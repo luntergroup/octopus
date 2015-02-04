@@ -25,6 +25,8 @@
 /* Begin PBXFileReference section */
 		CAA4DC211A81981400DD3E9A /* Octopus */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = Octopus; sourceTree = BUILT_PRODUCTS_DIR; };
 		CAA4DC241A81981400DD3E9A /* main.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
+		CAA4DC2F1A82AA6C00DD3E9A /* test_variant.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = test_variant.h; sourceTree = "<group>"; };
+		CAA4DC301A82B28800DD3E9A /* .gitignore */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = .gitignore; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -41,6 +43,7 @@
 		CAA4DC181A81981400DD3E9A = {
 			isa = PBXGroup;
 			children = (
+				CAA4DC301A82B28800DD3E9A /* .gitignore */,
 				CAA4DC2E1A8219DD00DD3E9A /* doc */,
 				CAA4DC2D1A8219D900DD3E9A /* test */,
 				CAA4DC2C1A8219CD00DD3E9A /* include */,
@@ -83,6 +86,7 @@
 		CAA4DC2D1A8219D900DD3E9A /* test */ = {
 			isa = PBXGroup;
 			children = (
+				CAA4DC2F1A82AA6C00DD3E9A /* test_variant.h */,
 			);
 			path = test;
 			sourceTree = "<group>";
