@@ -1,0 +1,5 @@
+Intervals:
+
+0-based indexing.
+Half open convention: [a,b).
+
