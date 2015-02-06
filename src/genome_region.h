@@ -25,8 +25,4 @@ struct GenomeRegion
     size_t size() const { return end - begin; }
 };
 
-GenomeRegion::GenomeRegion(std::string contig_name, size_t begin, size_t end) noexcept
-: contig_name {contig_name}, begin {begin}, end {end}
-{}
-
 #endif

@@ -9,7 +9,7 @@
 #include "variant.h"
 
 Variant::Variant(GenomeRegion ref_region, std::string sequence_added, std::string sequence_removed,
-                 VariantPriorModel* prior_model)
+                 std::function<double()> prior_model)
 : ref_region_(ref_region), sequence_added_(sequence_added), sequence_removed_(sequence_removed),
     prior_model_(prior_model)
 {
@@ -35,7 +35,7 @@ bool Variant::overlaps(const Variant& other) const noexcept
 
 double Variant::get_prior_probability() const noexcept
 {
-    return prior_model_->get_prior_probability();
+    return prior_model_();
 }
 
 inline bool operator==(const Variant& lhs, const Variant& rhs)

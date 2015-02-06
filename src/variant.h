@@ -10,12 +10,10 @@
 #define Octopus_variant_h
 
 #include <string>
-#include <memory>
 #include <cstdint>
 #include <functional>
 
 #include "genome_region.h"
-#include "variant_prior_model.h"
 
 using std::size_t;
 
@@ -30,7 +28,7 @@ class Variant
 public:
     Variant() = delete;
     Variant(GenomeRegion ref_region, std::string sequence_added, std::string sequence_removed,
-            VariantPriorModel* prior_model);
+            std::function<double()> prior_model);
     ~Variant();
     
     GenomeRegion get_ref_region() const noexcept;
@@ -44,7 +42,7 @@ private:
     std::string sequence_added_, sequence_removed_;
     
     unsigned long num_supporting_reads_;
-    std::shared_ptr<VariantPriorModel> prior_model_;
+    std::function<double()> prior_model_;
 };
 
 inline bool operator==(const Variant& lhs, const Variant& rhs);
