@@ -32,7 +32,11 @@ public:
     ~Variant();
     
     GenomeRegion get_ref_region() const noexcept;
+    const std::string& get_sequence_added() const noexcept;
+    const std::string& get_sequence_removed() const noexcept;
     unsigned long get_num_supporting_reads() const noexcept;
+    
+    void add_support(unsigned long num_reads) noexcept;
     bool overlaps(const Variant& other) const noexcept;
     
     double get_prior_probability() const noexcept;
