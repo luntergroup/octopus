@@ -14,6 +14,7 @@
 		CAA4DC481A841B2600DD3E9A /* variant_factory.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CAA4DC461A841B2600DD3E9A /* variant_factory.cpp */; };
 		CAA4DC4D1A84304700DD3E9A /* variant.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CAA4DC4C1A84304700DD3E9A /* variant.cpp */; };
 		CAA4DC501A84333C00DD3E9A /* variant_prior_model.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CAA4DC4E1A84333C00DD3E9A /* variant_prior_model.cpp */; };
+		CAA4DC591A88155200DD3E9A /* gtest.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = CAA4DC581A88155200DD3E9A /* gtest.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -45,6 +46,7 @@
 		CAA4DC4E1A84333C00DD3E9A /* variant_prior_model.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = variant_prior_model.cpp; sourceTree = "<group>"; };
 		CAA4DC4F1A84333C00DD3E9A /* variant_prior_model.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = variant_prior_model.h; sourceTree = "<group>"; };
 		CAA4DC511A84363A00DD3E9A /* genome_region.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = genome_region.h; sourceTree = "<group>"; };
+		CAA4DC581A88155200DD3E9A /* gtest.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = gtest.framework; path = "../../Library/Developer/Xcode/DerivedData/gtest-ajrcbcqoyqmdjjasuryflernxxlz/Build/Products/Debug/gtest.framework"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -52,6 +54,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				CAA4DC591A88155200DD3E9A /* gtest.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -61,6 +64,7 @@
 		CAA4DC181A81981400DD3E9A = {
 			isa = PBXGroup;
 			children = (
+				CAA4DC581A88155200DD3E9A /* gtest.framework */,
 				CAA4DC361A83A3BA00DD3E9A /* bin */,
 				CAA4DC331A83A2AB00DD3E9A /* Makefile */,
 				CAA4DC311A82B36300DD3E9A /* README.md */,
@@ -288,6 +292,10 @@
 		CAA4DC291A81981400DD3E9A /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(USER_LIBRARY_DIR)/Developer/Xcode/DerivedData/gtest-ajrcbcqoyqmdjjasuryflernxxlz/Build/Products/Debug",
+				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Debug;
@@ -295,6 +303,10 @@
 		CAA4DC2A1A81981400DD3E9A /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(USER_LIBRARY_DIR)/Developer/Xcode/DerivedData/gtest-ajrcbcqoyqmdjjasuryflernxxlz/Build/Products/Debug",
+				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Release;
