@@ -22,11 +22,16 @@ struct GenomeRegion
     GenomeRegion() = delete;
     GenomeRegion(std::string contig_name, size_t begin, size_t end) noexcept;
     
-    size_t size() const { return end - begin; }
+    size_t size() const noexcept;
+    size_t num_overlaped_bases(const GenomeRegion& other) const noexcept;
+    bool overlaps(const GenomeRegion& other) const noexcept;
 };
 
-GenomeRegion::GenomeRegion(std::string contig_name, size_t begin, size_t end) noexcept
-: contig_name {contig_name}, begin {begin}, end {end}
-{}
+inline bool operator==(const GenomeRegion& lhs, const GenomeRegion& rhs);
+inline bool operator!=(const GenomeRegion& lhs, const GenomeRegion& rhs);
+inline bool operator< (const GenomeRegion& lhs, const GenomeRegion& rhs);
+inline bool operator> (const GenomeRegion& lhs, const GenomeRegion& rhs);
+inline bool operator<=(const GenomeRegion& lhs, const GenomeRegion& rhs);
+inline bool operator>=(const GenomeRegion& lhs, const GenomeRegion& rhs);
 
 #endif

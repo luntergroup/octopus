@@ -6,11 +6,13 @@
 //  Copyright (c) 2015 Oxford University. All rights reserved.
 //
 
-#include <iostream>#
+#include <iostream>
+
+#include "variant_tests.h"
 
 int main(int argc, const char * argv[])
 {
-    // insert code here...
-    std::cout << "Hello, World!\n";
+    allocation_test();
+    
     return 0;
 }
