@@ -8,7 +8,7 @@
 
 #include "variant.h"
 
-Variant::Variant(GenomeRegion ref_region, std::string sequence_added, std::string sequence_removed,
+Variant::Variant(GenomicRegion ref_region, std::string sequence_added, std::string sequence_removed,
                  std::function<double()> prior_model)
 : ref_region_(ref_region), sequence_added_(sequence_added), sequence_removed_(sequence_removed),
     prior_model_(prior_model)
@@ -18,7 +18,7 @@ Variant::Variant(GenomeRegion ref_region, std::string sequence_added, std::strin
 
 Variant::~Variant() {} // Nothing allocated
 
-GenomeRegion Variant::get_ref_region() const noexcept
+GenomicRegion Variant::get_ref_region() const noexcept
 {
     return ref_region_;
 }

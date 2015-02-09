@@ -2,21 +2,20 @@
 //  variant_tests.h
 //  Octopus
 //
-//  Created by Daniel Cooke on 06/02/2015.
+//  Created by Daniel Cooke on 08/02/2015.
 //  Copyright (c) 2015 Oxford University. All rights reserved.
 //
 
 #ifndef Octopus_variant_tests_h
 #define Octopus_variant_tests_h
 
-#include <iostream>
-#include <assert.h>
+#include "gtest/gtest.h"
 
 #include "genome_region.h"
 #include "variant.h"
 #include "variant_factory.h"
 
-void allocation_test()
+void TEST(creation_test, snp)
 {
     VariantFactory a_variant_factory {};
     

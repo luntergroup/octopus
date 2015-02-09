@@ -12,7 +12,7 @@
 #include <memory>
 
 #include "variant.h"
-#include "genome_region.h"
+#include "genomic_region.h"
 
 class VariantFactory
 {
@@ -20,7 +20,7 @@ public:
     VariantFactory() = delete;
     
     std::unique_ptr<Variant>
-    make(GenomeRegion the_region, std::string added, std::string removed) const;
+    make(GenomicRegion the_region, std::string added, std::string removed) const;
     
 private:
 };

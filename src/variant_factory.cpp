@@ -11,7 +11,7 @@
 #include "variant_factory.h"
 
 std::unique_ptr<Variant>
-VariantFactory::make(GenomeRegion ref_region, std::string sequence_added,
+VariantFactory::make(GenomicRegion ref_region, std::string sequence_added,
                      std::string sequence_removed) const
 {
     std::function<double()> prior_model {};

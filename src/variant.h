@@ -27,11 +27,11 @@ class Variant
 {
 public:
     Variant() = delete;
-    Variant(GenomeRegion ref_region, std::string sequence_added, std::string sequence_removed,
+    Variant(GenomicRegion ref_region, std::string sequence_added, std::string sequence_removed,
             std::function<double()> prior_model);
     ~Variant();
     
-    GenomeRegion get_ref_region() const noexcept;
+    GenomicRegion get_ref_region() const noexcept;
     const std::string& get_sequence_added() const noexcept;
     const std::string& get_sequence_removed() const noexcept;
     unsigned long get_num_supporting_reads() const noexcept;
@@ -42,7 +42,7 @@ public:
     double get_prior_probability() const noexcept;
     
 private:
-    GenomeRegion ref_region_;
+    GenomicRegion ref_region_;
     std::string sequence_added_, sequence_removed_;
     
     unsigned long num_supporting_reads_;
