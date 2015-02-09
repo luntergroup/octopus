@@ -13,22 +13,20 @@
 #include <cstdint>
 #include <functional>
 
+#include "common.h"
 #include "genomic_region.h"
 
 using std::size_t;
 
 /*
- Class representing all variant types.
- 
- The
- 
+    Class representing all variant types.
  */
 class Variant
 {
 public:
     Variant() = delete;
-    Variant(GenomicRegion ref_region, std::string sequence_added, std::string sequence_removed,
-            std::function<double()> prior_model);
+    Variant(std::string sequence_name, int_fast32_t sequence_start_pos, std::string sequence_added,
+            std::string sequence_removed, std::function<double()> prior_model);
     ~Variant();
     
     GenomicRegion get_ref_region() const noexcept;
@@ -37,7 +35,6 @@ public:
     unsigned long get_num_supporting_reads() const noexcept;
     
     void add_support(unsigned long num_reads) noexcept;
-    bool overlaps(const Variant& other) const noexcept;
     
     double get_prior_probability() const noexcept;
     
@@ -51,17 +48,15 @@ private:
 
 inline bool operator==(const Variant& lhs, const Variant& rhs);
 inline bool operator!=(const Variant& lhs, const Variant& rhs);
-inline bool operator< (const Variant& lhs, const Variant& rhs);
-inline bool operator> (const Variant& lhs, const Variant& rhs);
-inline bool operator<=(const Variant& lhs, const Variant& rhs);
-inline bool operator>=(const Variant& lhs, const Variant& rhs);
+
+bool overlaps(const Variant& lhs, const Variant& rhs) noexcept;
 
 namespace std {
     template <> struct hash<Variant>
     {
         size_t operator()(const Variant& v) const
         {
-            return hash<size_t>()(v.get_ref_region().begin); //TODO: do something better!
+            return hash<size_t>()(v.get_ref_region().get_begin_pos()); //TODO: do something better!
         }
     };
 }

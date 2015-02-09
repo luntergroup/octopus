@@ -12,7 +12,6 @@
 #include <memory>
 
 #include "variant.h"
-#include "genomic_region.h"
 
 class VariantFactory
 {
@@ -20,7 +19,7 @@ public:
     VariantFactory() = delete;
     
     std::unique_ptr<Variant>
-    make(GenomicRegion the_region, std::string added, std::string removed) const;
+    make(std::string sequence_name, __uint32_t sequence_start_pos, std::string added, std::string removed) const;
     
 private:
 };
