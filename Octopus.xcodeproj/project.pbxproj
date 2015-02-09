@@ -13,8 +13,7 @@
 		CAA4DC351A83A39D00DD3E9A /* Octopus in CopyFiles */ = {isa = PBXBuildFile; fileRef = CAA4DC211A81981400DD3E9A /* Octopus */; };
 		CAA4DC481A841B2600DD3E9A /* variant_factory.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CAA4DC461A841B2600DD3E9A /* variant_factory.cpp */; };
 		CAA4DC4D1A84304700DD3E9A /* variant.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CAA4DC4C1A84304700DD3E9A /* variant.cpp */; };
-		CAA4DC611A8821DC00DD3E9A /* gtest.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = CAA4DC601A8821DC00DD3E9A /* gtest.framework */; };
-		CAA4DC641A88239800DD3E9A /* genomic_region.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CAA4DC631A88239800DD3E9A /* genomic_region.cpp */; };
+		D4907F481A88D71800639203 /* genomic_region.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D4907F461A88D71800639203 /* genomic_region.cpp */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -41,11 +40,10 @@
 		CAA4DC461A841B2600DD3E9A /* variant_factory.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = variant_factory.cpp; sourceTree = "<group>"; };
 		CAA4DC471A841B2600DD3E9A /* variant_factory.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = variant_factory.h; sourceTree = "<group>"; };
 		CAA4DC4C1A84304700DD3E9A /* variant.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = variant.cpp; sourceTree = "<group>"; };
-		CAA4DC511A84363A00DD3E9A /* genomic_region.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = genomic_region.h; sourceTree = "<group>"; };
 		CAA4DC5B1A8816BD00DD3E9A /* variant_tests.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = variant_tests.h; sourceTree = "<group>"; };
-		CAA4DC601A8821DC00DD3E9A /* gtest.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = gtest.framework; path = "../../Library/Developer/Xcode/DerivedData/gtest-ajrcbcqoyqmdjjasuryflernxxlz/Build/Products/Debug/gtest.framework"; sourceTree = "<group>"; };
 		CAA4DC621A88238C00DD3E9A /* variant.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = variant.h; sourceTree = "<group>"; };
-		CAA4DC631A88239800DD3E9A /* genomic_region.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = genomic_region.cpp; sourceTree = "<group>"; };
+		D4907F461A88D71800639203 /* genomic_region.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = genomic_region.cpp; sourceTree = "<group>"; };
+		D4907F471A88D71800639203 /* genomic_region.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = genomic_region.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -53,7 +51,6 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				CAA4DC611A8821DC00DD3E9A /* gtest.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -63,7 +60,6 @@
 		CAA4DC181A81981400DD3E9A = {
 			isa = PBXGroup;
 			children = (
-				CAA4DC601A8821DC00DD3E9A /* gtest.framework */,
 				CAA4DC361A83A3BA00DD3E9A /* bin */,
 				CAA4DC331A83A2AB00DD3E9A /* Makefile */,
 				CAA4DC311A82B36300DD3E9A /* README.md */,
@@ -88,10 +84,9 @@
 		CAA4DC231A81981400DD3E9A /* src */ = {
 			isa = PBXGroup;
 			children = (
+				D4907F421A88D6C600639203 /* io */,
 				CAA4DC3B1A83B64A00DD3E9A /* variant */,
 				CAA4DC241A81981400DD3E9A /* main.cpp */,
-				CAA4DC511A84363A00DD3E9A /* genomic_region.h */,
-				CAA4DC631A88239800DD3E9A /* genomic_region.cpp */,
 				CAA4DC3A1A83B4F800DD3E9A /* genotype.h */,
 			);
 			path = src;
@@ -143,6 +138,15 @@
 				CAA4DC461A841B2600DD3E9A /* variant_factory.cpp */,
 			);
 			name = variant;
+			sourceTree = "<group>";
+		};
+		D4907F421A88D6C600639203 /* io */ = {
+			isa = PBXGroup;
+			children = (
+				D4907F461A88D71800639203 /* genomic_region.cpp */,
+				D4907F471A88D71800639203 /* genomic_region.h */,
+			);
+			name = io;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -201,9 +205,9 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D4907F481A88D71800639203 /* genomic_region.cpp in Sources */,
 				CAA4DC481A841B2600DD3E9A /* variant_factory.cpp in Sources */,
 				CAA4DC4D1A84304700DD3E9A /* variant.cpp in Sources */,
-				CAA4DC641A88239800DD3E9A /* genomic_region.cpp in Sources */,
 				CAA4DC341A83A2AB00DD3E9A /* Makefile in Sources */,
 				CAA4DC321A82B36300DD3E9A /* README.md in Sources */,
 				CAA4DC251A81981400DD3E9A /* main.cpp in Sources */,

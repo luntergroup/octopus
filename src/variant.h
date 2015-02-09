@@ -13,7 +13,7 @@
 #include <cstdint>
 #include <functional>
 
-#include "genome_region.h"
+#include "genomic_region.h"
 
 using std::size_t;
 
