@@ -22,39 +22,39 @@ class SequenceRegion
 {
 public:
     SequenceRegion() = delete;
-    SequenceRegion(uint_fast32_t begin_pos, uint_fast32_t end_pos);
+    SequenceRegion(uint_fast32_t begin, uint_fast32_t end);
     
-    uint_fast32_t get_begin_pos() const noexcept;
-    uint_fast32_t get_end_pos() const noexcept;
+    uint_fast32_t get_begin() const noexcept;
+    uint_fast32_t get_end() const noexcept;
     
 private:
-    const uint_fast32_t begin_pos_;
-    const uint_fast32_t end_pos_;
+    const uint_fast32_t begin_;
+    const uint_fast32_t end_;
 };
 
-inline SequenceRegion::SequenceRegion(uint_fast32_t begin_pos, uint_fast32_t end_pos)
-: begin_pos_ {begin_pos}, end_pos_ {end_pos}
+inline SequenceRegion::SequenceRegion(uint_fast32_t begin, uint_fast32_t end)
+: begin_ {begin}, end_ {end}
 {}
 
-inline uint_fast32_t SequenceRegion::get_begin_pos() const noexcept
+inline uint_fast32_t SequenceRegion::get_begin() const noexcept
 {
-    return begin_pos_;
+    return begin_;
 }
 
-inline uint_fast32_t SequenceRegion::get_end_pos() const noexcept
+inline uint_fast32_t SequenceRegion::get_end() const noexcept
 {
-    return end_pos_;
+    return end_;
 }
 
 inline uint_fast32_t size(const SequenceRegion& a_region)
 {
-    return a_region.get_end_pos() - a_region.get_begin_pos();
+    return a_region.get_end() - a_region.get_begin();
 }
 
 inline int_fast64_t overlap_size(const SequenceRegion& lhs, const SequenceRegion& rhs)
 {
-    return static_cast<int_fast64_t>(std::min(lhs.get_end_pos(), rhs.get_end_pos())) -
-            static_cast<int_fast64_t>(std::max(lhs.get_begin_pos(), rhs.get_begin_pos()));
+    return static_cast<int_fast64_t>(std::min(lhs.get_end(), rhs.get_end())) -
+            static_cast<int_fast64_t>(std::max(lhs.get_begin(), rhs.get_begin()));
 }
 
 inline bool overlaps(const SequenceRegion& lhs, const SequenceRegion& rhs)
@@ -64,11 +64,11 @@ inline bool overlaps(const SequenceRegion& lhs, const SequenceRegion& rhs)
 
 inline bool operator==(const SequenceRegion& lhs, const SequenceRegion& rhs)
 {
-    return lhs.get_begin_pos() == rhs.get_begin_pos() && lhs.get_end_pos() == rhs.get_end_pos();
+    return lhs.get_begin() == rhs.get_begin() && lhs.get_end() == rhs.get_end();
 }
 inline bool operator< (const SequenceRegion& lhs, const SequenceRegion& rhs)
 {
-    return lhs.get_begin_pos() < rhs.get_begin_pos();
+    return lhs.get_begin() < rhs.get_begin();
 }
 inline bool operator!=(const SequenceRegion& lhs, const SequenceRegion& rhs){return !operator==(lhs, rhs);}
 inline bool operator> (const SequenceRegion& lhs, const SequenceRegion& rhs){return operator<(rhs,lhs);}

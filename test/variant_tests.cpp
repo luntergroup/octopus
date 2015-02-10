@@ -68,9 +68,9 @@ TEST_CASE("insertion_overlap_test", "[insertion]")
 {
     VariantFactory a_variant_factory {};
     
-    auto insert1 = a_variant_factory.make("chr1", 100, "TAG", "");
-    auto insert2 = a_variant_factory.make("chr1", 99, "TAG", "");
-    auto insert3 = a_variant_factory.make("chr1", 101, "TAG", "");
+    auto insert1 = a_variant_factory.make("chr1", 100, "", "TAG");
+    auto insert2 = a_variant_factory.make("chr1", 99, "", "TAG");
+    auto insert3 = a_variant_factory.make("chr1", 101, "", "TAG");
     
     // Insertions never overlap. IS THIS RIGHT!?!
     REQUIRE(!overlaps(*insert1, *insert1));
@@ -78,13 +78,13 @@ TEST_CASE("insertion_overlap_test", "[insertion]")
     REQUIRE(!overlaps(*insert1, *insert3));
 }
 
-TEST_CASE("deletion_overlap_test", "[insertion]")
+TEST_CASE("deletion_overlap_test", "[deletion]")
 {
     VariantFactory a_variant_factory {};
     
-    auto del1 = a_variant_factory.make("chr1", 100, "", "TAG");
-    auto del2 = a_variant_factory.make("chr1", 99, "", "TAG");
-    auto del3 = a_variant_factory.make("chr1", 101, "", "TAG");
+    auto del1 = a_variant_factory.make("chr1", 100, "TAG", "");
+    auto del2 = a_variant_factory.make("chr1", 99, "TAG", "");
+    auto del3 = a_variant_factory.make("chr1", 101, "TAG", "");
     
     REQUIRE(overlaps(*del1, *del1));
     REQUIRE(overlaps(*del1, *del2));
