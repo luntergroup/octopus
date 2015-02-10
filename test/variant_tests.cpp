@@ -15,17 +15,6 @@
 #include "variant.h"
 #include "variant_factory.h"
 
-TEST_CASE("creation_test", "snp")
-{
-    VariantFactory a_variant_factory {};
-    
-    auto a_variant = a_variant_factory.make("chr1", 100, "C", "CAT");
-    
-    std::cout << a_variant->get_prior_probability() << std::endl;
-    
-    REQUIRE(a_variant->get_prior_probability() == 1e-7);
-}
-
 TEST_CASE("snp_overlap_test", "[snps]")
 {
     VariantFactory a_variant_factory {};
@@ -73,4 +62,31 @@ TEST_CASE("mnp_overlap_test", "[mnp]")
     REQUIRE(overlaps(*mnp1, *mnp8));
     REQUIRE(!overlaps(*mnp1, *mnp9));
     REQUIRE(!overlaps(*mnp1, *mnp10));
+}
+
+TEST_CASE("insertion_overlap_test", "[insertion]")
+{
+    VariantFactory a_variant_factory {};
+    
+    auto insert1 = a_variant_factory.make("chr1", 100, "TAG", "");
+    auto insert2 = a_variant_factory.make("chr1", 99, "TAG", "");
+    auto insert3 = a_variant_factory.make("chr1", 101, "TAG", "");
+    
+    // Insertions never overlap. IS THIS RIGHT!?!
+    REQUIRE(!overlaps(*insert1, *insert1));
+    REQUIRE(!overlaps(*insert1, *insert2));
+    REQUIRE(!overlaps(*insert1, *insert3));
+}
+
+TEST_CASE("deletion_overlap_test", "[insertion]")
+{
+    VariantFactory a_variant_factory {};
+    
+    auto del1 = a_variant_factory.make("chr1", 100, "", "TAG");
+    auto del2 = a_variant_factory.make("chr1", 99, "", "TAG");
+    auto del3 = a_variant_factory.make("chr1", 101, "", "TAG");
+    
+    REQUIRE(overlaps(*del1, *del1));
+    REQUIRE(overlaps(*del1, *del2));
+    REQUIRE(overlaps(*del1, *del3));
 }

@@ -10,12 +10,15 @@
 #define __Octopus__genomic_region__
 
 #include <string>
+#include <cstdint>
 
-#include "common.h"
 #include "sequence_region.h"
 
+using std::uint_fast32_t;
+using std::int_fast64_t;
+
 /*
-    Represents a continuous sequence region in a genome. The sequence
+    Represents a continuous region of a sequence in a genome. The sequence
     name is the reference sequence name (usually a chromosome), and the
     begin and end positions are zero-indexed half open - [begin,end) - indexes.
  */
@@ -23,27 +26,77 @@ class GenomicRegion
 {
 public:
     GenomicRegion() = delete;
-    GenomicRegion(std::string sequence_name, int_fast32_t begin, int_fast32_t end);
+    GenomicRegion(std::string contig_name, uint_fast32_t begin_pos, uint_fast32_t end_pos);
     //GenomicRegion(std::string the_region);
     
-    const std::string& get_sequence_name() const noexcept;
-    const SequenceRegion& get_sequence_region() const noexcept;
-    int_fast32_t get_begin_pos() const noexcept;
-    int_fast32_t get_end_pos() const noexcept;
+    const std::string& get_contig_name() const noexcept;
+    const SequenceRegion& get_contig_region() const noexcept;
+    uint_fast32_t get_begin_pos() const noexcept;
+    uint_fast32_t get_end_pos() const noexcept;
 
 private:
-    std::string the_sequence_name_;
-    SequenceRegion the_region_;
+    const std::string contig_name_;
+    const SequenceRegion region_;
 };
 
-int_fast32_t size(const SequenceRegion& a_region) noexcept;
+inline
+GenomicRegion::GenomicRegion(std::string contig_name, uint_fast32_t begin_pos, uint_fast32_t end_pos)
+: contig_name_ {contig_name}, region_(begin_pos, end_pos)
+{}
 
-inline bool operator==(const GenomicRegion& lhs, const GenomicRegion& rhs) noexcept;
-inline bool operator!=(const GenomicRegion& lhs, const GenomicRegion& rhs) noexcept;
+//GenomicRegion::GenomicRegion(std::string the_region)
+//{
+//    // parse region
+//}
 
-std::string to_string(const GenomicRegion& a_region);
+inline const std::string& GenomicRegion::get_contig_name() const noexcept
+{
+    return contig_name_;
+}
 
-int_fast32_t overlap_size(const GenomicRegion& lhs, const GenomicRegion& rhs) noexcept;
-bool overlaps(const GenomicRegion& lhs, const GenomicRegion& rhs) noexcept;
+inline const SequenceRegion& GenomicRegion::get_contig_region() const noexcept
+{
+    return region_;
+}
+
+inline uint_fast32_t GenomicRegion::get_begin_pos() const noexcept
+{
+    return region_.get_begin_pos();
+}
+
+inline uint_fast32_t GenomicRegion::get_end_pos() const noexcept
+{
+    return region_.get_end_pos();
+}
+
+inline uint_fast32_t size(const GenomicRegion& a_region) noexcept
+{
+    return size(a_region.get_contig_region());
+}
+
+inline std::string to_string(const GenomicRegion& a_region)
+{
+    return "";
+}
+
+inline int_fast64_t overlap_size(const GenomicRegion& lhs, const GenomicRegion& rhs) noexcept
+{
+    return (lhs.get_contig_name() == rhs.get_contig_name()) ?
+        overlap_size(lhs.get_contig_region(), rhs.get_contig_region()) : 0;
+}
+
+inline bool overlaps(const GenomicRegion& lhs, const GenomicRegion& rhs) noexcept
+{
+    return overlap_size(lhs, rhs) > 0;
+}
+
+// It doesn't really make sense to define ordering operators for GenomicRegion
+// (as oposed to SequenceRegion), as non-continuous sequences have no natural ordering.
+inline bool operator==(const GenomicRegion& lhs, const GenomicRegion& rhs)
+{
+    return lhs.get_contig_name() == rhs.get_contig_name() &&
+            lhs.get_contig_region() == rhs.get_contig_region();
+}
+inline bool operator!=(const GenomicRegion& lhs, const GenomicRegion& rhs) {return !operator==(lhs, rhs);}
 
 #endif /* defined(__Octopus__genomic_region__) */

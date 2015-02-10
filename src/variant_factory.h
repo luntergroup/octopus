@@ -19,7 +19,7 @@ public:
     VariantFactory() = delete;
     
     std::unique_ptr<Variant>
-    make(std::string sequence_name, __uint32_t sequence_start_pos, std::string added, std::string removed) const;
+    make(std::string contig_name, __uint32_t contig_begin_pos, std::string added, std::string removed) const;
     
 private:
 };

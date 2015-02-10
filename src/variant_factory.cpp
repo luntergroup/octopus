@@ -11,7 +11,7 @@
 #include "variant_factory.h"
 
 std::unique_ptr<Variant>
-VariantFactory::make(std::string sequence_name, __uint32_t sequence_start_pos, std::string sequence_added,
+VariantFactory::make(std::string contig_name, __uint32_t contig_begin_pos, std::string sequence_added,
                      std::string sequence_removed) const
 {
     std::function<double()> prior_model {};
@@ -28,5 +28,5 @@ VariantFactory::make(std::string sequence_name, __uint32_t sequence_start_pos, s
             prior_model = [] () { return 1e-8; };
         }
     }
-    return std::make_unique<Variant>(sequence_name, sequence_start_pos, sequence_added, sequence_removed, prior_model);
+    return std::make_unique<Variant>(contig_name, contig_begin_pos, sequence_added, sequence_removed, prior_model);
 }
