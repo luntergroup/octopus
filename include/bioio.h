@@ -72,8 +72,7 @@ struct FastaIndex
     FastaIndex(std::string contig_name, size_t length, size_t offset, 
               size_t line_length, size_t line_byte_length) 
     : contig_name {contig_name}, offset {offset}, length {length}, 
-      line_length {line_length}, 
-      line_byte_length {line_byte_length} {}
+      line_length {line_length}, line_byte_length {line_byte_length} {}
     FastaIndex(std::string fasta_index_line)
     {
         auto parts = split(std::move(fasta_index_line), '\t');
@@ -81,8 +80,8 @@ struct FastaIndex
         contig_name      = parts[0];
         length           = std::stoll(parts[1]);
         offset           = std::stoll(parts[2]);
-        line_length      = std::stoll(parts[4]);
-        line_byte_length = std::stoll(parts[3]);
+        line_length      = std::stoll(parts[3]);
+        line_byte_length = std::stoll(parts[4]);
     }
 };
 
@@ -239,22 +238,16 @@ size_t get_contig_size(const std::string& fasta_index_path, const std::string& c
  =======================================================================================*/
 
 inline
-size_t get_line_offset(const FastaIndex& index, size_t begin)
-{
-    return begin % index.line_byte_length;
-}
-
-inline
 size_t get_contig_offset(const FastaIndex& index, size_t begin)
 {
-    return index.offset + index.line_length * (begin / index.line_byte_length) +
-                get_line_offset(index, begin);
+    return index.offset +  begin / index.line_length * index.line_byte_length +
+                begin % index.line_length;
 }
 
 inline
 size_t get_remaining_line_length(const FastaIndex& index, size_t begin)
 {
-    return index.line_length - get_line_offset(index, begin);
+    return index.line_length - begin % index.line_length;
 }
 
 template <typename T=std::string>
@@ -266,11 +259,11 @@ T read_fasta_contig(std::ifstream& fasta, const FastaIndex& index, size_t begin,
     if (index.line_length == index.line_byte_length) {
         fasta.read(&seq[0], length);
     } else {
-        size_t line_length_to_read {std::min(length, get_remaining_line_length(index, begin))};
-        fasta.read(&seq[0], line_length_to_read);
+        size_t num_line_bytes_to_read {std::min(length, get_remaining_line_length(index, begin))};
+        fasta.read(&seq[0], num_line_bytes_to_read);
         size_t num_line_end_bytes {index.line_byte_length - index.line_length};
-        fasta.ignore(num_line_end_bytes);
-        size_t num_chars_read {line_length_to_read};
+        fasta.ignore(num_line_bytes_to_read);
+        size_t num_chars_read {num_line_bytes_to_read};
         while (num_chars_read < length) {
             fasta.read(&seq[num_chars_read], index.line_length);
             fasta.ignore(num_line_end_bytes);

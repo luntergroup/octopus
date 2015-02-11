@@ -54,7 +54,10 @@ void Fasta::open_files()
 std::string Fasta::get_reference_name()
 {
     //return fasta_path_.filename().string();
-    return "NOT IMPLEMENTED!";
+    // TODO: get boost to work
+    auto name_begin = fasta_path_.find_last_of('/') + 1;
+    auto name_size  = fasta_path_.find_last_of('.') - name_begin;
+    return fasta_path_.substr(name_begin, name_size);
 }
 
 std::vector<std::string> Fasta::get_contig_names()
