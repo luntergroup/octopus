@@ -21,15 +21,12 @@ TEST_CASE("initialisation_test", "[reference]")
     std::string homedir {getenv("HOME")};
     std::string fasta_path {homedir + "/Genomics/References/human_g1k_v37.fasta"};
     
-    auto f = a_factory.make(fasta_path);
-    
-    auto f2 = std::move(f);
-    
-    std::cout << f2->get_reference_name() << std::endl;
-    std::cout << f2->get_contig_size("1") << std::endl;
-    
-    ReferenceGenome reference(std::move(f));
+    ReferenceGenome reference(a_factory.make(fasta_path));
     
     REQUIRE(reference.get_name() == "NOT IMPLEMENTED!");
     REQUIRE(reference.contains_region(GenomicRegion("1", 100, 10000)));
+    REQUIRE(reference.get_contig_size("20") == 63025520);
+    REQUIRE(reference.has_contig("X"));
+    REQUIRE(reference.get_contig_region("X") == GenomicRegion("X", 0, 155270560));
+    REQUIRE(reference.get_sequence(GenomicRegion("15", 51265690, 51265700)) == "ATACAATGTT");
 }

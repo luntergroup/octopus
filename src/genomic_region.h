@@ -11,6 +11,7 @@
 
 #include <string>
 #include <cstdint>
+#include <stdexcept>
 
 #include "sequence_region.h"
 
@@ -94,9 +95,16 @@ inline bool operator==(const GenomicRegion& lhs, const GenomicRegion& rhs)
     return is_same_contig(lhs, rhs) && lhs.get_contig_region() == rhs.get_contig_region();
 }
 inline bool operator!=(const GenomicRegion& lhs, const GenomicRegion& rhs) {return !operator==(lhs, rhs);}
-
 // It doesn't really make sense to define ordering operators for GenomicRegion
 // (as oposed to SequenceRegion), as non-continuous sequences have no natural ordering.
+inline bool operator<(const GenomicRegion& lhs, const GenomicRegion& rhs)
+{
+    if (is_same_contig(lhs, rhs)) return lhs.get_contig_region() < rhs.get_contig_region();
+    throw std::runtime_error {"Cannot compare regions on different contigs"};
+}
+inline bool operator> (const GenomicRegion& lhs, const GenomicRegion& rhs){return operator<(rhs,lhs);}
+inline bool operator<=(const GenomicRegion& lhs, const GenomicRegion& rhs){return !operator>(lhs,rhs);}
+inline bool operator>=(const GenomicRegion& lhs, const GenomicRegion& rhs){return !operator<(lhs,rhs);}
 
 inline std::string to_string(const GenomicRegion& a_region)
 {

@@ -20,6 +20,7 @@
 //#include "boost/filesystem/operations.hpp"
 
 #include "reference_genome_implementor.h"
+#include "genomic_region.h"
 
 //namespace fs = boost::filesystem;
 

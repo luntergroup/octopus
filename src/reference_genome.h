@@ -32,9 +32,10 @@ public:
     
     const std::string& get_name() const;
     bool has_contig(const std::string& contig_name) const noexcept;
+    const std::vector<std::string>& get_contig_names() const noexcept;
     uint_fast32_t get_contig_size(const std::string& contig_name) const;
     uint_fast32_t get_contig_size(const GenomicRegion& a_region) const;
-    GenomicRegion get_contig_region(std::string contig_name) const;
+    GenomicRegion get_contig_region(const std::string& contig_name) const;
     bool contains_region(const GenomicRegion& a_region) const;
     std::string get_sequence(const GenomicRegion& a_region);
     
@@ -56,12 +57,12 @@ class UnknownContig : public std::exception
 inline
 ReferenceGenome::ReferenceGenome(std::unique_ptr<IReferenceGenomeImplementor> the_reference_implementation)
 : the_reference_implementation_ {std::move(the_reference_implementation)},
-  name_ {the_reference_implementation->get_reference_name()},
-  contig_names_(std::move(the_reference_implementation->get_contig_names())),
+  name_ {the_reference_implementation_->get_reference_name()},
+  contig_names_(std::move(the_reference_implementation_->get_contig_names())),
   contig_sizes_ {}
 {
     for (const auto& contig_name : contig_names_) {
-        contig_sizes_[contig_name] = the_reference_implementation->get_contig_size(contig_name);
+        contig_sizes_[contig_name] = the_reference_implementation_->get_contig_size(contig_name);
     }
 }
 
@@ -73,6 +74,11 @@ inline const std::string& ReferenceGenome::get_name() const
 inline bool ReferenceGenome::has_contig(const std::string& contig_name) const noexcept
 {
     return std::find(std::cbegin(contig_names_), std::cend(contig_names_), contig_name) != std::cend(contig_names_);
+}
+
+inline const std::vector<std::string>& ReferenceGenome::get_contig_names() const noexcept
+{
+    return contig_names_;
 }
 
 inline uint_fast32_t ReferenceGenome::get_contig_size(const std::string& contig_name) const
@@ -88,9 +94,9 @@ inline uint_fast32_t ReferenceGenome::get_contig_size(const GenomicRegion& a_reg
     return get_contig_size(a_region.get_contig_name());
 }
 
-inline GenomicRegion ReferenceGenome::get_contig_region(std::string contig_name) const
+inline GenomicRegion ReferenceGenome::get_contig_region(const std::string& contig_name) const
 {
-    return GenomicRegion(std::move(contig_name), 0, get_contig_size(contig_name));
+    return GenomicRegion(contig_name, 0, get_contig_size(contig_name));
 }
 
 inline bool ReferenceGenome::contains_region(const GenomicRegion& a_region) const

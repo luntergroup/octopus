@@ -59,13 +59,12 @@ std::string Fasta::get_reference_name()
 
 std::vector<std::string> Fasta::get_contig_names()
 {
-    return bioio::get_fasta_index_names(fasta_index_path_);
+    return bioio::get_fasta_index_contig_names(fasta_index_path_);
 }
 
 std::uint_fast32_t Fasta::get_contig_size(std::string contig_name)
 {
-    auto contig_map = bioio::read_fasta_index(fasta_index_path_);
-    return static_cast<uint_fast32_t>(contig_map[contig_name].length);
+    return static_cast<uint_fast32_t>(bioio::get_contig_size(fasta_index_, contig_name));
 }
 
 std::string Fasta::get_sequence(const GenomicRegion& a_region)
@@ -76,8 +75,6 @@ std::string Fasta::get_sequence(const GenomicRegion& a_region)
         //TODO: this is a bit hacky/inefficient.. will change when bioio is better.
         auto contig_map = bioio::read_fasta_index(fasta_index_path_);
         auto index = contig_map[a_region.get_contig_name()];
-        index.offset += a_region.get_begin();
-        index.length -= (a_region.get_begin() + a_region.get_end());
-        return bioio::read_ref_seq(fasta_, index);
+        return bioio::read_fasta_contig(fasta_, index, a_region.get_begin(), size(a_region));
     }
 }

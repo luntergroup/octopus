@@ -9,12 +9,5 @@
 #ifndef __Octopus__utils__
 #define __Octopus__utils__
 
-#include <string>
-
-template <typename T, typename C>
-bool is_in(T val, C container)
-{
-    
-}
 
 #endif /* defined(__Octopus__utils__) */
