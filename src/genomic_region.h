@@ -32,6 +32,11 @@ public:
     GenomicRegion(std::string contig_name, uint_fast32_t begin, uint_fast32_t end);
     //GenomicRegion(std::string the_region);
     
+    GenomicRegion(const GenomicRegion&)            = default;
+    GenomicRegion& operator=(const GenomicRegion&) = default;
+    GenomicRegion(GenomicRegion&&)                 = default;
+    GenomicRegion& operator=(GenomicRegion&&)      = default;
+    
     const std::string& get_contig_name() const noexcept;
     const SequenceRegion& get_contig_region() const noexcept;
     uint_fast32_t get_begin() const noexcept;
@@ -97,7 +102,7 @@ inline bool operator==(const GenomicRegion& lhs, const GenomicRegion& rhs)
 {
     return is_same_contig(lhs, rhs) && lhs.get_contig_region() == rhs.get_contig_region();
 }
-inline bool operator!=(const GenomicRegion& lhs, const GenomicRegion& rhs) {return !operator==(lhs, rhs);}
+
 // It doesn't really make sense to define ordering operators for GenomicRegion
 // (as oposed to SequenceRegion), as non-continuous sequences have no natural ordering.
 inline bool operator<(const GenomicRegion& lhs, const GenomicRegion& rhs)

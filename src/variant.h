@@ -38,7 +38,11 @@ public:
             std::function<double()> prior_model);
     Variant(GenomicRegion reference_removed_region, std::string reference_sequence_removed,
             std::string sequence_added, std::function<double()> prior_model);
-    ~Variant();
+    
+    Variant(const Variant&)            = default;
+    Variant& operator=(const Variant&) = default;
+    Variant(Variant&&)                 = default;
+    Variant& operator=(Variant&&)      = default;
     
     GenomicRegion get_removed_region() const noexcept;
     uint_fast32_t get_removed_region_begin() const noexcept;
@@ -79,8 +83,6 @@ Variant::Variant(GenomicRegion reference_removed_region, std::string reference_s
     sequence_added_(sequence_added),
     prior_model_(prior_model)
 {}
-
-inline Variant::~Variant() {}
 
 inline GenomicRegion Variant::get_removed_region() const noexcept
 {

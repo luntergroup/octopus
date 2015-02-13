@@ -26,6 +26,11 @@ public:
     SequenceRegion() = delete;
     SequenceRegion(uint_fast32_t begin, uint_fast32_t end);
     
+    SequenceRegion(const SequenceRegion&)            = default;
+    SequenceRegion& operator=(const SequenceRegion&) = default;
+    SequenceRegion(SequenceRegion&&)                 = default;
+    SequenceRegion& operator=(SequenceRegion&&)      = default;
+    
     uint_fast32_t get_begin() const noexcept;
     uint_fast32_t get_end() const noexcept;
     
@@ -69,7 +74,7 @@ inline bool operator==(const SequenceRegion& lhs, const SequenceRegion& rhs)
     return lhs.get_begin() == rhs.get_begin() && lhs.get_end() == rhs.get_end();
 }
 
-inline bool operator< (const SequenceRegion& lhs, const SequenceRegion& rhs)
+inline bool operator<(const SequenceRegion& lhs, const SequenceRegion& rhs)
 {
     return lhs.get_begin() < rhs.get_begin();
 }

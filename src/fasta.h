@@ -31,7 +31,12 @@ public:
     Fasta() = delete;
     Fasta(std::string fasta_path);
     Fasta(std::string fasta_path, std::string fasta_index_path);
-    ~Fasta() override;
+    ~Fasta() override = default;
+    
+    Fasta(const Fasta&)            = default;
+    Fasta& operator=(const Fasta&) = default;
+    Fasta(Fasta&&)                 = default;
+    Fasta& operator=(Fasta&&)      = default;
     
     std::string get_reference_name() override;
     std::vector<std::string> get_contig_names() override;
@@ -51,8 +56,6 @@ private:
     std::unordered_map<std::string, bioio::FastaIndex> fasta_contig_indices_;
     std::unordered_map<GenomicRegion, std::string> region_cache_; // TODO: is this useful?
 };
-
-inline Fasta::~Fasta() {}
 
 inline bool Fasta::is_in_cache(const GenomicRegion& a_region) const noexcept
 {

@@ -24,6 +24,11 @@ public:
     ContigName() = delete;
     ContigName(const std::string& contig_name);
     
+    ContigName(const ContigName&)            = default;
+    ContigName& operator=(const ContigName&) = default;
+    ContigName(ContigName&&)                 = default;
+    ContigName& operator=(ContigName&&)      = default;
+    
     static void give_all_reference_contig_names(const std::unordered_set<std::string>& the_contig_names);
     
     std::string get_name() const;

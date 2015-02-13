@@ -28,6 +28,11 @@ public:
         CigarOperation() = delete;
         CigarOperation(uint_fast32_t size, char type) noexcept;
         
+        CigarOperation(const CigarOperation&)            = default;
+        CigarOperation& operator=(const CigarOperation&) = default;
+        CigarOperation(CigarOperation&&)                 = default;
+        CigarOperation& operator=(CigarOperation&&)      = default;
+        
         uint_fast32_t get_size() const noexcept;
         char get_flag() const noexcept;
     private:
@@ -125,6 +130,16 @@ inline std::string to_string(const CigarString& a_cigar_string)
         result += to_string(a_cigar_operation);
     }
     return result;
+}
+
+inline bool operator==(const CigarString::CigarOperation& lhs, const CigarString::CigarOperation& rhs)
+{
+    return lhs.get_size() == rhs.get_size() && lhs.get_size() == rhs.get_size();
+}
+
+inline bool operator==(const CigarString& lhs, const CigarString& rhs)
+{
+    return std::equal(std::cbegin(lhs), std::cend(lhs), std::cbegin(rhs));
 }
 
 inline std::ostream& operator<<(std::ostream& os, const CigarString::CigarOperation& a_cigar_operation)

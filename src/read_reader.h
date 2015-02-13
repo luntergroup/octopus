@@ -22,11 +22,13 @@
 class ReadReader
 {
 public:
-    
     ReadReader() = delete;
-    ReadReader(const ReadReader&) = delete;
-    ReadReader& operator=(const ReadReader&) = delete;
     ReadReader(const std::string& read_file_path);
+    
+    ReadReader(const ReadReader&)            = delete;
+    ReadReader& operator=(const ReadReader&) = delete;
+    ReadReader(ReadReader&&)                 = default;
+    ReadReader& operator=(ReadReader&&)      = default;
     
     std::set<AlignedRead> fetch_reads(const GenomicRegion& a_region);
     

@@ -27,8 +27,12 @@ class ReferenceGenome
 {
 public:
     ReferenceGenome() = delete;
-    void operator=(const ReferenceGenome&) = delete;
     ReferenceGenome(std::unique_ptr<IReferenceGenomeImplementor> the_reference_implementation);
+    
+    ReferenceGenome(const ReferenceGenome&)            = delete;
+    ReferenceGenome& operator=(const ReferenceGenome&) = delete;
+    ReferenceGenome(ReferenceGenome&&)                 = default;
+    ReferenceGenome& operator=(ReferenceGenome&&)      = default;
     
     const std::string& get_name() const;
     bool has_contig(const std::string& contig_name) const noexcept;

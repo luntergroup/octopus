@@ -16,7 +16,7 @@
 
 TEST_CASE("initialisation_test", "[reference]")
 {
-    ReferenceGenomeImplementorFactory a_factory;
+    ReferenceGenomeImplementorFactory a_factory {};
     
     std::string homedir {getenv("HOME")};
     

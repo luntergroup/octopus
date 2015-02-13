@@ -28,6 +28,7 @@ public:
     virtual uint_fast32_t get_num_reference_contigs() noexcept = 0;
     virtual std::unordered_set<std::string> get_reference_contig_names() = 0;
     virtual uint_fast32_t get_reference_contig_size(const std::string& contig_name) = 0;
+    virtual ~IReadReaderImplementor() = default;
 };
 
 #endif

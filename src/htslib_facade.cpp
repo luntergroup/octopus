@@ -10,6 +10,28 @@
 
 #include <stdexcept>
 
+HtslibFacade::HtslibFacade(const std::string& htslib_file_path)
+:   the_filename_ {htslib_file_path},
+    the_hts_file_ {hts_open(the_filename_.c_str(), "r")},
+    the_header_ {bam_hdr_init()},
+    the_index_ {sam_index_load(the_hts_file_, the_filename_.c_str())},
+    htslib_tid_to_contig_name_ {}
+{
+    the_header_ = sam_hdr_read(the_hts_file_);
+    htslib_tid_to_contig_name_ = get_htslib_tid_to_contig_name_mappings();
+}
+
+HtslibFacade::~HtslibFacade()
+{
+    try {
+        hts_close(the_hts_file_);
+        hts_idx_destroy(the_index_);
+        bam_hdr_destroy(the_header_);
+    } catch (...) {
+        // TODO: do something
+    }
+}
+
 std::set<AlignedRead> HtslibFacade::fetch_reads(const GenomicRegion& a_region)
 {
     HtslibIterator it {*this, a_region};
@@ -41,6 +63,23 @@ HtslibFacade::get_htslib_tid_to_contig_name_mappings() const
         result.emplace(std::make_pair(i, the_header_->target_name[i]));
     }
     return result;
+}
+
+HtslibFacade::HtslibIterator::HtslibIterator(HtslibFacade& hts_facade, const GenomicRegion& a_region)
+:   hts_facade_ {hts_facade},
+    b_ {bam_init1()},
+    the_htslib_HtslibIterator_ {sam_itr_querys(hts_facade_.the_index_, hts_facade_.the_header_,
+                                               to_string(a_region).c_str())}
+{}
+
+HtslibFacade::HtslibIterator::~HtslibIterator()
+{
+    try {
+        sam_itr_destroy(the_htslib_HtslibIterator_);
+        bam_destroy1(b_);
+    } catch (...) {
+        // TODO: do something
+    }
 }
 
 AlignedRead HtslibFacade::HtslibIterator::operator*() const

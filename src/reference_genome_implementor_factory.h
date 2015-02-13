@@ -17,6 +17,11 @@
 class ReferenceGenomeImplementorFactory
 {
 public:
+    ReferenceGenomeImplementorFactory(const ReferenceGenomeImplementorFactory&)            = default;
+    ReferenceGenomeImplementorFactory& operator=(const ReferenceGenomeImplementorFactory&) = default;
+    ReferenceGenomeImplementorFactory(ReferenceGenomeImplementorFactory&&)                 = default;
+    ReferenceGenomeImplementorFactory& operator=(ReferenceGenomeImplementorFactory&&)      = default;
+    
     std::unique_ptr<IReferenceGenomeImplementor> make(std::string genome_file_path) const;
 };
 

@@ -33,6 +33,11 @@ public:
                 uint_fast32_t insert_size, std::string mate_contig_name,
                 uint_fast32_t mate_begin, uint_fast8_t mapping_quality);
     
+    AlignedRead(const AlignedRead&)            = default;
+    AlignedRead& operator=(const AlignedRead&) = default;
+    AlignedRead(AlignedRead&&)                 = default;
+    AlignedRead& operator=(AlignedRead&&)      = default;
+    
     GenomicRegion get_region() const;
     const std::string& get_contig_name() const;
     uint_fast32_t get_begin() const;

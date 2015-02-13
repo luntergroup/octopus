@@ -34,9 +34,12 @@ class HtslibFacade : IReadReaderImplementor
 public:
     HtslibFacade() = delete;
     HtslibFacade(const std::string& htslib_file_path);
-    ~HtslibFacade();
-    HtslibFacade(const HtslibFacade&) = delete;
+    ~HtslibFacade() override;
+    
+    HtslibFacade(const HtslibFacade&)            = delete;
     HtslibFacade& operator=(const HtslibFacade&) = delete;
+    HtslibFacade(HtslibFacade&&)                 = default;
+    HtslibFacade& operator=(HtslibFacade&&)      = default;
     
     std::set<AlignedRead> fetch_reads(const GenomicRegion& a_region) override;
     uint_fast32_t get_num_reference_contigs() noexcept override;
@@ -78,30 +81,6 @@ private:
 };
 
 inline
-HtslibFacade::HtslibFacade(const std::string& htslib_file_path)
-:   the_filename_ {htslib_file_path},
-    the_hts_file_ {hts_open(the_filename_.c_str(), "r")},
-    the_header_ {bam_hdr_init()},
-    the_index_ {sam_index_load(the_hts_file_, the_filename_.c_str())},
-    htslib_tid_to_contig_name_ {}
-{
-    the_header_   = sam_hdr_read(the_hts_file_);
-    htslib_tid_to_contig_name_ = get_htslib_tid_to_contig_name_mappings();
-}
-
-inline
-HtslibFacade::~HtslibFacade()
-{
-    try {
-        hts_close(the_hts_file_);
-        hts_idx_destroy(the_index_);
-        bam_hdr_destroy(the_header_);
-    } catch (...) {
-        // TODO: do something
-    }
-}
-
-inline
 uint_fast32_t HtslibFacade::get_num_reference_contigs() noexcept
 {
     return the_header_->n_targets;
@@ -111,25 +90,6 @@ inline
 uint_fast32_t HtslibFacade::get_reference_contig_size(const std::string& contig_name)
 {
     return the_header_->target_len[get_htslib_tid(contig_name)];
-}
-
-inline
-HtslibFacade::HtslibIterator::HtslibIterator(HtslibFacade& hts_facade, const GenomicRegion& a_region)
-:   hts_facade_ {hts_facade},
-    b_ {bam_init1()},
-    the_htslib_HtslibIterator_ {sam_itr_querys(hts_facade_.the_index_, hts_facade_.the_header_,
-                                     to_string(a_region).c_str())}
-{}
-
-inline
-HtslibFacade::HtslibIterator::~HtslibIterator()
-{
-    try {
-        sam_itr_destroy(the_htslib_HtslibIterator_);
-        bam_destroy1(b_);
-    } catch (...) {
-        // TODO: do something
-    }
 }
 
 inline
@@ -165,8 +125,8 @@ HtslibFacade::HtslibIterator::make_qualities(uint8_t* qualities, uint_fast32_t s
     return result;
 }
 
-inline CigarString
-HtslibFacade::HtslibIterator::make_cigar_string(uint32_t* cigar_operations,
+inline
+CigarString HtslibFacade::HtslibIterator::make_cigar_string(uint32_t* cigar_operations,
                                           uint32_t cigar_length) const
 {
     static constexpr const char* operation_table {"MIDNSHP=X"};
