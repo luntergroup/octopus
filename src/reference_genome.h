@@ -56,10 +56,10 @@ class UnknownContig : public std::exception
 
 inline
 ReferenceGenome::ReferenceGenome(std::unique_ptr<IReferenceGenomeImplementor> the_reference_implementation)
-: the_reference_implementation_ {std::move(the_reference_implementation)},
-  name_ {the_reference_implementation_->get_reference_name()},
-  contig_names_(std::move(the_reference_implementation_->get_contig_names())),
-  contig_sizes_ {}
+:   the_reference_implementation_ {std::move(the_reference_implementation)},
+    name_ {the_reference_implementation_->get_reference_name()},
+    contig_names_(std::move(the_reference_implementation_->get_contig_names())),
+    contig_sizes_ {}
 {
     for (const auto& contig_name : contig_names_) {
         contig_sizes_[contig_name] = the_reference_implementation_->get_contig_size(contig_name);

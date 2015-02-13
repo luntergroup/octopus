@@ -19,6 +19,7 @@
 //#include "boost/filesystem/path.hpp"
 //#include "boost/filesystem/operations.hpp"
 
+#include "bioio.h"
 #include "reference_genome_implementor.h"
 #include "genomic_region.h"
 
@@ -30,6 +31,7 @@ public:
     Fasta() = delete;
     Fasta(std::string fasta_path);
     Fasta(std::string fasta_path, std::string fasta_index_path);
+    ~Fasta() override;
     
     std::string get_reference_name() override;
     std::vector<std::string> get_contig_names() override;
@@ -38,7 +40,6 @@ public:
 
 private:
     bool is_valid_fasta() const;
-    void open_files();
     bool is_in_cache(const GenomicRegion& a_region) const noexcept;
     
 //    fs::path fasta_path_;
@@ -46,12 +47,12 @@ private:
     
     std::string fasta_path_;
     std::string fasta_index_path_;
-    
     std::ifstream fasta_;
-    std::ifstream fasta_index_;
-    
-    std::unordered_map<GenomicRegion, std::string> region_cache_;
+    std::unordered_map<std::string, bioio::FastaIndex> fasta_contig_indices_;
+    std::unordered_map<GenomicRegion, std::string> region_cache_; // TODO: is this useful?
 };
+
+inline Fasta::~Fasta() {}
 
 inline bool Fasta::is_in_cache(const GenomicRegion& a_region) const noexcept
 {

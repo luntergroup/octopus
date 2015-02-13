@@ -44,4 +44,5 @@ TEST_CASE("initialisation_test", "[reference]")
     REQUIRE(!human.has_contig("y"));
     REQUIRE(human.get_contig_region("X") == GenomicRegion("X", 0, 155270560));
     REQUIRE(human.get_sequence(GenomicRegion("15", 51265690, 51265700)) == "ACAATGTTGT");
+    REQUIRE(human.get_sequence(GenomicRegion("5", 100000, 100010)) == "AGGAAGTTTC");
 }

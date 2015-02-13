@@ -12,6 +12,7 @@
 #include <string>
 #include <cstdint>
 #include <stdexcept>
+#include <ostream>
 
 #include "sequence_region.h"
 
@@ -42,7 +43,8 @@ private:
 
 inline
 GenomicRegion::GenomicRegion(std::string contig_name, uint_fast32_t begin, uint_fast32_t end)
-: contig_name_ {contig_name}, contig_region_(begin, end)
+:   contig_name_ {contig_name},
+    contig_region_(begin, end)
 {}
 
 //GenomicRegion::GenomicRegion(std::string the_region)
@@ -109,7 +111,7 @@ inline bool operator>=(const GenomicRegion& lhs, const GenomicRegion& rhs){retur
 inline std::string to_string(const GenomicRegion& a_region)
 {
     return a_region.get_contig_name() + ':' + std::to_string(a_region.get_begin()) + '-'
-    + std::to_string(a_region.get_end());
+            + std::to_string(a_region.get_end());
 }
 
 namespace std {
@@ -120,6 +122,13 @@ namespace std {
             return hash<std::string>()(to_string(r));
         }
     };
+}
+
+inline
+std::ostream& operator<<(std::ostream& os, const GenomicRegion& a_region)
+{
+    os << to_string(a_region);
+    return os;
 }
 
 #endif /* defined(__Octopus__genomic_region__) */

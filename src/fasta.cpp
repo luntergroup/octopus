@@ -8,32 +8,20 @@
 
 #include "fasta.h"
 
-#include "bioio.h"
-#include "utils.h"
-
 Fasta::Fasta(std::string fasta_path)
-: fasta_path_ {fasta_path}, fasta_index_path_ {}
-{
-    if (!is_valid_fasta()) {
-        throw std::runtime_error {"Invalid FASTA " + fasta_path};
-    }
-    
-//    fasta_index_path_ = fasta_path_;
-//    fasta_index_path_.replace_extension("fai");
-    
-    fasta_index_path_ = fasta_path + ".fai";
-    
-    open_files();
-}
+:   Fasta(fasta_path, fasta_path + ".fai")
+{}
 
 Fasta::Fasta(std::string fasta_path, std::string fasta_index_path)
-: fasta_path_ {std::move(fasta_path)}, fasta_index_path_ {std::move(fasta_index_path)}
+:   fasta_path_ {std::move(fasta_path)},
+    fasta_index_path_ {std::move(fasta_index_path)}
 {
     if (!is_valid_fasta()) {
         throw std::runtime_error {"Invalid FASTA " + fasta_path};
     }
     
-    open_files();
+    fasta_ = std::ifstream(fasta_path_);
+    fasta_contig_indices_ = std::move(bioio::read_fasta_index(fasta_index_path_));
 }
 
 bool Fasta::is_valid_fasta() const
@@ -43,12 +31,6 @@ bool Fasta::is_valid_fasta() const
 //        return false;
 //    }
     return true; // TODO: could actually check valid fasta format
-}
-
-void Fasta::open_files()
-{
-    fasta_       = std::ifstream(fasta_path_);
-    fasta_index_ = std::ifstream(fasta_index_path_);
 }
 
 std::string Fasta::get_reference_name()
@@ -67,7 +49,7 @@ std::vector<std::string> Fasta::get_contig_names()
 
 std::uint_fast32_t Fasta::get_contig_size(std::string contig_name)
 {
-    return static_cast<uint_fast32_t>(bioio::get_contig_size(fasta_index_, contig_name));
+    return static_cast<uint_fast32_t>(fasta_contig_indices_.at(contig_name).length);
 }
 
 std::string Fasta::get_sequence(const GenomicRegion& a_region)
@@ -75,9 +57,7 @@ std::string Fasta::get_sequence(const GenomicRegion& a_region)
     if (is_in_cache(a_region)) {
         return region_cache_.at(a_region);
     } else {
-        //TODO: this is a bit hacky/inefficient.. will change when bioio is better.
-        auto contig_map = bioio::read_fasta_index(fasta_index_path_);
-        auto index = contig_map[a_region.get_contig_name()];
-        return bioio::read_fasta_contig(fasta_, index, a_region.get_begin(), size(a_region));
+        return bioio::read_fasta_contig(fasta_, fasta_contig_indices_.at(a_region.get_contig_name()),
+                                        a_region.get_begin(), size(a_region));
     }
 }

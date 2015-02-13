@@ -7,6 +7,11 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		CA03C14E1A8C0519000D3494 /* read_reader.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA03C14C1A8C0519000D3494 /* read_reader.cpp */; };
+		CA03C1511A8C0D3D000D3494 /* htslib_facade.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA03C14F1A8C0D3D000D3494 /* htslib_facade.cpp */; };
+		CA03C2251A8C1702000D3494 /* read_reader_test.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA03C2241A8C1702000D3494 /* read_reader_test.cpp */; };
+		CA03C2271A8C1BED000D3494 /* reference_benchmarks.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA03C2261A8C1BED000D3494 /* reference_benchmarks.cpp */; };
+		CA03C2ED1A8D587F000D3494 /* libhts.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = CA03C2EC1A8D587F000D3494 /* libhts.dylib */; };
 		CAA4DC251A81981400DD3E9A /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CAA4DC241A81981400DD3E9A /* main.cpp */; };
 		CAA4DC321A82B36300DD3E9A /* README.md in Sources */ = {isa = PBXBuildFile; fileRef = CAA4DC311A82B36300DD3E9A /* README.md */; };
 		CAA4DC341A83A2AB00DD3E9A /* Makefile in Sources */ = {isa = PBXBuildFile; fileRef = CAA4DC331A83A2AB00DD3E9A /* Makefile */; };
@@ -18,7 +23,6 @@
 		D4907F5B1A8A374000639203 /* fasta.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D4907F591A8A374000639203 /* fasta.cpp */; };
 		D4907F5F1A8A3ADD00639203 /* utils.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D4907F5D1A8A3ADD00639203 /* utils.cpp */; };
 		D4907F651A8A6EE600639203 /* reference_genome_implementor_factory.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D4907F631A8A6EE600639203 /* reference_genome_implementor_factory.cpp */; };
-		D4907F6B1A8BC06800639203 /* aligned_read.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D4907F691A8BC06800639203 /* aligned_read.cpp */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -35,6 +39,16 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		CA03C14C1A8C0519000D3494 /* read_reader.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = read_reader.cpp; sourceTree = "<group>"; };
+		CA03C14D1A8C0519000D3494 /* read_reader.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = read_reader.h; sourceTree = "<group>"; };
+		CA03C14F1A8C0D3D000D3494 /* htslib_facade.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = htslib_facade.cpp; sourceTree = "<group>"; };
+		CA03C1501A8C0D3D000D3494 /* htslib_facade.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = htslib_facade.h; sourceTree = "<group>"; };
+		CA03C2241A8C1702000D3494 /* read_reader_test.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = read_reader_test.cpp; sourceTree = "<group>"; };
+		CA03C2261A8C1BED000D3494 /* reference_benchmarks.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = reference_benchmarks.cpp; sourceTree = "<group>"; };
+		CA03C2291A8C1C8C000D3494 /* benchmark_utils.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = benchmark_utils.h; sourceTree = "<group>"; };
+		CA03C22A1A8CEF25000D3494 /* read_reader_implementor.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = read_reader_implementor.h; sourceTree = "<group>"; };
+		CA03C22B1A8D2C5D000D3494 /* cigar_string.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = cigar_string.h; sourceTree = "<group>"; };
+		CA03C2EC1A8D587F000D3494 /* libhts.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libhts.dylib; path = ../../htslib/libhts.dylib; sourceTree = "<group>"; };
 		CAA4DC211A81981400DD3E9A /* Octopus */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = Octopus; sourceTree = BUILT_PRODUCTS_DIR; };
 		CAA4DC241A81981400DD3E9A /* main.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = main.cpp; path = ../src/main.cpp; sourceTree = "<group>"; };
 		CAA4DC301A82B28800DD3E9A /* .gitignore */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = .gitignore; sourceTree = "<group>"; };
@@ -59,7 +73,6 @@
 		D4907F5E1A8A3ADD00639203 /* utils.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = utils.h; sourceTree = "<group>"; };
 		D4907F631A8A6EE600639203 /* reference_genome_implementor_factory.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = reference_genome_implementor_factory.cpp; sourceTree = "<group>"; };
 		D4907F641A8A6EE600639203 /* reference_genome_implementor_factory.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = reference_genome_implementor_factory.h; sourceTree = "<group>"; };
-		D4907F691A8BC06800639203 /* aligned_read.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = aligned_read.cpp; sourceTree = "<group>"; };
 		D4907F6A1A8BC06800639203 /* aligned_read.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = aligned_read.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -68,12 +81,22 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				CA03C2ED1A8D587F000D3494 /* libhts.dylib in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		CA03C2281A8C1C2D000D3494 /* benchmarks */ = {
+			isa = PBXGroup;
+			children = (
+				CA03C2261A8C1BED000D3494 /* reference_benchmarks.cpp */,
+				CA03C2291A8C1C8C000D3494 /* benchmark_utils.h */,
+			);
+			name = benchmarks;
+			sourceTree = "<group>";
+		};
 		CAA4DC181A81981400DD3E9A = {
 			isa = PBXGroup;
 			children = (
@@ -112,6 +135,7 @@
 		CAA4DC2B1A8219C700DD3E9A /* lib */ = {
 			isa = PBXGroup;
 			children = (
+				CA03C2EC1A8D587F000D3494 /* libhts.dylib */,
 			);
 			path = lib;
 			sourceTree = "<group>";
@@ -128,9 +152,11 @@
 		CAA4DC2D1A8219D900DD3E9A /* test */ = {
 			isa = PBXGroup;
 			children = (
+				CA03C2281A8C1C2D000D3494 /* benchmarks */,
 				CAA4DC241A81981400DD3E9A /* main.cpp */,
 				D4907F4A1A88E20E00639203 /* variant_tests.cpp */,
 				D4907F561A8A2A9B00639203 /* reference_tests.cpp */,
+				CA03C2241A8C1702000D3494 /* read_reader_test.cpp */,
 			);
 			path = test;
 			sourceTree = "<group>";
@@ -166,14 +192,19 @@
 			children = (
 				D4907F471A88D71800639203 /* genomic_region.h */,
 				D4907F4D1A89095400639203 /* sequence_region.h */,
-				D4907F541A8A18CF00639203 /* reference_genome.h */,
 				D4907F581A8A35EA00639203 /* reference_genome_implementor.h */,
+				D4907F541A8A18CF00639203 /* reference_genome.h */,
 				D4907F5A1A8A374000639203 /* fasta.h */,
 				D4907F591A8A374000639203 /* fasta.cpp */,
 				D4907F641A8A6EE600639203 /* reference_genome_implementor_factory.h */,
 				D4907F631A8A6EE600639203 /* reference_genome_implementor_factory.cpp */,
+				CA03C22B1A8D2C5D000D3494 /* cigar_string.h */,
 				D4907F6A1A8BC06800639203 /* aligned_read.h */,
-				D4907F691A8BC06800639203 /* aligned_read.cpp */,
+				CA03C14D1A8C0519000D3494 /* read_reader.h */,
+				CA03C14C1A8C0519000D3494 /* read_reader.cpp */,
+				CA03C22A1A8CEF25000D3494 /* read_reader_implementor.h */,
+				CA03C1501A8C0D3D000D3494 /* htslib_facade.h */,
+				CA03C14F1A8C0D3D000D3494 /* htslib_facade.cpp */,
 			);
 			name = io;
 			sourceTree = "<group>";
@@ -234,11 +265,14 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				D4907F6B1A8BC06800639203 /* aligned_read.cpp in Sources */,
+				CA03C2251A8C1702000D3494 /* read_reader_test.cpp in Sources */,
+				CA03C2271A8C1BED000D3494 /* reference_benchmarks.cpp in Sources */,
 				CAA4DC481A841B2600DD3E9A /* variant_factory.cpp in Sources */,
+				CA03C14E1A8C0519000D3494 /* read_reader.cpp in Sources */,
 				D4907F5B1A8A374000639203 /* fasta.cpp in Sources */,
 				D4907F4B1A88E20E00639203 /* variant_tests.cpp in Sources */,
 				CAA4DC4D1A84304700DD3E9A /* variant.cpp in Sources */,
+				CA03C1511A8C0D3D000D3494 /* htslib_facade.cpp in Sources */,
 				CAA4DC341A83A2AB00DD3E9A /* Makefile in Sources */,
 				D4907F571A8A2A9B00639203 /* reference_tests.cpp in Sources */,
 				D4907F5F1A8A3ADD00639203 /* utils.cpp in Sources */,
@@ -328,15 +362,20 @@
 		CAA4DC291A81981400DD3E9A /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = YES;
 				CLANG_CXX_LANGUAGE_STANDARD = "c++14";
 				FRAMEWORK_SEARCH_PATHS = "$(inherited)";
+				GCC_OPTIMIZATION_LEVEL = 0;
 				HEADER_SEARCH_PATHS = (
 					"$(inherited)",
 					/usr/local/Cellar/boost/1.57.0/include,
+					/usr/local/include,
 				);
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
 					/usr/local/Cellar/boost/1.57.0/lib,
+					"$(PROJECT_DIR)/lib",
+					/Users/danielcooke/Development/htslib,
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
@@ -345,15 +384,20 @@
 		CAA4DC2A1A81981400DD3E9A /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = YES;
 				CLANG_CXX_LANGUAGE_STANDARD = "c++14";
 				FRAMEWORK_SEARCH_PATHS = "$(inherited)";
+				GCC_OPTIMIZATION_LEVEL = 3;
 				HEADER_SEARCH_PATHS = (
 					"$(inherited)",
 					/usr/local/Cellar/boost/1.57.0/include,
+					/usr/local/include,
 				);
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
 					/usr/local/Cellar/boost/1.57.0/lib,
+					"$(PROJECT_DIR)/lib",
+					/Users/danielcooke/Development/htslib,
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
