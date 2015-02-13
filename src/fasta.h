@@ -19,9 +19,9 @@
 //#include "boost/filesystem/path.hpp"
 //#include "boost/filesystem/operations.hpp"
 
-#include "bioio.h"
 #include "reference_genome_implementor.h"
 #include "genomic_region.h"
+#include "bioio.h"
 
 //namespace fs = boost::filesystem;
 

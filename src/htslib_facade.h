@@ -15,6 +15,7 @@
 #include <cstdint>
 #include <algorithm>
 #include <unordered_map>
+#include <unordered_set>
 
 #include "htslib/hts.h"
 #include "htslib/sam.h"
@@ -39,7 +40,7 @@ public:
     
     std::set<AlignedRead> fetch_reads(const GenomicRegion& a_region) override;
     uint_fast32_t get_num_reference_contigs() noexcept override;
-    std::set<std::string> get_reference_contig_names() override;
+    std::unordered_set<std::string> get_reference_contig_names() override;
     uint_fast32_t get_reference_contig_size(const std::string& contig_name) override;
     
 private:
@@ -72,6 +73,7 @@ private:
     hts_idx_t* the_index_;
     std::unordered_map<int32_t, std::string> htslib_tid_to_contig_name_;
     
+    std::unordered_map<int32_t, std::string> get_htslib_tid_to_contig_name_mappings() const;
     int32_t get_htslib_tid(const std::string& reference_contig_name) const;
 };
 
@@ -80,9 +82,11 @@ HtslibFacade::HtslibFacade(const std::string& htslib_file_path)
 :   the_filename_ {htslib_file_path},
     the_hts_file_ {hts_open(the_filename_.c_str(), "r")},
     the_header_ {bam_hdr_init()},
-    the_index_ {sam_index_load(the_hts_file_, the_filename_.c_str())}
+    the_index_ {sam_index_load(the_hts_file_, the_filename_.c_str())},
+    htslib_tid_to_contig_name_ {}
 {
     the_header_   = sam_hdr_read(the_hts_file_);
+    htslib_tid_to_contig_name_ = get_htslib_tid_to_contig_name_mappings();
 }
 
 inline
@@ -101,12 +105,6 @@ inline
 uint_fast32_t HtslibFacade::get_num_reference_contigs() noexcept
 {
     return the_header_->n_targets;
-}
-
-inline
-std::set<std::string> HtslibFacade::get_reference_contig_names()
-{
-    return std::set<std::string> {};
 }
 
 inline
@@ -171,10 +169,12 @@ inline CigarString
 HtslibFacade::HtslibIterator::make_cigar_string(uint32_t* cigar_operations,
                                           uint32_t cigar_length) const
 {
+    static constexpr const char* operation_table {"MIDNSHP=X"};
     std::vector<CigarString::CigarOperation> result;
     result.reserve(cigar_length);
     for (uint32_t i {0}; i < cigar_length; ++i) {
-        result.emplace_back(bam_cigar_oplen(cigar_operations[i]), bam_cigar_op(cigar_operations[i]));
+        result.emplace_back(bam_cigar_oplen(cigar_operations[i]),
+                            operation_table[bam_cigar_op(cigar_operations[i])]);
     };
     return CigarString(std::move(result));
 }

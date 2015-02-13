@@ -15,6 +15,7 @@
 #include <functional>
 
 #include "genomic_region.h"
+#include "comparable.h"
 
 using std::uint_fast32_t;
 using std::size_t;
@@ -27,7 +28,7 @@ using std::size_t;
    modelling the prior probability of different variants. This solution uses a strategy pattern
    injection (the functional 'prior_model' is injected) to acheive runtime polymorphism.
  */
-class Variant
+class Variant : Comparable<Variant>
 {
 public:
     
@@ -137,7 +138,11 @@ inline bool operator==(const Variant& lhs, const Variant& rhs)
            lhs.get_sequence_added() == rhs.get_sequence_added() &&
            lhs.get_sequence_removed() == rhs.get_sequence_removed();
 }
-inline bool operator!=(const Variant& lhs, const Variant& rhs) {return !operator==(lhs,rhs);}
+
+inline bool operator<(const Variant& lhs, const Variant& rhs)
+{
+    return lhs.get_removed_region() < rhs.get_removed_region();
+}
 
 namespace std {
     template <> struct hash<Variant>

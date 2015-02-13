@@ -11,6 +11,8 @@
 
 #include <cstdint>
 
+#include "comparable.h"
+
 using std::uint_fast32_t;
 using std::int_fast64_t;
 
@@ -18,7 +20,7 @@ using std::int_fast64_t;
     Represents a region of continuous sequence.
     begin and end positions are zero-indexed half open - [begin,end) - indexes.
  */
-class SequenceRegion
+class SequenceRegion : Comparable<SequenceRegion>
 {
 public:
     SequenceRegion() = delete;
@@ -66,13 +68,10 @@ inline bool operator==(const SequenceRegion& lhs, const SequenceRegion& rhs)
 {
     return lhs.get_begin() == rhs.get_begin() && lhs.get_end() == rhs.get_end();
 }
+
 inline bool operator< (const SequenceRegion& lhs, const SequenceRegion& rhs)
 {
     return lhs.get_begin() < rhs.get_begin();
 }
-inline bool operator!=(const SequenceRegion& lhs, const SequenceRegion& rhs){return !operator==(lhs, rhs);}
-inline bool operator> (const SequenceRegion& lhs, const SequenceRegion& rhs){return operator<(rhs,lhs);}
-inline bool operator<=(const SequenceRegion& lhs, const SequenceRegion& rhs){return !operator>(lhs,rhs);}
-inline bool operator>=(const SequenceRegion& lhs, const SequenceRegion& rhs){return !operator<(lhs,rhs);}
 
 #endif /* defined(__Octopus__sequence_region__) */

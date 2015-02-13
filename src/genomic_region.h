@@ -15,6 +15,7 @@
 #include <ostream>
 
 #include "sequence_region.h"
+#include "comparable.h"
 
 using std::uint_fast32_t;
 using std::int_fast64_t;
@@ -24,7 +25,7 @@ using std::int_fast64_t;
     name is the reference sequence name (usually a chromosome), and the
     begin and end positions are zero-indexed half open - [begin,end) - indexes.
  */
-class GenomicRegion
+class GenomicRegion : Comparable<GenomicRegion>
 {
 public:
     GenomicRegion() = delete;
@@ -104,9 +105,6 @@ inline bool operator<(const GenomicRegion& lhs, const GenomicRegion& rhs)
     if (is_same_contig(lhs, rhs)) return lhs.get_contig_region() < rhs.get_contig_region();
     throw std::runtime_error {"Cannot compare regions on different contigs"};
 }
-inline bool operator> (const GenomicRegion& lhs, const GenomicRegion& rhs){return operator<(rhs,lhs);}
-inline bool operator<=(const GenomicRegion& lhs, const GenomicRegion& rhs){return !operator>(lhs,rhs);}
-inline bool operator>=(const GenomicRegion& lhs, const GenomicRegion& rhs){return !operator<(lhs,rhs);}
 
 inline std::string to_string(const GenomicRegion& a_region)
 {
