@@ -11,12 +11,12 @@
 #include <sstream>
 
 HtslibFacade::HtslibFacade(const std::string& htslib_file_path)
-:   the_filename_ {htslib_file_path},
-    the_hts_file_ {hts_open(the_filename_.c_str(), "r")},
-    the_header_ {bam_hdr_init()},
-    the_index_ {sam_index_load(the_hts_file_, the_filename_.c_str())},
-    contig_name_map_ {},
-    sample_id_map_ {}
+:the_filename_ {htslib_file_path},
+ the_hts_file_ {hts_open(the_filename_.c_str(), "r")},
+ the_header_ {bam_hdr_init()},
+ the_index_ {sam_index_load(the_hts_file_, the_filename_.c_str())},
+ contig_name_map_ {},
+ sample_id_map_ {}
 {
     the_header_      = sam_hdr_read(the_hts_file_);
     contig_name_map_ = get_htslib_tid_to_contig_name_map();
@@ -65,7 +65,7 @@ HtslibFacade::SampleIdToReadsMap HtslibFacade::fetch_reads(const GenomicRegion& 
     SampleIdToReadsMap the_reads {};
     while (++it) {
         try {
-            auto a_read_and_its_group = *it;
+            auto&& a_read_and_its_group = *it;
             auto the_sample_id = sample_id_map_[a_read_and_its_group.second];
             the_reads[std::move(the_sample_id)].emplace_back(std::move(a_read_and_its_group.first));
         } catch (const std::runtime_error& e) {
@@ -134,9 +134,9 @@ HtslibFacade::HtsTidToContigNameMap HtslibFacade::get_htslib_tid_to_contig_name_
 }
 
 HtslibFacade::HtslibIterator::HtslibIterator(HtslibFacade& hts_facade, const GenomicRegion& a_region)
-:   hts_facade_ {hts_facade},
-    b_ {bam_init1()},
-    the_hts_iterator_ {sam_itr_querys(hts_facade_.the_index_, hts_facade_.the_header_,
+:hts_facade_ {hts_facade},
+ b_ {bam_init1()},
+ the_hts_iterator_ {sam_itr_querys(hts_facade_.the_index_, hts_facade_.the_header_,
                                                to_string(a_region).c_str())}
 {}
 
@@ -155,6 +155,7 @@ std::pair<AlignedRead, std::string> HtslibFacade::HtslibIterator::operator*() co
     auto the_qualities = get_qualities();
     if (the_qualities.empty() || the_qualities[0] == 0xff) throw std::runtime_error {"bad sequence"};
     auto the_cigar_string = get_cigar_string();
+    if (the_cigar_string.empty()) throw std::runtime_error {"bad sequence"};
     auto c = b_->core;
     auto read_start = static_cast<uint_fast32_t>(get_soft_clipped_read_begin(the_cigar_string, c.pos));
     

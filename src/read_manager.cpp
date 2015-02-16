@@ -1,16 +1,16 @@
 //
-//  read_factory.cpp
+//  read_manager.cpp
 //  Octopus
 //
 //  Created by Daniel Cooke on 14/02/2015.
 //  Copyright (c) 2015 Oxford University. All rights reserved.
 //
 
-#include "read_factory.h"
+#include "read_manager.h"
 
 #include <algorithm>
 
-ReadFactory::ReadFactory(std::vector<std::string>&& read_file_paths, unsigned Max_open_files)
+ReadManager::ReadManager(std::vector<std::string>&& read_file_paths, unsigned Max_open_files)
 :   closed_files_ (std::make_move_iterator(std::begin(read_file_paths)),
                    std::make_move_iterator(std::end(read_file_paths))),
     open_readers_ {},
@@ -22,7 +22,7 @@ ReadFactory::ReadFactory(std::vector<std::string>&& read_file_paths, unsigned Ma
     setup();
 }
 
-void ReadFactory::setup()
+void ReadManager::setup()
 {
     for (const auto& read_file_path : closed_files_) {
         auto read_reader = make_read_reader(read_file_path);
@@ -42,17 +42,19 @@ void ReadFactory::setup()
 }
 
 std::vector<AlignedRead>
-ReadFactory::fetch_reads(const std::string& a_sample_id, const GenomicRegion& a_region)
+ReadManager::fetch_reads(const std::string& a_sample_id, const GenomicRegion& a_region)
 {
     std::vector<AlignedRead> result {};
-    auto good_files = get_files_containing_region(a_region);
-    for (auto& file : good_files) {
+    for (const auto& file : get_files_containing_region(a_region)) {
         if (open_readers_.count(file) == 0) {
             open_reader(file);
         }
-        auto reads = open_readers_.at(file).fetch_reads(a_region).at(a_sample_id);
-        result.insert(std::end(result), std::make_move_iterator(std::begin(reads)),
-                      std::make_move_iterator(std::end(reads)));
+        auto&& reads = open_readers_.at(file).fetch_reads(a_region);
+        if (reads.count(a_sample_id) > 0) {
+            auto&& reads_for_sample = reads.at(a_sample_id);
+            result.insert(std::end(result), std::make_move_iterator(std::begin(reads_for_sample)),
+                          std::make_move_iterator(std::end(reads_for_sample)));
+        }
     }
     return result;
 }

@@ -67,21 +67,21 @@ inline
 Variant::Variant(std::string reference_contig_name, uint_fast32_t reference_removed_region_begin,
                  std::string reference_sequence_removed, std::string sequence_added,
                  std::function<double()> prior_model)
-:   reference_removed_region_(reference_contig_name, reference_removed_region_begin,
-                              reference_removed_region_begin +
-                              static_cast<uint_fast32_t>(reference_sequence_removed.size())),
-    reference_sequence_removed_(reference_sequence_removed),
-    sequence_added_(sequence_added),
-    prior_model_(prior_model)
+:reference_removed_region_(reference_contig_name, reference_removed_region_begin,
+                           reference_removed_region_begin +
+                           static_cast<uint_fast32_t>(reference_sequence_removed.size())),
+ reference_sequence_removed_(reference_sequence_removed),
+ sequence_added_(sequence_added),
+ prior_model_(prior_model)
 {}
 
 inline
 Variant::Variant(GenomicRegion reference_removed_region, std::string reference_sequence_removed,
                  std::string sequence_added, std::function<double()> prior_model)
-:   reference_removed_region_(std::move(reference_removed_region)),
-    reference_sequence_removed_(reference_sequence_removed),
-    sequence_added_(sequence_added),
-    prior_model_(prior_model)
+:reference_removed_region_(std::move(reference_removed_region)),
+ reference_sequence_removed_(reference_sequence_removed),
+ sequence_added_(sequence_added),
+ prior_model_(prior_model)
 {}
 
 inline const GenomicRegion& Variant::get_removed_region() const noexcept

@@ -48,8 +48,8 @@ private:
 
 inline
 GenomicRegion::GenomicRegion(std::string contig_name, uint_fast32_t begin, uint_fast32_t end)
-:   contig_name_ {contig_name},
-    contig_region_ {begin, end}
+:contig_name_ {contig_name},
+ contig_region_ {begin, end}
 {}
 
 //GenomicRegion::GenomicRegion(std::string the_region)

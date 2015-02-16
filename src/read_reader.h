@@ -46,8 +46,8 @@ private:
 
 inline ReadReader::ReadReader(const std::string& read_file_path,
                               std::unique_ptr<IReadReaderImplementor> the_implementation)
-:   read_file_path_ {read_file_path},
-    the_implementation_ {std::move(the_implementation)}
+:read_file_path_ {read_file_path},
+ the_implementation_ {std::move(the_implementation)}
 {}
 
 inline const std::string& ReadReader::get_read_file_path() const noexcept

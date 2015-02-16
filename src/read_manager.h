@@ -1,13 +1,13 @@
 //
-//  read_factory.h
+//  read_manager.h
 //  Octopus
 //
 //  Created by Daniel Cooke on 14/02/2015.
 //  Copyright (c) 2015 Oxford University. All rights reserved.
 //
 
-#ifndef __Octopus__read_factory__
-#define __Octopus__read_factory__
+#ifndef __Octopus__read_manager__
+#define __Octopus__read_manager__
 
 #include <string>
 #include <vector>
@@ -23,16 +23,16 @@
 #include "read_reader_implementor.h"
 #include "htslib_facade.h"
 
-class ReadFactory
+class ReadManager
 {
 public:
-    ReadFactory() = default;
-    ReadFactory(std::vector<std::string>&& read_file_paths, unsigned Max_open_files = 20);
+    ReadManager() = default;
+    ReadManager(std::vector<std::string>&& read_file_paths, unsigned Max_open_files = 20);
     
-    ReadFactory(const ReadFactory&)            = delete;
-    ReadFactory& operator=(const ReadFactory&) = delete;
-    ReadFactory(ReadFactory&&)                 = default;
-    ReadFactory& operator=(ReadFactory&&)      = default;
+    ReadManager(const ReadManager&)            = delete;
+    ReadManager& operator=(const ReadManager&) = delete;
+    ReadManager(ReadManager&&)                 = default;
+    ReadManager& operator=(ReadManager&&)      = default;
     
     unsigned get_num_samples() const;
     std::vector<std::string> get_sample_ids() const;
@@ -56,13 +56,13 @@ private:
     std::vector<std::string> get_files_containing_region(const GenomicRegion& a_region) const;
 };
 
-inline unsigned ReadFactory::get_num_samples() const
+inline unsigned ReadManager::get_num_samples() const
 {
     return num_samples_;
 }
 
 // TODO: Evaluate if this should change to a member variable.
-inline std::vector<std::string> ReadFactory::get_sample_ids() const
+inline std::vector<std::string> ReadManager::get_sample_ids() const
 {
     std::vector<std::string> result {};
     result.reserve(num_samples_);
@@ -72,25 +72,25 @@ inline std::vector<std::string> ReadFactory::get_sample_ids() const
     return result;
 }
 
-inline ReadReader ReadFactory::make_read_reader(const std::string& read_file_path)
+inline ReadReader ReadManager::make_read_reader(const std::string& read_file_path)
 {
     return ReadReader {read_file_path, std::make_unique<HtslibFacade>(read_file_path)};
 }
 
-inline void ReadFactory::open_reader(const std::string &read_file_path)
+inline void ReadManager::open_reader(const std::string &read_file_path)
 {
     open_readers_.emplace(std::make_pair(read_file_path, make_read_reader(read_file_path)));
     closed_files_.erase(read_file_path);
 }
 
-inline void ReadFactory::close_reader(const std::string &read_file_path)
+inline void ReadManager::close_reader(const std::string &read_file_path)
 {
     open_readers_.erase(read_file_path);
     closed_files_.insert(read_file_path);
 }
 
 inline std::vector<std::string>
-ReadFactory::get_files_containing_region(const GenomicRegion& a_region) const
+ReadManager::get_files_containing_region(const GenomicRegion& a_region) const
 {
     if (files_containing_region_.count(a_region) > 0) {
         return files_containing_region_.at(a_region);
@@ -105,4 +105,4 @@ ReadFactory::get_files_containing_region(const GenomicRegion& a_region) const
     return result;
 }
 
-#endif /* defined(__Octopus__read_factory__) */
+#endif /* defined(__Octopus__read_manager__) */

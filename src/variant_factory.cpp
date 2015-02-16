@@ -11,8 +11,8 @@
 #include "variant_factory.h"
 
 Variant
-VariantFactory::make(std::string contig_name, __uint32_t contig_begin_pos, std::string sequence_added,
-                     std::string sequence_removed) const
+VariantFactory::make(std::string contig_name, __uint32_t contig_begin_pos,
+                     std::string sequence_added, std::string sequence_removed) const
 {
     std::function<double()> prior_model {};
     if (sequence_added.length() == sequence_removed.length()) {

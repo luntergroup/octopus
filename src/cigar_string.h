@@ -50,6 +50,7 @@ public:
     Iterator begin() const;
     Iterator end() const;
     const CigarOperation& at(uint_fast32_t n) const;
+    bool empty() const noexcept;
     uint_fast32_t size() const noexcept;
     bool is_soft_clipped() const noexcept;
     
@@ -67,8 +68,8 @@ inline CigarString::CigarString(const std::string& a_cigar_string) : the_cigar_s
 }
 
 inline CigarString::CigarOperation::CigarOperation(uint_fast32_t size, char flag) noexcept
-:   size_ {size},
-    flag_ {flag}
+:size_ {size},
+ flag_ {flag}
 {}
 
 inline uint_fast32_t CigarString::CigarOperation::get_size() const noexcept
@@ -82,7 +83,7 @@ inline char CigarString::CigarOperation::get_flag() const noexcept
 }
 
 inline CigarString::CigarString(std::vector<CigarOperation>&& a_cigar_string)
-    : the_cigar_string_ {std::move(a_cigar_string)}
+:the_cigar_string_ {std::move(a_cigar_string)}
 {}
 
 inline CigarString::CigarOperation CigarString::get_cigar_operation(uint_fast32_t index) const
@@ -105,6 +106,11 @@ inline CigarString::Iterator CigarString::end() const
 inline const CigarString::CigarOperation& CigarString::at(uint_fast32_t n) const
 {
     return the_cigar_string_.at(n);
+}
+
+inline bool CigarString::empty() const noexcept
+{
+    return the_cigar_string_.empty();
 }
 
 inline uint_fast32_t CigarString::size() const noexcept

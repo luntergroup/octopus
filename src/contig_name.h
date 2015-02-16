@@ -39,7 +39,7 @@ private:
 };
 
 inline ContigName::ContigName(const std::string& contig_name)
-:   contig_id_ {contig_name_to_id_.at(contig_name)}
+:contig_id_ {contig_name_to_id_.at(contig_name)}
 {}
 
 inline std::string ContigName::get_name() const{

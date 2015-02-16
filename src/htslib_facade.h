@@ -22,6 +22,10 @@
 #include "read_reader_implementor.h"
 #include "aligned_read.h"
 
+// for testing
+#include <iostream>
+//
+
 using std::uint_fast32_t;
 using std::uint_fast8_t;
 using std::uint8_t;
@@ -76,6 +80,7 @@ private:
         CigarString get_cigar_string() const;
         std::string get_read_group() const;
         std::string get_contig_name(int32_t htslib_tid) const;
+        std::string get_read_name() const;
     };
     
     // No getting around these constants. I'll put them here so they are in plain sight.
@@ -167,8 +172,8 @@ inline CigarString HtslibFacade::HtslibIterator::get_cigar_string() const
 {
     static constexpr const char* operation_table {"MIDNSHP=X"};
     auto cigar_operations = bam_get_cigar(b_);
-    std::vector<CigarString::CigarOperation> result;
     auto length = get_cigar_length();
+    std::vector<CigarString::CigarOperation> result;
     result.reserve(length);
     for (uint32_t i {0}; i < length; ++i) {
         result.emplace_back(bam_cigar_oplen(cigar_operations[i]),
@@ -185,6 +190,11 @@ inline std::string HtslibFacade::HtslibIterator::get_read_group() const
 inline std::string HtslibFacade::HtslibIterator::get_contig_name(int32_t htslib_tid) const
 {
     return hts_facade_.contig_name_map_[htslib_tid];
+}
+
+inline std::string HtslibFacade::HtslibIterator::get_read_name() const
+{
+    return std::string {bam_get_qname(b_)};
 }
 
 inline std::string HtslibFacade::get_reference_contig_name(int32_t hts_tid) const

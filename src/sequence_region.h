@@ -40,7 +40,8 @@ private:
 };
 
 inline SequenceRegion::SequenceRegion(uint_fast32_t begin, uint_fast32_t end)
-: begin_ {begin}, end_ {end}
+:begin_ {begin},
+ end_ {end}
 {}
 
 inline uint_fast32_t SequenceRegion::get_begin() const noexcept

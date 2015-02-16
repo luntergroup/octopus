@@ -16,7 +16,7 @@
 #include "test_common.h"
 #include "genomic_region.h"
 #include "htslib_facade.h"
-#include "read_factory.h"
+#include "read_manager.h"
 
 TEST_CASE("read_reader_open_test", "[read_reader]")
 {
@@ -36,19 +36,21 @@ TEST_CASE("read_reader_open_test", "[read_reader]")
 
 TEST_CASE("read_factory_test", "[read_factory]")
 {
-    ReadFactory a_read_factory(std::vector<std::string> {human_1000g_bam});
+    ReadManager a_read_manager(std::vector<std::string> {human_1000g_bam});
     
-    auto sample_ids = a_read_factory.get_sample_ids();
+    auto sample_ids = a_read_manager.get_sample_ids();
     
     REQUIRE(sample_ids.size() == 1);
     
     auto the_sample_id = sample_ids.at(0);
     
-    GenomicRegion a_region {"10", 1000000, 1000100};
+    GenomicRegion a_big_region {"1", 9990, 10000};
+    GenomicRegion a_small_region {"10", 1000000, 1000100};
     GenomicRegion another_region {"3", 100000, 100100};
     
-    auto reads      = a_read_factory.fetch_reads(the_sample_id, a_region);
-    auto more_reads = a_read_factory.fetch_reads(the_sample_id, another_region);
+    auto some_reads = a_read_manager.fetch_reads(the_sample_id, a_big_region);
+    auto reads      = a_read_manager.fetch_reads(the_sample_id, a_small_region);
+    auto more_reads = a_read_manager.fetch_reads(the_sample_id, another_region);
     
     reads.insert(std::end(reads), std::make_move_iterator(std::begin(more_reads)),
                  std::make_move_iterator(std::end(more_reads)));
