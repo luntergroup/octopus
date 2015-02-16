@@ -36,8 +36,8 @@ public:
         uint_fast32_t get_size() const noexcept;
         char get_flag() const noexcept;
     private:
-        const uint_fast32_t size_;
-        const char flag_;
+        uint_fast32_t size_;
+        char flag_;
     };
     
     using Iterator = std::vector<CigarOperation>::const_iterator;
@@ -51,6 +51,7 @@ public:
     Iterator end() const;
     const CigarOperation& at(uint_fast32_t n) const;
     uint_fast32_t size() const noexcept;
+    bool is_soft_clipped() const noexcept;
     
 private:
     std::vector<CigarOperation> the_cigar_string_;
@@ -109,6 +110,11 @@ inline const CigarString::CigarOperation& CigarString::at(uint_fast32_t n) const
 inline uint_fast32_t CigarString::size() const noexcept
 {
     return static_cast<uint_fast32_t>(the_cigar_string_.size());
+}
+
+inline bool CigarString::is_soft_clipped() const noexcept
+{
+    return the_cigar_string_[0].get_flag() == 'S';
 }
 
 // Defining member and non-member size as the method for calculating

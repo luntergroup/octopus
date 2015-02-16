@@ -22,7 +22,7 @@ public:
     virtual std::vector<std::string> get_contig_names() = 0;
     virtual std::uint_fast32_t get_contig_size(std::string contig_name) = 0;
     virtual std::string get_sequence(const GenomicRegion& a_region) = 0;
-    virtual ~IReferenceGenomeImplementor() = default;
+    virtual ~IReferenceGenomeImplementor() noexcept = default;
 };
 
 #endif

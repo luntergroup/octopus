@@ -26,12 +26,12 @@ TEST_CASE("snp_overlap_test", "[snps]")
     auto snp5 = a_variant_factory.make("chr1", 99, "C", "T");
     auto snp6 = a_variant_factory.make("chr1", 101, "C", "T");
     
-    REQUIRE(overlaps(*snp1, *snp1));
-    REQUIRE(overlaps(*snp1, *snp4));
-    REQUIRE(!overlaps(*snp1, *snp2));
-    REQUIRE(!overlaps(*snp1, *snp3));
-    REQUIRE(!overlaps(*snp1, *snp5));
-    REQUIRE(!overlaps(*snp1, *snp6));
+    REQUIRE(overlaps(snp1, snp1));
+    REQUIRE(overlaps(snp1, snp4));
+    REQUIRE(!overlaps(snp1, snp2));
+    REQUIRE(!overlaps(snp1, snp3));
+    REQUIRE(!overlaps(snp1, snp5));
+    REQUIRE(!overlaps(snp1, snp6));
 }
 
 TEST_CASE("mnp_overlap_test", "[mnp]")
@@ -51,17 +51,17 @@ TEST_CASE("mnp_overlap_test", "[mnp]")
     auto mnp9 = a_variant_factory.make("chr1", 97, "CAT", "TAC");
     auto mnp10 = a_variant_factory.make("chr1", 103, "CAT", "TAC");
     
-    REQUIRE(overlaps(*mnp1, *mnp1));
-    REQUIRE(overlaps(*mnp1, *mnp2));
-    REQUIRE(overlaps(*mnp1, *mnp3));
-    REQUIRE(overlaps(*mnp1, *mnp4));
-    REQUIRE(overlaps(*mnp1, *mnp5));
-    REQUIRE(overlaps(*mnp1, *mnp6));
+    REQUIRE(overlaps(mnp1, mnp1));
+    REQUIRE(overlaps(mnp1, mnp2));
+    REQUIRE(overlaps(mnp1, mnp3));
+    REQUIRE(overlaps(mnp1, mnp4));
+    REQUIRE(overlaps(mnp1, mnp5));
+    REQUIRE(overlaps(mnp1, mnp6));
     
-    REQUIRE(overlaps(*mnp1, *mnp7));
-    REQUIRE(overlaps(*mnp1, *mnp8));
-    REQUIRE(!overlaps(*mnp1, *mnp9));
-    REQUIRE(!overlaps(*mnp1, *mnp10));
+    REQUIRE(overlaps(mnp1, mnp7));
+    REQUIRE(overlaps(mnp1, mnp8));
+    REQUIRE(!overlaps(mnp1, mnp9));
+    REQUIRE(!overlaps(mnp1, mnp10));
 }
 
 TEST_CASE("insertion_overlap_test", "[insertion]")
@@ -73,9 +73,9 @@ TEST_CASE("insertion_overlap_test", "[insertion]")
     auto insert3 = a_variant_factory.make("chr1", 101, "", "TAG");
     
     // Insertions never overlap. IS THIS RIGHT!?!
-    REQUIRE(!overlaps(*insert1, *insert1));
-    REQUIRE(!overlaps(*insert1, *insert2));
-    REQUIRE(!overlaps(*insert1, *insert3));
+    REQUIRE(!overlaps(insert1, insert1));
+    REQUIRE(!overlaps(insert1, insert2));
+    REQUIRE(!overlaps(insert1, insert3));
 }
 
 TEST_CASE("deletion_overlap_test", "[deletion]")
@@ -86,7 +86,7 @@ TEST_CASE("deletion_overlap_test", "[deletion]")
     auto del2 = a_variant_factory.make("chr1", 99, "TAG", "");
     auto del3 = a_variant_factory.make("chr1", 101, "TAG", "");
     
-    REQUIRE(overlaps(*del1, *del1));
-    REQUIRE(overlaps(*del1, *del2));
-    REQUIRE(overlaps(*del1, *del3));
+    REQUIRE(overlaps(del1, del1));
+    REQUIRE(overlaps(del1, del2));
+    REQUIRE(overlaps(del1, del3));
 }

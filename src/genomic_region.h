@@ -11,7 +11,6 @@
 
 #include <string>
 #include <cstdint>
-#include <stdexcept>
 #include <ostream>
 
 #include "sequence_region.h"
@@ -43,14 +42,14 @@ public:
     uint_fast32_t get_end() const noexcept;
 
 private:
-    const std::string contig_name_;
-    const SequenceRegion contig_region_;
+    std::string contig_name_;
+    SequenceRegion contig_region_;
 };
 
 inline
 GenomicRegion::GenomicRegion(std::string contig_name, uint_fast32_t begin, uint_fast32_t end)
 :   contig_name_ {contig_name},
-    contig_region_(begin, end)
+    contig_region_ {begin, end}
 {}
 
 //GenomicRegion::GenomicRegion(std::string the_region)
@@ -108,7 +107,7 @@ inline bool operator==(const GenomicRegion& lhs, const GenomicRegion& rhs)
 inline bool operator<(const GenomicRegion& lhs, const GenomicRegion& rhs)
 {
     if (is_same_contig(lhs, rhs)) return lhs.get_contig_region() < rhs.get_contig_region();
-    throw std::runtime_error {"Cannot compare regions on different contigs"};
+    throw std::logic_error {"Cannot compare regions on different contigs"};
 }
 
 inline std::string to_string(const GenomicRegion& a_region)

@@ -11,6 +11,7 @@
 #include <iostream>
 #include <string>
 
+#include "test_common.h"
 #include "reference_genome.h"
 #include "reference_genome_implementor_factory.h"
 
@@ -18,11 +19,8 @@ TEST_CASE("initialisation_test", "[reference]")
 {
     ReferenceGenomeImplementorFactory a_factory {};
     
-    std::string homedir {getenv("HOME")};
-    
     // test for a small single genome contig
-    std::string ecoli_fasta_path {homedir + "/Genomics/References/R00000042.fasta"};
-    ReferenceGenome ecoli(a_factory.make(ecoli_fasta_path));
+    ReferenceGenome ecoli(a_factory.make(ecoli_reference_fasta));
     
     REQUIRE(ecoli.get_name() == "R00000042");
     REQUIRE(ecoli.contains_region(GenomicRegion("R00000042", 10000, 2000000)));
@@ -33,8 +31,7 @@ TEST_CASE("initialisation_test", "[reference]")
     REQUIRE(ecoli.get_sequence(GenomicRegion("R00000042", 69, 80)) == "CTTCTGAACTG"); // accross lines
     
     // test for a large multi-contig genome
-    std::string human_fasta_path {homedir + "/Genomics/References/human_g1k_v37.fasta"};
-    ReferenceGenome human(a_factory.make(human_fasta_path));
+    ReferenceGenome human(a_factory.make(human_reference_fasta));
     
     REQUIRE(human.get_name() == "human_g1k_v37");
     REQUIRE(human.contains_region(GenomicRegion("1", 100, 10000)));

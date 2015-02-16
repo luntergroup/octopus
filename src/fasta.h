@@ -31,7 +31,7 @@ public:
     Fasta() = delete;
     Fasta(std::string fasta_path);
     Fasta(std::string fasta_path, std::string fasta_index_path);
-    ~Fasta() override = default;
+    ~Fasta() noexcept override = default;
     
     Fasta(const Fasta&)            = default;
     Fasta& operator=(const Fasta&) = default;

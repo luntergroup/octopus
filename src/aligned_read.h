@@ -38,7 +38,7 @@ public:
     AlignedRead(AlignedRead&&)                 = default;
     AlignedRead& operator=(AlignedRead&&)      = default;
     
-    GenomicRegion get_region() const;
+    const GenomicRegion& get_region() const;
     const std::string& get_contig_name() const;
     uint_fast32_t get_begin() const;
     uint_fast32_t get_end() const;
@@ -52,14 +52,15 @@ public:
     uint_fast32_t get_mate_begin() const;
     
 private:
-    const std::string sequence_;
-    const Qualities qualities_;
-    const CigarString cigar_string_;
-    const GenomicRegion reference_region_;
-    const uint_fast32_t insert_size_;
-    const std::string mate_contig_name_;
-    const uint_fast32_t mate_begin_;
-    const uint_fast8_t mapping_quality_;
+    // The seemingly arbitary order of these members is for memory alignment optimisation
+    GenomicRegion reference_region_;
+    std::string mate_contig_name_;
+    std::string sequence_;
+    CigarString cigar_string_;
+    Qualities qualities_;
+    uint_fast32_t insert_size_;
+    uint_fast32_t mate_begin_;
+    uint_fast8_t mapping_quality_;
 };
 
 inline AlignedRead::AlignedRead(GenomicRegion reference_region, std::string sequence,
@@ -76,7 +77,7 @@ inline AlignedRead::AlignedRead(GenomicRegion reference_region, std::string sequ
     mapping_quality_ {mapping_quality}
 {}
 
-inline GenomicRegion AlignedRead::get_region() const
+inline const GenomicRegion& AlignedRead::get_region() const
 {
     return reference_region_;
 }
@@ -138,12 +139,12 @@ inline uint_fast32_t AlignedRead::get_mate_begin() const
 
 inline bool operator==(const AlignedRead& lhs, const AlignedRead& rhs)
 {
-    return lhs.get_region() == rhs.get_region() &&
-            lhs.get_mapping_quality() == rhs.get_mapping_quality() &&
+    // The order of these comparisons should ensure optimal lazy evaluation
+    return lhs.get_mapping_quality() == rhs.get_mapping_quality() &&
+            lhs.get_region() == rhs.get_region() &&
             lhs.get_cigar_string() == rhs.get_cigar_string() &&
             lhs.get_sequence() == rhs.get_sequence() &&
-            lhs.get_qualities() == rhs.get_qualities() &&
-            lhs.get_insert_size() == rhs.get_insert_size();
+            lhs.get_qualities() == rhs.get_qualities();
 }
 
 inline bool operator< (const AlignedRead& lhs, const AlignedRead& rhs)

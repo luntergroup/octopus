@@ -35,8 +35,8 @@ public:
     uint_fast32_t get_end() const noexcept;
     
 private:
-    const uint_fast32_t begin_;
-    const uint_fast32_t end_;
+    uint_fast32_t begin_;
+    uint_fast32_t end_;
 };
 
 inline SequenceRegion::SequenceRegion(uint_fast32_t begin, uint_fast32_t end)

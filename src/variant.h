@@ -44,7 +44,7 @@ public:
     Variant(Variant&&)                 = default;
     Variant& operator=(Variant&&)      = default;
     
-    GenomicRegion get_removed_region() const noexcept;
+    const GenomicRegion& get_removed_region() const noexcept;
     uint_fast32_t get_removed_region_begin() const noexcept;
     uint_fast32_t get_removed_region_end() const noexcept;
     const std::string& get_sequence_added() const noexcept;
@@ -84,7 +84,7 @@ Variant::Variant(GenomicRegion reference_removed_region, std::string reference_s
     prior_model_(prior_model)
 {}
 
-inline GenomicRegion Variant::get_removed_region() const noexcept
+inline const GenomicRegion& Variant::get_removed_region() const noexcept
 {
     return reference_removed_region_;
 }
