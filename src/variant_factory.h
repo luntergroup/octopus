@@ -14,17 +14,22 @@
 class VariantFactory
 {
 public:
-    VariantFactory() = default;
+    VariantFactory(const VariantFactory&)            = delete;
+    VariantFactory& operator=(const VariantFactory&) = delete;
+    VariantFactory(VariantFactory&&)                 = delete;
+    VariantFactory& operator=(VariantFactory&&)      = delete;
     
-    VariantFactory(const VariantFactory&)            = default;
-    VariantFactory& operator=(const VariantFactory&) = default;
-    VariantFactory(VariantFactory&&)                 = default;
-    VariantFactory& operator=(VariantFactory&&)      = default;
+    static VariantFactory& get_instance()
+    {
+        static VariantFactory instance;
+        return instance;
+    }
     
     Variant
     make(std::string contig_name, __uint32_t contig_begin_pos, std::string added, std::string removed) const;
     
 private:
+    VariantFactory() {};
 };
 
 #endif /* defined(__Octopus__variant_factory__) */

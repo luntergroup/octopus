@@ -17,14 +17,12 @@
 
 TEST_CASE("snp_overlap_test", "[snps]")
 {
-    VariantFactory a_variant_factory {};
-    
-    auto snp1 = a_variant_factory.make("chr1", 100, "C", "A");
-    auto snp2 = a_variant_factory.make("chr1", 99, "C", "A");
-    auto snp3 = a_variant_factory.make("chr1", 101, "C", "A");
-    auto snp4 = a_variant_factory.make("chr1", 100, "C", "T");
-    auto snp5 = a_variant_factory.make("chr1", 99, "C", "T");
-    auto snp6 = a_variant_factory.make("chr1", 101, "C", "T");
+    auto snp1 = VariantFactory::get_instance().make("chr1", 100, "C", "A");
+    auto snp2 = VariantFactory::get_instance().make("chr1", 99, "C", "A");
+    auto snp3 = VariantFactory::get_instance().make("chr1", 101, "C", "A");
+    auto snp4 = VariantFactory::get_instance().make("chr1", 100, "C", "T");
+    auto snp5 = VariantFactory::get_instance().make("chr1", 99, "C", "T");
+    auto snp6 = VariantFactory::get_instance().make("chr1", 101, "C", "T");
     
     REQUIRE(overlaps(snp1, snp1));
     REQUIRE(overlaps(snp1, snp4));
@@ -36,20 +34,18 @@ TEST_CASE("snp_overlap_test", "[snps]")
 
 TEST_CASE("mnp_overlap_test", "[mnp]")
 {
-    VariantFactory a_variant_factory {};
-    
-    auto mnp1 = a_variant_factory.make("chr1", 100, "CAT", "TAC");
-    auto mnp2 = a_variant_factory.make("chr1", 99, "CAT", "TAC");
-    auto mnp3 = a_variant_factory.make("chr1", 101, "CAT", "TAC");
-    auto mnp4 = a_variant_factory.make("chr1", 100, "CAT", "TAG");
-    auto mnp5 = a_variant_factory.make("chr1", 99, "CAT", "TAG");
-    auto mnp6 = a_variant_factory.make("chr1", 101, "CAT", "TAG");
+    auto mnp1 = VariantFactory::get_instance().make("chr1", 100, "CAT", "TAC");
+    auto mnp2 = VariantFactory::get_instance().make("chr1", 99, "CAT", "TAC");
+    auto mnp3 = VariantFactory::get_instance().make("chr1", 101, "CAT", "TAC");
+    auto mnp4 = VariantFactory::get_instance().make("chr1", 100, "CAT", "TAG");
+    auto mnp5 = VariantFactory::get_instance().make("chr1", 99, "CAT", "TAG");
+    auto mnp6 = VariantFactory::get_instance().make("chr1", 101, "CAT", "TAG");
     
     // edge cases
-    auto mnp7 = a_variant_factory.make("chr1", 98, "CAT", "TAC");
-    auto mnp8 = a_variant_factory.make("chr1", 102, "CAT", "TAC");
-    auto mnp9 = a_variant_factory.make("chr1", 97, "CAT", "TAC");
-    auto mnp10 = a_variant_factory.make("chr1", 103, "CAT", "TAC");
+    auto mnp7  = VariantFactory::get_instance().make("chr1", 98, "CAT", "TAC");
+    auto mnp8  = VariantFactory::get_instance().make("chr1", 102, "CAT", "TAC");
+    auto mnp9  = VariantFactory::get_instance().make("chr1", 97, "CAT", "TAC");
+    auto mnp10 = VariantFactory::get_instance().make("chr1", 103, "CAT", "TAC");
     
     REQUIRE(overlaps(mnp1, mnp1));
     REQUIRE(overlaps(mnp1, mnp2));
@@ -66,11 +62,9 @@ TEST_CASE("mnp_overlap_test", "[mnp]")
 
 TEST_CASE("insertion_overlap_test", "[insertion]")
 {
-    VariantFactory a_variant_factory {};
-    
-    auto insert1 = a_variant_factory.make("chr1", 100, "", "TAG");
-    auto insert2 = a_variant_factory.make("chr1", 99, "", "TAG");
-    auto insert3 = a_variant_factory.make("chr1", 101, "", "TAG");
+    auto insert1 = VariantFactory::get_instance().make("chr1", 100, "", "TAG");
+    auto insert2 = VariantFactory::get_instance().make("chr1", 99, "", "TAG");
+    auto insert3 = VariantFactory::get_instance().make("chr1", 101, "", "TAG");
     
     // Insertions never overlap. IS THIS RIGHT!?!
     REQUIRE(!overlaps(insert1, insert1));
@@ -80,11 +74,9 @@ TEST_CASE("insertion_overlap_test", "[insertion]")
 
 TEST_CASE("deletion_overlap_test", "[deletion]")
 {
-    VariantFactory a_variant_factory {};
-    
-    auto del1 = a_variant_factory.make("chr1", 100, "TAG", "");
-    auto del2 = a_variant_factory.make("chr1", 99, "TAG", "");
-    auto del3 = a_variant_factory.make("chr1", 101, "TAG", "");
+    auto del1 = VariantFactory::get_instance().make("chr1", 100, "TAG", "");
+    auto del2 = VariantFactory::get_instance().make("chr1", 99, "TAG", "");
+    auto del3 = VariantFactory::get_instance().make("chr1", 101, "TAG", "");
     
     REQUIRE(overlaps(del1, del1));
     REQUIRE(overlaps(del1, del2));
