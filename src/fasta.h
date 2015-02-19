@@ -15,15 +15,14 @@
 #include <exception>
 #include <fstream>
 #include <unordered_map>
-
-//#include "boost/filesystem/path.hpp"
-//#include "boost/filesystem/operations.hpp"
+#include <boost/filesystem/path.hpp>
+#include <boost/filesystem/operations.hpp>
 
 #include "reference_genome_implementor.h"
 #include "genomic_region.h"
 #include "bioio.h"
 
-//namespace fs = boost::filesystem;
+namespace fs = boost::filesystem;
 
 class Fasta : public IReferenceGenomeImplementor
 {
@@ -44,17 +43,15 @@ public:
     std::string get_sequence(const GenomicRegion& a_region) override;
 
 private:
-    bool is_valid_fasta() const;
-    bool is_in_cache(const GenomicRegion& a_region) const noexcept;
-    
-//    fs::path fasta_path_;
-//    fs::path fasta_index_path_;
-    
-    std::string fasta_path_;
-    std::string fasta_index_path_;
+    fs::path fasta_path_;
+    fs::path fasta_index_path_;
     std::ifstream fasta_;
     std::unordered_map<std::string, bioio::FastaIndex> fasta_contig_indices_;
     std::unordered_map<GenomicRegion, std::string> region_cache_; // TODO: is this useful?
+    
+    
+    bool is_valid_fasta() const;
+    bool is_in_cache(const GenomicRegion& a_region) const noexcept;
 };
 
 inline bool Fasta::is_in_cache(const GenomicRegion& a_region) const noexcept

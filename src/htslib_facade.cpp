@@ -12,31 +12,19 @@
 
 HtslibFacade::HtslibFacade(const std::string& htslib_file_path)
 :the_filename_ {htslib_file_path},
- the_hts_file_ {hts_open(the_filename_.c_str(), "r")},
- the_header_ {bam_hdr_init()},
- the_index_ {sam_index_load(the_hts_file_, the_filename_.c_str())},
+ the_file_ {hts_open(the_filename_.c_str(), "r"), htslib_file_deleter},
+ the_header_ {sam_hdr_read(the_file_.get()), htslib_header_deleter},
+ the_index_ {sam_index_load(the_file_.get(), the_filename_.c_str()), htslib_index_deleter},
  contig_name_map_ {},
  sample_id_map_ {}
 {
-    the_header_      = sam_hdr_read(the_hts_file_);
     contig_name_map_ = get_htslib_tid_to_contig_name_map();
     sample_id_map_   = get_read_group_to_sample_id_map();
 }
 
 void HtslibFacade::close()
 {
-    hts_close(the_hts_file_);
-    hts_idx_destroy(the_index_);
-    bam_hdr_destroy(the_header_);
-}
-
-HtslibFacade::~HtslibFacade() noexcept
-{
-    try {
-        close();
-    } catch (...) {
-        std::abort(); // All is lost
-    }
+    // TODO: what should this do?
 }
 
 std::vector<std::string> HtslibFacade::get_sample_ids()
@@ -93,7 +81,7 @@ std::vector<GenomicRegion> HtslibFacade::get_regions_in_file()
         auto contig_name = get_reference_contig_name(i);
         // CRAM files don't seem to have the same index stats as BAM files so
         // we don't know which contigs have been mapped to
-        if (the_hts_file_->is_cram || get_num_mapped_reads(contig_name) > 0) {
+        if (the_file_->is_cram || get_num_mapped_reads(contig_name) > 0) {
             result.emplace_back(contig_name, 0, get_reference_contig_size(contig_name));
         }
     }
@@ -135,20 +123,10 @@ HtslibFacade::HtsTidToContigNameMap HtslibFacade::get_htslib_tid_to_contig_name_
 
 HtslibFacade::HtslibIterator::HtslibIterator(HtslibFacade& hts_facade, const GenomicRegion& a_region)
 :hts_facade_ {hts_facade},
- b_ {bam_init1()},
- the_hts_iterator_ {sam_itr_querys(hts_facade_.the_index_, hts_facade_.the_header_,
-                                               to_string(a_region).c_str())}
+ the_iterator_ {sam_itr_querys(hts_facade_.the_index_.get(), hts_facade_.the_header_.get(),
+                               to_string(a_region).c_str()), htslib_iterator_deleter},
+ the_bam1_ {bam_init1(), htslib_bam1_deleter}
 {}
-
-HtslibFacade::HtslibIterator::~HtslibIterator() noexcept
-{
-    try {
-        sam_itr_destroy(the_hts_iterator_);
-        bam_destroy1(b_);
-    } catch (...) {
-        std::abort();
-    }
-}
 
 std::pair<AlignedRead, std::string> HtslibFacade::HtslibIterator::operator*() const
 {
@@ -156,7 +134,7 @@ std::pair<AlignedRead, std::string> HtslibFacade::HtslibIterator::operator*() co
     if (the_qualities.empty() || the_qualities[0] == 0xff) throw std::runtime_error {"bad sequence"};
     auto the_cigar_string = get_cigar_string();
     if (the_cigar_string.empty()) throw std::runtime_error {"bad sequence"};
-    auto c = b_->core;
+    auto c = the_bam1_->core;
     auto read_start = static_cast<uint_fast32_t>(get_soft_clipped_read_begin(the_cigar_string, c.pos));
     
     return {AlignedRead {

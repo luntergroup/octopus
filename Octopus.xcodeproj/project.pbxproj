@@ -10,6 +10,8 @@
 		CA03C1511A8C0D3D000D3494 /* htslib_facade.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA03C14F1A8C0D3D000D3494 /* htslib_facade.cpp */; };
 		CA03C2251A8C1702000D3494 /* read_reader_test.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA03C2241A8C1702000D3494 /* read_reader_test.cpp */; };
 		CA03C2271A8C1BED000D3494 /* reference_benchmarks.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA03C2261A8C1BED000D3494 /* reference_benchmarks.cpp */; };
+		CA8FACBD1A954B67002760F2 /* libboost_system.a in Frameworks */ = {isa = PBXBuildFile; fileRef = CA8FACBC1A954B67002760F2 /* libboost_system.a */; };
+		CA8FACBF1A954C86002760F2 /* libboost_filesystem.a in Frameworks */ = {isa = PBXBuildFile; fileRef = CA8FACBE1A954C86002760F2 /* libboost_filesystem.a */; };
 		CAA4DC251A81981400DD3E9A /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CAA4DC241A81981400DD3E9A /* main.cpp */; };
 		CAA4DC321A82B36300DD3E9A /* README.md in Sources */ = {isa = PBXBuildFile; fileRef = CAA4DC311A82B36300DD3E9A /* README.md */; };
 		CAA4DC341A83A2AB00DD3E9A /* Makefile in Sources */ = {isa = PBXBuildFile; fileRef = CAA4DC331A83A2AB00DD3E9A /* Makefile */; };
@@ -49,6 +51,9 @@
 		CA03C2291A8C1C8C000D3494 /* benchmark_utils.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = benchmark_utils.h; sourceTree = "<group>"; };
 		CA03C22A1A8CEF25000D3494 /* read_reader_implementor.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = read_reader_implementor.h; sourceTree = "<group>"; };
 		CA03C22B1A8D2C5D000D3494 /* cigar_string.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = cigar_string.h; sourceTree = "<group>"; };
+		CA8FACBA1A954B0B002760F2 /* libboost_signals.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libboost_signals.a; path = ../../../../usr/local/Cellar/boost/1.57.0/lib/libboost_signals.a; sourceTree = "<group>"; };
+		CA8FACBC1A954B67002760F2 /* libboost_system.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libboost_system.a; path = ../../../../usr/local/Cellar/boost/1.57.0/lib/libboost_system.a; sourceTree = "<group>"; };
+		CA8FACBE1A954C86002760F2 /* libboost_filesystem.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libboost_filesystem.a; path = ../../../../usr/local/Cellar/boost/1.57.0/lib/libboost_filesystem.a; sourceTree = "<group>"; };
 		CAA4DC211A81981400DD3E9A /* Octopus */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = Octopus; sourceTree = BUILT_PRODUCTS_DIR; };
 		CAA4DC241A81981400DD3E9A /* main.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = main.cpp; path = ../src/main.cpp; sourceTree = "<group>"; };
 		CAA4DC301A82B28800DD3E9A /* .gitignore */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = .gitignore; sourceTree = "<group>"; };
@@ -90,6 +95,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				CA8FACBF1A954C86002760F2 /* libboost_filesystem.a in Frameworks */,
+				CA8FACBD1A954B67002760F2 /* libboost_system.a in Frameworks */,
 				D4907F701A8E032F00639203 /* libhts.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -110,6 +117,9 @@
 		CAA4DC181A81981400DD3E9A = {
 			isa = PBXGroup;
 			children = (
+				CA8FACBE1A954C86002760F2 /* libboost_filesystem.a */,
+				CA8FACBC1A954B67002760F2 /* libboost_system.a */,
+				CA8FACBA1A954B0B002760F2 /* libboost_signals.a */,
 				CAA4DC361A83A3BA00DD3E9A /* bin */,
 				CAA4DC331A83A2AB00DD3E9A /* Makefile */,
 				CAA4DC311A82B36300DD3E9A /* README.md */,
@@ -415,7 +425,7 @@
 				ALWAYS_SEARCH_USER_PATHS = YES;
 				CLANG_CXX_LANGUAGE_STANDARD = "c++14";
 				FRAMEWORK_SEARCH_PATHS = "$(inherited)";
-				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_OPTIMIZATION_LEVEL = 3;
 				HEADER_SEARCH_PATHS = (
 					"$(inherited)",
 					/usr/local/Cellar/boost/1.57.0/include,

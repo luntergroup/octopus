@@ -15,6 +15,7 @@
 #include <algorithm>
 #include <unordered_map>
 #include <stdexcept>
+#include <memory>
 
 #include "htslib/hts.h"
 #include "htslib/sam.h"
@@ -32,12 +33,18 @@ using std::uint8_t;
 using std::uint32_t;
 using std::int32_t;
 
+auto htslib_file_deleter     = [] (htsFile* the_file) { hts_close(the_file); };
+auto htslib_header_deleter   = [] (bam_hdr_t* the_header) { bam_hdr_destroy(the_header); };
+auto htslib_index_deleter    = [] (hts_idx_t* the_index) { hts_idx_destroy(the_index); };
+auto htslib_iterator_deleter = [] (hts_itr_t* the_iterator) { sam_itr_destroy(the_iterator); };
+auto htslib_bam1_deleter     = [] (bam1_t* b) { bam_destroy1(b); };
+
 class HtslibFacade : public IReadReaderImplementor
 {
 public:
     HtslibFacade() = delete;
     HtslibFacade(const std::string& htslib_file_path);
-    ~HtslibFacade() noexcept override;
+    ~HtslibFacade() noexcept override = default;
     
     HtslibFacade(const HtslibFacade&)            = delete;
     HtslibFacade& operator=(const HtslibFacade&) = delete;
@@ -59,17 +66,18 @@ private:
     public:
         HtslibIterator() = delete;
         HtslibIterator(HtslibFacade& hts_facade, const GenomicRegion& a_region);
+        ~HtslibIterator() noexcept = default;
+        
         HtslibIterator(const HtslibIterator&) = delete;
-        ~HtslibIterator() noexcept;
         HtslibIterator& operator=(const HtslibIterator&) = delete;
+        
         int operator++();
         std::pair<AlignedRead, std::string> operator*() const;
         
     private:
         HtslibFacade& hts_facade_;
-        // TODO: move these into seperate classes
-        hts_itr_t* the_hts_iterator_;
-        bam1_t* b_;
+        std::unique_ptr<hts_itr_t, decltype(htslib_iterator_deleter)> the_iterator_;
+        std::unique_ptr<bam1_t, decltype(htslib_bam1_deleter)> the_bam1_;
         
         uint_fast32_t get_read_start() const noexcept;
         uint32_t get_sequence_length() const noexcept;
@@ -92,10 +100,9 @@ private:
     using ReadGroupToSampleIdMap = std::unordered_map<std::string, std::string>;
     
     std::string the_filename_;
-    // TODO: move these into seperate classes
-    htsFile* the_hts_file_;
-    bam_hdr_t* the_header_;
-    hts_idx_t* the_index_;
+    std::unique_ptr<htsFile, decltype(htslib_file_deleter)> the_file_;
+    std::unique_ptr<bam_hdr_t, decltype(htslib_header_deleter)> the_header_;
+    std::unique_ptr<hts_idx_t, decltype(htslib_index_deleter)> the_index_;
     
     HtsTidToContigNameMap contig_name_map_;
     ReadGroupToSampleIdMap sample_id_map_;
@@ -123,17 +130,17 @@ inline uint_fast32_t HtslibFacade::get_reference_contig_size(const std::string& 
 
 inline int HtslibFacade::HtslibIterator::operator++()
 {
-    return sam_itr_next(hts_facade_.the_hts_file_, the_hts_iterator_, b_) >= 0;
+    return sam_itr_next(hts_facade_.the_file_.get(), the_iterator_.get(), the_bam1_.get()) >= 0;
 }
 
 inline uint_fast32_t HtslibFacade::HtslibIterator::get_read_start() const noexcept
 {
-    return static_cast<uint_fast32_t>(b_->core.pos);
+    return static_cast<uint_fast32_t>(the_bam1_->core.pos);
 }
 
 inline uint32_t HtslibFacade::HtslibIterator::get_sequence_length() const noexcept
 {
-    return b_->core.l_qseq;
+    return the_bam1_->core.l_qseq;
 }
 
 inline char HtslibFacade::HtslibIterator::get_base(uint8_t* a_htslib_sequence,
@@ -149,14 +156,14 @@ inline std::string HtslibFacade::HtslibIterator::get_sequence() const
     auto length = get_sequence_length();
     result.reserve(length);
     for (uint32_t i = 0; i < length; ++i) {
-        result.push_back(get_base(bam_get_seq(b_), i));
+        result.push_back(get_base(bam_get_seq(the_bam1_), i));
     }
     return result;
 }
 
 inline std::vector<uint_fast8_t> HtslibFacade::HtslibIterator::get_qualities() const
 {
-    auto qualities = bam_get_qual(b_);
+    auto qualities = bam_get_qual(the_bam1_);
     auto length = get_sequence_length();
     std::vector<uint_fast8_t> result(length);
     std::copy(qualities, qualities + length, std::begin(result));
@@ -165,13 +172,13 @@ inline std::vector<uint_fast8_t> HtslibFacade::HtslibIterator::get_qualities() c
 
 inline uint32_t HtslibFacade::HtslibIterator::get_cigar_length() const noexcept
 {
-    return b_->core.n_cigar;
+    return the_bam1_->core.n_cigar;
 }
 
 inline CigarString HtslibFacade::HtslibIterator::get_cigar_string() const
 {
     static constexpr const char* operation_table {"MIDNSHP=X"};
-    auto cigar_operations = bam_get_cigar(b_);
+    auto cigar_operations = bam_get_cigar(the_bam1_);
     auto length = get_cigar_length();
     std::vector<CigarString::CigarOperation> result;
     result.reserve(length);
@@ -184,7 +191,7 @@ inline CigarString HtslibFacade::HtslibIterator::get_cigar_string() const
 
 inline std::string HtslibFacade::HtslibIterator::get_read_group() const
 {
-    return std::string(bam_aux2Z(bam_aux_get(b_, Read_group_tag)));
+    return std::string(bam_aux2Z(bam_aux_get(the_bam1_.get(), Read_group_tag)));
 }
 
 inline std::string HtslibFacade::HtslibIterator::get_contig_name(int32_t htslib_tid) const
@@ -194,7 +201,7 @@ inline std::string HtslibFacade::HtslibIterator::get_contig_name(int32_t htslib_
 
 inline std::string HtslibFacade::HtslibIterator::get_read_name() const
 {
-    return std::string {bam_get_qname(b_)};
+    return std::string {bam_get_qname(the_bam1_)};
 }
 
 inline std::string HtslibFacade::get_reference_contig_name(int32_t hts_tid) const
@@ -227,7 +234,7 @@ inline std::string HtslibFacade::get_tag_value(const std::string& line, const ch
 inline uint64_t HtslibFacade::get_num_mapped_reads(const std::string& reference_contig_name) const
 {
     uint64_t num_mapped, num_unmapped;
-    hts_idx_get_stat(the_index_, get_htslib_tid(reference_contig_name), &num_mapped, &num_unmapped);
+    hts_idx_get_stat(the_index_.get(), get_htslib_tid(reference_contig_name), &num_mapped, &num_unmapped);
     return num_mapped;
 }
 
