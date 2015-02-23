@@ -23,7 +23,7 @@ using std::int_fast64_t;
 class SequenceRegion : Comparable<SequenceRegion>
 {
 public:
-    SequenceRegion() = delete;
+    SequenceRegion() = default;
     SequenceRegion(uint_fast32_t begin, uint_fast32_t end);
     
     SequenceRegion(const SequenceRegion&)            = default;

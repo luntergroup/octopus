@@ -23,10 +23,6 @@
 #include "read_reader_implementor.h"
 #include "aligned_read.h"
 
-// for testing
-#include <iostream>
-//
-
 using std::uint_fast32_t;
 using std::uint_fast8_t;
 using std::uint8_t;
@@ -165,8 +161,9 @@ inline std::vector<uint_fast8_t> HtslibFacade::HtslibIterator::get_qualities() c
 {
     auto qualities = bam_get_qual(the_bam1_);
     auto length = get_sequence_length();
-    std::vector<uint_fast8_t> result(length);
-    std::copy(qualities, qualities + length, std::begin(result));
+    std::vector<uint_fast8_t> result;
+    result.reserve(length);
+    result.insert(result.begin(), qualities, qualities + length);
     return result;
 }
 

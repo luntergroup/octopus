@@ -22,7 +22,7 @@ using std::uint_fast32_t;
 class IReadReaderImplementor
 {
 public:
-    using SampleIdToReadsMap     = std::unordered_map<std::string, std::vector<AlignedRead>>;
+    using SampleIdToReadsMap = std::unordered_map<std::string, std::vector<AlignedRead>>;
     
     virtual std::vector<std::string> get_sample_ids() = 0;
     virtual std::vector<std::string> get_read_groups_in_sample(const std::string& a_sample_id) = 0;

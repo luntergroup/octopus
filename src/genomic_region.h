@@ -27,7 +27,7 @@ using std::int_fast64_t;
 class GenomicRegion : Comparable<GenomicRegion>
 {
 public:
-    GenomicRegion() = delete;
+    GenomicRegion() = default;
     GenomicRegion(std::string contig_name, uint_fast32_t begin, uint_fast32_t end);
     //GenomicRegion(std::string the_region);
     

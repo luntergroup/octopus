@@ -34,7 +34,7 @@ TEST_CASE("read_reader_open_test", "[read_reader]")
     REQUIRE(reads.size() == 25);
 }
 
-TEST_CASE("read_factory_test", "[read_factory]")
+TEST_CASE("read_manager_test", "[read_manager]")
 {
     ReadManager a_read_manager(std::vector<std::string> {human_1000g_bam});
     
