@@ -25,8 +25,6 @@ using std::cbegin;
 using std::cend;
 using std::uint_fast32_t;
 
-using boost::adjacency_list;
-using boost::graph_traits;
 using boost::vertices;
 using boost::edges;
 
@@ -70,14 +68,14 @@ private:
         int weight;
     };
     
-    using Graph_t = adjacency_list<
+    using Graph_t = boost::adjacency_list<
         boost::multisetS, boost::listS, boost::bidirectionalS, boost::no_property, Kmer
     >;
-    using Vertex                 = graph_traits<Graph_t>::vertex_descriptor;
-    using Edge                   = graph_traits<Graph_t>::edge_descriptor;
-    using VertexIterator         = graph_traits<Graph_t>::vertex_iterator;
-    using EdgeIterator           = graph_traits<Graph_t>::edge_iterator;
-    using OutEdgeIterator        = graph_traits<Graph_t>::out_edge_iterator;
+    using Vertex                 = boost::graph_traits<Graph_t>::vertex_descriptor;
+    using Edge                   = boost::graph_traits<Graph_t>::edge_descriptor;
+    using VertexIterator         = boost::graph_traits<Graph_t>::vertex_iterator;
+    using EdgeIterator           = boost::graph_traits<Graph_t>::edge_iterator;
+    using OutEdgeIterator        = boost::graph_traits<Graph_t>::out_edge_iterator;
     using VertexPair             = std::pair<VertexIterator, VertexIterator>;
     using EdgePair               = std::pair<EdgeIterator, EdgeIterator>;
     using OutEdgePair            = std::pair<OutEdgeIterator, OutEdgeIterator>;

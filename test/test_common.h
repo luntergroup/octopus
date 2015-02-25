@@ -30,7 +30,7 @@ static std::string human_1000g_cram_name {"HG00101.mapped.ILLUMINA.bwa.GBR.low_c
 static std::string human_reference_fasta {home_dir + genomics_dir + reference_dir + human_reference};
 static std::string human_reference_fasta_index {human_reference_fasta + ".fai"};
 static std::string ecoli_reference_fasta {home_dir + genomics_dir + reference_dir + ecoli_reference};
-static std::string lamnda_reference_fasta {home_dir + genomics_dir + reference_dir + lambda_reference};
+static std::string lambda_reference_fasta {home_dir + genomics_dir + reference_dir + lambda_reference};
 
 static std::string human_1000g_bam {home_dir + genomics_dir + bam_dir + human_1000g_bam_name};
 static std::string human_1000g_cram {home_dir + genomics_dir + bam_dir + human_1000g_cram_name};

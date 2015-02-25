@@ -12,6 +12,7 @@
 #include <string>
 #include <cstdint>
 #include <ostream>
+#include <regex>
 
 #include "sequence_region.h"
 #include "comparable.h"
@@ -29,7 +30,7 @@ class GenomicRegion : Comparable<GenomicRegion>
 public:
     GenomicRegion() = default;
     GenomicRegion(std::string contig_name, uint_fast32_t begin, uint_fast32_t end);
-    //GenomicRegion(std::string the_region);
+    GenomicRegion(const std::string& the_region);
     
     GenomicRegion(const GenomicRegion&)            = default;
     GenomicRegion& operator=(const GenomicRegion&) = default;
@@ -52,10 +53,10 @@ GenomicRegion::GenomicRegion(std::string contig_name, uint_fast32_t begin, uint_
  contig_region_ {begin, end}
 {}
 
-//GenomicRegion::GenomicRegion(std::string the_region)
-//{
-//    // parse region
-//}
+GenomicRegion::GenomicRegion(const std::string& the_region)
+{
+    // TODO: implement
+}
 
 inline const std::string& GenomicRegion::get_contig_name() const noexcept
 {

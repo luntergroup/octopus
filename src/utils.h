@@ -12,6 +12,8 @@
 #include <vector>
 #include <string>
 #include <sstream>
+#include <boost/utility/string_ref.hpp>
+#include <boost/functional/hash.hpp>
 
 template <typename T>
 std::vector<std::string> split(T&& s, char delim) {
@@ -22,6 +24,16 @@ std::vector<std::string> split(T&& s, char delim) {
         elems.emplace_back(item);
     }
     return elems;
+}
+
+namespace std
+{
+    template<>
+    struct hash<boost::string_ref> {
+        size_t operator()(boost::string_ref const& sr) const {
+            return boost::hash_range(sr.begin(), sr.end());
+        }
+    };
 }
 
 #endif /* defined(__Octopus__utils__) */

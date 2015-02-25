@@ -52,7 +52,6 @@ public:
     bool has_support(unsigned long num_reads) const noexcept;
     unsigned long get_num_supporting_reads() const noexcept;
     double get_prior_probability() const noexcept;
-    
     void add_support(unsigned long num_reads) noexcept;
     
 private:
