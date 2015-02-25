@@ -53,7 +53,6 @@ public:
     uint_fast32_t get_mate_begin() const;
     
 private:
-    // The seemingly arbitary order of these members is for memory alignment optimisation
     GenomicRegion reference_region_;
     std::string mate_contig_name_;
     std::string sequence_;
@@ -144,9 +143,7 @@ inline bool operator==(const AlignedRead& lhs, const AlignedRead& rhs)
     // The order of these comparisons should ensure optimal lazy evaluation
     return lhs.get_mapping_quality() == rhs.get_mapping_quality() &&
             lhs.get_region() == rhs.get_region() &&
-            lhs.get_cigar_string() == rhs.get_cigar_string() &&
-            lhs.get_sequence() == rhs.get_sequence() &&
-            lhs.get_qualities() == rhs.get_qualities();
+            lhs.get_cigar_string() == rhs.get_cigar_string();
 }
 
 inline bool operator< (const AlignedRead& lhs, const AlignedRead& rhs)
@@ -159,7 +156,7 @@ namespace std {
     {
         size_t operator()(const AlignedRead& r) const
         {
-            return hash<string>()(r.get_sequence());
+            return hash<GenomicRegion>()(r.get_region()); // TODO: improve this hash
         }
     };
 }
