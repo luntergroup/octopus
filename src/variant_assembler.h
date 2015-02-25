@@ -16,7 +16,6 @@ class VariantAssembler
 {
 public:
     
-    
 private:
     
 };

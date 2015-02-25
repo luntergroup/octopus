@@ -53,7 +53,7 @@ GenomicRegion::GenomicRegion(std::string contig_name, uint_fast32_t begin, uint_
  contig_region_ {begin, end}
 {}
 
-GenomicRegion::GenomicRegion(const std::string& the_region)
+inline GenomicRegion::GenomicRegion(const std::string& the_region)
 {
     // TODO: implement
 }

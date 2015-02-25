@@ -16,6 +16,7 @@
 #include <functional>
 #include <tuple>
 #include <list>
+#include <iterator>
 #include <boost/graph/adjacency_list.hpp>
 
 #include <iostream>
@@ -86,7 +87,7 @@ private:
     void add_edge(Vertex source, Vertex target, ReferenceType the_kmer, ColourType the_colour);
     bool is_in_graph(EdgeIterator an_edge) const;
     bool is_in_graph(ReferenceType a_k_minus_1_mer) const;
-    template <typename C> std::string convert_path_to_string(const C& path) const;
+    template <typename ForwardIterator> std::string convert_path_to_string(ForwardIterator begin, ForwardIterator end) const;
     ReferenceType get_prefix(ReferenceType a_kmer) const;
     ReferenceType get_suffix(ReferenceType a_kmer) const;
     bool is_prefix(ReferenceType lhs, ReferenceType rhs) const noexcept;
@@ -234,7 +235,7 @@ std::vector<std::string> KmerAssembler<C, T>::get_all_euler_paths(Vertex the_sou
         }
     }
     
-    euler_paths.emplace_back(convert_path_to_string(path));
+    euler_paths.emplace_back(convert_path_to_string(path.cbegin(), path.cend()));
     
     return euler_paths;
 }
@@ -248,18 +249,14 @@ std::vector<Variant> KmerAssembler<ColourType, T>::get_variants(ColourType the_r
 }
 
 template <typename C, typename T>
-template <typename Container>
-std::string KmerAssembler<C, T>::convert_path_to_string(const Container& path) const
+template <typename ForwardIterator>
+std::string KmerAssembler<C, T>::convert_path_to_string(ForwardIterator begin, ForwardIterator end) const
 {
-    std::string result {};
-    result.reserve(k_ + path.size() - 1);
-    for (const auto& edge : path) {
-        auto the_edge_kmer = the_graph_[edge].the_kmer;
-        if (result.empty()) {
-            result += std::string {the_edge_kmer.cbegin(), the_edge_kmer.cend()};
-        } else {
-            result.push_back(the_edge_kmer.back());
-        }
+    auto the_first_kmer_prefix = get_prefix(the_graph_[*begin].the_kmer);
+    std::string result {the_first_kmer_prefix.cbegin(), the_first_kmer_prefix.cend()};
+    result.reserve(k_ + std::distance(begin, end));
+    for (; begin != end; ++begin) {
+        result.push_back(the_graph_[*begin].the_kmer.back());
     }
     return result;
 }
