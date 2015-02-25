@@ -69,10 +69,10 @@ inline AlignedRead::AlignedRead(GenomicRegion_&& reference_region, String_&& seq
                                 Qualities_&& qualities, CigarString_&& cigar_string,
                                 uint_fast32_t insert_size, std::string mate_contig_name,
                                 uint_fast32_t mate_begin, uint_fast8_t mapping_quality)
-:reference_region_ {std::forward<GenomicRegion>(reference_region)},
- sequence_ {std::forward<std::string>(sequence)},
- qualities_ {std::forward<Qualities>(qualities)},
- cigar_string_ {std::forward<CigarString>(cigar_string)},
+:reference_region_ {std::forward<GenomicRegion_>(reference_region)},
+ sequence_ {std::forward<String_>(sequence)},
+ qualities_ {std::forward<Qualities_>(qualities)},
+ cigar_string_ {std::forward<CigarString_>(cigar_string)},
  insert_size_ {insert_size},
  mate_contig_name_ {mate_contig_name},
  mate_begin_ {mate_begin},
@@ -159,7 +159,7 @@ namespace std {
     {
         size_t operator()(const AlignedRead& r) const
         {
-            return hash<std::string>()(r.get_sequence());
+            return hash<string>()(r.get_sequence());
         }
     };
 }
