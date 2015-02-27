@@ -27,7 +27,7 @@ class ReferenceGenome
 {
 public:
     ReferenceGenome() = delete;
-    ReferenceGenome(std::unique_ptr<IReferenceGenomeImplementor> the_reference_implementation);
+    explicit ReferenceGenome(std::unique_ptr<IReferenceGenomeImplementor> the_reference_implementation);
     
     ReferenceGenome(const ReferenceGenome&)            = delete;
     ReferenceGenome& operator=(const ReferenceGenome&) = delete;
@@ -40,7 +40,7 @@ public:
     uint_fast32_t get_contig_size(const std::string& contig_name) const;
     uint_fast32_t get_contig_size(const GenomicRegion& a_region) const;
     GenomicRegion get_contig_region(const std::string& contig_name) const;
-    bool contains_region(const GenomicRegion& a_region) const;
+    bool contains_region(const GenomicRegion& a_region) const noexcept;
     std::string get_sequence(const GenomicRegion& a_region);
     
 private:
@@ -103,7 +103,7 @@ inline GenomicRegion ReferenceGenome::get_contig_region(const std::string& conti
     return GenomicRegion(contig_name, 0, get_contig_size(contig_name));
 }
 
-inline bool ReferenceGenome::contains_region(const GenomicRegion& a_region) const
+inline bool ReferenceGenome::contains_region(const GenomicRegion& a_region) const noexcept
 {
     return a_region.get_end() <= get_contig_size(a_region);
 }

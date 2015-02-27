@@ -18,18 +18,19 @@
 #include <list>
 #include <iterator>
 #include <boost/graph/adjacency_list.hpp>
+#include <boost/graph/depth_first_search.hpp>
 
 #include <iostream>
 #include "variant.h"
 
 template <typename ColourType, typename StringStoragePolicy>
-class KmerAssembler : public StringStoragePolicy
+class KmerAssembler : StringStoragePolicy
 {
 public:
     using typename StringStoragePolicy::InputType;
     
     KmerAssembler() = delete;
-    KmerAssembler(unsigned k);
+    explicit KmerAssembler(unsigned k);
     ~KmerAssembler() = default;
     
     KmerAssembler(const KmerAssembler&)            = default;
@@ -38,14 +39,11 @@ public:
     KmerAssembler& operator=(KmerAssembler&&)      = default;
     
     void add_sequence(InputType a_sequence, ColourType the_colour);
-    
-    std::vector<std::string> get_contigs();
-    std::vector<Variant> get_variants(ColourType the_reference_colour);
-    
     void set_colour_weight_map(std::function<int(ColourType)> f_colour_weight);
-    void clear();
-    
+    std::vector<std::string> get_contigs();
+    bool is_acyclic() const;
     unsigned get_num_kmers() const noexcept;
+    void clear();
     
     void print_kmers() const;
     
@@ -60,14 +58,14 @@ private:
         int weight;
     };
     
-    using Graph_t = boost::adjacency_list<
+    using Graph = boost::adjacency_list<
         boost::listS, boost::listS, boost::bidirectionalS, boost::no_property, Kmer
     >;
-    using Vertex                 = typename boost::graph_traits<Graph_t>::vertex_descriptor;
-    using Edge                   = typename boost::graph_traits<Graph_t>::edge_descriptor;
-    using VertexIterator         = typename boost::graph_traits<Graph_t>::vertex_iterator;
-    using EdgeIterator           = typename boost::graph_traits<Graph_t>::edge_iterator;
-    using OutEdgeIterator        = typename boost::graph_traits<Graph_t>::out_edge_iterator;
+    using Vertex                 = typename boost::graph_traits<Graph>::vertex_descriptor;
+    using Edge                   = typename boost::graph_traits<Graph>::edge_descriptor;
+    using VertexIterator         = typename boost::graph_traits<Graph>::vertex_iterator;
+    using EdgeIterator           = typename boost::graph_traits<Graph>::edge_iterator;
+    using OutEdgeIterator        = typename boost::graph_traits<Graph>::out_edge_iterator;
     using VertexPair             = std::pair<VertexIterator, VertexIterator>;
     using EdgePair               = std::pair<EdgeIterator, EdgeIterator>;
     using OutEdgePair            = std::pair<OutEdgeIterator, OutEdgeIterator>;
@@ -75,8 +73,14 @@ private:
     using VertexIndexPropertyMap = boost::associative_property_map<VertexIndexMap>;
     using EdgeCountMap           = std::map<Edge, unsigned>;
     
+    struct DfsVisitor : public boost::default_dfs_visitor
+    {
+        void back_edge(Edge e, const Graph& g) const;
+        bool is_acyclic {true};
+    };
+    
     const unsigned k_;
-    Graph_t the_graph_;
+    Graph the_graph_;
     std::unordered_set<ReferenceType> added_kmer_suffixes_and_prefixes_;
     std::function<int(ColourType)> f_colour_weight_;
     
@@ -119,6 +123,39 @@ void KmerAssembler<ColourType, T>::add_sequence(InputType a_sequence, ColourType
     for (unsigned i = 0; i < num_kmers; ++i) {
         add_kmer(sequence_ref.substr(i, k_), the_colour);
     }
+}
+
+template <typename C, typename T>
+std::vector<std::string> KmerAssembler<C, T>::get_contigs()
+{
+    return get_all_euler_paths(boost::vertex(0, the_graph_));
+}
+
+template <typename C, typename T>
+void KmerAssembler<C, T>::DfsVisitor::back_edge(Edge e, const Graph &g) const
+{
+    if (boost::source(e, g) != boost::target(e, g)) is_acyclic = false;
+}
+
+template <typename C, typename T>
+bool KmerAssembler<C, T>::is_acyclic() const
+{
+    DfsVisitor a_visitor;
+    boost::depth_first_search(the_graph_, visitor(a_visitor));
+    return a_visitor.is_acyclic;
+}
+
+template <typename C, typename T>
+unsigned KmerAssembler<C, T>::get_num_kmers() const noexcept
+{
+    return static_cast<unsigned>(boost::num_edges(the_graph_));
+}
+
+template <typename C, typename T>
+void KmerAssembler<C, T>::clear()
+{
+    the_graph_.clear();
+    added_kmer_suffixes_and_prefixes_.clear();
 }
 
 template <typename ColourType, typename T>
@@ -198,12 +235,6 @@ bool KmerAssembler<C, T>::is_in_graph(ReferenceType a_k_minus_1_mer) const
 }
 
 template <typename C, typename T>
-std::vector<std::string> KmerAssembler<C, T>::get_contigs()
-{
-    return get_all_euler_paths(boost::vertex(0, the_graph_));
-}
-
-template <typename C, typename T>
 std::vector<std::string> KmerAssembler<C, T>::get_all_euler_paths(Vertex the_source)
 {
     std::vector<std::string> euler_paths {};
@@ -240,14 +271,6 @@ std::vector<std::string> KmerAssembler<C, T>::get_all_euler_paths(Vertex the_sou
     return euler_paths;
 }
 
-template <typename ColourType, typename T>
-std::vector<Variant> KmerAssembler<ColourType, T>::get_variants(ColourType the_reference_colour)
-{
-    std::vector<Variant> result {};
-    
-    return result;
-}
-
 template <typename C, typename T>
 template <typename ForwardIterator>
 std::string KmerAssembler<C, T>::convert_path_to_string(ForwardIterator begin, ForwardIterator end) const
@@ -259,19 +282,6 @@ std::string KmerAssembler<C, T>::convert_path_to_string(ForwardIterator begin, F
         result.push_back(the_graph_[*begin].the_kmer.back());
     }
     return result;
-}
-
-template <typename C, typename T>
-void KmerAssembler<C, T>::clear()
-{
-    the_graph_.clear();
-    added_kmer_suffixes_and_prefixes_.clear();
-}
-
-template <typename C, typename T>
-unsigned KmerAssembler<C, T>::get_num_kmers() const noexcept
-{
-    return static_cast<unsigned>(boost::num_edges(the_graph_));
 }
 
 template <typename C, typename T>

@@ -49,7 +49,6 @@ private:
     std::unordered_map<std::string, bioio::FastaIndex> fasta_contig_indices_;
     std::unordered_map<GenomicRegion, std::string> region_cache_; // TODO: is this useful?
     
-    
     bool is_valid_fasta() const;
     bool is_in_cache(const GenomicRegion& a_region) const noexcept;
 };

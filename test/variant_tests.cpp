@@ -8,7 +8,6 @@
 
 #include <iostream>
 
-#define CATCH_CONFIG_MAIN
 #include "catch.hpp"
 
 #include "genomic_region.h"

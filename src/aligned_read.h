@@ -29,10 +29,10 @@ public:
     
     AlignedRead() = delete;
     template <typename GenomicRegion_, typename String_, typename Qualities_, typename CigarString_>
-    AlignedRead(GenomicRegion_&& reference_region, String_&& sequence,
-                Qualities_&& qualities, CigarString_&& cigar_string,
-                uint_fast32_t insert_size, std::string mate_contig_name,
-                uint_fast32_t mate_begin, uint_fast8_t mapping_quality);
+    explicit AlignedRead(GenomicRegion_&& reference_region, String_&& sequence,
+                         Qualities_&& qualities, CigarString_&& cigar_string,
+                         uint_fast32_t insert_size, std::string mate_contig_name,
+                         uint_fast32_t mate_begin, uint_fast8_t mapping_quality);
     
     AlignedRead(const AlignedRead&)            = default;
     AlignedRead& operator=(const AlignedRead&) = default;

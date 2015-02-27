@@ -33,11 +33,11 @@ class Variant : Comparable<Variant>
 public:
     
     Variant() = delete;
-    Variant(std::string reference_contig_name, uint_fast32_t reference_removed_region_begin,
-            std::string reference_sequence_removed, std::string sequence_added,
-            std::function<double()> prior_model);
-    Variant(GenomicRegion reference_removed_region, std::string reference_sequence_removed,
-            std::string sequence_added, std::function<double()> prior_model);
+    explicit Variant(std::string reference_contig_name, uint_fast32_t reference_removed_region_begin,
+                     std::string reference_sequence_removed, std::string sequence_added,
+                     std::function<double()> prior_model);
+    explicit Variant(GenomicRegion reference_removed_region, std::string reference_sequence_removed,
+                     std::string sequence_added, std::function<double()> prior_model);
     
     Variant(const Variant&)            = default;
     Variant& operator=(const Variant&) = default;

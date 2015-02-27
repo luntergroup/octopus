@@ -24,7 +24,7 @@ class SequenceRegion : Comparable<SequenceRegion>
 {
 public:
     SequenceRegion() = default;
-    SequenceRegion(uint_fast32_t begin, uint_fast32_t end);
+    explicit SequenceRegion(uint_fast32_t begin, uint_fast32_t end);
     
     SequenceRegion(const SequenceRegion&)            = default;
     SequenceRegion& operator=(const SequenceRegion&) = default;

@@ -14,6 +14,7 @@
 #include <iterator>
 #include <vector>
 #include <ostream>
+#include <algorithm>
 
 #include "equitable.h"
 
@@ -26,7 +27,7 @@ public:
     {
     public:
         CigarOperation() = delete;
-        CigarOperation(uint_fast32_t size, char type) noexcept;
+        explicit CigarOperation(uint_fast32_t size, char type) noexcept;
         
         CigarOperation(const CigarOperation&)            = default;
         CigarOperation& operator=(const CigarOperation&) = default;
@@ -40,15 +41,26 @@ public:
         char flag_;
     };
     
-    using Iterator = std::vector<CigarOperation>::const_iterator;
+    using Iterator      = std::vector<CigarOperation>::iterator;
+    using ConstIterator = std::vector<CigarOperation>::const_iterator;
     
     CigarString() = delete;
     CigarString(const std::string& a_cigar_string);
-    CigarString(std::vector<CigarOperation>&& a_cigar_string);
+    explicit CigarString(std::vector<CigarOperation>&& a_cigar_string);
+    
+    CigarString(const CigarString&)            = default;
+    CigarString& operator=(const CigarString&) = default;
+    CigarString(CigarString&&)                 = default;
+    CigarString& operator=(CigarString&&)      = default;
+    
+    Iterator begin() noexcept;
+    Iterator end() noexcept;
+    ConstIterator begin() const noexcept;
+    ConstIterator end() const noexcept;
+    ConstIterator cbegin() const noexcept;
+    ConstIterator cend() const noexcept;
     
     CigarOperation get_cigar_operation(uint_fast32_t index) const;
-    Iterator begin() const;
-    Iterator end() const;
     const CigarOperation& at(uint_fast32_t n) const;
     bool empty() const noexcept;
     uint_fast32_t size() const noexcept;
@@ -91,17 +103,35 @@ inline CigarString::CigarOperation CigarString::get_cigar_operation(uint_fast32_
     return the_cigar_string_.at(index);
 }
 
-inline CigarString::Iterator CigarString::begin() const
+inline CigarString::Iterator CigarString::begin() noexcept
 {
-    return std::cbegin(the_cigar_string_);
+    return the_cigar_string_.begin();
 }
 
-
-inline CigarString::Iterator CigarString::end() const
+inline CigarString::Iterator CigarString::end() noexcept
 {
-    return std::cend(the_cigar_string_);
+    return the_cigar_string_.end();
 }
 
+inline CigarString::ConstIterator CigarString::begin() const noexcept
+{
+    return the_cigar_string_.begin();
+}
+
+inline CigarString::ConstIterator CigarString::end() const noexcept
+{
+    return the_cigar_string_.end();
+}
+
+inline CigarString::ConstIterator CigarString::cbegin() const noexcept
+{
+    return the_cigar_string_.cbegin();
+}
+
+inline CigarString::ConstIterator CigarString::cend() const noexcept
+{
+    return the_cigar_string_.cend();
+}
 
 inline const CigarString::CigarOperation& CigarString::at(uint_fast32_t n) const
 {
@@ -162,9 +192,6 @@ inline std::ostream& operator<<(std::ostream& os, const CigarString::CigarOperat
 
 inline std::ostream& operator<<(std::ostream& os, const CigarString& a_cigar_string)
 {
-//    for (const auto& a_cigar_operation : a_cigar_string) {
-//        os << a_cigar_operation;
-//    }
     std::copy(std::cbegin(a_cigar_string), std::cend(a_cigar_string),
               std::ostream_iterator<CigarString::CigarOperation>(os));
     return os;

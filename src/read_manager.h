@@ -27,14 +27,14 @@ class ReadManager
 {
 public:
     ReadManager() = default;
-    ReadManager(std::vector<std::string>&& read_file_paths, unsigned Max_open_files = 20);
+    explicit ReadManager(std::vector<std::string>&& read_file_paths, unsigned Max_open_files = 20);
     
     ReadManager(const ReadManager&)            = delete;
     ReadManager& operator=(const ReadManager&) = delete;
     ReadManager(ReadManager&&)                 = default;
     ReadManager& operator=(ReadManager&&)      = default;
     
-    unsigned get_num_samples() const;
+    unsigned get_num_samples() const noexcept;
     std::vector<std::string> get_sample_ids() const;
     std::vector<AlignedRead> fetch_reads(const std::string& a_sample_id, const GenomicRegion& a_region);
     
@@ -56,7 +56,7 @@ private:
     std::vector<std::string> get_files_containing_region(const GenomicRegion& a_region) const;
 };
 
-inline unsigned ReadManager::get_num_samples() const
+inline unsigned ReadManager::get_num_samples() const noexcept
 {
     return num_samples_;
 }

@@ -12,7 +12,6 @@
 #include <string>
 #include <cstdint>
 #include <ostream>
-#include <regex>
 
 #include "sequence_region.h"
 #include "comparable.h"
@@ -23,14 +22,13 @@ using std::int_fast64_t;
 /**
     Represents a continuous region of a sequence in a genome. The sequence
     name is the reference sequence name (usually a chromosome), and the
-    begin and end positions are zero-indexed half open - [begin,end) - indexes.
+    begin and end positions are zero-indexed half open - [begin,end) - indices.
  */
 class GenomicRegion : Comparable<GenomicRegion>
 {
 public:
     GenomicRegion() = default;
-    GenomicRegion(std::string contig_name, uint_fast32_t begin, uint_fast32_t end);
-    GenomicRegion(const std::string& the_region);
+    explicit GenomicRegion(std::string contig_name, uint_fast32_t begin, uint_fast32_t end);
     
     GenomicRegion(const GenomicRegion&)            = default;
     GenomicRegion& operator=(const GenomicRegion&) = default;
@@ -52,11 +50,6 @@ GenomicRegion::GenomicRegion(std::string contig_name, uint_fast32_t begin, uint_
 :contig_name_ {contig_name},
  contig_region_ {begin, end}
 {}
-
-inline GenomicRegion::GenomicRegion(const std::string& the_region)
-{
-    // TODO: implement
-}
 
 inline const std::string& GenomicRegion::get_contig_name() const noexcept
 {
@@ -103,8 +96,6 @@ inline bool operator==(const GenomicRegion& lhs, const GenomicRegion& rhs)
     return is_same_contig(lhs, rhs) && lhs.get_contig_region() == rhs.get_contig_region();
 }
 
-// It doesn't really make sense to define ordering operators for GenomicRegion
-// (as oposed to SequenceRegion), as non-continuous sequences have no natural ordering.
 inline bool operator<(const GenomicRegion& lhs, const GenomicRegion& rhs)
 {
     if (is_same_contig(lhs, rhs)) return lhs.get_contig_region() < rhs.get_contig_region();
@@ -127,8 +118,7 @@ namespace std {
     };
 }
 
-inline
-std::ostream& operator<<(std::ostream& os, const GenomicRegion& a_region)
+inline std::ostream& operator<<(std::ostream& os, const GenomicRegion& a_region)
 {
     os << to_string(a_region);
     return os;

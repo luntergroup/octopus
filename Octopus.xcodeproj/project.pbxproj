@@ -256,8 +256,6 @@
 			children = (
 				D4907F5D1A8A3ADD00639203 /* utils.cpp */,
 				D4907F5E1A8A3ADD00639203 /* utils.h */,
-				D4907F711A8E04B900639203 /* comparable.h */,
-				D4907F731A8E255200639203 /* equitable.h */,
 			);
 			name = utils;
 			sourceTree = "<group>";
@@ -277,6 +275,8 @@
 		CAE3E2931A9CF95900C01B2C /* policies */ = {
 			isa = PBXGroup;
 			children = (
+				D4907F711A8E04B900639203 /* comparable.h */,
+				D4907F731A8E255200639203 /* equitable.h */,
 				CAE3E2941A9CF97700C01B2C /* storage_policies.h */,
 			);
 			name = policies;

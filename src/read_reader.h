@@ -24,8 +24,8 @@ public:
     using SampleIdToReadsMap = std::unordered_map<std::string, std::vector<AlignedRead>>;
     
     ReadReader() = delete;
-    ReadReader(const std::string& read_file_path,
-               std::unique_ptr<IReadReaderImplementor> the_implementation);
+    explicit ReadReader(const std::string& read_file_path,
+                        std::unique_ptr<IReadReaderImplementor> the_implementation);
     
     ReadReader(const ReadReader&)            = delete;
     ReadReader& operator=(const ReadReader&) = delete;

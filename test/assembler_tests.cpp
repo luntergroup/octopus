@@ -83,13 +83,15 @@ TEST_CASE("assembler_path_test", "[assembler]")
     Assembler assembler {15};
     
     KmerAssembler<int, policies::StoreStringReference> kmer_assembler {10};
-    kmer_assembler.add_sequence("AAAAAAAACCCCCGGGGGGGG", 1);
-    kmer_assembler.add_sequence("AAAAAAAACCTCCGGGGGGGG", 2);
+    kmer_assembler.add_sequence("AAAAAAAAAACCCCCCCCCC", 1);
+    kmer_assembler.add_sequence("CCCCCCCCCCGGGGGGGGGG", 2);
+    kmer_assembler.add_sequence("GGGGGGGGGGAAAAAAAAAA", 2);
     kmer_assembler.print_kmers();
     //kmer_assembler.add_sequence("GGGGGGGGGGTTTTTTTTTT", 1);
 //    kmer_assembler.add_sequence(contig, 1);
     auto paths = kmer_assembler.get_contigs();
     std::cout << paths[0] << std::endl;
+    std::cout << kmer_assembler.is_acyclic() << std::endl;
     
     //assembler.add_reference_contig(contig);
     
