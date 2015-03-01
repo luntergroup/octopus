@@ -11,6 +11,9 @@
 #include <iterator> // std::make_move_iterator
 #include <algorithm> // std::move
 
+#include "htslib_facade.h"
+#include "aligned_read.h"
+
 ReadManager::ReadManager(std::vector<std::string>&& read_file_paths, unsigned Max_open_files)
 :   closed_files_ (std::make_move_iterator(std::begin(read_file_paths)),
                    std::make_move_iterator(std::end(read_file_paths))),
@@ -40,6 +43,55 @@ void ReadManager::setup()
         open_reader(read_file);
         --num_files_to_open;
     }
+}
+
+unsigned ReadManager::get_num_samples() const noexcept
+{
+    return num_samples_;
+}
+
+// TODO: Evaluate if this should change to a member variable.
+std::vector<std::string> ReadManager::get_sample_ids() const
+{
+    std::vector<std::string> result {};
+    result.reserve(num_samples_);
+    for (const auto& pair : files_containing_sample_) {
+        result.emplace_back(pair.first);
+    }
+    return result;
+}
+
+ReadReader ReadManager::make_read_reader(const std::string& read_file_path)
+{
+    return ReadReader {read_file_path, std::make_unique<HtslibFacade>(read_file_path)};
+}
+
+void ReadManager::open_reader(const std::string &read_file_path)
+{
+    open_readers_.emplace(read_file_path, make_read_reader(read_file_path));
+    closed_files_.erase(read_file_path);
+}
+
+void ReadManager::close_reader(const std::string &read_file_path)
+{
+    open_readers_.erase(read_file_path);
+    closed_files_.insert(read_file_path);
+}
+
+std::vector<std::string>
+ReadManager::get_files_containing_region(const GenomicRegion& a_region) const
+{
+    if (files_containing_region_.count(a_region) > 0) {
+        return files_containing_region_.at(a_region);
+    }
+    // TODO: improve this
+    std::vector<std::string> result {};
+    for (const auto& pair : files_containing_region_) {
+        if (overlaps(pair.first, a_region)) {
+            result.insert(std::end(result), std::cbegin(pair.second), std::cend(pair.second));
+        }
+    }
+    return result;
 }
 
 std::vector<AlignedRead>

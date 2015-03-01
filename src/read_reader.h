@@ -25,7 +25,7 @@ public:
     
     ReadReader() = delete;
     explicit ReadReader(const std::string& read_file_path,
-                        std::unique_ptr<IReadReaderImpl> the_implementation);
+                        std::unique_ptr<IReadReaderImpl> the_impl);
     
     ReadReader(const ReadReader&)            = delete;
     ReadReader& operator=(const ReadReader&) = delete;
@@ -41,13 +41,13 @@ public:
     
 private:
     std::string read_file_path_;
-    std::unique_ptr<IReadReaderImpl> the_implementation_;
+    std::unique_ptr<IReadReaderImpl> the_impl_;
 };
 
 inline ReadReader::ReadReader(const std::string& read_file_path,
-                              std::unique_ptr<IReadReaderImpl> the_implementation)
+                              std::unique_ptr<IReadReaderImpl> the_impl)
 :read_file_path_ {read_file_path},
- the_implementation_ {std::move(the_implementation)}
+ the_impl_ {std::move(the_impl)}
 {}
 
 inline const std::string& ReadReader::get_read_file_path() const noexcept
@@ -57,27 +57,27 @@ inline const std::string& ReadReader::get_read_file_path() const noexcept
 
 inline std::vector<std::string> ReadReader::get_sample_ids()
 {
-    return the_implementation_->get_sample_ids();
+    return the_impl_->get_sample_ids();
 }
 
 inline std::vector<std::string> ReadReader::get_read_groups_in_sample(const std::string& a_sample_id)
 {
-    return the_implementation_->get_read_groups_in_sample(a_sample_id);
+    return the_impl_->get_read_groups_in_sample(a_sample_id);
 }
 
 inline ReadReader::SampleIdToReadsMap ReadReader::fetch_reads(const GenomicRegion& a_region)
 {
-    return the_implementation_->fetch_reads(a_region);
+    return the_impl_->fetch_reads(a_region);
 }
 
 inline std::vector<std::string> ReadReader::get_reference_contig_names()
 {
-    return the_implementation_->get_reference_contig_names();
+    return the_impl_->get_reference_contig_names();
 }
 
 inline std::vector<GenomicRegion> ReadReader::get_regions_in_file()
 {
-    return the_implementation_->get_regions_in_file();
+    return the_impl_->get_regions_in_file();
 }
 
 inline bool operator==(const ReadReader& lhs, const ReadReader& rhs)

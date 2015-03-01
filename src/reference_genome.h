@@ -29,7 +29,7 @@ public:
     using SizeType     = IReferenceGenomeImpl::SizeType;
     
     ReferenceGenome() = delete;
-    explicit ReferenceGenome(std::unique_ptr<IReferenceGenomeImpl> the_reference_implementation);
+    explicit ReferenceGenome(std::unique_ptr<IReferenceGenomeImpl> the_reference_impl);
     
     ReferenceGenome(const ReferenceGenome&)            = delete;
     ReferenceGenome& operator=(const ReferenceGenome&) = delete;
@@ -46,21 +46,21 @@ public:
     SequenceType get_sequence(const GenomicRegion& a_region);
     
 private:
-    std::unique_ptr<IReferenceGenomeImpl> the_reference_implementation_;
+    std::unique_ptr<IReferenceGenomeImpl> the_reference_impl_;
     std::string name_;
     std::vector<std::string> contig_names_;
     std::unordered_map<std::string, SizeType> contig_sizes_;
 };
 
 inline
-ReferenceGenome::ReferenceGenome(std::unique_ptr<IReferenceGenomeImpl> the_reference_implementation)
-:the_reference_implementation_ {std::move(the_reference_implementation)},
- name_ {the_reference_implementation_->get_reference_name()},
- contig_names_(std::move(the_reference_implementation_->get_contig_names())),
+ReferenceGenome::ReferenceGenome(std::unique_ptr<IReferenceGenomeImpl> the_reference_impl)
+:the_reference_impl_ {std::move(the_reference_impl)},
+ name_ {the_reference_impl_->get_reference_name()},
+ contig_names_(std::move(the_reference_impl_->get_contig_names())),
  contig_sizes_ {}
 {
     for (const auto& contig_name : contig_names_) {
-        contig_sizes_[contig_name] = the_reference_implementation_->get_contig_size(contig_name);
+        contig_sizes_[contig_name] = the_reference_impl_->get_contig_size(contig_name);
     }
 }
 
@@ -104,7 +104,7 @@ inline bool ReferenceGenome::contains_region(const GenomicRegion& a_region) cons
 
 inline ReferenceGenome::SequenceType ReferenceGenome::get_sequence(const GenomicRegion& a_region)
 {
-    return the_reference_implementation_->get_sequence(a_region);
+    return the_reference_impl_->get_sequence(a_region);
 }
 
 inline GenomicRegion parse_region(const std::string& a_region, const ReferenceGenome& the_reference)

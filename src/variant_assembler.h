@@ -10,14 +10,37 @@
 #define __Octopus__variant_assembler__
 
 #include "kmer_assembler.h"
-#include "variant.h"
+
+#include <string>
+#include <set>
+
+#include "storage_policies.h"
+
+class Variant;
+class AlignedRead;
+class GenomicRegion;
 
 class VariantAssembler
 {
 public:
+    VariantAssembler() = delete;
+    explicit VariantAssembler(unsigned k);
+    ~VariantAssembler() = default;
+    
+    VariantAssembler(const VariantAssembler&)            = default;
+    VariantAssembler& operator=(const VariantAssembler&) = default;
+    VariantAssembler(VariantAssembler&&)                 = default;
+    VariantAssembler& operator=(VariantAssembler&&)      = default;
+    
+    void add_read(const AlignedRead& a_read);
+    void add_reference_sequence(const GenomicRegion& the_region, const std::string& the_sequence);
+    std::set<Variant> get_variants(const GenomicRegion& a_region);
+    void clear() noexcept;
     
 private:
+    enum class Colour {Reference, Read};
     
+    KmerAssembler<Colour, policies::StoreStringReference> the_assembler_;
 };
 
 #endif /* defined(__Octopus__variant_assembler__) */

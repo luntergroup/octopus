@@ -23,6 +23,8 @@
 #include "read_reader_impl.h"
 #include "aligned_read.h"
 
+class AlignedRead;
+
 using std::uint_fast32_t;
 using std::uint_fast8_t;
 using std::uint8_t;
@@ -113,126 +115,5 @@ private:
     std::string get_tag_value(const std::string& line, const char* tag) const;
     uint64_t get_num_mapped_reads(const std::string& reference_contig_name) const;
 };
-
-inline uint_fast32_t HtslibFacade::get_num_reference_contigs() noexcept
-{
-    return the_header_->n_targets;
-}
-
-inline uint_fast32_t HtslibFacade::get_reference_contig_size(const std::string& contig_name)
-{
-    return the_header_->target_len[get_htslib_tid(contig_name)];
-}
-
-inline int HtslibFacade::HtslibIterator::operator++()
-{
-    return sam_itr_next(hts_facade_.the_file_.get(), the_iterator_.get(), the_bam1_.get()) >= 0;
-}
-
-inline uint_fast32_t HtslibFacade::HtslibIterator::get_read_start() const noexcept
-{
-    return static_cast<uint_fast32_t>(the_bam1_->core.pos);
-}
-
-inline uint32_t HtslibFacade::HtslibIterator::get_sequence_length() const noexcept
-{
-    return the_bam1_->core.l_qseq;
-}
-
-inline char HtslibFacade::HtslibIterator::get_base(uint8_t* a_htslib_sequence,
-                                                   uint32_t index) const noexcept
-{
-    static constexpr const char* symbol_table {"=ACMGRSVTWYHKDBN"};
-    return symbol_table[bam_seqi(a_htslib_sequence, index)];
-}
-
-inline std::string HtslibFacade::HtslibIterator::get_sequence() const
-{
-    std::string result {};
-    auto length = get_sequence_length();
-    result.reserve(length);
-    for (uint32_t i = 0; i < length; ++i) {
-        result.push_back(get_base(bam_get_seq(the_bam1_), i));
-    }
-    return result;
-}
-
-inline std::vector<uint_fast8_t> HtslibFacade::HtslibIterator::get_qualities() const
-{
-    auto qualities = bam_get_qual(the_bam1_);
-    auto length = get_sequence_length();
-    std::vector<uint_fast8_t> result;
-    result.reserve(length);
-    result.insert(result.begin(), qualities, qualities + length);
-    return result;
-}
-
-inline uint32_t HtslibFacade::HtslibIterator::get_cigar_length() const noexcept
-{
-    return the_bam1_->core.n_cigar;
-}
-
-inline CigarString HtslibFacade::HtslibIterator::make_cigar_string() const
-{
-    static constexpr const char* operation_table {"MIDNSHP=X"};
-    auto cigar_operations = bam_get_cigar(the_bam1_);
-    auto length = get_cigar_length();
-    std::vector<CigarOperation> result;
-    result.reserve(length);
-    for (uint32_t i {0}; i < length; ++i) {
-        result.emplace_back(bam_cigar_oplen(cigar_operations[i]),
-                            operation_table[bam_cigar_op(cigar_operations[i])]);
-    };
-    return CigarString(std::move(result));
-}
-
-inline std::string HtslibFacade::HtslibIterator::get_read_group() const
-{
-    return std::string(bam_aux2Z(bam_aux_get(the_bam1_.get(), Read_group_tag)));
-}
-
-inline std::string HtslibFacade::HtslibIterator::get_contig_name(int32_t htslib_tid) const
-{
-    return hts_facade_.contig_name_map_[htslib_tid];
-}
-
-inline std::string HtslibFacade::HtslibIterator::get_read_name() const
-{
-    return std::string {bam_get_qname(the_bam1_)};
-}
-
-inline std::string HtslibFacade::get_reference_contig_name(int32_t hts_tid) const
-{
-    return std::string(the_header_->target_name[hts_tid]);
-}
-
-inline bool HtslibFacade::is_type(const std::string& header_line, const char* tag) const
-{
-    return header_line.compare(1, 2, tag) == 0;
-}
-
-inline bool HtslibFacade::has_tag(const std::string& header_line, const char* tag) const
-{
-    return header_line.find(tag) != std::string::npos;
-}
-
-inline std::string HtslibFacade::get_tag_value(const std::string& line, const char* tag) const
-{
-    // format TAG:VALUE\t
-    auto tag_position = line.find(tag);
-    if (tag_position != std::string::npos) {
-        auto value_position = line.find(':', tag_position) + 1;
-        auto tag_value_size = line.find('\t', value_position) - value_position;
-        return line.substr(value_position, tag_value_size);
-    }
-    throw std::runtime_error {"no " + std::string {tag} + " tag"};
-}
-
-inline uint64_t HtslibFacade::get_num_mapped_reads(const std::string& reference_contig_name) const
-{
-    uint64_t num_mapped, num_unmapped;
-    hts_idx_get_stat(the_index_.get(), get_htslib_tid(reference_contig_name), &num_mapped, &num_unmapped);
-    return num_mapped;
-}
 
 #endif /* defined(__Octopus__htslib_facade__) */

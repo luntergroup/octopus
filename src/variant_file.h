@@ -11,8 +11,8 @@
 
 #include <set>
 
-class Variant;
-class GenomicRegion;
+#include "variant.h"
+#include "genomic_region.h"
 
 class VariantFile
 {
@@ -21,6 +21,7 @@ public:
 private:
 };
 
+inline
 std::set<Variant> VariantFile::fetch_variants(const GenomicRegion& a_region)
 {
     return std::set<Variant> {};

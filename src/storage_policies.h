@@ -12,6 +12,7 @@
 #include <string>
 #include <unordered_set>
 #include <boost/utility/string_ref.hpp>
+#include "utils.h" // for boost::string_ref hash
 
 namespace policies {
     
