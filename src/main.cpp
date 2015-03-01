@@ -6,7 +6,8 @@
 //  Copyright (c) 2015 Oxford University. All rights reserved.
 //
 
-#include <iostream>
+#define CATCH_CONFIG_MAIN
+#include "catch.hpp"
 
 //int main(int argc, char **argv)
 //{

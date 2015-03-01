@@ -16,7 +16,7 @@
 
 #include "test_common.h"
 #include "reference_genome.h"
-#include "reference_genome_implementor_factory.h"
+#include "reference_genome_impl_factory.h"
 #include "bioio.h"
 
 TEST_CASE("reference_benchmark", "[benchmark]")
@@ -31,7 +31,7 @@ TEST_CASE("reference_benchmark", "[benchmark]")
     
     fasta.close();
     
-    ReferenceGenomeImplementorFactory a_factory {};
+    ReferenceGenomeImplFactory a_factory {};
     ReferenceGenome reference(a_factory.make(human_reference_fasta));
     
     auto f_ref = [&reference] () {

@@ -20,7 +20,7 @@
 #include "htslib/hts.h"
 #include "htslib/sam.h"
 
-#include "read_reader_implementor.h"
+#include "read_reader_impl.h"
 #include "aligned_read.h"
 
 using std::uint_fast32_t;
@@ -35,7 +35,7 @@ auto htslib_index_deleter    = [] (hts_idx_t* the_index) { hts_idx_destroy(the_i
 auto htslib_iterator_deleter = [] (hts_itr_t* the_iterator) { sam_itr_destroy(the_iterator); };
 auto htslib_bam1_deleter     = [] (bam1_t* b) { bam_destroy1(b); };
 
-class HtslibFacade : public IReadReaderImplementor
+class HtslibFacade : public IReadReaderImpl
 {
 public:
     HtslibFacade() = delete;
@@ -81,7 +81,7 @@ private:
         std::string get_sequence() const;
         std::vector<uint_fast8_t> get_qualities() const;
         uint32_t get_cigar_length() const noexcept;
-        CigarString get_cigar_string() const;
+        CigarString make_cigar_string() const;
         std::string get_read_group() const;
         std::string get_contig_name(int32_t htslib_tid) const;
         std::string get_read_name() const;
@@ -172,12 +172,12 @@ inline uint32_t HtslibFacade::HtslibIterator::get_cigar_length() const noexcept
     return the_bam1_->core.n_cigar;
 }
 
-inline CigarString HtslibFacade::HtslibIterator::get_cigar_string() const
+inline CigarString HtslibFacade::HtslibIterator::make_cigar_string() const
 {
     static constexpr const char* operation_table {"MIDNSHP=X"};
     auto cigar_operations = bam_get_cigar(the_bam1_);
     auto length = get_cigar_length();
-    std::vector<CigarString::CigarOperation> result;
+    std::vector<CigarOperation> result;
     result.reserve(length);
     for (uint32_t i {0}; i < length; ++i) {
         result.emplace_back(bam_cigar_oplen(cigar_operations[i]),
@@ -233,13 +233,6 @@ inline uint64_t HtslibFacade::get_num_mapped_reads(const std::string& reference_
     uint64_t num_mapped, num_unmapped;
     hts_idx_get_stat(the_index_.get(), get_htslib_tid(reference_contig_name), &num_mapped, &num_unmapped);
     return num_mapped;
-}
-
-inline uint32_t get_soft_clipped_read_begin(const CigarString& a_cigar_string,
-                                            uint32_t hard_clipped_begin) noexcept
-{
-    if (a_cigar_string.is_soft_clipped()) hard_clipped_begin -= a_cigar_string.at(0).get_size();
-    return hard_clipped_begin;
 }
 
 #endif /* defined(__Octopus__htslib_facade__) */

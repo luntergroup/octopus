@@ -13,22 +13,24 @@
 		CA8FACBD1A954B67002760F2 /* libboost_system.a in Frameworks */ = {isa = PBXBuildFile; fileRef = CA8FACBC1A954B67002760F2 /* libboost_system.a */; };
 		CA8FACBF1A954C86002760F2 /* libboost_filesystem.a in Frameworks */ = {isa = PBXBuildFile; fileRef = CA8FACBE1A954C86002760F2 /* libboost_filesystem.a */; };
 		CA8FACC41A96515A002760F2 /* assembler_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA8FACC31A96515A002760F2 /* assembler_tests.cpp */; };
-		CA8FACCA1A975FBC002760F2 /* assembler.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA8FACC81A975FBC002760F2 /* assembler.cpp */; };
 		CAA4DC251A81981400DD3E9A /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CAA4DC241A81981400DD3E9A /* main.cpp */; };
 		CAA4DC321A82B36300DD3E9A /* README.md in Sources */ = {isa = PBXBuildFile; fileRef = CAA4DC311A82B36300DD3E9A /* README.md */; };
 		CAA4DC351A83A39D00DD3E9A /* Octopus in CopyFiles */ = {isa = PBXBuildFile; fileRef = CAA4DC211A81981400DD3E9A /* Octopus */; };
 		CAA4DC481A841B2600DD3E9A /* variant_factory.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CAA4DC461A841B2600DD3E9A /* variant_factory.cpp */; };
-		CAA4DC4D1A84304700DD3E9A /* variant.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CAA4DC4C1A84304700DD3E9A /* variant.cpp */; };
 		CABA377F1A8FA11000BBE598 /* read_benchmark.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CABA377E1A8FA11000BBE598 /* read_benchmark.cpp */; };
 		CABA37821A8FA49800BBE598 /* read_manager.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CABA37801A8FA49800BBE598 /* read_manager.cpp */; };
 		CAE3E2971A9D292000C01B2C /* variant_assembler.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CAE3E2951A9D292000C01B2C /* variant_assembler.cpp */; };
+		CAE3E29D1AA139A000C01B2C /* program_options.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CAE3E29B1AA139A000C01B2C /* program_options.cpp */; };
+		CAE3E29F1AA13DF500C01B2C /* libboost_program_options.a in Frameworks */ = {isa = PBXBuildFile; fileRef = CAE3E29E1AA13DF500C01B2C /* libboost_program_options.a */; };
+		CAE3E2A81AA25F7D00C01B2C /* alignment_candidate_variant_generator.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CAE3E2A61AA25F7D00C01B2C /* alignment_candidate_variant_generator.cpp */; };
+		CAE3E2AB1AA2736D00C01B2C /* prior_variant_candidates.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CAE3E2A91AA2736D00C01B2C /* prior_variant_candidates.cpp */; };
+		CAE3E2B01AA2981E00C01B2C /* variant_candidate_generation_test.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CAE3E2AE1AA2981E00C01B2C /* variant_candidate_generation_test.cpp */; };
 		D4907F4B1A88E20E00639203 /* variant_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D4907F4A1A88E20E00639203 /* variant_tests.cpp */; };
 		D4907F571A8A2A9B00639203 /* reference_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D4907F561A8A2A9B00639203 /* reference_tests.cpp */; };
 		D4907F5B1A8A374000639203 /* fasta.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D4907F591A8A374000639203 /* fasta.cpp */; };
 		D4907F5F1A8A3ADD00639203 /* utils.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D4907F5D1A8A3ADD00639203 /* utils.cpp */; };
 		D4907F651A8A6EE600639203 /* reference_genome_implementor_factory.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D4907F631A8A6EE600639203 /* reference_genome_implementor_factory.cpp */; };
 		D4907F701A8E032F00639203 /* libhts.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D4907F6F1A8E032F00639203 /* libhts.a */; };
-		D4907F751A8E2B7200639203 /* contig_name.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D4907F741A8E2B7200639203 /* contig_name.cpp */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -51,14 +53,12 @@
 		CA03C2241A8C1702000D3494 /* read_reader_test.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = read_reader_test.cpp; sourceTree = "<group>"; };
 		CA03C2261A8C1BED000D3494 /* reference_benchmarks.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = reference_benchmarks.cpp; sourceTree = "<group>"; };
 		CA03C2291A8C1C8C000D3494 /* benchmark_utils.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = benchmark_utils.h; sourceTree = "<group>"; };
-		CA03C22A1A8CEF25000D3494 /* read_reader_implementor.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = read_reader_implementor.h; sourceTree = "<group>"; };
+		CA03C22A1A8CEF25000D3494 /* read_reader_impl.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = read_reader_impl.h; sourceTree = "<group>"; };
 		CA03C22B1A8D2C5D000D3494 /* cigar_string.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = cigar_string.h; sourceTree = "<group>"; };
 		CA8FACBA1A954B0B002760F2 /* libboost_signals.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libboost_signals.a; path = /usr/local/Cellar/boost/1.57.0/lib/libboost_signals.a; sourceTree = "<absolute>"; };
 		CA8FACBC1A954B67002760F2 /* libboost_system.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libboost_system.a; path = /usr/local/Cellar/boost/1.57.0/lib/libboost_system.a; sourceTree = "<absolute>"; };
 		CA8FACBE1A954C86002760F2 /* libboost_filesystem.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libboost_filesystem.a; path = /usr/local/Cellar/boost/1.57.0/lib/libboost_filesystem.a; sourceTree = "<absolute>"; };
 		CA8FACC31A96515A002760F2 /* assembler_tests.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = assembler_tests.cpp; sourceTree = "<group>"; };
-		CA8FACC81A975FBC002760F2 /* assembler.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = assembler.cpp; sourceTree = "<group>"; };
-		CA8FACC91A975FBC002760F2 /* assembler.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = assembler.h; sourceTree = "<group>"; };
 		CAA4DC211A81981400DD3E9A /* Octopus */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = Octopus; sourceTree = BUILT_PRODUCTS_DIR; };
 		CAA4DC241A81981400DD3E9A /* main.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = main.cpp; path = ../src/main.cpp; sourceTree = "<group>"; };
 		CAA4DC301A82B28800DD3E9A /* .gitignore */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = .gitignore; sourceTree = "<group>"; };
@@ -66,7 +66,6 @@
 		CAA4DC391A83B16800DD3E9A /* conventions.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = conventions.txt; sourceTree = "<group>"; };
 		CAA4DC461A841B2600DD3E9A /* variant_factory.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = variant_factory.cpp; sourceTree = "<group>"; };
 		CAA4DC471A841B2600DD3E9A /* variant_factory.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = variant_factory.h; sourceTree = "<group>"; };
-		CAA4DC4C1A84304700DD3E9A /* variant.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = variant.cpp; sourceTree = "<group>"; };
 		CAA4DC621A88238C00DD3E9A /* variant.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = variant.h; sourceTree = "<group>"; };
 		CAA4DC671A8ACE9B00DD3E9A /* bioio.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = bioio.h; sourceTree = "<group>"; };
 		CABA377D1A8F9E0A00BBE598 /* test_common.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = test_common.h; sourceTree = "<group>"; };
@@ -78,25 +77,36 @@
 		CAE3E2941A9CF97700C01B2C /* storage_policies.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = storage_policies.h; sourceTree = "<group>"; };
 		CAE3E2951A9D292000C01B2C /* variant_assembler.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = variant_assembler.cpp; sourceTree = "<group>"; };
 		CAE3E2961A9D292000C01B2C /* variant_assembler.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = variant_assembler.h; sourceTree = "<group>"; };
+		CAE3E29B1AA139A000C01B2C /* program_options.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = program_options.cpp; sourceTree = "<group>"; };
+		CAE3E29C1AA139A000C01B2C /* program_options.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = program_options.h; sourceTree = "<group>"; };
+		CAE3E29E1AA13DF500C01B2C /* libboost_program_options.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libboost_program_options.a; path = /usr/local/Cellar/boost/1.57.0/lib/libboost_program_options.a; sourceTree = "<absolute>"; };
+		CAE3E2A01AA1D39100C01B2C /* compression.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = compression.h; sourceTree = "<group>"; };
+		CAE3E2A21AA1DBE000C01B2C /* variant_candidate_generator.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = variant_candidate_generator.h; sourceTree = "<group>"; };
+		CAE3E2A41AA24C5500C01B2C /* i_variant_candidate_generator.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = i_variant_candidate_generator.h; sourceTree = "<group>"; };
+		CAE3E2A61AA25F7D00C01B2C /* alignment_candidate_variant_generator.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = alignment_candidate_variant_generator.cpp; sourceTree = "<group>"; };
+		CAE3E2A71AA25F7D00C01B2C /* alignment_candidate_variant_generator.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = alignment_candidate_variant_generator.h; sourceTree = "<group>"; };
+		CAE3E2A91AA2736D00C01B2C /* prior_variant_candidates.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = prior_variant_candidates.cpp; sourceTree = "<group>"; };
+		CAE3E2AA1AA2736D00C01B2C /* prior_variant_candidates.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = prior_variant_candidates.h; sourceTree = "<group>"; };
+		CAE3E2AC1AA274BE00C01B2C /* variant_file.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = variant_file.h; sourceTree = "<group>"; };
+		CAE3E2AD1AA276FA00C01B2C /* variant_file_impl.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = variant_file_impl.h; sourceTree = "<group>"; };
+		CAE3E2AE1AA2981E00C01B2C /* variant_candidate_generation_test.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = variant_candidate_generation_test.cpp; sourceTree = "<group>"; };
 		D4907F471A88D71800639203 /* genomic_region.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = genomic_region.h; sourceTree = "<group>"; };
 		D4907F491A88E14E00639203 /* catch.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = catch.hpp; sourceTree = "<group>"; };
 		D4907F4A1A88E20E00639203 /* variant_tests.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = variant_tests.cpp; sourceTree = "<group>"; };
 		D4907F4D1A89095400639203 /* sequence_region.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = sequence_region.h; sourceTree = "<group>"; };
 		D4907F541A8A18CF00639203 /* reference_genome.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = reference_genome.h; sourceTree = "<group>"; };
 		D4907F561A8A2A9B00639203 /* reference_tests.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = reference_tests.cpp; sourceTree = "<group>"; };
-		D4907F581A8A35EA00639203 /* reference_genome_implementor.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = reference_genome_implementor.h; sourceTree = "<group>"; };
+		D4907F581A8A35EA00639203 /* reference_genome_impl.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = reference_genome_impl.h; sourceTree = "<group>"; };
 		D4907F591A8A374000639203 /* fasta.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = fasta.cpp; sourceTree = "<group>"; };
 		D4907F5A1A8A374000639203 /* fasta.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = fasta.h; sourceTree = "<group>"; };
 		D4907F5D1A8A3ADD00639203 /* utils.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = utils.cpp; sourceTree = "<group>"; };
 		D4907F5E1A8A3ADD00639203 /* utils.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = utils.h; sourceTree = "<group>"; };
 		D4907F631A8A6EE600639203 /* reference_genome_implementor_factory.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = reference_genome_implementor_factory.cpp; sourceTree = "<group>"; };
-		D4907F641A8A6EE600639203 /* reference_genome_implementor_factory.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = reference_genome_implementor_factory.h; sourceTree = "<group>"; };
+		D4907F641A8A6EE600639203 /* reference_genome_impl_factory.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = reference_genome_impl_factory.h; sourceTree = "<group>"; };
 		D4907F6A1A8BC06800639203 /* aligned_read.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = aligned_read.h; sourceTree = "<group>"; };
 		D4907F6F1A8E032F00639203 /* libhts.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libhts.a; path = "../../htslib-develop/libhts.a"; sourceTree = "<group>"; };
 		D4907F711A8E04B900639203 /* comparable.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = comparable.h; sourceTree = "<group>"; };
-		D4907F721A8E250500639203 /* contig_name.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = contig_name.h; sourceTree = "<group>"; };
 		D4907F731A8E255200639203 /* equitable.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = equitable.h; sourceTree = "<group>"; };
-		D4907F741A8E2B7200639203 /* contig_name.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = contig_name.cpp; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -104,6 +114,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				CAE3E29F1AA13DF500C01B2C /* libboost_program_options.a in Frameworks */,
 				CA8FACBF1A954C86002760F2 /* libboost_filesystem.a in Frameworks */,
 				CA8FACBD1A954B67002760F2 /* libboost_system.a in Frameworks */,
 				D4907F701A8E032F00639203 /* libhts.a in Frameworks */,
@@ -150,10 +161,12 @@
 			isa = PBXGroup;
 			children = (
 				CAE3E2931A9CF95900C01B2C /* policies */,
-				CABA377C1A8F762200BBE598 /* assembly */,
+				CABA377C1A8F762200BBE598 /* assembler */,
 				CABA377B1A8F66E400BBE598 /* utils */,
 				D4907F421A88D6C600639203 /* io */,
-				CAA4DC3B1A83B64A00DD3E9A /* variant */,
+				CAA4DC3B1A83B64A00DD3E9A /* variants */,
+				CAE3E29C1AA139A000C01B2C /* program_options.h */,
+				CAE3E29B1AA139A000C01B2C /* program_options.cpp */,
 			);
 			path = src;
 			sourceTree = "<group>";
@@ -161,6 +174,7 @@
 		CAA4DC2B1A8219C700DD3E9A /* lib */ = {
 			isa = PBXGroup;
 			children = (
+				CAE3E29E1AA13DF500C01B2C /* libboost_program_options.a */,
 				CA8FACBC1A954B67002760F2 /* libboost_system.a */,
 				CA8FACBE1A954C86002760F2 /* libboost_filesystem.a */,
 				CA8FACBA1A954B0B002760F2 /* libboost_signals.a */,
@@ -187,6 +201,7 @@
 				D4907F561A8A2A9B00639203 /* reference_tests.cpp */,
 				CA03C2241A8C1702000D3494 /* read_reader_test.cpp */,
 				CA8FACC31A96515A002760F2 /* assembler_tests.cpp */,
+				CAE3E2AE1AA2981E00C01B2C /* variant_candidate_generation_test.cpp */,
 				CABA377D1A8F9E0A00BBE598 /* test_common.h */,
 				CAE3E2921A9A882000C01B2C /* mock_objects.h */,
 			);
@@ -208,29 +223,30 @@
 			path = bin;
 			sourceTree = "<group>";
 		};
-		CAA4DC3B1A83B64A00DD3E9A /* variant */ = {
+		CAA4DC3B1A83B64A00DD3E9A /* variants */ = {
 			isa = PBXGroup;
 			children = (
 				CAA4DC621A88238C00DD3E9A /* variant.h */,
-				CAA4DC4C1A84304700DD3E9A /* variant.cpp */,
 				CAA4DC471A841B2600DD3E9A /* variant_factory.h */,
 				CAA4DC461A841B2600DD3E9A /* variant_factory.cpp */,
+				CAE3E2A41AA24C5500C01B2C /* i_variant_candidate_generator.h */,
+				CAE3E2A21AA1DBE000C01B2C /* variant_candidate_generator.h */,
+				CAE3E2A71AA25F7D00C01B2C /* alignment_candidate_variant_generator.h */,
+				CAE3E2A61AA25F7D00C01B2C /* alignment_candidate_variant_generator.cpp */,
+				CAE3E2AA1AA2736D00C01B2C /* prior_variant_candidates.h */,
+				CAE3E2A91AA2736D00C01B2C /* prior_variant_candidates.cpp */,
 			);
-			name = variant;
+			name = variants;
 			sourceTree = "<group>";
 		};
 		CABA37791A8F668E00BBE598 /* reference */ = {
 			isa = PBXGroup;
 			children = (
-				D4907F721A8E250500639203 /* contig_name.h */,
-				D4907F741A8E2B7200639203 /* contig_name.cpp */,
-				D4907F4D1A89095400639203 /* sequence_region.h */,
-				D4907F471A88D71800639203 /* genomic_region.h */,
 				D4907F541A8A18CF00639203 /* reference_genome.h */,
-				D4907F581A8A35EA00639203 /* reference_genome_implementor.h */,
+				D4907F581A8A35EA00639203 /* reference_genome_impl.h */,
 				D4907F5A1A8A374000639203 /* fasta.h */,
 				D4907F591A8A374000639203 /* fasta.cpp */,
-				D4907F641A8A6EE600639203 /* reference_genome_implementor_factory.h */,
+				D4907F641A8A6EE600639203 /* reference_genome_impl_factory.h */,
 				D4907F631A8A6EE600639203 /* reference_genome_implementor_factory.cpp */,
 			);
 			name = reference;
@@ -244,7 +260,7 @@
 				CABA37811A8FA49800BBE598 /* read_manager.h */,
 				CABA37801A8FA49800BBE598 /* read_manager.cpp */,
 				CA03C14D1A8C0519000D3494 /* read_reader.h */,
-				CA03C22A1A8CEF25000D3494 /* read_reader_implementor.h */,
+				CA03C22A1A8CEF25000D3494 /* read_reader_impl.h */,
 				CA03C1501A8C0D3D000D3494 /* htslib_facade.h */,
 				CA03C14F1A8C0D3D000D3494 /* htslib_facade.cpp */,
 			);
@@ -254,22 +270,22 @@
 		CABA377B1A8F66E400BBE598 /* utils */ = {
 			isa = PBXGroup;
 			children = (
+				D4907F4D1A89095400639203 /* sequence_region.h */,
+				D4907F471A88D71800639203 /* genomic_region.h */,
 				D4907F5D1A8A3ADD00639203 /* utils.cpp */,
 				D4907F5E1A8A3ADD00639203 /* utils.h */,
 			);
 			name = utils;
 			sourceTree = "<group>";
 		};
-		CABA377C1A8F762200BBE598 /* assembly */ = {
+		CABA377C1A8F762200BBE598 /* assembler */ = {
 			isa = PBXGroup;
 			children = (
-				CA8FACC91A975FBC002760F2 /* assembler.h */,
-				CA8FACC81A975FBC002760F2 /* assembler.cpp */,
 				CAE3E2911A9A031600C01B2C /* kmer_assembler.h */,
 				CAE3E2961A9D292000C01B2C /* variant_assembler.h */,
 				CAE3E2951A9D292000C01B2C /* variant_assembler.cpp */,
 			);
-			name = assembly;
+			name = assembler;
 			sourceTree = "<group>";
 		};
 		CAE3E2931A9CF95900C01B2C /* policies */ = {
@@ -278,13 +294,24 @@
 				D4907F711A8E04B900639203 /* comparable.h */,
 				D4907F731A8E255200639203 /* equitable.h */,
 				CAE3E2941A9CF97700C01B2C /* storage_policies.h */,
+				CAE3E2A01AA1D39100C01B2C /* compression.h */,
 			);
 			name = policies;
+			sourceTree = "<group>";
+		};
+		CAE3E2A51AA24D6000C01B2C /* variants */ = {
+			isa = PBXGroup;
+			children = (
+				CAE3E2AC1AA274BE00C01B2C /* variant_file.h */,
+				CAE3E2AD1AA276FA00C01B2C /* variant_file_impl.h */,
+			);
+			name = variants;
 			sourceTree = "<group>";
 		};
 		D4907F421A88D6C600639203 /* io */ = {
 			isa = PBXGroup;
 			children = (
+				CAE3E2A51AA24D6000C01B2C /* variants */,
 				CABA377A1A8F66A300BBE598 /* reads */,
 				CABA37791A8F668E00BBE598 /* reference */,
 			);
@@ -347,19 +374,20 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				CA8FACCA1A975FBC002760F2 /* assembler.cpp in Sources */,
 				CA03C2251A8C1702000D3494 /* read_reader_test.cpp in Sources */,
 				CA03C2271A8C1BED000D3494 /* reference_benchmarks.cpp in Sources */,
 				CAA4DC481A841B2600DD3E9A /* variant_factory.cpp in Sources */,
 				D4907F5B1A8A374000639203 /* fasta.cpp in Sources */,
 				CABA37821A8FA49800BBE598 /* read_manager.cpp in Sources */,
+				CAE3E29D1AA139A000C01B2C /* program_options.cpp in Sources */,
 				D4907F4B1A88E20E00639203 /* variant_tests.cpp in Sources */,
-				CAA4DC4D1A84304700DD3E9A /* variant.cpp in Sources */,
+				CAE3E2AB1AA2736D00C01B2C /* prior_variant_candidates.cpp in Sources */,
 				CABA377F1A8FA11000BBE598 /* read_benchmark.cpp in Sources */,
 				CA03C1511A8C0D3D000D3494 /* htslib_facade.cpp in Sources */,
-				D4907F751A8E2B7200639203 /* contig_name.cpp in Sources */,
 				D4907F571A8A2A9B00639203 /* reference_tests.cpp in Sources */,
 				D4907F5F1A8A3ADD00639203 /* utils.cpp in Sources */,
+				CAE3E2B01AA2981E00C01B2C /* variant_candidate_generation_test.cpp in Sources */,
+				CAE3E2A81AA25F7D00C01B2C /* alignment_candidate_variant_generator.cpp in Sources */,
 				CAA4DC321A82B36300DD3E9A /* README.md in Sources */,
 				CAE3E2971A9D292000C01B2C /* variant_assembler.cpp in Sources */,
 				D4907F651A8A6EE600639203 /* reference_genome_implementor_factory.cpp in Sources */,

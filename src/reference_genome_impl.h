@@ -6,23 +6,24 @@
 //  Copyright (c) 2015 Oxford University. All rights reserved.
 //
 
-#ifndef Octopus_reference_genome_implementor_h
-#define Octopus_reference_genome_implementor_h
+#ifndef Octopus_reference_genome_impl_h
+#define Octopus_reference_genome_impl_h
 
 #include <string>
 #include <vector>
 #include <cstdint>
 
-#include "genomic_region.h"
+class GenomicRegion;
 
-class IReferenceGenomeImplementor
+class IReferenceGenomeImpl
 {
 public:
+    using SizeType = std::uint_fast32_t;
     virtual std::string get_reference_name() = 0;
     virtual std::vector<std::string> get_contig_names() = 0;
-    virtual std::uint_fast32_t get_contig_size(std::string contig_name) = 0;
+    virtual SizeType get_contig_size(std::string contig_name) = 0;
     virtual std::string get_sequence(const GenomicRegion& a_region) = 0;
-    virtual ~IReferenceGenomeImplementor() noexcept = default;
+    virtual ~IReferenceGenomeImpl() noexcept = default;
 };
 
 #endif

@@ -13,7 +13,7 @@
 #include <iterator>
 #include <memory>
 
-#include "read_reader_implementor.h"
+#include "read_reader_impl.h"
 #include "genomic_region.h"
 #include "aligned_read.h"
 #include "equitable.h"
@@ -25,7 +25,7 @@ public:
     
     ReadReader() = delete;
     explicit ReadReader(const std::string& read_file_path,
-                        std::unique_ptr<IReadReaderImplementor> the_implementation);
+                        std::unique_ptr<IReadReaderImpl> the_implementation);
     
     ReadReader(const ReadReader&)            = delete;
     ReadReader& operator=(const ReadReader&) = delete;
@@ -41,11 +41,11 @@ public:
     
 private:
     std::string read_file_path_;
-    std::unique_ptr<IReadReaderImplementor> the_implementation_;
+    std::unique_ptr<IReadReaderImpl> the_implementation_;
 };
 
 inline ReadReader::ReadReader(const std::string& read_file_path,
-                              std::unique_ptr<IReadReaderImplementor> the_implementation)
+                              std::unique_ptr<IReadReaderImpl> the_implementation)
 :read_file_path_ {read_file_path},
  the_implementation_ {std::move(the_implementation)}
 {}

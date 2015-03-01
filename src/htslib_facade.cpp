@@ -132,7 +132,7 @@ std::pair<AlignedRead, std::string> HtslibFacade::HtslibIterator::operator*() co
 {
     auto the_qualities = get_qualities();
     if (the_qualities.empty() || the_qualities[0] == 0xff) throw std::runtime_error {"bad sequence"};
-    auto the_cigar_string = get_cigar_string();
+    auto the_cigar_string = make_cigar_string();
     if (the_cigar_string.empty()) throw std::runtime_error {"bad sequence"};
     auto c = the_bam1_->core;
     auto read_start = static_cast<uint_fast32_t>(get_soft_clipped_read_begin(the_cigar_string, c.pos));

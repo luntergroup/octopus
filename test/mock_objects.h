@@ -24,7 +24,7 @@ AlignedRead get_mock_aligned_read(std::string the_sequence)
         get_mock_region(),
         std::move(the_sequence),
         AlignedRead::Qualities {},
-        CigarString {""},
+        CigarString {},
         0,
         "1",
         0,

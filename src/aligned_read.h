@@ -12,27 +12,25 @@
 #include <string>
 #include <cstdint>
 #include <ostream>
-#include <algorithm>
+#include <algorithm> // std::transform
 
 #include "genomic_region.h"
 #include "cigar_string.h"
 #include "comparable.h"
 
-using std::uint_fast32_t;
-using std::uint_fast8_t;
-
 class AlignedRead : Comparable<AlignedRead>
 {
 public:
-    using QualityType = uint_fast8_t;
+    using SizeType    = std::uint_fast32_t;
+    using QualityType = std::uint_fast8_t;
     using Qualities   = std::vector<QualityType>;
     
     AlignedRead() = delete;
     template <typename GenomicRegion_, typename String_, typename Qualities_, typename CigarString_>
     explicit AlignedRead(GenomicRegion_&& reference_region, String_&& sequence,
                          Qualities_&& qualities, CigarString_&& cigar_string,
-                         uint_fast32_t insert_size, std::string mate_contig_name,
-                         uint_fast32_t mate_begin, uint_fast8_t mapping_quality);
+                         SizeType insert_size, std::string mate_contig_name,
+                         SizeType mate_begin, QualityType mapping_quality);
     
     AlignedRead(const AlignedRead&)            = default;
     AlignedRead& operator=(const AlignedRead&) = default;
@@ -41,16 +39,19 @@ public:
     
     const GenomicRegion& get_region() const;
     const std::string& get_contig_name() const;
-    uint_fast32_t get_begin() const;
-    uint_fast32_t get_end() const;
+    SizeType get_begin() const noexcept;
+    SizeType get_end() const noexcept;
     const std::string& get_sequence() const;
     const Qualities& get_qualities() const;
-    uint_fast8_t get_mapping_quality() const;
-    uint_fast32_t get_sequence_size() const;
+    QualityType get_mapping_quality() const;
+    SizeType get_sequence_size() const;
     const CigarString& get_cigar_string() const;
-    uint_fast32_t get_insert_size() const;
+    SizeType get_insert_size() const;
     const std::string& get_mate_contig_name() const;
-    uint_fast32_t get_mate_begin() const;
+    SizeType get_mate_begin() const;
+    
+    template <typename CompressionAlgorithm> void compress(const CompressionAlgorithm& c);
+    template <typename CompressionAlgorithm> void decompress(const CompressionAlgorithm& c);
     
 private:
     GenomicRegion reference_region_;
@@ -58,16 +59,16 @@ private:
     std::string sequence_;
     CigarString cigar_string_;
     Qualities qualities_;
-    uint_fast32_t insert_size_;
-    uint_fast32_t mate_begin_;
-    uint_fast8_t mapping_quality_;
+    SizeType insert_size_;
+    SizeType mate_begin_;
+    QualityType mapping_quality_;
 };
 
 template <typename GenomicRegion_, typename String_, typename Qualities_, typename CigarString_>
 inline AlignedRead::AlignedRead(GenomicRegion_&& reference_region, String_&& sequence,
                                 Qualities_&& qualities, CigarString_&& cigar_string,
-                                uint_fast32_t insert_size, std::string mate_contig_name,
-                                uint_fast32_t mate_begin, uint_fast8_t mapping_quality)
+                                SizeType insert_size, std::string mate_contig_name,
+                                SizeType mate_begin, QualityType mapping_quality)
 :reference_region_ {std::forward<GenomicRegion_>(reference_region)},
  sequence_ {std::forward<String_>(sequence)},
  qualities_ {std::forward<Qualities_>(qualities)},
@@ -88,12 +89,12 @@ inline const std::string& AlignedRead::get_contig_name() const
     return reference_region_.get_contig_name();
 }
 
-inline uint_fast32_t AlignedRead::get_begin() const
+inline AlignedRead::SizeType AlignedRead::get_begin() const noexcept
 {
     return reference_region_.get_begin();
 }
 
-inline uint_fast32_t AlignedRead::get_end() const
+inline AlignedRead::SizeType AlignedRead::get_end() const noexcept
 {
     return reference_region_.get_end();
 }
@@ -108,14 +109,14 @@ inline const AlignedRead::Qualities& AlignedRead::get_qualities() const
     return qualities_;
 }
 
-inline uint_fast8_t AlignedRead::get_mapping_quality() const
+inline AlignedRead::QualityType AlignedRead::get_mapping_quality() const
 {
     return mapping_quality_;
 }
 
-inline uint_fast32_t AlignedRead::get_sequence_size() const
+inline AlignedRead::SizeType AlignedRead::get_sequence_size() const
 {
-    return static_cast<uint_fast32_t>(sequence_.size());
+    return static_cast<SizeType>(sequence_.size());
 }
 
 inline const CigarString& AlignedRead::get_cigar_string() const
@@ -123,7 +124,7 @@ inline const CigarString& AlignedRead::get_cigar_string() const
     return cigar_string_;
 }
 
-inline uint_fast32_t AlignedRead::get_insert_size() const
+inline AlignedRead::SizeType AlignedRead::get_insert_size() const
 {
     return insert_size_;
 }
@@ -133,9 +134,21 @@ inline const std::string& AlignedRead::get_mate_contig_name() const
     return mate_contig_name_;
 }
 
-inline uint_fast32_t AlignedRead::get_mate_begin() const
+inline AlignedRead::SizeType AlignedRead::get_mate_begin() const
 {
     return mate_begin_;
+}
+
+template <typename CompressionAlgorithm>
+void AlignedRead::compress(const CompressionAlgorithm& c)
+{
+    sequence_ = CompressionAlgorithm::compress(sequence_);
+}
+
+template <typename CompressionAlgorithm>
+void AlignedRead::decompress(const CompressionAlgorithm& c)
+{
+    sequence_ = CompressionAlgorithm::decompress(sequence_);
 }
 
 inline bool operator==(const AlignedRead& lhs, const AlignedRead& rhs)

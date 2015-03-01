@@ -8,6 +8,10 @@
 
 #include "fasta.h"
 
+#include <stdexcept>
+
+#include "genomic_region.h"
+
 Fasta::Fasta(std::string fasta_path)
 :Fasta {fasta_path, fasta_path + ".fai"}
 {}
@@ -36,7 +40,7 @@ Fasta::Fasta(std::string fasta_path, std::string fasta_index_path)
 bool Fasta::is_valid_fasta() const
 {
     auto extension = fasta_path_.extension().string();
-    if (!(extension == ".fa" || extension == ".fasta")) {
+    if (extension != ".fa" && extension != ".fasta") {
         return false;
     }
     return true; // TODO: could actually check valid fasta format
@@ -52,17 +56,13 @@ std::vector<std::string> Fasta::get_contig_names()
     return bioio::get_fasta_index_contig_names(fasta_index_path_.string());
 }
 
-std::uint_fast32_t Fasta::get_contig_size(std::string contig_name)
+Fasta::SizeType Fasta::get_contig_size(std::string contig_name)
 {
-    return static_cast<uint_fast32_t>(fasta_contig_indices_.at(contig_name).length);
+    return static_cast<SizeType>(fasta_contig_indices_.at(contig_name).length);
 }
 
-std::string Fasta::get_sequence(const GenomicRegion& a_region)
+Fasta::SequenceType Fasta::get_sequence(const GenomicRegion& a_region)
 {
-    if (is_in_cache(a_region)) {
-        return region_cache_.at(a_region);
-    } else {
-        return bioio::read_fasta_contig(fasta_, fasta_contig_indices_.at(a_region.get_contig_name()),
-                                        a_region.get_begin(), size(a_region));
-    }
+    return bioio::read_fasta_contig(fasta_, fasta_contig_indices_.at(a_region.get_contig_name()),
+                                    a_region.get_begin(), size(a_region));
 }

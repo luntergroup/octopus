@@ -8,7 +8,8 @@
 
 #include "read_manager.h"
 
-#include <algorithm>
+#include <iterator> // std::make_move_iterator
+#include <algorithm> // std::move
 
 ReadManager::ReadManager(std::vector<std::string>&& read_file_paths, unsigned Max_open_files)
 :   closed_files_ (std::make_move_iterator(std::begin(read_file_paths)),

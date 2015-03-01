@@ -10,11 +10,10 @@
 #define __Octopus__sequence_region__
 
 #include <cstdint>
+#include <algorithm> // min/max
+#include <stdexcept>
 
 #include "comparable.h"
-
-using std::uint_fast32_t;
-using std::int_fast64_t;
 
 /*
     Represents a region of continuous sequence.
@@ -23,46 +22,51 @@ using std::int_fast64_t;
 class SequenceRegion : Comparable<SequenceRegion>
 {
 public:
+    using SizeType      = std::uint_fast32_t;
+    using DifferenceType = std::int_fast64_t;
+    
     SequenceRegion() = default;
-    explicit SequenceRegion(uint_fast32_t begin, uint_fast32_t end);
+    explicit SequenceRegion(SizeType begin, SizeType end);
     
     SequenceRegion(const SequenceRegion&)            = default;
     SequenceRegion& operator=(const SequenceRegion&) = default;
     SequenceRegion(SequenceRegion&&)                 = default;
     SequenceRegion& operator=(SequenceRegion&&)      = default;
     
-    uint_fast32_t get_begin() const noexcept;
-    uint_fast32_t get_end() const noexcept;
+    SizeType get_begin() const noexcept;
+    SizeType get_end() const noexcept;
     
 private:
-    uint_fast32_t begin_;
-    uint_fast32_t end_;
+    SizeType begin_;
+    SizeType end_;
 };
 
-inline SequenceRegion::SequenceRegion(uint_fast32_t begin, uint_fast32_t end)
+inline SequenceRegion::SequenceRegion(SizeType begin, SizeType end)
 :begin_ {begin},
  end_ {end}
-{}
+{
+    if (end < begin) throw std::runtime_error {"Invalid sequence region"};
+}
 
-inline uint_fast32_t SequenceRegion::get_begin() const noexcept
+inline SequenceRegion::SizeType SequenceRegion::get_begin() const noexcept
 {
     return begin_;
 }
 
-inline uint_fast32_t SequenceRegion::get_end() const noexcept
+inline SequenceRegion::SizeType SequenceRegion::get_end() const noexcept
 {
     return end_;
 }
 
-inline uint_fast32_t size(const SequenceRegion& a_region)
+inline SequenceRegion::SizeType size(const SequenceRegion& a_region)
 {
     return a_region.get_end() - a_region.get_begin();
 }
 
-inline int_fast64_t overlap_size(const SequenceRegion& lhs, const SequenceRegion& rhs)
+inline SequenceRegion::DifferenceType overlap_size(const SequenceRegion& lhs, const SequenceRegion& rhs)
 {
-    return static_cast<int_fast64_t>(std::min(lhs.get_end(), rhs.get_end())) -
-            static_cast<int_fast64_t>(std::max(lhs.get_begin(), rhs.get_begin()));
+    return static_cast<SequenceRegion::DifferenceType>(std::min(lhs.get_end(), rhs.get_end())) -
+            static_cast<SequenceRegion::DifferenceType>(std::max(lhs.get_begin(), rhs.get_begin()));
 }
 
 inline bool overlaps(const SequenceRegion& lhs, const SequenceRegion& rhs)

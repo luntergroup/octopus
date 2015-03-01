@@ -13,15 +13,14 @@
 #include <vector>
 #include <unordered_set>
 #include <map>
-#include <functional>
-#include <tuple>
+#include <functional> // std::function
+#include <tuple> // std::tie
 #include <list>
-#include <iterator>
+#include <iterator> // std::cbegin etc
 #include <boost/graph/adjacency_list.hpp>
 #include <boost/graph/depth_first_search.hpp>
 
 #include <iostream>
-#include "variant.h"
 
 template <typename ColourType, typename StringStoragePolicy>
 class KmerAssembler : StringStoragePolicy
@@ -43,6 +42,7 @@ public:
     std::vector<std::string> get_contigs();
     bool is_acyclic() const;
     unsigned get_num_kmers() const noexcept;
+    unsigned get_num_connections() const noexcept;
     void clear();
     
     void print_kmers() const;
@@ -59,7 +59,7 @@ private:
     };
     
     using Graph = boost::adjacency_list<
-        boost::listS, boost::listS, boost::bidirectionalS, boost::no_property, Kmer
+        boost::listS, boost::vecS, boost::bidirectionalS, boost::no_property, Kmer
     >;
     using Vertex                 = typename boost::graph_traits<Graph>::vertex_descriptor;
     using Edge                   = typename boost::graph_traits<Graph>::edge_descriptor;
@@ -73,16 +73,20 @@ private:
     using VertexIndexPropertyMap = boost::associative_property_map<VertexIndexMap>;
     using EdgeCountMap           = std::map<Edge, unsigned>;
     
-    struct DfsVisitor : public boost::default_dfs_visitor
+    class DfsVisitor : public boost::default_dfs_visitor
     {
-        void back_edge(Edge e, const Graph& g) const;
-        bool is_acyclic {true};
+    public:
+        DfsVisitor(bool& is_acyclic) : is_acyclic_ {is_acyclic} {}
+        void back_edge(Edge e, const Graph& g);
+    private:
+        bool& is_acyclic_;
     };
     
     const unsigned k_;
     Graph the_graph_;
     std::unordered_set<ReferenceType> added_kmer_suffixes_and_prefixes_;
     std::function<int(ColourType)> f_colour_weight_;
+    VertexIndexPropertyMap vertex_indices_;
     
     void add_kmer(ReferenceType the_kmer, ColourType the_colour);
     std::pair<Vertex, Vertex> get_vertices(ReferenceType a_kmer);
@@ -132,23 +136,30 @@ std::vector<std::string> KmerAssembler<C, T>::get_contigs()
 }
 
 template <typename C, typename T>
-void KmerAssembler<C, T>::DfsVisitor::back_edge(Edge e, const Graph &g) const
+void KmerAssembler<C, T>::DfsVisitor::back_edge(Edge e, const Graph &g)
 {
-    if (boost::source(e, g) != boost::target(e, g)) is_acyclic = false;
+    if (boost::source(e, g) != boost::target(e, g)) is_acyclic_ = false;
 }
 
 template <typename C, typename T>
 bool KmerAssembler<C, T>::is_acyclic() const
 {
-    DfsVisitor a_visitor;
+    bool is_acyclic {true};
+    DfsVisitor a_visitor {is_acyclic};
     boost::depth_first_search(the_graph_, visitor(a_visitor));
-    return a_visitor.is_acyclic;
+    return is_acyclic;
 }
 
 template <typename C, typename T>
 unsigned KmerAssembler<C, T>::get_num_kmers() const noexcept
 {
     return static_cast<unsigned>(boost::num_edges(the_graph_));
+}
+
+template <typename C, typename T>
+unsigned KmerAssembler<C, T>::get_num_connections() const noexcept
+{
+    return static_cast<unsigned>(boost::num_vertices(the_graph_));
 }
 
 template <typename C, typename T>

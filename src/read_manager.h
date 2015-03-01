@@ -14,13 +14,12 @@
 #include <cstdint>
 #include <unordered_map>
 #include <unordered_set>
-#include <memory>
-#include <iterator>
+#include <memory> // std::make_unique
 
 #include "genomic_region.h"
 #include "read_reader.h"
 #include "aligned_read.h"
-#include "read_reader_implementor.h"
+#include "read_reader_impl.h"
 #include "htslib_facade.h"
 
 class ReadManager
@@ -79,7 +78,7 @@ inline ReadReader ReadManager::make_read_reader(const std::string& read_file_pat
 
 inline void ReadManager::open_reader(const std::string &read_file_path)
 {
-    open_readers_.emplace(std::make_pair(read_file_path, make_read_reader(read_file_path)));
+    open_readers_.emplace(read_file_path, make_read_reader(read_file_path));
     closed_files_.erase(read_file_path);
 }
 

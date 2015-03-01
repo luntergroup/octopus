@@ -9,9 +9,6 @@
 #ifndef Octopus_test_common_h
 #define Octopus_test_common_h
 
-#include "catch.hpp"
-#define CATCH_CONFIG_MAIN
-
 static std::string home_dir {getenv("HOME")};
 
 static std::string genomics_dir {"/Genomics/"};

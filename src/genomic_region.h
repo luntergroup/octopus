@@ -10,14 +10,10 @@
 #define __Octopus__genomic_region__
 
 #include <string>
-#include <cstdint>
 #include <ostream>
 
 #include "sequence_region.h"
 #include "comparable.h"
-
-using std::uint_fast32_t;
-using std::int_fast64_t;
 
 /**
     Represents a continuous region of a sequence in a genome. The sequence
@@ -27,31 +23,35 @@ using std::int_fast64_t;
 class GenomicRegion : Comparable<GenomicRegion>
 {
 public:
+    using StringType     = std::string;
+    using SizeType       = SequenceRegion::SizeType;
+    using DifferenceType = SequenceRegion::DifferenceType;
+    
     GenomicRegion() = default;
-    explicit GenomicRegion(std::string contig_name, uint_fast32_t begin, uint_fast32_t end);
+    explicit GenomicRegion(StringType contig_name, SizeType begin, SizeType end);
     
     GenomicRegion(const GenomicRegion&)            = default;
     GenomicRegion& operator=(const GenomicRegion&) = default;
     GenomicRegion(GenomicRegion&&)                 = default;
     GenomicRegion& operator=(GenomicRegion&&)      = default;
     
-    const std::string& get_contig_name() const noexcept;
+    const StringType& get_contig_name() const noexcept;
     const SequenceRegion& get_contig_region() const noexcept;
-    uint_fast32_t get_begin() const noexcept;
-    uint_fast32_t get_end() const noexcept;
+    SizeType get_begin() const noexcept;
+    SizeType get_end() const noexcept;
 
 private:
-    std::string contig_name_;
+    StringType contig_name_;
     SequenceRegion contig_region_;
 };
 
 inline
-GenomicRegion::GenomicRegion(std::string contig_name, uint_fast32_t begin, uint_fast32_t end)
+GenomicRegion::GenomicRegion(StringType contig_name, SizeType begin, SizeType end)
 :contig_name_ {contig_name},
  contig_region_ {begin, end}
 {}
 
-inline const std::string& GenomicRegion::get_contig_name() const noexcept
+inline const GenomicRegion::StringType& GenomicRegion::get_contig_name() const noexcept
 {
     return contig_name_;
 }
@@ -61,17 +61,17 @@ inline const SequenceRegion& GenomicRegion::get_contig_region() const noexcept
     return contig_region_;
 }
 
-inline uint_fast32_t GenomicRegion::get_begin() const noexcept
+inline GenomicRegion::SizeType GenomicRegion::get_begin() const noexcept
 {
     return contig_region_.get_begin();
 }
 
-inline uint_fast32_t GenomicRegion::get_end() const noexcept
+inline GenomicRegion::SizeType GenomicRegion::get_end() const noexcept
 {
     return contig_region_.get_end();
 }
 
-inline uint_fast32_t size(const GenomicRegion& a_region) noexcept
+inline GenomicRegion::SizeType size(const GenomicRegion& a_region) noexcept
 {
     return size(a_region.get_contig_region());
 }
@@ -81,7 +81,7 @@ inline bool is_same_contig(const GenomicRegion& lhs, const GenomicRegion& rhs) n
     return lhs.get_contig_name() == rhs.get_contig_name();
 }
 
-inline int_fast64_t overlap_size(const GenomicRegion& lhs, const GenomicRegion& rhs) noexcept
+inline GenomicRegion::DifferenceType overlap_size(const GenomicRegion& lhs, const GenomicRegion& rhs) noexcept
 {
     return is_same_contig(lhs, rhs) ? overlap_size(lhs.get_contig_region(), rhs.get_contig_region()) : 0;
 }
@@ -99,7 +99,7 @@ inline bool operator==(const GenomicRegion& lhs, const GenomicRegion& rhs)
 inline bool operator<(const GenomicRegion& lhs, const GenomicRegion& rhs)
 {
     if (is_same_contig(lhs, rhs)) return lhs.get_contig_region() < rhs.get_contig_region();
-    throw std::logic_error {"Cannot compare regions on different contigs"};
+    throw std::runtime_error {"Cannot compare regions on different contigs"};
 }
 
 inline std::string to_string(const GenomicRegion& a_region)
@@ -113,7 +113,7 @@ namespace std {
     {
         size_t operator()(const GenomicRegion& r) const
         {
-            return hash<std::string>()(to_string(r));
+            return hash<string>()(to_string(r));
         }
     };
 }

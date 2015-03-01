@@ -31,13 +31,16 @@ using std::size_t;
 class Variant : Comparable<Variant>
 {
 public:
+    using SizeType = GenomicRegion::SizeType;
     
     Variant() = delete;
-    explicit Variant(std::string reference_contig_name, uint_fast32_t reference_removed_region_begin,
-                     std::string reference_sequence_removed, std::string sequence_added,
+    template <typename T1, typename T2, typename T3>
+    explicit Variant(T1&& reference_contig_name, SizeType reference_removed_region_begin,
+                     T2&& reference_sequence_removed, T3&& sequence_added,
                      std::function<double()> prior_model);
-    explicit Variant(GenomicRegion reference_removed_region, std::string reference_sequence_removed,
-                     std::string sequence_added, std::function<double()> prior_model);
+    template <typename T1, typename T2>
+    explicit Variant(GenomicRegion reference_removed_region, T1&& reference_sequence_removed,
+                     T2&& sequence_added, std::function<double()> prior_model);
     
     Variant(const Variant&)            = default;
     Variant& operator=(const Variant&) = default;
@@ -45,8 +48,8 @@ public:
     Variant& operator=(Variant&&)      = default;
     
     const GenomicRegion& get_removed_region() const noexcept;
-    uint_fast32_t get_removed_region_begin() const noexcept;
-    uint_fast32_t get_removed_region_end() const noexcept;
+    SizeType get_removed_region_begin() const noexcept;
+    SizeType get_removed_region_end() const noexcept;
     const std::string& get_sequence_added() const noexcept;
     const std::string& get_sequence_removed() const noexcept;
     bool has_support(unsigned long num_reads) const noexcept;
@@ -62,25 +65,25 @@ private:
     std::function<double()> prior_model_;
 };
 
-inline
-Variant::Variant(std::string reference_contig_name, uint_fast32_t reference_removed_region_begin,
-                 std::string reference_sequence_removed, std::string sequence_added,
+template <typename T1, typename T2, typename T3>
+Variant::Variant(T1&& reference_contig_name, SizeType reference_removed_region_begin,
+                 T2&& reference_sequence_removed, T3&& sequence_added,
                  std::function<double()> prior_model)
-:reference_removed_region_(reference_contig_name, reference_removed_region_begin,
+:reference_removed_region_ {reference_contig_name, reference_removed_region_begin,
                            reference_removed_region_begin +
-                           static_cast<uint_fast32_t>(reference_sequence_removed.size())),
- reference_sequence_removed_(reference_sequence_removed),
- sequence_added_(sequence_added),
- prior_model_(prior_model)
+    static_cast<SizeType>(reference_sequence_removed.size())},
+reference_sequence_removed_ {std::forward<T2>(reference_sequence_removed)},
+sequence_added_ {std::forward<T3>(sequence_added)},
+prior_model_ {prior_model}
 {}
 
-inline
-Variant::Variant(GenomicRegion reference_removed_region, std::string reference_sequence_removed,
-                 std::string sequence_added, std::function<double()> prior_model)
-:reference_removed_region_(std::move(reference_removed_region)),
- reference_sequence_removed_(reference_sequence_removed),
- sequence_added_(sequence_added),
- prior_model_(prior_model)
+template <typename T1, typename T2>
+Variant::Variant(GenomicRegion reference_removed_region, T1&& reference_sequence_removed,
+                 T2&& sequence_added, std::function<double()> prior_model)
+:reference_removed_region_ {std::move(reference_removed_region)},
+reference_sequence_removed_ {std::forward<T1>(reference_sequence_removed)},
+sequence_added_ {std::forward<T2>(sequence_added)},
+prior_model_ {prior_model}
 {}
 
 inline const GenomicRegion& Variant::get_removed_region() const noexcept
@@ -88,12 +91,12 @@ inline const GenomicRegion& Variant::get_removed_region() const noexcept
     return reference_removed_region_;
 }
 
-inline uint_fast32_t Variant::get_removed_region_begin() const noexcept
+inline Variant::SizeType Variant::get_removed_region_begin() const noexcept
 {
     return reference_removed_region_.get_begin();
 }
 
-inline uint_fast32_t Variant::get_removed_region_end() const noexcept
+inline Variant::SizeType Variant::get_removed_region_end() const noexcept
 {
     return reference_removed_region_.get_end();
 }

@@ -13,11 +13,11 @@
 
 #include "test_common.h"
 #include "reference_genome.h"
-#include "reference_genome_implementor_factory.h"
+#include "reference_genome_impl_factory.h"
 
 TEST_CASE("initialisation_test", "[reference]")
 {
-    ReferenceGenomeImplementorFactory a_factory {};
+    ReferenceGenomeImplFactory a_factory {};
     
     // test for a small single genome contig
     ReferenceGenome ecoli(a_factory.make(ecoli_reference_fasta));
@@ -42,4 +42,25 @@ TEST_CASE("initialisation_test", "[reference]")
     REQUIRE(human.get_contig_region("X") == GenomicRegion("X", 0, 155270560));
     REQUIRE(human.get_sequence(GenomicRegion("15", 51265690, 51265700)) == "ACAATGTTGT");
     REQUIRE(human.get_sequence(GenomicRegion("5", 100000, 100010)) == "AGGAAGTTTC");
+}
+
+TEST_CASE("region_parsing", "[region_format")
+{
+    ReferenceGenomeImplFactory a_factory {};
+    ReferenceGenome human(a_factory.make(human_reference_fasta));
+    
+    auto r1 = parse_region("3", human);
+    REQUIRE(r1.get_contig_name() == "3");
+    REQUIRE(r1.get_begin() == 0);
+    REQUIRE(r1.get_end() == human.get_contig_size("3"));
+    
+    auto r2 = parse_region("10:100-200", human);
+    REQUIRE(r2.get_contig_name() == "10");
+    REQUIRE(r2.get_begin() == 100);
+    REQUIRE(r2.get_end() == 200);
+    
+    auto r3 = parse_region("18:102029", human);
+    REQUIRE(r3.get_contig_name() == "18");
+    REQUIRE(r3.get_begin() == 102029);
+    REQUIRE(r3.get_end() == 102029);
 }

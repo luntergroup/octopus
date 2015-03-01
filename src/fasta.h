@@ -12,21 +12,24 @@
 #include <string>
 #include <vector>
 #include <cstdint>
-#include <exception>
 #include <fstream>
 #include <unordered_map>
 #include <boost/filesystem/path.hpp>
 #include <boost/filesystem/operations.hpp>
 
-#include "reference_genome_implementor.h"
-#include "genomic_region.h"
+#include "reference_genome_impl.h"
 #include "bioio.h"
+
+class GenomicRegion;
 
 namespace fs = boost::filesystem;
 
-class Fasta : public IReferenceGenomeImplementor
+class Fasta : public IReferenceGenomeImpl
 {
 public:
+    using SequenceType = std::string;
+    using SizeType    = IReferenceGenomeImpl::SizeType;
+    
     Fasta() = delete;
     Fasta(std::string fasta_path);
     Fasta(std::string fasta_path, std::string fasta_index_path);
@@ -39,23 +42,16 @@ public:
     
     std::string get_reference_name() override;
     std::vector<std::string> get_contig_names() override;
-    std::uint_fast32_t get_contig_size(std::string contig_name) override;
-    std::string get_sequence(const GenomicRegion& a_region) override;
+    SizeType get_contig_size(std::string contig_name) override;
+    SequenceType get_sequence(const GenomicRegion& a_region) override;
 
 private:
     fs::path fasta_path_;
     fs::path fasta_index_path_;
     std::ifstream fasta_;
     std::unordered_map<std::string, bioio::FastaIndex> fasta_contig_indices_;
-    std::unordered_map<GenomicRegion, std::string> region_cache_; // TODO: is this useful?
     
     bool is_valid_fasta() const;
-    bool is_in_cache(const GenomicRegion& a_region) const noexcept;
 };
-
-inline bool Fasta::is_in_cache(const GenomicRegion& a_region) const noexcept
-{
-    return region_cache_.count(a_region) > 0;
-}
 
 #endif /* defined(__Octopus__fasta__) */
