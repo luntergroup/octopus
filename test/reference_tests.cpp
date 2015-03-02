@@ -13,11 +13,11 @@
 
 #include "test_common.h"
 #include "reference_genome.h"
-#include "reference_genome_impl_factory.h"
+#include "reference_genome_factory.h"
 
 TEST_CASE("initialisation_test", "[reference]")
 {
-    ReferenceGenomeImplFactory a_factory {};
+    ReferenceGenomeFactory a_factory {};
     
     // test for a small single genome contig
     ReferenceGenome ecoli(a_factory.make(ecoli_reference_fasta));
@@ -46,7 +46,7 @@ TEST_CASE("initialisation_test", "[reference]")
 
 TEST_CASE("region_parsing", "[region_format")
 {
-    ReferenceGenomeImplFactory a_factory {};
+    ReferenceGenomeFactory a_factory {};
     ReferenceGenome human(a_factory.make(human_reference_fasta));
     
     auto r1 = parse_region("3", human);

@@ -14,13 +14,13 @@
 
 class IReferenceGenomeImpl;
 
-class ReferenceGenomeImplFactory
+class ReferenceGenomeFactory
 {
 public:
-    ReferenceGenomeImplFactory(const ReferenceGenomeImplFactory&)            = default;
-    ReferenceGenomeImplFactory& operator=(const ReferenceGenomeImplFactory&) = default;
-    ReferenceGenomeImplFactory(ReferenceGenomeImplFactory&&)                 = default;
-    ReferenceGenomeImplFactory& operator=(ReferenceGenomeImplFactory&&)      = default;
+    ReferenceGenomeFactory(const ReferenceGenomeFactory&)            = default;
+    ReferenceGenomeFactory& operator=(const ReferenceGenomeFactory&) = default;
+    ReferenceGenomeFactory(ReferenceGenomeFactory&&)                 = default;
+    ReferenceGenomeFactory& operator=(ReferenceGenomeFactory&&)      = default;
     
     std::unique_ptr<IReferenceGenomeImpl> make(std::string genome_file_path) const;
 };

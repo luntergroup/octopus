@@ -15,11 +15,11 @@
 #include "genomic_region.h"
 #include "aligned_read.h"
 #include "reference_genome.h"
-#include "reference_genome_impl_factory.h"
+#include "reference_genome_factory.h"
 #include "mock_objects.h"
 #include "utils.h"
 //#include "assembler.h"
-#include "kmer_assembler.h"
+#include "kmer_graph.h"
 #include "storage_policies.h"
 
 //TEST_CASE("assembler_construct_test", "[assembler]")
@@ -73,7 +73,7 @@
 
 TEST_CASE("assembler_path_test", "[assembler]")
 {
-    ReferenceGenomeImplFactory a_factory {};
+    ReferenceGenomeFactory a_factory {};
     ReferenceGenome lambda(a_factory.make(lambda_reference_fasta));
     auto contig_name = lambda.get_contig_names()[0];
     auto contig_size = lambda.get_contig_size(contig_name);
@@ -81,14 +81,14 @@ TEST_CASE("assembler_path_test", "[assembler]")
     
     //Assembler assembler {15};
     
-    KmerAssembler<int, policies::StoreStringReference> kmer_assembler {10};
-    kmer_assembler.add_sequence("AAAAAAAAAACCCCCCCCCC", 1);
-    kmer_assembler.add_sequence("CCCCCCCCCCGGGGGGGGGG", 2);
-    kmer_assembler.add_sequence("GGGGGGGGGGAAAAAAAAAA", 2);
+    KmerGraph<int, policies::StoreStringReference> kmer_assembler {10};
+    kmer_assembler.add_sequence("AAAAAAAAAACCCCCCCCCC", 0, 1);
+    kmer_assembler.add_sequence("CCCCCCCCCCGGGGGGGGGG", 10, 2);
+    kmer_assembler.add_sequence("GGGGGGGGGGAAAAAAAAAA", 20, 2);
     //kmer_assembler.print_kmers();
     //kmer_assembler.add_sequence("GGGGGGGGGGTTTTTTTTTT", 1);
 //    kmer_assembler.add_sequence(contig, 1);
-    auto paths = kmer_assembler.get_contigs();
+    auto paths = kmer_assembler.get_contigs(1);
     //std::cout << paths[0] << std::endl;
     //std::cout << kmer_assembler.is_acyclic() << std::endl;
     

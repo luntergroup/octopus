@@ -27,6 +27,11 @@ std::pair<po::variables_map, bool> parse_options(int argc, char** argv)
         ("verbosity", po::value<unsigned>()->default_value(0), "Level of logging")
         ;
         
+        po::options_description model("Model options");
+        model.add_options()
+        ("ploidy", po::value<unsigned>()->default_value(2), "The organism ploidy")
+        ;
+        
         po::options_description calling("Caller options");
         calling.add_options()
         ("ref-calls", po::value<bool>()->default_value(false), "Output ref-calls")

@@ -12,7 +12,7 @@
 #include <string>
 #include <cstdint>
 #include <cstddef>
-#include <functional>
+#include <functional> // std::function
 
 #include "genomic_region.h"
 #include "comparable.h"
@@ -34,96 +34,49 @@ public:
     using SizeType = GenomicRegion::SizeType;
     
     Variant() = delete;
-    template <typename T1, typename T2, typename T3>
-    explicit Variant(T1&& reference_contig_name, SizeType reference_removed_region_begin,
-                     T2&& reference_sequence_removed, T3&& sequence_added,
-                     std::function<double()> prior_model);
     template <typename T1, typename T2>
-    explicit Variant(GenomicRegion reference_removed_region, T1&& reference_sequence_removed,
-                     T2&& sequence_added, std::function<double()> prior_model);
+    explicit Variant(GenomicRegion the_reference_allele_region, T1&& the_reference_allele,
+                     T2&& the_alternative_allele, std::function<double()> prior_model);
     
     Variant(const Variant&)            = default;
     Variant& operator=(const Variant&) = default;
     Variant(Variant&&)                 = default;
     Variant& operator=(Variant&&)      = default;
     
-    const GenomicRegion& get_removed_region() const noexcept;
-    SizeType get_removed_region_begin() const noexcept;
-    SizeType get_removed_region_end() const noexcept;
-    const std::string& get_sequence_added() const noexcept;
-    const std::string& get_sequence_removed() const noexcept;
-    bool has_support(unsigned long num_reads) const noexcept;
-    unsigned long get_num_supporting_reads() const noexcept;
+    const GenomicRegion& get_reference_allele_region() const noexcept;
+    const std::string& get_reference_allele() const noexcept;
+    const std::string& get_alternative_allele() const noexcept;
     double get_prior_probability() const noexcept;
-    void add_support(unsigned long num_reads) noexcept;
     
 private:
-    GenomicRegion reference_removed_region_;
-    std::string reference_sequence_removed_;
-    std::string sequence_added_;
-    unsigned long num_supporting_reads_;
+    GenomicRegion the_reference_allele_region_;
+    std::string the_reference_allele;
+    std::string the_alternative_allele;
     std::function<double()> prior_model_;
 };
 
-template <typename T1, typename T2, typename T3>
-Variant::Variant(T1&& reference_contig_name, SizeType reference_removed_region_begin,
-                 T2&& reference_sequence_removed, T3&& sequence_added,
-                 std::function<double()> prior_model)
-:reference_removed_region_ {reference_contig_name, reference_removed_region_begin,
-                           reference_removed_region_begin +
-    static_cast<SizeType>(reference_sequence_removed.size())},
-reference_sequence_removed_ {std::forward<T2>(reference_sequence_removed)},
-sequence_added_ {std::forward<T3>(sequence_added)},
-prior_model_ {prior_model}
-{}
-
 template <typename T1, typename T2>
-Variant::Variant(GenomicRegion reference_removed_region, T1&& reference_sequence_removed,
-                 T2&& sequence_added, std::function<double()> prior_model)
-:reference_removed_region_ {std::move(reference_removed_region)},
-reference_sequence_removed_ {std::forward<T1>(reference_sequence_removed)},
-sequence_added_ {std::forward<T2>(sequence_added)},
+Variant::Variant(GenomicRegion the_reference_allele_region, T1&& the_reference_allele,
+                 T2&& the_alternative_allele, std::function<double()> prior_model)
+:the_reference_allele_region_ {std::move(the_reference_allele_region)},
+the_reference_allele {std::forward<T1>(the_reference_allele)},
+the_alternative_allele {std::forward<T2>(the_alternative_allele)},
 prior_model_ {prior_model}
 {}
 
-inline const GenomicRegion& Variant::get_removed_region() const noexcept
+inline const GenomicRegion& Variant::get_reference_allele_region() const noexcept
 {
-    return reference_removed_region_;
+    return the_reference_allele_region_;
 }
 
-inline Variant::SizeType Variant::get_removed_region_begin() const noexcept
+inline const std::string& Variant::get_reference_allele() const noexcept
 {
-    return reference_removed_region_.get_begin();
+    return the_reference_allele;
 }
 
-inline Variant::SizeType Variant::get_removed_region_end() const noexcept
+inline const std::string& Variant::get_alternative_allele() const noexcept
 {
-    return reference_removed_region_.get_end();
-}
-
-inline const std::string& Variant::get_sequence_added() const noexcept
-{
-    return sequence_added_;
-}
-
-inline const std::string& Variant::get_sequence_removed() const noexcept
-{
-    return reference_sequence_removed_;
-}
-
-inline bool Variant::has_support(unsigned long num_reads) const noexcept
-{
-    return num_supporting_reads_ >= num_reads;
-}
-
-inline unsigned long Variant::get_num_supporting_reads() const noexcept
-{
-    return num_supporting_reads_;
-}
-
-inline void Variant::add_support(unsigned long num_reads) noexcept
-{
-    num_supporting_reads_ += num_reads;
+    return the_alternative_allele;
 }
 
 inline double Variant::get_prior_probability() const noexcept
@@ -133,19 +86,19 @@ inline double Variant::get_prior_probability() const noexcept
 
 inline bool overlaps(const Variant& lhs, const Variant& rhs) noexcept
 {
-    return overlaps(lhs.get_removed_region(), rhs.get_removed_region());
+    return overlaps(lhs.get_reference_allele_region(), rhs.get_reference_allele_region());
 }
 
 inline bool operator==(const Variant& lhs, const Variant& rhs)
 {
-    return lhs.get_removed_region() == rhs.get_removed_region() &&
-           lhs.get_sequence_added() == rhs.get_sequence_added() &&
-           lhs.get_sequence_removed() == rhs.get_sequence_removed();
+    return lhs.get_reference_allele_region() == rhs.get_reference_allele_region() &&
+           lhs.get_reference_allele() == rhs.get_reference_allele() &&
+           lhs.get_alternative_allele() == rhs.get_alternative_allele();
 }
 
 inline bool operator<(const Variant& lhs, const Variant& rhs)
 {
-    return lhs.get_removed_region() < rhs.get_removed_region();
+    return lhs.get_reference_allele_region() < rhs.get_reference_allele_region();
 }
 
 namespace std {
@@ -153,7 +106,7 @@ namespace std {
     {
         size_t operator()(const Variant& v) const
         {
-            return hash<GenomicRegion>()(v.get_removed_region());
+            return hash<GenomicRegion>()(v.get_reference_allele_region());
         }
     };
 }

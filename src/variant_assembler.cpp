@@ -18,13 +18,13 @@ VariantAssembler::VariantAssembler(unsigned k)
 
 void VariantAssembler::add_read(const AlignedRead& a_read)
 {
-    the_assembler_.add_sequence(a_read.get_sequence(), Colour::Read);
+    the_assembler_.add_sequence(a_read.get_sequence(), a_read.get_begin(), Colour::Read);
 }
 
 void VariantAssembler::add_reference_sequence(const GenomicRegion& the_region,
                                               const std::string& the_sequence)
 {
-    the_assembler_.add_sequence(the_sequence, Colour::Reference);
+    the_assembler_.add_sequence(the_sequence, the_region.get_begin(), Colour::Reference);
 }
 
 std::set<Variant> VariantAssembler::get_variants(const GenomicRegion& a_region)

@@ -14,10 +14,12 @@
 class Variant;
 class GenomicRegion;
 
-class VariantFileImpl
+class IVariantFileImpl
 {
 public:
-    virtual std::set<Variant> fetch_variants(const GenomicRegion& a_region);
+    virtual std::set<Variant> fetch_variants(const GenomicRegion& a_region) = 0;
+    virtual void write_variants(const std::set<Variant>& some_variants) = 0;
+    virtual ~IVariantFileImpl() = default;
 };
 
 #endif

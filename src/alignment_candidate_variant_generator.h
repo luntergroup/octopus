@@ -48,8 +48,7 @@ private:
 };
 
 template <typename T1, typename T2, typename T3>
-void AlignmentCandidateVariantGenerator::add_variant(T1&& the_region,
-                                                     T2&& sequence_removed,
+void AlignmentCandidateVariantGenerator::add_variant(T1&& the_region, T2&& sequence_removed,
                                                      T3&& sequence_added)
 {
     candidates_.emplace(variant_factory_.make(std::forward<T1>(the_region),

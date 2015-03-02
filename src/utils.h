@@ -12,6 +12,8 @@
 #include <vector>
 #include <string>
 #include <sstream>
+#include <algorithm> // std::equal
+#include <iterator> // std::next
 #include <boost/utility/string_ref.hpp>
 #include <boost/functional/hash.hpp>
 
@@ -24,6 +26,20 @@ std::vector<std::string> split(T&& s, char delim) {
         elems.emplace_back(item);
     }
     return elems;
+}
+
+template <typename T>
+bool is_prefix(T this_sequence, T that_sequence)
+{
+    return std::equal(std::cbegin(this_sequence), std::cend(this_sequence),
+                      std::cbegin(that_sequence));
+}
+
+template <typename T>
+bool is_suffix(T this_sequence, T that_sequence)
+{
+    return std::equal(std::cbegin(this_sequence), std::cend(this_sequence),
+                      std::next(std::cbegin(that_sequence)));
 }
 
 namespace std

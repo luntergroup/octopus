@@ -9,7 +9,7 @@
 #ifndef __Octopus__variant_assembler__
 #define __Octopus__variant_assembler__
 
-#include "kmer_assembler.h"
+#include "kmer_graph.h"
 
 #include <string>
 #include <set>
@@ -40,7 +40,7 @@ public:
 private:
     enum class Colour {Reference, Read};
     
-    KmerAssembler<Colour, policies::StoreStringReference> the_assembler_;
+    KmerGraph<Colour, policies::StoreStringReference> the_assembler_;
 };
 
 #endif /* defined(__Octopus__variant_assembler__) */
