@@ -210,9 +210,9 @@
 			children = (
 				CA03C2281A8C1C2D000D3494 /* benchmarks */,
 				CAA4DC241A81981400DD3E9A /* main.cpp */,
-				D4907F4A1A88E20E00639203 /* variant_tests.cpp */,
 				D4907F561A8A2A9B00639203 /* reference_tests.cpp */,
 				CA03C2241A8C1702000D3494 /* read_reader_test.cpp */,
+				D4907F4A1A88E20E00639203 /* variant_tests.cpp */,
 				CA8FACC31A96515A002760F2 /* assembler_tests.cpp */,
 				CAE3E2AE1AA2981E00C01B2C /* variant_candidate_generation_test.cpp */,
 				CABA377D1A8F9E0A00BBE598 /* test_common.h */,

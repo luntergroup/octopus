@@ -31,7 +31,8 @@ using std::size_t;
 class Variant : Comparable<Variant>
 {
 public:
-    using SizeType = GenomicRegion::SizeType;
+    using SizeType   = GenomicRegion::SizeType;
+    using StringType = std::string;
     
     Variant() = delete;
     template <typename T1, typename T2>
@@ -44,14 +45,14 @@ public:
     Variant& operator=(Variant&&)      = default;
     
     const GenomicRegion& get_reference_allele_region() const noexcept;
-    const std::string& get_reference_allele() const noexcept;
-    const std::string& get_alternative_allele() const noexcept;
+    const StringType& get_reference_allele() const noexcept;
+    const StringType& get_alternative_allele() const noexcept;
     double get_prior_probability() const noexcept;
     
 private:
     GenomicRegion the_reference_allele_region_;
-    std::string the_reference_allele;
-    std::string the_alternative_allele;
+    StringType the_reference_allele;
+    StringType the_alternative_allele;
     std::function<double()> prior_model_;
 };
 
@@ -69,12 +70,12 @@ inline const GenomicRegion& Variant::get_reference_allele_region() const noexcep
     return the_reference_allele_region_;
 }
 
-inline const std::string& Variant::get_reference_allele() const noexcept
+inline const Variant::StringType& Variant::get_reference_allele() const noexcept
 {
     return the_reference_allele;
 }
 
-inline const std::string& Variant::get_alternative_allele() const noexcept
+inline const Variant::StringType& Variant::get_alternative_allele() const noexcept
 {
     return the_alternative_allele;
 }
@@ -87,6 +88,31 @@ inline double Variant::get_prior_probability() const noexcept
 inline bool overlaps(const Variant& lhs, const Variant& rhs) noexcept
 {
     return overlaps(lhs.get_reference_allele_region(), rhs.get_reference_allele_region());
+}
+
+inline Variant::SizeType reference_allele_size(const Variant& a_variant) noexcept
+{
+    return size(a_variant.get_reference_allele_region());
+}
+
+inline Variant::SizeType alternative_allele_size(const Variant& a_variant) noexcept
+{
+    return static_cast<Variant::SizeType>(a_variant.get_alternative_allele().size());
+}
+
+inline GenomicRegion::StringType reference_contig_name(const Variant& a_variant)
+{
+    return a_variant.get_reference_allele_region().get_contig_name();
+}
+
+inline GenomicRegion::SizeType reference_allele_begin(const Variant& a_variant)
+{
+    return a_variant.get_reference_allele_region().get_begin();
+}
+
+inline GenomicRegion::SizeType reference_allele_end(const Variant& a_variant)
+{
+    return a_variant.get_reference_allele_region().get_end();
 }
 
 inline bool operator==(const Variant& lhs, const Variant& rhs)

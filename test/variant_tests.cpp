@@ -10,9 +10,13 @@
 
 #include "catch.hpp"
 
+#include "test_common.h"
+#include "reference_genome.h"
+#include "reference_genome_factory.h"
 #include "genomic_region.h"
 #include "variant.h"
 #include "variant_factory.h"
+#include "variant_utils.h"
 
 //TEST_CASE("snp_overlap_test", "[snps]")
 //{
@@ -89,3 +93,24 @@
 //    REQUIRE(overlaps(del1, del2));
 //    REQUIRE(overlaps(del1, del3));
 //}
+
+TEST_CASE("left_alignment", "[left_alignment]")
+{
+    ReferenceGenomeFactory a_factory {};
+    ReferenceGenome human(a_factory.make(human_reference_fasta));
+    
+    VariantFactory a_variant_factory {};
+    
+    // Region is CCAACAACAACAACAC (94594947-94594962)
+    auto a_region = parse_region("5:94594959-94594961", human);
+    
+    auto the_sequence = human.get_sequence(a_region);
+    
+    REQUIRE(the_sequence == "CA");
+    
+    auto a_variant = a_variant_factory.make(a_region, the_sequence, std::string {});
+    
+    auto left_aligned_variant = left_align(a_variant, human);
+    
+    std::cout << a_variant.get_reference_allele_region() << std::endl;
+}

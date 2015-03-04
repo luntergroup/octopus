@@ -47,7 +47,7 @@ private:
 
 inline
 GenomicRegion::GenomicRegion(StringType contig_name, SizeType begin, SizeType end)
-:contig_name_ {contig_name},
+:contig_name_ {std::move(contig_name)},
  contig_region_ {begin, end}
 {}
 
@@ -100,6 +100,19 @@ inline bool operator<(const GenomicRegion& lhs, const GenomicRegion& rhs)
 {
     if (is_same_contig(lhs, rhs)) return lhs.get_contig_region() < rhs.get_contig_region();
     throw std::runtime_error {"Cannot compare regions on different contigs"};
+}
+
+inline GenomicRegion shift(const GenomicRegion& a_region, GenomicRegion::DifferenceType n)
+{
+    if (n < 0 && a_region.get_begin() + n > a_region.get_begin()) {
+        throw std::runtime_error {"Bad shift"};
+    }
+    
+    return GenomicRegion {
+        a_region.get_contig_name(),
+        static_cast<GenomicRegion::SizeType>(a_region.get_begin() + n),
+        static_cast<GenomicRegion::SizeType>(a_region.get_end() + n)
+    };
 }
 
 inline std::string to_string(const GenomicRegion& a_region)
