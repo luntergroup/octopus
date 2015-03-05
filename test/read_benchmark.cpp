@@ -38,8 +38,8 @@ TEST_CASE("read_benchmark", "[benchmark]")
     
     auto with_vptr = benchmark<std::chrono::microseconds>(f_factory, 10).count();
     
-    std::cout << "Without vptr: " << without_vptr << "us" << std::endl;
-    std::cout << "With vptr: " << with_vptr << "us" << std::endl;
+    //std::cout << "Without vptr: " << without_vptr << "us" << std::endl;
+    //std::cout << "With vptr: " << with_vptr << "us" << std::endl;
     
     REQUIRE(true);
 }

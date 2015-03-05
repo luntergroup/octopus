@@ -101,16 +101,55 @@ TEST_CASE("left_alignment", "[left_alignment]")
     
     VariantFactory a_variant_factory {};
     
-    // Region is CCAACAACAACAACAC (94594947-94594962)
-    auto a_region = parse_region("5:94594959-94594961", human);
+    // Huntingtin region CAGCAGCAGCAGCAG
+    auto a_region = parse_region("4:3076657-3076660", human);
     
     auto the_sequence = human.get_sequence(a_region);
     
-    REQUIRE(the_sequence == "CA");
+    REQUIRE(the_sequence == "CAG");
     
-    auto a_variant = a_variant_factory.make(a_region, the_sequence, std::string {});
+    auto a_deletion = a_variant_factory.make(a_region, the_sequence, std::string {});
     
-    auto left_aligned_variant = left_align(a_variant, human);
+    auto left_aligned_deletion = left_align(a_deletion, human);
     
-    std::cout << a_variant.get_reference_allele_region() << std::endl;
+    REQUIRE(left_aligned_deletion.get_reference_allele_region() ==
+            parse_region("4:3076603-3076606", human));
+    REQUIRE(left_aligned_deletion.get_reference_allele() == "CAG");
+    REQUIRE(left_aligned_deletion.get_alternative_allele() == "");
+    
+    auto an_insertion = a_variant_factory.make(parse_region("4:3076660-3076660", human),
+                                               std::string {}, the_sequence);
+    
+    auto left_aligned_insertion = left_align(an_insertion, human);
+    
+    REQUIRE(left_aligned_insertion.get_reference_allele_region() ==
+            parse_region("4:3076603-3076603", human));
+    REQUIRE(left_aligned_insertion.get_reference_allele() == "");
+    REQUIRE(left_aligned_insertion.get_alternative_allele() == "CAG");
+    
+    // Region is CCAACAACAACAACAC (94594947-94594962)
+    a_region = parse_region("5:94594956-94594959", human);
+    
+    the_sequence = human.get_sequence(a_region);
+    
+    REQUIRE(the_sequence == "CAA");
+    
+    a_deletion = a_variant_factory.make(a_region, the_sequence, std::string {});
+    
+    left_aligned_deletion = left_align(a_deletion, human);
+    
+    REQUIRE(left_aligned_deletion.get_reference_allele_region() ==
+            parse_region("5:94594949-94594952", human));
+    REQUIRE(left_aligned_deletion.get_reference_allele() == "ACA");
+    REQUIRE(left_aligned_deletion.get_alternative_allele() == "");
+    
+    an_insertion = a_variant_factory.make(parse_region("5:94594959-94594959", human),
+                                               std::string {}, the_sequence);
+    
+    left_aligned_insertion = left_align(an_insertion, human);
+    
+    REQUIRE(left_aligned_insertion.get_reference_allele_region() ==
+            parse_region("5:94594949-94594949", human));
+    REQUIRE(left_aligned_insertion.get_reference_allele() == "");
+    REQUIRE(left_aligned_insertion.get_alternative_allele() == "ACA");
 }

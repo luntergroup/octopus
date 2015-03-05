@@ -9,16 +9,12 @@
 #include "variant_utils.h"
 
 #include <algorithm> // std::mismatch, std::max
-#include <iterator> // std::tie
-#include <type_traits> // std::remove_reference_t
-#include <deque>
+#include <iterator> // std::tie, std::next, std::distance
+#include <list>
 
-#include "variant.h"
 #include "reference_genome.h"
 #include "genomic_region.h"
 #include "variant_factory.h"
-
-#include <iostream> // Just for testing
 
 using std::cbegin;
 using std::cend;
@@ -52,63 +48,88 @@ Variant make_parsimonious(const Variant& a_variant)
     return a_variant;
 }
 
-bool is_left_aligned(const Variant& a_variant, ReferenceGenome& the_reference) noexcept
+bool is_left_alignable(const Variant& a_variant) noexcept
 {
-    return false;
+    return is_indel(a_variant);
 }
 
-Variant left_align(const Variant& a_variant, ReferenceGenome& the_reference)
+using LeftAlignmentList = std::list<Variant::StringType::value_type>;
+
+auto get_allele_lists(const Variant::StringType& allele_a, const Variant::StringType& allele_b)
 {
+    bool is_a_bigger = allele_a.size() > allele_b.size();
+    const auto& the_big_allele   = (is_a_bigger) ? allele_a : allele_b;
+    const auto& the_small_allele = (is_a_bigger) ? allele_b : allele_a;
+    
+    LeftAlignmentList big_allele {cbegin(the_big_allele), cend(the_big_allele)};
+    LeftAlignmentList small_allele {cbegin(the_small_allele), cend(the_small_allele)};
+    
+    return std::make_pair(big_allele, small_allele);
+}
+
+GenomicRegion extend_allele_lists(LeftAlignmentList& big_allele, LeftAlignmentList& small_allele,
+                                  ReferenceGenome& the_reference, const GenomicRegion& current_region,
+                                  Variant::SizeType extension_size)
+{
+    auto new_region = shift(current_region, -extension_size);
+    GenomicRegion extension_region {new_region.get_contig_name(), new_region.get_begin(),
+        new_region.get_begin() + extension_size};
+    auto the_extension = the_reference.get_sequence(extension_region);
+    
+    big_allele.insert(begin(big_allele), cbegin(the_extension), cend(the_extension));
+    small_allele.insert(begin(small_allele), cbegin(the_extension), cend(the_extension));
+    
+    return new_region;
+}
+
+Variant left_align(const Variant& a_variant, ReferenceGenome& the_reference,
+                   Variant::SizeType extension_size)
+{
+    if (!is_left_alignable(a_variant)) {
+        return a_variant;
+    }
+    
     const auto& ref_allele = a_variant.get_reference_allele();
     const auto& alt_allele = a_variant.get_alternative_allele();
     
-    auto max_allele_size = std::max(reference_allele_size(a_variant),
-                                    alternative_allele_size(a_variant));
+    LeftAlignmentList big_allele {}, small_allele {};
+    std::tie(big_allele, small_allele) = get_allele_lists(ref_allele, alt_allele);
+    auto big_allele_ritr = crbegin(big_allele);
+    auto small_allele_ritr = crbegin(small_allele);
     
-    using StringType = std::remove_reference_t<decltype(ref_allele)>;
+    auto big_allele_size   = static_cast<Variant::SizeType>(big_allele.size());
+    auto small_allele_size = static_cast<Variant::SizeType>(small_allele.size());
     
-    std::deque<StringType::value_type> ref_allele_q {cbegin(ref_allele), cend(ref_allele)};
-    std::deque<StringType::value_type> alt_allele_q {cbegin(alt_allele), cend(alt_allele)};
+    GenomicRegion current_region {a_variant.get_reference_allele_region()};
     
-    std::deque<StringType::value_type>::const_reverse_iterator ref_allele_reverse_itr {};
-    std::deque<StringType::value_type>::const_reverse_iterator alt_allele_reverse_itr {};
-    
-    GenomicRegion current_ref_region = a_variant.get_reference_allele_region();
-    
-    while (true) {
-        if (ref_allele_q.size() <= alt_allele_q.size()) {
-            std::tie(ref_allele_reverse_itr, alt_allele_reverse_itr)
-                    = std::mismatch(crbegin(ref_allele_q), crend(ref_allele_q), crbegin(alt_allele_q));
-        } else {
-            std::tie(alt_allele_reverse_itr, ref_allele_reverse_itr)
-                = std::mismatch(crbegin(alt_allele_q), crend(alt_allele_q), crbegin(ref_allele_q));
-        }
+    do {
+        current_region = extend_allele_lists(big_allele, small_allele, the_reference,
+                                             current_region, extension_size);
         
-        if (ref_allele_reverse_itr == crend(ref_allele_q) ||
-            alt_allele_reverse_itr == crend(alt_allele_q))
-        {
-            current_ref_region = shift(current_ref_region, -max_allele_size);
-            auto some_reference_sequence = the_reference.get_sequence(current_ref_region);
-            std::cout << some_reference_sequence << std::endl;
-            ref_allele_q.insert(begin(ref_allele_q), cbegin(some_reference_sequence),
-                                cend(some_reference_sequence));
-            alt_allele_q.insert(begin(alt_allele_q), cbegin(some_reference_sequence),
-                                cend(some_reference_sequence));
-        } else {
-            break;
-        }
-    }
+        std::tie(small_allele_ritr, big_allele_ritr)
+                = std::mismatch(small_allele_ritr, crend(small_allele), big_allele_ritr);
+    } while (small_allele_ritr == crend(small_allele));
     
-    auto p = std::mismatch(cbegin(ref_allele_q), cend(ref_allele_q), cbegin(alt_allele_q));
+    auto removable_extension = std::distance(small_allele_ritr, crend(small_allele));
+    auto new_big_allele_begin   = std::next(cbegin(big_allele), removable_extension);
+    auto new_small_allele_begin = std::next(cbegin(small_allele), removable_extension);
     
-    StringType new_ref_allele {p.first, cend(ref_allele_q)};
-    StringType new_alt_allele {p.second, cend(alt_allele_q)};
+    Variant::StringType new_big_allele {new_big_allele_begin,
+                                        std::next(new_big_allele_begin, big_allele_size)};
+    Variant::StringType new_small_allele {new_small_allele_begin,
+                                        std::next(new_small_allele_begin, small_allele_size)};
     
-    std::cout << new_ref_allele << std::endl;
-    std::cout << new_alt_allele << std::endl;
+    auto new_ref_region_begin = current_region.get_begin() +
+                                static_cast<GenomicRegion::SizeType>(removable_extension);
+    auto new_ref_region_end   = new_ref_region_begin +
+                                static_cast<GenomicRegion::SizeType>(ref_allele.size());
+    GenomicRegion new_ref_region {current_region.get_contig_name(), new_ref_region_begin,
+                                    new_ref_region_end};
     
     VariantFactory a_factory {};
-    return a_factory.make(current_ref_region, new_ref_allele, new_alt_allele);
+    return (ref_allele.size() > alt_allele.size()) ?
+        a_factory.make(new_ref_region, new_big_allele, new_small_allele) :
+        a_factory.make(new_ref_region, new_small_allele, new_big_allele);
 }
 
 bool is_normalised(const Variant& a_variant) noexcept

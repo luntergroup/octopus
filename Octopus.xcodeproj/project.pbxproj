@@ -29,6 +29,7 @@
 		CAE3E2B81AA370BD00C01B2C /* variant_file.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CAE3E2B71AA370BD00C01B2C /* variant_file.cpp */; };
 		CAE3E2BB1AA371F500C01B2C /* variant_file_factory.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CAE3E2B91AA371F500C01B2C /* variant_file_factory.cpp */; };
 		CAE3E2C01AA3D91C00C01B2C /* variant_utils.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CAE3E2BE1AA3D91C00C01B2C /* variant_utils.cpp */; };
+		CAE3E2C71AA895D600C01B2C /* variant_benchmarks.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CAE3E2C61AA895D600C01B2C /* variant_benchmarks.cpp */; };
 		D4907F4B1A88E20E00639203 /* variant_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D4907F4A1A88E20E00639203 /* variant_tests.cpp */; };
 		D4907F571A8A2A9B00639203 /* reference_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D4907F561A8A2A9B00639203 /* reference_tests.cpp */; };
 		D4907F5B1A8A374000639203 /* fasta.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D4907F591A8A374000639203 /* fasta.cpp */; };
@@ -103,6 +104,7 @@
 		CAE3E2BC1AA3A98D00C01B2C /* graph_bubbles.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = graph_bubbles.h; sourceTree = "<group>"; };
 		CAE3E2BE1AA3D91C00C01B2C /* variant_utils.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = variant_utils.cpp; sourceTree = "<group>"; };
 		CAE3E2BF1AA3D91C00C01B2C /* variant_utils.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = variant_utils.h; sourceTree = "<group>"; };
+		CAE3E2C61AA895D600C01B2C /* variant_benchmarks.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = variant_benchmarks.cpp; sourceTree = "<group>"; };
 		D4907F471A88D71800639203 /* genomic_region.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = genomic_region.h; sourceTree = "<group>"; };
 		D4907F491A88E14E00639203 /* catch.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = catch.hpp; sourceTree = "<group>"; };
 		D4907F4A1A88E20E00639203 /* variant_tests.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = variant_tests.cpp; sourceTree = "<group>"; };
@@ -140,9 +142,10 @@
 		CA03C2281A8C1C2D000D3494 /* benchmarks */ = {
 			isa = PBXGroup;
 			children = (
+				CA03C2291A8C1C8C000D3494 /* benchmark_utils.h */,
 				CA03C2261A8C1BED000D3494 /* reference_benchmarks.cpp */,
 				CABA377E1A8FA11000BBE598 /* read_benchmark.cpp */,
-				CA03C2291A8C1C8C000D3494 /* benchmark_utils.h */,
+				CAE3E2C61AA895D600C01B2C /* variant_benchmarks.cpp */,
 			);
 			name = benchmarks;
 			sourceTree = "<group>";
@@ -405,6 +408,7 @@
 				D4907F4B1A88E20E00639203 /* variant_tests.cpp in Sources */,
 				CAE3E2B81AA370BD00C01B2C /* variant_file.cpp in Sources */,
 				CAE3E2AB1AA2736D00C01B2C /* external_variant_candidates.cpp in Sources */,
+				CAE3E2C71AA895D600C01B2C /* variant_benchmarks.cpp in Sources */,
 				CABA377F1A8FA11000BBE598 /* read_benchmark.cpp in Sources */,
 				CA03C1511A8C0D3D000D3494 /* htslib_facade.cpp in Sources */,
 				D4907F571A8A2A9B00639203 /* reference_tests.cpp in Sources */,

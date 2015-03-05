@@ -9,16 +9,18 @@
 #ifndef __Octopus__variant_utils__
 #define __Octopus__variant_utils__
 
-class Variant;
+#include "variant.h"
+
 class ReferenceGenome;
 
 bool is_parsimonious(const Variant& a_variant) noexcept;
 
 Variant make_parsimonious(const Variant& a_variant);
 
-bool is_left_aligned(const Variant& a_variant) noexcept;
+bool is_left_alignable(const Variant& a_variant) noexcept;
 
-Variant left_align(const Variant& a_variant, ReferenceGenome& the_reference);
+Variant left_align(const Variant& a_variant, ReferenceGenome& the_reference,
+                   Variant::SizeType extension_size=10);
 
 bool is_normalised(const Variant& a_variant) noexcept;
 
