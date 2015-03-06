@@ -20,14 +20,6 @@
 using std::uint_fast32_t;
 using std::size_t;
 
-/**
-   All variants are considered replacements, i.e. a region of the reference contig is removed,
-   and replaced with a novel sequence.
- 
-   The underlying logic is designed to be transparent to the variant type. The exception is
-   modelling the prior probability of different variants. This solution uses a strategy pattern
-   injection (the functional 'prior_model' is injected) to acheive runtime polymorphism.
- */
 class Variant : Comparable<Variant>
 {
 public:
@@ -35,9 +27,13 @@ public:
     using StringType = std::string;
     
     Variant() = delete;
-    template <typename T1, typename T2>
-    explicit Variant(GenomicRegion the_reference_allele_region, T1&& the_reference_allele,
-                     T2&& the_alternative_allele, std::function<double()> prior_model);
+    template <typename GenomicRegion_, typename StringType1, typename StringType2>
+    explicit Variant(GenomicRegion_&& the_reference_allele_region, StringType1&& the_reference_allele,
+                     StringType2&& the_alternative_allele, std::function<double()> prior_model);
+    template <typename StringType1, typename StringType2, typename StringType3>
+    explicit Variant(StringType1&& the_reference_contig_name, SizeType the_reference_begin,
+                     StringType2&& the_reference_allele, StringType3&& the_alternative_allele,
+                     std::function<double()> prior_model);
     
     Variant(const Variant&)            = default;
     Variant& operator=(const Variant&) = default;
@@ -50,18 +46,34 @@ public:
     double get_prior_probability() const noexcept;
     
 private:
+    // Don't change the order of these members
+    StringType the_reference_allele_;
     GenomicRegion the_reference_allele_region_;
-    StringType the_reference_allele;
-    StringType the_alternative_allele;
+    StringType the_alternative_allele_;
     std::function<double()> prior_model_;
 };
 
-template <typename T1, typename T2>
-Variant::Variant(GenomicRegion the_reference_allele_region, T1&& the_reference_allele,
-                 T2&& the_alternative_allele, std::function<double()> prior_model)
-:the_reference_allele_region_ {std::move(the_reference_allele_region)},
-the_reference_allele {std::forward<T1>(the_reference_allele)},
-the_alternative_allele {std::forward<T2>(the_alternative_allele)},
+template <typename GenomicRegion_, typename StringType1, typename StringType2>
+Variant::Variant(GenomicRegion_&& the_reference_allele_region, StringType1&& the_reference_allele,
+                 StringType2&& the_alternative_allele, std::function<double()> prior_model)
+:
+the_reference_allele_ {std::forward<StringType1>(the_reference_allele)},
+the_reference_allele_region_ {std::forward<GenomicRegion_>(the_reference_allele_region)},
+the_alternative_allele_ {std::forward<StringType2>(the_alternative_allele)},
+prior_model_ {prior_model}
+{}
+
+template <typename StringType1, typename StringType2, typename StringType3>
+Variant::Variant(StringType1&& the_reference_contig_name, SizeType the_reference_begin,
+                 StringType2&& the_reference_allele, StringType3&& the_alternative_allele,
+                 std::function<double()> prior_model)
+:
+// The reference allele needs to be initialised first so it's size can be used for the
+// region initialisation.
+the_reference_allele_ {std::forward<StringType2>(the_reference_allele)},
+the_reference_allele_region_ {GenomicRegion{std::forward<StringType1>(the_reference_contig_name),
+    the_reference_begin, the_reference_begin + static_cast<SizeType>(the_reference_allele_.size())}},
+the_alternative_allele_ {std::forward<StringType3>(the_alternative_allele)},
 prior_model_ {prior_model}
 {}
 
@@ -72,12 +84,12 @@ inline const GenomicRegion& Variant::get_reference_allele_region() const noexcep
 
 inline const Variant::StringType& Variant::get_reference_allele() const noexcept
 {
-    return the_reference_allele;
+    return the_reference_allele_;
 }
 
 inline const Variant::StringType& Variant::get_alternative_allele() const noexcept
 {
-    return the_alternative_allele;
+    return the_alternative_allele_;
 }
 
 inline double Variant::get_prior_probability() const noexcept

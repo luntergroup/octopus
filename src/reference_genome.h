@@ -22,6 +22,8 @@
 #include "genomic_region.h"
 #include "reference_genome_impl.h"
 
+//TODO: make sure this is thread-safe
+
 class ReferenceGenome
 {
 public:

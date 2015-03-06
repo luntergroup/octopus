@@ -29,7 +29,8 @@ public:
     using DifferenceType = SequenceRegion::DifferenceType;
     
     GenomicRegion() = default;
-    explicit GenomicRegion(StringType contig_name, SizeType begin, SizeType end);
+    template <typename T>
+    explicit GenomicRegion(T&& contig_name, SizeType begin, SizeType end);
     
     GenomicRegion(const GenomicRegion&)            = default;
     GenomicRegion& operator=(const GenomicRegion&) = default;
@@ -46,9 +47,9 @@ private:
     SequenceRegion contig_region_;
 };
 
-inline
-GenomicRegion::GenomicRegion(StringType contig_name, SizeType begin, SizeType end)
-:contig_name_ {std::move(contig_name)},
+template <typename T>
+GenomicRegion::GenomicRegion(T&& contig_name, SizeType begin, SizeType end)
+:contig_name_ {std::forward<T>(contig_name)},
  contig_region_ {begin, end}
 {}
 

@@ -25,18 +25,52 @@ public:
     VariantFactory(VariantFactory&&)                 = delete;
     VariantFactory& operator=(VariantFactory&&)      = delete;
     
-    template <typename T1, typename T2, typename T3>
-    Variant make(T1&& the_reference_allele_region, T2&& the_reference_allele,
-                 T3&& the_alternative_allele) const;
+    template <typename GenomicRegion_, typename StringType1, typename StringType2>
+    Variant make(GenomicRegion_&& the_reference_allele_region, StringType1&& the_reference_allele,
+                 StringType2&& the_alternative_allele) const;
     
-//    template <typename T1, typename T2, typename T3>
-//    Variant make(T1&& the_contig_name, SizeType the_reference_allele_begin,
-//                 T2&& the_reference_allele, T3&& the_alternative_allele);
+    template <typename StringType1, typename StringType2, typename StringType3>
+    Variant make(StringType1&& the_reference_contig_name, SizeType the_reference_begin,
+                 StringType2&& the_reference_allele, StringType3&& the_alternative_allele) const;
+    
+private:
+    template <typename T1, typename T2>
+    std::function<double()> get_prior_probability_model(const T1& the_reference_allele,
+                                                        const T2& the_alternative_allele) const;
 };
 
-template <typename T1, typename T2, typename T3>
-Variant VariantFactory::make(T1&& the_reference_allele_region, T2&& the_reference_allele,
-                             T3&& the_alternative_allele) const
+template <typename GenomicRegion_, typename StringType1, typename StringType2>
+Variant VariantFactory::make(GenomicRegion_&& the_reference_allele_region,
+                             StringType1&& the_reference_allele,
+                             StringType2&& the_alternative_allele) const
+{
+    auto&& prior_model = get_prior_probability_model(the_reference_allele, the_alternative_allele);
+    return Variant {
+        std::forward<GenomicRegion_>(the_reference_allele_region),
+        std::forward<StringType1>(the_reference_allele),
+        std::forward<StringType2>(the_alternative_allele),
+        std::move(prior_model)
+    };
+}
+
+template <typename StringType1, typename StringType2, typename StringType3>
+Variant VariantFactory::make(StringType1&& the_reference_contig_name, SizeType the_reference_begin,
+                             StringType2&& the_reference_allele, StringType3&& the_alternative_allele) const
+{
+    auto&& prior_model = get_prior_probability_model(the_reference_allele, the_alternative_allele);
+    return Variant {
+        std::forward<StringType1>(the_reference_contig_name),
+        the_reference_begin,
+        std::forward<StringType2>(the_reference_allele),
+        std::forward<StringType3>(the_alternative_allele),
+        std::move(prior_model)
+    };
+}
+
+template <typename T1, typename T2>
+std::function<double()>
+VariantFactory::get_prior_probability_model(const T1& the_reference_allele,
+                                            const T2& the_alternative_allele) const
 {
     std::function<double()> prior_model {};
     if (stringlen(the_reference_allele) == stringlen(the_alternative_allele)) {
@@ -52,19 +86,7 @@ Variant VariantFactory::make(T1&& the_reference_allele_region, T2&& the_referenc
             prior_model = [] () { return 1e-8; };
         }
     }
-    return Variant {
-        std::forward<T1>(the_reference_allele_region),
-        std::forward<T2>(the_reference_allele),
-        std::forward<T3>(the_alternative_allele),
-        prior_model
-    };
+    return prior_model;
 }
-
-//template <typename T1, typename T2, typename T3>
-//Variant VariantFactory::make(T1&& the_contig_name, SizeType the_reference_allele_begin,
-//                             T2&& the_reference_allele, T3&& the_alternative_allele)
-//{
-//    
-//}
 
 #endif /* defined(__Octopus__variant_factory__) */

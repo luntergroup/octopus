@@ -30,6 +30,7 @@
 		CAE3E2BB1AA371F500C01B2C /* variant_file_factory.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CAE3E2B91AA371F500C01B2C /* variant_file_factory.cpp */; };
 		CAE3E2C01AA3D91C00C01B2C /* variant_utils.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CAE3E2BE1AA3D91C00C01B2C /* variant_utils.cpp */; };
 		CAE3E2C71AA895D600C01B2C /* variant_benchmarks.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CAE3E2C61AA895D600C01B2C /* variant_benchmarks.cpp */; };
+		D48C00BC1AAA113000E76FC8 /* read_filter.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D48C00BA1AAA113000E76FC8 /* read_filter.cpp */; };
 		D4907F4B1A88E20E00639203 /* variant_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D4907F4A1A88E20E00639203 /* variant_tests.cpp */; };
 		D4907F571A8A2A9B00639203 /* reference_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D4907F561A8A2A9B00639203 /* reference_tests.cpp */; };
 		D4907F5B1A8A374000639203 /* fasta.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D4907F591A8A374000639203 /* fasta.cpp */; };
@@ -105,6 +106,8 @@
 		CAE3E2BF1AA3D91C00C01B2C /* variant_utils.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = variant_utils.h; sourceTree = "<group>"; };
 		CAE3E2C61AA895D600C01B2C /* variant_benchmarks.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = variant_benchmarks.cpp; sourceTree = "<group>"; };
 		CAE3E2C81AA9129000C01B2C /* notes.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = notes.txt; sourceTree = "<group>"; };
+		D48C00BA1AAA113000E76FC8 /* read_filter.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = read_filter.cpp; sourceTree = "<group>"; };
+		D48C00BB1AAA113000E76FC8 /* read_filter.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = read_filter.h; sourceTree = "<group>"; };
 		D4907F471A88D71800639203 /* genomic_region.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = genomic_region.h; sourceTree = "<group>"; };
 		D4907F491A88E14E00639203 /* catch.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = catch.hpp; sourceTree = "<group>"; };
 		D4907F4A1A88E20E00639203 /* variant_tests.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = variant_tests.cpp; sourceTree = "<group>"; };
@@ -176,6 +179,7 @@
 		CAA4DC231A81981400DD3E9A /* src */ = {
 			isa = PBXGroup;
 			children = (
+				D48C00B81AAA0F5300E76FC8 /* filters */,
 				CAE3E2931A9CF95900C01B2C /* policies */,
 				CABA377C1A8F762200BBE598 /* assembler */,
 				CABA377B1A8F66E400BBE598 /* utils */,
@@ -333,6 +337,15 @@
 			name = variants;
 			sourceTree = "<group>";
 		};
+		D48C00B81AAA0F5300E76FC8 /* filters */ = {
+			isa = PBXGroup;
+			children = (
+				D48C00BB1AAA113000E76FC8 /* read_filter.h */,
+				D48C00BA1AAA113000E76FC8 /* read_filter.cpp */,
+			);
+			name = filters;
+			sourceTree = "<group>";
+		};
 		D4907F421A88D6C600639203 /* io */ = {
 			isa = PBXGroup;
 			children = (
@@ -403,6 +416,7 @@
 				CA03C2271A8C1BED000D3494 /* reference_benchmarks.cpp in Sources */,
 				D4907F5B1A8A374000639203 /* fasta.cpp in Sources */,
 				CAE3E2BB1AA371F500C01B2C /* variant_file_factory.cpp in Sources */,
+				D48C00BC1AAA113000E76FC8 /* read_filter.cpp in Sources */,
 				CABA37821A8FA49800BBE598 /* read_manager.cpp in Sources */,
 				CAE3E29D1AA139A000C01B2C /* program_options.cpp in Sources */,
 				D4907F4B1A88E20E00639203 /* variant_tests.cpp in Sources */,

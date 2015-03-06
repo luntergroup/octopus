@@ -22,6 +22,8 @@
 
 class AlignedRead;
 
+// TODO: make this thread-safe
+
 class ReadManager
 {
 public:
