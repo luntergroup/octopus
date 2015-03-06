@@ -62,7 +62,7 @@ void AlignmentCandidateVariantGenerator::add_read(const AlignedRead &a_read)
                 auto&& added_sequence = the_read_sequence.substr(read_index, op_size);
                 if (is_good_sequence(added_sequence)) {
                     add_variant(GenomicRegion {contig_name, ref_index, ref_index},
-                                std::string {}, std::move(added_sequence));
+                                "", std::move(added_sequence));
                 }
                 read_index += op_size;
                 break;
@@ -72,7 +72,7 @@ void AlignmentCandidateVariantGenerator::add_read(const AlignedRead &a_read)
                 a_region = GenomicRegion {contig_name, ref_index, ref_index + op_size};
                 auto&& removed_sequence = the_reference_.get_sequence(a_region);
                 if (is_good_sequence(removed_sequence)) {
-                    add_variant(a_region, std::move(removed_sequence), std::string {});
+                    add_variant(a_region, std::move(removed_sequence), "");
                 }
                 ref_index += op_size;
                 break;

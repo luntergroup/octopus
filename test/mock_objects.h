@@ -13,12 +13,12 @@
 #include "aligned_read.h"
 #include "cigar_string.h"
 
-GenomicRegion get_mock_region()
+inline GenomicRegion get_mock_region()
 {
     return GenomicRegion {"1", 0, 1};
 }
 
-AlignedRead get_mock_aligned_read(std::string the_sequence)
+inline AlignedRead get_mock_aligned_read(std::string the_sequence)
 {
     return AlignedRead {
         get_mock_region(),

@@ -11,9 +11,11 @@
 
 #include <vector>
 #include <string>
+#include <cstring> // std::strlen
 #include <sstream>
 #include <algorithm> // std::equal
 #include <iterator> // std::next
+#include <cstddef> // std::size_t
 #include <boost/utility/string_ref.hpp>
 #include <boost/functional/hash.hpp>
 
@@ -40,6 +42,16 @@ bool is_suffix(T this_sequence, T that_sequence)
 {
     return std::equal(std::cbegin(this_sequence), std::cend(this_sequence),
                       std::next(std::cbegin(that_sequence)));
+}
+
+inline std::size_t stringlen(const char* str)
+{
+    return std::strlen(str);
+}
+
+inline std::size_t stringlen(const std::string& str)
+{
+    return str.size();
 }
 
 namespace std
