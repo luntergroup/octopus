@@ -38,7 +38,7 @@ bool is_parsimonious(const Variant& a_variant) noexcept
     const auto& alt_allele = a_variant.get_alternative_allele();
     
     auto&& alleles = allele_minmax(ref_allele, alt_allele);
-        const auto& the_small_allele = alleles.first;
+    const auto& the_small_allele = alleles.first;
     const auto& the_big_allele   = alleles.second;
     
     if (num_redundant_bases(cbegin(the_small_allele), cend(the_small_allele),
@@ -71,14 +71,26 @@ Variant make_parsimonious(const Variant& a_variant, ReferenceGenome& the_referen
     const auto& old_ref_region = a_variant.get_reference_allele_region();
     
     if (the_small_allele.size() == 0) {
-        GenomicRegion new_ref_region {old_ref_region.get_contig_name(),
-                            old_ref_region.get_begin() - 1, old_ref_region.get_end()};
-        
-        auto new_ref_allele = the_reference.get_sequence(new_ref_region);
-        auto new_alt_allele = new_ref_allele.front() + a_variant.get_alternative_allele();
-        
-        return a_factory.make(std::move(new_ref_region), std::move(new_ref_allele),
-                              std::move(new_alt_allele));
+        if (old_ref_region.get_begin() > 0) {
+            GenomicRegion new_ref_region {old_ref_region.get_contig_name(),
+                old_ref_region.get_begin() - 1, old_ref_region.get_end()};
+            
+            auto new_ref_allele = the_reference.get_sequence(new_ref_region);
+            auto new_alt_allele = new_ref_allele.front() + a_variant.get_alternative_allele();
+            
+            return a_factory.make(std::move(new_ref_region), std::move(new_ref_allele),
+                                  std::move(new_alt_allele));
+        } else {
+            // In this very rare care the only option is to pad to the right.
+            GenomicRegion new_ref_region {old_ref_region.get_contig_name(),
+                old_ref_region.get_begin(), old_ref_region.get_end() + 1};
+            
+            auto new_ref_allele = the_reference.get_sequence(new_ref_region);
+            auto new_alt_allele = a_variant.get_alternative_allele() + new_ref_allele.back();
+            
+            return a_factory.make(std::move(new_ref_region), std::move(new_ref_allele),
+                                  std::move(new_alt_allele));
+        }
     }
     
     auto num_redundant_back_bases  = num_redundant_bases(crbegin(the_small_allele),
@@ -138,7 +150,6 @@ GenomicRegion extend_allele_lists(LeftAlignmentList& big_allele, LeftAlignmentLi
                                   ReferenceGenome& the_reference, const GenomicRegion& current_region,
                                   Variant::SizeType extension_size)
 {
-    //TODO: this could throw if start of contig is reached. Do something about it.
     auto new_region = shift(current_region, -extension_size);
     GenomicRegion extension_region {new_region.get_contig_name(), new_region.get_begin(),
         new_region.get_begin() + extension_size};
@@ -175,8 +186,15 @@ Variant left_align(const Variant& a_variant, ReferenceGenome& the_reference,
     GenomicRegion current_region {a_variant.get_reference_allele_region()};
     
     do {
-        current_region = extend_allele_lists(big_allele, small_allele, the_reference,
-                                             current_region, extension_size);
+        if (current_region.get_begin() >= extension_size) {
+            current_region = extend_allele_lists(big_allele, small_allele, the_reference,
+                                                 current_region, extension_size);
+        } else if (current_region.get_begin() > 0) {
+            current_region = extend_allele_lists(big_allele, small_allele, the_reference,
+                                                 current_region, current_region.get_begin());
+        } else {
+            break;
+        }
         
         // We can continue from previous iterators as list iterators aren't invalidated
         // by modifications to the list.
@@ -191,9 +209,12 @@ Variant left_align(const Variant& a_variant, ReferenceGenome& the_reference,
         removable_extension -= small_allele_size;
     } else {
         auto required_left_padding = static_cast<SizeType>(small_allele_size - removable_extension);
-        current_region = extend_allele_lists(big_allele, small_allele, the_reference,
-                                             current_region, required_left_padding);
-        removable_extension = 0;
+        // Note this will automatically pad to the right if we've reached the start of the contig
+        if (current_region.get_begin() >= required_left_padding) {
+            current_region = extend_allele_lists(big_allele, small_allele, the_reference,
+                                                 current_region, required_left_padding);
+            removable_extension = 0;
+        }
     }
     
     auto new_big_allele_begin   = std::next(cbegin(big_allele), removable_extension);

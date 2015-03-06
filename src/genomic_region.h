@@ -11,6 +11,7 @@
 
 #include <string>
 #include <ostream>
+#include <stdexcept>
 
 #include "sequence_region.h"
 #include "comparable.h"
@@ -105,7 +106,7 @@ inline bool operator<(const GenomicRegion& lhs, const GenomicRegion& rhs)
 inline GenomicRegion shift(const GenomicRegion& a_region, GenomicRegion::DifferenceType n)
 {
     if (n < 0 && a_region.get_begin() + n > a_region.get_begin()) {
-        throw std::runtime_error {"Bad shift"};
+        throw std::out_of_range {"Shifted past contig start"};
     }
     
     return GenomicRegion {
