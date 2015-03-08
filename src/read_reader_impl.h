@@ -11,7 +11,8 @@
 
 #include <string>
 #include <vector>
-#include <cstdint>
+#include <cstddef> // std::size_t
+#include <cstdint> // std::uint_fast32_t
 #include <unordered_map>
 
 class AlignedRead;
@@ -25,6 +26,7 @@ public:
     
     virtual std::vector<std::string> get_sample_ids() = 0;
     virtual std::vector<std::string> get_read_groups_in_sample(const std::string& a_sample_id) = 0;
+    virtual std::size_t get_num_reads(const GenomicRegion& a_region) = 0;
     virtual SampleIdToReadsMap fetch_reads(const GenomicRegion& a_region) = 0;
     virtual SizeType get_num_reference_contigs() noexcept = 0;
     virtual std::vector<std::string> get_reference_contig_names() = 0;

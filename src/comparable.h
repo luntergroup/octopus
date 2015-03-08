@@ -17,9 +17,7 @@
  */
 
 template <typename T>
-class Comparable
-{
-};
+class Comparable {};
 
 template <typename T>
 inline bool operator!=(const Comparable<T>& lhs, const Comparable<T>& rhs)

@@ -12,156 +12,413 @@
 #include <string>
 #include <cstdint>
 #include <ostream>
-#include <algorithm> // std::transform
+#include <vector>
+#include <algorithm> // std::transform, std::swap
+#include <memory>    // std::unique_ptr, std::make_unique
+#include <iterator>  // std::begin etc
 
 #include "genomic_region.h"
 #include "cigar_string.h"
 #include "comparable.h"
 
-class AlignedRead : Comparable<AlignedRead>
+class AlignedRead : public Comparable<AlignedRead>
 {
 public:
-    using SizeType    = std::uint_fast32_t;
+    using SizeType    = GenomicRegion::SizeType;
+    using StringType  = std::string;
     using QualityType = std::uint_fast8_t;
     using Qualities   = std::vector<QualityType>;
     
+    class MatePair : public Equitable<MatePair>
+    {
+    public:
+        struct SupplementaryData
+        {
+            bool is_marked_unmapped;
+            bool is_marked_reverse_mapped;
+        };
+        
+        MatePair() = default;
+        template <typename String_>
+        MatePair(String_&& contig_name, SizeType begin, SizeType insert_size,
+                 SupplementaryData data);
+        ~MatePair() = default;
+        
+        MatePair(const MatePair&)            = default;
+        MatePair& operator=(const MatePair&) = default;
+        MatePair(MatePair&&)                 = default;
+        MatePair& operator=(MatePair&&)      = default;
+        
+        const std::string& get_contig_name() const;
+        SizeType get_begin() const noexcept;
+        SizeType get_insert_size() const noexcept;
+        
+        bool is_marked_unmapped() const;
+        bool is_marked_reverse_mapped() const;
+        
+    private:
+        using Flags = std::vector<bool>;
+        
+        std::string the_contig_name_;
+        SizeType begin_;
+        SizeType the_insert_size_;
+        Flags flags_;
+        
+        Flags get_flags_(const SupplementaryData& data);
+    };
+    
+    struct SupplementaryData
+    {
+        bool is_marked_duplicate;
+        bool is_marked_unmapped;
+        bool is_marked_reverse_mapped;
+        bool is_marked_paired;
+        bool is_marked_proper_pair;
+        bool is_marked_secondary_alignment;
+        bool is_marked_qc_fail;
+    };
+    
     AlignedRead() = delete;
-    template <typename GenomicRegion_, typename String_, typename Qualities_, typename CigarString_>
-    explicit AlignedRead(GenomicRegion_&& reference_region, String_&& sequence,
+    
+    // For reads without a mate pair
+    template <typename GenomicRegion_, typename String1_, typename Qualities_, typename CigarString_>
+    explicit AlignedRead(GenomicRegion_&& reference_region, String1_&& sequence,
                          Qualities_&& qualities, CigarString_&& cigar_string,
-                         SizeType insert_size, std::string mate_contig_name,
-                         SizeType mate_begin, QualityType mapping_quality);
+                         QualityType mapping_quality, SupplementaryData data);
     
-    AlignedRead(const AlignedRead&)            = default;
-    AlignedRead& operator=(const AlignedRead&) = default;
-    AlignedRead(AlignedRead&&)                 = default;
-    AlignedRead& operator=(AlignedRead&&)      = default;
+    // For reads with a mate pair
+    template <typename GenomicRegion_, typename String1_, typename Qualities_, typename CigarString_,
+              typename String2_>
+    explicit AlignedRead(GenomicRegion_&& reference_region, String1_&& sequence,
+                         Qualities_&& qualities, CigarString_&& cigar_string,
+                         SizeType insert_size, String2_&& mate_contig_name,
+                         SizeType mate_begin, QualityType mapping_quality,
+                         SupplementaryData data,
+                         MatePair::SupplementaryData mate_pair_data);
     
+    AlignedRead(const AlignedRead& other);
+    AlignedRead& operator=(const AlignedRead& other);
+    AlignedRead(AlignedRead&&)            = default;
+    AlignedRead& operator=(AlignedRead&&) = default;
+    friend void swap(AlignedRead& lhs, AlignedRead& rhs) noexcept;
+    
+    // Things that should never change (in theory)
     const GenomicRegion& get_region() const;
     const std::string& get_contig_name() const;
     SizeType get_begin() const noexcept;
     SizeType get_end() const noexcept;
-    const std::string& get_sequence() const;
+    const StringType& get_sequence() const;
     const Qualities& get_qualities() const;
     QualityType get_mapping_quality() const;
     SizeType get_sequence_size() const;
     const CigarString& get_cigar_string() const;
-    SizeType get_insert_size() const;
-    const std::string& get_mate_contig_name() const;
-    SizeType get_mate_begin() const;
+    
+    void set_qualities(Qualities&& new_qualities) noexcept;
+    void zero_front_qualities(SizeType num_bases) noexcept;
+    void zero_back_qualities(SizeType num_bases) noexcept;
+    
+    // Mate-pair stuff
+    bool has_mate_pair() const noexcept;
+    const std::unique_ptr<MatePair>& get_mate_pair() const;
+    
+    // Things that could change / dependent on Samtools specification
+    bool is_marked_duplicate() const;
+    bool is_marked_unmapped() const;
+    bool is_marked_reverse_mapped() const;
+    bool is_marked_paired() const;
+    bool is_marked_proper_pair() const;
+    bool is_marked_secondary_alignment() const;
+    bool is_marked_qc_fail() const;
     
     template <typename CompressionAlgorithm> void compress(const CompressionAlgorithm& c);
     template <typename CompressionAlgorithm> void decompress(const CompressionAlgorithm& c);
     
 private:
-    GenomicRegion reference_region_;
-    std::string mate_contig_name_;
-    std::string sequence_;
-    CigarString cigar_string_;
-    Qualities qualities_;
-    SizeType insert_size_;
-    SizeType mate_begin_;
-    QualityType mapping_quality_;
+    using Flags = std::vector<bool>;
+    
+    GenomicRegion the_reference_region_;
+    StringType the_sequence_;
+    CigarString the_cigar_string_;
+    Qualities the_qualities_;
+    std::unique_ptr<MatePair> the_mate_pair_;
+    QualityType the_mapping_quality_;
+    Flags flags_;
+    
+    Flags get_flags_(const SupplementaryData& data);
+    
+    bool is_compressed_() const noexcept;
+    void set_compressed_() noexcept;
+    void set_uncompressed_() noexcept;
 };
 
-template <typename GenomicRegion_, typename String_, typename Qualities_, typename CigarString_>
-inline AlignedRead::AlignedRead(GenomicRegion_&& reference_region, String_&& sequence,
+template <typename GenomicRegion_, typename String1_, typename Qualities_, typename CigarString_>
+inline AlignedRead::AlignedRead(GenomicRegion_&& reference_region, String1_&& sequence,
                                 Qualities_&& qualities, CigarString_&& cigar_string,
-                                SizeType insert_size, std::string mate_contig_name,
-                                SizeType mate_begin, QualityType mapping_quality)
-:reference_region_ {std::forward<GenomicRegion_>(reference_region)},
- sequence_ {std::forward<String_>(sequence)},
- qualities_ {std::forward<Qualities_>(qualities)},
- cigar_string_ {std::forward<CigarString_>(cigar_string)},
- insert_size_ {insert_size},
- mate_contig_name_ {mate_contig_name},
- mate_begin_ {mate_begin},
- mapping_quality_ {mapping_quality}
+                                QualityType mapping_quality, SupplementaryData supplementary_data)
+:
+the_reference_region_ {std::forward<GenomicRegion_>(reference_region)},
+the_sequence_ {std::forward<String1_>(sequence)},
+the_qualities_ {std::forward<Qualities_>(qualities)},
+the_cigar_string_ {std::forward<CigarString_>(cigar_string)},
+the_mate_pair_ {nullptr},
+flags_ {get_flags_(supplementary_data)}
 {}
+
+template <typename GenomicRegion_, typename String1_, typename Qualities_, typename CigarString_,
+          typename String2_>
+inline AlignedRead::AlignedRead(GenomicRegion_&& reference_region, String1_&& sequence,
+                                Qualities_&& qualities, CigarString_&& cigar_string,
+                                SizeType insert_size, String2_&& mate_contig_name,
+                                SizeType mate_begin, QualityType mapping_quality,
+                                SupplementaryData data,
+                                MatePair::SupplementaryData mate_pair_data)
+:
+the_reference_region_ {std::forward<GenomicRegion_>(reference_region)},
+the_sequence_ {std::forward<String1_>(sequence)},
+the_qualities_ {std::forward<Qualities_>(qualities)},
+the_cigar_string_ {std::forward<CigarString_>(cigar_string)},
+the_mate_pair_ {std::make_unique<MatePair>(std::forward<String2_>(mate_contig_name),
+                                           mate_begin, insert_size, mate_pair_data)},
+the_mapping_quality_ {mapping_quality},
+flags_ {get_flags_(data)}
+{}
+
+template <typename String_>
+AlignedRead::MatePair::MatePair(String_&& contig_name, SizeType begin, SizeType insert_size,
+                                SupplementaryData data)
+:
+the_contig_name_ {std::forward<String_>(contig_name)},
+begin_ {begin},
+the_insert_size_ {insert_size},
+flags_ {get_flags_(data)}
+{}
+
+inline AlignedRead::AlignedRead(const AlignedRead& other)
+:
+the_reference_region_ {other.the_reference_region_},
+the_sequence_ {other.the_sequence_},
+the_qualities_ {other.the_qualities_},
+the_cigar_string_ {other.the_cigar_string_},
+the_mate_pair_ {(other.the_mate_pair_ != nullptr) ?
+    std::make_unique<MatePair>(*other.the_mate_pair_) : nullptr},
+the_mapping_quality_ {other.the_mapping_quality_},
+flags_ {other.flags_}
+{}
+
+inline AlignedRead& AlignedRead::operator=(const AlignedRead& other)
+{
+    AlignedRead temp {other};
+    swap(*this, temp);
+    return *this;
+}
+
+inline void swap(AlignedRead& lhs, AlignedRead& rhs) noexcept
+{
+    std::swap(lhs.the_reference_region_, rhs.the_reference_region_);
+    std::swap(lhs.the_sequence_, rhs.the_sequence_);
+    std::swap(lhs.the_cigar_string_, rhs.the_cigar_string_);
+    std::swap(lhs.the_qualities_, rhs.the_qualities_);
+    std::swap(lhs.the_mate_pair_, rhs.the_mate_pair_);
+    std::swap(lhs.the_mapping_quality_, rhs.the_mapping_quality_);
+    std::swap(lhs.flags_, rhs.flags_);
+}
+
+inline const std::string& AlignedRead::MatePair::get_contig_name() const
+{
+    return the_contig_name_;
+}
+
+inline AlignedRead::SizeType AlignedRead::MatePair::get_begin() const noexcept
+{
+    return begin_;
+}
+
+inline AlignedRead::SizeType AlignedRead::MatePair::get_insert_size() const noexcept
+{
+    return the_insert_size_;
+}
 
 inline const GenomicRegion& AlignedRead::get_region() const
 {
-    return reference_region_;
+    return the_reference_region_;
 }
 
 inline const std::string& AlignedRead::get_contig_name() const
 {
-    return reference_region_.get_contig_name();
+    return the_reference_region_.get_contig_name();
 }
 
 inline AlignedRead::SizeType AlignedRead::get_begin() const noexcept
 {
-    return reference_region_.get_begin();
+    return the_reference_region_.get_begin();
 }
 
 inline AlignedRead::SizeType AlignedRead::get_end() const noexcept
 {
-    return reference_region_.get_end();
+    return the_reference_region_.get_end();
 }
 
-inline const std::string& AlignedRead::get_sequence() const
+inline const AlignedRead::StringType& AlignedRead::get_sequence() const
 {
-    return sequence_;
+    return the_sequence_;
 }
 
 inline const AlignedRead::Qualities& AlignedRead::get_qualities() const
 {
-    return qualities_;
+    return the_qualities_;
 }
 
+inline void AlignedRead::set_qualities(Qualities&& new_qualities) noexcept
+{
+    the_qualities_ = std::move(new_qualities);
+}
+
+inline void AlignedRead::zero_front_qualities(SizeType num_bases) noexcept
+{
+    std::for_each(std::begin(the_qualities_), std::begin(the_qualities_) + num_bases,
+                  [] (auto& a_quality) {
+        a_quality = 0;
+    });
+}
+    
+inline void AlignedRead::zero_back_qualities(SizeType num_bases) noexcept
+{
+    std::for_each(std::rbegin(the_qualities_), std::rbegin(the_qualities_) + num_bases,
+                  [] (auto& a_quality) {
+        a_quality = 0;
+    });
+}
+    
 inline AlignedRead::QualityType AlignedRead::get_mapping_quality() const
 {
-    return mapping_quality_;
+    return the_mapping_quality_;
 }
 
 inline AlignedRead::SizeType AlignedRead::get_sequence_size() const
 {
-    return static_cast<SizeType>(sequence_.size());
+    return static_cast<SizeType>(the_sequence_.size());
 }
 
 inline const CigarString& AlignedRead::get_cigar_string() const
 {
-    return cigar_string_;
+    return the_cigar_string_;
 }
 
-inline AlignedRead::SizeType AlignedRead::get_insert_size() const
+inline bool AlignedRead::has_mate_pair() const noexcept
 {
-    return insert_size_;
+    return the_mate_pair_ != nullptr;
 }
 
-inline const std::string& AlignedRead::get_mate_contig_name() const
+inline const std::unique_ptr<AlignedRead::MatePair>& AlignedRead::get_mate_pair() const
 {
-    return mate_contig_name_;
-}
-
-inline AlignedRead::SizeType AlignedRead::get_mate_begin() const
-{
-    return mate_begin_;
+    if (has_mate_pair()) {
+        return the_mate_pair_;
+    } else {
+        throw std::runtime_error {"Read does not have a mate-pair"};
+    }
 }
 
 template <typename CompressionAlgorithm>
 void AlignedRead::compress(const CompressionAlgorithm& c)
 {
-    sequence_ = CompressionAlgorithm::compress(sequence_);
+    the_sequence_ = CompressionAlgorithm::compress(the_sequence_);
 }
 
 template <typename CompressionAlgorithm>
 void AlignedRead::decompress(const CompressionAlgorithm& c)
 {
-    sequence_ = CompressionAlgorithm::decompress(sequence_);
+    the_sequence_ = CompressionAlgorithm::decompress(the_sequence_);
+}
+
+inline AlignedRead::Flags AlignedRead::get_flags_(const SupplementaryData& data)
+{
+    Flags result(7);
+    result[0] = false;
+    result[1] = data.is_marked_duplicate;
+    result[2] = data.is_marked_unmapped;
+    result[3] = data.is_marked_reverse_mapped;
+    result[4] = data.is_marked_paired;
+    result[5] = data.is_marked_proper_pair;
+    result[6] = data.is_marked_secondary_alignment;
+    result[7] = data.is_marked_qc_fail;
+    return result;
+}
+
+inline AlignedRead::MatePair::Flags
+AlignedRead::MatePair::get_flags_(const SupplementaryData& data)
+{
+    Flags result(2);
+    result[0] = data.is_marked_unmapped;
+    result[1] = data.is_marked_reverse_mapped;
+    return result;
+}
+
+inline bool AlignedRead::is_marked_duplicate() const
+{
+    return flags_[1];
+}
+
+inline bool AlignedRead::is_marked_unmapped() const
+{
+    return flags_[2];
+}
+
+inline bool AlignedRead::is_marked_reverse_mapped() const
+{
+    return flags_[3];
+}
+
+inline bool AlignedRead::is_marked_paired() const
+{
+    return flags_[4];
+}
+
+inline bool AlignedRead::is_marked_proper_pair() const
+{
+    return flags_[5];
+}
+
+inline bool AlignedRead::is_marked_secondary_alignment() const
+{
+    return flags_[6];
+}
+
+inline bool AlignedRead::is_marked_qc_fail() const
+{
+    return flags_[7];
+}
+
+
+inline bool AlignedRead::is_compressed_() const noexcept
+{
+    return flags_[0];
+}
+
+inline void AlignedRead::set_compressed_() noexcept
+{
+    flags_[0] = true;
+}
+
+inline void AlignedRead::set_uncompressed_() noexcept
+{
+    flags_[0] = false;
 }
 
 inline bool operator==(const AlignedRead& lhs, const AlignedRead& rhs)
 {
-    // The order of these comparisons should ensure optimal lazy evaluation
     return lhs.get_mapping_quality() == rhs.get_mapping_quality() &&
             lhs.get_region() == rhs.get_region() &&
             lhs.get_cigar_string() == rhs.get_cigar_string();
 }
 
-inline bool operator< (const AlignedRead& lhs, const AlignedRead& rhs)
+inline bool operator<(const AlignedRead& lhs, const AlignedRead& rhs)
 {
-    return lhs.get_begin() < rhs.get_begin();
+    return lhs.get_region() < rhs.get_region();
+}
+
+inline bool operator==(const AlignedRead::MatePair& lhs, const AlignedRead::MatePair& rhs)
+{
+    return lhs.get_contig_name() == rhs.get_contig_name() && lhs.get_begin() == rhs.get_begin();
 }
 
 namespace std {
@@ -188,10 +445,13 @@ inline std::ostream& operator<<(std::ostream& os, const AlignedRead& a_read)
     os << a_read.get_sequence() << '\n';
     os << a_read.get_qualities() << '\n';
     os << a_read.get_cigar_string() << '\n';
-    os << static_cast<unsigned>(a_read.get_mapping_quality()) << '\n';
-    os << a_read.get_insert_size() << '\n';
-    os << a_read.get_mate_contig_name() << '\n';
-    os << a_read.get_mate_begin();
+    os << static_cast<unsigned>(a_read.get_mapping_quality());
+    if (a_read.has_mate_pair()) {
+        os << '\n';
+        os << a_read.get_mate_pair()->get_contig_name() << '\n';
+        os << a_read.get_mate_pair()->get_begin() << '\n';
+        os << a_read.get_mate_pair()->get_insert_size();
+    }
     return os;
 }
 

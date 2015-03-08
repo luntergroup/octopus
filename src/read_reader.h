@@ -9,7 +9,7 @@
 #ifndef __Octopus__read_reader__
 #define __Octopus__read_reader__
 
-#include <cstddef>
+#include <cstddef> // std::size_t
 #include <iterator>
 #include <memory>
 
@@ -37,6 +37,7 @@ public:
     std::vector<std::string> get_sample_ids();
     std::vector<std::string> get_read_groups_in_sample(const std::string& a_sample_id);
     std::vector<GenomicRegion> get_regions_in_file();
+    std::size_t get_num_read(const GenomicRegion& a_region);
     SampleIdToReadsMap fetch_reads(const GenomicRegion& a_region);
     
 private:
@@ -63,6 +64,11 @@ inline std::vector<std::string> ReadReader::get_sample_ids()
 inline std::vector<std::string> ReadReader::get_read_groups_in_sample(const std::string& a_sample_id)
 {
     return the_impl_->get_read_groups_in_sample(a_sample_id);
+}
+
+inline std::size_t ReadReader::get_num_read(const GenomicRegion& a_region)
+{
+    return the_impl_->get_num_reads(a_region);
 }
 
 inline ReadReader::SampleIdToReadsMap ReadReader::fetch_reads(const GenomicRegion& a_region)

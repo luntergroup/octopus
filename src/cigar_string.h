@@ -18,7 +18,7 @@
 
 #include "equitable.h"
 
-class CigarOperation : Equitable<CigarOperation>
+class CigarOperation : public Equitable<CigarOperation>
 {
 public:
     using SizeType = std::uint_fast32_t;
@@ -79,9 +79,33 @@ inline CigarString parse_cigar_string(const std::string& a_cigar_string)
     return result;
 }
 
+inline bool is_front_soft_clipped(const CigarString& a_cigar_string) noexcept
+{
+    return (a_cigar_string.size() > 0) ? a_cigar_string.front().get_flag() == 'S' : false;
+}
+
+inline bool is_back_soft_clipped(const CigarString& a_cigar_string) noexcept
+{
+    return (a_cigar_string.size() > 0) ? a_cigar_string.back().get_flag() == 'S' : false;
+}
+
 inline bool is_soft_clipped(const CigarString& a_cigar_string) noexcept
 {
-    return (a_cigar_string.size() > 0) ? a_cigar_string[0].get_flag() == 'S' : false;
+    return is_front_soft_clipped(a_cigar_string) || is_back_soft_clipped(a_cigar_string);
+}
+
+inline std::pair<CigarOperation::SizeType, CigarOperation::SizeType>
+get_soft_clipped_sizes(const CigarString& a_cigar_string) noexcept
+{
+    if (!is_soft_clipped(a_cigar_string)) {
+        return {0, 0};
+    } else {
+        auto front_soft_clipped_size = (is_front_soft_clipped(a_cigar_string)) ?
+            a_cigar_string.front().get_size() : 0;
+        auto back_soft_clipped_size = (is_back_soft_clipped(a_cigar_string)) ?
+            a_cigar_string.back().get_size() : 0;
+        return {front_soft_clipped_size, back_soft_clipped_size};
+    }
 }
 
 template <typename T>

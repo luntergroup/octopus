@@ -11,11 +11,12 @@
 
 #include <string>
 #include <vector>
-#include <cstdint>
-#include <algorithm>
+#include <cstddef> // std::size_t
+#include <cstdint> // std::uint_fast32_t etc
+#include <algorithm> // std::find
 #include <unordered_map>
-#include <stdexcept>
-#include <memory>
+#include <stdexcept> // std::runtime_error
+#include <memory> // std::unique_ptr
 
 #include "htslib/hts.h"
 #include "htslib/sam.h"
@@ -51,6 +52,7 @@ public:
     
     std::vector<std::string> get_sample_ids() override;
     std::vector<std::string> get_read_groups_in_sample(const std::string& a_sample_id);
+    std::size_t get_num_reads(const GenomicRegion& a_region) override;
     SampleIdToReadsMap fetch_reads(const GenomicRegion& a_region) override;
     uint_fast32_t get_num_reference_contigs() noexcept override;
     std::vector<std::string> get_reference_contig_names() override;
@@ -87,6 +89,8 @@ private:
         std::string get_read_group() const;
         std::string get_contig_name(int32_t htslib_tid) const;
         std::string get_read_name() const;
+        AlignedRead::SupplementaryData get_flags() const;
+        AlignedRead::MatePair::SupplementaryData get_mate_flags() const;
     };
     
     // No getting around these constants. I'll put them here so they are in plain sight.

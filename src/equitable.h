@@ -10,9 +10,7 @@
 #define Octopus_equitable_h
 
 template <typename T>
-class Equitable
-{
-};
+class Equitable {};
 
 template <typename T>
 inline bool operator!=(const Equitable<T>& lhs, const Equitable<T>& rhs)

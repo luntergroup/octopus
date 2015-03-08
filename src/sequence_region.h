@@ -19,7 +19,7 @@
     Represents a region of continuous sequence.
     begin and end positions are zero-indexed half open - [begin,end) - indexes.
  */
-class SequenceRegion : Comparable<SequenceRegion>
+class SequenceRegion : public Comparable<SequenceRegion>
 {
 public:
     using SizeType      = std::uint_fast32_t;

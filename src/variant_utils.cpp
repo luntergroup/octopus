@@ -20,8 +20,6 @@ using std::cend;
 using std::crbegin;
 using std::crend;
 
-#include <iostream>
-
 auto allele_minmax(const Variant::StringType& allele_a, const Variant::StringType& allele_b)
 {
     static auto is_bigger = [] (const auto& a1, const auto& a2) { return a1.size() < a2.size(); };

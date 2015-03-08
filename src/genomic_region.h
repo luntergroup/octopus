@@ -21,7 +21,7 @@
     name is the reference sequence name (usually a chromosome), and the
     begin and end positions are zero-indexed half open - [begin,end) - indices.
  */
-class GenomicRegion : Comparable<GenomicRegion>
+class GenomicRegion : public Comparable<GenomicRegion>
 {
 public:
     using StringType     = std::string;

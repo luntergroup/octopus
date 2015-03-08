@@ -20,16 +20,18 @@
 using std::uint_fast32_t;
 using std::size_t;
 
-class Variant : Comparable<Variant>
+class Variant : public Comparable<Variant>
 {
 public:
     using SizeType   = GenomicRegion::SizeType;
     using StringType = std::string;
     
     Variant() = delete;
+    
     template <typename GenomicRegion_, typename StringType1, typename StringType2>
     explicit Variant(GenomicRegion_&& the_reference_allele_region, StringType1&& the_reference_allele,
                      StringType2&& the_alternative_allele, std::function<double()> prior_model);
+    
     template <typename StringType1, typename StringType2, typename StringType3>
     explicit Variant(StringType1&& the_reference_contig_name, SizeType the_reference_begin,
                      StringType2&& the_reference_allele, StringType3&& the_alternative_allele,

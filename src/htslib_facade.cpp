@@ -168,6 +168,14 @@ std::vector<std::string> HtslibFacade::get_read_groups_in_sample(const std::stri
     return result;
 }
 
+std::size_t HtslibFacade::get_num_reads(const GenomicRegion& a_region)
+{
+    std::size_t result {0};
+    HtslibIterator it {*this, a_region};
+    while (++it) { ++result; }
+    return result;
+}
+
 HtslibFacade::SampleIdToReadsMap HtslibFacade::fetch_reads(const GenomicRegion& a_region)
 {
     HtslibIterator it {*this, a_region};
@@ -266,8 +274,33 @@ std::pair<AlignedRead, std::string> HtslibFacade::HtslibIterator::operator*() co
         static_cast<uint_fast32_t>(c.isize),
         get_contig_name(c.mtid),
         static_cast<uint_fast32_t>(c.mpos),
-        static_cast<uint_fast8_t>(c.qual)
+        static_cast<uint_fast8_t>(c.qual),
+        get_flags(),
+        get_mate_flags()
     }, get_read_group()};
+}
+
+AlignedRead::SupplementaryData HtslibFacade::HtslibIterator::get_flags() const
+{
+    auto c = the_bam1_->core;
+    AlignedRead::SupplementaryData result {};
+    result.is_marked_duplicate           = (c.flag & BAM_FDUP)         != 0;
+    result.is_marked_unmapped            = (c.flag & BAM_FUNMAP)       != 0;
+    result.is_marked_reverse_mapped      = (c.flag & BAM_FREVERSE)     != 0;
+    result.is_marked_paired              = (c.flag & BAM_FPAIRED)      != 0;
+    result.is_marked_proper_pair         = (c.flag & BAM_FPROPER_PAIR) != 0;
+    result.is_marked_secondary_alignment = (c.flag & BAM_FSECONDARY)   != 0;
+    result.is_marked_qc_fail             = (c.flag & BAM_FQCFAIL)      != 0;
+    return result;
+}
+
+AlignedRead::MatePair::SupplementaryData HtslibFacade::HtslibIterator::get_mate_flags() const
+{
+    auto c = the_bam1_->core;
+    AlignedRead::MatePair::SupplementaryData result {};
+    result.is_marked_unmapped       = (c.flag & BAM_FMUNMAP)   != 0;
+    result.is_marked_reverse_mapped = (c.flag & BAM_FMREVERSE) != 0;
+    return result;
 }
 
 int32_t HtslibFacade::get_htslib_tid(const std::string& reference_contig_name) const

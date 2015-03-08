@@ -17,6 +17,7 @@
 #include "genomic_region.h"
 #include "htslib_facade.h"
 #include "read_manager.h"
+#include "mock_objects.h"
 
 TEST_CASE("read_reader_open_test", "[read_reader]")
 {
@@ -56,4 +57,23 @@ TEST_CASE("read_manager_test", "[read_manager]")
                  std::make_move_iterator(std::end(more_reads)));
     
     REQUIRE(reads.size() == 25);
+}
+
+TEST_CASE("read_copy_test", "[reads]")
+{
+    AlignedRead a_read {get_mock_region(), "ACGT", AlignedRead::Qualities {1, 2, 3, 4}, parse_cigar_string("4M"), 10, "1", 10, 30, AlignedRead::SupplementaryData {}, AlignedRead::MatePair::SupplementaryData {}};
+    
+    REQUIRE(a_read.has_mate_pair());
+    REQUIRE(a_read.get_mate_pair()->get_insert_size() == 10);
+    
+    auto a_moved_read = std::move(a_read);
+    
+    REQUIRE(a_moved_read.has_mate_pair());
+    REQUIRE(a_moved_read.get_mate_pair()->get_insert_size() == 10);
+    
+    auto a_copied_read = a_moved_read;
+    
+    REQUIRE(a_copied_read.has_mate_pair());
+    REQUIRE(a_copied_read.get_mate_pair()->get_insert_size() == 10);
+    REQUIRE(a_moved_read == a_copied_read);
 }
