@@ -78,7 +78,7 @@ public:
         bool is_marked_qc_fail;
     };
     
-    AlignedRead() = delete;
+    AlignedRead() = default;
     
     // For reads without a mate pair
     template <typename GenomicRegion_, typename String1_, typename Qualities_, typename CigarString_>
@@ -451,6 +451,9 @@ inline std::ostream& operator<<(std::ostream& os, const AlignedRead& a_read)
         os << a_read.get_mate_pair()->get_contig_name() << '\n';
         os << a_read.get_mate_pair()->get_begin() << '\n';
         os << a_read.get_mate_pair()->get_insert_size();
+    } else {
+        os << '\n';
+        os << "no mate";
     }
     return os;
 }

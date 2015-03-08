@@ -46,7 +46,7 @@ TEST_CASE("alignment_variant_candidate_generator_test", "[variant_candidate]")
     
     auto candidates = candidate_generator.get_candidates(a_region);
     
-    std::cout << "Num alignment candidates: " << candidates.size() << std::endl;
+    //std::cout << "Num alignment candidates: " << candidates.size() << std::endl;
     
 //    for (const auto& candidate : candidates) {
 //        std::cout << candidate.get_removed_region() << " " << candidate.get_sequence_removed() << " "
@@ -82,7 +82,7 @@ TEST_CASE("assembler_variant_candidate_generator_test", "[variant_candidate]")
     
     auto candidates = candidate_generator.get_candidates(a_region);
     
-    std::cout << "Num assembler candidates: " << candidates.size() << std::endl;
+    //std::cout << "Num assembler candidates: " << candidates.size() << std::endl;
     
     //    for (const auto& candidate : candidates) {
     //        std::cout << candidate.get_removed_region() << " " << candidate.get_sequence_removed() << " "
@@ -134,5 +134,5 @@ TEST_CASE("all_variant_candidate_generator_test", "[variant_candidate]")
     
     auto candidates = candidate_generator.get_candidates(a_region);
     
-    std::cout << "Total candidates: " << candidates.size() << std::endl;
+    //std::cout << "Total candidates: " << candidates.size() << std::endl;
 }

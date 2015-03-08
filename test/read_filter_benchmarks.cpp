@@ -36,9 +36,9 @@
 //        std::sort(some_reads.begin(), some_reads.end());
 //    }
 //    
-//    using ReadIterator = std::vector<AlignedRead>::iterator;
+//    using ReadIterator = std::vector<AlignedRead>::const_iterator;
 //    
-//    ReadFilter<ReadIterator> a_read_filter;
+//    ReadFilter<ReadIterator> a_read_filter {};
 //    
 //    // context-free filters
 //    a_read_filter.register_filter(is_not_secondary_alignment);
@@ -57,13 +57,13 @@
 //        good_reads.reserve(some_reads.size() / 2);
 //        bad_reads.reserve(some_reads.size() / 2);
 //        
-//        a_read_filter.filter_reads(some_reads.begin(),
-//                                   some_reads.end(),
-//                                   std::back_inserter(good_reads),
-//                                   std::back_inserter(bad_reads));
+//        a_read_filter.filter_reads(std::make_move_iterator(some_reads.begin()),
+//                                   std::make_move_iterator(some_reads.end()),
+//                                   ContextBackInserter(good_reads),
+//                                   ContextBackInserter(bad_reads));
 //    };
 //    
-//    auto filtering_time = benchmark<std::chrono::milliseconds>(f_filter, 10).count();
+//    auto filtering_time = benchmark<std::chrono::milliseconds>(f_filter, 1).count();
 //    
 //    std::cout << "filtering_time: " << filtering_time << "ms" << std::endl;
 //}

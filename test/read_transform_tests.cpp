@@ -35,7 +35,7 @@ TEST_CASE("read_transform_test", "[read_transform]")
     if (!std::is_sorted(some_reads.begin(), some_reads.end())) {
         std::sort(some_reads.begin(), some_reads.end());
     }
-
+    
     REQUIRE(some_reads.size() == 4);
     
     const auto& a_read = some_reads[0];

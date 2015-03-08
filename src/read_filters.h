@@ -53,15 +53,15 @@ inline bool is_not_marked_duplicate(const AlignedRead& a_read)
 }
 
 template <typename BidirectionalIterator>
-bool is_not_duplicate(const AlignedRead& a_read, BidirectionalIterator first_read,
-                      BidirectionalIterator previous_read)
+bool is_not_duplicate(const AlignedRead& a_read, BidirectionalIterator first_good,
+                      BidirectionalIterator previous_good)
 {
-    if (a_read != *first_read) {
-        if (a_read.has_mate_pair() && previous_read->has_mate_pair()) {
-            return a_read != *previous_read &&
-                    *a_read.get_mate_pair() != *(previous_read->get_mate_pair());
+    if (first_good != previous_good) {
+        if (a_read.has_mate_pair() && previous_good->has_mate_pair()) {
+            return !(a_read == *previous_good &&
+                    *a_read.get_mate_pair() == *(previous_good->get_mate_pair()));
         } else {
-            return a_read != *previous_read;
+            return a_read != *previous_good;
         }
     } else {
         return true;

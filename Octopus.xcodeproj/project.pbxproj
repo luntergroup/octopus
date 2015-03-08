@@ -64,12 +64,14 @@
 		CA03C2291A8C1C8C000D3494 /* benchmark_utils.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = benchmark_utils.h; sourceTree = "<group>"; };
 		CA03C22A1A8CEF25000D3494 /* read_reader_impl.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = read_reader_impl.h; sourceTree = "<group>"; };
 		CA03C22B1A8D2C5D000D3494 /* cigar_string.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = cigar_string.h; sourceTree = "<group>"; };
+		CA1472741AACC7E2005FDCD1 /* context_back_insert_iterator.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = context_back_insert_iterator.h; sourceTree = "<group>"; };
 		CA28EBF21AAB7B63009F8622 /* read_filter_factory.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = read_filter_factory.h; sourceTree = "<group>"; };
 		CA28EBF31AABA2FC009F8622 /* read_transformations.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = read_transformations.h; sourceTree = "<group>"; };
 		CA28EBF41AABB80E009F8622 /* read_filter_benchmarks.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = read_filter_benchmarks.cpp; sourceTree = "<group>"; };
 		CA28EBF61AABDEE2009F8622 /* read_transform.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = read_transform.h; sourceTree = "<group>"; };
 		CA28EBF71AABE178009F8622 /* read_transform_tests.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = read_transform_tests.cpp; sourceTree = "<group>"; };
 		CA28EBF91AABE67B009F8622 /* read_transform_factory.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = read_transform_factory.h; sourceTree = "<group>"; };
+		CA28EBFA1AAC99D4009F8622 /* read_filter.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = read_filter.h; sourceTree = "<group>"; };
 		CA8FACBA1A954B0B002760F2 /* libboost_signals.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libboost_signals.a; path = /usr/local/Cellar/boost/1.57.0/lib/libboost_signals.a; sourceTree = "<absolute>"; };
 		CA8FACBC1A954B67002760F2 /* libboost_system.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libboost_system.a; path = /usr/local/Cellar/boost/1.57.0/lib/libboost_system.a; sourceTree = "<absolute>"; };
 		CA8FACBE1A954C86002760F2 /* libboost_filesystem.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libboost_filesystem.a; path = /usr/local/Cellar/boost/1.57.0/lib/libboost_filesystem.a; sourceTree = "<absolute>"; };
@@ -117,7 +119,6 @@
 		CAE3E2C81AA9129000C01B2C /* notes.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = notes.txt; sourceTree = "<group>"; };
 		CAE3E2CA1AAB42C900C01B2C /* read_filter_test.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = read_filter_test.cpp; sourceTree = "<group>"; };
 		CAE3E2CC1AAB46BC00C01B2C /* read_filters.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = read_filters.h; sourceTree = "<group>"; };
-		D48C00BB1AAA113000E76FC8 /* read_filter.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = read_filter.h; sourceTree = "<group>"; };
 		D4907F471A88D71800639203 /* genomic_region.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = genomic_region.h; sourceTree = "<group>"; };
 		D4907F491A88E14E00639203 /* catch.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = catch.hpp; sourceTree = "<group>"; };
 		D4907F4A1A88E20E00639203 /* variant_tests.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = variant_tests.cpp; sourceTree = "<group>"; };
@@ -352,6 +353,7 @@
 			children = (
 				D4907F4D1A89095400639203 /* sequence_region.h */,
 				D4907F471A88D71800639203 /* genomic_region.h */,
+				CA1472741AACC7E2005FDCD1 /* context_back_insert_iterator.h */,
 			);
 			name = types;
 			sourceTree = "<group>";
@@ -361,7 +363,7 @@
 			children = (
 				CA03C22B1A8D2C5D000D3494 /* cigar_string.h */,
 				D4907F6A1A8BC06800639203 /* aligned_read.h */,
-				D48C00BB1AAA113000E76FC8 /* read_filter.h */,
+				CA28EBFA1AAC99D4009F8622 /* read_filter.h */,
 				CAE3E2CC1AAB46BC00C01B2C /* read_filters.h */,
 				CA28EBF21AAB7B63009F8622 /* read_filter_factory.h */,
 				CA28EBF61AABDEE2009F8622 /* read_transform.h */,

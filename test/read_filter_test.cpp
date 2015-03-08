@@ -35,13 +35,12 @@ TEST_CASE("read_filter_test", "[read_filters]")
         std::sort(some_reads.begin(), some_reads.end());
     }
     
-    std::cout << "Num reads: " << some_reads.size() << std::endl;
+    REQUIRE(some_reads.size() == 669);
     
-    using ReadIterator = std::vector<AlignedRead>::iterator;
+    using ReadIterator = std::vector<AlignedRead>::const_iterator;
     
-    ReadFilter<ReadIterator> a_read_filter;
+    ReadFilter<ReadIterator> a_read_filter {};
     
-    // context-free filters
     a_read_filter.register_filter(is_not_secondary_alignment);
     a_read_filter.register_filter([] (const AlignedRead& the_read) {
         return is_good_mapping_quality(the_read, 20);
@@ -54,20 +53,17 @@ TEST_CASE("read_filter_test", "[read_filters]")
     a_read_filter.register_filter(is_not_duplicate<ReadIterator>);
     
     std::vector<AlignedRead> good_reads {}, bad_reads {};
-    good_reads.reserve(some_reads.size() / 2);
-    bad_reads.reserve(some_reads.size() / 2);
+    good_reads.reserve(some_reads.size());
+    bad_reads.reserve(some_reads.size());
     
-    a_read_filter.filter_reads(some_reads.begin(),
-                               some_reads.end(),
-                               std::back_inserter(good_reads),
-                               std::back_inserter(bad_reads));
+    a_read_filter.filter_reads(std::make_move_iterator(some_reads.begin()),
+                               std::make_move_iterator(some_reads.end()),
+                               ContextBackInserter(good_reads),
+                               ContextBackInserter(bad_reads));
     
-//    for (auto& broken_read : broken_reads) {
-//        std::cout << broken_read << std::endl;
-//    }
-    
-    std::cout << "Num good reads: " << good_reads.size() << std::endl;
-    std::cout << "Num bad reads: " << bad_reads.size() << std::endl;
+    // TODO: check these numbers are correct!
+    REQUIRE(good_reads.size() == 649);
+    REQUIRE(bad_reads.size() == 20);
 }
 
 
