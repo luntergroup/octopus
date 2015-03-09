@@ -10,7 +10,7 @@
 #define __Octopus__sequence_region__
 
 #include <cstdint>
-#include <algorithm> // min, max
+#include <algorithm> // std::min, std::max
 #include <stdexcept>
 
 #include "comparable.h"

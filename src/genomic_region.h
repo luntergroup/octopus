@@ -12,6 +12,7 @@
 #include <string>
 #include <ostream>
 #include <stdexcept>
+#include <vector>
 
 #include "sequence_region.h"
 #include "comparable.h"
@@ -122,6 +123,15 @@ inline GenomicRegion shift(const GenomicRegion& a_region, GenomicRegion::Differe
         static_cast<GenomicRegion::SizeType>(a_region.get_begin() + n),
         static_cast<GenomicRegion::SizeType>(a_region.get_end() + n)
     };
+}
+
+inline std::vector<GenomicRegion> split(const GenomicRegion& a_region, GenomicRegion::SizeType max_size)
+{
+    std::vector<GenomicRegion> result {};
+    
+    
+    
+    return result;
 }
 
 namespace std {
