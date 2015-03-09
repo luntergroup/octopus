@@ -33,8 +33,8 @@ inline bool is_good_mapping_quality(const AlignedRead& a_read,
 }
 
 inline bool has_sufficient_good_quality_bases(const AlignedRead& a_read,
-                                       AlignedRead::QualityType min_base_quality,
-                                       unsigned min_num_good_quality_bases)
+                                              AlignedRead::QualityType min_base_quality,
+                                              unsigned min_num_good_quality_bases)
 {
     const auto& qualities = a_read.get_qualities();
     return std::count_if(cbegin(qualities), cend(qualities), [min_base_quality] (const auto& qual) {

@@ -13,9 +13,9 @@
 #include <vector>
 #include <unordered_set>
 #include <functional> // std::function
-#include <tuple> // std::tie
+#include <tuple>      // std::tie
 #include <list>
-#include <iterator> // std::cbegin etc
+#include <iterator>   // std::cbegin etc
 #include <stdexcept>
 #include <cstdint>
 #include <unordered_map>
@@ -94,7 +94,7 @@ private:
     
     const unsigned k_;
     Graph the_graph_;
-    std::unordered_set<ReferenceType> added_kmer_suffixes_and_prefixes_;
+    std::unordered_map<ReferenceType, Vertex> kmer_vertex_map_;
     std::function<int(ColourType)> f_colour_weight_;
     VertexIndexMapImpl vertex_indices_impl_;
     VertexIndexMap vertex_indices_;
@@ -123,7 +123,7 @@ template <typename ColourType, typename T>
 KmerGraph<ColourType, T>::KmerGraph(unsigned k)
 :k_ {k},
 the_graph_ {},
-added_kmer_suffixes_and_prefixes_ {},
+kmer_vertex_map_ {},
 f_colour_weight_ {[] (ColourType c) { return 1; }},
 vertex_indices_impl_ {},
 vertex_indices_ {vertex_indices_impl_}
@@ -184,7 +184,7 @@ template <typename C, typename T>
 void KmerGraph<C, T>::clear()
 {
     the_graph_.clear();
-    added_kmer_suffixes_and_prefixes_.clear();
+    kmer_vertex_map_.clear();
     vertex_indices_impl_.clear();
 }
 
@@ -233,8 +233,8 @@ KmerGraph<C, T>::get_vertex(ReferenceType a_kmer_prefix_or_suffix) const
 template <typename C, typename T>
 typename KmerGraph<C, T>::Vertex KmerGraph<C, T>::add_vertex(ReferenceType a_k_minus_1_mer)
 {
-    added_kmer_suffixes_and_prefixes_.emplace(a_k_minus_1_mer);
     auto the_new_vertex = boost::add_vertex(the_graph_);
+    kmer_vertex_map_.emplace(a_k_minus_1_mer, the_new_vertex);
     boost::put(vertex_indices_, the_new_vertex, get_next_index());
     return the_new_vertex;
 }
@@ -260,7 +260,7 @@ void KmerGraph<ColourType, T>::add_edge(Vertex source, Vertex target, ReferenceT
 template <typename C, typename T>
 bool KmerGraph<C, T>::is_in_graph(ReferenceType a_k_minus_1_mer) const
 {
-    return added_kmer_suffixes_and_prefixes_.count(a_k_minus_1_mer) > 0;
+    return kmer_vertex_map_.count(a_k_minus_1_mer) > 0;
 }
 
 template <typename C, typename T>
