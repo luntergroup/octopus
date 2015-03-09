@@ -11,12 +11,12 @@
 
 #include <string>
 #include <vector>
-#include <cstddef> // std::size_t
-#include <cstdint> // std::uint_fast32_t etc
+#include <cstddef>   // std::size_t
+#include <cstdint>   // std::uint_fast32_t etc
 #include <algorithm> // std::find
 #include <unordered_map>
 #include <stdexcept> // std::runtime_error
-#include <memory> // std::unique_ptr
+#include <memory>    // std::unique_ptr
 
 #include "htslib/hts.h"
 #include "htslib/sam.h"

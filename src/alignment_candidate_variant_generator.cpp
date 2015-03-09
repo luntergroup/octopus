@@ -15,10 +15,11 @@
 #include "variant.h"
 #include "cigar_string.h"
 
-AlignmentCandidateVariantGenerator::AlignmentCandidateVariantGenerator(ReferenceGenome& the_reference)
+AlignmentCandidateVariantGenerator::AlignmentCandidateVariantGenerator(ReferenceGenome& the_reference,
+                                                                       VariantFactory& variant_factory)
 :the_reference_ {the_reference},
 candidates_ {},
-variant_factory_ {}
+variant_factory_ {variant_factory}
 {}
 
 void AlignmentCandidateVariantGenerator::add_read(const AlignedRead &a_read)
@@ -111,7 +112,7 @@ void AlignmentCandidateVariantGenerator::get_snps(const GenomicRegion& the_regio
     });
 }
 
-std::set<Variant> AlignmentCandidateVariantGenerator::get_candidates(const GenomicRegion& a_region)
+std::vector<Variant> AlignmentCandidateVariantGenerator::get_candidates(const GenomicRegion& a_region)
 {
     return candidates_;
 }

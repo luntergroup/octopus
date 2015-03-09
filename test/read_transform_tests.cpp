@@ -49,4 +49,16 @@ TEST_CASE("read_transform_test", "[read_transform]")
     
     REQUIRE(std::all_of(a_read.get_qualities().rbegin(), a_read.get_qualities().rbegin() + 13,
                         [] (auto q) { return q == 0; }));
+    
+    GenomicRegion another_region {"18", 389260, 389361};
+    
+    some_reads = a_read_manager.fetch_reads(the_sample_id, another_region);
+    
+    auto& read_with_adapter = some_reads[6];
+    
+    //std::cout << read_with_adapter << std::endl;
+    
+    a_read_transform.transform_reads(some_reads.begin(), some_reads.end());
+    
+    
 }

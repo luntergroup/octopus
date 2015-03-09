@@ -38,8 +38,8 @@ public:
     HtslibBcfFacade(HtslibBcfFacade&&)                 = default;
     HtslibBcfFacade& operator=(HtslibBcfFacade&&)      = default;
     
-    std::set<Variant> fetch_variants(const GenomicRegion& a_region) override;
-    void write_variants(const std::set<Variant>& some_variants) override;
+    std::vector<Variant> fetch_variants(const GenomicRegion& a_region) override;
+    void write_variants(const std::vector<Variant>& some_variants) override;
     
 private:
     fs::path the_bcf_file_path_;

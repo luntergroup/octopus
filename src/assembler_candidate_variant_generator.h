@@ -9,7 +9,7 @@
 #ifndef __Octopus__assembler_candidate_variant_generator__
 #define __Octopus__assembler_candidate_variant_generator__
 
-#include <set>
+#include <vector>
 
 #include "i_variant_candidate_generator.h"
 #include "variant_assembler.h"
@@ -32,7 +32,7 @@ public:
     AssemblerCandidateVariantGenerator& operator=(AssemblerCandidateVariantGenerator&&)      = default;
     
     void add_read(const AlignedRead& a_read) override;
-    std::set<Variant> get_candidates(const GenomicRegion& a_region) override;
+    std::vector<Variant> get_candidates(const GenomicRegion& a_region) override;
     void clear() override;
     
 private:

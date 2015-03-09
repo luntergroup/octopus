@@ -11,12 +11,25 @@
 
 #include "aligned_read.h"
 
-void trim_adapters(AlignedRead& a_read)
+#include <cmath>
+
+inline void trim_adapters(AlignedRead& a_read)
 {
-    
+    if (a_read.has_mate_pair()) {
+        auto insert_size = std::abs(a_read.get_mate_pair()->get_insert_size());
+        auto read_size   = a_read.get_sequence_size();
+        if (insert_size > 0 && insert_size < read_size) {
+            auto num_adapter_bases = read_size - insert_size;
+            if (a_read.is_marked_reverse_mapped()) {
+                a_read.zero_back_qualities(num_adapter_bases);
+            } else {
+                a_read.zero_front_qualities(num_adapter_bases);
+            }
+        }
+    }
 }
 
-void trim_soft_clipped(AlignedRead& a_read)
+inline void trim_soft_clipped(AlignedRead& a_read)
 {
     if (is_soft_clipped(a_read.get_cigar_string())) {
         auto qualities = a_read.get_qualities();

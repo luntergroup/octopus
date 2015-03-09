@@ -14,9 +14,9 @@
 #include <cstdint>
 #include <unordered_map>
 #include <stdexcept>
-#include <memory> // std::unique_ptr
+#include <memory>    // std::unique_ptr
 #include <algorithm> // std::find
-#include <iterator> // std::cbegin etc
+#include <iterator>  // std::cbegin etc
 #include <regex>
 
 #include "genomic_region.h"

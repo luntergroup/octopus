@@ -9,10 +9,9 @@
 #ifndef __Octopus__variant_candidate_generator__
 #define __Octopus__variant_candidate_generator__
 
-#include <set>
 #include <vector>
 #include <memory> // std::unique_ptr
-#include <algorithm> // std::for_each
+#include <algorithm> // std::for_each, std::sort
 #include <iterator> // std::make_move_iterator
 
 #include "i_variant_candidate_generator.h"
@@ -37,7 +36,7 @@ public:
     
     void register_generator(std::unique_ptr<IVariantCandidateGenerator> g);
     void add_read(const AlignedRead& a_read) override;
-    std::set<Variant> get_candidates(const GenomicRegion& a_region) override;
+    std::vector<Variant> get_candidates(const GenomicRegion& a_region) override;
     void clear() override;
     template <typename ReadIterator> void add_reads(ReadIterator begin, ReadIterator end);
     
@@ -52,27 +51,27 @@ inline void VariantCandidateGenerator::register_generator(std::unique_ptr<IVaria
 
 inline void VariantCandidateGenerator::add_read(const AlignedRead& a_read)
 {
-    std::for_each(std::begin(generator_list_), std::end(generator_list_), [&a_read] (auto& g) {
-        g->add_read(a_read);
-    });
+    for (auto& generator : generator_list_) {
+        generator->add_read(a_read);
+    }
 }
 
-inline std::set<Variant> VariantCandidateGenerator::get_candidates(const GenomicRegion& a_region)
+inline std::vector<Variant> VariantCandidateGenerator::get_candidates(const GenomicRegion& a_region)
 {
-    std::set<Variant> result {};
-    std::for_each(std::begin(generator_list_), std::end(generator_list_), [&result, &a_region] (auto& g) {
-        auto generator_result = g->get_candidates(a_region);
-        result.insert(std::begin(generator_result),
-                      std::end(generator_result));
-    });
+    std::vector<Variant> result {};
+    for (auto& generator : generator_list_) {
+        auto generator_result = generator->get_candidates(a_region);
+        result.insert(std::end(result), std::begin(generator_result), std::end(generator_result));
+    }
+    std::sort(std::begin(result), std::end(result));
     return result;
 }
 
 inline void VariantCandidateGenerator::clear()
 {
-    std::for_each(std::begin(generator_list_), std::end(generator_list_), [] (auto& g) {
-        g->clear();
-    });
+    for (auto& generator : generator_list_) {
+        generator->clear();
+    }
 }
 
 template <typename ReadIterator>

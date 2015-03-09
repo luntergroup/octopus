@@ -22,7 +22,7 @@ void AssemblerCandidateVariantGenerator::add_read(const AlignedRead& a_read)
     the_variant_assembler_.add_read(a_read);
 }
 
-std::set<Variant> AssemblerCandidateVariantGenerator::get_candidates(const GenomicRegion& a_region)
+std::vector<Variant> AssemblerCandidateVariantGenerator::get_candidates(const GenomicRegion& a_region)
 {
     auto reference_sequence = the_reference_.get_sequence(a_region);
     the_variant_assembler_.add_reference_sequence(a_region, reference_sequence);

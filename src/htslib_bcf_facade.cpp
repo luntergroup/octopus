@@ -17,13 +17,13 @@ the_file_ {hts_open(variant_file_path.string().c_str(), "r"), htslib_file_delete
 the_header_ {bcf_hdr_read(the_file_.get()), htslib_bcf_header_deleter}
 {}
 
-std::set<Variant> HtslibBcfFacade::fetch_variants(const GenomicRegion& a_region)
+std::vector<Variant> HtslibBcfFacade::fetch_variants(const GenomicRegion& a_region)
 {
-    std::set<Variant> result {};
+    std::vector<Variant> result {};
     return result;
 }
 
-void HtslibBcfFacade::write_variants(const std::set<Variant>& some_variants)
+void HtslibBcfFacade::write_variants(const std::vector<Variant>& some_variants)
 {
     // TODO: implement this
 }

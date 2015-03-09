@@ -15,12 +15,12 @@ VariantFile::VariantFile(std::unique_ptr<IVariantFileImpl> the_impl)
 : the_impl_ {std::move(the_impl)}
 {}
 
-std::set<Variant> VariantFile::fetch_variants(const GenomicRegion& a_region)
+std::vector<Variant> VariantFile::fetch_variants(const GenomicRegion& a_region)
 {
     return the_impl_->fetch_variants(a_region);
 }
 
-void VariantFile::write_variants(const std::set<Variant>& some_variants)
+void VariantFile::write_variants(const std::vector<Variant>& some_variants)
 {
     return the_impl_->write_variants(some_variants);
 }

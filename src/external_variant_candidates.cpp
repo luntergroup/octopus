@@ -13,7 +13,7 @@ ExternalVariantCandidates::ExternalVariantCandidates(VariantFile& a_variant_sour
 : a_variant_file_ {a_variant_source}
 {}
 
-std::set<Variant> ExternalVariantCandidates::get_candidates(const GenomicRegion& a_region)
+std::vector<Variant> ExternalVariantCandidates::get_candidates(const GenomicRegion& a_region)
 {
     return a_variant_file_.fetch_variants(a_region);
 }

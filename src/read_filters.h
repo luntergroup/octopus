@@ -6,6 +6,9 @@
 //  Copyright (c) 2015 Oxford University. All rights reserved.
 //
 
+#ifndef __Octopus__read_filters__
+#define __Octopus__read_filters__
+
 #include <functional>
 #include <algorithm> // std::count_if
 #include <iterator>  // std::prev
@@ -15,6 +18,8 @@
 
 using std::cbegin;
 using std::cend;
+
+// Context-free filters
 
 inline bool is_not_secondary_alignment(const AlignedRead& a_read)
 {
@@ -52,18 +57,28 @@ inline bool is_not_marked_duplicate(const AlignedRead& a_read)
     return !a_read.is_marked_duplicate();
 }
 
-template <typename BidirectionalIterator>
-bool is_not_duplicate(const AlignedRead& a_read, BidirectionalIterator first_good,
-                      BidirectionalIterator previous_good)
+inline bool is_not_contaminated(const AlignedRead& a_read)
 {
-    if (first_good != previous_good) {
-        if (a_read.has_mate_pair() && previous_good->has_mate_pair()) {
-            return !(a_read == *previous_good &&
-                    *a_read.get_mate_pair() == *(previous_good->get_mate_pair()));
+    return (a_read.has_mate_pair()) ?
+        a_read.get_sequence_size() >= a_read.get_mate_pair()->get_insert_size() : true;
+}
+
+// Context-based filters
+
+template <typename BidirectionalIterator>
+bool is_not_duplicate(const AlignedRead& a_read, BidirectionalIterator first_good_read,
+                      BidirectionalIterator previous_good_read)
+{
+    if (first_good_read != previous_good_read) {
+        if (a_read.has_mate_pair() && previous_good_read->has_mate_pair()) {
+            return !(a_read == *previous_good_read &&
+                    *a_read.get_mate_pair() == *(previous_good_read->get_mate_pair()));
         } else {
-            return a_read != *previous_good;
+            return a_read != *previous_good_read;
         }
     } else {
         return true;
     }
 }
+
+#endif /* defined(__Octopus__read_filters__) */

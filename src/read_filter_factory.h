@@ -9,7 +9,8 @@
 #ifndef Octopus_read_filter_factory_h
 #define Octopus_read_filter_factory_h
 
-class ReadFilter;
+#include "read_filter.h"
+#include "read_filters.h"
 
 class ReadFilterFactory
 {
@@ -22,7 +23,9 @@ public:
     ReadFilterFactory(ReadFilterFactory&&)                 = default;
     ReadFilterFactory& operator=(ReadFilterFactory&&)      = default;
     
-    ReadFilter make(/* options in here */) const;
+    template <typename T>
+    ReadFilter<T> make(/* options in here */) const;
 };
+
 
 #endif

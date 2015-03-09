@@ -106,7 +106,7 @@ std::string HtslibFacade::HtslibIterator::get_read_group() const
 
 std::string HtslibFacade::HtslibIterator::get_contig_name(int32_t htslib_tid) const
 {
-    return hts_facade_.contig_name_map_[htslib_tid];
+    return hts_facade_.contig_name_map_.at(htslib_tid);
 }
 
 std::string HtslibFacade::HtslibIterator::get_read_name() const
@@ -264,20 +264,31 @@ std::pair<AlignedRead, std::string> HtslibFacade::HtslibIterator::operator*() co
     auto the_cigar_string = make_cigar_string();
     if (the_cigar_string.empty()) throw std::runtime_error {"bad sequence"};
     auto c = the_bam1_->core;
-    auto read_start = static_cast<uint_fast32_t>(get_soft_clipped_read_begin(the_cigar_string, c.pos));
+    auto read_start = static_cast<AlignedRead::SizeType>(get_soft_clipped_read_begin(the_cigar_string, c.pos));
     
-    return {AlignedRead {
-        GenomicRegion(get_contig_name(c.tid), read_start, read_start + get_sequence_length()),
-        get_sequence(),
-        std::move(the_qualities),
-        std::move(the_cigar_string),
-        static_cast<uint_fast32_t>(c.isize),
-        get_contig_name(c.mtid),
-        static_cast<uint_fast32_t>(c.mpos),
-        static_cast<uint_fast8_t>(c.qual),
-        get_flags(),
-        get_mate_flags()
-    }, get_read_group()};
+    if (c.mtid == -1) { // TODO: check if this is always true
+        return {AlignedRead {
+            GenomicRegion(get_contig_name(c.tid), read_start, read_start + get_sequence_length()),
+            get_sequence(),
+            std::move(the_qualities),
+            std::move(the_cigar_string),
+            static_cast<AlignedRead::QualityType>(c.qual),
+            get_flags()
+        }, get_read_group()};
+    } else {
+        return {AlignedRead {
+            GenomicRegion(get_contig_name(c.tid), read_start, read_start + get_sequence_length()),
+            get_sequence(),
+            std::move(the_qualities),
+            std::move(the_cigar_string),
+            static_cast<AlignedRead::MatePair::InsertSizeType>(c.isize),
+            get_contig_name(c.mtid),
+            static_cast<AlignedRead::SizeType>(c.mpos),
+            static_cast<AlignedRead::QualityType>(c.qual),
+            get_flags(),
+            get_mate_flags()
+        }, get_read_group()};
+    }
 }
 
 AlignedRead::SupplementaryData HtslibFacade::HtslibIterator::get_flags() const

@@ -9,7 +9,7 @@
 #ifndef Octopus_variant_file_h
 #define Octopus_variant_file_h
 
-#include <set>
+#include <vector>
 #include <memory> // std::unique_ptr
 
 #include "variant_file_impl.h"
@@ -29,8 +29,8 @@ public:
     VariantFile(VariantFile&&)                 = default;
     VariantFile& operator=(VariantFile&&)      = default;
     
-    std::set<Variant> fetch_variants(const GenomicRegion& a_region);
-    void write_variants(const std::set<Variant>& some_variants);
+    std::vector<Variant> fetch_variants(const GenomicRegion& a_region);
+    void write_variants(const std::vector<Variant>& some_variants);
     
 private:
     std::unique_ptr<IVariantFileImpl> the_impl_;

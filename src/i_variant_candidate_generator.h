@@ -9,7 +9,7 @@
 #ifndef Octopus_i_variant_candidate_generator_h
 #define Octopus_i_variant_candidate_generator_h
 
-#include <set>
+#include <vector>
 
 class Variant;
 class AlignedRead;
@@ -18,7 +18,7 @@ class GenomicRegion;
 class IVariantCandidateGenerator
 {
 public:
-    virtual std::set<Variant> get_candidates(const GenomicRegion&) = 0;
+    virtual std::vector<Variant> get_candidates(const GenomicRegion&) = 0;
     virtual void add_read(const AlignedRead&) = 0;
     virtual void clear() = 0;
     virtual ~IVariantCandidateGenerator() = default;

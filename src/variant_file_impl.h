@@ -9,7 +9,7 @@
 #ifndef Octopus_variant_file_impl_h
 #define Octopus_variant_file_impl_h
 
-#include <set>
+#include <vector>
 
 class Variant;
 class GenomicRegion;
@@ -17,8 +17,8 @@ class GenomicRegion;
 class IVariantFileImpl
 {
 public:
-    virtual std::set<Variant> fetch_variants(const GenomicRegion& a_region) = 0;
-    virtual void write_variants(const std::set<Variant>& some_variants) = 0;
+    virtual std::vector<Variant> fetch_variants(const GenomicRegion& a_region) = 0;
+    virtual void write_variants(const std::vector<Variant>& some_variants) = 0;
     virtual ~IVariantFileImpl() = default;
 };
 

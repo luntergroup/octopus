@@ -12,7 +12,7 @@
 #include "kmer_graph.h"
 
 #include <string>
-#include <set>
+#include <vector>
 
 #include "storage_policies.h"
 
@@ -34,7 +34,7 @@ public:
     
     void add_read(const AlignedRead& a_read);
     void add_reference_sequence(const GenomicRegion& the_region, const std::string& the_sequence);
-    std::set<Variant> get_variants(const GenomicRegion& a_region);
+    std::vector<Variant> get_variants(const GenomicRegion& a_region);
     void clear() noexcept;
     
 private:

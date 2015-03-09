@@ -93,6 +93,12 @@ inline bool overlaps(const GenomicRegion& lhs, const GenomicRegion& rhs) noexcep
     return overlap_size(lhs, rhs) > 0;
 }
 
+inline std::string to_string(const GenomicRegion& a_region)
+{
+    return a_region.get_contig_name() + ':' + std::to_string(a_region.get_begin()) + '-'
+    + std::to_string(a_region.get_end());
+}
+
 inline bool operator==(const GenomicRegion& lhs, const GenomicRegion& rhs)
 {
     return is_same_contig(lhs, rhs) && lhs.get_contig_region() == rhs.get_contig_region();
@@ -101,7 +107,8 @@ inline bool operator==(const GenomicRegion& lhs, const GenomicRegion& rhs)
 inline bool operator<(const GenomicRegion& lhs, const GenomicRegion& rhs)
 {
     if (is_same_contig(lhs, rhs)) return lhs.get_contig_region() < rhs.get_contig_region();
-    throw std::runtime_error {"Cannot compare regions on different contigs"};
+    throw std::runtime_error {"Cannot compare regions on different contigs: "  + to_string(lhs) +
+        " & " + to_string(rhs)};
 }
 
 inline GenomicRegion shift(const GenomicRegion& a_region, GenomicRegion::DifferenceType n)
@@ -115,12 +122,6 @@ inline GenomicRegion shift(const GenomicRegion& a_region, GenomicRegion::Differe
         static_cast<GenomicRegion::SizeType>(a_region.get_begin() + n),
         static_cast<GenomicRegion::SizeType>(a_region.get_end() + n)
     };
-}
-
-inline std::string to_string(const GenomicRegion& a_region)
-{
-    return a_region.get_contig_name() + ':' + std::to_string(a_region.get_begin()) + '-'
-            + std::to_string(a_region.get_end());
 }
 
 namespace std {

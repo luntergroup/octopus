@@ -11,11 +11,11 @@
 
 #include <vector>
 #include <string>
-#include <cstring> // std::strlen
+#include <cstring>   // std::strlen
 #include <sstream>
 #include <algorithm> // std::equal
-#include <iterator> // std::next
-#include <cstddef> // std::size_t
+#include <iterator>  // std::next
+#include <cstddef>   // std::size_t
 #include <boost/utility/string_ref.hpp>
 #include <boost/functional/hash.hpp>
 

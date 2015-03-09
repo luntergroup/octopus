@@ -27,7 +27,7 @@ public:
     ExternalVariantCandidates& operator=(ExternalVariantCandidates&&)      = default;
     
     void add_read(const AlignedRead& a_read) override;
-    std::set<Variant> get_candidates(const GenomicRegion& a_region) override;
+    std::vector<Variant> get_candidates(const GenomicRegion& a_region) override;
     void clear() override;
     
 private:

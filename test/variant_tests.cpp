@@ -111,7 +111,7 @@ TEST_CASE("left_alignment", "[left_alignment]")
     
     auto a_deletion = a_variant_factory.make(a_region, the_sequence, "");
     
-    auto left_aligned_deletion = left_align(a_deletion, human);
+    auto left_aligned_deletion = left_align(a_deletion, human, a_variant_factory);
     
     REQUIRE(left_aligned_deletion.get_reference_allele_region() ==
             parse_region("4:3076603-3076606", human));
@@ -121,7 +121,7 @@ TEST_CASE("left_alignment", "[left_alignment]")
     auto an_insertion = a_variant_factory.make(parse_region("4:3076660-3076660", human),
                                                "", the_sequence);
     
-    auto left_aligned_insertion = left_align(an_insertion, human);
+    auto left_aligned_insertion = left_align(an_insertion, human, a_variant_factory);
     
     REQUIRE(left_aligned_insertion.get_reference_allele_region() ==
             parse_region("4:3076603-3076603", human));
@@ -137,7 +137,7 @@ TEST_CASE("left_alignment", "[left_alignment]")
     
     a_deletion = a_variant_factory.make(a_region, the_sequence, "");
     
-    left_aligned_deletion = left_align(a_deletion, human);
+    left_aligned_deletion = left_align(a_deletion, human, a_variant_factory);
     
     REQUIRE(left_aligned_deletion.get_reference_allele_region() ==
             parse_region("5:94594949-94594952", human));
@@ -147,7 +147,7 @@ TEST_CASE("left_alignment", "[left_alignment]")
     an_insertion = a_variant_factory.make(parse_region("5:94594959-94594959", human),
                                                "", the_sequence);
     
-    left_aligned_insertion = left_align(an_insertion, human);
+    left_aligned_insertion = left_align(an_insertion, human, a_variant_factory);
     
     REQUIRE(left_aligned_insertion.get_reference_allele_region() ==
             parse_region("5:94594949-94594949", human));
@@ -166,14 +166,14 @@ TEST_CASE("parsimonious_test", "[parsimonious]")
                                         std::string {"G"}, std::string {"C"});
     
     REQUIRE(is_parsimonious(a_snp));
-    REQUIRE(make_parsimonious(a_snp, human) == a_snp);
+    REQUIRE(make_parsimonious(a_snp, human, a_variant_factory) == a_snp);
     
     auto an_unparsimonious_snp = a_variant_factory.make(parse_region("12:10001330-10001332", human),
                                                         std::string {"GT"}, std::string {"CT"});
     
     REQUIRE(!is_parsimonious(an_unparsimonious_snp));
     
-    auto parsimonised_snp = make_parsimonious(an_unparsimonious_snp, human);
+    auto parsimonised_snp = make_parsimonious(an_unparsimonious_snp, human, a_variant_factory);
     
     REQUIRE(is_parsimonious(parsimonised_snp));
     REQUIRE(parsimonised_snp == a_snp);
@@ -183,7 +183,7 @@ TEST_CASE("parsimonious_test", "[parsimonious]")
     
     REQUIRE(!is_parsimonious(another_unparsimonious_snp));
     
-    auto another_parsimonised_snp = make_parsimonious(another_unparsimonious_snp, human);
+    auto another_parsimonised_snp = make_parsimonious(another_unparsimonious_snp, human, a_variant_factory);
     
     REQUIRE(is_parsimonious(another_parsimonised_snp));
     REQUIRE(another_parsimonised_snp == a_snp);
@@ -196,7 +196,7 @@ TEST_CASE("parsimonious_test", "[parsimonious]")
     
     auto a_deletion = a_variant_factory.make(a_region, the_sequence, "");
     
-    auto parsimonious_deletion = make_parsimonious(a_deletion, human);
+    auto parsimonious_deletion = make_parsimonious(a_deletion, human, a_variant_factory);
     
     REQUIRE(parsimonious_deletion.get_reference_allele_region() ==
             parse_region("12:10001329-10001335", human));
@@ -206,7 +206,7 @@ TEST_CASE("parsimonious_test", "[parsimonious]")
     auto an_insertion = a_variant_factory.make(parse_region("12:10001330-10001330", human),
                                                "", the_sequence);
     
-    auto parsimonious_insertion = make_parsimonious(an_insertion, human);
+    auto parsimonious_insertion = make_parsimonious(an_insertion, human, a_variant_factory);
     
     REQUIRE(parsimonious_insertion.get_reference_allele_region() ==
             parse_region("12:10001329-10001330", human));
@@ -218,7 +218,7 @@ TEST_CASE("parsimonious_test", "[parsimonious]")
     
     REQUIRE(!is_parsimonious(an_unparsimonious_deletion));
     
-    auto parsimonised_deletion = make_parsimonious(an_unparsimonious_deletion, human);
+    auto parsimonised_deletion = make_parsimonious(an_unparsimonious_deletion, human, a_variant_factory);
     
     REQUIRE(is_parsimonious(parsimonised_deletion));
     
@@ -227,7 +227,7 @@ TEST_CASE("parsimonious_test", "[parsimonious]")
     
     REQUIRE(!is_parsimonious(an_unparsimonious_insertion));
     
-    auto parsimonised_insertion = make_parsimonious(an_unparsimonious_insertion, human);
+    auto parsimonised_insertion = make_parsimonious(an_unparsimonious_insertion, human, a_variant_factory);
     
     REQUIRE(is_parsimonious(parsimonised_insertion));
 }
@@ -246,7 +246,7 @@ TEST_CASE("normalisation_test", "[normalisation]")
     
     REQUIRE(is_parsimonious(a_snp));
     
-    auto a_normalised_snp = normalise(a_snp, human);
+    auto a_normalised_snp = normalise(a_snp, human, a_variant_factory);
     
     REQUIRE(a_normalised_snp == a_snp);
     
@@ -260,7 +260,7 @@ TEST_CASE("normalisation_test", "[normalisation]")
     
     REQUIRE(is_parsimonious(a_mnp));
     
-    auto a_normalised_mnp = normalise(a_mnp, human);
+    auto a_normalised_mnp = normalise(a_mnp, human, a_variant_factory);
     
     REQUIRE(a_normalised_mnp == a_mnp);
     
@@ -268,11 +268,11 @@ TEST_CASE("normalisation_test", "[normalisation]")
     
     REQUIRE(!is_parsimonious(a_deletion));
     
-    auto left_aligned_unparsimonious_deletion = left_align(a_deletion, human);
+    auto left_aligned_unparsimonious_deletion = left_align(a_deletion, human, a_variant_factory);
     
     REQUIRE(!is_parsimonious(left_aligned_unparsimonious_deletion));
     
-    auto normilised_deletion = normalise(a_deletion, human);
+    auto normilised_deletion = normalise(a_deletion, human, a_variant_factory);
     
     REQUIRE(is_parsimonious(normilised_deletion));
     REQUIRE(normilised_deletion.get_reference_allele_region() ==
@@ -285,11 +285,11 @@ TEST_CASE("normalisation_test", "[normalisation]")
     
     REQUIRE(!is_parsimonious(an_insertion));
     
-    auto left_aligned_unparsimonious_insertion = left_align(an_insertion, human);
+    auto left_aligned_unparsimonious_insertion = left_align(an_insertion, human, a_variant_factory);
     
     REQUIRE(!is_parsimonious(left_aligned_unparsimonious_insertion));
     
-    auto normilised_insertion = normalise(an_insertion, human);
+    auto normilised_insertion = normalise(an_insertion, human, a_variant_factory);
     
     REQUIRE(is_parsimonious(normilised_insertion));
     REQUIRE(normilised_insertion.get_reference_allele_region() ==
@@ -304,7 +304,7 @@ TEST_CASE("normalisation_test", "[normalisation]")
     
     REQUIRE(!is_parsimonious(an_unormilised_snp));
     
-    a_normalised_snp = normalise(an_unormilised_snp, human);
+    a_normalised_snp = normalise(an_unormilised_snp, human, a_variant_factory);
     
     REQUIRE(is_parsimonious(a_normalised_mnp));
     REQUIRE(a_normalised_snp.get_reference_allele_region() == parse_region("4:3076657-3076658", human));
@@ -316,7 +316,7 @@ TEST_CASE("normalisation_test", "[normalisation]")
     
     REQUIRE(!is_parsimonious(an_unormilised_mnp));
     
-    a_normalised_mnp = normalise(an_unormilised_mnp, human);
+    a_normalised_mnp = normalise(an_unormilised_mnp, human, a_variant_factory);
     
     REQUIRE(is_parsimonious(a_normalised_mnp));
     REQUIRE(a_normalised_mnp.get_reference_allele_region() == parse_region("4:3076657-3076660", human));
@@ -328,7 +328,7 @@ TEST_CASE("normalisation_test", "[normalisation]")
     
     REQUIRE(!is_parsimonious(an_unnormilised_deletion));
     
-    auto a_normalised_deletion = normalise(an_unnormilised_deletion, human);
+    auto a_normalised_deletion = normalise(an_unnormilised_deletion, human, a_variant_factory);
     
     REQUIRE(is_parsimonious(a_normalised_deletion));
     REQUIRE(a_normalised_deletion.get_reference_allele_region() ==
@@ -341,7 +341,7 @@ TEST_CASE("normalisation_test", "[normalisation]")
     
     REQUIRE(!is_parsimonious(an_unnormilised_insertion));
     
-    auto a_normalised_insertion = normalise(an_unnormilised_insertion, human);
+    auto a_normalised_insertion = normalise(an_unnormilised_insertion, human, a_variant_factory);
     
     REQUIRE(is_parsimonious(a_normalised_insertion));
     REQUIRE(a_normalised_insertion.get_reference_allele_region() ==

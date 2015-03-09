@@ -18,6 +18,7 @@
 #include "read_manager.h"
 #include "read_filter.h"
 #include "read_filters.h"
+//#include "read_filter_factory.h"
 
 TEST_CASE("read_filter_test", "[read_filters]")
 {

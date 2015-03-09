@@ -53,11 +53,10 @@ bool is_parsimonious(const Variant& a_variant) noexcept
     return true;
 }
 
-Variant make_parsimonious(const Variant& a_variant, ReferenceGenome& the_reference)
+Variant make_parsimonious(const Variant& a_variant, ReferenceGenome& the_reference,
+                          VariantFactory& a_variant_factory)
 {
     if (is_parsimonious(a_variant)) return a_variant;
-    
-    VariantFactory a_factory {};
     
     const auto& old_ref_allele = a_variant.get_reference_allele();
     const auto& old_alt_allele = a_variant.get_alternative_allele();
@@ -76,8 +75,8 @@ Variant make_parsimonious(const Variant& a_variant, ReferenceGenome& the_referen
             auto new_ref_allele = the_reference.get_sequence(new_ref_region);
             auto new_alt_allele = new_ref_allele.front() + a_variant.get_alternative_allele();
             
-            return a_factory.make(std::move(new_ref_region), std::move(new_ref_allele),
-                                  std::move(new_alt_allele));
+            return a_variant_factory.make(std::move(new_ref_region), std::move(new_ref_allele),
+                                          std::move(new_alt_allele));
         } else {
             // In this very rare care the only option is to pad to the right.
             GenomicRegion new_ref_region {old_ref_region.get_contig_name(),
@@ -86,8 +85,8 @@ Variant make_parsimonious(const Variant& a_variant, ReferenceGenome& the_referen
             auto new_ref_allele = the_reference.get_sequence(new_ref_region);
             auto new_alt_allele = a_variant.get_alternative_allele() + new_ref_allele.back();
             
-            return a_factory.make(std::move(new_ref_region), std::move(new_ref_allele),
-                                  std::move(new_alt_allele));
+            return a_variant_factory.make(std::move(new_ref_region), std::move(new_ref_allele),
+                                          std::move(new_alt_allele));
         }
     }
     
@@ -121,8 +120,10 @@ Variant make_parsimonious(const Variant& a_variant, ReferenceGenome& the_referen
                                     new_ref_region_end};
     
     return (old_ref_allele.size() > old_alt_allele.size()) ?
-        a_factory.make(std::move(new_ref_region), std::move(new_big_allele), std::move(new_small_allele)) :
-        a_factory.make(std::move(new_ref_region), std::move(new_small_allele), std::move(new_big_allele));
+        a_variant_factory.make(std::move(new_ref_region), std::move(new_big_allele),
+                               std::move(new_small_allele)) :
+        a_variant_factory.make(std::move(new_ref_region), std::move(new_small_allele),
+                               std::move(new_big_allele));
 }
 
 bool is_left_alignable(const Variant& a_variant) noexcept
@@ -160,7 +161,7 @@ GenomicRegion extend_allele_lists(LeftAlignmentList& big_allele, LeftAlignmentLi
 }
 
 Variant left_align(const Variant& a_variant, ReferenceGenome& the_reference,
-                   Variant::SizeType extension_size)
+                   VariantFactory& a_variant_factory, Variant::SizeType extension_size)
 {
     if (!is_left_alignable(a_variant)) {
         return a_variant;
@@ -228,17 +229,18 @@ Variant left_align(const Variant& a_variant, ReferenceGenome& the_reference,
     GenomicRegion new_ref_region {current_region.get_contig_name(), new_ref_region_begin,
                                     new_ref_region_end};
     
-    VariantFactory a_factory {};
-    
     return (ref_allele.size() > alt_allele.size()) ?
-        a_factory.make(std::move(new_ref_region), std::move(new_big_allele), std::move(new_small_allele)) :
-        a_factory.make(std::move(new_ref_region), std::move(new_small_allele), std::move(new_big_allele));
+        a_variant_factory.make(std::move(new_ref_region), std::move(new_big_allele),
+                               std::move(new_small_allele)) :
+        a_variant_factory.make(std::move(new_ref_region), std::move(new_small_allele),
+                               std::move(new_big_allele));
 }
 
 Variant normalise(const Variant& a_variant, ReferenceGenome& the_reference,
-                  Variant::SizeType extension_size)
+                  VariantFactory& a_variant_factory, Variant::SizeType extension_size)
 {
-    return make_parsimonious(left_align(a_variant, the_reference, extension_size), the_reference);
+    return make_parsimonious(left_align(a_variant, the_reference, a_variant_factory, extension_size),
+                             the_reference, a_variant_factory);
 }
 
 bool is_snp(const Variant& a_variant) noexcept

@@ -32,6 +32,8 @@ public:
     class MatePair : public Equitable<MatePair>
     {
     public:
+        using InsertSizeType = std::int_fast32_t;
+        
         struct SupplementaryData
         {
             bool is_marked_unmapped;
@@ -40,7 +42,7 @@ public:
         
         MatePair() = default;
         template <typename String_>
-        MatePair(String_&& contig_name, SizeType begin, SizeType insert_size,
+        MatePair(String_&& contig_name, SizeType begin, InsertSizeType insert_size,
                  SupplementaryData data);
         ~MatePair() = default;
         
@@ -51,7 +53,7 @@ public:
         
         const std::string& get_contig_name() const;
         SizeType get_begin() const noexcept;
-        SizeType get_insert_size() const noexcept;
+        InsertSizeType get_insert_size() const noexcept;
         
         bool is_marked_unmapped() const;
         bool is_marked_reverse_mapped() const;
@@ -61,7 +63,7 @@ public:
         
         std::string the_contig_name_;
         SizeType begin_;
-        SizeType the_insert_size_;
+        InsertSizeType the_insert_size_;
         Flags flags_;
         
         Flags get_flags_(const SupplementaryData& data);
@@ -91,7 +93,7 @@ public:
               typename String2_>
     explicit AlignedRead(GenomicRegion_&& reference_region, String1_&& sequence,
                          Qualities_&& qualities, CigarString_&& cigar_string,
-                         SizeType insert_size, String2_&& mate_contig_name,
+                         MatePair::InsertSizeType insert_size, String2_&& mate_contig_name,
                          SizeType mate_begin, QualityType mapping_quality,
                          SupplementaryData data,
                          MatePair::SupplementaryData mate_pair_data);
@@ -161,6 +163,7 @@ the_sequence_ {std::forward<String1_>(sequence)},
 the_qualities_ {std::forward<Qualities_>(qualities)},
 the_cigar_string_ {std::forward<CigarString_>(cigar_string)},
 the_mate_pair_ {nullptr},
+the_mapping_quality_ {mapping_quality},
 flags_ {get_flags_(supplementary_data)}
 {}
 
@@ -168,7 +171,7 @@ template <typename GenomicRegion_, typename String1_, typename Qualities_, typen
           typename String2_>
 inline AlignedRead::AlignedRead(GenomicRegion_&& reference_region, String1_&& sequence,
                                 Qualities_&& qualities, CigarString_&& cigar_string,
-                                SizeType insert_size, String2_&& mate_contig_name,
+                                MatePair::InsertSizeType insert_size, String2_&& mate_contig_name,
                                 SizeType mate_begin, QualityType mapping_quality,
                                 SupplementaryData data,
                                 MatePair::SupplementaryData mate_pair_data)
@@ -184,7 +187,7 @@ flags_ {get_flags_(data)}
 {}
 
 template <typename String_>
-AlignedRead::MatePair::MatePair(String_&& contig_name, SizeType begin, SizeType insert_size,
+AlignedRead::MatePair::MatePair(String_&& contig_name, SizeType begin, InsertSizeType insert_size,
                                 SupplementaryData data)
 :
 the_contig_name_ {std::forward<String_>(contig_name)},
@@ -233,7 +236,7 @@ inline AlignedRead::SizeType AlignedRead::MatePair::get_begin() const noexcept
     return begin_;
 }
 
-inline AlignedRead::SizeType AlignedRead::MatePair::get_insert_size() const noexcept
+inline AlignedRead::MatePair::InsertSizeType AlignedRead::MatePair::get_insert_size() const noexcept
 {
     return the_insert_size_;
 }

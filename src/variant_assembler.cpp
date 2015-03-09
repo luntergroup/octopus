@@ -27,9 +27,9 @@ void VariantAssembler::add_reference_sequence(const GenomicRegion& the_region,
     the_assembler_.add_sequence(the_sequence, the_region.get_begin(), Colour::Reference);
 }
 
-std::set<Variant> VariantAssembler::get_variants(const GenomicRegion& a_region)
+std::vector<Variant> VariantAssembler::get_variants(const GenomicRegion& a_region)
 {
-    std::set<Variant> result {};
+    std::vector<Variant> result {};
     return result;
 }
 

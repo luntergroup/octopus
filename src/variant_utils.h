@@ -14,6 +14,7 @@
 #include "variant.h"
 
 class ReferenceGenome;
+class VariantFactory;
 
 /*
  A variant is parsimonious if and only if it is represented in as few nucleotides as possible
@@ -21,7 +22,8 @@ class ReferenceGenome;
  */
 bool is_parsimonious(const Variant& a_variant) noexcept;
 
-Variant make_parsimonious(const Variant& a_variant, ReferenceGenome& the_reference);
+Variant make_parsimonious(const Variant& a_variant, ReferenceGenome& the_reference,
+                          VariantFactory& a_variant_factory);
 
 bool is_left_alignable(const Variant& a_variant) noexcept;
 
@@ -33,13 +35,13 @@ bool is_left_alignable(const Variant& a_variant) noexcept;
  to the left while keeping the length of all its alleles constant.
  */
 Variant left_align(const Variant& a_variant, ReferenceGenome& the_reference,
-                   Variant::SizeType extension_size=30);
+                   VariantFactory& a_variant_factory, Variant::SizeType extension_size=30);
 
 /*
   A variant is normalised if and only if it is parsimonious and left aligned.
  */
 Variant normalise(const Variant& a_variant, ReferenceGenome& the_reference,
-                  Variant::SizeType extension_size=30);
+                  VariantFactory& a_variant_factory, Variant::SizeType extension_size=30);
 
 bool is_snp(const Variant& a_variant) noexcept;
 

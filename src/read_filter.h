@@ -6,8 +6,8 @@
 //  Copyright (c) 2015 Oxford University. All rights reserved.
 //
 
-#ifndef __Octopus__read_filter2__
-#define __Octopus__read_filter2__
+#ifndef __Octopus__read_filter__
+#define __Octopus__read_filter__
 
 #include <functional>
 #include <vector>
@@ -134,4 +134,4 @@ bool ReadFilter<BidirectionalIterator>::filter_read(const AlignedRead& the_read,
     });
 }
 
-#endif /* defined(__Octopus__read_filter2__) */
+#endif /* defined(__Octopus__read_filter__) */
