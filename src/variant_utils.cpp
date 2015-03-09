@@ -35,7 +35,7 @@ bool is_parsimonious(const Variant& a_variant) noexcept
     const auto& ref_allele = a_variant.get_reference_allele();
     const auto& alt_allele = a_variant.get_alternative_allele();
     
-    auto&& alleles = allele_minmax(ref_allele, alt_allele);
+    const auto& alleles = allele_minmax(ref_allele, alt_allele);
     const auto& the_small_allele = alleles.first;
     const auto& the_big_allele   = alleles.second;
     
@@ -61,7 +61,7 @@ Variant make_parsimonious(const Variant& a_variant, ReferenceGenome& the_referen
     const auto& old_ref_allele = a_variant.get_reference_allele();
     const auto& old_alt_allele = a_variant.get_alternative_allele();
     
-    auto&& alleles = allele_minmax(old_ref_allele, old_alt_allele);
+    const auto& alleles = allele_minmax(old_ref_allele, old_alt_allele);
     const auto& the_small_allele = alleles.first;
     const auto& the_big_allele   = alleles.second;
     
@@ -135,7 +135,7 @@ using LeftAlignmentList = std::list<Variant::StringType::value_type>;
 
 auto get_allele_lists(const Variant::StringType& allele_a, const Variant::StringType& allele_b)
 {
-    auto&& alleles = allele_minmax(allele_a, allele_b);
+    const auto& alleles = allele_minmax(allele_a, allele_b);
     const auto& the_small_allele = alleles.first;
     const auto& the_big_allele   = alleles.second;
     
