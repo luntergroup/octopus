@@ -29,6 +29,8 @@ std::vector<Variant> AssemblerCandidateVariantGenerator::get_candidates(const Ge
     return the_variant_assembler_.get_variants(a_region);
 }
 
+void AssemblerCandidateVariantGenerator::reserve(std::size_t n) {}
+
 void AssemblerCandidateVariantGenerator::clear()
 {
     the_variant_assembler_.clear();

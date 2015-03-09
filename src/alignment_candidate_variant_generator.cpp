@@ -36,9 +36,9 @@ void AlignmentCandidateVariantGenerator::add_read(const AlignedRead &a_read)
         
         switch (cigar_operation.get_flag()) {
             case CigarOperation::ALIGNMENT_MATCH:
-                get_snps(GenomicRegion {contig_name, ref_index, ref_index + op_size},
-                         std::cbegin(the_read_sequence) + read_index,
-                         std::cbegin(the_read_sequence) + read_index + op_size);
+                get_variants_in_match_range(GenomicRegion {contig_name, ref_index, ref_index + op_size},
+                                            std::cbegin(the_read_sequence) + read_index,
+                                            std::cbegin(the_read_sequence) + read_index + op_size);
                 read_index += op_size;
                 ref_index  += op_size;
                 break;
@@ -91,9 +91,9 @@ void AlignmentCandidateVariantGenerator::add_read(const AlignedRead &a_read)
     }
 }
 
-void AlignmentCandidateVariantGenerator::get_snps(const GenomicRegion& the_region,
-                                                  std::string::const_iterator read_begin,
-                                                  std::string::const_iterator read_end)
+void AlignmentCandidateVariantGenerator::
+get_variants_in_match_range(const GenomicRegion& the_region, std::string::const_iterator read_begin,
+                            std::string::const_iterator read_end)
 {
     auto ref_segment = the_reference_.get_sequence(the_region);
     char ref_base {'N'}, read_base {'N'};
@@ -115,6 +115,11 @@ void AlignmentCandidateVariantGenerator::get_snps(const GenomicRegion& the_regio
 std::vector<Variant> AlignmentCandidateVariantGenerator::get_candidates(const GenomicRegion& a_region)
 {
     return candidates_;
+}
+
+void AlignmentCandidateVariantGenerator::reserve(std::size_t n)
+{
+    candidates_.reserve(n);
 }
 
 void AlignmentCandidateVariantGenerator::clear()

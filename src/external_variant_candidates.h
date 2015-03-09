@@ -9,6 +9,8 @@
 #ifndef __Octopus__external_variant_candidates__
 #define __Octopus__external_variant_candidates__
 
+#include <cstddef> // std::size_t
+
 #include "i_variant_candidate_generator.h"
 #include "variant_file.h"
 
@@ -28,6 +30,7 @@ public:
     
     void add_read(const AlignedRead& a_read) override;
     std::vector<Variant> get_candidates(const GenomicRegion& a_region) override;
+    void reserve(std::size_t) override;
     void clear() override;
     
 private:
@@ -35,6 +38,7 @@ private:
 };
 
 inline void ExternalVariantCandidates::add_read(const AlignedRead& a_read) {}
+inline void ExternalVariantCandidates::reserve(std::size_t) {}
 inline void ExternalVariantCandidates::clear() {}
 
 #endif /* defined(__Octopus__external_variant_candidates__) */

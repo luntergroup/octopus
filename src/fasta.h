@@ -28,7 +28,7 @@ class Fasta : public IReferenceGenomeImpl
 {
 public:
     using SequenceType = std::string;
-    using SizeType    = IReferenceGenomeImpl::SizeType;
+    using SizeType     = IReferenceGenomeImpl::SizeType;
     
     Fasta() = delete;
     Fasta(std::string fasta_path);

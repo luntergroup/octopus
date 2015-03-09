@@ -10,6 +10,7 @@
 #define __Octopus__alignment_candidate_variant_generator__
 
 #include <vector>
+#include <cstddef> // std::size_t
 
 #include "i_variant_candidate_generator.h"
 #include "variant_factory.h"
@@ -34,6 +35,7 @@ public:
     
     void add_read(const AlignedRead& a_read) override;
     std::vector<Variant> get_candidates(const GenomicRegion& a_region) override;
+    void reserve(std::size_t n) override;
     void clear() override;
     
 private:
@@ -44,8 +46,9 @@ private:
     bool is_good_sequence(const std::string& sequence) const noexcept;
     template <typename T1, typename T2, typename T3>
     void add_variant(T1&& the_region, T2&& sequence_removed, T3&& sequence_added);
-    void get_snps(const GenomicRegion& the_region, std::string::const_iterator read_begin,
-                  std::string::const_iterator read_end);
+    void get_variants_in_match_range(const GenomicRegion& the_region,
+                                     std::string::const_iterator read_begin,
+                                     std::string::const_iterator read_end);
 };
 
 template <typename T1, typename T2, typename T3>

@@ -20,7 +20,7 @@ using std::cend;
 using std::crbegin;
 using std::crend;
 
-auto allele_minmax(const Variant::StringType& allele_a, const Variant::StringType& allele_b)
+auto allele_minmax(const Variant::SequenceType& allele_a, const Variant::SequenceType& allele_b)
 {
     static auto is_bigger = [] (const auto& a1, const auto& a2) { return a1.size() < a2.size(); };
     return std::minmax(allele_a, allele_b, is_bigger);
@@ -131,9 +131,9 @@ bool is_left_alignable(const Variant& a_variant) noexcept
     return is_indel(a_variant);
 }
 
-using LeftAlignmentList = std::list<Variant::StringType::value_type>;
+using LeftAlignmentList = std::list<Variant::SequenceType::value_type>;
 
-auto get_allele_lists(const Variant::StringType& allele_a, const Variant::StringType& allele_b)
+auto get_allele_lists(const Variant::SequenceType& allele_a, const Variant::SequenceType& allele_b)
 {
     const auto& alleles = allele_minmax(allele_a, allele_b);
     const auto& the_small_allele = alleles.first;
@@ -219,10 +219,10 @@ Variant left_align(const Variant& a_variant, ReferenceGenome& the_reference,
     auto new_big_allele_begin   = std::next(cbegin(big_allele), removable_extension);
     auto new_small_allele_begin = std::next(cbegin(small_allele), removable_extension);
     
-    Variant::StringType new_big_allele {new_big_allele_begin,
-                                        std::next(new_big_allele_begin, big_allele_size)};
-    Variant::StringType new_small_allele {new_small_allele_begin,
-                                        std::next(new_small_allele_begin, small_allele_size)};
+    Variant::SequenceType new_big_allele {new_big_allele_begin,
+                                            std::next(new_big_allele_begin, big_allele_size)};
+    Variant::SequenceType new_small_allele {new_small_allele_begin,
+                                            std::next(new_small_allele_begin, small_allele_size)};
     
     auto new_ref_region_begin = current_region.get_begin() + static_cast<SizeType>(removable_extension);
     auto new_ref_region_end   = new_ref_region_begin + static_cast<SizeType>(ref_allele.size());

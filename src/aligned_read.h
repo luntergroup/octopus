@@ -24,10 +24,10 @@
 class AlignedRead : public Comparable<AlignedRead>
 {
 public:
-    using SizeType    = GenomicRegion::SizeType;
-    using StringType  = std::string;
-    using QualityType = std::uint_fast8_t;
-    using Qualities   = std::vector<QualityType>;
+    using SizeType     = GenomicRegion::SizeType;
+    using SequenceType = std::string;
+    using QualityType  = std::uint_fast8_t;
+    using Qualities    = std::vector<QualityType>;
     
     class MatePair : public Equitable<MatePair>
     {
@@ -66,7 +66,7 @@ public:
         InsertSizeType the_insert_size_;
         Flags flags_;
         
-        Flags get_flags_(const SupplementaryData& data);
+        Flags get_flags(const SupplementaryData& data);
     };
     
     struct SupplementaryData
@@ -109,7 +109,7 @@ public:
     const std::string& get_contig_name() const;
     SizeType get_begin() const noexcept;
     SizeType get_end() const noexcept;
-    const StringType& get_sequence() const;
+    const SequenceType& get_sequence() const;
     const Qualities& get_qualities() const;
     QualityType get_mapping_quality() const;
     SizeType get_sequence_size() const;
@@ -139,18 +139,18 @@ private:
     using Flags = std::vector<bool>;
     
     GenomicRegion the_reference_region_;
-    StringType the_sequence_;
+    SequenceType the_sequence_;
     CigarString the_cigar_string_;
     Qualities the_qualities_;
     std::unique_ptr<MatePair> the_mate_pair_;
     QualityType the_mapping_quality_;
     Flags flags_;
     
-    Flags get_flags_(const SupplementaryData& data);
+    Flags get_flags(const SupplementaryData& data);
     
-    bool is_compressed_() const noexcept;
-    void set_compressed_() noexcept;
-    void set_uncompressed_() noexcept;
+    bool is_compressed() const noexcept;
+    void set_compressed() noexcept;
+    void set_uncompressed() noexcept;
 };
 
 template <typename GenomicRegion_, typename String1_, typename Qualities_, typename CigarString_>
@@ -164,7 +164,7 @@ the_qualities_ {std::forward<Qualities_>(qualities)},
 the_cigar_string_ {std::forward<CigarString_>(cigar_string)},
 the_mate_pair_ {nullptr},
 the_mapping_quality_ {mapping_quality},
-flags_ {get_flags_(supplementary_data)}
+flags_ {get_flags(supplementary_data)}
 {}
 
 template <typename GenomicRegion_, typename String1_, typename Qualities_, typename CigarString_,
@@ -183,7 +183,7 @@ the_cigar_string_ {std::forward<CigarString_>(cigar_string)},
 the_mate_pair_ {std::make_unique<MatePair>(std::forward<String2_>(mate_contig_name),
                                            mate_begin, insert_size, mate_pair_data)},
 the_mapping_quality_ {mapping_quality},
-flags_ {get_flags_(data)}
+flags_ {get_flags(data)}
 {}
 
 template <typename String_>
@@ -193,7 +193,7 @@ AlignedRead::MatePair::MatePair(String_&& contig_name, SizeType begin, InsertSiz
 the_contig_name_ {std::forward<String_>(contig_name)},
 begin_ {begin},
 the_insert_size_ {insert_size},
-flags_ {get_flags_(data)}
+flags_ {get_flags(data)}
 {}
 
 inline AlignedRead::AlignedRead(const AlignedRead& other)
@@ -261,7 +261,7 @@ inline AlignedRead::SizeType AlignedRead::get_end() const noexcept
     return the_reference_region_.get_end();
 }
 
-inline const AlignedRead::StringType& AlignedRead::get_sequence() const
+inline const AlignedRead::SequenceType& AlignedRead::get_sequence() const
 {
     return the_sequence_;
 }
@@ -333,7 +333,7 @@ void AlignedRead::decompress(const CompressionAlgorithm& c)
     the_sequence_ = CompressionAlgorithm::decompress(the_sequence_);
 }
 
-inline AlignedRead::Flags AlignedRead::get_flags_(const SupplementaryData& data)
+inline AlignedRead::Flags AlignedRead::get_flags(const SupplementaryData& data)
 {
     Flags result(7);
     result[0] = false;
@@ -348,7 +348,7 @@ inline AlignedRead::Flags AlignedRead::get_flags_(const SupplementaryData& data)
 }
 
 inline AlignedRead::MatePair::Flags
-AlignedRead::MatePair::get_flags_(const SupplementaryData& data)
+AlignedRead::MatePair::get_flags(const SupplementaryData& data)
 {
     Flags result(2);
     result[0] = data.is_marked_unmapped;
@@ -392,17 +392,17 @@ inline bool AlignedRead::is_marked_qc_fail() const
 }
 
 
-inline bool AlignedRead::is_compressed_() const noexcept
+inline bool AlignedRead::is_compressed() const noexcept
 {
     return flags_[0];
 }
 
-inline void AlignedRead::set_compressed_() noexcept
+inline void AlignedRead::set_compressed() noexcept
 {
     flags_[0] = true;
 }
 
-inline void AlignedRead::set_uncompressed_() noexcept
+inline void AlignedRead::set_uncompressed() noexcept
 {
     flags_[0] = false;
 }

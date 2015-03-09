@@ -11,57 +11,61 @@
 
 #include <cstddef> // std::size_t
 #include <iterator>
-#include <memory>
+#include <memory>  // std::unique_ptr
+#include <boost/filesystem/path.hpp>
 
 #include "read_reader_impl.h"
 #include "genomic_region.h"
 #include "aligned_read.h"
 #include "equitable.h"
 
+namespace fs = boost::filesystem;
+
 class ReadReader : Equitable<ReadReader>
 {
 public:
-    using SampleIdToReadsMap = std::unordered_map<std::string, std::vector<AlignedRead>>;
+    using SampleIdType       = IReadReaderImpl::SampleIdType;
+    using SizeType           = IReadReaderImpl::SizeType;
+    using SampleIdToReadsMap = IReadReaderImpl::SampleIdToReadsMap;
     
     ReadReader() = delete;
-    explicit ReadReader(const std::string& read_file_path,
-                        std::unique_ptr<IReadReaderImpl> the_impl);
+    explicit ReadReader(const fs::path& read_file_path, std::unique_ptr<IReadReaderImpl> the_impl);
     
     ReadReader(const ReadReader&)            = delete;
     ReadReader& operator=(const ReadReader&) = delete;
     ReadReader(ReadReader&&)                 = default;
     ReadReader& operator=(ReadReader&&)      = default;
     
-    const std::string& get_read_file_path() const noexcept;
+    const fs::path& get_read_file_path() const noexcept;
     std::vector<std::string> get_reference_contig_names();
-    std::vector<std::string> get_sample_ids();
-    std::vector<std::string> get_read_groups_in_sample(const std::string& a_sample_id);
+    std::vector<SampleIdType> get_sample_ids();
+    std::vector<std::string> get_read_groups_in_sample(const SampleIdType& a_sample_id);
     std::vector<GenomicRegion> get_regions_in_file();
     std::size_t get_num_read(const GenomicRegion& a_region);
     SampleIdToReadsMap fetch_reads(const GenomicRegion& a_region);
+    void close();
     
 private:
-    std::string read_file_path_;
+    fs::path read_file_path_;
     std::unique_ptr<IReadReaderImpl> the_impl_;
 };
 
-inline ReadReader::ReadReader(const std::string& read_file_path,
-                              std::unique_ptr<IReadReaderImpl> the_impl)
+inline ReadReader::ReadReader(const fs::path& read_file_path, std::unique_ptr<IReadReaderImpl> the_impl)
 :read_file_path_ {read_file_path},
  the_impl_ {std::move(the_impl)}
 {}
 
-inline const std::string& ReadReader::get_read_file_path() const noexcept
+inline const fs::path& ReadReader::get_read_file_path() const noexcept
 {
     return read_file_path_;
 }
 
-inline std::vector<std::string> ReadReader::get_sample_ids()
+inline std::vector<ReadReader::SampleIdType> ReadReader::get_sample_ids()
 {
     return the_impl_->get_sample_ids();
 }
 
-inline std::vector<std::string> ReadReader::get_read_groups_in_sample(const std::string& a_sample_id)
+inline std::vector<std::string> ReadReader::get_read_groups_in_sample(const SampleIdType& a_sample_id)
 {
     return the_impl_->get_read_groups_in_sample(a_sample_id);
 }
@@ -86,6 +90,11 @@ inline std::vector<GenomicRegion> ReadReader::get_regions_in_file()
     return the_impl_->get_regions_in_file();
 }
 
+inline void ReadReader::close()
+{
+    the_impl_->close();
+}
+
 inline bool operator==(const ReadReader& lhs, const ReadReader& rhs)
 {
     return lhs.get_read_file_path() == rhs.get_read_file_path();
@@ -96,7 +105,7 @@ namespace std {
     {
         size_t operator()(const ReadReader& a_read_reader) const
         {
-            return hash<std::string>()(a_read_reader.get_read_file_path());
+            return hash<string>()(a_read_reader.get_read_file_path().string());
         }
     };
 }

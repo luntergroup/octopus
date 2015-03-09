@@ -70,6 +70,7 @@
 		CA1472781AACECF1005FDCD1 /* octopus.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = octopus.cpp; sourceTree = "<group>"; };
 		CA1472791AACECF1005FDCD1 /* octopus.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = octopus.h; sourceTree = "<group>"; };
 		CA14727B1AACED6E005FDCD1 /* octopus_tests.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = octopus_tests.cpp; sourceTree = "<group>"; };
+		CA14727D1AAE63A8005FDCD1 /* hash_functions.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = hash_functions.h; sourceTree = "<group>"; };
 		CA28EBF21AAB7B63009F8622 /* read_filter_factory.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = read_filter_factory.h; sourceTree = "<group>"; };
 		CA28EBF31AABA2FC009F8622 /* read_transformations.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = read_transformations.h; sourceTree = "<group>"; };
 		CA28EBF41AABB80E009F8622 /* read_filter_benchmarks.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = read_filter_benchmarks.cpp; sourceTree = "<group>"; };
@@ -332,6 +333,7 @@
 			children = (
 				D4907F5E1A8A3ADD00639203 /* utils.h */,
 				D4907F5D1A8A3ADD00639203 /* utils.cpp */,
+				CA14727D1AAE63A8005FDCD1 /* hash_functions.h */,
 			);
 			name = utils;
 			sourceTree = "<group>";

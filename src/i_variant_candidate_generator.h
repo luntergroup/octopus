@@ -10,6 +10,7 @@
 #define Octopus_i_variant_candidate_generator_h
 
 #include <vector>
+#include <cstddef> // std::size_t
 
 class Variant;
 class AlignedRead;
@@ -20,6 +21,7 @@ class IVariantCandidateGenerator
 public:
     virtual std::vector<Variant> get_candidates(const GenomicRegion&) = 0;
     virtual void add_read(const AlignedRead&) = 0;
+    virtual void reserve(std::size_t n) = 0;
     virtual void clear() = 0;
     virtual ~IVariantCandidateGenerator() = default;
 };

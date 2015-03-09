@@ -21,11 +21,12 @@ class GenomicRegion;
 class IReadReaderImpl
 {
 public:
+    using SampleIdType       = std::string;
     using SizeType           = std::uint_fast32_t;
-    using SampleIdToReadsMap = std::unordered_map<std::string, std::vector<AlignedRead>>;
+    using SampleIdToReadsMap = std::unordered_map<SampleIdType, std::vector<AlignedRead>>;
     
-    virtual std::vector<std::string> get_sample_ids() = 0;
-    virtual std::vector<std::string> get_read_groups_in_sample(const std::string& a_sample_id) = 0;
+    virtual std::vector<SampleIdType> get_sample_ids() = 0;
+    virtual std::vector<std::string> get_read_groups_in_sample(const SampleIdType& a_sample_id) = 0;
     virtual std::size_t get_num_reads(const GenomicRegion& a_region) = 0;
     virtual SampleIdToReadsMap fetch_reads(const GenomicRegion& a_region) = 0;
     virtual SizeType get_num_reference_contigs() noexcept = 0;

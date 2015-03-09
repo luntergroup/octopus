@@ -16,8 +16,6 @@
 #include <algorithm> // std::equal
 #include <iterator>  // std::next
 #include <cstddef>   // std::size_t
-#include <boost/utility/string_ref.hpp>
-#include <boost/functional/hash.hpp>
 
 template <typename T>
 std::vector<std::string> split(T&& s, char delim) {
@@ -52,16 +50,6 @@ inline std::size_t stringlen(const char* str)
 inline std::size_t stringlen(const std::string& str)
 {
     return str.size();
-}
-
-namespace std
-{
-    template<>
-    struct hash<boost::string_ref> {
-        size_t operator()(boost::string_ref const& sr) const {
-            return boost::hash_range(sr.begin(), sr.end());
-        }
-    };
 }
 
 #endif /* defined(__Octopus__utils__) */

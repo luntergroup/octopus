@@ -10,11 +10,11 @@
 
 #include <sstream>
 
-HtslibFacade::HtslibFacade(const std::string& htslib_file_path)
-:the_filename_ {htslib_file_path},
- the_file_ {hts_open(the_filename_.c_str(), "r"), htslib_file_deleter},
+HtslibFacade::HtslibFacade(const fs::path& the_file_path)
+:the_filepath_ {the_file_path},
+ the_file_ {hts_open(the_filepath_.string().c_str(), "r"), htslib_file_deleter},
  the_header_ {sam_hdr_read(the_file_.get()), htslib_header_deleter},
- the_index_ {sam_index_load(the_file_.get(), the_filename_.c_str()), htslib_index_deleter},
+ the_index_ {sam_index_load(the_file_.get(), the_filepath_.string().c_str()), htslib_index_deleter},
  contig_name_map_ {},
  sample_id_map_ {}
 {
@@ -27,12 +27,12 @@ void HtslibFacade::close()
     // TODO: what should this do?
 }
 
-uint_fast32_t HtslibFacade::get_num_reference_contigs() noexcept
+HtslibFacade::SizeType HtslibFacade::get_num_reference_contigs() noexcept
 {
     return the_header_->n_targets;
 }
 
-uint_fast32_t HtslibFacade::get_reference_contig_size(const std::string& contig_name)
+HtslibFacade::SizeType HtslibFacade::get_reference_contig_size(const std::string& contig_name)
 {
     return the_header_->target_len[get_htslib_tid(contig_name)];
 }
@@ -42,9 +42,9 @@ int HtslibFacade::HtslibIterator::operator++()
     return sam_itr_next(hts_facade_.the_file_.get(), the_iterator_.get(), the_bam1_.get()) >= 0;
 }
 
-uint_fast32_t HtslibFacade::HtslibIterator::get_read_start() const noexcept
+HtslibFacade::SizeType HtslibFacade::HtslibIterator::get_read_start() const noexcept
 {
-    return static_cast<uint_fast32_t>(the_bam1_->core.pos);
+    return static_cast<HtslibFacade::SizeType>(the_bam1_->core.pos);
 }
 
 uint32_t HtslibFacade::HtslibIterator::get_sequence_length() const noexcept
@@ -52,16 +52,15 @@ uint32_t HtslibFacade::HtslibIterator::get_sequence_length() const noexcept
     return the_bam1_->core.l_qseq;
 }
 
-char HtslibFacade::HtslibIterator::get_base(uint8_t* a_htslib_sequence,
-                                                   uint32_t index) const noexcept
+char HtslibFacade::HtslibIterator::get_base(uint8_t* a_htslib_sequence, uint32_t index) const noexcept
 {
     static constexpr const char* symbol_table {"=ACMGRSVTWYHKDBN"};
     return symbol_table[bam_seqi(a_htslib_sequence, index)];
 }
 
-std::string HtslibFacade::HtslibIterator::get_sequence() const
+HtslibFacade::SequenceType HtslibFacade::HtslibIterator::get_sequence() const
 {
-    std::string result {};
+    SequenceType result {};
     auto length = get_sequence_length();
     result.reserve(length);
     for (uint32_t i = 0; i < length; ++i) {
@@ -148,9 +147,9 @@ uint64_t HtslibFacade::get_num_mapped_reads(const std::string& reference_contig_
     return num_mapped;
 }
 
-std::vector<std::string> HtslibFacade::get_sample_ids()
+std::vector<HtslibFacade::SampleIdType> HtslibFacade::get_sample_ids()
 {
-    std::vector<std::string> result {};
+    std::vector<HtslibFacade::SampleIdType> result {};
     for (const auto pair : sample_id_map_) {
         if (std::find(std::cbegin(result), std::cend(result), pair.second) == std::cend(result)) {
             result.emplace_back(pair.second);
@@ -232,7 +231,7 @@ HtslibFacade::ReadGroupToSampleIdMap HtslibFacade::get_read_group_to_sample_id_m
                 throw std::runtime_error {"bad read file"};
             }
             result.emplace(std::make_pair(get_tag_value(line, Read_group_id_tag),
-                                                        get_tag_value(line, Sample_id_tag)));
+                                          get_tag_value(line, Sample_id_tag)));
             ++num_read_groups;
         }
     }
@@ -257,7 +256,7 @@ HtslibFacade::HtslibIterator::HtslibIterator(HtslibFacade& hts_facade, const Gen
  the_bam1_ {bam_init1(), htslib_bam1_deleter}
 {}
 
-std::pair<AlignedRead, std::string> HtslibFacade::HtslibIterator::operator*() const
+std::pair<AlignedRead, HtslibFacade::SampleIdType> HtslibFacade::HtslibIterator::operator*() const
 {
     auto the_qualities = get_qualities();
     if (the_qualities.empty() || the_qualities[0] == 0xff) throw std::runtime_error {"bad sequence"};

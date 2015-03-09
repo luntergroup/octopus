@@ -35,7 +35,7 @@ public:
 private:
     std::vector<ReadTransformation> the_transforms_;
     
-    void transform_read(AlignedRead& a_read) const;
+    void transform_read_(AlignedRead& a_read) const;
 };
 
 inline void ReadTransform::register_transform(ReadTransformation a_transform)
@@ -46,10 +46,10 @@ inline void ReadTransform::register_transform(ReadTransformation a_transform)
 template <typename InputIterator>
 void ReadTransform::transform_reads(InputIterator first, InputIterator last) const
 {
-    std::for_each(first, last, [this] (auto& a_read) { transform_read(a_read); });
+    std::for_each(first, last, [this] (auto& a_read) { transform_read_(a_read); });
 }
 
-inline void ReadTransform::transform_read(AlignedRead& a_read) const
+inline void ReadTransform::transform_read_(AlignedRead& a_read) const
 {
     for (const auto& transform : the_transforms_) {
         transform(a_read);

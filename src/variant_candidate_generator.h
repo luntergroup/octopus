@@ -13,6 +13,7 @@
 #include <memory>    // std::unique_ptr
 #include <algorithm> // std::for_each, std::sort
 #include <iterator>  // std::make_move_iterator
+#include <cstddef>   // std::size_t
 
 #include "i_variant_candidate_generator.h"
 #include "reference_genome.h"
@@ -34,6 +35,7 @@ public:
     void register_generator(std::unique_ptr<IVariantCandidateGenerator> generator);
     void add_read(const AlignedRead& a_read) override;
     std::vector<Variant> get_candidates(const GenomicRegion& a_region) override;
+    void reserve(std::size_t n) override;
     void clear() override;
     template <typename ReadIterator> void add_reads(ReadIterator first, ReadIterator last);
     
@@ -57,7 +59,7 @@ inline std::vector<Variant> VariantCandidateGenerator::get_candidates(const Geno
 {
     std::vector<Variant> result {};
     for (auto& generator : generator_list_) {
-        std::vector<Variant>&& generator_result = generator->get_candidates(a_region);
+        auto generator_result = generator->get_candidates(a_region);
         result.insert(std::end(result),
                       std::make_move_iterator(std::begin(generator_result)),
                       std::make_move_iterator(std::end(generator_result))
@@ -65,6 +67,13 @@ inline std::vector<Variant> VariantCandidateGenerator::get_candidates(const Geno
     }
     std::sort(std::begin(result), std::end(result));
     return result;
+}
+
+inline void VariantCandidateGenerator::reserve(std::size_t n)
+{
+    for (auto& generator : generator_list_) {
+        generator->reserve(n);
+    }
 }
 
 inline void VariantCandidateGenerator::clear()

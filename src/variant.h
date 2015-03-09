@@ -23,8 +23,8 @@ using std::size_t;
 class Variant : public Comparable<Variant>
 {
 public:
-    using SizeType   = GenomicRegion::SizeType;
-    using StringType = std::string;
+    using SizeType     = GenomicRegion::SizeType;
+    using SequenceType = std::string;
     
     Variant() = delete;
     
@@ -43,15 +43,15 @@ public:
     Variant& operator=(Variant&&)      = default;
     
     const GenomicRegion& get_reference_allele_region() const noexcept;
-    const StringType& get_reference_allele() const noexcept;
-    const StringType& get_alternative_allele() const noexcept;
+    const SequenceType& get_reference_allele() const noexcept;
+    const SequenceType& get_alternative_allele() const noexcept;
     double get_prior_probability() const noexcept;
     
 private:
     // Don't change the order of these members
-    StringType the_reference_allele_;
+    SequenceType the_reference_allele_;
     GenomicRegion the_reference_allele_region_;
-    StringType the_alternative_allele_;
+    SequenceType the_alternative_allele_;
     std::function<double()> prior_model_;
 };
 
@@ -84,12 +84,12 @@ inline const GenomicRegion& Variant::get_reference_allele_region() const noexcep
     return the_reference_allele_region_;
 }
 
-inline const Variant::StringType& Variant::get_reference_allele() const noexcept
+inline const Variant::SequenceType& Variant::get_reference_allele() const noexcept
 {
     return the_reference_allele_;
 }
 
-inline const Variant::StringType& Variant::get_alternative_allele() const noexcept
+inline const Variant::SequenceType& Variant::get_alternative_allele() const noexcept
 {
     return the_alternative_allele_;
 }

@@ -14,8 +14,8 @@
 #include "htslib_facade.h"
 #include "aligned_read.h"
 
-ReadManager::ReadManager(std::vector<std::string>&& read_file_paths, unsigned Max_open_files)
-:   closed_files_ (std::make_move_iterator(std::begin(read_file_paths)),
+ReadManager::ReadManager(std::vector<std::string> read_file_paths, unsigned Max_open_files)
+:   closed_readers_ (std::make_move_iterator(std::begin(read_file_paths)),
                    std::make_move_iterator(std::end(read_file_paths))),
     open_readers_ {},
     Max_open_files_ {Max_open_files},
@@ -28,17 +28,17 @@ ReadManager::ReadManager(std::vector<std::string>&& read_file_paths, unsigned Ma
 
 void ReadManager::setup()
 {
-    for (const auto& read_file_path : closed_files_) {
+    for (const auto& read_file_path : closed_readers_) {
         auto read_reader = make_read_reader(read_file_path);
-        for (auto&& reference_region : read_reader.get_regions_in_file()) {
+        for (auto reference_region : read_reader.get_regions_in_file()) {
             files_containing_region_[std::move(reference_region)].emplace_back(read_file_path);
         }
-        for (auto&& sample_id : read_reader.get_sample_ids()) {
+        for (auto sample_id : read_reader.get_sample_ids()) {
             files_containing_sample_[std::move(sample_id)].emplace_back(read_file_path);
         }
     }
-    auto num_files_to_open = std::min(Max_open_files_, static_cast<unsigned>(closed_files_.size()));
-    for (const auto& read_file : closed_files_) {
+    auto num_files_to_open = std::min(Max_open_files_, static_cast<unsigned>(closed_readers_.size()));
+    for (const auto& read_file : closed_readers_) {
         if (num_files_to_open == 0) break;
         open_reader(read_file);
         --num_files_to_open;
@@ -51,9 +51,9 @@ unsigned ReadManager::get_num_samples() const noexcept
 }
 
 // TODO: Evaluate if this should change to a member variable.
-std::vector<std::string> ReadManager::get_sample_ids() const
+std::vector<ReadManager::SampleIdType> ReadManager::get_sample_ids() const
 {
-    std::vector<std::string> result {};
+    std::vector<SampleIdType> result {};
     result.reserve(num_samples_);
     for (const auto& pair : files_containing_sample_) {
         result.emplace_back(pair.first);
@@ -61,31 +61,30 @@ std::vector<std::string> ReadManager::get_sample_ids() const
     return result;
 }
 
-ReadReader ReadManager::make_read_reader(const std::string& read_file_path)
+ReadReader ReadManager::make_read_reader(const fs::path& read_file_path)
 {
     return ReadReader {read_file_path, std::make_unique<HtslibFacade>(read_file_path)};
 }
 
-void ReadManager::open_reader(const std::string &read_file_path)
+void ReadManager::open_reader(const fs::path& read_file_path)
 {
     open_readers_.emplace(read_file_path, make_read_reader(read_file_path));
-    closed_files_.erase(read_file_path);
+    closed_readers_.erase(read_file_path);
 }
 
-void ReadManager::close_reader(const std::string &read_file_path)
+void ReadManager::close_reader(const fs::path& read_file_path)
 {
     open_readers_.erase(read_file_path);
-    closed_files_.insert(read_file_path);
+    closed_readers_.insert(read_file_path);
 }
 
-std::vector<std::string>
-ReadManager::get_files_containing_region(const GenomicRegion& a_region) const
+std::vector<fs::path> ReadManager::get_files_containing_region(const GenomicRegion& a_region) const
 {
     if (files_containing_region_.count(a_region) > 0) {
         return files_containing_region_.at(a_region);
     }
     // TODO: improve this
-    std::vector<std::string> result {};
+    std::vector<fs::path> result {};
     for (const auto& pair : files_containing_region_) {
         if (overlaps(pair.first, a_region)) {
             result.insert(std::end(result), std::cbegin(pair.second), std::cend(pair.second));
@@ -95,7 +94,7 @@ ReadManager::get_files_containing_region(const GenomicRegion& a_region) const
 }
 
 std::vector<AlignedRead>
-ReadManager::fetch_reads(const std::string& a_sample_id, const GenomicRegion& a_region)
+ReadManager::fetch_reads(const SampleIdType& a_sample_id, const GenomicRegion& a_region)
 {
     std::vector<AlignedRead> result {};
     for (const auto& file : get_files_containing_region(a_region)) {

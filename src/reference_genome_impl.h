@@ -19,6 +19,7 @@ class IReferenceGenomeImpl
 {
 public:
     using SizeType = std::uint_fast32_t;
+    
     virtual std::string get_reference_name() = 0;
     virtual std::vector<std::string> get_contig_names() = 0;
     virtual SizeType get_contig_size(std::string contig_name) = 0;
