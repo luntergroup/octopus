@@ -61,7 +61,9 @@ TEST_CASE("read_manager_test", "[read_manager]")
 
 TEST_CASE("read_copy_test", "[reads]")
 {
-    AlignedRead a_read {get_mock_region(), "ACGT", AlignedRead::Qualities {1, 2, 3, 4}, parse_cigar_string("4M"), 10, "1", 10, 30, AlignedRead::SupplementaryData {}, AlignedRead::MatePair::SupplementaryData {}};
+    AlignedRead a_read {get_mock_region(), "ACGT", AlignedRead::Qualities {1, 2, 3, 4},
+        parse_cigar_string("4M"), 10, "1", 10, 30, AlignedRead::SupplementaryData {},
+        AlignedRead::MatePair::SupplementaryData {}};
     
     REQUIRE(a_read.has_mate_pair());
     REQUIRE(a_read.get_mate_pair()->get_insert_size() == 10);
