@@ -21,7 +21,7 @@
 
 namespace fs = boost::filesystem;
 
-class ReadReader : Equitable<ReadReader>
+class ReadReader : public Equitable<ReadReader>
 {
 public:
     using SampleIdType       = IReadReaderImpl::SampleIdType;
@@ -40,8 +40,9 @@ public:
     std::vector<std::string> get_reference_contig_names();
     std::vector<SampleIdType> get_sample_ids();
     std::vector<std::string> get_read_groups_in_sample(const SampleIdType& a_sample_id);
-    std::vector<GenomicRegion> get_regions_in_file();
-    std::size_t get_num_read(const GenomicRegion& a_region);
+    unsigned get_num_reference_contigs();
+    std::vector<GenomicRegion> get_possible_regions_in_file();
+    std::size_t get_num_reads(const GenomicRegion& a_region);
     SampleIdToReadsMap fetch_reads(const GenomicRegion& a_region);
     void close();
     
@@ -70,7 +71,12 @@ inline std::vector<std::string> ReadReader::get_read_groups_in_sample(const Samp
     return the_impl_->get_read_groups_in_sample(a_sample_id);
 }
 
-inline std::size_t ReadReader::get_num_read(const GenomicRegion& a_region)
+inline unsigned ReadReader::get_num_reference_contigs()
+{
+    return the_impl_->get_num_reference_contigs();
+}
+
+inline std::size_t ReadReader::get_num_reads(const GenomicRegion& a_region)
 {
     return the_impl_->get_num_reads(a_region);
 }
@@ -85,9 +91,9 @@ inline std::vector<std::string> ReadReader::get_reference_contig_names()
     return the_impl_->get_reference_contig_names();
 }
 
-inline std::vector<GenomicRegion> ReadReader::get_regions_in_file()
+inline std::vector<GenomicRegion> ReadReader::get_possible_regions_in_file()
 {
-    return the_impl_->get_regions_in_file();
+    return the_impl_->get_possible_regions_in_file();
 }
 
 inline void ReadReader::close()

@@ -9,9 +9,9 @@
 #include "read_manager.h"
 
 #include <iterator> // std::make_move_iterator
-#include <algorithm> // std::move
+#include <algorithm> // std::move, std::any_of, std::min
 
-#include "htslib_facade.h"
+#include "htslib_read_facade.h"
 #include "aligned_read.h"
 
 ReadManager::ReadManager(std::vector<std::string> read_file_paths, unsigned Max_open_files)
@@ -20,23 +20,31 @@ ReadManager::ReadManager(std::vector<std::string> read_file_paths, unsigned Max_
     open_readers_ {},
     Max_open_files_ {Max_open_files},
     num_samples_ {0},
-    files_containing_sample_ {},
-    files_containing_region_ {}
+    reader_paths_containing_sample_ {},
+    possible_regions_in_readers_ {}
 {
     setup();
 }
 
 void ReadManager::setup()
 {
+    get_reader_info();
+    open_initial_files();
+}
+
+void ReadManager::get_reader_info()
+{
     for (const auto& read_file_path : closed_readers_) {
         auto read_reader = make_read_reader(read_file_path);
-        for (auto reference_region : read_reader.get_regions_in_file()) {
-            files_containing_region_[std::move(reference_region)].emplace_back(read_file_path);
-        }
+        possible_regions_in_readers_.emplace(read_file_path, read_reader.get_possible_regions_in_file());
         for (auto sample_id : read_reader.get_sample_ids()) {
-            files_containing_sample_[std::move(sample_id)].emplace_back(read_file_path);
+            reader_paths_containing_sample_[sample_id].emplace_back(read_file_path);
         }
     }
+}
+
+void ReadManager::open_initial_files()
+{
     auto num_files_to_open = std::min(Max_open_files_, static_cast<unsigned>(closed_readers_.size()));
     for (const auto& read_file : closed_readers_) {
         if (num_files_to_open == 0) break;
@@ -55,21 +63,26 @@ std::vector<ReadManager::SampleIdType> ReadManager::get_sample_ids() const
 {
     std::vector<SampleIdType> result {};
     result.reserve(num_samples_);
-    for (const auto& pair : files_containing_sample_) {
+    for (const auto& pair : reader_paths_containing_sample_) {
         result.emplace_back(pair.first);
     }
     return result;
 }
 
-ReadReader ReadManager::make_read_reader(const fs::path& read_file_path)
+ReadReader ReadManager::make_read_reader(const fs::path& a_reader_path)
 {
-    return ReadReader {read_file_path, std::make_unique<HtslibFacade>(read_file_path)};
+    return ReadReader {a_reader_path, std::make_unique<HtslibReadFacade>(a_reader_path)};
 }
 
-void ReadManager::open_reader(const fs::path& read_file_path)
+bool ReadManager::is_open(const fs::path& a_reader_path) const noexcept
 {
-    open_readers_.emplace(read_file_path, make_read_reader(read_file_path));
-    closed_readers_.erase(read_file_path);
+    return open_readers_.count(a_reader_path) > 0;
+}
+
+void ReadManager::open_reader(const fs::path& a_reader_path)
+{
+    open_readers_.emplace(a_reader_path, make_read_reader(a_reader_path));
+    closed_readers_.erase(a_reader_path);
 }
 
 void ReadManager::close_reader(const fs::path& read_file_path)
@@ -78,18 +91,29 @@ void ReadManager::close_reader(const fs::path& read_file_path)
     closed_readers_.insert(read_file_path);
 }
 
-std::vector<fs::path> ReadManager::get_files_containing_region(const GenomicRegion& a_region) const
+bool ReadManager::reader_could_contain_region(const fs::path& the_reader_path,
+                                              const GenomicRegion& a_region) const
 {
-    if (files_containing_region_.count(a_region) > 0) {
-        return files_containing_region_.at(a_region);
-    }
-    // TODO: improve this
+    const auto& possible_regions = possible_regions_in_readers_.at(the_reader_path);
+    return std::any_of(std::cbegin(possible_regions), std::cend(possible_regions),
+                       [&a_region] (const auto& possible_region) {
+                           return overlaps(a_region, possible_region);
+                       });
+}
+
+std::vector<fs::path>
+ReadManager::get_reader_paths_possibly_containing_region(const GenomicRegion& a_region) const
+{
     std::vector<fs::path> result {};
-    for (const auto& pair : files_containing_region_) {
-        if (overlaps(pair.first, a_region)) {
-            result.insert(std::end(result), std::cbegin(pair.second), std::cend(pair.second));
+    
+    for (const auto& pair : possible_regions_in_readers_) {
+        for (const auto& region_possibly_in_reader : pair.second) {
+            if (overlaps(region_possibly_in_reader, a_region)) {
+                result.emplace_back(pair.first);
+            }
         }
     }
+    
     return result;
 }
 
@@ -97,16 +121,21 @@ std::vector<AlignedRead>
 ReadManager::fetch_reads(const SampleIdType& a_sample_id, const GenomicRegion& a_region)
 {
     std::vector<AlignedRead> result {};
-    for (const auto& file : get_files_containing_region(a_region)) {
-        if (open_readers_.count(file) == 0) {
-            open_reader(file);
+    
+    for (const auto& reader_path : reader_paths_containing_sample_[a_sample_id]) {
+        if (!reader_could_contain_region(reader_path, a_region)) {
+            continue;
         }
-        auto&& reads = open_readers_.at(file).fetch_reads(a_region);
-        if (reads.count(a_sample_id) > 0) {
-            auto&& reads_for_sample = reads.at(a_sample_id);
-            result.insert(std::end(result), std::make_move_iterator(std::begin(reads_for_sample)),
-                          std::make_move_iterator(std::end(reads_for_sample)));
+        
+        if (!is_open(reader_path)) {
+            open_reader(reader_path);
         }
+        
+        auto reads = open_readers_.at(reader_path).fetch_reads(a_region);
+        result.insert(std::end(result),
+                      std::make_move_iterator(std::begin(reads.at(a_sample_id))),
+                      std::make_move_iterator(std::end(reads.at(a_sample_id))));
     }
+    
     return result;
 }

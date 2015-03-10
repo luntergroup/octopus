@@ -15,13 +15,13 @@
 
 #include "test_common.h"
 #include "genomic_region.h"
-#include "htslib_facade.h"
+#include "htslib_read_facade.h"
 #include "read_manager.h"
 #include "mock_objects.h"
 
 TEST_CASE("read_reader_open_test", "[read_reader]")
 {
-    HtslibFacade a_reader {human_1000g_bam};
+    HtslibReadFacade a_reader {human_1000g_bam};
     
     GenomicRegion a_region {"10", 1000000, 1000100};
     GenomicRegion another_region {"3", 100000, 100100};

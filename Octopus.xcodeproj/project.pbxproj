@@ -7,7 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		CA03C1511A8C0D3D000D3494 /* htslib_facade.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA03C14F1A8C0D3D000D3494 /* htslib_facade.cpp */; };
+		CA03C1511A8C0D3D000D3494 /* htslib_read_facade.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA03C14F1A8C0D3D000D3494 /* htslib_read_facade.cpp */; };
 		CA03C2251A8C1702000D3494 /* read_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA03C2241A8C1702000D3494 /* read_tests.cpp */; };
 		CA03C2271A8C1BED000D3494 /* reference_benchmarks.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA03C2261A8C1BED000D3494 /* reference_benchmarks.cpp */; };
 		CA14727A1AACECF1005FDCD1 /* octopus.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA1472781AACECF1005FDCD1 /* octopus.cpp */; };
@@ -59,8 +59,8 @@
 
 /* Begin PBXFileReference section */
 		CA03C14D1A8C0519000D3494 /* read_reader.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = read_reader.h; sourceTree = "<group>"; };
-		CA03C14F1A8C0D3D000D3494 /* htslib_facade.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = htslib_facade.cpp; sourceTree = "<group>"; };
-		CA03C1501A8C0D3D000D3494 /* htslib_facade.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = htslib_facade.h; sourceTree = "<group>"; };
+		CA03C14F1A8C0D3D000D3494 /* htslib_read_facade.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = htslib_read_facade.cpp; sourceTree = "<group>"; };
+		CA03C1501A8C0D3D000D3494 /* htslib_read_facade.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = htslib_read_facade.h; sourceTree = "<group>"; };
 		CA03C2241A8C1702000D3494 /* read_tests.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = read_tests.cpp; sourceTree = "<group>"; };
 		CA03C2261A8C1BED000D3494 /* reference_benchmarks.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = reference_benchmarks.cpp; sourceTree = "<group>"; };
 		CA03C2291A8C1C8C000D3494 /* benchmark_utils.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = benchmark_utils.h; sourceTree = "<group>"; };
@@ -322,8 +322,8 @@
 				CABA37801A8FA49800BBE598 /* read_manager.cpp */,
 				CA03C14D1A8C0519000D3494 /* read_reader.h */,
 				CA03C22A1A8CEF25000D3494 /* read_reader_impl.h */,
-				CA03C1501A8C0D3D000D3494 /* htslib_facade.h */,
-				CA03C14F1A8C0D3D000D3494 /* htslib_facade.cpp */,
+				CA03C1501A8C0D3D000D3494 /* htslib_read_facade.h */,
+				CA03C14F1A8C0D3D000D3494 /* htslib_read_facade.cpp */,
 			);
 			name = reads;
 			sourceTree = "<group>";
@@ -480,7 +480,7 @@
 				CAE3E2AB1AA2736D00C01B2C /* external_variant_candidates.cpp in Sources */,
 				CAE3E2C71AA895D600C01B2C /* variant_benchmarks.cpp in Sources */,
 				CABA377F1A8FA11000BBE598 /* read_benchmark.cpp in Sources */,
-				CA03C1511A8C0D3D000D3494 /* htslib_facade.cpp in Sources */,
+				CA03C1511A8C0D3D000D3494 /* htslib_read_facade.cpp in Sources */,
 				D4907F571A8A2A9B00639203 /* reference_tests.cpp in Sources */,
 				D4907F5F1A8A3ADD00639203 /* utils.cpp in Sources */,
 				CAE3E2B01AA2981E00C01B2C /* variant_candidate_generation_test.cpp in Sources */,
@@ -581,7 +581,7 @@
 				ALWAYS_SEARCH_USER_PATHS = YES;
 				CLANG_CXX_LANGUAGE_STANDARD = "c++14";
 				FRAMEWORK_SEARCH_PATHS = "$(inherited)";
-				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_OPTIMIZATION_LEVEL = 3;
 				HEADER_SEARCH_PATHS = (
 					"$(inherited)",
 					/usr/local/Cellar/boost/1.57.0/include,

@@ -46,23 +46,28 @@ public:
     std::vector<AlignedRead> fetch_reads(const SampleIdType& a_sample_id, const GenomicRegion& a_region);
     
 private:
-    using OpenReaderMap         = std::unordered_map<fs::path, ReadReader>;
-    using ClosedReaders         = std::unordered_set<fs::path>;
-    using SampleIdToFilePathMap = std::unordered_map<SampleIdType, std::vector<fs::path>>;
-    using RegionToFilePathMap   = std::unordered_map<GenomicRegion, std::vector<fs::path>>;
+    using OpenReaderMap           = std::unordered_map<fs::path, ReadReader>;
+    using ClosedReaders           = std::unordered_set<fs::path>;
+    using SampleIdToReaderPathMap = std::unordered_map<SampleIdType, std::vector<fs::path>>;
+    using RegionToReaderPathMap   = std::unordered_map<fs::path, std::vector<GenomicRegion>>;
     
     const unsigned Max_open_files_;
     unsigned num_samples_;
     OpenReaderMap open_readers_;
     ClosedReaders closed_readers_;
-    SampleIdToFilePathMap files_containing_sample_;
-    RegionToFilePathMap files_containing_region_;
+    SampleIdToReaderPathMap reader_paths_containing_sample_;
+    RegionToReaderPathMap possible_regions_in_readers_;
     
     void setup();
-    ReadReader make_read_reader(const fs::path& read_file_path);
-    void open_reader(const fs::path& read_file_path);
-    void close_reader(const fs::path& read_file_path);
-    std::vector<fs::path> get_files_containing_region(const GenomicRegion& a_region) const;
+    void get_reader_info();
+    void open_initial_files();
+    
+    ReadReader make_read_reader(const fs::path& a_reader_path);
+    bool is_open(const fs::path& a_reader_path) const noexcept;
+    void open_reader(const fs::path& a_reader_path);
+    void close_reader(const fs::path& a_reader_path);
+    bool reader_could_contain_region(const fs::path& the_reader_path, const GenomicRegion& a_region) const;
+    std::vector<fs::path> get_reader_paths_possibly_containing_region(const GenomicRegion& a_region) const;
 };
 
 #endif /* defined(__Octopus__read_manager__) */

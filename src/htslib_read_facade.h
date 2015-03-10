@@ -1,13 +1,13 @@
 //
-//  htslib_facade.h
+//  htslib_read_facade.h
 //  Octopus
 //
 //  Created by Daniel Cooke on 11/02/2015.
 //  Copyright (c) 2015 Oxford University. All rights reserved.
 //
 
-#ifndef __Octopus__htslib_facade__
-#define __Octopus__htslib_facade__
+#ifndef __Octopus__htslib_read_facade__
+#define __Octopus__htslib_read_facade__
 
 #include <string>
 #include <vector>
@@ -41,7 +41,7 @@ auto htslib_index_deleter    = [] (hts_idx_t* the_index) { hts_idx_destroy(the_i
 auto htslib_iterator_deleter = [] (hts_itr_t* the_iterator) { sam_itr_destroy(the_iterator); };
 auto htslib_bam1_deleter     = [] (bam1_t* b) { bam_destroy1(b); };
 
-class HtslibFacade : public IReadReaderImpl
+class HtslibReadFacade : public IReadReaderImpl
 {
 public:
     using SequenceType       = AlignedRead::SequenceType;
@@ -49,23 +49,23 @@ public:
     using SampleIdToReadsMap = IReadReaderImpl::SampleIdToReadsMap;
     using SizeType           = IReadReaderImpl::SizeType;
     
-    HtslibFacade() = delete;
-    HtslibFacade(const fs::path& the_file_path);
-    ~HtslibFacade() noexcept override = default;
+    HtslibReadFacade() = delete;
+    HtslibReadFacade(const fs::path& the_file_path);
+    ~HtslibReadFacade() noexcept override = default;
     
-    HtslibFacade(const HtslibFacade&)            = delete;
-    HtslibFacade& operator=(const HtslibFacade&) = delete;
-    HtslibFacade(HtslibFacade&&)                 = default;
-    HtslibFacade& operator=(HtslibFacade&&)      = default;
+    HtslibReadFacade(const HtslibReadFacade&)            = delete;
+    HtslibReadFacade& operator=(const HtslibReadFacade&) = delete;
+    HtslibReadFacade(HtslibReadFacade&&)                 = default;
+    HtslibReadFacade& operator=(HtslibReadFacade&&)      = default;
     
     std::vector<SampleIdType> get_sample_ids() override;
     std::vector<std::string> get_read_groups_in_sample(const SampleIdType& a_sample_id) override;
     std::size_t get_num_reads(const GenomicRegion& a_region) override;
     SampleIdToReadsMap fetch_reads(const GenomicRegion& a_region) override;
-    SizeType get_num_reference_contigs() noexcept override;
+    unsigned get_num_reference_contigs() noexcept override;
     std::vector<std::string> get_reference_contig_names() override;
     SizeType get_reference_contig_size(const std::string& contig_name) override;
-    std::vector<GenomicRegion> get_regions_in_file() override;
+    std::vector<GenomicRegion> get_possible_regions_in_file() override;
     void close() override;
     
 private:
@@ -74,17 +74,17 @@ private:
     {
     public:
         HtslibIterator() = delete;
-        HtslibIterator(HtslibFacade& hts_facade, const GenomicRegion& a_region);
+        HtslibIterator(HtslibReadFacade& hts_facade, const GenomicRegion& a_region);
         ~HtslibIterator() noexcept = default;
         
         HtslibIterator(const HtslibIterator&) = delete;
         HtslibIterator& operator=(const HtslibIterator&) = delete;
         
         int operator++();
-        std::pair<AlignedRead, HtslibFacade::SampleIdType> operator*() const;
+        std::pair<AlignedRead, HtslibReadFacade::SampleIdType> operator*() const;
         
     private:
-        HtslibFacade& hts_facade_;
+        HtslibReadFacade& hts_facade_;
         std::unique_ptr<hts_itr_t, decltype(htslib_iterator_deleter)> the_iterator_;
         std::unique_ptr<bam1_t, decltype(htslib_bam1_deleter)> the_bam1_;
         
@@ -129,4 +129,4 @@ private:
     uint64_t get_num_mapped_reads(const std::string& reference_contig_name) const;
 };
 
-#endif /* defined(__Octopus__htslib_facade__) */
+#endif /* defined(__Octopus__htslib_read_facade__) */
