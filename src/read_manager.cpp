@@ -8,31 +8,43 @@
 
 #include "read_manager.h"
 
-#include <iterator> // std::make_move_iterator
-#include <algorithm> // std::move, std::any_of, std::min
+#include <iterator>  // std::make_move_iterator, std::cbegin etc
+#include <algorithm> // std::any_of, std::min, std::nth_element, std::partition
+#include <boost/filesystem/operations.hpp>
 
 #include "htslib_read_facade.h"
 #include "aligned_read.h"
 
 ReadManager::ReadManager(std::vector<std::string> read_file_paths, unsigned Max_open_files)
-:   closed_readers_ (std::make_move_iterator(std::begin(read_file_paths)),
-                   std::make_move_iterator(std::end(read_file_paths))),
-    open_readers_ {},
-    Max_open_files_ {Max_open_files},
-    num_samples_ {0},
-    reader_paths_containing_sample_ {},
-    possible_regions_in_readers_ {}
+:
+closed_readers_ {std::make_move_iterator(std::begin(read_file_paths)),
+                 std::make_move_iterator(std::end(read_file_paths))},
+open_readers_ {file_size_compare},
+Max_open_files_ {Max_open_files},
+num_samples_ {0},
+reader_paths_containing_sample_ {},
+possible_regions_in_readers_ {}
 {
     setup();
 }
 
 void ReadManager::setup()
 {
-    get_reader_info();
+    check_files_exists();
+    get_reader_samples_and_regions();
     open_initial_files();
 }
 
-void ReadManager::get_reader_info()
+void ReadManager::check_files_exists() const
+{
+    for (const auto& reader_path : closed_readers_) {
+        if (!fs::exists(reader_path)) {
+            throw std::runtime_error {"Cannot find read file " + reader_path.string()};
+        }
+    }
+}
+
+void ReadManager::get_reader_samples_and_regions()
 {
     for (const auto& read_file_path : closed_readers_) {
         auto read_reader = make_read_reader(read_file_path);
@@ -41,16 +53,16 @@ void ReadManager::get_reader_info()
             reader_paths_containing_sample_[sample_id].emplace_back(read_file_path);
         }
     }
+    num_samples_ = static_cast<unsigned>(reader_paths_containing_sample_.size());
 }
 
 void ReadManager::open_initial_files()
 {
+    std::vector<fs::path> reader_paths {std::cbegin(closed_readers_), std::cend(closed_readers_)};
     auto num_files_to_open = std::min(Max_open_files_, static_cast<unsigned>(closed_readers_.size()));
-    for (const auto& read_file : closed_readers_) {
-        if (num_files_to_open == 0) break;
-        open_reader(read_file);
-        --num_files_to_open;
-    }
+    std::nth_element(reader_paths.begin(), reader_paths.begin() + num_files_to_open, reader_paths.end(),
+                     file_size_compare);
+    open_readers(reader_paths.begin(), reader_paths.begin() + num_files_to_open);
 }
 
 unsigned ReadManager::get_num_samples() const noexcept
@@ -63,10 +75,17 @@ std::vector<ReadManager::SampleIdType> ReadManager::get_sample_ids() const
 {
     std::vector<SampleIdType> result {};
     result.reserve(num_samples_);
+    
     for (const auto& pair : reader_paths_containing_sample_) {
         result.emplace_back(pair.first);
     }
+    
     return result;
+}
+
+fs::path ReadManager::choose_reader_to_close() const
+{
+    return open_readers_.begin()->first;
 }
 
 ReadReader ReadManager::make_read_reader(const fs::path& a_reader_path)
@@ -81,8 +100,16 @@ bool ReadManager::is_open(const fs::path& a_reader_path) const noexcept
 
 void ReadManager::open_reader(const fs::path& a_reader_path)
 {
+    if (open_readers_.size() == Max_open_files_) {
+        close_reader(choose_reader_to_close());
+    }
     open_readers_.emplace(a_reader_path, make_read_reader(a_reader_path));
     closed_readers_.erase(a_reader_path);
+}
+
+void ReadManager::open_readers(std::vector<fs::path>::iterator first, std::vector<fs::path>::iterator last)
+{
+    
 }
 
 void ReadManager::close_reader(const fs::path& read_file_path)
@@ -120,22 +147,43 @@ ReadManager::get_reader_paths_possibly_containing_region(const GenomicRegion& a_
 std::vector<AlignedRead>
 ReadManager::fetch_reads(const SampleIdType& a_sample_id, const GenomicRegion& a_region)
 {
+    auto& reader_paths = reader_paths_containing_sample_[a_sample_id];
+    
+    auto it = std::partition(std::begin(reader_paths), std::end(reader_paths),
+                             [this, &a_region] (auto& reader_path) {
+                                 return reader_could_contain_region(reader_path, a_region);
+                             });
+    
+    // So we don't have to re-open already open readers
+    std::partition(std::begin(reader_paths), it,
+                   [this] (auto& reader_path) { return is_open(reader_path); });
+    
     std::vector<AlignedRead> result {};
     
-    for (const auto& reader_path : reader_paths_containing_sample_[a_sample_id]) {
-        if (!reader_could_contain_region(reader_path, a_region)) {
-            continue;
-        }
-        
-        if (!is_open(reader_path)) {
-            open_reader(reader_path);
-        }
-        
-        auto reads = open_readers_.at(reader_path).fetch_reads(a_region);
+    std::for_each(std::begin(reader_paths), it,
+                  [this, &a_sample_id, &a_region, &result] (const auto& reader_path) {
+        auto reads = std::move(open_readers_.at(reader_path).fetch_reads(a_region).at(a_sample_id));
         result.insert(std::end(result),
-                      std::make_move_iterator(std::begin(reads.at(a_sample_id))),
-                      std::make_move_iterator(std::end(reads.at(a_sample_id))));
-    }
+                      std::make_move_iterator(std::begin(reads)),
+                      std::make_move_iterator(std::end(reads)));
+    });
+    
+//    for (const auto& reader_path : reader_paths) {
+//        if (!reader_could_contain_region(reader_path, a_region)) {
+//            continue;
+//        }
+//        
+//        if (!is_open(reader_path)) {
+//            open_reader(reader_path);
+//        }
+//        
+//        auto reads = std::move(open_readers_.at(reader_path).fetch_reads(a_region).at(a_sample_id));
+//        result.insert(std::end(result),
+//                      std::make_move_iterator(std::begin(reads)),
+//                      std::make_move_iterator(std::end(reads)));
+//    }
+    
+    result.shrink_to_fit();
     
     return result;
 }

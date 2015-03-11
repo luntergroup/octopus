@@ -9,6 +9,7 @@
 #include "fasta.h"
 
 #include <stdexcept>
+#include <boost/filesystem/operations.hpp>
 
 #include "genomic_region.h"
 
@@ -23,12 +24,14 @@ Fasta::Fasta(std::string fasta_path, std::string fasta_index_path)
     if (!fs::exists(fasta_path_)) {
         throw std::runtime_error {"Cannot find FASTA " + fasta_path};
     }
+    
     if (!fs::exists(fasta_index_path_)) {
         fasta_index_path_ = fasta_path_.replace_extension("fai");
         if (!fs::exists(fasta_index_path_)) {
             throw std::runtime_error {"Cannot find FASTA index"};
         }
     }
+    
     if (!is_valid_fasta()) {
         throw std::runtime_error {"Invalid FASTA " + fasta_path};
     }

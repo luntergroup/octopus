@@ -96,15 +96,18 @@ std::vector<std::string> HtslibReadFacade::get_reference_contig_names()
 {
     std::vector<std::string> result {};
     result.reserve(get_num_reference_contigs());
+    
     for (uint_fast32_t i {0}; i < get_num_reference_contigs(); ++i) {
         result.emplace_back(the_header_->target_name[i]);
     }
+    
     return result;
 }
 
 std::vector<GenomicRegion> HtslibReadFacade::get_possible_regions_in_file()
 {
     std::vector<GenomicRegion> result {};
+    
     for (uint_fast32_t i {0}; i < get_num_reference_contigs(); ++i) {
         auto contig_name = get_reference_contig_name(i);
         // CRAM files don't seem to have the same index stats as BAM files so
@@ -113,9 +116,11 @@ std::vector<GenomicRegion> HtslibReadFacade::get_possible_regions_in_file()
             result.emplace_back(std::move(contig_name), 0, get_reference_contig_size(contig_name));
         }
     }
+    
     return result;
 }
-
+#include <chrono>
+#include <iostream>
 HtslibReadFacade::ReadGroupToSampleIdMap HtslibReadFacade::get_read_group_to_sample_id_map() const
 {
     std::string the_header_text (the_header_->text, the_header_->l_text);
@@ -144,10 +149,13 @@ HtslibReadFacade::ReadGroupToSampleIdMap HtslibReadFacade::get_read_group_to_sam
 HtslibReadFacade::HtsTidToContigNameMap HtslibReadFacade::get_htslib_tid_to_contig_name_map() const
 {
     HtsTidToContigNameMap result {};
+    
     result.reserve(the_header_->n_targets);
+    
     for (uint_fast32_t i {0}; i < the_header_->n_targets; ++i) {
         result.emplace(i, the_header_->target_name[i]);
     }
+    
     return result;
 }
 
@@ -223,9 +231,11 @@ HtslibReadFacade::SequenceType HtslibReadFacade::HtslibIterator::get_sequence() 
     SequenceType result {};
     auto length = get_sequence_length();
     result.reserve(length);
+    
     for (uint32_t i = 0; i < length; ++i) {
         result.push_back(get_base(bam_get_seq(the_bam1_), i));
     }
+    
     return result;
 }
 
@@ -233,7 +243,7 @@ std::vector<uint_fast8_t> HtslibReadFacade::HtslibIterator::get_qualities() cons
 {
     auto qualities = bam_get_qual(the_bam1_);
     auto length = get_sequence_length();
-    std::vector<uint_fast8_t> result;
+    std::vector<uint_fast8_t> result {};
     result.reserve(length);
     result.insert(result.begin(), qualities, qualities + length);
     return result;
@@ -249,12 +259,15 @@ CigarString HtslibReadFacade::HtslibIterator::make_cigar_string() const
     static constexpr const char* operation_table {"MIDNSHP=X"};
     auto cigar_operations = bam_get_cigar(the_bam1_);
     auto length = get_cigar_length();
+    
     std::vector<CigarOperation> result;
     result.reserve(length);
+    
     for (uint32_t i {0}; i < length; ++i) {
         result.emplace_back(bam_cigar_oplen(cigar_operations[i]),
                             operation_table[bam_cigar_op(cigar_operations[i])]);
     };
+    
     return CigarString(std::move(result));
 }
 
@@ -311,6 +324,7 @@ AlignedRead::SupplementaryData HtslibReadFacade::HtslibIterator::get_flags() con
 {
     auto c = the_bam1_->core;
     AlignedRead::SupplementaryData result {};
+    
     result.is_marked_duplicate           = (c.flag & BAM_FDUP)         != 0;
     result.is_marked_unmapped            = (c.flag & BAM_FUNMAP)       != 0;
     result.is_marked_reverse_mapped      = (c.flag & BAM_FREVERSE)     != 0;
@@ -318,6 +332,7 @@ AlignedRead::SupplementaryData HtslibReadFacade::HtslibIterator::get_flags() con
     result.is_marked_proper_pair         = (c.flag & BAM_FPROPER_PAIR) != 0;
     result.is_marked_secondary_alignment = (c.flag & BAM_FSECONDARY)   != 0;
     result.is_marked_qc_fail             = (c.flag & BAM_FQCFAIL)      != 0;
+    
     return result;
 }
 
@@ -325,7 +340,9 @@ AlignedRead::MatePair::SupplementaryData HtslibReadFacade::HtslibIterator::get_m
 {
     auto c = the_bam1_->core;
     AlignedRead::MatePair::SupplementaryData result {};
+    
     result.is_marked_unmapped       = (c.flag & BAM_FMUNMAP)   != 0;
     result.is_marked_reverse_mapped = (c.flag & BAM_FMREVERSE) != 0;
+    
     return result;
 }

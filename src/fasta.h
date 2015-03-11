@@ -15,7 +15,6 @@
 #include <fstream>
 #include <unordered_map>
 #include <boost/filesystem/path.hpp>
-#include <boost/filesystem/operations.hpp>
 
 #include "reference_genome_impl.h"
 #include "bioio.h"
