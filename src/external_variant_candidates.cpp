@@ -10,7 +10,8 @@
 #include "variant.h"
 
 ExternalVariantCandidates::ExternalVariantCandidates(VariantFile& a_variant_source)
-: a_variant_file_ {a_variant_source}
+:
+a_variant_file_ {a_variant_source}
 {}
 
 std::vector<Variant> ExternalVariantCandidates::get_candidates(const GenomicRegion& a_region)

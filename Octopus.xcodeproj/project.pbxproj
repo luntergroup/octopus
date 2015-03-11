@@ -219,8 +219,8 @@
 				CA1472771AACECAF005FDCD1 /* octopus */,
 				CA1472751AACEB03005FDCD1 /* options */,
 				CAE3E2C91AAB418000C01B2C /* types */,
-				CAA4DC3B1A83B64A00DD3E9A /* variants */,
 				D48C00B81AAA0F5300E76FC8 /* reads */,
+				CAA4DC3B1A83B64A00DD3E9A /* variants */,
 				CAE3E2931A9CF95900C01B2C /* policies */,
 				CABA377C1A8F762200BBE598 /* assembler */,
 				CABA377B1A8F66E400BBE598 /* utils */,
@@ -581,7 +581,7 @@
 				ALWAYS_SEARCH_USER_PATHS = YES;
 				CLANG_CXX_LANGUAGE_STANDARD = "c++14";
 				FRAMEWORK_SEARCH_PATHS = "$(inherited)";
-				GCC_OPTIMIZATION_LEVEL = 3;
+				GCC_OPTIMIZATION_LEVEL = 0;
 				HEADER_SEARCH_PATHS = (
 					"$(inherited)",
 					/usr/local/Cellar/boost/1.57.0/include,

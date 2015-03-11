@@ -102,22 +102,22 @@ private:
         AlignedRead::MatePair::SupplementaryData get_mate_flags() const;
     };
     
+    using HtsTidToContigNameMap  = std::unordered_map<int32_t, std::string>;
+    using ReadGroupToSampleIdMap = std::unordered_map<std::string, SampleIdType>;
+    
     // No getting around these constants. I'll put them here so they are in plain sight.
     static constexpr const char* Read_group_tag {"RG"};
     static constexpr const char* Read_group_id_tag {"ID"};
     static constexpr const char* Sample_id_tag {"SM"};
     
-    using HtsTidToContigNameMap  = std::unordered_map<int32_t, std::string>;
-    using ReadGroupToSampleIdMap = std::unordered_map<std::string, SampleIdType>;
-    
     fs::path the_filepath_;
     std::unique_ptr<htsFile, decltype(htslib_file_deleter)> the_file_;
     std::unique_ptr<bam_hdr_t, decltype(htslib_header_deleter)> the_header_;
     std::unique_ptr<hts_idx_t, decltype(htslib_index_deleter)> the_index_;
-    
     HtsTidToContigNameMap contig_name_map_;
     ReadGroupToSampleIdMap sample_id_map_;
     
+    std::unique_ptr<hts_idx_t, decltype(htslib_index_deleter)> load_index() const;
     std::string get_reference_contig_name(int32_t hts_tid) const;
     ReadGroupToSampleIdMap get_read_group_to_sample_id_map() const;
     HtsTidToContigNameMap get_htslib_tid_to_contig_name_map() const;

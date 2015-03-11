@@ -34,6 +34,7 @@ public:
     AlignmentCandidateVariantGenerator& operator=(AlignmentCandidateVariantGenerator&&)      = default;
     
     void add_read(const AlignedRead& a_read) override;
+    void add_reads(ReadIterator first, ReadIterator last) override;
     std::vector<Variant> get_candidates(const GenomicRegion& a_region) override;
     void reserve(std::size_t n) override;
     void clear() override;
@@ -49,6 +50,7 @@ private:
     void get_variants_in_match_range(const GenomicRegion& the_region,
                                      std::string::const_iterator read_begin,
                                      std::string::const_iterator read_end);
+    std::size_t estimate_num_variants(std::size_t num_reads) const noexcept;
 };
 
 template <typename T1, typename T2, typename T3>

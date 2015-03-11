@@ -21,7 +21,7 @@
 
 TEST_CASE("read_reader_open_test", "[read_reader]")
 {
-    HtslibReadFacade a_reader {human_1000g_bam};
+    HtslibReadFacade a_reader {human_1000g_bam1};
     
     GenomicRegion a_region {"10", 1000000, 1000100};
     GenomicRegion another_region {"3", 100000, 100100};
@@ -35,13 +35,13 @@ TEST_CASE("read_reader_open_test", "[read_reader]")
     REQUIRE(reads.size() == 25);
 }
 
-TEST_CASE("read_manager_test", "[read_manager]")
+TEST_CASE("read_manager_single_file_test", "[read_manager]")
 {
-    ReadManager a_read_manager(std::vector<std::string> {human_1000g_bam});
+    ReadManager a_read_manager(std::vector<std::string> {human_1000g_bam1});
+    
+    REQUIRE(a_read_manager.get_num_samples() == 1);
     
     auto sample_ids = a_read_manager.get_sample_ids();
-    
-    REQUIRE(sample_ids.size() == 1);
     
     auto the_sample_id = sample_ids.at(0);
     
@@ -58,6 +58,86 @@ TEST_CASE("read_manager_test", "[read_manager]")
     
     REQUIRE(reads.size() == 25);
 }
+
+TEST_CASE("read_manager_multiple_files_below_max_file_limit_test", "[read_manager")
+{
+    std::vector<std::string> read_paths {human_1000g_bam1, human_1000g_bam2};
+    
+    unsigned max_open_files {2};
+    
+    ReadManager a_read_manager(read_paths, max_open_files);
+    
+    REQUIRE(a_read_manager.get_num_samples() == 2);
+    
+    auto sample_ids = a_read_manager.get_sample_ids();
+    
+    GenomicRegion a_big_region {"1", 2000000, 3000000};
+    GenomicRegion a_small_region {"10", 1000000, 1000100};
+    
+    auto first_sample = sample_ids.at(0);
+    
+    auto big_region_reads1   = a_read_manager.fetch_reads(first_sample, a_big_region);
+    auto small_region_reads1 = a_read_manager.fetch_reads(first_sample, a_small_region);
+    
+    auto second_sample = sample_ids.at(1);
+    
+    auto big_region_reads2   = a_read_manager.fetch_reads(second_sample, a_big_region);
+    auto small_region_reads2 = a_read_manager.fetch_reads(second_sample, a_small_region);
+    
+    REQUIRE(big_region_reads1.size() == 61225);
+    REQUIRE(small_region_reads1.size() == 10);
+    REQUIRE(big_region_reads2.size() == 142606);
+    REQUIRE(small_region_reads2.size() == 29);
+}
+
+TEST_CASE("read_manager_multiple_files_above_max_file_limit_test", "[read_manager")
+{
+    std::vector<std::string> read_paths {human_1000g_bam1, human_1000g_bam2, human_1000g_bam3};
+    
+    unsigned max_open_files {2};
+    
+    ReadManager a_read_manager(read_paths, max_open_files);
+    
+    REQUIRE(a_read_manager.get_num_samples() == 3);
+    
+    auto sample_ids = a_read_manager.get_sample_ids();
+    
+    GenomicRegion a_big_region {"1", 2000000, 3000000};
+    GenomicRegion a_small_region {"10", 1000000, 1000100};
+    
+    auto first_sample = sample_ids.at(0);
+    auto second_sample = sample_ids.at(1);
+    auto third_sample = sample_ids.at(2);
+    
+    auto big_reads1 = a_read_manager.fetch_reads(first_sample, a_big_region);
+    auto big_reads2 = a_read_manager.fetch_reads(second_sample, a_big_region);
+    auto big_reads3 = a_read_manager.fetch_reads(third_sample, a_big_region);
+    
+    REQUIRE(big_reads1.size() == 142606);
+    REQUIRE(big_reads2.size() == 61225);
+    REQUIRE(big_reads3.size() == 56433);
+    
+    auto small_reads1 = a_read_manager.fetch_reads(first_sample, a_small_region);
+    auto small_reads2 = a_read_manager.fetch_reads(second_sample, a_small_region);
+    auto small_reads3 = a_read_manager.fetch_reads(third_sample, a_small_region);
+    
+    REQUIRE(small_reads1.size() == 29);
+    REQUIRE(small_reads2.size() == 10);
+    REQUIRE(small_reads3.size() == 8);
+}
+
+//TEST_CASE("files_without_all_chromosomes_test", "[read_manager]")
+//{
+//    std::vector<std::string> read_paths {human_1000g_bam1, human_1000g_bam1_chrom_20};
+//    
+//    ReadManager a_read_manager(read_paths);
+//    
+//    REQUIRE(a_read_manager.get_num_samples() == 1);
+//    
+//    GenomicRegion a_common_region {"20",
+//    GenomicRegion a {"1", 2000000, 3000000};
+//    
+//}
 
 TEST_CASE("read_copy_test", "[reads]")
 {

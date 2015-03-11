@@ -22,7 +22,7 @@
 
 TEST_CASE("read_filter_test", "[read_filters]")
 {
-    ReadManager a_read_manager(std::vector<std::string> {human_1000g_bam});
+    ReadManager a_read_manager(std::vector<std::string> {human_1000g_bam1});
     
     auto sample_ids = a_read_manager.get_sample_ids();
     

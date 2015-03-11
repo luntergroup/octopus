@@ -11,7 +11,7 @@
 
 #include <vector>
 #include <memory>    // std::unique_ptr
-#include <algorithm> // std::for_each, std::sort
+#include <algorithm> // std::sort
 #include <iterator>  // std::make_move_iterator
 #include <cstddef>   // std::size_t
 
@@ -34,10 +34,10 @@ public:
     
     void register_generator(std::unique_ptr<IVariantCandidateGenerator> generator);
     void add_read(const AlignedRead& a_read) override;
+    void add_reads(ReadIterator first, ReadIterator last) override;
     std::vector<Variant> get_candidates(const GenomicRegion& a_region) override;
     void reserve(std::size_t n) override;
     void clear() override;
-    template <typename ReadIterator> void add_reads(ReadIterator first, ReadIterator last);
     
 private:
     std::vector<std::unique_ptr<IVariantCandidateGenerator>> generator_list_;
@@ -55,9 +55,17 @@ inline void VariantCandidateGenerator::add_read(const AlignedRead& a_read)
     }
 }
 
+inline void VariantCandidateGenerator::add_reads(ReadIterator first, ReadIterator last)
+{
+    for (auto& generator : generator_list_) {
+        generator->add_reads(first, last);
+    }
+}
+
 inline std::vector<Variant> VariantCandidateGenerator::get_candidates(const GenomicRegion& a_region)
 {
     std::vector<Variant> result {};
+    
     for (auto& generator : generator_list_) {
         auto generator_result = generator->get_candidates(a_region);
         result.insert(std::end(result),
@@ -65,7 +73,9 @@ inline std::vector<Variant> VariantCandidateGenerator::get_candidates(const Geno
                       std::make_move_iterator(std::end(generator_result))
                       );
     }
+    
     std::sort(std::begin(result), std::end(result));
+    
     return result;
 }
 
@@ -81,12 +91,6 @@ inline void VariantCandidateGenerator::clear()
     for (auto& generator : generator_list_) {
         generator->clear();
     }
-}
-
-template <typename ReadIterator>
-void VariantCandidateGenerator::add_reads(ReadIterator first, ReadIterator last)
-{
-    std::for_each(first, last, [this] (const auto& a_read ) { add_read(a_read); });
 }
 
 #endif /* defined(__Octopus__variant_candidate_generator__) */

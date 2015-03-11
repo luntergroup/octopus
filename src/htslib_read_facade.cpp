@@ -15,7 +15,7 @@ HtslibReadFacade::HtslibReadFacade(const fs::path& the_file_path)
 the_filepath_ {the_file_path},
 the_file_ {hts_open(the_filepath_.string().c_str(), "r"), htslib_file_deleter},
 the_header_ {sam_hdr_read(the_file_.get()), htslib_header_deleter},
-the_index_ {sam_index_load(the_file_.get(), the_filepath_.string().c_str()), htslib_index_deleter},
+the_index_ {load_index()},
 contig_name_map_ {},
 sample_id_map_ {}
 {
@@ -119,8 +119,16 @@ std::vector<GenomicRegion> HtslibReadFacade::get_possible_regions_in_file()
     
     return result;
 }
-#include <chrono>
-#include <iostream>
+
+std::unique_ptr<hts_idx_t, decltype(htslib_index_deleter)> HtslibReadFacade::load_index() const
+{
+    auto index_ptr = sam_index_load(the_file_.get(), the_filepath_.string().c_str());
+    if (index_ptr == 0) {
+        throw std::runtime_error {"Could not load index for " + the_filepath_.string()};
+    }
+    return {index_ptr, htslib_index_deleter};
+}
+
 HtslibReadFacade::ReadGroupToSampleIdMap HtslibReadFacade::get_read_group_to_sample_id_map() const
 {
     std::string the_header_text (the_header_->text, the_header_->l_text);

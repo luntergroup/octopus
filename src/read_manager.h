@@ -32,11 +32,14 @@ auto file_size_compare = [] (const fs::path& lhs, const fs::path& rhs) {
 class AlignedRead;
 
 // TODO: make this thread-safe
+// Thoughts on making this thread-safe
+// 1) Only a concern when 
 
 class ReadManager
 {
 public:
-    using SampleIdType = IReadReaderImpl::SampleIdType;
+    using SampleIdType  = IReadReaderImpl::SampleIdType;
+    using SampleReadMap = std::unordered_map<SampleIdType, std::vector<AlignedRead>>;
     
     ReadManager() = default;
     explicit ReadManager(std::vector<std::string> read_file_paths, unsigned Max_open_files = 20);
@@ -49,6 +52,7 @@ public:
     unsigned get_num_samples() const noexcept;
     std::vector<SampleIdType> get_sample_ids() const;
     std::vector<AlignedRead> fetch_reads(const SampleIdType& a_sample_id, const GenomicRegion& a_region);
+    SampleReadMap fetch_reads(const std::vector<SampleIdType>& sample_ids, const GenomicRegion& a_region);
     
 private:
     using OpenReaderMap           = std::map<fs::path, ReadReader, decltype(file_size_compare)>;
@@ -57,7 +61,6 @@ private:
     using RegionToReaderPathMap   = std::unordered_map<fs::path, std::vector<GenomicRegion>>;
     
     const unsigned Max_open_files_;
-    unsigned num_samples_;
     OpenReaderMap open_readers_;
     ClosedReaders closed_readers_;
     SampleIdToReaderPathMap reader_paths_containing_sample_;
@@ -68,14 +71,15 @@ private:
     void get_reader_samples_and_regions();
     void open_initial_files();
     
-    fs::path choose_reader_to_close() const;
-    
     ReadReader make_read_reader(const fs::path& a_reader_path);
     bool is_open(const fs::path& a_reader_path) const noexcept;
     void open_reader(const fs::path& a_reader_path);
     void open_readers(std::vector<fs::path>::iterator first, std::vector<fs::path>::iterator last);
     void close_reader(const fs::path& a_reader_path);
+    fs::path choose_reader_to_close() const;
+    void close_readers(unsigned n);
     bool reader_could_contain_region(const fs::path& the_reader_path, const GenomicRegion& a_region) const;
+    std::vector<fs::path> get_reader_paths_containing_samples(const std::vector<SampleIdType>& sample_ids) const;
     std::vector<fs::path> get_reader_paths_possibly_containing_region(const GenomicRegion& a_region) const;
 };
 

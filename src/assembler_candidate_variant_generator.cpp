@@ -7,19 +7,28 @@
 //
 
 #include "assembler_candidate_variant_generator.h"
+
+#include <algorithm> // std::for_each
+
 #include "reference_genome.h"
 #include "aligned_read.h"
 #include "variant.h"
 
 AssemblerCandidateVariantGenerator::AssemblerCandidateVariantGenerator(ReferenceGenome& the_reference,
                                                                        unsigned kmer_size)
-:the_reference_ {the_reference},
+:
+the_reference_ {the_reference},
 the_variant_assembler_ {kmer_size}
 {}
 
 void AssemblerCandidateVariantGenerator::add_read(const AlignedRead& a_read)
 {
     the_variant_assembler_.add_read(a_read);
+}
+
+void AssemblerCandidateVariantGenerator::add_reads(ReadIterator first, ReadIterator last)
+{
+    std::for_each(first, last, [this] (const auto& a_read ) { add_read(a_read); });
 }
 
 std::vector<Variant> AssemblerCandidateVariantGenerator::get_candidates(const GenomicRegion& a_region)

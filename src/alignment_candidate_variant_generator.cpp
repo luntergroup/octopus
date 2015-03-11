@@ -8,6 +8,8 @@
 
 #include "alignment_candidate_variant_generator.h"
 
+#include <algorithm> // std::for_each
+#include <iterator>  // std::cbegin etc, std::distance
 #include <boost/range/combine.hpp>
 
 #include "reference_genome.h"
@@ -17,7 +19,8 @@
 
 AlignmentCandidateVariantGenerator::AlignmentCandidateVariantGenerator(ReferenceGenome& the_reference,
                                                                        VariantFactory& variant_factory)
-:the_reference_ {the_reference},
+:
+the_reference_ {the_reference},
 candidates_ {},
 variant_factory_ {variant_factory}
 {}
@@ -91,6 +94,28 @@ void AlignmentCandidateVariantGenerator::add_read(const AlignedRead &a_read)
     }
 }
 
+void AlignmentCandidateVariantGenerator::add_reads(ReadIterator first, ReadIterator last)
+{
+    candidates_.reserve(estimate_num_variants(std::distance(first, last)));
+    std::for_each(first, last, [this] (const auto& a_read ) { add_read(a_read); });
+    candidates_.shrink_to_fit();
+}
+
+std::vector<Variant> AlignmentCandidateVariantGenerator::get_candidates(const GenomicRegion& a_region)
+{
+    return candidates_;
+}
+
+void AlignmentCandidateVariantGenerator::reserve(std::size_t n)
+{
+    candidates_.reserve(n);
+}
+
+void AlignmentCandidateVariantGenerator::clear()
+{
+    candidates_.clear();
+}
+
 void AlignmentCandidateVariantGenerator::
 get_variants_in_match_range(const GenomicRegion& the_region, std::string::const_iterator read_begin,
                             std::string::const_iterator read_end)
@@ -112,24 +137,14 @@ get_variants_in_match_range(const GenomicRegion& the_region, std::string::const_
     });
 }
 
-std::vector<Variant> AlignmentCandidateVariantGenerator::get_candidates(const GenomicRegion& a_region)
-{
-    return candidates_;
-}
-
-void AlignmentCandidateVariantGenerator::reserve(std::size_t n)
-{
-    candidates_.reserve(n);
-}
-
-void AlignmentCandidateVariantGenerator::clear()
-{
-    candidates_.clear();
-}
-
 bool AlignmentCandidateVariantGenerator::is_good_sequence(const std::string& sequence) const noexcept
 {
     return std::none_of(std::cbegin(sequence), std::cend(sequence), [] (auto base) {
         return base == 'N';
     });
+}
+
+std::size_t AlignmentCandidateVariantGenerator::estimate_num_variants(std::size_t num_reads) const noexcept
+{
+    return num_reads;
 }

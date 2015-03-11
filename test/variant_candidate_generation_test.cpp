@@ -29,7 +29,7 @@ TEST_CASE("alignment_variant_candidate_generator_test", "[variant_candidate]")
     ReferenceGenomeFactory a_factory {};
     ReferenceGenome human(a_factory.make(human_reference_fasta));
     
-    ReadManager a_read_manager(std::vector<std::string> {human_1000g_bam});
+    ReadManager a_read_manager(std::vector<std::string> {human_1000g_bam1});
     
     VariantFactory a_variant_factory {};
     
@@ -66,7 +66,7 @@ TEST_CASE("assembler_variant_candidate_generator_test", "[variant_candidate]")
     ReferenceGenomeFactory a_factory {};
     ReferenceGenome human(a_factory.make(human_reference_fasta));
     
-    ReadManager a_read_manager(std::vector<std::string> {human_1000g_bam});
+    ReadManager a_read_manager(std::vector<std::string> {human_1000g_bam1});
     
     VariantCandidateGenerator candidate_generator {};
     
@@ -117,7 +117,7 @@ TEST_CASE("all_variant_candidate_generator_test", "[variant_candidate]")
     ReferenceGenomeFactory a_factory {};
     ReferenceGenome human(a_factory.make(human_reference_fasta));
     
-    ReadManager a_read_manager(std::vector<std::string> {human_1000g_bam});
+    ReadManager a_read_manager(std::vector<std::string> {human_1000g_bam1});
     
     VariantFactory a_variant_factory {};
     

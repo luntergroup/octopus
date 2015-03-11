@@ -17,7 +17,7 @@ class VariantFactory
 public:
     using SizeType = Variant::SizeType;
     
-    VariantFactory() = default;
+    VariantFactory()  = default;
     ~VariantFactory() = default;
     
     VariantFactory(const VariantFactory&)            = delete;
