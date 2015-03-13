@@ -18,11 +18,13 @@
 #include "cigar_string.h"
 
 AlignmentCandidateVariantGenerator::AlignmentCandidateVariantGenerator(ReferenceGenome& the_reference,
-                                                                       VariantFactory& variant_factory)
+                                                                       VariantFactory& variant_factory,
+                                                                       double generator_confidence)
 :
 the_reference_ {the_reference},
 candidates_ {},
-variant_factory_ {variant_factory}
+variant_factory_ {variant_factory},
+generator_confidence_ {generator_confidence}
 {}
 
 void AlignmentCandidateVariantGenerator::add_read(const AlignedRead &a_read)
@@ -49,11 +51,11 @@ void AlignmentCandidateVariantGenerator::add_read(const AlignedRead &a_read)
                 read_index += op_size;
                 ref_index  += op_size;
                 break;
-            case CigarOperation::MISMATCH:
+            case CigarOperation::SUBSTITUTION:
             {
                 a_region = GenomicRegion {contig_name, ref_index, ref_index + op_size};
-                auto&& removed_sequence = the_reference_.get_sequence(a_region);
-                auto&& added_sequence   = the_read_sequence.substr(read_index, op_size);
+                auto removed_sequence = the_reference_.get_sequence(a_region);
+                auto&& added_sequence = the_read_sequence.substr(read_index, op_size);
                 if (is_good_sequence(removed_sequence) && is_good_sequence(added_sequence)) {
                     add_variant(a_region, std::move(removed_sequence), std::move(added_sequence));
                 }
@@ -74,7 +76,7 @@ void AlignmentCandidateVariantGenerator::add_read(const AlignedRead &a_read)
             case CigarOperation::DELETION:
             {
                 a_region = GenomicRegion {contig_name, ref_index, ref_index + op_size};
-                auto&& removed_sequence = the_reference_.get_sequence(a_region);
+                auto removed_sequence = the_reference_.get_sequence(a_region);
                 if (is_good_sequence(removed_sequence)) {
                     add_variant(a_region, std::move(removed_sequence), "");
                 }
@@ -114,6 +116,11 @@ void AlignmentCandidateVariantGenerator::reserve(std::size_t n)
 void AlignmentCandidateVariantGenerator::clear()
 {
     candidates_.clear();
+}
+
+double AlignmentCandidateVariantGenerator::get_variant_detection_probability(const Variant& a_variant)
+{
+    return generator_confidence_;
 }
 
 void AlignmentCandidateVariantGenerator::

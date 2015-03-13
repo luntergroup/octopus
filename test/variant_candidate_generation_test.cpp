@@ -98,7 +98,7 @@ TEST_CASE("assembler_variant_candidate_generator_test", "[variant_candidate]")
 //TEST_CASE("external_variant_candidate_generator_test", "[variant_candidate]")
 //{
 //    VariantFileFactory a_variant_file_factory {};
-//    VariantFile a_variant_file {a_variant_file_factory.make_impl("some.vcf")};
+//    VariantFile a_variant_file {a_variant_file_factory.make_impl(sample_vcf)};
 //    VariantCandidateGenerator candidate_generator {};
 //    candidate_generator.register_generator(std::make_unique<ExternalVariantCandidates>(a_variant_file));
 //    

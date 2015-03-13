@@ -14,6 +14,7 @@
 #include <algorithm> // std::sort
 #include <iterator>  // std::make_move_iterator
 #include <cstddef>   // std::size_t
+#include <numeric>   // std::accumulate
 
 #include "i_variant_candidate_generator.h"
 #include "reference_genome.h"
@@ -24,7 +25,7 @@
 class VariantCandidateGenerator : public IVariantCandidateGenerator
 {
 public:
-    VariantCandidateGenerator() = default;
+    VariantCandidateGenerator()           = default;
     ~VariantCandidateGenerator() override = default;
     
     VariantCandidateGenerator(const VariantCandidateGenerator&)            = default;
@@ -38,6 +39,8 @@ public:
     std::vector<Variant> get_candidates(const GenomicRegion& a_region) override;
     void reserve(std::size_t n) override;
     void clear() override;
+    
+    double get_variant_detection_probability(const Variant& a_variant) override;
     
 private:
     std::vector<std::unique_ptr<IVariantCandidateGenerator>> generator_list_;
@@ -91,6 +94,15 @@ inline void VariantCandidateGenerator::clear()
     for (auto& generator : generator_list_) {
         generator->clear();
     }
+}
+
+inline double VariantCandidateGenerator::get_variant_detection_probability(const Variant& a_variant)
+{
+    double result {1};
+    for (auto& generator : generator_list_) {
+        result *= generator->get_variant_detection_probability(a_variant);
+    }
+    return result;
 }
 
 #endif /* defined(__Octopus__variant_candidate_generator__) */

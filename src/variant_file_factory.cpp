@@ -21,14 +21,16 @@ std::unique_ptr<IVariantFileImpl> VariantFileFactory::make_impl(const std::strin
     fs::path the_path {variant_file_path};
     
     if (!fs::exists(the_path)) {
-        throw std::runtime_error {"Cannot open " + the_path.string()};
+        throw std::runtime_error {"Cannot find " + the_path.string()};
     }
     
-    auto extension = the_path.extension().string();
+    return std::make_unique<HtslibBcfFacade>(variant_file_path);
     
-    if (extension == ".bcf" || extension == ".vcf") {
-        return std::make_unique<HtslibBcfFacade>(variant_file_path);
-    }
+//    auto extension = the_path.extension().string();
+//    
+//    if (extension == ".bcf" || extension == ".vcf.gz") {
+//        return std::make_unique<HtslibBcfFacade>(variant_file_path);
+//    }
     
     throw std::runtime_error {"Cannot open " + the_path.string()};
 }

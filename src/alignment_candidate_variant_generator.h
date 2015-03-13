@@ -25,7 +25,8 @@ class AlignmentCandidateVariantGenerator : public IVariantCandidateGenerator
 public:
     AlignmentCandidateVariantGenerator() = delete;
     explicit AlignmentCandidateVariantGenerator(ReferenceGenome& the_reference,
-                                                VariantFactory& variant_factory);
+                                                VariantFactory& variant_factory,
+                                                double generator_confidence);
     ~AlignmentCandidateVariantGenerator() override = default;
     
     AlignmentCandidateVariantGenerator(const AlignmentCandidateVariantGenerator&)            = default;
@@ -39,10 +40,13 @@ public:
     void reserve(std::size_t n) override;
     void clear() override;
     
+    double get_variant_detection_probability(const Variant& a_variant) override;
+    
 private:
     ReferenceGenome& the_reference_;
     std::vector<Variant> candidates_;
     VariantFactory& variant_factory_;
+    double generator_confidence_;
     
     bool is_good_sequence(const std::string& sequence) const noexcept;
     template <typename T1, typename T2, typename T3>

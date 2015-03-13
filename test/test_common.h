@@ -28,9 +28,11 @@ namespace details {
     static std::string human_1000g_bam_name3 {"HG00705.mapped.ILLUMINA.bwa.CHS.low_coverage.20120522.bam"};
     static std::string chrom_20_bam_name {"human_chr_20.bam"};
 
-    // CRAMS
+    // CRAMs
     static std::string human_1000g_cram_name {"HG00101.mapped.ILLUMINA.bwa.GBR.low_coverage.20130415.cram"};
-        
+    
+    // VCFs
+    static std::string sample_vcf_name {"CEU.low_coverage.2010_07.xchr.sites.vcf.gz"};
 }
 
 // Full paths
@@ -59,5 +61,7 @@ static std::string human_1000g_cram {details::home_dir + details::genomics_dir +
 
 static std::string human_1000g_bam1_chrom_20 {details::home_dir + details::genomics_dir + details::bam_dir +
         details::chrom_20_bam_name};
+
+static std::string sample_vcf {details::home_dir + details::genomics_dir + details::sample_vcf_name};
 
 #endif

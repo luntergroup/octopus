@@ -20,7 +20,7 @@ class ExternalVariantCandidates : public IVariantCandidateGenerator
 {
 public:
     ExternalVariantCandidates() = delete;
-    explicit ExternalVariantCandidates(VariantFile& a_variant_source);
+    explicit ExternalVariantCandidates(VariantFile& a_variant_source, double generator_confidence);
     ~ExternalVariantCandidates() override = default;
     
     ExternalVariantCandidates(const ExternalVariantCandidates&)            = default;
@@ -34,8 +34,11 @@ public:
     void reserve(std::size_t) override;
     void clear() override;
     
+    double get_variant_detection_probability(const Variant& a_variant) override;
+    
 private:
     VariantFile& a_variant_file_;
+    double generator_confidence_;
 };
 
 inline void ExternalVariantCandidates::add_read(const AlignedRead& a_read) {}

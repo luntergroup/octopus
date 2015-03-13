@@ -34,17 +34,17 @@ public:
     SizeType get_size() const noexcept;
     char get_flag() const noexcept;
     
-    // No getting arounf these really - they have to go somewhere. Could go into a config,
+    // No getting around these really - they have to go somewhere. Could go into a config,
     // but would loose constexpr-ness.
     static const constexpr char ALIGNMENT_MATCH {'M'};
-    static const constexpr char SEQUENCE_MATCH {'='};
-    static const constexpr char MISMATCH {'X'};
-    static const constexpr char INSERTION {'I'};
-    static const constexpr char DELETION {'D'};
-    static const constexpr char SOFT_CLIPPED {'S'};
-    static const constexpr char HARD_CLIPPED {'H'};
-    static const constexpr char PADDING {'P'};
-    static const constexpr char SKIPPED {'N'};
+    static const constexpr char SEQUENCE_MATCH  {'='};
+    static const constexpr char SUBSTITUTION    {'X'};
+    static const constexpr char INSERTION       {'I'};
+    static const constexpr char DELETION        {'D'};
+    static const constexpr char SOFT_CLIPPED    {'S'};
+    static const constexpr char HARD_CLIPPED    {'H'};
+    static const constexpr char PADDING         {'P'};
+    static const constexpr char SKIPPED         {'N'};
     
 private:
     SizeType size_;
@@ -54,8 +54,9 @@ private:
 using CigarString = std::vector<CigarOperation>;
 
 inline CigarOperation::CigarOperation(SizeType size, char flag) noexcept
-:size_ {size},
- flag_ {flag}
+:
+size_ {size},
+flag_ {flag}
 {}
 
 inline CigarOperation::SizeType CigarOperation::get_size() const noexcept

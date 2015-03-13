@@ -80,7 +80,7 @@ private:
         HtslibIterator(const HtslibIterator&) = delete;
         HtslibIterator& operator=(const HtslibIterator&) = delete;
         
-        int operator++();
+        bool operator++();
         std::pair<AlignedRead, HtslibReadFacade::SampleIdType> operator*() const;
         
     private:
@@ -98,8 +98,8 @@ private:
         std::string get_read_group() const;
         std::string get_contig_name(int32_t htslib_tid) const;
         std::string get_read_name() const;
-        AlignedRead::SupplementaryData get_flags() const;
-        AlignedRead::MatePair::SupplementaryData get_mate_flags() const;
+        AlignedRead::FlagData get_flags() const;
+        AlignedRead::NextSegment::FlagData get_next_segment_flags() const;
     };
     
     using HtsTidToContigNameMap  = std::unordered_map<int32_t, std::string>;
@@ -117,7 +117,6 @@ private:
     HtsTidToContigNameMap contig_name_map_;
     ReadGroupToSampleIdMap sample_id_map_;
     
-    std::unique_ptr<hts_idx_t, decltype(htslib_index_deleter)> load_index() const;
     std::string get_reference_contig_name(int32_t hts_tid) const;
     ReadGroupToSampleIdMap get_read_group_to_sample_id_map() const;
     HtsTidToContigNameMap get_htslib_tid_to_contig_name_map() const;

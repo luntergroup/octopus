@@ -14,11 +14,19 @@
 #include "reference_genome.h"
 #include "genomic_region.h"
 #include "variant_factory.h"
+#include "variant_candidate_generator.h"
 
 using std::cbegin;
 using std::cend;
 using std::crbegin;
 using std::crend;
+
+//double get_variant_prior_probability(const Variant& a_variant,
+//                                     VariantCandidateGenerator& a_variant_candidate_generator)
+//{
+//    double variant_prior = a_variant.get_prior_probability();
+//    double
+//}
 
 auto allele_minmax(const Variant::SequenceType& allele_a, const Variant::SequenceType& allele_b)
 {
@@ -45,8 +53,8 @@ bool is_parsimonious(const Variant& a_variant) noexcept
     }
     
     if (the_small_allele.size() > 1 &&
-        num_redundant_bases(crbegin(the_small_allele),
-                            crend(the_small_allele), crbegin(the_big_allele)) > 0) {
+        num_redundant_bases(crbegin(the_small_allele), crend(the_small_allele),
+                            crbegin(the_big_allele)) > 0) {
         return false;
     }
     

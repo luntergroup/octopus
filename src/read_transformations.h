@@ -11,12 +11,10 @@
 
 #include "aligned_read.h"
 
-#include <cmath>
-
 inline void trim_adapters(AlignedRead& a_read)
 {
-    if (a_read.has_mate_pair()) {
-        auto insert_size = std::abs(a_read.get_mate_pair()->get_insert_size());
+    if (a_read.is_chimeric()) {
+        auto insert_size = a_read.get_next_segment()->get_inferred_template_length();
         auto read_size   = a_read.get_sequence_size();
         if (insert_size > 0 && insert_size < read_size) {
             auto num_adapter_bases = read_size - insert_size;

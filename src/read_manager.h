@@ -32,8 +32,6 @@ auto file_size_compare = [] (const fs::path& lhs, const fs::path& rhs) {
 class AlignedRead;
 
 // TODO: make this thread-safe
-// Thoughts on making this thread-safe
-// 1) Only a concern when 
 
 class ReadManager
 {

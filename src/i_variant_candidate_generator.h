@@ -26,6 +26,7 @@ public:
     virtual void add_reads(ReadIterator first, ReadIterator last) = 0;
     virtual void reserve(std::size_t n) = 0;
     virtual void clear() = 0;
+    virtual double get_variant_detection_probability(const Variant& a_variant) = 0;
     virtual ~IVariantCandidateGenerator() = default;
 };
 

@@ -47,10 +47,15 @@ inline bool is_mapped(const AlignedRead& a_read)
     return !a_read.is_marked_unmapped();
 }
 
-inline bool is_good_pair(const AlignedRead& a_read)
+inline bool is_not_chimeric(const AlignedRead& a_read)
 {
-    return (a_read.has_mate_pair()) ? a_read.is_marked_proper_pair() : true;
+    return !a_read.is_chimeric();
 }
+
+//inline bool is_next_segment_mapped(const AlignedRead& a_read)
+//{
+//    return (a_read.has_mate_pair()) ? a_read.is_marked_proper_pair() : true;
+//}
 
 inline bool is_not_marked_duplicate(const AlignedRead& a_read)
 {
@@ -59,8 +64,8 @@ inline bool is_not_marked_duplicate(const AlignedRead& a_read)
 
 inline bool is_not_contaminated(const AlignedRead& a_read)
 {
-    return (a_read.has_mate_pair()) ?
-        a_read.get_sequence_size() >= a_read.get_mate_pair()->get_insert_size() : true;
+    return (a_read.is_chimeric()) ?
+        a_read.get_sequence_size() >= a_read.get_next_segment()->get_inferred_template_length() : true;
 }
 
 // Context-based filters
@@ -70,9 +75,9 @@ bool is_not_duplicate(const AlignedRead& a_read, BidirectionalIterator first_goo
                       BidirectionalIterator previous_good_read)
 {
     if (first_good_read != previous_good_read) {
-        if (a_read.has_mate_pair() && previous_good_read->has_mate_pair()) {
+        if (a_read.is_chimeric() && previous_good_read->is_chimeric()) {
             return !(a_read == *previous_good_read &&
-                    *a_read.get_mate_pair() == *(previous_good_read->get_mate_pair()));
+                    *a_read.get_next_segment() == *(previous_good_read->get_next_segment()));
         } else {
             return a_read != *previous_good_read;
         }

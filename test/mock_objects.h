@@ -26,7 +26,7 @@ inline AlignedRead get_mock_aligned_read(std::string the_sequence)
         AlignedRead::Qualities {},
         CigarString {},
         0,
-        AlignedRead::SupplementaryData {}
+        AlignedRead::FlagData {}
     };
 }
 

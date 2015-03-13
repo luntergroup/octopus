@@ -9,12 +9,19 @@
 #include "external_variant_candidates.h"
 #include "variant.h"
 
-ExternalVariantCandidates::ExternalVariantCandidates(VariantFile& a_variant_source)
+ExternalVariantCandidates::ExternalVariantCandidates(VariantFile& a_variant_source,
+                                                     double generator_confidence)
 :
-a_variant_file_ {a_variant_source}
+a_variant_file_ {a_variant_source},
+generator_confidence_ {generator_confidence}
 {}
 
 std::vector<Variant> ExternalVariantCandidates::get_candidates(const GenomicRegion& a_region)
 {
     return a_variant_file_.fetch_variants(a_region);
+}
+
+double ExternalVariantCandidates::get_variant_detection_probability(const Variant& a_variant)
+{
+    return generator_confidence_;
 }

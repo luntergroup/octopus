@@ -15,10 +15,12 @@
 #include "variant.h"
 
 AssemblerCandidateVariantGenerator::AssemblerCandidateVariantGenerator(ReferenceGenome& the_reference,
-                                                                       unsigned kmer_size)
+                                                                       unsigned kmer_size,
+                                                                       double generator_confidence)
 :
 the_reference_ {the_reference},
-the_variant_assembler_ {kmer_size}
+the_variant_assembler_ {kmer_size},
+generator_confidence_ {generator_confidence}
 {}
 
 void AssemblerCandidateVariantGenerator::add_read(const AlignedRead& a_read)
@@ -43,4 +45,9 @@ void AssemblerCandidateVariantGenerator::reserve(std::size_t n) {}
 void AssemblerCandidateVariantGenerator::clear()
 {
     the_variant_assembler_.clear();
+}
+
+double AssemblerCandidateVariantGenerator::get_variant_detection_probability(const Variant& a_variant)
+{
+    return generator_confidence_;
 }

@@ -24,7 +24,8 @@ class AssemblerCandidateVariantGenerator : public IVariantCandidateGenerator
 {
 public:
     AssemblerCandidateVariantGenerator() = delete;
-    explicit AssemblerCandidateVariantGenerator(ReferenceGenome& the_reference, unsigned kmer_size);
+    explicit AssemblerCandidateVariantGenerator(ReferenceGenome& the_reference, unsigned kmer_size,
+                                                double generator_confidence);
     ~AssemblerCandidateVariantGenerator() override = default;
     
     AssemblerCandidateVariantGenerator(const AssemblerCandidateVariantGenerator&)            = default;
@@ -38,9 +39,12 @@ public:
     void reserve(std::size_t n) override;
     void clear() override;
     
+    double get_variant_detection_probability(const Variant& a_variant) override;
+    
 private:
     ReferenceGenome& the_reference_;
     VariantAssembler the_variant_assembler_;
+    double generator_confidence_;
 };
 
 #endif /* defined(__Octopus__assembler_candidate_variant_generator__) */
