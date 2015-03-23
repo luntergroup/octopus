@@ -47,6 +47,7 @@ private:
     std::vector<Variant> candidates_;
     VariantFactory& variant_factory_;
     double generator_confidence_;
+    bool are_candidates_sorted_;
     
     bool is_good_sequence(const std::string& sequence) const noexcept;
     template <typename T1, typename T2, typename T3>
@@ -63,7 +64,8 @@ void AlignmentCandidateVariantGenerator::add_variant(T1&& the_region, T2&& seque
 {
     candidates_.emplace_back(variant_factory_.make(std::forward<T1>(the_region),
                                                    std::forward<T2>(sequence_removed),
-                                                   std::forward<T3>(sequence_added)));
+                                                   std::forward<T3>(sequence_added)));\
+    are_candidates_sorted_ = false;
 }
 
 #endif /* defined(__Octopus__alignment_candidate_variant_generator__) */

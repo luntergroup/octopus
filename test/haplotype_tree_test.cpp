@@ -47,7 +47,7 @@ TEST_CASE("haplotype_tree_single_sample_test", "[haplotype_tree]")
     HaplotypeTree the_haplotype_tree {human, a_read_manager, the_genotype_model, sample_ids,
                                         max_num_haplotypes, min_posterior};
     
-    auto a_region = parse_region("11:1000000-1000120", human);
+    auto a_region = parse_region("16:78203360-78203450", human);
     
     auto reads = a_read_manager.fetch_reads(the_sample_id, a_region);
     

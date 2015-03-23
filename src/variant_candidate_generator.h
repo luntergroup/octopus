@@ -11,7 +11,7 @@
 
 #include <vector>
 #include <memory>    // std::unique_ptr
-#include <algorithm> // std::sort
+#include <algorithm> // std::inplace_merge
 #include <iterator>  // std::make_move_iterator
 #include <cstddef>   // std::size_t
 #include <numeric>   // std::accumulate
@@ -72,13 +72,11 @@ inline std::vector<Variant> VariantCandidateGenerator::get_candidates(const Geno
     
     for (auto& generator : generator_list_) {
         auto generator_result = generator->get_candidates(a_region);
-        result.insert(std::end(result),
-                      std::make_move_iterator(std::begin(generator_result)),
-                      std::make_move_iterator(std::end(generator_result))
-                      );
+        auto it = result.insert(std::end(result),
+                                std::make_move_iterator(std::begin(generator_result)),
+                                std::make_move_iterator(std::end(generator_result)));
+        std::inplace_merge(std::begin(result), it, std::end(result));
     }
-    
-    std::sort(std::begin(result), std::end(result));
     
     return result;
 }

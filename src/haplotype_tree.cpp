@@ -11,7 +11,9 @@
 #include "reference_genome.h"
 #include "genotype_model.h"
 #include "variant.h"
-#include "genomic_region.h"
+
+//FOR TESTING
+#include <iostream>
 
 HaplotypeTree::HaplotypeTree(ReferenceGenome& the_reference, ReadManager& the_reads,
                              GenotypeModel& the_genotype_model,
@@ -24,8 +26,12 @@ the_genotype_model_ {the_genotype_model},
 the_sample_ids_ {the_sample_ids},
 max_num_haplotypes_ {max_num_haplotypes},
 min_posterior_ {min_posterior},
-num_extensions_since_posterior_update_ {}
-{}
+num_extensions_since_posterior_update_ {},
+the_tree_ {},
+haplotype_branch_ends_ {}
+{
+    init_tree();
+}
 
 HaplotypeTree::Haplotypes HaplotypeTree::get_haplotypes(const std::vector<Variant>& ordered_variants)
 {
@@ -41,6 +47,12 @@ HaplotypeTree::Haplotypes HaplotypeTree::get_haplotypes(const std::vector<Varian
     return get_highest_probability_haplotypes();
 }
 
+void HaplotypeTree::init_tree()
+{
+    auto root = boost::add_vertex(the_tree_);
+    haplotype_branch_ends_.emplace_back(root);
+}
+
 size_t HaplotypeTree::num_haplotypes() const
 {
     return haplotype_branch_ends_.size();
@@ -48,18 +60,40 @@ size_t HaplotypeTree::num_haplotypes() const
 
 void HaplotypeTree::extend_tree(const Variant& a_variant)
 {
+    std::list<Vertex> new_branch_ends {};
+    
+    std::cout << "adding variant " << a_variant.get_reference_allele_region() << " " << a_variant.get_reference_allele() << " " << a_variant.get_alternative_allele() << std::endl;
+    
     for (auto haplotype_branch : haplotype_branch_ends_) {
-        extend_haplotype(haplotype_branch, a_variant);
+        auto this_haplotype_new_branch_ends = extend_haplotype(haplotype_branch, a_variant);
+        new_branch_ends.insert(new_branch_ends.end(), this_haplotype_new_branch_ends.begin(),
+                               this_haplotype_new_branch_ends.end());
     }
+    
+    haplotype_branch_ends_ = new_branch_ends;
     ++num_extensions_since_posterior_update_;
 }
 
-void HaplotypeTree::extend_haplotype(Vertex haplotype_branch_end, const Variant& a_variant)
+std::vector<HaplotypeTree::Vertex>
+HaplotypeTree::extend_haplotype(Vertex haplotype_branch_end, const Variant& a_variant)
 {
+    std::vector<Vertex> new_haplotype_branch_ends {};
+    
     auto new_branch_end = boost::add_vertex(the_tree_);
-    the_tree_[new_branch_end].the_variant = a_variant;
+    the_tree_[new_branch_end].the_variant = Allele {a_variant.get_reference_allele_region(),
+        a_variant.get_reference_allele()};
     the_tree_[new_branch_end].haplotype_probability = the_tree_[new_branch_end].haplotype_probability;
     boost::add_edge(haplotype_branch_end, new_branch_end, the_tree_);
+    new_haplotype_branch_ends.emplace_back(new_branch_end);
+    
+    new_branch_end = boost::add_vertex(the_tree_);
+    the_tree_[new_branch_end].the_variant = Allele {a_variant.get_reference_allele_region(),
+                                                    a_variant.get_alternative_allele()};
+    the_tree_[new_branch_end].haplotype_probability = the_tree_[new_branch_end].haplotype_probability;
+    boost::add_edge(haplotype_branch_end, new_branch_end, the_tree_);
+    new_haplotype_branch_ends.emplace_back(new_branch_end);
+    
+    return new_haplotype_branch_ends;
 }
 
 HaplotypeTree::Haplotypes HaplotypeTree::get_unupdated_haplotypes()
@@ -67,10 +101,11 @@ HaplotypeTree::Haplotypes HaplotypeTree::get_unupdated_haplotypes()
     Haplotypes result {};
     
     for (auto haplotype_end : haplotype_branch_ends_) {
-        Haplotype a_haplotype {};
+        Haplotype a_haplotype {the_reference_};
         
         for (size_t i {0}; i < num_extensions_since_posterior_update_; ++i) {
-            a_haplotype.emplace_front(the_tree_[haplotype_end].the_variant);
+            a_haplotype.emplace_front(the_tree_[haplotype_end].the_variant.the_reference_region,
+                                      the_tree_[haplotype_end].the_variant.the_sequence);
             haplotype_end = *boost::inv_adjacent_vertices(haplotype_end, the_tree_).first;
         }
         
@@ -84,11 +119,13 @@ void HaplotypeTree::update_posteriors()
 {
     auto unupdated_haplotypes = get_unupdated_haplotypes();
     
-    GenomicRegion the_haplotype_region {
-        unupdated_haplotypes.front().front().get_reference_allele_region().get_contig_name(),
-        unupdated_haplotypes.front().front().get_reference_allele_region().get_begin(),
-        unupdated_haplotypes.front().back().get_reference_allele_region().get_end()
-    };
+    GenomicRegion the_haplotype_region {unupdated_haplotypes.front().get_region()};
+    
+    std::cout << "updating posteriors for haplotypes in region " << the_haplotype_region << std::endl;
+    std::cout << "unupdated haplotypes are:" << std::endl;
+    for (const auto& haplotype : unupdated_haplotypes) {
+        std::cout << haplotype << std::endl;
+    }
     
     auto sample_reads_map = the_reads_.fetch_reads(the_sample_ids_, the_haplotype_region);
     
@@ -102,10 +139,10 @@ void HaplotypeTree::update_posteriors()
     
     auto it = haplotype_probabilities.begin();
     
-    for (auto haplotype : haplotype_branch_ends_) {
-        the_tree_[haplotype].haplotype_probability = it->population_probability;
-        ++it;
-    }
+//    for (auto haplotype : haplotype_branch_ends_) {
+//        the_tree_[haplotype].haplotype_probability = it->population_probability;
+//        ++it;
+//    }
     
     num_extensions_since_posterior_update_ = 0;
 }

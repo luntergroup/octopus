@@ -125,14 +125,25 @@ inline GenomicRegion shift(const GenomicRegion& a_region, GenomicRegion::Differe
     };
 }
 
-inline std::vector<GenomicRegion> split(const GenomicRegion& a_region, GenomicRegion::SizeType max_size)
+inline GenomicRegion get_intervening_region(const GenomicRegion& lhs, const GenomicRegion& rhs)
 {
-    std::vector<GenomicRegion> result {};
+    if (lhs >= rhs || overlaps(lhs, rhs)) {
+        throw std::runtime_error {"Cannot get intervening region between overlapping regions"};
+    }
     
-    
-    
-    return result;
+    return GenomicRegion {
+        lhs.get_contig_name(),
+        lhs.get_end(),
+        rhs.get_begin()
+    };
 }
+
+//inline std::vector<GenomicRegion> split(const GenomicRegion& a_region, GenomicRegion::SizeType max_size)
+//{
+//    std::vector<GenomicRegion> result {};
+//    
+//    return result;
+//}
 
 namespace std {
     template <> struct hash<GenomicRegion>

@@ -8,7 +8,7 @@
 
 #include "alignment_candidate_variant_generator.h"
 
-#include <algorithm> // std::for_each
+#include <algorithm> // std::for_each, std::sort, std::unique
 #include <iterator>  // std::cbegin etc, std::distance
 #include <boost/range/combine.hpp>
 
@@ -24,7 +24,8 @@ AlignmentCandidateVariantGenerator::AlignmentCandidateVariantGenerator(Reference
 the_reference_ {the_reference},
 candidates_ {},
 variant_factory_ {variant_factory},
-generator_confidence_ {generator_confidence}
+generator_confidence_ {generator_confidence},
+are_candidates_sorted_ {true}
 {}
 
 void AlignmentCandidateVariantGenerator::add_read(const AlignedRead &a_read)
@@ -103,7 +104,22 @@ void AlignmentCandidateVariantGenerator::add_reads(ReadIterator first, ReadItera
 
 std::vector<Variant> AlignmentCandidateVariantGenerator::get_candidates(const GenomicRegion& a_region)
 {
-    return candidates_;
+    if (!are_candidates_sorted_) {
+        std::sort(std::begin(candidates_), std::end(candidates_));
+        auto it = std::unique(std::begin(candidates_), std::end(candidates_));
+        candidates_.resize(std::distance(std::begin(candidates_), it));
+        are_candidates_sorted_ = true;
+    }
+    
+    auto first = std::find_if(std::cbegin(candidates_), std::cend(candidates_), [a_region] (const auto& variant) {
+        return variant.get_reference_allele_region() >= a_region;
+    });
+    
+    auto last = std::find_if(std::cbegin(candidates_), std::cend(candidates_), [a_region] (const auto& variant) {
+        return variant.get_reference_allele_region() <= a_region;
+    });
+    
+    return std::vector<Variant> {first, last};
 }
 
 void AlignmentCandidateVariantGenerator::reserve(std::size_t n)

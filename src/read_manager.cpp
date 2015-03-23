@@ -63,7 +63,7 @@ ReadManager::fetch_reads(const SampleIdType& a_sample_id, const GenomicRegion& a
     
     std::for_each(std::begin(reader_paths), last_open_reader,
       [this, &a_sample_id, &a_region, &result] (const auto& reader_path) {
-          auto reads = std::move(open_readers_.at(reader_path).fetch_reads(a_region).at(a_sample_id));
+          auto reads = std::move(open_readers_.at(reader_path).fetch_reads(a_region)[a_sample_id]);
           result.insert(std::end(result),
                         std::make_move_iterator(std::begin(reads)),
                         std::make_move_iterator(std::end(reads)));
@@ -73,7 +73,7 @@ ReadManager::fetch_reads(const SampleIdType& a_sample_id, const GenomicRegion& a
     
     std::for_each(last_open_reader, last_region_containing_reader,
       [this, &a_sample_id, &a_region, &result] (const auto& reader_path) {
-          auto reads = std::move(open_readers_.at(reader_path).fetch_reads(a_region).at(a_sample_id));
+          auto reads = std::move(open_readers_.at(reader_path).fetch_reads(a_region)[a_sample_id]);
           result.insert(std::end(result),
                         std::make_move_iterator(std::begin(reads)),
                         std::make_move_iterator(std::end(reads)));

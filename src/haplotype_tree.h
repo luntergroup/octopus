@@ -16,6 +16,7 @@
 
 #include "haplotype.h"
 #include "read_manager.h"
+#include "genomic_region.h"
 
 class ReferenceGenome;
 class GenotypeModel;
@@ -43,9 +44,23 @@ public:
     Haplotypes get_haplotypes(const std::vector<Variant>& ordered_variants);
     
 private:
+    struct Allele
+    {
+        Allele() = default;
+        template <typename T>
+        Allele(const GenomicRegion& the_reference_region, T&& the_sequence)
+        :
+        the_reference_region {the_reference_region},
+        the_sequence {std::forward<T>(the_sequence)}
+        {}
+        
+        GenomicRegion the_reference_region;
+        Variant::SequenceType the_sequence;
+    };
+    
     struct HaplotypeNode
     {
-        Variant the_variant;
+        Allele the_variant;
         double haplotype_probability;
     };
     
@@ -67,9 +82,10 @@ private:
     Tree the_tree_;
     std::list<Vertex> haplotype_branch_ends_;
     
+    void init_tree();
     size_t num_haplotypes() const;
     void extend_tree(const Variant& a_variant);
-    void extend_haplotype(Vertex haplotype_branch_end, const Variant& a_variant);
+    std::vector<Vertex> extend_haplotype(Vertex haplotype_branch_end, const Variant& a_variant);
     Haplotypes get_unupdated_haplotypes();
     void update_posteriors();
     void prune_low_probability_haplotypes(size_t n);
