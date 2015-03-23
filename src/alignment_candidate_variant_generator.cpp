@@ -90,8 +90,6 @@ void AlignmentCandidateVariantGenerator::add_read(const AlignedRead &a_read)
                 read_index += op_size;
                 ref_index  += op_size;
                 break;
-            default:
-                continue;
         }
     }
 }

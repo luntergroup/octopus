@@ -36,7 +36,7 @@ TEST_CASE("alignment_variant_candidate_generator_test", "[variant_candidate]")
     VariantCandidateGenerator candidate_generator {};
     
     candidate_generator.register_generator(
-        std::make_unique<AlignmentCandidateVariantGenerator>(human, a_variant_factory));
+        std::make_unique<AlignmentCandidateVariantGenerator>(human, a_variant_factory, 0));
     
     auto sample_ids = a_read_manager.get_sample_ids();
     auto the_sample_id = sample_ids.at(0);
@@ -71,7 +71,7 @@ TEST_CASE("assembler_variant_candidate_generator_test", "[variant_candidate]")
     VariantCandidateGenerator candidate_generator {};
     
     candidate_generator.register_generator(
-            std::make_unique<AssemblerCandidateVariantGenerator>(human, kmer_size)
+            std::make_unique<AssemblerCandidateVariantGenerator>(human, kmer_size, 0)
     );
     
     auto sample_ids = a_read_manager.get_sample_ids();
@@ -123,9 +123,9 @@ TEST_CASE("all_variant_candidate_generator_test", "[variant_candidate]")
     
     VariantCandidateGenerator candidate_generator {};
     
-    candidate_generator.register_generator(std::make_unique<AlignmentCandidateVariantGenerator>(human, a_variant_factory));
+    candidate_generator.register_generator(std::make_unique<AlignmentCandidateVariantGenerator>(human, a_variant_factory, 0));
     candidate_generator.register_generator(
-        std::make_unique<AssemblerCandidateVariantGenerator>(human, kmer_size));
+        std::make_unique<AssemblerCandidateVariantGenerator>(human, kmer_size, 0));
     //candidate_generator.register_generator(std::make_unique<ExternalVariantCandidates>(a_variant_file));
     
     auto sample_ids = a_read_manager.get_sample_ids();

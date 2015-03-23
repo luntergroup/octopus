@@ -112,7 +112,7 @@ get_soft_clipped_sizes(const CigarString& a_cigar_string) noexcept
 template <typename T>
 inline T get_soft_clipped_read_begin(const CigarString& a_cigar_string, T hard_clipped_begin) noexcept
 {
-    if (is_soft_clipped(a_cigar_string)) {
+    if (is_front_soft_clipped(a_cigar_string)) {
         hard_clipped_begin -= static_cast<T>(a_cigar_string.at(0).get_size());
     }
     return hard_clipped_begin;

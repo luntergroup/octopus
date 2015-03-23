@@ -122,7 +122,8 @@ private:
 
 template <typename ColourType, typename T>
 KmerGraph<ColourType, T>::KmerGraph(unsigned k)
-:k_ {k},
+:
+k_ {k},
 the_graph_ {},
 kmer_vertex_map_ {},
 f_colour_weight_ {[] (ColourType c) { return 1; }},

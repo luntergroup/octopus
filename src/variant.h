@@ -26,7 +26,7 @@ public:
     using SizeType     = GenomicRegion::SizeType;
     using SequenceType = std::string;
     
-    Variant() = delete;
+    Variant() = default;
     
     template <typename GenomicRegion_, typename StringType1, typename StringType2>
     explicit Variant(GenomicRegion_&& the_reference_allele_region, StringType1&& the_reference_allele,

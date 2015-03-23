@@ -28,14 +28,14 @@ std::pair<po::variables_map, bool> parse_options(int argc, char** argv)
         ("max-open-files", po::value<unsigned>()->default_value(20), "the maximum number of files that can be open at one time")
         ;
         
-        po::options_description input("Input options");
+        po::options_description input("Input/output options");
         input.add_options()
-        ("ref-file", po::value<std::string>(), "the reference genome")
-        ("read-file", po::value<std::string>(), "comma-delimited list of aligned read file paths, or a path to a text file containing read file paths")
+        ("reference-file,R", po::value<std::string>(), "the reference genome file")
+        ("read-file,I", po::value<std::string>(), "comma-delimited list of aligned read file paths, or a path to a text file containing read file paths")
         ("regions", po::value<std::string>(), "comma-delimited list of one-indexed regions (chrom:begin-end) to consider, or a path to a file containing such regions")
         ("skip-regions", po::value<std::string>(), "comma-delimited list of one-indexed regions (chrom:begin-end) to skip, or a path to a file containing such regions")
         ("known-variants", po::value<std::string>(), "a variant file path containing known variants. These variants will automatically become candidates")
-        ("output", po::value<std::string>(), "the path of the output variant file")
+        ("output,o", po::value<std::string>(), "the path of the output variant file")
         ("log-file", po::value<std::string>(), "the path of the output log file")
         ;
         
@@ -50,8 +50,8 @@ std::pair<po::variables_map, bool> parse_options(int argc, char** argv)
         
         po::options_description candidates("Candidate generation options");
         candidates.add_options()
-        ("from-reads", po::value<bool>()->default_value(true), "generate candidate variants from the aligned reads")
-        ("assemble", po::value<bool>()->default_value(true), "generate candidate variants with the assembler")
+        ("candidates-from-alignments", po::value<bool>()->default_value(true), "generate candidate variants from the aligned reads")
+        ("candidates-from-assembler", po::value<bool>()->default_value(true), "generate candidate variants with the assembler")
         ("k", po::value<unsigned>()->default_value(15), "k-mer size to use")
         ("no-cycles", po::value<bool>()->default_value(false), "dissalow cycles in assembly graph")
         ;
@@ -59,6 +59,9 @@ std::pair<po::variables_map, bool> parse_options(int argc, char** argv)
         po::options_description model("Model options");
         model.add_options()
         ("ploidy", po::value<unsigned>()->default_value(2), "the organism ploidy")
+        ("snp-prior", po::value<double>()->default_value(0.003), "the prior probability of a SNP")
+        ("insertion-prior", po::value<double>()->default_value(0.003), "the prior probability of an insertion into the reference")
+        ("deletion-prior", po::value<double>()->default_value(0.003), "the prior probability of a deletion from the reference")
         ;
         
         po::options_description calling("Caller options");

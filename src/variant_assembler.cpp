@@ -13,7 +13,8 @@
 #include "variant.h"
 
 VariantAssembler::VariantAssembler(unsigned k)
-:the_assembler_ {k}
+:
+the_assembler_ {k}
 {}
 
 void VariantAssembler::add_read(const AlignedRead& a_read)
