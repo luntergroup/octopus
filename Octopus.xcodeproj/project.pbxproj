@@ -42,6 +42,7 @@
 		CAFA19641ABF75D400F953D9 /* haplotype.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CAFA19621ABF75D400F953D9 /* haplotype.cpp */; };
 		CAFA19661ABF84AC00F953D9 /* haplotype_tree_test.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CAFA19651ABF84AC00F953D9 /* haplotype_tree_test.cpp */; };
 		CAFA19681ABF84BE00F953D9 /* genotype_model_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CAFA19671ABF84BE00F953D9 /* genotype_model_tests.cpp */; };
+		CAFA196B1AC0D0D500F953D9 /* maths.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CAFA19691AC0D0D500F953D9 /* maths.cpp */; };
 		D4907F4B1A88E20E00639203 /* variant_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D4907F4A1A88E20E00639203 /* variant_tests.cpp */; };
 		D4907F571A8A2A9B00639203 /* reference_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D4907F561A8A2A9B00639203 /* reference_tests.cpp */; };
 		D4907F5B1A8A374000639203 /* fasta.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D4907F591A8A374000639203 /* fasta.cpp */; };
@@ -139,6 +140,8 @@
 		CAFA19631ABF75D400F953D9 /* haplotype.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = haplotype.h; sourceTree = "<group>"; };
 		CAFA19651ABF84AC00F953D9 /* haplotype_tree_test.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = haplotype_tree_test.cpp; sourceTree = "<group>"; };
 		CAFA19671ABF84BE00F953D9 /* genotype_model_tests.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = genotype_model_tests.cpp; sourceTree = "<group>"; };
+		CAFA19691AC0D0D500F953D9 /* maths.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = maths.cpp; sourceTree = "<group>"; };
+		CAFA196A1AC0D0D500F953D9 /* maths.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = maths.h; sourceTree = "<group>"; };
 		D4907F471A88D71800639203 /* genomic_region.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = genomic_region.h; sourceTree = "<group>"; };
 		D4907F491A88E14E00639203 /* catch.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = catch.hpp; sourceTree = "<group>"; };
 		D4907F4A1A88E20E00639203 /* variant_tests.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = variant_tests.cpp; sourceTree = "<group>"; };
@@ -355,6 +358,8 @@
 				D4907F5E1A8A3ADD00639203 /* utils.h */,
 				D4907F5D1A8A3ADD00639203 /* utils.cpp */,
 				CA14727D1AAE63A8005FDCD1 /* hash_functions.h */,
+				CAFA196A1AC0D0D500F953D9 /* maths.h */,
+				CAFA19691AC0D0D500F953D9 /* maths.cpp */,
 			);
 			name = utils;
 			sourceTree = "<group>";
@@ -513,6 +518,7 @@
 				CAE3E2B31AA3342B00C01B2C /* assembler_candidate_variant_generator.cpp in Sources */,
 				CAA4DC321A82B36300DD3E9A /* README.md in Sources */,
 				CAFA19641ABF75D400F953D9 /* haplotype.cpp in Sources */,
+				CAFA196B1AC0D0D500F953D9 /* maths.cpp in Sources */,
 				CAE3E2971A9D292000C01B2C /* variant_assembler.cpp in Sources */,
 				CA28EBF81AABE178009F8622 /* read_transform_tests.cpp in Sources */,
 				D4907F651A8A6EE600639203 /* reference_genome_factory.cpp in Sources */,

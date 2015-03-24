@@ -22,7 +22,7 @@ class GenotypeModel
 {
 public:
     using SampleProbabilities = std::vector<double>;
-    struct HaplotypeProbabilities
+    struct HaplotypePosteriors
     {
         double population_probability;
         SampleProbabilities sample_probabilities;
@@ -39,11 +39,23 @@ public:
     GenotypeModel(GenotypeModel&&)                 = default;
     GenotypeModel& operator=(GenotypeModel&&)      = default;
     
-    std::vector<HaplotypeProbabilities> get_haplotype_probabilities(const Haplotypes& the_haplotypes,
-                                                                    const SampleReads& the_reads);
+    std::vector<HaplotypePosteriors> get_haplotype_probabilities(const Haplotypes& the_haplotypes,
+                                                                 const SampleReads& the_reads);
 private:
+    using Genotype               = std::vector<Haplotype>;
+    using HaplotypeProbabilities = std::vector<double>;
+    
     unsigned ploidy_;
     size_t max_num_haplotypes_;
+    
+    double genotype_probability(const Genotype& the_genotype,
+                                const HaplotypeProbabilities& the_haplotype_probabilities) const;
+    double read_probability(const AlignedRead& a_read, const Genotype& the_genotype) const;
+    double reads_liklihood(const std::vector<AlignedRead>& individual_reads,
+                           const Genotype& the_genotype) const;
+    double genotype_likilihood(const std::vector<AlignedRead>& individual_reads,
+                               const Genotype& the_genotype,
+                               const HaplotypeProbabilities& the_haplotype_probabilities) const;
 };
 
 #endif /* defined(__Octopus__genotype_model__) */
