@@ -10,6 +10,8 @@
 #define __Octopus__haplotype__
 
 #include <queue>
+#include <algorithm> // std::equal
+#include <iterator>  // std::cbegin etc
 #include <ostream>
 
 #include "variant.h"
@@ -42,6 +44,7 @@ public:
     template <typename T>
     void emplace_front(const GenomicRegion& the_allele_region, T&& the_allele_sequence);
     
+    friend bool operator==(const Haplotype& lhs, const Haplotype& rhs);
 private:
     struct Allele
     {
@@ -74,7 +77,10 @@ void Haplotype::emplace_front(const GenomicRegion& the_allele_region, T&& the_al
 
 inline bool operator==(const Haplotype& lhs, const Haplotype& rhs)
 {
-    return lhs.get_region() == rhs.get_region();
+    if (lhs.get_region() != rhs.get_region()) return false;
+    if (lhs.the_haplotype_.size() != rhs.the_haplotype_.size()) return false;
+    return std::equal(std::cbegin(lhs.the_haplotype_), std::cend(lhs.the_haplotype_),
+                      std::cbegin(rhs.the_haplotype_));
 }
 
 namespace std {

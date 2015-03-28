@@ -50,10 +50,12 @@ Haplotype::SequenceType Haplotype::get_sequence() const
 
 void Haplotype::emplace_back(const Variant& a_variant)
 {
-    the_haplotype_.emplace_back(a_variant.get_reference_allele_region(), a_variant.get_alternative_allele());
+    the_haplotype_.emplace_back(a_variant.get_reference_allele_region(),
+                                a_variant.get_alternative_allele());
 }
 
 void Haplotype::emplace_front(const Variant& a_variant)
 {
-    the_haplotype_.emplace_front(a_variant.get_reference_allele_region(), a_variant.get_alternative_allele());
+    the_haplotype_.emplace_front(a_variant.get_reference_allele_region(),
+                                 a_variant.get_alternative_allele());
 }

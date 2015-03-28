@@ -11,8 +11,10 @@
 
 #include <vector>
 #include <cstddef>
+#include <unordered_map>
 
 #include "haplotype.h"
+#include "genotype.h"
 
 using std::size_t;
 
@@ -42,20 +44,50 @@ public:
     std::vector<HaplotypePosteriors> get_haplotype_probabilities(const Haplotypes& the_haplotypes,
                                                                  const SampleReads& the_reads);
 private:
-    using Genotype               = std::vector<Haplotype>;
-    using HaplotypeProbabilities = std::vector<double>;
+    using Reads                     = std::vector<AlignedRead>;
+    using HaplotypeLogProbabilities = std::unordered_map<Haplotype, double>;
     
     unsigned ploidy_;
     size_t max_num_haplotypes_;
+    std::unordered_map<unsigned, std::unordered_map<Haplotype, double>> sample_haplotype_log_probability_cache_;
     
-    double genotype_probability(const Genotype& the_genotype,
-                                const HaplotypeProbabilities& the_haplotype_probabilities) const;
-    double read_probability(const AlignedRead& a_read, const Genotype& the_genotype) const;
-    double reads_liklihood(const std::vector<AlignedRead>& individual_reads,
-                           const Genotype& the_genotype) const;
-    double genotype_likilihood(const std::vector<AlignedRead>& individual_reads,
-                               const Genotype& the_genotype,
-                               const HaplotypeProbabilities& the_haplotype_probabilities) const;
+    const double ln_ploidy_;
+    
+    bool is_haplotype_in_cache(unsigned sample, const Haplotype& haplotype) const;
+    
+    // ln p(read | haplotype)
+    double log_probability(const AlignedRead& read, const Haplotype& haplotype) const;
+    
+    // ln p(reads | haplotype)
+    double log_probability(const Reads& reads, const Haplotype& haplotype) const;
+    
+    // ln p(reads | genotype)
+    double log_probability(const Reads& reads, const Genotype& genotype, unsigned sample);
+    
+    // ln p(genotype | population_haplotype_log_probabilities)
+    // Note this assumes Hardy-Weinberg equilibrium
+    double log_probability(const Genotype& genotype,
+                           const HaplotypeLogProbabilities& population_haplotype_log_probabilities) const;
+    
+    // ln p(reads, genotype | population_haplotype_log_probabilities)
+    double log_probability(const Reads& reads, const Genotype& genotype,
+                           const HaplotypeLogProbabilities& population_haplotype_log_probabilities,
+                           const unsigned sample);
+    
+    // These are just for optimisation
+    double log_probability_haploid(const Reads& reads, const Genotype& genotype, unsigned sample);
+    double log_probability_diploid(const Reads& reads, const Genotype& genotype, unsigned sample);
+    double log_probability_triploid(const Reads& reads, const Genotype& genotype, unsigned sample);
+    double log_probability_polyploid(const Reads& reads, const Genotype& genotype, unsigned sample);
+    
+    double log_probability_haploid(const Genotype& genotype,
+                                   const HaplotypeLogProbabilities& population_haplotype_log_probabilities) const;
+    double log_probability_diploid(const Genotype& genotype,
+                                   const HaplotypeLogProbabilities& population_haplotype_log_probabilities) const;
+    double log_probability_triploid(const Genotype& genotype,
+                                    const HaplotypeLogProbabilities& population_haplotype_log_probabilities) const;
+    double log_probability_polyploid(const Genotype& genotype,
+                                     const HaplotypeLogProbabilities& population_haplotype_log_probabilities) const;
 };
 
 #endif /* defined(__Octopus__genotype_model__) */

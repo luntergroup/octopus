@@ -13,7 +13,7 @@
 #include <string>
 #include <cstring>   // std::strlen
 #include <sstream>
-#include <algorithm> // std::equal
+#include <algorithm> // std::equal, std::swap
 #include <iterator>  // std::next
 #include <cstddef>   // std::size_t
 
@@ -50,6 +50,16 @@ inline std::size_t stringlen(const char* str)
 inline std::size_t stringlen(const std::string& str)
 {
     return str.size();
+}
+
+template <typename C>
+inline C kth_permutation(std::size_t k, C container)
+{
+    for (std::size_t j = 1; j < container.size(); ++j) {
+        std::swap(container[k % (j + 1)], container[j]);
+        k = k / (j + 1);
+    }
+    return container;
 }
 
 #endif /* defined(__Octopus__utils__) */
