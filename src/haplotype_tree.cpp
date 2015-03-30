@@ -62,7 +62,7 @@ void HaplotypeTree::extend_tree(const Variant& a_variant)
 {
     std::list<Vertex> new_branch_ends {};
     
-    std::cout << "adding variant " << a_variant.get_reference_allele_region() << " " << a_variant.get_reference_allele() << " " << a_variant.get_alternative_allele() << std::endl;
+//    std::cout << "adding variant " << a_variant.get_reference_allele_region() << " " << a_variant.get_reference_allele() << " " << a_variant.get_alternative_allele() << std::endl;
     
     for (auto haplotype_branch : haplotype_branch_ends_) {
         auto this_haplotype_new_branch_ends = extend_haplotype(haplotype_branch, a_variant);
@@ -121,23 +121,23 @@ void HaplotypeTree::update_posteriors()
     
     GenomicRegion the_haplotype_region {unupdated_haplotypes.front().get_region()};
     
-    std::cout << "updating posteriors for haplotypes in region " << the_haplotype_region << std::endl;
-    std::cout << "unupdated haplotypes are:" << std::endl;
-    for (const auto& haplotype : unupdated_haplotypes) {
-        std::cout << haplotype << std::endl;
-    }
+//    std::cout << "updating posteriors for haplotypes in region " << the_haplotype_region << std::endl;
+//    std::cout << "unupdated haplotypes are:" << std::endl;
+//    for (const auto& haplotype : unupdated_haplotypes) {
+//        std::cout << haplotype << std::endl;
+//    }
     
     auto sample_reads_map = the_reads_.fetch_reads(the_sample_ids_, the_haplotype_region);
     
-    GenotypeModel::SampleReads sample_reads {};
-    for (const auto& sample_id : the_sample_ids_) {
-        sample_reads.emplace_back(std::move(sample_reads_map.at(sample_id)));
-    }
+//    GenotypeModel::SampleReads sample_reads {};
+//    for (const auto& sample_id : the_sample_ids_) {
+//        sample_reads.push_back(std::move(sample_reads_map.at(sample_id)));
+//    }
     
-    auto haplotype_probabilities = the_genotype_model_.get_haplotype_probabilities(unupdated_haplotypes,
-                                                                                   sample_reads);
-    
-    auto it = haplotype_probabilities.begin();
+//    auto haplotype_probabilities = the_genotype_model_.get_haplotype_probabilities(unupdated_haplotypes,
+//                                                                                   sample_reads);
+//    
+//    auto it = haplotype_probabilities.begin();
     
 //    for (auto haplotype : haplotype_branch_ends_) {
 //        the_tree_[haplotype].haplotype_probability = it->population_probability;

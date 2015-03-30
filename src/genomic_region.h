@@ -94,6 +94,11 @@ inline bool overlaps(const GenomicRegion& lhs, const GenomicRegion& rhs) noexcep
     return overlap_size(lhs, rhs) > 0;
 }
 
+inline bool are_adjacent(const GenomicRegion& lhs, const GenomicRegion& rhs) noexcept
+{
+    return overlap_size(lhs, rhs) == 0;
+}
+
 inline std::string to_string(const GenomicRegion& a_region)
 {
     return a_region.get_contig_name() + ':' + std::to_string(a_region.get_begin()) + '-'

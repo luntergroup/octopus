@@ -8,7 +8,7 @@
 
 #include "alignment_candidate_variant_generator.h"
 
-#include <algorithm> // std::for_each, std::sort, std::unique
+#include <algorithm> // std::for_each, std::sort, std::unique, std::lower_bound, std::upper_bound
 #include <iterator>  // std::cbegin etc, std::distance
 #include <boost/range/combine.hpp>
 
@@ -111,13 +111,15 @@ std::vector<Variant> AlignmentCandidateVariantGenerator::get_candidates(const Ge
         are_candidates_sorted_ = true;
     }
     
-    auto first = std::find_if(std::cbegin(candidates_), std::cend(candidates_), [a_region] (const auto& variant) {
-        return variant.get_reference_allele_region() >= a_region;
-    });
+    auto first = std::lower_bound(std::cbegin(candidates_), std::cend(candidates_), a_region,
+                                  [] (const auto& variant, const auto& a_region) {
+                                      return variant.get_reference_allele_region() < a_region;
+                                  });
     
-    auto last = std::find_if(std::cbegin(candidates_), std::cend(candidates_), [a_region] (const auto& variant) {
-        return variant.get_reference_allele_region() <= a_region;
-    });
+    auto last = std::upper_bound(std::cbegin(candidates_), std::cend(candidates_), a_region,
+                                  [] (const auto& a_region, const auto& variant) {
+                                      return a_region.get_end() < variant.get_reference_allele_region().get_end();
+                                  });
     
     return std::vector<Variant> {first, last};
 }

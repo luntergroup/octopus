@@ -19,8 +19,8 @@
 #include "variant.h"
 #include "variant_candidate_generator.h"
 #include "alignment_candidate_variant_generator.h"
-#include "haplotype_tree.h"
 #include "genotype_model.h"
+#include "haplotype_tree.h"
 
 TEST_CASE("haplotype_tree_single_sample_test", "[haplotype_tree]")
 {
@@ -42,7 +42,7 @@ TEST_CASE("haplotype_tree_single_sample_test", "[haplotype_tree]")
     std::size_t max_num_haplotypes {10};
     double min_posterior {0.0001};
     
-    GenotypeModel the_genotype_model {ploidy, max_num_haplotypes};
+    GenotypeModel the_genotype_model {ploidy};
     
     HaplotypeTree the_haplotype_tree {human, a_read_manager, the_genotype_model, sample_ids,
                                         max_num_haplotypes, min_posterior};

@@ -36,7 +36,9 @@ public:
     
     GenomicRegion get_region() const;
     SequenceType get_sequence() const;
+    SequenceType get_sequence(const GenomicRegion& a_region) const;
     
+    // TODO: should be checking order/conflicts
     void emplace_back(const Variant& a_variant);
     template <typename T>
     void emplace_back(const GenomicRegion& the_allele_region, T&& the_allele_sequence);
@@ -59,6 +61,8 @@ private:
         SequenceType the_sequence;
     };
     
+    friend bool operator==(const Allele& lhs, const Allele& rhs);
+    
     ReferenceGenome& the_reference_;
     std::deque<Allele> the_haplotype_;
 };
@@ -75,10 +79,15 @@ void Haplotype::emplace_front(const GenomicRegion& the_allele_region, T&& the_al
     the_haplotype_.emplace_front(the_allele_region, std::forward<T>(the_allele_sequence));
 }
 
+inline bool operator==(const Haplotype::Allele& lhs, const Haplotype::Allele& rhs)
+{
+    return (lhs.the_reference_region == rhs.the_reference_region && lhs.the_sequence == rhs.the_sequence);
+}
+
 inline bool operator==(const Haplotype& lhs, const Haplotype& rhs)
 {
-    if (lhs.get_region() != rhs.get_region()) return false;
     if (lhs.the_haplotype_.size() != rhs.the_haplotype_.size()) return false;
+    if (lhs.get_region() != rhs.get_region()) return false;
     return std::equal(std::cbegin(lhs.the_haplotype_), std::cend(lhs.the_haplotype_),
                       std::cbegin(rhs.the_haplotype_));
 }

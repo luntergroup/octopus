@@ -29,20 +29,34 @@ Haplotype::SequenceType Haplotype::get_sequence() const
 {
     SequenceType result {};
     
-    GenomicRegion last_region {the_haplotype_.front().the_reference_region};
+    if (the_haplotype_.empty()) return result;
+    
+    GenomicRegion previous_region {the_haplotype_.front().the_reference_region};
     
     for (const auto& allele : the_haplotype_) {
         auto this_region = allele.the_reference_region;
         
-        if (!overlaps(last_region, this_region)) {
-            auto intervening_reference_region   = get_intervening_region(last_region, this_region);
+        if (previous_region != this_region && !overlaps(previous_region, this_region)) {
+            auto intervening_reference_region   = get_intervening_region(previous_region, this_region);
             auto intervening_reference_sequence = the_reference_.get_sequence(intervening_reference_region);
             result += intervening_reference_sequence;
         }
         
         result += allele.the_sequence;
         
-        last_region = this_region;
+        previous_region = this_region;
+    }
+    
+    return result;
+}
+
+// TODO
+Haplotype::SequenceType Haplotype::get_sequence(const GenomicRegion& a_region) const
+{
+    SequenceType result {};
+    
+    if (the_haplotype_.empty()) {
+        return the_reference_.get_sequence(a_region);
     }
     
     return result;

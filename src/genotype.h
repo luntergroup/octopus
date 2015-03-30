@@ -13,19 +13,35 @@
 
 #include "haplotype.h"
 
-using Genotype = std::vector<Haplotype>;
+//using Genotype = std::vector<Haplotype>;
 
-bool is_homozygous(const Genotype& a_genotype);
+class Genotype
+{
+public:
+    Genotype()  = default;
+    ~Genotype() = default;
+    
+    Genotype(const Genotype&)            = default;
+    Genotype& operator=(const Genotype&) = default;
+    Genotype(Genotype&&)                 = default;
+    Genotype& operator=(Genotype&&)      = default;
+    
+    const Haplotype& at(unsigned n) const;
+    void emplace(const Haplotype& haplotype);
+    void emplace(Haplotype&& haplotype);
+    
+    unsigned ploidy() const noexcept;
+    unsigned num_occurences(const Haplotype& a_haplotype) const;
+    bool is_homozygous() const;
+    //const Haplotype& get_first_alternate_haplotype(const Haplotype& a_haplotype) const;
 
-bool is_heterozygous(const Genotype& a_genotype);
+private:
+    std::vector<Haplotype> the_haplotypes_;
+};
 
-unsigned num_occurences(const Haplotype& a_haplotype, const Genotype& a_genotype);
-
-unsigned ploidy(const Genotype& a_genotype);
-
-const Haplotype& get_first_alternate_haplotype(const Haplotype& a_haplotype, const Genotype& a_genotype);
+unsigned num_genotypes(unsigned num_haplotypes, unsigned ploidy);
 
 // Assumes the input haplotypes are all unique
-std::vector<Genotype> get_all_genotypes(unsigned ploidy, const std::vector<Haplotype>& haplotypes);
+std::vector<Genotype> get_all_genotypes(const std::vector<Haplotype>& haplotypes, unsigned ploidy);
 
 #endif /* defined(__Octopus__genotype__) */
