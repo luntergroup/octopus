@@ -82,4 +82,24 @@ inline T log_sum_exp(Iterator first, Iterator last)
     return max + std::log(exp_sum);
 }
 
+//template <typename RealType>
+//RealType dirichlet(const std::vector<RealType>& x, const std::vector<RealType>& a)
+//{
+//    
+//}
+//
+//template <typename RealType>
+//RealType dirichlet_multinomial(const std::vector<RealType>& x, const std::vector<RealType>& a)
+//{
+//    auto a_0 = std::accumulate(a.cbegin(), a.cend(), RealType{});
+//    auto s_0 = std::accumulate(x.cbegin(), x.cend(), RealType{});
+//    
+//    RealType c {};
+//    for (const auto x_k : x) {
+//        c *= factorial(x_k);
+//    }
+//    
+//    RealType 
+//}
+
 #endif /* defined(__Octopus__maths__) */

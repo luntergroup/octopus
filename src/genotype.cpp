@@ -8,7 +8,7 @@
 
 #include "genotype.h"
 
-#include <algorithm> // std::all_of, std::count
+#include <algorithm> // std::all_of, std::count, std::find
 #include <iterator>  // std::cbegin etc
 #include <boost/math/special_functions/binomial.hpp> // binomial_coefficient
 
@@ -47,6 +47,19 @@ unsigned Genotype::num_occurences(const Haplotype& a_haplotype) const
 unsigned Genotype::ploidy() const noexcept
 {
     return static_cast<unsigned>(the_haplotypes_.size());
+}
+
+std::vector<Haplotype> Genotype::get_unique_haplotypes() const
+{
+    std::vector<Haplotype> result {};
+    
+    for (const auto& haplotype : the_haplotypes_) {
+        if (std::find(result.cbegin(), result.cend(), haplotype) == result.cend()) {
+            result.push_back(haplotype);
+        }
+    }
+    
+    return result;
 }
 
 //const Haplotype& Genotype::get_first_alternate_haplotype(const Haplotype& a_haplotype) const

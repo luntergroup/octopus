@@ -1,8 +1,8 @@
 //
-//  genotype_model_tests.cpp
+//  empirical_variational_bayes_genotype_model_tests.cpp
 //  Octopus
 //
-//  Created by Daniel Cooke on 22/03/2015.
+//  Created by Daniel Cooke on 01/04/2015.
 //  Copyright (c) 2015 Oxford University. All rights reserved.
 //
 
@@ -23,9 +23,9 @@
 #include "haplotype.h"
 #include "genotype.h"
 #include "read_model.h"
-#include "genotype_model.h"
+#include "empirical_variational_bayes_genotype_model.h"
 
-TEST_CASE("haploid_genotype_model_test", "[genotype_model]")
+TEST_CASE("haploid_empirical_variational_bayes_genotype_model", "[empirical_variational_bayes_genotype_model]")
 {
     unsigned ploidy {1};
     
@@ -37,7 +37,7 @@ TEST_CASE("haploid_genotype_model_test", "[genotype_model]")
     VariantFactory a_variant_factory {};
     VariantCandidateGenerator candidate_generator {};
     candidate_generator.register_generator(
-                std::make_unique<AlignmentCandidateVariantGenerator>(ecoli, a_variant_factory, 0));
+                                           std::make_unique<AlignmentCandidateVariantGenerator>(ecoli, a_variant_factory, 0));
     
     auto a_region = parse_region("R00000042:99640-99745", ecoli);
     
@@ -84,17 +84,27 @@ TEST_CASE("haploid_genotype_model_test", "[genotype_model]")
     REQUIRE(genotypes.size() == num_genotypes(num_haplotypes, ploidy));
     
     ReadModel a_read_model {ploidy};
-    GenotypeModel the_model {a_read_model, ploidy};
+    EmpiricalVariationalBayesGenotypeModel the_model {a_read_model, ploidy};
     
+    EmpiricalVariationalBayesGenotypeModel::HaplotypePseudoCounts pseudo_counts {};
+    pseudo_counts[reference_haplotype] = 2;
+    pseudo_counts[best_haplotype]      = 1;
+    pseudo_counts[okay_haplotype]      = 1;
+    pseudo_counts[worst_haplotype]     = 1;
     
-}
-
-TEST_CASE("diploid_genotype_model_test", "[genotype_model]")
-{
+    EmpiricalVariationalBayesGenotypeModel::SampleGenotypeResponsabilities responsabilities {};
     
-}
-
-TEST_CASE("triploid_genotype_model_test", "[genotype_model]")
-{
+    for (const auto& genotype : genotypes) {
+        responsabilities[genotype] = the_model.genotype_responsability(genotype, some_reads, pseudo_counts, 0, genotypes);
+    }
     
+    auto reference_haplotype_expected_count = the_model.expected_haplotype_count(reference_haplotype, responsabilities);
+    auto best_haplotype_expected_count      = the_model.expected_haplotype_count(best_haplotype, responsabilities);
+    auto okay_haplotype_expected_count      = the_model.expected_haplotype_count(okay_haplotype, responsabilities);
+    auto worst_haplotype_expected_count     = the_model.expected_haplotype_count(worst_haplotype, responsabilities);
+    
+    std::cout << reference_haplotype_expected_count << std::endl;
+    std::cout << best_haplotype_expected_count << std::endl;
+    std::cout << okay_haplotype_expected_count << std::endl;
+    std::cout << worst_haplotype_expected_count << std::endl;
 }

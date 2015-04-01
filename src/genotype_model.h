@@ -15,6 +15,7 @@
 
 #include "haplotype.h"
 #include "genotype.h"
+#include "read_model.h"
 
 using std::size_t;
 
@@ -29,22 +30,13 @@ public:
     using HaplotypeLogProbabilities = std::unordered_map<Haplotype, double>;
     
     GenotypeModel() = delete;
-    explicit GenotypeModel(unsigned ploidy);
+    explicit GenotypeModel(ReadModel& read_model, unsigned ploidy);
     ~GenotypeModel() = default;
     
     GenotypeModel(const GenotypeModel&)            = default;
     GenotypeModel& operator=(const GenotypeModel&) = default;
     GenotypeModel(GenotypeModel&&)                 = default;
     GenotypeModel& operator=(GenotypeModel&&)      = default;
-    
-    // ln p(read | haplotype)
-    double log_probability(const AlignedRead& read, const Haplotype& haplotype) const;
-    
-    // ln p(reads | haplotype)
-    double log_probability(const SampleReads& reads, const Haplotype& haplotype) const;
-    
-    // ln p(reads | genotype)
-    double log_probability(const SampleReads& reads, const Genotype& genotype, unsigned sample);
     
     // ln p(genotype | population_haplotype_log_probabilities)
     // Note this assumes Hardy-Weinberg equilibrium
@@ -68,22 +60,9 @@ public:
     
 private:
     unsigned ploidy_;
-    std::unordered_map<unsigned, std::unordered_map<Haplotype, double>> haplotype_log_probability_cache_;
-    
-    const double ln_ploidy_;
-    
-    bool is_haplotype_in_cache(unsigned sample, const Haplotype& haplotype) const;
+    ReadModel& read_model_;
     
     // These are just for optimisation
-    double log_probability_haploid(const SampleReads& reads, const Genotype& genotype,
-                                   unsigned sample);
-    double log_probability_diploid(const SampleReads& reads, const Genotype& genotype,
-                                   unsigned sample);
-    double log_probability_triploid(const SampleReads& reads, const Genotype& genotype,
-                                    unsigned sample);
-    double log_probability_polyploid(const SampleReads& reads, const Genotype& genotype,
-                                     unsigned sample);
-    
     double log_probability_haploid(const Genotype& genotype,
                                    const HaplotypeLogProbabilities& sample_haplotype_log_probabilities) const;
     double log_probability_diploid(const Genotype& genotype,

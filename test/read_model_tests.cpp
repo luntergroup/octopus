@@ -1,8 +1,8 @@
 //
-//  genotype_model_tests.cpp
+//  read_model_tests.cpp
 //  Octopus
 //
-//  Created by Daniel Cooke on 22/03/2015.
+//  Created by Daniel Cooke on 01/04/2015.
 //  Copyright (c) 2015 Oxford University. All rights reserved.
 //
 
@@ -23,9 +23,8 @@
 #include "haplotype.h"
 #include "genotype.h"
 #include "read_model.h"
-#include "genotype_model.h"
 
-TEST_CASE("haploid_genotype_model_test", "[genotype_model]")
+TEST_CASE("haploid_read_model_test", "[read_model]")
 {
     unsigned ploidy {1};
     
@@ -37,7 +36,7 @@ TEST_CASE("haploid_genotype_model_test", "[genotype_model]")
     VariantFactory a_variant_factory {};
     VariantCandidateGenerator candidate_generator {};
     candidate_generator.register_generator(
-                std::make_unique<AlignmentCandidateVariantGenerator>(ecoli, a_variant_factory, 0));
+                                           std::make_unique<AlignmentCandidateVariantGenerator>(ecoli, a_variant_factory, 0));
     
     auto a_region = parse_region("R00000042:99640-99745", ecoli);
     
@@ -83,18 +82,16 @@ TEST_CASE("haploid_genotype_model_test", "[genotype_model]")
     
     REQUIRE(genotypes.size() == num_genotypes(num_haplotypes, ploidy));
     
-    ReadModel a_read_model {ploidy};
-    GenotypeModel the_model {a_read_model, ploidy};
+    ReadModel the_model {ploidy};
     
+    auto rlp1 = the_model.log_probability(some_reads, haplotypes[0]);
+    auto rlp2 = the_model.log_probability(some_reads, haplotypes[1]);
+    auto rlp3 = the_model.log_probability(some_reads, haplotypes[2]);
+    auto rlp4 = the_model.log_probability(some_reads, haplotypes[3]);
     
-}
-
-TEST_CASE("diploid_genotype_model_test", "[genotype_model]")
-{
-    
-}
-
-TEST_CASE("triploid_genotype_model_test", "[genotype_model]")
-{
-    
+    REQUIRE(rlp2 > rlp1);
+    REQUIRE(rlp2 > rlp3);
+    REQUIRE(rlp2 > rlp4);
+    //REQUIRE(rlp3 > rlp1);
+    REQUIRE(rlp3 > rlp4);
 }
