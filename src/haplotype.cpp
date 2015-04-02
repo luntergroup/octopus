@@ -50,9 +50,9 @@ Haplotype::SequenceType Haplotype::get_sequence() const
     return result;
 }
 
-// TODO
 Haplotype::SequenceType Haplotype::get_sequence(const GenomicRegion& a_region) const
 {
+    // TODO
     SequenceType result {};
     
     if (the_haplotype_.empty()) {
@@ -72,4 +72,9 @@ void Haplotype::emplace_front(const Variant& a_variant)
 {
     the_haplotype_.emplace_front(a_variant.get_reference_allele_region(),
                                  a_variant.get_alternative_allele());
+}
+
+void extend_with_reference(const GenomicRegion& the_region_to_cover)
+{
+    // TODO
 }

@@ -10,7 +10,7 @@
 
 #include <algorithm> // std::all_of, std::count, std::find
 #include <iterator>  // std::cbegin etc
-#include <boost/math/special_functions/binomial.hpp> // binomial_coefficient
+#include <boost/math/special_functions/binomial.hpp>
 
 #include "utils.h"
 
@@ -73,26 +73,45 @@ unsigned num_genotypes(unsigned num_haplotypes, unsigned ploidy)
                                                                            num_haplotypes - 1));
 }
 
+Genotype get_genotype_from_haplotype_indicies(const std::vector<Haplotype>& haplotypes,
+                                              const std::vector<unsigned>& haplotype_indicies)
+{
+    Genotype result {};
+    
+    for (auto i : haplotype_indicies) {
+        result.emplace(haplotypes.at(i));
+    }
+    
+    return result;
+}
+
 std::vector<Genotype> get_all_genotypes(const std::vector<Haplotype>& haplotypes, unsigned ploidy)
 {
     std::vector<Genotype> result {};
     
-    if (ploidy == 1) {
-        for (const auto& haplotype : haplotypes) {
-            Genotype a_genotype {};
-            a_genotype.emplace(haplotype);
-            result.emplace_back(std::move(a_genotype));
+    unsigned num_haplotypes {static_cast<unsigned>(haplotypes.size())};
+    
+    std::vector<unsigned> haplotype_indicies(ploidy, 0);
+    
+    unsigned i {0};
+    while (true) {
+        if (haplotype_indicies[i] == num_haplotypes) {
+            do {
+                ++i;
+            } while (haplotype_indicies[i] == num_haplotypes - 1);
+            
+            if (i == ploidy) return result;
+            
+            ++haplotype_indicies[i];
+            
+            for (unsigned j {0}; j <= i; ++j) {
+                haplotype_indicies[j] = haplotype_indicies[i];
+            }
+            
+            i = 0;
         }
-        return result;
+        
+        result.push_back(get_genotype_from_haplotype_indicies(haplotypes, haplotype_indicies));
+        ++haplotype_indicies[i];
     }
-    
-    auto one_ploidy_less_genotypes = get_all_genotypes(haplotypes, ploidy - 1);
-    
-    for (auto& genotype : one_ploidy_less_genotypes) {
-        for (const auto& haplotype : haplotypes) {
-            genotype.emplace(haplotype);
-        }
-    }
-    
-    return result;
 }

@@ -15,19 +15,7 @@
 #include <numeric>   // std::accumulate
 #include <algorithm> // std::max, std::max_element
 #include <boost/math/special_functions/gamma.hpp>
-
-template <typename T>
-inline constexpr T factorial(T x)
-{
-    return (x == 0) ? 1 : x * factorial(x - 1);
-}
-
-template <typename T>
-inline T multinomial_coefficient(const std::vector<T>& xs)
-{
-    auto x_0 = std::accumulate(xs.cbegin(), xs.cend(), T {});
-    return x_0;
-}
+#include <boost/math/special_functions/factorials.hpp>
 
 template <typename T>
 inline constexpr T exp_maclaurin(T x) {
@@ -102,7 +90,8 @@ RealType dirichlet_multinomial(const std::vector<RealType>& z, const std::vector
         g *= boost::math::tgamma<RealType>(z[i] + a[i]) / boost::math::tgamma<RealType>(a[i]);
     }
     
-    return (factorial(z_0) / z_m) * (boost::math::tgamma(a_0) / boost::math::tgamma(z_0 + a_0)) * g;
+    return (boost::math::factorial<RealType>(z_0) / z_m) *
+        (boost::math::tgamma(a_0) / boost::math::tgamma(z_0 + a_0)) * g;
 }
 
 #endif /* defined(__Octopus__maths__) */

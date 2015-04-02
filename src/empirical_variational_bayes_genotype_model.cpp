@@ -15,8 +15,6 @@
 #include "maths.h"
 #include "pair_hmm.h"
 
-#include <iostream> //TEST
-
 EmpiricalVariationalBayesGenotypeModel::EmpiricalVariationalBayesGenotypeModel(ReadModel& read_model,
                                                                                unsigned ploidy)
 :
@@ -33,6 +31,7 @@ read_model_ {read_model}
 double EmpiricalVariationalBayesGenotypeModel::log_expected_genotype_probability(const Genotype& genotype,
                                                                                  const HaplotypePseudoCounts& haplotype_pseudo_counts)
 {
+    // These cases are just for optimisation; they are functionally equivalent
     switch (ploidy_) {
         case 1:
             return log_expected_genotype_probability_haploid(genotype, haplotype_pseudo_counts);
@@ -101,6 +100,7 @@ double EmpiricalVariationalBayesGenotypeModel::posterior_predictive_probability(
                                                                                 const HaplotypePseudoCounts& haplotype_pseudo_count) const
 {
     std::vector<double> z {}, a {};
+    
     for (const auto& p : haplotype_counts) { z.push_back(p.second); };
     for (const auto& p : haplotype_pseudo_count) { a.push_back(p.second); };
     
@@ -111,6 +111,7 @@ double EmpiricalVariationalBayesGenotypeModel::log_expected_genotype_probability
                                                  const HaplotypePseudoCounts& haplotype_pseudo_counts) const
 {
     static double ln_1 = std::log(1);
+    
     return boost::math::digamma<double>(haplotype_pseudo_counts.at(genotype.at(0)))
             - boost::math::digamma<double>(pseudo_count_sum(haplotype_pseudo_counts)) + ln_1;
 }

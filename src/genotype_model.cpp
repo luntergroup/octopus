@@ -26,6 +26,7 @@ read_model_ {read_model}
 double GenotypeModel::log_probability(const Genotype& genotype,
                                       const HaplotypeLogProbabilities& sample_haplotype_log_probabilities) const
 {
+    // These cases are just for optimisation; they are functionally equivalent
     switch (ploidy_) {
         case 1:
             return log_probability_haploid(genotype, sample_haplotype_log_probabilities);

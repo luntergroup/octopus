@@ -46,6 +46,8 @@ public:
     template <typename T>
     void emplace_front(const GenomicRegion& the_allele_region, T&& the_allele_sequence);
     
+    void extend_with_reference(const GenomicRegion& the_region_to_cover);
+    
     friend bool operator==(const Haplotype& lhs, const Haplotype& rhs);
 private:
     struct Allele

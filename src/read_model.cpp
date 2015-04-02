@@ -14,6 +14,8 @@
 #include "pair_hmm.h"
 #include "maths.h"
 
+#include <iostream> //TEST
+
 ReadModel::ReadModel(unsigned ploidy)
 :
 ploidy_ {ploidy},
@@ -25,13 +27,13 @@ double ReadModel::log_probability(const AlignedRead& read, const Haplotype& hapl
 {
     RandomModel r {};
     r.background_probability = 0.25;
-    r.end_probability = 0.6;
+    r.end_probability        = 0.1;
     
     MatchModel m {};
-    m.match_probability = 1.0;
-    m.gap_open_probability = 0.0001;
+    m.match_probability      = 1.0;
+    m.gap_open_probability   = 0.0001;
     m.gap_extend_probability = 0.0001;
-    m.end_probability = 0.2;
+    m.end_probability        = 0.01;
     
     return nuc_log_viterbi_local<float>(haplotype.get_sequence(), read.get_sequence(),
                                         read.get_qualities(), m, r);
@@ -53,8 +55,7 @@ double ReadModel::log_probability(const Reads& reads, const Haplotype& haplotype
 double ReadModel::log_probability(const Reads& reads, const Genotype& genotype,
                                   unsigned sample)
 {
-    // This seemingly bad polymorphic design is entirly for optimisation purposes; the
-    // functionality in each case is entirly the same. Relax.
+    // These cases are just for optimisation; they are functionally equivalent
     switch (ploidy_) {
         case 1:
             return log_probability_haploid(reads, genotype, sample);
