@@ -157,6 +157,7 @@
 		D42061141ACC3DA500D11553 /* read_model.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = read_model.cpp; sourceTree = "<group>"; };
 		D42061151ACC3DA500D11553 /* read_model.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = read_model.h; sourceTree = "<group>"; };
 		D42061171ACC418500D11553 /* read_model_tests.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = read_model_tests.cpp; sourceTree = "<group>"; };
+		D42061191ACD518400D11553 /* variational_bayes_variant_callings.pdf */ = {isa = PBXFileReference; lastKnownFileType = image.pdf; path = variational_bayes_variant_callings.pdf; sourceTree = "<group>"; };
 		D4907F471A88D71800639203 /* genomic_region.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = genomic_region.h; sourceTree = "<group>"; };
 		D4907F491A88E14E00639203 /* catch.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = catch.hpp; sourceTree = "<group>"; };
 		D4907F4A1A88E20E00639203 /* variant_tests.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = variant_tests.cpp; sourceTree = "<group>"; };
@@ -297,6 +298,7 @@
 		CAA4DC2E1A8219DD00DD3E9A /* doc */ = {
 			isa = PBXGroup;
 			children = (
+				D42061191ACD518400D11553 /* variational_bayes_variant_callings.pdf */,
 				CA90C5581ACD2B4E00CBEE34 /* variational_bayes_variant_callings.tex */,
 				CAE3E2C81AA9129000C01B2C /* notes.txt */,
 			);

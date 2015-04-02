@@ -88,7 +88,7 @@ double EmpiricalVariationalBayesGenotypeModel::posterior_haplotype_pseudo_count(
                                                                                 double prior_pseudo_count,
                                                                                 const GenotypeResponsabilities& genotype_responsabilities)
 {
-    double result {prior_pseudo_count - 1};
+    double result {prior_pseudo_count};
     
     for (const auto& sample_genotype_responsabilities : genotype_responsabilities) {
         result += expected_haplotype_count(haplotype, sample_genotype_responsabilities);

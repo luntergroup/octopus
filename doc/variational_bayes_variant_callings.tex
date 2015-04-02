@@ -6,6 +6,7 @@
 \usepackage{graphicx} % Required to insert images
 \usepackage{lipsum} % Used for inserting dummy 'Lorem ipsum' text into the template
 \usepackage{amsmath}
+\usepackage{amssymb}
 \usepackage{amsfonts}
 
 % Margins
@@ -28,9 +29,9 @@
 
 \maketitle
 
-Variational Bayes is a method to approximate the posterior distribution of latent variables in a Bayesian Network. The technique is similar in nature to EM, but whereas EM gives point estimates of the model parameters, Variational Bayes gives a proper distribution over these parameters.  Variational Bayes can be contrasted to stochastic approximation methods; while stochastic approximation methods will always converge to the true distribution given enough time, Variational Bayes can never converge to the true distribution.
+Variational Bayes is a method to approximate the posterior distribution of latent variables in a Bayesian Network. The technique is similar in nature to EM, but whereas EM gives point estimates of the model parameters, variational Bayes gives a proper distribution over these parameters.
 
-Here I derive a Variational Bayes model for approximating the posterior distributions of a genotype model for variant calling. First I describe a generalisation to the standard EM model using my notation.
+Here I derive a variational Bayes model for approximating the posterior distributions of a genotype model for variant calling. First I describe a generalisation to the standard EM model using my notation.
 
 \section{Definitions \& conditions}
 
@@ -40,7 +41,7 @@ Constant & Description \\
 \hline
 $N$ & the number of samples \\
 $M$ & the ploidy of each sample \\
-$H$ & the number of haplotypes being considerd \\
+$H$ & the number of haplotypes being considered \\
 $K$ & the number of genotypes \\
 \hline
 \end{tabular}
@@ -54,18 +55,16 @@ Variable & Description \\
 \hline
 $\boldsymbol{x}_n$ & the read data for sample $n$ \\
 $\boldsymbol{r}_n$ & the number of reads in the $n^{th}$ sample \\
-$\boldsymbol{h}$ & the haplotypes \\
-$\boldsymbol{\pi}$ & the probabilties (or 'frequencies') of the haplotypes \\
+$h$ & a haplotype \\
+$\boldsymbol{\pi}$ & the probabilities (or 'frequencies') of the haplotypes \\
 $\boldsymbol{g}$ & a binary variable using a $1$-of-$K$ coding scheme representing the genotypes \\
 \hline
 \end{tabular}
 \end{center}
 
-In particular $g$ satisfies $g_k \in {0, 1}$ and $\sum_{k = 1}^{K} g_i = 1$.
+In particular $\boldsymbol{g}$ satisfies $g_k \in {0, 1}$ and $\sum_{k = 1}^{K} g_i = 1$.
 
-Finally I define a the function $\mu_i(g)$ which gives the number of occurences of haplotype $i$ in genotype $\boldsymbol{g}$.
-
-I will sometimes abuse notation by using $\boldsymbol{g}^k$ to mean the $\boldsymbol{g}$ with the $k^{th}$ element set to $1$.
+Finally I define the the function $\mu_i : \boldsymbol{g} \rightarrow \mathbb{N}$ which maps genotype binary variables to the number of occurrences of haplotype $i$ in the genotype. Alternatively, we could have defined the function maps to a multinomial variable, but I think this notation is clearer. I will sometimes abuse notation by using $\boldsymbol{g}^k$ to mean the $\boldsymbol{g}$ with the $k^{th}$ element set to $1$. For example $\mu_i(\boldsymbol{g}^k)$ is shorthand for $\mu_i(\boldsymbol{g}') \; \text{s.t.} \; g_k = 1$.
 
 Then we have the following conditions:
 
@@ -78,16 +77,20 @@ Then we have the following conditions:
 \end{equation}
 
 \begin{equation} 
+    \mu_i(\boldsymbol{g}) \ge 0
+\end{equation}
+
+\begin{equation} 
     \sum_{i = 1}^{H} \mu_i(\boldsymbol{g}) = M
 \end{equation}
 
 \begin{equation} 
-    \neg\exists i,j, i \ne j\in {1..K} \quad \text{s.t} \quad \mu_k(\boldsymbol{g}^i) = \mu_k(\boldsymbol{g}^j) \quad \forall k \in {1..H}
+    \nexists i,j, i \ne j\in {1..K} \quad \text{s.t} \quad \mu_k(\boldsymbol{g}^i) = \mu_k(\boldsymbol{g}^j) \quad \forall k \in {1..H}
 \end{equation}
 
 \section{EM approach}
 
-Here I review the standard EM model used for genotype modelling. This presentation is actually a slighy generalisation of that usually presented in the literature as it allows for any number of alleles (usually restricted to biallelic).
+Here I review the standard EM model used for genotype modelling. This presentation is actually a slight generalisation of that usually presented in the literature as it allows for any number of alleles, which are usually restricted to be biallelic.
 
 The marginal distribution for $\boldsymbol{g}$ is given by a multinomial distribution by assuming Hardy-Weinberg equilibrium
 
@@ -98,10 +101,10 @@ The marginal distribution for $\boldsymbol{g}$ is given by a multinomial distrib
 Note due to the $1$-of-$K$ representation for $\boldsymbol{g}$ this can also be written as
 
 \begin{equation} 
-    p(\boldsymbol{g}) = \prod_{k = 1}^K \left[\binom{M}{\mu_1(\boldsymbol{g},...,\mu_H(\boldsymbol{g})} \prod_{i = 1}^H \pi_i^{\mu_i(\boldsymbol{g})}\right]^{g_k}
+    p(\boldsymbol{g}) = \prod_{k = 1}^K \left[\binom{M}{\mu_1(\boldsymbol{g}),...,\mu_H(\boldsymbol{g})} \prod_{i = 1}^H \pi_i^{\mu_i(\boldsymbol{g})}\right]^{g_k}
 \end{equation}
 
-Using an abuse of notation $h \in \boldsymbol{g}$ to mean the haplotypes in $\boldsymbol{g}$, the data distribution is given by
+Using the abuse of notation $h \in \boldsymbol{g}$ to mean the haplotypes in $\boldsymbol{g}$, the data distribution is given by
 
 \begin{equation} 
     p(\boldsymbol{x} | \boldsymbol{g}) = \prod_{i = 1}^{r} \frac{1}{M} \sum_{h \in \boldsymbol{g}} p(r_i | h)
@@ -113,81 +116,81 @@ where $p(r_i | h)$ is determined by an HMM. The marginal data distribution is th
     p(\boldsymbol{x}) = \sum_{\boldsymbol{g}} p(\boldsymbol{g}) p(\boldsymbol{x} | \boldsymbol{g}) = \sum_{k = 1}^{K}  \binom{M}{\mu_1(\boldsymbol{g}^k),...,\mu_H(\boldsymbol{g}^k)} \prod_{i = 1}^H \pi_i^{\mu_i(\boldsymbol{g}^k)} \prod_{i = 1}^{r} \frac{1}{M} \sum_{h \in \boldsymbol{g}} p(r_i | h)
 \end{equation}
 
-The posterior probabilities, often called responsabilities, of $\boldsymbol{g}$ given read data $\boldsymbol{x}$ is given by Bayes theorem:
+The posterior probabilities, often called responsibilities, of $\boldsymbol{g}$ given read data $\boldsymbol{x}$ is given by Bayes theorem
 
 \begin{align} 
-    \gamma(g_k) &\equiv p(g_k = 1 | \boldsymbol{x}) \\
+    \gamma(g_k) &\equiv p(g_k = 1 | \boldsymbol{x}) \notag\\
     &= \frac{p(g_k = 1) p(\boldsymbol{x} | g_k = 1)}{\sum_{j = 1}^{K} p(g_j = 1) p(\boldsymbol{x} | g_j = 1)}
 \end{align}
 
-For the 'E' step of the EM algorithm, we need to evaulate the expectation of the full log-density, to do this we esentially treat each sample as an individual data point. Viewed this way the entire model can roughly be seen to be a clustering model, where samples are assigned to genotype clusters. Let $\boldsymbol{X} = {\boldsymbol{x}_1, ..., \boldsymbol{x}_N}$ and $\boldsymbol{G} = {\boldsymbol{g}_1, ..., \boldsymbol{g}_n}$ (note $\boldsymbol{g}_i$ is different from $g_i$), then the full joint density can be written as:
+For the 'E' step of the EM algorithm, we need to evaluate the expectation of the complete data log-likelihood, to do this we essentially treat each sample as an individual data point. Viewed this way the entire model can roughly be seen to be a clustering model, where samples are assigned to genotype clusters. Let $\boldsymbol{X} = \{\boldsymbol{x}_1, ..., \boldsymbol{x}_N\}$ and $\boldsymbol{G} = \{\boldsymbol{g}_1, ..., \boldsymbol{g}_n\}$ (note $\boldsymbol{g}_i$ is different from $g_i$), then the complete data likelihood can be written as
 
 \begin{equation} 
     p(\boldsymbol{X}, \boldsymbol{G} | \boldsymbol{\pi}) = \prod_{n = 1}^N \prod_{k = 1}^K \left[ \binom{M}{\mu_1(\boldsymbol{g}^k),...,\mu_H(\boldsymbol{g}^k)} \prod_{i = 1}^H \pi_i^{\mu_i(\boldsymbol{g}^k)} \right]^{g_{nk}} \left[ \prod_{i = 1}^{r} \frac{1}{M} \sum_{h \in \boldsymbol{g}} p(r_i | h) \right]^{g_{nk}}
 \end{equation}
 
-and so the full log-likelihoood is:
+and so the complete data log-likelihood is
 
 \begin{align} 
-    \ln p(\boldsymbol{X}, \boldsymbol{G} | \boldsymbol{\pi}) &= \sum_{n = 1}^N \sum_{k = 1}^K g_{nk} \left\{ \ln \binom{M}{\mu_1(\boldsymbol{g}^k),...,\mu_H(\boldsymbol{g}^k)} \ln \prod_{i = 1}^H \pi_i^{\mu_i(\boldsymbol{g}^k)} \sum{i = 1}^{r} \frac{1}{M} \sum_{h \in \boldsymbol{g}} p(r_i | h) \right\}\\
+    \ln p(\boldsymbol{X}, \boldsymbol{G} | \boldsymbol{\pi}) &= \sum_{n = 1}^N \sum_{k = 1}^K g_{nk} \left\{ \ln \binom{M}{\mu_1(\boldsymbol{g}^k),...,\mu_H(\boldsymbol{g}^k)} \ln \prod_{i = 1}^H \pi_i^{\mu_i(\boldsymbol{g}^k)} \sum{i = 1}^{r} \frac{1}{M} \sum_{h \in \boldsymbol{g}} p(r_i | h) \right\}\notag\\
     &= \sum_{n = 1}^N \sum_{k = 1}^K g_{nk} \left\{ \ln C(\boldsymbol{g}^k) + \sum_{i = 1}^H \mu_i(\boldsymbol{g}^k) \ln \pi_i + \sum_{i = 1}^{r} \ln \sum_{h \in \boldsymbol{g}^k} p(r_i | h) - \ln M \right\}
 \end{align}
 
-where $C(\boldsymbol{g}^k)$ is the multinomial coefficient.
-
-As $\boldsymbol{g}$ is a binary variable we have that $\mathbb{E}[\boldsymbol{g}] = \gamma(g_{nk})$ and thus:
+where $C(\boldsymbol{g}^k)$ is the multinomial coefficient. As $\boldsymbol{g}$ is a binary variable we have that $\mathbb{E}[\boldsymbol{g}] = \gamma(g_{nk})$ and thus
 
 \begin{equation} 
     \mathbb{E}_{\boldsymbol{G}} [\ln p(\boldsymbol{X}, \boldsymbol{G} | \boldsymbol{\pi})] = \sum_{n = 1}^N \sum_{k = 1}^K \gamma(g_{nk}) \left\{ \ln C(\boldsymbol{g}^k) + \sum_{i = 1}^H \mu_i(\boldsymbol{g}^k) \ln \pi_i + \sum_{i = 1}^{r} \ln \sum_{h \in \boldsymbol{g}^k} p(r_i | h) - \ln M \right\}
 \end{equation}
 
-To maximise w.r.t $\boldsymbol{\pi}$ note we must have $\sum_{i = 1}^H \pi_i = 1$, and so introducing Langrange multipliers we maximise:
+To maximise w.r.t $\boldsymbol{\pi}$ note we must have $\sum_{i = 1}^H \pi_i = 1$, and so introducing Lagrange multipliers we maximise
 
 \begin{equation} 
     \zeta(\boldsymbol{\pi}) = \mathbb{E}_{\boldsymbol{G}} [\ln p(\boldsymbol{X}, \boldsymbol{G} | \boldsymbol{\pi})] + \lambda \left( \sum_{i = 1}^H \pi_i - 1 \right)
 \end{equation}
 
-Differentiating w.r.t $\pi_i$ gives:
+Differentiating w.r.t $\pi_i$ and equating to zero gives
 
-\begin{equation} 
-   \frac{\partial \zeta}{\partial \pi_i} = \sum_{n = 1}^N \sum_{k = 1}^K \gamma(g_{nk}) \mu_i(\boldsymbol{g}^k) \frac{1}{\pi_i} + \lambda
+\begin{equation}
+\label{eq:zeta}
+   \frac{\partial \zeta}{\partial \pi_i} = \sum_{n = 1}^N \sum_{k = 1}^K \gamma(g_{nk}) \mu_i(\boldsymbol{g}^k) \frac{1}{\pi_i} + \lambda = 0
 \end{equation}
 
-equating to $0$ and summing over $i$ gives:
+we then sum over $i$ to find $\lambda$
 
 \begin{align} 
-    \sum_{i = 1}^H \sum_{n = 1}^N \sum_{k = 1}^K \gamma(g_{nk}) \mu_i(\boldsymbol{g}^k) &= -\lambda \sum_{i = 1}^H \pi_i \\
-      \sum_{n = 1}^N \sum_{k = 1}^K \gamma(g_{nk}) \sum_{i = 1}^H  \mu_i(\boldsymbol{g}^k) &= -\lambda \\
-      \sum_{n = 1}^N \sum_{k = 1}^K \gamma(g_{nk}) M &= -\lambda \\
+    \sum_{i = 1}^H \sum_{n = 1}^N \sum_{k = 1}^K \gamma(g_{nk}) \mu_i(\boldsymbol{g}^k) &= -\lambda \sum_{i = 1}^H \pi_i \notag\\
+      \sum_{n = 1}^N \sum_{k = 1}^K \gamma(g_{nk}) \sum_{i = 1}^H  \mu_i(\boldsymbol{g}^k) &= -\lambda \notag\\
+      \sum_{n = 1}^N \sum_{k = 1}^K \gamma(g_{nk}) M &= -\lambda \notag\\
       \lambda &= -NM
 \end{align}
 
-and so we have:
+and so substituting $\lambda$ into (\ref{eq:zeta}) we have
 
-\begin{equation} 
+\begin{equation}
+\label{eq:em_solution}
    \pi_i = \frac{1}{NM} \sum_{n = 1}^N \sum_{k = 1}^K \gamma(g_{nk}) \mu_i(\boldsymbol{g}^k)
 \end{equation}
 
-This intuitively makes sense as the expected number of occurences of haplotype $h_i$ under the posterior for $\boldsymbol{G}$.
+This intuitively makes sense as the mean expected number of occurrences of haplotype $h_i$ under the posterior for $\boldsymbol{G}$.
 
 \section{Variational Bayes}
 
-Using EM we do not get a proper probability distribution over the parameters $\boldsymbol{\pi}$, and thus it is difficult to make proper downstream inferences. The optimal solution would be to use a full Bayesian model by introducing priors over $\boldsymbol{\pi}$ (and as we will see later, possibly also over the hyperparameters of $\boldsymbol{\pi}$).
+Using EM we do not get a proper probability distribution over the parameters $\boldsymbol{\pi}$, and thus it is difficult to make proper downstream inferences. The optimal solution would be to use a proper Bayesian model by introducing priors over $\boldsymbol{\pi}$ (and as we will see later, possibly also over the hyperparameters of $\boldsymbol{\pi}$).
 
-This leads to problems as even if we choose the conjagte prior for $\boldsymbol{\pi}$, a Dirichlet distribution, the problem is still intractable as we must take the expectation over a sum of Dirichlet-Multinomials. This could be solved using stochastic approximation methods, but these methods are probably not ideal here as they can be slow to converge to the true density, and we also introduce a non-determinsm in the call set that is better avoided.
+This leads to analytical difficulties as even if we choose the conjugate prior for $\boldsymbol{\pi}$, a Dirichlet distribution, the problem is still intractable as we must take the expectation over a sum of Dirichlet-Multinomials. This could be solved using stochastic approximation methods, but these methods are probably not ideal here as they can be slow to converge to the true density, and we also introduce a non-determinsm in the call set that is better avoided.
 
-There are another set of methods for approximating posterior distributions that do not suffer the above problems called Variational Bayesian methods. The idea of these methods is to deterministically approximate the posterior distribution by enforcing a certain factorisation of the posterior distribution that necessarily introduces some independence assumptions. The factor distributions are then chosen to maximise the 'similarity' to the true posterior. While these methods are usually quick to converge, unlike stochastic methods they can never converge to the true distribution.
+There are another set of methods for approximating posterior distributions that do not suffer the above problems called variational Bayesian methods. The idea of these methods is to deterministically approximate the posterior distribution by enforcing a certain factorisation of the posterior distribution that necessarily introduces some independence assumptions. The factor distributions are then chosen to maximise the 'similarity' to the true posterior. While these methods are usually quick to converge, unlike stochastic methods they can never converge to the true distribution.
 
 \subsection{Introduction to variational Bayes}
 
-Given a probability model $p(\boldsymbol{X}, \boldsymbol{Z})$ where $\boldsymbol{X}$ is observed and $\boldsymbol{Z}$ are latent, the true posterior density, $p(\boldsymbol{Z} | \boldsymbol{X})$, can be approximated with another distribution, $q(\boldsymbol{Z})$ subject to some measure of similarity. A natural choice of similairty is the Kullback–Leibler divergence:
+Given a probability model $p(\boldsymbol{X}, \boldsymbol{Z})$ where $\boldsymbol{X}$ is observed and $\boldsymbol{Z}$ are latent, the true posterior density, $p(\boldsymbol{Z} | \boldsymbol{X})$, can be approximated with another distribution, $q(\boldsymbol{Z})$ subject to some measure of similarity. A natural choice of similarity is the Kullback–Leibler divergence
 
 \begin{equation}
 \label{eq:kl}
    \text{KL} (q\; ||\; p) = -\int q(\boldsymbol{Z}) \ln \frac{p(\boldsymbol{Z} | \boldsymbol{X})}{q(\boldsymbol{Z})} d\boldsymbol{Z}
 \end{equation}
 
-This measures the additional amount of information (in nats) required to generate codes from $q$ rather than $p$, it satisfies $\text{KL}(q\; ||\; p) \ge 0$, with equality when $p = q$. So we actually try to minimise this quanitity.
+This measures the additional amount of information (in nats) required to generate codes from $q$ rather than $p$, it satisfies $\text{KL}(q\; ||\; p) \ge 0$, with equality when $p = q$. So we actually try to minimise this quantity.
 
 We now partition the latent variables $\boldsymbol{Z}$ into a set of disjoint groups denoted by $\boldsymbol{Z_i}$ where $i = 1, ..., M$ and assume that the $q$ distribution factorizes into a product of these groups, i.e.
 
@@ -196,18 +199,18 @@ We now partition the latent variables $\boldsymbol{Z}$ into a set of disjoint gr
   q(\boldsymbol{Z}) = \prod_{i = 1}^M q_i(\boldsymbol{Z_i})
 \end{equation}
 
-This is the only assumption made, in particular the functional for of each $q_i$ is not contrained.
+This is the only assumption made, in particular the functional for of each $q_i$ is not contained.
 
-The idea is then to consider each group in turn, and average over the other groups. Formally this is a problem that can be solved using calculus of variations, but it's easy to see by substituting (\ref{eq:q}) into (\ref{eq:kl}) and seperating one group $\boldsymbol{Z_j}$:
+The idea is then to consider each group in turn, and average over the other groups. Formally this is a problem that can be solved using calculus of variations, but it's easy to see by substituting (\ref{eq:q}) into (\ref{eq:kl}) and separating one group $\boldsymbol{Z_j}$
 
 \begin{align}
-    \text{KL}(q\; ||\; p) &= -\int \prod_{i = 1}^M q_i \left\{ \ln p(\boldsymbol{Z} | \boldsymbol{X}) - \sum_i \ln q_i) \right\} d \boldsymbol{Z} \\
-    &= -\int q_j \left\{ \int \ln p(\boldsymbol{Z} | \boldsymbol{X}) \prod_{i \ne j} d \boldsymbol{Z_i} \right\} d \boldsymbol{Z_j} + \int q_j \ln q_j d \boldsymbol{Z_j} + \text{const}\\
-    &= -\int q_j \mathbb{E}_{i \ne j}[\ln p(\boldsymbol{Z} | \boldsymbol{X})] d \boldsymbol{Z_j} + \int q_j \ln q_j d \boldsymbol{Z_j} + \text{const}\\
-    &= \text{KL}(q_j\; ||\; \exp (\mathbb{E}_{i \ne j}[\ln p(\boldsymbol{Z} | \boldsymbol{X})])) + const
+    \text{KL}(q\; ||\; p) &= -\int \prod_{i = 1}^M q_i \left\{ \ln p(\boldsymbol{Z} | \boldsymbol{X}) - \sum_i \ln q_i) \right\} d \boldsymbol{Z}\notag \\
+    &= -\int q_j \left\{ \int \ln p(\boldsymbol{Z} | \boldsymbol{X}) \prod_{i \ne j} d \boldsymbol{Z_i} \right\} d \boldsymbol{Z_j} + \int q_j \ln q_j d \boldsymbol{Z_j} + \text{const}\notag\\
+    &= -\int q_j \mathbb{E}_{i \ne j}[\ln p(\boldsymbol{Z} | \boldsymbol{X})] d \boldsymbol{Z_j} + \int q_j \ln q_j d \boldsymbol{Z_j} + \text{const}\notag\\
+    &= \text{KL}(q_j\; ||\; \exp (\mathbb{E}_{i \ne j}[\ln p(\boldsymbol{Z} | \boldsymbol{X})])) + \text{const}
 \end{align}
 
-Clearly the $q_j$ which minimises this quanity is when $q_j = \exp(\mathbb{E}_{i \ne j}[\ln p(\boldsymbol{Z} | \boldsymbol{X})])$ and therefore we find the optimal $q_j$:
+Clearly the $q_j$ which minimises this quantity is when $q_j = \exp(\mathbb{E}_{i \ne j}[\ln p(\boldsymbol{Z} | \boldsymbol{X})])$ and therefore we find the optimal $q_j$
 
 \begin{equation}
 \label{eq:q_opt}
@@ -218,25 +221,23 @@ Note these equations do not represent an explicit solution because they are inte
 
 \subsection{The variational Bayes genotype model}
 
-As we are approximating a full Bayesian model, we need to specify a prior density on the parameters for the genotype model $\boldsymbol{\pi}$. Although these will now be considered latent variables under the new Bayesian model, they are still dintinct from the other latent variables as they do not grow in number with the number of data points (i.e. samples). I will therefore continue to refer to them as parameters. 
+As we are approximating a Bayesian model, we need to specify a prior density on the parameters for the genotype model $\boldsymbol{\pi}$. Although these will now be considered latent variables under the new Bayesian model, they are still distinct from the other latent variables as they do not grow in number with the number of data points (i.e. samples). I will therefore continue to refer to them as parameters. 
 
-It makes the analysis vastly simpler if we choose a conjugate prior density. We have already noted the marginal genotype density - under Hardy-Weinberg equilibrium - is Multinomial, it therefore makes most sense to choose the prior density $p(\boldsymbol{\pi})$ to be a Dirichlet distribution:
+It makes the analysis vastly simpler if we choose a conjugate prior density. We have already noted the marginal genotype density - under Hardy-Weinberg equilibrium - is Multinomial, it therefore makes most sense to choose the prior density $p(\boldsymbol{\pi})$ to be a Dirichlet distribution
 
 \begin{equation}
 p(\boldsymbol{\pi} | \boldsymbol{\alpha}) = \text{Dir}(\boldsymbol{\pi} | \boldsymbol{\alpha}) = \frac{1}{\text{B}(\boldsymbol{\alpha})} \prod_{i = 1}^H \pi_i^{\alpha_i - 1}
 \end{equation}
 
-where B is the multinomial Beta function.
-
-The full joint probability distribution is of the form:
+where B is the multinomial Beta function. The joint distribution of all random variables is given by
 
 \begin{equation}
 p(\boldsymbol{X}, \boldsymbol{G}, \boldsymbol{\pi}) = p(\boldsymbol{\pi} | \boldsymbol{\alpha}) p(G | \boldsymbol{\pi}) p(\boldsymbol{X} | \boldsymbol{G})
 \end{equation}
 
-Although this defines a full Bayesian model, we could infact do better by introducing another prior over the hyperparameters, and viewings each parameter $\boldsymbol{\pi}$ as a draw from a 'population' density, this would constitute a hierarchical Bayesian model (the haplotype probabilities are automatically updated for each sample). It may be worth investigating whether this is worthwhile. 
+Although this defines a Bayesian model, we could do better by introducing another prior over the hyperparameters, and viewings each parameter $\boldsymbol{\pi}$ as a draw from a 'population' density, this would constitute a hierarchical Bayesian model (the haplotype probabilities are automatically updated for each sample). It may be worth investigating whether this is worthwhile. 
 
-There are only two latent variables, so we must have a factorization of the form:
+There are only two latent variables, so we must have a factorization of the form
 
 \begin{equation}
 q(\boldsymbol{G}, \boldsymbol{\pi}) = q(\boldsymbol{G})q(\boldsymbol{\pi})
@@ -245,50 +246,47 @@ q(\boldsymbol{G}, \boldsymbol{\pi}) = q(\boldsymbol{G})q(\boldsymbol{\pi})
 Using (\ref{eq:q_opt}) we find that
 
 \begin{align}
-    \ln q^*(G) &= \mathbb{E}_{\boldsymbol{\pi}}[\ln p(\boldsymbol{X}, \boldsymbol{G}, \boldsymbol{\pi})] + const\\
-    &= \mathbb{E}_{\boldsymbol{\pi}}[\ln p(\boldsymbol{G} | \boldsymbol{\pi})] + \mathbb{E}_{\boldsymbol{\pi}}[p(\boldsymbol{X} | \boldsymbol{G})] + const\\
-    &= \mathbb{E}_{\boldsymbol{\pi}}\left[ \sum_{n = 1}^N \sum_{k = 1}^K g_{nk} \left\{ \ln C(\boldsymbol{g}^k) + \sum_{i = 1}^H \mu_i(\boldsymbol{g}^k) \ln \pi_i \right\} \right] \notag\\ &\phantom{{}=1} + \mathbb{E}_{\boldsymbol{\pi}}\left[ \sum_{n = 1}^N \sum_{k = 1}^K g_{nk} \left\{ \sum_{i = 1}^{r_n} \ln \sum_{h \in \boldsymbol{g}^k} p(r_{ni} | h) - \ln M \right\} \right] + const\\
-    &= \sum_{n = 1}^N \sum_{k = 1}^K g_{nk} \left\{ \ln C(\boldsymbol{g}^k) + \sum_{i = 1}^H \mu_i(\boldsymbol{g}^k) \mathbb{E}_{\boldsymbol{\pi}}[\ln \pi_i] + \sum_{i = 1}^{r_n} \ln \sum_{h \in \boldsymbol{g}^k} p(r_{ni} | h) - \ln M \right\} + const\\
-    &= \sum_{n = 1}^N \sum_{k = 1}^K g_{nk} \ln \rho_{nk} + const
+    \ln q^*(G) &= \mathbb{E}_{\boldsymbol{\pi}}[\ln p(\boldsymbol{X}, \boldsymbol{G}, \boldsymbol{\pi})] + \text{const}\notag\\
+    &= \mathbb{E}_{\boldsymbol{\pi}}[\ln p(\boldsymbol{G} | \boldsymbol{\pi})] + \mathbb{E}_{\boldsymbol{\pi}}[p(\boldsymbol{X} | \boldsymbol{G})] + \text{const} \notag\\
+    &= \mathbb{E}_{\boldsymbol{\pi}}\left[ \sum_{n = 1}^N \sum_{k = 1}^K g_{nk} \left\{ \ln C(\boldsymbol{g}^k) + \sum_{i = 1}^H \mu_i(\boldsymbol{g}^k) \ln \pi_i \right\} \right] \notag\\ &\phantom{{}=1} + \mathbb{E}_{\boldsymbol{\pi}}\left[ \sum_{n = 1}^N \sum_{k = 1}^K g_{nk} \left\{ \sum_{i = 1}^{r_n} \ln \sum_{h \in \boldsymbol{g}^k} p(r_{ni} | h) - \ln M \right\} \right] + \text{const}\notag\\
+    &= \sum_{n = 1}^N \sum_{k = 1}^K g_{nk} \left\{ \ln C(\boldsymbol{g}^k) + \sum_{i = 1}^H \mu_i(\boldsymbol{g}^k) \mathbb{E}_{\boldsymbol{\pi}}[\ln \pi_i] + \sum_{i = 1}^{r_n} \ln \sum_{h \in \boldsymbol{g}^k} p(r_{ni} | h) - \ln M \right\} + \text{const}\notag\\
+    &= \sum_{n = 1}^N \sum_{k = 1}^K g_{nk} \ln \rho_{nk} + \text{const}
 \end{align}
 
 where we have defined
 
 \begin{align}
-    \ln \rho_{nk} &= \ln C(\boldsymbol{g}^k) + \sum_{i = 1}^H \mu_i(\boldsymbol{g}^k) \mathbb{E}_{\boldsymbol{\pi}}[\ln \pi_i] + \sum_{i = 1}^{r_n} \ln \sum_{h \in \boldsymbol{g}^k} p(r_{ni} | h) - \ln M\\
-    &= \ln C(\boldsymbol{g}^k) + \sum_{i = 1}^H \mu_i(\boldsymbol{g}^k) (\psi(\alpha)j - \psi(\alpha_0)) + \sum_{i = 1}^{r_n} \ln \sum_{h \in \boldsymbol{g}^k} p(r_{ni} | h) - \ln M\\
-    &= \ln C(\boldsymbol{g}^k) + \sum_{i = 1}^H \mu_i(\boldsymbol{g}^k) \mathbb{E}_{\boldsymbol{\pi}}[\ln \pi_i] + \sum_{i = 1}^{r_n} \ln \sum_{h \in \boldsymbol{g}^k} p(r_{ni} | h) - \ln M\\
-    &= \ln C(\boldsymbol{g}^k) + \sum_{i = 1}^H \mu_i(\boldsymbol{g}^k) \psi(\alpha_i) - \psi(\alpha_0)\sum_{i = 1}^H \mu_i(\boldsymbol{g}^k) + \sum_{i = 1}^{r_n} \ln \sum_{h \in \boldsymbol{g}^k} p(r_{ni} | h) - \ln M\\
+    \ln \rho_{nk} &= \ln C(\boldsymbol{g}^k) + \sum_{i = 1}^H \mu_i(\boldsymbol{g}^k) \mathbb{E}_{\boldsymbol{\pi}}[\ln \pi_i] + \sum_{i = 1}^{r_n} \ln \sum_{h \in \boldsymbol{g}^k} p(r_{ni} | h) - \ln M\notag\\
+    &= \ln C(\boldsymbol{g}^k) + \sum_{i = 1}^H \mu_i(\boldsymbol{g}^k) (\psi(\alpha_i) - \psi(\alpha_0)) + \sum_{i = 1}^{r_n} \ln \sum_{h \in \boldsymbol{g}^k} p(r_{ni} | h) - \ln M\notag\\
+    &= \ln C(\boldsymbol{g}^k) + \sum_{i = 1}^H \mu_i(\boldsymbol{g}^k) \psi(\alpha_i) - \psi(\alpha_0)\sum_{i = 1}^H \mu_i(\boldsymbol{g}^k) + \sum_{i = 1}^{r_n} \ln \sum_{h \in \boldsymbol{g}^k} p(r_{ni} | h) - \ln M\notag\\
     &= \ln C(\boldsymbol{g}^k) + \sum_{i = 1}^H \mu_i(\boldsymbol{g}^k) \psi(\alpha_i) - M\psi(\alpha_0) + \sum_{i = 1}^{r_n} \ln \sum_{h \in \boldsymbol{g}^k} p(r_{ni} | h) - \ln M
 \end{align}
 
-where $\phi$ is the digamma function, $\alpha_0 = \sum_{i = 1}^H \alpha_i$, and $C(\boldsymbol{g}^k)$ is the multinomial coefficient.
-
-Hence we find the optimal density for $\boldsymbol{G}$ is given by
+where $\phi$ is the digamma function, $\alpha_0 = \sum_{i = 1}^H \alpha_i$, and $C(\boldsymbol{g}^k)$ is the multinomial coefficient. Hence we find the optimal density for $\boldsymbol{G}$ is given by
 
 \begin{equation}
 q^*(\boldsymbol{G}) = \prod_{n = 1}^N \prod_{k = 1}^K \tau_{nk}^{g_{nk}}
 \end{equation}
 
-where we have defined
+where
 
 \begin{equation}
 \tau_{nk} = \frac{\rho_{nk}}{\sum_{j = 1}^K \rho_{nj}}
 \end{equation}
 
-The sum in the denominator of $\tau$ is a normalisation constant. Next we need to find the optimal distribution for $\boldsymbol{\pi}$. Noting that as $\boldsymbol{g}$ is binary so we have $ \mathbb{E}[g_{nk}] = \tau_{nk}$, we again use (\ref{eq:q_opt}) to find
+The sum in the denominator of $\tau$ is a normalisation constant. Next we need to find the optimal distribution for $\boldsymbol{\pi}$. Noting that $\boldsymbol{g}$ is binary so we have $ \mathbb{E}[g_{nk}] = \tau_{nk}$, we again use (\ref{eq:q_opt}) to find
 
 \begin{align}
-    \ln q^*(\boldsymbol{\pi}) &= \ln p(\boldsymbol{\pi}) + \mathbb{E}[\ln p(\boldsymbol{G} | \boldsymbol{\pi})] + const\\
-    &= \sum_{i = 1}^H (\alpha_i - 1) \ln \pi_i + \sum_{n = 1}^N \sum_{k = 1}^K \mathbb{E}[g_{nk}]\left\{ \ln C(\boldsymbol{g}^k) + \sum_{i = 1}^H \mu_i(\boldsymbol{g}^k) \ln \pi_i \right\} + const\\
-    &= \sum_{i = 1}^H (\alpha_i - 1) \ln \pi_i + \sum_{n = 1}^N \sum_{k = 1}^K \tau_{nk} \left\{ \sum_{i = 1}^H \mu_i(\boldsymbol{g}^k) \ln \pi_i \right\} + const
+    \ln q^*(\boldsymbol{\pi}) &= \ln p(\boldsymbol{\pi}) + \mathbb{E}[\ln p(\boldsymbol{G} | \boldsymbol{\pi})] + \text{const}\notag\\
+    &= \sum_{i = 1}^H (\alpha_i - 1) \ln \pi_i + \sum_{n = 1}^N \sum_{k = 1}^K \mathbb{E}[g_{nk}]\left\{ \ln C(\boldsymbol{g}^k) + \sum_{i = 1}^H \mu_i(\boldsymbol{g}^k) \ln \pi_i \right\} + \text{const} \notag\\
+    &= \sum_{i = 1}^H (\alpha_i - 1) \ln \pi_i + \sum_{n = 1}^N \sum_{k = 1}^K \tau_{nk} \left\{ \sum_{i = 1}^H \mu_i(\boldsymbol{g}^k) \ln \pi_i \right\} + \text{const}
 \end{align}
 
 and therefore
 
 \begin{align}
-    q^*(\boldsymbol{\pi}) &= \prod_{i = 1}^H \pi_i^{\alpha_i - 1} \prod_{i = 1}^H \pi_i^{\sum_{n = 1}^N \sum_{k = 1}^K \tau_{nk} \mu_i(\boldsymbol{g}^k)} + const\\
-    &= \prod_{i = 1}^H \pi_i^{\alpha_i + \sum_{n = 1}^N \sum_{k = 1}^K \tau_{nk} \mu_i(\boldsymbol{g}^k) - 1} + const
+    q^*(\boldsymbol{\pi}) &= \prod_{i = 1}^H \pi_i^{\alpha_i - 1} \prod_{i = 1}^H \pi_i^{\sum_{n = 1}^N \sum_{k = 1}^K \tau_{nk} \mu_i(\boldsymbol{g}^k)} + \text{const} \\
+    &= \prod_{i = 1}^H \pi_i^{\alpha_i + \sum_{n = 1}^N \sum_{k = 1}^K \tau_{nk} \mu_i(\boldsymbol{g}^k) - 1} + \text{const}
 \end{align}
 
 Which we can recognise as a Dirichlet distribution
@@ -300,19 +298,20 @@ q^*(\boldsymbol{\pi}) = \text{Dir}(\boldsymbol{\pi} | \boldsymbol{\alpha}')
 where the components of $\boldsymbol{\alpha}'$ are given by
 
 \begin{equation}
+\label{eq:vb_solution}
 \alpha'_i = \alpha_i + \sum_{n = 1}^N \sum_{k = 1}^K \tau_{nk} \mu_i(\boldsymbol{g}^k)
 \end{equation}
 
-It is worthwhile noting that this variational Bayes model has the same runtime complexity as the EM algorithm.
+We can see the similarity of the variational Bayes solution (\ref{eq:vb_solution}) to the EM solution (\ref{eq:em_solution}). In particular both involve an expectation of the number of occurrences of each haplotype in the samples, the difference is that (\ref{eq:vb_solution}) implicitly accounts for our uncertainty in $\boldsymbol{\pi}$ through $\tau$. Additionally, as in all Bayesian models, the variational Bayes model automatically penalises model complexity through the term $M\psi(\alpha_0)$. It is also worthwhile noting that this variational Bayes method has the same runtime complexity as the EM algorithm.
 
 \subsubsection{Approximate posterior predictive destribution}
 
-We can now use the approximate densities to approximate posterior predictive destributions, which we can use to make inferences about the number of haplotypes in the population. For a vector of haplotype counts $\boldsymbol{z}$, the approximate posterior predictive distribution is
+We can now use the approximate densities to approximate posterior predictive distributions, which we can use to make inferences about the number of haplotypes in the population. For a vector of haplotype counts $\boldsymbol{z}$, the approximate posterior predictive distribution is
 
 \begin{align}
-    p(\boldsymbol{z} | \boldsymbol{X}, \boldsymbol{\alpha}) &= \int p(\boldsymbol{\pi} | \boldsymbol{X}, \boldsymbol{\alpha}) p(\boldsymbol{z} | \boldsymbol{\pi}) d\boldsymbol{\pi}\\
-    &\approx \int q^*(\boldsymbol{\pi}) p(\boldsymbol{z} | \boldsymbol{\pi}) d\boldsymbol{\pi}\\
-    &= \int \text{Dir}(\boldsymbol{\pi} | \boldsymbol{\alpha}) \text{Mul}(\boldsymbol{z} | \boldsymbol{\pi}) d\boldsymbol{\pi}\\
+    p(\boldsymbol{z} | \boldsymbol{X}, \boldsymbol{\alpha}) &= \int p(\boldsymbol{\pi} | \boldsymbol{X}, \boldsymbol{\alpha}) p(\boldsymbol{z} | \boldsymbol{\pi}) d\boldsymbol{\pi}\notag\\
+    &\approx \int q^*(\boldsymbol{\pi}) p(\boldsymbol{z} | \boldsymbol{\pi}) d\boldsymbol{\pi}\notag\\
+    &= \int \text{Dir}(\boldsymbol{\pi} | \boldsymbol{\alpha}) \text{Mul}(\boldsymbol{z} | \boldsymbol{\pi}) d\boldsymbol{\pi}\notag\\
     &= \frac{z_0!}{\prod_{i = 1}^{H} z_i} \frac{\Gamma(\alpha_0)}{\Gamma(z_0 + \alpha_0)} \prod_{i = 1}^H \frac{\Gamma(z_i + \alpha_i)}{\Gamma(\alpha_i)}
 \end{align}
 
@@ -320,12 +319,12 @@ where $z_0 = \sum_{i = 1}^H z_i$ and $\alpha_0 = \sum_{i = 1}^H \alpha_i$.
 
 \subsubsection{Finding the most probable allele counts}
 
-We could then find the most probable essemble of haplotypes in the samples by find a MAP estimate for $\boldsymbol{z}$, given the total number of haplotypes is $S = NM$.
+We could then find the most probable ensemble of haplotypes in the samples by find a MAP estimate for $\boldsymbol{z}$, given the total number of haplotypes is $S = NM$.
 
 \begin{align}
-    \hat{\boldsymbol{z}}_{MAP} &= \argmax_{\boldsymbol{z}} \check{p}(\boldsymbol{z} | \boldsymbol{X}, \boldsymbol{\alpha}, S = NM)\\
-    &= \argmax_{\boldsymbol{z}} \frac{\check{p}(\boldsymbol{z} | \boldsymbol{X}, \boldsymbol{\alpha})p(S = NM | \boldsymbol{z})}{p(S = NM)}\\
-    &= \argmax_{\boldsymbol{z}} \check{p}(\boldsymbol{z} | \boldsymbol{X}, \boldsymbol{\alpha})p(S = NM | \boldsymbol{z})\\
+    \hat{\boldsymbol{z}}_{MAP} &= \argmax_{\boldsymbol{z}} \check{p}(\boldsymbol{z} | \boldsymbol{X}, \boldsymbol{\alpha}, S = NM)\notag\\
+    &= \argmax_{\boldsymbol{z}} \frac{\check{p}(\boldsymbol{z} | \boldsymbol{X}, \boldsymbol{\alpha})p(S = NM | \boldsymbol{z})}{p(S = NM)}\notag\\
+    &= \argmax_{\boldsymbol{z}} \check{p}(\boldsymbol{z} | \boldsymbol{X}, \boldsymbol{\alpha})p(S = NM | \boldsymbol{z})\notag\\
     &= \argmax_{\boldsymbol{z} \; \text{s.t} \; \boldsymbol{z} \in \mathbb{N},\; \sum_k z_k = NM} \frac{NM!}{\prod_{i = 1}^{H} z_i} \frac{\Gamma(\alpha_0)}{\Gamma(NM + \alpha_0)} \prod_{i = 1}^H \frac{\Gamma(z_i + \alpha_i)}{\Gamma(\alpha_i)}
 \end{align}
 
