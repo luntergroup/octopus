@@ -54,8 +54,11 @@ public:
     double expected_haplotype_count(const Haplotype& haplotype,
                                     const SampleGenotypeResponsabilities& sample_genotype_responsabilities);
     
-    double posterior_haplotype_pseudo_count(const Haplotype& haplotype, double prior_pseudo_count,
+    double posterior_haplotype_pseudo_count(const Haplotype& haplotypes, double prior_pseudo_count,
                                             const GenotypeResponsabilities& genotype_responsabilities);
+    
+    double posterior_predictive_probability(const std::unordered_map<Haplotype, unsigned>& haplotype_counts,
+                                            const HaplotypePseudoCounts& haplotype_pseudo_count) const;
     
 private:
     unsigned ploidy_;

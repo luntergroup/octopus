@@ -97,6 +97,16 @@ double EmpiricalVariationalBayesGenotypeModel::posterior_haplotype_pseudo_count(
     return result;
 }
 
+double EmpiricalVariationalBayesGenotypeModel::posterior_predictive_probability(const std::unordered_map<Haplotype, unsigned>& haplotype_counts,
+                                                                                const HaplotypePseudoCounts& haplotype_pseudo_count) const
+{
+    std::vector<double> z {}, a {};
+    for (const auto& p : haplotype_counts) { z.push_back(p.second); };
+    for (const auto& p : haplotype_pseudo_count) { a.push_back(p.second); };
+    
+    return dirichlet_multinomial<double>(z, a);
+}
+
 double EmpiricalVariationalBayesGenotypeModel::log_expected_genotype_probability_haploid(const Genotype& genotype,
                                                  const HaplotypePseudoCounts& haplotype_pseudo_counts) const
 {

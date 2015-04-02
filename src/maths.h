@@ -10,9 +10,11 @@
 #define __Octopus__maths__
 
 #include <vector>
-#include <cmath>
+#include <cstddef>   // std::size_t
+#include <cmath>     // std::exp, std::log
 #include <numeric>   // std::accumulate
 #include <algorithm> // std::max, std::max_element
+#include <boost/math/special_functions/gamma.hpp>
 
 template <typename T>
 inline constexpr T factorial(T x)
@@ -87,19 +89,20 @@ inline T log_sum_exp(Iterator first, Iterator last)
 //{
 //    
 //}
-//
-//template <typename RealType>
-//RealType dirichlet_multinomial(const std::vector<RealType>& x, const std::vector<RealType>& a)
-//{
-//    auto a_0 = std::accumulate(a.cbegin(), a.cend(), RealType{});
-//    auto s_0 = std::accumulate(x.cbegin(), x.cend(), RealType{});
-//    
-//    RealType c {};
-//    for (const auto x_k : x) {
-//        c *= factorial(x_k);
-//    }
-//    
-//    RealType 
-//}
+
+template <typename RealType>
+RealType dirichlet_multinomial(const std::vector<RealType>& z, const std::vector<RealType>& a)
+{
+    auto z_0 = std::accumulate(z.cbegin(), z.cend(), RealType {});
+    auto a_0 = std::accumulate(a.cbegin(), a.cend(), RealType {});
+    auto z_m = std::accumulate(z.cbegin(), z.cend(), RealType {1}, std::multiplies<RealType>());
+    
+    RealType g {1};
+    for (std::size_t i {0}; i < z.size(); ++i) {
+        g *= boost::math::tgamma<RealType>(z[i] + a[i]) / boost::math::tgamma<RealType>(a[i]);
+    }
+    
+    return (factorial(z_0) / z_m) * (boost::math::tgamma(a_0) / boost::math::tgamma(z_0 + a_0)) * g;
+}
 
 #endif /* defined(__Octopus__maths__) */
