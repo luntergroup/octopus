@@ -13,11 +13,87 @@
 
 Haplotype::Haplotype(ReferenceGenome& the_reference)
 :
-the_reference_ {the_reference}
+the_reference_ {the_reference},
+is_region_set_ {false},
+the_reference_region_ {},
+the_haplotype_ {}
 {}
+
+Haplotype::Haplotype(ReferenceGenome& the_reference, const GenomicRegion& a_region)
+:
+the_reference_ {the_reference},
+is_region_set_ {true},
+the_reference_region_ {a_region},
+the_haplotype_ {}
+{}
+
+void Haplotype::emplace_back(const Variant& a_variant)
+{
+    the_haplotype_.emplace_back(a_variant.get_reference_allele_region(),
+                                a_variant.get_alternative_allele());
+}
+
+void Haplotype::emplace_front(const Variant& a_variant)
+{
+    the_haplotype_.emplace_front(a_variant.get_reference_allele_region(),
+                                 a_variant.get_alternative_allele());
+}
+
+bool Haplotype::contains(const Variant& a_variant) const
+{
+    return std::find_if(std::cbegin(the_haplotype_), std::cend(the_haplotype_),
+                        [a_variant] (const auto& an_allele) {
+                            return a_variant.get_alternative_allele() == an_allele.the_sequence;
+                        }) != std::cend(the_haplotype_);
+}
 
 GenomicRegion Haplotype::get_region() const
 {
+    return (is_region_set_) ? the_reference_region_ : get_region_bounded_by_alleles();
+}
+
+Haplotype::SequenceType Haplotype::get_sequence() const
+{
+    return (is_region_set_) ? get_sequence(the_reference_region_) : get_sequence_bounded_by_alleles();
+}
+
+Haplotype::SequenceType Haplotype::get_sequence(const GenomicRegion& a_region) const
+{
+    if (the_haplotype_.empty()) {
+        return the_reference_.get_sequence(a_region);
+    }
+    
+    auto the_region_bounded_by_alleles = get_region_bounded_by_alleles();
+    
+    GenomicRegion reference_left_part {
+        a_region.get_contig_name(),
+        a_region.get_begin(),
+        the_region_bounded_by_alleles.get_begin()
+    };
+    GenomicRegion reference_right_part {
+        a_region.get_contig_name(),
+        the_region_bounded_by_alleles.get_end(),
+        a_region.get_end()
+    };
+    
+    SequenceType result {};
+    
+    if (size(reference_left_part) > 0) {
+        result += the_reference_.get_sequence(reference_left_part);
+    }
+    
+    result += get_sequence_bounded_by_alleles();
+    
+    if (size(reference_right_part) > 0) {
+        result += the_reference_.get_sequence(reference_right_part);
+    }
+    
+    return result;
+}
+
+GenomicRegion Haplotype::get_region_bounded_by_alleles() const
+{
+    if (the_haplotype_.empty()) throw std::runtime_error {"Cannot get region from empty allele list"};
     return GenomicRegion {
         the_haplotype_.front().the_reference_region.get_contig_name(),
         the_haplotype_.front().the_reference_region.get_begin(),
@@ -25,7 +101,7 @@ GenomicRegion Haplotype::get_region() const
     };
 }
 
-Haplotype::SequenceType Haplotype::get_sequence() const
+Haplotype::SequenceType Haplotype::get_sequence_bounded_by_alleles() const
 {
     SequenceType result {};
     
@@ -48,33 +124,4 @@ Haplotype::SequenceType Haplotype::get_sequence() const
     }
     
     return result;
-}
-
-Haplotype::SequenceType Haplotype::get_sequence(const GenomicRegion& a_region) const
-{
-    // TODO
-    SequenceType result {};
-    
-    if (the_haplotype_.empty()) {
-        return the_reference_.get_sequence(a_region);
-    }
-    
-    return result;
-}
-
-void Haplotype::emplace_back(const Variant& a_variant)
-{
-    the_haplotype_.emplace_back(a_variant.get_reference_allele_region(),
-                                a_variant.get_alternative_allele());
-}
-
-void Haplotype::emplace_front(const Variant& a_variant)
-{
-    the_haplotype_.emplace_front(a_variant.get_reference_allele_region(),
-                                 a_variant.get_alternative_allele());
-}
-
-void extend_with_reference(const GenomicRegion& the_region_to_cover)
-{
-    // TODO
 }

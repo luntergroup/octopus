@@ -139,7 +139,10 @@ inline bool operator==(const Variant& lhs, const Variant& rhs)
 
 inline bool operator<(const Variant& lhs, const Variant& rhs)
 {
-    return lhs.get_reference_allele_region() < rhs.get_reference_allele_region();
+    // The end points of the region are compared when the begin points match so variants of the
+    // same type are ordered adjacently
+    return (lhs.get_reference_allele_region() < rhs.get_reference_allele_region()) ? true :
+            lhs.get_reference_allele_region().get_end() < rhs.get_reference_allele_region().get_end();
 }
 
 namespace std {

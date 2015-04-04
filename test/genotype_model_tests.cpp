@@ -52,8 +52,6 @@ TEST_CASE("haploid_genotype_model_test", "[genotype_model]")
     
     auto variants = candidate_generator.get_candidates(a_region);
     
-    REQUIRE(variants.size() == 14);
-    
     Haplotype reference_haplotype {ecoli};
     reference_haplotype.emplace_back(a_region, std::move(reference_sequence));
     

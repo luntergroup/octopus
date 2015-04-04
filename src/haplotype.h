@@ -13,6 +13,7 @@
 #include <algorithm> // std::equal
 #include <iterator>  // std::cbegin etc
 #include <ostream>
+#include <stdexcept> // std::runtime_error
 
 #include "variant.h"
 #include "equitable.h"
@@ -27,16 +28,13 @@ public:
     
     Haplotype() = delete;
     explicit Haplotype(ReferenceGenome& the_reference);
+    explicit Haplotype(ReferenceGenome& the_reference, const GenomicRegion& the_region);
     ~Haplotype() = default;
     
     Haplotype(const Haplotype&)            = default;
     Haplotype& operator=(const Haplotype&) = default;
     Haplotype(Haplotype&&)                 = default;
     Haplotype& operator=(Haplotype&&)      = default;
-    
-    GenomicRegion get_region() const;
-    SequenceType get_sequence() const;
-    SequenceType get_sequence(const GenomicRegion& a_region) const;
     
     // TODO: should be checking order/conflicts
     void emplace_back(const Variant& a_variant);
@@ -46,7 +44,10 @@ public:
     template <typename T>
     void emplace_front(const GenomicRegion& the_allele_region, T&& the_allele_sequence);
     
-    void extend_with_reference(const GenomicRegion& the_region_to_cover);
+    bool contains(const Variant& a_variant) const;
+    GenomicRegion get_region() const;
+    SequenceType get_sequence() const;
+    SequenceType get_sequence(const GenomicRegion& a_region) const;
     
     friend bool operator==(const Haplotype& lhs, const Haplotype& rhs);
 private:
@@ -65,7 +66,12 @@ private:
     
     friend bool operator==(const Allele& lhs, const Allele& rhs);
     
+    GenomicRegion get_region_bounded_by_alleles() const;
+    SequenceType get_sequence_bounded_by_alleles() const;
+    
     ReferenceGenome& the_reference_;
+    bool is_region_set_;
+    GenomicRegion the_reference_region_;
     std::deque<Allele> the_haplotype_;
 };
 

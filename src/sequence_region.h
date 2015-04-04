@@ -22,7 +22,7 @@
 class SequenceRegion : public Comparable<SequenceRegion>
 {
 public:
-    using SizeType      = std::uint_fast32_t;
+    using SizeType       = std::uint_fast32_t;
     using DifferenceType = std::int_fast64_t;
     
     SequenceRegion() = default;
@@ -42,8 +42,9 @@ private:
 };
 
 inline SequenceRegion::SequenceRegion(SizeType begin, SizeType end)
-:begin_ {begin},
- end_ {end}
+:
+begin_ {begin},
+end_ {end}
 {
     if (end < begin) throw std::runtime_error {"Invalid sequence region"};
 }

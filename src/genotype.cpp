@@ -85,6 +85,20 @@ Genotype get_genotype_from_haplotype_indicies(const std::vector<Haplotype>& hapl
     return result;
 }
 
+// This is a surprisingly complex algorithm. Essentially we are enumerating the terms in a
+// polynomial of the form (x_1 + ... + x_{num_haplotypes})^ploidy. It's easier if we first map
+// haplotypes to integers such that h_1 -> 0, ..., h_num_haplotypes -> num_haplotypes - 1.
+// The order of the haplotypes is not important, only that each haplotype maps to a unique integer,
+// and is within the set {0, num_haplotypes - 1}.
+// We then start with the homozygous genotype {0, ..., 0} and increment this each time
+// we exit the loop. We are then essentially enumerating integers in base_{num_haplotypes}.
+// However there is a caveat, usually when we increment an integer and need to carry, the bits to the
+// right of the carried 1 are all set to zero (e.g. in base 3, 0122 + 1 = 0200). In our case this
+// doesn't work as we will already have the resulting genotype (0002 in the example). The solution
+// is to 'miss out' all the genotypes we already have by setting the bits to the right of the carry
+// to the same value as the left most significant bit (e.g. 0122 + 1 = 0222). This is guaranteed
+// to be a novel genotype. We terminate when the leftmost bit is equal to the num_haplotypes - 1
+// which is necessarily the genotype {num_haplotypes - 1, ..., num_haplotypes - 1}.
 std::vector<Genotype> get_all_genotypes(const std::vector<Haplotype>& haplotypes, unsigned ploidy)
 {
     std::vector<Genotype> result {};
@@ -93,7 +107,7 @@ std::vector<Genotype> get_all_genotypes(const std::vector<Haplotype>& haplotypes
     
     std::vector<unsigned> haplotype_indicies(ploidy, 0);
     
-    unsigned i {0};
+    unsigned i {};
     while (true) {
         if (haplotype_indicies[i] == num_haplotypes) {
             do {
