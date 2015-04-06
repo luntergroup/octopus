@@ -20,8 +20,3 @@ std::vector<Variant> ExternalVariantCandidates::get_candidates(const GenomicRegi
 {
     return a_variant_file_.fetch_variants(a_region);
 }
-
-double ExternalVariantCandidates::get_variant_detection_probability(const Variant& a_variant)
-{
-    return generator_confidence_;
-}

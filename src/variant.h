@@ -31,12 +31,12 @@ public:
     
     template <typename GenomicRegion_, typename StringType1, typename StringType2>
     explicit Variant(GenomicRegion_&& the_reference_allele_region, StringType1&& the_reference_allele,
-                     StringType2&& the_alternative_allele, std::function<double()> prior_model);
+                     StringType2&& the_alternative_allele, double the_segregation_probability);
     
     template <typename StringType1, typename StringType2, typename StringType3>
     explicit Variant(StringType1&& the_reference_contig_name, SizeType the_reference_begin,
                      StringType2&& the_reference_allele, StringType3&& the_alternative_allele,
-                     std::function<double()> prior_model);
+                     double the_segregation_probability);
     
     Variant(const Variant&)            = default;
     Variant& operator=(const Variant&) = default;
@@ -46,30 +46,31 @@ public:
     const GenomicRegion& get_reference_allele_region() const noexcept;
     const SequenceType& get_reference_allele() const noexcept;
     const SequenceType& get_alternative_allele() const noexcept;
-    double get_prior_probability() const noexcept;
+    void set_segregation_probability(double p) noexcept;
+    double get_segregation_probability() const noexcept;
     
 private:
     // Don't change the order of these members
     SequenceType the_reference_allele_;
     GenomicRegion the_reference_allele_region_;
     SequenceType the_alternative_allele_;
-    std::function<double()> prior_model_;
+    double the_segregation_probability_;
 };
 
 template <typename GenomicRegion_, typename StringType1, typename StringType2>
 Variant::Variant(GenomicRegion_&& the_reference_allele_region, StringType1&& the_reference_allele,
-                 StringType2&& the_alternative_allele, std::function<double()> prior_model)
+                 StringType2&& the_alternative_allele, double the_segregation_probability)
 :
 the_reference_allele_ {std::forward<StringType1>(the_reference_allele)},
 the_reference_allele_region_ {std::forward<GenomicRegion_>(the_reference_allele_region)},
 the_alternative_allele_ {std::forward<StringType2>(the_alternative_allele)},
-prior_model_ {prior_model}
+the_segregation_probability_ {the_segregation_probability}
 {}
 
 template <typename StringType1, typename StringType2, typename StringType3>
 Variant::Variant(StringType1&& the_reference_contig_name, SizeType the_reference_begin,
                  StringType2&& the_reference_allele, StringType3&& the_alternative_allele,
-                 std::function<double()> prior_model)
+                 double the_segregation_probability)
 :
 // The reference allele needs to be initialised first so it's size can be used for the
 // region initialisation.
@@ -77,7 +78,7 @@ the_reference_allele_ {std::forward<StringType2>(the_reference_allele)},
 the_reference_allele_region_ {GenomicRegion{std::forward<StringType1>(the_reference_contig_name),
     the_reference_begin, the_reference_begin + static_cast<SizeType>(the_reference_allele_.size())}},
 the_alternative_allele_ {std::forward<StringType3>(the_alternative_allele)},
-prior_model_ {prior_model}
+the_segregation_probability_ {the_segregation_probability}
 {}
 
 inline const GenomicRegion& Variant::get_reference_allele_region() const noexcept
@@ -95,9 +96,14 @@ inline const Variant::SequenceType& Variant::get_alternative_allele() const noex
     return the_alternative_allele_;
 }
 
-inline double Variant::get_prior_probability() const noexcept
+inline void Variant::set_segregation_probability(double p) noexcept
 {
-    return prior_model_();
+    the_segregation_probability_ = p;
+}
+
+inline double Variant::get_segregation_probability() const noexcept
+{
+    return the_segregation_probability_;
 }
 
 inline bool overlaps(const Variant& lhs, const Variant& rhs) noexcept
@@ -139,10 +145,13 @@ inline bool operator==(const Variant& lhs, const Variant& rhs)
 
 inline bool operator<(const Variant& lhs, const Variant& rhs)
 {
-    // The end points of the region are compared when the begin points match so variants of the
-    // same type are ordered adjacently
-    return (lhs.get_reference_allele_region() < rhs.get_reference_allele_region()) ? true :
-            lhs.get_reference_allele_region().get_end() < rhs.get_reference_allele_region().get_end();
+    // This check is required for consistency with operator==
+    if (lhs.get_reference_allele_region() == rhs.get_reference_allele_region()) {
+        return (lhs.get_reference_allele() < rhs.get_reference_allele()) ? true :
+                            lhs.get_alternative_allele() < rhs.get_alternative_allele();
+    } else {
+        return lhs.get_reference_allele_region() < rhs.get_reference_allele_region();
+    }
 }
 
 namespace std {

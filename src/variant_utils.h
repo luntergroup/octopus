@@ -11,17 +11,11 @@
 
 #include <algorithm> // std::mismatch, std::max, std::minmax
 #include <cstddef>   // std::size_t
+
 #include "variant.h"
 
 class ReferenceGenome;
 class VariantFactory;
-class IVariantCandidateGenerator;
-
-using VariantGenerators = std::vector<IVariantCandidateGenerator>;
-
-//double get_variant_prior_probability(const Variant& a_variant,
-//                                     VariantCandidateGenerator& a_variant_candidate_generator,
-//                                     );
 
 /*
  A variant is parsimonious if and only if it is represented in as few nucleotides as possible

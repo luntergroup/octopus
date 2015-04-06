@@ -134,11 +134,6 @@ void AlignmentCandidateVariantGenerator::clear()
     candidates_.clear();
 }
 
-double AlignmentCandidateVariantGenerator::get_variant_detection_probability(const Variant& a_variant)
-{
-    return generator_confidence_;
-}
-
 void AlignmentCandidateVariantGenerator::
 get_variants_in_match_range(const GenomicRegion& the_region, std::string::const_iterator read_begin,
                             std::string::const_iterator read_end)

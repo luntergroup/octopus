@@ -39,8 +39,6 @@ public:
     void reserve(std::size_t n) override;
     void clear() override;
     
-    double get_variant_detection_probability(const Variant& a_variant) override;
-    
 private:
     ReferenceGenome& the_reference_;
     VariantAssembler the_variant_assembler_;

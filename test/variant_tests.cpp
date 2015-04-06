@@ -102,65 +102,53 @@ TEST_CASE("variant_ordering_test", "[variant]")
     VariantFactory a_variant_factory {};
     
     auto snp1 = a_variant_factory.make("chr1", 100, "T", "A");
-    auto snp2 = a_variant_factory.make("chr1", 100, "T", "G");
-    auto snp3 = a_variant_factory.make("chr1", 100, "T", "C");
-    auto ins1  = a_variant_factory.make("chr1", 100, "", "AG");
-    auto ins2  = a_variant_factory.make("chr1", 100, "", "CC");
-    auto del1  = a_variant_factory.make("chr1", 100, "TA", "");
-    auto del2  = a_variant_factory.make("chr1", 100, "TAG", "");
+    auto snp2 = a_variant_factory.make("chr1", 100, "T", "C");
+    auto snp3 = a_variant_factory.make("chr1", 100, "T", "G");
+    auto ins1 = a_variant_factory.make("chr1", 100, "", "AG");
+    auto ins2 = a_variant_factory.make("chr1", 100, "", "CC");
+    auto ins3 = a_variant_factory.make("chr1", 100, "", "CCA");
+    auto del1 = a_variant_factory.make("chr1", 100, "TA", "");
+    auto del2 = a_variant_factory.make("chr1", 100, "TAG", "");
     
     std::vector<Variant> variants1 {snp1, ins1, snp2};
     
     std::sort(variants1.begin(), variants1.end());
     
-    std::vector<Variant> variants1_possible_sort1 {ins1, snp1, snp2};
-    std::vector<Variant> variants1_possible_sort2 {ins1, snp2, snp1};
+    std::vector<Variant> variants1_required_sort {ins1, snp1, snp2};
     
-    bool is_possible_sort1 = std::equal(variants1.cbegin(), variants1.cend(), variants1_possible_sort1.cbegin());
-    bool is_possible_sort2 = std::equal(variants1.cbegin(), variants1.cend(), variants1_possible_sort2.cbegin());
+    bool is_required_sort1 = std::equal(variants1.cbegin(), variants1.cend(), variants1_required_sort.cbegin());
     
-    REQUIRE((is_possible_sort1 || is_possible_sort2));
+    REQUIRE(is_required_sort1);
     
     std::vector<Variant> variants2 {snp1, del1, snp2, ins1, snp3};
     
     std::sort(variants2.begin(), variants2.end());
     
-    std::vector<Variant> variants2_possible_sort1 {ins1, snp1, snp2, snp3, del1};
-    std::vector<Variant> variants2_possible_sort2 {ins1, snp2, snp1, snp3, del1};
-    std::vector<Variant> variants2_possible_sort3 {ins1, snp3, snp2, snp1, del1};
-    std::vector<Variant> variants2_possible_sort4 {ins1, snp2, snp3, snp1, del1};
+    std::vector<Variant> variants2_required_sort {ins1, snp1, snp2, snp3, del1};
     
-    is_possible_sort1 = std::equal(variants2.cbegin(), variants2.cend(), variants2_possible_sort1.cbegin());
-    is_possible_sort2 = std::equal(variants2.cbegin(), variants2.cend(), variants2_possible_sort2.cbegin());
-    auto is_possible_sort3 = std::equal(variants2.cbegin(), variants2.cend(), variants2_possible_sort3.cbegin());
-    auto is_possible_sort4 = std::equal(variants2.cbegin(), variants2.cend(), variants2_possible_sort4.cbegin());
+    auto is_required_sort2 = std::equal(variants2.cbegin(), variants2.cend(), variants2_required_sort.cbegin());
     
-    REQUIRE((is_possible_sort1 || is_possible_sort2 || is_possible_sort3 || is_possible_sort4));
+    REQUIRE(is_required_sort2);
     
     std::vector<Variant> variants3 {del2, snp1, del1, snp2, ins1, snp3, ins2};
     
     std::sort(variants3.begin(), variants3.end());
     
-    std::vector<Variant> variants3_possible_sort1 {ins1, ins2, snp1, snp2, snp3, del1, del2};
-    std::vector<Variant> variants3_possible_sort2 {ins1, ins2, snp2, snp1, snp3, del1, del2};
-    std::vector<Variant> variants3_possible_sort3 {ins1, ins2, snp3, snp2, snp1, del1, del2};
-    std::vector<Variant> variants3_possible_sort4 {ins1, ins2, snp2, snp3, snp1, del1, del2};
-    std::vector<Variant> variants3_possible_sort5 {ins2, ins1, snp1, snp2, snp3, del1, del2};
-    std::vector<Variant> variants3_possible_sort6 {ins2, ins1, snp2, snp1, snp3, del1, del2};
-    std::vector<Variant> variants3_possible_sort7 {ins2, ins1, snp3, snp2, snp1, del1, del2};
-    std::vector<Variant> variants3_possible_sort8 {ins2, ins2, snp3, snp1, snp3, del1, del2};
+    std::vector<Variant> variants3_required_sort {ins1, ins2, snp1, snp2, snp3, del1, del2};
     
-    is_possible_sort1 = std::equal(variants3.cbegin(), variants3.cend(), variants3_possible_sort1.cbegin());
-    is_possible_sort2 = std::equal(variants3.cbegin(), variants3.cend(), variants3_possible_sort2.cbegin());
-    is_possible_sort3 = std::equal(variants3.cbegin(), variants3.cend(), variants3_possible_sort3.cbegin());
-    is_possible_sort4 = std::equal(variants3.cbegin(), variants3.cend(), variants3_possible_sort4.cbegin());
-    auto is_possible_sort5 = std::equal(variants3.cbegin(), variants3.cend(), variants3_possible_sort5.cbegin());
-    auto is_possible_sort6 = std::equal(variants3.cbegin(), variants3.cend(), variants3_possible_sort6.cbegin());
-    auto is_possible_sort7 = std::equal(variants3.cbegin(), variants3.cend(), variants3_possible_sort7.cbegin());
-    auto is_possible_sort8 = std::equal(variants3.cbegin(), variants3.cend(), variants3_possible_sort8.cbegin());
+    auto is_required_sort3 = std::equal(variants3.cbegin(), variants3.cend(), variants3_required_sort.cbegin());
     
-    REQUIRE((is_possible_sort1 || is_possible_sort2 || is_possible_sort3 || is_possible_sort4 ||
-             is_possible_sort5 || is_possible_sort6 || is_possible_sort7 || is_possible_sort8));
+    REQUIRE(is_required_sort3);
+    
+    std::vector<Variant> variants4 {ins2, del2, snp1, del1, snp2, ins1, snp3, ins3};
+    
+    std::sort(variants4.begin(), variants4.end());
+    
+    std::vector<Variant> variants4_required_sort {ins1, ins2, ins3, snp1, snp2, snp3, del1, del2};
+    
+    auto is_required_sort4 = std::equal(variants4.cbegin(), variants4.cend(), variants4_required_sort.cbegin());
+    
+    REQUIRE(is_required_sort4);
 }
 
 TEST_CASE("left_alignment", "[left_alignment]")

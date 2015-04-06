@@ -338,9 +338,8 @@ The posterior haplotype densities for each sample is found using the posterior g
 
 \begin{align}
 \label{eq:sh_pp}
-p(h_{ni} | \boldsymbol{X}, \boldsymbol{\alpha}) &= \sum_{\boldsymbol{g}} p(\boldsymbol{g}_n | \boldsymbol{X}, \boldsymbol{\alpha}) p(h_{i} | \boldsymbol{g}_n) \notag \\
-    &\approx \sum_{k = 1}^K q^*(g_{nk}) p(h_{i} | g_{nk} = 1) \notag \\
-    &= \sum_{k = 1}^K \tau_{nk} p(h_{i} | g_{nk} = 1) \notag \\
+p(h_{ni} | \boldsymbol{X}, \boldsymbol{\alpha}) &= \sum_{\boldsymbol{g}} p(g_{nk} = 1 | \boldsymbol{X}, \boldsymbol{\alpha}) p(\mu_i(\boldsymbol{g}^k) \ge 1) \notag \\
+    &\approx \sum_{k = 1}^K q^*(g_{nk}) p(\mu_i(\boldsymbol{g}^k) \ge 1) \notag \\
     &= \sum_{k = 1}^K \tau_{nk} [h_i \in \boldsymbol{g}^k]
 \end{align}
 

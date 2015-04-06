@@ -40,9 +40,6 @@ public:
     void reserve(std::size_t n) override;
     void clear() override;
     
-    std::vector<std::pair<Variant, double>> get_candidates_and_priors(const GenomicRegion& a_region);
-    double get_variant_detection_probability(const Variant& a_variant) override;
-    
 private:
     std::vector<std::unique_ptr<IVariantCandidateGenerator>> generator_list_;
 };
@@ -93,23 +90,6 @@ inline void VariantCandidateGenerator::clear()
     for (auto& generator : generator_list_) {
         generator->clear();
     }
-}
-
-inline std::vector<std::pair<Variant, double>>
-VariantCandidateGenerator::get_candidates_and_priors(const GenomicRegion& a_region)
-{
-    std::vector<std::pair<Variant, double>> result {};
-    
-    return result;
-}
-
-inline double VariantCandidateGenerator::get_variant_detection_probability(const Variant& a_variant)
-{
-    double result {1};
-    for (auto& generator : generator_list_) {
-        result *= generator->get_variant_detection_probability(a_variant);
-    }
-    return result;
 }
 
 #endif /* defined(__Octopus__variant_candidate_generator__) */

@@ -14,11 +14,11 @@
 #include <iterator>
 #include <vector>
 #include <ostream>
-#include <algorithm> // std::copy
+#include <algorithm> // std::copy, std::minmax, std::mismatch
 
 #include "equitable.h"
 
-class CigarOperation : public Equitable<CigarOperation>
+class CigarOperation : public Comparable<CigarOperation> // Comparable so can compare reads
 {
 public:
     using SizeType = std::uint_fast32_t;
@@ -120,18 +120,29 @@ inline T get_soft_clipped_read_begin(const CigarString& a_cigar_string, T hard_c
 
 inline bool operator==(const CigarOperation& lhs, const CigarOperation& rhs)
 {
-    return lhs.get_size() == rhs.get_size() && lhs.get_size() == rhs.get_size();
+    return lhs.get_flag() == rhs.get_flag() && lhs.get_size() == rhs.get_size();
+}
+
+inline bool operator<(const CigarOperation& lhs, const CigarOperation& rhs)
+{
+    return (lhs.get_flag() == rhs.get_flag()) ? lhs.get_size() < rhs.get_size() :
+                                                lhs.get_flag() < rhs.get_flag();
 }
 
 inline bool operator==(const CigarString& lhs, const CigarString& rhs)
 {
     return std::equal(std::cbegin(lhs), std::cend(lhs), std::cbegin(rhs));
 }
-
-inline bool operator!=(const CigarString& lhs, const CigarString& rhs)
+inline bool operator!=(const CigarString& lhs, const CigarString& rhs){return !operator==(lhs, rhs);}
+inline bool operator<(const CigarString& lhs, const CigarString& rhs)
 {
-    return !operator==(lhs, rhs);
+    auto p = std::minmax(lhs, rhs, [] (const auto& lhs, const auto& rhs) { return lhs.size() <= rhs.size(); });
+    auto itrs = std::mismatch(std::cbegin(p.first), std::cend(p.first), std::cbegin(p.second));
+    return (itrs.first != std::cend(p.first)) ? *(itrs.first) < *(itrs.second) : false;
 }
+inline bool operator> (const CigarString& lhs, const CigarString& rhs){return  operator< (rhs,lhs);}
+inline bool operator<=(const CigarString& lhs, const CigarString& rhs){return !operator> (lhs,rhs);}
+inline bool operator>=(const CigarString& lhs, const CigarString& rhs){return !operator< (lhs,rhs);}
 
 inline std::ostream& operator<<(std::ostream& os, const CigarOperation& a_cigar_operation)
 {

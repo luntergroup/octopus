@@ -34,8 +34,6 @@ public:
     void reserve(std::size_t) override;
     void clear() override;
     
-    double get_variant_detection_probability(const Variant& a_variant) override;
-    
 private:
     VariantFile& a_variant_file_;
     double generator_confidence_;

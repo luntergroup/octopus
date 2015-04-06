@@ -12,8 +12,8 @@
 #include <queue>
 #include <algorithm> // std::equal
 #include <iterator>  // std::cbegin etc
-#include <ostream>
 #include <stdexcept> // std::runtime_error
+#include <ostream>
 
 #include "variant.h"
 #include "equitable.h"
@@ -25,6 +25,7 @@ class Haplotype : public Equitable<Haplotype>
 {
 public:
     using SequenceType = Variant::SequenceType;
+    using SizeType     = Variant::SizeType;
     
     Haplotype() = delete;
     explicit Haplotype(ReferenceGenome& the_reference);
@@ -65,6 +66,8 @@ private:
     };
     
     friend bool operator==(const Allele& lhs, const Allele& rhs);
+    friend bool operator<(const Variant& lhs, const Allele& rhs);
+    friend bool operator<(const Allele& lhs, const Variant& rhs);
     
     GenomicRegion get_region_bounded_by_alleles() const;
     SequenceType get_sequence_bounded_by_alleles() const;

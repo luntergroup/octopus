@@ -21,13 +21,6 @@ using std::cend;
 using std::crbegin;
 using std::crend;
 
-//double get_variant_prior_probability(const Variant& a_variant,
-//                                     VariantCandidateGenerator& a_variant_candidate_generator)
-//{
-//    double variant_prior = a_variant.get_prior_probability();
-//    double
-//}
-
 auto allele_minmax(const Variant::SequenceType& allele_a, const Variant::SequenceType& allele_b)
 {
     static auto is_bigger = [] (const auto& a1, const auto& a2) { return a1.size() < a2.size(); };

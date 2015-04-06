@@ -451,7 +451,14 @@ inline bool operator==(const AlignedRead& lhs, const AlignedRead& rhs)
 
 inline bool operator<(const AlignedRead& lhs, const AlignedRead& rhs)
 {
-    return lhs.get_region() < rhs.get_region();
+    // This check is required for consistency with operator==
+    if (lhs.get_region() == rhs.get_region()) {
+        return (lhs.get_mapping_quality() == rhs.get_mapping_quality()) ?
+                    lhs.get_cigar_string() < rhs.get_cigar_string() :
+                    lhs.get_mapping_quality() < rhs.get_mapping_quality();
+    } else {
+        return lhs.get_region() < rhs.get_region();
+    }
 }
 
 inline bool operator==(const AlignedRead::NextSegment& lhs, const AlignedRead::NextSegment& rhs)
@@ -491,7 +498,7 @@ inline std::ostream& operator<<(std::ostream& os, const AlignedRead& a_read)
         os << a_read.get_next_segment()->get_inferred_template_length() << '\n';
     } else {
         os << '\n';
-        os << "no mate";
+        os << "no other segments";
     }
     return os;
 }

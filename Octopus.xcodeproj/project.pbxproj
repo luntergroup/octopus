@@ -108,6 +108,7 @@
 		CABA377E1A8FA11000BBE598 /* read_benchmark.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = read_benchmark.cpp; sourceTree = "<group>"; };
 		CABA37801A8FA49800BBE598 /* read_manager.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = read_manager.cpp; sourceTree = "<group>"; };
 		CABA37811A8FA49800BBE598 /* read_manager.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = read_manager.h; sourceTree = "<group>"; };
+		CAD5EC041AD2920E00892816 /* haplotype_prior_model.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = haplotype_prior_model.h; sourceTree = "<group>"; };
 		CAE3E2911A9A031600C01B2C /* kmer_graph.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = kmer_graph.h; sourceTree = "<group>"; };
 		CAE3E2921A9A882000C01B2C /* mock_objects.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = mock_objects.h; sourceTree = "<group>"; };
 		CAE3E2941A9CF97700C01B2C /* storage_policies.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = storage_policies.h; sourceTree = "<group>"; };
@@ -409,6 +410,7 @@
 			children = (
 				CAFA19631ABF75D400F953D9 /* haplotype.h */,
 				CAFA19621ABF75D400F953D9 /* haplotype.cpp */,
+				CAD5EC041AD2920E00892816 /* haplotype_prior_model.h */,
 				CAFA196D1AC1B4AF00F953D9 /* genotype.h */,
 				CAFA196C1AC1B4AF00F953D9 /* genotype.cpp */,
 				CAFA19761AC5E67100F953D9 /* pair_hmm.h */,

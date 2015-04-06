@@ -82,7 +82,7 @@ inline bool operator==(const SequenceRegion& lhs, const SequenceRegion& rhs)
 
 inline bool operator<(const SequenceRegion& lhs, const SequenceRegion& rhs)
 {
-    return lhs.get_begin() < rhs.get_begin();
+    return (lhs.get_begin() == rhs.get_begin()) ? lhs.get_end() < rhs.get_end() : lhs.get_begin() < rhs.get_begin();
 }
 
 #endif /* defined(__Octopus__sequence_region__) */

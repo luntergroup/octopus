@@ -7,7 +7,6 @@
 //
 
 #include "haplotype.h"
-
 #include "reference_genome.h"
 #include "genomic_region.h"
 
@@ -41,10 +40,8 @@ void Haplotype::emplace_front(const Variant& a_variant)
 
 bool Haplotype::contains(const Variant& a_variant) const
 {
-    return std::find_if(std::cbegin(the_haplotype_), std::cend(the_haplotype_),
-                        [a_variant] (const auto& an_allele) {
-                            return a_variant.get_alternative_allele() == an_allele.the_sequence;
-                        }) != std::cend(the_haplotype_);
+    auto er = std::equal_range(std::cbegin(the_haplotype_), std::cend(the_haplotype_), a_variant);
+    return (std::distance(er.first, er.second) == 0) ? false : er.first->the_sequence == a_variant.get_alternative_allele();
 }
 
 GenomicRegion Haplotype::get_region() const
@@ -124,4 +121,14 @@ Haplotype::SequenceType Haplotype::get_sequence_bounded_by_alleles() const
     }
     
     return result;
+}
+
+bool operator<(const Variant& lhs, const Haplotype::Allele& rhs)
+{
+    return lhs.get_reference_allele_region() < rhs.the_reference_region;
+}
+
+bool operator<(const Haplotype::Allele& lhs, const Variant& rhs)
+{
+    return lhs.the_reference_region < rhs.get_reference_allele_region();
 }

@@ -46,8 +46,3 @@ void AssemblerCandidateVariantGenerator::clear()
 {
     the_variant_assembler_.clear();
 }
-
-double AssemblerCandidateVariantGenerator::get_variant_detection_probability(const Variant& a_variant)
-{
-    return generator_confidence_;
-}
