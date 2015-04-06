@@ -54,7 +54,7 @@ Note I make the assumption that all samples have the same ploidy, this assumptio
 Variable & Description \\
 \hline
 $\boldsymbol{x}_n$ & the read data for sample $n$ \\
-$\boldsymbol{r}_n$ & the number of reads in the $n^{th}$ sample \\
+$r_n$ & the number of reads in the $n^{th}$ sample \\
 $h$ & a haplotype \\
 $\boldsymbol{\pi}$ & the probabilities (or 'frequencies') of the haplotypes in the samples \\
 $\boldsymbol{g}$ & a binary variable using a $1$-of-$K$ coding scheme representing the genotypes \\
@@ -105,13 +105,13 @@ Note due to the $1$-of-$K$ representation for $\boldsymbol{g}$ this can also be 
 Using the abuse of notation $h \in \boldsymbol{g}$ to mean the haplotypes in $\boldsymbol{g}$, the data distribution is given by
 
 \begin{equation} 
-    p(\boldsymbol{x} | \boldsymbol{g}) = \prod_{i = 1}^{r} \sum_{h \in \boldsymbol{g}} p(h | g) p(r_i | h)  = \prod_{i = 1}^{r} \frac{1}{M} \sum_{h \in \boldsymbol{g}} p(r_i | h)
+    p(\boldsymbol{x} | \boldsymbol{g}) = \prod_{i = 1}^{r} \sum_{h \in \boldsymbol{g}} p(h | g) p(r_i | h)  = \prod_{i = 1}^{r} \frac{1}{M} \sum_{h \in \boldsymbol{g}} p(x_i | h)
 \end{equation}
 
-where $p(r_i | h)$ is determined by an HMM. The marginal data distribution is then
+where $p(x_i | h)$ is determined by an HMM. The marginal data distribution is then
 
 \begin{equation} 
-    p(\boldsymbol{x}) = \sum_{\boldsymbol{g}} p(\boldsymbol{g}) p(\boldsymbol{x} | \boldsymbol{g}) = \sum_{k = 1}^{K}  \binom{M}{\mu_1(\boldsymbol{g}^k),\dots,\mu_H(\boldsymbol{g}^k)} \prod_{i = 1}^H \pi_i^{\mu_i(\boldsymbol{g}^k)} \prod_{i = 1}^{r} \frac{1}{M} \sum_{h \in \boldsymbol{g}} p(r_i | h)
+    p(\boldsymbol{x}) = \sum_{\boldsymbol{g}} p(\boldsymbol{g}) p(\boldsymbol{x} | \boldsymbol{g}) = \sum_{k = 1}^{K}  \binom{M}{\mu_1(\boldsymbol{g}^k),\dots,\mu_H(\boldsymbol{g}^k)} \prod_{i = 1}^H \pi_i^{\mu_i(\boldsymbol{g}^k)} \prod_{i = 1}^{r} \frac{1}{M} \sum_{h \in \boldsymbol{g}} p(x_i | h)
 \end{equation}
 
 The posterior probabilities, often called responsibilities, of $\boldsymbol{g}$ given read data $\boldsymbol{x}$ is given by Bayes theorem
@@ -124,20 +124,20 @@ The posterior probabilities, often called responsibilities, of $\boldsymbol{g}$ 
 For the 'E' step of the EM algorithm, we need to evaluate the expectation of the complete data log-likelihood, to do this we essentially treat each sample as an individual data point. Viewed this way the entire model can roughly be seen to be a clustering model, where samples are assigned to genotype clusters. Let $\boldsymbol{X} = \{\boldsymbol{x}_1, \dots, \boldsymbol{x}_N\}$ and $\boldsymbol{G} = \{\boldsymbol{g}_1, \dots, \boldsymbol{g}_n\}$ (note $\boldsymbol{g}_i$ is different from $g_i$), then the complete data likelihood can be written as
 
 \begin{equation} 
-    p(\boldsymbol{X}, \boldsymbol{G} | \boldsymbol{\pi}) = \prod_{n = 1}^N \prod_{k = 1}^K \left[ \binom{M}{\mu_1(\boldsymbol{g}^k),\dots,\mu_H(\boldsymbol{g}^k)} \prod_{i = 1}^H \pi_i^{\mu_i(\boldsymbol{g}^k)} \right]^{g_{nk}} \left[ \prod_{i = 1}^{r} \frac{1}{M} \sum_{h \in \boldsymbol{g}} p(r_i | h) \right]^{g_{nk}}
+    p(\boldsymbol{X}, \boldsymbol{G} | \boldsymbol{\pi}) = \prod_{n = 1}^N \prod_{k = 1}^K \left[ \binom{M}{\mu_1(\boldsymbol{g}^k),\dots,\mu_H(\boldsymbol{g}^k)} \prod_{i = 1}^H \pi_i^{\mu_i(\boldsymbol{g}^k)} \right]^{g_{nk}} \left[ \prod_{i = 1}^{r} \frac{1}{M} \sum_{h \in \boldsymbol{g}} p(x_{ni} | h) \right]^{g_{nk}}
 \end{equation}
 
 and so the complete data log-likelihood is
 
 \begin{align} 
-    \ln p(\boldsymbol{X}, \boldsymbol{G} | \boldsymbol{\pi}) &= \sum_{n = 1}^N \sum_{k = 1}^K g_{nk} \left\{ \ln \binom{M}{\mu_1(\boldsymbol{g}^k),\dots,\mu_H(\boldsymbol{g}^k)} \ln \prod_{i = 1}^H \pi_i^{\mu_i(\boldsymbol{g}^k)} \sum{i = 1}^{r} \frac{1}{M} \sum_{h \in \boldsymbol{g}} p(r_i | h) \right\}\notag\\
-    &= \sum_{n = 1}^N \sum_{k = 1}^K g_{nk} \left\{ \ln C(\boldsymbol{g}^k) + \sum_{i = 1}^H \mu_i(\boldsymbol{g}^k) \ln \pi_i + \sum_{i = 1}^{r} \ln \sum_{h \in \boldsymbol{g}^k} p(r_i | h) - \ln M \right\}
+    \ln p(\boldsymbol{X}, \boldsymbol{G} | \boldsymbol{\pi}) &= \sum_{n = 1}^N \sum_{k = 1}^K g_{nk} \left\{ \ln \binom{M}{\mu_1(\boldsymbol{g}^k),\dots,\mu_H(\boldsymbol{g}^k)} \ln \prod_{i = 1}^H \pi_i^{\mu_i(\boldsymbol{g}^k)} \ln \prod_{i = 1}^{r_n} \frac{1}{M} \sum_{h \in \boldsymbol{g}} p(x_{ni} | h) \right\} \notag \\
+    &= \sum_{n = 1}^N \sum_{k = 1}^K g_{nk} \left\{ \ln C(\boldsymbol{g}^k) + \sum_{i = 1}^H \mu_i(\boldsymbol{g}^k) \ln \pi_i + \sum_{i = 1}^{r_n} \ln \sum_{h \in \boldsymbol{g}^k} p(x_{ni} | h) - r_n \ln M \right\}
 \end{align}
 
 where $C(\boldsymbol{g}^k)$ is the multinomial coefficient. As $\boldsymbol{g}$ is a binary variable we have that $\mathbb{E}[\boldsymbol{g}] = \gamma(g_{nk})$ and thus
 
 \begin{equation} 
-    \mathbb{E}_{\boldsymbol{G}} [\ln p(\boldsymbol{X}, \boldsymbol{G} | \boldsymbol{\pi})] = \sum_{n = 1}^N \sum_{k = 1}^K \gamma(g_{nk}) \left\{ \ln C(\boldsymbol{g}^k) + \sum_{i = 1}^H \mu_i(\boldsymbol{g}^k) \ln \pi_i + \sum_{i = 1}^{r} \ln \sum_{h \in \boldsymbol{g}^k} p(r_i | h) - \ln M \right\}
+    \mathbb{E}_{\boldsymbol{G}} [\ln p(\boldsymbol{X}, \boldsymbol{G} | \boldsymbol{\pi})] = \sum_{n = 1}^N \sum_{k = 1}^K \gamma(g_{nk}) \left\{ \ln C(\boldsymbol{g}^k) + \sum_{i = 1}^H \mu_i(\boldsymbol{g}^k) \ln \pi_i + \sum_{i = 1}^{r} \ln \sum_{h \in \boldsymbol{g}^k} p(x_{ni} | h) - r_n \ln M \right\}
 \end{equation}
 
 To maximise w.r.t $\boldsymbol{\pi}$ note we must have $\sum_{i = 1}^H \pi_i = 1$, and so introducing Lagrange multipliers we maximise
@@ -175,7 +175,7 @@ This intuitively makes sense as the mean expected number of occurrences of haplo
 
 Using EM we do not get a proper probability distribution over the parameters $\boldsymbol{\pi}$, and thus it is difficult to make proper downstream inferences. The optimal solution would be to use a proper Bayesian model by introducing priors over $\boldsymbol{\pi}$ (and as we will see later, possibly also over the hyperparameters of $\boldsymbol{\pi}$).
 
-This leads to analytical difficulties as even if we choose the conjugate prior for $\boldsymbol{\pi}$, a Dirichlet distribution, the problem is still intractable as we must take the expectation over a sum of Dirichlet-Multinomials. This could be solved using stochastic approximation methods, but these methods are probably not ideal here as they can be slow to converge to the true density, and we also introduce a non-determinsm in the call set that is better avoided.
+This leads to analytical difficulties as even if we choose the conjugate prior for $\boldsymbol{\pi}$, a Dirichlet distribution, the problem is still intractable as we must take the expectation over a sum of Dirichlet-Multinomials. This could be solved using stochastic approximation methods, but these methods are probably not ideal here as they can be slow to converge to the true density, and we also introduce a non-determinism in the call set that is better avoided.
 
 There are another set of methods for approximating posterior distributions that do not suffer the above problems called variational Bayesian methods. The idea of these methods is to deterministically approximate the posterior distribution by enforcing a certain factorisation of the posterior distribution that necessarily introduces some independence assumptions. The factor distributions are then chosen to maximise the 'similarity' to the true posterior. While these methods are usually quick to converge, unlike stochastic methods they can never converge to the true distribution.
 
@@ -190,7 +190,7 @@ Given a probability model $p(\boldsymbol{X}, \boldsymbol{Z})$ where $\boldsymbol
 
 This measures the additional amount of information (in nats) required to generate codes from $q$ rather than $p$, it satisfies $\text{KL}(q\; ||\; p) \ge 0$, with equality when $p = q$. So we actually try to minimise this quantity.
 
-We now partition the latent variables $\boldsymbol{Z}$ into a set of disjoint groups denoted by $\boldsymbol{Z_i}$ where $i = 1, \dots, M$ and assume that the $q$ distribution factorizes into a product of these groups, i.e.
+We now partition the latent variables $\boldsymbol{Z}$ into a set of disjoint groups denoted by $\boldsymbol{Z_i}$ where $i = 1, \dots, M$ and assume that the $q$ distribution factorises into a product of these groups, i.e.
 
 \begin{equation}
 \label{eq:q}
@@ -244,18 +244,18 @@ Using (\ref{eq:q_opt}) we find that
 \begin{align}
     \ln q^*(G) &= \mathbb{E}_{\boldsymbol{\pi}}[\ln p(\boldsymbol{X}, \boldsymbol{G}, \boldsymbol{\pi})] + \text{const}\notag\\
     &= \mathbb{E}_{\boldsymbol{\pi}}[\ln p(\boldsymbol{G} | \boldsymbol{\pi})] + \mathbb{E}_{\boldsymbol{\pi}}[p(\boldsymbol{X} | \boldsymbol{G})] + \text{const} \notag\\
-    &= \mathbb{E}_{\boldsymbol{\pi}}\left[ \sum_{n = 1}^N \sum_{k = 1}^K g_{nk} \left\{ \ln C(\boldsymbol{g}^k) + \sum_{i = 1}^H \mu_i(\boldsymbol{g}^k) \ln \pi_i \right\} \right] \notag\\ &\phantom{{}=1} + \mathbb{E}_{\boldsymbol{\pi}}\left[ \sum_{n = 1}^N \sum_{k = 1}^K g_{nk} \left\{ \sum_{i = 1}^{r_n} \ln \sum_{h \in \boldsymbol{g}^k} p(r_{ni} | h) - \ln M \right\} \right] + \text{const}\notag\\
-    &= \sum_{n = 1}^N \sum_{k = 1}^K g_{nk} \left\{ \ln C(\boldsymbol{g}^k) + \sum_{i = 1}^H \mu_i(\boldsymbol{g}^k) \mathbb{E}_{\boldsymbol{\pi}}[\ln \pi_i] + \sum_{i = 1}^{r_n} \ln \sum_{h \in \boldsymbol{g}^k} p(r_{ni} | h) - \ln M \right\} + \text{const}\notag\\
+    &= \mathbb{E}_{\boldsymbol{\pi}}\left[ \sum_{n = 1}^N \sum_{k = 1}^K g_{nk} \left\{ \ln C(\boldsymbol{g}^k) + \sum_{i = 1}^H \mu_i(\boldsymbol{g}^k) \ln \pi_i \right\} \right] \notag\\ &\phantom{{}=1} + \mathbb{E}_{\boldsymbol{\pi}}\left[ \sum_{n = 1}^N \sum_{k = 1}^K g_{nk} \left\{ \sum_{i = 1}^{r_n} \ln \sum_{h \in \boldsymbol{g}^k} p(x_{ni} | h) - r_n \ln M \right\} \right] + \text{const}\notag\\
+    &= \sum_{n = 1}^N \sum_{k = 1}^K g_{nk} \left\{ \ln C(\boldsymbol{g}^k) + \sum_{i = 1}^H \mu_i(\boldsymbol{g}^k) \mathbb{E}_{\boldsymbol{\pi}}[\ln \pi_i] + \sum_{i = 1}^{r_n} \ln \sum_{h \in \boldsymbol{g}^k} p(x_{ni} | h) - r_n \ln M \right\} + \text{const}\notag\\
     &= \sum_{n = 1}^N \sum_{k = 1}^K g_{nk} \ln \rho_{nk} + \text{const}
 \end{align}
 
 where we have defined
 
 \begin{align}
-    \ln \rho_{nk} &= \ln C(\boldsymbol{g}^k) + \sum_{i = 1}^H \mu_i(\boldsymbol{g}^k) \mathbb{E}_{\boldsymbol{\pi}}[\ln \pi_i] + \sum_{i = 1}^{r_n} \ln \sum_{h \in \boldsymbol{g}^k} p(r_{ni} | h) - \ln M\notag\\
-    &= \ln C(\boldsymbol{g}^k) + \sum_{i = 1}^H \mu_i(\boldsymbol{g}^k) (\psi(\alpha_i) - \psi(\alpha_0)) + \sum_{i = 1}^{r_n} \ln \sum_{h \in \boldsymbol{g}^k} p(r_{ni} | h) - \ln M\notag\\
-    &= \ln C(\boldsymbol{g}^k) + \sum_{i = 1}^H \mu_i(\boldsymbol{g}^k) \psi(\alpha_i) - \psi(\alpha_0)\sum_{i = 1}^H \mu_i(\boldsymbol{g}^k) + \sum_{i = 1}^{r_n} \ln \sum_{h \in \boldsymbol{g}^k} p(r_{ni} | h) - \ln M\notag\\
-    &= \ln C(\boldsymbol{g}^k) + \sum_{i = 1}^H \mu_i(\boldsymbol{g}^k) \psi(\alpha_i) - M\psi(\alpha_0) + \sum_{i = 1}^{r_n} \ln \sum_{h \in \boldsymbol{g}^k} p(r_{ni} | h) - \ln M
+    \ln \rho_{nk} &= \ln C(\boldsymbol{g}^k) + \sum_{i = 1}^H \mu_i(\boldsymbol{g}^k) \mathbb{E}_{\boldsymbol{\pi}}[\ln \pi_i] + \sum_{i = 1}^{r_n} \ln \sum_{h \in \boldsymbol{g}^k} p(x_{ni} | h) - r_n \ln M \notag \\
+    &= \ln C(\boldsymbol{g}^k) + \sum_{i = 1}^H \mu_i(\boldsymbol{g}^k) (\psi(\alpha_i) - \psi(\alpha_0)) + \sum_{i = 1}^{r_n} \ln \sum_{h \in \boldsymbol{g}^k} p(x_{ni} | h) - r_n \ln M \notag \\
+    &= \ln C(\boldsymbol{g}^k) + \sum_{i = 1}^H \mu_i(\boldsymbol{g}^k) \psi(\alpha_i) - \psi(\alpha_0)\sum_{i = 1}^H \mu_i(\boldsymbol{g}^k) + \sum_{i = 1}^{r_n} \ln \sum_{h \in \boldsymbol{g}^k} p(x_{ni} | h) - r_n \ln M\notag\\
+    &= \ln C(\boldsymbol{g}^k) + \sum_{i = 1}^H \mu_i(\boldsymbol{g}^k) \psi(\alpha_i) - M\psi(\alpha_0) + \sum_{i = 1}^{r_n} \ln \sum_{h \in \boldsymbol{g}^k} p(x_{ni} | h) - r_n \ln M
 \end{align}
 
 where $\phi$ is the digamma function, $\alpha_0 = \sum_{i = 1}^H \alpha_i$, and $C(\boldsymbol{g}^k)$ is the multinomial coefficient. Hence we find the optimal density for $\boldsymbol{G}$ is given by
@@ -327,7 +327,7 @@ We could then find the most probable ensemble of haplotypes in the samples by fi
     \hat{\boldsymbol{z}}_{MAP} &= \argmax_{\boldsymbol{z}} \check{p}(\boldsymbol{z} | \boldsymbol{X}, \boldsymbol{\alpha}, S = NM)\notag\\
     &= \argmax_{\boldsymbol{z}} \frac{\check{p}(\boldsymbol{z} | \boldsymbol{X}, \boldsymbol{\alpha})p(S = NM | \boldsymbol{z})}{p(S = NM)}\notag\\
     &= \argmax_{\boldsymbol{z}} \check{p}(\boldsymbol{z} | \boldsymbol{X}, \boldsymbol{\alpha})p(S = NM | \boldsymbol{z})\notag\\
-    &= \argmax_{\boldsymbol{z} \; \text{s.t} \; \boldsymbol{z} \in \mathbb{N},\; \sum_k z_k = NM} \frac{NM!}{\prod_{i = 1}^{H} z_i} \frac{\Gamma(\alpha_0)}{\Gamma(NM + \alpha_0)} \prod_{i = 1}^H \frac{\Gamma(z_i + \alpha_i)}{\Gamma(\alpha_i)}
+    &= \argmax_{\boldsymbol{z} \; \text{s.t} \; \boldsymbol{z} \in \mathbb{N},\; \sum_k z_k = NM} \frac{(NM)!}{\prod_{i = 1}^{H} z_i} \frac{\Gamma(\alpha_0)}{\Gamma(NM + \alpha_0)} \prod_{i = 1}^H \frac{\Gamma(z_i + \alpha_i)}{\Gamma(\alpha_i)}
 \end{align}
 
 In theory this is an integer programming problem which is NP-hard, but if $S$ is small then it is not too much work to find the optimal value.
@@ -339,18 +339,18 @@ The posterior haplotype densities for each sample is found using the posterior g
 \begin{align}
 \label{eq:sh_pp}
 p(h_{ni} | \boldsymbol{X}, \boldsymbol{\alpha}) &= \sum_{\boldsymbol{g}} p(\boldsymbol{g}_n | \boldsymbol{X}, \boldsymbol{\alpha}) p(h_{i} | \boldsymbol{g}_n) \notag \\
-    &\approx \sum_{k = 1}^K q^*(g_{nk}) p(h_{i} | g_k = 1) \notag \\
-    &= \sum_{k = 1}^K \tau_{nk} p(h_{i} | g_k = 1) \notag \\
-    &= \frac{1}{M}\sum_{k = 1}^K \tau_{nk}\mu_i(\boldsymbol{g}^k)
+    &\approx \sum_{k = 1}^K q^*(g_{nk}) p(h_{i} | g_{nk} = 1) \notag \\
+    &= \sum_{k = 1}^K \tau_{nk} p(h_{i} | g_{nk} = 1) \notag \\
+    &= \sum_{k = 1}^K \tau_{nk} [h_i \in \boldsymbol{g}^k]
 \end{align}
+
+Where $[h_i \in \boldsymbol{g}^k]$ is a binary indicator function.
 
 \subsection{Specifying the haplotype priors}
 
-The variational Bayes genotype model requires haplotype pseudocounts to specify the haplotype priors. There are two naive approaches we could use to specify the haplotype priors: the first is to use a flat, or non-informative prior. The second is to bias in favour of the reference. Whether or not these are good approaches is dependent on the experiment, and how the candidate alleles are generated.
+How should we set the haplotype pseudocounts to specify the haplotype priors? There are two naive approaches we could use: use a flat, or non-informative prior; or bias in favour of the reference. Whether or not either of these is good approach depends on the experiment (e.g. the number of samples), and how the candidate alleles are generated.
 
-If the candidates are generated from the data alone then the naive approaches may be suitable, as we want to avoid using the same information twice, but even here we may still have information that cannot be included in the genotype model, such as if the candidate was generated from assembly, which may have different properties to alignment candidates.
-
-We may also have external information we wish to include, for example, calls from previous experiments, or variants from dbSNP. This is valuable information that should be included in the prior.
+If the candidates are generated from the data alone then the naive approaches may be suitable, as we want to avoid using the same information twice, but even here we may still have information that cannot be included in the genotype model, such as if the candidate was generated from assembly, which may have different properties to alignment candidates. We may also have external information we wish to include, such as calls from previous experiments, or variants from dbSNP. This is valuable information that should be included in the prior if possible.
 
 A haplotype can be viewed as a set of alleles $h = \{a_1, \dots, a_L\}$ where $L$ is the number of alleles. Using the product rule we have
 
@@ -364,13 +364,37 @@ where $\boldsymbol{a}_{L-1}$ denotes the previous $L-1$ alleles. If the haplotyp
     p(h | \boldsymbol{a}) = \prod_{j = 1}^L p(a_i)
 \end{equation}
 
-It therefore seems a reasonable approach, to set the pseudocounts, $\boldsymbol{\alpha}$, in proportion to $p(h | \boldsymbol{a})$.  
+Note the probabilities $p(a_i)$ are not conditioned on the data and are therefore priors. It therefore seems a reasonable approach to set the pseudocounts, $\boldsymbol{\alpha}$, in proportion to $p(h | \boldsymbol{a})$
 
 \begin{equation}
-    \alpha_i = \beta \frac{p(h_i | \boldsymbol{a}_i)}{\sum_{j = 1}^H p(h_j | \boldsymbol{a}_j)}
+    \alpha_i = \beta \frac{p(h_i | \boldsymbol{a}_i)}{\sum_{j = 1}^H p(h_j | \boldsymbol{a}_j)} + c
 \end{equation}
 
-where $\beta$ is a constant scaling factor. 
+where $\beta$ is a constant scaling factor, and $c$ is a constant that will usually be $1$ ($c$ can be set to $0$ if the prior in non-informative, but then we must be sure there will be at-least one of each haplotype in the data so that the posterior is proper). How can we determine $\beta$? One motivation for $\beta$ is as measure of our reluctance to accept a low quality variant.
+
+Suppose we are examining a site which has two candidate haplotypes which differ at a single base: reference A, and alternate B. Now suppose the data has good support for A, but also has a single well mapped read supporting B. Should we prefer homozygous (A,A) or heterozygous (A,B)? The decision will surely come down to the mapping quality of the read (which we assume is very high), and the base quality of B. If we assume the base qualities are well calibrated, we can choose $\beta$ so that we prefer heterozygous (A,B) when the probability of B being wrong is below a certain value.
+
+To see this, suppose the log-likelihood of the reads for genotype (A,B) is given by $L_{AB}$, then given the haplotypes only differ in one position we know that the log-likelihood for genotype $(A,A)$ will take the form $L_{AA} = L_{AB} + C$ ($C < 0$), where $C$ is determined by the base quality of B. E.g, if $\text{qual}(\text{B}) = 20$, i.e. $p(\text{B is wrong}) = 0.01$, then we expect the difference between the two likelihoods to be close to $\ln(0.01) \approx -5$. Then in general we have
+
+\begin{align}
+\ln \rho_{AA} &\approx \ln 2 + 2 \psi(\alpha_A) - 2 \psi(\alpha_0) + L_{AB} - C \notag \\
+\ln \rho_{AB} &\approx \ln 1 + \psi(\alpha_A) + \psi(\alpha_B) - 2 \phi(\alpha_0) + L_{AB} \notag
+\end{align}
+
+Without loss of generality, assume $L_{AB} = 0$ so that
+
+\begin{align}
+\rho_{AA} &\approx 2 \exp(2 \psi(\alpha_A) - 2 \psi(\alpha_0) - C) \notag \\
+\rho_{AB} &\approx \exp(\psi(\alpha_A) + \psi(\alpha_B) - 2 \psi(\alpha_0)) \notag
+\end{align}
+
+Then we can see from (\ref{eq:sg_pp}) that to have $\tau_{AA} \ge 2 \tau_{AB}$ we must have $\rho_{AA} \ge 2 \rho_{AB}$, and so
+
+\begin{equation}
+    \psi(\alpha_A) \ge \psi(\alpha_B) + C
+\end{equation}
+
+For example, if we assume $\alpha_B = 1$ and $C = 5$ then $\beta$ should be set close to $100$.
 
 \subsection{Calling variants}
 
@@ -391,7 +415,7 @@ Similarly we find the probability of an allele appearing in a sample using the p
 
 \begin{equation}
 \label{eq:sa_pp}
-    p(a_n | \boldsymbol{X}, \boldsymbol{\alpha}) = \frac{1}{M} \sum_{i = 1}^H [a_n \in h_i] \sum_{k = 1}^K \tau_{nk}\mu_i(\boldsymbol{g}^k)
+    p(a_n | \boldsymbol{X}, \boldsymbol{\alpha}) = \sum_{i = 1}^H [a_n \in h_i] \sum_{k = 1}^K \tau_{nk} [h_i \in \boldsymbol{g}^k]
 \end{equation}
 
 \subsubsection{Decision theory approach to variant calling}

@@ -11,6 +11,7 @@
 #include <iostream>
 #include <string>
 #include <cstddef>
+#include <unordered_map>
 
 #include "test_common.h"
 #include "reference_genome.h"
@@ -66,32 +67,29 @@ TEST_CASE("haploid_read_model_test", "[read_model]")
     okay_haplotype.emplace_back(variants[5]); okay_haplotype.emplace_back(variants[6]);
     okay_haplotype.emplace_back(variants[11]);
     
-    Haplotype worst_haplotype {ecoli, a_region}; // no fully supporting reads
-    for (const auto& variant : variants) {
-        if (is_indel(variant)) {
-            worst_haplotype.emplace_back(variant);
-        }
-    }
-    
-    unsigned num_haplotypes {4};
-    std::vector<Haplotype> haplotypes {reference_haplotype, best_haplotype, okay_haplotype, worst_haplotype};
+    unsigned num_haplotypes {3};
+    std::vector<Haplotype> haplotypes {reference_haplotype, best_haplotype, okay_haplotype};
     
     auto genotypes = get_all_genotypes(haplotypes, ploidy);
     
     REQUIRE(genotypes.size() == num_genotypes(num_haplotypes, ploidy));
     
     ReadModel the_model {ploidy};
+    unsigned sample {0};
     
-    auto ref_hap_log_prob   = the_model.log_probability(some_reads, haplotypes[0]);
-    auto best_hap_log_prob  = the_model.log_probability(some_reads, haplotypes[1]);
-    auto okay_hap_log_prob  = the_model.log_probability(some_reads, haplotypes[2]);
-    auto worst_hap_log_prob = the_model.log_probability(some_reads, haplotypes[3]);
+    std::unordered_map<Genotype, double> genotype_log_probabilities {};
     
-    REQUIRE(best_hap_log_prob > ref_hap_log_prob);
-    REQUIRE(best_hap_log_prob > okay_hap_log_prob);
-    REQUIRE(best_hap_log_prob > worst_hap_log_prob);
-    REQUIRE(okay_hap_log_prob > ref_hap_log_prob);
-    REQUIRE(okay_hap_log_prob > worst_hap_log_prob);
+    for (const auto& genotype : genotypes) {
+        genotype_log_probabilities[genotype] = the_model.log_probability(some_reads, genotype, sample);
+    }
+    
+    std::sort(genotypes.begin(), genotypes.end(), [&genotype_log_probabilities] (const auto& g1, const auto& g2) {
+        return genotype_log_probabilities[g1] > genotype_log_probabilities[g2];
+    });
+    
+    REQUIRE(genotypes.at(0).at(0) == best_haplotype);
+    REQUIRE(genotypes.at(1).at(0) == okay_haplotype);
+    REQUIRE(genotypes.at(2).at(0) == reference_haplotype);
 }
 
 TEST_CASE("diploid_read_model_test", "[read_model]")
@@ -126,8 +124,8 @@ TEST_CASE("diploid_read_model_test", "[read_model]")
     Haplotype reference_haplotype {human, a_region}; // there are no reads completely supporting the reference
     
     Haplotype hap1 {human, a_region};
-    hap1.emplace_back(variants[0]); // high quality insert
-    hap1.emplace_back(variants[2]); // high quality snp
+    hap1.emplace_back(variants[0]); // well supported insert
+    hap1.emplace_back(variants[2]); // well supported snp
     
     Haplotype hap2 {human, a_region};
     hap2.emplace_back(variants[1]); // this is a low quality snp
@@ -141,16 +139,31 @@ TEST_CASE("diploid_read_model_test", "[read_model]")
     std::vector<Haplotype> haplotypes {reference_haplotype, hap1, hap2, hap3};
     
     ReadModel the_model {ploidy};
+    unsigned sample {0};
     
-    auto ref_log_prob  = the_model.log_probability(some_reads, haplotypes[0]);
-    auto hap1_log_prob = the_model.log_probability(some_reads, haplotypes[1]);
-    auto hap2_log_prob = the_model.log_probability(some_reads, haplotypes[2]);
-    auto hap3_log_prob = the_model.log_probability(some_reads, haplotypes[3]);
+//    const auto& hap2_supporting_read =  some_reads.at(1);
+//    auto ref_log_prob  = the_model.log_probability(hap2_supporting_read, reference_haplotype, sample);
+//    auto hap2_log_prob = the_model.log_probability(hap2_supporting_read, hap2, sample);
     
-    REQUIRE(ref_log_prob > hap2_log_prob); // As the snp in hap2 is not good evidence
-    REQUIRE(hap1_log_prob > ref_log_prob);
-    REQUIRE(hap1_log_prob > hap2_log_prob);
-    REQUIRE(hap1_log_prob > hap3_log_prob);
-    REQUIRE(hap3_log_prob > ref_log_prob);
-    REQUIRE(hap3_log_prob > hap2_log_prob);
+    auto genotypes = get_all_genotypes(haplotypes, ploidy);
+    
+    std::unordered_map<Genotype, double> genotype_log_probabilities {};
+    
+    for (const auto& genotype : genotypes) {
+        genotype_log_probabilities[genotype] = the_model.log_probability(some_reads, genotype, sample);
+    }
+    
+    std::sort(genotypes.begin(), genotypes.end(), [&genotype_log_probabilities] (const auto& g1, const auto& g2) {
+        return genotype_log_probabilities[g1] > genotype_log_probabilities[g2];
+    });
+    
+//    for (const auto& genotype : genotypes) {
+//        std::cout << genotype << " " << genotype_log_probabilities[genotype] << std::endl;
+//    }
+    
+    REQUIRE(genotypes.at(0).num_occurences(hap1) == 1);
+    REQUIRE(genotypes.at(0).num_occurences(hap2) == 1);
+    
+    REQUIRE(genotypes.at(1).num_occurences(hap1) == 1);
+    REQUIRE(genotypes.at(1).num_occurences(reference_haplotype) == 1);
 }

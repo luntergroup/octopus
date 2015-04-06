@@ -10,16 +10,14 @@
 #define __Octopus__empirical_variational_bayes_genotype_model__
 
 #include <vector>
-#include <cstddef>
 #include <unordered_map>
 
 #include "haplotype.h"
 #include "genotype.h"
 #include "read_model.h"
 
-using std::size_t;
-
 class AlignedRead;
+class Variant;
 
 class EmpiricalVariationalBayesGenotypeModel
 {
@@ -60,6 +58,10 @@ public:
     double posterior_predictive_probability(const std::unordered_map<Haplotype, unsigned>& haplotype_counts,
                                             const HaplotypePseudoCounts& haplotype_pseudo_count) const;
     
+    double allele_posterior_probability(const Variant& variant, const Haplotypes& haplotypes,
+                                        const SampleGenotypeResponsabilities& sample_genotype_responsabilities,
+                                        const Genotypes& genotypes) const;
+    
 private:
     unsigned ploidy_;
     ReadModel& read_model_;
@@ -76,5 +78,16 @@ private:
     double log_expected_genotype_probability_polyploid(const Genotype& genotype,
                                                        const HaplotypePseudoCounts& haplotype_pseudo_counts) const;
 };
+
+using GenotypePosteriors = std::pair<EmpiricalVariationalBayesGenotypeModel::GenotypeResponsabilities,
+                                    EmpiricalVariationalBayesGenotypeModel::HaplotypePseudoCounts>;
+
+using SamplesReads = std::vector<EmpiricalVariationalBayesGenotypeModel::SampleReads>;
+
+GenotypePosteriors
+update_parameters(EmpiricalVariationalBayesGenotypeModel& the_model,
+                  const EmpiricalVariationalBayesGenotypeModel::Genotypes& the_genotypes,
+                  const EmpiricalVariationalBayesGenotypeModel::HaplotypePseudoCounts& prior_haplotype_pseudocounts,
+                  const SamplesReads& the_reads, unsigned max_num_iterations);
 
 #endif /* defined(__Octopus__empirical_variational_bayes_genotype_model__) */

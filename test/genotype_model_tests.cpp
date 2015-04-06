@@ -63,19 +63,13 @@ TEST_CASE("haploid_genotype_model_test", "[genotype_model]")
     }
     
     Haplotype okay_haplotype {ecoli};
-    okay_haplotype.emplace_back(variants[1]); okay_haplotype.emplace_back(variants[3]);
-    okay_haplotype.emplace_back(variants[5]); okay_haplotype.emplace_back(variants[8]);
-    okay_haplotype.emplace_back(variants[11]); okay_haplotype.emplace_back(variants[12]);
+    okay_haplotype.emplace_back(variants[0]); okay_haplotype.emplace_back(variants[1]);
+    okay_haplotype.emplace_back(variants[3]); okay_haplotype.emplace_back(variants[4]);
+    okay_haplotype.emplace_back(variants[5]); okay_haplotype.emplace_back(variants[6]);
+    okay_haplotype.emplace_back(variants[11]);
     
-    Haplotype worst_haplotype {ecoli};
-    for (const auto& variant : variants) {
-        if (is_indel(variant)) {
-            worst_haplotype.emplace_back(variant);
-        }
-    }
-    
-    unsigned num_haplotypes {4};
-    std::vector<Haplotype> haplotypes {reference_haplotype, best_haplotype, okay_haplotype, worst_haplotype};
+    unsigned num_haplotypes {3};
+    std::vector<Haplotype> haplotypes {reference_haplotype, best_haplotype, okay_haplotype};
     
     auto genotypes = get_all_genotypes(haplotypes, ploidy);
     
@@ -88,11 +82,6 @@ TEST_CASE("haploid_genotype_model_test", "[genotype_model]")
 }
 
 TEST_CASE("diploid_genotype_model_test", "[genotype_model]")
-{
-    
-}
-
-TEST_CASE("triploid_genotype_model_test", "[genotype_model]")
 {
     
 }

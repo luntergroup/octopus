@@ -10,6 +10,9 @@
 #define __Octopus__genotype__
 
 #include <vector>
+#include <unordered_map>
+#include <ostream>
+#include <iterator>
 
 #include "haplotype.h"
 #include "equitable.h"
@@ -32,6 +35,7 @@ public:
     void emplace(Haplotype&& haplotype);
     
     unsigned ploidy() const noexcept;
+    bool contains(const Haplotype& a_haplotype) const;
     unsigned num_occurences(const Haplotype& a_haplotype) const;
     bool is_homozygous() const;
     std::vector<Haplotype> get_unique_haplotypes() const;
@@ -46,6 +50,8 @@ unsigned num_genotypes(unsigned num_haplotypes, unsigned ploidy);
 
 // Assumes the input haplotypes are all unique
 std::vector<Genotype> get_all_genotypes(const std::vector<Haplotype>& haplotypes, unsigned ploidy);
+
+std::unordered_map<Haplotype, unsigned> get_haplotype_occurence_map(const Genotype& a_genotype);
 
 inline bool operator==(const Genotype& lhs, const Genotype& rhs)
 {
@@ -66,6 +72,18 @@ namespace std {
             return hash<Haplotype>()(g.at(0)); //TODO: improve this
         }
     };
+}
+
+// Only really useful for testing
+inline std::ostream& operator<<(std::ostream& os, const Genotype& a_genotype)
+{
+    auto haplotype_occurences = get_haplotype_occurence_map(a_genotype);
+    std::vector<std::pair<Haplotype, unsigned>> p {haplotype_occurences.begin(), haplotype_occurences.end()};
+    for (unsigned i {}; i < p.size() - 1; ++i) {
+        os << p[i].first << "(" << p[i].second << "),";
+    }
+    os << p.back().first << "(" << p.back().second << ")";
+    return os;
 }
 
 #endif /* defined(__Octopus__genotype__) */

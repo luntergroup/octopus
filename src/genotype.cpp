@@ -8,8 +8,7 @@
 
 #include "genotype.h"
 
-#include <algorithm> // std::all_of, std::count, std::find
-#include <iterator>  // std::cbegin etc
+#include <algorithm> // std::all_of, std::any_of, std::count, std::find
 #include <boost/math/special_functions/binomial.hpp>
 
 #include "utils.h"
@@ -36,6 +35,12 @@ bool Genotype::is_homozygous() const
                        [&first_haplotype] (const auto& a_haplotype) {
                            return first_haplotype == a_haplotype;
                        });
+}
+
+bool Genotype::contains(const Haplotype& a_haplotype) const
+{
+    return std::any_of(std::cbegin(the_haplotypes_), std::cend(the_haplotypes_),
+                       [a_haplotype] (const auto& h) { return h == a_haplotype; });
 }
 
 unsigned Genotype::num_occurences(const Haplotype& a_haplotype) const
@@ -128,4 +133,15 @@ std::vector<Genotype> get_all_genotypes(const std::vector<Haplotype>& haplotypes
         result.push_back(get_genotype_from_haplotype_indicies(haplotypes, haplotype_indicies));
         ++haplotype_indicies[i];
     }
+}
+
+std::unordered_map<Haplotype, unsigned> get_haplotype_occurence_map(const Genotype& a_genotype)
+{
+    std::unordered_map<Haplotype, unsigned> result {};
+    
+    for (unsigned i {}; i < a_genotype.ploidy(); ++i) {
+        ++result[a_genotype.at(i)];
+    }
+    
+    return result;
 }

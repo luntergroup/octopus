@@ -14,8 +14,7 @@
 
 #include "haplotype.h"
 #include "genotype.h"
-
-class AlignedRead;
+#include "aligned_read.h"
 
 class ReadModel
 {
@@ -23,7 +22,7 @@ public:
     using Reads = std::vector<AlignedRead>;
     
     ReadModel() = delete;
-    explicit ReadModel(unsigned ploidy);
+    explicit ReadModel(unsigned ploidy, bool can_cache_reads = true);
     ~ReadModel() = default;
     
     ReadModel(const ReadModel&)            = default;
@@ -32,30 +31,37 @@ public:
     ReadModel& operator=(ReadModel&&)      = default;
     
     // ln p(read | haplotype)
-    double log_probability(const AlignedRead& read, const Haplotype& haplotype) const;
+    double log_probability(const AlignedRead& read, const Haplotype& haplotype, unsigned sample);
     
-    // ln p(reads | haplotype)
-    double log_probability(const Reads& reads, const Haplotype& haplotype) const;
+    // ln p(read | genotype)
+    double log_probability(const AlignedRead& read, const Genotype& genotype, unsigned sample);
     
     // ln p(reads | genotype)
     double log_probability(const Reads& reads, const Genotype& genotype, unsigned sample);
     
 private:
     unsigned ploidy_;
-    std::unordered_map<unsigned, std::unordered_map<Haplotype, double>> haplotype_log_probability_cache_;
+    bool can_cache_reads_;
+    std::unordered_map<unsigned, std::unordered_map<AlignedRead,
+        std::unordered_map<Haplotype, double>>> read_log_probability_cache_;
+    std::unordered_map<unsigned, std::unordered_map<Genotype, double>> genotype_log_probability_cache_;
     
     const double ln_ploidy_;
     
-    bool is_haplotype_in_cache(unsigned sample, const Haplotype& haplotype) const;
+    bool is_read_in_cache(unsigned sample, const AlignedRead& read, const Haplotype& haplotype) const noexcept;
+    bool is_genotype_in_cache(unsigned sample, const Genotype& genotype) const noexcept;
+    void add_read_to_cache(unsigned sample, const AlignedRead& read, const Haplotype& haplotype,
+                           double read_log_probability);
+    void add_genotype_to_cache(unsigned sample, const Genotype& genotype, double genotype_log_probability);
     
     // These are just for optimisation
-    double log_probability_haploid(const Reads& reads, const Genotype& genotype,
+    double log_probability_haploid(const AlignedRead& read, const Genotype& genotype,
                                    unsigned sample);
-    double log_probability_diploid(const Reads& reads, const Genotype& genotype,
+    double log_probability_diploid(const AlignedRead& read, const Genotype& genotype,
                                    unsigned sample);
-    double log_probability_triploid(const Reads& reads, const Genotype& genotype,
+    double log_probability_triploid(const AlignedRead& read, const Genotype& genotype,
                                     unsigned sample);
-    double log_probability_polyploid(const Reads& reads, const Genotype& genotype,
+    double log_probability_polyploid(const AlignedRead& read, const Genotype& genotype,
                                      unsigned sample);
 };
 
