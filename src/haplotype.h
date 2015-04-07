@@ -21,6 +21,10 @@
 class ReferenceGenome;
 class GenomicRegion;
 
+/**
+ A haplotype is simply a sequence with a known position. It is not required to store variants 
+ explictly - the methods that use the class Variant are just for convenience.
+ */
 class Haplotype : public Equitable<Haplotype>
 {
 public:
@@ -46,6 +50,7 @@ public:
     void emplace_front(const GenomicRegion& the_allele_region, T&& the_allele_sequence);
     
     bool contains(const Variant& a_variant) const;
+    bool contains(const GenomicRegion& the_allele_region, const SequenceType& the_allele_sequence) const;
     GenomicRegion get_region() const;
     SequenceType get_sequence() const;
     SequenceType get_sequence(const GenomicRegion& a_region) const;

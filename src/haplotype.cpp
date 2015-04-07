@@ -44,6 +44,11 @@ bool Haplotype::contains(const Variant& a_variant) const
     return (std::distance(er.first, er.second) == 0) ? false : er.first->the_sequence == a_variant.get_alternative_allele();
 }
 
+bool Haplotype::contains(const GenomicRegion& the_allele_region, const SequenceType& the_allele_sequence) const
+{
+    return false;
+}
+
 GenomicRegion Haplotype::get_region() const
 {
     return (is_region_set_) ? the_reference_region_ : get_region_bounded_by_alleles();
