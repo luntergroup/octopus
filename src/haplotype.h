@@ -21,10 +21,6 @@
 class ReferenceGenome;
 class GenomicRegion;
 
-/**
- A haplotype is simply a sequence with a known position. It is not required to store variants 
- explictly - the methods that use the class Variant are just for convenience.
- */
 class Haplotype : public Equitable<Haplotype>
 {
 public:
@@ -41,15 +37,11 @@ public:
     Haplotype(Haplotype&&)                 = default;
     Haplotype& operator=(Haplotype&&)      = default;
     
-    // TODO: should be checking order/conflicts
-    void emplace_back(const Variant& a_variant);
     template <typename T>
     void emplace_back(const GenomicRegion& the_allele_region, T&& the_allele_sequence);
-    void emplace_front(const Variant& a_variant);
     template <typename T>
     void emplace_front(const GenomicRegion& the_allele_region, T&& the_allele_sequence);
     
-    bool contains(const Variant& a_variant) const;
     bool contains(const GenomicRegion& the_allele_region, const SequenceType& the_allele_sequence) const;
     GenomicRegion get_region() const;
     SequenceType get_sequence() const;
@@ -70,11 +62,14 @@ private:
         SequenceType the_sequence;
     };
     
+    using AlleleIterator = std::deque<Allele>::const_iterator;
+    
     friend bool operator==(const Allele& lhs, const Allele& rhs);
-    friend bool operator<(const Variant& lhs, const Allele& rhs);
-    friend bool operator<(const Allele& lhs, const Variant& rhs);
+    friend bool operator<(const GenomicRegion& lhs, const Allele& rhs);
+    friend bool operator<(const Allele& lhs, const GenomicRegion& rhs);
     
     GenomicRegion get_region_bounded_by_alleles() const;
+    SequenceType get_sequence_bounded_by_alleles(AlleleIterator first, AlleleIterator last) const;
     SequenceType get_sequence_bounded_by_alleles() const;
     
     ReferenceGenome& the_reference_;
@@ -82,6 +77,10 @@ private:
     GenomicRegion the_reference_region_;
     std::deque<Allele> the_haplotype_;
 };
+
+void add_to_back(const Variant& a_variant, Haplotype& a_haplotype);
+void add_to_front(const Variant& a_variant, Haplotype& a_haplotype);
+bool contains(const Haplotype& a_haplotype, const Variant& a_variant);
 
 template <typename T>
 void Haplotype::emplace_back(const GenomicRegion& the_allele_region, T&& the_allele_sequence)

@@ -1,5 +1,5 @@
 //
-//  empirical_variational_bayes_genotype_model_tests.cpp
+//  variational_bayes_genotype_model_tests.cpp
 //  Octopus
 //
 //  Created by Daniel Cooke on 01/04/2015.
@@ -23,9 +23,9 @@
 #include "haplotype.h"
 #include "genotype.h"
 #include "read_model.h"
-#include "empirical_variational_bayes_genotype_model.h"
+#include "variational_bayes_genotype_model.h"
 
-TEST_CASE("single_sample_haploid_empirical_variational_bayes_genotype_model", "[empirical_variational_bayes_genotype_model]")
+TEST_CASE("single_sample_haploid_variational_bayes_genotype_model", "[variational_bayes_genotype_model]")
 {
     unsigned ploidy {1};
     
@@ -55,18 +55,21 @@ TEST_CASE("single_sample_haploid_empirical_variational_bayes_genotype_model", "[
     Haplotype reference_haplotype {ecoli};
     reference_haplotype.emplace_back(a_region, std::move(reference_sequence));
     
-    Haplotype best_haplotype {ecoli};
+    Haplotype best_haplotype {ecoli}; // most reads fully support this
     for (const auto& variant : variants) {
         if (is_snp(variant)) {
-            best_haplotype.emplace_back(variant);
+            add_to_back(variant, best_haplotype);
         }
     }
     
-    Haplotype okay_haplotype {ecoli};
-    okay_haplotype.emplace_back(variants[0]); okay_haplotype.emplace_back(variants[1]);
-    okay_haplotype.emplace_back(variants[3]); okay_haplotype.emplace_back(variants[4]);
-    okay_haplotype.emplace_back(variants[5]); okay_haplotype.emplace_back(variants[6]);
-    okay_haplotype.emplace_back(variants[11]);
+    Haplotype okay_haplotype {ecoli}; // Bad insertion and 3 missing snps
+    add_to_back(variants[0], okay_haplotype);
+    add_to_back(variants[1], okay_haplotype);
+    add_to_back(variants[3], okay_haplotype);
+    add_to_back(variants[4], okay_haplotype);
+    add_to_back(variants[5], okay_haplotype);
+    add_to_back(variants[6], okay_haplotype);
+    add_to_back(variants[11], okay_haplotype);
     
     unsigned num_haplotypes {3};
     std::vector<Haplotype> haplotypes {reference_haplotype, best_haplotype, okay_haplotype};
@@ -76,14 +79,14 @@ TEST_CASE("single_sample_haploid_empirical_variational_bayes_genotype_model", "[
     REQUIRE(genotypes.size() == num_genotypes(num_haplotypes, ploidy));
     
     ReadModel a_read_model {ploidy};
-    EmpiricalVariationalBayesGenotypeModel the_model {a_read_model, ploidy};
+    VariationalBayesGenotypeModel the_model {a_read_model, ploidy};
     
-    EmpiricalVariationalBayesGenotypeModel::HaplotypePseudoCounts pseudo_counts {};
+    VariationalBayesGenotypeModel::HaplotypePseudoCounts pseudo_counts {};
     pseudo_counts[reference_haplotype] = 2;
     pseudo_counts[best_haplotype]      = 1;
     pseudo_counts[okay_haplotype]      = 1;
     
-    EmpiricalVariationalBayesGenotypeModel::SampleGenotypeResponsabilities responsabilities {};
+    VariationalBayesGenotypeModel::SampleGenotypeResponsabilities responsabilities {};
     
     for (const auto& genotype : genotypes) {
         responsabilities[genotype] = the_model.genotype_responsability(genotype, some_reads, pseudo_counts, 0, genotypes);
@@ -101,7 +104,7 @@ TEST_CASE("single_sample_haploid_empirical_variational_bayes_genotype_model", "[
 //    std::cout << worst_haplotype_expected_count << std::endl;
 }
 
-TEST_CASE("single_sample_diploid_empirical_variational_bayes_genotype_model", "[empirical_variational_bayes_genotype_model]")
+TEST_CASE("single_sample_diploid_variational_bayes_genotype_model", "[variational_bayes_genotype_model]")
 {
     unsigned ploidy {2};
     
@@ -133,16 +136,16 @@ TEST_CASE("single_sample_diploid_empirical_variational_bayes_genotype_model", "[
     Haplotype reference_haplotype {human, a_region}; // there are no reads completely supporting the reference
     
     Haplotype hap1 {human, a_region};
-    hap1.emplace_back(variants[0]); // high quality insert
-    hap1.emplace_back(variants[2]); // high quality snp
+    add_to_back(variants[0], hap1); // well supported insert
+    add_to_back(variants[2], hap1); // well supported snp
     
     Haplotype hap2 {human, a_region};
-    hap2.emplace_back(variants[1]); // this is a low quality snp
+    add_to_back(variants[1], hap2); // this is a low quality snp
     
     Haplotype hap3 {human, a_region};
-    hap3.emplace_back(variants[0]);
-    hap3.emplace_back(variants[1]);
-    hap3.emplace_back(variants[2]);
+    add_to_back(variants[0], hap3);
+    add_to_back(variants[1], hap3);
+    add_to_back(variants[2], hap3);
     
     unsigned num_haplotypes {4};
     std::vector<Haplotype> haplotypes {reference_haplotype, hap1, hap2, hap3};
@@ -153,16 +156,16 @@ TEST_CASE("single_sample_diploid_empirical_variational_bayes_genotype_model", "[
     
     ReadModel a_read_model {ploidy};
     
-    EmpiricalVariationalBayesGenotypeModel the_model {a_read_model, ploidy};
+    VariationalBayesGenotypeModel the_model {a_read_model, ploidy};
     
-    EmpiricalVariationalBayesGenotypeModel::HaplotypePseudoCounts pseudo_counts {};
+    VariationalBayesGenotypeModel::HaplotypePseudoCounts pseudo_counts {};
     pseudo_counts[reference_haplotype] = 400; // set so we accept snps with qual > 21
     pseudo_counts[hap1]                = 1;
     pseudo_counts[hap2]                = 1;
     pseudo_counts[hap3]                = 1;
     
-    EmpiricalVariationalBayesGenotypeModel::SampleGenotypeResponsabilities responsabilities {};
-    EmpiricalVariationalBayesGenotypeModel::HaplotypePseudoCounts posterior_pseudo_counts {pseudo_counts};
+    VariationalBayesGenotypeModel::SampleGenotypeResponsabilities responsabilities {};
+    VariationalBayesGenotypeModel::HaplotypePseudoCounts posterior_pseudo_counts {pseudo_counts};
     
     for (unsigned i {}; i < 10; ++i) {
         for (const auto& genotype : genotypes) {
@@ -196,7 +199,7 @@ TEST_CASE("single_sample_diploid_empirical_variational_bayes_genotype_model", "[
     REQUIRE(genotypes.at(1).num_occurences(hap2) == 1);
 }
 
-TEST_CASE("two_samples_diploid_empirical_variational_bayes_genotype_model1", "[empirical_variational_bayes_genotype_model]")
+TEST_CASE("two_samples_diploid_variational_bayes_genotype_model1", "[variational_bayes_genotype_model]")
 {
     unsigned ploidy {2};
     
@@ -228,16 +231,16 @@ TEST_CASE("two_samples_diploid_empirical_variational_bayes_genotype_model1", "[e
     Haplotype reference_haplotype {human, a_region}; // there are no reads completely supporting the reference
     
     Haplotype hap1 {human, a_region};
-    hap1.emplace_back(variants[0]); // high quality insert
-    hap1.emplace_back(variants[2]); // high quality snp
+    add_to_back(variants[0], hap1); // well supported insert
+    add_to_back(variants[2], hap1); // well supported snp
     
     Haplotype hap2 {human, a_region};
-    hap2.emplace_back(variants[1]); // this is a low quality snp
+    add_to_back(variants[1], hap2); // this is a low quality snp
     
     Haplotype hap3 {human, a_region};
-    hap3.emplace_back(variants[0]);
-    hap3.emplace_back(variants[1]);
-    hap3.emplace_back(variants[2]);
+    add_to_back(variants[0], hap3);
+    add_to_back(variants[1], hap3);
+    add_to_back(variants[2], hap3);
     
     unsigned num_haplotypes {4};
     std::vector<Haplotype> haplotypes {reference_haplotype, hap1, hap2, hap3};
@@ -248,9 +251,9 @@ TEST_CASE("two_samples_diploid_empirical_variational_bayes_genotype_model1", "[e
     
     ReadModel a_read_model {ploidy};
     
-    EmpiricalVariationalBayesGenotypeModel the_model {a_read_model, ploidy};
+    VariationalBayesGenotypeModel the_model {a_read_model, ploidy};
     
-    EmpiricalVariationalBayesGenotypeModel::HaplotypePseudoCounts pseudo_counts {};
+    VariationalBayesGenotypeModel::HaplotypePseudoCounts pseudo_counts {};
     pseudo_counts[reference_haplotype] = 1;
     pseudo_counts[hap1]                = 1;
     pseudo_counts[hap2]                = 1;
@@ -277,7 +280,7 @@ TEST_CASE("two_samples_diploid_empirical_variational_bayes_genotype_model1", "[e
 //    }
 }
 
-TEST_CASE("two_samples_diploid_empirical_variational_bayes_genotype_model2", "[empirical_variational_bayes_genotype_model]")
+TEST_CASE("two_samples_diploid_variational_bayes_genotype_model2", "[variational_bayes_genotype_model]")
 {
     unsigned ploidy {2};
     
@@ -309,16 +312,16 @@ TEST_CASE("two_samples_diploid_empirical_variational_bayes_genotype_model2", "[e
     Haplotype reference_haplotype {human, a_region}; // there are no reads completely supporting the reference
     
     Haplotype hap1 {human, a_region};
-    hap1.emplace_back(variants[0]); // high quality insert
-    hap1.emplace_back(variants[2]); // high quality snp
+    add_to_back(variants[0], hap1); // well supported insert
+    add_to_back(variants[2], hap1); // well supported snp
     
     Haplotype hap2 {human, a_region};
-    hap2.emplace_back(variants[1]); // this is a low quality snp
+    add_to_back(variants[1], hap2); // this is a low quality snp
     
     Haplotype hap3 {human, a_region};
-    hap3.emplace_back(variants[0]);
-    hap3.emplace_back(variants[1]);
-    hap3.emplace_back(variants[2]);
+    add_to_back(variants[0], hap3);
+    add_to_back(variants[1], hap3);
+    add_to_back(variants[2], hap3);
     
     unsigned num_haplotypes {4};
     std::vector<Haplotype> haplotypes {reference_haplotype, hap1, hap2, hap3};
@@ -329,9 +332,9 @@ TEST_CASE("two_samples_diploid_empirical_variational_bayes_genotype_model2", "[e
     
     ReadModel a_read_model {ploidy};
     
-    EmpiricalVariationalBayesGenotypeModel the_model {a_read_model, ploidy};
+    VariationalBayesGenotypeModel the_model {a_read_model, ploidy};
     
-    EmpiricalVariationalBayesGenotypeModel::HaplotypePseudoCounts pseudo_counts {};
+    VariationalBayesGenotypeModel::HaplotypePseudoCounts pseudo_counts {};
     pseudo_counts[reference_haplotype] = 1;
     pseudo_counts[hap1]                = 1;
     pseudo_counts[hap2]                = 1;
@@ -358,7 +361,7 @@ TEST_CASE("two_samples_diploid_empirical_variational_bayes_genotype_model2", "[e
 //    }
 }
 
-TEST_CASE("three_samples_diploid_empirical_variational_bayes_genotype_model", "[empirical_variational_bayes_genotype_model]")
+TEST_CASE("three_samples_diploid_variational_bayes_genotype_model", "[variational_bayes_genotype_model]")
 {
     unsigned ploidy {2};
     
@@ -390,16 +393,16 @@ TEST_CASE("three_samples_diploid_empirical_variational_bayes_genotype_model", "[
     Haplotype reference_haplotype {human, a_region}; // there are no reads completely supporting the reference
     
     Haplotype hap1 {human, a_region};
-    hap1.emplace_back(variants[0]); // high quality insert
-    hap1.emplace_back(variants[2]); // high quality snp
+    add_to_back(variants[0], hap1); // well supported insert
+    add_to_back(variants[2], hap1); // well supported snp
     
     Haplotype hap2 {human, a_region};
-    hap2.emplace_back(variants[1]); // this is a low quality snp
+    add_to_back(variants[1], hap2); // this is a low quality snp
     
     Haplotype hap3 {human, a_region};
-    hap3.emplace_back(variants[0]);
-    hap3.emplace_back(variants[1]);
-    hap3.emplace_back(variants[2]);
+    add_to_back(variants[0], hap3);
+    add_to_back(variants[1], hap3);
+    add_to_back(variants[2], hap3);
     
     unsigned num_haplotypes {4};
     std::vector<Haplotype> haplotypes {reference_haplotype, hap1, hap2, hap3};
@@ -410,9 +413,9 @@ TEST_CASE("three_samples_diploid_empirical_variational_bayes_genotype_model", "[
     
     ReadModel a_read_model {ploidy};
     
-    EmpiricalVariationalBayesGenotypeModel the_model {a_read_model, ploidy};
+    VariationalBayesGenotypeModel the_model {a_read_model, ploidy};
     
-    EmpiricalVariationalBayesGenotypeModel::HaplotypePseudoCounts pseudo_counts {};
+    VariationalBayesGenotypeModel::HaplotypePseudoCounts pseudo_counts {};
     pseudo_counts[reference_haplotype] = 1;
     pseudo_counts[hap1]                = 1;
     pseudo_counts[hap2]                = 1;
@@ -439,16 +442,16 @@ TEST_CASE("three_samples_diploid_empirical_variational_bayes_genotype_model", "[
 //        std::cout << c.first << " " << c.second << std::endl;
 //    }
     
-    std::cout << sample_ids[0] << std::endl;
-    std::cout << the_model.allele_posterior_probability(variants[0], haplotypes, responsabilities[0], genotypes) << std::endl;
-    std::cout << the_model.allele_posterior_probability(variants[1], haplotypes, responsabilities[0], genotypes) << std::endl;
-    std::cout << the_model.allele_posterior_probability(variants[2], haplotypes, responsabilities[0], genotypes) << std::endl;
-    std::cout << sample_ids[1] << std::endl;
-    std::cout << the_model.allele_posterior_probability(variants[0], haplotypes, responsabilities[1], genotypes) << std::endl;
-    std::cout << the_model.allele_posterior_probability(variants[1], haplotypes, responsabilities[1], genotypes) << std::endl;
-    std::cout << the_model.allele_posterior_probability(variants[2], haplotypes, responsabilities[1], genotypes) << std::endl;
-    std::cout << sample_ids[2] << std::endl;
-    std::cout << the_model.allele_posterior_probability(variants[0], haplotypes, responsabilities[2], genotypes) << std::endl;
-    std::cout << the_model.allele_posterior_probability(variants[1], haplotypes, responsabilities[2], genotypes) << std::endl;
-    std::cout << the_model.allele_posterior_probability(variants[2], haplotypes, responsabilities[2], genotypes) << std::endl;
+//    std::cout << sample_ids[0] << std::endl;
+//    std::cout << the_model.allele_posterior_probability(variants[0], haplotypes, responsabilities[0], genotypes) << std::endl;
+//    std::cout << the_model.allele_posterior_probability(variants[1], haplotypes, responsabilities[0], genotypes) << std::endl;
+//    std::cout << the_model.allele_posterior_probability(variants[2], haplotypes, responsabilities[0], genotypes) << std::endl;
+//    std::cout << sample_ids[1] << std::endl;
+//    std::cout << the_model.allele_posterior_probability(variants[0], haplotypes, responsabilities[1], genotypes) << std::endl;
+//    std::cout << the_model.allele_posterior_probability(variants[1], haplotypes, responsabilities[1], genotypes) << std::endl;
+//    std::cout << the_model.allele_posterior_probability(variants[2], haplotypes, responsabilities[1], genotypes) << std::endl;
+//    std::cout << sample_ids[2] << std::endl;
+//    std::cout << the_model.allele_posterior_probability(variants[0], haplotypes, responsabilities[2], genotypes) << std::endl;
+//    std::cout << the_model.allele_posterior_probability(variants[1], haplotypes, responsabilities[2], genotypes) << std::endl;
+//    std::cout << the_model.allele_posterior_probability(variants[2], haplotypes, responsabilities[2], genotypes) << std::endl;
 }

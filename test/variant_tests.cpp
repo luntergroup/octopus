@@ -21,6 +21,31 @@
 #include "variant_utils.h"
 #include "mock_objects.h"
 
+TEST_CASE("comparison_consistency_test", "[variant]")
+{
+    VariantFactory a_variant_factory {};
+    
+    auto snp1 = a_variant_factory.make("chr1", 100, "C", "A");
+    auto snp2 = a_variant_factory.make("chr1", 99, "C", "A");
+    auto snp3 = a_variant_factory.make("chr1", 100, "C", "T");
+    auto snp4 = a_variant_factory.make("chr1", 100, "C", "A");
+    
+    bool r1 = !(snp1 < snp2) && !(snp2 < snp1);
+    bool r2 = (snp1 == snp2);
+    REQUIRE(!r2);
+    REQUIRE(r1 == r2);
+    
+    r1 = !(snp1 < snp3) && !(snp3 < snp1);
+    r2 = snp1 == snp3;
+    REQUIRE(!r2);
+    REQUIRE(r1 == r2);
+    
+    r1 = !(snp1 < snp4) && !(snp4 < snp1);
+    r2 = snp1 == snp4;
+    REQUIRE(r2);
+    REQUIRE(r1 == r2);
+}
+
 TEST_CASE("snp_overlap_test", "[snps]")
 {
     VariantFactory a_variant_factory {};

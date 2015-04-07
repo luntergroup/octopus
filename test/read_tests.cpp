@@ -106,7 +106,7 @@ TEST_CASE("read_manager_single_file_test", "[read_manager]")
 //    REQUIRE(big_region_reads2.size() == 142606);
 //    REQUIRE(small_region_reads2.size() == 29);
 //}
-//
+
 //TEST_CASE("read_manager_multiple_files_above_max_file_limit_test", "[read_manager")
 //{
 //    std::vector<std::string> read_paths {human_1000g_bam1, human_1000g_bam2, human_1000g_bam3};

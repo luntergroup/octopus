@@ -23,9 +23,9 @@
 #include "haplotype.h"
 #include "genotype.h"
 #include "read_model.h"
-#include "genotype_model.h"
+#include "standard_genotype_model.h"
 
-TEST_CASE("haploid_genotype_model_test", "[genotype_model]")
+TEST_CASE("haploid_standard_genotype_model_test", "[standard_genotype_model]")
 {
     unsigned ploidy {1};
     
@@ -58,15 +58,18 @@ TEST_CASE("haploid_genotype_model_test", "[genotype_model]")
     Haplotype best_haplotype {ecoli};
     for (const auto& variant : variants) {
         if (is_snp(variant)) {
-            best_haplotype.emplace_back(variant);
+            add_to_back(variant, best_haplotype);
         }
     }
     
     Haplotype okay_haplotype {ecoli};
-    okay_haplotype.emplace_back(variants[0]); okay_haplotype.emplace_back(variants[1]);
-    okay_haplotype.emplace_back(variants[3]); okay_haplotype.emplace_back(variants[4]);
-    okay_haplotype.emplace_back(variants[5]); okay_haplotype.emplace_back(variants[6]);
-    okay_haplotype.emplace_back(variants[11]);
+    add_to_back(variants[0], okay_haplotype);
+    add_to_back(variants[1], okay_haplotype);
+    add_to_back(variants[3], okay_haplotype);
+    add_to_back(variants[4], okay_haplotype);
+    add_to_back(variants[5], okay_haplotype);
+    add_to_back(variants[6], okay_haplotype);
+    add_to_back(variants[11], okay_haplotype);
     
     unsigned num_haplotypes {3};
     std::vector<Haplotype> haplotypes {reference_haplotype, best_haplotype, okay_haplotype};
@@ -76,12 +79,12 @@ TEST_CASE("haploid_genotype_model_test", "[genotype_model]")
     REQUIRE(genotypes.size() == num_genotypes(num_haplotypes, ploidy));
     
     ReadModel a_read_model {ploidy};
-    GenotypeModel the_model {a_read_model, ploidy};
+    StandardGenotypeModel the_model {a_read_model, ploidy};
     
     
 }
 
-TEST_CASE("diploid_genotype_model_test", "[genotype_model]")
+TEST_CASE("diploid_standard_genotype_model_test", "[standard_genotype_model]")
 {
     
 }

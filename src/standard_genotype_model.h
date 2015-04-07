@@ -1,13 +1,13 @@
 //
-//  genotype_model.h
+//  standard_genotype_model.h
 //  Octopus
 //
 //  Created by Daniel Cooke on 22/03/2015.
 //  Copyright (c) 2015 Oxford University. All rights reserved.
 //
 
-#ifndef __Octopus__genotype_model__
-#define __Octopus__genotype_model__
+#ifndef __Octopus__standard_genotype_model__
+#define __Octopus__standard_genotype_model__
 
 #include <vector>
 #include <cstddef>
@@ -21,7 +21,7 @@ using std::size_t;
 
 class AlignedRead;
 
-class GenotypeModel
+class StandardGenotypeModel
 {
 public:
     using Haplotypes  = std::vector<Haplotype>;
@@ -29,14 +29,14 @@ public:
     using SampleReads = std::vector<AlignedRead>;
     using HaplotypeLogProbabilities = std::unordered_map<Haplotype, double>;
     
-    GenotypeModel() = delete;
-    explicit GenotypeModel(ReadModel& read_model, unsigned ploidy);
-    ~GenotypeModel() = default;
+    StandardGenotypeModel() = delete;
+    explicit StandardGenotypeModel(ReadModel& read_model, unsigned ploidy);
+    ~StandardGenotypeModel() = default;
     
-    GenotypeModel(const GenotypeModel&)            = default;
-    GenotypeModel& operator=(const GenotypeModel&) = default;
-    GenotypeModel(GenotypeModel&&)                 = default;
-    GenotypeModel& operator=(GenotypeModel&&)      = default;
+    StandardGenotypeModel(const StandardGenotypeModel&)            = default;
+    StandardGenotypeModel& operator=(const StandardGenotypeModel&) = default;
+    StandardGenotypeModel(StandardGenotypeModel&&)                 = default;
+    StandardGenotypeModel& operator=(StandardGenotypeModel&&)      = default;
     
     // ln p(genotype | population_haplotype_log_probabilities)
     // Note this assumes Hardy-Weinberg equilibrium
@@ -73,17 +73,17 @@ private:
                                      const HaplotypeLogProbabilities& sample_haplotype_log_probabilities) const;
 };
 
-using Reads = std::vector<GenotypeModel::SampleReads>;
+using Reads = std::vector<StandardGenotypeModel::SampleReads>;
 using HaplotypeProbabilities = std::unordered_map<Haplotype, double>;
 using SampleGenotypeProbabilities = std::vector<std::unordered_map<Haplotype, double>>;
 
 std::pair<HaplotypeProbabilities, SampleGenotypeProbabilities>
-get_haplotype_probabilities(GenotypeModel the_model, GenotypeModel::Genotypes the_genotypes,
+get_haplotype_probabilities(StandardGenotypeModel the_model, StandardGenotypeModel::Genotypes the_genotypes,
                             const Reads& the_reads);
 
 void
-update_haplotype_probabilities(GenotypeModel::Genotypes the_genotypes, 
-                               GenotypeModel::HaplotypeLogProbabilities& haplotype_log_probabilities,
-                               const Reads& the_reads, GenotypeModel the_model);
+update_haplotype_probabilities(StandardGenotypeModel::Genotypes the_genotypes, 
+                               StandardGenotypeModel::HaplotypeLogProbabilities& haplotype_log_probabilities,
+                               const Reads& the_reads, StandardGenotypeModel the_model);
 
-#endif /* defined(__Octopus__genotype_model__) */
+#endif /* defined(__Octopus__standard_genotype_model__) */

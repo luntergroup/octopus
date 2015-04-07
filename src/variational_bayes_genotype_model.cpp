@@ -1,12 +1,12 @@
 //
-//  empirical_variational_bayes_genotype_model.cpp
+//  variational_bayes_genotype_model.cpp
 //  Octopus
 //
 //  Created by Daniel Cooke on 01/04/2015.
 //  Copyright (c) 2015 Oxford University. All rights reserved.
 //
 
-#include "empirical_variational_bayes_genotype_model.h"
+#include "variational_bayes_genotype_model.h"
 
 #include <cmath> // std::exp, std::log
 #include <boost/math/special_functions/digamma.hpp>
@@ -17,21 +17,14 @@
 
 #include <iostream> // TEST
 
-EmpiricalVariationalBayesGenotypeModel::EmpiricalVariationalBayesGenotypeModel(ReadModel& read_model,
-                                                                               unsigned ploidy)
+VariationalBayesGenotypeModel::VariationalBayesGenotypeModel(ReadModel& read_model, unsigned ploidy)
 :
 ploidy_ {ploidy},
 read_model_ {read_model}
 {}
 
-// E_pi [p(genotype | pi)] = sum {haplotype in genotype} (u(haplotype) * y(a_haplotype)) - ploidy * y(a_all) + ln C
-// where u(haplotype) is the number of times the haplotype occurs in the genotypes
-// a_haplotype is the pseudo count for the haplotype
-// a_all is the sum of the pseudo counts for all haplotypes
-// y is the digamma function
-// and C is the constant multinomial coefficient described in documentation
-double EmpiricalVariationalBayesGenotypeModel::log_expected_genotype_probability(const Genotype& genotype,
-                                                                                 const HaplotypePseudoCounts& haplotype_pseudo_counts)
+double VariationalBayesGenotypeModel::log_expected_genotype_probability(const Genotype& genotype,
+                                                                        const HaplotypePseudoCounts& haplotype_pseudo_counts)
 {
     // These cases are just for optimisation; they are functionally equivalent
     switch (ploidy_) {
@@ -46,19 +39,19 @@ double EmpiricalVariationalBayesGenotypeModel::log_expected_genotype_probability
     }
 }
 
-double EmpiricalVariationalBayesGenotypeModel::log_rho(const Genotype& genotype,
-                                                       const HaplotypePseudoCounts& haplotype_pseudo_counts,
-                                                       const SampleReads& reads, unsigned sample)
+double VariationalBayesGenotypeModel::log_rho(const Genotype& genotype,
+                                              const HaplotypePseudoCounts& haplotype_pseudo_counts,
+                                              const SampleReads& reads, unsigned sample)
 {
     return log_expected_genotype_probability(genotype, haplotype_pseudo_counts) +
             read_model_.log_probability(reads, genotype, sample);
 }
 
-double EmpiricalVariationalBayesGenotypeModel::genotype_responsability(const Genotype& genotype,
-                                                                       const SampleReads& reads,
-                                                                       const HaplotypePseudoCounts& haplotype_pseudo_counts,
-                                                                       unsigned sample,
-                                                                       const Genotypes& all_genotypes)
+double VariationalBayesGenotypeModel::genotype_responsability(const Genotype& genotype,
+                                                              const SampleReads& reads,
+                                                              const HaplotypePseudoCounts& haplotype_pseudo_counts,
+                                                              unsigned sample,
+                                                              const Genotypes& all_genotypes)
 {
     double log_rho_genotype = log_rho(genotype, haplotype_pseudo_counts, reads, sample);
     
@@ -73,8 +66,8 @@ double EmpiricalVariationalBayesGenotypeModel::genotype_responsability(const Gen
     return std::exp(log_rho_genotype - log_sum_rho_genotypes);
 }
 
-double EmpiricalVariationalBayesGenotypeModel::expected_haplotype_count(const Haplotype& haplotype,
-                                                                        const SampleGenotypeResponsabilities& sample_genotype_responsabilities)
+double VariationalBayesGenotypeModel::expected_haplotype_count(const Haplotype& haplotype,
+                                                               const SampleGenotypeResponsabilities& sample_genotype_responsabilities)
 {
     double result {0};
     
@@ -85,9 +78,9 @@ double EmpiricalVariationalBayesGenotypeModel::expected_haplotype_count(const Ha
     return result;
 }
 
-double EmpiricalVariationalBayesGenotypeModel::posterior_haplotype_pseudo_count(const Haplotype& haplotype,
-                                                                                double prior_pseudo_count,
-                                                                                const GenotypeResponsabilities& genotype_responsabilities)
+double VariationalBayesGenotypeModel::posterior_haplotype_pseudo_count(const Haplotype& haplotype,
+                                                                       double prior_pseudo_count,
+                                                                       const GenotypeResponsabilities& genotype_responsabilities)
 {
     double result {prior_pseudo_count};
     
@@ -98,8 +91,8 @@ double EmpiricalVariationalBayesGenotypeModel::posterior_haplotype_pseudo_count(
     return result;
 }
 
-double EmpiricalVariationalBayesGenotypeModel::posterior_predictive_probability(const std::unordered_map<Haplotype, unsigned>& haplotype_counts,
-                                                                                const HaplotypePseudoCounts& haplotype_pseudo_count) const
+double VariationalBayesGenotypeModel::posterior_predictive_probability(const std::unordered_map<Haplotype, unsigned>& haplotype_counts,
+                                                                       const HaplotypePseudoCounts& haplotype_pseudo_count) const
 {
     std::vector<double> z {}, a {};
     
@@ -109,15 +102,15 @@ double EmpiricalVariationalBayesGenotypeModel::posterior_predictive_probability(
     return dirichlet_multinomial<double>(z, a);
 }
 
-double EmpiricalVariationalBayesGenotypeModel::allele_posterior_probability(const Variant& variant,
-                                                                            const Haplotypes& haplotypes,
-                                                                            const SampleGenotypeResponsabilities& sample_genotype_responsabilities,
-                                                                            const Genotypes& genotypes) const
+double VariationalBayesGenotypeModel::allele_posterior_probability(const Variant& variant,
+                                                                   const Haplotypes& haplotypes,
+                                                                   const SampleGenotypeResponsabilities& sample_genotype_responsabilities,
+                                                                   const Genotypes& genotypes) const
 {
     double result {};
     
     for (const auto& haplotype : haplotypes) {
-        if (haplotype.contains(variant)) {
+        if (contains(haplotype, variant)) {
             for (const auto& genotype : genotypes) {
                 if (genotype.contains(haplotype)) {
                     result += sample_genotype_responsabilities.at(genotype);
@@ -129,8 +122,8 @@ double EmpiricalVariationalBayesGenotypeModel::allele_posterior_probability(cons
     return result;
 }
 
-double EmpiricalVariationalBayesGenotypeModel::log_expected_genotype_probability_haploid(const Genotype& genotype,
-                                                 const HaplotypePseudoCounts& haplotype_pseudo_counts) const
+double VariationalBayesGenotypeModel::log_expected_genotype_probability_haploid(const Genotype& genotype,
+                                                                                const HaplotypePseudoCounts& haplotype_pseudo_counts) const
 {
     const static double ln_1 = std::log(1);
     
@@ -138,8 +131,8 @@ double EmpiricalVariationalBayesGenotypeModel::log_expected_genotype_probability
             - boost::math::digamma<double>(pseudo_count_sum(haplotype_pseudo_counts)) + ln_1;
 }
 
-double EmpiricalVariationalBayesGenotypeModel::log_expected_genotype_probability_diploid(const Genotype& genotype,
-                                                 const HaplotypePseudoCounts& haplotype_pseudo_counts) const
+double VariationalBayesGenotypeModel::log_expected_genotype_probability_diploid(const Genotype& genotype,
+                                                                                const HaplotypePseudoCounts& haplotype_pseudo_counts) const
 {
     const static double ln_1 = std::log(1);
     const static double ln_2 = std::log(2);
@@ -154,21 +147,21 @@ double EmpiricalVariationalBayesGenotypeModel::log_expected_genotype_probability
     }
 }
 
-double EmpiricalVariationalBayesGenotypeModel::log_expected_genotype_probability_triploid(const Genotype& genotype,
-                                                  const HaplotypePseudoCounts& haplotype_pseudo_counts) const
+double VariationalBayesGenotypeModel::log_expected_genotype_probability_triploid(const Genotype& genotype,
+                                                                                 const HaplotypePseudoCounts& haplotype_pseudo_counts) const
 {
     //TODO
     return 0;
 }
 
-double EmpiricalVariationalBayesGenotypeModel::log_expected_genotype_probability_polyploid(const Genotype& genotype,
-                                                   const HaplotypePseudoCounts& haplotype_pseudo_counts) const
+double VariationalBayesGenotypeModel::log_expected_genotype_probability_polyploid(const Genotype& genotype,
+                                                                                  const HaplotypePseudoCounts& haplotype_pseudo_counts) const
 {
     //TODO
     return 0;
 }
 
-unsigned EmpiricalVariationalBayesGenotypeModel::pseudo_count_sum(const HaplotypePseudoCounts& haplotype_pseudo_counts) const
+unsigned VariationalBayesGenotypeModel::pseudo_count_sum(const HaplotypePseudoCounts& haplotype_pseudo_counts) const
 {
     unsigned result {0};
     
@@ -179,16 +172,15 @@ unsigned EmpiricalVariationalBayesGenotypeModel::pseudo_count_sum(const Haplotyp
     return result;
 }
 
-GenotypePosteriors
-update_parameters(EmpiricalVariationalBayesGenotypeModel& the_model,
-                  const EmpiricalVariationalBayesGenotypeModel::Genotypes& the_genotypes,
-                  const EmpiricalVariationalBayesGenotypeModel::HaplotypePseudoCounts& prior_haplotype_pseudocounts,
-                  const SamplesReads& the_reads, unsigned max_num_iterations)
+GenotypePosteriors update_parameters(VariationalBayesGenotypeModel& the_model,
+                                     const VariationalBayesGenotypeModel::Genotypes& the_genotypes,
+                                     const VariationalBayesGenotypeModel::HaplotypePseudoCounts& prior_haplotype_pseudocounts,
+                                     const SamplesReads& the_reads, unsigned max_num_iterations)
 {
     unsigned num_samples {static_cast<unsigned>(the_reads.size())};
     
-    EmpiricalVariationalBayesGenotypeModel::GenotypeResponsabilities responsabilities(num_samples);
-    EmpiricalVariationalBayesGenotypeModel::HaplotypePseudoCounts posterior_pseudo_counts {prior_haplotype_pseudocounts};
+    VariationalBayesGenotypeModel::GenotypeResponsabilities responsabilities(num_samples);
+    VariationalBayesGenotypeModel::HaplotypePseudoCounts posterior_pseudo_counts {prior_haplotype_pseudocounts};
     
     for (unsigned i {}; i < max_num_iterations; ++i) {
         for (unsigned s {}; s < num_samples; ++s) {

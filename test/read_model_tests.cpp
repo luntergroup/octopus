@@ -54,18 +54,21 @@ TEST_CASE("haploid_read_model_test", "[read_model]")
     
     Haplotype reference_haplotype {ecoli, a_region}; // single fully supporting read
     
-    Haplotype best_haplotype {ecoli, a_region}; // most reads fully support this
+    Haplotype best_haplotype {ecoli}; // most reads fully support this
     for (const auto& variant : variants) {
         if (is_snp(variant)) {
-            best_haplotype.emplace_back(variant);
+            add_to_back(variant, best_haplotype);
         }
     }
     
-    Haplotype okay_haplotype {ecoli, a_region}; // Bad insertion and 3 missing snps
-    okay_haplotype.emplace_back(variants[0]); okay_haplotype.emplace_back(variants[1]);
-    okay_haplotype.emplace_back(variants[3]); okay_haplotype.emplace_back(variants[4]);
-    okay_haplotype.emplace_back(variants[5]); okay_haplotype.emplace_back(variants[6]);
-    okay_haplotype.emplace_back(variants[11]);
+    Haplotype okay_haplotype {ecoli}; // Bad insertion and 3 missing snps
+    add_to_back(variants[0], okay_haplotype);
+    add_to_back(variants[1], okay_haplotype);
+    add_to_back(variants[3], okay_haplotype);
+    add_to_back(variants[4], okay_haplotype);
+    add_to_back(variants[5], okay_haplotype);
+    add_to_back(variants[6], okay_haplotype);
+    add_to_back(variants[11], okay_haplotype);
     
     unsigned num_haplotypes {3};
     std::vector<Haplotype> haplotypes {reference_haplotype, best_haplotype, okay_haplotype};
@@ -124,16 +127,16 @@ TEST_CASE("diploid_read_model_test", "[read_model]")
     Haplotype reference_haplotype {human, a_region}; // there are no reads completely supporting the reference
     
     Haplotype hap1 {human, a_region};
-    hap1.emplace_back(variants[0]); // well supported insert
-    hap1.emplace_back(variants[2]); // well supported snp
+    add_to_back(variants[0], hap1); // well supported insert
+    add_to_back(variants[2], hap1); // well supported snp
     
     Haplotype hap2 {human, a_region};
-    hap2.emplace_back(variants[1]); // this is a low quality snp
+    add_to_back(variants[1], hap2); // this is a low quality snp
     
     Haplotype hap3 {human, a_region};
-    hap3.emplace_back(variants[0]);
-    hap3.emplace_back(variants[1]);
-    hap3.emplace_back(variants[2]);
+    add_to_back(variants[0], hap3);
+    add_to_back(variants[1], hap3);
+    add_to_back(variants[2], hap3);
     
     unsigned num_haplotypes {4};
     std::vector<Haplotype> haplotypes {reference_haplotype, hap1, hap2, hap3};
@@ -200,16 +203,16 @@ TEST_CASE("two_sample_diploid_read_model_test", "[read_model]")
     Haplotype reference_haplotype {human, a_region}; // there are no reads completely supporting the reference
     
     Haplotype hap1 {human, a_region};
-    hap1.emplace_back(variants[0]); // high quality insert
-    hap1.emplace_back(variants[2]); // high quality snp
+    add_to_back(variants[0], hap1); // well supported insert
+    add_to_back(variants[2], hap1); // well supported snp
     
     Haplotype hap2 {human, a_region};
-    hap2.emplace_back(variants[1]); // this is a low quality snp
+    add_to_back(variants[1], hap2); // this is a low quality snp
     
     Haplotype hap3 {human, a_region};
-    hap3.emplace_back(variants[0]);
-    hap3.emplace_back(variants[1]);
-    hap3.emplace_back(variants[2]);
+    add_to_back(variants[0], hap3);
+    add_to_back(variants[1], hap3);
+    add_to_back(variants[2], hap3);
     
     unsigned num_haplotypes {4};
     std::vector<Haplotype> haplotypes {reference_haplotype, hap1, hap2, hap3};

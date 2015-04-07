@@ -1,13 +1,13 @@
 //
-//  empirical_variational_bayes_genotype_model.h
+//  variational_bayes_genotype_model.h.h
 //  Octopus
 //
 //  Created by Daniel Cooke on 01/04/2015.
 //  Copyright (c) 2015 Oxford University. All rights reserved.
 //
 
-#ifndef __Octopus__empirical_variational_bayes_genotype_model__
-#define __Octopus__empirical_variational_bayes_genotype_model__
+#ifndef __Octopus__variational_bayes_genotype_model__
+#define __Octopus__variational_bayes_genotype_model__
 
 #include <vector>
 #include <unordered_map>
@@ -19,7 +19,7 @@
 class AlignedRead;
 class Variant;
 
-class EmpiricalVariationalBayesGenotypeModel
+class VariationalBayesGenotypeModel
 {
 public:
     using Haplotypes                     = std::vector<Haplotype>;
@@ -29,14 +29,14 @@ public:
     using SampleGenotypeResponsabilities = std::unordered_map<Genotype, double>;
     using GenotypeResponsabilities       = std::vector<SampleGenotypeResponsabilities>;
     
-    EmpiricalVariationalBayesGenotypeModel() = delete;
-    explicit EmpiricalVariationalBayesGenotypeModel(ReadModel& read_model, unsigned ploidy);
-    ~EmpiricalVariationalBayesGenotypeModel() = default;
+    VariationalBayesGenotypeModel() = delete;
+    explicit VariationalBayesGenotypeModel(ReadModel& read_model, unsigned ploidy);
+    ~VariationalBayesGenotypeModel() = default;
     
-    EmpiricalVariationalBayesGenotypeModel(const EmpiricalVariationalBayesGenotypeModel&)            = default;
-    EmpiricalVariationalBayesGenotypeModel& operator=(const EmpiricalVariationalBayesGenotypeModel&) = default;
-    EmpiricalVariationalBayesGenotypeModel(EmpiricalVariationalBayesGenotypeModel&&)                 = default;
-    EmpiricalVariationalBayesGenotypeModel& operator=(EmpiricalVariationalBayesGenotypeModel&&)      = default;
+    VariationalBayesGenotypeModel(const VariationalBayesGenotypeModel&)            = default;
+    VariationalBayesGenotypeModel& operator=(const VariationalBayesGenotypeModel&) = default;
+    VariationalBayesGenotypeModel(VariationalBayesGenotypeModel&&)                 = default;
+    VariationalBayesGenotypeModel& operator=(VariationalBayesGenotypeModel&&)      = default;
     
     double log_expected_genotype_probability(const Genotype& genotype,
                                              const HaplotypePseudoCounts& haplotype_pseudo_counts);
@@ -78,15 +78,15 @@ private:
                                                        const HaplotypePseudoCounts& haplotype_pseudo_counts) const;
 };
 
-using GenotypePosteriors = std::pair<EmpiricalVariationalBayesGenotypeModel::GenotypeResponsabilities,
-                                    EmpiricalVariationalBayesGenotypeModel::HaplotypePseudoCounts>;
+using GenotypePosteriors = std::pair<VariationalBayesGenotypeModel::GenotypeResponsabilities,
+                                    VariationalBayesGenotypeModel::HaplotypePseudoCounts>;
 
-using SamplesReads = std::vector<EmpiricalVariationalBayesGenotypeModel::SampleReads>;
+using SamplesReads = std::vector<VariationalBayesGenotypeModel::SampleReads>;
 
 GenotypePosteriors
-update_parameters(EmpiricalVariationalBayesGenotypeModel& the_model,
-                  const EmpiricalVariationalBayesGenotypeModel::Genotypes& the_genotypes,
-                  const EmpiricalVariationalBayesGenotypeModel::HaplotypePseudoCounts& prior_haplotype_pseudocounts,
+update_parameters(VariationalBayesGenotypeModel& the_model,
+                  const VariationalBayesGenotypeModel::Genotypes& the_genotypes,
+                  const VariationalBayesGenotypeModel::HaplotypePseudoCounts& prior_haplotype_pseudocounts,
                   const SamplesReads& the_reads, unsigned max_num_iterations);
 
-#endif /* defined(__Octopus__empirical_variational_bayes_genotype_model__) */
+#endif /* defined(__Octopus__variational_bayes_genotype_model.h__) */
