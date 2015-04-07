@@ -21,6 +21,27 @@ using std::cend;
 using std::crbegin;
 using std::crend;
 
+void merge_equal_variants(std::vector<Variant>& the_variants)
+{
+    auto it = std::adjacent_find(std::cbegin(the_variants), std::cend(the_variants));
+    auto last = std::cend(the_variants);
+    
+    bool has_duplicates = it != last;
+    
+    while (it != last) {
+        auto er = std::equal_range(it, std::cend(the_variants), *it);
+        
+        //TODO: update probabilities here
+        
+        it = er.second;
+    }
+    
+    if (has_duplicates) {
+        auto last_unique_it = std::unique(std::begin(the_variants), std::end(the_variants));
+        the_variants.resize(std::distance(last_unique_it, std::end(the_variants)));
+    }
+}
+
 auto allele_minmax(const Variant::SequenceType& allele_a, const Variant::SequenceType& allele_b)
 {
     static auto is_bigger = [] (const auto& a1, const auto& a2) { return a1.size() < a2.size(); };

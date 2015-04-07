@@ -17,6 +17,8 @@
 class ReferenceGenome;
 class VariantFactory;
 
+void merge_equal_variants(std::vector<Variant>& the_variants);
+
 /*
  A variant is parsimonious if and only if it is represented in as few nucleotides as possible
  without an allele of length 0.

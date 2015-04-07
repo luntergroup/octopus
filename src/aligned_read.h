@@ -306,17 +306,13 @@ inline const AlignedRead::Qualities& AlignedRead::get_qualities() const
 inline void AlignedRead::zero_front_qualities(SizeType num_bases) noexcept
 {
     std::for_each(std::begin(the_qualities_), std::begin(the_qualities_) + num_bases,
-                  [] (auto& a_quality) {
-        a_quality = 0;
-    });
+                  [] (auto& quality) { quality = 0; });
 }
 
 inline void AlignedRead::zero_back_qualities(SizeType num_bases) noexcept
 {
     std::for_each(std::rbegin(the_qualities_), std::rbegin(the_qualities_) + num_bases,
-                  [] (auto& a_quality) {
-        a_quality = 0;
-    });
+                  [] (auto& quality) { quality = 0; });
 }
 
 inline AlignedRead::QualityType AlignedRead::get_mapping_quality() const noexcept

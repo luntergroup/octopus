@@ -21,6 +21,7 @@
 #include "genomic_region.h"
 #include "aligned_read.h"
 #include "variant.h"
+#include "variant_utils.h"
 
 class VariantCandidateGenerator : public IVariantCandidateGenerator
 {
@@ -74,6 +75,8 @@ inline std::vector<Variant> VariantCandidateGenerator::get_candidates(const Geno
                                 std::make_move_iterator(std::end(generator_result)));
         std::inplace_merge(std::begin(result), it, std::end(result));
     }
+    
+    merge_equal_variants(result);
     
     return result;
 }

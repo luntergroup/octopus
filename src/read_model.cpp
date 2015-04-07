@@ -39,8 +39,8 @@ double ReadModel::log_probability(const AlignedRead& read, const Haplotype& hapl
     m.gap_extend_probability = 0.0001;
     m.end_probability        = 0.01;
     
-    auto result =  nuc_log_viterbi_local<float>(haplotype.get_sequence(), read.get_sequence(),
-                                                read.get_qualities(), m, r);
+    auto result = nuc_log_viterbi_local<float>(haplotype.get_sequence(), read.get_sequence(),
+                                               read.get_qualities(), m, r);
     
     add_read_to_cache(sample, read, haplotype, result);
     
@@ -71,7 +71,7 @@ double ReadModel::log_probability(const Reads& reads, const Genotype& genotype,
         return genotype_log_probability_cache_.at(sample).at(genotype);
     }
     
-    double result {};
+    double result {0};
     
     for (const auto& read : reads) {
         result += log_probability(read, genotype, sample);

@@ -38,7 +38,6 @@ public:
     EmpiricalVariationalBayesGenotypeModel(EmpiricalVariationalBayesGenotypeModel&&)                 = default;
     EmpiricalVariationalBayesGenotypeModel& operator=(EmpiricalVariationalBayesGenotypeModel&&)      = default;
     
-    // E_pi [p(genotype | pi)]
     double log_expected_genotype_probability(const Genotype& genotype,
                                              const HaplotypePseudoCounts& haplotype_pseudo_counts);
     
