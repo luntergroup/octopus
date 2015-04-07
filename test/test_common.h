@@ -24,8 +24,8 @@ namespace details {
 
     // BAMs
     static std::string human_1000g_bam_name1 {"HG00101.mapped.ILLUMINA.bwa.GBR.low_coverage.20130415.bam"};
-    static std::string human_1000g_bam_name2 {"HG00103.mapped.ILLUMINA.bwa.GBR.low_coverage.20120522.bam"};
-    //static std::string human_1000g_bam_name3 {"HG00705.mapped.ILLUMINA.bwa.CHS.low_coverage.20120522.bam"};
+    static std::string human_1000g_bam_name2 {"HG00102.mapped.ILLUMINA.bwa.GBR.low_coverage.20130415.bam"};
+    static std::string human_1000g_bam_name3 {"HG00103.mapped.ILLUMINA.bwa.GBR.low_coverage.20120522.bam"};
     static std::string chrom_20_bam_name {"human_chr_20.bam"};
     static std::string ecoli_bam_name {"WTCHG_119208_201103.bam"};
 
@@ -54,8 +54,8 @@ static std::string human_1000g_bam1 {details::home_dir + details::genomics_dir +
 static std::string human_1000g_bam2 {details::home_dir + details::genomics_dir + details::bam_dir +
         details::human_1000g_bam_name2};
 
-//static std::string human_1000g_bam3 {details::home_dir + details::genomics_dir + details::bam_dir +
-//    details::human_1000g_bam_name3};
+static std::string human_1000g_bam3 {details::home_dir + details::genomics_dir + details::bam_dir +
+    details::human_1000g_bam_name3};
 
 static std::string human_1000g_cram {details::home_dir + details::genomics_dir + details::bam_dir +
         details::human_1000g_cram_name};

@@ -21,6 +21,7 @@
 #include <array>
 
 #include "aligned_read.h"
+#include "maths.h"
 
 using std::size_t;
 using std::uint8_t;

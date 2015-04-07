@@ -196,7 +196,7 @@ TEST_CASE("single_sample_diploid_empirical_variational_bayes_genotype_model", "[
     REQUIRE(genotypes.at(1).num_occurences(hap2) == 1);
 }
 
-TEST_CASE("two_samples_diploid_empirical_variational_bayes_genotype_model", "[empirical_variational_bayes_genotype_model]")
+TEST_CASE("two_samples_diploid_empirical_variational_bayes_genotype_model1", "[empirical_variational_bayes_genotype_model]")
 {
     unsigned ploidy {2};
     
@@ -204,6 +204,87 @@ TEST_CASE("two_samples_diploid_empirical_variational_bayes_genotype_model", "[em
     ReferenceGenome human(a_factory.make(human_reference_fasta));
     
     ReadManager a_read_manager(std::vector<std::string> {human_1000g_bam1, human_1000g_bam2});
+    
+    VariantFactory a_variant_factory {};
+    VariantCandidateGenerator candidate_generator {};
+    candidate_generator.register_generator(
+                                           std::make_unique<AlignmentCandidateVariantGenerator>(human, a_variant_factory, 0));
+    
+    auto a_region = parse_region("2:104142870-104142884", human);
+    
+    auto reference_sequence = human.get_sequence(a_region);
+    
+    auto sample_ids = a_read_manager.get_sample_ids();
+    
+    auto some_reads = a_read_manager.fetch_reads(sample_ids, a_region);
+    
+    candidate_generator.add_reads(some_reads[sample_ids[0]].cbegin(), some_reads[sample_ids[0]].cend());
+    candidate_generator.add_reads(some_reads[sample_ids[1]].cbegin(), some_reads[sample_ids[1]].cend());
+    
+    auto variants = candidate_generator.get_candidates(a_region);
+    
+    REQUIRE(variants.size() == 3);
+    
+    Haplotype reference_haplotype {human, a_region}; // there are no reads completely supporting the reference
+    
+    Haplotype hap1 {human, a_region};
+    hap1.emplace_back(variants[0]); // high quality insert
+    hap1.emplace_back(variants[2]); // high quality snp
+    
+    Haplotype hap2 {human, a_region};
+    hap2.emplace_back(variants[1]); // this is a low quality snp
+    
+    Haplotype hap3 {human, a_region};
+    hap3.emplace_back(variants[0]);
+    hap3.emplace_back(variants[1]);
+    hap3.emplace_back(variants[2]);
+    
+    unsigned num_haplotypes {4};
+    std::vector<Haplotype> haplotypes {reference_haplotype, hap1, hap2, hap3};
+    
+    auto genotypes = get_all_genotypes(haplotypes, ploidy);
+    
+    REQUIRE(genotypes.size() == num_genotypes(num_haplotypes, ploidy));
+    
+    ReadModel a_read_model {ploidy};
+    
+    EmpiricalVariationalBayesGenotypeModel the_model {a_read_model, ploidy};
+    
+    EmpiricalVariationalBayesGenotypeModel::HaplotypePseudoCounts pseudo_counts {};
+    pseudo_counts[reference_haplotype] = 1;
+    pseudo_counts[hap1]                = 1;
+    pseudo_counts[hap2]                = 1;
+    pseudo_counts[hap3]                = 1;
+    
+    SamplesReads the_reads {};
+    the_reads.emplace_back(std::move(some_reads[sample_ids[0]]));
+    the_reads.emplace_back(std::move(some_reads[sample_ids[1]]));
+    
+    auto results = update_parameters(the_model, genotypes, pseudo_counts, the_reads, 10);
+    auto responsabilities        = results.first;
+    auto posterior_pseudo_counts = results.second;
+    
+//    for (auto& p : responsabilities[0]) {
+//        std::cout << p.first << " " << p.second << std::endl;
+//    }
+//    std::cout << std::endl;
+//    for (auto& p : responsabilities[1]) {
+//        std::cout << p.first << " " << p.second << std::endl;
+//    }
+//    std::cout << std::endl;
+//    for (const auto& c : posterior_pseudo_counts) {
+//        std::cout << c.first << " " << c.second << std::endl;
+//    }
+}
+
+TEST_CASE("two_samples_diploid_empirical_variational_bayes_genotype_model2", "[empirical_variational_bayes_genotype_model]")
+{
+    unsigned ploidy {2};
+    
+    ReferenceGenomeFactory a_factory {};
+    ReferenceGenome human(a_factory.make(human_reference_fasta));
+    
+    ReadManager a_read_manager(std::vector<std::string> {human_1000g_bam1, human_1000g_bam3});
     
     VariantFactory a_variant_factory {};
     VariantCandidateGenerator candidate_generator {};
@@ -251,7 +332,7 @@ TEST_CASE("two_samples_diploid_empirical_variational_bayes_genotype_model", "[em
     EmpiricalVariationalBayesGenotypeModel the_model {a_read_model, ploidy};
     
     EmpiricalVariationalBayesGenotypeModel::HaplotypePseudoCounts pseudo_counts {};
-    pseudo_counts[reference_haplotype] = 10;
+    pseudo_counts[reference_haplotype] = 1;
     pseudo_counts[hap1]                = 1;
     pseudo_counts[hap2]                = 1;
     pseudo_counts[hap3]                = 1;
@@ -264,15 +345,110 @@ TEST_CASE("two_samples_diploid_empirical_variational_bayes_genotype_model", "[em
     auto responsabilities        = results.first;
     auto posterior_pseudo_counts = results.second;
     
-    for (auto& p : responsabilities[0]) {
-        std::cout << p.first << " " << p.second << std::endl;
-    }
-    std::cout << std::endl;
-    for (auto& p : responsabilities[1]) {
-        std::cout << p.first << " " << p.second << std::endl;
-    }
-    std::cout << std::endl;
-    for (const auto& c : posterior_pseudo_counts) {
-        std::cout << c.first << " " << c.second << std::endl;
-    }
+//    for (auto& p : responsabilities[0]) {
+//        std::cout << p.first << " " << p.second << std::endl;
+//    }
+//    std::cout << std::endl;
+//    for (auto& p : responsabilities[1]) {
+//        std::cout << p.first << " " << p.second << std::endl;
+//    }
+//    std::cout << std::endl;
+//    for (const auto& c : posterior_pseudo_counts) {
+//        std::cout << c.first << " " << c.second << std::endl;
+//    }
+}
+
+TEST_CASE("three_samples_diploid_empirical_variational_bayes_genotype_model", "[empirical_variational_bayes_genotype_model]")
+{
+    unsigned ploidy {2};
+    
+    ReferenceGenomeFactory a_factory {};
+    ReferenceGenome human(a_factory.make(human_reference_fasta));
+    
+    ReadManager a_read_manager(std::vector<std::string> {human_1000g_bam1, human_1000g_bam2, human_1000g_bam3});
+    
+    VariantFactory a_variant_factory {};
+    VariantCandidateGenerator candidate_generator {};
+    candidate_generator.register_generator(
+                                           std::make_unique<AlignmentCandidateVariantGenerator>(human, a_variant_factory, 0));
+    
+    auto a_region = parse_region("2:104142870-104142884", human);
+    
+    auto reference_sequence = human.get_sequence(a_region);
+    
+    auto sample_ids = a_read_manager.get_sample_ids();
+    
+    auto some_reads = a_read_manager.fetch_reads(sample_ids, a_region);
+    
+    candidate_generator.add_reads(some_reads[sample_ids[0]].cbegin(), some_reads[sample_ids[0]].cend());
+    candidate_generator.add_reads(some_reads[sample_ids[1]].cbegin(), some_reads[sample_ids[1]].cend());
+    
+    auto variants = candidate_generator.get_candidates(a_region);
+    
+    REQUIRE(variants.size() == 3);
+    
+    Haplotype reference_haplotype {human, a_region}; // there are no reads completely supporting the reference
+    
+    Haplotype hap1 {human, a_region};
+    hap1.emplace_back(variants[0]); // high quality insert
+    hap1.emplace_back(variants[2]); // high quality snp
+    
+    Haplotype hap2 {human, a_region};
+    hap2.emplace_back(variants[1]); // this is a low quality snp
+    
+    Haplotype hap3 {human, a_region};
+    hap3.emplace_back(variants[0]);
+    hap3.emplace_back(variants[1]);
+    hap3.emplace_back(variants[2]);
+    
+    unsigned num_haplotypes {4};
+    std::vector<Haplotype> haplotypes {reference_haplotype, hap1, hap2, hap3};
+    
+    auto genotypes = get_all_genotypes(haplotypes, ploidy);
+    
+    REQUIRE(genotypes.size() == num_genotypes(num_haplotypes, ploidy));
+    
+    ReadModel a_read_model {ploidy};
+    
+    EmpiricalVariationalBayesGenotypeModel the_model {a_read_model, ploidy};
+    
+    EmpiricalVariationalBayesGenotypeModel::HaplotypePseudoCounts pseudo_counts {};
+    pseudo_counts[reference_haplotype] = 1;
+    pseudo_counts[hap1]                = 1;
+    pseudo_counts[hap2]                = 1;
+    pseudo_counts[hap3]                = 1;
+    
+    SamplesReads the_reads {};
+    the_reads.emplace_back(std::move(some_reads[sample_ids[0]]));
+    the_reads.emplace_back(std::move(some_reads[sample_ids[1]]));
+    the_reads.emplace_back(std::move(some_reads[sample_ids[2]]));
+    
+    auto results = update_parameters(the_model, genotypes, pseudo_counts, the_reads, 10);
+    auto responsabilities        = results.first;
+    auto posterior_pseudo_counts = results.second;
+    
+//    for (auto& p : responsabilities[0]) {
+//        std::cout << p.first << " " << p.second << std::endl;
+//    }
+//    std::cout << std::endl;
+//    for (auto& p : responsabilities[1]) {
+//        std::cout << p.first << " " << p.second << std::endl;
+//    }
+//    std::cout << std::endl;
+//    for (const auto& c : posterior_pseudo_counts) {
+//        std::cout << c.first << " " << c.second << std::endl;
+//    }
+    
+    std::cout << sample_ids[0] << std::endl;
+    std::cout << the_model.allele_posterior_probability(variants[0], haplotypes, responsabilities[0], genotypes) << std::endl;
+    std::cout << the_model.allele_posterior_probability(variants[1], haplotypes, responsabilities[0], genotypes) << std::endl;
+    std::cout << the_model.allele_posterior_probability(variants[2], haplotypes, responsabilities[0], genotypes) << std::endl;
+    std::cout << sample_ids[1] << std::endl;
+    std::cout << the_model.allele_posterior_probability(variants[0], haplotypes, responsabilities[1], genotypes) << std::endl;
+    std::cout << the_model.allele_posterior_probability(variants[1], haplotypes, responsabilities[1], genotypes) << std::endl;
+    std::cout << the_model.allele_posterior_probability(variants[2], haplotypes, responsabilities[1], genotypes) << std::endl;
+    std::cout << sample_ids[2] << std::endl;
+    std::cout << the_model.allele_posterior_probability(variants[0], haplotypes, responsabilities[2], genotypes) << std::endl;
+    std::cout << the_model.allele_posterior_probability(variants[1], haplotypes, responsabilities[2], genotypes) << std::endl;
+    std::cout << the_model.allele_posterior_probability(variants[2], haplotypes, responsabilities[2], genotypes) << std::endl;
 }

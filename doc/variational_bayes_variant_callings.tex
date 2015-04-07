@@ -64,7 +64,7 @@ $\boldsymbol{g}$ & a binary variable using a $1$-of-$K$ coding scheme representi
 
 In particular $\boldsymbol{g}$ satisfies $g_k \in {0, 1}$ and $\sum_{k = 1}^{K} g_i = 1$.
 
-Finally I define the the function $\mu_i : \boldsymbol{g} \rightarrow \mathbb{N}$ which maps genotype binary variables to the number of occurrences of haplotype $i$ in the genotype. Alternatively, we could have defined the function maps to a multinomial variable, but I think this notation is clearer. I will sometimes abuse notation by using $\boldsymbol{g}^k$ to mean the $\boldsymbol{g}$ with the $k^{th}$ element set to $1$. For example $\mu_i(\boldsymbol{g}^k)$ is shorthand for $\mu_i(\boldsymbol{g}') \; \text{s.t.} \; g_k = 1$. Then we have the following conditions:
+Finally I define the the function $\mu_i : \boldsymbol{g} \rightarrow \mathbb{N}$ which maps genotype binary variables to the number of occurrences of haplotype $i$ in the genotype. Alternatively, we could have defined the function maps to a multinomial variable, but I think this notation is clearer. I will sometimes abuse notation by using $\boldsymbol{g}^k$ to mean the $\boldsymbol{g}$ with the $k^{th}$ element set to $1$. Then we have the following conditions:
 
 \begin{equation} 
     K \le \binom{M + H - 1}{H - 1}
@@ -83,7 +83,7 @@ Finally I define the the function $\mu_i : \boldsymbol{g} \rightarrow \mathbb{N}
 \end{equation}
 
 \begin{equation} 
-    \nexists i,j, i \ne j\in {1..K} \quad \text{s.t} \quad \mu_k(\boldsymbol{g}^i) = \mu_k(\boldsymbol{g}^j) \quad \forall k \in {1..H}
+    \nexists i,j,\in {1..K} i \ne j \quad \text{s.t} \quad \mu_k(\boldsymbol{g}^i) = \mu_k(\boldsymbol{g}^j) \quad \forall k \in {1..H}
 \end{equation}
 
 \section{EM approach}
@@ -347,59 +347,65 @@ Where $[h_i \in \boldsymbol{g}^k]$ is a binary indicator function.
 
 \subsection{Specifying the haplotype priors}
 
-How should we set the haplotype pseudocounts to specify the haplotype priors? There are two naive approaches we could use: use a flat, or non-informative prior; or bias in favour of the reference. Whether or not either of these is good approach depends on the experiment (e.g. the number of samples), and how the candidate alleles are generated.
+How should we set the haplotype pseudocounts that determine the haplotype priors? The naive approaches are either to use a flat (or even non-informative) prior, or bias towards the reference. However, these approaches may not be appropriate if we have information that cannot be included directly into the genotype model (e.g. knowledge of well known variants in the population). This is valuable information that should be included in the prior if possible.
 
-If the candidates are generated from the data alone then the naive approaches may be suitable, as we want to avoid using the same information twice, but even here we may still have information that cannot be included in the genotype model, such as if the candidate was generated from assembly, which may have different properties to alignment candidates. We may also have external information we wish to include, such as calls from previous experiments, or variants from dbSNP. This is valuable information that should be included in the prior if possible.
+\subsubsection{Candidate generation \& priors}
 
-A haplotype can be viewed as a set of alleles $h = \{a_1, \dots, a_L\}$ where $L$ is the number of alleles. Using the product rule we have
+A general way to proceed is to leverge all information we may have about the alleles before we examine the alignments. Strictly speaking we should not let the data influence our priors, but this is clearly infeasable as we would then have to assign every possible allele some positive probability. We get around this by allowing examination of the data to generate candidates - which has the affect of assiging most possible alleles probability zero - but require the priors be data-conditionally independent. This means that the prior of one candidate cannot be influenced by the generation of another candidate from the same source, note this does not mean different candidates cannot be given different priors. The reason for this is to minimise the affect of the data on our priors while allowing the general properties of the candidate generator to be included.
 
-\begin{equation}
-    p(h | \boldsymbol{a}) = p(a_1)p(a_2 | a_1)\dots p(a_L | \boldsymbol{a}_{L-1})
-\end{equation}
+\subsubsection{Haplotype priors from allele priors}
 
-where $\boldsymbol{a}_{L-1}$ denotes the previous $L-1$ alleles. If the haplotypes are short, it is probably reasonable to assume independence amongst the alleles giving
+A haplotype can be viewed as a set of alleles $h = \{a_1, \dots, a_L\}$ where $L$ is the number of alleles, using the product rule we have $p(h | \boldsymbol{a}) = p(a_1)p(a_2 | a_1)\dots p(a_L | \boldsymbol{a}_{L-1})$, where $\boldsymbol{a}_{L-1}$ denotes the previous $L-1$ alleles. If the haplotypes are short it is probably reasonable to assume independence amongst the alleles giving
 
 \begin{equation}
     p(h | \boldsymbol{a}) = \prod_{j = 1}^L p(a_i)
 \end{equation}
 
-Note the probabilities $p(a_i)$ are not conditioned on the data and are therefore priors. It therefore seems a reasonable approach to set the pseudocounts, $\boldsymbol{\alpha}$, in proportion to $p(h | \boldsymbol{a})$
+Where $p(a_i)$ is just the prior probability for allele $a_i$. It therefore seems a reasonable approach to set the pseudocounts, $\boldsymbol{\alpha}$, in proportion to $p(h | \boldsymbol{a})$
 
 \begin{equation}
     \alpha_i = \beta \frac{p(h_i | \boldsymbol{a}_i)}{\sum_{j = 1}^H p(h_j | \boldsymbol{a}_j)} + c
 \end{equation}
 
-where $\beta$ is a constant scaling factor, and $c$ is a constant that will usually be $1$ ($c$ can be set to $0$ if the prior in non-informative, but then we must be sure there will be at-least one of each haplotype in the data so that the posterior is proper). How can we determine $\beta$? One motivation for $\beta$ is as measure of our reluctance to accept a low quality variant.
+where $\beta$ is a constant scaling factor, and $c$ is a constant that will usually be $1$ ($c$ can be set to $0$ if the prior in non-informative, but then we must be sure there will be at-least one of each haplotype in the data so that the posterior is proper). How can we set $\beta$? Essentially $\beta$ expresses our confidence in our allele priors, which will usually decrease as the number of samples increases. Therefore $\beta$ could be of the form $\beta = \max(\beta' - N, 0)$, where $\beta'$ is a measure of our confidence in our priors if we had only one sample. We can motivate $\beta'$ by considering how strongly the data must support a low prior allele, compared to a high prior allele, before we change our minds.
 
-Suppose we are examining a site which has two candidate haplotypes which differ at a single base: reference A, and alternate B. Now suppose the data has good support for A, but also has a single well mapped read supporting B. Should we prefer homozygous (A,A) or heterozygous (A,B)? The decision will surely come down to the mapping quality of the read (which we assume is very high), and the base quality of B. If we assume the base qualities are well calibrated, we can choose $\beta$ so that we prefer heterozygous (A,B) when the probability of B being wrong is below a certain value.
+Suppose we are examining a site with two candidate haplotypes which differ at a single base. Let A be the allele with a high prior (close to 1), and B be the allele with low prior (close to 0). Now suppose there is a single well mapped read supporting B. Should we prefer homozygous (A,A) or heterozygous (A,B)? The decision will surely come down to the mapping quality of the read (which we assume is high), and the base quality of the read base supporting B. If we assume base qualities are well calibrated, we can choose $\beta'$ so that we prefer heterozygous (A,B) when the probability of the read base supporting B being wrong is below a certain value.
 
-To see this, suppose the log-likelihood of the reads for genotype (A,B) is given by $L_{AB}$, then given the haplotypes only differ in one position we know that the log-likelihood for genotype $(A,A)$ will take the form $L_{AA} = L_{AB} + C$ ($C < 0$), where $C$ is determined by the base quality of B. E.g, if $\text{qual}(\text{B}) = 20$, i.e. $p(\text{B is wrong}) = 0.01$, then we expect the difference between the two likelihoods to be close to $\ln(0.01) \approx -5$. Then in general we have
+To see this, suppose the log-likelihood for genotype (A,B) is given by $L_{AB}$, then given the haplotypes only differ in one position we know that the log-likelihood for genotype $(A,A)$ will take the form $L_{AA} = L_{AB} + C$ ($C < 0$), where $C$ is determined by the base quality of the read base supporting B. For example, if the base quality of the base supporting B is 20 (i.e. $p(\text{base supporting B is wrong}) = 0.01$) then we expect the difference between the two likelihoods to be close to $\ln(0.01) \approx -4.6$. Then in general we have
 
 \begin{align}
-\ln \rho_{AA} &\approx \ln 2 + 2 \psi(\alpha_A) - 2 \psi(\alpha_0) + L_{AB} - C \notag \\
+\ln \rho_{AA} &\approx \ln 2 + 2 \psi(\alpha_A) - 2 \psi(\alpha_0) + L_{AB} + C \notag \\
 \ln \rho_{AB} &\approx \ln 1 + \psi(\alpha_A) + \psi(\alpha_B) - 2 \phi(\alpha_0) + L_{AB} \notag
 \end{align}
 
 Without loss of generality, assume $L_{AB} = 0$ so that
 
 \begin{align}
-\rho_{AA} &\approx 2 \exp(2 \psi(\alpha_A) - 2 \psi(\alpha_0) - C) \notag \\
+\rho_{AA} &\approx 2 \exp(2 \psi(\alpha_A) - 2 \psi(\alpha_0) + C) \notag \\
 \rho_{AB} &\approx \exp(\psi(\alpha_A) + \psi(\alpha_B) - 2 \psi(\alpha_0)) \notag
 \end{align}
 
 Then we can see from (\ref{eq:sg_pp}) that to have $\tau_{AA} \ge 2 \tau_{AB}$ we must have $\rho_{AA} \ge 2 \rho_{AB}$, and so
 
 \begin{equation}
-    \psi(\alpha_A) \ge \psi(\alpha_B) + C
+    \psi(\alpha_A) \ge \psi(\alpha_B) - C
 \end{equation}
 
-For example, if we assume $\alpha_B = 1$ and $C = 5$ then $\beta$ should be set close to $100$.
+Therefore given haplotype priors $p(h_A | a_A)$ and $p(h_B | a_B)$ and a 'minimum quality tolerance' $q_{min}$ we can solve
+
+\begin{equation}
+    \psi \left(\beta \frac{p(h_A | a_A)}{p(h_A | a_A) + p(h_B | a_B)} + c \right) = \psi \left(\beta \frac{p(h_B | a_B)}{p(h_A | a_A) + p(h_B | a_B)} + c \right) + \frac{\ln(10)}{10}q_{min}
+\end{equation}
+
+This can be approximated analytically, or numerically estimated. For example, if we assume $p(h_A) \approx 1$, $p(h_B) \approx 0$, and $c = 1$, and we require a single read base supporting B to have quality 20 or higher to prefer heterozygous (A,B), then we solve $\psi(\beta + 1) = \psi(1) + 5 \approx 4$ then by inspection we see $\beta \approx 60$.
 
 \subsection{Calling variants}
 
 We are interested in two probabilities: 1) The probability the allele is present in all the samples. 2) The probability the allele is present in an individual. We can answer both these questions separately.
 
-To find the posterior probability that an allele appears in the samples we marginalise over each haplotype, and use the posterior predictive distribution found in (\ref{eq:z_pp}) to find the posterior probability of observing each haplotype in a single new observation, this simplifies to the expected value of the haplotype probability
+\subsubsection{Posterior probability that a variant is present in samples}
+
+To find the posterior probability that an allele appears in the samples we marginalise over each haplotype using the posterior predictive distribution found in (\ref{eq:z_pp}), this calculates the posterior probability of observing each haplotype in a single new observation and simplifies to the expected value of the haplotype probability
 
 \begin{align}
     p(a | \boldsymbol{X}, \boldsymbol{\alpha}) &= \sum_{i = 1}^H p(a | h_i) p(\boldsymbol{z}_i | \boldsymbol{X}, \boldsymbol{\alpha}) \notag \\
@@ -409,6 +415,8 @@ To find the posterior probability that an allele appears in the samples we margi
 \end{align}
 
 where $[a \in h]$ is an indicator function that is $1$ if $a \in h$ and is $0$ otherwise.
+
+\subsubsection{Posterior probability that a variant is present in an individual}
 
 Similarly we find the probability of an allele appearing in a sample using the posterior probability found in (\ref{eq:sh_pp})
 
@@ -421,6 +429,30 @@ Similarly we find the probability of an allele appearing in a sample using the p
 
 Firstly, we should distinguish between variant calls and genotype calls; we will usually want only one genotype call but may wish to be sensitive to variants. To this end, we should treat genotype calls and variant calls separately.
 
-In either case, the obvious approach is to make calls with the largest posterior probability. However, this may not always be the best approach. For example, if we are specifically looking for 
+In either case, the obvious approach is to make calls with the largest posterior probability. However, this may not always be the best approach. For example, if we are seeking deleterious mutations from a reference, then we might want to increase sensitivity at the expense of specificity. In this case it is not always optimal to call the genotype/allele with the largest posterior, instead we should specify some loss function, and call the genotype/allele that minimises the expected loss under the posterior distributions.
+
+There are many possible loss functions we could define, but the simplest is probably that which splits alleles/genotypes into classes 'reference', and 'alternative', and then determines the loss of misclassification. This can be expressed in a matrix of the form
+
+\begin{equation}
+\bordermatrix{~ & \text{reference} & \text{alternative} \cr
+              \text{reference} & 0 & L_{ra} \cr
+              \text{alternative} & L_{ar} & 0 \cr}
+\end{equation}
+
+where $L_{ra}$ is our loss of misclassifying a true reference allele as an alternative allele, and $L_{ar}$ is our loss of misclassifying a true alternative allele as a reference allele. For example if we want to be sensitive to variations from the reference we might have the loss matrix
+
+\begin{equation}
+\bordermatrix{~ & \text{reference} & \text{alternative} \cr
+              \text{reference} & 0 & 1 \cr
+              \text{alternative} & 1000 & 0 \cr}
+\end{equation}
+
+Once we have defined a loss function we then choose the genotype/allele $a_j$ that minimises the expected loss
+
+\begin{equation}
+\sum_{c} L_{cC(a_j)}p(a_j | \boldsymbol{X}, \boldsymbol{\alpha})
+\end{equation}
+
+Where $C(a_j)$ is the 'class' of $a_j$, Note that if we define a symmetric loss function then we revert to calling the genotype/allele with the largest posterior probability.
 
 \end{document}

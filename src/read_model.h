@@ -39,6 +39,8 @@ public:
     // ln p(reads | genotype)
     double log_probability(const Reads& reads, const Genotype& genotype, unsigned sample);
     
+    void clear_cache();
+    
 private:
     unsigned ploidy_;
     bool can_cache_reads_;

@@ -159,3 +159,9 @@ void ReadModel::add_genotype_to_cache(unsigned sample, const Genotype& genotype,
 {
     genotype_log_probability_cache_[sample][genotype] = genotype_log_probability;
 }
+
+void ReadModel::clear_cache()
+{
+    read_log_probability_cache_.clear();
+    genotype_log_probability_cache_.clear();
+}
