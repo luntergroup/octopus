@@ -17,6 +17,7 @@
 #include <unordered_set>
 #include <sstream>
 #include <algorithm>
+#include <type_traits>
 
 using std::size_t;
 
@@ -42,8 +43,14 @@ namespace bioio {
         FastaIndex() = default;
         FastaIndex(std::string contig_name, size_t length, size_t offset,
                    size_t line_length, size_t line_byte_length)
-        : contig_name {contig_name}, offset {offset}, length {length},
-        line_length {line_length}, line_byte_length {line_byte_length} {}
+        :
+        contig_name {contig_name},
+        offset {offset},
+        length {length},
+        line_length {line_length},
+        line_byte_length {line_byte_length}
+        {}
+        
         FastaIndex(std::string fasta_index_line)
         {
             auto parts = detail::split(std::move(fasta_index_line), '\t');
@@ -81,13 +88,16 @@ namespace bioio {
     {
         T2 seq;
         T3 qual;
-        T1 contig_name;
+        T1 name;
         
         FastqRecord() = delete;
         template<typename T1_, typename T2_, typename T3_>
-        FastqRecord(T1_&& contig_name, T2_&& seq, T3_&& qual)
-        : contig_name {std::forward<T1_>(contig_name)}, seq {std::forward<T2_>(seq)}
-        , qual {std::forward<T3_>(qual)} {}
+        FastqRecord(T1_&& name, T2_&& seq, T3_&& qual)
+        :
+        name {std::forward<T1_>(name)},
+        seq {std::forward<T2_>(seq)},
+        qual {std::forward<T3_>(qual)}
+        {}
     };
     
     template <typename T=std::string>
@@ -109,6 +119,7 @@ namespace bioio {
         inline
         size_t get_num_records(std::ifstream& file, char record_delimiter)
         {
+            auto current_position = file.tellg();
             size_t num_records = 0;
             std::string first_word;
             while (file >> first_word) {
@@ -119,7 +130,7 @@ namespace bioio {
             }
             // Uses pre-existing filestream so, need to reset eof flags and rewind.
             file.clear();
-            file.seekg(0, std::ios::beg);
+            file.seekg(current_position, std::ios::beg);
             return num_records;
         }
         
@@ -154,6 +165,7 @@ namespace bioio {
         }
         
         template<typename T1=std::string, typename T2=std::string>
+        inline
         ::bioio::FastaRecord<T1, T2>
         read_fasta_record(std::ifstream& fasta)
         {
@@ -185,18 +197,19 @@ namespace bioio {
         }
         
         template<typename T1=std::string, typename T2=std::string, typename T3=std::string>
+        inline
         ::bioio::FastqRecord<T1, T2, T3>
         read_fastq_record(std::ifstream& fastq)
         {
-            T1 contig_name;
+            T1 name;
             T2 seq;
             T3 quals;
             // Unlike FASTA, FASTQ always use one line per field.
-            std::getline(fastq, contig_name);
+            std::getline(fastq, name);
             std::getline(fastq, seq);
             fastq.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
             std::getline(fastq, quals);
-            return ::bioio::FastqRecord<T1, T2, T3>(std::move(contig_name), std::move(seq), std::move(quals));
+            return ::bioio::FastqRecord<T1, T2, T3>(std::move(name), std::move(seq), std::move(quals));
         }
     } // end detail namespace
     
@@ -222,7 +235,7 @@ namespace bioio {
     
     template <typename T1=std::string, typename T2=std::string>
     FastaRecord<T1, T2>
-    read_ref(const std::string& fasta_path)
+    read_single_contig_fasta(const std::string& fasta_path)
     {
         std::ifstream fasta(fasta_path, std::ios::binary | std::ios::ate);
         T1 contig_name;
@@ -320,6 +333,7 @@ namespace bioio {
                 num_chars_read += index.line_length;
             }
             seq.resize(length);
+            fasta.clear(); // assumes indexed queries do not need eof flag
         }
         return seq;
     }
@@ -350,31 +364,31 @@ namespace bioio {
      FASTA: For reading multiple record Fasta files.
      =======================================================================================*/
     
-    template<typename T=std::string>
+    template <typename T=std::string>
     std::vector<T>
-    read_fasta_seqs(std::string path)
+    read_fasta_seqs(const std::string& path)
     {
         std::ifstream fasta(path, std::ios::binary);
         std::vector<T> seqs;
         size_t num_records = detail::get_num_records(fasta, '>');
         seqs.reserve(num_records);
         while (num_records) {
-            seqs.push_back(detail::read_fasta_record<std::string, T>(fasta).seq);
+            seqs.emplace_back(detail::read_fasta_record<std::string, T>(fasta).seq);
             --num_records;
         }
         return seqs;
     }
     
-    template<typename T1=std::string, typename T2=std::string>
+    template <typename T1=std::string, typename T2=std::string>
     std::vector<FastaRecord<T1, T2>>
-    read_fasta(std::string path)
+    read_fasta(const std::string& path)
     {
         std::ifstream fasta(path, std::ios::binary);
         std::vector<FastaRecord<T1, T2>> seqs;
         size_t num_records = detail::get_num_records(fasta, '>');
         seqs.reserve(num_records);
         while (num_records) {
-            seqs.push_back(detail::read_fasta_record<T1, T2>(fasta));
+            seqs.emplace_back(detail::read_fasta_record<T1, T2>(fasta));
             --num_records;
         }
         return seqs;
@@ -382,7 +396,7 @@ namespace bioio {
     
     template <typename T1=std::string, typename T2=std::string, typename F>
     FastaReads<T1, T2>
-    read_fasta_map(std::string path, F f)
+    read_fasta_map(const std::string& path, F f)
     {
         std::ifstream fasta(path, std::ios::binary);
         FastaMap<T1, T2> records;
@@ -392,7 +406,7 @@ namespace bioio {
         contig_names.reserve(num_records);
         while (num_records) {
             auto record = detail::read_fasta_record<T1, T2>(fasta);
-            auto f_contig_name = f(record.contig_name);
+            auto f_contig_name = f(std::move(record.contig_name));
             records.emplace(f_contig_name, std::move(record.seq));
             contig_names.insert(std::move(f_contig_name));
             --num_records;
@@ -400,7 +414,7 @@ namespace bioio {
         return std::make_pair(contig_names, records);
     }
     
-    template<typename T1=std::string, typename T2=std::string>
+    template <typename T1=std::string, typename T2=std::string>
     FastaReads<T1, T2>
     read_fasta_map(std::string path)
     {
@@ -409,7 +423,7 @@ namespace bioio {
     
     template <typename T1=std::string, typename T2=std::string, typename F>
     FastaReads<T1, T2>
-    read_fasta_map(std::string path, const ReadIds<T1>& contig_names, F f)
+    read_fasta_map(const std::string& path, const ReadIds<T1>& contig_names, F f)
     {
         std::ifstream fasta(path, std::ios::binary);
         FastaMap<T1, T2> records;
@@ -419,7 +433,7 @@ namespace bioio {
         f_contig_names.reserve(num_records);
         while (num_records) {
             auto record = detail::read_fasta_record<T1, T2>(fasta);
-            auto f_contig_name = f(record.contig_name);
+            auto f_contig_name = f(std::move(record.contig_name));
             if (contig_names.find(f_contig_name) != contig_names.end()) {
                 records.emplace(f_contig_name, std::move(record.seq));
                 f_contig_names.insert(std::move(f_contig_name));
@@ -429,16 +443,16 @@ namespace bioio {
         return {f_contig_names, records};
     }
     
-    template<typename T1=std::string, typename T2=std::string>
+    template <typename T1=std::string, typename T2=std::string>
     inline
     FastaReads<T1, T2>
-    read_fasta_map(std::string path, const ReadIds<T1>& contig_names)
+    read_fasta_map(const std::string& path, const ReadIds<T1>& contig_names)
     {
         return read_fasta_map(path, contig_names, [] (T1 contig_name) { return contig_name; });
     }
     
-    template<typename T1=std::string, typename T2=std::string>
-    void write_fasta(std::string path, const FastaReads<T1, T2>& data)
+    template <typename T1=std::string, typename T2=std::string>
+    void write_fasta(const std::string& path, const FastaReads<T1, T2>& data)
     {
         std::ofstream fasta(path, std::ios::out | std::ios::binary);
         for (auto contig_name : data.first) {
@@ -451,62 +465,101 @@ namespace bioio {
      FASTQ: For reading multiple line Fastq files.
      =======================================================================================*/
     
-    template<typename T=std::string>
+    template <typename T=std::string>
     std::vector<T>
-    read_fastq_seqs(std::string path)
+    read_fastq_seqs(const std::string& path)
     {
         std::ifstream fastq(path, std::ios::binary);
         std::vector<T> seqs;
         size_t num_records = detail::get_num_records(fastq, '@');
         seqs.reserve(num_records);
         while (num_records) {
-            seqs.push_back(detail::read_fastq_record<std::string, T, std::string>(fastq).seq);
+            seqs.emplace_back(detail::read_fastq_record<std::string, T, std::string>(fastq).seq);
             --num_records;
         }
         return seqs;
     }
     
-    template<typename T1=std::string, typename T2=std::string, typename T3=std::string, typename F>
+    template <typename T1=std::string, typename T2=std::string, typename T3=std::string, typename F>
     std::vector<FastqRecord<T1, T2, T3>>
-    read_fastq(std::string path, F f)
+    read_fastq(std::ifstream& fastq, size_t num_records, F f)
     {
-        std::ifstream fastq(path, std::ios::binary);
         std::vector<FastqRecord<T1, T2, T3>> data;
-        size_t num_records = detail::get_num_records(fastq, '@');
         data.reserve(num_records);
         while (num_records) {
             auto record = detail::read_fastq_record<T1, T2, T3>(fastq);
-            data.emplace_back(f(record.contig_name), std::move(record.seq), std::move(record.qual));
+            data.emplace_back(f(std::move(record.name)), std::move(record.seq), std::move(record.qual));
             --num_records;
         }
         return data;
     }
     
-    template<typename T1=std::string, typename T2=std::string, typename T3=std::string>
-    inline
-    std::vector<FastqRecord<T1, T2, T3>>
-    read_fastq(std::string path)
+    template <typename T1=std::string, typename T2=std::string, typename T3=std::string, typename F>
+    typename std::enable_if<!std::is_integral<F>::value, std::vector<FastqRecord<T1, T2, T3>>>::type
+    read_fastq(std::ifstream& fastq, F f)
     {
-        return read_fastq(path, [] (T1 contig_name) { return contig_name; });
+        return read_fastq(fastq, detail::get_num_records(fastq, '@'), f);
     }
     
-    template<typename T1=std::string, typename T2=std::string, typename T3=std::string>
-    FastqReads<T1, T2, T3>
-    read_fastq_map(std::string path)
+    template <typename T1=std::string, typename T2=std::string, typename T3=std::string, typename F>
+    typename std::enable_if<!std::is_integral<F>::value, std::vector<FastqRecord<T1, T2, T3>>>::type
+    read_fastq(const std::string& path, F f)
     {
         std::ifstream fastq(path, std::ios::binary);
-        ReadIds<T1> contig_names;
+        return read_fastq(fastq, f);
+    }
+    
+    template <typename T1=std::string, typename T2=std::string, typename T3=std::string>
+    inline
+    std::vector<FastqRecord<T1, T2, T3>>
+    read_fastq(const std::string& path)
+    {
+        return read_fastq(path, [] (T1 name) { return name; });
+    }
+    
+    template <typename T1=std::string, typename T2=std::string, typename T3=std::string>
+    inline
+    std::vector<FastqRecord<T1, T2, T3>>
+    read_fastq(std::ifstream& fastq)
+    {
+        return read_fastq(fastq, [] (T1 name) { return name; });
+    }
+    
+    template <typename T1=std::string, typename T2=std::string, typename T3=std::string, typename N>
+    inline
+    typename std::enable_if<std::is_integral<N>::value, std::vector<FastqRecord<T1, T2, T3>>>::type
+    read_fastq(std::ifstream& fastq, N num_records)
+    {
+        return read_fastq(fastq, num_records, [] (T1 contig_name) { return contig_name; });
+    }
+    
+    template <typename T1=std::string, typename T2=std::string, typename T3=std::string, typename N>
+    inline
+    typename std::enable_if<std::is_integral<N>::value, std::vector<FastqRecord<T1, T2, T3>>>::type
+    read_fastq(const std::string& path, N num_records)
+    {
+        std::ifstream fastq(path, std::ios::binary);
+        return read_fastq(fastq, num_records, [] (T1 contig_name) { return contig_name; });
+    }
+    
+    template <typename T1=std::string, typename T2=std::string, typename T3=std::string>
+    FastqReads<T1, T2, T3>
+    read_fastq_map(const std::string& path)
+    {
+        std::ifstream fastq(path, std::ios::binary);
+        ReadIds<T1> names;
         FastqMap<T1, T2, T3> data;
         size_t num_records = detail::get_num_records(fastq, '@');
         data.reserve(num_records);
         while (num_records) {
             auto record = detail::read_fastq_record<T1, T2, T3>(fastq);
-            data.emplace(record.contig_name, {std::move(record.seq), std::move(record.qual)});
-            contig_names.insert(std::move(record.contig_name));
+            data.emplace(record.name, {std::move(record.seq), std::move(record.qual)});
+            names.insert(std::move(record.name));
             --num_records;
         }
-        return {contig_names, data};
+        return {names, data};
     }
+    
 } // end bioio namespace
 
 #endif /* defined(__bioio__bioio__) */
