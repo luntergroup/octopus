@@ -19,7 +19,7 @@
 #include "variant.h"
 #include "variant_candidate_generator.h"
 #include "alignment_candidate_variant_generator.h"
-#include "genotype_model.h"
+#include "variational_bayes_genotype_model.h"
 #include "haplotype_tree.h"
 
 //TEST_CASE("haplotype_tree_single_sample_test", "[haplotype_tree]")

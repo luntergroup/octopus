@@ -9,14 +9,14 @@
 #include "haplotype_tree.h"
 
 #include "reference_genome.h"
-#include "genotype_model.h"
+#include "variational_bayes_genotype_model.h"
 #include "variant.h"
 
 //FOR TESTING
 #include <iostream>
 
 HaplotypeTree::HaplotypeTree(ReferenceGenome& the_reference, ReadManager& the_reads,
-                             GenotypeModel& the_genotype_model,
+                             VariationalBayesGenotypeModel& the_genotype_model,
                              const std::vector<ReadManager::SampleIdType>& the_sample_ids,
                              size_t max_num_haplotypes, double min_posterior)
 :

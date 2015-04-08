@@ -15,8 +15,6 @@
 #include "maths.h"
 #include "pair_hmm.h"
 
-#include <iostream> // TEST
-
 VariationalBayesGenotypeModel::VariationalBayesGenotypeModel(ReadModel& read_model, unsigned ploidy)
 :
 ploidy_ {ploidy},
@@ -102,15 +100,16 @@ double VariationalBayesGenotypeModel::posterior_predictive_probability(const std
     return dirichlet_multinomial<double>(z, a);
 }
 
-double VariationalBayesGenotypeModel::allele_posterior_probability(const Variant& variant,
+double VariationalBayesGenotypeModel::allele_posterior_probability(const GenomicRegion& the_allele_region,
+                                                                   const Haplotype::SequenceType& the_allele_sequence,
                                                                    const Haplotypes& haplotypes,
                                                                    const SampleGenotypeResponsabilities& sample_genotype_responsabilities,
                                                                    const Genotypes& genotypes) const
 {
-    double result {};
+    double result {0};
     
     for (const auto& haplotype : haplotypes) {
-        if (contains(haplotype, variant)) {
+        if (haplotype.contains(the_allele_region, the_allele_sequence)) {
             for (const auto& genotype : genotypes) {
                 if (genotype.contains(haplotype)) {
                     result += sample_genotype_responsabilities.at(genotype);

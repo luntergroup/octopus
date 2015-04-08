@@ -34,9 +34,12 @@ the_haplotype_ {}
 
 bool Haplotype::contains(const GenomicRegion& the_allele_region, const SequenceType& the_allele_sequence) const
 {
-    if (!::contains(get_region(), the_allele_region)) return false;
-    
-    if (get_region() == the_allele_region) return get_sequence() == the_allele_sequence;
+    if (the_haplotype_.empty()) {
+        return (!is_region_set_ || !::contains(get_region(), the_allele_region)) ? false :
+                            the_allele_sequence == the_reference_.get_sequence(the_allele_region);
+    } else if (get_region() == the_allele_region) {
+        return the_allele_sequence == get_sequence();
+    }
     
     auto er = std::equal_range(std::cbegin(the_haplotype_), std::cend(the_haplotype_), the_allele_region);
     

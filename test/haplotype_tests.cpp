@@ -121,8 +121,32 @@ TEST_CASE("test_make_haplotype_from_candidates", "[haplotype]")
             "TTTTGCTGATAAAACTGCGTTAATTACGCGTCTTAAATTACTGATTGCTGAG");
 }
 
+TEST_CASE("haplotype_reference_haplotype_test", "[haplotype]")
+{
+    ReferenceGenomeFactory a_factory {};
+    ReferenceGenome human(a_factory.make(human_reference_fasta));
+    
+    GenomicRegion a_region {"7", 1000000, 1000100};
+    
+    Haplotype a_reference_haplotype {human, a_region};
+    
+    REQUIRE(a_reference_haplotype.contains(a_region, human.get_sequence(a_region)));
+    
+    GenomicRegion a_sub_region {"7", 1000010, 1000090};
+    
+    REQUIRE(a_reference_haplotype.contains(a_sub_region, human.get_sequence(a_sub_region)));
+    
+    GenomicRegion a_left_overlapping_region {"7", 999999, 1000090};
+    
+    REQUIRE(!a_reference_haplotype.contains(a_left_overlapping_region, human.get_sequence(a_left_overlapping_region)));
+    
+    GenomicRegion a_right_overlapping_region {"7", 1000090, 1000101};
+    
+    REQUIRE(!a_reference_haplotype.contains(a_right_overlapping_region, human.get_sequence(a_right_overlapping_region)));
+}
+
 // This is absolutely crucial to make the allele posteriors correct
-TEST_CASE("haplotype_simple_variant_containment_test", "[haplotype]")
+TEST_CASE("haplotype_variant_containment_test", "[haplotype]")
 {
     ReferenceGenomeFactory a_factory {};
     ReferenceGenome human(a_factory.make(human_reference_fasta));
@@ -224,16 +248,6 @@ TEST_CASE("haplotype_simple_variant_containment_test", "[haplotype]")
     REQUIRE(haplotype_bounded.contains(a_reference_part3, human.get_sequence(a_reference_part3)));
     REQUIRE(haplotype_bounded.contains(reference_end_bit, human.get_sequence(reference_end_bit)));
 }
-
-//TEST_CASE("haplotype_hard_variant_containment_test", "[haplotype]")
-//{
-//    ReferenceGenomeFactory a_factory {};
-//    ReferenceGenome human(a_factory.make(human_reference_fasta));
-//    
-//    VariantFactory a_variant_factory {};
-//    
-//    
-//}
 
 TEST_CASE("test_make_genotypes", "[genotype]")
 {

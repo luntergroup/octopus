@@ -442,16 +442,37 @@ TEST_CASE("three_samples_diploid_variational_bayes_genotype_model", "[variationa
 //        std::cout << c.first << " " << c.second << std::endl;
 //    }
     
-//    std::cout << sample_ids[0] << std::endl;
-//    std::cout << the_model.allele_posterior_probability(variants[0], haplotypes, responsabilities[0], genotypes) << std::endl;
-//    std::cout << the_model.allele_posterior_probability(variants[1], haplotypes, responsabilities[0], genotypes) << std::endl;
-//    std::cout << the_model.allele_posterior_probability(variants[2], haplotypes, responsabilities[0], genotypes) << std::endl;
+    std::cout << sample_ids[0] << std::endl;
+    std::cout << the_model.allele_posterior_probability(variants[1].get_reference_allele_region(),
+                                                        variants[1].get_reference_allele(), haplotypes,
+                                                        responsabilities[0], genotypes) << std::endl;
+//    std::cout << the_model.allele_posterior_probability(variants[0].get_reference_allele_region(),
+//                                                        variants[0].get_alternative_allele(), haplotypes,
+//                                                        responsabilities[0], genotypes) << std::endl;
+//    std::cout << the_model.allele_posterior_probability(variants[1].get_reference_allele_region(),
+//                                                        variants[1].get_alternative_allele(), haplotypes,
+//                                                        responsabilities[0], genotypes) << std::endl;
+//    std::cout << the_model.allele_posterior_probability(variants[2].get_reference_allele_region(),
+//                                                        variants[2].get_alternative_allele(), haplotypes,
+//                                                        responsabilities[0], genotypes) << std::endl;
 //    std::cout << sample_ids[1] << std::endl;
-//    std::cout << the_model.allele_posterior_probability(variants[0], haplotypes, responsabilities[1], genotypes) << std::endl;
-//    std::cout << the_model.allele_posterior_probability(variants[1], haplotypes, responsabilities[1], genotypes) << std::endl;
-//    std::cout << the_model.allele_posterior_probability(variants[2], haplotypes, responsabilities[1], genotypes) << std::endl;
+//    std::cout << the_model.allele_posterior_probability(variants[0].get_reference_allele_region(),
+//                                                        variants[0].get_alternative_allele(), haplotypes,
+//                                                        responsabilities[1], genotypes) << std::endl;
+//    std::cout << the_model.allele_posterior_probability(variants[1].get_reference_allele_region(),
+//                                                        variants[1].get_alternative_allele(), haplotypes,
+//                                                        responsabilities[1], genotypes) << std::endl;
+//    std::cout << the_model.allele_posterior_probability(variants[2].get_reference_allele_region(),
+//                                                        variants[2].get_alternative_allele(), haplotypes,
+//                                                        responsabilities[2], genotypes) << std::endl;
 //    std::cout << sample_ids[2] << std::endl;
-//    std::cout << the_model.allele_posterior_probability(variants[0], haplotypes, responsabilities[2], genotypes) << std::endl;
-//    std::cout << the_model.allele_posterior_probability(variants[1], haplotypes, responsabilities[2], genotypes) << std::endl;
-//    std::cout << the_model.allele_posterior_probability(variants[2], haplotypes, responsabilities[2], genotypes) << std::endl;
+//    std::cout << the_model.allele_posterior_probability(variants[0].get_reference_allele_region(),
+//                                                        variants[0].get_alternative_allele(), haplotypes,
+//                                                        responsabilities[2], genotypes) << std::endl;
+//    std::cout << the_model.allele_posterior_probability(variants[1].get_reference_allele_region(),
+//                                                        variants[1].get_alternative_allele(), haplotypes,
+//                                                        responsabilities[2], genotypes) << std::endl;
+//    std::cout << the_model.allele_posterior_probability(variants[2].get_reference_allele_region(),
+//                                                        variants[2].get_alternative_allele(), haplotypes,
+//                                                        responsabilities[2], genotypes) << std::endl;
 }

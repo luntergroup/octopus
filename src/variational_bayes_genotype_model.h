@@ -17,7 +17,6 @@
 #include "read_model.h"
 
 class AlignedRead;
-class Variant;
 
 class VariationalBayesGenotypeModel
 {
@@ -57,7 +56,9 @@ public:
     double posterior_predictive_probability(const std::unordered_map<Haplotype, unsigned>& haplotype_counts,
                                             const HaplotypePseudoCounts& haplotype_pseudo_count) const;
     
-    double allele_posterior_probability(const Variant& variant, const Haplotypes& haplotypes,
+    double allele_posterior_probability(const GenomicRegion& the_allele_region,
+                                        const Haplotype::SequenceType& the_allele_sequence,
+                                        const Haplotypes& haplotypes,
                                         const SampleGenotypeResponsabilities& sample_genotype_responsabilities,
                                         const Genotypes& genotypes) const;
     

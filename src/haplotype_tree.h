@@ -19,7 +19,7 @@
 #include "genomic_region.h"
 
 class ReferenceGenome;
-class GenotypeModel;
+class VariationalBayesGenotypeModel;
 class Variant;
 
 using std::size_t;
@@ -31,7 +31,7 @@ public:
     
     HaplotypeTree() = delete;
     explicit HaplotypeTree(ReferenceGenome& the_reference, ReadManager& the_reads,
-                           GenotypeModel& the_genotype_model,
+                           VariationalBayesGenotypeModel& the_genotype_model,
                            const std::vector<ReadManager::SampleIdType>& the_sample_ids,
                            size_t max_num_haplotypes, double min_posterior);
     ~HaplotypeTree() = default;
@@ -72,7 +72,7 @@ private:
     
     ReferenceGenome& the_reference_;
     ReadManager& the_reads_;
-    GenotypeModel& the_genotype_model_;
+    VariationalBayesGenotypeModel& the_genotype_model_;
     std::vector<ReadManager::SampleIdType> the_sample_ids_;
     
     size_t max_num_haplotypes_;
