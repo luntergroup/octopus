@@ -72,18 +72,44 @@ inline T log_sum_exp(Iterator first, Iterator last)
     return max + std::log(exp_sum);
 }
 
-//template <typename RealType>
-//RealType dirichlet(const std::vector<RealType>& x, const std::vector<RealType>& a)
-//{
-//    
-//}
+template <typename RealType>
+RealType dirichlet_multinomial(RealType z1, RealType z2, RealType a1, RealType a2)
+{
+    auto z_0 = z1 + z2;
+    auto a_0 = a1 + a2;
+    auto z_m = boost::math::factorial<RealType>(z1) * boost::math::factorial<RealType>(z2);
+    
+    return (boost::math::factorial<RealType>(z_0) / z_m) *
+            (boost::math::tgamma(a_0) / boost::math::tgamma(z_0 + a_0)) *
+            (boost::math::tgamma<RealType>(z1 + a1) * boost::math::tgamma<RealType>(z2 + a2)) /
+            (boost::math::tgamma<RealType>(a1) + boost::math::tgamma<RealType>(a2));
+}
+
+template <typename RealType>
+RealType dirichlet_multinomial(RealType z1, RealType z2, RealType z3, RealType a1, RealType a2, RealType a3)
+{
+    auto z_0 = z1 + z2 + z3;
+    auto a_0 = a1 + a2 + a3;
+    auto z_m = boost::math::factorial<RealType>(z1) * boost::math::factorial<RealType>(z2) *
+                boost::math::factorial<RealType>(z3);
+    
+    return (boost::math::factorial<RealType>(z_0) / z_m) *
+            (boost::math::tgamma(a_0) / boost::math::tgamma(z_0 + a_0)) *
+            (boost::math::tgamma<RealType>(z1 + a1) * boost::math::tgamma<RealType>(z2 + a2) *
+             boost::math::tgamma<RealType>(z3 + a3)) /
+            (boost::math::tgamma<RealType>(a1) + boost::math::tgamma<RealType>(a2) + boost::math::tgamma<RealType>(a3));
+}
 
 template <typename RealType>
 RealType dirichlet_multinomial(const std::vector<RealType>& z, const std::vector<RealType>& a)
 {
     auto z_0 = std::accumulate(z.cbegin(), z.cend(), RealType {});
     auto a_0 = std::accumulate(a.cbegin(), a.cend(), RealType {});
-    auto z_m = std::accumulate(z.cbegin(), z.cend(), RealType {1}, std::multiplies<RealType>());
+    
+    RealType z_m {1};
+    for (auto z_i : z) {
+        z_m *= boost::math::factorial<RealType>(z_i);
+    }
     
     RealType g {1};
     for (std::size_t i {0}; i < z.size(); ++i) {
@@ -91,7 +117,13 @@ RealType dirichlet_multinomial(const std::vector<RealType>& z, const std::vector
     }
     
     return (boost::math::factorial<RealType>(z_0) / z_m) *
-        (boost::math::tgamma(a_0) / boost::math::tgamma(z_0 + a_0)) * g;
+            (boost::math::tgamma(a_0) / boost::math::tgamma(z_0 + a_0)) * g;
+}
+
+template <typename RealType>
+RealType beta_binomial(RealType k, RealType n, RealType alpha, RealType beta)
+{
+    return dirichlet_multinomial<RealType>(k, n - k, alpha, beta);
 }
 
 #endif /* defined(__Octopus__maths__) */

@@ -11,6 +11,8 @@
 #include <iostream>
 #include <string>
 #include <cstddef>
+#include <vector>
+#include <cmath>
 
 #include "test_common.h"
 #include "reference_genome.h"
@@ -24,6 +26,117 @@
 #include "genotype.h"
 #include "read_model.h"
 #include "variational_bayes_genotype_model.h"
+#include "maths.h"
+
+using std::cout;
+using std::endl;
+
+bool is_close_to_one(double val)
+{
+    return std::abs(val - 1) < 0.0000000000001;
+}
+
+TEST_CASE("haplotype_normalisation_test", "[variational_bayes_genotype_model]")
+{
+    ReferenceGenomeFactory a_factory {};
+    ReferenceGenome human(a_factory.make(human_reference_fasta));
+    
+    GenomicRegion a_region {"3", 1000000, 1000001};
+    
+    Haplotype haplotype1 {human};
+    haplotype1.emplace_back(a_region, "C");
+    Haplotype haplotype2 {human};
+    haplotype2.emplace_back(a_region, "G");
+    
+    VariationalBayesGenotypeModel::HaplotypePseudoCounts pseudo_counts {};
+    pseudo_counts[haplotype1] = 5;
+    pseudo_counts[haplotype2] = 3;
+    
+    unsigned ploidy {2};
+    ReadModel a_read_model {ploidy};
+    VariationalBayesGenotypeModel the_model {a_read_model, ploidy};
+    
+    double haplotype_posterior_sum {};
+    haplotype_posterior_sum += the_model.posterior_haplotype_probability(haplotype1, pseudo_counts);
+    haplotype_posterior_sum += the_model.posterior_haplotype_probability(haplotype2, pseudo_counts);
+    
+    REQUIRE(is_close_to_one(haplotype_posterior_sum));
+}
+
+TEST_CASE("genotype_normalisation_test", "[variational_bayes_genotype_model]")
+{
+    ReferenceGenomeFactory a_factory {};
+    ReferenceGenome human(a_factory.make(human_reference_fasta));
+    
+    GenomicRegion region1 {"3", 1000000, 1000001};
+    GenomicRegion region2 {"3", 1000010, 1000011};
+    
+    Haplotype haplotype1 {human};
+    haplotype1.emplace_back(region1, "A");
+    haplotype1.emplace_back(region2, "A");
+    Haplotype haplotype2 {human};
+    haplotype2.emplace_back(region1, "C");
+    haplotype2.emplace_back(region2, "C");
+    Haplotype haplotype3 {human};
+    haplotype3.emplace_back(region1, "G");
+    haplotype3.emplace_back(region2, "G");
+    Haplotype haplotype4 {human};
+    haplotype4.emplace_back(region1, "A");
+    haplotype4.emplace_back(region2, "C");
+    Haplotype haplotype5 {human};
+    haplotype5.emplace_back(region1, "C");
+    haplotype5.emplace_back(region2, "G");
+    Haplotype haplotype6 {human};
+    haplotype6.emplace_back(region1, "G");
+    haplotype6.emplace_back(region2, "C");
+    
+    std::vector<Haplotype> haplotypes {haplotype1, haplotype2, haplotype3, haplotype4, haplotype5, haplotype6};
+    
+    VariationalBayesGenotypeModel::HaplotypePseudoCounts pseudo_counts {};
+    pseudo_counts[haplotype1] = 1;
+    pseudo_counts[haplotype2] = 3.2;
+    pseudo_counts[haplotype3] = 2;
+    pseudo_counts[haplotype4] = 1.5;
+    pseudo_counts[haplotype5] = 5.6;
+    pseudo_counts[haplotype6] = 1.1;
+
+    unsigned ploidy {1};
+    ReadModel a_read_model1 {ploidy};
+    VariationalBayesGenotypeModel the_model1 {a_read_model1, ploidy};
+    
+    auto genotypes = get_all_genotypes(haplotypes, ploidy);
+    
+    double genotype_posterior_sum {0};
+    for (const auto& genotype : genotypes) {
+        genotype_posterior_sum += the_model1.posterior_predictive_probability(genotype, pseudo_counts);
+    }
+    
+    REQUIRE(is_close_to_one(genotype_posterior_sum));
+    
+    ploidy = 2;
+    genotypes = get_all_genotypes(haplotypes, ploidy);
+    ReadModel a_read_model2 {ploidy};
+    VariationalBayesGenotypeModel the_model2 {a_read_model2, ploidy};
+    
+    genotype_posterior_sum = 0;
+    for (const auto& genotype : genotypes) {
+        genotype_posterior_sum += the_model2.posterior_predictive_probability(genotype, pseudo_counts);
+    }
+    
+    REQUIRE(is_close_to_one(genotype_posterior_sum));
+    
+    ploidy = 3;
+    genotypes = get_all_genotypes(haplotypes, ploidy);
+    ReadModel a_read_model3 {ploidy};
+    VariationalBayesGenotypeModel the_model3 {a_read_model3, ploidy};
+    
+    genotype_posterior_sum = 0;
+    for (const auto& genotype : genotypes) {
+        genotype_posterior_sum += the_model3.posterior_predictive_probability(genotype, pseudo_counts);
+    }
+    
+    REQUIRE(is_close_to_one(genotype_posterior_sum));
+}
 
 TEST_CASE("single_sample_haploid_variational_bayes_genotype_model", "[variational_bayes_genotype_model]")
 {
@@ -98,10 +211,10 @@ TEST_CASE("single_sample_haploid_variational_bayes_genotype_model", "[variationa
     
     REQUIRE(genotypes.at(0).num_occurences(best_haplotype) == 1);
     
-//    std::cout << reference_haplotype_expected_count << std::endl;
-//    std::cout << best_haplotype_expected_count << std::endl;
-//    std::cout << okay_haplotype_expected_count << std::endl;
-//    std::cout << worst_haplotype_expected_count << std::endl;
+//    cout << reference_haplotype_expected_count << endl;
+//    cout << best_haplotype_expected_count << endl;
+//    cout << okay_haplotype_expected_count << endl;
+//    cout << worst_haplotype_expected_count << endl;
 }
 
 TEST_CASE("single_sample_diploid_variational_bayes_genotype_model", "[variational_bayes_genotype_model]")
@@ -189,7 +302,7 @@ TEST_CASE("single_sample_diploid_variational_bayes_genotype_model", "[variationa
     });
     
 //    for (auto& g : genotypes) {
-//        std::cout << g << " " << responsabilities[g] << std::endl;
+//        cout << g << " " << responsabilities[g] << endl;
 //    }
     
     REQUIRE(genotypes.at(0).num_occurences(hap1) == 1);
@@ -268,15 +381,15 @@ TEST_CASE("two_samples_diploid_variational_bayes_genotype_model1", "[variational
     auto posterior_pseudo_counts = results.second;
     
 //    for (auto& p : responsabilities[0]) {
-//        std::cout << p.first << " " << p.second << std::endl;
+//        cout << p.first << " " << p.second << endl;
 //    }
-//    std::cout << std::endl;
+//    cout << endl;
 //    for (auto& p : responsabilities[1]) {
-//        std::cout << p.first << " " << p.second << std::endl;
+//        cout << p.first << " " << p.second << endl;
 //    }
-//    std::cout << std::endl;
+//    cout << endl;
 //    for (const auto& c : posterior_pseudo_counts) {
-//        std::cout << c.first << " " << c.second << std::endl;
+//        cout << c.first << " " << c.second << endl;
 //    }
 }
 
@@ -349,15 +462,15 @@ TEST_CASE("two_samples_diploid_variational_bayes_genotype_model2", "[variational
     auto posterior_pseudo_counts = results.second;
     
 //    for (auto& p : responsabilities[0]) {
-//        std::cout << p.first << " " << p.second << std::endl;
+//        cout << p.first << " " << p.second << endl;
 //    }
-//    std::cout << std::endl;
+//    cout << endl;
 //    for (auto& p : responsabilities[1]) {
-//        std::cout << p.first << " " << p.second << std::endl;
+//        cout << p.first << " " << p.second << endl;
 //    }
-//    std::cout << std::endl;
+//    cout << endl;
 //    for (const auto& c : posterior_pseudo_counts) {
-//        std::cout << c.first << " " << c.second << std::endl;
+//        cout << c.first << " " << c.second << endl;
 //    }
 }
 
@@ -431,51 +544,14 @@ TEST_CASE("three_samples_diploid_variational_bayes_genotype_model", "[variationa
     auto posterior_pseudo_counts = results.second;
     
 //    for (auto& p : responsabilities[0]) {
-//        std::cout << p.first << " " << p.second << std::endl;
+//        cout << p.first << " " << p.second << endl;
 //    }
-//    std::cout << std::endl;
+//    cout << endl;
 //    for (auto& p : responsabilities[1]) {
-//        std::cout << p.first << " " << p.second << std::endl;
+//        cout << p.first << " " << p.second << endl;
 //    }
-//    std::cout << std::endl;
-//    for (const auto& c : posterior_pseudo_counts) {
-//        std::cout << c.first << " " << c.second << std::endl;
+//    cout << endl;
+//    for (auto& p : responsabilities[2]) {
+//        cout << p.first << " " << p.second << endl;
 //    }
-    
-    std::cout << the_model.posterior_haplotype_probability(reference_haplotype, posterior_pseudo_counts) << std::endl;
-    std::cout << the_model.posterior_haplotype_probability(reference_haplotype, responsabilities[0]) << std::endl;
-    
-    std::cout << sample_ids[0] << std::endl;
-    std::cout << the_model.allele_posterior_probability(variants[1].get_reference_allele_region(),
-                                                        variants[1].get_reference_allele(), haplotypes,
-                                                        responsabilities[0], genotypes) << std::endl;
-//    std::cout << the_model.allele_posterior_probability(variants[0].get_reference_allele_region(),
-//                                                        variants[0].get_alternative_allele(), haplotypes,
-//                                                        responsabilities[0], genotypes) << std::endl;
-//    std::cout << the_model.allele_posterior_probability(variants[1].get_reference_allele_region(),
-//                                                        variants[1].get_alternative_allele(), haplotypes,
-//                                                        responsabilities[0], genotypes) << std::endl;
-//    std::cout << the_model.allele_posterior_probability(variants[2].get_reference_allele_region(),
-//                                                        variants[2].get_alternative_allele(), haplotypes,
-//                                                        responsabilities[0], genotypes) << std::endl;
-//    std::cout << sample_ids[1] << std::endl;
-//    std::cout << the_model.allele_posterior_probability(variants[0].get_reference_allele_region(),
-//                                                        variants[0].get_alternative_allele(), haplotypes,
-//                                                        responsabilities[1], genotypes) << std::endl;
-//    std::cout << the_model.allele_posterior_probability(variants[1].get_reference_allele_region(),
-//                                                        variants[1].get_alternative_allele(), haplotypes,
-//                                                        responsabilities[1], genotypes) << std::endl;
-//    std::cout << the_model.allele_posterior_probability(variants[2].get_reference_allele_region(),
-//                                                        variants[2].get_alternative_allele(), haplotypes,
-//                                                        responsabilities[2], genotypes) << std::endl;
-//    std::cout << sample_ids[2] << std::endl;
-//    std::cout << the_model.allele_posterior_probability(variants[0].get_reference_allele_region(),
-//                                                        variants[0].get_alternative_allele(), haplotypes,
-//                                                        responsabilities[2], genotypes) << std::endl;
-//    std::cout << the_model.allele_posterior_probability(variants[1].get_reference_allele_region(),
-//                                                        variants[1].get_alternative_allele(), haplotypes,
-//                                                        responsabilities[2], genotypes) << std::endl;
-//    std::cout << the_model.allele_posterior_probability(variants[2].get_reference_allele_region(),
-//                                                        variants[2].get_alternative_allele(), haplotypes,
-//                                                        responsabilities[2], genotypes) << std::endl;
 }

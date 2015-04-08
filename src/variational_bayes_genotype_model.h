@@ -53,25 +53,33 @@ public:
     double posterior_haplotype_pseudo_count(const Haplotype& haplotype, double prior_pseudo_count,
                                             const GenotypeResponsabilities& genotype_responsabilities);
     
-    double posterior_predictive_probability(const std::unordered_map<Haplotype, unsigned>& haplotype_counts,
-                                            const HaplotypePseudoCounts& haplotype_pseudo_counts) const;
-    
     double posterior_haplotype_probability(const Haplotype& haplotype,
                                            const HaplotypePseudoCounts& posterior_haplotype_pseudo_counts) const;
     
-    double posterior_haplotype_probability(const Haplotype& haplotype,
-                                           const SampleGenotypeResponsabilities& genotype_responsabilities) const;
+    double posterior_predictive_probability(const std::unordered_map<Haplotype, unsigned>& haplotype_counts,
+                                            const HaplotypePseudoCounts& haplotype_pseudo_counts) const;
     
-    double allele_posterior_probability(const GenomicRegion& the_allele_region,
-                                        const Haplotype::SequenceType& the_allele_sequence,
-                                        const Haplotypes& haplotypes,
-                                        const HaplotypePseudoCounts& posterior_haplotype_pseudo_counts) const;
+    double posterior_predictive_probability(const Genotype& genotype,
+                                            const HaplotypePseudoCounts& haplotype_pseudo_counts) const;
     
-    double allele_posterior_probability(const GenomicRegion& the_allele_region,
-                                        const Haplotype::SequenceType& the_allele_sequence,
-                                        const Haplotypes& haplotypes,
-                                        const SampleGenotypeResponsabilities& sample_genotype_responsabilities,
-                                        const Genotypes& genotypes) const;
+    double posterior_probability_haplotype_in_samples(const Haplotype& haplotype,
+                                                      const Genotypes& all_genotypes,
+                                                      const HaplotypePseudoCounts& posterior_haplotype_pseudo_counts) const;
+    
+    double posterior_probability_haplotype_in_sample(const Haplotype& haplotype,
+                                                     const Genotypes& all_genotypes,
+                                                     const SampleGenotypeResponsabilities& genotype_responsabilities) const;
+    
+    double posterior_probability_allele_in_samples(const GenomicRegion& the_allele_region,
+                                                   const Haplotype::SequenceType& the_allele_sequence,
+                                                   const Haplotypes& haplotypes,
+                                                   const HaplotypePseudoCounts& posterior_haplotype_pseudo_counts) const;
+    
+    double posterior_probability_allele_in_sample(const GenomicRegion& the_allele_region,
+                                                  const Haplotype::SequenceType& the_allele_sequence,
+                                                  const Haplotypes& haplotypes,
+                                                  const SampleGenotypeResponsabilities& sample_genotype_responsabilities,
+                                                  const Genotypes& genotypes) const;
     
 private:
     unsigned ploidy_;

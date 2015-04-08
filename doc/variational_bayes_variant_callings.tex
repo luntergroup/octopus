@@ -307,71 +307,6 @@ where the components of $\boldsymbol{\alpha}'$ are given by
 
 We can see the similarity of the variational Bayes solution (\ref{eq:vb_solution}) to the EM solution (\ref{eq:em_solution}). In particular both involve an expectation of the number of occurrences of each haplotype in the samples, the difference is that (\ref{eq:vb_solution}) implicitly accounts for our uncertainty in $\boldsymbol{\pi}$ through $\tau$. Additionally, as in all Bayesian models, the variational Bayes model automatically penalises model complexity through the term $M\psi(\alpha_0)$. It is also worthwhile noting that this variational Bayes method has the same runtime complexity as the EM algorithm.
 
-\subsection{Approximate inferences}
-
-We can use the optimal factored densities to make approximate haplotype and genotype inferences. 
-
-\subsubsection{Approximate posterior predictive distribution}
-
-We can use the approximate densities to approximate posterior predictive distributions, which we can use to make inferences about the number of haplotypes in the samples. For a vector of haplotype counts $\boldsymbol{z}$, the approximate posterior predictive distribution is
-
-\begin{align}
-\label{eq:z_pp}
-    p(\boldsymbol{z} | \boldsymbol{X}, \boldsymbol{\alpha}) &= \int p(\boldsymbol{\pi} | \boldsymbol{X}, \boldsymbol{\alpha}) p(\boldsymbol{z} | \boldsymbol{\pi}) d\boldsymbol{\pi}\notag\\
-    &\approx \int q^*(\boldsymbol{\pi}) p(\boldsymbol{z} | \boldsymbol{\pi}) d\boldsymbol{\pi}\notag\\
-    &= \int \text{Dir}(\boldsymbol{\pi} | \boldsymbol{\alpha}) \text{Mul}(\boldsymbol{z} | \boldsymbol{\pi}) d\boldsymbol{\pi}\notag\\
-    &= \frac{z_0!}{\prod_{i = 1}^{H} z_i} \frac{\Gamma(\alpha_0)}{\Gamma(z_0 + \alpha_0)} \prod_{i = 1}^H \frac{\Gamma(z_i + \alpha_i)}{\Gamma(\alpha_i)}
-\end{align}
-
-where $z_0 = \sum_{i = 1}^H z_i$ and $\alpha_0 = \sum_{i = 1}^H \alpha_i$.
-
-\subsubsection{Probability of observing a single haplotype}
-
-We can use (\ref{eq:z_pp}) to find the posterior probability of observing a haplotype in the sample population. This simplifies to the expected value of the haplotype probability
-
-\begin{align}
-     p(h_i | \boldsymbol{X}, \boldsymbol{\alpha}) &= p(\boldsymbol{z}_i | \boldsymbol{X}, \boldsymbol{\alpha}) \notag \\
-    &= \frac{\Gamma(\alpha_0)}{\Gamma(z_{i0} + \alpha_0)} \prod_{j = 1}^H \frac{\Gamma(z_{ij} + \alpha_i)}{\Gamma(\alpha_i)} \notag \\
-    &= \frac{\Gamma(\alpha_0)\Gamma(\alpha_i + 1)}{\Gamma(\alpha_i)\Gamma(\alpha_0 + 1)} \notag \\
-    &= \frac{\alpha_i}{\alpha_0}
-\end{align}
-
-where $\boldsymbol{z}_i$ is a categorical variable with the $i^{th}$ element set to $1$.
-
-\subsubsection{Finding the most probable haplotype counts}
-
-We could then find the most probable ensemble of haplotypes in the samples by find a MAP estimate for $\boldsymbol{z}$, given the total number of haplotypes is $S = NM$.
-
-\begin{align}
-    \hat{\boldsymbol{z}}_{MAP} &= \argmax_{\boldsymbol{z}} \check{p}(\boldsymbol{z} | \boldsymbol{X}, \boldsymbol{\alpha}, S = NM)\notag\\
-    &= \argmax_{\boldsymbol{z}} \frac{\check{p}(\boldsymbol{z} | \boldsymbol{X}, \boldsymbol{\alpha})p(S = NM | \boldsymbol{z})}{p(S = NM)}\notag\\
-    &= \argmax_{\boldsymbol{z}} \check{p}(\boldsymbol{z} | \boldsymbol{X}, \boldsymbol{\alpha})p(S = NM | \boldsymbol{z})\notag\\
-    &= \argmax_{\boldsymbol{z} \; \text{s.t} \; \boldsymbol{z} \in \mathbb{N},\; \sum_k z_k = NM} \frac{(NM)!}{\prod_{i = 1}^{H} z_i} \frac{\Gamma(\alpha_0)}{\Gamma(NM + \alpha_0)} \prod_{i = 1}^H \frac{\Gamma(z_i + \alpha_i)}{\Gamma(\alpha_i)}
-\end{align}
-
-In theory this is an integer programming problem which is NP-hard, but if $S$ is small then it is not too much work to find the optimal value.
-
-\subsubsection{Probability sample population contains a haplotype}
-
-We can find the posterior probability that the sample population contains a haplotype by marginalising over all genotypes where the haplotypes occurs, or alternatively 
-
-\begin{align}
-\label{eq:sph_pp}
-     p(h_i \; \text{occurs in samples}| \boldsymbol{X}, \boldsymbol{\alpha}) &= 1 - p(h_i \; \text{does not occur in samples}| \boldsymbol{X}, \boldsymbol{\alpha}) \notag \\
-     &= 1 - \sum_{\boldsymbol{g} \; \text{s.t.} \; \mu_i(\boldsymbol{g}) = 0} p(\boldsymbol{g} | \boldsymbol{X}, \boldsymbol{\alpha}) \notag \\
-     &= 1 -  \sum_{\boldsymbol{g} \; \text{s.t.} \; \mu_i(\boldsymbol{g}) = 0} \frac{M!}{\prod_{i = 1}^{H} \mu_i(\boldsymbol{g}^k)} \frac{\Gamma(\alpha_0)}{\Gamma(M + \alpha_0)} \prod_{i = 1}^H \frac{\Gamma(\mu_i(\boldsymbol{g}^k) + \alpha_i)}{\Gamma(\alpha_i)}
-\end{align}
-
-\subsubsection{Probability sample contains a haplotype}
-
-Similarly, we can find the posterior probability a single sample contains a haplotype by using the sample genotype posteriors $\tau_{n}$.
-
-\begin{align}
-\label{eq:sh_pp}
-p(h_i \; \text{occurs in sample } n | \boldsymbol{X}, \boldsymbol{\alpha}) &= 1 - p(h_i \; \text{does not occur in sample } n | \boldsymbol{X}, \boldsymbol{\alpha}) \notag \\
-    &= 1 - \sum_{k \; \text{s.t.} \; \mu_i(\boldsymbol{g}^k) = 0} \tau_{nk}
-\end{align}
-
 \subsection{Specifying the haplotype priors}
 
 How should we set the haplotype pseudocounts that determine the haplotype priors? The naive approaches are either to use a flat or other non-informative prior, or bias towards the reference. However, these approaches may not be appropriate if we have information that cannot be included directly into the genotype model (e.g. knowledge of well known variants in the population). This is valuable information that should be included in the prior if possible.
@@ -426,6 +361,71 @@ Therefore given haplotype priors $p(h_A | a_A)$ and $p(h_B | a_B)$ and a 'minimu
 
 This can be approximated analytically, or numerically estimated. For example, if we assume $p(h_A) \approx 1$, $p(h_B) \approx 0$, and $c = 1$, and we require a single read base supporting B to have quality 20 or higher to prefer heterozygous (A,B), then we solve $\psi(\beta + 1) = \psi(1) + 5 \approx 4$ then by inspection we see $\beta \approx 60$.
 
+\subsection{Approximate inferences}
+
+We can use the optimal factored densities to make approximate haplotype and genotype inferences. 
+
+\subsubsection{Approximate posterior predictive distribution}
+
+We can use the approximate densities to approximate posterior predictive distributions, which we can use to make inferences about the number of haplotypes in the samples. For a vector of haplotype counts $\boldsymbol{z}$, the approximate posterior predictive distribution is
+
+\begin{align}
+\label{eq:z_pp}
+    p(\boldsymbol{z} | \boldsymbol{X}, \boldsymbol{\alpha}) &= \int p(\boldsymbol{\pi} | \boldsymbol{X}, \boldsymbol{\alpha}) p(\boldsymbol{z} | \boldsymbol{\pi}) d\boldsymbol{\pi}\notag\\
+    &\approx \int q^*(\boldsymbol{\pi}) p(\boldsymbol{z} | \boldsymbol{\pi}) d\boldsymbol{\pi}\notag\\
+    &= \int \text{Dir}(\boldsymbol{\pi} | \boldsymbol{\alpha}) \text{Mul}(\boldsymbol{z} | \boldsymbol{\pi}) d\boldsymbol{\pi}\notag\\
+    &= \frac{z_0!}{\prod_{i = 1}^{H} (z_i!)} \frac{\Gamma(\alpha_0)}{\Gamma(z_0 + \alpha_0)} \prod_{i = 1}^H \frac{\Gamma(z_i + \alpha_i)}{\Gamma(\alpha_i)}
+\end{align}
+
+where $z_0 = \sum_{i = 1}^H z_i$ and $\alpha_0 = \sum_{i = 1}^H \alpha_i$.
+
+\subsubsection{Probability of observing a single haplotype}
+
+We can use (\ref{eq:z_pp}) to find the posterior probability of observing a haplotype in the sample population. This simplifies to the expected value of the haplotype probability
+
+\begin{align}
+     p(h_i | \boldsymbol{X}, \boldsymbol{\alpha}) &= p(\boldsymbol{z}_i | \boldsymbol{X}, \boldsymbol{\alpha}) \notag \\
+    &= \frac{\Gamma(\alpha_0)}{\Gamma(z_{i0} + \alpha_0)} \prod_{j = 1}^H \frac{\Gamma(z_{ij} + \alpha_i)}{\Gamma(\alpha_i)} \notag \\
+    &= \frac{\Gamma(\alpha_0)\Gamma(\alpha_i + 1)}{\Gamma(\alpha_i)\Gamma(\alpha_0 + 1)} \notag \\
+    &= \frac{\alpha_i}{\alpha_0}
+\end{align}
+
+where $\boldsymbol{z}_i$ is a categorical variable with the $i^{th}$ element set to $1$.
+
+\subsubsection{Finding the most probable haplotype counts}
+
+We could then find the most probable ensemble of haplotypes in the samples by find a MAP estimate for $\boldsymbol{z}$, given the total number of haplotypes is $S = NM$.
+
+\begin{align}
+    \hat{\boldsymbol{z}}_{MAP} &= \argmax_{\boldsymbol{z}} p(\boldsymbol{z} | \boldsymbol{X}, \boldsymbol{\alpha}, S = NM)\notag\\
+    &= \argmax_{\boldsymbol{z}} \frac{p(\boldsymbol{z} | \boldsymbol{X}, \boldsymbol{\alpha})p(S = NM | \boldsymbol{z})}{p(S = NM)}\notag\\
+    &= \argmax_{\boldsymbol{z}} p(\boldsymbol{z} | \boldsymbol{X}, \boldsymbol{\alpha})p(S = NM | \boldsymbol{z})\notag\\
+    &\approx \argmax_{\boldsymbol{z} \; \text{s.t} \; \boldsymbol{z} \in \mathbb{N},\; \sum_k z_k = NM} \frac{(NM)!}{\prod_{i = 1}^{H} (z_i!)} \frac{\Gamma(\alpha_0)}{\Gamma(NM + \alpha_0)} \prod_{i = 1}^H \frac{\Gamma(z_i + \alpha_i)}{\Gamma(\alpha_i)}
+\end{align}
+
+In theory this is an integer programming problem which is NP-hard, but if $S$ is small then it is not too much work to find the optimal value.
+
+\subsubsection{Probability sample population contains a haplotype}
+
+We can find the posterior probability that the sample population contains a haplotype by marginalising over all genotypes where the haplotypes occurs, or alternatively 
+
+\begin{align}
+\label{eq:sph_pp}
+     p(h_j \; \text{occurs in samples}| \boldsymbol{X}, \boldsymbol{\alpha}) &= 1 - p(h_j \; \text{does not occur in samples}| \boldsymbol{X}, \boldsymbol{\alpha}) \notag \\
+     &= 1 - \sum_{\boldsymbol{g} \; \text{s.t.} \; \mu_j(\boldsymbol{g}) = 0} p(\boldsymbol{g} | \boldsymbol{X}, \boldsymbol{\alpha}) \notag \\
+     &= 1 -  \sum_{\boldsymbol{g} \; \text{s.t.} \; \mu_j(\boldsymbol{g}) = 0} \frac{M!}{\prod_{i = 1}^{H} (\mu_i(\boldsymbol{g}^k)!)} \frac{\Gamma(\alpha_0)}{\Gamma(M + \alpha_0)} \prod_{i = 1}^H \frac{\Gamma(\mu_i(\boldsymbol{g}^k) + \alpha_i)}{\Gamma(\alpha_i)}
+\end{align}
+
+\subsubsection{Probability sample contains a haplotype}
+
+Similarly, we can find the posterior probability a single sample contains a haplotype by using the sample genotype posteriors $\tau_{n}$.
+
+\begin{align}
+\label{eq:sh_pp}
+p(h_j \; \text{occurs in sample } n | \boldsymbol{X}, \boldsymbol{\alpha}) &= 1 - p(h_j \; \text{does not occur in sample } n | \boldsymbol{X}, \boldsymbol{\alpha}) \notag \\
+    &= 1 - \sum_{k \; \text{s.t.} \; \mu_j(\boldsymbol{g}^k) = 0} \tau_{nk}
+\end{align}
+
 \subsection{Calling variants}
 
 We are interested in two probabilities: 1) The probability the allele is present in all the samples. 2) The probability the allele is present in an individual. We can answer both these questions separately.
@@ -436,8 +436,8 @@ To find the posterior probability that an allele appears in the samples by margi
 
 \begin{align}
 \label{eq:spa_pp}
-    p(a \text{ occurs in samples}| \boldsymbol{X}, \boldsymbol{\alpha}) &= \sum_{i = 1}^H p(a \in h_i) p(h_i \; \text{occurs in samples}| \boldsymbol{X}, \boldsymbol{\alpha}) \notag \\
-    &= \sum_{i = 1}^H [a \in h_i] \left\{ 1 -  \sum_{\boldsymbol{g} \; \text{s.t.} \; \mu_i(\boldsymbol{g}) = 0} \frac{M!}{\prod_{i = 1}^{H} \mu_i(\boldsymbol{g}^k)} \frac{\Gamma(\alpha_0)}{\Gamma(M + \alpha_0)} \prod_{i = 1}^H \frac{\Gamma(\mu_i(\boldsymbol{g}^k) + \alpha_i)}{\Gamma(\alpha_i)} \right\}
+    p(a \text{ occurs in samples}| \boldsymbol{X}, \boldsymbol{\alpha}) &= \sum_{j = 1}^H p(a \in h_j) p(h_j \; \text{occurs in samples}| \boldsymbol{X}, \boldsymbol{\alpha}) \notag \\
+    &= \sum_{j = 1}^H [a \in h_j] \left\{ 1 -  \sum_{\boldsymbol{g} \; \text{s.t.} \; \mu_j(\boldsymbol{g}) = 0} \frac{M!}{\prod_{i = 1}^{H} (\mu_i(\boldsymbol{g}^k)!)} \frac{\Gamma(\alpha_0)}{\Gamma(M + \alpha_0)} \prod_{i = 1}^H \frac{\Gamma(\mu_i(\boldsymbol{g}^k) + \alpha_i)}{\Gamma(\alpha_i)} \right\}
 \end{align}
 
 where $[a \in h]$ is an indicator function that is $1$ if $a \in h$ and is $0$ otherwise.
@@ -448,8 +448,8 @@ Similarly we find the probability of an allele appearing in a sample using the p
 
 \begin{align}
 \label{eq:sa_pp}
-    p(a \text{ occurs in sample } n | \boldsymbol{X}, \boldsymbol{\alpha}) &=  \sum_{i = 1}^H p(a_n \in h_i) p(h_i \; \text{occurs in sample } n | \boldsymbol{X}, \boldsymbol{\alpha}) \notag \\
-    &= \sum_{i = 1}^H [a_n \in h_i] \left\{ 1 - \sum_{k \; \text{s.t.} \; \mu_i(\boldsymbol{g}^k) = 0} \tau_{nk} \right\}
+    p(a \text{ occurs in sample } n | \boldsymbol{X}, \boldsymbol{\alpha}) &=  \sum_{j = 1}^H p(a_n \in h_j) p(h_j \; \text{occurs in sample } n | \boldsymbol{X}, \boldsymbol{\alpha}) \notag \\
+    &= \sum_{j = 1}^H [a_n \in h_j] \left\{ 1 - \sum_{k \; \text{s.t.} \; \mu_j(\boldsymbol{g}^k) = 0} \tau_{nk} \right\}
 \end{align}
 
 \subsubsection{Decision theory approach to variant calling}

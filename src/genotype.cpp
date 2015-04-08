@@ -67,11 +67,6 @@ std::vector<Haplotype> Genotype::get_unique_haplotypes() const
     return result;
 }
 
-//const Haplotype& Genotype::get_first_alternate_haplotype(const Haplotype& a_haplotype) const
-//{
-//    return *std::find_if_not(std::cbegin(the_haplotypes_), std::cend(the_haplotypes_), a_haplotype);
-//}
-
 unsigned num_genotypes(unsigned num_haplotypes, unsigned ploidy)
 {
     return static_cast<unsigned>(boost::math::binomial_coefficient<double>(num_haplotypes + ploidy - 1,
