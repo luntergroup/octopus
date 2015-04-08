@@ -90,14 +90,50 @@ double VariationalBayesGenotypeModel::posterior_haplotype_pseudo_count(const Hap
 }
 
 double VariationalBayesGenotypeModel::posterior_predictive_probability(const std::unordered_map<Haplotype, unsigned>& haplotype_counts,
-                                                                       const HaplotypePseudoCounts& haplotype_pseudo_count) const
+                                                                       const HaplotypePseudoCounts& haplotype_pseudo_counts) const
 {
     std::vector<double> z {}, a {};
     
     for (const auto& p : haplotype_counts) { z.push_back(p.second); };
-    for (const auto& p : haplotype_pseudo_count) { a.push_back(p.second); };
+    for (const auto& p : haplotype_pseudo_counts) { a.push_back(p.second); };
     
     return dirichlet_multinomial<double>(z, a);
+}
+
+double VariationalBayesGenotypeModel::posterior_haplotype_probability(const Haplotype& haplotype,
+                                                                      const HaplotypePseudoCounts& posterior_haplotype_pseudo_counts) const
+{
+    return posterior_haplotype_pseudo_counts.at(haplotype) / pseudo_count_sum(posterior_haplotype_pseudo_counts);
+}
+
+double VariationalBayesGenotypeModel::posterior_haplotype_probability(const Haplotype& haplotype,
+                                                                      const SampleGenotypeResponsabilities& genotype_responsabilities) const
+{
+    double result {0};
+    
+    for (const auto& genotype_responsability : genotype_responsabilities) {
+        if (genotype_responsability.first.contains(haplotype)) {
+            result += genotype_responsability.second;
+        }
+    }
+    
+    return result;
+}
+
+double VariationalBayesGenotypeModel::allele_posterior_probability(const GenomicRegion& the_allele_region,
+                                                                   const Haplotype::SequenceType& the_allele_sequence,
+                                                                   const Haplotypes& haplotypes,
+                                                                   const HaplotypePseudoCounts& posterior_haplotype_pseudo_counts) const
+{
+    double result {0};
+    
+    for (const auto& haplotype : haplotypes) {
+        if (haplotype.contains(the_allele_region, the_allele_sequence)) {
+            result += posterior_haplotype_probability(haplotype, posterior_haplotype_pseudo_counts);
+        }
+    }
+    
+    return result;
 }
 
 double VariationalBayesGenotypeModel::allele_posterior_probability(const GenomicRegion& the_allele_region,

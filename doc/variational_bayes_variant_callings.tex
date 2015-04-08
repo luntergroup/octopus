@@ -31,7 +31,7 @@
 
 Variational Bayes is a method to approximate the posterior distribution of latent variables in a Bayesian Network. The technique is similar in nature to EM, but whereas EM gives point estimates of the model parameters, variational Bayes gives a proper distribution over these parameters.
 
-Here I derive a variational Bayes model for approximating the posterior distributions of a genotype model for variant calling. First I describe a generalisation to the standard EM model using my notation.
+Here I derive a variational Bayes model for approximating the posterior distributions of a genotype model for variant calling. First I describe a generalisation to the standard EM model using my own notation for comparison.
 
 \section{Definitions \& conditions}
 
@@ -105,7 +105,7 @@ Note due to the $1$-of-$K$ representation for $\boldsymbol{g}$ this can also be 
 Using the abuse of notation $h \in \boldsymbol{g}$ to mean the haplotypes in $\boldsymbol{g}$, the data distribution is given by
 
 \begin{equation} 
-    p(\boldsymbol{x} | \boldsymbol{g}) = \prod_{i = 1}^{r} \sum_{h \in \boldsymbol{g}} p(h | g) p(r_i | h)  = \prod_{i = 1}^{r} \frac{1}{M} \sum_{h \in \boldsymbol{g}} p(x_i | h)
+    p(\boldsymbol{x} | \boldsymbol{g}) = \prod_{i = 1}^{r} \sum_{h \in \boldsymbol{g}} p(h | g) p(x_i | h)  = \prod_{i = 1}^{r} \frac{1}{M} \sum_{h \in \boldsymbol{g}} p(x_i | h)
 \end{equation}
 
 where $p(x_i | h)$ is determined by an HMM. The marginal data distribution is then
@@ -197,7 +197,7 @@ We now partition the latent variables $\boldsymbol{Z}$ into a set of disjoint gr
   q(\boldsymbol{Z}) = \prod_{i = 1}^M q_i(\boldsymbol{Z_i})
 \end{equation}
 
-This is the only assumption made, in particular the functional for of each $q_i$ is not contained. The idea is then to consider each group in turn, and average over the other groups. Formally this is a problem that can be solved using calculus of variations, but it's easy to see by substituting (\ref{eq:q}) into (\ref{eq:kl}) and separating one group $\boldsymbol{Z_j}$
+This is the only assumption made, in particular the functional form of each $q_i$ is not constrained. The idea is then to consider each group in turn, and average over the other groups. Formally this is a problem that can be solved using calculus of variations, but it's easy to see by substituting (\ref{eq:q}) into (\ref{eq:kl}) and separating one group $\boldsymbol{Z_j}$
 
 \begin{align}
     \text{KL}(q\; ||\; p) &= -\int \prod_{i = 1}^M q_i \left\{ \ln p(\boldsymbol{Z} | \boldsymbol{X}) - \sum_i \ln q_i) \right\} d \boldsymbol{Z}\notag \\
@@ -209,8 +209,14 @@ This is the only assumption made, in particular the functional for of each $q_i$
 Clearly the $q_j$ which minimises this quantity is when $q_j = \exp(\mathbb{E}_{i \ne j}[\ln p(\boldsymbol{Z} | \boldsymbol{X})])$ and therefore we find the optimal $q_j$
 
 \begin{equation}
+q^*_j(\boldsymbol{Z_j}) = \mathbb{E}_{i \ne j}[\ln p(\boldsymbol{Z} | \boldsymbol{X})] + \text{const}
+\end{equation}
+
+or equvilantly
+
+\begin{equation}
 \label{eq:q_opt}
-q^*_j(\boldsymbol{Z_j}) = \mathbb{E}_{i \ne j}[\ln p(\boldsymbol{Z} | \boldsymbol{X})]
+q^*_j(\boldsymbol{Z_j}) = \mathbb{E}_{i \ne j}[\ln p(\boldsymbol{X}, \boldsymbol{Z})] + \text{const}
 \end{equation}
 
 Note these equations do not represent an explicit solution because they are interdependent. The variational Bayes algorithm therefore proceeds similar to EM by cycling through each group, updating $q^*$, and repeating until convergence. It can be shown that $\text{KL}(q\; ||\; p)$ decreases at each step.
@@ -319,7 +325,20 @@ We can use the approximate densities to approximate posterior predictive distrib
 
 where $z_0 = \sum_{i = 1}^H z_i$ and $\alpha_0 = \sum_{i = 1}^H \alpha_i$.
 
-\subsubsection{Finding the most probable allele counts}
+\subsubsection{Probability of observing a single haplotype}
+
+We can use (\ref{eq:z_pp}) to find the posterior probability of observing a haplotype in the sample population. This simplifies to the expected value of the haplotype probability
+
+\begin{align}
+     p(h_i | \boldsymbol{X}, \boldsymbol{\alpha}) &= p(\boldsymbol{z}_i | \boldsymbol{X}, \boldsymbol{\alpha}) \notag \\
+    &= \frac{\Gamma(\alpha_0)}{\Gamma(z_{i0} + \alpha_0)} \prod_{j = 1}^H \frac{\Gamma(z_{ij} + \alpha_i)}{\Gamma(\alpha_i)} \notag \\
+    &= \frac{\Gamma(\alpha_0)\Gamma(\alpha_i + 1)}{\Gamma(\alpha_i)\Gamma(\alpha_0 + 1)} \notag \\
+    &= \frac{\alpha_i}{\alpha_0}
+\end{align}
+
+where $\boldsymbol{z}_i$ is a categorical variable with the $i^{th}$ element set to $1$.
+
+\subsubsection{Finding the most probable haplotype counts}
 
 We could then find the most probable ensemble of haplotypes in the samples by find a MAP estimate for $\boldsymbol{z}$, given the total number of haplotypes is $S = NM$.
 
@@ -332,26 +351,34 @@ We could then find the most probable ensemble of haplotypes in the samples by fi
 
 In theory this is an integer programming problem which is NP-hard, but if $S$ is small then it is not too much work to find the optimal value.
 
-\subsubsection{Sample haplotype posteriors}
+\subsubsection{Probability sample population contains a haplotype}
 
-The posterior haplotype densities for each sample is found using the posterior genotype approximations, $\tau_{n}$.
+We can find the posterior probability that the sample population contains a haplotype by marginalising over all genotypes where the haplotypes occurs, or alternatively 
+
+\begin{align}
+\label{eq:sph_pp}
+     p(h_i \; \text{occurs in samples}| \boldsymbol{X}, \boldsymbol{\alpha}) &= 1 - p(h_i \; \text{does not occur in samples}| \boldsymbol{X}, \boldsymbol{\alpha}) \notag \\
+     &= 1 - \sum_{\boldsymbol{g} \; \text{s.t.} \; \mu_i(\boldsymbol{g}) = 0} p(\boldsymbol{g} | \boldsymbol{X}, \boldsymbol{\alpha}) \notag \\
+     &= 1 -  \sum_{\boldsymbol{g} \; \text{s.t.} \; \mu_i(\boldsymbol{g}) = 0} \frac{M!}{\prod_{i = 1}^{H} \mu_i(\boldsymbol{g}^k)} \frac{\Gamma(\alpha_0)}{\Gamma(M + \alpha_0)} \prod_{i = 1}^H \frac{\Gamma(\mu_i(\boldsymbol{g}^k) + \alpha_i)}{\Gamma(\alpha_i)}
+\end{align}
+
+\subsubsection{Probability sample contains a haplotype}
+
+Similarly, we can find the posterior probability a single sample contains a haplotype by using the sample genotype posteriors $\tau_{n}$.
 
 \begin{align}
 \label{eq:sh_pp}
-p(h_{ni} | \boldsymbol{X}, \boldsymbol{\alpha}) &= \sum_{\boldsymbol{g}} p(g_{nk} = 1 | \boldsymbol{X}, \boldsymbol{\alpha}) p(\mu_i(\boldsymbol{g}^k) \ge 1) \notag \\
-    &\approx \sum_{k = 1}^K q^*(g_{nk}) p(\mu_i(\boldsymbol{g}^k) \ge 1) \notag \\
-    &= \sum_{k = 1}^K \tau_{nk} [h_i \in \boldsymbol{g}^k]
+p(h_i \; \text{occurs in sample } n | \boldsymbol{X}, \boldsymbol{\alpha}) &= 1 - p(h_i \; \text{does not occur in sample } n | \boldsymbol{X}, \boldsymbol{\alpha}) \notag \\
+    &= 1 - \sum_{k \; \text{s.t.} \; \mu_i(\boldsymbol{g}^k) = 0} \tau_{nk}
 \end{align}
-
-Where $[h_i \in \boldsymbol{g}^k]$ is a binary indicator function.
 
 \subsection{Specifying the haplotype priors}
 
-How should we set the haplotype pseudocounts that determine the haplotype priors? The naive approaches are either to use a flat (or even non-informative) prior, or bias towards the reference. However, these approaches may not be appropriate if we have information that cannot be included directly into the genotype model (e.g. knowledge of well known variants in the population). This is valuable information that should be included in the prior if possible.
+How should we set the haplotype pseudocounts that determine the haplotype priors? The naive approaches are either to use a flat or other non-informative prior, or bias towards the reference. However, these approaches may not be appropriate if we have information that cannot be included directly into the genotype model (e.g. knowledge of well known variants in the population). This is valuable information that should be included in the prior if possible.
 
 \subsubsection{Candidate generation \& priors}
 
-A general way to proceed is to leverge all information we may have about the alleles before we examine the alignments. Strictly speaking we should not let the data influence our priors, but this is clearly infeasable as we would then have to assign every possible allele some positive probability. We get around this by allowing examination of the data to generate candidates - which has the affect of assiging most possible alleles probability zero - but require the priors be data-conditionally independent. This means that the prior of one candidate cannot be influenced by the generation of another candidate from the same source, note this does not mean different candidates cannot be given different priors. The reason for this is to minimise the affect of the data on our priors while allowing the general properties of the candidate generator to be included.
+A general way to proceed is to leverge all information we may have about the alleles before we examine the alignments. Strictly speaking we should not let the data influence our priors, but this is clearly infeasable as we would then have to assign every possible allele some positive probability. We get around this by allowing examination of the data to generate candidates - which has the affect of assigning most possible alleles probability zero - but require the priors be data-conditionally independent. This means that the prior of one candidate cannot be influenced by the generation of another candidate from the same source, note this does not mean different candidates cannot be given different priors. The reason for this is to minimise the affect of the data on our priors while allowing the general properties of the candidate generator to be included.
 
 \subsubsection{Haplotype priors from allele priors}
 
@@ -367,7 +394,7 @@ Where $p(a_i)$ is just the prior probability for allele $a_i$. It therefore seem
     \alpha_i = \beta \frac{p(h_i | \boldsymbol{a}_i)}{\sum_{j = 1}^H p(h_j | \boldsymbol{a}_j)} + c
 \end{equation}
 
-where $\beta$ is a constant scaling factor, and $c$ is a constant that will usually be $1$ ($c$ can be set to $0$ if the prior in non-informative, but then we must be sure there will be at-least one of each haplotype in the data so that the posterior is proper). How can we set $\beta$? Essentially $\beta$ expresses our confidence in our allele priors, which will usually decrease as the number of samples increases. Therefore $\beta$ could be of the form $\beta = \max(\beta' - N, 0)$, where $\beta'$ is a measure of our confidence in our priors if we had only one sample. We can motivate $\beta'$ by considering how strongly the data must support a low prior allele, compared to a high prior allele, before we change our minds.
+where $\beta$ is a constant scaling factor, and $c$ is a constant that will usually be $1$ ($c$ can be set to $0$ if the prior is non-informative, but then we must be sure there will be at-least one of each haplotype in the data so that the posterior is proper). How can we set $\beta$? Essentially $\beta$ expresses our confidence in our allele priors, which will usually decrease as the number of samples increases. Therefore $\beta$ could be of the form $\beta = \max(\beta' - N, 0)$, where $\beta'$ is a measure of our confidence in our priors if we had only one sample. We can motivate $\beta'$ by considering how strongly the data must support a low prior allele, compared to a high prior allele, before we change our minds.
 
 Suppose we are examining a site with two candidate haplotypes which differ at a single base. Let A be the allele with a high prior (close to 1), and B be the allele with low prior (close to 0). Now suppose there is a single well mapped read supporting B. Should we prefer homozygous (A,A) or heterozygous (A,B)? The decision will surely come down to the mapping quality of the read (which we assume is high), and the base quality of the read base supporting B. If we assume base qualities are well calibrated, we can choose $\beta'$ so that we prefer heterozygous (A,B) when the probability of the read base supporting B being wrong is below a certain value.
 
@@ -405,13 +432,12 @@ We are interested in two probabilities: 1) The probability the allele is present
 
 \subsubsection{Posterior probability that a variant is present in samples}
 
-To find the posterior probability that an allele appears in the samples we marginalise over each haplotype using the posterior predictive distribution found in (\ref{eq:z_pp}), this calculates the posterior probability of observing each haplotype in a single new observation and simplifies to the expected value of the haplotype probability
+To find the posterior probability that an allele appears in the samples by marginalising over haplotypes and using (\ref{eq:sph_pp})
 
 \begin{align}
-    p(a | \boldsymbol{X}, \boldsymbol{\alpha}) &= \sum_{i = 1}^H p(a | h_i) p(\boldsymbol{z}_i | \boldsymbol{X}, \boldsymbol{\alpha}) \notag \\
-    &= \sum_{i = 1}^H [a \in h_i] \frac{z_{i0}!}{\prod_{j = 1}^{H} z_{ij}} \frac{\Gamma(\alpha_0)}{\Gamma(z_{i0} + \alpha_0)} \prod_{j = 1}^H \frac{\Gamma(z_{ij} + \alpha_i)}{\Gamma(\alpha_i)} \notag \\
-    &= \sum_{i = 1}^H [a \in h_i] \frac{\Gamma(\alpha_0)\Gamma(\alpha_i + 1)}{\Gamma(\alpha_i)\Gamma(\alpha_0 + 1)} \notag \\
-    &= \sum_{i = 1}^H [a \in h_i] \frac{\alpha_i}{\alpha_0}
+\label{eq:spa_pp}
+    p(a \text{ occurs in samples}| \boldsymbol{X}, \boldsymbol{\alpha}) &= \sum_{i = 1}^H p(a \in h_i) p(h_i \; \text{occurs in samples}| \boldsymbol{X}, \boldsymbol{\alpha}) \notag \\
+    &= \sum_{i = 1}^H [a \in h_i] \left\{ 1 -  \sum_{\boldsymbol{g} \; \text{s.t.} \; \mu_i(\boldsymbol{g}) = 0} \frac{M!}{\prod_{i = 1}^{H} \mu_i(\boldsymbol{g}^k)} \frac{\Gamma(\alpha_0)}{\Gamma(M + \alpha_0)} \prod_{i = 1}^H \frac{\Gamma(\mu_i(\boldsymbol{g}^k) + \alpha_i)}{\Gamma(\alpha_i)} \right\}
 \end{align}
 
 where $[a \in h]$ is an indicator function that is $1$ if $a \in h$ and is $0$ otherwise.
@@ -420,10 +446,11 @@ where $[a \in h]$ is an indicator function that is $1$ if $a \in h$ and is $0$ o
 
 Similarly we find the probability of an allele appearing in a sample using the posterior probability found in (\ref{eq:sh_pp})
 
-\begin{equation}
+\begin{align}
 \label{eq:sa_pp}
-    p(a_n | \boldsymbol{X}, \boldsymbol{\alpha}) = \sum_{i = 1}^H [a_n \in h_i] \sum_{k = 1}^K \tau_{nk} [h_i \in \boldsymbol{g}^k]
-\end{equation}
+    p(a \text{ occurs in sample } n | \boldsymbol{X}, \boldsymbol{\alpha}) &=  \sum_{i = 1}^H p(a_n \in h_i) p(h_i \; \text{occurs in sample } n | \boldsymbol{X}, \boldsymbol{\alpha}) \notag \\
+    &= \sum_{i = 1}^H [a_n \in h_i] \left\{ 1 - \sum_{k \; \text{s.t.} \; \mu_i(\boldsymbol{g}^k) = 0} \tau_{nk} \right\}
+\end{align}
 
 \subsubsection{Decision theory approach to variant calling}
 

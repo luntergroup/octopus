@@ -54,7 +54,18 @@ public:
                                             const GenotypeResponsabilities& genotype_responsabilities);
     
     double posterior_predictive_probability(const std::unordered_map<Haplotype, unsigned>& haplotype_counts,
-                                            const HaplotypePseudoCounts& haplotype_pseudo_count) const;
+                                            const HaplotypePseudoCounts& haplotype_pseudo_counts) const;
+    
+    double posterior_haplotype_probability(const Haplotype& haplotype,
+                                           const HaplotypePseudoCounts& posterior_haplotype_pseudo_counts) const;
+    
+    double posterior_haplotype_probability(const Haplotype& haplotype,
+                                           const SampleGenotypeResponsabilities& genotype_responsabilities) const;
+    
+    double allele_posterior_probability(const GenomicRegion& the_allele_region,
+                                        const Haplotype::SequenceType& the_allele_sequence,
+                                        const Haplotypes& haplotypes,
+                                        const HaplotypePseudoCounts& posterior_haplotype_pseudo_counts) const;
     
     double allele_posterior_probability(const GenomicRegion& the_allele_region,
                                         const Haplotype::SequenceType& the_allele_sequence,

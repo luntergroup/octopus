@@ -442,6 +442,9 @@ TEST_CASE("three_samples_diploid_variational_bayes_genotype_model", "[variationa
 //        std::cout << c.first << " " << c.second << std::endl;
 //    }
     
+    std::cout << the_model.posterior_haplotype_probability(reference_haplotype, posterior_pseudo_counts) << std::endl;
+    std::cout << the_model.posterior_haplotype_probability(reference_haplotype, responsabilities[0]) << std::endl;
+    
     std::cout << sample_ids[0] << std::endl;
     std::cout << the_model.allele_posterior_probability(variants[1].get_reference_allele_region(),
                                                         variants[1].get_reference_allele(), haplotypes,
