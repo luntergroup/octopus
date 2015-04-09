@@ -11,7 +11,7 @@
 
 #include <vector>
 #include <list>
-#include <cstddef>
+#include <unordered_map>
 #include <boost/graph/adjacency_list.hpp>
 
 #include "haplotype.h"
@@ -22,8 +22,6 @@ class ReferenceGenome;
 class VariationalBayesGenotypeModel;
 class Variant;
 
-using std::size_t;
-
 class HaplotypeTree
 {
 public:
@@ -33,7 +31,7 @@ public:
     explicit HaplotypeTree(ReferenceGenome& the_reference, ReadManager& the_reads,
                            VariationalBayesGenotypeModel& the_genotype_model,
                            const std::vector<ReadManager::SampleIdType>& the_sample_ids,
-                           size_t max_num_haplotypes, double min_posterior);
+                           unsigned max_num_haplotypes, double min_posterior);
     ~HaplotypeTree() = default;
     
     HaplotypeTree(const HaplotypeTree&)            = default;
@@ -41,7 +39,7 @@ public:
     HaplotypeTree(HaplotypeTree&&)                 = default;
     HaplotypeTree& operator=(HaplotypeTree&&)      = default;
     
-    Haplotypes get_haplotypes(const std::vector<Variant>& ordered_variants);
+    Haplotypes get_haplotypes(const std::vector<Variant>& the_variants);
     
 private:
     struct Allele
@@ -61,7 +59,7 @@ private:
     struct HaplotypeNode
     {
         Allele the_variant;
-        double haplotype_probability;
+        double probability;
     };
     
     using Tree = boost::adjacency_list<
@@ -75,20 +73,20 @@ private:
     VariationalBayesGenotypeModel& the_genotype_model_;
     std::vector<ReadManager::SampleIdType> the_sample_ids_;
     
-    size_t max_num_haplotypes_;
+    unsigned max_num_haplotypes_;
     double min_posterior_;
-    size_t num_extensions_since_posterior_update_;
+    unsigned num_extensions_since_posterior_update_;
     
     Tree the_tree_;
     std::list<Vertex> haplotype_branch_ends_;
     
     void init_tree();
-    size_t num_haplotypes() const;
+    unsigned num_haplotypes() const;
     void extend_tree(const Variant& a_variant);
     std::vector<Vertex> extend_haplotype(Vertex haplotype_branch_end, const Variant& a_variant);
     Haplotypes get_unupdated_haplotypes();
     void update_posteriors();
-    void prune_low_probability_haplotypes(size_t n);
+    void prune_low_probability_haplotypes(unsigned n);
     void prune_haplotype(Vertex haplotype_end);
     Haplotypes get_highest_probability_haplotypes();
 };

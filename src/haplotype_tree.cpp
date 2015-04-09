@@ -12,13 +12,12 @@
 #include "variational_bayes_genotype_model.h"
 #include "variant.h"
 
-//FOR TESTING
-#include <iostream>
+#include <iostream> // TEST
 
 HaplotypeTree::HaplotypeTree(ReferenceGenome& the_reference, ReadManager& the_reads,
                              VariationalBayesGenotypeModel& the_genotype_model,
                              const std::vector<ReadManager::SampleIdType>& the_sample_ids,
-                             size_t max_num_haplotypes, double min_posterior)
+                             unsigned max_num_haplotypes, double min_posterior)
 :
 the_reference_ {the_reference},
 the_reads_ {the_reads},
@@ -33,9 +32,9 @@ haplotype_branch_ends_ {}
     init_tree();
 }
 
-HaplotypeTree::Haplotypes HaplotypeTree::get_haplotypes(const std::vector<Variant>& ordered_variants)
+HaplotypeTree::Haplotypes HaplotypeTree::get_haplotypes(const std::vector<Variant>& the_variants)
 {
-    for (const auto& variant : ordered_variants) {
+    for (const auto& variant : the_variants) {
         extend_tree(variant);
         
         if (num_haplotypes() > max_num_haplotypes_) {
@@ -53,9 +52,9 @@ void HaplotypeTree::init_tree()
     haplotype_branch_ends_.emplace_back(root);
 }
 
-size_t HaplotypeTree::num_haplotypes() const
+unsigned HaplotypeTree::num_haplotypes() const
 {
-    return haplotype_branch_ends_.size();
+    return static_cast<unsigned>(haplotype_branch_ends_.size());
 }
 
 void HaplotypeTree::extend_tree(const Variant& a_variant)
@@ -79,19 +78,19 @@ HaplotypeTree::extend_haplotype(Vertex haplotype_branch_end, const Variant& a_va
 {
     std::vector<Vertex> new_haplotype_branch_ends {};
     
-    auto new_branch_end = boost::add_vertex(the_tree_);
-    the_tree_[new_branch_end].the_variant = Allele {a_variant.get_reference_allele_region(),
-        a_variant.get_reference_allele()};
-    the_tree_[new_branch_end].haplotype_probability = the_tree_[new_branch_end].haplotype_probability;
-    boost::add_edge(haplotype_branch_end, new_branch_end, the_tree_);
-    new_haplotype_branch_ends.emplace_back(new_branch_end);
-    
-    new_branch_end = boost::add_vertex(the_tree_);
-    the_tree_[new_branch_end].the_variant = Allele {a_variant.get_reference_allele_region(),
-                                                    a_variant.get_alternative_allele()};
-    the_tree_[new_branch_end].haplotype_probability = the_tree_[new_branch_end].haplotype_probability;
-    boost::add_edge(haplotype_branch_end, new_branch_end, the_tree_);
-    new_haplotype_branch_ends.emplace_back(new_branch_end);
+//    auto new_branch_end = boost::add_vertex(the_tree_);
+//    the_tree_[new_branch_end].the_variant = Allele {a_variant.get_reference_allele_region(),
+//        a_variant.get_reference_allele()};
+//    the_tree_[new_branch_end].haplotype_probability = the_tree_[new_branch_end].haplotype_probability;
+//    boost::add_edge(haplotype_branch_end, new_branch_end, the_tree_);
+//    new_haplotype_branch_ends.emplace_back(new_branch_end);
+//    
+//    new_branch_end = boost::add_vertex(the_tree_);
+//    the_tree_[new_branch_end].the_variant = Allele {a_variant.get_reference_allele_region(),
+//                                                    a_variant.get_alternative_allele()};
+//    the_tree_[new_branch_end].haplotype_probability = the_tree_[new_branch_end].haplotype_probability;
+//    boost::add_edge(haplotype_branch_end, new_branch_end, the_tree_);
+//    new_haplotype_branch_ends.emplace_back(new_branch_end);
     
     return new_haplotype_branch_ends;
 }
@@ -147,19 +146,19 @@ void HaplotypeTree::update_posteriors()
     num_extensions_since_posterior_update_ = 0;
 }
 
-void HaplotypeTree::prune_low_probability_haplotypes(size_t n)
+void HaplotypeTree::prune_low_probability_haplotypes(unsigned n)
 {
-    auto it = haplotype_branch_ends_.begin();
-    auto end = haplotype_branch_ends_.end();
-    while (n > 0 && it != end) {
-        if (the_tree_[*it].haplotype_probability < min_posterior_) {
-            prune_haplotype(*it);
-            it = haplotype_branch_ends_.erase(it);
-        } else {
-            ++it;
-        }
-        --n;
-    }
+//    auto it = haplotype_branch_ends_.begin();
+//    auto end = haplotype_branch_ends_.end();
+//    while (n > 0 && it != end) {
+//        if (the_tree_[*it].haplotype_probability < min_posterior_) {
+//            prune_haplotype(*it);
+//            it = haplotype_branch_ends_.erase(it);
+//        } else {
+//            ++it;
+//        }
+//        --n;
+//    }
 }
 
 void HaplotypeTree::prune_haplotype(Vertex haplotype_end)
