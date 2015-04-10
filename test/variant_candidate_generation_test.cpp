@@ -16,7 +16,6 @@
 #include "reference_genome_factory.h"
 #include "read_manager.h"
 #include "variant.h"
-#include "variant_factory.h"
 #include "variant_candidate_generator.h"
 #include "alignment_candidate_variant_generator.h"
 #include "assembler_candidate_variant_generator.h"
@@ -31,12 +30,9 @@ TEST_CASE("alignment_variant_candidate_generator_test", "[variant_candidate]")
     
     ReadManager a_read_manager(std::vector<std::string> {human_1000g_bam1});
     
-    VariantFactory a_variant_factory {};
-    
     VariantCandidateGenerator candidate_generator {};
     
-    candidate_generator.register_generator(
-        std::make_unique<AlignmentCandidateVariantGenerator>(human, a_variant_factory, 0));
+    candidate_generator.register_generator(std::make_unique<AlignmentCandidateVariantGenerator>(human, 0));
     
     auto sample_ids = a_read_manager.get_sample_ids();
     auto the_sample_id = sample_ids.at(0);
@@ -119,11 +115,9 @@ TEST_CASE("all_variant_candidate_generator_test", "[variant_candidate]")
     
     ReadManager a_read_manager(std::vector<std::string> {human_1000g_bam1});
     
-    VariantFactory a_variant_factory {};
-    
     VariantCandidateGenerator candidate_generator {};
     
-    candidate_generator.register_generator(std::make_unique<AlignmentCandidateVariantGenerator>(human, a_variant_factory, 0));
+    candidate_generator.register_generator(std::make_unique<AlignmentCandidateVariantGenerator>(human, 0));
     candidate_generator.register_generator(
         std::make_unique<AssemblerCandidateVariantGenerator>(human, kmer_size, 0));
     //candidate_generator.register_generator(std::make_unique<ExternalVariantCandidates>(a_variant_file));

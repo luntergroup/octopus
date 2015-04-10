@@ -37,9 +37,7 @@ TEST_CASE("test_make_haplotypes", "[haplotype]")
     
     REQUIRE(reference_haplotype.get_sequence() == the_reference_sequence);
     
-    VariantFactory a_variant_factory {};
-    
-    auto variant_1 = a_variant_factory.make("3", 1000004, "C", "A");
+    Variant variant_1 {"3", 1000004, "C", "A", 0, 0};
     
     Haplotype haplotype2 {human};
     add_to_back(variant_1, haplotype2);
@@ -51,8 +49,8 @@ TEST_CASE("test_make_haplotypes", "[haplotype]")
     
     REQUIRE(haplotype2.get_sequence(a_region) == haplotype3.get_sequence());
     
-    auto variant_2 = a_variant_factory.make("3", 1000004, "CA", "");
-    auto variant_3 = a_variant_factory.make("3", 1000008, "", "C");
+    Variant variant_2 {"3", 1000004, "CA", "", 0, 0};
+    Variant variant_3 {"3", 1000008, "", "C", 0, 0};
     
     Haplotype haplotype4 {human, a_region};
     add_to_back(variant_2, haplotype4);
@@ -66,15 +64,15 @@ TEST_CASE("test_make_haplotypes", "[haplotype]")
     
     REQUIRE(haplotype5.get_sequence() == "AGC");
     
-    auto variant_4 = a_variant_factory.make("3", 1000004, "CA", "GG");
+    Variant variant_4 {"3", 1000004, "CA", "GG", 0, 0};
     
     Haplotype haplotype6 {human, a_region};
     add_to_back(variant_4, haplotype6);
     
     REQUIRE(haplotype6.get_sequence() == "CCAAGGAGCA");
     
-    auto variant_5 = a_variant_factory.make("3", 1000004, "C", "G");
-    auto variant_6 = a_variant_factory.make("3", 1000005, "A", "G");
+    Variant variant_5 {"3", 1000004, "C", "G", 0, 0};
+    Variant variant_6 {"3", 1000005, "A", "G", 0, 0};
     
     Haplotype haplotype7 {human, a_region};
     add_to_back(variant_6, haplotype7);
@@ -90,10 +88,8 @@ TEST_CASE("test_make_haplotype_from_candidates", "[haplotype]")
     
     ReadManager a_read_manager(std::vector<std::string> {ecoli_bam});
     
-    VariantFactory a_variant_factory {};
     VariantCandidateGenerator candidate_generator {};
-    candidate_generator.register_generator(
-            std::make_unique<AlignmentCandidateVariantGenerator>(ecoli, a_variant_factory, 0));
+    candidate_generator.register_generator(std::make_unique<AlignmentCandidateVariantGenerator>(ecoli, 0));
     
     auto a_region = parse_region("R00000042:99640-99745", ecoli);
     
@@ -151,17 +147,15 @@ TEST_CASE("haplotype_variant_containment_test", "[haplotype]")
     ReferenceGenomeFactory a_factory {};
     ReferenceGenome human(a_factory.make(human_reference_fasta));
     
-    VariantFactory a_variant_factory {};
-    
     GenomicRegion a_region {"3", 1000000, 1000020}; // CCAACAAGCATTGGTGTGGC
     
     // Variants the haplotype will contain
-    auto variant_1 = a_variant_factory.make("3", 1000002, "A", "T");
-    auto variant_2 = a_variant_factory.make("3", 1000004, "CA", "");
-    auto variant_3 = a_variant_factory.make("3", 1000008, "", "C");
-    auto variant_4 = a_variant_factory.make("3", 1000010, "TT", "GG");
-    auto variant_5 = a_variant_factory.make("3", 1000014, "T", "C");
-    auto variant_6 = a_variant_factory.make("3", 1000018, "G", "A");
+    Variant variant_1 {"3", 1000002, "A", "T", 0, 0};
+    Variant variant_2 {"3", 1000004, "CA", "", 0, 0};
+    Variant variant_3 {"3", 1000008, "", "C", 0, 0};
+    Variant variant_4 {"3", 1000010, "TT", "GG", 0, 0};
+    Variant variant_5 {"3", 1000014, "T", "C", 0, 0};
+    Variant variant_6 {"3", 1000018, "G", "A", 0, 0};
     
     // Parts of the haplotype which remain reference
     GenomicRegion a_reference_part1 {"3", 1000003, 1000004};
@@ -169,10 +163,10 @@ TEST_CASE("haplotype_variant_containment_test", "[haplotype]")
     GenomicRegion a_reference_part3 {"3", 1000015, 1000018};
     
     // Variants which the haplotype does not contain
-    auto false_variant_1 = a_variant_factory.make("3", 1000002, "A", "C");
-    auto false_variant_2 = a_variant_factory.make("3", 1000008, "", "T");
-    auto false_variant_3 = a_variant_factory.make("3", 1000010, "TT", "AC");
-    auto false_variant_4 = a_variant_factory.make("3", 1000014, "T", "A");
+    Variant false_variant_1 {"3", 1000002, "A", "C", 0, 0};
+    Variant false_variant_2 {"3", 1000008, "", "T", 0, 0};
+    Variant false_variant_3 {"3", 1000010, "TT", "AC", 0, 0};
+    Variant false_variant_4 {"3", 1000014, "T", "A", 0, 0};
     
     Haplotype haplotype_unbounded {human};
     add_to_back(variant_1, haplotype_unbounded);
@@ -191,12 +185,12 @@ TEST_CASE("haplotype_variant_containment_test", "[haplotype]")
     REQUIRE(contains(haplotype_unbounded, variant_5));
     REQUIRE(contains(haplotype_unbounded, variant_6));
     
-    REQUIRE(!haplotype_unbounded.contains(variant_1.get_region(), variant_1.get_reference_allele()));
-    REQUIRE(!haplotype_unbounded.contains(variant_2.get_region(), variant_2.get_reference_allele()));
-    REQUIRE(!haplotype_unbounded.contains(variant_3.get_region(), variant_3.get_reference_allele()));
-    REQUIRE(!haplotype_unbounded.contains(variant_4.get_region(), variant_4.get_reference_allele()));
-    REQUIRE(!haplotype_unbounded.contains(variant_5.get_region(), variant_5.get_reference_allele()));
-    REQUIRE(!haplotype_unbounded.contains(variant_6.get_region(), variant_6.get_reference_allele()));
+    REQUIRE(!haplotype_unbounded.contains(variant_1.get_region(), variant_1.get_reference_allele_sequence()));
+    REQUIRE(!haplotype_unbounded.contains(variant_2.get_region(), variant_2.get_reference_allele_sequence()));
+    REQUIRE(!haplotype_unbounded.contains(variant_3.get_region(), variant_3.get_reference_allele_sequence()));
+    REQUIRE(!haplotype_unbounded.contains(variant_4.get_region(), variant_4.get_reference_allele_sequence()));
+    REQUIRE(!haplotype_unbounded.contains(variant_5.get_region(), variant_5.get_reference_allele_sequence()));
+    REQUIRE(!haplotype_unbounded.contains(variant_6.get_region(), variant_6.get_reference_allele_sequence()));
     
     REQUIRE(!contains(haplotype_unbounded, false_variant_1));
     REQUIRE(!contains(haplotype_unbounded, false_variant_2));
@@ -227,12 +221,12 @@ TEST_CASE("haplotype_variant_containment_test", "[haplotype]")
     REQUIRE(contains(haplotype_bounded, variant_5));
     REQUIRE(contains(haplotype_bounded, variant_6));
     
-    REQUIRE(!haplotype_bounded.contains(variant_1.get_region(), variant_1.get_reference_allele()));
-    REQUIRE(!haplotype_bounded.contains(variant_2.get_region(), variant_2.get_reference_allele()));
-    REQUIRE(!haplotype_bounded.contains(variant_3.get_region(), variant_3.get_reference_allele()));
-    REQUIRE(!haplotype_bounded.contains(variant_4.get_region(), variant_4.get_reference_allele()));
-    REQUIRE(!haplotype_bounded.contains(variant_5.get_region(), variant_5.get_reference_allele()));
-    REQUIRE(!haplotype_bounded.contains(variant_6.get_region(), variant_6.get_reference_allele()));
+    REQUIRE(!haplotype_bounded.contains(variant_1.get_region(), variant_1.get_reference_allele_sequence()));
+    REQUIRE(!haplotype_bounded.contains(variant_2.get_region(), variant_2.get_reference_allele_sequence()));
+    REQUIRE(!haplotype_bounded.contains(variant_3.get_region(), variant_3.get_reference_allele_sequence()));
+    REQUIRE(!haplotype_bounded.contains(variant_4.get_region(), variant_4.get_reference_allele_sequence()));
+    REQUIRE(!haplotype_bounded.contains(variant_5.get_region(), variant_5.get_reference_allele_sequence()));
+    REQUIRE(!haplotype_bounded.contains(variant_6.get_region(), variant_6.get_reference_allele_sequence()));
     
     REQUIRE(!contains(haplotype_bounded, false_variant_1));
     REQUIRE(!contains(haplotype_bounded, false_variant_2));

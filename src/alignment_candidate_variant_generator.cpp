@@ -19,12 +19,10 @@
 #include "region_utils.h"
 
 AlignmentCandidateVariantGenerator::AlignmentCandidateVariantGenerator(ReferenceGenome& the_reference,
-                                                                       VariantFactory& variant_factory,
                                                                        double generator_confidence)
 :
 the_reference_ {the_reference},
 candidates_ {},
-variant_factory_ {variant_factory},
 generator_confidence_ {generator_confidence},
 are_candidates_sorted_ {true}
 {}

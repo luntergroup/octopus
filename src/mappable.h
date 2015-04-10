@@ -21,6 +21,30 @@ template <typename T>
 class Mappable {};
 
 template <typename T>
+inline bool operator==(const Mappable<T>& lhs, const GenomicRegion& rhs)
+{
+    return static_cast<const T&>(lhs).get_region() == rhs;
+}
+
+template <typename T>
+inline bool operator==(const GenomicRegion& lhs, const Mappable<T>& rhs)
+{
+    return lhs == static_cast<const T&>(rhs).get_region();
+}
+
+template <typename T>
+inline bool operator<(const Mappable<T>& lhs, const GenomicRegion& rhs)
+{
+    return static_cast<const T&>(lhs).get_region() < rhs;
+}
+
+template <typename T>
+inline bool operator<(const GenomicRegion& lhs, const Mappable<T>& rhs)
+{
+    return lhs < static_cast<const T&>(rhs).get_region();
+}
+
+template <typename T>
 inline bool begins_before(const Mappable<T>& lhs, const GenomicRegion& rhs)
 {
     return begins_before(static_cast<const T&>(lhs).get_region(), rhs);

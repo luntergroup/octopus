@@ -12,7 +12,6 @@
 #include <list>
 
 #include "reference_genome.h"
-#include "variant_factory.h"
 #include "variant_candidate_generator.h"
 
 using std::cbegin;
@@ -53,8 +52,8 @@ bool is_parsimonious(const Variant& a_variant) noexcept
         return false;
     }
     
-    const auto& ref_allele = a_variant.get_reference_allele();
-    const auto& alt_allele = a_variant.get_alternative_allele();
+    const auto& ref_allele = a_variant.get_reference_allele_sequence();
+    const auto& alt_allele = a_variant.get_alternative_allele_sequence();
     
     const auto& alleles = allele_minmax(ref_allele, alt_allele);
     const auto& the_small_allele = alleles.first;
@@ -74,13 +73,12 @@ bool is_parsimonious(const Variant& a_variant) noexcept
     return true;
 }
 
-Variant make_parsimonious(const Variant& a_variant, ReferenceGenome& the_reference,
-                          VariantFactory& a_variant_factory)
+Variant make_parsimonious(const Variant& a_variant, ReferenceGenome& the_reference)
 {
     if (is_parsimonious(a_variant)) return a_variant;
     
-    const auto& old_ref_allele = a_variant.get_reference_allele();
-    const auto& old_alt_allele = a_variant.get_alternative_allele();
+    const auto& old_ref_allele = a_variant.get_reference_allele_sequence();
+    const auto& old_alt_allele = a_variant.get_alternative_allele_sequence();
     
     const auto& alleles = allele_minmax(old_ref_allele, old_alt_allele);
     const auto& the_small_allele = alleles.first;
@@ -94,20 +92,22 @@ Variant make_parsimonious(const Variant& a_variant, ReferenceGenome& the_referen
                 old_ref_region.get_begin() - 1, old_ref_region.get_end()};
             
             auto new_ref_allele = the_reference.get_sequence(new_ref_region);
-            auto new_alt_allele = new_ref_allele.front() + a_variant.get_alternative_allele();
+            auto new_alt_allele = new_ref_allele.front() + a_variant.get_alternative_allele_sequence();
             
-            return a_variant_factory.make(std::move(new_ref_region), std::move(new_ref_allele),
-                                          std::move(new_alt_allele));
+            return Variant {std::move(new_ref_region), std::move(new_ref_allele),
+                            std::move(new_alt_allele), a_variant.get_reference_allele_probability(),
+                            a_variant.get_alternative_allele_probability()};
         } else {
             // In this very rare care the only option is to pad to the right.
             GenomicRegion new_ref_region {old_ref_region.get_contig_name(),
                 old_ref_region.get_begin(), old_ref_region.get_end() + 1};
             
             auto new_ref_allele = the_reference.get_sequence(new_ref_region);
-            auto new_alt_allele = a_variant.get_alternative_allele() + new_ref_allele.back();
+            auto new_alt_allele = a_variant.get_alternative_allele_sequence() + new_ref_allele.back();
             
-            return a_variant_factory.make(std::move(new_ref_region), std::move(new_ref_allele),
-                                          std::move(new_alt_allele));
+            return Variant {std::move(new_ref_region), std::move(new_ref_allele),
+                            std::move(new_alt_allele), a_variant.get_reference_allele_probability(),
+                            a_variant.get_alternative_allele_probability()};
         }
     }
     
@@ -141,10 +141,12 @@ Variant make_parsimonious(const Variant& a_variant, ReferenceGenome& the_referen
                                     new_ref_region_end};
     
     return (old_ref_allele.size() > old_alt_allele.size()) ?
-        a_variant_factory.make(std::move(new_ref_region), std::move(new_big_allele),
-                               std::move(new_small_allele)) :
-        a_variant_factory.make(std::move(new_ref_region), std::move(new_small_allele),
-                               std::move(new_big_allele));
+        Variant {std::move(new_ref_region), std::move(new_big_allele),
+            std::move(new_small_allele), a_variant.get_reference_allele_probability(),
+            a_variant.get_alternative_allele_probability()} :
+        Variant {std::move(new_ref_region), std::move(new_small_allele),
+            std::move(new_big_allele), a_variant.get_reference_allele_probability(),
+            a_variant.get_alternative_allele_probability()};
 }
 
 bool is_left_alignable(const Variant& a_variant) noexcept
@@ -182,7 +184,7 @@ GenomicRegion extend_allele_lists(LeftAlignmentList& big_allele, LeftAlignmentLi
 }
 
 Variant left_align(const Variant& a_variant, ReferenceGenome& the_reference,
-                   VariantFactory& a_variant_factory, Variant::SizeType extension_size)
+                   Variant::SizeType extension_size)
 {
     if (!is_left_alignable(a_variant)) {
         return a_variant;
@@ -192,8 +194,8 @@ Variant left_align(const Variant& a_variant, ReferenceGenome& the_reference,
                   "Variant and GenomicRegion have different SizeType");
     using SizeType = Variant::SizeType;
     
-    const auto& ref_allele = a_variant.get_reference_allele();
-    const auto& alt_allele = a_variant.get_alternative_allele();
+    const auto& ref_allele = a_variant.get_reference_allele_sequence();
+    const auto& alt_allele = a_variant.get_alternative_allele_sequence();
     
     LeftAlignmentList big_allele {}, small_allele {};
     std::tie(big_allele, small_allele) = get_allele_lists(ref_allele, alt_allele);
@@ -251,17 +253,17 @@ Variant left_align(const Variant& a_variant, ReferenceGenome& the_reference,
                                     new_ref_region_end};
     
     return (ref_allele.size() > alt_allele.size()) ?
-        a_variant_factory.make(std::move(new_ref_region), std::move(new_big_allele),
-                               std::move(new_small_allele)) :
-        a_variant_factory.make(std::move(new_ref_region), std::move(new_small_allele),
-                               std::move(new_big_allele));
+            Variant {std::move(new_ref_region), std::move(new_big_allele),
+                std::move(new_small_allele), a_variant.get_reference_allele_probability(),
+                a_variant.get_alternative_allele_probability()} :
+            Variant {std::move(new_ref_region), std::move(new_small_allele),
+                std::move(new_big_allele), a_variant.get_reference_allele_probability(),
+                a_variant.get_alternative_allele_probability()};
 }
 
-Variant normalise(const Variant& a_variant, ReferenceGenome& the_reference,
-                  VariantFactory& a_variant_factory, Variant::SizeType extension_size)
+Variant normalise(const Variant& a_variant, ReferenceGenome& the_reference, Variant::SizeType extension_size)
 {
-    return make_parsimonious(left_align(a_variant, the_reference, a_variant_factory, extension_size),
-                             the_reference, a_variant_factory);
+    return make_parsimonious(left_align(a_variant, the_reference, extension_size), the_reference);
 }
 
 bool is_snp(const Variant& a_variant) noexcept

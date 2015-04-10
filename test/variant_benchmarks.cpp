@@ -16,7 +16,6 @@
 #include "reference_genome_factory.h"
 #include "genomic_region.h"
 #include "variant.h"
-#include "variant_factory.h"
 #include "variant_utils.h"
 
 //TEST_CASE("variant_benchmark", "[benchmark]")

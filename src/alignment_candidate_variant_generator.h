@@ -13,7 +13,6 @@
 #include <cstddef> // std::size_t
 
 #include "i_variant_candidate_generator.h"
-#include "variant_factory.h"
 #include "aligned_read.h"
 
 class ReferenceGenome;
@@ -25,7 +24,6 @@ class AlignmentCandidateVariantGenerator : public IVariantCandidateGenerator
 public:
     AlignmentCandidateVariantGenerator() = delete;
     explicit AlignmentCandidateVariantGenerator(ReferenceGenome& the_reference,
-                                                VariantFactory& variant_factory,
                                                 double generator_confidence);
     ~AlignmentCandidateVariantGenerator() override = default;
     
@@ -43,7 +41,6 @@ public:
 private:
     ReferenceGenome& the_reference_;
     std::vector<Variant> candidates_;
-    VariantFactory& variant_factory_;
     double generator_confidence_;
     bool are_candidates_sorted_;
     
@@ -60,9 +57,8 @@ template <typename T1, typename T2, typename T3>
 void AlignmentCandidateVariantGenerator::add_variant(T1&& the_region, T2&& sequence_removed,
                                                      T3&& sequence_added)
 {
-    candidates_.emplace_back(variant_factory_.make(std::forward<T1>(the_region),
-                                                   std::forward<T2>(sequence_removed),
-                                                   std::forward<T3>(sequence_added)));\
+    candidates_.emplace_back(std::forward<T1>(the_region), std::forward<T2>(sequence_removed),
+                             std::forward<T3>(sequence_added), 0, 0);
     are_candidates_sorted_ = false;
 }
 

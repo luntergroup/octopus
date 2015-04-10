@@ -34,10 +34,8 @@ TEST_CASE("haploid_standard_genotype_model_test", "[standard_genotype_model]")
     
     ReadManager a_read_manager(std::vector<std::string> {ecoli_bam});
     
-    VariantFactory a_variant_factory {};
     VariantCandidateGenerator candidate_generator {};
-    candidate_generator.register_generator(
-                std::make_unique<AlignmentCandidateVariantGenerator>(ecoli, a_variant_factory, 0));
+    candidate_generator.register_generator(std::make_unique<AlignmentCandidateVariantGenerator>(ecoli, 0));
     
     auto a_region = parse_region("R00000042:99640-99745", ecoli);
     

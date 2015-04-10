@@ -147,10 +147,8 @@ TEST_CASE("single_sample_haploid_variational_bayes_genotype_model", "[variationa
     
     ReadManager a_read_manager(std::vector<std::string> {ecoli_bam});
     
-    VariantFactory a_variant_factory {};
     VariantCandidateGenerator candidate_generator {};
-    candidate_generator.register_generator(
-                                           std::make_unique<AlignmentCandidateVariantGenerator>(ecoli, a_variant_factory, 0));
+    candidate_generator.register_generator(std::make_unique<AlignmentCandidateVariantGenerator>(ecoli, 0));
     
     auto a_region = parse_region("R00000042:99640-99745", ecoli);
     
@@ -226,10 +224,8 @@ TEST_CASE("single_sample_diploid_variational_bayes_genotype_model", "[variationa
     
     ReadManager a_read_manager(std::vector<std::string> {human_1000g_bam1});
     
-    VariantFactory a_variant_factory {};
     VariantCandidateGenerator candidate_generator {};
-    candidate_generator.register_generator(
-            std::make_unique<AlignmentCandidateVariantGenerator>(human, a_variant_factory, 0));
+    candidate_generator.register_generator(std::make_unique<AlignmentCandidateVariantGenerator>(human, 0));
     
     auto a_region = parse_region("2:104142870-104142884", human);
     
@@ -321,10 +317,8 @@ TEST_CASE("two_samples_diploid_variational_bayes_genotype_model1", "[variational
     
     ReadManager a_read_manager(std::vector<std::string> {human_1000g_bam1, human_1000g_bam2});
     
-    VariantFactory a_variant_factory {};
     VariantCandidateGenerator candidate_generator {};
-    candidate_generator.register_generator(
-                                           std::make_unique<AlignmentCandidateVariantGenerator>(human, a_variant_factory, 0));
+    candidate_generator.register_generator(std::make_unique<AlignmentCandidateVariantGenerator>(human, 0));
     
     auto a_region = parse_region("2:104142870-104142884", human);
     
@@ -402,10 +396,8 @@ TEST_CASE("two_samples_diploid_variational_bayes_genotype_model2", "[variational
     
     ReadManager a_read_manager(std::vector<std::string> {human_1000g_bam1, human_1000g_bam3});
     
-    VariantFactory a_variant_factory {};
     VariantCandidateGenerator candidate_generator {};
-    candidate_generator.register_generator(
-            std::make_unique<AlignmentCandidateVariantGenerator>(human, a_variant_factory, 0));
+    candidate_generator.register_generator(std::make_unique<AlignmentCandidateVariantGenerator>(human, 0));
     
     auto a_region = parse_region("2:104142870-104142884", human);
     
@@ -483,10 +475,8 @@ TEST_CASE("three_samples_diploid_variational_bayes_genotype_model", "[variationa
     
     ReadManager a_read_manager(std::vector<std::string> {human_1000g_bam1, human_1000g_bam2, human_1000g_bam3});
     
-    VariantFactory a_variant_factory {};
     VariantCandidateGenerator candidate_generator {};
-    candidate_generator.register_generator(
-                                           std::make_unique<AlignmentCandidateVariantGenerator>(human, a_variant_factory, 0));
+    candidate_generator.register_generator(std::make_unique<AlignmentCandidateVariantGenerator>(human, 0));
     
     auto a_region = parse_region("2:104142870-104142884", human);
     

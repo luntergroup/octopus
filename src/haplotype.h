@@ -15,6 +15,7 @@
 #include <stdexcept> // std::runtime_error
 #include <ostream>
 
+#include "allele.h"
 #include "variant.h"
 #include "equitable.h"
 #include "mappable.h"
@@ -25,8 +26,8 @@ class GenomicRegion;
 class Haplotype : public Equitable<Haplotype>, public Mappable<Haplotype>
 {
 public:
-    using SequenceType = Variant::SequenceType;
-    using SizeType     = Variant::SizeType;
+    using SequenceType = Allele::SequenceType;
+    using SizeType     = Allele::SizeType;
     
     Haplotype() = delete;
     explicit Haplotype(ReferenceGenome& the_reference);
@@ -51,26 +52,7 @@ public:
     //void operator+=(const Haplotype& other);
     friend bool operator==(const Haplotype& lhs, const Haplotype& rhs);
 private:
-    struct Allele : public Mappable<Allele>
-    {
-        template <typename T>
-        Allele(const GenomicRegion& the_reference_region, T&& the_sequence)
-        :
-        the_reference_region {the_reference_region},
-        the_sequence {std::forward<T>(the_sequence)}
-        {}
-        
-        GenomicRegion the_reference_region;
-        SequenceType the_sequence;
-        
-        GenomicRegion get_region() const { return the_reference_region; }
-    };
-    
     using AlleleIterator = std::deque<Allele>::const_iterator;
-    
-    friend bool operator==(const Allele& lhs, const Allele& rhs);
-    friend bool operator<(const GenomicRegion& lhs, const Allele& rhs);
-    friend bool operator<(const Allele& lhs, const GenomicRegion& rhs);
     
     GenomicRegion get_region_bounded_by_alleles() const;
     SequenceType get_sequence_bounded_by_alleles(AlleleIterator first, AlleleIterator last) const;
@@ -79,7 +61,7 @@ private:
     ReferenceGenome& the_reference_;
     bool is_region_set_;
     GenomicRegion the_reference_region_;
-    std::deque<Allele> the_haplotype_;
+    std::deque<Allele> the_explicit_alleles_;
 };
 
 void add_to_back(const Variant& a_variant, Haplotype& a_haplotype);
@@ -89,26 +71,20 @@ bool contains(const Haplotype& a_haplotype, const Variant& a_variant);
 template <typename T>
 void Haplotype::emplace_back(const GenomicRegion& the_allele_region, T&& the_allele_sequence)
 {
-    the_haplotype_.emplace_back(the_allele_region, std::forward<T>(the_allele_sequence));
+    the_explicit_alleles_.emplace_back(the_allele_region, std::forward<T>(the_allele_sequence));
 }
 
 template <typename T>
 void Haplotype::emplace_front(const GenomicRegion& the_allele_region, T&& the_allele_sequence)
 {
-    the_haplotype_.emplace_front(the_allele_region, std::forward<T>(the_allele_sequence));
+    the_explicit_alleles_.emplace_front(the_allele_region, std::forward<T>(the_allele_sequence));
 }
-
-inline bool operator==(const Haplotype::Allele& lhs, const Haplotype::Allele& rhs)
-{
-    return (lhs.the_reference_region == rhs.the_reference_region && lhs.the_sequence == rhs.the_sequence);
-}
-
 inline bool operator==(const Haplotype& lhs, const Haplotype& rhs)
 {
-    if (lhs.the_haplotype_.size() != rhs.the_haplotype_.size()) return false;
+    if (lhs.the_explicit_alleles_.size() != rhs.the_explicit_alleles_.size()) return false;
     if (lhs.get_region() != rhs.get_region()) return false;
-    return std::equal(std::cbegin(lhs.the_haplotype_), std::cend(lhs.the_haplotype_),
-                      std::cbegin(rhs.the_haplotype_));
+    return std::equal(std::cbegin(lhs.the_explicit_alleles_), std::cend(lhs.the_explicit_alleles_),
+                      std::cbegin(rhs.the_explicit_alleles_));
 }
 
 namespace std {

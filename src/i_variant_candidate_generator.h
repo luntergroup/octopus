@@ -12,13 +12,15 @@
 #include <vector>
 #include <cstddef> // std::size_t
 
-class Variant;
+#include "variant.h"
+
 class AlignedRead;
 class GenomicRegion;
 
 class IVariantCandidateGenerator
 {
 public:
+    using RealType     = Variant::RealType;
     using ReadIterator = std::vector<AlignedRead>::const_iterator;
     
     virtual std::vector<Variant> get_candidates(const GenomicRegion&) = 0;
@@ -27,6 +29,10 @@ public:
     virtual void reserve(std::size_t n) = 0;
     virtual void clear() = 0;
     virtual ~IVariantCandidateGenerator() = default;
+    
+//private:
+//    virtual RealType get_reference_allele_prior_probability() const noexcept = 0;
+//    virtual RealType get_alternative_allele_prior_probability() const noexcept = 0;
 };
 
 #endif

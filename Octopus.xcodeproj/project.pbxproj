@@ -102,7 +102,6 @@
 		CAA4DC241A81981400DD3E9A /* main.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
 		CAA4DC301A82B28800DD3E9A /* .gitignore */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = .gitignore; sourceTree = "<group>"; };
 		CAA4DC311A82B36300DD3E9A /* README.md */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
-		CAA4DC471A841B2600DD3E9A /* variant_factory.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = variant_factory.h; sourceTree = "<group>"; };
 		CAA4DC621A88238C00DD3E9A /* variant.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = variant.h; sourceTree = "<group>"; };
 		CAA4DC671A8ACE9B00DD3E9A /* bioio.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = bioio.h; sourceTree = "<group>"; };
 		CABA377D1A8F9E0A00BBE598 /* test_common.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = test_common.h; sourceTree = "<group>"; };
@@ -328,7 +327,6 @@
 			children = (
 				D4E41DA31AD81C390010D25D /* allele.h */,
 				CAA4DC621A88238C00DD3E9A /* variant.h */,
-				CAA4DC471A841B2600DD3E9A /* variant_factory.h */,
 				CAE3E2A41AA24C5500C01B2C /* i_variant_candidate_generator.h */,
 				CAE3E2A21AA1DBE000C01B2C /* variant_candidate_generator.h */,
 				CAE3E2AA1AA2736D00C01B2C /* external_variant_candidates.h */,

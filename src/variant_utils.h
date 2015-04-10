@@ -26,8 +26,7 @@ void merge_equal_variants(std::vector<Variant>& the_variants);
  */
 bool is_parsimonious(const Variant& a_variant) noexcept;
 
-Variant make_parsimonious(const Variant& a_variant, ReferenceGenome& the_reference,
-                          VariantFactory& a_variant_factory);
+Variant make_parsimonious(const Variant& a_variant, ReferenceGenome& the_reference);
 
 bool is_left_alignable(const Variant& a_variant) noexcept;
 
@@ -39,13 +38,13 @@ bool is_left_alignable(const Variant& a_variant) noexcept;
  to the left while keeping the length of all its alleles constant.
  */
 Variant left_align(const Variant& a_variant, ReferenceGenome& the_reference,
-                   VariantFactory& a_variant_factory, Variant::SizeType extension_size=30);
+                   Variant::SizeType extension_size=30);
 
 /*
   A variant is normalised if and only if it is parsimonious and left aligned.
  */
 Variant normalise(const Variant& a_variant, ReferenceGenome& the_reference,
-                  VariantFactory& a_variant_factory, Variant::SizeType extension_size=30);
+                  Variant::SizeType extension_size=30);
 
 bool is_snp(const Variant& a_variant) noexcept;
 

@@ -18,18 +18,15 @@
 #include "genomic_region.h"
 #include "allele.h"
 #include "variant.h"
-#include "variant_factory.h"
 #include "variant_utils.h"
 #include "mock_objects.h"
 
 TEST_CASE("comparison_consistency_test", "[variant]")
 {
-    VariantFactory a_variant_factory {};
-    
-    auto snp1 = a_variant_factory.make("chr1", 100, "C", "A");
-    auto snp2 = a_variant_factory.make("chr1", 99, "C", "A");
-    auto snp3 = a_variant_factory.make("chr1", 100, "C", "T");
-    auto snp4 = a_variant_factory.make("chr1", 100, "C", "A");
+    Variant snp1 {"chr1", 100, "C", "A", 0, 0};
+    Variant snp2 {"chr1", 99, "C", "A", 0, 0};
+    Variant snp3 {"chr1", 100, "C", "T", 0, 0};
+    Variant snp4 {"chr1", 100, "C", "A", 0, 0};
     
     bool r1 = !(snp1 < snp2) && !(snp2 < snp1);
     bool r2 = (snp1 == snp2);
@@ -49,14 +46,12 @@ TEST_CASE("comparison_consistency_test", "[variant]")
 
 TEST_CASE("snp_overlap_test", "[snps]")
 {
-    VariantFactory a_variant_factory {};
-    
-    auto snp1 = a_variant_factory.make("chr1", 100, "C", "A");
-    auto snp2 = a_variant_factory.make("chr1", 99, "C", "A");
-    auto snp3 = a_variant_factory.make("chr1", 101, "C", "A");
-    auto snp4 = a_variant_factory.make("chr1", 100, "C", "T");
-    auto snp5 = a_variant_factory.make("chr1", 99, "C", "T");
-    auto snp6 = a_variant_factory.make("chr1", 101, "C", "T");
+    Variant snp1 {"chr1", 100, "C", "A", 0, 0};
+    Variant snp2 {"chr1", 99, "C", "A", 0, 0};
+    Variant snp3 {"chr1", 101, "C", "A", 0, 0};
+    Variant snp4 {"chr1", 100, "C", "T", 0, 0};
+    Variant snp5 {"chr1", 99, "C", "T", 0, 0};
+    Variant snp6 {"chr1", 101, "C", "T", 0, 0};
     
     REQUIRE(overlaps(snp1, snp1));
     REQUIRE(overlaps(snp1, snp4));
@@ -68,20 +63,18 @@ TEST_CASE("snp_overlap_test", "[snps]")
 
 TEST_CASE("mnp_overlap_test", "[mnp]")
 {
-    VariantFactory a_variant_factory {};
-    
-    auto mnp1 = a_variant_factory.make("chr1", 100, "CAT", "TAC");
-    auto mnp2 = a_variant_factory.make("chr1", 99, "CAT", "TAC");
-    auto mnp3 = a_variant_factory.make("chr1", 101, "CAT", "TAC");
-    auto mnp4 = a_variant_factory.make("chr1", 100, "CAT", "TAG");
-    auto mnp5 = a_variant_factory.make("chr1", 99, "CAT", "TAG");
-    auto mnp6 = a_variant_factory.make("chr1", 101, "CAT", "TAG");
+    Variant mnp1 {"chr1", 100, "CAT", "TAC", 0, 0};
+    Variant mnp2 {"chr1", 99, "CAT", "TAC", 0, 0};
+    Variant mnp3 {"chr1", 101, "CAT", "TAC", 0, 0};
+    Variant mnp4 {"chr1", 100, "CAT", "TAG", 0, 0};
+    Variant mnp5 {"chr1", 99, "CAT", "TAG", 0, 0};
+    Variant mnp6 {"chr1", 101, "CAT", "TAG", 0, 0};
     
     // edge cases
-    auto mnp7  = a_variant_factory.make("chr1", 98, "CAT", "TAC");
-    auto mnp8  = a_variant_factory.make("chr1", 102, "CAT", "TAC");
-    auto mnp9  = a_variant_factory.make("chr1", 97, "CAT", "TAC");
-    auto mnp10 = a_variant_factory.make("chr1", 103, "CAT", "TAC");
+    Variant mnp7  {"chr1", 98, "CAT", "TAC", 0, 0};
+    Variant mnp8  {"chr1", 102, "CAT", "TAC", 0, 0};
+    Variant mnp9  {"chr1", 97, "CAT", "TAC", 0, 0};
+    Variant mnp10 {"chr1", 103, "CAT", "TAC", 0, 0};
     
     REQUIRE(overlaps(mnp1, mnp1));
     REQUIRE(overlaps(mnp1, mnp2));
@@ -98,11 +91,9 @@ TEST_CASE("mnp_overlap_test", "[mnp]")
 
 TEST_CASE("insertion_overlap_test", "[insertion]")
 {
-    VariantFactory a_variant_factory {};
-    
-    auto insert1 = a_variant_factory.make("chr1", 100, "", "TAG");
-    auto insert2 = a_variant_factory.make("chr1", 99, "", "TAG");
-    auto insert3 = a_variant_factory.make("chr1", 101, "", "TAG");
+    Variant insert1 {"chr1", 100, "", "TAG", 0, 0};
+    Variant insert2 {"chr1", 99, "", "TAG", 0, 0};
+    Variant insert3 {"chr1", 101, "", "TAG", 0, 0};
     
     // Insertions never overlap. IS THIS RIGHT!?!
     REQUIRE(!overlaps(insert1, insert1));
@@ -112,11 +103,9 @@ TEST_CASE("insertion_overlap_test", "[insertion]")
 
 TEST_CASE("deletion_overlap_test", "[deletion]")
 {
-    VariantFactory a_variant_factory {};
-    
-    auto del1 = a_variant_factory.make("chr1", 100, "TAG", "");
-    auto del2 = a_variant_factory.make("chr1", 99, "TAG", "");
-    auto del3 = a_variant_factory.make("chr1", 101, "TAG", "");
+    Variant del1 {"chr1", 100, "TAG", "", 0, 0};
+    Variant del2 {"chr1", 99, "TAG", "", 0, 0};
+    Variant del3 {"chr1", 101, "TAG", "", 0, 0};
     
     REQUIRE(overlaps(del1, del1));
     REQUIRE(overlaps(del1, del2));
@@ -125,16 +114,14 @@ TEST_CASE("deletion_overlap_test", "[deletion]")
 
 TEST_CASE("variant_ordering_test", "[variant]")
 {
-    VariantFactory a_variant_factory {};
-    
-    auto snp1 = a_variant_factory.make("chr1", 100, "T", "A");
-    auto snp2 = a_variant_factory.make("chr1", 100, "T", "C");
-    auto snp3 = a_variant_factory.make("chr1", 100, "T", "G");
-    auto ins1 = a_variant_factory.make("chr1", 100, "", "AG");
-    auto ins2 = a_variant_factory.make("chr1", 100, "", "CC");
-    auto ins3 = a_variant_factory.make("chr1", 100, "", "CCA");
-    auto del1 = a_variant_factory.make("chr1", 100, "TA", "");
-    auto del2 = a_variant_factory.make("chr1", 100, "TAG", "");
+    Variant snp1 {"chr1", 100, "T", "A", 0, 0};
+    Variant snp2 {"chr1", 100, "T", "C", 0, 0};
+    Variant snp3 {"chr1", 100, "T", "G", 0, 0};
+    Variant ins1 {"chr1", 100, "", "AG", 0, 0};
+    Variant ins2 {"chr1", 100, "", "CC", 0, 0};
+    Variant ins3 {"chr1", 100, "", "CCA", 0, 0};
+    Variant del1 {"chr1", 100, "TA", "", 0, 0};
+    Variant del2 {"chr1", 100, "TAG", "", 0, 0};
     
     std::vector<Variant> variants1 {snp1, ins1, snp2};
     
@@ -182,8 +169,6 @@ TEST_CASE("left_alignment", "[left_alignment]")
     ReferenceGenomeFactory a_factory {};
     ReferenceGenome human(a_factory.make(human_reference_fasta));
     
-    VariantFactory a_variant_factory {};
-    
     // Huntingtin region CCAGCAGCAGCAGCAG...
     auto a_region = parse_region("4:3076657-3076660", human);
     
@@ -191,24 +176,24 @@ TEST_CASE("left_alignment", "[left_alignment]")
     
     REQUIRE(the_sequence == "CAG");
     
-    auto a_deletion = a_variant_factory.make(a_region, the_sequence, "");
+    Variant a_deletion {a_region, the_sequence, "", 0, 0};
     
-    auto left_aligned_deletion = left_align(a_deletion, human, a_variant_factory);
+    Variant left_aligned_deletion = left_align(a_deletion, human);
     
     REQUIRE(left_aligned_deletion.get_region() ==
             parse_region("4:3076603-3076606", human));
-    REQUIRE(left_aligned_deletion.get_reference_allele() == "CAG");
-    REQUIRE(left_aligned_deletion.get_alternative_allele() == "");
+    REQUIRE(left_aligned_deletion.get_reference_allele_sequence() == "CAG");
+    REQUIRE(left_aligned_deletion.get_alternative_allele_sequence() == "");
     
-    auto an_insertion = a_variant_factory.make(parse_region("4:3076660-3076660", human),
-                                               "", the_sequence);
+    Variant an_insertion {parse_region("4:3076660-3076660", human),
+                                               "", the_sequence, 0, 0};
     
-    auto left_aligned_insertion = left_align(an_insertion, human, a_variant_factory);
+    auto left_aligned_insertion = left_align(an_insertion, human);
     
     REQUIRE(left_aligned_insertion.get_region() ==
             parse_region("4:3076603-3076603", human));
-    REQUIRE(left_aligned_insertion.get_reference_allele() == "");
-    REQUIRE(left_aligned_insertion.get_alternative_allele() == "CAG");
+    REQUIRE(left_aligned_insertion.get_reference_allele_sequence() == "");
+    REQUIRE(left_aligned_insertion.get_alternative_allele_sequence() == "CAG");
     
     // Region is CCAACAACAACAACAC (94594947-94594962)
     a_region = parse_region("5:94594956-94594959", human);
@@ -217,24 +202,23 @@ TEST_CASE("left_alignment", "[left_alignment]")
     
     REQUIRE(the_sequence == "CAA");
     
-    a_deletion = a_variant_factory.make(a_region, the_sequence, "");
+    a_deletion = Variant {a_region, the_sequence, "", 0, 0};
     
-    left_aligned_deletion = left_align(a_deletion, human, a_variant_factory);
+    left_aligned_deletion = left_align(a_deletion, human);
     
     REQUIRE(left_aligned_deletion.get_region() ==
             parse_region("5:94594949-94594952", human));
-    REQUIRE(left_aligned_deletion.get_reference_allele() == "ACA");
-    REQUIRE(left_aligned_deletion.get_alternative_allele() == "");
+    REQUIRE(left_aligned_deletion.get_reference_allele_sequence() == "ACA");
+    REQUIRE(left_aligned_deletion.get_alternative_allele_sequence() == "");
     
-    an_insertion = a_variant_factory.make(parse_region("5:94594959-94594959", human),
-                                               "", the_sequence);
+    an_insertion = Variant {parse_region("5:94594959-94594959", human), "", the_sequence, 0, 0};
     
-    left_aligned_insertion = left_align(an_insertion, human, a_variant_factory);
+    left_aligned_insertion = left_align(an_insertion, human);
     
     REQUIRE(left_aligned_insertion.get_region() ==
             parse_region("5:94594949-94594949", human));
-    REQUIRE(left_aligned_insertion.get_reference_allele() == "");
-    REQUIRE(left_aligned_insertion.get_alternative_allele() == "ACA");
+    REQUIRE(left_aligned_insertion.get_reference_allele_sequence() == "");
+    REQUIRE(left_aligned_insertion.get_alternative_allele_sequence() == "ACA");
 }
 
 TEST_CASE("parsimonious_test", "[parsimonious]")
@@ -242,30 +226,25 @@ TEST_CASE("parsimonious_test", "[parsimonious]")
     ReferenceGenomeFactory a_factory {};
     ReferenceGenome human(a_factory.make(human_reference_fasta));
     
-    VariantFactory a_variant_factory {};
-    
-    auto a_snp = a_variant_factory.make(parse_region("12:10001330-10001331", human),
-                                        std::string {"G"}, std::string {"C"});
+    Variant a_snp {parse_region("12:10001330-10001331", human), std::string {"G"}, std::string {"C"}, 0, 0};
     
     REQUIRE(is_parsimonious(a_snp));
-    REQUIRE(make_parsimonious(a_snp, human, a_variant_factory) == a_snp);
+    REQUIRE(make_parsimonious(a_snp, human) == a_snp);
     
-    auto an_unparsimonious_snp = a_variant_factory.make(parse_region("12:10001330-10001332", human),
-                                                        std::string {"GT"}, std::string {"CT"});
+    Variant an_unparsimonious_snp {parse_region("12:10001330-10001332", human), std::string {"GT"}, std::string {"CT"}, 0, 0};
     
     REQUIRE(!is_parsimonious(an_unparsimonious_snp));
     
-    auto parsimonised_snp = make_parsimonious(an_unparsimonious_snp, human, a_variant_factory);
+    auto parsimonised_snp = make_parsimonious(an_unparsimonious_snp, human);
     
     REQUIRE(is_parsimonious(parsimonised_snp));
     REQUIRE(parsimonised_snp == a_snp);
     
-    auto another_unparsimonious_snp = a_variant_factory.make(parse_region("12:10001329-10001332", human),
-                                                             std::string {"TGT"}, std::string {"TCT"});
+    Variant another_unparsimonious_snp {parse_region("12:10001329-10001332", human), std::string {"TGT"}, std::string {"TCT"}, 0, 0};
     
     REQUIRE(!is_parsimonious(another_unparsimonious_snp));
     
-    auto another_parsimonised_snp = make_parsimonious(another_unparsimonious_snp, human, a_variant_factory);
+    auto another_parsimonised_snp = make_parsimonious(another_unparsimonious_snp, human);
     
     REQUIRE(is_parsimonious(another_parsimonised_snp));
     REQUIRE(another_parsimonised_snp == a_snp);
@@ -276,40 +255,37 @@ TEST_CASE("parsimonious_test", "[parsimonious]")
     
     REQUIRE(the_sequence == "GTGGA");
     
-    auto a_deletion = a_variant_factory.make(a_region, the_sequence, "");
+    Variant a_deletion {a_region, the_sequence, "", 0, 0};
     
-    auto parsimonious_deletion = make_parsimonious(a_deletion, human, a_variant_factory);
+    auto parsimonious_deletion = make_parsimonious(a_deletion, human);
     
     REQUIRE(parsimonious_deletion.get_region() ==
             parse_region("12:10001329-10001335", human));
-    REQUIRE(parsimonious_deletion.get_reference_allele() == "CGTGGA");
-    REQUIRE(parsimonious_deletion.get_alternative_allele() == "C");
+    REQUIRE(parsimonious_deletion.get_reference_allele_sequence() == "CGTGGA");
+    REQUIRE(parsimonious_deletion.get_alternative_allele_sequence() == "C");
     
-    auto an_insertion = a_variant_factory.make(parse_region("12:10001330-10001330", human),
-                                               "", the_sequence);
+    Variant an_insertion {parse_region("12:10001330-10001330", human), "", the_sequence, 0, 0};
     
-    auto parsimonious_insertion = make_parsimonious(an_insertion, human, a_variant_factory);
+    auto parsimonious_insertion = make_parsimonious(an_insertion, human);
     
     REQUIRE(parsimonious_insertion.get_region() ==
             parse_region("12:10001329-10001330", human));
-    REQUIRE(parsimonious_insertion.get_reference_allele() == "C");
-    REQUIRE(parsimonious_insertion.get_alternative_allele() == "CGTGGA");
+    REQUIRE(parsimonious_insertion.get_reference_allele_sequence() == "C");
+    REQUIRE(parsimonious_insertion.get_alternative_allele_sequence() == "CGTGGA");
     
-    auto an_unparsimonious_deletion = a_variant_factory.make(parse_region("12:10001328-10001335", human),
-                                                             "TCGTGGA", "TC");
+    Variant an_unparsimonious_deletion {parse_region("12:10001328-10001335", human), "TCGTGGA", "TC", 0, 0};
     
     REQUIRE(!is_parsimonious(an_unparsimonious_deletion));
     
-    auto parsimonised_deletion = make_parsimonious(an_unparsimonious_deletion, human, a_variant_factory);
+    auto parsimonised_deletion = make_parsimonious(an_unparsimonious_deletion, human);
     
     REQUIRE(is_parsimonious(parsimonised_deletion));
     
-    auto an_unparsimonious_insertion = a_variant_factory.make(parse_region("12:10001329-10001331", human),
-                                                              "CG", "CGTGGA");
+    Variant an_unparsimonious_insertion {parse_region("12:10001329-10001331", human), "CG", "CGTGGA", 0, 0};
     
     REQUIRE(!is_parsimonious(an_unparsimonious_insertion));
     
-    auto parsimonised_insertion = make_parsimonious(an_unparsimonious_insertion, human, a_variant_factory);
+    auto parsimonised_insertion = make_parsimonious(an_unparsimonious_insertion, human);
     
     REQUIRE(is_parsimonious(parsimonised_insertion));
 }
@@ -319,16 +295,13 @@ TEST_CASE("normalisation_test", "[normalisation]")
     ReferenceGenomeFactory a_factory {};
     ReferenceGenome human(a_factory.make(human_reference_fasta));
     
-    VariantFactory a_variant_factory {};
-    
     // Huntingtin region CCAGCAGCAGCAGCAG...
     
-    auto a_snp = a_variant_factory.make(parse_region("4:3076657-3076658", human),
-                                        std::string {"G"}, std::string {"C"});
+    Variant a_snp {parse_region("4:3076657-3076658", human), std::string {"G"}, std::string {"C"}, 0, 0};
     
     REQUIRE(is_parsimonious(a_snp));
     
-    auto a_normalised_snp = normalise(a_snp, human, a_variant_factory);
+    auto a_normalised_snp = normalise(a_snp, human);
     
     REQUIRE(a_normalised_snp == a_snp);
     
@@ -338,96 +311,92 @@ TEST_CASE("normalisation_test", "[normalisation]")
     
     REQUIRE(the_sequence == "CAG");
     
-    auto a_mnp = a_variant_factory.make(a_region, the_sequence, std::string {"GAC"});
+    Variant a_mnp {a_region, the_sequence, std::string {"GAC"}, 0, 0};
     
     REQUIRE(is_parsimonious(a_mnp));
     
-    auto a_normalised_mnp = normalise(a_mnp, human, a_variant_factory);
+    auto a_normalised_mnp = normalise(a_mnp, human);
     
     REQUIRE(a_normalised_mnp == a_mnp);
     
-    auto a_deletion = a_variant_factory.make(a_region, the_sequence, "");
+    Variant a_deletion {a_region, the_sequence, "", 0, 0};
     
     REQUIRE(!is_parsimonious(a_deletion));
     
-    auto left_aligned_unparsimonious_deletion = left_align(a_deletion, human, a_variant_factory);
+    auto left_aligned_unparsimonious_deletion = left_align(a_deletion, human);
     
     REQUIRE(!is_parsimonious(left_aligned_unparsimonious_deletion));
     
-    auto normilised_deletion = normalise(a_deletion, human, a_variant_factory);
+    auto normilised_deletion = normalise(a_deletion, human);
     
     REQUIRE(is_parsimonious(normilised_deletion));
     REQUIRE(normilised_deletion.get_region() ==
             parse_region("4:3076602-3076606", human));
-    REQUIRE(normilised_deletion.get_reference_allele() == "CCAG");
-    REQUIRE(normilised_deletion.get_alternative_allele() == "C");
+    REQUIRE(normilised_deletion.get_reference_allele_sequence() == "CCAG");
+    REQUIRE(normilised_deletion.get_alternative_allele_sequence() == "C");
     
-    auto an_insertion = a_variant_factory.make(parse_region("4:3076660-3076660", human),
-                                               "", the_sequence);
+    Variant an_insertion {parse_region("4:3076660-3076660", human), "", the_sequence, 0, 0};
     
     REQUIRE(!is_parsimonious(an_insertion));
     
-    auto left_aligned_unparsimonious_insertion = left_align(an_insertion, human, a_variant_factory);
+    auto left_aligned_unparsimonious_insertion = left_align(an_insertion, human);
     
     REQUIRE(!is_parsimonious(left_aligned_unparsimonious_insertion));
     
-    auto normilised_insertion = normalise(an_insertion, human, a_variant_factory);
+    auto normilised_insertion = normalise(an_insertion, human);
     
     REQUIRE(is_parsimonious(normilised_insertion));
     REQUIRE(normilised_insertion.get_region() ==
             parse_region("4:3076602-3076603", human));
-    REQUIRE(normilised_insertion.get_reference_allele() == "C");
-    REQUIRE(normilised_insertion.get_alternative_allele() == "CCAG");
+    REQUIRE(normilised_insertion.get_reference_allele_sequence() == "C");
+    REQUIRE(normilised_insertion.get_alternative_allele_sequence() == "CCAG");
     
     // Some hard ones
     
-    auto an_unormilised_snp = a_variant_factory.make(parse_region("4:3076656-3076659", human),
-                                                     std::string {"AGC"}, std::string {"ACC"});
+    Variant an_unormilised_snp {parse_region("4:3076656-3076659", human), std::string {"AGC"}, std::string {"ACC"}, 0, 0};
     
     REQUIRE(!is_parsimonious(an_unormilised_snp));
     
-    a_normalised_snp = normalise(an_unormilised_snp, human, a_variant_factory);
+    a_normalised_snp = normalise(an_unormilised_snp, human);
     
     REQUIRE(is_parsimonious(a_normalised_mnp));
     REQUIRE(a_normalised_snp.get_region() == parse_region("4:3076657-3076658", human));
-    REQUIRE(a_normalised_snp.get_reference_allele() == "G");
-    REQUIRE(a_normalised_snp.get_alternative_allele() == "C");
+    REQUIRE(a_normalised_snp.get_reference_allele_sequence() == "G");
+    REQUIRE(a_normalised_snp.get_alternative_allele_sequence() == "C");
     
-    auto an_unormilised_mnp = a_variant_factory.make(parse_region("4:3076656-3076661", human),
-                                                     std::string {"GCAGC"}, std::string {"GGACC"});
+    Variant an_unormilised_mnp {parse_region("4:3076656-3076661", human), std::string {"GCAGC"}, std::string {"GGACC"}, 0, 0};
     
     REQUIRE(!is_parsimonious(an_unormilised_mnp));
     
-    a_normalised_mnp = normalise(an_unormilised_mnp, human, a_variant_factory);
+    a_normalised_mnp = normalise(an_unormilised_mnp, human);
     
     REQUIRE(is_parsimonious(a_normalised_mnp));
     REQUIRE(a_normalised_mnp.get_region() == parse_region("4:3076657-3076660", human));
-    REQUIRE(a_normalised_mnp.get_reference_allele() == "CAG");
-    REQUIRE(a_normalised_mnp.get_alternative_allele() == "GAC");
+    REQUIRE(a_normalised_mnp.get_reference_allele_sequence() == "CAG");
+    REQUIRE(a_normalised_mnp.get_alternative_allele_sequence() == "GAC");
     
-    auto an_unnormilised_deletion = a_variant_factory.make(parse_region("4:3076655-3076660", human),
-                                                          std::string {"AGCAG"}, std::string {"AG"});
+    Variant an_unnormilised_deletion {parse_region("4:3076655-3076660", human), std::string {"AGCAG"}, std::string {"AG"}, 0, 0};
     
     REQUIRE(!is_parsimonious(an_unnormilised_deletion));
     
-    auto a_normalised_deletion = normalise(an_unnormilised_deletion, human, a_variant_factory);
+    auto a_normalised_deletion = normalise(an_unnormilised_deletion, human);
     
     REQUIRE(is_parsimonious(a_normalised_deletion));
     REQUIRE(a_normalised_deletion.get_region() ==
             parse_region("4:3076602-3076606", human));
-    REQUIRE(a_normalised_deletion.get_reference_allele() == "CCAG");
-    REQUIRE(a_normalised_deletion.get_alternative_allele() == "C");
+    REQUIRE(a_normalised_deletion.get_reference_allele_sequence() == "CCAG");
+    REQUIRE(a_normalised_deletion.get_alternative_allele_sequence() == "C");
     
-    auto an_unnormilised_insertion = a_variant_factory.make(parse_region("4:3076655-3076657", human),
-                                                          std::string {"AG"}, std::string {"AGCAG"});
+    Variant an_unnormilised_insertion {parse_region("4:3076655-3076657", human),
+                                    std::string {"AG"}, std::string {"AGCAG"}, 0, 0};
     
     REQUIRE(!is_parsimonious(an_unnormilised_insertion));
     
-    auto a_normalised_insertion = normalise(an_unnormilised_insertion, human, a_variant_factory);
+    auto a_normalised_insertion = normalise(an_unnormilised_insertion, human);
     
     REQUIRE(is_parsimonious(a_normalised_insertion));
     REQUIRE(a_normalised_insertion.get_region() ==
             parse_region("4:3076602-3076603", human));
-    REQUIRE(a_normalised_insertion.get_reference_allele() == "C");
-    REQUIRE(a_normalised_insertion.get_alternative_allele() == "CCAG");
+    REQUIRE(a_normalised_insertion.get_reference_allele_sequence() == "C");
+    REQUIRE(a_normalised_insertion.get_alternative_allele_sequence() == "CCAG");
 }
