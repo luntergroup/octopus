@@ -18,6 +18,7 @@
 #include "htslib_read_facade.h"
 #include "read_manager.h"
 #include "mock_objects.h"
+#include "region_utils.h"
 
 TEST_CASE("read_reader_open_test", "[read_reader]")
 {
@@ -59,7 +60,6 @@ TEST_CASE("read_manager_single_file_test", "[read_manager]")
     REQUIRE(a_read_manager.get_num_samples() == 1);
     
     auto sample_ids = a_read_manager.get_sample_ids();
-    
     auto the_sample_id = sample_ids.at(0);
     
     GenomicRegion a_big_region {"1", 9990, 10000};
@@ -187,4 +187,63 @@ TEST_CASE("read_copy_test", "[reads]")
     REQUIRE(a_copied_read.is_chimeric());
     REQUIRE(a_copied_read.get_next_segment()->get_inferred_template_length() == 30);
     REQUIRE(a_moved_read == a_copied_read);
+}
+
+TEST_CASE("read_overlap_test", "[reads]")
+{
+    ReadManager a_read_manager(std::vector<std::string> {human_1000g_bam1});
+    
+    GenomicRegion a_region {"4", 93235280, 93235585};
+    
+    auto sample_ids = a_read_manager.get_sample_ids();
+    auto the_sample_id = sample_ids.at(0);
+    
+    auto reads = a_read_manager.fetch_reads(the_sample_id, a_region);
+    
+    REQUIRE(reads.size() == 9);
+    
+    std::sort(reads.begin(), reads.end());
+    
+    GenomicRegion sub_region1 {"4", 93235300, 93235345};
+    GenomicRegion sub_region2 {"4", 93235390, 93235445};
+    GenomicRegion sub_region3 {"4", 93235445, 93235490};
+    GenomicRegion sub_region4 {"4", 93235475, 93235490};
+    GenomicRegion sub_region5 {"4", 93235500, 93235515};
+    GenomicRegion sub_region6 {"4", 93235575, 93235580};
+    
+    auto reads_in_sub_region1 = overlap_range(reads.cbegin(), reads.cend(), sub_region1);
+    auto reads_in_sub_region2 = overlap_range(reads.cbegin(), reads.cend(), sub_region2);
+    auto reads_in_sub_region3 = overlap_range(reads.cbegin(), reads.cend(), sub_region3);
+    auto reads_in_sub_region4 = overlap_range(reads.cbegin(), reads.cend(), sub_region4);
+    auto reads_in_sub_region5 = overlap_range(reads.cbegin(), reads.cend(), sub_region5);
+    auto reads_in_sub_region6 = overlap_range(reads.cbegin(), reads.cend(), sub_region6);
+    
+    REQUIRE(std::distance(reads_in_sub_region1.first, reads_in_sub_region1.second) == 3);
+    REQUIRE(std::distance(reads_in_sub_region2.first, reads_in_sub_region2.second) == 2);
+    REQUIRE(std::distance(reads_in_sub_region3.first, reads_in_sub_region3.second) == 5);
+    REQUIRE(std::distance(reads_in_sub_region4.first, reads_in_sub_region4.second) == 4);
+    REQUIRE(std::distance(reads_in_sub_region5.first, reads_in_sub_region5.second) == 4);
+    REQUIRE(std::distance(reads_in_sub_region6.first, reads_in_sub_region5.second) == 1);
+    
+    REQUIRE(num_shared(reads.cbegin(), reads.cend(), sub_region1, sub_region2) == 0);
+    REQUIRE(num_shared(reads.cbegin(), reads.cend(), sub_region2, sub_region3) == 2);
+    REQUIRE(num_shared(reads.cbegin(), reads.cend(), sub_region2, sub_region4) == 1);
+    REQUIRE(num_shared(reads.cbegin(), reads.cend(), sub_region2, sub_region5) == 0);
+    REQUIRE(num_shared(reads.cbegin(), reads.cend(), sub_region3, sub_region4) == 4);
+    REQUIRE(num_shared(reads.cbegin(), reads.cend(), sub_region2, sub_region5) == 0);
+    REQUIRE(num_shared(reads.cbegin(), reads.cend(), sub_region3, sub_region5) == 3);
+    REQUIRE(num_shared(reads.cbegin(), reads.cend(), sub_region4, sub_region5) == 3);
+    REQUIRE(num_shared(reads.cbegin(), reads.cend(), sub_region4, sub_region6) == 0);
+    REQUIRE(num_shared(reads.cbegin(), reads.cend(), sub_region5, sub_region6) == 1);
+    
+    REQUIRE(!has_shared(reads.cbegin(), reads.cend(), sub_region1, sub_region2));
+    REQUIRE(has_shared(reads.cbegin(), reads.cend(), sub_region2, sub_region3));
+    REQUIRE(has_shared(reads.cbegin(), reads.cend(), sub_region2, sub_region4));
+    REQUIRE(!has_shared(reads.cbegin(), reads.cend(), sub_region2, sub_region5));
+    REQUIRE(has_shared(reads.cbegin(), reads.cend(), sub_region3, sub_region4));
+    REQUIRE(!has_shared(reads.cbegin(), reads.cend(), sub_region2, sub_region5));
+    REQUIRE(has_shared(reads.cbegin(), reads.cend(), sub_region3, sub_region5));
+    REQUIRE(has_shared(reads.cbegin(), reads.cend(), sub_region4, sub_region5));
+    REQUIRE(!has_shared(reads.cbegin(), reads.cend(), sub_region4, sub_region6));
+    REQUIRE(has_shared(reads.cbegin(), reads.cend(), sub_region5, sub_region6));
 }

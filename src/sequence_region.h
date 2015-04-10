@@ -64,22 +64,6 @@ inline SequenceRegion::SizeType size(const SequenceRegion& a_region) noexcept
     return a_region.get_end() - a_region.get_begin();
 }
 
-inline SequenceRegion::DifferenceType overlap_size(const SequenceRegion& lhs, const SequenceRegion& rhs) noexcept
-{
-    return static_cast<SequenceRegion::DifferenceType>(std::min(lhs.get_end(), rhs.get_end())) -
-            static_cast<SequenceRegion::DifferenceType>(std::max(lhs.get_begin(), rhs.get_begin()));
-}
-
-inline bool overlaps(const SequenceRegion& lhs, const SequenceRegion& rhs) noexcept
-{
-    return overlap_size(lhs, rhs) > 0;
-}
-
-inline bool contains(const SequenceRegion& lhs, const SequenceRegion& rhs) noexcept
-{
-    return lhs.get_begin() <= rhs.get_begin() && rhs.get_end() <= lhs.get_end();
-}
-
 inline bool begins_before(const SequenceRegion& lhs, const SequenceRegion& rhs) noexcept
 {
     return lhs.get_begin() < rhs.get_begin();
@@ -98,6 +82,32 @@ inline bool operator==(const SequenceRegion& lhs, const SequenceRegion& rhs) noe
 inline bool operator<(const SequenceRegion& lhs, const SequenceRegion& rhs) noexcept
 {
     return (lhs.get_begin() == rhs.get_begin()) ? ends_before(lhs, rhs) : begins_before(lhs, rhs);
+}
+
+inline bool is_before(const SequenceRegion& lhs, const SequenceRegion& rhs) noexcept
+{
+    return lhs.get_end() < rhs.get_begin();
+}
+
+inline bool is_after(const SequenceRegion& lhs, const SequenceRegion& rhs) noexcept
+{
+    return lhs.get_begin() > rhs.get_end();
+}
+
+inline SequenceRegion::DifferenceType overlap_size(const SequenceRegion& lhs, const SequenceRegion& rhs) noexcept
+{
+    return static_cast<SequenceRegion::DifferenceType>(std::min(lhs.get_end(), rhs.get_end())) -
+    static_cast<SequenceRegion::DifferenceType>(std::max(lhs.get_begin(), rhs.get_begin()));
+}
+
+inline bool overlaps(const SequenceRegion& lhs, const SequenceRegion& rhs) noexcept
+{
+    return overlap_size(lhs, rhs) > 0;
+}
+
+inline bool contains(const SequenceRegion& lhs, const SequenceRegion& rhs) noexcept
+{
+    return lhs.get_begin() <= rhs.get_begin() && rhs.get_end() <= lhs.get_end();
 }
 
 inline SequenceRegion get_left_overhang(const SequenceRegion& lhs, const SequenceRegion& rhs) noexcept

@@ -17,11 +17,12 @@
 
 #include "genomic_region.h"
 #include "comparable.h"
+#include "mappable.h"
 
 using std::uint_fast32_t;
 using std::size_t;
 
-class Variant : public Comparable<Variant>
+class Variant : public Comparable<Variant>, public Mappable<Variant>
 {
 public:
     using SizeType     = GenomicRegion::SizeType;
@@ -43,7 +44,7 @@ public:
     Variant(Variant&&)                 = default;
     Variant& operator=(Variant&&)      = default;
     
-    const GenomicRegion& get_reference_allele_region() const noexcept;
+    const GenomicRegion& get_region() const noexcept;
     const SequenceType& get_reference_allele() const noexcept;
     const SequenceType& get_alternative_allele() const noexcept;
     void set_segregation_probability(double p) noexcept;
@@ -81,7 +82,7 @@ the_alternative_allele_ {std::forward<StringType3>(the_alternative_allele)},
 the_segregation_probability_ {the_segregation_probability}
 {}
 
-inline const GenomicRegion& Variant::get_reference_allele_region() const noexcept
+inline const GenomicRegion& Variant::get_region() const noexcept
 {
     return the_reference_allele_region_;
 }
@@ -106,14 +107,9 @@ inline double Variant::get_segregation_probability() const noexcept
     return the_segregation_probability_;
 }
 
-inline bool overlaps(const Variant& lhs, const Variant& rhs) noexcept
-{
-    return overlaps(lhs.get_reference_allele_region(), rhs.get_reference_allele_region());
-}
-
 inline Variant::SizeType reference_allele_size(const Variant& a_variant) noexcept
 {
-    return size(a_variant.get_reference_allele_region());
+    return size(a_variant.get_region());
 }
 
 inline Variant::SizeType alternative_allele_size(const Variant& a_variant) noexcept
@@ -123,22 +119,22 @@ inline Variant::SizeType alternative_allele_size(const Variant& a_variant) noexc
 
 inline GenomicRegion::StringType reference_contig_name(const Variant& a_variant)
 {
-    return a_variant.get_reference_allele_region().get_contig_name();
+    return a_variant.get_region().get_contig_name();
 }
 
 inline GenomicRegion::SizeType reference_allele_begin(const Variant& a_variant)
 {
-    return a_variant.get_reference_allele_region().get_begin();
+    return a_variant.get_region().get_begin();
 }
 
 inline GenomicRegion::SizeType reference_allele_end(const Variant& a_variant)
 {
-    return a_variant.get_reference_allele_region().get_end();
+    return a_variant.get_region().get_end();
 }
 
 inline bool operator==(const Variant& lhs, const Variant& rhs)
 {
-    return lhs.get_reference_allele_region() == rhs.get_reference_allele_region() &&
+    return lhs.get_region() == rhs.get_region() &&
            lhs.get_reference_allele() == rhs.get_reference_allele() &&
            lhs.get_alternative_allele() == rhs.get_alternative_allele();
 }
@@ -146,11 +142,11 @@ inline bool operator==(const Variant& lhs, const Variant& rhs)
 inline bool operator<(const Variant& lhs, const Variant& rhs)
 {
     // This check is required for consistency with operator==
-    if (lhs.get_reference_allele_region() == rhs.get_reference_allele_region()) {
+    if (lhs.get_region() == rhs.get_region()) {
         return (lhs.get_reference_allele() < rhs.get_reference_allele()) ? true :
                             lhs.get_alternative_allele() < rhs.get_alternative_allele();
     } else {
-        return lhs.get_reference_allele_region() < rhs.get_reference_allele_region();
+        return lhs.get_region() < rhs.get_region();
     }
 }
 
@@ -159,14 +155,14 @@ namespace std {
     {
         size_t operator()(const Variant& v) const
         {
-            return hash<GenomicRegion>()(v.get_reference_allele_region());
+            return hash<GenomicRegion>()(v.get_region());
         }
     };
 }
 
 inline std::ostream& operator<<(std::ostream& os, const Variant& a_variant)
 {
-    os << a_variant.get_reference_allele_region() << " " << a_variant.get_reference_allele() << " " <<
+    os << a_variant.get_region() << " " << a_variant.get_reference_allele() << " " <<
         a_variant.get_alternative_allele();
     return os;
 }

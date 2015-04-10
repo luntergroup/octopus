@@ -21,8 +21,9 @@
 #include "genomic_region.h"
 #include "cigar_string.h"
 #include "comparable.h"
+#include "mappable.h"
 
-class AlignedRead : public Comparable<AlignedRead>
+class AlignedRead : public Comparable<AlignedRead>, public Mappable<AlignedRead>
 {
 public:
     using SizeType     = GenomicRegion::SizeType;

@@ -48,6 +48,22 @@ private:
     SequenceRegion contig_region_;
 };
 
+class RegionError : std::runtime_error {
+public:
+    RegionError(GenomicRegion::StringType first, GenomicRegion::StringType second)
+    :
+    runtime_error {"Cannot compare regions on different contigs"},
+    first_ {first}, second_ {second} {}
+    
+    const char* what() const noexcept
+    {
+        return (std::string{runtime_error::what()} + ": " + first_ + " & " + second_).c_str();
+    }
+    
+private:
+    GenomicRegion::StringType first_, second_;
+};
+
 template <typename T>
 GenomicRegion::GenomicRegion(T&& contig_name, SizeType begin, SizeType end)
 :contig_name_ {std::forward<T>(contig_name)},
@@ -79,9 +95,50 @@ inline GenomicRegion::SizeType size(const GenomicRegion& a_region) noexcept
     return size(a_region.get_contig_region());
 }
 
+inline std::string to_string(const GenomicRegion& a_region)
+{
+    return a_region.get_contig_name() + ':' + std::to_string(a_region.get_begin()) + '-'
+    + std::to_string(a_region.get_end());
+}
+
 inline bool is_same_contig(const GenomicRegion& lhs, const GenomicRegion& rhs) noexcept
 {
     return lhs.get_contig_name() == rhs.get_contig_name();
+}
+
+inline bool begins_before(const GenomicRegion& lhs, const GenomicRegion& rhs)
+{
+    if (is_same_contig(lhs, rhs)) return begins_before(lhs.get_contig_region(), rhs.get_contig_region());
+    throw RegionError(to_string(lhs), to_string(rhs));
+}
+
+inline bool ends_before(const GenomicRegion& lhs, const GenomicRegion& rhs)
+{
+    if (is_same_contig(lhs, rhs)) return ends_before(lhs.get_contig_region(), rhs.get_contig_region());
+    throw RegionError(to_string(lhs), to_string(rhs));
+}
+
+inline bool operator==(const GenomicRegion& lhs, const GenomicRegion& rhs) noexcept
+{
+    return is_same_contig(lhs, rhs) && lhs.get_contig_region() == rhs.get_contig_region();
+}
+
+inline bool operator<(const GenomicRegion& lhs, const GenomicRegion& rhs)
+{
+    if (is_same_contig(lhs, rhs)) return lhs.get_contig_region() < rhs.get_contig_region();
+    throw RegionError(to_string(lhs), to_string(rhs));
+}
+
+inline bool is_before(const GenomicRegion& lhs, const GenomicRegion& rhs) noexcept
+{
+    if (is_same_contig(lhs, rhs)) return is_before(lhs.get_contig_region(), rhs.get_contig_region());
+    throw RegionError(to_string(lhs), to_string(rhs));
+}
+
+inline bool is_after(const GenomicRegion& lhs, const GenomicRegion& rhs) noexcept
+{
+    if (is_same_contig(lhs, rhs)) return is_after(lhs.get_contig_region(), rhs.get_contig_region());
+    throw RegionError(to_string(lhs), to_string(rhs));
 }
 
 inline GenomicRegion::DifferenceType overlap_size(const GenomicRegion& lhs, const GenomicRegion& rhs) noexcept
@@ -101,40 +158,7 @@ inline bool are_adjacent(const GenomicRegion& lhs, const GenomicRegion& rhs) noe
 
 inline bool contains(const GenomicRegion& lhs, const GenomicRegion& rhs) noexcept
 {
-    return is_same_contig(lhs, rhs) &&
-            contains(lhs.get_contig_region(), rhs.get_contig_region());
-}
-
-inline std::string to_string(const GenomicRegion& a_region)
-{
-    return a_region.get_contig_name() + ':' + std::to_string(a_region.get_begin()) + '-'
-    + std::to_string(a_region.get_end());
-}
-
-inline bool begins_before(const GenomicRegion& lhs, const GenomicRegion& rhs)
-{
-    if (is_same_contig(lhs, rhs)) return begins_before(lhs.get_contig_region(), rhs.get_contig_region());
-    throw std::runtime_error {"Cannot compare regions on different contigs: "  + to_string(lhs) +
-            " & " + to_string(rhs)};
-}
-
-inline bool ends_before(const GenomicRegion& lhs, const GenomicRegion& rhs)
-{
-    if (is_same_contig(lhs, rhs)) return ends_before(lhs.get_contig_region(), rhs.get_contig_region());
-    throw std::runtime_error {"Cannot compare regions on different contigs: "  + to_string(lhs) +
-            " & " + to_string(rhs)};
-}
-
-inline bool operator==(const GenomicRegion& lhs, const GenomicRegion& rhs) noexcept
-{
-    return is_same_contig(lhs, rhs) && lhs.get_contig_region() == rhs.get_contig_region();
-}
-
-inline bool operator<(const GenomicRegion& lhs, const GenomicRegion& rhs)
-{
-    if (is_same_contig(lhs, rhs)) return lhs.get_contig_region() < rhs.get_contig_region();
-    throw std::runtime_error {"Cannot compare regions on different contigs: "  + to_string(lhs) +
-        " & " + to_string(rhs)};
+    return is_same_contig(lhs, rhs) && contains(lhs.get_contig_region(), rhs.get_contig_region());
 }
 
 inline GenomicRegion shift(const GenomicRegion& a_region, GenomicRegion::DifferenceType n)
@@ -169,8 +193,7 @@ inline GenomicRegion get_left_overhang(const GenomicRegion& lhs, const GenomicRe
         auto sequence_region = get_left_overhang(lhs.get_contig_region(), rhs.get_contig_region());
         return GenomicRegion {lhs.get_contig_name(), sequence_region.get_begin(), sequence_region.get_end()};
     }
-    throw std::runtime_error {"Cannot compare regions on different contigs: "  + to_string(lhs) +
-        " & " + to_string(rhs)};
+    throw RegionError(to_string(lhs), to_string(rhs));
 }
 
 inline GenomicRegion get_right_overhang(const GenomicRegion& lhs, const GenomicRegion& rhs)
@@ -179,8 +202,7 @@ inline GenomicRegion get_right_overhang(const GenomicRegion& lhs, const GenomicR
         auto sequence_region = get_right_overhang(lhs.get_contig_region(), rhs.get_contig_region());
         return GenomicRegion {lhs.get_contig_name(), sequence_region.get_begin(), sequence_region.get_end()};
     }
-    throw std::runtime_error {"Cannot compare regions on different contigs: "  + to_string(lhs) +
-        " & " + to_string(rhs)};
+    throw RegionError(to_string(lhs), to_string(rhs));
 }
 
 namespace std {

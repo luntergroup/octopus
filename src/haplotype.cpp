@@ -194,15 +194,15 @@ bool operator<(const Haplotype::Allele& lhs, const GenomicRegion& rhs)
 
 void add_to_back(const Variant& a_variant, Haplotype& a_haplotype)
 {
-    a_haplotype.emplace_back(a_variant.get_reference_allele_region(), a_variant.get_alternative_allele());
+    a_haplotype.emplace_back(a_variant.get_region(), a_variant.get_alternative_allele());
 }
 
 void add_to_front(const Variant& a_variant, Haplotype& a_haplotype)
 {
-    a_haplotype.emplace_front(a_variant.get_reference_allele_region(), a_variant.get_alternative_allele());
+    a_haplotype.emplace_front(a_variant.get_region(), a_variant.get_alternative_allele());
 }
 
 bool contains(const Haplotype& a_haplotype, const Variant& a_variant)
 {
-    return a_haplotype.contains(a_variant.get_reference_allele_region(), a_variant.get_alternative_allele());
+    return a_haplotype.contains(a_variant.get_region(), a_variant.get_alternative_allele());
 }

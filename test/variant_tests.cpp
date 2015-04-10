@@ -194,7 +194,7 @@ TEST_CASE("left_alignment", "[left_alignment]")
     
     auto left_aligned_deletion = left_align(a_deletion, human, a_variant_factory);
     
-    REQUIRE(left_aligned_deletion.get_reference_allele_region() ==
+    REQUIRE(left_aligned_deletion.get_region() ==
             parse_region("4:3076603-3076606", human));
     REQUIRE(left_aligned_deletion.get_reference_allele() == "CAG");
     REQUIRE(left_aligned_deletion.get_alternative_allele() == "");
@@ -204,7 +204,7 @@ TEST_CASE("left_alignment", "[left_alignment]")
     
     auto left_aligned_insertion = left_align(an_insertion, human, a_variant_factory);
     
-    REQUIRE(left_aligned_insertion.get_reference_allele_region() ==
+    REQUIRE(left_aligned_insertion.get_region() ==
             parse_region("4:3076603-3076603", human));
     REQUIRE(left_aligned_insertion.get_reference_allele() == "");
     REQUIRE(left_aligned_insertion.get_alternative_allele() == "CAG");
@@ -220,7 +220,7 @@ TEST_CASE("left_alignment", "[left_alignment]")
     
     left_aligned_deletion = left_align(a_deletion, human, a_variant_factory);
     
-    REQUIRE(left_aligned_deletion.get_reference_allele_region() ==
+    REQUIRE(left_aligned_deletion.get_region() ==
             parse_region("5:94594949-94594952", human));
     REQUIRE(left_aligned_deletion.get_reference_allele() == "ACA");
     REQUIRE(left_aligned_deletion.get_alternative_allele() == "");
@@ -230,7 +230,7 @@ TEST_CASE("left_alignment", "[left_alignment]")
     
     left_aligned_insertion = left_align(an_insertion, human, a_variant_factory);
     
-    REQUIRE(left_aligned_insertion.get_reference_allele_region() ==
+    REQUIRE(left_aligned_insertion.get_region() ==
             parse_region("5:94594949-94594949", human));
     REQUIRE(left_aligned_insertion.get_reference_allele() == "");
     REQUIRE(left_aligned_insertion.get_alternative_allele() == "ACA");
@@ -279,7 +279,7 @@ TEST_CASE("parsimonious_test", "[parsimonious]")
     
     auto parsimonious_deletion = make_parsimonious(a_deletion, human, a_variant_factory);
     
-    REQUIRE(parsimonious_deletion.get_reference_allele_region() ==
+    REQUIRE(parsimonious_deletion.get_region() ==
             parse_region("12:10001329-10001335", human));
     REQUIRE(parsimonious_deletion.get_reference_allele() == "CGTGGA");
     REQUIRE(parsimonious_deletion.get_alternative_allele() == "C");
@@ -289,7 +289,7 @@ TEST_CASE("parsimonious_test", "[parsimonious]")
     
     auto parsimonious_insertion = make_parsimonious(an_insertion, human, a_variant_factory);
     
-    REQUIRE(parsimonious_insertion.get_reference_allele_region() ==
+    REQUIRE(parsimonious_insertion.get_region() ==
             parse_region("12:10001329-10001330", human));
     REQUIRE(parsimonious_insertion.get_reference_allele() == "C");
     REQUIRE(parsimonious_insertion.get_alternative_allele() == "CGTGGA");
@@ -356,7 +356,7 @@ TEST_CASE("normalisation_test", "[normalisation]")
     auto normilised_deletion = normalise(a_deletion, human, a_variant_factory);
     
     REQUIRE(is_parsimonious(normilised_deletion));
-    REQUIRE(normilised_deletion.get_reference_allele_region() ==
+    REQUIRE(normilised_deletion.get_region() ==
             parse_region("4:3076602-3076606", human));
     REQUIRE(normilised_deletion.get_reference_allele() == "CCAG");
     REQUIRE(normilised_deletion.get_alternative_allele() == "C");
@@ -373,7 +373,7 @@ TEST_CASE("normalisation_test", "[normalisation]")
     auto normilised_insertion = normalise(an_insertion, human, a_variant_factory);
     
     REQUIRE(is_parsimonious(normilised_insertion));
-    REQUIRE(normilised_insertion.get_reference_allele_region() ==
+    REQUIRE(normilised_insertion.get_region() ==
             parse_region("4:3076602-3076603", human));
     REQUIRE(normilised_insertion.get_reference_allele() == "C");
     REQUIRE(normilised_insertion.get_alternative_allele() == "CCAG");
@@ -388,7 +388,7 @@ TEST_CASE("normalisation_test", "[normalisation]")
     a_normalised_snp = normalise(an_unormilised_snp, human, a_variant_factory);
     
     REQUIRE(is_parsimonious(a_normalised_mnp));
-    REQUIRE(a_normalised_snp.get_reference_allele_region() == parse_region("4:3076657-3076658", human));
+    REQUIRE(a_normalised_snp.get_region() == parse_region("4:3076657-3076658", human));
     REQUIRE(a_normalised_snp.get_reference_allele() == "G");
     REQUIRE(a_normalised_snp.get_alternative_allele() == "C");
     
@@ -400,7 +400,7 @@ TEST_CASE("normalisation_test", "[normalisation]")
     a_normalised_mnp = normalise(an_unormilised_mnp, human, a_variant_factory);
     
     REQUIRE(is_parsimonious(a_normalised_mnp));
-    REQUIRE(a_normalised_mnp.get_reference_allele_region() == parse_region("4:3076657-3076660", human));
+    REQUIRE(a_normalised_mnp.get_region() == parse_region("4:3076657-3076660", human));
     REQUIRE(a_normalised_mnp.get_reference_allele() == "CAG");
     REQUIRE(a_normalised_mnp.get_alternative_allele() == "GAC");
     
@@ -412,7 +412,7 @@ TEST_CASE("normalisation_test", "[normalisation]")
     auto a_normalised_deletion = normalise(an_unnormilised_deletion, human, a_variant_factory);
     
     REQUIRE(is_parsimonious(a_normalised_deletion));
-    REQUIRE(a_normalised_deletion.get_reference_allele_region() ==
+    REQUIRE(a_normalised_deletion.get_region() ==
             parse_region("4:3076602-3076606", human));
     REQUIRE(a_normalised_deletion.get_reference_allele() == "CCAG");
     REQUIRE(a_normalised_deletion.get_alternative_allele() == "C");
@@ -425,7 +425,7 @@ TEST_CASE("normalisation_test", "[normalisation]")
     auto a_normalised_insertion = normalise(an_unnormilised_insertion, human, a_variant_factory);
     
     REQUIRE(is_parsimonious(a_normalised_insertion));
-    REQUIRE(a_normalised_insertion.get_reference_allele_region() ==
+    REQUIRE(a_normalised_insertion.get_region() ==
             parse_region("4:3076602-3076603", human));
     REQUIRE(a_normalised_insertion.get_reference_allele() == "C");
     REQUIRE(a_normalised_insertion.get_alternative_allele() == "CCAG");

@@ -12,7 +12,6 @@
 #include <list>
 
 #include "reference_genome.h"
-#include "genomic_region.h"
 #include "variant_factory.h"
 #include "variant_candidate_generator.h"
 
@@ -87,7 +86,7 @@ Variant make_parsimonious(const Variant& a_variant, ReferenceGenome& the_referen
     const auto& the_small_allele = alleles.first;
     const auto& the_big_allele   = alleles.second;
     
-    const auto& old_ref_region = a_variant.get_reference_allele_region();
+    const auto& old_ref_region = a_variant.get_region();
     
     if (the_small_allele.size() == 0) {
         if (old_ref_region.get_begin() > 0) {
@@ -204,7 +203,7 @@ Variant left_align(const Variant& a_variant, ReferenceGenome& the_reference,
     auto big_allele_size   = static_cast<SizeType>(big_allele.size());
     auto small_allele_size = static_cast<SizeType>(small_allele.size());
     
-    GenomicRegion current_region {a_variant.get_reference_allele_region()};
+    GenomicRegion current_region {a_variant.get_region()};
     
     do {
         if (current_region.get_begin() >= extension_size) {

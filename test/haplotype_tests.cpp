@@ -191,12 +191,12 @@ TEST_CASE("haplotype_variant_containment_test", "[haplotype]")
     REQUIRE(contains(haplotype_unbounded, variant_5));
     REQUIRE(contains(haplotype_unbounded, variant_6));
     
-    REQUIRE(!haplotype_unbounded.contains(variant_1.get_reference_allele_region(), variant_1.get_reference_allele()));
-    REQUIRE(!haplotype_unbounded.contains(variant_2.get_reference_allele_region(), variant_2.get_reference_allele()));
-    REQUIRE(!haplotype_unbounded.contains(variant_3.get_reference_allele_region(), variant_3.get_reference_allele()));
-    REQUIRE(!haplotype_unbounded.contains(variant_4.get_reference_allele_region(), variant_4.get_reference_allele()));
-    REQUIRE(!haplotype_unbounded.contains(variant_5.get_reference_allele_region(), variant_5.get_reference_allele()));
-    REQUIRE(!haplotype_unbounded.contains(variant_6.get_reference_allele_region(), variant_6.get_reference_allele()));
+    REQUIRE(!haplotype_unbounded.contains(variant_1.get_region(), variant_1.get_reference_allele()));
+    REQUIRE(!haplotype_unbounded.contains(variant_2.get_region(), variant_2.get_reference_allele()));
+    REQUIRE(!haplotype_unbounded.contains(variant_3.get_region(), variant_3.get_reference_allele()));
+    REQUIRE(!haplotype_unbounded.contains(variant_4.get_region(), variant_4.get_reference_allele()));
+    REQUIRE(!haplotype_unbounded.contains(variant_5.get_region(), variant_5.get_reference_allele()));
+    REQUIRE(!haplotype_unbounded.contains(variant_6.get_region(), variant_6.get_reference_allele()));
     
     REQUIRE(!contains(haplotype_unbounded, false_variant_1));
     REQUIRE(!contains(haplotype_unbounded, false_variant_2));
@@ -227,12 +227,12 @@ TEST_CASE("haplotype_variant_containment_test", "[haplotype]")
     REQUIRE(contains(haplotype_bounded, variant_5));
     REQUIRE(contains(haplotype_bounded, variant_6));
     
-    REQUIRE(!haplotype_bounded.contains(variant_1.get_reference_allele_region(), variant_1.get_reference_allele()));
-    REQUIRE(!haplotype_bounded.contains(variant_2.get_reference_allele_region(), variant_2.get_reference_allele()));
-    REQUIRE(!haplotype_bounded.contains(variant_3.get_reference_allele_region(), variant_3.get_reference_allele()));
-    REQUIRE(!haplotype_bounded.contains(variant_4.get_reference_allele_region(), variant_4.get_reference_allele()));
-    REQUIRE(!haplotype_bounded.contains(variant_5.get_reference_allele_region(), variant_5.get_reference_allele()));
-    REQUIRE(!haplotype_bounded.contains(variant_6.get_reference_allele_region(), variant_6.get_reference_allele()));
+    REQUIRE(!haplotype_bounded.contains(variant_1.get_region(), variant_1.get_reference_allele()));
+    REQUIRE(!haplotype_bounded.contains(variant_2.get_region(), variant_2.get_reference_allele()));
+    REQUIRE(!haplotype_bounded.contains(variant_3.get_region(), variant_3.get_reference_allele()));
+    REQUIRE(!haplotype_bounded.contains(variant_4.get_region(), variant_4.get_reference_allele()));
+    REQUIRE(!haplotype_bounded.contains(variant_5.get_region(), variant_5.get_reference_allele()));
+    REQUIRE(!haplotype_bounded.contains(variant_6.get_region(), variant_6.get_reference_allele()));
     
     REQUIRE(!contains(haplotype_bounded, false_variant_1));
     REQUIRE(!contains(haplotype_bounded, false_variant_2));

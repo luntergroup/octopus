@@ -13,6 +13,7 @@
 #include <cstddef>   // std::size_t
 
 #include "variant.h"
+#include "genomic_region.h"
 
 class ReferenceGenome;
 class VariantFactory;

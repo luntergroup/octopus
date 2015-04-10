@@ -180,6 +180,8 @@
 		D4907F6A1A8BC06800639203 /* aligned_read.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = aligned_read.h; sourceTree = "<group>"; };
 		D4907F711A8E04B900639203 /* comparable.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = comparable.h; sourceTree = "<group>"; };
 		D4907F731A8E255200639203 /* equitable.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = equitable.h; sourceTree = "<group>"; };
+		D4E41DA11AD801EF0010D25D /* mappable.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = mappable.h; sourceTree = "<group>"; };
+		D4E41DA21AD80C1B0010D25D /* region_utils.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = region_utils.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -249,9 +251,9 @@
 			children = (
 				CA1472771AACECAF005FDCD1 /* octopus */,
 				CAFA19771AC62BEB00F953D9 /* core */,
-				D48C00B81AAA0F5300E76FC8 /* reads */,
-				CAA4DC3B1A83B64A00DD3E9A /* variants */,
 				CABA377C1A8F762200BBE598 /* assembler */,
+				CAA4DC3B1A83B64A00DD3E9A /* variants */,
+				D48C00B81AAA0F5300E76FC8 /* reads */,
 				CABA377B1A8F66E400BBE598 /* utils */,
 				D4907F421A88D6C600639203 /* io */,
 			);
@@ -372,6 +374,8 @@
 				D4907F471A88D71800639203 /* genomic_region.h */,
 				D4907F711A8E04B900639203 /* comparable.h */,
 				D4907F731A8E255200639203 /* equitable.h */,
+				D4E41DA11AD801EF0010D25D /* mappable.h */,
+				D4E41DA21AD80C1B0010D25D /* region_utils.h */,
 				CAE3E2941A9CF97700C01B2C /* storage_policies.h */,
 				CAE3E2A01AA1D39100C01B2C /* compression.h */,
 				CA1472741AACC7E2005FDCD1 /* context_back_insert_iterator.h */,

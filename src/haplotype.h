@@ -17,11 +17,12 @@
 
 #include "variant.h"
 #include "equitable.h"
+#include "mappable.h"
 
 class ReferenceGenome;
 class GenomicRegion;
 
-class Haplotype : public Equitable<Haplotype>
+class Haplotype : public Equitable<Haplotype>, public Mappable<Haplotype>
 {
 public:
     using SequenceType = Variant::SequenceType;
@@ -50,7 +51,7 @@ public:
     //void operator+=(const Haplotype& other);
     friend bool operator==(const Haplotype& lhs, const Haplotype& rhs);
 private:
-    struct Allele
+    struct Allele : public Mappable<Allele>
     {
         template <typename T>
         Allele(const GenomicRegion& the_reference_region, T&& the_sequence)
@@ -61,6 +62,8 @@ private:
         
         GenomicRegion the_reference_region;
         SequenceType the_sequence;
+        
+        GenomicRegion get_region() const { return the_reference_region; }
     };
     
     using AlleleIterator = std::deque<Allele>::const_iterator;

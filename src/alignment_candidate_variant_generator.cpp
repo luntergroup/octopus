@@ -16,6 +16,7 @@
 #include "aligned_read.h"
 #include "variant.h"
 #include "cigar_string.h"
+#include "region_utils.h"
 
 AlignmentCandidateVariantGenerator::AlignmentCandidateVariantGenerator(ReferenceGenome& the_reference,
                                                                        VariantFactory& variant_factory,
@@ -111,17 +112,9 @@ std::vector<Variant> AlignmentCandidateVariantGenerator::get_candidates(const Ge
         are_candidates_sorted_ = true;
     }
     
-    auto first = std::lower_bound(std::cbegin(candidates_), std::cend(candidates_), a_region,
-                                  [] (const auto& variant, const auto& a_region) {
-                                      return variant.get_reference_allele_region() < a_region;
-                                  });
+    auto range = overlap_range(std::cbegin(candidates_), std::cend(candidates_), a_region);
     
-    auto last = std::upper_bound(std::cbegin(candidates_), std::cend(candidates_), a_region,
-                                  [] (const auto& a_region, const auto& variant) {
-                                      return a_region.get_end() < variant.get_reference_allele_region().get_end();
-                                  });
-    
-    return std::vector<Variant> {first, last};
+    return std::vector<Variant> {range.first, range.second};
 }
 
 void AlignmentCandidateVariantGenerator::reserve(std::size_t n)
