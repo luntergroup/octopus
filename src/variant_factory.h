@@ -10,7 +10,7 @@
 #define __Octopus__variant_factory__
 
 #include "variant.h"
-#include "utils.h"
+#include "string_utils.h"
 
 class VariantFactory
 {

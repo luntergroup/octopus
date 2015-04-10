@@ -47,6 +47,7 @@ public:
     SequenceType get_sequence() const;
     SequenceType get_sequence(const GenomicRegion& a_region) const;
     
+    //void operator+=(const Haplotype& other);
     friend bool operator==(const Haplotype& lhs, const Haplotype& rhs);
 private:
     struct Allele

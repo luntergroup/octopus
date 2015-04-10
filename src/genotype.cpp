@@ -11,8 +11,6 @@
 #include <algorithm> // std::all_of, std::any_of, std::count, std::find
 #include <boost/math/special_functions/binomial.hpp>
 
-#include "utils.h"
-
 const Haplotype& Genotype::at(unsigned n) const
 {
     return the_haplotypes_.at(n);

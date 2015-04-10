@@ -50,7 +50,7 @@ public:
     double get_segregation_probability() const noexcept;
     
 private:
-    // Don't change the order of these members
+    //WARNING: Don't change the order of these members! Order required by second constructor.
     SequenceType the_reference_allele_;
     GenomicRegion the_reference_allele_region_;
     SequenceType the_alternative_allele_;

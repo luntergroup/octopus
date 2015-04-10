@@ -15,7 +15,7 @@
 #include <vector>
 #include <ostream>
 #include <algorithm> // std::copy, std::minmax, std::mismatch
-#include <ctype.h> // std::isdigit
+#include <ctype.h>   // std::isdigit
 
 #include "equitable.h"
 
@@ -74,23 +74,18 @@ inline CigarString parse_cigar_string(const std::string& a_cigar_string)
 {
     CigarString result {};
     result.reserve(a_cigar_string.size() / 2);
-    
-    auto first = a_cigar_string.cbegin();
-    auto last  = a_cigar_string.cend();
     std::string digits {};
     
-    while (first != last) {
-        if (std::isdigit(*first)) {
-            digits += *first;
+    for (char c : a_cigar_string) {
+        if (std::isdigit(c)) {
+            digits += c;
         } else {
-            result.emplace_back(std::stoi(digits), *first);
+            result.emplace_back(std::stoi(digits), c);
             digits.clear();
         }
-        ++first;
     }
     
     result.shrink_to_fit();
-    
     return result;
 }
 

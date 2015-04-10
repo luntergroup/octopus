@@ -1,13 +1,13 @@
 //
-//  utils.h
+//  string_utils.h
 //  Octopus
 //
 //  Created by Daniel Cooke on 10/02/2015.
 //  Copyright (c) 2015 Oxford University. All rights reserved.
 //
 
-#ifndef __Octopus__utils__
-#define __Octopus__utils__
+#ifndef __Octopus__string_utils__
+#define __Octopus__string_utils__
 
 #include <vector>
 #include <string>
@@ -52,14 +52,4 @@ inline std::size_t stringlen(const std::string& str)
     return str.size();
 }
 
-template <typename C>
-inline C kth_permutation(std::size_t k, C container)
-{
-    for (std::size_t j = 1; j < container.size(); ++j) {
-        std::swap(container[k % (j + 1)], container[j]);
-        k = k / (j + 1);
-    }
-    return container;
-}
-
-#endif /* defined(__Octopus__utils__) */
+#endif /* defined(__Octopus__string_utils__) */

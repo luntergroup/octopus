@@ -136,6 +136,11 @@ Haplotype::SequenceType Haplotype::get_sequence(const GenomicRegion& a_region) c
     return result;
 }
 
+//void Haplotype::operator+=(const Haplotype& other)
+//{
+//    the_haplotype_.insert(std::end(the_haplotype_), std::cbegin(other.the_haplotype_), std::cend(other.the_haplotype_));
+//}
+
 GenomicRegion Haplotype::get_region_bounded_by_alleles() const
 {
     if (the_haplotype_.empty()) throw std::runtime_error {"Cannot get region from empty allele list"};

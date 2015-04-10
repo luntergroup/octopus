@@ -22,7 +22,7 @@
 #include <boost/graph/adjacency_list.hpp>
 #include <boost/graph/depth_first_search.hpp>
 
-#include "utils.h"
+#include "string_utils.h"
 #include "hash_functions.h"
 
 #include <iostream>

@@ -25,6 +25,7 @@
 		CABA377F1A8FA11000BBE598 /* read_benchmark.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CABA377E1A8FA11000BBE598 /* read_benchmark.cpp */; };
 		CABA37821A8FA49800BBE598 /* read_manager.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CABA37801A8FA49800BBE598 /* read_manager.cpp */; };
 		CAD5EC071AD5BBEA00892816 /* genotype_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CAD5EC061AD5BBEA00892816 /* genotype_tests.cpp */; };
+		CAD5EC0A1AD6FD1E00892816 /* read_utils.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CAD5EC081AD6FD1E00892816 /* read_utils.cpp */; };
 		CAE3E2971A9D292000C01B2C /* variant_assembler.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CAE3E2951A9D292000C01B2C /* variant_assembler.cpp */; };
 		CAE3E29D1AA139A000C01B2C /* program_options.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CAE3E29B1AA139A000C01B2C /* program_options.cpp */; };
 		CAE3E29F1AA13DF500C01B2C /* libboost_program_options.a in Frameworks */ = {isa = PBXBuildFile; fileRef = CAE3E29E1AA13DF500C01B2C /* libboost_program_options.a */; };
@@ -53,7 +54,6 @@
 		D4907F4B1A88E20E00639203 /* variant_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D4907F4A1A88E20E00639203 /* variant_tests.cpp */; };
 		D4907F571A8A2A9B00639203 /* reference_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D4907F561A8A2A9B00639203 /* reference_tests.cpp */; };
 		D4907F5B1A8A374000639203 /* fasta.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D4907F591A8A374000639203 /* fasta.cpp */; };
-		D4907F5F1A8A3ADD00639203 /* utils.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D4907F5D1A8A3ADD00639203 /* utils.cpp */; };
 		D4907F651A8A6EE600639203 /* reference_genome_factory.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D4907F631A8A6EE600639203 /* reference_genome_factory.cpp */; };
 /* End PBXBuildFile section */
 
@@ -111,6 +111,8 @@
 		CABA37811A8FA49800BBE598 /* read_manager.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = read_manager.h; sourceTree = "<group>"; };
 		CAD5EC041AD2920E00892816 /* haplotype_prior_model.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = haplotype_prior_model.h; sourceTree = "<group>"; };
 		CAD5EC061AD5BBEA00892816 /* genotype_tests.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = genotype_tests.cpp; sourceTree = "<group>"; };
+		CAD5EC081AD6FD1E00892816 /* read_utils.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = read_utils.cpp; sourceTree = "<group>"; };
+		CAD5EC091AD6FD1E00892816 /* read_utils.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = read_utils.h; sourceTree = "<group>"; };
 		CAE3E2911A9A031600C01B2C /* kmer_graph.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = kmer_graph.h; sourceTree = "<group>"; };
 		CAE3E2921A9A882000C01B2C /* mock_objects.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = mock_objects.h; sourceTree = "<group>"; };
 		CAE3E2941A9CF97700C01B2C /* storage_policies.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = storage_policies.h; sourceTree = "<group>"; };
@@ -172,8 +174,7 @@
 		D4907F581A8A35EA00639203 /* reference_genome_impl.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = reference_genome_impl.h; sourceTree = "<group>"; };
 		D4907F591A8A374000639203 /* fasta.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = fasta.cpp; sourceTree = "<group>"; };
 		D4907F5A1A8A374000639203 /* fasta.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = fasta.h; sourceTree = "<group>"; };
-		D4907F5D1A8A3ADD00639203 /* utils.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = utils.cpp; sourceTree = "<group>"; };
-		D4907F5E1A8A3ADD00639203 /* utils.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = utils.h; sourceTree = "<group>"; };
+		D4907F5E1A8A3ADD00639203 /* string_utils.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = string_utils.h; sourceTree = "<group>"; };
 		D4907F631A8A6EE600639203 /* reference_genome_factory.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = reference_genome_factory.cpp; sourceTree = "<group>"; };
 		D4907F641A8A6EE600639203 /* reference_genome_factory.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = reference_genome_factory.h; sourceTree = "<group>"; };
 		D4907F6A1A8BC06800639203 /* aligned_read.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = aligned_read.h; sourceTree = "<group>"; };
@@ -374,8 +375,7 @@
 				CAE3E2941A9CF97700C01B2C /* storage_policies.h */,
 				CAE3E2A01AA1D39100C01B2C /* compression.h */,
 				CA1472741AACC7E2005FDCD1 /* context_back_insert_iterator.h */,
-				D4907F5E1A8A3ADD00639203 /* utils.h */,
-				D4907F5D1A8A3ADD00639203 /* utils.cpp */,
+				D4907F5E1A8A3ADD00639203 /* string_utils.h */,
 				CA14727D1AAE63A8005FDCD1 /* hash_functions.h */,
 				CAFA196A1AC0D0D500F953D9 /* maths.h */,
 				CAFA19691AC0D0D500F953D9 /* maths.cpp */,
@@ -440,6 +440,8 @@
 				CA28EBF61AABDEE2009F8622 /* read_transform.h */,
 				CA28EBF31AABA2FC009F8622 /* read_transformations.h */,
 				CA28EBF91AABE67B009F8622 /* read_transform_factory.h */,
+				CAD5EC091AD6FD1E00892816 /* read_utils.h */,
+				CAD5EC081AD6FD1E00892816 /* read_utils.cpp */,
 			);
 			name = reads;
 			sourceTree = "<group>";
@@ -534,7 +536,6 @@
 				CA03C1511A8C0D3D000D3494 /* htslib_read_facade.cpp in Sources */,
 				CAFA19681ABF84BE00F953D9 /* standard_genotype_model_tests.cpp in Sources */,
 				D4907F571A8A2A9B00639203 /* reference_tests.cpp in Sources */,
-				D4907F5F1A8A3ADD00639203 /* utils.cpp in Sources */,
 				CAE3E2B01AA2981E00C01B2C /* variant_candidate_generation_test.cpp in Sources */,
 				CAE3E2C01AA3D91C00C01B2C /* variant_utils.cpp in Sources */,
 				CAD5EC071AD5BBEA00892816 /* genotype_tests.cpp in Sources */,
@@ -547,6 +548,7 @@
 				CA28EBF81AABE178009F8622 /* read_transform_tests.cpp in Sources */,
 				D4907F651A8A6EE600639203 /* reference_genome_factory.cpp in Sources */,
 				CAE3E2B61AA36EA600C01B2C /* htslib_bcf_facade.cpp in Sources */,
+				CAD5EC0A1AD6FD1E00892816 /* read_utils.cpp in Sources */,
 				D42061111ACC165C00D11553 /* variational_bayes_genotype_model.cpp in Sources */,
 				CA8FACC41A96515A002760F2 /* assembler_tests.cpp in Sources */,
 				CA90C55A1ACDB95D00CBEE34 /* haplotype_tests.cpp in Sources */,

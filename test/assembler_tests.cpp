@@ -17,7 +17,6 @@
 #include "reference_genome.h"
 #include "reference_genome_factory.h"
 #include "mock_objects.h"
-#include "utils.h"
 //#include "assembler.h"
 #include "kmer_graph.h"
 #include "storage_policies.h"
