@@ -182,6 +182,7 @@
 		D4907F731A8E255200639203 /* equitable.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = equitable.h; sourceTree = "<group>"; };
 		D4E41DA11AD801EF0010D25D /* mappable.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = mappable.h; sourceTree = "<group>"; };
 		D4E41DA21AD80C1B0010D25D /* region_utils.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = region_utils.h; sourceTree = "<group>"; };
+		D4E41DA31AD81C390010D25D /* allele.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = allele.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -325,6 +326,7 @@
 		CAA4DC3B1A83B64A00DD3E9A /* variants */ = {
 			isa = PBXGroup;
 			children = (
+				D4E41DA31AD81C390010D25D /* allele.h */,
 				CAA4DC621A88238C00DD3E9A /* variant.h */,
 				CAA4DC471A841B2600DD3E9A /* variant_factory.h */,
 				CAE3E2A41AA24C5500C01B2C /* i_variant_candidate_generator.h */,

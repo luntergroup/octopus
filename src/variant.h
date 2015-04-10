@@ -11,8 +11,6 @@
 
 #include <string>
 #include <cstdint>
-#include <cstddef>
-#include <functional> // std::function
 #include <ostream>
 
 #include "genomic_region.h"
@@ -20,7 +18,6 @@
 #include "mappable.h"
 
 using std::uint_fast32_t;
-using std::size_t;
 
 class Variant : public Comparable<Variant>, public Mappable<Variant>
 {
@@ -38,6 +35,7 @@ public:
     explicit Variant(StringType1&& the_reference_contig_name, SizeType the_reference_begin,
                      StringType2&& the_reference_allele, StringType3&& the_alternative_allele,
                      double the_segregation_probability);
+    ~Variant() = default;
     
     Variant(const Variant&)            = default;
     Variant& operator=(const Variant&) = default;

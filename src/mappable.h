@@ -12,7 +12,7 @@
 #include "genomic_region.h"
 
 /**
- More template black magic. Anything that inherits from Mappableand define the get_region() method 
+ More template black magic. Anything that inherits from Mappable and define the get_region() method 
  will automatically get all the following region comparisons. This is very useful for comparing
  classes that exist on a sequence (i.e. they are mapplable).
  */
