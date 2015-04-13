@@ -96,12 +96,12 @@ inline bool operator<(const SequenceRegion& lhs, const SequenceRegion& rhs) noex
 
 inline bool is_before(const SequenceRegion& lhs, const SequenceRegion& rhs) noexcept
 {
-    return lhs.get_end() < rhs.get_begin();
+    return lhs.get_end() <= rhs.get_begin();
 }
 
 inline bool is_after(const SequenceRegion& lhs, const SequenceRegion& rhs) noexcept
 {
-    return lhs.get_begin() > rhs.get_end();
+    return  rhs.get_end() <= lhs.get_begin();
 }
 
 inline SequenceRegion::DifferenceType overlap_size(const SequenceRegion& lhs, const SequenceRegion& rhs) noexcept

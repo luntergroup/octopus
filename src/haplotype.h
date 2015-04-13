@@ -87,6 +87,13 @@ void Haplotype::emplace_front(const GenomicRegion& the_allele_region, T&& the_al
 
 inline bool operator==(const Haplotype& lhs, const Haplotype& rhs)
 {
+//    auto p = std::minmax(lhs, rhs, [] (const auto& lhs, const auto& rhs) {
+//        return lhs.the_explicit_alleles_.size() < rhs.the_explicit_alleles_.size();
+//    });
+//    return std::all_of(std::cbegin(p.second.the_explicit_alleles_), std::cend(p.second.the_explicit_alleles_),
+//                       [&p] (const auto& allele) {
+//                           return p.first.contains(allele);
+//                       });
     if (lhs.the_explicit_alleles_.size() != rhs.the_explicit_alleles_.size()) return false;
     if (lhs.get_region() != rhs.get_region()) return false;
     return std::equal(std::cbegin(lhs.the_explicit_alleles_), std::cend(lhs.the_explicit_alleles_),

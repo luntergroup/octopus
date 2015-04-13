@@ -67,7 +67,8 @@ TEST_CASE("haplotype_tree_single_sample_test", "[haplotype_tree]")
     auto sample_ids = a_read_manager.get_sample_ids();
     auto the_sample_id = sample_ids.at(0);
     
-    auto a_region = parse_region("16:78203360-78203450", human);
+    auto a_region = parse_region("12:0-10000000", human);
+    //auto a_region = parse_region("16:9300000-9300100", human);
     
     auto reads = a_read_manager.fetch_reads(the_sample_id, a_region);
     
@@ -87,13 +88,17 @@ TEST_CASE("haplotype_tree_single_sample_test", "[haplotype_tree]")
     
     HaplotypeTree haplotype_tree {human};
     
-    for (const auto& candidate : candidates) {
-        //cout << candidate << endl;
-        //haplotype_tree.extend_haplotypes(candidate);
-    }
+    std::vector<Variant> aligned_candidates {};
+    std::transform(candidates.begin(), candidates.end(),
+                      std::back_inserter(aligned_candidates),
+                      [&human] (const auto& a_variant) {
+                          return left_align(a_variant, human);
+                      });
     
-    Allele allele1 {parse_region("1:100-103", human), "AGA"};
-    Allele allele2 {parse_region("1:101-102", human), "C"};
-    
-    cout << contains(allele1, allele2) << endl;
+//    for (const auto& candidate : aligned_candidates) {
+//        auto er = overlap_range(candidates.cbegin(), candidates.cend(), candidate);
+//        if (is_deletion(candidate) && size(candidate) > 3 && std::distance(er.first, er.second) > 1) { cout << candidate << endl; }
+//        //cout << candidate << endl;
+//        //haplotype_tree.extend_haplotypes(candidate);
+//    }
 }

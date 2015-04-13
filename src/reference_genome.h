@@ -109,6 +109,7 @@ inline ReferenceGenome::SequenceType ReferenceGenome::get_sequence(const Genomic
     return the_reference_impl_->get_sequence(a_region);
 }
 
+// Requires reference access to get contig sizes for partially specified regions (e.g. "4")
 inline GenomicRegion parse_region(const std::string& a_region, const ReferenceGenome& the_reference)
 {
     const static std::regex re {"([^:]+)(?::(\\d+)-?(\\d*))?"};

@@ -242,3 +242,29 @@ TEST_CASE("haplotype_variant_containment_test", "[haplotype]")
     REQUIRE(haplotype_bounded.contains(a_reference_part3, human.get_sequence(a_reference_part3)));
     REQUIRE(haplotype_bounded.contains(reference_end_bit, human.get_sequence(reference_end_bit)));
 }
+
+TEST_CASE("haplotype_equality_test", "[haplotype]")
+{
+    ReferenceGenomeFactory a_factory {};
+    ReferenceGenome human(a_factory.make(human_reference_fasta));
+    
+    auto a_region = parse_region("16:9300000-9300100", human);
+    
+    Allele allele1 {parse_region("16:9300037-9300037", human), "TG"};
+    Allele allele2 {parse_region("16:9300037-9300051", human), ""};
+    Allele allele3 {parse_region("16:9300039-9300051", human), ""};
+    
+    Haplotype hap1 {human, a_region};
+    hap1.push_back(allele3);
+    
+    Haplotype hap2 {human, a_region};
+    hap2.push_back(allele1);
+    hap2.push_back(allele2);
+    
+    std::cout << hap1 << std::endl;
+    std::cout << hap2 << std::endl;
+    
+    //std::cout << hap2.contains(allele3) << std::endl; // CAUSES EXCEPTION!
+    
+    //REQUIRE(hap1 == hap2);
+}

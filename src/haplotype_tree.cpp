@@ -102,9 +102,9 @@ HaplotypeTree::BranchIterator HaplotypeTree::extend_haplotype(BranchIterator hap
             std::cout << "OVERLAP: " << an_allele << std::endl;
             
             Vertex previous_allele = get_previous_allele(*haplotype_branch_end);
-            while (previous_allele != the_root_ && ) {
-                <#statements#>
-            }
+//            while (previous_allele != the_root_ && ) {
+//                
+//            }
             
             if (begins_equal(the_tree_[previous_allele].the_allele, an_allele)) {
                 if (!node_has_allele_branch(previous_allele, an_allele)) {

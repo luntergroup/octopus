@@ -62,7 +62,7 @@ $\boldsymbol{g}$ & a binary variable using a $1$-of-$K$ coding scheme representi
 \end{tabular}
 \end{center}
 
-In particular $\boldsymbol{g}$ satisfies $g_k \in {0, 1}$ and $\sum_{k = 1}^{K} g_i = 1$.
+In particular $\boldsymbol{g}$ satisfies $g_k \in \{0, 1\}$ and $\sum_{k = 1}^{K} g_i = 1$.
 
 Finally I define the the function $\mu_i : \boldsymbol{g} \rightarrow \mathbb{N}$ which maps genotype binary variables to the number of occurrences of haplotype $i$ in the genotype. Alternatively, we could have defined the function maps to a multinomial variable, but I think this notation is clearer. I will sometimes abuse notation by using $\boldsymbol{g}^k$ to mean the $\boldsymbol{g}$ with the $k^{th}$ element set to $1$. Then we have the following conditions:
 
@@ -88,7 +88,7 @@ Finally I define the the function $\mu_i : \boldsymbol{g} \rightarrow \mathbb{N}
 
 \section{EM approach}
 
-Here I review the standard EM model used for genotype modelling. This presentation is actually a slight generalisation of that usually presented in the literature as it allows for any number of alleles, which are usually restricted to be biallelic.
+Here I review the standard EM model used for genotype modelling. This presentation is actually a slight generalisation of that usually given in the literature as it allows for any number of alleles, which are usually restricted to be biallelic.
 
 The marginal distribution for $\boldsymbol{g}$ is given by a multinomial distribution by assuming Hardy-Weinberg equilibrium
 
@@ -173,15 +173,13 @@ This intuitively makes sense as the mean expected number of occurrences of haplo
 
 \section{Variational Bayes}
 
-Using EM we do not get a proper probability distribution over the parameters $\boldsymbol{\pi}$, and thus it is difficult to make proper downstream inferences. The optimal solution would be to use a proper Bayesian model by introducing priors over $\boldsymbol{\pi}$ (and as we will see later, possibly also over the hyperparameters of $\boldsymbol{\pi}$).
+Using EM we do not get a probability distribution over the parameters $\boldsymbol{\pi}$, and thus it is difficult to make proper downstream inferences. The ideal solution would be to use a proper Bayesian model by introducing priors over $\boldsymbol{\pi}$ (and as we will see later, possibly also over the hyperparameters of $\boldsymbol{\pi}$). But this leads to analytical difficulties as even if we choose the conjugate prior for $\boldsymbol{\pi}$, a Dirichlet distribution, the problem is still intractable as we must integrate over a sum of Dirichlet-Multinomials. This could be solved using stochastic approximation methods, but these methods are not ideal here as they can be slow to converge, and we also introduce a non-determinism in the call set that is better avoided.
 
-This leads to analytical difficulties as even if we choose the conjugate prior for $\boldsymbol{\pi}$, a Dirichlet distribution, the problem is still intractable as we must take the expectation over a sum of Dirichlet-Multinomials. This could be solved using stochastic approximation methods, but these methods are probably not ideal here as they can be slow to converge to the true density, and we also introduce a non-determinism in the call set that is better avoided.
-
-There are another set of methods for approximating posterior distributions that do not suffer the above problems called variational Bayesian methods. The idea of these methods is to deterministically approximate the posterior distribution by enforcing a certain factorisation of the posterior distribution that necessarily introduces some independence assumptions. The factor distributions are then chosen to maximise the 'similarity' to the true posterior. While these methods are usually quick to converge, unlike stochastic methods they can never converge to the true distribution.
+There are another set of methods for approximating posterior distributions that do not suffer the above problems called variational Bayesian methods. The idea of these methods is to deterministically approximate the posterior distribution by enforcing a certain factorisation of the posterior distribution that necessarily introduces some independence assumptions. The factor distributions are then functionally optimised to maximise the 'similarity' to the true posterior. While these methods are usually quick to converge, unlike stochastic methods they can never converge to the true distribution.
 
 \subsection{Introduction to variational Bayes}
 
-Given a probability model $p(\boldsymbol{X}, \boldsymbol{Z})$ where $\boldsymbol{X}$ is observed and $\boldsymbol{Z}$ are latent, the true posterior density, $p(\boldsymbol{Z} | \boldsymbol{X})$, can be approximated with another distribution, $q(\boldsymbol{Z})$ subject to some measure of similarity. A natural choice of similarity is the Kullback–Leibler divergence
+Given a probability model $p(\boldsymbol{X}, \boldsymbol{Z})$ where $\boldsymbol{X}$ is observed and $\boldsymbol{Z}$ are latent, the true posterior density $p(\boldsymbol{Z} | \boldsymbol{X})$ can be approximated with another distribution $q(\boldsymbol{Z})$ subject to some measure of similarity. A natural choice of similarity is the Kullback–Leibler divergence
 
 \begin{equation}
 \label{eq:kl}
@@ -197,7 +195,7 @@ We now partition the latent variables $\boldsymbol{Z}$ into a set of disjoint gr
   q(\boldsymbol{Z}) = \prod_{i = 1}^M q_i(\boldsymbol{Z_i})
 \end{equation}
 
-This is the only assumption made, in particular the functional form of each $q_i$ is not constrained. The idea is then to consider each group in turn, and average over the other groups. Formally this is a problem that can be solved using calculus of variations, but it's easy to see by substituting (\ref{eq:q}) into (\ref{eq:kl}) and separating one group $\boldsymbol{Z_j}$
+This is the only assumption made, in particular the functional form of each $q_i$ is not constrained. The idea is then to optimise each group in tern, which can formally be solved using calculus of variations, but we can to see that by substituting (\ref{eq:q}) into (\ref{eq:kl}) and separating one group $\boldsymbol{Z_j}$ that
 
 \begin{align}
     \text{KL}(q\; ||\; p) &= -\int \prod_{i = 1}^M q_i \left\{ \ln p(\boldsymbol{Z} | \boldsymbol{X}) - \sum_i \ln q_i) \right\} d \boldsymbol{Z}\notag \\
@@ -212,7 +210,7 @@ Clearly the $q_j$ which minimises this quantity is when $q_j = \exp(\mathbb{E}_{
 q^*_j(\boldsymbol{Z_j}) = \mathbb{E}_{i \ne j}[\ln p(\boldsymbol{Z} | \boldsymbol{X})] + \text{const}
 \end{equation}
 
-or equvilantly
+or equvilantly if $p(\boldsymbol{X})$ is absorbed into the constant then
 
 \begin{equation}
 \label{eq:q_opt}
@@ -245,10 +243,10 @@ There are only two latent variables, so we must have a factorisation of the form
 q(\boldsymbol{G}, \boldsymbol{\pi}) = q(\boldsymbol{G})q(\boldsymbol{\pi})
 \end{equation}
 
-Using (\ref{eq:q_opt}) we find that
+Using (\ref{eq:q_opt}) we find the optimal densities for $\boldsymbol{G}$
 
 \begin{align}
-    \ln q^*(G) &= \mathbb{E}_{\boldsymbol{\pi}}[\ln p(\boldsymbol{X}, \boldsymbol{G}, \boldsymbol{\pi})] + \text{const}\notag\\
+    \ln q^*(\boldsymbol{G}) &= \mathbb{E}_{\boldsymbol{\pi}}[\ln p(\boldsymbol{X}, \boldsymbol{G}, \boldsymbol{\pi})] + \text{const}\notag\\
     &= \mathbb{E}_{\boldsymbol{\pi}}[\ln p(\boldsymbol{G} | \boldsymbol{\pi})] + \mathbb{E}_{\boldsymbol{\pi}}[p(\boldsymbol{X} | \boldsymbol{G})] + \text{const} \notag\\
     &= \mathbb{E}_{\boldsymbol{\pi}}\left[ \sum_{n = 1}^N \sum_{k = 1}^K g_{nk} \left\{ \ln C(\boldsymbol{g}^k) + \sum_{i = 1}^H \mu_i(\boldsymbol{g}^k) \ln \pi_i \right\} \right] \notag\\ &\phantom{{}=1} + \mathbb{E}_{\boldsymbol{\pi}}\left[ \sum_{n = 1}^N \sum_{k = 1}^K g_{nk} \left\{ \sum_{i = 1}^{r_n} \ln \sum_{h \in \boldsymbol{g}^k} p(x_{ni} | h) - r_n \ln M \right\} \right] + \text{const}\notag\\
     &= \sum_{n = 1}^N \sum_{k = 1}^K g_{nk} \left\{ \ln C(\boldsymbol{g}^k) + \sum_{i = 1}^H \mu_i(\boldsymbol{g}^k) \mathbb{E}_{\boldsymbol{\pi}}[\ln \pi_i] + \sum_{i = 1}^{r_n} \ln \sum_{h \in \boldsymbol{g}^k} p(x_{ni} | h) - r_n \ln M \right\} + \text{const}\notag\\
@@ -264,7 +262,7 @@ where we have defined
     &= \ln C(\boldsymbol{g}^k) + \sum_{i = 1}^H \mu_i(\boldsymbol{g}^k) \psi(\alpha_i) - M\psi(\alpha_0) + \sum_{i = 1}^{r_n} \ln \sum_{h \in \boldsymbol{g}^k} p(x_{ni} | h) - r_n \ln M
 \end{align}
 
-where $\phi$ is the digamma function, $\alpha_0 = \sum_{i = 1}^H \alpha_i$, and $C(\boldsymbol{g}^k)$ is the multinomial coefficient. Hence we find the optimal density for $\boldsymbol{G}$ is given by
+where $\psi$ is the digamma function, $\alpha_0 = \sum_{i = 1}^H \alpha_i$, and $C(\boldsymbol{g}^k)$ is the multinomial coefficient. Hence we find the optimal density for $\boldsymbol{G}$ is given by
 
 \begin{equation}
 q^*(\boldsymbol{G}) = \prod_{n = 1}^N \prod_{k = 1}^K \tau_{nk}^{g_{nk}}
@@ -313,7 +311,7 @@ How should we set the haplotype pseudocounts that determine the haplotype priors
 
 \subsubsection{Candidate generation \& priors}
 
-A general way to proceed is to leverge all information we may have about the alleles before we examine the alignments. Strictly speaking we should not let the data influence our priors, but this is clearly infeasable as we would then have to assign every possible allele some positive probability. We get around this by allowing examination of the data to generate candidates - which has the affect of assigning most possible alleles probability zero - but require the priors be data-conditionally independent. This means that the prior of one candidate cannot be influenced by the generation of another candidate from the same source, note this does not mean different candidates cannot be given different priors. The reason for this is to minimise the affect of the data on our priors while allowing the general properties of the candidate generator to be included.
+A general way to proceed is to leverge all information we may have about the alleles before we examine the alignments. Strictly speaking we should not let the data influence our priors, but this is clearly infeasable as we would then have to assign every possible allele some nonzero probability. We get around this by allowing examination of the data to generate candidates - which has the affect of assigning most possible alleles probability zero - but require the priors be data-conditionally independent. This means that the prior of one candidate cannot be influenced by the generation of another candidate from the same source, note this does not mean different candidates cannot be given different priors. The reason for this is to minimise the affect of the data on our priors while allowing the general properties of the candidate generator to be included.
 
 \subsubsection{Haplotype priors from allele priors}
 
@@ -456,7 +454,7 @@ Similarly we find the probability of an allele appearing in a sample using the p
 
 Firstly, we should distinguish between variant calls and genotype calls; we will usually want only one genotype call but may wish to be sensitive to variants. To this end, we should treat genotype calls and variant calls separately.
 
-In either case, the obvious approach is to make calls with the largest posterior probability. However, this may not always be the best approach. For example, if we are seeking deleterious mutations from a reference, then we might want to increase sensitivity at the expense of specificity. In this case it is not always optimal to call the genotype/allele with the largest posterior, instead we should specify some loss function, and call the genotype/allele that minimises the expected loss under the posterior distributions.
+In either case, the obvious approach is to make calls with the largest posterior probability. However, this may not always be the best approach. For example, if we are seeking deleterious mutations from a reference, then we might want to increase sensitivity at the expense of specificity. In this case it is not always optimal to call the genotype/allele with the largest posterior. Instead we should specify some loss function, and call the genotype/allele that minimises the expected loss under the posterior distributions.
 
 There are many possible loss functions we could define, but the simplest is probably that which splits alleles/genotypes into classes 'reference', and 'alternative', and then determines the loss of misclassification. This can be expressed in a matrix of the form
 

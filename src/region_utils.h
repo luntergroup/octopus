@@ -38,8 +38,8 @@ inline std::pair<ForwardIterator, ForwardIterator> overlap_range(ForwardIterator
  Requires [first, last) is sorted w.r.t GenomicRegion::operator<
  */
 template <typename ForwardIterator>
-std::size_t num_shared(ForwardIterator first, ForwardIterator last,
-                       const GenomicRegion& lhs, const GenomicRegion& rhs)
+std::size_t count_shared(ForwardIterator first, ForwardIterator last,
+                         const GenomicRegion& lhs, const GenomicRegion& rhs)
 {
     auto lhs_overlap_range = overlap_range(first, last, lhs);
     auto rhs_overlap_range = overlap_range(first, last, lhs);
@@ -92,7 +92,7 @@ template <typename ForwardIterator, typename T>
 std::size_t num_shared(ForwardIterator first, ForwardIterator last,
                        const Mappable<T>& lhs, const Mappable<T>& rhs)
 {
-    return num_shared(first, last, static_cast<const T&>(lhs).get_region(), static_cast<const T&>(rhs).get_region());
+    return count_shared(first, last, static_cast<const T&>(lhs).get_region(), static_cast<const T&>(rhs).get_region());
 }
 
 template <typename ForwardIterator, typename T>

@@ -225,16 +225,16 @@ TEST_CASE("read_overlap_test", "[reads]")
     REQUIRE(std::distance(reads_in_sub_region5.first, reads_in_sub_region5.second) == 4);
     REQUIRE(std::distance(reads_in_sub_region6.first, reads_in_sub_region5.second) == 1);
     
-    REQUIRE(num_shared(reads.cbegin(), reads.cend(), sub_region1, sub_region2) == 0);
-    REQUIRE(num_shared(reads.cbegin(), reads.cend(), sub_region2, sub_region3) == 2);
-    REQUIRE(num_shared(reads.cbegin(), reads.cend(), sub_region2, sub_region4) == 1);
-    REQUIRE(num_shared(reads.cbegin(), reads.cend(), sub_region2, sub_region5) == 0);
-    REQUIRE(num_shared(reads.cbegin(), reads.cend(), sub_region3, sub_region4) == 4);
-    REQUIRE(num_shared(reads.cbegin(), reads.cend(), sub_region2, sub_region5) == 0);
-    REQUIRE(num_shared(reads.cbegin(), reads.cend(), sub_region3, sub_region5) == 3);
-    REQUIRE(num_shared(reads.cbegin(), reads.cend(), sub_region4, sub_region5) == 3);
-    REQUIRE(num_shared(reads.cbegin(), reads.cend(), sub_region4, sub_region6) == 0);
-    REQUIRE(num_shared(reads.cbegin(), reads.cend(), sub_region5, sub_region6) == 1);
+    REQUIRE(count_shared(reads.cbegin(), reads.cend(), sub_region1, sub_region2) == 0);
+    REQUIRE(count_shared(reads.cbegin(), reads.cend(), sub_region2, sub_region3) == 2);
+    REQUIRE(count_shared(reads.cbegin(), reads.cend(), sub_region2, sub_region4) == 1);
+    REQUIRE(count_shared(reads.cbegin(), reads.cend(), sub_region2, sub_region5) == 0);
+    REQUIRE(count_shared(reads.cbegin(), reads.cend(), sub_region3, sub_region4) == 4);
+    REQUIRE(count_shared(reads.cbegin(), reads.cend(), sub_region2, sub_region5) == 0);
+    REQUIRE(count_shared(reads.cbegin(), reads.cend(), sub_region3, sub_region5) == 3);
+    REQUIRE(count_shared(reads.cbegin(), reads.cend(), sub_region4, sub_region5) == 3);
+    REQUIRE(count_shared(reads.cbegin(), reads.cend(), sub_region4, sub_region6) == 0);
+    REQUIRE(count_shared(reads.cbegin(), reads.cend(), sub_region5, sub_region6) == 1);
     
     REQUIRE(!has_shared(reads.cbegin(), reads.cend(), sub_region1, sub_region2));
     REQUIRE(has_shared(reads.cbegin(), reads.cend(), sub_region2, sub_region3));
