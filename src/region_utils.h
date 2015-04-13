@@ -33,7 +33,7 @@ inline std::pair<ForwardIterator, ForwardIterator> overlap_range(ForwardIterator
 
 /**
  Returns the number of Mappable elements in the range [first, last) such that both lhs and rhs overlap
- the the same region.
+ the the same element.
  
  Requires [first, last) is sorted w.r.t GenomicRegion::operator<
  */
@@ -97,7 +97,7 @@ std::size_t num_shared(ForwardIterator first, ForwardIterator last,
 
 template <typename ForwardIterator, typename T>
 bool has_shared(ForwardIterator first, ForwardIterator last,
-                const GenomicRegion& lhs, const GenomicRegion& rhs)
+                const Mappable<T>& lhs, const Mappable<T>& rhs)
 {
     return has_shared(first, last, static_cast<const T&>(lhs).get_region(), static_cast<const T&>(rhs).get_region());
 }

@@ -39,12 +39,17 @@ public:
     Haplotype(Haplotype&&)                 = default;
     Haplotype& operator=(Haplotype&&)      = default;
     
+    void push_back(const Allele& an_allele);
+    void push_front(const Allele& an_allele);
+    
     template <typename T>
     void emplace_back(const GenomicRegion& the_allele_region, T&& the_allele_sequence);
     template <typename T>
     void emplace_front(const GenomicRegion& the_allele_region, T&& the_allele_sequence);
     
+    bool contains(const Allele& an_allele) const;
     bool contains(const GenomicRegion& the_allele_region, const SequenceType& the_allele_sequence) const;
+    void set_region(const GenomicRegion& a_region);
     GenomicRegion get_region() const;
     SequenceType get_sequence() const;
     SequenceType get_sequence(const GenomicRegion& a_region) const;
@@ -54,9 +59,9 @@ public:
 private:
     using AlleleIterator = std::deque<Allele>::const_iterator;
     
-    GenomicRegion get_region_bounded_by_alleles() const;
-    SequenceType get_sequence_bounded_by_alleles(AlleleIterator first, AlleleIterator last) const;
-    SequenceType get_sequence_bounded_by_alleles() const;
+    GenomicRegion get_region_bounded_by_explicit_alleles() const;
+    SequenceType get_sequence_bounded_by_explicit_alleles(AlleleIterator first, AlleleIterator last) const;
+    SequenceType get_sequence_bounded_by_explicit_alleles() const;
     
     ReferenceGenome& the_reference_;
     bool is_region_set_;
@@ -79,6 +84,7 @@ void Haplotype::emplace_front(const GenomicRegion& the_allele_region, T&& the_al
 {
     the_explicit_alleles_.emplace_front(the_allele_region, std::forward<T>(the_allele_sequence));
 }
+
 inline bool operator==(const Haplotype& lhs, const Haplotype& rhs)
 {
     if (lhs.the_explicit_alleles_.size() != rhs.the_explicit_alleles_.size()) return false;

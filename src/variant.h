@@ -10,15 +10,12 @@
 #define Octopus_variant_h
 
 #include <string>
-#include <cstdint>
 #include <ostream>
 
 #include "genomic_region.h"
 #include "allele.h"
 #include "comparable.h"
 #include "mappable.h"
-
-using std::uint_fast32_t;
 
 /**
  A variant is a combination of a reference allele and an alternative allele.
@@ -31,17 +28,14 @@ public:
     using RealType     = Allele::RealType;
     
     Variant() = default;
-    
     template <typename GenomicRegion_, typename SequenceType1, typename SequenceType2>
     explicit Variant(GenomicRegion_&& the_reference_allele_region, SequenceType1&& the_reference_allele,
                      SequenceType2&& the_alternative_allele, RealType the_reference_allele_probability,
                      RealType the_alternative_allele_probability);
-    
     template <typename SequenceType1, typename SequenceType2, typename SequenceType3>
     explicit Variant(SequenceType1&& the_reference_contig_name, SizeType the_reference_begin,
                      SequenceType2&& the_reference_allele, SequenceType3&& the_alternative_allele,
                      RealType the_reference_allele_probability, RealType the_alternative_allele_probability);
-    
     ~Variant() = default;
     
     Variant(const Variant&)            = default;

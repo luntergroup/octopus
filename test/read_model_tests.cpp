@@ -81,7 +81,7 @@ TEST_CASE("haploid_read_model_test", "[read_model]")
     std::unordered_map<Genotype, double> genotype_log_probabilities {};
     
     for (const auto& genotype : genotypes) {
-        genotype_log_probabilities[genotype] = the_model.log_probability(some_reads, genotype, sample);
+        genotype_log_probabilities[genotype] = the_model.log_probability(some_reads.cbegin(), some_reads.cend(), genotype, sample);
     }
     
     std::sort(genotypes.begin(), genotypes.end(), [&genotype_log_probabilities] (const auto& g1, const auto& g2) {
@@ -149,7 +149,7 @@ TEST_CASE("diploid_read_model_test", "[read_model]")
     std::unordered_map<Genotype, double> genotype_log_probabilities {};
     
     for (const auto& genotype : genotypes) {
-        genotype_log_probabilities[genotype] = the_model.log_probability(some_reads, genotype, sample);
+        genotype_log_probabilities[genotype] = the_model.log_probability(some_reads.cbegin(), some_reads.cend(), genotype, sample);
     }
     
     std::sort(genotypes.begin(), genotypes.end(), [&genotype_log_probabilities] (const auto& g1, const auto& g2) {
@@ -220,13 +220,15 @@ TEST_CASE("two_sample_diploid_read_model_test", "[read_model]")
     std::unordered_map<Genotype, double> genotype_log_probabilities0 {};
     
     for (const auto& genotype : genotypes) {
-        genotype_log_probabilities0[genotype] = a_read_model.log_probability(some_reads[sample_ids[0]], genotype, 0);
+        genotype_log_probabilities0[genotype] = a_read_model.log_probability(some_reads[sample_ids[0]].cbegin(),
+                                                                             some_reads[sample_ids[0]].cend(), genotype, 0);
     }
     
     std::unordered_map<Genotype, double> genotype_log_probabilities1 {};
     
     for (const auto& genotype : genotypes) {
-        genotype_log_probabilities1[genotype] = a_read_model.log_probability(some_reads[sample_ids[1]], genotype, 1);
+        genotype_log_probabilities1[genotype] = a_read_model.log_probability(some_reads[sample_ids[0]].cbegin(),
+                                                                             some_reads[sample_ids[0]].cend(), genotype, 1);
     }
     
 //    for (const auto& genotype : genotypes) {

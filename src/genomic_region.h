@@ -90,6 +90,21 @@ inline GenomicRegion::SizeType GenomicRegion::get_end() const noexcept
     return contig_region_.get_end();
 }
 
+inline const GenomicRegion::StringType& get_contig_name(const GenomicRegion& a_region) noexcept
+{
+    return a_region.get_contig_name();
+}
+
+inline GenomicRegion::SizeType get_begin(const GenomicRegion& a_region) noexcept
+{
+    return a_region.get_begin();
+}
+
+inline GenomicRegion::SizeType get_end(const GenomicRegion& a_region) noexcept
+{
+    return a_region.get_end();
+}
+
 inline GenomicRegion::SizeType size(const GenomicRegion& a_region) noexcept
 {
     return size(a_region.get_contig_region());
@@ -104,6 +119,18 @@ inline std::string to_string(const GenomicRegion& a_region)
 inline bool is_same_contig(const GenomicRegion& lhs, const GenomicRegion& rhs) noexcept
 {
     return lhs.get_contig_name() == rhs.get_contig_name();
+}
+
+inline bool begins_equal(const GenomicRegion& lhs, const GenomicRegion& rhs)
+{
+    if (is_same_contig(lhs, rhs)) return begins_equal(lhs.get_contig_region(), rhs.get_contig_region());
+    throw RegionError(to_string(lhs), to_string(rhs));
+}
+
+inline bool ends_equal(const GenomicRegion& lhs, const GenomicRegion& rhs)
+{
+    if (is_same_contig(lhs, rhs)) return ends_equal(lhs.get_contig_region(), rhs.get_contig_region());
+    throw RegionError(to_string(lhs), to_string(rhs));
 }
 
 inline bool begins_before(const GenomicRegion& lhs, const GenomicRegion& rhs)

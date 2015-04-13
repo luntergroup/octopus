@@ -17,8 +17,6 @@
 #include "haplotype.h"
 #include "equitable.h"
 
-//using Genotype = std::vector<Haplotype>;
-
 class Genotype : public Equitable<Genotype>
 {
 public:

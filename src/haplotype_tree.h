@@ -14,12 +14,12 @@
 #include <unordered_map>
 #include <boost/graph/adjacency_list.hpp>
 
+#include "allele.h"
 #include "haplotype.h"
-#include "read_manager.h"
+#include "genotype.h"
 #include "genomic_region.h"
 
 class ReferenceGenome;
-class VariationalBayesGenotypeModel;
 class Variant;
 
 class HaplotypeTree
@@ -28,10 +28,7 @@ public:
     using Haplotypes = std::vector<Haplotype>;
     
     HaplotypeTree() = delete;
-    explicit HaplotypeTree(ReferenceGenome& the_reference, ReadManager& the_reads,
-                           VariationalBayesGenotypeModel& the_genotype_model,
-                           const std::vector<ReadManager::SampleIdType>& the_sample_ids,
-                           unsigned max_num_haplotypes, double min_posterior);
+    explicit HaplotypeTree(ReferenceGenome& the_reference);
     ~HaplotypeTree() = default;
     
     HaplotypeTree(const HaplotypeTree&)            = default;
@@ -39,56 +36,40 @@ public:
     HaplotypeTree(HaplotypeTree&&)                 = default;
     HaplotypeTree& operator=(HaplotypeTree&&)      = default;
     
-    Haplotypes get_haplotypes(const std::vector<Variant>& the_variants);
+    unsigned num_haplotypes() const;
+    void extend_haplotypes(const Variant& a_variant);
+    Haplotypes get_haplotypes(unsigned num_alleles);
+    void prune_haplotypes(const Haplotypes& haplotypes);
     
 private:
-    struct Allele
+    struct AlleleNode
     {
-        Allele() = default;
-        template <typename T>
-        Allele(const GenomicRegion& the_reference_region, T&& the_sequence)
-        :
-        the_reference_region {the_reference_region},
-        the_sequence {std::forward<T>(the_sequence)}
-        {}
-        
-        GenomicRegion the_reference_region;
-        Variant::SequenceType the_sequence;
-    };
-    
-    struct HaplotypeNode
-    {
-        Allele the_variant;
-        double probability;
+        Allele the_allele;
     };
     
     using Tree = boost::adjacency_list<
-        boost::listS, boost::listS, boost::undirectedS, HaplotypeNode, boost::no_property
+        boost::listS, boost::listS, boost::undirectedS, AlleleNode, boost::no_property
     >;
     using Vertex = typename boost::graph_traits<Tree>::vertex_descriptor;
     using Edge   = typename boost::graph_traits<Tree>::edge_descriptor;
     
-    ReferenceGenome& the_reference_;
-    ReadManager& the_reads_;
-    VariationalBayesGenotypeModel& the_genotype_model_;
-    std::vector<ReadManager::SampleIdType> the_sample_ids_;
-    
-    unsigned max_num_haplotypes_;
-    double min_posterior_;
-    unsigned num_extensions_since_posterior_update_;
-    
     Tree the_tree_;
+    Vertex the_root_;
     std::list<Vertex> haplotype_branch_ends_;
+    ReferenceGenome& the_reference_;
+    std::unordered_map<Haplotype, Vertex> haplotype_to_branch_end_map_;
+    unsigned haplotype_allele_length_;
     
-    void init_tree();
-    unsigned num_haplotypes() const;
-    void extend_tree(const Variant& a_variant);
-    std::vector<Vertex> extend_haplotype(Vertex haplotype_branch_end, const Variant& a_variant);
-    Haplotypes get_unupdated_haplotypes();
-    void update_posteriors();
-    void prune_low_probability_haplotypes(unsigned n);
-    void prune_haplotype(Vertex haplotype_end);
-    Haplotypes get_highest_probability_haplotypes();
+    using BranchIterator = decltype(haplotype_branch_ends_)::const_iterator;
+    
+    Vertex get_previous_allele(Vertex allele) const;
+    bool node_has_allele_branch(Vertex allele, const Allele& an_allele) const;
+    BranchIterator extend_haplotype(BranchIterator haplotype_branch_end, const Variant& a_variant);
+    BranchIterator extend_haplotype(BranchIterator haplotype_branch_end, const Allele& an_allele);
+    bool is_haplotype_branch_end(Vertex haplotype_branch_end, const Haplotype& haplotype) const;
+    Vertex find_haplotype_branch_end(const Haplotype& haplotype) const;
+    void prune_haplotype(const Haplotype& haplotype);
+    void prune_haplotype_from_branch_end(Vertex haplotype_branch_end);
 };
 
 #endif /* defined(__Octopus__haplotype_tree__) */

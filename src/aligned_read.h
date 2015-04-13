@@ -107,9 +107,6 @@ public:
     
     const std::string& get_read_group() const;
     const GenomicRegion& get_region() const;
-    const std::string& get_contig_name() const;
-    SizeType get_begin() const noexcept;
-    SizeType get_end() const noexcept;
     const SequenceType& get_sequence() const;
     const Qualities& get_qualities() const;
     QualityType get_mapping_quality() const noexcept;
@@ -274,21 +271,6 @@ inline const GenomicRegion& AlignedRead::get_region() const
     return the_reference_region_;
 }
 
-inline const std::string& AlignedRead::get_contig_name() const
-{
-    return the_reference_region_.get_contig_name();
-}
-
-inline AlignedRead::SizeType AlignedRead::get_begin() const noexcept
-{
-    return the_reference_region_.get_begin();
-}
-
-inline AlignedRead::SizeType AlignedRead::get_end() const noexcept
-{
-    return the_reference_region_.get_end();
-}
-
 inline const AlignedRead::SequenceType& AlignedRead::get_sequence() const
 {
     return the_sequence_;
@@ -298,11 +280,6 @@ inline const AlignedRead::Qualities& AlignedRead::get_qualities() const
 {
     return the_qualities_;
 }
-
-//inline void AlignedRead::set_qualities(Qualities&& new_qualities) noexcept
-//{
-//    the_qualities_ = std::move(new_qualities);
-//}
 
 inline void AlignedRead::zero_front_qualities(SizeType num_bases) noexcept
 {
@@ -492,7 +469,7 @@ inline std::ostream& operator<<(std::ostream& os, const AlignedRead& a_read)
         os << '\n';
         os << a_read.get_next_segment()->get_contig_name() << '\n';
         os << a_read.get_next_segment()->get_begin() << '\n';
-        os << a_read.get_next_segment()->get_inferred_template_length() << '\n';
+        os << a_read.get_next_segment()->get_inferred_template_length();
     } else {
         os << '\n';
         os << "no other segments";

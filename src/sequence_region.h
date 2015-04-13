@@ -64,6 +64,16 @@ inline SequenceRegion::SizeType size(const SequenceRegion& a_region) noexcept
     return a_region.get_end() - a_region.get_begin();
 }
 
+inline bool begins_equal(const SequenceRegion& lhs, const SequenceRegion& rhs) noexcept
+{
+    return lhs.get_begin() == rhs.get_begin();
+}
+
+inline bool ends_equal(const SequenceRegion& lhs, const SequenceRegion& rhs) noexcept
+{
+    return lhs.get_end() == rhs.get_end();
+}
+
 inline bool begins_before(const SequenceRegion& lhs, const SequenceRegion& rhs) noexcept
 {
     return lhs.get_begin() < rhs.get_begin();
@@ -76,12 +86,12 @@ inline bool ends_before(const SequenceRegion& lhs, const SequenceRegion& rhs) no
 
 inline bool operator==(const SequenceRegion& lhs, const SequenceRegion& rhs) noexcept
 {
-    return lhs.get_begin() == rhs.get_begin() && lhs.get_end() == rhs.get_end();
+    return begins_equal(lhs, rhs) && ends_equal(lhs, rhs);
 }
 
 inline bool operator<(const SequenceRegion& lhs, const SequenceRegion& rhs) noexcept
 {
-    return (lhs.get_begin() == rhs.get_begin()) ? ends_before(lhs, rhs) : begins_before(lhs, rhs);
+    return (begins_equal(lhs, rhs)) ? ends_before(lhs, rhs) : begins_before(lhs, rhs);
 }
 
 inline bool is_before(const SequenceRegion& lhs, const SequenceRegion& rhs) noexcept

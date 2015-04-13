@@ -200,7 +200,8 @@ TEST_CASE("single_sample_haploid_variational_bayes_genotype_model", "[variationa
     VariationalBayesGenotypeModel::SampleGenotypeResponsabilities responsabilities {};
     
     for (const auto& genotype : genotypes) {
-        responsabilities[genotype] = the_model.genotype_responsability(genotype, some_reads, pseudo_counts, 0, genotypes);
+        responsabilities[genotype] = the_model.genotype_responsability(genotype, some_reads.cbegin(),
+                                                                       some_reads.cend(), pseudo_counts, 0, genotypes);
     }
     
     std::sort(genotypes.begin(), genotypes.end(), [&responsabilities] (const auto& g1, const auto& g2) {
@@ -278,7 +279,7 @@ TEST_CASE("single_sample_diploid_variational_bayes_genotype_model", "[variationa
     
     for (unsigned i {}; i < 10; ++i) {
         for (const auto& genotype : genotypes) {
-            responsabilities[genotype] = the_model.genotype_responsability(genotype, some_reads,
+            responsabilities[genotype] = the_model.genotype_responsability(genotype, some_reads.cbegin(), some_reads.cend(),
                                                                            posterior_pseudo_counts, 0, genotypes);
         }
         
@@ -367,8 +368,8 @@ TEST_CASE("two_samples_diploid_variational_bayes_genotype_model1", "[variational
     pseudo_counts[hap3]                = 1;
     
     SamplesReads the_reads {};
-    the_reads.emplace_back(std::move(some_reads[sample_ids[0]]));
-    the_reads.emplace_back(std::move(some_reads[sample_ids[1]]));
+    the_reads.push_back({some_reads[sample_ids[0]].cbegin(), some_reads[sample_ids[0]].cend()});
+    the_reads.push_back({some_reads[sample_ids[1]].cbegin(), some_reads[sample_ids[1]].cend()});
     
     auto results = update_parameters(the_model, genotypes, pseudo_counts, the_reads, 10);
     auto responsabilities        = results.first;
@@ -446,8 +447,8 @@ TEST_CASE("two_samples_diploid_variational_bayes_genotype_model2", "[variational
     pseudo_counts[hap3]                = 1;
     
     SamplesReads the_reads {};
-    the_reads.emplace_back(std::move(some_reads[sample_ids[0]]));
-    the_reads.emplace_back(std::move(some_reads[sample_ids[1]]));
+    the_reads.push_back({some_reads[sample_ids[0]].cbegin(), some_reads[sample_ids[0]].cend()});
+    the_reads.push_back({some_reads[sample_ids[1]].cbegin(), some_reads[sample_ids[1]].cend()});
     
     auto results = update_parameters(the_model, genotypes, pseudo_counts, the_reads, 10);
     auto responsabilities        = results.first;
@@ -525,9 +526,9 @@ TEST_CASE("three_samples_diploid_variational_bayes_genotype_model", "[variationa
     pseudo_counts[hap3]                = 1;
     
     SamplesReads the_reads {};
-    the_reads.emplace_back(std::move(some_reads[sample_ids[0]]));
-    the_reads.emplace_back(std::move(some_reads[sample_ids[1]]));
-    the_reads.emplace_back(std::move(some_reads[sample_ids[2]]));
+    the_reads.push_back({some_reads[sample_ids[0]].cbegin(), some_reads[sample_ids[0]].cend()});
+    the_reads.push_back({some_reads[sample_ids[1]].cbegin(), some_reads[sample_ids[1]].cend()});
+    the_reads.push_back({some_reads[sample_ids[2]].cbegin(), some_reads[sample_ids[2]].cend()});
     
     auto results = update_parameters(the_model, genotypes, pseudo_counts, the_reads, 10);
     auto responsabilities        = results.first;

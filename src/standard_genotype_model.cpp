@@ -46,7 +46,7 @@ double StandardGenotypeModel::log_probability(const SampleReads& reads, const Ge
                                       unsigned sample)
 {
     return log_probability(genotype, sample_haplotype_log_probabilities) +
-            read_model_.log_probability(reads, genotype, sample);
+            read_model_.log_probability(reads.cbegin(), reads.cend(), genotype, sample);
 }
 
 double StandardGenotypeModel::log_probability(const SampleReads& reads,
@@ -69,7 +69,7 @@ double StandardGenotypeModel::genotype_posterior(const Genotype& genotype, const
                                          unsigned sample, const Genotypes& all_genotypes)
 {
     auto log_prior     = log_probability(genotype, sample_haplotype_log_probabilities);
-    auto log_liklihood = read_model_.log_probability(reads, genotype, sample);
+    auto log_liklihood = read_model_.log_probability(reads.cbegin(), reads.cend(), genotype, sample);
     auto log_evidence  = log_probability(reads, sample_haplotype_log_probabilities, sample, all_genotypes);
     
     auto log_posterior = log_prior + log_liklihood - log_evidence; // Bayes theorem log form

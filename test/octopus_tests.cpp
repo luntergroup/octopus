@@ -31,7 +31,6 @@
 //#include "read_transform.h"
 //#include "read_transformations.h"
 //#include "variant.h"
-//#include "variant_factory.h"
 //#include "variant_candidate_generator.h"
 //#include "variant_utils.h"
 //#include "alignment_candidate_variant_generator.h"
@@ -45,7 +44,6 @@
 //    ReferenceGenomeFactory a_factory {};
 //    ReferenceGenome human(a_factory.make(human_reference_fasta));
 //    ReadManager a_read_manager(std::vector<std::string> {human_1000g_bam});
-//    VariantFactory a_variant_factory {};
 //    
 //    std::vector<GenomicRegion> some_regions {};
 //    some_regions.emplace_back(parse_region("1:10000000-30000000", human));
@@ -78,7 +76,7 @@
 //    unsigned kmer_size {15};
 //    VariantCandidateGenerator candidate_generator {};
 //    candidate_generator.register_generator(
-//            std::make_unique<AlignmentCandidateVariantGenerator>(human, a_variant_factory));
+//            std::make_unique<AlignmentCandidateVariantGenerator>(human));
 ////    candidate_generator.register_generator(
 ////            std::make_unique<AssemblerCandidateVariantGenerator>(human, kmer_size));
 //    
@@ -90,7 +88,7 @@
 //        std::vector<AlignedRead> reads_in_region {};
 //        
 //        for (const auto& sample : samples) {
-//            auto&& sample_reads = a_read_manager.fetch_reads(sample, region);
+//            auto sample_reads = a_read_manager.fetch_reads(sample, region);
 //            reads_in_region.insert(reads_in_region.end(),
 //                                   std::make_move_iterator(sample_reads.begin()),
 //                                   std::make_move_iterator(sample_reads.end()));
@@ -133,8 +131,8 @@
 //        
 //        std::transform(candidates_in_region.begin(), candidates_in_region.end(),
 //                       std::back_inserter(aligned_candidates),
-//                       [&human, &a_variant_factory] (const auto& a_variant) {
-//                           return left_align(a_variant, human, a_variant_factory);
+//                       [&human] (const auto& a_variant) {
+//                           return left_align(a_variant, human);
 //                       });
 //        
 //        std::cout << "Left aligned candidates" << std::endl;

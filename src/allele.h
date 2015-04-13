@@ -10,15 +10,12 @@
 #define Octopus_allele_h
 
 #include <string>
-#include <cstdint>
 #include <ostream>
 
 #include "genomic_region.h"
 #include "comparable.h"
 #include "mappable.h"
 #include "reference_genome.h"
-
-using std::uint_fast32_t;
 
 class Allele : public Comparable<Allele>, public Mappable<Allele>
 {
@@ -122,6 +119,21 @@ inline bool is_reference_allele(const Allele& an_allele, ReferenceGenome& the_re
 inline Allele get_reference_allele(const GenomicRegion& a_region, ReferenceGenome& the_reference)
 {
     return Allele {a_region, the_reference.get_sequence(a_region)};
+}
+
+inline Allele::SequenceType get_subsequence(const Allele& an_allele, const GenomicRegion& a_region)
+{
+    if (!contains(an_allele, a_region)) {
+        return Allele::SequenceType {};
+    } else {
+        auto first = std::cbegin(an_allele.get_sequence()) + (get_begin(a_region) - get_begin(an_allele));
+        return Allele::SequenceType {first, first + size(a_region)};
+    }
+}
+
+inline bool contains(const Allele& lhs, const Allele& rhs)
+{
+    return contains(lhs.get_region(), rhs.get_region()) && get_subsequence(lhs, rhs.get_region()) == rhs.get_sequence();
 }
 
 #endif

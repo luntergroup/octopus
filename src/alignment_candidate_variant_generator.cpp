@@ -29,10 +29,10 @@ are_candidates_sorted_ {true}
 
 void AlignmentCandidateVariantGenerator::add_read(const AlignedRead &a_read)
 {
-    auto ref_index = a_read.get_begin();
+    auto ref_index = get_begin(a_read);
     AlignedRead::SizeType read_index {0};
     CigarOperation::SizeType op_size {};
-    const auto& contig_name = a_read.get_contig_name();
+    const auto& contig_name = get_contig_name(a_read);
     const auto& the_read_sequence = a_read.get_sequence();
     GenomicRegion a_region {};
     

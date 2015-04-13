@@ -19,7 +19,7 @@ the_assembler_ {k}
 
 void VariantAssembler::add_read(const AlignedRead& a_read)
 {
-    the_assembler_.add_sequence(a_read.get_sequence(), a_read.get_begin(), Colour::Read);
+    the_assembler_.add_sequence(a_read.get_sequence(), get_begin(a_read), Colour::Read);
 }
 
 void VariantAssembler::add_reference_sequence(const GenomicRegion& the_region,

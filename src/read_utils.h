@@ -13,11 +13,11 @@
 
 #include "aligned_read.h"
 
-//template <typename ForwardIterator>
-//unsigned get_min_coverage(ForwardIterator first, ForwardIterator last)
-//{
-//    return 0;
-//}
+template <typename ForwardIterator>
+unsigned get_min_coverage(ForwardIterator first, ForwardIterator last)
+{
+    return 0;
+}
 
 unsigned get_min_coverage(const std::vector<AlignedRead>& reads, const GenomicRegion& a_region);
 

@@ -25,12 +25,4 @@ std::unique_ptr<IVariantFileImpl> VariantFileFactory::make_impl(const std::strin
     }
     
     return std::make_unique<HtslibBcfFacade>(variant_file_path);
-    
-//    auto extension = the_path.extension().string();
-//    
-//    if (extension == ".bcf" || extension == ".vcf.gz") {
-//        return std::make_unique<HtslibBcfFacade>(variant_file_path);
-//    }
-    
-    throw std::runtime_error {"Cannot open " + the_path.string()};
 }

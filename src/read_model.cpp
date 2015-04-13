@@ -22,7 +22,7 @@ genotype_log_probability_cache_ {},
 ln_ploidy_ {std::log(ploidy)}
 {}
 
-double ReadModel::log_probability(const AlignedRead& read, const Haplotype& haplotype, unsigned sample)
+ReadModel::RealType ReadModel::log_probability(const AlignedRead& read, const Haplotype& haplotype, unsigned sample)
 {
     if (is_read_in_cache(sample, read, haplotype)) {
         return read_log_probability_cache_.at(sample).at(read).at(haplotype);
@@ -48,7 +48,7 @@ double ReadModel::log_probability(const AlignedRead& read, const Haplotype& hapl
 }
 
 // ln p(read | genotype) = ln sum {haplotype in genotype} p(read | haplotype) - ln ploidy
-double ReadModel::log_probability(const AlignedRead& read, const Genotype& genotype, unsigned sample)
+ReadModel::RealType ReadModel::log_probability(const AlignedRead& read, const Genotype& genotype, unsigned sample)
 {
     // These cases are just for optimisation; they are functionally equivalent
     switch (ploidy_) {
@@ -64,34 +64,34 @@ double ReadModel::log_probability(const AlignedRead& read, const Genotype& genot
 }
 
 // ln p(reads | genotype) = sum (read in reads} ln p(read | genotype)
-double ReadModel::log_probability(const Reads& reads, const Genotype& genotype,
-                                  unsigned sample)
+ReadModel::RealType ReadModel::log_probability(ReadIterator first, ReadIterator last, const Genotype& genotype,
+                                               unsigned sample)
 {
     if (is_genotype_in_cache(sample, genotype)) {
         return genotype_log_probability_cache_.at(sample).at(genotype);
     }
     
-    double result {0};
+    RealType result {0};
     
-    for (const auto& read : reads) {
+    std::for_each(first, last, [this, &genotype, &sample, &result] (const auto& read) {
         result += log_probability(read, genotype, sample);
-    }
+    });
     
     add_genotype_to_cache(sample, genotype, result);
     
     return result;
 }
 
-double ReadModel::log_probability_haploid(const AlignedRead& read, const Genotype& genotype,
-                                          unsigned sample)
+ReadModel::RealType ReadModel::log_probability_haploid(const AlignedRead& read, const Genotype& genotype,
+                                                       unsigned sample)
 {
     auto haplotype_log_probability = log_probability(read, genotype.at(0), sample);
     
     return haplotype_log_probability - ln_ploidy_;
 }
 
-double ReadModel::log_probability_diploid(const AlignedRead& read, const Genotype& genotype,
-                                          unsigned sample)
+ReadModel::RealType ReadModel::log_probability_diploid(const AlignedRead& read, const Genotype& genotype,
+                                                       unsigned sample)
 {
     auto haplotype1_log_probability = log_probability(read, genotype.at(0), sample);
     auto haplotype2_log_probability = log_probability(read, genotype.at(1), sample);
@@ -99,8 +99,8 @@ double ReadModel::log_probability_diploid(const AlignedRead& read, const Genotyp
     return log_sum_exp(haplotype1_log_probability, haplotype2_log_probability) - ln_ploidy_;
 }
 
-double ReadModel::log_probability_triploid(const AlignedRead& read, const Genotype& genotype,
-                                           unsigned sample)
+ReadModel::RealType ReadModel::log_probability_triploid(const AlignedRead& read, const Genotype& genotype,
+                                                        unsigned sample)
 {
     auto haplotype1_log_probability = log_probability(read, genotype.at(0), sample);
     auto haplotype2_log_probability = log_probability(read, genotype.at(1), sample);
@@ -110,11 +110,11 @@ double ReadModel::log_probability_triploid(const AlignedRead& read, const Genoty
                        haplotype3_log_probability) - ln_ploidy_;
 }
 
-double ReadModel::log_probability_polyploid(const AlignedRead& read, const Genotype& genotype,
-                                            unsigned sample)
+ReadModel::RealType ReadModel::log_probability_polyploid(const AlignedRead& read, const Genotype& genotype,
+                                                         unsigned sample)
 {
     //TODO
-    std::vector<double> log_haplotype_probabilities {};
+    std::vector<RealType> log_haplotype_probabilities {};
     log_haplotype_probabilities.reserve(ploidy_);
     
     //    for (const auto& haplotype : genotype) {
@@ -127,7 +127,7 @@ double ReadModel::log_probability_polyploid(const AlignedRead& read, const Genot
     //        }
     //    }
     
-    auto log_sum_haplotype_probabilities = log_sum_exp<double>(log_haplotype_probabilities.cbegin(),
+    auto log_sum_haplotype_probabilities = log_sum_exp<RealType>(log_haplotype_probabilities.cbegin(),
                                                                log_haplotype_probabilities.cend());
     
     return log_sum_haplotype_probabilities - ln_ploidy_;
@@ -148,14 +148,14 @@ bool ReadModel::is_genotype_in_cache(unsigned sample, const Genotype& genotype) 
 }
 
 void ReadModel::add_read_to_cache(unsigned sample, const AlignedRead& read, const Haplotype& haplotype,
-                                  double read_log_probability)
+                                  RealType read_log_probability)
 {
     if (can_cache_reads_) {
         read_log_probability_cache_[sample][read][haplotype] = read_log_probability;
     }
 }
 
-void ReadModel::add_genotype_to_cache(unsigned sample, const Genotype& genotype, double genotype_log_probability)
+void ReadModel::add_genotype_to_cache(unsigned sample, const Genotype& genotype, RealType genotype_log_probability)
 {
     genotype_log_probability_cache_[sample][genotype] = genotype_log_probability;
 }
