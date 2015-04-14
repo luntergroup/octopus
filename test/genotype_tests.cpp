@@ -25,22 +25,22 @@
 #include "haplotype.h"
 #include "genotype.h"
 
-TEST_CASE("test_make_genotypes", "[genotype]")
+TEST_CASE("get_all_genotypes gives in all possible unique genotypes", "[genotype]")
 {
     ReferenceGenomeFactory a_factory {};
     ReferenceGenome human(a_factory.make(human_reference_fasta));
     
     Haplotype hap1 {human};
-    hap1.emplace_back(parse_region("1", human), "");
+    hap1.push_back(Allele {parse_region("1", human), ""});
     
     Haplotype hap2 {human};
-    hap2.emplace_back(parse_region("2", human), "");
+    hap2.push_back(Allele {parse_region("2", human), ""});
     
     Haplotype hap3 {human};
-    hap3.emplace_back(parse_region("3", human), "");
+    hap3.push_back(Allele {parse_region("3", human), ""});
     
     Haplotype hap4 {human};
-    hap4.emplace_back(parse_region("4", human), "");
+    hap4.push_back(Allele {parse_region("4", human), ""});
     
     std::vector<Haplotype> haplotypes {hap1, hap2, hap3, hap4};
     
@@ -79,7 +79,7 @@ TEST_CASE("test_make_genotypes", "[genotype]")
     REQUIRE(genotypes_4.size() == unique_4.size());
 }
 
-TEST_CASE("genotypes_correct_ploidy_test", "[genotype]")
+TEST_CASE("get_all_genotypes results in correct ploidy", "[genotype]")
 {
     ReferenceGenomeFactory a_factory {};
     ReferenceGenome human(a_factory.make(human_reference_fasta));
@@ -88,23 +88,23 @@ TEST_CASE("genotypes_correct_ploidy_test", "[genotype]")
     GenomicRegion region2 {"3", 1000010, 1000011};
     
     Haplotype haplotype1 {human};
-    haplotype1.emplace_back(region1, "A");
-    haplotype1.emplace_back(region2, "A");
+    haplotype1.push_back(Allele{region1, "A"});
+    haplotype1.push_back(Allele{region2, "A"});
     Haplotype haplotype2 {human};
-    haplotype2.emplace_back(region1, "C");
-    haplotype2.emplace_back(region2, "C");
+    haplotype2.push_back(Allele{region1, "C"});
+    haplotype2.push_back(Allele{region2, "C"});
     Haplotype haplotype3 {human};
-    haplotype3.emplace_back(region1, "G");
-    haplotype3.emplace_back(region2, "G");
+    haplotype3.push_back(Allele{region1, "G"});
+    haplotype3.push_back(Allele{region2, "G"});
     Haplotype haplotype4 {human};
-    haplotype4.emplace_back(region1, "A");
-    haplotype4.emplace_back(region2, "C");
+    haplotype4.push_back(Allele{region1, "A"});
+    haplotype4.push_back(Allele{region2, "C"});
     Haplotype haplotype5 {human};
-    haplotype5.emplace_back(region1, "C");
-    haplotype5.emplace_back(region2, "G");
+    haplotype5.push_back(Allele{region1, "C"});
+    haplotype5.push_back(Allele{region2, "G"});
     Haplotype haplotype6 {human};
-    haplotype6.emplace_back(region1, "G");
-    haplotype6.emplace_back(region2, "C");
+    haplotype6.push_back(Allele{region1, "G"});
+    haplotype6.push_back(Allele{region2, "C"});
     
     std::vector<Haplotype> haplotypes {haplotype1, haplotype2, haplotype3, haplotype4, haplotype5, haplotype6};
     

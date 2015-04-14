@@ -51,7 +51,7 @@ TEST_CASE("haploid_standard_genotype_model_test", "[standard_genotype_model]")
     auto variants = candidate_generator.get_candidates(a_region);
     
     Haplotype reference_haplotype {ecoli};
-    reference_haplotype.emplace_back(a_region, std::move(reference_sequence));
+    reference_haplotype.push_back(get_reference_allele(a_region, ecoli));
     
     Haplotype best_haplotype {ecoli};
     for (const auto& variant : variants) {

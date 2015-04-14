@@ -120,6 +120,23 @@ inline bool contains(const SequenceRegion& lhs, const SequenceRegion& rhs) noexc
     return lhs.get_begin() <= rhs.get_begin() && rhs.get_end() <= lhs.get_end();
 }
 
+inline bool are_adjacent(const SequenceRegion& lhs, const SequenceRegion& rhs) noexcept
+{
+    return overlap_size(lhs, rhs) == 0;
+}
+
+inline SequenceRegion get_intervening_region(const SequenceRegion& lhs, const SequenceRegion& rhs)
+{
+    if (begins_before(rhs, lhs) || overlaps(lhs, rhs)) {
+        throw std::runtime_error {"Cannot get intervening region between overlapping regions"};
+    }
+    
+    return SequenceRegion {
+        lhs.get_end(),
+        rhs.get_begin()
+    };
+}
+
 inline SequenceRegion get_left_overhang(const SequenceRegion& lhs, const SequenceRegion& rhs) noexcept
 {
     if (begins_before(rhs, lhs)) return SequenceRegion {lhs.get_begin(), lhs.get_begin()};

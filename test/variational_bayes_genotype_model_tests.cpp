@@ -38,7 +38,7 @@ bool is_close_to_one(double val)
     return std::abs(val - 1) < 0.0000000000001;
 }
 
-TEST_CASE("haplotype_normalisation_test", "[variational_bayes_genotype_model]")
+TEST_CASE("haplotype posteriors sum to one", "[variational_bayes_genotype_model]")
 {
     ReferenceGenomeFactory a_factory {};
     ReferenceGenome human(a_factory.make(human_reference_fasta));
@@ -46,9 +46,9 @@ TEST_CASE("haplotype_normalisation_test", "[variational_bayes_genotype_model]")
     GenomicRegion a_region {"3", 1000000, 1000001};
     
     Haplotype haplotype1 {human};
-    haplotype1.emplace_back(a_region, "C");
+    haplotype1.push_back(Allele {a_region, "C"});
     Haplotype haplotype2 {human};
-    haplotype2.emplace_back(a_region, "G");
+    haplotype2.push_back(Allele {a_region, "G"});
     
     VariationalBayesGenotypeModel::HaplotypePseudoCounts pseudo_counts {};
     pseudo_counts[haplotype1] = 5;
@@ -65,7 +65,7 @@ TEST_CASE("haplotype_normalisation_test", "[variational_bayes_genotype_model]")
     REQUIRE(is_close_to_one(haplotype_posterior_sum));
 }
 
-TEST_CASE("genotype_normalisation_test", "[variational_bayes_genotype_model]")
+TEST_CASE("genotype posteriors sum to one", "[variational_bayes_genotype_model]")
 {
     ReferenceGenomeFactory a_factory {};
     ReferenceGenome human(a_factory.make(human_reference_fasta));
@@ -74,23 +74,23 @@ TEST_CASE("genotype_normalisation_test", "[variational_bayes_genotype_model]")
     GenomicRegion region2 {"3", 1000010, 1000011};
     
     Haplotype haplotype1 {human};
-    haplotype1.emplace_back(region1, "A");
-    haplotype1.emplace_back(region2, "A");
+    haplotype1.push_back(Allele {region1, "A"});
+    haplotype1.push_back(Allele {region2, "A"});
     Haplotype haplotype2 {human};
-    haplotype2.emplace_back(region1, "C");
-    haplotype2.emplace_back(region2, "C");
+    haplotype2.push_back(Allele {region1, "C"});
+    haplotype2.push_back(Allele {region2, "C"});
     Haplotype haplotype3 {human};
-    haplotype3.emplace_back(region1, "G");
-    haplotype3.emplace_back(region2, "G");
+    haplotype3.push_back(Allele {region1, "G"});
+    haplotype3.push_back(Allele {region2, "G"});
     Haplotype haplotype4 {human};
-    haplotype4.emplace_back(region1, "A");
-    haplotype4.emplace_back(region2, "C");
+    haplotype4.push_back(Allele {region1, "A"});
+    haplotype4.push_back(Allele {region2, "C"});
     Haplotype haplotype5 {human};
-    haplotype5.emplace_back(region1, "C");
-    haplotype5.emplace_back(region2, "G");
+    haplotype5.push_back(Allele {region1, "C"});
+    haplotype5.push_back(Allele {region2, "G"});
     Haplotype haplotype6 {human};
-    haplotype6.emplace_back(region1, "G");
-    haplotype6.emplace_back(region2, "C");
+    haplotype6.push_back(Allele {region1, "G"});
+    haplotype6.push_back(Allele {region2, "C"});
     
     std::vector<Haplotype> haplotypes {haplotype1, haplotype2, haplotype3, haplotype4, haplotype5, haplotype6};
     
@@ -166,7 +166,7 @@ TEST_CASE("single_sample_haploid_variational_bayes_genotype_model", "[variationa
     auto variants = candidate_generator.get_candidates(a_region);
     
     Haplotype reference_haplotype {ecoli};
-    reference_haplotype.emplace_back(a_region, std::move(reference_sequence));
+    reference_haplotype.push_back(get_reference_allele(a_region, ecoli));
     
     Haplotype best_haplotype {ecoli}; // most reads fully support this
     for (const auto& variant : variants) {

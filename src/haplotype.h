@@ -39,23 +39,16 @@ public:
     Haplotype(Haplotype&&)                 = default;
     Haplotype& operator=(Haplotype&&)      = default;
     
-    void push_back(const Allele& an_allele);
-    void push_front(const Allele& an_allele);
-    
-    template <typename T>
-    void emplace_back(const GenomicRegion& the_allele_region, T&& the_allele_sequence);
-    template <typename T>
-    void emplace_front(const GenomicRegion& the_allele_region, T&& the_allele_sequence);
+    template <typename T> void push_back(T&& an_allele);
+    template <typename T> void push_front(T&& an_allele);
     
     bool contains(const Allele& an_allele) const;
-    bool contains(const GenomicRegion& the_allele_region, const SequenceType& the_allele_sequence) const;
     void set_region(const GenomicRegion& a_region);
     GenomicRegion get_region() const;
     SequenceType get_sequence() const;
     SequenceType get_sequence(const GenomicRegion& a_region) const;
     
     //void operator+=(const Haplotype& other);
-    friend bool operator==(const Haplotype& lhs, const Haplotype& rhs);
 private:
     using AlleleIterator = std::deque<Allele>::const_iterator;
     
@@ -67,37 +60,46 @@ private:
     bool is_region_set_;
     GenomicRegion the_reference_region_;
     std::deque<Allele> the_explicit_alleles_;
+    
+    mutable SequenceType cached_sequence_;
+    mutable bool is_cached_sequence_outdated_;
 };
 
 template <typename T>
-void Haplotype::emplace_back(const GenomicRegion& the_allele_region, T&& the_allele_sequence)
+void Haplotype::push_back(T&& an_allele)
 {
-    the_explicit_alleles_.emplace_back(the_allele_region, std::forward<T>(the_allele_sequence));
+    if (!the_explicit_alleles_.empty()) {
+        if (!is_after(an_allele, the_explicit_alleles_.back())) {
+            throw std::runtime_error {"Cannot append out of order allele to back of haplotype"};
+        } else if (!are_adjacent(the_explicit_alleles_.back(), an_allele)) {
+            auto intervening_region = get_intervening_region(the_explicit_alleles_.back(), an_allele);
+            the_explicit_alleles_.push_back(get_reference_allele(intervening_region, the_reference_));
+        }
+    }
+    
+    the_explicit_alleles_.push_back(std::forward<T>(an_allele));
+    is_cached_sequence_outdated_ = true;
 }
 
 template <typename T>
-void Haplotype::emplace_front(const GenomicRegion& the_allele_region, T&& the_allele_sequence)
+void Haplotype::push_front(T&& an_allele)
 {
-    the_explicit_alleles_.emplace_front(the_allele_region, std::forward<T>(the_allele_sequence));
+    if (!the_explicit_alleles_.empty()) {
+        if (!is_before(an_allele, the_explicit_alleles_.front())) {
+            throw std::runtime_error {"Cannot append out of order allele to front of haplotype"};
+        } else if (!are_adjacent(an_allele, the_explicit_alleles_.front())) {
+            auto intervening_region = get_intervening_region(the_explicit_alleles_.back(), an_allele);
+            the_explicit_alleles_.push_front(get_reference_allele(intervening_region, the_reference_));
+        }
+    }
+    
+    the_explicit_alleles_.push_front(std::forward<T>(an_allele));
+    is_cached_sequence_outdated_ = true;
 }
 
 inline bool operator==(const Haplotype& lhs, const Haplotype& rhs)
 {
-    //return (lhs.get_region() == rhs.get_region() && lhs.get_sequence() == rhs.get_sequence());
-    
-//    if (lhs.get_region() != rhs.get_region()) return false;
-//    auto p = std::minmax(lhs, rhs, [] (const auto& lhs, const auto& rhs) {
-//        return lhs.the_explicit_alleles_.size() < rhs.the_explicit_alleles_.size();
-//    });
-//    return std::all_of(std::cbegin(p.second.the_explicit_alleles_), std::cend(p.second.the_explicit_alleles_),
-//                       [&p] (const auto& allele) {
-//                           return p.first.contains(allele);
-//                       });
-    
-    if (lhs.the_explicit_alleles_.size() != rhs.the_explicit_alleles_.size()) return false;
-    if (lhs.get_region() != rhs.get_region()) return false;
-    return std::equal(std::cbegin(lhs.the_explicit_alleles_), std::cend(lhs.the_explicit_alleles_),
-                      std::cbegin(rhs.the_explicit_alleles_));
+    return lhs.get_region() == rhs.get_region() && lhs.get_sequence() == rhs.get_sequence();
 }
 
 namespace std {
@@ -105,14 +107,14 @@ namespace std {
     {
         size_t operator()(const Haplotype& h) const
         {
-            return hash<string>()(to_string(h.get_region()));
+            return hash<string>()(to_string(h.get_region())); //TODO: see if this can be improved
         }
     };
 }
 
 inline std::ostream& operator<<(std::ostream& os, const Haplotype& a_haplotype)
 {
-    os << a_haplotype.get_sequence();
+    os << a_haplotype.get_region() << " " << a_haplotype.get_sequence();
     return os;
 }
 

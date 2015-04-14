@@ -126,19 +126,19 @@ TEST_CASE("alleles not explicitly added to haplotypes are assumed reference", "[
     
     Haplotype a_reference_haplotype {human, a_region};
     
-    REQUIRE(a_reference_haplotype.contains(a_region, human.get_sequence(a_region)));
+    REQUIRE(a_reference_haplotype.contains(get_reference_allele(a_region, human)));
     
     GenomicRegion a_sub_region {"7", 1000010, 1000090};
     
-    REQUIRE(a_reference_haplotype.contains(a_sub_region, human.get_sequence(a_sub_region)));
+    REQUIRE(a_reference_haplotype.contains(get_reference_allele(a_sub_region, human)));
     
     GenomicRegion a_left_overlapping_region {"7", 999999, 1000090};
     
-    REQUIRE(!a_reference_haplotype.contains(a_left_overlapping_region, human.get_sequence(a_left_overlapping_region)));
+    REQUIRE(!a_reference_haplotype.contains(get_reference_allele(a_left_overlapping_region, human)));
     
     GenomicRegion a_right_overlapping_region {"7", 1000090, 1000101};
     
-    REQUIRE(!a_reference_haplotype.contains(a_right_overlapping_region, human.get_sequence(a_right_overlapping_region)));
+    REQUIRE(!a_reference_haplotype.contains(get_reference_allele(a_right_overlapping_region, human)));
 }
 
 TEST_CASE("alleles explicitly added to haplotypes should be contained", "[haplotype]")
@@ -184,21 +184,21 @@ TEST_CASE("alleles explicitly added to haplotypes should be contained", "[haplot
     REQUIRE(contains(haplotype_unbounded, variant_5));
     REQUIRE(contains(haplotype_unbounded, variant_6));
     
-    REQUIRE(!haplotype_unbounded.contains(variant_1.get_region(), variant_1.get_reference_allele_sequence()));
-    REQUIRE(!haplotype_unbounded.contains(variant_2.get_region(), variant_2.get_reference_allele_sequence()));
-    REQUIRE(!haplotype_unbounded.contains(variant_3.get_region(), variant_3.get_reference_allele_sequence()));
-    REQUIRE(!haplotype_unbounded.contains(variant_4.get_region(), variant_4.get_reference_allele_sequence()));
-    REQUIRE(!haplotype_unbounded.contains(variant_5.get_region(), variant_5.get_reference_allele_sequence()));
-    REQUIRE(!haplotype_unbounded.contains(variant_6.get_region(), variant_6.get_reference_allele_sequence()));
+    REQUIRE(!haplotype_unbounded.contains(variant_1.get_reference_allele()));
+    REQUIRE(!haplotype_unbounded.contains(variant_2.get_reference_allele()));
+    REQUIRE(!haplotype_unbounded.contains(variant_3.get_reference_allele()));
+    REQUIRE(!haplotype_unbounded.contains(variant_4.get_reference_allele()));
+    REQUIRE(!haplotype_unbounded.contains(variant_5.get_reference_allele()));
+    REQUIRE(!haplotype_unbounded.contains(variant_6.get_reference_allele()));
     
     REQUIRE(!contains(haplotype_unbounded, false_variant_1));
     REQUIRE(!contains(haplotype_unbounded, false_variant_2));
     REQUIRE(!contains(haplotype_unbounded, false_variant_3));
     REQUIRE(!contains(haplotype_unbounded, false_variant_4));
     
-    REQUIRE(haplotype_unbounded.contains(a_reference_part1, human.get_sequence(a_reference_part1)));
-    REQUIRE(haplotype_unbounded.contains(a_reference_part2, human.get_sequence(a_reference_part2)));
-    REQUIRE(haplotype_unbounded.contains(a_reference_part3, human.get_sequence(a_reference_part3)));
+    REQUIRE(haplotype_unbounded.contains(get_reference_allele(a_reference_part1, human)));
+    REQUIRE(haplotype_unbounded.contains(get_reference_allele(a_reference_part2, human)));
+    REQUIRE(haplotype_unbounded.contains(get_reference_allele(a_reference_part3, human)));
     
     Haplotype haplotype_bounded {human, a_region};
     
@@ -220,12 +220,12 @@ TEST_CASE("alleles explicitly added to haplotypes should be contained", "[haplot
     REQUIRE(contains(haplotype_bounded, variant_5));
     REQUIRE(contains(haplotype_bounded, variant_6));
     
-    REQUIRE(!haplotype_bounded.contains(variant_1.get_region(), variant_1.get_reference_allele_sequence()));
-    REQUIRE(!haplotype_bounded.contains(variant_2.get_region(), variant_2.get_reference_allele_sequence()));
-    REQUIRE(!haplotype_bounded.contains(variant_3.get_region(), variant_3.get_reference_allele_sequence()));
-    REQUIRE(!haplotype_bounded.contains(variant_4.get_region(), variant_4.get_reference_allele_sequence()));
-    REQUIRE(!haplotype_bounded.contains(variant_5.get_region(), variant_5.get_reference_allele_sequence()));
-    REQUIRE(!haplotype_bounded.contains(variant_6.get_region(), variant_6.get_reference_allele_sequence()));
+    REQUIRE(!haplotype_bounded.contains(variant_1.get_reference_allele()));
+    REQUIRE(!haplotype_bounded.contains(variant_2.get_reference_allele()));
+    REQUIRE(!haplotype_bounded.contains(variant_3.get_reference_allele()));
+    REQUIRE(!haplotype_bounded.contains(variant_4.get_reference_allele()));
+    REQUIRE(!haplotype_bounded.contains(variant_5.get_reference_allele()));
+    REQUIRE(!haplotype_bounded.contains(variant_6.get_reference_allele()));
     
     REQUIRE(!contains(haplotype_bounded, false_variant_1));
     REQUIRE(!contains(haplotype_bounded, false_variant_2));
@@ -235,11 +235,11 @@ TEST_CASE("alleles explicitly added to haplotypes should be contained", "[haplot
     GenomicRegion reference_begin_bit {"3", 1000000, 1000002};
     GenomicRegion reference_end_bit {"3", 1000019, 1000020};
     
-    REQUIRE(haplotype_bounded.contains(reference_begin_bit, human.get_sequence(reference_begin_bit)));
-    REQUIRE(haplotype_bounded.contains(a_reference_part1, human.get_sequence(a_reference_part1)));
-    REQUIRE(haplotype_bounded.contains(a_reference_part2, human.get_sequence(a_reference_part2)));
-    REQUIRE(haplotype_bounded.contains(a_reference_part3, human.get_sequence(a_reference_part3)));
-    REQUIRE(haplotype_bounded.contains(reference_end_bit, human.get_sequence(reference_end_bit)));
+    REQUIRE(haplotype_bounded.contains(get_reference_allele(reference_begin_bit, human)));
+    REQUIRE(haplotype_bounded.contains(get_reference_allele(a_reference_part1, human)));
+    REQUIRE(haplotype_bounded.contains(get_reference_allele(a_reference_part2, human)));
+    REQUIRE(haplotype_bounded.contains(get_reference_allele(a_reference_part3, human)));
+    REQUIRE(haplotype_bounded.contains(get_reference_allele(reference_end_bit, human)));
 }
 
 TEST_CASE("mnps decompose", "[haplotype]")

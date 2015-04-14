@@ -167,15 +167,14 @@ VariationalBayesGenotypeModel::posterior_probability_haplotype_in_sample(const H
 }
 
 VariationalBayesGenotypeModel::RealType
-VariationalBayesGenotypeModel::posterior_probability_allele_in_samples(const GenomicRegion& the_allele_region,
-                                                                       const Haplotype::SequenceType& the_allele_sequence,
+VariationalBayesGenotypeModel::posterior_probability_allele_in_samples(const Allele& the_allele,
                                                                        const Haplotypes& haplotypes,
                                                                        const HaplotypePseudoCounts& posterior_haplotype_pseudo_counts) const
 {
     RealType result {0};
     
     for (const auto& haplotype : haplotypes) {
-        if (haplotype.contains(the_allele_region, the_allele_sequence)) {
+        if (haplotype.contains(the_allele)) {
             result += posterior_haplotype_probability(haplotype, posterior_haplotype_pseudo_counts);
         }
     }
@@ -184,8 +183,7 @@ VariationalBayesGenotypeModel::posterior_probability_allele_in_samples(const Gen
 }
 
 VariationalBayesGenotypeModel::RealType
-VariationalBayesGenotypeModel::posterior_probability_allele_in_sample(const GenomicRegion& the_allele_region,
-                                                                      const Haplotype::SequenceType& the_allele_sequence,
+VariationalBayesGenotypeModel::posterior_probability_allele_in_sample(const Allele& the_allele,
                                                                       const Haplotypes& haplotypes,
                                                                       const SampleGenotypeResponsabilities& sample_genotype_responsabilities,
                                                                       const Genotypes& genotypes) const
@@ -193,7 +191,7 @@ VariationalBayesGenotypeModel::posterior_probability_allele_in_sample(const Geno
     RealType result {0};
     
     for (const auto& haplotype : haplotypes) {
-        if (haplotype.contains(the_allele_region, the_allele_sequence)) {
+        if (haplotype.contains(the_allele)) {
             for (const auto& genotype : genotypes) {
                 if (genotype.contains(haplotype)) {
                     result += sample_genotype_responsabilities.at(genotype);

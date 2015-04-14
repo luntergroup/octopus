@@ -71,13 +71,11 @@ public:
                                                        const Genotypes& all_genotypes,
                                                        const SampleGenotypeResponsabilities& genotype_responsabilities) const;
     
-    RealType posterior_probability_allele_in_samples(const GenomicRegion& the_allele_region,
-                                                     const Haplotype::SequenceType& the_allele_sequence,
+    RealType posterior_probability_allele_in_samples(const Allele& the_allele,
                                                      const Haplotypes& haplotypes,
                                                      const HaplotypePseudoCounts& posterior_haplotype_pseudo_counts) const;
     
-    RealType posterior_probability_allele_in_sample(const GenomicRegion& the_allele_region,
-                                                    const Haplotype::SequenceType& the_allele_sequence,
+    RealType posterior_probability_allele_in_sample(const Allele& the_allele,
                                                     const Haplotypes& haplotypes,
                                                     const SampleGenotypeResponsabilities& sample_genotype_responsabilities,
                                                     const Genotypes& genotypes) const;

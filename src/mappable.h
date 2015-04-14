@@ -230,4 +230,76 @@ inline GenomicRegion::SizeType size(const Mappable<T>& m)
     return size(static_cast<const T&>(m).get_region());
 }
 
+template <typename T>
+inline bool are_adjacent(const Mappable<T>& lhs, const GenomicRegion& rhs) noexcept
+{
+    return are_adjacent(static_cast<const T&>(lhs).get_region(), rhs);
+}
+
+template <typename T>
+inline bool are_adjacent(const GenomicRegion& lhs, const Mappable<T>& rhs) noexcept
+{
+    return are_adjacent(lhs, static_cast<const T&>(rhs).get_region());
+}
+
+template <typename T1, typename T2>
+inline bool are_adjacent(const Mappable<T1>& lhs, const Mappable<T2>& rhs) noexcept
+{
+    return are_adjacent(static_cast<const T1&>(lhs).get_region(), static_cast<const T2&>(rhs).get_region());
+}
+
+template <typename T>
+inline GenomicRegion get_intervening_region(const Mappable<T>& lhs, const GenomicRegion& rhs)
+{
+    return get_intervening_region(static_cast<const T&>(lhs).get_region(), rhs);
+}
+
+template <typename T>
+inline GenomicRegion get_intervening_region(const GenomicRegion& lhs, const Mappable<T>& rhs)
+{
+    return get_intervening_region(lhs, static_cast<const T&>(rhs).get_region());
+}
+
+template <typename T1, typename T2>
+inline GenomicRegion get_intervening_region(const Mappable<T1>& lhs, const Mappable<T2>& rhs)
+{
+    return get_intervening_region(static_cast<const T1&>(lhs).get_region(), static_cast<const T1&>(rhs).get_region());
+}
+
+template <typename T>
+inline GenomicRegion get_left_overhang(const Mappable<T>& lhs, const GenomicRegion& rhs)
+{
+    return get_left_overhang(static_cast<const T&>(lhs).get_region(), rhs);
+}
+
+template <typename T>
+inline GenomicRegion get_left_overhang(const GenomicRegion& lhs, const Mappable<T>& rhs)
+{
+    return get_left_overhang(lhs, static_cast<const T&>(rhs).get_region());
+}
+
+template <typename T1, typename T2>
+inline GenomicRegion get_left_overhang(const Mappable<T1>& lhs, const Mappable<T2>& rhs)
+{
+    return get_left_overhang(static_cast<const T1&>(lhs).get_region(), static_cast<const T1&>(rhs).get_region());
+}
+
+template <typename T>
+inline GenomicRegion get_right_overhang(const Mappable<T>& lhs, const GenomicRegion& rhs)
+{
+    return get_right_overhang(static_cast<const T&>(lhs).get_region(), rhs);
+}
+
+template <typename T>
+inline GenomicRegion get_right_overhang(const GenomicRegion& lhs, const Mappable<T>& rhs)
+{
+    return get_right_overhang(lhs, static_cast<const T&>(rhs).get_region());
+}
+
+template <typename T1, typename T2>
+inline GenomicRegion get_right_overhang(const Mappable<T1>& lhs, const Mappable<T2>& rhs)
+{
+    return get_right_overhang(static_cast<const T1&>(lhs).get_region(), static_cast<const T1&>(rhs).get_region());
+}
+
 #endif

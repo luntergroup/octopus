@@ -59,6 +59,9 @@ TEST_CASE("snp_overlap_test", "[snps]")
     REQUIRE(!overlaps(snp1, snp3));
     REQUIRE(!overlaps(snp1, snp5));
     REQUIRE(!overlaps(snp1, snp6));
+    
+    REQUIRE(are_adjacent(snp1, snp2));
+    REQUIRE(!are_adjacent(snp1, snp3));
 }
 
 TEST_CASE("mnp_overlap_test", "[mnp]")
