@@ -69,10 +69,6 @@ private:
     std::deque<Allele> the_explicit_alleles_;
 };
 
-void add_to_back(const Variant& a_variant, Haplotype& a_haplotype);
-void add_to_front(const Variant& a_variant, Haplotype& a_haplotype);
-bool contains(const Haplotype& a_haplotype, const Variant& a_variant);
-
 template <typename T>
 void Haplotype::emplace_back(const GenomicRegion& the_allele_region, T&& the_allele_sequence)
 {
@@ -87,6 +83,9 @@ void Haplotype::emplace_front(const GenomicRegion& the_allele_region, T&& the_al
 
 inline bool operator==(const Haplotype& lhs, const Haplotype& rhs)
 {
+    //return (lhs.get_region() == rhs.get_region() && lhs.get_sequence() == rhs.get_sequence());
+    
+//    if (lhs.get_region() != rhs.get_region()) return false;
 //    auto p = std::minmax(lhs, rhs, [] (const auto& lhs, const auto& rhs) {
 //        return lhs.the_explicit_alleles_.size() < rhs.the_explicit_alleles_.size();
 //    });
@@ -94,6 +93,7 @@ inline bool operator==(const Haplotype& lhs, const Haplotype& rhs)
 //                       [&p] (const auto& allele) {
 //                           return p.first.contains(allele);
 //                       });
+    
     if (lhs.the_explicit_alleles_.size() != rhs.the_explicit_alleles_.size()) return false;
     if (lhs.get_region() != rhs.get_region()) return false;
     return std::equal(std::cbegin(lhs.the_explicit_alleles_), std::cend(lhs.the_explicit_alleles_),
@@ -115,5 +115,9 @@ inline std::ostream& operator<<(std::ostream& os, const Haplotype& a_haplotype)
     os << a_haplotype.get_sequence();
     return os;
 }
+
+void add_to_back(const Variant& a_variant, Haplotype& a_haplotype);
+void add_to_front(const Variant& a_variant, Haplotype& a_haplotype);
+bool contains(const Haplotype& a_haplotype, const Variant& a_variant);
 
 #endif /* defined(__Octopus__haplotype__) */

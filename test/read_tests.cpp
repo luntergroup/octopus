@@ -20,7 +20,7 @@
 #include "mock_objects.h"
 #include "region_utils.h"
 
-TEST_CASE("read_reader_open_test", "[read_reader]")
+TEST_CASE("read reader basic BAM", "[read_reader]")
 {
     HtslibReadFacade a_reader {human_1000g_bam1};
     
@@ -36,7 +36,7 @@ TEST_CASE("read_reader_open_test", "[read_reader]")
     REQUIRE(reads.size() == 25);
 }
 
-TEST_CASE("read_reader_open_test_cram", "[read_reader]")
+TEST_CASE("read reader basic CRAM", "[read_reader]")
 {
     HtslibReadFacade a_reader {human_1000g_cram};
     
@@ -53,7 +53,7 @@ TEST_CASE("read_reader_open_test_cram", "[read_reader]")
     REQUIRE(reads.size() == 25);
 }
 
-TEST_CASE("read_manager_single_file_test", "[read_manager]")
+TEST_CASE("read manager works for single file", "[read_manager]")
 {
     ReadManager a_read_manager(std::vector<std::string> {human_1000g_bam1});
     
@@ -168,7 +168,7 @@ TEST_CASE("read_manager_single_file_test", "[read_manager]")
 //    
 //}
 
-TEST_CASE("read_copy_test", "[reads]")
+TEST_CASE("aligned read copies correctly", "[reads]")
 {
     AlignedRead a_read {get_mock_region(), "ACGT", AlignedRead::Qualities {1, 2, 3, 4},
         parse_cigar_string("4M"), 10, AlignedRead::FlagData {}, "1", 10, 30,
@@ -189,7 +189,7 @@ TEST_CASE("read_copy_test", "[reads]")
     REQUIRE(a_moved_read == a_copied_read);
 }
 
-TEST_CASE("read_overlap_test", "[reads]")
+TEST_CASE("aligned read overlap sanity checks", "[reads]")
 {
     ReadManager a_read_manager(std::vector<std::string> {human_1000g_bam1});
     

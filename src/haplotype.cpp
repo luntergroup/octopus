@@ -86,8 +86,8 @@ bool Haplotype::contains(const GenomicRegion& the_allele_region, const SequenceT
                                                std::cend(the_explicit_alleles_), the_allele_region);
         }
         
-        if (begins_before(the_allele_region, first_allele_it->get_region())) {
-            if (overlaps(the_allele_region, first_allele_it->get_region())) {
+        if (begins_before(the_allele_region, *first_allele_it)) {
+            if (overlaps(the_allele_region, *first_allele_it)) {
                 auto reference_region_before_next_allele = get_left_overhang(the_allele_region,
                                                                              first_allele_it->get_region());
                 haplotype_sub_sequence += the_reference_.get_sequence(reference_region_before_next_allele);

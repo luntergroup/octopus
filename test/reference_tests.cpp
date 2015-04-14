@@ -15,12 +15,11 @@
 #include "reference_genome.h"
 #include "reference_genome_factory.h"
 
-TEST_CASE("initialisation_test", "[reference]")
+TEST_CASE("basic reference queries", "[reference]")
 {
     ReferenceGenomeFactory a_factory {};
     
-    // test for a small single genome contig
-    ReferenceGenome ecoli(a_factory.make(ecoli_reference_fasta));
+    ReferenceGenome ecoli {a_factory.make(ecoli_reference_fasta)};
     
     REQUIRE(ecoli.get_name() == "R00000042");
     REQUIRE(ecoli.contains_region(GenomicRegion("R00000042", 10000, 2000000)));
@@ -30,8 +29,7 @@ TEST_CASE("initialisation_test", "[reference]")
     REQUIRE(ecoli.get_sequence(GenomicRegion("R00000042", 0, 10)) == "AGCTTTTCAT"); // first line
     REQUIRE(ecoli.get_sequence(GenomicRegion("R00000042", 69, 80)) == "CTTCTGAACTG"); // accross lines
     
-    // test for a large multi-contig genome
-    ReferenceGenome human(a_factory.make(human_reference_fasta));
+    ReferenceGenome human {a_factory.make(human_reference_fasta)};
     
     REQUIRE(human.get_name() == "human_g1k_v37");
     REQUIRE(human.contains_region(GenomicRegion("1", 100, 10000)));
@@ -44,7 +42,15 @@ TEST_CASE("initialisation_test", "[reference]")
     REQUIRE(human.get_sequence(GenomicRegion("5", 100000, 100010)) == "AGGAAGTTTC");
 }
 
-TEST_CASE("region_parsing", "[region_format")
+TEST_CASE("reference query edge cases", "[reference]")
+{
+    ReferenceGenomeFactory a_factory {};
+    ReferenceGenome human {a_factory.make(human_reference_fasta)};
+    
+    REQUIRE(human.get_sequence(GenomicRegion {"1", 100, 100}) == "");
+}
+
+TEST_CASE("region parses correctly", "[region, reference]")
 {
     ReferenceGenomeFactory a_factory {};
     ReferenceGenome human(a_factory.make(human_reference_fasta));

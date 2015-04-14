@@ -67,8 +67,8 @@ TEST_CASE("haplotype_tree_single_sample_test", "[haplotype_tree]")
     auto sample_ids = a_read_manager.get_sample_ids();
     auto the_sample_id = sample_ids.at(0);
     
-    auto a_region = parse_region("12:0-10000000", human);
-    //auto a_region = parse_region("16:9300000-9300100", human);
+    //auto a_region = parse_region("12:0-10000000", human);
+    auto a_region = parse_region("16:9300000-9300100", human);
     
     auto reads = a_read_manager.fetch_reads(the_sample_id, a_region);
     
