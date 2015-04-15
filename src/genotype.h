@@ -72,7 +72,6 @@ namespace std {
     };
 }
 
-// Only really useful for testing
 inline std::ostream& operator<<(std::ostream& os, const Genotype& a_genotype)
 {
     auto haplotype_occurences = get_haplotype_occurence_map(a_genotype);

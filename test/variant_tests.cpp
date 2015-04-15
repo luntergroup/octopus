@@ -21,7 +21,7 @@
 #include "variant_utils.h"
 #include "mock_objects.h"
 
-TEST_CASE("comparison_consistency_test", "[variant]")
+TEST_CASE("< is consistent with ==", "[variant]")
 {
     Variant snp1 {"chr1", 100, "C", "A", 0, 0};
     Variant snp2 {"chr1", 99, "C", "A", 0, 0};
@@ -42,9 +42,79 @@ TEST_CASE("comparison_consistency_test", "[variant]")
     r2 = snp1 == snp4;
     REQUIRE(r2);
     REQUIRE(r1 == r2);
+    
+    Variant del1 {"chr1", 100, "C", "", 0, 0};
+    Variant del2 {"chr1", 100, "CA", "", 0, 0};
+    Variant del3 {"chr1", 100, "C", "", 0, 0};
+    
+    r1 = !(del1 < del2) && !(del2 < del1);
+    r2 = del1 == del2;
+    REQUIRE(!r2);
+    REQUIRE(r1 == r2);
+    
+    r1 = !(del1 < del3) && !(del3 < del1);
+    r2 = del1 == del3;
+    REQUIRE(r2);
+    REQUIRE(r1 == r2);
+    
+    Variant ins1 {"chr1", 100, "", "C", 0, 0};
+    Variant ins2 {"chr1", 100, "", "CA", 0, 0};
+    Variant ins3 {"chr1", 100, "", "C", 0, 0};
+    
+    r1 = !(ins1 < ins2) && !(ins2 < ins1);
+    r2 = ins1 == ins2;
+    REQUIRE(!r2);
+    REQUIRE(r1 == r2);
+    
+    r1 = !(ins1 < ins3) && !(ins3 < ins1);
+    r2 = ins1 == ins3;
+    REQUIRE(r2);
+    REQUIRE(r1 == r2);
 }
 
-TEST_CASE("snp_overlap_test", "[snps]")
+TEST_CASE("can binary search for ordered variants with < operator", "[variant]")
+{
+    Variant snp1 {"chr1", 100, "C", "A", 0, 0};
+    Variant snp2 {"chr1", 105, "G", "T", 0, 0};
+    Variant del1 {"chr1", 103, "C", "", 0, 0};
+    Variant del2 {"chr1", 115, "T", "", 0, 0};
+    Variant ins1 {"chr1", 107, "", "G", 0, 0};
+    Variant ins2 {"chr1", 110, "", "CA", 0, 0};
+    
+    std::vector<Variant> variants {snp1, del1, snp2, ins1, ins2, del2};
+    
+    REQUIRE(std::binary_search(variants.cbegin(), variants.cend(), snp1));
+    REQUIRE(std::binary_search(variants.cbegin(), variants.cend(), snp2));
+    REQUIRE(std::binary_search(variants.cbegin(), variants.cend(), del1));
+    REQUIRE(std::binary_search(variants.cbegin(), variants.cend(), del2));
+    REQUIRE(std::binary_search(variants.cbegin(), variants.cend(), ins1));
+    REQUIRE(std::binary_search(variants.cbegin(), variants.cend(), ins2));
+    
+    Variant non_snp1 {"chr1", 111, "C", "A", 0, 0};
+    Variant non_snp2 {"chr1", 105, "G", "A", 0, 0};
+    Variant non_del1 {"chr1", 104, "C", "", 0, 0};
+    Variant non_del2 {"chr1", 115, "TA", "", 0, 0};
+    Variant non_ins1 {"chr1", 108, "", "G", 0, 0};
+    Variant non_ins2 {"chr1", 110, "", "TA", 0, 0};
+    
+    REQUIRE(!std::binary_search(variants.cbegin(), variants.cend(), non_snp1));
+    REQUIRE(!std::binary_search(variants.cbegin(), variants.cend(), non_snp2));
+    REQUIRE(!std::binary_search(variants.cbegin(), variants.cend(), non_del1));
+    REQUIRE(!std::binary_search(variants.cbegin(), variants.cend(), non_del2));
+    REQUIRE(!std::binary_search(variants.cbegin(), variants.cend(), non_ins1));
+    REQUIRE(!std::binary_search(variants.cbegin(), variants.cend(), non_ins2));
+    
+    Variant del3 {"chr1", 101, "C", "", 0, 0};
+    Variant snp3 {"chr1", 101, "C", "", 0, 0};
+    
+    std::vector<Variant> variants2 {snp1, del3, snp3};
+    
+    REQUIRE(std::binary_search(variants2.cbegin(), variants2.cend(), snp1));
+    REQUIRE(std::binary_search(variants2.cbegin(), variants2.cend(), del3));
+    REQUIRE(std::binary_search(variants2.cbegin(), variants2.cend(), snp3));
+}
+
+TEST_CASE("snps do not overlap adjacent snps", "[snps]")
 {
     Variant snp1 {"chr1", 100, "C", "A", 0, 0};
     Variant snp2 {"chr1", 99, "C", "A", 0, 0};
@@ -61,10 +131,10 @@ TEST_CASE("snp_overlap_test", "[snps]")
     REQUIRE(!overlaps(snp1, snp6));
     
     REQUIRE(are_adjacent(snp1, snp2));
-    REQUIRE(!are_adjacent(snp1, snp3));
+    REQUIRE(!are_adjacent(snp2, snp3));
 }
 
-TEST_CASE("mnp_overlap_test", "[mnp]")
+TEST_CASE("mnps overlap correctly", "[mnp]")
 {
     Variant mnp1 {"chr1", 100, "CAT", "TAC", 0, 0};
     Variant mnp2 {"chr1", 99, "CAT", "TAC", 0, 0};
@@ -92,7 +162,7 @@ TEST_CASE("mnp_overlap_test", "[mnp]")
     REQUIRE(!overlaps(mnp1, mnp10));
 }
 
-TEST_CASE("insertion_overlap_test", "[insertion]")
+TEST_CASE("insertions never overlap", "[insertion]")
 {
     Variant insert1 {"chr1", 100, "", "TAG", 0, 0};
     Variant insert2 {"chr1", 99, "", "TAG", 0, 0};
@@ -104,7 +174,7 @@ TEST_CASE("insertion_overlap_test", "[insertion]")
     REQUIRE(!overlaps(insert1, insert3));
 }
 
-TEST_CASE("deletion_overlap_test", "[deletion]")
+TEST_CASE("deletions overlap in the same way as mnps", "[deletion]")
 {
     Variant del1 {"chr1", 100, "TAG", "", 0, 0};
     Variant del2 {"chr1", 99, "TAG", "", 0, 0};
@@ -115,7 +185,7 @@ TEST_CASE("deletion_overlap_test", "[deletion]")
     REQUIRE(overlaps(del1, del3));
 }
 
-TEST_CASE("variant_ordering_test", "[variant]")
+TEST_CASE("variants are ordered by region and lexicographically by sequence", "[variant]")
 {
     Variant snp1 {"chr1", 100, "T", "A", 0, 0};
     Variant snp2 {"chr1", 100, "T", "C", 0, 0};
@@ -167,7 +237,7 @@ TEST_CASE("variant_ordering_test", "[variant]")
     REQUIRE(is_required_sort4);
 }
 
-TEST_CASE("left_alignment", "[left_alignment]")
+TEST_CASE("indels can be left aligned", "[left_alignment]")
 {
     ReferenceGenomeFactory a_factory {};
     ReferenceGenome human(a_factory.make(human_reference_fasta));
@@ -224,7 +294,7 @@ TEST_CASE("left_alignment", "[left_alignment]")
     REQUIRE(left_aligned_insertion.get_alternative_allele_sequence() == "ACA");
 }
 
-TEST_CASE("parsimonious_test", "[parsimonious]")
+TEST_CASE("can make variants parsimonious", "[parsimonious]")
 {
     ReferenceGenomeFactory a_factory {};
     ReferenceGenome human(a_factory.make(human_reference_fasta));
@@ -293,7 +363,7 @@ TEST_CASE("parsimonious_test", "[parsimonious]")
     REQUIRE(is_parsimonious(parsimonised_insertion));
 }
 
-TEST_CASE("normalisation_test", "[normalisation]")
+TEST_CASE("can normalise variants", "[normalisation]")
 {
     ReferenceGenomeFactory a_factory {};
     ReferenceGenome human(a_factory.make(human_reference_fasta));

@@ -7,15 +7,15 @@
 //
 
 #include "haplotype.h"
+
+#include <algorithm> // std::for_each
+#include <iterator>  // std::cbegin etc
+
 #include "reference_genome.h"
 #include "genomic_region.h"
 #include "region_utils.h"
 
-/**
- I currently only store sequence data explictly added through the emplace methods. Any intervening
- or flanking regions are assumed to be reference and are retreived as needed. This saves memory,
- but it might cause too many file reads if a lot of complex containment queries are made.
- */
+#include <iostream> // TEST
 
 Haplotype::Haplotype(ReferenceGenome& the_reference)
 :
@@ -43,7 +43,22 @@ bool Haplotype::contains(const Allele& an_allele) const
         return false;
     }
     
-    return ::contains(get_region(), an_allele) && get_sequence(an_allele.get_region()) == an_allele.get_sequence();
+    if (::contains(get_region(), an_allele)) {
+        // These binary searches are just optimisations and should not be required
+        if (std::binary_search(std::cbegin(the_explicit_alleles_),
+                               std::cend(the_explicit_alleles_), an_allele)) {
+            return true;
+        } else if (std::binary_search(std::cbegin(the_explicit_alleles_),
+                                      std::cend(the_explicit_alleles_), an_allele.get_region())) {
+            // If the allele is not explcitly contained but the region is then it must be a different
+            // allele
+            return false;
+        }
+        
+        return get_sequence(an_allele.get_region()) == an_allele.get_sequence();
+    } else {
+        return false;
+    }
 }
 
 void Haplotype::set_region(const GenomicRegion& a_region)
@@ -71,58 +86,29 @@ Haplotype::SequenceType Haplotype::get_sequence() const
 
 Haplotype::SequenceType Haplotype::get_sequence(const GenomicRegion& a_region) const
 {
-    auto haplotype_region = get_region();
+    if (the_explicit_alleles_.empty()) {
+        return the_reference_.get_sequence(a_region);
+    }
+    
+    auto the_region_bounded_by_alleles = get_region_bounded_by_explicit_alleles();
     
     SequenceType result {};
     
-    if (begins_before(a_region, haplotype_region)) {
-        result += the_reference_.get_sequence(get_left_overhang(a_region, haplotype_region));
+    if (begins_before(a_region, the_region_bounded_by_alleles)) {
+        result += the_reference_.get_sequence(get_left_overhang(a_region, the_region_bounded_by_alleles));
     }
     
-    if (!is_cached_sequence_outdated_) {
-        auto first_cached_base = std::cbegin(cached_sequence_) + (get_begin(a_region) - get_begin(haplotype_region));
-        result.insert(std::end(result), first_cached_base, first_cached_base +
-                                        std::min(size(a_region), size(haplotype_region)));
-        
-    } else {
-        auto the_region_bounded_by_alleles = get_region_bounded_by_explicit_alleles();
-        
-        if (begins_before(haplotype_region, the_region_bounded_by_alleles)) {
-            result += the_reference_.get_sequence(get_left_overhang(haplotype_region, the_region_bounded_by_alleles));
-        }
-        
-        auto overlapped_explicit_allele_range = overlap_range(std::cbegin(the_explicit_alleles_),
-                                                              std::cend(the_explicit_alleles_), a_region);
-        
-        result += get_sequence_bounded_by_explicit_alleles(overlapped_explicit_allele_range.first,
-                                                           overlapped_explicit_allele_range.second);
-        
-        if (ends_before(the_region_bounded_by_alleles, haplotype_region)) {
-            result += the_reference_.get_sequence(get_right_overhang(haplotype_region, the_region_bounded_by_alleles));
-        }
-    }
+    auto overlapped_explicit_allele_range = overlap_range(std::cbegin(the_explicit_alleles_),
+                                                          std::cend(the_explicit_alleles_), a_region);
     
-    if (ends_before(haplotype_region, a_region)) {
-        result += the_reference_.get_sequence(get_right_overhang(a_region, haplotype_region));
+    result += get_sequence_bounded_by_explicit_alleles(overlapped_explicit_allele_range.first,
+                                                       overlapped_explicit_allele_range.second);
+    
+    if (ends_before(the_region_bounded_by_alleles, a_region)) {
+        result += the_reference_.get_sequence(get_right_overhang(a_region, the_region_bounded_by_alleles));
     }
     
     return result;
-    
-//    SequenceType result {};
-//    
-//    auto reference_left_part  = get_left_overhang(a_region, the_region_bounded_by_alleles);
-//    if (size(reference_left_part) > 0) {
-//        result += the_reference_.get_sequence(reference_left_part);
-//    }
-//    
-//    result += get_sequence_bounded_by_explicit_alleles();
-//    
-//    auto reference_right_part = get_right_overhang(a_region, the_region_bounded_by_alleles);
-//    if (size(reference_right_part) > 0) {
-//        result += the_reference_.get_sequence(reference_right_part);
-//    }
-//    
-//    return result;
 }
 
 //void Haplotype::operator+=(const Haplotype& other)
@@ -141,26 +127,13 @@ GenomicRegion Haplotype::get_region_bounded_by_explicit_alleles() const
     };
 }
 
-Haplotype::SequenceType Haplotype::get_sequence_bounded_by_explicit_alleles(AlleleIterator first, AlleleIterator last) const
+Haplotype::SequenceType Haplotype::get_sequence_bounded_by_explicit_alleles(AlleleIterator first,
+                                                                            AlleleIterator last) const
 {
     SequenceType result {};
     
-    if (first == last) return result;
-    
-    GenomicRegion previous_region {first->get_region()};
-    
-    std::for_each(first, last, [this, &previous_region, &result] (const auto& allele) {
-        auto this_region = allele.get_region();
-        
-        if (previous_region != this_region && !overlaps(previous_region, this_region)) {
-            auto intervening_reference_region   = get_intervening_region(previous_region, this_region);
-            auto intervening_reference_sequence = the_reference_.get_sequence(intervening_reference_region);
-            result += intervening_reference_sequence;
-        }
-        
+    std::for_each(first, last, [this, &result] (const auto& allele) {
         result += allele.get_sequence();
-        
-        previous_region = this_region;
     });
     
     return result;

@@ -91,7 +91,7 @@ inline bool operator==(const Allele& lhs, const Allele& rhs)
 
 inline bool operator<(const Allele& lhs, const Allele& rhs)
 {
-    return (lhs.get_region() == rhs.get_region()) ? lhs.get_sequence() == rhs.get_sequence() :
+    return (lhs.get_region() == rhs.get_region()) ? lhs.get_sequence() < rhs.get_sequence() :
                                                     lhs.get_region() < rhs.get_region();
 }
 

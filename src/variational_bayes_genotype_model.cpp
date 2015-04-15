@@ -25,7 +25,7 @@ VariationalBayesGenotypeModel::RealType
 VariationalBayesGenotypeModel::log_expected_genotype_probability(const Genotype& genotype,
                                                                  const HaplotypePseudoCounts& haplotype_pseudo_counts)
 {
-    // These cases are just for optimisation; they are functionally equivalent
+    // These cases are just for optimisation
     switch (ploidy_) {
         case 1:
             return log_expected_genotype_probability_haploid(genotype, haplotype_pseudo_counts);

@@ -10,8 +10,6 @@
 #define __Octopus__haplotype__
 
 #include <queue>
-#include <algorithm> // std::equal
-#include <iterator>  // std::cbegin etc
 #include <stdexcept> // std::runtime_error
 #include <ostream>
 

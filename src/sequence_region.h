@@ -107,7 +107,7 @@ inline bool is_after(const SequenceRegion& lhs, const SequenceRegion& rhs) noexc
 inline SequenceRegion::DifferenceType overlap_size(const SequenceRegion& lhs, const SequenceRegion& rhs) noexcept
 {
     return static_cast<SequenceRegion::DifferenceType>(std::min(lhs.get_end(), rhs.get_end())) -
-    static_cast<SequenceRegion::DifferenceType>(std::max(lhs.get_begin(), rhs.get_begin()));
+            static_cast<SequenceRegion::DifferenceType>(std::max(lhs.get_begin(), rhs.get_begin()));
 }
 
 inline bool overlaps(const SequenceRegion& lhs, const SequenceRegion& rhs) noexcept
