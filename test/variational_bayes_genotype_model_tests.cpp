@@ -614,28 +614,23 @@ TEST_CASE("single_sample_compelx_variational_bayes_genotype_model", "[variationa
     add_to_back(candidates[0], hap5);
     add_to_back(candidates[2], hap5);
     
-    // smaller insertion & larger deletion
-    Haplotype hap6 {human, a_region};
-    add_to_back(candidates[0], hap6);
-    add_to_back(candidates[1], hap6);
-    
     // bigger insertion
-    Haplotype hap7 {human, a_region};
-    add_to_back(candidates[6], hap7);
+    Haplotype hap6 {human, a_region};
+    add_to_back(candidates[6], hap6);
     
     // snps & smaller insertion
-    Haplotype hap8 {human, a_region};
-    add_to_back(candidates[0], hap8);
-    add_to_back(candidates[3], hap8);
-    add_to_back(candidates[5], hap8);
+    Haplotype hap7 {human, a_region};
+    add_to_back(candidates[0], hap7);
+    add_to_back(candidates[3], hap7);
+    add_to_back(candidates[5], hap7);
     
     // snps & bigger insertion
-    Haplotype hap9 {human, a_region};
-    add_to_back(candidates[3], hap9);
-    add_to_back(candidates[5], hap9);
-    add_to_back(candidates[6], hap9);
+    Haplotype hap8 {human, a_region};
+    add_to_back(candidates[3], hap8);
+    add_to_back(candidates[5], hap8);
+    add_to_back(candidates[6], hap8);
     
-    std::vector<Haplotype> haplotypes {reference_haplotype, hap1, hap2, hap3, hap4, hap5, hap6, hap7, hap8, hap9};
+    std::vector<Haplotype> haplotypes {reference_haplotype, hap1, hap2, hap3, hap4, hap5, hap6, hap7, hap8};
     
     unsigned ploidy {2};
     ReadModel a_read_model {ploidy};

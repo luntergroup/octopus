@@ -46,7 +46,7 @@ inline SequenceRegion::SequenceRegion(SizeType begin, SizeType end)
 begin_ {begin},
 end_ {end}
 {
-    if (end < begin) throw std::runtime_error {"Invalid sequence region"};
+    if (end < begin) throw std::runtime_error {"Invalid sequence region: end < begin"};
 }
 
 inline SequenceRegion::SizeType SequenceRegion::get_begin() const noexcept
@@ -96,12 +96,17 @@ inline bool operator<(const SequenceRegion& lhs, const SequenceRegion& rhs) noex
 
 inline bool is_before(const SequenceRegion& lhs, const SequenceRegion& rhs) noexcept
 {
-    return lhs.get_end() <= rhs.get_begin();
+    return (size(lhs) == 0) ? lhs.get_end() < rhs.get_begin() : lhs.get_end() <= rhs.get_begin();
 }
 
 inline bool is_after(const SequenceRegion& lhs, const SequenceRegion& rhs) noexcept
 {
-    return  rhs.get_end() <= lhs.get_begin();
+    return  (size(rhs) == 0) ? rhs.get_end() < lhs.get_begin() : rhs.get_end() <= lhs.get_begin();
+}
+
+inline bool are_adjacent(const SequenceRegion& lhs, const SequenceRegion& rhs) noexcept
+{
+    return lhs.get_begin() == rhs.get_end() || lhs.get_end() == rhs.get_begin();
 }
 
 inline SequenceRegion::DifferenceType overlap_size(const SequenceRegion& lhs, const SequenceRegion& rhs) noexcept
@@ -112,17 +117,13 @@ inline SequenceRegion::DifferenceType overlap_size(const SequenceRegion& lhs, co
 
 inline bool overlaps(const SequenceRegion& lhs, const SequenceRegion& rhs) noexcept
 {
-    return overlap_size(lhs, rhs) > 0;
+    auto num_bases_overlaped = overlap_size(lhs, rhs);
+    return (num_bases_overlaped == 0) ? size(lhs) == 0 || size(rhs) == 0 : num_bases_overlaped > 0;
 }
 
 inline bool contains(const SequenceRegion& lhs, const SequenceRegion& rhs) noexcept
 {
     return lhs.get_begin() <= rhs.get_begin() && rhs.get_end() <= lhs.get_end();
-}
-
-inline bool are_adjacent(const SequenceRegion& lhs, const SequenceRegion& rhs) noexcept
-{
-    return overlap_size(lhs, rhs) == 0;
 }
 
 inline SequenceRegion get_intervening_region(const SequenceRegion& lhs, const SequenceRegion& rhs)
@@ -131,10 +132,7 @@ inline SequenceRegion get_intervening_region(const SequenceRegion& lhs, const Se
         throw std::runtime_error {"Cannot get intervening region between overlapping regions"};
     }
     
-    return SequenceRegion {
-        lhs.get_end(),
-        rhs.get_begin()
-    };
+    return SequenceRegion {lhs.get_end(), rhs.get_begin()};
 }
 
 inline SequenceRegion get_left_overhang(const SequenceRegion& lhs, const SequenceRegion& rhs) noexcept

@@ -16,6 +16,7 @@
 #include "reference_genome.h"
 #include "reference_genome_factory.h"
 #include "genomic_region.h"
+#include "region_utils.h"
 #include "allele.h"
 #include "variant.h"
 #include "variant_utils.h"
@@ -162,16 +163,25 @@ TEST_CASE("mnps overlap correctly", "[mnp]")
     REQUIRE(!overlaps(mnp1, mnp10));
 }
 
-TEST_CASE("insertions never overlap", "[insertion]")
+TEST_CASE("insertions overlap other insertions with same region", "[insertion]")
 {
     Variant insert1 {"chr1", 100, "", "TAG", 0, 0};
     Variant insert2 {"chr1", 99, "", "TAG", 0, 0};
     Variant insert3 {"chr1", 101, "", "TAG", 0, 0};
     
-    // Insertions never overlap. IS THIS RIGHT!?!
-    REQUIRE(!overlaps(insert1, insert1));
+    REQUIRE(overlaps(insert1, insert1));
     REQUIRE(!overlaps(insert1, insert2));
     REQUIRE(!overlaps(insert1, insert3));
+}
+
+TEST_CASE("insertions overlap with other variants when contained by their region", "[insertion]")
+{
+    Variant insert {"chr1", 100, "", "TAG", 0, 0};
+    Variant del {"chr1", 99, "TAG", "", 0, 0};
+    Variant mnp {"chr1", 100, "TAG", "CAT", 0, 0};
+    
+    REQUIRE(overlaps(insert, del));
+    REQUIRE(overlaps(insert, mnp));
 }
 
 TEST_CASE("deletions overlap in the same way as mnps", "[deletion]")
@@ -235,6 +245,30 @@ TEST_CASE("variants are ordered by region and lexicographically by sequence", "[
     auto is_required_sort4 = std::equal(variants4.cbegin(), variants4.cend(), variants4_required_sort.cbegin());
     
     REQUIRE(is_required_sort4);
+}
+
+TEST_CASE("overlap_range includes insertions on boundry", "[variant]")
+{
+    Variant snp1 {"chr1", 100, "T", "A", 0, 0};
+    Variant snp2 {"chr1", 110, "T", "C", 0, 0};
+    Variant ins1 {"chr1", 105, "", "A", 0, 0};
+    
+    std::vector<Variant> variants {snp1, ins1, snp2};
+    
+    GenomicRegion region1 {"chr1", 104, 106};
+    GenomicRegion region2 {"chr1", 104, 105};
+    GenomicRegion region3 {"chr1", 105, 106};
+    GenomicRegion region4 {"chr1", 105, 105};
+    
+    auto overlapped1 = overlap_range(variants.cbegin(), variants.cend(), region1);
+    auto overlapped2 = overlap_range(variants.cbegin(), variants.cend(), region2);
+    auto overlapped3 = overlap_range(variants.cbegin(), variants.cend(), region3);
+    auto overlapped4 = overlap_range(variants.cbegin(), variants.cend(), region4);
+    
+    REQUIRE(std::distance(overlapped1.first, overlapped1.second) == 1);
+    REQUIRE(std::distance(overlapped2.first, overlapped2.second) == 0);
+    REQUIRE(std::distance(overlapped3.first, overlapped3.second) == 1);
+    REQUIRE(std::distance(overlapped4.first, overlapped4.second) == 1);
 }
 
 TEST_CASE("indels can be left aligned", "[left_alignment]")

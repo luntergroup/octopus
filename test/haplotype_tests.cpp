@@ -320,8 +320,8 @@ TEST_CASE("haplotype equate when alleles infer same sequence", "[haplotype]")
     auto a_region = parse_region("16:9300000-9300100", human);
     
     Allele allele1 {parse_region("16:9300037-9300037", human), "TG"};
-    Allele allele2 {parse_region("16:9300037-9300051", human), ""};
-    Allele allele3 {parse_region("16:9300039-9300051", human), ""};
+    Allele allele2 {parse_region("16:9300039-9300051", human), ""};
+    Allele allele3 {parse_region("16:9300041-9300051", human), ""};
     
     Haplotype hap1 {human, a_region};
     hap1.push_back(allele3);

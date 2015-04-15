@@ -21,6 +21,9 @@
     Represents a continuous region of a sequence in a genome. The sequence
     name is the reference sequence name (usually a chromosome), and the
     begin and end positions are zero-indexed half open - [begin,end) - indices.
+ 
+    All comparison operations (<, ==, is_before, etc) throw exceptions if the arguements
+    are not from the same contig.
  */
 class GenomicRegion : public Comparable<GenomicRegion>
 {
@@ -168,6 +171,11 @@ inline bool is_after(const GenomicRegion& lhs, const GenomicRegion& rhs) noexcep
     throw RegionError(to_string(lhs), to_string(rhs));
 }
 
+inline bool are_adjacent(const GenomicRegion& lhs, const GenomicRegion& rhs) noexcept
+{
+    return is_same_contig(lhs, rhs) ? are_adjacent(lhs.get_contig_region(), rhs.get_contig_region()) : false;
+}
+
 inline GenomicRegion::DifferenceType overlap_size(const GenomicRegion& lhs, const GenomicRegion& rhs) noexcept
 {
     return is_same_contig(lhs, rhs) ? overlap_size(lhs.get_contig_region(), rhs.get_contig_region()) : 0;
@@ -175,12 +183,7 @@ inline GenomicRegion::DifferenceType overlap_size(const GenomicRegion& lhs, cons
 
 inline bool overlaps(const GenomicRegion& lhs, const GenomicRegion& rhs) noexcept
 {
-    return overlap_size(lhs, rhs) > 0;
-}
-
-inline bool are_adjacent(const GenomicRegion& lhs, const GenomicRegion& rhs) noexcept
-{
-    return overlap_size(lhs, rhs) == 0;
+    return is_same_contig(lhs, rhs) ? overlaps(lhs.get_contig_region(), rhs.get_contig_region()) : false;
 }
 
 inline bool contains(const GenomicRegion& lhs, const GenomicRegion& rhs) noexcept
@@ -207,11 +210,7 @@ inline GenomicRegion get_intervening_region(const GenomicRegion& lhs, const Geno
         throw std::runtime_error {"Cannot get intervening region between overlapping regions"};
     }
     
-    return GenomicRegion {
-        lhs.get_contig_name(),
-        lhs.get_end(),
-        rhs.get_begin()
-    };
+    return GenomicRegion {lhs.get_contig_name(), lhs.get_end(), rhs.get_begin()};
 }
 
 inline GenomicRegion get_left_overhang(const GenomicRegion& lhs, const GenomicRegion& rhs)
