@@ -86,7 +86,7 @@ inline ReferenceGenome::SizeType ReferenceGenome::get_contig_size(const std::str
     if (has_contig(contig_name)) {
         return contig_sizes_.at(contig_name);
     }
-    throw std::runtime_error {"Contig is not in reference genome"};
+    throw std::runtime_error {"contig is not in reference genome"};
 }
 
 inline ReferenceGenome::SizeType ReferenceGenome::get_contig_size(const GenomicRegion& a_region) const
@@ -112,12 +112,14 @@ inline ReferenceGenome::SequenceType ReferenceGenome::get_sequence(const Genomic
 // Requires reference access to get contig sizes for partially specified regions (e.g. "4")
 inline GenomicRegion parse_region(const std::string& a_region, const ReferenceGenome& the_reference)
 {
-    const static std::regex re {"([^:]+)(?::(\\d+)-?(\\d*))?"};
+    const static std::regex re {"([^:]+)(?::(\\d+)(-)?(\\d*))?"};
     std::smatch match;
-    if (std::regex_search(a_region, match, re) && match.size() == 4) {
+    
+    if (std::regex_search(a_region, match, re) && match.size() == 5) {
         auto contig_name = match.str(1);
         GenomicRegion::SizeType begin {}, end {};
         auto the_contig_size = the_reference.get_contig_size(contig_name);
+        
         if (match.str(2).empty()) {
             end = the_contig_size;
         } else {
@@ -125,17 +127,21 @@ inline GenomicRegion parse_region(const std::string& a_region, const ReferenceGe
             
             if (match.str(3).empty()) {
                 end = begin;
+            } else if (match.str(4).empty()) {
+                end = the_contig_size;
             } else {
-                end = static_cast<GenomicRegion::SizeType>(std::stoul(match.str(3)));
+                end = static_cast<GenomicRegion::SizeType>(std::stoul(match.str(4)));
             }
             
             if (begin > the_contig_size || end > the_contig_size) {
-                throw std::runtime_error {"Region out of bounds"};
+                throw std::runtime_error {"region out of bounds"};
             }
         }
+        
         return GenomicRegion {std::move(contig_name), begin, end};
     }
-    throw std::runtime_error {"Invalid region format"};
+    
+    throw std::runtime_error {"invalid region format"};
 }
 
 #endif /* defined(__Octopus__reference_genome__) */

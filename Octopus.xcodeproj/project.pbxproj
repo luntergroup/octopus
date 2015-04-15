@@ -456,9 +456,9 @@
 		D4907F421A88D6C600639203 /* io */ = {
 			isa = PBXGroup;
 			children = (
-				CAE3E2A51AA24D6000C01B2C /* variants */,
-				CABA377A1A8F66A300BBE598 /* reads */,
 				CABA37791A8F668E00BBE598 /* reference */,
+				CABA377A1A8F66A300BBE598 /* reads */,
+				CAE3E2A51AA24D6000C01B2C /* variants */,
 			);
 			name = io;
 			sourceTree = "<group>";

@@ -15,7 +15,7 @@
 #include "reference_genome.h"
 #include "reference_genome_factory.h"
 
-TEST_CASE("basic reference queries", "[reference]")
+TEST_CASE("ReferemceGenome handles basic queries", "[reference]")
 {
     ReferenceGenomeFactory a_factory {};
     
@@ -42,7 +42,7 @@ TEST_CASE("basic reference queries", "[reference]")
     REQUIRE(human.get_sequence(GenomicRegion("5", 100000, 100010)) == "AGGAAGTTTC");
 }
 
-TEST_CASE("reference query edge cases", "[reference]")
+TEST_CASE("ReferemceGenome handles edge cases", "[reference]")
 {
     ReferenceGenomeFactory a_factory {};
     ReferenceGenome human {a_factory.make(human_reference_fasta)};
@@ -50,10 +50,10 @@ TEST_CASE("reference query edge cases", "[reference]")
     REQUIRE(human.get_sequence(GenomicRegion {"1", 100, 100}) == "");
 }
 
-TEST_CASE("region parses correctly", "[region, reference]")
+TEST_CASE("parse_region works with correctly formatted region input", "[region, reference]")
 {
     ReferenceGenomeFactory a_factory {};
-    ReferenceGenome human(a_factory.make(human_reference_fasta));
+    ReferenceGenome human {a_factory.make(human_reference_fasta)};
     
     auto r1 = parse_region("3", human);
     REQUIRE(r1.get_contig_name() == "3");
@@ -69,4 +69,44 @@ TEST_CASE("region parses correctly", "[region, reference]")
     REQUIRE(r3.get_contig_name() == "18");
     REQUIRE(r3.get_begin() == 102029);
     REQUIRE(r3.get_end() == 102029);
+    
+    auto r4 = parse_region("MT:100-", human);
+    REQUIRE(r4.get_contig_name() == "MT");
+    REQUIRE(r4.get_begin() == 100);
+    REQUIRE(r4.get_end() == human.get_contig_size("MT"));
+}
+
+TEST_CASE("parse_region throws when region is not formatted correctly", "[region, reference]")
+{
+    ReferenceGenomeFactory a_factory {};
+    ReferenceGenome human {a_factory.make(human_reference_fasta)};
+    
+    bool throwed {};
+    
+    try {
+        auto r1 = parse_region("-", human);
+        throwed = false;
+    } catch (...) {
+        throwed = true;
+    }
+    
+    REQUIRE(throwed);
+    
+    try {
+        auto r2 = parse_region("5:100-99", human);
+        throwed = false;
+    } catch (...) {
+        throwed = true;
+    }
+    
+    REQUIRE(throwed);
+    
+//    try {
+//        auto r3 = parse_region("2::0-100", human);
+//        throwed = false;
+//    } catch (...) {
+//        throwed = true;
+//    }
+//    
+//    REQUIRE(throwed);
 }
