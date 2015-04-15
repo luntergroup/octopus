@@ -59,6 +59,11 @@ inline SequenceRegion::SizeType SequenceRegion::get_end() const noexcept
     return end_;
 }
 
+inline bool empty(const SequenceRegion& a_region) noexcept
+{
+    return a_region.get_begin() == a_region.get_end();
+}
+
 inline SequenceRegion::SizeType size(const SequenceRegion& a_region) noexcept
 {
     return a_region.get_end() - a_region.get_begin();
@@ -96,12 +101,12 @@ inline bool operator<(const SequenceRegion& lhs, const SequenceRegion& rhs) noex
 
 inline bool is_before(const SequenceRegion& lhs, const SequenceRegion& rhs) noexcept
 {
-    return (size(lhs) == 0) ? lhs.get_end() < rhs.get_begin() : lhs.get_end() <= rhs.get_begin();
+    return (empty(lhs)) ? lhs.get_end() < rhs.get_begin() : lhs.get_end() <= rhs.get_begin();
 }
 
 inline bool is_after(const SequenceRegion& lhs, const SequenceRegion& rhs) noexcept
 {
-    return  (size(rhs) == 0) ? rhs.get_end() < lhs.get_begin() : rhs.get_end() <= lhs.get_begin();
+    return  (empty(rhs)) ? rhs.get_end() < lhs.get_begin() : rhs.get_end() <= lhs.get_begin();
 }
 
 inline bool are_adjacent(const SequenceRegion& lhs, const SequenceRegion& rhs) noexcept
@@ -118,12 +123,21 @@ inline SequenceRegion::DifferenceType overlap_size(const SequenceRegion& lhs, co
 inline bool overlaps(const SequenceRegion& lhs, const SequenceRegion& rhs) noexcept
 {
     auto num_bases_overlaped = overlap_size(lhs, rhs);
-    return (num_bases_overlaped == 0) ? size(lhs) == 0 || size(rhs) == 0 : num_bases_overlaped > 0;
+    return (num_bases_overlaped == 0) ? empty(lhs) || empty(rhs) : num_bases_overlaped > 0;
 }
 
 inline bool contains(const SequenceRegion& lhs, const SequenceRegion& rhs) noexcept
 {
     return lhs.get_begin() <= rhs.get_begin() && rhs.get_end() <= lhs.get_end();
+}
+
+inline SequenceRegion get_overlapped(const SequenceRegion& lhs, const SequenceRegion& rhs) noexcept
+{
+    if (!overlaps(lhs, rhs)) {
+        throw std::runtime_error {"Cannot get overalpped region between non overlapping regions"};
+    }
+    
+    return SequenceRegion {std::max(lhs.get_begin(), rhs.get_begin()), std::min(lhs.get_end(), rhs.get_end())};
 }
 
 inline SequenceRegion get_intervening_region(const SequenceRegion& lhs, const SequenceRegion& rhs)

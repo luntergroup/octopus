@@ -306,7 +306,7 @@ TEST_CASE("insertions decompose", "[haplotype")
     hap.push_back(an_allele);
     
     REQUIRE(hap.contains(an_allele));
-    //REQUIRE(hap.contains(a_sub_allele));
+    REQUIRE(hap.contains(a_sub_allele));
     REQUIRE(hap.contains(another_sub_allele));
     REQUIRE(!hap.contains(not_a_sub_allele1));
     REQUIRE(!hap.contains(not_a_sub_allele2));

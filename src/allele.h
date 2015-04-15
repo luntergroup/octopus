@@ -11,11 +11,14 @@
 
 #include <string>
 #include <ostream>
+#include <algorithm> // std::min
+#include <cstddef>   // std::size_t
 
 #include "genomic_region.h"
 #include "comparable.h"
 #include "mappable.h"
 #include "reference_genome.h"
+#include "string_utils.h"
 
 class Allele : public Comparable<Allele>, public Mappable<Allele>
 {
@@ -127,13 +130,26 @@ inline Allele::SequenceType get_subsequence(const Allele& an_allele, const Genom
         return Allele::SequenceType {};
     } else {
         auto first = std::cbegin(an_allele.get_sequence()) + (get_begin(a_region) - get_begin(an_allele));
-        return Allele::SequenceType {first, first + size(a_region)};
+        
+        // The minimum of the allele sequence size and region size is used as deletions will
+        // result in a sequence size smaller than the region size
+        return Allele::SequenceType {first, first +
+            std::min(an_allele.get_sequence().size(), static_cast<std::size_t>(size(a_region)))};
     }
 }
 
 inline bool contains(const Allele& lhs, const Allele& rhs)
 {
-    return contains(lhs.get_region(), rhs.get_region()) && get_subsequence(lhs, rhs.get_region()) == rhs.get_sequence();
+    if (!contains(lhs.get_region(), rhs.get_region())) {
+        return false;
+    } else if (empty(lhs.get_region())) {
+        // If the alleles are both insertions then both regions will be the same so we can only test
+        // if the inserted rhs sequence is a subsequence of the lhs sequence. The rhs sequence
+        // is required to be non-empty otherwise it would be a subsequence of everything.
+        return !rhs.get_sequence().empty() && ::contains(lhs.get_sequence(), rhs.get_sequence());
+    } else {
+        return get_subsequence(lhs, rhs.get_region()) == rhs.get_sequence();
+    }
 }
 
 #endif

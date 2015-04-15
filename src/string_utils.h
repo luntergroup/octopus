@@ -29,14 +29,14 @@ std::vector<std::string> split(T&& s, char delim) {
 }
 
 template <typename T>
-bool is_prefix(T this_sequence, T that_sequence)
+bool is_prefix(const T& this_sequence, const T& that_sequence)
 {
     return std::equal(std::cbegin(this_sequence), std::cend(this_sequence),
                       std::cbegin(that_sequence));
 }
 
 template <typename T>
-bool is_suffix(T this_sequence, T that_sequence)
+bool is_suffix(const T& this_sequence, const T& that_sequence)
 {
     return std::equal(std::cbegin(this_sequence), std::cend(this_sequence),
                       std::next(std::cbegin(that_sequence)));
@@ -50,6 +50,11 @@ inline std::size_t stringlen(const char* str)
 inline std::size_t stringlen(const std::string& str)
 {
     return str.size();
+}
+
+inline bool contains(const std::string& lhs, const std::string& rhs)
+{
+    return lhs.find(rhs) != std::string::npos;
 }
 
 #endif /* defined(__Octopus__string_utils__) */

@@ -21,6 +21,18 @@ template <typename T>
 class Mappable {};
 
 template <typename T>
+inline bool empty(const Mappable<T>& m)
+{
+    return empty(static_cast<const T&>(m).get_region());
+}
+
+template <typename T>
+inline GenomicRegion::SizeType size(const Mappable<T>& m)
+{
+    return size(static_cast<const T&>(m).get_region());
+}
+
+template <typename T>
 inline GenomicRegion::StringType get_contig_name(const Mappable<T>& m)
 {
     return get_contig_name(static_cast<const T&>(m).get_region());
@@ -225,12 +237,6 @@ inline bool contains(const Mappable<T1>& lhs, const Mappable<T2>& rhs) noexcept
 }
 
 template <typename T>
-inline GenomicRegion::SizeType size(const Mappable<T>& m)
-{
-    return size(static_cast<const T&>(m).get_region());
-}
-
-template <typename T>
 inline bool are_adjacent(const Mappable<T>& lhs, const GenomicRegion& rhs) noexcept
 {
     return are_adjacent(static_cast<const T&>(lhs).get_region(), rhs);
@@ -264,6 +270,24 @@ template <typename T1, typename T2>
 inline GenomicRegion get_intervening_region(const Mappable<T1>& lhs, const Mappable<T2>& rhs)
 {
     return get_intervening_region(static_cast<const T1&>(lhs).get_region(), static_cast<const T1&>(rhs).get_region());
+}
+
+template <typename T>
+inline GenomicRegion get_overlapped(const Mappable<T>& lhs, const GenomicRegion& rhs)
+{
+    return get_overlapped(static_cast<const T&>(lhs).get_region(), rhs);
+}
+
+template <typename T>
+inline GenomicRegion get_overlapped(const GenomicRegion& lhs, const Mappable<T>& rhs)
+{
+    return get_overlapped(lhs, static_cast<const T&>(rhs).get_region());
+}
+
+template <typename T1, typename T2>
+inline GenomicRegion get_overlapped(const Mappable<T1>& lhs, const Mappable<T2>& rhs)
+{
+    return get_overlapped(static_cast<const T1&>(lhs).get_region(), static_cast<const T1&>(rhs).get_region());
 }
 
 template <typename T>

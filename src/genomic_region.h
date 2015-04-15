@@ -35,6 +35,8 @@ public:
     GenomicRegion() = default;
     template <typename T>
     explicit GenomicRegion(T&& contig_name, SizeType begin, SizeType end);
+    template <typename T, typename R>
+    explicit GenomicRegion(T&& contig_name, R&& contig_region);
     
     GenomicRegion(const GenomicRegion&)            = default;
     GenomicRegion& operator=(const GenomicRegion&) = default;
@@ -69,8 +71,16 @@ private:
 
 template <typename T>
 GenomicRegion::GenomicRegion(T&& contig_name, SizeType begin, SizeType end)
-:contig_name_ {std::forward<T>(contig_name)},
- contig_region_ {begin, end}
+:
+contig_name_ {std::forward<T>(contig_name)},
+contig_region_ {begin, end}
+{}
+
+template <typename T, typename R>
+GenomicRegion::GenomicRegion(T&& contig_name, R&& contig_region)
+:
+contig_name_ {std::forward<T>(contig_name)},
+contig_region_ {std::forward<R>(contig_region)}
 {}
 
 inline const GenomicRegion::StringType& GenomicRegion::get_contig_name() const noexcept
@@ -106,6 +116,11 @@ inline GenomicRegion::SizeType get_begin(const GenomicRegion& a_region) noexcept
 inline GenomicRegion::SizeType get_end(const GenomicRegion& a_region) noexcept
 {
     return a_region.get_end();
+}
+
+inline bool empty(const GenomicRegion& a_region) noexcept
+{
+    return empty(a_region.get_contig_region());
 }
 
 inline GenomicRegion::SizeType size(const GenomicRegion& a_region) noexcept
@@ -210,7 +225,16 @@ inline GenomicRegion get_intervening_region(const GenomicRegion& lhs, const Geno
         throw std::runtime_error {"Cannot get intervening region between overlapping regions"};
     }
     
-    return GenomicRegion {lhs.get_contig_name(), lhs.get_end(), rhs.get_begin()};
+    return GenomicRegion {lhs.get_contig_name(), get_intervening_region(lhs.get_contig_region(), rhs.get_contig_region())};
+}
+
+inline GenomicRegion get_overlapped(const GenomicRegion& lhs, const GenomicRegion& rhs) noexcept
+{
+    if (!overlaps(lhs, rhs)) {
+        throw std::runtime_error {"Cannot get overalpped region between non overlapping regions"};
+    }
+    
+    return GenomicRegion {lhs.get_contig_name(), get_overlapped(lhs.get_contig_region(), rhs.get_contig_region())};
 }
 
 inline GenomicRegion get_left_overhang(const GenomicRegion& lhs, const GenomicRegion& rhs)
