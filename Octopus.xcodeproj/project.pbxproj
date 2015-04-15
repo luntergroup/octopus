@@ -299,10 +299,10 @@
 				CAE3E2AE1AA2981E00C01B2C /* variant_candidate_generation_test.cpp */,
 				CA90C5591ACDB95D00CBEE34 /* haplotype_tests.cpp */,
 				CAD5EC061AD5BBEA00892816 /* genotype_tests.cpp */,
+				CAFA19651ABF84AC00F953D9 /* haplotype_tree_test.cpp */,
 				D42061171ACC418500D11553 /* read_model_tests.cpp */,
 				CAFA19671ABF84BE00F953D9 /* standard_genotype_model_tests.cpp */,
 				D42061121ACC3D2B00D11553 /* variational_bayes_genotype_model_tests.cpp */,
-				CAFA19651ABF84AC00F953D9 /* haplotype_tree_test.cpp */,
 				CA14727B1AACED6E005FDCD1 /* octopus_tests.cpp */,
 			);
 			path = test;
@@ -423,6 +423,8 @@
 				CAD5EC041AD2920E00892816 /* haplotype_prior_model.h */,
 				CAFA196D1AC1B4AF00F953D9 /* genotype.h */,
 				CAFA196C1AC1B4AF00F953D9 /* genotype.cpp */,
+				CAFA195A1ABF3DF400F953D9 /* haplotype_tree.h */,
+				CAFA19591ABF3DF400F953D9 /* haplotype_tree.cpp */,
 				CAFA19761AC5E67100F953D9 /* pair_hmm.h */,
 				D42061151ACC3DA500D11553 /* read_model.h */,
 				D42061141ACC3DA500D11553 /* read_model.cpp */,
@@ -430,8 +432,6 @@
 				CAFA195F1ABF6F2D00F953D9 /* standard_genotype_model.cpp */,
 				D42061101ACC165C00D11553 /* variational_bayes_genotype_model.h */,
 				D420610F1ACC165C00D11553 /* variational_bayes_genotype_model.cpp */,
-				CAFA195A1ABF3DF400F953D9 /* haplotype_tree.h */,
-				CAFA19591ABF3DF400F953D9 /* haplotype_tree.cpp */,
 			);
 			name = core;
 			sourceTree = "<group>";

@@ -37,8 +37,8 @@ public:
     HaplotypeTree& operator=(HaplotypeTree&&)      = default;
     
     unsigned num_haplotypes() const;
-    void extend_haplotypes(const Variant& a_variant);
-    Haplotypes get_haplotypes(unsigned num_alleles);
+    void extend_haplotypes(const Allele& an_allele);
+    Haplotypes get_haplotypes(const GenomicRegion& a_region);
     void prune_haplotypes(const Haplotypes& haplotypes);
     
 private:

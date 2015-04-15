@@ -15,14 +15,15 @@
 #include <cstdint> // std::uint_fast32_t
 #include <unordered_map>
 
+#include "genomic_region.h"
+
 class AlignedRead;
-class GenomicRegion;
 
 class IReadReaderImpl
 {
 public:
     using SampleIdType       = std::string;
-    using SizeType           = std::uint_fast32_t;
+    using SizeType           = GenomicRegion::SizeType;
     using SampleIdToReadsMap = std::unordered_map<SampleIdType, std::vector<AlignedRead>>;
     
     virtual std::vector<SampleIdType> get_sample_ids() = 0;

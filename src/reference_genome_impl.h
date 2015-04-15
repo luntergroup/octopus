@@ -13,12 +13,12 @@
 #include <vector>
 #include <cstdint>
 
-class GenomicRegion;
+#include "genomic_region.h"
 
 class IReferenceGenomeImpl
 {
 public:
-    using SizeType = std::uint_fast32_t;
+    using SizeType = GenomicRegion::SizeType;
     
     virtual std::string get_reference_name() = 0;
     virtual std::vector<std::string> get_contig_names() = 0;

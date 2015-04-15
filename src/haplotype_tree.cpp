@@ -32,27 +32,27 @@ unsigned HaplotypeTree::num_haplotypes() const
     return static_cast<unsigned>(haplotype_branch_ends_.size());
 }
 
-void HaplotypeTree::extend_haplotypes(const Variant& a_variant)
+void HaplotypeTree::extend_haplotypes(const Allele& an_allele)
 {
     auto branch_end_it      = std::cbegin(haplotype_branch_ends_);
     auto last_branch_end_it = std::cend(haplotype_branch_ends_);
     
     while (branch_end_it != last_branch_end_it) {
-        branch_end_it = extend_haplotype(branch_end_it, a_variant);
+        branch_end_it = extend_haplotype(branch_end_it, an_allele);
     }
 }
 
-HaplotypeTree::Haplotypes HaplotypeTree::get_haplotypes(unsigned num_alleles)
+HaplotypeTree::Haplotypes HaplotypeTree::get_haplotypes(const GenomicRegion& a_region)
 {
     Haplotypes result {};
     
     for (auto haplotype_end : haplotype_branch_ends_) {
         Haplotype a_haplotype {the_reference_};
         
-        for (size_t i {0}; i < num_alleles; ++i) {
-            a_haplotype.push_front(the_tree_[haplotype_end].the_allele);
-            haplotype_end = get_previous_allele(haplotype_end);
-        }
+//        for (size_t i {0}; i < num_alleles; ++i) {
+//            a_haplotype.push_front(the_tree_[haplotype_end].the_allele);
+//            haplotype_end = get_previous_allele(haplotype_end);
+//        }
         
         haplotype_to_branch_end_map_[a_haplotype] = haplotype_end;
         result.emplace_back(std::move(a_haplotype));
