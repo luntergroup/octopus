@@ -17,7 +17,7 @@
 
 Haplotype::Haplotype(ReferenceGenome& the_reference)
 :
-the_reference_ {the_reference},
+the_reference_ {&the_reference},
 is_region_set_ {false},
 the_reference_region_ {},
 the_explicit_alleles_ {},
@@ -27,7 +27,7 @@ is_cached_sequence_outdated_ {false}
 
 Haplotype::Haplotype(ReferenceGenome& the_reference, const GenomicRegion& a_region)
 :
-the_reference_ {the_reference},
+the_reference_ {&the_reference},
 is_region_set_ {true},
 the_reference_region_ {a_region},
 the_explicit_alleles_ {},
@@ -102,7 +102,7 @@ Haplotype::SequenceType Haplotype::get_sequence() const
 Haplotype::SequenceType Haplotype::get_sequence(const GenomicRegion& a_region) const
 {
     if (the_explicit_alleles_.empty()) {
-        return the_reference_.get_sequence(a_region);
+        return the_reference_->get_sequence(a_region);
     }
     
     auto the_region_bounded_by_alleles = get_region_bounded_by_explicit_alleles();
@@ -110,7 +110,7 @@ Haplotype::SequenceType Haplotype::get_sequence(const GenomicRegion& a_region) c
     SequenceType result {};
     
     if (begins_before(a_region, the_region_bounded_by_alleles)) {
-        result += the_reference_.get_sequence(get_left_overhang(a_region, the_region_bounded_by_alleles));
+        result += the_reference_->get_sequence(get_left_overhang(a_region, the_region_bounded_by_alleles));
     }
     
     auto overlapped_explicit_alleles = overlap_range(std::cbegin(the_explicit_alleles_),
@@ -144,7 +144,7 @@ Haplotype::SequenceType Haplotype::get_sequence(const GenomicRegion& a_region) c
         result += get_subsequence(*overlapped_explicit_alleles.second,
                                   get_overlapped(*overlapped_explicit_alleles.second, a_region));
     } else if (ends_before(the_region_bounded_by_alleles, a_region)) {
-        result += the_reference_.get_sequence(get_right_overhang(a_region, the_region_bounded_by_alleles));
+        result += the_reference_->get_sequence(get_right_overhang(a_region, the_region_bounded_by_alleles));
     }
     
     return result;

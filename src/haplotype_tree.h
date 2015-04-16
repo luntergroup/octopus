@@ -39,7 +39,7 @@ public:
     unsigned num_haplotypes() const;
     void extend_haplotypes(const Allele& an_allele);
     Haplotypes get_haplotypes(const GenomicRegion& a_region);
-    void prune_haplotypes(const Haplotypes& haplotypes);
+    void prune_haplotype(const Haplotype& haplotype);
     
 private:
     struct AlleleNode
@@ -48,7 +48,7 @@ private:
     };
     
     using Tree = boost::adjacency_list<
-        boost::listS, boost::listS, boost::undirectedS, AlleleNode, boost::no_property
+        boost::listS, boost::listS, boost::bidirectionalS, AlleleNode, boost::no_property
     >;
     using Vertex = typename boost::graph_traits<Tree>::vertex_descriptor;
     using Edge   = typename boost::graph_traits<Tree>::edge_descriptor;
@@ -63,13 +63,14 @@ private:
     using BranchIterator = decltype(haplotype_branch_ends_)::const_iterator;
     
     Vertex get_previous_allele(Vertex allele) const;
-    bool node_has_allele_branch(Vertex allele, const Allele& an_allele) const;
+    bool allele_exists(Vertex allele, const Allele& an_allele) const;
     BranchIterator extend_haplotype(BranchIterator haplotype_branch_end, const Variant& a_variant);
-    BranchIterator extend_haplotype(BranchIterator haplotype_branch_end, const Allele& an_allele);
-    bool is_haplotype_branch_end(Vertex haplotype_branch_end, const Haplotype& haplotype) const;
-    Vertex find_haplotype_branch_end(const Haplotype& haplotype) const;
-    void prune_haplotype(const Haplotype& haplotype);
-    void prune_haplotype_from_branch_end(Vertex haplotype_branch_end);
+    BranchIterator extend_haplotype(BranchIterator haplotype_branch_end, const Allele& the_new_allele);
+    Haplotype get_haplotype(Vertex haplotype_end, const GenomicRegion& a_region);
+    
+    bool is_branch_the_haplotype(Vertex haplotype_end, const Haplotype& haplotype) const;
+    BranchIterator find_haplotype_leaf(BranchIterator first, BranchIterator last, const Haplotype& haplotype) const;
+    std::pair<Vertex, bool> prune_branch(Vertex leaf, const GenomicRegion& a_region);
 };
 
 #endif /* defined(__Octopus__haplotype_tree__) */

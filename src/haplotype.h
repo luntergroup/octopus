@@ -15,13 +15,13 @@
 
 #include "allele.h"
 #include "variant.h"
-#include "equitable.h"
+#include "comparable.h"
 #include "mappable.h"
 
 class ReferenceGenome;
 class GenomicRegion;
 
-class Haplotype : public Equitable<Haplotype>, public Mappable<Haplotype>
+class Haplotype : public Comparable<Haplotype>, public Mappable<Haplotype>
 {
 public:
     using SequenceType = Allele::SequenceType;
@@ -54,7 +54,7 @@ private:
     SequenceType get_sequence_bounded_by_explicit_alleles(AlleleIterator first, AlleleIterator last) const;
     SequenceType get_sequence_bounded_by_explicit_alleles() const;
     
-    ReferenceGenome& the_reference_;
+    ReferenceGenome* the_reference_; // A non-owning pointer so Haplotype copyable
     bool is_region_set_;
     GenomicRegion the_reference_region_;
     std::deque<Allele> the_explicit_alleles_;
@@ -71,7 +71,7 @@ void Haplotype::push_back(T&& an_allele)
             throw std::runtime_error {"Cannot append out of order allele to back of haplotype"};
         } else if (!are_adjacent(the_explicit_alleles_.back(), an_allele)) {
             auto intervening_region = get_intervening_region(the_explicit_alleles_.back(), an_allele);
-            the_explicit_alleles_.push_back(get_reference_allele(intervening_region, the_reference_));
+            the_explicit_alleles_.push_back(get_reference_allele(intervening_region, *the_reference_));
         }
     }
     
@@ -86,8 +86,8 @@ void Haplotype::push_front(T&& an_allele)
         if (!is_before(an_allele, the_explicit_alleles_.front())) {
             throw std::runtime_error {"Cannot append out of order allele to front of haplotype"};
         } else if (!are_adjacent(an_allele, the_explicit_alleles_.front())) {
-            auto intervening_region = get_intervening_region(the_explicit_alleles_.back(), an_allele);
-            the_explicit_alleles_.push_front(get_reference_allele(intervening_region, the_reference_));
+            auto intervening_region = get_intervening_region(an_allele, the_explicit_alleles_.front());
+            the_explicit_alleles_.push_front(get_reference_allele(intervening_region, *the_reference_));
         }
     }
     
@@ -98,6 +98,12 @@ void Haplotype::push_front(T&& an_allele)
 inline bool operator==(const Haplotype& lhs, const Haplotype& rhs)
 {
     return lhs.get_region() == rhs.get_region() && lhs.get_sequence() == rhs.get_sequence();
+}
+
+inline bool operator<(const Haplotype& lhs, const Haplotype& rhs)
+{
+    return (lhs.get_region() == rhs.get_region()) ? lhs.get_sequence() < rhs.get_sequence() :
+                                                    lhs.get_region() < rhs.get_region();
 }
 
 namespace std {
