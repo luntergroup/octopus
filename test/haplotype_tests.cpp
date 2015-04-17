@@ -23,11 +23,15 @@
 #include "alignment_candidate_variant_generator.h"
 #include "haplotype.h"
 #include "genotype.h"
+#include "region_utils.h"
+
+using std::cout;
+using std::endl;
 
 TEST_CASE("alleles can be added to front and back of haplotypes", "[haplotype]")
 {
     ReferenceGenomeFactory a_factory {};
-    ReferenceGenome human(a_factory.make(human_reference_fasta));
+    ReferenceGenome human {a_factory.make(human_reference_fasta)};
     
     auto a_region = parse_region("3:1000000-1000010", human);
     
@@ -84,7 +88,7 @@ TEST_CASE("alleles can be added to front and back of haplotypes", "[haplotype]")
 TEST_CASE("haplotypes work with real data", "[haplotype]")
 {
     ReferenceGenomeFactory a_factory {};
-    ReferenceGenome ecoli(a_factory.make(ecoli_reference_fasta));
+    ReferenceGenome ecoli {a_factory.make(ecoli_reference_fasta)};
     
     ReadManager a_read_manager(std::vector<std::string> {ecoli_bam});
     
@@ -120,7 +124,7 @@ TEST_CASE("haplotypes work with real data", "[haplotype]")
 TEST_CASE("alleles not explicitly added to haplotypes are assumed reference", "[haplotype]")
 {
     ReferenceGenomeFactory a_factory {};
-    ReferenceGenome human(a_factory.make(human_reference_fasta));
+    ReferenceGenome human {a_factory.make(human_reference_fasta)};
     
     GenomicRegion a_region {"7", 1000000, 1000100};
     
@@ -144,7 +148,7 @@ TEST_CASE("alleles not explicitly added to haplotypes are assumed reference", "[
 TEST_CASE("alleles explicitly added to haplotypes should be contained", "[haplotype]")
 {
     ReferenceGenomeFactory a_factory {};
-    ReferenceGenome human(a_factory.make(human_reference_fasta));
+    ReferenceGenome human {a_factory.make(human_reference_fasta)};
     
     GenomicRegion a_region {"3", 1000000, 1000020}; // CCAACAAGCATTGGTGTGGC
     
@@ -245,7 +249,7 @@ TEST_CASE("alleles explicitly added to haplotypes should be contained", "[haplot
 TEST_CASE("mnps decompose", "[haplotype]")
 {
     ReferenceGenomeFactory a_factory {};
-    ReferenceGenome human(a_factory.make(human_reference_fasta));
+    ReferenceGenome human {a_factory.make(human_reference_fasta)};
     
     auto a_region = parse_region("3:1000000-1000020", human);
     
@@ -267,7 +271,7 @@ TEST_CASE("mnps decompose", "[haplotype]")
 TEST_CASE("deletions decompose", "[haplotype]")
 {
     ReferenceGenomeFactory a_factory {};
-    ReferenceGenome human(a_factory.make(human_reference_fasta));
+    ReferenceGenome human {a_factory.make(human_reference_fasta)};
     
     auto a_region = parse_region("3:1000000-1000020", human);
     
@@ -291,7 +295,7 @@ TEST_CASE("deletions decompose", "[haplotype]")
 TEST_CASE("insertions decompose", "[haplotype")
 {
     ReferenceGenomeFactory a_factory {};
-    ReferenceGenome human(a_factory.make(human_reference_fasta));
+    ReferenceGenome human {a_factory.make(human_reference_fasta)};
     
     auto a_region = parse_region("3:1000000-1000020", human);
     
@@ -315,7 +319,7 @@ TEST_CASE("insertions decompose", "[haplotype")
 TEST_CASE("haplotype equate when alleles infer same sequence", "[haplotype]")
 {
     ReferenceGenomeFactory a_factory {};
-    ReferenceGenome human(a_factory.make(human_reference_fasta));
+    ReferenceGenome human {a_factory.make(human_reference_fasta)};
     
     auto a_region = parse_region("16:9300000-9300100", human);
     
@@ -346,4 +350,71 @@ TEST_CASE("haplotype equate when alleles infer same sequence", "[haplotype]")
     
     REQUIRE(hap3.get_sequence() == hap4.get_sequence());
     REQUIRE(hap3 == hap4);
+}
+
+TEST_CASE("haplotypes can be compared for structural complexity", "[haplotype]")
+{
+    ReferenceGenomeFactory a_factory {};
+    ReferenceGenome human {a_factory.make(human_reference_fasta)};
+    
+    auto a_region = parse_region("16:9300000-9300100", human);
+    
+    Allele allele1 {parse_region("16:9300037-9300037", human), "TG"};
+    Allele allele2 {parse_region("16:9300039-9300051", human), ""};
+    Allele allele3 {parse_region("16:9300041-9300051", human), ""};
+    
+    Haplotype hap1 {human, a_region};
+    hap1.push_back(allele3);
+    
+    Haplotype hap2 {human, a_region};
+    hap2.push_back(allele1);
+    hap2.push_back(allele2);
+    
+    REQUIRE(hap1.is_less_complex(hap2));
+}
+
+TEST_CASE("haplotypeS behave at boundries", "[haplotype]")
+{
+    ReferenceGenomeFactory a_factory {};
+    ReferenceGenome human {a_factory.make(human_reference_fasta)};
+    
+    auto a_region = parse_region("16:9299940-9300100", human);
+    
+    Allele allele1 {parse_region("16:9299945-9299946", human), "T"};
+    Allele allele2 {parse_region("16:9299946-9299957", human), "CGCATTACAAC"};
+    Allele allele3 {parse_region("16:9299957-9299958", human), "C"};
+    Allele allele4 {get_reference_allele(parse_region("16:9299958-9300037", human), human)};
+    Allele allele5 {parse_region("16:9300037-9300037", human), ""};
+    Allele allele6 {parse_region("16:9300037-9300039", human), "TG"};
+    Allele allele7 {parse_region("16:9300039-9300051", human), "TGTGTGTGCGTT"};
+    Allele allele8 {parse_region("16:9300051-9300061", human), "TGTGTGTGTG"};
+    Allele allele9 {parse_region("16:9300061-9300062", human), "G"};
+    Allele allele10 {parse_region("16:9300062-9300072", human), "GTGTGTGTGT"};
+    Allele allele11 {parse_region("16:9300072-9300073", human), "G"};
+    Allele allele12 {parse_region("16:9300073-9300074", human), "G"};
+    Allele allele13 {parse_region("16:9300074-9300075", human), "G"};
+    
+    Haplotype haplotype {human, a_region};
+    
+    haplotype.push_back(allele1);
+    haplotype.push_back(allele2);
+    haplotype.push_back(allele3);
+    haplotype.push_back(allele4);
+    haplotype.push_back(allele5);
+    haplotype.push_back(allele6);
+    haplotype.push_back(allele7);
+    haplotype.push_back(allele8);
+    haplotype.push_back(allele9);
+    haplotype.push_back(allele10);
+    haplotype.push_back(allele11);
+    haplotype.push_back(allele12);
+    haplotype.push_back(allele13);
+    
+    Allele test_allele1 {parse_region("16:9300037-9300050", human), ""};
+    Allele test_allele2 {parse_region("16:9300037-9300051", human), ""};
+    Allele test_allele3 {parse_region("16:9300037-9300052", human), ""};
+    
+    REQUIRE(!haplotype.contains(test_allele1));
+    REQUIRE(!haplotype.contains(test_allele2));
+    REQUIRE(!haplotype.contains(test_allele3));
 }

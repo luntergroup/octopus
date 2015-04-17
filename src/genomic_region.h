@@ -221,27 +221,21 @@ inline GenomicRegion shift(const GenomicRegion& a_region, GenomicRegion::Differe
 
 inline GenomicRegion get_intervening_region(const GenomicRegion& lhs, const GenomicRegion& rhs)
 {
-    if (begins_before(rhs, lhs) || overlaps(lhs, rhs)) {
-        throw std::runtime_error {"Cannot get intervening region between overlapping regions"};
-    }
-    
-    return GenomicRegion {lhs.get_contig_name(), get_intervening_region(lhs.get_contig_region(), rhs.get_contig_region())};
+    return GenomicRegion {lhs.get_contig_name(), get_intervening_region(lhs.get_contig_region(),
+                                                                        rhs.get_contig_region())};
 }
 
 inline GenomicRegion get_overlapped(const GenomicRegion& lhs, const GenomicRegion& rhs) noexcept
 {
-    if (!overlaps(lhs, rhs)) {
-        throw std::runtime_error {"Cannot get overalpped region between non overlapping regions"};
-    }
-    
-    return GenomicRegion {lhs.get_contig_name(), get_overlapped(lhs.get_contig_region(), rhs.get_contig_region())};
+    return GenomicRegion {lhs.get_contig_name(), get_overlapped(lhs.get_contig_region(),
+                                                                rhs.get_contig_region())};
 }
 
 inline GenomicRegion get_left_overhang(const GenomicRegion& lhs, const GenomicRegion& rhs)
 {
     if (is_same_contig(lhs, rhs)) {
-        auto sequence_region = get_left_overhang(lhs.get_contig_region(), rhs.get_contig_region());
-        return GenomicRegion {lhs.get_contig_name(), sequence_region.get_begin(), sequence_region.get_end()};
+        return GenomicRegion {lhs.get_contig_name(), get_left_overhang(lhs.get_contig_region(),
+                                                                       rhs.get_contig_region())};
     }
     throw RegionError(to_string(lhs), to_string(rhs));
 }
@@ -249,8 +243,8 @@ inline GenomicRegion get_left_overhang(const GenomicRegion& lhs, const GenomicRe
 inline GenomicRegion get_right_overhang(const GenomicRegion& lhs, const GenomicRegion& rhs)
 {
     if (is_same_contig(lhs, rhs)) {
-        auto sequence_region = get_right_overhang(lhs.get_contig_region(), rhs.get_contig_region());
-        return GenomicRegion {lhs.get_contig_name(), sequence_region.get_begin(), sequence_region.get_end()};
+        return GenomicRegion {lhs.get_contig_name(), get_right_overhang(lhs.get_contig_region(),
+                                                                        rhs.get_contig_region())};
     }
     throw RegionError(to_string(lhs), to_string(rhs));
 }

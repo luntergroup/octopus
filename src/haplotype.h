@@ -46,7 +46,9 @@ public:
     SequenceType get_sequence() const;
     SequenceType get_sequence(const GenomicRegion& a_region) const;
     
-    //void operator+=(const Haplotype& other);
+    bool is_less_complex(const Haplotype& other) const;
+    
+    void operator+=(const Haplotype& other);
 private:
     using AlleleIterator = std::deque<Allele>::const_iterator;
     
@@ -54,7 +56,7 @@ private:
     SequenceType get_sequence_bounded_by_explicit_alleles(AlleleIterator first, AlleleIterator last) const;
     SequenceType get_sequence_bounded_by_explicit_alleles() const;
     
-    ReferenceGenome* the_reference_; // A non-owning pointer so Haplotype copyable
+    ReferenceGenome* the_reference_; // a non-owning pointer (rather than a reference) so Haplotype copyable
     bool is_region_set_;
     GenomicRegion the_reference_region_;
     std::deque<Allele> the_explicit_alleles_;

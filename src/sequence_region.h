@@ -101,12 +101,12 @@ inline bool operator<(const SequenceRegion& lhs, const SequenceRegion& rhs) noex
 
 inline bool is_before(const SequenceRegion& lhs, const SequenceRegion& rhs) noexcept
 {
-    return (empty(lhs)) ? lhs.get_end() < rhs.get_begin() : lhs.get_end() <= rhs.get_begin();
+    return (lhs == rhs) ? false : lhs.get_end() <= rhs.get_begin();
 }
 
 inline bool is_after(const SequenceRegion& lhs, const SequenceRegion& rhs) noexcept
 {
-    return  (empty(rhs)) ? rhs.get_end() < lhs.get_begin() : rhs.get_end() <= lhs.get_begin();
+    return  (lhs == rhs) ? false : rhs.get_end() <= lhs.get_begin();
 }
 
 inline bool are_adjacent(const SequenceRegion& lhs, const SequenceRegion& rhs) noexcept
@@ -134,7 +134,7 @@ inline bool contains(const SequenceRegion& lhs, const SequenceRegion& rhs) noexc
 inline SequenceRegion get_overlapped(const SequenceRegion& lhs, const SequenceRegion& rhs) noexcept
 {
     if (!overlaps(lhs, rhs)) {
-        throw std::runtime_error {"Cannot get overalpped region between non overlapping regions"};
+        throw std::runtime_error {"Cannot get overlapped region between non overlapping regions"};
     }
     
     return SequenceRegion {std::max(lhs.get_begin(), rhs.get_begin()), std::min(lhs.get_end(), rhs.get_end())};

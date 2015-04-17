@@ -247,7 +247,7 @@ TEST_CASE("variants are ordered by region and lexicographically by sequence", "[
     REQUIRE(is_required_sort4);
 }
 
-TEST_CASE("overlap_range includes insertions on boundry", "[variant]")
+TEST_CASE("overlap_range excludes insertions on boundry", "[variant]")
 {
     Variant snp1 {"chr1", 100, "T", "A", 0, 0};
     Variant snp2 {"chr1", 110, "T", "C", 0, 0};
@@ -267,7 +267,7 @@ TEST_CASE("overlap_range includes insertions on boundry", "[variant]")
     
     REQUIRE(std::distance(overlapped1.first, overlapped1.second) == 1);
     REQUIRE(std::distance(overlapped2.first, overlapped2.second) == 0);
-    REQUIRE(std::distance(overlapped3.first, overlapped3.second) == 1);
+    REQUIRE(std::distance(overlapped3.first, overlapped3.second) == 0);
     REQUIRE(std::distance(overlapped4.first, overlapped4.second) == 1);
 }
 

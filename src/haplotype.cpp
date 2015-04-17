@@ -123,24 +123,23 @@ Haplotype::SequenceType Haplotype::get_sequence(const GenomicRegion& a_region) c
         } else if (begins_before(*overlapped_explicit_alleles.first, a_region)) {
             result += get_subsequence(*overlapped_explicit_alleles.first,
                                       get_overlapped(*overlapped_explicit_alleles.first, a_region));
-            std::advance(overlapped_explicit_alleles.first, 1);
+            ++overlapped_explicit_alleles.first;
         }
     }
     
-    bool region_partially_overlaps_last_allele = false;
+    bool region_ends_before_last_overlapped_allele = false;
     
     if (overlapped_explicit_alleles.second != std::cend(the_explicit_alleles_) &&
         overlapped_explicit_alleles.second != overlapped_explicit_alleles.first &&
         ends_before(a_region, *overlapped_explicit_alleles.second)) {
-        std::advance(overlapped_explicit_alleles.first, -1);
-        region_partially_overlaps_last_allele = true;
+        --overlapped_explicit_alleles.second;
+        region_ends_before_last_overlapped_allele = true;
     }
     
     result += get_sequence_bounded_by_explicit_alleles(overlapped_explicit_alleles.first,
                                                        overlapped_explicit_alleles.second);
     
-    if (region_partially_overlaps_last_allele) {
-        std::advance(overlapped_explicit_alleles.second, 1);
+    if (region_ends_before_last_overlapped_allele) {
         result += get_subsequence(*overlapped_explicit_alleles.second,
                                   get_overlapped(*overlapped_explicit_alleles.second, a_region));
     } else if (ends_before(the_region_bounded_by_alleles, a_region)) {
@@ -150,10 +149,16 @@ Haplotype::SequenceType Haplotype::get_sequence(const GenomicRegion& a_region) c
     return result;
 }
 
-//void Haplotype::operator+=(const Haplotype& other)
-//{
-//    the_explicit_alleles_.insert(std::end(the_explicit_alleles_), std::cbegin(other.the_explicit_alleles_), std::cend(other.the_explicit_alleles_));
-//}
+bool Haplotype::is_less_complex(const Haplotype& other) const
+{
+    return the_explicit_alleles_.size() < other.the_explicit_alleles_.size();
+}
+
+void Haplotype::operator+=(const Haplotype& other)
+{
+    the_explicit_alleles_.insert(std::end(the_explicit_alleles_), std::cbegin(other.the_explicit_alleles_),
+                                 std::cend(other.the_explicit_alleles_));
+}
 
 GenomicRegion Haplotype::get_region_bounded_by_explicit_alleles() const
 {

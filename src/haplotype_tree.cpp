@@ -143,7 +143,7 @@ HaplotypeTree::LeafIterator HaplotypeTree::extend_haplotype(LeafIterator haploty
 
 Haplotype HaplotypeTree::get_haplotype(Vertex haplotype_end, const GenomicRegion& a_region)
 {
-    Haplotype result {the_reference_};
+    Haplotype result {the_reference_, a_region};
     
     while (haplotype_end != the_root_ && is_after(the_tree_[haplotype_end].the_allele, a_region)) {
         haplotype_end = get_previous_allele(haplotype_end);

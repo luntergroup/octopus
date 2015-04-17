@@ -27,6 +27,18 @@ inline void trim_adapters(AlignedRead& a_read)
     }
 }
 
+// TODO: perhaps it would be better to just set these bases to reference rather
+// than zeroing... this could avoid a lot of spurious candidates. Would need to add
+// sequence setting api to AlignedRead
+inline void trim_tail(AlignedRead& a_read, unsigned num_bases)
+{
+    if (a_read.is_marked_reverse_mapped()) {
+        a_read.zero_front_qualities(num_bases);
+    } else {
+        a_read.zero_back_qualities(num_bases);
+    }
+}
+
 inline void trim_soft_clipped(AlignedRead& a_read)
 {
     if (is_soft_clipped(a_read.get_cigar_string())) {
