@@ -197,48 +197,48 @@ TEST_CASE("haplotype tree can generate haplotypes ending in different regions", 
     REQUIRE(haplotypes[1].get_sequence() == "AT");
 }
 
-//TEST_CASE("leading haplotypes can be removed from the tree", "[haplotype_tree]")
-//{
-//    ReferenceGenomeFactory a_factory {};
-//    ReferenceGenome human {a_factory.make(human_reference_fasta)};
-//    
-//    HaplotypeTree haplotype_tree {human};
-//    
-//    Allele allele1 {parse_region("4:1000000-1000001", human), "A"};
-//    Allele allele2 {parse_region("4:1000002-1000003", human), "C"};
-//    Allele allele3 {parse_region("4:1000002-1000003", human), "G"};
-//    Allele allele4 {parse_region("4:1000004-1000005", human), "T"};
-//    Allele allele5 {parse_region("4:1000004-1000005", human), "C"};
-//    
-//    haplotype_tree.extend_haplotypes(allele1);
-//    haplotype_tree.extend_haplotypes(allele2);
-//    haplotype_tree.extend_haplotypes(allele3);
-//    haplotype_tree.extend_haplotypes(allele4);
-//    haplotype_tree.extend_haplotypes(allele5);
-//    
-//    auto a_region = parse_region("4:1000000-1000005", human);
-//    
-//    auto haplotypes = haplotype_tree.get_haplotypes(a_region);
-//    
-//    REQUIRE(haplotypes.size() == 4);
-//    
-//    std::sort(haplotypes.begin(), haplotypes.end());
-//    
-//    haplotype_tree.prune_haplotype(haplotypes[0]);
-//    
-//    REQUIRE(haplotype_tree.num_haplotypes() == 3);
-//    
-//    haplotype_tree.prune_haplotype(haplotypes[1]);
-//    
-//    REQUIRE(haplotype_tree.num_haplotypes() == 2);
-//    
-//    haplotypes = haplotype_tree.get_haplotypes(a_region);
-//    
-//    std::sort(haplotypes.begin(), haplotypes.end());
-//    
-//    REQUIRE(haplotypes[0].get_sequence() == "ATGCC");
-//    REQUIRE(haplotypes[1].get_sequence() == "ATGCT");
-//}
+TEST_CASE("leading haplotypes can be removed from the tree", "[haplotype_tree]")
+{
+    ReferenceGenomeFactory a_factory {};
+    ReferenceGenome human {a_factory.make(human_reference_fasta)};
+    
+    HaplotypeTree haplotype_tree {human};
+    
+    Allele allele1 {parse_region("4:1000000-1000001", human), "A"};
+    Allele allele2 {parse_region("4:1000002-1000003", human), "C"};
+    Allele allele3 {parse_region("4:1000002-1000003", human), "G"};
+    Allele allele4 {parse_region("4:1000004-1000005", human), "T"};
+    Allele allele5 {parse_region("4:1000004-1000005", human), "C"};
+    
+    haplotype_tree.extend_haplotypes(allele1);
+    haplotype_tree.extend_haplotypes(allele2);
+    haplotype_tree.extend_haplotypes(allele3);
+    haplotype_tree.extend_haplotypes(allele4);
+    haplotype_tree.extend_haplotypes(allele5);
+    
+    auto a_region = parse_region("4:1000000-1000005", human);
+    
+    auto haplotypes = haplotype_tree.get_haplotypes(a_region);
+    
+    REQUIRE(haplotypes.size() == 4);
+    
+    std::sort(haplotypes.begin(), haplotypes.end());
+    
+    haplotype_tree.prune_haplotype(haplotypes[0]); // ATCCC
+    
+    REQUIRE(haplotype_tree.num_haplotypes() == 3);
+    
+    haplotype_tree.prune_haplotype(haplotypes[1]); // ATCCT
+    
+    REQUIRE(haplotype_tree.num_haplotypes() == 2);
+    
+    haplotypes = haplotype_tree.get_haplotypes(a_region);
+    
+    std::sort(haplotypes.begin(), haplotypes.end());
+    
+    REQUIRE(haplotypes[0].get_sequence() == "ATGCC");
+    REQUIRE(haplotypes[1].get_sequence() == "ATGCT");
+}
 
 TEST_CASE("pruned branches can still be extended", "[haplotype_tree]")
 {
@@ -273,22 +273,40 @@ TEST_CASE("pruned branches can still be extended", "[haplotype_tree]")
     hap2.push_back(allele6);
     
     haplotype_tree.prune_haplotype(hap1);
-    haplotype_tree.prune_haplotype(hap2);
     
-    REQUIRE(haplotype_tree.num_haplotypes() == 2);
+    REQUIRE(haplotype_tree.num_haplotypes() == 3);
     
-    haplotype_tree.extend_haplotypes(allele4);
-    
-    REQUIRE(haplotype_tree.num_haplotypes() == 2);
-    
-    auto a_region = parse_region("4:1000000-1000005", human);
+    auto a_region = parse_region("4:1000000-1000007", human);
     
     auto haplotypes = haplotype_tree.get_haplotypes(a_region);
     
     std::sort(haplotypes.begin(), haplotypes.end());
     
-    REQUIRE(haplotypes[1].get_sequence() == "ATCCTA");
+    REQUIRE(haplotypes[0].get_sequence() == "ATCCCAA");
+    REQUIRE(haplotypes[1].get_sequence() == "ATCCTAA");
+    REQUIRE(haplotypes[2].get_sequence() == "ATGCCAA");
+    
+    haplotype_tree.prune_haplotype(hap2);
+    
+    REQUIRE(haplotype_tree.num_haplotypes() == 2);
+    
+    haplotypes = haplotype_tree.get_haplotypes(a_region);
+    
+    std::sort(haplotypes.begin(), haplotypes.end());
+    
+    REQUIRE(haplotypes[0].get_sequence() == "ATG");
+    REQUIRE(haplotypes[1].get_sequence() == "ATCCTAA");
+    
+    haplotype_tree.extend_haplotypes(allele4);
+    
+    REQUIRE(haplotype_tree.num_haplotypes() == 2);
+    
+    haplotypes = haplotype_tree.get_haplotypes(a_region);
+    
+    std::sort(haplotypes.begin(), haplotypes.end());
+    
     REQUIRE(haplotypes[0].get_sequence() == "ATGCT");
+    REQUIRE(haplotypes[1].get_sequence() == "ATCCTAA");
 }
 
 //TEST_CASE("haplotype_tree_single_sample_test", "[haplotype_tree]")

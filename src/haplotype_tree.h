@@ -55,21 +55,21 @@ private:
     
     Tree the_tree_;
     Vertex the_root_;
-    std::list<Vertex> haplotype_branch_ends_;
+    std::list<Vertex> haplotype_leafs_;
     ReferenceGenome& the_reference_;
-    std::unordered_map<Haplotype, Vertex> haplotype_to_branch_end_map_;
+    std::unordered_map<Haplotype, Vertex> haplotype_leaf_cache_;
     unsigned haplotype_allele_length_;
     
-    using BranchIterator = decltype(haplotype_branch_ends_)::const_iterator;
+    using LeafIterator = decltype(haplotype_leafs_)::const_iterator;
     
     Vertex get_previous_allele(Vertex allele) const;
     bool allele_exists(Vertex allele, const Allele& an_allele) const;
-    BranchIterator extend_haplotype(BranchIterator haplotype_branch_end, const Variant& a_variant);
-    BranchIterator extend_haplotype(BranchIterator haplotype_branch_end, const Allele& the_new_allele);
+    LeafIterator extend_haplotype(LeafIterator haplotype_leaf, const Variant& a_variant);
+    LeafIterator extend_haplotype(LeafIterator haplotype_leaf, const Allele& the_new_allele);
     Haplotype get_haplotype(Vertex haplotype_end, const GenomicRegion& a_region);
     
     bool is_branch_the_haplotype(Vertex haplotype_end, const Haplotype& haplotype) const;
-    BranchIterator find_haplotype_leaf(BranchIterator first, BranchIterator last, const Haplotype& haplotype) const;
+    LeafIterator find_haplotype_leaf(LeafIterator first, LeafIterator last, const Haplotype& haplotype) const;
     std::pair<Vertex, bool> prune_branch(Vertex leaf, const GenomicRegion& a_region);
 };
 
