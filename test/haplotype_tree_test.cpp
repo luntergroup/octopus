@@ -13,6 +13,7 @@
 #include <string>
 #include <cstddef>
 #include <algorithm>
+#include <set>
 
 #include "test_common.h"
 #include "reference_genome.h"
@@ -30,7 +31,7 @@
 using std::cout;
 using std::endl;
 
-//TEST_CASE("haplotype tree does not bifurcate on non-overlapping alleles", "[haplotype_tree]")
+//TEST_CASE("haplotype tree does not bifurcate on alleles positioned past the leading alleles", "[haplotype_tree]")
 //{
 //    ReferenceGenomeFactory a_factory {};
 //    ReferenceGenome human {a_factory.make(human_reference_fasta)};
@@ -42,11 +43,11 @@ using std::endl;
 //    Allele allele5 {parse_region("4:1000007-1000008", human), "G"};
 //    
 //    HaplotypeTree haplotype_tree {human};
-//    haplotype_tree.extend_haplotypes(allele1);
-//    haplotype_tree.extend_haplotypes(allele2);
-//    haplotype_tree.extend_haplotypes(allele3);
-//    haplotype_tree.extend_haplotypes(allele4);
-//    haplotype_tree.extend_haplotypes(allele5);
+//    haplotype_tree.extend(allele1);
+//    haplotype_tree.extend(allele2);
+//    haplotype_tree.extend(allele3);
+//    haplotype_tree.extend(allele4);
+//    haplotype_tree.extend(allele5);
 //    
 //    REQUIRE(haplotype_tree.num_haplotypes() == 1);
 //}
@@ -61,9 +62,9 @@ using std::endl;
 //    Allele allele3 {parse_region("4:1000000-1000001", human), "A"};
 //    
 //    HaplotypeTree haplotype_tree {human};
-//    haplotype_tree.extend_haplotypes(allele1);
-//    haplotype_tree.extend_haplotypes(allele2);
-//    haplotype_tree.extend_haplotypes(allele3);
+//    haplotype_tree.extend(allele1);
+//    haplotype_tree.extend(allele2);
+//    haplotype_tree.extend(allele3);
 //    
 //    REQUIRE(haplotype_tree.num_haplotypes() == 2);
 //}
@@ -82,59 +83,25 @@ using std::endl;
 //    
 //    HaplotypeTree haplotype_tree {human};
 //    
-//    haplotype_tree.extend_haplotypes(allele1);
+//    haplotype_tree.extend(allele1);
 //    
 //    REQUIRE(haplotype_tree.num_haplotypes() == 1);
 //    
-//    haplotype_tree.extend_haplotypes(allele2);
+//    haplotype_tree.extend(allele2);
 //    
 //    REQUIRE(haplotype_tree.num_haplotypes() == 2);
 //    
-//    haplotype_tree.extend_haplotypes(allele3);
+//    haplotype_tree.extend(allele3);
 //    
 //    REQUIRE(haplotype_tree.num_haplotypes() == 3);
 //    
-//    haplotype_tree.extend_haplotypes(allele4);
+//    haplotype_tree.extend(allele4);
 //    
 //    REQUIRE(haplotype_tree.num_haplotypes() == 3);
 //    
-//    haplotype_tree.extend_haplotypes(allele5);
+//    haplotype_tree.extend(allele5);
 //    
 //    REQUIRE(haplotype_tree.num_haplotypes() == 6);
-//}
-//
-//TEST_CASE("haplotype tree can selectively extend branches", "[haplotype_tree]")
-//{
-//    ReferenceGenomeFactory a_factory {};
-//    ReferenceGenome human {a_factory.make(human_reference_fasta)};
-//    
-//    HaplotypeTree haplotype_tree {human};
-//    
-//    Allele allele1 {parse_region("4:1000000-1000001", human), "A"};
-//    Allele allele2 {parse_region("4:1000000-1000003", human), ""};
-//    
-//    haplotype_tree.extend_haplotypes(allele1);
-//    haplotype_tree.extend_haplotypes(allele2);
-//    
-//    Allele allele3 {parse_region("4:1000001-1000002", human), "C"};
-//    Allele allele4 {parse_region("4:1000002-1000003", human), "G"};
-//    
-//    haplotype_tree.extend_haplotypes(allele2);
-//    haplotype_tree.extend_haplotypes(allele3);
-//    
-//    REQUIRE(haplotype_tree.num_haplotypes() == 2);
-//    
-//    Allele allele5 {parse_region("4:1000003-1000004", human), "T"};
-//    
-//    haplotype_tree.extend_haplotypes(allele5);
-//    
-//    REQUIRE(haplotype_tree.num_haplotypes() == 2);
-//    
-//    Allele allele6 {parse_region("4:1000003-1000004", human), "A"};
-//    
-//    haplotype_tree.extend_haplotypes(allele6);
-//    
-//    REQUIRE(haplotype_tree.num_haplotypes() == 4);
 //}
 //
 //TEST_CASE("haplotype tree can generate haplotypes in a region", "[haplotype_tree]")
@@ -149,10 +116,10 @@ using std::endl;
 //    Allele allele3 {parse_region("4:1000002-1000003", human), "G"};
 //    Allele allele4 {parse_region("4:1000004-1000005", human), "T"};
 //    
-//    haplotype_tree.extend_haplotypes(allele1);
-//    haplotype_tree.extend_haplotypes(allele2);
-//    haplotype_tree.extend_haplotypes(allele3);
-//    haplotype_tree.extend_haplotypes(allele4);
+//    haplotype_tree.extend(allele1);
+//    haplotype_tree.extend(allele2);
+//    haplotype_tree.extend(allele3);
+//    haplotype_tree.extend(allele4);
 //    
 //    auto a_region = parse_region("4:1000000-1000005", human);
 //    
@@ -167,7 +134,7 @@ using std::endl;
 //TEST_CASE("haplotype tree can generate haplotypes ending in different regions", "[haplotype_tree]")
 //{
 //    ReferenceGenomeFactory a_factory {};
-//    ReferenceGenome human {a_factory.make(human_reference_fasta)};
+//    ReferenceGenome human {a_factory.make(human_reference_fasta)};;
 //    
 //    HaplotypeTree haplotype_tree {human};
 //    
@@ -175,9 +142,9 @@ using std::endl;
 //    Allele allele2 {parse_region("4:1000002-1000006", human), ""};
 //    Allele allele3 {parse_region("4:1000002-1000003", human), "G"};
 //    
-//    haplotype_tree.extend_haplotypes(allele1);
-//    haplotype_tree.extend_haplotypes(allele2);
-//    haplotype_tree.extend_haplotypes(allele3);
+//    haplotype_tree.extend(allele1);
+//    haplotype_tree.extend(allele2);
+//    haplotype_tree.extend(allele3);
 //    
 //    REQUIRE(haplotype_tree.num_haplotypes() == 2);
 //    
@@ -210,11 +177,11 @@ using std::endl;
 //    Allele allele4 {parse_region("4:1000004-1000005", human), "T"};
 //    Allele allele5 {parse_region("4:1000004-1000005", human), "C"};
 //    
-//    haplotype_tree.extend_haplotypes(allele1);
-//    haplotype_tree.extend_haplotypes(allele2);
-//    haplotype_tree.extend_haplotypes(allele3);
-//    haplotype_tree.extend_haplotypes(allele4);
-//    haplotype_tree.extend_haplotypes(allele5);
+//    haplotype_tree.extend(allele1);
+//    haplotype_tree.extend(allele2);
+//    haplotype_tree.extend(allele3);
+//    haplotype_tree.extend(allele4);
+//    haplotype_tree.extend(allele5);
 //    
 //    auto a_region = parse_region("4:1000000-1000005", human);
 //    
@@ -224,11 +191,11 @@ using std::endl;
 //    
 //    std::sort(haplotypes.begin(), haplotypes.end());
 //    
-//    haplotype_tree.prune_haplotype(haplotypes[0]); // ATCCC
+//    haplotype_tree.prune_all(haplotypes[0]); // ATCCC
 //    
 //    REQUIRE(haplotype_tree.num_haplotypes() == 3);
 //    
-//    haplotype_tree.prune_haplotype(haplotypes[1]); // ATCCT
+//    haplotype_tree.prune_all(haplotypes[1]); // ATCCT
 //    
 //    REQUIRE(haplotype_tree.num_haplotypes() == 2);
 //    
@@ -254,12 +221,12 @@ using std::endl;
 //    Allele allele5 {parse_region("4:1000004-1000005", human), "C"};
 //    Allele allele6 {parse_region("4:1000006-1000007", human), "A"};
 //    
-//    haplotype_tree.extend_haplotypes(allele1);
-//    haplotype_tree.extend_haplotypes(allele2);
-//    haplotype_tree.extend_haplotypes(allele3);
-//    haplotype_tree.extend_haplotypes(allele4);
-//    haplotype_tree.extend_haplotypes(allele5);
-//    haplotype_tree.extend_haplotypes(allele6);
+//    haplotype_tree.extend(allele1);
+//    haplotype_tree.extend(allele2);
+//    haplotype_tree.extend(allele3);
+//    haplotype_tree.extend(allele4);
+//    haplotype_tree.extend(allele5);
+//    haplotype_tree.extend(allele6);
 //    
 //    REQUIRE(haplotype_tree.num_haplotypes() == 4);
 //    
@@ -272,7 +239,7 @@ using std::endl;
 //    hap2.push_back(allele5);
 //    hap2.push_back(allele6);
 //    
-//    haplotype_tree.prune_haplotype(hap1);
+//    haplotype_tree.prune_all(hap1);
 //    
 //    REQUIRE(haplotype_tree.num_haplotypes() == 3);
 //    
@@ -286,7 +253,7 @@ using std::endl;
 //    REQUIRE(haplotypes[1].get_sequence() == "ATCCTAA");
 //    REQUIRE(haplotypes[2].get_sequence() == "ATGCCAA");
 //    
-//    haplotype_tree.prune_haplotype(hap2);
+//    haplotype_tree.prune_all(hap2);
 //    
 //    REQUIRE(haplotype_tree.num_haplotypes() == 2);
 //    
@@ -297,7 +264,7 @@ using std::endl;
 //    REQUIRE(haplotypes[0].get_sequence() == "ATCCTAA");
 //    REQUIRE(haplotypes[1].get_sequence() == "ATGCCAG");
 //    
-//    haplotype_tree.extend_haplotypes(allele4);
+//    haplotype_tree.extend(allele4);
 //    
 //    REQUIRE(haplotype_tree.num_haplotypes() == 2);
 //    
@@ -308,11 +275,180 @@ using std::endl;
 //    REQUIRE(haplotypes[0].get_sequence() == "ATCCTAA");
 //    REQUIRE(haplotypes[1].get_sequence() == "ATGCTAG");
 //}
-
-//TEST_CASE("haplotype tree works on real data", "[haplotype_tree]")
+//
+//TEST_CASE("extending on mnps results in backtracked bifurification", "[haplotype_tree]")
 //{
 //    ReferenceGenomeFactory a_factory {};
-//    ReferenceGenome human(a_factory.make(human_reference_fasta));
+//    ReferenceGenome human {a_factory.make(human_reference_fasta)};
+//    
+//    Allele allele1 {parse_region("16:9300039-9300051", human), "TGTGTGTGCGTT"};
+//    Allele allele2 {parse_region("16:9300039-9300051", human), ""};
+//    
+//    Allele allele3 {parse_region("16:9300047-9300048", human), "C"};
+//    Allele allele4 {parse_region("16:9300047-9300048", human), "T"};
+//    Allele allele5 {parse_region("16:9300050-9300051", human), "T"};
+//    Allele allele6 {parse_region("16:9300050-9300051", human), "G"};
+//    
+//    HaplotypeTree haplotype_tree {human};
+//    
+//    haplotype_tree.extend(allele1);
+//    haplotype_tree.extend(allele2);
+//    
+//    REQUIRE(haplotype_tree.num_haplotypes() == 2);
+//    
+//    haplotype_tree.extend(allele3);
+//    
+//    REQUIRE(haplotype_tree.num_haplotypes() == 3);
+//    
+//    haplotype_tree.extend(allele4);
+//    
+//    REQUIRE(haplotype_tree.num_haplotypes() == 4);
+//    
+//    haplotype_tree.extend(allele5);
+//    
+//    REQUIRE(haplotype_tree.num_haplotypes() == 5);
+//    
+//    haplotype_tree.extend(allele6);
+//    
+//    REQUIRE(haplotype_tree.num_haplotypes() == 8);
+//    
+//    auto a_region = parse_region("16:9300039-9300051", human);
+//    
+//    auto haplotypes = haplotype_tree.get_haplotypes(a_region);
+//    
+//    REQUIRE(haplotypes.size() == 8);
+//    
+//    std::sort(haplotypes.begin(), haplotypes.end());
+//    
+//    auto it = std::unique(haplotypes.begin(), haplotypes.end());
+//    
+//    haplotypes.erase(it, haplotypes.end());
+//    
+//    REQUIRE(haplotypes.size() == 5);
+//}
+//
+//TEST_CASE("haplotype tree can selectively extend branches", "[haplotype_tree]")
+//{
+//    ReferenceGenomeFactory a_factory {};
+//    ReferenceGenome human {a_factory.make(human_reference_fasta)};
+//    
+//    HaplotypeTree haplotype_tree {human};
+//    
+//    Allele allele1 {parse_region("4:1000000-1000001", human), "A"};
+//    Allele allele2 {parse_region("4:1000000-1000003", human), ""};
+//    
+//    haplotype_tree.extend(allele1);
+//    haplotype_tree.extend(allele2);
+//    
+//    REQUIRE(haplotype_tree.num_haplotypes() == 2);
+//    
+//    haplotype_tree.extend(allele1);
+//    haplotype_tree.extend(allele2);
+//    
+//    REQUIRE(haplotype_tree.num_haplotypes() == 2);
+//    
+//    Allele allele3 {parse_region("4:1000001-1000002", human), "C"};
+//    Allele allele4 {parse_region("4:1000002-1000003", human), "G"};
+//    
+//    haplotype_tree.extend(allele3);
+//    
+//    REQUIRE(haplotype_tree.num_haplotypes() == 3);
+//    
+//    haplotype_tree.extend(allele4);
+//    
+//    REQUIRE(haplotype_tree.num_haplotypes() == 4);
+//    
+//    Allele allele5 {parse_region("4:1000003-1000004", human), "T"};
+//    
+//    haplotype_tree.extend(allele5);
+//    
+//    REQUIRE(haplotype_tree.num_haplotypes() == 4);
+//    
+//    Allele allele6 {parse_region("4:1000003-1000004", human), "A"};
+//    
+//    haplotype_tree.extend(allele6);
+//    
+//    REQUIRE(haplotype_tree.num_haplotypes() == 8);
+//}
+
+TEST_CASE("haplotype tree survives serious pruning", "[haplotype_tree]")
+{
+    ReferenceGenomeFactory a_factory {};
+    ReferenceGenome human {a_factory.make(human_reference_fasta)};
+    
+    ReadManager a_read_manager(std::vector<std::string> {human_1000g_bam1});
+    
+    VariantCandidateGenerator candidate_generator {};
+    
+    candidate_generator.register_generator(std::make_unique<AlignmentCandidateVariantGenerator>(human, 0));
+    
+    auto sample_ids = a_read_manager.get_sample_ids();
+    auto the_sample_id = sample_ids.at(0);
+    
+    auto a_region = parse_region("16:9299940-9300100", human);
+    
+    auto reads = a_read_manager.fetch_reads(the_sample_id, a_region);
+    
+    candidate_generator.add_reads(reads.cbegin(), reads.cend());
+    
+    auto candidates = candidate_generator.get_candidates(a_region);
+    
+    HaplotypeTree haplotype_tree {human};
+    
+    for (const auto& candidate : candidates) {
+        haplotype_tree.extend(candidate.get_reference_allele());
+        haplotype_tree.extend(candidate.get_alternative_allele());
+    }
+    
+    auto haplotypes = haplotype_tree.get_haplotypes(a_region);
+    
+    cout << "num haplotypes " << haplotypes.size() << endl;
+    
+    std::sort(haplotypes.begin(), haplotypes.end());
+    
+    Haplotype the_reference_haplotype {human, a_region};
+    
+    auto er = std::equal_range(haplotypes.begin(), haplotypes.end(), the_reference_haplotype);
+    
+    cout << "num reference copies " << (er.second - er.first) << endl;
+    
+    haplotypes.erase(er.first, er.second);
+    
+    cout << "num removing " << haplotypes.size() << endl;
+    
+    for (const auto& haplotype : haplotypes) {
+        haplotype_tree.prune_all(haplotype);
+    }
+    
+    REQUIRE(haplotype_tree.num_haplotypes() > 0);
+    
+    auto pruned_haplotypes = haplotype_tree.get_haplotypes(a_region);
+    
+    for (const auto& pruned_haplotype : pruned_haplotypes) {
+        REQUIRE(pruned_haplotype == the_reference_haplotype);
+    }
+    
+    auto it = pruned_haplotypes.cbegin() + 1;
+    
+    std::for_each(it, pruned_haplotypes.cend(), [&haplotype_tree] (const auto& haplotype) {
+        haplotype_tree.prune_all(haplotype);
+    });
+    
+    REQUIRE(haplotype_tree.num_haplotypes() == 1);
+    
+    auto last_haplotype = haplotype_tree.get_haplotypes(a_region)[0];
+    
+    REQUIRE(last_haplotype == the_reference_haplotype);
+    
+    haplotype_tree.prune_all(last_haplotype);
+    
+    REQUIRE(haplotype_tree.num_haplotypes() == 1);
+}
+
+//TEST_CASE("prune_unqiue leaves a single haplotype which is the least complex one", "[haplotype_tree]")
+//{
+//    ReferenceGenomeFactory a_factory {};
+//    ReferenceGenome human {a_factory.make(human_reference_fasta)};
 //    
 //    ReadManager a_read_manager(std::vector<std::string> {human_1000g_bam1});
 //    
@@ -327,56 +463,38 @@ using std::endl;
 //    
 //    auto reads = a_read_manager.fetch_reads(the_sample_id, a_region);
 //    
-//    using ReadIterator = std::vector<AlignedRead>::const_iterator;
-//    ReadFilter<ReadIterator> a_read_filter {};
-//    a_read_filter.register_filter(is_mapped);
-//    
-//    std::vector<AlignedRead> good_reads {}, bad_reads {};
-//    good_reads.reserve(reads.size());
-//    bad_reads.reserve(reads.size());
-//    a_read_filter.filter_reads(std::make_move_iterator(reads.begin()), std::make_move_iterator(reads.end()),
-//                               ContextBackInserter(good_reads), ContextBackInserter(bad_reads));
-//    
-//    candidate_generator.add_reads(good_reads.cbegin(), good_reads.cend());
+//    candidate_generator.add_reads(reads.cbegin(), reads.cend());
 //    
 //    auto candidates = candidate_generator.get_candidates(a_region);
 //    
 //    HaplotypeTree haplotype_tree {human};
 //    
-//    std::vector<Variant> aligned_candidates {};
-//    std::transform(candidates.begin(), candidates.end(), std::back_inserter(aligned_candidates),
-//                      [&human] (const auto& a_variant) {
-//                          return left_align(a_variant, human);
-//                      });
+//    REQUIRE(candidates.size() == 13);
 //    
-//    REQUIRE(aligned_candidates.size() == 13);
-//    
-//    for (const auto& candidate : aligned_candidates) {
-//        haplotype_tree.extend_haplotypes(candidate.get_reference_allele());
-//        haplotype_tree.extend_haplotypes(candidate.get_alternative_allele());
+//    for (const auto& candidate : candidates) {
+//        haplotype_tree.extend(candidate.get_reference_allele());
+//        haplotype_tree.extend(candidate.get_alternative_allele());
 //    }
 //    
 //    auto haplotypes = haplotype_tree.get_haplotypes(a_region);
 //    
+//    Haplotype the_reference_haplotype {human, a_region};
+//    
 //    std::sort(haplotypes.begin(), haplotypes.end());
 //    
-//    cout << "total num haplotypes " << haplotypes.size() << endl;
+//    auto er = std::equal_range(haplotypes.cbegin(), haplotypes.cend(), the_reference_haplotype);
 //    
-//    auto it = std::unique(haplotypes.begin(), haplotypes.end());
+//    auto haplotype_to_prune= *er.first;
 //    
-//    std::for_each(it, haplotypes.end(), [&haplotype_tree] (const auto& haplotype) {
-//        haplotype_tree.prune_haplotype(haplotype);
-//    });
+//    haplotype_tree.prune_unique(haplotype_to_prune);
 //    
-//    haplotypes.erase(it, haplotypes.end());
+//    auto new_haplotypes = haplotype_tree.get_haplotypes(a_region);
 //    
-//    cout << "" << haplotypes.size() << endl;
+//    std::sort(new_haplotypes.begin(), new_haplotypes.end());
 //    
-////    auto pruned_hapotypes = haplotype_tree.get_haplotypes(a_region);
-////    
-////    cout << pruned_hapotypes.size() << endl;
+//    er = std::equal_range(new_haplotypes.cbegin(), new_haplotypes.cend(), the_reference_haplotype);
 //    
-////    for (const auto& haplotype : haplotypes) {
-////        cout << haplotype << endl;
-////    }
+//    auto num_copies = std::distance(er.first, er.second);
+//    
+//    REQUIRE(num_copies == 1);
 //}

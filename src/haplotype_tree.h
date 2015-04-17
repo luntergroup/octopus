@@ -37,9 +37,10 @@ public:
     HaplotypeTree& operator=(HaplotypeTree&&)      = default;
     
     unsigned num_haplotypes() const;
-    void extend_haplotypes(const Allele& an_allele);
+    void extend(const Allele& an_allele);
     Haplotypes get_haplotypes(const GenomicRegion& a_region);
-    void prune_haplotype(const Haplotype& haplotype);
+    void prune_all(const Haplotype& haplotype);
+    void prune_unique(const Haplotype& haplotype);
     
 private:
     struct AlleleNode
@@ -57,10 +58,11 @@ private:
     Vertex the_root_;
     std::list<Vertex> haplotype_leafs_;
     ReferenceGenome& the_reference_;
-    std::unordered_map<Haplotype, Vertex> haplotype_leaf_cache_;
+    std::unordered_multimap<Haplotype, Vertex> haplotype_leaf_cache_;
     unsigned haplotype_allele_length_;
     
     using LeafIterator = decltype(haplotype_leafs_)::const_iterator;
+    using CacheIterator = decltype(haplotype_leaf_cache_)::iterator;
     
     Vertex get_previous_allele(Vertex allele) const;
     bool allele_exists(Vertex allele, const Allele& an_allele) const;
@@ -71,6 +73,9 @@ private:
     bool is_branch_the_haplotype(Vertex haplotype_end, const Haplotype& haplotype) const;
     LeafIterator find_haplotype_leaf(LeafIterator first, LeafIterator last, const Haplotype& haplotype) const;
     std::pair<Vertex, bool> prune_branch(Vertex leaf, const GenomicRegion& a_region);
+    
+    void add_to_cache(const Haplotype& haplotype, Vertex leaf);
+    std::pair<LeafIterator, bool> get_leaf_from_cache(const Haplotype& haplotype);
 };
 
 #endif /* defined(__Octopus__haplotype_tree__) */

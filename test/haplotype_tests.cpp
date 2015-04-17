@@ -373,7 +373,7 @@ TEST_CASE("haplotypes can be compared for structural complexity", "[haplotype]")
     REQUIRE(hap1.is_less_complex(hap2));
 }
 
-TEST_CASE("haplotypeS behave at boundries", "[haplotype]")
+TEST_CASE("haplotypes behave at boundries", "[haplotype]")
 {
     ReferenceGenomeFactory a_factory {};
     ReferenceGenome human {a_factory.make(human_reference_fasta)};
@@ -417,4 +417,29 @@ TEST_CASE("haplotypeS behave at boundries", "[haplotype]")
     REQUIRE(!haplotype.contains(test_allele1));
     REQUIRE(!haplotype.contains(test_allele2));
     REQUIRE(!haplotype.contains(test_allele3));
+}
+
+TEST_CASE("haplotypes can be copied and moved", "[haplotype]")
+{
+    ReferenceGenomeFactory a_factory {};
+    ReferenceGenome human {a_factory.make(human_reference_fasta)};
+    
+    auto a_region = parse_region("16:9299940-9300100", human);
+    
+    Allele allele1 {parse_region("16:9300037-9300037", human), "TG"};
+    Allele allele2 {parse_region("16:9300039-9300051", human), ""};
+    
+    Haplotype hap {human, a_region};
+    hap.push_back(allele1);
+    hap.push_back(allele2);
+    
+    auto hap_copy = hap;
+    
+    REQUIRE(hap_copy.contains(allele1));
+    REQUIRE(hap_copy.contains(allele2));
+    
+    auto moved_hap = std::move(hap);
+    
+    REQUIRE(moved_hap.contains(allele1));
+    REQUIRE(moved_hap.contains(allele2));
 }
