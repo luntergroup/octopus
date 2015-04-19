@@ -139,10 +139,9 @@ get_haplotype_probabilities(StandardGenotypeModel the_model, StandardGenotypeMod
     return {HaplotypeProbabilities {}, SampleGenotypeProbabilities{}};
 }
 
-void
-update_haplotype_probabilities(StandardGenotypeModel::Genotypes the_genotypes,
-                               StandardGenotypeModel::HaplotypeLogProbabilities& haplotype_log_probabilities,
-                               const Reads& the_reads, StandardGenotypeModel the_model)
+void update_haplotype_probabilities(StandardGenotypeModel::Genotypes the_genotypes,
+                                    StandardGenotypeModel::HaplotypeLogProbabilities& haplotype_log_probabilities,
+                                    const Reads& the_reads, StandardGenotypeModel the_model)
 {
     const unsigned num_samples   = static_cast<unsigned>(the_reads.size());
     const unsigned num_genotypes = static_cast<unsigned>(the_genotypes.size());
@@ -151,7 +150,7 @@ update_haplotype_probabilities(StandardGenotypeModel::Genotypes the_genotypes,
     
     genotype_responsabilities.reserve(num_samples);
     
-    for (std::size_t n {0}; n < num_samples; ++n) {
+    for (unsigned n {0}; n < num_samples; ++n) {
     
         std::vector<double> sample_genotypes_responsabilities {};
         sample_genotypes_responsabilities.reserve(num_genotypes);

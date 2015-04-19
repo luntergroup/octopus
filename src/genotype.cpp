@@ -38,7 +38,7 @@ bool Genotype::is_homozygous() const
 bool Genotype::contains(const Haplotype& a_haplotype) const
 {
     return std::any_of(std::cbegin(the_haplotypes_), std::cend(the_haplotypes_),
-                       [a_haplotype] (const auto& h) { return h == a_haplotype; });
+                       [&a_haplotype] (const auto& h) { return h == a_haplotype; });
 }
 
 unsigned Genotype::num_occurences(const Haplotype& a_haplotype) const

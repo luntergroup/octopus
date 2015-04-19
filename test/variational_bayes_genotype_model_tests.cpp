@@ -630,7 +630,12 @@ TEST_CASE("single_sample_compelx_variational_bayes_genotype_model", "[variationa
     add_to_back(candidates[5], hap8);
     add_to_back(candidates[6], hap8);
     
-    std::vector<Haplotype> haplotypes {reference_haplotype, hap1, hap2, hap3, hap4, hap5, hap6, hap7, hap8};
+    // smaller insertion & bigger insertion
+    Haplotype hap9 {human, a_region};
+    add_to_back(candidates[0], hap9);
+    add_to_back(candidates[6], hap9);
+    
+    std::vector<Haplotype> haplotypes {reference_haplotype, hap1, hap2, hap3, hap4, hap5, hap6, hap7, hap8, hap9};
     
     unsigned ploidy {2};
     ReadModel a_read_model {ploidy};

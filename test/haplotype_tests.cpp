@@ -443,3 +443,56 @@ TEST_CASE("haplotypes can be copied and moved", "[haplotype]")
     REQUIRE(moved_hap.contains(allele1));
     REQUIRE(moved_hap.contains(allele2));
 }
+
+//TEST_CASE("unique_least_complex removes haplotypes that infer the same sequence,"
+//          "leaving the haplotype with the fewest alterations to the reference", "[haplotype]")
+//{
+//    ReferenceGenomeFactory a_factory {};
+//    ReferenceGenome human {a_factory.make(human_reference_fasta)};
+//    
+//    auto a_region = parse_region("16:9300000-9300100", human);
+//    
+//    Allele allele1 {parse_region("16:9300037-9300037", human), "TG"};
+//    Allele allele2 {parse_region("16:9300037-9300051", human), ""};
+//    Allele allele3 {parse_region("16:9300051-9300051", human), ""};
+//    Allele allele4 {parse_region("16:9300051-9300061", human), "TGTGTGTGTG"};
+//    Allele allele5 {parse_region("16:9300061-9300062", human), "T"};
+//    Allele allele6 {parse_region("16:9300062-9300072", human), "GTGTGTGTGT"};
+//    Allele allele7 {parse_region("16:9300072-9300073", human), "T"};
+//    Allele allele8 {parse_region("16:9300073-9300074", human), "G"};
+//    Allele allele9 {parse_region("16:9300074-9300075", human), "G"};
+//    
+//    Allele allele10 {parse_region("16:9300037-9300039", human), "TG"};
+//    Allele allele11 {parse_region("16:9300039-9300051", human), ""};
+//    
+//    Haplotype hap1 {human, a_region};
+//    hap1.push_back(allele1);
+//    hap1.push_back(allele2);
+//    hap1.push_back(allele3);
+//    hap1.push_back(allele4);
+//    hap1.push_back(allele5);
+//    hap1.push_back(allele6);
+//    hap1.push_back(allele7);
+//    hap1.push_back(allele8);
+//    hap1.push_back(allele9);
+//    
+//    Haplotype hap2 {human, a_region};
+//    hap2.push_back(allele10);
+//    hap2.push_back(allele11);
+//    hap2.push_back(allele3);
+//    hap2.push_back(allele4);
+//    hap2.push_back(allele5);
+//    hap2.push_back(allele6);
+//    hap2.push_back(allele7);
+//    hap2.push_back(allele8);
+//    hap2.push_back(allele9);
+//    
+//    REQUIRE(hap1 == hap2);
+//    
+//    std::vector<Haplotype> haplotypes {hap1, hap2};
+//    
+//    unique_least_complex(haplotypes);
+//    
+//    REQUIRE(haplotypes.size() == 1);
+//    REQUIRE(!haplotypes[0].contains(allele2));
+//}

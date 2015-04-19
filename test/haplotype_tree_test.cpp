@@ -69,6 +69,28 @@ TEST_CASE("haplotype tree ignores duplicate alleles coming from same allele", "[
     REQUIRE(haplotype_tree.num_haplotypes() == 2);
 }
 
+TEST_CASE("haplotype tree ignores insertions followed immediatly by deletions and vice versa", "[haplotype_tree]")
+{
+    ReferenceGenomeFactory a_factory {};
+    ReferenceGenome human {a_factory.make(human_reference_fasta)};
+    
+    Allele allele1 {parse_region("16:9300037-9300037", human), "TG"};
+    Allele allele2 {parse_region("16:9300037-9300051 ", human), ""};
+    
+    HaplotypeTree haplotype_tree {human};
+    haplotype_tree.extend(allele1);
+    haplotype_tree.extend(allele2);
+    
+    REQUIRE(haplotype_tree.num_haplotypes() == 1);
+    
+    auto a_region = parse_region("16:9300037-9300037", human);
+    
+    auto haplotypes = haplotype_tree.get_haplotypes(a_region);
+    
+    REQUIRE(haplotypes[0].contains(allele1));
+    REQUIRE(!haplotypes[0].contains(allele2));
+}
+
 TEST_CASE("haplotype tree splits overlapping snps into different branches", "[haplotype_tree]")
 {
     ReferenceGenomeFactory a_factory {};

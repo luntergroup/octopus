@@ -220,9 +220,9 @@
 		CA1472771AACECAF005FDCD1 /* octopus */ = {
 			isa = PBXGroup;
 			children = (
+				CAA4DC241A81981400DD3E9A /* main.cpp */,
 				CAE3E29C1AA139A000C01B2C /* program_options.h */,
 				CAE3E29B1AA139A000C01B2C /* program_options.cpp */,
-				CAA4DC241A81981400DD3E9A /* main.cpp */,
 				CA1472791AACECF1005FDCD1 /* octopus.h */,
 				CA1472781AACECF1005FDCD1 /* octopus.cpp */,
 			);

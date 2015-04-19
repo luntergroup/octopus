@@ -48,6 +48,11 @@ public:
                                      const HaplotypePseudoCounts& haplotype_pseudo_counts,
                                      unsigned sample, const Genotypes& all_genotypes);
     
+    SampleGenotypeResponsabilities genotype_responsabilities(const Genotypes& genotypes, ReadIterator first,
+                                                             ReadIterator last,
+                                                             const HaplotypePseudoCounts& haplotype_pseudo_counts,
+                                                             unsigned sample);
+    
     RealType expected_haplotype_count(const Haplotype& haplotype,
                                       const SampleGenotypeResponsabilities& sample_genotype_responsabilities);
     
@@ -103,10 +108,9 @@ using GenotypePosteriors = std::pair<VariationalBayesGenotypeModel::GenotypeResp
 using SamplesReads = std::vector<std::pair<VariationalBayesGenotypeModel::ReadIterator,
                                             VariationalBayesGenotypeModel::ReadIterator>>;
 
-GenotypePosteriors
-update_parameters(VariationalBayesGenotypeModel& the_model,
-                  const VariationalBayesGenotypeModel::Genotypes& the_genotypes,
-                  const VariationalBayesGenotypeModel::HaplotypePseudoCounts& prior_haplotype_pseudocounts,
-                  const SamplesReads& the_reads, unsigned max_num_iterations);
+GenotypePosteriors update_parameters(VariationalBayesGenotypeModel& the_model,
+                                     const VariationalBayesGenotypeModel::Genotypes& the_genotypes,
+                                     const VariationalBayesGenotypeModel::HaplotypePseudoCounts& prior_haplotype_pseudocounts,
+                                     const SamplesReads& the_reads, unsigned max_num_iterations);
 
 #endif /* defined(__Octopus__variational_bayes_genotype_model.h__) */

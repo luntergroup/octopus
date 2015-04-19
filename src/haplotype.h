@@ -19,6 +19,8 @@
 #include "comparable.h"
 #include "mappable.h"
 
+#include <iostream> // TEST
+
 class ReferenceGenome;
 class GenomicRegion;
 
@@ -50,6 +52,8 @@ public:
     void operator+=(const Haplotype& other);
     
     friend bool is_less_complex(const Haplotype& lhs, const Haplotype& rhs);
+    
+    void print_explicit_alleles() const; // TEST
 private:
     using AlleleIterator = std::deque<Allele>::const_iterator;
     
@@ -138,5 +142,12 @@ void unique_least_complex(std::vector<Haplotype>& haplotypes);
 void add_to_back(const Variant& a_variant, Haplotype& a_haplotype);
 void add_to_front(const Variant& a_variant, Haplotype& a_haplotype);
 bool contains(const Haplotype& a_haplotype, const Variant& a_variant);
+
+inline void Haplotype::print_explicit_alleles() const
+{
+    for (const auto& allele : the_explicit_alleles_) {
+        std::cout << allele << std::endl;
+    }
+}
 
 #endif /* defined(__Octopus__haplotype__) */

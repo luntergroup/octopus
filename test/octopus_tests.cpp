@@ -55,7 +55,9 @@
 //    
 //    ReadManager a_read_manager {std::vector<std::string> {human_1000g_bam1}};
 //    
-//    auto a_region = parse_region("16:9299940-9300055", human);
+//    //auto a_region = parse_region("16:9299940-9300055", human);
+//    //auto a_region = parse_region("16:9299940-9299970", human);
+//    auto a_region = parse_region("16:9300000-9300100", human);
 //    
 //    auto samples = a_read_manager.get_sample_ids();
 //    
@@ -69,11 +71,11 @@
 //        return has_sufficient_good_quality_bases(the_read, 20, 10);
 //    });
 //    a_read_filter.register_filter(is_not_duplicate<ReadIterator>);
-//
+//    
 //    ReadTransform a_read_transform {};
 //    a_read_transform.register_transform(trim_adapters);
 //    a_read_transform.register_transform(trim_soft_clipped);
-//
+//    
 //    VariantCandidateGenerator candidate_generator {};
 //    candidate_generator.register_generator(std::make_unique<AlignmentCandidateVariantGenerator>(human, 0));
 //    
@@ -99,7 +101,7 @@
 //    a_read_transform.transform_reads(good_reads.begin(), good_reads.end());
 //    
 //    candidate_generator.add_reads(good_reads.cbegin(), good_reads.cend());
-//
+//    
 //    auto candidates = candidate_generator.get_candidates(a_region);
 //    
 //    candidate_generator.clear();
@@ -148,32 +150,22 @@
 //    SamplesReads the_reads {};
 //    the_reads.push_back({good_reads.cbegin(), good_reads.cend()});
 //    
-//    std::chrono::milliseconds total {};
+//    auto results = update_parameters(the_model, genotypes, pseudo_counts, the_reads, 3);
+//    auto responsabilities        = results.first;
+//    auto posterior_pseudo_counts = results.second;
 //    
-//    for (unsigned i {}; i < genotypes.size(); ++i) {
-//        auto start = std::chrono::system_clock::now();
-//        auto p = a_read_model.log_probability(good_reads.cbegin(), good_reads.cend(), genotypes[i], 0);
-//        auto end = std::chrono::system_clock::now();
-//        total += std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
-//        if (i % 100 == 0) {
-//            cout << total.count() << "ms" << endl;
-//            total = std::chrono::milliseconds {};
-//        }
+//    auto& sample_responsabilities = responsabilities[0];
+//    
+//    std::sort(genotypes.begin(), genotypes.end(), [&sample_responsabilities] (const auto& g1, const auto& g2) {
+//        return sample_responsabilities[g1] > sample_responsabilities[g2];
+//    });
+//    
+//    cout << genotypes[0] << " " << sample_responsabilities.at(genotypes[0]) << endl;
+//    cout << genotypes[1] << " " << sample_responsabilities.at(genotypes[1]) << endl;
+//    
+//    for (const auto& variant : candidates) {
+//        cout << variant << " " << the_model.posterior_probability_allele_in_sample(variant.get_reference_allele(), haplotypes, sample_responsabilities, genotypes) << " " << the_model.posterior_probability_allele_in_sample(variant.get_alternative_allele(), haplotypes, sample_responsabilities, genotypes) << endl;
 //    }
-//    
-////    auto results = update_parameters(the_model, genotypes, pseudo_counts, the_reads, 3);
-////    auto responsabilities        = results.first;
-////    auto posterior_pseudo_counts = results.second;
-////    
-////    auto& sample_responsabilities = responsabilities[0];
-////    
-////    std::sort(genotypes.begin(), genotypes.end(), [&sample_responsabilities] (const auto& g1, const auto& g2) {
-////        return sample_responsabilities[g1] > sample_responsabilities[g2];
-////    });
-////    
-////    cout << genotypes[0] << " " << sample_responsabilities.at(genotypes[0]) << endl;
-////    cout << genotypes[1] << " " << sample_responsabilities.at(genotypes[1]) << endl;
-////    cout << genotypes[2] << " " << sample_responsabilities.at(genotypes[2]) << endl;
 //}
 //
 ////TEST_CASE("read_filter_transform_generate_left_align_test", "[octopus]")

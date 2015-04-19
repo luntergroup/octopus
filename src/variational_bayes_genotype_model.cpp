@@ -8,7 +8,9 @@
 
 #include "variational_bayes_genotype_model.h"
 
-#include <cmath> // std::exp, std::log
+#include <cmath>      // std::exp, std::log
+#include <algorithm>  // std::transform, std::copy_if, std::any_of
+#include <functional> // std::reference_wrapper
 #include <boost/math/special_functions/digamma.hpp>
 
 #include "aligned_read.h"
@@ -52,20 +54,45 @@ VariationalBayesGenotypeModel::genotype_responsability(const Genotype& genotype,
                                                        ReadIterator first, ReadIterator last,
                                                        const HaplotypePseudoCounts& haplotype_pseudo_counts,
                                                        unsigned sample,
-                                                       const Genotypes& all_genotypes)
+                                                       const Genotypes& genotypes)
 {
     RealType log_rho_genotype = log_rho(genotype, haplotype_pseudo_counts, first, last, sample);
     
-    std::vector<RealType> log_rho_genotypes {};
-    log_rho_genotypes.reserve(all_genotypes.size());
+    std::vector<RealType> log_rho_genotypes (genotypes.size());
     
-    for (const auto& g : all_genotypes) {
-        log_rho_genotypes.push_back(log_rho(g, haplotype_pseudo_counts, first, last, sample));
-    }
+    std::transform(std::cbegin(genotypes), std::cend(genotypes), log_rho_genotypes.begin(),
+                   [this, &haplotype_pseudo_counts, first, last, sample] (const auto& genotype) {
+                       return log_rho(genotype, haplotype_pseudo_counts, first, last, sample);
+                   });
     
     RealType log_sum_rho_genotypes = log_sum_exp<RealType>(log_rho_genotypes.cbegin(), log_rho_genotypes.cend());
     
     return std::exp(log_rho_genotype - log_sum_rho_genotypes);
+}
+
+VariationalBayesGenotypeModel::SampleGenotypeResponsabilities
+VariationalBayesGenotypeModel::genotype_responsabilities(const Genotypes& genotypes, ReadIterator first,
+                                                         ReadIterator last,
+                                                         const HaplotypePseudoCounts& haplotype_pseudo_counts,
+                                                         unsigned sample)
+{
+    std::vector<RealType> log_rho_genotypes (genotypes.size());
+    
+    std::transform(std::cbegin(genotypes), std::cend(genotypes), log_rho_genotypes.begin(),
+                   [this, &haplotype_pseudo_counts, first, last, sample] (const auto& genotype) {
+                       return log_rho(genotype, haplotype_pseudo_counts, first, last, sample);
+                   });
+    
+    RealType log_sum_rho_genotypes = log_sum_exp<RealType>(log_rho_genotypes.cbegin(), log_rho_genotypes.cend());
+    
+    SampleGenotypeResponsabilities result {};
+    result.reserve(genotypes.size());
+    
+    for (unsigned i {}; i < genotypes.size(); ++i) {
+        result[genotypes.at(i)] = std::exp(log_rho_genotypes.at(i) - log_sum_rho_genotypes);
+    }
+    
+    return result;
 }
 
 VariationalBayesGenotypeModel::RealType
@@ -139,11 +166,11 @@ VariationalBayesGenotypeModel::posterior_probability_haplotype_in_samples(const 
                                                                           const Genotypes& all_genotypes,
                                                                           const HaplotypePseudoCounts& posterior_haplotype_pseudo_counts) const
 {
-    RealType result {1};
+    RealType result {0};
     
     for (const auto& genotype : all_genotypes) {
-        if (!genotype.contains(haplotype)) {
-            result -= posterior_predictive_probability(genotype, posterior_haplotype_pseudo_counts);
+        if (genotype.contains(haplotype)) {
+            result += posterior_predictive_probability(genotype, posterior_haplotype_pseudo_counts);
         }
     }
     
@@ -155,11 +182,11 @@ VariationalBayesGenotypeModel::posterior_probability_haplotype_in_sample(const H
                                                                          const Genotypes& all_genotypes,
                                                                          const SampleGenotypeResponsabilities& genotype_responsabilities) const
 {
-    RealType result {1};
+    RealType result {0};
     
     for (const auto& genotype : all_genotypes) {
-        if (!genotype.contains(haplotype)) {
-            result -= genotype_responsabilities.at(genotype);
+        if (genotype.contains(haplotype)) {
+            result += genotype_responsabilities.at(genotype);
         }
     }
     
@@ -188,15 +215,18 @@ VariationalBayesGenotypeModel::posterior_probability_allele_in_sample(const Alle
                                                                       const SampleGenotypeResponsabilities& sample_genotype_responsabilities,
                                                                       const Genotypes& genotypes) const
 {
+    std::vector<std::reference_wrapper<const Haplotype>> containing_haplotypes {};
+    containing_haplotypes.reserve(haplotypes.size() / 2);
+    
+    std::copy_if(cbegin(haplotypes), std::cend(haplotypes), std::back_inserter(containing_haplotypes),
+                 [&the_allele] (const auto& haplotype) { return haplotype.contains(the_allele); });
+    
     RealType result {0};
     
-    for (const auto& haplotype : haplotypes) {
-        if (haplotype.contains(the_allele)) {
-            for (const auto& genotype : genotypes) {
-                if (genotype.contains(haplotype)) {
-                    result += sample_genotype_responsabilities.at(genotype);
-                }
-            }
+    for (const auto& genotype : genotypes) {
+        if (std::any_of(containing_haplotypes.cbegin(), containing_haplotypes.cend(),
+                        [&genotype] (const auto& haplotype) { return genotype.contains(haplotype); })) {
+            result += sample_genotype_responsabilities.at(genotype);
         }
     }
     
@@ -270,14 +300,11 @@ GenotypePosteriors update_parameters(VariationalBayesGenotypeModel& the_model,
     VariationalBayesGenotypeModel::HaplotypePseudoCounts posterior_pseudo_counts {prior_haplotype_pseudocounts};
     
     for (unsigned i {}; i < max_num_iterations; ++i) {
-        for (unsigned s {}; s < num_samples; ++s) {
-            for (const auto& genotype : the_genotypes) {
-                responsabilities[s][genotype] = the_model.genotype_responsability(genotype,
-                                                                                  the_reads.at(s).first,
-                                                                                  the_reads.at(s).second,
-                                                                                  posterior_pseudo_counts, s,
-                                                                                  the_genotypes);
-            }
+        for (unsigned sample {}; sample < num_samples; ++sample) {
+            responsabilities[sample] = the_model.genotype_responsabilities(the_genotypes,
+                                                                      the_reads.at(sample).first,
+                                                                      the_reads.at(sample).second,
+                                                                      posterior_pseudo_counts, sample);
         }
         
         for (const auto& haplotype_prior_pair : prior_haplotype_pseudocounts) {

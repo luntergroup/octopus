@@ -156,4 +156,14 @@ inline bool contains(const Allele& lhs, const Allele& rhs)
     }
 }
 
+inline bool is_insertion(const Allele& an_allele)
+{
+    return empty(an_allele.get_region()) && an_allele.get_sequence().size() > 0;
+}
+
+inline bool is_deletion(const Allele& an_allele)
+{
+    return !empty(an_allele.get_region()) && an_allele.get_sequence().size() == 0;
+}
+
 #endif
