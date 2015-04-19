@@ -149,11 +149,6 @@ Haplotype::SequenceType Haplotype::get_sequence(const GenomicRegion& a_region) c
     return result;
 }
 
-bool Haplotype::is_less_complex(const Haplotype& other) const
-{
-    return the_explicit_alleles_.size() < other.the_explicit_alleles_.size();
-}
-
 void Haplotype::operator+=(const Haplotype& other)
 {
     the_explicit_alleles_.insert(std::end(the_explicit_alleles_), std::cbegin(other.the_explicit_alleles_),
@@ -187,6 +182,33 @@ Haplotype::SequenceType Haplotype::get_sequence_bounded_by_explicit_alleles() co
 {
     return get_sequence_bounded_by_explicit_alleles(std::cbegin(the_explicit_alleles_),
                                                     std::cend(the_explicit_alleles_));
+}
+
+void unique_least_complex(std::vector<Haplotype>& haplotypes)
+{
+    std::sort(haplotypes.begin(), haplotypes.end());
+    
+    auto first_equal = haplotypes.begin();
+    auto last_equal  = haplotypes.begin();
+    auto last = haplotypes.end();
+    
+    while (true) {
+        first_equal = std::adjacent_find(first_equal, last);
+        
+        if (first_equal == last) break;
+        
+        last_equal = std::find_if_not(first_equal + 2, last, [first_equal] (const auto& haplotype) {
+            return haplotype == *first_equal;
+        });
+        
+        std::sort(first_equal, last_equal, is_less_complex);
+        
+        first_equal = last_equal;
+    }
+    
+    first_equal = std::unique(haplotypes.begin(), haplotypes.end());
+    
+    haplotypes.erase(first_equal, last);
 }
 
 void add_to_back(const Variant& a_variant, Haplotype& a_haplotype)

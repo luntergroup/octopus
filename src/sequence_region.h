@@ -12,6 +12,7 @@
 #include <cstdint>
 #include <algorithm> // std::min, std::max
 #include <stdexcept>
+#include <boost/functional/hash.hpp> // boost::hash_combine
 
 #include "comparable.h"
 
@@ -161,6 +162,19 @@ inline SequenceRegion get_right_overhang(const SequenceRegion& lhs, const Sequen
     if (ends_before(lhs, rhs)) return SequenceRegion {lhs.get_end(), lhs.get_end()};
     
     return SequenceRegion {rhs.get_end(), lhs.get_end()};
+}
+
+namespace std {
+    template <> struct hash<SequenceRegion>
+    {
+        size_t operator()(const SequenceRegion& r) const
+        {
+            size_t seed {};
+            boost::hash_combine(seed, r.get_begin());
+            boost::hash_combine(seed, r.get_end());
+            return seed;
+        }
+    };
 }
 
 #endif /* defined(__Octopus__sequence_region__) */

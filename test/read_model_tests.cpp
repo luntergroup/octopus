@@ -172,7 +172,7 @@ TEST_CASE("two_sample_diploid_read_model_test", "[read_model]")
     unsigned ploidy {2};
     
     ReferenceGenomeFactory a_factory {};
-    ReferenceGenome human(a_factory.make(human_reference_fasta));
+    ReferenceGenome human {a_factory.make(human_reference_fasta)};
     
     ReadManager a_read_manager(std::vector<std::string> {human_1000g_bam1, human_1000g_bam2});
     

@@ -13,6 +13,7 @@
 #include <unordered_map>
 #include <ostream>
 #include <iterator>
+#include <boost/functional/hash.hpp> // boost::hash_combine
 
 #include "haplotype.h"
 #include "equitable.h"
@@ -37,7 +38,6 @@ public:
     unsigned num_occurences(const Haplotype& a_haplotype) const;
     bool is_homozygous() const;
     std::vector<Haplotype> get_unique_haplotypes() const;
-    //const Haplotype& get_first_alternate_haplotype(const Haplotype& a_haplotype) const;
     
     friend bool operator==(const Genotype& lhs, const Genotype& rhs);
 private:
@@ -67,7 +67,13 @@ namespace std {
     {
         size_t operator()(const Genotype& g) const
         {
-            return hash<Haplotype>()(g.at(0)); //TODO: improve this
+            size_t seed {};
+            
+            for (unsigned i {}; i < g.ploidy(); ++i) {
+                boost::hash_combine(seed, hash<Haplotype>()(g.at(i)));
+            }
+            
+            return seed;
         }
     };
 }

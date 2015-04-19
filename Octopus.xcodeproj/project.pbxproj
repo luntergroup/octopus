@@ -10,6 +10,7 @@
 		CA03C1511A8C0D3D000D3494 /* htslib_read_facade.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA03C14F1A8C0D3D000D3494 /* htslib_read_facade.cpp */; };
 		CA03C2251A8C1702000D3494 /* read_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA03C2241A8C1702000D3494 /* read_tests.cpp */; };
 		CA03C2271A8C1BED000D3494 /* reference_benchmarks.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA03C2261A8C1BED000D3494 /* reference_benchmarks.cpp */; };
+		CA0B46651AE3CD6800158BBA /* read_model_benchmarks.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA0B46641AE3CD6800158BBA /* read_model_benchmarks.cpp */; };
 		CA14727A1AACECF1005FDCD1 /* octopus.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA1472781AACECF1005FDCD1 /* octopus.cpp */; };
 		CA14727C1AACED6E005FDCD1 /* octopus_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA14727B1AACED6E005FDCD1 /* octopus_tests.cpp */; };
 		CA24FBB41AB19E8A003D508A /* libhts.a in Frameworks */ = {isa = PBXBuildFile; fileRef = CA24FBB31AB19E8A003D508A /* libhts.a */; };
@@ -80,6 +81,7 @@
 		CA03C2291A8C1C8C000D3494 /* benchmark_utils.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = benchmark_utils.h; sourceTree = "<group>"; };
 		CA03C22A1A8CEF25000D3494 /* read_reader_impl.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = read_reader_impl.h; sourceTree = "<group>"; };
 		CA03C22B1A8D2C5D000D3494 /* cigar_string.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = cigar_string.h; sourceTree = "<group>"; };
+		CA0B46641AE3CD6800158BBA /* read_model_benchmarks.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = read_model_benchmarks.cpp; sourceTree = "<group>"; };
 		CA1472741AACC7E2005FDCD1 /* context_back_insert_iterator.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = context_back_insert_iterator.h; sourceTree = "<group>"; };
 		CA1472781AACECF1005FDCD1 /* octopus.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = octopus.cpp; sourceTree = "<group>"; };
 		CA1472791AACECF1005FDCD1 /* octopus.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = octopus.h; sourceTree = "<group>"; };
@@ -210,6 +212,7 @@
 				CAE3E2C61AA895D600C01B2C /* variant_benchmarks.cpp */,
 				CA28EBF41AABB80E009F8622 /* read_filter_benchmarks.cpp */,
 				CA5C8E011ADC4CBB000BA230 /* haplotype_benchmarks.cpp */,
+				CA0B46641AE3CD6800158BBA /* read_model_benchmarks.cpp */,
 			);
 			name = benchmarks;
 			sourceTree = "<group>";
@@ -428,10 +431,10 @@
 				CAFA19761AC5E67100F953D9 /* pair_hmm.h */,
 				D42061151ACC3DA500D11553 /* read_model.h */,
 				D42061141ACC3DA500D11553 /* read_model.cpp */,
-				CAFA19601ABF6F2D00F953D9 /* standard_genotype_model.h */,
-				CAFA195F1ABF6F2D00F953D9 /* standard_genotype_model.cpp */,
 				D42061101ACC165C00D11553 /* variational_bayes_genotype_model.h */,
 				D420610F1ACC165C00D11553 /* variational_bayes_genotype_model.cpp */,
+				CAFA19601ABF6F2D00F953D9 /* standard_genotype_model.h */,
+				CAFA195F1ABF6F2D00F953D9 /* standard_genotype_model.cpp */,
 			);
 			name = core;
 			sourceTree = "<group>";
@@ -543,6 +546,7 @@
 				CAFA196E1AC1B4AF00F953D9 /* genotype.cpp in Sources */,
 				CA03C1511A8C0D3D000D3494 /* htslib_read_facade.cpp in Sources */,
 				CAFA19681ABF84BE00F953D9 /* standard_genotype_model_tests.cpp in Sources */,
+				CA0B46651AE3CD6800158BBA /* read_model_benchmarks.cpp in Sources */,
 				D4907F571A8A2A9B00639203 /* reference_tests.cpp in Sources */,
 				CAE3E2B01AA2981E00C01B2C /* variant_candidate_generation_test.cpp in Sources */,
 				CAE3E2C01AA3D91C00C01B2C /* variant_utils.cpp in Sources */,
@@ -649,7 +653,7 @@
 				ALWAYS_SEARCH_USER_PATHS = YES;
 				CLANG_CXX_LANGUAGE_STANDARD = "c++14";
 				FRAMEWORK_SEARCH_PATHS = "$(inherited)";
-				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_OPTIMIZATION_LEVEL = 3;
 				HEADER_SEARCH_PATHS = (
 					"$(inherited)",
 					/usr/local/Cellar/boost/1.57.0/include,

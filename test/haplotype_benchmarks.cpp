@@ -23,23 +23,20 @@
 #include "haplotype.h"
 #include "genotype.h"
 
-//TEST_CASE("haplotype_get_sequence_benchmark", "[haplotype]")
+//TEST_CASE("haplotype hashing benchmark", "[haplotype]")
 //{
 //    ReferenceGenomeFactory a_factory {};
-//    ReferenceGenome human(a_factory.make(human_reference_fasta));
+//    ReferenceGenome human {a_factory.make(human_reference_fasta)};
 //    
-//    auto a_region = parse_region("16:9300000-9300100", human);
+//    auto a_region = parse_region("1:10000000-10001000", human);
 //    
-//    Allele allele1 {parse_region("16:9300037-9300037", human), "TG"};
-//    Allele allele2 {parse_region("16:9300037-9300051", human), ""};
-//    Allele allele3 {parse_region("16:9300039-9300051", human), ""};
+//    Haplotype haplotype {human, a_region};
 //    
-//    Haplotype hap1 {human, a_region};
-//    hap1.push_back(allele3);
+//    auto f_haplotype_hash = [&haplotype] () {
+//        std::hash<Haplotype>()(haplotype);
+//    };
 //    
-//    Haplotype hap2 {human, a_region};
-//    hap2.push_back(allele1);
-//    hap2.push_back(allele2);
+//    auto hash_time = benchmark<std::chrono::nanoseconds>(f_haplotype_hash, 10000).count();
 //    
-//    auto f_get_sequence = [&]
+//    std::cout << "hash_time: " << hash_time << "ns" << std::endl;
 //}

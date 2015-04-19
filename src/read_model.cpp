@@ -13,6 +13,8 @@
 #include "pair_hmm.h"
 #include "maths.h"
 
+#include <iostream> // TEST
+
 ReadModel::ReadModel(unsigned ploidy, bool can_cache_reads)
 :
 ploidy_ {ploidy},
@@ -22,10 +24,11 @@ genotype_log_probability_cache_ {},
 ln_ploidy_ {std::log(ploidy)}
 {}
 
-ReadModel::RealType ReadModel::log_probability(const AlignedRead& read, const Haplotype& haplotype, unsigned sample)
+ReadModel::RealType ReadModel::log_probability(const AlignedRead& read, const Haplotype& haplotype,
+                                               SampleIdType sample)
 {
     if (is_read_in_cache(sample, read, haplotype)) {
-        return read_log_probability_cache_.at(sample).at(read).at(haplotype);
+        return get_log_probability_from_cache(sample, read, haplotype);
     }
     
     //TODO: make these members when pair_hmm is finalised
@@ -48,7 +51,8 @@ ReadModel::RealType ReadModel::log_probability(const AlignedRead& read, const Ha
 }
 
 // ln p(read | genotype) = ln sum {haplotype in genotype} p(read | haplotype) - ln ploidy
-ReadModel::RealType ReadModel::log_probability(const AlignedRead& read, const Genotype& genotype, unsigned sample)
+ReadModel::RealType ReadModel::log_probability(const AlignedRead& read, const Genotype& genotype,
+                                               SampleIdType sample)
 {
     // These cases are just for optimisation; they are functionally equivalent
     switch (ploidy_) {
@@ -65,10 +69,10 @@ ReadModel::RealType ReadModel::log_probability(const AlignedRead& read, const Ge
 
 // ln p(reads | genotype) = sum (read in reads} ln p(read | genotype)
 ReadModel::RealType ReadModel::log_probability(ReadIterator first, ReadIterator last, const Genotype& genotype,
-                                               unsigned sample)
+                                               SampleIdType sample)
 {
-    if (is_genotype_in_cache(sample, genotype)) {
-        return genotype_log_probability_cache_.at(sample).at(genotype);
+    if (is_genotype_in_cache(sample, first, last, genotype)) {
+        return get_log_probability_from_cache(sample, first, last, genotype);
     }
     
     RealType result {0};
@@ -77,13 +81,13 @@ ReadModel::RealType ReadModel::log_probability(ReadIterator first, ReadIterator 
         result += log_probability(read, genotype, sample);
     });
     
-    add_genotype_to_cache(sample, genotype, result);
+    add_genotype_to_cache(sample, first, last, genotype, result);
     
     return result;
 }
 
 ReadModel::RealType ReadModel::log_probability_haploid(const AlignedRead& read, const Genotype& genotype,
-                                                       unsigned sample)
+                                                       SampleIdType sample)
 {
     auto haplotype_log_probability = log_probability(read, genotype.at(0), sample);
     
@@ -91,7 +95,7 @@ ReadModel::RealType ReadModel::log_probability_haploid(const AlignedRead& read, 
 }
 
 ReadModel::RealType ReadModel::log_probability_diploid(const AlignedRead& read, const Genotype& genotype,
-                                                       unsigned sample)
+                                                       SampleIdType sample)
 {
     auto haplotype1_log_probability = log_probability(read, genotype.at(0), sample);
     auto haplotype2_log_probability = log_probability(read, genotype.at(1), sample);
@@ -100,7 +104,7 @@ ReadModel::RealType ReadModel::log_probability_diploid(const AlignedRead& read, 
 }
 
 ReadModel::RealType ReadModel::log_probability_triploid(const AlignedRead& read, const Genotype& genotype,
-                                                        unsigned sample)
+                                                        SampleIdType sample)
 {
     auto haplotype1_log_probability = log_probability(read, genotype.at(0), sample);
     auto haplotype2_log_probability = log_probability(read, genotype.at(1), sample);
@@ -111,7 +115,7 @@ ReadModel::RealType ReadModel::log_probability_triploid(const AlignedRead& read,
 }
 
 ReadModel::RealType ReadModel::log_probability_polyploid(const AlignedRead& read, const Genotype& genotype,
-                                                         unsigned sample)
+                                                         SampleIdType sample)
 {
     //TODO
     std::vector<RealType> log_haplotype_probabilities {};
@@ -133,7 +137,8 @@ ReadModel::RealType ReadModel::log_probability_polyploid(const AlignedRead& read
     return log_sum_haplotype_probabilities - ln_ploidy_;
 }
 
-bool ReadModel::is_read_in_cache(unsigned sample, const AlignedRead& read, const Haplotype& haplotype) const noexcept
+bool ReadModel::is_read_in_cache(SampleIdType sample, const AlignedRead& read,
+                                 const Haplotype& haplotype) const noexcept
 {
     if (!can_cache_reads_) return false;
     if (read_log_probability_cache_.count(sample) == 0) return false;
@@ -141,13 +146,13 @@ bool ReadModel::is_read_in_cache(unsigned sample, const AlignedRead& read, const
     return read_log_probability_cache_.at(sample).at(read).count(haplotype) > 0;
 }
 
-bool ReadModel::is_genotype_in_cache(unsigned sample, const Genotype& genotype) const noexcept
+ReadModel::RealType ReadModel::get_log_probability_from_cache(SampleIdType sample, const AlignedRead& read,
+                                                              const Haplotype& haplotype) const
 {
-    if (genotype_log_probability_cache_.count(sample) == 0) return false;
-    return genotype_log_probability_cache_.at(sample).count(genotype) > 0;
+    return read_log_probability_cache_.at(sample).at(read).at(haplotype);
 }
 
-void ReadModel::add_read_to_cache(unsigned sample, const AlignedRead& read, const Haplotype& haplotype,
+void ReadModel::add_read_to_cache(SampleIdType sample, const AlignedRead& read, const Haplotype& haplotype,
                                   RealType read_log_probability)
 {
     if (can_cache_reads_) {
@@ -155,9 +160,23 @@ void ReadModel::add_read_to_cache(unsigned sample, const AlignedRead& read, cons
     }
 }
 
-void ReadModel::add_genotype_to_cache(unsigned sample, const Genotype& genotype, RealType genotype_log_probability)
+bool ReadModel::is_genotype_in_cache(SampleIdType sample, ReadIterator first, ReadIterator last,
+                                     const Genotype& genotype) const noexcept
 {
-    genotype_log_probability_cache_[sample][genotype] = genotype_log_probability;
+    if (genotype_log_probability_cache_.count(sample) == 0) return false;
+    return genotype_log_probability_cache_.at(sample).count(std::make_tuple(genotype, *first, std::distance(first, last))) > 0;
+}
+
+void ReadModel::add_genotype_to_cache(SampleIdType sample, ReadIterator first, ReadIterator last,
+                                      const Genotype& genotype, RealType genotype_log_probability)
+{
+    genotype_log_probability_cache_[sample][std::make_tuple(genotype, *first, std::distance(first, last))] = genotype_log_probability;
+}
+
+ReadModel::RealType ReadModel::get_log_probability_from_cache(SampleIdType sample, ReadIterator first,
+                                                              ReadIterator last, const Genotype& genotype) const
+{
+    return genotype_log_probability_cache_.at(sample).at(std::make_tuple(genotype, *first, std::distance(first, last)));
 }
 
 void ReadModel::clear_cache()

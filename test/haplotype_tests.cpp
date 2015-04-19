@@ -370,7 +370,7 @@ TEST_CASE("haplotypes can be compared for structural complexity", "[haplotype]")
     hap2.push_back(allele1);
     hap2.push_back(allele2);
     
-    REQUIRE(hap1.is_less_complex(hap2));
+    REQUIRE(is_less_complex(hap1, hap2));
 }
 
 TEST_CASE("haplotypes behave at boundries", "[haplotype]")

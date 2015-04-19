@@ -16,6 +16,7 @@
 #include <ostream>
 #include <algorithm> // std::copy, std::minmax, std::mismatch
 #include <ctype.h>   // std::isdigit
+#include <boost/functional/hash.hpp> // boost::hash_combine
 
 #include "equitable.h"
 
@@ -164,6 +165,35 @@ inline std::ostream& operator<<(std::ostream& os, const CigarString& a_cigar_str
     std::copy(std::cbegin(a_cigar_string), std::cend(a_cigar_string),
               std::ostream_iterator<CigarOperation>(os));
     return os;
+}
+
+namespace std {
+    template <> struct hash<CigarOperation>
+    {
+        size_t operator()(const CigarOperation& op) const
+        {
+            size_t seed {};
+            boost::hash_combine(seed, op.get_flag());
+            boost::hash_combine(seed, op.get_size());
+            return seed;
+        }
+    };
+}
+
+namespace std {
+    template <> struct hash<CigarString>
+    {
+        size_t operator()(const CigarString& cigar) const
+        {
+            size_t seed {};
+            
+            for (const auto& op : cigar) {
+                boost::hash_combine(seed, hash<CigarOperation>()(op));
+            }
+            
+            return seed;
+        }
+    };
 }
 
 #endif

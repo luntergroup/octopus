@@ -13,6 +13,7 @@
 #include <ostream>
 #include <algorithm> // std::min
 #include <cstddef>   // std::size_t
+#include <boost/functional/hash.hpp> // boost::hash_combine
 
 #include "genomic_region.h"
 #include "comparable.h"
@@ -103,7 +104,10 @@ namespace std {
     {
         size_t operator()(const Allele& a) const
         {
-            return hash<GenomicRegion>()(a.get_region());
+            size_t seed {};
+            boost::hash_combine(seed, hash<GenomicRegion>()(a.get_region()));
+            boost::hash_combine(seed, hash<Allele::SequenceType>()(a.get_sequence()));
+            return seed;
         }
     };
 }

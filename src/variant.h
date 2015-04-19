@@ -11,6 +11,7 @@
 
 #include <string>
 #include <ostream>
+#include <boost/functional/hash.hpp> // boost::hash_combine
 
 #include "genomic_region.h"
 #include "allele.h"
@@ -170,7 +171,11 @@ namespace std {
     {
         size_t operator()(const Variant& v) const
         {
-            return hash<GenomicRegion>()(v.get_region());
+            size_t seed {};
+            boost::hash_combine(seed, hash<GenomicRegion>()(v.get_region()));
+            boost::hash_combine(seed, hash<Allele::SequenceType>()(v.get_reference_allele_sequence()));
+            boost::hash_combine(seed, hash<Allele::SequenceType>()(v.get_alternative_allele_sequence()));
+            return seed;
         }
     };
 }

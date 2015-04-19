@@ -13,6 +13,7 @@
 #include <ostream>
 #include <stdexcept>
 #include <vector>
+#include <boost/functional/hash.hpp> // boost::hash_combine
 
 #include "sequence_region.h"
 #include "comparable.h"
@@ -118,6 +119,12 @@ inline GenomicRegion::SizeType get_end(const GenomicRegion& a_region) noexcept
     return a_region.get_end();
 }
 
+inline std::string to_string(const GenomicRegion& a_region)
+{
+    return a_region.get_contig_name() + ':' + std::to_string(a_region.get_begin()) + '-'
+    + std::to_string(a_region.get_end());
+}
+
 inline bool empty(const GenomicRegion& a_region) noexcept
 {
     return empty(a_region.get_contig_region());
@@ -126,12 +133,6 @@ inline bool empty(const GenomicRegion& a_region) noexcept
 inline GenomicRegion::SizeType size(const GenomicRegion& a_region) noexcept
 {
     return size(a_region.get_contig_region());
-}
-
-inline std::string to_string(const GenomicRegion& a_region)
-{
-    return a_region.get_contig_name() + ':' + std::to_string(a_region.get_begin()) + '-'
-    + std::to_string(a_region.get_end());
 }
 
 inline bool is_same_contig(const GenomicRegion& lhs, const GenomicRegion& rhs) noexcept
@@ -254,7 +255,10 @@ namespace std {
     {
         size_t operator()(const GenomicRegion& r) const
         {
-            return hash<string>()(to_string(r));
+            size_t seed {};
+            boost::hash_combine(seed, hash<GenomicRegion::StringType>()(r.get_contig_name()));
+            boost::hash_combine(seed, hash<SequenceRegion>()(r.get_contig_region()));
+            return seed;
         }
     };
 }
@@ -264,5 +268,6 @@ inline std::ostream& operator<<(std::ostream& os, const GenomicRegion& a_region)
     os << to_string(a_region);
     return os;
 }
+
 
 #endif /* defined(__Octopus__genomic_region__) */

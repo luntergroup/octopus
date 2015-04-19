@@ -12,6 +12,8 @@
 #include <vector>
 #include <list>
 #include <unordered_map>
+#include <unordered_set>
+#include <cstddef>
 #include <boost/graph/adjacency_list.hpp>
 
 #include "allele.h"
@@ -36,7 +38,7 @@ public:
     HaplotypeTree(HaplotypeTree&&)                 = default;
     HaplotypeTree& operator=(HaplotypeTree&&)      = default;
     
-    unsigned num_haplotypes() const;
+    std::size_t num_haplotypes() const;
     void extend(const Allele& an_allele);
     Haplotypes get_haplotypes(const GenomicRegion& a_region);
     void prune_all(const Haplotype& haplotype);
@@ -59,7 +61,7 @@ private:
     std::list<Vertex> haplotype_leafs_;
     ReferenceGenome& the_reference_;
     std::unordered_multimap<Haplotype, Vertex> haplotype_leaf_cache_;
-    unsigned haplotype_allele_length_;
+    std::unordered_set<Haplotype> recently_removed_haplotypes_;
     
     using LeafIterator = decltype(haplotype_leafs_)::const_iterator;
     using CacheIterator = decltype(haplotype_leaf_cache_)::iterator;

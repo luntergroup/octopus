@@ -17,6 +17,7 @@
 #include <algorithm> // std::transform, std::swap
 #include <memory>    // std::unique_ptr, std::make_unique
 #include <iterator>  // std::begin etc
+#include <boost/functional/hash.hpp> // boost::hash_combine
 
 #include "genomic_region.h"
 #include "cigar_string.h"
@@ -445,7 +446,11 @@ namespace std {
     {
         size_t operator()(const AlignedRead& r) const
         {
-            return hash<GenomicRegion>()(r.get_region()); // TODO: improve this hash
+            size_t seed {};
+            boost::hash_combine(seed, hash<GenomicRegion>()(r.get_region()));
+            boost::hash_combine(seed, hash<CigarString>()(r.get_cigar_string()));
+            boost::hash_combine(seed, r.get_mapping_quality());
+            return seed;
         }
     };
 }

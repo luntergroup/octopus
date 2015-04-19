@@ -14,12 +14,14 @@
 #include "genomic_region.h"
 
 Fasta::Fasta(std::string fasta_path)
-:Fasta {fasta_path, fasta_path + ".fai"}
+:
+Fasta {fasta_path, fasta_path + ".fai"}
 {}
 
 Fasta::Fasta(std::string fasta_path, std::string fasta_index_path)
-:fasta_path_ {std::move(fasta_path)},
- fasta_index_path_ {std::move(fasta_index_path)}
+:
+fasta_path_ {std::move(fasta_path)},
+fasta_index_path_ {std::move(fasta_index_path)}
 {
     if (!fs::exists(fasta_path_)) {
         throw std::runtime_error {"Cannot find FASTA " + fasta_path};

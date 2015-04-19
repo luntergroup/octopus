@@ -12,6 +12,7 @@
 #include <queue>
 #include <stdexcept> // std::runtime_error
 #include <ostream>
+#include <boost/functional/hash.hpp> // boost::hash_combine
 
 #include "allele.h"
 #include "variant.h"
@@ -27,7 +28,7 @@ public:
     using SequenceType = Allele::SequenceType;
     using SizeType     = Allele::SizeType;
     
-    Haplotype() = delete;
+    Haplotype() = default;
     explicit Haplotype(ReferenceGenome& the_reference);
     explicit Haplotype(ReferenceGenome& the_reference, const GenomicRegion& the_region);
     ~Haplotype() = default;
@@ -46,9 +47,9 @@ public:
     SequenceType get_sequence() const;
     SequenceType get_sequence(const GenomicRegion& a_region) const;
     
-    bool is_less_complex(const Haplotype& other) const;
-    
     void operator+=(const Haplotype& other);
+    
+    friend bool is_less_complex(const Haplotype& lhs, const Haplotype& rhs);
 private:
     using AlleleIterator = std::deque<Allele>::const_iterator;
     
@@ -113,7 +114,10 @@ namespace std {
     {
         size_t operator()(const Haplotype& h) const
         {
-            return hash<string>()(to_string(h.get_region())); //TODO: see if this can be improved
+            size_t seed {};
+            boost::hash_combine(seed, hash<GenomicRegion>()(h.get_region()));
+            boost::hash_combine(seed, hash<Haplotype::SequenceType>()(h.get_sequence()));
+            return seed;
         }
     };
 }
@@ -123,6 +127,13 @@ inline std::ostream& operator<<(std::ostream& os, const Haplotype& a_haplotype)
     os << a_haplotype.get_region() << " " << a_haplotype.get_sequence();
     return os;
 }
+
+inline bool is_less_complex(const Haplotype& lhs, const Haplotype& rhs)
+{
+    return lhs.the_explicit_alleles_.size() < rhs.the_explicit_alleles_.size();
+}
+
+void unique_least_complex(std::vector<Haplotype>& haplotypes);
 
 void add_to_back(const Variant& a_variant, Haplotype& a_haplotype);
 void add_to_front(const Variant& a_variant, Haplotype& a_haplotype);
