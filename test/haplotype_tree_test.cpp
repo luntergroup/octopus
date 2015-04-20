@@ -182,8 +182,8 @@ TEST_CASE("haplotype tree can generate haplotypes ending in different regions", 
     
     REQUIRE(haplotypes.size() == 2);
     std::sort(haplotypes.begin(), haplotypes.end());
-    REQUIRE(haplotypes[0].get_sequence() == "AT");
-    REQUIRE(haplotypes[1].get_sequence() == "ATG");
+    REQUIRE(haplotypes[0].get_sequence() == "ATG");
+    REQUIRE(haplotypes[1].get_sequence() == "AT");
 }
 
 TEST_CASE("leading haplotypes can be removed from the tree", "[haplotype_tree]")

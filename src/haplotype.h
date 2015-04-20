@@ -80,9 +80,16 @@ void Haplotype::push_back(T&& an_allele)
             auto intervening_region = get_intervening_region(the_explicit_alleles_.back(), an_allele);
             the_explicit_alleles_.push_back(get_reference_allele(intervening_region, *the_reference_));
         }
+        
+        if (is_region_set_ && ends_before(the_reference_region_, an_allele)) {
+            the_reference_region_ = get_encompassing_region(the_reference_region_, an_allele);
+        }
+    } else if (is_region_set_ && begins_before(an_allele, the_reference_region_)) {
+        the_reference_region_ = get_encompassing_region(an_allele, the_reference_region_);
     }
     
     the_explicit_alleles_.push_back(std::forward<T>(an_allele));
+    
     is_cached_sequence_outdated_ = true;
 }
 
@@ -96,9 +103,16 @@ void Haplotype::push_front(T&& an_allele)
             auto intervening_region = get_intervening_region(an_allele, the_explicit_alleles_.front());
             the_explicit_alleles_.push_front(get_reference_allele(intervening_region, *the_reference_));
         }
+        
+        if (is_region_set_ && begins_before(an_allele, the_reference_region_)) {
+            the_reference_region_ = get_encompassing_region(an_allele, the_reference_region_);
+        }
+    } else if (is_region_set_ && ends_before(the_reference_region_, an_allele)) {
+        the_reference_region_ = get_encompassing_region(the_reference_region_, an_allele);
     }
     
     the_explicit_alleles_.push_front(std::forward<T>(an_allele));
+    
     is_cached_sequence_outdated_ = true;
 }
 
@@ -122,6 +136,16 @@ namespace std {
             boost::hash_combine(seed, hash<GenomicRegion>()(h.get_region()));
             boost::hash_combine(seed, hash<Haplotype::SequenceType>()(h.get_sequence()));
             return seed;
+        }
+    };
+}
+
+namespace boost {
+    template <> struct hash<Haplotype> : std::unary_function<Haplotype, std::size_t>
+    {
+        std::size_t operator()(const Haplotype& h) const
+        {
+            return std::hash<Haplotype>()(h);
         }
     };
 }

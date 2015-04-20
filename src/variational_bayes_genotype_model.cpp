@@ -17,10 +17,12 @@
 #include "maths.h"
 #include "pair_hmm.h"
 
-VariationalBayesGenotypeModel::VariationalBayesGenotypeModel(ReadModel& read_model, unsigned ploidy)
+VariationalBayesGenotypeModel::VariationalBayesGenotypeModel(ReadModel& read_model, unsigned ploidy,
+                                                             RealType zero_epsilon)
 :
 ploidy_ {ploidy},
-read_model_ {read_model}
+read_model_ {read_model},
+zero_epsilon_ {zero_epsilon}
 {}
 
 VariationalBayesGenotypeModel::RealType
@@ -224,7 +226,8 @@ VariationalBayesGenotypeModel::posterior_probability_allele_in_sample(const Alle
     RealType result {0};
     
     for (const auto& genotype : genotypes) {
-        if (std::any_of(containing_haplotypes.cbegin(), containing_haplotypes.cend(),
+        if (sample_genotype_responsabilities.at(genotype) >= zero_epsilon_ &&
+            std::any_of(containing_haplotypes.cbegin(), containing_haplotypes.cend(),
                         [&genotype] (const auto& haplotype) { return genotype.contains(haplotype); })) {
             result += sample_genotype_responsabilities.at(genotype);
         }

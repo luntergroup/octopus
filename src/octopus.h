@@ -23,7 +23,6 @@ void run_octopus();
 
 GenomicRegion next_sub_region(const GenomicRegion& the_search_region, const GenomicRegion& previous_sub_region,
                               const ReadManager::SampleReadMap& the_reads, const Variants& the_candidates,
-                              std::pair<Variants::const_iterator, Variants::const_iterator> previous_sub_range, 
-                              unsigned max_variants_in_region, unsigned max_region_overlap);
+                              unsigned max_variants_in_region, unsigned max_region_size, unsigned max_region_overlap);
 
 #endif /* defined(__Octopus__octopus__) */

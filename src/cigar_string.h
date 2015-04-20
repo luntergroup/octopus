@@ -16,7 +16,7 @@
 #include <ostream>
 #include <algorithm> // std::copy, std::minmax, std::mismatch
 #include <ctype.h>   // std::isdigit
-#include <boost/functional/hash.hpp> // boost::hash_combine
+#include <boost/functional/hash.hpp> // boost::hash_combine, boost::hash_range
 
 #include "equitable.h"
 
@@ -180,18 +180,22 @@ namespace std {
     };
 }
 
+namespace boost {
+    template <> struct hash<CigarOperation> : std::unary_function<CigarOperation, std::size_t>
+    {
+        std::size_t operator()(const CigarOperation& op) const
+        {
+            return std::hash<CigarOperation>()(op);
+        }
+    };
+}
+
 namespace std {
     template <> struct hash<CigarString>
     {
         size_t operator()(const CigarString& cigar) const
         {
-            size_t seed {};
-            
-            for (const auto& op : cigar) {
-                boost::hash_combine(seed, hash<CigarOperation>()(op));
-            }
-            
-            return seed;
+            return boost::hash_range(std::cbegin(cigar), std::cend(cigar));
         }
     };
 }

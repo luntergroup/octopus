@@ -30,7 +30,8 @@ public:
     using GenotypeResponsabilities       = std::vector<SampleGenotypeResponsabilities>;
     
     VariationalBayesGenotypeModel() = delete;
-    explicit VariationalBayesGenotypeModel(ReadModel& read_model, unsigned ploidy);
+    explicit VariationalBayesGenotypeModel(ReadModel& read_model, unsigned ploidy,
+                                           RealType zero_epsilon=1e-20);
     ~VariationalBayesGenotypeModel() = default;
     
     VariationalBayesGenotypeModel(const VariationalBayesGenotypeModel&)            = default;
@@ -88,6 +89,7 @@ public:
 private:
     unsigned ploidy_;
     ReadModel& read_model_;
+    RealType zero_epsilon_;
     
     unsigned pseudo_count_sum(const HaplotypePseudoCounts& haplotype_pseudo_counts) const;
     

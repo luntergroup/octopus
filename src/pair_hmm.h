@@ -100,7 +100,8 @@ T nuc_log_viterbi_local(const AlignedRead::SequenceType& sequence1,
                         const AlignedRead::SequenceType& sequence2,
                         const AlignedRead::Qualities& quals, MatchModel m, RandomModel r)
 {
-    T log_prob_background     = std::log(0.25);
+    static T log_prob_background = std::log(0.25);
+    
     T log_prob_gap_open       = std::log(m.gap_open_probability);
     T log_prob_gap_extend     = std::log(m.gap_extend_probability);
     T log_prob_match_end      = std::log(m.end_probability);
@@ -109,8 +110,8 @@ T nuc_log_viterbi_local(const AlignedRead::SequenceType& sequence1,
     T log_prob_continue_match = std::log(1 - 2 * m.gap_open_probability - m.end_probability);
     T log_prob_to_match       = std::log(1 - m.gap_extend_probability - m.end_probability);
     
-    T ln_10_div_10 = std::log(10) / 10;
-    T ln_3         = std::log(3);
+    static T ln_10_div_10 = std::log(10) / 10;
+    static T ln_3         = std::log(3);
     
     auto sequence1_length = sequence1.size();
     auto sequence2_length = sequence2.size();
@@ -202,10 +203,11 @@ T nuc_log_viterbi_local(const AlignedRead::SequenceType& sequence1,
 }
 
 template <typename T>
-T nuc_forward_log_local(const std::string& sequence1, const std::string& sequence2,
+T nuc_log_forward_local(const std::string& sequence1, const std::string& sequence2,
                         const std::vector<uint8_t>& quals, MatchModel m, RandomModel r)
 {
-    T log_prob_background     = std::log(0.25);
+    static T log_prob_background = std::log(0.25);
+    
     T log_prob_gap_open       = std::log(m.gap_open_probability);
     T log_prob_gap_extend     = std::log(m.gap_extend_probability);
     T log_prob_match_end      = std::log(m.end_probability);
@@ -214,8 +216,8 @@ T nuc_forward_log_local(const std::string& sequence1, const std::string& sequenc
     T log_prob_continue_match = std::log(1 - 2 * m.gap_open_probability - m.end_probability);
     T log_prob_to_match       = std::log(1 - m.gap_extend_probability - m.end_probability);
     
-    T ln_10_div_10 = std::log(10) / 10;
-    T ln_3         = std::log(3);
+    static T ln_10_div_10 = std::log(10) / 10;
+    static T ln_3         = std::log(3);
     
     auto sequence1_length = sequence1.size();
     auto sequence2_length = sequence2.size();
