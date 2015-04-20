@@ -89,29 +89,22 @@ ReadModel::RealType ReadModel::log_probability(ReadIterator first, ReadIterator 
 ReadModel::RealType ReadModel::log_probability_haploid(const AlignedRead& read, const Genotype& genotype,
                                                        SampleIdType sample)
 {
-    auto haplotype_log_probability = log_probability(read, genotype.at(0), sample);
-    
-    return haplotype_log_probability - ln_ploidy_;
+    return log_probability(read, genotype.at(0), sample);
 }
 
 ReadModel::RealType ReadModel::log_probability_diploid(const AlignedRead& read, const Genotype& genotype,
                                                        SampleIdType sample)
 {
-    auto haplotype1_log_probability = log_probability(read, genotype.at(0), sample);
-    auto haplotype2_log_probability = log_probability(read, genotype.at(1), sample);
-    
-    return log_sum_exp(haplotype1_log_probability, haplotype2_log_probability) - ln_ploidy_;
+    return log_sum_exp(log_probability(read, genotype.at(0), sample),
+                       log_probability(read, genotype.at(1), sample)) - ln_ploidy_;
 }
 
 ReadModel::RealType ReadModel::log_probability_triploid(const AlignedRead& read, const Genotype& genotype,
                                                         SampleIdType sample)
 {
-    auto haplotype1_log_probability = log_probability(read, genotype.at(0), sample);
-    auto haplotype2_log_probability = log_probability(read, genotype.at(1), sample);
-    auto haplotype3_log_probability = log_probability(read, genotype.at(2), sample);
-    
-    return log_sum_exp(haplotype1_log_probability, haplotype2_log_probability,
-                       haplotype3_log_probability) - ln_ploidy_;
+    return log_sum_exp(log_probability(read, genotype.at(0), sample),
+                       log_probability(read, genotype.at(1), sample),
+                       log_probability(read, genotype.at(2), sample)) - ln_ploidy_;
 }
 
 ReadModel::RealType ReadModel::log_probability_polyploid(const AlignedRead& read, const Genotype& genotype,
