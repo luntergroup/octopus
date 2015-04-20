@@ -220,6 +220,15 @@ inline GenomicRegion shift(const GenomicRegion& a_region, GenomicRegion::Differe
     };
 }
 
+inline GenomicRegion get_encompassing_region(const GenomicRegion& lhs, const GenomicRegion& rhs)
+{
+    if (is_same_contig(lhs, rhs)) {
+        return GenomicRegion {lhs.get_contig_name(), get_encompassing_region(lhs.get_contig_region(),
+                                                                             rhs.get_contig_region())};
+    }
+    throw RegionError(to_string(lhs), to_string(rhs));
+}
+
 inline GenomicRegion get_intervening_region(const GenomicRegion& lhs, const GenomicRegion& rhs)
 {
     return GenomicRegion {lhs.get_contig_name(), get_intervening_region(lhs.get_contig_region(),

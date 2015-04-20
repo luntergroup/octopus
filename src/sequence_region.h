@@ -141,6 +141,11 @@ inline SequenceRegion get_overlapped(const SequenceRegion& lhs, const SequenceRe
     return SequenceRegion {std::max(lhs.get_begin(), rhs.get_begin()), std::min(lhs.get_end(), rhs.get_end())};
 }
 
+inline SequenceRegion get_encompassing_region(const SequenceRegion& lhs, const SequenceRegion& rhs) noexcept
+{
+    return SequenceRegion {std::min(lhs.get_begin(), rhs.get_begin()), std::max(lhs.get_end(), rhs.get_end())};
+}
+
 inline SequenceRegion get_intervening_region(const SequenceRegion& lhs, const SequenceRegion& rhs)
 {
     if (begins_before(rhs, lhs) || overlaps(lhs, rhs)) {
