@@ -39,7 +39,7 @@ ReadModel::RealType ReadModel::log_probability(const AlignedRead& read, const Ha
     MatchModel m {};
     m.match_probability      = 1.0;
     m.gap_open_probability   = 0.017;
-    m.gap_extend_probability = 0.001;
+    m.gap_extend_probability = 0.02;
     m.end_probability        = 0.01;
     
     auto result = nuc_log_viterbi_local<float>(haplotype.get_sequence(), read.get_sequence(),

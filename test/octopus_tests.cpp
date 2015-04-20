@@ -99,7 +99,11 @@ TEST_CASE("can call in complex region", "[octopus]")
     //auto a_region = parse_region("16:9299900-9300038", human);
     
     //auto a_region = parse_region("16:9297500-9297555", human);
-    auto a_region = parse_region("2:142376817-142376922", human);
+    //auto a_region = parse_region("2:142376817-142376922", human);
+    //auto a_region = parse_region("5:57167582-57167700", human);
+    //auto a_region = parse_region("5:143166825-143166875", human);
+    //auto a_region = parse_region("11:67503118-67503253", human); // Platypus wrong. we good
+    auto a_region = parse_region("11:27282193-27282290", human); // seems wrong to me
     
     auto samples = a_read_manager.get_sample_ids();
     
@@ -149,6 +153,7 @@ TEST_CASE("can call in complex region", "[octopus]")
     candidate_generator.clear();
     
     for (auto& candidate : candidates) {
+        //cout << candidate << endl;
         left_align(candidate, human);
     }
     
@@ -181,7 +186,7 @@ TEST_CASE("can call in complex region", "[octopus]")
     
     for (const auto& haplotype : haplotypes) {
         if (haplotype == reference_haplotype) {
-            pseudo_counts[haplotype] = 1.0;
+            pseudo_counts[haplotype] = 3000.0;
         } else {
             pseudo_counts[haplotype] = 1.0;
         }
@@ -217,20 +222,25 @@ TEST_CASE("can call in complex region", "[octopus]")
     cout << endl;
     cout << genotypes[0] << " " << sample_responsabilities.at(genotypes[0]) << endl;
     cout << genotypes[1] << " " << sample_responsabilities.at(genotypes[1]) << endl;
+    cout << genotypes[1] << " " << sample_responsabilities.at(genotypes[2]) << endl;
     cout << endl;
     
 //    for (const auto& haplotype : haplotypes) {
 //        cout << the_model.posterior_probability_haplotype_in_sample(haplotype, genotypes, sample_responsabilities) << endl;
 //    }
     
-//    cout << endl;
-//    cout << the_model.posterior_probability_haplotype_in_sample(genotypes[0].at(0), genotypes, sample_responsabilities) << endl;
-//    cout << the_model.posterior_probability_haplotype_in_sample(genotypes[0].at(1), genotypes, sample_responsabilities) << endl;
-//    cout << endl;
+    cout << endl;
+    cout << the_model.posterior_probability_haplotype_in_sample(genotypes[0].at(0), genotypes, sample_responsabilities) << endl;
+    cout << the_model.posterior_probability_haplotype_in_sample(genotypes[0].at(1), genotypes, sample_responsabilities) << endl;
+    cout << endl;
     
     genotypes[0].at(0).print_explicit_alleles();
     cout << endl;
     genotypes[0].at(1).print_explicit_alleles();
+    cout << endl;
+    genotypes[1].at(0).print_explicit_alleles();
+    cout << endl;
+    genotypes[1].at(1).print_explicit_alleles();
     cout << endl;
     
     for (const auto& variant : candidates) {
