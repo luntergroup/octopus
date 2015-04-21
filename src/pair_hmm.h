@@ -98,17 +98,22 @@ struct LocalPairHmmLogState
 template <typename T>
 T nuc_log_viterbi_local(const AlignedRead::SequenceType& sequence1,
                         const AlignedRead::SequenceType& sequence2,
-                        const AlignedRead::Qualities& quals, MatchModel m, RandomModel r)
+                        const AlignedRead::Qualities& quals,
+                        MatchModel m, RandomModel r1, RandomModel r2)
 {
     static T log_prob_background = std::log(0.25);
+    
+    T log_prob_rand1_end      = std::log(r1.end_probability);
+    T log_prob_rand1_cont     = std::log(1 - r1.end_probability);
     
     T log_prob_gap_open       = std::log(m.gap_open_probability);
     T log_prob_gap_extend     = std::log(m.gap_extend_probability);
     T log_prob_match_end      = std::log(m.end_probability);
-    T log_prob_rand_end       = std::log(r.end_probability);
-    T log_prob_rand_cont      = std::log(1 - r.end_probability);
     T log_prob_continue_match = std::log(1 - 2 * m.gap_open_probability - m.end_probability);
     T log_prob_to_match       = std::log(1 - m.gap_extend_probability - m.end_probability);
+    
+    T log_prob_rand2_end      = std::log(r2.end_probability);
+    T log_prob_rand2_cont     = std::log(1 - r2.end_probability);
     
     static T ln_10_div_10 = std::log(10) / 10;
     static T ln_3         = std::log(3);
@@ -124,37 +129,36 @@ T nuc_log_viterbi_local(const AlignedRead::SequenceType& sequence1,
     for (size_t i {1}; i <= sequence1_length + 1; ++i) {
         for (size_t j {1}; j <= sequence2_length + 1; ++j) {
             
-            current_column[j].random_x_1 = log_prob_background + log_prob_rand_cont + std::max({
+            current_column[j].random_x_1 = log_prob_background + log_prob_rand1_cont + std::max({
                 previous_column[j].begin,
                 previous_column[j].random_x_1
             });
             
-            current_column[j].silent_1 = log_prob_rand_end + std::max({
+            current_column[j].silent_1 = log_prob_rand1_end + std::max({
                 current_column[j].begin,
                 current_column[j].random_x_1
             });
             
-            current_column[j].random_y_1 = log_prob_background + log_prob_rand_cont + std::max({
+            current_column[j].random_y_1 = log_prob_background + log_prob_rand1_cont + std::max({
                 current_column[j - 1].silent_1,
                 current_column[j - 1].random_y_1
             });
             
-            current_column[j].silent_2 = log_prob_rand_end + std::max({
+            current_column[j].silent_2 = log_prob_rand1_end + std::max({
                 current_column[j].silent_1,
                 current_column[j].random_y_1
             });
             
             if (i > 1 && j > 1) {
-                auto match_log_prob = ((sequence1[i - 2] == sequence2[j - 2]) ?
-                                       std::log(1 - std::pow(10, -static_cast<T>(quals[j - 2]) / 10)) :
-                                       -ln_10_div_10 * quals[j - 2] - ln_3);
-                
-                current_column[j].match = match_log_prob + std::max({
-                    log_prob_continue_match + previous_column[j - 1].match,
-                    log_prob_to_match       + previous_column[j - 1].insertion,
-                    log_prob_to_match       + previous_column[j - 1].deletion,
-                    log_prob_continue_match + previous_column[j - 1].silent_2
-                });
+                current_column[j].match = ((sequence1[i - 2] == sequence2[j - 2]) ?
+                                           std::log(1 - std::pow(10, -static_cast<T>(quals[j - 2]) / 10)) :
+                                           -ln_10_div_10 * quals[j - 2])
+                        + std::max({
+                            log_prob_continue_match + previous_column[j - 1].match,
+                            log_prob_to_match       + previous_column[j - 1].insertion,
+                            log_prob_to_match       + previous_column[j - 1].deletion,
+                            log_prob_continue_match + previous_column[j - 1].silent_2
+                        });
             }
             
             current_column[j].insertion = log_prob_background + std::max({
@@ -176,17 +180,17 @@ T nuc_log_viterbi_local(const AlignedRead::SequenceType& sequence1,
                 current_column[j].silent_2
             });
             
-            current_column[j].random_x_2 = log_prob_background + log_prob_rand_cont + std::max({
+            current_column[j].random_x_2 = log_prob_background + log_prob_rand2_cont + std::max({
                 previous_column[j].silent_3,
                 previous_column[j].random_x_2
             });
             
-            current_column[j].silent_4 = log_prob_rand_end + std::max({
+            current_column[j].silent_4 = log_prob_rand2_end + std::max({
                 current_column[j].silent_3,
                 current_column[j].random_x_2
             });
             
-            current_column[j].random_y_2 = log_prob_background + log_prob_rand_cont + std::max({
+            current_column[j].random_y_2 = log_prob_background + log_prob_rand2_cont + std::max({
                 current_column[j - 1].silent_4,
                 current_column[j - 1].random_y_2
             });
@@ -197,7 +201,7 @@ T nuc_log_viterbi_local(const AlignedRead::SequenceType& sequence1,
         std::swap(current_column, previous_column);
     }
     
-    return log_prob_rand_end + std::max({
+    return log_prob_rand2_end + std::max({
         previous_column[sequence2_length + 1].silent_4,
         previous_column[sequence2_length + 1].random_y_2
     });
@@ -252,15 +256,15 @@ T nuc_log_forward_local(const std::string& sequence1, const std::string& sequenc
             );
             
             if (i > 1 && j > 1) {
-                auto match_log_prob = ((sequence1[i - 2] == sequence2[j - 2]) ?
-                                       std::log(1 - std::pow(10, -static_cast<T>(quals[j - 2]) / 10)) :
-                                       -ln_10_div_10 * quals[j - 2] - ln_3);
-                current_column[j].match = match_log_prob + log_sum_exp(
-                    log_prob_continue_match + previous_column[j - 1].match,
-                    log_prob_to_match       + previous_column[j - 1].insertion,
-                    log_prob_to_match       + previous_column[j - 1].deletion,
-                    log_prob_continue_match + previous_column[j - 1].silent_2
-                );
+                current_column[j].match = ((sequence1[i - 2] == sequence2[j - 2]) ?
+                                           std::log(1 - std::pow(10, -static_cast<T>(quals[j - 2]) / 10)) :
+                                           -ln_10_div_10 * quals[j - 2])
+                            + log_sum_exp(
+                                log_prob_continue_match + previous_column[j - 1].match,
+                                log_prob_to_match       + previous_column[j - 1].insertion,
+                                log_prob_to_match       + previous_column[j - 1].deletion,
+                                log_prob_continue_match + previous_column[j - 1].silent_2
+                            );
             }
             
             current_column[j].insertion = log_prob_background + log_sum_exp(

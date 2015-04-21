@@ -36,11 +36,16 @@ TEST_CASE("partially overlapped reads evaluate correctly", "[read_model]")
     
     ReadManager a_read_manager(std::vector<std::string> {human_1000g_bam1});
     
-    auto a_region = parse_region("11:27282193-27282290", human);
+    auto a_region = parse_region("11:27282186-27282290", human);
     
     auto samples = a_read_manager.get_sample_ids();
     
     auto reads = a_read_manager.fetch_reads(samples[0], a_region);
+    
+    //cout << reads.size() << endl;
+    
+//    std::vector<AlignedRead> read_3_copies(25, reads[3]);
+//    reads.insert(reads.end(), read_3_copies.cbegin(), read_3_copies.cend());
     
     Haplotype reference_haplotype {human, a_region};
     
@@ -63,38 +68,58 @@ TEST_CASE("partially overlapped reads evaluate correctly", "[read_model]")
     
     ReadModel a_read_model {ploidy};
     
-//    cout << a_read_model.log_probability(reads[6], reference_haplotype, 0) << endl;
-//    cout << a_read_model.log_probability(reads[6], true_haplotype, 0) << endl;
-//    cout << a_read_model.log_probability(reads[6], false_haplotype1, 0) << endl;
-//    cout << a_read_model.log_probability(reads[6], false_haplotype2, 0) << endl;
+    //cout << reads[4] << endl;
+    
+//    cout << a_read_model.log_probability(reads[3], reference_haplotype, 0) << endl;
+//    cout << a_read_model.log_probability(reads[3], true_haplotype, 0) << endl;
+//    cout << a_read_model.log_probability(reads[3], false_haplotype1, 0) << endl;
+//    cout << a_read_model.log_probability(reads[3], false_haplotype2, 0) << endl;
 //    cout << endl;
-//    
+    
 //    cout << a_read_model.log_probability(reads[7], reference_haplotype, 0) << endl;
 //    cout << a_read_model.log_probability(reads[7], true_haplotype, 0) << endl;
 //    cout << a_read_model.log_probability(reads[7], false_haplotype1, 0) << endl;
 //    cout << a_read_model.log_probability(reads[7], false_haplotype2, 0) << endl;
 //    cout << endl;
     
-    Genotype g1 {};
-    g1.emplace(reference_haplotype);
-    g1.emplace(true_haplotype);
-    Genotype g2 {};
-    g2.emplace(reference_haplotype);
-    g2.emplace(false_haplotype1);
-    Genotype g3 {};
-    g3.emplace(reference_haplotype);
-    g3.emplace(false_haplotype2);
-    Genotype g4 {};
-    g4.emplace(false_haplotype1);
-    g4.emplace(false_haplotype2);
+//    for (const auto& read : reads) {
+//        cout << a_read_model.log_probability(read, reference_haplotype, 0) << " "
+//            << a_read_model.log_probability(read, true_haplotype, 0) << endl;
+//    }
     
-//    cout << a_read_model.log_probability(reads.cbegin(), reads.cend(), g1, 0) << endl;
-//    cout << a_read_model.log_probability(reads.cbegin(), reads.cend(), g2, 0) << endl;
-//    cout << a_read_model.log_probability(reads.cbegin(), reads.cend(), g3, 0) << endl;
-//    cout << a_read_model.log_probability(reads.cbegin(), reads.cend(), g4, 0) << endl;
+    Genotype ref_true {};
+    ref_true.emplace(reference_haplotype);
+    ref_true.emplace(true_haplotype);
+    
+    Genotype ref_false1 {};
+    ref_false1.emplace(reference_haplotype);
+    ref_false1.emplace(false_haplotype1);
+    
+    Genotype ref_false2 {};
+    ref_false2.emplace(reference_haplotype);
+    ref_false2.emplace(false_haplotype2);
+    
+    Genotype true_false1 {};
+    true_false1.emplace(true_haplotype);
+    true_false1.emplace(false_haplotype2);
+    
+    Genotype true_false2 {};
+    true_false2.emplace(true_haplotype);
+    true_false2.emplace(false_haplotype2);
+    
+    Genotype false1_false2 {};
+    false1_false2.emplace(false_haplotype1);
+    false1_false2.emplace(false_haplotype2);
+    
+//    cout << "ref_true      = " << a_read_model.log_probability(reads.cbegin(), reads.cend(), ref_true, 0) << endl;
+//    cout << "ref_false1    = " << a_read_model.log_probability(reads.cbegin(), reads.cend(), ref_false1, 0) << endl;
+//    cout << "ref_false2    = " << a_read_model.log_probability(reads.cbegin(), reads.cend(), ref_false2, 0) << endl;
+//    cout << "true_false1   = " << a_read_model.log_probability(reads.cbegin(), reads.cend(), true_false1, 0) << endl;
+//    cout << "true_false2   = " << a_read_model.log_probability(reads.cbegin(), reads.cend(), true_false2, 0) << endl;
+//    cout << "false1_false2 = " << a_read_model.log_probability(reads.cbegin(), reads.cend(), false1_false2, 0) << endl;
 }
 
-TEST_CASE("haploid_read_model_test", "[read_model]")
+TEST_CASE("ReadModel works on haploid genomes", "[read_model]")
 {
     unsigned ploidy {1};
     
@@ -119,16 +144,32 @@ TEST_CASE("haploid_read_model_test", "[read_model]")
     
     auto variants = candidate_generator.get_candidates(a_region);
     
-    Haplotype reference_haplotype {ecoli, a_region}; // single fully supporting read
+    Haplotype reference_haplotype {ecoli, a_region}; // no fully supporting read, just a read with all N's
     
-    Haplotype best_haplotype {ecoli}; // most reads fully support this
+    Haplotype best_haplotype {ecoli, a_region}; // all reads fully support this
     for (const auto& variant : variants) {
         if (is_snp(variant)) {
             add_to_back(variant, best_haplotype);
         }
     }
     
-    Haplotype okay_haplotype {ecoli}; // Bad insertion and 3 missing snps
+    // Edge case - first snp missing
+    Haplotype missing_snp_haplotype1 {ecoli, a_region};
+    std::for_each(variants.cbegin() + 1, variants.cend(), [&missing_snp_haplotype1] (const auto& v) {
+        if (is_snp(v)) {
+            add_to_back(v, missing_snp_haplotype1);
+        }
+    });
+    
+    // Edge case - last snp missing
+    Haplotype missing_snp_haplotype2 {ecoli, a_region};
+    std::for_each(variants.cbegin(), variants.cend() - 1, [&missing_snp_haplotype2] (const auto& v) {
+        if (is_snp(v)) {
+            add_to_back(v, missing_snp_haplotype2);
+        }
+    });
+    
+    Haplotype okay_haplotype {ecoli, a_region}; // Bad insertion and 3 missing snps
     add_to_back(variants[0], okay_haplotype);
     add_to_back(variants[1], okay_haplotype);
     add_to_back(variants[3], okay_haplotype);
@@ -138,11 +179,10 @@ TEST_CASE("haploid_read_model_test", "[read_model]")
     add_to_back(variants[11], okay_haplotype);
     
     unsigned num_haplotypes {3};
-    std::vector<Haplotype> haplotypes {reference_haplotype, best_haplotype, okay_haplotype};
+    std::vector<Haplotype> haplotypes {reference_haplotype, best_haplotype, missing_snp_haplotype1,
+                                        missing_snp_haplotype2, okay_haplotype};
     
     auto genotypes = get_all_genotypes(haplotypes, ploidy);
-    
-    REQUIRE(genotypes.size() == num_genotypes(num_haplotypes, ploidy));
     
     ReadModel the_model {ploidy};
     unsigned sample {0};
@@ -157,9 +197,19 @@ TEST_CASE("haploid_read_model_test", "[read_model]")
         return genotype_log_probabilities[g1] > genotype_log_probabilities[g2];
     });
     
+//    for (const auto genotype : genotypes) {
+//        cout << genotype_log_probabilities.at(genotype) << endl;
+//    }
+    
     REQUIRE(genotypes.at(0).at(0) == best_haplotype);
-    REQUIRE(genotypes.at(1).at(0) == okay_haplotype);
-    REQUIRE(genotypes.at(2).at(0) == reference_haplotype);
+    
+    // There is one additional read supporting the last snp so we should expect the haplotype
+    // with this snp missing to be less probable than the one with the first snp missing
+    REQUIRE(genotypes.at(1).at(0) == missing_snp_haplotype1);
+    REQUIRE(genotypes.at(2).at(0) == missing_snp_haplotype2);
+    
+    REQUIRE(genotypes.at(3).at(0) == okay_haplotype);
+    REQUIRE(genotypes.at(4).at(0) == reference_haplotype);
 }
 
 TEST_CASE("diploid_read_model_test", "[read_model]")

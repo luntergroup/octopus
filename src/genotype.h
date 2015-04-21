@@ -13,6 +13,7 @@
 #include <unordered_map>
 #include <ostream>
 #include <iterator>
+#include <algorithm> // std::equal, 
 #include <boost/functional/hash.hpp> // boost::hash_combine
 
 #include "haplotype.h"
@@ -44,22 +45,12 @@ private:
     std::vector<Haplotype> the_haplotypes_;
 };
 
-unsigned num_genotypes(unsigned num_haplotypes, unsigned ploidy);
-
-// Assumes the input haplotypes are all unique
-std::vector<Genotype> get_all_genotypes(const std::vector<Haplotype>& haplotypes, unsigned ploidy);
-
-std::unordered_map<Haplotype, unsigned> get_haplotype_occurence_map(const Genotype& a_genotype);
-
 inline bool operator==(const Genotype& lhs, const Genotype& rhs)
 {
     if (lhs.ploidy() != rhs.ploidy()) return false;
     
-    for (const auto& lhs_haplotype : lhs.the_haplotypes_) {
-        if (lhs.num_occurences(lhs_haplotype) != rhs.num_occurences(lhs_haplotype)) return false;
-    }
-    
-    return true;
+    return std::equal(std::cbegin(lhs.the_haplotypes_), std::cend(lhs.the_haplotypes_),
+                      std::cbegin(rhs.the_haplotypes_));
 }
 
 namespace std {
@@ -77,6 +68,13 @@ namespace std {
         }
     };
 }
+
+unsigned num_genotypes(unsigned num_haplotypes, unsigned ploidy);
+
+// Assumes the input haplotypes are all unique
+std::vector<Genotype> get_all_genotypes(const std::vector<Haplotype>& haplotypes, unsigned ploidy);
+
+std::unordered_map<Haplotype, unsigned> get_haplotype_occurence_map(const Genotype& a_genotype);
 
 inline std::ostream& operator<<(std::ostream& os, const Genotype& a_genotype)
 {

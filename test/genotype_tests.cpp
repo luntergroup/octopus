@@ -25,22 +25,191 @@
 #include "haplotype.h"
 #include "genotype.h"
 
-TEST_CASE("get_all_genotypes gives in all possible unique genotypes", "[genotype]")
+using std::cout;
+using std::endl;
+
+TEST_CASE("Genotype can be tested for haplotype occurence", "[genotype]")
 {
     ReferenceGenomeFactory a_factory {};
-    ReferenceGenome human(a_factory.make(human_reference_fasta));
+    ReferenceGenome human {a_factory.make(human_reference_fasta)};
     
     Haplotype hap1 {human};
-    hap1.push_back(Allele {parse_region("1", human), ""});
+    hap1.push_back(Allele {parse_region("1:1000000-1000001", human), "A"});
     
     Haplotype hap2 {human};
-    hap2.push_back(Allele {parse_region("2", human), ""});
+    hap2.push_back(Allele {parse_region("1:1000000-1000001", human), "C"});
     
     Haplotype hap3 {human};
-    hap3.push_back(Allele {parse_region("3", human), ""});
+    hap3.push_back(Allele {parse_region("1:1000000-1000001", human), "G"});
     
     Haplotype hap4 {human};
-    hap4.push_back(Allele {parse_region("4", human), ""});
+    hap4.push_back(Allele {parse_region("1:1000000-1000001", human), "T"});
+    
+    Genotype g1 {};
+    g1.emplace(hap1);
+    g1.emplace(hap2);
+    g1.emplace(hap3);
+    
+    REQUIRE(g1.contains(hap1));
+    REQUIRE(g1.contains(hap2));
+    REQUIRE(g1.contains(hap3));
+    REQUIRE(!g1.contains(hap4));
+    
+    REQUIRE(g1.num_occurences(hap1) == 1);
+    REQUIRE(g1.num_occurences(hap2) == 1);
+    REQUIRE(g1.num_occurences(hap3) == 1);
+    REQUIRE(g1.num_occurences(hap4) == 0);
+    
+    Genotype g2 {};
+    g2.emplace(hap1);
+    g2.emplace(hap1);
+    g2.emplace(hap2);
+    
+    REQUIRE(g2.contains(hap1));
+    REQUIRE(g2.contains(hap2));
+    REQUIRE(!g2.contains(hap3));
+    REQUIRE(!g2.contains(hap4));
+    
+    REQUIRE(g2.num_occurences(hap1) == 2);
+    REQUIRE(g2.num_occurences(hap2) == 1);
+    REQUIRE(g2.num_occurences(hap3) == 0);
+    REQUIRE(g2.num_occurences(hap4) == 0);
+    
+    Genotype g3 {};
+    g3.emplace(hap1);
+    g3.emplace(hap3);
+    g3.emplace(hap4);
+    
+    REQUIRE(g3.contains(hap1));
+    REQUIRE(!g3.contains(hap2));
+    REQUIRE(g3.contains(hap3));
+    REQUIRE(g3.contains(hap4));
+    
+    REQUIRE(g3.num_occurences(hap1) == 1);
+    REQUIRE(g3.num_occurences(hap2) == 0);
+    REQUIRE(g3.num_occurences(hap3) == 1);
+    REQUIRE(g3.num_occurences(hap4) == 1);
+    
+    Genotype g4 {};
+    g4.emplace(hap4);
+    g4.emplace(hap4);
+    g4.emplace(hap4);
+    
+    REQUIRE(!g4.contains(hap1));
+    REQUIRE(!g4.contains(hap2));
+    REQUIRE(!g4.contains(hap3));
+    REQUIRE(g4.contains(hap4));
+    
+    REQUIRE(g4.num_occurences(hap1) == 0);
+    REQUIRE(g4.num_occurences(hap2) == 0);
+    REQUIRE(g4.num_occurences(hap3) == 0);
+    REQUIRE(g4.num_occurences(hap4) == 3);
+}
+
+TEST_CASE("Genotypes are equal if they contain the same haplotypes", "[genotype")
+{
+    ReferenceGenomeFactory a_factory {};
+    ReferenceGenome human {a_factory.make(human_reference_fasta)};
+    
+    Haplotype hap1 {human};
+    hap1.push_back(Allele {parse_region("1:1000000-1000001", human), "A"});
+    
+    Haplotype hap2 {human};
+    hap2.push_back(Allele {parse_region("1:1000000-1000001", human), "C"});
+    
+    Haplotype hap3 {human};
+    hap3.push_back(Allele {parse_region("1:1000000-1000001", human), "G"});
+    
+    Genotype g1 {};
+    g1.emplace(hap1);
+    g1.emplace(hap2);
+    g1.emplace(hap3);
+    
+    Genotype g2 {};
+    g2.emplace(hap1);
+    g2.emplace(hap2);
+    g2.emplace(hap2);
+    
+    Genotype g3 {};
+    g3.emplace(hap1);
+    g3.emplace(hap2);
+    g3.emplace(hap3);
+    
+    Genotype g4 {};
+    g4.emplace(hap1);
+    g4.emplace(hap3);
+    g4.emplace(hap3);
+    
+    Genotype g5 {};
+    g5.emplace(hap1);
+    g5.emplace(hap2);
+    g5.emplace(hap2);
+    
+    REQUIRE(g1 == g1);
+    REQUIRE(g1 != g2);
+    REQUIRE(g1 == g3);
+    REQUIRE(g1 != g4);
+    REQUIRE(g1 != g5);
+    
+    REQUIRE(g2 == g2);
+    REQUIRE(g2 != g3);
+    REQUIRE(g2 != g4);
+    REQUIRE(g2 == g5);
+    
+    REQUIRE(g3 == g3);
+    REQUIRE(g3 != g4);
+    REQUIRE(g3 != g5);
+    
+    REQUIRE(g4 == g4);
+    REQUIRE(g4 != g5);
+    
+    REQUIRE(g5 == g5);
+}
+
+TEST_CASE("Genotypes are not influenced by haplotype entry order", "[genotype]")
+{
+    ReferenceGenomeFactory a_factory {};
+    ReferenceGenome human {a_factory.make(human_reference_fasta)};
+    
+    Haplotype hap1 {human};
+    hap1.push_back(Allele {parse_region("1:1000000-1000001", human), "A"});
+    
+    Haplotype hap2 {human};
+    hap2.push_back(Allele {parse_region("1:1000000-1000001", human), "T"});
+    
+    Genotype g1 {};
+    g1.emplace(hap1);
+    g1.emplace(hap2);
+    g1.emplace(hap2);
+    
+    Genotype g2 {};
+    g2.emplace(hap2);
+    g2.emplace(hap1);
+    g2.emplace(hap2);
+    
+    REQUIRE(g1.num_occurences(hap1) == g2.num_occurences(hap1));
+    REQUIRE(g1.num_occurences(hap2) == g2.num_occurences(hap2));
+    
+    REQUIRE(g1 == g2);
+    REQUIRE(std::hash<Genotype>()(g1) == std::hash<Genotype>()(g2));
+}
+
+TEST_CASE("get_all_genotypes returns all possible unique genotypes", "[genotype]")
+{
+    ReferenceGenomeFactory a_factory {};
+    ReferenceGenome human {a_factory.make(human_reference_fasta)};
+    
+    Haplotype hap1 {human};
+    hap1.push_back(Allele {parse_region("1:1000000-1000001", human), "A"});
+    
+    Haplotype hap2 {human};
+    hap2.push_back(Allele {parse_region("1:1000000-1000001", human), "C"});
+    
+    Haplotype hap3 {human};
+    hap3.push_back(Allele {parse_region("1:1000000-1000001", human), "G"});
+    
+    Haplotype hap4 {human};
+    hap4.push_back(Allele {parse_region("1:1000000-1000001", human), "T"});
     
     std::vector<Haplotype> haplotypes {hap1, hap2, hap3, hap4};
     
@@ -125,4 +294,52 @@ TEST_CASE("get_all_genotypes results in correct ploidy", "[genotype]")
     for (const auto& genotype : genotypes3) {
         REQUIRE(genotype.ploidy() == 3);
     }
+}
+
+TEST_CASE("Genotype::get_unique_haplotypes returns all the unique haplotypes in a Genotype", "[genotype]")
+{
+    ReferenceGenomeFactory a_factory {};
+    ReferenceGenome human {a_factory.make(human_reference_fasta)};
+    
+    Haplotype hap1 {human};
+    hap1.push_back(Allele {parse_region("1:1000000-1000001", human), "A"});
+    
+    Haplotype hap2 {human};
+    hap2.push_back(Allele {parse_region("1:1000000-1000001", human), "C"});
+    
+    Haplotype hap3 {human};
+    hap3.push_back(Allele {parse_region("1:1000000-1000001", human), "G"});
+    
+    Genotype g1 {};
+    g1.emplace(hap1);
+    g1.emplace(hap2);
+    g1.emplace(hap3);
+    
+    auto g1_unique = g1.get_unique_haplotypes();
+    
+    REQUIRE(std::count(g1_unique.cbegin(), g1_unique.cend(), hap1) == 1);
+    REQUIRE(std::count(g1_unique.cbegin(), g1_unique.cend(), hap2) == 1);
+    REQUIRE(std::count(g1_unique.cbegin(), g1_unique.cend(), hap3) == 1);
+    
+    Genotype g2 {};
+    g2.emplace(hap1);
+    g2.emplace(hap3);
+    g2.emplace(hap3);
+    
+    auto g2_unique = g2.get_unique_haplotypes();
+    
+    REQUIRE(std::count(g2_unique.cbegin(), g2_unique.cend(), hap1) == 1);
+    REQUIRE(std::count(g2_unique.cbegin(), g2_unique.cend(), hap2) == 0);
+    REQUIRE(std::count(g2_unique.cbegin(), g2_unique.cend(), hap3) == 1);
+    
+    Genotype g3 {};
+    g3.emplace(hap3);
+    g3.emplace(hap3);
+    g3.emplace(hap3);
+    
+    auto g3_unique = g3.get_unique_haplotypes();
+    
+    REQUIRE(std::count(g3_unique.cbegin(), g3_unique.cend(), hap1) == 0);
+    REQUIRE(std::count(g3_unique.cbegin(), g3_unique.cend(), hap2) == 0);
+    REQUIRE(std::count(g3_unique.cbegin(), g3_unique.cend(), hap3) == 1);
 }

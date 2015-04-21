@@ -8,7 +8,7 @@
 
 #include "genotype.h"
 
-#include <algorithm> // std::all_of, std::any_of, std::count, std::find
+//#include <algorithm> // std::inplace_merge, std::all_of, std::binary_search, std::equal_range, std::unique_copy
 #include <boost/math/special_functions/binomial.hpp>
 
 const Haplotype& Genotype::at(unsigned n) const
@@ -19,11 +19,13 @@ const Haplotype& Genotype::at(unsigned n) const
 void Genotype::emplace(const Haplotype& haplotype)
 {
     the_haplotypes_.emplace_back(haplotype);
+    std::inplace_merge(std::begin(the_haplotypes_), std::prev(std::end(the_haplotypes_)), std::end(the_haplotypes_));
 }
 
 void Genotype::emplace(Haplotype&& haplotype)
 {
     the_haplotypes_.emplace_back(std::move(haplotype));
+    std::inplace_merge(std::begin(the_haplotypes_), std::prev(std::end(the_haplotypes_)), std::end(the_haplotypes_));
 }
 
 bool Genotype::is_homozygous() const
@@ -37,14 +39,13 @@ bool Genotype::is_homozygous() const
 
 bool Genotype::contains(const Haplotype& a_haplotype) const
 {
-    return std::any_of(std::cbegin(the_haplotypes_), std::cend(the_haplotypes_),
-                       [&a_haplotype] (const auto& h) { return h == a_haplotype; });
+    return std::binary_search(std::cbegin(the_haplotypes_), std::cend(the_haplotypes_), a_haplotype);
 }
 
 unsigned Genotype::num_occurences(const Haplotype& a_haplotype) const
 {
-    return static_cast<unsigned>(std::count(std::cbegin(the_haplotypes_), std::cend(the_haplotypes_),
-                                            a_haplotype));
+    auto equal_range = std::equal_range(std::cbegin(the_haplotypes_), std::cend(the_haplotypes_), a_haplotype);
+    return static_cast<unsigned>(std::distance(equal_range.first, equal_range.second));
 }
 
 unsigned Genotype::ploidy() const noexcept
@@ -55,12 +56,9 @@ unsigned Genotype::ploidy() const noexcept
 std::vector<Haplotype> Genotype::get_unique_haplotypes() const
 {
     std::vector<Haplotype> result {};
+    result.reserve(ploidy());
     
-    for (const auto& haplotype : the_haplotypes_) {
-        if (std::find(result.cbegin(), result.cend(), haplotype) == result.cend()) {
-            result.push_back(haplotype);
-        }
-    }
+    std::unique_copy(std::cbegin(the_haplotypes_), std::cend(the_haplotypes_), std::back_inserter(result));
     
     return result;
 }
