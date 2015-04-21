@@ -104,6 +104,7 @@ TEST_CASE("can call in complex region", "[octopus]")
     //auto a_region = parse_region("5:143166825-143166875", human);
     //auto a_region = parse_region("11:67503118-67503253", human); // Platypus wrong. we good
     auto a_region = parse_region("11:27282193-27282290", human); // seems wrong to me
+    //auto a_region = parse_region("13:31366400-31366500", human);
     
     auto samples = a_read_manager.get_sample_ids();
     
@@ -134,10 +135,8 @@ TEST_CASE("can call in complex region", "[octopus]")
     std::vector<AlignedRead> good_reads {}, bad_reads {};
     good_reads.reserve(reads.size());
     bad_reads.reserve(reads.size());
-    a_read_filter.filter_reads(std::make_move_iterator(reads.begin()),
-                               std::make_move_iterator(reads.end()),
-                               ContextBackInserter(good_reads),
-                               ContextBackInserter(bad_reads));
+    a_read_filter.filter_reads(std::make_move_iterator(reads.begin()), std::make_move_iterator(reads.end()),
+                               ContextBackInserter(good_reads), ContextBackInserter(bad_reads));
     reads.clear();
     good_reads.shrink_to_fit();
     bad_reads.shrink_to_fit();
@@ -186,7 +185,7 @@ TEST_CASE("can call in complex region", "[octopus]")
     
     for (const auto& haplotype : haplotypes) {
         if (haplotype == reference_haplotype) {
-            pseudo_counts[haplotype] = 3000.0;
+            pseudo_counts[haplotype] = 1000.0;
         } else {
             pseudo_counts[haplotype] = 1.0;
         }
@@ -209,7 +208,7 @@ TEST_CASE("can call in complex region", "[octopus]")
     SamplesReads the_reads {};
     the_reads.push_back({good_reads.cbegin(), good_reads.cend()});
     
-    auto results = update_parameters(the_model, genotypes, pseudo_counts, the_reads, 10);
+    auto results = update_parameters(the_model, genotypes, pseudo_counts, the_reads, 3);
     auto responsabilities        = results.first;
     auto posterior_pseudo_counts = results.second;
     
@@ -218,6 +217,40 @@ TEST_CASE("can call in complex region", "[octopus]")
     std::sort(genotypes.begin(), genotypes.end(), [&sample_responsabilities] (const auto& g1, const auto& g2) {
         return sample_responsabilities[g1] > sample_responsabilities[g2];
     });
+    
+    Haplotype test {human, a_region};
+    test.push_back(Allele {parse_region("11:27282267-27282268", human), "G"});
+    
+    cout << a_read_model.log_probability(good_reads[4], reference_haplotype, 0) << endl;
+    cout << a_read_model.log_probability(good_reads[4], genotypes[0].at(0), 0) << endl;
+    cout << a_read_model.log_probability(good_reads[4], genotypes[0].at(1), 0) << endl;
+    cout << a_read_model.log_probability(good_reads[4], test, 0) << endl;
+    cout << endl;
+    
+    cout << a_read_model.log_probability(good_reads[6], reference_haplotype, 0) << endl;
+    cout << a_read_model.log_probability(good_reads[6], genotypes[0].at(0), 0) << endl;
+    cout << a_read_model.log_probability(good_reads[6], genotypes[0].at(1), 0) << endl;
+    cout << a_read_model.log_probability(good_reads[6], test, 0) << endl;
+    cout << endl;
+    
+    cout << a_read_model.log_probability(good_reads[7], reference_haplotype, 0) << endl;
+    cout << a_read_model.log_probability(good_reads[7], genotypes[0].at(0), 0) << endl;
+    cout << a_read_model.log_probability(good_reads[7], genotypes[0].at(1), 0) << endl;
+    cout << a_read_model.log_probability(good_reads[7], test, 0) << endl;
+    cout << endl;
+    
+    Genotype g1 {};
+    g1.emplace(reference_haplotype);
+    g1.emplace(test);
+    Genotype g2 {};
+    g2.emplace(reference_haplotype);
+    g2.emplace(genotypes[0].at(0));
+    Genotype g3 {};
+    g3.emplace(test);
+    g3.emplace(genotypes[0].at(0));
+    cout << a_read_model.log_probability(good_reads.cbegin(), good_reads.cend(), g1, 0) << endl;
+    cout << a_read_model.log_probability(good_reads.cbegin(), good_reads.cend(), g2, 0) << endl;
+    cout << a_read_model.log_probability(good_reads.cbegin(), good_reads.cend(), g3, 0) << endl;
     
     cout << endl;
     cout << genotypes[0] << " " << sample_responsabilities.at(genotypes[0]) << endl;
@@ -229,26 +262,27 @@ TEST_CASE("can call in complex region", "[octopus]")
 //        cout << the_model.posterior_probability_haplotype_in_sample(haplotype, genotypes, sample_responsabilities) << endl;
 //    }
     
-    cout << endl;
-    cout << the_model.posterior_probability_haplotype_in_sample(genotypes[0].at(0), genotypes, sample_responsabilities) << endl;
-    cout << the_model.posterior_probability_haplotype_in_sample(genotypes[0].at(1), genotypes, sample_responsabilities) << endl;
-    cout << endl;
+//    cout << endl;
+//    cout << the_model.posterior_probability_haplotype_in_sample(genotypes[0].at(0), genotypes, sample_responsabilities) << endl;
+//    cout << the_model.posterior_probability_haplotype_in_sample(genotypes[0].at(1), genotypes, sample_responsabilities) << endl;
+//    cout << endl;
     
     genotypes[0].at(0).print_explicit_alleles();
     cout << endl;
     genotypes[0].at(1).print_explicit_alleles();
     cout << endl;
-    genotypes[1].at(0).print_explicit_alleles();
-    cout << endl;
-    genotypes[1].at(1).print_explicit_alleles();
-    cout << endl;
+//    genotypes[1].at(0).print_explicit_alleles();
+//    cout << endl;
+//    genotypes[1].at(1).print_explicit_alleles();
+//    cout << endl;
     
     for (const auto& variant : candidates) {
         cout << variant << " "
         << the_model.posterior_probability_allele_in_sample(variant.get_reference_allele(), haplotypes,
                                                             sample_responsabilities, genotypes)
-        << " " << the_model.posterior_probability_allele_in_sample(variant.get_alternative_allele(),
-                                                                   haplotypes, sample_responsabilities, genotypes)
+        << " "
+        << the_model.posterior_probability_allele_in_sample(variant.get_alternative_allele(), haplotypes,
+                                                            sample_responsabilities, genotypes)
         << endl;
     }
 }

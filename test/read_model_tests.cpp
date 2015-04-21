@@ -17,6 +17,7 @@
 #include "reference_genome.h"
 #include "reference_genome_factory.h"
 #include "read_manager.h"
+#include "allele.h"
 #include "variant.h"
 #include "variant_utils.h"
 #include "variant_candidate_generator.h"
@@ -25,12 +26,80 @@
 #include "genotype.h"
 #include "read_model.h"
 
+using std::cout;
+using std::endl;
+
+TEST_CASE("partially overlapped reads evaluate correctly", "[read_model]")
+{
+    ReferenceGenomeFactory a_factory {};
+    ReferenceGenome human {a_factory.make(human_reference_fasta)};
+    
+    ReadManager a_read_manager(std::vector<std::string> {human_1000g_bam1});
+    
+    auto a_region = parse_region("11:27282193-27282290", human);
+    
+    auto samples = a_read_manager.get_sample_ids();
+    
+    auto reads = a_read_manager.fetch_reads(samples[0], a_region);
+    
+    Haplotype reference_haplotype {human, a_region};
+    
+    Haplotype true_haplotype {human, a_region};
+    true_haplotype.push_back(Allele {parse_region("11:27282267-27282268", human), "G"});
+    
+    Haplotype false_haplotype1 {human, a_region};
+    false_haplotype1.push_back(Allele {parse_region("11:27282258-27282259", human), "C"});
+    false_haplotype1.push_back(Allele {parse_region("11:27282267-27282268", human), "G"});
+    
+    Haplotype false_haplotype2 {human, a_region};
+    false_haplotype2.push_back(Allele {parse_region("11:27282199-27282200", human), "C"});
+    false_haplotype2.push_back(Allele {parse_region("11:27282207-27282208", human), "C"});
+    false_haplotype2.push_back(Allele {parse_region("11:27282218-27282219", human), "C"});
+    false_haplotype2.push_back(Allele {parse_region("11:27282239-27282240", human), "T"});
+    //false_haplotype2.push_back(Allele {parse_region("11:27282258-27282259", human), "C"});
+    false_haplotype2.push_back(Allele {parse_region("11:27282267-27282268", human), "G"});
+    
+    unsigned ploidy {2};
+    
+    ReadModel a_read_model {ploidy};
+    
+//    cout << a_read_model.log_probability(reads[6], reference_haplotype, 0) << endl;
+//    cout << a_read_model.log_probability(reads[6], true_haplotype, 0) << endl;
+//    cout << a_read_model.log_probability(reads[6], false_haplotype1, 0) << endl;
+//    cout << a_read_model.log_probability(reads[6], false_haplotype2, 0) << endl;
+//    cout << endl;
+//    
+//    cout << a_read_model.log_probability(reads[7], reference_haplotype, 0) << endl;
+//    cout << a_read_model.log_probability(reads[7], true_haplotype, 0) << endl;
+//    cout << a_read_model.log_probability(reads[7], false_haplotype1, 0) << endl;
+//    cout << a_read_model.log_probability(reads[7], false_haplotype2, 0) << endl;
+//    cout << endl;
+    
+    Genotype g1 {};
+    g1.emplace(reference_haplotype);
+    g1.emplace(true_haplotype);
+    Genotype g2 {};
+    g2.emplace(reference_haplotype);
+    g2.emplace(false_haplotype1);
+    Genotype g3 {};
+    g3.emplace(reference_haplotype);
+    g3.emplace(false_haplotype2);
+    Genotype g4 {};
+    g4.emplace(false_haplotype1);
+    g4.emplace(false_haplotype2);
+    
+//    cout << a_read_model.log_probability(reads.cbegin(), reads.cend(), g1, 0) << endl;
+//    cout << a_read_model.log_probability(reads.cbegin(), reads.cend(), g2, 0) << endl;
+//    cout << a_read_model.log_probability(reads.cbegin(), reads.cend(), g3, 0) << endl;
+//    cout << a_read_model.log_probability(reads.cbegin(), reads.cend(), g4, 0) << endl;
+}
+
 TEST_CASE("haploid_read_model_test", "[read_model]")
 {
     unsigned ploidy {1};
     
     ReferenceGenomeFactory a_factory {};
-    ReferenceGenome ecoli(a_factory.make(ecoli_reference_fasta));
+    ReferenceGenome ecoli {a_factory.make(ecoli_reference_fasta)};
     
     ReadManager a_read_manager(std::vector<std::string> {ecoli_bam});
     
@@ -98,7 +167,7 @@ TEST_CASE("diploid_read_model_test", "[read_model]")
     unsigned ploidy {2};
     
     ReferenceGenomeFactory a_factory {};
-    ReferenceGenome human(a_factory.make(human_reference_fasta));
+    ReferenceGenome human {a_factory.make(human_reference_fasta)};
     
     ReadManager a_read_manager(std::vector<std::string> {human_1000g_bam1});
     

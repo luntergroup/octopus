@@ -148,24 +148,25 @@ T nuc_log_viterbi_local(const AlignedRead::SequenceType& sequence1,
                 auto match_log_prob = ((sequence1[i - 2] == sequence2[j - 2]) ?
                                        std::log(1 - std::pow(10, -static_cast<T>(quals[j - 2]) / 10)) :
                                        -ln_10_div_10 * quals[j - 2] - ln_3);
+                
                 current_column[j].match = match_log_prob + std::max({
                     log_prob_continue_match + previous_column[j - 1].match,
-                    log_prob_to_match + previous_column[j - 1].insertion,
-                    log_prob_to_match + previous_column[j - 1].deletion,
+                    log_prob_to_match       + previous_column[j - 1].insertion,
+                    log_prob_to_match       + previous_column[j - 1].deletion,
                     log_prob_continue_match + previous_column[j - 1].silent_2
                 });
             }
             
             current_column[j].insertion = log_prob_background + std::max({
-                log_prob_gap_open + previous_column[j].match,
+                log_prob_gap_open   + previous_column[j].match,
                 log_prob_gap_extend + previous_column[j].insertion,
-                log_prob_gap_open + previous_column[j].silent_2
+                log_prob_gap_open   + previous_column[j].silent_2
             });
             
             current_column[j].deletion = log_prob_background + std::max({
-                log_prob_gap_open + current_column[j - 1].match,
+                log_prob_gap_open   + current_column[j - 1].match,
                 log_prob_gap_extend + current_column[j - 1].insertion,
-                log_prob_gap_open + current_column[j - 1].silent_2
+                log_prob_gap_open   + current_column[j - 1].silent_2
             });
             
             current_column[j].silent_3 = log_prob_match_end + std::max({
@@ -229,6 +230,7 @@ T nuc_log_forward_local(const std::string& sequence1, const std::string& sequenc
     
     for (size_t i {1}; i <= sequence1_length + 1; ++i) {
         for (size_t j {1}; j <= sequence2_length + 1; ++j) {
+            
             current_column[j].random_x_1 = log_prob_background + log_prob_rand_cont + log_sum_exp(
                 previous_column[j].begin,
                 previous_column[j].random_x_1
@@ -255,22 +257,22 @@ T nuc_log_forward_local(const std::string& sequence1, const std::string& sequenc
                                        -ln_10_div_10 * quals[j - 2] - ln_3);
                 current_column[j].match = match_log_prob + log_sum_exp(
                     log_prob_continue_match + previous_column[j - 1].match,
-                    log_prob_to_match + previous_column[j - 1].insertion,
-                    log_prob_to_match + previous_column[j - 1].deletion,
+                    log_prob_to_match       + previous_column[j - 1].insertion,
+                    log_prob_to_match       + previous_column[j - 1].deletion,
                     log_prob_continue_match + previous_column[j - 1].silent_2
                 );
             }
             
             current_column[j].insertion = log_prob_background + log_sum_exp(
-                log_prob_gap_open + previous_column[j].match,
+                log_prob_gap_open   + previous_column[j].match,
                 log_prob_gap_extend + previous_column[j].insertion,
-                log_prob_gap_open + previous_column[j].silent_2
+                log_prob_gap_open   + previous_column[j].silent_2
             );
             
             current_column[j].deletion = log_prob_background + log_sum_exp(
-                log_prob_gap_open + current_column[j - 1].match,
+                log_prob_gap_open   + current_column[j - 1].match,
                 log_prob_gap_extend + current_column[j - 1].insertion,
-                log_prob_gap_open + current_column[j - 1].silent_2
+                log_prob_gap_open   + current_column[j - 1].silent_2
             );
             
             current_column[j].silent_3 = log_prob_match_end + log_sum_exp(
