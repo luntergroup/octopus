@@ -142,6 +142,67 @@ TEST_CASE("genotype posteriors sum to one", "[variational_bayes_genotype_model]"
     REQUIRE(is_close_to_one(genotype_posterior_sum));
 }
 
+TEST_CASE("obviously homozygous sites can overcome reference bias", "[variational_bayes_genotype_model]")
+{
+    ReferenceGenomeFactory a_factory {};
+    ReferenceGenome human {a_factory.make(human_reference_fasta)};
+    
+    ReadManager a_read_manager(std::vector<std::string> {human_1000g_bam2});
+    
+    auto a_region = parse_region("11:67503118-67503253", human);
+    
+    auto samples = a_read_manager.get_sample_ids();
+    
+    auto reads = a_read_manager.fetch_reads(samples[0], a_region);
+    
+    Haplotype reference_haplotype {human, a_region};
+    
+    Haplotype true_haplotype {human, a_region};
+    true_haplotype.push_back(Allele {parse_region("11:67503147-67503148", human), "A"});
+    true_haplotype.push_back(Allele {parse_region("11:67503214-67503215", human), "A"});
+    
+    unsigned ploidy {2};
+    
+    ReadModel a_read_model {ploidy};
+    
+    Genotype hom_ref {};
+    hom_ref.emplace(reference_haplotype);
+    hom_ref.emplace(reference_haplotype);
+    
+    Genotype het_alt {};
+    het_alt.emplace(reference_haplotype);
+    het_alt.emplace(true_haplotype);
+    
+    Genotype hom_alt {};
+    hom_alt.emplace(true_haplotype);
+    hom_alt.emplace(true_haplotype);
+    
+    std::vector<Genotype> genotypes {hom_ref, het_alt, hom_alt};
+    
+    VariationalBayesGenotypeModel the_model {a_read_model, ploidy};
+    
+    VariationalBayesGenotypeModel::HaplotypePseudoCounts pseudo_counts {};
+    pseudo_counts[reference_haplotype] = 1e6;
+    pseudo_counts[true_haplotype]      = 1.0;
+    
+    SamplesReads the_reads {};
+    the_reads.push_back({reads.cbegin(), reads.cend()});
+    
+    auto results                  = update_parameters(the_model, genotypes, pseudo_counts, the_reads, 3);
+    auto responsabilities         = results.first;
+    auto posterior_pseudo_counts  = results.second;
+    auto sample_responsabilities  = responsabilities[0];
+    
+    std::sort(genotypes.begin(), genotypes.end(), [&sample_responsabilities] (const auto& g1, const auto& g2) {
+        return sample_responsabilities[g1] > sample_responsabilities[g2];
+    });
+    
+//    cout << posterior_pseudo_counts[reference_haplotype] << endl;
+//    cout << posterior_pseudo_counts[true_haplotype] << endl;
+    
+    cout << genotypes.front() << " " << sample_responsabilities[genotypes.front()] << endl;
+}
+
 //TEST_CASE("haplotype priors affect genotype calls when support is low", "variational_bayes_genotype_model")
 //{
 //    ReferenceGenomeFactory a_factory {};
@@ -193,13 +254,13 @@ TEST_CASE("genotype posteriors sum to one", "[variational_bayes_genotype_model]"
 //    
 //    for (const auto& haplotype : haplotypes) {
 //        if (haplotype == reference_haplotype) {
-//            pseudo_counts[haplotype] = 9000.0;
+//            pseudo_counts[haplotype] = 1;
 //        } else {
-//            pseudo_counts[haplotype] = 0.0505;
+//            pseudo_counts[haplotype] = 0.05;
 //        }
 //    }
 //    
-//    pseudo_counts[true_haplotype] = 1.0;
+//    pseudo_counts[true_haplotype] = 0.7;
 //    
 //    unsigned ploidy {2};
 //    
@@ -262,145 +323,145 @@ TEST_CASE("genotype posteriors sum to one", "[variational_bayes_genotype_model]"
 //    }
 //}
 
-TEST_CASE("Support from other samples can correct a wrong haplotype", "variational_bayes_genotype_model")
-{
-    ReferenceGenomeFactory a_factory {};
-    ReferenceGenome human {a_factory.make(human_reference_fasta)};
-    
-    ReadManager a_read_manager {std::vector<std::string> {human_1000g_bam1, human_1000g_bam2, human_1000g_bam3}};
-    
-    auto a_region = parse_region("11:27282193-27282290", human);
-    
-    auto samples = a_read_manager.get_sample_ids();
-    
-    auto reads = a_read_manager.fetch_reads(samples, a_region);
-    
-    VariantCandidateGenerator candidate_generator {};
-    candidate_generator.register_generator(std::make_unique<AlignmentCandidateVariantGenerator>(human, 0));
-    
-    for (const auto& sample_reads : reads) {
-        candidate_generator.add_reads(sample_reads.second.cbegin(), sample_reads.second.cend());
-    }
-    
-    auto candidates = candidate_generator.get_candidates(a_region);
-    
-    HaplotypeTree haplotype_tree {human};
-    
-    for (const auto& candidate : candidates) {
-        haplotype_tree.extend(candidate.get_reference_allele());
-        haplotype_tree.extend(candidate.get_alternative_allele());
-    }
-    
-    auto haplotypes = haplotype_tree.get_haplotypes(a_region);
-    
-    unique_least_complex(haplotypes);
-    
-    cout << "there are " << haplotypes.size() << " unique haplotypes" << endl;
-    
-    Haplotype reference_haplotype {human, a_region};
-    
-    Haplotype true_haplotype {human, a_region};
-    true_haplotype.push_back(Allele {parse_region("11:27282267-27282268", human), "G"});
-    
-    Haplotype false_haplotype1 {human, a_region};
-    false_haplotype1.push_back(Allele {parse_region("11:27282258-27282259", human), "C"});
-    false_haplotype1.push_back(Allele {parse_region("11:27282267-27282268", human), "G"});
-    
-    Haplotype false_haplotype2 {human, a_region};
-    false_haplotype2.push_back(Allele {parse_region("11:27282199-27282200", human), "C"});
-    false_haplotype2.push_back(Allele {parse_region("11:27282207-27282208", human), "C"});
-    false_haplotype2.push_back(Allele {parse_region("11:27282218-27282219", human), "C"});
-    false_haplotype2.push_back(Allele {parse_region("11:27282239-27282240", human), "T"});
-    false_haplotype2.push_back(Allele {parse_region("11:27282267-27282268", human), "G"});
-    
-    VariationalBayesGenotypeModel::HaplotypePseudoCounts pseudo_counts {};
-    
-    for (const auto& haplotype : haplotypes) {
-        if (haplotype == reference_haplotype) {
-            pseudo_counts[haplotype] = 10000000.0;
-        } else {
-            pseudo_counts[haplotype] = 1.0;
-        }
-    }
-    
-    //pseudo_counts[true_haplotype] = 0.9;
-    
-    unsigned ploidy {2};
-    
-    auto genotypes = get_all_genotypes(haplotypes, ploidy);
-    
-    cout << "there are " << genotypes.size() << " genotypes" << endl;
-    
-    Genotype ref_true {};
-    ref_true.emplace(reference_haplotype);
-    ref_true.emplace(true_haplotype);
-    
-    Genotype ref_false1 {};
-    ref_false1.emplace(reference_haplotype);
-    ref_false1.emplace(false_haplotype1);
-    
-    Genotype ref_false2 {};
-    ref_false2.emplace(reference_haplotype);
-    ref_false2.emplace(false_haplotype2);
-    
-    Genotype true_false1 {};
-    true_false1.emplace(true_haplotype);
-    true_false1.emplace(false_haplotype2);
-    
-    Genotype true_false2 {};
-    true_false2.emplace(true_haplotype);
-    true_false2.emplace(false_haplotype2);
-    
-    Genotype false1_false2 {};
-    false1_false2.emplace(false_haplotype1);
-    false1_false2.emplace(false_haplotype2);
-    
-    ReadModel a_read_model {ploidy};
-    
-    VariationalBayesGenotypeModel the_model {a_read_model, ploidy};
-    
-    SamplesReads the_reads {};
-    for (const auto& sample_reads : reads) {
-        the_reads.push_back({sample_reads.second.cbegin(), sample_reads.second.cend()});
-    }
-    
-    auto results = update_parameters(the_model, genotypes, pseudo_counts, the_reads, 3);
-    auto responsabilities        = results.first;
-    auto posterior_pseudo_counts = results.second;
-    
-    cout << posterior_pseudo_counts[reference_haplotype] << endl;
-    cout << posterior_pseudo_counts[true_haplotype] << endl;
-    cout << posterior_pseudo_counts[false_haplotype1] << endl;
-    cout << posterior_pseudo_counts[false_haplotype2] << endl;
-    cout << endl;
-    
-    for (unsigned i {}; i < 3; ++i) {
-        auto& sample_responsabilities = responsabilities[i];
-        
-        std::sort(genotypes.begin(), genotypes.end(), [&sample_responsabilities] (const auto& g1, const auto& g2) {
-            return sample_responsabilities[g1] > sample_responsabilities[g2];
-        });
-        
-        cout << endl;
-        cout << sample_responsabilities.at(ref_true) << endl;
-        cout << sample_responsabilities.at(ref_false1) << endl;
-        cout << sample_responsabilities.at(ref_false2) << endl;
-        cout << sample_responsabilities.at(true_false1) << endl;
-        cout << sample_responsabilities.at(true_false2) << endl;
-        cout << sample_responsabilities.at(false1_false2) << endl;
-        cout << endl;
-        
-        for (const auto& variant : candidates) {
-            cout << variant << " "
-            << the_model.posterior_probability_allele_in_sample(variant.get_reference_allele(), haplotypes,
-                                                                sample_responsabilities, genotypes)
-            << " "
-            << the_model.posterior_probability_allele_in_sample(variant.get_alternative_allele(), haplotypes,
-                                                                sample_responsabilities, genotypes)
-            << endl;
-        }
-    }
-}
+//TEST_CASE("Support from other samples can correct a wrong haplotype", "variational_bayes_genotype_model")
+//{
+//    ReferenceGenomeFactory a_factory {};
+//    ReferenceGenome human {a_factory.make(human_reference_fasta)};
+//    
+//    ReadManager a_read_manager {std::vector<std::string> {human_1000g_bam1, human_1000g_bam2, human_1000g_bam3}};
+//    
+//    auto a_region = parse_region("11:27282193-27282290", human);
+//    
+//    auto samples = a_read_manager.get_sample_ids();
+//    
+//    auto reads = a_read_manager.fetch_reads(samples, a_region);
+//    
+//    VariantCandidateGenerator candidate_generator {};
+//    candidate_generator.register_generator(std::make_unique<AlignmentCandidateVariantGenerator>(human, 0));
+//    
+//    for (const auto& sample_reads : reads) {
+//        candidate_generator.add_reads(sample_reads.second.cbegin(), sample_reads.second.cend());
+//    }
+//    
+//    auto candidates = candidate_generator.get_candidates(a_region);
+//    
+//    HaplotypeTree haplotype_tree {human};
+//    
+//    for (const auto& candidate : candidates) {
+//        haplotype_tree.extend(candidate.get_reference_allele());
+//        haplotype_tree.extend(candidate.get_alternative_allele());
+//    }
+//    
+//    auto haplotypes = haplotype_tree.get_haplotypes(a_region);
+//    
+//    unique_least_complex(haplotypes);
+//    
+//    //cout << "there are " << haplotypes.size() << " unique haplotypes" << endl;
+//    
+//    Haplotype reference_haplotype {human, a_region};
+//    
+//    Haplotype true_haplotype {human, a_region};
+//    true_haplotype.push_back(Allele {parse_region("11:27282267-27282268", human), "G"});
+//    
+//    Haplotype false_haplotype1 {human, a_region};
+//    false_haplotype1.push_back(Allele {parse_region("11:27282258-27282259", human), "C"});
+//    false_haplotype1.push_back(Allele {parse_region("11:27282267-27282268", human), "G"});
+//    
+//    Haplotype false_haplotype2 {human, a_region};
+//    false_haplotype2.push_back(Allele {parse_region("11:27282199-27282200", human), "C"});
+//    false_haplotype2.push_back(Allele {parse_region("11:27282207-27282208", human), "C"});
+//    false_haplotype2.push_back(Allele {parse_region("11:27282218-27282219", human), "C"});
+//    false_haplotype2.push_back(Allele {parse_region("11:27282239-27282240", human), "T"});
+//    false_haplotype2.push_back(Allele {parse_region("11:27282267-27282268", human), "G"});
+//    
+//    VariationalBayesGenotypeModel::HaplotypePseudoCounts pseudo_counts {};
+//    
+//    for (const auto& haplotype : haplotypes) {
+//        if (haplotype == reference_haplotype) {
+//            pseudo_counts[haplotype] = 1.0;
+//        } else {
+//            pseudo_counts[haplotype] = 0.05;
+//        }
+//    }
+//    
+//    pseudo_counts[true_haplotype] = 0.6;
+//    
+//    unsigned ploidy {2};
+//    
+//    auto genotypes = get_all_genotypes(haplotypes, ploidy);
+//    
+//    //cout << "there are " << genotypes.size() << " genotypes" << endl;
+//    
+//    Genotype ref_true {};
+//    ref_true.emplace(reference_haplotype);
+//    ref_true.emplace(true_haplotype);
+//    
+//    Genotype ref_false1 {};
+//    ref_false1.emplace(reference_haplotype);
+//    ref_false1.emplace(false_haplotype1);
+//    
+//    Genotype ref_false2 {};
+//    ref_false2.emplace(reference_haplotype);
+//    ref_false2.emplace(false_haplotype2);
+//    
+//    Genotype true_false1 {};
+//    true_false1.emplace(true_haplotype);
+//    true_false1.emplace(false_haplotype2);
+//    
+//    Genotype true_false2 {};
+//    true_false2.emplace(true_haplotype);
+//    true_false2.emplace(false_haplotype2);
+//    
+//    Genotype false1_false2 {};
+//    false1_false2.emplace(false_haplotype1);
+//    false1_false2.emplace(false_haplotype2);
+//    
+//    ReadModel a_read_model {ploidy};
+//    
+//    VariationalBayesGenotypeModel the_model {a_read_model, ploidy};
+//    
+//    SamplesReads the_reads {};
+//    for (const auto& sample_reads : reads) {
+//        the_reads.push_back({sample_reads.second.cbegin(), sample_reads.second.cend()});
+//    }
+//    
+//    auto results = update_parameters(the_model, genotypes, pseudo_counts, the_reads, 3);
+//    auto responsabilities        = results.first;
+//    auto posterior_pseudo_counts = results.second;
+//    
+//    cout << posterior_pseudo_counts[reference_haplotype] << endl;
+//    cout << posterior_pseudo_counts[true_haplotype] << endl;
+//    cout << posterior_pseudo_counts[false_haplotype1] << endl;
+//    cout << posterior_pseudo_counts[false_haplotype2] << endl;
+//    cout << endl;
+//    
+//    for (unsigned i {}; i < 3; ++i) {
+//        auto& sample_responsabilities = responsabilities[i];
+//        
+//        std::sort(genotypes.begin(), genotypes.end(), [&sample_responsabilities] (const auto& g1, const auto& g2) {
+//            return sample_responsabilities[g1] > sample_responsabilities[g2];
+//        });
+//        
+//        cout << endl;
+//        cout << sample_responsabilities.at(ref_true) << endl;
+//        cout << sample_responsabilities.at(ref_false1) << endl;
+//        cout << sample_responsabilities.at(ref_false2) << endl;
+//        cout << sample_responsabilities.at(true_false1) << endl;
+//        cout << sample_responsabilities.at(true_false2) << endl;
+//        cout << sample_responsabilities.at(false1_false2) << endl;
+//        cout << endl;
+//        
+//        for (const auto& variant : candidates) {
+//            cout << variant << " "
+//            << the_model.posterior_probability_allele_in_sample(variant.get_reference_allele(), haplotypes,
+//                                                                sample_responsabilities, genotypes)
+//            << " "
+//            << the_model.posterior_probability_allele_in_sample(variant.get_alternative_allele(), haplotypes,
+//                                                                sample_responsabilities, genotypes)
+//            << endl;
+//        }
+//    }
+//}
 
 TEST_CASE("single_sample_haploid_variational_bayes_genotype_model", "[variational_bayes_genotype_model]")
 {

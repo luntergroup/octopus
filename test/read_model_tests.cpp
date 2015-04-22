@@ -119,6 +119,46 @@ TEST_CASE("partially overlapped reads evaluate correctly", "[read_model]")
 //    cout << "false1_false2 = " << a_read_model.log_probability(reads.cbegin(), reads.cend(), false1_false2, 0) << endl;
 }
 
+TEST_CASE("obviously homozygous sites evaluate correctly", "[read_model]")
+{
+    ReferenceGenomeFactory a_factory {};
+    ReferenceGenome human {a_factory.make(human_reference_fasta)};
+    
+    ReadManager a_read_manager(std::vector<std::string> {human_1000g_bam2});
+    
+    auto a_region = parse_region("11:67503118-67503253", human);
+    
+    auto samples = a_read_manager.get_sample_ids();
+    
+    auto reads = a_read_manager.fetch_reads(samples[0], a_region);
+    
+    Haplotype reference_haplotype {human, a_region};
+    
+    Haplotype true_haplotype {human, a_region};
+    true_haplotype.push_back(Allele {parse_region("11:67503147-67503148", human), "A"});
+    true_haplotype.push_back(Allele {parse_region("11:67503214-67503215", human), "A"});
+    
+    unsigned ploidy {2};
+    
+    ReadModel a_read_model {ploidy};
+    
+    Genotype hom_ref {};
+    hom_ref.emplace(reference_haplotype);
+    hom_ref.emplace(reference_haplotype);
+    
+    Genotype het_alt {};
+    het_alt.emplace(reference_haplotype);
+    het_alt.emplace(true_haplotype);
+    
+    Genotype hom_alt {};
+    hom_alt.emplace(true_haplotype);
+    hom_alt.emplace(true_haplotype);
+    
+    cout << "hom_ref = " << a_read_model.log_probability(reads.cbegin(), reads.cend(), hom_ref, 0) << endl;
+    cout << "het_alt = " << a_read_model.log_probability(reads.cbegin(), reads.cend(), het_alt, 0) << endl;
+    cout << "hom_alt = " << a_read_model.log_probability(reads.cbegin(), reads.cend(), hom_alt, 0) << endl;
+}
+
 TEST_CASE("ReadModel works on haploid genomes", "[read_model]")
 {
     unsigned ploidy {1};

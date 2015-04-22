@@ -89,7 +89,7 @@ using std::endl;
 //    ReferenceGenomeFactory a_factory {};
 //    ReferenceGenome human {a_factory.make(human_reference_fasta)};
 //    
-//    ReadManager a_read_manager {std::vector<std::string> {human_1000g_bam1}};
+//    ReadManager a_read_manager {std::vector<std::string> {human_1000g_bam3}};
 //    
 //    //auto a_region = parse_region("16:9299900-9300055", human);
 //    //auto a_region = parse_region("16:9299850-9299970", human);
@@ -179,9 +179,9 @@ using std::endl;
 //    
 //    for (const auto& haplotype : haplotypes) {
 //        if (haplotype == reference_haplotype) {
-//            pseudo_counts[haplotype] = 9000.0;
+//            pseudo_counts[haplotype] = 1e6;
 //        } else {
-//            pseudo_counts[haplotype] = 0.0505;
+//            pseudo_counts[haplotype] = 15.0;
 //        }
 //    }
 //    
@@ -208,15 +208,17 @@ using std::endl;
 //        return sample_responsabilities[g1] > sample_responsabilities[g2];
 //    });
 //    
-////    for (const auto& variant : candidates) {
-////        cout << variant << " "
-////        << the_model.posterior_probability_allele_in_sample(variant.get_reference_allele(), haplotypes,
-////                                                            sample_responsabilities, genotypes)
-////        << " "
-////        << the_model.posterior_probability_allele_in_sample(variant.get_alternative_allele(), haplotypes,
-////                                                            sample_responsabilities, genotypes)
-////        << endl;
-////    }
+//    cout << genotypes[0] << endl;
+//    
+//    for (const auto& variant : candidates) {
+//        cout << variant << " "
+//        << the_model.posterior_probability_allele_in_sample(variant.get_reference_allele(), haplotypes,
+//                                                            sample_responsabilities, genotypes)
+//        << " "
+//        << the_model.posterior_probability_allele_in_sample(variant.get_alternative_allele(), haplotypes,
+//                                                            sample_responsabilities, genotypes)
+//        << endl;
+//    }
 //}
 
 //TEST_CASE("read_filter_transform_generate_left_align_test", "[octopus]")
