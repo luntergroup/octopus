@@ -8,8 +8,15 @@
 
 #include "genotype.h"
 
-//#include <algorithm> // std::inplace_merge, std::all_of, std::binary_search, std::equal_range, std::unique_copy
+#include <algorithm> // std::inplace_merge, std::all_of, std::binary_search, std::equal_range, std::unique_copy, std::equal
 #include <boost/math/special_functions/binomial.hpp>
+
+Genotype::Genotype(unsigned ploidy)
+:
+the_haplotypes_ {}
+{
+    the_haplotypes_.reserve(ploidy);
+}
 
 const Haplotype& Genotype::at(unsigned n) const
 {
@@ -61,6 +68,14 @@ std::vector<Haplotype> Genotype::get_unique_haplotypes() const
     std::unique_copy(std::cbegin(the_haplotypes_), std::cend(the_haplotypes_), std::back_inserter(result));
     
     return result;
+}
+
+bool operator==(const Genotype& lhs, const Genotype& rhs)
+{
+    if (lhs.ploidy() != rhs.ploidy()) return false;
+    
+    return std::equal(std::cbegin(lhs.the_haplotypes_), std::cend(lhs.the_haplotypes_),
+                      std::cbegin(rhs.the_haplotypes_));
 }
 
 unsigned num_genotypes(unsigned num_haplotypes, unsigned ploidy)

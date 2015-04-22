@@ -13,7 +13,6 @@
 #include <unordered_map>
 #include <ostream>
 #include <iterator>
-#include <algorithm> // std::equal, 
 #include <boost/functional/hash.hpp> // boost::hash_combine
 
 #include "haplotype.h"
@@ -23,6 +22,7 @@ class Genotype : public Equitable<Genotype>
 {
 public:
     Genotype()  = default;
+    Genotype(unsigned ploidy);
     ~Genotype() = default;
     
     Genotype(const Genotype&)            = default;
@@ -45,13 +45,7 @@ private:
     std::vector<Haplotype> the_haplotypes_;
 };
 
-inline bool operator==(const Genotype& lhs, const Genotype& rhs)
-{
-    if (lhs.ploidy() != rhs.ploidy()) return false;
-    
-    return std::equal(std::cbegin(lhs.the_haplotypes_), std::cend(lhs.the_haplotypes_),
-                      std::cbegin(rhs.the_haplotypes_));
-}
+bool operator==(const Genotype& lhs, const Genotype& rhs);
 
 namespace std {
     template <> struct hash<Genotype>

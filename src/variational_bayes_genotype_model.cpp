@@ -17,6 +17,8 @@
 #include "maths.h"
 #include "pair_hmm.h"
 
+#include <iostream> // TEST
+
 VariationalBayesGenotypeModel::VariationalBayesGenotypeModel(ReadModel& read_model, unsigned ploidy,
                                                              RealType zero_epsilon)
 :
@@ -128,7 +130,7 @@ VariationalBayesGenotypeModel::RealType
 VariationalBayesGenotypeModel::posterior_haplotype_probability(const Haplotype& haplotype,
                                                                const HaplotypePseudoCounts& posterior_haplotype_pseudo_counts) const
 {
-    return posterior_haplotype_pseudo_counts.at(haplotype) / pseudo_count_sum(posterior_haplotype_pseudo_counts);
+    return posterior_haplotype_pseudo_counts.at(haplotype) / sum(posterior_haplotype_pseudo_counts);
 }
 
 VariationalBayesGenotypeModel::RealType
@@ -242,26 +244,21 @@ VariationalBayesGenotypeModel::RealType
 VariationalBayesGenotypeModel::log_expected_genotype_probability_haploid(const Genotype& genotype,
                                                                          const HaplotypePseudoCounts& haplotype_pseudo_counts) const
 {
-    const static RealType ln_1 = std::log(1);
-    
     return boost::math::digamma<RealType>(haplotype_pseudo_counts.at(genotype.at(0)))
-            - boost::math::digamma<RealType>(pseudo_count_sum(haplotype_pseudo_counts)) + ln_1;
+            - boost::math::digamma<RealType>(sum(haplotype_pseudo_counts));
 }
 
 VariationalBayesGenotypeModel::RealType
 VariationalBayesGenotypeModel::log_expected_genotype_probability_diploid(const Genotype& genotype,
                                                                          const HaplotypePseudoCounts& haplotype_pseudo_counts) const
 {
-    const static RealType ln_1 = std::log(1);
     const static RealType ln_2 = std::log(2);
     
-    return (genotype.is_homozygous()) ?
-        2 * boost::math::digamma<RealType>(haplotype_pseudo_counts.at(genotype.at(0))) -
-        2 * boost::math::digamma<RealType>(pseudo_count_sum(haplotype_pseudo_counts)) + ln_1
-        :
-        boost::math::digamma<RealType>(haplotype_pseudo_counts.at(genotype.at(0))) +
-        boost::math::digamma<RealType>(haplotype_pseudo_counts.at(genotype.at(1))) -
-        2 * boost::math::digamma<RealType>(pseudo_count_sum(haplotype_pseudo_counts)) + ln_2;
+    return ((genotype.is_homozygous()) ?
+        2 * boost::math::digamma<RealType>(haplotype_pseudo_counts.at(genotype.at(0))) :
+        ln_2 + boost::math::digamma<RealType>(haplotype_pseudo_counts.at(genotype.at(0))) +
+            boost::math::digamma<RealType>(haplotype_pseudo_counts.at(genotype.at(1))))
+        - 2 * boost::math::digamma<RealType>(sum(haplotype_pseudo_counts));
 }
 
 VariationalBayesGenotypeModel::RealType
@@ -280,9 +277,10 @@ VariationalBayesGenotypeModel::log_expected_genotype_probability_polyploid(const
     return 0;
 }
 
-unsigned VariationalBayesGenotypeModel::pseudo_count_sum(const HaplotypePseudoCounts& haplotype_pseudo_counts) const
+VariationalBayesGenotypeModel::RealType
+VariationalBayesGenotypeModel::sum(const HaplotypePseudoCounts& haplotype_pseudo_counts) const noexcept
 {
-    unsigned result {0};
+    RealType result {0};
     
     for (const auto& h : haplotype_pseudo_counts) {
         result += h.second;

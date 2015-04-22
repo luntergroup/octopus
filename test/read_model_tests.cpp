@@ -154,9 +154,9 @@ TEST_CASE("obviously homozygous sites evaluate correctly", "[read_model]")
     hom_alt.emplace(true_haplotype);
     hom_alt.emplace(true_haplotype);
     
-    cout << "hom_ref = " << a_read_model.log_probability(reads.cbegin(), reads.cend(), hom_ref, 0) << endl;
-    cout << "het_alt = " << a_read_model.log_probability(reads.cbegin(), reads.cend(), het_alt, 0) << endl;
-    cout << "hom_alt = " << a_read_model.log_probability(reads.cbegin(), reads.cend(), hom_alt, 0) << endl;
+//    cout << "hom_ref = " << a_read_model.log_probability(reads.cbegin(), reads.cend(), hom_ref, 0) << endl;
+//    cout << "het_alt = " << a_read_model.log_probability(reads.cbegin(), reads.cend(), het_alt, 0) << endl;
+//    cout << "hom_alt = " << a_read_model.log_probability(reads.cbegin(), reads.cend(), hom_alt, 0) << endl;
 }
 
 TEST_CASE("ReadModel works on haploid genomes", "[read_model]")

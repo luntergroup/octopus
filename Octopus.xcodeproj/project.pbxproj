@@ -307,6 +307,7 @@
 				CAFA19671ABF84BE00F953D9 /* standard_genotype_model_tests.cpp */,
 				D42061121ACC3D2B00D11553 /* variational_bayes_genotype_model_tests.cpp */,
 				CA14727B1AACED6E005FDCD1 /* octopus_tests.cpp */,
+				D42F90121AE7945B0003F791 /* 1000G */,
 			);
 			path = test;
 			sourceTree = "<group>";
@@ -437,6 +438,13 @@
 				CAFA195F1ABF6F2D00F953D9 /* standard_genotype_model.cpp */,
 			);
 			name = core;
+			sourceTree = "<group>";
+		};
+		D42F90121AE7945B0003F791 /* 1000G */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = 1000G;
 			sourceTree = "<group>";
 		};
 		D48C00B81AAA0F5300E76FC8 /* reads */ = {

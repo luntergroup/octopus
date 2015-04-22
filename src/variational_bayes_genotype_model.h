@@ -91,7 +91,7 @@ private:
     ReadModel& read_model_;
     RealType zero_epsilon_;
     
-    unsigned pseudo_count_sum(const HaplotypePseudoCounts& haplotype_pseudo_counts) const;
+    RealType sum(const HaplotypePseudoCounts& haplotype_pseudo_counts) const noexcept;
     
     // These are just for optimisation
     RealType log_expected_genotype_probability_haploid(const Genotype& genotype,
