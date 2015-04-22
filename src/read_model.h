@@ -10,6 +10,7 @@
 #define __Octopus__read_model__
 
 #include <vector>
+#include <string>
 #include <unordered_map>
 #include <cstddef> // std::size_t
 #include <boost/functional/hash.hpp> // boost::hash_combine
@@ -23,7 +24,7 @@ class ReadModel
 public:
     using RealType     = double;
     using ReadIterator = std::vector<AlignedRead>::const_iterator;
-    using SampleIdType = unsigned;
+    using SampleIdType = std::string;
     
     ReadModel() = delete;
     explicit ReadModel(unsigned ploidy, bool can_cache_reads = true);

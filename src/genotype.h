@@ -41,6 +41,7 @@ public:
     std::vector<Haplotype> get_unique_haplotypes() const;
     
     friend bool operator==(const Genotype& lhs, const Genotype& rhs);
+    
 private:
     std::vector<Haplotype> the_haplotypes_;
 };

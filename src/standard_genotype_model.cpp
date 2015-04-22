@@ -43,7 +43,7 @@ double StandardGenotypeModel::log_probability(const Genotype& genotype,
 // where php = sample_haplotype_log_probabilities
 double StandardGenotypeModel::log_probability(const SampleReads& reads, const Genotype& genotype,
                                       const HaplotypeLogProbabilities& sample_haplotype_log_probabilities,
-                                      unsigned sample)
+                                      SampleIdType sample)
 {
     return log_probability(genotype, sample_haplotype_log_probabilities) +
             read_model_.log_probability(reads.cbegin(), reads.cend(), genotype, sample);
@@ -51,7 +51,7 @@ double StandardGenotypeModel::log_probability(const SampleReads& reads, const Ge
 
 double StandardGenotypeModel::log_probability(const SampleReads& reads,
                                       const HaplotypeLogProbabilities& sample_haplotype_log_probabilities,
-                                      unsigned sample, const Genotypes& all_genotypes)
+                                      SampleIdType sample, const Genotypes& all_genotypes)
 {
     std::vector<double> genotype_log_probabilities {};
     genotype_log_probabilities.reserve(all_genotypes.size());
@@ -66,7 +66,7 @@ double StandardGenotypeModel::log_probability(const SampleReads& reads,
 
 double StandardGenotypeModel::genotype_posterior(const Genotype& genotype, const SampleReads& reads,
                                          const HaplotypeLogProbabilities& sample_haplotype_log_probabilities,
-                                         unsigned sample, const Genotypes& all_genotypes)
+                                         SampleIdType sample, const Genotypes& all_genotypes)
 {
     auto log_prior     = log_probability(genotype, sample_haplotype_log_probabilities);
     auto log_liklihood = read_model_.log_probability(reads.cbegin(), reads.cend(), genotype, sample);
@@ -143,26 +143,26 @@ void update_haplotype_probabilities(StandardGenotypeModel::Genotypes the_genotyp
                                     StandardGenotypeModel::HaplotypeLogProbabilities& haplotype_log_probabilities,
                                     const Reads& the_reads, StandardGenotypeModel the_model)
 {
-    const unsigned num_samples   = static_cast<unsigned>(the_reads.size());
-    const unsigned num_genotypes = static_cast<unsigned>(the_genotypes.size());
-    
-    std::vector<std::vector<double>> genotype_responsabilities {};
-    
-    genotype_responsabilities.reserve(num_samples);
-    
-    for (unsigned n {0}; n < num_samples; ++n) {
-    
-        std::vector<double> sample_genotypes_responsabilities {};
-        sample_genotypes_responsabilities.reserve(num_genotypes);
-        
-        for (const auto& genotype : the_genotypes) {
-            
-            sample_genotypes_responsabilities.push_back(the_model.genotype_posterior(genotype, the_reads.at(n),
-                                                                             haplotype_log_probabilities, n, the_genotypes));
-        }
-        
-        genotype_responsabilities.emplace_back(sample_genotypes_responsabilities);
-    }
-    
-    
+//    const unsigned num_samples   = static_cast<unsigned>(the_reads.size());
+//    const unsigned num_genotypes = static_cast<unsigned>(the_genotypes.size());
+//    
+//    std::vector<std::vector<double>> genotype_responsabilities {};
+//    
+//    genotype_responsabilities.reserve(num_samples);
+//    
+//    for (unsigned n {0}; n < num_samples; ++n) {
+//    
+//        std::vector<double> sample_genotypes_responsabilities {};
+//        sample_genotypes_responsabilities.reserve(num_genotypes);
+//        
+//        for (const auto& genotype : the_genotypes) {
+//            
+//            sample_genotypes_responsabilities.push_back(the_model.genotype_posterior(genotype, the_reads.at(n),
+//                                                                             haplotype_log_probabilities, n, the_genotypes));
+//        }
+//        
+//        genotype_responsabilities.emplace_back(sample_genotypes_responsabilities);
+//    }
+//    
+//    
 }

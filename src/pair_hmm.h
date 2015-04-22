@@ -152,7 +152,7 @@ T nuc_log_viterbi_local(const AlignedRead::SequenceType& sequence1,
             if (i > 1 && j > 1) {
                 current_column[j].match = ((sequence1[i - 2] == sequence2[j - 2]) ?
                                            std::log(1 - std::pow(10, -static_cast<T>(quals[j - 2]) / 10)) :
-                                           -ln_10_div_10 * quals[j - 2])
+                                           -ln_10_div_10 * quals[j - 2] - ln_3)
                         + std::max({
                             log_prob_continue_match + previous_column[j - 1].match,
                             log_prob_to_match       + previous_column[j - 1].insertion,

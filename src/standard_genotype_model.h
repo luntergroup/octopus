@@ -10,6 +10,7 @@
 #define __Octopus__standard_genotype_model__
 
 #include <vector>
+#include <string>
 #include <cstddef>
 #include <unordered_map>
 
@@ -28,6 +29,7 @@ public:
     using Genotypes   = std::vector<Genotype>;
     using SampleReads = std::vector<AlignedRead>;
     using HaplotypeLogProbabilities = std::unordered_map<Haplotype, double>;
+    using SampleIdType = std::string;
     
     StandardGenotypeModel() = delete;
     explicit StandardGenotypeModel(ReadModel& read_model, unsigned ploidy);
@@ -46,17 +48,17 @@ public:
     // ln p(reads, genotype | population_haplotype_log_probabilities)
     double log_probability(const SampleReads& reads, const Genotype& genotype,
                            const HaplotypeLogProbabilities& sample_haplotype_log_probabilities,
-                           unsigned sample);
+                           SampleIdType sample);
     
     // ln p(reads | population_haplotype_log_probabilities)
     double log_probability(const SampleReads& reads,
                            const HaplotypeLogProbabilities& sample_haplotype_log_probabilities,
-                           unsigned sample, const Genotypes& all_genotypes);
+                           SampleIdType sample, const Genotypes& all_genotypes);
     
     // p(genotype | reads, population_haplotype_log_probabilities)
     double genotype_posterior(const Genotype& genotype, const SampleReads& reads,
                               const HaplotypeLogProbabilities& sample_haplotype_log_probabilities,
-                              unsigned sample, const Genotypes& all_genotypes);
+                              SampleIdType sample, const Genotypes& all_genotypes);
     
 private:
     unsigned ploidy_;

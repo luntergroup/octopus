@@ -10,6 +10,7 @@
 #define __Octopus__variational_bayes_genotype_model__
 
 #include <vector>
+#include <string>
 #include <unordered_map>
 
 #include "haplotype.h"
@@ -27,7 +28,8 @@ public:
     using ReadIterator                   = ReadModel::ReadIterator;
     using HaplotypePseudoCounts          = std::unordered_map<Haplotype, RealType>;
     using SampleGenotypeResponsabilities = std::unordered_map<Genotype, RealType>;
-    using GenotypeResponsabilities       = std::vector<SampleGenotypeResponsabilities>;
+    using SampleIdType                   = std::string;
+    using GenotypeResponsabilities       = std::unordered_map<SampleIdType, SampleGenotypeResponsabilities>;
     
     VariationalBayesGenotypeModel() = delete;
     explicit VariationalBayesGenotypeModel(ReadModel& read_model, unsigned ploidy,
@@ -43,16 +45,16 @@ public:
                                                const HaplotypePseudoCounts& haplotype_pseudo_counts);
     
     RealType log_rho(const Genotype& genotype, const HaplotypePseudoCounts& haplotype_pseudo_counts,
-                     ReadIterator first, ReadIterator last, unsigned sample);
+                     ReadIterator first, ReadIterator last, SampleIdType sample);
     
     RealType genotype_responsability(const Genotype& genotype, ReadIterator first, ReadIterator last,
                                      const HaplotypePseudoCounts& haplotype_pseudo_counts,
-                                     unsigned sample, const Genotypes& all_genotypes);
+                                     const Genotypes& genotypes, SampleIdType sample);
     
     SampleGenotypeResponsabilities genotype_responsabilities(const Genotypes& genotypes, ReadIterator first,
                                                              ReadIterator last,
                                                              const HaplotypePseudoCounts& haplotype_pseudo_counts,
-                                                             unsigned sample);
+                                                             SampleIdType sample);
     
     RealType expected_haplotype_count(const Haplotype& haplotype,
                                       const SampleGenotypeResponsabilities& sample_genotype_responsabilities);
@@ -70,11 +72,11 @@ public:
                                               const HaplotypePseudoCounts& haplotype_pseudo_counts) const;
     
     RealType posterior_probability_haplotype_in_samples(const Haplotype& haplotype,
-                                                        const Genotypes& all_genotypes,
+                                                        const Genotypes& genotypes,
                                                         const HaplotypePseudoCounts& posterior_haplotype_pseudo_counts) const;
     
     RealType posterior_probability_haplotype_in_sample(const Haplotype& haplotype,
-                                                       const Genotypes& all_genotypes,
+                                                       const Genotypes& genotypes,
                                                        const SampleGenotypeResponsabilities& genotype_responsabilities) const;
     
     RealType posterior_probability_allele_in_samples(const Allele& the_allele,
@@ -107,8 +109,9 @@ private:
 using GenotypePosteriors = std::pair<VariationalBayesGenotypeModel::GenotypeResponsabilities,
                                     VariationalBayesGenotypeModel::HaplotypePseudoCounts>;
 
-using SamplesReads = std::vector<std::pair<VariationalBayesGenotypeModel::ReadIterator,
-                                            VariationalBayesGenotypeModel::ReadIterator>>;
+using SamplesReads = std::unordered_map<VariationalBayesGenotypeModel::SampleIdType,
+                                        std::pair<VariationalBayesGenotypeModel::ReadIterator,
+                                        VariationalBayesGenotypeModel::ReadIterator>>;
 
 GenotypePosteriors update_parameters(VariationalBayesGenotypeModel& the_model,
                                      const VariationalBayesGenotypeModel::Genotypes& the_genotypes,
