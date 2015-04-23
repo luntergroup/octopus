@@ -18,7 +18,7 @@
 #include "variant.h"
 #include "variant_utils.h"
 
-//TEST_CASE("variant_benchmark", "[benchmark]")
+//TEST_CASE("variant_benchmark", "[variant,benchmark]")
 //{
 //    ReferenceGenomeFactory a_factory {};
 //    ReferenceGenome human(a_factory.make(human_reference_fasta));

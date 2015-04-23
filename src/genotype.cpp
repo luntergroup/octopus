@@ -18,6 +18,11 @@ the_haplotypes_ {}
     the_haplotypes_.reserve(ploidy);
 }
 
+Genotype::Genotype(std::initializer_list<Haplotype> haplotypes)
+:
+the_haplotypes_ {haplotypes}
+{}
+
 const Haplotype& Genotype::at(unsigned n) const
 {
     return the_haplotypes_.at(n);
@@ -33,6 +38,26 @@ void Genotype::emplace(Haplotype&& haplotype)
 {
     the_haplotypes_.emplace_back(std::move(haplotype));
     std::inplace_merge(std::begin(the_haplotypes_), std::prev(std::end(the_haplotypes_)), std::end(the_haplotypes_));
+}
+
+Genotype::HaplotypeIterator Genotype::begin() const
+{
+    return the_haplotypes_.begin();
+}
+
+Genotype::HaplotypeIterator Genotype::end() const
+{
+    return the_haplotypes_.end();
+}
+
+Genotype::HaplotypeIterator Genotype::cbegin() const
+{
+    return the_haplotypes_.cbegin();
+}
+
+Genotype::HaplotypeIterator Genotype::cend() const
+{
+    return the_haplotypes_.cend();
 }
 
 bool Genotype::is_homozygous() const

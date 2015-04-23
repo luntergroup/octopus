@@ -51,16 +51,21 @@ public:
                                      const HaplotypePseudoCounts& haplotype_pseudo_counts,
                                      const Genotypes& genotypes, SampleIdType sample);
     
-    SampleGenotypeResponsabilities genotype_responsabilities(const Genotypes& genotypes, ReadIterator first,
-                                                             ReadIterator last,
+    SampleGenotypeResponsabilities genotype_responsabilities(const Genotypes& genotypes,
+                                                             ReadIterator first, ReadIterator last,
                                                              const HaplotypePseudoCounts& haplotype_pseudo_counts,
                                                              SampleIdType sample);
     
     RealType expected_haplotype_count(const Haplotype& haplotype,
-                                      const SampleGenotypeResponsabilities& sample_genotype_responsabilities);
+                                      const SampleGenotypeResponsabilities& sample_genotype_responsabilities) const;
     
     RealType posterior_haplotype_pseudo_count(const Haplotype& haplotype, RealType prior_pseudo_count,
-                                              const GenotypeResponsabilities& genotype_responsabilities);
+                                              const GenotypeResponsabilities& genotype_responsabilities) const;
+    
+    // This is just a slight optimisation of the other posterior_haplotype_pseudo_count
+    RealType posterior_haplotype_pseudo_count(const Haplotype& haplotype, RealType prior_pseudo_count,
+                                              const GenotypeResponsabilities& genotype_responsabilities,
+                                              const Genotypes& genotypes) const;
     
     RealType posterior_haplotype_probability(const Haplotype& haplotype,
                                              const HaplotypePseudoCounts& posterior_haplotype_pseudo_counts) const;

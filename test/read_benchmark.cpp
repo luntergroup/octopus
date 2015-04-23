@@ -18,7 +18,7 @@
 #include "read_manager.h"
 #include "aligned_read.h"
 
-//TEST_CASE("read_benchmark", "[benchmark]")
+//TEST_CASE("read_benchmark", "[read,benchmark]")
 //{
 //    HtslibReadFacade a_reader {human_1000g_bam1};
 //    
@@ -48,7 +48,7 @@
 
 //// Best time:
 //// 93 milliseconds (MacBook Pro)
-//TEST_CASE("reader_construct_destory_benchmark", "[benchmark]")
+//TEST_CASE("reader_construct_destory_benchmark", "[read,benchmark]")
 //{
 //    boost::filesystem::path the_path {human_1000g_bam};
 //    unsigned num_reference_contigs {};
@@ -63,7 +63,7 @@
 //    std::cout << "Read construct time: " << time << "ms" << std::endl;
 //}
 
-//TEST_CASE("aligned_read_copy_benchmark", "[benchmark]")
+//TEST_CASE("aligned_read_copy_benchmark", "[read,benchmark]")
 //{
 //    ReadFactory a_read_factory(std::vector<std::string> {human_1000g_bam});
 //    auto sample_ids = a_read_factory.get_sample_ids();

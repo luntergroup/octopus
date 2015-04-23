@@ -14,8 +14,11 @@
 #include <cmath>     // std::exp, std::log
 #include <numeric>   // std::accumulate
 #include <algorithm> // std::max, std::max_element
+
 #include <boost/math/special_functions/gamma.hpp>
 #include <boost/math/special_functions/factorials.hpp>
+#include <boost/math/special_functions/sign.hpp>
+#include <boost/math/special_functions/digamma.hpp>
 
 template <typename T>
 inline constexpr T exp_maclaurin(T x) {
@@ -124,6 +127,21 @@ template <typename RealType>
 RealType beta_binomial(RealType k, RealType n, RealType alpha, RealType beta)
 {
     return dirichlet_multinomial<RealType>(k, n - k, alpha, beta);
+}
+
+// Returns approximate y such that digamma(y) = x
+template <typename RealType>
+RealType digamma_inv(RealType x)
+{
+    RealType l {1.0};
+    auto y = std::exp(x);
+    
+    while (l > 10e-8) {
+        y += boost::math::sign(x - boost::math::digamma<RealType>(y));
+        l /= 2;
+    }
+    
+    return y;
 }
 
 #endif /* defined(__Octopus__maths__) */

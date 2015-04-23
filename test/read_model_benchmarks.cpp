@@ -48,15 +48,15 @@
 //    
 //    auto genotypes = get_all_genotypes(haplotypes, ploidy);
 //    
-//    auto f_genotype_prob = [&read_model, &reads, &genotypes] () {
-//        read_model.log_probability(reads.cbegin(), reads.cend(), genotypes[0], 0);
+//    auto f_genotype_prob = [&sample_id, &read_model, &reads, &genotypes] () {
+//        read_model.log_probability(reads.cbegin(), reads.cend(), genotypes[0], sample_id);
 //    };
 //    
 //    auto time = benchmark<std::chrono::microseconds>(f_genotype_prob, 1).count();
 //    
-//    std::cout << time << std::endl;
+//    std::cout << "time to align haplotype not in cache " << time << std::endl;
 //    
 //    time = benchmark<std::chrono::microseconds>(f_genotype_prob, 1000).count();
 //    
-//    std::cout << time << std::endl;
+//    std::cout << "time to align haplotype in cache " << time << std::endl;
 //}

@@ -12,8 +12,9 @@
 #include <vector>
 #include <unordered_map>
 #include <ostream>
-#include <iterator>
-#include <boost/functional/hash.hpp> // boost::hash_combine
+#include <iterator> // std::cbegin etc
+#include <initializer_list>
+#include <boost/functional/hash.hpp> // boost::hash_range
 
 #include "haplotype.h"
 #include "equitable.h"
@@ -21,8 +22,11 @@
 class Genotype : public Equitable<Genotype>
 {
 public:
-    Genotype()  = default;
+    using HaplotypeIterator = std::vector<Haplotype>::const_iterator;
+    
+    Genotype() = default;
     Genotype(unsigned ploidy);
+    Genotype(std::initializer_list<Haplotype> haplotypes);
     ~Genotype() = default;
     
     Genotype(const Genotype&)            = default;
@@ -33,6 +37,11 @@ public:
     const Haplotype& at(unsigned n) const;
     void emplace(const Haplotype& haplotype);
     void emplace(Haplotype&& haplotype);
+    
+    HaplotypeIterator begin() const;
+    HaplotypeIterator end() const;
+    HaplotypeIterator cbegin() const;
+    HaplotypeIterator cend() const;
     
     unsigned ploidy() const noexcept;
     bool contains(const Haplotype& a_haplotype) const;
@@ -51,15 +60,9 @@ bool operator==(const Genotype& lhs, const Genotype& rhs);
 namespace std {
     template <> struct hash<Genotype>
     {
-        size_t operator()(const Genotype& g) const
+        size_t operator()(const Genotype& genotype) const
         {
-            size_t seed {};
-            
-            for (unsigned i {}; i < g.ploidy(); ++i) {
-                boost::hash_combine(seed, hash<Haplotype>()(g.at(i)));
-            }
-            
-            return seed;
+            return boost::hash_range(std::cbegin(genotype), std::cend(genotype));
         }
     };
 }

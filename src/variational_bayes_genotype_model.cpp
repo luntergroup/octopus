@@ -100,7 +100,7 @@ VariationalBayesGenotypeModel::genotype_responsabilities(const Genotypes& genoty
 
 VariationalBayesGenotypeModel::RealType
 VariationalBayesGenotypeModel::expected_haplotype_count(const Haplotype& haplotype,
-                                                        const SampleGenotypeResponsabilities& sample_genotype_responsabilities)
+                                                        const SampleGenotypeResponsabilities& sample_genotype_responsabilities) const
 {
     RealType result {0};
     
@@ -114,12 +114,39 @@ VariationalBayesGenotypeModel::expected_haplotype_count(const Haplotype& haploty
 VariationalBayesGenotypeModel::RealType
 VariationalBayesGenotypeModel::posterior_haplotype_pseudo_count(const Haplotype& haplotype,
                                                                 RealType prior_pseudo_count,
-                                                                const GenotypeResponsabilities& genotype_responsabilities)
+                                                                const GenotypeResponsabilities& genotype_responsabilities) const
 {
     RealType result {prior_pseudo_count};
     
     for (const auto& sample_genotype_responsabilities : genotype_responsabilities) {
         result += expected_haplotype_count(haplotype, sample_genotype_responsabilities.second);
+    }
+    
+    return result;
+}
+
+VariationalBayesGenotypeModel::RealType
+VariationalBayesGenotypeModel::posterior_haplotype_pseudo_count(const Haplotype& haplotype,
+                                                                RealType prior_pseudo_count,
+                                                                const GenotypeResponsabilities& genotype_responsabilities,
+                                                                const Genotypes& genotypes) const
+{
+    RealType result {prior_pseudo_count};
+    
+    unsigned num_occurences {};
+    RealType responsability_sum {};
+    
+    for (const auto& genotype : genotypes) {
+        num_occurences = genotype.num_occurences(haplotype);
+        
+        if (num_occurences > 0) {
+            for (const auto& sample_genotype_responsabilities : genotype_responsabilities) {
+                responsability_sum += sample_genotype_responsabilities.second.at(genotype);
+            }
+            
+            result += num_occurences * responsability_sum;
+            responsability_sum = 0;
+        }
     }
     
     return result;
@@ -293,9 +320,7 @@ GenotypePosteriors update_parameters(VariationalBayesGenotypeModel& the_model,
                                      const VariationalBayesGenotypeModel::HaplotypePseudoCounts& prior_haplotype_pseudocounts,
                                      const SamplesReads& the_reads, unsigned max_num_iterations)
 {
-    unsigned num_samples {static_cast<unsigned>(the_reads.size())};
-    
-    VariationalBayesGenotypeModel::GenotypeResponsabilities responsabilities(num_samples);
+    VariationalBayesGenotypeModel::GenotypeResponsabilities responsabilities(the_reads.size());
     VariationalBayesGenotypeModel::HaplotypePseudoCounts posterior_pseudo_counts {prior_haplotype_pseudocounts};
     
     for (unsigned i {}; i < max_num_iterations; ++i) {
@@ -303,14 +328,15 @@ GenotypePosteriors update_parameters(VariationalBayesGenotypeModel& the_model,
             responsabilities[sample.first] = the_model.genotype_responsabilities(the_genotypes,
                                                                                  sample.second.first,
                                                                                  sample.second.second,
-                                                                                 posterior_pseudo_counts, sample.first);
+                                                                                 posterior_pseudo_counts,
+                                                                                 sample.first);
         }
         
-        for (const auto& haplotype_prior_pair : prior_haplotype_pseudocounts) {
-            const auto& haplotype = haplotype_prior_pair.first;
-            posterior_pseudo_counts[haplotype] = the_model.posterior_haplotype_pseudo_count(haplotype,
-                                                                                            haplotype_prior_pair.second,
-                                                                                            responsabilities);
+        for (const auto& haplotype_prior : prior_haplotype_pseudocounts) {
+            posterior_pseudo_counts[haplotype_prior.first] = the_model.posterior_haplotype_pseudo_count(haplotype_prior.first,
+                                                                                                        haplotype_prior.second,
+                                                                                                        responsabilities,
+                                                                                                        the_genotypes);
         }
     }
     

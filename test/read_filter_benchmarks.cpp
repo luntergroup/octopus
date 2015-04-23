@@ -20,7 +20,7 @@
 #include "read_filter.h"
 #include "read_filters.h"
 
-//TEST_CASE("read_filter_benchmarks", "[benchmarks]")
+//TEST_CASE("read_filter_benchmarks", "[read_filter,benchmarks]")
 //{
 //    ReadManager a_read_manager(std::vector<std::string> {human_1000g_bam});
 //    

@@ -19,7 +19,7 @@
 #include "reference_genome_factory.h"
 #include "bioio.h"
 
-TEST_CASE("reference_benchmark", "[benchmark]")
+TEST_CASE("reference_benchmark", "[reference,benchmark]")
 {
     std::ifstream fasta(human_reference_fasta);
     auto index = bioio::read_fasta_index(human_reference_fasta_index)["5"];

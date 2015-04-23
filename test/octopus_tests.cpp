@@ -96,13 +96,6 @@ using std::endl;
 //    //auto a_region = parse_region("16:9300000-9300100", human);
 //    //auto a_region = parse_region("16:9299900-9300038", human);
 //    
-//    //auto a_region = parse_region("16:9297500-9297555", human);
-//    //auto a_region = parse_region("2:142376817-142376922", human);
-//    //auto a_region = parse_region("5:57167582-57167700", human);
-//    //auto a_region = parse_region("5:143166825-143166875", human);
-//    auto a_region = parse_region("11:67503118-67503253", human); // Platypus wrong. we good
-//    //auto a_region = parse_region("13:31366400-31366500", human);
-//    
 //    auto samples = a_read_manager.get_sample_ids();
 //    
 //    using ReadIterator = std::vector<AlignedRead>::const_iterator;

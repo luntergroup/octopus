@@ -25,7 +25,7 @@
 #include "allele.h"
 #include "haplotype_tree.h"
 
-//TEST_CASE("haplotype hashing benchmark", "[haplotype]")
+//TEST_CASE("haplotype hashing benchmark", "[haplotype,benchmark]")
 //{
 //    ReferenceGenomeFactory a_factory {};
 //    ReferenceGenome human {a_factory.make(human_reference_fasta)};
@@ -43,7 +43,7 @@
 //    std::cout << "hash_time: " << hash_time << "ns" << std::endl;
 //}
 
-//TEST_CASE("haplotype containment benchmarks", "[haplotype]")
+//TEST_CASE("haplotype containment benchmarks", "[haplotype,benchmark]")
 //{
 //    ReferenceGenomeFactory a_factory {};
 //    ReferenceGenome human {a_factory.make(human_reference_fasta)};
