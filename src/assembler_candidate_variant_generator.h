@@ -12,7 +12,7 @@
 #include <vector>
 #include <cstddef> // std::size_t
 
-#include "i_variant_candidate_generator.h"
+#include "i_candidate_variant_generator.h"
 #include "variant_assembler.h"
 
 class ReferenceGenome;
@@ -20,7 +20,7 @@ class AlignedRead;
 class GenomicRegion;
 class Variant;
 
-class AssemblerCandidateVariantGenerator : public IVariantCandidateGenerator
+class AssemblerCandidateVariantGenerator : public ICandidateVariantGenerator
 {
 public:
     AssemblerCandidateVariantGenerator() = delete;

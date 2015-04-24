@@ -1,13 +1,13 @@
 //
-//  variant_candidate_generator.h
+//  candidate_variant_generator.h
 //  Octopus
 //
 //  Created by Daniel Cooke on 28/02/2015.
 //  Copyright (c) 2015 Oxford University. All rights reserved.
 //
 
-#ifndef __Octopus__variant_candidate_generator__
-#define __Octopus__variant_candidate_generator__
+#ifndef __Octopus__candidate_variant_generator__
+#define __Octopus__candidate_variant_generator__
 
 #include <vector>
 #include <memory>    // std::unique_ptr
@@ -16,25 +16,25 @@
 #include <cstddef>   // std::size_t
 #include <numeric>   // std::accumulate
 
-#include "i_variant_candidate_generator.h"
+#include "i_candidate_variant_generator.h"
 #include "reference_genome.h"
 #include "genomic_region.h"
 #include "aligned_read.h"
 #include "variant.h"
 #include "variant_utils.h"
 
-class VariantCandidateGenerator : public IVariantCandidateGenerator
+class CandidateVariantGenerator : public ICandidateVariantGenerator
 {
 public:
-    VariantCandidateGenerator()           = default;
-    ~VariantCandidateGenerator() override = default;
+    CandidateVariantGenerator()           = default;
+    ~CandidateVariantGenerator() override = default;
     
-    VariantCandidateGenerator(const VariantCandidateGenerator&)            = default;
-    VariantCandidateGenerator& operator=(const VariantCandidateGenerator&) = default;
-    VariantCandidateGenerator(VariantCandidateGenerator&&)                 = default;
-    VariantCandidateGenerator& operator=(VariantCandidateGenerator&&)      = default;
+    CandidateVariantGenerator(const CandidateVariantGenerator&)            = default;
+    CandidateVariantGenerator& operator=(const CandidateVariantGenerator&) = default;
+    CandidateVariantGenerator(CandidateVariantGenerator&&)                 = default;
+    CandidateVariantGenerator& operator=(CandidateVariantGenerator&&)      = default;
     
-    void register_generator(std::unique_ptr<IVariantCandidateGenerator> generator);
+    void register_generator(std::unique_ptr<ICandidateVariantGenerator> generator);
     void add_read(const AlignedRead& a_read) override;
     void add_reads(ReadIterator first, ReadIterator last) override;
     std::vector<Variant> get_candidates(const GenomicRegion& a_region) override;
@@ -42,29 +42,29 @@ public:
     void clear() override;
     
 private:
-    std::vector<std::unique_ptr<IVariantCandidateGenerator>> generator_list_;
+    std::vector<std::unique_ptr<ICandidateVariantGenerator>> generator_list_;
 };
 
-inline void VariantCandidateGenerator::register_generator(std::unique_ptr<IVariantCandidateGenerator> generator)
+inline void CandidateVariantGenerator::register_generator(std::unique_ptr<ICandidateVariantGenerator> generator)
 {
     generator_list_.emplace_back(std::move(generator));
 }
 
-inline void VariantCandidateGenerator::add_read(const AlignedRead& a_read)
+inline void CandidateVariantGenerator::add_read(const AlignedRead& a_read)
 {
     for (auto& generator : generator_list_) {
         generator->add_read(a_read);
     }
 }
 
-inline void VariantCandidateGenerator::add_reads(ReadIterator first, ReadIterator last)
+inline void CandidateVariantGenerator::add_reads(ReadIterator first, ReadIterator last)
 {
     for (auto& generator : generator_list_) {
         generator->add_reads(first, last);
     }
 }
 
-inline std::vector<Variant> VariantCandidateGenerator::get_candidates(const GenomicRegion& a_region)
+inline std::vector<Variant> CandidateVariantGenerator::get_candidates(const GenomicRegion& a_region)
 {
     std::vector<Variant> result {};
     
@@ -81,14 +81,14 @@ inline std::vector<Variant> VariantCandidateGenerator::get_candidates(const Geno
     return result;
 }
 
-inline void VariantCandidateGenerator::reserve(std::size_t n)
+inline void CandidateVariantGenerator::reserve(std::size_t n)
 {
     for (auto& generator : generator_list_) {
         generator->reserve(n);
     }
 }
 
-inline void VariantCandidateGenerator::clear()
+inline void CandidateVariantGenerator::clear()
 {
     for (auto& generator : generator_list_) {
         generator->clear();

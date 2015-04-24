@@ -52,6 +52,7 @@ std::pair<po::variables_map, bool> parse_options(int argc, char** argv)
         candidates.add_options()
         ("candidates-from-alignments", po::value<bool>()->default_value(true), "generate candidate variants from the aligned reads")
         ("candidates-from-assembler", po::value<bool>()->default_value(true), "generate candidate variants with the assembler")
+        ("min-base-quality", po::value<unsigned>()->default_value(15), "only base changes with quality above this value are considered for snp generation")
         ("k", po::value<unsigned>()->default_value(15), "k-mer size to use")
         ("no-cycles", po::value<bool>()->default_value(false), "dissalow cycles in assembly graph")
         ;
@@ -59,7 +60,7 @@ std::pair<po::variables_map, bool> parse_options(int argc, char** argv)
         po::options_description model("Model options");
         model.add_options()
         ("ploidy", po::value<unsigned>()->default_value(2), "the organism ploidy")
-        ("snp-prior", po::value<double>()->default_value(0.003), "the prior probability of a SNP")
+        ("snp-prior", po::value<double>()->default_value(0.003), "the prior probability of a snp")
         ("insertion-prior", po::value<double>()->default_value(0.003), "the prior probability of an insertion into the reference")
         ("deletion-prior", po::value<double>()->default_value(0.003), "the prior probability of a deletion from the reference")
         ;

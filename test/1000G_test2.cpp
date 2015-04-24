@@ -1,41 +1,41 @@
-////
-////  1000G_test2.cpp
-////  Octopus
-////
-////  Created by Daniel Cooke on 23/04/2015.
-////  Copyright (c) 2015 Oxford University. All rights reserved.
-////
 //
-//#include "catch.hpp"
+//  1000G_test2.cpp
+//  Octopus
 //
-//#include <iostream>
-//#include <string>
-//#include <cstddef>
-//#include <vector>
-//#include <unordered_map>
+//  Created by Daniel Cooke on 23/04/2015.
+//  Copyright (c) 2015 Oxford University. All rights reserved.
 //
-//#include "test_common.h"
-//#include "test_utils.h"
-//#include "reference_genome.h"
-//#include "reference_genome_factory.h"
-//#include "read_manager.h"
-//#include "allele.h"
-//#include "variant.h"
-//#include "variant_utils.h"
-//#include "variant_candidate_generator.h"
-//#include "alignment_candidate_variant_generator.h"
-//#include "haplotype.h"
-//#include "genotype.h"
-//#include "read_model.h"
-//#include "variational_bayes_genotype_model.h"
-//#include "maths.h"
-//#include "read_filter.h"
-//#include "read_filters.h"
-//#include "haplotype_tree.h"
-//
-//using std::cout;
-//using std::endl;
-//
+
+#include "catch.hpp"
+
+#include <iostream>
+#include <string>
+#include <cstddef>
+#include <vector>
+#include <unordered_map>
+
+#include "test_common.h"
+#include "test_utils.h"
+#include "reference_genome.h"
+#include "reference_genome_factory.h"
+#include "read_manager.h"
+#include "allele.h"
+#include "variant.h"
+#include "variant_utils.h"
+#include "candidate_variant_generator.h"
+#include "alignment_candidate_variant_generator.h"
+#include "haplotype.h"
+#include "genotype.h"
+#include "read_model.h"
+#include "variational_bayes_genotype_model.h"
+#include "maths.h"
+#include "read_filter.h"
+#include "read_filters.h"
+#include "haplotype_tree.h"
+
+using std::cout;
+using std::endl;
+
 //TEST_CASE("1000G test 2: 11:27282193-27282290", "[validation]")
 //{
 //    ReferenceGenomeFactory a_factory {};
@@ -53,7 +53,7 @@
 //    
 //    auto reads = a_read_manager.fetch_reads(samples, a_region);
 //    
-//    VariantCandidateGenerator candidate_generator {};
+//    CandidateVariantGenerator candidate_generator {};
 //    candidate_generator.register_generator(std::make_unique<AlignmentCandidateVariantGenerator>(human, 0));
 //    
 //    for (const auto& sample_reads : reads) {
@@ -114,7 +114,7 @@
 //    VariationalBayesGenotypeModel::HaplotypePseudoCounts pseudo_counts {};
 //    
 //    for (const auto& haplotype : haplotypes) {
-//        pseudo_counts[haplotype] = 0.025319;//0.03015;
+//        pseudo_counts[haplotype] = 0.025319;
 //    }
 //    
 //    pseudo_counts[reference_haplotype] = 1.46;

@@ -18,7 +18,7 @@
 #include "read_manager.h"
 #include "variant.h"
 #include "variant_utils.h"
-#include "variant_candidate_generator.h"
+#include "candidate_variant_generator.h"
 #include "alignment_candidate_variant_generator.h"
 #include "haplotype.h"
 #include "genotype.h"

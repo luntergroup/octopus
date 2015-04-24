@@ -33,7 +33,7 @@
 #include "read_transformations.h"
 #include "allele.h"
 #include "variant.h"
-#include "variant_candidate_generator.h"
+#include "candidate_variant_generator.h"
 #include "variant_utils.h"
 #include "alignment_candidate_variant_generator.h"
 #include "assembler_candidate_variant_generator.h"
@@ -64,7 +64,7 @@ using std::endl;
 //    
 //    auto reads = a_read_manager.fetch_reads(samples, a_region);
 //    
-//    VariantCandidateGenerator candidate_generator {};
+//    CandidateVariantGenerator candidate_generator {};
 //    candidate_generator.register_generator(std::make_unique<AlignmentCandidateVariantGenerator>(human, 0));
 //    
 //    for (auto& sample_reads : reads) {
@@ -249,7 +249,7 @@ using std::endl;
 //    a_read_transform.register_transform(trim_soft_clipped);
 //    
 //    unsigned kmer_size {15};
-//    VariantCandidateGenerator candidate_generator {};
+//    CandidateVariantGenerator candidate_generator {};
 //    candidate_generator.register_generator(
 //            std::make_unique<AlignmentCandidateVariantGenerator>(human));
 ////    candidate_generator.register_generator(

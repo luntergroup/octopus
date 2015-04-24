@@ -12,7 +12,7 @@
 #include <list>
 
 #include "reference_genome.h"
-#include "variant_candidate_generator.h"
+#include "candidate_variant_generator.h"
 
 using std::cbegin;
 using std::cend;

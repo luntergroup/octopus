@@ -22,7 +22,7 @@
 #include "allele.h"
 #include "variant.h"
 #include "variant_utils.h"
-#include "variant_candidate_generator.h"
+#include "candidate_variant_generator.h"
 #include "alignment_candidate_variant_generator.h"
 #include "haplotype.h"
 #include "genotype.h"
@@ -45,7 +45,7 @@ using std::endl;
 //
 //    ReadManager a_read_manager(std::vector<std::string> {human_1000g_bam1, human_1000g_bam2});
 //
-//    VariantCandidateGenerator candidate_generator {};
+//    CandidateVariantGenerator candidate_generator {};
 //    candidate_generator.register_generator(std::make_unique<AlignmentCandidateVariantGenerator>(human, 0));
 //
 //    auto a_region = parse_region("2:104142870-104142884", human);

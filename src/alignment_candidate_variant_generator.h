@@ -12,19 +12,21 @@
 #include <vector>
 #include <cstddef> // std::size_t
 
-#include "i_variant_candidate_generator.h"
+#include "i_candidate_variant_generator.h"
 #include "aligned_read.h"
 
 class ReferenceGenome;
 class GenomicRegion;
 class Variant;
 
-class AlignmentCandidateVariantGenerator : public IVariantCandidateGenerator
+class AlignmentCandidateVariantGenerator : public ICandidateVariantGenerator
 {
 public:
+    using QualityType = AlignedRead::QualityType;
+    
     AlignmentCandidateVariantGenerator() = delete;
     explicit AlignmentCandidateVariantGenerator(ReferenceGenome& the_reference,
-                                                double generator_confidence);
+                                                QualityType min_base_quality);
     ~AlignmentCandidateVariantGenerator() override = default;
     
     AlignmentCandidateVariantGenerator(const AlignmentCandidateVariantGenerator&)            = default;
@@ -41,7 +43,7 @@ public:
 private:
     ReferenceGenome& the_reference_;
     std::vector<Variant> candidates_;
-    double generator_confidence_;
+    QualityType min_base_quality_;
     bool are_candidates_sorted_;
     
     bool is_good_sequence(const std::string& sequence) const noexcept;

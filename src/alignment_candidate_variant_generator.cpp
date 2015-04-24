@@ -19,11 +19,11 @@
 #include "region_utils.h"
 
 AlignmentCandidateVariantGenerator::AlignmentCandidateVariantGenerator(ReferenceGenome& the_reference,
-                                                                       double generator_confidence)
+                                                                       QualityType min_base_quality)
 :
 the_reference_ {the_reference},
 candidates_ {},
-generator_confidence_ {generator_confidence},
+min_base_quality_ {min_base_quality},
 are_candidates_sorted_ {true}
 {}
 

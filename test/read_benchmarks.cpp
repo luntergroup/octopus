@@ -1,5 +1,5 @@
 //
-//  read_benchmark.cpp
+//  read_benchmarks.cpp
 //  Octopus
 //
 //  Created by Daniel Cooke on 14/02/2015.

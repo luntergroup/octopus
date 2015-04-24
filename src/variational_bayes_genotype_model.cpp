@@ -9,7 +9,7 @@
 #include "variational_bayes_genotype_model.h"
 
 #include <cmath>      // std::exp, std::log
-#include <algorithm>  // std::transform, std::copy_if, std::any_of
+#include <algorithm>  // std::transform, std::copy_if, std::any_of, std::binary_search
 #include <functional> // std::reference_wrapper
 #include <boost/math/special_functions/digamma.hpp>
 
@@ -239,6 +239,7 @@ VariationalBayesGenotypeModel::posterior_probability_allele_in_samples(const All
     return result;
 }
 
+// It is required that haplotypes is sorted
 VariationalBayesGenotypeModel::RealType
 VariationalBayesGenotypeModel::posterior_probability_allele_in_sample(const Allele& the_allele,
                                                                       const Haplotypes& haplotypes,
@@ -255,8 +256,9 @@ VariationalBayesGenotypeModel::posterior_probability_allele_in_sample(const Alle
     
     for (const auto& genotype : genotypes) {
         if (sample_genotype_responsabilities.at(genotype) >= zero_epsilon_ &&
-            std::any_of(containing_haplotypes.cbegin(), containing_haplotypes.cend(),
-                        [&genotype] (const auto& haplotype) { return genotype.contains(haplotype); })) {
+            std::any_of(std::cbegin(genotype), std::cend(genotype), [&containing_haplotypes] (const auto& haplotype) {
+                return std::binary_search(containing_haplotypes.cbegin(), containing_haplotypes.cend(), haplotype);
+            })) {
                 result += sample_genotype_responsabilities.at(genotype);
         }
     }

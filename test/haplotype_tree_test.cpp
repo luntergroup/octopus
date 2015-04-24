@@ -20,7 +20,7 @@
 #include "reference_genome_factory.h"
 #include "read_manager.h"
 #include "variant.h"
-#include "variant_candidate_generator.h"
+#include "candidate_variant_generator.h"
 #include "alignment_candidate_variant_generator.h"
 #include "haplotype.h"
 #include "haplotype_tree.h"
@@ -400,7 +400,7 @@ TEST_CASE("haplotype tree survives serious pruning", "[haplotype_tree]")
     
     ReadManager a_read_manager(std::vector<std::string> {human_1000g_bam1});
     
-    VariantCandidateGenerator candidate_generator {};
+    CandidateVariantGenerator candidate_generator {};
     
     candidate_generator.register_generator(std::make_unique<AlignmentCandidateVariantGenerator>(human, 0));
     
@@ -468,7 +468,7 @@ TEST_CASE("prune_unqiue leaves a single haplotype which contains the same allele
     
     ReadManager a_read_manager(std::vector<std::string> {human_1000g_bam1});
     
-    VariantCandidateGenerator candidate_generator {};
+    CandidateVariantGenerator candidate_generator {};
     
     candidate_generator.register_generator(std::make_unique<AlignmentCandidateVariantGenerator>(human, 0));
     

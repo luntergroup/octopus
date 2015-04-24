@@ -11,12 +11,12 @@
 
 #include <cstddef> // std::size_t
 
-#include "i_variant_candidate_generator.h"
+#include "i_candidate_variant_generator.h"
 #include "variant_file.h"
 
 class GenomicRegion;
 
-class ExternalVariantCandidates : public IVariantCandidateGenerator
+class ExternalVariantCandidates : public ICandidateVariantGenerator
 {
 public:
     ExternalVariantCandidates() = delete;
