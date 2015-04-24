@@ -41,7 +41,7 @@ using std::endl;
 //    ReferenceGenomeFactory a_factory {};
 //    ReferenceGenome human {a_factory.make(human_reference_fasta)};
 //    
-//    ReadManager a_read_manager {std::vector<std::string> {human_1000g_bam1}};
+//    ReadManager a_read_manager {std::vector<std::string> {human_1000g_bam1, human_1000g_bam2, human_1000g_bam3}};
 //    
 //    auto a_region = parse_region("11:67503118-67503253", human);
 //    
@@ -54,7 +54,7 @@ using std::endl;
 //    auto reads = a_read_manager.fetch_reads(samples, a_region);
 //    
 //    CandidateVariantGenerator candidate_generator {};
-//    candidate_generator.register_generator(std::make_unique<AlignmentCandidateVariantGenerator>(human, 0));
+//    candidate_generator.register_generator(std::make_unique<AlignmentCandidateVariantGenerator>(human, 10));
 //    
 //    for (const auto& sample_reads : reads) {
 //        candidate_generator.add_reads(sample_reads.second.cbegin(), sample_reads.second.cend());
@@ -110,10 +110,10 @@ using std::endl;
 //    
 //    VariationalBayesGenotypeModel::HaplotypePseudoCounts pseudo_counts {};
 //    for (const auto& haplotype : haplotypes) {
-//        pseudo_counts[haplotype] = 0.067;
+//        pseudo_counts[haplotype] = 0.06;
 //    }
 //    
-//    pseudo_counts[reference_haplotype] = 48.0;
+//    pseudo_counts[reference_haplotype] = 10.0;
 //    
 //    SamplesReads the_reads {};
 //    for (const auto& sample_reads : reads) {

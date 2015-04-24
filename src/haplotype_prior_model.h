@@ -10,25 +10,23 @@
 #define __Octopus__haplotype_prior_model__
 
 #include <vector>
-#include <algorithm> // std::transform, std::for_each
-#include <numeric>   // std::accumulate
 
 #include "allele.h"
 #include "variant.h"
 #include "haplotype.h"
 #include "maths.h"
 
-//template <typename RealType>
-//RealType get_haplotype_prior_probability(const Haplotype& the_haplotype,
-//                                         const std::vector<Variant>& possible_variants)
-//{
-//    RealType result {1};
-//    
-//    for (const auto& variant : possible_variants) {
-//        if (the_haplotype.contains(variant)) result *= variant.get_segregation_probability();
-//    }
-//    
-//    return result;
-//}
+template <typename RealType>
+RealType get_haplotype_prior_probability(const Haplotype& the_haplotype,
+                                         const std::vector<Variant>& possible_variants)
+{
+    RealType result {1};
+    
+    for (const auto& variant : possible_variants) {
+        if (the_haplotype.contains(variant)) result *= variant.get_segregation_probability();
+    }
+    
+    return result;
+}
 
 #endif /* defined(__Octopus__haplotype_prior_model__) */

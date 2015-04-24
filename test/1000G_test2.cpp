@@ -114,12 +114,12 @@ using std::endl;
 //    VariationalBayesGenotypeModel::HaplotypePseudoCounts pseudo_counts {};
 //    
 //    for (const auto& haplotype : haplotypes) {
-//        pseudo_counts[haplotype] = 0.025319;
+//        pseudo_counts[haplotype] = 0.022;
 //    }
 //    
-//    pseudo_counts[reference_haplotype] = 1.46;
-//    pseudo_counts[true_haplotype]      = 0.13112;
-//    pseudo_counts[false_haplotype3]    = 0.13112;
+//    pseudo_counts[reference_haplotype] = 10.0;
+//    pseudo_counts[true_haplotype]      = 0.14;
+//    pseudo_counts[false_haplotype3]    = 0.14;
 //    
 //    unsigned ploidy {2};
 //    

@@ -66,7 +66,7 @@ ReadModel::RealType ReadModel::log_probability(const AlignedRead& read, const Ha
         r2.end_probability = 1.0 / (size(get_right_overhang(covered_region, overlapped_region)) + 1);
     } else {
         r1.end_probability = 1.0 / (std::max(size(read), size(haplotype)) + 1);
-        m.end_probability  = 0.99;
+        m.end_probability  = m_end_max;
         r2.end_probability = 0.99;
     }
     
