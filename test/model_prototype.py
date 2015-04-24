@@ -33,13 +33,13 @@ def three_hap_posteriors(alpha1, alpha2, alpha3, ll_11, ll_12, ll_13, ll_22, ll_
     post_33 = exp(log_33 - norm)
     return (post_11, post_12, post_13, post_22, post_23, post_33)
 
-sign = lambda x: math.copysign(1, x)
+sign = lambda x: copysign(1, x)
 
 def idigamma(x):
     l = 1.0
     y = exp(x)
     while l > 10e-8:
-        y += sign(x - digamma(y))
+        y += l * sign(x - digamma(y))
         l /= 2
     return y
 

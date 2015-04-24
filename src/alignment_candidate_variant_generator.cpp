@@ -27,13 +27,17 @@ min_base_quality_ {min_base_quality},
 are_candidates_sorted_ {true}
 {}
 
-void AlignmentCandidateVariantGenerator::add_read(const AlignedRead &a_read)
+void AlignmentCandidateVariantGenerator::add_read(const AlignedRead& a_read)
 {
-    auto ref_index = get_begin(a_read);
-    AlignedRead::SizeType read_index {0};
-    CigarOperation::SizeType op_size {};
-    const auto& contig_name = get_contig_name(a_read);
+    const auto& contig_name       = get_contig_name(a_read);
     const auto& the_read_sequence = a_read.get_sequence();
+    const auto& the_qualities     = a_read.get_qualities();
+    
+    auto sequence_begin  = std::cbegin(the_read_sequence);
+    auto qualities_begin = std::cbegin(the_qualities);
+    auto ref_index       = get_begin(a_read);
+    AlignedRead::SizeType read_index {};
+    CigarOperation::SizeType op_size {};
     GenomicRegion a_region {};
     
     for (const auto& cigar_operation : a_read.get_cigar_string()) {
@@ -42,53 +46,68 @@ void AlignmentCandidateVariantGenerator::add_read(const AlignedRead &a_read)
         switch (cigar_operation.get_flag()) {
             case CigarOperation::ALIGNMENT_MATCH:
                 get_variants_in_match_range(GenomicRegion {contig_name, ref_index, ref_index + op_size},
-                                            std::cbegin(the_read_sequence) + read_index,
-                                            std::cbegin(the_read_sequence) + read_index + op_size);
+                                            sequence_begin + read_index,
+                                            sequence_begin + read_index + op_size,
+                                            qualities_begin + read_index);
+                
                 read_index += op_size;
                 ref_index  += op_size;
+                
                 break;
             case CigarOperation::SEQUENCE_MATCH:
                 read_index += op_size;
                 ref_index  += op_size;
+                
                 break;
             case CigarOperation::SUBSTITUTION:
             {
                 a_region = GenomicRegion {contig_name, ref_index, ref_index + op_size};
                 auto removed_sequence = the_reference_.get_sequence(a_region);
-                auto&& added_sequence = the_read_sequence.substr(read_index, op_size);
+                auto added_sequence   = the_read_sequence.substr(read_index, op_size);
+                
                 if (is_good_sequence(removed_sequence) && is_good_sequence(added_sequence)) {
                     add_variant(a_region, std::move(removed_sequence), std::move(added_sequence));
                 }
+                
                 read_index += op_size;
                 ref_index  += op_size;
+                
                 break;
             }
             case CigarOperation::INSERTION:
             {
-                auto&& added_sequence = the_read_sequence.substr(read_index, op_size);
+                auto added_sequence = the_read_sequence.substr(read_index, op_size);
+                
                 if (is_good_sequence(added_sequence)) {
                     add_variant(GenomicRegion {contig_name, ref_index, ref_index},
                                 "", std::move(added_sequence));
                 }
+                
                 read_index += op_size;
+                
                 break;
             }
             case CigarOperation::DELETION:
             {
                 a_region = GenomicRegion {contig_name, ref_index, ref_index + op_size};
                 auto removed_sequence = the_reference_.get_sequence(a_region);
+                
                 if (is_good_sequence(removed_sequence)) {
                     add_variant(a_region, std::move(removed_sequence), "");
                 }
+                
                 ref_index += op_size;
+                
                 break;
             }
             case CigarOperation::SKIPPED:
                 ref_index += op_size;
+                
                 break;
             case CigarOperation::SOFT_CLIPPED:
                 read_index += op_size;
                 ref_index  += op_size;
+                
                 break;
         }
     }
@@ -126,27 +145,33 @@ void AlignmentCandidateVariantGenerator::clear()
 }
 
 void AlignmentCandidateVariantGenerator::
-get_variants_in_match_range(const GenomicRegion& the_region, std::string::const_iterator read_begin,
-                            std::string::const_iterator read_end)
+get_variants_in_match_range(const GenomicRegion& the_region, SequenceIterator first_base,
+                            SequenceIterator last_base, QualitiesIterator first_quality)
 {
     auto ref_segment = the_reference_.get_sequence(the_region);
-    char ref_base {'N'}, read_base {'N'};
-    auto ref_index = the_region.get_begin();
+    auto ref_index   = get_begin(the_region);
+    
+    SequenceType::value_type ref_base {'N'}, read_base {'N'};
+    
     std::for_each(
-        boost::make_zip_iterator(boost::make_tuple(std::cbegin(ref_segment), read_begin)),
-        boost::make_zip_iterator(boost::make_tuple(std::cend(ref_segment), read_end)),
-        [this, &the_region, &ref_index, &ref_base, &read_base] (const boost::tuple<char, char>& p) {
+        boost::make_zip_iterator(boost::make_tuple(std::cbegin(ref_segment), first_base, first_quality)),
+        boost::make_zip_iterator(boost::make_tuple(std::cend(ref_segment), last_base, first_quality
+                                                   + std::distance(first_base, last_base))),
+        [this, &the_region, &ref_index, &ref_base, &read_base]
+                  (const boost::tuple<SequenceType::value_type, SequenceType::value_type, QualityType>& p) {
             ref_base  = p.get<0>();
             read_base = p.get<1>();
-            if (ref_base != read_base && ref_base != 'N' && read_base != 'N') {
+            
+            if (ref_base != read_base && ref_base != 'N' && read_base != 'N' && p.get<2>() >= min_base_quality_) {
                 add_variant(GenomicRegion {the_region.get_contig_name(), ref_index, ref_index + 1},
-                            std::string {ref_base}, std::string {read_base});
+                            ref_base, read_base);
             }
+            
             ++ref_index;
     });
 }
 
-bool AlignmentCandidateVariantGenerator::is_good_sequence(const std::string& sequence) const noexcept
+bool AlignmentCandidateVariantGenerator::is_good_sequence(const SequenceType& sequence) const noexcept
 {
     return std::none_of(std::cbegin(sequence), std::cend(sequence), [] (auto base) {
         return base == 'N';

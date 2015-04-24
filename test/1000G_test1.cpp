@@ -110,10 +110,10 @@ using std::endl;
 //    
 //    VariationalBayesGenotypeModel::HaplotypePseudoCounts pseudo_counts {};
 //    for (const auto& haplotype : haplotypes) {
-//        pseudo_counts[haplotype] = 0.0555;
+//        pseudo_counts[haplotype] = 0.067;
 //    }
 //    
-//    pseudo_counts[reference_haplotype] = 3.0;
+//    pseudo_counts[reference_haplotype] = 48.0;
 //    
 //    SamplesReads the_reads {};
 //    for (const auto& sample_reads : reads) {

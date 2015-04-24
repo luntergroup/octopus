@@ -41,17 +41,20 @@ public:
     void clear() override;
     
 private:
+    using SequenceType      = AlignedRead::SequenceType;
+    using SequenceIterator  = SequenceType::const_iterator;
+    using QualitiesIterator = AlignedRead::Qualities::const_iterator;
+    
     ReferenceGenome& the_reference_;
     std::vector<Variant> candidates_;
     QualityType min_base_quality_;
     bool are_candidates_sorted_;
     
-    bool is_good_sequence(const std::string& sequence) const noexcept;
+    bool is_good_sequence(const SequenceType& sequence) const noexcept;
     template <typename T1, typename T2, typename T3>
     void add_variant(T1&& the_region, T2&& sequence_removed, T3&& sequence_added);
-    void get_variants_in_match_range(const GenomicRegion& the_region,
-                                     std::string::const_iterator read_begin,
-                                     std::string::const_iterator read_end);
+    void get_variants_in_match_range(const GenomicRegion& the_region, SequenceIterator first_base,
+                                     SequenceIterator last_base, QualitiesIterator first_quality);
     std::size_t estimate_num_variants(std::size_t num_reads) const noexcept;
 };
 

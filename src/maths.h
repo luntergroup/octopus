@@ -137,7 +137,7 @@ RealType digamma_inv(RealType x)
     auto y = std::exp(x);
     
     while (l > 10e-8) {
-        y += boost::math::sign(x - boost::math::digamma<RealType>(y));
+        y += l * boost::math::sign(x - boost::math::digamma<RealType>(y));
         l /= 2;
     }
     
