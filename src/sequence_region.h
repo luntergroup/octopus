@@ -169,6 +169,12 @@ inline SequenceRegion get_right_overhang(const SequenceRegion& lhs, const Sequen
     return SequenceRegion {rhs.get_end(), lhs.get_end()};
 }
 
+inline SequenceRegion::DifferenceType distance(const SequenceRegion& lhs, const SequenceRegion& rhs) noexcept
+{
+    return static_cast<SequenceRegion::DifferenceType>(lhs.get_begin()) -
+        static_cast<SequenceRegion::DifferenceType>(rhs.get_end());
+}
+
 namespace std {
     template <> struct hash<SequenceRegion>
     {

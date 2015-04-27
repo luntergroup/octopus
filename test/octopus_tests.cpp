@@ -50,39 +50,47 @@
 using std::cout;
 using std::endl;
 
-//TEST_CASE("can split up search region by variant content", "[octopus]")
-//{
-//    ReferenceGenomeFactory a_factory {};
-//    ReferenceGenome human {a_factory.make(human_reference_fasta)};
-//    
-//    ReadManager a_read_manager {std::vector<std::string> {human_1000g_bam1}};
-//    
-//    //auto a_region = parse_region("16:9299940-9300055", human);
-//    auto a_region = parse_region("16:9200000-9300000", human);
-//    
-//    auto samples = a_read_manager.get_sample_ids();
-//    
-//    auto reads = a_read_manager.fetch_reads(samples, a_region);
-//    
-//    CandidateVariantGenerator candidate_generator {};
-//    candidate_generator.register_generator(std::make_unique<AlignmentCandidateVariantGenerator>(human, 0));
-//    
-//    for (auto& sample_reads : reads) {
-//        std::sort(sample_reads.second.begin(), sample_reads.second.end());
-//        candidate_generator.add_reads(sample_reads.second.cbegin(), sample_reads.second.cend());
-//    }
-//    
-//    auto candidates = candidate_generator.get_candidates(a_region);
-//    
-//    //cout << num_shared(reads.at(samples[0]).cbegin(), reads.at(samples[0]).cend(), candidates[2], candidates[3]) << endl;
-//    
-//    //auto first_region = parse_region("16:9299940-9299940", human);
-//    auto first_region = parse_region("16:9200000-9200000", human);
-//    
-//    auto next_region = next_sub_region(a_region, first_region, reads, candidates, 3, 100, 0);
-//    
-//    cout << "next sub-region " << next_region << endl;
-//}
+TEST_CASE("can split up search region by variant content", "[octopus]")
+{
+    ReferenceGenomeFactory a_factory {};
+    ReferenceGenome human {a_factory.make(human_reference_fasta)};
+    
+    ReadManager a_read_manager {std::vector<std::string> {human_1000g_bam1}};
+    
+    auto a_region = parse_region("16:9299885-9300100", human);
+    //auto a_region = parse_region("16:9200000-9300000", human);
+    
+    auto samples = a_read_manager.get_sample_ids();
+    
+    auto reads = a_read_manager.fetch_reads(samples, a_region);
+    
+    CandidateVariantGenerator candidate_generator {};
+    candidate_generator.register_generator(std::make_unique<AlignmentCandidateVariantGenerator>(human, 0));
+    
+    for (auto& sample_reads : reads) {
+        std::sort(sample_reads.second.begin(), sample_reads.second.end());
+        candidate_generator.add_reads(sample_reads.second.cbegin(), sample_reads.second.cend());
+    }
+    
+    auto candidates = candidate_generator.get_candidates(a_region);
+    
+    //cout << *find_first_shared(reads, candidates.cbegin(), candidates.cend(), candidates[3]) << endl;
+    
+    auto sample_reads = reads.at(samples[0]);
+    
+    //cout << num_shared(reads.at(samples[0]).cbegin(), reads.at(samples[0]).cend(), candidates[2], candidates[3]) << endl;
+    
+    auto first_region = parse_region("16:9299885-9299924", human);
+    //auto first_region = parse_region("16:9200000-9200000", human);
+    
+    auto next_region = next_sub_region(a_region, first_region, reads, candidates, 3, 0);
+    
+    cout << "next sub-region " << next_region << endl;
+    
+    next_region = next_sub_region(a_region, next_region, reads, candidates, 3, 0);
+    
+    cout << "next sub-region " << next_region << endl;
+}
 
 //TEST_CASE("can call in complex region", "[octopus]")
 //{

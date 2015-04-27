@@ -259,6 +259,14 @@ inline GenomicRegion get_right_overhang(const GenomicRegion& lhs, const GenomicR
     throw RegionError(to_string(lhs), to_string(rhs));
 }
 
+inline GenomicRegion::DifferenceType distance(const GenomicRegion& lhs, const GenomicRegion& rhs)
+{
+    if (is_same_contig(lhs, rhs)) {
+        return distance(lhs.get_contig_region(), rhs.get_contig_region());
+    }
+    throw RegionError(to_string(lhs), to_string(rhs));
+}
+
 namespace std {
     template <> struct hash<GenomicRegion>
     {

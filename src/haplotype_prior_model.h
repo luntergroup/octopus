@@ -10,20 +10,44 @@
 #define __Octopus__haplotype_prior_model__
 
 #include <vector>
+#include <algorithm>
+#include <boost/math/distributions/poisson.hpp>
+#include <unordered_map>
 
 #include "allele.h"
 #include "variant.h"
 #include "haplotype.h"
 #include "maths.h"
 
-template <typename RealType>
-RealType get_haplotype_prior_probability(const Haplotype& the_haplotype,
-                                         const std::vector<Variant>& possible_variants)
+#include <iostream> // TEST
+
+template <typename RealType, typename ForwardIterator>
+RealType prior_probability(const Haplotype& the_haplotype, ForwardIterator first_possible_variant,
+                           ForwardIterator last_possible_variant)
 {
-    RealType result {1};
+    auto num_non_reference_alleles = std::count_if(first_possible_variant, last_possible_variant,
+                                                   [&the_haplotype] (const auto& variant) {
+                                                       return the_haplotype.contains(variant.get_alternative_allele());
+                                                   });
     
-    for (const auto& variant : possible_variants) {
-        if (the_haplotype.contains(variant)) result *= variant.get_segregation_probability();
+    boost::math::poisson_distribution<RealType> poisson {0.000333 * size(the_haplotype)};
+    
+    return std::pow(0.0003333, num_non_reference_alleles);
+    
+    //return boost::math::pdf(poisson, num_non_reference_alleles);
+}
+
+template <typename RealType, typename Haplotypes, typename ForwardIterator>
+std::unordered_map<Haplotype, RealType>
+get_haplotype_prior_probabilities(const Haplotypes& the_haplotypes, ForwardIterator first_possible_variant,
+                                  ForwardIterator last_possible_variant)
+{
+    std::unordered_map<Haplotype, RealType> result {};
+    result.reserve(the_haplotypes.size());
+    
+    for (const auto& haplotype : the_haplotypes) {
+        result.emplace(haplotype, prior_probability<RealType>(haplotype, first_possible_variant,
+                                                              last_possible_variant));
     }
     
     return result;

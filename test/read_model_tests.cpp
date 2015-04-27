@@ -61,7 +61,6 @@ TEST_CASE("partially overlapped reads evaluate correctly", "[read_model]")
     false_haplotype2.push_back(Allele {parse_region("11:27282207-27282208", human), "C"});
     false_haplotype2.push_back(Allele {parse_region("11:27282218-27282219", human), "C"});
     false_haplotype2.push_back(Allele {parse_region("11:27282239-27282240", human), "T"});
-    //false_haplotype2.push_back(Allele {parse_region("11:27282258-27282259", human), "C"});
     false_haplotype2.push_back(Allele {parse_region("11:27282267-27282268", human), "G"});
     
     unsigned ploidy {2};

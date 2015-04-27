@@ -21,8 +21,8 @@ using Variants = std::vector<Variant>;
 
 void run_octopus();
 
-GenomicRegion next_sub_region(const GenomicRegion& the_search_region, const GenomicRegion& previous_sub_region,
+GenomicRegion next_sub_region(const GenomicRegion& the_search_region, const GenomicRegion& the_previous_sub_region,
                               const ReadManager::SampleReadMap& the_reads, const Variants& the_candidates,
-                              unsigned max_variants_in_region, unsigned max_region_size, unsigned max_region_overlap);
+                              unsigned max_variants, unsigned max_indicators);
 
 #endif /* defined(__Octopus__octopus__) */

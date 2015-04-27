@@ -98,8 +98,6 @@ private:
     ReadModel& read_model_;
     RealType zero_epsilon_;
     
-    RealType sum(const HaplotypePseudoCounts& haplotype_pseudo_counts) const noexcept;
-    
     // These are just for optimisation
     RealType log_expected_genotype_probability_haploid(const Genotype& genotype,
                                                        const HaplotypePseudoCounts& haplotype_pseudo_counts) const;
@@ -110,6 +108,25 @@ private:
     RealType log_expected_genotype_probability_polyploid(const Genotype& genotype,
                                                          const HaplotypePseudoCounts& haplotype_pseudo_counts) const;
 };
+
+template <typename T, typename RealType>
+RealType sum(const std::unordered_map<T, RealType>& map) noexcept
+{
+    RealType result {};
+    
+    for (const auto& p : map) {
+        result += p.second;
+    }
+    
+    return result;
+}
+
+using HaplotypePriors = std::unordered_map<Haplotype, VariationalBayesGenotypeModel::RealType>;
+
+VariationalBayesGenotypeModel::HaplotypePseudoCounts
+get_prior_pseudo_counts(const HaplotypePriors& the_haplotype_priors,
+                        const Haplotype& the_reference_haplotype,
+                        VariationalBayesGenotypeModel::RealType the_reference_haplotype_pseudo_count);
 
 using GenotypePosteriors = std::pair<VariationalBayesGenotypeModel::GenotypeResponsabilities,
                                     VariationalBayesGenotypeModel::HaplotypePseudoCounts>;

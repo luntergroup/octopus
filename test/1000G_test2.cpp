@@ -27,6 +27,7 @@
 #include "haplotype.h"
 #include "genotype.h"
 #include "read_model.h"
+#include "haplotype_prior_model.h"
 #include "variational_bayes_genotype_model.h"
 #include "maths.h"
 #include "read_filter.h"
@@ -111,15 +112,29 @@ using std::endl;
 //    haplotype_labels.emplace(false_haplotype3, "false3");
 //    haplotype_labels.emplace(false_haplotype4, "false4");
 //    
-//    VariationalBayesGenotypeModel::HaplotypePseudoCounts pseudo_counts {};
+////    VariationalBayesGenotypeModel::HaplotypePseudoCounts pseudo_counts {};
+////    
+////    for (const auto& haplotype : haplotypes) {
+////        pseudo_counts[haplotype] = 0.028;
+////    }
+////    
+////    pseudo_counts[reference_haplotype] = 3.0;
+////    pseudo_counts[true_haplotype]      = 0.37;
+////    pseudo_counts[false_haplotype3]    = 0.37;
 //    
-//    for (const auto& haplotype : haplotypes) {
-//        pseudo_counts[haplotype] = 0.022;
-//    }
+//    auto haplotype_priors = get_haplotype_prior_probabilities<double>(haplotypes, candidates.cbegin(),
+//                                                                      candidates.cend());
 //    
-//    pseudo_counts[reference_haplotype] = 10.0;
-//    pseudo_counts[true_haplotype]      = 0.14;
-//    pseudo_counts[false_haplotype3]    = 0.14;
+//    auto pseudo_counts = get_prior_pseudo_counts(haplotype_priors, reference_haplotype, 3.0);
+//    
+////    cout << pseudo_counts[reference_haplotype] << endl;
+////    cout << pseudo_counts[true_haplotype] << endl;
+////    cout << pseudo_counts[false_haplotype1] << endl;
+////    cout << pseudo_counts[false_haplotype2] << endl;
+////    cout << pseudo_counts[false_haplotype3] << endl;
+////    cout << pseudo_counts[false_haplotype4] << endl;
+////    
+////    exit(0);
 //    
 //    unsigned ploidy {2};
 //    

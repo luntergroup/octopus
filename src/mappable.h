@@ -344,4 +344,22 @@ inline GenomicRegion get_right_overhang(const Mappable<T1>& lhs, const Mappable<
     return get_right_overhang(static_cast<const T1&>(lhs).get_region(), static_cast<const T2&>(rhs).get_region());
 }
 
+template <typename T>
+inline GenomicRegion::DifferenceType distance(const Mappable<T>& lhs, const GenomicRegion& rhs)
+{
+    return distance(static_cast<const T&>(lhs).get_region(), rhs);
+}
+
+template <typename T>
+inline GenomicRegion::DifferenceType distance(const GenomicRegion& lhs, const Mappable<T>& rhs)
+{
+    return distance(lhs, static_cast<const T&>(rhs).get_region());
+}
+
+template <typename T1, typename T2>
+inline GenomicRegion::DifferenceType distance(const Mappable<T1>& lhs, const Mappable<T2>& rhs)
+{
+    return distance(static_cast<const T1&>(lhs).get_region(), static_cast<const T2&>(rhs).get_region());
+}
+
 #endif

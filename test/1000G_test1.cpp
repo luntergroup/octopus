@@ -27,6 +27,7 @@
 #include "haplotype.h"
 #include "genotype.h"
 #include "read_model.h"
+#include "haplotype_prior_model.h"
 #include "variational_bayes_genotype_model.h"
 #include "maths.h"
 #include "read_filter.h"
@@ -41,7 +42,7 @@ using std::endl;
 //    ReferenceGenomeFactory a_factory {};
 //    ReferenceGenome human {a_factory.make(human_reference_fasta)};
 //    
-//    ReadManager a_read_manager {std::vector<std::string> {human_1000g_bam1, human_1000g_bam2, human_1000g_bam3}};
+//    ReadManager a_read_manager {std::vector<std::string> {human_1000g_bam1}};
 //    
 //    auto a_region = parse_region("11:67503118-67503253", human);
 //    
@@ -108,12 +109,17 @@ using std::endl;
 //    
 //    VariationalBayesGenotypeModel the_model {a_read_model, ploidy};
 //    
-//    VariationalBayesGenotypeModel::HaplotypePseudoCounts pseudo_counts {};
-//    for (const auto& haplotype : haplotypes) {
-//        pseudo_counts[haplotype] = 0.06;
-//    }
+////    VariationalBayesGenotypeModel::HaplotypePseudoCounts pseudo_counts {};
+////    for (const auto& haplotype : haplotypes) {
+////        pseudo_counts[haplotype] = 0.196;
+////    }
+////    
+////    pseudo_counts[reference_haplotype] = 134;
 //    
-//    pseudo_counts[reference_haplotype] = 10.0;
+//    auto haplotype_priors = get_haplotype_prior_probabilities<double>(haplotypes, candidates.cbegin(),
+//                                                                      candidates.cend());
+//    
+//    auto pseudo_counts = get_prior_pseudo_counts(haplotype_priors, reference_haplotype, 3);
 //    
 //    SamplesReads the_reads {};
 //    for (const auto& sample_reads : reads) {
