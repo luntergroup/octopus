@@ -47,7 +47,7 @@ inline SequenceRegion::SequenceRegion(SizeType begin, SizeType end)
 begin_ {begin},
 end_ {end}
 {
-    if (end < begin) throw std::runtime_error {"Invalid sequence region: end < begin"};
+    if (end < begin) throw std::runtime_error {"invalid sequence region: end < begin"};
 }
 
 inline SequenceRegion::SizeType SequenceRegion::get_begin() const noexcept
@@ -132,10 +132,50 @@ inline bool contains(const SequenceRegion& lhs, const SequenceRegion& rhs) noexc
     return lhs.get_begin() <= rhs.get_begin() && rhs.get_end() <= lhs.get_end();
 }
 
+inline SequenceRegion shift(const SequenceRegion& a_region, SequenceRegion::DifferenceType n)
+{
+    if (n < 0 && a_region.get_begin() + n > a_region.get_begin()) {
+        throw std::out_of_range {"shifted past contig start"};
+    }
+    
+    return SequenceRegion {
+        static_cast<SequenceRegion::SizeType>(a_region.get_begin() + n),
+        static_cast<SequenceRegion::SizeType>(a_region.get_end() + n)
+    };
+}
+
+inline SequenceRegion compress_left(const SequenceRegion& a_region, SequenceRegion::DifferenceType n)
+{
+    if (n < 0 && a_region.get_begin() + n > a_region.get_begin()) {
+        throw std::out_of_range {"compressed past contig start"};
+    }
+    
+    if (a_region.get_begin() + n > a_region.get_end()) {
+        throw std::out_of_range {"compressed past region end"};
+    }
+    
+    return SequenceRegion {
+        static_cast<SequenceRegion::SizeType>(a_region.get_begin() + n),
+        a_region.get_end()
+    };
+}
+
+inline SequenceRegion compress_right(const SequenceRegion& a_region, SequenceRegion::DifferenceType n)
+{
+    if (a_region.get_end() + n < a_region.get_begin()) {
+        throw std::out_of_range {"compressed past region begin"};
+    }
+    
+    return SequenceRegion {
+        a_region.get_begin(),
+        static_cast<SequenceRegion::SizeType>(a_region.get_end() + n)
+    };
+}
+
 inline SequenceRegion get_overlapped(const SequenceRegion& lhs, const SequenceRegion& rhs) noexcept
 {
     if (!overlaps(lhs, rhs)) {
-        throw std::runtime_error {"Cannot get overlapped region between non overlapping regions"};
+        throw std::runtime_error {"cannot get overlapped region between non overlapping regions"};
     }
     
     return SequenceRegion {std::max(lhs.get_begin(), rhs.get_begin()), std::min(lhs.get_end(), rhs.get_end())};
@@ -149,7 +189,7 @@ inline SequenceRegion get_encompassing_region(const SequenceRegion& lhs, const S
 inline SequenceRegion get_intervening_region(const SequenceRegion& lhs, const SequenceRegion& rhs)
 {
     if (begins_before(rhs, lhs) || overlaps(lhs, rhs)) {
-        throw std::runtime_error {"Cannot get intervening region between overlapping regions"};
+        throw std::runtime_error {"cannot get intervening region between overlapping regions"};
     }
     
     return SequenceRegion {lhs.get_end(), rhs.get_begin()};

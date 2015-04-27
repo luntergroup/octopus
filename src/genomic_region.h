@@ -209,14 +209,25 @@ inline bool contains(const GenomicRegion& lhs, const GenomicRegion& rhs) noexcep
 
 inline GenomicRegion shift(const GenomicRegion& a_region, GenomicRegion::DifferenceType n)
 {
-    if (n < 0 && a_region.get_begin() + n > a_region.get_begin()) {
-        throw std::out_of_range {"Shifted past contig start"};
-    }
-    
     return GenomicRegion {
         a_region.get_contig_name(),
-        static_cast<GenomicRegion::SizeType>(a_region.get_begin() + n),
-        static_cast<GenomicRegion::SizeType>(a_region.get_end() + n)
+        shift(a_region.get_contig_region(), n)
+    };
+}
+
+inline GenomicRegion compress_left(const GenomicRegion& a_region, GenomicRegion::DifferenceType n)
+{
+    return GenomicRegion {
+        a_region.get_contig_name(),
+        compress_left(a_region.get_contig_region(), n)
+    };
+}
+
+inline GenomicRegion compress_right(const GenomicRegion& a_region, GenomicRegion::DifferenceType n)
+{
+    return GenomicRegion {
+        a_region.get_contig_name(),
+        compress_right(a_region.get_contig_region(), n)
     };
 }
 

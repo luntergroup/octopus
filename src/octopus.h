@@ -9,20 +9,10 @@
 #ifndef __Octopus__octopus__
 #define __Octopus__octopus__
 
-#include <vector>
-
-#include "read_manager.h"
-
-class GenomicRegion;
-class AlignedRead;
-class Variant;
-
-using Variants = std::vector<Variant>;
+#include <iostream> // TEST
+using std::cout;    // TEST
+using std::endl;    // TEST
 
 void run_octopus();
-
-GenomicRegion next_sub_region(const GenomicRegion& the_search_region, const GenomicRegion& the_previous_sub_region,
-                              const ReadManager::SampleReadMap& the_reads, const Variants& the_candidates,
-                              unsigned max_variants, unsigned max_indicators);
 
 #endif /* defined(__Octopus__octopus__) */
