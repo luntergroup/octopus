@@ -25,17 +25,6 @@ class CigarOperation : public Comparable<CigarOperation> // Comparable so can co
 public:
     using SizeType = std::uint_fast32_t;
     
-    CigarOperation() = delete;
-    explicit CigarOperation(SizeType size, char type) noexcept;
-    
-    CigarOperation(const CigarOperation&)            = default;
-    CigarOperation& operator=(const CigarOperation&) = default;
-    CigarOperation(CigarOperation&&)                 = default;
-    CigarOperation& operator=(CigarOperation&&)      = default;
-    
-    SizeType get_size() const noexcept;
-    char get_flag() const noexcept;
-    
     // No getting around these really - they have to go somewhere. Could go into a config,
     // but would loose constexpr-ness.
     static const constexpr char ALIGNMENT_MATCH {'M'};
@@ -47,6 +36,18 @@ public:
     static const constexpr char HARD_CLIPPED    {'H'};
     static const constexpr char PADDING         {'P'};
     static const constexpr char SKIPPED         {'N'};
+    
+    CigarOperation() = delete;
+    explicit CigarOperation(SizeType size, char type) noexcept;
+    
+    CigarOperation(const CigarOperation&)            = default;
+    CigarOperation& operator=(const CigarOperation&) = default;
+    CigarOperation(CigarOperation&&)                 = default;
+    CigarOperation& operator=(CigarOperation&&)      = default;
+    
+    SizeType get_size() const noexcept;
+    char get_flag() const noexcept;
+    bool advances_reference() const noexcept;
     
 private:
     SizeType size_;
@@ -69,6 +70,12 @@ inline CigarOperation::SizeType CigarOperation::get_size() const noexcept
 inline char CigarOperation::get_flag() const noexcept
 {
     return flag_;
+}
+
+inline bool CigarOperation::advances_reference() const noexcept
+{
+    if (flag_ == INSERTION || flag_ == HARD_CLIPPED || flag_ == PADDING) return false;
+    return true;
 }
 
 inline CigarString parse_cigar_string(const std::string& a_cigar_string)
@@ -119,13 +126,29 @@ get_soft_clipped_sizes(const CigarString& a_cigar_string) noexcept
     }
 }
 
-template <typename T>
-inline T get_soft_clipped_read_begin(const CigarString& a_cigar_string, T hard_clipped_begin) noexcept
+template <typename SizeType>
+inline
+SizeType get_soft_clipped_read_begin(const CigarString& a_cigar_string, SizeType hard_clipped_begin) noexcept
 {
     if (is_front_soft_clipped(a_cigar_string)) {
-        hard_clipped_begin -= static_cast<T>(a_cigar_string.at(0).get_size());
+        hard_clipped_begin -= static_cast<SizeType>(a_cigar_string.at(0).get_size());
     }
     return hard_clipped_begin;
+}
+
+template <typename SizeType>
+inline
+SizeType get_reference_size(const CigarString& a_cigar_string) noexcept
+{
+    SizeType result {};
+    
+    for (const auto& op : a_cigar_string) {
+        if (op.advances_reference()) {
+            result += op.get_size();
+        }
+    }
+    
+    return result;
 }
 
 inline bool operator==(const CigarOperation& lhs, const CigarOperation& rhs)

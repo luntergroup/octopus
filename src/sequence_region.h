@@ -132,6 +132,22 @@ inline bool contains(const SequenceRegion& lhs, const SequenceRegion& rhs) noexc
     return lhs.get_begin() <= rhs.get_begin() && rhs.get_end() <= lhs.get_end();
 }
 
+inline SequenceRegion::DifferenceType inner_distance(const SequenceRegion& lhs,
+                                                     const SequenceRegion& rhs) noexcept
+{
+    if (overlaps(lhs, rhs)) return 0;
+    
+    return static_cast<SequenceRegion::DifferenceType>(rhs.get_begin()) -
+    static_cast<SequenceRegion::DifferenceType>(lhs.get_end());
+}
+
+inline SequenceRegion::DifferenceType outer_distance(const SequenceRegion& lhs,
+                                                     const SequenceRegion& rhs) noexcept
+{
+    return static_cast<SequenceRegion::DifferenceType>(rhs.get_end()) -
+    static_cast<SequenceRegion::DifferenceType>(lhs.get_begin());
+}
+
 inline SequenceRegion shift(const SequenceRegion& a_region, SequenceRegion::DifferenceType n)
 {
     if (n < 0 && a_region.get_begin() + n > a_region.get_begin()) {
@@ -181,12 +197,12 @@ inline SequenceRegion get_overlapped(const SequenceRegion& lhs, const SequenceRe
     return SequenceRegion {std::max(lhs.get_begin(), rhs.get_begin()), std::min(lhs.get_end(), rhs.get_end())};
 }
 
-inline SequenceRegion get_encompassing_region(const SequenceRegion& lhs, const SequenceRegion& rhs) noexcept
+inline SequenceRegion get_encompassing(const SequenceRegion& lhs, const SequenceRegion& rhs) noexcept
 {
     return SequenceRegion {std::min(lhs.get_begin(), rhs.get_begin()), std::max(lhs.get_end(), rhs.get_end())};
 }
 
-inline SequenceRegion get_intervening_region(const SequenceRegion& lhs, const SequenceRegion& rhs)
+inline SequenceRegion get_intervening(const SequenceRegion& lhs, const SequenceRegion& rhs)
 {
     if (begins_before(rhs, lhs) || overlaps(lhs, rhs)) {
         throw std::runtime_error {"cannot get intervening region between overlapping regions"};
@@ -209,10 +225,9 @@ inline SequenceRegion get_right_overhang(const SequenceRegion& lhs, const Sequen
     return SequenceRegion {rhs.get_end(), lhs.get_end()};
 }
 
-inline SequenceRegion::DifferenceType distance(const SequenceRegion& lhs, const SequenceRegion& rhs) noexcept
+inline SequenceRegion get_closed(const SequenceRegion& lhs, const SequenceRegion& rhs) noexcept
 {
-    return static_cast<SequenceRegion::DifferenceType>(rhs.get_end()) -
-        static_cast<SequenceRegion::DifferenceType>(lhs.get_begin());
+    return SequenceRegion {lhs.get_begin(), rhs.get_end()};
 }
 
 namespace std {

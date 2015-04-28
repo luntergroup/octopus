@@ -207,6 +207,22 @@ inline bool contains(const GenomicRegion& lhs, const GenomicRegion& rhs) noexcep
     return is_same_contig(lhs, rhs) && contains(lhs.get_contig_region(), rhs.get_contig_region());
 }
 
+inline GenomicRegion::DifferenceType inner_distance(const GenomicRegion& lhs, const GenomicRegion& rhs)
+{
+    if (is_same_contig(lhs, rhs)) {
+        return inner_distance(lhs.get_contig_region(), rhs.get_contig_region());
+    }
+    throw RegionError(to_string(lhs), to_string(rhs));
+}
+
+inline GenomicRegion::DifferenceType outer_distance(const GenomicRegion& lhs, const GenomicRegion& rhs)
+{
+    if (is_same_contig(lhs, rhs)) {
+        return outer_distance(lhs.get_contig_region(), rhs.get_contig_region());
+    }
+    throw RegionError(to_string(lhs), to_string(rhs));
+}
+
 inline GenomicRegion shift(const GenomicRegion& a_region, GenomicRegion::DifferenceType n)
 {
     return GenomicRegion {
@@ -231,19 +247,19 @@ inline GenomicRegion compress_right(const GenomicRegion& a_region, GenomicRegion
     };
 }
 
-inline GenomicRegion get_encompassing_region(const GenomicRegion& lhs, const GenomicRegion& rhs)
+inline GenomicRegion get_encompassing(const GenomicRegion& lhs, const GenomicRegion& rhs)
 {
     if (is_same_contig(lhs, rhs)) {
-        return GenomicRegion {lhs.get_contig_name(), get_encompassing_region(lhs.get_contig_region(),
-                                                                             rhs.get_contig_region())};
+        return GenomicRegion {lhs.get_contig_name(), get_encompassing(lhs.get_contig_region(),
+                                                                      rhs.get_contig_region())};
     }
     throw RegionError(to_string(lhs), to_string(rhs));
 }
 
-inline GenomicRegion get_intervening_region(const GenomicRegion& lhs, const GenomicRegion& rhs)
+inline GenomicRegion get_intervening(const GenomicRegion& lhs, const GenomicRegion& rhs)
 {
-    return GenomicRegion {lhs.get_contig_name(), get_intervening_region(lhs.get_contig_region(),
-                                                                        rhs.get_contig_region())};
+    return GenomicRegion {lhs.get_contig_name(), get_intervening(lhs.get_contig_region(),
+                                                                 rhs.get_contig_region())};
 }
 
 inline GenomicRegion get_overlapped(const GenomicRegion& lhs, const GenomicRegion& rhs) noexcept
@@ -270,10 +286,11 @@ inline GenomicRegion get_right_overhang(const GenomicRegion& lhs, const GenomicR
     throw RegionError(to_string(lhs), to_string(rhs));
 }
 
-inline GenomicRegion::DifferenceType distance(const GenomicRegion& lhs, const GenomicRegion& rhs)
+inline GenomicRegion get_closed(const GenomicRegion& lhs, const GenomicRegion& rhs)
 {
     if (is_same_contig(lhs, rhs)) {
-        return distance(lhs.get_contig_region(), rhs.get_contig_region());
+        return GenomicRegion {lhs.get_contig_name(), get_closed(lhs.get_contig_region(),
+                                                                rhs.get_contig_region())};
     }
     throw RegionError(to_string(lhs), to_string(rhs));
 }

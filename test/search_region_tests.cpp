@@ -87,7 +87,6 @@ TEST_CASE("next_sub_region's bounds are respected", "[search_regions]")
     
     ReadManager a_read_manager {std::vector<std::string> {human_1000g_bam1}};
     
-    //auto a_region = parse_region("16:9299885-9300100", human);
     auto a_region = parse_region("16:9000000-9400000", human);
     
     auto samples = a_read_manager.get_sample_ids();
@@ -99,7 +98,7 @@ TEST_CASE("next_sub_region's bounds are respected", "[search_regions]")
     a_read_filter.register_filter([] (const AlignedRead& the_read) {
         return is_good_mapping_quality(the_read, 5);
     });
-
+    
     auto good_reads = filter_reads(std::move(reads), a_read_filter).first;
     
     CandidateVariantGenerator candidate_generator {};
@@ -114,28 +113,116 @@ TEST_CASE("next_sub_region's bounds are respected", "[search_regions]")
     
     auto sub_region = parse_region("16:9000000-9000000", human);
     
-    sub_region = parse_region("16:9000453-9000563", human);
-    auto next_region = next_sub_region(a_region, sub_region, good_reads, candidates, 5, 0);
-    cout << "next sub-region " << next_region << endl;
-    cout << count_overlapped(candidates.cbegin(), candidates.cend(), next_region) << endl;
-//    next_region = next_sub_region(a_region, next_region, good_reads, candidates, 8, 0);
-//    cout << "next sub-region " << next_region << endl;
+    unsigned max_variants {3};
+    unsigned max_indicators {0};
+    bool bound_respected {true};
     
-//    bool bound_respected {true};
-//    
-//    while (ends_before(sub_region, a_region)) {
-//        cout << sub_region << endl;
-//        sub_region = next_sub_region(a_region, sub_region, good_reads, candidates, 5, 0);
-//        
-//        auto num_variants_in_sub_region = count_overlapped(candidates.cbegin(), candidates.cend(), sub_region);
-//        
-//        if (num_variants_in_sub_region > 5) {
-//            bound_respected = false;
-//            cout << num_variants_in_sub_region << endl;
-//            cout << sub_region << endl;
-//            break;
-//        }
-//    }
-//    
-//    REQUIRE(bound_respected);
+//    sub_region = parse_region("16:9104004-9104078", human);
+//    auto next_region = next_sub_region(a_region, sub_region, good_reads, candidates, max_variants, max_indicators);
+//    cout << "next sub-region " << next_region << endl;
+//    cout << count_overlapped(candidates.cbegin(), candidates.cend(), next_region) << endl;
+//    exit(0);
+    
+    while (ends_before(sub_region, a_region)) {
+        sub_region = next_sub_region(a_region, sub_region, good_reads, candidates, max_variants, max_indicators);
+        auto num_variants_in_sub_region = count_overlapped(candidates.cbegin(), candidates.cend(), sub_region);
+        if (num_variants_in_sub_region > max_variants) {
+            auto overlapped = overlap_range(candidates.cbegin(), candidates.cend(), sub_region);
+            auto rightmost = rightmost_mappable(overlapped.first, overlapped.second);
+            if (!overlaps(*rightmost, *std::prev(overlapped.second))) {
+                bound_respected = false;
+                break;
+            }
+        }
+    }
+    
+    REQUIRE(bound_respected);
+    
+    max_variants = 5;
+    
+    while (ends_before(sub_region, a_region)) {
+        sub_region = next_sub_region(a_region, sub_region, good_reads, candidates, max_variants, max_indicators);
+        auto num_variants_in_sub_region = count_overlapped(candidates.cbegin(), candidates.cend(), sub_region);
+        if (num_variants_in_sub_region > max_variants) {
+            auto overlapped = overlap_range(candidates.cbegin(), candidates.cend(), sub_region);
+            auto rightmost = rightmost_mappable(overlapped.first, overlapped.second);
+            if (!overlaps(*rightmost, *std::prev(overlapped.second))) {
+                bound_respected = false;
+                break;
+            }
+        }
+    }
+    
+    REQUIRE(bound_respected);
+    
+    max_variants = 8;
+    
+    while (ends_before(sub_region, a_region)) {
+        sub_region = next_sub_region(a_region, sub_region, good_reads, candidates, max_variants, max_indicators);
+        auto num_variants_in_sub_region = count_overlapped(candidates.cbegin(), candidates.cend(), sub_region);
+        if (num_variants_in_sub_region > max_variants) {
+            auto overlapped = overlap_range(candidates.cbegin(), candidates.cend(), sub_region);
+            auto rightmost = rightmost_mappable(overlapped.first, overlapped.second);
+            if (!overlaps(*rightmost, *std::prev(overlapped.second))) {
+                bound_respected = false;
+                break;
+            }
+        }
+    }
+    
+    REQUIRE(bound_respected);
+    
+    max_variants   = 3;
+    max_indicators = 1;
+    
+    while (ends_before(sub_region, a_region)) {
+        sub_region = next_sub_region(a_region, sub_region, good_reads, candidates, max_variants, max_indicators);
+        auto num_variants_in_sub_region = count_overlapped(candidates.cbegin(), candidates.cend(), sub_region);
+        if (num_variants_in_sub_region > max_variants) {
+            auto overlapped = overlap_range(candidates.cbegin(), candidates.cend(), sub_region);
+            auto rightmost = rightmost_mappable(overlapped.first, overlapped.second);
+            if (!overlaps(*rightmost, *std::prev(overlapped.second))) {
+                bound_respected = false;
+                break;
+            }
+        }
+    }
+    
+    REQUIRE(bound_respected);
+    
+    max_variants   = 5;
+    max_indicators = 2;
+    
+    while (ends_before(sub_region, a_region)) {
+        sub_region = next_sub_region(a_region, sub_region, good_reads, candidates, max_variants, max_indicators);
+        auto num_variants_in_sub_region = count_overlapped(candidates.cbegin(), candidates.cend(), sub_region);
+        if (num_variants_in_sub_region > max_variants) {
+            auto overlapped = overlap_range(candidates.cbegin(), candidates.cend(), sub_region);
+            auto rightmost = rightmost_mappable(overlapped.first, overlapped.second);
+            if (!overlaps(*rightmost, *std::prev(overlapped.second))) {
+                bound_respected = false;
+                break;
+            }
+        }
+    }
+    
+    REQUIRE(bound_respected);
+    
+    max_variants   = 8;
+    max_indicators = 3;
+    
+    while (ends_before(sub_region, a_region)) {
+        sub_region = next_sub_region(a_region, sub_region, good_reads, candidates, max_variants, max_indicators);
+        auto num_variants_in_sub_region = count_overlapped(candidates.cbegin(), candidates.cend(), sub_region);
+        if (num_variants_in_sub_region > max_variants) {
+            auto overlapped = overlap_range(candidates.cbegin(), candidates.cend(), sub_region);
+            auto rightmost = rightmost_mappable(overlapped.first, overlapped.second);
+            if (!overlaps(*rightmost, *std::prev(overlapped.second))) {
+                bound_respected = false;
+                break;
+            }
+        }
+    }
+    
+    REQUIRE(bound_respected);
 }

@@ -11,6 +11,8 @@
 #include <sstream>
 #include <cmath> // std::abs
 
+#include "cigar_string.h"
+
 HtslibReadFacade::HtslibReadFacade(const fs::path& the_file_path)
 :
 the_filepath_ {the_file_path},
@@ -21,15 +23,15 @@ contig_name_map_ {},
 sample_id_map_ {}
 {
     if (the_file_ == nullptr) {
-        throw std::runtime_error {"Could not open " + the_filepath_.string()};
+        throw std::runtime_error {"could not open " + the_filepath_.string()};
     }
     
     if (the_header_ == nullptr) {
-        throw std::runtime_error {"Could not open file header for " + the_filepath_.string()};
+        throw std::runtime_error {"could not open file header for " + the_filepath_.string()};
     }
     
     if (the_index_ == nullptr) {
-        throw std::runtime_error {"Could not open file index for " + the_filepath_.string()};
+        throw std::runtime_error {"could not open file index for " + the_filepath_.string()};
     }
     
     contig_name_map_ = get_htslib_tid_to_contig_name_map();
@@ -225,11 +227,11 @@ the_iterator_ {sam_itr_querys(hts_facade_.the_index_.get(), hts_facade_.the_head
 the_bam1_ {bam_init1(), htslib_bam1_deleter}
 {
     if (the_iterator_ == nullptr) {
-        throw std::runtime_error {"Could not load read iterator for " + hts_facade.the_filepath_.string()};
+        throw std::runtime_error {"could not load read iterator for " + hts_facade.the_filepath_.string()};
     }
     
     if (the_bam1_ == nullptr) {
-        throw std::runtime_error {"Error creating bam1 for " + hts_facade.the_filepath_.string()};
+        throw std::runtime_error {"error creating bam1 for " + hts_facade.the_filepath_.string()};
     }
 }
 
@@ -258,7 +260,8 @@ std::pair<AlignedRead, HtslibReadFacade::SampleIdType> HtslibReadFacade::HtslibI
     
     if (c.mtid == -1) { // TODO: check if this is always true
         return {AlignedRead {
-            GenomicRegion {get_contig_name(c.tid), read_start, read_start + get_sequence_length()},
+            GenomicRegion {get_contig_name(c.tid), read_start, read_start +
+                get_reference_size<GenomicRegion::SizeType>(the_cigar_string)},
             get_sequence(),
             std::move(the_qualities),
             std::move(the_cigar_string),
@@ -267,7 +270,8 @@ std::pair<AlignedRead, HtslibReadFacade::SampleIdType> HtslibReadFacade::HtslibI
         }, get_read_group()};
     } else {
         return {AlignedRead {
-            GenomicRegion {get_contig_name(c.tid), read_start, read_start + get_sequence_length()},
+            GenomicRegion {get_contig_name(c.tid), read_start, read_start +
+                get_reference_size<GenomicRegion::SizeType>(the_cigar_string)},
             get_sequence(),
             std::move(the_qualities),
             std::move(the_cigar_string),

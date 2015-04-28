@@ -114,8 +114,8 @@ namespace bioio {
     using FastqReads = std::pair<ReadIds<T1>, FastqMap<T1, T2, T3>>;
     
     // This namespace contains helper functions for bioio, don't use it!
-    namespace detail {
-        
+    namespace detail
+    {
         inline
         size_t get_num_records(std::ifstream& file, char record_delimiter)
         {

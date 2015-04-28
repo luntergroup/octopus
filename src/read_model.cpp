@@ -55,7 +55,7 @@ ReadModel::RealType ReadModel::log_probability(const AlignedRead& read, const Ha
     
     // EXPERIMENTAL
     
-    auto covered_region = get_encompassing_region(read, haplotype);
+    auto covered_region = get_encompassing(read, haplotype);
     
     auto m_end_max = 1 - std::max(2 * m.gap_open_probability, m.gap_extend_probability);
     

@@ -262,7 +262,7 @@ bool HaplotypeTree::is_branch_the_haplotype(Vertex this_vertex, const Haplotype&
         }
         
         if (!are_adjacent(*previous_allele, *this_allele) &&
-            !haplotype.contains(get_reference_allele(get_intervening_region(*previous_allele, *this_allele),
+            !haplotype.contains(get_reference_allele(get_intervening(*previous_allele, *this_allele),
                                                      the_reference_))) {
             return false;
         }

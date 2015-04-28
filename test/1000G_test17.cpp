@@ -36,20 +36,20 @@
 using std::cout;
 using std::endl;
 
-//TEST_CASE("1000G test 17 : ", "[validation]")
-//{
-//    ReferenceGenomeFactory a_factory {};
-//    ReferenceGenome human(a_factory.make(human_reference_fasta));
-//    
-//    ReadManager a_read_manager(std::vector<std::string> {human_1000g_bam1});
-//    
-//    CandidateVariantGenerator candidate_generator {};
-//    
-//    candidate_generator.register_generator(std::make_unique<AlignmentCandidateVariantGenerator>(human, 0));
-//    
-//    auto sample_ids = a_read_manager.get_sample_ids();
-//    auto the_sample_id = sample_ids.at(0);
-//    
-//    auto a_region = parse_region("", human);
-//    
-//}
+TEST_CASE("1000G test 17 : 16:9104037-9104148", "[validation]")
+{
+    ReferenceGenomeFactory a_factory {};
+    ReferenceGenome human(a_factory.make(human_reference_fasta));
+    
+    ReadManager a_read_manager(std::vector<std::string> {human_1000g_bam1});
+    
+    CandidateVariantGenerator candidate_generator {};
+    
+    candidate_generator.register_generator(std::make_unique<AlignmentCandidateVariantGenerator>(human, 0));
+    
+    auto sample_ids = a_read_manager.get_sample_ids();
+    auto the_sample_id = sample_ids.at(0);
+    
+    auto a_region = parse_region("16:9104037-9104148", human);
+    
+}

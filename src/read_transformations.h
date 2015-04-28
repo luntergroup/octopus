@@ -16,6 +16,7 @@ inline void trim_adapters(AlignedRead& a_read)
     if (a_read.is_chimeric()) {
         auto insert_size = a_read.get_next_segment()->get_inferred_template_length();
         auto read_size   = a_read.get_sequence_size();
+        
         if (insert_size > 0 && insert_size < read_size) {
             auto num_adapter_bases = read_size - insert_size;
             if (a_read.is_marked_reverse_mapped()) {

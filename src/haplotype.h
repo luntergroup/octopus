@@ -77,15 +77,15 @@ void Haplotype::push_back(T&& an_allele)
         if (!is_after(an_allele, the_explicit_alleles_.back())) {
             throw std::runtime_error {"Cannot append out of order allele to back of haplotype"};
         } else if (!are_adjacent(the_explicit_alleles_.back(), an_allele)) {
-            auto intervening_region = get_intervening_region(the_explicit_alleles_.back(), an_allele);
+            auto intervening_region = get_intervening(the_explicit_alleles_.back(), an_allele);
             the_explicit_alleles_.push_back(get_reference_allele(intervening_region, *the_reference_));
         }
         
         if (is_region_set_ && ends_before(the_reference_region_, an_allele)) {
-            the_reference_region_ = get_encompassing_region(the_reference_region_, an_allele);
+            the_reference_region_ = get_encompassing(the_reference_region_, an_allele);
         }
     } else if (is_region_set_ && begins_before(an_allele, the_reference_region_)) {
-        the_reference_region_ = get_encompassing_region(an_allele, the_reference_region_);
+        the_reference_region_ = get_encompassing(an_allele, the_reference_region_);
     }
     
     the_explicit_alleles_.push_back(std::forward<T>(an_allele));
@@ -100,15 +100,15 @@ void Haplotype::push_front(T&& an_allele)
         if (!is_before(an_allele, the_explicit_alleles_.front())) {
             throw std::runtime_error {"Cannot append out of order allele to front of haplotype"};
         } else if (!are_adjacent(an_allele, the_explicit_alleles_.front())) {
-            auto intervening_region = get_intervening_region(an_allele, the_explicit_alleles_.front());
+            auto intervening_region = get_intervening(an_allele, the_explicit_alleles_.front());
             the_explicit_alleles_.push_front(get_reference_allele(intervening_region, *the_reference_));
         }
         
         if (is_region_set_ && begins_before(an_allele, the_reference_region_)) {
-            the_reference_region_ = get_encompassing_region(an_allele, the_reference_region_);
+            the_reference_region_ = get_encompassing(an_allele, the_reference_region_);
         }
     } else if (is_region_set_ && ends_before(the_reference_region_, an_allele)) {
-        the_reference_region_ = get_encompassing_region(the_reference_region_, an_allele);
+        the_reference_region_ = get_encompassing(the_reference_region_, an_allele);
     }
     
     the_explicit_alleles_.push_front(std::forward<T>(an_allele));

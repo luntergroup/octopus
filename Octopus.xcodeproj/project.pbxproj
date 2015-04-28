@@ -220,6 +220,7 @@
 		D42F90131AE7A8000003F791 /* testing.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = testing.txt; sourceTree = "<group>"; };
 		D463C1881AEE2E1900739A66 /* search_regions.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = search_regions.h; sourceTree = "<group>"; };
 		D463C1891AEE2EA100739A66 /* search_region_tests.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = search_region_tests.cpp; sourceTree = "<group>"; };
+		D463C18B1AEF7D2200739A66 /* map_utils.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = map_utils.h; sourceTree = "<group>"; };
 		D4907F471A88D71800639203 /* genomic_region.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = genomic_region.h; sourceTree = "<group>"; };
 		D4907F491A88E14E00639203 /* catch.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = catch.hpp; sourceTree = "<group>"; };
 		D4907F4A1A88E20E00639203 /* variant_tests.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = variant_tests.cpp; sourceTree = "<group>"; };
@@ -467,12 +468,13 @@
 				D4907F731A8E255200639203 /* equitable.h */,
 				D4E41DA11AD801EF0010D25D /* mappable.h */,
 				D4E41DA21AD80C1B0010D25D /* region_utils.h */,
+				D463C18B1AEF7D2200739A66 /* map_utils.h */,
+				CAFA196A1AC0D0D500F953D9 /* maths.h */,
 				CAE3E2941A9CF97700C01B2C /* storage_policies.h */,
 				CAE3E2A01AA1D39100C01B2C /* compression.h */,
 				CA1472741AACC7E2005FDCD1 /* context_back_insert_iterator.h */,
 				D4907F5E1A8A3ADD00639203 /* string_utils.h */,
 				CA14727D1AAE63A8005FDCD1 /* hash_functions.h */,
-				CAFA196A1AC0D0D500F953D9 /* maths.h */,
 			);
 			name = utils;
 			sourceTree = "<group>";

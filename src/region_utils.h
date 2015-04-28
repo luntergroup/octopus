@@ -9,13 +9,38 @@
 #ifndef Octopus_region_utils_h
 #define Octopus_region_utils_h
 
-#include <algorithm> // std::equal_range, std::count_if, std::any_of, std::find_if, std::transform, std::min_element
+#include <algorithm> // std::equal_range, std::count_if, std::any_of, std::find_if, std::min_element, std::max_element
 #include <cstddef>   // std::size_t
-#include <iterator>  // std::distance, std::cbegin etc
-#include <vector>
+#include <iterator>  // std::distance, std::cbegin, std::cend, std::prev, std::next
 
 #include "genomic_region.h"
 #include "mappable.h"
+
+/**
+ Returns the leftmost mappable element in the range [first, last).
+ 
+ The range [first, last) is not required to be sorted.
+ */
+template <typename ForwardIterator>
+inline
+ForwardIterator leftmost_mappable(ForwardIterator first, ForwardIterator last)
+{
+    return std::min_element(first, last);
+}
+
+/**
+ Returns the rightmost mappable element in the range [first, last).
+ 
+ The range [first, last) is not required to be sorted.
+ */
+template <typename ForwardIterator>
+inline
+ForwardIterator rightmost_mappable(ForwardIterator first, ForwardIterator last)
+{
+    return std::max_element(first, last, [] (const auto& lhs, const auto& rhs) {
+        return ends_before(lhs, rhs);
+    });
+}
 
 /**
  Returns the sub-range of Mappable elements in the range [first, last) such that each element
@@ -34,6 +59,11 @@ std::pair<ForwardIterator, ForwardIterator> overlap_range(ForwardIterator first,
                             });
 }
 
+/**
+ Returns the number of mappable elements in the range [first, last) that overlap with a_region.
+ 
+ Requires [first, last) is sorted w.r.t GenomicRegion::operator<
+ */
 template <typename ForwardIterator>
 inline
 std::size_t count_overlapped(ForwardIterator first, ForwardIterator last,
@@ -128,73 +158,6 @@ std::size_t count_overlapped(ForwardIterator first, ForwardIterator last,
     return count_overlapped(first, last, static_cast<const T&>(m).get_region());
 }
 
-template <typename MappableMap, typename MappableType>
-inline
-std::size_t count_overlapped(const MappableMap& mappables, const MappableType& m)
-{
-    std::size_t result {};
-    
-    for (const auto& map_pair : mappables) {
-        result += count_overlapped(std::cbegin(map_pair.second), std::cend(map_pair.second), m);
-    }
-    
-    return result;
-}
-
-template <typename MappableMap, typename MappableType>
-inline
-typename MappableMap::mapped_type::const_iterator
-leftmost_overlapping(const MappableMap& mappables, const MappableType& mappable)
-{
-    using Iterator = typename MappableMap::mapped_type::const_iterator;
-    
-    Iterator result;
-    std::pair<Iterator, Iterator> overlapped_mappables;
-    
-    // To find a default value
-    for (const auto& map_pair : mappables) {
-        if (map_pair.second.size() > 0) {
-            result = std::prev(std::cend(map_pair.second));
-            break;
-        }
-    }
-    
-    for (const auto& map_pair : mappables) {
-        overlapped_mappables = overlap_range(std::cbegin(map_pair.second),
-                                             std::cend(map_pair.second), mappable);
-        
-        if (overlapped_mappables.first != std::cend(map_pair.second) &&
-            begins_before(*overlapped_mappables.first, *result)) {
-            result = overlapped_mappables.first;
-        }
-    }
-    
-    return result;
-}
-
-template <typename MappableMap, typename MappableType>
-inline
-typename MappableMap::mapped_type::const_iterator
-rightmost_overlapping(const MappableMap& mappables, const MappableType& mappable)
-{
-    using Iterator = typename MappableMap::mapped_type::const_iterator;
-    
-    Iterator result {std::cbegin(std::cbegin(mappables)->second)};
-    std::pair<Iterator, Iterator> overlapped_mappables;
-    
-    for (const auto& map_pair : mappables) {
-        overlapped_mappables = overlap_range(std::cbegin(map_pair.second),
-                                             std::cend(map_pair.second), mappable);
-        
-        if (overlapped_mappables.first != overlapped_mappables.second &&
-            ends_before(*result, *std::prev(overlapped_mappables.second))) {
-            result = std::prev(overlapped_mappables.second);
-        }
-    }
-    
-    return result;
-}
-
 template <typename ForwardIterator, typename T1, typename T2>
 inline
 std::size_t count_shared(ForwardIterator first, ForwardIterator last,
@@ -213,17 +176,6 @@ bool has_shared(ForwardIterator first, ForwardIterator last,
                       static_cast<const T2&>(rhs).get_region());
 }
 
-template <typename MappableMap, typename Mappable1, typename Mappable2>
-inline
-bool has_shared(const MappableMap& mappables, const Mappable1& lhs, const Mappable2& rhs)
-{
-    return std::any_of(std::cbegin(mappables), std::cend(mappables),
-                       [&lhs, &rhs] (const auto& map_pair) {
-                           return has_shared(std::cbegin(map_pair.second), std::cend(map_pair.second),
-                                             lhs, rhs);
-                       });
-}
-
 template <typename ForwardIterator1, typename ForwardIterator2, typename T>
 inline
 ForwardIterator2 find_first_shared(ForwardIterator1 first1, ForwardIterator1 last1,
@@ -235,53 +187,11 @@ ForwardIterator2 find_first_shared(ForwardIterator1 first1, ForwardIterator1 las
     });
 }
 
-template <typename MappableMap, typename MappableType1, typename MappableType2>
-inline
-std::size_t
-count_shared(const MappableMap& mappables, const MappableType1& lhs, const MappableType2& rhs)
-{
-    std::size_t result {};
-    
-    for (const auto& map_pair : mappables) {
-        result += count_shared(std::cbegin(map_pair.second), std::cend(map_pair.second), lhs, rhs);
-    }
-    
-    return result;
-}
-
-/**
- Works the same way as the other find_first_shared, but operators over a map of ranges
- (e.g. std::map or std::unordered_map).
- */
-template <typename ForwardIterator, typename MappableMap, typename MappableType>
-ForwardIterator find_first_shared(const MappableMap& mappables, ForwardIterator first,
-                                  ForwardIterator last, const MappableType& mappable)
-{
-    if (mappables.empty()) return last;
-    
-    if (mappables.size() == 1) {
-        return find_first_shared(std::cbegin(std::cbegin(mappables)->second), std::cend(std::cbegin(mappables)->second),
-                                 first, last, mappable);
-    }
-    
-    std::vector<ForwardIterator> smallest {};
-    smallest.reserve(mappables.size());
-    
-    std::transform(std::cbegin(mappables), std::cend(mappables), std::back_inserter(smallest),
-                   [first, last, &mappable] (const auto& p) {
-                       return find_first_shared(std::cbegin(p.second), std::cend(p.second), first, last,
-                                                mappable);
-                   });
-    
-    return *std::min_element(std::cbegin(smallest), std::cend(smallest), []
-                             (ForwardIterator lhs, ForwardIterator rhs) {
-                                 return *lhs < *rhs;
-                             });
-}
-
 /**
  Counts the number of Mappable elements in the range [first2 + 1, last2) that have shared overalapped
  elements in the range [first1, last1) with the first2
+ 
+ Requires [first1, last1) and [first2, last2) to be sorted w.r.t GenomicRegion::operator<
  */
 template <typename ForwardIterator1, typename ForwardIterator2>
 std::size_t count_if_shared_with_first(ForwardIterator1 first1, ForwardIterator1 last1,
@@ -295,28 +205,10 @@ std::size_t count_if_shared_with_first(ForwardIterator1 first1, ForwardIterator1
     
     auto last_overlapped_mappable = std::prev(first_overlap_range.second);
     
-    auto overlapped_with_last_range = overlap_range(std::next(first2), last2, *last_overlapped_mappable);
+    auto overlapped_with_last_range = overlap_range(std::next(first2), last2,
+                                                    *last_overlapped_mappable);
     
     return std::distance(overlapped_with_last_range.first, overlapped_with_last_range.second);
-}
-
-template <typename MappableMap, typename ForwardIterator>
-inline
-std::size_t max_count_if_shared_with_first(const MappableMap& mappables,
-                                           ForwardIterator first, ForwardIterator last)
-{
-    std::size_t maximum {0};
-    std::size_t count {};
-    
-    for (const auto& map_pair : mappables) {
-        count = count_if_shared_with_first(std::cbegin(map_pair.second), std::cend(map_pair.second),
-                                           first, last);
-        if (count > maximum) {
-            maximum = count;
-        }
-    }
-    
-    return maximum;
 }
 
 #endif

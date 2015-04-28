@@ -183,6 +183,24 @@ inline bool is_after(const Mappable<T1>& lhs, const Mappable<T2>& rhs) noexcept
 }
 
 template <typename T>
+inline bool are_adjacent(const Mappable<T>& lhs, const GenomicRegion& rhs) noexcept
+{
+    return are_adjacent(static_cast<const T&>(lhs).get_region(), rhs);
+}
+
+template <typename T>
+inline bool are_adjacent(const GenomicRegion& lhs, const Mappable<T>& rhs) noexcept
+{
+    return are_adjacent(lhs, static_cast<const T&>(rhs).get_region());
+}
+
+template <typename T1, typename T2>
+inline bool are_adjacent(const Mappable<T1>& lhs, const Mappable<T2>& rhs) noexcept
+{
+    return are_adjacent(static_cast<const T1&>(lhs).get_region(), static_cast<const T2&>(rhs).get_region());
+}
+
+template <typename T>
 inline GenomicRegion::DifferenceType overlap_size(const Mappable<T>& lhs, const GenomicRegion& rhs) noexcept
 {
     return overlap_size(static_cast<const T&>(lhs).get_region(), rhs);
@@ -237,57 +255,75 @@ inline bool contains(const Mappable<T1>& lhs, const Mappable<T2>& rhs) noexcept
 }
 
 template <typename T>
-inline bool are_adjacent(const Mappable<T>& lhs, const GenomicRegion& rhs) noexcept
+inline GenomicRegion::DifferenceType inner_distance(const Mappable<T>& lhs, const GenomicRegion& rhs)
 {
-    return are_adjacent(static_cast<const T&>(lhs).get_region(), rhs);
+    return inner_distance(static_cast<const T&>(lhs).get_region(), rhs);
 }
 
 template <typename T>
-inline bool are_adjacent(const GenomicRegion& lhs, const Mappable<T>& rhs) noexcept
+inline GenomicRegion::DifferenceType inner_distance(const GenomicRegion& lhs, const Mappable<T>& rhs)
 {
-    return are_adjacent(lhs, static_cast<const T&>(rhs).get_region());
+    return inner_distance(lhs, static_cast<const T&>(rhs).get_region());
 }
 
 template <typename T1, typename T2>
-inline bool are_adjacent(const Mappable<T1>& lhs, const Mappable<T2>& rhs) noexcept
+inline GenomicRegion::DifferenceType inner_distance(const Mappable<T1>& lhs, const Mappable<T2>& rhs)
 {
-    return are_adjacent(static_cast<const T1&>(lhs).get_region(), static_cast<const T2&>(rhs).get_region());
+    return inner_distance(static_cast<const T1&>(lhs).get_region(), static_cast<const T2&>(rhs).get_region());
 }
 
 template <typename T>
-inline GenomicRegion get_encompassing_region(const Mappable<T>& lhs, const GenomicRegion& rhs)
+inline GenomicRegion::DifferenceType outer_distance(const Mappable<T>& lhs, const GenomicRegion& rhs)
 {
-    return get_encompassing_region(static_cast<const T&>(lhs).get_region(), rhs);
+    return outer_distance(static_cast<const T&>(lhs).get_region(), rhs);
 }
 
 template <typename T>
-inline GenomicRegion get_encompassing_region(const GenomicRegion& lhs, const Mappable<T>& rhs)
+inline GenomicRegion::DifferenceType outer_distance(const GenomicRegion& lhs, const Mappable<T>& rhs)
 {
-    return get_encompassing_region(lhs, static_cast<const T&>(rhs).get_region());
+    return outer_distance(lhs, static_cast<const T&>(rhs).get_region());
 }
 
 template <typename T1, typename T2>
-inline GenomicRegion get_encompassing_region(const Mappable<T1>& lhs, const Mappable<T2>& rhs)
+inline GenomicRegion::DifferenceType outer_distance(const Mappable<T1>& lhs, const Mappable<T2>& rhs)
 {
-    return get_encompassing_region(static_cast<const T1&>(lhs).get_region(), static_cast<const T2&>(rhs).get_region());
+    return outer_distance(static_cast<const T1&>(lhs).get_region(), static_cast<const T2&>(rhs).get_region());
 }
 
 template <typename T>
-inline GenomicRegion get_intervening_region(const Mappable<T>& lhs, const GenomicRegion& rhs)
+inline GenomicRegion get_encompassing(const Mappable<T>& lhs, const GenomicRegion& rhs)
 {
-    return get_intervening_region(static_cast<const T&>(lhs).get_region(), rhs);
+    return get_encompassing(static_cast<const T&>(lhs).get_region(), rhs);
 }
 
 template <typename T>
-inline GenomicRegion get_intervening_region(const GenomicRegion& lhs, const Mappable<T>& rhs)
+inline GenomicRegion get_encompassing(const GenomicRegion& lhs, const Mappable<T>& rhs)
 {
-    return get_intervening_region(lhs, static_cast<const T&>(rhs).get_region());
+    return get_encompassing(lhs, static_cast<const T&>(rhs).get_region());
 }
 
 template <typename T1, typename T2>
-inline GenomicRegion get_intervening_region(const Mappable<T1>& lhs, const Mappable<T2>& rhs)
+inline GenomicRegion get_encompassing(const Mappable<T1>& lhs, const Mappable<T2>& rhs)
 {
-    return get_intervening_region(static_cast<const T1&>(lhs).get_region(), static_cast<const T2&>(rhs).get_region());
+    return get_encompassing(static_cast<const T1&>(lhs).get_region(), static_cast<const T2&>(rhs).get_region());
+}
+
+template <typename T>
+inline GenomicRegion get_intervening(const Mappable<T>& lhs, const GenomicRegion& rhs)
+{
+    return get_intervening(static_cast<const T&>(lhs).get_region(), rhs);
+}
+
+template <typename T>
+inline GenomicRegion get_intervening(const GenomicRegion& lhs, const Mappable<T>& rhs)
+{
+    return get_intervening(lhs, static_cast<const T&>(rhs).get_region());
+}
+
+template <typename T1, typename T2>
+inline GenomicRegion get_intervening(const Mappable<T1>& lhs, const Mappable<T2>& rhs)
+{
+    return get_intervening(static_cast<const T1&>(lhs).get_region(), static_cast<const T2&>(rhs).get_region());
 }
 
 template <typename T>
@@ -345,21 +381,21 @@ inline GenomicRegion get_right_overhang(const Mappable<T1>& lhs, const Mappable<
 }
 
 template <typename T>
-inline GenomicRegion::DifferenceType distance(const Mappable<T>& lhs, const GenomicRegion& rhs)
+inline GenomicRegion get_closed(const Mappable<T>& lhs, const GenomicRegion& rhs)
 {
-    return distance(static_cast<const T&>(lhs).get_region(), rhs);
+    return get_closed(static_cast<const T&>(lhs).get_region(), rhs);
 }
 
 template <typename T>
-inline GenomicRegion::DifferenceType distance(const GenomicRegion& lhs, const Mappable<T>& rhs)
+inline GenomicRegion get_closed(const GenomicRegion& lhs, const Mappable<T>& rhs)
 {
-    return distance(lhs, static_cast<const T&>(rhs).get_region());
+    return get_closed(lhs, static_cast<const T&>(rhs).get_region());
 }
 
 template <typename T1, typename T2>
-inline GenomicRegion::DifferenceType distance(const Mappable<T1>& lhs, const Mappable<T2>& rhs)
+inline GenomicRegion get_closed(const Mappable<T1>& lhs, const Mappable<T2>& rhs)
 {
-    return distance(static_cast<const T1&>(lhs).get_region(), static_cast<const T2&>(rhs).get_region());
+    return get_closed(static_cast<const T1&>(lhs).get_region(), static_cast<const T2&>(rhs).get_region());
 }
 
 #endif

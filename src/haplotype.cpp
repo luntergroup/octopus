@@ -8,8 +8,9 @@
 
 #include "haplotype.h"
 
-#include <algorithm> // std::for_each
-#include <iterator>  // std::cbegin etc
+#include <algorithm> // std::for_each, std::binary_search, std::equal_range, std::sort,
+                     // std::find_if_not, std::adjacent_find, std::unique
+#include <iterator>  // std::cbegin, std::cend, std::distance
 
 #include "reference_genome.h"
 #include "genomic_region.h"
@@ -159,11 +160,7 @@ GenomicRegion Haplotype::get_region_bounded_by_explicit_alleles() const
 {
     if (the_explicit_alleles_.empty()) throw std::runtime_error {"Cannot get region from empty allele list"};
     
-    return GenomicRegion {
-        the_explicit_alleles_.front().get_region().get_contig_name(),
-        the_explicit_alleles_.front().get_region().get_begin(),
-        the_explicit_alleles_.back().get_region().get_end()
-    };
+    return get_encompassing(the_explicit_alleles_.front(), the_explicit_alleles_.back());
 }
 
 Haplotype::SequenceType Haplotype::get_sequence_bounded_by_explicit_alleles(AlleleIterator first,
