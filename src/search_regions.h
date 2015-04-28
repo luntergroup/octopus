@@ -47,7 +47,7 @@ namespace detail
         if (current == first_included) return true;
         
         bool increases_density {max_count_if_shared_with_first(the_reads, std::next(current), last)
-                                        > max_density_increase};
+                                        >= max_density_increase};
         
         return (increases_density) ? outer_distance(*std::prev(current), *current)
                                         <= outer_distance(*current, *first_excluded) : true;
@@ -121,15 +121,16 @@ GenomicRegion next_sub_region(const GenomicRegion& the_search_region, const Geno
         ++max_variants;
     }
     
-    while (included_it != first_excluded_it &&
+    while (--max_variants > 0 &&
            detail::is_optimal_to_include(first_included_it, included_it, first_excluded_it,
-                                         last_variant_it, the_reads,
-                                         max_variants + num_excluded_variants)) {
+                                         last_variant_it, the_reads, max_variants + num_excluded_variants)) {
         ++included_it;
     }
     
+    first_excluded_it = std::next(included_it);
+    
     return detail::get_optimal_region_around_variants(previous_variant_sub_range.first, first_included_it,
-                                                      included_it, last_variant_it, the_reads);
+                                                      first_excluded_it, last_variant_it, the_reads);
 }
 
 #endif
