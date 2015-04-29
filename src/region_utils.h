@@ -54,8 +54,8 @@ std::pair<ForwardIterator, ForwardIterator> overlap_range(ForwardIterator first,
                                                           const GenomicRegion& a_region)
 {
     return std::equal_range(first, last, a_region,
-                            [] (const auto& other, const auto& a_region) {
-                                return is_before(other, a_region);
+                            [] (const auto& lhs, const auto& rhs) {
+                                return is_before(lhs, rhs);
                             });
 }
 

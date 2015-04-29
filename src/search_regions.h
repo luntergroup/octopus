@@ -9,7 +9,7 @@
 #ifndef Octopus_search_regions_h
 #define Octopus_search_regions_h
 
-#include <iterator>  // std::distance, std::next, std::prev, std::cbegin, std::cend
+#include <iterator>  // std::distance, std::next, std::prev, std::advance, std::cbegin, std::cend
 #include <algorithm> // std::min
 #include <cmath>     // std::abs
 
@@ -40,22 +40,20 @@ bool is_dense_region(const GenomicRegion& a_region, const SampleReadMap& the_rea
 namespace detail
 {
     template <typename BidirectionalIterator, typename SampleReadMap>
-    bool is_optimal_to_include(BidirectionalIterator first_included, BidirectionalIterator current,
-                               BidirectionalIterator first_excluded, BidirectionalIterator last,
-                               const SampleReadMap& the_reads, unsigned max_density_increase)
+    bool is_optimal_to_extend(BidirectionalIterator first_included, BidirectionalIterator proposed_included,
+                              BidirectionalIterator first_excluded, BidirectionalIterator last,
+                              const SampleReadMap& the_reads, unsigned max_density_increase)
     {
-        if (current == first_included) return true;
-        
-        bool increases_density {max_count_if_shared_with_first(the_reads, std::next(current), last)
+        bool increases_density {max_count_if_shared_with_first(the_reads, std::next(proposed_included), last)
                                         >= max_density_increase};
         
-        return (increases_density) ? outer_distance(*std::prev(current), *current)
-                                        <= outer_distance(*current, *first_excluded) : true;
+        return (increases_density) ? outer_distance(*std::prev(proposed_included), *proposed_included)
+                                        <= outer_distance(*proposed_included, *first_excluded) : true;
     }
     
     template <typename BidirectionalIterator, typename SampleReadMap>
     GenomicRegion
-    get_optimal_region_around_variants(BidirectionalIterator first_previous, BidirectionalIterator first_included,
+    get_optimal_region_around_included(BidirectionalIterator first_previous, BidirectionalIterator first_included,
                                        BidirectionalIterator first_excluded, BidirectionalIterator last,
                                        const SampleReadMap& the_reads)
     {
@@ -114,22 +112,17 @@ GenomicRegion next_sub_region(const GenomicRegion& the_search_region, const Geno
     unsigned num_excluded_variants = max_num_variants_within_read_length - max_variants;
     auto first_excluded_it = std::next(included_it, max_variants);
     
-    // Any 'excluded' variants overlapping the last included variant will be implicitly included in
-    // the final region, so they are added explictly here
-    while (first_excluded_it != last_variant_it && overlaps(*std::prev(first_excluded_it), *first_excluded_it)) {
-        ++first_excluded_it;
-        ++max_variants;
-    }
-    
     while (--max_variants > 0 &&
-           detail::is_optimal_to_include(first_included_it, included_it, first_excluded_it,
-                                         last_variant_it, the_reads, max_variants + num_excluded_variants)) {
+           detail::is_optimal_to_extend(first_included_it, std::next(included_it), first_excluded_it,
+                                        last_variant_it, the_reads, max_variants + num_excluded_variants)) {
         ++included_it;
     }
     
+    std::advance(included_it, count_overlapped(first_excluded_it, last_variant_it, *included_it));
+    
     first_excluded_it = std::next(included_it);
     
-    return detail::get_optimal_region_around_variants(previous_variant_sub_range.first, first_included_it,
+    return detail::get_optimal_region_around_included(previous_variant_sub_range.first, first_included_it,
                                                       first_excluded_it, last_variant_it, the_reads);
 }
 

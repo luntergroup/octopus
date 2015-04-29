@@ -75,7 +75,9 @@ void Haplotype::push_back(T&& an_allele)
 {
     if (!the_explicit_alleles_.empty()) {
         if (!is_after(an_allele, the_explicit_alleles_.back())) {
-            throw std::runtime_error {"Cannot append out of order allele to back of haplotype"};
+            std::cout << the_explicit_alleles_.back() << std::endl;
+            std::cout << an_allele << std::endl;
+            throw std::runtime_error {"cannot append out of order allele to back of haplotype"};
         } else if (!are_adjacent(the_explicit_alleles_.back(), an_allele)) {
             auto intervening_region = get_intervening(the_explicit_alleles_.back(), an_allele);
             the_explicit_alleles_.push_back(get_reference_allele(intervening_region, *the_reference_));
@@ -97,8 +99,8 @@ template <typename T>
 void Haplotype::push_front(T&& an_allele)
 {
     if (!the_explicit_alleles_.empty()) {
-        if (!is_before(an_allele, the_explicit_alleles_.front())) {
-            throw std::runtime_error {"Cannot append out of order allele to front of haplotype"};
+        if (!is_after(the_explicit_alleles_.front(), an_allele)) {
+            throw std::runtime_error {"cannot append out of order allele to front of haplotype"};
         } else if (!are_adjacent(an_allele, the_explicit_alleles_.front())) {
             auto intervening_region = get_intervening(an_allele, the_explicit_alleles_.front());
             the_explicit_alleles_.push_front(get_reference_allele(intervening_region, *the_reference_));

@@ -102,7 +102,7 @@ inline bool operator<(const SequenceRegion& lhs, const SequenceRegion& rhs) noex
 
 inline bool is_before(const SequenceRegion& lhs, const SequenceRegion& rhs) noexcept
 {
-    return (lhs == rhs) ? false : lhs.get_end() <= rhs.get_begin();
+    return (lhs == rhs) ? false : lhs.get_end() <= rhs.get_begin() && lhs.get_begin() != rhs.get_begin();
 }
 
 inline bool is_after(const SequenceRegion& lhs, const SequenceRegion& rhs) noexcept
