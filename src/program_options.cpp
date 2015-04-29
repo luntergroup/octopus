@@ -8,7 +8,22 @@
 
 #include "program_options.h"
 
-std::pair<po::variables_map, bool> parse_options(int argc, char** argv)
+#include <iostream>
+#include <fstream>
+#include <stdexcept>
+#include <iterator>
+#include <algorithm>  // std::transform
+#include <functional> // std::function
+#include <boost/filesystem/path.hpp>
+#include <boost/filesystem/operations.hpp>
+
+#include "genomic_region.h"
+#include "reference_genome.h"
+#include "string_utils.h"
+
+namespace fs = boost::filesystem;
+
+std::pair<po::variables_map, bool> parse_options(int argc, const char** argv)
 {
     try {
         po::positional_options_description p;
@@ -16,14 +31,14 @@ std::pair<po::variables_map, bool> parse_options(int argc, char** argv)
         
         po::options_description general("General options");
         general.add_options()
-        ("help", "produce help message")
+        ("help,h", "produce help message")
         ("version", "output the version number")
         ("verbosity", po::value<unsigned>()->default_value(0), "level of logging. Verbosity 0 switches off logging")
         ;
         
         po::options_description backend("Backend options");
         backend.add_options()
-        ("num-threads", po::value<unsigned>(), "the number of threads")
+        ("num-threads,t", po::value<unsigned>(), "the number of threads")
         ("compress-reads", po::value<bool>()->default_value(false), "compress the reads (slower)")
         ("max-open-files", po::value<unsigned>()->default_value(20), "the maximum number of files that can be open at one time")
         ;
@@ -31,9 +46,9 @@ std::pair<po::variables_map, bool> parse_options(int argc, char** argv)
         po::options_description input("Input/output options");
         input.add_options()
         ("reference-file,R", po::value<std::string>(), "the reference genome file")
-        ("read-file,I", po::value<std::string>(), "comma-delimited list of aligned read file paths, or a path to a text file containing read file paths")
-        ("regions", po::value<std::string>(), "comma-delimited list of one-indexed regions (chrom:begin-end) to consider, or a path to a file containing such regions")
-        ("skip-regions", po::value<std::string>(), "comma-delimited list of one-indexed regions (chrom:begin-end) to skip, or a path to a file containing such regions")
+        ("read-file,I", po::value<std::vector<std::string>>()->multitoken(), "space-seperated list of aligned read file paths, or a path to a text file containing read file paths")
+        ("regions,R", po::value<std::vector<std::string>>()->multitoken(), "space-seperated list of one-indexed variant search regions (chrom:begin-end), or a path to a file containing such regions")
+        ("skip-regions", po::value<std::vector<std::string>>()->multitoken(), "space-seperated list of one-indexed regions (chrom:begin-end) to skip, or a path to a file containing such regions")
         ("known-variants", po::value<std::string>(), "a variant file path containing known variants. These variants will automatically become candidates")
         ("output,o", po::value<std::string>(), "the path of the output variant file")
         ("log-file", po::value<std::string>(), "the path of the output log file")
@@ -89,5 +104,92 @@ std::pair<po::variables_map, bool> parse_options(int argc, char** argv)
     catch(std::exception& e) {
         std::cout << e.what() << std::endl;
         return {po::variables_map {}, false};
+    }
+}
+
+namespace detail
+{
+    bool is_region_file_path(const std::string& region_option)
+    {
+        return fs::native(region_option);
+    }
+    
+    struct Line
+    {
+        std::string line_data;
+        
+        operator std::string() const
+        {
+            return line_data;
+        }
+    };
+    
+    std::istream& operator>>(std::istream& str, Line& data)
+    {
+        std::getline(str, data.line_data);
+        return str;
+    }
+    
+    std::string to_region_format(const std::string& bed_line)
+    {
+        auto tokens = split(bed_line, '\t');
+        return std::string {tokens[0] + ':' + tokens[1] + '-' + tokens[2]};
+    }
+    
+    std::function<GenomicRegion(std::string)> get_line_parser(const fs::path& the_region_path,
+                                                              const ReferenceGenome& the_reference)
+    {
+        if (the_region_path.extension().string() == ".bed") {
+            return [&the_reference] (const std::string& line) {
+                return parse_region(detail::to_region_format(line), the_reference);
+            };
+        } else {
+            return [&the_reference] (const std::string& line) {
+                return parse_region(line, the_reference);
+            };
+        }
+    }
+    
+    std::vector<GenomicRegion> get_regions_from_file(const std::string& region_path, const ReferenceGenome& the_reference)
+    {
+        std::vector<GenomicRegion> result {};
+        
+        fs::path the_path {region_path};
+        
+        if (!fs::exists(the_path)) {
+            throw std::runtime_error {"cannot find given region file " + the_path.string()};
+        }
+        
+        std::ifstream the_file {the_path.string()};
+        
+        std::transform(std::istream_iterator<Line>(the_file), std::istream_iterator<Line>(),
+                       std::back_inserter(result), get_line_parser(the_path, the_reference));
+        
+        return result;
+    }
+    
+} // end namespace detail
+
+std::vector<GenomicRegion> parse_region_option(const po::variables_map& options, const std::string& region_option,
+                                               const ReferenceGenome& the_reference)
+{
+    if (options.count(region_option) == 0) {
+        return get_all_contig_regions(the_reference);
+    } else {
+        std::vector<GenomicRegion> result {};
+        
+        const auto& given_regions = options.at(region_option).as<std::vector<std::string>>();
+        
+        for (const auto& region : given_regions) {
+            if (detail::is_region_file_path(region)) {
+                auto regions_from_file = detail::get_regions_from_file(region, the_reference);
+                result.insert(result.end(), std::make_move_iterator(regions_from_file.begin()),
+                              std::make_move_iterator(regions_from_file.end()));
+            } else {
+                result.emplace_back(parse_region(region, the_reference));
+            }
+        }
+        
+        return result;
     }
 }

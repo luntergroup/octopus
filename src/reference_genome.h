@@ -15,7 +15,7 @@
 #include <unordered_map>
 #include <stdexcept>
 #include <memory>    // std::unique_ptr
-#include <algorithm> // std::find
+#include <algorithm> // std::find, std::sort
 #include <iterator>  // std::cbegin etc
 #include <regex>
 
@@ -96,7 +96,7 @@ inline ReferenceGenome::SizeType ReferenceGenome::get_contig_size(const GenomicR
 
 inline GenomicRegion ReferenceGenome::get_contig_region(const std::string& contig_name) const
 {
-    return GenomicRegion(contig_name, 0, get_contig_size(contig_name));
+    return GenomicRegion {contig_name, 0, get_contig_size(contig_name)};
 }
 
 inline bool ReferenceGenome::contains_region(const GenomicRegion& a_region) const noexcept
@@ -107,6 +107,23 @@ inline bool ReferenceGenome::contains_region(const GenomicRegion& a_region) cons
 inline ReferenceGenome::SequenceType ReferenceGenome::get_sequence(const GenomicRegion& a_region)
 {
     return the_reference_impl_->get_sequence(a_region);
+}
+
+inline std::vector<GenomicRegion> get_all_contig_regions(const ReferenceGenome& the_reference)
+{
+    std::vector<GenomicRegion> result {};
+    
+    for (const auto& contig : the_reference.get_contig_names()) {
+        result.emplace_back(the_reference.get_contig_region(contig));
+    }
+    
+    result.shrink_to_fit();
+    
+    std::sort(result.begin(), result.end(), [] (const auto& lhs, const auto& rhs) {
+        return size(lhs) < size(rhs);
+    });
+    
+    return result;
 }
 
 // Requires reference access to get contig sizes for partially specified regions (e.g. "4")
