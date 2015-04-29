@@ -18,7 +18,7 @@
 #include "htslib_read_facade.h"
 #include "read_manager.h"
 #include "mock_objects.h"
-#include "region_utils.h"
+#include "region_algorithms.h"
 
 TEST_CASE("read reader basic BAM", "[read_reader]")
 {

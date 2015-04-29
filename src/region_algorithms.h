@@ -1,13 +1,13 @@
 //
-//  region_utils.h
+//  region_algorithms.h
 //  Octopus
 //
 //  Created by Daniel Cooke on 10/04/2015.
 //  Copyright (c) 2015 Oxford University. All rights reserved.
 //
 
-#ifndef Octopus_region_utils_h
-#define Octopus_region_utils_h
+#ifndef Octopus_region_algorithms_h
+#define Octopus_region_algorithms_h
 
 #include <algorithm> // std::equal_range, std::count_if, std::any_of, std::find_if, std::min_element, std::max_element
 #include <cstddef>   // std::size_t
@@ -38,7 +38,7 @@ inline
 ForwardIterator rightmost_mappable(ForwardIterator first, ForwardIterator last)
 {
     return std::max_element(first, last, [] (const auto& lhs, const auto& rhs) {
-        return ends_before(lhs, rhs);
+        return (ends_equal(lhs, rhs)) ? begins_before(lhs, rhs) : ends_before(lhs, rhs);
     });
 }
 
@@ -48,12 +48,12 @@ ForwardIterator rightmost_mappable(ForwardIterator first, ForwardIterator last)
  
  Requires [first, last) is sorted w.r.t GenomicRegion::operator<
  */
-template <typename ForwardIterator>
+template <typename ForwardIterator, typename MappableType>
 inline
 std::pair<ForwardIterator, ForwardIterator> overlap_range(ForwardIterator first, ForwardIterator last,
-                                                          const GenomicRegion& a_region)
+                                                          const MappableType& mappable)
 {
-    return std::equal_range(first, last, a_region,
+    return std::equal_range(first, last, mappable,
                             [] (const auto& lhs, const auto& rhs) {
                                 return is_before(lhs, rhs);
                             });
@@ -64,12 +64,12 @@ std::pair<ForwardIterator, ForwardIterator> overlap_range(ForwardIterator first,
  
  Requires [first, last) is sorted w.r.t GenomicRegion::operator<
  */
-template <typename ForwardIterator>
+template <typename ForwardIterator, typename MappableType>
 inline
 std::size_t count_overlapped(ForwardIterator first, ForwardIterator last,
-                             const GenomicRegion& a_region)
+                             const MappableType& mappable)
 {
-    auto overlapped = overlap_range(first, last, a_region);
+    auto overlapped = overlap_range(first, last, mappable);
     return std::distance(overlapped.first, overlapped.second);
 }
 
@@ -79,10 +79,10 @@ std::size_t count_overlapped(ForwardIterator first, ForwardIterator last,
  
  Requires [first, last) is sorted w.r.t GenomicRegion::operator<
  */
-template <typename ForwardIterator>
+template <typename ForwardIterator, typename MappableType1, typename MappableType2>
 inline
 std::size_t count_shared(ForwardIterator first, ForwardIterator last,
-                         const GenomicRegion& lhs, const GenomicRegion& rhs)
+                         const MappableType1& lhs, const MappableType2& rhs)
 {
     auto lhs_overlap_range = overlap_range(first, last, lhs);
     auto rhs_overlap_range = overlap_range(first, last, lhs);
@@ -104,10 +104,10 @@ std::size_t count_shared(ForwardIterator first, ForwardIterator last,
  
  Requires [first, last) is sorted w.r.t GenomicRegion::operator<
  */
-template <typename ForwardIterator>
+template <typename ForwardIterator, typename MappableType1, typename MappableType2>
 inline
 bool has_shared(ForwardIterator first, ForwardIterator last,
-                const GenomicRegion& lhs, const GenomicRegion& rhs)
+                const MappableType1& lhs, const MappableType2& rhs)
 {
     auto lhs_overlap_range = overlap_range(first, last, lhs);
     auto rhs_overlap_range = overlap_range(first, last, lhs);
@@ -130,60 +130,14 @@ bool has_shared(ForwardIterator first, ForwardIterator last,
  
  Requires [first1, last1) and [first2, last2) are sorted w.r.t GenomicRegion::operator<
  */
-template <typename ForwardIterator>
-inline
-ForwardIterator find_first_shared(ForwardIterator first1, ForwardIterator last1,
-                                  ForwardIterator first2, ForwardIterator last2,
-                                  const GenomicRegion& a_region)
-{
-    return std::find_if(first2, last2, [first1, last1, &a_region] (const auto& mappable) {
-        return has_shared(first1, last1, mappable, a_region);
-    });
-}
-
-template <typename ForwardIterator, typename T>
-inline
-std::pair<ForwardIterator, ForwardIterator> overlap_range(ForwardIterator first, ForwardIterator last,
-                                                          const Mappable<T>& m)
-
-{
-    return overlap_range(first, last, static_cast<const T&>(m).get_region());
-}
-
-template <typename ForwardIterator, typename T>
-inline
-std::size_t count_overlapped(ForwardIterator first, ForwardIterator last,
-                             const Mappable<T>& m)
-{
-    return count_overlapped(first, last, static_cast<const T&>(m).get_region());
-}
-
-template <typename ForwardIterator, typename T1, typename T2>
-inline
-std::size_t count_shared(ForwardIterator first, ForwardIterator last,
-                       const Mappable<T1>& lhs, const Mappable<T2>& rhs)
-{
-    return count_shared(first, last, static_cast<const T1&>(lhs).get_region(),
-                        static_cast<const T2&>(rhs).get_region());
-}
-
-template <typename ForwardIterator, typename T1, typename T2>
-inline
-bool has_shared(ForwardIterator first, ForwardIterator last,
-                const Mappable<T1>& lhs, const Mappable<T2>& rhs)
-{
-    return has_shared(first, last, static_cast<const T1&>(lhs).get_region(),
-                      static_cast<const T2&>(rhs).get_region());
-}
-
-template <typename ForwardIterator1, typename ForwardIterator2, typename T>
+template <typename ForwardIterator1, typename ForwardIterator2, typename MappableType>
 inline
 ForwardIterator2 find_first_shared(ForwardIterator1 first1, ForwardIterator1 last1,
-                                   ForwardIterator2 first2, ForwardIterator2 last2,
-                                   const Mappable<T>& m)
+                                  ForwardIterator2 first2, ForwardIterator2 last2,
+                                  const MappableType& mappable)
 {
-    return std::find_if(first2, last2, [first1, last1, &m] (const auto& mappable) {
-        return has_shared(first1, last1, mappable, m);
+    return std::find_if(first2, last2, [first1, last1, &mappable] (const auto& m) {
+        return has_shared(first1, last1, m, mappable);
     });
 }
 

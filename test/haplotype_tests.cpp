@@ -23,7 +23,7 @@
 #include "alignment_candidate_variant_generator.h"
 #include "haplotype.h"
 #include "genotype.h"
-#include "region_utils.h"
+#include "region_algorithms.h"
 
 using std::cout;
 using std::endl;

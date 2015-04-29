@@ -138,14 +138,16 @@ inline SequenceRegion::DifferenceType inner_distance(const SequenceRegion& lhs,
     if (overlaps(lhs, rhs)) return 0;
     
     return static_cast<SequenceRegion::DifferenceType>(rhs.get_begin()) -
-    static_cast<SequenceRegion::DifferenceType>(lhs.get_end());
+            static_cast<SequenceRegion::DifferenceType>((empty(lhs)) ? lhs.get_end() + 1 : lhs.get_end());
 }
 
 inline SequenceRegion::DifferenceType outer_distance(const SequenceRegion& lhs,
                                                      const SequenceRegion& rhs) noexcept
 {
+    if (contains(lhs, rhs) || contains(rhs, lhs)) return 0;
+    
     return static_cast<SequenceRegion::DifferenceType>(rhs.get_end()) -
-    static_cast<SequenceRegion::DifferenceType>(lhs.get_begin());
+            static_cast<SequenceRegion::DifferenceType>(lhs.get_begin());
 }
 
 inline SequenceRegion shift(const SequenceRegion& a_region, SequenceRegion::DifferenceType n)
@@ -155,8 +157,8 @@ inline SequenceRegion shift(const SequenceRegion& a_region, SequenceRegion::Diff
     }
     
     return SequenceRegion {
-        static_cast<SequenceRegion::SizeType>(a_region.get_begin() + n),
-        static_cast<SequenceRegion::SizeType>(a_region.get_end() + n)
+            static_cast<SequenceRegion::SizeType>(a_region.get_begin() + n),
+            static_cast<SequenceRegion::SizeType>(a_region.get_end() + n)
     };
 }
 

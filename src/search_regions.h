@@ -14,7 +14,7 @@
 #include <cmath>     // std::abs
 
 #include "genomic_region.h"
-#include "region_utils.h"
+#include "region_algorithms.h"
 #include "map_utils.h"
 
 #include <iostream> // TEST
@@ -44,11 +44,14 @@ namespace detail
                               BidirectionalIterator first_excluded, BidirectionalIterator last,
                               const SampleReadMap& the_reads, unsigned max_density_increase)
     {
-        bool increases_density {max_count_if_shared_with_first(the_reads, std::next(proposed_included), last)
+        if (proposed_included == last) return false;
+        if (first_excluded == last) return true;
+        
+        bool increases_density {max_count_if_shared_with_first(the_reads, proposed_included, last)
                                         >= max_density_increase};
         
-        return (increases_density) ? outer_distance(*std::prev(proposed_included), *proposed_included)
-                                        <= outer_distance(*proposed_included, *first_excluded) : true;
+        return (increases_density) ? inner_distance(*std::prev(proposed_included), *proposed_included)
+                                        <= inner_distance(*proposed_included, *first_excluded) : true;
     }
     
     template <typename BidirectionalIterator, typename SampleReadMap>
@@ -81,10 +84,10 @@ namespace detail
 template <typename SampleReadMap, typename Variants>
 GenomicRegion next_sub_region(const GenomicRegion& the_search_region, const GenomicRegion& the_previous_sub_region,
                               const SampleReadMap& the_reads, const Variants& the_variants,
-                              unsigned max_variants, unsigned max_indicators)
+                              unsigned max_included, unsigned max_indicators)
 {
-    if (max_variants > 0 && max_variants <= max_indicators) {
-        max_indicators = max_variants - 1;
+    if (max_included > 0 && max_included <= max_indicators) {
+        max_indicators = max_included - 1;
     }
     
     auto last_variant_it  = std::cend(the_variants);
@@ -92,33 +95,39 @@ GenomicRegion next_sub_region(const GenomicRegion& the_search_region, const Geno
     auto previous_variant_sub_range = overlap_range(std::cbegin(the_variants), last_variant_it, the_previous_sub_region);
     auto included_it = previous_variant_sub_range.second;
     
+    if (max_included == 0) {
+        return (included_it != last_variant_it) ? get_intervening(the_previous_sub_region, *included_it) :
+                                                    the_previous_sub_region;
+    }
+    
     auto first_shared_in_previous_range_it = find_first_shared(the_reads, previous_variant_sub_range.first,
                                                                previous_variant_sub_range.second, *included_it);
     auto num_possible_indicators = static_cast<unsigned>(std::distance(first_shared_in_previous_range_it, included_it));
     unsigned num_indicators = std::min(num_possible_indicators, max_indicators);
     
-    max_variants -= num_indicators;
+    max_included -= num_indicators;
     auto first_included_it = std::prev(included_it, num_indicators);
     
     auto num_remaining_variants = static_cast<unsigned>(std::distance(included_it, last_variant_it));
-    if (num_remaining_variants < max_variants) {
-        max_variants -= num_remaining_variants;
+    if (num_remaining_variants < max_included) {
+        max_included -= num_remaining_variants;
     }
     
     auto max_num_variants_within_read_length = static_cast<unsigned>(max_count_if_shared_with_first(the_reads,
                                                                     included_it, last_variant_it));
-    max_variants = std::min(max_variants, max_num_variants_within_read_length + 1);
+    max_included = std::min(max_included, max_num_variants_within_read_length + 1);
     
-    unsigned num_excluded_variants = max_num_variants_within_read_length - max_variants;
-    auto first_excluded_it = std::next(included_it, max_variants);
+    unsigned num_excluded_variants = max_num_variants_within_read_length - max_included;
+    auto first_excluded_it = std::next(included_it, max_included);
     
-    while (--max_variants > 0 &&
+    while (--max_included > 0 &&
            detail::is_optimal_to_extend(first_included_it, std::next(included_it), first_excluded_it,
-                                        last_variant_it, the_reads, max_variants + num_excluded_variants)) {
+                                        last_variant_it, the_reads, max_included + num_excluded_variants)) {
         ++included_it;
     }
     
-    std::advance(included_it, count_overlapped(first_excluded_it, last_variant_it, *included_it));
+    std::advance(included_it, count_overlapped(std::next(included_it), last_variant_it,
+                                               *rightmost_mappable(first_included_it, std::next(included_it))));
     
     first_excluded_it = std::next(included_it);
     

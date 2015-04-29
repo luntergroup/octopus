@@ -13,7 +13,7 @@
 #include <algorithm> // std::find, std::find_if
 
 #include "reference_genome.h"
-#include "region_utils.h"
+#include "region_algorithms.h"
 
 #include <iostream> // TEST
 

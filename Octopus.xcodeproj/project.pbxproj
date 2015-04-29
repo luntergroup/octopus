@@ -237,7 +237,7 @@
 		D4907F711A8E04B900639203 /* comparable.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = comparable.h; sourceTree = "<group>"; };
 		D4907F731A8E255200639203 /* equitable.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = equitable.h; sourceTree = "<group>"; };
 		D4E41DA11AD801EF0010D25D /* mappable.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = mappable.h; sourceTree = "<group>"; };
-		D4E41DA21AD80C1B0010D25D /* region_utils.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = region_utils.h; sourceTree = "<group>"; };
+		D4E41DA21AD80C1B0010D25D /* region_algorithms.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = region_algorithms.h; sourceTree = "<group>"; };
 		D4E41DA31AD81C390010D25D /* allele.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = allele.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -467,7 +467,7 @@
 				D4907F711A8E04B900639203 /* comparable.h */,
 				D4907F731A8E255200639203 /* equitable.h */,
 				D4E41DA11AD801EF0010D25D /* mappable.h */,
-				D4E41DA21AD80C1B0010D25D /* region_utils.h */,
+				D4E41DA21AD80C1B0010D25D /* region_algorithms.h */,
 				D463C18B1AEF7D2200739A66 /* map_utils.h */,
 				CAFA196A1AC0D0D500F953D9 /* maths.h */,
 				CAE3E2941A9CF97700C01B2C /* storage_policies.h */,
