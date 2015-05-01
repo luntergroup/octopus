@@ -46,11 +46,14 @@ public:
     PhasedGenotypePosteriors get_phased_genotypes_posteriors(bool include_partially_phased_haplotypes);
     
 private:
-    using RealType = VariationalBayesGenotypeModel::RealType;
-    using ReadMap = std::unordered_map<SampleIdType, std::deque<AlignedRead>>;
+    using RealType          = VariationalBayesGenotypeModel::RealType;
+    using ReadMap           = std::unordered_map<SampleIdType, std::deque<AlignedRead>>;
     
     ReadMap the_reads_;
     std::deque<Variant> the_candidates_;
+    
+    using ReadIterator      = typename ReadMap::mapped_type::const_iterator;
+    using CandidateIterator = decltype(the_candidates_)::const_iterator;
     
     ReferenceGenome& the_reference_;
     unsigned ploidy_;
@@ -67,7 +70,7 @@ private:
     GenomicRegion the_last_unphased_region_;
     
     void phase();
-    void remove_phased_region(const GenomicRegion& a_region);
+    void remove_phased_region(CandidateIterator first, CandidateIterator last);
 };
 
 template <typename ForwardIterator1, typename ForwardIterator2>

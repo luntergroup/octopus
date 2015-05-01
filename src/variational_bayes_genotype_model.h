@@ -16,6 +16,7 @@
 #include "haplotype.h"
 #include "genotype.h"
 #include "read_model.h"
+#include "maths.h"
 
 class AlignedRead;
 
@@ -25,7 +26,6 @@ public:
     using RealType                       = double;
     using Haplotypes                     = std::vector<Haplotype>;
     using Genotypes                      = std::vector<Genotype>;
-    using ReadIterator                   = ReadModel::ReadIterator;
     using HaplotypePseudoCounts          = std::unordered_map<Haplotype, RealType>;
     using SampleGenotypeResponsabilities = std::unordered_map<Genotype, RealType>;
     using SampleIdType                   = std::string;
@@ -44,15 +44,18 @@ public:
     RealType log_expected_genotype_probability(const Genotype& genotype,
                                                const HaplotypePseudoCounts& haplotype_pseudo_counts);
     
+    template <typename ForwardIterator>
     RealType log_rho(const Genotype& genotype, const HaplotypePseudoCounts& haplotype_pseudo_counts,
-                     ReadIterator first, ReadIterator last, SampleIdType sample);
+                     ForwardIterator first_read, ForwardIterator last_read, SampleIdType sample);
     
-    RealType genotype_responsability(const Genotype& genotype, ReadIterator first, ReadIterator last,
+    template <typename ForwardIterator>
+    RealType genotype_responsability(const Genotype& genotype, ForwardIterator first_read, ForwardIterator last_read,
                                      const HaplotypePseudoCounts& haplotype_pseudo_counts,
                                      const Genotypes& genotypes, SampleIdType sample);
     
+    template <typename ForwardIterator>
     SampleGenotypeResponsabilities genotype_responsabilities(const Genotypes& genotypes,
-                                                             ReadIterator first, ReadIterator last,
+                                                             ForwardIterator first_read, ForwardIterator last_read,
                                                              const HaplotypePseudoCounts& haplotype_pseudo_counts,
                                                              SampleIdType sample);
     
@@ -110,6 +113,65 @@ private:
                                                          const HaplotypePseudoCounts& haplotype_pseudo_counts) const;
 };
 
+template <typename ForwardIterator>
+inline
+VariationalBayesGenotypeModel::RealType
+VariationalBayesGenotypeModel::log_rho(const Genotype& genotype,
+                                       const HaplotypePseudoCounts& haplotype_pseudo_counts,
+                                       ForwardIterator first_read, ForwardIterator last_read,
+                                       SampleIdType sample)
+{
+    return log_expected_genotype_probability(genotype, haplotype_pseudo_counts) +
+    read_model_.log_probability(first_read, last_read, genotype, sample);
+}
+
+template <typename ForwardIterator>
+VariationalBayesGenotypeModel::RealType
+VariationalBayesGenotypeModel::genotype_responsability(const Genotype& genotype,
+                                                       ForwardIterator first_read, ForwardIterator last_read,
+                                                       const HaplotypePseudoCounts& haplotype_pseudo_counts,
+                                                       const Genotypes& genotypes, SampleIdType sample)
+{
+    RealType log_rho_genotype = log_rho(genotype, haplotype_pseudo_counts, first_read, last_read, sample);
+    
+    std::vector<RealType> log_rho_genotypes (genotypes.size());
+    
+    std::transform(std::cbegin(genotypes), std::cend(genotypes), log_rho_genotypes.begin(),
+                   [this, &haplotype_pseudo_counts, first_read, last_read, sample] (const auto& genotype) {
+                       return log_rho(genotype, haplotype_pseudo_counts, first_read, last_read, sample);
+                   });
+    
+    RealType log_sum_rho_genotypes = log_sum_exp<RealType>(log_rho_genotypes.cbegin(), log_rho_genotypes.cend());
+    
+    return std::exp(log_rho_genotype - log_sum_rho_genotypes);
+}
+
+template <typename ForwardIterator>
+VariationalBayesGenotypeModel::SampleGenotypeResponsabilities
+VariationalBayesGenotypeModel::genotype_responsabilities(const Genotypes& genotypes,
+                                                         ForwardIterator first_read, ForwardIterator last_read,
+                                                         const HaplotypePseudoCounts& haplotype_pseudo_counts,
+                                                         SampleIdType sample)
+{
+    std::vector<RealType> log_rho_genotypes (genotypes.size());
+    
+    std::transform(std::cbegin(genotypes), std::cend(genotypes), log_rho_genotypes.begin(),
+                   [this, &haplotype_pseudo_counts, first_read, last_read, sample] (const auto& genotype) {
+                       return log_rho(genotype, haplotype_pseudo_counts, first_read, last_read, sample);
+                   });
+    
+    RealType log_sum_rho_genotypes = log_sum_exp<RealType>(log_rho_genotypes.cbegin(), log_rho_genotypes.cend());
+    
+    SampleGenotypeResponsabilities result {};
+    result.reserve(genotypes.size());
+    
+    for (unsigned i {}; i < genotypes.size(); ++i) {
+        result[genotypes.at(i)] = std::exp(log_rho_genotypes.at(i) - log_sum_rho_genotypes);
+    }
+    
+    return result;
+}
+
 template <typename T, typename RealType>
 RealType sum(const std::unordered_map<T, RealType>& map) noexcept
 {
@@ -132,13 +194,38 @@ get_prior_pseudo_counts(const HaplotypePriors& the_haplotype_priors,
 using GenotypePosteriors = std::pair<VariationalBayesGenotypeModel::GenotypeResponsabilities,
                                     VariationalBayesGenotypeModel::HaplotypePseudoCounts>;
 
+template <typename ForwardIterator>
 using SamplesReads = std::unordered_map<VariationalBayesGenotypeModel::SampleIdType,
-                                        std::pair<VariationalBayesGenotypeModel::ReadIterator,
-                                        VariationalBayesGenotypeModel::ReadIterator>>;
+                                        std::pair<ForwardIterator, ForwardIterator>>;
 
+template <typename ForwardIterator>
 GenotypePosteriors update_parameters(VariationalBayesGenotypeModel& the_model,
                                      const VariationalBayesGenotypeModel::Genotypes& the_genotypes,
                                      const VariationalBayesGenotypeModel::HaplotypePseudoCounts& prior_haplotype_pseudocounts,
-                                     const SamplesReads& the_reads, unsigned max_num_iterations);
+                                     const SamplesReads<ForwardIterator>& the_reads,
+                                     unsigned max_num_iterations)
+{
+    VariationalBayesGenotypeModel::GenotypeResponsabilities responsabilities(the_reads.size());
+    VariationalBayesGenotypeModel::HaplotypePseudoCounts posterior_pseudo_counts {prior_haplotype_pseudocounts};
+    
+    for (unsigned i {}; i < max_num_iterations; ++i) {
+        for (const auto& sample : the_reads) {
+            responsabilities[sample.first] = the_model.genotype_responsabilities(the_genotypes,
+                                                                                 sample.second.first,
+                                                                                 sample.second.second,
+                                                                                 posterior_pseudo_counts,
+                                                                                 sample.first);
+        }
+        
+        for (const auto& haplotype_prior : prior_haplotype_pseudocounts) {
+            posterior_pseudo_counts[haplotype_prior.first] = the_model.posterior_haplotype_pseudo_count(haplotype_prior.first,
+                                                                                                        haplotype_prior.second,
+                                                                                                        responsabilities,
+                                                                                                        the_genotypes);
+        }
+    }
+    
+    return {responsabilities, posterior_pseudo_counts};
+}
 
 #endif /* defined(__Octopus__variational_bayes_genotype_model.h__) */

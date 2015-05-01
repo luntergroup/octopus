@@ -23,7 +23,6 @@ class ReadModel
 {
 public:
     using RealType     = double;
-    using ReadIterator = std::vector<AlignedRead>::const_iterator;
     using SampleIdType = std::string;
     
     ReadModel() = delete;
@@ -42,7 +41,9 @@ public:
     RealType log_probability(const AlignedRead& read, const Genotype& genotype, SampleIdType sample);
     
     // ln p(reads | genotype)
-    RealType log_probability(ReadIterator first, ReadIterator last, const Genotype& genotype, SampleIdType sample);
+    template <typename ForwardIterator>
+    RealType log_probability(ForwardIterator first_read, ForwardIterator last_read,
+                             const Genotype& genotype, SampleIdType sample);
     
     void clear_cache();
     
@@ -72,13 +73,16 @@ private:
     RealType get_log_probability_from_cache(SampleIdType sample, const AlignedRead& read,
                                             const Haplotype& haplotype) const;
     
-    bool is_genotype_in_cache(SampleIdType sample, ReadIterator first, ReadIterator last,
+    template <typename ForwardIterator>
+    bool is_genotype_in_cache(SampleIdType sample, ForwardIterator first_read, ForwardIterator last_read,
                               const Genotype& genotype) const noexcept;
     
-    void add_genotype_to_cache(SampleIdType sample, ReadIterator first, ReadIterator last,
+    template <typename ForwardIterator>
+    void add_genotype_to_cache(SampleIdType sample, ForwardIterator first_read, ForwardIterator last_read,
                                const Genotype& genotype, RealType genotype_log_probability);
     
-    RealType get_log_probability_from_cache(SampleIdType sample, ReadIterator first, ReadIterator last,
+    template <typename ForwardIterator>
+    RealType get_log_probability_from_cache(SampleIdType sample, ForwardIterator first_read, ForwardIterator last_read,
                                             const Genotype& genotype) const;
     
     // These are just for optimisation
@@ -91,6 +95,55 @@ private:
     RealType log_probability_polyploid(const AlignedRead& read, const Genotype& genotype,
                                        SampleIdType sample);
 };
+
+// ln p(reads | genotype) = sum (read in reads} ln p(read | genotype)
+template <typename ForwardIterator>
+ReadModel::RealType ReadModel::log_probability(ForwardIterator first_read, ForwardIterator last_read,
+                                               const Genotype& genotype, SampleIdType sample)
+{
+    if (is_genotype_in_cache(sample, first_read, last_read, genotype)) {
+        return get_log_probability_from_cache(sample, first_read, last_read, genotype);
+    }
+    
+    RealType result {0};
+    
+    std::for_each(first_read, last_read, [this, &genotype, &sample, &result] (const auto& read) {
+        result += log_probability(read, genotype, sample);
+    });
+    
+    add_genotype_to_cache(sample, first_read, last_read, genotype, result);
+    
+    return result;
+}
+
+template <typename ForwardIterator>
+inline
+bool ReadModel::is_genotype_in_cache(SampleIdType sample, ForwardIterator first_read, ForwardIterator last_read,
+                                     const Genotype& genotype) const noexcept
+{
+    if (genotype_log_probability_cache_.count(sample) == 0) return false;
+    return genotype_log_probability_cache_.at(sample).count(std::make_tuple(genotype, *first_read,
+                                                                            std::distance(first_read, last_read))) > 0;
+}
+
+template <typename ForwardIterator>
+inline
+void ReadModel::add_genotype_to_cache(SampleIdType sample, ForwardIterator first_read, ForwardIterator last_read,
+                                      const Genotype& genotype, RealType genotype_log_probability)
+{
+    genotype_log_probability_cache_[sample][std::make_tuple(genotype, *first_read,
+                                                            std::distance(first_read, last_read))] = genotype_log_probability;
+}
+
+template <typename ForwardIterator>
+inline
+ReadModel::RealType
+ReadModel::get_log_probability_from_cache(SampleIdType sample, ForwardIterator first_read, ForwardIterator last_read,
+                                          const Genotype& genotype) const
+{
+    return genotype_log_probability_cache_.at(sample).at(std::make_tuple(genotype, *first_read,
+                                                                         std::distance(first_read, last_read)));
+}
 
 inline std::size_t ReadModel::GenotypeReadKeyHash::operator()(const GenotypeReadKey &key) const
 {

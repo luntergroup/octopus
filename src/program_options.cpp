@@ -12,7 +12,7 @@
 #include <fstream>
 #include <stdexcept>
 #include <iterator>
-#include <algorithm>  // std::transform
+#include <algorithm>  // std::transform, std::min
 #include <functional> // std::function
 #include <boost/filesystem/path.hpp>
 #include <boost/filesystem/operations.hpp>
@@ -133,7 +133,18 @@ namespace detail
     std::string to_region_format(const std::string& bed_line)
     {
         auto tokens = split(bed_line, '\t');
-        return std::string {tokens[0] + ':' + tokens[1] + '-' + tokens[2]};
+        
+        switch (tokens.size()) {
+            case 0:
+                throw std::runtime_error {"Empty line in input region bed file"};
+            case 1:
+                return std::string {tokens[0]};
+            case 2:
+                // Assume this represents a half range rather than a point
+                return std::string {tokens[0] + ':' + tokens[1] + '-'};
+            default:
+                return std::string {tokens[0] + ':' + tokens[1] + '-' + tokens[2]};
+        }
     }
     
     std::function<GenomicRegion(std::string)> get_line_parser(const fs::path& the_region_path,

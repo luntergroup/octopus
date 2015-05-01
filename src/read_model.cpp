@@ -95,25 +95,6 @@ ReadModel::RealType ReadModel::log_probability(const AlignedRead& read, const Ge
     }
 }
 
-// ln p(reads | genotype) = sum (read in reads} ln p(read | genotype)
-ReadModel::RealType ReadModel::log_probability(ReadIterator first, ReadIterator last, const Genotype& genotype,
-                                               SampleIdType sample)
-{
-    if (is_genotype_in_cache(sample, first, last, genotype)) {
-        return get_log_probability_from_cache(sample, first, last, genotype);
-    }
-    
-    RealType result {0};
-    
-    std::for_each(first, last, [this, &genotype, &sample, &result] (const auto& read) {
-        result += log_probability(read, genotype, sample);
-    });
-    
-    add_genotype_to_cache(sample, first, last, genotype, result);
-    
-    return result;
-}
-
 ReadModel::RealType ReadModel::log_probability_haploid(const AlignedRead& read, const Genotype& genotype,
                                                        SampleIdType sample)
 {
@@ -179,25 +160,6 @@ void ReadModel::add_read_to_cache(SampleIdType sample, const AlignedRead& read, 
     if (can_cache_reads_) {
         read_log_probability_cache_[sample][read][haplotype] = read_log_probability;
     }
-}
-
-bool ReadModel::is_genotype_in_cache(SampleIdType sample, ReadIterator first, ReadIterator last,
-                                     const Genotype& genotype) const noexcept
-{
-    if (genotype_log_probability_cache_.count(sample) == 0) return false;
-    return genotype_log_probability_cache_.at(sample).count(std::make_tuple(genotype, *first, std::distance(first, last))) > 0;
-}
-
-void ReadModel::add_genotype_to_cache(SampleIdType sample, ReadIterator first, ReadIterator last,
-                                      const Genotype& genotype, RealType genotype_log_probability)
-{
-    genotype_log_probability_cache_[sample][std::make_tuple(genotype, *first, std::distance(first, last))] = genotype_log_probability;
-}
-
-ReadModel::RealType ReadModel::get_log_probability_from_cache(SampleIdType sample, ReadIterator first,
-                                                              ReadIterator last, const Genotype& genotype) const
-{
-    return genotype_log_probability_cache_.at(sample).at(std::make_tuple(genotype, *first, std::distance(first, last)));
 }
 
 void ReadModel::clear_cache()

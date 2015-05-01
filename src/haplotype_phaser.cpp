@@ -36,7 +36,11 @@ HaplotypePhaser::PhasedGenotypePosteriors
 HaplotypePhaser::get_phased_genotypes_posteriors(bool include_partially_phased_haplotypes)
 {
     if (include_partially_phased_haplotypes) {
-        remove_phased_region(the_last_unphased_region_);
+        auto candidate_range = overlap_range(the_candidates_.cbegin(), the_candidates_.cend(),
+                                             the_last_unphased_region_);
+        
+        
+        remove_phased_region(candidate_range.first, candidate_range.second);
     }
     
     return the_phased_genotypes_;
@@ -46,7 +50,7 @@ void HaplotypePhaser::phase()
 {
     auto sub_region = the_last_unphased_region_;
     
-    SamplesReads reads {};
+    SamplesReads<ReadIterator> reads {};
     
     while (!the_candidates_.empty()) {
         auto candidate_range = overlap_range(the_candidates_.cbegin(), the_candidates_.cend(), sub_region);
@@ -98,29 +102,30 @@ void HaplotypePhaser::phase()
                 }
             }
             
+            auto num_partially_phased_candidates = static_cast<unsigned>(std::distance(the_candidates_.cbegin(),
+                                                                                       candidate_range.first));
+            auto max_candidates = max_region_density_ + num_partially_phased_candidates;
             
-            
-            sub_region = next_sub_region(sub_region, the_reads_, the_candidates_, max_region_density_, max_indicators_);
+            sub_region = next_sub_region(sub_region, the_reads_, the_candidates_, max_candidates,
+                                         num_partially_phased_candidates);
         } else {
             the_phased_genotypes_.emplace_back(genotype_posteriors);
-            
-            the_candidates_.erase(the_candidates_.begin(), candidate_range.second);
-            
-            for (auto& sample_reads : the_reads_) {
-                auto overlapped_reads = overlap_range(sample_reads.second.cbegin(),
-                                                      sample_reads.second.cend(), *candidate_range.first);
-                sample_reads.second.erase(sample_reads.second.begin(), overlapped_reads.first);
-            }
-            
-            the_tree_.clear();
-            the_model_.clear_cache();
-            
+            remove_phased_region(candidate_range.first, candidate_range.second);
             sub_region = next_sub_region(sub_region, the_reads_, the_candidates_, max_region_density_, max_indicators_);
         }
     }
 }
 
-void HaplotypePhaser::remove_phased_region(const GenomicRegion &a_region)
+void HaplotypePhaser::remove_phased_region(CandidateIterator first, CandidateIterator last)
 {
+    the_candidates_.erase(the_candidates_.cbegin(), last);
     
+    for (auto& sample_reads : the_reads_) {
+        auto overlapped_reads = overlap_range(sample_reads.second.cbegin(),
+                                              sample_reads.second.cend(), *first);
+        sample_reads.second.erase(sample_reads.second.begin(), overlapped_reads.first);
+    }
+    
+    the_tree_.clear();
+    the_model_.clear_cache();
 }

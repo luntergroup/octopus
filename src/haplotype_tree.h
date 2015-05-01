@@ -13,14 +13,13 @@
 #include <list>
 #include <unordered_map>
 #include <unordered_set>
-#include <cstddef>
+#include <cstddef> // std::size_t
 #include <boost/graph/adjacency_list.hpp>
 
 #include "allele.h"
 #include "haplotype.h"
-#include "genotype.h"
-#include "genomic_region.h"
 
+class GenomicRegion;
 class ReferenceGenome;
 class Variant;
 
@@ -47,39 +46,33 @@ public:
     void clear();
     
 private:
-    struct AlleleNode
-    {
-        Allele the_allele;
-    };
-    
     using Tree = boost::adjacency_list<
-        boost::listS, boost::listS, boost::bidirectionalS, AlleleNode, boost::no_property
+        boost::listS, boost::listS, boost::bidirectionalS, Allele, boost::no_property
     >;
     using Vertex = typename boost::graph_traits<Tree>::vertex_descriptor;
     using Edge   = typename boost::graph_traits<Tree>::edge_descriptor;
     
     Tree the_tree_;
     Vertex the_root_;
-    std::list<Vertex> haplotype_leafs_;
+    std::list<Vertex> the_haplotype_leafs_;
     ReferenceGenome& the_reference_;
     std::unordered_multimap<Haplotype, Vertex> haplotype_leaf_cache_;
     std::unordered_set<Haplotype> recently_removed_haplotypes_;
     
-    using LeafIterator = decltype(haplotype_leafs_)::const_iterator;
+    using LeafIterator = decltype(the_haplotype_leafs_)::const_iterator;
     using CacheIterator = decltype(haplotype_leaf_cache_)::iterator;
     
     Vertex get_previous_allele(Vertex allele) const;
     bool allele_exists(Vertex allele, const Allele& an_allele) const;
     LeafIterator extend_haplotype(LeafIterator haplotype_leaf, const Variant& a_variant);
     LeafIterator extend_haplotype(LeafIterator haplotype_leaf, const Allele& the_new_allele);
-    Haplotype get_haplotype(Vertex haplotype_end, const GenomicRegion& a_region);
+    Haplotype get_haplotype(Vertex haplotype_end, const GenomicRegion& a_region) const;
     
-    bool is_branch_the_haplotype(Vertex haplotype_end, const Haplotype& haplotype) const;
-    LeafIterator find_haplotype_leaf(LeafIterator first, LeafIterator last, const Haplotype& haplotype) const;
+    bool is_branch_exact_haplotype(Vertex haplotype_end, const Haplotype& haplotype) const;
+    bool is_branch_equal_haplotype(Vertex haplotype_end, const Haplotype& haplotype) const;
+    LeafIterator find_exact_haplotype_leaf(LeafIterator first, LeafIterator last, const Haplotype& haplotype) const;
+    LeafIterator find_equal_haplotype_leaf(LeafIterator first, LeafIterator last, const Haplotype& haplotype) const;
     std::pair<Vertex, bool> prune_branch(Vertex leaf, const GenomicRegion& a_region);
-    
-    void add_to_cache(const Haplotype& haplotype, Vertex leaf);
-    std::pair<LeafIterator, bool> get_leaf_from_cache(const Haplotype& haplotype);
 };
 
 #endif /* defined(__Octopus__haplotype_tree__) */
