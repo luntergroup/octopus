@@ -25,9 +25,9 @@ using std::endl;    // TEST
  A region is 'dense' if the number of variants within a read length of the first variant in
  'the_variants' that overlaps 'a_region', is greater than max_variants
  */
-template <typename SampleReadMap, typename Variants>
+template <typename SampleReadMap, typename Container>
 bool is_dense_region(const GenomicRegion& a_region, const SampleReadMap& the_reads,
-                     const Variants& the_variants, unsigned max_variants)
+                     const Container& the_variants, unsigned max_variants)
 {
     auto overlapped = overlap_range(std::cbegin(the_variants), std::cend(the_variants), a_region);
     
@@ -81,9 +81,9 @@ namespace detail
     
 } // end namespace detail
 
-template <typename SampleReadMap, typename Variants>
-GenomicRegion next_sub_region(const GenomicRegion& the_search_region, const GenomicRegion& the_previous_sub_region,
-                              const SampleReadMap& the_reads, const Variants& the_variants,
+template <typename SampleReadMap, typename Container>
+GenomicRegion next_sub_region(const GenomicRegion& the_previous_sub_region,
+                              const SampleReadMap& the_reads, const Container& the_variants,
                               unsigned max_included, unsigned max_indicators)
 {
     if (max_included > 0 && max_included <= max_indicators) {

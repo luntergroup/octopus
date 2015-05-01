@@ -27,7 +27,12 @@ haplotype_leaf_cache_ {},
 recently_removed_haplotypes_ {}
 {}
 
-std::size_t HaplotypeTree::num_haplotypes() const
+bool HaplotypeTree::empty() const noexcept
+{
+    return haplotype_leafs_.empty();
+}
+
+std::size_t HaplotypeTree::num_haplotypes() const noexcept
 {
     return haplotype_leafs_.size();
 }
@@ -158,6 +163,18 @@ void HaplotypeTree::prune_unique(const Haplotype &haplotype)
         // TODO
     }
 }
+
+void HaplotypeTree::clear()
+{
+    haplotype_leaf_cache_.clear();
+    recently_removed_haplotypes_.clear();
+    haplotype_leafs_.clear();
+    the_tree_.clear();
+    the_root_ = boost::add_vertex(the_tree_);
+    haplotype_leafs_.push_back(the_root_);
+}
+
+// Private methods
 
 HaplotypeTree::Vertex HaplotypeTree::get_previous_allele(Vertex allele) const
 {

@@ -132,6 +132,24 @@ std::size_t max_count_if_shared_with_first(const MappableMap& mappables,
     return maximum;
 }
 
+template <typename MappableMap>
+inline
+typename MappableMap::mapped_type::const_iterator
+leftmost_sorted_mappable(const MappableMap& mappables)
+{
+    using Iterator = typename MappableMap::mapped_type::const_iterator;
+    
+    Iterator result {std::cbegin(std::cbegin(mappables)->second)->get_region()};
+    
+    for (const auto& map_pair : mappables) {
+        if (!map_pair.second.empty() && begins_before(*std::cbegin(map_pair.second))) {
+            result = std::cbegin(map_pair.second);
+        }
+    }
+    
+    return result;
+}
+
 template <typename MappableMap, typename MappableType>
 inline
 typename MappableMap::mapped_type::const_iterator

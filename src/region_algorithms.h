@@ -66,8 +66,7 @@ std::pair<ForwardIterator, ForwardIterator> overlap_range(ForwardIterator first,
  */
 template <typename ForwardIterator, typename MappableType>
 inline
-std::size_t count_overlapped(ForwardIterator first, ForwardIterator last,
-                             const MappableType& mappable)
+std::size_t count_overlapped(ForwardIterator first, ForwardIterator last, const MappableType& mappable)
 {
     auto overlapped = overlap_range(first, last, mappable);
     return std::distance(overlapped.first, overlapped.second);

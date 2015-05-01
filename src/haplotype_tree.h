@@ -38,11 +38,13 @@ public:
     HaplotypeTree(HaplotypeTree&&)                 = default;
     HaplotypeTree& operator=(HaplotypeTree&&)      = default;
     
-    std::size_t num_haplotypes() const;
+    bool empty() const noexcept;
+    std::size_t num_haplotypes() const noexcept;
     void extend(const Allele& an_allele);
     Haplotypes get_haplotypes(const GenomicRegion& a_region);
     void prune_all(const Haplotype& haplotype);
     void prune_unique(const Haplotype& haplotype);
+    void clear();
     
 private:
     struct AlleleNode

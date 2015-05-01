@@ -22,7 +22,7 @@
 class Genotype : public Equitable<Genotype>
 {
 public:
-    using HaplotypeIterator = std::vector<Haplotype>::const_iterator;
+    using Iterator = std::vector<Haplotype>::const_iterator;
     
     Genotype() = default;
     Genotype(unsigned ploidy);
@@ -38,10 +38,10 @@ public:
     void emplace(const Haplotype& haplotype);
     void emplace(Haplotype&& haplotype);
     
-    HaplotypeIterator begin() const;
-    HaplotypeIterator end() const;
-    HaplotypeIterator cbegin() const;
-    HaplotypeIterator cend() const;
+    Iterator begin() const;
+    Iterator end() const;
+    Iterator cbegin() const;
+    Iterator cend() const;
     
     unsigned ploidy() const noexcept;
     bool contains(const Haplotype& a_haplotype) const;

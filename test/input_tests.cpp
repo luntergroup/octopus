@@ -12,6 +12,7 @@
 #include <string>
 #include <vector>
 #include <algorithm>
+#include <sstream>
 #include <boost/program_options.hpp>
 
 #include "test_common.h"
@@ -24,6 +25,24 @@ namespace po = boost::program_options;
 
 using std::cout;
 using std::endl;
+
+void create_argv(const std::string& args, std::vector<char*>& argv)
+{
+    std::istringstream iss(args);
+    std::string token;
+    while (iss >> token) {
+        char *arg = new char[token.size() + 1];
+        std::copy(token.begin(), token.end(), arg);
+        arg[token.size()] = '\0';
+        argv.push_back(arg);
+    }
+    argv.push_back(0);
+}
+
+void destroy_argv(std::vector<char*>& argv)
+{
+    for(std::size_t i {}; i < argv.size(); ++i) delete[] argv[i];
+}
 
 TEST_CASE("parse_search_region_option returns all chromosome regions when no region option is given", "[program_options]")
 {
@@ -52,17 +71,18 @@ TEST_CASE("parse_search_region_option parses manually entered regions", "[progra
     ReferenceGenomeFactory a_factory {};
     ReferenceGenome human {a_factory.make(human_reference_fasta)};
     
-    std::string region_options {"1:32000092-33000000 5:1104209-2104209 X:80000-900000"};
+    std::string region_options {"-R 1:32000092-33000000 5:1104209-2104209 X:80000-900000"};
     
-//    const char** options = new char[][];
-//    
-//    options[0] = region_options.c_str();
-//    
-//    auto vmp = parse_options(1, options);
+    std::vector<char*> argv {};
+    create_argv(region_options, argv);
+    
+//    auto vmp = parse_options(argv.size(), &argv[0]);
 //    
 //    REQUIRE(vmp.second);
 //    
 //    auto regions = parse_region_option(vmp.first, "regions", human);
+//    
+//    destroy_argv(argv);
 }
 
 TEST_CASE("parse_search_region_option extracts regions from text files", "[program_options]")

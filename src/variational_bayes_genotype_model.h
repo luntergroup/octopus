@@ -92,6 +92,7 @@ public:
                                                     const Haplotypes& haplotypes,
                                                     const SampleGenotypeResponsabilities& sample_genotype_responsabilities,
                                                     const Genotypes& genotypes) const;
+    void clear_cache();
     
 private:
     unsigned ploidy_;

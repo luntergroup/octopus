@@ -16,7 +16,7 @@
 #include "aligned_read.h"
 #include "variant.h"
 #include "cigar_string.h"
-#include "region_utils.h"
+#include "region_algorithms.h"
 
 AlignmentCandidateVariantGenerator::AlignmentCandidateVariantGenerator(ReferenceGenome& the_reference,
                                                                        QualityType min_base_quality)

@@ -121,7 +121,7 @@ TEST_CASE("search regions contains all variants in list exactly once when max_in
     bool bound_respected {true};
     
     while (ends_before(sub_region, a_region)) {
-        sub_region = next_sub_region(a_region, sub_region, good_reads, candidates, max_variants, max_indicators);
+        sub_region = next_sub_region(sub_region, good_reads, candidates, max_variants, max_indicators);
         auto overlapped = overlap_range(candidates.cbegin(), candidates.cend(), sub_region);
         
         std::for_each(overlapped.first, overlapped.second, [&included, &bound_respected] (const auto& variant) {
@@ -152,7 +152,7 @@ TEST_CASE("search regions contains all variants in list exactly once when max_in
     max_variants = 5;
     
     while (ends_before(sub_region, a_region)) {
-        sub_region = next_sub_region(a_region, sub_region, good_reads, candidates, max_variants, max_indicators);
+        sub_region = next_sub_region(sub_region, good_reads, candidates, max_variants, max_indicators);
         
         auto overlapped = overlap_range(candidates.cbegin(), candidates.cend(), sub_region);
         
@@ -184,7 +184,7 @@ TEST_CASE("search regions contains all variants in list exactly once when max_in
     max_variants = 8;
     
     while (ends_before(sub_region, a_region)) {
-        sub_region = next_sub_region(a_region, sub_region, good_reads, candidates, max_variants, max_indicators);
+        sub_region = next_sub_region(sub_region, good_reads, candidates, max_variants, max_indicators);
         
         auto overlapped = overlap_range(candidates.cbegin(), candidates.cend(), sub_region);
         
@@ -249,7 +249,7 @@ TEST_CASE("next_sub_region's bounds are respected", "[search_regions]")
     bool bound_respected {true};
     
     while (ends_before(sub_region, a_region)) {
-        sub_region = next_sub_region(a_region, sub_region, good_reads, candidates, max_variants, max_indicators);
+        sub_region = next_sub_region(sub_region, good_reads, candidates, max_variants, max_indicators);
         auto num_variants_in_sub_region = count_overlapped(candidates.cbegin(), candidates.cend(), sub_region);
         if (num_variants_in_sub_region > max_variants) {
             auto overlapped = overlap_range(candidates.cbegin(), candidates.cend(), sub_region);
@@ -267,7 +267,7 @@ TEST_CASE("next_sub_region's bounds are respected", "[search_regions]")
     max_variants = 5;
     
     while (ends_before(sub_region, a_region)) {
-        sub_region = next_sub_region(a_region, sub_region, good_reads, candidates, max_variants, max_indicators);
+        sub_region = next_sub_region(sub_region, good_reads, candidates, max_variants, max_indicators);
         auto num_variants_in_sub_region = count_overlapped(candidates.cbegin(), candidates.cend(), sub_region);
         if (num_variants_in_sub_region > max_variants) {
             auto overlapped = overlap_range(candidates.cbegin(), candidates.cend(), sub_region);
@@ -285,7 +285,7 @@ TEST_CASE("next_sub_region's bounds are respected", "[search_regions]")
     max_variants = 8;
     
     while (ends_before(sub_region, a_region)) {
-        sub_region = next_sub_region(a_region, sub_region, good_reads, candidates, max_variants, max_indicators);
+        sub_region = next_sub_region(sub_region, good_reads, candidates, max_variants, max_indicators);
         auto num_variants_in_sub_region = count_overlapped(candidates.cbegin(), candidates.cend(), sub_region);
         if (num_variants_in_sub_region > max_variants) {
             auto overlapped = overlap_range(candidates.cbegin(), candidates.cend(), sub_region);
@@ -304,7 +304,7 @@ TEST_CASE("next_sub_region's bounds are respected", "[search_regions]")
     max_indicators = 1;
     
     while (ends_before(sub_region, a_region)) {
-        sub_region = next_sub_region(a_region, sub_region, good_reads, candidates, max_variants, max_indicators);
+        sub_region = next_sub_region(sub_region, good_reads, candidates, max_variants, max_indicators);
         auto num_variants_in_sub_region = count_overlapped(candidates.cbegin(), candidates.cend(), sub_region);
         if (num_variants_in_sub_region > max_variants) {
             auto overlapped = overlap_range(candidates.cbegin(), candidates.cend(), sub_region);
@@ -323,7 +323,7 @@ TEST_CASE("next_sub_region's bounds are respected", "[search_regions]")
     max_indicators = 2;
     
     while (ends_before(sub_region, a_region)) {
-        sub_region = next_sub_region(a_region, sub_region, good_reads, candidates, max_variants, max_indicators);
+        sub_region = next_sub_region(sub_region, good_reads, candidates, max_variants, max_indicators);
         auto num_variants_in_sub_region = count_overlapped(candidates.cbegin(), candidates.cend(), sub_region);
         if (num_variants_in_sub_region > max_variants) {
             auto overlapped = overlap_range(candidates.cbegin(), candidates.cend(), sub_region);
@@ -342,7 +342,7 @@ TEST_CASE("next_sub_region's bounds are respected", "[search_regions]")
     max_indicators = 3;
     
     while (ends_before(sub_region, a_region)) {
-        sub_region = next_sub_region(a_region, sub_region, good_reads, candidates, max_variants, max_indicators);
+        sub_region = next_sub_region(sub_region, good_reads, candidates, max_variants, max_indicators);
         auto num_variants_in_sub_region = count_overlapped(candidates.cbegin(), candidates.cend(), sub_region);
         if (num_variants_in_sub_region > max_variants) {
             auto overlapped = overlap_range(candidates.cbegin(), candidates.cend(), sub_region);
@@ -393,12 +393,12 @@ TEST_CASE("setting max_included to zero in next_sub_region results in the larges
     unsigned max_variants {0};
     unsigned max_indicators {0};
     
-    sub_region = next_sub_region(a_region, sub_region, reads, candidates, max_variants, max_indicators);
+    sub_region = next_sub_region(sub_region, reads, candidates, max_variants, max_indicators);
     
     REQUIRE(sub_region == parse_region("16:9199045-9199306", human));
     
     sub_region = parse_region("16:9006622-9006661", human);
-    sub_region = next_sub_region(a_region, sub_region, reads, candidates, max_variants, max_indicators);
+    sub_region = next_sub_region(sub_region, reads, candidates, max_variants, max_indicators);
     
     REQUIRE(sub_region == parse_region("16:9006661-9006671", human));
 }

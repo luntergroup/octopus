@@ -266,6 +266,11 @@ VariationalBayesGenotypeModel::posterior_probability_allele_in_sample(const Alle
     return result;
 }
 
+void VariationalBayesGenotypeModel::clear_cache()
+{
+    read_model_.clear_cache();
+}
+
 // Private methods
 
 VariationalBayesGenotypeModel::RealType

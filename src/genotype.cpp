@@ -40,22 +40,22 @@ void Genotype::emplace(Haplotype&& haplotype)
     std::inplace_merge(std::begin(the_haplotypes_), std::prev(std::end(the_haplotypes_)), std::end(the_haplotypes_));
 }
 
-Genotype::HaplotypeIterator Genotype::begin() const
+Genotype::Iterator Genotype::begin() const
 {
     return the_haplotypes_.begin();
 }
 
-Genotype::HaplotypeIterator Genotype::end() const
+Genotype::Iterator Genotype::end() const
 {
     return the_haplotypes_.end();
 }
 
-Genotype::HaplotypeIterator Genotype::cbegin() const
+Genotype::Iterator Genotype::cbegin() const
 {
     return the_haplotypes_.cbegin();
 }
 
-Genotype::HaplotypeIterator Genotype::cend() const
+Genotype::Iterator Genotype::cend() const
 {
     return the_haplotypes_.cend();
 }
