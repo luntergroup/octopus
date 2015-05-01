@@ -187,23 +187,24 @@ RealType sum(const std::unordered_map<T, RealType>& map) noexcept
 using HaplotypePriors = std::unordered_map<Haplotype, VariationalBayesGenotypeModel::RealType>;
 
 VariationalBayesGenotypeModel::HaplotypePseudoCounts
-get_prior_pseudo_counts(const HaplotypePriors& the_haplotype_priors,
-                        const Haplotype& the_reference_haplotype,
-                        VariationalBayesGenotypeModel::RealType the_reference_haplotype_pseudo_count);
-
-using GenotypePosteriors = std::pair<VariationalBayesGenotypeModel::GenotypeResponsabilities,
-                                    VariationalBayesGenotypeModel::HaplotypePseudoCounts>;
+get_haplotype_prior_pseudo_counts(const HaplotypePriors& the_haplotype_priors,
+                                  const Haplotype& the_reference_haplotype,
+                                  VariationalBayesGenotypeModel::RealType the_reference_haplotype_pseudo_count);
 
 template <typename ForwardIterator>
 using SamplesReads = std::unordered_map<VariationalBayesGenotypeModel::SampleIdType,
                                         std::pair<ForwardIterator, ForwardIterator>>;
 
+using VariationalBayesGenotypeModelLatents = std::pair<VariationalBayesGenotypeModel::GenotypeResponsabilities,
+                                                    VariationalBayesGenotypeModel::HaplotypePseudoCounts>;
+
 template <typename ForwardIterator>
-GenotypePosteriors update_parameters(VariationalBayesGenotypeModel& the_model,
-                                     const VariationalBayesGenotypeModel::Genotypes& the_genotypes,
-                                     const VariationalBayesGenotypeModel::HaplotypePseudoCounts& prior_haplotype_pseudocounts,
-                                     const SamplesReads<ForwardIterator>& the_reads,
-                                     unsigned max_num_iterations)
+VariationalBayesGenotypeModelLatents
+update_parameters(VariationalBayesGenotypeModel& the_model,
+                  const VariationalBayesGenotypeModel::Genotypes& the_genotypes,
+                  const VariationalBayesGenotypeModel::HaplotypePseudoCounts& prior_haplotype_pseudocounts,
+                  const SamplesReads<ForwardIterator>& the_reads,
+                  unsigned max_num_iterations)
 {
     VariationalBayesGenotypeModel::GenotypeResponsabilities responsabilities(the_reads.size());
     VariationalBayesGenotypeModel::HaplotypePseudoCounts posterior_pseudo_counts {prior_haplotype_pseudocounts};

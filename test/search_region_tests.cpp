@@ -12,7 +12,6 @@
 #include <string>
 #include <iterator>
 #include <vector>
-#include <memory>
 #include <algorithm>
 #include <set>
 
@@ -401,4 +400,37 @@ TEST_CASE("setting max_included to zero in next_sub_region results in the larges
     sub_region = next_sub_region(sub_region, reads, candidates, max_variants, max_indicators);
     
     REQUIRE(sub_region == parse_region("16:9006661-9006671", human));
+}
+
+TEST_CASE("search regions includes all possible indicators", "search_regions")
+{
+    ReferenceGenomeFactory a_factory {};
+    ReferenceGenome human {a_factory.make(human_reference_fasta)};
+    
+    ReadManager a_read_manager {std::vector<std::string> {human_1000g_bam1}};
+    
+    auto a_region = parse_region("16:62646780-62647130", human);
+    
+    auto samples = a_read_manager.get_sample_ids();
+    
+    auto reads = a_read_manager.fetch_reads(samples, a_region);
+    
+    CandidateVariantGenerator candidate_generator {};
+    candidate_generator.register_generator(std::make_unique<AlignmentCandidateVariantGenerator>(human, 0));
+    
+    for (auto& sample_reads : reads) {
+        std::sort(sample_reads.second.begin(), sample_reads.second.end());
+        candidate_generator.add_reads(sample_reads.second.cbegin(), sample_reads.second.cend());
+    }
+    
+    auto candidates = candidate_generator.get_candidates(a_region);
+    
+    auto sub_region = parse_region("16:62646834-62646972", human);
+    
+    //    auto overlapped = overlap_range(candidates.cbegin(), candidates.cend(), sub_region);
+    //    std::for_each(overlapped.first, overlapped.second, [] (auto& e) { cout << e << endl; });
+    
+    auto next_region = next_sub_region(sub_region, reads, candidates, 12, 7);
+    
+    REQUIRE(next_region == parse_region("16:62646834-62646990", human));
 }

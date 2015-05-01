@@ -139,10 +139,10 @@ leftmost_sorted_mappable(const MappableMap& mappables)
 {
     using Iterator = typename MappableMap::mapped_type::const_iterator;
     
-    Iterator result {std::cbegin(std::cbegin(mappables)->second)->get_region()};
+    Iterator result {std::cbegin(std::cbegin(mappables)->second)};
     
     for (const auto& map_pair : mappables) {
-        if (!map_pair.second.empty() && begins_before(*std::cbegin(map_pair.second))) {
+        if (!map_pair.second.empty() && begins_before(*std::cbegin(map_pair.second), *result)) {
             result = std::cbegin(map_pair.second);
         }
     }

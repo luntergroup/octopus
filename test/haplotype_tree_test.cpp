@@ -444,21 +444,26 @@ TEST_CASE("haplotype tree survives serious pruning", "[haplotype_tree]")
         REQUIRE(pruned_haplotype == the_reference_haplotype);
     }
     
+    unique_least_complex(pruned_haplotypes);
+    
     auto it = pruned_haplotypes.cbegin() + 1;
     
     std::for_each(it, pruned_haplotypes.cend(), [&haplotype_tree] (const auto& haplotype) {
         haplotype_tree.prune_all(haplotype);
     });
     
-    REQUIRE(haplotype_tree.num_haplotypes() == 1);
+    REQUIRE(haplotype_tree.num_haplotypes() == 5);
     
-    auto last_haplotype = haplotype_tree.get_haplotypes(a_region)[0];
+    auto remaining_haplotypes = haplotype_tree.get_haplotypes(a_region);
     
-    REQUIRE(last_haplotype == the_reference_haplotype);
+    REQUIRE(std::all_of(remaining_haplotypes.cbegin(), remaining_haplotypes.cend(),
+                        [&pruned_haplotypes] (const auto& haplotype) {
+                            return haplotype == pruned_haplotypes.front();
+                        }));
     
-    haplotype_tree.prune_all(last_haplotype);
+    haplotype_tree.prune_all(remaining_haplotypes.front());
     
-    REQUIRE(haplotype_tree.num_haplotypes() == 1);
+    REQUIRE(haplotype_tree.empty());
 }
 
 TEST_CASE("prune_unqiue leaves a single haplotype which contains the same alleles as the given haplotype", "[haplotype_tree]")

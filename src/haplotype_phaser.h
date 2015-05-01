@@ -23,11 +23,17 @@
 #include "haplotype_tree.h"
 #include "variational_bayes_genotype_model.h"
 
+#include <iostream> // TEST
+using std::cout;    // TEST
+using std::endl;    // TEST
+
 class HaplotypePhaser
 {
 public:
     using SampleIdType = std::string;
-    using PhasedGenotypePosteriors = std::vector<GenotypePosteriors>;
+    template <typename ForwardIterator>
+    using ReadRangeMap = std::unordered_map<SampleIdType, std::pair<ForwardIterator, ForwardIterator>>;
+    using PhasedGenotypePosteriors = std::vector<VariationalBayesGenotypeModelLatents>;
     
     HaplotypePhaser() = delete;
     HaplotypePhaser(ReferenceGenome& the_reference, VariationalBayesGenotypeModel& the_model,
@@ -40,14 +46,17 @@ public:
     HaplotypePhaser& operator=(HaplotypePhaser&&)      = delete;
     
     template <typename ForwardIterator1, typename ForwardIterator2>
-    void put_data(SampleIdType sample, ForwardIterator1 first_read, ForwardIterator1 last_read,
+    void put_data(const ReadRangeMap<ForwardIterator1>& the_reads,
                   ForwardIterator2 first_candidate, ForwardIterator2 last_candidate);
     
     PhasedGenotypePosteriors get_phased_genotypes_posteriors(bool include_partially_phased_haplotypes);
     
 private:
-    using RealType          = VariationalBayesGenotypeModel::RealType;
-    using ReadMap           = std::unordered_map<SampleIdType, std::deque<AlignedRead>>;
+    using RealType              = VariationalBayesGenotypeModel::RealType;
+    using ReadMap               = std::unordered_map<SampleIdType, std::deque<AlignedRead>>;
+    using Haplotypes            = HaplotypeTree::Haplotypes;
+    using GenotypePosteriors    = VariationalBayesGenotypeModel::GenotypeResponsabilities;
+    using HaplotypePseudoCounts = VariationalBayesGenotypeModel::HaplotypePseudoCounts;
     
     ReadMap the_reads_;
     std::deque<Variant> the_candidates_;
@@ -62,27 +71,40 @@ private:
     
     std::size_t max_haplotypes_;
     unsigned max_region_density_;
-    unsigned max_indicators_;
     unsigned max_model_update_iterations_;
     
     PhasedGenotypePosteriors the_phased_genotypes_;
     
     GenomicRegion the_last_unphased_region_;
+    VariationalBayesGenotypeModelLatents the_last_unphased_posteriors_;
     
     void phase();
+    void extend_haplotypes(CandidateIterator first, CandidateIterator last);
+    Haplotypes get_haplotypes(const GenomicRegion& a_region);
+    HaplotypePseudoCounts get_haplotype_prior_counts(const Haplotypes& the_haplotypes,
+                                                     CandidateIterator first, CandidateIterator last,
+                                                     const GenomicRegion& the_region) const;
+    SamplesReads<ReadIterator> get_read_ranges(const GenomicRegion& the_region) const;
+    void remove_unlikely_haplotypes(const Haplotypes& the_haplotypes,
+                                    const HaplotypePseudoCounts& prior_counts,
+                                    const HaplotypePseudoCounts& posterior_counts);
     void remove_phased_region(CandidateIterator first, CandidateIterator last);
 };
 
 template <typename ForwardIterator1, typename ForwardIterator2>
-void HaplotypePhaser::put_data(SampleIdType sample, ForwardIterator1 first_read, ForwardIterator1 last_read,
+void HaplotypePhaser::put_data(const ReadRangeMap<ForwardIterator1>& the_reads,
                                ForwardIterator2 first_candidate, ForwardIterator2 last_candidate)
 {
-    the_reads_[sample].insert(the_reads_[sample].end(), first_read, last_read);
+    for (auto&& map_pair : the_reads) {
+        the_reads_[map_pair.first].insert(the_reads_[map_pair.first].end(), map_pair.second.first, map_pair.second.second);
+    }
+    
     the_candidates_.insert(the_candidates_.end(), first_candidate, last_candidate);
     
-//    if (the_tree_.empty()) {
-//        the_last_unphased_region_ = leftmost_sorted_mappable(the_candidates_)->get_region();
-//    }
+    if (the_tree_.empty()) {
+        the_last_unphased_region_ = get_left_overhang(*leftmost_sorted_mappable(the_reads_),
+                                                      the_candidates_.front().get_region());
+    }
     
     phase();
 }

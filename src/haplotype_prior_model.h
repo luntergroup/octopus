@@ -10,9 +10,9 @@
 #define __Octopus__haplotype_prior_model__
 
 #include <vector>
-#include <algorithm>
-#include <boost/math/distributions/poisson.hpp>
+#include <algorithm> // std::count_if
 #include <unordered_map>
+#include <boost/math/distributions/poisson.hpp>
 
 #include "allele.h"
 #include "variant.h"
@@ -30,11 +30,11 @@ RealType prior_probability(const Haplotype& the_haplotype, ForwardIterator first
                                                        return the_haplotype.contains(variant.get_alternative_allele());
                                                    });
     
-    boost::math::poisson_distribution<RealType> poisson {0.000333 * size(the_haplotype)};
+    boost::math::poisson_distribution<RealType> poisson {0.007 * size(the_haplotype)};
     
-    return std::pow(0.0003333, num_non_reference_alleles);
+    //return std::pow(0.0003333, num_non_reference_alleles);
     
-    //return boost::math::pdf(poisson, num_non_reference_alleles);
+    return boost::math::pdf(poisson, num_non_reference_alleles) / 3;
 }
 
 template <typename RealType, typename Haplotypes, typename ForwardIterator>

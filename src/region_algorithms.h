@@ -60,6 +60,21 @@ std::pair<ForwardIterator, ForwardIterator> overlap_range(ForwardIterator first,
 }
 
 /**
+ Returns true if any of the mappable elements in the range [first, last) overlap with a_region.
+ 
+ Requires [first, last) is sorted w.r.t GenomicRegion::operator<
+ */
+template <typename ForwardIterator, typename MappableType>
+inline
+bool has_overlapped(ForwardIterator first, ForwardIterator last, const MappableType& mappable)
+{
+    return std::binary_search(first, last, mappable,
+                              [] (const auto& lhs, const auto& rhs) {
+                                  return is_before(lhs, rhs);
+                              });
+}
+
+/**
  Returns the number of mappable elements in the range [first, last) that overlap with a_region.
  
  Requires [first, last) is sorted w.r.t GenomicRegion::operator<

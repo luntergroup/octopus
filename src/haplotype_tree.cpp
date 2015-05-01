@@ -30,12 +30,12 @@ recently_removed_haplotypes_ {}
 
 bool HaplotypeTree::empty() const noexcept
 {
-    return the_haplotype_leafs_.empty();
+    return the_haplotype_leafs_.front() == the_root_;
 }
 
 std::size_t HaplotypeTree::num_haplotypes() const noexcept
 {
-    return the_haplotype_leafs_.size();
+    return (empty()) ? 0 : the_haplotype_leafs_.size();
 }
 
 void HaplotypeTree::extend(const Allele& an_allele)

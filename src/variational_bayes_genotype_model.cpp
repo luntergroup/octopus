@@ -273,9 +273,9 @@ VariationalBayesGenotypeModel::log_expected_genotype_probability_polyploid(const
 }
 
 VariationalBayesGenotypeModel::HaplotypePseudoCounts
-get_prior_pseudo_counts(const HaplotypePriors& the_haplotype_priors,
-                        const Haplotype& the_reference_haplotype,
-                        VariationalBayesGenotypeModel::RealType the_reference_haplotype_pseudo_count)
+get_haplotype_prior_pseudo_counts(const HaplotypePriors& the_haplotype_priors,
+                                  const Haplotype& the_reference_haplotype,
+                                  VariationalBayesGenotypeModel::RealType the_reference_haplotype_pseudo_count)
 {
     VariationalBayesGenotypeModel::HaplotypePseudoCounts result {};
     result.reserve(the_haplotype_priors.size());
@@ -289,6 +289,10 @@ get_prior_pseudo_counts(const HaplotypePriors& the_haplotype_priors,
                                                           std::log(the_reference_haplotype_pseudo_count - 0.5) -
                                                           ln_2));
     }
+    
+//    for (const auto& haplotype_prior : the_haplotype_priors) {
+//        result[haplotype_prior.first] = 0.5;
+//    }
     
     result[the_reference_haplotype] = the_reference_haplotype_pseudo_count;
     
