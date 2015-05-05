@@ -17,6 +17,7 @@
 #include <memory>    // std::unique_ptr
 #include <algorithm> // std::find, std::sort
 #include <iterator>  // std::cbegin etc
+#include <utility>   // std::move
 #include <regex>
 
 #include "genomic_region.h"

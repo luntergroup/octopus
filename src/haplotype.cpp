@@ -59,7 +59,6 @@ bool Haplotype::contains(const Allele& an_allele) const
             }
         }
         
-        // Another optimisation
         auto overlapped_range = overlap_range(std::cbegin(the_explicit_alleles_),
                                               std::cend(the_explicit_alleles_), an_allele);
         if (std::distance(overlapped_range.first, overlapped_range.second) == 1 &&
@@ -68,8 +67,6 @@ bool Haplotype::contains(const Allele& an_allele) const
                     get_subsequence(*overlapped_range.first,get_overlapped(*overlapped_range.first, an_allele));
         }
         
-        // If we get here then we have a complex query so we may aswell just pull out the
-        // haplotype sequence in the requested region
         return get_sequence(an_allele.get_region()) == an_allele.get_sequence();
     } else {
         return false;

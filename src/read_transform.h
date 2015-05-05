@@ -9,9 +9,9 @@
 #ifndef Octopus_read_transform_h
 #define Octopus_read_transform_h
 
-#include <functional> // std::function
 #include <vector>
-#include <algorithm>
+#include <functional> // std::function
+#include <algorithm>  // std::for_each
 
 #include "aligned_read.h"
 

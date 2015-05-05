@@ -211,18 +211,16 @@ update_parameters(VariationalBayesGenotypeModel& the_model,
     
     for (unsigned i {}; i < max_num_iterations; ++i) {
         for (const auto& sample : the_reads) {
-            responsabilities[sample.first] = the_model.genotype_responsabilities(the_genotypes,
-                                                                                 sample.second.first,
-                                                                                 sample.second.second,
-                                                                                 posterior_pseudo_counts,
-                                                                                 sample.first);
+            responsabilities[sample.first] =
+                the_model.genotype_responsabilities(the_genotypes, sample.second.first,
+                                                    sample.second.second, posterior_pseudo_counts,
+                                                    sample.first);
         }
         
         for (const auto& haplotype_prior : prior_haplotype_pseudocounts) {
-            posterior_pseudo_counts[haplotype_prior.first] = the_model.posterior_haplotype_pseudo_count(haplotype_prior.first,
-                                                                                                        haplotype_prior.second,
-                                                                                                        responsabilities,
-                                                                                                        the_genotypes);
+            posterior_pseudo_counts[haplotype_prior.first] =
+                the_model.posterior_haplotype_pseudo_count(haplotype_prior.first, haplotype_prior.second,
+                                                           responsabilities, the_genotypes);
         }
     }
     

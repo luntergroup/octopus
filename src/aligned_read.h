@@ -17,6 +17,7 @@
 #include <algorithm> // std::transform, std::swap
 #include <memory>    // std::unique_ptr, std::make_unique
 #include <iterator>  // std::begin etc
+#include <utility>   // std::forward
 #include <boost/functional/hash.hpp> // boost::hash_combine
 
 #include "genomic_region.h"

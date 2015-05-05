@@ -10,6 +10,7 @@
 #define __Octopus__variant_utils__
 
 #include <algorithm> // std::mismatch, std::max, std::minmax
+#include <iterator>  // std::distance
 #include <cstddef>   // std::size_t
 
 #include "variant.h"

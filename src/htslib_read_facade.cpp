@@ -9,7 +9,8 @@
 #include "htslib_read_facade.h"
 
 #include <sstream>
-#include <cmath> // std::abs
+#include <cmath>   // std::abs
+#include <utility> // std::move
 
 #include "cigar_string.h"
 

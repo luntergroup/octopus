@@ -8,8 +8,8 @@
 
 #include "variant_utils.h"
 
-#include <iterator> // std::tie, std::next, std::distance
 #include <list>
+#include <utility> // std::move
 
 #include "reference_genome.h"
 #include "candidate_variant_generator.h"
@@ -42,8 +42,9 @@ void merge_equal_variants(std::vector<Variant>& the_variants)
 
 auto allele_minmax(const Variant::SequenceType& allele_a, const Variant::SequenceType& allele_b)
 {
-    static auto is_bigger = [] (const auto& a1, const auto& a2) { return a1.size() < a2.size(); };
-    return std::minmax(allele_a, allele_b, is_bigger);
+    return std::minmax(allele_a, allele_b, [] (const auto& a1, const auto& a2) {
+        return a1.size() < a2.size();
+    });
 }
 
 bool is_parsimonious(const Variant& a_variant) noexcept

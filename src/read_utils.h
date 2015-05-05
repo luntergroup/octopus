@@ -10,9 +10,9 @@
 #define __Octopus__read_utils__
 
 #include <vector>
+#include <unordered_map>
 #include <iterator> // std::begin, std::end, std::make_move_iterator
 #include <utility>  // std::move
-#include <unordered_map>
 
 #include "aligned_read.h"
 #include "read_filter.h"

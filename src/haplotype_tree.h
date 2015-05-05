@@ -21,7 +21,6 @@
 
 class GenomicRegion;
 class ReferenceGenome;
-class Variant;
 
 class HaplotypeTree
 {
@@ -64,7 +63,6 @@ private:
     
     Vertex get_previous_allele(Vertex allele) const;
     bool allele_exists(Vertex allele, const Allele& an_allele) const;
-    LeafIterator extend_haplotype(LeafIterator haplotype_leaf, const Variant& a_variant);
     LeafIterator extend_haplotype(LeafIterator haplotype_leaf, const Allele& the_new_allele);
     Haplotype get_haplotype(Vertex haplotype_end, const GenomicRegion& a_region) const;
     

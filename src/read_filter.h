@@ -9,11 +9,12 @@
 #ifndef __Octopus__read_filter__
 #define __Octopus__read_filter__
 
-#include <functional>
 #include <vector>
-#include <algorithm> // std::all_of, std::partition_copy
-#include <iterator>  // std::cbegin etc
-#include <type_traits>
+#include <functional>  // std::function
+#include <algorithm>   // std::all_of, std::partition_copy
+#include <iterator>    // std::prev, std::cbegin, std::cend
+#include <type_traits> // std::enable_if, std::is_void
+#include <utility>     // std::move
 
 #include "context_back_insert_iterator.h"
 

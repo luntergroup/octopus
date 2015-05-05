@@ -11,13 +11,10 @@
 
 #include <functional>
 #include <algorithm> // std::count_if
-#include <iterator>  // std::prev
+#include <iterator>  // std::prev, std::cbegin, std::cend
 
 #include "aligned_read.h"
 #include "cigar_string.h"
-
-using std::cbegin;
-using std::cend;
 
 // Context-free filters
 
@@ -37,7 +34,7 @@ inline bool has_sufficient_good_quality_bases(const AlignedRead& a_read,
                                               unsigned min_num_good_quality_bases)
 {
     const auto& qualities = a_read.get_qualities();
-    return std::count_if(cbegin(qualities), cend(qualities), [min_base_quality] (const auto& qual) {
+    return std::count_if(std::cbegin(qualities), std::cend(qualities), [min_base_quality] (const auto& qual) {
         return qual >= min_base_quality;
     }) >= min_num_good_quality_bases;
 }

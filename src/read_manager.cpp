@@ -10,6 +10,7 @@
 
 #include <iterator>  // std::make_move_iterator, std::cbegin etc
 #include <algorithm> // std::any_of, std::min, std::nth_element, std::partition, std::for_each
+#include <utility>   // std::move
 #include <boost/filesystem/operations.hpp>
 
 #include "htslib_read_facade.h"
