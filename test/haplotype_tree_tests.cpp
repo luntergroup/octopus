@@ -1,5 +1,5 @@
 //
-//  haplotype_tree_test.cpp
+//  haplotype_tree_tests.cpp
 //  Octopus
 //
 //  Created by Daniel Cooke on 22/03/2015.

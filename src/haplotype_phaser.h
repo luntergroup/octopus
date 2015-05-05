@@ -37,7 +37,7 @@ public:
     
     HaplotypePhaser() = delete;
     HaplotypePhaser(ReferenceGenome& the_reference, VariationalBayesGenotypeModel& the_model,
-                    unsigned ploidy);
+                    unsigned ploidy, unsigned max_haplotypes=128, unsigned max_model_update_iterations=3);
     ~HaplotypePhaser() = default;
     
     HaplotypePhaser(const HaplotypePhaser&)            = delete;
@@ -69,7 +69,7 @@ private:
     HaplotypeTree the_tree_;
     VariationalBayesGenotypeModel& the_model_;
     
-    std::size_t max_haplotypes_;
+    unsigned max_haplotypes_;
     unsigned max_region_density_;
     unsigned max_model_update_iterations_;
     

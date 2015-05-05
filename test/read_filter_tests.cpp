@@ -1,5 +1,5 @@
 //
-//  read_filter_test.cpp
+//  read_filter_tests.cpp
 //  Octopus
 //
 //  Created by Daniel Cooke on 07/03/2015.
