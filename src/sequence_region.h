@@ -124,7 +124,9 @@ inline SequenceRegion::DifferenceType overlap_size(const SequenceRegion& lhs, co
 inline bool overlaps(const SequenceRegion& lhs, const SequenceRegion& rhs) noexcept
 {
     auto num_bases_overlaped = overlap_size(lhs, rhs);
-    return (num_bases_overlaped == 0) ? empty(lhs) || empty(rhs) : num_bases_overlaped > 0;
+    // if lhs & rhs have no bases overlapping and are not adjacent then one must be 'empty' and
+    // contained by the other
+    return (num_bases_overlaped == 0) ? !are_adjacent(lhs, rhs) || empty(std::min(lhs, rhs)) : num_bases_overlaped > 0;
 }
 
 inline bool contains(const SequenceRegion& lhs, const SequenceRegion& rhs) noexcept
@@ -137,8 +139,8 @@ inline SequenceRegion::DifferenceType inner_distance(const SequenceRegion& lhs,
 {
     if (overlaps(lhs, rhs)) return 0;
     
-    return static_cast<SequenceRegion::DifferenceType>(rhs.get_begin()) -
-            static_cast<SequenceRegion::DifferenceType>((empty(lhs)) ? lhs.get_end() + 1 : lhs.get_end());
+    return (is_before(lhs, rhs)) ? static_cast<SequenceRegion::DifferenceType>(rhs.get_begin() - lhs.get_end())
+                                : -inner_distance(rhs, lhs);
 }
 
 inline SequenceRegion::DifferenceType outer_distance(const SequenceRegion& lhs,

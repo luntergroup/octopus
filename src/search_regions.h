@@ -64,11 +64,15 @@ namespace detail
         
         auto leftmost_region  = leftmost_overlapped(the_reads, *first_included)->get_region();
         auto rightmost_region = rightmost_overlapped(the_reads, *last_included)->get_region();
-        
+
         if (count_overlapped(first_previous, first_included, leftmost_region) > 0) {
-            auto max_left_flank_size = inner_distance(*rightmost_mappable(first_previous, first_included),
-                                                      *first_included);
-            leftmost_region = shift(first_included->get_region(), -max_left_flank_size);
+            auto max_left_flank_size = inner_distance(*first_included, *rightmost_mappable(first_previous, first_included));
+            leftmost_region = shift(first_included->get_region(), max_left_flank_size);
+            
+            if (overlaps(*std::prev(first_included), leftmost_region)) {
+                // to deal with case where last previous is insertion, otherwise would be included in overlap_range
+                leftmost_region = shift(leftmost_region, 1);
+            }
         }
         
         if (first_excluded != last && contains(rightmost_region, *first_excluded)) {

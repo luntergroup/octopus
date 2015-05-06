@@ -42,7 +42,6 @@ TEST_CASE("can phase", "[haplotype_phaser]")
     
     auto samples = a_read_manager.get_sample_ids();
     
-    //auto a_region = parse_region("16:62646780-62647130", human);
     auto a_region = parse_region("16:62646800-62647030", human);
     
     auto reads = a_read_manager.fetch_reads(samples, a_region);
@@ -68,7 +67,7 @@ TEST_CASE("can phase", "[haplotype_phaser]")
     ReadModel a_read_model {ploidy};
     VariationalBayesGenotypeModel the_model {a_read_model, ploidy};
     
-    unsigned max_haplotypes {16};
+    unsigned max_haplotypes {128};
     HaplotypePhaser phaser {human, the_model, ploidy, max_haplotypes};
     
     HaplotypePhaser::ReadRangeMap<std::move_iterator<decltype(good_reads)::mapped_type::iterator>> read_ranges {};

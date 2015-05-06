@@ -274,6 +274,18 @@ TEST_CASE("overlap_range includes insertions on left boundry, but not the right"
     REQUIRE(std::distance(overlapped4.first, overlapped4.second) == 1);
 }
 
+TEST_CASE("inner_distance respects insertion lhs ordering rule", "[variant]")
+{
+    Variant snp1 {"chr1", 99, "T", "A", 0, 0};
+    Variant snp2 {"chr1", 101, "T", "C", 0, 0};
+    Variant ins {"chr1", 100, "", "A", 0, 0};
+    
+    REQUIRE(inner_distance(snp1, ins) == 0);
+    REQUIRE(inner_distance(ins, snp1) == 0);
+    REQUIRE(inner_distance(snp2, ins) == -1);
+    REQUIRE(inner_distance(ins, snp2) == 1);
+}
+
 TEST_CASE("indels can be left aligned", "[left_alignment]")
 {
     ReferenceGenomeFactory a_factory {};
