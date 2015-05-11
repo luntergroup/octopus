@@ -107,19 +107,17 @@ GenomicRegion next_sub_region(const GenomicRegion& the_previous_sub_region,
     auto first_shared_in_previous_range_it = find_first_shared(the_reads, previous_variant_sub_range.first,
                                                                previous_variant_sub_range.second, *included_it);
     auto num_possible_indicators = static_cast<unsigned>(std::distance(first_shared_in_previous_range_it, included_it));
+    
     unsigned num_indicators = std::min(num_possible_indicators, max_indicators);
     
     max_included -= num_indicators;
     auto first_included_it = std::prev(included_it, num_indicators);
     
     auto num_remaining_variants = static_cast<unsigned>(std::distance(included_it, last_variant_it));
-    if (num_remaining_variants < max_included) {
-        max_included -= num_remaining_variants;
-    }
-    
     auto max_num_variants_within_read_length = static_cast<unsigned>(max_count_if_shared_with_first(the_reads,
                                                                     included_it, last_variant_it));
-    max_included = std::min(max_included, max_num_variants_within_read_length + 1);
+    
+    max_included = std::min({max_included, num_remaining_variants, max_num_variants_within_read_length + 1});
     
     unsigned num_excluded_variants = max_num_variants_within_read_length - max_included;
     auto first_excluded_it = std::next(included_it, max_included);

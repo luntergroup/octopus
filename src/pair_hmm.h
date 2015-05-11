@@ -20,34 +20,34 @@
 #include <numeric>
 #include <array>
 
-#include "aligned_read.h"
 #include "maths.h"
 
 using std::size_t;
-using std::uint8_t;
 
+template <typename RealType>
 struct RandomModel
 {
     RandomModel() = default;
     
-    double background_probability;
-    double end_probability;
+    RealType background_probability;
+    RealType end_probability;
 };
 
+template <typename RealType>
 struct MatchModel
 {
     MatchModel() = default;
     
-    double match_probability;
-    double gap_open_probability;
-    double gap_extend_probability;
-    double end_probability;
+    RealType match_probability;
+    RealType gap_open_probability;
+    RealType gap_extend_probability;
+    RealType end_probability;
 };
 
-template <typename T>
+template <typename RealType>
 struct LocalPairHmmLogState
 {
-    static constexpr const T Negative_infinity = std::numeric_limits<T>::lowest();
+    static constexpr const RealType Negative_infinity = std::numeric_limits<RealType>::lowest();
     
     LocalPairHmmLogState()
     :
@@ -65,7 +65,7 @@ struct LocalPairHmmLogState
     random_y_2 {Negative_infinity}
     {}
     
-    LocalPairHmmLogState(T x)
+    LocalPairHmmLogState(RealType x)
     :
     begin {x},
     random_x_1 {x},
@@ -81,78 +81,109 @@ struct LocalPairHmmLogState
     random_y_2 {x}
     {}
     
-    T begin;
-    T random_x_1;
-    T silent_1;
-    T random_y_1;
-    T silent_2;
-    T match;
-    T insertion;
-    T deletion;
-    T silent_3;
-    T random_x_2;
-    T silent_4;
-    T random_y_2;
+    RealType begin;
+    RealType random_x_1;
+    RealType silent_1;
+    RealType random_y_1;
+    RealType silent_2;
+    RealType match;
+    RealType insertion;
+    RealType deletion;
+    RealType silent_3;
+    RealType random_x_2;
+    RealType silent_4;
+    RealType random_y_2;
 };
 
-template <typename T>
-T nuc_log_viterbi_local(const AlignedRead::SequenceType& sequence1,
-                        const AlignedRead::SequenceType& sequence2,
-                        const AlignedRead::Qualities& quals,
-                        MatchModel m, RandomModel r1, RandomModel r2)
+template <typename RealType>
+std::vector<RealType> make_log_prob_match_lookup()
 {
-    static T log_prob_background = std::log(0.25);
+    static constexpr const unsigned Num_qualities {256};
     
-    T log_prob_rand1_end      = std::log(r1.end_probability);
-    T log_prob_rand1_cont     = std::log(1 - r1.end_probability);
+    std::vector<RealType> the_lookup(Num_qualities);
     
-    T log_prob_gap_open       = std::log(m.gap_open_probability);
-    T log_prob_gap_extend     = std::log(m.gap_extend_probability);
-    T log_prob_match_end      = std::log(m.end_probability);
-    T log_prob_continue_match = std::log(1 - 2 * m.gap_open_probability - m.end_probability);
-    T log_prob_to_match       = std::log(1 - m.gap_extend_probability - m.end_probability);
+    for (unsigned i {}; i < Num_qualities; ++i) {
+        the_lookup[i] = std::log(1 - std::pow(10, -static_cast<RealType>(i) / 10));
+    }
     
-    T log_prob_rand2_end      = std::log(r2.end_probability);
-    T log_prob_rand2_cont     = std::log(1 - r2.end_probability);
+    return the_lookup;
+}
+
+template <typename RealType>
+std::vector<RealType> make_log_prob_mismatch_lookup()
+{
+    static constexpr const unsigned Num_qualities {256};
     
-    static T ln_10_div_10 = std::log(10) / 10;
-    static T ln_3         = std::log(3);
+    static const RealType ln_10_div_10 {static_cast<RealType>(std::log(10)) / 10};
+    static const RealType ln_3         {static_cast<RealType>(std::log(3))};
     
-    auto sequence1_length = sequence1.size();
-    auto sequence2_length = sequence2.size();
+    std::vector<RealType> the_lookup(Num_qualities);
     
-    std::vector<LocalPairHmmLogState<T>> current_column(sequence2_length + 2);
-    std::vector<LocalPairHmmLogState<T>> previous_column(sequence2_length + 2);
+    for (unsigned i {}; i < Num_qualities; ++i) {
+        the_lookup[i] = -ln_10_div_10 * i - ln_3;
+    }
+    
+    return the_lookup;
+}
+
+template <typename RealType, typename SequenceType1, typename SequenceType2>
+RealType nuc_log_viterbi_local(const SequenceType1& target, const SequenceType1& query,
+                               const SequenceType2& query_qualities, 
+                               MatchModel<RealType> m, RandomModel<RealType> r1, 
+                               RandomModel<RealType> r2)
+{
+    static auto log_prob_background = static_cast<RealType>(std::log(0.25));
+    
+    RealType log_prob_rand1_end      = std::log(r1.end_probability);
+    RealType log_prob_rand1_cont     = std::log(1 - r1.end_probability);
+    
+    RealType log_prob_gap_open       = std::log(m.gap_open_probability);
+    RealType log_prob_gap_extend     = std::log(m.gap_extend_probability);
+    RealType log_prob_match_end      = std::log(m.end_probability);
+    RealType log_prob_continue_match = std::log(1 - 2 * m.gap_open_probability - m.end_probability);
+    RealType log_prob_to_match       = std::log(1 - m.gap_extend_probability - m.end_probability);
+    
+    RealType log_prob_rand2_end      = std::log(r2.end_probability);
+    RealType log_prob_rand2_cont     = std::log(1 - r2.end_probability);
+    
+    static auto log_prob_match_lookup    = make_log_prob_match_lookup<RealType>();
+    static auto log_prob_mismatch_lookup = make_log_prob_mismatch_lookup<RealType>();
+    
+    auto target_length = target.size();
+    auto query_length  = query.size();
+    
+    std::vector<LocalPairHmmLogState<RealType>> current_column(query_length + 2);
+    std::vector<LocalPairHmmLogState<RealType>> previous_column(query_length + 2);
     
     current_column[1].begin = 0;
     
-    for (size_t i {1}; i <= sequence1_length + 1; ++i) {
-        for (size_t j {1}; j <= sequence2_length + 1; ++j) {
+    for (size_t i {1}; i <= target_length + 1; ++i) {
+        for (size_t j {1}; j <= query_length + 1; ++j) {
             
-            current_column[j].random_x_1 = log_prob_background + log_prob_rand1_cont + std::max({
+            current_column[j].random_x_1 = log_prob_background + log_prob_rand1_cont + std::max(
                 previous_column[j].begin,
                 previous_column[j].random_x_1
-            });
+            );
             
-            current_column[j].silent_1 = log_prob_rand1_end + std::max({
+            current_column[j].silent_1 = log_prob_rand1_end + std::max(
                 current_column[j].begin,
                 current_column[j].random_x_1
-            });
+            );
             
-            current_column[j].random_y_1 = log_prob_background + log_prob_rand1_cont + std::max({
+            current_column[j].random_y_1 = log_prob_background + log_prob_rand1_cont + std::max(
                 current_column[j - 1].silent_1,
                 current_column[j - 1].random_y_1
-            });
+            );
             
-            current_column[j].silent_2 = log_prob_rand1_end + std::max({
+            current_column[j].silent_2 = log_prob_rand1_end + std::max(
                 current_column[j].silent_1,
                 current_column[j].random_y_1
-            });
+            );
             
             if (i > 1 && j > 1) {
-                current_column[j].match = ((sequence1[i - 2] == sequence2[j - 2]) ?
-                                           std::log(1 - std::pow(10, -static_cast<T>(quals[j - 2]) / 10)) :
-                                           -ln_10_div_10 * quals[j - 2] - ln_3)
+                current_column[j].match = ((target[i - 2] == query[j - 2]) ?
+                                           log_prob_match_lookup[query_qualities[j - 2]] :
+                                           log_prob_mismatch_lookup[query_qualities[j - 2]])
                         + std::max({
                             log_prob_continue_match + previous_column[j - 1].match,
                             log_prob_to_match       + previous_column[j - 1].insertion,
@@ -180,85 +211,91 @@ T nuc_log_viterbi_local(const AlignedRead::SequenceType& sequence1,
                 current_column[j].silent_2
             });
             
-            current_column[j].random_x_2 = log_prob_background + log_prob_rand2_cont + std::max({
+            current_column[j].random_x_2 = log_prob_background + log_prob_rand2_cont + std::max(
                 previous_column[j].silent_3,
                 previous_column[j].random_x_2
-            });
+            );
             
-            current_column[j].silent_4 = log_prob_rand2_end + std::max({
+            current_column[j].silent_4 = log_prob_rand2_end + std::max(
                 current_column[j].silent_3,
                 current_column[j].random_x_2
-            });
+            );
             
-            current_column[j].random_y_2 = log_prob_background + log_prob_rand2_cont + std::max({
+            current_column[j].random_y_2 = log_prob_background + log_prob_rand2_cont + std::max(
                 current_column[j - 1].silent_4,
                 current_column[j - 1].random_y_2
-            });
+            );
         }
         
-        if (i == 2) previous_column[1].begin = LocalPairHmmLogState<T>::Negative_infinity;
+        if (i == 2) previous_column[1].begin = LocalPairHmmLogState<RealType>::Negative_infinity;
         
         std::swap(current_column, previous_column);
     }
     
-    return log_prob_rand2_end + std::max({
-        previous_column[sequence2_length + 1].silent_4,
-        previous_column[sequence2_length + 1].random_y_2
-    });
+    return log_prob_rand2_end + std::max(
+        previous_column[query_length + 1].silent_4,
+        previous_column[query_length + 1].random_y_2
+    );
 }
 
-template <typename T>
-T nuc_log_forward_local(const std::string& sequence1, const std::string& sequence2,
-                        const std::vector<uint8_t>& quals, MatchModel m, RandomModel r)
+template <typename RealType, typename SequenceType1, typename SequenceType2>
+RealType nuc_log_forward_local(const SequenceType1& target, const SequenceType1& query,
+                               const SequenceType2& query_qualities, 
+                               MatchModel<RealType> m, RandomModel<RealType> r1, 
+                               RandomModel<RealType> r2)
 {
-    static T log_prob_background = std::log(0.25);
+    static auto log_prob_background = static_cast<RealType>(std::log(0.25));
     
-    T log_prob_gap_open       = std::log(m.gap_open_probability);
-    T log_prob_gap_extend     = std::log(m.gap_extend_probability);
-    T log_prob_match_end      = std::log(m.end_probability);
-    T log_prob_rand_end       = std::log(r.end_probability);
-    T log_prob_rand_cont      = std::log(1 - r.end_probability);
-    T log_prob_continue_match = std::log(1 - 2 * m.gap_open_probability - m.end_probability);
-    T log_prob_to_match       = std::log(1 - m.gap_extend_probability - m.end_probability);
+    RealType log_prob_rand1_end      = std::log(r1.end_probability);
+    RealType log_prob_rand1_cont     = std::log(1 - r1.end_probability);
     
-    static T ln_10_div_10 = std::log(10) / 10;
-    static T ln_3         = std::log(3);
+    RealType log_prob_gap_open       = std::log(m.gap_open_probability);
+    RealType log_prob_gap_extend     = std::log(m.gap_extend_probability);
+    RealType log_prob_match_end      = std::log(m.end_probability);
+    RealType log_prob_continue_match = std::log(1 - 2 * m.gap_open_probability - m.end_probability);
+    RealType log_prob_to_match       = std::log(1 - m.gap_extend_probability - m.end_probability);
     
-    auto sequence1_length = sequence1.size();
-    auto sequence2_length = sequence2.size();
+    RealType log_prob_rand2_end      = std::log(r2.end_probability);
+    RealType log_prob_rand2_cont     = std::log(1 - r2.end_probability);
     
-    std::vector<LocalPairHmmLogState<T>> current_column(sequence2_length + 2);
-    std::vector<LocalPairHmmLogState<T>> previous_column(sequence2_length + 2);
+    static auto log_prob_match_lookup    = make_log_prob_match_lookup<RealType>();
+    static auto log_prob_mismatch_lookup = make_log_prob_mismatch_lookup<RealType>();
+    
+    auto target_length = target.size();
+    auto query_length  = query.size();
+    
+    std::vector<LocalPairHmmLogState<RealType>> current_column(query_length + 2);
+    std::vector<LocalPairHmmLogState<RealType>> previous_column(query_length + 2);
     
     current_column[1].begin = 0;
     
-    for (size_t i {1}; i <= sequence1_length + 1; ++i) {
-        for (size_t j {1}; j <= sequence2_length + 1; ++j) {
+    for (size_t i {1}; i <= target_length + 1; ++i) {
+        for (size_t j {1}; j <= query_length + 1; ++j) {
             
-            current_column[j].random_x_1 = log_prob_background + log_prob_rand_cont + log_sum_exp(
+            current_column[j].random_x_1 = log_prob_background + log_prob_rand1_cont + log_sum_exp(
                 previous_column[j].begin,
                 previous_column[j].random_x_1
             );
             
-            current_column[j].silent_1 = log_prob_rand_end + log_sum_exp(
+            current_column[j].silent_1 = log_prob_rand1_end + log_sum_exp(
                 current_column[j].begin,
                 current_column[j].random_x_1
             );
             
-            current_column[j].random_y_1 = log_prob_background + log_prob_rand_cont + log_sum_exp(
+            current_column[j].random_y_1 = log_prob_background + log_prob_rand1_cont + log_sum_exp(
                 current_column[j - 1].silent_1,
                 current_column[j - 1].random_y_1
             );
             
-            current_column[j].silent_2 = log_prob_rand_end + log_sum_exp(
+            current_column[j].silent_2 = log_prob_rand1_end + log_sum_exp(
                 current_column[j].silent_1,
                 current_column[j].random_y_1
             );
             
             if (i > 1 && j > 1) {
-                current_column[j].match = ((sequence1[i - 2] == sequence2[j - 2]) ?
-                                           std::log(1 - std::pow(10, -static_cast<T>(quals[j - 2]) / 10)) :
-                                           -ln_10_div_10 * quals[j - 2])
+                current_column[j].match = ((target[i - 2] == query[j - 2]) ?
+                                           log_prob_match_lookup[query_qualities[j - 2]] :
+                                           log_prob_mismatch_lookup[query_qualities[j - 2]])
                             + log_sum_exp(
                                 log_prob_continue_match + previous_column[j - 1].match,
                                 log_prob_to_match       + previous_column[j - 1].insertion,
@@ -286,30 +323,30 @@ T nuc_log_forward_local(const std::string& sequence1, const std::string& sequenc
                 current_column[j].silent_2
             );
             
-            current_column[j].random_x_2 = log_prob_background + log_prob_rand_cont + log_sum_exp(
+            current_column[j].random_x_2 = log_prob_background + log_prob_rand2_cont + log_sum_exp(
                 previous_column[j].silent_3,
                 previous_column[j].random_x_2
             );
             
-            current_column[j].silent_4 = log_prob_rand_end + log_sum_exp(
+            current_column[j].silent_4 = log_prob_rand2_end + log_sum_exp(
                 current_column[j].silent_3,
                 current_column[j].random_x_2
             );
             
-            current_column[j].random_y_2 = log_prob_background + log_prob_rand_cont + log_sum_exp(
+            current_column[j].random_y_2 = log_prob_background + log_prob_rand2_cont + log_sum_exp(
                 current_column[j - 1].silent_4,
                 current_column[j - 1].random_y_2
             );
         }
         
-        if (i == 2) previous_column[1].begin = LocalPairHmmLogState<T>::Negative_infinity;
-            
+        if (i == 2) previous_column[1].begin = LocalPairHmmLogState<RealType>::Negative_infinity;
+          
         std::swap(current_column, previous_column);
     }
             
-    return log_prob_rand_end + log_sum_exp(
-        previous_column[sequence2_length + 1].silent_4,
-        previous_column[sequence2_length + 1].random_y_2
+    return log_prob_rand2_end + log_sum_exp(
+        previous_column[query_length + 1].silent_4,
+        previous_column[query_length + 1].random_y_2
     );
 }
 

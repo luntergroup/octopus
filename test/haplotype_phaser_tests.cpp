@@ -38,7 +38,7 @@ TEST_CASE("can phase", "[haplotype_phaser]")
     ReferenceGenomeFactory a_factory {};
     ReferenceGenome human(a_factory.make(human_reference_fasta));
     
-    ReadManager a_read_manager(std::vector<std::string> {human_1000g_bam1, human_1000g_bam2, human_1000g_bam3});
+    ReadManager a_read_manager(std::vector<std::string> {human_1000g_bam2});
     
     auto samples = a_read_manager.get_sample_ids();
     
@@ -67,7 +67,7 @@ TEST_CASE("can phase", "[haplotype_phaser]")
     ReadModel a_read_model {ploidy};
     VariationalBayesGenotypeModel the_model {a_read_model, ploidy};
     
-    unsigned max_haplotypes {128};
+    unsigned max_haplotypes {64};
     HaplotypePhaser phaser {human, the_model, ploidy, max_haplotypes};
     
     HaplotypePhaser::ReadRangeMap<std::move_iterator<decltype(good_reads)::mapped_type::iterator>> read_ranges {};

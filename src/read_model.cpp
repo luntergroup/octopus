@@ -32,35 +32,28 @@ ReadModel::RealType ReadModel::log_probability(const AlignedRead& read, const Ha
         return get_log_probability_from_cache(sample, read, haplotype);
     }
     
-    //TODO: make these members when pair_hmm is finalised
+    // TODO: make these members when pair_hmm is finalised
     
-    RandomModel r1 {};
+    RandomModel<RealType> r1 {};
     r1.background_probability = 0.25;
     
-    MatchModel m {};
+    MatchModel<RealType> m {};
     m.match_probability      = 1.0;
     m.gap_open_probability   = 0.017;
     m.gap_extend_probability = 0.025;
     
-    RandomModel r2 {};
+    RandomModel<RealType> r2 {};
     r2.background_probability = 0.25;
     
     // m.end_probability must satisfy:
-    // * m.end_probability <= 1 - 2 * m.gap_open_probability
-    // * m.end_probability <= 1 - m.gap_extend_probability
-    
-//    r1.end_probability = 0.05;
-//    m.end_probability  = 0.01;
-//    r2.end_probability = 0.05;
-    
-    // EXPERIMENTAL
-    
-    auto covered_region = get_encompassing(read, haplotype);
-    
+    // m.end_probability <= 1 - 2 * m.gap_open_probability
+    // m.end_probability <= 1 - m.gap_extend_probability
     auto m_end_max = 1 - std::max(2 * m.gap_open_probability, m.gap_extend_probability);
     
     if (overlaps(read, haplotype)) {
         auto overlapped_region = get_overlapped(read, haplotype);
+        auto covered_region    = get_encompassing(read, haplotype);
+        
         r1.end_probability = 1.0 / (size(get_left_overhang(covered_region, overlapped_region)) + 1);
         m.end_probability  = std::min(1.0 / (size(overlapped_region) + 1), m_end_max);
         r2.end_probability = 1.0 / (size(get_right_overhang(covered_region, overlapped_region)) + 1);
@@ -70,8 +63,8 @@ ReadModel::RealType ReadModel::log_probability(const AlignedRead& read, const Ha
         r2.end_probability = 0.99;
     }
     
-    auto result = nuc_log_viterbi_local<float>(haplotype.get_sequence(), read.get_sequence(),
-                                               read.get_qualities(), m, r1, r2);
+    auto result = nuc_log_viterbi_local<RealType>(haplotype.get_sequence(), read.get_sequence(),
+                                                  read.get_qualities(), m, r1, r2);
     
     add_read_to_cache(sample, read, haplotype, result);
     

@@ -58,7 +58,7 @@ public:
     RealType get_alternative_allele_probability() const noexcept;
     
 private:
-    //WARNING: Do not change the order of these members! Order required by second constructor.
+    // WARNING: Do not change the order of these members! Order required by second constructor.
     SequenceType the_reference_allele_sequence_;
     GenomicRegion the_reference_allele_region_;
     SequenceType the_alternative_allele_sequence_;
