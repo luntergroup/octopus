@@ -16,24 +16,15 @@
 
 #include "allele.h"
 #include "variant.h"
-
-template <typename SampleIdType, typename RealType=double>
-using AlleleProbabilityMap = std::unordered_map<SampleIdType, std::map<Allele, RealType>>;
+#include "variational_bayes_genotype_model.h"
+#include "haplotype_phaser.h"
 
 template <typename SampleIdType, typename RealType=double>
 using VariantCalls = std::unordered_map<SampleIdType, std::map<Variant, RealType>>;
 
-template <typename SampleIdType, typename RealType=double>
-VariantCalls<SampleIdType, RealType>
-call_variants(const AlleleProbabilityMap<SampleIdType, RealType>& the_allele_probabilities)
-{
-    VariantCalls<SampleIdType, RealType> result {};
-    
-    for (const auto& sample_allele_probabilities : the_allele_probabilities) {
-        
-    }
-    
-    return result;
-}
+VariantCalls<HaplotypePhaser::SampleIdType, HaplotypePhaser::RealType>
+call_variants(const std::vector<HaplotypePhaser::SampleIdType>& the_samples,
+              const HaplotypePhaser::PhasedRegions& the_phased_regions,
+              const std::vector<Variant>& the_candidates, const VariationalBayesGenotypeModel& the_model);
 
 #endif /* defined(__Octopus__variant_caller__) */

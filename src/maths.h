@@ -144,4 +144,32 @@ RealType digamma_inv(RealType x)
     return y;
 }
 
+template <typename MapType>
+inline
+typename MapType::mapped_type
+sum_values(const MapType& map)
+{
+    typename MapType::mapped_type result {};
+    
+    for (const auto& map_pair : map) {
+        result += map_pair.second;
+    }
+    
+    return result;
+}
+
+template <typename ResultType, typename MapType, typename UnaryOperation>
+inline
+ResultType
+sum_values(const MapType& map, UnaryOperation op)
+{
+    ResultType result {};
+    
+    for (const auto& map_pair : map) {
+        result += op(map_pair.second);
+    }
+    
+    return result;
+}
+
 #endif /* defined(__Octopus__maths__) */

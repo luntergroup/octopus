@@ -179,4 +179,19 @@ std::size_t count_if_shared_with_first(ForwardIterator1 first1, ForwardIterator1
     return std::distance(overlapped_with_last_range.first, overlapped_with_last_range.second);
 }
 
+template <typename ForwardIterator>
+std::vector<GenomicRegion> get_all_intervening(ForwardIterator first_mappable, ForwardIterator last_mappable)
+{
+    if (first_mappable == last_mappable) return std::vector<GenomicRegion> {};
+    
+    std::vector<GenomicRegion> result(std::distance(first_mappable, last_mappable) - 1);
+    
+    std::transform(first_mappable, std::prev(last_mappable), std::next(first_mappable), result.begin(),
+                   [] (const auto& mappable, const auto& next_mappable) {
+                       return get_intervening(mappable, next_mappable);
+                   });
+    
+    return result;
+}
+
 #endif

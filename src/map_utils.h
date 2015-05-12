@@ -17,34 +17,6 @@
 #include "genomic_region.h"
 #include "mappable.h"
 
-template <typename MapType>
-inline
-typename MapType::mapped_type
-sum(const MapType& map)
-{
-    typename MapType::mapped_type result {};
-    
-    for (const auto& map_pair : map) {
-        result += map_pair.second;
-    }
-    
-    return result;
-}
-
-template <typename ResultType, typename MapType, typename UnaryOperation>
-inline
-ResultType
-sum(const MapType& map, UnaryOperation op)
-{
-    ResultType result {};
-    
-    for (const auto& map_pair : map) {
-        result += op(map_pair.second);
-    }
-    
-    return result;
-}
-
 template <typename MappableMap, typename MappableType>
 inline
 std::size_t count_overlapped(const MappableMap& mappables, const MappableType& m)

@@ -15,6 +15,7 @@
 #include <cstddef> // std::size_t
 #include <boost/functional/hash.hpp> // boost::hash_combine
 
+#include "common.h"
 #include "haplotype.h"
 #include "genotype.h"
 #include "aligned_read.h"
@@ -22,8 +23,8 @@
 class ReadModel
 {
 public:
-    using RealType     = double;
-    using SampleIdType = std::string;
+    using RealType     = Octopus::ProbabilityType;
+    using SampleIdType = Octopus::SampleIdType;
     
     ReadModel() = delete;
     explicit ReadModel(unsigned ploidy, bool can_cache_reads = true);

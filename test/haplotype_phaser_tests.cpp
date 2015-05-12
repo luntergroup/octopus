@@ -27,6 +27,7 @@
 #include "haplotype.h"
 #include "genotype.h"
 #include "read_model.h"
+#include "bayesian_genotype_model.h"
 #include "variational_bayes_genotype_model.h"
 #include "haplotype_phaser.h"
 
@@ -70,7 +71,7 @@ TEST_CASE("can phase", "[haplotype_phaser]")
     unsigned max_haplotypes {64};
     HaplotypePhaser phaser {human, the_model, ploidy, max_haplotypes};
     
-    HaplotypePhaser::ReadRangeMap<std::move_iterator<decltype(good_reads)::mapped_type::iterator>> read_ranges {};
+    BayesianGenotypeModel::ReadRanges<ReadManager::SampleIdType, std::move_iterator<decltype(good_reads)::mapped_type::iterator>> read_ranges {};
     for (const auto& sample : samples) {
         read_ranges.emplace(sample, std::make_pair(std::make_move_iterator(good_reads[sample].begin()),
                                                    std::make_move_iterator(good_reads[sample].end())));
@@ -78,11 +79,11 @@ TEST_CASE("can phase", "[haplotype_phaser]")
     
     phaser.put_data(read_ranges, candidates.cbegin(), candidates.cend());
     
-    auto phased_genotypes = phaser.get_phased_genotypes_posteriors(true);
+    auto phased_regions = phaser.get_phased_regions(true);
     
-    cout << "phased into " << phased_genotypes.size() << " sections" << endl;
+    cout << "phased into " << phased_regions.size() << " sections" << endl;
     
-    for (const auto& haplotype_count : phased_genotypes.front().second) {
+    for (const auto& haplotype_count : phased_regions.front().the_latent_posteriors.haplotype_pseudo_counts) {
         if (haplotype_count.second > 1) {
             cout << haplotype_count.first << endl;
             haplotype_count.first.print_explicit_alleles();

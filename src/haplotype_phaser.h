@@ -15,6 +15,7 @@
 #include <deque>
 #include <unordered_map>
 
+#include "common.h"
 #include "genomic_region.h"
 #include "map_utils.h"
 #include "reference_genome.h"
@@ -27,13 +28,34 @@
 using std::cout;    // TEST
 using std::endl;    // TEST
 
+using BayesianGenotypeModel::VariationalBayesGenotypeModel;
+
 class HaplotypePhaser
 {
 public:
-    using SampleIdType = std::string;
-    template <typename ForwardIterator>
-    using ReadRangeMap = std::unordered_map<SampleIdType, std::pair<ForwardIterator, ForwardIterator>>;
-    using PhasedGenotypePosteriors = std::vector<VariationalBayesGenotypeModelLatents>;
+    using RealType     = Octopus::ProbabilityType;
+    using SampleIdType = Octopus::SampleIdType;
+    
+    struct PhasedRegion
+    {
+        GenomicRegion the_region;
+        std::vector<Haplotype> the_haplotypes;
+        std::vector<Genotype> the_genotypes;
+        BayesianGenotypeModel::Latents<SampleIdType, RealType> the_latent_posteriors;
+        
+        PhasedRegion() = default;
+        template <typename GenomicRegion_, typename Haplotypes_, typename Genotypes_, typename Latents_>
+        PhasedRegion(GenomicRegion_&& the_region, Haplotypes_&& the_haplotypes,
+                     Genotypes_&& the_genotypes, Latents_&& the_latent_posteriors)
+        :
+        the_region {std::forward<GenomicRegion_>(the_region)},
+        the_haplotypes {std::forward<Haplotypes_>(the_haplotypes)},
+        the_genotypes {std::forward<Genotypes_>(the_genotypes)},
+        the_latent_posteriors {std::forward<Latents_>(the_latent_posteriors)}
+        {}
+    };
+    
+    using PhasedRegions = std::vector<PhasedRegion>;
     
     HaplotypePhaser() = delete;
     HaplotypePhaser(ReferenceGenome& the_reference, VariationalBayesGenotypeModel& the_model,
@@ -46,23 +68,23 @@ public:
     HaplotypePhaser& operator=(HaplotypePhaser&&)      = delete;
     
     template <typename ForwardIterator1, typename ForwardIterator2>
-    void put_data(const ReadRangeMap<ForwardIterator1>& the_reads,
+    void put_data(const BayesianGenotypeModel::ReadRanges<SampleIdType, ForwardIterator1>& the_reads,
                   ForwardIterator2 first_candidate, ForwardIterator2 last_candidate);
     
-    PhasedGenotypePosteriors get_phased_genotypes_posteriors(bool include_partially_phased_haplotypes);
+    PhasedRegions get_phased_regions(bool include_partially_phased_regions);
     
 private:
-    using RealType              = VariationalBayesGenotypeModel::RealType;
     using ReadMap               = std::unordered_map<SampleIdType, std::deque<AlignedRead>>;
     using Haplotypes            = HaplotypeTree::Haplotypes;
-    using GenotypePosteriors    = VariationalBayesGenotypeModel::GenotypeResponsabilities;
-    using HaplotypePseudoCounts = VariationalBayesGenotypeModel::HaplotypePseudoCounts;
+    using GenotypePosteriors    = BayesianGenotypeModel::GenotypeProbabilities<SampleIdType, RealType>;
+    using HaplotypePseudoCounts = BayesianGenotypeModel::HaplotypePseudoCounts<RealType>;
     
     ReadMap the_reads_;
     std::deque<Variant> the_candidates_;
     
     using ReadIterator      = typename ReadMap::mapped_type::const_iterator;
     using CandidateIterator = decltype(the_candidates_)::const_iterator;
+    using ReadRanges        = BayesianGenotypeModel::ReadRanges<SampleIdType, ReadIterator>;
     
     ReferenceGenome& the_reference_;
     unsigned ploidy_;
@@ -73,10 +95,8 @@ private:
     unsigned max_region_density_;
     unsigned max_model_update_iterations_;
     
-    PhasedGenotypePosteriors the_phased_genotypes_;
-    
-    GenomicRegion the_last_unphased_region_;
-    VariationalBayesGenotypeModelLatents the_last_unphased_posteriors_;
+    PhasedRegion the_last_unphased_region_;
+    PhasedRegions the_phased_regions_;
     
     void phase();
     void extend_haplotypes(CandidateIterator first, CandidateIterator last);
@@ -84,7 +104,7 @@ private:
     HaplotypePseudoCounts get_haplotype_prior_counts(const Haplotypes& the_haplotypes,
                                                      CandidateIterator first, CandidateIterator last,
                                                      const GenomicRegion& the_region) const;
-    SamplesReads<ReadIterator> get_read_ranges(const GenomicRegion& the_region) const;
+    ReadRanges get_read_ranges(const GenomicRegion& the_region) const;
     void remove_unlikely_haplotypes(const Haplotypes& the_haplotypes,
                                     const HaplotypePseudoCounts& prior_counts,
                                     const HaplotypePseudoCounts& posterior_counts);
@@ -92,7 +112,7 @@ private:
 };
 
 template <typename ForwardIterator1, typename ForwardIterator2>
-void HaplotypePhaser::put_data(const ReadRangeMap<ForwardIterator1>& the_reads,
+void HaplotypePhaser::put_data(const BayesianGenotypeModel::ReadRanges<SampleIdType, ForwardIterator1>& the_reads,
                                ForwardIterator2 first_candidate, ForwardIterator2 last_candidate)
 {
     for (auto&& map_pair : the_reads) {
@@ -102,8 +122,8 @@ void HaplotypePhaser::put_data(const ReadRangeMap<ForwardIterator1>& the_reads,
     the_candidates_.insert(the_candidates_.end(), first_candidate, last_candidate);
     
     if (the_tree_.empty()) {
-        the_last_unphased_region_ = get_left_overhang(*leftmost_sorted_mappable(the_reads_),
-                                                      the_candidates_.front().get_region());
+        the_last_unphased_region_.the_region = get_left_overhang(*leftmost_sorted_mappable(the_reads_),
+                                                                 the_candidates_.front().get_region());
     }
     
     phase();

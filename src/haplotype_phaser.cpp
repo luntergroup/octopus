@@ -9,7 +9,7 @@
 #include "haplotype_phaser.h"
 
 #include <algorithm> // std::for_each
-#include <iterator>  // std::tie, std::distance
+#include <iterator>  // std::distance
 #include <cmath>     // std::log2
 #include <utility>   // std::make_pair
 
@@ -30,28 +30,28 @@ the_model_ {the_model},
 max_haplotypes_ {max_haplotypes},
 max_region_density_ {static_cast<unsigned int>(std::log2(max_haplotypes_))},
 max_model_update_iterations_ {max_model_update_iterations},
-the_phased_genotypes_ {},
-the_last_unphased_region_ {},
-the_last_unphased_posteriors_ {}
+the_phased_regions_ {},
+the_last_unphased_region_ {}
 {}
 
-HaplotypePhaser::PhasedGenotypePosteriors
-HaplotypePhaser::get_phased_genotypes_posteriors(bool include_partially_phased_haplotypes)
+HaplotypePhaser::PhasedRegions
+HaplotypePhaser::get_phased_regions(bool include_partially_phased_regions)
 {
-    if (include_partially_phased_haplotypes) {
-        the_phased_genotypes_.emplace_back(the_last_unphased_posteriors_);
+    if (include_partially_phased_regions) {
+        the_phased_regions_.emplace_back(std::move(the_last_unphased_region_));
         remove_phased_region(the_candidates_.cbegin(), the_candidates_.cend());
     }
     
-    return the_phased_genotypes_;
+    return the_phased_regions_;
 }
 
 void HaplotypePhaser::phase()
 {
-    GenotypePosteriors genotype_posteriors;
     HaplotypePseudoCounts haplotype_prior_counts;
-    HaplotypePseudoCounts haplotype_posterior_counts;
-    auto sub_region = the_last_unphased_region_;
+    
+    BayesianGenotypeModel::Latents<SampleIdType, RealType> latent_posteriors;
+    
+    GenomicRegion sub_region {the_last_unphased_region_.the_region};
     unsigned max_candidates {max_region_density_};
     unsigned max_indicators {0};
     std::pair<CandidateIterator, CandidateIterator> candidate_range;
@@ -80,25 +80,27 @@ void HaplotypePhaser::phase()
         auto haplotype_prior_counts = get_haplotype_prior_counts(haplotypes, candidate_range.first,
                                                                  candidate_range.second, sub_region);
         
-        std::tie(genotype_posteriors, haplotype_posterior_counts) =
-            update_parameters(the_model_, get_all_genotypes(haplotypes, ploidy_), haplotype_prior_counts,
-                              get_read_ranges(sub_region), max_model_update_iterations_);
+        auto genotypes = get_all_genotypes(haplotypes, ploidy_);
+        
+        latent_posteriors = BayesianGenotypeModel::update_latents(the_model_, genotypes, haplotype_prior_counts,
+                                                                  get_read_ranges(sub_region), max_model_update_iterations_);
         
         cout << "updated model" << endl;
         
         if (candidate_range.second == the_candidates_.cend()) {
-            remove_unlikely_haplotypes(haplotypes, haplotype_prior_counts, haplotype_posterior_counts);
-            the_last_unphased_region_ = sub_region;
-            the_last_unphased_posteriors_ = std::make_pair(genotype_posteriors, haplotype_posterior_counts);
+            remove_unlikely_haplotypes(haplotypes, haplotype_prior_counts, latent_posteriors.haplotype_pseudo_counts);
+            the_last_unphased_region_ = PhasedRegion {sub_region, std::move(haplotypes),
+                                                std::move(genotypes), std::move(latent_posteriors)};
             return;
         } else if (has_shared(the_reads_, sub_region, *candidate_range.second)) {
-            remove_unlikely_haplotypes(haplotypes, haplotype_prior_counts, haplotype_posterior_counts);
+            remove_unlikely_haplotypes(haplotypes, haplotype_prior_counts, latent_posteriors.haplotype_pseudo_counts);
             max_indicators = static_cast<unsigned>(std::distance(the_candidates_.cbegin(), candidate_range.second));
             max_candidates = max_region_density_ + max_indicators - std::log2(the_tree_.num_haplotypes());
             previous_region_last_it = candidate_range.second;
             cout << "can phase with maximum " << max_indicators << " indicators and " << max_candidates << " candidates" << endl;
         } else {
-            the_phased_genotypes_.emplace_back(std::make_pair(genotype_posteriors, haplotype_posterior_counts));
+            the_phased_regions_.emplace_back(sub_region, std::move(haplotypes), std::move(genotypes),
+                                             std::move(latent_posteriors));
             remove_phased_region(candidate_range.first, candidate_range.second);
             max_indicators = 0;
             max_candidates = max_region_density_;
@@ -134,12 +136,12 @@ HaplotypePhaser::get_haplotype_prior_counts(const Haplotypes& the_haplotypes,
 {
     auto haplotype_priors = get_haplotype_prior_probabilities<RealType>(the_haplotypes, first, last);
     Haplotype reference {the_reference_, the_region};
-    return get_haplotype_prior_pseudo_counts(haplotype_priors, reference, 1.0);
+    return BayesianGenotypeModel::get_haplotype_prior_pseudo_counts(haplotype_priors, reference, 1.0);
 }
 
-SamplesReads<HaplotypePhaser::ReadIterator> HaplotypePhaser::get_read_ranges(const GenomicRegion& the_region) const
+HaplotypePhaser::ReadRanges HaplotypePhaser::get_read_ranges(const GenomicRegion& the_region) const
 {
-    SamplesReads<ReadIterator> reads {};
+    ReadRanges reads {};
     reads.reserve(the_reads_.size());
     
     for (const auto& sample_reads : the_reads_) {
