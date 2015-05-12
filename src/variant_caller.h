@@ -14,17 +14,39 @@
 #include <map>
 #include <functional>
 
+#include "common.h"
 #include "allele.h"
 #include "variant.h"
-#include "variational_bayes_genotype_model.h"
 #include "haplotype_phaser.h"
 
-template <typename SampleIdType, typename RealType=double>
-using VariantCalls = std::unordered_map<SampleIdType, std::map<Variant, RealType>>;
+namespace Octopus
+{
 
-VariantCalls<HaplotypePhaser::SampleIdType, HaplotypePhaser::RealType>
-call_variants(const std::vector<HaplotypePhaser::SampleIdType>& the_samples,
-              const HaplotypePhaser::PhasedRegions& the_phased_regions,
-              const std::vector<Variant>& the_candidates, const VariationalBayesGenotypeModel& the_model);
+namespace VariantCaller
+{
+    template <typename SampleIdType, typename RealType>
+    using AllelePosteriors = std::unordered_map<SampleIdType, std::map<Allele, RealType>>;
+    
+    AllelePosteriors<Octopus::SampleIdType, Octopus::ProbabilityType>
+    get_allele_posteriors(const std::vector<Octopus::SampleIdType>& the_samples,
+                          const HaplotypePhaser::PhasedRegions& the_phased_regions,
+                          const std::vector<Allele>& the_candidates);
+    
+    AllelePosteriors<Octopus::SampleIdType, Octopus::ProbabilityType>
+    get_allele_posteriors(const std::vector<Octopus::SampleIdType>& the_samples,
+                          const HaplotypePhaser::PhasedRegions& the_phased_regions,
+                          const std::vector<Variant>& the_candidates);
+    
+    template <typename SampleIdType, typename RealType>
+    using VariantCalls = std::unordered_map<SampleIdType, std::map<Variant, RealType>>;
+    
+    VariantCalls<Octopus::SampleIdType, Octopus::ProbabilityType>
+    call_variants(const std::vector<Octopus::SampleIdType>& the_samples,
+                  const HaplotypePhaser::PhasedRegions& the_phased_regions,
+                  const std::vector<Variant>& the_candidates);
+    
+} // end namespace VariantCaller
+
+} // end namespace Octopus
 
 #endif /* defined(__Octopus__variant_caller__) */

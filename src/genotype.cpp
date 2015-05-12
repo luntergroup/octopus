@@ -128,7 +128,7 @@ Genotype get_genotype_from_haplotype_indicies(const std::vector<Haplotype>& hapl
 // and is within the set {0, num_haplotypes - 1}.
 // We then start with the homozygous genotype {0, ..., 0} and increment this each time
 // we exit the loop. We are then essentially enumerating integers in base_{num_haplotypes}.
-// However there is a caveat, usually when we increment an integer and need to carry, the bits to the
+// However there is a caveat. Usually when we increment an integer and need to carry, the bits to the
 // right of the carried 1 are all set to zero (e.g. in base 3, 0122 + 1 = 0200). In our case this
 // doesn't work as we will already have the resulting genotype (0002 in the example). The solution
 // is to 'miss out' all the genotypes we already have by setting the bits to the right of the carry

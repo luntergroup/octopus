@@ -20,6 +20,9 @@
 #include "genotype.h"
 #include "haplotype_prior_model.h"
 
+namespace Octopus
+{
+
 HaplotypePhaser::HaplotypePhaser(ReferenceGenome& the_reference, VariationalBayesGenotypeModel& the_model,
                                  unsigned ploidy, unsigned max_haplotypes, unsigned max_model_update_iterations)
 :
@@ -67,7 +70,7 @@ void HaplotypePhaser::phase()
     sub_region = next_sub_region(sub_region, the_reads_, the_candidates_, max_candidates, max_indicators);
     
     while (true) {
-        cout << "looking in region " << sub_region << endl;
+        //cout << "looking in region " << sub_region << endl;
         
         candidate_range = overlap_range(the_candidates_.cbegin(), the_candidates_.cend(), sub_region);
         
@@ -75,7 +78,7 @@ void HaplotypePhaser::phase()
         
         auto haplotypes = get_haplotypes(sub_region);
         
-        cout << "there are " << haplotypes.size() << " haplotypes" << endl;
+        //cout << "there are " << haplotypes.size() << " haplotypes" << endl;
         
         auto haplotype_prior_counts = get_haplotype_prior_counts(haplotypes, candidate_range.first,
                                                                  candidate_range.second, sub_region);
@@ -85,7 +88,7 @@ void HaplotypePhaser::phase()
         latent_posteriors = BayesianGenotypeModel::update_latents(the_model_, genotypes, haplotype_prior_counts,
                                                                   get_read_ranges(sub_region), max_model_update_iterations_);
         
-        cout << "updated model" << endl;
+        //cout << "updated model" << endl;
         
         if (candidate_range.second == the_candidates_.cend()) {
             remove_unlikely_haplotypes(haplotypes, haplotype_prior_counts, latent_posteriors.haplotype_pseudo_counts);
@@ -97,7 +100,7 @@ void HaplotypePhaser::phase()
             max_indicators = static_cast<unsigned>(std::distance(the_candidates_.cbegin(), candidate_range.second));
             max_candidates = max_region_density_ + max_indicators - std::log2(the_tree_.num_haplotypes());
             previous_region_last_it = candidate_range.second;
-            cout << "can phase with maximum " << max_indicators << " indicators and " << max_candidates << " candidates" << endl;
+            //cout << "can phase with maximum " << max_indicators << " indicators and " << max_candidates << " candidates" << endl;
         } else {
             the_phased_regions_.emplace_back(sub_region, std::move(haplotypes), std::move(genotypes),
                                              std::move(latent_posteriors));
@@ -105,10 +108,10 @@ void HaplotypePhaser::phase()
             max_indicators = 0;
             max_candidates = max_region_density_;
             previous_region_last_it = the_candidates_.cbegin();
-            cout << "could not phase" << endl;
+            //cout << "could not phase" << endl;
         }
         
-        cout << "there are now " << the_tree_.num_haplotypes() << " haplotypes" << endl;
+        //cout << "there are now " << the_tree_.num_haplotypes() << " haplotypes" << endl;
         
         sub_region = next_sub_region(sub_region, the_reads_, the_candidates_, max_candidates, max_indicators);
     }
@@ -157,8 +160,6 @@ void HaplotypePhaser::remove_unlikely_haplotypes(const Haplotypes& the_haplotype
                                                  const HaplotypePseudoCounts& posterior_counts)
 {
     for (const auto& haplotype : the_haplotypes) {
-        //haplotype.print_explicit_alleles();
-        //cout << prior_counts.at(haplotype) << " " << posterior_counts.at(haplotype) << " " << (posterior_counts.at(haplotype) / prior_counts.at(haplotype)) << endl;
         if (posterior_counts.at(haplotype) / prior_counts.at(haplotype) < 1.001) {
             the_tree_.prune_all(haplotype);
         } else {
@@ -180,3 +181,5 @@ void HaplotypePhaser::remove_phased_region(CandidateIterator first, CandidateIte
     the_tree_.clear();
     the_model_.clear_cache();
 }
+
+} // end namespace Octopus

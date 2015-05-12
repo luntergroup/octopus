@@ -21,6 +21,9 @@
 
 #include <iostream> // TEST
 
+namespace Octopus
+{
+
 template <typename RealType, typename ForwardIterator>
 RealType prior_probability(const Haplotype& the_haplotype, ForwardIterator first_possible_variant,
                            ForwardIterator last_possible_variant)
@@ -52,5 +55,7 @@ get_haplotype_prior_probabilities(const Haplotypes& the_haplotypes, ForwardItera
     
     return result;
 }
+
+} // end namespace Octopus
 
 #endif /* defined(__Octopus__haplotype_prior_model__) */

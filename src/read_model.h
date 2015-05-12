@@ -20,6 +20,9 @@
 #include "genotype.h"
 #include "aligned_read.h"
 
+namespace Octopus
+{
+
 class ReadModel
 {
 public:
@@ -154,5 +157,7 @@ inline std::size_t ReadModel::GenotypeReadKeyHash::operator()(const GenotypeRead
     boost::hash_combine(seed, std::get<2>(key));
     return seed;
 }
+
+} // end namespace Octopus
 
 #endif /* defined(__Octopus__read_model__) */

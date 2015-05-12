@@ -31,6 +31,8 @@
 using std::cout;
 using std::endl;
 
+using Octopus::HaplotypeTree;
+
 TEST_CASE("haplotype tree does not bifurcate on alleles positioned past the leading alleles", "[haplotype_tree]")
 {
     ReferenceGenomeFactory a_factory {};

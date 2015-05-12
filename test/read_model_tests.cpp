@@ -29,6 +29,8 @@
 using std::cout;
 using std::endl;
 
+using Octopus::ReadModel;
+
 TEST_CASE("partially overlapped reads evaluate correctly", "[read_model]")
 {
     ReferenceGenomeFactory a_factory {};

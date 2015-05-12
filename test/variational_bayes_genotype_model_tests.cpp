@@ -38,9 +38,11 @@
 using std::cout;
 using std::endl;
 
-using BayesianGenotypeModel::VariationalBayesGenotypeModel;
-using BayesianGenotypeModel::haplotype_probability;
-using BayesianGenotypeModel::posterior_predictive_probability;
+using Octopus::ReadModel;
+
+using Octopus::BayesianGenotypeModel::VariationalBayesGenotypeModel;
+using Octopus::BayesianGenotypeModel::haplotype_probability;
+using Octopus::BayesianGenotypeModel::posterior_predictive_probability;
 
 TEST_CASE("haplotype posteriors sum to one", "[variational_bayes_genotype_model]")
 {
@@ -54,7 +56,7 @@ TEST_CASE("haplotype posteriors sum to one", "[variational_bayes_genotype_model]
     Haplotype haplotype2 {human};
     haplotype2.push_back(Allele {a_region, "G"});
     
-    BayesianGenotypeModel::HaplotypePseudoCounts<Octopus::ProbabilityType> pseudo_counts {};
+    Octopus::BayesianGenotypeModel::HaplotypePseudoCounts<Octopus::ProbabilityType> pseudo_counts {};
     pseudo_counts[haplotype1] = 5;
     pseudo_counts[haplotype2] = 3;
     
@@ -98,7 +100,7 @@ TEST_CASE("genotype posteriors sum to one", "[variational_bayes_genotype_model]"
     
     std::vector<Haplotype> haplotypes {haplotype1, haplotype2, haplotype3, haplotype4, haplotype5, haplotype6};
     
-    BayesianGenotypeModel::HaplotypePseudoCounts<Octopus::ProbabilityType> pseudo_counts {};
+    Octopus::BayesianGenotypeModel::HaplotypePseudoCounts<Octopus::ProbabilityType> pseudo_counts {};
     pseudo_counts[haplotype1] = 1;
     pseudo_counts[haplotype2] = 3.2;
     pseudo_counts[haplotype3] = 2;

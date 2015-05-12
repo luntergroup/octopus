@@ -41,7 +41,7 @@ TEST_CASE("alleles can be added to front and back of haplotypes", "[haplotype]")
     
     REQUIRE(reference_haplotype.get_sequence() == the_reference_sequence);
     
-    Variant variant_1 {"3", 1000004, "C", "A", 0, 0};
+    Variant variant_1 {"3", 1000004, "C", "A"};
     
     Haplotype haplotype2 {human};
     add_to_back(variant_1, haplotype2);
@@ -53,8 +53,8 @@ TEST_CASE("alleles can be added to front and back of haplotypes", "[haplotype]")
     
     REQUIRE(haplotype2.get_sequence(a_region) == haplotype3.get_sequence());
     
-    Variant variant_2 {"3", 1000004, "CA", "", 0, 0};
-    Variant variant_3 {"3", 1000008, "", "C", 0, 0};
+    Variant variant_2 {"3", 1000004, "CA", ""};
+    Variant variant_3 {"3", 1000008, "", "C"};
     
     Haplotype haplotype4 {human, a_region};
     add_to_back(variant_2, haplotype4);
@@ -68,15 +68,15 @@ TEST_CASE("alleles can be added to front and back of haplotypes", "[haplotype]")
     
     REQUIRE(haplotype5.get_sequence() == "AGC");
     
-    Variant variant_4 {"3", 1000004, "CA", "GG", 0, 0};
+    Variant variant_4 {"3", 1000004, "CA", "GG"};
     
     Haplotype haplotype6 {human, a_region};
     add_to_back(variant_4, haplotype6);
     
     REQUIRE(haplotype6.get_sequence() == "CCAAGGAGCA");
     
-    Variant variant_5 {"3", 1000004, "C", "G", 0, 0};
-    Variant variant_6 {"3", 1000005, "A", "G", 0, 0};
+    Variant variant_5 {"3", 1000004, "C", "G"};
+    Variant variant_6 {"3", 1000005, "A", "G"};
     
     Haplotype haplotype7 {human, a_region};
     add_to_back(variant_6, haplotype7);
@@ -153,12 +153,12 @@ TEST_CASE("alleles explicitly added to haplotypes should be contained", "[haplot
     GenomicRegion a_region {"3", 1000000, 1000020}; // CCAACAAGCATTGGTGTGGC
     
     // Variants the haplotype will contain
-    Variant variant_1 {"3", 1000002, "A", "T", 0, 0};
-    Variant variant_2 {"3", 1000004, "CA", "", 0, 0};
-    Variant variant_3 {"3", 1000008, "", "C", 0, 0};
-    Variant variant_4 {"3", 1000010, "TT", "GG", 0, 0};
-    Variant variant_5 {"3", 1000014, "T", "C", 0, 0};
-    Variant variant_6 {"3", 1000018, "G", "A", 0, 0};
+    Variant variant_1 {"3", 1000002, "A", "T"};
+    Variant variant_2 {"3", 1000004, "CA", ""};
+    Variant variant_3 {"3", 1000008, "", "C"};
+    Variant variant_4 {"3", 1000010, "TT", "GG"};
+    Variant variant_5 {"3", 1000014, "T", "C"};
+    Variant variant_6 {"3", 1000018, "G", "A"};
     
     // Parts of the haplotype which remain reference
     GenomicRegion a_reference_part1 {"3", 1000003, 1000004};
@@ -166,10 +166,10 @@ TEST_CASE("alleles explicitly added to haplotypes should be contained", "[haplot
     GenomicRegion a_reference_part3 {"3", 1000015, 1000018};
     
     // Variants which the haplotype does not contain
-    Variant false_variant_1 {"3", 1000002, "A", "C", 0, 0};
-    Variant false_variant_2 {"3", 1000008, "", "T", 0, 0};
-    Variant false_variant_3 {"3", 1000010, "TT", "AC", 0, 0};
-    Variant false_variant_4 {"3", 1000014, "T", "A", 0, 0};
+    Variant false_variant_1 {"3", 1000002, "A", "C"};
+    Variant false_variant_2 {"3", 1000008, "", "T"};
+    Variant false_variant_3 {"3", 1000010, "TT", "AC"};
+    Variant false_variant_4 {"3", 1000014, "T", "A"};
     
     Haplotype haplotype_unbounded {human};
     add_to_back(variant_1, haplotype_unbounded);

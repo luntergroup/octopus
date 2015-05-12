@@ -18,6 +18,9 @@
 
 #include <iostream> // TEST
 
+namespace Octopus
+{
+
 HaplotypeTree::HaplotypeTree(ReferenceGenome& the_reference)
 :
 the_reference_ {the_reference},
@@ -361,3 +364,5 @@ std::pair<HaplotypeTree::Vertex, bool> HaplotypeTree::prune_branch(Vertex leaf, 
     // the root should only be indicated as a leaf node if there are no other nodes in the tree
     return {leaf, num_haplotypes() == 1};
 }
+
+} // end namespace Octopus

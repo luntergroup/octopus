@@ -37,6 +37,8 @@
 using std::cout;
 using std::endl;
 
+using Octopus::next_sub_region;
+
 //TEST_CASE("expermenting", "[search_regions]")
 //{
 //    ReferenceGenomeFactory a_factory {};

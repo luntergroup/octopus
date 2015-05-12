@@ -28,6 +28,9 @@
 using std::cout;    // TEST
 using std::endl;    // TEST
 
+namespace Octopus
+{
+
 using BayesianGenotypeModel::VariationalBayesGenotypeModel;
 
 class HaplotypePhaser
@@ -128,5 +131,7 @@ void HaplotypePhaser::put_data(const BayesianGenotypeModel::ReadRanges<SampleIdT
     
     phase();
 }
+
+} // end namespace Octopus
 
 #endif /* defined(__Octopus__haplotype_phaser__) */

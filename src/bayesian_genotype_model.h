@@ -23,6 +23,9 @@
 #include "aligned_read.h"
 #include "pair_hmm.h"
 
+namespace Octopus
+{
+
 namespace BayesianGenotypeModel
 {
     template <typename RealType>
@@ -75,14 +78,14 @@ namespace BayesianGenotypeModel
     
     template <typename RealType, typename Genotypes>
     RealType probability_haplotype_in_samples(const Haplotype& haplotype,
-                                                        const Genotypes& genotypes,
-                                                        const HaplotypePseudoCounts<RealType>& posterior_haplotype_pseudo_counts)
+                                              const Genotypes& genotypes,
+                                              const HaplotypePseudoCounts<RealType>& haplotype_pseudo_counts)
     {
         RealType result {0};
         
         for (const auto& genotype : genotypes) {
             if (genotype.contains(haplotype)) {
-                result += posterior_predictive_probability(genotype, posterior_haplotype_pseudo_counts);
+                result += posterior_predictive_probability(genotype, haplotype_pseudo_counts);
             }
         }
         
@@ -184,5 +187,7 @@ namespace BayesianGenotypeModel
     }
     
 } // end namespace BayesianGenotypeModel
+
+} // end namespace Octopus
 
 #endif

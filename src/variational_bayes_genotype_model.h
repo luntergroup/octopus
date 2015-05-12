@@ -24,6 +24,9 @@
 #include "pair_hmm.h"
 #include "bayesian_genotype_model.h"
 
+namespace Octopus
+{
+
 namespace BayesianGenotypeModel
 {
     template <typename ForwardIterator>
@@ -212,5 +215,7 @@ namespace BayesianGenotypeModel
     }
     
 } // end namespace BayesianGenotypeModel
+
+} // end namespace Octopus
 
 #endif /* defined(__Octopus__variational_bayes_genotype_model.h__) */

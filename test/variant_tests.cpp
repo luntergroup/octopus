@@ -27,10 +27,10 @@ using std::endl;
 
 TEST_CASE("< is consistent with ==", "[variant]")
 {
-    Variant snp1 {"chr1", 100, "C", "A", 0, 0};
-    Variant snp2 {"chr1", 99, "C", "A", 0, 0};
-    Variant snp3 {"chr1", 100, "C", "T", 0, 0};
-    Variant snp4 {"chr1", 100, "C", "A", 0, 0};
+    Variant snp1 {"chr1", 100, "C", "A"};
+    Variant snp2 {"chr1", 99, "C", "A"};
+    Variant snp3 {"chr1", 100, "C", "T"};
+    Variant snp4 {"chr1", 100, "C", "A"};
     
     bool r1 = !(snp1 < snp2) && !(snp2 < snp1);
     bool r2 = (snp1 == snp2);
@@ -47,9 +47,9 @@ TEST_CASE("< is consistent with ==", "[variant]")
     REQUIRE(r2);
     REQUIRE(r1 == r2);
     
-    Variant del1 {"chr1", 100, "C", "", 0, 0};
-    Variant del2 {"chr1", 100, "CA", "", 0, 0};
-    Variant del3 {"chr1", 100, "C", "", 0, 0};
+    Variant del1 {"chr1", 100, "C", ""};
+    Variant del2 {"chr1", 100, "CA", ""};
+    Variant del3 {"chr1", 100, "C", ""};
     
     r1 = !(del1 < del2) && !(del2 < del1);
     r2 = del1 == del2;
@@ -61,9 +61,9 @@ TEST_CASE("< is consistent with ==", "[variant]")
     REQUIRE(r2);
     REQUIRE(r1 == r2);
     
-    Variant ins1 {"chr1", 100, "", "C", 0, 0};
-    Variant ins2 {"chr1", 100, "", "CA", 0, 0};
-    Variant ins3 {"chr1", 100, "", "C", 0, 0};
+    Variant ins1 {"chr1", 100, "", "C"};
+    Variant ins2 {"chr1", 100, "", "CA"};
+    Variant ins3 {"chr1", 100, "", "C"};
     
     r1 = !(ins1 < ins2) && !(ins2 < ins1);
     r2 = ins1 == ins2;
@@ -78,12 +78,12 @@ TEST_CASE("< is consistent with ==", "[variant]")
 
 TEST_CASE("can binary search for ordered variants with < operator", "[variant]")
 {
-    Variant snp1 {"chr1", 100, "C", "A", 0, 0};
-    Variant snp2 {"chr1", 105, "G", "T", 0, 0};
-    Variant del1 {"chr1", 103, "C", "", 0, 0};
-    Variant del2 {"chr1", 115, "T", "", 0, 0};
-    Variant ins1 {"chr1", 107, "", "G", 0, 0};
-    Variant ins2 {"chr1", 110, "", "CA", 0, 0};
+    Variant snp1 {"chr1", 100, "C", "A"};
+    Variant snp2 {"chr1", 105, "G", "T"};
+    Variant del1 {"chr1", 103, "C", ""};
+    Variant del2 {"chr1", 115, "T", ""};
+    Variant ins1 {"chr1", 107, "", "G"};
+    Variant ins2 {"chr1", 110, "", "CA"};
     
     std::vector<Variant> variants {snp1, del1, snp2, ins1, ins2, del2};
     
@@ -94,12 +94,12 @@ TEST_CASE("can binary search for ordered variants with < operator", "[variant]")
     REQUIRE(std::binary_search(variants.cbegin(), variants.cend(), ins1));
     REQUIRE(std::binary_search(variants.cbegin(), variants.cend(), ins2));
     
-    Variant non_snp1 {"chr1", 111, "C", "A", 0, 0};
-    Variant non_snp2 {"chr1", 105, "G", "A", 0, 0};
-    Variant non_del1 {"chr1", 104, "C", "", 0, 0};
-    Variant non_del2 {"chr1", 115, "TA", "", 0, 0};
-    Variant non_ins1 {"chr1", 108, "", "G", 0, 0};
-    Variant non_ins2 {"chr1", 110, "", "TA", 0, 0};
+    Variant non_snp1 {"chr1", 111, "C", "A"};
+    Variant non_snp2 {"chr1", 105, "G", "A"};
+    Variant non_del1 {"chr1", 104, "C", ""};
+    Variant non_del2 {"chr1", 115, "TA", ""};
+    Variant non_ins1 {"chr1", 108, "", "G"};
+    Variant non_ins2 {"chr1", 110, "", "TA"};
     
     REQUIRE(!std::binary_search(variants.cbegin(), variants.cend(), non_snp1));
     REQUIRE(!std::binary_search(variants.cbegin(), variants.cend(), non_snp2));
@@ -108,8 +108,8 @@ TEST_CASE("can binary search for ordered variants with < operator", "[variant]")
     REQUIRE(!std::binary_search(variants.cbegin(), variants.cend(), non_ins1));
     REQUIRE(!std::binary_search(variants.cbegin(), variants.cend(), non_ins2));
     
-    Variant del3 {"chr1", 101, "C", "", 0, 0};
-    Variant snp3 {"chr1", 101, "C", "", 0, 0};
+    Variant del3 {"chr1", 101, "C", ""};
+    Variant snp3 {"chr1", 101, "C", ""};
     
     std::vector<Variant> variants2 {snp1, del3, snp3};
     
@@ -120,12 +120,12 @@ TEST_CASE("can binary search for ordered variants with < operator", "[variant]")
 
 TEST_CASE("snps do not overlap adjacent snps", "[snps]")
 {
-    Variant snp1 {"chr1", 100, "C", "A", 0, 0};
-    Variant snp2 {"chr1", 99, "C", "A", 0, 0};
-    Variant snp3 {"chr1", 101, "C", "A", 0, 0};
-    Variant snp4 {"chr1", 100, "C", "T", 0, 0};
-    Variant snp5 {"chr1", 99, "C", "T", 0, 0};
-    Variant snp6 {"chr1", 101, "C", "T", 0, 0};
+    Variant snp1 {"chr1", 100, "C", "A"};
+    Variant snp2 {"chr1", 99, "C", "A"};
+    Variant snp3 {"chr1", 101, "C", "A"};
+    Variant snp4 {"chr1", 100, "C", "T"};
+    Variant snp5 {"chr1", 99, "C", "T"};
+    Variant snp6 {"chr1", 101, "C", "T"};
     
     REQUIRE(overlaps(snp1, snp1));
     REQUIRE(overlaps(snp1, snp4));
@@ -140,18 +140,18 @@ TEST_CASE("snps do not overlap adjacent snps", "[snps]")
 
 TEST_CASE("mnps overlap correctly", "[mnp]")
 {
-    Variant mnp1 {"chr1", 100, "CAT", "TAC", 0, 0};
-    Variant mnp2 {"chr1", 99, "CAT", "TAC", 0, 0};
-    Variant mnp3 {"chr1", 101, "CAT", "TAC", 0, 0};
-    Variant mnp4 {"chr1", 100, "CAT", "TAG", 0, 0};
-    Variant mnp5 {"chr1", 99, "CAT", "TAG", 0, 0};
-    Variant mnp6 {"chr1", 101, "CAT", "TAG", 0, 0};
+    Variant mnp1 {"chr1", 100, "CAT", "TAC"};
+    Variant mnp2 {"chr1", 99, "CAT", "TAC"};
+    Variant mnp3 {"chr1", 101, "CAT", "TAC"};
+    Variant mnp4 {"chr1", 100, "CAT", "TAG"};
+    Variant mnp5 {"chr1", 99, "CAT", "TAG"};
+    Variant mnp6 {"chr1", 101, "CAT", "TAG"};
     
     // edge cases
-    Variant mnp7  {"chr1", 98, "CAT", "TAC", 0, 0};
-    Variant mnp8  {"chr1", 102, "CAT", "TAC", 0, 0};
-    Variant mnp9  {"chr1", 97, "CAT", "TAC", 0, 0};
-    Variant mnp10 {"chr1", 103, "CAT", "TAC", 0, 0};
+    Variant mnp7  {"chr1", 98, "CAT", "TAC"};
+    Variant mnp8  {"chr1", 102, "CAT", "TAC"};
+    Variant mnp9  {"chr1", 97, "CAT", "TAC"};
+    Variant mnp10 {"chr1", 103, "CAT", "TAC"};
     
     REQUIRE(overlaps(mnp1, mnp1));
     REQUIRE(overlaps(mnp1, mnp2));
@@ -168,9 +168,9 @@ TEST_CASE("mnps overlap correctly", "[mnp]")
 
 TEST_CASE("insertions overlap other insertions with same region", "[insertion]")
 {
-    Variant insert1 {"chr1", 100, "", "TAG", 0, 0};
-    Variant insert2 {"chr1", 99, "", "TAG", 0, 0};
-    Variant insert3 {"chr1", 101, "", "TAG", 0, 0};
+    Variant insert1 {"chr1", 100, "", "TAG"};
+    Variant insert2 {"chr1", 99, "", "TAG"};
+    Variant insert3 {"chr1", 101, "", "TAG"};
     
     REQUIRE(overlaps(insert1, insert1));
     REQUIRE(!overlaps(insert1, insert2));
@@ -179,9 +179,9 @@ TEST_CASE("insertions overlap other insertions with same region", "[insertion]")
 
 TEST_CASE("insertions overlap with other variants when contained by their region", "[insertion]")
 {
-    Variant insert {"chr1", 100, "", "TAG", 0, 0};
-    Variant del {"chr1", 99, "TAG", "", 0, 0};
-    Variant mnp {"chr1", 100, "TAG", "CAT", 0, 0};
+    Variant insert {"chr1", 100, "", "TAG"};
+    Variant del {"chr1", 99, "TAG", ""};
+    Variant mnp {"chr1", 100, "TAG", "CAT"};
     
     REQUIRE(overlaps(insert, del));
     REQUIRE(overlaps(insert, mnp));
@@ -189,9 +189,9 @@ TEST_CASE("insertions overlap with other variants when contained by their region
 
 TEST_CASE("deletions overlap in the same way as mnps", "[deletion]")
 {
-    Variant del1 {"chr1", 100, "TAG", "", 0, 0};
-    Variant del2 {"chr1", 99, "TAG", "", 0, 0};
-    Variant del3 {"chr1", 101, "TAG", "", 0, 0};
+    Variant del1 {"chr1", 100, "TAG", ""};
+    Variant del2 {"chr1", 99, "TAG", ""};
+    Variant del3 {"chr1", 101, "TAG", ""};
     
     REQUIRE(overlaps(del1, del1));
     REQUIRE(overlaps(del1, del2));
@@ -200,14 +200,14 @@ TEST_CASE("deletions overlap in the same way as mnps", "[deletion]")
 
 TEST_CASE("variants are ordered by region and lexicographically by sequence", "[variant]")
 {
-    Variant snp1 {"chr1", 100, "T", "A", 0, 0};
-    Variant snp2 {"chr1", 100, "T", "C", 0, 0};
-    Variant snp3 {"chr1", 100, "T", "G", 0, 0};
-    Variant ins1 {"chr1", 100, "", "AG", 0, 0};
-    Variant ins2 {"chr1", 100, "", "CC", 0, 0};
-    Variant ins3 {"chr1", 100, "", "CCA", 0, 0};
-    Variant del1 {"chr1", 100, "TA", "", 0, 0};
-    Variant del2 {"chr1", 100, "TAG", "", 0, 0};
+    Variant snp1 {"chr1", 100, "T", "A"};
+    Variant snp2 {"chr1", 100, "T", "C"};
+    Variant snp3 {"chr1", 100, "T", "G"};
+    Variant ins1 {"chr1", 100, "", "AG"};
+    Variant ins2 {"chr1", 100, "", "CC"};
+    Variant ins3 {"chr1", 100, "", "CCA"};
+    Variant del1 {"chr1", 100, "TA", ""};
+    Variant del2 {"chr1", 100, "TAG", ""};
     
     std::vector<Variant> variants1 {snp1, ins1, snp2};
     
@@ -252,9 +252,9 @@ TEST_CASE("variants are ordered by region and lexicographically by sequence", "[
 
 TEST_CASE("overlap_range includes insertions on left boundry, but not the right", "[variant]")
 {
-    Variant snp1 {"chr1", 100, "T", "A", 0, 0};
-    Variant snp2 {"chr1", 110, "T", "C", 0, 0};
-    Variant ins1 {"chr1", 105, "", "A", 0, 0};
+    Variant snp1 {"chr1", 100, "T", "A"};
+    Variant snp2 {"chr1", 110, "T", "C"};
+    Variant ins1 {"chr1", 105, "", "A"};
     
     std::vector<Variant> variants {snp1, ins1, snp2};
     
@@ -276,9 +276,9 @@ TEST_CASE("overlap_range includes insertions on left boundry, but not the right"
 
 TEST_CASE("inner_distance respects insertion lhs ordering rule", "[variant]")
 {
-    Variant snp1 {"chr1", 99, "T", "A", 0, 0};
-    Variant snp2 {"chr1", 101, "T", "C", 0, 0};
-    Variant ins {"chr1", 100, "", "A", 0, 0};
+    Variant snp1 {"chr1", 99, "T", "A"};
+    Variant snp2 {"chr1", 101, "T", "C"};
+    Variant ins {"chr1", 100, "", "A"};
     
     REQUIRE(inner_distance(snp1, ins) == 0);
     REQUIRE(inner_distance(ins, snp1) == 0);
@@ -298,7 +298,7 @@ TEST_CASE("indels can be left aligned", "[left_alignment]")
     
     REQUIRE(the_sequence == "CAG");
     
-    Variant a_deletion {a_region, the_sequence, "", 0, 0};
+    Variant a_deletion {a_region, the_sequence, ""};
     
     Variant left_aligned_deletion = left_align(a_deletion, human);
     
@@ -308,7 +308,7 @@ TEST_CASE("indels can be left aligned", "[left_alignment]")
     REQUIRE(left_aligned_deletion.get_alternative_allele_sequence() == "");
     
     Variant an_insertion {parse_region("4:3076660-3076660", human),
-                                               "", the_sequence, 0, 0};
+                                               "", the_sequence};
     
     auto left_aligned_insertion = left_align(an_insertion, human);
     
@@ -324,7 +324,7 @@ TEST_CASE("indels can be left aligned", "[left_alignment]")
     
     REQUIRE(the_sequence == "CAA");
     
-    a_deletion = Variant {a_region, the_sequence, "", 0, 0};
+    a_deletion = Variant {a_region, the_sequence, ""};
     
     left_aligned_deletion = left_align(a_deletion, human);
     
@@ -333,7 +333,7 @@ TEST_CASE("indels can be left aligned", "[left_alignment]")
     REQUIRE(left_aligned_deletion.get_reference_allele_sequence() == "ACA");
     REQUIRE(left_aligned_deletion.get_alternative_allele_sequence() == "");
     
-    an_insertion = Variant {parse_region("5:94594959-94594959", human), "", the_sequence, 0, 0};
+    an_insertion = Variant {parse_region("5:94594959-94594959", human), "", the_sequence};
     
     left_aligned_insertion = left_align(an_insertion, human);
     
@@ -348,12 +348,12 @@ TEST_CASE("can make variants parsimonious", "[parsimonious]")
     ReferenceGenomeFactory a_factory {};
     ReferenceGenome human(a_factory.make(human_reference_fasta));
     
-    Variant a_snp {parse_region("12:10001330-10001331", human), std::string {"G"}, std::string {"C"}, 0, 0};
+    Variant a_snp {parse_region("12:10001330-10001331", human), std::string {"G"}, std::string {"C"}};
     
     REQUIRE(is_parsimonious(a_snp));
     REQUIRE(make_parsimonious(a_snp, human) == a_snp);
     
-    Variant an_unparsimonious_snp {parse_region("12:10001330-10001332", human), std::string {"GT"}, std::string {"CT"}, 0, 0};
+    Variant an_unparsimonious_snp {parse_region("12:10001330-10001332", human), std::string {"GT"}, std::string {"CT"}};
     
     REQUIRE(!is_parsimonious(an_unparsimonious_snp));
     
@@ -362,7 +362,7 @@ TEST_CASE("can make variants parsimonious", "[parsimonious]")
     REQUIRE(is_parsimonious(parsimonised_snp));
     REQUIRE(parsimonised_snp == a_snp);
     
-    Variant another_unparsimonious_snp {parse_region("12:10001329-10001332", human), std::string {"TGT"}, std::string {"TCT"}, 0, 0};
+    Variant another_unparsimonious_snp {parse_region("12:10001329-10001332", human), std::string {"TGT"}, std::string {"TCT"}};
     
     REQUIRE(!is_parsimonious(another_unparsimonious_snp));
     
@@ -377,7 +377,7 @@ TEST_CASE("can make variants parsimonious", "[parsimonious]")
     
     REQUIRE(the_sequence == "GTGGA");
     
-    Variant a_deletion {a_region, the_sequence, "", 0, 0};
+    Variant a_deletion {a_region, the_sequence, ""};
     
     auto parsimonious_deletion = make_parsimonious(a_deletion, human);
     
@@ -386,7 +386,7 @@ TEST_CASE("can make variants parsimonious", "[parsimonious]")
     REQUIRE(parsimonious_deletion.get_reference_allele_sequence() == "CGTGGA");
     REQUIRE(parsimonious_deletion.get_alternative_allele_sequence() == "C");
     
-    Variant an_insertion {parse_region("12:10001330-10001330", human), "", the_sequence, 0, 0};
+    Variant an_insertion {parse_region("12:10001330-10001330", human), "", the_sequence};
     
     auto parsimonious_insertion = make_parsimonious(an_insertion, human);
     
@@ -395,7 +395,7 @@ TEST_CASE("can make variants parsimonious", "[parsimonious]")
     REQUIRE(parsimonious_insertion.get_reference_allele_sequence() == "C");
     REQUIRE(parsimonious_insertion.get_alternative_allele_sequence() == "CGTGGA");
     
-    Variant an_unparsimonious_deletion {parse_region("12:10001328-10001335", human), "TCGTGGA", "TC", 0, 0};
+    Variant an_unparsimonious_deletion {parse_region("12:10001328-10001335", human), "TCGTGGA", "TC"};
     
     REQUIRE(!is_parsimonious(an_unparsimonious_deletion));
     
@@ -403,7 +403,7 @@ TEST_CASE("can make variants parsimonious", "[parsimonious]")
     
     REQUIRE(is_parsimonious(parsimonised_deletion));
     
-    Variant an_unparsimonious_insertion {parse_region("12:10001329-10001331", human), "CG", "CGTGGA", 0, 0};
+    Variant an_unparsimonious_insertion {parse_region("12:10001329-10001331", human), "CG", "CGTGGA"};
     
     REQUIRE(!is_parsimonious(an_unparsimonious_insertion));
     
@@ -419,7 +419,7 @@ TEST_CASE("can normalise variants", "[normalisation]")
     
     // Huntingtin region CCAGCAGCAGCAGCAG...
     
-    Variant a_snp {parse_region("4:3076657-3076658", human), std::string {"G"}, std::string {"C"}, 0, 0};
+    Variant a_snp {parse_region("4:3076657-3076658", human), std::string {"G"}, std::string {"C"}};
     
     REQUIRE(is_parsimonious(a_snp));
     
@@ -433,7 +433,7 @@ TEST_CASE("can normalise variants", "[normalisation]")
     
     REQUIRE(the_sequence == "CAG");
     
-    Variant a_mnp {a_region, the_sequence, std::string {"GAC"}, 0, 0};
+    Variant a_mnp {a_region, the_sequence, std::string {"GAC"}};
     
     REQUIRE(is_parsimonious(a_mnp));
     
@@ -441,7 +441,7 @@ TEST_CASE("can normalise variants", "[normalisation]")
     
     REQUIRE(a_normalised_mnp == a_mnp);
     
-    Variant a_deletion {a_region, the_sequence, "", 0, 0};
+    Variant a_deletion {a_region, the_sequence, ""};
     
     REQUIRE(!is_parsimonious(a_deletion));
     
@@ -457,7 +457,7 @@ TEST_CASE("can normalise variants", "[normalisation]")
     REQUIRE(normilised_deletion.get_reference_allele_sequence() == "CCAG");
     REQUIRE(normilised_deletion.get_alternative_allele_sequence() == "C");
     
-    Variant an_insertion {parse_region("4:3076660-3076660", human), "", the_sequence, 0, 0};
+    Variant an_insertion {parse_region("4:3076660-3076660", human), "", the_sequence};
     
     REQUIRE(!is_parsimonious(an_insertion));
     
@@ -475,7 +475,7 @@ TEST_CASE("can normalise variants", "[normalisation]")
     
     // Some hard ones
     
-    Variant an_unormilised_snp {parse_region("4:3076656-3076659", human), std::string {"AGC"}, std::string {"ACC"}, 0, 0};
+    Variant an_unormilised_snp {parse_region("4:3076656-3076659", human), std::string {"AGC"}, std::string {"ACC"}};
     
     REQUIRE(!is_parsimonious(an_unormilised_snp));
     
@@ -486,7 +486,7 @@ TEST_CASE("can normalise variants", "[normalisation]")
     REQUIRE(a_normalised_snp.get_reference_allele_sequence() == "G");
     REQUIRE(a_normalised_snp.get_alternative_allele_sequence() == "C");
     
-    Variant an_unormilised_mnp {parse_region("4:3076656-3076661", human), std::string {"GCAGC"}, std::string {"GGACC"}, 0, 0};
+    Variant an_unormilised_mnp {parse_region("4:3076656-3076661", human), std::string {"GCAGC"}, std::string {"GGACC"}};
     
     REQUIRE(!is_parsimonious(an_unormilised_mnp));
     
@@ -497,7 +497,7 @@ TEST_CASE("can normalise variants", "[normalisation]")
     REQUIRE(a_normalised_mnp.get_reference_allele_sequence() == "CAG");
     REQUIRE(a_normalised_mnp.get_alternative_allele_sequence() == "GAC");
     
-    Variant an_unnormilised_deletion {parse_region("4:3076655-3076660", human), std::string {"AGCAG"}, std::string {"AG"}, 0, 0};
+    Variant an_unnormilised_deletion {parse_region("4:3076655-3076660", human), std::string {"AGCAG"}, std::string {"AG"}};
     
     REQUIRE(!is_parsimonious(an_unnormilised_deletion));
     
@@ -510,7 +510,7 @@ TEST_CASE("can normalise variants", "[normalisation]")
     REQUIRE(a_normalised_deletion.get_alternative_allele_sequence() == "C");
     
     Variant an_unnormilised_insertion {parse_region("4:3076655-3076657", human),
-                                    std::string {"AG"}, std::string {"AGCAG"}, 0, 0};
+                                    std::string {"AG"}, std::string {"AGCAG"}};
     
     REQUIRE(!is_parsimonious(an_unnormilised_insertion));
     

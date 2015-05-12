@@ -13,6 +13,7 @@
 #include <iterator>  // std::distance
 #include <cstddef>   // std::size_t
 
+#include "allele.h"
 #include "variant.h"
 #include "genomic_region.h"
 
@@ -20,6 +21,9 @@ class ReferenceGenome;
 class VariantFactory;
 
 void merge_equal_variants(std::vector<Variant>& the_variants);
+
+std::vector<Allele> get_reference_alleles_between_variants(const std::vector<Variant>& the_variants,
+                                                           ReferenceGenome& the_reference);
 
 /*
  A variant is parsimonious if and only if it is represented in as few nucleotides as possible

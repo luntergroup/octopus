@@ -22,6 +22,9 @@
 class GenomicRegion;
 class ReferenceGenome;
 
+namespace Octopus
+{
+
 class HaplotypeTree
 {
 public:
@@ -72,5 +75,7 @@ private:
     LeafIterator find_equal_haplotype_leaf(LeafIterator first, LeafIterator last, const Haplotype& haplotype) const;
     std::pair<Vertex, bool> prune_branch(Vertex leaf, const GenomicRegion& a_region);
 };
+
+} // end namespace Octopus
 
 #endif /* defined(__Octopus__haplotype_tree__) */

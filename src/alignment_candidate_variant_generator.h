@@ -26,7 +26,7 @@ public:
     
     AlignmentCandidateVariantGenerator() = delete;
     explicit AlignmentCandidateVariantGenerator(ReferenceGenome& the_reference,
-                                                QualityType min_base_quality);
+                                                QualityType min_base_quality=0);
     ~AlignmentCandidateVariantGenerator() override = default;
     
     AlignmentCandidateVariantGenerator(const AlignmentCandidateVariantGenerator&)            = default;
@@ -63,7 +63,7 @@ void AlignmentCandidateVariantGenerator::add_variant(T1&& the_region, T2&& seque
                                                      T3&& sequence_added)
 {
     candidates_.emplace_back(std::forward<T1>(the_region), std::forward<T2>(sequence_removed),
-                             std::forward<T3>(sequence_added), 0, 0);
+                             std::forward<T3>(sequence_added));
     are_candidates_sorted_ = false;
 }
 

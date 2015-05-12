@@ -10,6 +10,9 @@
 
 #include <boost/math/special_functions/digamma.hpp>
 
+namespace Octopus
+{
+
 namespace BayesianGenotypeModel
 {
     VariationalBayesGenotypeModel::VariationalBayesGenotypeModel(ReadModel& read_model, unsigned ploidy)
@@ -125,4 +128,4 @@ namespace BayesianGenotypeModel
     
 } // end namespace BayesianGenotypeModel
 
-// Non-member functions
+} // end namespace Octopus

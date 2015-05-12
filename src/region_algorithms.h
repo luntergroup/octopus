@@ -171,14 +171,44 @@ std::size_t count_if_shared_with_first(ForwardIterator1 first1, ForwardIterator1
     
     if (first_overlap_range.first == first_overlap_range.second) return 0;
     
-    auto last_overlapped_mappable = std::prev(first_overlap_range.second);
-    
-    auto overlapped_with_last_range = overlap_range(std::next(first2), last2,
-                                                    *last_overlapped_mappable);
+    auto overlapped_with_last_range = overlap_range(std::next(first2), last2, *std::prev(first_overlap_range.second));
     
     return std::distance(overlapped_with_last_range.first, overlapped_with_last_range.second);
 }
 
+/**
+ Returns all overlapped GenomicRegion's in the range [first_mappable, last_mappable) such that
+ the returned regions covers the same overall area as the input range (i.e. the maximal overlapping
+ regions)
+ 
+ Requires [first_mappable, last_mappable) is sorted w.r.t GenomicRegion::operator<
+ */
+template <typename ForwardIterator>
+std::vector<GenomicRegion> get_all_overlapped(ForwardIterator first_mappable, ForwardIterator last_mappable)
+{
+    if (first_mappable == last_mappable) return std::vector<GenomicRegion> {};
+    
+    std::vector<GenomicRegion> result {};
+    
+    ForwardIterator last_overlapped;
+    
+    while (first_mappable != last_mappable) {
+        last_overlapped = overlap_range(first_mappable, last_mappable, *first_mappable).second;
+        
+        result.emplace_back(get_encompassing(*first_mappable, *rightmost_mappable(first_mappable, last_overlapped)));
+        
+        first_mappable = last_overlapped;
+    }
+    
+    return result;
+}
+
+/**
+ Returns all intervening GenomicRegion's between non-overlapping mappables in the range 
+ [first_mappable, last_mappable)
+ 
+ Requires [first_mappable, last_mappable) is sorted w.r.t GenomicRegion::operator<
+ */
 template <typename ForwardIterator>
 std::vector<GenomicRegion> get_all_intervening(ForwardIterator first_mappable, ForwardIterator last_mappable)
 {

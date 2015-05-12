@@ -21,6 +21,9 @@
 using std::cout;    // TEST
 using std::endl;    // TEST
 
+namespace Octopus
+{
+
 /**
  A region is 'dense' if the number of variants within a read length of the first variant in
  'the_variants' that overlaps 'a_region', is greater than max_variants
@@ -136,5 +139,7 @@ GenomicRegion next_sub_region(const GenomicRegion& the_previous_sub_region,
     return detail::get_optimal_region_around_included(previous_variant_sub_range.first, first_included_it,
                                                       first_excluded_it, last_variant_it, the_reads);
 }
+    
+} // end namespace Octopus
 
 #endif

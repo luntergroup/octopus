@@ -12,6 +12,7 @@
 #include <vector>
 #include <cstddef> // std::size_t
 
+#include "common.h"
 #include "variant.h"
 
 class AlignedRead;
@@ -20,7 +21,7 @@ class GenomicRegion;
 class ICandidateVariantGenerator
 {
 public:
-    using RealType     = Variant::RealType;
+    using RealType     = Octopus::ProbabilityType;
     using ReadIterator = std::vector<AlignedRead>::const_iterator;
     
     virtual std::vector<Variant> get_candidates(const GenomicRegion&) = 0;

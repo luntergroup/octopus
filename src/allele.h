@@ -26,13 +26,10 @@ class Allele : public Comparable<Allele>, public Mappable<Allele>
 public:
     using SizeType     = GenomicRegion::SizeType;
     using SequenceType = ReferenceGenome::SequenceType;
-    using RealType     = double;
     
     Allele() = default;
     template <typename GenomicRegion_, typename SequenceType_>
     Allele(GenomicRegion_&& the_reference_region, SequenceType_&& the_sequence);
-    template <typename GenomicRegion_, typename SequenceType_>
-    Allele(GenomicRegion_&& the_reference_region, SequenceType_&& the_sequence, RealType probability);
     ~Allele() = default;
     
     Allele(const Allele&)            = default;
@@ -43,29 +40,16 @@ public:
     const GenomicRegion& get_region() const noexcept;
     const SequenceType& get_sequence() const noexcept;
     
-    void set_probability(RealType probability) noexcept;
-    RealType get_probability() const noexcept;
-    
 private:
     GenomicRegion the_reference_region_;
     SequenceType the_sequence_;
-    RealType probability_;
 };
 
 template <typename GenomicRegion_, typename SequenceType_>
 Allele::Allele(GenomicRegion_&& the_reference_region, SequenceType_&& the_sequence)
 :
 the_reference_region_ {std::forward<GenomicRegion_>(the_reference_region)},
-the_sequence_ {std::forward<SequenceType_>(the_sequence)},
-probability_ {0}
-{}
-
-template <typename GenomicRegion_, typename SequenceType_>
-Allele::Allele(GenomicRegion_&& the_reference_region, SequenceType_&& the_sequence, RealType probability)
-:
-the_reference_region_ {std::forward<GenomicRegion_>(the_reference_region)},
-the_sequence_ {std::forward<SequenceType_>(the_sequence)},
-probability_ {probability}
+the_sequence_ {std::forward<SequenceType_>(the_sequence)}
 {}
 
 inline const GenomicRegion& Allele::get_region() const noexcept
@@ -76,16 +60,6 @@ inline const GenomicRegion& Allele::get_region() const noexcept
 inline const Allele::SequenceType& Allele::get_sequence() const noexcept
 {
     return the_sequence_;
-}
-
-inline void Allele::set_probability(RealType probability) noexcept
-{
-    probability_ = probability;
-}
-
-inline Allele::RealType Allele::get_probability() const noexcept
-{
-    return probability_;
 }
 
 inline bool operator==(const Allele& lhs, const Allele& rhs)

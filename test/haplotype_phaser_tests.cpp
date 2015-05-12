@@ -34,6 +34,11 @@
 using std::cout;
 using std::endl;
 
+using Octopus::HaplotypeTree;
+using Octopus::ReadModel;
+using Octopus::HaplotypePhaser;
+using Octopus::VariationalBayesGenotypeModel;
+
 TEST_CASE("can phase", "[haplotype_phaser]")
 {
     ReferenceGenomeFactory a_factory {};
@@ -71,23 +76,24 @@ TEST_CASE("can phase", "[haplotype_phaser]")
     unsigned max_haplotypes {64};
     HaplotypePhaser phaser {human, the_model, ploidy, max_haplotypes};
     
-    BayesianGenotypeModel::ReadRanges<ReadManager::SampleIdType, std::move_iterator<decltype(good_reads)::mapped_type::iterator>> read_ranges {};
+    Octopus::BayesianGenotypeModel::ReadRanges<ReadManager::SampleIdType,
+            std::move_iterator<decltype(good_reads)::mapped_type::iterator>> read_ranges {};
     for (const auto& sample : samples) {
         read_ranges.emplace(sample, std::make_pair(std::make_move_iterator(good_reads[sample].begin()),
                                                    std::make_move_iterator(good_reads[sample].end())));
     }
     
-    phaser.put_data(read_ranges, candidates.cbegin(), candidates.cend());
-    
-    auto phased_regions = phaser.get_phased_regions(true);
-    
-    cout << "phased into " << phased_regions.size() << " sections" << endl;
-    
-    for (const auto& haplotype_count : phased_regions.front().the_latent_posteriors.haplotype_pseudo_counts) {
-        if (haplotype_count.second > 1) {
-            cout << haplotype_count.first << endl;
-            haplotype_count.first.print_explicit_alleles();
-            cout << haplotype_count.second << endl;
-        }
-    }
+//    phaser.put_data(read_ranges, candidates.cbegin(), candidates.cend());
+//    
+//    auto phased_regions = phaser.get_phased_regions(true);
+//    
+//    cout << "phased into " << phased_regions.size() << " sections" << endl;
+//    
+//    for (const auto& haplotype_count : phased_regions.front().the_latent_posteriors.haplotype_pseudo_counts) {
+//        if (haplotype_count.second > 1) {
+//            cout << haplotype_count.first << endl;
+//            haplotype_count.first.print_explicit_alleles();
+//            cout << haplotype_count.second << endl;
+//        }
+//    }
 }

@@ -16,6 +16,9 @@
 
 #include <iostream> // TEST
 
+namespace Octopus
+{
+
 ReadModel::ReadModel(unsigned ploidy, bool can_cache_reads)
 :
 ploidy_ {ploidy},
@@ -160,3 +163,5 @@ void ReadModel::clear_cache()
     read_log_probability_cache_.clear();
     genotype_log_probability_cache_.clear();
 }
+
+} // end namespace Octopus
