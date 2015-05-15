@@ -17,6 +17,7 @@
 #include <unordered_map>
 #include <stdexcept> // std::runtime_error
 #include <memory>    // std::unique_ptr
+#include <tuple>     // std::pair
 #include <boost/filesystem/path.hpp>
 
 #include "htslib/hts.h"
@@ -69,6 +70,7 @@ public:
     void close() override;
     
 private:
+    using HtsTidType = int32_t;
     
     class HtslibIterator
     {
@@ -96,13 +98,14 @@ private:
         uint32_t get_cigar_length() const noexcept;
         CigarString make_cigar_string() const;
         std::string get_read_group() const;
-        std::string get_contig_name(int32_t htslib_tid) const;
+        std::string get_contig_name(HtslibReadFacade::HtsTidType hts_tid) const;
         std::string get_read_name() const;
         AlignedRead::FlagData get_flags() const;
         AlignedRead::NextSegment::FlagData get_next_segment_flags() const;
     };
     
-    using HtsTidToContigNameMap  = std::unordered_map<int32_t, std::string>;
+    using ContigNameToHtsTidMap  = std::unordered_map<std::string, HtsTidType>;
+    using HtsTidToContigNameMap  = std::unordered_map<HtsTidType, std::string>;
     using ReadGroupToSampleIdMap = std::unordered_map<std::string, SampleIdType>;
     
     // No getting around these constants. I'll put them here so they are in plain sight.
@@ -114,13 +117,14 @@ private:
     std::unique_ptr<htsFile, decltype(htslib_file_deleter)> the_file_;
     std::unique_ptr<bam_hdr_t, decltype(htslib_header_deleter)> the_header_;
     std::unique_ptr<hts_idx_t, decltype(htslib_index_deleter)> the_index_;
+    ContigNameToHtsTidMap hts_tid_map_;
     HtsTidToContigNameMap contig_name_map_;
     ReadGroupToSampleIdMap sample_id_map_;
     
-    std::string get_reference_contig_name(int32_t hts_tid) const;
+    std::string get_reference_contig_name(HtsTidType hts_tid) const;
     ReadGroupToSampleIdMap get_read_group_to_sample_id_map() const;
-    HtsTidToContigNameMap get_htslib_tid_to_contig_name_map() const;
-    int32_t get_htslib_tid(const std::string& reference_contig_name) const;
+    std::pair<ContigNameToHtsTidMap, HtsTidToContigNameMap> get_htslib_tid_maps();
+    HtsTidType get_htslib_tid(const std::string& reference_contig_name) const;
     // These methods have const char* parameters so they can be declared constexpr
     bool is_type(const std::string& header_line, const char* tag) const;
     bool has_tag(const std::string& header_line, const char* tag) const;

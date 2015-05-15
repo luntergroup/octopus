@@ -34,6 +34,13 @@ namespace details {
     
     // VCFs
     static std::string sample_vcf_name {"CEU.low_coverage.2010_07.xchr.sites.vcf.gz"};
+    
+    // donna data
+    static std::string donna_dir {"donna/"};
+    static std::string donna_bam_name1 {"356_005_sorted_with_labels.bam"};
+    static std::string donna_bam_name2 {"356_006_sorted_with_labels.bam"};
+    static std::string donna_bam_name3 {"357_005_sorted_with_labels.bam"};
+    static std::string donna_bam_name4 {"357_006_sorted_with_labels.bam"};
 }
 
 // Full paths
@@ -67,5 +74,14 @@ static std::string ecoli_bam {details::home_dir + details::genomics_dir + detail
     details::ecoli_bam_name};
 
 static std::string sample_vcf {details::home_dir + details::genomics_dir + details::sample_vcf_name};
+
+static std::string donna_bam1 {details::home_dir + details::genomics_dir + details::donna_dir +
+    details::donna_bam_name1};
+static std::string donna_bam2 {details::home_dir + details::genomics_dir + details::donna_dir +
+    details::donna_bam_name2};
+static std::string donna_bam3 {details::home_dir + details::genomics_dir + details::donna_dir +
+    details::donna_bam_name3};
+static std::string donna_bam4 {details::home_dir + details::genomics_dir + details::donna_dir +
+    details::donna_bam_name4};
 
 #endif

@@ -20,6 +20,9 @@
 #include "mock_objects.h"
 #include "region_algorithms.h"
 
+using std::cout;
+using std::endl;
+
 TEST_CASE("read reader basic BAM", "[read_reader]")
 {
     HtslibReadFacade a_reader {human_1000g_bam1};
