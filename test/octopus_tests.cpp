@@ -43,7 +43,7 @@
 #include "read_model.h"
 #include "variational_bayes_genotype_model.h"
 #include "variant_file_factory.h"
-#include "variant_file.h"
+#include "variant_file_reader.h"
 #include "octopus.h"
 
 using std::cout;

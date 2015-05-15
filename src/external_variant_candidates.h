@@ -12,7 +12,7 @@
 #include <cstddef> // std::size_t
 
 #include "i_candidate_variant_generator.h"
-#include "variant_file.h"
+#include "variant_file_reader.h"
 
 class GenomicRegion;
 
@@ -20,7 +20,7 @@ class ExternalVariantCandidates : public ICandidateVariantGenerator
 {
 public:
     ExternalVariantCandidates() = delete;
-    explicit ExternalVariantCandidates(VariantFile& a_variant_source, double generator_confidence);
+    explicit ExternalVariantCandidates(VariantFileReader& a_variant_source, double generator_confidence);
     ~ExternalVariantCandidates() override = default;
     
     ExternalVariantCandidates(const ExternalVariantCandidates&)            = default;
@@ -35,7 +35,7 @@ public:
     void clear() override;
     
 private:
-    VariantFile& a_variant_file_;
+    VariantFileReader& a_variant_file_;
     double generator_confidence_;
 };
 

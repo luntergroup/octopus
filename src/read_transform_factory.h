@@ -9,5 +9,20 @@
 #ifndef Octopus_read_transform_factory_h
 #define Octopus_read_transform_factory_h
 
+#include "read_tranform.h"
+
+class ReadTransformFactory
+{
+public:
+    ReadTransformFactory() = default;
+    ~ReadTransformFactory() = default;
+    
+    ReadTransformFactory(const ReadTransformFactory&)            = default;
+    ReadTransformFactory& operator=(const ReadTransformFactory&) = default;
+    ReadTransformFactory(ReadTransformFactory&&)                 = default;
+    ReadTransformFactory& operator=(ReadTransformFactory&&)      = default;
+    
+    ReadTransform make(/* options in here */) const;
+};
 
 #endif

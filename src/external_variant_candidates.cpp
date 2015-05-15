@@ -9,7 +9,7 @@
 #include "external_variant_candidates.h"
 #include "variant.h"
 
-ExternalVariantCandidates::ExternalVariantCandidates(VariantFile& a_variant_source,
+ExternalVariantCandidates::ExternalVariantCandidates(VariantFileReader& a_variant_source,
                                                      double generator_confidence)
 :
 a_variant_file_ {a_variant_source},

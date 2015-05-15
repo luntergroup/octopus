@@ -33,7 +33,7 @@ namespace details {
     static std::string human_1000g_cram_name {"HG00101.mapped.ILLUMINA.bwa.GBR.low_coverage.20130415.cram"};
     
     // VCFs
-    static std::string sample_vcf_name {"CEU.low_coverage.2010_07.xchr.sites.vcf.gz"};
+    static std::string sample_vcf_name {"CHBJPT.low_coverage.2010_07.xchr.sites.vcf.gz"};
     
     // donna data
     static std::string donna_dir {"donna/"};

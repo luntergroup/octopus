@@ -63,7 +63,7 @@
 		CAE3E2B01AA2981E00C01B2C /* candidate_variant_generation_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CAE3E2AE1AA2981E00C01B2C /* candidate_variant_generation_tests.cpp */; };
 		CAE3E2B31AA3342B00C01B2C /* assembler_candidate_variant_generator.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CAE3E2B11AA3342B00C01B2C /* assembler_candidate_variant_generator.cpp */; };
 		CAE3E2B61AA36EA600C01B2C /* htslib_bcf_facade.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CAE3E2B41AA36EA600C01B2C /* htslib_bcf_facade.cpp */; };
-		CAE3E2B81AA370BD00C01B2C /* variant_file.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CAE3E2B71AA370BD00C01B2C /* variant_file.cpp */; };
+		CAE3E2B81AA370BD00C01B2C /* variant_file_reader.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CAE3E2B71AA370BD00C01B2C /* variant_file_reader.cpp */; };
 		CAE3E2BB1AA371F500C01B2C /* variant_file_factory.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CAE3E2B91AA371F500C01B2C /* variant_file_factory.cpp */; };
 		CAE3E2C01AA3D91C00C01B2C /* variant_utils.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CAE3E2BE1AA3D91C00C01B2C /* variant_utils.cpp */; };
 		CAE3E2C71AA895D600C01B2C /* variant_benchmarks.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CAE3E2C61AA895D600C01B2C /* variant_benchmarks.cpp */; };
@@ -81,6 +81,9 @@
 		D463C18D1AF137EB00739A66 /* input_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D463C18C1AF137EB00739A66 /* input_tests.cpp */; };
 		D463C1911AF38DCF00739A66 /* haplotype_phaser_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D463C1901AF38DCE00739A66 /* haplotype_phaser_tests.cpp */; };
 		D463C1931B00FF5400739A66 /* variant_caller_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D463C1921B00FF5400739A66 /* variant_caller_tests.cpp */; };
+		D463C1981B062E0200739A66 /* variant_file_writer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D463C1961B062E0200739A66 /* variant_file_writer.cpp */; };
+		D463C19D1B062F7F00739A66 /* variant_reader_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D463C19C1B062F7F00739A66 /* variant_reader_tests.cpp */; };
+		D463C19F1B062F9300739A66 /* variant_writer_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D463C19E1B062F9300739A66 /* variant_writer_tests.cpp */; };
 		D4907F4B1A88E20E00639203 /* variant_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D4907F4A1A88E20E00639203 /* variant_tests.cpp */; };
 		D4907F571A8A2A9B00639203 /* reference_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D4907F561A8A2A9B00639203 /* reference_tests.cpp */; };
 		D4907F5B1A8A374000639203 /* fasta.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D4907F591A8A374000639203 /* fasta.cpp */; };
@@ -191,14 +194,14 @@
 		CAE3E2A71AA25F7D00C01B2C /* alignment_candidate_variant_generator.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = alignment_candidate_variant_generator.h; sourceTree = "<group>"; };
 		CAE3E2A91AA2736D00C01B2C /* external_variant_candidates.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = external_variant_candidates.cpp; sourceTree = "<group>"; };
 		CAE3E2AA1AA2736D00C01B2C /* external_variant_candidates.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = external_variant_candidates.h; sourceTree = "<group>"; };
-		CAE3E2AC1AA274BE00C01B2C /* variant_file.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = variant_file.h; sourceTree = "<group>"; };
-		CAE3E2AD1AA276FA00C01B2C /* variant_file_impl.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = variant_file_impl.h; sourceTree = "<group>"; };
+		CAE3E2AC1AA274BE00C01B2C /* variant_file_reader.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = variant_file_reader.h; sourceTree = "<group>"; };
+		CAE3E2AD1AA276FA00C01B2C /* variant_file_reader_impl.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = variant_file_reader_impl.h; sourceTree = "<group>"; };
 		CAE3E2AE1AA2981E00C01B2C /* candidate_variant_generation_tests.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = candidate_variant_generation_tests.cpp; sourceTree = "<group>"; };
 		CAE3E2B11AA3342B00C01B2C /* assembler_candidate_variant_generator.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = assembler_candidate_variant_generator.cpp; sourceTree = "<group>"; };
 		CAE3E2B21AA3342B00C01B2C /* assembler_candidate_variant_generator.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = assembler_candidate_variant_generator.h; sourceTree = "<group>"; };
 		CAE3E2B41AA36EA600C01B2C /* htslib_bcf_facade.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = htslib_bcf_facade.cpp; sourceTree = "<group>"; };
 		CAE3E2B51AA36EA600C01B2C /* htslib_bcf_facade.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = htslib_bcf_facade.h; sourceTree = "<group>"; };
-		CAE3E2B71AA370BD00C01B2C /* variant_file.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = variant_file.cpp; sourceTree = "<group>"; };
+		CAE3E2B71AA370BD00C01B2C /* variant_file_reader.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = variant_file_reader.cpp; sourceTree = "<group>"; };
 		CAE3E2B91AA371F500C01B2C /* variant_file_factory.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = variant_file_factory.cpp; sourceTree = "<group>"; };
 		CAE3E2BA1AA371F500C01B2C /* variant_file_factory.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = variant_file_factory.h; sourceTree = "<group>"; };
 		CAE3E2BC1AA3A98D00C01B2C /* graph_bubbles.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = graph_bubbles.h; sourceTree = "<group>"; };
@@ -235,6 +238,11 @@
 		D463C1921B00FF5400739A66 /* variant_caller_tests.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = variant_caller_tests.cpp; sourceTree = "<group>"; };
 		D463C1941B02108F00739A66 /* bayesian_genotype_model.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = bayesian_genotype_model.h; sourceTree = "<group>"; };
 		D463C1951B0229A000739A66 /* common.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = common.h; sourceTree = "<group>"; };
+		D463C1961B062E0200739A66 /* variant_file_writer.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = variant_file_writer.cpp; sourceTree = "<group>"; };
+		D463C1971B062E0200739A66 /* variant_file_writer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = variant_file_writer.h; sourceTree = "<group>"; };
+		D463C19A1B062E2500739A66 /* variant_file_writer_impl.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = variant_file_writer_impl.h; sourceTree = "<group>"; };
+		D463C19C1B062F7F00739A66 /* variant_reader_tests.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = variant_reader_tests.cpp; sourceTree = "<group>"; };
+		D463C19E1B062F9300739A66 /* variant_writer_tests.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = variant_writer_tests.cpp; sourceTree = "<group>"; };
 		D4907F471A88D71800639203 /* genomic_region.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = genomic_region.h; sourceTree = "<group>"; };
 		D4907F491A88E14E00639203 /* catch.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = catch.hpp; sourceTree = "<group>"; };
 		D4907F4A1A88E20E00639203 /* variant_tests.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = variant_tests.cpp; sourceTree = "<group>"; };
@@ -306,8 +314,10 @@
 				D463C1891AEE2EA100739A66 /* search_region_tests.cpp */,
 				D463C1901AF38DCE00739A66 /* haplotype_phaser_tests.cpp */,
 				D463C1921B00FF5400739A66 /* variant_caller_tests.cpp */,
-				CA14727B1AACED6E005FDCD1 /* octopus_tests.cpp */,
+				D463C19C1B062F7F00739A66 /* variant_reader_tests.cpp */,
+				D463C19E1B062F9300739A66 /* variant_writer_tests.cpp */,
 				D463C18C1AF137EB00739A66 /* input_tests.cpp */,
+				CA14727B1AACED6E005FDCD1 /* octopus_tests.cpp */,
 			);
 			name = components;
 			sourceTree = "<group>";
@@ -512,9 +522,12 @@
 		CAE3E2A51AA24D6000C01B2C /* variants */ = {
 			isa = PBXGroup;
 			children = (
-				CAE3E2AC1AA274BE00C01B2C /* variant_file.h */,
-				CAE3E2B71AA370BD00C01B2C /* variant_file.cpp */,
-				CAE3E2AD1AA276FA00C01B2C /* variant_file_impl.h */,
+				CAE3E2AC1AA274BE00C01B2C /* variant_file_reader.h */,
+				CAE3E2B71AA370BD00C01B2C /* variant_file_reader.cpp */,
+				D463C1971B062E0200739A66 /* variant_file_writer.h */,
+				D463C1961B062E0200739A66 /* variant_file_writer.cpp */,
+				CAE3E2AD1AA276FA00C01B2C /* variant_file_reader_impl.h */,
+				D463C19A1B062E2500739A66 /* variant_file_writer_impl.h */,
 				CAE3E2BA1AA371F500C01B2C /* variant_file_factory.h */,
 				CAE3E2B91AA371F500C01B2C /* variant_file_factory.cpp */,
 				CAE3E2B51AA36EA600C01B2C /* htslib_bcf_facade.h */,
@@ -676,6 +689,7 @@
 				D463C1911AF38DCF00739A66 /* haplotype_phaser_tests.cpp in Sources */,
 				CAE3E29D1AA139A000C01B2C /* program_options.cpp in Sources */,
 				CA14727C1AACED6E005FDCD1 /* octopus_tests.cpp in Sources */,
+				D463C19F1B062F9300739A66 /* variant_writer_tests.cpp in Sources */,
 				D42061131ACC3D2B00D11553 /* variational_bayes_genotype_model_tests.cpp in Sources */,
 				CAE3E2CB1AAB42C900C01B2C /* read_filter_tests.cpp in Sources */,
 				CA28EBF51AABB80E009F8622 /* read_filter_benchmarks.cpp in Sources */,
@@ -686,12 +700,13 @@
 				CAFA195B1ABF3DF400F953D9 /* haplotype_tree.cpp in Sources */,
 				D42061181ACC418500D11553 /* read_model_tests.cpp in Sources */,
 				D4907F4B1A88E20E00639203 /* variant_tests.cpp in Sources */,
-				CAE3E2B81AA370BD00C01B2C /* variant_file.cpp in Sources */,
+				CAE3E2B81AA370BD00C01B2C /* variant_file_reader.cpp in Sources */,
 				CAE3E2AB1AA2736D00C01B2C /* external_variant_candidates.cpp in Sources */,
 				CAE3E2C71AA895D600C01B2C /* variant_benchmarks.cpp in Sources */,
 				CABA377F1A8FA11000BBE598 /* read_benchmarks.cpp in Sources */,
 				CA4551621AEB06D800FDAAE8 /* 1000G_test11.cpp in Sources */,
 				CA0B467D1AE8EFDA00158BBA /* variational_bayes_genotype_model_benchmarks.cpp in Sources */,
+				D463C19D1B062F7F00739A66 /* variant_reader_tests.cpp in Sources */,
 				CA0B46821AEA210300158BBA /* 1000G_test9.cpp in Sources */,
 				CAFA19661ABF84AC00F953D9 /* haplotype_tree_tests.cpp in Sources */,
 				CA0B467B1AE8E8F700158BBA /* genotype_benchmarks.cpp in Sources */,
@@ -728,6 +743,7 @@
 				CA0B46691AE860FC00158BBA /* 1000G_test1.cpp in Sources */,
 				CA90C55A1ACDB95D00CBEE34 /* haplotype_tests.cpp in Sources */,
 				CAE3E2CD1AAB46BC00C01B2C /* read_filters.h in Sources */,
+				D463C1981B062E0200739A66 /* variant_file_writer.cpp in Sources */,
 				CA0B46771AE8657F00158BBA /* 1000G_test6.cpp in Sources */,
 				CA4551741AEB09DC00FDAAE8 /* 1000G_test20.cpp in Sources */,
 				CA45516A1AEB097E00FDAAE8 /* 1000G_test15.cpp in Sources */,
@@ -819,7 +835,7 @@
 				ALWAYS_SEARCH_USER_PATHS = YES;
 				CLANG_CXX_LANGUAGE_STANDARD = "c++14";
 				FRAMEWORK_SEARCH_PATHS = "$(inherited)";
-				GCC_OPTIMIZATION_LEVEL = 3;
+				GCC_OPTIMIZATION_LEVEL = 0;
 				HEADER_SEARCH_PATHS = (
 					"$(inherited)",
 					/usr/local/Cellar/boost/1.57.0/include,
@@ -843,7 +859,7 @@
 				ALWAYS_SEARCH_USER_PATHS = YES;
 				CLANG_CXX_LANGUAGE_STANDARD = "c++14";
 				FRAMEWORK_SEARCH_PATHS = "$(inherited)";
-				GCC_OPTIMIZATION_LEVEL = 3;
+				GCC_OPTIMIZATION_LEVEL = 0;
 				HEADER_SEARCH_PATHS = (
 					"$(inherited)",
 					/usr/local/Cellar/boost/1.57.0/include,

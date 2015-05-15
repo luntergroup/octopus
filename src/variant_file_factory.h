@@ -12,14 +12,14 @@
 #include <string>
 #include <memory> // std::unique_ptr
 
-#include "variant_file_impl.h"
+#include "variant_file_reader_impl.h"
 
 class VariantFileFactory
 {
 public:
     VariantFileFactory() = default;
     
-    std::unique_ptr<IVariantFileImpl> make_impl(const std::string& variant_file_path);
+    std::unique_ptr<IVariantFileReaderImpl> make_reader(const std::string& variant_file_path);
 };
 
 #endif /* defined(__Octopus__variant_file_factory__) */

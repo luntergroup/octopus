@@ -16,7 +16,7 @@
 
 namespace fs = boost::filesystem;
 
-std::unique_ptr<IVariantFileImpl> VariantFileFactory::make_impl(const std::string& variant_file_path)
+std::unique_ptr<IVariantFileReaderImpl> VariantFileFactory::make_reader(const std::string& variant_file_path)
 {
     fs::path the_path {variant_file_path};
     

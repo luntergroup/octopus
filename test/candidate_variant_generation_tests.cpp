@@ -21,7 +21,7 @@
 #include "assembler_candidate_variant_generator.h"
 #include "external_variant_candidates.h"
 #include "variant_file_factory.h"
-#include "variant_file.h"
+#include "variant_file_reader.h"
 
 TEST_CASE("CandidateVariantGenerator does not give duplicate candidates", "[candidates]")
 {
