@@ -45,7 +45,7 @@ TEST_CASE("Genotype can be tested for haplotype occurence", "[genotype]")
     Haplotype hap4 {human};
     hap4.push_back(Allele {parse_region("1:1000000-1000001", human), "T"});
     
-    Genotype g1 {};
+    Genotype<Haplotype> g1 {};
     g1.emplace(hap1);
     g1.emplace(hap2);
     g1.emplace(hap3);
@@ -60,7 +60,7 @@ TEST_CASE("Genotype can be tested for haplotype occurence", "[genotype]")
     REQUIRE(g1.num_occurences(hap3) == 1);
     REQUIRE(g1.num_occurences(hap4) == 0);
     
-    Genotype g2 {};
+    Genotype<Haplotype> g2 {};
     g2.emplace(hap1);
     g2.emplace(hap1);
     g2.emplace(hap2);
@@ -75,7 +75,7 @@ TEST_CASE("Genotype can be tested for haplotype occurence", "[genotype]")
     REQUIRE(g2.num_occurences(hap3) == 0);
     REQUIRE(g2.num_occurences(hap4) == 0);
     
-    Genotype g3 {};
+    Genotype<Haplotype> g3 {};
     g3.emplace(hap1);
     g3.emplace(hap3);
     g3.emplace(hap4);
@@ -90,7 +90,7 @@ TEST_CASE("Genotype can be tested for haplotype occurence", "[genotype]")
     REQUIRE(g3.num_occurences(hap3) == 1);
     REQUIRE(g3.num_occurences(hap4) == 1);
     
-    Genotype g4 {};
+    Genotype<Haplotype> g4 {};
     g4.emplace(hap4);
     g4.emplace(hap4);
     g4.emplace(hap4);
@@ -120,27 +120,27 @@ TEST_CASE("Genotypes are equal if they contain the same haplotypes", "[genotype"
     Haplotype hap3 {human};
     hap3.push_back(Allele {parse_region("1:1000000-1000001", human), "G"});
     
-    Genotype g1 {};
+    Genotype<Haplotype> g1 {};
     g1.emplace(hap1);
     g1.emplace(hap2);
     g1.emplace(hap3);
     
-    Genotype g2 {};
+    Genotype<Haplotype> g2 {};
     g2.emplace(hap1);
     g2.emplace(hap2);
     g2.emplace(hap2);
     
-    Genotype g3 {};
+    Genotype<Haplotype> g3 {};
     g3.emplace(hap1);
     g3.emplace(hap2);
     g3.emplace(hap3);
     
-    Genotype g4 {};
+    Genotype<Haplotype> g4 {};
     g4.emplace(hap1);
     g4.emplace(hap3);
     g4.emplace(hap3);
     
-    Genotype g5 {};
+    Genotype<Haplotype> g5 {};
     g5.emplace(hap1);
     g5.emplace(hap2);
     g5.emplace(hap2);
@@ -177,12 +177,12 @@ TEST_CASE("Genotypes are not influenced by haplotype entry order", "[genotype]")
     Haplotype hap2 {human};
     hap2.push_back(Allele {parse_region("1:1000000-1000001", human), "T"});
     
-    Genotype g1 {};
+    Genotype<Haplotype> g1 {};
     g1.emplace(hap1);
     g1.emplace(hap2);
     g1.emplace(hap2);
     
-    Genotype g2 {};
+    Genotype<Haplotype> g2 {};
     g2.emplace(hap2);
     g2.emplace(hap1);
     g2.emplace(hap2);
@@ -191,7 +191,7 @@ TEST_CASE("Genotypes are not influenced by haplotype entry order", "[genotype]")
     REQUIRE(g1.num_occurences(hap2) == g2.num_occurences(hap2));
     
     REQUIRE(g1 == g2);
-    REQUIRE(std::hash<Genotype>()(g1) == std::hash<Genotype>()(g2));
+    REQUIRE(std::hash<Genotype<Haplotype>>()(g1) == std::hash<Genotype<Haplotype>>()(g2));
 }
 
 TEST_CASE("get_all_genotypes returns all possible unique genotypes", "[genotype]")
@@ -219,7 +219,7 @@ TEST_CASE("get_all_genotypes returns all possible unique genotypes", "[genotype]
     
     REQUIRE(genotypes_1.size() == num_genotypes(num_haplotypes, 1));
     
-    std::unordered_set<Genotype> unique_1 {genotypes_1.cbegin(), genotypes_1.cend()};
+    std::unordered_set<Genotype<Haplotype>> unique_1 {genotypes_1.cbegin(), genotypes_1.cend()};
     
     REQUIRE(genotypes_1.size() == unique_1.size());
     
@@ -227,7 +227,7 @@ TEST_CASE("get_all_genotypes returns all possible unique genotypes", "[genotype]
     
     REQUIRE(genotypes_2.size() == num_genotypes(num_haplotypes, 2));
     
-    std::unordered_set<Genotype> unique_2 {genotypes_2.cbegin(), genotypes_2.cend()};
+    std::unordered_set<Genotype<Haplotype>> unique_2 {genotypes_2.cbegin(), genotypes_2.cend()};
     
     REQUIRE(genotypes_2.size() == unique_2.size());
     
@@ -235,7 +235,7 @@ TEST_CASE("get_all_genotypes returns all possible unique genotypes", "[genotype]
     
     REQUIRE(genotypes_3.size() == num_genotypes(num_haplotypes, 3));
     
-    std::unordered_set<Genotype> unique_3 {genotypes_3.cbegin(), genotypes_3.cend()};
+    std::unordered_set<Genotype<Haplotype>> unique_3 {genotypes_3.cbegin(), genotypes_3.cend()};
     
     REQUIRE(genotypes_3.size() == unique_3.size());
     
@@ -243,7 +243,7 @@ TEST_CASE("get_all_genotypes returns all possible unique genotypes", "[genotype]
     
     REQUIRE(genotypes_4.size() == num_genotypes(num_haplotypes, 4));
     
-    std::unordered_set<Genotype> unique_4 {genotypes_4.cbegin(), genotypes_4.cend()};
+    std::unordered_set<Genotype<Haplotype>> unique_4 {genotypes_4.cbegin(), genotypes_4.cend()};
     
     REQUIRE(genotypes_4.size() == unique_4.size());
 }
@@ -296,7 +296,7 @@ TEST_CASE("get_all_genotypes results in correct ploidy", "[genotype]")
     }
 }
 
-TEST_CASE("Genotype::get_unique_haplotypes returns all the unique haplotypes in a Genotype", "[genotype]")
+TEST_CASE("Genotype::get_unique returns all the unique haplotypes in a Genotype", "[genotype]")
 {
     ReferenceGenomeFactory a_factory {};
     ReferenceGenome human {a_factory.make(human_reference_fasta)};
@@ -310,34 +310,34 @@ TEST_CASE("Genotype::get_unique_haplotypes returns all the unique haplotypes in 
     Haplotype hap3 {human};
     hap3.push_back(Allele {parse_region("1:1000000-1000001", human), "G"});
     
-    Genotype g1 {};
+    Genotype<Haplotype> g1 {};
     g1.emplace(hap1);
     g1.emplace(hap2);
     g1.emplace(hap3);
     
-    auto g1_unique = g1.get_unique_haplotypes();
+    auto g1_unique = g1.get_unique();
     
     REQUIRE(std::count(g1_unique.cbegin(), g1_unique.cend(), hap1) == 1);
     REQUIRE(std::count(g1_unique.cbegin(), g1_unique.cend(), hap2) == 1);
     REQUIRE(std::count(g1_unique.cbegin(), g1_unique.cend(), hap3) == 1);
     
-    Genotype g2 {};
+    Genotype<Haplotype> g2 {};
     g2.emplace(hap1);
     g2.emplace(hap3);
     g2.emplace(hap3);
     
-    auto g2_unique = g2.get_unique_haplotypes();
+    auto g2_unique = g2.get_unique();
     
     REQUIRE(std::count(g2_unique.cbegin(), g2_unique.cend(), hap1) == 1);
     REQUIRE(std::count(g2_unique.cbegin(), g2_unique.cend(), hap2) == 0);
     REQUIRE(std::count(g2_unique.cbegin(), g2_unique.cend(), hap3) == 1);
     
-    Genotype g3 {};
+    Genotype<Haplotype> g3 {};
     g3.emplace(hap3);
     g3.emplace(hap3);
     g3.emplace(hap3);
     
-    auto g3_unique = g3.get_unique_haplotypes();
+    auto g3_unique = g3.get_unique();
     
     REQUIRE(std::count(g3_unique.cbegin(), g3_unique.cend(), hap1) == 0);
     REQUIRE(std::count(g3_unique.cbegin(), g3_unique.cend(), hap2) == 0);

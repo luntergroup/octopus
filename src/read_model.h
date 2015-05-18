@@ -42,12 +42,12 @@ public:
     RealType log_probability(const AlignedRead& read, const Haplotype& haplotype, SampleIdType sample);
     
     // ln p(read | genotype)
-    RealType log_probability(const AlignedRead& read, const Genotype& genotype, SampleIdType sample);
+    RealType log_probability(const AlignedRead& read, const Genotype<Haplotype>& genotype, SampleIdType sample);
     
     // ln p(reads | genotype)
     template <typename ForwardIterator>
     RealType log_probability(ForwardIterator first_read, ForwardIterator last_read,
-                             const Genotype& genotype, SampleIdType sample);
+                             const Genotype<Haplotype>& genotype, SampleIdType sample);
     
     void clear_cache();
     
@@ -57,7 +57,7 @@ private:
     std::unordered_map<SampleIdType, std::unordered_map<AlignedRead,
                         std::unordered_map<Haplotype, RealType>>> read_log_probability_cache_;
     
-    using GenotypeReadKey = std::tuple<Genotype, AlignedRead, std::size_t>;
+    using GenotypeReadKey = std::tuple<Genotype<Haplotype>, AlignedRead, std::size_t>;
     
     struct GenotypeReadKeyHash
     {
@@ -79,31 +79,31 @@ private:
     
     template <typename ForwardIterator>
     bool is_genotype_in_cache(SampleIdType sample, ForwardIterator first_read, ForwardIterator last_read,
-                              const Genotype& genotype) const noexcept;
+                              const Genotype<Haplotype>& genotype) const noexcept;
     
     template <typename ForwardIterator>
     void add_genotype_to_cache(SampleIdType sample, ForwardIterator first_read, ForwardIterator last_read,
-                               const Genotype& genotype, RealType genotype_log_probability);
+                               const Genotype<Haplotype>& genotype, RealType genotype_log_probability);
     
     template <typename ForwardIterator>
     RealType get_log_probability_from_cache(SampleIdType sample, ForwardIterator first_read, ForwardIterator last_read,
-                                            const Genotype& genotype) const;
+                                            const Genotype<Haplotype>& genotype) const;
     
     // These are just for optimisation
-    RealType log_probability_haploid(const AlignedRead& read, const Genotype& genotype,
+    RealType log_probability_haploid(const AlignedRead& read, const Genotype<Haplotype>& genotype,
                                      SampleIdType sample);
-    RealType log_probability_diploid(const AlignedRead& read, const Genotype& genotype,
+    RealType log_probability_diploid(const AlignedRead& read, const Genotype<Haplotype>& genotype,
                                      SampleIdType sample);
-    RealType log_probability_triploid(const AlignedRead& read, const Genotype& genotype,
+    RealType log_probability_triploid(const AlignedRead& read, const Genotype<Haplotype>& genotype,
                                       SampleIdType sample);
-    RealType log_probability_polyploid(const AlignedRead& read, const Genotype& genotype,
+    RealType log_probability_polyploid(const AlignedRead& read, const Genotype<Haplotype>& genotype,
                                        SampleIdType sample);
 };
 
 // ln p(reads | genotype) = sum (read in reads} ln p(read | genotype)
 template <typename ForwardIterator>
 ReadModel::RealType ReadModel::log_probability(ForwardIterator first_read, ForwardIterator last_read,
-                                               const Genotype& genotype, SampleIdType sample)
+                                               const Genotype<Haplotype>& genotype, SampleIdType sample)
 {
     if (is_genotype_in_cache(sample, first_read, last_read, genotype)) {
         return get_log_probability_from_cache(sample, first_read, last_read, genotype);
@@ -123,7 +123,7 @@ ReadModel::RealType ReadModel::log_probability(ForwardIterator first_read, Forwa
 template <typename ForwardIterator>
 inline
 bool ReadModel::is_genotype_in_cache(SampleIdType sample, ForwardIterator first_read, ForwardIterator last_read,
-                                     const Genotype& genotype) const noexcept
+                                     const Genotype<Haplotype>& genotype) const noexcept
 {
     if (genotype_log_probability_cache_.count(sample) == 0) return false;
     return genotype_log_probability_cache_.at(sample).count(std::make_tuple(genotype, *first_read,
@@ -133,7 +133,7 @@ bool ReadModel::is_genotype_in_cache(SampleIdType sample, ForwardIterator first_
 template <typename ForwardIterator>
 inline
 void ReadModel::add_genotype_to_cache(SampleIdType sample, ForwardIterator first_read, ForwardIterator last_read,
-                                      const Genotype& genotype, RealType genotype_log_probability)
+                                      const Genotype<Haplotype>& genotype, RealType genotype_log_probability)
 {
     genotype_log_probability_cache_[sample][std::make_tuple(genotype, *first_read,
                                                             std::distance(first_read, last_read))] = genotype_log_probability;
@@ -143,7 +143,7 @@ template <typename ForwardIterator>
 inline
 ReadModel::RealType
 ReadModel::get_log_probability_from_cache(SampleIdType sample, ForwardIterator first_read, ForwardIterator last_read,
-                                          const Genotype& genotype) const
+                                          const Genotype<Haplotype>& genotype) const
 {
     return genotype_log_probability_cache_.at(sample).at(std::make_tuple(genotype, *first_read,
                                                                          std::distance(first_read, last_read)));
@@ -152,7 +152,7 @@ ReadModel::get_log_probability_from_cache(SampleIdType sample, ForwardIterator f
 inline std::size_t ReadModel::GenotypeReadKeyHash::operator()(const GenotypeReadKey &key) const
 {
     std::size_t seed {};
-    boost::hash_combine(seed, std::hash<Genotype>()(std::get<0>(key)));
+    boost::hash_combine(seed, std::hash<Genotype<Haplotype>>()(std::get<0>(key)));
     boost::hash_combine(seed, std::hash<AlignedRead>()(std::get<1>(key)));
     boost::hash_combine(seed, std::get<2>(key));
     return seed;

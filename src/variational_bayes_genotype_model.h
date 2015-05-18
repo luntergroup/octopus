@@ -50,15 +50,15 @@ namespace BayesianGenotypeModel
         VariationalBayesGenotypeModel(VariationalBayesGenotypeModel&&)                 = default;
         VariationalBayesGenotypeModel& operator=(VariationalBayesGenotypeModel&&)      = default;
         
-        RealType log_expected_genotype_probability(const Genotype& genotype,
+        RealType log_expected_genotype_probability(const Genotype<Haplotype>& genotype,
                                                    const HaplotypePseudoCounts<RealType>& haplotype_pseudo_counts);
         
         template <typename ForwardIterator>
-        RealType log_rho(const Genotype& genotype, const HaplotypePseudoCounts<RealType>& haplotype_pseudo_counts,
+        RealType log_rho(const Genotype<Haplotype>& genotype, const HaplotypePseudoCounts<RealType>& haplotype_pseudo_counts,
                          ForwardIterator first_read, ForwardIterator last_read, SampleIdType sample);
         
         template <typename ForwardIterator, typename Container>
-        RealType genotype_posterior(const Genotype& genotype, ForwardIterator first_read, ForwardIterator last_read,
+        RealType genotype_posterior(const Genotype<Haplotype>& genotype, ForwardIterator first_read, ForwardIterator last_read,
                                     const HaplotypePseudoCounts<RealType>& haplotype_pseudo_counts,
                                     const Container& genotypes, SampleIdType sample);
         
@@ -87,20 +87,20 @@ namespace BayesianGenotypeModel
         ReadModel& read_model_;
         
         // These are just for optimisation
-        RealType log_expected_genotype_probability_haploid(const Genotype& genotype,
+        RealType log_expected_genotype_probability_haploid(const Genotype<Haplotype>& genotype,
                                                            const HaplotypePseudoCounts<RealType>& haplotype_pseudo_counts) const;
-        RealType log_expected_genotype_probability_diploid(const Genotype& genotype,
+        RealType log_expected_genotype_probability_diploid(const Genotype<Haplotype>& genotype,
                                                            const HaplotypePseudoCounts<RealType>& haplotype_pseudo_counts) const;
-        RealType log_expected_genotype_probability_triploid(const Genotype& genotype,
+        RealType log_expected_genotype_probability_triploid(const Genotype<Haplotype>& genotype,
                                                             const HaplotypePseudoCounts<RealType>& haplotype_pseudo_counts) const;
-        RealType log_expected_genotype_probability_polyploid(const Genotype& genotype,
+        RealType log_expected_genotype_probability_polyploid(const Genotype<Haplotype>& genotype,
                                                              const HaplotypePseudoCounts<RealType>& haplotype_pseudo_counts) const;
     };
     
     template <typename ForwardIterator>
     inline
     VariationalBayesGenotypeModel::RealType
-    VariationalBayesGenotypeModel::log_rho(const Genotype& genotype,
+    VariationalBayesGenotypeModel::log_rho(const Genotype<Haplotype>& genotype,
                                            const HaplotypePseudoCounts<RealType>& haplotype_pseudo_counts,
                                            ForwardIterator first_read, ForwardIterator last_read,
                                            SampleIdType sample)
@@ -111,7 +111,7 @@ namespace BayesianGenotypeModel
     
     template <typename ForwardIterator, typename Container>
     VariationalBayesGenotypeModel::RealType
-    VariationalBayesGenotypeModel::genotype_posterior(const Genotype& genotype,
+    VariationalBayesGenotypeModel::genotype_posterior(const Genotype<Haplotype>& genotype,
                                                       ForwardIterator first_read, ForwardIterator last_read,
                                                       const HaplotypePseudoCounts<RealType>& haplotype_pseudo_counts,
                                                       const Container& genotypes, SampleIdType sample)

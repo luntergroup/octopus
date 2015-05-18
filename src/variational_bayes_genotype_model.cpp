@@ -22,7 +22,7 @@ namespace BayesianGenotypeModel
     {}
     
     VariationalBayesGenotypeModel::RealType
-    VariationalBayesGenotypeModel::log_expected_genotype_probability(const Genotype& genotype,
+    VariationalBayesGenotypeModel::log_expected_genotype_probability(const Genotype<Haplotype>& genotype,
                                                                      const HaplotypePseudoCounts<RealType>& haplotype_pseudo_counts)
     {
         // These cases are just for optimisation
@@ -73,7 +73,7 @@ namespace BayesianGenotypeModel
     // Private methods
     
     VariationalBayesGenotypeModel::RealType
-    VariationalBayesGenotypeModel::log_expected_genotype_probability_haploid(const Genotype& genotype,
+    VariationalBayesGenotypeModel::log_expected_genotype_probability_haploid(const Genotype<Haplotype>& genotype,
                                                                              const HaplotypePseudoCounts<RealType>& haplotype_pseudo_counts) const
     {
         return boost::math::digamma<RealType>(haplotype_pseudo_counts.at(genotype.at(0)))
@@ -81,7 +81,7 @@ namespace BayesianGenotypeModel
     }
     
     VariationalBayesGenotypeModel::RealType
-    VariationalBayesGenotypeModel::log_expected_genotype_probability_diploid(const Genotype& genotype,
+    VariationalBayesGenotypeModel::log_expected_genotype_probability_diploid(const Genotype<Haplotype>& genotype,
                                                                              const HaplotypePseudoCounts<RealType>& haplotype_pseudo_counts) const
     {
         const static RealType ln_2 = std::log(2);
@@ -94,7 +94,7 @@ namespace BayesianGenotypeModel
     }
     
     VariationalBayesGenotypeModel::RealType
-    VariationalBayesGenotypeModel::log_expected_genotype_probability_triploid(const Genotype& genotype,
+    VariationalBayesGenotypeModel::log_expected_genotype_probability_triploid(const Genotype<Haplotype>& genotype,
                                                                               const HaplotypePseudoCounts<RealType>& haplotype_pseudo_counts) const
     {
         const static RealType ln_3 = std::log(3);
@@ -119,7 +119,7 @@ namespace BayesianGenotypeModel
     }
     
     VariationalBayesGenotypeModel::RealType
-    VariationalBayesGenotypeModel::log_expected_genotype_probability_polyploid(const Genotype& genotype,
+    VariationalBayesGenotypeModel::log_expected_genotype_probability_polyploid(const Genotype<Haplotype>& genotype,
                                                                                const HaplotypePseudoCounts<RealType>& haplotype_pseudo_counts) const
     {
         //TODO

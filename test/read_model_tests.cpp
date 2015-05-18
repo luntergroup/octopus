@@ -88,27 +88,27 @@ TEST_CASE("partially overlapped reads evaluate correctly", "[read_model]")
 //            << a_read_model.log_probability(read, true_haplotype, 0) << endl;
 //    }
     
-    Genotype ref_true {};
+    Genotype<Haplotype> ref_true {};
     ref_true.emplace(reference_haplotype);
     ref_true.emplace(true_haplotype);
     
-    Genotype ref_false1 {};
+    Genotype<Haplotype> ref_false1 {};
     ref_false1.emplace(reference_haplotype);
     ref_false1.emplace(false_haplotype1);
     
-    Genotype ref_false2 {};
+    Genotype<Haplotype> ref_false2 {};
     ref_false2.emplace(reference_haplotype);
     ref_false2.emplace(false_haplotype2);
     
-    Genotype true_false1 {};
+    Genotype<Haplotype> true_false1 {};
     true_false1.emplace(true_haplotype);
     true_false1.emplace(false_haplotype2);
     
-    Genotype true_false2 {};
+    Genotype<Haplotype> true_false2 {};
     true_false2.emplace(true_haplotype);
     true_false2.emplace(false_haplotype2);
     
-    Genotype false1_false2 {};
+    Genotype<Haplotype> false1_false2 {};
     false1_false2.emplace(false_haplotype1);
     false1_false2.emplace(false_haplotype2);
     
@@ -143,15 +143,15 @@ TEST_CASE("obviously homozygous sites evaluate correctly", "[read_model]")
     
     ReadModel a_read_model {ploidy};
     
-    Genotype hom_ref {};
+    Genotype<Haplotype> hom_ref {};
     hom_ref.emplace(reference_haplotype);
     hom_ref.emplace(reference_haplotype);
     
-    Genotype het_alt {};
+    Genotype<Haplotype> het_alt {};
     het_alt.emplace(reference_haplotype);
     het_alt.emplace(true_haplotype);
     
-    Genotype hom_alt {};
+    Genotype<Haplotype> hom_alt {};
     hom_alt.emplace(true_haplotype);
     hom_alt.emplace(true_haplotype);
     
@@ -228,7 +228,7 @@ TEST_CASE("ReadModel works on haploid genomes", "[read_model]")
     
     ReadModel the_model {ploidy};
     
-    std::unordered_map<Genotype, double> genotype_log_probabilities {};
+    std::unordered_map<Genotype<Haplotype>, double> genotype_log_probabilities {};
     
     for (const auto& genotype : genotypes) {
         genotype_log_probabilities[genotype] = the_model.log_probability(some_reads.cbegin(), some_reads.cend(), genotype, the_sample_id);
@@ -305,7 +305,7 @@ TEST_CASE("diploid_read_model_test", "[read_model]")
     
     auto genotypes = get_all_genotypes(haplotypes, ploidy);
     
-    std::unordered_map<Genotype, double> genotype_log_probabilities {};
+    std::unordered_map<Genotype<Haplotype>, double> genotype_log_probabilities {};
     
     for (const auto& genotype : genotypes) {
         genotype_log_probabilities[genotype] = the_model.log_probability(some_reads.cbegin(), some_reads.cend(), genotype, the_sample_id);

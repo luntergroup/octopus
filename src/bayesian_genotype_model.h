@@ -32,7 +32,7 @@ namespace BayesianGenotypeModel
     using HaplotypePseudoCounts = std::unordered_map<Haplotype, RealType>;
     
     template <typename RealType>
-    using SampleGenotypeProbabilities = std::unordered_map<Genotype, RealType>;
+    using SampleGenotypeProbabilities = std::unordered_map<Genotype<Haplotype>, RealType>;
     
     template <typename SampleIdType, typename RealType>
     using GenotypeProbabilities = std::unordered_map<SampleIdType, SampleGenotypeProbabilities<RealType>>;
@@ -171,7 +171,7 @@ namespace BayesianGenotypeModel
     }
     
     template <typename RealType>
-    RealType posterior_predictive_probability(const Genotype& genotype,
+    RealType posterior_predictive_probability(const Genotype<Haplotype>& genotype,
                                               const HaplotypePseudoCounts<RealType>& haplotype_pseudo_counts)
     {
         std::vector<RealType> z {}, a {};

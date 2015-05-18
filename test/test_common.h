@@ -9,8 +9,8 @@
 #ifndef Octopus_test_common_h
 #define Octopus_test_common_h
 
-namespace details {
-
+namespace detail
+{
     static std::string home_dir {getenv("HOME")};
 
     static std::string genomics_dir {"/Genomics/"};
@@ -34,6 +34,7 @@ namespace details {
     
     // VCFs
     static std::string sample_vcf_name {"CHBJPT.low_coverage.2010_07.xchr.sites.vcf.gz"};
+    //static std::string sample_vcf_name {"platypus.vcf"};
     
     // donna data
     static std::string donna_dir {"donna/"};
@@ -41,47 +42,47 @@ namespace details {
     static std::string donna_bam_name2 {"356_006_sorted_with_labels.bam"};
     static std::string donna_bam_name3 {"357_005_sorted_with_labels.bam"};
     static std::string donna_bam_name4 {"357_006_sorted_with_labels.bam"};
-}
+} // end namespace detail
 
 // Full paths
-static std::string human_reference_fasta {details::home_dir + details::genomics_dir +
-                details::reference_dir + details::human_reference_name};
+static std::string human_reference_fasta {detail::home_dir + detail::genomics_dir +
+                detail::reference_dir + detail::human_reference_name};
 
 static std::string human_reference_fasta_index {human_reference_fasta + ".fai"};
 
-static std::string ecoli_reference_fasta {details::home_dir + details::genomics_dir +
-        details::reference_dir + details::ecoli_reference_name};
+static std::string ecoli_reference_fasta {detail::home_dir + detail::genomics_dir +
+        detail::reference_dir + detail::ecoli_reference_name};
 
-static std::string lambda_reference_fasta {details::home_dir + details::genomics_dir +
-        details::reference_dir + details::lambda_reference_name};
+static std::string lambda_reference_fasta {detail::home_dir + detail::genomics_dir +
+        detail::reference_dir + detail::lambda_reference_name};
 
-static std::string human_1000g_bam0 {details::home_dir + details::genomics_dir + details::bam_dir +
-    details::human_1000g_bam_name0};
+static std::string human_1000g_bam0 {detail::home_dir + detail::genomics_dir + detail::bam_dir +
+    detail::human_1000g_bam_name0};
 
-static std::string human_1000g_bam1 {details::home_dir + details::genomics_dir + details::bam_dir +
-        details::human_1000g_bam_name1};
+static std::string human_1000g_bam1 {detail::home_dir + detail::genomics_dir + detail::bam_dir +
+        detail::human_1000g_bam_name1};
 
-static std::string human_1000g_bam2 {details::home_dir + details::genomics_dir + details::bam_dir +
-        details::human_1000g_bam_name2};
+static std::string human_1000g_bam2 {detail::home_dir + detail::genomics_dir + detail::bam_dir +
+        detail::human_1000g_bam_name2};
 
-static std::string human_1000g_bam3 {details::home_dir + details::genomics_dir + details::bam_dir +
-    details::human_1000g_bam_name3};
+static std::string human_1000g_bam3 {detail::home_dir + detail::genomics_dir + detail::bam_dir +
+    detail::human_1000g_bam_name3};
 
-static std::string human_1000g_cram {details::home_dir + details::genomics_dir + details::bam_dir +
-        details::human_1000g_cram_name};
+static std::string human_1000g_cram {detail::home_dir + detail::genomics_dir + detail::bam_dir +
+        detail::human_1000g_cram_name};
 
-static std::string ecoli_bam {details::home_dir + details::genomics_dir + details::bam_dir +
-    details::ecoli_bam_name};
+static std::string ecoli_bam {detail::home_dir + detail::genomics_dir + detail::bam_dir +
+    detail::ecoli_bam_name};
 
-static std::string sample_vcf {details::home_dir + details::genomics_dir + details::sample_vcf_name};
+static std::string sample_vcf {detail::home_dir + detail::genomics_dir + detail::sample_vcf_name};
 
-static std::string donna_bam1 {details::home_dir + details::genomics_dir + details::donna_dir +
-    details::donna_bam_name1};
-static std::string donna_bam2 {details::home_dir + details::genomics_dir + details::donna_dir +
-    details::donna_bam_name2};
-static std::string donna_bam3 {details::home_dir + details::genomics_dir + details::donna_dir +
-    details::donna_bam_name3};
-static std::string donna_bam4 {details::home_dir + details::genomics_dir + details::donna_dir +
-    details::donna_bam_name4};
+static std::string donna_bam1 {detail::home_dir + detail::genomics_dir + detail::donna_dir +
+    detail::donna_bam_name1};
+static std::string donna_bam2 {detail::home_dir + detail::genomics_dir + detail::donna_dir +
+    detail::donna_bam_name2};
+static std::string donna_bam3 {detail::home_dir + detail::genomics_dir + detail::donna_dir +
+    detail::donna_bam_name3};
+static std::string donna_bam4 {detail::home_dir + detail::genomics_dir + detail::donna_dir +
+    detail::donna_bam_name4};
 
 #endif

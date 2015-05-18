@@ -84,28 +84,28 @@ TEST_CASE("can call", "variant_caller")
                                                    std::make_move_iterator(good_reads[sample].end())));
     }
     
-//    phaser.put_data(read_ranges, candidates.cbegin(), candidates.cend());
-//    
-//    auto phased_regions = phaser.get_phased_regions(true);
-//    
-//    auto allele_posteriors = Octopus::VariantCaller::get_allele_posteriors(samples, phased_regions, candidates);
-//    
-//    for (const auto& sample : samples) {
-//        for (const auto& allele_posterior : allele_posteriors.at(sample)) {
-//            cout << sample << " " << allele_posterior.first << " " << allele_posterior.second << endl;
-//        }
-//    }
-//    
-//    auto alleles_between_candidates = get_reference_alleles_between_variants(candidates, human);
-//    
-//    allele_posteriors = Octopus::VariantCaller::get_allele_posteriors(samples, phased_regions,
-//                                                                      alleles_between_candidates);
-//    
-//    for (const auto& sample : samples) {
-//        for (const auto& allele_posterior : allele_posteriors.at(sample)) {
-//            cout << sample << " " << allele_posterior.first << " " << allele_posterior.second << endl;
-//        }
-//    }
+    phaser.put_data(read_ranges, candidates.cbegin(), candidates.cend());
+    
+    auto phased_regions = phaser.get_phased_regions(true);
+    
+    auto allele_posteriors = Octopus::VariantCaller::get_allele_posteriors(samples, phased_regions, candidates);
+    
+    for (const auto& sample : samples) {
+        for (const auto& allele_posterior : allele_posteriors.at(sample)) {
+            cout << sample << " " << allele_posterior.first << " " << allele_posterior.second << endl;
+        }
+    }
+    
+    auto alleles_between_candidates = get_reference_alleles_between_variants(candidates, human);
+    
+    allele_posteriors = Octopus::VariantCaller::get_allele_posteriors(samples, phased_regions,
+                                                                      alleles_between_candidates);
+    
+    for (const auto& sample : samples) {
+        for (const auto& allele_posterior : allele_posteriors.at(sample)) {
+            cout << sample << " " << allele_posterior.first << " " << allele_posterior.second << endl;
+        }
+    }
 }
 
 TEST_CASE("reference allele posteriors in regions with no reads are the reference haplotype priors", "[variant_caller]")

@@ -43,7 +43,7 @@ public:
     {
         GenomicRegion the_region;
         std::vector<Haplotype> the_haplotypes;
-        std::vector<Genotype> the_genotypes;
+        std::vector<Genotype<Haplotype>> the_genotypes;
         BayesianGenotypeModel::Latents<SampleIdType, RealType> the_latent_posteriors;
         
         PhasedRegion() = default;

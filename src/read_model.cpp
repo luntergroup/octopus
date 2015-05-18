@@ -75,7 +75,7 @@ ReadModel::RealType ReadModel::log_probability(const AlignedRead& read, const Ha
 }
 
 // ln p(read | genotype) = ln sum {haplotype in genotype} p(read | haplotype) - ln ploidy
-ReadModel::RealType ReadModel::log_probability(const AlignedRead& read, const Genotype& genotype,
+ReadModel::RealType ReadModel::log_probability(const AlignedRead& read, const Genotype<Haplotype>& genotype,
                                                SampleIdType sample)
 {
     // These cases are just for optimisation; they are functionally equivalent
@@ -91,20 +91,20 @@ ReadModel::RealType ReadModel::log_probability(const AlignedRead& read, const Ge
     }
 }
 
-ReadModel::RealType ReadModel::log_probability_haploid(const AlignedRead& read, const Genotype& genotype,
+ReadModel::RealType ReadModel::log_probability_haploid(const AlignedRead& read, const Genotype<Haplotype>& genotype,
                                                        SampleIdType sample)
 {
     return log_probability(read, genotype.at(0), sample);
 }
 
-ReadModel::RealType ReadModel::log_probability_diploid(const AlignedRead& read, const Genotype& genotype,
+ReadModel::RealType ReadModel::log_probability_diploid(const AlignedRead& read, const Genotype<Haplotype>& genotype,
                                                        SampleIdType sample)
 {
     return log_sum_exp(log_probability(read, genotype.at(0), sample),
                        log_probability(read, genotype.at(1), sample)) - ln_ploidy_;
 }
 
-ReadModel::RealType ReadModel::log_probability_triploid(const AlignedRead& read, const Genotype& genotype,
+ReadModel::RealType ReadModel::log_probability_triploid(const AlignedRead& read, const Genotype<Haplotype>& genotype,
                                                         SampleIdType sample)
 {
     return log_sum_exp(log_probability(read, genotype.at(0), sample),
@@ -112,7 +112,7 @@ ReadModel::RealType ReadModel::log_probability_triploid(const AlignedRead& read,
                        log_probability(read, genotype.at(2), sample)) - ln_ploidy_;
 }
 
-ReadModel::RealType ReadModel::log_probability_polyploid(const AlignedRead& read, const Genotype& genotype,
+ReadModel::RealType ReadModel::log_probability_polyploid(const AlignedRead& read, const Genotype<Haplotype>& genotype,
                                                          SampleIdType sample)
 {
     //TODO
