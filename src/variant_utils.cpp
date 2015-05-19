@@ -50,6 +50,7 @@ std::vector<Allele> get_reference_alleles_between_variants(const std::vector<Var
     
     std::vector<Allele> result {};
     result.reserve(regions_between_candidates.size());
+    
     std::transform(std::cbegin(regions_between_candidates), std::cend(regions_between_candidates),
                    std::back_inserter(result), [&the_reference] (const auto& region) {
                        return get_reference_allele(region, the_reference);
@@ -67,7 +68,7 @@ auto allele_minmax(const Variant::SequenceType& allele_a, const Variant::Sequenc
 
 bool is_parsimonious(const Variant& a_variant) noexcept
 {
-    if (reference_allele_size(a_variant) == 0 || alternative_allele_size(a_variant) == 0) {
+    if (a_variant.reference_allele_size() == 0 || a_variant.alternative_allele_size() == 0) {
         return false;
     }
     
@@ -78,14 +79,14 @@ bool is_parsimonious(const Variant& a_variant) noexcept
     const auto& the_small_allele = alleles.first;
     const auto& the_big_allele   = alleles.second;
     
-    if (num_redundant_bases(cbegin(the_small_allele), cend(the_small_allele),
-                            cbegin(the_big_allele)) > 1) {
+    if (detail::num_redundant_bases(cbegin(the_small_allele), cend(the_small_allele),
+                                    cbegin(the_big_allele)) > 1) {
         return false;
     }
     
     if (the_small_allele.size() > 1 &&
-        num_redundant_bases(crbegin(the_small_allele), crend(the_small_allele),
-                            crbegin(the_big_allele)) > 0) {
+        detail::num_redundant_bases(crbegin(the_small_allele), crend(the_small_allele),
+                                    crbegin(the_big_allele)) > 0) {
         return false;
     }
     
@@ -128,10 +129,10 @@ Variant make_parsimonious(const Variant& a_variant, ReferenceGenome& the_referen
         }
     }
     
-    auto num_redundant_back_bases  = num_redundant_bases(crbegin(the_small_allele),
-                                                         crend(the_small_allele), crbegin(the_big_allele));
-    auto num_redundant_front_bases = num_redundant_bases(cbegin(the_small_allele),
-                                                         cend(the_small_allele), cbegin(the_big_allele));
+    auto num_redundant_back_bases  = detail::num_redundant_bases(crbegin(the_small_allele),
+                                                                 crend(the_small_allele), crbegin(the_big_allele));
+    auto num_redundant_front_bases = detail::num_redundant_bases(cbegin(the_small_allele),
+                                                                 cend(the_small_allele), cbegin(the_big_allele));
     
     // We could avoid this check by removing redundant back bases first, but this way is cheaper.
     bool are_same_redundant_bases = num_redundant_front_bases == num_redundant_back_bases &&
@@ -281,17 +282,17 @@ Variant normalise(const Variant& a_variant, ReferenceGenome& the_reference, Vari
 
 bool is_snp(const Variant& a_variant) noexcept
 {
-    return reference_allele_size(a_variant) == 1 && alternative_allele_size(a_variant) == 1;
+    return a_variant.reference_allele_size() == 1 && a_variant.alternative_allele_size() == 1;
 }
 
 bool is_insertion(const Variant& a_variant) noexcept
 {
-    return reference_allele_size(a_variant) < alternative_allele_size(a_variant);
+    return a_variant.reference_allele_size() < a_variant.alternative_allele_size();
 }
 
 bool is_deletion(const Variant& a_variant) noexcept
 {
-    return reference_allele_size(a_variant) > alternative_allele_size(a_variant);
+    return a_variant.reference_allele_size() > a_variant.alternative_allele_size();
 }
 
 bool is_indel(const Variant& a_variant) noexcept
@@ -301,5 +302,5 @@ bool is_indel(const Variant& a_variant) noexcept
 
 bool is_mnv(const Variant& a_variant) noexcept
 {
-    return reference_allele_size(a_variant) > 1 && alternative_allele_size(a_variant) > 1;
+    return a_variant.reference_allele_size() > 1 && a_variant.alternative_allele_size() > 1;
 }

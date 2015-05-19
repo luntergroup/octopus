@@ -43,6 +43,9 @@ public:
     
     const GenomicRegion& get_region() const noexcept;
     
+    SizeType reference_allele_size() const noexcept;
+    SizeType alternative_allele_size() const noexcept;
+    
     Allele get_reference_allele() const;
     Allele get_alternative_allele() const;
     
@@ -76,41 +79,6 @@ the_reference_allele_region_ {GenomicRegion{std::forward<SequenceType1>(the_refe
     the_reference_begin, the_reference_begin + static_cast<SizeType>(the_reference_allele_sequence_.size())}},
 the_alternative_allele_sequence_ {std::forward<SequenceType3>(the_alternative_allele)}
 {}
-
-inline const GenomicRegion& Variant::get_region() const noexcept
-{
-    return the_reference_allele_region_;
-}
-
-inline Allele Variant::get_reference_allele() const
-{
-    return Allele {the_reference_allele_region_, the_reference_allele_sequence_};
-}
-
-inline Allele Variant::get_alternative_allele() const
-{
-    return Allele {the_reference_allele_region_, the_alternative_allele_sequence_};
-}
-
-inline const Variant::SequenceType& Variant::get_reference_allele_sequence() const noexcept
-{
-    return the_reference_allele_sequence_;
-}
-
-inline const Variant::SequenceType& Variant::get_alternative_allele_sequence() const noexcept
-{
-    return the_alternative_allele_sequence_;
-}
-
-inline Variant::SizeType reference_allele_size(const Variant& a_variant) noexcept
-{
-    return size(a_variant.get_region());
-}
-
-inline Variant::SizeType alternative_allele_size(const Variant& a_variant) noexcept
-{
-    return static_cast<Variant::SizeType>(a_variant.get_alternative_allele_sequence().size());
-}
 
 inline bool operator==(const Variant& lhs, const Variant& rhs)
 {

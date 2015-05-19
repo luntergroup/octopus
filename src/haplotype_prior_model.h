@@ -29,7 +29,7 @@ RealType prior_probability(const Haplotype& the_haplotype, ForwardIterator first
                            ForwardIterator last_possible_variant)
 {
     auto num_non_reference_alleles = std::count_if(first_possible_variant, last_possible_variant,
-                                                   [&the_haplotype] (const auto& variant) {
+                                                   [&the_haplotype] (const Variant& variant) {
                                                        return the_haplotype.contains(variant.get_alternative_allele());
                                                    });
     

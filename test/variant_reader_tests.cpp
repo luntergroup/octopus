@@ -24,7 +24,7 @@ TEST_CASE("can read", "[variant_file_reader]")
 {
     VariantFileFactory a_factory {};
     
-    VariantFileReader reader {a_factory.make_reader(sample_vcf)};
+    //VariantFileReader reader {a_factory.make_reader(sample_vcf)};
     
     //auto variants = reader.fetch_variants(GenomicRegion {"X", 10000, 100000});
 }

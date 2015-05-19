@@ -61,11 +61,13 @@ bool is_indel(const Variant& a_variant) noexcept;
 
 bool is_mnv(const Variant& a_variant) noexcept;
 
-template <typename Iterator>
-std::size_t num_redundant_bases(Iterator first1, Iterator last1, Iterator first2)
+namespace detail
 {
-    auto matching_begin_itrs = std::mismatch(first1, last1, first2);
-    return std::distance(first1, matching_begin_itrs.first);
-}
+    template <typename InputIterator>
+    std::size_t num_redundant_bases(InputIterator first1, InputIterator last1, InputIterator first2)
+    {
+        return std::distance(first1, std::mismatch(first1, last1, first2).first);
+    }
+} // end namespace detail
 
 #endif /* defined(__Octopus__variant_utils__) */

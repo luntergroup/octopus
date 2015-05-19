@@ -198,15 +198,15 @@ namespace BayesianGenotypeModel
         for (unsigned i {}; i < max_num_iterations; ++i) {
             for (const auto& sample : the_reads) {
                 genotype_posteriors[sample.first] =
-                the_model.genotype_posteriors(the_genotypes, sample.second.first,
-                                              sample.second.second, haplotype_posterior_counts,
-                                              sample.first);
+                    the_model.genotype_posteriors(the_genotypes, sample.second.first,
+                                                  sample.second.second, haplotype_posterior_counts,
+                                                  sample.first);
             }
             
             for (const auto& haplotype_prior : haplotype_prior_counts) {
                 haplotype_posterior_counts[haplotype_prior.first] =
-                the_model.posterior_haplotype_pseudo_count(haplotype_prior.first, haplotype_prior.second,
-                                                           genotype_posteriors, the_genotypes);
+                    the_model.posterior_haplotype_pseudo_count(haplotype_prior.first, haplotype_prior.second,
+                                                               genotype_posteriors, the_genotypes);
             }
         }
         

@@ -177,6 +177,26 @@ std::size_t count_if_shared_with_first(ForwardIterator1 first1, ForwardIterator1
 }
 
 /**
+ Splits a_region into an ordered vector of GenomicRegions of size 1
+ */
+inline std::vector<GenomicRegion> decompose(const GenomicRegion& a_region)
+{
+    std::vector<GenomicRegion> result {};
+    
+    auto num_elements = size(a_region);
+    
+    result.reserve(num_elements);
+    
+    unsigned n {0};
+    
+    std::generate_n(std::back_inserter(result), num_elements, [&n, &a_region] () {
+        return GenomicRegion {a_region.get_contig_name(), a_region.get_begin() + n, a_region.get_begin() + ++n};
+    });
+    
+    return result;
+}
+
+/**
  Returns all overlapped GenomicRegion's in the range [first_mappable, last_mappable) such that
  the returned regions covers the same overall area as the input range (i.e. the maximal overlapping
  regions)

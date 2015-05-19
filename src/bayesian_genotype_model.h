@@ -56,7 +56,7 @@ namespace BayesianGenotypeModel
     HaplotypePseudoCounts<RealType>
     get_haplotype_prior_pseudo_counts(const MapType& the_haplotype_priors,
                                       const Haplotype& the_reference_haplotype,
-                                      RealType the_reference_haplotype_pseudo_count)
+                                      RealType the_reference_haplotype_pseudo_count=1)
     {
         HaplotypePseudoCounts<RealType> result {};
         result.reserve(the_haplotype_priors.size());
@@ -72,6 +72,8 @@ namespace BayesianGenotypeModel
         }
         
         result[the_reference_haplotype] = the_reference_haplotype_pseudo_count;
+        
+        for (auto& count : result) count.second = 0.5; // TEST
         
         return result;
     }
@@ -105,6 +107,21 @@ namespace BayesianGenotypeModel
         }
         
         return result;
+    }
+    
+    template <typename RealType, typename Genotypes>
+    RealType probability_genotype_in_samples(const Genotype<Allele>& the_genotype, const Genotypes& genotypes,
+                                             const SampleGenotypeProbabilities<RealType>& genotype_probabilities)
+    {
+        return 0;
+    }
+    
+    template <typename RealType, typename Haplotypes, typename Genotypes>
+    RealType probability_sample_has_genotype(const Genotype<Allele>& the_genotype, const Haplotypes& haplotypes,
+                                             const SampleGenotypeProbabilities<RealType>& genotype_probabilities,
+                                             const Genotypes& genotypes)
+    {
+        return 0;
     }
     
     template <typename RealType, typename Haplotypes>

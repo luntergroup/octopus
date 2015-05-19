@@ -18,7 +18,6 @@ namespace Octopus
 
 namespace VariantCaller
 {
-        
     using BayesianGenotypeModel::probability_allele_in_sample;
 
     HaplotypePhaser::PhasedRegions::const_iterator

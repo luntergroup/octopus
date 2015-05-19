@@ -88,16 +88,29 @@ namespace detail
     
 } // end namespace detail
 
+/**
+ Determines the next sub-region to phase. Up to 'max_included' non-overlapping variants are included 
+ in the returned region, of which up to 'max_indicators' may be present in 'the_previous_sub_region'.
+ 
+ The returned region may include less than 'max_included' variants if including more variants would
+ cause the region density to increase more than the available number of variants.
+ 
+ The algorithm only uses indicators that may share reads containing variants with the new region (note
+ this does not actually look at the read sequence, only the position). Unless 
+ 'limit_indicators_to_shared_with_previous_region' is false, in which case all indicators are used.
+ */
 template <typename SampleReadMap, typename Container>
 GenomicRegion next_sub_region(const GenomicRegion& the_previous_sub_region,
                               const SampleReadMap& the_reads, const Container& the_variants,
-                              unsigned max_included, unsigned max_indicators)
+                              unsigned max_included, unsigned max_indicators,
+                              bool limit_indicators_to_shared_with_previous_region=true,
+                              bool limit_included_by_first_included_read_boundries=true)
 {
     if (max_included > 0 && max_included <= max_indicators) {
         max_indicators = max_included - 1;
     }
     
-    auto last_variant_it  = std::cend(the_variants);
+    auto last_variant_it = std::cend(the_variants);
     
     auto previous_variant_sub_range = overlap_range(std::cbegin(the_variants), last_variant_it, the_previous_sub_region);
     auto included_it = previous_variant_sub_range.second;
@@ -107,22 +120,31 @@ GenomicRegion next_sub_region(const GenomicRegion& the_previous_sub_region,
                                                     the_previous_sub_region;
     }
     
-    auto first_shared_in_previous_range_it = find_first_shared(the_reads, previous_variant_sub_range.first,
-                                                               previous_variant_sub_range.second, *included_it);
-    auto num_possible_indicators = static_cast<unsigned>(std::distance(first_shared_in_previous_range_it, included_it));
+    unsigned num_indicators {max_indicators};
     
-    unsigned num_indicators = std::min(num_possible_indicators, max_indicators);
+    if (limit_indicators_to_shared_with_previous_region) {
+        auto first_shared_in_previous_range_it = find_first_shared(the_reads, previous_variant_sub_range.first,
+                                                                   previous_variant_sub_range.second, *included_it);
+        auto num_possible_indicators = static_cast<unsigned>(std::distance(first_shared_in_previous_range_it, included_it));
+        
+        num_indicators = std::min(num_possible_indicators, num_indicators);
+    }
     
     max_included -= num_indicators;
     auto first_included_it = std::prev(included_it, num_indicators);
     
     auto num_remaining_variants = static_cast<unsigned>(std::distance(included_it, last_variant_it));
-    auto max_num_variants_within_read_length = static_cast<unsigned>(max_count_if_shared_with_first(the_reads,
+    unsigned num_excluded_variants {0};
+    
+    if (limit_included_by_first_included_read_boundries) {
+        auto max_num_variants_within_read_length = static_cast<unsigned>(max_count_if_shared_with_first(the_reads,
                                                                     included_it, last_variant_it));
+        max_included = std::min({max_included, num_remaining_variants, max_num_variants_within_read_length + 1});
+        num_excluded_variants = max_num_variants_within_read_length - max_included;
+    } else {
+        max_included = std::min(max_included, num_remaining_variants);
+    }
     
-    max_included = std::min({max_included, num_remaining_variants, max_num_variants_within_read_length + 1});
-    
-    unsigned num_excluded_variants = max_num_variants_within_read_length - max_included;
     auto first_excluded_it = std::next(included_it, max_included);
     
     while (--max_included > 0 &&
