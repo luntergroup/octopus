@@ -42,7 +42,7 @@ using Octopus::VariationalBayesGenotypeModel;
 TEST_CASE("can phase", "[haplotype_phaser]")
 {
     ReferenceGenomeFactory a_factory {};
-    ReferenceGenome human(a_factory.make(human_reference_fasta));
+    ReferenceGenome human {a_factory.make(human_reference_fasta)};
     
     ReadManager a_read_manager(std::vector<std::string> {human_1000g_bam2});
     
@@ -83,53 +83,51 @@ TEST_CASE("can phase", "[haplotype_phaser]")
                                                    std::make_move_iterator(good_reads[sample].end())));
     }
     
-    Haplotype a {human, a_region};
-    a.push_back(Allele {a_region, "CTTCCATGCTGAAAGCAAGGAAACTGAGTTGTATGGCTGCTGTTTCAAGGTAAACAGGTCTATGCAAACCTAATTCCCAAAGTTTGAGGAGGCTAAGAGGCTAAAGAAAGAGGCTGAGAAATCCAGTTTTTTTTTTTTTAGAAAAAAACATTTAATAGGGATTTTTGAAGAAAAGCTATGTCTGTGTCTCAGGCAGTGATGAGACAAGATGGTGGACCCCTGAAACATTTACCCCCCAGACCCAGGGCTTCTTTATGCTACAGGGAAAGGGTGGTTGAAAAGGGATGTGTAGGACGACTGAAGCACAGCAACATCAAGGTTATTTG"});
-    Haplotype b {human, a_region};
-    b.push_back(Allele {a_region, "CTTCCATGCTGAAAGCAAGGAAACTGAGTTGTATGGCTGCTGTTTCAAGGTAAACAGGTCTATGCAAACCTAATTCCCAAAGTTTGAGGAGGCTGAGAGGCTAAAGAAAGAGGCTGAGAAATCCGTTTTTTTTTTTTTGGAAAAAAACATTTAATAGGGATTTTTGAAGAAAAGCTATGTCTGTGTCTCAGGCAGTGATGAGACAAGATGGTGGACCCCTGAAACATTTAACCCCCAGACCCAGGGCTTCTTTATGCTACAGGGAAAGGGTGGTTGAAAAGGGATGTGTAGGACGACTGAAGCACAGCAACATCAAGGTTATTTG"});
-    Haplotype c {human, a_region};
-    c.push_back(Allele {a_region, "CTTCCATGCTGAAAGCAAGGAAACTGAGTTGTATGGCTGCTGTTTCAAGGTAAACAGGTCTATGCAAACCTAATTCCCAAAGTTTGAGGAGGCTGAGAGGCTAAAGAAAGAGGCTGAGAAATCCAGTTTTTTTTTTTTGGAAAAAAACATTTAATAGGGATTTTTGAAGAAAAGCTATGTCTGTGTCTCAGGCAGTGATGAGACAAGATGGTGGACCCCTGAAACATTTAACCCCCAGACCCAGGGCTTCTTTATGCTACAGGGAAAGGGTGGTTGAAAAGGGATGTGTAGGACGACTGAAGCACAGCAACATCAAGGTTATTTG"});
-    Haplotype d {human, a_region};
-    d.push_back(Allele {a_region, "CTTCCATGCTGAAAGCAAGGAAACTGAGTTGTATGGCTGCTGTTTCAAGGTAAACAGGTCTATGCAAACCTAATTCCCAAAGTTTGAGGAGGCTGAGAGGCTAAAGAAAGAGGCTGAGAAATCCATTTTTTTTTTTTTGGAAAAAAACATTTAATAGGGATTTTTGAAGAAAAGCTATGTCTGTGTCTCAGGCAGTGATGAGACAAGATGGTGGACCCCTGAAACATTTAACCCCCAGACCCAGGGCTTCTTTATGCTACAGGGAAAGGGTGGTTGAAAAGGGATGTGTAGGACGACTGAAGCACAGCAACATCAAGGTTATTTG"});
-    Haplotype e {human, a_region};
-    e.push_back(Allele {a_region, "CTTCCATGCTGAAAGCAAGGAAACTGAGTTGTATGGCTGCTGTTTCAAGGTAAACAGGTCTATGCAAACCTAATTCCCAAAGTTTGAGGAGGCTGAGAGGCTAAAGAAAGAGGCTGAGAAATCCAGTATTTTTTTTTTTTGGAAAAAAACATTTAATAGGGATTTTTGAAGAAAAGCTATGTCTGTGTCTCAGGCAGTGATGAGACAAGATGGTGGACCCCTGAAACATTTAACCCCCAGACCCAGGGCTTCTTTATGCTACAGGGAAAGGGTGGTTGAAAAGGGATGTGTAGGACGACTGAAGCACAGCAACATCAAGGTTATTTG"});
+    auto region = parse_region("16:62646815-62647140", human);
     
-//    double sum {};
-//    for (const auto& read : good_reads.at(samples.front())) {
-//        sum += a_read_model.log_probability(read, a, samples.front());
-//    }
-//    cout << sum << endl;
-//    sum = 0;
-//    for (const auto& read : good_reads.at(samples.front())) {
-//        sum += a_read_model.log_probability(read, b, samples.front());
-//    }
-//    cout << sum << endl;
-//    sum = 0;
-//    for (const auto& read : good_reads.at(samples.front())) {
-//        sum += a_read_model.log_probability(read, c, samples.front());
-//    }
-//    cout << sum << endl;
-//    sum = 0;
-//    for (const auto& read : good_reads.at(samples.front())) {
-//        sum += a_read_model.log_probability(read, d, samples.front());
-//    }
-//    cout << sum << endl;
-//    sum = 0;
-//    for (const auto& read : good_reads.at(samples.front())) {
-//        sum += a_read_model.log_probability(read, e, samples.front());
-//    }
-//    cout << sum << endl;
-//    sum = 0;
+    Haplotype a {human, region};
+    a.push_back(Allele {region, "CTTCCATGCTGAAAGCAAGGAAACTGAGTTGTATGGCTGCTGTTTCAAGGTAAACAGGTCTATGCAAACCTAATTCCCAAAGTTTGAGGAGGCTAAGAGGCTAAAGAAAGAGGCTGAGAAATCCAGTTTTTTTTTTTTTAGAAAAAAACATTTAATAGGGATTTTTGAAGAAAAGCTATGTCTGTGTCTCAGGCAGTGATGAGACAAGATGGTGGACCCCTGAAACATTTACCCCCCAGACCCAGGGCTTCTTTATGCTACAGGGAAAGGGTGGTTGAAAAGGGATGTGTAGGACGACTGAAGCACAGCAACATCAAGGTTATTTG"});
+    Haplotype b {human, region};
+    b.push_back(Allele {region, "CTTCCATGCTGAAAGCAAGGAAACTGAGTTGTATGGCTGCTGTTTCAAGGTAAACAGGTCTATGCAAACCTAATTCCCAAAGTTTGAGGAGGCTGAGAGGCTAAAGAAAGAGGCTGAGAAATCCGTTTTTTTTTTTTTGGAAAAAAACATTTAATAGGGATTTTTGAAGAAAAGCTATGTCTGTGTCTCAGGCAGTGATGAGACAAGATGGTGGACCCCTGAAACATTTAACCCCCAGACCCAGGGCTTCTTTATGCTACAGGGAAAGGGTGGTTGAAAAGGGATGTGTAGGACGACTGAAGCACAGCAACATCAAGGTTATTTG"});
+    Haplotype c {human, region};
+    c.push_back(Allele {region, "CTTCCATGCTGAAAGCAAGGAAACTGAGTTGTATGGCTGCTGTTTCAAGGTAAACAGGTCTATGCAAACCTAATTCCCAAAGTTTGAGGAGGCTGAGAGGCTAAAGAAAGAGGCTGAGAAATCCAGTTTTTTTTTTTTGGAAAAAAACATTTAATAGGGATTTTTGAAGAAAAGCTATGTCTGTGTCTCAGGCAGTGATGAGACAAGATGGTGGACCCCTGAAACATTTAACCCCCAGACCCAGGGCTTCTTTATGCTACAGGGAAAGGGTGGTTGAAAAGGGATGTGTAGGACGACTGAAGCACAGCAACATCAAGGTTATTTG"});
+    Haplotype d {human, region};
+    d.push_back(Allele {region, "CTTCCATGCTGAAAGCAAGGAAACTGAGTTGTATGGCTGCTGTTTCAAGGTAAACAGGTCTATGCAAACCTAATTCCCAAAGTTTGAGGAGGCTGAGAGGCTAAAGAAAGAGGCTGAGAAATCCATTTTTTTTTTTTTGGAAAAAAACATTTAATAGGGATTTTTGAAGAAAAGCTATGTCTGTGTCTCAGGCAGTGATGAGACAAGATGGTGGACCCCTGAAACATTTAACCCCCAGACCCAGGGCTTCTTTATGCTACAGGGAAAGGGTGGTTGAAAAGGGATGTGTAGGACGACTGAAGCACAGCAACATCAAGGTTATTTG"});
+    Haplotype e {human, region};
+    e.push_back(Allele {region, "CTTCCATGCTGAAAGCAAGGAAACTGAGTTGTATGGCTGCTGTTTCAAGGTAAACAGGTCTATGCAAACCTAATTCCCAAAGTTTGAGGAGGCTGAGAGGCTAAAGAAAGAGGCTGAGAAATCCAGTATTTTTTTTTTTTGGAAAAAAACATTTAATAGGGATTTTTGAAGAAAAGCTATGTCTGTGTCTCAGGCAGTGATGAGACAAGATGGTGGACCCCTGAAACATTTAACCCCCAGACCCAGGGCTTCTTTATGCTACAGGGAAAGGGTGGTTGAAAAGGGATGTGTAGGACGACTGAAGCACAGCAACATCAAGGTTATTTG"});
+    
+    double sum {};
+    for (const auto& read : good_reads.at(samples.front())) {
+        sum += a_read_model.log_probability(read, a, samples.front());
+    }
+    cout << sum << endl;
+    sum = 0;
+    for (const auto& read : good_reads.at(samples.front())) {
+        sum += a_read_model.log_probability(read, b, samples.front());
+    }
+    cout << sum << endl;
+    sum = 0;
+    for (const auto& read : good_reads.at(samples.front())) {
+        sum += a_read_model.log_probability(read, c, samples.front());
+    }
+    cout << sum << endl;
+    sum = 0;
+    for (const auto& read : good_reads.at(samples.front())) {
+        sum += a_read_model.log_probability(read, d, samples.front());
+    }
+    cout << sum << endl;
+    sum = 0;
+    for (const auto& read : good_reads.at(samples.front())) {
+        sum += a_read_model.log_probability(read, e, samples.front());
+    }
+    cout << sum << endl;
+    sum = 0;
     
     Genotype<Haplotype> g1 {a, c};
     Genotype<Haplotype> g2 {a, e};
     
-    
-    
     cout << a_read_model.log_probability(good_reads.at(samples.front()).cbegin(), good_reads.at(samples.front()).cend(), g1, samples.front()) << endl;
     cout << a_read_model.log_probability(good_reads.at(samples.front()).cbegin(), good_reads.at(samples.front()).cend(), g2, samples.front()) << endl;
-    
-    exit(0);
     
     phaser.put_data(read_ranges, candidates.cbegin(), candidates.cend());
     
@@ -137,25 +135,22 @@ TEST_CASE("can phase", "[haplotype_phaser]")
     
     cout << "phased into " << phased_regions.size() << " sections" << endl;
     
+    auto& haps = phased_regions.front().the_latent_posteriors.haplotype_pseudo_counts;
+    
+    cout << haps.at(a) << endl;
+    cout << haps.at(c) << endl;
+    cout << haps.at(e) << endl;
+    
     auto& gens = phased_regions.front().the_latent_posteriors.genotype_posteriors.at(samples.front());
     
-    Genotype<Haplotype> max_gen {};
-    double max_p {};
-    for (auto& g : gens) {
-        if (g.second > max_p) {
-            max_gen = g.first;
-            max_p = g.second;
-        }
-    }
-    max_gen.at(0).print_explicit_alleles();
-    max_gen.at(1).print_explicit_alleles();
-    cout << max_p << endl;
+    cout << gens.at(g1) << endl;
+    cout << gens.at(g2) << endl;
     
-    for (const auto& haplotype_count : phased_regions.front().the_latent_posteriors.haplotype_pseudo_counts) {
-        if (haplotype_count.second > 0.6) {
-            cout << haplotype_count.first << endl;
-            haplotype_count.first.print_explicit_alleles();
-            cout << haplotype_count.second << endl;
-        }
-    }
+//    for (const auto& haplotype_count : phased_regions.front().the_latent_posteriors.haplotype_pseudo_counts) {
+//        if (haplotype_count.second > 0.6) {
+//            cout << haplotype_count.first << endl;
+//            haplotype_count.first.print_explicit_alleles();
+//            cout << haplotype_count.second << endl;
+//        }
+//    }
 }

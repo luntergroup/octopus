@@ -125,7 +125,7 @@ Haplotype::SequenceType Haplotype::get_sequence(const GenomicRegion& a_region) c
         }
     }
     
-    bool region_ends_before_last_overlapped_allele = false;
+    bool region_ends_before_last_overlapped_allele {false};
     
     if (overlapped_explicit_alleles.second != std::cend(the_explicit_alleles_) &&
         overlapped_explicit_alleles.second != overlapped_explicit_alleles.first &&

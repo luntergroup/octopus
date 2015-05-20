@@ -38,6 +38,8 @@ Allele::SequenceType get_subsequence(const Allele& an_allele, const GenomicRegio
 {
     if (!contains(an_allele, a_region)) {
         return Allele::SequenceType {};
+    } if (an_allele.get_region() == a_region) {
+        return an_allele.get_sequence();
     } else {
         auto first = std::cbegin(an_allele.get_sequence()) + (get_begin(a_region) - get_begin(an_allele));
         
