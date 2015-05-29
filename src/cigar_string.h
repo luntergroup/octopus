@@ -151,6 +151,42 @@ SizeType get_reference_size(const CigarString& a_cigar_string) noexcept
     return result;
 }
 
+template <typename SizeType>
+inline
+CigarOperation get_operation_at_sequence_index(const CigarString& a_cigar_string, SizeType the_sequence_index)
+{
+    auto first = std::cbegin(a_cigar_string);
+    
+    while (the_sequence_index >= first->get_size()) {
+        ++first;
+        the_sequence_index -= first->get_size();
+    }
+    
+    return *first;
+}
+
+template <typename SizeType>
+inline
+CigarString splice(const CigarString& a_cigar_string, SizeType the_sequence_begin, SizeType size)
+{
+    CigarString result {};
+    
+    auto first = std::cbegin(a_cigar_string);
+    
+    while (the_sequence_begin >= first->get_size()) {
+        ++first;
+        the_sequence_begin -= first->get_size();
+    }
+    
+    auto last = first;
+    
+    size += first->get_size() - the_sequence_begin;
+    
+    //while (size >= last->get
+    
+    return result;
+}
+
 inline bool operator==(const CigarOperation& lhs, const CigarOperation& rhs)
 {
     return lhs.get_flag() == rhs.get_flag() && lhs.get_size() == rhs.get_size();

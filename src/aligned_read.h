@@ -409,14 +409,15 @@ inline AlignedRead::Flags AlignedRead::get_flags(const FlagData& flags)
     return result;
 }
 
-inline AlignedRead::NextSegment::Flags
-AlignedRead::NextSegment::get_flags(const FlagData& flags)
+inline AlignedRead::NextSegment::Flags AlignedRead::NextSegment::get_flags(const FlagData& flags)
 {
     Flags result {};
     result[0] = flags.is_marked_unmapped;
     result[1] = flags.is_marked_reverse_mapped;
     return result;
 }
+
+// Non-member methods
 
 inline bool operator==(const AlignedRead& lhs, const AlignedRead& rhs)
 {
@@ -482,5 +483,33 @@ inline std::ostream& operator<<(std::ostream& os, const AlignedRead& a_read)
     }
     return os;
 }
+
+//inline AlignedRead splice(const AlignedRead& a_read, const GenomicRegion& a_region)
+//{
+//    if (!contains(a_read, a_region)) {
+//        throw std::runtime_error {"cannot splice AlignedRead region that is not contained"};
+//    }
+//    
+//    auto offset = a_region.get_begin() - a_read.get_region().get_begin();
+//    auto splice_size = size(a_region);
+//    
+//    AlignedRead::SequenceType sub_sequence {a_read.get_sequence().substr(offset, splice_size)};
+//    AlignedRead::Qualities sub_qualities {a_read.get_qualities().cbegin() + offset,
+//        a_read.get_qualities().cbegin() + offset + splice_size};
+//    
+//    return (a_read.is_chimeric()) ?
+//        AlignedRead {
+//            a_region,
+//            std::move(sub_sequence),
+//            std::move(sub_qualities),
+//            
+//        } :
+//        AlignedRead {
+//            a_region,
+//            std::move(sub_sequence),
+//            std::move(sub_qualities),
+//            
+//        };
+//}
 
 #endif /* defined(__Octopus__aligned_read__) */

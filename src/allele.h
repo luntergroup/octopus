@@ -85,6 +85,8 @@ Allele get_reference_allele(const GenomicRegion& a_region, ReferenceGenome& the_
 
 Allele::SequenceType get_subsequence(const Allele& an_allele, const GenomicRegion& a_region);
 
+Allele splice(const Allele& an_allele, const GenomicRegion& a_region);
+
 bool contains(const Allele& lhs, const Allele& rhs);
 
 bool is_insertion(const Allele& an_allele);

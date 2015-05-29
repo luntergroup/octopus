@@ -162,7 +162,9 @@ void HaplotypePhaser::remove_unlikely_haplotypes(const Haplotypes& the_haplotype
                                                  const HaplotypePseudoCounts& posterior_counts)
 {
     for (const auto& haplotype : the_haplotypes) {
-        if (posterior_counts.at(haplotype) / prior_counts.at(haplotype) < 1.001) {
+        if (Octopus::BayesianGenotypeModel::haplotype_probability(haplotype, posterior_counts) < 0.02) {
+        //if (posterior_counts.at(haplotype) / prior_counts.at(haplotype) < 1.0001) {
+            //cout << Octopus::BayesianGenotypeModel::haplotype_probability(haplotype, posterior_counts) << endl;
             the_tree_.prune_all(haplotype);
         } else {
             the_tree_.prune_unique(haplotype);

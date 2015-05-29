@@ -38,15 +38,17 @@ ReadModel::RealType ReadModel::log_probability(const AlignedRead& read, const Ha
     // TODO: make these members when pair_hmm is finalised
     
     RandomModel<RealType> r1 {};
-    r1.background_probability = 0.25;
+    r1.target_emission_probability = 0.25;
+    r1.query_emission_probability  = 0.25;
     
     MatchModel<RealType> m {};
-    m.match_probability      = 1.0;
+    m.match_probability      = 0.25;
     m.gap_open_probability   = 0.017;
     m.gap_extend_probability = 0.025;
     
     RandomModel<RealType> r2 {};
-    r2.background_probability = 0.25;
+    r2.target_emission_probability = 0.25;
+    r2.query_emission_probability  = 0.25;
     
     // m.end_probability must satisfy:
     // m.end_probability <= 1 - 2 * m.gap_open_probability
@@ -57,28 +59,33 @@ ReadModel::RealType ReadModel::log_probability(const AlignedRead& read, const Ha
         auto overlapped_region = get_overlapped(read, haplotype);
         auto covered_region    = get_encompassing(read, haplotype);
         
-        r1.end_probability = 1.0 / (size(get_left_overhang(covered_region, overlapped_region)) + 1);
+        r1.target_end_probability = 1.0 / (size(get_left_overhang(covered_region, overlapped_region)) + 1);
         m.end_probability  = std::min(1.0 / (size(overlapped_region) + 1), m_end_max);
-        r2.end_probability = 1.0 / (size(get_right_overhang(covered_region, overlapped_region)) + 1);
+        r2.target_end_probability = 1.0 / (size(get_right_overhang(covered_region, overlapped_region)) + 1);
     } else {
-        r1.end_probability = 1.0 / (std::max(size(read), size(haplotype)) + 1);
+        r1.target_end_probability = 1.0 / (std::max(size(read), size(haplotype)) + 1);
         m.end_probability  = m_end_max;
-        r2.end_probability = 0.99;
+        r2.target_end_probability = 0.99;
     }
     
-    auto result = nuc_log_viterbi_local<RealType>(haplotype.get_sequence(), read.get_sequence(),
-                                                  read.get_qualities(), m, r1, r2);
+    r1.query_end_probability = r1.target_end_probability;
+    r2.query_end_probability = r2.target_end_probability;
     
-    add_read_to_cache(sample, read, haplotype, result);
+    auto joint_log_probability = nuc_log_viterbi_local<RealType>(haplotype.get_sequence(), read.get_sequence(),
+                                                                 read.get_qualities(), m, r1, r2);
     
-    return result;
+    auto conditional_log_probability = joint_log_probability - haplotype.get_sequence().size() * std::log(r1.target_emission_probability);
+    
+    add_read_to_cache(sample, read, haplotype, conditional_log_probability);
+    
+    return conditional_log_probability;
 }
 
 // ln p(read | genotype) = ln sum {haplotype in genotype} p(read | haplotype) - ln ploidy
 ReadModel::RealType ReadModel::log_probability(const AlignedRead& read, const Genotype<Haplotype>& genotype,
                                                SampleIdType sample)
 {
-    // These cases are just for optimisation; they are functionally equivalent
+    // These cases are just for optimisation
     switch (ploidy_) {
         case 1:
             return log_probability_haploid(read, genotype, sample);

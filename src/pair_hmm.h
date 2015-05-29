@@ -29,8 +29,10 @@ struct RandomModel
 {
     RandomModel() = default;
     
-    RealType background_probability;
-    RealType end_probability;
+    RealType target_emission_probability;
+    RealType query_emission_probability;
+    RealType target_end_probability;
+    RealType query_end_probability;
 };
 
 template <typename RealType>
@@ -132,19 +134,26 @@ RealType nuc_log_viterbi_local(const SequenceType1& target, const SequenceType1&
                                MatchModel<RealType> m, RandomModel<RealType> r1, 
                                RandomModel<RealType> r2)
 {
-    static auto log_prob_background = static_cast<RealType>(std::log(0.25));
+    RealType log_prob_target_rand1      = std::log(r1.target_emission_probability);
+    RealType log_prob_query_rand1       = std::log(r1.query_emission_probability);
+    RealType log_prob_target_rand1_end  = std::log(r1.target_end_probability);
+    RealType log_prob_target_rand1_cont = std::log(1 - r1.target_end_probability);
+    RealType log_prob_query_rand1_end   = std::log(r1.target_end_probability);
+    RealType log_prob_query_rand1_cont  = std::log(1 - r1.target_end_probability);
     
-    RealType log_prob_rand1_end      = std::log(r1.end_probability);
-    RealType log_prob_rand1_cont     = std::log(1 - r1.end_probability);
+    RealType log_prob_match             = std::log(m.match_probability);
+    RealType log_prob_gap_open          = std::log(m.gap_open_probability);
+    RealType log_prob_gap_extend        = std::log(m.gap_extend_probability);
+    RealType log_prob_match_end         = std::log(m.end_probability);
+    RealType log_prob_continue_match    = std::log(1 - 2 * m.gap_open_probability - m.end_probability);
+    RealType log_prob_to_match          = std::log(1 - m.gap_extend_probability - m.end_probability);
     
-    RealType log_prob_gap_open       = std::log(m.gap_open_probability);
-    RealType log_prob_gap_extend     = std::log(m.gap_extend_probability);
-    RealType log_prob_match_end      = std::log(m.end_probability);
-    RealType log_prob_continue_match = std::log(1 - 2 * m.gap_open_probability - m.end_probability);
-    RealType log_prob_to_match       = std::log(1 - m.gap_extend_probability - m.end_probability);
-    
-    RealType log_prob_rand2_end      = std::log(r2.end_probability);
-    RealType log_prob_rand2_cont     = std::log(1 - r2.end_probability);
+    RealType log_prob_target_rand2      = std::log(r2.target_emission_probability);
+    RealType log_prob_query_rand2       = std::log(r2.query_emission_probability);
+    RealType log_prob_target_rand2_end  = std::log(r2.target_end_probability);
+    RealType log_prob_target_rand2_cont = std::log(1 - r2.target_end_probability);
+    RealType log_prob_query_rand2_end   = std::log(r2.target_end_probability);
+    RealType log_prob_query_rand2_cont  = std::log(1 - r2.target_end_probability);
     
     static auto log_prob_match_lookup    = make_log_prob_match_lookup<RealType>();
     static auto log_prob_mismatch_lookup = make_log_prob_mismatch_lookup<RealType>();
@@ -160,28 +169,28 @@ RealType nuc_log_viterbi_local(const SequenceType1& target, const SequenceType1&
     for (size_t i {1}; i <= target_length + 1; ++i) {
         for (size_t j {1}; j <= query_length + 1; ++j) {
             
-            current_column[j].random_x_1 = log_prob_background + log_prob_rand1_cont + std::max(
+            current_column[j].random_x_1 = log_prob_target_rand1 + log_prob_target_rand1_cont + std::max(
                 previous_column[j].begin,
                 previous_column[j].random_x_1
             );
             
-            current_column[j].silent_1 = log_prob_rand1_end + std::max(
+            current_column[j].silent_1 = log_prob_target_rand1_end + std::max(
                 current_column[j].begin,
                 current_column[j].random_x_1
             );
             
-            current_column[j].random_y_1 = log_prob_background + log_prob_rand1_cont + std::max(
+            current_column[j].random_y_1 = log_prob_query_rand1 + log_prob_query_rand1_cont + std::max(
                 current_column[j - 1].silent_1,
                 current_column[j - 1].random_y_1
             );
             
-            current_column[j].silent_2 = log_prob_rand1_end + std::max(
+            current_column[j].silent_2 = log_prob_query_rand1_end + std::max(
                 current_column[j].silent_1,
                 current_column[j].random_y_1
             );
             
             if (i > 1 && j > 1) {
-                current_column[j].match = ((target[i - 2] == query[j - 2]) ?
+                current_column[j].match = log_prob_match + ((target[i - 2] == query[j - 2]) ?
                                            log_prob_match_lookup[query_qualities[j - 2]] :
                                            log_prob_mismatch_lookup[query_qualities[j - 2]])
                         + std::max({
@@ -192,13 +201,13 @@ RealType nuc_log_viterbi_local(const SequenceType1& target, const SequenceType1&
                         });
             }
             
-            current_column[j].insertion = log_prob_background + std::max({
+            current_column[j].insertion = log_prob_target_rand1 + std::max({
                 log_prob_gap_open   + previous_column[j].match,
                 log_prob_gap_extend + previous_column[j].insertion,
                 log_prob_gap_open   + previous_column[j].silent_2
             });
             
-            current_column[j].deletion = log_prob_background + std::max({
+            current_column[j].deletion = log_prob_query_rand1 + std::max({
                 log_prob_gap_open   + current_column[j - 1].match,
                 log_prob_gap_extend + current_column[j - 1].insertion,
                 log_prob_gap_open   + current_column[j - 1].silent_2
@@ -211,17 +220,17 @@ RealType nuc_log_viterbi_local(const SequenceType1& target, const SequenceType1&
                 current_column[j].silent_2
             });
             
-            current_column[j].random_x_2 = log_prob_background + log_prob_rand2_cont + std::max(
+            current_column[j].random_x_2 = log_prob_target_rand2 + log_prob_target_rand2_cont + std::max(
                 previous_column[j].silent_3,
                 previous_column[j].random_x_2
             );
             
-            current_column[j].silent_4 = log_prob_rand2_end + std::max(
+            current_column[j].silent_4 = log_prob_target_rand2_end + std::max(
                 current_column[j].silent_3,
                 current_column[j].random_x_2
             );
             
-            current_column[j].random_y_2 = log_prob_background + log_prob_rand2_cont + std::max(
+            current_column[j].random_y_2 = log_prob_query_rand2 + log_prob_query_rand2_cont + std::max(
                 current_column[j - 1].silent_4,
                 current_column[j - 1].random_y_2
             );
@@ -232,122 +241,122 @@ RealType nuc_log_viterbi_local(const SequenceType1& target, const SequenceType1&
         std::swap(current_column, previous_column);
     }
     
-    return log_prob_rand2_end + std::max(
+    return log_prob_query_rand2_end + std::max(
         previous_column[query_length + 1].silent_4,
         previous_column[query_length + 1].random_y_2
     );
 }
 
-template <typename RealType, typename SequenceType1, typename SequenceType2>
-RealType nuc_log_forward_local(const SequenceType1& target, const SequenceType1& query,
-                               const SequenceType2& query_qualities, 
-                               MatchModel<RealType> m, RandomModel<RealType> r1, 
-                               RandomModel<RealType> r2)
-{
-    static auto log_prob_background = static_cast<RealType>(std::log(0.25));
-    
-    RealType log_prob_rand1_end      = std::log(r1.end_probability);
-    RealType log_prob_rand1_cont     = std::log(1 - r1.end_probability);
-    
-    RealType log_prob_gap_open       = std::log(m.gap_open_probability);
-    RealType log_prob_gap_extend     = std::log(m.gap_extend_probability);
-    RealType log_prob_match_end      = std::log(m.end_probability);
-    RealType log_prob_continue_match = std::log(1 - 2 * m.gap_open_probability - m.end_probability);
-    RealType log_prob_to_match       = std::log(1 - m.gap_extend_probability - m.end_probability);
-    
-    RealType log_prob_rand2_end      = std::log(r2.end_probability);
-    RealType log_prob_rand2_cont     = std::log(1 - r2.end_probability);
-    
-    static auto log_prob_match_lookup    = make_log_prob_match_lookup<RealType>();
-    static auto log_prob_mismatch_lookup = make_log_prob_mismatch_lookup<RealType>();
-    
-    auto target_length = target.size();
-    auto query_length  = query.size();
-    
-    std::vector<LocalPairHmmLogState<RealType>> current_column(query_length + 2);
-    std::vector<LocalPairHmmLogState<RealType>> previous_column(query_length + 2);
-    
-    current_column[1].begin = 0;
-    
-    for (size_t i {1}; i <= target_length + 1; ++i) {
-        for (size_t j {1}; j <= query_length + 1; ++j) {
-            
-            current_column[j].random_x_1 = log_prob_background + log_prob_rand1_cont + log_sum_exp(
-                previous_column[j].begin,
-                previous_column[j].random_x_1
-            );
-            
-            current_column[j].silent_1 = log_prob_rand1_end + log_sum_exp(
-                current_column[j].begin,
-                current_column[j].random_x_1
-            );
-            
-            current_column[j].random_y_1 = log_prob_background + log_prob_rand1_cont + log_sum_exp(
-                current_column[j - 1].silent_1,
-                current_column[j - 1].random_y_1
-            );
-            
-            current_column[j].silent_2 = log_prob_rand1_end + log_sum_exp(
-                current_column[j].silent_1,
-                current_column[j].random_y_1
-            );
-            
-            if (i > 1 && j > 1) {
-                current_column[j].match = ((target[i - 2] == query[j - 2]) ?
-                                           log_prob_match_lookup[query_qualities[j - 2]] :
-                                           log_prob_mismatch_lookup[query_qualities[j - 2]])
-                            + log_sum_exp(
-                                log_prob_continue_match + previous_column[j - 1].match,
-                                log_prob_to_match       + previous_column[j - 1].insertion,
-                                log_prob_to_match       + previous_column[j - 1].deletion,
-                                log_prob_continue_match + previous_column[j - 1].silent_2
-                            );
-            }
-            
-            current_column[j].insertion = log_prob_background + log_sum_exp(
-                log_prob_gap_open   + previous_column[j].match,
-                log_prob_gap_extend + previous_column[j].insertion,
-                log_prob_gap_open   + previous_column[j].silent_2
-            );
-            
-            current_column[j].deletion = log_prob_background + log_sum_exp(
-                log_prob_gap_open   + current_column[j - 1].match,
-                log_prob_gap_extend + current_column[j - 1].insertion,
-                log_prob_gap_open   + current_column[j - 1].silent_2
-            );
-            
-            current_column[j].silent_3 = log_prob_match_end + log_sum_exp(
-                current_column[j].match,
-                current_column[j].insertion,
-                current_column[j].deletion,
-                current_column[j].silent_2
-            );
-            
-            current_column[j].random_x_2 = log_prob_background + log_prob_rand2_cont + log_sum_exp(
-                previous_column[j].silent_3,
-                previous_column[j].random_x_2
-            );
-            
-            current_column[j].silent_4 = log_prob_rand2_end + log_sum_exp(
-                current_column[j].silent_3,
-                current_column[j].random_x_2
-            );
-            
-            current_column[j].random_y_2 = log_prob_background + log_prob_rand2_cont + log_sum_exp(
-                current_column[j - 1].silent_4,
-                current_column[j - 1].random_y_2
-            );
-        }
-        
-        if (i == 2) previous_column[1].begin = LocalPairHmmLogState<RealType>::Negative_infinity;
-          
-        std::swap(current_column, previous_column);
-    }
-            
-    return log_prob_rand2_end + log_sum_exp(
-        previous_column[query_length + 1].silent_4,
-        previous_column[query_length + 1].random_y_2
-    );
-}
+//template <typename RealType, typename SequenceType1, typename SequenceType2>
+//RealType nuc_log_forward_local(const SequenceType1& target, const SequenceType1& query,
+//                               const SequenceType2& query_qualities, 
+//                               MatchModel<RealType> m, RandomModel<RealType> r1, 
+//                               RandomModel<RealType> r2)
+//{
+//    static auto log_prob_background = static_cast<RealType>(std::log(0.25));
+//    
+//    RealType log_prob_rand1_end      = std::log(r1.end_probability);
+//    RealType log_prob_rand1_cont     = std::log(1 - r1.end_probability);
+//    
+//    RealType log_prob_gap_open       = std::log(m.gap_open_probability);
+//    RealType log_prob_gap_extend     = std::log(m.gap_extend_probability);
+//    RealType log_prob_match_end      = std::log(m.end_probability);
+//    RealType log_prob_continue_match = std::log(1 - 2 * m.gap_open_probability - m.end_probability);
+//    RealType log_prob_to_match       = std::log(1 - m.gap_extend_probability - m.end_probability);
+//    
+//    RealType log_prob_rand2_end      = std::log(r2.end_probability);
+//    RealType log_prob_rand2_cont     = std::log(1 - r2.end_probability);
+//    
+//    static auto log_prob_match_lookup    = make_log_prob_match_lookup<RealType>();
+//    static auto log_prob_mismatch_lookup = make_log_prob_mismatch_lookup<RealType>();
+//    
+//    auto target_length = target.size();
+//    auto query_length  = query.size();
+//    
+//    std::vector<LocalPairHmmLogState<RealType>> current_column(query_length + 2);
+//    std::vector<LocalPairHmmLogState<RealType>> previous_column(query_length + 2);
+//    
+//    current_column[1].begin = 0;
+//    
+//    for (size_t i {1}; i <= target_length + 1; ++i) {
+//        for (size_t j {1}; j <= query_length + 1; ++j) {
+//            
+//            current_column[j].random_x_1 = log_prob_background + log_prob_rand1_cont + log_sum_exp(
+//                previous_column[j].begin,
+//                previous_column[j].random_x_1
+//            );
+//            
+//            current_column[j].silent_1 = log_prob_rand1_end + log_sum_exp(
+//                current_column[j].begin,
+//                current_column[j].random_x_1
+//            );
+//            
+//            current_column[j].random_y_1 = log_prob_background + log_prob_rand1_cont + log_sum_exp(
+//                current_column[j - 1].silent_1,
+//                current_column[j - 1].random_y_1
+//            );
+//            
+//            current_column[j].silent_2 = log_prob_rand1_end + log_sum_exp(
+//                current_column[j].silent_1,
+//                current_column[j].random_y_1
+//            );
+//            
+//            if (i > 1 && j > 1) {
+//                current_column[j].match = ((target[i - 2] == query[j - 2]) ?
+//                                           log_prob_match_lookup[query_qualities[j - 2]] :
+//                                           log_prob_mismatch_lookup[query_qualities[j - 2]])
+//                            + log_sum_exp(
+//                                log_prob_continue_match + previous_column[j - 1].match,
+//                                log_prob_to_match       + previous_column[j - 1].insertion,
+//                                log_prob_to_match       + previous_column[j - 1].deletion,
+//                                log_prob_continue_match + previous_column[j - 1].silent_2
+//                            );
+//            }
+//            
+//            current_column[j].insertion = log_prob_background + log_sum_exp(
+//                log_prob_gap_open   + previous_column[j].match,
+//                log_prob_gap_extend + previous_column[j].insertion,
+//                log_prob_gap_open   + previous_column[j].silent_2
+//            );
+//            
+//            current_column[j].deletion = log_prob_background + log_sum_exp(
+//                log_prob_gap_open   + current_column[j - 1].match,
+//                log_prob_gap_extend + current_column[j - 1].insertion,
+//                log_prob_gap_open   + current_column[j - 1].silent_2
+//            );
+//            
+//            current_column[j].silent_3 = log_prob_match_end + log_sum_exp(
+//                current_column[j].match,
+//                current_column[j].insertion,
+//                current_column[j].deletion,
+//                current_column[j].silent_2
+//            );
+//            
+//            current_column[j].random_x_2 = log_prob_background + log_prob_rand2_cont + log_sum_exp(
+//                previous_column[j].silent_3,
+//                previous_column[j].random_x_2
+//            );
+//            
+//            current_column[j].silent_4 = log_prob_rand2_end + log_sum_exp(
+//                current_column[j].silent_3,
+//                current_column[j].random_x_2
+//            );
+//            
+//            current_column[j].random_y_2 = log_prob_background + log_prob_rand2_cont + log_sum_exp(
+//                current_column[j - 1].silent_4,
+//                current_column[j - 1].random_y_2
+//            );
+//        }
+//        
+//        if (i == 2) previous_column[1].begin = LocalPairHmmLogState<RealType>::Negative_infinity;
+//          
+//        std::swap(current_column, previous_column);
+//    }
+//            
+//    return log_prob_rand2_end + log_sum_exp(
+//        previous_column[query_length + 1].silent_4,
+//        previous_column[query_length + 1].random_y_2
+//    );
+//}
 
 #endif

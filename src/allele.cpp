@@ -50,6 +50,14 @@ Allele::SequenceType get_subsequence(const Allele& an_allele, const GenomicRegio
     }
 }
 
+Allele splice(const Allele& an_allele, const GenomicRegion& a_region)
+{
+    if (!contains(an_allele, a_region)) {
+        throw std::runtime_error {"cannot splice Allele region that is not contained"};
+    }
+    return Allele {a_region, get_subsequence(an_allele, a_region)};
+}
+
 bool contains(const Allele& lhs, const Allele& rhs)
 {
     if (!contains(lhs.get_region(), rhs.get_region())) {

@@ -73,7 +73,7 @@ namespace BayesianGenotypeModel
         
         result[the_reference_haplotype] = the_reference_haplotype_pseudo_count;
         
-        for (auto& count : result) count.second = 0.5; // TEST
+        //for (auto& count : result) count.second = 0.5; // TEST
         
         return result;
     }
