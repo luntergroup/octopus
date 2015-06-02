@@ -41,7 +41,7 @@ using std::endl;
 using Octopus::ReadModel;
 
 using Octopus::BayesianGenotypeModel::VariationalBayesGenotypeModel;
-using Octopus::BayesianGenotypeModel::haplotype_probability;
+using Octopus::BayesianGenotypeModel::haplotype_population_probability;
 using Octopus::BayesianGenotypeModel::posterior_predictive_probability;
 
 TEST_CASE("haplotype posteriors sum to one", "[variational_bayes_genotype_model]")
@@ -65,8 +65,8 @@ TEST_CASE("haplotype posteriors sum to one", "[variational_bayes_genotype_model]
     VariationalBayesGenotypeModel the_model {a_read_model, ploidy};
     
     Octopus::ProbabilityType haplotype_posterior_sum {};
-    haplotype_posterior_sum += haplotype_probability(haplotype1, pseudo_counts);
-    haplotype_posterior_sum += haplotype_probability(haplotype2, pseudo_counts);
+    haplotype_posterior_sum += haplotype_population_probability(haplotype1, pseudo_counts);
+    haplotype_posterior_sum += haplotype_population_probability(haplotype2, pseudo_counts);
     
     REQUIRE(is_close_to_one(haplotype_posterior_sum));
 }

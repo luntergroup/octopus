@@ -33,7 +33,7 @@ RealType prior_probability(const Haplotype& the_haplotype, ForwardIterator first
                                                        return the_haplotype.contains(variant.get_alternative_allele());
                                                    });
     
-    boost::math::poisson_distribution<RealType> poisson {0.003 * size(the_haplotype)};
+    boost::math::poisson_distribution<RealType> poisson {0.0015 * size(the_haplotype)};
     
     //return std::pow(0.0003333, num_non_reference_alleles);
     

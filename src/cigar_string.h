@@ -165,6 +165,7 @@ CigarOperation get_operation_at_sequence_index(const CigarString& a_cigar_string
     return *first;
 }
 
+// TODO
 template <typename SizeType>
 inline
 CigarString splice(const CigarString& a_cigar_string, SizeType the_sequence_begin, SizeType size)

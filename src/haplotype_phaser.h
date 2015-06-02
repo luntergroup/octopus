@@ -62,7 +62,8 @@ public:
     
     HaplotypePhaser() = delete;
     HaplotypePhaser(ReferenceGenome& the_reference, VariationalBayesGenotypeModel& the_model,
-                    unsigned ploidy, unsigned max_haplotypes=128, unsigned max_model_update_iterations=3);
+                    unsigned ploidy, unsigned max_haplotypes=128, unsigned max_model_update_iterations=3,
+                    RealType reference_haplotype_pseudo_count=1);
     ~HaplotypePhaser() = default;
     
     HaplotypePhaser(const HaplotypePhaser&)            = delete;
@@ -94,6 +95,8 @@ private:
     HaplotypeTree the_tree_;
     VariationalBayesGenotypeModel& the_model_;
     
+    RealType reference_haplotype_pseudo_count_;
+    
     unsigned max_haplotypes_;
     unsigned max_region_density_;
     unsigned max_model_update_iterations_;
@@ -101,17 +104,21 @@ private:
     PhasedRegion the_last_unphased_region_;
     PhasedRegions the_phased_regions_;
     
-    void phase();
-    void extend_haplotypes(CandidateIterator first, CandidateIterator last);
-    Haplotypes get_haplotypes(const GenomicRegion& a_region);
+    void phase_current_data();
+    void extend_tree(CandidateIterator first, CandidateIterator last);
+    Haplotypes get_unique_haplotypes_from_tree(const GenomicRegion& a_region);
     HaplotypePseudoCounts get_haplotype_prior_counts(const Haplotypes& the_haplotypes,
                                                      CandidateIterator first, CandidateIterator last,
                                                      const GenomicRegion& the_region) const;
-    ReadRanges get_read_ranges(const GenomicRegion& the_region) const;
-    void remove_unlikely_haplotypes(const Haplotypes& the_haplotypes,
-                                    const HaplotypePseudoCounts& prior_counts,
-                                    const HaplotypePseudoCounts& posterior_counts);
-    void remove_phased_region(CandidateIterator first, CandidateIterator last);
+    ReadRanges get_read_iterator_ranges(const GenomicRegion& the_region) const;
+    void remove_unlikely_haplotypes_from_tree(const Haplotypes& current_haplotypes,
+                                              const HaplotypePseudoCounts& prior_counts,
+                                              const HaplotypePseudoCounts& posterior_counts);
+    bool is_haplotype_likely(RealType haplotype_population_prior, RealType haplotype_population_posterior) const;
+    void clear_phased_region(CandidateIterator first, CandidateIterator last);
+    
+    bool is_potentially_phasable(const GenomicRegion& current_region, const Variant& previous_candidate) const;
+    bool was_phased(const GenomicRegion& a_region, const HaplotypePseudoCounts& posterior_counts) const;
 };
 
 template <typename ForwardIterator1, typename ForwardIterator2>
@@ -129,7 +136,7 @@ void HaplotypePhaser::put_data(const BayesianGenotypeModel::ReadRanges<SampleIdT
                                                                  the_candidates_.front().get_region());
     }
     
-    phase();
+    phase_current_data();
 }
 
 } // end namespace Octopus

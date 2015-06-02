@@ -503,7 +503,8 @@ inline std::ostream& operator<<(std::ostream& os, const AlignedRead& a_read)
 //            std::move(sub_sequence),
 //            std::move(sub_qualities),
 //            
-//        } :
+//        }
+//    :
 //        AlignedRead {
 //            a_region,
 //            std::move(sub_sequence),

@@ -521,3 +521,74 @@ TEST_CASE("prune_unqiue leaves a single haplotype which contains the same allele
     
     REQUIRE(std::distance(er.first, er.second) == 1);
 }
+
+TEST_CASE("contains returns true if the given haplotype is in the tree in any form", "[haplotype_tree]")
+{
+    ReferenceGenomeFactory a_factory {};
+    ReferenceGenome human {a_factory.make(human_reference_fasta)};
+    
+    Allele allele1 {parse_region("4:1000000-1000001", human), "A"};
+    Allele allele2 {parse_region("4:1000000-1000001", human), "C"};
+    Allele allele3 {parse_region("4:1000000-1000001", human), "G"};
+    Allele allele4 {parse_region("4:1000001-1000002", human), "G"};
+    Allele allele5 {parse_region("4:1000001-1000002", human), "C"};
+    
+    HaplotypeTree haplotype_tree {human};
+    
+    haplotype_tree.extend(allele1);
+    haplotype_tree.extend(allele2);
+    haplotype_tree.extend(allele3);
+    haplotype_tree.extend(allele4);
+    haplotype_tree.extend(allele5);
+    
+    Haplotype haplotype1 {human};
+    haplotype1.push_back(allele1);
+    haplotype1.push_back(allele4);
+    
+    REQUIRE(haplotype_tree.contains(haplotype1));
+    
+    Haplotype haplotype2 {human};
+    haplotype2.push_back(allele1);
+    haplotype2.push_back(Allele {parse_region("4:1000001-1000002", human), "A"});
+    
+    REQUIRE(!haplotype_tree.contains(haplotype2));
+}
+
+TEST_CASE("is_unique return true if the given haplotype occurs extactly once in the tree", "[haplotype_tree]")
+{
+    
+}
+
+TEST_CASE("get_seperation_region returns the allele region before two unique haplotypes seperate,"
+          "if the haplotypes seperate at the root then the entire region covered by the first haplotype is returned", "[haplotype_tree]")
+{
+    ReferenceGenomeFactory a_factory {};
+    ReferenceGenome human {a_factory.make(human_reference_fasta)};
+    
+    Allele allele1 {parse_region("4:1000000-1000001", human), "A"};
+    Allele allele2 {parse_region("4:1000000-1000001", human), "C"};
+    Allele allele3 {parse_region("4:1000001-1000002", human), "G"};
+    Allele allele4 {parse_region("4:1000001-1000002", human), "T"};
+    
+    HaplotypeTree haplotype_tree {human};
+    
+    haplotype_tree.extend(allele1);
+    haplotype_tree.extend(allele2);
+    haplotype_tree.extend(allele3);
+    haplotype_tree.extend(allele4);
+    
+    Haplotype haplotype1 {human};
+    haplotype1.push_back(allele1);
+    haplotype1.push_back(allele3);
+    
+    Haplotype haplotype2 {human};
+    haplotype2.push_back(allele1);
+    haplotype2.push_back(allele4);
+    
+    Haplotype haplotype3 {human};
+    haplotype3.push_back(allele2);
+    haplotype3.push_back(allele3);
+    
+    REQUIRE(haplotype_tree.get_seperation_region(haplotype1, haplotype2) == GenomicRegion("4", 1000000, 1000001));
+    REQUIRE(haplotype_tree.get_seperation_region(haplotype1, haplotype3) == GenomicRegion("4", 1000000, 1000002));
+}

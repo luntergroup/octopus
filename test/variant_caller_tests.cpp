@@ -126,9 +126,11 @@ TEST_CASE("can call2", "variant_caller")
     
     auto samples = a_read_manager.get_sample_ids();
     
+    //auto a_region = parse_region("6:29909020-29909269", human);
     //auto a_region = parse_region("6:29909330-29909670", human);
     //auto a_region = parse_region("6:29912399-29912528", human);
     auto a_region = parse_region("6:29913709-29914116", human);
+    //auto a_region = parse_region("6:29912084-29912570", human);
     
     auto reads = a_read_manager.fetch_reads(samples, a_region);
     
@@ -153,7 +155,7 @@ TEST_CASE("can call2", "variant_caller")
     ReadModel a_read_model {ploidy};
     VariationalBayesGenotypeModel the_model {a_read_model, ploidy};
     
-    unsigned max_haplotypes {128};
+    unsigned max_haplotypes {64};
     HaplotypePhaser phaser {human, the_model, ploidy, max_haplotypes};
     
     Octopus::BayesianGenotypeModel::ReadRanges<ReadManager::SampleIdType,

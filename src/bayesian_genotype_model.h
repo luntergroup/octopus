@@ -15,6 +15,8 @@
 #include <algorithm>  // std::transform, std::copy_if, std::any_of, std::binary_search
 #include <functional> // std::reference_wrapper
 #include <cmath>      // std::exp, std::log
+#include <cstddef>    // std::size_t
+#include <numeric>    // std::accumulate
 
 #include "haplotype.h"
 #include "genotype.h"
@@ -113,7 +115,7 @@ namespace BayesianGenotypeModel
     RealType probability_genotype_in_samples(const Genotype<Allele>& the_genotype, const Genotypes& genotypes,
                                              const SampleGenotypeProbabilities<RealType>& genotype_probabilities)
     {
-        return 0;
+        return 0; // TODO
     }
     
     template <typename RealType, typename Haplotypes, typename Genotypes>
@@ -121,7 +123,7 @@ namespace BayesianGenotypeModel
                                              const SampleGenotypeProbabilities<RealType>& genotype_probabilities,
                                              const Genotypes& genotypes)
     {
-        return 0;
+        return 0; // TODO
     }
     
     template <typename RealType, typename Haplotypes>
@@ -165,8 +167,8 @@ namespace BayesianGenotypeModel
     }
     
     template <typename RealType>
-    RealType haplotype_probability(const Haplotype& haplotype,
-                                   const HaplotypePseudoCounts<RealType>& haplotype_pseudo_counts)
+    RealType haplotype_population_probability(const Haplotype& haplotype,
+                                              const HaplotypePseudoCounts<RealType>& haplotype_pseudo_counts)
     {
         return haplotype_pseudo_counts.at(haplotype) / sum_values(haplotype_pseudo_counts);
     }
@@ -201,6 +203,27 @@ namespace BayesianGenotypeModel
         }
         
         return dirichlet_multinomial<RealType>(z, a);
+    }
+    
+    template <typename RealType>
+    RealType median_haplotype_population_probability(const HaplotypePseudoCounts<RealType>& haplotype_pseudo_counts)
+    {
+        std::vector<RealType> values(haplotype_pseudo_counts.size());
+        
+        std::transform(std::cbegin(haplotype_pseudo_counts), std::cend(haplotype_pseudo_counts),
+                       values.begin(), [] (const auto& pair) {
+                           return pair.second;
+                       });
+        
+        std::size_t n {values.size() / 2};
+        std::nth_element(values.begin(), values.begin() + n, values.end());
+        
+        std::cout << values[n] << std::endl;
+        
+        return (values.size() % 2 == 0) ?
+            (values[n] + values[n + 1]) / (2 * std::accumulate(values.cbegin(), values.cend(), 0))
+        :
+            values[n] / std::accumulate(values.cbegin(), values.cend(), 0);
     }
     
 } // end namespace BayesianGenotypeModel
