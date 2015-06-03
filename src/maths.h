@@ -10,69 +10,127 @@
 #define __Octopus__maths__
 
 #include <vector>
-#include <cstddef>   // std::size_t
-#include <cmath>     // std::exp, std::log
-#include <numeric>   // std::accumulate
-#include <algorithm> // std::max, std::max_element
+#include <cstddef>     // std::size_t
+#include <cmath>       // std::exp, std::log
+#include <numeric>     // std::accumulate, std::iota
+#include <algorithm>   // std::max, std::max_element, std::transform
+#include <type_traits> // std::enable_if, std::is_integral
 
 #include <boost/math/special_functions/gamma.hpp>
 #include <boost/math/special_functions/factorials.hpp>
 #include <boost/math/special_functions/sign.hpp>
 #include <boost/math/special_functions/digamma.hpp>
 
-template <typename T>
-inline constexpr T exp_maclaurin(T x) {
+template <typename RealType>
+inline constexpr RealType exp_maclaurin(RealType x) {
     return (6 + x * (6 + x * (3 + x))) * 0.16666666;
 }
 
-template <typename T>
-inline constexpr T mercator(T x) {
+template <typename RealType>
+inline constexpr RealType mercator(RealType x) {
     return x - x * x / 2 + x * x * x / 3;
 }
 
-template <typename T>
-inline T log_sum_exp(T log_a, T log_b)
+template <typename RealType>
+inline RealType log_sum_exp(RealType log_a, RealType log_b)
 {
     auto r = std::minmax(log_a, log_b);
     return r.second + std::log(1 + std::exp(r.first - r.second));
 }
 
-template <typename T>
-inline T log_sum_exp(T log_a, T log_b, T log_c)
+template <typename RealType>
+inline RealType log_sum_exp(RealType log_a, RealType log_b, RealType log_c)
 {
     auto max = std::max({log_a, log_b, log_c});
     return max + std::log(std::exp(log_a - max) + std::exp(log_b - max) + std::exp(log_c - max));
 }
 
-template <typename T>
-inline T log_sum_exp(T log_a, T log_b, T log_c, T log_d)
+template <typename RealType>
+inline RealType log_sum_exp(RealType log_a, RealType log_b, RealType log_c, RealType log_d)
 {
     auto max = std::max({log_a, log_b, log_c, log_d});
     return max + std::log(std::exp(log_a - max) + std::exp(log_b - max) + std::exp(log_c - max) +
                           std::exp(log_d - max));
 }
 
-template <typename T>
-inline T log_sum_exp(std::initializer_list<T> il)
+template <typename RealType>
+inline RealType log_sum_exp(std::initializer_list<RealType> il)
 {
     auto max = std::max(il);
-    T exp_sum {};
+    RealType exp_sum {};
     for (const auto& x : il) {
         exp_sum += std::exp(x - max);
     }
     return max + std::log(exp_sum);
 }
 
-template <typename T, typename Iterator>
-inline T log_sum_exp(Iterator first, Iterator last)
+template <typename RealType, typename Iterator>
+inline RealType log_sum_exp(Iterator first, Iterator last)
 {
     auto max = *std::max_element(first, last);
-    T exp_sum {};
+    RealType exp_sum {};
     while (first != last) {
         exp_sum += std::exp(*first - max);
         ++first;
     }
     return max + std::log(exp_sum);
+}
+
+template <typename RealType, typename IntegerType,
+          typename = typename std::enable_if<std::is_integral<IntegerType>::value>::type>
+inline
+RealType log_factorial(IntegerType x)
+{
+    if (x == 0 || x == 1) return 0;
+    if (x == 2) return std::log(2);
+    if (x == 3) return std::log(6);
+    if (x == 4) return std::log(24);
+    
+    if (x > 100) {
+        return x * std::log(x) - x; // Stirling's approximation
+    } else {
+        std::vector<IntegerType> lx(x), tx(x);
+        std::iota(lx.begin(), lx.end(), 0);
+        std::transform(lx.cbegin(), lx.cend(), tx.begin(), [] (IntegerType x) { return std::log(x); });
+        return std::accumulate(tx.cbegin(), tx.cend(), 0);
+    }
+}
+
+template <typename RealType, typename IntegerType>
+inline
+RealType
+log_multinomial_coefficient(std::initializer_list<IntegerType> il)
+{
+    std::vector<RealType> bs(il.size());
+    std::transform(il.begin(), il.end(), bs.begin(), log_factorial<RealType, IntegerType>);
+    return log_factorial<RealType, IntegerType>(std::accumulate(il.begin(), il.end(), 0)) -
+            std::accumulate(bs.cbegin(), bs.cend(), 0);
+}
+
+template <typename RealType, typename Iterator>
+inline
+RealType
+log_multinomial_coefficient(Iterator first, Iterator last)
+{
+    std::vector<RealType> bs(std::distance(first, last));
+    std::transform(first, last, bs.begin(), log_factorial<RealType, decltype(Iterator::value_type)>);
+    return log_factorial(std::accumulate(first, last, 0)) - std::accumulate(bs.cbegin(), bs.cend(), 0);
+}
+
+template <typename RealType, typename Iterator>
+inline
+RealType
+multinomial_coefficient(std::initializer_list<RealType> il)
+{
+    return std::exp(std::move(log_multinomial_coefficient(il)));
+}
+
+template <typename RealType, typename Iterator>
+inline
+RealType
+multinomial_coefficient(Iterator first, Iterator last)
+{
+    return std::exp(log_multinomial_coefficient(first, last));
 }
 
 template <typename RealType>

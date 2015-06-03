@@ -77,44 +77,45 @@ namespace BayesianGenotypeModel
                                                                              const HaplotypePseudoCounts<RealType>& haplotype_pseudo_counts) const
     {
         return boost::math::digamma<RealType>(haplotype_pseudo_counts.at(genotype.at(0)))
-        - boost::math::digamma<RealType>(sum_values(haplotype_pseudo_counts));
+                - boost::math::digamma<RealType>(sum_values(haplotype_pseudo_counts));
     }
     
     VariationalBayesGenotypeModel::RealType
     VariationalBayesGenotypeModel::log_expected_genotype_probability_diploid(const Genotype<Haplotype>& genotype,
                                                                              const HaplotypePseudoCounts<RealType>& haplotype_pseudo_counts) const
     {
-        const static RealType ln_2 = std::log(2);
+        const static RealType ln_2 {std::log(2)};
         
         return ((genotype.is_homozygous()) ?
-                2 * boost::math::digamma<RealType>(haplotype_pseudo_counts.at(genotype.at(0))) :
+                2 * boost::math::digamma<RealType>(haplotype_pseudo_counts.at(genotype.at(0)))
+                :
                 ln_2 + boost::math::digamma<RealType>(haplotype_pseudo_counts.at(genotype.at(0))) +
-                boost::math::digamma<RealType>(haplotype_pseudo_counts.at(genotype.at(1))))
-        - 2 * boost::math::digamma<RealType>(sum_values(haplotype_pseudo_counts));
+                    boost::math::digamma<RealType>(haplotype_pseudo_counts.at(genotype.at(1))))
+                    - 2 * boost::math::digamma<RealType>(sum_values(haplotype_pseudo_counts));
     }
     
     VariationalBayesGenotypeModel::RealType
     VariationalBayesGenotypeModel::log_expected_genotype_probability_triploid(const Genotype<Haplotype>& genotype,
                                                                               const HaplotypePseudoCounts<RealType>& haplotype_pseudo_counts) const
     {
-        const static RealType ln_3 = std::log(3);
-        const static RealType ln_6 = std::log(6);
+        const static RealType ln_3 {std::log(3)};
+        const static RealType ln_6 {std::log(6)};
         
-        auto k = 3 * boost::math::digamma<RealType>(sum_values(haplotype_pseudo_counts));
+        const auto k = 3 * boost::math::digamma<RealType>(sum_values(haplotype_pseudo_counts));
         
         if (genotype.is_homozygous()) {
             return 3 * boost::math::digamma<RealType>(haplotype_pseudo_counts.at(genotype.at(0))) - k;
         } else if (genotype.num_occurences(genotype.at(0)) == 2) {
             return  ln_3 + 2 * boost::math::digamma<RealType>(haplotype_pseudo_counts.at(genotype.at(0))) +
-            boost::math::digamma<RealType>(haplotype_pseudo_counts.at((genotype.at(1) == genotype.at(0)) ?
-                                                                      genotype.at(2) : genotype.at(1))) - k;
+                        boost::math::digamma<RealType>(haplotype_pseudo_counts.at((genotype.at(1) == genotype.at(0)) ?
+                                                                                  genotype.at(2) : genotype.at(1))) - k;
         } else if (genotype.num_occurences(genotype.at(1)) == 2) {
             return  ln_3 + 2 * boost::math::digamma<RealType>(haplotype_pseudo_counts.at(genotype.at(1))) +
-            boost::math::digamma<RealType>(haplotype_pseudo_counts.at(genotype.at(0))) - k;
+                        boost::math::digamma<RealType>(haplotype_pseudo_counts.at(genotype.at(0))) - k;
         } else {
             return ln_6 + boost::math::digamma<RealType>(haplotype_pseudo_counts.at(genotype.at(0))) +
-            boost::math::digamma<RealType>(haplotype_pseudo_counts.at(genotype.at(1))) +
-            boost::math::digamma<RealType>(haplotype_pseudo_counts.at(genotype.at(2))) + k;
+                        boost::math::digamma<RealType>(haplotype_pseudo_counts.at(genotype.at(1))) +
+                        boost::math::digamma<RealType>(haplotype_pseudo_counts.at(genotype.at(2))) - k;
         }
     }
     
@@ -122,8 +123,21 @@ namespace BayesianGenotypeModel
     VariationalBayesGenotypeModel::log_expected_genotype_probability_polyploid(const Genotype<Haplotype>& genotype,
                                                                                const HaplotypePseudoCounts<RealType>& haplotype_pseudo_counts) const
     {
-        //TODO
-        return 0;
+        const auto k = 3 * boost::math::digamma<RealType>(sum_values(haplotype_pseudo_counts));
+        
+        auto unique_haplotypes = genotype.get_unique();
+        
+        RealType r {0};
+        
+        std::vector<unsigned> occurences {};
+        occurences.reserve(unique_haplotypes.size());
+        
+        for (const auto& haplotype : unique_haplotypes) {
+            occurences.push_back(genotype.num_occurences(haplotype));
+            r += genotype.num_occurences(haplotype) * haplotype_pseudo_counts.at(haplotype);
+        }
+        
+        return log_multinomial_coefficient<RealType>(occurences.cbegin(), occurences.cend()) + r - k;
     }
     
 } // end namespace BayesianGenotypeModel

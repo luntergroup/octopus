@@ -87,6 +87,7 @@ namespace BayesianGenotypeModel
     {
         RealType result {0};
         
+        // TODO: this calculation is incorrect
         for (const auto& genotype : genotypes) {
             if (genotype.contains(haplotype)) {
                 result += posterior_predictive_probability(genotype, haplotype_pseudo_counts);

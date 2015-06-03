@@ -122,24 +122,15 @@ ReadModel::RealType ReadModel::log_probability_triploid(const AlignedRead& read,
 ReadModel::RealType ReadModel::log_probability_polyploid(const AlignedRead& read, const Genotype<Haplotype>& genotype,
                                                          SampleIdType sample)
 {
-    //TODO
-    std::vector<RealType> log_haplotype_probabilities {};
-    log_haplotype_probabilities.reserve(ploidy_);
+    std::vector<RealType> log_haplotype_probabilities(ploidy_);
     
-    //    for (const auto& haplotype : genotype) {
-    //        if (is_haplotype_in_cache(sample, haplotype)) {
-    //            log_haplotype_probabilities.push_back(haplotype_log_probability_cache_.at(sample).at(haplotype));
-    //        } else {
-    //            auto haplotype_log_probability = log_probability(reads, haplotype);
-    //            haplotype_log_probability_cache_[sample][haplotype] = haplotype_log_probability;
-    //            log_haplotype_probabilities.push_back(haplotype_log_probability);
-    //        }
-    //    }
+    std::transform(std::cbegin(genotype), std::cend(genotype), log_haplotype_probabilities.begin(),
+                   [this, &read, &sample] (const Haplotype& haplotype) {
+                       return log_probability(read, haplotype, sample);
+                   });
     
-    auto log_sum_haplotype_probabilities = log_sum_exp<RealType>(log_haplotype_probabilities.cbegin(),
-                                                               log_haplotype_probabilities.cend());
-    
-    return log_sum_haplotype_probabilities - ln_ploidy_;
+    return log_sum_exp<RealType>(log_haplotype_probabilities.cbegin(),
+                                 log_haplotype_probabilities.cend()) - ln_ploidy_;
 }
 
 bool ReadModel::is_read_in_cache(SampleIdType sample, const AlignedRead& read,
