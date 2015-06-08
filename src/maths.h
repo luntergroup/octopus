@@ -77,6 +77,7 @@ inline RealType log_sum_exp(Iterator first, Iterator last)
 }
 
 template <typename RealType, typename IntegerType,
+          typename = typename std::enable_if<std::is_floating_point<RealType>::value>::type,
           typename = typename std::enable_if<std::is_integral<IntegerType>::value>::type>
 inline
 RealType log_factorial(IntegerType x)
@@ -89,10 +90,12 @@ RealType log_factorial(IntegerType x)
     if (x > 100) {
         return x * std::log(x) - x; // Stirling's approximation
     } else {
-        std::vector<IntegerType> lx(x), tx(x);
-        std::iota(lx.begin(), lx.end(), 0);
-        std::transform(lx.cbegin(), lx.cend(), tx.begin(), [] (IntegerType x) { return std::log(x); });
-        return std::accumulate(tx.cbegin(), tx.cend(), 0);
+        std::vector<IntegerType> lx(x);
+        std::iota(lx.begin(), lx.end(), 1);
+        std::vector<RealType> tx(x);
+        std::transform(lx.cbegin(), lx.cend(), tx.begin(),
+                       [] (IntegerType a) { return std::log(static_cast<RealType>(a)); });
+        return std::accumulate(tx.cbegin(), tx.cend(), static_cast<RealType>(0));
     }
 }
 
@@ -101,10 +104,10 @@ inline
 RealType
 log_multinomial_coefficient(std::initializer_list<IntegerType> il)
 {
-    std::vector<RealType> bs(il.size());
-    std::transform(il.begin(), il.end(), bs.begin(), log_factorial<RealType, IntegerType>);
-    return log_factorial<RealType, IntegerType>(std::accumulate(il.begin(), il.end(), 0)) -
-            std::accumulate(bs.cbegin(), bs.cend(), 0);
+    std::vector<RealType> denoms(il.size());
+    std::transform(il.begin(), il.end(), denoms.begin(), log_factorial<RealType, IntegerType>);
+    return log_factorial<RealType>(std::accumulate(il.begin(), il.end(), 0)) -
+            std::accumulate(denoms.cbegin(), denoms.cend(), static_cast<RealType>(0));
 }
 
 template <typename RealType, typename Iterator>
@@ -112,25 +115,27 @@ inline
 RealType
 log_multinomial_coefficient(Iterator first, Iterator last)
 {
-    std::vector<RealType> bs(std::distance(first, last));
-    std::transform(first, last, bs.begin(), log_factorial<RealType, decltype(Iterator::value_type)>);
-    return log_factorial(std::accumulate(first, last, 0)) - std::accumulate(bs.cbegin(), bs.cend(), 0);
+    std::vector<RealType> denoms(std::distance(first, last));
+    using IntegerType = typename Iterator::value_type;
+    std::transform(first, last, denoms.begin(), log_factorial<RealType, IntegerType>);
+    return log_factorial<RealType>(std::accumulate(first, last, 0)) -
+            std::accumulate(denoms.cbegin(), denoms.cend(), static_cast<RealType>(0));
 }
 
-template <typename RealType, typename Iterator>
+template <typename RealType, typename IntegerType>
 inline
-RealType
-multinomial_coefficient(std::initializer_list<RealType> il)
+IntegerType
+multinomial_coefficient(std::initializer_list<IntegerType> il)
 {
-    return std::exp(std::move(log_multinomial_coefficient(il)));
+    return static_cast<IntegerType>(std::exp(log_multinomial_coefficient<RealType, IntegerType>(std::move(il))));
 }
 
-template <typename RealType, typename Iterator>
+template <typename IntegerType, typename RealType, typename Iterator>
 inline
-RealType
+IntegerType
 multinomial_coefficient(Iterator first, Iterator last)
 {
-    return std::exp(log_multinomial_coefficient(first, last));
+    return static_cast<IntegerType>(std::exp(log_multinomial_coefficient<RealType, IntegerType>(first, last)));
 }
 
 template <typename RealType>

@@ -193,13 +193,15 @@ namespace detail
     }
 } // end namespace detail
 
-// Assumes the input haplotypes are all unique
+// Assumes the input haplotypes are unique
 template <typename MappableType>
 std::vector<Genotype<MappableType>> get_all_genotypes(const std::vector<MappableType>& elements, unsigned ploidy)
 {
     std::vector<Genotype<MappableType>> result {};
     
     unsigned num_elements {static_cast<unsigned>(elements.size())};
+    
+    result.reserve(num_genotypes(num_elements, ploidy));
     
     std::vector<unsigned> element_indicies(ploidy, 0);
     

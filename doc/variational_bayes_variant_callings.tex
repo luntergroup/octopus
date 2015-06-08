@@ -303,6 +303,14 @@ where the components of $\boldsymbol{\alpha}'$ are given by
 \alpha'_i = \alpha_i + \sum_{n = 1}^N \sum_{k = 1}^K \tau_{nk} \mu_i(\boldsymbol{g}^k)
 \end{equation}
 
+Note this may also be written as
+
+\begin{equation}
+\alpha'_i = \alpha_i + \sum_{k = 1}^K \mu_i(\boldsymbol{g}^k) \sum_{n = 1}^N \tau_{nk}
+\end{equation}
+
+which may be more efficient to compute.
+
 We can see the similarity of the variational Bayes solution (\ref{eq:vb_solution}) to the EM solution (\ref{eq:em_solution}). In particular both involve an expectation of the number of occurrences of each haplotype in the samples, the difference is that (\ref{eq:vb_solution}) implicitly accounts for our uncertainty in $\boldsymbol{\pi}$ through $\tau$. Additionally, as in all Bayesian models, the variational Bayes model automatically penalises model complexity through the term $M\psi(\alpha_0)$. It is also worthwhile noting that this variational Bayes method has the same runtime complexity as the EM algorithm.
 
 \subsection{Specifying the haplotype priors}

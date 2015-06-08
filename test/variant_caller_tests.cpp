@@ -167,27 +167,25 @@ TEST_CASE("can call2", "variant_caller")
                                                    std::make_move_iterator(good_reads[sample].end())));
     }
     
-    cout << log_multinomial_coefficient<double>({1, 1}) << endl;
+    phaser.put_data(read_ranges, candidates.cbegin(), candidates.cend());
     
-//    phaser.put_data(read_ranges, candidates.cbegin(), candidates.cend());
-//    
-//    auto phased_regions = phaser.get_phased_regions(true);
-//    
-//    auto allele_posteriors = Octopus::VariantCaller::get_allele_posteriors(samples, phased_regions, candidates);
-//    
-//    for (const auto& haplotype_count : phased_regions.front().the_latent_posteriors.haplotype_pseudo_counts) {
-//        if (haplotype_count.second > 1.0) {
-//            cout << haplotype_count.first << endl;
-//            haplotype_count.first.print_explicit_alleles();
-//            cout << haplotype_count.second << endl;
-//        }
-//    }
-//    
-//    for (const auto& sample : samples) {
-//        for (const auto& allele_posterior : allele_posteriors.at(sample)) {
-//            cout << sample << " " << allele_posterior.first << " " << allele_posterior.second << endl;
-//        }
-//    }
+    auto phased_regions = phaser.get_phased_regions(true);
+    
+    auto allele_posteriors = Octopus::VariantCaller::get_allele_posteriors(samples, phased_regions, candidates);
+    
+    for (const auto& haplotype_count : phased_regions.front().the_latent_posteriors.haplotype_pseudo_counts) {
+        if (haplotype_count.second > 1.0) {
+            cout << haplotype_count.first << endl;
+            haplotype_count.first.print_explicit_alleles();
+            cout << haplotype_count.second << endl;
+        }
+    }
+    
+    for (const auto& sample : samples) {
+        for (const auto& allele_posterior : allele_posteriors.at(sample)) {
+            cout << sample << " " << allele_posterior.first << " " << allele_posterior.second << endl;
+        }
+    }
 }
 
 TEST_CASE("reference allele posteriors in regions with no reads are the reference haplotype priors", "[variant_caller]")

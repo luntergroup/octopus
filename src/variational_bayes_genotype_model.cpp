@@ -90,8 +90,8 @@ namespace BayesianGenotypeModel
                 2 * boost::math::digamma<RealType>(haplotype_pseudo_counts.at(genotype.at(0)))
                 :
                 ln_2 + boost::math::digamma<RealType>(haplotype_pseudo_counts.at(genotype.at(0))) +
-                    boost::math::digamma<RealType>(haplotype_pseudo_counts.at(genotype.at(1))))
-                    - 2 * boost::math::digamma<RealType>(sum_values(haplotype_pseudo_counts));
+                        boost::math::digamma<RealType>(haplotype_pseudo_counts.at(genotype.at(1)))
+                ) - 2 * boost::math::digamma<RealType>(sum_values(haplotype_pseudo_counts));
     }
     
     VariationalBayesGenotypeModel::RealType
@@ -107,15 +107,15 @@ namespace BayesianGenotypeModel
             return 3 * boost::math::digamma<RealType>(haplotype_pseudo_counts.at(genotype.at(0))) - k;
         } else if (genotype.num_occurences(genotype.at(0)) == 2) {
             return  ln_3 + 2 * boost::math::digamma<RealType>(haplotype_pseudo_counts.at(genotype.at(0))) +
-                        boost::math::digamma<RealType>(haplotype_pseudo_counts.at((genotype.at(1) == genotype.at(0)) ?
-                                                                                  genotype.at(2) : genotype.at(1))) - k;
+                               boost::math::digamma<RealType>(haplotype_pseudo_counts.at((genotype.at(0) == genotype.at(1)) ?
+                                                                                         genotype.at(2) : genotype.at(1))) - k;
         } else if (genotype.num_occurences(genotype.at(1)) == 2) {
             return  ln_3 + 2 * boost::math::digamma<RealType>(haplotype_pseudo_counts.at(genotype.at(1))) +
-                        boost::math::digamma<RealType>(haplotype_pseudo_counts.at(genotype.at(0))) - k;
+                               boost::math::digamma<RealType>(haplotype_pseudo_counts.at(genotype.at(0))) - k;
         } else {
             return ln_6 + boost::math::digamma<RealType>(haplotype_pseudo_counts.at(genotype.at(0))) +
-                        boost::math::digamma<RealType>(haplotype_pseudo_counts.at(genotype.at(1))) +
-                        boost::math::digamma<RealType>(haplotype_pseudo_counts.at(genotype.at(2))) - k;
+                          boost::math::digamma<RealType>(haplotype_pseudo_counts.at(genotype.at(1))) +
+                          boost::math::digamma<RealType>(haplotype_pseudo_counts.at(genotype.at(2))) - k;
         }
     }
     
@@ -123,21 +123,22 @@ namespace BayesianGenotypeModel
     VariationalBayesGenotypeModel::log_expected_genotype_probability_polyploid(const Genotype<Haplotype>& genotype,
                                                                                const HaplotypePseudoCounts<RealType>& haplotype_pseudo_counts) const
     {
-        const auto k = 3 * boost::math::digamma<RealType>(sum_values(haplotype_pseudo_counts));
-        
         auto unique_haplotypes = genotype.get_unique();
-        
-        RealType r {0};
         
         std::vector<unsigned> occurences {};
         occurences.reserve(unique_haplotypes.size());
         
+        RealType r {0};
+        unsigned num_occurences;
+        
         for (const auto& haplotype : unique_haplotypes) {
-            occurences.push_back(genotype.num_occurences(haplotype));
-            r += genotype.num_occurences(haplotype) * haplotype_pseudo_counts.at(haplotype);
+            num_occurences = genotype.num_occurences(haplotype);
+            occurences.push_back(num_occurences);
+            r += num_occurences * boost::math::digamma<RealType>(haplotype_pseudo_counts.at(haplotype));
         }
         
-        return log_multinomial_coefficient<RealType>(occurences.cbegin(), occurences.cend()) + r - k;
+        return log_multinomial_coefficient<RealType>(occurences.cbegin(), occurences.cend()) + r
+                - ploidy_ * boost::math::digamma<RealType>(sum_values(haplotype_pseudo_counts));
     }
     
 } // end namespace BayesianGenotypeModel

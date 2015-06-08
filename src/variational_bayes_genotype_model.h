@@ -24,6 +24,8 @@
 #include "pair_hmm.h"
 #include "bayesian_genotype_model.h"
 
+#include <iostream> // TEST
+
 namespace Octopus
 {
 
@@ -74,7 +76,7 @@ namespace BayesianGenotypeModel
         RealType posterior_haplotype_pseudo_count(const Haplotype& haplotype, RealType prior_pseudo_count,
                                                   const GenotypeProbabilities<SampleIdType, RealType>& genotype_responsabilities) const;
         
-        // This is just a slight optimisation of the other posterior_haplotype_pseudo_count
+        // This is just an optimisation of the other posterior_haplotype_pseudo_count
         template <typename Container>
         RealType posterior_haplotype_pseudo_count(const Haplotype& haplotype, RealType prior_pseudo_count,
                                                   const GenotypeProbabilities<SampleIdType, RealType>& genotype_responsabilities,
@@ -106,7 +108,7 @@ namespace BayesianGenotypeModel
                                            SampleIdType sample)
     {
         return log_expected_genotype_probability(genotype, haplotype_pseudo_counts) +
-        read_model_.log_probability(first_read, last_read, genotype, sample);
+                read_model_.log_probability(first_read, last_read, genotype, sample);
     }
     
     template <typename ForwardIterator, typename Container>
@@ -116,16 +118,16 @@ namespace BayesianGenotypeModel
                                                       const HaplotypePseudoCounts<RealType>& haplotype_pseudo_counts,
                                                       const Container& genotypes, SampleIdType sample)
     {
-        RealType log_rho_genotype = log_rho(genotype, haplotype_pseudo_counts, first_read, last_read, sample);
+        RealType log_rho_genotype {log_rho(genotype, haplotype_pseudo_counts, first_read, last_read, sample)};
         
-        std::vector<RealType> log_rho_genotypes (genotypes.size());
+        std::vector<RealType> log_rho_genotypes(genotypes.size());
         
         std::transform(std::cbegin(genotypes), std::cend(genotypes), log_rho_genotypes.begin(),
                        [this, &haplotype_pseudo_counts, first_read, last_read, sample] (const auto& genotype) {
                            return log_rho(genotype, haplotype_pseudo_counts, first_read, last_read, sample);
                        });
         
-        RealType log_sum_rho_genotypes = log_sum_exp<RealType>(log_rho_genotypes.cbegin(), log_rho_genotypes.cend());
+        auto log_sum_rho_genotypes = log_sum_exp<RealType>(log_rho_genotypes.cbegin(), log_rho_genotypes.cend());
         
         return std::exp(log_rho_genotype - log_sum_rho_genotypes);
     }
@@ -137,14 +139,14 @@ namespace BayesianGenotypeModel
                                                        const HaplotypePseudoCounts<RealType>& haplotype_pseudo_counts,
                                                        SampleIdType sample)
     {
-        std::vector<RealType> log_rho_genotypes (genotypes.size());
+        std::vector<RealType> log_rho_genotypes(genotypes.size());
         
         std::transform(std::cbegin(genotypes), std::cend(genotypes), log_rho_genotypes.begin(),
                        [this, &haplotype_pseudo_counts, first_read, last_read, sample] (const auto& genotype) {
                            return log_rho(genotype, haplotype_pseudo_counts, first_read, last_read, sample);
                        });
         
-        RealType log_sum_rho_genotypes = log_sum_exp<RealType>(log_rho_genotypes.cbegin(), log_rho_genotypes.cend());
+        auto log_sum_rho_genotypes = log_sum_exp<RealType>(log_rho_genotypes.cbegin(), log_rho_genotypes.cend());
         
         SampleGenotypeProbabilities<RealType> result {};
         result.reserve(genotypes.size());
@@ -175,7 +177,9 @@ namespace BayesianGenotypeModel
                 for (const auto& sample_genotype_responsabilities : genotype_responsabilities) {
                     responsability_sum += sample_genotype_responsabilities.second.at(genotype);
                 }
-                
+                if (responsability_sum > 0.5) {
+                    std::cout << num_occurences << " " << responsability_sum << std::endl;
+                }
                 result += num_occurences * responsability_sum;
                 responsability_sum = 0;
             }
