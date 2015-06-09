@@ -177,9 +177,7 @@ namespace BayesianGenotypeModel
                 for (const auto& sample_genotype_responsabilities : genotype_responsabilities) {
                     responsability_sum += sample_genotype_responsabilities.second.at(genotype);
                 }
-                if (responsability_sum > 0.5) {
-                    std::cout << num_occurences << " " << responsability_sum << std::endl;
-                }
+                
                 result += num_occurences * responsability_sum;
                 responsability_sum = 0;
             }

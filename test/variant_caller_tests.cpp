@@ -47,11 +47,14 @@ TEST_CASE("can call", "variant_caller")
     ReferenceGenomeFactory a_factory {};
     ReferenceGenome human(a_factory.make(human_reference_fasta));
     
-    ReadManager a_read_manager(std::vector<std::string> {human_1000g_bam2});
+    ReadManager a_read_manager(std::vector<std::string> {human_1000g_bam1});
     
     auto samples = a_read_manager.get_sample_ids();
     
-    auto a_region = parse_region("16:62646800-62647150", human);
+    //auto a_region = parse_region("16:62646800-62647150", human);
+    auto a_region = parse_region("11:67503118-67503253", human);
+    //auto a_region = parse_region("11:67503125-67503164", human);
+    //auto a_region = parse_region("11:67502976-67503491", human);
     
     auto reads = a_read_manager.fetch_reads(samples, a_region);
     
@@ -86,37 +89,25 @@ TEST_CASE("can call", "variant_caller")
                                                    std::make_move_iterator(good_reads[sample].end())));
     }
     
-//    phaser.put_data(read_ranges, candidates.cbegin(), candidates.cend());
-//    
-//    auto phased_regions = phaser.get_phased_regions(true);
-//    
-//    auto allele_posteriors = Octopus::VariantCaller::get_allele_posteriors(samples, phased_regions, candidates);
-//    
-//    for (const auto& sample : samples) {
-//        for (const auto& allele_posterior : allele_posteriors.at(sample)) {
-//            cout << sample << " " << allele_posterior.first << " " << allele_posterior.second << endl;
-//        }
-//    }
+    phaser.put_data(read_ranges, candidates.cbegin(), candidates.cend());
+
+    auto phased_regions = phaser.get_phased_regions(true);
     
-//    cout << "reference alleles" << endl;
-//    
-//    auto alleles_between_candidates = get_reference_alleles_between_variants(candidates, human);
-//    
-//    std::vector<Allele> decomposed_reference_alleles {};
-//    for (auto& allele : alleles_between_candidates) {
-//        auto decomposed_alleles = decompose(allele);
-//        decomposed_reference_alleles.insert(decomposed_reference_alleles.end(), decomposed_alleles.begin(),
-//                                            decomposed_alleles.end());
-//    }
-//    
-//    allele_posteriors = Octopus::VariantCaller::get_allele_posteriors(samples, phased_regions,
-//                                                                      decomposed_reference_alleles);
-//    
-//    for (const auto& sample : samples) {
-//        for (const auto& allele_posterior : allele_posteriors.at(sample)) {
-//            cout << sample << " " << allele_posterior.first << " " << allele_posterior.second << endl;
-//        }
-//    }
+    auto allele_posteriors = Octopus::VariantCaller::get_allele_posteriors(samples, phased_regions, candidates);
+    
+    for (const auto& haplotype_count : phased_regions.front().the_latent_posteriors.haplotype_pseudo_counts) {
+        if (haplotype_count.second > 1.0) {
+            cout << haplotype_count.first << endl;
+            haplotype_count.first.print_explicit_alleles();
+            cout << haplotype_count.second << endl;
+        }
+    }
+    
+    for (const auto& sample : samples) {
+        for (const auto& allele_posterior : allele_posteriors.at(sample)) {
+            cout << sample << " " << allele_posterior.first << " " << allele_posterior.second << endl;
+        }
+    }
 }
 
 TEST_CASE("can call2", "variant_caller")
@@ -167,25 +158,25 @@ TEST_CASE("can call2", "variant_caller")
                                                    std::make_move_iterator(good_reads[sample].end())));
     }
     
-    phaser.put_data(read_ranges, candidates.cbegin(), candidates.cend());
-    
-    auto phased_regions = phaser.get_phased_regions(true);
-    
-    auto allele_posteriors = Octopus::VariantCaller::get_allele_posteriors(samples, phased_regions, candidates);
-    
-    for (const auto& haplotype_count : phased_regions.front().the_latent_posteriors.haplotype_pseudo_counts) {
-        if (haplotype_count.second > 1.0) {
-            cout << haplotype_count.first << endl;
-            haplotype_count.first.print_explicit_alleles();
-            cout << haplotype_count.second << endl;
-        }
-    }
-    
-    for (const auto& sample : samples) {
-        for (const auto& allele_posterior : allele_posteriors.at(sample)) {
-            cout << sample << " " << allele_posterior.first << " " << allele_posterior.second << endl;
-        }
-    }
+//    phaser.put_data(read_ranges, candidates.cbegin(), candidates.cend());
+//    
+//    auto phased_regions = phaser.get_phased_regions(true);
+//    
+//    auto allele_posteriors = Octopus::VariantCaller::get_allele_posteriors(samples, phased_regions, candidates);
+//    
+//    for (const auto& haplotype_count : phased_regions.front().the_latent_posteriors.haplotype_pseudo_counts) {
+//        if (haplotype_count.second > 1.0) {
+//            cout << haplotype_count.first << endl;
+//            haplotype_count.first.print_explicit_alleles();
+//            cout << haplotype_count.second << endl;
+//        }
+//    }
+//    
+//    for (const auto& sample : samples) {
+//        for (const auto& allele_posterior : allele_posteriors.at(sample)) {
+//            cout << sample << " " << allele_posterior.first << " " << allele_posterior.second << endl;
+//        }
+//    }
 }
 
 TEST_CASE("reference allele posteriors in regions with no reads are the reference haplotype priors", "[variant_caller]")

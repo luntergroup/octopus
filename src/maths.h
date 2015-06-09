@@ -209,16 +209,29 @@ RealType digamma_inv(RealType x)
 
 template <typename MapType>
 inline
+typename MapType::key_type
+sum_keys(const MapType& map)
+{
+    return std::accumulate(std::cbegin(map), std::cend(map), typename MapType::key_type {},
+                           [] (const auto previous, const auto& p) { return previous + p.first; });
+}
+
+template <typename ResultType, typename MapType, typename UnaryOperation>
+inline
+ResultType
+sum_keys(const MapType& map, UnaryOperation op)
+{
+    return std::accumulate(std::cbegin(map), std::cend(map), ResultType {},
+                           [op] (const auto previous, const auto& p) { return previous + op(p.first); });
+}
+
+template <typename MapType>
+inline
 typename MapType::mapped_type
 sum_values(const MapType& map)
 {
-    typename MapType::mapped_type result {};
-    
-    for (const auto& map_pair : map) {
-        result += map_pair.second;
-    }
-    
-    return result;
+    return std::accumulate(std::cbegin(map), std::cend(map), typename MapType::mapped_type {},
+                           [] (const auto previous, const auto& p) { return previous + p.second; });
 }
 
 template <typename ResultType, typename MapType, typename UnaryOperation>
@@ -226,13 +239,8 @@ inline
 ResultType
 sum_values(const MapType& map, UnaryOperation op)
 {
-    ResultType result {};
-    
-    for (const auto& map_pair : map) {
-        result += op(map_pair.second);
-    }
-    
-    return result;
+    return std::accumulate(std::cbegin(map), std::cend(map), ResultType {},
+                           [op] (const auto previous, const auto& p) { return previous + op(p.second); });
 }
 
 #endif /* defined(__Octopus__maths__) */

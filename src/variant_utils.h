@@ -61,6 +61,10 @@ bool is_indel(const Variant& a_variant) noexcept;
 
 bool is_mnv(const Variant& a_variant) noexcept;
 
+bool is_transition(const Variant& a_variant) noexcept;
+
+bool is_transversion(const Variant& a_variant) noexcept;
+
 namespace detail
 {
     template <typename InputIterator>

@@ -70,6 +70,8 @@ void HaplotypePhaser::phase_current_data()
     
     sub_region = next_sub_region(sub_region, the_reads_, the_candidates_, max_candidates, max_indicators, false, false);
     
+    GenomicRegion test_region {"6", 29913636, 29914203}; // TEST
+    
     while (true) {
         cout << "looking in region " << sub_region << endl;
         candidate_range = overlap_range(the_candidates_.cbegin(), the_candidates_.cend(), sub_region);
@@ -82,6 +84,12 @@ void HaplotypePhaser::phase_current_data()
         auto genotypes = get_all_genotypes(haplotypes, ploidy_);
         
         cout << "proceeding with " << haplotypes.size() << " haplotypes" << endl;
+        
+//        if (sub_region == test_region) {
+//            for (const auto& haplotype_count : haplotype_prior_counts) {
+//                cout << Octopus::prior_probability<RealType>(haplotype_count.first, candidate_range.first, candidate_range.second) << " " << haplotype_count.second << endl;
+//            }
+//        }
         
         latent_posteriors = BayesianGenotypeModel::update_latents(the_model_, genotypes,
                                                                   haplotype_prior_counts,

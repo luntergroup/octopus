@@ -304,3 +304,18 @@ bool is_mnv(const Variant& a_variant) noexcept
 {
     return a_variant.reference_allele_size() > 1 && a_variant.alternative_allele_size() > 1;
 }
+
+bool is_transition(const Variant& a_variant) noexcept
+{
+    return is_snp(a_variant) && (
+           (a_variant.get_reference_allele_sequence() == "A" && a_variant.get_alternative_allele_sequence() == "G")
+        || (a_variant.get_reference_allele_sequence() == "G" && a_variant.get_alternative_allele_sequence() == "A")
+        || (a_variant.get_reference_allele_sequence() == "C" && a_variant.get_alternative_allele_sequence() == "T")
+        || (a_variant.get_reference_allele_sequence() == "T" && a_variant.get_alternative_allele_sequence() == "C")
+    );
+}
+
+bool is_transversion(const Variant& a_variant) noexcept
+{
+    return is_snp(a_variant) && !is_transition(a_variant);
+}

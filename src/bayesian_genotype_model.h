@@ -65,12 +65,23 @@ namespace BayesianGenotypeModel
         
         static const RealType ln_2 {std::log(2)};
         
-        auto norm = sum_values(the_haplotype_priors);
+//        for (const auto& hap_prior : the_haplotype_priors) {
+//            hap_prior.first.print_explicit_alleles();
+//            std::cout << hap_prior.second << std::endl;
+////            if (hap_prior.second > 0.5)
+////                hap_prior.second = 1.0;
+////            else
+////                hap_prior.second = 0.000001;
+////            std::cout << hap_prior.second << std::endl;
+//        }
+        
+        static const RealType concentration {std::log(10.0)};
         
         for (const auto& haplotype_prior : the_haplotype_priors) {
-            result.emplace(haplotype_prior.first, digamma_inv(std::log(haplotype_prior.second / norm) -
-                                                              std::log(the_reference_haplotype_pseudo_count - 0.5) -
-                                                              ln_2));
+//            result.emplace(haplotype_prior.first, digamma_inv(std::log(haplotype_prior.second) -
+//                                                              std::log(the_reference_haplotype_pseudo_count - 0.5) -
+//                                                              ln_2));
+            result.emplace(haplotype_prior.first, digamma_inv(std::log(haplotype_prior.second) - concentration));
         }
         
         result[the_reference_haplotype] = the_reference_haplotype_pseudo_count;
