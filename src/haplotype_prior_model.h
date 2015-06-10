@@ -29,8 +29,8 @@ namespace detail
 {
     // A ts/tv ratio of around 2.1 seems to be a good approximation for human genome.
     // See https://www.biostars.org/p/4751/ for a discussion on this.
-    template <typename RealType> constexpr RealType transition_rate {0.000222}; //0.0006999
-    template <typename RealType> constexpr RealType transversion_rate {0.000111}; //0.0003333;
+    template <typename RealType> constexpr RealType transition_rate {0.0006999}; //0.0006999 or 0.000222?
+    template <typename RealType> constexpr RealType transversion_rate {0.0003333}; //0.0003333 or 0.000111?
 }
 
 template <typename RealType, typename ForwardIterator>

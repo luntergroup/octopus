@@ -63,28 +63,20 @@ namespace BayesianGenotypeModel
         HaplotypePseudoCounts<RealType> result {};
         result.reserve(the_haplotype_priors.size());
         
-        static const RealType ln_2 {std::log(2)};
-        
-//        for (const auto& hap_prior : the_haplotype_priors) {
-//            hap_prior.first.print_explicit_alleles();
-//            std::cout << hap_prior.second << std::endl;
-////            if (hap_prior.second > 0.5)
-////                hap_prior.second = 1.0;
-////            else
-////                hap_prior.second = 0.000001;
-////            std::cout << hap_prior.second << std::endl;
-//        }
-        
-        static const RealType concentration {std::log(10.0)};
+        RealType reference_bias {0.9};
+        static const RealType concentration {std::log(7.0)};
         
         for (const auto& haplotype_prior : the_haplotype_priors) {
-//            result.emplace(haplotype_prior.first, digamma_inv(std::log(haplotype_prior.second) -
-//                                                              std::log(the_reference_haplotype_pseudo_count - 0.5) -
-//                                                              ln_2));
-            result.emplace(haplotype_prior.first, digamma_inv(std::log(haplotype_prior.second) - concentration));
+            result.emplace(haplotype_prior.first, digamma_inv(reference_bias * std::log(haplotype_prior.second) - concentration));
         }
         
-        result[the_reference_haplotype] = the_reference_haplotype_pseudo_count;
+//        std::cout << "prior pseudo counts: " << std::endl;
+//        for (const auto& count : result) {
+//            std::cout << count.second << std::endl;
+//        }
+//        std::cout << "sum: " << sum_values(result) << std::endl;
+        
+        result[the_reference_haplotype] += reference_bias;
         
         //for (auto& count : result) count.second = 0.5; // TEST
         

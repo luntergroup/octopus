@@ -53,6 +53,7 @@ ReadModel::RealType ReadModel::log_probability(const AlignedRead& read, const Ha
     // m.end_probability must satisfy:
     // m.end_probability <= 1 - 2 * m.gap_open_probability
     // m.end_probability <= 1 - m.gap_extend_probability
+    
     auto m_end_max = 1 - std::max(2 * m.gap_open_probability, m.gap_extend_probability);
     
     if (overlaps(read, haplotype)) {
@@ -74,7 +75,8 @@ ReadModel::RealType ReadModel::log_probability(const AlignedRead& read, const Ha
     auto joint_log_probability = nuc_log_viterbi_local<RealType>(haplotype.get_sequence(), read.get_sequence(),
                                                                  read.get_qualities(), m, r1, r2);
     
-    auto conditional_log_probability = joint_log_probability - haplotype.get_sequence().size() * std::log(r1.target_emission_probability);
+    auto conditional_log_probability = joint_log_probability -
+                    (haplotype.get_sequence().size() * std::log(r1.target_emission_probability));
     
     add_read_to_cache(sample, read, haplotype, conditional_log_probability);
     

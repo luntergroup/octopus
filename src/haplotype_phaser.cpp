@@ -184,6 +184,7 @@ void HaplotypePhaser::remove_unlikely_haplotypes_from_tree(const Haplotypes& cur
 bool HaplotypePhaser::is_haplotype_likely(RealType haplotype_population_prior, RealType haplotype_population_posterior) const
 {
     if (haplotype_population_posterior < 0.001) return false;
+    if (haplotype_population_posterior > 0.1) return true;
     
     auto haplotype_liklihood = haplotype_population_posterior / haplotype_population_prior;
     

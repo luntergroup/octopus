@@ -52,7 +52,11 @@ TEST_CASE("can call", "variant_caller")
     auto samples = a_read_manager.get_sample_ids();
     
     //auto a_region = parse_region("16:62646800-62647150", human);
-    auto a_region = parse_region("11:67503118-67503253", human);
+    //auto a_region = parse_region("11:27282193-27282290", human);
+    //auto a_region = parse_region("16:9299900-9300110", human);
+    auto a_region = parse_region("6:103700685-103700740", human);
+    
+    //auto a_region = parse_region("11:67503118-67503253", human);
     //auto a_region = parse_region("11:67503125-67503164", human);
     //auto a_region = parse_region("11:67502976-67503491", human);
     
@@ -89,14 +93,53 @@ TEST_CASE("can call", "variant_caller")
                                                    std::make_move_iterator(good_reads[sample].end())));
     }
     
+//    Haplotype ref {human, a_region};
+//    ref.push_back(candidates.at(0).get_reference_allele());
+//    ref.push_back(candidates.at(1).get_reference_allele());
+//    ref.push_back(candidates.at(2).get_reference_allele());
+//    
+//    Haplotype hap1 {human, a_region};
+//    hap1.push_back(candidates.at(0).get_reference_allele());
+//    hap1.push_back(candidates.at(1).get_reference_allele());
+//    hap1.push_back(candidates.at(2).get_alternative_allele());
+//    
+//    Haplotype hap2 {human, a_region};
+//    hap2.push_back(candidates.at(0).get_reference_allele());
+//    hap2.push_back(candidates.at(1).get_alternative_allele());
+//    hap2.push_back(candidates.at(2).get_reference_allele());
+//    
+//    Haplotype hap3 {human, a_region};
+//    hap3.push_back(candidates.at(0).get_reference_allele());
+//    hap3.push_back(candidates.at(1).get_alternative_allele());
+//    hap3.push_back(candidates.at(2).get_alternative_allele());
+//    
+//    cout << a_read_model.log_probability(good_reads.at(samples.front()).at(13), ref, "1") << " " << a_read_model.log_probability(good_reads.at(samples.front()).at(13), hap3, "1") << endl;
+//    
+//    for (const auto& read : good_reads[samples.front()]) {
+//        cout << read.get_region() << ": " << a_read_model.log_probability(read, ref, "1") << " " << a_read_model.log_probability(read, hap2, "1") << endl;
+//    }
+//
+//    Genotype<Haplotype> g1 {ref, ref};
+////    Genotype<Haplotype> g2 {ref, hap1};
+//    Genotype<Haplotype> g3 {ref, hap2};
+////    Genotype<Haplotype> g4 {ref, hap3};
+//    Genotype<Haplotype> g5 {hap2, hap2};
+////
+    //cout << a_read_model.log_probability(good_reads.at(samples.front()).cbegin(), good_reads.at(samples.front()).cend(), g1, "1") << endl;
+////    cout << a_read_model.log_probability(good_reads.at(samples.front()).cbegin(), good_reads.at(samples.front()).cend(), g2, "1") << endl;
+    //cout << a_read_model.log_probability(good_reads.at(samples.front()).cbegin(), good_reads.at(samples.front()).cend(), g3, "1") << endl;
+////    cout << a_read_model.log_probability(good_reads.at(samples.front()).cbegin(), good_reads.at(samples.front()).cend(), g4, "1") << endl;
+    //cout << a_read_model.log_probability(good_reads.at(samples.front()).cbegin(), good_reads.at(samples.front()).cend(), g5, "1") << endl;
+    //exit(0);
+    
     phaser.put_data(read_ranges, candidates.cbegin(), candidates.cend());
-
+    
     auto phased_regions = phaser.get_phased_regions(true);
     
     auto allele_posteriors = Octopus::VariantCaller::get_allele_posteriors(samples, phased_regions, candidates);
     
     for (const auto& haplotype_count : phased_regions.front().the_latent_posteriors.haplotype_pseudo_counts) {
-        if (haplotype_count.second > 1.0) {
+        if (haplotype_count.second > 0.5) {
             cout << haplotype_count.first << endl;
             haplotype_count.first.print_explicit_alleles();
             cout << haplotype_count.second << endl;
