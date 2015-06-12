@@ -19,9 +19,13 @@
 #include "candidate_variant_generator.h"
 #include "alignment_candidate_variant_generator.h"
 #include "assembler_candidate_variant_generator.h"
+#include "online_candidate_variant_generator.h"
 #include "external_variant_candidates.h"
 #include "variant_file_factory.h"
 #include "variant_file_reader.h"
+
+using std::cout;
+using std::endl;
 
 TEST_CASE("CandidateVariantGenerator does not give duplicate candidates", "[candidates]")
 {
@@ -90,6 +94,19 @@ TEST_CASE("AlignmentCandidateVariantGenerator includes all alleles in the same r
     candidate_generator.add_reads(reads.cbegin(), reads.cend());
     
     auto candidates = candidate_generator.get_candidates(a_region);
+}
+
+TEST_CASE("OnlineCandidateVariantGenerator can fetch variants from online web service", "[candidates]")
+{
+    OnlineCandidateVariantGenerator candidate_generator {};
+    
+    GenomicRegion a_region {"X", 10000, 10500};
+    
+    auto candidates = candidate_generator.get_candidates(a_region);
+    
+    for (const auto& candidate : candidates) {
+        cout << candidate << endl;
+    }
 }
 
 //TEST_CASE("CandidateVariantGenerator combines multiple generators", "[candidates]")

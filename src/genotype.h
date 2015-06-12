@@ -171,6 +171,14 @@ namespace std {
     };
 }
 
+template <typename MappableType1, typename MappableType2>
+bool contains(const Genotype<MappableType1>& lhs, const Genotype<MappableType2>& rhs)
+{
+    return std::all_of(std::cbegin(lhs), std::cend(lhs), [&rhs] (const auto& element) {
+        return rhs.contains(element);
+    });
+}
+
 inline unsigned num_genotypes(unsigned num_elements, unsigned ploidy)
 {
     return static_cast<unsigned>(boost::math::binomial_coefficient<double>(num_elements + ploidy - 1,

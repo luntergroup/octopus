@@ -17,10 +17,6 @@
 #include "region_algorithms.h"
 #include "map_utils.h"
 
-#include <iostream> // TEST
-using std::cout;    // TEST
-using std::endl;    // TEST
-
 namespace Octopus
 {
 
@@ -88,6 +84,9 @@ namespace detail
     
 } // end namespace detail
 
+enum class IndicatorLimit { SharedWithPreviousRegion, NoLimit };
+enum class ExtensionLimit { WithinReadLengthOfFirstIncluded, NoLimit };
+
 /**
  Determines the next sub-region to phase. Up to 'max_included' non-overlapping variants are included 
  in the returned region, of which up to 'max_indicators' may be present in 'the_previous_sub_region'.
@@ -103,8 +102,8 @@ template <typename SampleReadMap, typename Container>
 GenomicRegion next_sub_region(const GenomicRegion& the_previous_sub_region,
                               const SampleReadMap& the_reads, const Container& the_variants,
                               unsigned max_included, unsigned max_indicators,
-                              bool limit_indicators_to_shared_with_previous_region=true,
-                              bool limit_included_by_first_included_read_boundries=true)
+                              IndicatorLimit indicator_limit=IndicatorLimit::SharedWithPreviousRegion,
+                              ExtensionLimit extension_limit=ExtensionLimit::WithinReadLengthOfFirstIncluded)
 {
     if (max_included > 0 && max_included <= max_indicators) {
         max_indicators = max_included - 1;
@@ -122,7 +121,7 @@ GenomicRegion next_sub_region(const GenomicRegion& the_previous_sub_region,
     
     unsigned num_indicators {max_indicators};
     
-    if (limit_indicators_to_shared_with_previous_region) {
+    if (indicator_limit == IndicatorLimit::SharedWithPreviousRegion) {
         auto first_shared_in_previous_range_it = find_first_shared(the_reads, previous_variant_sub_range.first,
                                                                    previous_variant_sub_range.second, *included_it);
         auto num_possible_indicators = static_cast<unsigned>(std::distance(first_shared_in_previous_range_it, included_it));
@@ -136,7 +135,7 @@ GenomicRegion next_sub_region(const GenomicRegion& the_previous_sub_region,
     auto num_remaining_variants = static_cast<unsigned>(std::distance(included_it, last_variant_it));
     unsigned num_excluded_variants {0};
     
-    if (limit_included_by_first_included_read_boundries) {
+    if (extension_limit == ExtensionLimit::WithinReadLengthOfFirstIncluded) {
         auto max_num_variants_within_read_length = static_cast<unsigned>(max_count_if_shared_with_first(the_reads,
                                                                     included_it, last_variant_it));
         max_included = std::min({max_included, num_remaining_variants, max_num_variants_within_read_length + 1});

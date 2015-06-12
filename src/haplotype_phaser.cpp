@@ -25,13 +25,13 @@ namespace Octopus
 
 HaplotypePhaser::HaplotypePhaser(ReferenceGenome& the_reference, VariationalBayesGenotypeModel& the_model,
                                  unsigned ploidy, unsigned max_haplotypes, unsigned max_model_update_iterations,
-                                 RealType reference_haplotype_pseudo_count)
+                                 RealType reference_bias)
 :
 the_reference_ {the_reference},
 ploidy_ {ploidy},
 the_tree_ {the_reference},
 the_model_ {the_model},
-reference_haplotype_pseudo_count_ {reference_haplotype_pseudo_count},
+reference_bias_ {reference_bias},
 max_haplotypes_ {max_haplotypes},
 max_region_density_ {static_cast<unsigned int>(std::log2(max_haplotypes_))},
 max_model_update_iterations_ {max_model_update_iterations},
@@ -40,9 +40,9 @@ the_last_unphased_region_ {}
 {}
 
 HaplotypePhaser::PhasedRegions
-HaplotypePhaser::get_phased_regions(bool include_partially_phased_regions)
+HaplotypePhaser::get_phased_regions(SteamingStatus status)
 {
-    if (include_partially_phased_regions) {
+    if (status == SteamingStatus::Finished) {
         the_phased_regions_.emplace_back(std::move(the_last_unphased_region_));
         clear_phased_region(the_candidates_.cbegin(), the_candidates_.cend());
     }
@@ -68,9 +68,8 @@ void HaplotypePhaser::phase_current_data()
                                                           sub_region).second;
     }
     
-    sub_region = next_sub_region(sub_region, the_reads_, the_candidates_, max_candidates, max_indicators, false, false);
-    
-    GenomicRegion test_region {"6", 29913636, 29914203}; // TEST
+    sub_region = next_sub_region(sub_region, the_reads_, the_candidates_, max_candidates, max_indicators,
+                                 IndicatorLimit::NoLimit, ExtensionLimit::NoLimit);
     
     while (true) {
         cout << "looking in region " << sub_region << endl;
@@ -84,12 +83,6 @@ void HaplotypePhaser::phase_current_data()
         auto genotypes = get_all_genotypes(haplotypes, ploidy_);
         
         cout << "proceeding with " << haplotypes.size() << " haplotypes" << endl;
-        
-//        if (sub_region == test_region) {
-//            for (const auto& haplotype_count : haplotype_prior_counts) {
-//                cout << Octopus::prior_probability<RealType>(haplotype_count.first, candidate_range.first, candidate_range.second) << " " << haplotype_count.second << endl;
-//            }
-//        }
         
         latent_posteriors = BayesianGenotypeModel::update_latents(the_model_, genotypes,
                                                                   haplotype_prior_counts,
@@ -123,7 +116,8 @@ void HaplotypePhaser::phase_current_data()
         
         cout << "there are now " << the_tree_.num_haplotypes() << " haplotypes" << endl;
         
-        sub_region = next_sub_region(sub_region, the_reads_, the_candidates_, max_candidates, max_indicators, false, false);
+        sub_region = next_sub_region(sub_region, the_reads_, the_candidates_, max_candidates, max_indicators,
+                                     IndicatorLimit::NoLimit, ExtensionLimit::NoLimit);
     }
 }
 
@@ -150,7 +144,7 @@ HaplotypePhaser::get_haplotype_prior_counts(const Haplotypes& the_haplotypes,
     auto haplotype_priors = get_haplotype_prior_probabilities<RealType>(the_haplotypes, first, last);
     Haplotype reference {the_reference_, the_region};
     return BayesianGenotypeModel::get_haplotype_prior_pseudo_counts(haplotype_priors, reference,
-                                                                    reference_haplotype_pseudo_count_);
+                                                                    reference_bias_);
 }
 
 HaplotypePhaser::ReadRanges HaplotypePhaser::get_read_iterator_ranges(const GenomicRegion& the_region) const
@@ -175,6 +169,7 @@ void HaplotypePhaser::remove_unlikely_haplotypes_from_tree(const Haplotypes& cur
                                  BayesianGenotypeModel::haplotype_population_probability(haplotype, posterior_counts))) {
             the_tree_.prune_all(haplotype);
         } else {
+            haplotype.print_explicit_alleles(); cout << endl; // TEST
             // we may as-well clean the tree up here too
             the_tree_.prune_unique(haplotype);
         }
@@ -184,7 +179,7 @@ void HaplotypePhaser::remove_unlikely_haplotypes_from_tree(const Haplotypes& cur
 bool HaplotypePhaser::is_haplotype_likely(RealType haplotype_population_prior, RealType haplotype_population_posterior) const
 {
     if (haplotype_population_posterior < 0.001) return false;
-    if (haplotype_population_posterior > 0.1) return true;
+    if (haplotype_population_posterior > 0.05) return true;
     
     auto haplotype_liklihood = haplotype_population_posterior / haplotype_population_prior;
     

@@ -15,8 +15,8 @@
 #include <unordered_map>
 #include <stdexcept>
 #include <memory>    // std::unique_ptr
-#include <algorithm> // std::find, std::sort
-#include <iterator>  // std::cbegin etc
+#include <algorithm> // std::find, std::sort, remove_copy
+#include <iterator>  // std::cbegin, std::cend, std::back_inserter
 #include <utility>   // std::move
 #include <regex>
 
@@ -131,10 +131,13 @@ inline std::vector<GenomicRegion> get_all_contig_regions(const ReferenceGenome& 
 // Requires reference access to get contig sizes for partially specified regions (e.g. "4")
 inline GenomicRegion parse_region(const std::string& a_region, const ReferenceGenome& the_reference)
 {
+    std::string filtered_region;
+    std::remove_copy(a_region.cbegin(), a_region.cend(), std::back_inserter(filtered_region), ',');
+    
     const static std::regex re {"([^:]+)(?::(\\d+)(-)?(\\d*))?"};
     std::smatch match;
     
-    if (std::regex_search(a_region, match, re) && match.size() == 5) {
+    if (std::regex_search(filtered_region, match, re) && match.size() == 5) {
         auto contig_name = match.str(1);
         GenomicRegion::SizeType begin {}, end {};
         auto the_contig_size = the_reference.get_contig_size(contig_name);

@@ -60,10 +60,12 @@ public:
     
     using PhasedRegions = std::vector<PhasedRegion>;
     
+    enum class SteamingStatus { Finished, Unfinished };
+    
     HaplotypePhaser() = delete;
     HaplotypePhaser(ReferenceGenome& the_reference, VariationalBayesGenotypeModel& the_model,
                     unsigned ploidy, unsigned max_haplotypes=128, unsigned max_model_update_iterations=3,
-                    RealType reference_haplotype_pseudo_count=1);
+                    RealType reference_bias=1.0);
     ~HaplotypePhaser() = default;
     
     HaplotypePhaser(const HaplotypePhaser&)            = delete;
@@ -75,7 +77,7 @@ public:
     void put_data(const BayesianGenotypeModel::ReadRanges<SampleIdType, ForwardIterator1>& the_reads,
                   ForwardIterator2 first_candidate, ForwardIterator2 last_candidate);
     
-    PhasedRegions get_phased_regions(bool include_partially_phased_regions);
+    PhasedRegions get_phased_regions(SteamingStatus status);
     
 private:
     using ReadMap               = std::unordered_map<SampleIdType, std::deque<AlignedRead>>;
@@ -95,7 +97,7 @@ private:
     HaplotypeTree the_tree_;
     VariationalBayesGenotypeModel& the_model_;
     
-    RealType reference_haplotype_pseudo_count_;
+    RealType reference_bias_;
     
     unsigned max_haplotypes_;
     unsigned max_region_density_;

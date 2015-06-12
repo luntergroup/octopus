@@ -27,6 +27,9 @@
 		CA14727A1AACECF1005FDCD1 /* octopus.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA1472781AACECF1005FDCD1 /* octopus.cpp */; };
 		CA14727C1AACED6E005FDCD1 /* octopus_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA14727B1AACED6E005FDCD1 /* octopus_tests.cpp */; };
 		CA24FBB41AB19E8A003D508A /* libhts.a in Frameworks */ = {isa = PBXBuildFile; fileRef = CA24FBB31AB19E8A003D508A /* libhts.a */; };
+		CA2827BB1B2A4C18007712D4 /* libcppnetlib-client-connections.a in Frameworks */ = {isa = PBXBuildFile; fileRef = CA2827BA1B2A4C18007712D4 /* libcppnetlib-client-connections.a */; };
+		CA2827C11B2A4CD0007712D4 /* online_candidate_variant_generator.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA2827BF1B2A4CD0007712D4 /* online_candidate_variant_generator.cpp */; };
+		CA2827C71B2A54D2007712D4 /* libcppnetlib-uri.a in Frameworks */ = {isa = PBXBuildFile; fileRef = CA2827C61B2A54D2007712D4 /* libcppnetlib-uri.a */; };
 		CA28EBF51AABB80E009F8622 /* read_filter_benchmarks.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA28EBF41AABB80E009F8622 /* read_filter_benchmarks.cpp */; };
 		CA28EBF81AABE178009F8622 /* read_transform_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA28EBF71AABE178009F8622 /* read_transform_tests.cpp */; };
 		CA4551621AEB06D800FDAAE8 /* 1000G_test11.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA4551611AEB06D800FDAAE8 /* 1000G_test11.cpp */; };
@@ -135,6 +138,10 @@
 		CA14727B1AACED6E005FDCD1 /* octopus_tests.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = octopus_tests.cpp; sourceTree = "<group>"; };
 		CA14727D1AAE63A8005FDCD1 /* hash_functions.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = hash_functions.h; sourceTree = "<group>"; };
 		CA24FBB31AB19E8A003D508A /* libhts.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libhts.a; path = ../../htslib/libhts.a; sourceTree = "<group>"; };
+		CA2827BA1B2A4C18007712D4 /* libcppnetlib-client-connections.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = "libcppnetlib-client-connections.a"; path = "/usr/local/Cellar/cpp-netlib/netlib/lib/libcppnetlib-client-connections.a"; sourceTree = "<absolute>"; };
+		CA2827BF1B2A4CD0007712D4 /* online_candidate_variant_generator.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = online_candidate_variant_generator.cpp; sourceTree = "<group>"; };
+		CA2827C01B2A4CD0007712D4 /* online_candidate_variant_generator.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = online_candidate_variant_generator.h; sourceTree = "<group>"; };
+		CA2827C61B2A54D2007712D4 /* libcppnetlib-uri.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = "libcppnetlib-uri.a"; path = "/usr/local/Cellar/cpp-netlib/netlib/lib/libcppnetlib-uri.a"; sourceTree = "<absolute>"; };
 		CA28EBF21AAB7B63009F8622 /* read_filter_factory.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = read_filter_factory.h; sourceTree = "<group>"; };
 		CA28EBF31AABA2FC009F8622 /* read_transformations.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = read_transformations.h; sourceTree = "<group>"; };
 		CA28EBF41AABB80E009F8622 /* read_filter_benchmarks.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = read_filter_benchmarks.cpp; sourceTree = "<group>"; };
@@ -271,10 +278,12 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				CA2827C71B2A54D2007712D4 /* libcppnetlib-uri.a in Frameworks */,
+				CA8FACBD1A954B67002760F2 /* libboost_system.a in Frameworks */,
+				CA2827BB1B2A4C18007712D4 /* libcppnetlib-client-connections.a in Frameworks */,
 				CA24FBB41AB19E8A003D508A /* libhts.a in Frameworks */,
 				CAE3E29F1AA13DF500C01B2C /* libboost_program_options.a in Frameworks */,
 				CA8FACBF1A954C86002760F2 /* libboost_filesystem.a in Frameworks */,
-				CA8FACBD1A954B67002760F2 /* libboost_system.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -396,6 +405,8 @@
 		CAA4DC2B1A8219C700DD3E9A /* lib */ = {
 			isa = PBXGroup;
 			children = (
+				CA2827BA1B2A4C18007712D4 /* libcppnetlib-client-connections.a */,
+				CA2827C61B2A54D2007712D4 /* libcppnetlib-uri.a */,
 				CA24FBB31AB19E8A003D508A /* libhts.a */,
 				CAE3E29E1AA13DF500C01B2C /* libboost_program_options.a */,
 				CA8FACBC1A954B67002760F2 /* libboost_system.a */,
@@ -461,6 +472,8 @@
 				CAE3E2A61AA25F7D00C01B2C /* alignment_candidate_variant_generator.cpp */,
 				CAE3E2B21AA3342B00C01B2C /* assembler_candidate_variant_generator.h */,
 				CAE3E2B11AA3342B00C01B2C /* assembler_candidate_variant_generator.cpp */,
+				CA2827C01B2A4CD0007712D4 /* online_candidate_variant_generator.h */,
+				CA2827BF1B2A4CD0007712D4 /* online_candidate_variant_generator.cpp */,
 				CAE3E2BF1AA3D91C00C01B2C /* variant_utils.h */,
 				CAE3E2BE1AA3D91C00C01B2C /* variant_utils.cpp */,
 				D463C1A01B09D65900739A66 /* variant_call.h */,
@@ -734,6 +747,7 @@
 				CAA4DC321A82B36300DD3E9A /* README.md in Sources */,
 				CA4551681AEB096900FDAAE8 /* 1000G_test14.cpp in Sources */,
 				CAFA19641ABF75D400F953D9 /* haplotype.cpp in Sources */,
+				CA2827C11B2A4CD0007712D4 /* online_candidate_variant_generator.cpp in Sources */,
 				CAE3E2971A9D292000C01B2C /* variant_assembler.cpp in Sources */,
 				CA28EBF81AABE178009F8622 /* read_transform_tests.cpp in Sources */,
 				CA4551761AEC1C8600FDAAE8 /* haplotype_prior_model_tests.cpp in Sources */,
@@ -854,6 +868,7 @@
 					/usr/local/lib,
 					/usr/local/Cellar/htslib/1.2.1/lib,
 					/Users/danielcooke/Development/htslib,
+					"/usr/local/Cellar/cpp-netlib/netlib/lib",
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
@@ -878,6 +893,7 @@
 					/usr/local/lib,
 					/usr/local/Cellar/htslib/1.2.1/lib,
 					/Users/danielcooke/Development/htslib,
+					"/usr/local/Cellar/cpp-netlib/netlib/lib",
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};

@@ -58,42 +58,43 @@ namespace BayesianGenotypeModel
     HaplotypePseudoCounts<RealType>
     get_haplotype_prior_pseudo_counts(const MapType& the_haplotype_priors,
                                       const Haplotype& the_reference_haplotype,
-                                      RealType the_reference_haplotype_pseudo_count=1)
+                                      RealType reference_bias=1.0)
     {
         HaplotypePseudoCounts<RealType> result {};
         result.reserve(the_haplotype_priors.size());
         
-        RealType reference_bias {0.9};
-        static const RealType concentration {std::log(7.0)};
+        reference_bias = 1.0;
+        
+        RealType uniformity {0};//(1 - reference_bias) * 0.4};
+        static const RealType concentration {-std::log(10.0)};
         
         for (const auto& haplotype_prior : the_haplotype_priors) {
-            result.emplace(haplotype_prior.first, digamma_inv(reference_bias * std::log(haplotype_prior.second) - concentration));
+            result.emplace(haplotype_prior.first, uniformity + digamma_inv(std::log(haplotype_prior.second) +
+                                                                           std::log(reference_bias) + concentration));
         }
-        
-//        std::cout << "prior pseudo counts: " << std::endl;
-//        for (const auto& count : result) {
-//            std::cout << count.second << std::endl;
-//        }
-//        std::cout << "sum: " << sum_values(result) << std::endl;
         
         result[the_reference_haplotype] += reference_bias;
         
-        //for (auto& count : result) count.second = 0.5; // TEST
+//        for (auto& count : result) {
+//            //std::cout << count.second << std::endl;
+//            count.second = 0.5; // TEST
+//        }
         
         return result;
     }
     
-    template <typename RealType, typename Genotypes>
+    template <typename SampleIdType, typename RealType, typename Genotypes>
     RealType probability_haplotype_in_samples(const Haplotype& haplotype,
                                               const Genotypes& genotypes,
-                                              const HaplotypePseudoCounts<RealType>& haplotype_pseudo_counts)
+                                              const GenotypeProbabilities<SampleIdType, RealType>& genotype_probabilities)
     {
         RealType result {0};
         
-        // TODO: this calculation is incorrect
         for (const auto& genotype : genotypes) {
             if (genotype.contains(haplotype)) {
-                result += posterior_predictive_probability(genotype, haplotype_pseudo_counts);
+                for (const auto& sample_genotype_probabilities : genotype_probabilities) {
+                    result += sample_genotype_probabilities.second.at(genotype);
+                }
             }
         }
         
@@ -115,19 +116,39 @@ namespace BayesianGenotypeModel
         return result;
     }
     
-    template <typename RealType, typename Genotypes>
+    // Note Genotypes must be a container of Genotype<Haplotype>'s
+    template <typename SampleIdType, typename RealType, typename Genotypes>
     RealType probability_genotype_in_samples(const Genotype<Allele>& the_genotype, const Genotypes& genotypes,
-                                             const SampleGenotypeProbabilities<RealType>& genotype_probabilities)
+                                             const GenotypeProbabilities<SampleIdType, RealType>& genotype_probabilities)
     {
-        return 0; // TODO
+        RealType result {0};
+        
+        for (const auto& genotype : genotypes) {
+            if (contains(genotype, the_genotype)) {
+                for (const auto& sample_genotype_probabilities : genotype_probabilities) {
+                    result += sample_genotype_probabilities.second.at(genotype);
+                }
+            }
+        }
+        
+        return result;
     }
     
+    // Note Genotypes must be a container of Genotype<Haplotype>'s
     template <typename RealType, typename Haplotypes, typename Genotypes>
     RealType probability_sample_has_genotype(const Genotype<Allele>& the_genotype, const Haplotypes& haplotypes,
                                              const SampleGenotypeProbabilities<RealType>& genotype_probabilities,
-                                             const Genotypes& genotypes)
+                                             RealType zero_epsilon=1e-20)
     {
-        return 0; // TODO
+        RealType result {0};
+        
+        for (const auto& genotype_probability : genotype_probabilities) {
+            if (genotype_probability.second > zero_epsilon && contains(genotype_probability.first, the_genotype)) {
+                result += genotype_probability.second;
+            }
+        }
+        
+        return result;
     }
     
     template <typename RealType, typename Haplotypes>

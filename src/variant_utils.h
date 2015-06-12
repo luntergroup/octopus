@@ -9,6 +9,7 @@
 #ifndef __Octopus__variant_utils__
 #define __Octopus__variant_utils__
 
+#include <vector>
 #include <algorithm> // std::mismatch, std::max, std::minmax
 #include <iterator>  // std::distance
 #include <cstddef>   // std::size_t
@@ -50,6 +51,11 @@ Variant left_align(const Variant& a_variant, ReferenceGenome& the_reference,
  */
 Variant normalise(const Variant& a_variant, ReferenceGenome& the_reference,
                   Variant::SizeType extension_size=30);
+
+/*
+ Left aligns all input Variants and removes any resulting duplicates. The returned variants are sorted.
+ */
+std::vector<Variant> unique_left_align(const std::vector<Variant>& variants, ReferenceGenome& the_reference);
 
 bool is_snp(const Variant& a_variant) noexcept;
 

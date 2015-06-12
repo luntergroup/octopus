@@ -159,10 +159,11 @@ Variant make_parsimonious(const Variant& a_variant, ReferenceGenome& the_referen
                                     new_ref_region_end};
     
     return (old_ref_allele.size() > old_alt_allele.size()) ?
-        Variant {std::move(new_ref_region), std::move(new_big_allele),
-            std::move(new_small_allele)} :
-        Variant {std::move(new_ref_region), std::move(new_small_allele),
-            std::move(new_big_allele)};
+            Variant {std::move(new_ref_region), std::move(new_big_allele),
+                    std::move(new_small_allele)}
+            :
+            Variant {std::move(new_ref_region), std::move(new_small_allele),
+                    std::move(new_big_allele)};
 }
 
 bool is_left_alignable(const Variant& a_variant) noexcept
@@ -270,14 +271,34 @@ Variant left_align(const Variant& a_variant, ReferenceGenome& the_reference,
     
     return (ref_allele.size() > alt_allele.size()) ?
             Variant {std::move(new_ref_region), std::move(new_big_allele),
-                std::move(new_small_allele)} :
+                    std::move(new_small_allele)}
+            :
             Variant {std::move(new_ref_region), std::move(new_small_allele),
-                std::move(new_big_allele)};
+                    std::move(new_big_allele)};
 }
 
 Variant normalise(const Variant& a_variant, ReferenceGenome& the_reference, Variant::SizeType extension_size)
 {
     return make_parsimonious(left_align(a_variant, the_reference, extension_size), the_reference);
+}
+
+std::vector<Variant> unique_left_align(const std::vector<Variant>& variants, ReferenceGenome& the_reference)
+{
+    std::vector<Variant> result {};
+    result.reserve(variants.size());
+    
+    std::transform(variants.cbegin(), variants.cend(), std::back_inserter(result),
+                   [&the_reference] (const Variant& variant) {
+                       return left_align(variant, the_reference);
+                   });
+    
+    if (!std::is_sorted(result.cbegin(), result.cend())) {
+        std::sort(result.begin(), result.end());
+    }
+    
+    result.erase(std::unique(result.begin(), result.end()), result.end());
+    
+    return result;
 }
 
 bool is_snp(const Variant& a_variant) noexcept
