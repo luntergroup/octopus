@@ -24,12 +24,14 @@ public:
     using RealType     = Octopus::ProbabilityType;
     using ReadIterator = std::vector<AlignedRead>::const_iterator;
     
+    // pure virtual functions
     virtual std::vector<Variant> get_candidates(const GenomicRegion&) = 0;
-    virtual void add_read(const AlignedRead&) = 0;
-    virtual void add_reads(ReadIterator first, ReadIterator last) = 0;
-    virtual void reserve(std::size_t n) = 0;
-    virtual void clear() = 0;
     virtual ~ICandidateVariantGenerator() = default;
+    
+    virtual void add_read(const AlignedRead&) {};
+    virtual void add_reads(ReadIterator first, ReadIterator last) {};
+    virtual void reserve(std::size_t n) {};
+    virtual void clear() {};
 };
 
 #endif

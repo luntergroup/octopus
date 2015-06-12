@@ -15,10 +15,6 @@
 
 namespace http = boost::network::http;
 
-void OnlineCandidateVariantGenerator::add_read(const AlignedRead& a_read) {}
-
-void OnlineCandidateVariantGenerator::add_reads(ReadIterator first, ReadIterator last) {}
-
 std::vector<Variant> OnlineCandidateVariantGenerator::get_candidates(const GenomicRegion& a_region)
 {
 //    <?xml version="1.0" encoding="UTF-8"?>
@@ -51,7 +47,3 @@ std::vector<Variant> OnlineCandidateVariantGenerator::get_candidates(const Genom
         throw;
     }
 }
-
-void OnlineCandidateVariantGenerator::reserve(std::size_t n) {}
-
-void OnlineCandidateVariantGenerator::clear() {}

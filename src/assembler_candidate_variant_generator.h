@@ -36,7 +36,6 @@ public:
     void add_read(const AlignedRead& a_read) override;
     void add_reads(ReadIterator first, ReadIterator last) override;
     std::vector<Variant> get_candidates(const GenomicRegion& a_region) override;
-    void reserve(std::size_t n) override;
     void clear() override;
     
 private:
