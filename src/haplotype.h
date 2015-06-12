@@ -163,6 +163,8 @@ inline bool is_less_complex(const Haplotype& lhs, const Haplotype& rhs)
     return lhs.the_explicit_alleles_.size() < rhs.the_explicit_alleles_.size();
 }
 
+bool is_reference(const Haplotype& a_haplotype, ReferenceGenome& the_reference);
+
 void unique_least_complex(std::vector<Haplotype>& haplotypes);
 
 void add_to_back(const Variant& a_variant, Haplotype& a_haplotype);

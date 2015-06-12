@@ -178,6 +178,13 @@ Haplotype::SequenceType Haplotype::get_sequence_bounded_by_explicit_alleles() co
                                                     std::cend(the_explicit_alleles_));
 }
 
+// non-member methods
+
+bool is_reference(const Haplotype& a_haplotype, ReferenceGenome& the_reference)
+{
+    return a_haplotype.get_sequence() == the_reference.get_sequence(a_haplotype.get_region());
+}
+
 void unique_least_complex(std::vector<Haplotype>& haplotypes)
 {
     std::sort(haplotypes.begin(), haplotypes.end());

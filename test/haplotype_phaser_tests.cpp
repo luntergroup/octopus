@@ -75,13 +75,18 @@ TEST_CASE("HaplotypePhaser phases when the data supports one phase", "[haplotype
                                                    std::make_move_iterator(reads[sample].end())));
     }
     
-//    phaser.put_data(read_ranges, candidates.cbegin(), candidates.cend());
-//    auto phased_regions = phaser.get_phased_regions(HaplotypePhaser::SteamingStatus::Finished);
-//    
-//    REQUIRE(phased_regions.size() == 1);
-//    
-//    auto sorted_haplotypes = get_value_sorted_keys(phased_regions.front().the_latent_posteriors.haplotype_pseudo_counts);
-//    
+    phaser.put_data(read_ranges, candidates.cbegin(), candidates.cend());
+    auto phased_regions = phaser.get_phased_regions(HaplotypePhaser::SteamingStatus::Finished);
+    
+    REQUIRE(phased_regions.size() == 1);
+    
+    const auto& posterior_counts = phased_regions.front().the_latent_posteriors.haplotype_pseudo_counts;
+    auto sorted_haplotypes = get_value_sorted_keys(posterior_counts);
+    
+    REQUIRE(is_reference(sorted_haplotypes[0], human));
+    REQUIRE(posterior_counts.at(sorted_haplotypes[1]) > 1);
+    REQUIRE(posterior_counts.at(sorted_haplotypes[2]) > 1);
+    REQUIRE(posterior_counts.at(sorted_haplotypes[3]) < 0.5);
 }
 
 TEST_CASE("HaplotypePhaser breaks haplotypes when the data does not support one phase", "[haplotype_phaser]")
