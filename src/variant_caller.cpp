@@ -41,7 +41,7 @@ namespace VariantCaller
             
             for (const auto& sample : the_samples ) {
                 result[sample][allele] = probability_allele_in_sample(allele, it->the_haplotypes,
-                                                                      it->the_latent_posteriors.genotype_posteriors.at(sample),
+                                                                      it->the_latent_posteriors.genotype_probabilities.at(sample),
                                                                       it->the_genotypes);
             }
         }
@@ -79,7 +79,7 @@ namespace VariantCaller
             
             for (const auto& sample : the_samples ) {
                 auto p = probability_allele_in_sample(alternative_allele, it->the_haplotypes,
-                                                      it->the_latent_posteriors.genotype_posteriors.at(sample),
+                                                      it->the_latent_posteriors.genotype_probabilities.at(sample),
                                                       it->the_genotypes);
                 
                 if (p > 0.9) {

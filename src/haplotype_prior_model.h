@@ -29,8 +29,8 @@ namespace detail
 {
     // A ts/tv ratio of around 2.1 seems to be a good approximation for human genome.
     // See https://www.biostars.org/p/4751/ for a discussion on this.
-    template <typename RealType> constexpr RealType transition_rate {0.000222}; //0.0006999 or 0.000222?
-    template <typename RealType> constexpr RealType transversion_rate {0.000111}; //0.0003333 or 0.000111?
+    template <typename RealType> constexpr RealType transition_rate {0.0006999}; //0.0006999 or 0.000222?
+    template <typename RealType> constexpr RealType transversion_rate {0.0003333}; //0.0003333 or 0.000111?
 }
 
 template <typename RealType, typename ForwardIterator>
@@ -67,7 +67,7 @@ RealType prior_probability(const Haplotype& the_haplotype, ForwardIterator first
 //        detail::transversion_rate<RealType> * size(the_haplotype)
 //    };
     
-    //std::cout << "num_transitions: " << num_transitions << " num_transversions: " << num_transversions << std::endl;
+    std::cout << "num_transitions: " << num_transitions << " num_transversions: " << num_transversions << std::endl;
     
     constexpr RealType r {detail::transition_rate<RealType> + detail::transversion_rate<RealType>};
     
@@ -78,15 +78,15 @@ RealType prior_probability(const Haplotype& the_haplotype, ForwardIterator first
     //return boost::math::pdf(transiton_poisson, num_transitions + num_transversions);
 }
 
-template <typename RealType, typename Haplotypes, typename ForwardIterator>
+template <typename RealType, typename Container, typename ForwardIterator>
 std::unordered_map<Haplotype, RealType>
-get_haplotype_prior_probabilities(const Haplotypes& the_haplotypes, ForwardIterator first_possible_variant,
+get_haplotype_prior_probabilities(const Container& haplotypes, ForwardIterator first_possible_variant,
                                   ForwardIterator last_possible_variant)
 {
     std::unordered_map<Haplotype, RealType> result {};
-    result.reserve(the_haplotypes.size());
+    result.reserve(haplotypes.size());
     
-    for (const auto& haplotype : the_haplotypes) {
+    for (const auto& haplotype : haplotypes) {
         result.emplace(haplotype, prior_probability<RealType>(haplotype, first_possible_variant,
                                                               last_possible_variant));
     }

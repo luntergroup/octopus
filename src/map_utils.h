@@ -178,7 +178,7 @@ rightmost_overlapped(const MappableMap& mappables, const MappableType& mappable)
 
 template <typename MapType>
 std::vector<typename MapType::key_type>
-get_value_sorted_keys(const MapType& map)
+value_sorted_keys(const MapType& map)
 {
     std::vector<std::pair<typename MapType::mapped_type, typename MapType::key_type>> pairs {};
     pairs.reserve(map.size());
@@ -186,7 +186,8 @@ get_value_sorted_keys(const MapType& map)
     std::transform(std::cbegin(map), std::cend(map), std::back_inserter(pairs),
                    [] (const auto& p) { return std::make_pair(p.second, p.first); });
     
-    std::sort(pairs.begin(), pairs.end(), [] (const auto& lhs, const auto& rhs) { return lhs > rhs; });
+    std::sort(pairs.begin(), pairs.end(),
+              [] (const auto& lhs, const auto& rhs) { return lhs.first > rhs.first; });
     
     std::vector<typename MapType::key_type> result {};
     result.reserve(pairs.size());

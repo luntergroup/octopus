@@ -36,7 +36,7 @@
 using std::cout;
 using std::endl;
 
-//TEST_CASE("1000G test 20 : ", "[validation]")
+//TEST_CASE("1000G test 20 : 2:216907440-216908080", "[validation]")
 //{
 //    ReferenceGenomeFactory a_factory {};
 //    ReferenceGenome human(a_factory.make(human_reference_fasta));
