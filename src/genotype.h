@@ -14,7 +14,7 @@
 #include <ostream>
 #include <iterator>  // std::cbegin etc
 #include <initializer_list>
-#include <algorithm> // std::inplace_merge, std::all_of, std::binary_search, std::equal_range, std::unique_copy, std::equal
+#include <algorithm> // std::std::sort, std::inplace_merge, std::all_of, std::binary_search, std::equal_range, std::unique_copy, std::equal
 #include <boost/functional/hash.hpp> // boost::hash_range
 #include <boost/math/special_functions/binomial.hpp>
 
@@ -68,7 +68,9 @@ template <typename MappableType>
 Genotype<MappableType>::Genotype(std::initializer_list<MappableType> the_elements)
 :
 the_elements_ {the_elements}
-{}
+{
+    std::sort(the_elements_.begin(), the_elements_.end());
+}
 
 template <typename MappableType>
 const MappableType& Genotype<MappableType>::at(unsigned n) const

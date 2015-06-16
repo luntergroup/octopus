@@ -69,11 +69,12 @@ namespace BayesianGenotypeModel
         static const RealType concentration {-std::log(10.0)};
         
         for (const auto& haplotype_prior : the_haplotype_priors) {
-            result.emplace(haplotype_prior.first, uniformity + digamma_inv(std::log(haplotype_prior.second) +
-                                                                           std::log(reference_bias) + concentration));
+//            result.emplace(haplotype_prior.first, uniformity + digamma_inv(std::log(haplotype_prior.second) +
+//                                                                           std::log(reference_bias) + concentration));
+            result.emplace(haplotype_prior.first, digamma_inv(std::log(haplotype_prior.second)));
         }
         
-        result[the_reference_haplotype] += reference_bias;
+        //result[the_reference_haplotype] += reference_bias;
         
 //        for (auto& count : result) {
 //            //std::cout << count.second << std::endl;

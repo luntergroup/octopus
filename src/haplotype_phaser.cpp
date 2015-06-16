@@ -169,7 +169,6 @@ void HaplotypePhaser::remove_unlikely_haplotypes_from_tree(const Haplotypes& cur
                                  BayesianGenotypeModel::haplotype_population_probability(haplotype, posterior_counts))) {
             the_tree_.prune_all(haplotype);
         } else {
-            //haplotype.print_explicit_alleles(); cout << endl; // TEST
             // we may as-well clean the tree up here too
             the_tree_.prune_unique(haplotype);
         }

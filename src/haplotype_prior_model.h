@@ -29,8 +29,8 @@ namespace detail
 {
     // A ts/tv ratio of around 2.1 seems to be a good approximation for human genome.
     // See https://www.biostars.org/p/4751/ for a discussion on this.
-    template <typename RealType> constexpr RealType transition_rate {0.0006999}; //0.0006999 or 0.000222?
-    template <typename RealType> constexpr RealType transversion_rate {0.0003333}; //0.0003333 or 0.000111?
+    template <typename RealType> constexpr RealType transition_rate {0.000222}; //0.0006999 or 0.000222?
+    template <typename RealType> constexpr RealType transversion_rate {0.000111}; //0.0003333 or 0.000111?
 }
 
 template <typename RealType, typename ForwardIterator>
@@ -66,8 +66,6 @@ RealType prior_probability(const Haplotype& the_haplotype, ForwardIterator first
 //    boost::math::poisson_distribution<RealType> transversion_poisson {
 //        detail::transversion_rate<RealType> * size(the_haplotype)
 //    };
-    
-    std::cout << "num_transitions: " << num_transitions << " num_transversions: " << num_transversions << std::endl;
     
     constexpr RealType r {detail::transition_rate<RealType> + detail::transversion_rate<RealType>};
     

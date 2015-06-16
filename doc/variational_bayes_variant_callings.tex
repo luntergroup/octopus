@@ -247,7 +247,7 @@ Using (\ref{eq:q_opt}) we find the optimal densities for $\boldsymbol{G}$
 
 \begin{align}
     \ln q^*(\boldsymbol{G}) &= \mathbb{E}_{\boldsymbol{\pi}}[\ln p(\boldsymbol{X}, \boldsymbol{G}, \boldsymbol{\pi})] + \text{const}\notag\\
-    &= \mathbb{E}_{\boldsymbol{\pi}}[\ln p(\boldsymbol{G} | \boldsymbol{\pi})] + \mathbb{E}_{\boldsymbol{\pi}}[p(\boldsymbol{X} | \boldsymbol{G})] + \text{const} \notag\\
+    &= \mathbb{E}_{\boldsymbol{\pi}}[\ln p(\boldsymbol{G} | \boldsymbol{\pi})] + \mathbb{E}_{\boldsymbol{\pi}}[\ln p(\boldsymbol{X} | \boldsymbol{G})] + \text{const} \notag\\
     &= \mathbb{E}_{\boldsymbol{\pi}}\left[ \sum_{n = 1}^N \sum_{k = 1}^K g_{nk} \left\{ \ln C(\boldsymbol{g}^k) + \sum_{i = 1}^H \mu_i(\boldsymbol{g}^k) \ln \pi_i \right\} \right] \notag\\ &\phantom{{}=1} + \mathbb{E}_{\boldsymbol{\pi}}\left[ \sum_{n = 1}^N \sum_{k = 1}^K g_{nk} \left\{ \sum_{i = 1}^{r_n} \ln \sum_{h \in \boldsymbol{g}^k} p(x_{ni} | h) - r_n \ln M \right\} \right] + \text{const}\notag\\
     &= \sum_{n = 1}^N \sum_{k = 1}^K g_{nk} \left\{ \ln C(\boldsymbol{g}^k) + \sum_{i = 1}^H \mu_i(\boldsymbol{g}^k) \mathbb{E}_{\boldsymbol{\pi}}[\ln \pi_i] + \sum_{i = 1}^{r_n} \ln \sum_{h \in \boldsymbol{g}^k} p(x_{ni} | h) - r_n \ln M \right\} + \text{const}\notag\\
     &= \sum_{n = 1}^N \sum_{k = 1}^K g_{nk} \ln \rho_{nk} + \text{const}
