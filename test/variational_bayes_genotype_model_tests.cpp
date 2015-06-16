@@ -221,10 +221,10 @@ TEST_CASE("what happens when two heterzygous genotypes are equally likely", "[va
     prior_counts[hap3] = c * digamma_inv(std::log(priors[hap3]) + b) + d;
     prior_counts[hap4] = c * digamma_inv(std::log(priors[hap4]) + b) + d;
     
-    prior_counts[hap1] = 0.5;
-    prior_counts[hap2] = 0.5;
-    prior_counts[hap3] = 0.5;
-    prior_counts[hap4] = 0.5;
+    prior_counts[hap1] = 0.7950764629581251;
+    prior_counts[hap2] = 0.037906527521309075;
+    prior_counts[hap3] = 0.05556977733180246;
+    prior_counts[hap4] = 0.11146278700786327;
     
     cout << "prior probabilities: " << endl;
     cout << "hap1: " << priors[hap1] << endl;

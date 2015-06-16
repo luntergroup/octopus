@@ -47,3 +47,16 @@ def dirichlet_pdf(x, alpha):
     return (gamma(sum(alpha)) /
             reduce(operator.mul, [gamma(a) for a in alpha]) *
             reduce(operator.mul, [x[i]**(alpha[i]-1.0) for i in range(len(alpha))]))
+
+def alpha_ml(p, s, n):
+    l = len(p)
+    a = [1.0 / l] * l
+    m = [1.0 / l] * l
+    for i in range(n):
+        v = 0
+        for j in range(l):
+            v += m[j] * (log(p[j]) - digamma(s * m[j]))
+        for k in range(l):
+            a[k] = idigamma(log(p[k]) - v)
+            m[k] = a[k] / sum(a)
+    return a
