@@ -56,25 +56,27 @@ namespace BayesianGenotypeModel
     
     template <typename MapType, typename RealType>
     HaplotypePseudoCounts<RealType>
-    get_haplotype_prior_pseudo_counts(const MapType& the_haplotype_priors,
+    get_haplotype_prior_pseudo_counts(const MapType& haplotype_priors,
                                       const Haplotype& the_reference_haplotype,
                                       RealType reference_bias=1.0)
     {
         HaplotypePseudoCounts<RealType> result {};
-        result.reserve(the_haplotype_priors.size());
+        result.reserve(haplotype_priors.size());
         
-        reference_bias = 1.0;
+        std::vector<RealType> expected_probabilities(haplotype_priors.size());
+        std::transform(haplotype_priors.cbegin(), haplotype_priors.cend(), expected_probabilities.begin(),
+                       [] (const auto& p) { return p.second; });
         
-        RealType uniformity {0};//(1 - reference_bias) * 0.4};
-        static const RealType concentration {-std::log(10.0)};
+        static const constexpr unsigned max_iterations {200};
         
-        for (const auto& haplotype_prior : the_haplotype_priors) {
-//            result.emplace(haplotype_prior.first, uniformity + digamma_inv(std::log(haplotype_prior.second) +
-//                                                                           std::log(reference_bias) + concentration));
-            result.emplace(haplotype_prior.first, digamma_inv(std::log(haplotype_prior.second)));
+        std::vector<RealType> alphas = maximum_likelihood_dirichlet_params(expected_probabilities,
+                                                                           reference_bias, max_iterations);
+        
+        std::size_t i {};
+        for (const auto& haplotype_prior : haplotype_priors) {
+            result.emplace(haplotype_prior.first, alphas[i]);
+            ++i;
         }
-        
-        //result[the_reference_haplotype] += reference_bias;
         
 //        for (auto& count : result) {
 //            //std::cout << count.second << std::endl;
