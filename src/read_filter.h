@@ -68,39 +68,42 @@ unsigned ReadFilter<BidirectionalIterator>::num_filters() const noexcept
     return static_cast<unsigned>(context_free_filters_.size() + context_based_filters_.size());
 }
 
-template <typename T>
-inline
-typename std::enable_if<std::is_void<typename T::value_type>::value,
+namespace detail
+{
+    template <typename T>
+    inline
+    typename std::enable_if<std::is_void<typename T::value_type>::value,
     typename T::container_type::const_iterator>::type
-get_first(T first, T last)
-{
-    return last.begin();
-}
-
-template <typename T>
-inline
-typename std::enable_if<!std::is_void<typename T::value_type>::value, T>::type
-get_first(T first, T last)
-{
-    return first;
-}
-
-template <typename T>
-inline
-typename std::enable_if<std::is_void<typename T::value_type>::value,
+    get_first(T first, T last)
+    {
+        return last.begin();
+    }
+    
+    template <typename T>
+    inline
+    typename std::enable_if<!std::is_void<typename T::value_type>::value, T>::type
+    get_first(T first, T last)
+    {
+        return first;
+    }
+    
+    template <typename T>
+    inline
+    typename std::enable_if<std::is_void<typename T::value_type>::value,
     typename T::container_type::const_iterator>::type
-get_last(T first, T last)
-{
-    return (last.begin() != last.end()) ? std::prev(last.end()) : last.begin();
-}
-
-template <typename T>
-inline
-typename std::enable_if<!std::is_void<typename T::value_type>::value, T>::type
-get_last(T first, T last)
-{
-    return (first != last) ? std::prev(last) : last;
-}
+    get_last(T first, T last)
+    {
+        return (last.begin() != last.end()) ? std::prev(last.end()) : last.begin();
+    }
+    
+    template <typename T>
+    inline
+    typename std::enable_if<!std::is_void<typename T::value_type>::value, T>::type
+    get_last(T first, T last)
+    {
+        return (first != last) ? std::prev(last) : last;
+    }
+} // end namespace detail
 
 template <typename BidirectionalIterator>
 template <typename InputIterator, typename OutputIterator1, typename OutputIterator2>
@@ -112,8 +115,8 @@ ReadFilter<BidirectionalIterator>::filter_reads(InputIterator first, InputIterat
     auto good_reads_last = good_reads;
     return std::partition_copy(first, last, good_reads, bad_reads,
         [this, good_reads, &good_reads_last] (const AlignedRead& the_read) {
-        if (filter_read(the_read, get_first(good_reads, good_reads_last),
-                        get_last(good_reads, good_reads_last))) {
+            if (filter_read(the_read, detail::get_first(good_reads, good_reads_last),
+                            detail::get_last(good_reads, good_reads_last))) {
             ++good_reads_last;
             return true;
         }

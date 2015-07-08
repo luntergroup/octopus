@@ -89,6 +89,8 @@ void HaplotypePhaser::phase_current_data()
                                                                   get_read_iterator_ranges(sub_region),
                                                                   max_model_update_iterations_);
         
+        cout << "computed latents" << endl;
+        
         if (candidate_range.second == the_candidates_.cend()) {
             remove_unlikely_haplotypes_from_tree(haplotypes, haplotype_prior_counts,
                                                  latent_posteriors.haplotype_pseudo_counts);

@@ -252,81 +252,81 @@ TEST_CASE("what happens when two heterzygous genotypes are equally likely", "[va
 //    cout << dirichlet_multinomial(z2, a) << endl;
 //    cout << "diff: " << (dirichlet_multinomial(z1, a) - dirichlet_multinomial(z2, a)) << endl;
     
-    cout << "prior probabilities: " << endl;
-    cout << "hap1: " << priors[hap1] << endl;
-    cout << "hap2: " << priors[hap2] << endl;
-    cout << "hap3: " << priors[hap3] << endl;
-    cout << "hap4: " << priors[hap4] << endl;
-    cout << endl;
-    
-    cout << "prior counts: " << endl;
-    cout << "hap1: " << prior_counts[hap1] << endl;
-    cout << "hap2: " << prior_counts[hap2] << endl;
-    cout << "hap3: " << prior_counts[hap3] << endl;
-    cout << "hap4: " << prior_counts[hap4] << endl;
-    cout << endl;
-    
-    cout << "log genotype likelihoods (should be equal): " << endl;
-    cout << "g1: " << a_read_model.log_probability(reads.at(samples.front()).cbegin(), reads.at(samples.front()).cend(), g1, samples.front()) << endl;
-    cout << "g2: " << a_read_model.log_probability(reads.at(samples.front()).cbegin(), reads.at(samples.front()).cend(), g2, samples.front()) << endl;
-    cout << endl;
-    
-    cout << "log_expected_genotype_probability: " << endl;
-    cout << "g1: " << the_model.log_expected_genotype_probability(g1, prior_counts) << endl;
-    cout << "g2: " << the_model.log_expected_genotype_probability(g2, prior_counts) << endl;
-    cout << endl;
-    
-    cout << "log_rho: " << endl;
-    cout << "g1: " << the_model.log_rho(g1, prior_counts, read_ranges.at(samples.front()).first, read_ranges.at(samples.front()).second, samples.front()) << endl;
-    cout << "g2: " << the_model.log_rho(g2, prior_counts, read_ranges.at(samples.front()).first, read_ranges.at(samples.front()).second, samples.front()) << endl;
-    cout << endl;
-    
-    auto latent_posteriors = Octopus::BayesianGenotypeModel::update_latents(the_model, gens, prior_counts, read_ranges, 1);
-    
-    auto expected_occurences = Octopus::BayesianGenotypeModel::expected_haplotype_occurences(prior_counts, latent_posteriors.haplotype_pseudo_counts);
-    
-    cout << "effective occurences (1 iteration): " << endl;
-    cout << "hap1: "  << expected_occurences.at(hap1) << endl;
-    cout << "hap2: "  << expected_occurences.at(hap2) << endl;
-    cout << "hap3: "  << expected_occurences.at(hap3) << endl;
-    cout << "hap4: "  << expected_occurences.at(hap4) << endl;
-    cout << endl;
-    
-    cout << "posterior counts (1 iteration): " << endl;
-    cout << "hap1: "  << latent_posteriors.haplotype_pseudo_counts.at(hap1) << endl;
-    cout << "hap2: "  << latent_posteriors.haplotype_pseudo_counts.at(hap2) << endl;
-    cout << "hap3: "  << latent_posteriors.haplotype_pseudo_counts.at(hap3) << endl;
-    cout << "hap4: "  << latent_posteriors.haplotype_pseudo_counts.at(hap4) << endl;
-    cout << endl;
-    
-    cout << "genotype posteriors (1 iteration): " << endl;
-    cout << "g1: "  << latent_posteriors.genotype_probabilities.at(samples.front()).at(g1) << endl;
-    cout << "g2: "  << latent_posteriors.genotype_probabilities.at(samples.front()).at(g2) << endl;
-    cout << endl;
-    
-    unsigned n_iterations {100};
-    
-    latent_posteriors = Octopus::BayesianGenotypeModel::update_latents(the_model, gens, prior_counts, read_ranges, n_iterations);
-    
-    expected_occurences = Octopus::BayesianGenotypeModel::expected_haplotype_occurences(prior_counts, latent_posteriors.haplotype_pseudo_counts);
-    
-    cout << "effective occurences (" + std::to_string(n_iterations) + " iteration): " << endl;
-    cout << "hap1: "  << expected_occurences.at(hap1) << endl;
-    cout << "hap2: "  << expected_occurences.at(hap2) << endl;
-    cout << "hap3: "  << expected_occurences.at(hap3) << endl;
-    cout << "hap4: "  << expected_occurences.at(hap4) << endl;
-    cout << endl;
-    
-    cout << "posterior counts (" + std::to_string(n_iterations) + " iteration): " << endl;
-    cout << "hap1: "  << latent_posteriors.haplotype_pseudo_counts.at(hap1) << endl;
-    cout << "hap2: "  << latent_posteriors.haplotype_pseudo_counts.at(hap2) << endl;
-    cout << "hap3: "  << latent_posteriors.haplotype_pseudo_counts.at(hap3) << endl;
-    cout << "hap4: "  << latent_posteriors.haplotype_pseudo_counts.at(hap4) << endl;
-    cout << endl;
-    
-    cout << "posteriors (" + std::to_string(n_iterations) + " iteration): " << endl;
-    cout << "g1: "   << latent_posteriors.genotype_probabilities.at(samples.front()).at(g1) << endl;
-    cout << "g2: "   << latent_posteriors.genotype_probabilities.at(samples.front()).at(g2) << endl;
+//    cout << "prior probabilities: " << endl;
+//    cout << "hap1: " << priors[hap1] << endl;
+//    cout << "hap2: " << priors[hap2] << endl;
+//    cout << "hap3: " << priors[hap3] << endl;
+//    cout << "hap4: " << priors[hap4] << endl;
+//    cout << endl;
+//    
+//    cout << "prior counts: " << endl;
+//    cout << "hap1: " << prior_counts[hap1] << endl;
+//    cout << "hap2: " << prior_counts[hap2] << endl;
+//    cout << "hap3: " << prior_counts[hap3] << endl;
+//    cout << "hap4: " << prior_counts[hap4] << endl;
+//    cout << endl;
+//    
+//    cout << "log genotype likelihoods (should be equal): " << endl;
+//    cout << "g1: " << a_read_model.log_probability(reads.at(samples.front()).cbegin(), reads.at(samples.front()).cend(), g1, samples.front()) << endl;
+//    cout << "g2: " << a_read_model.log_probability(reads.at(samples.front()).cbegin(), reads.at(samples.front()).cend(), g2, samples.front()) << endl;
+//    cout << endl;
+//    
+//    cout << "log_expected_genotype_probability: " << endl;
+//    cout << "g1: " << the_model.log_expected_genotype_probability(g1, prior_counts) << endl;
+//    cout << "g2: " << the_model.log_expected_genotype_probability(g2, prior_counts) << endl;
+//    cout << endl;
+//    
+//    cout << "log_rho: " << endl;
+//    cout << "g1: " << the_model.log_rho(g1, prior_counts, read_ranges.at(samples.front()).first, read_ranges.at(samples.front()).second, samples.front()) << endl;
+//    cout << "g2: " << the_model.log_rho(g2, prior_counts, read_ranges.at(samples.front()).first, read_ranges.at(samples.front()).second, samples.front()) << endl;
+//    cout << endl;
+//    
+//    auto latent_posteriors = Octopus::BayesianGenotypeModel::update_latents(the_model, gens, prior_counts, read_ranges, 1);
+//    
+//    auto expected_occurences = Octopus::BayesianGenotypeModel::expected_haplotype_occurences(prior_counts, latent_posteriors.haplotype_pseudo_counts);
+//    
+//    cout << "effective occurences (1 iteration): " << endl;
+//    cout << "hap1: "  << expected_occurences.at(hap1) << endl;
+//    cout << "hap2: "  << expected_occurences.at(hap2) << endl;
+//    cout << "hap3: "  << expected_occurences.at(hap3) << endl;
+//    cout << "hap4: "  << expected_occurences.at(hap4) << endl;
+//    cout << endl;
+//    
+//    cout << "posterior counts (1 iteration): " << endl;
+//    cout << "hap1: "  << latent_posteriors.haplotype_pseudo_counts.at(hap1) << endl;
+//    cout << "hap2: "  << latent_posteriors.haplotype_pseudo_counts.at(hap2) << endl;
+//    cout << "hap3: "  << latent_posteriors.haplotype_pseudo_counts.at(hap3) << endl;
+//    cout << "hap4: "  << latent_posteriors.haplotype_pseudo_counts.at(hap4) << endl;
+//    cout << endl;
+//    
+//    cout << "genotype posteriors (1 iteration): " << endl;
+//    cout << "g1: "  << latent_posteriors.genotype_probabilities.at(samples.front()).at(g1) << endl;
+//    cout << "g2: "  << latent_posteriors.genotype_probabilities.at(samples.front()).at(g2) << endl;
+//    cout << endl;
+//    
+//    unsigned n_iterations {100};
+//    
+//    latent_posteriors = Octopus::BayesianGenotypeModel::update_latents(the_model, gens, prior_counts, read_ranges, n_iterations);
+//    
+//    expected_occurences = Octopus::BayesianGenotypeModel::expected_haplotype_occurences(prior_counts, latent_posteriors.haplotype_pseudo_counts);
+//    
+//    cout << "effective occurences (" + std::to_string(n_iterations) + " iteration): " << endl;
+//    cout << "hap1: "  << expected_occurences.at(hap1) << endl;
+//    cout << "hap2: "  << expected_occurences.at(hap2) << endl;
+//    cout << "hap3: "  << expected_occurences.at(hap3) << endl;
+//    cout << "hap4: "  << expected_occurences.at(hap4) << endl;
+//    cout << endl;
+//    
+//    cout << "posterior counts (" + std::to_string(n_iterations) + " iteration): " << endl;
+//    cout << "hap1: "  << latent_posteriors.haplotype_pseudo_counts.at(hap1) << endl;
+//    cout << "hap2: "  << latent_posteriors.haplotype_pseudo_counts.at(hap2) << endl;
+//    cout << "hap3: "  << latent_posteriors.haplotype_pseudo_counts.at(hap3) << endl;
+//    cout << "hap4: "  << latent_posteriors.haplotype_pseudo_counts.at(hap4) << endl;
+//    cout << endl;
+//    
+//    cout << "posteriors (" + std::to_string(n_iterations) + " iteration): " << endl;
+//    cout << "g1: "   << latent_posteriors.genotype_probabilities.at(samples.front()).at(g1) << endl;
+//    cout << "g2: "   << latent_posteriors.genotype_probabilities.at(samples.front()).at(g2) << endl;
 }
 
 TEST_CASE("what happens when a unlikely haplotype has a large liklihood", "[variational_bayes_genotype_model]")

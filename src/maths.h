@@ -15,11 +15,28 @@
 #include <numeric>     // std::accumulate, std::iota
 #include <algorithm>   // std::max, std::max_element, std::transform
 #include <type_traits> // std::enable_if, std::is_integral
+#include <iterator>    // std::distance
 
 #include <boost/math/special_functions/gamma.hpp>
 #include <boost/math/special_functions/factorials.hpp>
 #include <boost/math/special_functions/sign.hpp>
 #include <boost/math/special_functions/digamma.hpp>
+
+template <typename InputIterator>
+double mean(InputIterator first, InputIterator last)
+{
+    return std::accumulate(first, last, 0.0) / std::distance(first, last);
+}
+
+template <typename InputIterator>
+double stdev(InputIterator first, InputIterator last)
+{
+    auto m = mean(first, last);
+    auto n = std::distance(first, last);
+    std::vector<double> diff(n);
+    std::transform(first, last, diff.begin(), std::bind2nd(std::minus<double>(), m));
+    return std::sqrt(std::inner_product(diff.begin(), diff.end(), diff.begin(), 0.0) / n);
+}
 
 template <typename RealType>
 inline constexpr RealType exp_maclaurin(RealType x) {
