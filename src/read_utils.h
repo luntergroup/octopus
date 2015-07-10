@@ -13,7 +13,7 @@
 #include <unordered_map>
 #include <iterator>  // std::begin, std::end, std::make_move_iterator
 #include <utility>   // std::move
-#include <algorithm> // std::min_element
+#include <algorithm> // std::min_element, std::max_element, std::transform
 
 #include "aligned_read.h"
 #include "read_filter.h"
@@ -75,10 +75,9 @@ double stdev_coverage(const std::vector<AlignedRead>& reads, const GenomicRegion
 template <typename T, typename Container>
 unsigned min_coverage(const ReadMap<T, Container>& reads, const GenomicRegion& a_region)
 {
-    std::vector<unsigned> sample_min_coverages {};
-    sample_min_coverages.reserve(reads.size());
+    std::vector<unsigned> sample_min_coverages(reads.size(), 0);
     
-    std::transform(std::cbegin(reads), std::cend(reads), std::back_inserter(sample_min_coverages),
+    std::transform(std::cbegin(reads), std::cend(reads), sample_min_coverages.begin(),
                    [&a_region] (const auto& sample_reads) {
                        return min_coverage(sample_reads.second, a_region);
                    });
@@ -89,22 +88,36 @@ unsigned min_coverage(const ReadMap<T, Container>& reads, const GenomicRegion& a
 template <typename T, typename Container>
 unsigned max_coverage(const ReadMap<T, Container>& reads, const GenomicRegion& a_region)
 {
-    std::vector<unsigned> sample_min_coverages {};
-    sample_min_coverages.reserve(reads.size());
+    std::vector<unsigned> sample_max_coverages(reads.size(), 0);
     
-    std::transform(std::cbegin(reads), std::cend(reads), std::back_inserter(sample_min_coverages),
+    std::transform(std::cbegin(reads), std::cend(reads), sample_max_coverages.begin(),
                    [&a_region] (const auto& sample_reads) {
                        return max_coverage(sample_reads.second, a_region);
                    });
     
-    return *std::max_element(sample_min_coverages.cbegin(), sample_min_coverages.cend());
+    return *std::max_element(sample_max_coverages.cbegin(), sample_max_coverages.cend());
 }
 
 std::vector<GenomicRegion> find_high_coverage_regions(const std::vector<AlignedRead>& reads,
-                                                      const GenomicRegion& a_region, unsigned max_positional_coverage);
+                                                      const GenomicRegion& a_region, unsigned maximum_coverage);
 
-std::vector<AlignedRead> downsample(const std::vector<AlignedRead>& reads,
-                                    const GenomicRegion& a_regionunsigned, unsigned max_positional_coverage);
+template <typename SampleIdType, typename Container>
+std::unordered_map<SampleIdType, std::vector<GenomicRegion>>
+find_high_coverage_regions(const ReadMap<SampleIdType, Container>& reads,
+                           const GenomicRegion& a_region, unsigned maximum_coverage)
+{
+    std::unordered_map<SampleIdType, std::vector<GenomicRegion>> result {};
+    result.reserve(reads.size());
+    
+    for (const auto& sample_reads : reads) {
+        result.emplace(sample_reads.first, find_high_coverage_regions(sample_reads.second, a_region, maximum_coverage));
+    }
+    
+    return result;
+}
+
+std::vector<AlignedRead> downsample(const std::vector<AlignedRead>& reads, const GenomicRegion& a_region,
+                                    unsigned maximum_coverage, unsigned minimum_downsample_coverage);
 
 template <typename T, typename Container>
 ReadMap<T, Container> downsample(ReadMap<T, Container>&& reads, unsigned max_coverage_per_sample)

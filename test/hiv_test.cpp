@@ -58,6 +58,8 @@ TEST_CASE("HIV test 1", "[hiv]")
     
     auto reads = a_read_manager.fetch_reads(samples, a_region);
     
+    cout << "there are " << reads.at(samples.front()).size() << " reads" << endl;
+    
     using ReadIterator = std::vector<AlignedRead>::const_iterator;
     ReadFilter<ReadIterator> a_read_filter {};
     a_read_filter.register_filter([] (const AlignedRead& the_read) {
@@ -79,12 +81,16 @@ TEST_CASE("HIV test 1", "[hiv]")
     
     cout << "there are " << candidates.size() << " candidates" << endl;
     
-    cout << min_coverage(good_reads, a_region) << endl;
-    cout << max_coverage(good_reads, a_region) << endl;
+//    cout << min_coverage(good_reads, a_region) << endl;
+//    cout << max_coverage(good_reads, a_region) << endl;
+//    
+//    auto high_coverages = find_high_coverage_regions(good_reads, a_region, 10000);
+//    
+//    for (const auto& region : high_coverages[samples.front()]) cout << region << endl;
     
-    auto high_coverages = find_high_coverage_regions(good_reads.at(samples.front()), a_region, 15000);
+    auto downsampled_reads = downsample(good_reads.at(samples.front()), a_region, 10000, 50);
     
-    for (const auto& region : high_coverages) cout << region << endl;
+    cout << "there are " << downsampled_reads.size() << " downsampled reads" << endl;
     
     exit(0);
     

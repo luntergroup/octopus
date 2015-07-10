@@ -9,9 +9,11 @@
 #ifndef Octopus_region_algorithms_h
 #define Octopus_region_algorithms_h
 
-#include <algorithm> // std::equal_range, std::count_if, std::any_of, std::find_if, std::min_element, std::max_element
+#include <algorithm> // std::equal_range, std::binary_search, std::count_if, std::any_of, std::find_if, std::min_element,
+                     // std::max_element, std::lower_bound, std::find_if_not, std::generate_n, std::transform
 #include <cstddef>   // std::size_t
 #include <iterator>  // std::distance, std::cbegin, std::cend, std::prev, std::next
+#include <stdexcept>
 
 #include "genomic_region.h"
 #include "mappable.h"
@@ -85,6 +87,28 @@ std::size_t count_overlapped(ForwardIterator first, ForwardIterator last, const 
 {
     auto overlapped = overlap_range(first, last, mappable);
     return std::distance(overlapped.first, overlapped.second);
+}
+
+/**
+ Returns the sub-range of Mappable elements in the range [first, last) such that each element
+ in the sub-range is contained within a_region.
+ 
+ Requires [first, last) is sorted w.r.t GenomicRegion::operator<
+ */
+template <typename ForwardIterator, typename MappableType>
+inline
+std::pair<ForwardIterator, ForwardIterator> contained_range(ForwardIterator first, ForwardIterator last,
+                                                            const MappableType& mappable)
+{
+    auto start = std::lower_bound(first, last, mappable,
+                                  [] (const auto& lhs, const auto& rhs) {
+                                      return begins_before(lhs, rhs);
+                                  });
+    
+    return std::make_pair(start, std::find_if_not(start, last,
+                                                  [&mappable] (const auto& m) {
+                                                      return get_end(m) <= get_end(mappable);
+                                                  }));
 }
 
 /**
@@ -177,6 +201,22 @@ std::size_t count_if_shared_with_first(ForwardIterator1 first1, ForwardIterator1
 }
 
 /**
+ Returns the GenomicRegion encompassed by the elements in the range [first, last).
+ 
+ Requires [first, last) is sorted w.r.t GenomicRegion::operator<
+ */
+template <typename ForwardIterator>
+inline
+GenomicRegion encompassing(ForwardIterator first, ForwardIterator last)
+{
+    if (std::distance(first, last) == 0) {
+        throw std::runtime_error {"cannot get encompassed region of empty range"};
+    }
+    
+    return get_encompassing(*first, *rightmost_mappable(first, last));
+}
+
+/**
  Splits a_region into an ordered vector of GenomicRegions of size 1
  */
 inline std::vector<GenomicRegion> decompose(const GenomicRegion& a_region)
@@ -214,9 +254,7 @@ std::vector<GenomicRegion> get_all_overlapped(ForwardIterator first_mappable, Fo
     
     while (first_mappable != last_mappable) {
         last_overlapped = overlap_range(first_mappable, last_mappable, *first_mappable).second;
-        
-        result.emplace_back(get_encompassing(*first_mappable, *rightmost_mappable(first_mappable, last_overlapped)));
-        
+        result.emplace_back(encompassing(first_mappable, last_overlapped));
         first_mappable = last_overlapped;
     }
     
