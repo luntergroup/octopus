@@ -112,6 +112,36 @@ std::pair<ForwardIterator, ForwardIterator> contained_range(ForwardIterator firs
 }
 
 /**
+ Returns true if any of the mappable elements in the range [first, last) are contained within a_region.
+ 
+ Requires [first, last) is sorted w.r.t GenomicRegion::operator<
+ */
+template <typename ForwardIterator, typename MappableType>
+inline
+bool has_contained(ForwardIterator first, ForwardIterator last, const MappableType& mappable)
+{
+    auto start = std::lower_bound(first, last, mappable,
+                                  [] (const auto& lhs, const auto& rhs) {
+                                      return begins_before(lhs, rhs);
+                                  });
+    
+    return (start != last) && get_end(*start) <= get_end(mappable);
+}
+
+/**
+ Returns the number of mappable elements in the range [first, last) that are contained within a_region.
+ 
+ Requires [first, last) is sorted w.r.t GenomicRegion::operator<
+ */
+template <typename ForwardIterator, typename MappableType>
+inline
+std::size_t count_contained(ForwardIterator first, ForwardIterator last, const MappableType& mappable)
+{
+    auto contained = contained_range(first, last, mappable);
+    return std::distance(contained.first, contained.second);
+}
+
+/**
  Returns the number of Mappable elements in the range [first, last) such that both lhs and rhs overlap
  the the same element.
  

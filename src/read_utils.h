@@ -72,6 +72,10 @@ double mean_coverage(const std::vector<AlignedRead>& reads, const GenomicRegion&
 
 double stdev_coverage(const std::vector<AlignedRead>& reads, const GenomicRegion& a_region);
 
+std::unordered_map<AlignedRead, unsigned> min_coverage_in_read_region(const std::vector<AlignedRead>& reads, const GenomicRegion& a_region);
+
+std::unordered_map<AlignedRead, unsigned> max_coverage_in_read_region(const std::vector<AlignedRead>& reads, const GenomicRegion& a_region);
+
 template <typename T, typename Container>
 unsigned min_coverage(const ReadMap<T, Container>& reads, const GenomicRegion& a_region)
 {

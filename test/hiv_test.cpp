@@ -65,8 +65,13 @@ TEST_CASE("HIV test 1", "[hiv]")
     a_read_filter.register_filter([] (const AlignedRead& the_read) {
         return is_good_mapping_quality(the_read, 10);
     });
+    a_read_filter.register_filter(is_not_duplicate<ReadIterator>);
     
     auto good_reads = filter_reads(std::move(reads), a_read_filter).first;
+    
+    for (auto& sample_reads : good_reads) {
+        std::sort(std::begin(sample_reads.second), std::end(sample_reads.second));
+    }
     
     cout << "there are " << good_reads.at(samples.front()).size() << " good reads" << endl;
     
@@ -88,7 +93,7 @@ TEST_CASE("HIV test 1", "[hiv]")
 //    
 //    for (const auto& region : high_coverages[samples.front()]) cout << region << endl;
     
-    auto downsampled_reads = downsample(good_reads.at(samples.front()), a_region, 10000, 50);
+    auto downsampled_reads = downsample(good_reads.at(samples.front()), a_region, 2000, 1000);
     
     cout << "there are " << downsampled_reads.size() << " downsampled reads" << endl;
     

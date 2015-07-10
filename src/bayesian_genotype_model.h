@@ -78,10 +78,10 @@ namespace BayesianGenotypeModel
             ++i;
         }
         
-        for (auto& count : result) {
-            //std::cout << count.second << std::endl;
-            count.second = 0.5; // TEST
-        }
+//        for (auto& count : result) {
+//            //std::cout << count.second << std::endl;
+//            count.second = 0.5; // TEST
+//        }
         
         return result;
     }

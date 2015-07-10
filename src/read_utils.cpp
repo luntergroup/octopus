@@ -121,6 +121,42 @@ std::vector<GenomicRegion> find_high_coverage_regions(const std::vector<AlignedR
     return result;
 }
 
+std::unordered_map<AlignedRead, unsigned> min_coverage_in_read_region(const std::vector<AlignedRead>& reads, const GenomicRegion& a_region)
+{
+    std::unordered_map<AlignedRead, unsigned> result {};
+    result.reserve(reads.size());
+    
+    auto position_coverages = positional_coverage(reads, a_region);
+    auto first_position = get_begin(a_region);
+    auto num_positions  = size(a_region);
+    
+    for (const auto& read : reads) {
+        auto first = std::next(std::cbegin(position_coverages), (get_begin(read) <= first_position) ? 0 : get_begin(read) - first_position);
+        auto last  = std::next(std::cbegin(position_coverages), std::min(get_end(read) - first_position, num_positions));
+        result.emplace(read, *std::min_element(first, last));
+    }
+    
+    return result;
+}
+
+std::unordered_map<AlignedRead, unsigned> max_coverage_in_read_region(const std::vector<AlignedRead>& reads, const GenomicRegion& a_region)
+{
+    std::unordered_map<AlignedRead, unsigned> result {};
+    result.reserve(reads.size());
+    
+    auto position_coverages = positional_coverage(reads, a_region);
+    auto first_position = get_begin(a_region);
+    auto num_positions  = size(a_region);
+    
+    for (const auto& read : reads) {
+        auto first = std::next(std::cbegin(position_coverages), (get_begin(read) <= first_position) ? 0 : get_begin(read) - first_position);
+        auto last  = std::next(std::cbegin(position_coverages), std::min(get_end(read) - first_position, num_positions));
+        result.emplace(read, *std::max_element(first, last));
+    }
+    
+    return result;
+}
+
 bool has_minimum_coverage(const std::vector<unsigned>& required_coverage)
 {
     return std::all_of(required_coverage.cbegin(), required_coverage.cend(),
@@ -135,6 +171,30 @@ bool can_add_samples(const std::vector<unsigned>& new_position_coverages, unsign
                        [maximum_coverage] (unsigned coverage) {
                            return coverage <= maximum_coverage;
                        });
+}
+
+std::vector<GenomicRegion>
+find_good_coverage_regions_containing_high_coverage_positions(const std::vector<AlignedRead>& reads, const GenomicRegion& a_region,
+                                                              unsigned maximum_coverage, unsigned minimum_downsample_coverage)
+{
+    auto above_max_coverage_regions = find_high_coverage_regions(reads, a_region, maximum_coverage);
+    
+    std::vector<GenomicRegion> result {};
+    
+    if (above_max_coverage_regions.empty()) return result;
+    
+    result.reserve(above_max_coverage_regions.size());
+    
+    auto above_min_coverage_regions = find_high_coverage_regions(reads, a_region, minimum_downsample_coverage);
+    
+    std::copy_if(std::cbegin(above_min_coverage_regions), std::cend(above_min_coverage_regions), std::back_inserter(result),
+                 [&above_max_coverage_regions] (const auto& region) {
+                     return has_contained(std::cbegin(above_max_coverage_regions), std::cend(above_max_coverage_regions), region);
+                 });
+    
+    result.shrink_to_fit();
+    
+    return result;
 }
 
 std::vector<AlignedRead> sample(std::vector<AlignedRead>::const_iterator first,
@@ -171,7 +231,6 @@ std::vector<AlignedRead> sample(std::vector<AlignedRead>::const_iterator first,
     std::vector<AlignedRead> result {};
     result.reserve(std::distance(first, last) * maximum_coverage);
     
-    //std::list<std::reference_wrapper<const AlignedRead>> unsampled_reads(first, last);
     std::list<AlignedRead> unsampled_reads(first, last);
     
     std::cout << "starting to sample" << std::endl;
@@ -187,12 +246,12 @@ std::vector<AlignedRead> sample(std::vector<AlignedRead>::const_iterator first,
         if (std::distance(overlapped.first, overlapped.second) == 0) {
             std::cout << "ran out of reads at position " << positions[sample_position] << std::endl;
             std::cout << "required remaining coverage is " << required_coverage[sample_position] << std::endl;
+            exit(0);
         }
         
         std::uniform_int_distribution<std::size_t> uniform(0, std::distance(overlapped.first, overlapped.second) - 1);
         
         auto sampled_read_it = std::next(overlapped.first, uniform(generator));
-        //const AlignedRead& sampled_read {sampled_read_it->get()};
         const AlignedRead& sampled_read {*sampled_read_it};
         result.emplace_back(sampled_read);
         unsampled_reads.erase(sampled_read_it);
@@ -238,9 +297,7 @@ std::vector<AlignedRead> sample(std::vector<AlignedRead>::const_iterator first,
 std::vector<AlignedRead> downsample(const std::vector<AlignedRead>& reads, const GenomicRegion& a_region,
                                     unsigned maximum_coverage, unsigned minimum_downsample_coverage)
 {
-    auto high_coverage_regions = find_high_coverage_regions(reads, a_region, maximum_coverage);
-    
-    if (high_coverage_regions.empty()) return reads;
+    auto regions_to_sample = find_good_coverage_regions_containing_high_coverage_positions(reads, a_region, maximum_coverage, minimum_downsample_coverage);
     
     auto overlapped = overlap_range(reads.cbegin(), reads.cend(), a_region);
     
@@ -249,34 +306,19 @@ std::vector<AlignedRead> downsample(const std::vector<AlignedRead>& reads, const
     
     std::vector<AlignedRead>::const_iterator last_sampled {reads.cbegin()};
     
-    for (auto& region : high_coverage_regions) {
+    for (auto& region : regions_to_sample) {
         std::cout << "downsampling region " << region << std::endl;
         
         auto contained = contained_range(overlapped.first, overlapped.second, region);
         
-        auto num_removals_required = max_coverage(reads, region) - maximum_coverage;
-        auto num_reads_in_contained_region = std::distance(contained.first, contained.second);
-        
-        if (num_reads_in_contained_region < num_removals_required) {
-            std::cout << "contained region does not contain sufficient reads" << std::endl;
-            
-            auto contained_region = (num_reads_in_contained_region > 0) ? encompassing(contained.first, contained.second) : region;
-            auto overlapped_with_contained = overlap_range(overlapped.first, overlapped.second, contained_region);
-            auto overlapped_region = encompassing(overlapped_with_contained.first, overlapped_with_contained.second);
-            
-            if (!contains(region, overlapped_region)) {
-                std::cout << "BAD" << std::endl;
-            }
-            
-            if (min_coverage(reads, overlapped_region) > minimum_downsample_coverage) {
-                contained = overlapped_with_contained;
-                region = overlapped_region;
-            } else {
-                std::cout << "can't remove any reads from this region" << std::endl;
-                result.insert(result.end(), last_sampled, contained.second);
-                continue;
-            }
+        if (!std::all_of(contained.first, contained.second, [&region] (const auto& read) { return contains(region, read); })) {
+            std::cout << "BAD" << std::endl;
+            auto a_bad_read = std::find_if_not(contained.first, contained.second, [&region] (const auto& read) { return contains(region, read); });
+            std::cout << *a_bad_read << std::endl;
+            exit(0);
         }
+        
+        if (std::distance(contained.first, contained.second) == 0) continue;
         
         std::cout << "copying over " << std::distance(last_sampled, contained.first) << " reads" << std::endl;
         
