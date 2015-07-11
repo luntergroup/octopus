@@ -13,30 +13,9 @@
 #include <list>
 #include <functional> // std::reference_wrapper
 
-#include "region_algorithms.h"
 #include "maths.h"
 
 #include <iostream> // TEST
-
-std::vector<unsigned> positional_coverage(std::vector<AlignedRead>::const_iterator first,
-                                          std::vector<AlignedRead>::const_iterator last,
-                                          const GenomicRegion& a_region)
-{
-    auto num_positions = size(a_region);
-    
-    std::vector<unsigned> result(num_positions, 0);
-    
-    auto overlapped     = overlap_range(first, last, a_region);
-    auto first_position = get_begin(a_region);
-    
-    std::for_each(overlapped.first, overlapped.second, [&result, first_position, num_positions] (const auto& read) {
-        auto first = std::next(result.begin(), (get_begin(read) <= first_position) ? 0 : get_begin(read) - first_position);
-        auto last  = std::next(result.begin(), std::min(get_end(read) - first_position, num_positions));
-        std::transform(first, last, first, [] (unsigned count) { return count + 1; });
-    });
-    
-    return result;
-}
 
 std::vector<unsigned> positional_coverage(const std::vector<AlignedRead>& reads, const GenomicRegion& a_region)
 {
@@ -45,19 +24,19 @@ std::vector<unsigned> positional_coverage(const std::vector<AlignedRead>& reads,
 
 // Unfortunately the algorithm above is faster than this one. Which is a shame because
 // this one is so damn pretty!
-//std::vector<unsigned> positional_coverage(const std::vector<AlignedRead>& reads, const GenomicRegion& a_region)
-//{
-//    std::vector<unsigned> result(size(a_region), 0);
-//    
-//    auto positions = decompose(a_region);
-//    
-//    std::transform(std::cbegin(positions), std::cend(positions), result.begin(),
-//                   [&reads] (const auto& position) {
-//                       return count_overlapped(reads.cbegin(), reads.cend(), position);
-//                   });
-//    
-//    return result;
-//}
+std::vector<unsigned> positional_coverage2(const std::vector<AlignedRead>& reads, const GenomicRegion& a_region)
+{
+    std::vector<unsigned> result(size(a_region), 0);
+    
+    auto positions = decompose(a_region);
+    
+    std::transform(std::cbegin(positions), std::cend(positions), result.begin(),
+                   [&reads] (const auto& position) {
+                       return count_overlapped(reads.cbegin(), reads.cend(), position);
+                   });
+    
+    return result;
+}
 
 unsigned min_coverage(const std::vector<AlignedRead>& reads, const GenomicRegion& a_region)
 {
@@ -244,8 +223,27 @@ std::vector<AlignedRead> sample(std::vector<AlignedRead>::const_iterator first,
         auto overlapped = overlap_range(unsampled_reads.cbegin(), unsampled_reads.cend(), positions[sample_position]);
         
         if (std::distance(overlapped.first, overlapped.second) == 0) {
+            std::cout << "-----------" << std::endl;
             std::cout << "ran out of reads at position " << positions[sample_position] << std::endl;
+            std::cout << "there are " << unsampled_reads.size() << " reads left" << std::endl;
+            std::cout << "old coverage at position was " << old_position_coverages[sample_position] << std::endl;
             std::cout << "required remaining coverage is " << required_coverage[sample_position] << std::endl;
+            std::cout << "recordered coverage at position is " << new_position_coverages[sample_position] << std::endl;
+            
+            auto remaining_actually = positional_coverage(unsampled_reads.cbegin(), unsampled_reads.cend(), encompassing_region);
+            
+            std::cout << "actual remaining coverage is " << remaining_actually[sample_position] << std::endl;
+            std::cout << "are unsampled reads sorted? " << std::is_sorted(unsampled_reads.cbegin(), unsampled_reads.cend()) << std::endl;
+            
+            auto region = positions[sample_position];
+            auto fo = std::find_if(unsampled_reads.cbegin(), unsampled_reads.cend(), [&region] (const auto& read) {
+                return overlaps(read, region);
+            });
+            
+            std::cout << *std::prev(fo) << std::endl;
+            std::cout << *fo << std::endl;
+            std::cout << *std::next(fo) << std::endl;
+            
             exit(0);
         }
         
@@ -255,8 +253,6 @@ std::vector<AlignedRead> sample(std::vector<AlignedRead>::const_iterator first,
         const AlignedRead& sampled_read {*sampled_read_it};
         result.emplace_back(sampled_read);
         unsampled_reads.erase(sampled_read_it);
-        
-        if (unsampled_reads.empty()) break;
         
         auto offset = get_begin(sampled_read) - get_begin(encompassing_region);
         

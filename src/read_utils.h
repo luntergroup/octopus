@@ -13,10 +13,11 @@
 #include <unordered_map>
 #include <iterator>  // std::begin, std::end, std::make_move_iterator
 #include <utility>   // std::move
-#include <algorithm> // std::min_element, std::max_element, std::transform
+#include <algorithm> // std::min_element, std::max_element, std::transform, std::for_each
 
 #include "aligned_read.h"
 #include "read_filter.h"
+#include "region_algorithms.h"
 
 template <typename T, typename Container>
 using ReadMap = std::unordered_map<T, Container>;
@@ -60,6 +61,25 @@ filter_reads(ReadMap<T, Container>&& the_reads, ReadFilter& a_read_filter)
     }
     
     return {good_read_map, bad_read_map};
+}
+
+template <typename InputIterator>
+std::vector<unsigned> positional_coverage(InputIterator first, InputIterator last, const GenomicRegion& a_region)
+{
+    auto num_positions = size(a_region);
+    
+    std::vector<unsigned> result(num_positions, 0);
+    
+    auto overlapped     = overlap_range(first, last, a_region);
+    auto first_position = get_begin(a_region);
+    
+    std::for_each(overlapped.first, overlapped.second, [&result, first_position, num_positions] (const auto& read) {
+        auto first = std::next(result.begin(), (get_begin(read) <= first_position) ? 0 : get_begin(read) - first_position);
+        auto last  = std::next(result.begin(), std::min(get_end(read) - first_position, num_positions));
+        std::transform(first, last, first, [] (unsigned count) { return count + 1; });
+    });
+    
+    return result;
 }
 
 std::vector<unsigned> positional_coverage(const std::vector<AlignedRead>& reads, const GenomicRegion& a_region);

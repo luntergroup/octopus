@@ -14,7 +14,7 @@
 #include <iterator>
 #include <vector>
 #include <ostream>
-#include <algorithm> // std::copy, std::minmax, std::mismatch
+#include <algorithm> // std::copy, std::equal, std::lexicographical_compare
 #include <ctype.h>   // std::isdigit
 #include <boost/functional/hash.hpp> // boost::hash_combine, boost::hash_range
 
@@ -166,27 +166,27 @@ CigarOperation get_operation_at_sequence_index(const CigarString& a_cigar_string
 }
 
 // TODO
-template <typename SizeType>
-inline
-CigarString splice(const CigarString& a_cigar_string, SizeType the_sequence_begin, SizeType size)
-{
-    CigarString result {};
-    
-    auto first = std::cbegin(a_cigar_string);
-    
-    while (the_sequence_begin >= first->get_size()) {
-        ++first;
-        the_sequence_begin -= first->get_size();
-    }
-    
-    auto last = first;
-    
-    size += first->get_size() - the_sequence_begin;
-    
-    //while (size >= last->get
-    
-    return result;
-}
+//template <typename SizeType>
+//inline
+//CigarString splice(const CigarString& a_cigar_string, SizeType the_sequence_begin, SizeType size)
+//{
+//    CigarString result {};
+//    
+//    auto first = std::cbegin(a_cigar_string);
+//    
+//    while (the_sequence_begin >= first->get_size()) {
+//        ++first;
+//        the_sequence_begin -= first->get_size();
+//    }
+//    
+//    auto last = first;
+//    
+//    size += first->get_size() - the_sequence_begin;
+//    
+//    //while (size >= last->get
+//    
+//    return result;
+//}
 
 inline bool operator==(const CigarOperation& lhs, const CigarOperation& rhs)
 {
@@ -206,9 +206,7 @@ inline bool operator==(const CigarString& lhs, const CigarString& rhs)
 inline bool operator!=(const CigarString& lhs, const CigarString& rhs){return !operator==(lhs, rhs);}
 inline bool operator<(const CigarString& lhs, const CigarString& rhs)
 {
-    auto p = std::minmax(lhs, rhs, [] (const auto& lhs, const auto& rhs) { return lhs.size() <= rhs.size(); });
-    auto itrs = std::mismatch(std::cbegin(p.first), std::cend(p.first), std::cbegin(p.second));
-    return (itrs.first != std::cend(p.first)) ? *(itrs.first) < *(itrs.second) : false;
+    return std::lexicographical_compare(std::cbegin(lhs), std::cend(lhs), std::cbegin(rhs), std::cend(rhs));
 }
 inline bool operator> (const CigarString& lhs, const CigarString& rhs){return  operator< (rhs,lhs);}
 inline bool operator<=(const CigarString& lhs, const CigarString& rhs){return !operator> (lhs,rhs);}

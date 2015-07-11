@@ -93,6 +93,19 @@ TEST_CASE("HIV test 1", "[hiv]")
 //    
 //    for (const auto& region : high_coverages[samples.front()]) cout << region << endl;
     
+    std::vector<GenomicRegion> regions {GenomicRegion {"1", 7517, 7667}, GenomicRegion {"1", 7517, 7670}, GenomicRegion {"1", 7518, 7668}};
+    
+    GenomicRegion r {"1", 7669, 7670};
+    
+    for (auto& region : regions) cout << overlaps(r, region);
+    cout << endl;
+    
+    auto overlapped = overlap_range(regions.cbegin(), regions.cend(), r);
+    
+    cout << std::distance(overlapped.first, overlapped.second) << endl;
+    
+    exit(0);
+    
     auto downsampled_reads = downsample(good_reads.at(samples.front()), a_region, 2000, 1000);
     
     cout << "there are " << downsampled_reads.size() << " downsampled reads" << endl;
