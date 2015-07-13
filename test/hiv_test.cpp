@@ -93,9 +93,11 @@ TEST_CASE("HIV test 1", "[hiv]")
 //    
 //    for (const auto& region : high_coverages[samples.front()]) cout << region << endl;
     
-    std::vector<GenomicRegion> regions {GenomicRegion {"1", 7517, 7667}, GenomicRegion {"1", 7517, 7670}, GenomicRegion {"1", 7518, 7668}};
+    std::vector<GenomicRegion> regions {GenomicRegion {"1", 7510, 7515}, GenomicRegion {"1", 7517, 8667}, GenomicRegion {"1", 7517, 7665}, GenomicRegion {"1", 7518, 7668}, GenomicRegion {"1", 7718, 7768}, GenomicRegion {"1", 8518, 8668}};
     
     GenomicRegion r {"1", 7669, 7670};
+    
+    cout << is_bidirectionally_sorted(regions.cbegin(), regions.cend()) << endl;
     
     for (auto& region : regions) cout << overlaps(r, region);
     cout << endl;
@@ -103,6 +105,8 @@ TEST_CASE("HIV test 1", "[hiv]")
     auto overlapped = overlap_range(regions.cbegin(), regions.cend(), r);
     
     cout << std::distance(overlapped.first, overlapped.second) << endl;
+    
+    cout << has_overlapped(regions.cbegin(), regions.cend(), r) << endl;
     
     exit(0);
     

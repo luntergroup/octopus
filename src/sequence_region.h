@@ -164,6 +164,11 @@ inline SequenceRegion shift(const SequenceRegion& a_region, SequenceRegion::Diff
     };
 }
 
+inline SequenceRegion next_increment(const SequenceRegion& a_region)
+{
+    return SequenceRegion {a_region.get_end(), a_region.get_end() + 1};
+}
+
 inline SequenceRegion compress_left(const SequenceRegion& a_region, SequenceRegion::DifferenceType n)
 {
     if (n < 0 && a_region.get_begin() + n > a_region.get_begin()) {

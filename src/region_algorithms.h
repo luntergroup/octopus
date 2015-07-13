@@ -19,6 +19,22 @@
 #include "mappable.h"
 
 /**
+ Returns true if the range of Mappable elements in the range [first, last) is sorted
+ w.r.t GenomicRegion::operator<, and satisfies the condition 'if lhs < rhs then end(lhs) < end(rhs)
+ */
+//template <typename ForwardIterator>
+//inline
+//bool is_bidirectionally_sorted(ForwardIterator first, ForwardIterator last)
+//{
+//    typename ForwardIterator::pointer rightmost {&(*first)};
+//    return std::is_sorted(first, last, [&rightmost] (const auto& lhs, const auto& rhs) {
+//        if (*rightmost < lhs && ends_before(lhs, *rightmost)) return false;
+//        rightmost = &lhs;
+//        return *lhs < *rhs;
+//    });
+//}
+
+/**
  Returns the leftmost mappable element in the range [first, last).
  
  The range [first, last) is not required to be sorted.
@@ -45,7 +61,19 @@ ForwardIterator rightmost_mappable(ForwardIterator first, ForwardIterator last)
 }
 
 /**
- Returns the sub-range of Mappable elements in the range [first, last) such that each element
+ Returns the first Mappable element in the range [first, last) that is_after mappable
+ 
+ Requires [first, last) is sorted w.r.t GenomicRegion::operator<
+ */
+template <typename ForwardIterator, typename MappableType>
+inline
+ForwardIterator find_first_after(ForwardIterator first, ForwardIterator last, const MappableType& mappable)
+{
+    return std::upper_bound(first, last, next_increment(mappable));
+}
+
+/**
+ Returns the first sub-range of Mappable elements in the range [first, last) such that each element
  in the sub-range overlaps a_region.
  
  Requires [first, last) is sorted w.r.t GenomicRegion::operator<
@@ -55,6 +83,20 @@ inline
 std::pair<ForwardIterator, ForwardIterator> overlap_range(ForwardIterator first, ForwardIterator last,
                                                           const MappableType& mappable)
 {
+//    auto it = last;
+//    
+//    while (has_overlapped(first, it, mappable)) {
+//        it = std::lower_bound(first, it, mappable,
+//                              [] (const auto& lhs, const auto& rhs) {
+//                                  return is_before(lhs, rhs);
+//                              });
+//    }
+//    
+//    return std::make_pair(it, std::find_if_not(it, last,
+//                                               [&mappable] (const auto& m) {
+//                                                   return is_before(mappable, m);
+//                                               }));
+    
     return std::equal_range(first, last, mappable,
                             [] (const auto& lhs, const auto& rhs) {
                                 return is_before(lhs, rhs);
@@ -66,14 +108,27 @@ std::pair<ForwardIterator, ForwardIterator> overlap_range(ForwardIterator first,
  
  Requires [first, last) is sorted w.r.t GenomicRegion::operator<
  */
-template <typename ForwardIterator, typename MappableType>
+template <typename BidirectionalIterator, typename MappableType>
 inline
-bool has_overlapped(ForwardIterator first, ForwardIterator last, const MappableType& mappable)
+bool has_overlapped(BidirectionalIterator first, BidirectionalIterator last, const MappableType& mappable)
 {
-    return std::binary_search(first, last, mappable,
-                              [] (const auto& lhs, const auto& rhs) {
-                                  return is_before(lhs, rhs);
-                              });
+    auto it = find_first_after(first, last, mappable);
+    
+    using ReverseIterator = std::reverse_iterator<BidirectionalIterator>;
+    
+    // searches in reverse order on the assumption regions closer to the boundry with
+    // mappable are more likely to overlap with mappable. This assumption may not hold if
+    // the elements in the range [first, last) have high variance sizes.
+    
+    return std::any_of(ReverseIterator(it), ReverseIterator(first++),
+                       [&mappable] (const auto& m) {
+                           return overlaps(mappable, m);
+                       }) || overlaps(*first, mappable);
+    
+//    return std::binary_search(first, last, mappable,
+//                              [] (const auto& lhs, const auto& rhs) {
+//                                  return is_before(lhs, rhs);
+//                              });
 }
 
 /**
@@ -100,15 +155,15 @@ inline
 std::pair<ForwardIterator, ForwardIterator> contained_range(ForwardIterator first, ForwardIterator last,
                                                             const MappableType& mappable)
 {
-    auto start = std::lower_bound(first, last, mappable,
-                                  [] (const auto& lhs, const auto& rhs) {
-                                      return begins_before(lhs, rhs);
-                                  });
+    auto it = std::lower_bound(first, last, mappable,
+                               [] (const auto& lhs, const auto& rhs) {
+                                    return begins_before(lhs, rhs);
+                                });
     
-    return std::make_pair(start, std::find_if_not(start, last,
-                                                  [&mappable] (const auto& m) {
-                                                      return get_end(m) <= get_end(mappable);
-                                                  }));
+    return std::make_pair(it, std::find_if_not(it, last,
+                                               [&mappable] (const auto& m) {
+                                                   return get_end(m) <= get_end(mappable);
+                                               }));
 }
 
 /**
@@ -120,12 +175,12 @@ template <typename ForwardIterator, typename MappableType>
 inline
 bool has_contained(ForwardIterator first, ForwardIterator last, const MappableType& mappable)
 {
-    auto start = std::lower_bound(first, last, mappable,
-                                  [] (const auto& lhs, const auto& rhs) {
-                                      return begins_before(lhs, rhs);
-                                  });
+    auto it = std::lower_bound(first, last, mappable,
+                               [] (const auto& lhs, const auto& rhs) {
+                                    return begins_before(lhs, rhs);
+                                });
     
-    return (start != last) && get_end(*start) <= get_end(mappable);
+    return (it != last) && get_end(*it) <= get_end(mappable);
 }
 
 /**

@@ -398,4 +398,10 @@ inline GenomicRegion get_closed(const Mappable<T1>& lhs, const Mappable<T2>& rhs
     return get_closed(static_cast<const T1&>(lhs).get_region(), static_cast<const T2&>(rhs).get_region());
 }
 
+template <typename T>
+inline GenomicRegion next_increment(const Mappable<T>& m)
+{
+    return next_increment(static_cast<const T&>(m).get_region());
+}
+
 #endif
