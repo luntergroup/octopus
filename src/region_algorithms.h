@@ -9,30 +9,16 @@
 #ifndef Octopus_region_algorithms_h
 #define Octopus_region_algorithms_h
 
-#include <algorithm> // std::equal_range, std::binary_search, std::count_if, std::any_of, std::find_if, std::min_element,
-                     // std::max_element, std::lower_bound, std::find_if_not, std::generate_n, std::transform
+#include <algorithm> // std::equal_range, std::is_sorted, std::binary_search, std::count_if, std::any_of,
+                     // std::find_if, std::min_element, std::max_element, std::lower_bound, std::find_if_not
+                     // std::generate_n, std::transform
+#include <numeric>   // std::accumulate
 #include <cstddef>   // std::size_t
 #include <iterator>  // std::distance, std::cbegin, std::cend, std::prev, std::next
 #include <stdexcept>
 
 #include "genomic_region.h"
 #include "mappable.h"
-
-/**
- Returns true if the range of Mappable elements in the range [first, last) is sorted
- w.r.t GenomicRegion::operator<, and satisfies the condition 'if lhs < rhs then end(lhs) < end(rhs)
- */
-//template <typename ForwardIterator>
-//inline
-//bool is_bidirectionally_sorted(ForwardIterator first, ForwardIterator last)
-//{
-//    typename ForwardIterator::pointer rightmost {&(*first)};
-//    return std::is_sorted(first, last, [&rightmost] (const auto& lhs, const auto& rhs) {
-//        if (*rightmost < lhs && ends_before(lhs, *rightmost)) return false;
-//        rightmost = &lhs;
-//        return *lhs < *rhs;
-//    });
-//}
 
 /**
  Returns the leftmost mappable element in the range [first, last).
@@ -69,34 +55,70 @@ template <typename ForwardIterator, typename MappableType>
 inline
 ForwardIterator find_first_after(ForwardIterator first, ForwardIterator last, const MappableType& mappable)
 {
-    return std::upper_bound(first, last, next_increment(mappable));
+    return std::upper_bound(first, last, next_position(mappable));
 }
 
 /**
- Returns the first sub-range of Mappable elements in the range [first, last) such that each element
+ Returns true if the range of Mappable elements in the range [first, last) is sorted
+ w.r.t GenomicRegion::operator<, and satisfies the condition 'if lhs < rhs then end(lhs) < end(rhs)
+ */
+template <typename ForwardIterator>
+inline
+bool is_bidirectionally_sorted(ForwardIterator first, ForwardIterator last)
+{
+    return std::is_sorted(first, last, [] (const auto& lhs, const auto& rhs) {
+        return lhs < rhs || ends_before(lhs, rhs);
+    });
+}
+
+/**
+ Returns the an iterator to the first element in the range [first, last) that is not sorted
+ according w.r.t GenomicRegion::operator< and 'if lhs < rhs then end(lhs) < end(rhs)
+ */
+template <typename ForwardIterator>
+inline
+ForwardIterator is_bidirectionally_sorted_until(ForwardIterator first, ForwardIterator last)
+{
+    return std::is_sorted_until(first, last, [] (const auto& lhs, const auto& rhs) {
+        return lhs < rhs || ends_before(lhs, rhs);
+    });
+}
+
+/**
+ Returns the minimum number of sub-ranges in each within the range [first, last) such that each
+ sub-range is bidirectionally_sorted.
+ */
+template <typename ForwardIterator>
+inline
+std::vector<std::pair<ForwardIterator, ForwardIterator>>
+bidirectionally_sorted_ranges(ForwardIterator first, ForwardIterator last)
+{
+    std::vector<std::pair<ForwardIterator, ForwardIterator>> result {};
+    
+    auto it = first;
+    
+    while (first != last) {
+        it = is_bidirectionally_sorted_until(first, last);
+        result.emplace_back(std::make_pair(first, it));
+        first = it;
+    }
+    
+    result.shrink_to_fit();
+    
+    return result;
+}
+
+/**
+ Returns the sub-range of Mappable elements in the range [first, last) such that each element
  in the sub-range overlaps a_region.
  
- Requires [first, last) is sorted w.r.t GenomicRegion::operator<
+ Requires [first, last) is sorted bidirectionally sorted
  */
 template <typename ForwardIterator, typename MappableType>
 inline
 std::pair<ForwardIterator, ForwardIterator> overlap_range(ForwardIterator first, ForwardIterator last,
                                                           const MappableType& mappable)
 {
-//    auto it = last;
-//    
-//    while (has_overlapped(first, it, mappable)) {
-//        it = std::lower_bound(first, it, mappable,
-//                              [] (const auto& lhs, const auto& rhs) {
-//                                  return is_before(lhs, rhs);
-//                              });
-//    }
-//    
-//    return std::make_pair(it, std::find_if_not(it, last,
-//                                               [&mappable] (const auto& m) {
-//                                                   return is_before(mappable, m);
-//                                               }));
-    
     return std::equal_range(first, last, mappable,
                             [] (const auto& lhs, const auto& rhs) {
                                 return is_before(lhs, rhs);
@@ -104,37 +126,24 @@ std::pair<ForwardIterator, ForwardIterator> overlap_range(ForwardIterator first,
 }
 
 /**
- Returns true if any of the mappable elements in the range [first, last) overlap with a_region.
+ Returns true if any of the mappable elements in the range [first, last) overlap with mappable.
  
- Requires [first, last) is sorted w.r.t GenomicRegion::operator<
+ Requires [first, last) is sorted bidirectionally sorted
  */
 template <typename BidirectionalIterator, typename MappableType>
 inline
 bool has_overlapped(BidirectionalIterator first, BidirectionalIterator last, const MappableType& mappable)
 {
-    auto it = find_first_after(first, last, mappable);
-    
-    using ReverseIterator = std::reverse_iterator<BidirectionalIterator>;
-    
-    // searches in reverse order on the assumption regions closer to the boundry with
-    // mappable are more likely to overlap with mappable. This assumption may not hold if
-    // the elements in the range [first, last) have high variance sizes.
-    
-    return std::any_of(ReverseIterator(it), ReverseIterator(first++),
-                       [&mappable] (const auto& m) {
-                           return overlaps(mappable, m);
-                       }) || overlaps(*first, mappable);
-    
-//    return std::binary_search(first, last, mappable,
-//                              [] (const auto& lhs, const auto& rhs) {
-//                                  return is_before(lhs, rhs);
-//                              });
+    return std::binary_search(first, last, mappable,
+                              [] (const auto& lhs, const auto& rhs) {
+                                  return is_before(lhs, rhs);
+                              });
 }
 
 /**
- Returns the number of mappable elements in the range [first, last) that overlap with a_region.
+ Returns the number of mappable elements in the range [first, last) that overlap with mappable.
  
- Requires [first, last) is sorted w.r.t GenomicRegion::operator<
+ Requires [first, last) is sorted bidirectionally sorted
  */
 template <typename ForwardIterator, typename MappableType>
 inline
@@ -145,8 +154,74 @@ std::size_t count_overlapped(ForwardIterator first, ForwardIterator last, const 
 }
 
 /**
+ Returns all sub-ranges of Mappable elements in the range [first, last) such that each element
+ in each of the sub-ranges overlaps mappable, but none the elements between the sub-ranges overlaps with mappable.
+ 
+ Requires [first, last) is sorted w.r.t GenomicRegion::operator<
+ */
+template <typename ForwardIterator, typename MappableType>
+inline
+std::vector<std::pair<ForwardIterator, ForwardIterator>> overlap_ranges(ForwardIterator first, ForwardIterator last,
+                                                                        const MappableType& mappable)
+{
+    std::vector<std::pair<ForwardIterator, ForwardIterator>> result {};
+    
+    auto it = find_first_after(first, last, mappable);
+    
+    while (first != it) {
+        first = std::find_if(first, it, [&mappable] (const auto& m) { return overlaps(m, mappable); });
+        last  = std::find_if_not(first, it, [&mappable] (const auto& m) { return overlaps(m, mappable); });
+        if (first != last) result.emplace_back(std::make_pair(first, last));
+        first = last;
+    }
+    
+    result.shrink_to_fit();
+    
+    return result;
+}
+
+/**
+ Returns true if any of the mappable elements in the range [first, last) overlap with mappable.
+ 
+ Requires [first, last) is sorted w.r.t GenomicRegion::operator<
+ */
+template <typename BidirectionalIterator, typename MappableType>
+inline
+bool has_any_overlapped(BidirectionalIterator first, BidirectionalIterator last, const MappableType& mappable)
+{
+    auto it = find_first_after(first, last, mappable);
+    
+    using ReverseIterator = std::reverse_iterator<BidirectionalIterator>;
+    
+    // searches in reverse order on the assumption regions closer to the boundry with
+    // mappable are more likely to overlap with mappable. This assumption may not hold if
+    // the elements in the range [first, last) have highly variant sizes.
+    
+    return std::any_of(ReverseIterator(it), ReverseIterator(first++),
+                       [&mappable] (const auto& m) {
+                           return overlaps(mappable, m);
+                       }) || overlaps(*first, mappable);
+}
+
+/**
+ Returns the number of mappable elements in the range [first, last) that overlap with mappable.
+ 
+ Requires [first, last) is sorted w.r.t GenomicRegion::operator<
+ */
+template <typename ForwardIterator, typename MappableType>
+inline
+std::size_t count_all_overlapped(ForwardIterator first, ForwardIterator last, const MappableType& mappable)
+{
+    auto overlapped = overlap_ranges(first, last, mappable);
+    return std::accumulate(std::cbegin(overlapped), std::cend(overlapped), 0,
+                           [] (std::size_t lhs, const auto& rhs) {
+                               return lhs + std::distance(rhs.first, rhs.second);
+                           });
+}
+
+/**
  Returns the sub-range of Mappable elements in the range [first, last) such that each element
- in the sub-range is contained within a_region.
+ in the sub-range is contained within mappable.
  
  Requires [first, last) is sorted w.r.t GenomicRegion::operator<
  */
@@ -167,7 +242,7 @@ std::pair<ForwardIterator, ForwardIterator> contained_range(ForwardIterator firs
 }
 
 /**
- Returns true if any of the mappable elements in the range [first, last) are contained within a_region.
+ Returns true if any of the mappable elements in the range [first, last) are contained within mappable.
  
  Requires [first, last) is sorted w.r.t GenomicRegion::operator<
  */
@@ -184,7 +259,7 @@ bool has_contained(ForwardIterator first, ForwardIterator last, const MappableTy
 }
 
 /**
- Returns the number of mappable elements in the range [first, last) that are contained within a_region.
+ Returns the number of mappable elements in the range [first, last) that are contained within mappable.
  
  Requires [first, last) is sorted w.r.t GenomicRegion::operator<
  */

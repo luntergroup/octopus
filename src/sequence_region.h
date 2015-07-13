@@ -164,7 +164,7 @@ inline SequenceRegion shift(const SequenceRegion& a_region, SequenceRegion::Diff
     };
 }
 
-inline SequenceRegion next_increment(const SequenceRegion& a_region)
+inline SequenceRegion next_position(const SequenceRegion& a_region)
 {
     return SequenceRegion {a_region.get_end(), a_region.get_end() + 1};
 }

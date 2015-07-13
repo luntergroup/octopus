@@ -231,9 +231,9 @@ inline GenomicRegion shift(const GenomicRegion& a_region, GenomicRegion::Differe
     };
 }
 
-inline GenomicRegion next_increment(const GenomicRegion& a_region)
+inline GenomicRegion next_position(const GenomicRegion& a_region)
 {
-    return GenomicRegion {a_region.get_contig_name(), next_increment(a_region.get_contig_region())};
+    return GenomicRegion {a_region.get_contig_name(), next_position(a_region.get_contig_region())};
 }
 
 inline GenomicRegion compress_left(const GenomicRegion& a_region, GenomicRegion::DifferenceType n)

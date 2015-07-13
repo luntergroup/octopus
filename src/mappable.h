@@ -399,9 +399,9 @@ inline GenomicRegion get_closed(const Mappable<T1>& lhs, const Mappable<T2>& rhs
 }
 
 template <typename T>
-inline GenomicRegion next_increment(const Mappable<T>& m)
+inline GenomicRegion next_position(const Mappable<T>& m)
 {
-    return next_increment(static_cast<const T&>(m).get_region());
+    return next_position(static_cast<const T&>(m).get_region());
 }
 
 #endif

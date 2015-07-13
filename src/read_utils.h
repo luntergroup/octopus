@@ -70,14 +70,17 @@ std::vector<unsigned> positional_coverage(InputIterator first, InputIterator las
     
     std::vector<unsigned> result(num_positions, 0);
     
-    auto overlapped     = overlap_range(first, last, a_region);
+    auto overlapped_ranges = overlap_ranges(first, last, a_region);
+    
     auto first_position = get_begin(a_region);
     
-    std::for_each(overlapped.first, overlapped.second, [&result, first_position, num_positions] (const auto& read) {
-        auto first = std::next(result.begin(), (get_begin(read) <= first_position) ? 0 : get_begin(read) - first_position);
-        auto last  = std::next(result.begin(), std::min(get_end(read) - first_position, num_positions));
-        std::transform(first, last, first, [] (unsigned count) { return count + 1; });
-    });
+    for (const auto& overlapped : overlapped_ranges) {
+        std::for_each(overlapped.first, overlapped.second, [&result, first_position, num_positions] (const auto& read) {
+            auto first = std::next(result.begin(), (get_begin(read) <= first_position) ? 0 : get_begin(read) - first_position);
+            auto last  = std::next(result.begin(), std::min(get_end(read) - first_position, num_positions));
+            std::transform(first, last, first, [] (unsigned count) { return count + 1; });
+        });
+    }
     
     return result;
 }
@@ -140,8 +143,8 @@ find_high_coverage_regions(const ReadMap<SampleIdType, Container>& reads,
     return result;
 }
 
-std::vector<AlignedRead> downsample(const std::vector<AlignedRead>& reads, const GenomicRegion& a_region,
-                                    unsigned maximum_coverage, unsigned minimum_downsample_coverage);
+std::vector<AlignedRead> downsample(const std::vector<AlignedRead>& reads, unsigned maximum_coverage,
+                                    unsigned minimum_downsample_coverage);
 
 template <typename T, typename Container>
 ReadMap<T, Container> downsample(ReadMap<T, Container>&& reads, unsigned max_coverage_per_sample)

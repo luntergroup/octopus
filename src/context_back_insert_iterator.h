@@ -13,8 +13,7 @@
 #include <memory> // std::addressof
 
 template <typename Container>
-class ContextBackInsertIterator :
-public std::iterator<std::output_iterator_tag, void, void, void, void>
+class ContextBackInsertIterator : public std::iterator<std::output_iterator_tag, void, void, void, void>
 {
 protected:
     Container* container;

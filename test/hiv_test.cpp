@@ -84,35 +84,26 @@ TEST_CASE("HIV test 1", "[hiv]")
     
     auto candidates = candidate_generator.get_candidates(a_region);
     
-    cout << "there are " << candidates.size() << " candidates" << endl;
+    cout << "there are " << candidates.size() << " candidates in good reads" << endl;
     
-//    cout << min_coverage(good_reads, a_region) << endl;
-//    cout << max_coverage(good_reads, a_region) << endl;
-//    
-//    auto high_coverages = find_high_coverage_regions(good_reads, a_region, 10000);
-//    
-//    for (const auto& region : high_coverages[samples.front()]) cout << region << endl;
+    cout << "min coverage before downsample " << min_coverage(good_reads.at(samples.front()), a_region) << endl;
+    cout << "max coverage before downsample " << max_coverage(good_reads.at(samples.front()), a_region) << endl;
+    cout << "mean coverage before downsample " << mean_coverage(good_reads.at(samples.front()), a_region) << endl;
     
-    std::vector<GenomicRegion> regions {GenomicRegion {"1", 7510, 7515}, GenomicRegion {"1", 7517, 8667}, GenomicRegion {"1", 7517, 7665}, GenomicRegion {"1", 7518, 7668}, GenomicRegion {"1", 7718, 7768}, GenomicRegion {"1", 8518, 8668}};
-    
-    GenomicRegion r {"1", 7669, 7670};
-    
-    cout << is_bidirectionally_sorted(regions.cbegin(), regions.cend()) << endl;
-    
-    for (auto& region : regions) cout << overlaps(r, region);
-    cout << endl;
-    
-    auto overlapped = overlap_range(regions.cbegin(), regions.cend(), r);
-    
-    cout << std::distance(overlapped.first, overlapped.second) << endl;
-    
-    cout << has_overlapped(regions.cbegin(), regions.cend(), r) << endl;
-    
-    exit(0);
-    
-    auto downsampled_reads = downsample(good_reads.at(samples.front()), a_region, 2000, 1000);
+    auto downsampled_reads = downsample(good_reads.at(samples.front()), 500, 200);
     
     cout << "there are " << downsampled_reads.size() << " downsampled reads" << endl;
+    
+    cout << "min coverage after downsample " << min_coverage(downsampled_reads, a_region) << endl;
+    cout << "max coverage after downsample " << max_coverage(downsampled_reads, a_region) << endl;
+    cout << "mean coverage after downsample " << mean_coverage(downsampled_reads, a_region) << endl;
+    
+    candidate_generator.clear();
+    candidate_generator.add_reads(downsampled_reads.cbegin(), downsampled_reads.cend());
+    
+    auto downsampled_candidates = candidate_generator.get_candidates(a_region);
+    
+    cout << "there are " << downsampled_candidates.size() << " candidates in downsampled reads" << endl;
     
     exit(0);
     
@@ -127,13 +118,15 @@ TEST_CASE("HIV test 1", "[hiv]")
     //exit(0);
     
     Octopus::BayesianGenotypeModel::ReadRanges<ReadManager::SampleIdType,
-    std::move_iterator<decltype(good_reads)::mapped_type::iterator>> read_ranges {};
-    for (const auto& sample : samples) {
-        read_ranges.emplace(sample, std::make_pair(std::make_move_iterator(good_reads[sample].begin()),
-                                                   std::make_move_iterator(good_reads[sample].end())));
-    }
+                std::move_iterator<decltype(good_reads)::mapped_type::iterator>> read_ranges {};
+    read_ranges.emplace(samples.front(), std::make_pair(std::make_move_iterator(downsampled_reads.begin()),
+                                                        std::make_move_iterator(downsampled_reads.end())));
+//    for (const auto& sample : samples) {
+//        read_ranges.emplace(sample, std::make_pair(std::make_move_iterator(good_reads[sample].begin()),
+//                                                   std::make_move_iterator(good_reads[sample].end())));
+//    }
     
-    phaser.put_data(read_ranges, candidates.cbegin(), candidates.cend());
+    phaser.put_data(read_ranges, downsampled_candidates.cbegin(), downsampled_candidates.cend());
     auto phased_regions = phaser.get_phased_regions(HaplotypePhaser::SteamingStatus::Finished);
     
     cout << "phased into " << phased_regions.size() << " sections" << endl;

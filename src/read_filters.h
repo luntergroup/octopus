@@ -59,6 +59,11 @@ inline bool is_not_marked_duplicate(const AlignedRead& a_read)
     return !a_read.is_marked_duplicate();
 }
 
+inline bool is_short(const AlignedRead& a_read, AlignedRead::SizeType max_length)
+{
+    return a_read.get_sequence_size() <= max_length;
+}
+
 inline bool is_not_contaminated(const AlignedRead& a_read)
 {
     return (a_read.is_chimeric()) ?

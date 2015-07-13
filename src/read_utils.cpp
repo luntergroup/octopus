@@ -24,19 +24,19 @@ std::vector<unsigned> positional_coverage(const std::vector<AlignedRead>& reads,
 
 // Unfortunately the algorithm above is faster than this one. Which is a shame because
 // this one is so damn pretty!
-std::vector<unsigned> positional_coverage2(const std::vector<AlignedRead>& reads, const GenomicRegion& a_region)
-{
-    std::vector<unsigned> result(size(a_region), 0);
-    
-    auto positions = decompose(a_region);
-    
-    std::transform(std::cbegin(positions), std::cend(positions), result.begin(),
-                   [&reads] (const auto& position) {
-                       return count_overlapped(reads.cbegin(), reads.cend(), position);
-                   });
-    
-    return result;
-}
+//std::vector<unsigned> positional_coverage2(const std::vector<AlignedRead>& reads, const GenomicRegion& a_region)
+//{
+//    std::vector<unsigned> result(size(a_region), 0);
+//    
+//    auto positions = decompose(a_region);
+//    
+//    std::transform(std::cbegin(positions), std::cend(positions), result.begin(),
+//                   [&reads] (const auto& position) {
+//                       return count_overlapped(reads.cbegin(), reads.cend(), position);
+//                   });
+//    
+//    return result;
+//}
 
 unsigned min_coverage(const std::vector<AlignedRead>& reads, const GenomicRegion& a_region)
 {
@@ -144,14 +144,6 @@ bool has_minimum_coverage(const std::vector<unsigned>& required_coverage)
                        });
 }
 
-bool can_add_samples(const std::vector<unsigned>& new_position_coverages, unsigned maximum_coverage)
-{
-    return std::all_of(new_position_coverages.cbegin(), new_position_coverages.cend(),
-                       [maximum_coverage] (unsigned coverage) {
-                           return coverage <= maximum_coverage;
-                       });
-}
-
 std::vector<GenomicRegion>
 find_good_coverage_regions_containing_high_coverage_positions(const std::vector<AlignedRead>& reads, const GenomicRegion& a_region,
                                                               unsigned maximum_coverage, unsigned minimum_downsample_coverage)
@@ -187,9 +179,6 @@ std::vector<AlignedRead> sample(std::vector<AlignedRead>::const_iterator first,
     
     auto num_positions = size(encompassing_region);
     
-    std::cout << "there are " << num_positions << " positions" << std::endl;
-    std::cout << "there are " << std::distance(first, last) << " reads" << std::endl;
-    
     std::vector<unsigned> old_position_coverages = positional_coverage(first, last, encompassing_region);
     std::vector<unsigned> required_coverage(num_positions);
     
@@ -202,8 +191,8 @@ std::vector<AlignedRead> sample(std::vector<AlignedRead>::const_iterator first,
     
     auto positions = decompose(encompassing_region);
     
-    auto seed = std::chrono::system_clock::now().time_since_epoch().count();
-    std::default_random_engine generator {static_cast<unsigned>(seed)};
+    static const auto seed = std::chrono::system_clock::now().time_since_epoch().count();
+    static std::default_random_engine generator {static_cast<unsigned>(seed)};
     
     // first pass ensures minimum coverage requirements are satisfied
     
@@ -212,50 +201,24 @@ std::vector<AlignedRead> sample(std::vector<AlignedRead>::const_iterator first,
     
     std::list<AlignedRead> unsampled_reads(first, last);
     
-    std::cout << "starting to sample" << std::endl;
-    
-    std::size_t i {0};
-    
     while (!has_minimum_coverage(required_coverage)) {
         std::discrete_distribution<unsigned> covers(required_coverage.cbegin(), required_coverage.cend());
         auto sample_position = covers(generator);
         
-        auto overlapped = overlap_range(unsampled_reads.cbegin(), unsampled_reads.cend(), positions[sample_position]);
+        auto overlapped_ranges = overlap_ranges(unsampled_reads.cbegin(), unsampled_reads.cend(), positions[sample_position]);
         
-        if (std::distance(overlapped.first, overlapped.second) == 0) {
-            std::cout << "-----------" << std::endl;
-            std::cout << "ran out of reads at position " << positions[sample_position] << std::endl;
-            std::cout << "there are " << unsampled_reads.size() << " reads left" << std::endl;
-            std::cout << "old coverage at position was " << old_position_coverages[sample_position] << std::endl;
-            std::cout << "required remaining coverage is " << required_coverage[sample_position] << std::endl;
-            std::cout << "recordered coverage at position is " << new_position_coverages[sample_position] << std::endl;
-            
-            auto remaining_actually = positional_coverage(unsampled_reads.cbegin(), unsampled_reads.cend(), encompassing_region);
-            
-            std::cout << "actual remaining coverage is " << remaining_actually[sample_position] << std::endl;
-            std::cout << "are unsampled reads sorted? " << std::is_sorted(unsampled_reads.cbegin(), unsampled_reads.cend()) << std::endl;
-            
-            auto region = positions[sample_position];
-            auto fo = std::find_if(unsampled_reads.cbegin(), unsampled_reads.cend(), [&region] (const auto& read) {
-                return overlaps(read, region);
-            });
-            
-            std::cout << *std::prev(fo) << std::endl;
-            std::cout << *fo << std::endl;
-            std::cout << *std::next(fo) << std::endl;
-            
-            exit(0);
-        }
+        std::uniform_int_distribution<std::size_t> range_sampler(0, overlapped_ranges.size() - 1);
         
-        std::uniform_int_distribution<std::size_t> uniform(0, std::distance(overlapped.first, overlapped.second) - 1);
+        const auto& overlapped = overlapped_ranges[range_sampler(generator)];
         
-        auto sampled_read_it = std::next(overlapped.first, uniform(generator));
+        std::uniform_int_distribution<std::size_t> read_sampler(0, std::distance(overlapped.first, overlapped.second) - 1);
+        
+        auto sampled_read_it = std::next(overlapped.first, read_sampler(generator));
         const AlignedRead& sampled_read {*sampled_read_it};
         result.emplace_back(sampled_read);
         unsampled_reads.erase(sampled_read_it);
         
         auto offset = get_begin(sampled_read) - get_begin(encompassing_region);
-        
         std::transform(required_coverage.begin() + offset,
                        required_coverage.begin() + offset + size(sampled_read),
                        required_coverage.begin() + offset, [] (unsigned count) {
@@ -266,20 +229,11 @@ std::vector<AlignedRead> sample(std::vector<AlignedRead>::const_iterator first,
                        new_position_coverages.begin() + offset, [] (unsigned count) {
                            return count + 1;
                        });
-        
-        ++i;
-        if (i % 100 == 0) {
-            std::cout << "sampled " << i << " reads" << std::endl;
-            std::cout << "there are " << unsampled_reads.size() << " unsampled reads left" << std::endl;
-            std::cout << "max required coverage is " << *std::max_element(required_coverage.cbegin(), required_coverage.cend()) << std::endl;
-        }
     }
-    
-    std::cout << "finished first pass" << std::endl;
     
     // second pass increases coverage up to maximum coverage bound
     
-//    while (can_add_samples(new_position_coverages, maximum_coverage)) {
+//    while (!unsampled_reads.empty()) {
 //        
 //    }
     
@@ -290,12 +244,13 @@ std::vector<AlignedRead> sample(std::vector<AlignedRead>::const_iterator first,
     return result;
 }
 
-std::vector<AlignedRead> downsample(const std::vector<AlignedRead>& reads, const GenomicRegion& a_region,
-                                    unsigned maximum_coverage, unsigned minimum_downsample_coverage)
+std::vector<AlignedRead> downsample(const std::vector<AlignedRead>& reads, unsigned maximum_coverage,
+                                    unsigned minimum_downsample_coverage)
 {
-    auto regions_to_sample = find_good_coverage_regions_containing_high_coverage_positions(reads, a_region, maximum_coverage, minimum_downsample_coverage);
+    auto region = encompassing(reads.cbegin(), reads.cend());
     
-    auto overlapped = overlap_range(reads.cbegin(), reads.cend(), a_region);
+    auto regions_to_sample = find_good_coverage_regions_containing_high_coverage_positions(reads, region, maximum_coverage,
+                                                                                           minimum_downsample_coverage);
     
     std::vector<AlignedRead> result {};
     result.reserve(reads.size());
@@ -303,33 +258,20 @@ std::vector<AlignedRead> downsample(const std::vector<AlignedRead>& reads, const
     std::vector<AlignedRead>::const_iterator last_sampled {reads.cbegin()};
     
     for (auto& region : regions_to_sample) {
-        std::cout << "downsampling region " << region << std::endl;
-        
-        auto contained = contained_range(overlapped.first, overlapped.second, region);
-        
-        if (!std::all_of(contained.first, contained.second, [&region] (const auto& read) { return contains(region, read); })) {
-            std::cout << "BAD" << std::endl;
-            auto a_bad_read = std::find_if_not(contained.first, contained.second, [&region] (const auto& read) { return contains(region, read); });
-            std::cout << *a_bad_read << std::endl;
-            exit(0);
-        }
+        auto contained = contained_range(reads.cbegin(), reads.cend(), region);
         
         if (std::distance(contained.first, contained.second) == 0) continue;
-        
-        std::cout << "copying over " << std::distance(last_sampled, contained.first) << " reads" << std::endl;
         
         result.insert(result.end(), last_sampled, contained.first);
         
         auto samples = sample(contained.first, contained.second, region, maximum_coverage, minimum_downsample_coverage);
-        
-        std::cout << "moving over " << samples.size() << " sampled reads" << std::endl;
         
         result.insert(result.end(), std::make_move_iterator(std::begin(samples)), std::make_move_iterator(std::end(samples)));
         
         last_sampled = contained.second;
     }
     
-    result.insert(result.end(), overlapped.second, reads.cend());
+    result.insert(result.end(), last_sampled, reads.cend());
     
     result.shrink_to_fit();
     
