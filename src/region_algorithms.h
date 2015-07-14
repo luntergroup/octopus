@@ -16,6 +16,8 @@
 #include <cstddef>   // std::size_t
 #include <iterator>  // std::distance, std::cbegin, std::cend, std::prev, std::next
 #include <stdexcept>
+#include <boost/iterator/filter_iterator.hpp>
+#include <boost/range/iterator_range_core.hpp>
 
 #include "genomic_region.h"
 #include "mappable.h"
@@ -106,6 +108,33 @@ bidirectionally_sorted_ranges(ForwardIterator first, ForwardIterator last)
     result.shrink_to_fit();
     
     return result;
+}
+
+template <typename MappableType1, typename MappableType2>
+class IsOverlapped
+{
+public:
+    IsOverlapped(const MappableType1& mappable) : mappable_ {mappable} {}
+    bool operator()(const MappableType2& m) { return overlaps(mappable_, m); }
+private:
+    const MappableType1& mappable_;
+};
+
+template <typename MappableType1, typename MappableType2, typename Iterator>
+using OverlapIterator = boost::filter_iterator<IsOverlapped<MappableType1, MappableType2>, Iterator>;
+
+template <typename MappableType1, typename MappableType2, typename Iterator>
+using OverlapRange = boost::iterator_range<OverlapIterator<MappableType1, MappableType2, Iterator>>;
+
+template <typename ForwardIterator, typename MappableType>
+inline
+OverlapRange<MappableType, typename ForwardIterator::value_type, ForwardIterator>
+overlap_range2(ForwardIterator first, ForwardIterator last, const MappableType& mappable)
+{
+    auto it = find_first_after(first, last, mappable);
+    auto f = std::find_if(first, it, [&mappable] (const auto& m) { return overlaps(m, mappable); });
+    return boost::make_iterator_range(boost::make_filter_iterator<IsOverlapped<MappableType, typename ForwardIterator::value_type>>(IsOverlapped<MappableType, typename ForwardIterator::value_type>(mappable), f, it),
+                                      boost::make_filter_iterator<IsOverlapped<MappableType, typename ForwardIterator::value_type>>(IsOverlapped<MappableType, typename ForwardIterator::value_type>(mappable), it, it));
 }
 
 /**

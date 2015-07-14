@@ -86,6 +86,11 @@ TEST_CASE("HIV test 1", "[hiv]")
     
     cout << "there are " << candidates.size() << " candidates in good reads" << endl;
     
+    auto filtered = overlap_range2(candidates.cbegin(), candidates.cend(), GenomicRegion {contig_name, 5000, 5100});
+    std::copy(filtered.begin(), filtered.end(), std::ostream_iterator<Variant>(std::cout, "\n"));
+    
+    exit(0);
+    
     cout << "min coverage before downsample " << min_coverage(good_reads.at(samples.front()), a_region) << endl;
     cout << "max coverage before downsample " << max_coverage(good_reads.at(samples.front()), a_region) << endl;
     cout << "mean coverage before downsample " << mean_coverage(good_reads.at(samples.front()), a_region) << endl;

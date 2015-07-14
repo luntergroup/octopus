@@ -81,6 +81,7 @@
 		D45D2E671B2AD93500F6A89D /* libboost_program_options.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D45D2E641B2AD93500F6A89D /* libboost_program_options.a */; };
 		D45D2E681B2AD93500F6A89D /* libboost_system.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D45D2E651B2AD93500F6A89D /* libboost_system.a */; };
 		D46094F01B4C037B00AE72A1 /* hiv_test.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D46094EF1B4C037B00AE72A1 /* hiv_test.cpp */; };
+		D46094F21B550A2400AE72A1 /* region_algorithm_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D46094F11B550A2400AE72A1 /* region_algorithm_tests.cpp */; };
 		D463C18A1AEE2EA100739A66 /* search_region_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D463C1891AEE2EA100739A66 /* search_region_tests.cpp */; };
 		D463C18D1AF137EB00739A66 /* input_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D463C18C1AF137EB00739A66 /* input_tests.cpp */; };
 		D463C1911AF38DCF00739A66 /* haplotype_phaser_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D463C1901AF38DCE00739A66 /* haplotype_phaser_tests.cpp */; };
@@ -239,6 +240,7 @@
 		D45D2E641B2AD93500F6A89D /* libboost_program_options.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libboost_program_options.a; path = /usr/local/Cellar/boost/1.58.0/lib/libboost_program_options.a; sourceTree = "<absolute>"; };
 		D45D2E651B2AD93500F6A89D /* libboost_system.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libboost_system.a; path = /usr/local/Cellar/boost/1.58.0/lib/libboost_system.a; sourceTree = "<absolute>"; };
 		D46094EF1B4C037B00AE72A1 /* hiv_test.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = hiv_test.cpp; sourceTree = "<group>"; };
+		D46094F11B550A2400AE72A1 /* region_algorithm_tests.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = region_algorithm_tests.cpp; sourceTree = "<group>"; };
 		D463C1881AEE2E1900739A66 /* search_regions.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = search_regions.h; sourceTree = "<group>"; };
 		D463C1891AEE2EA100739A66 /* search_region_tests.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = search_region_tests.cpp; sourceTree = "<group>"; };
 		D463C18B1AEF7D2200739A66 /* map_utils.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = map_utils.h; sourceTree = "<group>"; };
@@ -315,6 +317,7 @@
 			children = (
 				CAE3E2921A9A882000C01B2C /* mock_objects.h */,
 				D4907F561A8A2A9B00639203 /* reference_tests.cpp */,
+				D46094F11B550A2400AE72A1 /* region_algorithm_tests.cpp */,
 				CA03C2241A8C1702000D3494 /* read_tests.cpp */,
 				CAE3E2CA1AAB42C900C01B2C /* read_filter_tests.cpp */,
 				CA28EBF71AABE178009F8622 /* read_transform_tests.cpp */,
@@ -697,6 +700,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D46094F21B550A2400AE72A1 /* region_algorithm_tests.cpp in Sources */,
 				CA14727A1AACECF1005FDCD1 /* octopus.cpp in Sources */,
 				CA03C2251A8C1702000D3494 /* read_tests.cpp in Sources */,
 				D463C1A21B0A160000739A66 /* allele.cpp in Sources */,
