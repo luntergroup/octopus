@@ -205,18 +205,14 @@ std::vector<AlignedRead> sample(std::vector<AlignedRead>::const_iterator first,
         std::discrete_distribution<unsigned> covers(required_coverage.cbegin(), required_coverage.cend());
         auto sample_position = covers(generator);
         
-        auto overlapped_ranges = overlap_ranges(unsampled_reads.cbegin(), unsampled_reads.cend(), positions[sample_position]);
+        auto overlapped = overlap_range2(unsampled_reads.cbegin(), unsampled_reads.cend(), positions[sample_position]);
         
-        std::uniform_int_distribution<std::size_t> range_sampler(0, overlapped_ranges.size() - 1);
+        std::uniform_int_distribution<std::size_t> read_sampler(0, std::distance(overlapped.begin(), overlapped.end()) - 1);
         
-        const auto& overlapped = overlapped_ranges[range_sampler(generator)];
-        
-        std::uniform_int_distribution<std::size_t> read_sampler(0, std::distance(overlapped.first, overlapped.second) - 1);
-        
-        auto sampled_read_it = std::next(overlapped.first, read_sampler(generator));
+        auto sampled_read_it = std::next(overlapped.begin(), read_sampler(generator));
         const AlignedRead& sampled_read {*sampled_read_it};
         result.emplace_back(sampled_read);
-        unsampled_reads.erase(sampled_read_it);
+        unsampled_reads.erase(sampled_read_it.base());
         
         auto offset = get_begin(sampled_read) - get_begin(encompassing_region);
         std::transform(required_coverage.begin() + offset,

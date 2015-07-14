@@ -71,6 +71,7 @@
 		CAFA195B1ABF3DF400F953D9 /* haplotype_tree.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CAFA19591ABF3DF400F953D9 /* haplotype_tree.cpp */; };
 		CAFA19641ABF75D400F953D9 /* haplotype.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CAFA19621ABF75D400F953D9 /* haplotype.cpp */; };
 		CAFA19661ABF84AC00F953D9 /* haplotype_tree_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CAFA19651ABF84AC00F953D9 /* haplotype_tree_tests.cpp */; };
+		D413B03D1B554CD0007EFDE0 /* region_algorithm_benchmarks.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D413B03C1B554CD0007EFDE0 /* region_algorithm_benchmarks.cpp */; };
 		D42061111ACC165C00D11553 /* variational_bayes_genotype_model.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D420610F1ACC165C00D11553 /* variational_bayes_genotype_model.cpp */; };
 		D42061131ACC3D2B00D11553 /* variational_bayes_genotype_model_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D42061121ACC3D2B00D11553 /* variational_bayes_genotype_model_tests.cpp */; };
 		D42061161ACC3DA500D11553 /* read_model.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D42061141ACC3DA500D11553 /* read_model.cpp */; };
@@ -226,6 +227,7 @@
 		CAFA196A1AC0D0D500F953D9 /* maths.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = maths.h; sourceTree = "<group>"; };
 		CAFA196D1AC1B4AF00F953D9 /* genotype.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = genotype.h; sourceTree = "<group>"; };
 		CAFA19761AC5E67100F953D9 /* pair_hmm.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = pair_hmm.h; sourceTree = "<group>"; };
+		D413B03C1B554CD0007EFDE0 /* region_algorithm_benchmarks.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = region_algorithm_benchmarks.cpp; sourceTree = "<group>"; };
 		D420610F1ACC165C00D11553 /* variational_bayes_genotype_model.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = variational_bayes_genotype_model.cpp; sourceTree = "<group>"; };
 		D42061101ACC165C00D11553 /* variational_bayes_genotype_model.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = variational_bayes_genotype_model.h; sourceTree = "<group>"; };
 		D42061121ACC3D2B00D11553 /* variational_bayes_genotype_model_tests.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = variational_bayes_genotype_model_tests.cpp; sourceTree = "<group>"; };
@@ -301,6 +303,7 @@
 			children = (
 				CA03C2291A8C1C8C000D3494 /* benchmark_utils.h */,
 				CA03C2261A8C1BED000D3494 /* reference_benchmarks.cpp */,
+				D413B03C1B554CD0007EFDE0 /* region_algorithm_benchmarks.cpp */,
 				CABA377E1A8FA11000BBE598 /* read_benchmarks.cpp */,
 				CAE3E2C61AA895D600C01B2C /* variant_benchmarks.cpp */,
 				CA28EBF41AABB80E009F8622 /* read_filter_benchmarks.cpp */,
@@ -729,6 +732,7 @@
 				CAFA195B1ABF3DF400F953D9 /* haplotype_tree.cpp in Sources */,
 				D42061181ACC418500D11553 /* read_model_tests.cpp in Sources */,
 				D4907F4B1A88E20E00639203 /* variant_tests.cpp in Sources */,
+				D413B03D1B554CD0007EFDE0 /* region_algorithm_benchmarks.cpp in Sources */,
 				CAE3E2B81AA370BD00C01B2C /* variant_file_reader.cpp in Sources */,
 				CAE3E2AB1AA2736D00C01B2C /* external_variant_candidates.cpp in Sources */,
 				CAE3E2C71AA895D600C01B2C /* variant_benchmarks.cpp in Sources */,

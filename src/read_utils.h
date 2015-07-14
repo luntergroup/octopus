@@ -70,17 +70,15 @@ std::vector<unsigned> positional_coverage(InputIterator first, InputIterator las
     
     std::vector<unsigned> result(num_positions, 0);
     
-    auto overlapped_ranges = overlap_ranges(first, last, a_region);
+    auto overlapped = overlap_range2(first, last, a_region);
     
     auto first_position = get_begin(a_region);
     
-    for (const auto& overlapped : overlapped_ranges) {
-        std::for_each(overlapped.first, overlapped.second, [&result, first_position, num_positions] (const auto& read) {
-            auto first = std::next(result.begin(), (get_begin(read) <= first_position) ? 0 : get_begin(read) - first_position);
-            auto last  = std::next(result.begin(), std::min(get_end(read) - first_position, num_positions));
-            std::transform(first, last, first, [] (unsigned count) { return count + 1; });
-        });
-    }
+    std::for_each(overlapped.begin(), overlapped.end(), [&result, first_position, num_positions] (const auto& read) {
+        auto first = std::next(result.begin(), (get_begin(read) <= first_position) ? 0 : get_begin(read) - first_position);
+        auto last  = std::next(result.begin(), std::min(get_end(read) - first_position, num_positions));
+        std::transform(first, last, first, [] (unsigned count) { return count + 1; });
+    });
     
     return result;
 }
