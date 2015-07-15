@@ -221,12 +221,12 @@ TEST_CASE("aligned read overlap sanity checks", "[reads]")
     auto reads_in_sub_region5 = overlap_range(reads.cbegin(), reads.cend(), sub_region5);
     auto reads_in_sub_region6 = overlap_range(reads.cbegin(), reads.cend(), sub_region6);
     
-    REQUIRE(std::distance(reads_in_sub_region1.first, reads_in_sub_region1.second) == 3);
-    REQUIRE(std::distance(reads_in_sub_region2.first, reads_in_sub_region2.second) == 2);
-    REQUIRE(std::distance(reads_in_sub_region3.first, reads_in_sub_region3.second) == 5);
-    REQUIRE(std::distance(reads_in_sub_region4.first, reads_in_sub_region4.second) == 4);
-    REQUIRE(std::distance(reads_in_sub_region5.first, reads_in_sub_region5.second) == 4);
-    REQUIRE(std::distance(reads_in_sub_region6.first, reads_in_sub_region5.second) == 1);
+    REQUIRE(std::distance(reads_in_sub_region1.begin(), reads_in_sub_region1.end()) == 3);
+    REQUIRE(std::distance(reads_in_sub_region2.begin(), reads_in_sub_region2.end()) == 2);
+    REQUIRE(std::distance(reads_in_sub_region3.begin(), reads_in_sub_region3.end()) == 5);
+    REQUIRE(std::distance(reads_in_sub_region4.begin(), reads_in_sub_region4.end()) == 4);
+    REQUIRE(std::distance(reads_in_sub_region5.begin(), reads_in_sub_region5.end()) == 4);
+    REQUIRE(std::distance(reads_in_sub_region6.begin(), reads_in_sub_region5.end()) == 1);
     
     REQUIRE(count_shared(reads.cbegin(), reads.cend(), sub_region1, sub_region2) == 0);
     REQUIRE(count_shared(reads.cbegin(), reads.cend(), sub_region2, sub_region3) == 2);

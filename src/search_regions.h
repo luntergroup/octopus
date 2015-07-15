@@ -111,8 +111,9 @@ GenomicRegion next_sub_region(const GenomicRegion& the_previous_sub_region,
     
     auto last_variant_it = std::cend(the_variants);
     
-    auto previous_variant_sub_range = overlap_range(std::cbegin(the_variants), last_variant_it, the_previous_sub_region);
-    auto included_it = previous_variant_sub_range.second;
+    auto previous_variant_sub_range = contained_range(std::cbegin(the_variants), last_variant_it, the_previous_sub_region);
+    auto first_previous_it = previous_variant_sub_range.begin();
+    auto included_it       = previous_variant_sub_range.end();
     
     if (max_included == 0) {
         return (included_it != last_variant_it) ? get_intervening(the_previous_sub_region, *included_it) :
@@ -122,8 +123,8 @@ GenomicRegion next_sub_region(const GenomicRegion& the_previous_sub_region,
     unsigned num_indicators {max_indicators};
     
     if (indicator_limit == IndicatorLimit::SharedWithPreviousRegion) {
-        auto first_shared_in_previous_range_it = find_first_shared(the_reads, previous_variant_sub_range.first,
-                                                                   previous_variant_sub_range.second, *included_it);
+        auto first_shared_in_previous_range_it = find_first_shared(the_reads, first_previous_it,
+                                                                   included_it, *included_it);
         auto num_possible_indicators = static_cast<unsigned>(std::distance(first_shared_in_previous_range_it, included_it));
         
         num_indicators = std::min(num_possible_indicators, num_indicators);
@@ -157,7 +158,7 @@ GenomicRegion next_sub_region(const GenomicRegion& the_previous_sub_region,
     
     first_excluded_it = std::next(included_it);
     
-    return detail::get_optimal_region_around_included(previous_variant_sub_range.first, first_included_it,
+    return detail::get_optimal_region_around_included(first_previous_it, first_included_it,
                                                       first_excluded_it, last_variant_it, the_reads);
 }
     

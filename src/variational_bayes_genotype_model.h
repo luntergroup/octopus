@@ -23,6 +23,7 @@
 #include "aligned_read.h"
 #include "pair_hmm.h"
 #include "bayesian_genotype_model.h"
+#include "region_algorithms.h"
 
 #include <iostream> // TEST
 
@@ -32,7 +33,7 @@ namespace Octopus
 namespace BayesianGenotypeModel
 {
     template <typename ForwardIterator>
-    using SampleReadRange = std::pair<ForwardIterator, ForwardIterator>;
+    using SampleReadRange = OverlapRange<ForwardIterator>;
     
     template <typename SampleIdType, typename ForwardIterator>
     using ReadRanges = std::unordered_map<SampleIdType, SampleReadRange<ForwardIterator>>;
@@ -200,8 +201,8 @@ namespace BayesianGenotypeModel
         for (unsigned i {}; i < max_num_iterations; ++i) {
             for (const auto& sample : the_reads) {
                 genotype_posteriors[sample.first] =
-                    the_model.genotype_posteriors(the_genotypes, sample.second.first,
-                                                  sample.second.second, haplotype_posterior_counts,
+                    the_model.genotype_posteriors(the_genotypes, sample.second.begin(),
+                                                  sample.second.end(), haplotype_posterior_counts,
                                                   sample.first);
             }
             

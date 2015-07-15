@@ -84,12 +84,12 @@ TEST_CASE("can call", "variant_caller")
     unsigned max_haplotypes {128};
     HaplotypePhaser phaser {human, the_model, ploidy, max_haplotypes};
     
-    Octopus::BayesianGenotypeModel::ReadRanges<ReadManager::SampleIdType,
-        std::move_iterator<decltype(good_reads)::mapped_type::iterator>> read_ranges {};
-    for (const auto& sample : samples) {
-        read_ranges.emplace(sample, std::make_pair(std::make_move_iterator(good_reads[sample].begin()),
-                                                   std::make_move_iterator(good_reads[sample].end())));
-    }
+//    Octopus::BayesianGenotypeModel::ReadRanges<ReadManager::SampleIdType,
+//        std::move_iterator<decltype(good_reads)::mapped_type::iterator>> read_ranges {};
+//    for (const auto& sample : samples) {
+//        read_ranges.emplace(sample, std::make_pair(std::make_move_iterator(good_reads[sample].begin()),
+//                                                   std::make_move_iterator(good_reads[sample].end())));
+//    }
     
 //    Haplotype ref {human, a_region};
 //    ref.push_back(candidates.at(0).get_reference_allele());
@@ -194,12 +194,12 @@ TEST_CASE("can call2", "variant_caller")
     unsigned max_haplotypes {128};
     HaplotypePhaser phaser {human, the_model, ploidy, max_haplotypes};
     
-    Octopus::BayesianGenotypeModel::ReadRanges<ReadManager::SampleIdType,
-    std::move_iterator<decltype(good_reads)::mapped_type::iterator>> read_ranges {};
-    for (const auto& sample : samples) {
-        read_ranges.emplace(sample, std::make_pair(std::make_move_iterator(good_reads[sample].begin()),
-                                                   std::make_move_iterator(good_reads[sample].end())));
-    }
+//    Octopus::BayesianGenotypeModel::ReadRanges<ReadManager::SampleIdType,
+//    std::move_iterator<decltype(good_reads)::mapped_type::iterator>> read_ranges {};
+//    for (const auto& sample : samples) {
+//        read_ranges.emplace(sample, std::make_pair(std::make_move_iterator(good_reads[sample].begin()),
+//                                                   std::make_move_iterator(good_reads[sample].end())));
+//    }
     
 //    phaser.put_data(read_ranges, candidates.cbegin(), candidates.cend());
 //    
@@ -259,12 +259,12 @@ TEST_CASE("reference allele posteriors in regions with no reads are the referenc
     unsigned max_haplotypes {64};
     HaplotypePhaser phaser {human, the_model, ploidy, max_haplotypes};
     
-    Octopus::BayesianGenotypeModel::ReadRanges<ReadManager::SampleIdType,
-    std::move_iterator<decltype(good_reads)::mapped_type::iterator>> read_ranges {};
-    for (const auto& sample : samples) {
-        read_ranges.emplace(sample, std::make_pair(std::make_move_iterator(good_reads[sample].begin()),
-                                                   std::make_move_iterator(good_reads[sample].end())));
-    }
+//    Octopus::BayesianGenotypeModel::ReadRanges<ReadManager::SampleIdType,
+//    std::move_iterator<decltype(good_reads)::mapped_type::iterator>> read_ranges {};
+//    for (const auto& sample : samples) {
+//        read_ranges.emplace(sample, std::make_pair(std::make_move_iterator(good_reads[sample].begin()),
+//                                                   std::make_move_iterator(good_reads[sample].end())));
+//    }
     
 //    phaser.put_data(read_ranges, candidates.cbegin(), candidates.cend());
 //    

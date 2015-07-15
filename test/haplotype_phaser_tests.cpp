@@ -69,7 +69,7 @@ TEST_CASE("HaplotypePhaser phases when the data supports one phase", "[haplotype
     unsigned max_haplotypes {128};
     HaplotypePhaser phaser {human, the_model, ploidy, max_haplotypes};
     
-    Octopus::BayesianGenotypeModel::ReadRanges<ReadManager::SampleIdType,
+    Octopus::HaplotypePhaser::ReadRanges<ReadManager::SampleIdType,
     std::move_iterator<decltype(reads)::mapped_type::iterator>> read_ranges {};
     for (const auto& sample : samples) {
         read_ranges.emplace(sample, std::make_pair(std::make_move_iterator(reads[sample].begin()),
@@ -164,7 +164,7 @@ TEST_CASE("HaplotypePhaser can use data from other samples to help phase uncerta
     unsigned max_haplotypes {128};
     HaplotypePhaser phaser {human, the_model, ploidy, max_haplotypes};
     
-    Octopus::BayesianGenotypeModel::ReadRanges<ReadManager::SampleIdType,
+    Octopus::HaplotypePhaser::ReadRanges<ReadManager::SampleIdType,
     std::move_iterator<decltype(reads)::mapped_type::iterator>> read_ranges {};
     for (const auto& sample : samples) {
         read_ranges.emplace(sample, std::make_pair(std::make_move_iterator(reads[sample].begin()),
@@ -217,7 +217,7 @@ TEST_CASE("can phase", "[haplotype_phaser]")
     unsigned max_haplotypes {64};
     HaplotypePhaser phaser {human, the_model, ploidy, max_haplotypes};
     
-    Octopus::BayesianGenotypeModel::ReadRanges<ReadManager::SampleIdType,
+    Octopus::HaplotypePhaser::ReadRanges<ReadManager::SampleIdType,
             std::move_iterator<decltype(good_reads)::mapped_type::iterator>> read_ranges {};
     for (const auto& sample : samples) {
         read_ranges.emplace(sample, std::make_pair(std::make_move_iterator(good_reads[sample].begin()),

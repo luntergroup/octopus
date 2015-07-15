@@ -203,11 +203,11 @@ TEST_CASE("what happens when two heterzygous genotypes are equally likely", "[va
     
     std::vector<Genotype<Haplotype>> gens {g1, g2};
     
-    Octopus::BayesianGenotypeModel::ReadRanges<ReadManager::SampleIdType,
-    decltype(reads)::mapped_type::iterator> read_ranges {};
-    for (const auto& sample : samples) {
-        read_ranges.emplace(sample, std::make_pair(reads[sample].begin(), reads[sample].end()));
-    }
+//    Octopus::BayesianGenotypeModel::ReadRanges<ReadManager::SampleIdType,
+//    decltype(reads)::mapped_type::iterator> read_ranges {};
+//    for (const auto& sample : samples) {
+//        read_ranges.emplace(sample, std::make_pair(reads[sample].begin(), reads[sample].end()));
+//    }
     
     auto priors = Octopus::get_haplotype_prior_probabilities<double>(haplotypes, candidates.begin(), candidates.end());
     
@@ -372,11 +372,11 @@ TEST_CASE("what happens when a unlikely haplotype has a large liklihood", "[vari
     
     std::vector<Genotype<Haplotype>> gens {g1, g2};
     
-    Octopus::BayesianGenotypeModel::ReadRanges<ReadManager::SampleIdType,
-    decltype(reads)::mapped_type::iterator> read_ranges {};
-    for (const auto& sample : samples) {
-        read_ranges.emplace(sample, std::make_pair(reads[sample].begin(), reads[sample].end()));
-    }
+//    Octopus::BayesianGenotypeModel::ReadRanges<ReadManager::SampleIdType,
+//    decltype(reads)::mapped_type::iterator> read_ranges {};
+//    for (const auto& sample : samples) {
+//        read_ranges.emplace(sample, std::make_pair(reads[sample].begin(), reads[sample].end()));
+//    }
     
     auto priors = Octopus::get_haplotype_prior_probabilities<double>(haplotypes, candidates.begin(), candidates.end());
     auto prior_counts = Octopus::BayesianGenotypeModel::get_haplotype_prior_pseudo_counts(priors, hap1, 2.0);

@@ -57,15 +57,14 @@ void HaplotypePhaser::phase_current_data()
     GenomicRegion sub_region {the_last_unphased_region_.the_region};
     unsigned max_candidates {max_region_density_};
     unsigned max_indicators {0};
-    std::pair<CandidateIterator, CandidateIterator> candidate_range;
     CandidateIterator previous_region_last_candidate_it {the_candidates_.cbegin()};
     
     if (has_overlapped(the_candidates_.cbegin(), the_candidates_.cend(), sub_region)) {
         max_indicators = static_cast<unsigned>(count_overlapped(the_candidates_.cbegin(), the_candidates_.cend(),
                                                                 sub_region));
         max_candidates = max_region_density_ + max_indicators - std::log2(the_tree_.num_haplotypes());
-        previous_region_last_candidate_it = overlap_range(the_candidates_.cbegin(), the_candidates_.cend(),
-                                                          sub_region).second;
+        previous_region_last_candidate_it = contained_range(the_candidates_.cbegin(), the_candidates_.cend(),
+                                                          sub_region).end();
     }
     
     sub_region = next_sub_region(sub_region, the_reads_, the_candidates_, max_candidates, max_indicators,
@@ -73,13 +72,13 @@ void HaplotypePhaser::phase_current_data()
     
     while (true) {
         cout << "looking in region " << sub_region << endl;
-        candidate_range = overlap_range(the_candidates_.cbegin(), the_candidates_.cend(), sub_region);
+        auto candidate_range = contained_range(the_candidates_.cbegin(), the_candidates_.cend(), sub_region);
         
-        extend_tree(previous_region_last_candidate_it, candidate_range.second);
+        extend_tree(previous_region_last_candidate_it, candidate_range.end());
         
         auto haplotypes = get_unique_haplotypes_from_tree(sub_region);
-        auto haplotype_prior_counts = get_haplotype_prior_counts(haplotypes, candidate_range.first,
-                                                                 candidate_range.second, sub_region);
+        auto haplotype_prior_counts = get_haplotype_prior_counts(haplotypes, candidate_range.begin(),
+                                                                 candidate_range.end(), sub_region);
         auto genotypes = get_all_genotypes(haplotypes, ploidy_);
         
         cout << "proceeding with " << haplotypes.size() << " haplotypes" << endl;
@@ -91,24 +90,24 @@ void HaplotypePhaser::phase_current_data()
         
         cout << "computed latents" << endl;
         
-        if (candidate_range.second == the_candidates_.cend()) {
+        if (candidate_range.end() == the_candidates_.cend()) {
             remove_unlikely_haplotypes_from_tree(haplotypes, haplotype_prior_counts,
                                                  latent_posteriors.haplotype_pseudo_counts);
             the_last_unphased_region_ = PhasedRegion {sub_region, std::move(haplotypes),
                                                 std::move(genotypes), std::move(latent_posteriors)};
             return;
-        } else if (is_potentially_phasable(sub_region, *candidate_range.second)) {
+        } else if (is_potentially_phasable(sub_region, *candidate_range.end())) {
             remove_unlikely_haplotypes_from_tree(haplotypes, haplotype_prior_counts,
                                                  latent_posteriors.haplotype_pseudo_counts);
             
-            max_indicators = static_cast<unsigned>(std::distance(the_candidates_.cbegin(), candidate_range.second));
+            max_indicators = static_cast<unsigned>(std::distance(the_candidates_.cbegin(), candidate_range.end()));
             max_candidates = max_region_density_ + max_indicators - std::log2(the_tree_.num_haplotypes());
-            previous_region_last_candidate_it = candidate_range.second;
+            previous_region_last_candidate_it = candidate_range.end();
             cout << "can phase with maximum " << max_indicators << " indicators and " << max_candidates << " candidates" << endl;
         } else {
             the_phased_regions_.emplace_back(sub_region, std::move(haplotypes), std::move(genotypes),
                                              std::move(latent_posteriors));
-            clear_phased_region(candidate_range.first, candidate_range.second);
+            clear_phased_region(candidate_range.begin(), candidate_range.end());
             
             max_indicators = 0;
             max_candidates = max_region_density_;
@@ -149,9 +148,10 @@ HaplotypePhaser::get_haplotype_prior_counts(const Haplotypes& the_haplotypes,
                                                                     reference_bias_);
 }
 
-HaplotypePhaser::ReadRanges HaplotypePhaser::get_read_iterator_ranges(const GenomicRegion& the_region) const
+BayesianGenotypeModel::ReadRanges<SampleIdType, HaplotypePhaser::ReadIterator>
+HaplotypePhaser::get_read_iterator_ranges(const GenomicRegion& the_region) const
 {
-    ReadRanges reads {};
+    BayesianGenotypeModel::ReadRanges<SampleIdType, ReadIterator> reads {};
     reads.reserve(the_reads_.size());
     
     for (const auto& sample_reads : the_reads_) {
@@ -198,9 +198,8 @@ void HaplotypePhaser::clear_phased_region(CandidateIterator first, CandidateIter
     the_candidates_.erase(the_candidates_.cbegin(), last);
     
     for (auto& sample_reads : the_reads_) {
-        auto overlapped_reads = overlap_range(sample_reads.second.cbegin(),
-                                              sample_reads.second.cend(), *first);
-        sample_reads.second.erase(sample_reads.second.cbegin(), overlapped_reads.first);
+        auto overlapped_reads = overlap_range(sample_reads.second.cbegin(), sample_reads.second.cend(), *first);
+        sample_reads.second.erase(sample_reads.second.cbegin(), overlapped_reads.begin().base());
     }
     
     the_tree_.clear();

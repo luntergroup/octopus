@@ -70,7 +70,7 @@ std::vector<unsigned> positional_coverage(InputIterator first, InputIterator las
     
     std::vector<unsigned> result(num_positions, 0);
     
-    auto overlapped = overlap_range2(first, last, a_region);
+    auto overlapped = overlap_range(first, last, a_region);
     
     auto first_position = get_begin(a_region);
     

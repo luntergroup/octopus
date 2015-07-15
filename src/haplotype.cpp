@@ -61,10 +61,10 @@ bool Haplotype::contains(const Allele& an_allele) const
         
         auto overlapped_range = overlap_range(std::cbegin(the_explicit_alleles_),
                                               std::cend(the_explicit_alleles_), an_allele);
-        if (std::distance(overlapped_range.first, overlapped_range.second) == 1 &&
-            ::contains(*overlapped_range.first, an_allele)) {
+        if (std::distance(overlapped_range.begin(), overlapped_range.end()) == 1 &&
+            ::contains(*overlapped_range.begin(), an_allele)) {
             return an_allele.get_sequence() ==
-                    get_subsequence(*overlapped_range.first,get_overlapped(*overlapped_range.first, an_allele));
+                    get_subsequence(*overlapped_range.begin(), get_overlapped(*overlapped_range.begin(), an_allele));
         }
         
         return get_sequence(an_allele.get_region()) == an_allele.get_sequence();
@@ -111,35 +111,35 @@ Haplotype::SequenceType Haplotype::get_sequence(const GenomicRegion& a_region) c
         result += the_reference_->get_sequence(get_left_overhang(a_region, the_region_bounded_by_alleles));
     }
     
-    auto overlapped_explicit_alleles = overlap_range(std::cbegin(the_explicit_alleles_),
-                                                     std::cend(the_explicit_alleles_), a_region);
+    auto overlapped_explicit_alleles = contained_range(std::cbegin(the_explicit_alleles_),
+                                                       std::cend(the_explicit_alleles_), a_region);
     
-    if (overlapped_explicit_alleles.first != std::cend(the_explicit_alleles_)) {
-        if (::contains(*overlapped_explicit_alleles.first, a_region)) {
-            result += get_subsequence(*overlapped_explicit_alleles.first, a_region);
+    if (overlapped_explicit_alleles.begin() != std::cend(the_explicit_alleles_)) {
+        if (::contains(*overlapped_explicit_alleles.begin(), a_region)) {
+            result += get_subsequence(*overlapped_explicit_alleles.begin(), a_region);
             return result;
-        } else if (begins_before(*overlapped_explicit_alleles.first, a_region)) {
-            result += get_subsequence(*overlapped_explicit_alleles.first,
-                                      get_overlapped(*overlapped_explicit_alleles.first, a_region));
-            ++overlapped_explicit_alleles.first;
+        } else if (begins_before(*overlapped_explicit_alleles.begin(), a_region)) {
+            result += get_subsequence(*overlapped_explicit_alleles.begin(),
+                                      get_overlapped(*overlapped_explicit_alleles.begin(), a_region));
+            overlapped_explicit_alleles.advance_begin(1);
         }
     }
     
     bool region_ends_before_last_overlapped_allele {false};
     
-    if (overlapped_explicit_alleles.second != std::cend(the_explicit_alleles_) &&
-        overlapped_explicit_alleles.second != overlapped_explicit_alleles.first &&
-        ends_before(a_region, *overlapped_explicit_alleles.second)) {
-        --overlapped_explicit_alleles.second;
+    if (overlapped_explicit_alleles.end() != std::cend(the_explicit_alleles_) &&
+        overlapped_explicit_alleles.end() != overlapped_explicit_alleles.begin() &&
+        ends_before(a_region, *overlapped_explicit_alleles.end())) {
+        overlapped_explicit_alleles.advance_end(-1);
         region_ends_before_last_overlapped_allele = true;
     }
     
-    result += get_sequence_bounded_by_explicit_alleles(overlapped_explicit_alleles.first,
-                                                       overlapped_explicit_alleles.second);
+    result += get_sequence_bounded_by_explicit_alleles(overlapped_explicit_alleles.begin(),
+                                                       overlapped_explicit_alleles.end());
     
     if (region_ends_before_last_overlapped_allele) {
-        result += get_subsequence(*overlapped_explicit_alleles.second,
-                                  get_overlapped(*overlapped_explicit_alleles.second, a_region));
+        result += get_subsequence(*overlapped_explicit_alleles.end(),
+                                  get_overlapped(*overlapped_explicit_alleles.end(), a_region));
     } else if (ends_before(the_region_bounded_by_alleles, a_region)) {
         result += the_reference_->get_sequence(get_right_overhang(a_region, the_region_bounded_by_alleles));
     }

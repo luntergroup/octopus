@@ -20,6 +20,17 @@
 template <typename T>
 class Mappable {};
 
+inline GenomicRegion get_region(const GenomicRegion& m)
+{
+    return m;
+}
+
+template <typename T>
+inline GenomicRegion get_region(const Mappable<T>& m)
+{
+    return static_cast<const T&>(m).get_region();
+}
+
 template <typename T>
 inline bool empty(const Mappable<T>& m)
 {

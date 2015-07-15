@@ -44,7 +44,7 @@ void merge_equal_variants(std::vector<Variant>& the_variants)
 std::vector<Allele> get_reference_alleles_between_variants(const std::vector<Variant>& the_variants,
                                                            ReferenceGenome& the_reference)
 {
-    auto all_overlapped_regions = get_all_overlapped(std::cbegin(the_variants), std::cend(the_variants));
+    auto all_overlapped_regions = minimal_encompassing(std::cbegin(the_variants), std::cend(the_variants));
     auto regions_between_candidates = get_all_intervening(std::cbegin(all_overlapped_regions),
                                                           std::cend(all_overlapped_regions));
     

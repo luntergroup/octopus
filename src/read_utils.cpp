@@ -205,7 +205,7 @@ std::vector<AlignedRead> sample(std::vector<AlignedRead>::const_iterator first,
         std::discrete_distribution<unsigned> covers(required_coverage.cbegin(), required_coverage.cend());
         auto sample_position = covers(generator);
         
-        auto overlapped = overlap_range2(unsampled_reads.cbegin(), unsampled_reads.cend(), positions[sample_position]);
+        auto overlapped = overlap_range(unsampled_reads.cbegin(), unsampled_reads.cend(), positions[sample_position]);
         
         std::uniform_int_distribution<std::size_t> read_sampler(0, std::distance(overlapped.begin(), overlapped.end()) - 1);
         
@@ -256,15 +256,15 @@ std::vector<AlignedRead> downsample(const std::vector<AlignedRead>& reads, unsig
     for (auto& region : regions_to_sample) {
         auto contained = contained_range(reads.cbegin(), reads.cend(), region);
         
-        if (std::distance(contained.first, contained.second) == 0) continue;
+        if (std::distance(contained.begin(), contained.end()) == 0) continue;
         
-        result.insert(result.end(), last_sampled, contained.first);
+        result.insert(result.end(), last_sampled, contained.begin());
         
-        auto samples = sample(contained.first, contained.second, region, maximum_coverage, minimum_downsample_coverage);
+        auto samples = sample(contained.begin(), contained.end(), region, maximum_coverage, minimum_downsample_coverage);
         
         result.insert(result.end(), std::make_move_iterator(std::begin(samples)), std::make_move_iterator(std::end(samples)));
         
-        last_sampled = contained.second;
+        last_sampled = contained.end();
     }
     
     result.insert(result.end(), last_sampled, reads.cend());

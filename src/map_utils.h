@@ -16,6 +16,7 @@
 
 #include "genomic_region.h"
 #include "mappable.h"
+#include "region_algorithms.h"
 
 template <typename MappableMap, typename MappableType>
 inline
@@ -130,7 +131,6 @@ leftmost_overlapped(const MappableMap& mappables, const MappableType& mappable)
     using Iterator = typename MappableMap::mapped_type::const_iterator;
     
     Iterator result;
-    std::pair<Iterator, Iterator> overlapped_mappables;
     
     // To find a default value
     for (const auto& map_pair : mappables) {
@@ -141,12 +141,10 @@ leftmost_overlapped(const MappableMap& mappables, const MappableType& mappable)
     }
     
     for (const auto& map_pair : mappables) {
-        overlapped_mappables = overlap_range(std::cbegin(map_pair.second),
-                                             std::cend(map_pair.second), mappable);
+        auto overlapped = overlap_range(std::cbegin(map_pair.second), std::cend(map_pair.second), mappable);
         
-        if (overlapped_mappables.first != std::cend(map_pair.second) &&
-            begins_before(*overlapped_mappables.first, *result)) {
-            result = overlapped_mappables.first;
+        if (overlapped.begin() != std::cend(map_pair.second) && begins_before(*overlapped.begin(), *result)) {
+            result = overlapped.begin().base();
         }
     }
     
@@ -161,15 +159,12 @@ rightmost_overlapped(const MappableMap& mappables, const MappableType& mappable)
     using Iterator = typename MappableMap::mapped_type::const_iterator;
     
     Iterator result {std::cbegin(std::cbegin(mappables)->second)};
-    std::pair<Iterator, Iterator> overlapped_mappables;
     
     for (const auto& map_pair : mappables) {
-        overlapped_mappables = overlap_range(std::cbegin(map_pair.second),
-                                             std::cend(map_pair.second), mappable);
+        auto overlapped = overlap_range(std::cbegin(map_pair.second), std::cend(map_pair.second), mappable);
         
-        if (overlapped_mappables.first != overlapped_mappables.second &&
-            ends_before(*result, *std::prev(overlapped_mappables.second))) {
-            result = std::prev(overlapped_mappables.second);
+        if (overlapped.begin() != overlapped.end() && ends_before(*result, *std::prev(overlapped.end()))) {
+            result = std::prev(overlapped.end().base());
         }
     }
     

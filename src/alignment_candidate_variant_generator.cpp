@@ -131,7 +131,7 @@ std::vector<Variant> AlignmentCandidateVariantGenerator::get_candidates(const Ge
     
     auto range = overlap_range(std::cbegin(candidates_), std::cend(candidates_), a_region);
     
-    return std::vector<Variant> {range.first, range.second};
+    return std::vector<Variant> {range.begin(), range.end()};
 }
 
 void AlignmentCandidateVariantGenerator::reserve(std::size_t n)
