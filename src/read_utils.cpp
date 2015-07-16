@@ -168,18 +168,17 @@ find_good_coverage_regions_containing_high_coverage_positions(const std::vector<
     return result;
 }
 
-std::vector<AlignedRead> sample(std::vector<AlignedRead>::const_iterator first,
-                                std::vector<AlignedRead>::const_iterator last,
+std::vector<AlignedRead> sample(const ContainedRange<std::vector<AlignedRead>::const_iterator>& reads,
                                 const GenomicRegion& encompassing_region,
                                 unsigned maximum_coverage, unsigned minimum_downsample_coverage)
 {
     std::cout << "downsampling reads in region " << encompassing_region << std::endl;
     
-    if (std::distance(first, last) == 0) return std::vector<AlignedRead> {};
+    if (reads.empty()) return std::vector<AlignedRead> {};
     
     auto num_positions = size(encompassing_region);
     
-    std::vector<unsigned> old_position_coverages = positional_coverage(first, last, encompassing_region);
+    std::vector<unsigned> old_position_coverages = positional_coverage(reads.begin(), reads.end(), encompassing_region);
     std::vector<unsigned> required_coverage(num_positions);
     
     std::transform(old_position_coverages.cbegin(), old_position_coverages.cend(), required_coverage.begin(),
@@ -197,9 +196,9 @@ std::vector<AlignedRead> sample(std::vector<AlignedRead>::const_iterator first,
     // first pass ensures minimum coverage requirements are satisfied
     
     std::vector<AlignedRead> result {};
-    result.reserve(std::distance(first, last) * maximum_coverage);
+    result.reserve(size(reads) * maximum_coverage);
     
-    std::list<AlignedRead> unsampled_reads(first, last);
+    std::list<AlignedRead> unsampled_reads(reads.begin(), reads.end());
     
     while (!has_minimum_coverage(required_coverage)) {
         std::discrete_distribution<unsigned> covers(required_coverage.cbegin(), required_coverage.cend());
@@ -256,15 +255,15 @@ std::vector<AlignedRead> downsample(const std::vector<AlignedRead>& reads, unsig
     for (auto& region : regions_to_sample) {
         auto contained = contained_range(reads.cbegin(), reads.cend(), region);
         
-        if (std::distance(contained.begin(), contained.end()) == 0) continue;
+        if (contained.empty()) continue;
         
-        result.insert(result.end(), last_sampled, contained.begin());
+        result.insert(result.end(), last_sampled, contained.begin().base());
         
-        auto samples = sample(contained.begin(), contained.end(), region, maximum_coverage, minimum_downsample_coverage);
+        auto samples = sample(contained, region, maximum_coverage, minimum_downsample_coverage);
         
         result.insert(result.end(), std::make_move_iterator(std::begin(samples)), std::make_move_iterator(std::end(samples)));
         
-        last_sampled = contained.end();
+        last_sampled = contained.end().base();
     }
     
     result.insert(result.end(), last_sampled, reads.cend());

@@ -59,66 +59,66 @@ void HaplotypePhaser::phase_current_data()
     unsigned max_indicators {0};
     CandidateIterator previous_region_last_candidate_it {the_candidates_.cbegin()};
     
-    if (has_overlapped(the_candidates_.cbegin(), the_candidates_.cend(), sub_region)) {
-        max_indicators = static_cast<unsigned>(count_overlapped(the_candidates_.cbegin(), the_candidates_.cend(),
-                                                                sub_region));
-        max_candidates = max_region_density_ + max_indicators - std::log2(the_tree_.num_haplotypes());
-        previous_region_last_candidate_it = contained_range(the_candidates_.cbegin(), the_candidates_.cend(),
-                                                          sub_region).end();
-    }
+//    if (has_overlapped(the_candidates_.cbegin(), the_candidates_.cend(), sub_region)) {
+//        max_indicators = static_cast<unsigned>(count_overlapped(the_candidates_.cbegin(), the_candidates_.cend(),
+//                                                                sub_region));
+//        max_candidates = max_region_density_ + max_indicators - std::log2(the_tree_.num_haplotypes());
+//        previous_region_last_candidate_it = contained_range(the_candidates_.cbegin(), the_candidates_.cend(),
+//                                                          sub_region).end();
+//    }
     
     sub_region = next_sub_region(sub_region, the_reads_, the_candidates_, max_candidates, max_indicators,
                                  IndicatorLimit::NoLimit, ExtensionLimit::NoLimit);
     
     while (true) {
-        cout << "looking in region " << sub_region << endl;
-        auto candidate_range = contained_range(the_candidates_.cbegin(), the_candidates_.cend(), sub_region);
-        
-        extend_tree(previous_region_last_candidate_it, candidate_range.end());
-        
-        auto haplotypes = get_unique_haplotypes_from_tree(sub_region);
-        auto haplotype_prior_counts = get_haplotype_prior_counts(haplotypes, candidate_range.begin(),
-                                                                 candidate_range.end(), sub_region);
-        auto genotypes = get_all_genotypes(haplotypes, ploidy_);
-        
-        cout << "proceeding with " << haplotypes.size() << " haplotypes" << endl;
-        
-        latent_posteriors = BayesianGenotypeModel::update_latents(the_model_, genotypes,
-                                                                  haplotype_prior_counts,
-                                                                  get_read_iterator_ranges(sub_region),
-                                                                  max_model_update_iterations_);
-        
-        cout << "computed latents" << endl;
-        
-        if (candidate_range.end() == the_candidates_.cend()) {
-            remove_unlikely_haplotypes_from_tree(haplotypes, haplotype_prior_counts,
-                                                 latent_posteriors.haplotype_pseudo_counts);
-            the_last_unphased_region_ = PhasedRegion {sub_region, std::move(haplotypes),
-                                                std::move(genotypes), std::move(latent_posteriors)};
-            return;
-        } else if (is_potentially_phasable(sub_region, *candidate_range.end())) {
-            remove_unlikely_haplotypes_from_tree(haplotypes, haplotype_prior_counts,
-                                                 latent_posteriors.haplotype_pseudo_counts);
-            
-            max_indicators = static_cast<unsigned>(std::distance(the_candidates_.cbegin(), candidate_range.end()));
-            max_candidates = max_region_density_ + max_indicators - std::log2(the_tree_.num_haplotypes());
-            previous_region_last_candidate_it = candidate_range.end();
-            cout << "can phase with maximum " << max_indicators << " indicators and " << max_candidates << " candidates" << endl;
-        } else {
-            the_phased_regions_.emplace_back(sub_region, std::move(haplotypes), std::move(genotypes),
-                                             std::move(latent_posteriors));
-            clear_phased_region(candidate_range.begin(), candidate_range.end());
-            
-            max_indicators = 0;
-            max_candidates = max_region_density_;
-            previous_region_last_candidate_it = the_candidates_.cbegin();
-            cout << "could not phase" << endl;
-        }
-        
-        cout << "there are now " << the_tree_.num_haplotypes() << " haplotypes" << endl;
-        
-        sub_region = next_sub_region(sub_region, the_reads_, the_candidates_, max_candidates, max_indicators,
-                                     IndicatorLimit::NoLimit, ExtensionLimit::NoLimit);
+//        cout << "looking in region " << sub_region << endl;
+//        auto candidate_range = contained_range(the_candidates_.cbegin(), the_candidates_.cend(), sub_region);
+//        
+//        extend_tree(previous_region_last_candidate_it, candidate_range.end());
+//        
+//        auto haplotypes = get_unique_haplotypes_from_tree(sub_region);
+//        auto haplotype_prior_counts = get_haplotype_prior_counts(haplotypes, candidate_range.begin(),
+//                                                                 candidate_range.end(), sub_region);
+//        auto genotypes = get_all_genotypes(haplotypes, ploidy_);
+//        
+//        cout << "proceeding with " << haplotypes.size() << " haplotypes" << endl;
+//        
+//        latent_posteriors = BayesianGenotypeModel::update_latents(the_model_, genotypes,
+//                                                                  haplotype_prior_counts,
+//                                                                  get_read_iterator_ranges(sub_region),
+//                                                                  max_model_update_iterations_);
+//        
+//        cout << "computed latents" << endl;
+//        
+//        if (candidate_range.end() == the_candidates_.cend()) {
+//            remove_unlikely_haplotypes_from_tree(haplotypes, haplotype_prior_counts,
+//                                                 latent_posteriors.haplotype_pseudo_counts);
+//            the_last_unphased_region_ = PhasedRegion {sub_region, std::move(haplotypes),
+//                                                std::move(genotypes), std::move(latent_posteriors)};
+//            return;
+//        } else if (is_potentially_phasable(sub_region, *candidate_range.end())) {
+//            remove_unlikely_haplotypes_from_tree(haplotypes, haplotype_prior_counts,
+//                                                 latent_posteriors.haplotype_pseudo_counts);
+//            
+//            max_indicators = static_cast<unsigned>(std::distance(the_candidates_.cbegin(), candidate_range.end()));
+//            max_candidates = max_region_density_ + max_indicators - std::log2(the_tree_.num_haplotypes());
+//            previous_region_last_candidate_it = candidate_range.end();
+//            cout << "can phase with maximum " << max_indicators << " indicators and " << max_candidates << " candidates" << endl;
+//        } else {
+//            the_phased_regions_.emplace_back(sub_region, std::move(haplotypes), std::move(genotypes),
+//                                             std::move(latent_posteriors));
+//            clear_phased_region(candidate_range.begin(), candidate_range.end());
+//            
+//            max_indicators = 0;
+//            max_candidates = max_region_density_;
+//            previous_region_last_candidate_it = the_candidates_.cbegin();
+//            cout << "could not phase" << endl;
+//        }
+//        
+//        cout << "there are now " << the_tree_.num_haplotypes() << " haplotypes" << endl;
+//        
+//        sub_region = next_sub_region(sub_region, the_reads_, the_candidates_, max_candidates, max_indicators,
+//                                     IndicatorLimit::NoLimit, ExtensionLimit::NoLimit);
     }
 }
 

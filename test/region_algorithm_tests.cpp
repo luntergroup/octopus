@@ -9,6 +9,123 @@
 #include "catch.hpp"
 
 #include <iostream>
+#include <vector>
+#include <algorithm>
+#include <numeric>
 
+#include "mock_objects.h"
 #include "genomic_region.h"
 #include "region_algorithms.h"
+
+using std::cout;
+using std::endl;
+
+TEST_CASE("overlap_range returns a filter iterator range that includes all overlapped elements", "[region_algorithms]")
+{
+    auto regions = generate_random_regions(10000, 100, 10000);
+    
+    GenomicRegion test_region {"test", 5000, 6000};
+    
+    std::vector<GenomicRegion> true_overlaps {};
+    std::copy_if(regions.cbegin(), regions.cend(), std::back_inserter(true_overlaps),
+                 [&test_region] (const auto& region) { return overlaps(region, test_region); });
+    
+    auto overlapped = overlap_range(regions.cbegin(), regions.cend(), test_region);
+    
+    REQUIRE(std::equal(true_overlaps.cbegin(), true_overlaps.cend(), overlapped.begin()));
+}
+
+TEST_CASE("bidirectionally_sorted_ranges returns a set of ranges that are by themselves bidirectionally sorted and accounts for every element", "[region_algorithms]")
+{
+    auto regions = generate_random_regions(10000, 100, 10000);
+    
+    auto bisorted_ranges = bidirectionally_sorted_ranges(regions.cbegin(), regions.cend());
+    
+    bool are_all_bisorted = std::all_of(bisorted_ranges.cbegin(), bisorted_ranges.cend(),
+                                        [] (const auto& range) {
+                                            return is_bidirectionally_sorted(range.begin(), range.end());
+                                        });
+    
+    auto s = std::accumulate(bisorted_ranges.cbegin(), bisorted_ranges.cend(), 0,
+                             [] (const auto& lhs, const auto& rhs) {
+                                 return lhs + size(rhs);
+                             });
+    
+    REQUIRE(s == regions.size());
+    REQUIRE(are_all_bisorted);
+}
+
+TEST_CASE("overlap_range returns correct range if regions are bidirectionally sorted", "[region_algorithms]")
+{
+    auto regions = generate_random_regions(10000, 100, 10000);
+    
+    GenomicRegion test_region {"test", 5000, 6000};
+    
+    std::vector<GenomicRegion> true_overlaps {};
+    std::copy_if(regions.cbegin(), regions.cend(), std::back_inserter(true_overlaps),
+                 [&test_region] (const auto& region) { return overlaps(region, test_region); });
+    
+    auto bisorted_ranges = bidirectionally_sorted_ranges(regions.cbegin(), regions.cend());
+    
+    std::vector<GenomicRegion> overlapped {};
+    for (const auto& bisorted_range : bisorted_ranges) {
+        auto sorted_overlapped = overlap_range(bisorted_range.begin(), bisorted_range.end(), test_region);
+        overlapped.insert(overlapped.end(), sorted_overlapped.begin(), sorted_overlapped.end());
+    }
+    
+    REQUIRE(std::equal(true_overlaps.cbegin(), true_overlaps.cend(), overlapped.begin()));
+}
+
+TEST_CASE("overlap_range returns correct range if given the maximum region size", "[region_algorithms]")
+{
+    auto regions = generate_random_regions(10000, 100, 10000);
+    
+    GenomicRegion test_region {"test", 5000, 6000};
+    
+    std::vector<GenomicRegion> true_overlaps {};
+    std::copy_if(regions.cbegin(), regions.cend(), std::back_inserter(true_overlaps),
+                 [&test_region] (const auto& region) { return overlaps(region, test_region); });
+    
+    auto bisorted_ranges = bidirectionally_sorted_ranges(regions.cbegin(), regions.cend());
+    
+    auto max_region_size = size(*largest(regions.cbegin(), regions.cend()));
+    
+    auto overlapped = overlap_range(regions.cbegin(), regions.cend(), test_region, max_region_size);
+    
+    REQUIRE(std::equal(true_overlaps.cbegin(), true_overlaps.cend(), overlapped.begin()));
+}
+
+TEST_CASE("contained_range returns a range of iterators that span all elements contained by a region", "[region_algorithms]")
+{
+    auto regions = generate_random_regions(10000, 100, 10000);
+    
+    GenomicRegion test_region {"test", 5000, 6000};
+    
+    std::vector<GenomicRegion> true_contained {};
+    std::copy_if(regions.cbegin(), regions.cend(), std::back_inserter(true_contained),
+                 [&test_region] (const auto& region) { return contains(test_region, region); });
+    
+    auto contained = contained_range(regions.cbegin(), regions.cend(), test_region);
+    
+    REQUIRE(std::equal(true_contained.cbegin(), true_contained.cend(), contained.begin()));
+}
+
+TEST_CASE("", "[region_algorithms]")
+{
+    
+}
+
+TEST_CASE("", "[region_algorithms]")
+{
+    
+}
+
+TEST_CASE("", "[region_algorithms]")
+{
+    
+}
+
+TEST_CASE("", "[region_algorithms]")
+{
+    
+}

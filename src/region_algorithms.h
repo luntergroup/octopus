@@ -14,7 +14,7 @@
                      // std::generate_n, std::transform
 #include <numeric>   // std::accumulate
 #include <cstddef>   // std::size_t
-#include <iterator>  // std::distance, std::cbegin, std::cend, std::prev, std::next
+#include <iterator>  // std::distance, std::cbegin, std::cend, std::prev, std::next, std::reverse_iterator
 #include <stdexcept>
 #include <boost/iterator/filter_iterator.hpp>
 #include <boost/range/iterator_range_core.hpp>
@@ -45,6 +45,34 @@ ForwardIterator rightmost_mappable(ForwardIterator first, ForwardIterator last)
 {
     return std::max_element(first, last, [] (const auto& lhs, const auto& rhs) {
         return (ends_equal(lhs, rhs)) ? begins_before(lhs, rhs) : ends_before(lhs, rhs);
+    });
+}
+
+/**
+ Returns the mappable element in the range [first, last) with the largest size.
+ 
+ The range [first, last) is not required to be sorted.
+ */
+template <typename ForwardIterator>
+inline
+ForwardIterator largest(ForwardIterator first, ForwardIterator last)
+{
+    return std::max_element(first, last, [] (const auto& lhs, const auto& rhs) {
+        return size(lhs) < size(rhs);
+    });
+}
+
+/**
+ Returns the mappable element in the range [first, last) with the smallest size.
+ 
+ The range [first, last) is not required to be sorted.
+ */
+template <typename ForwardIterator>
+inline
+ForwardIterator smallest(ForwardIterator first, ForwardIterator last)
+{
+    return std::min_element(first, last, [] (const auto& lhs, const auto& rhs) {
+        return size(lhs) < size(rhs);
     });
 }
 
@@ -92,16 +120,16 @@ ForwardIterator is_bidirectionally_sorted_until(ForwardIterator first, ForwardIt
  */
 template <typename ForwardIterator>
 inline
-std::vector<std::pair<ForwardIterator, ForwardIterator>>
+std::vector<boost::iterator_range<ForwardIterator>>
 bidirectionally_sorted_ranges(ForwardIterator first, ForwardIterator last)
 {
-    std::vector<std::pair<ForwardIterator, ForwardIterator>> result {};
+    std::vector<boost::iterator_range<ForwardIterator>> result {};
     
     auto it = first;
     
     while (first != last) {
         it = is_bidirectionally_sorted_until(first, last);
-        result.emplace_back(std::make_pair(first, it));
+        result.emplace_back(first, it);
         first = it;
     }
     
@@ -110,20 +138,23 @@ bidirectionally_sorted_ranges(ForwardIterator first, ForwardIterator last)
     return result;
 }
 
-template <typename MappableType>
-class IsOverlapped
+namespace detail
 {
-public:
-    IsOverlapped() = delete;
-    template <typename MappableType_>
-    IsOverlapped(const MappableType_& mappable) : region_ {get_region(mappable)} {}
-    bool operator()(const MappableType& mappable) { return overlaps(mappable, region_); }
-private:
-    GenomicRegion region_;
-};
+    template <typename MappableType>
+    class IsOverlapped
+    {
+    public:
+        IsOverlapped() = delete;
+        template <typename MappableType_>
+        IsOverlapped(const MappableType_& mappable) : region_ {get_region(mappable)} {}
+        bool operator()(const MappableType& mappable) { return overlaps(mappable, region_); }
+    private:
+        GenomicRegion region_;
+    };
+} // end namespace detail
 
 template <typename Iterator>
-using OverlapIterator = boost::filter_iterator<IsOverlapped<typename Iterator::value_type>, Iterator>;
+using OverlapIterator = boost::filter_iterator<detail::IsOverlapped<typename Iterator::value_type>, Iterator>;
 
 template <typename Iterator>
 inline bool operator==(Iterator lhs, OverlapIterator<Iterator> rhs) noexcept
@@ -149,6 +180,28 @@ inline bool operator!=(OverlapIterator<Iterator> lhs, Iterator rhs) noexcept
 template <typename Iterator>
 using OverlapRange = boost::iterator_range<OverlapIterator<Iterator>>;
 
+template <typename Iterator>
+inline
+boost::iterator_range<Iterator> bases(const OverlapRange<Iterator>& overlap_range)
+{
+    return boost::make_iterator_range(overlap_range.begin().base(), overlap_range.end().base());
+}
+
+template <typename Iterator>
+inline
+std::size_t size(const OverlapRange<Iterator>& range, bool is_bidirectional=false)
+{
+    return (is_bidirectional) ? std::distance(range.begin().base(), range.end().base()) :
+                                std::distance(range.begin(), range.end());
+}
+
+template <typename Iterator>
+inline
+bool empty(const OverlapRange<Iterator>& range)
+{
+    return range.empty();
+}
+
 namespace detail
 {
     template <typename Iterator, typename MappableType>
@@ -160,8 +213,18 @@ namespace detail
         return boost::make_iterator_range(boost::make_filter_iterator<IsOverlapped<MappableType2>>(IsOverlapped<MappableType2>(mappable), first, last),
                                           boost::make_filter_iterator<IsOverlapped<MappableType2>>(IsOverlapped<MappableType2>(mappable), last, last));
     }
-}
+} // end namespace detail
 
+/**
+ Returns the sub-range(s) of Mappable elements in the range [first, last) such that each element
+ in the sub-range overlaps mappable.
+ 
+ The returned OverlapRange is a range of filter iterators (i.e. skips over non-overlapped elements).
+ 
+ The algorithm takes linear time if is_bidirectional=false and logorithmic time if is_bidirectional=true.
+ 
+ Requires [first, last) is sorted w.r.t GenomicRegion::operator<
+ */
 template <typename ForwardIterator, typename MappableType>
 inline
 OverlapRange<ForwardIterator>
@@ -178,13 +241,23 @@ overlap_range(ForwardIterator first, ForwardIterator last, const MappableType& m
     
     auto it = find_first_after(first, last, mappable);
     
-    return detail::make_overlap_range(std::find_if(first, it, [&mappable] (const auto& m) { return overlaps(m, mappable); }), it, mappable);
+    return detail::make_overlap_range(std::find_if(first, it, [&mappable] (const auto& m) {
+                                                    return overlaps(m, mappable); }), it, mappable);
 }
 
+/**
+ Returns the sub-range(s) of Mappable elements in the range [first, last) such that each element
+ in the sub-range overlaps a_region.
+ 
+ The returned OverlapRange is a range of filter iterators (i.e. skips over non-overlapped elements).
+ 
+ Requires [first, last) is sorted w.r.t GenomicRegion::operator<
+ */
 template <typename ForwardIterator, typename MappableType>
 inline
 OverlapRange<ForwardIterator>
-overlap_range(ForwardIterator first, ForwardIterator last, const MappableType& mappable, GenomicRegion::SizeType max_mappable_size)
+overlap_range(ForwardIterator first, ForwardIterator last, const MappableType& mappable,
+              GenomicRegion::SizeType max_mappable_size)
 {
     using MappableType2 = typename ForwardIterator::value_type;
     
@@ -200,53 +273,140 @@ overlap_range(ForwardIterator first, ForwardIterator last, const MappableType& m
     return detail::make_overlap_range(it2, it, mappable);
 }
 
-//template <typename Iterator>
-//using OverlapRange = boost::iterator_range<Iterator>;
-//
-///**
-// Returns the sub-range of Mappable elements in the range [first, last) such that each element
-// in the sub-range overlaps a_region.
-// 
-// Requires [first, last) is sorted bidirectionally sorted
-// */
-//template <typename ForwardIterator, typename MappableType>
-//inline
-//OverlapRange<ForwardIterator>
-//overlap_range(ForwardIterator first, ForwardIterator last, const MappableType& mappable)
-//{
-//    return boost::make_iterator_range(std::equal_range(first, last, mappable,
-//                                                       [] (const auto& lhs, const auto& rhs) {
-//                                                           return is_before(lhs, rhs);
-//                                                       }));
-//}
-
 /**
  Returns true if any of the mappable elements in the range [first, last) overlap with mappable.
  
- Requires [first, last) is sorted bidirectionally sorted
+ Requires [first, last) is sorted w.r.t GenomicRegion::operator<
  */
 template <typename BidirectionalIterator, typename MappableType>
 inline
-bool has_overlapped(BidirectionalIterator first, BidirectionalIterator last, const MappableType& mappable)
+bool has_overlapped(BidirectionalIterator first, BidirectionalIterator last,
+                    const MappableType& mappable, bool is_bidirectional=false)
 {
-    return std::binary_search(first, last, mappable,
-                              [] (const auto& lhs, const auto& rhs) {
-                                  return is_before(lhs, rhs);
-                              });
+    if (is_bidirectional) {
+        return std::binary_search(first, last, mappable,
+                                  [] (const auto& lhs, const auto& rhs) {
+                                      return is_before(lhs, rhs);
+                                  });
+    } else {
+        auto it = find_first_after(first, last, mappable);
+        
+        using ReverseIterator = std::reverse_iterator<BidirectionalIterator>;
+        
+        // searches in reverse order on the assumption regions closer to the boundry with
+        // mappable are more likely to overlap with mappable.
+        
+        return std::any_of(ReverseIterator(it), ReverseIterator(std::next(first)),
+                           [&mappable] (const auto& m) {
+                               return overlaps(mappable, m);
+                           }) || overlaps(*first, mappable);
+    }
 }
 
 /**
  Returns the number of mappable elements in the range [first, last) that overlap with mappable.
  
- Requires [first, last) is sorted bidirectionally sorted
+ Requires [first, last) is sorted w.r.t GenomicRegion::operator<
  */
 template <typename ForwardIterator, typename MappableType>
 inline
-std::size_t count_overlapped(ForwardIterator first, ForwardIterator last, const MappableType& mappable)
+std::size_t count_overlapped(ForwardIterator first, ForwardIterator last, const MappableType& mappable,
+                             bool is_bidirectional=false)
 {
-    auto overlapped = overlap_range(first, last, mappable);
+    auto overlapped = overlap_range(first, last, mappable, is_bidirectional);
     return std::distance(overlapped.begin(), overlapped.end());
 }
+
+/**
+ Returns the number of mappable elements in the range [first, last) that overlap with mappable.
+ 
+ Requires [first, last) is sorted w.r.t GenomicRegion::operator<
+ */
+template <typename ForwardIterator, typename MappableType>
+inline
+std::size_t count_overlapped(ForwardIterator first, ForwardIterator last, const MappableType& mappable,
+                             GenomicRegion::SizeType max_mappable_size)
+{
+    auto overlapped = overlap_range(first, last, mappable, max_mappable_size);
+    return std::distance(overlapped.begin(), overlapped.end());
+}
+
+namespace detail
+{
+    template <typename MappableType>
+    class IsContained
+    {
+    public:
+        IsContained() = delete;
+        template <typename MappableType_>
+        IsContained(const MappableType_& mappable) : region_ {get_region(mappable)} {}
+        bool operator()(const MappableType& mappable) { return contains(region_, mappable); }
+    private:
+        GenomicRegion region_;
+    };
+} // end namespace detail
+
+template <typename Iterator>
+using ContainedIterator = boost::filter_iterator<detail::IsContained<typename Iterator::value_type>, Iterator>;
+
+template <typename Iterator>
+inline bool operator==(Iterator lhs, ContainedIterator<Iterator> rhs) noexcept
+{
+    return lhs == rhs.base();
+}
+template <typename Iterator>
+inline bool operator!=(Iterator lhs, ContainedIterator<Iterator> rhs) noexcept
+{
+    return !operator==(lhs, rhs);
+}
+template <typename Iterator>
+inline bool operator==(ContainedIterator<Iterator> lhs, Iterator rhs) noexcept
+{
+    return operator==(rhs, lhs);
+}
+template <typename Iterator>
+inline bool operator!=(ContainedIterator<Iterator> lhs, Iterator rhs) noexcept
+{
+    return !operator==(lhs, rhs);
+}
+
+template <typename Iterator>
+using ContainedRange = boost::iterator_range<ContainedIterator<Iterator>>;
+
+template <typename Iterator>
+inline
+boost::iterator_range<Iterator> bases(const ContainedRange<Iterator>& overlap_range)
+{
+    return boost::make_iterator_range(overlap_range.begin().base(), overlap_range.end().base());
+}
+
+template <typename Iterator>
+inline
+std::size_t size(const ContainedRange<Iterator>& range, bool is_bidirectional=false)
+{
+    return (is_bidirectional) ? std::distance(range.begin().base(), range.end().base()) :
+                                std::distance(range.begin(), range.end());
+}
+
+template <typename Iterator>
+inline
+bool empty(const ContainedRange<Iterator>& range)
+{
+    return range.empty();
+}
+
+namespace detail
+{
+    template <typename Iterator, typename MappableType>
+    inline
+    ContainedRange<Iterator>
+    make_contained_range(Iterator first, Iterator last, const MappableType& mappable)
+    {
+        using MappableType2 = typename Iterator::value_type;
+        return boost::make_iterator_range(boost::make_filter_iterator<IsContained<MappableType2>>(IsContained<MappableType2>(mappable), first, last),
+                                          boost::make_filter_iterator<IsContained<MappableType2>>(IsContained<MappableType2>(mappable), last, last));
+    }
+} // end namespace detail
 
 /**
  Returns the sub-range of Mappable elements in the range [first, last) such that each element
@@ -254,20 +414,22 @@ std::size_t count_overlapped(ForwardIterator first, ForwardIterator last, const 
  
  Requires [first, last) is sorted w.r.t GenomicRegion::operator<
  */
-template <typename ForwardIterator, typename MappableType>
+template <typename BidirectionalIterator, typename MappableType>
 inline
-boost::iterator_range<ForwardIterator>
-contained_range(ForwardIterator first, ForwardIterator last, const MappableType& mappable)
+ContainedRange<BidirectionalIterator>
+contained_range(BidirectionalIterator first, BidirectionalIterator last, const MappableType& mappable)
 {
     auto it = std::lower_bound(first, last, mappable,
                                [] (const auto& lhs, const auto& rhs) {
                                     return begins_before(lhs, rhs);
                                 });
     
-    return boost::make_iterator_range(it, std::find_if_not(it, last,
-                                                           [&mappable] (const auto& m) {
-                                                               return get_end(m) <= get_end(mappable);
-                                                           }));
+    using ReverseIterator = std::reverse_iterator<BidirectionalIterator>;
+    
+    auto rit = std::find_if(ReverseIterator(find_first_after(it, last, mappable)), ReverseIterator(std::next(it)),
+                            [&mappable] (const auto& m) { return contains(mappable, m); });
+    
+    return detail::make_contained_range(it, rit.base(), mappable);
 }
 
 /**
@@ -275,9 +437,9 @@ contained_range(ForwardIterator first, ForwardIterator last, const MappableType&
  
  Requires [first, last) is sorted w.r.t GenomicRegion::operator<
  */
-template <typename ForwardIterator, typename MappableType>
+template <typename BidirectionalIterator, typename MappableType>
 inline
-bool has_contained(ForwardIterator first, ForwardIterator last, const MappableType& mappable)
+bool has_contained(BidirectionalIterator first, BidirectionalIterator last, const MappableType& mappable)
 {
     auto it = std::lower_bound(first, last, mappable,
                                [] (const auto& lhs, const auto& rhs) {
@@ -292,9 +454,9 @@ bool has_contained(ForwardIterator first, ForwardIterator last, const MappableTy
  
  Requires [first, last) is sorted w.r.t GenomicRegion::operator<
  */
-template <typename ForwardIterator, typename MappableType>
+template <typename BidirectionalIterator, typename MappableType>
 inline
-std::size_t count_contained(ForwardIterator first, ForwardIterator last, const MappableType& mappable)
+std::size_t count_contained(BidirectionalIterator first, BidirectionalIterator last, const MappableType& mappable)
 {
     auto contained = contained_range(first, last, mappable);
     return std::distance(contained.begin(), contained.end());
@@ -311,16 +473,15 @@ inline
 std::size_t count_shared(ForwardIterator first, ForwardIterator last,
                          const MappableType1& lhs, const MappableType2& rhs)
 {
-    auto lhs_overlap_range = overlap_range(first, last, lhs);
-    auto rhs_overlap_range = overlap_range(first, last, lhs);
+    auto lhs_overlapped = overlap_range(first, last, lhs);
+    auto rhs_overlapped = overlap_range(first, last, rhs);
     
-    return (std::distance(lhs_overlap_range.begin(), lhs_overlap_range.end()) <=
-            std::distance(rhs_overlap_range.begin(), rhs_overlap_range.end())) ?
-            std::count_if(lhs_overlap_range.begin(), lhs_overlap_range.end(),
+    return (size(lhs_overlapped) <= size(rhs_overlapped)) ?
+            std::count_if(lhs_overlapped.begin(), lhs_overlapped.end(),
                           [&rhs] (const auto& region) {
                               return overlaps(region, rhs);
                           }) :
-            std::count_if(rhs_overlap_range.begin(), rhs_overlap_range.end(),
+            std::count_if(rhs_overlapped.begin(), rhs_overlapped.end(),
                           [&lhs] (const auto& region) {
                               return overlaps(region, lhs);
                           });
@@ -336,16 +497,15 @@ inline
 bool has_shared(ForwardIterator first, ForwardIterator last,
                 const MappableType1& lhs, const MappableType2& rhs)
 {
-    auto lhs_overlap_range = overlap_range(first, last, lhs);
-    auto rhs_overlap_range = overlap_range(first, last, lhs);
+    auto lhs_overlapped = overlap_range(first, last, lhs);
+    auto rhs_overlapped = overlap_range(first, last, rhs);
     
-    return (std::distance(lhs_overlap_range.begin(), lhs_overlap_range.end()) <=
-            std::distance(rhs_overlap_range.begin(), rhs_overlap_range.end())) ?
-            std::any_of(lhs_overlap_range.begin(), lhs_overlap_range.end(),
+    return (size(lhs_overlapped) <= size(rhs_overlapped)) ?
+            std::any_of(lhs_overlapped.begin(), lhs_overlapped.end(),
                         [&rhs] (const auto& region) {
                             return overlaps(region, rhs);
                         }) :
-            std::any_of(rhs_overlap_range.begin(), rhs_overlap_range.end(),
+            std::any_of(rhs_overlapped.begin(), rhs_overlapped.end(),
                         [&lhs] (const auto& region) {
                             return overlaps(region, lhs);
                         });
@@ -353,7 +513,7 @@ bool has_shared(ForwardIterator first, ForwardIterator last,
 
 /**
  Returns the first Mappable element in the range [first2, last2) such that the element overlaps at-least
-  one element in the range [first1, last1) with a_region.
+ one element in the range [first1, last1) with a_region.
  
  Requires [first1, last1) and [first2, last2) are sorted w.r.t GenomicRegion::operator<
  */
@@ -380,13 +540,11 @@ std::size_t count_if_shared_with_first(ForwardIterator1 first1, ForwardIterator1
 {
     if (first2 == last2) return 0;
     
-    auto first_overlap_range = overlap_range(first1, last1, *first2);
+    auto overlapped = overlap_range(first1, last1, *first2);
     
-    if (first_overlap_range.begin() == first_overlap_range.end()) return 0;
+    if (empty(overlapped)) return 0;
     
-    auto overlapped_with_last_range = overlap_range(std::next(first2), last2, *std::prev(first_overlap_range.end()));
-    
-    return std::distance(overlapped_with_last_range.begin(), overlapped_with_last_range.end());
+    return size(overlap_range(std::next(first2), last2, *std::prev(overlapped.end())));
 }
 
 /**
