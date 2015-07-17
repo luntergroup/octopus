@@ -14,6 +14,7 @@
 #include <chrono>
 #include <random>
 #include <iterator>
+#include <cstddef>
 
 #include "genomic_region.h"
 #include "aligned_read.h"
@@ -21,7 +22,7 @@
 
 inline std::vector<GenomicRegion> generate_random_regions(GenomicRegion::SizeType contig_size,
                                                           GenomicRegion::SizeType mean_region_size,
-                                                          unsigned num_regions)
+                                                          std::size_t num_regions)
 {
     std::vector<GenomicRegion> result {};
     result.reserve(num_regions);
@@ -31,14 +32,14 @@ inline std::vector<GenomicRegion> generate_random_regions(GenomicRegion::SizeTyp
     const auto seed = std::chrono::system_clock::now().time_since_epoch().count();
     std::default_random_engine generator {static_cast<unsigned>(seed)};
     
-    std::uniform_int_distribution<GenomicRegion::SizeType> begin_dist(0, contig_size - 1);
+    std::uniform_int_distribution<GenomicRegion::SizeType> begin_dist(0, contig_size - mean_region_size - 1);
     std::geometric_distribution<GenomicRegion::SizeType> size_dist(1.0 / mean_region_size);
     
     std::generate_n(std::back_inserter(result), num_regions,
                     [&contig_name, contig_size, mean_region_size, &generator, &begin_dist, &size_dist] () {
                         auto begin = begin_dist(generator);
                         auto size  = size_dist(generator);
-                        begin = std::min(begin, contig_size - size);
+                        if (begin + size >= contig_size) begin = contig_size - size;
                         return GenomicRegion {contig_name, begin, begin + size};
                     });
     

@@ -8,7 +8,6 @@
 
 #include "alignment_candidate_variant_generator.h"
 
-#include <algorithm> // std::for_each, std::sort, std::unique, std::lower_bound, std::upper_bound
 #include <iterator>  // std::cbegin etc, std::distance
 #include <boost/range/combine.hpp>
 
@@ -19,12 +18,15 @@
 #include "region_algorithms.h"
 
 AlignmentCandidateVariantGenerator::AlignmentCandidateVariantGenerator(ReferenceGenome& the_reference,
-                                                                       QualityType min_base_quality)
+                                                                       QualityType min_base_quality,
+                                                                       SizeType max_variant_size)
 :
 the_reference_ {the_reference},
-candidates_ {},
 min_base_quality_ {min_base_quality},
-are_candidates_sorted_ {true}
+max_variant_size_ {max_variant_size},
+candidates_ {},
+are_candidates_sorted_ {true},
+max_seen_candidate_size_ {}
 {}
 
 void AlignmentCandidateVariantGenerator::add_read(const AlignedRead& a_read)
@@ -128,7 +130,8 @@ std::vector<Variant> AlignmentCandidateVariantGenerator::get_candidates(const Ge
         are_candidates_sorted_ = true;
     }
     
-    auto overlapped = overlap_range(std::cbegin(candidates_), std::cend(candidates_), a_region);
+    auto overlapped = overlap_range(std::cbegin(candidates_), std::cend(candidates_), a_region,
+                                    max_seen_candidate_size_);
     
     return std::vector<Variant> {overlapped.begin(), overlapped.end()};
 }

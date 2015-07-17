@@ -11,6 +11,7 @@
 
 #include <vector>
 #include <cstddef> // std::size_t
+#include <algorithm> // std::for_each, std::sort, std::unique, std::lower_bound, std::upper_bound, std::max
 
 #include "i_candidate_variant_generator.h"
 #include "aligned_read.h"
@@ -23,10 +24,12 @@ class AlignmentCandidateVariantGenerator : public ICandidateVariantGenerator
 {
 public:
     using QualityType = AlignedRead::QualityType;
+    using SizeType    = GenomicRegion::SizeType;
     
     AlignmentCandidateVariantGenerator() = delete;
     explicit AlignmentCandidateVariantGenerator(ReferenceGenome& the_reference,
-                                                QualityType min_base_quality=0);
+                                                QualityType min_base_quality=0,
+                                                SizeType max_variant_size=100);
     ~AlignmentCandidateVariantGenerator() override = default;
     
     AlignmentCandidateVariantGenerator(const AlignmentCandidateVariantGenerator&)            = default;
@@ -46,9 +49,12 @@ private:
     using QualitiesIterator = AlignedRead::Qualities::const_iterator;
     
     ReferenceGenome& the_reference_;
-    std::vector<Variant> candidates_;
     QualityType min_base_quality_;
+    SizeType max_variant_size_;
+    
+    std::vector<Variant> candidates_;
     bool are_candidates_sorted_;
+    SizeType max_seen_candidate_size_;
     
     bool is_good_sequence(const SequenceType& sequence) const noexcept;
     template <typename T1, typename T2, typename T3>
@@ -62,9 +68,13 @@ template <typename T1, typename T2, typename T3>
 void AlignmentCandidateVariantGenerator::add_variant(T1&& the_region, T2&& sequence_removed,
                                                      T3&& sequence_added)
 {
-    candidates_.emplace_back(std::forward<T1>(the_region), std::forward<T2>(sequence_removed),
-                             std::forward<T3>(sequence_added));
-    are_candidates_sorted_ = false;
+    auto candidate_size = size(the_region);
+    if (candidate_size <= max_variant_size_) {
+        candidates_.emplace_back(std::forward<T1>(the_region), std::forward<T2>(sequence_removed),
+                                 std::forward<T3>(sequence_added));
+        max_seen_candidate_size_ = std::max(max_seen_candidate_size_, candidate_size);
+        are_candidates_sorted_ = false;
+    }
 }
 
 #endif /* defined(__Octopus__alignment_candidate_variant_generator__) */

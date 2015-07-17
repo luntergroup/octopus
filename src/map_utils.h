@@ -20,12 +20,13 @@
 
 template <typename MappableMap, typename MappableType>
 inline
-std::size_t count_overlapped(const MappableMap& mappables, const MappableType& m)
+std::size_t count_overlapped(const MappableMap& mappables, const MappableType& m,
+                             MappableRangeOrder order=MappableRangeOrder::ForwardSorted)
 {
     std::size_t result {};
     
     for (const auto& map_pair : mappables) {
-        result += count_overlapped(std::cbegin(map_pair.second), std::cend(map_pair.second), m);
+        result += count_overlapped(std::cbegin(map_pair.second), std::cend(map_pair.second), m, order);
     }
     
     return result;
@@ -33,24 +34,26 @@ std::size_t count_overlapped(const MappableMap& mappables, const MappableType& m
 
 template <typename MappableMap, typename MappableType1, typename MappableType2>
 inline
-bool has_shared(const MappableMap& mappables, const MappableType1& lhs, const MappableType2& rhs)
+bool has_shared(const MappableMap& mappables, const MappableType1& lhs, const MappableType2& rhs,
+                MappableRangeOrder order=MappableRangeOrder::ForwardSorted)
 {
     return std::any_of(std::cbegin(mappables), std::cend(mappables),
-                       [&lhs, &rhs] (const auto& map_pair) {
+                       [&lhs, &rhs, order] (const auto& map_pair) {
                            return has_shared(std::cbegin(map_pair.second), std::cend(map_pair.second),
-                                             lhs, rhs);
+                                             lhs, rhs, order);
                        });
 }
 
 template <typename MappableMap, typename MappableType1, typename MappableType2>
 inline
 std::size_t
-count_shared(const MappableMap& mappables, const MappableType1& lhs, const MappableType2& rhs)
+count_shared(const MappableMap& mappables, const MappableType1& lhs, const MappableType2& rhs,
+             MappableRangeOrder order=MappableRangeOrder::ForwardSorted)
 {
     std::size_t result {};
     
     for (const auto& map_pair : mappables) {
-        result += count_shared(std::cbegin(map_pair.second), std::cend(map_pair.second), lhs, rhs);
+        result += count_shared(std::cbegin(map_pair.second), std::cend(map_pair.second), lhs, rhs, order);
     }
     
     return result;
@@ -61,23 +64,24 @@ count_shared(const MappableMap& mappables, const MappableType1& lhs, const Mappa
  (e.g. std::map or std::unordered_map).
  */
 template <typename ForwardIterator, typename MappableMap, typename MappableType>
-ForwardIterator find_first_shared(const MappableMap& mappables, ForwardIterator first,
-                                  ForwardIterator last, const MappableType& mappable)
+ForwardIterator
+find_first_shared(const MappableMap& mappables, ForwardIterator first, ForwardIterator last,
+                  const MappableType& mappable, MappableRangeOrder order=MappableRangeOrder::ForwardSorted)
 {
     if (mappables.empty()) return last;
     
     if (mappables.size() == 1) {
         return find_first_shared(std::cbegin(std::cbegin(mappables)->second),
-                                 std::cend(std::cbegin(mappables)->second), first, last, mappable);
+                                 std::cend(std::cbegin(mappables)->second), first, last, mappable, order);
     }
     
     std::vector<ForwardIterator> smallest {};
     smallest.reserve(mappables.size());
     
     std::transform(std::cbegin(mappables), std::cend(mappables), std::back_inserter(smallest),
-                   [first, last, &mappable] (const auto& p) {
+                   [first, last, &mappable, order] (const auto& p) {
                        return find_first_shared(std::cbegin(p.second), std::cend(p.second), first,
-                                                last, mappable);
+                                                last, mappable, order);
                    });
     
     return *std::min_element(std::cbegin(smallest), std::cend(smallest), []
@@ -88,15 +92,16 @@ ForwardIterator find_first_shared(const MappableMap& mappables, ForwardIterator 
 
 template <typename MappableMap, typename ForwardIterator>
 inline
-std::size_t max_count_if_shared_with_first(const MappableMap& mappables,
-                                           ForwardIterator first, ForwardIterator last)
+std::size_t
+max_count_if_shared_with_first(const MappableMap& mappables, ForwardIterator first, ForwardIterator last,
+                               MappableRangeOrder order=MappableRangeOrder::ForwardSorted)
 {
     std::size_t maximum {0};
     std::size_t count {};
     
     for (const auto& map_pair : mappables) {
         count = count_if_shared_with_first(std::cbegin(map_pair.second), std::cend(map_pair.second),
-                                           first, last);
+                                           first, last, order);
         if (count > maximum) {
             maximum = count;
         }
@@ -126,7 +131,8 @@ leftmost_sorted_mappable(const MappableMap& mappables)
 template <typename MappableMap, typename MappableType>
 inline
 typename MappableMap::mapped_type::const_iterator
-leftmost_overlapped(const MappableMap& mappables, const MappableType& mappable)
+leftmost_overlapped(const MappableMap& mappables, const MappableType& mappable,
+                    MappableRangeOrder order=MappableRangeOrder::ForwardSorted)
 {
     using Iterator = typename MappableMap::mapped_type::const_iterator;
     
@@ -141,9 +147,9 @@ leftmost_overlapped(const MappableMap& mappables, const MappableType& mappable)
     }
     
     for (const auto& map_pair : mappables) {
-        auto overlapped = overlap_range(std::cbegin(map_pair.second), std::cend(map_pair.second), mappable);
+        auto overlapped = overlap_range(std::cbegin(map_pair.second), std::cend(map_pair.second), mappable, order);
         
-        if (overlapped.begin() != std::cend(map_pair.second) && begins_before(*overlapped.begin(), *result)) {
+        if (overlapped.begin() != std::cend(map_pair.second) && begins_before(overlapped.front(), *result)) {
             result = overlapped.begin().base();
         }
     }
@@ -154,16 +160,17 @@ leftmost_overlapped(const MappableMap& mappables, const MappableType& mappable)
 template <typename MappableMap, typename MappableType>
 inline
 typename MappableMap::mapped_type::const_iterator
-rightmost_overlapped(const MappableMap& mappables, const MappableType& mappable)
+rightmost_overlapped(const MappableMap& mappables, const MappableType& mappable,
+                     MappableRangeOrder order=MappableRangeOrder::ForwardSorted)
 {
     using Iterator = typename MappableMap::mapped_type::const_iterator;
     
     Iterator result {std::cbegin(std::cbegin(mappables)->second)};
     
     for (const auto& map_pair : mappables) {
-        auto overlapped = overlap_range(std::cbegin(map_pair.second), std::cend(map_pair.second), mappable);
+        auto overlapped = overlap_range(std::cbegin(map_pair.second), std::cend(map_pair.second), mappable, order);
         
-        if (overlapped.begin() != overlapped.end() && ends_before(*result, *std::prev(overlapped.end()))) {
+        if (overlapped.begin() != overlapped.end() && ends_before(*result, overlapped.back())) {
             result = std::prev(overlapped.end().base());
         }
     }

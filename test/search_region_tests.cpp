@@ -1,456 +1,438 @@
-////
-////  search_region_tests.cpp
-////  Octopus
-////
-////  Created by Daniel Cooke on 27/04/2015.
-////  Copyright (c) 2015 Oxford University. All rights reserved.
-////
 //
-//#include "catch.hpp"
+//  search_region_tests.cpp
+//  Octopus
 //
-//#include <iostream>
-//#include <string>
-//#include <iterator>
-//#include <vector>
-//#include <algorithm>
-//#include <set>
+//  Created by Daniel Cooke on 27/04/2015.
+//  Copyright (c) 2015 Oxford University. All rights reserved.
 //
-//#include "test_common.h"
-//#include "reference_genome.h"
-//#include "region_algorithms.h"
-//#include "reference_genome_factory.h"
-//#include "test_common.h"
-//#include "read_manager.h"
-//#include "read_filter.h"
-//#include "read_filters.h"
-//#include "read_utils.h"
-//#include "allele.h"
-//#include "variant.h"
-//#include "candidate_variant_generator.h"
-//#include "alignment_candidate_variant_generator.h"
-//#include "haplotype.h"
-//#include "genotype.h"
-//#include "haplotype_tree.h"
-//#include "read_model.h"
-//#include "search_regions.h"
-//
-//using std::cout;
-//using std::endl;
-//
-//using Octopus::next_sub_region;
-//
-////TEST_CASE("expermenting", "[search_regions]")
-////{
-////    ReferenceGenomeFactory a_factory {};
-////    ReferenceGenome human {a_factory.make(human_reference_fasta)};
-////    
-////    ReadManager a_read_manager {std::vector<std::string> {human_1000g_bam1}};
-////    
-////    auto a_region = parse_region("16:8999900-9400000", human);
-////    
-////    auto samples = a_read_manager.get_sample_ids();
-////    
-////    auto reads = a_read_manager.fetch_reads(samples, a_region);
-////    
-////    CandidateVariantGenerator candidate_generator {};
-////    candidate_generator.register_generator(std::make_unique<AlignmentCandidateVariantGenerator>(human, 0));
-////    
-////    for (auto& sample_reads : reads) {
-////        std::sort(sample_reads.second.begin(), sample_reads.second.end());
-////        candidate_generator.add_reads(sample_reads.second.cbegin(), sample_reads.second.cend());
-////    }
-////    
-////    auto candidates = candidate_generator.get_candidates(a_region);
-////    
-////    auto sub_region = parse_region("16:9316470-9316477", human);
-////    
-////    auto overlapped = overlap_range(candidates.cbegin(), candidates.cend(), sub_region);
-////    std::for_each(overlapped.first, overlapped.second, [] (auto& v) { cout << v << endl; });
-////    
-////    sub_region = next_sub_region(sub_region, reads, candidates, 3, 0);
-////    
-////    cout << "result " << sub_region << endl;
-////    
-////    overlapped = overlap_range(candidates.cbegin(), candidates.cend(), sub_region);
-////    std::for_each(overlapped.first, overlapped.second, [] (auto& v) { cout << v << endl; });
-////    
-////    exit(0);
-////}
-//
-//TEST_CASE("next_sub_region always gives a region more advanced than the previous region", "[search_regions]")
+
+#include "catch.hpp"
+
+#include <iostream>
+#include <string>
+#include <iterator>
+#include <vector>
+#include <algorithm>
+#include <set>
+#include <unordered_map>
+
+#include "test_common.h"
+#include "mock_objects.h"
+#include "reference_genome.h"
+#include "region_algorithms.h"
+#include "reference_genome_factory.h"
+#include "test_common.h"
+#include "read_manager.h"
+#include "read_filter.h"
+#include "read_filters.h"
+#include "read_utils.h"
+#include "allele.h"
+#include "variant.h"
+#include "candidate_variant_generator.h"
+#include "alignment_candidate_variant_generator.h"
+#include "haplotype.h"
+#include "genotype.h"
+#include "haplotype_tree.h"
+#include "read_model.h"
+#include "search_regions.h"
+
+using std::cout;
+using std::endl;
+
+using Octopus::advance_region;
+
+TEST_CASE("advance_region always gives a region more advanced than the previous region", "[search_regions]")
+{
+    ReferenceGenomeFactory a_factory {};
+    ReferenceGenome human {a_factory.make(human_reference_fasta)};
+    
+    ReadManager a_read_manager {std::vector<std::string> {human_1000g_bam1, human_1000g_bam2, human_1000g_bam3}};
+    
+    auto a_region = parse_region("16:62646800-62647030", human);
+    
+    auto samples = a_read_manager.get_sample_ids();
+    
+    auto reads = a_read_manager.fetch_reads(samples, a_region);
+    
+    CandidateVariantGenerator candidate_generator {};
+    candidate_generator.register_generator(std::make_unique<AlignmentCandidateVariantGenerator>(human, 0));
+    
+    for (auto& sample_reads : reads) {
+        std::sort(sample_reads.second.begin(), sample_reads.second.end());
+        candidate_generator.add_reads(sample_reads.second.cbegin(), sample_reads.second.cend());
+    }
+    
+    auto candidates = candidate_generator.get_candidates(a_region);
+    
+    auto sub_region = parse_region("16:62646915-62646941", human);
+    
+    // This case was causing trouble
+    auto next_region = advance_region(sub_region, reads, candidates, 4, 3);
+    
+    REQUIRE(ends_before(sub_region, next_region));
+}
+
+TEST_CASE("search regions contains all variants in list exactly once when max_indicators = 0", "[search_regions]")
+{
+    ReferenceGenomeFactory a_factory {};
+    ReferenceGenome human {a_factory.make(human_reference_fasta)};
+    
+    ReadManager a_read_manager {std::vector<std::string> {human_1000g_bam1}};
+    
+    auto a_region = parse_region("16:8999900-9400000", human);
+    
+    auto samples = a_read_manager.get_sample_ids();
+    
+    auto reads = a_read_manager.fetch_reads(samples, a_region);
+    
+    using ReadIterator = std::vector<AlignedRead>::const_iterator;
+    ReadFilter<ReadIterator> a_read_filter {};
+    a_read_filter.register_filter([] (const AlignedRead& the_read) {
+        return is_good_mapping_quality(the_read, 5);
+    });
+    
+    auto good_reads = filter_reads(std::move(reads), a_read_filter).first;
+    
+    CandidateVariantGenerator candidate_generator {};
+    candidate_generator.register_generator(std::make_unique<AlignmentCandidateVariantGenerator>(human, 0));
+    
+    for (auto& sample_reads : good_reads) {
+        std::sort(sample_reads.second.begin(), sample_reads.second.end());
+        candidate_generator.add_reads(sample_reads.second.cbegin(), sample_reads.second.cend());
+    }
+    
+    auto candidates = candidate_generator.get_candidates(a_region);
+    
+    auto sub_region = parse_region("16:8999900-8999900", human);
+    
+    std::set<Variant> included {};
+    
+    unsigned max_variants {3};
+    unsigned max_indicators {0};
+    bool bound_respected {true};
+    
+    while (ends_before(sub_region, a_region)) {
+        sub_region = advance_region(sub_region, good_reads, candidates, max_variants, max_indicators);
+        auto overlapped = overlap_range(candidates.cbegin(), candidates.cend(), sub_region);
+        std::for_each(overlapped.begin(), overlapped.end(), [&included, &bound_respected] (const auto& variant) {
+            if (included.count(variant) > 0) {
+                bound_respected = false;
+            } else {
+                included.emplace(variant);
+            }
+        });
+        
+        if (!bound_respected) break;
+    }
+    
+    REQUIRE(bound_respected);
+    
+    for (const auto& variant : candidates) {
+        if (included.count(variant) == 0) {
+            bound_respected = false;
+            break;
+        }
+    }
+    
+    REQUIRE(bound_respected);
+    
+    included.clear();
+    
+    sub_region = parse_region("16:8999900-8999900", human);
+    max_variants = 5;
+    
+    while (ends_before(sub_region, a_region)) {
+        sub_region = advance_region(sub_region, good_reads, candidates, max_variants, max_indicators);
+        auto overlapped = overlap_range(candidates.cbegin(), candidates.cend(), sub_region);
+        std::for_each(overlapped.begin(), overlapped.end(), [&included, &bound_respected] (const auto& variant) {
+            if (included.count(variant) > 0) {
+                bound_respected = false;
+            } else {
+                included.emplace(variant);
+            }
+        });
+        
+        if (!bound_respected) break;
+    }
+    
+    REQUIRE(bound_respected);
+    
+    for (const auto& variant : candidates) {
+        if (included.count(variant) == 0) {
+            bound_respected = false;
+            break;
+        }
+    }
+    
+    REQUIRE(bound_respected);
+    
+    included.clear();
+    
+    sub_region = parse_region("16:8999900-8999900", human);
+    max_variants = 8;
+    
+    while (ends_before(sub_region, a_region)) {
+        sub_region = advance_region(sub_region, good_reads, candidates, max_variants, max_indicators);
+        auto overlapped = overlap_range(candidates.cbegin(), candidates.cend(), sub_region);
+        std::for_each(overlapped.begin(), overlapped.end(), [&included, &bound_respected] (const auto& variant) {
+            if (included.count(variant) > 0) {
+                bound_respected = false;
+            } else {
+                included.emplace(variant);
+            }
+        });
+        
+        if (!bound_respected) break;
+    }
+    
+    REQUIRE(bound_respected);
+    
+    for (const auto& variant : candidates) {
+        if (included.count(variant) == 0) {
+            bound_respected = false;
+            break;
+        }
+    }
+    
+    REQUIRE(bound_respected);
+}
+
+TEST_CASE("advance_region's bounds are respected", "[search_regions]")
+{
+    ReferenceGenomeFactory a_factory {};
+    ReferenceGenome human {a_factory.make(human_reference_fasta)};
+    
+    ReadManager a_read_manager {std::vector<std::string> {human_1000g_bam1}};
+    
+    auto a_region = parse_region("16:8999900-9400000", human);
+    
+    auto samples = a_read_manager.get_sample_ids();
+    
+    auto reads = a_read_manager.fetch_reads(samples, a_region);
+    
+    using ReadIterator = std::vector<AlignedRead>::const_iterator;
+    ReadFilter<ReadIterator> a_read_filter {};
+    a_read_filter.register_filter([] (const AlignedRead& the_read) {
+        return is_good_mapping_quality(the_read, 5);
+    });
+    
+    auto good_reads = filter_reads(std::move(reads), a_read_filter).first;
+    
+    CandidateVariantGenerator candidate_generator {};
+    candidate_generator.register_generator(std::make_unique<AlignmentCandidateVariantGenerator>(human, 0));
+    
+    for (auto& sample_reads : good_reads) {
+        std::sort(sample_reads.second.begin(), sample_reads.second.end());
+        candidate_generator.add_reads(sample_reads.second.cbegin(), sample_reads.second.cend());
+    }
+    
+    auto candidates = candidate_generator.get_candidates(a_region);
+    
+    auto sub_region = parse_region("16:8999900-8999900", human);
+    
+    unsigned max_variants {3};
+    unsigned max_indicators {0};
+    bool bound_respected {true};
+    
+    while (ends_before(sub_region, a_region)) {
+        sub_region = advance_region(sub_region, good_reads, candidates, max_variants, max_indicators);
+        auto num_variants_in_sub_region = count_overlapped(candidates.cbegin(), candidates.cend(), sub_region);
+        if (num_variants_in_sub_region > max_variants) {
+            auto overlapped = overlap_range(candidates.cbegin(), candidates.cend(), sub_region);
+            auto rightmost = rightmost_mappable(overlapped.begin(), overlapped.end());
+            if (!overlaps(*rightmost, overlapped.back())) {
+                bound_respected = false;
+                break;
+            }
+        }
+    }
+    
+    REQUIRE(bound_respected);
+
+    sub_region = parse_region("16:8999900-8999900", human);
+    max_variants = 5;
+    
+    while (ends_before(sub_region, a_region)) {
+        sub_region = advance_region(sub_region, good_reads, candidates, max_variants, max_indicators);
+        auto num_variants_in_sub_region = count_overlapped(candidates.cbegin(), candidates.cend(), sub_region);
+        if (num_variants_in_sub_region > max_variants) {
+            auto overlapped = overlap_range(candidates.cbegin(), candidates.cend(), sub_region);
+            auto rightmost = rightmost_mappable(overlapped.begin(), overlapped.end());
+            if (!overlaps(*rightmost, overlapped.back())) {
+                bound_respected = false;
+                break;
+            }
+        }
+    }
+    
+    REQUIRE(bound_respected);
+
+    sub_region = parse_region("16:8999900-8999900", human);
+    max_variants = 8;
+    
+    while (ends_before(sub_region, a_region)) {
+        sub_region = advance_region(sub_region, good_reads, candidates, max_variants, max_indicators);
+        auto num_variants_in_sub_region = count_overlapped(candidates.cbegin(), candidates.cend(), sub_region);
+        if (num_variants_in_sub_region > max_variants) {
+            auto overlapped = overlap_range(candidates.cbegin(), candidates.cend(), sub_region);
+            auto rightmost = rightmost_mappable(overlapped.begin(), overlapped.end());
+            if (!overlaps(*rightmost, overlapped.back())) {
+                bound_respected = false;
+                break;
+            }
+        }
+    }
+    
+    REQUIRE(bound_respected);
+
+    sub_region = parse_region("16:8999900-8999900", human);
+    max_variants   = 3;
+    max_indicators = 1;
+    
+    while (ends_before(sub_region, a_region)) {
+        sub_region = advance_region(sub_region, good_reads, candidates, max_variants, max_indicators);
+        auto num_variants_in_sub_region = count_overlapped(candidates.cbegin(), candidates.cend(), sub_region);
+        if (num_variants_in_sub_region > max_variants) {
+            auto overlapped = overlap_range(candidates.cbegin(), candidates.cend(), sub_region);
+            auto rightmost = rightmost_mappable(overlapped.begin(), overlapped.end());
+            if (!overlaps(*rightmost, overlapped.back())) {
+                bound_respected = false;
+                break;
+            }
+        }
+    }
+    
+    REQUIRE(bound_respected);
+
+    sub_region = parse_region("16:8999900-8999900", human);
+    max_variants   = 5;
+    max_indicators = 2;
+    
+    while (ends_before(sub_region, a_region)) {
+        sub_region = advance_region(sub_region, good_reads, candidates, max_variants, max_indicators);
+        auto num_variants_in_sub_region = count_overlapped(candidates.cbegin(), candidates.cend(), sub_region);
+        if (num_variants_in_sub_region > max_variants) {
+            auto overlapped = overlap_range(candidates.cbegin(), candidates.cend(), sub_region);
+            auto rightmost = rightmost_mappable(overlapped.begin(), overlapped.end());
+            if (!overlaps(*rightmost, overlapped.back())) {
+                bound_respected = false;
+                break;
+            }
+        }
+    }
+    
+    REQUIRE(bound_respected);
+
+    sub_region = parse_region("16:8999900-8999900", human);
+    max_variants   = 8;
+    max_indicators = 3;
+    
+    while (ends_before(sub_region, a_region)) {
+        sub_region = advance_region(sub_region, good_reads, candidates, max_variants, max_indicators);
+        auto num_variants_in_sub_region = count_overlapped(candidates.cbegin(), candidates.cend(), sub_region);
+        if (num_variants_in_sub_region > max_variants) {
+            auto overlapped = overlap_range(candidates.cbegin(), candidates.cend(), sub_region);
+            auto rightmost = rightmost_mappable(overlapped.begin(), overlapped.end());
+            if (!overlaps(*rightmost, overlapped.back())) {
+                bound_respected = false;
+                break;
+            }
+        }
+    }
+    
+    REQUIRE(bound_respected);
+}
+
+TEST_CASE("setting max_included to zero in advance_region results in the largest variant free reference region", "[search_regions]")
+{
+    ReferenceGenomeFactory a_factory {};
+    ReferenceGenome human {a_factory.make(human_reference_fasta)};
+    
+    ReadManager a_read_manager {std::vector<std::string> {human_1000g_bam1}};
+    
+    auto a_region = parse_region("16:8999900-9400000", human);
+    
+    auto samples = a_read_manager.get_sample_ids();
+    
+    auto reads = a_read_manager.fetch_reads(samples, a_region);
+    
+    using ReadIterator = std::vector<AlignedRead>::const_iterator;
+    ReadFilter<ReadIterator> a_read_filter {};
+    a_read_filter.register_filter([] (const AlignedRead& the_read) {
+        return is_good_mapping_quality(the_read, 5);
+    });
+    
+    auto good_reads = filter_reads(std::move(reads), a_read_filter).first;
+    
+    CandidateVariantGenerator candidate_generator {};
+    candidate_generator.register_generator(std::make_unique<AlignmentCandidateVariantGenerator>(human, 0));
+    
+    for (auto& sample_reads : good_reads) {
+        std::sort(sample_reads.second.begin(), sample_reads.second.end());
+        candidate_generator.add_reads(sample_reads.second.cbegin(), sample_reads.second.cend());
+    }
+    
+    auto candidates = candidate_generator.get_candidates(a_region);
+    
+    auto sub_region = parse_region("16:9198984-9199045", human);
+    
+    unsigned max_variants {0};
+    unsigned max_indicators {0};
+    
+    sub_region = advance_region(sub_region, reads, candidates, max_variants, max_indicators);
+    
+    REQUIRE(sub_region == parse_region("16:9199045-9199306", human));
+    
+    sub_region = parse_region("16:9006622-9006661", human);
+    sub_region = advance_region(sub_region, reads, candidates, max_variants, max_indicators);
+    
+    REQUIRE(sub_region == parse_region("16:9006661-9006671", human));
+}
+
+TEST_CASE("search regions includes all possible indicators", "search_regions")
+{
+    ReferenceGenomeFactory a_factory {};
+    ReferenceGenome human {a_factory.make(human_reference_fasta)};
+    
+    ReadManager a_read_manager {std::vector<std::string> {human_1000g_bam1}};
+    
+    auto a_region = parse_region("16:62646780-62647130", human);
+    
+    auto samples = a_read_manager.get_sample_ids();
+    
+    auto reads = a_read_manager.fetch_reads(samples, a_region);
+    
+    CandidateVariantGenerator candidate_generator {};
+    candidate_generator.register_generator(std::make_unique<AlignmentCandidateVariantGenerator>(human, 0));
+    
+    for (auto& sample_reads : reads) {
+        std::sort(sample_reads.second.begin(), sample_reads.second.end());
+        candidate_generator.add_reads(sample_reads.second.cbegin(), sample_reads.second.cend());
+    }
+    
+    auto candidates = candidate_generator.get_candidates(a_region);
+    
+    auto sub_region = parse_region("16:62646834-62646972", human);
+    
+    auto next_region = advance_region(sub_region, reads, candidates, 12, 7);
+    
+    REQUIRE(next_region == parse_region("16:62646834-62646990", human));
+}
+
+//TEST_CASE("advance_region works on unusual/messy data", "search_regions")
 //{
-//    ReferenceGenomeFactory a_factory {};
-//    ReferenceGenome human {a_factory.make(human_reference_fasta)};
+//    auto candidates = generate_random_regions(10000, 5, 10000);
 //    
-//    ReadManager a_read_manager {std::vector<std::string> {human_1000g_bam1, human_1000g_bam2, human_1000g_bam3}};
+//    GenomicRegion region {"test", 0, 10000};
+//    unsigned max_variants {10};
+//    unsigned max_indicators {5};
 //    
-//    auto a_region = parse_region("16:62646800-62647030", human);
+//    std::unordered_map<std::string, std::vector<GenomicRegion>> reads {};
+//    reads.emplace("t", generate_random_regions(10000, 100, 10000));
 //    
-//    auto samples = a_read_manager.get_sample_ids();
+//    auto regions = Octopus::cover_region(region, reads, candidates, max_variants, max_indicators);
 //    
-//    auto reads = a_read_manager.fetch_reads(samples, a_region);
-//    
-//    CandidateVariantGenerator candidate_generator {};
-//    candidate_generator.register_generator(std::make_unique<AlignmentCandidateVariantGenerator>(human, 0));
-//    
-//    for (auto& sample_reads : reads) {
-//        std::sort(sample_reads.second.begin(), sample_reads.second.end());
-//        candidate_generator.add_reads(sample_reads.second.cbegin(), sample_reads.second.cend());
+//    for (const auto& r : regions) {
+//        cout << r << endl;
 //    }
-//    
-//    auto candidates = candidate_generator.get_candidates(a_region);
-//    
-//    auto sub_region = parse_region("16:62646915-62646941", human);
-//    
-//    // This case was causing trouble
-//    auto next_region = next_sub_region(sub_region, reads, candidates, 4, 3);
-//    
-//    REQUIRE(ends_before(sub_region, next_region));
-//}
-//
-//TEST_CASE("search regions contains all variants in list exactly once when max_indicators = 0", "[search_regions]")
-//{
-//    ReferenceGenomeFactory a_factory {};
-//    ReferenceGenome human {a_factory.make(human_reference_fasta)};
-//    
-//    ReadManager a_read_manager {std::vector<std::string> {human_1000g_bam1}};
-//    
-//    auto a_region = parse_region("16:8999900-9400000", human);
-//    
-//    auto samples = a_read_manager.get_sample_ids();
-//    
-//    auto reads = a_read_manager.fetch_reads(samples, a_region);
-//    
-//    using ReadIterator = std::vector<AlignedRead>::const_iterator;
-//    ReadFilter<ReadIterator> a_read_filter {};
-//    a_read_filter.register_filter([] (const AlignedRead& the_read) {
-//        return is_good_mapping_quality(the_read, 5);
-//    });
-//    
-//    auto good_reads = filter_reads(std::move(reads), a_read_filter).first;
-//    
-//    CandidateVariantGenerator candidate_generator {};
-//    candidate_generator.register_generator(std::make_unique<AlignmentCandidateVariantGenerator>(human, 0));
-//    
-//    for (auto& sample_reads : good_reads) {
-//        std::sort(sample_reads.second.begin(), sample_reads.second.end());
-//        candidate_generator.add_reads(sample_reads.second.cbegin(), sample_reads.second.cend());
-//    }
-//    
-//    auto candidates = candidate_generator.get_candidates(a_region);
-//    
-//    auto sub_region = parse_region("16:8999900-8999900", human);
-//    
-//    std::set<Variant> included {};
-//    
-//    unsigned max_variants {3};
-//    unsigned max_indicators {0};
-//    bool bound_respected {true};
-//    
-//    while (ends_before(sub_region, a_region)) {
-//        sub_region = next_sub_region(sub_region, good_reads, candidates, max_variants, max_indicators);
-//        auto overlapped = overlap_range(candidates.cbegin(), candidates.cend(), sub_region);
-//        std::for_each(overlapped.first, overlapped.second, [&included, &bound_respected] (const auto& variant) {
-//            if (included.count(variant) > 0) {
-//                bound_respected = false;
-//            } else {
-//                included.emplace(variant);
-//            }
-//        });
-//        
-//        if (!bound_respected) break;
-//    }
-//    
-//    REQUIRE(bound_respected);
-//    
-//    for (const auto& variant : candidates) {
-//        if (included.count(variant) == 0) {
-//            bound_respected = false;
-//            break;
-//        }
-//    }
-//    
-//    REQUIRE(bound_respected);
-//    
-//    included.clear();
-//    
-//    sub_region = parse_region("16:8999900-8999900", human);
-//    max_variants = 5;
-//    
-//    while (ends_before(sub_region, a_region)) {
-//        sub_region = next_sub_region(sub_region, good_reads, candidates, max_variants, max_indicators);
-//        auto overlapped = overlap_range(candidates.cbegin(), candidates.cend(), sub_region);
-//        std::for_each(overlapped.first, overlapped.second, [&included, &bound_respected] (const auto& variant) {
-//            if (included.count(variant) > 0) {
-//                bound_respected = false;
-//            } else {
-//                included.emplace(variant);
-//            }
-//        });
-//        
-//        if (!bound_respected) break;
-//    }
-//    
-//    REQUIRE(bound_respected);
-//    
-//    for (const auto& variant : candidates) {
-//        if (included.count(variant) == 0) {
-//            bound_respected = false;
-//            break;
-//        }
-//    }
-//    
-//    REQUIRE(bound_respected);
-//    
-//    included.clear();
-//    
-//    sub_region = parse_region("16:8999900-8999900", human);
-//    max_variants = 8;
-//    
-//    while (ends_before(sub_region, a_region)) {
-//        sub_region = next_sub_region(sub_region, good_reads, candidates, max_variants, max_indicators);
-//        auto overlapped = overlap_range(candidates.cbegin(), candidates.cend(), sub_region);
-//        std::for_each(overlapped.first, overlapped.second, [&included, &bound_respected] (const auto& variant) {
-//            if (included.count(variant) > 0) {
-//                bound_respected = false;
-//            } else {
-//                included.emplace(variant);
-//            }
-//        });
-//        
-//        if (!bound_respected) break;
-//    }
-//    
-//    REQUIRE(bound_respected);
-//    
-//    for (const auto& variant : candidates) {
-//        if (included.count(variant) == 0) {
-//            bound_respected = false;
-//            break;
-//        }
-//    }
-//    
-//    REQUIRE(bound_respected);
-//}
-//
-//TEST_CASE("next_sub_region's bounds are respected", "[search_regions]")
-//{
-//    ReferenceGenomeFactory a_factory {};
-//    ReferenceGenome human {a_factory.make(human_reference_fasta)};
-//    
-//    ReadManager a_read_manager {std::vector<std::string> {human_1000g_bam1}};
-//    
-//    auto a_region = parse_region("16:8999900-9400000", human);
-//    
-//    auto samples = a_read_manager.get_sample_ids();
-//    
-//    auto reads = a_read_manager.fetch_reads(samples, a_region);
-//    
-//    using ReadIterator = std::vector<AlignedRead>::const_iterator;
-//    ReadFilter<ReadIterator> a_read_filter {};
-//    a_read_filter.register_filter([] (const AlignedRead& the_read) {
-//        return is_good_mapping_quality(the_read, 5);
-//    });
-//    
-//    auto good_reads = filter_reads(std::move(reads), a_read_filter).first;
-//    
-//    CandidateVariantGenerator candidate_generator {};
-//    candidate_generator.register_generator(std::make_unique<AlignmentCandidateVariantGenerator>(human, 0));
-//    
-//    for (auto& sample_reads : good_reads) {
-//        std::sort(sample_reads.second.begin(), sample_reads.second.end());
-//        candidate_generator.add_reads(sample_reads.second.cbegin(), sample_reads.second.cend());
-//    }
-//    
-//    auto candidates = candidate_generator.get_candidates(a_region);
-//    
-//    auto sub_region = parse_region("16:8999900-8999900", human);
-//    
-//    unsigned max_variants {3};
-//    unsigned max_indicators {0};
-//    bool bound_respected {true};
-//    
-//    while (ends_before(sub_region, a_region)) {
-//        sub_region = next_sub_region(sub_region, good_reads, candidates, max_variants, max_indicators);
-//        auto num_variants_in_sub_region = count_overlapped(candidates.cbegin(), candidates.cend(), sub_region);
-//        if (num_variants_in_sub_region > max_variants) {
-//            auto overlapped = overlap_range(candidates.cbegin(), candidates.cend(), sub_region);
-//            auto rightmost = rightmost_mappable(overlapped.first, overlapped.second);
-//            if (!overlaps(*rightmost, *std::prev(overlapped.second))) {
-//                bound_respected = false;
-//                break;
-//            }
-//        }
-//    }
-//    
-//    REQUIRE(bound_respected);
-//
-//    sub_region = parse_region("16:8999900-8999900", human);
-//    max_variants = 5;
-//    
-//    while (ends_before(sub_region, a_region)) {
-//        sub_region = next_sub_region(sub_region, good_reads, candidates, max_variants, max_indicators);
-//        auto num_variants_in_sub_region = count_overlapped(candidates.cbegin(), candidates.cend(), sub_region);
-//        if (num_variants_in_sub_region > max_variants) {
-//            auto overlapped = overlap_range(candidates.cbegin(), candidates.cend(), sub_region);
-//            auto rightmost = rightmost_mappable(overlapped.first, overlapped.second);
-//            if (!overlaps(*rightmost, *std::prev(overlapped.second))) {
-//                bound_respected = false;
-//                break;
-//            }
-//        }
-//    }
-//    
-//    REQUIRE(bound_respected);
-//
-//    sub_region = parse_region("16:8999900-8999900", human);
-//    max_variants = 8;
-//    
-//    while (ends_before(sub_region, a_region)) {
-//        sub_region = next_sub_region(sub_region, good_reads, candidates, max_variants, max_indicators);
-//        auto num_variants_in_sub_region = count_overlapped(candidates.cbegin(), candidates.cend(), sub_region);
-//        if (num_variants_in_sub_region > max_variants) {
-//            auto overlapped = overlap_range(candidates.cbegin(), candidates.cend(), sub_region);
-//            auto rightmost = rightmost_mappable(overlapped.first, overlapped.second);
-//            if (!overlaps(*rightmost, *std::prev(overlapped.second))) {
-//                bound_respected = false;
-//                break;
-//            }
-//        }
-//    }
-//    
-//    REQUIRE(bound_respected);
-//
-//    sub_region = parse_region("16:8999900-8999900", human);
-//    max_variants   = 3;
-//    max_indicators = 1;
-//    
-//    while (ends_before(sub_region, a_region)) {
-//        sub_region = next_sub_region(sub_region, good_reads, candidates, max_variants, max_indicators);
-//        auto num_variants_in_sub_region = count_overlapped(candidates.cbegin(), candidates.cend(), sub_region);
-//        if (num_variants_in_sub_region > max_variants) {
-//            auto overlapped = overlap_range(candidates.cbegin(), candidates.cend(), sub_region);
-//            auto rightmost = rightmost_mappable(overlapped.first, overlapped.second);
-//            if (!overlaps(*rightmost, *std::prev(overlapped.second))) {
-//                bound_respected = false;
-//                break;
-//            }
-//        }
-//    }
-//    
-//    REQUIRE(bound_respected);
-//
-//    sub_region = parse_region("16:8999900-8999900", human);
-//    max_variants   = 5;
-//    max_indicators = 2;
-//    
-//    while (ends_before(sub_region, a_region)) {
-//        sub_region = next_sub_region(sub_region, good_reads, candidates, max_variants, max_indicators);
-//        auto num_variants_in_sub_region = count_overlapped(candidates.cbegin(), candidates.cend(), sub_region);
-//        if (num_variants_in_sub_region > max_variants) {
-//            auto overlapped = overlap_range(candidates.cbegin(), candidates.cend(), sub_region);
-//            auto rightmost = rightmost_mappable(overlapped.first, overlapped.second);
-//            if (!overlaps(*rightmost, *std::prev(overlapped.second))) {
-//                bound_respected = false;
-//                break;
-//            }
-//        }
-//    }
-//    
-//    REQUIRE(bound_respected);
-//
-//    sub_region = parse_region("16:8999900-8999900", human);
-//    max_variants   = 8;
-//    max_indicators = 3;
-//    
-//    while (ends_before(sub_region, a_region)) {
-//        sub_region = next_sub_region(sub_region, good_reads, candidates, max_variants, max_indicators);
-//        auto num_variants_in_sub_region = count_overlapped(candidates.cbegin(), candidates.cend(), sub_region);
-//        if (num_variants_in_sub_region > max_variants) {
-//            auto overlapped = overlap_range(candidates.cbegin(), candidates.cend(), sub_region);
-//            auto rightmost = rightmost_mappable(overlapped.first, overlapped.second);
-//            if (!overlaps(*rightmost, *std::prev(overlapped.second))) {
-//                bound_respected = false;
-//                break;
-//            }
-//        }
-//    }
-//    
-//    REQUIRE(bound_respected);
-//}
-//
-//TEST_CASE("setting max_included to zero in next_sub_region results in the largest variant free reference region", "[search_regions]")
-//{
-//    ReferenceGenomeFactory a_factory {};
-//    ReferenceGenome human {a_factory.make(human_reference_fasta)};
-//    
-//    ReadManager a_read_manager {std::vector<std::string> {human_1000g_bam1}};
-//    
-//    auto a_region = parse_region("16:8999900-9400000", human);
-//    
-//    auto samples = a_read_manager.get_sample_ids();
-//    
-//    auto reads = a_read_manager.fetch_reads(samples, a_region);
-//    
-//    using ReadIterator = std::vector<AlignedRead>::const_iterator;
-//    ReadFilter<ReadIterator> a_read_filter {};
-//    a_read_filter.register_filter([] (const AlignedRead& the_read) {
-//        return is_good_mapping_quality(the_read, 5);
-//    });
-//    
-//    auto good_reads = filter_reads(std::move(reads), a_read_filter).first;
-//    
-//    CandidateVariantGenerator candidate_generator {};
-//    candidate_generator.register_generator(std::make_unique<AlignmentCandidateVariantGenerator>(human, 0));
-//    
-//    for (auto& sample_reads : good_reads) {
-//        std::sort(sample_reads.second.begin(), sample_reads.second.end());
-//        candidate_generator.add_reads(sample_reads.second.cbegin(), sample_reads.second.cend());
-//    }
-//    
-//    auto candidates = candidate_generator.get_candidates(a_region);
-//    
-//    auto sub_region = parse_region("16:9198984-9199045", human);
-//    
-//    unsigned max_variants {0};
-//    unsigned max_indicators {0};
-//    
-//    sub_region = next_sub_region(sub_region, reads, candidates, max_variants, max_indicators);
-//    
-//    REQUIRE(sub_region == parse_region("16:9199045-9199306", human));
-//    
-//    sub_region = parse_region("16:9006622-9006661", human);
-//    sub_region = next_sub_region(sub_region, reads, candidates, max_variants, max_indicators);
-//    
-//    REQUIRE(sub_region == parse_region("16:9006661-9006671", human));
-//}
-//
-//TEST_CASE("search regions includes all possible indicators", "search_regions")
-//{
-//    ReferenceGenomeFactory a_factory {};
-//    ReferenceGenome human {a_factory.make(human_reference_fasta)};
-//    
-//    ReadManager a_read_manager {std::vector<std::string> {human_1000g_bam1}};
-//    
-//    auto a_region = parse_region("16:62646780-62647130", human);
-//    
-//    auto samples = a_read_manager.get_sample_ids();
-//    
-//    auto reads = a_read_manager.fetch_reads(samples, a_region);
-//    
-//    CandidateVariantGenerator candidate_generator {};
-//    candidate_generator.register_generator(std::make_unique<AlignmentCandidateVariantGenerator>(human, 0));
-//    
-//    for (auto& sample_reads : reads) {
-//        std::sort(sample_reads.second.begin(), sample_reads.second.end());
-//        candidate_generator.add_reads(sample_reads.second.cbegin(), sample_reads.second.cend());
-//    }
-//    
-//    auto candidates = candidate_generator.get_candidates(a_region);
-//    
-//    auto sub_region = parse_region("16:62646834-62646972", human);
-//    
-//    auto next_region = next_sub_region(sub_region, reads, candidates, 12, 7);
-//    
-//    REQUIRE(next_region == parse_region("16:62646834-62646990", human));
 //}

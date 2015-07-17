@@ -273,12 +273,12 @@ std::pair<AlignedRead, HtslibReadFacade::SampleIdType> HtslibReadFacade::HtslibI
     
     auto c = the_bam1_->core;
     
-    auto read_start = static_cast<AlignedRead::SizeType>(get_soft_clipped_read_begin(the_cigar_string, c.pos));
+    auto read_start = static_cast<AlignedRead::SizeType>(soft_clipped_read_begin(the_cigar_string, c.pos));
     
     if (c.mtid == -1) { // TODO: check if this is always true
         return {AlignedRead {
             GenomicRegion {get_contig_name(c.tid), read_start, read_start +
-                get_reference_size<GenomicRegion::SizeType>(the_cigar_string)},
+                reference_size<GenomicRegion::SizeType>(the_cigar_string)},
             get_sequence(),
             std::move(the_qualities),
             std::move(the_cigar_string),
@@ -288,7 +288,7 @@ std::pair<AlignedRead, HtslibReadFacade::SampleIdType> HtslibReadFacade::HtslibI
     } else {
         return {AlignedRead {
             GenomicRegion {get_contig_name(c.tid), read_start, read_start +
-                get_reference_size<GenomicRegion::SizeType>(the_cigar_string)},
+                reference_size<GenomicRegion::SizeType>(the_cigar_string)},
             get_sequence(),
             std::move(the_qualities),
             std::move(the_cigar_string),

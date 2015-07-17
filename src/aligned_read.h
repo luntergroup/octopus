@@ -108,12 +108,12 @@ public:
     friend void swap(AlignedRead& lhs, AlignedRead& rhs) noexcept;
     
     const std::string& get_read_group() const;
-    const GenomicRegion& get_region() const;
-    const SequenceType& get_sequence() const;
-    const Qualities& get_qualities() const;
+    const GenomicRegion& get_region() const noexcept;
+    const SequenceType& get_sequence() const noexcept;
+    const Qualities& get_qualities() const noexcept;
     QualityType get_mapping_quality() const noexcept;
     SizeType get_sequence_size() const noexcept;
-    const CigarString& get_cigar_string() const;
+    const CigarString& get_cigar_string() const noexcept;
     const std::unique_ptr<NextSegment>& get_next_segment() const;
     
     //void set_qualities(Qualities&& new_qualities) noexcept;
@@ -268,17 +268,17 @@ inline bool AlignedRead::NextSegment::is_marked_reverse_mapped() const
 // AlignedRead public methods
 //
 
-inline const GenomicRegion& AlignedRead::get_region() const
+inline const GenomicRegion& AlignedRead::get_region() const noexcept
 {
     return the_reference_region_;
 }
 
-inline const AlignedRead::SequenceType& AlignedRead::get_sequence() const
+inline const AlignedRead::SequenceType& AlignedRead::get_sequence() const noexcept
 {
     return the_sequence_;
 }
 
-inline const AlignedRead::Qualities& AlignedRead::get_qualities() const
+inline const AlignedRead::Qualities& AlignedRead::get_qualities() const noexcept
 {
     return the_qualities_;
 }
@@ -305,7 +305,7 @@ inline AlignedRead::SizeType AlignedRead::get_sequence_size() const noexcept
     return static_cast<SizeType>(the_sequence_.size());
 }
 
-inline const CigarString& AlignedRead::get_cigar_string() const
+inline const CigarString& AlignedRead::get_cigar_string() const noexcept
 {
     return the_cigar_string_;
 }
@@ -419,6 +419,35 @@ inline AlignedRead::NextSegment::Flags AlignedRead::NextSegment::get_flags(const
 
 // Non-member methods
 
+inline AlignedRead splice(const AlignedRead& read, const GenomicRegion& region)
+{
+    if (!contains(read, region)) {
+        throw std::runtime_error {"cannot splice AlignedRead region that is not contained"};
+    }
+    
+    auto reference_offset = get_begin(region) - get_begin(read);
+    
+    auto uncontained_cigar_splice = reference_splice(read.get_cigar_string(), GenomicRegion::SizeType {}, reference_offset);
+    auto contained_cigar_splice   = reference_splice(read.get_cigar_string(), reference_offset, size(region));
+    
+    auto sequence_offset = sequence_size(uncontained_cigar_splice);
+    auto sequence_length = sequence_size(contained_cigar_splice);
+    
+    AlignedRead::SequenceType sequence_splice(read.get_sequence().cbegin() + sequence_offset,
+                                              read.get_sequence().cbegin() + sequence_offset + sequence_length);
+    AlignedRead::Qualities qualities_splice(read.get_qualities().cbegin() + sequence_offset,
+                                            read.get_qualities().cbegin() + sequence_offset + sequence_length);
+    
+    return AlignedRead {
+        region,
+        std::move(sequence_splice),
+        std::move(qualities_splice),
+        std::move(contained_cigar_splice),
+        read.get_mapping_quality(),
+        AlignedRead::FlagData {}
+    };
+}
+
 inline bool operator==(const AlignedRead& lhs, const AlignedRead& rhs)
 {
     return lhs.get_mapping_quality() == rhs.get_mapping_quality() &&
@@ -483,34 +512,5 @@ inline std::ostream& operator<<(std::ostream& os, const AlignedRead& a_read)
     }
     return os;
 }
-
-//inline AlignedRead splice(const AlignedRead& a_read, const GenomicRegion& a_region)
-//{
-//    if (!contains(a_read, a_region)) {
-//        throw std::runtime_error {"cannot splice AlignedRead region that is not contained"};
-//    }
-//    
-//    auto offset = a_region.get_begin() - a_read.get_region().get_begin();
-//    auto splice_size = size(a_region);
-//    
-//    AlignedRead::SequenceType sub_sequence {a_read.get_sequence().substr(offset, splice_size)};
-//    AlignedRead::Qualities sub_qualities {a_read.get_qualities().cbegin() + offset,
-//        a_read.get_qualities().cbegin() + offset + splice_size};
-//    
-//    return (a_read.is_chimeric()) ?
-//        AlignedRead {
-//            a_region,
-//            std::move(sub_sequence),
-//            std::move(sub_qualities),
-//            
-//        }
-//    :
-//        AlignedRead {
-//            a_region,
-//            std::move(sub_sequence),
-//            std::move(sub_qualities),
-//            
-//        };
-//}
 
 #endif /* defined(__Octopus__aligned_read__) */

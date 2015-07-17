@@ -476,10 +476,11 @@ std::size_t count_contained(BidirectionalIterator first, BidirectionalIterator l
 template <typename ForwardIterator, typename MappableType1, typename MappableType2>
 inline
 std::size_t count_shared(ForwardIterator first, ForwardIterator last,
-                         const MappableType1& lhs, const MappableType2& rhs)
+                         const MappableType1& lhs, const MappableType2& rhs,
+                         MappableRangeOrder order=MappableRangeOrder::ForwardSorted)
 {
-    auto lhs_overlapped = overlap_range(first, last, lhs);
-    auto rhs_overlapped = overlap_range(first, last, rhs);
+    auto lhs_overlapped = overlap_range(first, last, lhs, order);
+    auto rhs_overlapped = overlap_range(first, last, rhs, order);
     
     return (size(lhs_overlapped) <= size(rhs_overlapped)) ?
             std::count_if(lhs_overlapped.begin(), lhs_overlapped.end(),
@@ -500,10 +501,11 @@ std::size_t count_shared(ForwardIterator first, ForwardIterator last,
 template <typename ForwardIterator, typename MappableType1, typename MappableType2>
 inline
 bool has_shared(ForwardIterator first, ForwardIterator last,
-                const MappableType1& lhs, const MappableType2& rhs)
+                const MappableType1& lhs, const MappableType2& rhs,
+                MappableRangeOrder order=MappableRangeOrder::ForwardSorted)
 {
-    auto lhs_overlapped = overlap_range(first, last, lhs);
-    auto rhs_overlapped = overlap_range(first, last, rhs);
+    auto lhs_overlapped = overlap_range(first, last, lhs, order);
+    auto rhs_overlapped = overlap_range(first, last, rhs, order);
     
     return (size(lhs_overlapped) <= size(rhs_overlapped)) ?
             std::any_of(lhs_overlapped.begin(), lhs_overlapped.end(),
@@ -525,11 +527,12 @@ bool has_shared(ForwardIterator first, ForwardIterator last,
 template <typename ForwardIterator1, typename ForwardIterator2, typename MappableType>
 inline
 ForwardIterator2 find_first_shared(ForwardIterator1 first1, ForwardIterator1 last1,
-                                  ForwardIterator2 first2, ForwardIterator2 last2,
-                                  const MappableType& mappable)
+                                   ForwardIterator2 first2, ForwardIterator2 last2,
+                                   const MappableType& mappable,
+                                   MappableRangeOrder order=MappableRangeOrder::ForwardSorted)
 {
-    return std::find_if(first2, last2, [first1, last1, &mappable] (const auto& m) {
-        return has_shared(first1, last1, m, mappable);
+    return std::find_if(first2, last2, [first1, last1, &mappable, order] (const auto& m) {
+        return has_shared(first1, last1, m, mappable, order);
     });
 }
 
@@ -541,15 +544,16 @@ ForwardIterator2 find_first_shared(ForwardIterator1 first1, ForwardIterator1 las
  */
 template <typename ForwardIterator1, typename ForwardIterator2>
 std::size_t count_if_shared_with_first(ForwardIterator1 first1, ForwardIterator1 last1,
-                                       ForwardIterator2 first2, ForwardIterator2 last2)
+                                       ForwardIterator2 first2, ForwardIterator2 last2,
+                                       MappableRangeOrder order=MappableRangeOrder::ForwardSorted)
 {
     if (first2 == last2) return 0;
     
-    auto overlapped = overlap_range(first1, last1, *first2);
+    auto overlapped = overlap_range(first1, last1, *first2, order);
     
     if (empty(overlapped)) return 0;
     
-    return size(overlap_range(std::next(first2), last2, *std::prev(overlapped.end())));
+    return size(overlap_range(std::next(first2), last2, *std::prev(overlapped.end()), order));
 }
 
 /**

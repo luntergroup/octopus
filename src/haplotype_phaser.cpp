@@ -69,8 +69,8 @@ void HaplotypePhaser::phase_current_data()
                                                           sub_region).end().base();
     }
     
-    sub_region = next_sub_region(sub_region, the_reads_, the_candidates_, max_candidates, max_indicators,
-                                 IndicatorLimit::NoLimit, ExtensionLimit::NoLimit);
+    sub_region = advance_region(sub_region, the_reads_, the_candidates_, max_candidates, max_indicators,
+                                IndicatorLimit::NoLimit, ExtensionLimit::NoLimit);
     
     while (true) {
 //        cout << "looking in region " << sub_region << endl;

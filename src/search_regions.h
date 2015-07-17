@@ -17,36 +17,22 @@
 #include "region_algorithms.h"
 #include "map_utils.h"
 
+#include <iostream> // TEST
+
 namespace Octopus
 {
-
-/**
- A region is 'dense' if the number of variants within a read length of the first variant in
- 'the_variants' that overlaps 'a_region', is greater than max_variants
- */
-template <typename SampleReadMap, typename Container>
-bool is_dense_region(const GenomicRegion& a_region, const SampleReadMap& the_reads,
-                     const Container& the_variants, unsigned max_variants)
-{
-    auto overlapped = overlap_range(std::cbegin(the_variants), std::cend(the_variants), a_region);
-    
-    auto max_num_variants_within_read_length = max_count_if_shared_with_first(the_reads, overlapped.first,
-                                                                              std::cend(the_variants));
-    
-    return max_num_variants_within_read_length > max_variants;
-}
 
 namespace detail
 {
     template <typename BidirectionalIterator, typename SampleReadMap>
     bool is_optimal_to_extend(BidirectionalIterator first_included, BidirectionalIterator proposed_included,
                               BidirectionalIterator first_excluded, BidirectionalIterator last,
-                              const SampleReadMap& the_reads, unsigned max_density_increase)
+                              const SampleReadMap& reads, unsigned max_density_increase)
     {
         if (proposed_included == last) return false;
         if (first_excluded == last) return true;
         
-        bool increases_density {max_count_if_shared_with_first(the_reads, proposed_included, last)
+        bool increases_density {max_count_if_shared_with_first(reads, proposed_included, last)
                                         >= max_density_increase};
         
         return (increases_density) ? inner_distance(*std::prev(proposed_included), *proposed_included)
@@ -55,18 +41,18 @@ namespace detail
     
     template <typename BidirectionalIterator, typename SampleReadMap>
     GenomicRegion
-    get_optimal_region_around_included(BidirectionalIterator first_previous, BidirectionalIterator first_included,
-                                       BidirectionalIterator first_excluded, BidirectionalIterator last,
-                                       const SampleReadMap& the_reads)
+    expand_around_included(BidirectionalIterator first_previous, BidirectionalIterator first_included,
+                           BidirectionalIterator first_excluded, BidirectionalIterator last,
+                           const SampleReadMap& reads)
     {
         auto last_included = std::prev(first_excluded);
         
-        auto leftmost_region  = leftmost_overlapped(the_reads, *first_included)->get_region();
-        auto rightmost_region = rightmost_overlapped(the_reads, *last_included)->get_region();
-
-        if (count_overlapped(first_previous, first_included, leftmost_region) > 0) {
+        auto leftmost_region  = get_region(*leftmost_overlapped(reads, *first_included, MappableRangeOrder::BidirectionallySorted));
+        auto rightmost_region = get_region(*rightmost_overlapped(reads, *last_included, MappableRangeOrder::BidirectionallySorted));
+        
+        if (count_overlapped(first_previous, first_included, leftmost_region, MappableRangeOrder::BidirectionallySorted) > 0) {
             auto max_left_flank_size = inner_distance(*first_included, *rightmost_mappable(first_previous, first_included));
-            leftmost_region = shift(first_included->get_region(), max_left_flank_size);
+            leftmost_region = shift(get_region(*first_included), max_left_flank_size);
             
             if (overlaps(*std::prev(first_included), leftmost_region)) {
                 // to deal with case where last previous is insertion, otherwise would be included in overlap_range
@@ -76,7 +62,7 @@ namespace detail
         
         if (first_excluded != last && contains(rightmost_region, *first_excluded)) {
             auto max_right_flank_size = inner_distance(*last_included, *first_excluded);
-            rightmost_region = shift(last_included->get_region(), max_right_flank_size);
+            rightmost_region = shift(get_region(*last_included), max_right_flank_size);
         }
         
         return get_closed(leftmost_region, rightmost_region);
@@ -88,7 +74,7 @@ enum class IndicatorLimit { SharedWithPreviousRegion, NoLimit };
 enum class ExtensionLimit { WithinReadLengthOfFirstIncluded, NoLimit };
 
 /**
- Determines the next sub-region to phase. Up to 'max_included' non-overlapping variants are included 
+ Determines the optimal sub-region given the conditions. Up to 'max_included' non-overlapping variants are included
  in the returned region, of which up to 'max_indicators' may be present in 'the_previous_sub_region'.
  
  The returned region may include less than 'max_included' variants if including more variants would
@@ -99,34 +85,37 @@ enum class ExtensionLimit { WithinReadLengthOfFirstIncluded, NoLimit };
  'limit_indicators_to_shared_with_previous_region' is false, in which case all indicators are used.
  */
 template <typename SampleReadMap, typename Container>
-GenomicRegion next_sub_region(const GenomicRegion& the_previous_sub_region,
-                              const SampleReadMap& the_reads, const Container& the_variants,
-                              unsigned max_included, unsigned max_indicators,
-                              IndicatorLimit indicator_limit=IndicatorLimit::SharedWithPreviousRegion,
-                              ExtensionLimit extension_limit=ExtensionLimit::WithinReadLengthOfFirstIncluded)
+GenomicRegion advance_region(const GenomicRegion& previous_region,
+                             const SampleReadMap& reads, const Container& variants,
+                             unsigned max_included, unsigned max_indicators,
+                             IndicatorLimit indicator_limit=IndicatorLimit::SharedWithPreviousRegion,
+                             ExtensionLimit extension_limit=ExtensionLimit::WithinReadLengthOfFirstIncluded)
 {
     if (max_included > 0 && max_included <= max_indicators) {
         max_indicators = max_included - 1;
     }
     
-    auto last_variant_it = std::cend(the_variants);
+    auto candidate_order = MappableRangeOrder::BidirectionallySorted;
+    auto read_order      = MappableRangeOrder::BidirectionallySorted;
     
-    auto previous_variant_sub_range = bases(overlap_range(std::cbegin(the_variants), last_variant_it,
-                                                          the_previous_sub_region,
-                                                          MappableRangeOrder::BidirectionallySorted));
-    auto first_previous_it = previous_variant_sub_range.begin();
-    auto included_it       = previous_variant_sub_range.end();
+    auto last_variant_it = std::cend(variants);
+    
+    auto previous_variants = bases(overlap_range(std::cbegin(variants), last_variant_it, previous_region,
+                                                 candidate_order));
+    auto first_previous_it = previous_variants.begin();
+    auto included_it       = previous_variants.end();
     
     if (max_included == 0) {
-        return (included_it != last_variant_it) ? get_intervening(the_previous_sub_region, *included_it) :
-                                                    the_previous_sub_region;
+        return (included_it != last_variant_it) ? get_intervening(previous_region, *included_it) :
+                                                    previous_region;
     }
     
     unsigned num_indicators {max_indicators};
     
     if (indicator_limit == IndicatorLimit::SharedWithPreviousRegion) {
-        auto first_shared_in_previous_range_it = find_first_shared(the_reads, first_previous_it,
-                                                                   included_it, *included_it);
+        auto first_shared_in_previous_range_it = find_first_shared(reads, first_previous_it,
+                                                                   included_it, *included_it,
+                                                                   read_order);
         auto num_possible_indicators = static_cast<unsigned>(std::distance(first_shared_in_previous_range_it, included_it));
         
         num_indicators = std::min(num_possible_indicators, num_indicators);
@@ -139,8 +128,8 @@ GenomicRegion next_sub_region(const GenomicRegion& the_previous_sub_region,
     unsigned num_excluded_variants {0};
     
     if (extension_limit == ExtensionLimit::WithinReadLengthOfFirstIncluded) {
-        auto max_num_variants_within_read_length = static_cast<unsigned>(max_count_if_shared_with_first(the_reads,
-                                                                    included_it, last_variant_it));
+        auto max_num_variants_within_read_length = static_cast<unsigned>(max_count_if_shared_with_first(reads,
+                                                                    included_it, last_variant_it, read_order));
         max_included = std::min({max_included, num_remaining_variants, max_num_variants_within_read_length + 1});
         num_excluded_variants = max_num_variants_within_read_length - max_included;
     } else {
@@ -151,17 +140,42 @@ GenomicRegion next_sub_region(const GenomicRegion& the_previous_sub_region,
     
     while (--max_included > 0 &&
            detail::is_optimal_to_extend(first_included_it, std::next(included_it), first_excluded_it,
-                                        last_variant_it, the_reads, max_included + num_excluded_variants)) {
+                                        last_variant_it, reads, max_included + num_excluded_variants)) {
         ++included_it;
     }
     
     std::advance(included_it, count_overlapped(std::next(included_it), last_variant_it,
-                                               *rightmost_mappable(first_included_it, std::next(included_it))));
+                                               *rightmost_mappable(first_included_it, std::next(included_it)),
+                                               candidate_order));
     
     first_excluded_it = std::next(included_it);
     
-    return detail::get_optimal_region_around_included(first_previous_it, first_included_it,
-                                                      first_excluded_it, last_variant_it, the_reads);
+    return detail::expand_around_included(first_previous_it, first_included_it, first_excluded_it,
+                                          last_variant_it, reads);
+}
+
+template <typename SampleReadMap, typename Container>
+std::vector<GenomicRegion> cover_region(const GenomicRegion& region,
+                                        const SampleReadMap& reads, const Container& variants,
+                                        unsigned max_included, unsigned max_indicators,
+                                        IndicatorLimit indicator_limit=IndicatorLimit::SharedWithPreviousRegion,
+                                        ExtensionLimit extension_limit=ExtensionLimit::WithinReadLengthOfFirstIncluded)
+{
+    std::vector<GenomicRegion> result {};
+    
+    auto sub_region = compress_right(region, -size(region));
+    
+    std::cout << sub_region << std::endl;
+    
+    while (ends_before(sub_region, region)) {
+        sub_region = advance_region(sub_region, reads, variants, max_included, max_indicators,
+                                    indicator_limit, extension_limit);
+        result.emplace_back(sub_region);
+    }
+    
+    result.shrink_to_fit();
+    
+    return result;
 }
     
 } // end namespace Octopus

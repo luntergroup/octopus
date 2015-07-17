@@ -268,10 +268,10 @@ TEST_CASE("overlap_range includes insertions on left boundry, but not the right"
     auto overlapped3 = overlap_range(variants.cbegin(), variants.cend(), region3);
     auto overlapped4 = overlap_range(variants.cbegin(), variants.cend(), region4);
     
-    REQUIRE(std::distance(overlapped1.begin(), overlapped1.end()) == 1);
-    REQUIRE(std::distance(overlapped2.begin(), overlapped2.end()) == 0);
-    REQUIRE(std::distance(overlapped3.begin(), overlapped3.end()) == 1);
-    REQUIRE(std::distance(overlapped4.begin(), overlapped4.end()) == 1);
+    REQUIRE(size(overlapped1) == 1);
+    REQUIRE(size(overlapped2) == 0);
+    REQUIRE(size(overlapped3) == 1);
+    REQUIRE(size(overlapped4) == 1);
 }
 
 TEST_CASE("inner_distance respects insertion lhs ordering rule", "[variant]")
