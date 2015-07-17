@@ -59,13 +59,15 @@ void HaplotypePhaser::phase_current_data()
     unsigned max_indicators {0};
     CandidateIterator previous_region_last_candidate_it {the_candidates_.cbegin()};
     
-//    if (has_overlapped(the_candidates_.cbegin(), the_candidates_.cend(), sub_region)) {
-//        max_indicators = static_cast<unsigned>(count_overlapped(the_candidates_.cbegin(), the_candidates_.cend(),
-//                                                                sub_region));
-//        max_candidates = max_region_density_ + max_indicators - std::log2(the_tree_.num_haplotypes());
-//        previous_region_last_candidate_it = contained_range(the_candidates_.cbegin(), the_candidates_.cend(),
-//                                                          sub_region).end();
-//    }
+    auto num_candidates_unphased = count_overlapped(the_candidates_.cbegin(), the_candidates_.cend(),
+                                                    sub_region);
+    
+    if (num_candidates_unphased > 0) {
+        max_indicators = static_cast<unsigned>(num_candidates_unphased);
+        max_candidates = max_region_density_ + max_indicators - std::log2(the_tree_.num_haplotypes());
+        previous_region_last_candidate_it = overlap_range(the_candidates_.cbegin(), the_candidates_.cend(),
+                                                          sub_region).end().base();
+    }
     
     sub_region = next_sub_region(sub_region, the_reads_, the_candidates_, max_candidates, max_indicators,
                                  IndicatorLimit::NoLimit, ExtensionLimit::NoLimit);

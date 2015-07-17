@@ -45,10 +45,9 @@ void AlignmentCandidateVariantGenerator::add_read(const AlignedRead& a_read)
         
         switch (cigar_operation.get_flag()) {
             case CigarOperation::ALIGNMENT_MATCH:
-                get_variants_in_match_range(GenomicRegion {contig_name, ref_index, ref_index + op_size},
-                                            sequence_begin + read_index,
-                                            sequence_begin + read_index + op_size,
-                                            qualities_begin + read_index);
+                get_snvs_in_match_range(GenomicRegion {contig_name, ref_index, ref_index + op_size},
+                                        sequence_begin + read_index, sequence_begin + read_index + op_size,
+                                        qualities_begin + read_index);
                 
                 read_index += op_size;
                 ref_index  += op_size;
@@ -129,9 +128,9 @@ std::vector<Variant> AlignmentCandidateVariantGenerator::get_candidates(const Ge
         are_candidates_sorted_ = true;
     }
     
-    auto range = overlap_range(std::cbegin(candidates_), std::cend(candidates_), a_region);
+    auto overlapped = overlap_range(std::cbegin(candidates_), std::cend(candidates_), a_region);
     
-    return std::vector<Variant> {range.begin(), range.end()};
+    return std::vector<Variant> {overlapped.begin(), overlapped.end()};
 }
 
 void AlignmentCandidateVariantGenerator::reserve(std::size_t n)
@@ -145,8 +144,8 @@ void AlignmentCandidateVariantGenerator::clear()
 }
 
 void AlignmentCandidateVariantGenerator::
-get_variants_in_match_range(const GenomicRegion& the_region, SequenceIterator first_base,
-                            SequenceIterator last_base, QualitiesIterator first_quality)
+get_snvs_in_match_range(const GenomicRegion& the_region, SequenceIterator first_base,
+                        SequenceIterator last_base, QualitiesIterator first_quality)
 {
     auto ref_segment = the_reference_.get_sequence(the_region);
     auto ref_index   = get_begin(the_region);

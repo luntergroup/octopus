@@ -106,13 +106,15 @@ Haplotype::SequenceType Haplotype::get_sequence(const GenomicRegion& a_region) c
     auto the_region_bounded_by_alleles = get_region_bounded_by_explicit_alleles();
     
     SequenceType result {};
+    result.reserve(size(a_region));
     
     if (begins_before(a_region, the_region_bounded_by_alleles)) {
         result += the_reference_->get_sequence(get_left_overhang(a_region, the_region_bounded_by_alleles));
     }
     
     auto overlapped_explicit_alleles = bases(overlap_range(std::cbegin(the_explicit_alleles_),
-                                                           std::cend(the_explicit_alleles_), a_region, true));
+                                                           std::cend(the_explicit_alleles_), a_region,
+                                                           MappableRangeOrder::BidirectionallySorted));
     
     if (overlapped_explicit_alleles.begin() != std::cend(the_explicit_alleles_)) {
         if (::contains(*overlapped_explicit_alleles.begin(), a_region)) {
@@ -127,8 +129,8 @@ Haplotype::SequenceType Haplotype::get_sequence(const GenomicRegion& a_region) c
     
     bool region_ends_before_last_overlapped_allele {false};
     
-    if (overlapped_explicit_alleles.end() != std::cend(the_explicit_alleles_) &&
-        overlapped_explicit_alleles.end() != overlapped_explicit_alleles.begin() &&
+    if (!empty(overlapped_explicit_alleles) &&
+        overlapped_explicit_alleles.end() != std::cend(the_explicit_alleles_) &&
         ends_before(a_region, *overlapped_explicit_alleles.end())) {
         overlapped_explicit_alleles.advance_end(-1);
         region_ends_before_last_overlapped_allele = true;

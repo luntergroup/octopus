@@ -88,6 +88,8 @@ ForwardIterator find_first_after(ForwardIterator first, ForwardIterator last, co
     return std::upper_bound(first, last, next_position(mappable));
 }
 
+enum class MappableRangeOrder { ForwardSorted, BidirectionallySorted, Unsorted };
+
 /**
  Returns true if the range of Mappable elements in the range [first, last) is sorted
  w.r.t GenomicRegion::operator<, and satisfies the condition 'if lhs < rhs then end(lhs) < end(rhs)
@@ -189,10 +191,11 @@ boost::iterator_range<Iterator> bases(const OverlapRange<Iterator>& overlap_rang
 
 template <typename Iterator>
 inline
-std::size_t size(const OverlapRange<Iterator>& range, bool is_bidirectional=false)
+std::size_t size(const OverlapRange<Iterator>& range, MappableRangeOrder order=MappableRangeOrder::ForwardSorted)
 {
-    return (is_bidirectional) ? std::distance(range.begin().base(), range.end().base()) :
-                                std::distance(range.begin(), range.end());
+    return (order == MappableRangeOrder::BidirectionallySorted) ?
+                std::distance(range.begin().base(), range.end().base()) :
+                std::distance(range.begin(), range.end());
 }
 
 template <typename Iterator>
@@ -228,9 +231,10 @@ namespace detail
 template <typename ForwardIterator, typename MappableType>
 inline
 OverlapRange<ForwardIterator>
-overlap_range(ForwardIterator first, ForwardIterator last, const MappableType& mappable, bool is_bidirectional=false)
+overlap_range(ForwardIterator first, ForwardIterator last, const MappableType& mappable,
+              MappableRangeOrder order=MappableRangeOrder::ForwardSorted)
 {
-    if (is_bidirectional) {
+    if (order == MappableRangeOrder::BidirectionallySorted) {
         auto range = std::equal_range(first, last, mappable,
                                       [] (const auto& lhs, const auto& rhs) {
                                           return is_before(lhs, rhs);
@@ -281,9 +285,9 @@ overlap_range(ForwardIterator first, ForwardIterator last, const MappableType& m
 template <typename BidirectionalIterator, typename MappableType>
 inline
 bool has_overlapped(BidirectionalIterator first, BidirectionalIterator last,
-                    const MappableType& mappable, bool is_bidirectional=false)
+                    const MappableType& mappable, MappableRangeOrder order=MappableRangeOrder::ForwardSorted)
 {
-    if (is_bidirectional) {
+    if (order == MappableRangeOrder::BidirectionallySorted) {
         return std::binary_search(first, last, mappable,
                                   [] (const auto& lhs, const auto& rhs) {
                                       return is_before(lhs, rhs);
@@ -311,9 +315,9 @@ bool has_overlapped(BidirectionalIterator first, BidirectionalIterator last,
 template <typename ForwardIterator, typename MappableType>
 inline
 std::size_t count_overlapped(ForwardIterator first, ForwardIterator last, const MappableType& mappable,
-                             bool is_bidirectional=false)
+                             MappableRangeOrder order=MappableRangeOrder::ForwardSorted)
 {
-    auto overlapped = overlap_range(first, last, mappable, is_bidirectional);
+    auto overlapped = overlap_range(first, last, mappable, order);
     return std::distance(overlapped.begin(), overlapped.end());
 }
 
@@ -382,10 +386,11 @@ boost::iterator_range<Iterator> bases(const ContainedRange<Iterator>& overlap_ra
 
 template <typename Iterator>
 inline
-std::size_t size(const ContainedRange<Iterator>& range, bool is_bidirectional=false)
+std::size_t size(const ContainedRange<Iterator>& range, MappableRangeOrder order=MappableRangeOrder::ForwardSorted)
 {
-    return (is_bidirectional) ? std::distance(range.begin().base(), range.end().base()) :
-                                std::distance(range.begin(), range.end());
+    return (order == MappableRangeOrder::BidirectionallySorted) ?
+                        std::distance(range.begin().base(), range.end().base()) :
+                        std::distance(range.begin(), range.end());
 }
 
 template <typename Iterator>
@@ -603,7 +608,7 @@ std::vector<GenomicRegion> minimal_encompassing(ForwardIterator first_mappable, 
     
     while (first_mappable != last_mappable) {
         rightmost = &(*first_mappable);
-        last_overlapped = std::find_if(first_mappable, last_mappable, [&rightmost] (const auto& m) {
+        last_overlapped = std::find_if_not(first_mappable, last_mappable, [&rightmost] (const auto& m) {
             if (ends_before(*rightmost, m)) rightmost = &m;
             return overlaps(m, *rightmost);
         });

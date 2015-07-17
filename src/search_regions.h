@@ -111,9 +111,11 @@ GenomicRegion next_sub_region(const GenomicRegion& the_previous_sub_region,
     
     auto last_variant_it = std::cend(the_variants);
     
-    auto previous_variant_sub_range = contained_range(std::cbegin(the_variants), last_variant_it, the_previous_sub_region);
-    auto first_previous_it = previous_variant_sub_range.begin().base();
-    auto included_it       = previous_variant_sub_range.end().base();
+    auto previous_variant_sub_range = bases(overlap_range(std::cbegin(the_variants), last_variant_it,
+                                                          the_previous_sub_region,
+                                                          MappableRangeOrder::BidirectionallySorted));
+    auto first_previous_it = previous_variant_sub_range.begin();
+    auto included_it       = previous_variant_sub_range.end();
     
     if (max_included == 0) {
         return (included_it != last_variant_it) ? get_intervening(the_previous_sub_region, *included_it) :

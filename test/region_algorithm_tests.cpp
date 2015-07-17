@@ -110,9 +110,20 @@ TEST_CASE("contained_range returns a range of iterators that span all elements c
     REQUIRE(std::equal(true_contained.cbegin(), true_contained.cend(), contained.begin()));
 }
 
-TEST_CASE("", "[region_algorithms]")
+TEST_CASE("minimal_encompassing returns regions which contain all elements in the given range, with no inter-range-overlaps", "[region_algorithms]")
 {
+    auto regions = generate_random_regions(10000, 100, 10000);
     
+    auto sub_regions = minimal_encompassing(regions.cbegin(), regions.cend());
+    
+    std::vector<GenomicRegion> contained_regions {};
+    
+    for (const auto& region : sub_regions) {
+        auto contained = contained_range(regions.cbegin(), regions.cend(), region);
+        contained_regions.insert(contained_regions.end(), contained.begin(), contained.end());
+    }
+    
+    REQUIRE(std::equal(regions.cbegin(), regions.cend(), contained_regions.begin()));
 }
 
 TEST_CASE("", "[region_algorithms]")
