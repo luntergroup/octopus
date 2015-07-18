@@ -23,6 +23,7 @@
 #include "genomic_region.h"
 #include "cigar_string.h"
 #include "comparable.h"
+#include "equitable.h"
 #include "mappable.h"
 
 class AlignedRead : public Comparable<AlignedRead>, public Mappable<AlignedRead>
@@ -61,16 +62,18 @@ public:
     private:
         using Flags = std::bitset<2>;
         
-        std::string the_contig_name_;
+        std::string contig_name_;
         SizeType begin_;
-        SizeType the_inferred_template_length_;
-        Flags the_flags_;
+        SizeType inferred_template_length_;
+        Flags flags_;
         
         Flags get_flags(const FlagData& data);
     };
     
     struct FlagData
     {
+        FlagData() = default;
+        
         bool is_marked_multiple_read_template;
         bool is_marked_all_segments_in_read_aligned;
         bool is_marked_unmapped;
@@ -115,6 +118,7 @@ public:
     SizeType get_sequence_size() const noexcept;
     const CigarString& get_cigar_string() const noexcept;
     const std::unique_ptr<NextSegment>& get_next_segment() const;
+    FlagData get_flags() const;
     
     //void set_qualities(Qualities&& new_qualities) noexcept;
     void zero_front_qualities(SizeType num_bases) noexcept;
@@ -137,14 +141,14 @@ public:
 private:
     using Flags = std::bitset<8>;
     
-    GenomicRegion the_reference_region_;
-    std::string the_read_group_;
-    SequenceType the_sequence_;
-    CigarString the_cigar_string_;
-    Qualities the_qualities_;
-    std::unique_ptr<NextSegment> the_next_segment_;
-    Flags the_flags_;
-    QualityType the_mapping_quality_;
+    GenomicRegion reference_region_;
+    std::string read_group_;
+    SequenceType sequence_;
+    CigarString cigar_string_;
+    Qualities qualities_;
+    std::unique_ptr<NextSegment> next_segment_;
+    Flags flags_;
+    QualityType mapping_quality_;
     bool is_compressed_;
     
     Flags get_flags(const FlagData& data);
@@ -158,36 +162,35 @@ inline AlignedRead::AlignedRead(GenomicRegion_&& reference_region, String1_&& se
                                 Qualities_&& qualities, CigarString_&& cigar_string,
                                 QualityType mapping_quality, FlagData flags)
 :
-the_reference_region_ {std::forward<GenomicRegion_>(reference_region)},
-the_read_group_ {},
-the_sequence_ {std::forward<String1_>(sequence)},
-the_qualities_ {std::forward<Qualities_>(qualities)},
-the_cigar_string_ {std::forward<CigarString_>(cigar_string)},
-the_next_segment_ {nullptr},
-the_flags_ {get_flags(flags)},
-the_mapping_quality_ {mapping_quality},
+reference_region_ {std::forward<GenomicRegion_>(reference_region)},
+read_group_ {},
+sequence_ {std::forward<String1_>(sequence)},
+qualities_ {std::forward<Qualities_>(qualities)},
+cigar_string_ {std::forward<CigarString_>(cigar_string)},
+next_segment_ {nullptr},
+flags_ {get_flags(flags)},
+mapping_quality_ {mapping_quality},
 is_compressed_ {false}
 {}
 
 template <typename GenomicRegion_, typename String1_, typename Qualities_, typename CigarString_,
           typename String2_>
-inline
 AlignedRead::AlignedRead(GenomicRegion_&& reference_region, String1_&& sequence,
                          Qualities_&& qualities, CigarString_&& cigar_string,
                          QualityType mapping_quality, FlagData flags,
                          String2_&& next_segment_contig_name, SizeType next_segment_begin,
                          SizeType inferred_template_length, NextSegment::FlagData next_segment_flags)
 :
-the_reference_region_ {std::forward<GenomicRegion_>(reference_region)},
-the_read_group_ {},
-the_sequence_ {std::forward<String1_>(sequence)},
-the_qualities_ {std::forward<Qualities_>(qualities)},
-the_cigar_string_ {std::forward<CigarString_>(cigar_string)},
-the_next_segment_ {std::make_unique<NextSegment>(std::forward<String2_>(next_segment_contig_name),
+reference_region_ {std::forward<GenomicRegion_>(reference_region)},
+read_group_ {},
+sequence_ {std::forward<String1_>(sequence)},
+qualities_ {std::forward<Qualities_>(qualities)},
+cigar_string_ {std::forward<CigarString_>(cigar_string)},
+next_segment_ {std::make_unique<NextSegment>(std::forward<String2_>(next_segment_contig_name),
                                                  next_segment_begin, inferred_template_length,
                                                  next_segment_flags)},
-the_flags_ {get_flags(flags)},
-the_mapping_quality_ {mapping_quality},
+flags_ {get_flags(flags)},
+mapping_quality_ {mapping_quality},
 is_compressed_ {false}
 {}
 
@@ -195,258 +198,27 @@ template <typename String_>
 AlignedRead::NextSegment::NextSegment(String_&& contig_name, SizeType begin,
                                       SizeType inferred_template_length, FlagData data)
 :
-the_contig_name_ {std::forward<String_>(contig_name)},
+contig_name_ {std::forward<String_>(contig_name)},
 begin_ {begin},
-the_inferred_template_length_ {inferred_template_length},
-the_flags_ {get_flags(data)}
+inferred_template_length_ {inferred_template_length},
+flags_ {get_flags(data)}
 {}
-
-inline AlignedRead::AlignedRead(const AlignedRead& other)
-:
-the_reference_region_ {other.the_reference_region_},
-the_read_group_ {other.the_read_group_},
-the_sequence_ {other.the_sequence_},
-the_qualities_ {other.the_qualities_},
-the_cigar_string_ {other.the_cigar_string_},
-the_next_segment_ {((other.the_next_segment_ != nullptr) ?
-        std::make_unique<NextSegment>(*other.the_next_segment_) : nullptr) },
-the_flags_ {other.the_flags_},
-the_mapping_quality_ {other.the_mapping_quality_},
-is_compressed_ {other.is_compressed()}
-{}
-
-inline AlignedRead& AlignedRead::operator=(const AlignedRead& other)
-{
-    AlignedRead temp {other};
-    swap(*this, temp);
-    return *this;
-}
-
-inline void swap(AlignedRead& lhs, AlignedRead& rhs) noexcept
-{
-    std::swap(lhs.the_reference_region_, rhs.the_reference_region_);
-    std::swap(lhs.the_read_group_, rhs.the_read_group_);
-    std::swap(lhs.the_sequence_, rhs.the_sequence_);
-    std::swap(lhs.the_cigar_string_, rhs.the_cigar_string_);
-    std::swap(lhs.the_qualities_, rhs.the_qualities_);
-    std::swap(lhs.the_next_segment_, rhs.the_next_segment_);
-    std::swap(lhs.the_flags_, rhs.the_flags_);
-    std::swap(lhs.the_mapping_quality_, rhs.the_mapping_quality_);
-    std::swap(lhs.is_compressed_, rhs.is_compressed_);
-}
-
-//
-// NextSegment public methods
-//
-
-inline const std::string& AlignedRead::NextSegment::get_contig_name() const
-{
-    return the_contig_name_;
-}
-
-inline AlignedRead::SizeType AlignedRead::NextSegment::get_begin() const noexcept
-{
-    return begin_;
-}
-
-inline AlignedRead::SizeType AlignedRead::NextSegment::get_inferred_template_length() const noexcept
-{
-    return the_inferred_template_length_;
-}
-
-inline bool AlignedRead::NextSegment::is_marked_unmapped() const
-{
-    return the_flags_[0];
-}
-
-inline bool AlignedRead::NextSegment::is_marked_reverse_mapped() const
-{
-    return the_flags_[1];
-}
-
-//
-// AlignedRead public methods
-//
-
-inline const GenomicRegion& AlignedRead::get_region() const noexcept
-{
-    return the_reference_region_;
-}
-
-inline const AlignedRead::SequenceType& AlignedRead::get_sequence() const noexcept
-{
-    return the_sequence_;
-}
-
-inline const AlignedRead::Qualities& AlignedRead::get_qualities() const noexcept
-{
-    return the_qualities_;
-}
-
-inline void AlignedRead::zero_front_qualities(SizeType num_bases) noexcept
-{
-    std::for_each(std::begin(the_qualities_), std::begin(the_qualities_) + num_bases,
-                  [] (auto& quality) { quality = 0; });
-}
-
-inline void AlignedRead::zero_back_qualities(SizeType num_bases) noexcept
-{
-    std::for_each(std::rbegin(the_qualities_), std::rbegin(the_qualities_) + num_bases,
-                  [] (auto& quality) { quality = 0; });
-}
-
-inline AlignedRead::QualityType AlignedRead::get_mapping_quality() const noexcept
-{
-    return the_mapping_quality_;
-}
-
-inline AlignedRead::SizeType AlignedRead::get_sequence_size() const noexcept
-{
-    return static_cast<SizeType>(the_sequence_.size());
-}
-
-inline const CigarString& AlignedRead::get_cigar_string() const noexcept
-{
-    return the_cigar_string_;
-}
-
-inline const std::unique_ptr<AlignedRead::NextSegment>& AlignedRead::get_next_segment() const
-{
-    if (is_chimeric()) {
-        return the_next_segment_;
-    } else {
-        throw std::runtime_error {"Read does not have a next segment"};
-    }
-}
-
-inline bool AlignedRead::is_chimeric() const noexcept
-{
-    return the_next_segment_ != nullptr;
-}
-
-inline bool AlignedRead::is_marked_all_segments_in_read_aligned() const
-{
-    return the_flags_[0];
-}
-
-inline bool AlignedRead::is_marked_multiple_read_template() const
-{
-    return the_flags_[1];
-}
-
-inline bool AlignedRead::is_marked_unmapped() const
-{
-    return the_flags_[2];
-}
-
-inline bool AlignedRead::is_marked_reverse_mapped() const
-{
-    return the_flags_[3];
-}
-
-inline bool AlignedRead::is_marked_secondary_alignment() const
-{
-    return the_flags_[4];
-}
-
-inline bool AlignedRead::is_marked_qc_fail() const
-{
-    return the_flags_[5];
-}
-
-inline bool AlignedRead::is_marked_duplicate() const
-{
-    return the_flags_[6];
-}
-
-inline bool AlignedRead::is_marked_supplementary_alignment() const
-{
-    return the_flags_[7];
-}
 
 template <typename CompressionAlgorithm>
 void AlignedRead::compress(const CompressionAlgorithm& c)
 {
-    the_sequence_ = CompressionAlgorithm::compress(the_sequence_);
+    sequence_ = CompressionAlgorithm::compress(sequence_);
 }
 
 template <typename CompressionAlgorithm>
 void AlignedRead::decompress(const CompressionAlgorithm& c)
 {
-    the_sequence_ = CompressionAlgorithm::decompress(the_sequence_);
-}
-
-//
-// Private methods
-//
-
-inline bool AlignedRead::is_compressed() const noexcept
-{
-    return is_compressed_;
-}
-
-inline void AlignedRead::set_compressed() noexcept
-{
-    is_compressed_ = true;
-}
-
-inline void AlignedRead::set_uncompressed() noexcept
-{
-    is_compressed_ = false;
-}
-
-inline AlignedRead::Flags AlignedRead::get_flags(const FlagData& flags)
-{
-    Flags result {};
-    result[0] = flags.is_marked_all_segments_in_read_aligned;
-    result[1] = flags.is_marked_multiple_read_template;
-    result[2] = flags.is_marked_unmapped;
-    result[3] = flags.is_marked_reverse_mapped;
-    result[4] = flags.is_marked_secondary_alignment;
-    result[5] = flags.is_marked_qc_fail;
-    result[6] = flags.is_marked_duplicate;
-    result[7] = flags.is_marked_supplementary_alignment;
-    return result;
-}
-
-inline AlignedRead::NextSegment::Flags AlignedRead::NextSegment::get_flags(const FlagData& flags)
-{
-    Flags result {};
-    result[0] = flags.is_marked_unmapped;
-    result[1] = flags.is_marked_reverse_mapped;
-    return result;
+    sequence_ = CompressionAlgorithm::decompress(sequence_);
 }
 
 // Non-member methods
 
-inline AlignedRead splice(const AlignedRead& read, const GenomicRegion& region)
-{
-    if (!contains(read, region)) {
-        throw std::runtime_error {"cannot splice AlignedRead region that is not contained"};
-    }
-    
-    auto reference_offset = get_begin(region) - get_begin(read);
-    
-    auto uncontained_cigar_splice = reference_splice(read.get_cigar_string(), GenomicRegion::SizeType {}, reference_offset);
-    auto contained_cigar_splice   = reference_splice(read.get_cigar_string(), reference_offset, size(region));
-    
-    auto sequence_offset = sequence_size(uncontained_cigar_splice);
-    auto sequence_length = sequence_size(contained_cigar_splice);
-    
-    AlignedRead::SequenceType sequence_splice(read.get_sequence().cbegin() + sequence_offset,
-                                              read.get_sequence().cbegin() + sequence_offset + sequence_length);
-    AlignedRead::Qualities qualities_splice(read.get_qualities().cbegin() + sequence_offset,
-                                            read.get_qualities().cbegin() + sequence_offset + sequence_length);
-    
-    return AlignedRead {
-        region,
-        std::move(sequence_splice),
-        std::move(qualities_splice),
-        std::move(contained_cigar_splice),
-        read.get_mapping_quality(),
-        AlignedRead::FlagData {}
-    };
-}
+AlignedRead splice(const AlignedRead& read, const GenomicRegion& region);
 
 inline bool operator==(const AlignedRead& lhs, const AlignedRead& rhs)
 {

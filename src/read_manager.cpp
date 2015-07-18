@@ -49,8 +49,7 @@ std::vector<ReadManager::SampleIdType> ReadManager::get_sample_ids() const
     return result;
 }
 
-std::vector<AlignedRead>
-ReadManager::fetch_reads(const SampleIdType& a_sample_id, const GenomicRegion& a_region)
+std::vector<AlignedRead> ReadManager::fetch_reads(const SampleIdType& a_sample_id, const GenomicRegion& a_region)
 {
     auto& reader_paths = reader_paths_containing_sample_.at(a_sample_id);
     
@@ -86,9 +85,8 @@ ReadManager::fetch_reads(const SampleIdType& a_sample_id, const GenomicRegion& a
     return result;
 }
 
-ReadManager::SampleReadMap
-ReadManager::fetch_reads(const std::vector<SampleIdType>& sample_ids,
-                         const GenomicRegion& a_region)
+ReadManager::SampleReadMap ReadManager::fetch_reads(const std::vector<SampleIdType>& sample_ids,
+                                                    const GenomicRegion& a_region)
 {
     auto reader_paths_containing_samples = get_reader_paths_containing_samples(sample_ids);
     
@@ -127,6 +125,11 @@ ReadManager::fetch_reads(const std::vector<SampleIdType>& sample_ids,
       });
     
     return result;
+}
+
+ReadManager::SampleReadMap ReadManager::fetch_reads(const GenomicRegion& a_region)
+{
+    return fetch_reads(get_sample_ids(), a_region);
 }
 
 // Private methods

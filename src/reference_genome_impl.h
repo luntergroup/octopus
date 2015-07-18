@@ -18,12 +18,13 @@
 class IReferenceGenomeImpl
 {
 public:
-    using SizeType = GenomicRegion::SizeType;
+    using SizeType     = GenomicRegion::SizeType;
+    using SequenceType = std::string;
     
     virtual std::string get_reference_name() = 0;
     virtual std::vector<std::string> get_contig_names() = 0;
     virtual SizeType get_contig_size(std::string contig_name) = 0;
-    virtual std::string get_sequence(const GenomicRegion& a_region) = 0;
+    virtual SequenceType get_sequence(const GenomicRegion& a_region) = 0;
     virtual ~IReferenceGenomeImpl() noexcept = default;
 };
 

@@ -47,8 +47,6 @@ using std::endl;
 //    
 //    std::cout << "Without vptr: " << without_vptr << "us" << std::endl;
 //    std::cout << "With vptr: " << with_vptr << "us" << std::endl;
-//    
-//    REQUIRE(true);
 //}
 
 //// Best time:
@@ -88,8 +86,6 @@ using std::endl;
 //    auto copy_time = benchmark<std::chrono::microseconds>(f_lots_of_copies, 100).count();
 //    
 //    //std::cout << "Copy: " << copy_time << "us" << std::endl;
-//    
-//    REQUIRE(true);
 //}
 
 //TEST_CASE("reader coverage calculation benchmarks", "[read,benchmark]")

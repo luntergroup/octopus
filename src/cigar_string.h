@@ -9,17 +9,16 @@
 #ifndef Octopus_cigar_string_h
 #define Octopus_cigar_string_h
 
-#include <string>
+#include <string>    // std::stoi
 #include <cstdint>
 #include <iterator>
 #include <vector>
 #include <ostream>
 #include <algorithm> // std::copy
 #include <numeric>   // std::accumulate
-#include <ctype.h>   // std::isdigit
 #include <boost/functional/hash.hpp> // boost::hash_combine, boost::hash_range
 
-#include "equitable.h"
+#include "comparable.h"
 
 class CigarOperation : public Comparable<CigarOperation> // Comparable so can compare reads
 {
@@ -58,83 +57,17 @@ private:
 
 using CigarString = std::vector<CigarOperation>;
 
-inline CigarOperation::CigarOperation(SizeType size, char flag) noexcept
-:
-size_ {size},
-flag_ {flag}
-{}
+CigarString parse_cigar_string(const std::string& cigar_string);
 
-inline CigarOperation::SizeType CigarOperation::get_size() const noexcept
-{
-    return size_;
-}
+bool is_front_soft_clipped(const CigarString& cigar_string) noexcept;
 
-inline char CigarOperation::get_flag() const noexcept
-{
-    return flag_;
-}
+bool is_back_soft_clipped(const CigarString& cigar_string) noexcept;
 
-inline bool CigarOperation::advances_reference() const noexcept
-{
-    return !(flag_ == INSERTION || flag_ == HARD_CLIPPED || flag_ == PADDING);
-}
+bool is_soft_clipped(const CigarString& cigar_string) noexcept;
 
-inline bool CigarOperation::advances_sequence() const noexcept
-{
-    return !(flag_ == DELETION || flag_ == HARD_CLIPPED);
-}
-
-inline CigarString parse_cigar_string(const std::string& cigar_string)
-{
-    CigarString result {};
-    result.reserve(cigar_string.size() / 2);
-    std::string digits {};
-    
-    for (char c : cigar_string) {
-        if (std::isdigit(c)) {
-            digits += c;
-        } else {
-            result.emplace_back(std::stoi(digits), c);
-            digits.clear();
-        }
-    }
-    
-    result.shrink_to_fit();
-    
-    return result;
-}
-
-inline bool is_front_soft_clipped(const CigarString& cigar_string) noexcept
-{
-    return (cigar_string.size() > 0) ? cigar_string.front().get_flag() == 'S' : false;
-}
-
-inline bool is_back_soft_clipped(const CigarString& cigar_string) noexcept
-{
-    return (cigar_string.size() > 0) ? cigar_string.back().get_flag() == 'S' : false;
-}
-
-inline bool is_soft_clipped(const CigarString& cigar_string) noexcept
-{
-    return is_front_soft_clipped(cigar_string) || is_back_soft_clipped(cigar_string);
-}
-
-inline std::pair<CigarOperation::SizeType, CigarOperation::SizeType>
-get_soft_clipped_sizes(const CigarString& cigar_string) noexcept
-{
-    if (!is_soft_clipped(cigar_string)) {
-        return {0, 0};
-    } else {
-        auto front_soft_clipped_size = (is_front_soft_clipped(cigar_string)) ?
-            cigar_string.front().get_size() : 0;
-        auto back_soft_clipped_size = (is_back_soft_clipped(cigar_string)) ?
-            cigar_string.back().get_size() : 0;
-        return {front_soft_clipped_size, back_soft_clipped_size};
-    }
-}
+std::pair<CigarOperation::SizeType, CigarOperation::SizeType> get_soft_clipped_sizes(const CigarString& cigar_string) noexcept;
 
 template <typename SizeType>
-inline
 SizeType soft_clipped_read_begin(const CigarString& cigar_string, SizeType hard_clipped_begin) noexcept
 {
     if (is_front_soft_clipped(cigar_string)) {
@@ -144,7 +77,7 @@ SizeType soft_clipped_read_begin(const CigarString& cigar_string, SizeType hard_
 }
 
 template <typename SizeType=unsigned>
-inline SizeType operations_size(const CigarString& cigar_string) noexcept
+SizeType operations_size(const CigarString& cigar_string) noexcept
 {
     return std::accumulate(std::cbegin(cigar_string), std::cend(cigar_string), SizeType {},
                            [] (const unsigned lhs, const CigarOperation& rhs) {
@@ -153,7 +86,7 @@ inline SizeType operations_size(const CigarString& cigar_string) noexcept
 }
 
 template <typename SizeType=unsigned>
-inline SizeType reference_size(const CigarString& cigar_string) noexcept
+SizeType reference_size(const CigarString& cigar_string) noexcept
 {
     SizeType result {};
     
@@ -167,7 +100,7 @@ inline SizeType reference_size(const CigarString& cigar_string) noexcept
 }
 
 template <typename SizeType=unsigned>
-inline SizeType sequence_size(const CigarString& cigar_string) noexcept
+SizeType sequence_size(const CigarString& cigar_string) noexcept
 {
     SizeType result {};
     
@@ -211,36 +144,36 @@ namespace detail
         CigarString result {};
         result.reserve(cigar_string.size()); // ensures no reallocation due to emplace_back
         
-        auto first = std::cbegin(cigar_string);
+        auto op_it = std::cbegin(cigar_string);
         auto last  = std::cend(cigar_string);
         
-        while (first != last && (offset >= first->get_size() || !pred(*first))) {
-            if (pred(*first)) offset -= first->get_size();
-            ++first;
+        while (op_it != last && (offset >= op_it->get_size() || !pred(*op_it))) {
+            if (pred(*op_it)) offset -= op_it->get_size();
+            ++op_it;
         }
         
-        if (first != last) {
-            auto remainder = first->get_size() - offset;
+        if (op_it != last) {
+            auto remainder = op_it->get_size() - offset;
             
             if (remainder >= size) {
-                result.emplace_back(size, first->get_flag());
+                result.emplace_back(size, op_it->get_flag());
                 result.shrink_to_fit();
                 return result;
             }
             
-            result.emplace_back(remainder, first->get_flag());
+            result.emplace_back(remainder, op_it->get_flag());
             size -= remainder;
-            ++first;
+            ++op_it;
         }
         
-        while (first != last && (size >= first->get_size() || !pred(*first))) {
-            result.emplace_back(*first);
-            if (pred(*first)) size -= first->get_size();
-            ++first;
+        while (op_it != last && size > 0 && (size >= op_it->get_size() || !pred(*op_it))) {
+            result.emplace_back(*op_it);
+            if (pred(*op_it)) size -= op_it->get_size();
+            ++op_it;
         }
         
-        if (first != last && size > 0) {
-            result.emplace_back(size, first->get_flag());
+        if (op_it != last && size > 0) {
+            result.emplace_back(size, op_it->get_flag());
         }
         
         result.shrink_to_fit();

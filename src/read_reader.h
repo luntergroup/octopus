@@ -52,8 +52,9 @@ private:
 };
 
 inline ReadReader::ReadReader(const fs::path& read_file_path, std::unique_ptr<IReadReaderImpl> the_impl)
-:read_file_path_ {read_file_path},
- the_impl_ {std::move(the_impl)}
+:
+read_file_path_ {read_file_path},
+the_impl_ {std::move(the_impl)}
 {}
 
 inline const fs::path& ReadReader::get_read_file_path() const noexcept

@@ -36,7 +36,7 @@ bool HaplotypeTree::empty() const noexcept
 
 std::size_t HaplotypeTree::num_haplotypes() const noexcept
 {
-    return (empty()) ? 0 : the_haplotype_leafs_.size();
+    return the_haplotype_leafs_.size();
 }
 
 bool HaplotypeTree::contains(const Haplotype& a_haplotype) const

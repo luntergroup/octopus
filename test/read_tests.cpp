@@ -268,7 +268,7 @@ TEST_CASE("can splice CigarString", "[cigar_string]")
 TEST_CASE("can splice reads", "[reads]")
 {
     AlignedRead read {
-        GenomicRegion {"1", 100, 123},
+        GenomicRegion {"1", 100, 120},
         "AAAAACCCCCCCCCCGGGTTTT",
         AlignedRead::Qualities(23, 0),
         parse_cigar_string("5M1D10M3I4M"),
@@ -279,11 +279,10 @@ TEST_CASE("can splice reads", "[reads]")
     REQUIRE(splice(read, GenomicRegion {"1", 100, 105}).get_sequence() == "AAAAA");
     REQUIRE(splice(read, GenomicRegion {"1", 100, 106}).get_sequence() == "AAAAA");
     REQUIRE(splice(read, GenomicRegion {"1", 100, 107}).get_sequence() == "AAAAAC");
+    REQUIRE(splice(read, GenomicRegion {"1", 100, 110}).get_sequence() == "AAAAACCCC");
     REQUIRE(splice(read, GenomicRegion {"1", 100, 116}).get_sequence() == "AAAAACCCCCCCCCC");
-    REQUIRE(splice(read, GenomicRegion {"1", 100, 117}).get_sequence() == "AAAAACCCCCCCCCCGGG");
-    REQUIRE(splice(read, GenomicRegion {"1", 100, 118}).get_sequence() == "AAAAACCCCCCCCCCGGG");
-    REQUIRE(splice(read, GenomicRegion {"1", 100, 119}).get_sequence() == "AAAAACCCCCCCCCCGGG");
-    REQUIRE(splice(read, GenomicRegion {"1", 100, 120}).get_sequence() == "AAAAACCCCCCCCCCGGGT");
-    REQUIRE(splice(read, GenomicRegion {"1", 100, 121}).get_sequence() == "AAAAACCCCCCCCCCGGGTT");
-    REQUIRE(splice(read, GenomicRegion {"1", 100, 123}) == read);
+    REQUIRE(splice(read, GenomicRegion {"1", 100, 117}).get_sequence() == "AAAAACCCCCCCCCCGGGT");
+    REQUIRE(splice(read, GenomicRegion {"1", 100, 118}).get_sequence() == "AAAAACCCCCCCCCCGGGTT");
+    REQUIRE(splice(read, GenomicRegion {"1", 100, 119}).get_sequence() == "AAAAACCCCCCCCCCGGGTTT");
+    REQUIRE(splice(read, GenomicRegion {"1", 100, 120}) == read);
 }

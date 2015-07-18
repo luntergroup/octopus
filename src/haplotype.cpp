@@ -9,8 +9,8 @@
 #include "haplotype.h"
 
 #include <algorithm> // std::for_each, std::binary_search, std::equal_range, std::sort,
-                     // std::find_if_not, std::adjacent_find, std::unique
-#include <iterator>  // std::cbegin, std::cend, std::distance
+                     // std::nth_element, std::find_if_not, std::adjacent_find, std::unique
+#include <iterator>  // std::cbegin, std::cend, std::distance, std::next
 
 #include "reference_genome.h"
 #include "genomic_region.h"
@@ -112,6 +112,7 @@ Haplotype::SequenceType Haplotype::get_sequence(const GenomicRegion& a_region) c
         result += the_reference_->get_sequence(get_left_overhang(a_region, the_region_bounded_by_alleles));
     }
     
+    // we know the alleles are bidirectionally sorted as it is a condition of them being on a single haplotype
     auto overlapped_explicit_alleles = bases(overlap_range(std::cbegin(the_explicit_alleles_),
                                                            std::cend(the_explicit_alleles_), a_region,
                                                            MappableRangeOrder::BidirectionallySorted));
@@ -195,18 +196,20 @@ void unique_least_complex(std::vector<Haplotype>& haplotypes)
     
     auto first_equal = haplotypes.begin();
     auto last_equal  = haplotypes.begin();
-    auto last = haplotypes.end();
+    auto last        = haplotypes.end();
     
     while (true) {
         first_equal = std::adjacent_find(first_equal, last);
         
         if (first_equal == last) break;
         
-        last_equal = std::find_if_not(first_equal + 2, last, [first_equal] (const auto& haplotype) {
-            return haplotype == *first_equal;
-        });
+        // skips 2 as std::next(first_equal, 1) is a duplicate
+        last_equal = std::find_if_not(std::next(first_equal, 2), last,
+                                      [first_equal] (const auto& haplotype) {
+                                          return haplotype == *first_equal;
+                                      });
         
-        std::sort(first_equal, last_equal, is_less_complex);
+        std::nth_element(first_equal, first_equal, last_equal, is_less_complex);
         
         first_equal = last_equal;
     }
