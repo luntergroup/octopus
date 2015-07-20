@@ -38,7 +38,8 @@ public:
     AlignmentCandidateVariantGenerator& operator=(AlignmentCandidateVariantGenerator&&)      = default;
     
     void add_read(const AlignedRead& a_read) override;
-    void add_reads(ReadIterator first, ReadIterator last) override;
+    void add_reads(std::vector<AlignedRead>::const_iterator first, std::vector<AlignedRead>::const_iterator last) override;
+    void add_reads(MappableSet<AlignedRead>::const_iterator first, MappableSet<AlignedRead>::const_iterator last) override;
     std::vector<Variant> get_candidates(const GenomicRegion& a_region) override;
     void reserve(std::size_t n) override;
     void clear() override;

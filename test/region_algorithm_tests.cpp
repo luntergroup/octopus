@@ -15,7 +15,7 @@
 
 #include "mock_objects.h"
 #include "genomic_region.h"
-#include "region_algorithms.h"
+#include "mappable_algorithms.h"
 
 using std::cout;
 using std::endl;
@@ -88,7 +88,7 @@ TEST_CASE("overlap_range returns correct range if given the maximum region size"
     
     auto bisorted_ranges = bidirectionally_sorted_ranges(regions.cbegin(), regions.cend());
     
-    auto max_region_size = size(*largest(regions.cbegin(), regions.cend()));
+    auto max_region_size = size(*largest_element(regions.cbegin(), regions.cend()));
     
     auto overlapped = overlap_range(regions.cbegin(), regions.cend(), test_region, max_region_size);
     

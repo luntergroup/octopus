@@ -18,7 +18,7 @@
 #include "htslib_read_facade.h"
 #include "read_manager.h"
 #include "mock_objects.h"
-#include "region_algorithms.h"
+#include "mappable_algorithms.h"
 
 using std::cout;
 using std::endl;

@@ -12,7 +12,7 @@
 #include <iterator>  // std::back_inserter
 
 #include "string_utils.h"
-#include "region_algorithms.h"
+#include "mappable_algorithms.h"
 
 const GenomicRegion& Allele::get_region() const noexcept
 {

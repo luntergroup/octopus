@@ -18,7 +18,7 @@
 #include "read_manager.h"
 #include "aligned_read.h"
 #include "read_utils.h"
-#include "region_algorithms.h"
+#include "mappable_algorithms.h"
 
 using std::cout;
 using std::endl;

@@ -14,7 +14,7 @@
 #include <utility>   // std::make_pair
 
 #include "allele.h"
-#include "region_algorithms.h"
+#include "mappable_algorithms.h"
 #include "search_regions.h"
 #include "haplotype.h"
 #include "genotype.h"

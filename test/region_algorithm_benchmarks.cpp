@@ -14,7 +14,7 @@
 #include "benchmark_utils.h"
 #include "test_common.h"
 #include "genomic_region.h"
-#include "region_algorithms.h"
+#include "mappable_algorithms.h"
 #include "read_manager.h"
 
 //TEST_CASE("overlap_range performance", "[region_algorithms, benchmark]")

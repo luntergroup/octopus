@@ -16,7 +16,7 @@
 
 #include "genomic_region.h"
 #include "mappable.h"
-#include "region_algorithms.h"
+#include "mappable_algorithms.h"
 
 template <typename MappableMap, typename MappableType>
 std::size_t count_overlapped(const MappableMap& mappables, const MappableType& m,

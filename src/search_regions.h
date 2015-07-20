@@ -14,7 +14,7 @@
 #include <cmath>     // std::abs
 
 #include "genomic_region.h"
-#include "region_algorithms.h"
+#include "mappable_algorithms.h"
 #include "map_utils.h"
 
 #include <iostream> // TEST

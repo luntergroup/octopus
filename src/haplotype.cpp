@@ -14,7 +14,7 @@
 
 #include "reference_genome.h"
 #include "genomic_region.h"
-#include "region_algorithms.h"
+#include "mappable_algorithms.h"
 
 Haplotype::Haplotype(ReferenceGenome& the_reference)
 :

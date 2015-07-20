@@ -16,7 +16,7 @@
 #include "reference_genome.h"
 #include "reference_genome_factory.h"
 #include "genomic_region.h"
-#include "region_algorithms.h"
+#include "mappable_algorithms.h"
 #include "allele.h"
 #include "variant.h"
 #include "variant_utils.h"

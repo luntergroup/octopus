@@ -11,7 +11,7 @@
 #include <algorithm> // std::find_if
 
 #include "bayesian_genotype_model.h"
-#include "region_algorithms.h"
+#include "mappable_algorithms.h"
 
 namespace Octopus
 {

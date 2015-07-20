@@ -15,7 +15,7 @@
 #include "aligned_read.h"
 #include "variant.h"
 #include "cigar_string.h"
-#include "region_algorithms.h"
+#include "mappable_algorithms.h"
 
 AlignmentCandidateVariantGenerator::AlignmentCandidateVariantGenerator(ReferenceGenome& the_reference,
                                                                        QualityType min_base_quality,
@@ -114,9 +114,16 @@ void AlignmentCandidateVariantGenerator::add_read(const AlignedRead& a_read)
     }
 }
 
-void AlignmentCandidateVariantGenerator::add_reads(ReadIterator first, ReadIterator last)
+void AlignmentCandidateVariantGenerator::add_reads(std::vector<AlignedRead>::const_iterator first, std::vector<AlignedRead>::const_iterator last)
 {
-    candidates_.reserve(estimate_num_variants(std::distance(first, last)));
+    candidates_.reserve(candidates_.size() + estimate_num_variants(std::distance(first, last)));
+    std::for_each(first, last, [this] (const auto& a_read ) { add_read(a_read); });
+    candidates_.shrink_to_fit();
+}
+
+void AlignmentCandidateVariantGenerator::add_reads(MappableSet<AlignedRead>::const_iterator first, MappableSet<AlignedRead>::const_iterator last)
+{
+    candidates_.reserve(candidates_.size() + estimate_num_variants(std::distance(first, last)));
     std::for_each(first, last, [this] (const auto& a_read ) { add_read(a_read); });
     candidates_.shrink_to_fit();
 }

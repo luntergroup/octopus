@@ -15,7 +15,7 @@
 
 #include "htslib_read_facade.h"
 #include "aligned_read.h"
-#include "region_algorithms.h"
+#include "mappable_algorithms.h"
 
 #include <iostream> // TEST
 

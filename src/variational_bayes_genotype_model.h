@@ -23,7 +23,7 @@
 #include "aligned_read.h"
 #include "pair_hmm.h"
 #include "bayesian_genotype_model.h"
-#include "region_algorithms.h"
+#include "mappable_algorithms.h"
 
 #include <iostream> // TEST
 

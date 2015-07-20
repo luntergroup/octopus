@@ -13,7 +13,7 @@
 
 #include "reference_genome.h"
 #include "candidate_variant_generator.h"
-#include "region_algorithms.h"
+#include "mappable_algorithms.h"
 
 using std::cbegin;
 using std::cend;

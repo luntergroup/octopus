@@ -16,8 +16,6 @@
 #include <type_traits> // std::enable_if, std::is_void
 #include <utility>     // std::move
 
-#include "context_back_insert_iterator.h"
-
 template <typename BidirectionalIterator>
 class ReadFilter
 {
@@ -72,8 +70,7 @@ namespace detail
 {
     template <typename T>
     inline
-    typename std::enable_if<std::is_void<typename T::value_type>::value,
-    typename T::container_type::const_iterator>::type
+    typename std::enable_if<std::is_void<typename T::value_type>::value, typename T::container_type::const_iterator>::type
     get_first(T first, T last)
     {
         return last.begin();
@@ -89,8 +86,7 @@ namespace detail
     
     template <typename T>
     inline
-    typename std::enable_if<std::is_void<typename T::value_type>::value,
-    typename T::container_type::const_iterator>::type
+    typename std::enable_if<std::is_void<typename T::value_type>::value, typename T::container_type::const_iterator>::type
     get_last(T first, T last)
     {
         return (last.begin() != last.end()) ? std::prev(last.end()) : last.begin();

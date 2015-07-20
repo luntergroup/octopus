@@ -141,7 +141,7 @@
 		CA0B467F1AE97F0C00158BBA /* 1000G_test8.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = 1000G_test8.cpp; sourceTree = "<group>"; };
 		CA0B46811AEA210300158BBA /* 1000G_test9.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = 1000G_test9.cpp; sourceTree = "<group>"; };
 		CA0B46831AEA222B00158BBA /* 1000G_test10.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = 1000G_test10.cpp; sourceTree = "<group>"; };
-		CA1472741AACC7E2005FDCD1 /* context_back_insert_iterator.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = context_back_insert_iterator.h; sourceTree = "<group>"; };
+		CA1472741AACC7E2005FDCD1 /* context_iterators.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = context_iterators.h; sourceTree = "<group>"; };
 		CA1472781AACECF1005FDCD1 /* octopus.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = octopus.cpp; sourceTree = "<group>"; };
 		CA1472791AACECF1005FDCD1 /* octopus.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = octopus.h; sourceTree = "<group>"; };
 		CA14727B1AACED6E005FDCD1 /* octopus_tests.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = octopus_tests.cpp; sourceTree = "<group>"; };
@@ -239,6 +239,8 @@
 		CAFA19761AC5E67100F953D9 /* pair_hmm.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = pair_hmm.h; sourceTree = "<group>"; };
 		D413B03C1B554CD0007EFDE0 /* region_algorithm_benchmarks.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = region_algorithm_benchmarks.cpp; sourceTree = "<group>"; };
 		D413B03E1B590C2B007EFDE0 /* search_region_benchmarks.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = search_region_benchmarks.cpp; sourceTree = "<group>"; };
+		D413B0401B5D0431007EFDE0 /* mappable_map.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = mappable_map.h; sourceTree = "<group>"; };
+		D413B0411B5D17CA007EFDE0 /* mappable_ranges.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = mappable_ranges.h; sourceTree = "<group>"; };
 		D420610F1ACC165C00D11553 /* variational_bayes_genotype_model.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = variational_bayes_genotype_model.cpp; sourceTree = "<group>"; };
 		D42061101ACC165C00D11553 /* variational_bayes_genotype_model.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = variational_bayes_genotype_model.h; sourceTree = "<group>"; };
 		D42061121ACC3D2B00D11553 /* variational_bayes_genotype_model_tests.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = variational_bayes_genotype_model_tests.cpp; sourceTree = "<group>"; };
@@ -288,7 +290,7 @@
 		D4907F711A8E04B900639203 /* comparable.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = comparable.h; sourceTree = "<group>"; };
 		D4907F731A8E255200639203 /* equitable.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = equitable.h; sourceTree = "<group>"; };
 		D4E41DA11AD801EF0010D25D /* mappable.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = mappable.h; sourceTree = "<group>"; };
-		D4E41DA21AD80C1B0010D25D /* region_algorithms.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = region_algorithms.h; sourceTree = "<group>"; };
+		D4E41DA21AD80C1B0010D25D /* mappable_algorithms.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = mappable_algorithms.h; sourceTree = "<group>"; };
 		D4E41DA31AD81C390010D25D /* allele.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = allele.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -541,13 +543,15 @@
 				D4907F711A8E04B900639203 /* comparable.h */,
 				D4907F731A8E255200639203 /* equitable.h */,
 				D4E41DA11AD801EF0010D25D /* mappable.h */,
-				D4E41DA21AD80C1B0010D25D /* region_algorithms.h */,
+				D413B0411B5D17CA007EFDE0 /* mappable_ranges.h */,
+				D4E41DA21AD80C1B0010D25D /* mappable_algorithms.h */,
 				CA386DA61B5BBBDE0057A5A8 /* mappable_set.h */,
+				D413B0401B5D0431007EFDE0 /* mappable_map.h */,
 				D463C18B1AEF7D2200739A66 /* map_utils.h */,
 				CAFA196A1AC0D0D500F953D9 /* maths.h */,
 				CAE3E2941A9CF97700C01B2C /* storage_policies.h */,
 				CAE3E2A01AA1D39100C01B2C /* compression.h */,
-				CA1472741AACC7E2005FDCD1 /* context_back_insert_iterator.h */,
+				CA1472741AACC7E2005FDCD1 /* context_iterators.h */,
 				D4907F5E1A8A3ADD00639203 /* string_utils.h */,
 				CA14727D1AAE63A8005FDCD1 /* hash_functions.h */,
 			);
