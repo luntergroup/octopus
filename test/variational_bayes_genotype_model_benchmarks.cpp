@@ -27,11 +27,16 @@
 #include "haplotype.h"
 #include "genotype.h"
 #include "read_model.h"
+#include "bayesian_genotype_model.h"
 #include "variational_bayes_genotype_model.h"
 #include "maths.h"
 #include "read_filter.h"
 #include "read_filters.h"
 #include "haplotype_tree.h"
+
+using Octopus::HaplotypeTree;
+using Octopus::ReadModel;
+using Octopus::BayesianGenotypeModel::VariationalBayesGenotypeModel;
 
 //TEST_CASE("responsability calculation", "[variational_bayes_genotype_model,benchmark]")
 //{
@@ -119,12 +124,13 @@
 //    ReadModel a_new_read_model {ploidy};
 //    
 //    VariationalBayesGenotypeModel the_model {a_new_read_model, ploidy};
-//    VariationalBayesGenotypeModel::HaplotypePseudoCounts pseudo_counts {};
+//    
+//    Octopus::BayesianGenotypeModel::HaplotypePseudoCounts<double> pseudo_counts {};
 //    for (const auto& haplotype : haplotypes) {
 //        pseudo_counts[haplotype] = 1.0;
 //    }
 //    
-//    VariationalBayesGenotypeModel::GenotypeResponsabilities responsabilities(samples.size());
+//    Octopus::BayesianGenotypeModel::GenotypeProbabilities<std::string, double> responsabilities(samples.size());
 //    
 //    auto f_genotype_resp = [&the_model, &reads, &genotypes, &pseudo_counts, &responsabilities] () {
 //        for (const auto& sample : reads) {

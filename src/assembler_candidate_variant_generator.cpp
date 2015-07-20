@@ -28,7 +28,12 @@ void AssemblerCandidateVariantGenerator::add_read(const AlignedRead& a_read)
     the_variant_assembler_.add_read(a_read);
 }
 
-void AssemblerCandidateVariantGenerator::add_reads(ReadIterator first, ReadIterator last)
+void AssemblerCandidateVariantGenerator::add_reads(std::vector<AlignedRead>::const_iterator first, std::vector<AlignedRead>::const_iterator last)
+{
+    std::for_each(first, last, [this] (const auto& a_read ) { add_read(a_read); });
+}
+
+void AssemblerCandidateVariantGenerator::add_reads(MappableSet<AlignedRead>::const_iterator first, MappableSet<AlignedRead>::const_iterator last)
 {
     std::for_each(first, last, [this] (const auto& a_read ) { add_read(a_read); });
 }

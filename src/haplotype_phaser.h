@@ -14,6 +14,7 @@
 #include <vector>
 #include <deque>
 #include <unordered_map>
+#include <boost/range/iterator_range_core.hpp>
 
 #include "common.h"
 #include "genomic_region.h"
@@ -38,6 +39,8 @@ class HaplotypePhaser
 public:
     using RealType     = Octopus::ProbabilityType;
     using SampleIdType = Octopus::SampleIdType;
+    template <typename SampleIdType, typename Iterator>
+    using ReadRanges = std::unordered_map<SampleIdType, boost::iterator_range<Iterator>>;
     
     struct PhasedRegion
     {
@@ -74,7 +77,7 @@ public:
     HaplotypePhaser& operator=(HaplotypePhaser&&)      = delete;
     
     template <typename ForwardIterator1, typename ForwardIterator2>
-    void put_data(const BayesianGenotypeModel::ReadRanges<SampleIdType, ForwardIterator1>& the_reads,
+    void put_data(const ReadRanges<SampleIdType, ForwardIterator1>& the_reads,
                   ForwardIterator2 first_candidate, ForwardIterator2 last_candidate);
     
     PhasedRegions get_phased_regions(SteamingStatus status);
@@ -90,7 +93,6 @@ private:
     
     using ReadIterator      = typename ReadMap::mapped_type::const_iterator;
     using CandidateIterator = decltype(the_candidates_)::const_iterator;
-    using ReadRanges        = BayesianGenotypeModel::ReadRanges<SampleIdType, ReadIterator>;
     
     ReferenceGenome& the_reference_;
     unsigned ploidy_;
@@ -112,7 +114,7 @@ private:
     HaplotypePseudoCounts get_haplotype_prior_counts(const Haplotypes& the_haplotypes,
                                                      CandidateIterator first, CandidateIterator last,
                                                      const GenomicRegion& the_region) const;
-    ReadRanges get_read_iterator_ranges(const GenomicRegion& the_region) const;
+    BayesianGenotypeModel::ReadRanges<SampleIdType, ReadIterator> get_read_iterator_ranges(const GenomicRegion& the_region) const;
     void remove_unlikely_haplotypes_from_tree(const Haplotypes& current_haplotypes,
                                               const HaplotypePseudoCounts& prior_counts,
                                               const HaplotypePseudoCounts& posterior_counts);
@@ -124,7 +126,7 @@ private:
 };
 
 template <typename ForwardIterator1, typename ForwardIterator2>
-void HaplotypePhaser::put_data(const BayesianGenotypeModel::ReadRanges<SampleIdType, ForwardIterator1>& the_reads,
+void HaplotypePhaser::put_data(const ReadRanges<SampleIdType, ForwardIterator1>& the_reads,
                                ForwardIterator2 first_candidate, ForwardIterator2 last_candidate)
 {
     for (auto&& map_pair : the_reads) {

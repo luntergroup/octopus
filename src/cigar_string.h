@@ -9,16 +9,16 @@
 #ifndef Octopus_cigar_string_h
 #define Octopus_cigar_string_h
 
-#include <string>
+#include <string>    // std::stoi
 #include <cstdint>
 #include <iterator>
 #include <vector>
 #include <ostream>
-#include <algorithm> // std::copy, std::minmax, std::mismatch
-#include <ctype.h>   // std::isdigit
+#include <algorithm> // std::copy
+#include <numeric>   // std::accumulate
 #include <boost/functional/hash.hpp> // boost::hash_combine, boost::hash_range
 
-#include "equitable.h"
+#include "comparable.h"
 
 class CigarOperation : public Comparable<CigarOperation> // Comparable so can compare reads
 {
@@ -48,6 +48,7 @@ public:
     SizeType get_size() const noexcept;
     char get_flag() const noexcept;
     bool advances_reference() const noexcept;
+    bool advances_sequence() const noexcept;
     
 private:
     SizeType size_;
@@ -56,93 +57,40 @@ private:
 
 using CigarString = std::vector<CigarOperation>;
 
-inline CigarOperation::CigarOperation(SizeType size, char flag) noexcept
-:
-size_ {size},
-flag_ {flag}
-{}
+CigarString parse_cigar_string(const std::string& cigar_string);
 
-inline CigarOperation::SizeType CigarOperation::get_size() const noexcept
-{
-    return size_;
-}
+bool is_front_soft_clipped(const CigarString& cigar_string) noexcept;
 
-inline char CigarOperation::get_flag() const noexcept
-{
-    return flag_;
-}
+bool is_back_soft_clipped(const CigarString& cigar_string) noexcept;
 
-inline bool CigarOperation::advances_reference() const noexcept
-{
-    if (flag_ == INSERTION || flag_ == HARD_CLIPPED || flag_ == PADDING) return false;
-    return true;
-}
+bool is_soft_clipped(const CigarString& cigar_string) noexcept;
 
-inline CigarString parse_cigar_string(const std::string& a_cigar_string)
-{
-    CigarString result {};
-    result.reserve(a_cigar_string.size() / 2);
-    std::string digits {};
-    
-    for (char c : a_cigar_string) {
-        if (std::isdigit(c)) {
-            digits += c;
-        } else {
-            result.emplace_back(std::stoi(digits), c);
-            digits.clear();
-        }
-    }
-    
-    result.shrink_to_fit();
-    return result;
-}
-
-inline bool is_front_soft_clipped(const CigarString& a_cigar_string) noexcept
-{
-    return (a_cigar_string.size() > 0) ? a_cigar_string.front().get_flag() == 'S' : false;
-}
-
-inline bool is_back_soft_clipped(const CigarString& a_cigar_string) noexcept
-{
-    return (a_cigar_string.size() > 0) ? a_cigar_string.back().get_flag() == 'S' : false;
-}
-
-inline bool is_soft_clipped(const CigarString& a_cigar_string) noexcept
-{
-    return is_front_soft_clipped(a_cigar_string) || is_back_soft_clipped(a_cigar_string);
-}
-
-inline std::pair<CigarOperation::SizeType, CigarOperation::SizeType>
-get_soft_clipped_sizes(const CigarString& a_cigar_string) noexcept
-{
-    if (!is_soft_clipped(a_cigar_string)) {
-        return {0, 0};
-    } else {
-        auto front_soft_clipped_size = (is_front_soft_clipped(a_cigar_string)) ?
-            a_cigar_string.front().get_size() : 0;
-        auto back_soft_clipped_size = (is_back_soft_clipped(a_cigar_string)) ?
-            a_cigar_string.back().get_size() : 0;
-        return {front_soft_clipped_size, back_soft_clipped_size};
-    }
-}
+std::pair<CigarOperation::SizeType, CigarOperation::SizeType> get_soft_clipped_sizes(const CigarString& cigar_string) noexcept;
 
 template <typename SizeType>
-inline
-SizeType get_soft_clipped_read_begin(const CigarString& a_cigar_string, SizeType hard_clipped_begin) noexcept
+SizeType soft_clipped_read_begin(const CigarString& cigar_string, SizeType hard_clipped_begin) noexcept
 {
-    if (is_front_soft_clipped(a_cigar_string)) {
-        hard_clipped_begin -= static_cast<SizeType>(a_cigar_string.at(0).get_size());
+    if (is_front_soft_clipped(cigar_string)) {
+        hard_clipped_begin -= static_cast<SizeType>(cigar_string.at(0).get_size());
     }
     return hard_clipped_begin;
 }
 
-template <typename SizeType>
-inline
-SizeType get_reference_size(const CigarString& a_cigar_string) noexcept
+template <typename SizeType=unsigned>
+SizeType operations_size(const CigarString& cigar_string) noexcept
+{
+    return std::accumulate(std::cbegin(cigar_string), std::cend(cigar_string), SizeType {},
+                           [] (const unsigned lhs, const CigarOperation& rhs) {
+                               return lhs + rhs.get_size();
+                           });
+}
+
+template <typename SizeType=unsigned>
+SizeType reference_size(const CigarString& cigar_string) noexcept
 {
     SizeType result {};
     
-    for (const auto& op : a_cigar_string) {
+    for (const auto& op : cigar_string) {
         if (op.advances_reference()) {
             result += op.get_size();
         }
@@ -151,11 +99,24 @@ SizeType get_reference_size(const CigarString& a_cigar_string) noexcept
     return result;
 }
 
-template <typename SizeType>
-inline
-CigarOperation get_operation_at_sequence_index(const CigarString& a_cigar_string, SizeType the_sequence_index)
+template <typename SizeType=unsigned>
+SizeType sequence_size(const CigarString& cigar_string) noexcept
 {
-    auto first = std::cbegin(a_cigar_string);
+    SizeType result {};
+    
+    for (const auto& op : cigar_string) {
+        if (op.advances_sequence()) {
+            result += op.get_size();
+        }
+    }
+    
+    return result;
+}
+
+template <typename SizeType>
+CigarOperation get_operation_at_sequence_index(const CigarString& cigar_string, SizeType the_sequence_index)
+{
+    auto first = std::cbegin(cigar_string);
     
     while (the_sequence_index >= first->get_size()) {
         ++first;
@@ -165,27 +126,78 @@ CigarOperation get_operation_at_sequence_index(const CigarString& a_cigar_string
     return *first;
 }
 
-// TODO
-template <typename SizeType>
-inline
-CigarString splice(const CigarString& a_cigar_string, SizeType the_sequence_begin, SizeType size)
+namespace detail
 {
-    CigarString result {};
-    
-    auto first = std::cbegin(a_cigar_string);
-    
-    while (the_sequence_begin >= first->get_size()) {
-        ++first;
-        the_sequence_begin -= first->get_size();
+    inline bool advances_reference(const CigarOperation& op)
+    {
+        return op.advances_reference();
     }
     
-    auto last = first;
+    inline bool advances_sequence(const CigarOperation& op)
+    {
+        return op.advances_sequence();
+    }
     
-    size += first->get_size() - the_sequence_begin;
-    
-    //while (size >= last->get
-    
-    return result;
+    template <typename SizeType, typename Predicate>
+    CigarString splice(const CigarString& cigar_string, SizeType offset, SizeType size, Predicate pred)
+    {
+        CigarString result {};
+        result.reserve(cigar_string.size()); // ensures no reallocation due to emplace_back
+        
+        auto op_it = std::cbegin(cigar_string);
+        auto last  = std::cend(cigar_string);
+        
+        while (op_it != last && (offset >= op_it->get_size() || !pred(*op_it))) {
+            if (pred(*op_it)) offset -= op_it->get_size();
+            ++op_it;
+        }
+        
+        if (op_it != last) {
+            auto remainder = op_it->get_size() - offset;
+            
+            if (remainder >= size) {
+                result.emplace_back(size, op_it->get_flag());
+                result.shrink_to_fit();
+                return result;
+            }
+            
+            result.emplace_back(remainder, op_it->get_flag());
+            size -= remainder;
+            ++op_it;
+        }
+        
+        while (op_it != last && size > 0 && (size >= op_it->get_size() || !pred(*op_it))) {
+            result.emplace_back(*op_it);
+            if (pred(*op_it)) size -= op_it->get_size();
+            ++op_it;
+        }
+        
+        if (op_it != last && size > 0) {
+            result.emplace_back(size, op_it->get_flag());
+        }
+        
+        result.shrink_to_fit();
+        
+        return result;
+    }
+} // end namespace detail
+
+template <typename SizeType>
+CigarString operation_splice(const CigarString& cigar_string, SizeType offset, SizeType size)
+{
+    return detail::splice(cigar_string, offset, size, [] (const auto& op) { return true; });
+}
+
+template <typename SizeType>
+CigarString reference_splice(const CigarString& cigar_string, SizeType offset, SizeType size)
+{
+    return detail::splice(cigar_string, offset, size, [] (const auto& op) { return detail::advances_reference(op); });
+}
+
+template <typename SizeType>
+CigarString sequence_splice(const CigarString& cigar_string, SizeType offset, SizeType size)
+{
+    return detail::splice(cigar_string, offset, size, [] (const auto& op) { return detail::advances_sequence(op); });
 }
 
 inline bool operator==(const CigarOperation& lhs, const CigarOperation& rhs)
@@ -199,31 +211,18 @@ inline bool operator<(const CigarOperation& lhs, const CigarOperation& rhs)
                                                 lhs.get_flag() < rhs.get_flag();
 }
 
-inline bool operator==(const CigarString& lhs, const CigarString& rhs)
-{
-    return std::equal(std::cbegin(lhs), std::cend(lhs), std::cbegin(rhs));
-}
-inline bool operator!=(const CigarString& lhs, const CigarString& rhs){return !operator==(lhs, rhs);}
-inline bool operator<(const CigarString& lhs, const CigarString& rhs)
-{
-    auto p = std::minmax(lhs, rhs, [] (const auto& lhs, const auto& rhs) { return lhs.size() <= rhs.size(); });
-    auto itrs = std::mismatch(std::cbegin(p.first), std::cend(p.first), std::cbegin(p.second));
-    return (itrs.first != std::cend(p.first)) ? *(itrs.first) < *(itrs.second) : false;
-}
-inline bool operator> (const CigarString& lhs, const CigarString& rhs){return  operator< (rhs,lhs);}
-inline bool operator<=(const CigarString& lhs, const CigarString& rhs){return !operator> (lhs,rhs);}
-inline bool operator>=(const CigarString& lhs, const CigarString& rhs){return !operator< (lhs,rhs);}
+// Note CigarString gets all of std::vector comparison methods. In particular, operator< uses
+// std::lexicographical_compare
 
-inline std::ostream& operator<<(std::ostream& os, const CigarOperation& a_cigar_operation)
+inline std::ostream& operator<<(std::ostream& os, const CigarOperation& cigar_operation)
 {
-    os << a_cigar_operation.get_size() << a_cigar_operation.get_flag();
+    os << cigar_operation.get_size() << cigar_operation.get_flag();
     return os;
 }
 
-inline std::ostream& operator<<(std::ostream& os, const CigarString& a_cigar_string)
+inline std::ostream& operator<<(std::ostream& os, const CigarString& cigar_string)
 {
-    std::copy(std::cbegin(a_cigar_string), std::cend(a_cigar_string),
-              std::ostream_iterator<CigarOperation>(os));
+    std::copy(std::cbegin(cigar_string), std::cend(cigar_string), std::ostream_iterator<CigarOperation>(os));
     return os;
 }
 

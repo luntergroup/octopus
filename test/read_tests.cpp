@@ -18,7 +18,7 @@
 #include "htslib_read_facade.h"
 #include "read_manager.h"
 #include "mock_objects.h"
-#include "region_algorithms.h"
+#include "mappable_algorithms.h"
 
 using std::cout;
 using std::endl;
@@ -171,7 +171,7 @@ TEST_CASE("read manager works for single file", "[read_manager]")
 //    
 //}
 
-TEST_CASE("aligned read copies correctly", "[reads]")
+TEST_CASE("aligned read copies/moves correctly", "[reads]")
 {
     AlignedRead a_read {get_mock_region(), "ACGT", AlignedRead::Qualities {1, 2, 3, 4},
         parse_cigar_string("4M"), 10, AlignedRead::FlagData {}, "1", 10, 30,
@@ -221,12 +221,12 @@ TEST_CASE("aligned read overlap sanity checks", "[reads]")
     auto reads_in_sub_region5 = overlap_range(reads.cbegin(), reads.cend(), sub_region5);
     auto reads_in_sub_region6 = overlap_range(reads.cbegin(), reads.cend(), sub_region6);
     
-    REQUIRE(std::distance(reads_in_sub_region1.first, reads_in_sub_region1.second) == 3);
-    REQUIRE(std::distance(reads_in_sub_region2.first, reads_in_sub_region2.second) == 2);
-    REQUIRE(std::distance(reads_in_sub_region3.first, reads_in_sub_region3.second) == 5);
-    REQUIRE(std::distance(reads_in_sub_region4.first, reads_in_sub_region4.second) == 4);
-    REQUIRE(std::distance(reads_in_sub_region5.first, reads_in_sub_region5.second) == 4);
-    REQUIRE(std::distance(reads_in_sub_region6.first, reads_in_sub_region5.second) == 1);
+    REQUIRE(size(reads_in_sub_region1) == 3);
+    REQUIRE(size(reads_in_sub_region2) == 2);
+    REQUIRE(size(reads_in_sub_region3) == 5);
+    REQUIRE(size(reads_in_sub_region4) == 4);
+    REQUIRE(size(reads_in_sub_region5) == 4);
+    REQUIRE(size(reads_in_sub_region6) == 1);
     
     REQUIRE(count_shared(reads.cbegin(), reads.cend(), sub_region1, sub_region2) == 0);
     REQUIRE(count_shared(reads.cbegin(), reads.cend(), sub_region2, sub_region3) == 2);
@@ -249,4 +249,40 @@ TEST_CASE("aligned read overlap sanity checks", "[reads]")
     REQUIRE(has_shared(reads.cbegin(), reads.cend(), sub_region4, sub_region5));
     REQUIRE(!has_shared(reads.cbegin(), reads.cend(), sub_region4, sub_region6));
     REQUIRE(has_shared(reads.cbegin(), reads.cend(), sub_region5, sub_region6));
+}
+
+TEST_CASE("can splice CigarString", "[cigar_string]")
+{
+    auto cigar = parse_cigar_string("5M1D10M3I4M");
+    
+    REQUIRE(operation_splice(cigar, 3, 10)  == parse_cigar_string("2M1D7M"));
+    REQUIRE(operation_splice(cigar, 3, 15)  == parse_cigar_string("2M1D10M2I"));
+    REQUIRE(operation_splice(cigar, 0, 10)  == parse_cigar_string("5M1D4M"));
+    REQUIRE(operation_splice(cigar, 0, 50)  == cigar);
+    REQUIRE(operation_splice(cigar, 20, 10) == parse_cigar_string("3M"));
+    REQUIRE(operation_splice(cigar, 20, 3)  == parse_cigar_string("3M"));
+    REQUIRE(operation_splice(cigar, 24, 10) == parse_cigar_string(""));
+    REQUIRE(operation_splice(cigar, 16, 7)  == parse_cigar_string("3I4M"));
+}
+
+TEST_CASE("can splice reads", "[reads]")
+{
+    AlignedRead read {
+        GenomicRegion {"1", 100, 120},
+        "AAAAACCCCCCCCCCGGGTTTT",
+        AlignedRead::Qualities(23, 0),
+        parse_cigar_string("5M1D10M3I4M"),
+        0,
+        AlignedRead::FlagData {}
+    };
+    
+    REQUIRE(splice(read, GenomicRegion {"1", 100, 105}).get_sequence() == "AAAAA");
+    REQUIRE(splice(read, GenomicRegion {"1", 100, 106}).get_sequence() == "AAAAA");
+    REQUIRE(splice(read, GenomicRegion {"1", 100, 107}).get_sequence() == "AAAAAC");
+    REQUIRE(splice(read, GenomicRegion {"1", 100, 110}).get_sequence() == "AAAAACCCC");
+    REQUIRE(splice(read, GenomicRegion {"1", 100, 116}).get_sequence() == "AAAAACCCCCCCCCC");
+    REQUIRE(splice(read, GenomicRegion {"1", 100, 117}).get_sequence() == "AAAAACCCCCCCCCCGGGT");
+    REQUIRE(splice(read, GenomicRegion {"1", 100, 118}).get_sequence() == "AAAAACCCCCCCCCCGGGTT");
+    REQUIRE(splice(read, GenomicRegion {"1", 100, 119}).get_sequence() == "AAAAACCCCCCCCCCGGGTTT");
+    REQUIRE(splice(read, GenomicRegion {"1", 100, 120}) == read);
 }

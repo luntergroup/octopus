@@ -14,13 +14,17 @@
 #include "i_candidate_variant_generator.h"
 
 class GenomicRegion;
+class ReferenceGenome;
 class Variant;
 class AlignedRead;
 
 class OnlineCandidateVariantGenerator : public ICandidateVariantGenerator
 {
 public:
-    OnlineCandidateVariantGenerator() = default;
+    using SizeType = GenomicRegion::SizeType;
+    
+    OnlineCandidateVariantGenerator() = delete;
+    explicit OnlineCandidateVariantGenerator(ReferenceGenome& the_reference, SizeType max_variant_size=100);
     ~OnlineCandidateVariantGenerator() override = default;
     
     OnlineCandidateVariantGenerator(const OnlineCandidateVariantGenerator&)            = default;
@@ -29,6 +33,10 @@ public:
     OnlineCandidateVariantGenerator& operator=(OnlineCandidateVariantGenerator&&)      = default;
     
     std::vector<Variant> get_candidates(const GenomicRegion& a_region) override;
+
+private:
+    ReferenceGenome& the_reference_;
+    SizeType max_variant_size_;
 };
 
 #endif /* defined(__Octopus__online_candidate_variant_generator__) */

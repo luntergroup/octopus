@@ -17,6 +17,11 @@
 #include "htslib_read_facade.h"
 #include "read_manager.h"
 #include "aligned_read.h"
+#include "read_utils.h"
+#include "mappable_algorithms.h"
+
+using std::cout;
+using std::endl;
 
 //TEST_CASE("read_benchmark", "[read,benchmark]")
 //{
@@ -42,8 +47,6 @@
 //    
 //    std::cout << "Without vptr: " << without_vptr << "us" << std::endl;
 //    std::cout << "With vptr: " << with_vptr << "us" << std::endl;
-//    
-//    REQUIRE(true);
 //}
 
 //// Best time:
@@ -83,7 +86,28 @@
 //    auto copy_time = benchmark<std::chrono::microseconds>(f_lots_of_copies, 100).count();
 //    
 //    //std::cout << "Copy: " << copy_time << "us" << std::endl;
+//}
+
+//TEST_CASE("reader coverage calculation benchmarks", "[read,benchmark]")
+//{
+//    ReadManager a_read_manager {std::vector<std::string> {human_1000g_bam1}};
 //    
-//    REQUIRE(true);
+//    GenomicRegion a_region {"1", 1000000, 2000000};
+//    
+//    auto sample = a_read_manager.get_sample_ids().front();
+//    
+//    auto reads = a_read_manager.fetch_reads(sample, a_region);
+//    
+//    auto f_min_coverage = [&reads, &a_region] () {
+//        unsigned coverage = min_coverage(reads, a_region);
+//    };
+//    
+//    auto min_coverage_time = benchmark<std::chrono::nanoseconds>(f_min_coverage, 100).count();
+//    auto time_per_position = min_coverage_time / size(a_region);
+//    auto time_per_read     = min_coverage_time / reads.size();
+//    
+//    cout << "total time: " << min_coverage_time << "ns" << endl;
+//    cout << "time per position: " << time_per_position << "ns" <<  endl;
+//    cout << "time per read: " << time_per_read << "ns" <<  endl;
 //}
 

@@ -8,7 +8,6 @@
 
 #include "alignment_candidate_variant_generator.h"
 
-#include <algorithm> // std::for_each, std::sort, std::unique, std::lower_bound, std::upper_bound
 #include <iterator>  // std::cbegin etc, std::distance
 #include <boost/range/combine.hpp>
 
@@ -16,15 +15,18 @@
 #include "aligned_read.h"
 #include "variant.h"
 #include "cigar_string.h"
-#include "region_algorithms.h"
+#include "mappable_algorithms.h"
 
 AlignmentCandidateVariantGenerator::AlignmentCandidateVariantGenerator(ReferenceGenome& the_reference,
-                                                                       QualityType min_base_quality)
+                                                                       QualityType min_base_quality,
+                                                                       SizeType max_variant_size)
 :
 the_reference_ {the_reference},
-candidates_ {},
 min_base_quality_ {min_base_quality},
-are_candidates_sorted_ {true}
+max_variant_size_ {max_variant_size},
+candidates_ {},
+are_candidates_sorted_ {true},
+max_seen_candidate_size_ {}
 {}
 
 void AlignmentCandidateVariantGenerator::add_read(const AlignedRead& a_read)
@@ -45,10 +47,9 @@ void AlignmentCandidateVariantGenerator::add_read(const AlignedRead& a_read)
         
         switch (cigar_operation.get_flag()) {
             case CigarOperation::ALIGNMENT_MATCH:
-                get_variants_in_match_range(GenomicRegion {contig_name, ref_index, ref_index + op_size},
-                                            sequence_begin + read_index,
-                                            sequence_begin + read_index + op_size,
-                                            qualities_begin + read_index);
+                get_snvs_in_match_range(GenomicRegion {contig_name, ref_index, ref_index + op_size},
+                                        sequence_begin + read_index, sequence_begin + read_index + op_size,
+                                        qualities_begin + read_index);
                 
                 read_index += op_size;
                 ref_index  += op_size;
@@ -113,9 +114,16 @@ void AlignmentCandidateVariantGenerator::add_read(const AlignedRead& a_read)
     }
 }
 
-void AlignmentCandidateVariantGenerator::add_reads(ReadIterator first, ReadIterator last)
+void AlignmentCandidateVariantGenerator::add_reads(std::vector<AlignedRead>::const_iterator first, std::vector<AlignedRead>::const_iterator last)
 {
-    candidates_.reserve(estimate_num_variants(std::distance(first, last)));
+    candidates_.reserve(candidates_.size() + estimate_num_variants(std::distance(first, last)));
+    std::for_each(first, last, [this] (const auto& a_read ) { add_read(a_read); });
+    candidates_.shrink_to_fit();
+}
+
+void AlignmentCandidateVariantGenerator::add_reads(MappableSet<AlignedRead>::const_iterator first, MappableSet<AlignedRead>::const_iterator last)
+{
+    candidates_.reserve(candidates_.size() + estimate_num_variants(std::distance(first, last)));
     std::for_each(first, last, [this] (const auto& a_read ) { add_read(a_read); });
     candidates_.shrink_to_fit();
 }
@@ -129,9 +137,10 @@ std::vector<Variant> AlignmentCandidateVariantGenerator::get_candidates(const Ge
         are_candidates_sorted_ = true;
     }
     
-    auto range = overlap_range(std::cbegin(candidates_), std::cend(candidates_), a_region);
+    auto overlapped = overlap_range(std::cbegin(candidates_), std::cend(candidates_), a_region,
+                                    max_seen_candidate_size_);
     
-    return std::vector<Variant> {range.first, range.second};
+    return std::vector<Variant> {overlapped.begin(), overlapped.end()};
 }
 
 void AlignmentCandidateVariantGenerator::reserve(std::size_t n)
@@ -145,8 +154,8 @@ void AlignmentCandidateVariantGenerator::clear()
 }
 
 void AlignmentCandidateVariantGenerator::
-get_variants_in_match_range(const GenomicRegion& the_region, SequenceIterator first_base,
-                            SequenceIterator last_base, QualitiesIterator first_quality)
+get_snvs_in_match_range(const GenomicRegion& the_region, SequenceIterator first_base,
+                        SequenceIterator last_base, QualitiesIterator first_quality)
 {
     auto ref_segment = the_reference_.get_sequence(the_region);
     auto ref_index   = get_begin(the_region);

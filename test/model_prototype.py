@@ -1,5 +1,6 @@
-from math import log, exp, copysign
-from scipy.special import digamma
+from math import log, exp, copysign, gamma, factorial
+from scipy.special import digamma, gammaln
+import operator
 
 def log_sum_exp(xs):
     m = max(xs)
@@ -47,3 +48,37 @@ def dirichlet_pdf(x, alpha):
     return (gamma(sum(alpha)) /
             reduce(operator.mul, [gamma(a) for a in alpha]) *
             reduce(operator.mul, [x[i]**(alpha[i]-1.0) for i in range(len(alpha))]))
+
+def dirichlet_alpha_ml(p, s, n):
+    l = len(p)
+    a = [1.0 / l] * l
+    m = [1.0 / l] * l
+    for i in range(n):
+        v = 0
+        for j in range(l):
+            v += m[j] * (log(p[j]) - digamma(s * m[j]))
+        for k in range(l):
+            a[k] = idigamma(log(p[k]) - v)
+            m[k] = a[k] / sum(a)
+    return a
+
+def multinomial_coefficient(xs):
+    return exp(gammaln(sum(xs) + 1) - sum([gammaln(x + 1) for x in xs]))
+
+def multinomial_pdf(xs, ps):
+    r = 1.0
+    for i in range(len(xs)):
+        r *= pow(ps[i], xs[i])
+    return multinomial_coefficient(xs) * r
+
+def dirichlet_multinomial_pdf(zs, alphas):
+    z0 = sum(zs)
+    a0 = sum(alphas)
+    zm = reduce(operator.mul, [factorial(z) for z in zs])
+    
+    g = 1.0
+    for i in range(len(zs)):
+        g *= gamma(zs[i] + alphas[i]) / gamma(alphas[i])
+    
+    return (factorial(z0) / zm) * (gamma(a0) / gamma(z0 + a0)) * g
+

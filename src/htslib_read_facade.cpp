@@ -16,26 +16,26 @@
 
 #include <iostream> // TEST
 
-HtslibReadFacade::HtslibReadFacade(const fs::path& the_file_path)
+HtslibReadFacade::HtslibReadFacade(const fs::path& file_path)
 :
-the_filepath_ {the_file_path},
-the_file_ {hts_open(the_filepath_.string().c_str(), "r"), htslib_file_deleter},
-the_header_ {sam_hdr_read(the_file_.get()), htslib_header_deleter},
-the_index_ {sam_index_load(the_file_.get(), the_filepath_.string().c_str()), htslib_index_deleter},
+file_path_ {file_path},
+hts_file_ {hts_open(file_path_.string().c_str(), "r"), htslib_file_deleter},
+hts_header_ {sam_hdr_read(hts_file_.get()), htslib_header_deleter},
+hts_index_ {sam_index_load(hts_file_.get(), file_path_.string().c_str()), htslib_index_deleter},
 hts_tid_map_ {},
 contig_name_map_ {},
 sample_id_map_ {}
 {
-    if (the_file_ == nullptr) {
-        throw std::runtime_error {"could not open " + the_filepath_.string()};
+    if (hts_file_ == nullptr) {
+        throw std::runtime_error {"could not open " + file_path_.string()};
     }
     
-    if (the_header_ == nullptr) {
-        throw std::runtime_error {"could not open file header for " + the_filepath_.string()};
+    if (hts_header_ == nullptr) {
+        throw std::runtime_error {"could not open file header for " + file_path_.string()};
     }
     
-    if (the_index_ == nullptr) {
-        throw std::runtime_error {"could not open index file for " + the_filepath_.string()};
+    if (hts_index_ == nullptr) {
+        throw std::runtime_error {"could not open index file for " + file_path_.string()};
     }
     
     std::tie(hts_tid_map_, contig_name_map_) = get_htslib_tid_maps();
@@ -49,18 +49,18 @@ void HtslibReadFacade::close()
 
 unsigned HtslibReadFacade::get_num_reference_contigs() noexcept
 {
-    return the_header_->n_targets;
+    return hts_header_->n_targets;
 }
 
 HtslibReadFacade::SizeType HtslibReadFacade::get_reference_contig_size(const std::string& contig_name)
 {
-    return the_header_->target_len[get_htslib_tid(contig_name)];
+    return hts_header_->target_len[get_htslib_tid(contig_name)];
 }
 
 uint64_t HtslibReadFacade::get_num_mapped_reads(const std::string& reference_contig_name) const
 {
     uint64_t num_mapped, num_unmapped;
-    hts_idx_get_stat(the_index_.get(), get_htslib_tid(reference_contig_name), &num_mapped, &num_unmapped);
+    hts_idx_get_stat(hts_index_.get(), get_htslib_tid(reference_contig_name), &num_mapped, &num_unmapped);
     return num_mapped;
 }
 
@@ -138,7 +138,7 @@ std::vector<GenomicRegion> HtslibReadFacade::get_possible_regions_in_file()
         contig_name = get_reference_contig_name(hts_tid);
         // CRAM files don't seem to have the same index stats as BAM files so
         // we don't know which contigs have been mapped to
-        if (the_file_->is_cram || get_num_mapped_reads(contig_name) > 0) {
+        if (hts_file_->is_cram || get_num_mapped_reads(contig_name) > 0) {
             result.emplace_back(contig_name, 0, get_reference_contig_size(contig_name));
         }
     }
@@ -150,19 +150,19 @@ std::vector<GenomicRegion> HtslibReadFacade::get_possible_regions_in_file()
 
 HtslibReadFacade::ReadGroupToSampleIdMap HtslibReadFacade::get_read_group_to_sample_id_map() const
 {
-    std::string the_header_text (the_header_->text, the_header_->l_text);
+    std::string the_header_text (hts_header_->text, hts_header_->l_text);
     std::stringstream ss {the_header_text};
     std::string line {};
     ReadGroupToSampleIdMap result {};
     unsigned num_read_groups {0};
     
     while (std::getline(ss, line, '\n')) {
-        if (is_type(line, Read_group_tag)) {
+        if (is_tag_type(line, Read_group_tag)) {
             if (!(has_tag(line, Read_group_id_tag) && has_tag(line, Sample_id_tag))) {
                 // The SAM specification does not specify the sample id tag 'SM' as a required
                 // field, however we can't do much without it.
                 throw std::runtime_error {"no read group tag in sample (SM) header line in file " +
-                                        the_filepath_.string()};
+                                           file_path_.string()};
             }
             result.emplace(get_tag_value(line, Read_group_id_tag), get_tag_value(line, Sample_id_tag));
             ++num_read_groups;
@@ -170,7 +170,7 @@ HtslibReadFacade::ReadGroupToSampleIdMap HtslibReadFacade::get_read_group_to_sam
     }
     
     if (num_read_groups == 0) {
-        throw std::runtime_error {"no read groups found in file " + the_filepath_.string()};
+        throw std::runtime_error {"no read groups found in file " + file_path_.string()};
     }
     
     return result;
@@ -186,8 +186,8 @@ HtslibReadFacade::get_htslib_tid_maps()
     result.reserve(get_num_reference_contigs());
     
     for (HtsTidType hts_tid {0}; hts_tid < get_num_reference_contigs(); ++hts_tid) {
-        hts_tid_map_.emplace(the_header_->target_name[hts_tid], hts_tid);
-        result.emplace(hts_tid, the_header_->target_name[hts_tid]);
+        hts_tid_map_.emplace(hts_header_->target_name[hts_tid], hts_tid);
+        result.emplace(hts_tid, hts_header_->target_name[hts_tid]);
     }
     
     return {hts_tid_map_, result};
@@ -195,10 +195,10 @@ HtslibReadFacade::get_htslib_tid_maps()
 
 std::string HtslibReadFacade::get_reference_contig_name(HtsTidType hts_tid) const
 {
-    return std::string(the_header_->target_name[hts_tid]);
+    return std::string(hts_header_->target_name[hts_tid]);
 }
 
-bool HtslibReadFacade::is_type(const std::string& header_line, const char* tag) const
+bool HtslibReadFacade::is_tag_type(const std::string& header_line, const char* tag) const
 {
     return header_line.compare(1, 2, tag) == 0;
 }
@@ -237,22 +237,22 @@ HtslibReadFacade::HtsTidType HtslibReadFacade::get_htslib_tid(const std::string&
 HtslibReadFacade::HtslibIterator::HtslibIterator(HtslibReadFacade& hts_facade, const GenomicRegion& a_region)
 :
 hts_facade_ {hts_facade},
-the_iterator_ {sam_itr_querys(hts_facade_.the_index_.get(), hts_facade_.the_header_.get(),
+hts_iterator_ {sam_itr_querys(hts_facade_.hts_index_.get(), hts_facade_.hts_header_.get(),
                               to_string(a_region).c_str()), htslib_iterator_deleter},
-the_bam1_ {bam_init1(), htslib_bam1_deleter}
+hts_bam1_ {bam_init1(), htslib_bam1_deleter}
 {
-    if (the_iterator_ == nullptr) {
-        throw std::runtime_error {"could not load read iterator for " + hts_facade.the_filepath_.string()};
+    if (hts_iterator_ == nullptr) {
+        throw std::runtime_error {"could not load read iterator for " + hts_facade.file_path_.string()};
     }
     
-    if (the_bam1_ == nullptr) {
-        throw std::runtime_error {"error creating bam1 for " + hts_facade.the_filepath_.string()};
+    if (hts_bam1_ == nullptr) {
+        throw std::runtime_error {"error creating bam1 for " + hts_facade.file_path_.string()};
     }
 }
 
 bool HtslibReadFacade::HtslibIterator::operator++()
 {
-    return sam_itr_next(hts_facade_.the_file_.get(), the_iterator_.get(), the_bam1_.get()) >= 0;
+    return sam_itr_next(hts_facade_.hts_file_.get(), hts_iterator_.get(), hts_bam1_.get()) >= 0;
 }
 
 std::pair<AlignedRead, HtslibReadFacade::SampleIdType> HtslibReadFacade::HtslibIterator::operator*() const
@@ -261,24 +261,24 @@ std::pair<AlignedRead, HtslibReadFacade::SampleIdType> HtslibReadFacade::HtslibI
     
     if (the_qualities.empty() || the_qualities[0] == 0xff) {
         throw std::runtime_error {"improper sequence data in read " + get_read_name() +
-                                    " in file " + hts_facade_.the_filepath_.string()};
+                                    " in file " + hts_facade_.file_path_.string()};
     }
     
     auto the_cigar_string = make_cigar_string();
     
     if (the_cigar_string.empty()) {
         throw std::runtime_error {"improper cigar data in read " + get_read_name() +
-                                    " in file " + hts_facade_.the_filepath_.string()};
+                                    " in file " + hts_facade_.file_path_.string()};
     }
     
-    auto c = the_bam1_->core;
+    auto c = hts_bam1_->core;
     
-    auto read_start = static_cast<AlignedRead::SizeType>(get_soft_clipped_read_begin(the_cigar_string, c.pos));
+    auto read_start = static_cast<AlignedRead::SizeType>(soft_clipped_read_begin(the_cigar_string, c.pos));
     
     if (c.mtid == -1) { // TODO: check if this is always true
         return {AlignedRead {
             GenomicRegion {get_contig_name(c.tid), read_start, read_start +
-                get_reference_size<GenomicRegion::SizeType>(the_cigar_string)},
+                reference_size<GenomicRegion::SizeType>(the_cigar_string)},
             get_sequence(),
             std::move(the_qualities),
             std::move(the_cigar_string),
@@ -288,7 +288,7 @@ std::pair<AlignedRead, HtslibReadFacade::SampleIdType> HtslibReadFacade::HtslibI
     } else {
         return {AlignedRead {
             GenomicRegion {get_contig_name(c.tid), read_start, read_start +
-                get_reference_size<GenomicRegion::SizeType>(the_cigar_string)},
+                reference_size<GenomicRegion::SizeType>(the_cigar_string)},
             get_sequence(),
             std::move(the_qualities),
             std::move(the_cigar_string),
@@ -304,12 +304,12 @@ std::pair<AlignedRead, HtslibReadFacade::SampleIdType> HtslibReadFacade::HtslibI
 
 HtslibReadFacade::SizeType HtslibReadFacade::HtslibIterator::get_read_start() const noexcept
 {
-    return static_cast<HtslibReadFacade::SizeType>(the_bam1_->core.pos);
+    return static_cast<HtslibReadFacade::SizeType>(hts_bam1_->core.pos);
 }
 
 uint32_t HtslibReadFacade::HtslibIterator::get_sequence_length() const noexcept
 {
-    return the_bam1_->core.l_qseq;
+    return hts_bam1_->core.l_qseq;
 }
 
 char HtslibReadFacade::HtslibIterator::get_base(uint8_t* a_htslib_sequence, uint32_t index) const noexcept
@@ -323,19 +323,16 @@ HtslibReadFacade::SequenceType HtslibReadFacade::HtslibIterator::get_sequence() 
     SequenceType result {};
     auto length = get_sequence_length();
     result.reserve(length);
-    
-    auto bam_seq = bam_get_seq(the_bam1_);
-    
+    auto bam_seq = bam_get_seq(hts_bam1_);
     for (uint32_t i {0}; i < length; ++i) {
         result.push_back(get_base(bam_seq, i));
     }
-    
     return result;
 }
 
 std::vector<uint_fast8_t> HtslibReadFacade::HtslibIterator::get_qualities() const
 {
-    auto qualities = bam_get_qual(the_bam1_);
+    auto qualities = bam_get_qual(hts_bam1_);
     auto length = get_sequence_length();
     std::vector<uint_fast8_t> result {};
     result.reserve(length);
@@ -345,12 +342,12 @@ std::vector<uint_fast8_t> HtslibReadFacade::HtslibIterator::get_qualities() cons
 
 uint32_t HtslibReadFacade::HtslibIterator::get_cigar_length() const noexcept
 {
-    return the_bam1_->core.n_cigar;
+    return hts_bam1_->core.n_cigar;
 }
 
 CigarString HtslibReadFacade::HtslibIterator::make_cigar_string() const
 {
-    auto cigar_operations = bam_get_cigar(the_bam1_);
+    auto cigar_operations = bam_get_cigar(hts_bam1_);
     auto length = get_cigar_length();
     
     std::vector<CigarOperation> result;
@@ -365,16 +362,16 @@ CigarString HtslibReadFacade::HtslibIterator::make_cigar_string() const
 
 std::string HtslibReadFacade::HtslibIterator::get_read_name() const
 {
-    return std::string {bam_get_qname(the_bam1_)};
+    return std::string {bam_get_qname(hts_bam1_)};
 }
 
 std::string HtslibReadFacade::HtslibIterator::get_read_group() const
 {
-    const auto ptr = bam_aux_get(the_bam1_.get(), Read_group_tag);
+    const auto ptr = bam_aux_get(hts_bam1_.get(), Read_group_tag);
     
     if (ptr == nullptr) {
         throw std::runtime_error {"could not get read group from read " + get_read_name() +
-                                    " in file " + hts_facade_.the_filepath_.string()};
+                                    " in file " + hts_facade_.file_path_.string()};
     }
     
     return std::string {bam_aux2Z(ptr)};
@@ -388,7 +385,7 @@ std::string HtslibReadFacade::HtslibIterator::get_contig_name(HtslibReadFacade::
 // Some of these flags will need to be changes when htslib catches up to the new SAM spec
 AlignedRead::FlagData HtslibReadFacade::HtslibIterator::get_flags() const
 {
-    auto c = the_bam1_->core;
+    auto c = hts_bam1_->core;
     AlignedRead::FlagData result {};
     
     result.is_marked_multiple_read_template       = (c.flag & BAM_FPAIRED)        != 0;
@@ -407,7 +404,7 @@ AlignedRead::FlagData HtslibReadFacade::HtslibIterator::get_flags() const
 
 AlignedRead::NextSegment::FlagData HtslibReadFacade::HtslibIterator::get_next_segment_flags() const
 {
-    auto c = the_bam1_->core;
+    auto c = hts_bam1_->core;
     AlignedRead::NextSegment::FlagData result {};
     
     result.is_marked_unmapped       = (c.flag & BAM_FMUNMAP)   != 0;

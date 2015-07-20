@@ -42,6 +42,20 @@ namespace detail
     static std::string donna_bam_name2 {"356_006_sorted_with_labels.bam"};
     static std::string donna_bam_name3 {"357_005_sorted_with_labels.bam"};
     static std::string donna_bam_name4 {"357_006_sorted_with_labels.bam"};
+    
+    // hiv data
+    static std::string hiv_dir {"hiv/"};
+    static std::string hiv_reference_dir {"references/"};
+    static std::string hiv_reads_dir {"reads/alignments/"};
+    static std::string hiv_reference_name {"B.FR.83.HXB2_LAI_IIIB_BRU.K03455.fasta"};
+    static std::string hiv_bam_name1 {"10065_1_28_1_B.FR.83.HXB2_LAI_IIIB_BRU.K03455_bwa.bam"};
+    static std::string hiv_bam_name2 {"10065_1_28_2_B.FR.83.HXB2_LAI_IIIB_BRU.K03455_bwa.bam"};
+    static std::string hiv_bam_name3 {"12370_1_1_1_B.FR.83.HXB2_LAI_IIIB_BRU.K03455_bwa.bam"};
+    static std::string hiv_bam_name4 {"12370_1_1_2_B.FR.83.HXB2_LAI_IIIB_BRU.K03455_bwa.bam"};
+    static std::string hiv_bam_name5 {"12426_1_49_1_B.FR.83.HXB2_LAI_IIIB_BRU.K03455_bwa.bam"};
+    static std::string hiv_bam_name6 {"12426_1_49_2_B.FR.83.HXB2_LAI_IIIB_BRU.K03455_bwa.bam"};
+    static std::string hiv_bam_name7 {"13591_1_16_1_B.FR.83.HXB2_LAI_IIIB_BRU.K03455_bwa.bam"};
+    static std::string hiv_bam_name8 {"13591_1_16_2_B.FR.83.HXB2_LAI_IIIB_BRU.K03455_bwa.bam"};
 } // end namespace detail
 
 // Full paths
@@ -76,6 +90,8 @@ static std::string ecoli_bam {detail::home_dir + detail::genomics_dir + detail::
 
 static std::string sample_vcf {detail::home_dir + detail::genomics_dir + detail::sample_vcf_name};
 
+// donna
+
 static std::string donna_bam1 {detail::home_dir + detail::genomics_dir + detail::donna_dir +
     detail::donna_bam_name1};
 static std::string donna_bam2 {detail::home_dir + detail::genomics_dir + detail::donna_dir +
@@ -84,5 +100,27 @@ static std::string donna_bam3 {detail::home_dir + detail::genomics_dir + detail:
     detail::donna_bam_name3};
 static std::string donna_bam4 {detail::home_dir + detail::genomics_dir + detail::donna_dir +
     detail::donna_bam_name4};
+
+// hiv
+
+static std::string hiv_reference {detail::home_dir + detail::genomics_dir + detail::hiv_dir +
+    detail::hiv_reference_dir + detail::hiv_reference_name};
+
+static std::string hiv_bam1 {detail::home_dir + detail::genomics_dir + detail::hiv_dir +
+    detail::hiv_reads_dir + detail::hiv_bam_name1};
+static std::string hiv_bam2 {detail::home_dir + detail::genomics_dir + detail::hiv_dir +
+    detail::hiv_reads_dir + detail::hiv_bam_name2};
+static std::string hiv_bam3 {detail::home_dir + detail::genomics_dir + detail::hiv_dir +
+    detail::hiv_reads_dir + detail::hiv_bam_name3};
+static std::string hiv_bam4 {detail::home_dir + detail::genomics_dir + detail::hiv_dir +
+    detail::hiv_reads_dir + detail::hiv_bam_name4};
+static std::string hiv_bam5 {detail::home_dir + detail::genomics_dir + detail::hiv_dir +
+    detail::hiv_reads_dir + detail::hiv_bam_name5};
+static std::string hiv_bam6 {detail::home_dir + detail::genomics_dir + detail::hiv_dir +
+    detail::hiv_reads_dir + detail::hiv_bam_name6};
+static std::string hiv_bam7 {detail::home_dir + detail::genomics_dir + detail::hiv_dir +
+    detail::hiv_reads_dir + detail::hiv_bam_name7};
+static std::string hiv_bam8 {detail::home_dir + detail::genomics_dir + detail::hiv_dir +
+    detail::hiv_reads_dir + detail::hiv_bam_name8};
 
 #endif

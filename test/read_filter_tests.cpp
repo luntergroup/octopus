@@ -18,7 +18,10 @@
 #include "read_manager.h"
 #include "read_filter.h"
 #include "read_filters.h"
+#include "context_iterators.h"
 //#include "read_filter_factory.h"
+
+using Octopus::ContextBackInserter;
 
 TEST_CASE("read_filter_test", "[read_filters]")
 {
@@ -30,7 +33,7 @@ TEST_CASE("read_filter_test", "[read_filters]")
     
     GenomicRegion a_region {"X", 1000000, 1010000};
     
-    std::vector<AlignedRead> some_reads = a_read_manager.fetch_reads(the_sample_id, a_region);
+    auto some_reads = a_read_manager.fetch_reads(the_sample_id, a_region);
     
     if (!std::is_sorted(some_reads.begin(), some_reads.end())) {
         std::sort(some_reads.begin(), some_reads.end());
@@ -62,7 +65,7 @@ TEST_CASE("read_filter_test", "[read_filters]")
                                ContextBackInserter(good_reads),
                                ContextBackInserter(bad_reads));
     
-    // TODO: check these numbers are correct!
+    // TODO: check these numbers are actually correct!
     REQUIRE(good_reads.size() == 649);
     REQUIRE(bad_reads.size() == 20);
 }

@@ -12,7 +12,7 @@
 #include <iterator>  // std::back_inserter
 
 #include "string_utils.h"
-#include "region_algorithms.h"
+#include "mappable_algorithms.h"
 
 const GenomicRegion& Allele::get_region() const noexcept
 {
@@ -24,7 +24,7 @@ const Allele::SequenceType& Allele::get_sequence() const noexcept
     return the_sequence_;
 }
 
-bool is_reference_allele(const Allele& an_allele, ReferenceGenome& the_reference)
+bool is_reference(const Allele& an_allele, ReferenceGenome& the_reference)
 {
     return an_allele.get_sequence() == the_reference.get_sequence(an_allele.get_region());
 }

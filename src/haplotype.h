@@ -51,7 +51,7 @@ public:
     
     void operator+=(const Haplotype& other);
     
-    friend bool is_less_complex(const Haplotype& lhs, const Haplotype& rhs);
+    friend bool is_less_complex(const Haplotype& lhs, const Haplotype& rhs) noexcept;
     
     void print_explicit_alleles() const; // TEST
 private:
@@ -158,10 +158,12 @@ inline std::ostream& operator<<(std::ostream& os, const Haplotype& a_haplotype)
     return os;
 }
 
-inline bool is_less_complex(const Haplotype& lhs, const Haplotype& rhs)
+inline bool is_less_complex(const Haplotype& lhs, const Haplotype& rhs) noexcept
 {
     return lhs.the_explicit_alleles_.size() < rhs.the_explicit_alleles_.size();
 }
+
+bool is_reference(const Haplotype& a_haplotype, ReferenceGenome& the_reference);
 
 void unique_least_complex(std::vector<Haplotype>& haplotypes);
 

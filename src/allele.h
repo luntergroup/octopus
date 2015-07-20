@@ -79,7 +79,7 @@ inline std::ostream& operator<<(std::ostream& os, const Allele& an_allele)
     return os;
 }
 
-bool is_reference_allele(const Allele& an_allele, ReferenceGenome& the_reference);
+bool is_reference(const Allele& an_allele, ReferenceGenome& the_reference);
 
 Allele get_reference_allele(const GenomicRegion& a_region, ReferenceGenome& the_reference);
 

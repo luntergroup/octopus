@@ -40,7 +40,7 @@ public:
     using SampleReadMap = std::unordered_map<SampleIdType, std::vector<AlignedRead>>;
     
     ReadManager() = default;
-    explicit ReadManager(std::vector<std::string> read_file_paths, unsigned Max_open_files = 20);
+    explicit ReadManager(std::vector<std::string> read_file_paths, unsigned Max_open_files=20);
     
     ReadManager(const ReadManager&)            = delete;
     ReadManager& operator=(const ReadManager&) = delete;
@@ -51,6 +51,7 @@ public:
     std::vector<SampleIdType> get_sample_ids() const;
     std::vector<AlignedRead> fetch_reads(const SampleIdType& a_sample_id, const GenomicRegion& a_region);
     SampleReadMap fetch_reads(const std::vector<SampleIdType>& sample_ids, const GenomicRegion& a_region);
+    SampleReadMap fetch_reads(const GenomicRegion& a_region);
     
 private:
     using OpenReaderMap           = std::map<fs::path, ReadReader, decltype(file_size_compare)>;

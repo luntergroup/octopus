@@ -29,7 +29,7 @@ public:
     using SampleIdToReadsMap = IReadReaderImpl::SampleIdToReadsMap;
     
     ReadReader() = delete;
-    explicit ReadReader(const fs::path& read_file_path, std::unique_ptr<IReadReaderImpl> the_impl);
+    explicit ReadReader(const fs::path& file_path, std::unique_ptr<IReadReaderImpl> the_impl);
     
     ReadReader(const ReadReader&)            = delete;
     ReadReader& operator=(const ReadReader&) = delete;
@@ -47,18 +47,19 @@ public:
     void close();
     
 private:
-    fs::path read_file_path_;
+    fs::path file_path_;
     std::unique_ptr<IReadReaderImpl> the_impl_;
 };
 
-inline ReadReader::ReadReader(const fs::path& read_file_path, std::unique_ptr<IReadReaderImpl> the_impl)
-:read_file_path_ {read_file_path},
- the_impl_ {std::move(the_impl)}
+inline ReadReader::ReadReader(const fs::path& file_path, std::unique_ptr<IReadReaderImpl> the_impl)
+:
+file_path_ {file_path},
+the_impl_ {std::move(the_impl)}
 {}
 
 inline const fs::path& ReadReader::get_read_file_path() const noexcept
 {
-    return read_file_path_;
+    return file_path_;
 }
 
 inline std::vector<ReadReader::SampleIdType> ReadReader::get_sample_ids()

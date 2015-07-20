@@ -24,7 +24,7 @@
 #include "alignment_candidate_variant_generator.h"
 #include "haplotype.h"
 #include "haplotype_tree.h"
-#include "region_algorithms.h"
+#include "mappable_algorithms.h"
 #include "read_filter.h"
 #include "read_filters.h"
 

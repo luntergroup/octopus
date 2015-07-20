@@ -15,11 +15,28 @@
 #include <numeric>     // std::accumulate, std::iota
 #include <algorithm>   // std::max, std::max_element, std::transform
 #include <type_traits> // std::enable_if, std::is_integral
+#include <iterator>    // std::distance
 
 #include <boost/math/special_functions/gamma.hpp>
 #include <boost/math/special_functions/factorials.hpp>
 #include <boost/math/special_functions/sign.hpp>
 #include <boost/math/special_functions/digamma.hpp>
+
+template <typename InputIterator>
+double mean(InputIterator first, InputIterator last)
+{
+    return std::accumulate(first, last, 0.0) / std::distance(first, last);
+}
+
+template <typename InputIterator>
+double stdev(InputIterator first, InputIterator last)
+{
+    auto m = mean(first, last);
+    auto n = std::distance(first, last);
+    std::vector<double> diff(n);
+    std::transform(first, last, diff.begin(), std::bind2nd(std::minus<double>(), m));
+    return std::sqrt(std::inner_product(diff.begin(), diff.end(), diff.begin(), 0.0) / n);
+}
 
 template <typename RealType>
 inline constexpr RealType exp_maclaurin(RealType x) {
@@ -118,8 +135,8 @@ log_multinomial_coefficient(Iterator first, Iterator last)
     std::vector<RealType> denoms(std::distance(first, last));
     using IntegerType = typename Iterator::value_type;
     std::transform(first, last, denoms.begin(), log_factorial<RealType, IntegerType>);
-    return log_factorial<RealType>(std::accumulate(first, last, 0)) -
-            std::accumulate(denoms.cbegin(), denoms.cend(), static_cast<RealType>(0));
+    return log_factorial<RealType, IntegerType>(std::accumulate(first, last, IntegerType {})) -
+                std::accumulate(denoms.cbegin(), denoms.cend(), RealType {});
 }
 
 template <typename RealType, typename IntegerType>
@@ -135,7 +152,36 @@ inline
 IntegerType
 multinomial_coefficient(Iterator first, Iterator last)
 {
-    return static_cast<IntegerType>(std::exp(log_multinomial_coefficient<RealType, IntegerType>(first, last)));
+    return static_cast<IntegerType>(std::exp(log_multinomial_coefficient<RealType>(first, last)));
+}
+
+template <typename IntegerType, typename RealType>
+inline
+RealType
+multinomial_pdf(const std::vector<IntegerType>& z, const std::vector<RealType>& p)
+{
+    RealType r {1};
+    
+    for (std::size_t i {}; i < z.size(); ++i) {
+        r *= std::pow(p[i], z[i]);
+    }
+    
+    return multinomial_coefficient<IntegerType, RealType>(z.cbegin(), z.cend()) * r;
+}
+
+// Returns approximate y such that digamma(y) = x
+template <typename RealType>
+RealType digamma_inv(RealType x)
+{
+    RealType l {1.0};
+    auto y = std::exp(x);
+    
+    while (l > 10e-8) {
+        y += l * boost::math::sign(x - boost::math::digamma<RealType>(y));
+        l /= 2;
+    }
+    
+    return y;
 }
 
 template <typename RealType>
@@ -192,19 +238,33 @@ RealType beta_binomial(RealType k, RealType n, RealType alpha, RealType beta)
     return dirichlet_multinomial<RealType>(k, n - k, alpha, beta);
 }
 
-// Returns approximate y such that digamma(y) = x
 template <typename RealType>
-RealType digamma_inv(RealType x)
+std::vector<RealType>
+maximum_likelihood_dirichlet_params(std::vector<RealType>& expected_probabilities, RealType precision,
+                                    unsigned max_iterations)
 {
-    RealType l {1.0};
-    auto y = std::exp(x);
+    auto l = expected_probabilities.size();
+    std::vector<RealType> alphas(l, 1.0 / l), means(l, 1.0 / l), log_expected_probabilities(l);
     
-    while (l > 10e-8) {
-        y += l * boost::math::sign(x - boost::math::digamma<RealType>(y));
-        l /= 2;
+    std::transform(expected_probabilities.cbegin(), expected_probabilities.cend(), log_expected_probabilities.begin(),
+                   [] (RealType p) { return std::log(p); });
+    
+    RealType v;
+    std::size_t j {}, k {};
+    
+    for (unsigned n {}; n < max_iterations; ++n) {
+        v = 0;
+        for (j = 0; j < l; ++j) {
+            v += means[j] * (log_expected_probabilities[j] - boost::math::digamma<RealType>(precision * means[j]));
+        }
+        
+        for (k = 0; k < l; ++k) {
+            alphas[k] = digamma_inv<RealType>(log_expected_probabilities[k] - v);
+            means[k]  = alphas[k] / std::accumulate(alphas.cbegin(), alphas.cend(), RealType {});
+        }
     }
     
-    return y;
+    return alphas;
 }
 
 template <typename MapType>

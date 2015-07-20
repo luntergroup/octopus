@@ -15,6 +15,13 @@
 
 namespace http = boost::network::http;
 
+OnlineCandidateVariantGenerator::OnlineCandidateVariantGenerator(ReferenceGenome& the_reference,
+                                                                 SizeType max_variant_size)
+:
+the_reference_ {the_reference},
+max_variant_size_ {max_variant_size}
+{}
+
 std::vector<Variant> OnlineCandidateVariantGenerator::get_candidates(const GenomicRegion& a_region)
 {
 //    <?xml version="1.0" encoding="UTF-8"?>
@@ -35,7 +42,7 @@ std::vector<Variant> OnlineCandidateVariantGenerator::get_candidates(const Genom
 //    </Query>
     
     try {
-        //http::client::request request("http://www.boost.org/");
+//        http::client::request request("http://www.boost.org/");
 //        http::client client;
 //        http::client::response response = client.get(request);
 //        std::cout << body(response) << std::endl;

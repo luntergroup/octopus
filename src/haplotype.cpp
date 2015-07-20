@@ -9,12 +9,12 @@
 #include "haplotype.h"
 
 #include <algorithm> // std::for_each, std::binary_search, std::equal_range, std::sort,
-                     // std::find_if_not, std::adjacent_find, std::unique
-#include <iterator>  // std::cbegin, std::cend, std::distance
+                     // std::nth_element, std::find_if_not, std::adjacent_find, std::unique
+#include <iterator>  // std::cbegin, std::cend, std::distance, std::next
 
 #include "reference_genome.h"
 #include "genomic_region.h"
-#include "region_algorithms.h"
+#include "mappable_algorithms.h"
 
 Haplotype::Haplotype(ReferenceGenome& the_reference)
 :
@@ -61,10 +61,10 @@ bool Haplotype::contains(const Allele& an_allele) const
         
         auto overlapped_range = overlap_range(std::cbegin(the_explicit_alleles_),
                                               std::cend(the_explicit_alleles_), an_allele);
-        if (std::distance(overlapped_range.first, overlapped_range.second) == 1 &&
-            ::contains(*overlapped_range.first, an_allele)) {
+        if (std::distance(overlapped_range.begin(), overlapped_range.end()) == 1 &&
+            ::contains(*overlapped_range.begin(), an_allele)) {
             return an_allele.get_sequence() ==
-                    get_subsequence(*overlapped_range.first,get_overlapped(*overlapped_range.first, an_allele));
+                    get_subsequence(*overlapped_range.begin(), get_overlapped(*overlapped_range.begin(), an_allele));
         }
         
         return get_sequence(an_allele.get_region()) == an_allele.get_sequence();
@@ -106,43 +106,48 @@ Haplotype::SequenceType Haplotype::get_sequence(const GenomicRegion& a_region) c
     auto the_region_bounded_by_alleles = get_region_bounded_by_explicit_alleles();
     
     SequenceType result {};
+    result.reserve(size(a_region));
     
     if (begins_before(a_region, the_region_bounded_by_alleles)) {
         result += the_reference_->get_sequence(get_left_overhang(a_region, the_region_bounded_by_alleles));
     }
     
-    auto overlapped_explicit_alleles = overlap_range(std::cbegin(the_explicit_alleles_),
-                                                     std::cend(the_explicit_alleles_), a_region);
+    // we know the alleles are bidirectionally sorted as it is a condition of them being on a single haplotype
+    auto overlapped_explicit_alleles = bases(overlap_range(std::cbegin(the_explicit_alleles_),
+                                                           std::cend(the_explicit_alleles_), a_region,
+                                                           MappableRangeOrder::BidirectionallySorted));
     
-    if (overlapped_explicit_alleles.first != std::cend(the_explicit_alleles_)) {
-        if (::contains(*overlapped_explicit_alleles.first, a_region)) {
-            result += get_subsequence(*overlapped_explicit_alleles.first, a_region);
+    if (overlapped_explicit_alleles.begin() != std::cend(the_explicit_alleles_)) {
+        if (::contains(*overlapped_explicit_alleles.begin(), a_region)) {
+            result += get_subsequence(*overlapped_explicit_alleles.begin(), a_region);
             return result;
-        } else if (begins_before(*overlapped_explicit_alleles.first, a_region)) {
-            result += get_subsequence(*overlapped_explicit_alleles.first,
-                                      get_overlapped(*overlapped_explicit_alleles.first, a_region));
-            ++overlapped_explicit_alleles.first;
+        } else if (begins_before(*overlapped_explicit_alleles.begin(), a_region)) {
+            result += get_subsequence(*overlapped_explicit_alleles.begin(),
+                                      get_overlapped(*overlapped_explicit_alleles.begin(), a_region));
+            overlapped_explicit_alleles.advance_begin(1);
         }
     }
     
     bool region_ends_before_last_overlapped_allele {false};
     
-    if (overlapped_explicit_alleles.second != std::cend(the_explicit_alleles_) &&
-        overlapped_explicit_alleles.second != overlapped_explicit_alleles.first &&
-        ends_before(a_region, *overlapped_explicit_alleles.second)) {
-        --overlapped_explicit_alleles.second;
+    if (!empty(overlapped_explicit_alleles) &&
+        overlapped_explicit_alleles.end() != std::cend(the_explicit_alleles_) &&
+        ends_before(a_region, *overlapped_explicit_alleles.end())) {
+        overlapped_explicit_alleles.advance_end(-1);
         region_ends_before_last_overlapped_allele = true;
     }
     
-    result += get_sequence_bounded_by_explicit_alleles(overlapped_explicit_alleles.first,
-                                                       overlapped_explicit_alleles.second);
+    result += get_sequence_bounded_by_explicit_alleles(overlapped_explicit_alleles.begin(),
+                                                       overlapped_explicit_alleles.end());
     
     if (region_ends_before_last_overlapped_allele) {
-        result += get_subsequence(*overlapped_explicit_alleles.second,
-                                  get_overlapped(*overlapped_explicit_alleles.second, a_region));
+        result += get_subsequence(*overlapped_explicit_alleles.end(),
+                                  get_overlapped(*overlapped_explicit_alleles.end(), a_region));
     } else if (ends_before(the_region_bounded_by_alleles, a_region)) {
         result += the_reference_->get_sequence(get_right_overhang(a_region, the_region_bounded_by_alleles));
     }
+    
+    result.shrink_to_fit();
     
     return result;
 }
@@ -178,24 +183,33 @@ Haplotype::SequenceType Haplotype::get_sequence_bounded_by_explicit_alleles() co
                                                     std::cend(the_explicit_alleles_));
 }
 
+// non-member methods
+
+bool is_reference(const Haplotype& a_haplotype, ReferenceGenome& the_reference)
+{
+    return a_haplotype.get_sequence() == the_reference.get_sequence(a_haplotype.get_region());
+}
+
 void unique_least_complex(std::vector<Haplotype>& haplotypes)
 {
     std::sort(haplotypes.begin(), haplotypes.end());
     
     auto first_equal = haplotypes.begin();
     auto last_equal  = haplotypes.begin();
-    auto last = haplotypes.end();
+    auto last        = haplotypes.end();
     
     while (true) {
         first_equal = std::adjacent_find(first_equal, last);
         
         if (first_equal == last) break;
         
-        last_equal = std::find_if_not(first_equal + 2, last, [first_equal] (const auto& haplotype) {
-            return haplotype == *first_equal;
-        });
+        // skips 2 as std::next(first_equal, 1) is a duplicate
+        last_equal = std::find_if_not(std::next(first_equal, 2), last,
+                                      [first_equal] (const auto& haplotype) {
+                                          return haplotype == *first_equal;
+                                      });
         
-        std::sort(first_equal, last_equal, is_less_complex);
+        std::nth_element(first_equal, first_equal, last_equal, is_less_complex);
         
         first_equal = last_equal;
     }

@@ -36,11 +36,11 @@ using std::uint8_t;
 using std::uint32_t;
 using std::int32_t;
 
-auto htslib_file_deleter     = [] (htsFile* the_file) { hts_close(the_file); };
-auto htslib_header_deleter   = [] (bam_hdr_t* the_header) { bam_hdr_destroy(the_header); };
-auto htslib_index_deleter    = [] (hts_idx_t* the_index) { hts_idx_destroy(the_index); };
-auto htslib_iterator_deleter = [] (hts_itr_t* the_iterator) { sam_itr_destroy(the_iterator); };
-auto htslib_bam1_deleter     = [] (bam1_t* b) { bam_destroy1(b); };
+auto htslib_file_deleter     = [] (htsFile* file)       { hts_close(file); };
+auto htslib_header_deleter   = [] (bam_hdr_t* header)   { bam_hdr_destroy(header); };
+auto htslib_index_deleter    = [] (hts_idx_t* index)    { hts_idx_destroy(index); };
+auto htslib_iterator_deleter = [] (hts_itr_t* iterator) { sam_itr_destroy(iterator); };
+auto htslib_bam1_deleter     = [] (bam1_t* b)           { bam_destroy1(b); };
 
 class HtslibReadFacade : public IReadReaderImpl
 {
@@ -51,7 +51,7 @@ public:
     using SizeType           = IReadReaderImpl::SizeType;
     
     HtslibReadFacade() = delete;
-    HtslibReadFacade(const fs::path& the_file_path);
+    HtslibReadFacade(const fs::path& file_path);
     ~HtslibReadFacade() noexcept override = default;
     
     HtslibReadFacade(const HtslibReadFacade&)            = delete;
@@ -60,9 +60,9 @@ public:
     HtslibReadFacade& operator=(HtslibReadFacade&&)      = default;
     
     std::vector<SampleIdType> get_sample_ids() override;
-    std::vector<std::string> get_read_groups_in_sample(const SampleIdType& a_sample_id) override;
-    std::size_t get_num_reads(const GenomicRegion& a_region) override;
-    SampleIdToReadsMap fetch_reads(const GenomicRegion& a_region) override;
+    std::vector<std::string> get_read_groups_in_sample(const SampleIdType& sample_id) override;
+    std::size_t get_num_reads(const GenomicRegion& region) override;
+    SampleIdToReadsMap fetch_reads(const GenomicRegion& region) override;
     unsigned get_num_reference_contigs() noexcept override;
     std::vector<std::string> get_reference_contig_names() override;
     SizeType get_reference_contig_size(const std::string& contig_name) override;
@@ -87,8 +87,8 @@ private:
         
     private:
         HtslibReadFacade& hts_facade_;
-        std::unique_ptr<hts_itr_t, decltype(htslib_iterator_deleter)> the_iterator_;
-        std::unique_ptr<bam1_t, decltype(htslib_bam1_deleter)> the_bam1_;
+        std::unique_ptr<hts_itr_t, decltype(htslib_iterator_deleter)> hts_iterator_;
+        std::unique_ptr<bam1_t, decltype(htslib_bam1_deleter)> hts_bam1_;
         
         SizeType get_read_start() const noexcept;
         uint32_t get_sequence_length() const noexcept;
@@ -109,14 +109,14 @@ private:
     using ReadGroupToSampleIdMap = std::unordered_map<std::string, SampleIdType>;
     
     // No getting around these constants. I'll put them here so they are in plain sight.
-    static constexpr const char* Read_group_tag {"RG"};
+    static constexpr const char* Read_group_tag    {"RG"};
     static constexpr const char* Read_group_id_tag {"ID"};
-    static constexpr const char* Sample_id_tag {"SM"};
+    static constexpr const char* Sample_id_tag     {"SM"};
     
-    fs::path the_filepath_;
-    std::unique_ptr<htsFile, decltype(htslib_file_deleter)> the_file_;
-    std::unique_ptr<bam_hdr_t, decltype(htslib_header_deleter)> the_header_;
-    std::unique_ptr<hts_idx_t, decltype(htslib_index_deleter)> the_index_;
+    fs::path file_path_;
+    std::unique_ptr<htsFile, decltype(htslib_file_deleter)> hts_file_;
+    std::unique_ptr<bam_hdr_t, decltype(htslib_header_deleter)> hts_header_;
+    std::unique_ptr<hts_idx_t, decltype(htslib_index_deleter)> hts_index_;
     ContigNameToHtsTidMap hts_tid_map_;
     HtsTidToContigNameMap contig_name_map_;
     ReadGroupToSampleIdMap sample_id_map_;
@@ -126,7 +126,7 @@ private:
     std::pair<ContigNameToHtsTidMap, HtsTidToContigNameMap> get_htslib_tid_maps();
     HtsTidType get_htslib_tid(const std::string& reference_contig_name) const;
     // These methods have const char* parameters so they can be declared constexpr
-    bool is_type(const std::string& header_line, const char* tag) const;
+    bool is_tag_type(const std::string& header_line, const char* tag) const;
     bool has_tag(const std::string& header_line, const char* tag) const;
     std::string get_tag_value(const std::string& line, const char* tag) const;
     uint64_t get_num_mapped_reads(const std::string& reference_contig_name) const;

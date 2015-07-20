@@ -16,7 +16,7 @@
 #include "reference_genome.h"
 #include "reference_genome_factory.h"
 #include "genomic_region.h"
-#include "region_algorithms.h"
+#include "mappable_algorithms.h"
 #include "allele.h"
 #include "variant.h"
 #include "variant_utils.h"
@@ -268,10 +268,10 @@ TEST_CASE("overlap_range includes insertions on left boundry, but not the right"
     auto overlapped3 = overlap_range(variants.cbegin(), variants.cend(), region3);
     auto overlapped4 = overlap_range(variants.cbegin(), variants.cend(), region4);
     
-    REQUIRE(std::distance(overlapped1.first, overlapped1.second) == 1);
-    REQUIRE(std::distance(overlapped2.first, overlapped2.second) == 0);
-    REQUIRE(std::distance(overlapped3.first, overlapped3.second) == 1);
-    REQUIRE(std::distance(overlapped4.first, overlapped4.second) == 1);
+    REQUIRE(size(overlapped1) == 1);
+    REQUIRE(size(overlapped2) == 0);
+    REQUIRE(size(overlapped3) == 1);
+    REQUIRE(size(overlapped4) == 1);
 }
 
 TEST_CASE("inner_distance respects insertion lhs ordering rule", "[variant]")

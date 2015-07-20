@@ -14,6 +14,7 @@
 
 #include "common.h"
 #include "variant.h"
+#include "mappable_set.h"
 
 class AlignedRead;
 class GenomicRegion;
@@ -21,15 +22,15 @@ class GenomicRegion;
 class ICandidateVariantGenerator
 {
 public:
-    using RealType     = Octopus::ProbabilityType;
-    using ReadIterator = std::vector<AlignedRead>::const_iterator;
+    using RealType = Octopus::ProbabilityType;
     
     // pure virtual functions
     virtual std::vector<Variant> get_candidates(const GenomicRegion&) = 0;
     virtual ~ICandidateVariantGenerator() = default;
     
     virtual void add_read(const AlignedRead&) {};
-    virtual void add_reads(ReadIterator first, ReadIterator last) {};
+    virtual void add_reads(std::vector<AlignedRead>::const_iterator first, std::vector<AlignedRead>::const_iterator last) {};
+    virtual void add_reads(MappableSet<AlignedRead>::const_iterator first, MappableSet<AlignedRead>::const_iterator last) {};
     virtual void reserve(std::size_t n) {};
     virtual void clear() {};
 };

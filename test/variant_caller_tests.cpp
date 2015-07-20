@@ -13,7 +13,7 @@
 
 #include "test_common.h"
 #include "reference_genome.h"
-#include "region_algorithms.h"
+#include "mappable_algorithms.h"
 #include "reference_genome_factory.h"
 #include "test_common.h"
 #include "read_manager.h"
@@ -84,12 +84,12 @@ TEST_CASE("can call", "variant_caller")
     unsigned max_haplotypes {128};
     HaplotypePhaser phaser {human, the_model, ploidy, max_haplotypes};
     
-    Octopus::BayesianGenotypeModel::ReadRanges<ReadManager::SampleIdType,
-        std::move_iterator<decltype(good_reads)::mapped_type::iterator>> read_ranges {};
-    for (const auto& sample : samples) {
-        read_ranges.emplace(sample, std::make_pair(std::make_move_iterator(good_reads[sample].begin()),
-                                                   std::make_move_iterator(good_reads[sample].end())));
-    }
+//    Octopus::BayesianGenotypeModel::ReadRanges<ReadManager::SampleIdType,
+//        std::move_iterator<decltype(good_reads)::mapped_type::iterator>> read_ranges {};
+//    for (const auto& sample : samples) {
+//        read_ranges.emplace(sample, std::make_pair(std::make_move_iterator(good_reads[sample].begin()),
+//                                                   std::make_move_iterator(good_reads[sample].end())));
+//    }
     
 //    Haplotype ref {human, a_region};
 //    ref.push_back(candidates.at(0).get_reference_allele());
@@ -163,8 +163,10 @@ TEST_CASE("can call2", "variant_caller")
     //auto a_region = parse_region("6:29909020-29909269", human);
     //auto a_region = parse_region("6:29909330-29909670", human);
     //auto a_region = parse_region("6:29912399-29912528", human);
-    auto a_region = parse_region("6:29913709-29914116", human);
+    //auto a_region = parse_region("6:29913709-29914116", human);
     //auto a_region = parse_region("6:29912084-29912570", human);
+    //auto a_region = parse_region("6:29913600-29914159", human);
+    auto a_region = parse_region("6:29913849-29913951", human);
     
     auto reads = a_read_manager.fetch_reads(samples, a_region);
     
@@ -185,19 +187,19 @@ TEST_CASE("can call2", "variant_caller")
     
     auto candidates = candidate_generator.get_candidates(a_region);
     
-    unsigned ploidy {3};
+    unsigned ploidy {2};
     ReadModel a_read_model {ploidy};
     VariationalBayesGenotypeModel the_model {a_read_model, ploidy};
     
-    unsigned max_haplotypes {64};
+    unsigned max_haplotypes {128};
     HaplotypePhaser phaser {human, the_model, ploidy, max_haplotypes};
     
-    Octopus::BayesianGenotypeModel::ReadRanges<ReadManager::SampleIdType,
-    std::move_iterator<decltype(good_reads)::mapped_type::iterator>> read_ranges {};
-    for (const auto& sample : samples) {
-        read_ranges.emplace(sample, std::make_pair(std::make_move_iterator(good_reads[sample].begin()),
-                                                   std::make_move_iterator(good_reads[sample].end())));
-    }
+//    Octopus::BayesianGenotypeModel::ReadRanges<ReadManager::SampleIdType,
+//    std::move_iterator<decltype(good_reads)::mapped_type::iterator>> read_ranges {};
+//    for (const auto& sample : samples) {
+//        read_ranges.emplace(sample, std::make_pair(std::make_move_iterator(good_reads[sample].begin()),
+//                                                   std::make_move_iterator(good_reads[sample].end())));
+//    }
     
 //    phaser.put_data(read_ranges, candidates.cbegin(), candidates.cend());
 //    
@@ -212,7 +214,7 @@ TEST_CASE("can call2", "variant_caller")
 //            cout << haplotype_count.second << endl;
 //        }
 //    }
-//    
+    
 //    for (const auto& sample : samples) {
 //        for (const auto& allele_posterior : allele_posteriors.at(sample)) {
 //            cout << sample << " " << allele_posterior.first << " " << allele_posterior.second << endl;
@@ -257,12 +259,12 @@ TEST_CASE("reference allele posteriors in regions with no reads are the referenc
     unsigned max_haplotypes {64};
     HaplotypePhaser phaser {human, the_model, ploidy, max_haplotypes};
     
-    Octopus::BayesianGenotypeModel::ReadRanges<ReadManager::SampleIdType,
-    std::move_iterator<decltype(good_reads)::mapped_type::iterator>> read_ranges {};
-    for (const auto& sample : samples) {
-        read_ranges.emplace(sample, std::make_pair(std::make_move_iterator(good_reads[sample].begin()),
-                                                   std::make_move_iterator(good_reads[sample].end())));
-    }
+//    Octopus::BayesianGenotypeModel::ReadRanges<ReadManager::SampleIdType,
+//    std::move_iterator<decltype(good_reads)::mapped_type::iterator>> read_ranges {};
+//    for (const auto& sample : samples) {
+//        read_ranges.emplace(sample, std::make_pair(std::make_move_iterator(good_reads[sample].begin()),
+//                                                   std::make_move_iterator(good_reads[sample].end())));
+//    }
     
 //    phaser.put_data(read_ranges, candidates.cbegin(), candidates.cend());
 //    

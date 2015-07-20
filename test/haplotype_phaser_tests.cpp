@@ -13,7 +13,7 @@
 
 #include "test_common.h"
 #include "reference_genome.h"
-#include "region_algorithms.h"
+#include "mappable_algorithms.h"
 #include "reference_genome_factory.h"
 #include "test_common.h"
 #include "read_manager.h"
@@ -27,6 +27,7 @@
 #include "haplotype.h"
 #include "genotype.h"
 #include "read_model.h"
+#include "haplotype_prior_model.h"
 #include "bayesian_genotype_model.h"
 #include "variational_bayes_genotype_model.h"
 #include "haplotype_phaser.h"
@@ -68,7 +69,7 @@ TEST_CASE("HaplotypePhaser phases when the data supports one phase", "[haplotype
     unsigned max_haplotypes {128};
     HaplotypePhaser phaser {human, the_model, ploidy, max_haplotypes};
     
-    Octopus::BayesianGenotypeModel::ReadRanges<ReadManager::SampleIdType,
+    Octopus::HaplotypePhaser::ReadRanges<ReadManager::SampleIdType,
     std::move_iterator<decltype(reads)::mapped_type::iterator>> read_ranges {};
     for (const auto& sample : samples) {
         read_ranges.emplace(sample, std::make_pair(std::make_move_iterator(reads[sample].begin()),
@@ -80,8 +81,13 @@ TEST_CASE("HaplotypePhaser phases when the data supports one phase", "[haplotype
 //    
 //    REQUIRE(phased_regions.size() == 1);
 //    
-//    auto sorted_haplotypes = get_value_sorted_keys(phased_regions.front().the_latent_posteriors.haplotype_pseudo_counts);
+//    const auto& posterior_counts = phased_regions.front().the_latent_posteriors.haplotype_pseudo_counts;
+//    auto sorted_haplotypes = value_sorted_keys(posterior_counts);
 //    
+//    REQUIRE(is_reference(sorted_haplotypes[0], human));
+//    REQUIRE(posterior_counts.at(sorted_haplotypes[1]) > 1);
+//    REQUIRE(posterior_counts.at(sorted_haplotypes[2]) > 1);
+//    REQUIRE(posterior_counts.at(sorted_haplotypes[3]) < 0.5);
 }
 
 TEST_CASE("HaplotypePhaser breaks haplotypes when the data does not support one phase", "[haplotype_phaser]")
@@ -93,7 +99,8 @@ TEST_CASE("HaplotypePhaser breaks haplotypes when the data does not support one 
     
     auto samples = a_read_manager.get_sample_ids();
     
-    auto a_region = parse_region("14:53674675-53674780", human);
+    auto a_region = parse_region("4:79282976-79283139", human);
+    //auto a_region = parse_region("4:79283040-79283139", human);
     
     auto reads = a_read_manager.fetch_reads(samples, a_region);
     
@@ -113,14 +120,19 @@ TEST_CASE("HaplotypePhaser breaks haplotypes when the data does not support one 
     unsigned max_haplotypes {128};
     HaplotypePhaser phaser {human, the_model, ploidy, max_haplotypes};
     
-    Octopus::BayesianGenotypeModel::ReadRanges<ReadManager::SampleIdType,
-    std::move_iterator<decltype(reads)::mapped_type::iterator>> read_ranges {};
-    for (const auto& sample : samples) {
-        read_ranges.emplace(sample, std::make_pair(std::make_move_iterator(reads[sample].begin()),
-                                                   std::make_move_iterator(reads[sample].end())));
-    }
-    
-    //phaser.put_data(read_ranges, candidates.cbegin(), candidates.cend());
+//    phaser.put_data(read_ranges, candidates.cbegin(), candidates.cend());
+//    auto phased_regions = phaser.get_phased_regions(HaplotypePhaser::SteamingStatus::Finished);
+//    
+//    auto genotype_posteriors = phased_regions.front().the_latent_posteriors.genotype_probabilities.at(samples.front());
+//    
+//    auto sorted_genotypes = value_sorted_keys(genotype_posteriors);
+//    
+//    for (unsigned i = 0; i < 2; ++i) {
+//        sorted_genotypes.at(i).at(0).print_explicit_alleles();
+//        cout << endl;
+//        sorted_genotypes.at(i).at(1).print_explicit_alleles();
+//        cout << genotype_posteriors.at(sorted_genotypes.at(i)) << endl;
+//    }
 }
 
 TEST_CASE("HaplotypePhaser can use data from other samples to help phase uncertain phasing in other samples", "[haplotype_phaser]")
@@ -152,14 +164,19 @@ TEST_CASE("HaplotypePhaser can use data from other samples to help phase uncerta
     unsigned max_haplotypes {128};
     HaplotypePhaser phaser {human, the_model, ploidy, max_haplotypes};
     
-    Octopus::BayesianGenotypeModel::ReadRanges<ReadManager::SampleIdType,
+    Octopus::HaplotypePhaser::ReadRanges<ReadManager::SampleIdType,
     std::move_iterator<decltype(reads)::mapped_type::iterator>> read_ranges {};
     for (const auto& sample : samples) {
         read_ranges.emplace(sample, std::make_pair(std::make_move_iterator(reads[sample].begin()),
                                                    std::make_move_iterator(reads[sample].end())));
     }
     
-    //phaser.put_data(read_ranges, candidates.cbegin(), candidates.cend());
+//    phaser.put_data(read_ranges, candidates.cbegin(), candidates.cend());
+//    auto phased_regions = phaser.get_phased_regions(HaplotypePhaser::SteamingStatus::Finished);
+//    
+//    REQUIRE(phased_regions.size() == 1);
+//    
+//    
 }
 
 TEST_CASE("can phase", "[haplotype_phaser]")
@@ -200,7 +217,7 @@ TEST_CASE("can phase", "[haplotype_phaser]")
     unsigned max_haplotypes {64};
     HaplotypePhaser phaser {human, the_model, ploidy, max_haplotypes};
     
-    Octopus::BayesianGenotypeModel::ReadRanges<ReadManager::SampleIdType,
+    Octopus::HaplotypePhaser::ReadRanges<ReadManager::SampleIdType,
             std::move_iterator<decltype(good_reads)::mapped_type::iterator>> read_ranges {};
     for (const auto& sample : samples) {
         read_ranges.emplace(sample, std::make_pair(std::make_move_iterator(good_reads[sample].begin()),

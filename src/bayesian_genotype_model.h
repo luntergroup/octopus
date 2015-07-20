@@ -12,7 +12,7 @@
 #include <vector>
 #include <string>
 #include <unordered_map>
-#include <algorithm>  // std::transform, std::copy_if, std::any_of, std::binary_search
+#include <algorithm>  // std::transform, std::copy_if, std::any_of, std::binary_search, std::max_element
 #include <functional> // std::reference_wrapper
 #include <cmath>      // std::exp, std::log
 #include <cstddef>    // std::size_t
@@ -43,37 +43,40 @@ namespace BayesianGenotypeModel
     struct Latents
     {
         HaplotypePseudoCounts<RealType> haplotype_pseudo_counts;
-        GenotypeProbabilities<SampleIdType, RealType> genotype_posteriors;
+        GenotypeProbabilities<SampleIdType, RealType> genotype_probabilities;
         
         Latents() = default;
         template <typename HaplotypePseudoCounts_, typename GenotypeProbabilities_>
-        Latents(HaplotypePseudoCounts_&& haplotype_pseudo_counts, GenotypeProbabilities_&& genotype_posteriors)
+        Latents(HaplotypePseudoCounts_&& haplotype_pseudo_counts, GenotypeProbabilities_&& genotype_probabilities)
         :
         haplotype_pseudo_counts {std::forward<HaplotypePseudoCounts_>(haplotype_pseudo_counts)},
-        genotype_posteriors {std::forward<GenotypeProbabilities_>(genotype_posteriors)}
+        genotype_probabilities {std::forward<GenotypeProbabilities_>(genotype_probabilities)}
         {}
     };
     
     template <typename MapType, typename RealType>
     HaplotypePseudoCounts<RealType>
-    get_haplotype_prior_pseudo_counts(const MapType& the_haplotype_priors,
+    get_haplotype_prior_pseudo_counts(const MapType& haplotype_priors,
                                       const Haplotype& the_reference_haplotype,
                                       RealType reference_bias=1.0)
     {
         HaplotypePseudoCounts<RealType> result {};
-        result.reserve(the_haplotype_priors.size());
+        result.reserve(haplotype_priors.size());
         
-        reference_bias = 1.0;
+        std::vector<RealType> expected_probabilities(haplotype_priors.size());
+        std::transform(haplotype_priors.cbegin(), haplotype_priors.cend(), expected_probabilities.begin(),
+                       [] (const auto& p) { return p.second; });
         
-        RealType uniformity {0};//(1 - reference_bias) * 0.4};
-        static const RealType concentration {-std::log(10.0)};
+        static const constexpr unsigned max_iterations {200};
         
-        for (const auto& haplotype_prior : the_haplotype_priors) {
-            result.emplace(haplotype_prior.first, uniformity + digamma_inv(std::log(haplotype_prior.second) +
-                                                                           std::log(reference_bias) + concentration));
+        std::vector<RealType> alphas = maximum_likelihood_dirichlet_params(expected_probabilities,
+                                                                           reference_bias, max_iterations);
+        
+        std::size_t i {};
+        for (const auto& haplotype_prior : haplotype_priors) {
+            result.emplace(haplotype_prior.first, alphas[i]);
+            ++i;
         }
-        
-        result[the_reference_haplotype] += reference_bias;
         
 //        for (auto& count : result) {
 //            //std::cout << count.second << std::endl;
@@ -231,6 +234,21 @@ namespace BayesianGenotypeModel
     }
     
     template <typename RealType>
+    std::unordered_map<Haplotype, RealType>
+    expected_haplotype_occurences(const HaplotypePseudoCounts<RealType>& prior_counts,
+                                  const HaplotypePseudoCounts<RealType>& posterior_counts)
+    {
+        std::unordered_map<Haplotype, RealType> result {};
+        result.reserve(prior_counts.size());
+        
+        for (const auto& prior_count : prior_counts) {
+            result.emplace(prior_count.first, posterior_counts.at(prior_count.first) - prior_count.second);
+        }
+        
+        return result;
+    }
+    
+    template <typename RealType>
     RealType median_haplotype_population_probability(const HaplotypePseudoCounts<RealType>& haplotype_pseudo_counts)
     {
         std::vector<RealType> values(haplotype_pseudo_counts.size());
@@ -243,12 +261,35 @@ namespace BayesianGenotypeModel
         std::size_t n {values.size() / 2};
         std::nth_element(values.begin(), values.begin() + n, values.end());
         
-        std::cout << values[n] << std::endl;
-        
         return (values.size() % 2 == 0) ?
             (values[n] + values[n + 1]) / (2 * std::accumulate(values.cbegin(), values.cend(), 0))
         :
             values[n] / std::accumulate(values.cbegin(), values.cend(), 0);
+    }
+    
+    template <typename RealType>
+    Genotype<Haplotype>
+    most_probable(const SampleGenotypeProbabilities<RealType>& genotype_probabilities)
+    {
+        return std::max_element(std::cbegin(genotype_probabilities), std::cend(genotype_probabilities),
+                                [] (const auto& lhs, const auto& rhs) {
+                                    return lhs.second < rhs.second;
+                                })->first;
+    }
+    
+    template <typename SampleIdType, typename RealType>
+    std::unordered_map<SampleIdType, Genotype<Haplotype>>
+    most_probable(const GenotypeProbabilities<SampleIdType, RealType>& genotype_probabilities)
+    {
+        std::unordered_map<SampleIdType, Genotype<Haplotype>> result {};
+        result.reserve(genotype_probabilities.size());
+        
+        for (const auto& sample_genotype_probabilities : genotype_probabilities) {
+            result.emplace(sample_genotype_probabilities.first,
+                           most_probable(sample_genotype_probabilities.second));
+        }
+        
+        return result;
     }
     
 } // end namespace BayesianGenotypeModel
