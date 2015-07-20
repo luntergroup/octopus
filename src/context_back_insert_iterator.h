@@ -39,10 +39,41 @@ public:
 };
 
 template <class Container>
-inline
 ContextBackInsertIterator<Container> ContextBackInserter(Container& x)
 {
     return ContextBackInsertIterator<Container>(x);
+}
+
+template <typename Container>
+class ContextInsertIterator : public std::iterator<std::output_iterator_tag, void, void, void, void>
+{
+protected:
+    Container* container;
+    
+public:
+    using container_type = Container;
+    explicit ContextInsertIterator (Container& x) : container(std::addressof(x)) {}
+    ContextInsertIterator<Container>& operator= (const typename Container::value_type& value)
+    { container->insert(value); return *this; }
+    ContextInsertIterator<Container>& operator= (typename Container::value_type&& value)
+    { container->insert(std::move(value)); return *this; }
+    ContextInsertIterator<Container>& operator* ()
+    { return *this; }
+    ContextInsertIterator<Container>& operator++ ()
+    { return *this; }
+    ContextInsertIterator<Container> operator++ (int)
+    { return *this; }
+    
+    typename container_type::const_iterator begin() const { return container->begin(); }
+    typename container_type::const_iterator end() const { return container->end(); }
+    typename container_type::const_iterator cbegin() const { return container->cbegin(); }
+    typename container_type::const_iterator cend() const { return container->cend(); }
+};
+
+template <class Container>
+ContextInsertIterator<Container> ContextInserter(Container& x)
+{
+    return ContextInsertIterator<Container>(x);
 }
 
 #endif

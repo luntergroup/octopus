@@ -39,6 +39,8 @@ public:
     public:
         struct FlagData
         {
+            FlagData() = default;
+            
             bool is_marked_unmapped;
             bool is_marked_reverse_mapped;
         };
@@ -125,7 +127,6 @@ public:
     void zero_back_qualities(SizeType num_bases) noexcept;
     
     bool is_chimeric() const noexcept;
-    
     bool is_marked_all_segments_in_read_aligned() const;
     bool is_marked_multiple_read_template() const;
     bool is_marked_unmapped() const;

@@ -19,7 +19,6 @@
 #include "region_algorithms.h"
 
 template <typename MappableMap, typename MappableType>
-inline
 std::size_t count_overlapped(const MappableMap& mappables, const MappableType& m,
                              MappableRangeOrder order=MappableRangeOrder::ForwardSorted)
 {
@@ -33,7 +32,6 @@ std::size_t count_overlapped(const MappableMap& mappables, const MappableType& m
 }
 
 template <typename MappableMap, typename MappableType1, typename MappableType2>
-inline
 bool has_shared(const MappableMap& mappables, const MappableType1& lhs, const MappableType2& rhs,
                 MappableRangeOrder order=MappableRangeOrder::ForwardSorted)
 {
@@ -45,7 +43,6 @@ bool has_shared(const MappableMap& mappables, const MappableType1& lhs, const Ma
 }
 
 template <typename MappableMap, typename MappableType1, typename MappableType2>
-inline
 std::size_t
 count_shared(const MappableMap& mappables, const MappableType1& lhs, const MappableType2& rhs,
              MappableRangeOrder order=MappableRangeOrder::ForwardSorted)
@@ -91,7 +88,6 @@ find_first_shared(const MappableMap& mappables, ForwardIterator first, ForwardIt
 }
 
 template <typename MappableMap, typename ForwardIterator>
-inline
 std::size_t
 max_count_if_shared_with_first(const MappableMap& mappables, ForwardIterator first, ForwardIterator last,
                                MappableRangeOrder order=MappableRangeOrder::ForwardSorted)
@@ -111,7 +107,6 @@ max_count_if_shared_with_first(const MappableMap& mappables, ForwardIterator fir
 }
 
 template <typename MappableMap>
-inline
 typename MappableMap::mapped_type::const_iterator
 leftmost_sorted_mappable(const MappableMap& mappables)
 {
@@ -129,7 +124,6 @@ leftmost_sorted_mappable(const MappableMap& mappables)
 }
 
 template <typename MappableMap, typename MappableType>
-inline
 typename MappableMap::mapped_type::const_iterator
 leftmost_overlapped(const MappableMap& mappables, const MappableType& mappable,
                     MappableRangeOrder order=MappableRangeOrder::ForwardSorted)
@@ -158,7 +152,6 @@ leftmost_overlapped(const MappableMap& mappables, const MappableType& mappable,
 }
 
 template <typename MappableMap, typename MappableType>
-inline
 typename MappableMap::mapped_type::const_iterator
 rightmost_overlapped(const MappableMap& mappables, const MappableType& mappable,
                      MappableRangeOrder order=MappableRangeOrder::ForwardSorted)

@@ -126,9 +126,36 @@ TEST_CASE("minimal_encompassing returns regions which contain all elements in th
     REQUIRE(std::equal(regions.cbegin(), regions.cend(), contained_regions.begin()));
 }
 
-TEST_CASE("", "[region_algorithms]")
+TEST_CASE("find_first_after returns the first element that is_after the given region", "[region_algorithms]")
 {
+    auto regions = generate_random_regions(10000, 100, 10000);
     
+    GenomicRegion test1 {"test", 500, 600};
+    GenomicRegion test2 {"test", 2000, 2500};
+    GenomicRegion test3 {"test", 7000, 9800};
+    
+    auto after1 = *find_first_after(regions.cbegin(), regions.cend(), test1);
+    auto after2 = *find_first_after(regions.cbegin(), regions.cend(), test2);
+    auto after3 = *find_first_after(regions.cbegin(), regions.cend(), test3);
+    
+    auto true_after1 = *std::find_if(regions.cbegin(), regions.cend(),
+                                    [&test1] (const auto& region) {
+                                        return is_after(region, test1);
+                                    });
+    
+    auto true_after2 = *std::find_if(regions.cbegin(), regions.cend(),
+                                    [&test2] (const auto& region) {
+                                        return is_after(region, test2);
+                                    });
+    
+    auto true_after3 = *std::find_if(regions.cbegin(), regions.cend(),
+                                    [&test3] (const auto& region) {
+                                        return is_after(region, test3);
+                                    });
+    
+    REQUIRE(after1 == true_after1);
+    REQUIRE(after2 == true_after2);
+    REQUIRE(after3 == true_after3);
 }
 
 TEST_CASE("", "[region_algorithms]")

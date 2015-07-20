@@ -34,6 +34,7 @@
 		CA386D9D1B5AA3C80057A5A8 /* reference_genome.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA386D9C1B5AA3C80057A5A8 /* reference_genome.cpp */; };
 		CA386DA31B5AC2870057A5A8 /* cigar_string.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA386DA21B5AC2870057A5A8 /* cigar_string.cpp */; };
 		CA386DA51B5AC3850057A5A8 /* aligned_read.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA386DA41B5AC3850057A5A8 /* aligned_read.cpp */; };
+		CA386DA81B5BBCB90057A5A8 /* mappable_set_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA386DA71B5BBCB90057A5A8 /* mappable_set_tests.cpp */; };
 		CA4551621AEB06D800FDAAE8 /* 1000G_test11.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA4551611AEB06D800FDAAE8 /* 1000G_test11.cpp */; };
 		CA4551641AEB075E00FDAAE8 /* 1000G_test12.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA4551631AEB075E00FDAAE8 /* 1000G_test12.cpp */; };
 		CA4551661AEB092D00FDAAE8 /* 1000G_test13.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA4551651AEB092D00FDAAE8 /* 1000G_test13.cpp */; };
@@ -159,6 +160,8 @@
 		CA386D9C1B5AA3C80057A5A8 /* reference_genome.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = reference_genome.cpp; sourceTree = "<group>"; };
 		CA386DA21B5AC2870057A5A8 /* cigar_string.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = cigar_string.cpp; sourceTree = "<group>"; };
 		CA386DA41B5AC3850057A5A8 /* aligned_read.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = aligned_read.cpp; sourceTree = "<group>"; };
+		CA386DA61B5BBBDE0057A5A8 /* mappable_set.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = mappable_set.h; sourceTree = "<group>"; };
+		CA386DA71B5BBCB90057A5A8 /* mappable_set_tests.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = mappable_set_tests.cpp; sourceTree = "<group>"; };
 		CA4551611AEB06D800FDAAE8 /* 1000G_test11.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = 1000G_test11.cpp; sourceTree = "<group>"; };
 		CA4551631AEB075E00FDAAE8 /* 1000G_test12.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = 1000G_test12.cpp; sourceTree = "<group>"; };
 		CA4551651AEB092D00FDAAE8 /* 1000G_test13.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = 1000G_test13.cpp; sourceTree = "<group>"; };
@@ -329,6 +332,7 @@
 			children = (
 				D4907F561A8A2A9B00639203 /* reference_tests.cpp */,
 				D46094F11B550A2400AE72A1 /* region_algorithm_tests.cpp */,
+				CA386DA71B5BBCB90057A5A8 /* mappable_set_tests.cpp */,
 				CA03C2241A8C1702000D3494 /* read_tests.cpp */,
 				CAE3E2CA1AAB42C900C01B2C /* read_filter_tests.cpp */,
 				CA28EBF71AABE178009F8622 /* read_transform_tests.cpp */,
@@ -538,6 +542,7 @@
 				D4907F731A8E255200639203 /* equitable.h */,
 				D4E41DA11AD801EF0010D25D /* mappable.h */,
 				D4E41DA21AD80C1B0010D25D /* region_algorithms.h */,
+				CA386DA61B5BBBDE0057A5A8 /* mappable_set.h */,
 				D463C18B1AEF7D2200739A66 /* map_utils.h */,
 				CAFA196A1AC0D0D500F953D9 /* maths.h */,
 				CAE3E2941A9CF97700C01B2C /* storage_policies.h */,
@@ -763,6 +768,7 @@
 				CA03C1511A8C0D3D000D3494 /* htslib_read_facade.cpp in Sources */,
 				CA4551641AEB075E00FDAAE8 /* 1000G_test12.cpp in Sources */,
 				CA0B46651AE3CD6800158BBA /* read_model_benchmarks.cpp in Sources */,
+				CA386DA81B5BBCB90057A5A8 /* mappable_set_tests.cpp in Sources */,
 				CA0B466B1AE8611800158BBA /* 1000G_test2.cpp in Sources */,
 				D4907F571A8A2A9B00639203 /* reference_tests.cpp in Sources */,
 				CAE3E2B01AA2981E00C01B2C /* candidate_variant_generation_tests.cpp in Sources */,

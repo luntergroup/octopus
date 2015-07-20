@@ -109,8 +109,7 @@ template <typename BidirectionalIterator>
 template <typename InputIterator, typename OutputIterator1, typename OutputIterator2>
 std::pair<OutputIterator1, OutputIterator2>
 ReadFilter<BidirectionalIterator>::filter_reads(InputIterator first, InputIterator last,
-                                                 OutputIterator1 good_reads,
-                                                 OutputIterator2 bad_reads) const
+                                                OutputIterator1 good_reads, OutputIterator2 bad_reads) const
 {
     auto good_reads_last = good_reads;
     return std::partition_copy(first, last, good_reads, bad_reads,
