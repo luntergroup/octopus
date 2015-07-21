@@ -12,15 +12,15 @@
 #include <vector>
 #include <string>
 #include <cstring>   // std::strlen
-#include <sstream>
+#include <sstream>   // std::stringstream
 #include <algorithm> // std::equal, std::swap
 #include <iterator>  // std::next
 #include <cstddef>   // std::size_t
 
 template <typename T>
-std::vector<std::string> split(T&& s, char delim) {
+std::vector<std::string> split(T&& str, char delim) {
     std::vector<std::string> elems;
-    std::stringstream ss(s);
+    std::stringstream ss(str);
     std::string item;
     while (std::getline(ss, item, delim)) {
         elems.emplace_back(item);
@@ -29,17 +29,15 @@ std::vector<std::string> split(T&& s, char delim) {
 }
 
 template <typename T>
-bool is_prefix(const T& this_sequence, const T& that_sequence)
+bool is_prefix(const T& lhs, const T& rhs)
 {
-    return std::equal(std::cbegin(this_sequence), std::cend(this_sequence),
-                      std::cbegin(that_sequence));
+    return std::equal(std::cbegin(lhs), std::cend(lhs), std::cbegin(rhs));
 }
 
 template <typename T>
-bool is_suffix(const T& this_sequence, const T& that_sequence)
+bool is_suffix(const T& lhs, const T& rhs)
 {
-    return std::equal(std::cbegin(this_sequence), std::cend(this_sequence),
-                      std::next(std::cbegin(that_sequence)));
+    return std::equal(std::cbegin(lhs), std::cend(lhs), std::next(std::cbegin(rhs)));
 }
 
 inline std::size_t stringlen(const char* str)

@@ -44,27 +44,24 @@ void destroy_argv(std::vector<char*>& argv)
     for(std::size_t i {}; i < argv.size(); ++i) delete[] argv[i];
 }
 
-TEST_CASE("parse_search_region_option returns all chromosome regions when no region option is given", "[program_options]")
-{
-    ReferenceGenomeFactory a_factory {};
-    ReferenceGenome human {a_factory.make(human_reference_fasta)};
-    
-    po::variables_map vm;
-    
-    auto regions = parse_region_option(vm, "regions", human);
-    
-    bool has_all_chromosomes {true};
-    
-    for (const auto& chromosome : human.get_contig_names()) {
-        auto region = human.get_contig_region(chromosome);
-        
-        if (std::find(regions.cbegin(), regions.cend(), region) == regions.cend()) {
-            has_all_chromosomes = false;
-        }
-    }
-    
-    REQUIRE(has_all_chromosomes);
-}
+//TEST_CASE("get_search_regions returns all chromosome regions when no region option is given", "[program_options]")
+//{
+//    ReferenceGenomeFactory a_factory {};
+//    ReferenceGenome human {a_factory.make(human_reference_fasta)};
+//    
+//    po::variables_map vm;
+//    
+//    auto regions = Octopus::get_search_regions(vm, human);
+//    
+//    auto all_contig_names = human.get_contig_names();
+//    
+//    bool all_good = std::all_of(std::cbegin(all_contig_names), std::cend(all_contig_names),
+//                                [&human, &regions] (const auto& contig_name) {
+//                                    return regions.count(contig_name) == 1 && human.get_contig_region(contig_name) == regions.at(contig_name).front();
+//                                });
+//    
+//    REQUIRE(all_good);
+//}
 
 TEST_CASE("parse_search_region_option parses manually entered regions", "[program_options]")
 {

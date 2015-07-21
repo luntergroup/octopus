@@ -20,25 +20,10 @@ using std::cend;
 using std::crbegin;
 using std::crend;
 
-void merge_equal_variants(std::vector<Variant>& the_variants)
+void remove_duplicates(std::vector<Variant>& variants)
 {
-    auto it = std::adjacent_find(std::cbegin(the_variants), std::cend(the_variants));
-    auto last = std::cend(the_variants);
-    
-    bool has_duplicates = it != last;
-    
-    while (it != last) {
-        auto er = std::equal_range(it, std::cend(the_variants), *it);
-        
-        //TODO: update probabilities here
-        
-        it = er.second;
-    }
-    
-    if (has_duplicates) {
-        auto last_unique_it = std::unique(std::begin(the_variants), std::end(the_variants));
-        the_variants.resize(std::distance(last_unique_it, std::end(the_variants)));
-    }
+    auto it = std::unique(std::begin(variants), std::end(variants));
+    variants.erase(it, variants.end());
 }
 
 std::vector<Allele> get_reference_alleles_between_variants(const std::vector<Variant>& the_variants,

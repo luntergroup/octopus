@@ -15,6 +15,7 @@
 
 #include "test_common.h"
 #include "genomic_region.h"
+#include "aligned_read.h"
 #include "htslib_read_facade.h"
 #include "read_manager.h"
 #include "mock_objects.h"
@@ -63,7 +64,7 @@ TEST_CASE("read manager works for single file", "[read_manager]")
     REQUIRE(a_read_manager.get_num_samples() == 1);
     
     auto sample_ids = a_read_manager.get_sample_ids();
-    auto the_sample_id = sample_ids.at(0);
+    auto the_sample_id = sample_ids.front();
     
     GenomicRegion a_big_region {"1", 9990, 10000};
     GenomicRegion a_small_region {"10", 1000000, 1000100};
@@ -199,7 +200,7 @@ TEST_CASE("aligned read overlap sanity checks", "[reads]")
     GenomicRegion a_region {"4", 93235280, 93235585};
     
     auto sample_ids = a_read_manager.get_sample_ids();
-    auto the_sample_id = sample_ids.at(0);
+    auto the_sample_id = sample_ids.front();
     
     auto reads = a_read_manager.fetch_reads(the_sample_id, a_region);
     
@@ -285,4 +286,28 @@ TEST_CASE("can splice reads", "[reads]")
     REQUIRE(splice(read, GenomicRegion {"1", 100, 118}).get_sequence() == "AAAAACCCCCCCCCCGGGTT");
     REQUIRE(splice(read, GenomicRegion {"1", 100, 119}).get_sequence() == "AAAAACCCCCCCCCCGGGTTT");
     REQUIRE(splice(read, GenomicRegion {"1", 100, 120}) == read);
+}
+
+TEST_CASE("AlignedRead can be compressed/decompressed", "[reads]")
+{
+    ReadManager a_read_manager(std::vector<std::string> {human_1000g_bam1});
+    
+    GenomicRegion a_region {"4", 93235280, 93235585};
+    
+    auto sample_ids = a_read_manager.get_sample_ids();
+    auto the_sample_id = sample_ids.front();
+    
+    auto reads = a_read_manager.fetch_reads(the_sample_id, a_region);
+    
+    auto reads_copy = reads;
+    
+    for (auto& read : reads_copy) {
+        read.compress();
+    }
+    
+    for (auto& read : reads_copy) {
+        read.decompress();
+    }
+    
+    REQUIRE(reads == reads_copy);
 }

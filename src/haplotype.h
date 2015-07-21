@@ -52,6 +52,8 @@ public:
     void operator+=(const Haplotype& other);
     
     friend bool is_less_complex(const Haplotype& lhs, const Haplotype& rhs) noexcept;
+    friend bool contains(const Haplotype& lhs, const Haplotype& rhs);
+    friend Haplotype splice(const Haplotype& haplotype, const GenomicRegion& region);
     
     void print_explicit_alleles() const; // TEST
 private:
@@ -118,6 +120,18 @@ void Haplotype::push_front(T&& an_allele)
     is_cached_sequence_outdated_ = true;
 }
 
+// non-members
+
+bool contains(const Haplotype& lhs, const Haplotype& rhs);
+
+Haplotype splice(const Haplotype& haplotype, const GenomicRegion& region);
+
+bool is_reference(const Haplotype& a_haplotype, ReferenceGenome& the_reference);
+
+bool is_less_complex(const Haplotype& lhs, const Haplotype& rhs) noexcept;
+
+void unique_least_complex(std::vector<Haplotype>& haplotypes);
+
 inline bool operator==(const Haplotype& lhs, const Haplotype& rhs)
 {
     return lhs.get_region() == rhs.get_region() && lhs.get_sequence() == rhs.get_sequence();
@@ -157,15 +171,6 @@ inline std::ostream& operator<<(std::ostream& os, const Haplotype& a_haplotype)
     os << a_haplotype.get_region() << " " << a_haplotype.get_sequence();
     return os;
 }
-
-inline bool is_less_complex(const Haplotype& lhs, const Haplotype& rhs) noexcept
-{
-    return lhs.the_explicit_alleles_.size() < rhs.the_explicit_alleles_.size();
-}
-
-bool is_reference(const Haplotype& a_haplotype, ReferenceGenome& the_reference);
-
-void unique_least_complex(std::vector<Haplotype>& haplotypes);
 
 void add_to_back(const Variant& a_variant, Haplotype& a_haplotype);
 void add_to_front(const Variant& a_variant, Haplotype& a_haplotype);

@@ -729,4 +729,86 @@ find_first_shared(const MappableSet<MappableType1>& mappables, ForwardIterator f
                         });
 }
 
+template <typename MappableType1, typename MappableType2>
+MappableSet<MappableType1>
+copy_overlapped(const MappableSet<MappableType1>& mappables, const MappableType2& mappable)
+{
+    auto overlapped = mappables.overlap_range(mappable);
+    return MappableSet<MappableType1>(overlapped.begin(), overlapped.end());
+}
+
+template <typename MappableType1, typename MappableType2>
+MappableSet<MappableType1>
+copy_nonoverlapped(const MappableSet<MappableType1>& mappables, const MappableType2& mappable)
+{
+    auto num_overlapped = mappables.count_overlapped(mappable);
+    
+    if (num_overlapped == 0) return mappables;
+    
+    MappableSet<MappableType1> result {};
+    result.reserve(mappables.size() - num_overlapped);
+    
+    auto overlapped = mappables.overlap_range(mappable);
+    
+    auto base_begin = overlapped.begin().base();
+    auto base_end   = overlapped.end().base();
+    
+    result.insert(std::cbegin(mappables), base_begin);
+    
+    while (!overlapped.empty()) {
+        overlapped.advance_begin(1);
+        ++base_begin;
+        
+        if (overlapped.begin() != base_begin) {
+            result.insert(base_begin, overlapped.begin().base());
+            base_begin = overlapped.begin().base();
+        }
+    }
+    
+    result.insert(base_end, std::cend(mappables));
+    
+    return result;
+}
+
+template <typename MappableType1, typename MappableType2>
+MappableSet<MappableType1>
+copy_contained(const MappableSet<MappableType1>& mappables, const MappableType2& mappable)
+{
+    auto contained = mappables.contained_range(mappable);
+    return MappableSet<MappableType1>(contained.begin(), contained.end());
+}
+
+template <typename MappableType1, typename MappableType2>
+MappableSet<MappableType1>
+copy_noncontained(const MappableSet<MappableType1>& mappables, const MappableType2& mappable)
+{
+    auto num_overlapped = mappables.count_overlapped(mappable);
+    
+    if (num_overlapped == 0) return mappables;
+    
+    MappableSet<MappableType1> result {};
+    result.reserve(mappables.size() - num_overlapped);
+    
+    auto contained = mappables.contained_range(mappable);
+    
+    auto base_begin = contained.begin().base();
+    auto base_end   = contained.end().base();
+    
+    result.insert(std::cbegin(mappables), base_begin);
+    
+    while (!contained.empty()) {
+        contained.advance_begin(1);
+        std::advance(base_begin);
+        
+        if (contained.begin() != base_begin) {
+            result.insert(base_begin, contained.begin().base());
+            base_begin = contained.begin().base();
+        }
+    }
+    
+    result.insert(base_end, std::cend(mappables));
+    
+    return result;
+}
+
 #endif

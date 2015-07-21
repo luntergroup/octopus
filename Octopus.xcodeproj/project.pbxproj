@@ -77,6 +77,7 @@
 		CAFA19661ABF84AC00F953D9 /* haplotype_tree_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CAFA19651ABF84AC00F953D9 /* haplotype_tree_tests.cpp */; };
 		D413B03D1B554CD0007EFDE0 /* region_algorithm_benchmarks.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D413B03C1B554CD0007EFDE0 /* region_algorithm_benchmarks.cpp */; };
 		D413B03F1B590C2B007EFDE0 /* search_region_benchmarks.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D413B03E1B590C2B007EFDE0 /* search_region_benchmarks.cpp */; };
+		D413B0451B5E54F7007EFDE0 /* libboost_iostreams.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D413B0441B5E54F7007EFDE0 /* libboost_iostreams.a */; };
 		D42061111ACC165C00D11553 /* variational_bayes_genotype_model.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D420610F1ACC165C00D11553 /* variational_bayes_genotype_model.cpp */; };
 		D42061131ACC3D2B00D11553 /* variational_bayes_genotype_model_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D42061121ACC3D2B00D11553 /* variational_bayes_genotype_model_tests.cpp */; };
 		D42061161ACC3DA500D11553 /* read_model.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D42061141ACC3DA500D11553 /* read_model.cpp */; };
@@ -241,6 +242,8 @@
 		D413B03E1B590C2B007EFDE0 /* search_region_benchmarks.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = search_region_benchmarks.cpp; sourceTree = "<group>"; };
 		D413B0401B5D0431007EFDE0 /* mappable_map.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = mappable_map.h; sourceTree = "<group>"; };
 		D413B0411B5D17CA007EFDE0 /* mappable_ranges.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = mappable_ranges.h; sourceTree = "<group>"; };
+		D413B0431B5D4EAC007EFDE0 /* i_model.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = i_model.h; sourceTree = "<group>"; };
+		D413B0441B5E54F7007EFDE0 /* libboost_iostreams.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libboost_iostreams.a; path = /usr/local/Cellar/boost/1.58.0/lib/libboost_iostreams.a; sourceTree = "<absolute>"; };
 		D420610F1ACC165C00D11553 /* variational_bayes_genotype_model.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = variational_bayes_genotype_model.cpp; sourceTree = "<group>"; };
 		D42061101ACC165C00D11553 /* variational_bayes_genotype_model.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = variational_bayes_genotype_model.h; sourceTree = "<group>"; };
 		D42061121ACC3D2B00D11553 /* variational_bayes_genotype_model_tests.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = variational_bayes_genotype_model_tests.cpp; sourceTree = "<group>"; };
@@ -299,6 +302,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D413B0451B5E54F7007EFDE0 /* libboost_iostreams.a in Frameworks */,
 				D45D2E661B2AD93500F6A89D /* libboost_filesystem.a in Frameworks */,
 				D45D2E671B2AD93500F6A89D /* libboost_program_options.a in Frameworks */,
 				D45D2E681B2AD93500F6A89D /* libboost_system.a in Frameworks */,
@@ -380,11 +384,11 @@
 			isa = PBXGroup;
 			children = (
 				CAA4DC241A81981400DD3E9A /* main.cpp */,
+				D463C1951B0229A000739A66 /* common.h */,
 				CAE3E29C1AA139A000C01B2C /* program_options.h */,
 				CAE3E29B1AA139A000C01B2C /* program_options.cpp */,
 				CA1472791AACECF1005FDCD1 /* octopus.h */,
 				CA1472781AACECF1005FDCD1 /* octopus.cpp */,
-				D463C1951B0229A000739A66 /* common.h */,
 			);
 			name = octopus;
 			sourceTree = "<group>";
@@ -417,6 +421,7 @@
 			isa = PBXGroup;
 			children = (
 				CA1472771AACECAF005FDCD1 /* octopus */,
+				D413B0421B5D4E84007EFDE0 /* model */,
 				CAFA19771AC62BEB00F953D9 /* core */,
 				CABA377C1A8F762200BBE598 /* assembler */,
 				CAA4DC3B1A83B64A00DD3E9A /* variants */,
@@ -430,6 +435,7 @@
 		CAA4DC2B1A8219C700DD3E9A /* lib */ = {
 			isa = PBXGroup;
 			children = (
+				D413B0441B5E54F7007EFDE0 /* libboost_iostreams.a */,
 				D45D2E631B2AD93500F6A89D /* libboost_filesystem.a */,
 				D45D2E641B2AD93500F6A89D /* libboost_program_options.a */,
 				D45D2E651B2AD93500F6A89D /* libboost_system.a */,
@@ -610,6 +616,14 @@
 				CA4551771AF15D7E00FDAAE8 /* variant_caller.cpp */,
 			);
 			name = core;
+			sourceTree = "<group>";
+		};
+		D413B0421B5D4E84007EFDE0 /* model */ = {
+			isa = PBXGroup;
+			children = (
+				D413B0431B5D4EAC007EFDE0 /* i_model.h */,
+			);
+			name = model;
 			sourceTree = "<group>";
 		};
 		D42F90121AE7945B0003F791 /* 1000G */ = {

@@ -9,10 +9,13 @@
 #ifndef __Octopus__octopus__
 #define __Octopus__octopus__
 
-#include <iostream> // TEST
-using std::cout;    // TEST
-using std::endl;    // TEST
+#include <boost/program_options.hpp>
 
-void run_octopus();
+namespace po = boost::program_options;
+
+namespace Octopus
+{
+    void run_octopus(po::variables_map& options);
+} // end namespace Octopus
 
 #endif /* defined(__Octopus__octopus__) */

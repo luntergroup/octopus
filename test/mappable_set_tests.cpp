@@ -75,11 +75,11 @@ TEST_CASE("MappableSet works like std::vector", "MappableSet")
 //                             Octopus::ContextInserter(good_reads),
 //                             Octopus::ContextInserter(bad_reads));
     
-    cout << mean_coverage(reads, overlap_region) << endl;
-    
-    auto samples = downsample(reads, 50, 10);
-    
-    cout << mean_coverage(samples, overlap_region) << endl;
+//    cout << mean_coverage(reads, overlap_region) << endl;
+//    
+//    auto samples = downsample(reads, 50, 10);
+//    
+//    cout << mean_coverage(samples, overlap_region) << endl;
     
 //    cout << good_reads.size() << endl;
 //    cout << bad_reads.size() << endl;
@@ -87,7 +87,12 @@ TEST_CASE("MappableSet works like std::vector", "MappableSet")
 //    cout << good_reads.count_overlapped(overlap_region) << endl;
 //    cout << bad_reads.count_overlapped(overlap_region) << endl;
     
-    GenomicRegion shared_region {"1", 600010, 600200};
+//    GenomicRegion shared_region {"1", 600010, 600200};
+//    
+//    MappableMap<int, AlignedRead> read_map {};
+//    read_map.emplace(1, reads);
+//    
+//    cout << *leftmost_overlapped(read_map, overlap_region) << endl;
     
     //auto filtered = filter_reads(std::move(reads), read_filter);
     

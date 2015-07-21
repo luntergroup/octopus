@@ -84,7 +84,7 @@ inline std::vector<Variant> CandidateVariantGenerator::get_candidates(const Geno
         std::inplace_merge(std::begin(result), it, std::end(result));
     }
     
-    merge_equal_variants(result);
+    remove_duplicates(result);
     
     return result;
 }

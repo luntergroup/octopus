@@ -13,14 +13,21 @@
 #include <vector>
 #include <boost/program_options.hpp>
 
+#include "common.h"
+
 class ReferenceGenome;
 class GenomicRegion;
 
 namespace po = boost::program_options;
 
-std::pair<po::variables_map, bool> parse_options(int argc, const char** argv);
-
-std::vector<GenomicRegion> parse_region_option(const po::variables_map& options, const std::string& region_option,
-                                               const ReferenceGenome& the_reference);
+namespace Octopus
+{
+    std::pair<po::variables_map, bool> parse_options(int argc, char** argv);
+    
+    SearchRegions get_search_regions(const po::variables_map& options, const ReferenceGenome& the_reference);
+    
+    std::vector<std::string> get_read_paths(const po::variables_map& options);
+    
+} // end namespace Octopus
 
 #endif /* defined(__Octopus__program_options__) */

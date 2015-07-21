@@ -21,9 +21,9 @@
 class ReferenceGenome;
 class VariantFactory;
 
-void merge_equal_variants(std::vector<Variant>& the_variants);
+void remove_duplicates(std::vector<Variant>& the_variants);
 
-std::vector<Allele> get_reference_alleles_between_variants(const std::vector<Variant>& the_variants,
+std::vector<Allele> get_reference_alleles_between_variants(const std::vector<Variant>& variants,
                                                            ReferenceGenome& the_reference);
 
 /*

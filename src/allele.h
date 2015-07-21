@@ -81,13 +81,13 @@ inline std::ostream& operator<<(std::ostream& os, const Allele& an_allele)
 
 bool is_reference(const Allele& an_allele, ReferenceGenome& the_reference);
 
-Allele get_reference_allele(const GenomicRegion& a_region, ReferenceGenome& the_reference);
+Allele get_reference_allele(const GenomicRegion& region, ReferenceGenome& the_reference);
 
-Allele::SequenceType get_subsequence(const Allele& an_allele, const GenomicRegion& a_region);
-
-Allele splice(const Allele& an_allele, const GenomicRegion& a_region);
+Allele::SequenceType get_subsequence(const Allele& an_allele, const GenomicRegion& region);
 
 bool contains(const Allele& lhs, const Allele& rhs);
+
+Allele splice(const Allele& an_allele, const GenomicRegion& region);
 
 bool is_insertion(const Allele& an_allele);
 

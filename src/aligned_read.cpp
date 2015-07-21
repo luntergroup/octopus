@@ -8,6 +8,8 @@
 
 #include "aligned_read.h"
 
+#include "compression.h"
+
 AlignedRead::AlignedRead(const AlignedRead& other)
 :
 reference_region_ {other.reference_region_},
@@ -184,6 +186,19 @@ bool AlignedRead::is_marked_duplicate() const
 bool AlignedRead::is_marked_supplementary_alignment() const
 {
     return flags_[7];
+}
+
+// TODO: can we also compress qualities and cigar string?
+void AlignedRead::compress()
+{
+    sequence_ = Octopus::compress(sequence_);
+    set_compressed();
+}
+
+void AlignedRead::decompress()
+{
+    sequence_ = Octopus::decompress(sequence_);
+    set_uncompressed();
 }
 
 //

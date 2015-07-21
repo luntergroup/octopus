@@ -15,6 +15,7 @@
 
 #include "genomic_region.h"
 #include "mappable_algorithms.h"
+#include "mappable_map.h"
 #include "map_utils.h"
 
 #include <iostream> // TEST

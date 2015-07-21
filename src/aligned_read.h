@@ -136,8 +136,8 @@ public:
     bool is_marked_duplicate() const;
     bool is_marked_supplementary_alignment() const;
     
-    template <typename CompressionAlgorithm> void compress(const CompressionAlgorithm& c);
-    template <typename CompressionAlgorithm> void decompress(const CompressionAlgorithm& c);
+    void compress();
+    void decompress();
     
 private:
     using Flags = std::bitset<8>;
@@ -204,18 +204,6 @@ begin_ {begin},
 inferred_template_length_ {inferred_template_length},
 flags_ {get_flags(data)}
 {}
-
-template <typename CompressionAlgorithm>
-void AlignedRead::compress(const CompressionAlgorithm& c)
-{
-    sequence_ = CompressionAlgorithm::compress(sequence_);
-}
-
-template <typename CompressionAlgorithm>
-void AlignedRead::decompress(const CompressionAlgorithm& c)
-{
-    sequence_ = CompressionAlgorithm::decompress(sequence_);
-}
 
 // Non-member methods
 

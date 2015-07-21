@@ -11,10 +11,16 @@
 
 #include <string>
 #include <cstdint>
+#include <unordered_map>
+
+#include "genomic_region.h"
+#include "mappable_map.h"
 
 namespace Octopus {    
     using ProbabilityType = double;
     using SampleIdType    = std::string;
+    
+    using SearchRegions = MappableMap<GenomicRegion::StringType, GenomicRegion>;
 }
 
 #endif

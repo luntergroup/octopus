@@ -185,9 +185,46 @@ Haplotype::SequenceType Haplotype::get_sequence_bounded_by_explicit_alleles() co
 
 // non-member methods
 
+bool contains(const Haplotype& lhs, const Haplotype& rhs)
+{
+    if (!contains(get_region(lhs), get_region(rhs))) return false;
+    
+    auto rhs_explicit_allele_region = rhs.get_region_bounded_by_explicit_alleles();
+    
+    return lhs.get_sequence(rhs_explicit_allele_region) == rhs.get_sequence_bounded_by_explicit_alleles();
+}
+
+Haplotype splice(const Haplotype& haplotype, const GenomicRegion& region)
+{
+    Haplotype result {*haplotype.the_reference_, region};
+    
+    auto contained = bases(contained_range(std::cbegin(haplotype.the_explicit_alleles_),
+                                           std::cend(haplotype.the_explicit_alleles_), region));
+    
+    switch (size(contained)) {
+        case 0:
+            break;
+        case 1:
+            result.push_back(contained.front());
+        default:
+            result.push_back(contained.front());
+            result.the_explicit_alleles_.insert(std::end(result.the_explicit_alleles_),
+                                                std::next(contained.begin()), std::prev(contained.end()));
+            result.push_back(contained.back());
+            break;
+    }
+    
+    return result;
+}
+
 bool is_reference(const Haplotype& a_haplotype, ReferenceGenome& the_reference)
 {
     return a_haplotype.get_sequence() == the_reference.get_sequence(a_haplotype.get_region());
+}
+
+bool is_less_complex(const Haplotype& lhs, const Haplotype& rhs) noexcept
+{
+    return lhs.the_explicit_alleles_.size() < rhs.the_explicit_alleles_.size();
 }
 
 void unique_least_complex(std::vector<Haplotype>& haplotypes)

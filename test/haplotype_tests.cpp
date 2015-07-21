@@ -444,6 +444,51 @@ TEST_CASE("haplotypes can be copied and moved", "[haplotype]")
     REQUIRE(moved_hap.contains(allele2));
 }
 
+TEST_CASE("Haplotype can be spliced", "[haplotype]")
+{
+    ReferenceGenomeFactory a_factory {};
+    ReferenceGenome human {a_factory.make(human_reference_fasta)};
+    
+    auto a_region = parse_region("16:9299940-9300100", human);
+    
+    Allele allele1 {parse_region("16:9299945-9299946", human), "T"};
+    Allele allele2 {parse_region("16:9299946-9299957", human), "CGCATTACAAC"};
+    Allele allele3 {parse_region("16:9299957-9299958", human), "C"};
+    Allele allele4 {get_reference_allele(parse_region("16:9299958-9300037", human), human)};
+    Allele allele5 {parse_region("16:9300037-9300037", human), ""};
+    Allele allele6 {parse_region("16:9300037-9300039", human), "TG"};
+    Allele allele7 {parse_region("16:9300039-9300051", human), "TGTGTGTGCGTT"};
+    Allele allele8 {parse_region("16:9300051-9300061", human), "TGTGTGTGTG"};
+    Allele allele9 {parse_region("16:9300061-9300062", human), "G"};
+    Allele allele10 {parse_region("16:9300062-9300072", human), "GTGTGTGTGT"};
+    Allele allele11 {parse_region("16:9300072-9300073", human), "G"};
+    Allele allele12 {parse_region("16:9300073-9300074", human), "G"};
+    Allele allele13 {parse_region("16:9300074-9300075", human), "G"};
+    
+    Haplotype haplotype {human, a_region};
+    
+    haplotype.push_back(allele1);
+    haplotype.push_back(allele2);
+    haplotype.push_back(allele3);
+    haplotype.push_back(allele4);
+    haplotype.push_back(allele5);
+    haplotype.push_back(allele6);
+    haplotype.push_back(allele7);
+    haplotype.push_back(allele8);
+    haplotype.push_back(allele9);
+    haplotype.push_back(allele10);
+    haplotype.push_back(allele11);
+    haplotype.push_back(allele12);
+    haplotype.push_back(allele13);
+    
+    auto splice_region = parse_region("16:9299964-9300083", human);
+    
+    auto spliced = splice(haplotype, splice_region);
+    
+    REQUIRE(get_region(spliced) == splice_region);
+    REQUIRE(contains(haplotype, spliced));
+}
+
 //TEST_CASE("unique_least_complex removes haplotypes that infer the same sequence,"
 //          "leaving the haplotype with the fewest alterations to the reference", "[haplotype]")
 //{
