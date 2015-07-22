@@ -6,7 +6,9 @@
 //  Copyright (c) 2015 Oxford University. All rights reserved.
 //
 
-#include "catch.hpp"
+#define BOOST_TEST_DYN_LINK
+
+#include <boost/test/unit_test.hpp>
 
 #include <iostream>
 #include <string>
@@ -44,7 +46,7 @@ using std::endl;
 using Octopus::advance_region;
 using Octopus::cover_region;
 
-//TEST_CASE("advance_region is reasonably fast", "[search_region, benchmark]")
+//BOOST_AUTO_TEST_CASE(advance_region is reasonably fast)
 //{
 //    GenomicRegion::SizeType contig_size {10000000};
 //    GenomicRegion::SizeType mean_read_size {100};

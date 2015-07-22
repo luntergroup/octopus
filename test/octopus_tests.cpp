@@ -6,11 +6,9 @@
 //  Copyright (c) 2015 Oxford University. All rights reserved.
 //
 
-/*
-    This file contains some general tests for sections of the overall Octopus workflow
- */
+#define BOOST_TEST_DYN_LINK
 
-#include "catch.hpp"
+#include <boost/test/unit_test.hpp>
 
 #include <iostream>
 #include <string>
@@ -49,12 +47,7 @@
 using std::cout;
 using std::endl;
 
-//TEST_CASE("haplotypes can ", "[octopus]")
-//{
-//    
-//}
-
-//TEST_CASE("can call in complex region", "[octopus]")
+//BOOST_AUTO_TEST_CASE(can call in complex region)
 //{
 //    ReferenceGenomeFactory a_factory {};
 //    ReferenceGenome human {a_factory.make(human_reference_fasta)};

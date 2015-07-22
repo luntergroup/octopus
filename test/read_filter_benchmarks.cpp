@@ -6,7 +6,9 @@
 //  Copyright (c) 2015 Oxford University. All rights reserved.
 //
 
-#include "catch.hpp"
+#define BOOST_TEST_DYN_LINK
+
+#include <boost/test/unit_test.hpp>
 
 #include <iostream>
 #include <vector>
@@ -20,7 +22,7 @@
 #include "read_filter.h"
 #include "read_filters.h"
 
-//TEST_CASE("read_filter_benchmarks", "[read_filter,benchmarks]")
+//BOOST_AUTO_TEST_CASE(read_filter_benchmarks)
 //{
 //    ReadManager a_read_manager(std::vector<std::string> {human_1000g_bam});
 //    

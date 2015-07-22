@@ -6,7 +6,9 @@
 //  Copyright (c) 2015 Oxford University. All rights reserved.
 //
 
-#include "catch.hpp"
+#define BOOST_TEST_DYN_LINK
+
+#include <boost/test/unit_test.hpp>
 
 #include <iostream>
 #include <memory>
@@ -23,7 +25,7 @@
 using std::cout;
 using std::endl;
 
-//TEST_CASE("read_benchmark", "[read,benchmark]")
+//BOOST_AUTO_TEST_CASE(read_benchmark)
 //{
 //    HtslibReadFacade a_reader {human_1000g_bam1};
 //    
@@ -51,7 +53,7 @@ using std::endl;
 
 //// Best time:
 //// 93 milliseconds (MacBook Pro)
-//TEST_CASE("reader_construct_destory_benchmark", "[read,benchmark]")
+//BOOST_AUTO_TEST_CASE(reader_construct_destory_benchmark)
 //{
 //    boost::filesystem::path the_path {human_1000g_bam};
 //    unsigned num_reference_contigs {};
@@ -66,7 +68,7 @@ using std::endl;
 //    std::cout << "Read construct time: " << time << "ms" << std::endl;
 //}
 
-//TEST_CASE("aligned_read_copy_benchmark", "[read,benchmark]")
+//BOOST_AUTO_TEST_CASE(aligned_read_copy_benchmark)
 //{
 //    ReadFactory a_read_factory(std::vector<std::string> {human_1000g_bam});
 //    auto sample_ids = a_read_factory.get_sample_ids();
@@ -88,7 +90,7 @@ using std::endl;
 //    //std::cout << "Copy: " << copy_time << "us" << std::endl;
 //}
 
-//TEST_CASE("reader coverage calculation benchmarks", "[read,benchmark]")
+//BOOST_AUTO_TEST_CASE(reader coverage calculation benchmarks)
 //{
 //    ReadManager a_read_manager {std::vector<std::string> {human_1000g_bam1}};
 //    

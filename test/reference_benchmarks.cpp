@@ -6,7 +6,9 @@
 //  Copyright (c) 2015 Oxford University. All rights reserved.
 //
 
-#include "catch.hpp"
+#define BOOST_TEST_DYN_LINK
+
+#include <boost/test/unit_test.hpp>
 
 #include <iostream>
 #include <string>
@@ -19,7 +21,7 @@
 #include "reference_genome_factory.h"
 #include "bioio.h"
 
-//TEST_CASE("reference_benchmark", "[reference,benchmark]")
+//BOOST_AUTO_TEST_CASE(reference_benchmark)
 //{
 //    std::ifstream fasta(human_reference_fasta);
 //    auto index = bioio::read_fasta_index(human_reference_fasta_index)["5"];
@@ -43,5 +45,5 @@
 //    std::cout << "Without vptr: " << without_vptr << "ns" << std::endl;
 //    std::cout << "With vptr: " << with_vptr << "ns" << std::endl;
 //    
-//    REQUIRE(true);
+//    BOOST_CHECK(true);
 //}

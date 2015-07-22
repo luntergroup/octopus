@@ -6,7 +6,9 @@
 //  Copyright (c) 2015 Oxford University. All rights reserved.
 //
 
-#include "catch.hpp"
+#define BOOST_TEST_DYN_LINK
+
+#include <boost/test/unit_test.hpp>
 
 #include <iostream>
 #include <memory>
@@ -27,7 +29,9 @@
 using std::cout;
 using std::endl;
 
-TEST_CASE("CandidateVariantGenerator does not give duplicate candidates", "[candidates]")
+BOOST_AUTO_TEST_SUITE(Components)
+
+BOOST_AUTO_TEST_CASE(CandidateVariantGenerator_does_not_give_duplicate_candidates)
 {
     ReferenceGenomeFactory a_factory {};
     ReferenceGenome human {a_factory.make(human_reference_fasta)};
@@ -49,10 +53,10 @@ TEST_CASE("CandidateVariantGenerator does not give duplicate candidates", "[cand
     
     auto candidates = candidate_generator.get_candidates(a_region);
     
-    REQUIRE(candidates.size() == 15);
+    BOOST_CHECK(candidates.size() == 15);
 }
 
-TEST_CASE("AlignmentCandidateVariantGenerator ignores snps with low base qualities", "[candidates]")
+BOOST_AUTO_TEST_CASE(AlignmentCandidateVariantGenerator_ignores_snps_with_low_base_qualities)
 {
     ReferenceGenomeFactory a_factory {};
     ReferenceGenome human {a_factory.make(human_reference_fasta)};
@@ -72,10 +76,10 @@ TEST_CASE("AlignmentCandidateVariantGenerator ignores snps with low base qualiti
     
     auto candidates = candidate_generator.get_candidates(a_region);
     
-    REQUIRE(candidates.size() == 12);
+    BOOST_CHECK(candidates.size() == 12);
 }
 
-TEST_CASE("AlignmentCandidateVariantGenerator includes all alleles in the same region", "[candidates]")
+BOOST_AUTO_TEST_CASE(AlignmentCandidateVariantGenerator_includes_all_alleles_in_the_same_region)
 {
     ReferenceGenomeFactory a_factory {};
     ReferenceGenome human {a_factory.make(human_reference_fasta)};
@@ -96,7 +100,7 @@ TEST_CASE("AlignmentCandidateVariantGenerator includes all alleles in the same r
     auto candidates = candidate_generator.get_candidates(a_region);
 }
 
-TEST_CASE("OnlineCandidateVariantGenerator can fetch variants from online web service", "[candidates]")
+BOOST_AUTO_TEST_CASE(OnlineCandidateVariantGenerator_can_fetch_variants_from_online_web_service)
 {
     ReferenceGenomeFactory a_factory {};
     ReferenceGenome human {a_factory.make(human_reference_fasta)};
@@ -112,7 +116,7 @@ TEST_CASE("OnlineCandidateVariantGenerator can fetch variants from online web se
     }
 }
 
-//TEST_CASE("CandidateVariantGenerator combines multiple generators", "[candidates]")
+//BOOST_AUTO_TEST_CASE(CandidateVariantGenerator_combines_multiple_generators)
 //{
 //    const constexpr unsigned kmer_size {15};
 //    
@@ -147,3 +151,5 @@ TEST_CASE("OnlineCandidateVariantGenerator can fetch variants from online web se
 //    //        << candidate.get_sequence_added() << std::endl;
 //    //    }
 //}
+
+BOOST_AUTO_TEST_SUITE_END()

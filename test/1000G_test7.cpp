@@ -6,7 +6,9 @@
 //  Copyright (c) 2015 Oxford University. All rights reserved.
 //
 
-#include "catch.hpp"
+#define BOOST_TEST_DYN_LINK
+
+#include <boost/test/unit_test.hpp>
 
 #include <iostream>
 #include <string>
@@ -36,7 +38,7 @@
 using std::cout;
 using std::endl;
 
-//TEST_CASE("1000G test 7: 22:42024962-42025018", "[validation]")
+//BOOST_AUTO_TEST_CASE(1000G test 7: 22:42024962-42025018)
 //{
 //    ReferenceGenomeFactory a_factory {};
 //    ReferenceGenome human(a_factory.make(human_reference_fasta));

@@ -6,7 +6,9 @@
 //  Copyright (c) 2015 Oxford University. All rights reserved.
 //
 
-#include "catch.hpp"
+#define BOOST_TEST_DYN_LINK
+
+#include <boost/test/unit_test.hpp>
 
 #include <iostream>
 #include <string>
@@ -41,7 +43,9 @@ using std::endl;
 
 using Octopus::advance_region;
 
-TEST_CASE("advance_region always gives a region more advanced than the previous region", "[search_regions]")
+BOOST_AUTO_TEST_SUITE(Components)
+
+BOOST_AUTO_TEST_CASE(advance_region_always_gives_a_region_more_advanced_than_the_previous_region)
 {
     ReferenceGenomeFactory a_factory {};
     ReferenceGenome human {a_factory.make(human_reference_fasta)};
@@ -69,10 +73,10 @@ TEST_CASE("advance_region always gives a region more advanced than the previous 
     // This case was causing trouble
     auto next_region = advance_region(sub_region, reads, candidates, 4, 3);
     
-    REQUIRE(ends_before(sub_region, next_region));
+    BOOST_CHECK(ends_before(sub_region, next_region));
 }
 
-TEST_CASE("search regions contains all variants in list exactly once when max_indicators = 0", "[search_regions]")
+BOOST_AUTO_TEST_CASE(search_regions_contains_all_variants_in_list_exactly_once_when_max_indicators_is_0)
 {
     ReferenceGenomeFactory a_factory {};
     ReferenceGenome human {a_factory.make(human_reference_fasta)};
@@ -125,7 +129,7 @@ TEST_CASE("search regions contains all variants in list exactly once when max_in
         if (!bound_respected) break;
     }
     
-    REQUIRE(bound_respected);
+    BOOST_CHECK(bound_respected);
     
     for (const auto& variant : candidates) {
         if (included.count(variant) == 0) {
@@ -134,7 +138,7 @@ TEST_CASE("search regions contains all variants in list exactly once when max_in
         }
     }
     
-    REQUIRE(bound_respected);
+    BOOST_CHECK(bound_respected);
     
     included.clear();
     
@@ -155,7 +159,7 @@ TEST_CASE("search regions contains all variants in list exactly once when max_in
         if (!bound_respected) break;
     }
     
-    REQUIRE(bound_respected);
+    BOOST_CHECK(bound_respected);
     
     for (const auto& variant : candidates) {
         if (included.count(variant) == 0) {
@@ -164,7 +168,7 @@ TEST_CASE("search regions contains all variants in list exactly once when max_in
         }
     }
     
-    REQUIRE(bound_respected);
+    BOOST_CHECK(bound_respected);
     
     included.clear();
     
@@ -185,7 +189,7 @@ TEST_CASE("search regions contains all variants in list exactly once when max_in
         if (!bound_respected) break;
     }
     
-    REQUIRE(bound_respected);
+    BOOST_CHECK(bound_respected);
     
     for (const auto& variant : candidates) {
         if (included.count(variant) == 0) {
@@ -194,10 +198,10 @@ TEST_CASE("search regions contains all variants in list exactly once when max_in
         }
     }
     
-    REQUIRE(bound_respected);
+    BOOST_CHECK(bound_respected);
 }
 
-TEST_CASE("advance_region's bounds are respected", "[search_regions]")
+BOOST_AUTO_TEST_CASE(advance_regions_bounds_are_respected)
 {
     ReferenceGenomeFactory a_factory {};
     ReferenceGenome human {a_factory.make(human_reference_fasta)};
@@ -247,7 +251,7 @@ TEST_CASE("advance_region's bounds are respected", "[search_regions]")
         }
     }
     
-    REQUIRE(bound_respected);
+    BOOST_CHECK(bound_respected);
 
     sub_region = parse_region("16:8999900-8999900", human);
     max_variants = 5;
@@ -265,7 +269,7 @@ TEST_CASE("advance_region's bounds are respected", "[search_regions]")
         }
     }
     
-    REQUIRE(bound_respected);
+    BOOST_CHECK(bound_respected);
 
     sub_region = parse_region("16:8999900-8999900", human);
     max_variants = 8;
@@ -283,7 +287,7 @@ TEST_CASE("advance_region's bounds are respected", "[search_regions]")
         }
     }
     
-    REQUIRE(bound_respected);
+    BOOST_CHECK(bound_respected);
 
     sub_region = parse_region("16:8999900-8999900", human);
     max_variants   = 3;
@@ -302,7 +306,7 @@ TEST_CASE("advance_region's bounds are respected", "[search_regions]")
         }
     }
     
-    REQUIRE(bound_respected);
+    BOOST_CHECK(bound_respected);
 
     sub_region = parse_region("16:8999900-8999900", human);
     max_variants   = 5;
@@ -321,7 +325,7 @@ TEST_CASE("advance_region's bounds are respected", "[search_regions]")
         }
     }
     
-    REQUIRE(bound_respected);
+    BOOST_CHECK(bound_respected);
 
     sub_region = parse_region("16:8999900-8999900", human);
     max_variants   = 8;
@@ -340,10 +344,10 @@ TEST_CASE("advance_region's bounds are respected", "[search_regions]")
         }
     }
     
-    REQUIRE(bound_respected);
+    BOOST_CHECK(bound_respected);
 }
 
-TEST_CASE("setting max_included to zero in advance_region results in the largest variant free reference region", "[search_regions]")
+BOOST_AUTO_TEST_CASE(setting_max_included_to_zero_in_advance_region_results_in_the_largest_variant_free_reference_region)
 {
     ReferenceGenomeFactory a_factory {};
     ReferenceGenome human {a_factory.make(human_reference_fasta)};
@@ -381,15 +385,15 @@ TEST_CASE("setting max_included to zero in advance_region results in the largest
     
     sub_region = advance_region(sub_region, reads, candidates, max_variants, max_indicators);
     
-    REQUIRE(sub_region == parse_region("16:9199045-9199306", human));
+    BOOST_CHECK(sub_region == parse_region("16:9199045-9199306", human));
     
     sub_region = parse_region("16:9006622-9006661", human);
     sub_region = advance_region(sub_region, reads, candidates, max_variants, max_indicators);
     
-    REQUIRE(sub_region == parse_region("16:9006661-9006671", human));
+    BOOST_CHECK(sub_region == parse_region("16:9006661-9006671", human));
 }
 
-TEST_CASE("search regions includes all possible indicators", "search_regions")
+BOOST_AUTO_TEST_CASE(search_regions_includes_all_possible_indicators)
 {
     ReferenceGenomeFactory a_factory {};
     ReferenceGenome human {a_factory.make(human_reference_fasta)};
@@ -416,10 +420,10 @@ TEST_CASE("search regions includes all possible indicators", "search_regions")
     
     auto next_region = advance_region(sub_region, reads, candidates, 12, 7);
     
-    REQUIRE(next_region == parse_region("16:62646834-62646990", human));
+    BOOST_CHECK(next_region == parse_region("16:62646834-62646990", human));
 }
 
-//TEST_CASE("advance_region works on unusual/messy data", "search_regions")
+//BOOST_AUTO_TEST_CASE(advance_region_works_on_unusual_and_messy_data)
 //{
 //    auto candidates = generate_random_regions(10000, 5, 10000);
 //    
@@ -436,3 +440,5 @@ TEST_CASE("search regions includes all possible indicators", "search_regions")
 //        cout << r << endl;
 //    }
 //}
+
+BOOST_AUTO_TEST_SUITE_END()

@@ -6,11 +6,13 @@
 //  Copyright (c) 2015 Oxford University. All rights reserved.
 //
 
+#define BOOST_TEST_DYN_LINK
+
+#include <boost/test/unit_test.hpp>
+
 #include <iostream>
 #include <vector>
 #include <algorithm>
-
-#include "catch.hpp"
 
 #include "test_common.h"
 #include "reference_genome.h"
@@ -25,7 +27,9 @@
 using std::cout;
 using std::endl;
 
-TEST_CASE("< is consistent with ==", "[variant]")
+BOOST_AUTO_TEST_SUITE(Components)
+
+BOOST_AUTO_TEST_CASE(operator_are_consistent)
 {
     Variant snp1 {"chr1", 100, "C", "A"};
     Variant snp2 {"chr1", 99, "C", "A"};
@@ -34,18 +38,18 @@ TEST_CASE("< is consistent with ==", "[variant]")
     
     bool r1 = !(snp1 < snp2) && !(snp2 < snp1);
     bool r2 = (snp1 == snp2);
-    REQUIRE(!r2);
-    REQUIRE(r1 == r2);
+    BOOST_CHECK(!r2);
+    BOOST_CHECK(r1 == r2);
     
     r1 = !(snp1 < snp3) && !(snp3 < snp1);
     r2 = snp1 == snp3;
-    REQUIRE(!r2);
-    REQUIRE(r1 == r2);
+    BOOST_CHECK(!r2);
+    BOOST_CHECK(r1 == r2);
     
     r1 = !(snp1 < snp4) && !(snp4 < snp1);
     r2 = snp1 == snp4;
-    REQUIRE(r2);
-    REQUIRE(r1 == r2);
+    BOOST_CHECK(r2);
+    BOOST_CHECK(r1 == r2);
     
     Variant del1 {"chr1", 100, "C", ""};
     Variant del2 {"chr1", 100, "CA", ""};
@@ -53,13 +57,13 @@ TEST_CASE("< is consistent with ==", "[variant]")
     
     r1 = !(del1 < del2) && !(del2 < del1);
     r2 = del1 == del2;
-    REQUIRE(!r2);
-    REQUIRE(r1 == r2);
+    BOOST_CHECK(!r2);
+    BOOST_CHECK(r1 == r2);
     
     r1 = !(del1 < del3) && !(del3 < del1);
     r2 = del1 == del3;
-    REQUIRE(r2);
-    REQUIRE(r1 == r2);
+    BOOST_CHECK(r2);
+    BOOST_CHECK(r1 == r2);
     
     Variant ins1 {"chr1", 100, "", "C"};
     Variant ins2 {"chr1", 100, "", "CA"};
@@ -67,16 +71,16 @@ TEST_CASE("< is consistent with ==", "[variant]")
     
     r1 = !(ins1 < ins2) && !(ins2 < ins1);
     r2 = ins1 == ins2;
-    REQUIRE(!r2);
-    REQUIRE(r1 == r2);
+    BOOST_CHECK(!r2);
+    BOOST_CHECK(r1 == r2);
     
     r1 = !(ins1 < ins3) && !(ins3 < ins1);
     r2 = ins1 == ins3;
-    REQUIRE(r2);
-    REQUIRE(r1 == r2);
+    BOOST_CHECK(r2);
+    BOOST_CHECK(r1 == r2);
 }
 
-TEST_CASE("can binary search for ordered variants with < operator", "[variant]")
+BOOST_AUTO_TEST_CASE(can_binary_search_for_ordered_variants)
 {
     Variant snp1 {"chr1", 100, "C", "A"};
     Variant snp2 {"chr1", 105, "G", "T"};
@@ -87,12 +91,12 @@ TEST_CASE("can binary search for ordered variants with < operator", "[variant]")
     
     std::vector<Variant> variants {snp1, del1, snp2, ins1, ins2, del2};
     
-    REQUIRE(std::binary_search(variants.cbegin(), variants.cend(), snp1));
-    REQUIRE(std::binary_search(variants.cbegin(), variants.cend(), snp2));
-    REQUIRE(std::binary_search(variants.cbegin(), variants.cend(), del1));
-    REQUIRE(std::binary_search(variants.cbegin(), variants.cend(), del2));
-    REQUIRE(std::binary_search(variants.cbegin(), variants.cend(), ins1));
-    REQUIRE(std::binary_search(variants.cbegin(), variants.cend(), ins2));
+    BOOST_CHECK(std::binary_search(variants.cbegin(), variants.cend(), snp1));
+    BOOST_CHECK(std::binary_search(variants.cbegin(), variants.cend(), snp2));
+    BOOST_CHECK(std::binary_search(variants.cbegin(), variants.cend(), del1));
+    BOOST_CHECK(std::binary_search(variants.cbegin(), variants.cend(), del2));
+    BOOST_CHECK(std::binary_search(variants.cbegin(), variants.cend(), ins1));
+    BOOST_CHECK(std::binary_search(variants.cbegin(), variants.cend(), ins2));
     
     Variant non_snp1 {"chr1", 111, "C", "A"};
     Variant non_snp2 {"chr1", 105, "G", "A"};
@@ -101,24 +105,24 @@ TEST_CASE("can binary search for ordered variants with < operator", "[variant]")
     Variant non_ins1 {"chr1", 108, "", "G"};
     Variant non_ins2 {"chr1", 110, "", "TA"};
     
-    REQUIRE(!std::binary_search(variants.cbegin(), variants.cend(), non_snp1));
-    REQUIRE(!std::binary_search(variants.cbegin(), variants.cend(), non_snp2));
-    REQUIRE(!std::binary_search(variants.cbegin(), variants.cend(), non_del1));
-    REQUIRE(!std::binary_search(variants.cbegin(), variants.cend(), non_del2));
-    REQUIRE(!std::binary_search(variants.cbegin(), variants.cend(), non_ins1));
-    REQUIRE(!std::binary_search(variants.cbegin(), variants.cend(), non_ins2));
+    BOOST_CHECK(!std::binary_search(variants.cbegin(), variants.cend(), non_snp1));
+    BOOST_CHECK(!std::binary_search(variants.cbegin(), variants.cend(), non_snp2));
+    BOOST_CHECK(!std::binary_search(variants.cbegin(), variants.cend(), non_del1));
+    BOOST_CHECK(!std::binary_search(variants.cbegin(), variants.cend(), non_del2));
+    BOOST_CHECK(!std::binary_search(variants.cbegin(), variants.cend(), non_ins1));
+    BOOST_CHECK(!std::binary_search(variants.cbegin(), variants.cend(), non_ins2));
     
     Variant del3 {"chr1", 101, "C", ""};
     Variant snp3 {"chr1", 101, "C", ""};
     
     std::vector<Variant> variants2 {snp1, del3, snp3};
     
-    REQUIRE(std::binary_search(variants2.cbegin(), variants2.cend(), snp1));
-    REQUIRE(std::binary_search(variants2.cbegin(), variants2.cend(), del3));
-    REQUIRE(std::binary_search(variants2.cbegin(), variants2.cend(), snp3));
+    BOOST_CHECK(std::binary_search(variants2.cbegin(), variants2.cend(), snp1));
+    BOOST_CHECK(std::binary_search(variants2.cbegin(), variants2.cend(), del3));
+    BOOST_CHECK(std::binary_search(variants2.cbegin(), variants2.cend(), snp3));
 }
 
-TEST_CASE("snps do not overlap adjacent snps", "[snps]")
+BOOST_AUTO_TEST_CASE(snps_do_not_overlap_adjacent_snps)
 {
     Variant snp1 {"chr1", 100, "C", "A"};
     Variant snp2 {"chr1", 99, "C", "A"};
@@ -127,18 +131,18 @@ TEST_CASE("snps do not overlap adjacent snps", "[snps]")
     Variant snp5 {"chr1", 99, "C", "T"};
     Variant snp6 {"chr1", 101, "C", "T"};
     
-    REQUIRE(overlaps(snp1, snp1));
-    REQUIRE(overlaps(snp1, snp4));
-    REQUIRE(!overlaps(snp1, snp2));
-    REQUIRE(!overlaps(snp1, snp3));
-    REQUIRE(!overlaps(snp1, snp5));
-    REQUIRE(!overlaps(snp1, snp6));
+    BOOST_CHECK(overlaps(snp1, snp1));
+    BOOST_CHECK(overlaps(snp1, snp4));
+    BOOST_CHECK(!overlaps(snp1, snp2));
+    BOOST_CHECK(!overlaps(snp1, snp3));
+    BOOST_CHECK(!overlaps(snp1, snp5));
+    BOOST_CHECK(!overlaps(snp1, snp6));
     
-    REQUIRE(are_adjacent(snp1, snp2));
-    REQUIRE(!are_adjacent(snp2, snp3));
+    BOOST_CHECK(are_adjacent(snp1, snp2));
+    BOOST_CHECK(!are_adjacent(snp2, snp3));
 }
 
-TEST_CASE("mnps overlap correctly", "[mnp]")
+BOOST_AUTO_TEST_CASE(mnps_overlap_correctly)
 {
     Variant mnp1 {"chr1", 100, "CAT", "TAC"};
     Variant mnp2 {"chr1", 99, "CAT", "TAC"};
@@ -153,52 +157,52 @@ TEST_CASE("mnps overlap correctly", "[mnp]")
     Variant mnp9  {"chr1", 97, "CAT", "TAC"};
     Variant mnp10 {"chr1", 103, "CAT", "TAC"};
     
-    REQUIRE(overlaps(mnp1, mnp1));
-    REQUIRE(overlaps(mnp1, mnp2));
-    REQUIRE(overlaps(mnp1, mnp3));
-    REQUIRE(overlaps(mnp1, mnp4));
-    REQUIRE(overlaps(mnp1, mnp5));
-    REQUIRE(overlaps(mnp1, mnp6));
+    BOOST_CHECK(overlaps(mnp1, mnp1));
+    BOOST_CHECK(overlaps(mnp1, mnp2));
+    BOOST_CHECK(overlaps(mnp1, mnp3));
+    BOOST_CHECK(overlaps(mnp1, mnp4));
+    BOOST_CHECK(overlaps(mnp1, mnp5));
+    BOOST_CHECK(overlaps(mnp1, mnp6));
     
-    REQUIRE(overlaps(mnp1, mnp7));
-    REQUIRE(overlaps(mnp1, mnp8));
-    REQUIRE(!overlaps(mnp1, mnp9));
-    REQUIRE(!overlaps(mnp1, mnp10));
+    BOOST_CHECK(overlaps(mnp1, mnp7));
+    BOOST_CHECK(overlaps(mnp1, mnp8));
+    BOOST_CHECK(!overlaps(mnp1, mnp9));
+    BOOST_CHECK(!overlaps(mnp1, mnp10));
 }
 
-TEST_CASE("insertions overlap other insertions with same region", "[insertion]")
+BOOST_AUTO_TEST_CASE(insertions_overlap_other_insertions_with_same_region)
 {
     Variant insert1 {"chr1", 100, "", "TAG"};
     Variant insert2 {"chr1", 99, "", "TAG"};
     Variant insert3 {"chr1", 101, "", "TAG"};
     
-    REQUIRE(overlaps(insert1, insert1));
-    REQUIRE(!overlaps(insert1, insert2));
-    REQUIRE(!overlaps(insert1, insert3));
+    BOOST_CHECK(overlaps(insert1, insert1));
+    BOOST_CHECK(!overlaps(insert1, insert2));
+    BOOST_CHECK(!overlaps(insert1, insert3));
 }
 
-TEST_CASE("insertions overlap with other variants when contained by their region", "[insertion]")
+BOOST_AUTO_TEST_CASE(insertions_overlap_with_other_variants_when_contained_by_their_region)
 {
     Variant insert {"chr1", 100, "", "TAG"};
     Variant del {"chr1", 99, "TAG", ""};
     Variant mnp {"chr1", 100, "TAG", "CAT"};
     
-    REQUIRE(overlaps(insert, del));
-    REQUIRE(overlaps(insert, mnp));
+    BOOST_CHECK(overlaps(insert, del));
+    BOOST_CHECK(overlaps(insert, mnp));
 }
 
-TEST_CASE("deletions overlap in the same way as mnps", "[deletion]")
+BOOST_AUTO_TEST_CASE(deletions_overlap_in_the_same_way_as_mnps)
 {
     Variant del1 {"chr1", 100, "TAG", ""};
     Variant del2 {"chr1", 99, "TAG", ""};
     Variant del3 {"chr1", 101, "TAG", ""};
     
-    REQUIRE(overlaps(del1, del1));
-    REQUIRE(overlaps(del1, del2));
-    REQUIRE(overlaps(del1, del3));
+    BOOST_CHECK(overlaps(del1, del1));
+    BOOST_CHECK(overlaps(del1, del2));
+    BOOST_CHECK(overlaps(del1, del3));
 }
 
-TEST_CASE("variants are ordered by region and lexicographically by sequence", "[variant]")
+BOOST_AUTO_TEST_CASE(variants_are_ordered_by_region_and_lexicographically_by_sequence)
 {
     Variant snp1 {"chr1", 100, "T", "A"};
     Variant snp2 {"chr1", 100, "T", "C"};
@@ -217,7 +221,7 @@ TEST_CASE("variants are ordered by region and lexicographically by sequence", "[
     
     bool is_required_sort1 = std::equal(variants1.cbegin(), variants1.cend(), variants1_required_sort.cbegin());
     
-    REQUIRE(is_required_sort1);
+    BOOST_CHECK(is_required_sort1);
     
     std::vector<Variant> variants2 {snp1, del1, snp2, ins1, snp3};
     
@@ -227,7 +231,7 @@ TEST_CASE("variants are ordered by region and lexicographically by sequence", "[
     
     auto is_required_sort2 = std::equal(variants2.cbegin(), variants2.cend(), variants2_required_sort.cbegin());
     
-    REQUIRE(is_required_sort2);
+    BOOST_CHECK(is_required_sort2);
     
     std::vector<Variant> variants3 {del2, snp1, del1, snp2, ins1, snp3, ins2};
     
@@ -237,7 +241,7 @@ TEST_CASE("variants are ordered by region and lexicographically by sequence", "[
     
     auto is_required_sort3 = std::equal(variants3.cbegin(), variants3.cend(), variants3_required_sort.cbegin());
     
-    REQUIRE(is_required_sort3);
+    BOOST_CHECK(is_required_sort3);
     
     std::vector<Variant> variants4 {ins2, del2, snp1, del1, snp2, ins1, snp3, ins3};
     
@@ -247,10 +251,10 @@ TEST_CASE("variants are ordered by region and lexicographically by sequence", "[
     
     auto is_required_sort4 = std::equal(variants4.cbegin(), variants4.cend(), variants4_required_sort.cbegin());
     
-    REQUIRE(is_required_sort4);
+    BOOST_CHECK(is_required_sort4);
 }
 
-TEST_CASE("overlap_range includes insertions on left boundry, but not the right", "[variant]")
+BOOST_AUTO_TEST_CASE(overlap_range_includes_insertions_on_left_boundry_but_not_the_right)
 {
     Variant snp1 {"chr1", 100, "T", "A"};
     Variant snp2 {"chr1", 110, "T", "C"};
@@ -268,25 +272,25 @@ TEST_CASE("overlap_range includes insertions on left boundry, but not the right"
     auto overlapped3 = overlap_range(variants.cbegin(), variants.cend(), region3);
     auto overlapped4 = overlap_range(variants.cbegin(), variants.cend(), region4);
     
-    REQUIRE(size(overlapped1) == 1);
-    REQUIRE(size(overlapped2) == 0);
-    REQUIRE(size(overlapped3) == 1);
-    REQUIRE(size(overlapped4) == 1);
+    BOOST_CHECK(size(overlapped1) == 1);
+    BOOST_CHECK(size(overlapped2) == 0);
+    BOOST_CHECK(size(overlapped3) == 1);
+    BOOST_CHECK(size(overlapped4) == 1);
 }
 
-TEST_CASE("inner_distance respects insertion lhs ordering rule", "[variant]")
+BOOST_AUTO_TEST_CASE(inner_distance_respects_insertion_lhs_ordering_rule)
 {
     Variant snp1 {"chr1", 99, "T", "A"};
     Variant snp2 {"chr1", 101, "T", "C"};
     Variant ins {"chr1", 100, "", "A"};
     
-    REQUIRE(inner_distance(snp1, ins) == 0);
-    REQUIRE(inner_distance(ins, snp1) == 0);
-    REQUIRE(inner_distance(snp2, ins) == -1);
-    REQUIRE(inner_distance(ins, snp2) == 1);
+    BOOST_CHECK(inner_distance(snp1, ins) == 0);
+    BOOST_CHECK(inner_distance(ins, snp1) == 0);
+    BOOST_CHECK(inner_distance(snp2, ins) == -1);
+    BOOST_CHECK(inner_distance(ins, snp2) == 1);
 }
 
-TEST_CASE("indels can be left aligned", "[left_alignment]")
+BOOST_AUTO_TEST_CASE(indels_can_be_left_aligned)
 {
     ReferenceGenomeFactory a_factory {};
     ReferenceGenome human(a_factory.make(human_reference_fasta));
@@ -296,123 +300,123 @@ TEST_CASE("indels can be left aligned", "[left_alignment]")
     
     auto the_sequence = human.get_sequence(a_region);
     
-    REQUIRE(the_sequence == "CAG");
+    BOOST_CHECK(the_sequence == "CAG");
     
     Variant a_deletion {a_region, the_sequence, ""};
     
     Variant left_aligned_deletion = left_align(a_deletion, human);
     
-    REQUIRE(left_aligned_deletion.get_region() ==
+    BOOST_CHECK(left_aligned_deletion.get_region() ==
             parse_region("4:3076603-3076606", human));
-    REQUIRE(left_aligned_deletion.get_reference_allele_sequence() == "CAG");
-    REQUIRE(left_aligned_deletion.get_alternative_allele_sequence() == "");
+    BOOST_CHECK(left_aligned_deletion.get_reference_allele_sequence() == "CAG");
+    BOOST_CHECK(left_aligned_deletion.get_alternative_allele_sequence() == "");
     
     Variant an_insertion {parse_region("4:3076660-3076660", human),
                                                "", the_sequence};
     
     auto left_aligned_insertion = left_align(an_insertion, human);
     
-    REQUIRE(left_aligned_insertion.get_region() ==
+    BOOST_CHECK(left_aligned_insertion.get_region() ==
             parse_region("4:3076603-3076603", human));
-    REQUIRE(left_aligned_insertion.get_reference_allele_sequence() == "");
-    REQUIRE(left_aligned_insertion.get_alternative_allele_sequence() == "CAG");
+    BOOST_CHECK(left_aligned_insertion.get_reference_allele_sequence() == "");
+    BOOST_CHECK(left_aligned_insertion.get_alternative_allele_sequence() == "CAG");
     
     // Region is CCAACAACAACAACAC (94594947-94594962)
     a_region = parse_region("5:94594956-94594959", human);
     
     the_sequence = human.get_sequence(a_region);
     
-    REQUIRE(the_sequence == "CAA");
+    BOOST_CHECK(the_sequence == "CAA");
     
     a_deletion = Variant {a_region, the_sequence, ""};
     
     left_aligned_deletion = left_align(a_deletion, human);
     
-    REQUIRE(left_aligned_deletion.get_region() ==
+    BOOST_CHECK(left_aligned_deletion.get_region() ==
             parse_region("5:94594949-94594952", human));
-    REQUIRE(left_aligned_deletion.get_reference_allele_sequence() == "ACA");
-    REQUIRE(left_aligned_deletion.get_alternative_allele_sequence() == "");
+    BOOST_CHECK(left_aligned_deletion.get_reference_allele_sequence() == "ACA");
+    BOOST_CHECK(left_aligned_deletion.get_alternative_allele_sequence() == "");
     
     an_insertion = Variant {parse_region("5:94594959-94594959", human), "", the_sequence};
     
     left_aligned_insertion = left_align(an_insertion, human);
     
-    REQUIRE(left_aligned_insertion.get_region() ==
+    BOOST_CHECK(left_aligned_insertion.get_region() ==
             parse_region("5:94594949-94594949", human));
-    REQUIRE(left_aligned_insertion.get_reference_allele_sequence() == "");
-    REQUIRE(left_aligned_insertion.get_alternative_allele_sequence() == "ACA");
+    BOOST_CHECK(left_aligned_insertion.get_reference_allele_sequence() == "");
+    BOOST_CHECK(left_aligned_insertion.get_alternative_allele_sequence() == "ACA");
 }
 
-TEST_CASE("can make variants parsimonious", "[parsimonious]")
+BOOST_AUTO_TEST_CASE(can_make_variants_parsimonious)
 {
     ReferenceGenomeFactory a_factory {};
     ReferenceGenome human(a_factory.make(human_reference_fasta));
     
     Variant a_snp {parse_region("12:10001330-10001331", human), std::string {"G"}, std::string {"C"}};
     
-    REQUIRE(is_parsimonious(a_snp));
-    REQUIRE(make_parsimonious(a_snp, human) == a_snp);
+    BOOST_CHECK(is_parsimonious(a_snp));
+    BOOST_CHECK(make_parsimonious(a_snp, human) == a_snp);
     
     Variant an_unparsimonious_snp {parse_region("12:10001330-10001332", human), std::string {"GT"}, std::string {"CT"}};
     
-    REQUIRE(!is_parsimonious(an_unparsimonious_snp));
+    BOOST_CHECK(!is_parsimonious(an_unparsimonious_snp));
     
     auto parsimonised_snp = make_parsimonious(an_unparsimonious_snp, human);
     
-    REQUIRE(is_parsimonious(parsimonised_snp));
-    REQUIRE(parsimonised_snp == a_snp);
+    BOOST_CHECK(is_parsimonious(parsimonised_snp));
+    BOOST_CHECK(parsimonised_snp == a_snp);
     
     Variant another_unparsimonious_snp {parse_region("12:10001329-10001332", human), std::string {"TGT"}, std::string {"TCT"}};
     
-    REQUIRE(!is_parsimonious(another_unparsimonious_snp));
+    BOOST_CHECK(!is_parsimonious(another_unparsimonious_snp));
     
     auto another_parsimonised_snp = make_parsimonious(another_unparsimonious_snp, human);
     
-    REQUIRE(is_parsimonious(another_parsimonised_snp));
-    REQUIRE(another_parsimonised_snp == a_snp);
+    BOOST_CHECK(is_parsimonious(another_parsimonised_snp));
+    BOOST_CHECK(another_parsimonised_snp == a_snp);
     
     auto a_region = parse_region("12:10001330-10001335", human);
     
     auto the_sequence = human.get_sequence(a_region);
     
-    REQUIRE(the_sequence == "GTGGA");
+    BOOST_CHECK(the_sequence == "GTGGA");
     
     Variant a_deletion {a_region, the_sequence, ""};
     
     auto parsimonious_deletion = make_parsimonious(a_deletion, human);
     
-    REQUIRE(parsimonious_deletion.get_region() ==
+    BOOST_CHECK(parsimonious_deletion.get_region() ==
             parse_region("12:10001329-10001335", human));
-    REQUIRE(parsimonious_deletion.get_reference_allele_sequence() == "CGTGGA");
-    REQUIRE(parsimonious_deletion.get_alternative_allele_sequence() == "C");
+    BOOST_CHECK(parsimonious_deletion.get_reference_allele_sequence() == "CGTGGA");
+    BOOST_CHECK(parsimonious_deletion.get_alternative_allele_sequence() == "C");
     
     Variant an_insertion {parse_region("12:10001330-10001330", human), "", the_sequence};
     
     auto parsimonious_insertion = make_parsimonious(an_insertion, human);
     
-    REQUIRE(parsimonious_insertion.get_region() ==
+    BOOST_CHECK(parsimonious_insertion.get_region() ==
             parse_region("12:10001329-10001330", human));
-    REQUIRE(parsimonious_insertion.get_reference_allele_sequence() == "C");
-    REQUIRE(parsimonious_insertion.get_alternative_allele_sequence() == "CGTGGA");
+    BOOST_CHECK(parsimonious_insertion.get_reference_allele_sequence() == "C");
+    BOOST_CHECK(parsimonious_insertion.get_alternative_allele_sequence() == "CGTGGA");
     
     Variant an_unparsimonious_deletion {parse_region("12:10001328-10001335", human), "TCGTGGA", "TC"};
     
-    REQUIRE(!is_parsimonious(an_unparsimonious_deletion));
+    BOOST_CHECK(!is_parsimonious(an_unparsimonious_deletion));
     
     auto parsimonised_deletion = make_parsimonious(an_unparsimonious_deletion, human);
     
-    REQUIRE(is_parsimonious(parsimonised_deletion));
+    BOOST_CHECK(is_parsimonious(parsimonised_deletion));
     
     Variant an_unparsimonious_insertion {parse_region("12:10001329-10001331", human), "CG", "CGTGGA"};
     
-    REQUIRE(!is_parsimonious(an_unparsimonious_insertion));
+    BOOST_CHECK(!is_parsimonious(an_unparsimonious_insertion));
     
     auto parsimonised_insertion = make_parsimonious(an_unparsimonious_insertion, human);
     
-    REQUIRE(is_parsimonious(parsimonised_insertion));
+    BOOST_CHECK(is_parsimonious(parsimonised_insertion));
 }
 
-TEST_CASE("can normalise variants", "[normalisation]")
+BOOST_AUTO_TEST_CASE(can_normalise_variants)
 {
     ReferenceGenomeFactory a_factory {};
     ReferenceGenome human(a_factory.make(human_reference_fasta));
@@ -421,104 +425,106 @@ TEST_CASE("can normalise variants", "[normalisation]")
     
     Variant a_snp {parse_region("4:3076657-3076658", human), std::string {"G"}, std::string {"C"}};
     
-    REQUIRE(is_parsimonious(a_snp));
+    BOOST_CHECK(is_parsimonious(a_snp));
     
     auto a_normalised_snp = normalise(a_snp, human);
     
-    REQUIRE(a_normalised_snp == a_snp);
+    BOOST_CHECK(a_normalised_snp == a_snp);
     
     auto a_region = parse_region("4:3076657-3076660", human);
     
     auto the_sequence = human.get_sequence(a_region);
     
-    REQUIRE(the_sequence == "CAG");
+    BOOST_CHECK(the_sequence == "CAG");
     
     Variant a_mnp {a_region, the_sequence, std::string {"GAC"}};
     
-    REQUIRE(is_parsimonious(a_mnp));
+    BOOST_CHECK(is_parsimonious(a_mnp));
     
     auto a_normalised_mnp = normalise(a_mnp, human);
     
-    REQUIRE(a_normalised_mnp == a_mnp);
+    BOOST_CHECK(a_normalised_mnp == a_mnp);
     
     Variant a_deletion {a_region, the_sequence, ""};
     
-    REQUIRE(!is_parsimonious(a_deletion));
+    BOOST_CHECK(!is_parsimonious(a_deletion));
     
     auto left_aligned_unparsimonious_deletion = left_align(a_deletion, human);
     
-    REQUIRE(!is_parsimonious(left_aligned_unparsimonious_deletion));
+    BOOST_CHECK(!is_parsimonious(left_aligned_unparsimonious_deletion));
     
     auto normilised_deletion = normalise(a_deletion, human);
     
-    REQUIRE(is_parsimonious(normilised_deletion));
-    REQUIRE(normilised_deletion.get_region() ==
+    BOOST_CHECK(is_parsimonious(normilised_deletion));
+    BOOST_CHECK(normilised_deletion.get_region() ==
             parse_region("4:3076602-3076606", human));
-    REQUIRE(normilised_deletion.get_reference_allele_sequence() == "CCAG");
-    REQUIRE(normilised_deletion.get_alternative_allele_sequence() == "C");
+    BOOST_CHECK(normilised_deletion.get_reference_allele_sequence() == "CCAG");
+    BOOST_CHECK(normilised_deletion.get_alternative_allele_sequence() == "C");
     
     Variant an_insertion {parse_region("4:3076660-3076660", human), "", the_sequence};
     
-    REQUIRE(!is_parsimonious(an_insertion));
+    BOOST_CHECK(!is_parsimonious(an_insertion));
     
     auto left_aligned_unparsimonious_insertion = left_align(an_insertion, human);
     
-    REQUIRE(!is_parsimonious(left_aligned_unparsimonious_insertion));
+    BOOST_CHECK(!is_parsimonious(left_aligned_unparsimonious_insertion));
     
     auto normilised_insertion = normalise(an_insertion, human);
     
-    REQUIRE(is_parsimonious(normilised_insertion));
-    REQUIRE(normilised_insertion.get_region() ==
+    BOOST_CHECK(is_parsimonious(normilised_insertion));
+    BOOST_CHECK(normilised_insertion.get_region() ==
             parse_region("4:3076602-3076603", human));
-    REQUIRE(normilised_insertion.get_reference_allele_sequence() == "C");
-    REQUIRE(normilised_insertion.get_alternative_allele_sequence() == "CCAG");
+    BOOST_CHECK(normilised_insertion.get_reference_allele_sequence() == "C");
+    BOOST_CHECK(normilised_insertion.get_alternative_allele_sequence() == "CCAG");
     
     // Some hard ones
     
     Variant an_unormilised_snp {parse_region("4:3076656-3076659", human), std::string {"AGC"}, std::string {"ACC"}};
     
-    REQUIRE(!is_parsimonious(an_unormilised_snp));
+    BOOST_CHECK(!is_parsimonious(an_unormilised_snp));
     
     a_normalised_snp = normalise(an_unormilised_snp, human);
     
-    REQUIRE(is_parsimonious(a_normalised_mnp));
-    REQUIRE(a_normalised_snp.get_region() == parse_region("4:3076657-3076658", human));
-    REQUIRE(a_normalised_snp.get_reference_allele_sequence() == "G");
-    REQUIRE(a_normalised_snp.get_alternative_allele_sequence() == "C");
+    BOOST_CHECK(is_parsimonious(a_normalised_mnp));
+    BOOST_CHECK(a_normalised_snp.get_region() == parse_region("4:3076657-3076658", human));
+    BOOST_CHECK(a_normalised_snp.get_reference_allele_sequence() == "G");
+    BOOST_CHECK(a_normalised_snp.get_alternative_allele_sequence() == "C");
     
     Variant an_unormilised_mnp {parse_region("4:3076656-3076661", human), std::string {"GCAGC"}, std::string {"GGACC"}};
     
-    REQUIRE(!is_parsimonious(an_unormilised_mnp));
+    BOOST_CHECK(!is_parsimonious(an_unormilised_mnp));
     
     a_normalised_mnp = normalise(an_unormilised_mnp, human);
     
-    REQUIRE(is_parsimonious(a_normalised_mnp));
-    REQUIRE(a_normalised_mnp.get_region() == parse_region("4:3076657-3076660", human));
-    REQUIRE(a_normalised_mnp.get_reference_allele_sequence() == "CAG");
-    REQUIRE(a_normalised_mnp.get_alternative_allele_sequence() == "GAC");
+    BOOST_CHECK(is_parsimonious(a_normalised_mnp));
+    BOOST_CHECK(a_normalised_mnp.get_region() == parse_region("4:3076657-3076660", human));
+    BOOST_CHECK(a_normalised_mnp.get_reference_allele_sequence() == "CAG");
+    BOOST_CHECK(a_normalised_mnp.get_alternative_allele_sequence() == "GAC");
     
     Variant an_unnormilised_deletion {parse_region("4:3076655-3076660", human), std::string {"AGCAG"}, std::string {"AG"}};
     
-    REQUIRE(!is_parsimonious(an_unnormilised_deletion));
+    BOOST_CHECK(!is_parsimonious(an_unnormilised_deletion));
     
     auto a_normalised_deletion = normalise(an_unnormilised_deletion, human);
     
-    REQUIRE(is_parsimonious(a_normalised_deletion));
-    REQUIRE(a_normalised_deletion.get_region() ==
+    BOOST_CHECK(is_parsimonious(a_normalised_deletion));
+    BOOST_CHECK(a_normalised_deletion.get_region() ==
             parse_region("4:3076602-3076606", human));
-    REQUIRE(a_normalised_deletion.get_reference_allele_sequence() == "CCAG");
-    REQUIRE(a_normalised_deletion.get_alternative_allele_sequence() == "C");
+    BOOST_CHECK(a_normalised_deletion.get_reference_allele_sequence() == "CCAG");
+    BOOST_CHECK(a_normalised_deletion.get_alternative_allele_sequence() == "C");
     
     Variant an_unnormilised_insertion {parse_region("4:3076655-3076657", human),
                                     std::string {"AG"}, std::string {"AGCAG"}};
     
-    REQUIRE(!is_parsimonious(an_unnormilised_insertion));
+    BOOST_CHECK(!is_parsimonious(an_unnormilised_insertion));
     
     auto a_normalised_insertion = normalise(an_unnormilised_insertion, human);
     
-    REQUIRE(is_parsimonious(a_normalised_insertion));
-    REQUIRE(a_normalised_insertion.get_region() ==
+    BOOST_CHECK(is_parsimonious(a_normalised_insertion));
+    BOOST_CHECK(a_normalised_insertion.get_region() ==
             parse_region("4:3076602-3076603", human));
-    REQUIRE(a_normalised_insertion.get_reference_allele_sequence() == "C");
-    REQUIRE(a_normalised_insertion.get_alternative_allele_sequence() == "CCAG");
+    BOOST_CHECK(a_normalised_insertion.get_reference_allele_sequence() == "C");
+    BOOST_CHECK(a_normalised_insertion.get_alternative_allele_sequence() == "CCAG");
 }
+
+BOOST_AUTO_TEST_SUITE_END()

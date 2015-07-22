@@ -6,7 +6,9 @@
 //  Copyright (c) 2015 Oxford University. All rights reserved.
 //
 
-#include "catch.hpp"
+#define BOOST_TEST_DYN_LINK
+
+#include <boost/test/unit_test.hpp>
 
 #include <iostream>
 #include <string>
@@ -26,7 +28,7 @@
 #include "genotype.h"
 #include "read_model.h"
 
-//TEST_CASE("read model benchmarks", "[read_model]")
+//BOOST_AUTO_TEST_CASE(read model benchmarks)
 //{
 //    ReferenceGenomeFactory a_factory {};
 //    ReferenceGenome human {a_factory.make(human_reference_fasta)};

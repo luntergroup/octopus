@@ -35,6 +35,7 @@
 		CA386DA31B5AC2870057A5A8 /* cigar_string.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA386DA21B5AC2870057A5A8 /* cigar_string.cpp */; };
 		CA386DA51B5AC3850057A5A8 /* aligned_read.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA386DA41B5AC3850057A5A8 /* aligned_read.cpp */; };
 		CA386DA81B5BBCB90057A5A8 /* mappable_set_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA386DA71B5BBCB90057A5A8 /* mappable_set_tests.cpp */; };
+		CA386DAA1B6007FF0057A5A8 /* libboost_unit_test_framework.a in Frameworks */ = {isa = PBXBuildFile; fileRef = CA386DA91B6007FF0057A5A8 /* libboost_unit_test_framework.a */; };
 		CA4551621AEB06D800FDAAE8 /* 1000G_test11.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA4551611AEB06D800FDAAE8 /* 1000G_test11.cpp */; };
 		CA4551641AEB075E00FDAAE8 /* 1000G_test12.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA4551631AEB075E00FDAAE8 /* 1000G_test12.cpp */; };
 		CA4551661AEB092D00FDAAE8 /* 1000G_test13.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA4551651AEB092D00FDAAE8 /* 1000G_test13.cpp */; };
@@ -163,6 +164,7 @@
 		CA386DA41B5AC3850057A5A8 /* aligned_read.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = aligned_read.cpp; sourceTree = "<group>"; };
 		CA386DA61B5BBBDE0057A5A8 /* mappable_set.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = mappable_set.h; sourceTree = "<group>"; };
 		CA386DA71B5BBCB90057A5A8 /* mappable_set_tests.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = mappable_set_tests.cpp; sourceTree = "<group>"; };
+		CA386DA91B6007FF0057A5A8 /* libboost_unit_test_framework.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libboost_unit_test_framework.a; path = /usr/local/Cellar/boost/1.58.0/lib/libboost_unit_test_framework.a; sourceTree = "<absolute>"; };
 		CA4551611AEB06D800FDAAE8 /* 1000G_test11.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = 1000G_test11.cpp; sourceTree = "<group>"; };
 		CA4551631AEB075E00FDAAE8 /* 1000G_test12.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = 1000G_test12.cpp; sourceTree = "<group>"; };
 		CA4551651AEB092D00FDAAE8 /* 1000G_test13.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = 1000G_test13.cpp; sourceTree = "<group>"; };
@@ -280,7 +282,6 @@
 		D463C1A11B0A160000739A66 /* allele.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = allele.cpp; sourceTree = "<group>"; };
 		D463C1A31B0A174B00739A66 /* variant.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = variant.cpp; sourceTree = "<group>"; };
 		D4907F471A88D71800639203 /* genomic_region.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = genomic_region.h; sourceTree = "<group>"; };
-		D4907F491A88E14E00639203 /* catch.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = catch.hpp; sourceTree = "<group>"; };
 		D4907F4A1A88E20E00639203 /* variant_tests.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = variant_tests.cpp; sourceTree = "<group>"; };
 		D4907F4D1A89095400639203 /* sequence_region.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = sequence_region.h; sourceTree = "<group>"; };
 		D4907F541A8A18CF00639203 /* reference_genome.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = reference_genome.h; sourceTree = "<group>"; };
@@ -304,6 +305,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				CA386DAA1B6007FF0057A5A8 /* libboost_unit_test_framework.a in Frameworks */,
 				D413B0451B5E54F7007EFDE0 /* libboost_iostreams.a in Frameworks */,
 				D45D2E661B2AD93500F6A89D /* libboost_filesystem.a in Frameworks */,
 				D45D2E671B2AD93500F6A89D /* libboost_program_options.a in Frameworks */,
@@ -369,7 +371,6 @@
 			children = (
 				CA0B46711AE8637800158BBA /* ecoli */,
 				D42F90121AE7945B0003F791 /* 1000G */,
-				CA0B467E1AE9309A00158BBA /* model_prototype.py */,
 			);
 			name = validation;
 			sourceTree = "<group>";
@@ -437,6 +438,7 @@
 		CAA4DC2B1A8219C700DD3E9A /* lib */ = {
 			isa = PBXGroup;
 			children = (
+				CA386DA91B6007FF0057A5A8 /* libboost_unit_test_framework.a */,
 				D413B0441B5E54F7007EFDE0 /* libboost_iostreams.a */,
 				D45D2E631B2AD93500F6A89D /* libboost_filesystem.a */,
 				D45D2E641B2AD93500F6A89D /* libboost_program_options.a */,
@@ -453,7 +455,6 @@
 			isa = PBXGroup;
 			children = (
 				CAA4DC671A8ACE9B00DD3E9A /* bioio.h */,
-				D4907F491A88E14E00639203 /* catch.hpp */,
 			);
 			path = include;
 			sourceTree = "<group>";
@@ -468,6 +469,7 @@
 				D463C18E1AF13ECD00739A66 /* test_regions.txt */,
 				D463C18F1AF13EDB00739A66 /* test_regions.bed */,
 				D4636C5E1B5FEEC700FEA7D2 /* test_files.txt */,
+				CA0B467E1AE9309A00158BBA /* model_prototype.py */,
 				CA0B46661AE8609A00158BBA /* components */,
 				CA0B46671AE860B600158BBA /* validation */,
 				CA03C2281A8C1C2D000D3494 /* benchmarks */,

@@ -6,7 +6,9 @@
 //  Copyright (c) 2015 Oxford University. All rights reserved.
 //
 
-#include "catch.hpp"
+#define BOOST_TEST_DYN_LINK
+
+#include <boost/test/unit_test.hpp>
 
 #include <iostream>
 #include <vector>
@@ -23,7 +25,9 @@
 
 using Octopus::ContextBackInserter;
 
-TEST_CASE("read_filter_test", "[read_filters]")
+BOOST_AUTO_TEST_SUITE(Components)
+
+BOOST_AUTO_TEST_CASE(read_filter_test)
 {
     ReadManager a_read_manager(std::vector<std::string> {human_1000g_bam1});
     
@@ -39,7 +43,7 @@ TEST_CASE("read_filter_test", "[read_filters]")
         std::sort(some_reads.begin(), some_reads.end());
     }
     
-    REQUIRE(some_reads.size() == 669);
+    BOOST_CHECK(some_reads.size() == 669);
     
     using ReadIterator = std::vector<AlignedRead>::const_iterator;
     
@@ -66,8 +70,8 @@ TEST_CASE("read_filter_test", "[read_filters]")
                                ContextBackInserter(bad_reads));
     
     // TODO: check these numbers are actually correct!
-    REQUIRE(good_reads.size() == 649);
-    REQUIRE(bad_reads.size() == 20);
+    BOOST_CHECK(good_reads.size() == 649);
+    BOOST_CHECK(bad_reads.size() == 20);
 }
 
-
+BOOST_AUTO_TEST_SUITE_END()

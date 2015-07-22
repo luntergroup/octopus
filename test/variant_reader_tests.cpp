@@ -6,7 +6,9 @@
 //  Copyright (c) 2015 Oxford University. All rights reserved.
 //
 
-#include "catch.hpp"
+#define BOOST_TEST_DYN_LINK
+
+#include <boost/test/unit_test.hpp>
 
 #include <iostream>
 #include <string>
@@ -20,11 +22,11 @@
 using std::cout;
 using std::endl;
 
-TEST_CASE("can read", "[variant_file_reader]")
-{
-    VariantFileFactory a_factory {};
-    
-    //VariantFileReader reader {a_factory.make_reader(sample_vcf)};
-    
-    //auto variants = reader.fetch_variants(GenomicRegion {"X", 10000, 100000});
-}
+//BOOST_AUTO_TEST_CASE(can read)
+//{
+//    VariantFileFactory a_factory {};
+//    
+//    //VariantFileReader reader {a_factory.make_reader(sample_vcf)};
+//    
+//    //auto variants = reader.fetch_variants(GenomicRegion {"X", 10000, 100000});
+//}

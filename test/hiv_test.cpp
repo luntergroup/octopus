@@ -6,7 +6,9 @@
 //  Copyright (c) 2015 Oxford University. All rights reserved.
 //
 
-#include "catch.hpp"
+#define BOOST_TEST_DYN_LINK
+
+#include <boost/test/unit_test.hpp>
 
 #include <iostream>
 #include <string>
@@ -41,7 +43,7 @@ using Octopus::ReadModel;
 using Octopus::HaplotypePhaser;
 using Octopus::VariationalBayesGenotypeModel;
 
-//TEST_CASE("HIV test 1", "[hiv]")
+//TEST_CASE("HIV test 1)
 //{
 //    cout << "starting HIV test" << endl;
 //    

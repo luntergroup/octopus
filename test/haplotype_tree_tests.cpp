@@ -6,7 +6,9 @@
 //  Copyright (c) 2015 Oxford University. All rights reserved.
 //
 
-#include "catch.hpp"
+#define BOOST_TEST_DYN_LINK
+
+#include <boost/test/unit_test.hpp>
 
 #include <iostream>
 #include <vector>
@@ -33,7 +35,9 @@ using std::endl;
 
 using Octopus::HaplotypeTree;
 
-TEST_CASE("haplotype tree does not bifurcate on alleles positioned past the leading alleles", "[haplotype_tree]")
+BOOST_AUTO_TEST_SUITE(Components)
+
+BOOST_AUTO_TEST_CASE(haplotype_tree_does_not_bifurcate_on_alleles_positioned_past_the_leading_alleles)
 {
     ReferenceGenomeFactory a_factory {};
     ReferenceGenome human {a_factory.make(human_reference_fasta)};
@@ -51,10 +55,10 @@ TEST_CASE("haplotype tree does not bifurcate on alleles positioned past the lead
     haplotype_tree.extend(allele4);
     haplotype_tree.extend(allele5);
     
-    REQUIRE(haplotype_tree.num_haplotypes() == 1);
+    BOOST_CHECK(haplotype_tree.num_haplotypes() == 1);
 }
 
-TEST_CASE("haplotype tree ignores duplicate alleles coming from same allele", "[haplotype_tree]")
+BOOST_AUTO_TEST_CASE(haplotype_tree_ignores_duplicate_alleles_coming_from_same_allele)
 {
     ReferenceGenomeFactory a_factory {};
     ReferenceGenome human {a_factory.make(human_reference_fasta)};
@@ -68,10 +72,10 @@ TEST_CASE("haplotype tree ignores duplicate alleles coming from same allele", "[
     haplotype_tree.extend(allele2);
     haplotype_tree.extend(allele3);
     
-    REQUIRE(haplotype_tree.num_haplotypes() == 2);
+    BOOST_CHECK(haplotype_tree.num_haplotypes() == 2);
 }
 
-TEST_CASE("haplotype tree ignores insertions followed immediatly by deletions and vice versa", "[haplotype_tree]")
+BOOST_AUTO_TEST_CASE(haplotype_tree_ignores_insertions_followed_immediatly_by_deletions_and_vice_versa)
 {
     ReferenceGenomeFactory a_factory {};
     ReferenceGenome human {a_factory.make(human_reference_fasta)};
@@ -83,17 +87,17 @@ TEST_CASE("haplotype tree ignores insertions followed immediatly by deletions an
     haplotype_tree.extend(allele1);
     haplotype_tree.extend(allele2);
     
-    REQUIRE(haplotype_tree.num_haplotypes() == 1);
+    BOOST_CHECK(haplotype_tree.num_haplotypes() == 1);
     
     auto a_region = parse_region("16:9300037-9300037", human);
     
     auto haplotypes = haplotype_tree.get_haplotypes(a_region);
     
-    REQUIRE(haplotypes[0].contains(allele1));
-    REQUIRE(!haplotypes[0].contains(allele2));
+    BOOST_CHECK(haplotypes[0].contains(allele1));
+    BOOST_CHECK(!haplotypes[0].contains(allele2));
 }
 
-TEST_CASE("haplotype tree splits overlapping snps into different branches", "[haplotype_tree]")
+BOOST_AUTO_TEST_CASE(haplotype_tree_splits_overlapping_snps_into_different_branches)
 {
     ReferenceGenomeFactory a_factory {};
     ReferenceGenome human {a_factory.make(human_reference_fasta)};
@@ -109,26 +113,26 @@ TEST_CASE("haplotype tree splits overlapping snps into different branches", "[ha
     
     haplotype_tree.extend(allele1);
     
-    REQUIRE(haplotype_tree.num_haplotypes() == 1);
+    BOOST_CHECK(haplotype_tree.num_haplotypes() == 1);
     
     haplotype_tree.extend(allele2);
     
-    REQUIRE(haplotype_tree.num_haplotypes() == 2);
+    BOOST_CHECK(haplotype_tree.num_haplotypes() == 2);
     
     haplotype_tree.extend(allele3);
     
-    REQUIRE(haplotype_tree.num_haplotypes() == 3);
+    BOOST_CHECK(haplotype_tree.num_haplotypes() == 3);
     
     haplotype_tree.extend(allele4);
     
-    REQUIRE(haplotype_tree.num_haplotypes() == 3);
+    BOOST_CHECK(haplotype_tree.num_haplotypes() == 3);
     
     haplotype_tree.extend(allele5);
     
-    REQUIRE(haplotype_tree.num_haplotypes() == 6);
+    BOOST_CHECK(haplotype_tree.num_haplotypes() == 6);
 }
 
-TEST_CASE("haplotype tree can generate haplotypes in a region", "[haplotype_tree]")
+BOOST_AUTO_TEST_CASE(haplotype_tree_can_generate_haplotypes_in_a_region)
 {
     ReferenceGenomeFactory a_factory {};
     ReferenceGenome human {a_factory.make(human_reference_fasta)};
@@ -149,13 +153,13 @@ TEST_CASE("haplotype tree can generate haplotypes in a region", "[haplotype_tree
     
     auto haplotypes = haplotype_tree.get_haplotypes(a_region);
     
-    REQUIRE(haplotypes.size() == 2);
+    BOOST_CHECK(haplotypes.size() == 2);
     std::sort(haplotypes.begin(), haplotypes.end());
-    REQUIRE(haplotypes[0].get_sequence() == "ATCCT");
-    REQUIRE(haplotypes[1].get_sequence() == "ATGCT");
+    BOOST_CHECK(haplotypes[0].get_sequence() == "ATCCT");
+    BOOST_CHECK(haplotypes[1].get_sequence() == "ATGCT");
 }
 
-TEST_CASE("haplotype tree can generate haplotypes ending in different regions", "[haplotype_tree]")
+BOOST_AUTO_TEST_CASE(haplotype_tree_can_generate_haplotypes_ending_in_different_regions)
 {
     ReferenceGenomeFactory a_factory {};
     ReferenceGenome human {a_factory.make(human_reference_fasta)};;
@@ -170,25 +174,25 @@ TEST_CASE("haplotype tree can generate haplotypes ending in different regions", 
     haplotype_tree.extend(allele2);
     haplotype_tree.extend(allele3);
     
-    REQUIRE(haplotype_tree.num_haplotypes() == 2);
+    BOOST_CHECK(haplotype_tree.num_haplotypes() == 2);
     
     auto a_region = parse_region("4:1000000-1000006", human);
     
     auto haplotypes = haplotype_tree.get_haplotypes(a_region);
     
-    REQUIRE(haplotypes.size() == 2);
+    BOOST_CHECK(haplotypes.size() == 2);
     
     a_region = parse_region("4:1000000-1000003", human);
     
     haplotypes = haplotype_tree.get_haplotypes(a_region);
     
-    REQUIRE(haplotypes.size() == 2);
+    BOOST_CHECK(haplotypes.size() == 2);
     std::sort(haplotypes.begin(), haplotypes.end());
-    REQUIRE(haplotypes[0].get_sequence() == "ATG");
-    REQUIRE(haplotypes[1].get_sequence() == "AT");
+    BOOST_CHECK(haplotypes[0].get_sequence() == "ATG");
+    BOOST_CHECK(haplotypes[1].get_sequence() == "AT");
 }
 
-TEST_CASE("leading haplotypes can be removed from the tree", "[haplotype_tree]")
+BOOST_AUTO_TEST_CASE(leading_haplotypes_can_be_removed_from_the_tree)
 {
     ReferenceGenomeFactory a_factory {};
     ReferenceGenome human {a_factory.make(human_reference_fasta)};
@@ -211,27 +215,27 @@ TEST_CASE("leading haplotypes can be removed from the tree", "[haplotype_tree]")
     
     auto haplotypes = haplotype_tree.get_haplotypes(a_region);
     
-    REQUIRE(haplotypes.size() == 4);
+    BOOST_CHECK(haplotypes.size() == 4);
     
     std::sort(haplotypes.begin(), haplotypes.end());
     
     haplotype_tree.prune_all(haplotypes[0]); // ATCCC
     
-    REQUIRE(haplotype_tree.num_haplotypes() == 3);
+    BOOST_CHECK(haplotype_tree.num_haplotypes() == 3);
     
     haplotype_tree.prune_all(haplotypes[1]); // ATCCT
     
-    REQUIRE(haplotype_tree.num_haplotypes() == 2);
+    BOOST_CHECK(haplotype_tree.num_haplotypes() == 2);
     
     haplotypes = haplotype_tree.get_haplotypes(a_region);
     
     std::sort(haplotypes.begin(), haplotypes.end());
     
-    REQUIRE(haplotypes[0].get_sequence() == "ATGCC");
-    REQUIRE(haplotypes[1].get_sequence() == "ATGCT");
+    BOOST_CHECK(haplotypes[0].get_sequence() == "ATGCC");
+    BOOST_CHECK(haplotypes[1].get_sequence() == "ATGCT");
 }
 
-TEST_CASE("pruned branches can still be extended", "[haplotype_tree]")
+BOOST_AUTO_TEST_CASE(pruned_branches_can_still_be_extended)
 {
     ReferenceGenomeFactory a_factory {};
     ReferenceGenome human {a_factory.make(human_reference_fasta)};
@@ -254,7 +258,7 @@ TEST_CASE("pruned branches can still be extended", "[haplotype_tree]")
     
     auto a_region = parse_region("4:1000000-1000007", human);
     
-    REQUIRE(haplotype_tree.num_haplotypes() == 4);
+    BOOST_CHECK(haplotype_tree.num_haplotypes() == 4);
     
     Haplotype hap1 {human};
     hap1.push_back(allele3);
@@ -263,15 +267,15 @@ TEST_CASE("pruned branches can still be extended", "[haplotype_tree]")
     
     haplotype_tree.prune_all(hap1);
     
-    REQUIRE(haplotype_tree.num_haplotypes() == 3);
+    BOOST_CHECK(haplotype_tree.num_haplotypes() == 3);
     
     auto haplotypes = haplotype_tree.get_haplotypes(a_region);
     
     std::sort(haplotypes.begin(), haplotypes.end());
     
-    REQUIRE(haplotypes[0].get_sequence() == "ATCCCAA");
-    REQUIRE(haplotypes[1].get_sequence() == "ATCCTAA");
-    REQUIRE(haplotypes[2].get_sequence() == "ATGCCAA");
+    BOOST_CHECK(haplotypes[0].get_sequence() == "ATCCCAA");
+    BOOST_CHECK(haplotypes[1].get_sequence() == "ATCCTAA");
+    BOOST_CHECK(haplotypes[2].get_sequence() == "ATGCCAA");
     
     Haplotype hap2 {human};
     hap2.push_back(allele5);
@@ -279,28 +283,28 @@ TEST_CASE("pruned branches can still be extended", "[haplotype_tree]")
     
     haplotype_tree.prune_all(hap2);
     
-    REQUIRE(haplotype_tree.num_haplotypes() == 2);
+    BOOST_CHECK(haplotype_tree.num_haplotypes() == 2);
     
     haplotypes = haplotype_tree.get_haplotypes(a_region);
     
     std::sort(haplotypes.begin(), haplotypes.end());
     
-    REQUIRE(haplotypes[0].get_sequence() == "ATCCTAA");
-    REQUIRE(haplotypes[1].get_sequence() == "ATGCCAG");
+    BOOST_CHECK(haplotypes[0].get_sequence() == "ATCCTAA");
+    BOOST_CHECK(haplotypes[1].get_sequence() == "ATGCCAG");
     
     haplotype_tree.extend(allele4);
     
-    REQUIRE(haplotype_tree.num_haplotypes() == 2);
+    BOOST_CHECK(haplotype_tree.num_haplotypes() == 2);
     
     haplotypes = haplotype_tree.get_haplotypes(a_region);
     
     std::sort(haplotypes.begin(), haplotypes.end());
     
-    REQUIRE(haplotypes[0].get_sequence() == "ATCCTAA");
-    REQUIRE(haplotypes[1].get_sequence() == "ATGCTAG");
+    BOOST_CHECK(haplotypes[0].get_sequence() == "ATCCTAA");
+    BOOST_CHECK(haplotypes[1].get_sequence() == "ATGCTAG");
 }
 
-TEST_CASE("extending on mnps results in backtracked bifurification", "[haplotype_tree]")
+BOOST_AUTO_TEST_CASE(extending_on_mnps_results_in_backtracked_bifurification)
 {
     ReferenceGenomeFactory a_factory {};
     ReferenceGenome human {a_factory.make(human_reference_fasta)};
@@ -318,29 +322,29 @@ TEST_CASE("extending on mnps results in backtracked bifurification", "[haplotype
     haplotype_tree.extend(allele1);
     haplotype_tree.extend(allele2);
     
-    REQUIRE(haplotype_tree.num_haplotypes() == 2);
+    BOOST_CHECK(haplotype_tree.num_haplotypes() == 2);
     
     haplotype_tree.extend(allele3);
     
-    REQUIRE(haplotype_tree.num_haplotypes() == 3);
+    BOOST_CHECK(haplotype_tree.num_haplotypes() == 3);
     
     haplotype_tree.extend(allele4);
     
-    REQUIRE(haplotype_tree.num_haplotypes() == 4);
+    BOOST_CHECK(haplotype_tree.num_haplotypes() == 4);
     
     haplotype_tree.extend(allele5);
     
-    REQUIRE(haplotype_tree.num_haplotypes() == 5);
+    BOOST_CHECK(haplotype_tree.num_haplotypes() == 5);
     
     haplotype_tree.extend(allele6);
     
-    REQUIRE(haplotype_tree.num_haplotypes() == 8);
+    BOOST_CHECK(haplotype_tree.num_haplotypes() == 8);
     
     auto a_region = parse_region("16:9300039-9300051", human);
     
     auto haplotypes = haplotype_tree.get_haplotypes(a_region);
     
-    REQUIRE(haplotypes.size() == 8);
+    BOOST_CHECK(haplotypes.size() == 8);
     
     std::sort(haplotypes.begin(), haplotypes.end());
     
@@ -348,10 +352,10 @@ TEST_CASE("extending on mnps results in backtracked bifurification", "[haplotype
     
     haplotypes.erase(it, haplotypes.end());
     
-    REQUIRE(haplotypes.size() == 5);
+    BOOST_CHECK(haplotypes.size() == 5);
 }
 
-TEST_CASE("haplotype tree can selectively extend branches", "[haplotype_tree]")
+BOOST_AUTO_TEST_CASE(haplotype_tree_can_selectively_extend_branches)
 {
     ReferenceGenomeFactory a_factory {};
     ReferenceGenome human {a_factory.make(human_reference_fasta)};
@@ -364,38 +368,38 @@ TEST_CASE("haplotype tree can selectively extend branches", "[haplotype_tree]")
     haplotype_tree.extend(allele1);
     haplotype_tree.extend(allele2);
     
-    REQUIRE(haplotype_tree.num_haplotypes() == 2);
+    BOOST_CHECK(haplotype_tree.num_haplotypes() == 2);
     
     haplotype_tree.extend(allele1);
     haplotype_tree.extend(allele2);
     
-    REQUIRE(haplotype_tree.num_haplotypes() == 2);
+    BOOST_CHECK(haplotype_tree.num_haplotypes() == 2);
     
     Allele allele3 {parse_region("4:1000001-1000002", human), "C"};
     Allele allele4 {parse_region("4:1000002-1000003", human), "G"};
     
     haplotype_tree.extend(allele3);
     
-    REQUIRE(haplotype_tree.num_haplotypes() == 3);
+    BOOST_CHECK(haplotype_tree.num_haplotypes() == 3);
     
     haplotype_tree.extend(allele4);
     
-    REQUIRE(haplotype_tree.num_haplotypes() == 4);
+    BOOST_CHECK(haplotype_tree.num_haplotypes() == 4);
     
     Allele allele5 {parse_region("4:1000003-1000004", human), "T"};
     
     haplotype_tree.extend(allele5);
     
-    REQUIRE(haplotype_tree.num_haplotypes() == 4);
+    BOOST_CHECK(haplotype_tree.num_haplotypes() == 4);
     
     Allele allele6 {parse_region("4:1000003-1000004", human), "A"};
     
     haplotype_tree.extend(allele6);
     
-    REQUIRE(haplotype_tree.num_haplotypes() == 8);
+    BOOST_CHECK(haplotype_tree.num_haplotypes() == 8);
 }
 
-TEST_CASE("haplotype tree survives serious pruning", "[haplotype_tree]")
+BOOST_AUTO_TEST_CASE(haplotype_tree_survives_serious_pruning)
 {
     ReferenceGenomeFactory a_factory {};
     ReferenceGenome human {a_factory.make(human_reference_fasta)};
@@ -438,12 +442,12 @@ TEST_CASE("haplotype tree survives serious pruning", "[haplotype_tree]")
         haplotype_tree.prune_all(haplotype);
     }
     
-    REQUIRE(haplotype_tree.num_haplotypes() > 0);
+    BOOST_CHECK(haplotype_tree.num_haplotypes() > 0);
     
     auto pruned_haplotypes = haplotype_tree.get_haplotypes(a_region);
     
     for (const auto& pruned_haplotype : pruned_haplotypes) {
-        REQUIRE(pruned_haplotype == the_reference_haplotype);
+        BOOST_CHECK(pruned_haplotype == the_reference_haplotype);
     }
     
     unique_least_complex(pruned_haplotypes);
@@ -454,21 +458,21 @@ TEST_CASE("haplotype tree survives serious pruning", "[haplotype_tree]")
         haplotype_tree.prune_all(haplotype);
     });
     
-    REQUIRE(haplotype_tree.num_haplotypes() == 5);
+    BOOST_CHECK(haplotype_tree.num_haplotypes() == 5);
     
     auto remaining_haplotypes = haplotype_tree.get_haplotypes(a_region);
     
-    REQUIRE(std::all_of(remaining_haplotypes.cbegin(), remaining_haplotypes.cend(),
+    BOOST_CHECK(std::all_of(remaining_haplotypes.cbegin(), remaining_haplotypes.cend(),
                         [&pruned_haplotypes] (const auto& haplotype) {
                             return haplotype == pruned_haplotypes.front();
                         }));
     
     haplotype_tree.prune_all(remaining_haplotypes.front());
     
-    REQUIRE(haplotype_tree.empty());
+    BOOST_CHECK(haplotype_tree.empty());
 }
 
-TEST_CASE("prune_unqiue leaves a single haplotype which contains the same alleles as the given haplotype", "[haplotype_tree]")
+BOOST_AUTO_TEST_CASE(prune_unqiue_leaves_a_single_haplotype_which_contains_the_same_alleles_as_the_given_haplotype)
 {
     ReferenceGenomeFactory a_factory {};
     ReferenceGenome human {a_factory.make(human_reference_fasta)};
@@ -507,7 +511,7 @@ TEST_CASE("prune_unqiue leaves a single haplotype which contains the same allele
     
     std::sort(er.first, er.second, is_less_complex);
     
-    REQUIRE(std::distance(er.first, er.second) == 5);
+    BOOST_CHECK(std::distance(er.first, er.second) == 5);
     
     auto haplotype_to_prune= *er.first;
     
@@ -519,10 +523,10 @@ TEST_CASE("prune_unqiue leaves a single haplotype which contains the same allele
     
     er = std::equal_range(new_haplotypes.begin(), new_haplotypes.end(), the_reference_haplotype);
     
-    REQUIRE(std::distance(er.first, er.second) == 1);
+    BOOST_CHECK(std::distance(er.first, er.second) == 1);
 }
 
-TEST_CASE("contains returns true if the given haplotype is in the tree in any form", "[haplotype_tree]")
+BOOST_AUTO_TEST_CASE(contains_returns_true_if_the_given_haplotype_is_in_the_tree_in_any_form)
 {
     ReferenceGenomeFactory a_factory {};
     ReferenceGenome human {a_factory.make(human_reference_fasta)};
@@ -545,22 +549,21 @@ TEST_CASE("contains returns true if the given haplotype is in the tree in any fo
     haplotype1.push_back(allele1);
     haplotype1.push_back(allele4);
     
-    REQUIRE(haplotype_tree.contains(haplotype1));
+    BOOST_CHECK(haplotype_tree.contains(haplotype1));
     
     Haplotype haplotype2 {human};
     haplotype2.push_back(allele1);
     haplotype2.push_back(Allele {parse_region("4:1000001-1000002", human), "A"});
     
-    REQUIRE(!haplotype_tree.contains(haplotype2));
+    BOOST_CHECK(!haplotype_tree.contains(haplotype2));
 }
 
-TEST_CASE("is_unique return true if the given haplotype occurs extactly once in the tree", "[haplotype_tree]")
-{
-    
-}
+//BOOST_AUTO_TEST_CASE(is_unique_return_true_if_the_given_haplotype_occurs_extactly_once_in_the_tree)
+//{
+//    
+//}
 
-TEST_CASE("get_seperation_region returns the allele region before two unique haplotypes seperate,"
-          "if the haplotypes seperate at the root then the entire region covered by the first haplotype is returned", "[haplotype_tree]")
+BOOST_AUTO_TEST_CASE(get_seperation_region_returns_the_allele_region_before_two_unique_haplotypes_seperate_if_the_haplotypes_seperate_at_the_root_then_the_entire_region_covered_by_the_first_haplotype_is_returned)
 {
     ReferenceGenomeFactory a_factory {};
     ReferenceGenome human {a_factory.make(human_reference_fasta)};
@@ -589,6 +592,8 @@ TEST_CASE("get_seperation_region returns the allele region before two unique hap
     haplotype3.push_back(allele2);
     haplotype3.push_back(allele3);
     
-    REQUIRE(haplotype_tree.get_seperation_region(haplotype1, haplotype2) == GenomicRegion("4", 1000000, 1000001));
-    REQUIRE(haplotype_tree.get_seperation_region(haplotype1, haplotype3) == GenomicRegion("4", 1000000, 1000002));
+    BOOST_CHECK(haplotype_tree.get_seperation_region(haplotype1, haplotype2) == GenomicRegion("4", 1000000, 1000001));
+    BOOST_CHECK(haplotype_tree.get_seperation_region(haplotype1, haplotype3) == GenomicRegion("4", 1000000, 1000002));
 }
+
+BOOST_AUTO_TEST_SUITE_END()

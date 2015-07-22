@@ -6,7 +6,9 @@
 //  Copyright (c) 2015 Oxford University. All rights reserved.
 //
 
-#include "catch.hpp"
+#define BOOST_TEST_DYN_LINK
+
+#include <boost/test/unit_test.hpp>
 
 #include <iostream>
 #include <string>
@@ -25,7 +27,7 @@
 #include "allele.h"
 #include "haplotype_tree.h"
 
-//TEST_CASE("haplotype hashing benchmark", "[haplotype,benchmark]")
+//BOOST_AUTO_TEST_CASE(haplotype hashing benchmark)
 //{
 //    ReferenceGenomeFactory a_factory {};
 //    ReferenceGenome human {a_factory.make(human_reference_fasta)};
@@ -43,7 +45,7 @@
 //    std::cout << "hash_time: " << hash_time << "ns" << std::endl;
 //}
 
-//TEST_CASE("haplotype containment benchmarks", "[haplotype,benchmark]")
+//BOOST_AUTO_TEST_CASE(haplotype containment benchmarks)
 //{
 //    ReferenceGenomeFactory a_factory {};
 //    ReferenceGenome human {a_factory.make(human_reference_fasta)};

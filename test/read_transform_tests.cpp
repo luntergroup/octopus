@@ -6,7 +6,9 @@
 //  Copyright (c) 2015 Oxford University. All rights reserved.
 //
 
-#include "catch.hpp"
+#define BOOST_TEST_DYN_LINK
+
+#include <boost/test/unit_test.hpp>
 
 #include <iostream>
 #include <vector>
@@ -19,7 +21,9 @@
 #include "read_transform.h"
 #include "read_transformations.h"
 
-TEST_CASE("read_transform_test", "[read_transform]")
+BOOST_AUTO_TEST_SUITE(Components)
+
+BOOST_AUTO_TEST_CASE(read_transform_test)
 {
     
     ReadManager a_read_manager(std::vector<std::string> {human_1000g_bam1});
@@ -36,18 +40,18 @@ TEST_CASE("read_transform_test", "[read_transform]")
         std::sort(some_reads.begin(), some_reads.end());
     }
     
-    REQUIRE(some_reads.size() == 4);
+    BOOST_CHECK(some_reads.size() == 4);
     
     const auto& a_read = some_reads[0];
     
-    REQUIRE(is_back_soft_clipped(a_read.get_cigar_string()));
+    BOOST_CHECK(is_back_soft_clipped(a_read.get_cigar_string()));
     
     ReadTransform a_read_transform {};
     a_read_transform.register_transform(trim_adapters);
     a_read_transform.register_transform(trim_soft_clipped);
     a_read_transform.transform_reads(some_reads.begin(), some_reads.end());
     
-    REQUIRE(std::all_of(a_read.get_qualities().rbegin(), a_read.get_qualities().rbegin() + 13,
+    BOOST_CHECK(std::all_of(a_read.get_qualities().rbegin(), a_read.get_qualities().rbegin() + 13,
                         [] (auto q) { return q == 0; }));
     
     GenomicRegion another_region {"18", 389260, 389361};
@@ -62,3 +66,5 @@ TEST_CASE("read_transform_test", "[read_transform]")
     
     
 }
+
+BOOST_AUTO_TEST_SUITE_END()

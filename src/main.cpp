@@ -6,16 +6,16 @@
 //  Copyright (c) 2015 Oxford University. All rights reserved.
 //
 
-#define CATCH_CONFIG_MAIN
-//#define CATCH_CONFIG_RUNNER
-#include "catch.hpp"
+#define BOOST_TEST_DYN_LINK
+#define BOOST_TEST_MODULE Main
+#include <boost/test/unit_test.hpp>
 
-#include <iostream>
-#include <cstdlib>
-
-#include "program_options.h"
-#include "octopus.h"
-
+//#include <iostream>
+//#include <cstdlib>
+//
+//#include "program_options.h"
+//#include "octopus.h"
+//
 //int main(int argc, const char **argv)
 //{
 //    auto options = Octopus::parse_options(argc, argv);

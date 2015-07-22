@@ -6,9 +6,12 @@
 //  Copyright (c) 2015 Oxford University. All rights reserved.
 //
 
+#define BOOST_TEST_DYN_LINK
+
+#include <boost/test/unit_test.hpp>
+
 #include <iostream>
 
-#include "catch.hpp"
 #include "test_common.h"
 #include "benchmark_utils.h"
 
@@ -18,7 +21,7 @@
 #include "variant.h"
 #include "variant_utils.h"
 
-//TEST_CASE("variant_benchmark", "[variant,benchmark]")
+//BOOST_AUTO_TEST_CASE(variant_benchmark)
 //{
 //    ReferenceGenomeFactory a_factory {};
 //    ReferenceGenome human(a_factory.make(human_reference_fasta));
@@ -29,7 +32,7 @@
 //    
 //    auto the_sequence = human.get_sequence(a_region);
 //    
-//    REQUIRE(the_sequence == "CAG");
+//    BOOST_CHECK(the_sequence == "CAG");
 //    
 //    auto a_variant = a_variant_factory.make(a_region, the_sequence, std::string {});
 //    

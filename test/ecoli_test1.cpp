@@ -6,7 +6,9 @@
 //  Copyright (c) 2015 Oxford University. All rights reserved.
 //
 
-#include "catch.hpp"
+#define BOOST_TEST_DYN_LINK
+
+#include <boost/test/unit_test.hpp>
 
 #include <iostream>
 #include <string>
@@ -36,7 +38,7 @@
 using std::cout;
 using std::endl;
 
-//TEST_CASE("ecoli test 1 : R00000042:99640-99745", "[validation]")
+//BOOST_AUTO_TEST_CASE(ecoli test 1 : R00000042:99640-99745)
 //{
 //    unsigned ploidy {1};
 //
@@ -84,7 +86,7 @@ using std::endl;
 //
 //    auto genotypes = get_all_genotypes(haplotypes, ploidy);
 //
-//    REQUIRE(genotypes.size() == num_genotypes(num_haplotypes, ploidy));
+//    BOOST_CHECK(genotypes.size() == num_genotypes(num_haplotypes, ploidy));
 //
 //    ReadModel a_read_model {ploidy};
 //    VariationalBayesGenotypeModel the_model {a_read_model, ploidy};
@@ -105,7 +107,7 @@ using std::endl;
 //        return responsabilities[g1] > responsabilities[g2];
 //    });
 //
-//    REQUIRE(genotypes.at(0).num_occurences(best_haplotype) == 1);
+//    BOOST_CHECK(genotypes.at(0).num_occurences(best_haplotype) == 1);
 //
 ////    cout << reference_haplotype_expected_count << endl;
 ////    cout << best_haplotype_expected_count << endl;

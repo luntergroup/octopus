@@ -6,7 +6,9 @@
 //  Copyright (c) 2015 Oxford University. All rights reserved.
 //
 
-#include "catch.hpp"
+#define BOOST_TEST_DYN_LINK
+
+#include <boost/test/unit_test.hpp>
 
 #include <iostream>
 #include <string>
@@ -21,7 +23,9 @@
 #include "kmer_graph.h"
 #include "storage_policies.h"
 
-//TEST_CASE("assembler_construct_test", "[assembler]")
+BOOST_AUTO_TEST_SUITE(Components)
+
+//BOOST_AUTO_TEST_CASE(assembler_construct_test)
 //{
 //    Assembler assembler {10};
 //    
@@ -31,46 +35,46 @@
 //    
 //    assembler.add_read(get_mock_aligned_read("AAAAAAAAAACCCCCCCCCC"));
 //    
-//    REQUIRE(assembler.get_num_verticies() == 10);
-//    REQUIRE(assembler.get_num_edges() == 11);
+//    BOOST_CHECK(assembler.get_num_verticies() == 10);
+//    BOOST_CHECK(assembler.get_num_edges() == 11);
 //    
 //    assembler.clear();
 //    
-//    REQUIRE(assembler.get_num_verticies() == 0);
-//    REQUIRE(assembler.get_num_edges() == 0);
+//    BOOST_CHECK(assembler.get_num_verticies() == 0);
+//    BOOST_CHECK(assembler.get_num_edges() == 0);
 //    
 //    assembler.add_read(get_mock_aligned_read("AAAAAAAAAACCCCCCCCCC"));
 //    
-//    REQUIRE(assembler.get_num_verticies() == 10);
-//    REQUIRE(assembler.get_num_edges() == 11);
+//    BOOST_CHECK(assembler.get_num_verticies() == 10);
+//    BOOST_CHECK(assembler.get_num_edges() == 11);
 //    
 //    assembler.add_read(get_mock_aligned_read("GGGGGGGGGGTTTTTTTTTT"));
 //    
-//    REQUIRE(assembler.get_num_verticies() == 20);
-//    REQUIRE(assembler.get_num_edges() == 22);
+//    BOOST_CHECK(assembler.get_num_verticies() == 20);
+//    BOOST_CHECK(assembler.get_num_edges() == 22);
 //    
 //    assembler.add_reference_contig(a_mock_region, "CCCCCCCCCCTTTTTTTTTT");
 //    
-//    REQUIRE(assembler.get_num_verticies() == 28);
-//    REQUIRE(assembler.get_num_edges() == 31);
+//    BOOST_CHECK(assembler.get_num_verticies() == 28);
+//    BOOST_CHECK(assembler.get_num_edges() == 31);
 //    
 //    assembler.add_reference_contig(a_mock_region, "GGGGGGGGGGAAAAAAAAAA");
 //    
-//    REQUIRE(assembler.get_num_verticies() == 36);
-//    REQUIRE(assembler.get_num_edges() == 40);
+//    BOOST_CHECK(assembler.get_num_verticies() == 36);
+//    BOOST_CHECK(assembler.get_num_edges() == 40);
 //    
 //    assembler.add_read(get_mock_aligned_read("CCCCCCCCCCGGGGGGGGGG"));
 //    
-//    REQUIRE(assembler.get_num_verticies() == 44);
-//    REQUIRE(assembler.get_num_edges() == 51);
+//    BOOST_CHECK(assembler.get_num_verticies() == 44);
+//    BOOST_CHECK(assembler.get_num_edges() == 51);
 //    
 //    assembler.add_reference_contig(a_mock_region, "CCCCCCCCCCGGGGGGGGGG");
 //    
-//    REQUIRE(assembler.get_num_verticies() == 44);
-//    REQUIRE(assembler.get_num_edges() == 51);
+//    BOOST_CHECK(assembler.get_num_verticies() == 44);
+//    BOOST_CHECK(assembler.get_num_edges() == 51);
 //}
 
-TEST_CASE("assembler_path_test", "[assembler]")
+BOOST_AUTO_TEST_CASE(assembler_path_test)
 {
     ReferenceGenomeFactory a_factory {};
     ReferenceGenome lambda(a_factory.make(lambda_reference_fasta));
@@ -96,19 +100,21 @@ TEST_CASE("assembler_path_test", "[assembler]")
     //std::cout << assembler.get_contigs().at(0) << std::endl;
 }
 
-//TEST_CASE("assembler_cycle_test", "[assembler]")
+//BOOST_AUTO_TEST_CASE(assembler_cycle_test)
 //{
 //    Assembler assembler {5};
 //    
 //    assembler.add_read("AAAAACCCCC");
 //    
-//    REQUIRE(!assembler.has_cycle());
+//    BOOST_CHECK(!assembler.has_cycle());
 //    
 //    assembler.add_read("CCCCCGGGGG");
 //    
-//    //REQUIRE(!assembler.has_cycle());
+//    //BOOST_CHECK(!assembler.has_cycle());
 //    
 //    assembler.add_read("GGGGGAAAAA");
 //    
-//    //REQUIRE(assembler.has_cycle());
+//    //BOOST_CHECK(assembler.has_cycle());
 //}
+
+BOOST_AUTO_TEST_SUITE_END()

@@ -6,7 +6,9 @@
 //  Copyright (c) 2015 Oxford University. All rights reserved.
 //
 
-#include "catch.hpp"
+#define BOOST_TEST_DYN_LINK
+
+#include <boost/test/unit_test.hpp>
 
 #include <iostream>
 #include <string>
@@ -38,7 +40,7 @@ using Octopus::HaplotypeTree;
 using Octopus::ReadModel;
 using Octopus::BayesianGenotypeModel::VariationalBayesGenotypeModel;
 
-//TEST_CASE("responsability calculation", "[variational_bayes_genotype_model,benchmark]")
+//BOOST_AUTO_TEST_CASE(responsability calculation)
 //{
 //    ReferenceGenomeFactory a_factory {};
 //    ReferenceGenome human {a_factory.make(human_reference_fasta)};
@@ -75,7 +77,7 @@ using Octopus::BayesianGenotypeModel::VariationalBayesGenotypeModel;
 //    std::cout << "genotype responsabilities time " << time << std::endl;
 //}
 
-//TEST_CASE("where is the time being taken?", "[variational_bayes_genotype_model,benchmark]")
+//BOOST_AUTO_TEST_CASE(where is the time being taken?)
 //{
 //    ReferenceGenomeFactory a_factory {};
 //    ReferenceGenome human {a_factory.make(human_reference_fasta)};
@@ -165,7 +167,7 @@ using Octopus::BayesianGenotypeModel::VariationalBayesGenotypeModel;
 //    std::cout << "model_update_time " << model_update_time << std::endl;
 //}
 
-//TEST_CASE("prior calculation", "[variational_bayes_genotype_model,benchmark]")
+//BOOST_AUTO_TEST_CASE(prior calculation)
 //{
 //    std::size_t size {100};
 //    std::vector<double> probs(size);

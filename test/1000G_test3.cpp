@@ -6,7 +6,9 @@
 //  Copyright (c) 2015 Oxford University. All rights reserved.
 //
 
-#include "catch.hpp"
+#define BOOST_TEST_DYN_LINK
+
+#include <boost/test/unit_test.hpp>
 
 #include <iostream>
 #include <string>
@@ -36,7 +38,7 @@
 using std::cout;
 using std::endl;
 
-//TEST_CASE("1000G test 3: 2:104142870-104142884", "[validation]")
+//BOOST_AUTO_TEST_CASE(1000G test 3: 2:104142870-104142884)
 //{
 //    unsigned ploidy {2};
 //
