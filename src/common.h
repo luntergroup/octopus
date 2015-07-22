@@ -16,7 +16,8 @@
 #include "genomic_region.h"
 #include "mappable_map.h"
 
-namespace Octopus {    
+namespace Octopus
+{
     using ProbabilityType = double;
     using SampleIdType    = std::string;
     

@@ -428,40 +428,47 @@ inline std::vector<GenomicRegion> decompose(const GenomicRegion& a_region)
  */
 template <typename ForwardIterator>
 inline
-GenomicRegion encompassing(ForwardIterator first, ForwardIterator last)
+GenomicRegion get_encompassing_region(ForwardIterator first, ForwardIterator last)
 {
-    if (std::distance(first, last) == 0) {
-        throw std::runtime_error {"cannot get encompassed region of empty range"};
+    if (first == last) {
+        throw std::runtime_error {"cannot get encompassing region of empty range"};
     }
     
     return get_encompassing(*first, *rightmost_mappable(first, last));
 }
 
 /**
- Returns the minimal range of non-overlapping GenomicRegion's such that each element in the range [first_mappable, last_mappable)
+ Returns the minimal range of non-overlapping GenomicRegion's such that each element in the range [first, last)
  is contained within a single region.
  
  Requires [first_mappable, last_mappable) is sorted w.r.t GenomicRegion::operator<
  */
 template <typename ForwardIterator>
-std::vector<GenomicRegion> minimal_encompassing(ForwardIterator first_mappable, ForwardIterator last_mappable)
+std::vector<GenomicRegion> get_covered_regions(ForwardIterator first, ForwardIterator last)
 {
     std::vector<GenomicRegion> result {};
     
-    if (first_mappable == last_mappable) return result;
+    if (first == last) return result;
     
-    ForwardIterator last_overlapped;
-    typename ForwardIterator::pointer rightmost;
+    ForwardIterator first_overlapped {first};
+    ForwardIterator rightmost {first};
     
-    while (first_mappable != last_mappable) {
-        rightmost = &(*first_mappable);
-        last_overlapped = std::find_if_not(first_mappable, last_mappable, [&rightmost] (const auto& m) {
-            if (ends_before(*rightmost, m)) rightmost = &m;
-            return overlaps(m, *rightmost);
-        });
-        result.emplace_back(encompassing(first_mappable, last_overlapped));
-        first_mappable = last_overlapped;
+    while (first != last) {
+        if (get_begin(*first) > get_end(*rightmost)) {
+            result.emplace_back(get_contig_name(*first_overlapped), get_begin(*first_overlapped), get_end(*rightmost));
+            rightmost        = first;
+            first_overlapped = first;
+        } else {
+            if (ends_before(*rightmost, *first)) {
+                rightmost = first;
+            }
+        }
+        ++first;
     }
+    
+    result.emplace_back(get_contig_name(*first_overlapped), get_begin(*first_overlapped), get_end(*rightmost));
+    
+    result.shrink_to_fit();
     
     return result;
 }
@@ -473,13 +480,13 @@ std::vector<GenomicRegion> minimal_encompassing(ForwardIterator first_mappable, 
  Requires [first_mappable, last_mappable) is sorted w.r.t GenomicRegion::operator<
  */
 template <typename ForwardIterator>
-std::vector<GenomicRegion> get_all_intervening(ForwardIterator first_mappable, ForwardIterator last_mappable)
+std::vector<GenomicRegion> get_all_intervening(ForwardIterator first, ForwardIterator last)
 {
-    if (first_mappable == last_mappable) return std::vector<GenomicRegion> {};
+    if (first == last) return std::vector<GenomicRegion> {};
     
-    std::vector<GenomicRegion> result(std::distance(first_mappable, last_mappable) - 1);
+    std::vector<GenomicRegion> result(std::distance(first, last) - 1);
     
-    std::transform(first_mappable, std::prev(last_mappable), std::next(first_mappable), result.begin(),
+    std::transform(first, std::prev(last), std::next(first), result.begin(),
                    [] (const auto& mappable, const auto& next_mappable) {
                        return get_intervening(mappable, next_mappable);
                    });

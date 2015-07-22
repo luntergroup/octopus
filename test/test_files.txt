@@ -1,0 +1,3 @@
+/Users/dcooke/Genomics/Illumina/HG00101.mapped.ILLUMINA.bwa.GBR.low_coverage.20130415.bam
+/Users/dcooke/Genomics/Illumina/HG00102.mapped.ILLUMINA.bwa.GBR.low_coverage.20130415.bam
+/Users/dcooke/Genomics/Illumina/HG00103.mapped.ILLUMINA.bwa.GBR.low_coverage.20120522.bam

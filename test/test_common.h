@@ -12,23 +12,24 @@
 namespace detail
 {
     static std::string home_dir {getenv("HOME")};
-
+    
     static std::string genomics_dir {"/Genomics/"};
     static std::string reference_dir {"References/"};
     static std::string bam_dir {"Illumina/"};
-
+    static std::string octopus_test_dir {"/Development/Octopus/test/"};
+    
     // Reference names
     static std::string ecoli_reference_name {"R00000042.fasta"};
     static std::string human_reference_name {"human_g1k_v37.fasta"};
     static std::string lambda_reference_name {"lambda_ref.fasta"};
-
+    
     // BAMs
     static std::string human_1000g_bam_name0 {"HG00100.mapped.ILLUMINA.bwa.GBR.low_coverage.20130415.bam"};
     static std::string human_1000g_bam_name1 {"HG00101.mapped.ILLUMINA.bwa.GBR.low_coverage.20130415.bam"};
     static std::string human_1000g_bam_name2 {"HG00102.mapped.ILLUMINA.bwa.GBR.low_coverage.20130415.bam"};
     static std::string human_1000g_bam_name3 {"HG00103.mapped.ILLUMINA.bwa.GBR.low_coverage.20120522.bam"};
     static std::string ecoli_bam_name {"WTCHG_119208_201103.bam"};
-
+    
     // CRAMs
     static std::string human_1000g_cram_name {"HG00101.mapped.ILLUMINA.bwa.GBR.low_coverage.20130415.cram"};
     
@@ -59,6 +60,11 @@ namespace detail
 } // end namespace detail
 
 // Full paths
+
+static std::string regions_txt_file {detail::home_dir + detail::octopus_test_dir + "test_regions.txt"};
+static std::string regions_bed_file {detail::home_dir + detail::octopus_test_dir + "test_regions.bed"};
+static std::string reads_file {detail::home_dir + detail::octopus_test_dir + "test_files.txt"};
+
 static std::string human_reference_fasta {detail::home_dir + detail::genomics_dir +
                 detail::reference_dir + detail::human_reference_name};
 

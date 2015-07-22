@@ -110,20 +110,15 @@ TEST_CASE("contained_range returns a range of iterators that span all elements c
     REQUIRE(std::equal(true_contained.cbegin(), true_contained.cend(), contained.begin()));
 }
 
-TEST_CASE("minimal_encompassing returns regions which contain all elements in the given range, with no inter-range-overlaps", "[region_algorithms]")
+TEST_CASE("get_covered_regions returns regions which contain all elements in the given range, with no inter-range-overlaps", "[region_algorithms]")
 {
-    auto regions = generate_random_regions(10000, 100, 10000);
+    std::vector<GenomicRegion> regions {GenomicRegion {"18", 10000, 20000}, GenomicRegion {"18", 20000, 30000}, GenomicRegion {"18", 30000, 40000}, GenomicRegion {"18", 40001, 50000}, GenomicRegion {"18", 45000, 60000}};
     
-    auto sub_regions = minimal_encompassing(regions.cbegin(), regions.cend());
+    auto covered = get_covered_regions(regions.cbegin(), regions.cend());
     
-    std::vector<GenomicRegion> contained_regions {};
-    
-    for (const auto& region : sub_regions) {
-        auto contained = contained_range(regions.cbegin(), regions.cend(), region);
-        contained_regions.insert(contained_regions.end(), contained.begin(), contained.end());
-    }
-    
-    REQUIRE(std::equal(regions.cbegin(), regions.cend(), contained_regions.begin()));
+    REQUIRE(covered.size() == 2);
+    REQUIRE(covered[0] == GenomicRegion("18", 10000, 40000));
+    REQUIRE(covered[1] == GenomicRegion("18", 40001, 60000));
 }
 
 TEST_CASE("find_first_after returns the first element that is_after the given region", "[region_algorithms]")

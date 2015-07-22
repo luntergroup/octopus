@@ -97,7 +97,7 @@ std::vector<AlignedRead> sample(const MappableSet<AlignedRead>& reads, const Gen
 MappableSet<AlignedRead> downsample(const MappableSet<AlignedRead>& reads, unsigned maximum_coverage,
                                     unsigned minimum_downsample_coverage)
 {
-    auto region = encompassing(reads.cbegin(), reads.cend());
+    auto region = get_encompassing_region(reads.cbegin(), reads.cend());
     
     auto regions_to_sample = find_good_coverage_regions_containing_high_coverage_positions(reads, region, maximum_coverage,
                                                                                            minimum_downsample_coverage);

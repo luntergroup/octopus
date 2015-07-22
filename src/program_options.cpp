@@ -19,7 +19,9 @@
 #include <boost/filesystem/operations.hpp>
 
 #include "genomic_region.h"
+#include "reference_genome_factory.h"
 #include "reference_genome.h"
+#include "read_manager.h"
 #include "mappable_algorithms.h"
 #include "string_utils.h"
 
@@ -27,7 +29,7 @@ namespace fs = boost::filesystem;
 
 namespace Octopus
 {
-    std::pair<po::variables_map, bool> parse_options(int argc, char** argv)
+    std::pair<po::variables_map, bool> parse_options(int argc, const char** argv)
     {
         try {
             po::positional_options_description p;
@@ -49,7 +51,7 @@ namespace Octopus
             
             po::options_description input("Input/output options");
             input.add_options()
-            ("reference,R", po::value<std::string>(), "the reference genome file")
+            ("reference,R", po::value<std::string>()->required(), "the reference genome file")
             ("reads,I", po::value<std::vector<std::string>>()->multitoken(), "space-seperated list of read file paths")
             ("reads-file", po::value<std::string>(), "path to a text file containing read file paths")
             ("regions,R", po::value<std::vector<std::string>>()->multitoken(), "space-seperated list of one-indexed variant search regions (chrom:begin-end)")
@@ -93,12 +95,10 @@ namespace Octopus
             ;
             
             po::options_description all("Allowed options");
-            all.add(general).add(backend).add(candidates);
+            all.add(general).add(backend).add(input).add(filters).add(candidates).add(model).add(calling);
             
             po::variables_map vm;
-            po::store(po::command_line_parser(argc, argv).
-                      options(all).positional(p).run(), vm);
-            po::notify(vm);
+            po::store(po::command_line_parser(argc, argv).options(all).positional(p).run(), vm);
             
             if (vm.count("help")) {
                 std::cout << "Usage: octopus <command> [options]" << std::endl;
@@ -106,11 +106,23 @@ namespace Octopus
                 return {vm, false};
             }
             
+            // boost::option cannot handle option dependencies so we must do our own checks
+            
+            if (vm.count("reads") == 0 && vm.count("reads-file") == 0) {
+                throw boost::program_options::required_option {"--reads | --reads-file"};
+            }
+            
+            po::notify(vm);
+            
             return {vm, true};
         }
         catch(std::exception& e) {
-            std::cout << e.what() << std::endl;
+            std::cerr << e.what() << std::endl;
             return {po::variables_map {}, false};
+        }
+        catch(...) {
+            std::cerr << "unknown error in option parsing" << std::endl;
+            return {po::variables_map {}, false};;
         }
     }
     
@@ -188,10 +200,19 @@ namespace Octopus
         
         SearchRegions make_search_regions(const std::vector<GenomicRegion>& regions)
         {
-            SearchRegions result {};
+            SearchRegions contig_mapped_regions {};
             
             for (const auto& region : regions) {
-                result[region.get_contig_name()].insert(region);
+                contig_mapped_regions[region.get_contig_name()].insert(region);
+            }
+            
+            SearchRegions result {};
+            
+            for (auto& contig_regions : contig_mapped_regions) {
+                auto covered_contig_regions = get_covered_regions(std::cbegin(contig_regions.second),
+                                                                  std::cend(contig_regions.second));
+                result[contig_regions.first].insert(std::make_move_iterator(std::begin(covered_contig_regions)),
+                                                    std::make_move_iterator(std::end(covered_contig_regions)));
             }
             
             return result;
@@ -203,8 +224,6 @@ namespace Octopus
                 return make_search_regions(get_all_contig_regions(the_reference));
             } else {
                 auto skipped = make_search_regions(skip_regions);
-                
-                
                 
                 SearchRegions result {};
                 
@@ -231,11 +250,17 @@ namespace Octopus
         }
     } // end namespace detail
     
+    ReferenceGenome get_reference(const po::variables_map& options)
+    {
+        ReferenceGenomeFactory factory {};
+        return ReferenceGenome {factory.make(options.at("reference").as<std::string>())};
+    }
+    
     SearchRegions get_search_regions(const po::variables_map& options, const ReferenceGenome& the_reference)
     {
         std::vector<GenomicRegion> input_regions {};
         
-        if (options.count("regions") == 0 && options.count("regions-file")) {
+        if (options.count("regions") == 0 && options.count("regions-file") == 0) {
             std::vector<GenomicRegion> skip_regions {};
             
             if (options.count("skip-regions") != 0) {
@@ -292,6 +317,18 @@ namespace Octopus
                           std::make_move_iterator(std::end(regions_from_file)));
         }
         
+        std::sort(result.begin(), result.end());
+        auto it = std::unique(result.begin(), result.end());
+        result.erase(it, result.end());
+        
         return result;
+    }
+    
+    ReadManager get_read_manager(const po::variables_map& options)
+    {
+        auto read_paths     = get_read_paths(options);
+        auto max_open_files = options.at("max-open-files").as<unsigned>();
+        
+        return ReadManager {std::move(read_paths), max_open_files};
     }
 } // end namespace Octopus

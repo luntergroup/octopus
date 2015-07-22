@@ -17,16 +17,21 @@
 
 class ReferenceGenome;
 class GenomicRegion;
+class ReadManager;
 
 namespace po = boost::program_options;
 
 namespace Octopus
 {
-    std::pair<po::variables_map, bool> parse_options(int argc, char** argv);
+    std::pair<po::variables_map, bool> parse_options(int argc, const char** argv);
+    
+    ReferenceGenome get_reference(const po::variables_map& options);
     
     SearchRegions get_search_regions(const po::variables_map& options, const ReferenceGenome& the_reference);
     
     std::vector<std::string> get_read_paths(const po::variables_map& options);
+    
+    ReadManager get_read_manager(const po::variables_map& options);
     
 } // end namespace Octopus
 

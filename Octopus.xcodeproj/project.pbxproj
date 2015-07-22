@@ -259,6 +259,8 @@
 		D45D2E651B2AD93500F6A89D /* libboost_system.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libboost_system.a; path = /usr/local/Cellar/boost/1.58.0/lib/libboost_system.a; sourceTree = "<absolute>"; };
 		D46094EF1B4C037B00AE72A1 /* hiv_test.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = hiv_test.cpp; sourceTree = "<group>"; };
 		D46094F11B550A2400AE72A1 /* region_algorithm_tests.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = region_algorithm_tests.cpp; sourceTree = "<group>"; };
+		D4636C5D1B5F97BD00FEA7D2 /* threaded_transform.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = threaded_transform.h; sourceTree = "<group>"; };
+		D4636C5E1B5FEEC700FEA7D2 /* test_files.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = test_files.txt; sourceTree = "<group>"; };
 		D463C1881AEE2E1900739A66 /* search_regions.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = search_regions.h; sourceTree = "<group>"; };
 		D463C1891AEE2EA100739A66 /* search_region_tests.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = search_region_tests.cpp; sourceTree = "<group>"; };
 		D463C18B1AEF7D2200739A66 /* map_utils.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = map_utils.h; sourceTree = "<group>"; };
@@ -465,6 +467,7 @@
 				CAE3E2921A9A882000C01B2C /* mock_objects.h */,
 				D463C18E1AF13ECD00739A66 /* test_regions.txt */,
 				D463C18F1AF13EDB00739A66 /* test_regions.bed */,
+				D4636C5E1B5FEEC700FEA7D2 /* test_files.txt */,
 				CA0B46661AE8609A00158BBA /* components */,
 				CA0B46671AE860B600158BBA /* validation */,
 				CA03C2281A8C1C2D000D3494 /* benchmarks */,
@@ -533,8 +536,8 @@
 			children = (
 				CABA37811A8FA49800BBE598 /* read_manager.h */,
 				CABA37801A8FA49800BBE598 /* read_manager.cpp */,
-				CA03C14D1A8C0519000D3494 /* read_reader.h */,
 				CA03C22A1A8CEF25000D3494 /* read_reader_impl.h */,
+				CA03C14D1A8C0519000D3494 /* read_reader.h */,
 				CA03C1501A8C0D3D000D3494 /* htslib_read_facade.h */,
 				CA03C14F1A8C0D3D000D3494 /* htslib_read_facade.cpp */,
 			);
@@ -560,6 +563,7 @@
 				CA1472741AACC7E2005FDCD1 /* context_iterators.h */,
 				D4907F5E1A8A3ADD00639203 /* string_utils.h */,
 				CA14727D1AAE63A8005FDCD1 /* hash_functions.h */,
+				D4636C5D1B5F97BD00FEA7D2 /* threaded_transform.h */,
 			);
 			name = utils;
 			sourceTree = "<group>";
