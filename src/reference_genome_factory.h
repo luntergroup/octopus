@@ -12,7 +12,7 @@
 #include <string>
 #include <memory> // std::unique_ptr, std::make_unique
 
-class IReferenceGenomeImpl;
+#include "reference_genome_impl.h"
 
 class ReferenceGenomeFactory
 {
@@ -22,7 +22,11 @@ public:
     ReferenceGenomeFactory(ReferenceGenomeFactory&&)                 = default;
     ReferenceGenomeFactory& operator=(ReferenceGenomeFactory&&)      = default;
     
-    std::unique_ptr<IReferenceGenomeImpl> make(std::string genome_file_path) const;
+    std::unique_ptr<IReferenceGenomeImpl> make(std::string file_path,
+                                               IReferenceGenomeImpl::SizeType max_cache_size = 0) const;
+    
+    std::unique_ptr<IReferenceGenomeImpl> make(std::string file_path, std::string index_path,
+                                               IReferenceGenomeImpl::SizeType max_cache_size = 0) const;
 };
 
 #endif /* defined(__Octopus__reference_genome_implementor_factory__) */

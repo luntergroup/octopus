@@ -26,7 +26,7 @@ namespace fs = boost::filesystem;
 class Fasta : public IReferenceGenomeImpl
 {
 public:
-    using SequenceType = std::string;
+    using SequenceType = IReferenceGenomeImpl::SequenceType;
     using SizeType     = IReferenceGenomeImpl::SizeType;
     
     Fasta() = delete;
@@ -41,8 +41,8 @@ public:
     
     std::string get_reference_name() override;
     std::vector<std::string> get_contig_names() override;
-    SizeType get_contig_size(std::string contig_name) override;
-    SequenceType get_sequence(const GenomicRegion& a_region) override;
+    SizeType get_contig_size(const std::string& contig_name) override;
+    SequenceType get_sequence(const GenomicRegion& region) override;
 
 private:
     fs::path fasta_path_;

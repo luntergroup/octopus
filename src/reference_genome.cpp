@@ -54,9 +54,9 @@ ReferenceGenome::SizeType ReferenceGenome::get_contig_size(const std::string& co
     throw std::runtime_error {"contig is not in reference genome"};
 }
 
-ReferenceGenome::SizeType ReferenceGenome::get_contig_size(const GenomicRegion& a_region) const
+ReferenceGenome::SizeType ReferenceGenome::get_contig_size(const GenomicRegion& region) const
 {
-    return get_contig_size(a_region.get_contig_name());
+    return get_contig_size(region.get_contig_name());
 }
 
 GenomicRegion ReferenceGenome::get_contig_region(const std::string& contig_name) const
@@ -64,14 +64,14 @@ GenomicRegion ReferenceGenome::get_contig_region(const std::string& contig_name)
     return GenomicRegion {contig_name, 0, get_contig_size(contig_name)};
 }
 
-bool ReferenceGenome::contains_region(const GenomicRegion& a_region) const noexcept
+bool ReferenceGenome::contains_region(const GenomicRegion& region) const noexcept
 {
-    return a_region.get_end() <= get_contig_size(a_region);
+    return region.get_end() <= get_contig_size(region);
 }
 
-ReferenceGenome::SequenceType ReferenceGenome::get_sequence(const GenomicRegion& a_region)
+ReferenceGenome::SequenceType ReferenceGenome::get_sequence(const GenomicRegion& region)
 {
-    return the_reference_impl_->get_sequence(a_region);
+    return the_reference_impl_->get_sequence(region);
 }
 
 // non-member functions

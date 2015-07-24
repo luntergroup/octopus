@@ -11,6 +11,23 @@
 #include <chrono>
 #include <random>
 #include <list>
+#include <stdexcept>
+
+AlignedRead find_next_segment(const AlignedRead& read, const MappableMap<GenomicRegion::StringType, AlignedRead>& reads)
+{
+    if (!read.is_chimeric()) {
+        throw std::runtime_error {"cannot find next segment as read is not chimeric"};
+    }
+    
+    auto segment_region = read.get_next_segment()->get_inferred_region();
+    
+    
+}
+
+MappableSet<AlignedRead> find_chimeras(const AlignedRead& read, const MappableSet<AlignedRead>& reads)
+{
+    return MappableSet<AlignedRead> {};
+}
 
 std::vector<unsigned> positional_coverage(const MappableSet<AlignedRead>& reads, const GenomicRegion& region)
 {

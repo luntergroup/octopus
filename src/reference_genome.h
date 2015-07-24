@@ -39,10 +39,10 @@ public:
     std::size_t num_contigs() const noexcept;
     const std::vector<std::string>& get_contig_names() const noexcept;
     SizeType get_contig_size(const std::string& contig_name) const;
-    SizeType get_contig_size(const GenomicRegion& a_region) const;
+    SizeType get_contig_size(const GenomicRegion& region) const;
     GenomicRegion get_contig_region(const std::string& contig_name) const;
-    bool contains_region(const GenomicRegion& a_region) const noexcept;
-    SequenceType get_sequence(const GenomicRegion& a_region);
+    bool contains_region(const GenomicRegion& region) const noexcept;
+    SequenceType get_sequence(const GenomicRegion& region);
     
 private:
     std::unique_ptr<IReferenceGenomeImpl> the_reference_impl_;

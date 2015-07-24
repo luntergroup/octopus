@@ -36,6 +36,7 @@
 		CA386DA51B5AC3850057A5A8 /* aligned_read.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA386DA41B5AC3850057A5A8 /* aligned_read.cpp */; };
 		CA386DA81B5BBCB90057A5A8 /* mappable_set_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA386DA71B5BBCB90057A5A8 /* mappable_set_tests.cpp */; };
 		CA386DAA1B6007FF0057A5A8 /* libboost_unit_test_framework.a in Frameworks */ = {isa = PBXBuildFile; fileRef = CA386DA91B6007FF0057A5A8 /* libboost_unit_test_framework.a */; };
+		CA386DAD1B603C380057A5A8 /* caching_fasta.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA386DAB1B603C380057A5A8 /* caching_fasta.cpp */; };
 		CA4551621AEB06D800FDAAE8 /* 1000G_test11.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA4551611AEB06D800FDAAE8 /* 1000G_test11.cpp */; };
 		CA4551641AEB075E00FDAAE8 /* 1000G_test12.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA4551631AEB075E00FDAAE8 /* 1000G_test12.cpp */; };
 		CA4551661AEB092D00FDAAE8 /* 1000G_test13.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA4551651AEB092D00FDAAE8 /* 1000G_test13.cpp */; };
@@ -165,6 +166,8 @@
 		CA386DA61B5BBBDE0057A5A8 /* mappable_set.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = mappable_set.h; sourceTree = "<group>"; };
 		CA386DA71B5BBCB90057A5A8 /* mappable_set_tests.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = mappable_set_tests.cpp; sourceTree = "<group>"; };
 		CA386DA91B6007FF0057A5A8 /* libboost_unit_test_framework.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libboost_unit_test_framework.a; path = /usr/local/Cellar/boost/1.58.0/lib/libboost_unit_test_framework.a; sourceTree = "<absolute>"; };
+		CA386DAB1B603C380057A5A8 /* caching_fasta.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = caching_fasta.cpp; sourceTree = "<group>"; };
+		CA386DAC1B603C380057A5A8 /* caching_fasta.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = caching_fasta.h; sourceTree = "<group>"; };
 		CA4551611AEB06D800FDAAE8 /* 1000G_test11.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = 1000G_test11.cpp; sourceTree = "<group>"; };
 		CA4551631AEB075E00FDAAE8 /* 1000G_test12.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = 1000G_test12.cpp; sourceTree = "<group>"; };
 		CA4551651AEB092D00FDAAE8 /* 1000G_test13.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = 1000G_test13.cpp; sourceTree = "<group>"; };
@@ -529,6 +532,8 @@
 				D4907F631A8A6EE600639203 /* reference_genome_factory.cpp */,
 				D4907F5A1A8A374000639203 /* fasta.h */,
 				D4907F591A8A374000639203 /* fasta.cpp */,
+				CA386DAC1B603C380057A5A8 /* caching_fasta.h */,
+				CA386DAB1B603C380057A5A8 /* caching_fasta.cpp */,
 			);
 			name = reference;
 			sourceTree = "<group>";
@@ -757,6 +762,7 @@
 				CABA37821A8FA49800BBE598 /* read_manager.cpp in Sources */,
 				D413B03F1B590C2B007EFDE0 /* search_region_benchmarks.cpp in Sources */,
 				CA0B46701AE8630700158BBA /* 1000G_test4.cpp in Sources */,
+				CA386DAD1B603C380057A5A8 /* caching_fasta.cpp in Sources */,
 				CA0B46731AE8639F00158BBA /* ecoli_test1.cpp in Sources */,
 				CA0B46841AEA222B00158BBA /* 1000G_test10.cpp in Sources */,
 				CA4551881AF27A4100FDAAE8 /* haplotype_phaser.cpp in Sources */,

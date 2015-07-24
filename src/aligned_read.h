@@ -58,6 +58,7 @@ public:
         const std::string& get_contig_name() const;
         SizeType get_begin() const noexcept;
         SizeType get_inferred_template_length() const noexcept;
+        GenomicRegion get_inferred_region() const;
         bool is_marked_unmapped() const;
         bool is_marked_reverse_mapped() const;
         

@@ -23,8 +23,8 @@ public:
     
     virtual std::string get_reference_name() = 0;
     virtual std::vector<std::string> get_contig_names() = 0;
-    virtual SizeType get_contig_size(std::string contig_name) = 0;
-    virtual SequenceType get_sequence(const GenomicRegion& a_region) = 0;
+    virtual SizeType get_contig_size(const std::string& contig_name) = 0;
+    virtual SequenceType get_sequence(const GenomicRegion& region) = 0;
     virtual ~IReferenceGenomeImpl() noexcept = default;
 };
 

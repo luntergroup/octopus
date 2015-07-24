@@ -28,6 +28,10 @@
 using Octopus::ContextInserter;
 using Octopus::ContextBackInserter;
 
+AlignedRead find_next_segment(const AlignedRead& read, const MappableMap<GenomicRegion::StringType, AlignedRead>& reads);
+
+MappableSet<AlignedRead> find_chimeras(const AlignedRead& read, const MappableSet<AlignedRead>& reads);
+
 namespace detail {
     template <typename Container>
     void reserve_if_enabled(Container& container, typename Container::size_type n) {}
@@ -254,7 +258,6 @@ unsigned max_coverage(const ReadMap<T, Container>& reads, const GenomicRegion& r
     
     return *std::max_element(sample_max_coverages.cbegin(), sample_max_coverages.cend());
 }
-
 
 template <typename T>
 std::vector<GenomicRegion> find_high_coverage_regions(const T& reads,

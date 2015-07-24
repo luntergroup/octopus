@@ -7,11 +7,27 @@
 //
 
 #include "reference_genome_factory.h"
-#include "reference_genome_impl.h"
+
 #include "fasta.h"
+#include "caching_fasta.h"
 
 std::unique_ptr<IReferenceGenomeImpl>
-ReferenceGenomeFactory::make(std::string genome_file_path) const
+ReferenceGenomeFactory::make(std::string file_path, IReferenceGenomeImpl::SizeType max_cache_size) const
 {
-    return std::make_unique<Fasta>(genome_file_path);
+    if (max_cache_size == 0) {
+        return std::make_unique<Fasta>(std::move(file_path));
+    } else {
+        return std::make_unique<CachingFasta>(std::move(file_path), max_cache_size);
+    }
+}
+
+std::unique_ptr<IReferenceGenomeImpl>
+ReferenceGenomeFactory::make(std::string file_path, std::string index_path,
+                             IReferenceGenomeImpl::SizeType max_cache_size) const
+{
+    if (max_cache_size == 0) {
+        return std::make_unique<Fasta>(std::move(file_path), std::move(index_path));
+    } else {
+        return std::make_unique<CachingFasta>(std::move(file_path), std::move(index_path), max_cache_size);
+    }
 }

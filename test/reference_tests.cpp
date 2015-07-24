@@ -17,6 +17,9 @@
 #include "reference_genome.h"
 #include "reference_genome_factory.h"
 
+using std::cout;
+using std::endl;
+
 BOOST_AUTO_TEST_SUITE(Components)
 
 BOOST_AUTO_TEST_CASE(ReferemceGenome_handles_basic_queries)
@@ -114,5 +117,42 @@ BOOST_AUTO_TEST_CASE(parse_region_throws_when_region_is_not_formatted_correctly)
 //    
 //    BOOST_CHECK(throwed);
 }
+
+//BOOST_AUTO_TEST_CASE(CachingFasta_works_the_same_as_Fasta)
+//{
+//    ReferenceGenomeFactory a_factory {};
+//    
+//    ReferenceGenome human_normal {a_factory.make(human_reference_fasta)};
+//    ReferenceGenome human_cached {a_factory.make(human_reference_fasta, 200)};
+//    
+////    GenomicRegion region1 {"1", 1000000, 1000100};
+////    GenomicRegion region2 {"1", 1000030, 1000080};
+////    GenomicRegion region3 {"1",  999990, 1000110};
+////    GenomicRegion region4 {"1",  1000200, 1000300};
+////    GenomicRegion region5 {"1",  1000300, 1000400};
+////    GenomicRegion region6 {"1",  1000350, 1000450};
+//    
+//    GenomicRegion region1 {"1", 1000000, 1000100};
+//    GenomicRegion region2 {"1", 1000100, 1000200};
+//    GenomicRegion region3 {"1", 1000200, 1000300};
+//    
+//    cout << human_cached.get_sequence(region1) << endl;
+//    cout << human_cached.get_sequence(region2) << endl;
+//    cout << human_cached.get_sequence(region3) << endl;
+//    
+////    cout << human_cached.get_sequence(region1) << endl;
+////    cout << human_cached.get_sequence(region2) << endl;
+////    cout << human_cached.get_sequence(region3) << endl;
+////    cout << human_cached.get_sequence(region4) << endl;
+////    cout << human_cached.get_sequence(region5) << endl;
+////    cout << human_cached.get_sequence(region6) << endl;
+////    
+////    cout << human_cached.get_sequence(region1) << endl;
+////    cout << human_cached.get_sequence(region2) << endl;
+////    cout << human_cached.get_sequence(region3) << endl;
+////    cout << human_cached.get_sequence(region4) << endl;
+////    cout << human_cached.get_sequence(region5) << endl;
+////    cout << human_cached.get_sequence(region6) << endl;
+//}
 
 BOOST_AUTO_TEST_SUITE_END()
