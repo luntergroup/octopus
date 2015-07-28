@@ -21,7 +21,7 @@ AlignedRead find_next_segment(const AlignedRead& read, const MappableMap<Genomic
     
     auto segment_region = read.get_next_segment()->get_inferred_region();
     
-    
+    return read;
 }
 
 MappableSet<AlignedRead> find_chimeras(const AlignedRead& read, const MappableSet<AlignedRead>& reads)

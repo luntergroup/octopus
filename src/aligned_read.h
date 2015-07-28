@@ -107,12 +107,12 @@ public:
     
     AlignedRead(const AlignedRead& other);
     AlignedRead& operator=(const AlignedRead& other);
-    
     AlignedRead(AlignedRead&&)            = default;
     AlignedRead& operator=(AlignedRead&&) = default;
     
     friend void swap(AlignedRead& lhs, AlignedRead& rhs) noexcept;
     
+    // basic accessors
     const std::string& get_read_group() const;
     const GenomicRegion& get_region() const noexcept;
     const SequenceType& get_sequence() const noexcept;
@@ -123,10 +123,7 @@ public:
     const std::unique_ptr<NextSegment>& get_next_segment() const;
     FlagData get_flags() const;
     
-    //void set_qualities(Qualities&& new_qualities) noexcept;
-    void zero_front_qualities(SizeType num_bases) noexcept;
-    void zero_back_qualities(SizeType num_bases) noexcept;
-    
+    // flags
     bool is_chimeric() const noexcept;
     bool is_marked_all_segments_in_read_aligned() const;
     bool is_marked_multiple_read_template() const;
@@ -137,6 +134,9 @@ public:
     bool is_marked_duplicate() const;
     bool is_marked_supplementary_alignment() const;
     
+    // mutables
+    void zero_front_qualities(SizeType num_bases) noexcept;
+    void zero_back_qualities(SizeType num_bases) noexcept;
     void compress();
     void decompress();
     

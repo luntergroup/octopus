@@ -97,18 +97,6 @@ const AlignedRead::Qualities& AlignedRead::get_qualities() const noexcept
     return qualities_;
 }
 
-void AlignedRead::zero_front_qualities(SizeType num_bases) noexcept
-{
-    std::for_each(std::begin(qualities_), std::begin(qualities_) + num_bases,
-                  [] (auto& quality) { quality = 0; });
-}
-
-void AlignedRead::zero_back_qualities(SizeType num_bases) noexcept
-{
-    std::for_each(std::rbegin(qualities_), std::rbegin(qualities_) + num_bases,
-                  [] (auto& quality) { quality = 0; });
-}
-
 AlignedRead::QualityType AlignedRead::get_mapping_quality() const noexcept
 {
     return mapping_quality_;
@@ -191,6 +179,18 @@ bool AlignedRead::is_marked_duplicate() const
 bool AlignedRead::is_marked_supplementary_alignment() const
 {
     return flags_[7];
+}
+
+void AlignedRead::zero_front_qualities(SizeType num_bases) noexcept
+{
+    std::for_each(std::begin(qualities_), std::begin(qualities_) + num_bases,
+                  [] (auto& quality) { quality = 0; });
+}
+
+void AlignedRead::zero_back_qualities(SizeType num_bases) noexcept
+{
+    std::for_each(std::rbegin(qualities_), std::rbegin(qualities_) + num_bases,
+                  [] (auto& quality) { quality = 0; });
 }
 
 // TODO: can we also compress qualities and cigar string?
