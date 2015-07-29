@@ -37,16 +37,16 @@ private:
 
 enum class HeaderLineType { Integer, Float, Flag, Chracter, String };
 
-class BaseHeaderTypedLine : public BaseHeaderLine
+class BaseValuedHeaderLine : public BaseHeaderLine
 {
 public:
-    virtual ~BaseHeaderTypedLine() = default;
+    virtual ~BaseValuedHeaderLine() = default;
     virtual unsigned get_number() const noexcept = 0;
 private:
     HeaderLineType type_;
 };
 
-class InfoFormatLine : public BaseHeaderTypedLine, public DescriptiveHeaderLine
+class InfoFormatLine : public BaseValuedHeaderLine, public DescriptiveHeaderLine
 {
 public:
     virtual ~InfoFormatLine() = default;

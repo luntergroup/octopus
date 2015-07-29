@@ -17,24 +17,27 @@ namespace detail
     static std::string reference_dir {"References/"};
     static std::string bam_dir {"Illumina/"};
     static std::string octopus_test_dir {"/Development/Octopus/test/"};
+    static std::string sample_vcf_dir {"sample_vcf/"};
     
-    // Reference names
+    // Reference
     static std::string ecoli_reference_name {"R00000042.fasta"};
     static std::string human_reference_name {"human_g1k_v37.fasta"};
     static std::string lambda_reference_name {"lambda_ref.fasta"};
     
-    // BAMs
+    // BAM
     static std::string human_1000g_bam_name0 {"HG00100.mapped.ILLUMINA.bwa.GBR.low_coverage.20130415.bam"};
     static std::string human_1000g_bam_name1 {"HG00101.mapped.ILLUMINA.bwa.GBR.low_coverage.20130415.bam"};
     static std::string human_1000g_bam_name2 {"HG00102.mapped.ILLUMINA.bwa.GBR.low_coverage.20130415.bam"};
     static std::string human_1000g_bam_name3 {"HG00103.mapped.ILLUMINA.bwa.GBR.low_coverage.20120522.bam"};
     static std::string ecoli_bam_name {"WTCHG_119208_201103.bam"};
     
-    // CRAMs
+    // CRAM
     static std::string human_1000g_cram_name {"HG00101.mapped.ILLUMINA.bwa.GBR.low_coverage.20130415.cram"};
     
-    // VCFs
+    // VCF/BCF
     static std::string sample_vcf_name {"CHBJPT.low_coverage.2010_07.xchr.sites.vcf.gz"};
+    static std::string sample_tabix_vcf_name {"CHBJPT.low_coverage.2010_07.xchr.sites.vcf.gz"};
+    static std::string sample_bcf_name {"CHBJPT.low_coverage.2010_07.xchr.sites.vcf.gz"};
     //static std::string sample_vcf_name {"platypus.vcf"};
     
     // donna data
@@ -94,7 +97,8 @@ static std::string human_1000g_cram {detail::home_dir + detail::genomics_dir + d
 static std::string ecoli_bam {detail::home_dir + detail::genomics_dir + detail::bam_dir +
     detail::ecoli_bam_name};
 
-static std::string sample_vcf {detail::home_dir + detail::genomics_dir + detail::sample_vcf_name};
+static std::string sample_vcf {detail::home_dir + detail::genomics_dir  + detail::sample_vcf_dir +
+    detail::sample_vcf_name};
 
 // donna
 

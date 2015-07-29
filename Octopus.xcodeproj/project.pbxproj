@@ -94,6 +94,7 @@
 		D4636C611B6788AC00FEA7D2 /* vcf_reader.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D4636C5F1B6788AC00FEA7D2 /* vcf_reader.cpp */; };
 		D4636C641B6788C500FEA7D2 /* vcf_record.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D4636C621B6788C500FEA7D2 /* vcf_record.cpp */; };
 		D4636C671B678B8000FEA7D2 /* vcf_header.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D4636C651B678B8000FEA7D2 /* vcf_header.cpp */; };
+		D4636C6A1B6919B500FEA7D2 /* vcf_writer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D4636C681B6919B500FEA7D2 /* vcf_writer.cpp */; };
 		D463C18A1AEE2EA100739A66 /* search_region_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D463C1891AEE2EA100739A66 /* search_region_tests.cpp */; };
 		D463C18D1AF137EB00739A66 /* input_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D463C18C1AF137EB00739A66 /* input_tests.cpp */; };
 		D463C1911AF38DCF00739A66 /* haplotype_phaser_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D463C1901AF38DCE00739A66 /* haplotype_phaser_tests.cpp */; };
@@ -275,6 +276,8 @@
 		D4636C631B6788C500FEA7D2 /* vcf_record.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = vcf_record.h; sourceTree = "<group>"; };
 		D4636C651B678B8000FEA7D2 /* vcf_header.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = vcf_header.cpp; sourceTree = "<group>"; };
 		D4636C661B678B8000FEA7D2 /* vcf_header.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = vcf_header.h; sourceTree = "<group>"; };
+		D4636C681B6919B500FEA7D2 /* vcf_writer.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = vcf_writer.cpp; sourceTree = "<group>"; };
+		D4636C691B6919B500FEA7D2 /* vcf_writer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = vcf_writer.h; sourceTree = "<group>"; };
 		D463C1881AEE2E1900739A66 /* search_regions.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = search_regions.h; sourceTree = "<group>"; };
 		D463C1891AEE2EA100739A66 /* search_region_tests.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = search_region_tests.cpp; sourceTree = "<group>"; };
 		D463C18B1AEF7D2200739A66 /* map_utils.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = map_utils.h; sourceTree = "<group>"; };
@@ -612,6 +615,8 @@
 				D4636C621B6788C500FEA7D2 /* vcf_record.cpp */,
 				D4636C601B6788AC00FEA7D2 /* vcf_reader.h */,
 				D4636C5F1B6788AC00FEA7D2 /* vcf_reader.cpp */,
+				D4636C691B6919B500FEA7D2 /* vcf_writer.h */,
+				D4636C681B6919B500FEA7D2 /* vcf_writer.cpp */,
 				CAE3E2B51AA36EA600C01B2C /* htslib_bcf_facade.h */,
 				CAE3E2B41AA36EA600C01B2C /* htslib_bcf_facade.cpp */,
 			);
@@ -818,6 +823,7 @@
 				CA0B466B1AE8611800158BBA /* 1000G_test2.cpp in Sources */,
 				D4907F571A8A2A9B00639203 /* reference_tests.cpp in Sources */,
 				D4636C671B678B8000FEA7D2 /* vcf_header.cpp in Sources */,
+				D4636C6A1B6919B500FEA7D2 /* vcf_writer.cpp in Sources */,
 				CAE3E2B01AA2981E00C01B2C /* candidate_variant_generation_tests.cpp in Sources */,
 				CAE3E2C01AA3D91C00C01B2C /* variant_utils.cpp in Sources */,
 				CA0B466E1AE862B400158BBA /* 1000G_test3.cpp in Sources */,
