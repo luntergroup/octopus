@@ -12,6 +12,7 @@
 #include <cstdint>
 #include <string>
 #include <vector>
+#include <map>
 #include <ostream>
 
 class VcfRecord
@@ -22,8 +23,10 @@ public:
     using QualityType  = std::uint_fast8_t;
     
     VcfRecord()  = default;
-    template <typename StringType1_, typename StringType2_, typename SequenceType1_, typename SequenceType2_>
-    VcfRecord(StringType1_&& chrom, SizeType pos, StringType2_&& id, SequenceType1_&& ref, SequenceType2_&& alt, QualityType qual);
+    template <typename StringType1_, typename StringType2_, typename SequenceType1_, typename SequenceType2_,
+              typename Filters_, typename Info_>
+    VcfRecord(StringType1_&& chrom, SizeType pos, StringType2_&& id, SequenceType1_&& ref, SequenceType2_&& alt,
+              QualityType qual, Filters_&& filters, Info_&& info);
     ~VcfRecord() = default;
     
     VcfRecord(const VcfRecord&)            = default;
@@ -42,6 +45,11 @@ public:
     bool has_filter(const std::string& filter) const noexcept;
     unsigned get_num_samples() const noexcept;
     
+    bool has_info(const std::string& key) const noexcept;
+    const std::vector<std::string>& get_info_values(const std::string& key) const;
+    
+    friend std::ostream& operator<<(std::ostream& os, const VcfRecord& record);
+    
 private:
     // mandatory fields
     std::string chrom_;
@@ -51,24 +59,36 @@ private:
     std::vector<SequenceType> alt_;
     QualityType qual_;
     std::vector<std::string> filter_;
-    std::vector<std::string> info_;
+    std::map<std::string, std::vector<std::string>> info_;
     
     // optional fields
     std::vector<std::string> format_;
     std::vector<std::vector<std::string>> genotypes_;
 };
 
-template <typename StringType1_, typename StringType2_, typename SequenceType1_, typename SequenceType2_>
+template <typename StringType1_, typename StringType2_, typename SequenceType1_, typename SequenceType2_,
+          typename Filters_, typename Info_>
 VcfRecord::VcfRecord(StringType1_&& chrom, SizeType pos, StringType2_&& id, SequenceType1_&& ref,
-                     SequenceType2_&& alt, QualityType qual)
+                     SequenceType2_&& alt, QualityType qual, Filters_&& filters, Info_&& info)
 :
 chrom_ {std::forward<StringType1_>(chrom)},
 pos_ {pos},
 id_ {std::forward<StringType2_>(id)},
 ref_ {std::forward<SequenceType1_>(ref)},
 alt_ {std::forward<SequenceType2_>(alt)},
-qual_ {qual}
+qual_ {qual},
+filter_ {std::forward<Filters_>(filters)},
+info_ {std::forward<Info_>(info)}
 {}
+
+// non-member functions
+
+bool is_dbsnp_member(const VcfRecord& record) noexcept;
+bool is_hapmap2_member(const VcfRecord& record) noexcept;
+bool is_hapmap3_member(const VcfRecord& record) noexcept;
+bool is_1000g_member(const VcfRecord& record) noexcept;
+bool is_somatic(const VcfRecord& record) noexcept;
+bool is_validated(const VcfRecord& record) noexcept;
 
 std::ostream& operator<<(std::ostream& os, const VcfRecord& record);
 

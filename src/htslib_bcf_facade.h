@@ -47,6 +47,7 @@ public:
     
 private:
     using HtsBcfSrPtr = std::unique_ptr<bcf_srs_t, decltype(htslib_bcf_srs_deleter)>;
+    using HtsBcf1Ptr  = std::unique_ptr<bcf1_t, decltype(htslib_bcf1_deleter)>;
     
     fs::path the_file_path_;
     std::unique_ptr<htsFile, decltype(htslib_file_deleter)> the_file_;

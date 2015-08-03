@@ -9,6 +9,7 @@
 #include "htslib_bcf_facade.h"
 
 #include <vector>
+#include <map>
 
 #include "genomic_region.h"
 #include "variant.h"
@@ -63,18 +64,26 @@ std::vector<Variant> HtslibBcfFacade::fetch_variants(const GenomicRegion& region
 
 std::vector<VcfRecord> HtslibBcfFacade::fetch_records(const GenomicRegion& region)
 {
-    HtsBcfSrPtr ptr {bcf_sr_init(), htslib_bcf_srs_deleter};
+    HtsBcfSrPtr sr {bcf_sr_init(), htslib_bcf_srs_deleter};
     
-    bcf_sr_set_regions(ptr.get(), to_string(region).c_str(), 0);
+    bcf_sr_set_regions(sr.get(), to_string(region).c_str(), 0); // must go before bcf_sr_add_reader
     
-    if (!bcf_sr_add_reader(ptr.get(), the_file_path_.string().c_str())) {
+    if (!bcf_sr_add_reader(sr.get(), the_file_path_.string().c_str())) {
         throw std::runtime_error {"Failed to open file " + the_file_path_.string()};
     }
     
+    bcf1_t* record; // points into sr - don't need to delete
+    
+    int ninfo {};
+    int* intinfo {nullptr};
+    float* floatinfo {nullptr};
+    char** stringinfo {nullptr};
+    int* flaginfo {nullptr}; // not actually populated
+    
     std::vector<VcfRecord> result {};
     
-    while (bcf_sr_next_line(ptr.get())) {
-        bcf1_t* record = bcf_sr_get_line(ptr.get(), 0);
+    while (bcf_sr_next_line(sr.get())) {
+        record = bcf_sr_get_line(sr.get(), 0);
         
         bcf_unpack(record, BCF_UN_ALL);
         
@@ -103,18 +112,66 @@ std::vector<VcfRecord> HtslibBcfFacade::fetch_records(const GenomicRegion& regio
             }
         }
         
-        std::vector<std::string> info {};
-        info.reserve(record->n_info);
+        std::map<std::string, std::vector<std::string>> info {};
         
         for (unsigned i {}; i < record->n_info; ++i) {
             std::string key {the_header_->id[BCF_DT_ID][record->d.info[i].key].key};
-            char** p; int* in;
-            int r = bcf_get_info_string(the_header_.get(), record, key.c_str(), p, in);
-            std::cout << r << " " << (p == nullptr) << " " << (in == nullptr) << std::endl;
+            auto type = bcf_hdr_id2type(the_header_.get(), BCF_HL_INFO, record->d.info[i].key);
+            
+            std::vector<std::string> vals {};
+            vals.reserve(ninfo);
+            
+            int r {};
+            switch (type) {
+                case BCF_HT_INT:
+                {
+                    r = bcf_get_info_int32(the_header_.get(), record, key.c_str(), &intinfo, &ninfo);
+                    if (r > 0) {
+                        std::transform(intinfo, intinfo + ninfo, std::back_inserter(vals), [] (auto v) {
+                            return std::to_string(v);
+                        });
+                    }
+                    break;
+                }
+                case BCF_HT_REAL:
+                {
+                    r = bcf_get_info_float(the_header_.get(), record, key.c_str(), &floatinfo, &ninfo);
+                    if (r > 0) {
+                        std::transform(floatinfo, floatinfo + ninfo, std::back_inserter(vals), [] (auto v) {
+                            return std::to_string(v);
+                        });
+                    }
+                    break;
+                }
+                case BCF_HT_STR:
+                {
+                    r = bcf_get_info_string(the_header_.get(), record, key.c_str(), &stringinfo, &ninfo);
+                    auto last = stringinfo + ninfo;
+                    if (r > 0) {
+                        for (; stringinfo != last; ++stringinfo) {
+                            vals.emplace_back(*stringinfo);
+                        }
+                    }
+                    break;
+                }
+                case BCF_HT_FLAG:
+                {
+                    r = bcf_get_info_flag(the_header_.get(), record, key.c_str(), &flaginfo, &ninfo);
+                    vals.emplace_back((r == 1) ? "1" : "0");
+                    break;
+                }
+            }
+            
+            info.emplace(key, std::move(vals));
         }
         
-        result.emplace_back(std::move(chrom), pos, std::move(id), std::move(ref), std::move(alt), qual);
+        result.emplace_back(std::move(chrom), pos, std::move(id), std::move(ref), std::move(alt), qual, std::move(filter), std::move(info));
     }
+    
+    if (intinfo != nullptr)    delete [] intinfo;
+    if (floatinfo != nullptr)  delete [] floatinfo;
+    if (stringinfo != nullptr) delete [] stringinfo;
+    if (flaginfo != nullptr)   delete [] flaginfo;
     
     return result;
 }
