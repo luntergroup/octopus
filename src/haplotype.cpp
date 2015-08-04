@@ -256,6 +256,12 @@ void unique_least_complex(std::vector<Haplotype>& haplotypes)
     haplotypes.erase(first_equal, last);
 }
 
+std::ostream& operator<<(std::ostream& os, const Haplotype& a_haplotype)
+{
+    os << a_haplotype.get_region() << " " << a_haplotype.get_sequence();
+    return os;
+}
+
 void add_to_back(const Variant& a_variant, Haplotype& a_haplotype)
 {
     a_haplotype.push_back(a_variant.get_alternative_allele());

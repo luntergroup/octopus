@@ -166,11 +166,7 @@ namespace boost {
     };
 }
 
-inline std::ostream& operator<<(std::ostream& os, const Haplotype& a_haplotype)
-{
-    os << a_haplotype.get_region() << " " << a_haplotype.get_sequence();
-    return os;
-}
+std::ostream& operator<<(std::ostream& os, const Haplotype& a_haplotype);
 
 void add_to_back(const Variant& a_variant, Haplotype& a_haplotype);
 void add_to_front(const Variant& a_variant, Haplotype& a_haplotype);

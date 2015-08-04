@@ -9,6 +9,7 @@
 #include "cigar_string.h"
 
 #include <ctype.h>   // std::isdigit
+#include <algorithm> // std::copy
 
 CigarOperation::CigarOperation(SizeType size, char flag) noexcept
 :
@@ -83,4 +84,18 @@ get_soft_clipped_sizes(const CigarString& cigar_string) noexcept
         cigar_string.back().get_size() : 0;
         return {front_soft_clipped_size, back_soft_clipped_size};
     }
+}
+
+// non-member functions
+
+std::ostream& operator<<(std::ostream& os, const CigarOperation& cigar_operation)
+{
+    os << cigar_operation.get_size() << cigar_operation.get_flag();
+    return os;
+}
+
+std::ostream& operator<<(std::ostream& os, const CigarString& cigar_string)
+{
+    std::copy(std::cbegin(cigar_string), std::cend(cigar_string), std::ostream_iterator<CigarOperation>(os));
+    return os;
 }

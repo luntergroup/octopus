@@ -42,3 +42,10 @@ const Variant::SequenceType& Variant::get_alternative_allele_sequence() const no
 {
     return the_alternative_allele_sequence_;
 }
+
+std::ostream& operator<<(std::ostream& os, const Variant& a_variant)
+{
+    os << a_variant.get_region() << " " << a_variant.get_reference_allele_sequence() << " " <<
+    a_variant.get_alternative_allele_sequence();
+    return os;
+}

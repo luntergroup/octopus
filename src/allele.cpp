@@ -24,6 +24,8 @@ const Allele::SequenceType& Allele::get_sequence() const noexcept
     return the_sequence_;
 }
 
+// non-member functions
+
 bool is_reference(const Allele& an_allele, ReferenceGenome& the_reference)
 {
     return an_allele.get_sequence() == the_reference.get_sequence(an_allele.get_region());
@@ -112,4 +114,10 @@ std::vector<Allele> decompose(const Allele& an_allele)
     }
     
     return result;
+}
+
+std::ostream& operator<<(std::ostream& os, const Allele& an_allele)
+{
+    os << an_allele.get_region() << " " << an_allele.get_sequence();
+    return os;
 }

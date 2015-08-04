@@ -49,36 +49,6 @@ the_reference_region_ {std::forward<GenomicRegion_>(the_reference_region)},
 the_sequence_ {std::forward<SequenceType_>(the_sequence)}
 {}
 
-inline bool operator==(const Allele& lhs, const Allele& rhs)
-{
-    return lhs.get_region() == rhs.get_region() && lhs.get_sequence() == rhs.get_sequence();
-}
-
-inline bool operator<(const Allele& lhs, const Allele& rhs)
-{
-    return (lhs.get_region() == rhs.get_region()) ? lhs.get_sequence() < rhs.get_sequence() :
-                                                    lhs.get_region() < rhs.get_region();
-}
-
-namespace std {
-    template <> struct hash<Allele>
-    {
-        size_t operator()(const Allele& a) const
-        {
-            size_t seed {};
-            boost::hash_combine(seed, hash<GenomicRegion>()(a.get_region()));
-            boost::hash_combine(seed, hash<Allele::SequenceType>()(a.get_sequence()));
-            return seed;
-        }
-    };
-}
-
-inline std::ostream& operator<<(std::ostream& os, const Allele& an_allele)
-{
-    os << an_allele.get_region() << " " << an_allele.get_sequence();
-    return os;
-}
-
 bool is_reference(const Allele& an_allele, ReferenceGenome& the_reference);
 
 Allele get_reference_allele(const GenomicRegion& region, ReferenceGenome& the_reference);
@@ -94,5 +64,31 @@ bool is_insertion(const Allele& an_allele);
 bool is_deletion(const Allele& an_allele);
 
 std::vector<Allele> decompose(const Allele& an_allele);
+
+inline bool operator==(const Allele& lhs, const Allele& rhs)
+{
+    return lhs.get_region() == rhs.get_region() && lhs.get_sequence() == rhs.get_sequence();
+}
+
+inline bool operator<(const Allele& lhs, const Allele& rhs)
+{
+    return (lhs.get_region() == rhs.get_region()) ? lhs.get_sequence() < rhs.get_sequence() :
+    lhs.get_region() < rhs.get_region();
+}
+
+namespace std {
+    template <> struct hash<Allele>
+    {
+        size_t operator()(const Allele& a) const
+        {
+            size_t seed {};
+            boost::hash_combine(seed, hash<GenomicRegion>()(a.get_region()));
+            boost::hash_combine(seed, hash<Allele::SequenceType>()(a.get_sequence()));
+            return seed;
+        }
+    };
+}
+
+std::ostream& operator<<(std::ostream& os, const Allele& an_allele);
 
 #endif

@@ -14,7 +14,6 @@
 #include <iterator>
 #include <vector>
 #include <ostream>
-#include <algorithm> // std::copy
 #include <numeric>   // std::accumulate
 #include <boost/functional/hash.hpp> // boost::hash_combine, boost::hash_range
 
@@ -214,17 +213,9 @@ inline bool operator<(const CigarOperation& lhs, const CigarOperation& rhs)
 // Note CigarString gets all of std::vector comparison methods. In particular, operator< uses
 // std::lexicographical_compare
 
-inline std::ostream& operator<<(std::ostream& os, const CigarOperation& cigar_operation)
-{
-    os << cigar_operation.get_size() << cigar_operation.get_flag();
-    return os;
-}
+std::ostream& operator<<(std::ostream& os, const CigarOperation& cigar_operation);
 
-inline std::ostream& operator<<(std::ostream& os, const CigarString& cigar_string)
-{
-    std::copy(std::cbegin(cigar_string), std::cend(cigar_string), std::ostream_iterator<CigarOperation>(os));
-    return os;
-}
+std::ostream& operator<<(std::ostream& os, const CigarString& cigar_string);
 
 namespace std {
     template <> struct hash<CigarOperation>

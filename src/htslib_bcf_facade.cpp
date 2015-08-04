@@ -22,7 +22,7 @@ HtslibBcfFacade::HtslibBcfFacade(const fs::path& file_path)
 :
 the_file_path_ {file_path},
 the_file_ {bcf_open(the_file_path_.string().c_str(), "r"), htslib_file_deleter},
-the_header_ {bcf_hdr_read(the_file_.get()), htslib_bcf_header_deleter}
+the_header_ {(the_file_ != nullptr) ? bcf_hdr_read(the_file_.get()) : nullptr, htslib_bcf_header_deleter}
 {
     if (the_file_ == nullptr) {
         throw std::runtime_error {"Could not initalise memory for file " + the_file_path_.string()};
@@ -38,7 +38,7 @@ std::vector<Variant> HtslibBcfFacade::fetch_variants(const GenomicRegion& region
     HtsBcfSrPtr ptr {bcf_sr_init(), htslib_bcf_srs_deleter};
     
     bcf_sr_set_regions(ptr.get(), to_string(region).c_str(), 0);
-
+    
     if (!bcf_sr_add_reader(ptr.get(), the_file_path_.string().c_str())) {
         throw std::runtime_error {"Failed to open file " + the_file_path_.string()};
     }

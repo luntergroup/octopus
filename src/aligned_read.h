@@ -248,31 +248,8 @@ namespace std {
     };
 }
 
-inline std::ostream& operator<<(std::ostream& os, const AlignedRead::Qualities& qualities)
-{
-    std::transform(std::cbegin(qualities), std::cend(qualities),
-                   std::ostream_iterator<AlignedRead::QualityType>(os, ""),
-                   [] (auto q) { return q + 33; });
-    return os;
-}
+std::ostream& operator<<(std::ostream& os, const AlignedRead::Qualities& qualities);
 
-inline std::ostream& operator<<(std::ostream& os, const AlignedRead& a_read)
-{
-    os << a_read.get_region() << '\n';
-    os << a_read.get_sequence() << '\n';
-    os << a_read.get_qualities() << '\n';
-    os << a_read.get_cigar_string() << '\n';
-    os << static_cast<unsigned>(a_read.get_mapping_quality());
-    if (a_read.is_chimeric()) {
-        os << '\n';
-        os << a_read.get_next_segment()->get_contig_name() << '\n';
-        os << a_read.get_next_segment()->get_begin() << '\n';
-        os << a_read.get_next_segment()->get_inferred_template_length();
-    } else {
-        os << '\n';
-        os << "no other segments";
-    }
-    return os;
-}
+std::ostream& operator<<(std::ostream& os, const AlignedRead& a_read);
 
 #endif /* defined(__Octopus__aligned_read__) */
