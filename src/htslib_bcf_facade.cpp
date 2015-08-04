@@ -80,6 +80,11 @@ std::vector<VcfRecord> HtslibBcfFacade::fetch_records(const GenomicRegion& regio
     char** stringinfo {nullptr};
     int* flaginfo {nullptr}; // not actually populated
     
+    int nformat {};
+    int* intformat {nullptr};
+    float* floatformat {nullptr};
+    char** stringformat {nullptr};
+    
     std::vector<VcfRecord> result {};
     
     while (bcf_sr_next_line(sr.get())) {
@@ -115,57 +120,91 @@ std::vector<VcfRecord> HtslibBcfFacade::fetch_records(const GenomicRegion& regio
         std::map<std::string, std::vector<std::string>> info {};
         
         for (unsigned i {}; i < record->n_info; ++i) {
-            std::string key {the_header_->id[BCF_DT_ID][record->d.info[i].key].key};
+            const char* key {the_header_->id[BCF_DT_ID][record->d.info[i].key].key};
             auto type = bcf_hdr_id2type(the_header_.get(), BCF_HL_INFO, record->d.info[i].key);
             
             std::vector<std::string> vals {};
             vals.reserve(ninfo);
             
-            int r {};
             switch (type) {
                 case BCF_HT_INT:
-                {
-                    r = bcf_get_info_int32(the_header_.get(), record, key.c_str(), &intinfo, &ninfo);
-                    if (r > 0) {
+                    if (bcf_get_info_int32(the_header_.get(), record, key, &intinfo, &ninfo) > 0) {
                         std::transform(intinfo, intinfo + ninfo, std::back_inserter(vals), [] (auto v) {
                             return std::to_string(v);
                         });
                     }
                     break;
-                }
                 case BCF_HT_REAL:
-                {
-                    r = bcf_get_info_float(the_header_.get(), record, key.c_str(), &floatinfo, &ninfo);
-                    if (r > 0) {
+                    if (bcf_get_info_float(the_header_.get(), record, key, &floatinfo, &ninfo) > 0) {
                         std::transform(floatinfo, floatinfo + ninfo, std::back_inserter(vals), [] (auto v) {
                             return std::to_string(v);
                         });
                     }
                     break;
-                }
                 case BCF_HT_STR:
-                {
-                    r = bcf_get_info_string(the_header_.get(), record, key.c_str(), &stringinfo, &ninfo);
-                    auto last = stringinfo + ninfo;
-                    if (r > 0) {
-                        for (; stringinfo != last; ++stringinfo) {
-                            vals.emplace_back(*stringinfo);
-                        }
+                    if (bcf_get_info_string(the_header_.get(), record, key, &stringinfo, &ninfo) > 0) {
+                        std::for_each(stringinfo, stringinfo + ninfo, [&vals] (const char* str) {
+                            vals.emplace_back(str);
+                        });
                     }
                     break;
-                }
                 case BCF_HT_FLAG:
-                {
-                    r = bcf_get_info_flag(the_header_.get(), record, key.c_str(), &flaginfo, &ninfo);
-                    vals.emplace_back((r == 1) ? "1" : "0");
+                    vals.emplace_back((bcf_get_info_flag(the_header_.get(), record, key, &flaginfo, &ninfo) == 1) ? "1" : "0");
                     break;
-                }
             }
             
             info.emplace(key, std::move(vals));
         }
         
-        result.emplace_back(std::move(chrom), pos, std::move(id), std::move(ref), std::move(alt), qual, std::move(filter), std::move(info));
+        std::vector<std::string> format {};
+        format.reserve(record->n_fmt);
+        
+        for (unsigned i {}; i < record->n_fmt; ++i) {
+            format.emplace_back(the_header_->id[BCF_DT_ID][record->d.fmt[i].id].key);
+        }
+        
+        std::map<std::string, std::vector<std::string>> genotypes {};
+        
+        format.erase(format.begin() + 1, format.end()); // TEST
+        
+        for (const auto& key : format) {
+            std::cout << key << std::endl;
+            
+            auto type = bcf_hdr_id2type(the_header_.get(), BCF_HL_FMT, bcf_hdr_id2int(the_header_.get(), BCF_DT_ID, key.c_str()));
+            
+            std::vector<std::string> vals {};
+            vals.reserve(record->n_sample);
+            
+            switch (type) {
+                case BCF_HT_INT:
+                    if (bcf_get_format_int32(the_header_.get(), record, key.c_str(), &intformat, &nformat) > 0) {
+                        std::transform(intformat, intformat + record->n_sample, std::back_inserter(vals), [] (auto v) {
+                            return std::to_string(v);
+                        });
+                    }
+                    break;
+                case BCF_HT_REAL:
+                    if (bcf_get_format_float(the_header_.get(), record, key.c_str(), &floatformat, &nformat) > 0) {
+                        std::transform(floatformat, floatformat + record->n_sample, std::back_inserter(vals), [] (auto v) {
+                            return std::to_string(v);
+                        });
+                    }
+                    break;
+                case BCF_HT_STR:
+                    if (bcf_get_format_string(the_header_.get(), record, key.c_str(), &stringformat, &nformat) > 0) {
+                        std::for_each(stringformat, stringformat + record->n_sample, [&vals] (const char* str) {
+                            vals.emplace_back(str);
+                        });
+                    }
+                    break;
+            }
+            
+            for (unsigned i {}; i < record->n_sample; ++i) {
+                genotypes[the_header_->samples[i]].push_back(std::move(vals[i]));
+            }
+        }
+        
+        result.emplace_back(std::move(chrom), pos, std::move(id), std::move(ref), std::move(alt), qual, std::move(filter), std::move(info), std::move(format), std::move(genotypes));
     }
     
     if (intinfo != nullptr)    delete [] intinfo;
@@ -177,8 +216,3 @@ std::vector<VcfRecord> HtslibBcfFacade::fetch_records(const GenomicRegion& regio
 }
 
 // private methods
-
-void HtslibBcfFacade::set_region(const GenomicRegion& a_region)
-{
-    
-}

@@ -11,12 +11,12 @@
 #include <algorithm> // std::find
 #include <iterator>  // std::cbegin, std::cend
 
-const std::string& VcfRecord::get_chrom() const noexcept
+const std::string& VcfRecord::get_chromosome_name() const noexcept
 {
     return chrom_;
 }
 
-VcfRecord::SizeType VcfRecord::get_pos() const noexcept
+VcfRecord::SizeType VcfRecord::get_position() const noexcept
 {
     return pos_;
 }
@@ -26,7 +26,7 @@ const std::string& VcfRecord::get_id() const noexcept
     return id_;
 }
 
-const VcfRecord::SequenceType& VcfRecord::get_ref() const noexcept
+const VcfRecord::SequenceType& VcfRecord::get_ref_allele() const noexcept
 {
     return ref_;
 }
@@ -36,12 +36,12 @@ unsigned VcfRecord::get_num_alt_alleles() const noexcept
     return static_cast<unsigned>(alt_.size());
 }
 
-const VcfRecord::SequenceType& VcfRecord::get_alt(unsigned n) const noexcept
+const VcfRecord::SequenceType& VcfRecord::get_alt_allele(unsigned n) const noexcept
 {
     return alt_.at(n);
 }
 
-VcfRecord::QualityType VcfRecord::get_qual() const noexcept
+VcfRecord::QualityType VcfRecord::get_quality() const noexcept
 {
     return qual_;
 }
@@ -64,6 +64,11 @@ bool VcfRecord::has_info(const std::string& key) const noexcept
 const std::vector<std::string>& VcfRecord::get_info_values(const std::string& key) const
 {
     return info_.at(key);
+}
+
+bool VcfRecord::has_genotype_data() const noexcept
+{
+    return !format_.empty();
 }
 
 // non-member functions
@@ -108,31 +113,34 @@ bool is_validated(const VcfRecord& record) noexcept
     return record.has_info(Info_validated);
 }
 
-std::ostream& operator<<(std::ostream& os, const std::vector<std::string>& v)
+std::ostream& print_vector(std::ostream& os, const std::vector<std::string>& v, const std::string& delim)
 {
     if (v.empty()) {
         os << ".";
     } else {
-        std::for_each(v.cbegin(), std::prev(v.cend()), [&os] (const auto& str) {
-            os << str << ",";
-        });
+        std::copy(v.cbegin(), std::prev(v.cend()), std::ostream_iterator<std::string>(os, delim.c_str()));
         os << v.back();
     }
     return os;
 }
 
-std::ostream& operator<<(std::ostream& os, const std::map<std::string, std::vector<std::string>>& m)
+std::ostream& operator<<(std::ostream& os, const std::vector<std::string>& v)
+{
+    return print_vector(os, v, ",");
+}
+
+std::ostream& print_map(std::ostream& os, const std::map<std::string, std::vector<std::string>>& m, const std::string& delim)
 {
     if (m.empty()) {
         os << ".";
     } else {
         auto last = std::prev(m.cend());
-        std::for_each(m.cbegin(), last, [&os] (const auto& p) {
+        std::for_each(m.cbegin(), last, [&os, delim] (const auto& p) {
             os << p.first;
             if (!p.second.empty()) {
                 os << "=" << p.second;
             }
-            os << ";";
+            os << delim;
         });
         os << last->first;
         if (!last->second.empty()) {
@@ -142,6 +150,11 @@ std::ostream& operator<<(std::ostream& os, const std::map<std::string, std::vect
     return os;
 }
 
+std::ostream& operator<<(std::ostream& os, const std::map<std::string, std::vector<std::string>>& m)
+{
+    return print_map(os, m, ";");
+}
+
 std::ostream& operator<<(std::ostream& os, const VcfRecord& record)
 {
     os << record.chrom_ << "\t" << record.pos_ << "\t" << record.id_ << "\t" << record.ref_ << "\t";
@@ -149,6 +162,11 @@ std::ostream& operator<<(std::ostream& os, const VcfRecord& record)
     os << static_cast<unsigned>(record.qual_) << "\t";
     os << record.filter_ << "\t";
     os << record.info_ << "\t";
+    
+    if (record.has_genotype_data()) {
+        print_vector(os, record.format_, ":") << "\t";
+        print_map(os, record.genotypes_, ":");
+    }
     
     return os;
 }
