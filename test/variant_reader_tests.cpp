@@ -28,9 +28,9 @@ BOOST_AUTO_TEST_CASE(can_read_vcf_files)
 {
     HtslibBcfFacade vcf_reader {sample_vcf};
     
-    GenomicRegion region {"X", 0, 1000000};
+    GenomicRegion region {"X", 2000000, 2001000};
     
     auto records = vcf_reader.fetch_records(region);
     
-    //for (const auto& record : records) cout << record << endl;
+    for (const auto& record : records) cout << record << endl;
 }

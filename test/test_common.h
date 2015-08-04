@@ -64,9 +64,13 @@ namespace detail
 
 // Full paths
 
+// regions
+
 static std::string regions_txt_file {detail::home_dir + detail::octopus_test_dir + "test_regions.txt"};
 static std::string regions_bed_file {detail::home_dir + detail::octopus_test_dir + "test_regions.bed"};
 static std::string reads_file {detail::home_dir + detail::octopus_test_dir + "test_files.txt"};
+
+// references
 
 static std::string human_reference_fasta {detail::home_dir + detail::genomics_dir +
                 detail::reference_dir + detail::human_reference_name};
@@ -78,6 +82,8 @@ static std::string ecoli_reference_fasta {detail::home_dir + detail::genomics_di
 
 static std::string lambda_reference_fasta {detail::home_dir + detail::genomics_dir +
         detail::reference_dir + detail::lambda_reference_name};
+
+// reads
 
 static std::string human_1000g_bam0 {detail::home_dir + detail::genomics_dir + detail::bam_dir +
     detail::human_1000g_bam_name0};
@@ -96,6 +102,8 @@ static std::string human_1000g_cram {detail::home_dir + detail::genomics_dir + d
 
 static std::string ecoli_bam {detail::home_dir + detail::genomics_dir + detail::bam_dir +
     detail::ecoli_bam_name};
+
+// vcfs
 
 static std::string sample_vcf {detail::home_dir + detail::genomics_dir  + detail::sample_vcf_dir +
     detail::sample_vcf_name};

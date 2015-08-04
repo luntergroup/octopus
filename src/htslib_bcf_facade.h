@@ -47,12 +47,11 @@ public:
     
 private:
     using HtsBcfSrPtr = std::unique_ptr<bcf_srs_t, decltype(htslib_bcf_srs_deleter)>;
+    using HtsBcf1Ptr  = std::unique_ptr<bcf1_t, decltype(htslib_bcf1_deleter)>;
     
     fs::path the_file_path_;
     std::unique_ptr<htsFile, decltype(htslib_file_deleter)> the_file_;
     std::unique_ptr<bcf_hdr_t, decltype(htslib_bcf_header_deleter)> the_header_;
-    
-    void set_region(const GenomicRegion& a_region);
 };
 
 #endif /* defined(__Octopus__htslib_bcf_facade__) */
