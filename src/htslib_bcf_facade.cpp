@@ -165,10 +165,21 @@ std::vector<VcfRecord> HtslibBcfFacade::fetch_records(const GenomicRegion& regio
         
         std::map<std::string, std::vector<std::string>> genotypes {};
         
-        format.erase(format.begin() + 1, format.end()); // TEST
+        //format.erase(format.begin() + 1, format.end()); // TEST
+        //format.clear(); format.emplace_back("GQ");
         
         for (const auto& key : format) {
             std::cout << key << std::endl;
+            
+            if (key == "GT") {
+                bcf_get_format_int32(the_header_.get(), record, key.c_str(), &intformat, &nformat);
+                for (int i = 0; i < record->n_sample; ++i) {
+                    int a, b;
+                    bcf_gt2alleles(intformat[i], &a, &b);
+                    std::cout << intformat[i] << " " << a << " " << b << std::endl;
+                }
+                exit(0);
+            }
             
             auto type = bcf_hdr_id2type(the_header_.get(), BCF_HL_FMT, bcf_hdr_id2int(the_header_.get(), BCF_DT_ID, key.c_str()));
             
@@ -192,6 +203,8 @@ std::vector<VcfRecord> HtslibBcfFacade::fetch_records(const GenomicRegion& regio
                     break;
                 case BCF_HT_STR:
                     if (bcf_get_format_string(the_header_.get(), record, key.c_str(), &stringformat, &nformat) > 0) {
+                        std::string str {stringformat[0][0]};
+                        std::cout << str << std::endl;
                         std::for_each(stringformat, stringformat + record->n_sample, [&vals] (const char* str) {
                             vals.emplace_back(str);
                         });
@@ -204,7 +217,8 @@ std::vector<VcfRecord> HtslibBcfFacade::fetch_records(const GenomicRegion& regio
             }
         }
         
-        result.emplace_back(std::move(chrom), pos, std::move(id), std::move(ref), std::move(alt), qual, std::move(filter), std::move(info), std::move(format), std::move(genotypes));
+        result.emplace_back(std::move(chrom), pos, std::move(id), std::move(ref), std::move(alt), qual,
+                            std::move(filter), std::move(info), std::move(format), std::move(genotypes));
     }
     
     if (intinfo != nullptr)    delete [] intinfo;
