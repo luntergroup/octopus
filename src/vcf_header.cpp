@@ -43,9 +43,6 @@ private:
 VcfHeader::VcfHeader(const std::string& lines)
 {
     insert_lines(lines);
-    key_type_map_.emplace("AA", "String");
-    key_type_map_.emplace("DP", "Integer");
-    key_type_map_.emplace("SOMATIC", "Flag");
 }
 
 void VcfHeader::insert_line(const std::string& line)
@@ -60,6 +57,21 @@ void VcfHeader::insert_line(const std::string& line)
     } else {
         throw std::runtime_error {"invalid header line " + line};
     }
+}
+
+const std::string& VcfHeader::get_file_format() const noexcept
+{
+    return file_format_;
+}
+
+unsigned VcfHeader::get_num_samples() const noexcept
+{
+    return static_cast<unsigned>(samples_.size());
+}
+
+std::vector<std::string> VcfHeader::get_samples() const
+{
+    return samples_;
 }
 
 unsigned VcfHeader::get_field_cardinality(const std::string& key, const VcfRecord& record) const
@@ -80,8 +92,7 @@ VcfType VcfHeader::get_typed_value(const std::string& format_key, const std::str
 
 VcfType VcfHeader::get_typed_value(const std::string& field_key, const std::string& value) const
 {
-    if (key_type_map_.count(field_key) == 0) throw UnknownKey {field_key};
-    return vcf_type_factory(key_type_map_.at(field_key), value);
+    return vcf_type_factory("String", value);
 }
 
 // private methods

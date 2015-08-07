@@ -59,13 +59,18 @@ void test2()
 //    cout << v3 << endl;
 //    cout << v4 << endl;
     
-//    auto v6 = v2 * v3;
-//    cout << v6 << endl;
-//    
-//    auto v7 = v1 + v5;
-//    cout << v7 << endl;
+    auto v6 = v2 * v3;
+    cout << v6 << endl;
     
+    auto v7 = v1 + v5;
+    cout << v7 << endl;
+    
+    cout << (v2 == v3) << endl;
     cout << (v2 < v3) << endl;
+    cout << (v2 > v3) << endl;
+    cout << (v2 <= v3) << endl;
+    cout << (v2 >= v3) << endl;
+    cout << (v6 > v2) << endl;
 }
 
 int main(int argc, const char **argv)

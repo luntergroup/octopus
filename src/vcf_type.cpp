@@ -32,6 +32,36 @@ VcfType operator/(const VcfType& lhs, const VcfType& rhs)
     return boost::apply_visitor(detail::divide(), lhs, rhs);
 }
 
+bool operator==(const VcfType& lhs, const VcfType& rhs)
+{
+    return boost::apply_visitor(detail::is_equal(), lhs, rhs);
+}
+
+bool operator!=(const VcfType& lhs, const VcfType& rhs)
+{
+    return !operator==(lhs, rhs);
+}
+
+bool operator<(const VcfType& lhs, const VcfType& rhs)
+{
+    return boost::apply_visitor(detail::is_less_than(), lhs, rhs);
+}
+
+bool operator>(const VcfType& lhs, const VcfType& rhs)
+{
+    return operator<(rhs, lhs);
+}
+
+bool operator<=(const VcfType& lhs, const VcfType& rhs)
+{
+    return !operator>(lhs, rhs);
+}
+
+bool operator>=(const VcfType& lhs, const VcfType& rhs)
+{
+    return !operator<(lhs, rhs);
+}
+
 class UnknownVcfType : std::runtime_error {
 public:
     UnknownVcfType(std::string type)

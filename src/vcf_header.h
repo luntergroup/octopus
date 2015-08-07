@@ -49,11 +49,17 @@ public:
     
     void insert_line(const std::string& line);
     
+    const std::string& get_file_format() const noexcept;
+    unsigned get_num_samples() const noexcept;
+    std::vector<std::string> get_samples() const;
+    
+    // acessors for single fields
+    const std::string& get_field(const std::string& field_key) const;
+    
     unsigned get_field_cardinality(const std::string& key, const VcfRecord& record) const;
     
+    // The second version will look at all format fields and throw if field_key is not unique
     VcfType get_typed_value(const std::string& format_key, const std::string& field_key, const std::string& value) const;
-    // same as above but will look at all possible formats, throws if field_key is present
-    // in more than one format
     VcfType get_typed_value(const std::string& field_key, const std::string& value) const;
     
     friend std::ostream& operator<<(std::ostream& os, const VcfHeader& header);
@@ -63,15 +69,13 @@ private:
     
     // required lines
     std::string file_format_;
+    std::vector<std::string> samples_;
     
     // optional single-lines
     Fields fields_;
     
     // optional field format lines
     std::unordered_multimap<std::string, Fields> formats_;
-    
-    // for fast access to types
-    std::unordered_map<std::string, std::string> key_type_map_;
     
     void insert_format_line(const std::string& line);
     void insert_field_line(const std::string& line);
