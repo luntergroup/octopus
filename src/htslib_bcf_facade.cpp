@@ -10,6 +10,10 @@
 
 #include <vector>
 #include <map>
+#include <stdexcept>
+#include <algorithm> // std::transform, std::for_each
+#include <iterator>  // std::cbegin, std::cend, std::next
+#include <utility>   // std::move
 
 #include "genomic_region.h"
 #include "variant.h"
@@ -32,34 +36,6 @@ header_ {(file_ != nullptr) ? bcf_hdr_read(file_.get()) : nullptr, htslib_bcf_he
     if (header_ == nullptr) {
         throw std::runtime_error {"Cannot find header for " + file_path_.string()};
     }
-}
-
-std::vector<Variant> HtslibBcfFacade::fetch_variants(const GenomicRegion& region)
-{
-    HtsBcfSrPtr ptr {bcf_sr_init(), htslib_bcf_srs_deleter};
-    
-    bcf_sr_set_regions(ptr.get(), to_string(region).c_str(), 0);
-    
-    if (!bcf_sr_add_reader(ptr.get(), file_path_.string().c_str())) {
-        throw std::runtime_error {"Failed to open file " + file_path_.string()};
-    }
-    
-    std::vector<Variant> result {};
-    
-    while (bcf_sr_next_line(ptr.get())) {
-        bcf1_t* record = bcf_sr_get_line(ptr.get(), 0);
-        
-        const char* contig = bcf_hdr_id2name(header_.get(), record->rid);
-        auto begin = static_cast<GenomicRegion::SizeType>(record->pos);
-        auto end   = begin + static_cast<GenomicRegion::SizeType>(record->rlen);
-        GenomicRegion the_region {contig, begin, end};
-        
-        Variant v {the_region, record->d.allele[0], record->d.allele[1]};
-        
-        std::cout << v << std::endl;
-    }
-    
-    return result;
 }
 
 auto get_chrom(bcf_hdr_t* header, bcf1_t* record)
@@ -86,9 +62,11 @@ auto get_alt(bcf_hdr_t* header, bcf1_t* record)
 {
     std::vector<std::string> result {};
     result.reserve(record->n_allele - 1);
+    
     for (unsigned i {1}; i < record->n_allele; ++i) {
         result.emplace_back(record->d.allele[i]);
     }
+    
     return result;
 }
 
@@ -100,6 +78,7 @@ auto get_qual(bcf_hdr_t* header, bcf1_t* record)
 auto get_filter(bcf_hdr_t* header, bcf1_t* record)
 {
     std::vector<std::string> result {};
+    
     if (record->d.n_flt == 0) {
         result.reserve(1);
         result.emplace_back("PASS");
@@ -109,6 +88,7 @@ auto get_filter(bcf_hdr_t* header, bcf1_t* record)
             result.emplace_back(bcf_hdr_int2id(header, BCF_DT_ID, record->d.flt[i]));
         }
     }
+    
     return result;
 }
 
@@ -212,7 +192,7 @@ auto get_samples(bcf_hdr_t* header, bcf1_t* record, const std::vector<std::strin
                 }
             }
             
-            bool is_phased {static_cast<bool>(bcf_gt_is_phased(gt[i + ploidy - 1]))};
+            auto is_phased = static_cast<bool>(bcf_gt_is_phased(gt[i + ploidy - 1]));
             
             genotypes[header->samples[s]] = std::make_pair(std::move(alleles), is_phased);
         }
@@ -248,8 +228,6 @@ auto get_samples(bcf_hdr_t* header, bcf1_t* record, const std::vector<std::strin
                 break;
             case BCF_HT_STR:
                 if (bcf_get_format_string(header, record, key.c_str(), &stringformat, &nformat) > 0) {
-                    std::string str {stringformat[0][0]};
-                    std::cout << str << std::endl;
                     std::for_each(stringformat, stringformat + record->n_sample, [&vals] (const char* str) {
                         vals.emplace_back(str);
                     });

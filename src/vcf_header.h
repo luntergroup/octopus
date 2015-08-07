@@ -12,95 +12,34 @@
 #include <string>
 #include <vector>
 #include <ctime>
+#include <ostream>
 #include <unordered_map>
+#include <stdexcept>
 #include <boost/optional.hpp>
+
+#include "vcf_type.h"
 
 using boost::optional;
 
-class BaseHeaderLine {};
+class VcfRecord;
 
-class IdHeaderLine : public BaseHeaderLine
+class VcfHeaderLine {};
+
+enum class VcfHeaderLineType {Integer, Float, Character, String, Flag};
+
+class TypeField
 {
 public:
-    const std::string& get_id() const noexcept { return id_; }
+    
 private:
-    std::string id_;
-};
-
-class DescriptiveHeaderLine : public IdHeaderLine
-{
-public:
-    const std::string& get_description() const noexcept;
-private:
-    std::string description_;
-};
-
-enum class HeaderLineType { Integer, Float, Flag, Chracter, String };
-
-class BaseValuedHeaderLine : public BaseHeaderLine
-{
-public:
-    virtual ~BaseValuedHeaderLine() = default;
-    virtual unsigned get_number() const noexcept = 0;
-private:
-    HeaderLineType type_;
-};
-
-class InfoFormatLine : public BaseValuedHeaderLine, public DescriptiveHeaderLine
-{
-public:
-    virtual ~InfoFormatLine() = default;
-    virtual unsigned get_number() const noexcept = 0;
-private:
-    optional<std::string> source_;
-    optional<std::string> version_;
-};
-
-class NumericInfoFormatLine : public InfoFormatLine
-{
-public:
-    virtual unsigned get_number() const noexcept { return number_; }
-private:
-    unsigned number_;
-};
-
-class FlaggedInfoFormatLine : public InfoFormatLine
-{
-public:
-    virtual unsigned get_number() const noexcept;
-private:
-    enum class NumberFlags { A, R, G, N };
-    NumberFlags number_flag_;
-};
-
-class FilterFormatLine : public DescriptiveHeaderLine {};
-
-class FortmatFormatLine
-{
     
 };
-
-class AltAlleleFormatLine : public DescriptiveHeaderLine
-{
-    
-};
-
-class ContigFormatLine : public IdHeaderLine
-{
-public:
-    const std::string get_url() const noexcept;
-private:
-    std::string url_;
-};
-
-class SampleFormatLine {};
-
-class PedigreeFormatLine {};
 
 class VcfHeader
 {
 public:
     VcfHeader()  = default;
+    VcfHeader(const std::string& lines);
     ~VcfHeader() = default;
     
     VcfHeader(const VcfHeader&)            = default;
@@ -108,28 +47,37 @@ public:
     VcfHeader(VcfHeader&&)                 = default;
     VcfHeader& operator=(VcfHeader&&)      = default;
     
+    void insert_line(const std::string& line);
+    
+    unsigned get_field_cardinality(const std::string& key, const VcfRecord& record) const;
+    
+    VcfType get_typed_value(const std::string& format_key, const std::string& field_key, const std::string& value) const;
+    // same as above but will look at all possible formats, throws if field_key is present
+    // in more than one format
+    VcfType get_typed_value(const std::string& field_key, const std::string& value) const;
+    
+    friend std::ostream& operator<<(std::ostream& os, const VcfHeader& header);
+    
 private:
+    using Fields = std::unordered_map<std::string, std::string>;
+    
     // required lines
     std::string file_format_;
     
-    // optional field format lines
-    std::vector<InfoFormatLine> info_format_lines_;
-    std::vector<FilterFormatLine> filter_format_lines_;
-    std::vector<FortmatFormatLine> format_format_lines_;
-    std::vector<AltAlleleFormatLine> alt_allele_format_lines_;
-    std::vector<ContigFormatLine> contig_format_lines_;
-    std::vector<SampleFormatLine> sample_format_lines_;
-    std::vector<PedigreeFormatLine> pedigree_format_lines_;
-    
     // optional single-lines
-    optional<std::string> assembly_;
-    optional<std::tm> file_date_;
-    optional<std::string> source_;
-    optional<std::string> reference_;
-    optional<std::string> contig_;
-    optional<std::string> phasing_;
+    Fields fields_;
     
+    // optional field format lines
+    std::unordered_multimap<std::string, Fields> formats_;
     
+    // for fast access to types
+    std::unordered_map<std::string, std::string> key_type_map_;
+    
+    void insert_format_line(const std::string& line);
+    void insert_field_line(const std::string& line);
+    void insert_lines(const std::string& lines);
 };
+
+std::ostream& operator<<(std::ostream& os, const VcfHeader& header);
 
 #endif /* defined(__Octopus__vcf_header__) */

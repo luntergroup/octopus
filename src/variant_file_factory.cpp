@@ -24,5 +24,6 @@ std::unique_ptr<IVariantFileReaderImpl> VariantFileFactory::make_reader(const st
         throw std::runtime_error {"Cannot find " + the_path.string()};
     }
     
-    return std::make_unique<HtslibBcfFacade>(variant_file_path);
+    //return std::make_unique<HtslibBcfFacade>(variant_file_path);
+    return nullptr;
 }

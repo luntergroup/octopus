@@ -30,7 +30,7 @@ auto htslib_bcf_header_deleter = [] (bcf_hdr_t* header) { bcf_hdr_destroy(header
 auto htslib_bcf_srs_deleter    = [] (bcf_srs_t* file) { bcf_sr_destroy(file); };
 auto htslib_bcf1_deleter       = [] (bcf1_t* bcf1) { bcf_destroy(bcf1); };
 
-class HtslibBcfFacade : public IVariantFileReaderImpl
+class HtslibBcfFacade
 {
 public:
     HtslibBcfFacade() = delete;
@@ -42,7 +42,6 @@ public:
     HtslibBcfFacade(HtslibBcfFacade&&)                 = default;
     HtslibBcfFacade& operator=(HtslibBcfFacade&&)      = default;
     
-    std::vector<Variant> fetch_variants(const GenomicRegion& region) override;
     std::vector<VcfRecord> fetch_records(const GenomicRegion& region);
     
 private:

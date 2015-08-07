@@ -25,6 +25,7 @@
 #include "variant_file_reader.h"
 #include "variant_file_factory.h"
 #include "htslib_bcf_facade.h"
+#include "vcf_header.h"
 #include "vcf_record.h"
 
 using std::cout;
@@ -41,9 +42,35 @@ void test()
     for (const auto& record : records) cout << record << endl;
 }
 
+void test2()
+{
+    VcfHeader header {"##INFO=<ID=AA,Type=String>\n##INFO=<ID=DP,Type=Integer>\n##INFO=<ID=SOMATIC,Type=Flag>\n##INFO=<ID=AF,Type=Float>"};
+    
+    cout << header << endl;
+    
+    auto v1 = header.get_typed_value("INFO", "AA", "ACGT");
+    auto v2 = header.get_typed_value("INFO", "DP", "110");
+    auto v3 = header.get_typed_value("INFO", "AF", "0.9");
+    auto v4 = header.get_typed_value("INFO", "SOMATIC", "1");
+    auto v5 = header.get_typed_value("INFO", "AA", "TGCA");
+    
+//    cout << v1 << endl;
+//    cout << v2 << endl;
+//    cout << v3 << endl;
+//    cout << v4 << endl;
+    
+//    auto v6 = v2 * v3;
+//    cout << v6 << endl;
+//    
+//    auto v7 = v1 + v5;
+//    cout << v7 << endl;
+    
+    cout << (v2 < v3) << endl;
+}
+
 int main(int argc, const char **argv)
 {
-    test();
+    test2();
 //    auto options = Octopus::parse_options(argc, argv);
 //    
 //    if (options.second) {

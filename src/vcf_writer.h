@@ -9,6 +9,19 @@
 #ifndef __Octopus__vcf_writer__
 #define __Octopus__vcf_writer__
 
-#include <stdio.h>
+class VcfWriter
+{
+public:
+    VcfWriter()  = delete;
+    ~VcfWriter() = default;
+    
+    VcfWriter(const VcfWriter&)            = default;
+    VcfWriter& operator=(const VcfWriter&) = default;
+    VcfWriter(VcfWriter&&)                 = default;
+    VcfWriter& operator=(VcfWriter&&)      = default;
+    
+private:
+    
+};
 
 #endif /* defined(__Octopus__vcf_writer__) */
