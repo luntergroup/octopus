@@ -13,115 +13,98 @@
 #include <type_traits>
 #include <stdexcept>
 #include <boost/variant.hpp>
+#include <boost/type_index.hpp>
 
 #include <iostream> // TEST
 
 namespace detail
 {
     using VcfTypeBase = boost::variant<int, double, char, std::string, bool>;
-}
-
-// subclass from boost::variant so we can define our own comparison operators
-class VcfType : public detail::VcfTypeBase
-{
-public:
-    template <typename T> VcfType(T&& v) : detail::VcfTypeBase {std::forward<T>(v)} {}
-};
-
-class VcfTypeBinaryOpError : std::runtime_error {
-public:
-    VcfTypeBinaryOpError(std::string op, std::string type1, std::string type2)
-    :
-    runtime_error {"Cannot apply binary operation to given types"},
-    op_ {std::move(op)},
-    type1_ {std::move(type1)},
-    type2_ {std::move(type2)}
-    {}
     
-    const char* what() const noexcept
+    template <typename T>
+    std::string type_name()
     {
-        return (std::string{runtime_error::what()} + ": operation=" + op_ + " type1= " + type1_ + " type2=" + type2_).c_str();
+        return boost::typeindex::type_id<T>().pretty_name();
     }
     
-private:
-    std::string op_, type1_, type2_;
-};
-
-namespace detail
-{
-    template <typename T, typename U, typename R = VcfType>
+    template <typename T>
+    std::string type_name(const T& v)
+    {
+        return boost::typeindex::type_id<T>().pretty_name();
+    }
+    
+    template <typename T>
+    class convert : public boost::static_visitor<T>
+    {
+    public:
+        template <typename U>
+        T operator()(const U& v) const
+        {
+            return static_cast<T>(v);
+        }
+        
+        T operator()(const std::string& v) const
+        {
+            return do_convert(v, T {});
+        }
+        
+    private:
+        int do_convert(const std::string& v, int) const
+        {
+            return std::stoi(v);
+        }
+        
+        double do_convert(const std::string& v, double) const
+        {
+            return std::stod(v);
+        }
+        
+        template <typename U>
+        U do_convert(const std::string& v, U) const
+        {
+            throw std::runtime_error {"Cannot convert std::string to type " + type_name<U>()};
+        }
+    };
+    
+    template <>
+    class convert<std::string> : public boost::static_visitor<std::string>
+    {
+    public:
+        template <typename U>
+        std::string operator()(const U& v) const
+        {
+            return std::to_string(v);
+        }
+        
+        std::string operator()(const std::string& v) const
+        {
+            return v;
+        }
+    };
+    
+    template <typename T, typename U, typename R>
     using enable_if_both_arithmetic = std::enable_if_t<std::is_arithmetic<T>::value && std::is_arithmetic<U>::value, R>;
     
-    template <typename T, typename U, typename R = VcfType>
+    template <typename T, typename U, typename R>
     using enable_if_not_both_arithmetic = std::enable_if_t<!(std::is_arithmetic<T>::value && std::is_arithmetic<U>::value), R>;
     
-    class add : public boost::static_visitor<VcfType>
-    {
+    class VcfTypeError : std::runtime_error {
     public:
-        std::string operator()(const std::string& lhs, const std::string& rhs) const
+        VcfTypeError(std::string op, std::string type1, std::string type2)
+        :
+        runtime_error {"Invalid operation on types"},
+        op_ {std::move(op)},
+        type1_ {std::move(type1)},
+        type2_ {std::move(type2)}
+        {}
+        
+        const char* what() const noexcept
         {
-            return lhs + rhs;
+            return (std::string{runtime_error::what()} + ": operation=" + op_ + " lhs= " + type1_ + " rhs=" + type2_).c_str();
         }
         
-        template <typename T, typename U>
-        enable_if_both_arithmetic<T, U> operator()(const T& lhs, const U& rhs) const
-        {
-            return lhs + rhs;
-        }
-        
-        template <typename T, typename U>
-        enable_if_not_both_arithmetic<T, U> operator()(const T& lhs, const U& rhs) const
-        {
-            throw std::logic_error {"cannot add these types"};
-        }
-    };
-    
-    class subtract : public boost::static_visitor<VcfType>
-    {
-    public:
-        template <typename T, typename U>
-        enable_if_both_arithmetic<T, U> operator()(const T& lhs, const U& rhs) const
-        {
-            return lhs - rhs;
-        }
-        
-        template <typename T, typename U>
-        enable_if_not_both_arithmetic<T, U> operator()(const T& lhs, const U& rhs) const
-        {
-            throw std::logic_error {"cannot subtract these types"};
-        }
-    };
-    
-    class multiply : public boost::static_visitor<VcfType>
-    {
-    public:
-        template <typename T, typename U>
-        enable_if_both_arithmetic<T, U> operator()(const T& lhs, const U& rhs) const
-        {
-            return lhs * rhs;
-        }
-        
-        template <typename T, typename U>
-        enable_if_not_both_arithmetic<T, U> operator()(const T& lhs, const U& rhs) const
-        {
-            throw std::logic_error {"cannot multiply these types"};
-        }
-    };
-    
-    class divide : public boost::static_visitor<VcfType>
-    {
-    public:
-        template <typename T, typename U>
-        enable_if_both_arithmetic<T, U> operator()(const T& lhs, const U& rhs) const
-        {
-            return lhs / rhs;
-        }
-        
-        template <typename T, typename U>
-        enable_if_not_both_arithmetic<T, U> operator()(const T& lhs, const U& rhs) const
-        {
-            throw std::logic_error {"cannot divide these types"};
-        }
+    private:
+        std::string op_, type1_, type2_;
     };
     
     class is_equal : public boost::static_visitor<bool>
@@ -142,7 +125,7 @@ namespace detail
         template <typename T, typename U>
         enable_if_not_both_arithmetic<T, U, bool> operator()(const T& lhs, const U& rhs) const
         {
-            return false;
+            throw VcfTypeError {"==", type_name<T>(), type_name<U>()};
         }
     };
     
@@ -164,15 +147,186 @@ namespace detail
         template <typename T, typename U>
         enable_if_not_both_arithmetic<T, U, bool> operator()(const T& lhs, const U& rhs) const
         {
-            return false;
+            throw VcfTypeError {"<", type_name<T>(), type_name<U>()};
+        }
+    };
+    
+    class inplace_add : public boost::static_visitor<void>
+    {
+    public:
+        template <typename T>
+        void operator()(T& lhs, const T& rhs) const // this case is really just for std::string
+        {
+            lhs += rhs;
+        }
+        
+        template <typename T, typename U>
+        enable_if_both_arithmetic<T, U, void> operator()(T& lhs, const U& rhs) const
+        {
+            lhs += rhs;
+        }
+        
+        template <typename T, typename U>
+        enable_if_not_both_arithmetic<T, U, void> operator()(T& lhs, const U& rhs) const
+        {
+            throw VcfTypeError {"+=", type_name<T>(), type_name<U>()};
+        }
+    };
+    
+    class inplace_subtract : public boost::static_visitor<void>
+    {
+    public:
+        template <typename T, typename U>
+        enable_if_both_arithmetic<T, U, void> operator()(T& lhs, const U& rhs) const
+        {
+            lhs -= rhs;
+        }
+        
+        template <typename T, typename U>
+        enable_if_not_both_arithmetic<T, U, void> operator()(T& lhs, const U& rhs) const
+        {
+            throw VcfTypeError {"-=", type_name<T>(), type_name<U>()};
+        }
+    };
+    
+    class inplace_multiply : public boost::static_visitor<void>
+    {
+    public:
+        template <typename T, typename U>
+        enable_if_both_arithmetic<T, U, void> operator()(T& lhs, const U& rhs) const
+        {
+            lhs *= rhs;
+        }
+        
+        template <typename T, typename U>
+        enable_if_not_both_arithmetic<T, U, void> operator()(T& lhs, const U& rhs) const
+        {
+            throw VcfTypeError {"*=", type_name<T>(), type_name<U>()};
+        }
+    };
+    
+    class inplace_divide : public boost::static_visitor<void>
+    {
+    public:
+        template <typename T, typename U>
+        enable_if_both_arithmetic<T, U, void> operator()(T& lhs, const U& rhs) const
+        {
+            lhs /= rhs;
+        }
+        
+        template <typename T, typename U>
+        enable_if_not_both_arithmetic<T, U, void> operator()(T& lhs, const U& rhs) const
+        {
+            throw VcfTypeError {"/=", type_name<T>(), type_name<U>()};
+        }
+    };
+    
+    class inplace_mod : public boost::static_visitor<void>
+    {
+    public:
+        template <typename T, typename U>
+        enable_if_both_arithmetic<T, U, void> operator()(T& lhs, const U& rhs) const
+        {
+            lhs %= rhs;
+        }
+        
+        template <typename T, typename U>
+        enable_if_not_both_arithmetic<T, U, void> operator()(T& lhs, const U& rhs) const
+        {
+            throw VcfTypeError {"%=", type_name<T>(), type_name<U>()};
+        }
+    };
+    
+    class inplace_bit_and : public boost::static_visitor<void>
+    {
+    public:
+        template <typename T, typename U>
+        enable_if_both_arithmetic<T, U, void> operator()(T& lhs, const U& rhs) const
+        {
+            lhs &= rhs;
+        }
+        
+        template <typename T, typename U>
+        enable_if_not_both_arithmetic<T, U, void> operator()(T& lhs, const U& rhs) const
+        {
+            throw VcfTypeError {"&=", type_name<T>(), type_name<U>()};
+        }
+    };
+    
+    class inplace_bit_or : public boost::static_visitor<void>
+    {
+    public:
+        template <typename T, typename U>
+        enable_if_both_arithmetic<T, U, void> operator()(T& lhs, const U& rhs) const
+        {
+            lhs |= rhs;
+        }
+        
+        template <typename T, typename U>
+        enable_if_not_both_arithmetic<T, U, void> operator()(T& lhs, const U& rhs) const
+        {
+            throw VcfTypeError {"|=", type_name<T>(), type_name<U>()};
+        }
+    };
+    
+    class inplace_bit_xor : public boost::static_visitor<void>
+    {
+    public:
+        template <typename T, typename U>
+        enable_if_both_arithmetic<T, U, void> operator()(T& lhs, const U& rhs) const
+        {
+            lhs ^= rhs;
+        }
+        
+        template <typename T, typename U>
+        enable_if_not_both_arithmetic<T, U, void> operator()(T& lhs, const U& rhs) const
+        {
+            throw VcfTypeError {"^=", type_name<T>(), type_name<U>()};
+        }
+    };
+    
+    class reflect : public boost::static_visitor<std::string>
+    {
+    public:
+        template <typename T>
+        std::string operator()(const T& v) const
+        {
+            return type_name(v);
         }
     };
 }
 
-VcfType operator+(const VcfType& lhs, const VcfType& rhs);
-VcfType operator-(const VcfType& lhs, const VcfType& rhs);
-VcfType operator*(const VcfType& lhs, const VcfType& rhs);
-VcfType operator/(const VcfType& lhs, const VcfType& rhs);
+// subclass from boost::variant so we can define our own comparison operators
+class VcfType : public detail::VcfTypeBase
+{
+public:
+    // need first constructor to avoid const char* converting to bool
+    explicit VcfType(const char* str) : detail::VcfTypeBase {std::string {str}} {}
+    template <typename T> explicit VcfType(T&& v) : detail::VcfTypeBase {std::forward<T>(v)} {}
+    
+    VcfType(const VcfType&)            = default;
+    VcfType& operator=(const VcfType&) = default;
+    VcfType(VcfType&&)                 = default;
+    VcfType& operator=(VcfType&&)      = default;
+    
+    template <typename T>
+    operator T() const
+    {
+        return boost::apply_visitor(detail::convert<T>(), *this);
+    }
+    
+    VcfType& operator+=(const VcfType& rhs);
+    VcfType& operator-=(const VcfType& rhs);
+    VcfType& operator*=(const VcfType& rhs);
+    VcfType& operator/=(const VcfType& rhs);
+    
+    std::string name() const;
+};
+
+VcfType operator+(VcfType lhs, const VcfType& rhs);
+VcfType operator-(VcfType lhs, const VcfType& rhs);
+VcfType operator*(VcfType lhs, const VcfType& rhs);
+VcfType operator/(VcfType lhs, const VcfType& rhs);
 bool operator==(const VcfType& lhs, const VcfType& rhs);
 bool operator!=(const VcfType& lhs, const VcfType& rhs);
 bool operator<(const VcfType& lhs, const VcfType& rhs);
@@ -189,6 +343,6 @@ namespace detail
     }
 }
 
-VcfType vcf_type_factory(const std::string& type, const std::string& value);
+VcfType make_vcf_type(const std::string& type, const std::string& value);
 
 #endif

@@ -12,24 +12,57 @@
 #include <functional>
 #include <stdexcept>
 
-VcfType operator+(const VcfType& lhs, const VcfType& rhs)
+VcfType& VcfType::operator+=(const VcfType& rhs)
 {
-    return boost::apply_visitor(detail::add(), lhs, rhs);
+    boost::apply_visitor(detail::inplace_add(), *this, rhs);
+    return *this;
 }
 
-VcfType operator-(const VcfType& lhs, const VcfType& rhs)
+VcfType& VcfType::operator-=(const VcfType& rhs)
 {
-    return boost::apply_visitor(detail::subtract(), lhs, rhs);
+    boost::apply_visitor(detail::inplace_subtract(), *this, rhs);
+    return *this;
 }
 
-VcfType operator*(const VcfType& lhs, const VcfType& rhs)
+VcfType& VcfType::operator*=(const VcfType& rhs)
 {
-    return boost::apply_visitor(detail::multiply(), lhs, rhs);
+    boost::apply_visitor(detail::inplace_multiply(), *this, rhs);
+    return *this;
 }
 
-VcfType operator/(const VcfType& lhs, const VcfType& rhs)
+VcfType& VcfType::operator/=(const VcfType& rhs)
 {
-    return boost::apply_visitor(detail::divide(), lhs, rhs);
+    boost::apply_visitor(detail::inplace_divide(), *this, rhs);
+    return *this;
+}
+
+std::string VcfType::name() const
+{
+    return boost::apply_visitor(detail::reflect(), *this);
+}
+
+VcfType operator+(VcfType lhs, const VcfType& rhs)
+{
+    lhs += rhs;
+    return lhs;
+}
+
+VcfType operator-(VcfType lhs, const VcfType& rhs)
+{
+    lhs -= rhs;
+    return lhs;
+}
+
+VcfType operator*(VcfType lhs, const VcfType& rhs)
+{
+    lhs *= rhs;
+    return lhs;
+}
+
+VcfType operator/(VcfType lhs, const VcfType& rhs)
+{
+    lhs /= rhs;
+    return lhs;
 }
 
 bool operator==(const VcfType& lhs, const VcfType& rhs)
@@ -97,7 +130,7 @@ private:
     std::string type_, value_;
 };
 
-VcfType vcf_type_factory(const std::string& type, const std::string& value)
+VcfType make_vcf_type(const std::string& type, const std::string& value)
 {
     static std::unordered_map<std::string, std::function<VcfType(std::string)>> type_map;
     type_map.emplace("String",    [] (const auto& value) { return detail::make_vcf_type(value); });

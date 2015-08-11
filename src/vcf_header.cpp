@@ -87,12 +87,12 @@ VcfType VcfHeader::get_typed_value(const std::string& format_key, const std::str
     auto has_key = [&field_key] (const auto& p) { return p.second.at("ID") == field_key; };
     auto it = std::find_if(er.first, er.second, has_key);
     if (it == er.second) throw UnknownKey {field_key};
-    return vcf_type_factory(it->second.at("Type"), value);
+    return make_vcf_type(it->second.at("Type"), value);
 }
 
 VcfType VcfHeader::get_typed_value(const std::string& field_key, const std::string& value) const
 {
-    return vcf_type_factory("String", value);
+    return make_vcf_type("String", value);
 }
 
 // private methods
@@ -195,4 +195,22 @@ std::ostream& operator<<(std::ostream& os, const VcfHeader& header)
     }
     
     return os;
+}
+
+std::vector<VcfType> get_typed_values(const std::string& format_key, const std::string& field_key,
+                                      const std::vector<std::string>& values, const VcfHeader& header)
+{
+    std::vector<VcfType> result {};
+    result.reserve(values.size());
+    std::transform(values.cbegin(), values.cend(), std::back_inserter(result),
+                   [&header, &format_key, &field_key] (const auto& value) {
+                       return header.get_typed_value(format_key, field_key, value);
+                   });
+    return result;
+}
+
+std::vector<VcfType> get_typed_info_values(const std::string& field_key, const std::vector<std::string>& values,
+                                           const VcfHeader& header)
+{
+    return get_typed_values("INFO", field_key, values, header);
 }

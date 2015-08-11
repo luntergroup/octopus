@@ -84,4 +84,10 @@ private:
 
 std::ostream& operator<<(std::ostream& os, const VcfHeader& header);
 
+std::vector<VcfType> get_typed_values(const std::string& format_key, const std::string& field_key,
+                                      const std::vector<std::string>& values, const VcfHeader& header);
+
+std::vector<VcfType> get_typed_info_values(const std::string& field_key, const std::vector<std::string>& values,
+                                           const VcfHeader& header);
+
 #endif /* defined(__Octopus__vcf_header__) */

@@ -58,10 +58,10 @@ bool VcfRecord::has_info(const KeyType& key) const noexcept
     return info_.count(key) == 1;
 }
 
-//const std::vector<std::string>& VcfRecord::get_info_values(const std::string& key) const
-//{
-//    return info_.at(key);
-//}
+const std::vector<std::string>& VcfRecord::get_info_value(const KeyType& key) const
+{
+    return info_.at(key);
+}
 
 bool VcfRecord::has_sample_data() const noexcept
 {
@@ -93,7 +93,7 @@ bool VcfRecord::is_homozygous(const SampleIdType& sample) const
 {
     const auto& genotype = genotypes_.at(sample).first;
     return std::adjacent_find(std::cbegin(genotype), std::cend(genotype),
-                              std::not_equal_to<std::string>()) == std::cend(genotype);
+                              std::not_equal_to<SequenceType>()) == std::cend(genotype);
 }
 
 bool VcfRecord::is_heterozygous(const SampleIdType& sample) const
@@ -151,7 +151,7 @@ std::ostream& operator<<(std::ostream& os, const std::vector<std::string>& v)
 std::string VcfRecord::get_allele_number(const SequenceType& allele) const
 {
     if (allele == ".") {
-        return allele;
+        return ".";
     } else if (allele == ref_allele_) {
         return "0";
     } else {
@@ -165,7 +165,7 @@ void VcfRecord::print_info(std::ostream& os) const
     if (info_.empty()) {
         os << ".";
     } else {
-        auto last = std::prev(info_.cend());
+        auto last = std::next(info_.cbegin(), info_.size() - 1);
         std::for_each(info_.cbegin(), last, [&os] (const auto& p) {
             os << p.first;
             if (!p.second.empty()) {
@@ -207,7 +207,7 @@ void VcfRecord::print_other_sample_data(std::ostream& os, const SampleIdType& sa
 void VcfRecord::print_sample_data(std::ostream& os) const
 {
     if (has_sample_data()) {
-        print_vector(os, format_, ":");
+        //print_vector(os, format_, ":");
         os << "\t";
         
         bool has_genotype {has_genotype_data()};
@@ -237,14 +237,14 @@ void VcfRecord::print_sample_data(std::ostream& os) const
 // non-member functions
 
 // these INFO keys are reserved
-static const std::string Info_ancestral_allele {"AA"};
-static const std::string Info_genotype_allele_count {"AC"};
-static const std::string Info_dbsnp {"DB"};
-static const std::string Info_hapmap2 {"H2"};
-static const std::string Info_hapmap3 {"H3"};
-static const std::string Info_1000g {"1000G"};
-static const std::string Info_somatic {"SOMATIC"};
-static const std::string Info_validated {"VALIDATED"};
+static const VcfRecord::KeyType Info_ancestral_allele {"AA"};
+static const VcfRecord::KeyType Info_genotype_allele_count {"AC"};
+static const VcfRecord::KeyType Info_dbsnp {"DB"};
+static const VcfRecord::KeyType Info_hapmap2 {"H2"};
+static const VcfRecord::KeyType Info_hapmap3 {"H3"};
+static const VcfRecord::KeyType Info_1000g {"1000G"};
+static const VcfRecord::KeyType Info_somatic {"SOMATIC"};
+static const VcfRecord::KeyType Info_validated {"VALIDATED"};
 
 bool is_dbsnp_member(const VcfRecord& record) noexcept
 {
@@ -278,16 +278,16 @@ bool is_validated(const VcfRecord& record) noexcept
 
 std::ostream& operator<<(std::ostream& os, const VcfRecord& record)
 {
-    os << record.chromosome_ << "\t";
-    os << record.position_ << "\t";
-    os << record.id_ << "\t";
-    os << record.ref_allele_ << "\t";
-    os << record.alt_alleles_ << "\t";
-    os << static_cast<unsigned>(record.quality_) << "\t";
-    os << record.filters_ << "\t";
-    record.print_info(os);
-    os << "\t";
-    record.print_sample_data(os);
+//    os << record.chromosome_ << "\t";
+//    os << record.position_ << "\t";
+//    os << record.id_ << "\t";
+//    os << record.ref_allele_ << "\t";
+//    os << record.alt_alleles_ << "\t";
+//    os << static_cast<unsigned>(record.quality_) << "\t";
+//    os << record.filters_ << "\t";
+//    record.print_info(os);
+//    os << "\t";
+//    record.print_sample_data(os);
     
     return os;
 }

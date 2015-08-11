@@ -18,6 +18,7 @@
 
 #include <iostream>
 #include <string>
+#include <chrono>
 
 #include "test_common.h"
 #include "genomic_region.h"
@@ -27,6 +28,7 @@
 #include "htslib_bcf_facade.h"
 #include "vcf_header.h"
 #include "vcf_record.h"
+#include "vcf_reader.h"
 
 using std::cout;
 using std::endl;
@@ -53,29 +55,57 @@ void test2()
     auto v3 = header.get_typed_value("INFO", "AF", "0.9");
     auto v4 = header.get_typed_value("INFO", "SOMATIC", "1");
     auto v5 = header.get_typed_value("INFO", "AA", "TGCA");
+    auto v6 = header.get_typed_value("INFO", "SOMATIC", "0");
     
-//    cout << v1 << endl;
+    //v3 += 5;
+    
 //    cout << v2 << endl;
 //    cout << v3 << endl;
-//    cout << v4 << endl;
+//    cout << (v2 + v3) << endl;
     
-    auto v6 = v2 * v3;
-    cout << v6 << endl;
+//    auto x = static_cast<double>(v2);
+//    auto y = static_cast<double>(v3);
+//    
+//    mu::Parser parser {};
+//    
+//    parser.DefineVar("x", &x);
+//    parser.DefineVar("y", &y);
+//    
+//    parser.SetExpr("x + y");
+//    
+//    cout << parser.Eval() << endl;
+}
+
+void test3()
+{
+    VcfReader reader {sample_vcf};
     
-    auto v7 = v1 + v5;
-    cout << v7 << endl;
+    auto header = reader.fetch_header();
     
-    cout << (v2 == v3) << endl;
-    cout << (v2 < v3) << endl;
-    cout << (v2 > v3) << endl;
-    cout << (v2 <= v3) << endl;
-    cout << (v2 >= v3) << endl;
-    cout << (v6 > v2) << endl;
+    //cout << header << endl;
+    
+    GenomicRegion region {"X", 2000000, 2001000};
+    
+    auto start = std::chrono::system_clock::now();
+    
+    auto records = reader.fetch_records();
+    
+    auto end = std::chrono::system_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::seconds>(end - start).count();
+    
+    cout << duration << endl;
+    
+    cout << records.size() << endl;
+    
+//    for (const auto& record : records) {
+//        auto dp = get_typed_info_values("DP", record.get_info_value("DP"), header);
+//        cout << dp.front() << endl;
+//    }
 }
 
 int main(int argc, const char **argv)
 {
-    test2();
+    test3();
 //    auto options = Octopus::parse_options(argc, argv);
 //    
 //    if (options.second) {

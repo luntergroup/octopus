@@ -13,16 +13,22 @@
 #include <string>
 #include <vector>
 #include <map>
+#include <unordered_map>
 #include <ostream>
+
+#include <boost/pool/pool_alloc.hpp>
 
 class VcfRecord
 {
 public:
     using SizeType     = std::uint_fast32_t;
     using SequenceType = std::string;
+    //using SequenceType = std::basic_string<char, std::char_traits<char>, boost::pool_allocator<char>>;
     using QualityType  = std::uint_fast8_t;
     using SampleIdType = std::string;
+    //using SampleIdType = std::basic_string<char, std::char_traits<char>, boost::pool_allocator<char>>;
     using KeyType      = std::string;
+    //using KeyType      = std::basic_string<char, std::char_traits<char>, boost::pool_allocator<char>>;
     
     VcfRecord()  = default;
     
@@ -54,7 +60,7 @@ public:
     QualityType get_quality() const noexcept;
     bool has_filter(const KeyType& filter) const noexcept;
     bool has_info(const KeyType& key) const noexcept;
-    //const std::vector<std::string>& get_info_values(const std::string& key) const;
+    const std::vector<std::string>& get_info_value(const KeyType& key) const;
     
     bool has_sample_data() const noexcept;
     unsigned num_samples() const noexcept;
@@ -81,16 +87,15 @@ private:
     std::vector<SequenceType> alt_alleles_;
     QualityType quality_;
     std::vector<KeyType> filters_;
-    std::map<KeyType, std::vector<std::string>> info_;
+    std::unordered_map<KeyType, std::vector<std::string>> info_;
     
     // optional fields
     std::vector<KeyType> format_;
-    std::map<SampleIdType, Genotype> genotypes_;
+    std::unordered_map<SampleIdType, Genotype> genotypes_;
     std::map<SampleIdType, std::map<KeyType, std::vector<std::string>>> samples_;
     
     std::string get_allele_number(const SequenceType& allele) const;
     
-    // for printing
     void print_info(std::ostream& os) const;
     void print_genotype_allele_numbers(std::ostream& os, const SampleIdType& sample) const;
     void print_other_sample_data(std::ostream& os, const SampleIdType& sample) const;

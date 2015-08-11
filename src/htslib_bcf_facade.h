@@ -34,7 +34,7 @@ class HtslibBcfFacade
 {
 public:
     HtslibBcfFacade() = delete;
-    HtslibBcfFacade(const fs::path& file_path);
+    explicit HtslibBcfFacade(const fs::path& file_path);
     ~HtslibBcfFacade() = default;
     
     HtslibBcfFacade(const HtslibBcfFacade&)            = default;
@@ -42,6 +42,7 @@ public:
     HtslibBcfFacade(HtslibBcfFacade&&)                 = default;
     HtslibBcfFacade& operator=(HtslibBcfFacade&&)      = default;
     
+    std::vector<VcfRecord> fetch_records();
     std::vector<VcfRecord> fetch_records(const GenomicRegion& region);
     
 private:
@@ -51,6 +52,10 @@ private:
     fs::path file_path_;
     std::unique_ptr<htsFile, decltype(htslib_file_deleter)> file_;
     std::unique_ptr<bcf_hdr_t, decltype(htslib_bcf_header_deleter)> header_;
+    
+    std::vector<std::string> samples_;
+    
+    std::vector<VcfRecord> fetch_records(HtsBcfSrPtr& sr);
 };
 
 #endif /* defined(__Octopus__htslib_bcf_facade__) */
