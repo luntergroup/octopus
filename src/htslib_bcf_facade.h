@@ -20,7 +20,7 @@
 #include "htslib/synced_bcf_reader.h"
 
 class GenomicRegion;
-class Variant;
+class VcfHeader;
 class VcfRecord;
 
 namespace fs = boost::filesystem;
@@ -42,8 +42,12 @@ public:
     HtslibBcfFacade(HtslibBcfFacade&&)                 = default;
     HtslibBcfFacade& operator=(HtslibBcfFacade&&)      = default;
     
+    VcfHeader fetch_header();
     std::vector<VcfRecord> fetch_records();
     std::vector<VcfRecord> fetch_records(const GenomicRegion& region);
+    
+    void write(const VcfHeader& header);
+    void write(const VcfRecord& record);
     
 private:
     using HtsBcfSrPtr = std::unique_ptr<bcf_srs_t, decltype(htslib_bcf_srs_deleter)>;

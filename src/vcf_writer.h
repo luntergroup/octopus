@@ -9,10 +9,22 @@
 #ifndef __Octopus__vcf_writer__
 #define __Octopus__vcf_writer__
 
+#include <boost/filesystem/path.hpp>
+
+#include "htslib_bcf_facade.h"
+
+class VcfHeader;
+class VcfRecord;
+class GenomicRegion;
+
+namespace fs = boost::filesystem;
+
 class VcfWriter
 {
 public:
     VcfWriter()  = delete;
+    explicit VcfWriter(const fs::path& file_path);
+    explicit VcfWriter(const fs::path& file_path, const VcfHeader& header);
     ~VcfWriter() = default;
     
     VcfWriter(const VcfWriter&)            = default;
@@ -20,8 +32,13 @@ public:
     VcfWriter(VcfWriter&&)                 = default;
     VcfWriter& operator=(VcfWriter&&)      = default;
     
-private:
+    void write(const VcfHeader& header);
+    void write(const VcfRecord& record);
     
+private:
+    fs::path file_path_;
+    bool is_header_written_;
+    HtslibBcfFacade writer_;
 };
 
 #endif /* defined(__Octopus__vcf_writer__) */

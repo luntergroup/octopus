@@ -16,7 +16,7 @@
 #include <unordered_map>
 #include <ostream>
 
-#include <boost/pool/pool_alloc.hpp>
+//#include <boost/pool/pool_alloc.hpp>
 
 class VcfRecord
 {
@@ -92,7 +92,7 @@ private:
     // optional fields
     std::vector<KeyType> format_;
     std::unordered_map<SampleIdType, Genotype> genotypes_;
-    std::map<SampleIdType, std::map<KeyType, std::vector<std::string>>> samples_;
+    std::unordered_map<SampleIdType, std::unordered_map<KeyType, std::vector<std::string>>> samples_;
     
     std::string get_allele_number(const SequenceType& allele) const;
     

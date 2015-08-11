@@ -23,18 +23,7 @@ reader_ {file_path_}
 
 VcfHeader VcfReader::fetch_header()
 {
-    std::ifstream header {file_path_.string()};
-    
-    std::string line {};
-    
-    VcfHeader result {};
-    
-    while (std::getline(header, line)) {
-        if (line.size() < 3 || !(line[0] == '#' && line[1] == '#')) break;
-        result.insert_line(line);
-    }
-    
-    return result;
+    return reader_.fetch_header();
 }
 
 std::vector<VcfRecord> VcfReader::fetch_records()

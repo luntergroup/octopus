@@ -195,7 +195,7 @@ void VcfRecord::print_other_sample_data(std::ostream& os, const SampleIdType& sa
     if (data.empty()) {
         os << ".";
     } else {
-        auto last = std::prev(data.cend());
+        auto last = std::next(data.cbegin(), data.size() - 1);
         std::for_each(data.cbegin(), last, [&os] (const auto& p) {
             print_vector(os, p.second, ",");
             os << ":";
@@ -212,7 +212,8 @@ void VcfRecord::print_sample_data(std::ostream& os) const
         
         bool has_genotype {has_genotype_data()};
         
-        std::for_each(std::cbegin(samples_), std::prev(std::cend(samples_)), [this, &os, has_genotype] (const auto& sample_data) {
+        auto last = std::next(samples_.cbegin(), samples_.size() - 1);
+        std::for_each(std::cbegin(samples_), last, [this, &os, has_genotype] (const auto& sample_data) {
             if (has_genotype) {
                 print_genotype_allele_numbers(os, sample_data.first);
                 if (!samples_.empty()) {
@@ -223,7 +224,7 @@ void VcfRecord::print_sample_data(std::ostream& os) const
             os << "\t";
         });
         
-        const auto& sample_data = *std::prev(std::cend(samples_));
+        const auto& sample_data = *last;
         if (has_genotype) {
             print_genotype_allele_numbers(os, sample_data.first);
             if (!samples_.empty()) {

@@ -8,55 +8,46 @@
 
 #include "vcf_header.h"
 
-#include <istream>
-#include <sstream>
-#include <algorithm> // std::for_each, std::count, std::find, std::transform
+#include <algorithm> // std::find_if, std::transform
 #include <utility>   // std::move
-#include <iterator>  // std::cbegin, std::cend, std::next, std::prev
-
-#include <iostream> // TEST
+#include <iterator>  // std::back_inserter
 
 bool is_valid_line(const std::string& line);
 bool is_valid_field(const std::string& str);
 bool is_format_line(const std::string& line);
 std::unordered_map<std::string, std::string> parse_fields(const std::string& fields);
 
-class UnknownKey : std::runtime_error {
-public:
-    UnknownKey(std::string key)
-    :
-    runtime_error {"key is not in header"},
-    key_ {std::move(key)}
-    {}
-    
-    const char* what() const noexcept
-    {
-        return (std::string{runtime_error::what()} + ": " + key_).c_str();
-    }
-    
-private:
-    std::string key_;
-};
-
 // public methods
 
-VcfHeader::VcfHeader(const std::string& lines)
+VcfHeader::VcfHeader(std::string file_format)
+: file_format_ {std::move(file_format)}
+{}
+
+void VcfHeader::set_file_format(std::string format)
 {
-    insert_lines(lines);
+    file_format_ = std::move(format);
 }
 
-void VcfHeader::insert_line(const std::string& line)
+void VcfHeader::put_sample(std::string sample)
 {
-    if (is_valid_line(line)) {
-        auto content = line.substr(2); // remove ##
-        if (is_format_line(content)) {
-            insert_format_line(content);
-        } else {
-            insert_field_line(content);
-        }
-    } else {
-        throw std::runtime_error {"invalid header line " + line};
+    samples_.emplace_back(std::move(sample));
+}
+
+void VcfHeader::put_samples(std::vector<std::string> samples)
+{
+    samples_.insert(samples_.end(), std::make_move_iterator(samples.begin()), std::make_move_iterator(samples.end()));
+}
+
+void VcfHeader::put_field(std::string key, std::string value)
+{
+    if (key != "fileformat") {
+        fields_.emplace(std::move(key), std::move(value));
     }
+}
+
+void VcfHeader::put_field(std::string tag, std::unordered_map<std::string, std::string> values)
+{
+    formats_.emplace(std::move(tag), std::move(values));
 }
 
 const std::string& VcfHeader::get_file_format() const noexcept
@@ -74,102 +65,86 @@ std::vector<std::string> VcfHeader::get_samples() const
     return samples_;
 }
 
-unsigned VcfHeader::get_field_cardinality(const std::string& key, const VcfRecord& record) const
+bool VcfHeader::has_field(const std::string& key) const noexcept
 {
-    return 0;
+    return fields_.count(key) == 1;
 }
 
-VcfType VcfHeader::get_typed_value(const std::string& format_key, const std::string& field_key,
-                                   const std::string& value) const
+bool VcfHeader::has_tag(const std::string& tag) const noexcept
 {
-    if (formats_.count(format_key) == 0) throw UnknownKey {format_key};
-    auto er = formats_.equal_range(format_key);
-    auto has_key = [&field_key] (const auto& p) { return p.second.at("ID") == field_key; };
-    auto it = std::find_if(er.first, er.second, has_key);
-    if (it == er.second) throw UnknownKey {field_key};
-    return make_vcf_type(it->second.at("Type"), value);
+    return formats_.count(tag) > 0;
 }
 
-VcfType VcfHeader::get_typed_value(const std::string& field_key, const std::string& value) const
+bool VcfHeader::has_field(const std::string& tag, const std::string& key) const noexcept
 {
-    return make_vcf_type("String", value);
+    return formats_.count(tag) > 0; // TODO: complete this
+}
+
+const std::string& VcfHeader::get_field(const std::string& key) const
+{
+    return fields_.at(key);
+}
+
+const std::string& VcfHeader::get_field(const std::string& tag, const std::string& id_key,
+                                        const std::string& id_value, const std::string& lookup_key) const
+{
+    auto er = formats_.equal_range(tag);
+    return std::find_if(er.first, er.second,
+                        [&id_key, &id_value, &lookup_key] (const auto& p) {
+                            return p.second.at(id_key) == id_value;
+                        })->second.at(lookup_key);
 }
 
 // private methods
 
-template <char Delim>
-struct Token
-{
-    std::string data;
-    
-    operator std::string() const
-    {
-        return data;
-    }
-};
-
-template <char Delim>
-std::istream& operator>>(std::istream& str, Token<Delim>& data)
-{
-    std::getline(str, data.data, Delim);
-    return str;
-}
-
-using Line  = Token<'\n'>;
-using Field = Token<','>;
-
-void VcfHeader::insert_format_line(const std::string& line)
-{
-    auto it = std::find(line.cbegin(), line.cend(), '=');
-    formats_.emplace(std::string {line.cbegin(), it}, parse_fields(std::string {std::next(it, 2), std::prev(line.cend())}));
-}
-
-void VcfHeader::insert_field_line(const std::string& line)
-{
-    if (!is_valid_field(line)) {
-        throw std::runtime_error {"field line " + line + " has invalid format"};
-    }
-    auto it = std::find(line.cbegin(), line.cend(), '=');
-    fields_.emplace(std::string {std::next(line.cbegin(), 2), it}, std::string {std::next(it), line.cend()});
-}
-
-void VcfHeader::insert_lines(const std::string& lines)
-{
-    std::istringstream ss {lines};
-    std::for_each(std::istream_iterator<Line>(ss), std::istream_iterator<Line>(),
-                  [this] (const auto& line) { this->insert_line(line); });
-}
-
 // non-member methods
 
-bool is_valid_line(const std::string& line)
+const std::string& get_id_field(const VcfHeader& header, const std::string& tag, const std::string& id_value, const std::string& lookup_key)
 {
-    return line.size() > 3 && line[0] == '#' && line[1] == '#' && std::find(line.cbegin(), line.cend(), '=') != line.cend();
+    return header.get_field(tag, "ID", id_value, lookup_key);
 }
 
-bool is_valid_field(const std::string& str)
+const std::string& get_id_field_type(const VcfHeader& header, const std::string& tag, const std::string& id_value)
 {
-    return std::count(std::cbegin(str), std::cend(str), '=') == 1; // anything else?
+    return header.get_field(tag, "ID", id_value, "Type");
 }
 
-bool is_format_line(const std::string& line)
+VcfType get_typed_value(const VcfHeader& header, const std::string& tag, const std::string& key, const std::string& value)
 {
-    return *std::next(std::find(line.cbegin(), line.cend(), '=')) == '<' && line.back() == '>';
+    return make_vcf_type(get_id_field_type(header, tag, key), value);
 }
 
-std::pair<std::string, std::string> parse_field(const std::string& field)
+VcfType get_typed_info_value(const VcfHeader& header, const std::string& key, const std::string& value)
 {
-    auto it = std::find(field.cbegin(), field.cend(), '=');
-    return std::make_pair(std::string {field.cbegin(), it}, std::string {std::next(it), field.cend()});
+    return get_typed_value(header, "INFO", key, value);
 }
 
-std::unordered_map<std::string, std::string> parse_fields(const std::string& fields)
+VcfType get_typed_format_value(const VcfHeader& header, const std::string& key, const std::string& value)
 {
-    std::istringstream ss {fields};
-    std::unordered_map<std::string, std::string> result {};
-    std::transform(std::istream_iterator<Field>(ss), std::istream_iterator<Field>(), std::inserter(result, result.begin()),
-                  [] (const auto& field) { return parse_field(field); });
+    return get_typed_value(header, "FORMAT", key, value);
+}
+
+std::vector<VcfType> get_typed_values(const std::string& format_key, const std::string& field_key,
+                                      const std::vector<std::string>& values, const VcfHeader& header)
+{
+    std::vector<VcfType> result {};
+    result.reserve(values.size());
+    std::transform(values.cbegin(), values.cend(), std::back_inserter(result),
+                   [&header, &format_key, &field_key] (const auto& value) {
+                       return get_typed_value(header, format_key, field_key, value);
+                   });
     return result;
+}
+
+std::vector<VcfType> get_typed_info_values(const std::string& field_key, const std::vector<std::string>& values,
+                                           const VcfHeader& header)
+{
+    return get_typed_values("INFO", field_key, values, header);
+}
+
+unsigned get_field_cardinality(const std::string& key, const VcfRecord& record)
+{
+    return 0;
 }
 
 std::ostream& operator<<(std::ostream& os, const std::unordered_map<std::string, std::string>& fields)
@@ -184,7 +159,7 @@ std::ostream& operator<<(std::ostream& os, const std::unordered_map<std::string,
 
 std::ostream& operator<<(std::ostream& os, const VcfHeader& header)
 {
-    os << "##" << header.file_format_ << std::endl;
+    os << "##fileformat=" << header.file_format_ << std::endl;
     
     for (const auto& field : header.fields_) {
         os << "##" << field.first << "=" << field.second << std::endl;
@@ -195,22 +170,4 @@ std::ostream& operator<<(std::ostream& os, const VcfHeader& header)
     }
     
     return os;
-}
-
-std::vector<VcfType> get_typed_values(const std::string& format_key, const std::string& field_key,
-                                      const std::vector<std::string>& values, const VcfHeader& header)
-{
-    std::vector<VcfType> result {};
-    result.reserve(values.size());
-    std::transform(values.cbegin(), values.cend(), std::back_inserter(result),
-                   [&header, &format_key, &field_key] (const auto& value) {
-                       return header.get_typed_value(format_key, field_key, value);
-                   });
-    return result;
-}
-
-std::vector<VcfType> get_typed_info_values(const std::string& field_key, const std::vector<std::string>& values,
-                                           const VcfHeader& header)
-{
-    return get_typed_values("INFO", field_key, values, header);
 }

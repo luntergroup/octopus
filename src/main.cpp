@@ -46,16 +46,16 @@ void test()
 
 void test2()
 {
-    VcfHeader header {"##INFO=<ID=AA,Type=String>\n##INFO=<ID=DP,Type=Integer>\n##INFO=<ID=SOMATIC,Type=Flag>\n##INFO=<ID=AF,Type=Float>"};
+    VcfReader reader {sample_vcf};
     
-    cout << header << endl;
+    auto header = reader.fetch_header();
     
-    auto v1 = header.get_typed_value("INFO", "AA", "ACGT");
-    auto v2 = header.get_typed_value("INFO", "DP", "110");
-    auto v3 = header.get_typed_value("INFO", "AF", "0.9");
-    auto v4 = header.get_typed_value("INFO", "SOMATIC", "1");
-    auto v5 = header.get_typed_value("INFO", "AA", "TGCA");
-    auto v6 = header.get_typed_value("INFO", "SOMATIC", "0");
+    auto v1 = get_typed_info_value(header, "AA", "ACGT");
+    auto v2 = get_typed_info_value(header, "DP", "110");
+    auto v3 = get_typed_info_value(header, "AF", "0.9");
+    auto v4 = get_typed_info_value(header, "SOMATIC", "1");
+    auto v5 = get_typed_info_value(header, "AA", "TGCA");
+    auto v6 = get_typed_info_value(header, "SOMATIC", "0");
     
     //v3 += 5;
     
@@ -82,25 +82,11 @@ void test3()
     
     auto header = reader.fetch_header();
     
-    //cout << header << endl;
-    
     GenomicRegion region {"X", 2000000, 2001000};
     
-    auto start = std::chrono::system_clock::now();
+    auto records = reader.fetch_records(region);
     
-    auto records = reader.fetch_records();
     
-    auto end = std::chrono::system_clock::now();
-    auto duration = std::chrono::duration_cast<std::chrono::seconds>(end - start).count();
-    
-    cout << duration << endl;
-    
-    cout << records.size() << endl;
-    
-//    for (const auto& record : records) {
-//        auto dp = get_typed_info_values("DP", record.get_info_value("DP"), header);
-//        cout << dp.front() << endl;
-//    }
 }
 
 int main(int argc, const char **argv)

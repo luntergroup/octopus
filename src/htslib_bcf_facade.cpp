@@ -9,15 +9,15 @@
 #include "htslib_bcf_facade.h"
 
 #include <vector>
-#include <map>
 #include <unordered_map>
 #include <stdexcept>
 #include <algorithm> // std::transform, std::for_each
 #include <iterator>  // std::cbegin, std::cend, std::next
 #include <utility>   // std::move
+#include <cstdint>
 
 #include "genomic_region.h"
-#include "variant.h"
+#include "vcf_header.h"
 #include "vcf_record.h"
 
 #include <iostream> // TEST
@@ -44,6 +44,30 @@ samples_ {}
     }
 }
 
+std::unordered_map<std::string, std::string> get_format(bcf_hrec_t* line);
+
+VcfHeader HtslibBcfFacade::fetch_header()
+{
+    VcfHeader result {};
+    
+    result.set_file_format(bcf_hdr_get_version(header_.get()));
+    result.put_samples(samples_);
+    
+    for (unsigned i {}; i < header_->nhrec; ++i) {
+        const auto record = header_->hrec[i];
+        switch (record->type) {
+            case BCF_HL_GEN: // key=value
+                result.put_field(record->key, record->value);
+                break;
+            default: // TAG=<A=..,B=..>
+                result.put_field(record->key, get_format(record));
+                break;
+        }
+    }
+    
+    return result;
+}
+
 std::vector<VcfRecord> HtslibBcfFacade::fetch_records()
 {
     HtsBcfSrPtr sr {bcf_sr_init(), htslib_bcf_srs_deleter};
@@ -68,11 +92,68 @@ std::vector<VcfRecord> HtslibBcfFacade::fetch_records(const GenomicRegion& regio
     return fetch_records(sr);
 }
 
-// private methods
+void HtslibBcfFacade::write(const VcfHeader& header)
+{
+    auto hdr = bcf_hdr_init("w");
+    
+    bcf_hdr_set_version(hdr, header.get_file_format().c_str());
+    
+    for (const auto& sample : header.get_samples()) {
+        bcf_hdr_add_sample(hdr, sample.c_str());
+    }
+    
+    // add fields
+    
+    bcf_hdr_write(file_.get(), hdr);
+    
+    header_.reset(hdr);
+}
+
+void set_chrom(bcf_hdr_t* header, bcf1_t* record, const std::string& chrom);
+void set_pos(bcf_hdr_t* header, bcf1_t* record, VcfRecord::SizeType pos);
+void set_id(bcf_hdr_t* header, bcf1_t* record, const std::string& id);
+void set_qual(bcf_hdr_t* header, bcf1_t* record, VcfRecord::QualityType qual);
+
+void HtslibBcfFacade::write(const VcfRecord& record)
+{
+    auto r = bcf_init();
+    
+    set_chrom(header_.get(), r, record.get_chromosome_name());
+    set_pos(header_.get(), r, record.get_position());
+    set_id(header_.get(), r, record.get_id());
+    
+    set_qual(header_.get(), r, record.get_quality());
+    
+    bcf_write(file_.get(), header_.get(), r);
+    
+    // just free the memory allocated by 
+    delete r;
+}
+
+// private and non-member methods
+
+std::unordered_map<std::string, std::string> get_format(bcf_hrec_t* line)
+{
+    std::unordered_map<std::string, std::string> result {};
+    result.reserve(line->nkeys);
+    
+    for (unsigned k {}; k < line->nkeys; ++k) {
+        if (std::strcmp(line->keys[k], "IDX") != 0) {
+            result.emplace(line->keys[k], line->vals[k]);
+        }
+    }
+    
+    return result;
+}
 
 auto get_chrom(bcf_hdr_t* header, bcf1_t* record)
 {
     return bcf_hdr_id2name(header, record->rid);
+}
+
+void set_chrom(bcf_hdr_t* header, bcf1_t* record, const std::string& chrom)
+{
+    record->rid = bcf_hdr_name2id(header, chrom.c_str());
 }
 
 auto get_pos(bcf_hdr_t* header, bcf1_t* record)
@@ -80,14 +161,29 @@ auto get_pos(bcf_hdr_t* header, bcf1_t* record)
     return record->pos;
 }
 
+void set_pos(bcf_hdr_t* header, bcf1_t* record, VcfRecord::SizeType pos)
+{
+    record->pos = static_cast<std::uint32_t>(pos);
+}
+
 auto get_id(bcf_hdr_t* header, bcf1_t* record)
 {
     return record->d.id;
 }
 
+void set_id(bcf_hdr_t* header, bcf1_t* record, const std::string& id)
+{
+    id.copy(record->d.id, id.size());
+}
+
 auto get_ref(bcf_hdr_t* header, bcf1_t* record)
 {
     return record->d.allele[0];
+}
+
+void set_alleles(bcf_hdr_t* header, bcf1_t* record, const VcfRecord& r)
+{
+    //const char** alleles = new char*[r.];
 }
 
 auto get_alt(bcf_hdr_t* header, bcf1_t* record)
@@ -107,6 +203,11 @@ auto get_alt(bcf_hdr_t* header, bcf1_t* record)
 auto get_qual(bcf_hdr_t* header, bcf1_t* record)
 {
     return record->qual;
+}
+
+void set_qual(bcf_hdr_t* header, bcf1_t* record, VcfRecord::QualityType qual)
+{
+    record->qual = static_cast<float>(qual);
 }
 
 auto get_filter(bcf_hdr_t* header, bcf1_t* record)
@@ -232,43 +333,43 @@ auto get_samples(bcf_hdr_t* header, bcf1_t* record, const std::vector<VcfRecord:
         delete[] gt;
     }
     
-    std::map<VcfRecord::SampleIdType, std::map<VcfRecord::KeyType, std::vector<std::string>>> other_data {};
+    std::unordered_map<VcfRecord::SampleIdType, std::unordered_map<VcfRecord::KeyType, std::vector<std::string>>> other_data {};
     
-//    auto end = std::cend(format);
-//    for (auto it = std::next(std::cbegin(format)); it != end; ++it) {
-//        const auto& key = *it;
-//        
-//        std::vector<std::string> values {};
-//        values.reserve(num_samples);
-//        
-//        switch (bcf_hdr_id2type(header, BCF_HL_FMT, bcf_hdr_id2int(header, BCF_DT_ID, key.c_str()))) {
-//            case BCF_HT_INT:
-//                if (bcf_get_format_int32(header, record, key.c_str(), &intformat, &nformat) > 0) {
-//                    std::transform(intformat, intformat + record->n_sample, std::back_inserter(values), [] (auto v) {
-//                        return std::to_string(v);
-//                    });
-//                }
-//                break;
-//            case BCF_HT_REAL:
-//                if (bcf_get_format_float(header, record, key.c_str(), &floatformat, &nformat) > 0) {
-//                    std::transform(floatformat, floatformat + record->n_sample, std::back_inserter(values), [] (auto v) {
-//                        return std::to_string(v);
-//                    });
-//                }
-//                break;
-//            case BCF_HT_STR:
-//                if (bcf_get_format_string(header, record, key.c_str(), &stringformat, &nformat) > 0) {
-//                    std::for_each(stringformat, stringformat + record->n_sample, [&values] (const char* str) {
-//                        values.emplace_back(str);
-//                    });
-//                }
-//                break;
-//        }
-//        
-//        for (unsigned sample {}; sample < num_samples; ++sample) {
-//            other_data[header->samples[sample]][key].push_back(std::move(values[sample]));
-//        }
-//    }
+    auto end = std::cend(format);
+    for (auto it = std::next(std::cbegin(format)); it != end; ++it) {
+        const auto& key = *it;
+        
+        std::vector<std::string> values {};
+        values.reserve(num_samples);
+        
+        switch (bcf_hdr_id2type(header, BCF_HL_FMT, bcf_hdr_id2int(header, BCF_DT_ID, key.c_str()))) {
+            case BCF_HT_INT:
+                if (bcf_get_format_int32(header, record, key.c_str(), &intformat, &nformat) > 0) {
+                    std::transform(intformat, intformat + record->n_sample, std::back_inserter(values), [] (auto v) {
+                        return std::to_string(v);
+                    });
+                }
+                break;
+            case BCF_HT_REAL:
+                if (bcf_get_format_float(header, record, key.c_str(), &floatformat, &nformat) > 0) {
+                    std::transform(floatformat, floatformat + record->n_sample, std::back_inserter(values), [] (auto v) {
+                        return std::to_string(v);
+                    });
+                }
+                break;
+            case BCF_HT_STR:
+                if (bcf_get_format_string(header, record, key.c_str(), &stringformat, &nformat) > 0) {
+                    std::for_each(stringformat, stringformat + record->n_sample, [&values] (const char* str) {
+                        values.emplace_back(str);
+                    });
+                }
+                break;
+        }
+        
+        for (unsigned sample {}; sample < num_samples; ++sample) {
+            other_data[header->samples[sample]][key].push_back(std::move(values[sample]));
+        }
+    }
     
     if (intformat    != nullptr) delete[] intformat;
     if (floatformat  != nullptr) delete[] floatformat;
