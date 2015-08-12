@@ -14,6 +14,7 @@
 #include <algorithm> // std::transform, std::for_each
 #include <iterator>  // std::cbegin, std::cend, std::next
 #include <utility>   // std::move
+#include <cstring>   // std::strcpy
 #include <cstdint>
 
 #include "genomic_region.h"
@@ -22,16 +23,23 @@
 
 #include <iostream> // TEST
 
+char* stringcopy(const std::string& source)
+{
+    char* result = new char[source.length() + 1];
+    std::strcpy(result, source.c_str());
+    return result;
+}
+
 // public methods
 
-HtslibBcfFacade::HtslibBcfFacade(const fs::path& file_path)
+HtslibBcfFacade::HtslibBcfFacade(const fs::path& file_path, const std::string& mode)
 :
 file_path_ {file_path},
-file_ {bcf_open(file_path_.string().c_str(), "r"), htslib_file_deleter},
-header_ {(file_ != nullptr) ? bcf_hdr_read(file_.get()) : nullptr, htslib_bcf_header_deleter},
+file_ {bcf_open(file_path_.string().c_str(), mode.c_str()), htslib_file_deleter},
+header_ {(file_ != nullptr && mode == "r") ? bcf_hdr_read(file_.get()) : bcf_hdr_init(mode.c_str()), htslib_bcf_header_deleter},
 samples_ {}
 {
-    if (file_ == nullptr) {
+    if (mode == "r" && file_ == nullptr) {
         throw std::runtime_error {"Could not initalise memory for file " + file_path_.string()};
     }
     
@@ -39,8 +47,10 @@ samples_ {}
         throw std::runtime_error {"Could not make header for file " + file_path_.string()};
     }
     
-    for (unsigned sample {}; sample < bcf_hdr_nsamples(header_.get()); ++sample) {
-        samples_.emplace_back(header_->samples[sample]);
+    if (mode == "r") {
+        for (unsigned sample {}; sample < bcf_hdr_nsamples(header_.get()); ++sample) {
+            samples_.emplace_back(header_->samples[sample]);
+        }
     }
 }
 
@@ -92,17 +102,56 @@ std::vector<VcfRecord> HtslibBcfFacade::fetch_records(const GenomicRegion& regio
     return fetch_records(sr);
 }
 
+auto get_hts_tag_type(const std::string& tag)
+{
+    const static std::unordered_map<std::string, int> types {
+        {"FILTER", BCF_HL_FLT},
+        {"INFO", BCF_HL_INFO},
+        {"FORMAT", BCF_HL_FMT},
+        {"CONTIG", BCF_HL_CTG}
+    };
+    
+    return (types.count(tag) == 1) ? types.at(tag) : BCF_HL_STR;
+}
+
 void HtslibBcfFacade::write(const VcfHeader& header)
 {
     auto hdr = bcf_hdr_init("w");
     
     bcf_hdr_set_version(hdr, header.get_file_format().c_str());
     
+    for (auto key : header.get_fields()) {
+        bcf_hrec_t* hrec {new bcf_hrec_t};
+        
+        hrec->type  = BCF_HL_GEN;
+        hrec->key   = stringcopy(key);
+        hrec->value = stringcopy(header.get_field(key));
+        
+        hrec->nkeys = 0;
+        hrec->keys  = nullptr;
+        hrec->vals  = nullptr;
+        
+        bcf_hdr_add_hrec(hdr, hrec);
+    }
+    
+    for (auto tag : header.get_tags()) {
+        bcf_hrec_t* hrec {new bcf_hrec_t};
+        
+        hrec->type  = get_hts_tag_type(tag);
+        
+        hrec->nkeys = 0;
+        hrec->keys  = nullptr;
+        hrec->vals  = nullptr;
+        
+        hrec->key   = nullptr;
+        hrec->value = nullptr;
+        
+        bcf_hdr_add_hrec(hdr, hrec);
+    }
+    
     for (const auto& sample : header.get_samples()) {
         bcf_hdr_add_sample(hdr, sample.c_str());
     }
-    
-    // add fields
     
     bcf_hdr_write(file_.get(), hdr);
     
@@ -112,7 +161,10 @@ void HtslibBcfFacade::write(const VcfHeader& header)
 void set_chrom(bcf_hdr_t* header, bcf1_t* record, const std::string& chrom);
 void set_pos(bcf_hdr_t* header, bcf1_t* record, VcfRecord::SizeType pos);
 void set_id(bcf_hdr_t* header, bcf1_t* record, const std::string& id);
+void set_alleles(bcf_hdr_t* header, bcf1_t* record, const VcfRecord::SequenceType& ref, const std::vector<VcfRecord::SequenceType>& alts);
 void set_qual(bcf_hdr_t* header, bcf1_t* record, VcfRecord::QualityType qual);
+void set_filters(bcf_hdr_t* header, bcf1_t* record, const std::vector<std::string>& filters);
+void set_info(bcf_hdr_t* header, bcf1_t* record, const VcfRecord& r);
 
 void HtslibBcfFacade::write(const VcfRecord& record)
 {
@@ -121,13 +173,18 @@ void HtslibBcfFacade::write(const VcfRecord& record)
     set_chrom(header_.get(), r, record.get_chromosome_name());
     set_pos(header_.get(), r, record.get_position());
     set_id(header_.get(), r, record.get_id());
-    
+    set_alleles(header_.get(), r, record.get_ref_allele(), record.get_alt_alleles());
     set_qual(header_.get(), r, record.get_quality());
+    set_filters(header_.get(), r, record.get_filters());
+    set_info(header_.get(), r, record);
+    
+    if (record.has_sample_data()) {
+        
+    }
     
     bcf_write(file_.get(), header_.get(), r);
     
-    // just free the memory allocated by 
-    delete r;
+    bcf_destroy(r);
 }
 
 // private and non-member methods
@@ -173,7 +230,8 @@ auto get_id(bcf_hdr_t* header, bcf1_t* record)
 
 void set_id(bcf_hdr_t* header, bcf1_t* record, const std::string& id)
 {
-    id.copy(record->d.id, id.size());
+    record->d.id = new char[id.length() + 1];
+    std::strcpy(record->d.id, id.c_str());
 }
 
 auto get_ref(bcf_hdr_t* header, bcf1_t* record)
@@ -181,9 +239,19 @@ auto get_ref(bcf_hdr_t* header, bcf1_t* record)
     return record->d.allele[0];
 }
 
-void set_alleles(bcf_hdr_t* header, bcf1_t* record, const VcfRecord& r)
+void set_alleles(bcf_hdr_t* header, bcf1_t* record, const VcfRecord::SequenceType& ref, const std::vector<VcfRecord::SequenceType>& alts)
 {
-    //const char** alleles = new char*[r.];
+    char** alleles = new char*[alts.size() + 1];
+    
+    alleles[0] = new char[ref.length() + 1];
+    std::strcpy(alleles[0], ref.c_str());
+    
+    for (unsigned i {1}; i <= alts.size(); ++i) {
+        alleles[i] = new char[alts[i - 1].length() + 1];
+        std::strcpy(alleles[i], alts[i - 1].c_str());
+    }
+    
+    bcf_update_alleles(header, record, (const char**) alleles, static_cast<int>(alts.size() + 1));
 }
 
 auto get_alt(bcf_hdr_t* header, bcf1_t* record)
@@ -225,6 +293,13 @@ auto get_filter(bcf_hdr_t* header, bcf1_t* record)
     }
     
     return result;
+}
+
+void set_filters(bcf_hdr_t* header, bcf1_t* record, const std::vector<std::string>& filters)
+{
+    for (const auto& filter : filters) {
+        bcf_add_filter(header, record, bcf_hdr_id2int(header, BCF_DT_ID, filter.c_str()));
+    }
 }
 
 auto get_info(bcf_hdr_t* header, bcf1_t* record)
@@ -280,6 +355,53 @@ auto get_info(bcf_hdr_t* header, bcf1_t* record)
     if (flaginfo   != nullptr) delete[] flaginfo;
     
     return result;
+}
+
+void set_info(bcf_hdr_t* header, bcf1_t* record, const VcfRecord& r)
+{
+    auto keys = r.get_info_keys();
+    
+    for (const auto& key : keys) {
+        auto values     = r.get_info_value(key);
+        auto num_values = static_cast<int>(values.size());
+        
+        switch (bcf_hdr_id2type(header, BCF_HL_INFO, bcf_hdr_id2int(header, BCF_DT_ID, key.c_str()))) {
+            case BCF_HT_INT:
+            {
+                int* vals = new int[num_values];
+                std::transform(std::cbegin(values), std::cend(values), vals, [] (const auto& v) {
+                    return std::stoi(v);
+                });
+                bcf_update_info_int32(header, record, key.c_str(), &vals, num_values);
+                break;
+            }
+            case BCF_HT_REAL:
+            {
+                float* vals = new float[num_values];
+                std::transform(std::cbegin(values), std::cend(values), vals, [] (const auto& v) {
+                    return std::stof(v);
+                });
+                bcf_update_info_float(header, record, key.c_str(), &vals, num_values);
+                break;
+            }
+            case BCF_HT_STR:
+            {
+                char** vals = new char*[num_values];
+                std::transform(std::cbegin(values), std::cend(values), vals, [] (const auto& v) {
+                    char* s = new char[v.length() + 1];
+                    std::strcpy(s, v.c_str());
+                    return s;
+                });
+                bcf_update_info_string(header, record, key.c_str(), (const char**) &vals);
+                break;
+            }
+            case BCF_HT_FLAG:
+            {
+                bcf_update_info_flag(header, record, key.c_str(), "", values.front() == "1");
+                break;
+            }
+        }
+    }
 }
 
 bool has_samples(bcf_hdr_t* header)

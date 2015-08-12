@@ -25,10 +25,10 @@
 #include "variant.h"
 #include "variant_file_reader.h"
 #include "variant_file_factory.h"
-#include "htslib_bcf_facade.h"
 #include "vcf_header.h"
 #include "vcf_record.h"
 #include "vcf_reader.h"
+#include "vcf_writer.h"
 
 using std::cout;
 using std::endl;
@@ -86,7 +86,10 @@ void test3()
     
     auto records = reader.fetch_records(region);
     
+    VcfWriter writer {"/Users/danielcooke/test.vcf"};
     
+    writer.write(header);
+    //writer.write(records.front());
 }
 
 int main(int argc, const char **argv)

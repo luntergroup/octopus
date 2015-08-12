@@ -80,6 +80,30 @@ bool VcfHeader::has_field(const std::string& tag, const std::string& key) const 
     return formats_.count(tag) > 0; // TODO: complete this
 }
 
+std::vector<std::string> VcfHeader::get_fields() const
+{
+    std::vector<std::string> result {};
+    result.reserve(fields_.size());
+    
+    std::transform(std::cbegin(fields_), std::cend(fields_), std::back_inserter(result), [] (const auto& p) {
+        return p.first;
+    });
+    
+    return result;
+}
+
+std::vector<std::string> VcfHeader::get_tags() const
+{
+    std::vector<std::string> result {};
+    result.reserve(formats_.size());
+    
+    std::transform(std::cbegin(fields_), std::cend(fields_), std::back_inserter(result), [] (const auto& p) {
+        return p.first;
+    });
+    
+    return result;
+}
+
 const std::string& VcfHeader::get_field(const std::string& key) const
 {
     return fields_.at(key);

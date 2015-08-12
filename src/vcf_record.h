@@ -57,9 +57,12 @@ public:
     const SequenceType& get_ref_allele() const noexcept;
     unsigned get_num_alt_alleles() const noexcept;
     const SequenceType& get_alt_allele(unsigned n) const noexcept;
+    const std::vector<SequenceType>& get_alt_alleles() const noexcept;
     QualityType get_quality() const noexcept;
     bool has_filter(const KeyType& filter) const noexcept;
+    const std::vector<KeyType> get_filters() const noexcept;
     bool has_info(const KeyType& key) const noexcept;
+    std::vector<KeyType> get_info_keys() const;
     const std::vector<std::string>& get_info_value(const KeyType& key) const;
     
     bool has_sample_data() const noexcept;

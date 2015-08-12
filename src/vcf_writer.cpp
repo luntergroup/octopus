@@ -13,16 +13,18 @@
 #include "vcf_header.h"
 #include "vcf_record.h"
 
+#include <iostream> // TEST
+
 VcfWriter::VcfWriter(const fs::path& file_path)
 :
 file_path_ {file_path},
-writer_ {file_path_}
+writer_ {file_path_, "w"}
 {}
 
 VcfWriter::VcfWriter(const fs::path& file_path, const VcfHeader& header)
 :
 file_path_ {file_path},
-writer_ {file_path_}
+writer_ {file_path_, "w"}
 {
     write(header);
     is_header_written_ = true;
@@ -32,12 +34,14 @@ void VcfWriter::write(const VcfHeader& header)
 {
     writer_.write(header);
     is_header_written_ = true;
+    std::cout << "header written" << std::endl;
 }
 
 void VcfWriter::write(const VcfRecord& record)
 {
     if (is_header_written_) {
         write(record);
+        std::cout << "record written" << std::endl;
     } else {
         throw std::runtime_error {"Cannot write VCF record as header has not beein written"};
     }

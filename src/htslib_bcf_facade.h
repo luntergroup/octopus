@@ -34,7 +34,7 @@ class HtslibBcfFacade
 {
 public:
     HtslibBcfFacade() = delete;
-    explicit HtslibBcfFacade(const fs::path& file_path);
+    explicit HtslibBcfFacade(const fs::path& file_path, const std::string& mode="r");
     ~HtslibBcfFacade() = default;
     
     HtslibBcfFacade(const HtslibBcfFacade&)            = default;

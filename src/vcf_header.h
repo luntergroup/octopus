@@ -52,6 +52,8 @@ public:
     bool has_field(const std::string& key) const noexcept;
     bool has_tag(const std::string& tag) const noexcept;
     bool has_field(const std::string& tag, const std::string& key) const noexcept;
+    std::vector<std::string> get_fields() const;
+    std::vector<std::string> get_tags() const;
     const std::string& get_field(const std::string& key) const;
     const std::string& get_field(const std::string& tag, const std::string& id_key, const std::string& id_value, const std::string& lookup_key) const;
     
