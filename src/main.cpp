@@ -19,6 +19,7 @@
 #include <iostream>
 #include <string>
 #include <chrono>
+#include <algorithm>
 
 #include "test_common.h"
 #include "genomic_region.h"
@@ -33,15 +34,38 @@
 using std::cout;
 using std::endl;
 
-void test()
+std::vector<GenomicRegion> get_batch_regions(const GenomicRegion& region, const VcfReader& reader, std::size_t max_batch_size)
 {
-    HtslibBcfFacade vcf_reader {sample_vcf};
+    std::vector<GenomicRegion> result {};
     
-    GenomicRegion region {"X", 2000000, 2001000};
+    if (reader.num_records(region) > max_batch_size) {
+        // umm?
+    } else {
+        result.push_back(region);
+    }
     
-    auto records = vcf_reader.fetch_records(region);
+    return result;
+}
+
+std::vector<Variant> fetch_variants(const GenomicRegion& region, VcfReader& reader)
+{
+    std::vector<Variant> result {};
+    result.reserve(reader.num_records(region));
     
-    for (const auto& record : records) cout << record << endl;
+    std::size_t max_batch_size {10000};
+    
+    auto batches = get_batch_regions(region, reader, max_batch_size);
+    
+    for (const auto& batch : batches) {
+        auto vcf_records = reader.fetch_records(batch);
+        for (const auto& record : vcf_records) {
+            for (const auto& alt_allele : record.get_alt_alleles()) {
+                result.emplace_back(record.get_chromosome_name(), record.get_position(), record.get_ref_allele(), alt_allele);
+            }
+        }
+    }
+    
+    return result;
 }
 
 void test2()
@@ -56,24 +80,6 @@ void test2()
     auto v4 = get_typed_info_value(header, "SOMATIC", "1");
     auto v5 = get_typed_info_value(header, "AA", "TGCA");
     auto v6 = get_typed_info_value(header, "SOMATIC", "0");
-    
-    //v3 += 5;
-    
-//    cout << v2 << endl;
-//    cout << v3 << endl;
-//    cout << (v2 + v3) << endl;
-    
-//    auto x = static_cast<double>(v2);
-//    auto y = static_cast<double>(v3);
-//    
-//    mu::Parser parser {};
-//    
-//    parser.DefineVar("x", &x);
-//    parser.DefineVar("y", &y);
-//    
-//    parser.SetExpr("x + y");
-//    
-//    cout << parser.Eval() << endl;
 }
 
 void test3()
@@ -82,14 +88,24 @@ void test3()
     
     auto header = reader.fetch_header();
     
-    GenomicRegion region {"X", 2000000, 2001000};
+    GenomicRegion region {"X", 2000000, 2010000};
     
-    auto records = reader.fetch_records(region);
+    auto variants = fetch_variants(region, reader);
     
-    VcfWriter writer {"/Users/danielcooke/test.vcf"};
+    for (const auto& variant : variants) {
+        cout << variant << endl;
+    }
     
-    writer.write(header);
-    //writer.write(records.front());
+    //cout << reader.num_records(region) << endl;
+    
+    //auto records = reader.fetch_records(region);
+    
+//    VcfWriter writer {"/Users/dcooke/test.vcf.gz"};
+//    
+//    writer.write(header);
+//    for (const auto& record : records) {
+//        writer.write(record);
+//    }
 }
 
 int main(int argc, const char **argv)

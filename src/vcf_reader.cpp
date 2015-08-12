@@ -18,12 +18,22 @@
 VcfReader::VcfReader(const fs::path& file_path)
 :
 file_path_ {file_path},
-reader_ {file_path_}
+reader_ {file_path_, "r"}
 {}
 
 VcfHeader VcfReader::fetch_header()
 {
     return reader_.fetch_header();
+}
+
+std::size_t VcfReader::num_records() const
+{
+    return reader_.num_records();
+}
+
+std::size_t VcfReader::num_records(const GenomicRegion& region) const
+{
+    return reader_.num_records(region);
 }
 
 std::vector<VcfRecord> VcfReader::fetch_records()

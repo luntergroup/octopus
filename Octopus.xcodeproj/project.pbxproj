@@ -445,7 +445,7 @@
 			isa = PBXGroup;
 			children = (
 				CA1472771AACECAF005FDCD1 /* octopus */,
-				D413B0421B5D4E84007EFDE0 /* model */,
+				D413B0421B5D4E84007EFDE0 /* models */,
 				CAFA19771AC62BEB00F953D9 /* core */,
 				CABA377C1A8F762200BBE598 /* assembler */,
 				CAA4DC3B1A83B64A00DD3E9A /* variants */,
@@ -659,12 +659,12 @@
 			name = core;
 			sourceTree = "<group>";
 		};
-		D413B0421B5D4E84007EFDE0 /* model */ = {
+		D413B0421B5D4E84007EFDE0 /* models */ = {
 			isa = PBXGroup;
 			children = (
 				D413B0431B5D4EAC007EFDE0 /* i_model.h */,
 			);
-			name = model;
+			name = models;
 			sourceTree = "<group>";
 		};
 		D42F90121AE7945B0003F791 /* 1000G */ = {
@@ -959,7 +959,7 @@
 				ALWAYS_SEARCH_USER_PATHS = YES;
 				CLANG_CXX_LANGUAGE_STANDARD = "c++14";
 				FRAMEWORK_SEARCH_PATHS = "$(inherited)";
-				GCC_OPTIMIZATION_LEVEL = 3;
+				GCC_OPTIMIZATION_LEVEL = 0;
 				HEADER_SEARCH_PATHS = (
 					"$(inherited)",
 					/usr/local/Cellar/boost/1.58.0/include,
@@ -984,7 +984,7 @@
 				ALWAYS_SEARCH_USER_PATHS = YES;
 				CLANG_CXX_LANGUAGE_STANDARD = "c++14";
 				FRAMEWORK_SEARCH_PATHS = "$(inherited)";
-				GCC_OPTIMIZATION_LEVEL = 3;
+				GCC_OPTIMIZATION_LEVEL = 0;
 				HEADER_SEARCH_PATHS = (
 					"$(inherited)",
 					/usr/local/Cellar/boost/1.58.0/include,

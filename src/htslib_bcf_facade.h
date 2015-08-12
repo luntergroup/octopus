@@ -12,6 +12,7 @@
 #include <string>
 #include <set>
 #include <memory> // std::unique_ptr
+#include <cstddef>
 #include <boost/filesystem/path.hpp>
 
 #include "variant_file_reader_impl.h"
@@ -43,11 +44,13 @@ public:
     HtslibBcfFacade& operator=(HtslibBcfFacade&&)      = default;
     
     VcfHeader fetch_header();
-    std::vector<VcfRecord> fetch_records();
+    std::size_t num_records() const;
+    std::size_t num_records(const GenomicRegion& region) const;
+    std::vector<VcfRecord> fetch_records(); // fetches all records
     std::vector<VcfRecord> fetch_records(const GenomicRegion& region);
     
-    void write(const VcfHeader& header);
-    void write(const VcfRecord& record);
+    void write_header(const VcfHeader& header);
+    void write_record(const VcfRecord& record);
     
 private:
     using HtsBcfSrPtr = std::unique_ptr<bcf_srs_t, decltype(htslib_bcf_srs_deleter)>;
@@ -59,7 +62,8 @@ private:
     
     std::vector<std::string> samples_;
     
-    std::vector<VcfRecord> fetch_records(HtsBcfSrPtr& sr);
+    std::size_t num_records(HtsBcfSrPtr& sr) const;
+    std::vector<VcfRecord> fetch_records(HtsBcfSrPtr& sr, std::size_t num_records = 0);
 };
 
 #endif /* defined(__Octopus__htslib_bcf_facade__) */

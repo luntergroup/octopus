@@ -15,20 +15,16 @@
 #include <map>
 #include <unordered_map>
 #include <ostream>
-
-//#include <boost/pool/pool_alloc.hpp>
+#include <utility> // std::forward
 
 class VcfRecord
 {
 public:
     using SizeType     = std::uint_fast32_t;
     using SequenceType = std::string;
-    //using SequenceType = std::basic_string<char, std::char_traits<char>, boost::pool_allocator<char>>;
     using QualityType  = std::uint_fast8_t;
     using SampleIdType = std::string;
-    //using SampleIdType = std::basic_string<char, std::char_traits<char>, boost::pool_allocator<char>>;
     using KeyType      = std::string;
-    //using KeyType      = std::basic_string<char, std::char_traits<char>, boost::pool_allocator<char>>;
     
     VcfRecord()  = default;
     
@@ -55,8 +51,7 @@ public:
     SizeType get_position() const noexcept;
     const std::string& get_id() const noexcept;
     const SequenceType& get_ref_allele() const noexcept;
-    unsigned get_num_alt_alleles() const noexcept;
-    const SequenceType& get_alt_allele(unsigned n) const noexcept;
+    unsigned num_alt_alleles() const noexcept;
     const std::vector<SequenceType>& get_alt_alleles() const noexcept;
     QualityType get_quality() const noexcept;
     bool has_filter(const KeyType& filter) const noexcept;
@@ -65,8 +60,12 @@ public:
     std::vector<KeyType> get_info_keys() const;
     const std::vector<std::string>& get_info_value(const KeyType& key) const;
     
+    // sample related functions
+    bool has_format(const KeyType& key) const noexcept;
     bool has_sample_data() const noexcept;
     unsigned num_samples() const noexcept;
+    
+    // genotype related functions
     bool has_genotype_data() const noexcept;
     unsigned sample_ploidy() const noexcept;
     bool is_sample_phased(const SampleIdType& sample) const;
@@ -76,6 +75,11 @@ public:
     bool is_homozygous_non_ref(const SampleIdType& sample) const;
     bool has_ref_allele(const SampleIdType& sample) const;
     bool has_alt_allele(const SampleIdType& sample) const;
+    
+    unsigned format_cardinality(const KeyType& key) const noexcept;
+    
+    const std::vector<KeyType>& get_format() const noexcept;
+    const std::vector<std::string>& get_sample_value(const SampleIdType& sample, const KeyType& key) const;
     
     friend std::ostream& operator<<(std::ostream& os, const VcfRecord& record);
     

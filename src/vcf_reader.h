@@ -10,6 +10,7 @@
 #define __Octopus__vcf_reader__
 
 #include <vector>
+#include <cstddef>
 #include <boost/filesystem/path.hpp>
 
 #include "htslib_bcf_facade.h"
@@ -33,7 +34,9 @@ public:
     VcfReader& operator=(VcfReader&&)      = default;
     
     VcfHeader fetch_header();
-    std::vector<VcfRecord> fetch_records();
+    std::size_t num_records() const;
+    std::size_t num_records(const GenomicRegion& region) const;
+    std::vector<VcfRecord> fetch_records(); // fetches all records
     std::vector<VcfRecord> fetch_records(const GenomicRegion& region);
     
 private:

@@ -33,7 +33,7 @@ const VcfRecord::SequenceType& VcfRecord::get_ref_allele() const noexcept
     return ref_allele_;
 }
 
-unsigned VcfRecord::get_num_alt_alleles() const noexcept
+unsigned VcfRecord::num_alt_alleles() const noexcept
 {
     return static_cast<unsigned>(alt_alleles_.size());
 }
@@ -41,11 +41,6 @@ unsigned VcfRecord::get_num_alt_alleles() const noexcept
 const std::vector<VcfRecord::SequenceType>& VcfRecord::get_alt_alleles() const noexcept
 {
     return alt_alleles_;
-}
-
-const VcfRecord::SequenceType& VcfRecord::get_alt_allele(unsigned n) const noexcept
-{
-    return alt_alleles_.at(n);
 }
 
 VcfRecord::QualityType VcfRecord::get_quality() const noexcept
@@ -83,6 +78,11 @@ std::vector<VcfRecord::KeyType> VcfRecord::get_info_keys() const
 const std::vector<std::string>& VcfRecord::get_info_value(const KeyType& key) const
 {
     return info_.at(key);
+}
+
+bool VcfRecord::has_format(const KeyType& key) const noexcept
+{
+    return std::find(std::cbegin(format_), std::cend(format_), key) != std::cend(format_);
 }
 
 bool VcfRecord::has_sample_data() const noexcept
@@ -147,6 +147,21 @@ bool VcfRecord::has_alt_allele(const SampleIdType& sample) const
     const auto& genotype = genotypes_.at(sample).first;
     return std::find_if_not(std::cbegin(genotype), std::cend(genotype),
                             [this] (const auto& allele) { return allele == ref_allele_; }) != std::cend(genotype);
+}
+
+unsigned VcfRecord::format_cardinality(const KeyType& key) const noexcept
+{
+    return (has_format(key)) ? static_cast<unsigned>(samples_.cbegin()->second.at(key).size()) : 0;
+}
+
+const std::vector<VcfRecord::KeyType>& VcfRecord::get_format() const noexcept
+{
+    return format_;
+}
+
+const std::vector<std::string>& VcfRecord::get_sample_value(const SampleIdType& sample, const KeyType& key) const
+{
+    return (key == "GT") ? genotypes_.at(sample).first : samples_.at(sample).at(key);
 }
 
 // helper non-members needed for printing
