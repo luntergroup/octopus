@@ -75,7 +75,7 @@ SizeType soft_clipped_read_begin(const CigarString& cigar_string, SizeType hard_
     return hard_clipped_begin;
 }
 
-template <typename SizeType=unsigned>
+template <typename SizeType = unsigned>
 SizeType operations_size(const CigarString& cigar_string) noexcept
 {
     return std::accumulate(std::cbegin(cigar_string), std::cend(cigar_string), SizeType {},
@@ -84,7 +84,7 @@ SizeType operations_size(const CigarString& cigar_string) noexcept
                            });
 }
 
-template <typename SizeType=unsigned>
+template <typename SizeType = unsigned>
 SizeType reference_size(const CigarString& cigar_string) noexcept
 {
     SizeType result {};
@@ -98,7 +98,7 @@ SizeType reference_size(const CigarString& cigar_string) noexcept
     return result;
 }
 
-template <typename SizeType=unsigned>
+template <typename SizeType = unsigned>
 SizeType sequence_size(const CigarString& cigar_string) noexcept
 {
     SizeType result {};

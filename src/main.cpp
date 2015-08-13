@@ -108,9 +108,26 @@ void test3()
 //    }
 }
 
+#include <boost/bimap.hpp>
+#include <boost/bimap/unordered_set_of.hpp>
+
+void test_bimap()
+{
+    using Bimap = boost::bimap<boost::bimaps::unordered_set_of<std::string>, boost::bimaps::unordered_set_of<int>>;
+    
+    using value_t = Bimap::value_type;
+    
+    Bimap map {};
+    
+    map.insert(value_t {"hello", 10});
+    map.insert(value_t {"world", 20});
+    
+    cout << map.left.find("hello")->second << endl;
+}
+
 int main(int argc, const char **argv)
 {
-    test3();
+    test_bimap();
 //    auto options = Octopus::parse_options(argc, argv);
 //    
 //    if (options.second) {

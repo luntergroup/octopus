@@ -20,6 +20,8 @@
 class VcfRecord
 {
 public:
+    class Builder;
+    
     using SizeType     = std::uint_fast32_t;
     using SequenceType = std::string;
     using QualityType  = std::uint_fast8_t;
@@ -159,5 +161,36 @@ bool is_somatic(const VcfRecord& record) noexcept;
 bool is_validated(const VcfRecord& record) noexcept;
 
 std::ostream& operator<<(std::ostream& os, const VcfRecord& record);
+
+class VcfRecord::Builder
+{
+public:
+    using SizeType     = VcfRecord::SizeType;
+    using SequenceType = VcfRecord::SequenceType;
+    using QualityType  = VcfRecord::QualityType;
+    using SampleIdType = VcfRecord::SampleIdType;
+    using KeyType      = VcfRecord::KeyType;
+    
+    Builder() = default;
+    
+    Builder& set_chromosome(const std::string& chromosome);
+    Builder& set_position(SizeType position);
+    Builder& set_id(const std::string& id);
+    
+private:
+    std::string chromosome_ = ".";
+    SizeType position_ = 0;
+    std::string id_ = ".";
+    SequenceType ref_allele_ = ".";
+    std::vector<SequenceType> alt_alleles_;
+    QualityType quality_ = 0;
+    std::vector<KeyType> filters_;
+    std::unordered_map<KeyType, std::vector<std::string>> info_;
+    
+    // optional fields
+    std::vector<KeyType> format_;
+    std::unordered_map<SampleIdType, Genotype> genotypes_;
+    std::unordered_map<SampleIdType, std::unordered_map<KeyType, std::vector<std::string>>> samples_;
+};
 
 #endif /* defined(__Octopus__vcf_record__) */

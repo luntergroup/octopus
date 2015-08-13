@@ -11,8 +11,9 @@
 
 #include <vector>
 #include <thread>
-#include <algorithm>
-#include <cstddef>
+#include <algorithm> // std::transform
+#include <cstddef>   // std::size_t
+#include <iterator>  // std::distance
 
 template <typename InputIterator, typename OutputIterator, typename UnaryOperation>
 OutputIterator threaded_transform(InputIterator first, InputIterator last, OutputIterator result,

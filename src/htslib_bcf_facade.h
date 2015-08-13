@@ -34,7 +34,7 @@ auto htslib_bcf1_deleter       = [] (bcf1_t* bcf1) { bcf_destroy(bcf1); };
 class HtslibBcfFacade
 {
 public:
-    HtslibBcfFacade() = delete;
+    HtslibBcfFacade()  = delete;
     explicit HtslibBcfFacade(const fs::path& file_path, const std::string& mode="r");
     ~HtslibBcfFacade() = default;
     

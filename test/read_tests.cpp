@@ -18,7 +18,7 @@
 #include "test_common.h"
 #include "genomic_region.h"
 #include "aligned_read.h"
-#include "htslib_read_facade.h"
+#include "htslib_sam_facade.h"
 #include "read_manager.h"
 #include "mock_objects.h"
 #include "mappable_algorithms.h"
@@ -30,7 +30,7 @@ BOOST_AUTO_TEST_SUITE(Components)
 
 BOOST_AUTO_TEST_CASE(read_reader_handles_BAM)
 {
-    HtslibReadFacade a_reader {human_1000g_bam1};
+    HtslibSamFacade a_reader {human_1000g_bam1};
     
     GenomicRegion a_region {"10", 1000000, 1000100};
     GenomicRegion another_region {"3", 100000, 100100};
@@ -46,7 +46,7 @@ BOOST_AUTO_TEST_CASE(read_reader_handles_BAM)
 
 BOOST_AUTO_TEST_CASE(read_reader_handles_CRAM)
 {
-    HtslibReadFacade a_reader {human_1000g_cram};
+    HtslibSamFacade a_reader {human_1000g_cram};
     
     GenomicRegion a_region {"10", 1000000, 1000100};
     GenomicRegion another_region {"3", 100000, 100100};

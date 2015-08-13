@@ -20,6 +20,12 @@ using std::cend;
 using std::crbegin;
 using std::crend;
 
+template <typename InputIterator>
+std::size_t num_redundant_bases(InputIterator first1, InputIterator last1, InputIterator first2)
+{
+    return std::distance(first1, std::mismatch(first1, last1, first2).first);
+}
+
 void remove_duplicates(std::vector<Variant>& variants)
 {
     auto it = std::unique(std::begin(variants), std::end(variants));
@@ -64,14 +70,12 @@ bool is_parsimonious(const Variant& a_variant) noexcept
     const auto& the_small_allele = alleles.first;
     const auto& the_big_allele   = alleles.second;
     
-    if (detail::num_redundant_bases(cbegin(the_small_allele), cend(the_small_allele),
-                                    cbegin(the_big_allele)) > 1) {
+    if (num_redundant_bases(cbegin(the_small_allele), cend(the_small_allele), cbegin(the_big_allele)) > 1) {
         return false;
     }
     
     if (the_small_allele.size() > 1 &&
-        detail::num_redundant_bases(crbegin(the_small_allele), crend(the_small_allele),
-                                    crbegin(the_big_allele)) > 0) {
+        num_redundant_bases(crbegin(the_small_allele), crend(the_small_allele), crbegin(the_big_allele)) > 0) {
         return false;
     }
     
@@ -114,10 +118,10 @@ Variant make_parsimonious(const Variant& a_variant, ReferenceGenome& the_referen
         }
     }
     
-    auto num_redundant_back_bases  = detail::num_redundant_bases(crbegin(the_small_allele),
-                                                                 crend(the_small_allele), crbegin(the_big_allele));
-    auto num_redundant_front_bases = detail::num_redundant_bases(cbegin(the_small_allele),
-                                                                 cend(the_small_allele), cbegin(the_big_allele));
+    auto num_redundant_back_bases  = num_redundant_bases(crbegin(the_small_allele), crend(the_small_allele),
+                                                         crbegin(the_big_allele));
+    auto num_redundant_front_bases = num_redundant_bases(cbegin(the_small_allele), cend(the_small_allele),
+                                                         cbegin(the_big_allele));
     
     // We could avoid this check by removing redundant back bases first, but this way is cheaper.
     bool are_same_redundant_bases = num_redundant_front_bases == num_redundant_back_bases &&

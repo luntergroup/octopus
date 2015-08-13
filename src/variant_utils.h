@@ -71,13 +71,4 @@ bool is_transition(const Variant& a_variant) noexcept;
 
 bool is_transversion(const Variant& a_variant) noexcept;
 
-namespace detail
-{
-    template <typename InputIterator>
-    std::size_t num_redundant_bases(InputIterator first1, InputIterator last1, InputIterator first2)
-    {
-        return std::distance(first1, std::mismatch(first1, last1, first2).first);
-    }
-} // end namespace detail
-
 #endif /* defined(__Octopus__variant_utils__) */

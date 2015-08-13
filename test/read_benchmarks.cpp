@@ -16,7 +16,7 @@
 
 #include "test_common.h"
 #include "benchmark_utils.h"
-#include "htslib_read_facade.h"
+#include "htslib_sam_facade.h"
 #include "read_manager.h"
 #include "aligned_read.h"
 #include "read_utils.h"
@@ -27,7 +27,7 @@ using std::endl;
 
 //BOOST_AUTO_TEST_CASE(read_benchmark)
 //{
-//    HtslibReadFacade a_reader {human_1000g_bam1};
+//    HtslibSamFacade a_reader {human_1000g_bam1};
 //    
 //    auto f_read = [&a_reader] () {
 //        a_reader.fetch_reads(GenomicRegion("10", 1000000, 1010000));

@@ -1,13 +1,13 @@
 //
-//  htslib_read_facade.h
+//  htslib_sam_facade.h
 //  Octopus
 //
 //  Created by Daniel Cooke on 11/02/2015.
 //  Copyright (c) 2015 Oxford University. All rights reserved.
 //
 
-#ifndef __Octopus__htslib_read_facade__
-#define __Octopus__htslib_read_facade__
+#ifndef __Octopus__htslib_sam_facade__
+#define __Octopus__htslib_sam_facade__
 
 #include <string>
 #include <vector>
@@ -28,8 +28,6 @@
 
 namespace fs = boost::filesystem;
 
-class AlignedRead;
-
 using std::uint_fast32_t;
 using std::uint_fast8_t;
 using std::uint8_t;
@@ -42,7 +40,7 @@ auto htslib_index_deleter    = [] (hts_idx_t* index)    { hts_idx_destroy(index)
 auto htslib_iterator_deleter = [] (hts_itr_t* iterator) { sam_itr_destroy(iterator); };
 auto htslib_bam1_deleter     = [] (bam1_t* b)           { bam_destroy1(b); };
 
-class HtslibReadFacade : public IReadReaderImpl
+class HtslibSamFacade : public IReadReaderImpl
 {
 public:
     using SequenceType       = AlignedRead::SequenceType;
@@ -50,14 +48,14 @@ public:
     using SampleIdToReadsMap = IReadReaderImpl::SampleIdToReadsMap;
     using SizeType           = IReadReaderImpl::SizeType;
     
-    HtslibReadFacade() = delete;
-    HtslibReadFacade(const fs::path& file_path);
-    ~HtslibReadFacade() noexcept override = default;
+    HtslibSamFacade() = delete;
+    HtslibSamFacade(const fs::path& file_path);
+    ~HtslibSamFacade() noexcept override = default;
     
-    HtslibReadFacade(const HtslibReadFacade&)            = delete;
-    HtslibReadFacade& operator=(const HtslibReadFacade&) = delete;
-    HtslibReadFacade(HtslibReadFacade&&)                 = default;
-    HtslibReadFacade& operator=(HtslibReadFacade&&)      = default;
+    HtslibSamFacade(const HtslibSamFacade&)            = delete;
+    HtslibSamFacade& operator=(const HtslibSamFacade&) = delete;
+    HtslibSamFacade(HtslibSamFacade&&)                 = default;
+    HtslibSamFacade& operator=(HtslibSamFacade&&)      = default;
     
     std::vector<SampleIdType> get_sample_ids() override;
     std::vector<std::string> get_read_groups_in_sample(const SampleIdType& sample_id) override;
@@ -76,29 +74,27 @@ private:
     {
     public:
         HtslibIterator() = delete;
-        HtslibIterator(HtslibReadFacade& hts_facade, const GenomicRegion& a_region);
+        HtslibIterator(HtslibSamFacade& hts_facade, const GenomicRegion& a_region);
         ~HtslibIterator() noexcept = default;
         
         HtslibIterator(const HtslibIterator&) = delete;
         HtslibIterator& operator=(const HtslibIterator&) = delete;
         
         bool operator++();
-        std::pair<AlignedRead, HtslibReadFacade::SampleIdType> operator*() const;
+        std::pair<AlignedRead, HtslibSamFacade::SampleIdType> operator*() const;
         
     private:
-        HtslibReadFacade& hts_facade_;
+        HtslibSamFacade& hts_facade_;
         std::unique_ptr<hts_itr_t, decltype(htslib_iterator_deleter)> hts_iterator_;
         std::unique_ptr<bam1_t, decltype(htslib_bam1_deleter)> hts_bam1_;
         
         SizeType get_read_start() const noexcept;
         uint32_t get_sequence_length() const noexcept;
-        char get_base(uint8_t* a_htslib_sequence, uint32_t index) const noexcept;
         SequenceType get_sequence() const;
-        std::vector<uint_fast8_t> get_qualities() const;
+        std::vector<AlignedRead::QualityType> get_qualities() const;
         uint32_t get_cigar_length() const noexcept;
-        CigarString make_cigar_string() const;
+        CigarString get_cigar_string() const;
         std::string get_read_group() const;
-        std::string get_contig_name(HtslibReadFacade::HtsTidType hts_tid) const;
         std::string get_read_name() const;
         AlignedRead::FlagData get_flags() const;
         AlignedRead::NextSegment::FlagData get_next_segment_flags() const;
@@ -108,7 +104,6 @@ private:
     using HtsTidToContigNameMap  = std::unordered_map<HtsTidType, std::string>;
     using ReadGroupToSampleIdMap = std::unordered_map<std::string, SampleIdType>;
     
-    // No getting around these constants. I'll put them here so they are in plain sight.
     static constexpr const char* Read_group_tag    {"RG"};
     static constexpr const char* Read_group_id_tag {"ID"};
     static constexpr const char* Sample_id_tag     {"SM"};
@@ -121,15 +116,13 @@ private:
     HtsTidToContigNameMap contig_name_map_;
     ReadGroupToSampleIdMap sample_id_map_;
     
-    std::string get_reference_contig_name(HtsTidType hts_tid) const;
-    ReadGroupToSampleIdMap get_read_group_to_sample_id_map() const;
-    std::pair<ContigNameToHtsTidMap, HtsTidToContigNameMap> get_htslib_tid_maps();
-    HtsTidType get_htslib_tid(const std::string& reference_contig_name) const;
-    // These methods have const char* parameters so they can be declared constexpr
+    void init_maps();
+    HtsTidType get_htslib_tid(const std::string& contig_name) const;
+    const std::string& get_contig_name(HtsTidType hts_tid) const;
     bool is_tag_type(const std::string& header_line, const char* tag) const;
     bool has_tag(const std::string& header_line, const char* tag) const;
     std::string get_tag_value(const std::string& line, const char* tag) const;
-    uint64_t get_num_mapped_reads(const std::string& reference_contig_name) const;
+    uint64_t get_num_mapped_reads(const std::string& contig_name) const;
 };
 
-#endif /* defined(__Octopus__htslib_read_facade__) */
+#endif /* defined(__Octopus__htslib_sam_facade__) */

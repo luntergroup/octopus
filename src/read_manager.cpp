@@ -13,7 +13,7 @@
 #include <utility>   // std::move
 #include <boost/filesystem/operations.hpp>
 
-#include "htslib_read_facade.h"
+#include "htslib_sam_facade.h"
 #include "aligned_read.h"
 #include "mappable_algorithms.h"
 
@@ -172,7 +172,7 @@ void ReadManager::open_initial_files()
 
 ReadReader ReadManager::make_reader(const fs::path& a_reader_path)
 {
-    return ReadReader {a_reader_path, std::make_unique<HtslibReadFacade>(a_reader_path)};
+    return ReadReader {a_reader_path, std::make_unique<HtslibSamFacade>(a_reader_path)};
 }
 
 bool ReadManager::is_open(const fs::path& a_reader_path) const noexcept
@@ -245,8 +245,7 @@ bool ReadManager::could_reader_contain_region(const fs::path& the_reader_path,
     return has_overlapped(std::cbegin(contig_regions), std::cend(contig_regions), a_region.get_contig_region());
 }
 
-std::vector<fs::path>
-ReadManager::get_reader_paths_possibly_containing_region(const GenomicRegion& a_region) const
+std::vector<fs::path> ReadManager::get_reader_paths_possibly_containing_region(const GenomicRegion& a_region) const
 {
     std::vector<fs::path> result {};
     
@@ -273,8 +272,7 @@ void ReadManager::add_reader_to_sample_map(const fs::path& the_reader_path,
     }
 }
 
-std::vector<fs::path>
-ReadManager::get_reader_paths_containing_samples(const std::vector<SampleIdType>& sample_ids) const
+std::vector<fs::path> ReadManager::get_reader_paths_containing_samples(const std::vector<SampleIdType>& sample_ids) const
 {
     std::unordered_set<fs::path> unique_reader_paths {};
     
