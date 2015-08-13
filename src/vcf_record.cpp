@@ -85,17 +85,22 @@ bool VcfRecord::has_format(const KeyType& key) const noexcept
     return std::find(std::cbegin(format_), std::cend(format_), key) != std::cend(format_);
 }
 
-bool VcfRecord::has_sample_data() const noexcept
+unsigned VcfRecord::format_cardinality(const KeyType& key) const noexcept
 {
-    return !format_.empty();
+    return (has_format(key)) ? static_cast<unsigned>(samples_.cbegin()->second.at(key).size()) : 0;
+}
+
+const std::vector<VcfRecord::KeyType>& VcfRecord::get_format() const noexcept
+{
+    return format_;
 }
 
 unsigned VcfRecord::num_samples() const noexcept
 {
-    return static_cast<unsigned>((has_genotype_data() ? genotypes_.size() : samples_.size()));
+    return static_cast<unsigned>((has_genotypes()) ? genotypes_.size() : samples_.size());
 }
 
-bool VcfRecord::has_genotype_data() const noexcept
+bool VcfRecord::has_genotypes() const noexcept
 {
     return !genotypes_.empty();
 }
@@ -103,7 +108,7 @@ bool VcfRecord::has_genotype_data() const noexcept
 unsigned VcfRecord::sample_ploidy() const noexcept
 {
     // all samples must have the same ploidy
-    return (has_genotype_data()) ? static_cast<unsigned>(genotypes_.cbegin()->second.first.size()) : 0;
+    return (has_genotypes()) ? static_cast<unsigned>(genotypes_.cbegin()->second.first.size()) : 0;
 }
 
 bool VcfRecord::is_sample_phased(const SampleIdType& sample) const
@@ -147,16 +152,6 @@ bool VcfRecord::has_alt_allele(const SampleIdType& sample) const
     const auto& genotype = genotypes_.at(sample).first;
     return std::find_if_not(std::cbegin(genotype), std::cend(genotype),
                             [this] (const auto& allele) { return allele == ref_allele_; }) != std::cend(genotype);
-}
-
-unsigned VcfRecord::format_cardinality(const KeyType& key) const noexcept
-{
-    return (has_format(key)) ? static_cast<unsigned>(samples_.cbegin()->second.at(key).size()) : 0;
-}
-
-const std::vector<VcfRecord::KeyType>& VcfRecord::get_format() const noexcept
-{
-    return format_;
 }
 
 const std::vector<std::string>& VcfRecord::get_sample_value(const SampleIdType& sample, const KeyType& key) const
@@ -243,11 +238,11 @@ void VcfRecord::print_other_sample_data(std::ostream& os, const SampleIdType& sa
 
 void VcfRecord::print_sample_data(std::ostream& os) const
 {
-    if (has_sample_data()) {
+    if (num_samples() > 0) {
         //print_vector(os, format_, ":");
         os << "\t";
         
-        bool has_genotype {has_genotype_data()};
+        bool has_genotype {has_genotypes()};
         
         auto last = std::next(samples_.cbegin(), samples_.size() - 1);
         std::for_each(std::cbegin(samples_), last, [this, &os, has_genotype] (const auto& sample_data) {
@@ -316,16 +311,99 @@ bool is_validated(const VcfRecord& record) noexcept
 
 std::ostream& operator<<(std::ostream& os, const VcfRecord& record)
 {
-//    os << record.chromosome_ << "\t";
-//    os << record.position_ << "\t";
-//    os << record.id_ << "\t";
-//    os << record.ref_allele_ << "\t";
-//    os << record.alt_alleles_ << "\t";
-//    os << static_cast<unsigned>(record.quality_) << "\t";
-//    os << record.filters_ << "\t";
-//    record.print_info(os);
-//    os << "\t";
-//    record.print_sample_data(os);
+    os << record.chromosome_ << "\t";
+    os << record.position_ << "\t";
+    os << record.id_ << "\t";
+    os << record.ref_allele_ << "\t";
+    os << record.alt_alleles_ << "\t";
+    os << static_cast<unsigned>(record.quality_) << "\t";
+    os << record.filters_ << "\t";
+    record.print_info(os);
+    os << "\t";
+    record.print_sample_data(os);
     
     return os;
+}
+
+// VcfRecord::Builder
+
+VcfRecord::Builder& VcfRecord::Builder::set_chromosome(const std::string& chromosome)
+{
+    chromosome_ = chromosome;
+    return *this;
+}
+
+VcfRecord::Builder& VcfRecord::Builder::set_position(SizeType position)
+{
+    position_ = position;
+    return *this;
+}
+
+VcfRecord::Builder& VcfRecord::Builder::set_id(const std::string& id)
+{
+    id_ = id;
+    return *this;
+}
+
+VcfRecord::Builder& VcfRecord::Builder::set_ref_allele(const SequenceType& ref_allele)
+{
+    ref_allele_ = ref_allele;
+    return *this;
+}
+
+VcfRecord::Builder& VcfRecord::Builder::set_alt_allele(const SequenceType& alt_allele)
+{
+    alt_alleles_[0] = alt_allele;
+    return *this;
+}
+
+VcfRecord::Builder& VcfRecord::Builder::set_alt_alleles(const std::vector<SequenceType>& alt_alleles)
+{
+    alt_alleles_ = alt_alleles;
+    return *this;
+}
+
+VcfRecord::Builder& VcfRecord::Builder::set_quality(QualityType quality)
+{
+    quality_ = quality;
+    return *this;
+}
+
+VcfRecord::Builder& VcfRecord::Builder::set_filters(const std::vector<KeyType>& filters)
+{
+    filters_ = filters;
+    return *this;
+}
+
+VcfRecord::Builder& VcfRecord::Builder::add_info(const KeyType& key, const std::vector<std::string>& values)
+{
+    info_.emplace(key, values);
+    return *this;
+}
+
+VcfRecord::Builder& VcfRecord::Builder::set_format(const std::vector<KeyType>& format)
+{
+    format_ = format;
+    return *this;
+}
+
+VcfRecord::Builder& VcfRecord::Builder::add_genotype(const SampleIdType& sample, const std::vector<SequenceType>& alleles, bool is_phased)
+{
+    genotypes_.emplace(sample, std::make_pair(alleles, is_phased));
+    return *this;
+}
+
+VcfRecord::Builder& VcfRecord::Builder::add_genotype_field(const SampleIdType& sample, const KeyType& key, const std::vector<std::string>& values)
+{
+    samples_[sample].emplace(key, values);
+    return *this;
+}
+
+VcfRecord VcfRecord::Builder::build() const
+{
+    if (genotypes_.empty() && samples_.empty()) {
+        return VcfRecord {chromosome_, position_, id_, ref_allele_, alt_alleles_, quality_, filters_, info_};
+    } else {
+        return VcfRecord {chromosome_, position_, id_, ref_allele_, alt_alleles_, quality_, filters_, info_, format_, genotypes_, samples_};
+    }
 }

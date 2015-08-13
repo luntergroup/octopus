@@ -13,11 +13,15 @@
 #include "genomic_region.h"
 #include "vcf_record.h"
 
+VcfHeader parse_header(std::ifstream& vcf_file);
+
 // public methods
 
 VcfParser::VcfParser(const fs::path& file_path)
 :
-file_path_ {file_path}
+file_path_ {file_path},
+file_ {file_path_.string()},
+header_ {parse_header(file_)}
 {}
 
 VcfHeader VcfParser::fetch_header()
@@ -25,14 +29,24 @@ VcfHeader VcfParser::fetch_header()
     return header_;
 }
 
-std::vector<VcfRecord> VcfParser::fetch_records()
+std::size_t VcfParser::num_records() const
+{
+    return 0;
+}
+
+std::size_t VcfParser::num_records(const GenomicRegion& region) const
+{
+    return 0;
+}
+
+std::vector<VcfRecord> VcfParser::fetch_records(Unpack level)
 {
     std::vector<VcfRecord> result {};
     
     return result;
 }
 
-std::vector<VcfRecord> VcfParser::fetch_records(const GenomicRegion& region)
+std::vector<VcfRecord> VcfParser::fetch_records(const GenomicRegion& region, Unpack level)
 {
     std::vector<VcfRecord> result {};
     
@@ -47,6 +61,11 @@ void VcfParser::parse()
 }
 
 // non-member methods
+
+VcfHeader parse_header(std::ifstream& vcf_file)
+{
+    return VcfHeader::Builder().build();
+}
 
 template <char Delim>
 struct Token

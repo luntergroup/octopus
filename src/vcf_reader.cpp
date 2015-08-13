@@ -36,12 +36,12 @@ std::size_t VcfReader::num_records(const GenomicRegion& region) const
     return reader_.num_records(region);
 }
 
-std::vector<VcfRecord> VcfReader::fetch_records()
+std::vector<VcfRecord> VcfReader::fetch_records(Unpack level)
 {
-    return reader_.fetch_records();
+    return reader_.fetch_records((level == Unpack::All) ? HtslibBcfFacade::Unpack::All : HtslibBcfFacade::Unpack::AllButSamples);
 }
 
-std::vector<VcfRecord> VcfReader::fetch_records(const GenomicRegion& region)
+std::vector<VcfRecord> VcfReader::fetch_records(const GenomicRegion& region, Unpack level)
 {
-    return reader_.fetch_records(region);
+    return reader_.fetch_records(region, (level == Unpack::All) ? HtslibBcfFacade::Unpack::All : HtslibBcfFacade::Unpack::AllButSamples);
 }

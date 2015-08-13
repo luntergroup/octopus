@@ -23,33 +23,6 @@ VcfHeader::VcfHeader(std::string file_format)
 : file_format_ {std::move(file_format)}
 {}
 
-void VcfHeader::set_file_format(std::string format)
-{
-    file_format_ = std::move(format);
-}
-
-void VcfHeader::put_sample(std::string sample)
-{
-    samples_.emplace_back(std::move(sample));
-}
-
-void VcfHeader::put_samples(std::vector<std::string> samples)
-{
-    samples_.insert(samples_.end(), std::make_move_iterator(samples.begin()), std::make_move_iterator(samples.end()));
-}
-
-void VcfHeader::put_basic_field(std::string key, std::string value)
-{
-    if (key != "fileformat") {
-        basic_fields_.emplace(std::move(key), std::move(value));
-    }
-}
-
-void VcfHeader::put_structured_field(std::string tag, std::unordered_map<std::string, std::string> values)
-{
-    structured_fields_.emplace(std::move(tag), std::move(values));
-}
-
 const std::string& VcfHeader::get_file_format() const noexcept
 {
     return file_format_;
@@ -215,4 +188,80 @@ std::ostream& operator<<(std::ostream& os, const VcfHeader& header)
     }
     
     return os;
+}
+
+// VcfHeader::Builder
+
+VcfHeader::Builder& VcfHeader::Builder::set_file_format(std::string file_format)
+{
+    file_format_ = std::move(file_format);
+    return *this;
+}
+
+VcfHeader::Builder& VcfHeader::Builder::add_sample(std::string sample)
+{
+    samples_.push_back(std::move(sample));
+    return *this;
+}
+
+VcfHeader::Builder& VcfHeader::Builder::set_samples(std::vector<std::string> samples)
+{
+    samples_ = std::move(samples);
+    return *this;
+}
+
+VcfHeader::Builder& VcfHeader::Builder::add_basic_field(std::string key, std::string value)
+{
+    if (key != "fileformat") {
+        basic_fields_.emplace(std::move(key), std::move(value));
+    }
+    return *this;
+}
+
+VcfHeader::Builder& VcfHeader::Builder::add_structured_field(std::string tag, std::unordered_map<std::string, std::string> values)
+{
+    structured_fields_.emplace(tag, values);
+    return *this;
+}
+
+VcfHeader::Builder& VcfHeader::Builder::add_info(std::string id, std::string number, std::string type, std::string description,
+                                                 std::unordered_map<std::string, std::string> other_values)
+{
+    other_values.emplace("ID", std::move(id));
+    other_values.emplace("Number", std::move(number));
+    other_values.emplace("Type", std::move(type));
+    other_values.emplace("Description", std::move(description));
+    
+    structured_fields_.emplace("INFO", std::move(other_values));
+    
+    return *this;
+}
+
+VcfHeader::Builder& VcfHeader::Builder::add_filter(std::string id, std::string description,
+                                                   std::unordered_map<std::string, std::string> other_values)
+{
+    other_values.emplace("ID", std::move(id));
+    other_values.emplace("Description", std::move(description));
+    
+    structured_fields_.emplace("FILTER", std::move(other_values));
+    
+    return *this;
+}
+
+VcfHeader::Builder& VcfHeader::Builder::add_format(std::string id, std::string number, std::string type, std::string description,
+                                                   std::unordered_map<std::string, std::string> other_values)
+{
+    other_values.emplace("ID", std::move(id));
+    other_values.emplace("Number", std::move(number));
+    other_values.emplace("Type", std::move(type));
+    other_values.emplace("Description", std::move(description));
+    
+    structured_fields_.emplace("FORMAT", std::move(other_values));
+    
+    return *this;
+}
+
+VcfHeader VcfHeader::Builder::build() const
+{
+    return VcfHeader {file_format_, samples_, basic_fields_, structured_fields_};
 }

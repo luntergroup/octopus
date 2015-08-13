@@ -89,24 +89,24 @@ std::unordered_map<std::string, std::string> get_format(bcf_hrec_t* line);
 
 VcfHeader HtslibBcfFacade::fetch_header()
 {
-    VcfHeader result {};
+    VcfHeader::Builder hb {};
     
-    result.set_file_format(bcf_hdr_get_version(header_.get()));
-    result.put_samples(samples_);
+    hb.set_file_format(bcf_hdr_get_version(header_.get()));
+    hb.set_samples(samples_);
     
     for (unsigned i {}; i < header_->nhrec; ++i) {
         const auto record = header_->hrec[i];
         switch (record->type) {
             case BCF_HL_GEN: // key=value
-                result.put_basic_field(record->key, record->value);
+                hb.add_basic_field(record->key, record->value);
                 break;
             default: // TAG=<A=..,B=..>
-                result.put_structured_field(record->key, get_format(record));
+                hb.add_structured_field(record->key, get_format(record));
                 break;
         }
     }
     
-    return result;
+    return hb.build();
 }
 
 std::size_t HtslibBcfFacade::num_records() const
@@ -133,7 +133,7 @@ std::size_t HtslibBcfFacade::num_records(const GenomicRegion& region) const
     return num_records(sr);
 }
 
-std::vector<VcfRecord> HtslibBcfFacade::fetch_records()
+std::vector<VcfRecord> HtslibBcfFacade::fetch_records(Unpack level)
 {
     auto n_records = num_records();
     
@@ -143,10 +143,10 @@ std::vector<VcfRecord> HtslibBcfFacade::fetch_records()
         throw std::runtime_error {"Failed to open file " + file_path_.string()};
     }
     
-    return fetch_records(sr, n_records);
+    return fetch_records(sr, level, n_records);
 }
 
-std::vector<VcfRecord> HtslibBcfFacade::fetch_records(const GenomicRegion& region)
+std::vector<VcfRecord> HtslibBcfFacade::fetch_records(const GenomicRegion& region, Unpack level)
 {
     auto n_records = num_records(region);
     
@@ -158,7 +158,7 @@ std::vector<VcfRecord> HtslibBcfFacade::fetch_records(const GenomicRegion& regio
         throw std::runtime_error {"Failed to open file " + file_path_.string()};
     }
     
-    return fetch_records(sr, n_records);
+    return fetch_records(sr, level, n_records);
 }
 
 auto get_hts_tag_type(const std::string& tag)
@@ -248,7 +248,7 @@ void HtslibBcfFacade::write_record(const VcfRecord& record)
     set_filters(header_.get(), r, record.get_filters());
     set_info(header_.get(), r, record);
     
-    if (record.has_sample_data()) {
+    if (record.num_samples() > 0) {
         set_samples(header_.get(), r, record);
     }
     
@@ -573,7 +573,7 @@ void set_samples(bcf_hdr_t* header, bcf1_t* dest, const VcfRecord& source)
     
     int num_samples {static_cast<int>(source.num_samples())};
     
-    if (source.has_genotype_data()) {
+    if (source.has_genotypes()) {
         int ngt {num_samples * static_cast<int>(source.sample_ploidy())};
         int* gts {new int[ngt]};
         
@@ -656,7 +656,7 @@ std::size_t HtslibBcfFacade::num_records(HtsBcfSrPtr& sr) const
     return result;
 }
 
-std::vector<VcfRecord> HtslibBcfFacade::fetch_records(HtsBcfSrPtr& sr, std::size_t num_records)
+std::vector<VcfRecord> HtslibBcfFacade::fetch_records(HtsBcfSrPtr& sr, Unpack level, std::size_t num_records)
 {
     bcf1_t* record; // points into sr - don't need to delete
     
@@ -669,7 +669,7 @@ std::vector<VcfRecord> HtslibBcfFacade::fetch_records(HtsBcfSrPtr& sr, std::size
     while (bcf_sr_next_line(sr.get())) {
         record = bcf_sr_get_line(sr.get(), 0);
         
-        bcf_unpack(record, BCF_UN_ALL);
+        bcf_unpack(record, (level == Unpack::All) ? BCF_UN_ALL : BCF_UN_SHR);
         
         auto chrom  = get_chrom(header_.get(), record);
         auto pos    = static_cast<GenomicRegion::SizeType>(get_pos(header_.get(), record));
@@ -680,7 +680,7 @@ std::vector<VcfRecord> HtslibBcfFacade::fetch_records(HtsBcfSrPtr& sr, std::size
         auto filter = get_filter(header_.get(), record);
         auto info   = get_info(header_.get(), record);
         
-        if (has_samples(header_.get())) {
+        if (level == Unpack::All && has_samples(header_.get())) {
             auto format  = get_format(header_.get(), record);
             auto samples = get_samples(header_.get(), record, format);
             result.emplace_back(chrom, pos, std::move(id), std::move(ref), std::move(alt), qual,

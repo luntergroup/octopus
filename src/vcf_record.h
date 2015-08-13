@@ -64,11 +64,10 @@ public:
     
     // sample related functions
     bool has_format(const KeyType& key) const noexcept;
-    bool has_sample_data() const noexcept;
+    unsigned format_cardinality(const KeyType& key) const noexcept;
+    const std::vector<KeyType>& get_format() const noexcept;
     unsigned num_samples() const noexcept;
-    
-    // genotype related functions
-    bool has_genotype_data() const noexcept;
+    bool has_genotypes() const noexcept;
     unsigned sample_ploidy() const noexcept;
     bool is_sample_phased(const SampleIdType& sample) const;
     bool is_homozygous(const SampleIdType& sample) const;
@@ -78,9 +77,6 @@ public:
     bool has_ref_allele(const SampleIdType& sample) const;
     bool has_alt_allele(const SampleIdType& sample) const;
     
-    unsigned format_cardinality(const KeyType& key) const noexcept;
-    
-    const std::vector<KeyType>& get_format() const noexcept;
     const std::vector<std::string>& get_sample_value(const SampleIdType& sample, const KeyType& key) const;
     
     friend std::ostream& operator<<(std::ostream& os, const VcfRecord& record);
@@ -176,21 +172,30 @@ public:
     Builder& set_chromosome(const std::string& chromosome);
     Builder& set_position(SizeType position);
     Builder& set_id(const std::string& id);
+    Builder& set_ref_allele(const SequenceType& ref_allele);
+    Builder& set_alt_allele(const SequenceType& alt_allele); // if just one
+    Builder& set_alt_alleles(const std::vector<SequenceType>& alt_alleles);
+    Builder& set_quality(QualityType quality);
+    Builder& set_filters(const std::vector<KeyType>& filters);
+    Builder& add_info(const KeyType& key, const std::vector<std::string>& values);
+    Builder& set_format(const std::vector<KeyType>& format);
+    Builder& add_genotype(const SampleIdType& sample, const std::vector<SequenceType>& alleles, bool is_phased);
+    Builder& add_genotype_field(const SampleIdType& sample, const KeyType& key, const std::vector<std::string>& values);
+    
+    VcfRecord build() const;
     
 private:
     std::string chromosome_ = ".";
     SizeType position_ = 0;
     std::string id_ = ".";
     SequenceType ref_allele_ = ".";
-    std::vector<SequenceType> alt_alleles_;
+    std::vector<SequenceType> alt_alleles_ = {"."};
     QualityType quality_ = 0;
-    std::vector<KeyType> filters_;
-    std::unordered_map<KeyType, std::vector<std::string>> info_;
-    
-    // optional fields
-    std::vector<KeyType> format_;
-    std::unordered_map<SampleIdType, Genotype> genotypes_;
-    std::unordered_map<SampleIdType, std::unordered_map<KeyType, std::vector<std::string>>> samples_;
+    std::vector<KeyType> filters_ = {"PASS"};
+    std::unordered_map<KeyType, std::vector<std::string>> info_ = {};
+    std::vector<KeyType> format_ = {};
+    std::unordered_map<SampleIdType, Genotype> genotypes_ = {};
+    std::unordered_map<SampleIdType, std::unordered_map<KeyType, std::vector<std::string>>> samples_ = {};
 };
 
 #endif /* defined(__Octopus__vcf_record__) */

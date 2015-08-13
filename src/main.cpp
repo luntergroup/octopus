@@ -27,6 +27,7 @@
 #include "variant_file_reader.h"
 #include "variant_file_factory.h"
 #include "vcf_header.h"
+#include "vcf_type.h"
 #include "vcf_record.h"
 #include "vcf_reader.h"
 #include "vcf_writer.h"
@@ -57,7 +58,7 @@ std::vector<Variant> fetch_variants(const GenomicRegion& region, VcfReader& read
     auto batches = get_batch_regions(region, reader, max_batch_size);
     
     for (const auto& batch : batches) {
-        auto vcf_records = reader.fetch_records(batch);
+        auto vcf_records = reader.fetch_records(batch, VcfReader::Unpack::AllButSamples);
         for (const auto& record : vcf_records) {
             for (const auto& alt_allele : record.get_alt_alleles()) {
                 result.emplace_back(record.get_chromosome_name(), record.get_position(), record.get_ref_allele(), alt_allele);
@@ -86,19 +87,23 @@ void test3()
 {
     VcfReader reader {sample_vcf};
     
-    auto header = reader.fetch_header();
+    //auto header = reader.fetch_header();
+    
+    auto header = VcfHeader::Builder().add_info("DP", "1", "Integer", "Total Depth").build();
+    
+    cout << header << endl;
     
     GenomicRegion region {"X", 2000000, 2010000};
     
-    auto variants = fetch_variants(region, reader);
-    
-    for (const auto& variant : variants) {
-        cout << variant << endl;
-    }
+//    auto variants = fetch_variants(region, reader);
+//    
+//    for (const auto& variant : variants) {
+//        cout << variant << endl;
+//    }
     
     //cout << reader.num_records(region) << endl;
     
-    //auto records = reader.fetch_records(region);
+    //auto records = reader.fetch_records(VcfReader::Unpack::AllButSamples);
     
 //    VcfWriter writer {"/Users/dcooke/test.vcf.gz"};
 //    
@@ -108,26 +113,9 @@ void test3()
 //    }
 }
 
-#include <boost/bimap.hpp>
-#include <boost/bimap/unordered_set_of.hpp>
-
-void test_bimap()
-{
-    using Bimap = boost::bimap<boost::bimaps::unordered_set_of<std::string>, boost::bimaps::unordered_set_of<int>>;
-    
-    using value_t = Bimap::value_type;
-    
-    Bimap map {};
-    
-    map.insert(value_t {"hello", 10});
-    map.insert(value_t {"world", 20});
-    
-    cout << map.left.find("hello")->second << endl;
-}
-
 int main(int argc, const char **argv)
 {
-    test_bimap();
+    test3();
 //    auto options = Octopus::parse_options(argc, argv);
 //    
 //    if (options.second) {

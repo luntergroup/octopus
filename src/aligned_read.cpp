@@ -278,6 +278,30 @@ AlignedRead splice(const AlignedRead& read, const GenomicRegion& region)
     };
 }
 
+bool operator==(const AlignedRead& lhs, const AlignedRead& rhs)
+{
+    return lhs.get_mapping_quality() == rhs.get_mapping_quality() &&
+            lhs.get_region() == rhs.get_region() &&
+            lhs.get_cigar_string() == rhs.get_cigar_string();
+}
+
+bool operator<(const AlignedRead& lhs, const AlignedRead& rhs)
+{
+    // This check is required for consistency with operator==
+    if (lhs.get_region() == rhs.get_region()) {
+        return (lhs.get_mapping_quality() == rhs.get_mapping_quality()) ?
+        lhs.get_cigar_string() < rhs.get_cigar_string() :
+        lhs.get_mapping_quality() < rhs.get_mapping_quality();
+    } else {
+        return lhs.get_region() < rhs.get_region();
+    }
+}
+
+bool operator==(const AlignedRead::NextSegment& lhs, const AlignedRead::NextSegment& rhs)
+{
+    return lhs.get_contig_name() == rhs.get_contig_name() && lhs.get_begin() == rhs.get_begin();
+}
+
 std::ostream& operator<<(std::ostream& os, const AlignedRead::Qualities& qualities)
 {
     std::transform(std::cbegin(qualities), std::cend(qualities),

@@ -28,20 +28,18 @@
 class VcfHeader
 {
 public:
+    class Builder;
+    
     VcfHeader()  = default;
-    VcfHeader(std::string file_format);
+    explicit VcfHeader(std::string file_format);
+    template <typename T, typename U, typename B, typename S>
+    explicit VcfHeader(T&& file_format, U&& samples, B&& basic_fields, S&& structured_fields);
     ~VcfHeader() = default;
     
     VcfHeader(const VcfHeader&)            = default;
     VcfHeader& operator=(const VcfHeader&) = default;
     VcfHeader(VcfHeader&&)                 = default;
     VcfHeader& operator=(VcfHeader&&)      = default;
-    
-    void set_file_format(std::string format);
-    void put_sample(std::string sample);
-    void put_samples(std::vector<std::string> samples);
-    void put_basic_field(std::string key, std::string value); // key=value
-    void put_structured_field(std::string tag, std::unordered_map<std::string, std::string> values); // TAG=<A=..,B=..>
     
     const std::string& get_file_format() const noexcept;
     unsigned get_num_samples() const noexcept;
@@ -52,7 +50,8 @@ public:
     std::vector<std::string> get_basic_field_keys() const;
     std::vector<std::string> get_structured_field_tags() const;
     const std::string& get_basic_field_value(const std::string& key) const;
-    const std::string& get_structured_field_value(const std::string& tag, const std::string& id_key, const std::string& id_value, const std::string& lookup_key) const;
+    const std::string& get_structured_field_value(const std::string& tag, const std::string& id_key,
+                                                  const std::string& id_value, const std::string& lookup_key) const;
     
     const std::unordered_map<std::string, std::string>& get_basic_fields() const noexcept;
     std::vector<std::unordered_map<std::string, std::string>> get_structured_fields(const std::string& tag) const;
@@ -68,8 +67,16 @@ private:
     // optional lines
     std::unordered_map<std::string, std::string> basic_fields_;
     std::unordered_multimap<std::string, std::unordered_map<std::string, std::string>> structured_fields_;
-    //std::unordered_map<std::string, std::string> structured_field_unique_key_;
 };
+
+template <typename T, typename U, typename B, typename S>
+VcfHeader::VcfHeader(T&& file_format, U&& samples, B&& basic_fields, S&& structured_fields)
+:
+file_format_ {std::forward<T>(file_format)},
+samples_ {std::forward<U>(samples)},
+basic_fields_ {std::forward<B>(basic_fields)},
+structured_fields_ {std::forward<S>(structured_fields)}
+{}
 
 const std::string& get_id_field_value(const VcfHeader& header, const std::string& tag, const std::string& id_value, const std::string& lookup_key);
 const std::string& get_id_field_type(const VcfHeader& header, const std::string& tag, const std::string& id_value);
@@ -88,5 +95,32 @@ class VcfRecord;
 unsigned get_field_cardinality(const std::string& key, const VcfRecord& record);
 
 std::ostream& operator<<(std::ostream& os, const VcfHeader& header);
+
+class VcfHeader::Builder
+{
+public:
+    Builder() = default;
+    
+    Builder& set_file_format(std::string file_format);
+    Builder& add_sample(std::string sample);
+    Builder& set_samples(std::vector<std::string> samples);
+    Builder& add_basic_field(std::string key, std::string value);
+    Builder& add_structured_field(std::string tag, std::unordered_map<std::string, std::string> values);
+    
+    Builder& add_info(std::string id, std::string number, std::string type, std::string description,
+                      std::unordered_map<std::string, std::string> other_values = {});
+    Builder& add_filter(std::string id, std::string description,
+                        std::unordered_map<std::string, std::string> other_values = {});
+    Builder& add_format(std::string id, std::string number, std::string type, std::string description,
+                        std::unordered_map<std::string, std::string> other_values = {});
+    
+    VcfHeader build() const;
+    
+private:
+    std::string file_format_ = "VCFv4.2";
+    std::vector<std::string> samples_ = {};
+    std::unordered_map<std::string, std::string> basic_fields_ = {};
+    std::unordered_multimap<std::string, std::unordered_map<std::string, std::string>> structured_fields_ = {};
+};
 
 #endif /* defined(__Octopus__vcf_header__) */

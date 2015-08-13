@@ -34,8 +34,10 @@ auto htslib_bcf1_deleter       = [] (bcf1_t* bcf1) { bcf_destroy(bcf1); };
 class HtslibBcfFacade
 {
 public:
+    enum class Unpack { All, AllButSamples };
+    
     HtslibBcfFacade()  = delete;
-    explicit HtslibBcfFacade(const fs::path& file_path, const std::string& mode="r");
+    explicit HtslibBcfFacade(const fs::path& file_path, const std::string& mode = "r");
     ~HtslibBcfFacade() = default;
     
     HtslibBcfFacade(const HtslibBcfFacade&)            = default;
@@ -46,8 +48,8 @@ public:
     VcfHeader fetch_header();
     std::size_t num_records() const;
     std::size_t num_records(const GenomicRegion& region) const;
-    std::vector<VcfRecord> fetch_records(); // fetches all records
-    std::vector<VcfRecord> fetch_records(const GenomicRegion& region);
+    std::vector<VcfRecord> fetch_records(Unpack level = Unpack::All); // fetches all records
+    std::vector<VcfRecord> fetch_records(const GenomicRegion& region, Unpack level = Unpack::All);
     
     void write_header(const VcfHeader& header);
     void write_record(const VcfRecord& record);
@@ -63,7 +65,7 @@ private:
     std::vector<std::string> samples_;
     
     std::size_t num_records(HtsBcfSrPtr& sr) const;
-    std::vector<VcfRecord> fetch_records(HtsBcfSrPtr& sr, std::size_t num_records = 0);
+    std::vector<VcfRecord> fetch_records(HtsBcfSrPtr& sr, Unpack level, std::size_t num_records = 0);
 };
 
 #endif /* defined(__Octopus__htslib_bcf_facade__) */
