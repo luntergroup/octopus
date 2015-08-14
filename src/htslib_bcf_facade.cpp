@@ -238,9 +238,15 @@ void set_samples(bcf_hdr_t* header, bcf1_t* dest, const VcfRecord& source);
 
 void HtslibBcfFacade::write_record(const VcfRecord& record)
 {
+    const auto& contig = record.get_chromosome_name();
+    
+    if (bcf_hdr_get_hrec(header_.get(), BCF_HL_CTG, "ID", contig.c_str(), nullptr) == nullptr) {
+        throw std::runtime_error {"Required contig header line missing for contig " + contig};
+    }
+    
     auto r = bcf_init();
     
-    set_chrom(header_.get(), r, record.get_chromosome_name());
+    set_chrom(header_.get(), r, contig);
     set_pos(header_.get(), r, record.get_position());
     set_id(header_.get(), r, record.get_id());
     set_alleles(header_.get(), r, record.get_ref_allele(), record.get_alt_alleles());

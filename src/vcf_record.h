@@ -180,6 +180,7 @@ public:
     Builder& add_info(const KeyType& key, const std::vector<std::string>& values);
     Builder& set_format(const std::vector<KeyType>& format);
     Builder& add_genotype(const SampleIdType& sample, const std::vector<SequenceType>& alleles, bool is_phased);
+    Builder& add_genotype(const SampleIdType& sample, const std::vector<unsigned>& alleles, bool is_phased);
     Builder& add_genotype_field(const SampleIdType& sample, const KeyType& key, const std::vector<std::string>& values);
     
     VcfRecord build() const;

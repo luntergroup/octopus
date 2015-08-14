@@ -297,11 +297,17 @@ void parse_sample(const std::string& column, const VcfRecord::SampleIdType& samp
     
     if (format.front() == "GT") {
         const std::string& genotype = values.front();
-        if (genotype.find_first_of('|') != std::string::npos) {
-            rb.add_genotype(sample, split(genotype, '|'), true);
-        } else {
-            rb.add_genotype(sample, split(genotype, '/'), false);
-        }
+        bool is_phased {(genotype.find_first_of('|') != std::string::npos)};
+        auto alleles = split(genotype, (is_phased) ? '|' : '/');
+        
+        std::vector<unsigned> allele_numbers {};
+        allele_numbers.reserve(alleles.size());
+        std::transform(alleles.cbegin(), alleles.cend(), std::back_inserter(allele_numbers),
+                       [] (const std::string& a) {
+                           return static_cast<unsigned>(std::stoul(a));
+                       });
+        
+        rb.add_genotype(sample, allele_numbers, is_phased);
     }
     
     auto key_it = std::cbegin(format);
