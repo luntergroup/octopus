@@ -109,7 +109,7 @@ VcfHeader HtslibBcfFacade::fetch_header()
     return hb.build_once();
 }
 
-std::size_t HtslibBcfFacade::num_records() const
+std::size_t HtslibBcfFacade::num_records()
 {
     HtsBcfSrPtr sr {bcf_sr_init(), htslib_bcf_srs_deleter};
     
@@ -120,7 +120,7 @@ std::size_t HtslibBcfFacade::num_records() const
     return num_records(sr);
 }
 
-std::size_t HtslibBcfFacade::num_records(const GenomicRegion& region) const
+std::size_t HtslibBcfFacade::num_records(const GenomicRegion& region)
 {
     HtsBcfSrPtr sr {bcf_sr_init(), htslib_bcf_srs_deleter};
     

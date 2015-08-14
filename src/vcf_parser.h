@@ -14,6 +14,7 @@
 #include <fstream>
 #include <boost/filesystem/path.hpp>
 
+#include "i_vcf_reader_impl.h"
 #include "vcf_header.h"
 
 namespace fs = boost::filesystem;
@@ -21,25 +22,22 @@ namespace fs = boost::filesystem;
 class GenomicRegion;
 class VcfRecord;
 
-class VcfParser
+class VcfParser : public IVcfReaderImpl
 {
 public:
-    enum class Unpack { All, AllButSamples };
-    
     VcfParser() = delete;
     explicit VcfParser(const fs::path& file_path);
-    ~VcfParser() = default;
     
     VcfParser(const VcfParser&)            = default;
     VcfParser& operator=(const VcfParser&) = default;
     VcfParser(VcfParser&&)                 = default;
     VcfParser& operator=(VcfParser&&)      = default;
     
-    VcfHeader fetch_header();
-    std::size_t num_records();
-    std::size_t num_records(const GenomicRegion& region);
-    std::vector<VcfRecord> fetch_records(Unpack level = Unpack::All); // fetches all records
-    std::vector<VcfRecord> fetch_records(const GenomicRegion& region, Unpack level = Unpack::All);
+    VcfHeader fetch_header() override;
+    std::size_t num_records() override;
+    std::size_t num_records(const GenomicRegion& region) override;
+    std::vector<VcfRecord> fetch_records(Unpack level = Unpack::All) override;
+    std::vector<VcfRecord> fetch_records(const GenomicRegion& region, Unpack level = Unpack::All) override;
     
 private:
     fs::path file_path_;
@@ -47,6 +45,8 @@ private:
     VcfHeader header_;
     const std::vector<std::string> samples_;
     const std::streampos first_record_pos_; // must go after header_!
+    
+    void reset_vcf();
 };
 
 #endif /* defined(__Octopus__vcf_parser__) */

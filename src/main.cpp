@@ -88,36 +88,40 @@ void test3()
 {
     GenomicRegion region {"X", 2000000, 2010000};
     
-    VcfReader reader {sample_vcf};
-    VcfParser parser {"/Users/danielcooke/Genomics/sample_vcf/CEU.low_coverage.2010_07.xchr.genotypes.vcf"};
+    //VcfReader reader {sample_vcf};
+    VcfReader reader {"/Users/danielcooke/Genomics/sample_vcf/CEU.low_coverage.2010_07.xchr.genotypes.vcf"};
     
     auto header = reader.fetch_header();
-    //auto header = VcfHeader::Builder(parser.fetch_header()).add_contig("X").build_once();
+    //auto header = VcfHeader::Builder(reader.fetch_header()).add_contig("X").build_once();
     
     auto records = reader.fetch_records(region);
-    //auto records = parser.fetch_records(region);
     
-    VcfWriter writer {"/Users/danielcooke/test.vcf.gz"};
-    writer.write(header);
-    for (const auto& record : records) {
-        writer.write(record);
+    cout << records.front() << endl;
+    
+//    VcfWriter writer {"/Users/danielcooke/test.vcf.gz"};
+//    writer.write(header);
+//    for (const auto& record : records) {
+//        writer.write(record);
+//    }
+}
+
+void test4()
+{
+    GenomicRegion region {"X", 2000000, 2010000};
+    
+    //VcfReader reader {sample_vcf};
+    VcfReader reader {"/Users/danielcooke/Genomics/sample_vcf/CEU.low_coverage.2010_07.xchr.genotypes.vcf"};
+    
+    auto variants = fetch_variants(region, reader);
+    
+    for (const auto& variant : variants) {
+        cout << variant << endl;
     }
-    
-    //    auto variants = fetch_variants(region, reader);
-    //
-    //    for (const auto& variant : variants) {
-    //        cout << variant << endl;
-    //    }
-    
-    //    cout << reader.num_records(region) << endl;
-    //    cout << parser.num_records(region) << endl;
-    
-    //auto records = reader.fetch_records(VcfReader::Unpack::AllButSamples);
 }
 
 int main(int argc, const char **argv)
 {
-    test3();
+    test4();
 //    auto options = Octopus::parse_options(argc, argv);
 //    
 //    if (options.second) {

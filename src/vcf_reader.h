@@ -11,9 +11,10 @@
 
 #include <vector>
 #include <cstddef>
+#include <memory>
 #include <boost/filesystem/path.hpp>
 
-#include "htslib_bcf_facade.h"
+#include "i_vcf_reader_impl.h"
 
 class VcfHeader;
 class VcfRecord;
@@ -45,7 +46,7 @@ public:
     
 private:
     fs::path file_path_;
-    HtslibBcfFacade reader_;
+    std::unique_ptr<IVcfReaderImpl> reader_;
 };
 
 #endif /* defined(__Octopus__vcf_reader__) */
