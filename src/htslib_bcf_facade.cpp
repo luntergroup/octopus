@@ -106,7 +106,7 @@ VcfHeader HtslibBcfFacade::fetch_header()
         }
     }
     
-    return hb.build();
+    return hb.build_once();
 }
 
 std::size_t HtslibBcfFacade::num_records() const

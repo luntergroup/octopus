@@ -28,7 +28,7 @@ const std::string& VcfHeader::get_file_format() const noexcept
     return file_format_;
 }
 
-unsigned VcfHeader::get_num_samples() const noexcept
+unsigned VcfHeader::num_samples() const noexcept
 {
     return static_cast<unsigned>(samples_.size());
 }
@@ -74,6 +74,10 @@ std::vector<std::string> VcfHeader::get_structured_field_tags() const
         return p.first;
     });
     
+    std::sort(result.begin(), result.end());
+    
+    result.erase(std::unique(result.begin(), result.end()), result.end());
+    
     return result;
 }
 
@@ -117,7 +121,8 @@ const std::unordered_multimap<std::string, std::unordered_map<std::string, std::
 
 // non-member methods
 
-const std::string& get_id_field_value(const VcfHeader& header, const std::string& tag, const std::string& id_value, const std::string& lookup_key)
+const std::string& get_id_field_value(const VcfHeader& header, const std::string& tag,
+                                      const std::string& id_value, const std::string& lookup_key)
 {
     return header.get_structured_field_value(tag, "ID", id_value, lookup_key);
 }
@@ -192,6 +197,14 @@ std::ostream& operator<<(std::ostream& os, const VcfHeader& header)
 
 // VcfHeader::Builder
 
+VcfHeader::Builder::Builder(const VcfHeader& header)
+:
+file_format_ {header.file_format_},
+samples_ {header.samples_},
+basic_fields_ {header.basic_fields_},
+structured_fields_ {header.structured_fields_}
+{}
+
 VcfHeader::Builder& VcfHeader::Builder::set_file_format(std::string file_format)
 {
     file_format_ = std::move(file_format);
@@ -220,7 +233,7 @@ VcfHeader::Builder& VcfHeader::Builder::add_basic_field(std::string key, std::st
 
 VcfHeader::Builder& VcfHeader::Builder::add_structured_field(std::string tag, std::unordered_map<std::string, std::string> values)
 {
-    structured_fields_.emplace(tag, values);
+    structured_fields_.emplace(std::move(tag), std::move(values));
     return *this;
 }
 
@@ -261,7 +274,21 @@ VcfHeader::Builder& VcfHeader::Builder::add_format(std::string id, std::string n
     return *this;
 }
 
+VcfHeader::Builder& VcfHeader::Builder::add_contig(std::string id, std::unordered_map<std::string, std::string> other_values)
+{
+    other_values.emplace("ID", std::move(id));
+    
+    structured_fields_.emplace("contig", std::move(other_values));
+    
+    return *this;
+}
+
 VcfHeader VcfHeader::Builder::build() const
 {
     return VcfHeader {file_format_, samples_, basic_fields_, structured_fields_};
+}
+
+VcfHeader VcfHeader::Builder::build_once() noexcept
+{
+    return VcfHeader {std::move(file_format_), std::move(samples_), std::move(basic_fields_), std::move(structured_fields_)};
 }

@@ -183,6 +183,7 @@ public:
     Builder& add_genotype_field(const SampleIdType& sample, const KeyType& key, const std::vector<std::string>& values);
     
     VcfRecord build() const;
+    VcfRecord build_once() noexcept;
     
 private:
     std::string chromosome_ = ".";

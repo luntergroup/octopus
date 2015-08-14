@@ -42,7 +42,7 @@ public:
     VcfHeader& operator=(VcfHeader&&)      = default;
     
     const std::string& get_file_format() const noexcept;
-    unsigned get_num_samples() const noexcept;
+    unsigned num_samples() const noexcept;
     std::vector<std::string> get_samples() const;
     bool has_basic_field(const std::string& key) const noexcept;
     bool has_structured_field(const std::string& tag) const noexcept;
@@ -78,7 +78,8 @@ basic_fields_ {std::forward<B>(basic_fields)},
 structured_fields_ {std::forward<S>(structured_fields)}
 {}
 
-const std::string& get_id_field_value(const VcfHeader& header, const std::string& tag, const std::string& id_value, const std::string& lookup_key);
+const std::string& get_id_field_value(const VcfHeader& header, const std::string& tag,
+                                      const std::string& id_value, const std::string& lookup_key);
 const std::string& get_id_field_type(const VcfHeader& header, const std::string& tag, const std::string& id_value);
 
 VcfType get_typed_value(const VcfHeader& header, const std::string& tag, const std::string& key, const std::string& value);
@@ -100,6 +101,7 @@ class VcfHeader::Builder
 {
 public:
     Builder() = default;
+    Builder(const VcfHeader& header);
     
     Builder& set_file_format(std::string file_format);
     Builder& add_sample(std::string sample);
@@ -113,8 +115,10 @@ public:
                         std::unordered_map<std::string, std::string> other_values = {});
     Builder& add_format(std::string id, std::string number, std::string type, std::string description,
                         std::unordered_map<std::string, std::string> other_values = {});
+    Builder& add_contig(std::string id, std::unordered_map<std::string, std::string> other_values = {});
     
     VcfHeader build() const;
+    VcfHeader build_once() noexcept;
     
 private:
     std::string file_format_ = "VCFv4.2";

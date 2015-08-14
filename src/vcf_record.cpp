@@ -407,3 +407,15 @@ VcfRecord VcfRecord::Builder::build() const
         return VcfRecord {chromosome_, position_, id_, ref_allele_, alt_alleles_, quality_, filters_, info_, format_, genotypes_, samples_};
     }
 }
+
+VcfRecord VcfRecord::Builder::build_once() noexcept
+{
+    if (genotypes_.empty() && samples_.empty()) {
+        return VcfRecord {std::move(chromosome_), position_, std::move(id_), std::move(ref_allele_),
+            std::move(alt_alleles_), quality_, std::move(filters_), std::move(info_)};
+    } else {
+        return VcfRecord {std::move(chromosome_), position_, std::move(id_), std::move(ref_allele_),
+            std::move(alt_alleles_), quality_, std::move(filters_), std::move(info_),
+            std::move(format_), std::move(genotypes_), std::move(samples_)};
+    }
+}

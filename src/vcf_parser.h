@@ -36,18 +36,17 @@ public:
     VcfParser& operator=(VcfParser&&)      = default;
     
     VcfHeader fetch_header();
-    std::size_t num_records() const;
-    std::size_t num_records(const GenomicRegion& region) const;
+    std::size_t num_records();
+    std::size_t num_records(const GenomicRegion& region);
     std::vector<VcfRecord> fetch_records(Unpack level = Unpack::All); // fetches all records
     std::vector<VcfRecord> fetch_records(const GenomicRegion& region, Unpack level = Unpack::All);
     
 private:
     fs::path file_path_;
     std::ifstream file_;
-    
     VcfHeader header_;
-    
-    void parse();
+    const std::vector<std::string> samples_;
+    const std::streampos first_record_pos_; // must go after header_!
 };
 
 #endif /* defined(__Octopus__vcf_parser__) */

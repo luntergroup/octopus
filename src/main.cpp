@@ -31,6 +31,7 @@
 #include "vcf_record.h"
 #include "vcf_reader.h"
 #include "vcf_writer.h"
+#include "vcf_parser.h"
 
 using std::cout;
 using std::endl;
@@ -85,32 +86,35 @@ void test2()
 
 void test3()
 {
-    VcfReader reader {sample_vcf};
-    
-    //auto header = reader.fetch_header();
-    
-    auto header = VcfHeader::Builder().add_info("DP", "1", "Integer", "Total Depth").build();
-    
-    cout << header << endl;
-    
     GenomicRegion region {"X", 2000000, 2010000};
     
-//    auto variants = fetch_variants(region, reader);
-//    
-//    for (const auto& variant : variants) {
-//        cout << variant << endl;
-//    }
+    VcfReader reader {sample_vcf};
+    VcfParser parser {"/Users/danielcooke/Genomics/sample_vcf/CEU.low_coverage.2010_07.xchr.genotypes.vcf"};
     
-    //cout << reader.num_records(region) << endl;
+    auto header = reader.fetch_header();
+    //auto header = VcfHeader::Builder(parser.fetch_header()).add_contig("X").build_once();
     
-    //auto records = reader.fetch_records(VcfReader::Unpack::AllButSamples);
+    //auto records = reader.fetch_records(region);
+    auto records = parser.fetch_records(region);
     
-//    VcfWriter writer {"/Users/dcooke/test.vcf.gz"};
-//    
+    cout << records.front().num_alt_alleles() << endl;
+    
+//    VcfWriter writer {"/Users/danielcooke/test.vcf.gz"};
 //    writer.write(header);
 //    for (const auto& record : records) {
 //        writer.write(record);
 //    }
+    
+    //    auto variants = fetch_variants(region, reader);
+    //
+    //    for (const auto& variant : variants) {
+    //        cout << variant << endl;
+    //    }
+    
+    //    cout << reader.num_records(region) << endl;
+    //    cout << parser.num_records(region) << endl;
+    
+    //auto records = reader.fetch_records(VcfReader::Unpack::AllButSamples);
 }
 
 int main(int argc, const char **argv)
