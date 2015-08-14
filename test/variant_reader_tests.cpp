@@ -32,5 +32,5 @@ BOOST_AUTO_TEST_CASE(can_read_vcf_files)
     
     auto records = vcf_reader.fetch_records(region);
     
-    for (const auto& record : records) cout << record << endl;
+    //for (const auto& record : records) cout << record << endl;
 }

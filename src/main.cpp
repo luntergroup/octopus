@@ -89,16 +89,15 @@ void test3()
     GenomicRegion region {"X", 2000000, 2010000};
     
     VcfReader reader {sample_vcf};
-    VcfParser parser {"/Users/dcooke/Genomics/sample_vcf/CEU.low_coverage.2010_07.xchr.genotypes.vcf"};
+    VcfParser parser {"/Users/danielcooke/Genomics/sample_vcf/CEU.low_coverage.2010_07.xchr.genotypes.vcf"};
     
-    //auto header = reader.fetch_header();
-    auto header = VcfHeader::Builder(parser.fetch_header()).add_contig("X").build_once();
-    //auto header = parser.fetch_header();
+    auto header = reader.fetch_header();
+    //auto header = VcfHeader::Builder(parser.fetch_header()).add_contig("X").build_once();
     
-    //auto records = reader.fetch_records(region);
-    auto records = parser.fetch_records(region);
+    auto records = reader.fetch_records(region);
+    //auto records = parser.fetch_records(region);
     
-    VcfWriter writer {"/Users/dcooke/test.vcf.gz"};
+    VcfWriter writer {"/Users/danielcooke/test.vcf.gz"};
     writer.write(header);
     for (const auto& record : records) {
         writer.write(record);
