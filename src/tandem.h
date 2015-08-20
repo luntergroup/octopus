@@ -20,9 +20,22 @@
 
 using std::size_t;
 
+struct StringRun
+{
+    StringRun() = default;
+    StringRun(size_t pos, size_t length, size_t period) : pos {pos}, length {length}, period {period} {}
+    size_t pos, length, period;
+};
+
+inline bool operator==(const StringRun& lhs, const StringRun& rhs)
+{
+    return lhs.pos == rhs.pos && lhs.length == rhs.length && lhs.period == rhs.period;
+}
+inline bool operator!=(const StringRun& lhs, const StringRun& rhs) { return !operator==(lhs, rhs); }
+
 // Wrapper for divsufsort
 template <typename T>
-std::vector<size_t> make_suffix_array_fast(const T& str)
+std::vector<size_t> make_suffix_array(const T& str)
 {
     std::vector<int32_t> sa(str.size());
     
@@ -36,27 +49,27 @@ std::vector<size_t> make_suffix_array_fast(const T& str)
 }
 
 // Naive implementation - O(nlogn)
-template <typename T>
-std::vector<size_t> make_suffix_array(const T& str)
-{
-    std::vector<std::pair<T, size_t>> suffixes {};
-    suffixes.reserve(str.size());
-    
-    for (size_t i {}; i < str.size(); ++i) {
-        suffixes.emplace_back(str.substr(i), i);
-    }
-    
-    std::sort(suffixes.begin(), suffixes.end());
-    
-    std::vector<size_t> result {};
-    result.reserve(str.size());
-    
-    for (auto& suffix : suffixes) {
-        result.push_back(suffix.second);
-    }
-    
-    return result;
-}
+//template <typename T>
+//std::vector<size_t> make_suffix_array(const T& str)
+//{
+//    std::vector<std::pair<T, size_t>> suffixes {};
+//    suffixes.reserve(str.size());
+//    
+//    for (size_t i {}; i < str.size(); ++i) {
+//        suffixes.emplace_back(str.substr(i), i);
+//    }
+//    
+//    std::sort(suffixes.begin(), suffixes.end());
+//    
+//    std::vector<size_t> result {};
+//    result.reserve(str.size());
+//    
+//    for (auto& suffix : suffixes) {
+//        result.push_back(suffix.second);
+//    }
+//    
+//    return result;
+//}
 
 // Naive implementation, but can be fast in practice according to Fischer (2011)
 template <typename T>
@@ -88,7 +101,7 @@ struct LZBlock
 template <typename T>
 std::vector<LZBlock> lempel_ziv_factorisation(const T& str)
 {
-    auto sa  = make_suffix_array_fast(str);
+    auto sa  = make_suffix_array(str);
     auto lcp = make_longest_common_prefix_array(str, sa);
     auto lcf = make_longest_common_factor_array(std::move(sa), std::move(lcp));
     
@@ -112,7 +125,7 @@ std::vector<LZBlock> lempel_ziv_factorisation(const T& str)
 template <typename T>
 std::pair<std::vector<LZBlock>, std::vector<size_t>> lempel_ziv_factorisation_with_backpointers(const T& str)
 {
-    auto sa  = make_suffix_array_fast(str);
+    auto sa  = make_suffix_array(str);
     auto lcp = make_longest_common_prefix_array(str, sa);
     
     std::vector<size_t> lpf, prev_occ;
@@ -137,19 +150,6 @@ std::pair<std::vector<LZBlock>, std::vector<size_t>> lempel_ziv_factorisation_wi
     
     return {lz_blocks, backpointers};
 }
-
-struct StringRun
-{
-    StringRun() = default;
-    StringRun(size_t pos, size_t length, size_t period) : pos {pos}, length {length}, period {period} {}
-    size_t pos, length, period;
-};
-
-inline bool operator==(const StringRun& lhs, const StringRun& rhs)
-{
-    return lhs.pos == rhs.pos && lhs.length == rhs.length && lhs.period == rhs.period;
-}
-inline bool operator!=(const StringRun& lhs, const StringRun& rhs) { return !operator==(lhs, rhs); }
 
 // Llie et al (2010) show that this direct computation of LCE actually outperforms other O(n) and O(log n)
 // methods in practice
@@ -180,7 +180,8 @@ size_t backward_lce(const T& str, size_t i, size_t j)
 
 // Implements Mains algorithm found in Main (1989)
 template <typename T>
-std::vector<StringRun> find_leftmost_maximal_repetitions(const T& str, const std::vector<LZBlock>& lz_blocks, size_t min_period = 1)
+std::vector<StringRun> find_leftmost_maximal_repetitions(const T& str, const std::vector<LZBlock>& lz_blocks,
+                                                         size_t min_period = 1)
 {
     std::vector<StringRun> result {};
     
@@ -287,7 +288,6 @@ std::vector<StringRun> find_maximal_repetitions(const T& str, size_t min_period 
     prev_lz_block_occurrence.shrink_to_fit();
     
     std::vector<StringRun> result {};
-    
     result.reserve(num_runs);
     
     for (auto& bucket : sorted_buckets) {
@@ -298,7 +298,5 @@ std::vector<StringRun> find_maximal_repetitions(const T& str, size_t min_period 
     
     return result;
 }
-
-
 
 #endif /* defined(__tandem__tandem__) */

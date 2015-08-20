@@ -111,9 +111,9 @@
 		D4907F571A8A2A9B00639203 /* reference_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D4907F561A8A2A9B00639203 /* reference_tests.cpp */; };
 		D4907F5B1A8A374000639203 /* fasta.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D4907F591A8A374000639203 /* fasta.cpp */; };
 		D4907F651A8A6EE600639203 /* reference_genome_factory.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D4907F631A8A6EE600639203 /* reference_genome_factory.cpp */; };
-		D4BEA9FB1B861BE200E53CFD /* divsufsort.c in Sources */ = {isa = PBXBuildFile; fileRef = D4BEA9F71B861BE200E53CFD /* divsufsort.c */; };
-		D4BEA9FC1B861BE200E53CFD /* sssort.c in Sources */ = {isa = PBXBuildFile; fileRef = D4BEA9F81B861BE200E53CFD /* sssort.c */; };
-		D4BEA9FD1B861BE200E53CFD /* trsort.c in Sources */ = {isa = PBXBuildFile; fileRef = D4BEA9F91B861BE200E53CFD /* trsort.c */; };
+		D4BEA9FB1B861BE200E53CFD /* divsufsort.c in Sources */ = {isa = PBXBuildFile; fileRef = D4BEA9F71B861BE200E53CFD /* divsufsort.c */; settings = {COMPILER_FLAGS = "-w"; }; };
+		D4BEA9FC1B861BE200E53CFD /* sssort.c in Sources */ = {isa = PBXBuildFile; fileRef = D4BEA9F81B861BE200E53CFD /* sssort.c */; settings = {COMPILER_FLAGS = "-w"; }; };
+		D4BEA9FD1B861BE200E53CFD /* trsort.c in Sources */ = {isa = PBXBuildFile; fileRef = D4BEA9F91B861BE200E53CFD /* trsort.c */; settings = {COMPILER_FLAGS = "-w"; }; };
 		D4BEA9FE1B861BE200E53CFD /* utils.c in Sources */ = {isa = PBXBuildFile; fileRef = D4BEA9FA1B861BE200E53CFD /* utils.c */; };
 		D4BEAA051B861C1500E53CFD /* tandem.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D4BEAA031B861C1500E53CFD /* tandem.cpp */; };
 /* End PBXBuildFile section */

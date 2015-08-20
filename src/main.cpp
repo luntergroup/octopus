@@ -130,9 +130,23 @@ void test5()
     cout << is_palindromic(std::string {"ACCTAGGT"}) << endl;
 }
 
+void test6()
+{
+    auto reference = make_reference(human_reference_fasta);
+    
+    auto region = parse_region("1:1000000-1500000", reference);
+    
+    auto tandem_repeats = find_exact_tandem_repeats(reference, region, 50);
+    
+//    for (auto r : tandem_repeats) {
+//        cout << reference.get_sequence(r) << endl;
+//    }
+    cout << tandem_repeats.size() << endl;
+}
+
 int main(int argc, const char **argv)
 {
-    test5();
+    test6();
 //    auto options = Octopus::parse_options(argc, argv);
 //    
 //    if (options.second) {

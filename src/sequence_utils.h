@@ -20,6 +20,7 @@
 #include <iostream> // TEST
 
 #include "contig_region.h"
+#include "tandem.h"
 
 template <typename SequenceType>
 bool is_dna(const SequenceType& sequence)
@@ -102,6 +103,29 @@ std::unordered_map<char, std::size_t> count_bases(const SequenceType& sequence)
     }
     
     return result;
+}
+
+std::vector<GenomicRegion> find_exact_tandem_repeats(ReferenceGenome& reference, const GenomicRegion& region,
+                                                     GenomicRegion::SizeType min_repeat_size = 2)
+{
+    auto maximal_repetitions = find_maximal_repetitions(reference.get_sequence(region), min_repeat_size);
+    
+    std::vector<GenomicRegion> result {};
+    result.reserve(maximal_repetitions.size());
+    
+    auto offset = region.get_begin();
+    
+    for (auto& run : maximal_repetitions) {
+        result.emplace_back(region.get_contig_name(), run.pos + offset, run.pos + run.length + offset);
+    }
+    
+    return result;
+}
+
+template <typename SequenceType>
+std::map<ContigRegion, SequenceType> find_tandem_repeats(const SequenceType& sequence, unsigned min_repeat_size = 3)
+{
+    return false;
 }
 
 template <typename SequenceType>
@@ -188,12 +212,6 @@ std::vector<ContigRegion> find_cpg_islands(const SequenceType& sequence)
 //    }
     
     return result;
-}
-
-template <typename SequenceType>
-std::map<ContigRegion, SequenceType> find_tandem_repeats(const SequenceType& sequence, unsigned min_repeat_size = 3)
-{
-    return false;
 }
 
 template <typename SequenceType>
