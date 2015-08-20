@@ -110,6 +110,11 @@
 		D4907F571A8A2A9B00639203 /* reference_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D4907F561A8A2A9B00639203 /* reference_tests.cpp */; };
 		D4907F5B1A8A374000639203 /* fasta.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D4907F591A8A374000639203 /* fasta.cpp */; };
 		D4907F651A8A6EE600639203 /* reference_genome_factory.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D4907F631A8A6EE600639203 /* reference_genome_factory.cpp */; };
+		D4BEA9FB1B861BE200E53CFD /* divsufsort.c in Sources */ = {isa = PBXBuildFile; fileRef = D4BEA9F71B861BE200E53CFD /* divsufsort.c */; };
+		D4BEA9FC1B861BE200E53CFD /* sssort.c in Sources */ = {isa = PBXBuildFile; fileRef = D4BEA9F81B861BE200E53CFD /* sssort.c */; };
+		D4BEA9FD1B861BE200E53CFD /* trsort.c in Sources */ = {isa = PBXBuildFile; fileRef = D4BEA9F91B861BE200E53CFD /* trsort.c */; };
+		D4BEA9FE1B861BE200E53CFD /* utils.c in Sources */ = {isa = PBXBuildFile; fileRef = D4BEA9FA1B861BE200E53CFD /* utils.c */; };
+		D4BEAA051B861C1500E53CFD /* tandem.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D4BEAA031B861C1500E53CFD /* tandem.cpp */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -316,6 +321,16 @@
 		D4907F6A1A8BC06800639203 /* aligned_read.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = aligned_read.h; sourceTree = "<group>"; };
 		D4907F711A8E04B900639203 /* comparable.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = comparable.h; sourceTree = "<group>"; };
 		D4907F731A8E255200639203 /* equitable.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = equitable.h; sourceTree = "<group>"; };
+		D4BEA9F71B861BE200E53CFD /* divsufsort.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = divsufsort.c; sourceTree = "<group>"; };
+		D4BEA9F81B861BE200E53CFD /* sssort.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = sssort.c; sourceTree = "<group>"; };
+		D4BEA9F91B861BE200E53CFD /* trsort.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = trsort.c; sourceTree = "<group>"; };
+		D4BEA9FA1B861BE200E53CFD /* utils.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = utils.c; sourceTree = "<group>"; };
+		D4BEA9FF1B861BF700E53CFD /* config.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = config.h; sourceTree = "<group>"; };
+		D4BEAA001B861BF700E53CFD /* divsufsort_private.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = divsufsort_private.h; sourceTree = "<group>"; };
+		D4BEAA011B861BF700E53CFD /* divsufsort.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = divsufsort.h; sourceTree = "<group>"; };
+		D4BEAA021B861BF700E53CFD /* lfs.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = lfs.h; sourceTree = "<group>"; };
+		D4BEAA031B861C1500E53CFD /* tandem.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = tandem.cpp; path = ../src/tandem.cpp; sourceTree = "<group>"; };
+		D4BEAA041B861C1500E53CFD /* tandem.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = tandem.h; path = ../src/tandem.h; sourceTree = "<group>"; };
 		D4E41DA11AD801EF0010D25D /* mappable.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = mappable.h; sourceTree = "<group>"; };
 		D4E41DA21AD80C1B0010D25D /* mappable_algorithms.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = mappable_algorithms.h; sourceTree = "<group>"; };
 		D4E41DA31AD81C390010D25D /* allele.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = allele.h; sourceTree = "<group>"; };
@@ -475,6 +490,7 @@
 		CAA4DC2C1A8219CD00DD3E9A /* include */ = {
 			isa = PBXGroup;
 			children = (
+				D4BEA9F61B861BAF00E53CFD /* tandem */,
 				CAA4DC671A8ACE9B00DD3E9A /* bioio.h */,
 			);
 			path = include;
@@ -723,6 +739,23 @@
 			name = io;
 			sourceTree = "<group>";
 		};
+		D4BEA9F61B861BAF00E53CFD /* tandem */ = {
+			isa = PBXGroup;
+			children = (
+				D4BEAA041B861C1500E53CFD /* tandem.h */,
+				D4BEAA031B861C1500E53CFD /* tandem.cpp */,
+				D4BEA9FF1B861BF700E53CFD /* config.h */,
+				D4BEAA001B861BF700E53CFD /* divsufsort_private.h */,
+				D4BEAA011B861BF700E53CFD /* divsufsort.h */,
+				D4BEAA021B861BF700E53CFD /* lfs.h */,
+				D4BEA9F71B861BE200E53CFD /* divsufsort.c */,
+				D4BEA9F81B861BE200E53CFD /* sssort.c */,
+				D4BEA9F91B861BE200E53CFD /* trsort.c */,
+				D4BEA9FA1B861BE200E53CFD /* utils.c */,
+			);
+			name = tandem;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -788,6 +821,7 @@
 				CA5C8E021ADC4CBB000BA230 /* haplotype_benchmarks.cpp in Sources */,
 				CA4551701AEB09B800FDAAE8 /* 1000G_test18.cpp in Sources */,
 				CAE3E2BB1AA371F500C01B2C /* variant_file_factory.cpp in Sources */,
+				D4BEA9FD1B861BE200E53CFD /* trsort.c in Sources */,
 				CA0B46751AE8648D00158BBA /* 1000G_test5.cpp in Sources */,
 				CABA37821A8FA49800BBE598 /* read_manager.cpp in Sources */,
 				D413B03F1B590C2B007EFDE0 /* search_region_benchmarks.cpp in Sources */,
@@ -802,6 +836,7 @@
 				D463C19F1B062F9300739A66 /* variant_writer_tests.cpp in Sources */,
 				D42061131ACC3D2B00D11553 /* variational_bayes_genotype_model_tests.cpp in Sources */,
 				CAE3E2CB1AAB42C900C01B2C /* read_filter_tests.cpp in Sources */,
+				D4BEAA051B861C1500E53CFD /* tandem.cpp in Sources */,
 				CA28EBF51AABB80E009F8622 /* read_filter_benchmarks.cpp in Sources */,
 				CA4551791AF15D7E00FDAAE8 /* variant_caller.cpp in Sources */,
 				CA45516E1AEB09A500FDAAE8 /* 1000G_test17.cpp in Sources */,
@@ -818,8 +853,10 @@
 				CABA377F1A8FA11000BBE598 /* read_benchmarks.cpp in Sources */,
 				D463C1A41B0A174B00739A66 /* variant.cpp in Sources */,
 				CA4551621AEB06D800FDAAE8 /* 1000G_test11.cpp in Sources */,
+				D4BEA9FC1B861BE200E53CFD /* sssort.c in Sources */,
 				D435E9F91B2B345700945EC7 /* Makefile in Sources */,
 				CA0B467D1AE8EFDA00158BBA /* variational_bayes_genotype_model_benchmarks.cpp in Sources */,
+				D4BEA9FE1B861BE200E53CFD /* utils.c in Sources */,
 				D463C19D1B062F7F00739A66 /* variant_reader_tests.cpp in Sources */,
 				CA0B46821AEA210300158BBA /* 1000G_test9.cpp in Sources */,
 				CAFA19661ABF84AC00F953D9 /* haplotype_tree_tests.cpp in Sources */,
@@ -840,6 +877,7 @@
 				CAEC8E1A1B73ACB9008FC858 /* vcf_type.cpp in Sources */,
 				CA0B466E1AE862B400158BBA /* 1000G_test3.cpp in Sources */,
 				CAD5EC071AD5BBEA00892816 /* genotype_tests.cpp in Sources */,
+				D4BEA9FB1B861BE200E53CFD /* divsufsort.c in Sources */,
 				CA4551661AEB092D00FDAAE8 /* 1000G_test13.cpp in Sources */,
 				D463C18D1AF137EB00739A66 /* input_tests.cpp in Sources */,
 				D463C18A1AEE2EA100739A66 /* search_region_tests.cpp in Sources */,
