@@ -11,10 +11,10 @@
 
 #include <string>
 #include <vector>
+#include <unordered_map>
 #include <cstddef>   // std::size_t
 #include <cstdint>   // std::uint_fast32_t etc
 #include <algorithm> // std::find
-#include <unordered_map>
 #include <stdexcept> // std::runtime_error
 #include <memory>    // std::unique_ptr
 #include <tuple>     // std::pair
@@ -47,6 +47,7 @@ public:
     using SampleIdType       = IReadReaderImpl::SampleIdType;
     using SampleIdToReadsMap = IReadReaderImpl::SampleIdToReadsMap;
     using SizeType           = IReadReaderImpl::SizeType;
+    using ReadGroupIdType    = std::string;
     
     HtslibSamFacade() = delete;
     HtslibSamFacade(const fs::path& file_path);
@@ -58,7 +59,7 @@ public:
     HtslibSamFacade& operator=(HtslibSamFacade&&)      = default;
     
     std::vector<SampleIdType> get_sample_ids() override;
-    std::vector<std::string> get_read_groups_in_sample(const SampleIdType& sample_id) override;
+    std::vector<ReadGroupIdType> get_read_groups_in_sample(const SampleIdType& sample_id) override;
     std::size_t get_num_reads(const GenomicRegion& region) override;
     SampleIdToReadsMap fetch_reads(const GenomicRegion& region) override;
     unsigned get_num_reference_contigs() noexcept override;
@@ -88,21 +89,8 @@ private:
         std::unique_ptr<hts_itr_t, decltype(htslib_iterator_deleter)> hts_iterator_;
         std::unique_ptr<bam1_t, decltype(htslib_bam1_deleter)> hts_bam1_;
         
-        SizeType get_read_start() const noexcept;
-        uint32_t get_sequence_length() const noexcept;
-        SequenceType get_sequence() const;
-        std::vector<AlignedRead::QualityType> get_qualities() const;
-        uint32_t get_cigar_length() const noexcept;
-        CigarString get_cigar_string() const;
-        std::string get_read_group() const;
-        std::string get_read_name() const;
-        AlignedRead::FlagData get_flags() const;
-        AlignedRead::NextSegment::FlagData get_next_segment_flags() const;
+        HtslibSamFacade::ReadGroupIdType get_read_group() const;
     };
-    
-    using ContigNameToHtsTidMap  = std::unordered_map<std::string, HtsTidType>;
-    using HtsTidToContigNameMap  = std::unordered_map<HtsTidType, std::string>;
-    using ReadGroupToSampleIdMap = std::unordered_map<std::string, SampleIdType>;
     
     static constexpr const char* Read_group_tag    {"RG"};
     static constexpr const char* Read_group_id_tag {"ID"};
@@ -112,16 +100,14 @@ private:
     std::unique_ptr<htsFile, decltype(htslib_file_deleter)> hts_file_;
     std::unique_ptr<bam_hdr_t, decltype(htslib_header_deleter)> hts_header_;
     std::unique_ptr<hts_idx_t, decltype(htslib_index_deleter)> hts_index_;
-    ContigNameToHtsTidMap hts_tid_map_;
-    HtsTidToContigNameMap contig_name_map_;
-    ReadGroupToSampleIdMap sample_id_map_;
+    
+    std::unordered_map<std::string, HtsTidType> hts_tid_map_;
+    std::unordered_map<HtsTidType, std::string> contig_name_map_;
+    std::unordered_map<ReadGroupIdType, SampleIdType> sample_id_map_;
     
     void init_maps();
     HtsTidType get_htslib_tid(const std::string& contig_name) const;
     const std::string& get_contig_name(HtsTidType hts_tid) const;
-    bool is_tag_type(const std::string& header_line, const char* tag) const;
-    bool has_tag(const std::string& header_line, const char* tag) const;
-    std::string get_tag_value(const std::string& line, const char* tag) const;
     uint64_t get_num_mapped_reads(const std::string& contig_name) const;
 };
 
