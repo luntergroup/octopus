@@ -12,7 +12,7 @@
 #include <vector>
 #include <cstddef>
 #include <memory>
-#include <boost/filesystem/path.hpp>
+#include <boost/filesystem.hpp>
 
 #include "i_vcf_reader_impl.h"
 

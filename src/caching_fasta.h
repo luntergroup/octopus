@@ -13,9 +13,12 @@
 #include <map>
 #include <list>
 #include <cstddef>
+#include <boost/filesystem/path.hpp>
 
-#include "reference_genome_impl.h"
+#include "i_reference_genome_impl.h"
 #include "fasta.h"
+
+namespace fs = boost::filesystem;
 
 class GenomicRegion;
 
@@ -26,10 +29,10 @@ public:
     using SizeType     = IReferenceGenomeImpl::SizeType;
     
     CachingFasta() = delete;
-    CachingFasta(std::string fasta_path);
-    CachingFasta(std::string fasta_path, SizeType max_cache_size);
-    CachingFasta(std::string fasta_path, std::string fasta_index_path);
-    CachingFasta(std::string fasta_path, std::string fasta_index_path, SizeType max_cache_size);
+    explicit CachingFasta(fs::path fasta_path);
+    explicit CachingFasta(fs::path fasta_path, SizeType max_cache_size);
+    explicit CachingFasta(fs::path fasta_path, fs::path fasta_index_path);
+    explicit CachingFasta(fs::path fasta_path, fs::path fasta_index_path, SizeType max_cache_size);
     ~CachingFasta() noexcept override = default;
     
     CachingFasta(const CachingFasta&)            = default;
@@ -37,7 +40,7 @@ public:
     CachingFasta(CachingFasta&&)                 = default;
     CachingFasta& operator=(CachingFasta&&)      = default;
     
-    std::string get_reference_name() override;
+    std::string get_reference_name() const override;
     std::vector<std::string> get_contig_names() override;
     SizeType get_contig_size(const std::string& contig_name) override;
     SequenceType get_sequence(const GenomicRegion& region) override;
@@ -52,8 +55,8 @@ private:
     std::unordered_map<std::string, ContigSequenceCache> sequence_cache_;
     std::list<GenomicRegion> recently_used_regions_;
     
-    SizeType used_cache_size_;
-    SizeType max_cache_size_;
+    SizeType used_cache_size_ = 0;
+    const SizeType max_cache_size_ = 1000000;
     
     void setup_cache();
     

@@ -13,18 +13,18 @@
 
 #include "genomic_region.h"
 
-Fasta::Fasta(std::string fasta_path)
+Fasta::Fasta(fs::path fasta_path)
 :
-Fasta {fasta_path, fasta_path + ".fai"}
+Fasta {fasta_path, fasta_path.string() + ".fai"}
 {}
 
-Fasta::Fasta(std::string fasta_path, std::string fasta_index_path)
+Fasta::Fasta(fs::path fasta_path, fs::path fasta_index_path)
 :
 fasta_path_ {std::move(fasta_path)},
 fasta_index_path_ {std::move(fasta_index_path)}
 {
     if (!fs::exists(fasta_path_)) {
-        throw std::runtime_error {"Cannot find FASTA " + fasta_path};
+        throw std::runtime_error {"Cannot find FASTA " + fasta_path.string()};
     }
     
     if (!fs::exists(fasta_index_path_)) {
@@ -35,14 +35,14 @@ fasta_index_path_ {std::move(fasta_index_path)}
     }
     
     if (!is_valid_fasta()) {
-        throw std::runtime_error {"Invalid FASTA " + fasta_path};
+        throw std::runtime_error {"Invalid FASTA " + fasta_path.string()};
     }
     
     fasta_ = std::ifstream(fasta_path_.string());
     fasta_contig_indices_ = bioio::read_fasta_index(fasta_index_path_.string());
 }
 
-std::string Fasta::get_reference_name()
+std::string Fasta::get_reference_name() const
 {
     return fasta_path_.stem().string();
 }
@@ -68,7 +68,7 @@ Fasta::SequenceType Fasta::get_sequence(const GenomicRegion& region)
 
 // private methods
 
-bool Fasta::is_valid_fasta() const
+bool Fasta::is_valid_fasta() const noexcept
 {
     auto extension = fasta_path_.extension().string();
     if (extension != ".fa" && extension != ".fasta") {

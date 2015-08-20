@@ -66,6 +66,8 @@ public:
     std::vector<std::string> get_reference_contig_names() override;
     SizeType get_reference_contig_size(const std::string& contig_name) override;
     std::vector<GenomicRegion> get_possible_regions_in_file() override;
+    
+    void open() override;
     void close() override;
     
 private:

@@ -16,7 +16,7 @@
 #include <unordered_map>
 #include <boost/filesystem/path.hpp>
 
-#include "reference_genome_impl.h"
+#include "i_reference_genome_impl.h"
 #include "bioio.h"
 
 class GenomicRegion;
@@ -30,8 +30,8 @@ public:
     using SizeType     = IReferenceGenomeImpl::SizeType;
     
     Fasta() = delete;
-    Fasta(std::string fasta_path);
-    Fasta(std::string fasta_path, std::string fasta_index_path);
+    explicit Fasta(fs::path fasta_path);
+    explicit Fasta(fs::path fasta_path, fs::path fasta_index_path);
     ~Fasta() noexcept override = default;
     
     Fasta(const Fasta&)            = default;
@@ -39,7 +39,7 @@ public:
     Fasta(Fasta&&)                 = default;
     Fasta& operator=(Fasta&&)      = default;
     
-    std::string get_reference_name() override;
+    std::string get_reference_name() const override;
     std::vector<std::string> get_contig_names() override;
     SizeType get_contig_size(const std::string& contig_name) override;
     SequenceType get_sequence(const GenomicRegion& region) override;
@@ -50,7 +50,7 @@ private:
     std::ifstream fasta_;
     std::unordered_map<std::string, bioio::FastaIndex> fasta_contig_indices_;
     
-    bool is_valid_fasta() const;
+    bool is_valid_fasta() const noexcept;
 };
 
 #endif /* defined(__Octopus__fasta__) */

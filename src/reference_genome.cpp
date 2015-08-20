@@ -51,7 +51,7 @@ ReferenceGenome::SizeType ReferenceGenome::get_contig_size(const std::string& co
     if (has_contig(contig_name)) {
         return contig_sizes_.at(contig_name);
     }
-    throw std::runtime_error {"contig is not in reference genome"};
+    throw std::runtime_error {"contig " + contig_name + " is not in reference genome " + name_};
 }
 
 ReferenceGenome::SizeType ReferenceGenome::get_contig_size(const GenomicRegion& region) const

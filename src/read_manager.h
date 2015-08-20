@@ -18,6 +18,7 @@
 #include <memory> // std::make_unique
 #include <boost/filesystem.hpp>
 
+#include "contig_region.h"
 #include "genomic_region.h"
 #include "read_reader.h"
 #include "read_reader_impl.h"
@@ -58,7 +59,7 @@ private:
     using ClosedReaders           = std::unordered_set<fs::path>;
     using SampleIdToReaderPathMap = std::unordered_map<SampleIdType, std::vector<fs::path>>;
     using ReaderRegionsMap        = std::unordered_map<fs::path, std::unordered_map<GenomicRegion::StringType,
-                                                                                std::vector<SequenceRegion>>>;
+                                                                                std::vector<ContigRegion>>>;
     
     const unsigned Max_open_files_;
     OpenReaderMap open_readers_;

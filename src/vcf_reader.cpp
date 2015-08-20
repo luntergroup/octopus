@@ -17,18 +17,12 @@
 #include "htslib_bcf_facade.h"
 #include "vcf_parser.h"
 
-std::ifstream::pos_type file_size(const fs::path& file_path) // in bytes
-{
-    std::ifstream in {file_path.string(), std::ifstream::ate | std::ifstream::binary};
-    return in.tellg();
-}
-
 std::unique_ptr<IVcfReaderImpl> make_vcf_reader(const fs::path& file_path)
 {
     auto file_type = file_path.extension().string();
     
     if (file_type == ".vcf") {
-        auto vcf_file_size = file_size(file_path);
+        auto vcf_file_size = fs::file_size(file_path);
         if (vcf_file_size > 1e9) { // 1GB
             throw std::runtime_error {"VCF file " + file_path.string() + " is too big"};
         }

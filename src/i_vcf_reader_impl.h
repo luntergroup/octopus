@@ -27,7 +27,7 @@ public:
     virtual std::vector<VcfRecord> fetch_records(Unpack level = Unpack::All) = 0; // fetches all records
     virtual std::vector<VcfRecord> fetch_records(const GenomicRegion& region, Unpack level = Unpack::All) = 0;
     
-    virtual ~IVcfReaderImpl() = default;
+    virtual ~IVcfReaderImpl() noexcept = default;
 };
 
 #endif

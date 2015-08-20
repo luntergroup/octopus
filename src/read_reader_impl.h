@@ -34,7 +34,9 @@ public:
     virtual std::vector<std::string> get_reference_contig_names() = 0;
     virtual SizeType get_reference_contig_size(const std::string& contig_name) = 0;
     virtual std::vector<GenomicRegion> get_possible_regions_in_file() = 0;
-    virtual void close() = 0; // may throw
+    
+    virtual void open() = 0;
+    virtual void close() = 0;
     virtual ~IReadReaderImpl() noexcept = default;
 };
 
