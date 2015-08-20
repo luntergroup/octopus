@@ -26,12 +26,16 @@
 #include "variant.h"
 #include "variant_file_reader.h"
 #include "variant_file_factory.h"
+#include "reference_genome.h"
+#include "reference_genome_factory.h"
 #include "vcf_header.h"
 #include "vcf_type.h"
 #include "vcf_record.h"
 #include "vcf_reader.h"
 #include "vcf_writer.h"
 #include "vcf_parser.h"
+
+#include "sequence_utils.h"
 
 using std::cout;
 using std::endl;
@@ -119,9 +123,16 @@ void test4()
     }
 }
 
+void test5()
+{
+    std::string sequence {"ACGTGATGATCTATGATGATCTACTGGGGTATCCCATTCTTGGACGATT"};
+    
+    cout << is_palindromic(std::string {"ACCTAGGT"}) << endl;
+}
+
 int main(int argc, const char **argv)
 {
-    test4();
+    test5();
 //    auto options = Octopus::parse_options(argc, argv);
 //    
 //    if (options.second) {

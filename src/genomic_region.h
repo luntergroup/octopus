@@ -15,7 +15,7 @@
 #include <vector>
 #include <boost/functional/hash.hpp> // boost::hash_combine
 
-#include "sequence_region.h"
+#include "contig_region.h"
 #include "comparable.h"
 
 /**
@@ -30,8 +30,8 @@ class GenomicRegion : public Comparable<GenomicRegion>
 {
 public:
     using StringType     = std::string;
-    using SizeType       = SequenceRegion::SizeType;
-    using DifferenceType = SequenceRegion::DifferenceType;
+    using SizeType       = ContigRegion::SizeType;
+    using DifferenceType = ContigRegion::DifferenceType;
     
     GenomicRegion() = default;
     template <typename T>
@@ -45,13 +45,13 @@ public:
     GenomicRegion& operator=(GenomicRegion&&)      = default;
     
     const StringType& get_contig_name() const noexcept;
-    const SequenceRegion& get_contig_region() const noexcept;
+    const ContigRegion& get_contig_region() const noexcept;
     SizeType get_begin() const noexcept;
     SizeType get_end() const noexcept;
 
 private:
     StringType contig_name_;
-    SequenceRegion contig_region_;
+    ContigRegion contig_region_;
 };
 
 class RegionError : std::runtime_error {
@@ -89,7 +89,7 @@ inline const GenomicRegion::StringType& GenomicRegion::get_contig_name() const n
     return contig_name_;
 }
 
-inline const SequenceRegion& GenomicRegion::get_contig_region() const noexcept
+inline const ContigRegion& GenomicRegion::get_contig_region() const noexcept
 {
     return contig_region_;
 }
@@ -307,7 +307,7 @@ namespace std {
         {
             size_t seed {};
             boost::hash_combine(seed, hash<GenomicRegion::StringType>()(r.get_contig_name()));
-            boost::hash_combine(seed, hash<SequenceRegion>()(r.get_contig_region()));
+            boost::hash_combine(seed, hash<ContigRegion>()(r.get_contig_region()));
             return seed;
         }
     };

@@ -206,6 +206,7 @@ void ReadManager::open_readers(std::vector<fs::path>::iterator first, std::vecto
 
 void ReadManager::close_reader(const fs::path& read_file_path)
 {
+    // TODO: we can make use of IReadReaderImpl::close to avoid calling deconstructor on the file.
     open_readers_.erase(read_file_path);
     closed_readers_.insert(read_file_path);
 }

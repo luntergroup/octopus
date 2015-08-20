@@ -15,55 +15,49 @@
 
 #include <iostream> // TEST
 
-CachingFasta::CachingFasta(std::string fasta_path)
+CachingFasta::CachingFasta(fs::path fasta_path)
+:
+fasta_ {std::move(fasta_path)},
+contig_size_cache_ {},
+sequence_cache_ {},
+recently_used_regions_ {}
+{
+    setup_cache();
+}
+
+CachingFasta::CachingFasta(fs::path fasta_path, SizeType max_cache_size)
 :
 fasta_ {std::move(fasta_path)},
 contig_size_cache_ {},
 sequence_cache_ {},
 recently_used_regions_ {},
-used_cache_size_ {},
-max_cache_size_ {1000000}
-{
-    setup_cache();
-}
-
-CachingFasta::CachingFasta(std::string fasta_path, SizeType max_cache_size)
-:
-fasta_ {std::move(fasta_path)},
-contig_size_cache_ {},
-sequence_cache_ {},
-recently_used_regions_ {},
-used_cache_size_ {},
 max_cache_size_ {max_cache_size}
 {
     setup_cache();
 }
 
-CachingFasta::CachingFasta(std::string fasta_path, std::string fasta_index_path)
+CachingFasta::CachingFasta(fs::path fasta_path, fs::path fasta_index_path)
 :
 fasta_ {std::move(fasta_path), std::move(fasta_index_path)},
 contig_size_cache_ {},
 sequence_cache_ {},
-recently_used_regions_ {},
-used_cache_size_ {},
-max_cache_size_ {1000000}
+recently_used_regions_ {}
 {
     setup_cache();
 }
 
-CachingFasta::CachingFasta(std::string fasta_path, std::string fasta_index_path, SizeType max_cache_size)
+CachingFasta::CachingFasta(fs::path fasta_path, fs::path fasta_index_path, SizeType max_cache_size)
 :
 fasta_ {std::move(fasta_path), std::move(fasta_index_path)},
 contig_size_cache_ {},
 sequence_cache_ {},
 recently_used_regions_ {},
-used_cache_size_ {},
 max_cache_size_ {max_cache_size}
 {
     setup_cache();
 }
 
-std::string CachingFasta::get_reference_name()
+std::string CachingFasta::get_reference_name() const
 {
     return fasta_.get_reference_name();
 }

@@ -16,9 +16,7 @@
 #include <memory>  // std::unique_ptr
 
 #include "genomic_region.h"
-#include "reference_genome_impl.h"
-
-//TODO: make sure this is thread-safe
+#include "i_reference_genome_impl.h"
 
 class ReferenceGenome
 {

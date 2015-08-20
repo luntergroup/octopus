@@ -55,7 +55,7 @@ private:
 HtslibSamFacade::HtslibSamFacade(const fs::path& file_path)
 :
 file_path_ {file_path},
-hts_file_ {hts_open(file_path_.string().c_str(), "r"), htslib_file_deleter},
+hts_file_ {sam_open(file_path_.string().c_str(), "r"), htslib_file_deleter},
 hts_header_ {sam_hdr_read(hts_file_.get()), htslib_header_deleter},
 hts_index_ {sam_index_load(hts_file_.get(), file_path_.string().c_str()), htslib_index_deleter},
 hts_tid_map_ {},
@@ -77,9 +77,14 @@ sample_id_map_ {}
     init_maps();
 }
 
+void HtslibSamFacade::open()
+{
+    hts_file_.reset(sam_open(file_path_.string().c_str(), "r"));
+}
+
 void HtslibSamFacade::close()
 {
-    // TODO: what should this do?
+    hts_file_.reset(nullptr);
 }
 
 unsigned HtslibSamFacade::get_num_reference_contigs() noexcept
@@ -174,14 +179,13 @@ std::vector<GenomicRegion> HtslibSamFacade::get_possible_regions_in_file()
 {
     std::vector<GenomicRegion> result {};
     result.reserve(get_num_reference_contigs());
-    std::string contig_name;
     
     for (HtsTidType hts_tid {0}; hts_tid < get_num_reference_contigs(); ++hts_tid) {
-        contig_name = get_contig_name(hts_tid);
+        auto contig_name = get_contig_name(hts_tid);
         // CRAM files don't seem to have the same index stats as BAM files so
         // we don't know which contigs have been mapped to
         if (hts_file_->is_cram || get_num_mapped_reads(contig_name) > 0) {
-            result.emplace_back(contig_name, 0, get_reference_contig_size(contig_name));
+            result.emplace_back(std::move(contig_name), 0, get_reference_contig_size(contig_name));
         }
     }
     

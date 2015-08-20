@@ -52,6 +52,7 @@
 		CA45517C1AF2484E00FDAAE8 /* genotype_caller.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA45517A1AF2484E00FDAAE8 /* genotype_caller.cpp */; };
 		CA4551881AF27A4100FDAAE8 /* haplotype_phaser.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA4551861AF27A4100FDAAE8 /* haplotype_phaser.cpp */; };
 		CA5C8E021ADC4CBB000BA230 /* haplotype_benchmarks.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA5C8E011ADC4CBB000BA230 /* haplotype_benchmarks.cpp */; };
+		CA8A664A1B81CA7E008CE1D8 /* threadsafe_fasta.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA8A66481B81CA7E008CE1D8 /* threadsafe_fasta.cpp */; };
 		CA8FACC41A96515A002760F2 /* assembler_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA8FACC31A96515A002760F2 /* assembler_tests.cpp */; };
 		CA90C55A1ACDB95D00CBEE34 /* haplotype_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA90C5591ACDB95D00CBEE34 /* haplotype_tests.cpp */; };
 		CAA4DC251A81981400DD3E9A /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CAA4DC241A81981400DD3E9A /* main.cpp */; };
@@ -193,6 +194,9 @@
 		CA4551871AF27A4100FDAAE8 /* haplotype_phaser.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = haplotype_phaser.h; sourceTree = "<group>"; };
 		CA5C8E011ADC4CBB000BA230 /* haplotype_benchmarks.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = haplotype_benchmarks.cpp; sourceTree = "<group>"; };
 		CA8A66431B7E2CC7008CE1D8 /* i_vcf_reader_impl.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = i_vcf_reader_impl.h; sourceTree = "<group>"; };
+		CA8A66451B7E5E0C008CE1D8 /* sequence_utils.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = sequence_utils.h; sourceTree = "<group>"; };
+		CA8A66481B81CA7E008CE1D8 /* threadsafe_fasta.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = threadsafe_fasta.cpp; sourceTree = "<group>"; };
+		CA8A66491B81CA7E008CE1D8 /* threadsafe_fasta.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = threadsafe_fasta.h; sourceTree = "<group>"; };
 		CA8FACBA1A954B0B002760F2 /* libboost_signals.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libboost_signals.a; path = /usr/local/Cellar/boost/1.57.0/lib/libboost_signals.a; sourceTree = "<absolute>"; };
 		CA8FACC31A96515A002760F2 /* assembler_tests.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = assembler_tests.cpp; sourceTree = "<group>"; };
 		CA90C5581ACD2B4E00CBEE34 /* variational_bayes_variant_callings.tex */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = variational_bayes_variant_callings.tex; sourceTree = "<group>"; };
@@ -305,10 +309,10 @@
 		D463C1A31B0A174B00739A66 /* variant.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = variant.cpp; sourceTree = "<group>"; };
 		D4907F471A88D71800639203 /* genomic_region.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = genomic_region.h; sourceTree = "<group>"; };
 		D4907F4A1A88E20E00639203 /* variant_tests.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = variant_tests.cpp; sourceTree = "<group>"; };
-		D4907F4D1A89095400639203 /* sequence_region.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = sequence_region.h; sourceTree = "<group>"; };
+		D4907F4D1A89095400639203 /* contig_region.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = contig_region.h; sourceTree = "<group>"; };
 		D4907F541A8A18CF00639203 /* reference_genome.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = reference_genome.h; sourceTree = "<group>"; };
 		D4907F561A8A2A9B00639203 /* reference_tests.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = reference_tests.cpp; sourceTree = "<group>"; };
-		D4907F581A8A35EA00639203 /* reference_genome_impl.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = reference_genome_impl.h; sourceTree = "<group>"; };
+		D4907F581A8A35EA00639203 /* i_reference_genome_impl.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = i_reference_genome_impl.h; sourceTree = "<group>"; };
 		D4907F591A8A374000639203 /* fasta.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = fasta.cpp; sourceTree = "<group>"; };
 		D4907F5A1A8A374000639203 /* fasta.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = fasta.h; sourceTree = "<group>"; };
 		D4907F5E1A8A3ADD00639203 /* string_utils.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = string_utils.h; sourceTree = "<group>"; };
@@ -546,13 +550,15 @@
 			children = (
 				D4907F541A8A18CF00639203 /* reference_genome.h */,
 				CA386D9C1B5AA3C80057A5A8 /* reference_genome.cpp */,
-				D4907F581A8A35EA00639203 /* reference_genome_impl.h */,
+				D4907F581A8A35EA00639203 /* i_reference_genome_impl.h */,
 				D4907F641A8A6EE600639203 /* reference_genome_factory.h */,
 				D4907F631A8A6EE600639203 /* reference_genome_factory.cpp */,
 				D4907F5A1A8A374000639203 /* fasta.h */,
 				D4907F591A8A374000639203 /* fasta.cpp */,
 				CA386DAC1B603C380057A5A8 /* caching_fasta.h */,
 				CA386DAB1B603C380057A5A8 /* caching_fasta.cpp */,
+				CA8A66491B81CA7E008CE1D8 /* threadsafe_fasta.h */,
+				CA8A66481B81CA7E008CE1D8 /* threadsafe_fasta.cpp */,
 			);
 			name = reference;
 			sourceTree = "<group>";
@@ -575,7 +581,7 @@
 			children = (
 				D4907F731A8E255200639203 /* equitable.h */,
 				D4907F711A8E04B900639203 /* comparable.h */,
-				D4907F4D1A89095400639203 /* sequence_region.h */,
+				D4907F4D1A89095400639203 /* contig_region.h */,
 				D4907F471A88D71800639203 /* genomic_region.h */,
 				D4E41DA11AD801EF0010D25D /* mappable.h */,
 				D413B0411B5D17CA007EFDE0 /* mappable_ranges.h */,
@@ -590,6 +596,7 @@
 				D4907F5E1A8A3ADD00639203 /* string_utils.h */,
 				CA14727D1AAE63A8005FDCD1 /* hash_functions.h */,
 				D4636C5D1B5F97BD00FEA7D2 /* threaded_transform.h */,
+				CA8A66451B7E5E0C008CE1D8 /* sequence_utils.h */,
 			);
 			name = utils;
 			sourceTree = "<group>";
@@ -834,6 +841,7 @@
 				CA0B46651AE3CD6800158BBA /* read_model_benchmarks.cpp in Sources */,
 				CA386DA81B5BBCB90057A5A8 /* mappable_set_tests.cpp in Sources */,
 				CA0B466B1AE8611800158BBA /* 1000G_test2.cpp in Sources */,
+				CA8A664A1B81CA7E008CE1D8 /* threadsafe_fasta.cpp in Sources */,
 				D4907F571A8A2A9B00639203 /* reference_tests.cpp in Sources */,
 				D4636C671B678B8000FEA7D2 /* vcf_header.cpp in Sources */,
 				D4636C6A1B6919B500FEA7D2 /* vcf_writer.cpp in Sources */,
