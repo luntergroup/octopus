@@ -50,7 +50,7 @@ BOOST_AUTO_TEST_CASE(advance_region_always_gives_a_region_more_advanced_than_the
     ReferenceGenomeFactory a_factory {};
     ReferenceGenome human {a_factory.make(human_reference_fasta)};
     
-    ReadManager a_read_manager {std::vector<std::string> {human_1000g_bam1, human_1000g_bam2, human_1000g_bam3}};
+    ReadManager a_read_manager {human_1000g_bam1, human_1000g_bam2, human_1000g_bam3};
     
     auto a_region = parse_region("16:62646800-62647030", human);
     
@@ -81,7 +81,7 @@ BOOST_AUTO_TEST_CASE(search_regions_contains_all_variants_in_list_exactly_once_w
     ReferenceGenomeFactory a_factory {};
     ReferenceGenome human {a_factory.make(human_reference_fasta)};
     
-    ReadManager a_read_manager {std::vector<std::string> {human_1000g_bam1}};
+    ReadManager a_read_manager {human_1000g_bam1};
     
     auto a_region = parse_region("16:8999900-9400000", human);
     
@@ -206,7 +206,7 @@ BOOST_AUTO_TEST_CASE(advance_regions_bounds_are_respected)
     ReferenceGenomeFactory a_factory {};
     ReferenceGenome human {a_factory.make(human_reference_fasta)};
     
-    ReadManager a_read_manager {std::vector<std::string> {human_1000g_bam1}};
+    ReadManager a_read_manager {human_1000g_bam1};
     
     auto a_region = parse_region("16:8999900-9400000", human);
     
@@ -352,7 +352,7 @@ BOOST_AUTO_TEST_CASE(setting_max_included_to_zero_in_advance_region_results_in_t
     ReferenceGenomeFactory a_factory {};
     ReferenceGenome human {a_factory.make(human_reference_fasta)};
     
-    ReadManager a_read_manager {std::vector<std::string> {human_1000g_bam1}};
+    ReadManager a_read_manager {human_1000g_bam1};
     
     auto a_region = parse_region("16:8999900-9400000", human);
     
@@ -398,7 +398,7 @@ BOOST_AUTO_TEST_CASE(search_regions_includes_all_possible_indicators)
     ReferenceGenomeFactory a_factory {};
     ReferenceGenome human {a_factory.make(human_reference_fasta)};
     
-    ReadManager a_read_manager {std::vector<std::string> {human_1000g_bam1}};
+    ReadManager a_read_manager {human_1000g_bam1};
     
     auto a_region = parse_region("16:62646780-62647130", human);
     

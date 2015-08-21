@@ -29,7 +29,7 @@ BOOST_AUTO_TEST_SUITE(Components)
 
 BOOST_AUTO_TEST_CASE(read_filter_test)
 {
-    ReadManager a_read_manager(std::vector<std::string> {human_1000g_bam1});
+    ReadManager a_read_manager {human_1000g_bam1};
     
     auto sample_ids = a_read_manager.get_sample_ids();
     

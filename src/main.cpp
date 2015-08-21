@@ -34,6 +34,10 @@
 #include "vcf_reader.h"
 #include "vcf_writer.h"
 #include "vcf_parser.h"
+#include "read_manager.h"
+#include "mappable_set.h"
+#include "candidate_variant_generator.h"
+#include "alignment_candidate_variant_generator.h"
 
 #include "sequence_utils.h"
 
@@ -134,19 +138,26 @@ void test6()
 {
     auto reference = make_reference(human_reference_fasta);
     
-    auto region = parse_region("1:1000000-1500000", reference);
+    auto region = parse_region("Y", reference);
     
-    auto tandem_repeats = find_exact_tandem_repeats(reference, region, 50);
+    auto start = std::chrono::system_clock::now();
+    
+    auto tandem_repeats = find_exact_tandem_repeats(reference, region, 3);
+    
+    auto end = std::chrono::system_clock::now();
+    
+    auto duration = std::chrono::duration_cast<std::chrono::seconds>(end - start).count();
     
 //    for (auto r : tandem_repeats) {
 //        cout << reference.get_sequence(r) << endl;
 //    }
-    cout << tandem_repeats.size() << endl;
+    cout << "found " << tandem_repeats.size() << " repeats" << endl;
+    cout << "took " << duration << " seconds" << endl;
 }
 
 int main(int argc, const char **argv)
 {
-    test6();
+    test5();
 //    auto options = Octopus::parse_options(argc, argv);
 //    
 //    if (options.second) {

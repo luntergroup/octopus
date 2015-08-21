@@ -404,7 +404,7 @@ BOOST_AUTO_TEST_CASE(haplotype_tree_survives_serious_pruning)
     ReferenceGenomeFactory a_factory {};
     ReferenceGenome human {a_factory.make(human_reference_fasta)};
     
-    ReadManager a_read_manager(std::vector<std::string> {human_1000g_bam1});
+    ReadManager a_read_manager {human_1000g_bam1};
     
     CandidateVariantGenerator candidate_generator {};
     
@@ -477,7 +477,7 @@ BOOST_AUTO_TEST_CASE(prune_unqiue_leaves_a_single_haplotype_which_contains_the_s
     ReferenceGenomeFactory a_factory {};
     ReferenceGenome human {a_factory.make(human_reference_fasta)};
     
-    ReadManager a_read_manager(std::vector<std::string> {human_1000g_bam1});
+    ReadManager a_read_manager {human_1000g_bam1};
     
     CandidateVariantGenerator candidate_generator {};
     

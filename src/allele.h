@@ -11,6 +11,7 @@
 
 #include <string>
 #include <ostream>
+#include <utility> // std::forward
 #include <boost/functional/hash.hpp> // boost::hash_combine
 
 #include "genomic_region.h"
@@ -26,7 +27,7 @@ public:
     
     Allele() = default;
     template <typename GenomicRegion_, typename SequenceType_>
-    Allele(GenomicRegion_&& the_reference_region, SequenceType_&& the_sequence);
+    Allele(GenomicRegion_&& reference_region, SequenceType_&& sequence);
     ~Allele() = default;
     
     Allele(const Allele&)            = default;
@@ -38,15 +39,15 @@ public:
     const SequenceType& get_sequence() const noexcept;
     
 private:
-    GenomicRegion the_reference_region_;
-    SequenceType the_sequence_;
+    GenomicRegion reference_region_;
+    SequenceType sequence_;
 };
 
 template <typename GenomicRegion_, typename SequenceType_>
-Allele::Allele(GenomicRegion_&& the_reference_region, SequenceType_&& the_sequence)
+Allele::Allele(GenomicRegion_&& reference_region, SequenceType_&& sequence)
 :
-the_reference_region_ {std::forward<GenomicRegion_>(the_reference_region)},
-the_sequence_ {std::forward<SequenceType_>(the_sequence)}
+reference_region_ {std::forward<GenomicRegion_>(reference_region)},
+sequence_ {std::forward<SequenceType_>(sequence)}
 {}
 
 bool is_reference(const Allele& an_allele, ReferenceGenome& the_reference);

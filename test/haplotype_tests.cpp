@@ -94,7 +94,7 @@ BOOST_AUTO_TEST_CASE(haplotypes_work_with_real_data)
     ReferenceGenomeFactory a_factory {};
     ReferenceGenome ecoli {a_factory.make(ecoli_reference_fasta)};
     
-    ReadManager a_read_manager(std::vector<std::string> {ecoli_bam});
+    ReadManager a_read_manager {ecoli_bam};
     
     CandidateVariantGenerator candidate_generator {};
     candidate_generator.register_generator(std::make_unique<AlignmentCandidateVariantGenerator>(ecoli, 0));

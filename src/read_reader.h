@@ -36,6 +36,9 @@ public:
     ReadReader(ReadReader&&)                 = default;
     ReadReader& operator=(ReadReader&&)      = default;
     
+    void open();
+    void close();
+    
     const fs::path& get_read_file_path() const noexcept;
     std::vector<std::string> get_reference_contig_names();
     std::vector<SampleIdType> get_sample_ids();
@@ -44,7 +47,6 @@ public:
     std::vector<GenomicRegion> get_possible_regions_in_file();
     std::size_t get_num_reads(const GenomicRegion& a_region);
     SampleIdToReadsMap fetch_reads(const GenomicRegion& a_region);
-    void close();
     
 private:
     fs::path file_path_;
@@ -56,6 +58,16 @@ inline ReadReader::ReadReader(const fs::path& file_path, std::unique_ptr<IReadRe
 file_path_ {file_path},
 the_impl_ {std::move(the_impl)}
 {}
+
+inline void ReadReader::open()
+{
+    the_impl_->open();
+}
+
+inline void ReadReader::close()
+{
+    the_impl_->close();
+}
 
 inline const fs::path& ReadReader::get_read_file_path() const noexcept
 {
@@ -95,11 +107,6 @@ inline std::vector<std::string> ReadReader::get_reference_contig_names()
 inline std::vector<GenomicRegion> ReadReader::get_possible_regions_in_file()
 {
     return the_impl_->get_possible_regions_in_file();
-}
-
-inline void ReadReader::close()
-{
-    the_impl_->close();
 }
 
 inline bool operator==(const ReadReader& lhs, const ReadReader& rhs)

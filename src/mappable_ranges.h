@@ -12,6 +12,12 @@
 #include <boost/iterator/filter_iterator.hpp>
 #include <boost/range/iterator_range_core.hpp>
 
+/**
+ An ordered collection of MappableType elements, X, is:
+ - ForwardSorted         iff i <= j -> get_region(X[i]) <= get_region(X[j])
+ - BidirectionallySorted iff X is ForwardSorted AND i <= j -> get_end(X[i]) <= get_end(X[j])
+ - Unsorted              iff X is not ForwardSorted
+ */
 enum class MappableRangeOrder { ForwardSorted, BidirectionallySorted, Unsorted };
 
 namespace detail
@@ -65,7 +71,7 @@ boost::iterator_range<Iterator> bases(const OverlapRange<Iterator>& overlap_rang
 
 template <typename Iterator>
 inline
-std::size_t size(const OverlapRange<Iterator>& range, MappableRangeOrder order=MappableRangeOrder::ForwardSorted)
+std::size_t size(const OverlapRange<Iterator>& range, MappableRangeOrder order = MappableRangeOrder::ForwardSorted)
 {
     return (order == MappableRangeOrder::BidirectionallySorted) ?
     std::distance(range.begin().base(), range.end().base()) :
@@ -215,7 +221,7 @@ boost::iterator_range<Iterator> bases(const SharedRange<Iterator>& shared_range)
 
 template <typename Iterator>
 inline
-std::size_t size(const SharedRange<Iterator>& range, MappableRangeOrder order=MappableRangeOrder::ForwardSorted)
+std::size_t size(const SharedRange<Iterator>& range, MappableRangeOrder order = MappableRangeOrder::ForwardSorted)
 {
     return (order == MappableRangeOrder::BidirectionallySorted) ?
     std::distance(range.begin().base(), range.end().base()) :

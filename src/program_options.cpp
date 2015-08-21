@@ -250,10 +250,14 @@ namespace Octopus
         }
     } // end namespace detail
     
+    unsigned get_num_threads(const po::variables_map& options)
+    {
+        return options.at("num_threads").as<unsigned>();
+    }
+    
     ReferenceGenome get_reference(const po::variables_map& options)
     {
-        ReferenceGenomeFactory factory {};
-        return ReferenceGenome {factory.make(options.at("reference").as<std::string>())};
+        return make_reference(options.at("reference").as<std::string>());
     }
     
     SearchRegions get_search_regions(const po::variables_map& options, const ReferenceGenome& the_reference)
@@ -301,9 +305,9 @@ namespace Octopus
         return detail::make_search_regions(input_regions);
     }
     
-    std::vector<std::string> get_read_paths(const po::variables_map& options)
+    std::vector<fs::path> get_read_paths(const po::variables_map& options)
     {
-        std::vector<std::string> result {};
+        std::vector<fs::path> result {};
         
         if (options.count("reads") != 0) {
             const auto& read_paths = options.at("reads").as<std::vector<std::string>>();
@@ -318,8 +322,7 @@ namespace Octopus
         }
         
         std::sort(result.begin(), result.end());
-        auto it = std::unique(result.begin(), result.end());
-        result.erase(it, result.end());
+        result.erase(std::unique(result.begin(), result.end()), result.end());
         
         return result;
     }
