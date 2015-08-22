@@ -30,7 +30,7 @@ fasta_index_path_ {std::move(fasta_index_path)}
     if (!fs::exists(fasta_index_path_)) {
         fasta_index_path_ = fasta_path_.replace_extension("fai");
         if (!fs::exists(fasta_index_path_)) {
-            throw std::runtime_error {"Cannot find FASTA index"};
+            throw std::runtime_error {"Cannot find FASTA index " + fasta_index_path_.string()};
         }
     }
     

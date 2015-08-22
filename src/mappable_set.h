@@ -22,6 +22,10 @@
 
 #include <iostream> // TEST
 
+/**
+ MappableSet is a container designed to allow fast retrival of MappableType elements with minimal
+ memory overhead.
+ */
 template <typename MappableType, typename Allocator = std::allocator<MappableType>>
 class MappableSet
 {
@@ -87,6 +91,9 @@ public:
     void shrink_to_fit();
     
     allocator_type get_allocator();
+    
+    const MappableType& leftmost() const noexcept;
+    const MappableType& rightmost() const noexcept;
     
     template <typename MappableType_>
     bool has_overlapped(const MappableType_& mappable) const;
@@ -440,6 +447,24 @@ typename MappableSet<MappableType, Allocator>::allocator_type
 MappableSet<MappableType, Allocator>::get_allocator()
 {
     return elements_.get_allocator();
+}
+
+template <typename MappableType, typename Allocator>
+const MappableType& MappableSet<MappableType, Allocator>::leftmost() const noexcept
+{
+    return *elements_.cbegin();
+}
+
+template <typename MappableType, typename Allocator>
+const MappableType& MappableSet<MappableType, Allocator>::rightmost() const noexcept
+{
+    const auto& last = *std::prev(elements_.cend());
+    if (is_bidirectionally_sorted_) {
+        return last;
+    } else {
+        auto overlapped = ::overlap_range(elements_.cbegin(), elements_.cend(), last, max_element_size_);
+        return rightmost_mappable(overlapped.begin(), overlapped.end());
+    }
 }
 
 template <typename MappableType, typename Allocator>

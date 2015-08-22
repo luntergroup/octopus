@@ -41,11 +41,7 @@ std::vector<size_t> make_suffix_array(const T& str)
     
     divsufsort(str.c_str(), &sa[0], static_cast<int>(str.size()));
     
-    std::vector<size_t> result(str.size());
-    
-    std::transform(sa.cbegin(), sa.cend(), result.begin(), [] (auto i) { return static_cast<size_t>(i); });
-    
-    return result;
+    return std::vector<size_t> {sa.cbegin(), sa.cend()};
 }
 
 // Naive implementation - O(nlogn)
@@ -116,6 +112,8 @@ std::vector<LZBlock> lempel_ziv_factorisation(const T& str)
         result.emplace_back(end, m);
         end += m;
     }
+    
+    result.shrink_to_fit();
     
     return result;
 }

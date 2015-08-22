@@ -11,12 +11,11 @@
 
 namespace Octopus
 {
-    class Model
+    class IModel
     {
     public:
+        
         virtual ~Model() = default;
-        
-        
     };
     
 } // end namespace Octopus

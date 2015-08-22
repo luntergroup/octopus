@@ -16,12 +16,12 @@
 
 const GenomicRegion& Allele::get_region() const noexcept
 {
-    return the_reference_region_;
+    return reference_region_;
 }
 
 const Allele::SequenceType& Allele::get_sequence() const noexcept
 {
-    return the_sequence_;
+    return sequence_;
 }
 
 // non-member functions

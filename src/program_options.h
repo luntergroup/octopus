@@ -12,6 +12,7 @@
 #include <string>
 #include <vector>
 #include <boost/program_options.hpp>
+#include <boost/filesystem.hpp>
 
 #include "common.h"
 
@@ -20,16 +21,19 @@ class GenomicRegion;
 class ReadManager;
 
 namespace po = boost::program_options;
+namespace fs = boost::filesystem;
 
 namespace Octopus
 {
     std::pair<po::variables_map, bool> parse_options(int argc, const char** argv);
     
+    unsigned get_num_threads(const po::variables_map& options);
+    
     ReferenceGenome get_reference(const po::variables_map& options);
     
     SearchRegions get_search_regions(const po::variables_map& options, const ReferenceGenome& the_reference);
     
-    std::vector<std::string> get_read_paths(const po::variables_map& options);
+    std::vector<fs::path> get_read_paths(const po::variables_map& options);
     
     ReadManager get_read_manager(const po::variables_map& options);
     

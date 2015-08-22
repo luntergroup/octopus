@@ -63,9 +63,9 @@ BOOST_AUTO_TEST_CASE(read_reader_handles_CRAM)
 
 BOOST_AUTO_TEST_CASE(ReadManager_works_with_single_file)
 {
-    ReadManager a_read_manager(std::vector<std::string> {human_1000g_bam1});
+    ReadManager a_read_manager {human_1000g_bam1};
     
-    BOOST_CHECK(a_read_manager.get_num_samples() == 1);
+    BOOST_CHECK(a_read_manager.num_samples() == 1);
     
     auto sample_ids = a_read_manager.get_sample_ids();
     auto the_sample_id = sample_ids.front();
@@ -199,7 +199,7 @@ BOOST_AUTO_TEST_CASE(aligned_read_copies_and_moves_correctly)
 
 BOOST_AUTO_TEST_CASE(aligned_read_overlap_sanity_checks)
 {
-    ReadManager a_read_manager(std::vector<std::string> {human_1000g_bam1});
+    ReadManager a_read_manager {human_1000g_bam1};
     
     GenomicRegion a_region {"4", 93235280, 93235585};
     
@@ -294,7 +294,7 @@ BOOST_AUTO_TEST_CASE(can_splice_reads)
 
 BOOST_AUTO_TEST_CASE(AlignedRead_can_be_compressed_and_decompressed)
 {
-    ReadManager a_read_manager(std::vector<std::string> {human_1000g_bam1});
+    ReadManager a_read_manager {human_1000g_bam1};
     
     GenomicRegion a_region {"4", 93235280, 93235585};
     

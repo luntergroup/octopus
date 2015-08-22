@@ -31,8 +31,8 @@ public:
     using SizeType     = Allele::SizeType;
     
     Haplotype() = default;
-    explicit Haplotype(ReferenceGenome& the_reference);
-    explicit Haplotype(ReferenceGenome& the_reference, const GenomicRegion& the_region);
+    explicit Haplotype(ReferenceGenome& reference);
+    explicit Haplotype(ReferenceGenome& reference, const GenomicRegion& region);
     ~Haplotype() = default;
     
     Haplotype(const Haplotype&)            = default;
@@ -44,10 +44,13 @@ public:
     template <typename T> void push_front(T&& an_allele);
     
     bool contains(const Allele& an_allele) const;
-    void set_region(const GenomicRegion& a_region);
+    void set_region(const GenomicRegion& region);
     GenomicRegion get_region() const;
     SequenceType get_sequence() const;
-    SequenceType get_sequence(const GenomicRegion& a_region) const;
+    SequenceType get_sequence(const GenomicRegion& region) const;
+    
+    unsigned num_transitions() const noexcept;
+    unsigned num_transversions() const noexcept;
     
     void operator+=(const Haplotype& other);
     
@@ -63,10 +66,10 @@ private:
     SequenceType get_sequence_bounded_by_explicit_alleles(AlleleIterator first, AlleleIterator last) const;
     SequenceType get_sequence_bounded_by_explicit_alleles() const;
     
-    ReferenceGenome* the_reference_; // a non-owning pointer (rather than a reference) so Haplotype copyable
+    ReferenceGenome* reference_; // a non-owning pointer (rather than a reference) so Haplotype copyable
     bool is_region_set_;
-    GenomicRegion the_reference_region_;
-    std::deque<Allele> the_explicit_alleles_;
+    GenomicRegion reference_region_;
+    std::deque<Allele> explicit_alleles_;
     
     mutable SequenceType cached_sequence_;
     mutable bool is_cached_sequence_outdated_;
@@ -75,24 +78,24 @@ private:
 template <typename T>
 void Haplotype::push_back(T&& an_allele)
 {
-    if (!the_explicit_alleles_.empty()) {
-        if (!is_after(an_allele, the_explicit_alleles_.back())) {
-            std::cout << the_explicit_alleles_.back() << std::endl;
+    if (!explicit_alleles_.empty()) {
+        if (!is_after(an_allele, explicit_alleles_.back())) {
+            std::cout << explicit_alleles_.back() << std::endl;
             std::cout << an_allele << std::endl;
             throw std::runtime_error {"cannot append out of order allele to back of haplotype"};
-        } else if (!are_adjacent(the_explicit_alleles_.back(), an_allele)) {
-            auto intervening_region = get_intervening(the_explicit_alleles_.back(), an_allele);
-            the_explicit_alleles_.push_back(get_reference_allele(intervening_region, *the_reference_));
+        } else if (!are_adjacent(explicit_alleles_.back(), an_allele)) {
+            auto intervening_region = get_intervening(explicit_alleles_.back(), an_allele);
+            explicit_alleles_.push_back(get_reference_allele(intervening_region, *reference_));
         }
         
-        if (is_region_set_ && ends_before(the_reference_region_, an_allele)) {
-            the_reference_region_ = get_encompassing(the_reference_region_, an_allele);
+        if (is_region_set_ && ends_before(reference_region_, an_allele)) {
+            reference_region_ = get_encompassing(reference_region_, an_allele);
         }
-    } else if (is_region_set_ && begins_before(an_allele, the_reference_region_)) {
-        the_reference_region_ = get_encompassing(an_allele, the_reference_region_);
+    } else if (is_region_set_ && begins_before(an_allele, reference_region_)) {
+        reference_region_ = get_encompassing(an_allele, reference_region_);
     }
     
-    the_explicit_alleles_.push_back(std::forward<T>(an_allele));
+    explicit_alleles_.push_back(std::forward<T>(an_allele));
     
     is_cached_sequence_outdated_ = true;
 }
@@ -100,22 +103,22 @@ void Haplotype::push_back(T&& an_allele)
 template <typename T>
 void Haplotype::push_front(T&& an_allele)
 {
-    if (!the_explicit_alleles_.empty()) {
-        if (!is_after(the_explicit_alleles_.front(), an_allele)) {
+    if (!explicit_alleles_.empty()) {
+        if (!is_after(explicit_alleles_.front(), an_allele)) {
             throw std::runtime_error {"cannot append out of order allele to front of haplotype"};
-        } else if (!are_adjacent(an_allele, the_explicit_alleles_.front())) {
-            auto intervening_region = get_intervening(an_allele, the_explicit_alleles_.front());
-            the_explicit_alleles_.push_front(get_reference_allele(intervening_region, *the_reference_));
+        } else if (!are_adjacent(an_allele, explicit_alleles_.front())) {
+            auto intervening_region = get_intervening(an_allele, explicit_alleles_.front());
+            explicit_alleles_.push_front(get_reference_allele(intervening_region, *reference_));
         }
         
-        if (is_region_set_ && begins_before(an_allele, the_reference_region_)) {
-            the_reference_region_ = get_encompassing(an_allele, the_reference_region_);
+        if (is_region_set_ && begins_before(an_allele, reference_region_)) {
+            reference_region_ = get_encompassing(an_allele, reference_region_);
         }
-    } else if (is_region_set_ && ends_before(the_reference_region_, an_allele)) {
-        the_reference_region_ = get_encompassing(the_reference_region_, an_allele);
+    } else if (is_region_set_ && ends_before(reference_region_, an_allele)) {
+        reference_region_ = get_encompassing(reference_region_, an_allele);
     }
     
-    the_explicit_alleles_.push_front(std::forward<T>(an_allele));
+    explicit_alleles_.push_front(std::forward<T>(an_allele));
     
     is_cached_sequence_outdated_ = true;
 }
@@ -126,22 +129,14 @@ bool contains(const Haplotype& lhs, const Haplotype& rhs);
 
 Haplotype splice(const Haplotype& haplotype, const GenomicRegion& region);
 
-bool is_reference(const Haplotype& a_haplotype, ReferenceGenome& the_reference);
+bool is_reference(const Haplotype& haplotype, ReferenceGenome& reference);
 
 bool is_less_complex(const Haplotype& lhs, const Haplotype& rhs) noexcept;
 
 void unique_least_complex(std::vector<Haplotype>& haplotypes);
 
-inline bool operator==(const Haplotype& lhs, const Haplotype& rhs)
-{
-    return lhs.get_region() == rhs.get_region() && lhs.get_sequence() == rhs.get_sequence();
-}
-
-inline bool operator<(const Haplotype& lhs, const Haplotype& rhs)
-{
-    return (lhs.get_region() == rhs.get_region()) ? lhs.get_sequence() < rhs.get_sequence() :
-                                                    lhs.get_region() < rhs.get_region();
-}
+bool operator==(const Haplotype& lhs, const Haplotype& rhs);
+bool operator<(const Haplotype& lhs, const Haplotype& rhs);
 
 namespace std {
     template <> struct hash<Haplotype>
@@ -166,15 +161,15 @@ namespace boost {
     };
 }
 
-std::ostream& operator<<(std::ostream& os, const Haplotype& a_haplotype);
+std::ostream& operator<<(std::ostream& os, const Haplotype& haplotype);
 
-void add_to_back(const Variant& a_variant, Haplotype& a_haplotype);
-void add_to_front(const Variant& a_variant, Haplotype& a_haplotype);
-bool contains(const Haplotype& a_haplotype, const Variant& a_variant);
+void add_to_back(const Variant& a_variant, Haplotype& haplotype);
+void add_to_front(const Variant& a_variant, Haplotype& haplotype);
+bool contains(const Haplotype& haplotype, const Variant& a_variant);
 
 inline void Haplotype::print_explicit_alleles() const
 {
-    for (const auto& allele : the_explicit_alleles_) {
+    for (const auto& allele : explicit_alleles_) {
         std::cout << allele << std::endl;
     }
 }

@@ -21,43 +21,43 @@ namespace Octopus
 
 HaplotypeTree::HaplotypeTree(ReferenceGenome& the_reference)
 :
-the_reference_ {the_reference},
-the_tree_ {},
-the_root_ {boost::add_vertex(the_tree_)},
-the_haplotype_leafs_ {the_root_},
+reference_ {the_reference},
+tree_ {},
+root_ {boost::add_vertex(tree_)},
+haplotype_leafs_ {root_},
 haplotype_leaf_cache_ {},
 recently_removed_haplotypes_ {}
 {}
 
 bool HaplotypeTree::empty() const noexcept
 {
-    return the_haplotype_leafs_.front() == the_root_;
+    return haplotype_leafs_.front() == root_;
 }
 
 std::size_t HaplotypeTree::num_haplotypes() const noexcept
 {
-    return the_haplotype_leafs_.size();
+    return haplotype_leafs_.size();
 }
 
-bool HaplotypeTree::contains(const Haplotype& a_haplotype) const
+bool HaplotypeTree::contains(const Haplotype& haplotype) const
 {
-    if (haplotype_leaf_cache_.count(a_haplotype) > 0) return true;
+    if (haplotype_leaf_cache_.count(haplotype) > 0) return true;
     
-    return std::any_of(std::cbegin(the_haplotype_leafs_), std::cend(the_haplotype_leafs_),
-                       [this, &a_haplotype] (const Vertex leaf) {
-                           return is_branch_equal_haplotype(leaf, a_haplotype);
+    return std::any_of(std::cbegin(haplotype_leafs_), std::cend(haplotype_leafs_),
+                       [this, &haplotype] (const Vertex leaf) {
+                           return is_branch_equal_haplotype(leaf, haplotype);
                        });
 }
 
-bool HaplotypeTree::is_unique(const Haplotype& a_haplotype) const
+bool HaplotypeTree::is_unique(const Haplotype& haplotype) const
 {
-    if (haplotype_leaf_cache_.count(a_haplotype) > 0) {
-        return haplotype_leaf_cache_.count(a_haplotype) == 1;
+    if (haplotype_leaf_cache_.count(haplotype) > 0) {
+        return haplotype_leaf_cache_.count(haplotype) == 1;
     } else {
         bool haplotype_seen {false};
         
-        for (const Vertex& leaf : the_haplotype_leafs_) {
-            if (is_branch_equal_haplotype(leaf, a_haplotype)) {
+        for (const Vertex& leaf : haplotype_leafs_) {
+            if (is_branch_equal_haplotype(leaf, haplotype)) {
                 if (haplotype_seen) {
                     return false;
                 } else {
@@ -86,18 +86,18 @@ GenomicRegion HaplotypeTree::get_seperation_region(const Haplotype& the_first_ha
     if (haplotype_leaf_cache_.count(the_first_haplotype) > 0) {
         first_allele = haplotype_leaf_cache_.find(the_first_haplotype)->second;
     } else {
-        first_allele = *find_equal_haplotype_leaf(std::cbegin(the_haplotype_leafs_),
-                                                  std::cend(the_haplotype_leafs_), the_first_haplotype);
+        first_allele = *find_equal_haplotype_leaf(std::cbegin(haplotype_leafs_),
+                                                  std::cend(haplotype_leafs_), the_first_haplotype);
     }
     if (haplotype_leaf_cache_.count(the_second_haplotype) > 0) {
         second_allele = haplotype_leaf_cache_.find(the_second_haplotype)->second;
     } else {
-        second_allele = *find_equal_haplotype_leaf(std::cbegin(the_haplotype_leafs_),
-                                                   std::cend(the_haplotype_leafs_), the_second_haplotype);
+        second_allele = *find_equal_haplotype_leaf(std::cbegin(haplotype_leafs_),
+                                                   std::cend(haplotype_leafs_), the_second_haplotype);
     }
     
-    while (first_allele != the_root_ && second_allele != the_root_) {
-        if (first_allele == second_allele) return the_tree_[first_allele].get_region();
+    while (first_allele != root_ && second_allele != root_) {
+        if (first_allele == second_allele) return tree_[first_allele].get_region();
         
         first_allele  = get_previous_allele(first_allele);
         second_allele = get_previous_allele(second_allele);
@@ -106,12 +106,12 @@ GenomicRegion HaplotypeTree::get_seperation_region(const Haplotype& the_first_ha
     return the_first_haplotype.get_region();
 }
 
-void HaplotypeTree::extend(const Allele& an_allele)
+void HaplotypeTree::extend(const Allele& allele)
 {
-    auto leaf_it = std::cbegin(the_haplotype_leafs_);
+    auto leaf_it = std::cbegin(haplotype_leafs_);
     
-    while (leaf_it != std::cend(the_haplotype_leafs_)) {
-        leaf_it = extend_haplotype(leaf_it, an_allele);
+    while (leaf_it != std::cend(haplotype_leafs_)) {
+        leaf_it = extend_haplotype(leaf_it, allele);
         ++leaf_it;
     }
     
@@ -119,15 +119,15 @@ void HaplotypeTree::extend(const Allele& an_allele)
     recently_removed_haplotypes_.clear();
 }
 
-HaplotypeTree::Haplotypes HaplotypeTree::get_haplotypes(const GenomicRegion& a_region)
+HaplotypeTree::Haplotypes HaplotypeTree::get_haplotypes(const GenomicRegion& region)
 {
     haplotype_leaf_cache_.clear();
     
     Haplotypes result {};
-    result.reserve(the_haplotype_leafs_.size());
+    result.reserve(haplotype_leafs_.size());
     
-    for (auto leaf : the_haplotype_leafs_) {
-        auto haplotype = get_haplotype(leaf, a_region);
+    for (auto leaf : haplotype_leafs_) {
+        auto haplotype = get_haplotype(leaf, region);
         
         // recently retreived haplotypes are added to the cache as it is likely these
         // are the haplotypes that will be pruned next
@@ -139,9 +139,9 @@ HaplotypeTree::Haplotypes HaplotypeTree::get_haplotypes(const GenomicRegion& a_r
     return result;
 }
 
-void HaplotypeTree::prune_all(const Haplotype& a_haplotype)
+void HaplotypeTree::prune_all(const Haplotype& haplotype)
 {
-    if (recently_removed_haplotypes_.count(a_haplotype) > 1) return;
+    if (recently_removed_haplotypes_.count(haplotype) > 1) return;
     
     Vertex new_haplotype_end;
     LeafIterator leaf_it;
@@ -150,103 +150,103 @@ void HaplotypeTree::prune_all(const Haplotype& a_haplotype)
     // if any of the haplotypes in cache match the query haplotype then the cache must contain
     // all possible leaves corrosponding to that haplotype. So we don't need to look through
     // the list of all leaves. Win.
-    if (haplotype_leaf_cache_.count(a_haplotype) > 0) {
-        auto leaf_range = haplotype_leaf_cache_.equal_range(a_haplotype);
+    if (haplotype_leaf_cache_.count(haplotype) > 0) {
+        auto leaf_range = haplotype_leaf_cache_.equal_range(haplotype);
         
         std::for_each(leaf_range.first, leaf_range.second,
-              [this, &a_haplotype, &leaf_it, &new_haplotype_end, &new_end_is_leaf] (auto& leaf_pair) {
+              [this, &haplotype, &leaf_it, &new_haplotype_end, &new_end_is_leaf] (auto& leaf_pair) {
                   std::tie(new_haplotype_end, new_end_is_leaf) = prune_branch(leaf_pair.second,
-                                                                              a_haplotype.get_region());
+                                                                              haplotype.get_region());
                   
-                  leaf_it = std::find(std::cbegin(the_haplotype_leafs_), std::cend(the_haplotype_leafs_),
+                  leaf_it = std::find(std::cbegin(haplotype_leafs_), std::cend(haplotype_leafs_),
                                       leaf_pair.second);
                   
-                  leaf_it = the_haplotype_leafs_.erase(leaf_it);
+                  leaf_it = haplotype_leafs_.erase(leaf_it);
                   
                   if (new_end_is_leaf) {
-                      the_haplotype_leafs_.insert(leaf_it, new_haplotype_end);
+                      haplotype_leafs_.insert(leaf_it, new_haplotype_end);
                   }
               });
         
-        haplotype_leaf_cache_.erase(a_haplotype);
+        haplotype_leaf_cache_.erase(haplotype);
     } else {
-        leaf_it = std::cbegin(the_haplotype_leafs_);
+        leaf_it = std::cbegin(haplotype_leafs_);
         
         while (true) {
-            leaf_it = find_equal_haplotype_leaf(leaf_it, std::cend(the_haplotype_leafs_), a_haplotype);
+            leaf_it = find_equal_haplotype_leaf(leaf_it, std::cend(haplotype_leafs_), haplotype);
             
-            if (leaf_it == std::cend(the_haplotype_leafs_)) {
+            if (leaf_it == std::cend(haplotype_leafs_)) {
                 return;
             }
             
-            std::tie(new_haplotype_end, new_end_is_leaf) = prune_branch(*leaf_it, a_haplotype.get_region());
+            std::tie(new_haplotype_end, new_end_is_leaf) = prune_branch(*leaf_it, haplotype.get_region());
             
-            leaf_it = the_haplotype_leafs_.erase(leaf_it);
+            leaf_it = haplotype_leafs_.erase(leaf_it);
             
             if (new_end_is_leaf) {
-                leaf_it = the_haplotype_leafs_.insert(leaf_it, new_haplotype_end);
+                leaf_it = haplotype_leafs_.insert(leaf_it, new_haplotype_end);
             }
         }
     }
     
-    recently_removed_haplotypes_.emplace(a_haplotype);
+    recently_removed_haplotypes_.emplace(haplotype);
 }
 
-void HaplotypeTree::prune_unique(const Haplotype& a_haplotype)
+void HaplotypeTree::prune_unique(const Haplotype& haplotype)
 {
     Vertex new_haplotype_end;
     Vertex leaf_to_keep;
     LeafIterator leaf_it;
     bool new_end_is_leaf {};
     
-    if (haplotype_leaf_cache_.count(a_haplotype) > 0) {
-        auto leaf_range = haplotype_leaf_cache_.equal_range(a_haplotype);
+    if (haplotype_leaf_cache_.count(haplotype) > 0) {
+        auto leaf_range = haplotype_leaf_cache_.equal_range(haplotype);
         
         leaf_to_keep = std::find_if(leaf_range.first, leaf_range.second,
-                                    [this, &a_haplotype] (auto& leaf_pair) {
-                                        return is_branch_exact_haplotype(leaf_pair.second, a_haplotype);
+                                    [this, &haplotype] (auto& leaf_pair) {
+                                        return is_branch_exact_haplotype(leaf_pair.second, haplotype);
                                     })->second;
         
         std::for_each(leaf_range.first, leaf_range.second,
-          [this, &a_haplotype, &leaf_it, &new_haplotype_end, &new_end_is_leaf, &leaf_to_keep] (auto& leaf_pair) {
+          [this, &haplotype, &leaf_it, &new_haplotype_end, &new_end_is_leaf, &leaf_to_keep] (auto& leaf_pair) {
               if (leaf_pair.second != leaf_to_keep) {
                   std::tie(new_haplotype_end, new_end_is_leaf) = prune_branch(leaf_pair.second,
-                                                                              a_haplotype.get_region());
+                                                                              haplotype.get_region());
                   
-                  leaf_it = std::find(std::cbegin(the_haplotype_leafs_), std::cend(the_haplotype_leafs_),
+                  leaf_it = std::find(std::cbegin(haplotype_leafs_), std::cend(haplotype_leafs_),
                                       leaf_pair.second);
                   
-                  leaf_it = the_haplotype_leafs_.erase(leaf_it);
+                  leaf_it = haplotype_leafs_.erase(leaf_it);
                   
                   if (new_end_is_leaf) {
-                      the_haplotype_leafs_.insert(leaf_it, new_haplotype_end);
+                      haplotype_leafs_.insert(leaf_it, new_haplotype_end);
                   }
               }
           });
         
-        haplotype_leaf_cache_.erase(a_haplotype);
-        haplotype_leaf_cache_.emplace(a_haplotype, leaf_to_keep);
+        haplotype_leaf_cache_.erase(haplotype);
+        haplotype_leaf_cache_.emplace(haplotype, leaf_to_keep);
     } else {
-        leaf_to_keep = *find_exact_haplotype_leaf(std::cbegin(the_haplotype_leafs_), std::cend(the_haplotype_leafs_),
-                                                  a_haplotype);
+        leaf_to_keep = *find_exact_haplotype_leaf(std::cbegin(haplotype_leafs_), std::cend(haplotype_leafs_),
+                                                  haplotype);
         
-        leaf_it = std::cbegin(the_haplotype_leafs_);
+        leaf_it = std::cbegin(haplotype_leafs_);
         
         while (true) {
-            leaf_it = find_equal_haplotype_leaf(leaf_it, std::cend(the_haplotype_leafs_), a_haplotype);
+            leaf_it = find_equal_haplotype_leaf(leaf_it, std::cend(haplotype_leafs_), haplotype);
             
             if (*leaf_it == leaf_to_keep) continue;
             
-            if (leaf_it == std::cend(the_haplotype_leafs_)) {
+            if (leaf_it == std::cend(haplotype_leafs_)) {
                 return;
             }
             
-            std::tie(new_haplotype_end, new_end_is_leaf) = prune_branch(*leaf_it, a_haplotype.get_region());
+            std::tie(new_haplotype_end, new_end_is_leaf) = prune_branch(*leaf_it, haplotype.get_region());
             
-            leaf_it = the_haplotype_leafs_.erase(leaf_it);
+            leaf_it = haplotype_leafs_.erase(leaf_it);
             
             if (new_end_is_leaf) {
-                leaf_it = the_haplotype_leafs_.insert(leaf_it, new_haplotype_end);
+                leaf_it = haplotype_leafs_.insert(leaf_it, new_haplotype_end);
             }
         }
 
@@ -257,119 +257,119 @@ void HaplotypeTree::clear()
 {
     haplotype_leaf_cache_.clear();
     recently_removed_haplotypes_.clear();
-    the_haplotype_leafs_.clear();
-    the_tree_.clear();
-    the_root_ = boost::add_vertex(the_tree_);
-    the_haplotype_leafs_.push_back(the_root_);
+    haplotype_leafs_.clear();
+    tree_.clear();
+    root_ = boost::add_vertex(tree_);
+    haplotype_leafs_.push_back(root_);
 }
 
 // Private methods
 
-HaplotypeTree::Vertex HaplotypeTree::get_previous_allele(Vertex an_allele) const
+HaplotypeTree::Vertex HaplotypeTree::get_previous_allele(Vertex allele) const
 {
-    return *boost::inv_adjacent_vertices(an_allele, the_tree_).first;
+    return *boost::inv_adjacent_vertices(allele, tree_).first;
 }
 
-bool HaplotypeTree::allele_exists(Vertex allele, const Allele& an_allele) const
+bool HaplotypeTree::allele_exists(Vertex leaf, const Allele& allele) const
 {
-    auto vertex_range = boost::adjacent_vertices(allele, the_tree_);
-    return std::any_of(vertex_range.first, vertex_range.second, [this, &an_allele] (Vertex vertex) {
-        return the_tree_[vertex] == an_allele;
-    });
+    auto vertex_range = boost::adjacent_vertices(leaf, tree_);
+    return std::any_of(vertex_range.first, vertex_range.second,
+                       [this, &allele] (Vertex vertex) {
+                           return tree_[vertex] == allele;
+                       });
 }
 
-HaplotypeTree::LeafIterator HaplotypeTree::extend_haplotype(LeafIterator haplotype_leaf,
-                                                            const Allele& the_new_allele)
+HaplotypeTree::LeafIterator HaplotypeTree::extend_haplotype(LeafIterator haplotype_leaf, const Allele& new_allele)
 {
-    const Allele& the_leaf_allele = the_tree_[*haplotype_leaf];
+    const Allele& the_leaf_allele = tree_[*haplotype_leaf];
     
-    if (are_adjacent(the_leaf_allele, the_new_allele) &&
-        ((is_insertion(the_leaf_allele) && is_deletion(the_new_allele)) ||
-        (is_deletion(the_leaf_allele) && is_insertion(the_new_allele)))) {
+    if (are_adjacent(the_leaf_allele, new_allele) &&
+        ((is_insertion(the_leaf_allele) && is_deletion(new_allele)) ||
+        (is_deletion(the_leaf_allele) && is_insertion(new_allele)))) {
         return haplotype_leaf;
     }
     
-    if (*haplotype_leaf == the_root_ || is_after(the_new_allele, the_leaf_allele)) {
-        Vertex new_leaf = boost::add_vertex(the_tree_);
-        the_tree_[new_leaf] = the_new_allele;
-        boost::add_edge(*haplotype_leaf, new_leaf, the_tree_);
+    if (*haplotype_leaf == root_ || is_after(new_allele, the_leaf_allele)) {
+        Vertex new_leaf = boost::add_vertex(tree_);
+        tree_[new_leaf] = new_allele;
+        boost::add_edge(*haplotype_leaf, new_leaf, tree_);
         
-        haplotype_leaf = the_haplotype_leafs_.erase(haplotype_leaf);
-        haplotype_leaf = the_haplotype_leafs_.insert(haplotype_leaf, new_leaf);
-    } else if (overlaps(the_new_allele, the_leaf_allele)) {
+        haplotype_leaf = haplotype_leafs_.erase(haplotype_leaf);
+        haplotype_leaf = haplotype_leafs_.insert(haplotype_leaf, new_leaf);
+    } else if (overlaps(new_allele, the_leaf_allele)) {
         Vertex previous_allele = get_previous_allele(*haplotype_leaf);
         
-        const Allele& the_previous_allele = the_tree_[previous_allele];
+        const Allele& the_previous_allele = tree_[previous_allele];
         
-        if (are_adjacent(the_previous_allele, the_new_allele) &&
-            ((is_insertion(the_previous_allele) && is_deletion(the_new_allele)) ||
-             (is_deletion(the_previous_allele) && is_insertion(the_new_allele)))) {
+        if (are_adjacent(the_previous_allele, new_allele) &&
+            ((is_insertion(the_previous_allele) && is_deletion(new_allele)) ||
+             (is_deletion(the_previous_allele) && is_insertion(new_allele)))) {
             return haplotype_leaf;
         }
         
-        if (!allele_exists(previous_allele, the_new_allele)) {
-            Vertex new_branch = boost::add_vertex(the_tree_);
-            the_tree_[new_branch] = the_new_allele;
-            boost::add_edge(previous_allele, new_branch, the_tree_);
+        if (!allele_exists(previous_allele, new_allele)) {
+            Vertex new_branch = boost::add_vertex(tree_);
+            tree_[new_branch] = new_allele;
+            boost::add_edge(previous_allele, new_branch, tree_);
             
-            the_haplotype_leafs_.insert(haplotype_leaf, new_branch);
+            haplotype_leafs_.insert(haplotype_leaf, new_branch);
         }
     }
     
     return haplotype_leaf;
 }
 
-Haplotype HaplotypeTree::get_haplotype(Vertex haplotype_leaf, const GenomicRegion& a_region) const
+Haplotype HaplotypeTree::get_haplotype(Vertex haplotype_leaf, const GenomicRegion& region) const
 {
-    Haplotype result {the_reference_, a_region};
+    Haplotype result {reference_, region};
     
-    while (haplotype_leaf != the_root_ && is_after(the_tree_[haplotype_leaf], a_region)) {
+    while (haplotype_leaf != root_ && is_after(tree_[haplotype_leaf], region)) {
         haplotype_leaf = get_previous_allele(haplotype_leaf);
     }
     
-    while (haplotype_leaf != the_root_ && overlaps(the_tree_[haplotype_leaf], a_region)) {
-        result.push_front(the_tree_[haplotype_leaf]);
+    while (haplotype_leaf != root_ && overlaps(tree_[haplotype_leaf], region)) {
+        result.push_front(tree_[haplotype_leaf]);
         haplotype_leaf = get_previous_allele(haplotype_leaf);
     }
     
     return result;
 }
 
-bool HaplotypeTree::is_branch_exact_haplotype(Vertex this_vertex, const Haplotype& a_haplotype) const
+bool HaplotypeTree::is_branch_exact_haplotype(Vertex this_vertex, const Haplotype& haplotype) const
 {
-    if (this_vertex == the_root_) {
+    if (this_vertex == root_) {
         return false;
     }
     
-    const Allele* this_allele {&the_tree_[this_vertex]};
+    const Allele* this_allele {&tree_[this_vertex]};
     
-    if (!overlaps(a_haplotype, *this_allele)) {
+    if (!overlaps(haplotype, *this_allele)) {
         return false;
     }
     
     Vertex previous_vertex;
     const Allele* previous_allele;
     
-    while (!is_before(*this_allele, a_haplotype)) {
-        if (!a_haplotype.contains(*this_allele)) {
+    while (!is_before(*this_allele, haplotype)) {
+        if (!haplotype.contains(*this_allele)) {
             return false;
         }
         
         previous_vertex = get_previous_allele(this_vertex);
         
-        if (previous_vertex == the_root_) {
+        if (previous_vertex == root_) {
             break;
         }
         
-        previous_allele = &the_tree_[previous_vertex];
+        previous_allele = &tree_[previous_vertex];
         
-        if (is_before(*previous_allele, a_haplotype)) {
+        if (is_before(*previous_allele, haplotype)) {
             break;
         }
         
         if (!are_adjacent(*previous_allele, *this_allele) &&
-            !a_haplotype.contains(get_reference_allele(get_intervening(*previous_allele, *this_allele),
-                                                       the_reference_))) {
+            !haplotype.contains(get_reference_allele(get_intervening(*previous_allele, *this_allele),
+                                                       reference_))) {
             return false;
         }
         
@@ -380,49 +380,49 @@ bool HaplotypeTree::is_branch_exact_haplotype(Vertex this_vertex, const Haplotyp
     return true;
 }
 
-bool HaplotypeTree::is_branch_equal_haplotype(Vertex this_vertex, const Haplotype& a_haplotype) const
+bool HaplotypeTree::is_branch_equal_haplotype(Vertex this_vertex, const Haplotype& haplotype) const
 {
-    if (this_vertex == the_root_) {
+    if (this_vertex == root_) {
         return false;
     }
     
-    if (!overlaps(a_haplotype, the_tree_[this_vertex])) {
+    if (!overlaps(haplotype, tree_[this_vertex])) {
         return false;
     }
     
-    return get_haplotype(this_vertex, a_haplotype.get_region()) == a_haplotype;
+    return get_haplotype(this_vertex, haplotype.get_region()) == haplotype;
 }
 
 HaplotypeTree::LeafIterator HaplotypeTree::find_exact_haplotype_leaf(LeafIterator first, LeafIterator last,
-                                                                     const Haplotype& a_haplotype) const
+                                                                     const Haplotype& haplotype) const
 {
-    return std::find_if(first, last, [this, &a_haplotype] (Vertex leaf) {
-        return is_branch_exact_haplotype(leaf, a_haplotype);
+    return std::find_if(first, last, [this, &haplotype] (Vertex leaf) {
+        return is_branch_exact_haplotype(leaf, haplotype);
     });
 }
 
 HaplotypeTree::LeafIterator HaplotypeTree::find_equal_haplotype_leaf(LeafIterator first, LeafIterator last,
-                                                                     const Haplotype& a_haplotype) const
+                                                                     const Haplotype& haplotype) const
 {
-    return std::find_if(first, last, [this, &a_haplotype] (Vertex leaf) {
-        return is_branch_equal_haplotype(leaf, a_haplotype);
+    return std::find_if(first, last, [this, &haplotype] (Vertex leaf) {
+        return is_branch_equal_haplotype(leaf, haplotype);
     });
 }
 
-std::pair<HaplotypeTree::Vertex, bool> HaplotypeTree::prune_branch(Vertex leaf, const GenomicRegion& a_region)
+std::pair<HaplotypeTree::Vertex, bool> HaplotypeTree::prune_branch(Vertex leaf, const GenomicRegion& region)
 {
     Vertex new_leaf;
     
-    while (leaf != the_root_) {
-        if (boost::out_degree(leaf, the_tree_) > 0) {
+    while (leaf != root_) {
+        if (boost::out_degree(leaf, tree_) > 0) {
             return {leaf, false};
-        } else if (begins_before(the_tree_[leaf], a_region)) {
+        } else if (begins_before(tree_[leaf], region)) {
             return {leaf, true};
         }
         
         new_leaf = get_previous_allele(leaf);
-        boost::remove_edge(new_leaf, leaf, the_tree_);
-        boost::remove_vertex(leaf, the_tree_);
+        boost::remove_edge(new_leaf, leaf, tree_);
+        boost::remove_vertex(leaf, tree_);
         leaf = new_leaf;
     }
     

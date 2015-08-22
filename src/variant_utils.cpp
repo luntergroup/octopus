@@ -28,12 +28,11 @@ std::size_t num_redundant_bases(InputIterator first1, InputIterator last1, Input
 
 void remove_duplicates(std::vector<Variant>& variants)
 {
-    auto it = std::unique(std::begin(variants), std::end(variants));
-    variants.erase(it, variants.end());
+    variants.erase(std::unique(std::begin(variants), std::end(variants)), variants.end());
 }
 
-std::vector<Allele> get_reference_alleles_between_variants(const std::vector<Variant>& the_variants,
-                                                           ReferenceGenome& the_reference)
+std::vector<Allele> get_intervening_reference_alleles(const std::vector<Variant>& the_variants,
+                                                      ReferenceGenome& reference)
 {
     auto all_overlapped_regions = get_covered_regions(std::cbegin(the_variants), std::cend(the_variants));
     auto regions_between_candidates = get_all_intervening(std::cbegin(all_overlapped_regions),
@@ -43,28 +42,26 @@ std::vector<Allele> get_reference_alleles_between_variants(const std::vector<Var
     result.reserve(regions_between_candidates.size());
     
     std::transform(std::cbegin(regions_between_candidates), std::cend(regions_between_candidates),
-                   std::back_inserter(result), [&the_reference] (const auto& region) {
-                       return get_reference_allele(region, the_reference);
+                   std::back_inserter(result), [&reference] (const auto& region) {
+                       return get_reference_allele(region, reference);
                    });
     
     return result;
 }
 
-auto allele_minmax(const Variant::SequenceType& allele_a, const Variant::SequenceType& allele_b)
+auto allele_minmax(const Variant::SequenceType& lhs, const Variant::SequenceType& rhs)
 {
-    return std::minmax(allele_a, allele_b, [] (const auto& a1, const auto& a2) {
-        return a1.size() < a2.size();
-    });
+    return std::minmax(lhs, rhs, [] (const auto& a1, const auto& a2) { return a1.size() < a2.size(); });
 }
 
-bool is_parsimonious(const Variant& a_variant) noexcept
+bool is_parsimonious(const Variant& variant) noexcept
 {
-    if (a_variant.reference_allele_size() == 0 || a_variant.alternative_allele_size() == 0) {
+    if (variant.reference_allele_size() == 0 || variant.alternative_allele_size() == 0) {
         return false;
     }
     
-    const auto& ref_allele = a_variant.get_reference_allele_sequence();
-    const auto& alt_allele = a_variant.get_alternative_allele_sequence();
+    const auto& ref_allele = variant.get_reference_allele_sequence();
+    const auto& alt_allele = variant.get_alternative_allele_sequence();
     
     const auto& alleles = allele_minmax(ref_allele, alt_allele);
     const auto& the_small_allele = alleles.first;
@@ -82,26 +79,26 @@ bool is_parsimonious(const Variant& a_variant) noexcept
     return true;
 }
 
-Variant make_parsimonious(const Variant& a_variant, ReferenceGenome& the_reference)
+Variant make_parsimonious(const Variant& variant, ReferenceGenome& reference)
 {
-    if (is_parsimonious(a_variant)) return a_variant;
+    if (is_parsimonious(variant)) return variant;
     
-    const auto& old_ref_allele = a_variant.get_reference_allele_sequence();
-    const auto& old_alt_allele = a_variant.get_alternative_allele_sequence();
+    const auto& old_ref_allele = variant.get_reference_allele_sequence();
+    const auto& old_alt_allele = variant.get_alternative_allele_sequence();
     
     const auto& alleles = allele_minmax(old_ref_allele, old_alt_allele);
     const auto& the_small_allele = alleles.first;
     const auto& the_big_allele   = alleles.second;
     
-    const auto& old_ref_region = a_variant.get_region();
+    const auto& old_ref_region = variant.get_region();
     
     if (the_small_allele.size() == 0) {
         if (old_ref_region.get_begin() > 0) {
             GenomicRegion new_ref_region {old_ref_region.get_contig_name(),
                 old_ref_region.get_begin() - 1, old_ref_region.get_end()};
             
-            auto new_ref_allele = the_reference.get_sequence(new_ref_region);
-            auto new_alt_allele = new_ref_allele.front() + a_variant.get_alternative_allele_sequence();
+            auto new_ref_allele = reference.get_sequence(new_ref_region);
+            auto new_alt_allele = new_ref_allele.front() + variant.get_alternative_allele_sequence();
             
             return Variant {std::move(new_ref_region), std::move(new_ref_allele),
                             std::move(new_alt_allele)};
@@ -110,8 +107,8 @@ Variant make_parsimonious(const Variant& a_variant, ReferenceGenome& the_referen
             GenomicRegion new_ref_region {old_ref_region.get_contig_name(),
                 old_ref_region.get_begin(), old_ref_region.get_end() + 1};
             
-            auto new_ref_allele = the_reference.get_sequence(new_ref_region);
-            auto new_alt_allele = a_variant.get_alternative_allele_sequence() + new_ref_allele.back();
+            auto new_ref_allele = reference.get_sequence(new_ref_region);
+            auto new_alt_allele = variant.get_alternative_allele_sequence() + new_ref_allele.back();
             
             return Variant {std::move(new_ref_region), std::move(new_ref_allele),
                             std::move(new_alt_allele)};
@@ -155,9 +152,9 @@ Variant make_parsimonious(const Variant& a_variant, ReferenceGenome& the_referen
                     std::move(new_big_allele)};
 }
 
-bool is_left_alignable(const Variant& a_variant) noexcept
+bool is_left_alignable(const Variant& variant) noexcept
 {
-    return is_indel(a_variant);
+    return is_indel(variant);
 }
 
 using LeftAlignmentList = std::list<Variant::SequenceType::value_type>;
@@ -175,13 +172,13 @@ auto get_allele_lists(const Variant::SequenceType& allele_a, const Variant::Sequ
 }
 
 GenomicRegion extend_allele_lists(LeftAlignmentList& big_allele, LeftAlignmentList& small_allele,
-                                  ReferenceGenome& the_reference, const GenomicRegion& current_region,
+                                  ReferenceGenome& reference, const GenomicRegion& current_region,
                                   Variant::SizeType extension_size)
 {
     auto new_region = shift(current_region, -extension_size);
     GenomicRegion extension_region {new_region.get_contig_name(), new_region.get_begin(),
         new_region.get_begin() + extension_size};
-    auto the_extension = the_reference.get_sequence(extension_region);
+    auto the_extension = reference.get_sequence(extension_region);
     
     big_allele.insert(begin(big_allele), cbegin(the_extension), cend(the_extension));
     small_allele.insert(begin(small_allele), cbegin(the_extension), cend(the_extension));
@@ -189,19 +186,19 @@ GenomicRegion extend_allele_lists(LeftAlignmentList& big_allele, LeftAlignmentLi
     return new_region;
 }
 
-Variant left_align(const Variant& a_variant, ReferenceGenome& the_reference,
+Variant left_align(const Variant& variant, ReferenceGenome& reference,
                    Variant::SizeType extension_size)
 {
-    if (!is_left_alignable(a_variant)) {
-        return a_variant;
+    if (!is_left_alignable(variant)) {
+        return variant;
     }
     
     static_assert(sizeof(Variant::SizeType) == sizeof(GenomicRegion::SizeType),
                   "Variant and GenomicRegion have different SizeType");
     using SizeType = Variant::SizeType;
     
-    const auto& ref_allele = a_variant.get_reference_allele_sequence();
-    const auto& alt_allele = a_variant.get_alternative_allele_sequence();
+    const auto& ref_allele = variant.get_reference_allele_sequence();
+    const auto& alt_allele = variant.get_alternative_allele_sequence();
     
     LeftAlignmentList big_allele {}, small_allele {};
     std::tie(big_allele, small_allele) = get_allele_lists(ref_allele, alt_allele);
@@ -211,14 +208,14 @@ Variant left_align(const Variant& a_variant, ReferenceGenome& the_reference,
     auto big_allele_size   = static_cast<SizeType>(big_allele.size());
     auto small_allele_size = static_cast<SizeType>(small_allele.size());
     
-    GenomicRegion current_region {a_variant.get_region()};
+    GenomicRegion current_region {variant.get_region()};
     
     do {
         if (current_region.get_begin() >= extension_size) {
-            current_region = extend_allele_lists(big_allele, small_allele, the_reference,
+            current_region = extend_allele_lists(big_allele, small_allele, reference,
                                                  current_region, extension_size);
         } else if (current_region.get_begin() > 0) {
-            current_region = extend_allele_lists(big_allele, small_allele, the_reference,
+            current_region = extend_allele_lists(big_allele, small_allele, reference,
                                                  current_region, current_region.get_begin());
         } else {
             break;
@@ -239,7 +236,7 @@ Variant left_align(const Variant& a_variant, ReferenceGenome& the_reference,
         auto required_left_padding = static_cast<SizeType>(small_allele_size - removable_extension);
         // Note this will automatically pad to the right if we've reached the start of the contig
         if (current_region.get_begin() >= required_left_padding) {
-            current_region = extend_allele_lists(big_allele, small_allele, the_reference,
+            current_region = extend_allele_lists(big_allele, small_allele, reference,
                                                  current_region, required_left_padding);
             removable_extension = 0;
         }
@@ -266,19 +263,19 @@ Variant left_align(const Variant& a_variant, ReferenceGenome& the_reference,
                     std::move(new_big_allele)};
 }
 
-Variant normalise(const Variant& a_variant, ReferenceGenome& the_reference, Variant::SizeType extension_size)
+Variant normalise(const Variant& variant, ReferenceGenome& reference, Variant::SizeType extension_size)
 {
-    return make_parsimonious(left_align(a_variant, the_reference, extension_size), the_reference);
+    return make_parsimonious(left_align(variant, reference, extension_size), reference);
 }
 
-std::vector<Variant> unique_left_align(const std::vector<Variant>& variants, ReferenceGenome& the_reference)
+std::vector<Variant> unique_left_align(const std::vector<Variant>& variants, ReferenceGenome& reference)
 {
     std::vector<Variant> result {};
     result.reserve(variants.size());
     
     std::transform(variants.cbegin(), variants.cend(), std::back_inserter(result),
-                   [&the_reference] (const Variant& variant) {
-                       return left_align(variant, the_reference);
+                   [&reference] (const Variant& variant) {
+                       return left_align(variant, reference);
                    });
     
     if (!std::is_sorted(result.cbegin(), result.cend())) {
@@ -290,42 +287,42 @@ std::vector<Variant> unique_left_align(const std::vector<Variant>& variants, Ref
     return result;
 }
 
-bool is_snp(const Variant& a_variant) noexcept
+bool is_snp(const Variant& variant) noexcept
 {
-    return a_variant.reference_allele_size() == 1 && a_variant.alternative_allele_size() == 1;
+    return variant.reference_allele_size() == 1 && variant.alternative_allele_size() == 1;
 }
 
-bool is_insertion(const Variant& a_variant) noexcept
+bool is_insertion(const Variant& variant) noexcept
 {
-    return a_variant.reference_allele_size() < a_variant.alternative_allele_size();
+    return variant.reference_allele_size() < variant.alternative_allele_size();
 }
 
-bool is_deletion(const Variant& a_variant) noexcept
+bool is_deletion(const Variant& variant) noexcept
 {
-    return a_variant.reference_allele_size() > a_variant.alternative_allele_size();
+    return variant.reference_allele_size() > variant.alternative_allele_size();
 }
 
-bool is_indel(const Variant& a_variant) noexcept
+bool is_indel(const Variant& variant) noexcept
 {
-    return is_insertion(a_variant) || is_deletion(a_variant);
+    return is_insertion(variant) || is_deletion(variant);
 }
 
-bool is_mnv(const Variant& a_variant) noexcept
+bool is_mnv(const Variant& variant) noexcept
 {
-    return a_variant.reference_allele_size() > 1 && a_variant.alternative_allele_size() > 1;
+    return variant.reference_allele_size() > 1 && variant.alternative_allele_size() > 1;
 }
 
-bool is_transition(const Variant& a_variant) noexcept
+bool is_transition(const Variant& variant) noexcept
 {
-    return is_snp(a_variant) && (
-           (a_variant.get_reference_allele_sequence() == "A" && a_variant.get_alternative_allele_sequence() == "G")
-        || (a_variant.get_reference_allele_sequence() == "G" && a_variant.get_alternative_allele_sequence() == "A")
-        || (a_variant.get_reference_allele_sequence() == "C" && a_variant.get_alternative_allele_sequence() == "T")
-        || (a_variant.get_reference_allele_sequence() == "T" && a_variant.get_alternative_allele_sequence() == "C")
+    return is_snp(variant) && (
+           (variant.get_reference_allele_sequence() == "A" && variant.get_alternative_allele_sequence() == "G")
+        || (variant.get_reference_allele_sequence() == "G" && variant.get_alternative_allele_sequence() == "A")
+        || (variant.get_reference_allele_sequence() == "C" && variant.get_alternative_allele_sequence() == "T")
+        || (variant.get_reference_allele_sequence() == "T" && variant.get_alternative_allele_sequence() == "C")
     );
 }
 
-bool is_transversion(const Variant& a_variant) noexcept
+bool is_transversion(const Variant& variant) noexcept
 {
-    return is_snp(a_variant) && !is_transition(a_variant);
+    return is_snp(variant) && !is_transition(variant);
 }
