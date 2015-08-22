@@ -10,6 +10,7 @@
 		CA03C1511A8C0D3D000D3494 /* htslib_sam_facade.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA03C14F1A8C0D3D000D3494 /* htslib_sam_facade.cpp */; };
 		CA03C2251A8C1702000D3494 /* read_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA03C2241A8C1702000D3494 /* read_tests.cpp */; };
 		CA03C2271A8C1BED000D3494 /* reference_benchmarks.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA03C2261A8C1BED000D3494 /* reference_benchmarks.cpp */; };
+		CA0A329D1B863B5A001BE30F /* tandem.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA0A329B1B863B5A001BE30F /* tandem.cpp */; };
 		CA0B46651AE3CD6800158BBA /* read_model_benchmarks.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA0B46641AE3CD6800158BBA /* read_model_benchmarks.cpp */; };
 		CA0B46691AE860FC00158BBA /* 1000G_test1.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA0B46681AE860FC00158BBA /* 1000G_test1.cpp */; };
 		CA0B466B1AE8611800158BBA /* 1000G_test2.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA0B466A1AE8611800158BBA /* 1000G_test2.cpp */; };
@@ -115,7 +116,6 @@
 		D4BEA9FC1B861BE200E53CFD /* sssort.c in Sources */ = {isa = PBXBuildFile; fileRef = D4BEA9F81B861BE200E53CFD /* sssort.c */; settings = {COMPILER_FLAGS = "-w"; }; };
 		D4BEA9FD1B861BE200E53CFD /* trsort.c in Sources */ = {isa = PBXBuildFile; fileRef = D4BEA9F91B861BE200E53CFD /* trsort.c */; settings = {COMPILER_FLAGS = "-w"; }; };
 		D4BEA9FE1B861BE200E53CFD /* utils.c in Sources */ = {isa = PBXBuildFile; fileRef = D4BEA9FA1B861BE200E53CFD /* utils.c */; };
-		D4BEAA051B861C1500E53CFD /* tandem.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D4BEAA031B861C1500E53CFD /* tandem.cpp */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -140,6 +140,9 @@
 		CA03C2291A8C1C8C000D3494 /* benchmark_utils.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = benchmark_utils.h; sourceTree = "<group>"; };
 		CA03C22A1A8CEF25000D3494 /* read_reader_impl.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = read_reader_impl.h; sourceTree = "<group>"; };
 		CA03C22B1A8D2C5D000D3494 /* cigar_string.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = cigar_string.h; sourceTree = "<group>"; };
+		CA0A329B1B863B5A001BE30F /* tandem.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = tandem.cpp; sourceTree = "<group>"; };
+		CA0A329C1B863B5A001BE30F /* tandem.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = tandem.h; sourceTree = "<group>"; };
+		CA0A329E1B863B6E001BE30F /* threaded_transform.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = threaded_transform.h; sourceTree = "<group>"; };
 		CA0B46641AE3CD6800158BBA /* read_model_benchmarks.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = read_model_benchmarks.cpp; sourceTree = "<group>"; };
 		CA0B46681AE860FC00158BBA /* 1000G_test1.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = 1000G_test1.cpp; sourceTree = "<group>"; };
 		CA0B466A1AE8611800158BBA /* 1000G_test2.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = 1000G_test2.cpp; sourceTree = "<group>"; };
@@ -282,7 +285,6 @@
 		D45D2E651B2AD93500F6A89D /* libboost_system.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libboost_system.a; path = /usr/local/Cellar/boost/1.58.0/lib/libboost_system.a; sourceTree = "<absolute>"; };
 		D46094EF1B4C037B00AE72A1 /* hiv_test.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = hiv_test.cpp; sourceTree = "<group>"; };
 		D46094F11B550A2400AE72A1 /* region_algorithm_tests.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = region_algorithm_tests.cpp; sourceTree = "<group>"; };
-		D4636C5D1B5F97BD00FEA7D2 /* threaded_transform.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = threaded_transform.h; sourceTree = "<group>"; };
 		D4636C5E1B5FEEC700FEA7D2 /* test_files.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = test_files.txt; sourceTree = "<group>"; };
 		D4636C5F1B6788AC00FEA7D2 /* vcf_reader.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = vcf_reader.cpp; sourceTree = "<group>"; };
 		D4636C601B6788AC00FEA7D2 /* vcf_reader.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = vcf_reader.h; sourceTree = "<group>"; };
@@ -334,8 +336,6 @@
 		D4BEAA001B861BF700E53CFD /* divsufsort_private.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = divsufsort_private.h; sourceTree = "<group>"; };
 		D4BEAA011B861BF700E53CFD /* divsufsort.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = divsufsort.h; sourceTree = "<group>"; };
 		D4BEAA021B861BF700E53CFD /* lfs.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = lfs.h; sourceTree = "<group>"; };
-		D4BEAA031B861C1500E53CFD /* tandem.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = tandem.cpp; path = ../src/tandem.cpp; sourceTree = "<group>"; };
-		D4BEAA041B861C1500E53CFD /* tandem.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = tandem.h; path = ../src/tandem.h; sourceTree = "<group>"; };
 		D4E41DA11AD801EF0010D25D /* mappable.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = mappable.h; sourceTree = "<group>"; };
 		D4E41DA21AD80C1B0010D25D /* mappable_algorithms.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = mappable_algorithms.h; sourceTree = "<group>"; };
 		D4E41DA31AD81C390010D25D /* allele.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = allele.h; sourceTree = "<group>"; };
@@ -495,8 +495,9 @@
 		CAA4DC2C1A8219CD00DD3E9A /* include */ = {
 			isa = PBXGroup;
 			children = (
-				D4BEA9F61B861BAF00E53CFD /* tandem */,
 				CAA4DC671A8ACE9B00DD3E9A /* bioio.h */,
+				CA0A329E1B863B6E001BE30F /* threaded_transform.h */,
+				D4BEA9F61B861BAF00E53CFD /* tandem */,
 			);
 			path = include;
 			sourceTree = "<group>";
@@ -611,7 +612,6 @@
 				CA1472741AACC7E2005FDCD1 /* context_iterators.h */,
 				D4907F5E1A8A3ADD00639203 /* string_utils.h */,
 				CA14727D1AAE63A8005FDCD1 /* hash_functions.h */,
-				D4636C5D1B5F97BD00FEA7D2 /* threaded_transform.h */,
 				CA8A66451B7E5E0C008CE1D8 /* sequence_utils.h */,
 			);
 			name = utils;
@@ -751,8 +751,8 @@
 		D4BEA9F61B861BAF00E53CFD /* tandem */ = {
 			isa = PBXGroup;
 			children = (
-				D4BEAA041B861C1500E53CFD /* tandem.h */,
-				D4BEAA031B861C1500E53CFD /* tandem.cpp */,
+				CA0A329C1B863B5A001BE30F /* tandem.h */,
+				CA0A329B1B863B5A001BE30F /* tandem.cpp */,
 				D4BEA9FF1B861BF700E53CFD /* config.h */,
 				D4BEAA001B861BF700E53CFD /* divsufsort_private.h */,
 				D4BEAA011B861BF700E53CFD /* divsufsort.h */,
@@ -845,7 +845,6 @@
 				D463C19F1B062F9300739A66 /* variant_writer_tests.cpp in Sources */,
 				D42061131ACC3D2B00D11553 /* variational_bayes_genotype_model_tests.cpp in Sources */,
 				CAE3E2CB1AAB42C900C01B2C /* read_filter_tests.cpp in Sources */,
-				D4BEAA051B861C1500E53CFD /* tandem.cpp in Sources */,
 				CA28EBF51AABB80E009F8622 /* read_filter_benchmarks.cpp in Sources */,
 				CA4551791AF15D7E00FDAAE8 /* variant_caller.cpp in Sources */,
 				CA45516E1AEB09A500FDAAE8 /* 1000G_test17.cpp in Sources */,
@@ -887,6 +886,7 @@
 				CAEC8E1A1B73ACB9008FC858 /* vcf_type.cpp in Sources */,
 				CA0B466E1AE862B400158BBA /* 1000G_test3.cpp in Sources */,
 				CAD5EC071AD5BBEA00892816 /* genotype_tests.cpp in Sources */,
+				CA0A329D1B863B5A001BE30F /* tandem.cpp in Sources */,
 				D4BEA9FB1B861BE200E53CFD /* divsufsort.c in Sources */,
 				CA4551661AEB092D00FDAAE8 /* 1000G_test13.cpp in Sources */,
 				D463C18D1AF137EB00739A66 /* input_tests.cpp in Sources */,

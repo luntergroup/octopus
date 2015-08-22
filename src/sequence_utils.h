@@ -225,8 +225,6 @@ std::vector<ContigRegion> find_low_complex_regions(const SequenceType& sequence)
 {
     std::vector<ContigRegion> result {};
     
-    
-    
     return result;
 }
 

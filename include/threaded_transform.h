@@ -21,7 +21,7 @@ OutputIterator threaded_transform(InputIterator first, InputIterator last, Outpu
 {
     std::size_t num_values_per_threads = std::distance(first, last) / num_threads;
     
-    std::vector<std::thread> threads;
+    std::vector<std::thread> threads {};
     threads.reserve(num_threads);
     
     for (int i = 1; i <= num_threads; ++i) {

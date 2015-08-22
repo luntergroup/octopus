@@ -109,7 +109,6 @@ std::vector<LZBlock> lempel_ziv_factorisation(const T& str)
     result.reserve(str.size() - 1); // max possible blocks
     
     size_t end {1};
-    
     result.emplace_back(0, end);
     
     while (end < str.size()) {
@@ -133,22 +132,22 @@ std::pair<std::vector<LZBlock>, std::vector<size_t>> lempel_ziv_factorisation_wi
     
     std::vector<LZBlock> lz_blocks {};
     lz_blocks.reserve(str.size() - 1); // max possible blocks
-    std::vector<size_t> backpointers {};
-    backpointers.reserve(str.size() - 1);
+    std::vector<size_t> prev_lz_block_occurrence {};
+    prev_lz_block_occurrence.reserve(str.size() - 1);
     
     size_t end {1};
     
     lz_blocks.emplace_back(0, end);
-    backpointers.emplace_back(-1);
+    prev_lz_block_occurrence.emplace_back(-1);
     
     while (end < str.size()) {
         auto m = std::max(size_t {1}, lpf[end]);
         lz_blocks.emplace_back(end, m);
-        backpointers.emplace_back(prev_occ[end]);
+        prev_lz_block_occurrence.emplace_back(prev_occ[end]);
         end += m;
     }
     
-    return {lz_blocks, backpointers};
+    return {lz_blocks, prev_lz_block_occurrence};
 }
 
 // Llie et al (2010) show that this direct computation of LCE actually outperforms other O(n) and O(log n)
@@ -260,10 +259,10 @@ std::vector<StringRun> find_maximal_repetitions(const T& str, size_t min_period 
     
     for (size_t k {}; k < lz_blocks.size(); ++k) {
         const auto& block = lz_blocks[k];
-        auto block_end    = block.pos + block.length;
         
-        auto delta = block.pos - ((prev_lz_block_occurrence[k] == -1) ? 0 : prev_lz_block_occurrence[k]);
-        auto v_end = block_end - delta;
+        auto block_end = block.pos + block.length;
+        auto delta     = block.pos - ((prev_lz_block_occurrence[k] == -1) ? 0 : prev_lz_block_occurrence[k]);
+        auto v_end     = block_end - delta;
         
         for (auto j = block.pos; j < block_end; ++j) {
             auto v = j - delta;
