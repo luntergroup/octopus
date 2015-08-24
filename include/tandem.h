@@ -104,7 +104,7 @@ inline std::vector<uint32_t> make_rank_array(const std::vector<uint32_t>& suffix
     return result;
 }
 
-// LCP = Longest Common Prefix. O(n) implementation given in Kasai et al.
+// LCP = Longest Common Prefix. O(n) implementation given in Kasai et al (2001).
 template <typename T>
 std::vector<uint32_t> make_lcp_array(const T& str, const std::vector<uint32_t>& suffix_array)
 {
@@ -217,12 +217,7 @@ namespace detail
                 auto ls = backward_lce(str, u - 1, u + j - 1, t);
                 auto lp = forward_lce(str, u + j, u, end);
                 
-                if (ls > 0 && ls + lp >= j) {
-                    if ((u - ls) == 780) {
-                        std::cout << end << std::endl;
-                        std::cout << (u + j + lp) << std::endl;
-                        exit(0);
-                    }
+                if (ls > 0 && ls + lp >= j && j + lp < n) {
                     result.emplace_back(u - ls, j + lp + ls, j);
                 }
             }
@@ -237,7 +232,7 @@ namespace detail
                 }
             }
         }
-        exit(0);
+        
         return result;
     }
     
@@ -414,6 +409,6 @@ std::vector<StringRun> find_maximal_repetitions(const T& str, uint32_t min_perio
     return result;
 }
 
-void remove_non_primitives(std::vector<StringRun>& repetitions);
+std::vector<StringRun> remove_non_primitives(const std::vector<StringRun>& repetitions);
 
 #endif /* defined(__tandem__tandem__) */

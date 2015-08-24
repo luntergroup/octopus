@@ -102,12 +102,35 @@ namespace detail
     }
 } // end namespace detail
 
-void remove_non_primitives(std::vector<StringRun>& repetitions)
+std::vector<StringRun> remove_non_primitives(const std::vector<StringRun>& repetitions)
 {
+    std::vector<StringRun> result {};
+    result.reserve(repetitions.size());
+    
     auto first = std::begin(repetitions);
     auto last  = std::end(repetitions);
     
     while (first != last) {
+        auto it = std::adjacent_find(first, last, [] (const auto& lhs, const auto& rhs) {
+            return lhs.pos == rhs.pos && lhs.length == rhs.length;
+        });
         
+        std::copy(first, it, std::back_inserter(result));
+        
+        if (it == last) break;
+        
+        auto it2 = std::find_if_not(it, last, [it] (const auto& run) {
+            return run.pos == it->pos && run.length == it->length;
+        });
+        
+        result.emplace_back(*std::min_element(it, it2, [] (const auto& lhs, const auto& rhs) {
+            return lhs.period < rhs.period;
+        }));
+        
+        first = it2;
     }
+    
+    result.shrink_to_fit();
+    
+    return result;
 }

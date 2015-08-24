@@ -139,16 +139,28 @@ std::map<std::size_t, std::size_t> collapse_ns(SequenceType& sequence)
         first = it2;
     }
     
-    sequence.erase(std::unique(std::begin(sequence) + result.cbegin()->first, last,
-                               [] (char lhs, char rhs) { return lhs == 'N' && lhs == rhs; }), last);
+    if (!result.empty()) {
+        sequence.erase(std::unique(std::next(std::begin(sequence), result.cbegin()->first), last,
+                                   [] (char lhs, char rhs) { return lhs == 'N' && lhs == rhs; }), last);
+    }
     
     return result;
 }
+
+//template <typename SequenceType>
+//void expand_ns(SequenceType& sequence, const std::map<std::size_t, std::size_t>& n_shift_map)
+//{
+//    if (n_shift_map.empty()) return;
+//    
+//    
+//}
 
 namespace detail
 {
     void rebase(std::vector<StringRun>& runs, const std::map<std::size_t, std::size_t>& shift_map)
     {
+        if (shift_map.empty()) return;
+        
         auto shift_map_it = std::cbegin(shift_map);
         for (auto& run : runs) {
             while (std::next(shift_map_it)->first <= run.pos) ++shift_map_it;
@@ -175,7 +187,7 @@ std::vector<TandemRepeat> find_exact_tandem_repeats(SequenceType sequence, const
 {
     auto n_shift_map = collapse_ns(sequence);
     
-    auto maximal_repetitions = find_maximal_repetitions(sequence , min_repeat_size, max_repeat_size);
+    auto maximal_repetitions = remove_non_primitives(find_maximal_repetitions(sequence , min_repeat_size, max_repeat_size));
     
     detail::rebase(maximal_repetitions, n_shift_map);
     
