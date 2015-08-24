@@ -127,37 +127,50 @@ void test4()
     }
 }
 
-void test5()
-{
-    std::string sequence {"ACGTGATGATCTATGATGATCTACTGGGGTATCCCATTCTTGGACGATT"};
-    
-    cout << is_palindromic(std::string {"ACCTAGGT"}) << endl;
-}
-
 void test6()
 {
     auto reference = make_reference(human_reference_fasta);
     
-    auto region = parse_region("Y", reference);
+    auto region = parse_region("22", reference);
+    
+    cout << "finding repeats in " << size(region) << "bp" << endl;
     
     auto start = std::chrono::system_clock::now();
     
-    auto tandem_repeats = find_exact_tandem_repeats(reference, region, 3);
+    auto repeats = find_exact_tandem_repeats(reference.get_sequence(region), region, 2);
     
     auto end = std::chrono::system_clock::now();
     
     auto duration = std::chrono::duration_cast<std::chrono::seconds>(end - start).count();
     
-//    for (auto r : tandem_repeats) {
+    cout << "found " << repeats.size() << " repeats" << endl;
+    cout << "took " << duration << " seconds" << endl;
+    
+    //cout << repeats.front().region << endl;
+    //cout << reference.get_sequence(repeats.front().region) << " " << repeats.front().period << endl;
+    
+    auto it = std::adjacent_find(repeats.begin(), repeats.end(), [] (const auto& lhs, const auto& rhs) {
+        return lhs.region.get_begin() == rhs.region.get_begin();
+    });
+    
+    cout << it->region << " " << reference.get_sequence(it->region) << " " << it->period << endl;
+    cout << it->region << " " << reference.get_sequence((++it)->region) << " " << it->period << endl;
+    
+//    auto it = std::max_element(repeats.begin(), repeats.end(), [] (const auto& lhs, const auto& rhs) {
+//        return size(lhs.region) < size(rhs.region);
+//    });
+//    
+//    cout << reference.get_sequence(it->region) << " " << it->period << endl;
+    
+//    for (auto r : repeats) {
 //        cout << reference.get_sequence(r) << endl;
 //    }
-    cout << "found " << tandem_repeats.size() << " repeats" << endl;
-    cout << "took " << duration << " seconds" << endl;
 }
 
 int main(int argc, const char **argv)
 {
-    test5();
+    test6();
+    
 //    auto options = Octopus::parse_options(argc, argv);
 //    
 //    if (options.second) {

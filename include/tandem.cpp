@@ -9,26 +9,26 @@
 #include "tandem.h"
 
 #include <stack>
+#include <numeric> // std::accumulate
 
 // Implementation of algorithm found in Crochemore et al. (2008)
-std::vector<size_t> make_longest_common_factor_array(std::vector<size_t> sa, std::vector<size_t> lcp)
+std::vector<uint32_t> make_lcf_array(std::vector<uint32_t> sa, std::vector<uint32_t> lcp)
 {
     auto n = sa.size();
     
-    std::vector<size_t> result(n, 0);
+    std::vector<uint32_t> result(n, 0);
     
     sa.push_back(-1);
     lcp.push_back(0);
     
-    std::stack<size_t> stack {};
+    std::stack<uint32_t> stack {};
     
     stack.push(0);
     
-    for (size_t i {1}; i <= n; ++i) {
+    for (uint32_t i {1}; i <= n; ++i) {
         while (!stack.empty() && (sa[i] == -1 || sa[i] < sa[stack.top()] || (sa[i] > sa[stack.top()] && lcp[i] <= lcp[stack.top()]))) {
             if (sa[i] < sa[stack.top()]) {
-                auto tmp = lcp[i];
-                std::tie(lcp[i], result[sa[stack.top()]]) = std::minmax(lcp[stack.top()], tmp);
+                std::tie(lcp[i], result[sa[stack.top()]]) = std::minmax(lcp[stack.top()], uint32_t {lcp[i]});
             } else {
                 result[sa[stack.top()]] = lcp[stack.top()];
             }
@@ -44,25 +44,24 @@ std::vector<size_t> make_longest_common_factor_array(std::vector<size_t> sa, std
 }
 
 // Implementation of algorithm found in Crochemore et al. (2008)
-std::pair<std::vector<size_t>, std::vector<size_t>> make_lpf_and_prev_occ(std::vector<size_t> sa, std::vector<size_t> lcp)
+std::pair<std::vector<uint32_t>, std::vector<uint32_t>> make_lpf_and_prev_occ_arrays(std::vector<uint32_t> sa, std::vector<uint32_t> lcp)
 {
     auto n = sa.size();
     
-    std::vector<size_t> lpf(n, 0), prev_occ(n, 0);
+    std::vector<uint32_t> lpf(n, 0), prev_occ(n, 0);
     
     sa.push_back(-1);
     lcp.push_back(0);
     
-    std::stack<std::pair<size_t, size_t>> stack {};
+    std::stack<std::pair<uint32_t, uint32_t>> stack {}; // default std::stack uses std::deque
     
     stack.emplace(0, sa[0]);
     
-    for (size_t i {1}; i <= n; ++i) {
+    for (uint32_t i {1}; i <= n; ++i) {
         auto u = lcp[i];
         
         while (!stack.empty() && (sa[i] == -1 || sa[i] < stack.top().second)) {
-            auto tmp = u;
-            std::tie(u, lpf[stack.top().second]) = std::minmax(stack.top().first, tmp);
+            std::tie(u, lpf[stack.top().second]) = std::minmax(stack.top().first, uint32_t {u});
             
             auto v = stack.top();
             stack.pop();
@@ -82,4 +81,33 @@ std::pair<std::vector<size_t>, std::vector<size_t>> make_lpf_and_prev_occ(std::v
     }
     
     return {lpf, prev_occ};
+}
+
+namespace detail
+{
+    std::size_t get_num_runs(const std::vector<std::deque<StringRun>>& buckets)
+    {
+        return std::accumulate(std::cbegin(buckets), std::cend(buckets), 0,
+                               [] (auto lhs, const auto& rhs) {
+                                   return lhs + rhs.size();
+                               });
+    }
+    
+    std::size_t get_num_runs(const std::unordered_map<uint32_t, std::deque<StringRun>>& buckets)
+    {
+        return std::accumulate(std::cbegin(buckets), std::cend(buckets), 0,
+                               [] (auto lhs, const auto& rhs) {
+                                   return lhs + rhs.second.size();
+                               });
+    }
+} // end namespace detail
+
+void remove_non_primitives(std::vector<StringRun>& repetitions)
+{
+    auto first = std::begin(repetitions);
+    auto last  = std::end(repetitions);
+    
+    while (first != last) {
+        
+    }
 }

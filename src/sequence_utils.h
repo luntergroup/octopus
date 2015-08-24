@@ -23,6 +23,12 @@
 #include "tandem.h"
 
 template <typename SequenceType>
+bool is_n_free(const SequenceType& sequence)
+{
+    return std::none_of(std::cbegin(sequence), std::cend(sequence), 'N');
+}
+
+template <typename SequenceType>
 bool is_dna(const SequenceType& sequence)
 {
     return sequence.find_first_not_of("ACGTN") == SequenceType::npos;
@@ -105,27 +111,87 @@ std::unordered_map<char, std::size_t> count_bases(const SequenceType& sequence)
     return result;
 }
 
-std::vector<GenomicRegion> find_exact_tandem_repeats(ReferenceGenome& reference, const GenomicRegion& region,
-                                                     GenomicRegion::SizeType min_repeat_size = 2)
+// Replaces all contiguous sub-sequences of N's with a single N, inplace, and returns a map of
+// each N position in the new sequence, and how many N's have been removed up to the first non-N
+// base past the position
+template <typename SequenceType>
+std::map<std::size_t, std::size_t> collapse_ns(SequenceType& sequence)
 {
-    auto maximal_repetitions = find_maximal_repetitions(reference.get_sequence(region), min_repeat_size);
+    std::map<std::size_t, std::size_t> result {};
     
-    std::vector<GenomicRegion> result {};
-    result.reserve(maximal_repetitions.size());
+    auto first = std::begin(sequence);
+    auto last  = std::end(sequence);
     
-    auto offset = region.get_begin();
+    std::size_t position {}, num_removed {};
     
-    for (auto& run : maximal_repetitions) {
-        result.emplace_back(region.get_contig_name(), run.pos + offset, run.pos + run.length + offset);
+    while (first != last) {
+        auto it1 = std::adjacent_find(first, last, [] (char lhs, char rhs) { return lhs == 'N' && lhs == rhs; });
+        
+        if (it1 == last) break;
+        
+        auto it2 = std::find_if_not(it1, last, [] (char base) { return base == 'N'; });
+        
+        position    += std::distance(first, it1);
+        num_removed += std::distance(it1, it2) - 1;
+        
+        result.emplace(position, num_removed);
+        
+        first = it2;
     }
+    
+    sequence.erase(std::unique(std::begin(sequence) + result.cbegin()->first, last,
+                               [] (char lhs, char rhs) { return lhs == 'N' && lhs == rhs; }), last);
     
     return result;
 }
 
-template <typename SequenceType>
-std::map<ContigRegion, SequenceType> find_tandem_repeats(const SequenceType& sequence, unsigned min_repeat_size = 3)
+namespace detail
 {
-    return false;
+    void rebase(std::vector<StringRun>& runs, const std::map<std::size_t, std::size_t>& shift_map)
+    {
+        auto shift_map_it = std::cbegin(shift_map);
+        for (auto& run : runs) {
+            while (std::next(shift_map_it)->first <= run.pos) ++shift_map_it;
+            run.pos += static_cast<decltype(run.pos)>(shift_map_it->second);
+        }
+    }
+}
+
+struct TandemRepeat
+{
+    using SizeType = GenomicRegion::SizeType;
+    TandemRepeat() = delete;
+    template <typename T>
+    TandemRepeat(T region, GenomicRegion::SizeType period) : region {std::forward<T>(region)}, period {period} {}
+    
+    GenomicRegion region;
+    GenomicRegion::SizeType period;
+};
+
+template <typename SequenceType>
+std::vector<TandemRepeat> find_exact_tandem_repeats(SequenceType sequence, const GenomicRegion& region,
+                                                    GenomicRegion::SizeType min_repeat_size = 2,
+                                                    GenomicRegion::SizeType max_repeat_size = 10000)
+{
+    auto n_shift_map = collapse_ns(sequence);
+    
+    auto maximal_repetitions = find_maximal_repetitions(sequence , min_repeat_size, max_repeat_size);
+    
+    detail::rebase(maximal_repetitions, n_shift_map);
+    
+    std::vector<TandemRepeat> result {};
+    result.reserve(maximal_repetitions.size());
+    
+    auto offset = region.get_begin();
+    
+    for (const auto& run : maximal_repetitions) {
+        result.emplace_back(GenomicRegion {region.get_contig_name(),
+            static_cast<GenomicRegion::SizeType>(run.pos + offset),
+            static_cast<GenomicRegion::SizeType>(run.pos + run.length + offset)
+        }, run.period);
+    }
+    
+    return result;
 }
 
 template <typename SequenceType>
