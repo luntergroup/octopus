@@ -15,18 +15,18 @@
 #include <cstddef>
 #include <boost/filesystem/path.hpp>
 
-#include "i_reference_genome_impl.h"
+#include "reference_genome_impl.h"
 #include "fasta.h"
 
 namespace fs = boost::filesystem;
 
 class GenomicRegion;
 
-class CachingFasta : public IReferenceGenomeImpl
+class CachingFasta : public ReferenceGenomeImpl
 {
 public:
-    using SequenceType = IReferenceGenomeImpl::SequenceType;
-    using SizeType     = IReferenceGenomeImpl::SizeType;
+    using SequenceType = ReferenceGenomeImpl::SequenceType;
+    using SizeType     = ReferenceGenomeImpl::SizeType;
     
     CachingFasta() = delete;
     explicit CachingFasta(fs::path fasta_path);
@@ -40,16 +40,16 @@ public:
     CachingFasta(CachingFasta&&)                 = default;
     CachingFasta& operator=(CachingFasta&&)      = default;
     
-    std::string get_reference_name() const override;
-    std::vector<std::string> get_contig_names() override;
-    SizeType get_contig_size(const std::string& contig_name) override;
-    SequenceType get_sequence(const GenomicRegion& region) override;
-    
 private:
     Fasta fasta_;
     
     using ContigSequenceCache = std::map<GenomicRegion, SequenceType>;
     using CacheIterator       = ContigSequenceCache::const_iterator;
+    
+    std::string do_get_reference_name() const override;
+    std::vector<std::string> do_get_contig_names() override;
+    SizeType do_get_contig_size(const std::string& contig_name) override;
+    SequenceType do_get_sequence(const GenomicRegion& region) override;
     
     std::unordered_map<std::string, SizeType> contig_size_cache_;
     std::unordered_map<std::string, ContigSequenceCache> sequence_cache_;

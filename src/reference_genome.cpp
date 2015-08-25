@@ -14,15 +14,19 @@
 #include <regex>     // std::regex, std::smatch, std::regex_search
 #include <stdexcept>
 
-ReferenceGenome::ReferenceGenome(std::unique_ptr<IReferenceGenomeImpl> the_reference_impl)
+#include "fasta.h"
+#include "caching_fasta.h"
+#include "threadsafe_fasta.h"
+
+ReferenceGenome::ReferenceGenome(std::unique_ptr<ReferenceGenomeImpl> impl)
 :
-the_reference_impl_ {std::move(the_reference_impl)},
-name_ {the_reference_impl_->get_reference_name()},
-contig_names_(std::move(the_reference_impl_->get_contig_names())),
+impl_ {std::move(impl)},
+name_ {impl_->get_reference_name()},
+contig_names_(std::move(impl_->get_contig_names())),
 contig_sizes_ {}
 {
     for (const auto& contig_name : contig_names_) {
-        contig_sizes_[contig_name] = the_reference_impl_->get_contig_size(contig_name);
+        contig_sizes_[contig_name] = impl_->get_contig_size(contig_name);
     }
 }
 
@@ -71,10 +75,21 @@ bool ReferenceGenome::contains_region(const GenomicRegion& region) const noexcep
 
 ReferenceGenome::SequenceType ReferenceGenome::get_sequence(const GenomicRegion& region)
 {
-    return the_reference_impl_->get_sequence(region);
+    return impl_->get_sequence(region);
 }
 
 // non-member functions
+
+ReferenceGenome make_reference(fs::path file_path, std::size_t max_base_pair_cache, bool is_threaded)
+{
+    if (max_base_pair_cache > 0) {
+        return ReferenceGenome {std::make_unique<CachingFasta>(std::move(file_path), max_base_pair_cache)};
+    } else if (is_threaded) {
+        return ReferenceGenome {std::make_unique<ThreadsafeFasta>(std::move(file_path))};
+    } else {
+        return ReferenceGenome {std::make_unique<Fasta>(std::move(file_path))};
+    }
+}
 
 std::vector<GenomicRegion> get_all_contig_regions(const ReferenceGenome& the_reference)
 {

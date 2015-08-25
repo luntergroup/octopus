@@ -111,7 +111,6 @@
 		D4907F4B1A88E20E00639203 /* variant_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D4907F4A1A88E20E00639203 /* variant_tests.cpp */; };
 		D4907F571A8A2A9B00639203 /* reference_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D4907F561A8A2A9B00639203 /* reference_tests.cpp */; };
 		D4907F5B1A8A374000639203 /* fasta.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D4907F591A8A374000639203 /* fasta.cpp */; };
-		D4907F651A8A6EE600639203 /* reference_genome_factory.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D4907F631A8A6EE600639203 /* reference_genome_factory.cpp */; };
 		D4BEA9FB1B861BE200E53CFD /* divsufsort.c in Sources */ = {isa = PBXBuildFile; fileRef = D4BEA9F71B861BE200E53CFD /* divsufsort.c */; settings = {COMPILER_FLAGS = "-w"; }; };
 		D4BEA9FC1B861BE200E53CFD /* sssort.c in Sources */ = {isa = PBXBuildFile; fileRef = D4BEA9F81B861BE200E53CFD /* sssort.c */; settings = {COMPILER_FLAGS = "-w"; }; };
 		D4BEA9FD1B861BE200E53CFD /* trsort.c in Sources */ = {isa = PBXBuildFile; fileRef = D4BEA9F91B861BE200E53CFD /* trsort.c */; settings = {COMPILER_FLAGS = "-w"; }; };
@@ -319,12 +318,10 @@
 		D4907F4D1A89095400639203 /* contig_region.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = contig_region.h; sourceTree = "<group>"; };
 		D4907F541A8A18CF00639203 /* reference_genome.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = reference_genome.h; sourceTree = "<group>"; };
 		D4907F561A8A2A9B00639203 /* reference_tests.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = reference_tests.cpp; sourceTree = "<group>"; };
-		D4907F581A8A35EA00639203 /* i_reference_genome_impl.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = i_reference_genome_impl.h; sourceTree = "<group>"; };
+		D4907F581A8A35EA00639203 /* reference_genome_impl.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = reference_genome_impl.h; sourceTree = "<group>"; };
 		D4907F591A8A374000639203 /* fasta.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = fasta.cpp; sourceTree = "<group>"; };
 		D4907F5A1A8A374000639203 /* fasta.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = fasta.h; sourceTree = "<group>"; };
 		D4907F5E1A8A3ADD00639203 /* string_utils.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = string_utils.h; sourceTree = "<group>"; };
-		D4907F631A8A6EE600639203 /* reference_genome_factory.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = reference_genome_factory.cpp; sourceTree = "<group>"; };
-		D4907F641A8A6EE600639203 /* reference_genome_factory.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = reference_genome_factory.h; sourceTree = "<group>"; };
 		D4907F6A1A8BC06800639203 /* aligned_read.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = aligned_read.h; sourceTree = "<group>"; };
 		D4907F711A8E04B900639203 /* comparable.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = comparable.h; sourceTree = "<group>"; };
 		D4907F731A8E255200639203 /* equitable.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = equitable.h; sourceTree = "<group>"; };
@@ -567,9 +564,7 @@
 			children = (
 				D4907F541A8A18CF00639203 /* reference_genome.h */,
 				CA386D9C1B5AA3C80057A5A8 /* reference_genome.cpp */,
-				D4907F581A8A35EA00639203 /* i_reference_genome_impl.h */,
-				D4907F641A8A6EE600639203 /* reference_genome_factory.h */,
-				D4907F631A8A6EE600639203 /* reference_genome_factory.cpp */,
+				D4907F581A8A35EA00639203 /* reference_genome_impl.h */,
 				D4907F5A1A8A374000639203 /* fasta.h */,
 				D4907F591A8A374000639203 /* fasta.cpp */,
 				CA386DAC1B603C380057A5A8 /* caching_fasta.h */,
@@ -900,7 +895,6 @@
 				CAE3E2971A9D292000C01B2C /* variant_assembler.cpp in Sources */,
 				CA28EBF81AABE178009F8622 /* read_transform_tests.cpp in Sources */,
 				CA4551761AEC1C8600FDAAE8 /* haplotype_prior_model_tests.cpp in Sources */,
-				D4907F651A8A6EE600639203 /* reference_genome_factory.cpp in Sources */,
 				CA4551721AEB09CC00FDAAE8 /* 1000G_test19.cpp in Sources */,
 				CAE3E2B61AA36EA600C01B2C /* htslib_bcf_facade.cpp in Sources */,
 				CA45517C1AF2484E00FDAAE8 /* genotype_caller.cpp in Sources */,

@@ -20,7 +20,6 @@
 #include "test_common.h"
 #include "reference_genome.h"
 #include "mappable_algorithms.h"
-#include "reference_genome_factory.h"
 #include "test_common.h"
 #include "read_manager.h"
 #include "mock_objects.h"

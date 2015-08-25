@@ -16,18 +16,18 @@
 #include <unordered_map>
 #include <boost/filesystem/path.hpp>
 
-#include "i_reference_genome_impl.h"
+#include "reference_genome_impl.h"
 #include "bioio.h"
 
 class GenomicRegion;
 
 namespace fs = boost::filesystem;
 
-class Fasta : public IReferenceGenomeImpl
+class Fasta : public ReferenceGenomeImpl
 {
 public:
-    using SequenceType = IReferenceGenomeImpl::SequenceType;
-    using SizeType     = IReferenceGenomeImpl::SizeType;
+    using SequenceType = ReferenceGenomeImpl::SequenceType;
+    using SizeType     = ReferenceGenomeImpl::SizeType;
     
     Fasta() = delete;
     explicit Fasta(fs::path fasta_path);
@@ -38,17 +38,17 @@ public:
     Fasta& operator=(const Fasta&) = default;
     Fasta(Fasta&&)                 = default;
     Fasta& operator=(Fasta&&)      = default;
-    
-    std::string get_reference_name() const override;
-    std::vector<std::string> get_contig_names() override;
-    SizeType get_contig_size(const std::string& contig_name) override;
-    SequenceType get_sequence(const GenomicRegion& region) override;
 
 private:
     fs::path fasta_path_;
     fs::path fasta_index_path_;
     std::ifstream fasta_;
     std::unordered_map<std::string, bioio::FastaIndex> fasta_contig_indices_;
+    
+    std::string do_get_reference_name() const override;
+    std::vector<std::string> do_get_contig_names() override;
+    SizeType do_get_contig_size(const std::string& contig_name) override;
+    SequenceType do_get_sequence(const GenomicRegion& region) override;
     
     bool is_valid_fasta() const noexcept;
 };

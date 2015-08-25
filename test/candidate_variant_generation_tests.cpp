@@ -15,7 +15,6 @@
 
 #include "test_common.h"
 #include "reference_genome.h"
-#include "reference_genome_factory.h"
 #include "read_manager.h"
 #include "variant.h"
 #include "candidate_variant_generator.h"
@@ -33,8 +32,7 @@ BOOST_AUTO_TEST_SUITE(Components)
 
 BOOST_AUTO_TEST_CASE(CandidateVariantGenerator_does_not_give_duplicate_candidates)
 {
-    ReferenceGenomeFactory a_factory {};
-    ReferenceGenome human {a_factory.make(human_reference_fasta)};
+    auto human = make_reference(human_reference_fasta);
     
     ReadManager a_read_manager {human_1000g_bam1};
     
@@ -58,8 +56,7 @@ BOOST_AUTO_TEST_CASE(CandidateVariantGenerator_does_not_give_duplicate_candidate
 
 BOOST_AUTO_TEST_CASE(AlignmentCandidateVariantGenerator_ignores_snps_with_low_base_qualities)
 {
-    ReferenceGenomeFactory a_factory {};
-    ReferenceGenome human {a_factory.make(human_reference_fasta)};
+    auto human = make_reference(human_reference_fasta);
     
     ReadManager a_read_manager {human_1000g_bam1};
     
@@ -81,8 +78,7 @@ BOOST_AUTO_TEST_CASE(AlignmentCandidateVariantGenerator_ignores_snps_with_low_ba
 
 BOOST_AUTO_TEST_CASE(AlignmentCandidateVariantGenerator_includes_all_alleles_in_the_same_region)
 {
-    ReferenceGenomeFactory a_factory {};
-    ReferenceGenome human {a_factory.make(human_reference_fasta)};
+    auto human = make_reference(human_reference_fasta);
     
     ReadManager a_read_manager {human_1000g_bam1};
     
@@ -102,8 +98,7 @@ BOOST_AUTO_TEST_CASE(AlignmentCandidateVariantGenerator_includes_all_alleles_in_
 
 BOOST_AUTO_TEST_CASE(OnlineCandidateVariantGenerator_can_fetch_variants_from_online_web_service)
 {
-    ReferenceGenomeFactory a_factory {};
-    ReferenceGenome human {a_factory.make(human_reference_fasta)};
+    auto human = make_reference(human_reference_fasta);
     
     OnlineCandidateVariantGenerator candidate_generator {human};
     

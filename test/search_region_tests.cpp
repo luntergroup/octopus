@@ -22,7 +22,6 @@
 #include "mock_objects.h"
 #include "reference_genome.h"
 #include "mappable_algorithms.h"
-#include "reference_genome_factory.h"
 #include "test_common.h"
 #include "read_manager.h"
 #include "read_filter.h"
@@ -47,8 +46,7 @@ BOOST_AUTO_TEST_SUITE(Components)
 
 BOOST_AUTO_TEST_CASE(advance_region_always_gives_a_region_more_advanced_than_the_previous_region)
 {
-    ReferenceGenomeFactory a_factory {};
-    ReferenceGenome human {a_factory.make(human_reference_fasta)};
+    auto human = make_reference(human_reference_fasta);
     
     ReadManager a_read_manager {human_1000g_bam1, human_1000g_bam2, human_1000g_bam3};
     
@@ -78,8 +76,7 @@ BOOST_AUTO_TEST_CASE(advance_region_always_gives_a_region_more_advanced_than_the
 
 BOOST_AUTO_TEST_CASE(search_regions_contains_all_variants_in_list_exactly_once_when_max_indicators_is_0)
 {
-    ReferenceGenomeFactory a_factory {};
-    ReferenceGenome human {a_factory.make(human_reference_fasta)};
+    auto human = make_reference(human_reference_fasta);
     
     ReadManager a_read_manager {human_1000g_bam1};
     
@@ -203,8 +200,7 @@ BOOST_AUTO_TEST_CASE(search_regions_contains_all_variants_in_list_exactly_once_w
 
 BOOST_AUTO_TEST_CASE(advance_regions_bounds_are_respected)
 {
-    ReferenceGenomeFactory a_factory {};
-    ReferenceGenome human {a_factory.make(human_reference_fasta)};
+    auto human = make_reference(human_reference_fasta);
     
     ReadManager a_read_manager {human_1000g_bam1};
     
@@ -349,8 +345,7 @@ BOOST_AUTO_TEST_CASE(advance_regions_bounds_are_respected)
 
 BOOST_AUTO_TEST_CASE(setting_max_included_to_zero_in_advance_region_results_in_the_largest_variant_free_reference_region)
 {
-    ReferenceGenomeFactory a_factory {};
-    ReferenceGenome human {a_factory.make(human_reference_fasta)};
+    auto human = make_reference(human_reference_fasta);
     
     ReadManager a_read_manager {human_1000g_bam1};
     
@@ -395,8 +390,7 @@ BOOST_AUTO_TEST_CASE(setting_max_included_to_zero_in_advance_region_results_in_t
 
 BOOST_AUTO_TEST_CASE(search_regions_includes_all_possible_indicators)
 {
-    ReferenceGenomeFactory a_factory {};
-    ReferenceGenome human {a_factory.make(human_reference_fasta)};
+    auto human = make_reference(human_reference_fasta);
     
     ReadManager a_read_manager {human_1000g_bam1};
     

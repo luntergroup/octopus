@@ -14,18 +14,18 @@
 #include <mutex>
 #include <boost/filesystem/path.hpp>
 
-#include "i_reference_genome_impl.h"
+#include "reference_genome_impl.h"
 #include "fasta.h"
 
 class GenomicRegion;
 
 namespace fs = boost::filesystem;
 
-class ThreadsafeFasta : public IReferenceGenomeImpl
+class ThreadsafeFasta : public ReferenceGenomeImpl
 {
 public:
-    using SequenceType = IReferenceGenomeImpl::SequenceType;
-    using SizeType     = IReferenceGenomeImpl::SizeType;
+    using SequenceType = ReferenceGenomeImpl::SequenceType;
+    using SizeType     = ReferenceGenomeImpl::SizeType;
     
     ThreadsafeFasta() = delete;
     explicit ThreadsafeFasta(fs::path fasta_path);
@@ -37,14 +37,14 @@ public:
     ThreadsafeFasta(ThreadsafeFasta&&)                 = default;
     ThreadsafeFasta& operator=(ThreadsafeFasta&&)      = default;
     
-    std::string get_reference_name() const override;
-    std::vector<std::string> get_contig_names() override;
-    SizeType get_contig_size(const std::string& contig_name) override;
-    SequenceType get_sequence(const GenomicRegion& region) override;
-    
 private:
     Fasta fasta_;
     std::mutex fasta_mutex_;
+    
+    std::string do_get_reference_name() const override;
+    std::vector<std::string> do_get_contig_names() override;
+    SizeType do_get_contig_size(const std::string& contig_name) override;
+    SequenceType do_get_sequence(const GenomicRegion& region) override;
 };
 
 #endif /* defined(__Octopus__threadsafe_fasta__) */

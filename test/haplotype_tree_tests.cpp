@@ -19,7 +19,6 @@
 
 #include "test_common.h"
 #include "reference_genome.h"
-#include "reference_genome_factory.h"
 #include "read_manager.h"
 #include "variant.h"
 #include "candidate_variant_generator.h"
@@ -39,8 +38,7 @@ BOOST_AUTO_TEST_SUITE(Components)
 
 BOOST_AUTO_TEST_CASE(haplotype_tree_does_not_bifurcate_on_alleles_positioned_past_the_leading_alleles)
 {
-    ReferenceGenomeFactory a_factory {};
-    ReferenceGenome human {a_factory.make(human_reference_fasta)};
+    auto human = make_reference(human_reference_fasta);
     
     Allele allele1 {parse_region("4:1000000-1000001", human), "A"};
     Allele allele2 {parse_region("4:1000001-1000002", human), "C"};
@@ -60,8 +58,7 @@ BOOST_AUTO_TEST_CASE(haplotype_tree_does_not_bifurcate_on_alleles_positioned_pas
 
 BOOST_AUTO_TEST_CASE(haplotype_tree_ignores_duplicate_alleles_coming_from_same_allele)
 {
-    ReferenceGenomeFactory a_factory {};
-    ReferenceGenome human {a_factory.make(human_reference_fasta)};
+    auto human = make_reference(human_reference_fasta);
     
     Allele allele1 {parse_region("4:1000000-1000001", human), "A"};
     Allele allele2 {parse_region("4:1000000-1000001", human), "C"};
@@ -77,8 +74,7 @@ BOOST_AUTO_TEST_CASE(haplotype_tree_ignores_duplicate_alleles_coming_from_same_a
 
 BOOST_AUTO_TEST_CASE(haplotype_tree_ignores_insertions_followed_immediatly_by_deletions_and_vice_versa)
 {
-    ReferenceGenomeFactory a_factory {};
-    ReferenceGenome human {a_factory.make(human_reference_fasta)};
+    auto human = make_reference(human_reference_fasta);
     
     Allele allele1 {parse_region("16:9300037-9300037", human), "TG"};
     Allele allele2 {parse_region("16:9300037-9300051 ", human), ""};
@@ -99,8 +95,7 @@ BOOST_AUTO_TEST_CASE(haplotype_tree_ignores_insertions_followed_immediatly_by_de
 
 BOOST_AUTO_TEST_CASE(haplotype_tree_splits_overlapping_snps_into_different_branches)
 {
-    ReferenceGenomeFactory a_factory {};
-    ReferenceGenome human {a_factory.make(human_reference_fasta)};
+    auto human = make_reference(human_reference_fasta);
     
     Allele allele1 {parse_region("4:1000000-1000001", human), "A"};
     Allele allele2 {parse_region("4:1000000-1000001", human), "C"};
@@ -134,8 +129,7 @@ BOOST_AUTO_TEST_CASE(haplotype_tree_splits_overlapping_snps_into_different_branc
 
 BOOST_AUTO_TEST_CASE(haplotype_tree_can_generate_haplotypes_in_a_region)
 {
-    ReferenceGenomeFactory a_factory {};
-    ReferenceGenome human {a_factory.make(human_reference_fasta)};
+    auto human = make_reference(human_reference_fasta);
     
     HaplotypeTree haplotype_tree {human};
     
@@ -161,8 +155,7 @@ BOOST_AUTO_TEST_CASE(haplotype_tree_can_generate_haplotypes_in_a_region)
 
 BOOST_AUTO_TEST_CASE(haplotype_tree_can_generate_haplotypes_ending_in_different_regions)
 {
-    ReferenceGenomeFactory a_factory {};
-    ReferenceGenome human {a_factory.make(human_reference_fasta)};;
+    auto human = make_reference(human_reference_fasta);
     
     HaplotypeTree haplotype_tree {human};
     
@@ -194,8 +187,7 @@ BOOST_AUTO_TEST_CASE(haplotype_tree_can_generate_haplotypes_ending_in_different_
 
 BOOST_AUTO_TEST_CASE(leading_haplotypes_can_be_removed_from_the_tree)
 {
-    ReferenceGenomeFactory a_factory {};
-    ReferenceGenome human {a_factory.make(human_reference_fasta)};
+    auto human = make_reference(human_reference_fasta);
     
     HaplotypeTree haplotype_tree {human};
     
@@ -237,8 +229,7 @@ BOOST_AUTO_TEST_CASE(leading_haplotypes_can_be_removed_from_the_tree)
 
 BOOST_AUTO_TEST_CASE(pruned_branches_can_still_be_extended)
 {
-    ReferenceGenomeFactory a_factory {};
-    ReferenceGenome human {a_factory.make(human_reference_fasta)};
+    auto human = make_reference(human_reference_fasta);
     
     HaplotypeTree haplotype_tree {human};
     
@@ -306,8 +297,7 @@ BOOST_AUTO_TEST_CASE(pruned_branches_can_still_be_extended)
 
 BOOST_AUTO_TEST_CASE(extending_on_mnps_results_in_backtracked_bifurification)
 {
-    ReferenceGenomeFactory a_factory {};
-    ReferenceGenome human {a_factory.make(human_reference_fasta)};
+    auto human = make_reference(human_reference_fasta);
     
     Allele allele1 {parse_region("16:9300039-9300051", human), "TGTGTGTGCGTT"};
     Allele allele2 {parse_region("16:9300039-9300051", human), ""};
@@ -357,8 +347,7 @@ BOOST_AUTO_TEST_CASE(extending_on_mnps_results_in_backtracked_bifurification)
 
 BOOST_AUTO_TEST_CASE(haplotype_tree_can_selectively_extend_branches)
 {
-    ReferenceGenomeFactory a_factory {};
-    ReferenceGenome human {a_factory.make(human_reference_fasta)};
+    auto human = make_reference(human_reference_fasta);
     
     HaplotypeTree haplotype_tree {human};
     
@@ -401,8 +390,7 @@ BOOST_AUTO_TEST_CASE(haplotype_tree_can_selectively_extend_branches)
 
 BOOST_AUTO_TEST_CASE(haplotype_tree_survives_serious_pruning)
 {
-    ReferenceGenomeFactory a_factory {};
-    ReferenceGenome human {a_factory.make(human_reference_fasta)};
+    auto human = make_reference(human_reference_fasta);
     
     ReadManager a_read_manager {human_1000g_bam1};
     
@@ -474,8 +462,7 @@ BOOST_AUTO_TEST_CASE(haplotype_tree_survives_serious_pruning)
 
 BOOST_AUTO_TEST_CASE(prune_unqiue_leaves_a_single_haplotype_which_contains_the_same_alleles_as_the_given_haplotype)
 {
-    ReferenceGenomeFactory a_factory {};
-    ReferenceGenome human {a_factory.make(human_reference_fasta)};
+    auto human = make_reference(human_reference_fasta);
     
     ReadManager a_read_manager {human_1000g_bam1};
     
@@ -528,8 +515,7 @@ BOOST_AUTO_TEST_CASE(prune_unqiue_leaves_a_single_haplotype_which_contains_the_s
 
 BOOST_AUTO_TEST_CASE(contains_returns_true_if_the_given_haplotype_is_in_the_tree_in_any_form)
 {
-    ReferenceGenomeFactory a_factory {};
-    ReferenceGenome human {a_factory.make(human_reference_fasta)};
+    auto human = make_reference(human_reference_fasta);
     
     Allele allele1 {parse_region("4:1000000-1000001", human), "A"};
     Allele allele2 {parse_region("4:1000000-1000001", human), "C"};
@@ -565,8 +551,7 @@ BOOST_AUTO_TEST_CASE(contains_returns_true_if_the_given_haplotype_is_in_the_tree
 
 BOOST_AUTO_TEST_CASE(get_seperation_region_returns_the_allele_region_before_two_unique_haplotypes_seperate_if_the_haplotypes_seperate_at_the_root_then_the_entire_region_covered_by_the_first_haplotype_is_returned)
 {
-    ReferenceGenomeFactory a_factory {};
-    ReferenceGenome human {a_factory.make(human_reference_fasta)};
+    auto human = make_reference(human_reference_fasta);
     
     Allele allele1 {parse_region("4:1000000-1000001", human), "A"};
     Allele allele2 {parse_region("4:1000000-1000001", human), "C"};

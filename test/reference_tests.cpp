@@ -16,7 +16,6 @@
 
 #include "test_common.h"
 #include "reference_genome.h"
-#include "reference_genome_factory.h"
 
 using std::cout;
 using std::endl;
@@ -25,9 +24,7 @@ BOOST_AUTO_TEST_SUITE(Components)
 
 BOOST_AUTO_TEST_CASE(ReferemceGenome_handles_basic_queries)
 {
-    ReferenceGenomeFactory a_factory {};
-    
-    ReferenceGenome ecoli {a_factory.make(ecoli_reference_fasta)};
+    auto ecoli = make_reference(ecoli_reference_fasta);
     
     BOOST_CHECK(ecoli.get_name() == "R00000042");
     BOOST_CHECK(ecoli.contains_region(GenomicRegion("R00000042", 10000, 2000000)));
@@ -37,7 +34,7 @@ BOOST_AUTO_TEST_CASE(ReferemceGenome_handles_basic_queries)
     BOOST_CHECK(ecoli.get_sequence(GenomicRegion("R00000042", 0, 10)) == "AGCTTTTCAT"); // first line
     BOOST_CHECK(ecoli.get_sequence(GenomicRegion("R00000042", 69, 80)) == "CTTCTGAACTG"); // accross lines
     
-    ReferenceGenome human {a_factory.make(human_reference_fasta)};
+    auto human = make_reference(human_reference_fasta);
     
     BOOST_CHECK(human.get_name() == "human_g1k_v37");
     BOOST_CHECK(human.contains_region(GenomicRegion("1", 100, 10000)));
@@ -52,16 +49,14 @@ BOOST_AUTO_TEST_CASE(ReferemceGenome_handles_basic_queries)
 
 BOOST_AUTO_TEST_CASE(ReferemceGenome_handles_edge_cases)
 {
-    ReferenceGenomeFactory a_factory {};
-    ReferenceGenome human {a_factory.make(human_reference_fasta)};
+    auto human = make_reference(human_reference_fasta);
     
     BOOST_CHECK(human.get_sequence(GenomicRegion {"1", 100, 100}) == "");
 }
 
 BOOST_AUTO_TEST_CASE(parse_region_works_with_correctly_formatted_region_input)
 {
-    ReferenceGenomeFactory a_factory {};
-    ReferenceGenome human {a_factory.make(human_reference_fasta)};
+    auto human = make_reference(human_reference_fasta);
     
     auto r1 = parse_region("3", human);
     BOOST_CHECK(r1.get_contig_name() == "3");
@@ -86,8 +81,7 @@ BOOST_AUTO_TEST_CASE(parse_region_works_with_correctly_formatted_region_input)
 
 BOOST_AUTO_TEST_CASE(parse_region_throws_when_region_is_not_formatted_correctly)
 {
-    ReferenceGenomeFactory a_factory {};
-    ReferenceGenome human {a_factory.make(human_reference_fasta)};
+    auto human = make_reference(human_reference_fasta);
     
     bool throwed {};
     

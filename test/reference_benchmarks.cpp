@@ -18,7 +18,6 @@
 
 #include "test_common.h"
 #include "reference_genome.h"
-#include "reference_genome_factory.h"
 #include "bioio.h"
 
 //BOOST_AUTO_TEST_CASE(reference_benchmark)

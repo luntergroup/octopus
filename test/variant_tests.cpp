@@ -16,7 +16,6 @@
 
 #include "test_common.h"
 #include "reference_genome.h"
-#include "reference_genome_factory.h"
 #include "genomic_region.h"
 #include "mappable_algorithms.h"
 #include "allele.h"
@@ -292,8 +291,7 @@ BOOST_AUTO_TEST_CASE(inner_distance_respects_insertion_lhs_ordering_rule)
 
 BOOST_AUTO_TEST_CASE(indels_can_be_left_aligned)
 {
-    ReferenceGenomeFactory a_factory {};
-    ReferenceGenome human(a_factory.make(human_reference_fasta));
+    auto human = make_reference(human_reference_fasta);
     
     // Huntingtin region CCAGCAGCAGCAGCAG...
     auto a_region = parse_region("4:3076657-3076660", human);
@@ -349,8 +347,7 @@ BOOST_AUTO_TEST_CASE(indels_can_be_left_aligned)
 
 BOOST_AUTO_TEST_CASE(can_make_variants_parsimonious)
 {
-    ReferenceGenomeFactory a_factory {};
-    ReferenceGenome human(a_factory.make(human_reference_fasta));
+    auto human = make_reference(human_reference_fasta);
     
     Variant a_snp {parse_region("12:10001330-10001331", human), std::string {"G"}, std::string {"C"}};
     
@@ -418,8 +415,7 @@ BOOST_AUTO_TEST_CASE(can_make_variants_parsimonious)
 
 BOOST_AUTO_TEST_CASE(can_normalise_variants)
 {
-    ReferenceGenomeFactory a_factory {};
-    ReferenceGenome human(a_factory.make(human_reference_fasta));
+    auto human = make_reference(human_reference_fasta);
     
     // Huntingtin region CCAGCAGCAGCAGCAG...
     

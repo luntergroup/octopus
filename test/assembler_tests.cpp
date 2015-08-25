@@ -17,7 +17,6 @@
 #include "genomic_region.h"
 #include "aligned_read.h"
 #include "reference_genome.h"
-#include "reference_genome_factory.h"
 #include "mock_objects.h"
 //#include "assembler.h"
 #include "kmer_graph.h"
@@ -76,8 +75,8 @@ BOOST_AUTO_TEST_SUITE(Components)
 
 BOOST_AUTO_TEST_CASE(assembler_path_test)
 {
-    ReferenceGenomeFactory a_factory {};
-    ReferenceGenome lambda(a_factory.make(lambda_reference_fasta));
+    auto lambda = make_reference(lambda_reference_fasta);
+    
     auto contig_name = lambda.get_contig_names()[0];
     auto contig_size = lambda.get_contig_size(contig_name);
     auto contig = lambda.get_sequence(GenomicRegion {contig_name, 0, contig_size});

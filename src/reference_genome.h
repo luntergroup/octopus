@@ -14,18 +14,21 @@
 #include <unordered_map>
 #include <cstddef> // std::size_t
 #include <memory>  // std::unique_ptr
+#include <boost/filesystem/path.hpp>
 
 #include "genomic_region.h"
-#include "i_reference_genome_impl.h"
+#include "reference_genome_impl.h"
+
+namespace fs = boost::filesystem;
 
 class ReferenceGenome
 {
 public:
-    using SizeType     = IReferenceGenomeImpl::SizeType;
-    using SequenceType = IReferenceGenomeImpl::SequenceType;
+    using SizeType     = ReferenceGenomeImpl::SizeType;
+    using SequenceType = ReferenceGenomeImpl::SequenceType;
     
     ReferenceGenome() = delete;
-    explicit ReferenceGenome(std::unique_ptr<IReferenceGenomeImpl> the_reference_impl);
+    explicit ReferenceGenome(std::unique_ptr<ReferenceGenomeImpl> impl);
     
     ReferenceGenome(const ReferenceGenome&)            = delete;
     ReferenceGenome& operator=(const ReferenceGenome&) = delete;
@@ -43,13 +46,15 @@ public:
     SequenceType get_sequence(const GenomicRegion& region);
     
 private:
-    std::unique_ptr<IReferenceGenomeImpl> the_reference_impl_;
+    std::unique_ptr<ReferenceGenomeImpl> impl_;
     std::string name_;
     std::vector<std::string> contig_names_;
     std::unordered_map<std::string, SizeType> contig_sizes_;
 };
 
 // non-member functions
+
+ReferenceGenome make_reference(fs::path file_path, std::size_t max_base_pair_cache = 0, bool is_threaded = false);
 
 std::vector<GenomicRegion> get_all_contig_regions(const ReferenceGenome& the_reference);
 

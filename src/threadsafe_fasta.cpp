@@ -22,24 +22,24 @@ fasta_ {std::move(fasta_path), std::move(fasta_index_path)},
 fasta_mutex_ {}
 {}
 
-std::string ThreadsafeFasta::get_reference_name() const
+std::string ThreadsafeFasta::do_get_reference_name() const
 {
     return fasta_.get_reference_name(); // don't need mutex as const
 }
 
-std::vector<std::string> ThreadsafeFasta::get_contig_names()
+std::vector<std::string> ThreadsafeFasta::do_get_contig_names()
 {
     std::lock_guard<std::mutex> lock {fasta_mutex_};
     return fasta_.get_contig_names();
 }
 
-ThreadsafeFasta::SizeType ThreadsafeFasta::get_contig_size(const std::string& contig_name)
+ThreadsafeFasta::SizeType ThreadsafeFasta::do_get_contig_size(const std::string& contig_name)
 {
     std::lock_guard<std::mutex> lock {fasta_mutex_};
     return fasta_.get_contig_size(contig_name);
 }
 
-ThreadsafeFasta::SequenceType ThreadsafeFasta::get_sequence(const GenomicRegion& region)
+ThreadsafeFasta::SequenceType ThreadsafeFasta::do_get_sequence(const GenomicRegion& region)
 {
     std::lock_guard<std::mutex> lock {fasta_mutex_};
     return fasta_.get_sequence(region);

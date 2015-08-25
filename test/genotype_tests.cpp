@@ -18,7 +18,6 @@
 
 #include "test_common.h"
 #include "reference_genome.h"
-#include "reference_genome_factory.h"
 #include "read_manager.h"
 #include "variant.h"
 #include "variant_utils.h"
@@ -34,8 +33,7 @@ BOOST_AUTO_TEST_SUITE(Components)
 
 BOOST_AUTO_TEST_CASE(Genotype_can_be_tested_for_haplotype_occurence)
 {
-    ReferenceGenomeFactory a_factory {};
-    ReferenceGenome human {a_factory.make(human_reference_fasta)};
+    auto human = make_reference(human_reference_fasta);
     
     Haplotype hap1 {human};
     hap1.push_back(Allele {parse_region("1:1000000-1000001", human), "A"});
@@ -112,8 +110,7 @@ BOOST_AUTO_TEST_CASE(Genotype_can_be_tested_for_haplotype_occurence)
 
 BOOST_AUTO_TEST_CASE(Genotypes_are_equal_if_they_contain_the_same_haplotypes)
 {
-    ReferenceGenomeFactory a_factory {};
-    ReferenceGenome human {a_factory.make(human_reference_fasta)};
+    auto human = make_reference(human_reference_fasta);
     
     Haplotype hap1 {human};
     hap1.push_back(Allele {parse_region("1:1000000-1000001", human), "A"});
@@ -172,8 +169,7 @@ BOOST_AUTO_TEST_CASE(Genotypes_are_equal_if_they_contain_the_same_haplotypes)
 
 BOOST_AUTO_TEST_CASE(Genotypes_are_not_influenced_by_haplotype_entry_order)
 {
-    ReferenceGenomeFactory a_factory {};
-    ReferenceGenome human {a_factory.make(human_reference_fasta)};
+    auto human = make_reference(human_reference_fasta);
     
     Haplotype hap1 {human};
     hap1.push_back(Allele {parse_region("1:1000000-1000001", human), "A"});
@@ -200,8 +196,7 @@ BOOST_AUTO_TEST_CASE(Genotypes_are_not_influenced_by_haplotype_entry_order)
 
 BOOST_AUTO_TEST_CASE(get_all_genotypes_returns_all_possible_unique_genotypes)
 {
-    ReferenceGenomeFactory a_factory {};
-    ReferenceGenome human {a_factory.make(human_reference_fasta)};
+    auto human = make_reference(human_reference_fasta);
     
     Haplotype hap1 {human};
     hap1.push_back(Allele {parse_region("1:1000000-1000001", human), "A"});
@@ -254,8 +249,7 @@ BOOST_AUTO_TEST_CASE(get_all_genotypes_returns_all_possible_unique_genotypes)
 
 BOOST_AUTO_TEST_CASE(get_all_genotypes_results_in_correct_ploidy)
 {
-    ReferenceGenomeFactory a_factory {};
-    ReferenceGenome human(a_factory.make(human_reference_fasta));
+    auto human = make_reference(human_reference_fasta);
     
     GenomicRegion region1 {"3", 1000000, 1000001};
     GenomicRegion region2 {"3", 1000010, 1000011};
@@ -302,8 +296,7 @@ BOOST_AUTO_TEST_CASE(get_all_genotypes_results_in_correct_ploidy)
 
 BOOST_AUTO_TEST_CASE(get_unique_returns_all_the_unique_haplotypes_in_a_Genotype)
 {
-    ReferenceGenomeFactory a_factory {};
-    ReferenceGenome human {a_factory.make(human_reference_fasta)};
+    auto human = make_reference(human_reference_fasta);
     
     Haplotype hap1 {human};
     hap1.push_back(Allele {parse_region("1:1000000-1000001", human), "A"});

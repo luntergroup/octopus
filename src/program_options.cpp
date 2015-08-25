@@ -19,7 +19,6 @@
 #include <boost/filesystem/operations.hpp>
 
 #include "genomic_region.h"
-#include "reference_genome_factory.h"
 #include "reference_genome.h"
 #include "read_manager.h"
 #include "mappable_algorithms.h"

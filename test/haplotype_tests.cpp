@@ -17,7 +17,6 @@
 
 #include "test_common.h"
 #include "reference_genome.h"
-#include "reference_genome_factory.h"
 #include "read_manager.h"
 #include "variant.h"
 #include "variant_utils.h"
@@ -34,8 +33,7 @@ BOOST_AUTO_TEST_SUITE(Components)
 
 BOOST_AUTO_TEST_CASE(alleles_can_be_added_to_front_and_back_of_haplotypes)
 {
-    ReferenceGenomeFactory a_factory {};
-    ReferenceGenome human {a_factory.make(human_reference_fasta)};
+    auto human = make_reference(human_reference_fasta);
     
     auto a_region = parse_region("3:1000000-1000010", human);
     
@@ -91,8 +89,7 @@ BOOST_AUTO_TEST_CASE(alleles_can_be_added_to_front_and_back_of_haplotypes)
 
 BOOST_AUTO_TEST_CASE(haplotypes_work_with_real_data)
 {
-    ReferenceGenomeFactory a_factory {};
-    ReferenceGenome ecoli {a_factory.make(ecoli_reference_fasta)};
+    auto ecoli = make_reference(ecoli_reference_fasta);
     
     ReadManager a_read_manager {ecoli_bam};
     
@@ -127,8 +124,7 @@ BOOST_AUTO_TEST_CASE(haplotypes_work_with_real_data)
 
 BOOST_AUTO_TEST_CASE(alleles_not_explicitly_added_to_haplotypes_are_assumed_reference)
 {
-    ReferenceGenomeFactory a_factory {};
-    ReferenceGenome human {a_factory.make(human_reference_fasta)};
+    auto human = make_reference(human_reference_fasta);
     
     GenomicRegion a_region {"7", 1000000, 1000100};
     
@@ -151,8 +147,7 @@ BOOST_AUTO_TEST_CASE(alleles_not_explicitly_added_to_haplotypes_are_assumed_refe
 
 BOOST_AUTO_TEST_CASE(alleles_explicitly_added_to_haplotypes_should_be_contained)
 {
-    ReferenceGenomeFactory a_factory {};
-    ReferenceGenome human {a_factory.make(human_reference_fasta)};
+    auto human = make_reference(human_reference_fasta);
     
     GenomicRegion a_region {"3", 1000000, 1000020}; // CCAACAAGCATTGGTGTGGC
     
@@ -252,8 +247,7 @@ BOOST_AUTO_TEST_CASE(alleles_explicitly_added_to_haplotypes_should_be_contained)
 
 BOOST_AUTO_TEST_CASE(mnps_decompose)
 {
-    ReferenceGenomeFactory a_factory {};
-    ReferenceGenome human {a_factory.make(human_reference_fasta)};
+    auto human = make_reference(human_reference_fasta);
     
     auto a_region = parse_region("3:1000000-1000020", human);
     
@@ -274,8 +268,7 @@ BOOST_AUTO_TEST_CASE(mnps_decompose)
 
 BOOST_AUTO_TEST_CASE(deletions_decompose)
 {
-    ReferenceGenomeFactory a_factory {};
-    ReferenceGenome human {a_factory.make(human_reference_fasta)};
+    auto human = make_reference(human_reference_fasta);
     
     auto a_region = parse_region("3:1000000-1000020", human);
     
@@ -298,8 +291,7 @@ BOOST_AUTO_TEST_CASE(deletions_decompose)
 
 BOOST_AUTO_TEST_CASE(insertions_decompose)
 {
-    ReferenceGenomeFactory a_factory {};
-    ReferenceGenome human {a_factory.make(human_reference_fasta)};
+    auto human = make_reference(human_reference_fasta);
     
     auto a_region = parse_region("3:1000000-1000020", human);
     
@@ -322,8 +314,7 @@ BOOST_AUTO_TEST_CASE(insertions_decompose)
 
 BOOST_AUTO_TEST_CASE(haplotype_equate_when_alleles_infer_same_sequence)
 {
-    ReferenceGenomeFactory a_factory {};
-    ReferenceGenome human {a_factory.make(human_reference_fasta)};
+    auto human = make_reference(human_reference_fasta);
     
     auto a_region = parse_region("16:9300000-9300100", human);
     
@@ -358,8 +349,7 @@ BOOST_AUTO_TEST_CASE(haplotype_equate_when_alleles_infer_same_sequence)
 
 BOOST_AUTO_TEST_CASE(haplotypes_can_be_compared_for_structural_complexity)
 {
-    ReferenceGenomeFactory a_factory {};
-    ReferenceGenome human {a_factory.make(human_reference_fasta)};
+    auto human = make_reference(human_reference_fasta);
     
     auto a_region = parse_region("16:9300000-9300100", human);
     
@@ -379,8 +369,7 @@ BOOST_AUTO_TEST_CASE(haplotypes_can_be_compared_for_structural_complexity)
 
 BOOST_AUTO_TEST_CASE(haplotypes_behave_at_boundries)
 {
-    ReferenceGenomeFactory a_factory {};
-    ReferenceGenome human {a_factory.make(human_reference_fasta)};
+    auto human = make_reference(human_reference_fasta);
     
     auto a_region = parse_region("16:9299940-9300100", human);
     
@@ -425,8 +414,7 @@ BOOST_AUTO_TEST_CASE(haplotypes_behave_at_boundries)
 
 BOOST_AUTO_TEST_CASE(haplotypes_can_be_copied_and_moved)
 {
-    ReferenceGenomeFactory a_factory {};
-    ReferenceGenome human {a_factory.make(human_reference_fasta)};
+    auto human = make_reference(human_reference_fasta);
     
     auto a_region = parse_region("16:9299940-9300100", human);
     
@@ -450,8 +438,7 @@ BOOST_AUTO_TEST_CASE(haplotypes_can_be_copied_and_moved)
 
 BOOST_AUTO_TEST_CASE(Haplotype_can_be_spliced)
 {
-    ReferenceGenomeFactory a_factory {};
-    ReferenceGenome human {a_factory.make(human_reference_fasta)};
+    auto human = make_reference(human_reference_fasta);
     
     auto a_region = parse_region("16:9299940-9300100", human);
     

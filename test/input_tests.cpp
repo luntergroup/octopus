@@ -17,7 +17,6 @@
 
 #include "test_common.h"
 #include "genomic_region.h"
-#include "reference_genome_factory.h"
 #include "reference_genome.h"
 #include "read_manager.h"
 #include "program_options.h"

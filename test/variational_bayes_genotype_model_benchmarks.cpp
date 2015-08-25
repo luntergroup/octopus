@@ -19,7 +19,6 @@
 #include "test_utils.h"
 #include "benchmark_utils.h"
 #include "reference_genome.h"
-#include "reference_genome_factory.h"
 #include "read_manager.h"
 #include "allele.h"
 #include "variant.h"

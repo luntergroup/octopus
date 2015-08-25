@@ -57,22 +57,22 @@ max_cache_size_ {max_cache_size}
     setup_cache();
 }
 
-std::string CachingFasta::get_reference_name() const
+std::string CachingFasta::do_get_reference_name() const
 {
     return fasta_.get_reference_name();
 }
 
-std::vector<std::string> CachingFasta::get_contig_names()
+std::vector<std::string> CachingFasta::do_get_contig_names()
 {
     return fasta_.get_contig_names();
 }
 
-CachingFasta::SizeType CachingFasta::get_contig_size(const std::string& contig_name)
+CachingFasta::SizeType CachingFasta::do_get_contig_size(const std::string& contig_name)
 {
     return contig_size_cache_.at(contig_name);
 }
 
-CachingFasta::SequenceType CachingFasta::get_sequence(const GenomicRegion& region)
+CachingFasta::SequenceType CachingFasta::do_get_sequence(const GenomicRegion& region)
 {
     std::cout << "requested " << region << std::endl;
     
@@ -93,8 +93,6 @@ CachingFasta::SequenceType CachingFasta::get_sequence(const GenomicRegion& regio
     
     return get_subsequence(region, it->first, it->second);
 }
-
-// private methods
 
 void CachingFasta::setup_cache()
 {

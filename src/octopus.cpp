@@ -13,7 +13,6 @@
 #include "common.h"
 #include "program_options.h"
 #include "reference_genome.h"
-#include "reference_genome_factory.h"
 #include "read_manager.h"
 
 using std::cout;

@@ -21,7 +21,6 @@
 #include "test_utils.h"
 #include "common.h"
 #include "reference_genome.h"
-#include "reference_genome_factory.h"
 #include "read_manager.h"
 #include "allele.h"
 #include "variant.h"

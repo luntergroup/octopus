@@ -27,7 +27,6 @@
 #include "variant_file_reader.h"
 #include "variant_file_factory.h"
 #include "reference_genome.h"
-#include "reference_genome_factory.h"
 #include "vcf_header.h"
 #include "vcf_type.h"
 #include "vcf_record.h"
