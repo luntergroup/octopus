@@ -9,7 +9,9 @@
 #include "tandem.h"
 
 #include <stack>
-#include <numeric> // std::accumulate
+
+namespace Tandem
+{
 
 // Implementation of algorithm found in Crochemore et al. (2008)
 std::vector<uint32_t> make_lcf_array(std::vector<uint32_t> sa, std::vector<uint32_t> lcp)
@@ -85,52 +87,41 @@ std::pair<std::vector<uint32_t>, std::vector<uint32_t>> make_lpf_and_prev_occ_ar
 
 namespace detail
 {
-    std::size_t get_num_runs(const std::vector<std::deque<StringRun>>& buckets)
+    std::vector<std::vector<StringRun>> get_init_buckets(const std::size_t n, const std::deque<StringRun>& lmrs)
     {
-        return std::accumulate(std::cbegin(buckets), std::cend(buckets), 0,
-                               [] (auto lhs, const auto& rhs) {
-                                   return lhs + rhs.size();
-                               });
+        std::vector<uint32_t> counts(n, 0);
+        
+        for (const auto& run : lmrs) {
+            ++counts[run.pos + run.length - 1];
+        }
+        
+        std::vector<std::vector<StringRun>> result(n, std::vector<StringRun> {});
+        
+        for (std::size_t i {}; i < n; ++i) {
+            result[i].reserve(counts[i]);
+        }
+        
+        return result;
     }
     
-    std::size_t get_num_runs(const std::unordered_map<uint32_t, std::deque<StringRun>>& buckets)
+    std::vector<std::vector<StringRun>> get_init_buckets(const std::size_t n, const std::vector<std::vector<StringRun>>& end_buckets)
     {
-        return std::accumulate(std::cbegin(buckets), std::cend(buckets), 0,
-                               [] (auto lhs, const auto& rhs) {
-                                   return lhs + rhs.second.size();
-                               });
+        std::vector<uint32_t> counts(n, 0);
+        
+        for (const auto& bucket : end_buckets) {
+            for (const auto& run : bucket) {
+                ++counts[run.pos];
+            }
+        }
+        
+        std::vector<std::vector<StringRun>> result(n, std::vector<StringRun> {});
+        
+        for (std::size_t i {}; i < n; ++i) {
+            result[i].reserve(counts[i]);
+        }
+        
+        return result;
     }
 } // end namespace detail
 
-std::vector<StringRun> remove_non_primitives(const std::vector<StringRun>& repetitions)
-{
-    std::vector<StringRun> result {};
-    result.reserve(repetitions.size());
-    
-    auto first = std::begin(repetitions);
-    auto last  = std::end(repetitions);
-    
-    while (first != last) {
-        auto it = std::adjacent_find(first, last, [] (const auto& lhs, const auto& rhs) {
-            return lhs.pos == rhs.pos && lhs.length == rhs.length;
-        });
-        
-        std::copy(first, it, std::back_inserter(result));
-        
-        if (it == last) break;
-        
-        auto it2 = std::find_if_not(it, last, [it] (const auto& run) {
-            return run.pos == it->pos && run.length == it->length;
-        });
-        
-        result.emplace_back(*std::min_element(it, it2, [] (const auto& lhs, const auto& rhs) {
-            return lhs.period < rhs.period;
-        }));
-        
-        first = it2;
-    }
-    
-    result.shrink_to_fit();
-    
-    return result;
-}
+} // end namespace Tandem

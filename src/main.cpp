@@ -167,13 +167,13 @@ void test6()
 {
     auto reference = make_reference(human_reference_fasta);
     
-    auto region = parse_region("22", reference);
+    auto region = parse_region("20", reference);
     
     cout << "finding repeats in " << size(region) << "bp" << endl;
     
     auto start = std::chrono::system_clock::now();
     
-    auto repeats = find_exact_tandem_repeats(reference.get_sequence(region), region, 2);
+    auto repeats = find_exact_tandem_repeats(reference.get_sequence(region), region, 500);
     
     auto end = std::chrono::system_clock::now();
     
@@ -185,15 +185,15 @@ void test6()
     //cout << repeats.front().region << endl;
     //cout << reference.get_sequence(repeats.front().region) << " " << repeats.front().period << endl;
     
-    auto it = std::adjacent_find(repeats.cbegin(), repeats.cend(), [] (const auto& lhs, const auto& rhs) { return lhs.region.get_end() + 5 >= rhs.region.get_begin(); });
-    
-    if (it != repeats.cend()) {
-        cout << it->region << " " << reference.get_sequence(it->region) << " " << it->period << endl;
-        ++it;
-        cout << it->region << " " << reference.get_sequence(it->region) << " " << it->period << endl;
-        ++it;
-        cout << it->region << " " << reference.get_sequence(it->region) << " " << it->period << endl;
-    }
+//    auto it = std::adjacent_find(repeats.cbegin(), repeats.cend(), [] (const auto& lhs, const auto& rhs) { return lhs.region.get_end() + 5 >= rhs.region.get_begin(); });
+//    
+//    if (it != repeats.cend()) {
+//        cout << it->region << " " << reference.get_sequence(it->region) << " " << it->period << endl;
+//        ++it;
+//        cout << it->region << " " << reference.get_sequence(it->region) << " " << it->period << endl;
+//        ++it;
+//        cout << it->region << " " << reference.get_sequence(it->region) << " " << it->period << endl;
+//    }
     
 //    auto it = std::adjacent_find(repeats.cbegin(), repeats.cend(), [] (const auto& lhs, const auto& rhs) { return lhs.region.get_begin() == rhs.region.get_begin(); });
 //    
@@ -205,11 +205,12 @@ void test6()
 //        cout << it->region << " " << reference.get_sequence(it->region) << " " << it->period << endl;
 //    }
     
-//    auto it = std::max_element(repeats.begin(), repeats.end(), [] (const auto& lhs, const auto& rhs) {
-//        return size(lhs.region) < size(rhs.region);
-//    });
-//    
-//    cout << reference.get_sequence(it->region) << " " << it->period << endl;
+    if (!repeats.empty()) {
+        auto it = std::max_element(repeats.begin(), repeats.end(), [] (const auto& lhs, const auto& rhs) {
+            return size(lhs.region) < size(rhs.region);
+        });
+        cout << it->region << " " << reference.get_sequence(it->region) << " " << it->period << endl;
+    }
     
 //    for (auto r : repeats) {
 //        cout << reference.get_sequence(r) << endl;

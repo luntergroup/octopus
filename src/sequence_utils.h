@@ -119,12 +119,10 @@ std::map<std::size_t, std::size_t> collapse_ns(SequenceType& sequence)
 {
     std::map<std::size_t, std::size_t> result {};
     
-    auto first = std::begin(sequence);
-    auto last  = std::end(sequence);
-    
+    auto last = std::end(sequence);
     std::size_t position {}, num_removed {};
     
-    while (first != last) {
+    for (auto first = std::begin(sequence); first != last;) {
         auto it1 = std::adjacent_find(first, last, [] (char lhs, char rhs) { return lhs == 'N' && lhs == rhs; });
         
         if (it1 == last) break;
@@ -157,7 +155,7 @@ std::map<std::size_t, std::size_t> collapse_ns(SequenceType& sequence)
 
 namespace detail
 {
-    void rebase(std::vector<StringRun>& runs, const std::map<std::size_t, std::size_t>& shift_map)
+    void rebase(std::vector<Tandem::StringRun>& runs, const std::map<std::size_t, std::size_t>& shift_map)
     {
         if (shift_map.empty()) return;
         
@@ -174,7 +172,7 @@ struct TandemRepeat
     using SizeType = GenomicRegion::SizeType;
     TandemRepeat() = delete;
     template <typename T>
-    TandemRepeat(T region, GenomicRegion::SizeType period) : region {std::forward<T>(region)}, period {period} {}
+    explicit TandemRepeat(T region, GenomicRegion::SizeType period) : region {std::forward<T>(region)}, period {period} {}
     
     GenomicRegion region;
     GenomicRegion::SizeType period;
@@ -187,7 +185,7 @@ std::vector<TandemRepeat> find_exact_tandem_repeats(SequenceType sequence, const
 {
     auto n_shift_map = collapse_ns(sequence);
     
-    auto maximal_repetitions = remove_non_primitives(find_maximal_repetitions(sequence , min_repeat_size, max_repeat_size));
+    auto maximal_repetitions = Tandem::find_maximal_repetitions(sequence , min_repeat_size, max_repeat_size);
     
     detail::rebase(maximal_repetitions, n_shift_map);
     
