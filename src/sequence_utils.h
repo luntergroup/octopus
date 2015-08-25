@@ -138,7 +138,7 @@ std::map<std::size_t, std::size_t> collapse_ns(SequenceType& sequence)
     }
     
     if (!result.empty()) {
-        sequence.erase(std::unique(std::next(std::begin(sequence), result.cbegin()->first), last,
+        sequence.erase(std::unique(std::next(std::begin(sequence), std::cbegin(result)->first), last,
                                    [] (char lhs, char rhs) { return lhs == 'N' && lhs == rhs; }), last);
     }
     
@@ -183,6 +183,11 @@ std::vector<TandemRepeat> find_exact_tandem_repeats(SequenceType sequence, const
                                                     GenomicRegion::SizeType min_repeat_size = 2,
                                                     GenomicRegion::SizeType max_repeat_size = 10000)
 {
+    if (sequence.back() != 'N') {
+        sequence.reserve(sequence.size() + 1);
+        sequence.push_back('N');
+    }
+    
     auto n_shift_map = collapse_ns(sequence);
     
     auto maximal_repetitions = Tandem::find_maximal_repetitions(sequence , min_repeat_size, max_repeat_size);

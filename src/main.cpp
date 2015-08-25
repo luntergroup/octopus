@@ -167,7 +167,7 @@ void test6()
 {
     auto reference = make_reference(human_reference_fasta);
     
-    auto region = parse_region("20", reference);
+    auto region = parse_region("Y", reference);
     
     cout << "finding repeats in " << size(region) << "bp" << endl;
     
