@@ -216,9 +216,10 @@ void test6()
 //    }
 }
 
+#include "genotype_model.h"
 int main(int argc, const char **argv)
 {
-    test6();
+    //test6();
     
 //    auto options = Octopus::parse_options(argc, argv);
 //    

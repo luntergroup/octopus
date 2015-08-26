@@ -11,6 +11,7 @@
 
 #include <vector>
 #include <deque>
+#include <map>
 #include <cstdint>   // uint32_t
 #include <cstddef>   // size_t
 #include <algorithm> // std::mismatch, std::max, std::min, std::find, std::transform, std::lower_bound
@@ -356,6 +357,52 @@ namespace Tandem
         
         return result;
     }
+    
+    /**
+     Replaces all contiguous sub-sequences of c with a single c, inplace, and returns a map of
+     each c position in the new sequence, and how many c's have been removed up to the first non-c
+     base past the position. This is just a helper that can speed up repetition finding if the sequence
+     contains long runs of characters that are not of interest (e.g. unknwown base 'N' in DNA/RNA sequence).
+     
+     If this function is used, the output StringRun's will need to be rebased to get the correct positions
+     in the original sequence. The function rebase does this transformation.
+     
+     Example:
+     std::string str {"NNNACGTNNTGCNANNNN"};
+     auto n_shift_map = colapse(str, 'N'); // str is now "NACGTNTGCNAN", n_shift_map contains (0, 2), (4, 3), (9, 6)
+     */
+    template <typename SequenceType>
+    std::map<size_t, size_t> collapse(SequenceType& sequence, char c)
+    {
+        std::map<size_t, size_t> result {};
+        
+        auto last = std::end(sequence);
+        size_t position {}, num_removed {};
+        
+        for (auto first = std::begin(sequence); first != last;) {
+            auto it1 = std::adjacent_find(first, last, [c] (char lhs, char rhs) { return lhs == c && lhs == rhs; });
+            
+            if (it1 == last) break;
+            
+            auto it2 = std::find_if_not(it1, last, [c] (char b) { return b == c; });
+            
+            position    += std::distance(first, it1);
+            num_removed += std::distance(it1, it2) - 1;
+            
+            result.emplace(position, num_removed);
+            
+            first = it2;
+        }
+        
+        if (!result.empty()) {
+            sequence.erase(std::unique(std::next(std::begin(sequence), std::cbegin(result)->first), last,
+                                       [c] (char lhs, char rhs) { return lhs == c && lhs == rhs; }), last);
+        }
+        
+        return result;
+    }
+    
+    void rebase(std::vector<Tandem::StringRun>& runs, const std::map<size_t, size_t>& shift_map);
     
 } // end namespace Tandem
 

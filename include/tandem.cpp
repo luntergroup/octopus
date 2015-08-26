@@ -124,4 +124,15 @@ namespace Tandem
         }
     } // end namespace detail
     
+    void rebase(std::vector<Tandem::StringRun>& runs, const std::map<size_t, size_t>& shift_map)
+    {
+        if (shift_map.empty()) return;
+        
+        auto shift_map_it = std::cbegin(shift_map);
+        for (auto& run : runs) {
+            while (std::next(shift_map_it)->first <= run.pos) ++shift_map_it;
+            run.pos += static_cast<decltype(run.pos)>(shift_map_it->second);
+        }
+    }
+    
 } // end namespace Tandem

@@ -35,8 +35,8 @@ public:
     using Iterator = typename std::vector<MappableType>::const_iterator;
     
     Genotype() = default;
-    Genotype(unsigned ploidy);
-    Genotype(std::initializer_list<MappableType> the_elements);
+    explicit Genotype(unsigned ploidy);
+    explicit Genotype(std::initializer_list<MappableType> the_elements);
     ~Genotype() = default;
     
     Genotype(const Genotype&)            = default;
@@ -45,17 +45,17 @@ public:
     Genotype& operator=(Genotype&&)      = default;
     
     const MappableType& at(unsigned n) const;
-    void emplace(const MappableType& an_element);
-    void emplace(MappableType&& an_element);
+    void emplace(const MappableType& element);
+    void emplace(MappableType&& element);
     
-    Iterator begin() const;
-    Iterator end() const;
-    Iterator cbegin() const;
-    Iterator cend() const;
+    Iterator begin() const noexcept;
+    Iterator end() const noexcept ;
+    Iterator cbegin() const noexcept ;
+    Iterator cend() const noexcept ;
     
     unsigned ploidy() const noexcept;
-    bool contains(const MappableType& an_element) const;
-    unsigned num_occurences(const MappableType& an_element) const;
+    bool contains(const MappableType& element) const;
+    unsigned num_occurences(const MappableType& element) const;
     bool is_homozygous() const;
     std::vector<MappableType> get_unique() const;
     
@@ -86,39 +86,39 @@ const MappableType& Genotype<MappableType>::at(unsigned n) const
 }
 
 template <typename MappableType>
-void Genotype<MappableType>::emplace(const MappableType& an_element)
+void Genotype<MappableType>::emplace(const MappableType& element)
 {
-    elements_.emplace_back(an_element);
+    elements_.emplace_back(element);
     std::inplace_merge(std::begin(elements_), std::prev(std::end(elements_)), std::end(elements_));
 }
 
 template <typename MappableType>
-void Genotype<MappableType>::emplace(MappableType&& an_element)
+void Genotype<MappableType>::emplace(MappableType&& element)
 {
-    elements_.emplace_back(std::move(an_element));
+    elements_.emplace_back(std::move(element));
     std::inplace_merge(std::begin(elements_), std::prev(std::end(elements_)), std::end(elements_));
 }
 
 template <typename MappableType>
-typename Genotype<MappableType>::Iterator Genotype<MappableType>::begin() const
+typename Genotype<MappableType>::Iterator Genotype<MappableType>::begin() const noexcept
 {
     return elements_.begin();
 }
 
 template <typename MappableType>
-typename Genotype<MappableType>::Iterator Genotype<MappableType>::end() const
+typename Genotype<MappableType>::Iterator Genotype<MappableType>::end() const noexcept
 {
     return elements_.end();
 }
 
 template <typename MappableType>
-typename Genotype<MappableType>::Iterator Genotype<MappableType>::cbegin() const
+typename Genotype<MappableType>::Iterator Genotype<MappableType>::cbegin() const noexcept
 {
     return elements_.cbegin();
 }
 
 template <typename MappableType>
-typename Genotype<MappableType>::Iterator Genotype<MappableType>::cend() const
+typename Genotype<MappableType>::Iterator Genotype<MappableType>::cend() const noexcept
 {
     return elements_.cend();
 }
@@ -126,6 +126,7 @@ typename Genotype<MappableType>::Iterator Genotype<MappableType>::cend() const
 template <typename MappableType>
 bool Genotype<MappableType>::is_homozygous() const
 {
+    if (ploidy() < 2) return true;
     const auto& first_element = elements_.front();
     return std::all_of(std::next(std::cbegin(elements_)), std::cend(elements_),
                        [&first_element] (const auto& element) {
@@ -195,13 +196,13 @@ inline unsigned num_genotypes(unsigned num_elements, unsigned ploidy)
 namespace detail
 {
     template <typename MappableType>
-    Genotype<MappableType> get_genotype_from_element_indicies(const std::vector<MappableType>& the_elements,
+    Genotype<MappableType> get_genotype_from_element_indicies(const std::vector<MappableType>& elements,
                                                               const std::vector<unsigned>& element_indicies)
     {
         Genotype<MappableType> result {static_cast<unsigned>(element_indicies.size())};
         
         for (auto i : element_indicies) {
-            result.emplace(the_elements.at(i));
+            result.emplace(elements.at(i));
         }
         
         return result;
@@ -245,21 +246,21 @@ std::vector<Genotype<MappableType>> get_all_genotypes(const std::vector<Mappable
 }
 
 template <typename MappableType>
-std::unordered_map<MappableType, unsigned> get_element_occurence_map(const Genotype<MappableType>& a_genotype)
+std::unordered_map<MappableType, unsigned> get_element_occurence_map(const Genotype<MappableType>& genotype)
 {
     std::unordered_map<MappableType, unsigned> result {};
     
-    for (unsigned i {}; i < a_genotype.ploidy(); ++i) {
-        ++result[a_genotype.at(i)];
+    for (unsigned i {}; i < genotype.ploidy(); ++i) {
+        ++result[genotype.at(i)];
     }
     
     return result;
 }
 
 template <typename MappableType>
-inline std::ostream& operator<<(std::ostream& os, const Genotype<MappableType>& a_genotype)
+std::ostream& operator<<(std::ostream& os, const Genotype<MappableType>& genotype)
 {
-    auto element_occurences = get_element_occurence_map(a_genotype);
+    auto element_occurences = get_element_occurence_map(genotype);
     std::vector<std::pair<Haplotype, unsigned>> p {element_occurences.begin(), element_occurences.end()};
     for (unsigned i {}; i < p.size() - 1; ++i) {
         os << p[i].first << "(" << p[i].second << "),";
