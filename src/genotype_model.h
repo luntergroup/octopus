@@ -34,7 +34,7 @@ namespace Octopus
         virtual ~GenotypeModel() = default;
         
     private:
-        virtual GenotypeProbabilities do_evaluate(const std::vector<Haplotype>& haplotypes, const ReadMap& reads);
+        virtual GenotypeProbabilities do_evaluate(const std::vector<Haplotype>& haplotypes, const ReadMap& reads) = 0;
     };
     
     inline GenotypeModel::GenotypeProbabilities

@@ -139,16 +139,16 @@ HaplotypePhaser::Haplotypes HaplotypePhaser::get_unique_haplotypes_from_tree(con
     return haplotypes;
 }
 
-HaplotypePhaser::HaplotypePseudoCounts
-HaplotypePhaser::get_haplotype_prior_counts(const Haplotypes& the_haplotypes,
-                                            CandidateIterator first, CandidateIterator last,
-                                            const GenomicRegion& the_region) const
-{
-    auto haplotype_priors = get_haplotype_prior_probabilities<RealType>(the_haplotypes, first, last);
-    Haplotype reference {the_reference_, the_region};
-    return BayesianGenotypeModel::get_haplotype_prior_pseudo_counts(haplotype_priors, reference,
-                                                                    reference_bias_);
-}
+//HaplotypePhaser::HaplotypePseudoCounts
+//HaplotypePhaser::get_haplotype_prior_counts(const Haplotypes& the_haplotypes,
+//                                            CandidateIterator first, CandidateIterator last,
+//                                            const GenomicRegion& the_region) const
+//{
+//    auto haplotype_priors = get_haplotype_prior_probabilities<RealType>(the_haplotypes, first, last);
+//    Haplotype reference {the_reference_, the_region};
+//    return BayesianGenotypeModel::get_haplotype_prior_pseudo_counts(haplotype_priors, reference,
+//                                                                    reference_bias_);
+//}
 
 BayesianGenotypeModel::ReadRanges<SampleIdType, HaplotypePhaser::ReadIterator>
 HaplotypePhaser::get_read_iterator_ranges(const GenomicRegion& the_region) const

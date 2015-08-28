@@ -31,7 +31,7 @@ public:
     using Haplotypes = std::vector<Haplotype>;
     
     HaplotypeTree() = delete;
-    explicit HaplotypeTree(ReferenceGenome& the_reference);
+    explicit HaplotypeTree(ReferenceGenome& reference);
     ~HaplotypeTree() = default;
     
     HaplotypeTree(const HaplotypeTree&)            = default;
@@ -46,7 +46,6 @@ public:
     GenomicRegion get_seperation_region(const Haplotype& first, const Haplotype& second) const;
     void extend(const Allele& allele);
     Haplotypes get_haplotypes(const GenomicRegion& region);
-    
     void prune_all(const Haplotype& haplotype);
     void prune_unique(const Haplotype& haplotype);
     void clear();

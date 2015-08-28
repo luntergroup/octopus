@@ -10,42 +10,42 @@
 
 #include <boost/test/unit_test.hpp>
 
-#include <iostream>
-#include <string>
-#include <cstddef>
-#include <vector>
-#include <unordered_map>
-#include <cmath>
-
-#include "test_common.h"
-#include "test_utils.h"
-#include "common.h"
-#include "reference_genome.h"
-#include "read_manager.h"
-#include "allele.h"
-#include "variant.h"
-#include "variant_utils.h"
-#include "candidate_variant_generator.h"
-#include "alignment_candidate_variant_generator.h"
-#include "haplotype.h"
-#include "genotype.h"
-#include "read_model.h"
-#include "haplotype_prior_model.h"
-#include "bayesian_genotype_model.h"
-#include "variational_bayes_genotype_model.h"
-#include "maths.h"
-#include "read_filter.h"
-#include "read_filters.h"
-#include "haplotype_tree.h"
-
-using std::cout;
-using std::endl;
-
-using Octopus::ReadModel;
-
-using Octopus::BayesianGenotypeModel::VariationalBayesGenotypeModel;
-using Octopus::BayesianGenotypeModel::haplotype_population_probability;
-using Octopus::BayesianGenotypeModel::posterior_predictive_probability;
+//#include <iostream>
+//#include <string>
+//#include <cstddef>
+//#include <vector>
+//#include <unordered_map>
+//#include <cmath>
+//
+//#include "test_common.h"
+//#include "test_utils.h"
+//#include "common.h"
+//#include "reference_genome.h"
+//#include "read_manager.h"
+//#include "allele.h"
+//#include "variant.h"
+//#include "variant_utils.h"
+//#include "candidate_variant_generator.h"
+//#include "alignment_candidate_variant_generator.h"
+//#include "haplotype.h"
+//#include "genotype.h"
+//#include "read_model.h"
+//#include "haplotype_prior_model.h"
+//#include "bayesian_genotype_model.h"
+//#include "variational_bayes_genotype_model.h"
+//#include "maths.h"
+//#include "read_filter.h"
+//#include "read_filters.h"
+//#include "haplotype_tree.h"
+//
+//using std::cout;
+//using std::endl;
+//
+//using Octopus::ReadModel;
+//
+//using Octopus::BayesianGenotypeModel::VariationalBayesGenotypeModel;
+//using Octopus::BayesianGenotypeModel::haplotype_population_probability;
+//using Octopus::BayesianGenotypeModel::posterior_predictive_probability;
 
 //BOOST_AUTO_TEST_CASE(haplotype posteriors sum to one)
 //{

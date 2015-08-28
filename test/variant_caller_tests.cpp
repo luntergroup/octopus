@@ -10,38 +10,38 @@
 
 #include <boost/test/unit_test.hpp>
 
-#include <iostream>
-#include <string>
-
-#include "test_common.h"
-#include "reference_genome.h"
-#include "mappable_algorithms.h"
-#include "test_common.h"
-#include "read_manager.h"
-#include "read_filter.h"
-#include "read_filters.h"
-#include "read_utils.h"
-#include "allele.h"
-#include "variant.h"
-#include "variant_utils.h"
-#include "candidate_variant_generator.h"
-#include "alignment_candidate_variant_generator.h"
-#include "haplotype.h"
-#include "genotype.h"
-#include "read_model.h"
-#include "variational_bayes_genotype_model.h"
-#include "haplotype_phaser.h"
-#include "variant_caller.h"
-
-#include "maths.h"
-
-using std::cout;
-using std::endl;
-
-using Octopus::ReadModel;
-using Octopus::ReadModel;
-using Octopus::VariationalBayesGenotypeModel;
-using Octopus::HaplotypePhaser;
+//#include <iostream>
+//#include <string>
+//
+//#include "test_common.h"
+//#include "reference_genome.h"
+//#include "mappable_algorithms.h"
+//#include "test_common.h"
+//#include "read_manager.h"
+//#include "read_filter.h"
+//#include "read_filters.h"
+//#include "read_utils.h"
+//#include "allele.h"
+//#include "variant.h"
+//#include "variant_utils.h"
+//#include "candidate_variant_generator.h"
+//#include "alignment_candidate_variant_generator.h"
+//#include "haplotype.h"
+//#include "genotype.h"
+//#include "read_model.h"
+//#include "variational_bayes_genotype_model.h"
+//#include "haplotype_phaser.h"
+//#include "variant_caller.h"
+//
+//#include "maths.h"
+//
+//using std::cout;
+//using std::endl;
+//
+//using Octopus::ReadModel;
+//using Octopus::ReadModel;
+//using Octopus::VariationalBayesGenotypeModel;
+//using Octopus::HaplotypePhaser;
 
 //BOOST_AUTO_TEST_CASE(can call)
 //{

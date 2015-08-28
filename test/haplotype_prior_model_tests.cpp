@@ -10,23 +10,23 @@
 
 #include <boost/test/unit_test.hpp>
 
-#include <iostream>
-#include <string>
-
-#include "test_common.h"
-#include "reference_genome.h"
-#include "read_manager.h"
-#include "allele.h"
-#include "variant.h"
-#include "variant_utils.h"
-#include "candidate_variant_generator.h"
-#include "alignment_candidate_variant_generator.h"
-#include "haplotype.h"
-#include "genotype.h"
-#include "haplotype_prior_model.h"
-
-using std::cout;
-using std::endl;
+//#include <iostream>
+//#include <string>
+//
+//#include "test_common.h"
+//#include "reference_genome.h"
+//#include "read_manager.h"
+//#include "allele.h"
+//#include "variant.h"
+//#include "variant_utils.h"
+//#include "candidate_variant_generator.h"
+//#include "alignment_candidate_variant_generator.h"
+//#include "haplotype.h"
+//#include "genotype.h"
+//#include "haplotype_prior_model.h"
+//
+//using std::cout;
+//using std::endl;
 
 //BOOST_AUTO_TEST_CASE(haplotype_priors_can_be_evaluated)
 //{

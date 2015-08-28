@@ -8,6 +8,11 @@
 
 #include "population_genotype_model.h"
 
+#include <unordered_map>
+
+#include "read_model.h"
+#include "maths.h"
+
 namespace Octopus
 {
     // public methods
@@ -26,6 +31,14 @@ namespace Octopus
         GenotypeProbabilities result {};
         
         return result;
+    }
+    
+    // non member methods
+    
+    double hardy_weinberg_log_probability(const Genotype<Haplotype>& genotype,
+                                          const std::unordered_map<Haplotype, double>& haplotype_frequencies)
+    {
+        return 0;
     }
     
 } // end namespace Octopus

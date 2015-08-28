@@ -19,9 +19,9 @@
 namespace Octopus
 {
 
-HaplotypeTree::HaplotypeTree(ReferenceGenome& the_reference)
+HaplotypeTree::HaplotypeTree(ReferenceGenome& reference)
 :
-reference_ {the_reference},
+reference_ {reference},
 tree_ {},
 root_ {boost::add_vertex(tree_)},
 haplotype_leafs_ {root_},

@@ -111,9 +111,9 @@ private:
     void phase_current_data();
     void extend_tree(CandidateIterator first, CandidateIterator last);
     Haplotypes get_unique_haplotypes_from_tree(const GenomicRegion& a_region);
-    HaplotypePseudoCounts get_haplotype_prior_counts(const Haplotypes& the_haplotypes,
-                                                     CandidateIterator first, CandidateIterator last,
-                                                     const GenomicRegion& the_region) const;
+//    HaplotypePseudoCounts get_haplotype_prior_counts(const Haplotypes& the_haplotypes,
+//                                                     CandidateIterator first, CandidateIterator last,
+//                                                     const GenomicRegion& the_region) const;
     BayesianGenotypeModel::ReadRanges<SampleIdType, ReadIterator> get_read_iterator_ranges(const GenomicRegion& the_region) const;
     void remove_unlikely_haplotypes_from_tree(const Haplotypes& current_haplotypes,
                                               const HaplotypePseudoCounts& prior_counts,

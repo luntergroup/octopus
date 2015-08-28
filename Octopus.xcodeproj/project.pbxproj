@@ -49,7 +49,6 @@
 		CA4551721AEB09CC00FDAAE8 /* 1000G_test19.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA4551711AEB09CC00FDAAE8 /* 1000G_test19.cpp */; };
 		CA4551741AEB09DC00FDAAE8 /* 1000G_test20.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA4551731AEB09DC00FDAAE8 /* 1000G_test20.cpp */; };
 		CA4551761AEC1C8600FDAAE8 /* haplotype_prior_model_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA4551751AEC1C8600FDAAE8 /* haplotype_prior_model_tests.cpp */; };
-		CA4551791AF15D7E00FDAAE8 /* variant_caller.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA4551771AF15D7E00FDAAE8 /* variant_caller.cpp */; };
 		CA4551881AF27A4100FDAAE8 /* haplotype_phaser.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA4551861AF27A4100FDAAE8 /* haplotype_phaser.cpp */; };
 		CA5C8E021ADC4CBB000BA230 /* haplotype_benchmarks.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA5C8E011ADC4CBB000BA230 /* haplotype_benchmarks.cpp */; };
 		CA8A664A1B81CA7E008CE1D8 /* threadsafe_fasta.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA8A66481B81CA7E008CE1D8 /* threadsafe_fasta.cpp */; };
@@ -57,6 +56,7 @@
 		CA90C55A1ACDB95D00CBEE34 /* haplotype_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA90C5591ACDB95D00CBEE34 /* haplotype_tests.cpp */; };
 		CA91C2C81B8DE00E00609FFA /* population_genotype_model.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA91C2C61B8DE00E00609FFA /* population_genotype_model.cpp */; };
 		CA91C2CB1B8DE02300609FFA /* cancer_genotype_model.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA91C2C91B8DE02300609FFA /* cancer_genotype_model.cpp */; };
+		CA91C2D01B8DF56100609FFA /* basic_haplotype_prior_model.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA91C2CE1B8DF56100609FFA /* basic_haplotype_prior_model.cpp */; };
 		CAA4DC251A81981400DD3E9A /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CAA4DC241A81981400DD3E9A /* main.cpp */; };
 		CAA4DC321A82B36300DD3E9A /* README.md in Sources */ = {isa = PBXBuildFile; fileRef = CAA4DC311A82B36300DD3E9A /* README.md */; };
 		CAA4DC351A83A39D00DD3E9A /* Octopus in CopyFiles */ = {isa = PBXBuildFile; fileRef = CAA4DC211A81981400DD3E9A /* Octopus */; };
@@ -194,8 +194,6 @@
 		CA4551711AEB09CC00FDAAE8 /* 1000G_test19.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = 1000G_test19.cpp; sourceTree = "<group>"; };
 		CA4551731AEB09DC00FDAAE8 /* 1000G_test20.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = 1000G_test20.cpp; sourceTree = "<group>"; };
 		CA4551751AEC1C8600FDAAE8 /* haplotype_prior_model_tests.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = haplotype_prior_model_tests.cpp; sourceTree = "<group>"; };
-		CA4551771AF15D7E00FDAAE8 /* variant_caller.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = variant_caller.cpp; sourceTree = "<group>"; };
-		CA4551781AF15D7E00FDAAE8 /* variant_caller.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = variant_caller.h; sourceTree = "<group>"; };
 		CA4551861AF27A4100FDAAE8 /* haplotype_phaser.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = haplotype_phaser.cpp; sourceTree = "<group>"; };
 		CA4551871AF27A4100FDAAE8 /* haplotype_phaser.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = haplotype_phaser.h; sourceTree = "<group>"; };
 		CA5C8E011ADC4CBB000BA230 /* haplotype_benchmarks.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = haplotype_benchmarks.cpp; sourceTree = "<group>"; };
@@ -211,6 +209,10 @@
 		CA91C2C71B8DE00E00609FFA /* population_genotype_model.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = population_genotype_model.h; sourceTree = "<group>"; };
 		CA91C2C91B8DE02300609FFA /* cancer_genotype_model.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = cancer_genotype_model.cpp; sourceTree = "<group>"; };
 		CA91C2CA1B8DE02300609FFA /* cancer_genotype_model.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = cancer_genotype_model.h; sourceTree = "<group>"; };
+		CA91C2CD1B8DF4CC00609FFA /* haplotype_prior_model.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = haplotype_prior_model.h; sourceTree = "<group>"; };
+		CA91C2CE1B8DF56100609FFA /* basic_haplotype_prior_model.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = basic_haplotype_prior_model.cpp; sourceTree = "<group>"; };
+		CA91C2CF1B8DF56100609FFA /* basic_haplotype_prior_model.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = basic_haplotype_prior_model.h; sourceTree = "<group>"; };
+		CA91C2D11B8DF76300609FFA /* variant_caller.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = variant_caller.h; sourceTree = "<group>"; };
 		CAA4DC211A81981400DD3E9A /* Octopus */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = Octopus; sourceTree = BUILT_PRODUCTS_DIR; };
 		CAA4DC241A81981400DD3E9A /* main.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
 		CAA4DC301A82B28800DD3E9A /* .gitignore */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = .gitignore; sourceTree = "<group>"; };
@@ -221,7 +223,6 @@
 		CABA377E1A8FA11000BBE598 /* read_benchmarks.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = read_benchmarks.cpp; sourceTree = "<group>"; };
 		CABA37801A8FA49800BBE598 /* read_manager.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = read_manager.cpp; sourceTree = "<group>"; };
 		CABA37811A8FA49800BBE598 /* read_manager.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = read_manager.h; sourceTree = "<group>"; };
-		CAD5EC041AD2920E00892816 /* haplotype_prior_model.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = haplotype_prior_model.h; sourceTree = "<group>"; };
 		CAD5EC061AD5BBEA00892816 /* genotype_tests.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = genotype_tests.cpp; sourceTree = "<group>"; };
 		CAD5EC081AD6FD1E00892816 /* read_utils.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = read_utils.cpp; sourceTree = "<group>"; };
 		CAD5EC091AD6FD1E00892816 /* read_utils.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = read_utils.h; sourceTree = "<group>"; };
@@ -440,6 +441,7 @@
 		CA91C2CC1B8DE63A00609FFA /* callers */ = {
 			isa = PBXGroup;
 			children = (
+				CA91C2D11B8DF76300609FFA /* variant_caller.h */,
 			);
 			name = callers;
 			sourceTree = "<group>";
@@ -673,17 +675,12 @@
 				CAFA195A1ABF3DF400F953D9 /* haplotype_tree.h */,
 				CAFA19591ABF3DF400F953D9 /* haplotype_tree.cpp */,
 				CAFA19761AC5E67100F953D9 /* pair_hmm.h */,
-				D42061151ACC3DA500D11553 /* read_model.h */,
-				D42061141ACC3DA500D11553 /* read_model.cpp */,
-				CAD5EC041AD2920E00892816 /* haplotype_prior_model.h */,
 				D463C1941B02108F00739A66 /* bayesian_genotype_model.h */,
 				D42061101ACC165C00D11553 /* variational_bayes_genotype_model.h */,
 				D420610F1ACC165C00D11553 /* variational_bayes_genotype_model.cpp */,
 				D463C1881AEE2E1900739A66 /* search_regions.h */,
 				CA4551871AF27A4100FDAAE8 /* haplotype_phaser.h */,
 				CA4551861AF27A4100FDAAE8 /* haplotype_phaser.cpp */,
-				CA4551781AF15D7E00FDAAE8 /* variant_caller.h */,
-				CA4551771AF15D7E00FDAAE8 /* variant_caller.cpp */,
 			);
 			name = core;
 			sourceTree = "<group>";
@@ -691,6 +688,11 @@
 		D413B0421B5D4E84007EFDE0 /* models */ = {
 			isa = PBXGroup;
 			children = (
+				CA91C2CD1B8DF4CC00609FFA /* haplotype_prior_model.h */,
+				CA91C2CF1B8DF56100609FFA /* basic_haplotype_prior_model.h */,
+				CA91C2CE1B8DF56100609FFA /* basic_haplotype_prior_model.cpp */,
+				D42061151ACC3DA500D11553 /* read_model.h */,
+				D42061141ACC3DA500D11553 /* read_model.cpp */,
 				D413B0431B5D4EAC007EFDE0 /* genotype_model.h */,
 				CA91C2C71B8DE00E00609FFA /* population_genotype_model.h */,
 				CA91C2C61B8DE00E00609FFA /* population_genotype_model.cpp */,
@@ -847,6 +849,7 @@
 				CA386DAD1B603C380057A5A8 /* caching_fasta.cpp in Sources */,
 				CA0B46731AE8639F00158BBA /* ecoli_test1.cpp in Sources */,
 				CA0B46841AEA222B00158BBA /* 1000G_test10.cpp in Sources */,
+				CA91C2D01B8DF56100609FFA /* basic_haplotype_prior_model.cpp in Sources */,
 				CA4551881AF27A4100FDAAE8 /* haplotype_phaser.cpp in Sources */,
 				CA91C2CB1B8DE02300609FFA /* cancer_genotype_model.cpp in Sources */,
 				D463C1911AF38DCF00739A66 /* haplotype_phaser_tests.cpp in Sources */,
@@ -856,7 +859,6 @@
 				D42061131ACC3D2B00D11553 /* variational_bayes_genotype_model_tests.cpp in Sources */,
 				CAE3E2CB1AAB42C900C01B2C /* read_filter_tests.cpp in Sources */,
 				CA28EBF51AABB80E009F8622 /* read_filter_benchmarks.cpp in Sources */,
-				CA4551791AF15D7E00FDAAE8 /* variant_caller.cpp in Sources */,
 				CA45516E1AEB09A500FDAAE8 /* 1000G_test17.cpp in Sources */,
 				CA45516C1AEB099200FDAAE8 /* 1000G_test16.cpp in Sources */,
 				CA386D9D1B5AA3C80057A5A8 /* reference_genome.cpp in Sources */,
