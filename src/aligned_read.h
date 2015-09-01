@@ -228,7 +228,7 @@ namespace std {
             return seed;
         }
     };
-}
+} // end namespace std
 
 std::ostream& operator<<(std::ostream& os, const AlignedRead::Qualities& qualities);
 

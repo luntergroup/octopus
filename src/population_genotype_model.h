@@ -11,6 +11,8 @@
 
 #include "genotype_model.h"
 
+#include <unordered_map>
+
 namespace Octopus
 {
     class PopulationGenotypeModel : public GenotypeModel
@@ -19,6 +21,8 @@ namespace Octopus
         PopulationGenotypeModel(unsigned num_samples, unsigned sample_ploidy);
         
     private:
+        using HaplotypeFrequencies = std::unordered_map<Haplotype, double>;
+        
         unsigned num_samples_;
         unsigned sample_ploidy_;
         

@@ -43,9 +43,8 @@ bool Haplotype::contains(const Allele& an_allele) const
     if (explicit_alleles_.empty() && !is_region_set_) return false;
     
     if (::contains(get_region(), an_allele)) {
-        // These binary searches are just optimisations and should not be required
-        if (std::binary_search(std::cbegin(explicit_alleles_),
-                               std::cend(explicit_alleles_), an_allele)) {
+        // these binary searches are just optimisations
+        if (std::binary_search(std::cbegin(explicit_alleles_), std::cend(explicit_alleles_), an_allele)) {
             return true;
         } else if (std::binary_search(std::cbegin(explicit_alleles_),
                                       std::cend(explicit_alleles_), an_allele.get_region())) {
@@ -77,8 +76,8 @@ bool Haplotype::contains(const Allele& an_allele) const
 
 void Haplotype::set_region(const GenomicRegion& region)
 {
-    reference_region_ = region;
-    is_region_set_ = true;
+    reference_region_            = region;
+    is_region_set_               = true;
     is_cached_sequence_outdated_ = true;
 }
 

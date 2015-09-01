@@ -138,7 +138,8 @@ void unique_least_complex(std::vector<Haplotype>& haplotypes);
 bool operator==(const Haplotype& lhs, const Haplotype& rhs);
 bool operator<(const Haplotype& lhs, const Haplotype& rhs);
 
-namespace std {
+namespace std
+{
     template <> struct hash<Haplotype>
     {
         size_t operator()(const Haplotype& h) const
@@ -149,9 +150,10 @@ namespace std {
             return seed;
         }
     };
-}
+} // end namespace std
 
-namespace boost {
+namespace boost
+{
     template <> struct hash<Haplotype> : std::unary_function<Haplotype, std::size_t>
     {
         std::size_t operator()(const Haplotype& h) const
@@ -159,7 +161,7 @@ namespace boost {
             return std::hash<Haplotype>()(h);
         }
     };
-}
+} // end namespace boost
 
 std::ostream& operator<<(std::ostream& os, const Haplotype& haplotype);
 

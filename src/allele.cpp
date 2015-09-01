@@ -26,29 +26,29 @@ const Allele::SequenceType& Allele::get_sequence() const noexcept
 
 // non-member functions
 
-bool is_reference(const Allele& an_allele, ReferenceGenome& the_reference)
+bool is_reference(const Allele& allele, ReferenceGenome& reference)
 {
-    return an_allele.get_sequence() == the_reference.get_sequence(an_allele.get_region());
+    return allele.get_sequence() == reference.get_sequence(allele.get_region());
 }
 
-Allele get_reference_allele(const GenomicRegion& region, ReferenceGenome& the_reference)
+Allele get_reference_allele(const GenomicRegion& region, ReferenceGenome& reference)
 {
-    return Allele {region, the_reference.get_sequence(region)};
+    return Allele {region, reference.get_sequence(region)};
 }
 
-Allele::SequenceType get_subsequence(const Allele& an_allele, const GenomicRegion& region)
+Allele::SequenceType get_subsequence(const Allele& allele, const GenomicRegion& region)
 {
-    if (!contains(an_allele, region)) {
+    if (!contains(allele, region)) {
         return Allele::SequenceType {};
-    } if (get_region(an_allele) == region) {
-        return an_allele.get_sequence();
+    } if (get_region(allele) == region) {
+        return allele.get_sequence();
     } else {
-        auto first = std::cbegin(an_allele.get_sequence()) + (get_begin(region) - get_begin(an_allele));
+        auto first = std::cbegin(allele.get_sequence()) + (get_begin(region) - get_begin(allele));
         
         // The minimum of the allele sequence size and region size is used as deletions will
         // result in a sequence size smaller than the region size
         return Allele::SequenceType {first, first +
-            std::min(an_allele.get_sequence().size(), static_cast<std::size_t>(size(region)))};
+            std::min(allele.get_sequence().size(), static_cast<std::size_t>(size(region)))};
     }
 }
 
@@ -66,48 +66,48 @@ bool contains(const Allele& lhs, const Allele& rhs)
     }
 }
 
-Allele splice(const Allele& an_allele, const GenomicRegion& region)
+Allele splice(const Allele& allele, const GenomicRegion& region)
 {
-    if (!contains(an_allele, region)) {
+    if (!contains(allele, region)) {
         throw std::runtime_error {"cannot splice Allele region that is not contained"};
     }
-    return Allele {region, get_subsequence(an_allele, region)};
+    return Allele {region, get_subsequence(allele, region)};
 }
 
-bool is_insertion(const Allele& an_allele)
+bool is_insertion(const Allele& allele)
 {
-    return empty(an_allele) && an_allele.get_sequence().size() > 0;
+    return empty(allele) && allele.get_sequence().size() > 0;
 }
 
-bool is_deletion(const Allele& an_allele)
+bool is_deletion(const Allele& allele)
 {
-    return !empty(an_allele) && an_allele.get_sequence().size() == 0;
+    return !empty(allele) && allele.get_sequence().size() == 0;
 }
 
-std::vector<Allele> decompose(const Allele& an_allele)
+std::vector<Allele> decompose(const Allele& allele)
 {
     std::vector<Allele> result {};
     
-    if (is_insertion(an_allele)) {
-        const auto& sequence = an_allele.get_sequence();
+    if (is_insertion(allele)) {
+        const auto& sequence = allele.get_sequence();
         auto insertion_size = sequence.size();
         result.reserve(insertion_size);
         
         for (unsigned i {0}; i < insertion_size; ++i) {
-            result.emplace_back(get_region(an_allele), sequence.substr(i, 1));
+            result.emplace_back(get_region(allele), sequence.substr(i, 1));
         }
-    } else if (is_deletion(an_allele)) {
-        result.reserve(size(an_allele));
-        auto decomposed_regions = decompose(get_region(an_allele));
+    } else if (is_deletion(allele)) {
+        result.reserve(size(allele));
+        auto decomposed_regions = decompose(get_region(allele));
         
         std::transform(std::begin(decomposed_regions), std::end(decomposed_regions), std::back_inserter(result),
                        [] (const auto& region) { return Allele {region, ""}; } );
     } else {
-        result.reserve(size(an_allele));
-        const auto& sequence = an_allele.get_sequence();
+        result.reserve(size(allele));
+        const auto& sequence = allele.get_sequence();
         unsigned i {};
         
-        for (const auto& region : decompose(get_region(an_allele))) {
+        for (const auto& region : decompose(get_region(allele))) {
             result.emplace_back(region, sequence.substr(i, 1));
             ++i;
         }
@@ -116,8 +116,19 @@ std::vector<Allele> decompose(const Allele& an_allele)
     return result;
 }
 
-std::ostream& operator<<(std::ostream& os, const Allele& an_allele)
+bool operator==(const Allele& lhs, const Allele& rhs)
 {
-    os << an_allele.get_region() << " " << an_allele.get_sequence();
+    return lhs.get_region() == rhs.get_region() && lhs.get_sequence() == rhs.get_sequence();
+}
+
+bool operator<(const Allele& lhs, const Allele& rhs)
+{
+    return (lhs.get_region() == rhs.get_region()) ? lhs.get_sequence() < rhs.get_sequence() :
+    lhs.get_region() < rhs.get_region();
+}
+
+std::ostream& operator<<(std::ostream& os, const Allele& allele)
+{
+    os << allele.get_region() << " " << allele.get_sequence();
     return os;
 }
