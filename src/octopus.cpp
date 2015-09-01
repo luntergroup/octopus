@@ -9,6 +9,8 @@
 #include "octopus.h"
 
 #include <iostream>
+#include <thread>
+#include <future>
 
 #include "common.h"
 #include "program_options.h"
@@ -24,7 +26,9 @@ namespace Octopus
     {
         cout << "starting Octopus" << endl;
         
-        auto num_threads  = Octopus::get_num_threads(options);
+        //auto num_system_threads = std::thread::hardware_concurrency(); // just a hint
+        
+        //auto max_threads  = Octopus::get_num_threads(options);
         
         auto reference    = Octopus::get_reference(options);
         auto read_manager = Octopus::get_read_manager(options);

@@ -249,9 +249,9 @@ namespace Octopus
         }
     } // end namespace detail
     
-    unsigned get_num_threads(const po::variables_map& options)
+    unsigned get_max_threads(const po::variables_map& options)
     {
-        return options.at("num_threads").as<unsigned>();
+        return options.at("max-threads").as<unsigned>();
     }
     
     ReferenceGenome get_reference(const po::variables_map& options)

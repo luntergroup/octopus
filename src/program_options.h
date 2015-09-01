@@ -27,7 +27,7 @@ namespace Octopus
 {
     std::pair<po::variables_map, bool> parse_options(int argc, const char** argv);
     
-    unsigned get_num_threads(const po::variables_map& options);
+    unsigned get_max_threads(const po::variables_map& options);
     
     ReferenceGenome get_reference(const po::variables_map& options);
     
