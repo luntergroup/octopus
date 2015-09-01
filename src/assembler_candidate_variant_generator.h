@@ -24,7 +24,7 @@ class AssemblerCandidateVariantGenerator : public ICandidateVariantGenerator
 {
 public:
     AssemblerCandidateVariantGenerator() = delete;
-    explicit AssemblerCandidateVariantGenerator(ReferenceGenome& the_reference, unsigned kmer_size,
+    explicit AssemblerCandidateVariantGenerator(ReferenceGenome& reference, unsigned kmer_size,
                                                 double generator_confidence);
     ~AssemblerCandidateVariantGenerator() override = default;
     
@@ -36,11 +36,11 @@ public:
     void add_read(const AlignedRead& a_read) override;
     void add_reads(std::vector<AlignedRead>::const_iterator first, std::vector<AlignedRead>::const_iterator last) override;
     void add_reads(MappableSet<AlignedRead>::const_iterator first, MappableSet<AlignedRead>::const_iterator last) override;
-    std::vector<Variant> get_candidates(const GenomicRegion& a_region) override;
+    std::vector<Variant> get_candidates(const GenomicRegion& region) override;
     void clear() override;
     
 private:
-    ReferenceGenome& the_reference_;
+    ReferenceGenome& reference_;
     VariantAssembler the_variant_assembler_;
     double generator_confidence_;
 };

@@ -15,14 +15,14 @@
 
 namespace http = boost::network::http;
 
-OnlineCandidateVariantGenerator::OnlineCandidateVariantGenerator(ReferenceGenome& the_reference,
+OnlineCandidateVariantGenerator::OnlineCandidateVariantGenerator(ReferenceGenome& reference,
                                                                  SizeType max_variant_size)
 :
-the_reference_ {the_reference},
+reference_ {reference},
 max_variant_size_ {max_variant_size}
 {}
 
-std::vector<Variant> OnlineCandidateVariantGenerator::get_candidates(const GenomicRegion& a_region)
+std::vector<Variant> OnlineCandidateVariantGenerator::get_candidates(const GenomicRegion& region)
 {
 //    <?xml version="1.0" encoding="UTF-8"?>
 //    <!DOCTYPE Query>

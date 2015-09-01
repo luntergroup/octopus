@@ -24,7 +24,7 @@ public:
     using SizeType = GenomicRegion::SizeType;
     
     OnlineCandidateVariantGenerator() = delete;
-    explicit OnlineCandidateVariantGenerator(ReferenceGenome& the_reference, SizeType max_variant_size=100);
+    explicit OnlineCandidateVariantGenerator(ReferenceGenome& reference, SizeType max_variant_size = 100);
     ~OnlineCandidateVariantGenerator() override = default;
     
     OnlineCandidateVariantGenerator(const OnlineCandidateVariantGenerator&)            = default;
@@ -32,10 +32,10 @@ public:
     OnlineCandidateVariantGenerator(OnlineCandidateVariantGenerator&&)                 = default;
     OnlineCandidateVariantGenerator& operator=(OnlineCandidateVariantGenerator&&)      = default;
     
-    std::vector<Variant> get_candidates(const GenomicRegion& a_region) override;
+    std::vector<Variant> get_candidates(const GenomicRegion& region) override;
 
 private:
-    ReferenceGenome& the_reference_;
+    ReferenceGenome& reference_;
     SizeType max_variant_size_;
 };
 

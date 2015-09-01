@@ -22,8 +22,7 @@
 #include "assembler_candidate_variant_generator.h"
 #include "online_candidate_variant_generator.h"
 #include "external_variant_candidates.h"
-#include "variant_file_factory.h"
-#include "variant_file_reader.h"
+#include "vcf_reader.h"
 
 using std::cout;
 using std::endl;
@@ -146,5 +145,21 @@ BOOST_AUTO_TEST_CASE(OnlineCandidateVariantGenerator_can_fetch_variants_from_onl
 //    //        << candidate.get_sequence_added() << std::endl;
 //    //    }
 //}
+
+BOOST_AUTO_TEST_CASE(ExternalVariantCandidates_gets_candidates_from_vcf)
+{
+    auto reference = make_reference(human_reference_fasta);
+    
+    VcfReader reader {sample_vcf};
+    
+    CandidateVariantGenerator generator {};
+    generator.register_generator(std::make_unique<ExternalVariantCandidates>(reader));
+    
+    auto region = parse_region("X:10,095,000-10,100,000", reference);
+    
+    auto candidates = generator.get_candidates(region);
+    
+    BOOST_CHECK(candidates.size() == 16);
+}
 
 BOOST_AUTO_TEST_SUITE_END()

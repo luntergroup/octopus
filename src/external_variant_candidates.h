@@ -9,10 +9,10 @@
 #ifndef __Octopus__external_variant_candidates__
 #define __Octopus__external_variant_candidates__
 
-#include <cstddef> // std::size_t
+#include <vector>
 
 #include "i_candidate_variant_generator.h"
-#include "variant_file_reader.h"
+#include "vcf_reader.h"
 
 class GenomicRegion;
 
@@ -20,7 +20,7 @@ class ExternalVariantCandidates : public ICandidateVariantGenerator
 {
 public:
     ExternalVariantCandidates() = delete;
-    explicit ExternalVariantCandidates(VariantFileReader& a_variant_source, double generator_confidence);
+    explicit ExternalVariantCandidates(VcfReader& reader);
     ~ExternalVariantCandidates() override = default;
     
     ExternalVariantCandidates(const ExternalVariantCandidates&)            = default;
@@ -28,11 +28,10 @@ public:
     ExternalVariantCandidates(ExternalVariantCandidates&&)                 = default;
     ExternalVariantCandidates& operator=(ExternalVariantCandidates&&)      = default;
     
-    std::vector<Variant> get_candidates(const GenomicRegion& a_region) override;
+    std::vector<Variant> get_candidates(const GenomicRegion& region) override;
     
 private:
-    VariantFileReader& a_variant_file_;
-    double generator_confidence_;
+    VcfReader& reader_;
 };
 
 #endif /* defined(__Octopus__external_variant_candidates__) */

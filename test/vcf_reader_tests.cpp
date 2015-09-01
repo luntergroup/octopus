@@ -1,5 +1,5 @@
 //
-//  variant_reader_tests.cpp
+//  vcf_reader_tests.cpp
 //  Octopus
 //
 //  Created by Daniel Cooke on 15/05/2015.
@@ -16,9 +16,8 @@
 #include "test_common.h"
 #include "genomic_region.h"
 #include "variant.h"
-#include "variant_file_reader.h"
-#include "variant_file_factory.h"
-#include "htslib_bcf_facade.h"
+#include "vcf_reader.h"
+#include "vcf_header.h"
 #include "vcf_record.h"
 
 using std::cout;
@@ -26,11 +25,25 @@ using std::endl;
 
 BOOST_AUTO_TEST_CASE(can_read_vcf_files)
 {
-    HtslibBcfFacade vcf_reader {sample_vcf};
+    VcfReader vcf_reader {sample_vcf};
     
     GenomicRegion region {"X", 2000000, 2001000};
     
     auto records = vcf_reader.fetch_records(region);
     
     //for (const auto& record : records) cout << record << endl;
+}
+
+BOOST_AUTO_TEST_CASE(can_use_vcf_types)
+{
+    VcfReader reader {sample_vcf};
+    
+    auto header = reader.fetch_header();
+    
+    auto v1 = get_typed_info_value(header, "AA", "ACGT");
+    auto v2 = get_typed_info_value(header, "DP", "110");
+    auto v3 = get_typed_info_value(header, "AF", "0.9");
+    auto v4 = get_typed_info_value(header, "SOMATIC", "1");
+    auto v5 = get_typed_info_value(header, "AA", "TGCA");
+    auto v6 = get_typed_info_value(header, "SOMATIC", "0");
 }

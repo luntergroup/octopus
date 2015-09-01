@@ -10,41 +10,41 @@
 
 #include <boost/test/unit_test.hpp>
 
-#include <iostream>
-#include <string>
-#include <iterator>
-#include <vector>
-#include <memory>
-#include <algorithm>
-
-#include "test_common.h"
-#include "reference_genome.h"
-#include "mappable_algorithms.h"
-#include "test_common.h"
-#include "read_manager.h"
-#include "mock_objects.h"
-#include "read_filter.h"
-#include "read_filters.h"
-#include "read_transform.h"
-#include "read_transformations.h"
-#include "allele.h"
-#include "variant.h"
-#include "candidate_variant_generator.h"
-#include "variant_utils.h"
-#include "alignment_candidate_variant_generator.h"
-#include "assembler_candidate_variant_generator.h"
-#include "external_variant_candidates.h"
-#include "haplotype.h"
-#include "genotype.h"
-#include "haplotype_tree.h"
-#include "read_model.h"
-#include "variational_bayes_genotype_model.h"
-#include "variant_file_factory.h"
-#include "variant_file_reader.h"
-#include "octopus.h"
-
-using std::cout;
-using std::endl;
+//#include <iostream>
+//#include <string>
+//#include <iterator>
+//#include <vector>
+//#include <memory>
+//#include <algorithm>
+//
+//#include "test_common.h"
+//#include "reference_genome.h"
+//#include "mappable_algorithms.h"
+//#include "test_common.h"
+//#include "read_manager.h"
+//#include "mock_objects.h"
+//#include "read_filter.h"
+//#include "read_filters.h"
+//#include "read_transform.h"
+//#include "read_transformations.h"
+//#include "allele.h"
+//#include "variant.h"
+//#include "candidate_variant_generator.h"
+//#include "variant_utils.h"
+//#include "alignment_candidate_variant_generator.h"
+//#include "assembler_candidate_variant_generator.h"
+//#include "external_variant_candidates.h"
+//#include "haplotype.h"
+//#include "genotype.h"
+//#include "haplotype_tree.h"
+//#include "read_model.h"
+//#include "variational_bayes_genotype_model.h"
+//#include "vcf_reader.h"
+//#include "vcf_writer.h"
+//#include "octopus.h"
+//
+//using std::cout;
+//using std::endl;
 
 //BOOST_AUTO_TEST_CASE(can call in complex region)
 //{

@@ -27,9 +27,9 @@ public:
     using SizeType    = GenomicRegion::SizeType;
     
     AlignmentCandidateVariantGenerator() = delete;
-    explicit AlignmentCandidateVariantGenerator(ReferenceGenome& the_reference,
-                                                QualityType min_base_quality=0,
-                                                SizeType max_variant_size=100);
+    explicit AlignmentCandidateVariantGenerator(ReferenceGenome& reference,
+                                                QualityType min_base_quality = 0,
+                                                SizeType max_variant_size = 100);
     ~AlignmentCandidateVariantGenerator() override = default;
     
     AlignmentCandidateVariantGenerator(const AlignmentCandidateVariantGenerator&)            = default;
@@ -37,10 +37,10 @@ public:
     AlignmentCandidateVariantGenerator(AlignmentCandidateVariantGenerator&&)                 = default;
     AlignmentCandidateVariantGenerator& operator=(AlignmentCandidateVariantGenerator&&)      = default;
     
-    void add_read(const AlignedRead& a_read) override;
+    void add_read(const AlignedRead& read) override;
     void add_reads(std::vector<AlignedRead>::const_iterator first, std::vector<AlignedRead>::const_iterator last) override;
     void add_reads(MappableSet<AlignedRead>::const_iterator first, MappableSet<AlignedRead>::const_iterator last) override;
-    std::vector<Variant> get_candidates(const GenomicRegion& a_region) override;
+    std::vector<Variant> get_candidates(const GenomicRegion& region) override;
     void reserve(std::size_t n) override;
     void clear() override;
     
@@ -49,7 +49,7 @@ private:
     using SequenceIterator  = SequenceType::const_iterator;
     using QualitiesIterator = AlignedRead::Qualities::const_iterator;
     
-    ReferenceGenome& the_reference_;
+    ReferenceGenome& reference_;
     QualityType min_base_quality_;
     SizeType max_variant_size_;
     
