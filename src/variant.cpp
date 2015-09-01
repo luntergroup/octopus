@@ -43,6 +43,23 @@ const Variant::SequenceType& Variant::get_alternative_allele_sequence() const no
     return alternative_allele_sequence_;
 }
 
+bool operator==(const Variant& lhs, const Variant& rhs)
+{
+    return lhs.get_region() == rhs.get_region() &&
+    lhs.get_reference_allele_sequence() == rhs.get_reference_allele_sequence() &&
+    lhs.get_alternative_allele_sequence() == rhs.get_alternative_allele_sequence();
+}
+
+bool operator<(const Variant& lhs, const Variant& rhs)
+{
+    if (lhs.get_region() == rhs.get_region()) { // This check is required for consistency with operator==
+        return (lhs.get_reference_allele_sequence() < rhs.get_reference_allele_sequence()) ? true :
+        lhs.get_alternative_allele_sequence() < rhs.get_alternative_allele_sequence();
+    } else {
+        return lhs.get_region() < rhs.get_region();
+    }
+}
+
 std::ostream& operator<<(std::ostream& os, const Variant& a_variant)
 {
     os << a_variant.get_region() << " " << a_variant.get_reference_allele_sequence() << " " <<

@@ -10,11 +10,9 @@
 #define __Octopus__read_manager__
 
 #include <vector>
-#include <cstdint>
 #include <map>
 #include <unordered_map>
 #include <unordered_set>
-#include <memory> // std::make_unique
 #include <initializer_list>
 #include <boost/filesystem.hpp>
 
@@ -44,7 +42,7 @@ public:
     using SampleReadMap = std::unordered_map<SampleIdType, std::vector<AlignedRead>>;
     
     ReadManager() = default;
-    explicit ReadManager(std::vector<fs::path> read_file_paths, unsigned Max_open_files);
+    explicit ReadManager(std::vector<fs::path> read_file_paths, unsigned max_open_files);
     explicit ReadManager(std::initializer_list<fs::path> read_file_paths);
     ~ReadManager() = default;
     
@@ -66,7 +64,8 @@ private:
     using ReaderRegionsMap        = std::unordered_map<fs::path, std::unordered_map<GenomicRegion::StringType,
                                                                                 std::vector<ContigRegion>>>;
     
-    const unsigned Max_open_files_ = 50;
+    const unsigned max_open_files_ = 200;
+    const unsigned num_files_;
     OpenReaderMap open_readers_;
     ClosedReaders closed_readers_;
     SampleIdToReaderPathMap reader_paths_containing_sample_;

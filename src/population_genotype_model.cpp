@@ -8,8 +8,6 @@
 
 #include "population_genotype_model.h"
 
-#include <unordered_map>
-
 #include "read_model.h"
 #include "maths.h"
 
@@ -35,10 +33,25 @@ namespace Octopus
     
     // non member methods
     
-    double hardy_weinberg_log_probability(const Genotype<Haplotype>& genotype,
-                                          const std::unordered_map<Haplotype, double>& haplotype_frequencies)
+    double log_hardy_weinberg(const Genotype<Haplotype>& genotype,
+                              const std::unordered_map<Haplotype, double>& haplotype_frequencies)
     {
-        return 0;
+        auto unique_haplotypes = genotype.get_unique();
+        
+        std::vector<unsigned> occurences {};
+        occurences.reserve(unique_haplotypes.size());
+        
+        double r {};
+        
+        for (const auto& haplotype : unique_haplotypes) {
+            auto num_occurences = genotype.num_occurences(haplotype);
+            occurences.push_back(num_occurences);
+            r += num_occurences * haplotype_frequencies.at(haplotype);
+        }
+        
+        auto c = log_multinomial_coefficient<double>(occurences.cbegin(), occurences.cend());
+        
+        return c * r;
     }
     
 } // end namespace Octopus

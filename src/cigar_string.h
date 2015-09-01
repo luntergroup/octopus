@@ -228,7 +228,7 @@ namespace std {
             return seed;
         }
     };
-}
+} // end namespace std
 
 namespace boost {
     template <> struct hash<CigarOperation> : std::unary_function<CigarOperation, std::size_t>
@@ -238,7 +238,7 @@ namespace boost {
             return std::hash<CigarOperation>()(op);
         }
     };
-}
+} // end namespace boost
 
 namespace std {
     template <> struct hash<CigarString>
@@ -248,6 +248,6 @@ namespace std {
             return boost::hash_range(std::cbegin(cigar), std::cend(cigar));
         }
     };
-}
+} // end namespace std
 
 #endif

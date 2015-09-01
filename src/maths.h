@@ -22,6 +22,12 @@
 #include <boost/math/special_functions/sign.hpp>
 #include <boost/math/special_functions/digamma.hpp>
 
+template <typename T, typename = typename std::enable_if_t<!std::is_integral<T>::value, bool>>
+inline bool almost_equal(T lhs, T rhs, int ulp = 1)
+{
+    return lhs == rhs || std::abs(lhs - rhs) < std::numeric_limits<T>::epsilon() * std::abs(lhs + rhs) * ulp;
+}
+
 template <typename InputIterator>
 double mean(InputIterator first, InputIterator last)
 {

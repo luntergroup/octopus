@@ -50,32 +50,24 @@ reference_region_ {std::forward<GenomicRegion_>(reference_region)},
 sequence_ {std::forward<SequenceType_>(sequence)}
 {}
 
-bool is_reference(const Allele& an_allele, ReferenceGenome& the_reference);
+bool is_reference(const Allele& allele, ReferenceGenome& reference);
 
-Allele get_reference_allele(const GenomicRegion& region, ReferenceGenome& the_reference);
+Allele get_reference_allele(const GenomicRegion& region, ReferenceGenome& reference);
 
-Allele::SequenceType get_subsequence(const Allele& an_allele, const GenomicRegion& region);
+Allele::SequenceType get_subsequence(const Allele& allele, const GenomicRegion& region);
 
 bool contains(const Allele& lhs, const Allele& rhs);
 
-Allele splice(const Allele& an_allele, const GenomicRegion& region);
+Allele splice(const Allele& allele, const GenomicRegion& region);
 
-bool is_insertion(const Allele& an_allele);
+bool is_insertion(const Allele& allele);
 
-bool is_deletion(const Allele& an_allele);
+bool is_deletion(const Allele& allele);
 
-std::vector<Allele> decompose(const Allele& an_allele);
+std::vector<Allele> decompose(const Allele& allele);
 
-inline bool operator==(const Allele& lhs, const Allele& rhs)
-{
-    return lhs.get_region() == rhs.get_region() && lhs.get_sequence() == rhs.get_sequence();
-}
-
-inline bool operator<(const Allele& lhs, const Allele& rhs)
-{
-    return (lhs.get_region() == rhs.get_region()) ? lhs.get_sequence() < rhs.get_sequence() :
-    lhs.get_region() < rhs.get_region();
-}
+bool operator==(const Allele& lhs, const Allele& rhs);
+bool operator<(const Allele& lhs, const Allele& rhs);
 
 namespace std {
     template <> struct hash<Allele>
@@ -88,8 +80,8 @@ namespace std {
             return seed;
         }
     };
-}
+} // end namespace std
 
-std::ostream& operator<<(std::ostream& os, const Allele& an_allele);
+std::ostream& operator<<(std::ostream& os, const Allele& allele);
 
 #endif

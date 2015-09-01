@@ -80,22 +80,8 @@ reference_allele_region_ {GenomicRegion{std::forward<SequenceType1>(reference_co
 alternative_allele_sequence_ {std::forward<SequenceType3>(alternative_allele)}
 {}
 
-inline bool operator==(const Variant& lhs, const Variant& rhs)
-{
-    return lhs.get_region() == rhs.get_region() &&
-           lhs.get_reference_allele_sequence() == rhs.get_reference_allele_sequence() &&
-           lhs.get_alternative_allele_sequence() == rhs.get_alternative_allele_sequence();
-}
-
-inline bool operator<(const Variant& lhs, const Variant& rhs)
-{
-    if (lhs.get_region() == rhs.get_region()) { // This check is required for consistency with operator==
-        return (lhs.get_reference_allele_sequence() < rhs.get_reference_allele_sequence()) ? true :
-                    lhs.get_alternative_allele_sequence() < rhs.get_alternative_allele_sequence();
-    } else {
-        return lhs.get_region() < rhs.get_region();
-    }
-}
+bool operator==(const Variant& lhs, const Variant& rhs);
+bool operator<(const Variant& lhs, const Variant& rhs);
 
 namespace std {
     template <> struct hash<Variant>
@@ -109,7 +95,7 @@ namespace std {
             return seed;
         }
     };
-}
+} // end namespace std
 
 std::ostream& operator<<(std::ostream& os, const Variant& a_variant);
 

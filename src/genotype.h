@@ -36,7 +36,7 @@ public:
     
     Genotype() = default;
     explicit Genotype(unsigned ploidy);
-    explicit Genotype(std::initializer_list<MappableType> the_elements);
+    explicit Genotype(std::initializer_list<MappableType> elements);
     ~Genotype() = default;
     
     Genotype(const Genotype&)            = default;
@@ -170,7 +170,8 @@ bool operator==(const Genotype<MappableType>& lhs, const Genotype<MappableType>&
     return lhs.ploidy() == rhs.ploidy() && std::equal(std::cbegin(lhs), std::cend(lhs), std::cbegin(rhs));
 }
 
-namespace std {
+namespace std
+{
     template <typename MappableType> struct hash<Genotype<MappableType>>
     {
         size_t operator()(const Genotype<MappableType>& genotype) const
@@ -178,7 +179,7 @@ namespace std {
             return boost::hash_range(std::cbegin(genotype), std::cend(genotype));
         }
     };
-}
+} // end namespace std
 
 template <typename MappableType1, typename MappableType2>
 bool contains(const Genotype<MappableType1>& lhs, const Genotype<MappableType2>& rhs)

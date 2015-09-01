@@ -8,6 +8,7 @@
 
 #include "read_manager.h"
 
+#include <memory> // std::make_unique
 #include <iterator>  // std::make_move_iterator, std::cbegin etc
 #include <algorithm> // std::copy_if, std::min, std::nth_element, std::partition, std::for_each
 #include <utility>   // std::move
@@ -19,12 +20,13 @@
 
 #include <iostream> // TEST
 
-ReadManager::ReadManager(std::vector<fs::path> read_file_paths, unsigned Max_open_files)
+ReadManager::ReadManager(std::vector<fs::path> read_file_paths, unsigned max_open_files)
 :
+max_open_files_ {max_open_files},
+num_files_ {static_cast<unsigned>(read_file_paths.size())},
 closed_readers_ {std::make_move_iterator(std::begin(read_file_paths)),
                  std::make_move_iterator(std::end(read_file_paths))},
 open_readers_ {detail::file_size_compare},
-Max_open_files_ {Max_open_files},
 reader_paths_containing_sample_ {},
 possible_regions_in_readers_ {}
 {
@@ -33,6 +35,7 @@ possible_regions_in_readers_ {}
 
 ReadManager::ReadManager(std::initializer_list<fs::path> read_file_paths)
 :
+num_files_ {static_cast<unsigned>(read_file_paths.size())},
 closed_readers_ {std::begin(read_file_paths), std::end(read_file_paths)},
 open_readers_ {detail::file_size_compare},
 reader_paths_containing_sample_ {},
@@ -108,6 +111,7 @@ ReadManager::SampleReadMap ReadManager::fetch_reads(const std::vector<SampleIdTy
                                            [this] (auto& reader_path) { return is_open(reader_path); });
     
     SampleReadMap result {};
+    result.reserve(sample_ids.size());
     
     std::for_each(std::begin(reader_paths_containing_samples), last_open_reader,
       [this, &region, &result] (const auto& reader_path) {
@@ -156,6 +160,7 @@ void ReadManager::setup()
 std::vector<fs::path> ReadManager::get_bad_paths() const
 {
     std::vector<fs::path> result {};
+    result.reserve(num_files_);
     
     std::copy_if(std::cbegin(closed_readers_), std::cend(closed_readers_), std::back_inserter(result),
                  [] (const auto& path) {
@@ -177,7 +182,7 @@ void ReadManager::setup_reader_samples_and_regions()
 void ReadManager::open_initial_files()
 {
     std::vector<fs::path> reader_paths {std::cbegin(closed_readers_), std::cend(closed_readers_)};
-    auto num_files_to_open = std::min(Max_open_files_, static_cast<unsigned>(closed_readers_.size()));
+    auto num_files_to_open = std::min(max_open_files_, static_cast<unsigned>(closed_readers_.size()));
     
     std::nth_element(reader_paths.begin(), reader_paths.begin() + num_files_to_open, reader_paths.end(),
                      detail::file_size_compare);
@@ -197,7 +202,7 @@ bool ReadManager::is_open(const fs::path& reader_path) const noexcept
 
 void ReadManager::open_reader(const fs::path& reader_path)
 {
-    if (open_readers_.size() == Max_open_files_) {
+    if (open_readers_.size() == max_open_files_) {
         close_reader(choose_reader_to_close());
     }
     open_readers_.emplace(reader_path, make_reader(reader_path));
@@ -206,7 +211,7 @@ void ReadManager::open_reader(const fs::path& reader_path)
 
 void ReadManager::open_readers(std::vector<fs::path>::iterator first, std::vector<fs::path>::iterator last)
 {
-    unsigned num_open_reader_spaces = Max_open_files_ - static_cast<unsigned>(open_readers_.size());
+    unsigned num_open_reader_spaces = max_open_files_ - static_cast<unsigned>(open_readers_.size());
     unsigned num_requested_spaces = static_cast<unsigned>(std::distance(first, last));
     unsigned num_readers_to_close = (num_requested_spaces <= num_open_reader_spaces) ?
                 0 : num_requested_spaces - num_open_reader_spaces;
@@ -263,6 +268,7 @@ bool ReadManager::could_reader_contain_region(const fs::path& the_reader_path, c
 std::vector<fs::path> ReadManager::get_reader_paths_possibly_containing_region(const GenomicRegion& region) const
 {
     std::vector<fs::path> result {};
+    result.reserve(num_files_);
     
     for (const auto& reader_path : closed_readers_) {
         if (could_reader_contain_region(reader_path, region)) {
