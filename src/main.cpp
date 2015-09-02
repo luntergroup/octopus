@@ -46,7 +46,8 @@ void test()
     
     ReadManager read_manager {human_1000g_bam1};
     
-    auto region = parse_region("2:104142870-104142884", reference);
+    //auto region = parse_region("2:104142870-104142884", reference);
+    auto region = parse_region("11:67503118-67503253", reference);
     
     CandidateVariantGenerator generator {};
     generator.register_generator(std::make_unique<AlignmentCandidateVariantGenerator>(reference, 10));

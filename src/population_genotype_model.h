@@ -18,13 +18,17 @@ namespace Octopus
     class PopulationGenotypeModel : public GenotypeModel
     {
     public:
-        PopulationGenotypeModel(unsigned num_samples, unsigned sample_ploidy);
+        PopulationGenotypeModel(unsigned num_samples, unsigned sample_ploidy,
+                                unsigned max_em_iterations = 100, double em_epsilon = 0.001);
         
     private:
         using HaplotypeFrequencies = std::unordered_map<Haplotype, double>;
         
-        unsigned num_samples_;
-        unsigned sample_ploidy_;
+        const unsigned max_em_iterations_;
+        const double em_epsilon_;
+        
+        const unsigned num_samples_;
+        const unsigned sample_ploidy_;
         
         GenotypeProbabilities do_evaluate(const std::vector<Haplotype>& haplotypes, const ReadMap& reads) override;
     };

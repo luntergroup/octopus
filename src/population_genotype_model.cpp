@@ -8,24 +8,36 @@
 
 #include "population_genotype_model.h"
 
+#include <cmath>
+
 #include "read_model.h"
 #include "maths.h"
+
+#include <iostream> // TEST
 
 namespace Octopus
 {
     // public methods
     
-    PopulationGenotypeModel::PopulationGenotypeModel(unsigned num_samples, unsigned sample_ploidy)
+    PopulationGenotypeModel::PopulationGenotypeModel(unsigned num_samples, unsigned sample_ploidy,
+                                                     unsigned max_em_iterations, double em_epsilon)
     :
+    max_em_iterations_ {max_em_iterations},
+    em_epsilon_ {em_epsilon},
     num_samples_ {num_samples},
     sample_ploidy_ {sample_ploidy}
     {}
     
     // non member methods
     
-    std::unordered_map<Haplotype, double> init_haplotype_frequencies(const std::vector<Haplotype>& haplotypes)
+    using HaplotypeFrequencies = std::unordered_map<Haplotype, double>;
+    using GenotypeLikelihoods  = std::unordered_map<PopulationGenotypeModel::SampleIdType,
+                                                std::unordered_map<Genotype<Haplotype>, double>>;
+    using GenotypeMarginals    = std::unordered_map<Genotype<Haplotype>, double>;
+    
+    HaplotypeFrequencies init_haplotype_frequencies(const std::vector<Haplotype>& haplotypes)
     {
-        std::unordered_map<Haplotype, double> result {};
+        HaplotypeFrequencies result {};
         result.reserve(haplotypes.size());
         
         double uniform {1.0 / haplotypes.size()};
@@ -38,7 +50,7 @@ namespace Octopus
     }
     
     double log_hardy_weinberg(const Genotype<Haplotype>& genotype,
-                              const std::unordered_map<Haplotype, double>& haplotype_frequencies)
+                              const HaplotypeFrequencies& haplotype_frequencies)
     {
         auto unique_haplotypes = genotype.get_unique();
         
@@ -58,11 +70,11 @@ namespace Octopus
         return c * r;
     }
     
-    std::unordered_map<Genotype<Haplotype>, double>
+    GenotypeMarginals
     init_marginal_genotype_log_probabilities(const std::vector<Genotype<Haplotype>>& genotypes,
-                                             const std::unordered_map<Haplotype, double>& haplotype_frequencies)
+                                             const HaplotypeFrequencies& haplotype_frequencies)
     {
-        std::unordered_map<Genotype<Haplotype>, double> result {};
+        GenotypeMarginals result {};
         result.reserve(genotypes.size());
         
         for (const auto& genotype : genotypes) {
@@ -72,12 +84,159 @@ namespace Octopus
         return result;
     }
     
-    void update_marginal_genotype_log_probabilities(std::unordered_map<Genotype<Haplotype>, double>& marginals,
-                                                    const std::unordered_map<Haplotype, double>& haplotype_frequencies)
+    GenotypeLikelihoods
+    compute_genotype_log_likelihoods(const std::vector<Genotype<Haplotype>>& genotypes,
+                                     const PopulationGenotypeModel::ReadMap& reads, unsigned ploidy)
+    {
+        ReadModel read_model {ploidy};
+        
+        GenotypeLikelihoods result {};
+        result.reserve(reads.size());
+        
+        for (const auto& sample_reads : reads) {
+            const auto& sample = sample_reads.first;
+            std::unordered_map<Genotype<Haplotype>, double> likelihoods {};
+            likelihoods.reserve(genotypes.size());
+            
+            for (const auto& genotype : genotypes) {
+                likelihoods.emplace(genotype, read_model.log_probability(sample_reads.second.cbegin(),
+                                                                        sample_reads.second.cend(), genotype, sample));
+            }
+            
+            result.emplace(sample, std::move(likelihoods));
+        }
+        
+        return result;
+    }
+    
+    void update_marginal_genotype_log_probabilities(GenotypeMarginals& marginals,
+                                                    const HaplotypeFrequencies& haplotype_frequencies)
     {
         for (auto& p : marginals) {
             p.second = log_hardy_weinberg(p.first, haplotype_frequencies);
         }
+    }
+    
+    template <typename K, typename V>
+    std::vector<V> get_values(const std::unordered_map<K, V>& map)
+    {
+        std::vector<V> result(map.size());
+        std::transform(std::cbegin(map), std::cend(map), std::begin(result),
+                       [] (const auto& p) { return p.second; });
+        return result;
+    }
+    
+    void normalise(PopulationGenotypeModel::SampleGenotypeProbabilities& unnormalised_log_posteriors)
+    {
+        auto log_posteriors = get_values(unnormalised_log_posteriors);
+        auto norm = log_sum_exp<double>(std::cbegin(log_posteriors), std::cend(log_posteriors));
+        for (auto& p : unnormalised_log_posteriors) p.second -= norm;
+    }
+    
+    void exponentiate(PopulationGenotypeModel::SampleGenotypeProbabilities& log_posteriors)
+    {
+        for (auto& p : log_posteriors) p.second = std::exp(p.second);
+    }
+    
+    PopulationGenotypeModel::GenotypeProbabilities
+    init_genotype_posteriors(const GenotypeMarginals& log_marginals,
+                             const GenotypeLikelihoods& log_likilhoods)
+    {
+        PopulationGenotypeModel::GenotypeProbabilities result {};
+        result.reserve(log_likilhoods.size());
+        
+        for (const auto& sample_likelihoods : log_likilhoods) {
+            PopulationGenotypeModel::SampleGenotypeProbabilities gps {};
+            gps.reserve(log_marginals.size());
+            
+            for (const auto& marginal : log_marginals) {
+                gps.emplace(marginal.first, marginal.second + sample_likelihoods.second.at(marginal.first));
+            }
+            
+            result.emplace(sample_likelihoods.first, std::move(gps));
+        }
+        
+        for (auto& sample_genotypes : result) {
+            normalise(sample_genotypes.second);
+            exponentiate(sample_genotypes.second);
+        }
+        
+        return result;
+    }
+    
+    void update_posteriors(PopulationGenotypeModel::GenotypeProbabilities& genotype_posteriors,
+                           const HaplotypeFrequencies& haplotype_frequencies,
+                           GenotypeMarginals& marginal_genotype_log_probabilities,
+                           const GenotypeLikelihoods& genotype_log_likilhoods)
+    {
+        update_marginal_genotype_log_probabilities(marginal_genotype_log_probabilities, haplotype_frequencies);
+        
+        for (auto& sample_genotype_log_likilhoods : genotype_posteriors) {
+            auto sample = sample_genotype_log_likilhoods.first;
+            for (auto& p : sample_genotype_log_likilhoods.second) {
+                p.second = marginal_genotype_log_probabilities.at(p.first) + genotype_log_likilhoods.at(sample).at(p.first);
+            }
+        }
+        
+        for (auto& p : genotype_posteriors) {
+            normalise(p.second);
+            exponentiate(p.second);
+        }
+    }
+    
+    HaplotypeFrequencies
+    compute_haplotype_frequencies(const PopulationGenotypeModel::GenotypeProbabilities& posteriors,
+                                  unsigned num_samples, unsigned ploidy)
+    {
+        std::unordered_map<Haplotype, double> result {};
+        
+        for (const auto& sample_posteriors : posteriors) {
+            for (const auto& posterior : sample_posteriors.second) {
+                for (auto haplotype : posterior.first.get_unique()) {
+                    result[haplotype] += posterior.first.num_occurences(haplotype) * posterior.second;
+                }
+            }
+        }
+        
+        auto norm = num_samples * ploidy;
+        
+        for (auto& h : result) {
+            h.second /= norm;
+        }
+        
+        return result;
+    }
+    
+    double max_haplotype_frequency_change(const HaplotypeFrequencies& old_frequencies,
+                                          const HaplotypeFrequencies& new_frequencies)
+    {
+        double result {};
+        
+        for (const auto& h : new_frequencies) {
+            auto change = std::abs(h.second - old_frequencies.at(h.first));
+            if (change > result) result = change;
+        }
+        
+        return result;
+    }
+    
+    double do_em_iteration(PopulationGenotypeModel::GenotypeProbabilities& genotype_posteriors,
+                           HaplotypeFrequencies& haplotype_frequencies,
+                           GenotypeMarginals& marginal_genotype_log_probabilities,
+                           const GenotypeLikelihoods& genotype_log_likilhoods,
+                           unsigned ploidy)
+    {
+        update_posteriors(genotype_posteriors, haplotype_frequencies, marginal_genotype_log_probabilities, genotype_log_likilhoods);
+        
+        auto num_samples = static_cast<unsigned>(genotype_posteriors.size());
+        
+        auto new_frequencies = compute_haplotype_frequencies(genotype_posteriors, num_samples, ploidy);
+        
+        auto max_change = max_haplotype_frequency_change(haplotype_frequencies, new_frequencies);
+        
+        haplotype_frequencies = new_frequencies;
+        
+        return max_change;
     }
     
     // private methods
@@ -87,39 +246,27 @@ namespace Octopus
     {
         auto genotypes = get_all_genotypes(haplotypes, sample_ploidy_);
         
-        ReadModel read_model {sample_ploidy_};
+        std::cout << "there are " << genotypes.size() << " genotypes" << std::endl;
         
-        auto haplotype_frequencies = init_haplotype_frequencies(haplotypes);
+        const auto genotype_log_likilhoods = compute_genotype_log_likelihoods(genotypes, reads, sample_ploidy_);
         
+        auto haplotype_frequencies               = init_haplotype_frequencies(haplotypes);
         auto marginal_genotype_log_probabilities = init_marginal_genotype_log_probabilities(genotypes, haplotype_frequencies);
         
-        GenotypeProbabilities result {};
-        result.reserve(num_samples_);
+        std::cout << "computed genotype log likilhoods" << std::endl;
         
-        for (const auto& sample_reads : reads) {
-            auto sample = sample_reads.first;
-            
-            SampleGenotypeProbabilities gps {};
-            gps.reserve(genotypes.size());
-            
-            for (const auto& genotype : genotypes) {
-                auto p = read_model.log_probability(sample_reads.second.cbegin(), sample_reads.second.cend(), genotype, sample);
-                gps.emplace(genotype, marginal_genotype_log_probabilities[genotype] + p);
-            }
-            
-            result.emplace(sample, std::move(gps));
+        auto result = init_genotype_posteriors(marginal_genotype_log_probabilities, genotype_log_likilhoods);
+        
+        for (unsigned n {0}; n < max_em_iterations_; ++n) {
+            std::cout << "EM iteration " << n << std::endl;
+            auto c = do_em_iteration(result, haplotype_frequencies, marginal_genotype_log_probabilities,
+                                     genotype_log_likilhoods, sample_ploidy_);
+            if (c < em_epsilon_) break;
         }
         
-        // exp and normalise
-        
-        std::vector<double> log_probs(genotypes.size());
-        for (auto& sample_genotypes : result) {
-            std::transform(sample_genotypes.second.cbegin(), sample_genotypes.second.cend(), log_probs.begin(), [] (const auto& p) { return p.second; });
-            auto n = log_sum_exp<double>(log_probs.cbegin(), log_probs.cend());
-            for (auto& p : sample_genotypes.second) {
-                p.second = std::exp(p.second - n);
-            }
-        }
+//        for (const auto& h : haplotype_frequencies) {
+//            std::cout << h.first << " " << h.second << std::endl;
+//        }
         
         return result;
     }

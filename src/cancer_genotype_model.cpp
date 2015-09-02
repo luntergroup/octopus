@@ -12,8 +12,11 @@ namespace Octopus
 {
     // public methods
     
-    CancerGenotypeModel::CancerGenotypeModel(unsigned num_samples, SampleIdType normal_sample_id)
+    CancerGenotypeModel::CancerGenotypeModel(unsigned num_samples, SampleIdType normal_sample_id,
+                                             unsigned max_em_iterations, double em_epsilon)
     :
+    max_em_iterations_ {max_em_iterations},
+    em_epsilon_ {em_epsilon},
     num_samples_ {num_samples},
     normal_sample_id_ {std::move(normal_sample_id)}
     {}
