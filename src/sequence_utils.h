@@ -25,8 +25,8 @@
 
 namespace detail
 {
-    static const constexpr std::array<char, 4> DnaBases {'A', 'C', 'G', 'T'};
-    static const constexpr std::array<char, 4> RnaBases {'A', 'C', 'G', 'U'};
+    static constexpr std::array<char, 4> DnaBases {'A', 'C', 'G', 'T'};
+    static constexpr std::array<char, 4> RnaBases {'A', 'C', 'G', 'U'};
     
     static const std::unordered_map<char, std::vector<char>> AminoAcidCodes {
         {'A', {'A'}},                    // Adenine
@@ -46,6 +46,9 @@ namespace detail
         {'V', {'A', 'C', 'G'}},          // not T/U
         {'N', {'A', 'C', 'G', 'T', 'U'}} // Nucleic acid
     };
+    
+    static constexpr std::array<char, 11> AmbiguousCodes {'N', 'R', 'Y', 'K', 'M', 'S', 'W', 'B', 'D', 'H', 'V'};
+    
 } // end namespace detail
 
 template <typename SequenceType>

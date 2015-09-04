@@ -40,11 +40,27 @@
 using std::cout;
 using std::endl;
 
+void test_map()
+{
+    auto reference = make_reference(human_reference_fasta);
+    ReadManager read_manager {human_1000g_bam1, human_1000g_bam2, human_1000g_bam3};
+    auto reads = read_manager.fetch_reads(parse_region("21", reference));
+    
+    auto start = std::chrono::system_clock::now();
+    
+    auto read_map = make_mappable_map(std::move(reads));
+    
+    auto end = std::chrono::system_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+    
+    cout << duration << endl;
+}
+
 void test()
 {
     auto reference = make_reference(human_reference_fasta);
     
-    ReadManager read_manager {human_1000g_bam1};
+    ReadManager read_manager {human_1000g_bam1, human_1000g_bam2, human_1000g_bam3};
     
     //auto region = parse_region("2:104142870-104142884", reference);
     auto region = parse_region("11:67503118-67503253", reference);
@@ -54,55 +70,60 @@ void test()
     
     auto reads = read_manager.fetch_reads(region);
     
-    MappableMap<std::string, AlignedRead> read_map {};
-    for (auto r : reads) {
-        read_map.emplace(r.first, MappableSet<AlignedRead> {r.second.cbegin(), r.second.cend()});
-        generator.add_reads(r.second.cbegin(), r.second.cend());
-    }
+//    MappableMap<std::string, AlignedRead> read_map {};
+//    for (auto r : reads) {
+//        read_map.emplace(r.first, MappableSet<AlignedRead> {r.second.cbegin(), r.second.cend()});
+//        generator.add_reads(r.second.cbegin(), r.second.cend());
+//    }
     
-    auto candidates = generator.get_candidates(region);
+    auto read_map = make_mappable_map(std::move(reads));
     
-    cout << "there are " << candidates.size() << " candidates" << endl;
-    
-    Octopus::HaplotypeTree tree {reference};
-    
-    for (const auto& v : candidates) {
-        tree.extend(v.get_reference_allele());
-        tree.extend(v.get_alternative_allele());
-    }
-    
-    auto haplotypes = tree.get_haplotypes(region);
-    
-    cout << "there are " << haplotypes.size() << " haplotypes" << endl;
-    
-    auto genotype_model = std::make_unique<Octopus::PopulationGenotypeModel>(1, 2);
-    
-    auto genotype_posteriors = genotype_model->evaluate(haplotypes, read_map);
-    
-    auto sample = read_manager.get_sample_ids().front();
-    auto it = std::max_element(genotype_posteriors[sample].cbegin(), genotype_posteriors[sample].cend(), [] (const auto& lhs, const auto& rhs) { return lhs.second < rhs.second; });
-    
-    cout << it->first << " " << it->second << endl;
+//    auto candidates = generator.get_candidates(region);
+//    
+//    cout << "there are " << candidates.size() << " candidates" << endl;
+//    
+//    Octopus::HaplotypeTree tree {reference};
+//    
+//    for (const auto& v : candidates) {
+//        tree.extend(v.get_reference_allele());
+//        tree.extend(v.get_alternative_allele());
+//    }
+//    
+//    auto haplotypes = tree.get_haplotypes(region);
+//    
+//    cout << "there are " << haplotypes.size() << " haplotypes" << endl;
+//    
+//    auto genotype_model = std::make_unique<Octopus::PopulationGenotypeModel>(1, 2);
+//    
+//    auto genotype_posteriors = genotype_model->evaluate(haplotypes, read_map);
+//    
+//    auto sample = read_manager.get_sample_ids()[2];
+//    auto it = std::max_element(genotype_posteriors[sample].cbegin(), genotype_posteriors[sample].cend(), [] (const auto& lhs, const auto& rhs) { return lhs.second < rhs.second; });
+//    
+//    it->first.at(0).print_explicit_alleles();
+//    cout << "\n";
+//    it->first.at(1).print_explicit_alleles();
+//    cout << "\n" << it->second << endl;
     
     //cout << genotype_posteriors[sample].cbegin()->second << endl;
 }
 
 int main(int argc, const char **argv)
 {
-    //test();
+    test_map();
     
-    auto ecoli = make_reference(ecoli_reference_fasta);
-    auto human = make_reference(human_reference_fasta);
-    
-    //auto sequence = ecoli.get_sequence(ecoli.get_contig_region(ecoli.get_contig_names().front()));
-    
-    auto sequence = human.get_sequence(human.get_contig_region("1"));
-    
-    randomise(sequence);
-    
-    auto seq = transcribe(sequence);
-    
-    cout << is_rna(seq) << endl;
+//    auto ecoli = make_reference(ecoli_reference_fasta);
+//    auto human = make_reference(human_reference_fasta);
+//    
+//    //auto sequence = ecoli.get_sequence(ecoli.get_contig_region(ecoli.get_contig_names().front()));
+//    
+//    auto sequence = human.get_sequence(human.get_contig_region("1"));
+//    
+//    randomise(sequence);
+//    
+//    auto seq = transcribe(sequence);
+//    
+//    cout << is_rna(seq) << endl;
     
 //    auto options = Octopus::parse_options(argc, argv);
 //    
