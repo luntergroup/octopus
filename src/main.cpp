@@ -52,15 +52,13 @@ void test()
     CandidateVariantGenerator generator {};
     generator.register_generator(std::make_unique<AlignmentCandidateVariantGenerator>(reference, 10));
     
-    auto sample = read_manager.get_sample_ids().front();
-    
     auto reads = read_manager.fetch_reads(region);
     
-    cout << "there are " << reads[sample].size() << " reads" << endl;
-    
-    MappableMap<std::string, AlignedRead> read_map {{sample, MappableSet<AlignedRead> {reads[sample].begin(), reads[sample].end()}}};
-    
-    generator.add_reads(reads[sample].cbegin(), reads[sample].cend());
+    MappableMap<std::string, AlignedRead> read_map {};
+    for (auto r : reads) {
+        read_map.emplace(r.first, MappableSet<AlignedRead> {r.second.cbegin(), r.second.cend()});
+        generator.add_reads(r.second.cbegin(), r.second.cend());
+    }
     
     auto candidates = generator.get_candidates(region);
     
@@ -81,6 +79,7 @@ void test()
     
     auto genotype_posteriors = genotype_model->evaluate(haplotypes, read_map);
     
+    auto sample = read_manager.get_sample_ids().front();
     auto it = std::max_element(genotype_posteriors[sample].cbegin(), genotype_posteriors[sample].cend(), [] (const auto& lhs, const auto& rhs) { return lhs.second < rhs.second; });
     
     cout << it->first << " " << it->second << endl;
@@ -90,7 +89,20 @@ void test()
 
 int main(int argc, const char **argv)
 {
-    test();
+    //test();
+    
+    auto ecoli = make_reference(ecoli_reference_fasta);
+    auto human = make_reference(human_reference_fasta);
+    
+    //auto sequence = ecoli.get_sequence(ecoli.get_contig_region(ecoli.get_contig_names().front()));
+    
+    auto sequence = human.get_sequence(human.get_contig_region("1"));
+    
+    randomise(sequence);
+    
+    auto seq = transcribe(sequence);
+    
+    cout << is_rna(seq) << endl;
     
 //    auto options = Octopus::parse_options(argc, argv);
 //    

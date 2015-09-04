@@ -27,9 +27,7 @@
 		CA0B46841AEA222B00158BBA /* 1000G_test10.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA0B46831AEA222B00158BBA /* 1000G_test10.cpp */; };
 		CA14727A1AACECF1005FDCD1 /* octopus.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA1472781AACECF1005FDCD1 /* octopus.cpp */; };
 		CA14727C1AACED6E005FDCD1 /* octopus_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA14727B1AACED6E005FDCD1 /* octopus_tests.cpp */; };
-		CA2827BB1B2A4C18007712D4 /* libcppnetlib-client-connections.a in Frameworks */ = {isa = PBXBuildFile; fileRef = CA2827BA1B2A4C18007712D4 /* libcppnetlib-client-connections.a */; };
 		CA2827C11B2A4CD0007712D4 /* online_candidate_variant_generator.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA2827BF1B2A4CD0007712D4 /* online_candidate_variant_generator.cpp */; };
-		CA2827C71B2A54D2007712D4 /* libcppnetlib-uri.a in Frameworks */ = {isa = PBXBuildFile; fileRef = CA2827C61B2A54D2007712D4 /* libcppnetlib-uri.a */; };
 		CA28EBF51AABB80E009F8622 /* read_filter_benchmarks.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA28EBF41AABB80E009F8622 /* read_filter_benchmarks.cpp */; };
 		CA28EBF81AABE178009F8622 /* read_transform_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA28EBF71AABE178009F8622 /* read_transform_tests.cpp */; };
 		CA386D9D1B5AA3C80057A5A8 /* reference_genome.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA386D9C1B5AA3C80057A5A8 /* reference_genome.cpp */; };
@@ -58,6 +56,8 @@
 		CA91C2CB1B8DE02300609FFA /* cancer_genotype_model.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA91C2C91B8DE02300609FFA /* cancer_genotype_model.cpp */; };
 		CA91C2D01B8DF56100609FFA /* basic_haplotype_prior_model.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA91C2CE1B8DF56100609FFA /* basic_haplotype_prior_model.cpp */; };
 		CA91C2D31B9339E900609FFA /* misc_benchmarks.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA91C2D21B9339E900609FFA /* misc_benchmarks.cpp */; };
+		CA91C2D61B98424300609FFA /* libcppnetlib-client-connections.a in Frameworks */ = {isa = PBXBuildFile; fileRef = CA91C2D41B98424300609FFA /* libcppnetlib-client-connections.a */; };
+		CA91C2D71B98424300609FFA /* libcppnetlib-uri.a in Frameworks */ = {isa = PBXBuildFile; fileRef = CA91C2D51B98424300609FFA /* libcppnetlib-uri.a */; };
 		CAA4DC251A81981400DD3E9A /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CAA4DC241A81981400DD3E9A /* main.cpp */; };
 		CAA4DC321A82B36300DD3E9A /* README.md in Sources */ = {isa = PBXBuildFile; fileRef = CAA4DC311A82B36300DD3E9A /* README.md */; };
 		CAA4DC351A83A39D00DD3E9A /* Octopus in CopyFiles */ = {isa = PBXBuildFile; fileRef = CAA4DC211A81981400DD3E9A /* Octopus */; };
@@ -163,10 +163,8 @@
 		CA1472791AACECF1005FDCD1 /* octopus.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = octopus.h; sourceTree = "<group>"; };
 		CA14727B1AACED6E005FDCD1 /* octopus_tests.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = octopus_tests.cpp; sourceTree = "<group>"; };
 		CA14727D1AAE63A8005FDCD1 /* hash_functions.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = hash_functions.h; sourceTree = "<group>"; };
-		CA2827BA1B2A4C18007712D4 /* libcppnetlib-client-connections.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = "libcppnetlib-client-connections.a"; path = "/usr/local/Cellar/cpp-netlib/netlib/lib/libcppnetlib-client-connections.a"; sourceTree = "<absolute>"; };
 		CA2827BF1B2A4CD0007712D4 /* online_candidate_variant_generator.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = online_candidate_variant_generator.cpp; sourceTree = "<group>"; };
 		CA2827C01B2A4CD0007712D4 /* online_candidate_variant_generator.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = online_candidate_variant_generator.h; sourceTree = "<group>"; };
-		CA2827C61B2A54D2007712D4 /* libcppnetlib-uri.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = "libcppnetlib-uri.a"; path = "/usr/local/Cellar/cpp-netlib/netlib/lib/libcppnetlib-uri.a"; sourceTree = "<absolute>"; };
 		CA28EBF21AAB7B63009F8622 /* read_filter_factory.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = read_filter_factory.h; sourceTree = "<group>"; };
 		CA28EBF31AABA2FC009F8622 /* read_transformations.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = read_transformations.h; sourceTree = "<group>"; };
 		CA28EBF41AABB80E009F8622 /* read_filter_benchmarks.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = read_filter_benchmarks.cpp; sourceTree = "<group>"; };
@@ -213,6 +211,8 @@
 		CA91C2CF1B8DF56100609FFA /* basic_haplotype_prior_model.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = basic_haplotype_prior_model.h; sourceTree = "<group>"; };
 		CA91C2D11B8DF76300609FFA /* variant_caller.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = variant_caller.h; sourceTree = "<group>"; };
 		CA91C2D21B9339E900609FFA /* misc_benchmarks.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = misc_benchmarks.cpp; sourceTree = "<group>"; };
+		CA91C2D41B98424300609FFA /* libcppnetlib-client-connections.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = "libcppnetlib-client-connections.a"; path = "/usr/local/Cellar/cpp-netlib/0.11.1_1/lib/libcppnetlib-client-connections.a"; sourceTree = "<absolute>"; };
+		CA91C2D51B98424300609FFA /* libcppnetlib-uri.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = "libcppnetlib-uri.a"; path = "/usr/local/Cellar/cpp-netlib/0.11.1_1/lib/libcppnetlib-uri.a"; sourceTree = "<absolute>"; };
 		CAA4DC211A81981400DD3E9A /* Octopus */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = Octopus; sourceTree = BUILT_PRODUCTS_DIR; };
 		CAA4DC241A81981400DD3E9A /* main.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
 		CAA4DC301A82B28800DD3E9A /* .gitignore */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = .gitignore; sourceTree = "<group>"; };
@@ -340,14 +340,14 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				CA91C2D61B98424300609FFA /* libcppnetlib-client-connections.a in Frameworks */,
+				CA91C2D71B98424300609FFA /* libcppnetlib-uri.a in Frameworks */,
 				CA386DAA1B6007FF0057A5A8 /* libboost_unit_test_framework.a in Frameworks */,
 				D413B0451B5E54F7007EFDE0 /* libboost_iostreams.a in Frameworks */,
 				D45D2E661B2AD93500F6A89D /* libboost_filesystem.a in Frameworks */,
 				D45D2E671B2AD93500F6A89D /* libboost_program_options.a in Frameworks */,
 				D45D2E681B2AD93500F6A89D /* libboost_system.a in Frameworks */,
 				D45D2E601B2AD88A00F6A89D /* libhts.a in Frameworks */,
-				CA2827C71B2A54D2007712D4 /* libcppnetlib-uri.a in Frameworks */,
-				CA2827BB1B2A4C18007712D4 /* libcppnetlib-client-connections.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -484,14 +484,14 @@
 		CAA4DC2B1A8219C700DD3E9A /* lib */ = {
 			isa = PBXGroup;
 			children = (
+				CA91C2D41B98424300609FFA /* libcppnetlib-client-connections.a */,
+				CA91C2D51B98424300609FFA /* libcppnetlib-uri.a */,
 				CA386DA91B6007FF0057A5A8 /* libboost_unit_test_framework.a */,
 				D413B0441B5E54F7007EFDE0 /* libboost_iostreams.a */,
 				D45D2E631B2AD93500F6A89D /* libboost_filesystem.a */,
 				D45D2E641B2AD93500F6A89D /* libboost_program_options.a */,
 				D45D2E651B2AD93500F6A89D /* libboost_system.a */,
 				D45D2E5F1B2AD88A00F6A89D /* libhts.a */,
-				CA2827BA1B2A4C18007712D4 /* libcppnetlib-client-connections.a */,
-				CA2827C61B2A54D2007712D4 /* libcppnetlib-uri.a */,
 				CA8FACBA1A954B0B002760F2 /* libboost_signals.a */,
 			);
 			path = lib;
@@ -1016,6 +1016,7 @@
 					/usr/local/lib,
 					/usr/local/Cellar/htslib/1.2.1/lib,
 					"/usr/local/Cellar/cpp-netlib/netlib/lib",
+					"/usr/local/Cellar/cpp-netlib/0.11.1_1/lib",
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
@@ -1040,6 +1041,7 @@
 					/usr/local/lib,
 					/usr/local/Cellar/htslib/1.2.1/lib,
 					"/usr/local/Cellar/cpp-netlib/netlib/lib",
+					"/usr/local/Cellar/cpp-netlib/0.11.1_1/lib",
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};

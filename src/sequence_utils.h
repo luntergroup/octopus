@@ -25,9 +25,27 @@
 
 namespace detail
 {
-    static const constexpr char Unknown_base {'N'};
-    static const constexpr std::array<char, 4> Dna_bases {'A', 'C', 'G', 'T'};
-    static const constexpr std::array<char, 4> Rna_bases {'A', 'C', 'G', 'U'};
+    static const constexpr std::array<char, 4> DnaBases {'A', 'C', 'G', 'T'};
+    static const constexpr std::array<char, 4> RnaBases {'A', 'C', 'G', 'U'};
+    
+    static const std::unordered_map<char, std::vector<char>> AminoAcidCodes {
+        {'A', {'A'}},                    // Adenine
+        {'C', {'C'}},                    // Cytosine
+        {'G', {'G'}},                    // Guanine
+        {'T', {'T'}},                    // Thymine
+        {'U', {'U'}},                    // Uracil
+        {'R', {'A', 'G'}},               // puRine
+        {'Y', {'C', 'T', 'U'}},          // pYrimidines
+        {'K', {'G', 'T', 'U'}},          // Ketones
+        {'M', {'A', 'C'}},               // aMino groups
+        {'S', {'C', 'G'}},               // Strong interaction
+        {'W', {'A', 'T', 'U'}},          // Weak interaction
+        {'B', {'C', 'G', 'T', 'U'}},     // not A
+        {'D', {'A', 'G', 'T', 'U'}},     // not C
+        {'H', {'A', 'C', 'T', 'U'}},     // not G
+        {'V', {'A', 'C', 'G'}},          // not T/U
+        {'N', {'A', 'C', 'G', 'T', 'U'}} // Nucleic acid
+    };
 } // end namespace detail
 
 template <typename SequenceType>
@@ -90,10 +108,25 @@ void capitalise(SequenceType& sequence)
                    });
 }
 
-template <typename SequenceType>
-void randomise_ns(SequenceType& sequence)
+namespace detail
 {
-    
+    template <typename Container>
+    typename Container::value_type random_member(const Container& values)
+    {
+        static std::default_random_engine generator {};
+        if (values.empty()) throw std::runtime_error {"cannot sample from empty container"};
+        if (values.size() == 1) return *std::cbegin(values);
+        std::uniform_int_distribution<size_t> distribution {0, values.size() - 1};
+        return *std::next(std::cbegin(values), distribution(generator));
+    }
+} // end namespace detail
+
+template <typename SequenceType>
+void randomise(SequenceType& sequence)
+{
+    for (auto& base : sequence) {
+        base = detail::random_member(detail::AminoAcidCodes.at(base));
+    }
 }
 
 namespace detail
@@ -147,9 +180,9 @@ bool is_palindromic(const SequenceType& sequence)
 }
 
 template <typename SequenceType>
-std::unordered_map<char, std::size_t> count_bases(const SequenceType& sequence)
+std::unordered_map<char, size_t> count_bases(const SequenceType& sequence)
 {
-    std::unordered_map<char, std::size_t> result {};
+    std::unordered_map<char, size_t> result {};
     result.reserve(5); // 4 bases + N
     
     for (char base : sequence) {

@@ -40,7 +40,7 @@ namespace Octopus
         HaplotypeFrequencies result {};
         result.reserve(haplotypes.size());
         
-        double uniform {1.0 / haplotypes.size()};
+        const double uniform {1.0 / haplotypes.size()};
         
         for (const auto& haplotype : haplotypes) {
             result.emplace(haplotype, uniform);
@@ -65,9 +65,7 @@ namespace Octopus
             r += num_occurences * haplotype_frequencies.at(haplotype);
         }
         
-        auto c = log_multinomial_coefficient<double>(occurences.cbegin(), occurences.cend());
-        
-        return c * r;
+        return log_multinomial_coefficient<double>(occurences.cbegin(), occurences.cend()) * r;
     }
     
     GenotypeMarginals
@@ -129,7 +127,7 @@ namespace Octopus
     void normalise(PopulationGenotypeModel::SampleGenotypeProbabilities& unnormalised_log_posteriors)
     {
         auto log_posteriors = get_values(unnormalised_log_posteriors);
-        auto norm = log_sum_exp<double>(std::cbegin(log_posteriors), std::cend(log_posteriors));
+        const auto norm = log_sum_exp<double>(std::cbegin(log_posteriors), std::cend(log_posteriors));
         for (auto& p : unnormalised_log_posteriors) p.second -= norm;
     }
     
@@ -153,21 +151,19 @@ namespace Octopus
                 gps.emplace(marginal.first, marginal.second + sample_likelihoods.second.at(marginal.first));
             }
             
+            normalise(gps);
+            exponentiate(gps);
+            
             result.emplace(sample_likelihoods.first, std::move(gps));
-        }
-        
-        for (auto& sample_genotypes : result) {
-            normalise(sample_genotypes.second);
-            exponentiate(sample_genotypes.second);
         }
         
         return result;
     }
     
-    void update_posteriors(PopulationGenotypeModel::GenotypeProbabilities& genotype_posteriors,
-                           const HaplotypeFrequencies& haplotype_frequencies,
-                           GenotypeMarginals& marginal_genotype_log_probabilities,
-                           const GenotypeLikelihoods& genotype_log_likilhoods)
+    void update_genotype_posteriors(PopulationGenotypeModel::GenotypeProbabilities& genotype_posteriors,
+                                    const HaplotypeFrequencies& haplotype_frequencies,
+                                    GenotypeMarginals& marginal_genotype_log_probabilities,
+                                    const GenotypeLikelihoods& genotype_log_likilhoods)
     {
         update_marginal_genotype_log_probabilities(marginal_genotype_log_probabilities, haplotype_frequencies);
         
@@ -198,7 +194,7 @@ namespace Octopus
             }
         }
         
-        auto norm = num_samples * ploidy;
+        const auto norm = num_samples * ploidy;
         
         for (auto& h : result) {
             h.second /= norm;
@@ -226,7 +222,8 @@ namespace Octopus
                            const GenotypeLikelihoods& genotype_log_likilhoods,
                            unsigned ploidy)
     {
-        update_posteriors(genotype_posteriors, haplotype_frequencies, marginal_genotype_log_probabilities, genotype_log_likilhoods);
+        update_genotype_posteriors(genotype_posteriors, haplotype_frequencies,
+                                   marginal_genotype_log_probabilities, genotype_log_likilhoods);
         
         auto num_samples = static_cast<unsigned>(genotype_posteriors.size());
         
@@ -252,8 +249,6 @@ namespace Octopus
         
         auto haplotype_frequencies               = init_haplotype_frequencies(haplotypes);
         auto marginal_genotype_log_probabilities = init_marginal_genotype_log_probabilities(genotypes, haplotype_frequencies);
-        
-        std::cout << "computed genotype log likilhoods" << std::endl;
         
         auto result = init_genotype_posteriors(marginal_genotype_log_probabilities, genotype_log_likilhoods);
         
