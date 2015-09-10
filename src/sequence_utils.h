@@ -73,14 +73,26 @@ bool is_dna_rna_ambiguous(const SequenceType& sequence) // i.e. is_dna(sequence)
 }
 
 template <typename SequenceType>
-SequenceType transcribe(SequenceType dna_sequence)
+void transcribe(SequenceType& dna_sequence)
+{
+    std::replace(std::begin(dna_sequence), std::end(dna_sequence), 'T', 'U');
+}
+
+template <typename SequenceType>
+SequenceType transcribe_copy(SequenceType dna_sequence)
 {
     std::replace(std::begin(dna_sequence), std::end(dna_sequence), 'T', 'U');
     return dna_sequence;
 }
 
 template <typename SequenceType>
-SequenceType reverse_transcribe(SequenceType rna_sequence)
+void reverse_transcribe(SequenceType& rna_sequence)
+{
+    std::replace(std::begin(rna_sequence), std::end(rna_sequence), 'U', 'T');
+}
+
+template <typename SequenceType>
+SequenceType reverse_transcribe_copy(SequenceType rna_sequence)
 {
     std::replace(std::begin(rna_sequence), std::end(rna_sequence), 'U', 'T');
     return rna_sequence;
@@ -192,54 +204,6 @@ std::unordered_map<char, size_t> count_bases(const SequenceType& sequence)
     return result;
 }
 
-namespace detail
-{
-    // Replaces all contiguous sub-sequences of N's with a single N, inplace, and returns a map of
-    // each N position in the new sequence, and how many N's have been removed up to the first non-N
-    // base past the position
-    template <typename SequenceType>
-    std::map<std::size_t, std::size_t> collapse_ns(SequenceType& sequence)
-    {
-        std::map<std::size_t, std::size_t> result {};
-        
-        auto last = std::end(sequence);
-        std::size_t position {}, num_removed {};
-        
-        for (auto first = std::begin(sequence); first != last;) {
-            auto it1 = std::adjacent_find(first, last, [] (char lhs, char rhs) { return lhs == 'N' && lhs == rhs; });
-            
-            if (it1 == last) break;
-            
-            auto it2 = std::find_if_not(it1, last, [] (char base) { return base == 'N'; });
-            
-            position    += std::distance(first, it1);
-            num_removed += std::distance(it1, it2) - 1;
-            
-            result.emplace(position, num_removed);
-            
-            first = it2;
-        }
-        
-        if (!result.empty()) {
-            sequence.erase(std::unique(std::next(std::begin(sequence), std::cbegin(result)->first), last,
-                                       [] (char lhs, char rhs) { return lhs == 'N' && lhs == rhs; }), last);
-        }
-        
-        return result;
-    }
-    
-    inline void rebase(std::vector<Tandem::StringRun>& runs, const std::map<std::size_t, std::size_t>& shift_map)
-    {
-        if (shift_map.empty()) return;
-        
-        auto shift_map_it = std::cbegin(shift_map);
-        for (auto& run : runs) {
-            while (std::next(shift_map_it)->first <= run.pos) ++shift_map_it;
-            run.pos += static_cast<decltype(run.pos)>(shift_map_it->second);
-        }
-    }
-} // end namespace detail
-
 struct TandemRepeat
 {
     using SizeType = GenomicRegion::SizeType;
@@ -261,11 +225,11 @@ std::vector<TandemRepeat> find_exact_tandem_repeats(SequenceType sequence, const
         sequence.push_back('N');
     }
     
-    auto n_shift_map = detail::collapse_ns(sequence);
+    auto n_shift_map = Tandem::collapse(sequence, 'N');
     
     auto maximal_repetitions = Tandem::find_maximal_repetitions(sequence , min_repeat_size, max_repeat_size);
     
-    detail::rebase(maximal_repetitions, n_shift_map);
+    Tandem::rebase(maximal_repetitions, n_shift_map);
     
     std::vector<TandemRepeat> result {};
     result.reserve(maximal_repetitions.size());

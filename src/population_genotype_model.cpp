@@ -241,7 +241,7 @@ namespace Octopus
     PopulationGenotypeModel::GenotypeProbabilities
     PopulationGenotypeModel::do_evaluate(const std::vector<Haplotype>& haplotypes, const ReadMap& reads)
     {
-        auto genotypes = get_all_genotypes(haplotypes, sample_ploidy_);
+        auto genotypes = generate_all_genotypes(haplotypes, sample_ploidy_);
         
         std::cout << "there are " << genotypes.size() << " genotypes" << std::endl;
         

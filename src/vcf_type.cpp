@@ -132,17 +132,18 @@ private:
 
 VcfType make_vcf_type(const std::string& type, const std::string& value)
 {
-    static std::unordered_map<std::string, std::function<VcfType(std::string)>> type_map;
-    type_map.emplace("String",    [] (const auto& value) { return detail::make_vcf_type(value); });
-    type_map.emplace("Integer",   [] (const auto& value) { return detail::make_vcf_type(std::stoi(value)); });
-    type_map.emplace("Float",     [] (const auto& value) { return detail::make_vcf_type(std::stod(value)); });
-    type_map.emplace("Character", [] (const auto& value) { return detail::make_vcf_type(value.front()); });
-    type_map.emplace("Flag",      [] (const auto& value) { return detail::make_vcf_type(value == "1"); });
+    static const std::unordered_map<std::string, std::function<VcfType(std::string)>> type_map {
+        {"String", [] (const auto& value) { return detail::make_vcf_type(value); }},
+        {"Integer",   [] (const auto& value) { return detail::make_vcf_type(std::stoi(value)); }},
+        {"Float",     [] (const auto& value) { return detail::make_vcf_type(std::stod(value)); }},
+        {"Character", [] (const auto& value) { return detail::make_vcf_type(value.front()); }},
+        {"Flag",      [] (const auto& value) { return detail::make_vcf_type(value == "1"); }}
+    };
     
     if (type_map.count(type) == 0) throw UnknownVcfType {type};
     
     try {
-        return type_map[type](value);
+        return type_map.at(type)(value);
     } catch (std::invalid_argument& e) {
         throw BadVcfType {type, value};
     } catch (...) { // e.g. std::out_of_range

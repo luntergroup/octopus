@@ -27,13 +27,13 @@
 #include "reference_genome.h"
 #include "read_manager.h"
 #include "mappable_set.h"
-#include "candidate_variant_generator.h"
-#include "alignment_candidate_variant_generator.h"
+#include "candidate_generators.h"
 #include "mappable_set.h"
 #include "mappable_map.h"
 #include "haplotype_tree.h"
 #include "genotype_model.h"
 #include "population_genotype_model.h"
+#include "vcf.h"
 
 #include "sequence_utils.h"
 
@@ -91,18 +91,22 @@ int main(int argc, const char **argv)
 {
     //test();
     
-    auto ecoli = make_reference(ecoli_reference_fasta);
-    auto human = make_reference(human_reference_fasta);
+    VcfReader reader {sample_vcf};
     
-    //auto sequence = ecoli.get_sequence(ecoli.get_contig_region(ecoli.get_contig_names().front()));
+    GenomicRegion region {"X", 10000000, 11000000};
     
-    auto sequence = human.get_sequence(human.get_contig_region("1"));
+    auto header  = reader.fetch_header();
+    auto records = reader.fetch_records(region);
     
-    randomise(sequence);
+    cout << records[0] << endl;
     
-    auto seq = transcribe(sequence);
+    auto untyped_val1 = records[0].get_info_value("DP")[0];
+    auto untyped_val2 = records[1].get_info_value("DP")[0];
     
-    cout << is_rna(seq) << endl;
+    auto val1 = get_typed_info_value(header, "DP", untyped_val1);
+    auto val2 = get_typed_info_value(header, "DP", untyped_val1);
+    
+    cout << val1 << " " << val2 << " " << (val1 + val2) << endl;
     
 //    auto options = Octopus::parse_options(argc, argv);
 //    

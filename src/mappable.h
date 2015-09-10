@@ -9,6 +9,8 @@
 #ifndef Octopus_mappable_h
 #define Octopus_mappable_h
 
+#include <type_traits>
+
 #include "genomic_region.h"
 
 /**
@@ -19,6 +21,9 @@
 
 template <typename T>
 class Mappable {};
+
+template <typename T, typename R = void>
+using EnableIfMappable = std::enable_if_t<std::is_same<T, GenomicRegion>::value || std::is_base_of<Mappable<T>, T>::value, R>;
 
 inline GenomicRegion get_region(const GenomicRegion& m)
 {

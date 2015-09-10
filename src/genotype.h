@@ -197,8 +197,8 @@ inline unsigned num_genotypes(unsigned num_elements, unsigned ploidy)
 namespace detail
 {
     template <typename MappableType>
-    Genotype<MappableType> get_genotype_from_element_indicies(const std::vector<MappableType>& elements,
-                                                              const std::vector<unsigned>& element_indicies)
+    Genotype<MappableType> generate_genotype(const std::vector<MappableType>& elements,
+                                             const std::vector<unsigned>& element_indicies)
     {
         Genotype<MappableType> result {static_cast<unsigned>(element_indicies.size())};
         
@@ -212,12 +212,11 @@ namespace detail
 
 // Assumes the input haplotypes are unique
 template <typename MappableType>
-std::vector<Genotype<MappableType>> get_all_genotypes(const std::vector<MappableType>& elements, unsigned ploidy)
+std::vector<Genotype<MappableType>> generate_all_genotypes(const std::vector<MappableType>& elements, unsigned ploidy)
 {
+    auto num_elements = static_cast<unsigned>(elements.size());
+    
     std::vector<Genotype<MappableType>> result {};
-    
-    unsigned num_elements {static_cast<unsigned>(elements.size())};
-    
     result.reserve(num_genotypes(num_elements, ploidy));
     
     std::vector<unsigned> element_indicies(ploidy, 0);
@@ -226,9 +225,7 @@ std::vector<Genotype<MappableType>> get_all_genotypes(const std::vector<Mappable
     
     while (true) {
         if (element_indicies[i] == num_elements) {
-            do {
-                ++i;
-            } while (element_indicies[i] == num_elements - 1);
+            do { ++i; } while (element_indicies[i] == num_elements - 1);
             
             if (i == ploidy) return result;
             
@@ -241,7 +238,7 @@ std::vector<Genotype<MappableType>> get_all_genotypes(const std::vector<Mappable
             i = 0;
         }
         
-        result.push_back(detail::get_genotype_from_element_indicies(elements, element_indicies));
+        result.push_back(detail::generate_genotype(elements, element_indicies));
         ++element_indicies[i];
     }
 }
@@ -262,7 +259,7 @@ template <typename MappableType>
 std::ostream& operator<<(std::ostream& os, const Genotype<MappableType>& genotype)
 {
     auto element_occurences = get_element_occurence_map(genotype);
-    std::vector<std::pair<Haplotype, unsigned>> p {element_occurences.begin(), element_occurences.end()};
+    std::vector<std::pair<MappableType, unsigned>> p {element_occurences.begin(), element_occurences.end()};
     for (unsigned i {}; i < p.size() - 1; ++i) {
         os << p[i].first << "(" << p[i].second << "),";
     }

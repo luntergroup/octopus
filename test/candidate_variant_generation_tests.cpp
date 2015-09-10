@@ -17,11 +17,7 @@
 #include "reference_genome.h"
 #include "read_manager.h"
 #include "variant.h"
-#include "candidate_variant_generator.h"
-#include "alignment_candidate_variant_generator.h"
-#include "assembler_candidate_variant_generator.h"
-#include "online_candidate_variant_generator.h"
-#include "external_variant_candidates.h"
+#include "candidate_generators.h"
 #include "vcf_reader.h"
 
 using std::cout;

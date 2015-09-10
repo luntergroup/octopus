@@ -77,6 +77,7 @@
 		CAE3E2CB1AAB42C900C01B2C /* read_filter_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CAE3E2CA1AAB42C900C01B2C /* read_filter_tests.cpp */; };
 		CAE3E2CD1AAB46BC00C01B2C /* read_filters.h in Sources */ = {isa = PBXBuildFile; fileRef = CAE3E2CC1AAB46BC00C01B2C /* read_filters.h */; };
 		CAEC8E1A1B73ACB9008FC858 /* vcf_type.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CAEC8E191B73ACB9008FC858 /* vcf_type.cpp */; };
+		CAF23F6B1B9DFF04006B673F /* threadsafe_caching_fasta.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CAF23F691B9DFF04006B673F /* threadsafe_caching_fasta.cpp */; };
 		CAFA195B1ABF3DF400F953D9 /* haplotype_tree.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CAFA19591ABF3DF400F953D9 /* haplotype_tree.cpp */; };
 		CAFA19641ABF75D400F953D9 /* haplotype.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CAFA19621ABF75D400F953D9 /* haplotype.cpp */; };
 		CAFA19661ABF84AC00F953D9 /* haplotype_tree_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CAFA19651ABF84AC00F953D9 /* haplotype_tree_tests.cpp */; };
@@ -254,6 +255,10 @@
 		CAE3E2CC1AAB46BC00C01B2C /* read_filters.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = read_filters.h; sourceTree = "<group>"; };
 		CAEC8E181B73A9E5008FC858 /* vcf_type.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = vcf_type.h; sourceTree = "<group>"; };
 		CAEC8E191B73ACB9008FC858 /* vcf_type.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = vcf_type.cpp; sourceTree = "<group>"; };
+		CAF23F691B9DFF04006B673F /* threadsafe_caching_fasta.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = threadsafe_caching_fasta.cpp; sourceTree = "<group>"; };
+		CAF23F6A1B9DFF04006B673F /* threadsafe_caching_fasta.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = threadsafe_caching_fasta.h; sourceTree = "<group>"; };
+		CAF23F6C1BA16E94006B673F /* vcf.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = vcf.h; sourceTree = "<group>"; };
+		CAF23F6D1BA17B47006B673F /* candidate_generators.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = candidate_generators.h; sourceTree = "<group>"; };
 		CAFA19591ABF3DF400F953D9 /* haplotype_tree.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = haplotype_tree.cpp; sourceTree = "<group>"; };
 		CAFA195A1ABF3DF400F953D9 /* haplotype_tree.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = haplotype_tree.h; sourceTree = "<group>"; };
 		CAFA19621ABF75D400F953D9 /* haplotype.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = haplotype.cpp; sourceTree = "<group>"; };
@@ -550,6 +555,7 @@
 				D463C1A11B0A160000739A66 /* allele.cpp */,
 				CAA4DC621A88238C00DD3E9A /* variant.h */,
 				D463C1A31B0A174B00739A66 /* variant.cpp */,
+				CAF23F6D1BA17B47006B673F /* candidate_generators.h */,
 				CAE3E2A41AA24C5500C01B2C /* i_candidate_variant_generator.h */,
 				CAE3E2A21AA1DBE000C01B2C /* candidate_variant_generator.h */,
 				CAE3E2AA1AA2736D00C01B2C /* external_variant_candidates.h */,
@@ -579,6 +585,8 @@
 				CA386DAB1B603C380057A5A8 /* caching_fasta.cpp */,
 				CA8A66491B81CA7E008CE1D8 /* threadsafe_fasta.h */,
 				CA8A66481B81CA7E008CE1D8 /* threadsafe_fasta.cpp */,
+				CAF23F6A1B9DFF04006B673F /* threadsafe_caching_fasta.h */,
+				CAF23F691B9DFF04006B673F /* threadsafe_caching_fasta.cpp */,
 			);
 			name = reference;
 			sourceTree = "<group>";
@@ -634,6 +642,7 @@
 		CAE3E2A51AA24D6000C01B2C /* variants */ = {
 			isa = PBXGroup;
 			children = (
+				CAF23F6C1BA16E94006B673F /* vcf.h */,
 				CAEC8E181B73A9E5008FC858 /* vcf_type.h */,
 				CAEC8E191B73ACB9008FC858 /* vcf_type.cpp */,
 				D4636C661B678B8000FEA7D2 /* vcf_header.h */,
@@ -912,6 +921,7 @@
 				CA0B46771AE8657F00158BBA /* 1000G_test6.cpp in Sources */,
 				D4636C641B6788C500FEA7D2 /* vcf_record.cpp in Sources */,
 				CA4551741AEB09DC00FDAAE8 /* 1000G_test20.cpp in Sources */,
+				CAF23F6B1B9DFF04006B673F /* threadsafe_caching_fasta.cpp in Sources */,
 				CA45516A1AEB097E00FDAAE8 /* 1000G_test15.cpp in Sources */,
 				D4256ED91B95F4DF00D122C9 /* indel_prior_tests.cpp in Sources */,
 				CAA4DC251A81981400DD3E9A /* main.cpp in Sources */,

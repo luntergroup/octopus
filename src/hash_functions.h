@@ -17,7 +17,7 @@ namespace std
 {
     template<>
     struct hash<boost::string_ref> {
-        size_t operator()(boost::string_ref const& sr) const {
+        size_t operator()(const boost::string_ref& sr) const {
             return boost::hash_range(sr.begin(), sr.end());
         }
     };

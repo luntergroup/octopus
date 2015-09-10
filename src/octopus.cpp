@@ -16,6 +16,8 @@
 #include "program_options.h"
 #include "reference_genome.h"
 #include "read_manager.h"
+#include "candidate_generators.h"
+#include "vcf.h"
 
 using std::cout;
 using std::endl;

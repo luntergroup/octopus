@@ -194,7 +194,7 @@ BOOST_AUTO_TEST_CASE(Genotypes_are_not_influenced_by_haplotype_entry_order)
     BOOST_CHECK(std::hash<Genotype<Haplotype>>()(g1) == std::hash<Genotype<Haplotype>>()(g2));
 }
 
-BOOST_AUTO_TEST_CASE(get_all_genotypes_returns_all_possible_unique_genotypes)
+BOOST_AUTO_TEST_CASE(generate_all_genotypes_returns_all_possible_unique_genotypes)
 {
     auto human = make_reference(human_reference_fasta);
     
@@ -214,7 +214,7 @@ BOOST_AUTO_TEST_CASE(get_all_genotypes_returns_all_possible_unique_genotypes)
     
     unsigned num_haplotypes {4};
     
-    auto genotypes_1 = get_all_genotypes(haplotypes, 1);
+    auto genotypes_1 = generate_all_genotypes(haplotypes, 1);
     
     BOOST_CHECK(genotypes_1.size() == num_genotypes(num_haplotypes, 1));
     
@@ -222,7 +222,7 @@ BOOST_AUTO_TEST_CASE(get_all_genotypes_returns_all_possible_unique_genotypes)
     
     BOOST_CHECK(genotypes_1.size() == unique_1.size());
     
-    auto genotypes_2 = get_all_genotypes(haplotypes, 2);
+    auto genotypes_2 = generate_all_genotypes(haplotypes, 2);
     
     BOOST_CHECK(genotypes_2.size() == num_genotypes(num_haplotypes, 2));
     
@@ -230,7 +230,7 @@ BOOST_AUTO_TEST_CASE(get_all_genotypes_returns_all_possible_unique_genotypes)
     
     BOOST_CHECK(genotypes_2.size() == unique_2.size());
     
-    auto genotypes_3 = get_all_genotypes(haplotypes, 3);
+    auto genotypes_3 = generate_all_genotypes(haplotypes, 3);
     
     BOOST_CHECK(genotypes_3.size() == num_genotypes(num_haplotypes, 3));
     
@@ -238,7 +238,7 @@ BOOST_AUTO_TEST_CASE(get_all_genotypes_returns_all_possible_unique_genotypes)
     
     BOOST_CHECK(genotypes_3.size() == unique_3.size());
     
-    auto genotypes_4 = get_all_genotypes(haplotypes, 4);
+    auto genotypes_4 = generate_all_genotypes(haplotypes, 4);
     
     BOOST_CHECK(genotypes_4.size() == num_genotypes(num_haplotypes, 4));
     
@@ -247,7 +247,7 @@ BOOST_AUTO_TEST_CASE(get_all_genotypes_returns_all_possible_unique_genotypes)
     BOOST_CHECK(genotypes_4.size() == unique_4.size());
 }
 
-BOOST_AUTO_TEST_CASE(get_all_genotypes_results_in_correct_ploidy)
+BOOST_AUTO_TEST_CASE(generate_all_genotypes_results_in_correct_ploidy)
 {
     auto human = make_reference(human_reference_fasta);
     
@@ -275,19 +275,19 @@ BOOST_AUTO_TEST_CASE(get_all_genotypes_results_in_correct_ploidy)
     
     std::vector<Haplotype> haplotypes {haplotype1, haplotype2, haplotype3, haplotype4, haplotype5, haplotype6};
     
-    auto genotypes1 = get_all_genotypes(haplotypes, 1);
+    auto genotypes1 = generate_all_genotypes(haplotypes, 1);
     
     for (const auto& genotype : genotypes1) {
         BOOST_CHECK(genotype.ploidy() == 1);
     }
     
-    auto genotypes2 = get_all_genotypes(haplotypes, 2);
+    auto genotypes2 = generate_all_genotypes(haplotypes, 2);
     
     for (const auto& genotype : genotypes2) {
         BOOST_CHECK(genotype.ploidy() == 2);
     }
     
-    auto genotypes3 = get_all_genotypes(haplotypes, 3);
+    auto genotypes3 = generate_all_genotypes(haplotypes, 3);
     
     for (const auto& genotype : genotypes3) {
         BOOST_CHECK(genotype.ploidy() == 3);
