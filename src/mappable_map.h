@@ -10,14 +10,34 @@
 #define Octopus_mappable_map_h
 
 #include <unordered_map>
-#include <algorithm> // std::any_of, std::transform
+#include <algorithm> // std::for_each, std::any_of, std::transform
 #include <numeric>   // std::accumulate
+#include <iterator>  // std::begin, std::end, std::make_move_iterator
 #include <stdexcept>
 
 #include "mappable_set.h"
 
 template <typename KeyType, typename MappableType>
 using MappableMap = std::unordered_map<KeyType, MappableSet<MappableType>>;
+
+template <typename Map>
+MappableMap<typename Map::key_type, typename Map::mapped_type::value_type>
+make_mappable_map(Map map)
+{
+    using T = typename Map::mapped_type::value_type;
+    
+    MappableMap<typename Map::key_type, T> result {};
+    result.reserve(map.size());
+    
+    using std::make_move_iterator; using std::begin; using std::end;
+    
+    std::for_each(make_move_iterator(begin(map)), make_move_iterator(end(map)), [&result] (auto&& p) {
+        result.emplace(std::move(p.first),
+                       MappableSet<T> { make_move_iterator(begin(p.second)), make_move_iterator(end(p.second)) });
+    });
+    
+    return result;
+}
 
 template <typename KeyType, typename MappableType1, typename MappableType2>
 bool
