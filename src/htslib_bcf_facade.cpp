@@ -48,7 +48,7 @@ std::vector<std::string> get_samples(bcf_hdr_t* header)
 std::string get_hts_mode(const fs::path& file_path, const std::string& mode)
 {
     if (!(mode == "r" || mode == "w")) {
-        throw std::runtime_error {"Invalid mode " + mode + " given to HtslibBcfFacade; must be r or w"};
+        throw std::runtime_error {"invalid mode " + mode + " given to HtslibBcfFacade; must be r or w"};
     }
     
     auto result = "[" + mode + "]";
@@ -73,11 +73,11 @@ header_ {(file_ != nullptr && mode == "r") ? bcf_hdr_read(file_.get()) : bcf_hdr
 samples_ {}
 {
     if (mode == "r" && file_ == nullptr) {
-        throw std::runtime_error {"Could not initalise memory for file " + file_path_.string()};
+        throw std::runtime_error {"could not initalise memory for file " + file_path_.string()};
     }
     
     if (header_ == nullptr) {
-        throw std::runtime_error {"Could not make header for file " + file_path_.string()};
+        throw std::runtime_error {"could not make header for file " + file_path_.string()};
     }
     
     if (mode == "r") {
@@ -109,18 +109,18 @@ VcfHeader HtslibBcfFacade::fetch_header()
     return hb.build_once();
 }
 
-std::size_t HtslibBcfFacade::num_records()
+size_t HtslibBcfFacade::num_records()
 {
     HtsBcfSrPtr sr {bcf_sr_init(), htslib_bcf_srs_deleter};
     
     if (!bcf_sr_add_reader(sr.get(), file_path_.string().c_str())) {
-        throw std::runtime_error {"Failed to open file " + file_path_.string()};
+        throw std::runtime_error {"failed to open file " + file_path_.string()};
     }
     
     return num_records(sr);
 }
 
-std::size_t HtslibBcfFacade::num_records(const GenomicRegion& region)
+size_t HtslibBcfFacade::num_records(const GenomicRegion& region)
 {
     HtsBcfSrPtr sr {bcf_sr_init(), htslib_bcf_srs_deleter};
     
@@ -155,7 +155,7 @@ std::vector<VcfRecord> HtslibBcfFacade::fetch_records(const GenomicRegion& regio
     bcf_sr_set_regions(sr.get(), to_string(region).c_str(), 0); // must go before bcf_sr_add_reader
     
     if (!bcf_sr_add_reader(sr.get(), file_path_.string().c_str())) {
-        throw std::runtime_error {"Failed to open file " + file_path_.string()};
+        throw std::runtime_error {"failed to open file " + file_path_.string()};
     }
     
     return fetch_records(sr, level, n_records);
@@ -241,7 +241,7 @@ void HtslibBcfFacade::write_record(const VcfRecord& record)
     const auto& contig = record.get_chromosome_name();
     
     if (bcf_hdr_get_hrec(header_.get(), BCF_HL_CTG, "ID", contig.c_str(), nullptr) == nullptr) {
-        throw std::runtime_error {"Required contig header line missing for contig " + contig};
+        throw std::runtime_error {"required contig header line missing for contig " + contig};
     }
     
     auto r = bcf_init();
@@ -655,14 +655,14 @@ void set_samples(bcf_hdr_t* header, bcf1_t* dest, const VcfRecord& source)
     }
 }
 
-std::size_t HtslibBcfFacade::num_records(HtsBcfSrPtr& sr) const
+size_t HtslibBcfFacade::num_records(HtsBcfSrPtr& sr) const
 {
-    std::size_t result {};
+    size_t result {};
     while (bcf_sr_next_line(sr.get())) ++result;
     return result;
 }
 
-std::vector<VcfRecord> HtslibBcfFacade::fetch_records(HtsBcfSrPtr& sr, Unpack level, std::size_t num_records)
+std::vector<VcfRecord> HtslibBcfFacade::fetch_records(HtsBcfSrPtr& sr, Unpack level, size_t num_records)
 {
     bcf1_t* record; // points into sr - don't need to delete
     

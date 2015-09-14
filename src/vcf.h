@@ -14,5 +14,6 @@
 #include "vcf_record.h"
 #include "vcf_reader.h"
 #include "vcf_writer.h"
+#include "vcf_utils.h"
 
 #endif

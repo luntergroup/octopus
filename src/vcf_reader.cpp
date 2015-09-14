@@ -44,12 +44,12 @@ VcfHeader VcfReader::fetch_header()
     return reader_->fetch_header();
 }
 
-std::size_t VcfReader::num_records() const
+size_t VcfReader::num_records() const
 {
     return reader_->num_records();
 }
 
-std::size_t VcfReader::num_records(const GenomicRegion& region) const
+size_t VcfReader::num_records(const GenomicRegion& region) const
 {
     return reader_->num_records(region);
 }

@@ -171,10 +171,28 @@ std::vector<VcfType> get_typed_info_values(const VcfHeader& header, const VcfHea
     return get_typed_values(header, "INFO", field_key, values);
 }
 
-unsigned get_field_cardinality(const VcfHeader::KeyType& key, const VcfRecord& record)
+std::vector<VcfType> get_typed_format_values(const VcfHeader& header, const VcfHeader::KeyType& field_key,
+                                             const std::vector<VcfHeader::ValueType>& values)
 {
-    return 0;
+    return get_typed_values(header, "FORMAT", field_key, values);
 }
+
+//void print_vector(std::ostream& os, const std::vector<std::string>& v,
+//                  const std::string& delim = ",", const std::string& empty_value = ".")
+//{
+//    if (v.empty()) {
+//        os << empty_value;
+//    } else {
+//        std::copy(v.cbegin(), std::prev(v.cend()), std::ostream_iterator<std::string>(os, delim.c_str()));
+//        os << v.back();
+//    }
+//}
+//
+//std::ostream& operator<<(std::ostream& os, const std::vector<std::string>& v)
+//{
+//    print_vector(os, v);
+//    return os;
+//}
 
 std::ostream& operator<<(std::ostream& os, const std::unordered_map<std::string, std::string>& fields)
 {
@@ -197,6 +215,9 @@ std::ostream& operator<<(std::ostream& os, const VcfHeader& header)
     for (const auto& format : header.structured_fields_) {
         os << "##" << format.first << "=" << format.second << std::endl;
     }
+    
+    static const std::vector<std::string> columns {"CHROM", "POS", "ID", "REF", "ALT", "QUAL", "FILTER", "INFO"};
+    
     
     return os;
 }

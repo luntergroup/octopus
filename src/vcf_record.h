@@ -17,6 +17,8 @@
 #include <ostream>
 #include <utility> // std::forward
 
+// TODO: consider using #include <boost/container/small_vector.hpp> for INFO and genotype fields
+
 class VcfRecord
 {
 public:
@@ -27,6 +29,7 @@ public:
     using QualityType  = std::uint_fast8_t;
     using SampleIdType = std::string;
     using KeyType      = std::string;
+    using ValueType    = std::string;
     
     VcfRecord()  = default;
     
@@ -60,7 +63,7 @@ public:
     const std::vector<KeyType> get_filters() const noexcept;
     bool has_info(const KeyType& key) const noexcept;
     std::vector<KeyType> get_info_keys() const;
-    const std::vector<std::string>& get_info_value(const KeyType& key) const;
+    const std::vector<ValueType>& get_info_value(const KeyType& key) const;
     
     // sample related functions
     bool has_format(const KeyType& key) const noexcept;
@@ -77,7 +80,7 @@ public:
     bool has_ref_allele(const SampleIdType& sample) const;
     bool has_alt_allele(const SampleIdType& sample) const;
     
-    const std::vector<std::string>& get_sample_value(const SampleIdType& sample, const KeyType& key) const;
+    const std::vector<ValueType>& get_sample_value(const SampleIdType& sample, const KeyType& key) const;
     
     friend std::ostream& operator<<(std::ostream& os, const VcfRecord& record);
     
@@ -92,12 +95,12 @@ private:
     std::vector<SequenceType> alt_alleles_;
     QualityType quality_;
     std::vector<KeyType> filters_;
-    std::unordered_map<KeyType, std::vector<std::string>> info_;
+    std::unordered_map<KeyType, std::vector<ValueType>> info_;
     
     // optional fields
     std::vector<KeyType> format_;
     std::unordered_map<SampleIdType, Genotype> genotypes_;
-    std::unordered_map<SampleIdType, std::unordered_map<KeyType, std::vector<std::string>>> samples_;
+    std::unordered_map<SampleIdType, std::unordered_map<KeyType, std::vector<ValueType>>> samples_;
     
     std::string get_allele_number(const SequenceType& allele) const;
     
@@ -166,6 +169,7 @@ public:
     using QualityType  = VcfRecord::QualityType;
     using SampleIdType = VcfRecord::SampleIdType;
     using KeyType      = VcfRecord::KeyType;
+    using ValueType    = VcfRecord::ValueType;
     
     Builder() = default;
     
@@ -177,11 +181,11 @@ public:
     Builder& set_alt_alleles(const std::vector<SequenceType>& alt_alleles);
     Builder& set_quality(QualityType quality);
     Builder& set_filters(const std::vector<KeyType>& filters);
-    Builder& add_info(const KeyType& key, const std::vector<std::string>& values);
+    Builder& add_info(const KeyType& key, const std::vector<ValueType>& values);
     Builder& set_format(const std::vector<KeyType>& format);
     Builder& add_genotype(const SampleIdType& sample, const std::vector<SequenceType>& alleles, bool is_phased);
     Builder& add_genotype(const SampleIdType& sample, const std::vector<unsigned>& alleles, bool is_phased);
-    Builder& add_genotype_field(const SampleIdType& sample, const KeyType& key, const std::vector<std::string>& values);
+    Builder& add_genotype_field(const SampleIdType& sample, const KeyType& key, const std::vector<ValueType>& values);
     
     VcfRecord build() const;
     VcfRecord build_once() noexcept;
@@ -194,10 +198,10 @@ private:
     std::vector<SequenceType> alt_alleles_ = {"."};
     QualityType quality_ = 0;
     std::vector<KeyType> filters_ = {"PASS"};
-    std::unordered_map<KeyType, std::vector<std::string>> info_ = {};
+    std::unordered_map<KeyType, std::vector<ValueType>> info_ = {};
     std::vector<KeyType> format_ = {};
     std::unordered_map<SampleIdType, Genotype> genotypes_ = {};
-    std::unordered_map<SampleIdType, std::unordered_map<KeyType, std::vector<std::string>>> samples_ = {};
+    std::unordered_map<SampleIdType, std::unordered_map<KeyType, std::vector<ValueType>>> samples_ = {};
 };
 
 #endif /* defined(__Octopus__vcf_record__) */

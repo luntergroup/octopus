@@ -75,7 +75,7 @@ std::vector<VcfRecord::KeyType> VcfRecord::get_info_keys() const
     return result;
 }
 
-const std::vector<std::string>& VcfRecord::get_info_value(const KeyType& key) const
+const std::vector<VcfRecord::ValueType>& VcfRecord::get_info_value(const KeyType& key) const
 {
     return info_.at(key);
 }
@@ -154,7 +154,7 @@ bool VcfRecord::has_alt_allele(const SampleIdType& sample) const
                             [this] (const auto& allele) { return allele == ref_allele_; }) != std::cend(genotype);
 }
 
-const std::vector<std::string>& VcfRecord::get_sample_value(const SampleIdType& sample, const KeyType& key) const
+const std::vector<VcfRecord::ValueType>& VcfRecord::get_sample_value(const SampleIdType& sample, const KeyType& key) const
 {
     return (key == "GT") ? genotypes_.at(sample).first : samples_.at(sample).at(key);
 }
@@ -239,7 +239,7 @@ void VcfRecord::print_other_sample_data(std::ostream& os, const SampleIdType& sa
 void VcfRecord::print_sample_data(std::ostream& os) const
 {
     if (num_samples() > 0) {
-        //print_vector(os, format_, ":");
+        print_vector(os, format_, ":");
         os << "\t";
         
         bool has_genotype {has_genotypes()};
@@ -375,7 +375,7 @@ VcfRecord::Builder& VcfRecord::Builder::set_filters(const std::vector<KeyType>& 
     return *this;
 }
 
-VcfRecord::Builder& VcfRecord::Builder::add_info(const KeyType& key, const std::vector<std::string>& values)
+VcfRecord::Builder& VcfRecord::Builder::add_info(const KeyType& key, const std::vector<ValueType>& values)
 {
     info_.emplace(key, values);
     return *this;
@@ -397,15 +397,15 @@ VcfRecord::Builder& VcfRecord::Builder::add_genotype(const SampleIdType& sample,
 {
     std::vector<SequenceType> a {};
     a.reserve(alleles.size());
-    std::transform(alleles.cbegin(), alleles.cend(), std::back_inserter(a), [this] (unsigned allele) {
-        return (allele == 0) ? ref_allele_ : alt_alleles_[allele - 1];
-    });
+    std::transform(alleles.cbegin(), alleles.cend(), std::back_inserter(a),
+                   [this] (unsigned allele) { return (allele == 0) ? ref_allele_ : alt_alleles_[allele - 1]; });
     
     genotypes_.emplace(sample, std::make_pair(a, is_phased));
     return *this;
 }
 
-VcfRecord::Builder& VcfRecord::Builder::add_genotype_field(const SampleIdType& sample, const KeyType& key, const std::vector<std::string>& values)
+VcfRecord::Builder& VcfRecord::Builder::add_genotype_field(const SampleIdType& sample, const KeyType& key,
+                                                           const std::vector<ValueType>& values)
 {
     samples_[sample].emplace(key, values);
     return *this;

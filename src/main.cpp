@@ -119,15 +119,13 @@ int main(int argc, const char **argv)
     auto header  = reader.fetch_header();
     auto records = reader.fetch_records(region);
     
-    cout << records[0] << endl;
+    auto val1 = get_typed_format_values(header, records[0], "NA06985", "GT").front();
+    auto val2 = get_typed_format_values(header, records[1], "NA06985", "GT").front();
     
-    auto untyped_val1 = records[0].get_info_value("DP")[0];
-    auto untyped_val2 = records[1].get_info_value("DP")[0];
+    cout << val1.type_name() << endl;
+    cout << val2.type_name() << endl;
     
-    auto val1 = get_typed_info_value(header, "DP", untyped_val1);
-    auto val2 = get_typed_info_value(header, "DP", untyped_val1);
-    
-    cout << val1 << " " << val2 << " " << (val1 + val2) << endl;
+    cout << val1 << " " << val2 << " " << (val1 * val2 - val2) << endl;
     
 //    auto options = Octopus::parse_options(argc, argv);
 //    

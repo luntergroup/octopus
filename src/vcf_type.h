@@ -15,8 +15,6 @@
 #include <boost/variant.hpp>
 #include <boost/type_index.hpp>
 
-#include <iostream> // TEST
-
 namespace detail
 {
     using VcfTypeBase = boost::variant<int, double, char, std::string, bool>;
@@ -92,7 +90,7 @@ namespace detail
     public:
         VcfTypeError(std::string op, std::string type1, std::string type2)
         :
-        runtime_error {"Invalid operation on types"},
+        runtime_error {"invalid operation on types"},
         op_ {std::move(op)},
         type1_ {std::move(type1)},
         type2_ {std::move(type2)}
@@ -100,7 +98,7 @@ namespace detail
         
         const char* what() const noexcept
         {
-            return (std::string{runtime_error::what()} + ": operation=" + op_ + " lhs= " + type1_ + " rhs=" + type2_).c_str();
+            return (std::string {runtime_error::what()} + ": operation=" + op_ + " lhs= " + type1_ + " rhs=" + type2_).c_str();
         }
         
     private:
@@ -321,7 +319,7 @@ public:
     VcfType& operator*=(const VcfType& rhs);
     VcfType& operator/=(const VcfType& rhs);
     
-    std::string name() const;
+    std::string type_name() const;
 };
 
 VcfType operator+(VcfType lhs, const VcfType& rhs);
@@ -334,15 +332,6 @@ bool operator<(const VcfType& lhs, const VcfType& rhs);
 bool operator>(const VcfType& lhs, const VcfType& rhs);
 bool operator<=(const VcfType& lhs, const VcfType& rhs);
 bool operator>=(const VcfType& lhs, const VcfType& rhs);
-
-namespace detail
-{
-    template <typename T>
-    VcfType make_vcf_type(T&& val)
-    {
-        return VcfType(std::forward<T>(val));
-    }
-}
 
 VcfType make_vcf_type(const std::string& type, const std::string& value);
 

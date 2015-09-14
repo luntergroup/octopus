@@ -104,8 +104,8 @@ std::vector<VcfType> get_typed_values(const VcfHeader& header, const VcfHeader::
 std::vector<VcfType> get_typed_info_values(const VcfHeader& header, const VcfHeader::KeyType& field_key,
                                            const std::vector<VcfHeader::ValueType>& values);
 
-class VcfRecord;
-unsigned get_field_cardinality(const VcfHeader::KeyType& key, const VcfRecord& record);
+std::vector<VcfType> get_typed_format_values(const VcfHeader& header, const VcfHeader::KeyType& field_key,
+                                             const std::vector<VcfHeader::ValueType>& values);
 
 std::ostream& operator<<(std::ostream& os, const VcfHeader& header);
 

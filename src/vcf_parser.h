@@ -10,7 +10,7 @@
 #define __Octopus__vcf_parser__
 
 #include <vector>
-#include <cstddef> // std::size_t
+#include <cstddef> // size_t
 #include <fstream>
 #include <boost/filesystem/path.hpp>
 
@@ -34,8 +34,8 @@ public:
     VcfParser& operator=(VcfParser&&)      = default;
     
     VcfHeader fetch_header() override;
-    std::size_t num_records() override;
-    std::size_t num_records(const GenomicRegion& region) override;
+    size_t num_records() override;
+    size_t num_records(const GenomicRegion& region) override;
     std::vector<VcfRecord> fetch_records(Unpack level = Unpack::All) override;
     std::vector<VcfRecord> fetch_records(const GenomicRegion& region, Unpack level = Unpack::All) override;
     

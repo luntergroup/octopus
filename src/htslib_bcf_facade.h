@@ -44,8 +44,8 @@ public:
     HtslibBcfFacade& operator=(HtslibBcfFacade&&)      = default;
     
     VcfHeader fetch_header() override;
-    std::size_t num_records() override;
-    std::size_t num_records(const GenomicRegion& region) override;
+    size_t num_records() override;
+    size_t num_records(const GenomicRegion& region) override;
     std::vector<VcfRecord> fetch_records(Unpack level = Unpack::All) override;
     std::vector<VcfRecord> fetch_records(const GenomicRegion& region, Unpack level = Unpack::All) override;
     
@@ -62,8 +62,8 @@ private:
     
     std::vector<std::string> samples_;
     
-    std::size_t num_records(HtsBcfSrPtr& sr) const;
-    std::vector<VcfRecord> fetch_records(HtsBcfSrPtr& sr, Unpack level, std::size_t num_records = 0);
+    size_t num_records(HtsBcfSrPtr& sr) const;
+    std::vector<VcfRecord> fetch_records(HtsBcfSrPtr& sr, Unpack level, size_t num_records = 0);
 };
 
 #endif /* defined(__Octopus__htslib_bcf_facade__) */

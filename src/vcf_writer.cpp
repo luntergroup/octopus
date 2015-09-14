@@ -41,6 +41,6 @@ void VcfWriter::write(const VcfRecord& record)
     if (is_header_written_) {
         writer_.write_record(record);
     } else {
-        throw std::runtime_error {"Cannot write VCF record as header has not beein written"};
+        throw std::runtime_error {"cannot write VCF record as header has not beein written"};
     }
 }

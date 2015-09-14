@@ -36,7 +36,7 @@ VcfType& VcfType::operator/=(const VcfType& rhs)
     return *this;
 }
 
-std::string VcfType::name() const
+std::string VcfType::type_name() const
 {
     return boost::apply_visitor(detail::reflect(), *this);
 }
@@ -116,7 +116,7 @@ class BadVcfType : std::invalid_argument {
 public:
     BadVcfType(std::string type, std::string value)
     :
-    invalid_argument {"Incompatible VcfType"},
+    invalid_argument {"invalid VcfType"},
     type_ {std::move(type)},
     value_ {std::move(value)}
     {}
@@ -130,14 +130,20 @@ private:
     std::string type_, value_;
 };
 
+template <typename T>
+VcfType make_vcf_type(T&& val)
+{
+    return VcfType(std::forward<T>(val));
+}
+
 VcfType make_vcf_type(const std::string& type, const std::string& value)
 {
     static const std::unordered_map<std::string, std::function<VcfType(std::string)>> type_map {
-        {"String", [] (const auto& value) { return detail::make_vcf_type(value); }},
-        {"Integer",   [] (const auto& value) { return detail::make_vcf_type(std::stoi(value)); }},
-        {"Float",     [] (const auto& value) { return detail::make_vcf_type(std::stod(value)); }},
-        {"Character", [] (const auto& value) { return detail::make_vcf_type(value.front()); }},
-        {"Flag",      [] (const auto& value) { return detail::make_vcf_type(value == "1"); }}
+        {"String",    [] (const auto& value) { return make_vcf_type(value); }},
+        {"Integer",   [] (const auto& value) { return make_vcf_type(std::stoi(value)); }},
+        {"Float",     [] (const auto& value) { return make_vcf_type(std::stod(value)); }},
+        {"Character", [] (const auto& value) { return make_vcf_type(value.front()); }},
+        {"Flag",      [] (const auto& value) { return make_vcf_type(value == "1"); }}
     };
     
     if (type_map.count(type) == 0) throw UnknownVcfType {type};
