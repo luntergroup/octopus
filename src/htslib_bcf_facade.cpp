@@ -53,7 +53,7 @@ std::string get_hts_mode(const fs::path& file_path, const std::string& mode)
     
     auto result = "[" + mode + "]";
     
-    if (mode == "w") {
+    if (mode == "w" && file_path != "-") { // "-" is for stdout
         auto extension = file_path.extension();
         if (extension == ".bcf") {
             result += "b";
@@ -257,8 +257,6 @@ void HtslibBcfFacade::write_record(const VcfRecord& record)
     if (record.num_samples() > 0) {
         set_samples(header_.get(), r, record);
     }
-    
-    bcf_write(file_.get(), header_.get(), r);
     
     bcf_destroy(r);
 }

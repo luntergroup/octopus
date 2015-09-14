@@ -103,11 +103,10 @@
 		D4636C6A1B6919B500FEA7D2 /* vcf_writer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D4636C681B6919B500FEA7D2 /* vcf_writer.cpp */; };
 		D4636C6D1B7A24F400FEA7D2 /* vcf_parser.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D4636C6B1B7A24F400FEA7D2 /* vcf_parser.cpp */; };
 		D463C18A1AEE2EA100739A66 /* search_region_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D463C1891AEE2EA100739A66 /* search_region_tests.cpp */; };
-		D463C18D1AF137EB00739A66 /* input_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D463C18C1AF137EB00739A66 /* input_tests.cpp */; };
+		D463C18D1AF137EB00739A66 /* options_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D463C18C1AF137EB00739A66 /* options_tests.cpp */; };
 		D463C1911AF38DCF00739A66 /* haplotype_phaser_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D463C1901AF38DCE00739A66 /* haplotype_phaser_tests.cpp */; };
 		D463C1931B00FF5400739A66 /* variant_caller_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D463C1921B00FF5400739A66 /* variant_caller_tests.cpp */; };
-		D463C19D1B062F7F00739A66 /* vcf_reader_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D463C19C1B062F7F00739A66 /* vcf_reader_tests.cpp */; };
-		D463C19F1B062F9300739A66 /* vcf_writer_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D463C19E1B062F9300739A66 /* vcf_writer_tests.cpp */; };
+		D463C19D1B062F7F00739A66 /* vcf_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D463C19C1B062F7F00739A66 /* vcf_tests.cpp */; };
 		D463C1A21B0A160000739A66 /* allele.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D463C1A11B0A160000739A66 /* allele.cpp */; };
 		D463C1A41B0A174B00739A66 /* variant.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D463C1A31B0A174B00739A66 /* variant.cpp */; };
 		D4907F4B1A88E20E00639203 /* variant_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D4907F4A1A88E20E00639203 /* variant_tests.cpp */; };
@@ -306,15 +305,14 @@
 		D463C1881AEE2E1900739A66 /* search_regions.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = search_regions.h; sourceTree = "<group>"; };
 		D463C1891AEE2EA100739A66 /* search_region_tests.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = search_region_tests.cpp; sourceTree = "<group>"; };
 		D463C18B1AEF7D2200739A66 /* map_utils.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = map_utils.h; sourceTree = "<group>"; };
-		D463C18C1AF137EB00739A66 /* input_tests.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = input_tests.cpp; sourceTree = "<group>"; };
+		D463C18C1AF137EB00739A66 /* options_tests.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = options_tests.cpp; sourceTree = "<group>"; };
 		D463C18E1AF13ECD00739A66 /* test_regions.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = test_regions.txt; sourceTree = "<group>"; };
 		D463C18F1AF13EDB00739A66 /* test_regions.bed */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = test_regions.bed; sourceTree = "<group>"; };
 		D463C1901AF38DCE00739A66 /* haplotype_phaser_tests.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = haplotype_phaser_tests.cpp; sourceTree = "<group>"; };
 		D463C1921B00FF5400739A66 /* variant_caller_tests.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = variant_caller_tests.cpp; sourceTree = "<group>"; };
 		D463C1941B02108F00739A66 /* bayesian_genotype_model.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = bayesian_genotype_model.h; sourceTree = "<group>"; };
 		D463C1951B0229A000739A66 /* common.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = common.h; sourceTree = "<group>"; };
-		D463C19C1B062F7F00739A66 /* vcf_reader_tests.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = vcf_reader_tests.cpp; sourceTree = "<group>"; };
-		D463C19E1B062F9300739A66 /* vcf_writer_tests.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = vcf_writer_tests.cpp; sourceTree = "<group>"; };
+		D463C19C1B062F7F00739A66 /* vcf_tests.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = vcf_tests.cpp; sourceTree = "<group>"; };
 		D463C1A01B09D65900739A66 /* variant_call.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = variant_call.h; sourceTree = "<group>"; };
 		D463C1A11B0A160000739A66 /* allele.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = allele.cpp; sourceTree = "<group>"; };
 		D463C1A31B0A174B00739A66 /* variant.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = variant.cpp; sourceTree = "<group>"; };
@@ -403,9 +401,8 @@
 				D463C1891AEE2EA100739A66 /* search_region_tests.cpp */,
 				D463C1901AF38DCE00739A66 /* haplotype_phaser_tests.cpp */,
 				D463C1921B00FF5400739A66 /* variant_caller_tests.cpp */,
-				D463C19C1B062F7F00739A66 /* vcf_reader_tests.cpp */,
-				D463C19E1B062F9300739A66 /* vcf_writer_tests.cpp */,
-				D463C18C1AF137EB00739A66 /* input_tests.cpp */,
+				D463C19C1B062F7F00739A66 /* vcf_tests.cpp */,
+				D463C18C1AF137EB00739A66 /* options_tests.cpp */,
 				CA14727B1AACED6E005FDCD1 /* octopus_tests.cpp */,
 			);
 			name = components;
@@ -855,7 +852,6 @@
 				D463C1911AF38DCF00739A66 /* haplotype_phaser_tests.cpp in Sources */,
 				CAE3E29D1AA139A000C01B2C /* program_options.cpp in Sources */,
 				CA14727C1AACED6E005FDCD1 /* octopus_tests.cpp in Sources */,
-				D463C19F1B062F9300739A66 /* vcf_writer_tests.cpp in Sources */,
 				D42061131ACC3D2B00D11553 /* variational_bayes_genotype_model_tests.cpp in Sources */,
 				CAE3E2CB1AAB42C900C01B2C /* read_filter_tests.cpp in Sources */,
 				CA28EBF51AABB80E009F8622 /* read_filter_benchmarks.cpp in Sources */,
@@ -876,7 +872,7 @@
 				D435E9F91B2B345700945EC7 /* Makefile in Sources */,
 				CA0B467D1AE8EFDA00158BBA /* variational_bayes_genotype_model_benchmarks.cpp in Sources */,
 				D4BEA9FE1B861BE200E53CFD /* utils.c in Sources */,
-				D463C19D1B062F7F00739A66 /* vcf_reader_tests.cpp in Sources */,
+				D463C19D1B062F7F00739A66 /* vcf_tests.cpp in Sources */,
 				CA0B46821AEA210300158BBA /* 1000G_test9.cpp in Sources */,
 				CAFA19661ABF84AC00F953D9 /* haplotype_tree_tests.cpp in Sources */,
 				D4636C6D1B7A24F400FEA7D2 /* vcf_parser.cpp in Sources */,
@@ -900,7 +896,7 @@
 				CA0A329D1B863B5A001BE30F /* tandem.cpp in Sources */,
 				D4BEA9FB1B861BE200E53CFD /* divsufsort.c in Sources */,
 				CA4551661AEB092D00FDAAE8 /* 1000G_test13.cpp in Sources */,
-				D463C18D1AF137EB00739A66 /* input_tests.cpp in Sources */,
+				D463C18D1AF137EB00739A66 /* options_tests.cpp in Sources */,
 				D463C18A1AEE2EA100739A66 /* search_region_tests.cpp in Sources */,
 				CAE3E2A81AA25F7D00C01B2C /* alignment_candidate_variant_generator.cpp in Sources */,
 				CAE3E2B31AA3342B00C01B2C /* assembler_candidate_variant_generator.cpp in Sources */,

@@ -23,6 +23,7 @@
 #include "read_manager.h"
 #include "mappable_algorithms.h"
 #include "string_utils.h"
+#include "vcf_writer.h"
 
 namespace fs = boost::filesystem;
 
@@ -332,5 +333,10 @@ namespace Octopus
         auto max_open_files = options.at("max-open-files").as<unsigned>();
         
         return ReadManager {std::move(read_paths), max_open_files};
+    }
+    
+    VcfWriter get_output_vcf(const po::variables_map& options)
+    {
+        return VcfWriter {options.at("output").as<std::string>()};
     }
 } // end namespace Octopus

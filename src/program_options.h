@@ -19,6 +19,7 @@
 class ReferenceGenome;
 class GenomicRegion;
 class ReadManager;
+class VcfWriter;
 
 namespace po = boost::program_options;
 namespace fs = boost::filesystem;
@@ -36,6 +37,8 @@ namespace Octopus
     std::vector<fs::path> get_read_paths(const po::variables_map& options);
     
     ReadManager get_read_manager(const po::variables_map& options);
+    
+    VcfWriter get_output_vcf(const po::variables_map& options);
     
 } // end namespace Octopus
 

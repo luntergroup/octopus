@@ -15,7 +15,7 @@
 #include <iterator>  // std::cbegin etc
 #include <initializer_list>
 #include <algorithm> // std::std::sort, std::inplace_merge, std::all_of, std::binary_search,
-                     // std::equal_range, std::unique_copy, std::equal
+                     // std::equal_range, std::unique_copy, std::equal, std::fill_n
 #include <type_traits> // std::enable_if_t, std::is_base_of
 #include <boost/functional/hash.hpp> // boost::hash_range
 #include <boost/math/special_functions/binomial.hpp>
@@ -23,6 +23,8 @@
 #include "haplotype.h"
 #include "equitable.h"
 #include "mappable.h"
+
+#include <iostream> // TEST
 
 // Genotype should only store Haplotype and Alleles
 template <typename MappableType, typename = std::enable_if_t<std::is_base_of<Mappable<MappableType>, MappableType>::value>>
@@ -36,6 +38,7 @@ public:
     
     Genotype() = default;
     explicit Genotype(unsigned ploidy);
+    explicit Genotype(unsigned ploidy, const MappableType& init);
     explicit Genotype(std::initializer_list<MappableType> elements);
     ~Genotype() = default;
     
@@ -70,6 +73,12 @@ elements_ {}
 {
     elements_.reserve(ploidy);
 }
+
+template <typename MappableType>
+Genotype<MappableType>::Genotype(unsigned ploidy, const MappableType& init)
+:
+elements_ {ploidy, init}
+{}
 
 template <typename MappableType>
 Genotype<MappableType>::Genotype(std::initializer_list<MappableType> elements)
@@ -203,7 +212,7 @@ namespace detail
         Genotype<MappableType> result {static_cast<unsigned>(element_indicies.size())};
         
         for (auto i : element_indicies) {
-            result.emplace(elements.at(i));
+            result.emplace(elements[i]);
         }
         
         return result;
@@ -214,7 +223,13 @@ namespace detail
 template <typename MappableType>
 std::vector<Genotype<MappableType>> generate_all_genotypes(const std::vector<MappableType>& elements, unsigned ploidy)
 {
+    if (elements.empty()) return {};
+    
     auto num_elements = static_cast<unsigned>(elements.size());
+    
+    if (num_elements == 1) {
+        return {Genotype<MappableType> {ploidy, elements.front()}}; // just an optimization
+    }
     
     std::vector<Genotype<MappableType>> result {};
     result.reserve(num_genotypes(num_elements, ploidy));
@@ -225,15 +240,13 @@ std::vector<Genotype<MappableType>> generate_all_genotypes(const std::vector<Map
     
     while (true) {
         if (element_indicies[i] == num_elements) {
-            do { ++i; } while (element_indicies[i] == num_elements - 1);
+            do { ++i; } while (i < ploidy && element_indicies[i] == num_elements - 1);
             
             if (i == ploidy) return result;
             
             ++element_indicies[i];
             
-            for (unsigned j {0}; j <= i; ++j) {
-                element_indicies[j] = element_indicies[i];
-            }
+            std::fill_n(std::begin(element_indicies), i + 1, element_indicies[i]);
             
             i = 0;
         }

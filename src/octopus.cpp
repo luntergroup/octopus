@@ -29,24 +29,19 @@ namespace Octopus
         cout << "starting Octopus" << endl;
         
         //auto num_system_threads = std::thread::hardware_concurrency(); // just a hint
+        //if (num_system_threads == 0) num_system_threads = 1;
         
         //auto max_threads  = Octopus::get_num_threads(options);
         
         auto reference    = Octopus::get_reference(options);
         auto read_manager = Octopus::get_read_manager(options);
         auto regions      = Octopus::get_search_regions(options, reference);
+        auto vcf          = Octopus::get_output_vcf(options);
         
         auto samples = read_manager.get_sample_ids();
         
     }
     
-    namespace detail
-    {
-        void process_contig(ReferenceGenome& reference)
-        {
-            
-        }
-    }
 } // end namespace Octopus
 
 

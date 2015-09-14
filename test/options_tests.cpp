@@ -1,5 +1,5 @@
 //
-//  input_tests.cpp
+//  options_tests.cpp
 //  Octopus
 //
 //  Created by Daniel Cooke on 29/04/2015.

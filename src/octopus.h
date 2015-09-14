@@ -22,10 +22,6 @@ namespace Octopus
 {
     void run_octopus(po::variables_map& options);
     
-    namespace detail
-    {
-        void process_contig(ReferenceGenome& reference);
-    }
 } // end namespace Octopus
 
 #endif /* defined(__Octopus__octopus__) */

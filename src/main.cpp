@@ -10,11 +10,11 @@
 //#define BOOST_TEST_MODULE Main
 //#include <boost/test/unit_test.hpp>
 
-//#include <iostream>
-//#include <cstdlib>
-//
-//#include "program_options.h"
-//#include "octopus.h"
+#include <iostream>
+#include <cstdlib>
+
+#include "program_options.h"
+#include "octopus.h"
 
 #include <iostream>
 #include <string>
@@ -40,22 +40,6 @@
 using std::cout;
 using std::endl;
 
-void test_map()
-{
-    auto reference = make_reference(human_reference_fasta);
-    ReadManager read_manager {human_1000g_bam1, human_1000g_bam2, human_1000g_bam3};
-    auto reads = read_manager.fetch_reads(parse_region("21", reference));
-    
-    auto start = std::chrono::system_clock::now();
-    
-    auto read_map = make_mappable_map(std::move(reads));
-    
-    auto end = std::chrono::system_clock::now();
-    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
-    
-    cout << duration << endl;
-}
-
 void test()
 {
     auto reference = make_reference(human_reference_fasta);
@@ -68,73 +52,57 @@ void test()
     CandidateVariantGenerator generator {};
     generator.register_generator(std::make_unique<AlignmentCandidateVariantGenerator>(reference, 10));
     
-    auto reads = read_manager.fetch_reads(region);
+    auto reads = make_mappable_map(read_manager.fetch_reads(region));
     
-//    MappableMap<std::string, AlignedRead> read_map {};
-//    for (auto r : reads) {
-//        read_map.emplace(r.first, MappableSet<AlignedRead> {r.second.cbegin(), r.second.cend()});
-//        generator.add_reads(r.second.cbegin(), r.second.cend());
-//    }
+    auto candidates = generator.get_candidates(region);
     
-    auto read_map = make_mappable_map(std::move(reads));
+    cout << "there are " << candidates.size() << " candidates" << endl;
     
-//    auto candidates = generator.get_candidates(region);
-//    
-//    cout << "there are " << candidates.size() << " candidates" << endl;
-//    
-//    Octopus::HaplotypeTree tree {reference};
-//    
-//    for (const auto& v : candidates) {
-//        tree.extend(v.get_reference_allele());
-//        tree.extend(v.get_alternative_allele());
-//    }
-//    
-//    auto haplotypes = tree.get_haplotypes(region);
-//    
-//    cout << "there are " << haplotypes.size() << " haplotypes" << endl;
-//    
-//    auto genotype_model = std::make_unique<Octopus::PopulationGenotypeModel>(1, 2);
-//    
-//    auto genotype_posteriors = genotype_model->evaluate(haplotypes, read_map);
-//    
-//    auto sample = read_manager.get_sample_ids()[2];
-//    auto it = std::max_element(genotype_posteriors[sample].cbegin(), genotype_posteriors[sample].cend(), [] (const auto& lhs, const auto& rhs) { return lhs.second < rhs.second; });
-//    
-//    it->first.at(0).print_explicit_alleles();
-//    cout << "\n";
-//    it->first.at(1).print_explicit_alleles();
-//    cout << "\n" << it->second << endl;
+    Octopus::HaplotypeTree tree {reference};
+    
+    for (const auto& v : candidates) {
+        tree.extend(v.get_reference_allele());
+        tree.extend(v.get_alternative_allele());
+    }
+    
+    auto haplotypes = tree.get_haplotypes(region);
+    
+    cout << "there are " << haplotypes.size() << " haplotypes" << endl;
+    
+    auto genotype_model = std::make_unique<Octopus::PopulationGenotypeModel>(1, 2);
+    
+    auto genotype_posteriors = genotype_model->evaluate(haplotypes, reads);
+    
+    auto sample = read_manager.get_sample_ids()[2];
+    auto it = std::max_element(genotype_posteriors[sample].cbegin(), genotype_posteriors[sample].cend(), [] (const auto& lhs, const auto& rhs) { return lhs.second < rhs.second; });
+    
+    it->first.at(0).print_explicit_alleles();
+    cout << "\n";
+    it->first.at(1).print_explicit_alleles();
+    cout << "\n" << it->second << endl;
     
     //cout << genotype_posteriors[sample].cbegin()->second << endl;
 }
 
 int main(int argc, const char **argv)
 {
-    //test();
+    test();
+    exit(0);
     
-    VcfReader reader {sample_vcf};
-    
-    GenomicRegion region {"X", 10000000, 11000000};
-    
-    auto header  = reader.fetch_header();
-    auto records = reader.fetch_records(region);
-    
-    auto val1 = get_typed_format_values(header, records[0], "NA06985", "GT").front();
-    auto val2 = get_typed_format_values(header, records[1], "NA06985", "GT").front();
-    
-    cout << val1.type_name() << endl;
-    cout << val2.type_name() << endl;
-    
-    cout << val1 << " " << val2 << " " << (val1 * val2 - val2) << endl;
-    
-//    auto options = Octopus::parse_options(argc, argv);
-//    
-//    if (options.second) {
-//        Octopus::run_octopus(options.first);
-//        std::cout << "finished running Octopus" << std::endl;
-//    } else {
-//        std::cout << "did not run Octopus" << std::endl;
-//    }
+    try {
+        auto options = Octopus::parse_options(argc, argv);
+        
+        if (options.second) {
+            Octopus::run_octopus(options.first);
+            std::cout << "finished running Octopus" << std::endl;
+        } else {
+            std::cout << "did not run Octopus" << std::endl;
+        }
+        
+    } catch (...) {
+        std::cerr << "Encountered unknown error. Quiting now" << std::endl;
+        return EXIT_FAILURE;
+    }
     
     return EXIT_SUCCESS;
 }

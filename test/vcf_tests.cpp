@@ -1,5 +1,5 @@
 //
-//  vcf_reader_tests.cpp
+//  vcf_tests.cpp
 //  Octopus
 //
 //  Created by Daniel Cooke on 15/05/2015.
@@ -16,9 +16,7 @@
 #include "test_common.h"
 #include "genomic_region.h"
 #include "variant.h"
-#include "vcf_reader.h"
-#include "vcf_header.h"
-#include "vcf_record.h"
+#include "vcf.h"
 
 using std::cout;
 using std::endl;
@@ -47,3 +45,26 @@ BOOST_AUTO_TEST_CASE(can_use_vcf_types)
     auto v5 = get_typed_info_value(header, "AA", "TGCA");
     auto v6 = get_typed_info_value(header, "SOMATIC", "0");
 }
+
+//BOOST_AUTO_TEST_CASE(can_write_vcf_files)
+//{
+//    VcfWriter writer {sample_vcf};
+//    
+//    auto header  = VcfHeader::Builder().add_basic_field("TEST", "TEST").build_once();
+//    auto record  = VcfRecord::Builder().set_chromosome("TEST").set_id("TEST").set_position(0).set_quality(60).set_ref_allele("A").set_alt_allele("C").build_once();
+//    
+//    writer.write(header);
+//    writer.write(record);
+//    
+//}
+
+//BOOST_AUTO_TEST_CASE(can_write_vcf_to_stdout)
+//{
+//    VcfWriter writer {"-"};
+//    
+//    auto header  = VcfHeader::Builder().add_basic_field("TEST", "TEST").build_once();
+//    auto record  = VcfRecord::Builder().set_chromosome("TEST").set_id("TEST").set_position(0).set_quality(60).set_ref_allele("A").set_alt_allele("C").build_once();
+//    
+//    writer.write(header);
+//    writer.write(record);
+//}

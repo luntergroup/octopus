@@ -194,6 +194,45 @@ BOOST_AUTO_TEST_CASE(Genotypes_are_not_influenced_by_haplotype_entry_order)
     BOOST_CHECK(std::hash<Genotype<Haplotype>>()(g1) == std::hash<Genotype<Haplotype>>()(g2));
 }
 
+BOOST_AUTO_TEST_CASE(generate_all_genotypes_works_when_num_elements_is_less_than_ploidy)
+{
+    auto human = make_reference(human_reference_fasta);
+    
+    Haplotype hap1 {human};
+    hap1.push_back(Allele {parse_region("1:1000000-1000001", human), "A"});
+    
+    Haplotype hap2 {human};
+    hap2.push_back(Allele {parse_region("1:1000000-1000001", human), "T"});
+    
+    std::vector<Haplotype> haplotypes {hap1};
+    
+    auto genotypes = generate_all_genotypes(haplotypes, 2);
+    
+    BOOST_CHECK(genotypes.size() == 1);
+    
+    genotypes = generate_all_genotypes(haplotypes, 3);
+    
+    BOOST_CHECK(genotypes.size() == 1);
+    
+    genotypes = generate_all_genotypes(haplotypes, 4);
+    
+    BOOST_CHECK(genotypes.size() == 1);
+    
+    genotypes = generate_all_genotypes(haplotypes, 5);
+    
+    BOOST_CHECK(genotypes.size() == 1);
+    
+    haplotypes.push_back(hap2);
+    
+    genotypes = generate_all_genotypes(haplotypes, 3);
+    
+    BOOST_CHECK(genotypes.size() == 4);
+    
+    genotypes = generate_all_genotypes(haplotypes, 4);
+    
+    BOOST_CHECK(genotypes.size() == 5);
+}
+
 BOOST_AUTO_TEST_CASE(generate_all_genotypes_returns_all_possible_unique_genotypes)
 {
     auto human = make_reference(human_reference_fasta);
