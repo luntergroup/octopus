@@ -15,10 +15,12 @@
 #include <boost/filesystem.hpp>
 
 #include "common.h"
+#include "read_filter.h"
 
 class ReferenceGenome;
 class GenomicRegion;
 class ReadManager;
+class CandidateVariantGenerator;
 class VcfWriter;
 
 namespace po = boost::program_options;
@@ -37,6 +39,10 @@ namespace Octopus
     std::vector<fs::path> get_read_paths(const po::variables_map& options);
     
     ReadManager get_read_manager(const po::variables_map& options);
+    
+    ReadFilter<ReadContainer::const_iterator> get_read_filter(const po::variables_map& options);
+    
+    CandidateVariantGenerator get_candidate_generator(const po::variables_map& options, ReferenceGenome& reference);
     
     VcfWriter get_output_vcf(const po::variables_map& options);
     

@@ -153,7 +153,15 @@ void ReadManager::setup()
         setup_reader_samples_and_regions();
         open_initial_files();
     } else {
-        throw std::runtime_error {"Could not open read files"};
+        std::string error {"bad read files: \n"};
+        
+        for (const auto& path : bad_paths) {
+            error += "\t* " + path.string() + ": does not exist\n";
+        }
+        
+        error.erase(--error.end()); // removes last \n
+        
+        throw std::runtime_error {error};
     }
 }
 

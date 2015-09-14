@@ -17,6 +17,7 @@
 #include <boost/graph/adjacency_list.hpp>
 
 #include "allele.h"
+#include "variant.h"
 #include "haplotype.h"
 
 class GenomicRegion;
@@ -78,7 +79,34 @@ private:
     LeafIterator find_equal_haplotype_leaf(LeafIterator first, LeafIterator last, const Haplotype& haplotype) const;
     std::pair<Vertex, bool> prune_branch(Vertex leaf, const GenomicRegion& region);
 };
-
+    
+    namespace detail
+    {
+        template <typename Container>
+        void extend_tree(const Container& container, HaplotypeTree& tree, Allele)
+        {
+            for (const auto& allele : container) {
+                tree.extend(allele);
+            }
+        }
+        
+        template <typename Container>
+        void extend_tree(const Container& container, HaplotypeTree& tree, Variant)
+        {
+            for (const auto& variant : container) {
+                tree.extend(variant.get_reference_allele());
+                tree.extend(variant.get_alternative_allele());
+            }
+        }
+        
+    } // end namespace detail
+    
+    template <typename Container>
+    void extend_tree(const Container& container, HaplotypeTree& tree)
+    {
+        detail::extend_tree(container, tree, typename Container::value_type {});
+    }
+    
 } // end namespace Octopus
 
 #endif /* defined(__Octopus__haplotype_tree__) */

@@ -14,7 +14,9 @@
 #include <unordered_map>
 
 #include "genomic_region.h"
+#include "mappable_set.h"
 #include "mappable_map.h"
+#include "aligned_read.h"
 
 namespace Octopus
 {
@@ -22,6 +24,8 @@ namespace Octopus
     using SampleIdType    = std::string;
     
     using SearchRegions = MappableMap<GenomicRegion::StringType, GenomicRegion>;
+    
+    using ReadContainer = MappableSet<AlignedRead>;
 }
 
 #endif

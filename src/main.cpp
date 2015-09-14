@@ -12,6 +12,7 @@
 
 #include <iostream>
 #include <cstdlib>
+#include <stdexcept>
 
 #include "program_options.h"
 #include "octopus.h"
@@ -37,60 +38,16 @@
 
 #include "sequence_utils.h"
 
+#include "mock_options.h"
+
 using std::cout;
 using std::endl;
 
-void test()
-{
-    auto reference = make_reference(human_reference_fasta);
-    
-    ReadManager read_manager {human_1000g_bam1, human_1000g_bam2, human_1000g_bam3};
-    
-    //auto region = parse_region("2:104142870-104142884", reference);
-    auto region = parse_region("11:67503118-67503253", reference);
-    
-    CandidateVariantGenerator generator {};
-    generator.register_generator(std::make_unique<AlignmentCandidateVariantGenerator>(reference, 10));
-    
-    auto reads = make_mappable_map(read_manager.fetch_reads(region));
-    
-    auto candidates = generator.get_candidates(region);
-    
-    cout << "there are " << candidates.size() << " candidates" << endl;
-    
-    Octopus::HaplotypeTree tree {reference};
-    
-    for (const auto& v : candidates) {
-        tree.extend(v.get_reference_allele());
-        tree.extend(v.get_alternative_allele());
-    }
-    
-    auto haplotypes = tree.get_haplotypes(region);
-    
-    cout << "there are " << haplotypes.size() << " haplotypes" << endl;
-    
-    auto genotype_model = std::make_unique<Octopus::PopulationGenotypeModel>(1, 2);
-    
-    auto genotype_posteriors = genotype_model->evaluate(haplotypes, reads);
-    
-    auto sample = read_manager.get_sample_ids()[2];
-    auto it = std::max_element(genotype_posteriors[sample].cbegin(), genotype_posteriors[sample].cend(), [] (const auto& lhs, const auto& rhs) { return lhs.second < rhs.second; });
-    
-    it->first.at(0).print_explicit_alleles();
-    cout << "\n";
-    it->first.at(1).print_explicit_alleles();
-    cout << "\n" << it->second << endl;
-    
-    //cout << genotype_posteriors[sample].cbegin()->second << endl;
-}
-
 int main(int argc, const char **argv)
 {
-    test();
-    exit(0);
-    
     try {
-        auto options = Octopus::parse_options(argc, argv);
+        //auto options = Octopus::parse_options(argc, argv);
+        auto options = std::make_pair(get_basic_mock_options(), true);
         
         if (options.second) {
             Octopus::run_octopus(options.first);
@@ -99,8 +56,11 @@ int main(int argc, const char **argv)
             std::cout << "did not run Octopus" << std::endl;
         }
         
+    } catch (std::runtime_error& e) {
+        std::cerr << "Error: " << e.what() << std::endl;
+        return EXIT_FAILURE;
     } catch (...) {
-        std::cerr << "Encountered unknown error. Quiting now" << std::endl;
+        std::cerr << "Error: encountered unknown error. Quiting now" << std::endl;
         return EXIT_FAILURE;
     }
     

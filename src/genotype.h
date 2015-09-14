@@ -24,8 +24,6 @@
 #include "equitable.h"
 #include "mappable.h"
 
-#include <iostream> // TEST
-
 // Genotype should only store Haplotype and Alleles
 template <typename MappableType, typename = std::enable_if_t<std::is_base_of<Mappable<MappableType>, MappableType>::value>>
 class Genotype;

@@ -31,12 +31,12 @@ inline bool is_good_mapping_quality(const AlignedRead& read,
 
 inline bool has_sufficient_good_quality_bases(const AlignedRead& read,
                                               AlignedRead::QualityType min_base_quality,
-                                              unsigned min_num_good_quality_bases)
+                                              unsigned min_good_bases)
 {
     const auto& qualities = read.get_qualities();
     return std::count_if(std::cbegin(qualities), std::cend(qualities), [min_base_quality] (const auto& qual) {
         return qual >= min_base_quality;
-    }) >= min_num_good_quality_bases;
+    }) >= min_good_bases;
 }
 
 inline bool is_mapped(const AlignedRead& read)
