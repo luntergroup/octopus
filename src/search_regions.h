@@ -89,8 +89,8 @@ template <typename SampleReadMap, typename Container>
 GenomicRegion advance_region(const GenomicRegion& previous_region,
                              const SampleReadMap& reads, const Container& variants,
                              unsigned max_included, unsigned max_indicators,
-                             IndicatorLimit indicator_limit=IndicatorLimit::SharedWithPreviousRegion,
-                             ExtensionLimit extension_limit=ExtensionLimit::WithinReadLengthOfFirstIncluded)
+                             IndicatorLimit indicator_limit = IndicatorLimit::SharedWithPreviousRegion,
+                             ExtensionLimit extension_limit = ExtensionLimit::WithinReadLengthOfFirstIncluded)
 {
     if (max_included > 0 && max_included <= max_indicators) {
         max_indicators = max_included - 1;

@@ -17,6 +17,7 @@
 
 #include "aligned_read.h"
 #include "read_filter.h"
+#include "read_transform.h"
 #include "context_iterators.h"
 #include "mappable_algorithms.h"
 #include "maths.h"
@@ -143,6 +144,14 @@ filter_reads(ReadMap<T, Container>&& reads, ReadFilter& read_filter)
     }
     
     return {good_read_map, bad_read_map};
+}
+
+template <typename Map>
+void transform_reads(Map& reads, ReadTransform& transformer)
+{
+    for (auto& p : reads) {
+        transformer.transform_reads(std::begin(p.second), std::end(p.second));
+    }
 }
 
 template <typename InputIterator>

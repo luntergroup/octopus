@@ -26,6 +26,7 @@ namespace Octopus
     using SearchRegions = MappableMap<GenomicRegion::StringType, GenomicRegion>;
     
     using ReadContainer = MappableSet<AlignedRead>;
+    using ReadMap       = MappableMap<std::string, AlignedRead>;
 }
 
 #endif

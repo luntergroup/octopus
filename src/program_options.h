@@ -20,6 +20,7 @@
 class ReferenceGenome;
 class GenomicRegion;
 class ReadManager;
+class ReadTransform;
 class CandidateVariantGenerator;
 class VcfWriter;
 
@@ -41,6 +42,8 @@ namespace Octopus
     ReadManager get_read_manager(const po::variables_map& options);
     
     ReadFilter<ReadContainer::const_iterator> get_read_filter(const po::variables_map& options);
+    
+    ReadTransform get_read_transformer(const po::variables_map& options);
     
     CandidateVariantGenerator get_candidate_generator(const po::variables_map& options, ReferenceGenome& reference);
     

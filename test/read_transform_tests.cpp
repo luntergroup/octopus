@@ -46,10 +46,10 @@ BOOST_AUTO_TEST_CASE(read_transform_test)
     
     BOOST_CHECK(is_back_soft_clipped(a_read.get_cigar_string()));
     
-    ReadTransform a_read_transform {};
-    a_read_transform.register_transform(trim_adapters);
-    a_read_transform.register_transform(trim_soft_clipped);
-    a_read_transform.transform_reads(some_reads.begin(), some_reads.end());
+    ReadTransform transformer {};
+    transformer.register_transform(trim_adapters);
+    transformer.register_transform(trim_soft_clipped);
+    transformer.transform_reads(some_reads.begin(), some_reads.end());
     
     BOOST_CHECK(std::all_of(a_read.get_qualities().rbegin(), a_read.get_qualities().rbegin() + 13,
                         [] (auto q) { return q == 0; }));
@@ -58,11 +58,11 @@ BOOST_AUTO_TEST_CASE(read_transform_test)
     
     some_reads = a_read_manager.fetch_reads(the_sample_id, another_region);
     
-    auto& read_with_adapter = some_reads[6];
+    //auto& read_with_adapter = some_reads[6];
     
     //std::cout << read_with_adapter << std::endl;
     
-    a_read_transform.transform_reads(some_reads.begin(), some_reads.end());
+    transformer.transform_reads(some_reads.begin(), some_reads.end());
     
     
 }

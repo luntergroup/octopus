@@ -31,6 +31,28 @@ using std::endl;
 
 BOOST_AUTO_TEST_SUITE(Components)
 
+BOOST_AUTO_TEST_CASE(can_iterate_Genotype_Haplotypes_with_range_based_for)
+{
+    auto human = make_reference(human_reference_fasta);
+    
+    Haplotype hap1 {human};
+    hap1.push_back(Allele {parse_region("1:1000000-1000001", human), "A"});
+    
+    Haplotype hap2 {human};
+    hap2.push_back(Allele {parse_region("1:1000000-1000001", human), "C"});
+    
+    Genotype<Haplotype> genotype {hap1, hap2};
+    
+    std::vector<Haplotype> r {};
+    
+    for (const auto& haplotype : genotype) {
+        r.push_back(haplotype);
+    }
+    
+    BOOST_CHECK(r.front() == hap1);
+    BOOST_CHECK(r.back() == hap2);
+}
+
 BOOST_AUTO_TEST_CASE(Genotype_can_be_tested_for_haplotype_occurence)
 {
     auto human = make_reference(human_reference_fasta);
@@ -47,10 +69,7 @@ BOOST_AUTO_TEST_CASE(Genotype_can_be_tested_for_haplotype_occurence)
     Haplotype hap4 {human};
     hap4.push_back(Allele {parse_region("1:1000000-1000001", human), "T"});
     
-    Genotype<Haplotype> g1 {};
-    g1.emplace(hap1);
-    g1.emplace(hap2);
-    g1.emplace(hap3);
+    Genotype<Haplotype> g1 {hap1, hap2, hap3};
     
     BOOST_CHECK(g1.contains(hap1));
     BOOST_CHECK(g1.contains(hap2));
@@ -62,10 +81,7 @@ BOOST_AUTO_TEST_CASE(Genotype_can_be_tested_for_haplotype_occurence)
     BOOST_CHECK(g1.num_occurences(hap3) == 1);
     BOOST_CHECK(g1.num_occurences(hap4) == 0);
     
-    Genotype<Haplotype> g2 {};
-    g2.emplace(hap1);
-    g2.emplace(hap1);
-    g2.emplace(hap2);
+    Genotype<Haplotype> g2 {hap1, hap1, hap2};
     
     BOOST_CHECK(g2.contains(hap1));
     BOOST_CHECK(g2.contains(hap2));
@@ -77,10 +93,7 @@ BOOST_AUTO_TEST_CASE(Genotype_can_be_tested_for_haplotype_occurence)
     BOOST_CHECK(g2.num_occurences(hap3) == 0);
     BOOST_CHECK(g2.num_occurences(hap4) == 0);
     
-    Genotype<Haplotype> g3 {};
-    g3.emplace(hap1);
-    g3.emplace(hap3);
-    g3.emplace(hap4);
+    Genotype<Haplotype> g3 {hap1, hap3, hap4};
     
     BOOST_CHECK(g3.contains(hap1));
     BOOST_CHECK(!g3.contains(hap2));
@@ -92,10 +105,7 @@ BOOST_AUTO_TEST_CASE(Genotype_can_be_tested_for_haplotype_occurence)
     BOOST_CHECK(g3.num_occurences(hap3) == 1);
     BOOST_CHECK(g3.num_occurences(hap4) == 1);
     
-    Genotype<Haplotype> g4 {};
-    g4.emplace(hap4);
-    g4.emplace(hap4);
-    g4.emplace(hap4);
+    Genotype<Haplotype> g4 {hap4, hap4, hap4};
     
     BOOST_CHECK(!g4.contains(hap1));
     BOOST_CHECK(!g4.contains(hap2));

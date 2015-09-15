@@ -24,6 +24,8 @@
 #include "aligned_read.h"
 #include "read_manager.h"
 #include "read_filters.h"
+#include "read_transform.h"
+#include "read_transformations.h"
 #include "candidate_generators.h"
 #include "vcf_reader.h"
 #include "vcf_writer.h"
@@ -371,6 +373,21 @@ namespace Octopus
         
         if (options.at("no-duplicates").as<bool>()) {
             result.register_filter(is_not_duplicate<ReadContainer::const_iterator>);
+        }
+        
+        return result;
+    }
+    
+    ReadTransform get_read_transformer(const po::variables_map& options)
+    {
+        ReadTransform result {};
+        
+        if (options.count("trim-soft-clipped") == 1) {
+            result.register_transform(trim_soft_clipped);
+        }
+        
+        if (options.count("trim-adapters") == 1) {
+            result.register_transform(trim_adapters);
         }
         
         return result;
