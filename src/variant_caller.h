@@ -42,7 +42,7 @@ public:
     std::vector<VcfRecord> call_variants(const GenomicRegion& region);
     
 protected:
-    using ReadMap    = Octopus::ReadMap;
+    using ReadMap = Octopus::ReadMap;
     
     ReferenceGenome& reference_;
     ReadManager& read_manager_;
@@ -55,7 +55,6 @@ private:
     
     virtual GenomicRegion get_init_region(const GenomicRegion& region) = 0;
     virtual GenomicRegion get_next_region(const GenomicRegion& current_region) = 0;
-    
     virtual std::vector<VcfRecord> call_variants(const GenomicRegion& region,
                                                  const std::vector<Variant>& candidates,
                                                  const ReadMap& reads) = 0;

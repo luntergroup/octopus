@@ -38,37 +38,37 @@ cached_sequence_ {},
 is_cached_sequence_outdated_ {true}
 {}
 
-bool Haplotype::contains(const Allele& an_allele) const
+bool Haplotype::contains(const Allele& allele) const
 {
     if (explicit_alleles_.empty() && !is_region_set_) return false;
     
-    if (::contains(get_region(), an_allele)) {
+    if (::contains(get_region(), allele)) {
         // these binary searches are just optimisations
-        if (std::binary_search(std::cbegin(explicit_alleles_), std::cend(explicit_alleles_), an_allele)) {
+        if (std::binary_search(std::cbegin(explicit_alleles_), std::cend(explicit_alleles_), allele)) {
             return true;
         } else if (std::binary_search(std::cbegin(explicit_alleles_),
-                                      std::cend(explicit_alleles_), an_allele.get_region())) {
+                                      std::cend(explicit_alleles_), allele.get_region())) {
             // If the allele is not explcitly contained but the region is then it must be a different
             // allele, unless it is an insertion, in which case we must check the sequence
-            if (empty(an_allele.get_region())) {
+            if (empty(allele.get_region())) {
                 const auto& haplotype_allele = *std::equal_range(std::cbegin(explicit_alleles_),
                                                                  std::cend(explicit_alleles_),
-                                                                 an_allele.get_region()).first;
-                return ::contains(haplotype_allele, an_allele);
+                                                                 allele.get_region()).first;
+                return ::contains(haplotype_allele, allele);
             } else {
                 return false;
             }
         }
         
         auto overlapped_range = overlap_range(std::cbegin(explicit_alleles_),
-                                              std::cend(explicit_alleles_), an_allele);
+                                              std::cend(explicit_alleles_), allele);
         if (std::distance(overlapped_range.begin(), overlapped_range.end()) == 1 &&
-            ::contains(*overlapped_range.begin(), an_allele)) {
-            return an_allele.get_sequence() ==
-                    get_subsequence(*overlapped_range.begin(), get_overlapped(*overlapped_range.begin(), an_allele));
+            ::contains(*overlapped_range.begin(), allele)) {
+            return allele.get_sequence() ==
+                    get_subsequence(*overlapped_range.begin(), get_overlapped(*overlapped_range.begin(), allele));
         }
         
-        return get_sequence(an_allele.get_region()) == an_allele.get_sequence();
+        return get_sequence(allele.get_region()) == allele.get_sequence();
     } else {
         return false;
     }

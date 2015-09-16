@@ -38,7 +38,6 @@
 //#include "genotype.h"
 //#include "haplotype_tree.h"
 //#include "read_model.h"
-//#include "variational_bayes_genotype_model.h"
 //#include "vcf_reader.h"
 //#include "vcf_writer.h"
 //#include "octopus.h"

@@ -523,4 +523,9 @@ BOOST_AUTO_TEST_CASE(can_normalise_variants)
     BOOST_CHECK(a_normalised_insertion.get_alternative_allele_sequence() == "CCAG");
 }
 
+//BOOST_AUTO_TEST_CASE(decompose_returns_all_alleles_from_given_variants)
+//{
+//    std::vector<Variant> variants {};
+//}
+
 BOOST_AUTO_TEST_SUITE_END()

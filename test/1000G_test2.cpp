@@ -29,7 +29,6 @@
 #include "genotype.h"
 #include "read_model.h"
 #include "haplotype_prior_model.h"
-#include "variational_bayes_genotype_model.h"
 #include "maths.h"
 #include "read_filter.h"
 #include "read_filters.h"

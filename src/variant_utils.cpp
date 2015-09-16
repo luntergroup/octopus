@@ -31,6 +31,25 @@ void remove_duplicates(std::vector<Variant>& variants)
     variants.erase(std::unique(std::begin(variants), std::end(variants)), variants.end());
 }
 
+std::vector<Allele> decompose(const std::vector<Variant>& variants)
+{
+    std::vector<Allele> result {};
+    result.reserve(2 * variants.size()); // max num alleles (may be less)
+    
+    if (variants.empty()) return result;
+    
+    for (const auto& variant : variants) {
+        if (result.empty() || get_region(result.back()) != get_region(variant)) {
+            result.emplace_back(variant.get_reference_allele());
+        }
+        result.emplace_back(variant.get_alternative_allele());
+    }
+    
+    result.shrink_to_fit();
+    
+    return result;
+}
+
 std::vector<Allele> get_intervening_reference_alleles(const std::vector<Variant>& the_variants,
                                                       ReferenceGenome& reference)
 {

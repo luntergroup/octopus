@@ -21,7 +21,9 @@
 class ReferenceGenome;
 class VariantFactory;
 
-void remove_duplicates(std::vector<Variant>& the_variants);
+void remove_duplicates(std::vector<Variant>& variants);
+
+std::vector<Allele> decompose(const std::vector<Variant>& variants);
 
 std::vector<Allele> get_intervening_reference_alleles(const std::vector<Variant>& variants,
                                                       ReferenceGenome& reference);

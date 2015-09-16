@@ -402,11 +402,11 @@ std::size_t count_if_shared_with_first(ForwardIterator1 first1, ForwardIterator1
 /**
  Splits a_region into an ordered vector of GenomicRegions of size 1
  */
-inline std::vector<GenomicRegion> decompose(const GenomicRegion& a_region)
+inline std::vector<GenomicRegion> decompose(const GenomicRegion& region)
 {
     std::vector<GenomicRegion> result {};
     
-    auto num_elements = size(a_region);
+    auto num_elements = size(region);
     
     if (num_elements == 0) return result;
     
@@ -414,8 +414,8 @@ inline std::vector<GenomicRegion> decompose(const GenomicRegion& a_region)
     
     unsigned n {0};
     
-    std::generate_n(std::back_inserter(result), num_elements, [&n, &a_region] () {
-        return GenomicRegion {a_region.get_contig_name(), a_region.get_begin() + n, a_region.get_begin() + ++n};
+    std::generate_n(std::back_inserter(result), num_elements, [&n, &region] () {
+        return GenomicRegion {region.get_contig_name(), region.get_begin() + n, region.get_begin() + ++n};
     });
     
     return result;
@@ -490,6 +490,33 @@ std::vector<GenomicRegion> get_all_intervening(ForwardIterator first, ForwardIte
                    [] (const auto& mappable, const auto& next_mappable) {
                        return get_intervening(mappable, next_mappable);
                    });
+    
+    return result;
+}
+
+template <typename Container>
+auto segment(const Container& mappables)
+{
+    using MappableType = typename Container::value_type;
+    
+    std::vector<std::vector<MappableType>> result {};
+    result.reserve(mappables.size());
+    
+    std::vector<MappableType> segment {};
+    
+    for (const auto& mappable : mappables) {
+        if (segment.empty() || get_region(mappable) == get_region(segment.back())) {
+            segment.push_back(mappable);
+        } else {
+            segment.shrink_to_fit();
+            result.push_back(std::move(segment));
+            segment.push_back(mappable);
+        }
+    }
+    
+    if (!segment.empty()) result.push_back(std::move(segment));
+    
+    result.shrink_to_fit();
     
     return result;
 }

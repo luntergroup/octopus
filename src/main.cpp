@@ -28,6 +28,7 @@
 #include "reference_genome.h"
 #include "read_manager.h"
 #include "mappable_set.h"
+#include "mappable_algorithms.h"
 #include "candidate_generators.h"
 #include "mappable_set.h"
 #include "mappable_map.h"
@@ -42,6 +43,7 @@
 
 using std::cout;
 using std::endl;
+
 
 int main(int argc, const char **argv)
 {

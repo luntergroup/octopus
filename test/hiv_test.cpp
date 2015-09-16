@@ -29,8 +29,6 @@
 #include "genotype.h"
 #include "read_model.h"
 #include "haplotype_prior_model.h"
-#include "bayesian_genotype_model.h"
-#include "variational_bayes_genotype_model.h"
 #include "haplotype_phaser.h"
 #include "mappable_set.h"
 
@@ -39,8 +37,6 @@ using std::endl;
 
 using Octopus::HaplotypeTree;
 using Octopus::ReadModel;
-using Octopus::HaplotypePhaser;
-using Octopus::VariationalBayesGenotypeModel;
 
 //TEST_CASE("HIV test 1)
 //{

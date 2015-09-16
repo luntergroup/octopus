@@ -11,6 +11,7 @@
 #include "genomic_region.h"
 #include "mappable.h"
 #include "read_utils.h"
+#include "variant_utils.h"
 #include "vcf_record.h"
 
 #include <iostream> // TEST
@@ -50,15 +51,15 @@ std::vector<VcfRecord> VariantCaller::call_variants(const GenomicRegion& region)
         
         add_reads(good_reads, candidate_generator_);
         
-        auto candidates = candidate_generator_.get_candidates(current_region);
+        auto candidates = unique_left_align(candidate_generator_.get_candidates(current_region), reference_);
         
         candidate_generator_.clear();
         
         std::cout << "found " << candidates.size() << " candidates" << std::endl;
         
-        auto new_variants = call_variants(current_region, candidates, good_reads);
+        auto calls_in_region = call_variants(current_region, candidates, good_reads);
         
-        result.insert(std::end(result), std::begin(new_variants), std::end(new_variants));
+        result.insert(std::end(result), std::begin(calls_in_region), std::end(calls_in_region));
         
         current_region = get_next_region(current_region);
     }
