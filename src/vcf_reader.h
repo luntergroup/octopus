@@ -38,6 +38,7 @@ public:
     VcfReader(VcfReader&&)                 = default;
     VcfReader& operator=(VcfReader&&)      = default;
     
+    const fs::path path() const;
     VcfHeader fetch_header();
     size_t num_records() const;
     size_t num_records(const GenomicRegion& region) const;

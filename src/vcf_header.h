@@ -139,4 +139,7 @@ private:
     std::unordered_multimap<std::string, std::unordered_map<std::string, std::string>> structured_fields_ = {};
 };
 
+// A VcfHeader::Builder pre-filled with all reserved INFO and FORMAT fields
+VcfHeader::Builder get_default_header_builder();
+
 #endif /* defined(__Octopus__vcf_header__) */

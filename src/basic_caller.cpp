@@ -10,7 +10,9 @@
 
 #include <unordered_map>
 #include <numeric>
+#include <algorithm>
 
+#include "common.h"
 #include "genomic_region.h"
 #include "read_manager.h"
 #include "allele.h"
@@ -109,8 +111,8 @@ double marginalise(const Allele& allele, const Octopus::GenotypeModel::SampleGen
 }
 
 std::unordered_map<Allele, double>
-get_allele_posteriors(const Octopus::GenotypeModel::SampleGenotypeProbabilities& genotype_posteriors,
-                      const std::vector<Allele>& alleles)
+compute_sample_allele_posteriors(const Octopus::GenotypeModel::SampleGenotypeProbabilities& genotype_posteriors,
+                                 const std::vector<Allele>& alleles)
 {
     std::unordered_map<Allele, double> result {};
     result.reserve(alleles.size());
@@ -122,6 +124,65 @@ get_allele_posteriors(const Octopus::GenotypeModel::SampleGenotypeProbabilities&
     return result;
 }
 
+auto call_genotype(const Octopus::GenotypeModel::SampleGenotypeProbabilities& genotype_posteriors)
+{
+    return *std::max_element(std::cbegin(genotype_posteriors), std::cend(genotype_posteriors),
+                             [] (const auto& lhs, const auto& rhs) {
+                                 return lhs.second < rhs.second;
+                             });
+}
+
+using AllelePosteriors = std::unordered_map<Octopus::SampleIdType, std::unordered_map<Allele, double>>;
+
+AllelePosteriors compute_allele_posteriors(const Octopus::GenotypeModel::GenotypeProbabilities& genotype_posteriors,
+                                           const std::vector<Haplotype>& haplotypes,
+                                           const std::vector<Allele>& alleles)
+{
+    AllelePosteriors result {};
+    result.reserve(genotype_posteriors.size());
+    
+    for (const auto sample_genotype_posteriors : genotype_posteriors) {
+        auto haplotype_posteriors = get_haplotype_posteriors(haplotypes, sample_genotype_posteriors.second);
+        
+//        std::cout << "haplotype posteriors" << std::endl;
+//        for (auto& h : haplotype_posteriors) {
+//            h.first.print_explicit_alleles();
+//            std::cout << h.second << std::endl;
+//        }
+        
+        result.emplace(sample_genotype_posteriors.first,
+                       compute_sample_allele_posteriors(sample_genotype_posteriors.second, alleles));
+    }
+    
+    return result;
+}
+
+VcfRecord call_segment(const std::vector<Allele>& segment, const AllelePosteriors& allele_posteriors)
+{
+    const auto& ref_allele = segment.front();
+    
+    auto result = VcfRecord::Builder()
+        .set_chromosome(get_contig_name(ref_allele))
+        .set_position(get_begin(ref_allele))
+        .set_ref_allele(ref_allele.get_sequence());
+    
+    result.set_alt_allele(segment.back().get_sequence());
+    result.set_quality(60);
+    result.add_info("DP", std::vector<std::string> {"100"});
+    
+    std::vector<std::string> g {ref_allele.get_sequence(), segment.back().get_sequence()};
+    
+    result.set_format(std::vector<std::string> {"GT"});
+    result.add_genotype("HG00101", g, false);
+    
+//    std::for_each(std::next(std::cbegin(segment)), std::cend(segment),
+//                  [&result] (const auto& allele) {
+//                      
+//                  });
+    
+    return result.build_once();
+}
+
 std::vector<VcfRecord> BasicVariantCaller::call_variants(const GenomicRegion& region,
                                                          const std::vector<Variant>& candidates,
                                                          const ReadMap& reads)
@@ -130,7 +191,18 @@ std::vector<VcfRecord> BasicVariantCaller::call_variants(const GenomicRegion& re
     
     Octopus::HaplotypeTree tree {reference_};
     extend_tree(candidates, tree);
+    
     auto haplotypes = tree.get_haplotypes(region);
+    
+    Allele a1 {parse_region("2:104142873-104142874", reference_), "T"};
+    Allele a2 {parse_region("2:104142874-104142874", reference_), "AGG"};
+    Allele a3 {parse_region("2:104142873-104142874", reference_), "TAGG"};
+    
+//    std::cout << haplotypes.front().contains(a1) << std::endl;
+//    std::cout << haplotypes.front().contains(a2) << std::endl;
+    std::cout << haplotypes.front().contains(a3) << std::endl;
+    
+    exit(0);
     
     std::cout << "there are " << haplotypes.size() << " haplotypes" << std::endl;
     
@@ -138,30 +210,18 @@ std::vector<VcfRecord> BasicVariantCaller::call_variants(const GenomicRegion& re
     
     auto genotype_posteriors = genotype_model->evaluate(haplotypes, reads);
     
-    for (const auto sample_genotype_posteriors : genotype_posteriors) {
-        auto haplotype_posteriors = get_haplotype_posteriors(haplotypes, sample_genotype_posteriors.second);
-        
-        std::cout << "haplotype posteriors" << std::endl;
-        for (auto& h : haplotype_posteriors) {
-            h.first.print_explicit_alleles();
-            std::cout << h.second << std::endl;
-        }
-        
-        auto alleles = decompose(candidates);
-        
-        //auto allele_posteriors = get_allele_posteriors(haplotype_posteriors, candidates);
-        auto allele_posteriors = get_allele_posteriors(sample_genotype_posteriors.second, alleles);
-        
-        auto segments = segment(alleles);
-        
-        for (const auto& segment : segments) {
-            
-        }
-        
-        std::cout << "allele posteriors" << std::endl;
-        for (auto& a : allele_posteriors) {
-            std::cout << a.first << " " << a.second << std::endl;
-        }
+    auto call = call_genotype(genotype_posteriors.cbegin()->second);
+    
+    auto alleles = decompose(make_parsimonious(candidates, reference_));
+    
+    auto allele_posteriors = compute_allele_posteriors(genotype_posteriors, haplotypes, alleles);
+    
+    for (const auto& a : allele_posteriors.cbegin()->second) std::cout << a.first << " " << a.second << std::endl;
+    
+    auto segments = segment(alleles);
+    
+    for (const auto& segment : segments) {
+        result.emplace_back(call_segment(segment, allele_posteriors));
     }
     
     return result;

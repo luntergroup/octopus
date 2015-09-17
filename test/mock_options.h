@@ -21,7 +21,8 @@ inline po::variables_map get_basic_mock_options()
     const char *argv[] = {"octopus",
         "--reference", human_reference_fasta.c_str(),
         "--reads", human_1000g_bam1.c_str(),
-        "--regions", "11:67503118-67503253",
+        "--regions", "2:104142870-104142884",
+        "--output", test_out_vcf.c_str(),
         nullptr};
     
     int argc = sizeof(argv) / sizeof(char*) - 1;

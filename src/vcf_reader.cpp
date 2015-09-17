@@ -39,6 +39,11 @@ file_path_ {file_path},
 reader_ {make_vcf_reader(file_path)}
 {}
 
+const fs::path VcfReader::path() const
+{
+    return file_path_;
+}
+
 VcfHeader VcfReader::fetch_header()
 {
     return reader_->fetch_header();

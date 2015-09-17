@@ -12,6 +12,7 @@
 #include <thread>
 #include <future>
 #include <memory>
+#include <algorithm>
 
 #include "common.h"
 #include "program_options.h"
@@ -31,6 +32,15 @@ using std::endl;
 
 namespace Octopus
 {
+    auto get_contigs(const SearchRegions& regions)
+    {
+        std::vector<GenomicRegion::StringType> result {};
+        result.reserve(regions.size());
+        std::transform(std::cbegin(regions), std::cend(regions), std::back_inserter(result),
+                       [] (const auto& p) { return p.first; });
+        return result;
+    }
+    
     void run_octopus(po::variables_map& options)
     {
         cout << "starting Octopus" << endl;
@@ -48,6 +58,21 @@ namespace Octopus
         auto candidate_generator = Octopus::get_candidate_generator(options, reference);
         auto vcf                 = Octopus::get_output_vcf(options);
         
+        cout << "writing results to " << vcf.path().string() << endl;
+        
+        auto samples = read_manager.get_sample_ids();
+        
+        auto contigs = get_contigs(regions);
+        
+        auto vcf_header_builder = get_default_header_builder().set_samples(samples);
+        for (const auto& contig : contigs) {
+            vcf_header_builder.add_contig(contig);
+        }
+        
+        auto vcf_header = vcf_header_builder.build_once();
+        
+        vcf.write(vcf_header);
+        
         for (const auto& contig_region : regions) {
             auto region = *contig_region.second.cbegin();
             
@@ -56,6 +81,10 @@ namespace Octopus
             std::unique_ptr<VariantCaller> caller = std::make_unique<BasicVariantCaller>(reference, read_manager, read_filter, read_transform, candidate_generator);
             
             auto calls = caller->call_variants(region);
+            
+            for (auto& call : calls) {
+                vcf.write(call);
+            }
         }
     }
     

@@ -20,6 +20,7 @@
 #include <boost/functional/hash.hpp> // boost::hash_range
 #include <boost/math/special_functions/binomial.hpp>
 
+#include "allele.h"
 #include "haplotype.h"
 #include "equitable.h"
 #include "mappable.h"
@@ -46,8 +47,7 @@ public:
     Genotype& operator=(Genotype&&)      = default;
     
     const MappableType& at(unsigned n) const;
-    void emplace(const MappableType& element);
-    void emplace(MappableType&& element);
+    template <typename T> void emplace(T&& element);
     
     Iterator begin() const noexcept;
     Iterator end() const noexcept ;
@@ -93,16 +93,10 @@ const MappableType& Genotype<MappableType>::at(unsigned n) const
 }
 
 template <typename MappableType>
-void Genotype<MappableType>::emplace(const MappableType& element)
+template <typename T>
+void Genotype<MappableType>::emplace(T&& element)
 {
-    elements_.emplace_back(element);
-    std::inplace_merge(std::begin(elements_), std::prev(std::end(elements_)), std::end(elements_));
-}
-
-template <typename MappableType>
-void Genotype<MappableType>::emplace(MappableType&& element)
-{
-    elements_.emplace_back(std::move(element));
+    elements_.emplace_back(std::forward<T>(element));
     std::inplace_merge(std::begin(elements_), std::prev(std::end(elements_)), std::end(elements_));
 }
 
@@ -167,6 +161,18 @@ std::vector<MappableType> Genotype<MappableType>::get_unique() const
     result.reserve(ploidy());
     
     std::unique_copy(std::cbegin(elements_), std::cend(elements_), std::back_inserter(result));
+    
+    return result;
+}
+
+template <typename MappableType2, typename MappableType1>
+Genotype<MappableType2> splice(const Genotype<MappableType1>& genotype, const GenomicRegion& region)
+{
+    Genotype<MappableType2> result {genotype.ploidy()};
+    
+    for (const auto& mappable : genotype) {
+        result.emplace(static_cast<MappableType2>(splice(mappable, region)));
+    }
     
     return result;
 }

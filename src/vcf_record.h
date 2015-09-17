@@ -104,6 +104,8 @@ private:
     
     std::string get_allele_number(const SequenceType& allele) const;
     
+    
+    std::vector<SampleIdType> get_samples() const;
     void print_info(std::ostream& os) const;
     void print_genotype_allele_numbers(std::ostream& os, const SampleIdType& sample) const;
     void print_other_sample_data(std::ostream& os, const SampleIdType& sample) const;

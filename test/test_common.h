@@ -109,6 +109,10 @@ static std::string ecoli_bam {detail::home_dir + detail::genomics_dir + detail::
 static std::string sample_vcf {detail::home_dir + detail::genomics_dir  + detail::sample_vcf_dir +
     detail::sample_vcf_name};
 
+static std::string test_out_vcf {detail::home_dir + detail::octopus_test_dir + "test.vcf"};
+static std::string test_out_vcfgz {detail::home_dir + detail::octopus_test_dir + "test.vcf.gz"};
+static std::string test_out_bcf {detail::home_dir + detail::octopus_test_dir + "test.bcf"};
+
 // donna
 
 static std::string donna_bam1 {detail::home_dir + detail::genomics_dir + detail::donna_dir +

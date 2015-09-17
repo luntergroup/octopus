@@ -21,22 +21,27 @@
 Haplotype::Haplotype(ReferenceGenome& reference)
 :
 reference_ {&reference},
-is_region_set_ {false},
-reference_region_ {},
+region_ {},
 explicit_alleles_ {},
 cached_sequence_ {},
+is_region_set_ {false},
 is_cached_sequence_outdated_ {false}
 {}
 
 Haplotype::Haplotype(ReferenceGenome& reference, const GenomicRegion& region)
 :
 reference_ {&reference},
-is_region_set_ {true},
-reference_region_ {region},
+region_ {region},
 explicit_alleles_ {},
 cached_sequence_ {},
+is_region_set_ {true},
 is_cached_sequence_outdated_ {true}
 {}
+
+Haplotype::operator Allele() const
+{
+    return Allele {region_, get_sequence()};
+}
 
 bool Haplotype::contains(const Allele& allele) const
 {
@@ -46,8 +51,8 @@ bool Haplotype::contains(const Allele& allele) const
         // these binary searches are just optimisations
         if (std::binary_search(std::cbegin(explicit_alleles_), std::cend(explicit_alleles_), allele)) {
             return true;
-        } else if (std::binary_search(std::cbegin(explicit_alleles_),
-                                      std::cend(explicit_alleles_), allele.get_region())) {
+        } else if (std::binary_search(std::cbegin(explicit_alleles_), std::cend(explicit_alleles_),
+                                      allele.get_region())) {
             // If the allele is not explcitly contained but the region is then it must be a different
             // allele, unless it is an insertion, in which case we must check the sequence
             if (empty(allele.get_region())) {
@@ -60,12 +65,12 @@ bool Haplotype::contains(const Allele& allele) const
             }
         }
         
-        auto overlapped_range = overlap_range(std::cbegin(explicit_alleles_),
-                                              std::cend(explicit_alleles_), allele);
+        auto overlapped_range = bases(overlap_range(std::cbegin(explicit_alleles_), std::cend(explicit_alleles_),
+                                                    allele));
         if (std::distance(overlapped_range.begin(), overlapped_range.end()) == 1 &&
             ::contains(*overlapped_range.begin(), allele)) {
-            return allele.get_sequence() ==
-                    get_subsequence(*overlapped_range.begin(), get_overlapped(*overlapped_range.begin(), allele));
+            return allele.get_sequence() == get_subsequence(*overlapped_range.begin(),
+                                                            get_overlapped(*overlapped_range.begin(), allele));
         }
         
         return get_sequence(allele.get_region()) == allele.get_sequence();
@@ -76,14 +81,14 @@ bool Haplotype::contains(const Allele& allele) const
 
 void Haplotype::set_region(const GenomicRegion& region)
 {
-    reference_region_            = region;
+    region_                      = region;
     is_region_set_               = true;
     is_cached_sequence_outdated_ = true;
 }
 
 GenomicRegion Haplotype::get_region() const
 {
-    return (is_region_set_) ? reference_region_ : get_region_bounded_by_explicit_alleles();
+    return (is_region_set_) ? region_ : get_region_bounded_by_explicit_alleles();
 }
 
 Haplotype::SequenceType Haplotype::get_sequence() const
@@ -91,7 +96,7 @@ Haplotype::SequenceType Haplotype::get_sequence() const
     if (!is_cached_sequence_outdated_) {
         return cached_sequence_;
     } else {
-        cached_sequence_ = (is_region_set_) ? get_sequence(reference_region_) :
+        cached_sequence_ = (is_region_set_) ? get_sequence(region_) :
                                                 get_sequence_bounded_by_explicit_alleles();
         is_cached_sequence_outdated_ = false;
         return cached_sequence_;
@@ -107,7 +112,7 @@ Haplotype::SequenceType Haplotype::get_sequence(const GenomicRegion& region) con
     auto region_bounded_by_alleles = get_region_bounded_by_explicit_alleles();
     
     SequenceType result {};
-    result.reserve(size(region));
+    result.reserve(size(region)); // may be more or less depending on indels
     
     if (begins_before(region, region_bounded_by_alleles)) {
         result += reference_->get_sequence(get_left_overhang(region, region_bounded_by_alleles));
@@ -225,10 +230,11 @@ Haplotype splice(const Haplotype& haplotype, const GenomicRegion& region)
             break;
         case 1:
             result.push_back(contained.front());
+            break;
         default:
             result.push_back(contained.front());
-            result.explicit_alleles_.insert(std::end(result.explicit_alleles_),
-                                                std::next(contained.begin()), std::prev(contained.end()));
+            result.explicit_alleles_.insert(std::end(result.explicit_alleles_), std::next(contained.begin()),
+                                            std::prev(contained.end()));
             result.push_back(contained.back());
             break;
     }

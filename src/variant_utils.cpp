@@ -306,6 +306,15 @@ std::vector<Variant> unique_left_align(const std::vector<Variant>& variants, Ref
     return result;
 }
 
+std::vector<Variant> make_parsimonious(const std::vector<Variant>& variants, ReferenceGenome& reference)
+{
+    std::vector<Variant> result {};
+    result.reserve(variants.size());
+    std::transform(std::cbegin(variants), std::cend(variants), std::back_inserter(result),
+                   [&reference] (const auto& variant) { return make_parsimonious(variant, reference); });
+    return result;
+}
+
 bool is_snp(const Variant& variant) noexcept
 {
     return variant.reference_allele_size() == 1 && variant.alternative_allele_size() == 1;

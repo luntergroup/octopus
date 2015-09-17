@@ -267,6 +267,8 @@ VcfHeader::Builder& VcfHeader::Builder::add_structured_field(std::string tag, st
 VcfHeader::Builder& VcfHeader::Builder::add_info(std::string id, std::string number, std::string type, std::string description,
                                                  std::unordered_map<std::string, std::string> other_values)
 {
+    other_values.reserve(other_values.size() + 4);
+    
     other_values.emplace("ID", std::move(id));
     other_values.emplace("Number", std::move(number));
     other_values.emplace("Type", std::move(type));
@@ -280,6 +282,8 @@ VcfHeader::Builder& VcfHeader::Builder::add_info(std::string id, std::string num
 VcfHeader::Builder& VcfHeader::Builder::add_filter(std::string id, std::string description,
                                                    std::unordered_map<std::string, std::string> other_values)
 {
+    other_values.reserve(other_values.size() + 2);
+    
     other_values.emplace("ID", std::move(id));
     other_values.emplace("Description", std::move(description));
     
@@ -291,6 +295,8 @@ VcfHeader::Builder& VcfHeader::Builder::add_filter(std::string id, std::string d
 VcfHeader::Builder& VcfHeader::Builder::add_format(std::string id, std::string number, std::string type, std::string description,
                                                    std::unordered_map<std::string, std::string> other_values)
 {
+    other_values.reserve(other_values.size() + 4);
+    
     other_values.emplace("ID", std::move(id));
     other_values.emplace("Number", std::move(number));
     other_values.emplace("Type", std::move(type));
@@ -318,4 +324,44 @@ VcfHeader VcfHeader::Builder::build() const
 VcfHeader VcfHeader::Builder::build_once() noexcept
 {
     return VcfHeader {std::move(file_format_), std::move(samples_), std::move(basic_fields_), std::move(structured_fields_)};
+}
+
+VcfHeader::Builder get_default_header_builder()
+{
+    VcfHeader::Builder result {};
+    
+    result.add_info("AA", "1", "String", "ancestral allele");
+    result.add_info("AC", "1", "String", "allele count in genotypes");
+    result.add_info("AF", "A", "Float", "allele frequency for each ALT allele");
+    result.add_info("AN", "1", "Integer", "total number of alleles in called genotypes");
+    result.add_info("BQ", "1", "Integer", "RMS base quality at this position");
+    result.add_info("CIGAR", "A", "String", "cigar string describing how to align an alternate allele to the reference allele");
+    result.add_info("DB", "0", "Flag", "dbSNP membership");
+    result.add_info("DP", "1", "Integer", "combined depth across samples");
+    result.add_info("END", "1", "Integer", "end position of the variant described in this record");
+    result.add_info("H2", "0", "Flag", "membership in hapmap2");
+    result.add_info("H3", "0", "Flag", "membership in hapmap3");
+    result.add_info("MQ", "1", "Integer", "RMS mapping quality");
+    result.add_info("MQ0", "1", "Integer", "Number of MAPQ == 0 reads covering this record");
+    result.add_info("NS", "1", "Integer", "Number of samples with data");
+    result.add_info("SB", "1", "Integer", "strand bias at this position");
+    result.add_info("SOMATIC", "0", "Flag", "indicates that the record is a somatic mutation, for cancer genomics");
+    result.add_info("VALIDATED", "0", "Flag", "validated by follow-up experiment");
+    result.add_info("1000G", "0", "Flag", "membership in 1000 Genomes");
+    
+    result.add_format("GT", "1", "String", "Genotype");
+    result.add_format("DP", "1", "Integer", "read depth at this position for this sample");
+    result.add_format("FT", "1", "String", "sample genotype filter indicating if this genotype was “called”");
+    result.add_format("GL", "1", "String", "log10-scaled genotype likelihoods");
+    result.add_format("GLE", "1", "String", "genotype likelihoods of heterogeneous ploidy");
+    result.add_format("PL", "1", "String", "phred-scaled genotype likelihoods");
+    result.add_format("GP", "1", "String", "phred-scaled genotype posterior probabilities");
+    result.add_format("GQ", "1", "String", "conditional genotype quality (phred-scaled)");
+    result.add_format("HQ", "1", "String", "haplotype qualities");
+    result.add_format("PS", "1", "String", "phase set");
+    result.add_format("PQ", "1", "String", "phasing quality");
+    result.add_format("EC", "1", "String", "expected alternate allele counts");
+    result.add_format("MQ", "1", "String", "RMS mapping quality");
+    
+    return result;
 }

@@ -167,7 +167,7 @@ void print_vector(std::ostream& os, const std::vector<std::string>& v,
     if (v.empty()) {
         os << empty_value;
     } else {
-        std::copy(v.cbegin(), std::prev(v.cend()), std::ostream_iterator<std::string>(os, delim.c_str()));
+        std::copy(std::cbegin(v), std::prev(std::cend(v)), std::ostream_iterator<std::string>(os, delim.c_str()));
         os << v.back();
     }
 }
@@ -179,6 +179,23 @@ std::ostream& operator<<(std::ostream& os, const std::vector<std::string>& v)
 }
 
 // private methods
+
+std::vector<VcfRecord::SampleIdType> VcfRecord::get_samples() const
+{
+    std::vector<SampleIdType> result {};
+    
+    if (has_genotypes()) {
+        result.reserve(genotypes_.size());
+        std::transform(std::cbegin(genotypes_), std::cend(genotypes_), std::back_inserter(result),
+                       [] (const auto& p) { return p.first; });
+    } else {
+        result.reserve(samples_.size());
+        std::transform(std::cbegin(samples_), std::cend(samples_), std::back_inserter(result),
+                       [] (const auto& p) { return p.first; });
+    }
+    
+    return result;
+}
 
 std::string VcfRecord::get_allele_number(const SequenceType& allele) const
 {
@@ -197,8 +214,8 @@ void VcfRecord::print_info(std::ostream& os) const
     if (info_.empty()) {
         os << ".";
     } else {
-        auto last = std::next(info_.cbegin(), info_.size() - 1);
-        std::for_each(info_.cbegin(), last, [&os] (const auto& p) {
+        auto last = std::next(std::cbegin(info_), info_.size() - 1);
+        std::for_each(std::cbegin(info_), last, [&os] (const auto& p) {
             os << p.first;
             if (!p.second.empty()) {
                 os << "=" << p.second;
@@ -223,16 +240,18 @@ void VcfRecord::print_genotype_allele_numbers(std::ostream& os, const SampleIdTy
 
 void VcfRecord::print_other_sample_data(std::ostream& os, const SampleIdType& sample) const
 {
-    const auto& data = samples_.at(sample);
-    if (data.empty()) {
-        os << ".";
-    } else {
-        auto last = std::next(data.cbegin(), data.size() - 1);
-        std::for_each(data.cbegin(), last, [&os] (const auto& p) {
-            print_vector(os, p.second, ",");
-            os << ":";
-        });
-        print_vector(os, last->second, ",");
+    if (!samples_.empty()) {
+        if (samples_.at(sample).empty()) {
+            os << ".";
+        } else {
+            const auto& data = samples_.at(sample);
+            auto last = std::next(cbegin(data), data.size() - 1);
+            std::for_each(std::cbegin(data), last, [&os] (const auto& p) {
+                print_vector(os, p.second, ",");
+                os << ":";
+            });
+            print_vector(os, last->second, ",");
+        }
     }
 }
 
@@ -244,26 +263,27 @@ void VcfRecord::print_sample_data(std::ostream& os) const
         
         bool has_genotype {has_genotypes()};
         
-        auto last = std::next(samples_.cbegin(), samples_.size() - 1);
-        std::for_each(std::cbegin(samples_), last, [this, &os, has_genotype] (const auto& sample_data) {
+        auto samples = get_samples();
+        
+        auto last = std::next(std::cbegin(samples), samples.size() - 1);
+        std::for_each(std::cbegin(samples), last, [this, &os, has_genotype] (const auto& sample) {
             if (has_genotype) {
-                print_genotype_allele_numbers(os, sample_data.first);
+                print_genotype_allele_numbers(os, sample);
                 if (!samples_.empty()) {
                     os << ":";
                 }
             }
-            print_other_sample_data(os, sample_data.first);
+            print_other_sample_data(os, sample);
             os << "\t";
         });
         
-        const auto& sample_data = *last;
         if (has_genotype) {
-            print_genotype_allele_numbers(os, sample_data.first);
+            print_genotype_allele_numbers(os, samples.back());
             if (!samples_.empty()) {
                 os << ":";
             }
         }
-        print_other_sample_data(os, sample_data.first);
+        print_other_sample_data(os, samples.back());
     }
 }
 

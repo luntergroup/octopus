@@ -11,15 +11,13 @@
 
 #include <queue>
 #include <stdexcept> // std::runtime_error
-#include <ostream>
+#include <iostream>
 #include <boost/functional/hash.hpp> // boost::hash_combine
 
 #include "allele.h"
 #include "variant.h"
 #include "comparable.h"
 #include "mappable.h"
-
-#include <iostream> // TEST
 
 class ReferenceGenome;
 class GenomicRegion;
@@ -39,6 +37,8 @@ public:
     Haplotype& operator=(const Haplotype&) = default;
     Haplotype(Haplotype&&)                 = default;
     Haplotype& operator=(Haplotype&&)      = default;
+    
+    explicit operator Allele() const;
     
     template <typename T> void push_back(T&& allele);
     template <typename T> void push_front(T&& allele);
@@ -67,11 +67,10 @@ private:
     SequenceType get_sequence_bounded_by_explicit_alleles() const;
     
     ReferenceGenome* reference_; // a non-owning pointer (rather than a reference) so Haplotype copyable
-    bool is_region_set_;
-    GenomicRegion reference_region_;
-    std::deque<Allele> explicit_alleles_;
-    
+    GenomicRegion region_;
     mutable SequenceType cached_sequence_;
+    std::deque<Allele> explicit_alleles_;
+    bool is_region_set_;
     mutable bool is_cached_sequence_outdated_;
 };
 
@@ -80,19 +79,17 @@ void Haplotype::push_back(T&& allele)
 {
     if (!explicit_alleles_.empty()) {
         if (!is_after(allele, explicit_alleles_.back())) {
-            std::cout << explicit_alleles_.back() << std::endl;
-            std::cout << allele << std::endl;
             throw std::runtime_error {"cannot append out of order allele to back of haplotype"};
         } else if (!are_adjacent(explicit_alleles_.back(), allele)) {
             auto intervening_region = get_intervening(explicit_alleles_.back(), allele);
             explicit_alleles_.push_back(get_reference_allele(intervening_region, *reference_));
         }
         
-        if (is_region_set_ && ends_before(reference_region_, allele)) {
-            reference_region_ = get_encompassing(reference_region_, allele);
+        if (is_region_set_ && ends_before(region_, allele)) {
+            region_ = get_encompassing(region_, allele);
         }
-    } else if (is_region_set_ && begins_before(allele, reference_region_)) {
-        reference_region_ = get_encompassing(allele, reference_region_);
+    } else if (is_region_set_ && begins_before(allele, region_)) {
+        region_ = get_encompassing(allele, region_);
     }
     
     explicit_alleles_.push_back(std::forward<T>(allele));
@@ -111,11 +108,11 @@ void Haplotype::push_front(T&& allele)
             explicit_alleles_.push_front(get_reference_allele(intervening_region, *reference_));
         }
         
-        if (is_region_set_ && begins_before(allele, reference_region_)) {
-            reference_region_ = get_encompassing(allele, reference_region_);
+        if (is_region_set_ && begins_before(allele, region_)) {
+            region_ = get_encompassing(allele, region_);
         }
-    } else if (is_region_set_ && ends_before(reference_region_, allele)) {
-        reference_region_ = get_encompassing(reference_region_, allele);
+    } else if (is_region_set_ && ends_before(region_, allele)) {
+        region_ = get_encompassing(region_, allele);
     }
     
     explicit_alleles_.push_front(std::forward<T>(allele));

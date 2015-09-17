@@ -30,6 +30,11 @@ writer_ {file_path_, "w"}
     is_header_written_ = true;
 }
 
+const fs::path VcfWriter::path() const
+{
+    return file_path_;
+}
+
 void VcfWriter::write(const VcfHeader& header)
 {
     writer_.write_header(header);

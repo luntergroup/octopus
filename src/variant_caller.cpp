@@ -43,11 +43,7 @@ std::vector<VcfRecord> VariantCaller::call_variants(const GenomicRegion& region)
         
         auto good_reads = filter_reads(reads, read_filter_).first;
         
-        //std::cout << "found " << good_reads[samples.front()].size() << " good reads" << std::endl;
-        
         transform_reads(good_reads, read_transform_);
-        
-        std::cout << "transformed reads" << std::endl;
         
         add_reads(good_reads, candidate_generator_);
         

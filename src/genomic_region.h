@@ -59,7 +59,7 @@ class RegionError : std::runtime_error
 public:
     RegionError(GenomicRegion::StringType first, GenomicRegion::StringType second)
     :
-    runtime_error {"Cannot compare regions on different contigs"},
+    runtime_error {"cannot compare regions on different contigs"},
     first_ {first}, second_ {second} {}
     
     const char* what() const noexcept

@@ -26,15 +26,15 @@ public:
     
     // No getting around these really - they have to go somewhere. Could go into a config,
     // but would loose constexpr-ness.
-    static const constexpr char ALIGNMENT_MATCH {'M'};
-    static const constexpr char SEQUENCE_MATCH  {'='};
-    static const constexpr char SUBSTITUTION    {'X'};
-    static const constexpr char INSERTION       {'I'};
-    static const constexpr char DELETION        {'D'};
-    static const constexpr char SOFT_CLIPPED    {'S'};
-    static const constexpr char HARD_CLIPPED    {'H'};
-    static const constexpr char PADDING         {'P'};
-    static const constexpr char SKIPPED         {'N'};
+    static constexpr char ALIGNMENT_MATCH {'M'};
+    static constexpr char SEQUENCE_MATCH  {'='};
+    static constexpr char SUBSTITUTION    {'X'};
+    static constexpr char INSERTION       {'I'};
+    static constexpr char DELETION        {'D'};
+    static constexpr char SOFT_CLIPPED    {'S'};
+    static constexpr char HARD_CLIPPED    {'H'};
+    static constexpr char PADDING         {'P'};
+    static constexpr char SKIPPED         {'N'};
     
     CigarOperation() = delete;
     explicit CigarOperation(SizeType size, char type) noexcept;

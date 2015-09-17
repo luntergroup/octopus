@@ -18,7 +18,7 @@ class InvalidBamHeader : std::runtime_error {
 public:
     InvalidBamHeader(fs::path file_path, std::string message)
     :
-    runtime_error {"Invalid BAM header"},
+    runtime_error {"invalid BAM header"},
     file_path_ {file_path.string()},
     message_ {std::move(message)}
     {}
@@ -36,7 +36,7 @@ class InvalidBamRecord : std::runtime_error {
 public:
     InvalidBamRecord(fs::path file_path, std::string read_name, std::string message)
     :
-    runtime_error {"Invalid BAM record"},
+    runtime_error {"invalid BAM record"},
     file_path_ {file_path.string()},
     read_name_ {std::move(read_name)},
     message_ {std::move(message)}

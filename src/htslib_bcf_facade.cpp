@@ -127,7 +127,7 @@ size_t HtslibBcfFacade::num_records(const GenomicRegion& region)
     bcf_sr_set_regions(sr.get(), to_string(region).c_str(), 0); // must go before bcf_sr_add_reader
     
     if (!bcf_sr_add_reader(sr.get(), file_path_.string().c_str())) {
-        throw std::runtime_error {"Failed to open file " + file_path_.string()};
+        throw std::runtime_error {"failed to open file " + file_path_.string()};
     }
     
     return num_records(sr);
@@ -140,7 +140,7 @@ std::vector<VcfRecord> HtslibBcfFacade::fetch_records(Unpack level)
     HtsBcfSrPtr sr {bcf_sr_init(), htslib_bcf_srs_deleter};
     
     if (!bcf_sr_add_reader(sr.get(), file_path_.string().c_str())) {
-        throw std::runtime_error {"Failed to open file " + file_path_.string()};
+        throw std::runtime_error {"failed to open file " + file_path_.string()};
     }
     
     return fetch_records(sr, level, n_records);
@@ -257,6 +257,8 @@ void HtslibBcfFacade::write_record(const VcfRecord& record)
     if (record.num_samples() > 0) {
         set_samples(header_.get(), r, record);
     }
+    
+    bcf_write(file_.get(), header_.get(), r);
     
     bcf_destroy(r);
 }
@@ -573,12 +575,11 @@ void set_samples(bcf_hdr_t* header, bcf1_t* dest, const VcfRecord& source)
     const auto& alt_alleles = source.get_alt_alleles();
     alleles.insert(alleles.end(), std::cbegin(alt_alleles), std::cend(alt_alleles));
     
-    auto samples = get_samples(header); // maybe pass this instead?
-    
-    int num_samples {static_cast<int>(source.num_samples())};
+    auto samples     = get_samples(header); // maybe pass this instead?
+    auto num_samples = static_cast<int>(source.num_samples());
     
     if (source.has_genotypes()) {
-        int ngt {num_samples * static_cast<int>(source.sample_ploidy())};
+        auto ngt = num_samples * static_cast<int>(source.sample_ploidy());
         auto gts = (int*) malloc(sizeof(int) * ngt);
         
         unsigned i {};
@@ -604,7 +605,7 @@ void set_samples(bcf_hdr_t* header, bcf1_t* dest, const VcfRecord& source)
     for (const auto& key : format) {
         if (key == "GT") continue;
         
-        int num_values {num_samples * static_cast<int>(source.format_cardinality(key))};
+        auto num_values = num_samples * static_cast<int>(source.format_cardinality(key));
         
         switch (bcf_hdr_id2type(header, BCF_HL_FMT, bcf_hdr_id2int(header, BCF_DT_ID, key.c_str()))) {
             case BCF_HT_INT:

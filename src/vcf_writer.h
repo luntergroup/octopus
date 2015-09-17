@@ -32,6 +32,7 @@ public:
     VcfWriter(VcfWriter&&)                 = default;
     VcfWriter& operator=(VcfWriter&&)      = default;
     
+    const fs::path path() const;
     void write(const VcfHeader& header);
     void write(const VcfRecord& record);
     

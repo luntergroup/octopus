@@ -644,7 +644,7 @@
 			name = assembler;
 			sourceTree = "<group>";
 		};
-		CAE3E2A51AA24D6000C01B2C /* variants */ = {
+		CAE3E2A51AA24D6000C01B2C /* vcf */ = {
 			isa = PBXGroup;
 			children = (
 				CAF23F6C1BA16E94006B673F /* vcf.h */,
@@ -666,7 +666,7 @@
 				D4636C6C1B7A24F400FEA7D2 /* vcf_parser.h */,
 				D4636C6B1B7A24F400FEA7D2 /* vcf_parser.cpp */,
 			);
-			name = variants;
+			name = vcf;
 			sourceTree = "<group>";
 		};
 		CAFA19771AC62BEB00F953D9 /* core */ = {
@@ -752,7 +752,7 @@
 			children = (
 				CABA37791A8F668E00BBE598 /* reference */,
 				CABA377A1A8F66A300BBE598 /* reads */,
-				CAE3E2A51AA24D6000C01B2C /* variants */,
+				CAE3E2A51AA24D6000C01B2C /* vcf */,
 			);
 			name = io;
 			sourceTree = "<group>";

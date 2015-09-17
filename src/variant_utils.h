@@ -23,6 +23,10 @@ class VariantFactory;
 
 void remove_duplicates(std::vector<Variant>& variants);
 
+/*
+ Decomposes a list of variants into unique alleles in the same order as the given variants.
+ The reference allele for each unique GenomicRegion will appear first in the sub-list.
+ */
 std::vector<Allele> decompose(const std::vector<Variant>& variants);
 
 std::vector<Allele> get_intervening_reference_alleles(const std::vector<Variant>& variants,
@@ -58,6 +62,8 @@ Variant normalise(const Variant& variant, ReferenceGenome& reference,
  Left aligns all input Variants and removes any resulting duplicates. The returned variants are sorted.
  */
 std::vector<Variant> unique_left_align(const std::vector<Variant>& variants, ReferenceGenome& reference);
+
+std::vector<Variant> make_parsimonious(const std::vector<Variant>& variants, ReferenceGenome& reference);
 
 bool is_snp(const Variant& variant) noexcept;
 
