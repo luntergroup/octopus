@@ -41,8 +41,8 @@ public:
     
     const fs::path& get_read_file_path() const noexcept;
     std::vector<std::string> get_reference_contig_names();
-    std::vector<SampleIdType> get_sample_ids();
-    std::vector<std::string> get_read_groups_in_sample(const SampleIdType& a_sample_id);
+    std::vector<SampleIdType> get_samples();
+    std::vector<std::string> get_read_groups_in_sample(const SampleIdType& sample);
     unsigned get_num_reference_contigs();
     std::vector<GenomicRegion> get_possible_regions_in_file();
     std::size_t get_num_reads(const GenomicRegion& a_region);
@@ -74,14 +74,14 @@ inline const fs::path& ReadReader::get_read_file_path() const noexcept
     return file_path_;
 }
 
-inline std::vector<ReadReader::SampleIdType> ReadReader::get_sample_ids()
+inline std::vector<ReadReader::SampleIdType> ReadReader::get_samples()
 {
-    return the_impl_->get_sample_ids();
+    return the_impl_->get_samples();
 }
 
-inline std::vector<std::string> ReadReader::get_read_groups_in_sample(const SampleIdType& a_sample_id)
+inline std::vector<std::string> ReadReader::get_read_groups_in_sample(const SampleIdType& sample)
 {
-    return the_impl_->get_read_groups_in_sample(a_sample_id);
+    return the_impl_->get_read_groups_in_sample(sample);
 }
 
 inline unsigned ReadReader::get_num_reference_contigs()

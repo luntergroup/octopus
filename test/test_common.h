@@ -43,6 +43,7 @@ namespace detail
     
     // donna data
     static std::string donna_dir {"donna/"};
+    static std::string donna_ref {"a.lines.fasta"};
     static std::string donna_bam_name1 {"356_005_sorted_with_labels.bam"};
     static std::string donna_bam_name2 {"356_006_sorted_with_labels.bam"};
     static std::string donna_bam_name3 {"357_005_sorted_with_labels.bam"};
@@ -114,6 +115,9 @@ static std::string test_out_vcfgz {detail::home_dir + detail::octopus_test_dir +
 static std::string test_out_bcf {detail::home_dir + detail::octopus_test_dir + "test.bcf"};
 
 // donna
+
+static std::string donna_ref {detail::home_dir + detail::genomics_dir + detail::donna_dir +
+    detail::donna_ref};
 
 static std::string donna_bam1 {detail::home_dir + detail::genomics_dir + detail::donna_dir +
     detail::donna_bam_name1};

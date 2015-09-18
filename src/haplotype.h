@@ -122,6 +122,7 @@ void Haplotype::push_front(T&& allele)
 
 // non-members
 
+bool contains(const Haplotype& lhs, const Allele& rhs);
 bool contains(const Haplotype& lhs, const Haplotype& rhs);
 
 Haplotype splice(const Haplotype& haplotype, const GenomicRegion& region);

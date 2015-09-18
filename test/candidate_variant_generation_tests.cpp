@@ -35,7 +35,7 @@ BOOST_AUTO_TEST_CASE(CandidateVariantGenerator_does_not_give_duplicate_candidate
     
     candidate_generator.register_generator(std::make_unique<AlignmentCandidateVariantGenerator>(human, 0));
     
-    auto sample_ids = a_read_manager.get_sample_ids();
+    auto sample_ids = a_read_manager.get_samples();
     auto the_sample_id = sample_ids.at(0);
     
     auto a_region = parse_region("7:122579662-122579817", human);
@@ -59,7 +59,7 @@ BOOST_AUTO_TEST_CASE(AlignmentCandidateVariantGenerator_ignores_snps_with_low_ba
     
     auto a_region = parse_region("7:122579662-122579817", human);
     
-    auto sample_ids = a_read_manager.get_sample_ids();
+    auto sample_ids = a_read_manager.get_samples();
     auto the_sample_id = sample_ids.at(0);
     
     auto reads = a_read_manager.fetch_reads(the_sample_id, a_region);
@@ -81,7 +81,7 @@ BOOST_AUTO_TEST_CASE(AlignmentCandidateVariantGenerator_includes_all_alleles_in_
     
     auto a_region = parse_region("7:122579662-122579817", human);
     
-    auto sample_ids = a_read_manager.get_sample_ids();
+    auto sample_ids = a_read_manager.get_samples();
     auto the_sample_id = sample_ids.at(0);
     
     auto reads = a_read_manager.fetch_reads(the_sample_id, a_region);

@@ -58,8 +58,8 @@ public:
     HtslibSamFacade(HtslibSamFacade&&)                 = default;
     HtslibSamFacade& operator=(HtslibSamFacade&&)      = default;
     
-    std::vector<SampleIdType> get_sample_ids() override;
-    std::vector<ReadGroupIdType> get_read_groups_in_sample(const SampleIdType& sample_id) override;
+    std::vector<SampleIdType> get_samples() override;
+    std::vector<ReadGroupIdType> get_read_groups_in_sample(const SampleIdType& sample) override;
     std::size_t get_num_reads(const GenomicRegion& region) override;
     SampleIdToReadsMap fetch_reads(const GenomicRegion& region) override;
     unsigned get_num_reference_contigs() noexcept override;
@@ -105,7 +105,7 @@ private:
     
     std::unordered_map<std::string, HtsTidType> hts_tid_map_;
     std::unordered_map<HtsTidType, std::string> contig_name_map_;
-    std::unordered_map<ReadGroupIdType, SampleIdType> sample_id_map_;
+    std::unordered_map<ReadGroupIdType, SampleIdType> sample_map_;
     
     void init_maps();
     HtsTidType get_htslib_tid(const std::string& contig_name) const;

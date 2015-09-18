@@ -52,7 +52,7 @@ BOOST_AUTO_TEST_CASE(advance_region_always_gives_a_region_more_advanced_than_the
     
     auto a_region = parse_region("16:62646800-62647030", human);
     
-    auto samples = a_read_manager.get_sample_ids();
+    auto samples = a_read_manager.get_samples();
     
     auto reads = a_read_manager.fetch_reads(samples, a_region);
     
@@ -82,7 +82,7 @@ BOOST_AUTO_TEST_CASE(search_regions_contains_all_variants_in_list_exactly_once_w
     
     auto a_region = parse_region("16:8999900-9400000", human);
     
-    auto samples = a_read_manager.get_sample_ids();
+    auto samples = a_read_manager.get_samples();
     
     auto reads = a_read_manager.fetch_reads(samples, a_region);
     
@@ -206,7 +206,7 @@ BOOST_AUTO_TEST_CASE(advance_regions_bounds_are_respected)
     
     auto a_region = parse_region("16:8999900-9400000", human);
     
-    auto samples = a_read_manager.get_sample_ids();
+    auto samples = a_read_manager.get_samples();
     
     auto reads = a_read_manager.fetch_reads(samples, a_region);
     
@@ -351,7 +351,7 @@ BOOST_AUTO_TEST_CASE(setting_max_included_to_zero_in_advance_region_results_in_t
     
     auto a_region = parse_region("16:8999900-9400000", human);
     
-    auto samples = a_read_manager.get_sample_ids();
+    auto samples = a_read_manager.get_samples();
     
     auto reads = a_read_manager.fetch_reads(samples, a_region);
     
@@ -396,7 +396,7 @@ BOOST_AUTO_TEST_CASE(search_regions_includes_all_possible_indicators)
     
     auto a_region = parse_region("16:62646780-62647130", human);
     
-    auto samples = a_read_manager.get_sample_ids();
+    auto samples = a_read_manager.get_samples();
     
     auto reads = a_read_manager.fetch_reads(samples, a_region);
     

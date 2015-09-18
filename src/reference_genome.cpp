@@ -70,7 +70,7 @@ GenomicRegion ReferenceGenome::get_contig_region(const std::string& contig_name)
 
 bool ReferenceGenome::contains_region(const GenomicRegion& region) const noexcept
 {
-    return region.get_end() <= get_contig_size(region);
+    return has_contig(region.get_contig_name()) && region.get_end() <= get_contig_size(region.get_contig_name());
 }
 
 ReferenceGenome::SequenceType ReferenceGenome::get_sequence(const GenomicRegion& region)

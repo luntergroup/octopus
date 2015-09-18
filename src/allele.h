@@ -54,11 +54,11 @@ bool is_reference(const Allele& allele, ReferenceGenome& reference);
 
 Allele get_reference_allele(const GenomicRegion& region, ReferenceGenome& reference);
 
-Allele::SequenceType get_subsequence(const Allele& allele, const GenomicRegion& region);
-
-bool contains(const Allele& lhs, const Allele& rhs);
+//Allele::SequenceType get_subsequence(const Allele& allele, const GenomicRegion& region);
 
 Allele splice(const Allele& allele, const GenomicRegion& region);
+
+bool contains(const Allele& lhs, const Allele& rhs);
 
 bool is_insertion(const Allele& allele);
 

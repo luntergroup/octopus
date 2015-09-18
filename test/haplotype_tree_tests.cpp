@@ -398,7 +398,7 @@ BOOST_AUTO_TEST_CASE(haplotype_tree_survives_serious_pruning)
     
     candidate_generator.register_generator(std::make_unique<AlignmentCandidateVariantGenerator>(human, 0));
     
-    auto sample_ids = a_read_manager.get_sample_ids();
+    auto sample_ids = a_read_manager.get_samples();
     auto the_sample_id = sample_ids.at(0);
     
     auto a_region = parse_region("16:9299940-9300055", human);
@@ -470,7 +470,7 @@ BOOST_AUTO_TEST_CASE(prune_unqiue_leaves_a_single_haplotype_which_contains_the_s
     
     candidate_generator.register_generator(std::make_unique<AlignmentCandidateVariantGenerator>(human, 0));
     
-    auto sample_ids = a_read_manager.get_sample_ids();
+    auto sample_ids = a_read_manager.get_samples();
     auto the_sample_id = sample_ids.at(0);
     
     auto a_region = parse_region("16:9299940-9300055", human);

@@ -194,16 +194,6 @@ std::vector<VcfRecord> BasicVariantCaller::call_variants(const GenomicRegion& re
     
     auto haplotypes = tree.get_haplotypes(region);
     
-    Allele a1 {parse_region("2:104142873-104142874", reference_), "T"};
-    Allele a2 {parse_region("2:104142874-104142874", reference_), "AGG"};
-    Allele a3 {parse_region("2:104142873-104142874", reference_), "TAGG"};
-    
-//    std::cout << haplotypes.front().contains(a1) << std::endl;
-//    std::cout << haplotypes.front().contains(a2) << std::endl;
-    std::cout << haplotypes.front().contains(a3) << std::endl;
-    
-    exit(0);
-    
     std::cout << "there are " << haplotypes.size() << " haplotypes" << std::endl;
     
     auto genotype_model = std::make_unique<Octopus::PopulationGenotypeModel>(1, 2);
@@ -212,7 +202,7 @@ std::vector<VcfRecord> BasicVariantCaller::call_variants(const GenomicRegion& re
     
     auto call = call_genotype(genotype_posteriors.cbegin()->second);
     
-    auto alleles = decompose(make_parsimonious(candidates, reference_));
+    auto alleles = decompose(candidates);
     
     auto allele_posteriors = compute_allele_posteriors(genotype_posteriors, haplotypes, alleles);
     

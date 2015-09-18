@@ -52,9 +52,9 @@ public:
     ReadManager& operator=(ReadManager&&)      = default;
     
     unsigned num_samples() const noexcept;
-    std::vector<SampleIdType> get_sample_ids() const;
-    std::vector<AlignedRead> fetch_reads(const SampleIdType& sample_id, const GenomicRegion& region);
-    SampleReadMap fetch_reads(const std::vector<SampleIdType>& sample_ids, const GenomicRegion& region);
+    std::vector<SampleIdType> get_samples() const;
+    std::vector<AlignedRead> fetch_reads(const SampleIdType& sample, const GenomicRegion& region);
+    SampleReadMap fetch_reads(const std::vector<SampleIdType>& samples, const GenomicRegion& region);
     SampleReadMap fetch_reads(const GenomicRegion& region);
     
 private:
@@ -87,7 +87,7 @@ private:
     void add_possible_regions_to_reader_map(const fs::path& the_reader_path, const std::vector<GenomicRegion>& the_regions);
     void add_reader_to_sample_map(const fs::path& the_reader_path, const std::vector<SampleIdType>& the_samples_in_reader);
     bool could_reader_contain_region(const fs::path& the_reader_path, const GenomicRegion& region) const;
-    std::vector<fs::path> get_reader_paths_containing_samples(const std::vector<SampleIdType>& sample_ids) const;
+    std::vector<fs::path> get_reader_paths_containing_samples(const std::vector<SampleIdType>& sample) const;
     std::vector<fs::path> get_reader_paths_possibly_containing_region(const GenomicRegion& region) const;
 };
 

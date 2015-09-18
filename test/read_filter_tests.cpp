@@ -31,7 +31,7 @@ BOOST_AUTO_TEST_CASE(read_filter_test)
 {
     ReadManager a_read_manager {human_1000g_bam1};
     
-    auto sample_ids = a_read_manager.get_sample_ids();
+    auto sample_ids = a_read_manager.get_samples();
     
     auto the_sample_id = sample_ids.at(0);
     

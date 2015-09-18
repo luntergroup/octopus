@@ -10,6 +10,7 @@
 
 #include <algorithm> // std::min, std::transform
 #include <iterator>  // std::back_inserter
+#include <cstddef>   // size_t
 
 #include "string_utils.h"
 #include "mappable_algorithms.h"
@@ -40,16 +41,32 @@ Allele::SequenceType get_subsequence(const Allele& allele, const GenomicRegion& 
 {
     if (!contains(allele, region)) {
         return Allele::SequenceType {};
-    } if (get_region(allele) == region) {
-        return allele.get_sequence();
-    } else {
-        auto first = std::cbegin(allele.get_sequence()) + (get_begin(region) - get_begin(allele));
-        
-        // The minimum of the allele sequence size and region size is used as deletions will
-        // result in a sequence size smaller than the region size
-        return Allele::SequenceType {first, first +
-            std::min(allele.get_sequence().size(), static_cast<std::size_t>(size(region)))};
     }
+    
+    const auto& sequence = allele.get_sequence();
+    
+    if (get_region(allele) == region) {
+        return sequence;
+    }
+    
+    if (begins_equal(region, allele) && empty(region) && is_insertion(allele)) {
+        auto first = std::cbegin(sequence);
+        return Allele::SequenceType {first, first + sequence.size() - size(allele)};
+    }
+    
+    auto first = std::cbegin(allele.get_sequence()) + get_begin(region) - get_begin(allele);
+    // The minimum of the allele sequence size and region size is used as deletions will
+    // result in a sequence size smaller than the region size
+    return Allele::SequenceType {first, first + std::min(sequence.size(), static_cast<size_t>(size(region)))};
+}
+
+Allele splice(const Allele& allele, const GenomicRegion& region)
+{
+    if (!contains(allele, region)) {
+        throw std::runtime_error {"cannot splice region " + to_string(region) +
+            " from Allele as the region is not contained"};
+    }
+    return Allele {region, get_subsequence(allele, region)};
 }
 
 bool contains(const Allele& lhs, const Allele& rhs)
@@ -66,22 +83,14 @@ bool contains(const Allele& lhs, const Allele& rhs)
     }
 }
 
-Allele splice(const Allele& allele, const GenomicRegion& region)
-{
-    if (!contains(allele, region)) {
-        throw std::runtime_error {"cannot splice Allele region that is not contained"};
-    }
-    return Allele {region, get_subsequence(allele, region)};
-}
-
 bool is_insertion(const Allele& allele)
 {
-    return empty(allele) && allele.get_sequence().size() > 0;
+    return allele.get_sequence().size() > size(allele);
 }
 
 bool is_deletion(const Allele& allele)
 {
-    return !empty(allele) && allele.get_sequence().size() == 0;
+    return allele.get_sequence().size() < size(allele);
 }
 
 std::vector<Allele> decompose(const Allele& allele)

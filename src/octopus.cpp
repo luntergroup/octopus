@@ -60,7 +60,7 @@ namespace Octopus
         
         cout << "writing results to " << vcf.path().string() << endl;
         
-        auto samples = read_manager.get_sample_ids();
+        auto samples = read_manager.get_samples();
         
         auto contigs = get_contigs(regions);
         

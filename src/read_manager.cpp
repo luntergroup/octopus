@@ -49,7 +49,7 @@ unsigned ReadManager::num_samples() const noexcept
     return static_cast<unsigned>(reader_paths_containing_sample_.size());
 }
 
-std::vector<ReadManager::SampleIdType> ReadManager::get_sample_ids() const
+std::vector<ReadManager::SampleIdType> ReadManager::get_samples() const
 {
     std::vector<SampleIdType> result {};
     result.reserve(num_samples());
@@ -61,9 +61,9 @@ std::vector<ReadManager::SampleIdType> ReadManager::get_sample_ids() const
     return result;
 }
 
-std::vector<AlignedRead> ReadManager::fetch_reads(const SampleIdType& sample_id, const GenomicRegion& region)
+std::vector<AlignedRead> ReadManager::fetch_reads(const SampleIdType& sample, const GenomicRegion& region)
 {
-    auto& reader_paths = reader_paths_containing_sample_.at(sample_id);
+    auto& reader_paths = reader_paths_containing_sample_.at(sample);
     
     auto last_region_containing_reader = std::partition(std::begin(reader_paths), std::end(reader_paths),
                    [this, &region] (auto& reader_path) {
@@ -77,8 +77,8 @@ std::vector<AlignedRead> ReadManager::fetch_reads(const SampleIdType& sample_id,
     std::vector<AlignedRead> result {};
     
     std::for_each(std::begin(reader_paths), last_open_reader,
-      [this, &sample_id, &region, &result] (const auto& reader_path) {
-          auto reads = std::move(open_readers_.at(reader_path).fetch_reads(region)[sample_id]);
+      [this, &sample, &region, &result] (const auto& reader_path) {
+          auto reads = std::move(open_readers_.at(reader_path).fetch_reads(region)[sample]);
           result.insert(std::end(result), std::make_move_iterator(std::begin(reads)),
                         std::make_move_iterator(std::end(reads)));
       });
@@ -86,8 +86,8 @@ std::vector<AlignedRead> ReadManager::fetch_reads(const SampleIdType& sample_id,
     open_readers(last_open_reader, last_region_containing_reader);
     
     std::for_each(last_open_reader, last_region_containing_reader,
-      [this, &sample_id, &region, &result] (const auto& reader_path) {
-          auto reads = std::move(open_readers_.at(reader_path).fetch_reads(region)[sample_id]);
+      [this, &sample, &region, &result] (const auto& reader_path) {
+          auto reads = std::move(open_readers_.at(reader_path).fetch_reads(region)[sample]);
           result.insert(std::end(result), std::make_move_iterator(std::begin(reads)),
                         std::make_move_iterator(std::end(reads)));
       });
@@ -95,10 +95,10 @@ std::vector<AlignedRead> ReadManager::fetch_reads(const SampleIdType& sample_id,
     return result;
 }
 
-ReadManager::SampleReadMap ReadManager::fetch_reads(const std::vector<SampleIdType>& sample_ids,
+ReadManager::SampleReadMap ReadManager::fetch_reads(const std::vector<SampleIdType>& samples,
                                                     const GenomicRegion& region)
 {
-    auto reader_paths_containing_samples = get_reader_paths_containing_samples(sample_ids);
+    auto reader_paths_containing_samples = get_reader_paths_containing_samples(samples);
     
     auto last_region_containing_reader = std::partition(std::begin(reader_paths_containing_samples),
                                                         std::end(reader_paths_containing_samples),
@@ -111,7 +111,7 @@ ReadManager::SampleReadMap ReadManager::fetch_reads(const std::vector<SampleIdTy
                                            [this] (auto& reader_path) { return is_open(reader_path); });
     
     SampleReadMap result {};
-    result.reserve(sample_ids.size());
+    result.reserve(samples.size());
     
     std::for_each(std::begin(reader_paths_containing_samples), last_open_reader,
       [this, &region, &result] (const auto& reader_path) {
@@ -140,7 +140,7 @@ ReadManager::SampleReadMap ReadManager::fetch_reads(const std::vector<SampleIdTy
 
 ReadManager::SampleReadMap ReadManager::fetch_reads(const GenomicRegion& region)
 {
-    return fetch_reads(get_sample_ids(), region);
+    return fetch_reads(get_samples(), region);
 }
 
 // Private methods
@@ -183,7 +183,7 @@ void ReadManager::setup_reader_samples_and_regions()
     for (const auto& reader_path : closed_readers_) {
         auto reader = make_reader(reader_path);
         add_possible_regions_to_reader_map(reader_path, reader.get_possible_regions_in_file());
-        add_reader_to_sample_map(reader_path, reader.get_sample_ids());
+        add_reader_to_sample_map(reader_path, reader.get_samples());
     }
 }
 
@@ -296,17 +296,17 @@ std::vector<fs::path> ReadManager::get_reader_paths_possibly_containing_region(c
 void ReadManager::add_reader_to_sample_map(const fs::path& the_reader_path,
                                            const std::vector<SampleIdType>& the_samples_in_reader)
 {
-    for (auto sample_id : the_samples_in_reader) {
-        reader_paths_containing_sample_[sample_id].emplace_back(the_reader_path);
+    for (auto sample : the_samples_in_reader) {
+        reader_paths_containing_sample_[sample].emplace_back(the_reader_path);
     }
 }
 
-std::vector<fs::path> ReadManager::get_reader_paths_containing_samples(const std::vector<SampleIdType>& sample_ids) const
+std::vector<fs::path> ReadManager::get_reader_paths_containing_samples(const std::vector<SampleIdType>& samples) const
 {
     std::unordered_set<fs::path> unique_reader_paths {};
     
-    for (const auto& sample_id : sample_ids) {
-        const auto& sample_reader_paths = reader_paths_containing_sample_.at(sample_id);
+    for (const auto& sample : samples) {
+        const auto& sample_reader_paths = reader_paths_containing_sample_.at(sample);
         for (const auto& reader_path : sample_reader_paths) {
             unique_reader_paths.emplace(reader_path);
         }
