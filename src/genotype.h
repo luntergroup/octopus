@@ -47,6 +47,7 @@ public:
     Genotype& operator=(Genotype&&)      = default;
     
     const MappableType& at(unsigned n) const;
+    const MappableType& operator[](unsigned n) const;
     template <typename T> void emplace(T&& element);
     
     Iterator begin() const noexcept;
@@ -58,6 +59,7 @@ public:
     bool contains(const MappableType& element) const;
     unsigned num_occurences(const MappableType& element) const;
     bool is_homozygous() const;
+    unsigned zygosity() const;
     std::vector<MappableType> get_unique() const;
     
 private:
@@ -90,6 +92,12 @@ template <typename MappableType>
 const MappableType& Genotype<MappableType>::at(unsigned n) const
 {
     return elements_.at(n);
+}
+
+template <typename MappableType>
+const MappableType& Genotype<MappableType>::operator[](unsigned n) const
+{
+    return elements_[n];
 }
 
 template <typename MappableType>
@@ -133,6 +141,19 @@ bool Genotype<MappableType>::is_homozygous() const
                        [&first_element] (const auto& element) {
                            return first_element == element;
                        });
+}
+
+template <typename MappableType>
+unsigned Genotype<MappableType>::zygosity() const
+{
+    unsigned result {};
+    
+    for (auto first = std::cbegin(elements_), last = std::cend(elements_); first != last;) {
+        ++result;
+        first = std::upper_bound(first, last, *first);
+    }
+    
+    return result;
 }
 
 template <typename MappableType>

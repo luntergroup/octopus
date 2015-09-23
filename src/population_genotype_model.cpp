@@ -184,7 +184,7 @@ namespace Octopus
     compute_haplotype_frequencies(const PopulationGenotypeModel::GenotypeProbabilities& posteriors,
                                   unsigned num_samples, unsigned ploidy)
     {
-        std::unordered_map<Haplotype, double> result {};
+        HaplotypeFrequencies result {};
         
         for (const auto& sample_posteriors : posteriors) {
             for (const auto& posterior : sample_posteriors.second) {

@@ -22,7 +22,7 @@
 #include "vcf_record.h"
 
 #include "genotype_model.h"
-#include "population_genotype_model.h"
+#include "cancer_genotype_model.h"
 
 #include <iostream> // TEST
 
@@ -48,6 +48,15 @@ std::vector<VcfRecord> CancerVariantCaller::call_variants(const GenomicRegion& r
                                                           const ReadMap& reads)
 {
     std::vector<VcfRecord> result {};
+    
+    Octopus::HaplotypeTree tree {reference_};
+    extend_tree(candidates, tree);
+    
+    auto haplotypes = tree.get_haplotypes(region);
+    
+    auto genotype_model = std::make_unique<Octopus::CancerGenotypeModel>(1, "1");
+    
+    auto genotype_posteriors = genotype_model->evaluate(haplotypes, reads);
     
     return result;
 }

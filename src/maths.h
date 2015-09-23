@@ -12,10 +12,11 @@
 #include <vector>
 #include <cstddef>     // std::size_t
 #include <cmath>       // std::exp, std::log
-#include <numeric>     // std::accumulate, std::iota
+#include <numeric>     // std::accumulate, std::iota, std::inner_product
 #include <algorithm>   // std::max, std::max_element, std::transform
 #include <type_traits> // std::enable_if, std::is_integral
 #include <iterator>    // std::distance
+#include <functional>  // std::plus
 
 #include <boost/math/special_functions/gamma.hpp>
 #include <boost/math/special_functions/factorials.hpp>
@@ -118,8 +119,28 @@ RealType log_factorial(IntegerType x)
         std::vector<RealType> tx(x);
         std::transform(lx.cbegin(), lx.cend(), tx.begin(),
                        [] (IntegerType a) { return std::log(static_cast<RealType>(a)); });
-        return std::accumulate(tx.cbegin(), tx.cend(), static_cast<RealType>(0));
+        return std::accumulate(tx.cbegin(), tx.cend(), RealType {});
     }
+}
+
+template <typename RealType, typename InputIterator>
+inline
+RealType
+log_beta(InputIterator first, InputIterator last)
+{
+    auto n = std::accumulate(first, last, RealType {}, [] (auto v, auto x) { return v + boost::math::lgamma(x); });
+    auto d = boost::math::lgamma(std::accumulate(first, last, RealType {}));
+    return n - d;
+}
+
+template <typename RealType, typename InputIterator1, typename InputIterator2>
+inline
+RealType
+log_dirichlet(InputIterator1 firstalpha, InputIterator1 lastalpha, InputIterator2 firstpi)
+{
+    auto p = std::inner_product(firstalpha, lastalpha, firstpi, RealType {}, std::plus<RealType>(),
+                                [] (auto a, auto p) { return (a - 1) * std::log(p); });
+    return p - log_beta<RealType>(firstalpha, lastalpha);
 }
 
 template <typename RealType, typename IntegerType>
@@ -130,7 +151,7 @@ log_multinomial_coefficient(std::initializer_list<IntegerType> il)
     std::vector<RealType> denoms(il.size());
     std::transform(il.begin(), il.end(), denoms.begin(), log_factorial<RealType, IntegerType>);
     return log_factorial<RealType>(std::accumulate(il.begin(), il.end(), 0)) -
-            std::accumulate(denoms.cbegin(), denoms.cend(), static_cast<RealType>(0));
+    std::accumulate(denoms.cbegin(), denoms.cend(), RealType {});
 }
 
 template <typename RealType, typename Iterator>

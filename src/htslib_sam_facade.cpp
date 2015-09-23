@@ -47,8 +47,8 @@ public:
     
     const char* what() const noexcept
     {
-        return (std::string{runtime_error::what()} + ": in " + file_path_ + ", read " + read_name_ +
-                " - " + message_).c_str();
+        return (std::string {runtime_error::what()} + ": in " + file_path_ + ", read " + read_name_ +
+                    " - " + message_).c_str();
     }
     
 private:
@@ -153,7 +153,7 @@ HtslibSamFacade::SampleIdToReadsMap HtslibSamFacade::fetch_reads(const GenomicRe
             the_reads[std::move(sample)].emplace_back(std::move(a_read_and_its_group.first));
         } catch (InvalidBamRecord& e) {
             // TODO: Just ignore? Could log or something.
-            std::clog << "Warning: " << e.what() << std::endl;
+            //std::clog << "Warning: " << e.what() << std::endl;
         } catch (...) {
             // Could be something really bad.
             throw;

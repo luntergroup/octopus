@@ -36,7 +36,7 @@
 #include "genotype_model.h"
 #include "population_genotype_model.h"
 #include "vcf.h"
-
+#include "maths.h"
 #include "sequence_utils.h"
 
 #include "mock_options.h"
