@@ -6,7 +6,7 @@
 //  Copyright (c) 2015 Oxford University. All rights reserved.
 //
 
-#include "htslib_sam_facade.h"
+#include "htslib_sam_facade.hpp"
 
 #include <sstream>
 #include <cmath>    // std::abs
@@ -15,7 +15,7 @@
 
 #include <iostream> // TEST
 
-#include "cigar_string.h"
+#include "cigar_string.hpp"
 
 class InvalidBamHeader : std::runtime_error {
 public:

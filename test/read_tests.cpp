@@ -15,13 +15,13 @@
 #include <iterator>
 #include <vector>
 
-#include "test_common.h"
-#include "genomic_region.h"
-#include "aligned_read.h"
-#include "htslib_sam_facade.h"
-#include "read_manager.h"
-#include "mock_objects.h"
-#include "mappable_algorithms.h"
+#include "test_common.hpp"
+#include "genomic_region.hpp"
+#include "aligned_read.hpp"
+#include "htslib_sam_facade.hpp"
+#include "read_manager.hpp"
+#include "mock_objects.hpp"
+#include "mappable_algorithms.hpp"
 
 using std::cout;
 using std::endl;

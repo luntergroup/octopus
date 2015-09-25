@@ -6,7 +6,7 @@
 //  Copyright (c) 2015 Oxford University. All rights reserved.
 //
 
-#include "basic_haplotype_prior_model.h"
+#include "basic_haplotype_prior_model.hpp"
 
 // public methods
 

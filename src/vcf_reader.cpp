@@ -6,16 +6,16 @@
 //  Copyright (c) 2015 Oxford University. All rights reserved.
 //
 
-#include "vcf_reader.h"
+#include "vcf_reader.hpp"
 
 #include <fstream>
 #include <iostream>
 #include <stdexcept>
 
-#include "vcf_header.h"
-#include "vcf_record.h"
-#include "htslib_bcf_facade.h"
-#include "vcf_parser.h"
+#include "vcf_header.hpp"
+#include "vcf_record.hpp"
+#include "htslib_bcf_facade.hpp"
+#include "vcf_parser.hpp"
 
 std::unique_ptr<IVcfReaderImpl> make_vcf_reader(const fs::path& file_path)
 {

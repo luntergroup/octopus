@@ -6,7 +6,7 @@
 //  Copyright (c) 2015 Oxford University. All rights reserved.
 //
 
-#include "reference_genome.h"
+#include "reference_genome.hpp"
 
 #include <algorithm> // std::find, std::sort, std::remove_copy
 #include <iterator>  // std::cbegin, std::cend, std::back_inserter
@@ -14,9 +14,9 @@
 #include <regex>     // std::regex, std::smatch, std::regex_search
 #include <stdexcept>
 
-#include "fasta.h"
-#include "caching_fasta.h"
-#include "threadsafe_fasta.h"
+#include "fasta.hpp"
+#include "caching_fasta.hpp"
+#include "threadsafe_fasta.hpp"
 
 ReferenceGenome::ReferenceGenome(std::unique_ptr<ReferenceGenomeImpl> impl)
 :

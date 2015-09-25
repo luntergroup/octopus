@@ -6,7 +6,7 @@
 //  Copyright (c) 2015 Oxford University. All rights reserved.
 //
 
-#include "program_options.h"
+#include "program_options.hpp"
 
 #include <iostream>
 #include <fstream>
@@ -19,19 +19,19 @@
 #include <boost/filesystem/path.hpp>
 #include <boost/filesystem/operations.hpp>
 
-#include "genomic_region.h"
-#include "reference_genome.h"
-#include "aligned_read.h"
-#include "read_manager.h"
-#include "read_filters.h"
-#include "read_transform.h"
-#include "read_transformations.h"
-#include "candidate_generators.h"
-#include "vcf_reader.h"
-#include "vcf_writer.h"
+#include "genomic_region.hpp"
+#include "reference_genome.hpp"
+#include "aligned_read.hpp"
+#include "read_manager.hpp"
+#include "read_filters.hpp"
+#include "read_transform.hpp"
+#include "read_transformations.hpp"
+#include "candidate_generators.hpp"
+#include "vcf_reader.hpp"
+#include "vcf_writer.hpp"
 
-#include "mappable_algorithms.h"
-#include "string_utils.h"
+#include "mappable_algorithms.hpp"
+#include "string_utils.hpp"
 
 namespace fs = boost::filesystem;
 

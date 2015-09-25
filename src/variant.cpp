@@ -6,7 +6,7 @@
 //  Copyright (c) 2015 Oxford University. All rights reserved.
 //
 
-#include "variant.h"
+#include "variant.hpp"
 
 const GenomicRegion& Variant::get_region() const noexcept
 {

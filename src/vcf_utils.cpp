@@ -6,7 +6,7 @@
 //  Copyright (c) 2015 Oxford University. All rights reserved.
 //
 
-#include "vcf_utils.h"
+#include "vcf_utils.hpp"
 
 unsigned get_field_cardinality(const VcfHeader::KeyType& key, const VcfRecord& record)
 {

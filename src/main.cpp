@@ -14,32 +14,32 @@
 #include <cstdlib>
 #include <stdexcept>
 
-#include "program_options.h"
-#include "octopus.h"
+#include "program_options.hpp"
+#include "octopus.hpp"
 
 #include <iostream>
 #include <string>
 #include <chrono>
 #include <algorithm>
 
-#include "test_common.h"
-#include "genomic_region.h"
-#include "variant.h"
-#include "reference_genome.h"
-#include "read_manager.h"
-#include "mappable_set.h"
-#include "mappable_algorithms.h"
-#include "candidate_generators.h"
-#include "mappable_set.h"
-#include "mappable_map.h"
-#include "haplotype_tree.h"
-#include "genotype_model.h"
-#include "population_genotype_model.h"
-#include "vcf.h"
-#include "maths.h"
-#include "sequence_utils.h"
+#include "test_common.hpp"
+#include "genomic_region.hpp"
+#include "variant.hpp"
+#include "reference_genome.hpp"
+#include "read_manager.hpp"
+#include "mappable_set.hpp"
+#include "mappable_algorithms.hpp"
+#include "candidate_generators.hpp"
+#include "mappable_set.hpp"
+#include "mappable_map.hpp"
+#include "haplotype_tree.hpp"
+#include "genotype_model.hpp"
+#include "population_genotype_model.hpp"
+#include "vcf.hpp"
+#include "maths.hpp"
+#include "sequence_utils.hpp"
 
-#include "mock_options.h"
+#include "mock_options.hpp"
 
 using std::cout;
 using std::endl;

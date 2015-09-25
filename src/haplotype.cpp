@@ -6,15 +6,15 @@
 //  Copyright (c) 2015 Oxford University. All rights reserved.
 //
 
-#include "haplotype.h"
+#include "haplotype.hpp"
 
 #include <algorithm> // std::for_each, std::binary_search, std::equal_range, std::sort,
                      // std::nth_element, std::find_if_not, std::adjacent_find, std::unique
 #include <iterator>  // std::cbegin, std::cend, std::distance, std::next
 
-#include "reference_genome.h"
-#include "genomic_region.h"
-#include "mappable_algorithms.h"
+#include "reference_genome.hpp"
+#include "genomic_region.hpp"
+#include "mappable_algorithms.hpp"
 
 // public methods
 

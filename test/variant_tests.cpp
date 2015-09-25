@@ -14,14 +14,14 @@
 #include <vector>
 #include <algorithm>
 
-#include "test_common.h"
-#include "reference_genome.h"
-#include "genomic_region.h"
-#include "mappable_algorithms.h"
-#include "allele.h"
-#include "variant.h"
-#include "variant_utils.h"
-#include "mock_objects.h"
+#include "test_common.hpp"
+#include "reference_genome.hpp"
+#include "genomic_region.hpp"
+#include "mappable_algorithms.hpp"
+#include "allele.hpp"
+#include "variant.hpp"
+#include "variant_utils.hpp"
+#include "mock_objects.hpp"
 
 using std::cout;
 using std::endl;

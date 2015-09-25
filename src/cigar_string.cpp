@@ -6,7 +6,7 @@
 //  Copyright (c) 2015 Oxford University. All rights reserved.
 //
 
-#include "cigar_string.h"
+#include "cigar_string.hpp"
 
 #include <ctype.h>   // std::isdigit
 #include <algorithm> // std::copy

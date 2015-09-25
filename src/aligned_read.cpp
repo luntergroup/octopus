@@ -6,9 +6,9 @@
 //  Copyright (c) 2015 Oxford University. All rights reserved.
 //
 
-#include "aligned_read.h"
+#include "aligned_read.hpp"
 
-#include "compression.h"
+#include "compression.hpp"
 
 AlignedRead::AlignedRead(const AlignedRead& other)
 :

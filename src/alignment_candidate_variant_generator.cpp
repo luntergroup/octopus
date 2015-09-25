@@ -6,16 +6,16 @@
 //  Copyright (c) 2015 Oxford University. All rights reserved.
 //
 
-#include "alignment_candidate_variant_generator.h"
+#include "alignment_candidate_variant_generator.hpp"
 
 #include <iterator>  // std::cbegin etc, std::distance
 #include <boost/range/combine.hpp>
 
-#include "reference_genome.h"
-#include "aligned_read.h"
-#include "variant.h"
-#include "cigar_string.h"
-#include "mappable_algorithms.h"
+#include "reference_genome.hpp"
+#include "aligned_read.hpp"
+#include "variant.hpp"
+#include "cigar_string.hpp"
+#include "mappable_algorithms.hpp"
 
 AlignmentCandidateVariantGenerator::AlignmentCandidateVariantGenerator(ReferenceGenome& reference,
                                                                        QualityType min_base_quality,

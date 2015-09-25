@@ -6,13 +6,13 @@
 //  Copyright (c) 2015 Oxford University. All rights reserved.
 //
 
-#include "read_model.h"
+#include "read_model.hpp"
 
 #include <cmath>
 #include <algorithm> // std::max, std::min
 
-#include "pair_hmm.h"
-#include "maths.h"
+#include "pair_hmm.hpp"
+#include "maths.hpp"
 
 #include <iostream> // TEST
 

@@ -13,12 +13,12 @@
 #include <iostream>
 #include <memory>
 
-#include "test_common.h"
-#include "reference_genome.h"
-#include "read_manager.h"
-#include "variant.h"
-#include "candidate_generators.h"
-#include "vcf_reader.h"
+#include "test_common.hpp"
+#include "reference_genome.hpp"
+#include "read_manager.hpp"
+#include "variant.hpp"
+#include "candidate_generators.hpp"
+#include "vcf_reader.hpp"
 
 using std::cout;
 using std::endl;

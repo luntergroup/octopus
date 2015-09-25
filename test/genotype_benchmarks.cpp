@@ -13,18 +13,18 @@
 #include <iostream>
 #include <string>
 
-#include "test_common.h"
-#include "benchmark_utils.h"
-#include "reference_genome.h"
-#include "read_manager.h"
-#include "variant.h"
-#include "variant_utils.h"
-#include "candidate_variant_generator.h"
-#include "alignment_candidate_variant_generator.h"
-#include "haplotype.h"
-#include "genotype.h"
-#include "allele.h"
-#include "haplotype_tree.h"
+#include "test_common.hpp"
+#include "benchmark_utils.hpp"
+#include "reference_genome.hpp"
+#include "read_manager.hpp"
+#include "variant.hpp"
+#include "variant_utils.hpp"
+#include "candidate_variant_generator.hpp"
+#include "alignment_candidate_variant_generator.hpp"
+#include "haplotype.hpp"
+#include "genotype.hpp"
+#include "allele.hpp"
+#include "haplotype_tree.hpp"
 
 //BOOST_AUTO_TEST_CASE(genotype hashing benchmark)
 //{

@@ -6,7 +6,7 @@
 //  Copyright (c) 2015 Oxford University. All rights reserved.
 //
 
-#include "vcf_type.h"
+#include "vcf_type.hpp"
 
 #include <unordered_map>
 #include <functional>

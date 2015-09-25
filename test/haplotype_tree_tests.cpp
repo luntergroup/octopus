@@ -17,17 +17,17 @@
 #include <algorithm>
 #include <set>
 
-#include "test_common.h"
-#include "reference_genome.h"
-#include "read_manager.h"
-#include "variant.h"
-#include "candidate_variant_generator.h"
-#include "alignment_candidate_variant_generator.h"
-#include "haplotype.h"
-#include "haplotype_tree.h"
-#include "mappable_algorithms.h"
-#include "read_filter.h"
-#include "read_filters.h"
+#include "test_common.hpp"
+#include "reference_genome.hpp"
+#include "read_manager.hpp"
+#include "variant.hpp"
+#include "candidate_variant_generator.hpp"
+#include "alignment_candidate_variant_generator.hpp"
+#include "haplotype.hpp"
+#include "haplotype_tree.hpp"
+#include "mappable_algorithms.hpp"
+#include "read_filter.hpp"
+#include "read_filters.hpp"
 
 using std::cout;
 using std::endl;

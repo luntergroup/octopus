@@ -6,12 +6,12 @@
 //  Copyright (c) 2015 Oxford University. All rights reserved.
 //
 
-#include "online_candidate_variant_generator.h"
+#include "online_candidate_variant_generator.hpp"
 
 #include <boost/network/protocol/http/client.hpp>
 
-#include "aligned_read.h"
-#include "variant.h"
+#include "aligned_read.hpp"
+#include "variant.hpp"
 
 namespace http = boost::network::http;
 

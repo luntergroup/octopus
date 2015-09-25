@@ -15,13 +15,13 @@
 #include <algorithm> // std::sort
 #include <iterator>  // std::back_inserter
 
-#include "test_common.h"
-#include "genomic_region.h"
-#include "read_manager.h"
-#include "read_filter.h"
-#include "read_filters.h"
-#include "context_iterators.h"
-//#include "read_filter_factory.h"
+#include "test_common.hpp"
+#include "genomic_region.hpp"
+#include "read_manager.hpp"
+#include "read_filter.hpp"
+#include "read_filters.hpp"
+#include "context_iterators.hpp"
+//#include "read_filter_factory.hpp"
 
 using Octopus::ContextBackInserter;
 

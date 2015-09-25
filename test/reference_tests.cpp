@@ -14,8 +14,8 @@
 #include <string>
 #include <future>
 
-#include "test_common.h"
-#include "reference_genome.h"
+#include "test_common.hpp"
+#include "reference_genome.hpp"
 
 using std::cout;
 using std::endl;

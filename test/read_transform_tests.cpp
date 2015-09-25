@@ -15,11 +15,11 @@
 #include <algorithm> // std::sort
 #include <iterator>  // std::back_inserter
 
-#include "test_common.h"
-#include "genomic_region.h"
-#include "read_manager.h"
-#include "read_transform.h"
-#include "read_transformations.h"
+#include "test_common.hpp"
+#include "genomic_region.hpp"
+#include "read_manager.hpp"
+#include "read_transform.hpp"
+#include "read_transformations.hpp"
 
 BOOST_AUTO_TEST_SUITE(Components)
 

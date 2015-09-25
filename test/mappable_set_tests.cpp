@@ -14,14 +14,14 @@
 #include <chrono>
 #include <algorithm>
 
-#include "test_common.h"
-#include "genomic_region.h"
-#include "read_manager.h"
-#include "mappable_set.h"
-#include "read_utils.h"
-#include "read_filters.h"
-#include "context_iterators.h"
-#include "mappable_map.h"
+#include "test_common.hpp"
+#include "genomic_region.hpp"
+#include "read_manager.hpp"
+#include "mappable_set.hpp"
+#include "read_utils.hpp"
+#include "read_filters.hpp"
+#include "context_iterators.hpp"
+#include "mappable_map.hpp"
 
 using std::cout;
 using std::endl;

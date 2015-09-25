@@ -6,14 +6,14 @@
 //  Copyright (c) 2015 Oxford University. All rights reserved.
 //
 
-#include "allele.h"
+#include "allele.hpp"
 
 #include <algorithm> // std::min, std::transform
 #include <iterator>  // std::back_inserter
 #include <cstddef>   // size_t
 
-#include "string_utils.h"
-#include "mappable_algorithms.h"
+#include "string_utils.hpp"
+#include "mappable_algorithms.hpp"
 
 const GenomicRegion& Allele::get_region() const noexcept
 {

@@ -6,7 +6,7 @@
 //  Copyright (c) 2015 Oxford University. All rights reserved.
 //
 
-#include "vcf_record.h"
+#include "vcf_record.hpp"
 
 #include <algorithm> // std::find
 #include <iterator>  // std::cbegin, std::cend

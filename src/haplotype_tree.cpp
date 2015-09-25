@@ -6,15 +6,15 @@
 //  Copyright (c) 2015 Oxford University. All rights reserved.
 //
 
-#include "haplotype_tree.h"
+#include "haplotype_tree.hpp"
 
 #include <stdexcept>
 #include <iterator>  // std::next, std::tie, std::cbegin etc
 #include <algorithm> // std::find, std::find_if, std::any_of
 
-#include "genomic_region.h"
-#include "reference_genome.h"
-#include "mappable_algorithms.h"
+#include "genomic_region.hpp"
+#include "reference_genome.hpp"
+#include "mappable_algorithms.hpp"
 
 namespace Octopus
 {

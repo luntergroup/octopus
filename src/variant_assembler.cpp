@@ -6,11 +6,11 @@
 //  Copyright (c) 2015 Oxford University. All rights reserved.
 //
 
-#include "variant_assembler.h"
+#include "variant_assembler.hpp"
 
-#include "aligned_read.h"
-#include "genomic_region.h"
-#include "variant.h"
+#include "aligned_read.hpp"
+#include "genomic_region.hpp"
+#include "variant.hpp"
 
 VariantAssembler::VariantAssembler(unsigned k)
 :

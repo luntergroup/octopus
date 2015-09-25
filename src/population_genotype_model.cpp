@@ -6,12 +6,12 @@
 //  Copyright (c) 2015 Oxford University. All rights reserved.
 //
 
-#include "population_genotype_model.h"
+#include "population_genotype_model.hpp"
 
 #include <cmath>
 
-#include "read_model.h"
-#include "maths.h"
+#include "read_model.hpp"
+#include "maths.hpp"
 
 #include <iostream> // TEST
 

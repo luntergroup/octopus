@@ -6,12 +6,12 @@
 //  Copyright (c) 2015 Oxford University. All rights reserved.
 //
 
-#include "external_variant_candidates.h"
+#include "external_variant_candidates.hpp"
 
 #include <cstddef>
 
-#include "vcf_record.h"
-#include "variant.h"
+#include "vcf_record.hpp"
+#include "variant.hpp"
 
 ExternalVariantCandidates::ExternalVariantCandidates(VcfReader& reader)
 :

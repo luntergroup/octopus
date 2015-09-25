@@ -6,12 +6,12 @@
 //  Copyright (c) 2015 Oxford University. All rights reserved.
 //
 
-#include "vcf_writer.h"
+#include "vcf_writer.hpp"
 
 #include <stdexcept>
 
-#include "vcf_header.h"
-#include "vcf_record.h"
+#include "vcf_header.hpp"
+#include "vcf_record.hpp"
 
 #include <iostream> // TEST
 

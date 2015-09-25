@@ -6,7 +6,7 @@
 //  Copyright (c) 2015 Oxford University. All rights reserved.
 //
 
-#include "tandem.h"
+#include "tandem.hpp"
 
 #include <stack>
 

@@ -6,15 +6,15 @@
 //  Copyright (c) 2015 Oxford University. All rights reserved.
 //
 
-#include "cancer_genotype_model.h"
+#include "cancer_genotype_model.hpp"
 
 #include <array>
 #include <numeric>
 #include <algorithm>
 
-#include "read_model.h"
-#include "common.h"
-#include "maths.h"
+#include "read_model.hpp"
+#include "common.hpp"
+#include "maths.hpp"
 
 namespace Octopus
 {

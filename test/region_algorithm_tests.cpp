@@ -15,9 +15,9 @@
 #include <algorithm>
 #include <numeric>
 
-#include "mock_objects.h"
-#include "genomic_region.h"
-#include "mappable_algorithms.h"
+#include "mock_objects.hpp"
+#include "genomic_region.hpp"
+#include "mappable_algorithms.hpp"
 
 using std::cout;
 using std::endl;

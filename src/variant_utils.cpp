@@ -6,14 +6,14 @@
 //  Copyright (c) 2015 Oxford University. All rights reserved.
 //
 
-#include "variant_utils.h"
+#include "variant_utils.hpp"
 
 #include <list>
 #include <utility> // std::move
 
-#include "reference_genome.h"
-#include "candidate_variant_generator.h"
-#include "mappable_algorithms.h"
+#include "reference_genome.hpp"
+#include "candidate_variant_generator.hpp"
+#include "mappable_algorithms.hpp"
 
 using std::cbegin;
 using std::cend;

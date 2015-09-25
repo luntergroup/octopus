@@ -6,14 +6,14 @@
 //  Copyright (c) 2015 Oxford University. All rights reserved.
 //
 
-#include "candidate_variant_generator.h"
+#include "candidate_variant_generator.hpp"
 
 #include <algorithm> // std::inplace_merge
 
-#include "genomic_region.h"
-#include "aligned_read.h"
-#include "variant.h"
-#include "variant_utils.h"
+#include "genomic_region.hpp"
+#include "aligned_read.hpp"
+#include "variant.hpp"
+#include "variant_utils.hpp"
 
 void CandidateVariantGenerator::register_generator(std::unique_ptr<ICandidateVariantGenerator> generator)
 {

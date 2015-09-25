@@ -6,15 +6,15 @@
 //  Copyright (c) 2015 Oxford University. All rights reserved.
 //
 
-#include "vcf_parser.h"
+#include "vcf_parser.hpp"
 
 #include <string>
 #include <algorithm> // std::count_if, std::copy, std::transform, std::for_each, std::count
 #include <iterator>  // std::cbegin, std::cend, std::advance, std::next
 #include <stdexcept>
 
-#include "genomic_region.h"
-#include "vcf_record.h"
+#include "genomic_region.hpp"
+#include "vcf_record.hpp"
 
 #include <iostream> // TEST
 

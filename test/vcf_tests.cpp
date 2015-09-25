@@ -13,10 +13,10 @@
 #include <iostream>
 #include <string>
 
-#include "test_common.h"
-#include "genomic_region.h"
-#include "variant.h"
-#include "vcf.h"
+#include "test_common.hpp"
+#include "genomic_region.hpp"
+#include "variant.hpp"
+#include "vcf.hpp"
 
 using std::cout;
 using std::endl;

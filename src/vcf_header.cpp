@@ -6,7 +6,7 @@
 //  Copyright (c) 2015 Oxford University. All rights reserved.
 //
 
-#include "vcf_header.h"
+#include "vcf_header.hpp"
 
 #include <algorithm> // std::find_if, std::transform, std::sort, std::unique
 #include <utility>   // std::move

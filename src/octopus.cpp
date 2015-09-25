@@ -6,7 +6,7 @@
 //  Copyright (c) 2015 Oxford University. All rights reserved.
 //
 
-#include "octopus.h"
+#include "octopus.hpp"
 
 #include <iostream>
 #include <thread>
@@ -14,19 +14,19 @@
 #include <memory>
 #include <algorithm>
 
-#include "common.h"
-#include "program_options.h"
-#include "mappable_map.h"
-#include "reference_genome.h"
-#include "read_manager.h"
-#include "read_filter.h"
-#include "read_transform.h"
-#include "read_utils.h"
-#include "candidate_generators.h"
-#include "vcf.h"
-#include "variant_caller.h"
-#include "basic_caller.h"
-#include "cancer_caller.h"
+#include "common.hpp"
+#include "program_options.hpp"
+#include "mappable_map.hpp"
+#include "reference_genome.hpp"
+#include "read_manager.hpp"
+#include "read_filter.hpp"
+#include "read_transform.hpp"
+#include "read_utils.hpp"
+#include "candidate_generators.hpp"
+#include "vcf.hpp"
+#include "variant_caller.hpp"
+#include "basic_caller.hpp"
+#include "cancer_caller.hpp"
 
 using std::cout;
 using std::endl;

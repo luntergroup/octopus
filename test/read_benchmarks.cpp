@@ -14,13 +14,13 @@
 #include <memory>
 #include <boost/filesystem/path.hpp>
 
-#include "test_common.h"
-#include "benchmark_utils.h"
-#include "htslib_sam_facade.h"
-#include "read_manager.h"
-#include "aligned_read.h"
-#include "read_utils.h"
-#include "mappable_algorithms.h"
+#include "test_common.hpp"
+#include "benchmark_utils.hpp"
+#include "htslib_sam_facade.hpp"
+#include "read_manager.hpp"
+#include "aligned_read.hpp"
+#include "read_utils.hpp"
+#include "mappable_algorithms.hpp"
 
 using std::cout;
 using std::endl;

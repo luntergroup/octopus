@@ -6,19 +6,19 @@
 //  Copyright (c) 2015 Oxford University. All rights reserved.
 //
 
-#include "haplotype_phaser.h"
+#include "haplotype_phaser.hpp"
 
 #include <algorithm> // std::for_each
 #include <iterator>  // std::distance
 #include <cmath>     // std::log2
 #include <utility>   // std::make_pair
 
-#include "allele.h"
-#include "mappable_algorithms.h"
-#include "search_regions.h"
-#include "haplotype.h"
-#include "genotype.h"
-#include "haplotype_prior_model.h"
+#include "allele.hpp"
+#include "mappable_algorithms.hpp"
+#include "search_regions.hpp"
+#include "haplotype.hpp"
+#include "genotype.hpp"
+#include "haplotype_prior_model.hpp"
 
 namespace Octopus
 {

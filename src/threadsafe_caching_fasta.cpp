@@ -6,9 +6,9 @@
 //  Copyright (c) 2015 Oxford University. All rights reserved.
 //
 
-#include "threadsafe_caching_fasta.h"
+#include "threadsafe_caching_fasta.hpp"
 
-#include "genomic_region.h"
+#include "genomic_region.hpp"
 
 ThreadsafeCachingFasta::ThreadsafeCachingFasta(fs::path fasta_path)
 :

@@ -13,14 +13,14 @@
 #include <iostream>
 #include <string>
 
-#include "test_common.h"
-#include "genomic_region.h"
-#include "aligned_read.h"
-#include "reference_genome.h"
-#include "mock_objects.h"
-//#include "assembler.h"
-#include "kmer_graph.h"
-#include "storage_policies.h"
+#include "test_common.hpp"
+#include "genomic_region.hpp"
+#include "aligned_read.hpp"
+#include "reference_genome.hpp"
+#include "mock_objects.hpp"
+//#include "assembler.hpp"
+#include "kmer_graph.hpp"
+#include "storage_policies.hpp"
 
 BOOST_AUTO_TEST_SUITE(Components)
 

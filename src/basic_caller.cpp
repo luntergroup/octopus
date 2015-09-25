@@ -6,27 +6,27 @@
 //  Copyright (c) 2015 Oxford University. All rights reserved.
 //
 
-#include "basic_caller.h"
+#include "basic_caller.hpp"
 
 #include <unordered_map>
 #include <numeric>
 #include <algorithm>
 
-#include "common.h"
-#include "genomic_region.h"
-#include "read_manager.h"
-#include "allele.h"
-#include "variant.h"
-#include "haplotype.h"
-#include "genotype.h"
-#include "haplotype_tree.h"
-#include "search_regions.h"
-#include "vcf_record.h"
+#include "common.hpp"
+#include "genomic_region.hpp"
+#include "read_manager.hpp"
+#include "allele.hpp"
+#include "variant.hpp"
+#include "haplotype.hpp"
+#include "genotype.hpp"
+#include "haplotype_tree.hpp"
+#include "search_regions.hpp"
+#include "vcf_record.hpp"
 
-#include "mappable_algorithms.h"
-#include "variant_utils.h"
-#include "genotype_model.h"
-#include "population_genotype_model.h"
+#include "mappable_algorithms.hpp"
+#include "variant_utils.hpp"
+#include "genotype_model.hpp"
+#include "population_genotype_model.hpp"
 
 #include <iostream> // TEST
 

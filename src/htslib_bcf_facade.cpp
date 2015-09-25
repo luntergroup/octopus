@@ -6,7 +6,7 @@
 //  Copyright (c) 2015 Oxford University. All rights reserved.
 //
 
-#include "htslib_bcf_facade.h"
+#include "htslib_bcf_facade.hpp"
 
 #include <vector>
 #include <unordered_map>
@@ -17,9 +17,9 @@
 #include <cstring>   // std::strcpy
 #include <cstdint>
 
-#include "genomic_region.h"
-#include "vcf_header.h"
-#include "vcf_record.h"
+#include "genomic_region.hpp"
+#include "vcf_header.hpp"
+#include "vcf_record.hpp"
 
 #include <iostream> // TEST
 

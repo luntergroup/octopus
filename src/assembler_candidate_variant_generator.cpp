@@ -6,13 +6,13 @@
 //  Copyright (c) 2015 Oxford University. All rights reserved.
 //
 
-#include "assembler_candidate_variant_generator.h"
+#include "assembler_candidate_variant_generator.hpp"
 
 #include <algorithm> // std::for_each
 
-#include "reference_genome.h"
-#include "aligned_read.h"
-#include "variant.h"
+#include "reference_genome.hpp"
+#include "aligned_read.hpp"
+#include "variant.hpp"
 
 AssemblerCandidateVariantGenerator::AssemblerCandidateVariantGenerator(ReferenceGenome& reference,
                                                                        unsigned kmer_size,

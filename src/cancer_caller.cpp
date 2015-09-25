@@ -6,23 +6,23 @@
 //  Copyright (c) 2015 Oxford University. All rights reserved.
 //
 
-#include "cancer_caller.h"
+#include "cancer_caller.hpp"
 
 #include <unordered_map>
 #include <numeric>
 
-#include "genomic_region.h"
-#include "read_manager.h"
-#include "allele.h"
-#include "variant.h"
-#include "haplotype.h"
-#include "genotype.h"
-#include "haplotype_tree.h"
-#include "search_regions.h"
-#include "vcf_record.h"
+#include "genomic_region.hpp"
+#include "read_manager.hpp"
+#include "allele.hpp"
+#include "variant.hpp"
+#include "haplotype.hpp"
+#include "genotype.hpp"
+#include "haplotype_tree.hpp"
+#include "search_regions.hpp"
+#include "vcf_record.hpp"
 
-#include "genotype_model.h"
-#include "cancer_genotype_model.h"
+#include "genotype_model.hpp"
+#include "cancer_genotype_model.hpp"
 
 #include <iostream> // TEST
 

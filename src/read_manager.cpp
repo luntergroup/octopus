@@ -6,7 +6,7 @@
 //  Copyright (c) 2015 Oxford University. All rights reserved.
 //
 
-#include "read_manager.h"
+#include "read_manager.hpp"
 
 #include <memory> // std::make_unique
 #include <iterator>  // std::make_move_iterator, std::cbegin etc
@@ -14,9 +14,9 @@
 #include <utility>   // std::move
 #include <boost/filesystem/operations.hpp>
 
-#include "htslib_sam_facade.h"
-#include "aligned_read.h"
-#include "mappable_algorithms.h"
+#include "htslib_sam_facade.hpp"
+#include "aligned_read.hpp"
+#include "mappable_algorithms.hpp"
 
 #include <iostream> // TEST
 

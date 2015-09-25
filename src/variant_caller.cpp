@@ -6,13 +6,13 @@
 //  Copyright (c) 2015 Oxford University. All rights reserved.
 //
 
-#include "variant_caller.h"
+#include "variant_caller.hpp"
 
-#include "genomic_region.h"
-#include "mappable.h"
-#include "read_utils.h"
-#include "variant_utils.h"
-#include "vcf_record.h"
+#include "genomic_region.hpp"
+#include "mappable.hpp"
+#include "read_utils.hpp"
+#include "variant_utils.hpp"
+#include "vcf_record.hpp"
 
 #include <iostream> // TEST
 
