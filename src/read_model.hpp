@@ -12,13 +12,15 @@
 #include <vector>
 #include <string>
 #include <unordered_map>
-#include <cstddef> // std::size_t
+#include <cstddef>   // std::size_t
+#include <algorithm> // std::for_each
 #include <boost/functional/hash.hpp> // boost::hash_combine
 
 #include "common.hpp"
 #include "haplotype.hpp"
 #include "genotype.hpp"
 #include "aligned_read.hpp"
+#include "single_read_model.hpp"
 
 namespace Octopus
 {
@@ -29,7 +31,7 @@ public:
     using RealType     = Octopus::ProbabilityType;
     using SampleIdType = Octopus::SampleIdType;
     
-    ReadModel() = delete;
+    ReadModel()  = delete;
     explicit ReadModel(unsigned ploidy, bool can_cache_reads = true);
     ~ReadModel() = default;
     
@@ -52,10 +54,10 @@ public:
     void clear_cache();
     
 private:
+    SingleReadModel read_model_;
+    
     unsigned ploidy_;
     bool can_cache_reads_;
-    std::unordered_map<SampleIdType, std::unordered_map<AlignedRead,
-                        std::unordered_map<Haplotype, RealType>>> read_log_probability_cache_;
     
     using GenotypeReadKey = std::tuple<Genotype<Haplotype>, AlignedRead, std::size_t>;
     
@@ -64,18 +66,11 @@ private:
         std::size_t operator()(const GenotypeReadKey& key) const;
     };
     
-    std::unordered_map<SampleIdType, std::unordered_map<GenotypeReadKey, RealType, GenotypeReadKeyHash>>
-        genotype_log_probability_cache_;
+    using GenotypeCache = std::unordered_map<SampleIdType, std::unordered_map<GenotypeReadKey, RealType, GenotypeReadKeyHash>>;
+    
+    GenotypeCache genotype_log_probability_cache_;
     
     const double ln_ploidy_;
-    
-    bool is_read_in_cache(SampleIdType sample, const AlignedRead& read, const Haplotype& haplotype) const noexcept;
-    
-    void add_read_to_cache(SampleIdType sample, const AlignedRead& read, const Haplotype& haplotype,
-                           RealType read_log_probability);
-    
-    RealType get_log_probability_from_cache(SampleIdType sample, const AlignedRead& read,
-                                            const Haplotype& haplotype) const;
     
     template <typename ForwardIterator>
     bool is_genotype_in_cache(SampleIdType sample, ForwardIterator first_read, ForwardIterator last_read,

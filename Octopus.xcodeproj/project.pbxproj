@@ -688,11 +688,11 @@
 		D413B0421B5D4E84007EFDE0 /* models */ = {
 			isa = PBXGroup;
 			children = (
-				D48D2AE31BB5753F00C5596E /* single_read_model.hpp */,
-				D48D2AE21BB5753F00C5596E /* single_read_model.cpp */,
 				CA91C2CD1B8DF4CC00609FFA /* haplotype_prior_model.hpp */,
 				CA91C2CF1B8DF56100609FFA /* basic_haplotype_prior_model.hpp */,
 				CA91C2CE1B8DF56100609FFA /* basic_haplotype_prior_model.cpp */,
+				D48D2AE31BB5753F00C5596E /* single_read_model.hpp */,
+				D48D2AE21BB5753F00C5596E /* single_read_model.cpp */,
 				D42061151ACC3DA500D11553 /* read_model.hpp */,
 				D42061141ACC3DA500D11553 /* read_model.cpp */,
 				D413B0431B5D4EAC007EFDE0 /* genotype_model.hpp */,

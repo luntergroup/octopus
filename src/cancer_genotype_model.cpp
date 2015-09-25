@@ -12,6 +12,7 @@
 #include <numeric>
 #include <algorithm>
 
+#include "single_read_model.hpp"
 #include "read_model.hpp"
 #include "common.hpp"
 #include "maths.hpp"
@@ -53,25 +54,32 @@ namespace Octopus
         return log_multinomial_coefficient<double>(occurences.cbegin(), occurences.cend()) * r;
     }
     
+    double log_probability(const Genotype<Haplotype>& genotype, const std::array<double, 3>& f,
+                           const MappableSet<AlignedRead>& reads)
+    {
+        SingleReadModel rm {1000};
+        
+        double result {};
+        
+        for (const auto read : reads) {
+            result += log_sum_exp(std::log(f[0]) + rm.log_probability(read, genotype[0]),
+                                  std::log(f[1]) + rm.log_probability(read, genotype[1]),
+                                  std::log(f[2]) + rm.log_probability(read, genotype[2]));
+        }
+        
+        return result;
+    }
+    
     double log_joint_liklihood(const Genotype<Haplotype>& g, const ComponentFrequencies& fs,
                                const ReadMap& reads, const HaplotypeFrequencies& pi,
                                const ComponentPseudoCounts& alphas)
     {
-        ReadModel rm {3};
-        
         double p {};
         
         for (const auto sample_reads : reads) {
             auto f = fs.at(sample_reads.first);
             auto a = alphas.at(sample_reads.first);
-            
-            p += log_dirichlet<double>(a.begin(), a.end(), f.begin());
-            
-            for (const auto read : sample_reads.second) {
-                p += log_sum_exp(std::log(f[0]) + rm.log_probability(read, g[0], sample_reads.first),
-                                 std::log(f[1]) + rm.log_probability(read, g[1], sample_reads.first),
-                                 std::log(f[2]) + rm.log_probability(read, g[2], sample_reads.first));
-            }
+            p += log_dirichlet<double>(a.begin(), a.end(), f.begin()) + log_probability(g, f, sample_reads.second);
         }
         
         return log_hardy_weinberg(g, pi) + p;
@@ -81,8 +89,6 @@ namespace Octopus
     genotype_posteriors(const std::vector<Genotype<Haplotype>>& genotypes, const ReadMap& reads,
                         const HaplotypeFrequencies& pi, const ComponentPseudoCounts& alphas)
     {
-        ReadModel rm {3};
-        
         GenotypeMarginals result {};
         result.reserve(genotypes.size());
         
@@ -94,12 +100,8 @@ namespace Octopus
             
             for (const auto& sample_reads : reads) {
                 const auto& s = sample_reads.first;
-                const auto a = alphas.at(s);
-                for (const auto& read : sample_reads.second) {
-                    p += log_sum_exp(std::log(a[0]) + rm.log_probability(read, g[0], sample_reads.first),
-                                     std::log(a[1]) + rm.log_probability(read, g[1], sample_reads.first),
-                                     std::log(a[2]) + rm.log_probability(read, g[2], sample_reads.first));
-                }
+                const auto a  = alphas.at(s);
+                p += log_probability(g, a, sample_reads.second);
                 p -= sample_reads.second.size() * std::log(a[0] +  a[1] +  a[2]);
             }
             
@@ -143,7 +145,7 @@ namespace Octopus
         ComponentPseudoCounts result {};
         result.reserve(prior_counts.size());
         
-        ReadModel rm {3};
+        SingleReadModel rm {1000};
         
         for (const auto& sample_prior_counts : prior_counts) {
             result[sample_prior_counts.first] = sample_prior_counts.second;
@@ -152,9 +154,9 @@ namespace Octopus
                 double a {}, b {}, c {};
                 
                 for (const auto& read : reads.at(sample_prior_counts.first)) {
-                    a += rm.log_probability(read, genotype_posterior.first.at(0), sample_prior_counts.first);
-                    b += rm.log_probability(read, genotype_posterior.first.at(1), sample_prior_counts.first);
-                    c += rm.log_probability(read, genotype_posterior.first.at(2), sample_prior_counts.first);
+                    a += rm.log_probability(read, genotype_posterior.first.at(0));
+                    b += rm.log_probability(read, genotype_posterior.first.at(1));
+                    c += rm.log_probability(read, genotype_posterior.first.at(2));
                 }
                 
                 auto n = log_sum_exp(a, b, c);
