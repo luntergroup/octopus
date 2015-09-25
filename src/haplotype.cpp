@@ -294,7 +294,12 @@ bool operator==(const Haplotype& lhs, const Haplotype& rhs)
 bool operator<(const Haplotype& lhs, const Haplotype& rhs)
 {
     return (lhs.get_region() == rhs.get_region()) ? lhs.get_sequence() < rhs.get_sequence() :
-    lhs.get_region() < rhs.get_region();
+            lhs.get_region() < rhs.get_region();
+}
+
+bool have_same_alleles(const Haplotype& lhs, const Haplotype& rhs)
+{
+    return lhs.explicit_alleles_ == rhs.explicit_alleles_;
 }
 
 std::ostream& operator<<(std::ostream& os, const Haplotype& haplotype)
@@ -316,4 +321,11 @@ void add_to_front(const Variant& a_variant, Haplotype& haplotype)
 bool contains(const Haplotype& haplotype, const Variant& a_variant)
 {
     return haplotype.contains(a_variant.get_alternative_allele());
+}
+
+void print_alleles(const Haplotype& haplotype)
+{
+    for (const auto& allele : haplotype.explicit_alleles_) {
+        std::cout << allele << std::endl;
+    }
 }

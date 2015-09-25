@@ -82,7 +82,7 @@ inline RealType log_sum_exp(std::initializer_list<RealType> il)
 {
     auto max = std::max(il);
     RealType exp_sum {};
-    for (const auto& x : il) {
+    for (auto x : il) {
         exp_sum += std::exp(x - max);
     }
     return max + std::log(exp_sum);
@@ -93,9 +93,8 @@ inline RealType log_sum_exp(Iterator first, Iterator last)
 {
     auto max = *std::max_element(first, last);
     RealType exp_sum {};
-    while (first != last) {
+    for (; first != last; ++first) {
         exp_sum += std::exp(*first - max);
-        ++first;
     }
     return max + std::log(exp_sum);
 }
@@ -103,8 +102,7 @@ inline RealType log_sum_exp(Iterator first, Iterator last)
 template <typename RealType, typename IntegerType,
           typename = typename std::enable_if<std::is_floating_point<RealType>::value>::type,
           typename = typename std::enable_if<std::is_integral<IntegerType>::value>::type>
-inline
-RealType log_factorial(IntegerType x)
+inline RealType log_factorial(IntegerType x)
 {
     if (x == 0 || x == 1) return 0;
     if (x == 2) return std::log(2);
@@ -124,29 +122,23 @@ RealType log_factorial(IntegerType x)
 }
 
 template <typename RealType, typename InputIterator>
-inline
-RealType
-log_beta(InputIterator first, InputIterator last)
+inline RealType log_beta(InputIterator first, InputIterator last)
 {
-    auto n = std::accumulate(first, last, RealType {}, [] (auto v, auto x) { return v + boost::math::lgamma(x); });
-    auto d = boost::math::lgamma(std::accumulate(first, last, RealType {}));
-    return n - d;
+    return std::accumulate(first, last, RealType {},
+                           [] (auto v, auto x) { return v + boost::math::lgamma(x); }) -
+            boost::math::lgamma(std::accumulate(first, last, RealType {}));
 }
 
 template <typename RealType, typename InputIterator1, typename InputIterator2>
-inline
-RealType
-log_dirichlet(InputIterator1 firstalpha, InputIterator1 lastalpha, InputIterator2 firstpi)
+inline RealType log_dirichlet(InputIterator1 firstalpha, InputIterator1 lastalpha, InputIterator2 firstpi)
 {
-    auto p = std::inner_product(firstalpha, lastalpha, firstpi, RealType {}, std::plus<RealType>(),
-                                [] (auto a, auto p) { return (a - 1) * std::log(p); });
-    return p - log_beta<RealType>(firstalpha, lastalpha);
+    return std::inner_product(firstalpha, lastalpha, firstpi, RealType {}, std::plus<RealType>(),
+                              [] (auto a, auto p) { return (a - 1) * std::log(p); }) -
+            log_beta<RealType>(firstalpha, lastalpha);
 }
 
 template <typename RealType, typename IntegerType>
-inline
-RealType
-log_multinomial_coefficient(std::initializer_list<IntegerType> il)
+inline RealType log_multinomial_coefficient(std::initializer_list<IntegerType> il)
 {
     std::vector<RealType> denoms(il.size());
     std::transform(il.begin(), il.end(), denoms.begin(), log_factorial<RealType, IntegerType>);
@@ -155,9 +147,7 @@ log_multinomial_coefficient(std::initializer_list<IntegerType> il)
 }
 
 template <typename RealType, typename Iterator>
-inline
-RealType
-log_multinomial_coefficient(Iterator first, Iterator last)
+inline RealType log_multinomial_coefficient(Iterator first, Iterator last)
 {
     std::vector<RealType> denoms(std::distance(first, last));
     using IntegerType = typename Iterator::value_type;
@@ -167,25 +157,19 @@ log_multinomial_coefficient(Iterator first, Iterator last)
 }
 
 template <typename RealType, typename IntegerType>
-inline
-IntegerType
-multinomial_coefficient(std::initializer_list<IntegerType> il)
+inline IntegerType multinomial_coefficient(std::initializer_list<IntegerType> il)
 {
     return static_cast<IntegerType>(std::exp(log_multinomial_coefficient<RealType, IntegerType>(std::move(il))));
 }
 
 template <typename IntegerType, typename RealType, typename Iterator>
-inline
-IntegerType
-multinomial_coefficient(Iterator first, Iterator last)
+inline IntegerType multinomial_coefficient(Iterator first, Iterator last)
 {
     return static_cast<IntegerType>(std::exp(log_multinomial_coefficient<RealType>(first, last)));
 }
 
 template <typename IntegerType, typename RealType>
-inline
-RealType
-multinomial_pdf(const std::vector<IntegerType>& z, const std::vector<RealType>& p)
+inline RealType multinomial_pdf(const std::vector<IntegerType>& z, const std::vector<RealType>& p)
 {
     RealType r {1};
     
@@ -198,7 +182,7 @@ multinomial_pdf(const std::vector<IntegerType>& z, const std::vector<RealType>& 
 
 // Returns approximate y such that digamma(y) = x
 template <typename RealType>
-RealType digamma_inv(RealType x)
+inline RealType digamma_inv(RealType x)
 {
     RealType l {1.0};
     auto y = std::exp(x);

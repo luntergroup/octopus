@@ -110,6 +110,7 @@
 		D4807FB01BA826DB00657D4F /* basic_caller.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D4807FAE1BA826DB00657D4F /* basic_caller.cpp */; };
 		D4807FB21BA843B900657D4F /* variant_caller.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D4807FB11BA843B900657D4F /* variant_caller.cpp */; };
 		D4807FB51BA9716700657D4F /* cancer_caller.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D4807FB31BA9716700657D4F /* cancer_caller.cpp */; };
+		D48D2AE41BB5753F00C5596E /* single_read_model.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D48D2AE21BB5753F00C5596E /* single_read_model.cpp */; settings = {ASSET_TAGS = (); }; };
 		D4907F4B1A88E20E00639203 /* variant_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D4907F4A1A88E20E00639203 /* variant_tests.cpp */; };
 		D4907F571A8A2A9B00639203 /* reference_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D4907F561A8A2A9B00639203 /* reference_tests.cpp */; };
 		D4907F5B1A8A374000639203 /* fasta.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D4907F591A8A374000639203 /* fasta.cpp */; };
@@ -317,6 +318,8 @@
 		D4807FB11BA843B900657D4F /* variant_caller.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = variant_caller.cpp; sourceTree = "<group>"; };
 		D4807FB31BA9716700657D4F /* cancer_caller.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = cancer_caller.cpp; sourceTree = "<group>"; };
 		D4807FB41BA9716700657D4F /* cancer_caller.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = cancer_caller.h; sourceTree = "<group>"; };
+		D48D2AE21BB5753F00C5596E /* single_read_model.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = single_read_model.cpp; sourceTree = "<group>"; };
+		D48D2AE31BB5753F00C5596E /* single_read_model.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = single_read_model.hpp; sourceTree = "<group>"; };
 		D4907F471A88D71800639203 /* genomic_region.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = genomic_region.h; sourceTree = "<group>"; };
 		D4907F4A1A88E20E00639203 /* variant_tests.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = variant_tests.cpp; sourceTree = "<group>"; };
 		D4907F4D1A89095400639203 /* contig_region.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = contig_region.h; sourceTree = "<group>"; };
@@ -688,6 +691,8 @@
 		D413B0421B5D4E84007EFDE0 /* models */ = {
 			isa = PBXGroup;
 			children = (
+				D48D2AE31BB5753F00C5596E /* single_read_model.hpp */,
+				D48D2AE21BB5753F00C5596E /* single_read_model.cpp */,
 				CA91C2CD1B8DF4CC00609FFA /* haplotype_prior_model.h */,
 				CA91C2CF1B8DF56100609FFA /* basic_haplotype_prior_model.h */,
 				CA91C2CE1B8DF56100609FFA /* basic_haplotype_prior_model.cpp */,
@@ -861,6 +866,7 @@
 				CA386D9D1B5AA3C80057A5A8 /* reference_genome.cpp in Sources */,
 				D42061161ACC3DA500D11553 /* read_model.cpp in Sources */,
 				CAFA195B1ABF3DF400F953D9 /* haplotype_tree.cpp in Sources */,
+				D48D2AE41BB5753F00C5596E /* single_read_model.cpp in Sources */,
 				D42061181ACC418500D11553 /* read_model_tests.cpp in Sources */,
 				D4907F4B1A88E20E00639203 /* variant_tests.cpp in Sources */,
 				D413B03D1B554CD0007EFDE0 /* region_algorithm_benchmarks.cpp in Sources */,

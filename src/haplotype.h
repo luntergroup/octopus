@@ -42,7 +42,6 @@ public:
     
     template <typename T> void push_back(T&& allele);
     template <typename T> void push_front(T&& allele);
-    
     bool contains(const Allele& allele) const;
     void set_region(const GenomicRegion& region);
     GenomicRegion get_region() const;
@@ -57,21 +56,22 @@ public:
     friend bool is_less_complex(const Haplotype& lhs, const Haplotype& rhs) noexcept;
     friend bool contains(const Haplotype& lhs, const Haplotype& rhs);
     friend Haplotype splice(const Haplotype& haplotype, const GenomicRegion& region);
+    friend bool have_same_alleles(const Haplotype& lhs, const Haplotype& rhs);
+    friend void print_alleles(const Haplotype& haplotype);
     
-    void print_explicit_alleles() const; // TEST
 private:
-    using AlleleIterator = std::deque<Allele>::const_iterator;
-    
-    GenomicRegion get_region_bounded_by_explicit_alleles() const;
-    SequenceType get_sequence_bounded_by_explicit_alleles(AlleleIterator first, AlleleIterator last) const;
-    SequenceType get_sequence_bounded_by_explicit_alleles() const;
-    
-    ReferenceGenome* reference_; // a non-owning pointer (rather than a reference) so Haplotype copyable
+    ReferenceGenome* reference_; // non-owning pointer rather than a reference so Haplotype copyable
     GenomicRegion region_;
     mutable SequenceType cached_sequence_;
     std::deque<Allele> explicit_alleles_;
     bool is_region_set_;
     mutable bool is_cached_sequence_outdated_;
+    
+    using AlleleIterator = decltype(explicit_alleles_)::const_iterator;
+    
+    GenomicRegion get_region_bounded_by_explicit_alleles() const;
+    SequenceType get_sequence_bounded_by_explicit_alleles(AlleleIterator first, AlleleIterator last) const;
+    SequenceType get_sequence_bounded_by_explicit_alleles() const;
 };
 
 template <typename T>
@@ -124,17 +124,15 @@ void Haplotype::push_front(T&& allele)
 
 bool contains(const Haplotype& lhs, const Allele& rhs);
 bool contains(const Haplotype& lhs, const Haplotype& rhs);
-
 Haplotype splice(const Haplotype& haplotype, const GenomicRegion& region);
-
 bool is_reference(const Haplotype& haplotype, ReferenceGenome& reference);
-
 bool is_less_complex(const Haplotype& lhs, const Haplotype& rhs) noexcept;
-
 void unique_least_complex(std::vector<Haplotype>& haplotypes);
 
 bool operator==(const Haplotype& lhs, const Haplotype& rhs);
 bool operator<(const Haplotype& lhs, const Haplotype& rhs);
+
+bool have_same_alleles(const Haplotype& lhs, const Haplotype& rhs);
 
 namespace std
 {
@@ -166,12 +164,6 @@ std::ostream& operator<<(std::ostream& os, const Haplotype& haplotype);
 void add_to_back(const Variant& a_variant, Haplotype& haplotype);
 void add_to_front(const Variant& a_variant, Haplotype& haplotype);
 bool contains(const Haplotype& haplotype, const Variant& a_variant);
-
-inline void Haplotype::print_explicit_alleles() const
-{
-    for (const auto& allele : explicit_alleles_) {
-        std::cout << allele << std::endl;
-    }
-}
+void print_alleles(const Haplotype& haplotype);
 
 #endif /* defined(__Octopus__haplotype__) */

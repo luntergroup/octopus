@@ -49,8 +49,8 @@ namespace Octopus
         return result;
     }
     
-    double log_hardy_weinberg(const Genotype<Haplotype>& genotype,
-                              const HaplotypeFrequencies& haplotype_frequencies)
+    static double log_hardy_weinberg(const Genotype<Haplotype>& genotype,
+                                     const HaplotypeFrequencies& haplotype_frequencies)
     {
         auto unique_haplotypes = genotype.get_unique();
         

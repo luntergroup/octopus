@@ -145,8 +145,7 @@ ReadModel::RealType
 ReadModel::get_log_probability_from_cache(SampleIdType sample, ForwardIterator first_read, ForwardIterator last_read,
                                           const Genotype<Haplotype>& genotype) const
 {
-    return genotype_log_probability_cache_.at(sample).at(std::make_tuple(genotype, *first_read,
-                                                                         std::distance(first_read, last_read)));
+    return genotype_log_probability_cache_.at(sample).at(std::make_tuple(genotype, *first_read, std::distance(first_read, last_read)));
 }
 
 inline std::size_t ReadModel::GenotypeReadKeyHash::operator()(const GenotypeReadKey &key) const
