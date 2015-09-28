@@ -12,10 +12,11 @@
 #include <vector>
 #include <unordered_map>
 #include <ostream>
-#include <iterator>  // std::cbegin etc
+#include <iterator>    // std::cbegin etc
 #include <initializer_list>
-#include <algorithm> // std::std::sort, std::inplace_merge, std::all_of, std::binary_search,
-                     // std::equal_range, std::unique_copy, std::equal, std::fill_n
+#include <algorithm>   // std::std::sort, std::inplace_merge, std::all_of, std::adjacent_find,
+                       // std::binary_search, std::equal_range, std::unique_copy, std::equal, std::fill_n
+#include <functional>  // std::not_equal_to
 #include <type_traits> // std::enable_if_t, std::is_base_of
 #include <boost/functional/hash.hpp> // boost::hash_range
 #include <boost/math/special_functions/binomial.hpp>
@@ -135,12 +136,7 @@ typename Genotype<MappableType>::Iterator Genotype<MappableType>::cend() const n
 template <typename MappableType>
 bool Genotype<MappableType>::is_homozygous() const
 {
-    if (ploidy() < 2) return true;
-    const auto& first_element = elements_.front();
-    return std::all_of(std::next(std::cbegin(elements_)), std::cend(elements_),
-                       [&first_element] (const auto& element) {
-                           return first_element == element;
-                       });
+    return std::adjacent_find(std::cbegin(elements_), std::cend(elements_), std::not_equal_to<MappableType>()) == std::cend(elements_);
 }
 
 template <typename MappableType>
@@ -296,6 +292,10 @@ std::unordered_map<MappableType, unsigned> get_element_occurence_map(const Genot
 template <typename MappableType>
 std::ostream& operator<<(std::ostream& os, const Genotype<MappableType>& genotype)
 {
+    if (genotype.ploidy() == 0) {
+        os << "empty genotype";
+        return os;
+    }
     auto element_occurences = get_element_occurence_map(genotype);
     std::vector<std::pair<MappableType, unsigned>> p {element_occurences.begin(), element_occurences.end()};
     for (unsigned i {}; i < p.size() - 1; ++i) {
@@ -303,6 +303,15 @@ std::ostream& operator<<(std::ostream& os, const Genotype<MappableType>& genotyp
     }
     os << p.back().first << "(" << p.back().second << ")";
     return os;
+}
+
+inline void print_alleles(const Genotype<Haplotype>& genotype)
+{
+    for (unsigned i {}; i < genotype.ploidy() - 1; ++i) {
+        print_alleles(genotype[i]);
+        std::cout << std::endl;
+    }
+    print_alleles(genotype[genotype.ploidy() - 1]);
 }
 
 #endif /* defined(__Octopus__genotype__) */

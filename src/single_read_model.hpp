@@ -44,7 +44,7 @@ namespace Octopus
         size_t cache_size_;
         
         bool is_cached(const AlignedRead& read, const Haplotype& haplotype) const noexcept;
-        void cache(const AlignedRead& read, const Haplotype& haplotype, RealType log_probability);
+        void cache(const AlignedRead& read, const Haplotype& haplotype, RealType value);
         RealType get_cached(const AlignedRead& read, const Haplotype& haplotype) const;
     };
     

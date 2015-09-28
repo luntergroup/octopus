@@ -16,6 +16,7 @@
 #include <unordered_map>
 #include <ostream>
 #include <utility> // std::forward
+#include <initializer_list>
 
 // TODO: consider using #include <boost/container/small_vector.hpp> for INFO and genotype fields
 
@@ -183,11 +184,17 @@ public:
     Builder& set_alt_alleles(const std::vector<SequenceType>& alt_alleles);
     Builder& set_quality(QualityType quality);
     Builder& set_filters(const std::vector<KeyType>& filters);
+    Builder& set_filters(const std::initializer_list<KeyType>& filters);
+    Builder& add_info(const KeyType& key, const ValueType& value);
     Builder& add_info(const KeyType& key, const std::vector<ValueType>& values);
+    Builder& add_info(const KeyType& key, const std::initializer_list<ValueType>& values);
     Builder& set_format(const std::vector<KeyType>& format);
+    Builder& set_format(const std::initializer_list<KeyType>& format);
     Builder& add_genotype(const SampleIdType& sample, const std::vector<SequenceType>& alleles, bool is_phased);
     Builder& add_genotype(const SampleIdType& sample, const std::vector<unsigned>& alleles, bool is_phased);
+    Builder& add_genotype_field(const SampleIdType& sample, const KeyType& key, const ValueType& value);
     Builder& add_genotype_field(const SampleIdType& sample, const KeyType& key, const std::vector<ValueType>& values);
+    Builder& add_genotype_field(const SampleIdType& sample, const KeyType& key, const std::initializer_list<ValueType>& values);
     
     VcfRecord build() const;
     VcfRecord build_once() noexcept;

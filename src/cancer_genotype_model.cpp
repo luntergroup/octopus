@@ -11,6 +11,7 @@
 #include <array>
 #include <numeric>
 #include <algorithm>
+#include <cmath>
 
 #include "single_read_model.hpp"
 #include "read_model.hpp"
@@ -57,7 +58,7 @@ namespace Octopus
     double log_probability(const Genotype<Haplotype>& genotype, const std::array<double, 3>& f,
                            const MappableSet<AlignedRead>& reads)
     {
-        SingleReadModel rm {1000};
+        static SingleReadModel rm {1000};
         
         double result {};
         
@@ -177,8 +178,40 @@ namespace Octopus
     {
         genotypes.erase(std::remove_if(std::begin(genotypes), std::end(genotypes),
                                        [] (const auto& genotype) {
-                                           return genotype.zygosity() != 3;
+                                           return genotype.is_homozygous();
                                        }), std::end(genotypes));
+    }
+    
+    std::vector<std::array<unsigned, 3>> generate_all_ratios(unsigned n)
+    {
+        std::vector<std::array<unsigned, 3>> result {};
+        
+        for (unsigned i {}; i <= n; ++i) {
+            for (unsigned j {i}; j <= n; ++j) {
+                std::array<unsigned, 3> arr {i, j - i, n - j};
+                if (std::find(std::cbegin(arr), std::cend(arr), n) == std::cend(arr)) {
+                    result.push_back(arr);
+                }
+            }
+        }
+        
+        return result;
+    }
+    
+    std::vector<std::array<double, 3>> generate_all_fs(unsigned n)
+    {
+        auto ratios = generate_all_ratios(n);
+        std::vector<std::array<double, 3>> result(ratios.size());
+        double epsilon {std::nextafter(0, 1.0)};
+        std::transform(std::cbegin(ratios), std::cend(ratios), std::begin(result),
+                       [n, epsilon] (const auto& arr) {
+            return std::array<double, 3> {
+                static_cast<double>(arr[0]) / n + epsilon,
+                static_cast<double>(arr[1]) / n + epsilon,
+                static_cast<double>(arr[2]) / n + epsilon
+            };
+        });
+        return result;
     }
     
     // private methods
@@ -186,6 +219,12 @@ namespace Octopus
     CancerGenotypeModel::GenotypeProbabilities
     CancerGenotypeModel::do_evaluate(const std::vector<Haplotype>& haplotypes, const ReadMap& reads)
     {
+        auto ratios = generate_all_fs(20);
+        
+//        for (auto r : ratios) {
+//            std::cout << r[0] << " " << r[1] << " " << r[2] << std::endl;
+//        }
+        
         GenotypeProbabilities result {};
         
         ComponentPseudoCounts alphas {};
@@ -195,7 +234,7 @@ namespace Octopus
         
         ComponentFrequencies fs {};
         for (const auto& s : reads) {
-            fs.emplace(s.first, std::array<double, 3> {0.1, 0.1, 0.8});
+            fs.emplace(s.first, std::array<double, 3> {0.5, 0.5, std::nextafter(0, 1.0)});
         }
         
         HaplotypeFrequencies pi {};
@@ -205,7 +244,30 @@ namespace Octopus
         
         auto genotypes = generate_all_genotypes(haplotypes, 3);
         
-        //remove_redundant_genotypes(genotypes);
+        remove_redundant_genotypes(genotypes);
+        
+        Genotype<Haplotype> gm {}; std::array<double, 3> fm {}; double m {-10000000};
+        
+        for (auto g : genotypes) {
+            for (auto r : ratios) {
+                ComponentFrequencies f {{reads.cbegin()->first, r}};
+                auto h = log_joint_liklihood(g, f, reads, pi, alphas);
+                if (h > m) {
+                    gm = g;
+                    fm = r;
+                    m  = h;
+                }
+            }
+        }
+        
+        print_alleles(gm);
+        std::cout << std::endl;
+        std::cout << fm[0] << " " << fm[1] << " " << fm[2] << std::endl;
+        std::cout << m << std::endl;
+        
+        //std::cout << log_joint_liklihood(gm, fs, reads, pi, alphas) << std::endl;
+        
+        exit(0);
         
         //for (auto g : genotypes) std::cout << g << std::endl;
         
@@ -230,11 +292,7 @@ namespace Octopus
         
         auto it = std::max_element(gp.begin(), gp.end(), [] (const auto& lhs, const auto& rhs) { return lhs.second < rhs.second; });
         //std::cout << it->first << std::endl;
-        print_alleles(it->first.at(0));
-        std::cout << std::endl;
-        print_alleles(it->first.at(1));
-        std::cout << std::endl;
-        print_alleles(it->first.at(2));
+        print_alleles(it->first);
         std::cout << std::endl;
         std::cout << it->second << std::endl;
         

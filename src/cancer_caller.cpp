@@ -54,6 +54,8 @@ std::vector<VcfRecord> CancerVariantCaller::call_variants(const GenomicRegion& r
     
     auto haplotypes = tree.get_haplotypes(region);
     
+    std::cout << "there are " << haplotypes.size() << " haplotypes" << std::endl;
+    
     auto genotype_model = std::make_unique<Octopus::CancerGenotypeModel>(1, "1");
     
     auto genotype_posteriors = genotype_model->evaluate(haplotypes, reads);

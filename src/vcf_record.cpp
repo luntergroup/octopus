@@ -395,13 +395,37 @@ VcfRecord::Builder& VcfRecord::Builder::set_filters(const std::vector<KeyType>& 
     return *this;
 }
 
+VcfRecord::Builder& VcfRecord::Builder::set_filters(const std::initializer_list<KeyType>& filters)
+{
+    filters_ = filters;
+    return *this;
+}
+
+VcfRecord::Builder& VcfRecord::Builder::add_info(const KeyType& key, const ValueType& value)
+{
+    info_.emplace(key, std::vector<ValueType> {value});
+    return *this;
+}
+
 VcfRecord::Builder& VcfRecord::Builder::add_info(const KeyType& key, const std::vector<ValueType>& values)
 {
     info_.emplace(key, values);
     return *this;
 }
 
+VcfRecord::Builder& VcfRecord::Builder::add_info(const KeyType& key, const std::initializer_list<ValueType>& values)
+{
+    info_.emplace(key, values);
+    return *this;
+}
+
 VcfRecord::Builder& VcfRecord::Builder::set_format(const std::vector<KeyType>& format)
+{
+    format_ = format;
+    return *this;
+}
+
+VcfRecord::Builder& VcfRecord::Builder::set_format(const std::initializer_list<KeyType>& format)
 {
     format_ = format;
     return *this;
@@ -425,7 +449,21 @@ VcfRecord::Builder& VcfRecord::Builder::add_genotype(const SampleIdType& sample,
 }
 
 VcfRecord::Builder& VcfRecord::Builder::add_genotype_field(const SampleIdType& sample, const KeyType& key,
+                                                           const ValueType& value)
+{
+    samples_[sample].emplace(key, std::vector<ValueType> {value});
+    return *this;
+}
+
+VcfRecord::Builder& VcfRecord::Builder::add_genotype_field(const SampleIdType& sample, const KeyType& key,
                                                            const std::vector<ValueType>& values)
+{
+    samples_[sample].emplace(key, values);
+    return *this;
+}
+
+VcfRecord::Builder& VcfRecord::Builder::add_genotype_field(const SampleIdType& sample, const KeyType& key,
+                                                           const std::initializer_list<ValueType>& values)
 {
     samples_[sample].emplace(key, values);
     return *this;

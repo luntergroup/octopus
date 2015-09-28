@@ -14,6 +14,8 @@
 #include "mappable.hpp"
 #include "pair_hmm.hpp"
 
+#include <iostream> // TEST
+
 namespace Octopus
 {
     // public methods
@@ -117,13 +119,12 @@ namespace Octopus
         return cache_.count(read) == 1 && cache_.at(read).count(haplotype) == 1;
     }
     
-    void SingleReadModel::cache(const AlignedRead& read, const Haplotype& haplotype, RealType log_probability)
+    void SingleReadModel::cache(const AlignedRead& read, const Haplotype& haplotype, RealType value)
     {
         if (cache_size_ < max_cache_size_) {
-            cache_[read][haplotype] = log_probability;
+            cache_[read][haplotype] = value;
             ++cache_size_;
         }
-        
     }
     
     SingleReadModel::RealType SingleReadModel::get_cached(const AlignedRead& read, const Haplotype& haplotype) const
