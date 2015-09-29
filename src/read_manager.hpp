@@ -14,6 +14,7 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <initializer_list>
+#include <cstddef> // size_t
 #include <boost/filesystem.hpp>
 
 #include "contig_region.hpp"
@@ -29,7 +30,7 @@ namespace detail
     auto file_size_compare = [] (const fs::path& lhs, const fs::path& rhs) {
         return fs::file_size(lhs) < fs::file_size(rhs);
     };
-}
+} // namespace detail
 
 class AlignedRead;
 
@@ -53,9 +54,17 @@ public:
     
     unsigned num_samples() const noexcept;
     std::vector<SampleIdType> get_samples() const;
+    
+    size_t count_reads(const SampleIdType& sample, const GenomicRegion& region);
+    size_t count_reads(const std::vector<SampleIdType>& samples, const GenomicRegion& region);
+    size_t count_reads(const GenomicRegion& region); // all samples
+    
+    GenomicRegion find_head_region(const std::vector<SampleIdType>& samples, const GenomicRegion& region, size_t target_coverage);
+    GenomicRegion find_head_region(const GenomicRegion& region, size_t target_coverage);
+    
     std::vector<AlignedRead> fetch_reads(const SampleIdType& sample, const GenomicRegion& region);
     SampleReadMap fetch_reads(const std::vector<SampleIdType>& samples, const GenomicRegion& region);
-    SampleReadMap fetch_reads(const GenomicRegion& region);
+    SampleReadMap fetch_reads(const GenomicRegion& region); // all samples
     
 private:
     using OpenReaderMap           = std::map<fs::path, ReadReader, decltype(detail::file_size_compare)>;

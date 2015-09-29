@@ -62,10 +62,10 @@ namespace Octopus
         for (const auto& haplotype : unique_haplotypes) {
             auto num_occurences = genotype.num_occurences(haplotype);
             occurences.push_back(num_occurences);
-            r += num_occurences * haplotype_frequencies.at(haplotype);
+            r += num_occurences * std::log(haplotype_frequencies.at(haplotype));
         }
         
-        return log_multinomial_coefficient<double>(occurences.cbegin(), occurences.cend()) * r;
+        return log_multinomial_coefficient<double>(occurences.cbegin(), occurences.cend()) + r;
     }
     
     GenotypeMarginals
@@ -98,7 +98,8 @@ namespace Octopus
             
             for (const auto& genotype : genotypes) {
                 likelihoods.emplace(genotype, read_model.log_probability(sample_reads.second.cbegin(),
-                                                                        sample_reads.second.cend(), genotype, sample));
+                                                                         sample_reads.second.cend(),
+                                                                         genotype, sample));
             }
             
             result.emplace(sample, std::move(likelihoods));
@@ -166,6 +167,11 @@ namespace Octopus
                                     const GenotypeLikelihoods& genotype_log_likilhoods)
     {
         update_marginal_genotype_log_probabilities(marginal_genotype_log_probabilities, haplotype_frequencies);
+        
+//        for (auto g : marginal_genotype_log_probabilities) {
+//            std::cout << g.first << std::endl;
+//            std::cout << g.second << std::endl;
+//        }
         
         for (auto& sample_genotype_log_likilhoods : genotype_posteriors) {
             auto sample = sample_genotype_log_likilhoods.first;
@@ -253,18 +259,18 @@ namespace Octopus
         auto result = init_genotype_posteriors(marginal_genotype_log_probabilities, genotype_log_likilhoods);
         
         for (unsigned n {0}; n < max_em_iterations_; ++n) {
-            std::cout << "EM iteration " << n << std::endl;
+            //std::cout << "EM iteration " << n << std::endl;
             auto c = do_em_iteration(result, haplotype_frequencies, marginal_genotype_log_probabilities,
                                      genotype_log_likilhoods, sample_ploidy_);
             if (c < em_epsilon_) break;
         }
         
-//        for (const auto& h : haplotype_frequencies) {
-//            std::cout << h.first << " " << h.second << std::endl;
-//        }
+        for (const auto& h : haplotype_frequencies) {
+            std::cout << h.first << " " << h.second << std::endl;
+        }
         
         return result;
     }
     
-} // end namespace Octopus
+} // namespace Octopus
 

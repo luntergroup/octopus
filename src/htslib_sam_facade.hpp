@@ -12,7 +12,7 @@
 #include <string>
 #include <vector>
 #include <unordered_map>
-#include <cstddef>   // std::size_t
+#include <cstddef>   // size_t
 #include <cstdint>   // std::uint_fast32_t etc
 #include <algorithm> // std::find
 #include <stdexcept> // std::runtime_error
@@ -60,8 +60,11 @@ public:
     
     std::vector<SampleIdType> get_samples() override;
     std::vector<ReadGroupIdType> get_read_groups_in_sample(const SampleIdType& sample) override;
-    std::size_t get_num_reads(const GenomicRegion& region) override;
+    size_t count_reads(const GenomicRegion& region) override;
+    size_t count_reads(const SampleIdType& sample, const GenomicRegion& region) override;
+    GenomicRegion find_head_region(const GenomicRegion& region, size_t target_coverage) override;
     SampleIdToReadsMap fetch_reads(const GenomicRegion& region) override;
+    std::vector<AlignedRead> fetch_reads(const SampleIdType& sample, const GenomicRegion& region) override;
     unsigned get_num_reference_contigs() noexcept override;
     std::vector<std::string> get_reference_contig_names() override;
     SizeType get_reference_contig_size(const std::string& contig_name) override;
@@ -83,15 +86,14 @@ private:
         HtslibIterator(const HtslibIterator&) = delete;
         HtslibIterator& operator=(const HtslibIterator&) = delete;
         
+        HtslibSamFacade::ReadGroupIdType get_read_group() const;
         bool operator++();
-        std::pair<AlignedRead, HtslibSamFacade::SampleIdType> operator*() const;
+        std::pair<AlignedRead, HtslibSamFacade::ReadGroupIdType> operator*() const;
         
     private:
         HtslibSamFacade& hts_facade_;
         std::unique_ptr<hts_itr_t, decltype(htslib_iterator_deleter)> hts_iterator_;
         std::unique_ptr<bam1_t, decltype(htslib_bam1_deleter)> hts_bam1_;
-        
-        HtslibSamFacade::ReadGroupIdType get_read_group() const;
     };
     
     static constexpr const char* Read_group_tag    {"RG"};

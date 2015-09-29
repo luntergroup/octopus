@@ -109,7 +109,7 @@ VcfHeader HtslibBcfFacade::fetch_header()
     return hb.build_once();
 }
 
-size_t HtslibBcfFacade::num_records()
+size_t HtslibBcfFacade::count_records()
 {
     HtsBcfSrPtr sr {bcf_sr_init(), htslib_bcf_srs_deleter};
     
@@ -120,7 +120,7 @@ size_t HtslibBcfFacade::num_records()
     return num_records(sr);
 }
 
-size_t HtslibBcfFacade::num_records(const GenomicRegion& region)
+size_t HtslibBcfFacade::count_records(const GenomicRegion& region)
 {
     HtsBcfSrPtr sr {bcf_sr_init(), htslib_bcf_srs_deleter};
     
@@ -135,7 +135,7 @@ size_t HtslibBcfFacade::num_records(const GenomicRegion& region)
 
 std::vector<VcfRecord> HtslibBcfFacade::fetch_records(Unpack level)
 {
-    auto n_records = num_records();
+    auto n_records = count_records();
     
     HtsBcfSrPtr sr {bcf_sr_init(), htslib_bcf_srs_deleter};
     
@@ -148,7 +148,7 @@ std::vector<VcfRecord> HtslibBcfFacade::fetch_records(Unpack level)
 
 std::vector<VcfRecord> HtslibBcfFacade::fetch_records(const GenomicRegion& region, Unpack level)
 {
-    auto n_records = num_records(region);
+    auto n_records = count_records(region);
     
     HtsBcfSrPtr sr {bcf_sr_init(), htslib_bcf_srs_deleter};
     

@@ -11,6 +11,7 @@
 
 #include <string>
 #include <vector>
+#include <cstddef>
 #include <boost/program_options.hpp>
 #include <boost/filesystem.hpp>
 
@@ -33,9 +34,13 @@ namespace Octopus
     
     unsigned get_max_threads(const po::variables_map& options);
     
+    size_t get_memory_quota(const po::variables_map& options);
+    
     ReferenceGenome get_reference(const po::variables_map& options);
     
-    SearchRegions get_search_regions(const po::variables_map& options, const ReferenceGenome& the_reference);
+    SearchRegions get_search_regions(const po::variables_map& options, const ReferenceGenome& reference);
+    
+    std::vector<SampleIdType> get_samples(const po::variables_map& options);
     
     std::vector<fs::path> get_read_paths(const po::variables_map& options);
     

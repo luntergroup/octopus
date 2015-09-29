@@ -9,7 +9,8 @@
 #ifndef __Octopus__read_reader__
 #define __Octopus__read_reader__
 
-#include <cstddef> // std::size_t
+#include <vector>
+#include <cstddef> // size_t
 #include <iterator>
 #include <memory>  // std::unique_ptr
 #include <boost/filesystem/path.hpp>
@@ -45,8 +46,11 @@ public:
     std::vector<std::string> get_read_groups_in_sample(const SampleIdType& sample);
     unsigned get_num_reference_contigs();
     std::vector<GenomicRegion> get_possible_regions_in_file();
-    std::size_t get_num_reads(const GenomicRegion& a_region);
-    SampleIdToReadsMap fetch_reads(const GenomicRegion& a_region);
+    size_t count_reads(const GenomicRegion& region);
+    size_t count_reads(const SampleIdType& sample, const GenomicRegion& region);
+    GenomicRegion find_head_region(const GenomicRegion& region, size_t target_coverage);
+    SampleIdToReadsMap fetch_reads(const GenomicRegion& region);
+    std::vector<AlignedRead> fetch_reads(const SampleIdType& sample, const GenomicRegion& region);
     
 private:
     fs::path file_path_;
@@ -89,14 +93,29 @@ inline unsigned ReadReader::get_num_reference_contigs()
     return the_impl_->get_num_reference_contigs();
 }
 
-inline std::size_t ReadReader::get_num_reads(const GenomicRegion& a_region)
+inline size_t ReadReader::count_reads(const GenomicRegion& region)
 {
-    return the_impl_->get_num_reads(a_region);
+    return the_impl_->count_reads(region);
 }
 
-inline ReadReader::SampleIdToReadsMap ReadReader::fetch_reads(const GenomicRegion& a_region)
+inline size_t ReadReader::count_reads(const SampleIdType& sample, const GenomicRegion& region)
 {
-    return the_impl_->fetch_reads(a_region);
+    return the_impl_->count_reads(sample, region);
+}
+
+inline GenomicRegion ReadReader::find_head_region(const GenomicRegion& region, size_t target_coverage)
+{
+    return the_impl_->find_head_region(region, target_coverage);
+}
+
+inline ReadReader::SampleIdToReadsMap ReadReader::fetch_reads(const GenomicRegion& region)
+{
+    return the_impl_->fetch_reads(region);
+}
+
+inline std::vector<AlignedRead> ReadReader::fetch_reads(const SampleIdType& sample, const GenomicRegion& region)
+{
+    return the_impl_->fetch_reads(sample, region);
 }
 
 inline std::vector<std::string> ReadReader::get_reference_contig_names()

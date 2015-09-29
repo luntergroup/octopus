@@ -54,7 +54,8 @@ namespace Octopus
             
             po::options_description backend("Backend options");
             backend.add_options()
-            ("max-threads,t", po::value<unsigned>(), "the maximum number of threads allowed")
+            ("max-threads,t", po::value<unsigned>()->default_value(1), "maximum number of threads")
+            ("memory", po::value<size_t>()->default_value(8000), "target memory usage in MB")
             ("compress-reads", po::value<bool>()->default_value(false), "compress the reads (slower)")
             ("max-open-files", po::value<unsigned>()->default_value(20), "the maximum number of files that can be open at one time")
             ;
@@ -64,10 +65,12 @@ namespace Octopus
             ("reference,R", po::value<std::string>()->required(), "the reference genome file")
             ("reads,I", po::value<std::vector<std::string>>()->multitoken(), "space-seperated list of read file paths")
             ("reads-file", po::value<std::string>(), "path to a text file containing read file paths")
-            ("regions,R", po::value<std::vector<std::string>>()->multitoken(), "space-seperated list of one-indexed variant search regions (chrom:begin-end)")
-            ("regions-file,R", po::value<std::string>(), "path to a file containing list of one-indexed variant search regions (chrom:begin-end)")
+            ("regions", po::value<std::vector<std::string>>()->multitoken(), "space-seperated list of one-indexed variant search regions (chrom:begin-end)")
+            ("regions-file", po::value<std::string>(), "path to a file containing list of one-indexed variant search regions (chrom:begin-end)")
             ("skip-regions", po::value<std::vector<std::string>>()->multitoken(), "space-seperated list of one-indexed regions (chrom:begin-end) to skip")
             ("skip-regions-file", po::value<std::string>(), "path to a file containing list of one-indexed regions (chrom:begin-end) to skip")
+            ("samples,S", po::value<std::vector<std::string>>()->multitoken(), "space-seperated list of sample names to consider")
+            ("samples-file", po::value<std::string>(), "path to a file containing list of sample names to consider")
             ("output,o", po::value<std::string>()->default_value("octopus_variants.vcf"), "path of the output variant file")
             ("log-file", po::value<std::string>(), "path of the output log file")
             ;
@@ -272,6 +275,11 @@ namespace Octopus
         return options.at("max-threads").as<unsigned>();
     }
     
+    size_t get_memory_quota(const po::variables_map& options)
+    {
+        return options.at("memory").as<size_t>();
+    }
+    
     ReferenceGenome get_reference(const po::variables_map& options)
     {
         return make_reference(options.at("reference").as<std::string>());
@@ -320,6 +328,19 @@ namespace Octopus
         }
         
         return detail::make_search_regions(input_regions);
+    }
+    
+    std::vector<SampleIdType> get_samples(const po::variables_map& options)
+    {
+        std::vector<SampleIdType> result {};
+        
+        if (options.count("samples") == 1) {
+            auto samples = options.at("samples").as<std::vector<std::string>>();
+            result.reserve(samples.size());
+            std::copy(std::cbegin(samples), std::cend(samples), std::back_inserter(result));
+        }
+        
+        return result;
     }
     
     std::vector<fs::path> get_read_paths(const po::variables_map& options)

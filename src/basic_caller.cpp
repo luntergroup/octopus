@@ -28,6 +28,8 @@
 #include "genotype_model.hpp"
 #include "population_genotype_model.hpp"
 
+#include "search_regions.hpp"
+
 #include <iostream> // TEST
 
 BasicVariantCaller::BasicVariantCaller(ReferenceGenome& reference, ReadManager& read_manager,
@@ -183,6 +185,8 @@ unsigned to_phred_quality(double p)
     return -10 * static_cast<unsigned>(std::log10(1.0 - p));
 }
 
+//double compute_variant_quality(const Allele)
+
 VcfRecord call_segment(const std::vector<Allele>& segment,
                        const GenotypeCalls& genotype_calls,
                        const AllelePosteriors& allele_posteriors)
@@ -224,6 +228,12 @@ std::vector<VcfRecord> BasicVariantCaller::call_variants(const GenomicRegion& re
     auto genotype_model = std::make_unique<Octopus::PopulationGenotypeModel>(1, 2);
     
     auto genotype_posteriors = genotype_model->evaluate(haplotypes, reads);
+    
+    for (auto& p : genotype_posteriors) {
+        std::cout << p.first << std::endl;
+        auto m = std::max_element(p.second.cbegin(), p.second.cend(), [] (const auto& lhs, const auto& rhs) { return lhs.second < rhs.second; });
+        std::cout << m->first << " " << m->second << std::endl;
+    }
     
     auto alleles = decompose(candidates);
     

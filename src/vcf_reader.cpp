@@ -49,14 +49,14 @@ VcfHeader VcfReader::fetch_header()
     return reader_->fetch_header();
 }
 
-size_t VcfReader::num_records() const
+size_t VcfReader::count_records() const
 {
-    return reader_->num_records();
+    return reader_->count_records();
 }
 
-size_t VcfReader::num_records(const GenomicRegion& region) const
+size_t VcfReader::count_records(const GenomicRegion& region) const
 {
-    return reader_->num_records(region);
+    return reader_->count_records(region);
 }
 
 std::vector<VcfRecord> VcfReader::fetch_records(Unpack level)

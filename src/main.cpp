@@ -11,57 +11,86 @@
 //#include <boost/test/unit_test.hpp>
 
 #include <iostream>
-#include <cstdlib>
+#include <cstdlib>   // EXIT_SUCCESS/EXIT_FAILURE
 #include <stdexcept>
+#include <chrono>
+#include <ctime>
+#include <iomanip>   // std::put_time
+#include <utility>   // std::pair, std::make_pair
 
 #include "program_options.hpp"
 #include "octopus.hpp"
 
-#include <iostream>
-#include <string>
-#include <chrono>
-#include <algorithm>
-
-#include "test_common.hpp"
-#include "genomic_region.hpp"
-#include "variant.hpp"
-#include "reference_genome.hpp"
-#include "read_manager.hpp"
-#include "mappable_set.hpp"
-#include "mappable_algorithms.hpp"
-#include "candidate_generators.hpp"
-#include "mappable_set.hpp"
-#include "mappable_map.hpp"
-#include "haplotype_tree.hpp"
-#include "genotype_model.hpp"
-#include "population_genotype_model.hpp"
-#include "vcf.hpp"
-#include "maths.hpp"
-#include "sequence_utils.hpp"
-
 #include "mock_options.hpp"
 
-using std::cout;
-using std::endl;
+std::ostream& operator<<(std::ostream& os, const std::chrono::system_clock::time_point& t)
+{
+    std::time_t t_c = std::chrono::system_clock::to_time_t(t);
+    os << std::put_time(std::localtime(&t_c), "%F %T");
+    return os;
+}
+
+using TimeInterval = std::pair<std::chrono::system_clock::time_point, std::chrono::system_clock::time_point>;
+
+template <typename T>
+auto duration(const TimeInterval& interval)
+{
+    return std::chrono::duration_cast<T>(interval.second - interval.first);
+}
+
+std::ostream& operator<<(std::ostream& os, TimeInterval interval)
+{
+    auto duration_ms = duration<std::chrono::milliseconds>(interval);
+    
+    if (duration_ms.count() < 1000) {
+        os << duration_ms.count() << "ms";
+    } else {
+        auto duration_s = duration<std::chrono::seconds>(interval);
+        if (duration_s.count() < 60) {
+            os << duration_s.count() << "s";
+        } else {
+            auto duration_m = duration<std::chrono::minutes>(interval);
+            if (duration_m.count() < 60) {
+                os << duration_m.count() << "." << (duration_s.count() % 60) << "m";
+            } else {
+                auto duration_h = duration<std::chrono::hours>(interval);
+                os << duration_h.count() << "." << (duration_m.count() % 60) << "h";
+            }
+        }
+    }
+    
+    return os;
+}
 
 int main(int argc, const char **argv)
 {
+    using std::cout; using std::cerr; using std::endl;
+    
     try {
         //auto options = Octopus::parse_options(argc, argv);
         auto options = std::make_pair(get_basic_mock_options(), true);
         
         if (options.second) {
+            auto start   = std::chrono::system_clock::now();
+            
+            cout << "started running Octopus at " << start << endl;
+            
             Octopus::run_octopus(options.first);
-            std::cout << "finished running Octopus" << std::endl;
+            
+            auto end = std::chrono::system_clock::now();
+            
+            cout << "finished running Octopus at " << end << endl;
+            
+            cout << "elapsed time: " << std::make_pair(start, end) << endl;
         } else {
-            std::cout << "did not run Octopus" << std::endl;
+            cout << "did not run Octopus" << endl;
         }
         
     } catch (std::runtime_error& e) {
-        std::cerr << "Error: " << e.what() << std::endl;
+        cerr << "Error: " << e.what() << endl;
         return EXIT_FAILURE;
     } catch (...) {
-        std::cerr << "Error: encountered unknown error. Quiting now" << std::endl;
+        cerr << "Error: encountered unknown error. Quiting now" << endl;
         return EXIT_FAILURE;
     }
     

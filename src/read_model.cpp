@@ -89,4 +89,4 @@ ReadModel::RealType ReadModel::log_probability_polyploid(const AlignedRead& read
                                  log_haplotype_probabilities.cend()) - ln_ploidy_;
 }
     
-} // end namespace Octopus
+} // namespace Octopus

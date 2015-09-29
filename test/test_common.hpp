@@ -41,14 +41,6 @@ namespace detail
     static std::string sample_bcf_name {"CHBJPT.low_coverage.2010_07.xchr.sites.vcf.gz"};
     //static std::string sample_vcf_name {"platypus.vcf"};
     
-    // donna data
-    static std::string donna_dir {"donna/"};
-    static std::string donna_ref {"a.lines.fasta"};
-    static std::string donna_bam_name1 {"356_005_sorted_with_labels.bam"};
-    static std::string donna_bam_name2 {"356_006_sorted_with_labels.bam"};
-    static std::string donna_bam_name3 {"357_005_sorted_with_labels.bam"};
-    static std::string donna_bam_name4 {"357_006_sorted_with_labels.bam"};
-    
     // hiv data
     static std::string hiv_dir {"hiv/"};
     static std::string hiv_reference_dir {"references/"};
@@ -113,20 +105,6 @@ static std::string sample_vcf {detail::home_dir + detail::genomics_dir  + detail
 static std::string test_out_vcf {detail::home_dir + detail::octopus_test_dir + "test.vcf"};
 static std::string test_out_vcfgz {detail::home_dir + detail::octopus_test_dir + "test.vcf.gz"};
 static std::string test_out_bcf {detail::home_dir + detail::octopus_test_dir + "test.bcf"};
-
-// donna
-
-static std::string donna_ref {detail::home_dir + detail::genomics_dir + detail::donna_dir +
-    detail::donna_ref};
-
-static std::string donna_bam1 {detail::home_dir + detail::genomics_dir + detail::donna_dir +
-    detail::donna_bam_name1};
-static std::string donna_bam2 {detail::home_dir + detail::genomics_dir + detail::donna_dir +
-    detail::donna_bam_name2};
-static std::string donna_bam3 {detail::home_dir + detail::genomics_dir + detail::donna_dir +
-    detail::donna_bam_name3};
-static std::string donna_bam4 {detail::home_dir + detail::genomics_dir + detail::donna_dir +
-    detail::donna_bam_name4};
 
 // hiv
 

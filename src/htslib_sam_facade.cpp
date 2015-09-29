@@ -120,7 +120,7 @@ std::vector<HtslibSamFacade::SampleIdType> HtslibSamFacade::get_samples()
     return result;
 }
 
-std::vector<std::string> HtslibSamFacade::get_read_groups_in_sample(const std::string& sample)
+std::vector<std::string> HtslibSamFacade::get_read_groups_in_sample(const SampleIdType& sample)
 {
     std::vector<std::string> result {};
     
@@ -131,9 +131,9 @@ std::vector<std::string> HtslibSamFacade::get_read_groups_in_sample(const std::s
     return result;
 }
 
-std::size_t HtslibSamFacade::get_num_reads(const GenomicRegion& region)
+size_t HtslibSamFacade::count_reads(const GenomicRegion& region)
 {
-    std::size_t result {0};
+    size_t result {0};
     HtslibIterator it {*this, region};
     
     while (++it) ++result;
@@ -141,16 +141,35 @@ std::size_t HtslibSamFacade::get_num_reads(const GenomicRegion& region)
     return result;
 }
 
+size_t HtslibSamFacade::count_reads(const SampleIdType& sample, const GenomicRegion& region)
+{
+    size_t result {0};
+    HtslibIterator it {*this, region};
+    
+    while (++it && sample_map_.at(it.get_read_group()) == sample) ++result;
+    
+    return result;
+}
+
+GenomicRegion HtslibSamFacade::find_head_region(const GenomicRegion& region, size_t target_coverage)
+{
+    HtslibIterator it {*this, region};
+    
+    while (++it && target_coverage > 0) --target_coverage;
+    
+    return GenomicRegion {region.get_contig_name(), region.get_begin(), (*it).first.get_region().get_end()};
+}
+
 HtslibSamFacade::SampleIdToReadsMap HtslibSamFacade::fetch_reads(const GenomicRegion& region)
 {
     HtslibIterator it {*this, region};
-    SampleIdToReadsMap the_reads {};
+    SampleIdToReadsMap result {};
     
     while (++it) {
         try {
             auto a_read_and_its_group = *it;
             const auto& sample = sample_map_.at(a_read_and_its_group.second);
-            the_reads[std::move(sample)].emplace_back(std::move(a_read_and_its_group.first));
+            result[std::move(sample)].emplace_back(std::move(a_read_and_its_group.first));
         } catch (InvalidBamRecord& e) {
             // TODO: Just ignore? Could log or something.
             //std::clog << "Warning: " << e.what() << std::endl;
@@ -160,11 +179,33 @@ HtslibSamFacade::SampleIdToReadsMap HtslibSamFacade::fetch_reads(const GenomicRe
         }
     }
     
-    for (auto& sample_reads_pair : the_reads) {
+    for (auto& sample_reads_pair : result) {
         sample_reads_pair.second.shrink_to_fit();
     }
     
-    return the_reads;
+    return result;
+}
+
+std::vector<AlignedRead> HtslibSamFacade::fetch_reads(const SampleIdType& sample, const GenomicRegion& region)
+{
+    HtslibIterator it {*this, region};
+    std::vector<AlignedRead> result {};
+    
+    while (++it) {
+        try {
+            if (sample_map_.at(it.get_read_group()) == sample) {
+                result.push_back((*it).first);
+            }
+        } catch (InvalidBamRecord& e) {
+            // TODO: Just ignore? Could log or something.
+            //std::clog << "Warning: " << e.what() << std::endl;
+        } catch (...) {
+            // Could be something really bad.
+            throw;
+        }
+    }
+    
+    return result;
 }
 
 std::vector<std::string> HtslibSamFacade::get_reference_contig_names()
@@ -285,6 +326,22 @@ hts_bam1_ {bam_init1(), htslib_bam1_deleter}
     }
 }
 
+std::string get_read_name(bam1_t* b)
+{
+    return std::string {bam_get_qname(b)};
+}
+
+HtslibSamFacade::ReadGroupIdType HtslibSamFacade::HtslibIterator::get_read_group() const
+{
+    const auto ptr = bam_aux_get(hts_bam1_.get(), Read_group_tag);
+    
+    if (ptr == nullptr) {
+        throw InvalidBamRecord {hts_facade_.file_path_, get_read_name(hts_bam1_.get()), "no read group"};
+    }
+    
+    return HtslibSamFacade::ReadGroupIdType {bam_aux2Z(ptr)};
+}
+
 bool HtslibSamFacade::HtslibIterator::operator++()
 {
     return sam_itr_next(hts_facade_.hts_file_.get(), hts_iterator_.get(), hts_bam1_.get()) >= 0;
@@ -348,11 +405,6 @@ CigarString get_cigar_string(bam1_t* b)
     return CigarString {std::move(result)};
 }
 
-std::string get_read_name(bam1_t* b)
-{
-    return std::string {bam_get_qname(b)};
-}
-
 // Some of these flags will need to be changes when htslib catches up to the new SAM spec
 AlignedRead::FlagData get_flags(bam1_t* b)
 {
@@ -385,7 +437,7 @@ AlignedRead::NextSegment::FlagData get_next_segment_flags(bam1_t* b)
     return result;
 }
 
-std::pair<AlignedRead, HtslibSamFacade::SampleIdType> HtslibSamFacade::HtslibIterator::operator*() const
+std::pair<AlignedRead, HtslibSamFacade::ReadGroupIdType> HtslibSamFacade::HtslibIterator::operator*() const
 {
     auto qualities = get_qualities(hts_bam1_.get());
     
@@ -440,15 +492,4 @@ std::pair<AlignedRead, HtslibSamFacade::SampleIdType> HtslibSamFacade::HtslibIte
             get_next_segment_flags(hts_bam1_.get())
         }, get_read_group()};
     }
-}
-
-HtslibSamFacade::ReadGroupIdType HtslibSamFacade::HtslibIterator::get_read_group() const
-{
-    const auto ptr = bam_aux_get(hts_bam1_.get(), Read_group_tag);
-    
-    if (ptr == nullptr) {
-        throw InvalidBamRecord {hts_facade_.file_path_, get_read_name(hts_bam1_.get()), "no read group"};
-    }
-    
-    return HtslibSamFacade::ReadGroupIdType {bam_aux2Z(ptr)};
 }

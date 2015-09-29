@@ -59,7 +59,7 @@ VcfHeader VcfParser::fetch_header()
     return header_;
 }
 
-size_t VcfParser::num_records()
+size_t VcfParser::count_records()
 {
     reset_vcf();
     
@@ -69,7 +69,7 @@ size_t VcfParser::num_records()
                          });
 }
 
-size_t VcfParser::num_records(const GenomicRegion& region)
+size_t VcfParser::count_records(const GenomicRegion& region)
 {
     reset_vcf();
     

@@ -43,6 +43,6 @@ namespace Octopus
         return do_evaluate(haplotypes, reads);
     }
     
-} // end namespace Octopus
+} // namespace Octopus
 
 #endif

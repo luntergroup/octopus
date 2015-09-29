@@ -28,6 +28,6 @@ namespace Octopus
         
         GenotypeProbabilities do_evaluate(const std::vector<Haplotype>& haplotypes, const ReadMap& reads) override;
     };
-} // end namespace Octopus
+} // namespace Octopus
 
 #endif /* defined(__Octopus__cancer_genotype_model__) */

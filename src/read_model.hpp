@@ -152,6 +152,6 @@ inline std::size_t ReadModel::GenotypeReadKeyHash::operator()(const GenotypeRead
     return seed;
 }
 
-} // end namespace Octopus
+} // namespace Octopus
 
 #endif /* defined(__Octopus__read_model__) */

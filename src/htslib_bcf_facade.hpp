@@ -44,8 +44,8 @@ public:
     HtslibBcfFacade& operator=(HtslibBcfFacade&&)      = default;
     
     VcfHeader fetch_header() override;
-    size_t num_records() override;
-    size_t num_records(const GenomicRegion& region) override;
+    size_t count_records() override;
+    size_t count_records(const GenomicRegion& region) override;
     std::vector<VcfRecord> fetch_records(Unpack level = Unpack::All) override;
     std::vector<VcfRecord> fetch_records(const GenomicRegion& region, Unpack level = Unpack::All) override;
     

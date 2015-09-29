@@ -10,7 +10,7 @@
 #define __Octopus__maths__
 
 #include <vector>
-#include <cstddef>     // std::size_t
+#include <cstddef>     // size_t
 #include <cmath>       // std::exp, std::log
 #include <numeric>     // std::accumulate, std::iota, std::inner_product
 #include <algorithm>   // std::max, std::max_element, std::transform
@@ -173,7 +173,7 @@ inline RealType multinomial_pdf(const std::vector<IntegerType>& z, const std::ve
 {
     RealType r {1};
     
-    for (std::size_t i {}; i < z.size(); ++i) {
+    for (size_t i {}; i < z.size(); ++i) {
         r *= std::pow(p[i], z[i]);
     }
     
@@ -235,7 +235,7 @@ RealType dirichlet_multinomial(const std::vector<RealType>& z, const std::vector
     }
     
     RealType g {1};
-    for (std::size_t i {0}; i < z.size(); ++i) {
+    for (size_t i {0}; i < z.size(); ++i) {
         g *= boost::math::tgamma<RealType>(z[i] + a[i]) / boost::math::tgamma<RealType>(a[i]);
     }
     
@@ -261,7 +261,7 @@ maximum_likelihood_dirichlet_params(std::vector<RealType>& expected_probabilitie
                    [] (RealType p) { return std::log(p); });
     
     RealType v;
-    std::size_t j {}, k {};
+    size_t j {}, k {};
     
     for (unsigned n {}; n < max_iterations; ++n) {
         v = 0;
@@ -312,6 +312,14 @@ sum_values(const MapType& map, UnaryOperation op)
 {
     return std::accumulate(std::cbegin(map), std::cend(map), ResultType {},
                            [op] (const auto previous, const auto& p) { return previous + op(p.second); });
+}
+
+template <typename Map>
+inline
+size_t sum_sizes(const Map& map)
+{
+    return std::accumulate(std::cbegin(map), std::cend(map), size_t {},
+                           [] (const auto& p, const auto& v) { return p + v.second.size(); });
 }
 
 #endif /* defined(__Octopus__maths__) */

@@ -22,7 +22,6 @@
 
 namespace Octopus
 {
-
 //HaplotypePhaser::HaplotypePhaser(ReferenceGenome& the_reference, VariationalBayesGenotypeModel& the_model,
 //                                 unsigned ploidy, unsigned max_haplotypes, unsigned max_model_update_iterations,
 //                                 RealType reference_bias)
@@ -218,4 +217,4 @@ namespace Octopus
 //    return false;
 //}
 
-} // end namespace Octopus
+} // namespace Octopus

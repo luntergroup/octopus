@@ -40,8 +40,8 @@ public:
     
     const fs::path path() const;
     VcfHeader fetch_header();
-    size_t num_records() const;
-    size_t num_records(const GenomicRegion& region) const;
+    size_t count_records() const;
+    size_t count_records(const GenomicRegion& region) const;
     std::vector<VcfRecord> fetch_records(Unpack level = Unpack::All); // fetches all records
     std::vector<VcfRecord> fetch_records(const GenomicRegion& region, Unpack level = Unpack::All);
     

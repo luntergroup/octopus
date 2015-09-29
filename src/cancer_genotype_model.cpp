@@ -58,10 +58,10 @@ namespace Octopus
         for (const auto& haplotype : unique_haplotypes) {
             auto num_occurences = genotype.num_occurences(haplotype);
             occurences.push_back(num_occurences);
-            r += num_occurences * haplotype_frequencies.at(haplotype);
+            r += num_occurences * std::log(haplotype_frequencies.at(haplotype));
         }
         
-        return log_multinomial_coefficient<double>(occurences.cbegin(), occurences.cend()) * r;
+        return log_multinomial_coefficient<double>(occurences.cbegin(), occurences.cend()) + r;
     }
     
     double log_probability(const Genotype<Haplotype>& genotype, const GenotypeWeights& f,
@@ -312,4 +312,4 @@ namespace Octopus
         return result;
     }
     
-} // end namespace Octopus
+} // namespace Octopus

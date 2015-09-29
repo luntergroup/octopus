@@ -69,7 +69,7 @@ namespace detail
         return get_closed(leftmost_region, rightmost_region);
     }
     
-} // end namespace detail
+} // namespace detail
 
 enum class IndicatorLimit { SharedWithPreviousRegion, NoLimit };
 enum class ExtensionLimit { WithinReadLengthOfFirstIncluded, NoLimit };
@@ -159,14 +159,12 @@ template <typename SampleReadMap, typename Container>
 std::vector<GenomicRegion> cover_region(const GenomicRegion& region,
                                         const SampleReadMap& reads, const Container& variants,
                                         unsigned max_included, unsigned max_indicators,
-                                        IndicatorLimit indicator_limit=IndicatorLimit::SharedWithPreviousRegion,
-                                        ExtensionLimit extension_limit=ExtensionLimit::WithinReadLengthOfFirstIncluded)
+                                        IndicatorLimit indicator_limit = IndicatorLimit::SharedWithPreviousRegion,
+                                        ExtensionLimit extension_limit = ExtensionLimit::WithinReadLengthOfFirstIncluded)
 {
     std::vector<GenomicRegion> result {};
     
     auto sub_region = compress_right(region, -size(region));
-    
-    std::cout << sub_region << std::endl;
     
     while (ends_before(sub_region, region)) {
         sub_region = advance_region(sub_region, reads, variants, max_included, max_indicators,
@@ -179,6 +177,6 @@ std::vector<GenomicRegion> cover_region(const GenomicRegion& region,
     return result;
 }
     
-} // end namespace Octopus
+} // namespace Octopus
 
 #endif

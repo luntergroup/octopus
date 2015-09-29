@@ -22,7 +22,7 @@ std::vector<GenomicRegion> get_batch_regions(const GenomicRegion& region, const 
 {
     std::vector<GenomicRegion> result {};
     
-    if (reader.num_records(region) > max_batch_size) {
+    if (reader.count_records(region) > max_batch_size) {
         // umm?
     } else {
         result.push_back(region);
@@ -34,7 +34,7 @@ std::vector<GenomicRegion> get_batch_regions(const GenomicRegion& region, const 
 std::vector<Variant> fetch_variants(const GenomicRegion& region, VcfReader& reader)
 {
     std::vector<Variant> result {};
-    result.reserve(reader.num_records(region));
+    result.reserve(reader.count_records(region));
     
     size_t max_batch_size {10000};
     

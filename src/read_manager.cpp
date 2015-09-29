@@ -61,6 +61,113 @@ std::vector<ReadManager::SampleIdType> ReadManager::get_samples() const
     return result;
 }
 
+size_t ReadManager::count_reads(const SampleIdType& sample, const GenomicRegion& region)
+{
+    auto& reader_paths = reader_paths_containing_sample_.at(sample);
+    
+    auto last_region_containing_reader = std::partition(std::begin(reader_paths), std::end(reader_paths),
+                                                        [this, &region] (auto& reader_path) {
+                                                            return could_reader_contain_region(reader_path, region);
+                                                        });
+    
+    // So we don't have to re-open already open readers
+    auto last_open_reader = std::partition(std::begin(reader_paths), last_region_containing_reader,
+                                           [this] (auto& reader_path) { return is_open(reader_path); });
+    
+    size_t result {};
+    
+    std::for_each(std::begin(reader_paths), last_open_reader,
+                  [this, &sample, &region, &result] (const auto& reader_path) {
+                      result += open_readers_.at(reader_path).count_reads(sample, region);
+                  });
+    
+    open_readers(last_open_reader, last_region_containing_reader);
+    
+    std::for_each(last_open_reader, last_region_containing_reader,
+                  [this, &sample, &region, &result] (const auto& reader_path) {
+                      result += open_readers_.at(reader_path).count_reads(sample, region);
+                  });
+    
+    return result;
+}
+
+size_t ReadManager::count_reads(const std::vector<SampleIdType>& samples, const GenomicRegion& region)
+{
+    auto reader_paths_containing_samples = get_reader_paths_containing_samples(samples);
+    
+    auto last_region_containing_reader = std::partition(std::begin(reader_paths_containing_samples),
+                                                        std::end(reader_paths_containing_samples),
+                                                        [this, &region] (auto& reader_path) {
+                                                            return could_reader_contain_region(reader_path, region);
+                                                        });
+    
+    auto last_open_reader = std::partition(std::begin(reader_paths_containing_samples),
+                                           last_region_containing_reader,
+                                           [this] (auto& reader_path) { return is_open(reader_path); });
+    
+    size_t result {};
+    
+    std::for_each(std::begin(reader_paths_containing_samples), last_open_reader,
+                  [this, &samples, &region, &result] (const auto& reader_path) {
+                      for (const auto& sample : samples) {
+                          result += open_readers_.at(reader_path).count_reads(sample, region);
+                      }
+                  });
+    
+    open_readers(last_open_reader, last_region_containing_reader);
+    
+    std::for_each(last_open_reader, last_region_containing_reader,
+                  [this, &samples, &region, &result] (const auto& reader_path) {
+                      for (const auto& sample : samples) {
+                          result += open_readers_.at(reader_path).count_reads(sample, region);
+                      }
+                  });
+    
+    return result;
+}
+
+size_t ReadManager::count_reads(const GenomicRegion& region)
+{
+    return count_reads(get_samples(), region);
+}
+
+GenomicRegion ReadManager::find_head_region(const std::vector<SampleIdType>& samples,
+                                            const GenomicRegion& region, size_t target_coverage)
+{
+    auto reader_paths_containing_samples = get_reader_paths_containing_samples(samples);
+    
+    auto last_region_containing_reader = std::partition(std::begin(reader_paths_containing_samples),
+                                                        std::end(reader_paths_containing_samples),
+                                                        [this, &region] (auto& reader_path) {
+                                                            return could_reader_contain_region(reader_path, region);
+                                                        });
+    
+    auto last_open_reader = std::partition(std::begin(reader_paths_containing_samples),
+                                           last_region_containing_reader,
+                                           [this] (auto& reader_path) { return is_open(reader_path); });
+    
+    std::vector<GenomicRegion> results {};
+    
+    std::for_each(std::begin(reader_paths_containing_samples), last_open_reader,
+                  [this, &samples, &region, &results, target_coverage] (const auto& reader_path) {
+                      results.push_back(open_readers_.at(reader_path).find_head_region(region, target_coverage));
+                  });
+    
+    open_readers(last_open_reader, last_region_containing_reader);
+    
+    std::for_each(last_open_reader, last_region_containing_reader,
+                  [this, &samples, &region, &results, target_coverage] (const auto& reader_path) {
+                      results.push_back(open_readers_.at(reader_path).find_head_region(region, target_coverage));
+                  });
+    
+    return *leftmost_mappable(std::cbegin(results), std::cend(results));
+}
+
+GenomicRegion ReadManager::find_head_region(const GenomicRegion& region, size_t target_coverage)
+{
+    return find_head_region(get_samples(), region, target_coverage);
+}
+
 std::vector<AlignedRead> ReadManager::fetch_reads(const SampleIdType& sample, const GenomicRegion& region)
 {
     auto& reader_paths = reader_paths_containing_sample_.at(sample);
@@ -78,7 +185,7 @@ std::vector<AlignedRead> ReadManager::fetch_reads(const SampleIdType& sample, co
     
     std::for_each(std::begin(reader_paths), last_open_reader,
       [this, &sample, &region, &result] (const auto& reader_path) {
-          auto reads = std::move(open_readers_.at(reader_path).fetch_reads(region)[sample]);
+          auto reads = std::move(open_readers_.at(reader_path).fetch_reads(sample, region));
           result.insert(std::end(result), std::make_move_iterator(std::begin(reads)),
                         std::make_move_iterator(std::end(reads)));
       });
@@ -87,7 +194,7 @@ std::vector<AlignedRead> ReadManager::fetch_reads(const SampleIdType& sample, co
     
     std::for_each(last_open_reader, last_region_containing_reader,
       [this, &sample, &region, &result] (const auto& reader_path) {
-          auto reads = std::move(open_readers_.at(reader_path).fetch_reads(region)[sample]);
+          auto reads = std::move(open_readers_.at(reader_path).fetch_reads(sample, region));
           result.insert(std::end(result), std::make_move_iterator(std::begin(reads)),
                         std::make_move_iterator(std::end(reads)));
       });

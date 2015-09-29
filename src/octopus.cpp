@@ -13,6 +13,8 @@
 #include <future>
 #include <memory>
 #include <algorithm>
+#include <cstddef> // size_t
+#include <stdexcept>
 
 #include "common.hpp"
 #include "program_options.hpp"
@@ -28,11 +30,27 @@
 #include "basic_caller.hpp"
 #include "cancer_caller.hpp"
 
-using std::cout;
-using std::endl;
-
 namespace Octopus
 {
+    size_t count_reads(ReadManager& read_manager, ReferenceGenome& reference)
+    {
+        size_t result {};
+        for (const auto& contig : reference.get_contig_names()) {
+            result += read_manager.count_reads(reference.get_contig_region(contig));
+        }
+        return result;
+    }
+    
+    std::vector<GenomicRegion> split_region_by_coverage(const GenomicRegion& region, size_t target_region_coverage,
+                                                        ReadManager& read_manager)
+    {
+        std::vector<GenomicRegion> result {};
+        
+        
+        
+        return result;
+    }
+    
     auto get_contigs(const SearchRegions& regions)
     {
         std::vector<GenomicRegion::StringType> result {};
@@ -42,14 +60,48 @@ namespace Octopus
         return result;
     }
     
+    std::vector<SampleIdType> get_samples(const po::variables_map& options, const ReadManager& read_manager)
+    {
+        auto user_samples = get_samples(options);
+        auto file_samples = read_manager.get_samples();
+        
+        if (!user_samples.empty()) {
+            std::vector<SampleIdType> bad_samples {};
+            
+            for (const auto& user_sample : user_samples) {
+                if (std::find(std::cbegin(file_samples), std::cend(file_samples), user_sample) == std::cend(file_samples)) {
+                    bad_samples.push_back(user_sample);
+                }
+            }
+            
+            if (!bad_samples.empty()) {
+                std::string error {"input samples not in read files: "};
+                for (const auto& sample : bad_samples) error += sample + ',';
+                error.erase(--error.end()); // removes last ','
+                throw std::runtime_error {error};
+            }
+            
+            return user_samples;
+        } else {
+            return file_samples;
+        }
+    }
+    
+    size_t approx_num_reads(size_t bytes_available)
+    {
+        return bytes_available / sizeof(AlignedRead);
+    }
+    
     void run_octopus(po::variables_map& options)
     {
-        cout << "starting Octopus" << endl;
+        using std::cout; using std::endl;
         
         //auto num_system_threads = std::thread::hardware_concurrency(); // just a hint
         //if (num_system_threads == 0) num_system_threads = 1;
         
         //auto max_threads  = Octopus::get_num_threads(options);
+        
+        auto memory_quota = Octopus::get_memory_quota(options);
         
         auto reference           = Octopus::get_reference(options);
         auto read_manager        = Octopus::get_read_manager(options);
@@ -59,16 +111,14 @@ namespace Octopus
         auto candidate_generator = Octopus::get_candidate_generator(options, reference);
         auto vcf                 = Octopus::get_output_vcf(options);
         
-        cout << "writing results to " << vcf.path().string() << endl;
+        auto samples = get_samples(options, read_manager);
         
-        auto samples = read_manager.get_samples();
+        cout << "writing results to " << vcf.path().string() << endl;
         
         auto contigs = get_contigs(regions);
         
         auto vcf_header_builder = get_default_header_builder().set_samples(samples);
-        for (const auto& contig : contigs) {
-            vcf_header_builder.add_contig(contig);
-        }
+        for (const auto& contig : contigs) vcf_header_builder.add_contig(contig);
         
         auto vcf_header = vcf_header_builder.build_once();
         
@@ -92,6 +142,6 @@ namespace Octopus
         }
     }
     
-} // end namespace Octopus
+} // namespace Octopus
 
 

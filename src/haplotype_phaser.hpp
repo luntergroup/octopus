@@ -140,6 +140,6 @@ namespace Octopus
 //    phase_current_data();
 //}
 
-} // end namespace Octopus
+} // namespace Octopus
 
 #endif /* defined(__Octopus__haplotype_phaser__) */

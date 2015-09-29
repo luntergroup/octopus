@@ -11,8 +11,7 @@
 
 #include <string>
 #include <vector>
-#include <cstddef> // std::size_t
-#include <cstdint> // std::uint_fast32_t
+#include <cstddef> // size_t
 #include <unordered_map>
 
 #include "genomic_region.hpp"
@@ -28,8 +27,13 @@ public:
     
     virtual std::vector<SampleIdType> get_samples() = 0;
     virtual std::vector<std::string> get_read_groups_in_sample(const SampleIdType& sample) = 0;
-    virtual std::size_t get_num_reads(const GenomicRegion& region) = 0;
+    
+    virtual size_t count_reads(const GenomicRegion& region) = 0;
+    virtual size_t count_reads(const SampleIdType& sample, const GenomicRegion& region) = 0;
+    virtual GenomicRegion find_head_region(const GenomicRegion& region, size_t target_coverage) = 0;
     virtual SampleIdToReadsMap fetch_reads(const GenomicRegion& region) = 0;
+    virtual std::vector<AlignedRead> fetch_reads(const SampleIdType& sample, const GenomicRegion& region) = 0;
+    
     virtual unsigned get_num_reference_contigs() noexcept = 0;
     virtual std::vector<std::string> get_reference_contig_names() = 0;
     virtual SizeType get_reference_contig_size(const std::string& contig_name) = 0;
