@@ -18,6 +18,8 @@
 #include "common.hpp"
 #include "maths.hpp"
 
+#include <iostream> // TEST
+
 namespace Octopus
 {
     // public methods
@@ -33,8 +35,15 @@ namespace Octopus
     
     using HaplotypeFrequencies  = std::unordered_map<Haplotype, double>;
     using GenotypeMarginals     = std::unordered_map<Genotype<Haplotype>, double>;
-    using ComponentPseudoCounts = std::unordered_map<Octopus::SampleIdType, std::array<double, 3>>;
-    using ComponentFrequencies  = std::unordered_map<Octopus::SampleIdType, std::array<double, 3>>;
+    using GenotypeWeights       = std::array<double, 3>;
+    using ComponentPseudoCounts = std::unordered_map<Octopus::SampleIdType, GenotypeWeights>;
+    using ComponentFrequencies  = std::unordered_map<Octopus::SampleIdType, GenotypeWeights>;
+    
+    std::ostream& operator<<(std::ostream& os, const GenotypeWeights& weights)
+    {
+        os << weights[0] << " " << weights[1] << " " << weights[2];
+        return os;
+    }
     
     static double log_hardy_weinberg(const Genotype<Haplotype>& genotype,
                                      const HaplotypeFrequencies& haplotype_frequencies)
@@ -55,7 +64,7 @@ namespace Octopus
         return log_multinomial_coefficient<double>(occurences.cbegin(), occurences.cend()) * r;
     }
     
-    double log_probability(const Genotype<Haplotype>& genotype, const std::array<double, 3>& f,
+    double log_probability(const Genotype<Haplotype>& genotype, const GenotypeWeights& f,
                            const MappableSet<AlignedRead>& reads)
     {
         static SingleReadModel rm {1000};
@@ -198,14 +207,14 @@ namespace Octopus
         return result;
     }
     
-    std::vector<std::array<double, 3>> generate_all_fs(unsigned n)
+    std::vector<GenotypeWeights> generate_all_fs(unsigned n)
     {
         auto ratios = generate_all_ratios(n);
-        std::vector<std::array<double, 3>> result(ratios.size());
+        std::vector<GenotypeWeights> result(ratios.size());
         double epsilon {std::nextafter(0, 1.0)};
         std::transform(std::cbegin(ratios), std::cend(ratios), std::begin(result),
                        [n, epsilon] (const auto& arr) {
-            return std::array<double, 3> {
+            return GenotypeWeights {
                 static_cast<double>(arr[0]) / n + epsilon,
                 static_cast<double>(arr[1]) / n + epsilon,
                 static_cast<double>(arr[2]) / n + epsilon
@@ -229,12 +238,12 @@ namespace Octopus
         
         ComponentPseudoCounts alphas {};
         for (const auto& s : reads) {
-            alphas.emplace(s.first, std::array<double, 3> {1.0, 1.0, 1.0});
+            alphas.emplace(s.first, GenotypeWeights {1.0, 1.0, 1.0});
         }
         
         ComponentFrequencies fs {};
         for (const auto& s : reads) {
-            fs.emplace(s.first, std::array<double, 3> {0.5, 0.5, std::nextafter(0, 1.0)});
+            fs.emplace(s.first, GenotypeWeights {0.5, 0.5, std::nextafter(0, 1.0)});
         }
         
         HaplotypeFrequencies pi {};
@@ -246,7 +255,7 @@ namespace Octopus
         
         remove_redundant_genotypes(genotypes);
         
-        Genotype<Haplotype> gm {}; std::array<double, 3> fm {}; double m {-10000000};
+        Genotype<Haplotype> gm {}; GenotypeWeights fm {}; double m {-10000000};
         
         for (auto g : genotypes) {
             for (auto r : ratios) {
@@ -262,7 +271,7 @@ namespace Octopus
         
         print_alleles(gm);
         std::cout << std::endl;
-        std::cout << fm[0] << " " << fm[1] << " " << fm[2] << std::endl;
+        std::cout << fm << std::endl;
         std::cout << m << std::endl;
         
         //std::cout << log_joint_liklihood(gm, fs, reads, pi, alphas) << std::endl;
@@ -277,7 +286,6 @@ namespace Octopus
 //        }
         
         auto gp = genotype_posteriors(genotypes, reads, pi, alphas);
-        
         auto hf = compute_haplotype_frequencies(gp, 3);
         auto cf = compute_component_pseudo_counts(alphas, gp, reads);
         
