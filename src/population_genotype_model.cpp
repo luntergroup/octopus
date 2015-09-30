@@ -168,11 +168,6 @@ namespace Octopus
     {
         update_marginal_genotype_log_probabilities(marginal_genotype_log_probabilities, haplotype_frequencies);
         
-//        for (auto g : marginal_genotype_log_probabilities) {
-//            std::cout << g.first << std::endl;
-//            std::cout << g.second << std::endl;
-//        }
-        
         for (auto& sample_genotype_log_likilhoods : genotype_posteriors) {
             auto sample = sample_genotype_log_likilhoods.first;
             for (auto& p : sample_genotype_log_likilhoods.second) {
@@ -251,23 +246,23 @@ namespace Octopus
         
         //std::cout << "there are " << genotypes.size() << " genotypes" << std::endl;
         
-        const auto genotype_log_likilhoods = compute_genotype_log_likelihoods(genotypes, reads, sample_ploidy_);
-        
         auto haplotype_frequencies               = init_haplotype_frequencies(haplotypes);
         auto marginal_genotype_log_probabilities = init_marginal_genotype_log_probabilities(genotypes, haplotype_frequencies);
+        
+        const auto genotype_log_likilhoods = compute_genotype_log_likelihoods(genotypes, reads, sample_ploidy_);
         
         auto result = init_genotype_posteriors(marginal_genotype_log_probabilities, genotype_log_likilhoods);
         
         for (unsigned n {0}; n < max_em_iterations_; ++n) {
-            std::cout << "EM iteration " << n << std::endl;
+            //std::cout << "EM iteration " << n << std::endl;
             auto c = do_em_iteration(result, haplotype_frequencies, marginal_genotype_log_probabilities,
                                      genotype_log_likilhoods, sample_ploidy_);
             if (c < em_epsilon_) break;
         }
         
-        for (const auto& h : haplotype_frequencies) {
-            std::cout << h.first << " " << h.second << std::endl;
-        }
+//        for (const auto& h : haplotype_frequencies) {
+//            std::cout << h.first << " " << h.second << std::endl;
+//        }
         
         return result;
     }

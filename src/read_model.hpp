@@ -100,9 +100,9 @@ template <typename ForwardIterator>
 ReadModel::RealType ReadModel::log_probability(ForwardIterator first_read, ForwardIterator last_read,
                                                const Genotype<Haplotype>& genotype, SampleIdType sample)
 {
-    if (is_genotype_in_cache(sample, first_read, last_read, genotype)) {
-        return get_log_probability_from_cache(sample, first_read, last_read, genotype);
-    }
+//    if (is_genotype_in_cache(sample, first_read, last_read, genotype)) {
+//        return get_log_probability_from_cache(sample, first_read, last_read, genotype);
+//    }
     
     RealType result {0};
     
@@ -110,7 +110,7 @@ ReadModel::RealType ReadModel::log_probability(ForwardIterator first_read, Forwa
         result += log_probability(read, genotype, sample);
     });
     
-    add_genotype_to_cache(sample, first_read, last_read, genotype, result);
+    //add_genotype_to_cache(sample, first_read, last_read, genotype, result);
     
     return result;
 }

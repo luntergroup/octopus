@@ -23,20 +23,17 @@ inline bool is_not_secondary_alignment(const AlignedRead& read)
     return !read.is_marked_secondary_alignment();
 }
 
-inline bool is_good_mapping_quality(const AlignedRead& read,
-                                    AlignedRead::QualityType min_mapping_quality)
+inline bool is_good_mapping_quality(const AlignedRead& read, AlignedRead::QualityType min_mapping_quality)
 {
     return read.get_mapping_quality() >= min_mapping_quality;
 }
 
-inline bool has_sufficient_good_quality_bases(const AlignedRead& read,
-                                              AlignedRead::QualityType min_base_quality,
+inline bool has_sufficient_good_quality_bases(const AlignedRead& read, AlignedRead::QualityType min_base_quality,
                                               unsigned min_good_bases)
 {
     const auto& qualities = read.get_qualities();
-    return std::count_if(std::cbegin(qualities), std::cend(qualities), [min_base_quality] (const auto& qual) {
-        return qual >= min_base_quality;
-    }) >= min_good_bases;
+    return std::count_if(std::cbegin(qualities), std::cend(qualities),
+                         [min_base_quality] (const auto& qual) { return qual >= min_base_quality; }) >= min_good_bases;
 }
 
 inline bool is_mapped(const AlignedRead& read)
@@ -71,8 +68,7 @@ inline bool is_long(const AlignedRead& read, AlignedRead::SizeType min_length)
 
 inline bool is_not_contaminated(const AlignedRead& read)
 {
-    return (read.is_chimeric()) ?
-        read.get_sequence_size() >= read.get_next_segment()->get_inferred_template_length() : true;
+    return (read.is_chimeric()) ? read.get_sequence_size() >= read.get_next_segment()->get_inferred_template_length() : true;
 }
 
 inline bool not_marked_qc_fail(const AlignedRead& read)
@@ -87,12 +83,7 @@ bool is_not_duplicate(const AlignedRead& read, BidirectionalIterator first_good_
                       BidirectionalIterator previous_good_read)
 {
     if (first_good_read != previous_good_read) {
-        if (read.is_chimeric() && previous_good_read->is_chimeric()) {
-            return !(read == *previous_good_read &&
-                    *read.get_next_segment() == *(previous_good_read->get_next_segment()));
-        } else {
-            return read != *previous_good_read;
-        }
+        return !IsDuplicate()(read, *previous_good_read);
     } else {
         return true;
     }

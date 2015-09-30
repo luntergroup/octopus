@@ -214,6 +214,11 @@ bool operator==(const AlignedRead& lhs, const AlignedRead& rhs);
 
 bool operator<(const AlignedRead& lhs, const AlignedRead& rhs);
 
+struct IsDuplicate
+{
+    bool operator()(const AlignedRead& lhs, const AlignedRead& rhs);
+};
+
 bool operator==(const AlignedRead::NextSegment& lhs, const AlignedRead::NextSegment& rhs);
 
 namespace std {
