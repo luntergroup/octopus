@@ -256,12 +256,12 @@ VcfRecord call_segment(const Allele& ref_allele, const std::vector<Variant>& var
     result.set_alt_alleles(get_alt_allele_sequences(variants));
     result.set_quality(phred_quality);
     result.add_info("NS", std::to_string(genotype_calls.size()));
-    result.set_format({"GT", "GQ"});
+    result.set_format({"GT", "GP"});
     
     for (const auto& sample_call : genotype_calls) {
         const auto& sample = sample_call.first;
         result.add_genotype(sample, to_vcf_genotype(sample_call.second.first), false);
-        result.add_genotype_field(sample, "GQ", std::to_string(to_phred_quality(sample_call.second.second)));
+        result.add_genotype_field(sample, "GP", std::to_string(to_phred_quality(sample_call.second.second)));
     }
     
     return result.build_once();

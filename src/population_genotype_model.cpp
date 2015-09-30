@@ -204,8 +204,8 @@ namespace Octopus
         return result;
     }
     
-    double max_haplotype_frequency_change(const HaplotypeFrequencies& old_frequencies,
-                                          const HaplotypeFrequencies& new_frequencies)
+    static double max_haplotype_frequency_change(const HaplotypeFrequencies& old_frequencies,
+                                                 const HaplotypeFrequencies& new_frequencies)
     {
         double result {};
         
@@ -223,12 +223,12 @@ namespace Octopus
                            const GenotypeLikelihoods& genotype_log_likilhoods,
                            unsigned ploidy)
     {
-        update_genotype_posteriors(genotype_posteriors, haplotype_frequencies,
-                                   marginal_genotype_log_probabilities, genotype_log_likilhoods);
-        
         auto num_samples = static_cast<unsigned>(genotype_posteriors.size());
         
         auto new_frequencies = compute_haplotype_frequencies(genotype_posteriors, num_samples, ploidy);
+        
+        update_genotype_posteriors(genotype_posteriors, haplotype_frequencies,
+                                   marginal_genotype_log_probabilities, genotype_log_likilhoods);
         
         auto max_change = max_haplotype_frequency_change(haplotype_frequencies, new_frequencies);
         
