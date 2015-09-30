@@ -33,15 +33,22 @@ namespace Octopus
     normal_sample_id_ {std::move(normal_sample_id)}
     {}
     
-    using HaplotypeFrequencies  = std::unordered_map<Haplotype, double>;
-    using GenotypeMarginals     = std::unordered_map<Genotype<Haplotype>, double>;
-    using GenotypeWeights       = std::array<double, 3>;
-    using ComponentPseudoCounts = std::unordered_map<Octopus::SampleIdType, GenotypeWeights>;
-    using ComponentFrequencies  = std::unordered_map<Octopus::SampleIdType, GenotypeWeights>;
+    using HaplotypeFrequencies        = std::unordered_map<Haplotype, double>;
+    using GenotypeMarginals           = std::unordered_map<Genotype<Haplotype>, double>;
+    using SampleGenotypeWeightsPriors = std::array<double, 3>;
+    using SampleGenotypeWeights       = std::array<double, 3>;
+    using GenotypeWeightsPriors       = std::unordered_map<Octopus::SampleIdType, SampleGenotypeWeightsPriors>;
+    using GenotypeWeights             = std::unordered_map<Octopus::SampleIdType, SampleGenotypeWeights>;
     
-    std::ostream& operator<<(std::ostream& os, const GenotypeWeights& weights)
+    std::ostream& operator<<(std::ostream& os, const std::array<double, 3>& arr)
     {
-        os << weights[0] << " " << weights[1] << " " << weights[2];
+        os << arr[0] << " " << arr[1] << " " << arr[2];
+        return os;
+    }
+    
+    std::ostream& operator<<(std::ostream& os, const std::unordered_map<Octopus::SampleIdType, std::array<double, 3>>& m)
+    {
+        for (const auto& p : m) os << p.first << ": " << p.second << "\n";
         return os;
     }
     
@@ -64,8 +71,16 @@ namespace Octopus
         return log_multinomial_coefficient<double>(occurences.cbegin(), occurences.cend()) + r;
     }
     
-    double log_probability(const Genotype<Haplotype>& genotype, const GenotypeWeights& f,
-                           const MappableSet<AlignedRead>& reads)
+    SampleGenotypeWeightsPriors
+    get_genotype_weight_priors(const std::vector<Genotype<Haplotype>>& genotypes)
+    {
+        SampleGenotypeWeightsPriors result {};
+        
+        return result;
+    }
+    
+    double genotype_log_likelihood(const Genotype<Haplotype>& genotype, const SampleGenotypeWeights& f,
+                                   const MappableSet<AlignedRead>& reads)
     {
         static SingleReadModel rm {1000};
         
@@ -80,16 +95,16 @@ namespace Octopus
         return result;
     }
     
-    double log_joint_liklihood(const Genotype<Haplotype>& g, const ComponentFrequencies& fs,
+    double log_joint_liklihood(const Genotype<Haplotype>& g, const GenotypeWeights& fs,
                                const ReadMap& reads, const HaplotypeFrequencies& pi,
-                               const ComponentPseudoCounts& alphas)
+                               const GenotypeWeightsPriors& alphas)
     {
         double p {};
         
         for (const auto sample_reads : reads) {
             auto f = fs.at(sample_reads.first);
             auto a = alphas.at(sample_reads.first);
-            p += log_dirichlet<double>(a.begin(), a.end(), f.begin()) + log_probability(g, f, sample_reads.second);
+            p += log_dirichlet<double>(a.begin(), a.end(), f.begin()) + genotype_log_likelihood(g, f, sample_reads.second);
         }
         
         return log_hardy_weinberg(g, pi) + p;
@@ -97,7 +112,7 @@ namespace Octopus
     
     GenotypeMarginals
     genotype_posteriors(const std::vector<Genotype<Haplotype>>& genotypes, const ReadMap& reads,
-                        const HaplotypeFrequencies& pi, const ComponentPseudoCounts& alphas)
+                        const HaplotypeFrequencies& pi, const GenotypeWeightsPriors& alphas)
     {
         GenotypeMarginals result {};
         result.reserve(genotypes.size());
@@ -111,7 +126,7 @@ namespace Octopus
             for (const auto& sample_reads : reads) {
                 const auto& s = sample_reads.first;
                 const auto a  = alphas.at(s);
-                p += log_probability(g, a, sample_reads.second);
+                p += genotype_log_likelihood(g, a, sample_reads.second);
                 p -= sample_reads.second.size() * std::log(a[0] +  a[1] +  a[2]);
             }
             
@@ -147,12 +162,12 @@ namespace Octopus
         return result;
     }
     
-    ComponentPseudoCounts
-    compute_component_pseudo_counts(const ComponentPseudoCounts& prior_counts,
+    GenotypeWeightsPriors
+    compute_component_pseudo_counts(const GenotypeWeightsPriors& prior_counts,
                                     const GenotypeMarginals& genotype_posteriors,
                                     const ReadMap& reads)
     {
-        ComponentPseudoCounts result {};
+        GenotypeWeightsPriors result {};
         result.reserve(prior_counts.size());
         
         SingleReadModel rm {1000};
@@ -207,14 +222,14 @@ namespace Octopus
         return result;
     }
     
-    std::vector<GenotypeWeights> generate_all_fs(unsigned n)
+    std::vector<SampleGenotypeWeights> generate_all_fs(unsigned n)
     {
         auto ratios = generate_all_ratios(n);
-        std::vector<GenotypeWeights> result(ratios.size());
+        std::vector<SampleGenotypeWeights> result(ratios.size());
         double epsilon {std::nextafter(0, 1.0)};
         std::transform(std::cbegin(ratios), std::cend(ratios), std::begin(result),
                        [n, epsilon] (const auto& arr) {
-            return GenotypeWeights {
+            return SampleGenotypeWeights {
                 static_cast<double>(arr[0]) / n + epsilon,
                 static_cast<double>(arr[1]) / n + epsilon,
                 static_cast<double>(arr[2]) / n + epsilon
@@ -236,14 +251,14 @@ namespace Octopus
         
         GenotypeProbabilities result {};
         
-        ComponentPseudoCounts alphas {};
+        GenotypeWeightsPriors alphas {};
         for (const auto& s : reads) {
-            alphas.emplace(s.first, GenotypeWeights {1.0, 1.0, 1.0});
+            alphas.emplace(s.first, SampleGenotypeWeights {1.0, 1.0, 1.0});
         }
         
-        ComponentFrequencies fs {};
+        GenotypeWeights fs {};
         for (const auto& s : reads) {
-            fs.emplace(s.first, GenotypeWeights {0.5, 0.5, std::nextafter(0, 1.0)});
+            fs.emplace(s.first, SampleGenotypeWeights {0.5, 0.5, std::nextafter(0, 1.0)});
         }
         
         HaplotypeFrequencies pi {};
@@ -255,11 +270,11 @@ namespace Octopus
         
         remove_redundant_genotypes(genotypes);
         
-        Genotype<Haplotype> gm {}; GenotypeWeights fm {}; double m {-10000000};
+        Genotype<Haplotype> gm {}; SampleGenotypeWeights fm {}; double m {-10000000};
         
         for (auto g : genotypes) {
             for (auto r : ratios) {
-                ComponentFrequencies f {{reads.cbegin()->first, r}};
+                GenotypeWeights f {{reads.cbegin()->first, r}};
                 auto h = log_joint_liklihood(g, f, reads, pi, alphas);
                 if (h > m) {
                     gm = g;
