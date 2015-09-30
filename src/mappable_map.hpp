@@ -14,6 +14,7 @@
 #include <numeric>   // std::accumulate
 #include <iterator>  // std::begin, std::end, std::make_move_iterator
 #include <stdexcept>
+#include <cstddef>   // size_t
 
 #include "mappable_set.hpp"
 
@@ -37,6 +38,13 @@ make_mappable_map(Map map)
     });
     
     return result;
+}
+
+template <typename KeyType, typename MappableType>
+size_t count_mappables(const MappableMap<KeyType, MappableType>& map)
+{
+    return std::accumulate(std::cbegin(map), std::cend(map), size_t {},
+                           [] (size_t prev, const auto& v) { return prev + v.second.size(); });
 }
 
 template <typename KeyType, typename MappableType1, typename MappableType2>

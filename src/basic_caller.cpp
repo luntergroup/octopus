@@ -271,6 +271,8 @@ std::vector<VcfRecord> BasicVariantCaller::call_variants(const GenomicRegion& re
                                                          const std::vector<Variant>& candidates,
                                                          const ReadMap& reads)
 {
+    std::cout << count_mappables(reads) << std::endl;
+    
     std::vector<VcfRecord> result {};
     
     Octopus::HaplotypeTree tree {reference_};
