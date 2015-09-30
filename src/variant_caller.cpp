@@ -51,7 +51,7 @@ std::vector<VcfRecord> VariantCaller::call_variants(const GenomicRegion& region)
         
         candidate_generator_.clear();
         
-        std::cout << "found " << candidates.size() << " candidates" << std::endl;
+        //std::cout << "found " << candidates.size() << " candidates" << std::endl;
         
         auto calls_in_region = call_variants(current_region, candidates, good_reads);
         

@@ -111,35 +111,37 @@ namespace Octopus
         auto candidate_generator = Octopus::get_candidate_generator(options, reference);
         auto vcf                 = Octopus::get_output_vcf(options);
         
-        auto samples = get_samples(options, read_manager);
+        cout << count_reads(read_manager, reference) << endl;
         
-        cout << "writing results to " << vcf.path().string() << endl;
-        
-        auto contigs = get_contigs(regions);
-        
-        auto vcf_header_builder = get_default_header_builder().set_samples(samples);
-        for (const auto& contig : contigs) vcf_header_builder.add_contig(contig);
-        
-        auto vcf_header = vcf_header_builder.build_once();
-        
-        vcf.write(vcf_header);
-        
-        for (const auto& contig_region : regions) {
-            auto region = *contig_region.second.cbegin();
-            
-            cout << "looking at region " << region << endl;
-            
-            std::unique_ptr<VariantCaller> caller = std::make_unique<BasicVariantCaller>(reference, read_manager, read_filter, read_transform, candidate_generator);
-            
-            auto calls = caller->call_variants(region);
-            
-            cout << "writing " << calls.size() << " calls to VCF" << endl;
-            
-            for (auto& call : calls) {
-                cout << call << endl;
-                vcf.write(call);
-            }
-        }
+//        auto samples = get_samples(options, read_manager);
+//        
+//        cout << "writing results to " << vcf.path().string() << endl;
+//        
+//        auto contigs = get_contigs(regions);
+//        
+//        auto vcf_header_builder = get_default_header_builder().set_samples(samples);
+//        for (const auto& contig : contigs) vcf_header_builder.add_contig(contig);
+//        
+//        auto vcf_header = vcf_header_builder.build_once();
+//        
+//        vcf.write(vcf_header);
+//        
+//        for (const auto& contig_region : regions) {
+//            auto region = *contig_region.second.cbegin();
+//            
+//            cout << "looking at region " << region << endl;
+//            
+//            std::unique_ptr<VariantCaller> caller = std::make_unique<BasicVariantCaller>(reference, read_manager, read_filter, read_transform, candidate_generator);
+//            
+//            auto calls = caller->call_variants(region);
+//            
+//            cout << "writing " << calls.size() << " calls to VCF" << endl;
+//            
+//            for (auto& call : calls) {
+//                cout << call << endl;
+//                vcf.write(call);
+//            }
+//        }
     }
     
 } // namespace Octopus

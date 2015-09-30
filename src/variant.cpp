@@ -8,6 +8,13 @@
 
 #include "variant.hpp"
 
+Variant::Variant(const Allele& reference, const Allele& alternative)
+:
+reference_allele_sequence_ {reference.get_sequence()},
+reference_allele_region_ {reference.get_region()},
+alternative_allele_sequence_ {alternative.get_sequence()}
+{}
+
 const GenomicRegion& Variant::get_region() const noexcept
 {
     return reference_allele_region_;

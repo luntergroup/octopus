@@ -185,21 +185,76 @@ unsigned to_phred_quality(double p)
     return -10 * static_cast<unsigned>(std::log10(1.0 - p));
 }
 
-//double compute_variant_quality(const Allele)
-
-VcfRecord call_segment(const std::vector<Allele>& segment,
-                       const GenotypeCalls& genotype_calls,
-                       const AllelePosteriors& allele_posteriors)
+double max_posterior(const Allele& allele, const AllelePosteriors& allele_posteriors)
 {
+    double result {};
+    
+    for (const auto& sample_allele_posteriors : allele_posteriors) {
+        auto p = sample_allele_posteriors.second.at(allele);
+        if (p > result) result = p;
+    }
+    
+    return result;
+}
+
+double max_posterior(const std::vector<Variant>& variants, const AllelePosteriors& allele_posteriors)
+{
+    double result {};
+    
+    for (const auto& sample_allele_posteriors : allele_posteriors) {
+        for (const auto& variant : variants) {
+            auto p = sample_allele_posteriors.second.at(variant.get_alternative_allele());
+            if (p > result) result = p;
+        }
+    }
+    
+    return result;
+}
+
+std::vector<VcfRecord::SequenceType> get_alt_allele_sequences(const std::vector<Variant>& segment)
+{
+    std::vector<VcfRecord::SequenceType> result {};
+    result.reserve(segment.size());
+    std::transform(std::cbegin(segment), std::cend(segment), std::back_inserter(result),
+                   [] (const auto& variant) { return variant.get_alternative_allele_sequence(); });
+    return result;
+}
+
+std::vector<GenomicRegion> get_segment_regions(const std::vector<std::vector<Allele>>& segments)
+{
+    std::vector<GenomicRegion> result {};
+    result.reserve(segments.size());
+    for (const auto& segment : segments) result.push_back(segment.front().get_region());
+    return result;
+}
+
+std::vector<Variant> call_segment_variants(const std::vector<Allele>& segment,
+                                           const AllelePosteriors& allele_posteriors, double min_posterior)
+{
+    std::vector<Variant> result {};
+    
     const auto& ref_allele = segment.front();
     
+    std::for_each(std::next(std::cbegin(segment)), std::cend(segment),
+                  [&ref_allele, &allele_posteriors, min_posterior, &result] (const auto& allele) {
+                      if (max_posterior(allele, allele_posteriors) >= min_posterior) {
+                          result.emplace_back(ref_allele, allele);
+                      }
+                  });
+    
+    return result;
+}
+
+VcfRecord call_segment(const Allele& ref_allele, const std::vector<Variant>& variants,
+                       const GenotypeCalls& genotype_calls, unsigned phred_quality)
+{
     auto result = VcfRecord::Builder();
     
     result.set_chromosome(get_contig_name(ref_allele));
     result.set_position(get_begin(ref_allele));
     result.set_ref_allele(ref_allele.get_sequence());
-    result.set_alt_allele(segment.back().get_sequence());
-    result.set_quality(60);
+    result.set_alt_alleles(get_alt_allele_sequences(variants));
+    result.set_quality(phred_quality);
     result.add_info("NS", std::to_string(genotype_calls.size()));
     result.set_format({"GT", "GQ"});
     
@@ -223,34 +278,27 @@ std::vector<VcfRecord> BasicVariantCaller::call_variants(const GenomicRegion& re
     
     auto haplotypes = tree.get_haplotypes(region);
     
-    std::cout << "there are " << haplotypes.size() << " haplotypes" << std::endl;
+    //std::cout << "there are " << haplotypes.size() << " haplotypes" << std::endl;
     
     auto genotype_model = std::make_unique<Octopus::PopulationGenotypeModel>(1, 2);
     
     auto genotype_posteriors = genotype_model->evaluate(haplotypes, reads);
-    
-    for (auto& p : genotype_posteriors) {
-        std::cout << p.first << std::endl;
-        auto m = std::max_element(p.second.cbegin(), p.second.cend(), [] (const auto& lhs, const auto& rhs) { return lhs.second < rhs.second; });
-        std::cout << m->first << " " << m->second << std::endl;
-    }
     
     auto alleles = decompose(candidates);
     
     auto allele_posteriors = compute_allele_posteriors(genotype_posteriors, haplotypes, alleles);
     
     auto segments = segment(alleles);
-    
-    std::vector<GenomicRegion> regions {};
-    regions.reserve(segments.size());
-    for (const auto& segment : segments) regions.push_back(segment.front().get_region());
+    auto regions  = get_segment_regions(segments);
     
     auto genotype_calls = call_genotypes(genotype_posteriors, regions);
-    auto it = std::cbegin(genotype_calls);
+    auto genotype_calls_itr = std::cbegin(genotype_calls);
     
     for (const auto& segment : segments) {
-        result.emplace_back(call_segment(segment, *it, allele_posteriors));
-        ++it;
+        auto variants = call_segment_variants(segment, allele_posteriors, 0.95);
+        auto segment_quality = to_phred_quality(max_posterior(variants, allele_posteriors));
+        result.emplace_back(call_segment(segment.front(), variants, *genotype_calls_itr, segment_quality));
+        ++genotype_calls_itr;
     }
     
     return result;

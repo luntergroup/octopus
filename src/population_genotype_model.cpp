@@ -249,7 +249,7 @@ namespace Octopus
     {
         auto genotypes = generate_all_genotypes(haplotypes, sample_ploidy_);
         
-        std::cout << "there are " << genotypes.size() << " genotypes" << std::endl;
+        //std::cout << "there are " << genotypes.size() << " genotypes" << std::endl;
         
         const auto genotype_log_likilhoods = compute_genotype_log_likelihoods(genotypes, reads, sample_ploidy_);
         
@@ -265,9 +265,9 @@ namespace Octopus
             if (c < em_epsilon_) break;
         }
         
-        for (const auto& h : haplotype_frequencies) {
-            std::cout << h.first << " " << h.second << std::endl;
-        }
+//        for (const auto& h : haplotype_frequencies) {
+//            std::cout << h.first << " " << h.second << std::endl;
+//        }
         
         return result;
     }

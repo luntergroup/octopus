@@ -28,6 +28,7 @@ public:
     using SequenceType = Allele::SequenceType;
     
     Variant() = default;
+    explicit Variant(const Allele& reference, const Allele& alternative);
     template <typename GenomicRegion_, typename SequenceType1, typename SequenceType2>
     explicit Variant(GenomicRegion_&& reference_allele_region, SequenceType1&& reference_allele,
                      SequenceType2&& alternative_allele);
