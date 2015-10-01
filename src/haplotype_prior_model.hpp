@@ -14,17 +14,14 @@ class Haplotype;
 class HaplotypePriorModel
 {
 public:
+    HaplotypePriorModel() = delete;
+    
     double evaluate(const Haplotype& haplotype);
-    
-    virtual ~HaplotypePriorModel() = default;
-    
-private:
-    virtual double do_evaluate(const Haplotype& haplotype) = 0;
 };
 
 inline double HaplotypePriorModel::evaluate(const Haplotype& haplotype)
 {
-    return do_evaluate(haplotype);
+    return 0;
 }
 
 #endif

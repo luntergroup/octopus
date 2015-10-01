@@ -186,6 +186,9 @@ namespace Octopus
     {
         auto new_frequencies = compute_haplotype_frequencies(haplotypes, genotypes, genotype_posteriors);
         
+        update_genotype_posteriors(genotype_posteriors, haplotype_frequencies,
+                                   marginal_genotype_log_probabilities, genotype_log_likilhoods);
+        
         auto max_change = max_haplotype_frequency_change(haplotype_frequencies, new_frequencies);
         
         update_genotype_posteriors(genotype_posteriors, new_frequencies,

@@ -272,6 +272,36 @@ namespace Octopus
         return std::max(c1, c2);
     }
     
+    static double max_haplotype_frequency_change(const HaplotypeFrequencies& old_frequencies,
+                                                 const HaplotypeFrequencies& new_frequencies)
+    {
+        double result {};
+        
+        for (const auto& h : new_frequencies) {
+            auto change = std::abs(h.second - old_frequencies.at(h.first));
+            if (change > result) result = change;
+        }
+        
+        return result;
+    }
+    
+    double do_em_iteration(GenotypeMarginals& genotype_posteriors,
+                           HaplotypeFrequencies& haplotype_frequencies,
+                           GenotypeWeightsCounts& weight_counts,
+                           const ReadMap& reads)
+    {
+        auto new_haplotype_frequencies  = compute_haplotype_frequencies(genotype_posteriors);
+        auto new_genotype_weight_counts = compute_component_pseudo_counts(weight_counts, genotype_posteriors, reads);
+        
+        auto max_change = max_haplotype_frequency_change(haplotype_frequencies, new_haplotype_frequencies);
+        
+        
+        
+        haplotype_frequencies = new_haplotype_frequencies;
+        
+        return max_change;
+    }
+    
     // private methods
     
     Cancer::Latents Cancer::evaluate(const std::vector<Haplotype>& haplotypes, const ReadMap& reads)
