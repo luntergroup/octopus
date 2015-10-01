@@ -209,7 +209,7 @@ namespace std
             return boost::hash_range(std::cbegin(genotype), std::cend(genotype));
         }
     };
-} // end namespace std
+} // namespace std
 
 template <typename MappableType1, typename MappableType2>
 bool contains(const Genotype<MappableType1>& lhs, const Genotype<MappableType2>& rhs)
@@ -238,7 +238,7 @@ namespace detail
         
         return result;
     }
-} // end namespace detail
+} // namespace detail
 
 // Assumes the input haplotypes are unique
 template <typename MappableType>

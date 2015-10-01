@@ -27,7 +27,7 @@
 #include "candidate_generators.hpp"
 #include "vcf.hpp"
 #include "variant_caller.hpp"
-#include "basic_caller.hpp"
+#include "population_caller.hpp"
 #include "cancer_caller.hpp"
 
 namespace Octopus
@@ -62,7 +62,7 @@ namespace Octopus
     
     std::vector<SampleIdType> get_samples(const po::variables_map& options, const ReadManager& read_manager)
     {
-        auto user_samples = get_samples(options);
+        auto user_samples = Options::get_samples(options);
         auto file_samples = read_manager.get_samples();
         
         if (!user_samples.empty()) {
@@ -101,15 +101,15 @@ namespace Octopus
         
         //auto max_threads  = Octopus::get_num_threads(options);
         
-        auto memory_quota = Octopus::get_memory_quota(options);
+        auto memory_quota = Options::get_memory_quota(options);
         
-        auto reference           = Octopus::get_reference(options);
-        auto read_manager        = Octopus::get_read_manager(options);
-        auto regions             = Octopus::get_search_regions(options, reference);
-        auto read_filter         = Octopus::get_read_filter(options);
-        auto read_transform      = Octopus::get_read_transformer(options);
-        auto candidate_generator = Octopus::get_candidate_generator(options, reference);
-        auto vcf                 = Octopus::get_output_vcf(options);
+        auto reference           = Options::get_reference(options);
+        auto read_manager        = Options::get_read_manager(options);
+        auto regions             = Options::get_search_regions(options, reference);
+        auto read_filter         = Options::get_read_filter(options);
+        auto read_transform      = Options::get_read_transformer(options);
+        auto candidate_generator = Options::get_candidate_generator(options, reference);
+        auto vcf                 = Options::get_output_vcf(options);
         
         auto samples = get_samples(options, read_manager);
         
@@ -129,7 +129,7 @@ namespace Octopus
             
             cout << "looking at region " << region << endl;
             
-            std::unique_ptr<VariantCaller> caller = std::make_unique<BasicVariantCaller>(reference, read_manager, read_filter, read_transform, candidate_generator);
+            std::unique_ptr<VariantCaller> caller = std::make_unique<CancerVariantCaller>(reference, read_manager, read_filter, read_transform, candidate_generator);
             
             auto calls = caller->call_variants(region);
             

@@ -22,6 +22,6 @@ namespace Octopus
 {
     void run_octopus(po::variables_map& options);
     
-} // end namespace Octopus
+} // namespace Octopus
 
 #endif /* defined(__Octopus__octopus__) */

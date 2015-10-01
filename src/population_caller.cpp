@@ -6,7 +6,7 @@
 //  Copyright (c) 2015 Oxford University. All rights reserved.
 //
 
-#include "basic_caller.hpp"
+#include "population_caller.hpp"
 
 #include <unordered_map>
 #include <numeric>
@@ -32,26 +32,31 @@
 
 #include <iostream> // TEST
 
-BasicVariantCaller::BasicVariantCaller(ReferenceGenome& reference, ReadManager& read_manager,
-                                       ReadFilter read_filter, ReadTransform read_transform,
-                                       CandidateVariantGenerator& candidate_generator)
+namespace Octopus
+{
+
+PopulationVariantCaller::PopulationVariantCaller(ReferenceGenome& reference, ReadManager& read_manager,
+                                                 ReadFilter read_filter, ReadTransform read_transform,
+                                                 CandidateVariantGenerator& candidate_generator,
+                                                 unsigned ploidy)
 :
-VariantCaller {reference, read_manager, read_filter, read_transform, candidate_generator}
+VariantCaller {reference, read_manager, read_filter, read_transform, candidate_generator},
+ploidy_ {ploidy}
 {}
 
-GenomicRegion BasicVariantCaller::get_init_region(const GenomicRegion& region)
+GenomicRegion PopulationVariantCaller::get_init_region(const GenomicRegion& region)
 {
     return region;
 }
 
-GenomicRegion BasicVariantCaller::get_next_region(const GenomicRegion& current_region)
+GenomicRegion PopulationVariantCaller::get_next_region(const GenomicRegion& current_region)
 {
     return GenomicRegion {"TEST", 0, 0};
 }
 
 std::unordered_map<Haplotype, double>
-get_haplotype_posteriors(const std::vector<Haplotype>& haplotypes,
-                         const Octopus::GenotypeModel::SampleGenotypeProbabilities& genotype_posteriors)
+compute_haplotype_posteriors(const std::vector<Haplotype>& haplotypes,
+                             const GenotypeModel::Population::SampleGenotypeProbabilities& genotype_posteriors)
 {
     std::unordered_map<Haplotype, double> result {};
     result.reserve(haplotypes.size());
@@ -67,36 +72,7 @@ get_haplotype_posteriors(const std::vector<Haplotype>& haplotypes,
     return result;
 }
 
-double marginalise(const Allele& allele, const std::unordered_map<Haplotype, double>& haplotype_posteriors)
-{
-    double result {};
-    
-    for (const auto& haplotype_posterior : haplotype_posteriors) {
-        if (haplotype_posterior.first.contains(allele)) {
-            result += haplotype_posterior.second;
-        }
-    }
-    
-    return result;
-}
-
-std::unordered_map<Allele, double>
-get_allele_posteriors(const std::unordered_map<Haplotype, double>& haplotype_posteriors,
-                      const std::vector<Variant>& variants)
-{
-    auto alleles = decompose(variants);
-    
-    std::unordered_map<Allele, double> result {};
-    result.reserve(alleles.size());
-    
-    for (const auto& allele : alleles) {
-        result.emplace(allele, marginalise(allele, haplotype_posteriors));
-    }
-    
-    return result;
-}
-
-double marginalise(const Allele& allele, const Octopus::GenotypeModel::SampleGenotypeProbabilities& genotype_posteriors)
+double marginalise(const Allele& allele, const GenotypeModel::Population::SampleGenotypeProbabilities& genotype_posteriors)
 {
     double result {};
     
@@ -113,7 +89,7 @@ double marginalise(const Allele& allele, const Octopus::GenotypeModel::SampleGen
 }
 
 std::unordered_map<Allele, double>
-compute_sample_allele_posteriors(const Octopus::GenotypeModel::SampleGenotypeProbabilities& genotype_posteriors,
+compute_sample_allele_posteriors(const GenotypeModel::Population::SampleGenotypeProbabilities& genotype_posteriors,
                                  const std::vector<Allele>& alleles)
 {
     std::unordered_map<Allele, double> result {};
@@ -126,7 +102,7 @@ compute_sample_allele_posteriors(const Octopus::GenotypeModel::SampleGenotypePro
     return result;
 }
 
-auto call_genotype(const Octopus::GenotypeModel::SampleGenotypeProbabilities& genotype_posteriors)
+auto call_genotype(const GenotypeModel::Population::SampleGenotypeProbabilities& genotype_posteriors)
 {
     return *std::max_element(std::cbegin(genotype_posteriors), std::cend(genotype_posteriors),
                              [] (const auto& lhs, const auto& rhs) {
@@ -137,7 +113,7 @@ auto call_genotype(const Octopus::GenotypeModel::SampleGenotypeProbabilities& ge
 using GenotypeCalls = std::unordered_map<Octopus::SampleIdType, std::pair<Genotype<Allele>, double>>;
 
 std::vector<GenotypeCalls>
-call_genotypes(const Octopus::GenotypeModel::GenotypeProbabilities& genotype_posteriors,
+call_genotypes(const GenotypeModel::Population::GenotypeProbabilities& genotype_posteriors,
                const std::vector<GenomicRegion>& segments)
 {
     std::vector<GenotypeCalls> result(segments.size());
@@ -156,7 +132,7 @@ call_genotypes(const Octopus::GenotypeModel::GenotypeProbabilities& genotype_pos
 
 using AllelePosteriors = std::unordered_map<Octopus::SampleIdType, std::unordered_map<Allele, double>>;
 
-AllelePosteriors compute_allele_posteriors(const Octopus::GenotypeModel::GenotypeProbabilities& genotype_posteriors,
+AllelePosteriors compute_allele_posteriors(const GenotypeModel::Population::GenotypeProbabilities& genotype_posteriors,
                                            const std::vector<Haplotype>& haplotypes,
                                            const std::vector<Allele>& alleles)
 {
@@ -164,7 +140,7 @@ AllelePosteriors compute_allele_posteriors(const Octopus::GenotypeModel::Genotyp
     result.reserve(genotype_posteriors.size());
     
     for (const auto sample_genotype_posteriors : genotype_posteriors) {
-        auto haplotype_posteriors = get_haplotype_posteriors(haplotypes, sample_genotype_posteriors.second);
+        auto haplotype_posteriors = compute_haplotype_posteriors(haplotypes, sample_genotype_posteriors.second);
         result.emplace(sample_genotype_posteriors.first,
                        compute_sample_allele_posteriors(sample_genotype_posteriors.second, alleles));
     }
@@ -180,7 +156,7 @@ std::vector<VcfRecord::SequenceType> to_vcf_genotype(const Genotype<Allele>& gen
     return result;
 }
 
-unsigned to_phred_quality(double p)
+static unsigned to_phred_quality(double p)
 {
     return -10 * static_cast<unsigned>(std::log10(1.0 - p));
 }
@@ -220,7 +196,7 @@ std::vector<VcfRecord::SequenceType> get_alt_allele_sequences(const std::vector<
     return result;
 }
 
-std::vector<GenomicRegion> get_segment_regions(const std::vector<std::vector<Allele>>& segments)
+static std::vector<GenomicRegion> get_segment_regions(const std::vector<std::vector<Allele>>& segments)
 {
     std::vector<GenomicRegion> result {};
     result.reserve(segments.size());
@@ -267,22 +243,22 @@ VcfRecord call_segment(const Allele& ref_allele, const std::vector<Variant>& var
     return result.build_once();
 }
 
-std::vector<VcfRecord> BasicVariantCaller::call_variants(const GenomicRegion& region,
-                                                         const std::vector<Variant>& candidates,
-                                                         const ReadMap& reads)
+std::vector<VcfRecord> PopulationVariantCaller::call_variants(const GenomicRegion& region,
+                                                              const std::vector<Variant>& candidates,
+                                                              const ReadMap& reads)
 {
     std::vector<VcfRecord> result {};
     
-    Octopus::HaplotypeTree tree {reference_};
+    HaplotypeTree tree {reference_};
     extend_tree(candidates, tree);
     
     auto haplotypes = tree.get_haplotypes(region);
     
     //std::cout << "there are " << haplotypes.size() << " haplotypes" << std::endl;
     
-    auto genotype_model = std::make_unique<Octopus::PopulationGenotypeModel>(1, 2);
+    GenotypeModel::Population genotype_model {ploidy_};
     
-    auto genotype_posteriors = genotype_model->evaluate(haplotypes, reads);
+    auto genotype_posteriors = genotype_model.evaluate(haplotypes, reads).genotype_posteriors;
     
     auto alleles = decompose(candidates);
     
@@ -303,3 +279,5 @@ std::vector<VcfRecord> BasicVariantCaller::call_variants(const GenomicRegion& re
     
     return result;
 }
+    
+} // namespace Octopus

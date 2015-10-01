@@ -23,10 +23,15 @@
 #include "reference_genome.hpp"
 #include "aligned_read.hpp"
 #include "read_manager.hpp"
+
 #include "read_filters.hpp"
 #include "read_transform.hpp"
 #include "read_transformations.hpp"
 #include "candidate_generators.hpp"
+
+#include "population_caller.hpp"
+#include "cancer_caller.hpp"
+
 #include "vcf_reader.hpp"
 #include "vcf_writer.hpp"
 
@@ -37,6 +42,8 @@ namespace fs = boost::filesystem;
 
 namespace Octopus
 {
+    namespace Options
+    {
     std::pair<po::variables_map, bool> parse_options(int argc, const char** argv)
     {
         using QualityType = AlignedRead::QualityType;
@@ -103,6 +110,7 @@ namespace Octopus
             
             po::options_description model("Model options");
             model.add_options()
+            ("model", po::value<std::string>()->default_value("population"), "the calling model used")
             ("ploidy", po::value<unsigned>()->default_value(2), "the organism ploidy")
             ("snp-prior", po::value<double>()->default_value(0.003), "the prior probability of a snp")
             ("insertion-prior", po::value<double>()->default_value(0.003), "the prior probability of an insertion into the reference")
@@ -427,8 +435,22 @@ namespace Octopus
         return result;
     }
     
+//    std::unique_ptr<VariantCaller> get_variant_caller(const po::variables_map& options)
+//    {
+//        const auto& model = options.at("model").as<std::string>();
+//        if (model == "population") {
+//            
+//            return std::make_unique<PopulationVariantCaller>();
+//        } else if (model == "cancer"){
+//            return std::make_unique<PopulationVariantCaller>();
+//        }
+//        throw std::runtime_error {"unknown calling model " + model};
+//    }
+    
     VcfWriter get_output_vcf(const po::variables_map& options)
     {
         return VcfWriter {options.at("output").as<std::string>()};
     }
-} // end namespace Octopus
+    
+    } // namespace Options
+} // namespace Octopus

@@ -14,7 +14,6 @@
 #include <cmath>
 
 #include "single_read_model.hpp"
-#include "read_model.hpp"
 #include "common.hpp"
 #include "maths.hpp"
 
@@ -22,23 +21,16 @@
 
 namespace Octopus
 {
+    namespace GenotypeModel
+    {
     // public methods
     
-    CancerGenotypeModel::CancerGenotypeModel(unsigned num_samples, SampleIdType normal_sample_id,
-                                             unsigned max_em_iterations, double em_epsilon)
+    Cancer::Cancer(SampleIdType normal_sample, unsigned max_em_iterations, double em_epsilon)
     :
     max_em_iterations_ {max_em_iterations},
     em_epsilon_ {em_epsilon},
-    num_samples_ {num_samples},
-    normal_sample_id_ {std::move(normal_sample_id)}
+    normal_sample_ {std::move(normal_sample)}
     {}
-    
-    using HaplotypeFrequencies        = std::unordered_map<Haplotype, double>;
-    using GenotypeMarginals           = std::unordered_map<Genotype<Haplotype>, double>;
-    using SampleGenotypeWeightsPriors = std::array<double, 3>;
-    using SampleGenotypeWeights       = std::array<double, 3>;
-    using GenotypeWeightsPriors       = std::unordered_map<Octopus::SampleIdType, SampleGenotypeWeightsPriors>;
-    using GenotypeWeights             = std::unordered_map<Octopus::SampleIdType, SampleGenotypeWeights>;
     
     std::ostream& operator<<(std::ostream& os, const std::array<double, 3>& arr)
     {
@@ -52,34 +44,41 @@ namespace Octopus
         return os;
     }
     
-    static double log_hardy_weinberg(const Genotype<Haplotype>& genotype,
-                                     const HaplotypeFrequencies& haplotype_frequencies)
+    double sum(const std::array<double, 3>& arr)
     {
-        auto unique_haplotypes = genotype.get_unique();
-        
-        std::vector<unsigned> occurences {};
-        occurences.reserve(unique_haplotypes.size());
-        
-        double r {};
-        
-        for (const auto& haplotype : unique_haplotypes) {
-            auto num_occurences = genotype.num_occurences(haplotype);
-            occurences.push_back(num_occurences);
-            r += num_occurences * std::log(haplotype_frequencies.at(haplotype));
-        }
-        
-        return log_multinomial_coefficient<double>(occurences.cbegin(), occurences.cend()) + r;
+        return arr[0] + arr[1] + arr[2];
     }
     
-    SampleGenotypeWeightsPriors
-    get_genotype_weight_priors(const std::vector<Genotype<Haplotype>>& genotypes)
+    HaplotypeFrequencies init_haplotype_frequencies(const HaplotypePriorCounts& haplotype_counts)
     {
-        SampleGenotypeWeightsPriors result {};
+        HaplotypeFrequencies result {};
+        result.reserve(haplotype_counts.size());
+        
+        auto n = sum_values(haplotype_counts);
+        
+        for (const auto& haplotype_count : haplotype_counts) {
+            result.emplace(haplotype_count.first, haplotype_count.second / n);
+        }
+        
+        return result;
+    }
+        
+    Cancer::GenotypeWeights init_genotype_weights(const Cancer::GenotypeWeightsPriors& weight_counts)
+    {
+        Cancer::GenotypeWeights result {};
+        result.reserve(weight_counts.size());
+        
+        for (const auto& sample_weight_counts : weight_counts) {
+            const auto& curr = sample_weight_counts.second;
+            const auto n = sum(curr);
+            result.emplace(sample_weight_counts.first, Cancer::SampleGenotypeWeights {curr[0] / n, curr[1] / n, curr[2] / n});
+        }
         
         return result;
     }
     
-    double genotype_log_likelihood(const Genotype<Haplotype>& genotype, const SampleGenotypeWeights& f,
+    double genotype_log_likelihood(const CancerGenotype<Haplotype>& genotype,
+                                   const Cancer::SampleGenotypeWeights& genotype_weights,
                                    const MappableSet<AlignedRead>& reads)
     {
         static SingleReadModel rm {1000};
@@ -87,244 +86,227 @@ namespace Octopus
         double result {};
         
         for (const auto read : reads) {
-            result += log_sum_exp(std::log(f[0]) + rm.log_probability(read, genotype[0]),
-                                  std::log(f[1]) + rm.log_probability(read, genotype[1]),
-                                  std::log(f[2]) + rm.log_probability(read, genotype[2]));
+            result += log_sum_exp(std::log(genotype_weights[0]) + rm.log_probability(read, genotype[0]),
+                                  std::log(genotype_weights[1]) + rm.log_probability(read, genotype[1]),
+                                  std::log(genotype_weights[2]) + rm.log_probability(read, genotype[2]));
         }
         
         return result;
     }
     
-    double log_joint_liklihood(const Genotype<Haplotype>& g, const GenotypeWeights& fs,
-                               const ReadMap& reads, const HaplotypeFrequencies& pi,
-                               const GenotypeWeightsPriors& alphas)
+    void normalise_exp(Cancer::GenotypeProbabilities& log_genotype_scores)
     {
-        double p {};
+        std::vector<double> tmp(log_genotype_scores.size());
         
-        for (const auto sample_reads : reads) {
-            auto f = fs.at(sample_reads.first);
-            auto a = alphas.at(sample_reads.first);
-            p += log_dirichlet<double>(a.begin(), a.end(), f.begin()) + genotype_log_likelihood(g, f, sample_reads.second);
+        std::transform(std::cbegin(log_genotype_scores), std::cend(log_genotype_scores), std::begin(tmp),
+                       [] (const auto& p) { return p.second; });
+        
+        auto norm = log_sum_exp<double>(std::cbegin(tmp), std::cend(tmp));
+        
+        for (auto& p : log_genotype_scores) {
+            p.second -= norm;
+            p.second = std::exp(p.second);
         }
-        
-        return log_hardy_weinberg(g, pi) + p;
     }
     
-    GenotypeMarginals
-    genotype_posteriors(const std::vector<Genotype<Haplotype>>& genotypes, const ReadMap& reads,
-                        const HaplotypeFrequencies& pi, const GenotypeWeightsPriors& alphas)
+    Cancer::GenotypeProbabilities
+    compute_genotype_posteriors(const std::vector<CancerGenotype<Haplotype>>& genotypes, const ReadMap& reads,
+                                const HaplotypeFrequencies& haplotype_frequencies,
+                                const Cancer::GenotypeWeights& genotype_weights)
     {
-        GenotypeMarginals result {};
+        Cancer::GenotypeProbabilities result {};
         result.reserve(genotypes.size());
         
-        std::vector<double> t {};
-        t.reserve(genotypes.size());
-        
-        for (const auto& g : genotypes) {
-            auto p = log_hardy_weinberg(g, pi);
+        for (const auto& genotype : genotypes) {
+            auto p = log_hardy_weinberg(genotype, haplotype_frequencies);
             
             for (const auto& sample_reads : reads) {
-                const auto& s = sample_reads.first;
-                const auto a  = alphas.at(s);
-                p += genotype_log_likelihood(g, a, sample_reads.second);
-                p -= sample_reads.second.size() * std::log(a[0] +  a[1] +  a[2]);
+                const auto& w = genotype_weights.at(sample_reads.first);
+                p += genotype_log_likelihood(genotype, w, sample_reads.second);
+                p -= sample_reads.second.size() * std::log(sum(w));
             }
             
-            result.emplace(g, p);
-            t.emplace_back(p);
+            result.emplace(genotype, p);
         }
         
-        auto norm = log_sum_exp<double>(t.cbegin(), t.cend());
+        normalise_exp(result);
         
-        for (auto& g : result) {
-            g.second -= norm;
-            g.second = std::exp(g.second);
+        return result;
+    }
+    
+    inline std::array<double, 3> log(std::array<double, 3> arr)
+    {
+        for (auto& e : arr) e = std::log(e);
+        return arr;
+    }
+    
+    Cancer::GenotypeWeightResponsibilities
+    compute_genotype_weight_responsibilities(const Cancer::GenotypeProbabilities& genotype_probabilities,
+                                             const ReadMap& reads, const Cancer::GenotypeWeights& genotype_weights)
+    {
+        static SingleReadModel rm {1000};
+        
+        Cancer::GenotypeWeightResponsibilities result {};
+        result.reserve(reads.size());
+        
+        for (const auto& sample_reads : reads) {
+            std::vector<std::array<double, 3>> v {};
+            v.reserve(sample_reads.second.size());
+            
+            auto log_weight = log(genotype_weights.at(sample_reads.first));
+            
+            for (const auto& read : sample_reads.second) {
+                std::array<double, 3> p {0.0, 0.0, 0.0};
+                
+                for (unsigned k {}; k < 3; ++k) {
+                    std::vector<double> lg {};
+                    lg.reserve(genotype_probabilities.size());
+                    
+                    for (const auto& p : genotype_probabilities) {
+                        lg.push_back(std::log(p.second) + log_weight[k] + rm.log_probability(read, p.first[k]));
+                    }
+                    
+                    p[k] = log_sum_exp<double>(std::cbegin(lg), std::cend(lg));
+                }
+                
+                auto norm = log_sum_exp(p[0], p[1], p[2]);
+                
+                for (auto& k : p) {
+                    k -= norm;
+                    k = std::exp(k);
+                }
+                
+                v.push_back(p);
+            }
+            
+            result.emplace(sample_reads.first, std::move(v));
         }
         
         return result;
     }
     
     HaplotypeFrequencies
-    compute_haplotype_frequencies(const GenotypeMarginals& genotype_posteriors, unsigned ploidy)
+    compute_haplotype_frequencies(const std::vector<Haplotype>& haplotypes,
+                                  const Cancer::GenotypeProbabilities& genotype_posteriors)
     {
         HaplotypeFrequencies result {};
+        result.reserve(haplotypes.size());
         
-        for (const auto& posterior : genotype_posteriors) {
-            for (auto haplotype : posterior.first.get_unique()) {
-                result[haplotype] += posterior.first.num_occurences(haplotype) * posterior.second;
-            }
-        }
-        
-        for (auto& h : result) {
-            h.second /= ploidy;
-        }
-        
-        return result;
-    }
-    
-    GenotypeWeightsPriors
-    compute_component_pseudo_counts(const GenotypeWeightsPriors& prior_counts,
-                                    const GenotypeMarginals& genotype_posteriors,
-                                    const ReadMap& reads)
-    {
-        GenotypeWeightsPriors result {};
-        result.reserve(prior_counts.size());
-        
-        SingleReadModel rm {1000};
-        
-        for (const auto& sample_prior_counts : prior_counts) {
-            result[sample_prior_counts.first] = sample_prior_counts.second;
+        for (const auto& haplotype : haplotypes) {
+            double p {};
             
             for (const auto& genotype_posterior : genotype_posteriors) {
-                double a {}, b {}, c {};
-                
-                for (const auto& read : reads.at(sample_prior_counts.first)) {
-                    a += rm.log_probability(read, genotype_posterior.first.at(0));
-                    b += rm.log_probability(read, genotype_posterior.first.at(1));
-                    c += rm.log_probability(read, genotype_posterior.first.at(2));
-                }
-                
-                auto n = log_sum_exp(a, b, c);
-                a -= n;
-                b -= n;
-                c -= n;
-                
-                result[sample_prior_counts.first][0] += genotype_posterior.second * std::exp(a);
-                result[sample_prior_counts.first][1] += genotype_posterior.second * std::exp(b);
-                result[sample_prior_counts.first][2] += genotype_posterior.second * std::exp(c);
+                p += genotype_posterior.first.num_occurences(haplotype) * genotype_posterior.second;
+            }
+            
+            result.emplace(haplotype, p / 3);
+        }
+        
+        return result;
+    }
+    
+    Cancer::GenotypeWeights
+    compute_genotype_weights(const Cancer::GenotypeWeightsPriors& prior_counts,
+                             const Cancer::GenotypeWeightResponsibilities& genotype_weight_responsibilities)
+    {
+        Cancer::GenotypeWeights result {};
+        result.reserve(prior_counts.size());
+        
+        for (const auto& sample_prior_counts : prior_counts) {
+            const auto& sample = sample_prior_counts.first;
+            const auto& z = genotype_weight_responsibilities.at(sample);
+            
+            Cancer::SampleGenotypeWeights curr {};
+            
+            auto norm = z.size() + sum(sample_prior_counts.second);
+            
+            for (unsigned k {}; k < 3; ++k) {
+                curr[k] = std::accumulate(std::cbegin(z), std::cend(z), 0.0,
+                                          [k] (double v, const auto& a) { return v + a[k]; });
+                curr[k] += sample_prior_counts.second[k];
+                curr[k] /= norm;
+            }
+            
+            result.emplace(sample, curr);
+        }
+        
+        return result;
+    }
+    
+    double max_genotype_weight_change(const Cancer::GenotypeWeights& old_weights,
+                                      const Cancer::GenotypeWeights& new_weights)
+    {
+        double result {};
+        
+        for (const auto& w : new_weights) {
+            for (unsigned k {}; k < 3; ++k) {
+                auto change = std::abs(w.second[k] - old_weights.at(w.first)[k]);
+                if (change > result) result = change;
             }
         }
         
         return result;
     }
     
-    void remove_redundant_genotypes(std::vector<Genotype<Haplotype>>& genotypes)
+    double do_em_iteration(const std::vector<Haplotype>& haplotypes,
+                           const std::vector<CancerGenotype<Haplotype>>& genotypes,
+                           HaplotypeFrequencies& haplotype_frequencies,
+                           const Cancer::GenotypeWeightsPriors& weight_priors,
+                           Cancer::GenotypeWeights& genotype_weights,
+                           Cancer::GenotypeProbabilities& genotypes_probabilities,
+                           Cancer::GenotypeWeightResponsibilities& genotype_weight_responsibilities,
+                           const ReadMap& reads)
     {
-        genotypes.erase(std::remove_if(std::begin(genotypes), std::end(genotypes),
-                                       [] (const auto& genotype) {
-                                           return genotype.is_homozygous();
-                                       }), std::end(genotypes));
-    }
-    
-    std::vector<std::array<unsigned, 3>> generate_all_ratios(unsigned n)
-    {
-        std::vector<std::array<unsigned, 3>> result {};
+        auto new_haplotype_frequencies = compute_haplotype_frequencies(haplotypes, genotypes_probabilities);
+        auto new_genotype_weights      = compute_genotype_weights(weight_priors, genotype_weight_responsibilities);
         
-        for (unsigned i {}; i <= n; ++i) {
-            for (unsigned j {i}; j <= n; ++j) {
-                std::array<unsigned, 3> arr {i, j - i, n - j};
-                if (std::find(std::cbegin(arr), std::cend(arr), n) == std::cend(arr)) {
-                    result.push_back(arr);
-                }
-            }
-        }
+        genotypes_probabilities = compute_genotype_posteriors(genotypes, reads, new_haplotype_frequencies, genotype_weights);
+        genotype_weight_responsibilities = compute_genotype_weight_responsibilities(genotypes_probabilities, reads, new_genotype_weights);
         
-        return result;
-    }
-    
-    std::vector<SampleGenotypeWeights> generate_all_fs(unsigned n)
-    {
-        auto ratios = generate_all_ratios(n);
-        std::vector<SampleGenotypeWeights> result(ratios.size());
-        double epsilon {std::nextafter(0, 1.0)};
-        std::transform(std::cbegin(ratios), std::cend(ratios), std::begin(result),
-                       [n, epsilon] (const auto& arr) {
-            return SampleGenotypeWeights {
-                static_cast<double>(arr[0]) / n + epsilon,
-                static_cast<double>(arr[1]) / n + epsilon,
-                static_cast<double>(arr[2]) / n + epsilon
-            };
-        });
-        return result;
+        auto c1 = max_haplotype_frequency_change(haplotype_frequencies, new_haplotype_frequencies);
+        auto c2 = max_genotype_weight_change(genotype_weights, new_genotype_weights);
+        
+        haplotype_frequencies = new_haplotype_frequencies;
+        genotype_weights      = new_genotype_weights;
+        
+        return std::max(c1, c2);
     }
     
     // private methods
     
-    CancerGenotypeModel::GenotypeProbabilities
-    CancerGenotypeModel::do_evaluate(const std::vector<Haplotype>& haplotypes, const ReadMap& reads)
+    Cancer::Latents Cancer::evaluate(const std::vector<Haplotype>& haplotypes, const ReadMap& reads)
     {
-        auto ratios = generate_all_fs(20);
+        auto genotypes = generate_all_cancer_genotypes(haplotypes, 2);
         
-//        for (auto r : ratios) {
-//            std::cout << r[0] << " " << r[1] << " " << r[2] << std::endl;
-//        }
-        
-        GenotypeProbabilities result {};
-        
-        GenotypeWeightsPriors alphas {};
+        GenotypeWeightsPriors weight_priors {};
         for (const auto& s : reads) {
-            alphas.emplace(s.first, SampleGenotypeWeights {1.0, 1.0, 1.0});
-        }
-        
-        GenotypeWeights fs {};
-        for (const auto& s : reads) {
-            fs.emplace(s.first, SampleGenotypeWeights {0.5, 0.5, std::nextafter(0, 1.0)});
-        }
-        
-        HaplotypeFrequencies pi {};
-        for (const auto& h : haplotypes) {
-            pi.emplace(h, 1.0 / haplotypes.size());
-        }
-        
-        auto genotypes = generate_all_genotypes(haplotypes, 3);
-        
-        remove_redundant_genotypes(genotypes);
-        
-        Genotype<Haplotype> gm {}; SampleGenotypeWeights fm {}; double m {-10000000};
-        
-        for (auto g : genotypes) {
-            for (auto r : ratios) {
-                GenotypeWeights f {{reads.cbegin()->first, r}};
-                auto h = log_joint_liklihood(g, f, reads, pi, alphas);
-                if (h > m) {
-                    gm = g;
-                    fm = r;
-                    m  = h;
-                }
+            if (s.first == normal_sample_) {
+                weight_priors.emplace(s.first, SampleGenotypeWeightsPriors {1.0, 1.0, 0.01});
+            } else {
+                weight_priors.emplace(s.first, SampleGenotypeWeightsPriors {0.5, 0.5, 0.5});
             }
         }
         
-        print_alleles(gm);
-        std::cout << std::endl;
-        std::cout << fm << std::endl;
-        std::cout << m << std::endl;
+        auto haplotype_frequencies = init_haplotype_frequencies(haplotypes);
+        auto genotype_weights      = init_genotype_weights(weight_priors);
         
-        //std::cout << log_joint_liklihood(gm, fs, reads, pi, alphas) << std::endl;
+        auto genotype_posteriors = compute_genotype_posteriors(genotypes, reads, haplotype_frequencies, genotype_weights);
+        auto genotype_weight_responsibilities = compute_genotype_weight_responsibilities(genotype_posteriors, reads, genotype_weights);
         
-        exit(0);
-        
-        //for (auto g : genotypes) std::cout << g << std::endl;
-        
-//        std::unordered_map<Genotype<Haplotype>, double> ll(genotypes.size());
-//        for (const auto& genotype : genotypes) {
-//            ll.emplace(genotype, log_joint_liklihood(genotype, fs, reads, pi, alphas));
-//        }
-        
-        auto gp = genotype_posteriors(genotypes, reads, pi, alphas);
-        auto hf = compute_haplotype_frequencies(gp, 3);
-        auto cf = compute_component_pseudo_counts(alphas, gp, reads);
-        
-//        for (const auto f : hf) {
-//            std::cout << f.second << " ";
-//        }
-//        std::cout << std::endl;
-        
-//        for (const auto g : ll) {
-//            std::cout << g << std::endl;
-//        }
-        
-        auto it = std::max_element(gp.begin(), gp.end(), [] (const auto& lhs, const auto& rhs) { return lhs.second < rhs.second; });
-        //std::cout << it->first << std::endl;
-        print_alleles(it->first);
-        std::cout << std::endl;
-        std::cout << it->second << std::endl;
-        
-        for (const auto& scf : cf) {
-            auto n = scf.second[0] + scf.second[2] + scf.second[2];
-            std::cout << (scf.second[0] / n) << " " << (scf.second[1] / n) << " " << (scf.second[2] / n) << std::endl;
+        for (unsigned n {0}; n < max_em_iterations_; ++n) {
+            //std::cout << "EM iteration " << n << std::endl;
+            auto c = do_em_iteration(haplotypes, genotypes, haplotype_frequencies, weight_priors,
+                                     genotype_weights, genotype_posteriors,
+                                     genotype_weight_responsibilities, reads);
+            if (c < em_epsilon_) break;
         }
+        
+        Latents result {};
+        result.genotype_posteriors = std::move(genotype_posteriors);
+        result.genotype_weights    = std::move(genotype_weights);
         
         return result;
     }
     
+    } // namespace GenotypeModel
 } // namespace Octopus

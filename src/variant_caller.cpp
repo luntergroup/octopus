@@ -16,6 +16,9 @@
 
 #include <iostream> // TEST
 
+namespace Octopus
+{
+
 VariantCaller::VariantCaller(ReferenceGenome& reference, ReadManager& read_manager,
                              ReadFilter read_filter, ReadTransform read_transform,
                              CandidateVariantGenerator& candidate_generator)
@@ -62,3 +65,5 @@ std::vector<VcfRecord> VariantCaller::call_variants(const GenomicRegion& region)
     
     return result;
 }
+    
+} // namespace Octopus

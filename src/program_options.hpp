@@ -12,11 +12,13 @@
 #include <string>
 #include <vector>
 #include <cstddef>
+#include <memory>
 #include <boost/program_options.hpp>
 #include <boost/filesystem.hpp>
 
 #include "common.hpp"
 #include "read_filter.hpp"
+#include "variant_caller.hpp"
 
 class ReferenceGenome;
 class GenomicRegion;
@@ -30,6 +32,8 @@ namespace fs = boost::filesystem;
 
 namespace Octopus
 {
+    namespace Options
+    {
     std::pair<po::variables_map, bool> parse_options(int argc, const char** argv);
     
     unsigned get_max_threads(const po::variables_map& options);
@@ -52,8 +56,11 @@ namespace Octopus
     
     CandidateVariantGenerator get_candidate_generator(const po::variables_map& options, ReferenceGenome& reference);
     
+    //std::unique_ptr<VariantCaller> get_variant_caller(const po::variables_map& options);
+    
     VcfWriter get_output_vcf(const po::variables_map& options);
     
-} // end namespace Octopus
+    } // namespace Options
+} // namespace Octopus
 
 #endif /* defined(__Octopus__program_options__) */

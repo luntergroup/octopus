@@ -17,6 +17,9 @@ class ReadTransform;
 class Variant;
 class VcfRecord;
 
+namespace Octopus
+{
+
 class CancerVariantCaller : public VariantCaller
 {
 public:
@@ -32,10 +35,14 @@ public:
     CancerVariantCaller& operator=(CancerVariantCaller&&)      = delete;
     
 private:
+    double min_genotype_posterior_ = 0.95;
+    
     GenomicRegion get_init_region(const GenomicRegion& region) override;
     GenomicRegion get_next_region(const GenomicRegion& current_region) override;
     std::vector<VcfRecord> call_variants(const GenomicRegion& region, const std::vector<Variant>& candidates,
                                          const ReadMap& reads) override;
 };
+    
+} // namespace Octopus
 
 #endif /* defined(__Octopus__cancer_caller__) */
