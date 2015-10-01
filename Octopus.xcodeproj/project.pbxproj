@@ -216,7 +216,7 @@
 		CAA4DC311A82B36300DD3E9A /* README.md */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
 		CAA4DC621A88238C00DD3E9A /* variant.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = variant.hpp; sourceTree = "<group>"; };
 		CAA4DC671A8ACE9B00DD3E9A /* bioio.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = bioio.hpp; sourceTree = "<group>"; };
-		CAB0DFD61BBD5CA9001D2F99 /* cancer_genotype.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = cancer_genotype.h; sourceTree = "<group>"; };
+		CAB0DFD61BBD5CA9001D2F99 /* cancer_genotype.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = cancer_genotype.hpp; sourceTree = "<group>"; };
 		CABA377D1A8F9E0A00BBE598 /* test_common.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = test_common.hpp; sourceTree = "<group>"; };
 		CABA377E1A8FA11000BBE598 /* read_benchmarks.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = read_benchmarks.cpp; sourceTree = "<group>"; };
 		CABA37801A8FA49800BBE598 /* read_manager.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = read_manager.cpp; sourceTree = "<group>"; };
@@ -673,7 +673,7 @@
 				CAFA19631ABF75D400F953D9 /* haplotype.hpp */,
 				CAFA19621ABF75D400F953D9 /* haplotype.cpp */,
 				CAFA196D1AC1B4AF00F953D9 /* genotype.hpp */,
-				CAB0DFD61BBD5CA9001D2F99 /* cancer_genotype.h */,
+				CAB0DFD61BBD5CA9001D2F99 /* cancer_genotype.hpp */,
 				CAFA195A1ABF3DF400F953D9 /* haplotype_tree.hpp */,
 				CAFA19591ABF3DF400F953D9 /* haplotype_tree.cpp */,
 				D463C1881AEE2E1900739A66 /* search_regions.hpp */,

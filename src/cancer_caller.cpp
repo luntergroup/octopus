@@ -25,6 +25,7 @@
 #include "mappable_algorithms.hpp"
 #include "variant_utils.hpp"
 
+#include "cancer_genotype.hpp
 #include "genotype_model.hpp"
 #include "cancer_genotype_model.hpp"
 

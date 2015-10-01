@@ -15,7 +15,7 @@
 
 #include "genotype_model.hpp"
 #include "mappable_map.hpp"
-#include "cancer_genotype.h"
+#include "cancer_genotype.hpp"
 
 class AlignedRead;
 class Haplotype;

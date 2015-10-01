@@ -1,13 +1,13 @@
 //
-//  cancer_genotype.h
+//  cancer_genotype.hpp
 //  Octopus
 //
 //  Created by Daniel Cooke on 01/10/2015.
 //  Copyright © 2015 Oxford University. All rights reserved.
 //
 
-#ifndef cancer_genotype_h
-#define cancer_genotype_h
+#ifndef cancer_genotype_hpp
+#define cancer_genotype_hpp
 
 #include <initializer_list>
 #include <utility>
