@@ -13,34 +13,30 @@
 #include <iostream>
 #include <string>
 
-#include "test_common.h"
-#include "reference_genome.h"
-#include "mappable_algorithms.h"
-#include "test_common.h"
-#include "read_manager.h"
-#include "read_filter.h"
-#include "read_filters.h"
-#include "read_utils.h"
-#include "allele.h"
-#include "variant.h"
-#include "candidate_variant_generator.h"
-#include "alignment_candidate_variant_generator.h"
-#include "haplotype.h"
-#include "genotype.h"
-#include "read_model.h"
-#include "haplotype_prior_model.h"
-#include "bayesian_genotype_model.h"
-#include "variational_bayes_genotype_model.h"
-#include "haplotype_phaser.h"
-#include "mappable_set.h"
+#include "test_common.hpp"
+#include "reference_genome.hpp"
+#include "mappable_algorithms.hpp"
+#include "test_common.hpp"
+#include "read_manager.hpp"
+#include "read_filter.hpp"
+#include "read_filters.hpp"
+#include "read_utils.hpp"
+#include "allele.hpp"
+#include "variant.hpp"
+#include "candidate_variant_generator.hpp"
+#include "alignment_candidate_variant_generator.hpp"
+#include "haplotype.hpp"
+#include "genotype.hpp"
+#include "read_model.hpp"
+#include "haplotype_prior_model.hpp"
+#include "haplotype_phaser.hpp"
+#include "mappable_set.hpp"
 
 using std::cout;
 using std::endl;
 
 using Octopus::HaplotypeTree;
 using Octopus::ReadModel;
-using Octopus::HaplotypePhaser;
-using Octopus::VariationalBayesGenotypeModel;
 
 //TEST_CASE("HIV test 1)
 //{

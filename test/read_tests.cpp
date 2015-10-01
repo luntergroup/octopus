@@ -15,13 +15,13 @@
 #include <iterator>
 #include <vector>
 
-#include "test_common.h"
-#include "genomic_region.h"
-#include "aligned_read.h"
-#include "htslib_sam_facade.h"
-#include "read_manager.h"
-#include "mock_objects.h"
-#include "mappable_algorithms.h"
+#include "test_common.hpp"
+#include "genomic_region.hpp"
+#include "aligned_read.hpp"
+#include "htslib_sam_facade.hpp"
+#include "read_manager.hpp"
+#include "mock_objects.hpp"
+#include "mappable_algorithms.hpp"
 
 using std::cout;
 using std::endl;
@@ -67,7 +67,7 @@ BOOST_AUTO_TEST_CASE(ReadManager_works_with_single_file)
     
     BOOST_CHECK(a_read_manager.num_samples() == 1);
     
-    auto sample_ids = a_read_manager.get_sample_ids();
+    auto sample_ids = a_read_manager.get_samples();
     auto the_sample_id = sample_ids.front();
     
     GenomicRegion a_big_region {"1", 9990, 10000};
@@ -203,7 +203,7 @@ BOOST_AUTO_TEST_CASE(aligned_read_overlap_sanity_checks)
     
     GenomicRegion a_region {"4", 93235280, 93235585};
     
-    auto sample_ids = a_read_manager.get_sample_ids();
+    auto sample_ids = a_read_manager.get_samples();
     auto the_sample_id = sample_ids.front();
     
     auto reads = a_read_manager.fetch_reads(the_sample_id, a_region);
@@ -298,7 +298,7 @@ BOOST_AUTO_TEST_CASE(AlignedRead_can_be_compressed_and_decompressed)
     
     GenomicRegion a_region {"4", 93235280, 93235585};
     
-    auto sample_ids = a_read_manager.get_sample_ids();
+    auto sample_ids = a_read_manager.get_samples();
     auto the_sample_id = sample_ids.front();
     
     auto reads = a_read_manager.fetch_reads(the_sample_id, a_region);

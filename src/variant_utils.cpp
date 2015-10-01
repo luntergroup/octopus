@@ -6,14 +6,14 @@
 //  Copyright (c) 2015 Oxford University. All rights reserved.
 //
 
-#include "variant_utils.h"
+#include "variant_utils.hpp"
 
 #include <list>
 #include <utility> // std::move
 
-#include "reference_genome.h"
-#include "candidate_variant_generator.h"
-#include "mappable_algorithms.h"
+#include "reference_genome.hpp"
+#include "candidate_variant_generator.hpp"
+#include "mappable_algorithms.hpp"
 
 using std::cbegin;
 using std::cend;
@@ -29,6 +29,25 @@ std::size_t num_redundant_bases(InputIterator first1, InputIterator last1, Input
 void remove_duplicates(std::vector<Variant>& variants)
 {
     variants.erase(std::unique(std::begin(variants), std::end(variants)), variants.end());
+}
+
+std::vector<Allele> decompose(const std::vector<Variant>& variants)
+{
+    std::vector<Allele> result {};
+    result.reserve(2 * variants.size()); // max num alleles (may be less)
+    
+    if (variants.empty()) return result;
+    
+    for (const auto& variant : variants) {
+        if (result.empty() || get_region(result.back()) != get_region(variant)) {
+            result.emplace_back(variant.get_reference_allele());
+        }
+        result.emplace_back(variant.get_alternative_allele());
+    }
+    
+    result.shrink_to_fit();
+    
+    return result;
 }
 
 std::vector<Allele> get_intervening_reference_alleles(const std::vector<Variant>& the_variants,
@@ -284,6 +303,15 @@ std::vector<Variant> unique_left_align(const std::vector<Variant>& variants, Ref
     
     result.erase(std::unique(result.begin(), result.end()), result.end());
     
+    return result;
+}
+
+std::vector<Variant> make_parsimonious(const std::vector<Variant>& variants, ReferenceGenome& reference)
+{
+    std::vector<Variant> result {};
+    result.reserve(variants.size());
+    std::transform(std::cbegin(variants), std::cend(variants), std::back_inserter(result),
+                   [&reference] (const auto& variant) { return make_parsimonious(variant, reference); });
     return result;
 }
 

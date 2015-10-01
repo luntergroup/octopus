@@ -10,27 +10,27 @@
 
 #include <boost/test/unit_test.hpp>
 
-#include <iostream>
-#include <string>
-#include <cstddef>
-#include <unordered_map>
-
-#include "test_common.h"
-#include "reference_genome.h"
-#include "read_manager.h"
-#include "allele.h"
-#include "variant.h"
-#include "variant_utils.h"
-#include "candidate_variant_generator.h"
-#include "alignment_candidate_variant_generator.h"
-#include "haplotype.h"
-#include "genotype.h"
-#include "read_model.h"
-
-using std::cout;
-using std::endl;
-
-using Octopus::ReadModel;
+//#include <iostream>
+//#include <string>
+//#include <cstddef>
+//#include <unordered_map>
+//
+//#include "test_common.hpp"
+//#include "reference_genome.hpp"
+//#include "read_manager.hpp"
+//#include "allele.hpp"
+//#include "variant.hpp"
+//#include "variant_utils.hpp"
+//#include "candidate_variant_generator.hpp"
+//#include "alignment_candidate_variant_generator.hpp"
+//#include "haplotype.hpp"
+//#include "genotype.hpp"
+//#include "read_model.hpp"
+//
+//using std::cout;
+//using std::endl;
+//
+//using Octopus::ReadModel;
 
 //BOOST_AUTO_TEST_CASE(partially_overlapped_reads_evaluate_correctly)
 //{

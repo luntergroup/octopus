@@ -18,24 +18,24 @@
 #include <set>
 #include <unordered_map>
 
-#include "test_common.h"
-#include "mock_objects.h"
-#include "reference_genome.h"
-#include "mappable_algorithms.h"
-#include "test_common.h"
-#include "read_manager.h"
-#include "read_filter.h"
-#include "read_filters.h"
-#include "read_utils.h"
-#include "allele.h"
-#include "variant.h"
-#include "candidate_variant_generator.h"
-#include "alignment_candidate_variant_generator.h"
-#include "haplotype.h"
-#include "genotype.h"
-#include "haplotype_tree.h"
-#include "read_model.h"
-#include "search_regions.h"
+#include "test_common.hpp"
+#include "mock_objects.hpp"
+#include "reference_genome.hpp"
+#include "mappable_algorithms.hpp"
+#include "test_common.hpp"
+#include "read_manager.hpp"
+#include "read_filter.hpp"
+#include "read_filters.hpp"
+#include "read_utils.hpp"
+#include "allele.hpp"
+#include "variant.hpp"
+#include "candidate_variant_generator.hpp"
+#include "alignment_candidate_variant_generator.hpp"
+#include "haplotype.hpp"
+#include "genotype.hpp"
+#include "haplotype_tree.hpp"
+#include "read_model.hpp"
+#include "search_regions.hpp"
 
 using std::cout;
 using std::endl;
@@ -52,7 +52,7 @@ BOOST_AUTO_TEST_CASE(advance_region_always_gives_a_region_more_advanced_than_the
     
     auto a_region = parse_region("16:62646800-62647030", human);
     
-    auto samples = a_read_manager.get_sample_ids();
+    auto samples = a_read_manager.get_samples();
     
     auto reads = a_read_manager.fetch_reads(samples, a_region);
     
@@ -82,7 +82,7 @@ BOOST_AUTO_TEST_CASE(search_regions_contains_all_variants_in_list_exactly_once_w
     
     auto a_region = parse_region("16:8999900-9400000", human);
     
-    auto samples = a_read_manager.get_sample_ids();
+    auto samples = a_read_manager.get_samples();
     
     auto reads = a_read_manager.fetch_reads(samples, a_region);
     
@@ -206,7 +206,7 @@ BOOST_AUTO_TEST_CASE(advance_regions_bounds_are_respected)
     
     auto a_region = parse_region("16:8999900-9400000", human);
     
-    auto samples = a_read_manager.get_sample_ids();
+    auto samples = a_read_manager.get_samples();
     
     auto reads = a_read_manager.fetch_reads(samples, a_region);
     
@@ -351,7 +351,7 @@ BOOST_AUTO_TEST_CASE(setting_max_included_to_zero_in_advance_region_results_in_t
     
     auto a_region = parse_region("16:8999900-9400000", human);
     
-    auto samples = a_read_manager.get_sample_ids();
+    auto samples = a_read_manager.get_samples();
     
     auto reads = a_read_manager.fetch_reads(samples, a_region);
     
@@ -396,7 +396,7 @@ BOOST_AUTO_TEST_CASE(search_regions_includes_all_possible_indicators)
     
     auto a_region = parse_region("16:62646780-62647130", human);
     
-    auto samples = a_read_manager.get_sample_ids();
+    auto samples = a_read_manager.get_samples();
     
     auto reads = a_read_manager.fetch_reads(samples, a_region);
     

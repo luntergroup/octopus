@@ -6,12 +6,12 @@
 //  Copyright (c) 2015 Oxford University. All rights reserved.
 //
 
-#include "fasta.h"
+#include "fasta.hpp"
 
 #include <stdexcept>
 #include <boost/filesystem/operations.hpp>
 
-#include "genomic_region.h"
+#include "genomic_region.hpp"
 
 Fasta::Fasta(fs::path fasta_path)
 :

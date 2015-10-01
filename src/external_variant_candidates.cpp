@@ -6,17 +6,53 @@
 //  Copyright (c) 2015 Oxford University. All rights reserved.
 //
 
-#include "external_variant_candidates.h"
-#include "variant.h"
+#include "external_variant_candidates.hpp"
 
-ExternalVariantCandidates::ExternalVariantCandidates(VariantFileReader& a_variant_source,
-                                                     double generator_confidence)
+#include <cstddef>
+
+#include "vcf_record.hpp"
+#include "variant.hpp"
+
+ExternalVariantCandidates::ExternalVariantCandidates(VcfReader& reader)
 :
-a_variant_file_ {a_variant_source},
-generator_confidence_ {generator_confidence}
+reader_ {reader}
 {}
 
-std::vector<Variant> ExternalVariantCandidates::get_candidates(const GenomicRegion& a_region)
+std::vector<GenomicRegion> get_batch_regions(const GenomicRegion& region, const VcfReader& reader, std::size_t max_batch_size)
 {
-    return a_variant_file_.fetch_variants(a_region);
+    std::vector<GenomicRegion> result {};
+    
+    if (reader.count_records(region) > max_batch_size) {
+        // umm?
+    } else {
+        result.push_back(region);
+    }
+    
+    return result;
+}
+
+std::vector<Variant> fetch_variants(const GenomicRegion& region, VcfReader& reader)
+{
+    std::vector<Variant> result {};
+    result.reserve(reader.count_records(region));
+    
+    size_t max_batch_size {10000};
+    
+    auto batches = get_batch_regions(region, reader, max_batch_size);
+    
+    for (const auto& batch : batches) {
+        auto vcf_records = reader.fetch_records(batch, VcfReader::Unpack::AllButSamples);
+        for (const auto& record : vcf_records) {
+            for (const auto& alt_allele : record.get_alt_alleles()) {
+                result.emplace_back(record.get_chromosome_name(), record.get_position(), record.get_ref_allele(), alt_allele);
+            }
+        }
+    }
+    
+    return result;
+}
+
+std::vector<Variant> ExternalVariantCandidates::get_candidates(const GenomicRegion& region)
+{
+    return fetch_variants(region, reader_);
 }

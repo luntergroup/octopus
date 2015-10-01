@@ -6,23 +6,23 @@
 //  Copyright (c) 2015 Oxford University. All rights reserved.
 //
 
-#include "online_candidate_variant_generator.h"
+#include "online_candidate_variant_generator.hpp"
 
 #include <boost/network/protocol/http/client.hpp>
 
-#include "aligned_read.h"
-#include "variant.h"
+#include "aligned_read.hpp"
+#include "variant.hpp"
 
 namespace http = boost::network::http;
 
-OnlineCandidateVariantGenerator::OnlineCandidateVariantGenerator(ReferenceGenome& the_reference,
+OnlineCandidateVariantGenerator::OnlineCandidateVariantGenerator(ReferenceGenome& reference,
                                                                  SizeType max_variant_size)
 :
-the_reference_ {the_reference},
+reference_ {reference},
 max_variant_size_ {max_variant_size}
 {}
 
-std::vector<Variant> OnlineCandidateVariantGenerator::get_candidates(const GenomicRegion& a_region)
+std::vector<Variant> OnlineCandidateVariantGenerator::get_candidates(const GenomicRegion& region)
 {
 //    <?xml version="1.0" encoding="UTF-8"?>
 //    <!DOCTYPE Query>

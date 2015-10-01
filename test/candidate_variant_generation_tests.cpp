@@ -13,17 +13,12 @@
 #include <iostream>
 #include <memory>
 
-#include "test_common.h"
-#include "reference_genome.h"
-#include "read_manager.h"
-#include "variant.h"
-#include "candidate_variant_generator.h"
-#include "alignment_candidate_variant_generator.h"
-#include "assembler_candidate_variant_generator.h"
-#include "online_candidate_variant_generator.h"
-#include "external_variant_candidates.h"
-#include "variant_file_factory.h"
-#include "variant_file_reader.h"
+#include "test_common.hpp"
+#include "reference_genome.hpp"
+#include "read_manager.hpp"
+#include "variant.hpp"
+#include "candidate_generators.hpp"
+#include "vcf_reader.hpp"
 
 using std::cout;
 using std::endl;
@@ -40,7 +35,7 @@ BOOST_AUTO_TEST_CASE(CandidateVariantGenerator_does_not_give_duplicate_candidate
     
     candidate_generator.register_generator(std::make_unique<AlignmentCandidateVariantGenerator>(human, 0));
     
-    auto sample_ids = a_read_manager.get_sample_ids();
+    auto sample_ids = a_read_manager.get_samples();
     auto the_sample_id = sample_ids.at(0);
     
     auto a_region = parse_region("7:122579662-122579817", human);
@@ -64,7 +59,7 @@ BOOST_AUTO_TEST_CASE(AlignmentCandidateVariantGenerator_ignores_snps_with_low_ba
     
     auto a_region = parse_region("7:122579662-122579817", human);
     
-    auto sample_ids = a_read_manager.get_sample_ids();
+    auto sample_ids = a_read_manager.get_samples();
     auto the_sample_id = sample_ids.at(0);
     
     auto reads = a_read_manager.fetch_reads(the_sample_id, a_region);
@@ -86,7 +81,7 @@ BOOST_AUTO_TEST_CASE(AlignmentCandidateVariantGenerator_includes_all_alleles_in_
     
     auto a_region = parse_region("7:122579662-122579817", human);
     
-    auto sample_ids = a_read_manager.get_sample_ids();
+    auto sample_ids = a_read_manager.get_samples();
     auto the_sample_id = sample_ids.at(0);
     
     auto reads = a_read_manager.fetch_reads(the_sample_id, a_region);
@@ -146,5 +141,21 @@ BOOST_AUTO_TEST_CASE(OnlineCandidateVariantGenerator_can_fetch_variants_from_onl
 //    //        << candidate.get_sequence_added() << std::endl;
 //    //    }
 //}
+
+BOOST_AUTO_TEST_CASE(ExternalVariantCandidates_gets_candidates_from_vcf)
+{
+    auto reference = make_reference(human_reference_fasta);
+    
+    VcfReader reader {sample_vcf};
+    
+    CandidateVariantGenerator generator {};
+    generator.register_generator(std::make_unique<ExternalVariantCandidates>(reader));
+    
+    auto region = parse_region("X:10,095,000-10,100,000", reference);
+    
+    auto candidates = generator.get_candidates(region);
+    
+    BOOST_CHECK(candidates.size() == 16);
+}
 
 BOOST_AUTO_TEST_SUITE_END()

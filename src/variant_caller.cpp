@@ -2,95 +2,68 @@
 //  variant_caller.cpp
 //  Octopus
 //
-//  Created by Daniel Cooke on 29/04/2015.
+//  Created by Daniel Cooke on 15/09/2015.
 //  Copyright (c) 2015 Oxford University. All rights reserved.
 //
 
-#include "variant_caller.h"
+#include "variant_caller.hpp"
 
-#include <algorithm> // std::find_if
+#include "genomic_region.hpp"
+#include "mappable.hpp"
+#include "read_utils.hpp"
+#include "variant_utils.hpp"
+#include "vcf_record.hpp"
 
-#include "bayesian_genotype_model.h"
-#include "mappable_algorithms.h"
+#include <iostream> // TEST
 
 namespace Octopus
 {
 
-namespace VariantCaller
-{
-    using BayesianGenotypeModel::probability_allele_in_sample;
+VariantCaller::VariantCaller(ReferenceGenome& reference, ReadManager& read_manager,
+                             ReadFilter read_filter, ReadTransform read_transform,
+                             CandidateVariantGenerator& candidate_generator)
+:
+reference_ {reference},
+read_manager_ {read_manager},
+read_filter_ {read_filter},
+read_transform_ {read_transform},
+candidate_generator_ {candidate_generator}
+{}
 
-    HaplotypePhaser::PhasedRegions::const_iterator
-    find_phased_region(const HaplotypePhaser::PhasedRegions& the_phased_regions, const Allele& an_allele)
-    {
-        return std::find_if(std::cbegin(the_phased_regions), std::cend(the_phased_regions),
-                            [&an_allele] (const auto& phased_region) {
-                                return overlaps(an_allele, phased_region.the_region);
-                            });
+bool VariantCaller::done_calling(const GenomicRegion& region) const noexcept
+{
+    return empty(region);
+}
+
+std::vector<VcfRecord> VariantCaller::call_variants(const GenomicRegion& region)
+{
+    auto current_region = get_init_region(region);
+    
+    std::vector<VcfRecord> result {};
+    
+    while (!done_calling(current_region)) {
+        auto reads = make_mappable_map(read_manager_.fetch_reads(current_region));
+        
+        auto good_reads = filter_reads(reads, read_filter_).first;
+        
+        transform_reads(good_reads, read_transform_);
+        
+        add_reads(good_reads, candidate_generator_);
+        
+        auto candidates = unique_left_align(candidate_generator_.get_candidates(current_region), reference_);
+        
+        candidate_generator_.clear();
+        
+        //std::cout << "found " << candidates.size() << " candidates" << std::endl;
+        
+        auto calls_in_region = call_variants(current_region, candidates, good_reads);
+        
+        result.insert(std::end(result), std::begin(calls_in_region), std::end(calls_in_region));
+        
+        current_region = get_next_region(current_region);
     }
     
-    AllelePosteriors<Octopus::SampleIdType, Octopus::ProbabilityType>
-    get_allele_posteriors(const std::vector<Octopus::SampleIdType>& the_samples,
-                          const HaplotypePhaser::PhasedRegions& the_phased_regions,
-                          const std::vector<Allele>& the_alleles)
-    {
-        AllelePosteriors<Octopus::SampleIdType, Octopus::ProbabilityType> result {};
-        
-        for (const auto& allele : the_alleles) {
-            auto it = find_phased_region(the_phased_regions, allele);
-            
-            for (const auto& sample : the_samples ) {
-                result[sample][allele] = probability_allele_in_sample(allele, it->the_haplotypes,
-                                                                      it->the_latent_posteriors.genotype_probabilities.at(sample),
-                                                                      it->the_genotypes);
-            }
-        }
-        
-        return result;
-    }
+    return result;
+}
     
-    AllelePosteriors<Octopus::SampleIdType, Octopus::ProbabilityType>
-    get_allele_posteriors(const std::vector<Octopus::SampleIdType>& the_samples,
-                          const HaplotypePhaser::PhasedRegions& the_phased_regions,
-                          const std::vector<Variant>& the_candidates)
-    {
-        std::vector<Allele> the_alleles {};
-        
-        for (const Variant& a_variant : the_candidates) {
-            the_alleles.emplace_back(a_variant.get_reference_allele());
-            the_alleles.emplace_back(a_variant.get_alternative_allele());
-        }
-        
-        return get_allele_posteriors(the_samples, the_phased_regions, the_alleles);
-    }
-    
-    VariantCalls<Octopus::SampleIdType, Octopus::ProbabilityType>
-    call_variants(const std::vector<Octopus::SampleIdType>& the_samples,
-                  const HaplotypePhaser::PhasedRegions& the_phased_regions,
-                  const std::vector<Variant>& the_candidates)
-    {
-        VariantCalls<Octopus::SampleIdType, Octopus::ProbabilityType> result {};
-        
-        for (const auto& candidate : the_candidates) {
-            Allele reference_allele {candidate.get_reference_allele()};
-            Allele alternative_allele {candidate.get_alternative_allele()};
-            
-            auto it = find_phased_region(the_phased_regions, alternative_allele);
-            
-            for (const auto& sample : the_samples ) {
-                auto p = probability_allele_in_sample(alternative_allele, it->the_haplotypes,
-                                                      it->the_latent_posteriors.genotype_probabilities.at(sample),
-                                                      it->the_genotypes);
-                
-                if (p > 0.9) {
-                    result[sample][candidate] = p;
-                }
-            }
-        }
-        
-        return result;
-    }
-    
-    } // end namespace VariantCaller
-    
-} // end namespace Octopus
+} // namespace Octopus

@@ -6,12 +6,12 @@
 //  Copyright (c) 2015 Oxford University. All rights reserved.
 //
 
-#include "caching_fasta.h"
+#include "caching_fasta.hpp"
 
 #include <iterator>
 #include <algorithm>
 
-#include "genomic_region.h"
+#include "genomic_region.hpp"
 
 #include <iostream> // TEST
 

@@ -12,13 +12,13 @@
 
 #include <iostream>
 
-#include "test_common.h"
-#include "benchmark_utils.h"
+#include "test_common.hpp"
+#include "benchmark_utils.hpp"
 
-#include "reference_genome.h"
-#include "genomic_region.h"
-#include "variant.h"
-#include "variant_utils.h"
+#include "reference_genome.hpp"
+#include "genomic_region.hpp"
+#include "variant.hpp"
+#include "variant_utils.hpp"
 
 //BOOST_AUTO_TEST_CASE(variant_benchmark)
 //{

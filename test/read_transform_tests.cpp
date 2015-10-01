@@ -15,11 +15,11 @@
 #include <algorithm> // std::sort
 #include <iterator>  // std::back_inserter
 
-#include "test_common.h"
-#include "genomic_region.h"
-#include "read_manager.h"
-#include "read_transform.h"
-#include "read_transformations.h"
+#include "test_common.hpp"
+#include "genomic_region.hpp"
+#include "read_manager.hpp"
+#include "read_transform.hpp"
+#include "read_transformations.hpp"
 
 BOOST_AUTO_TEST_SUITE(Components)
 
@@ -28,7 +28,7 @@ BOOST_AUTO_TEST_CASE(read_transform_test)
     
     ReadManager a_read_manager {human_1000g_bam1};
     
-    auto sample_ids = a_read_manager.get_sample_ids();
+    auto sample_ids = a_read_manager.get_samples();
     
     auto the_sample_id = sample_ids.at(0);
     
@@ -46,10 +46,10 @@ BOOST_AUTO_TEST_CASE(read_transform_test)
     
     BOOST_CHECK(is_back_soft_clipped(a_read.get_cigar_string()));
     
-    ReadTransform a_read_transform {};
-    a_read_transform.register_transform(trim_adapters);
-    a_read_transform.register_transform(trim_soft_clipped);
-    a_read_transform.transform_reads(some_reads.begin(), some_reads.end());
+    ReadTransform transformer {};
+    transformer.register_transform(trim_adapters);
+    transformer.register_transform(trim_soft_clipped);
+    transformer.transform_reads(some_reads.begin(), some_reads.end());
     
     BOOST_CHECK(std::all_of(a_read.get_qualities().rbegin(), a_read.get_qualities().rbegin() + 13,
                         [] (auto q) { return q == 0; }));
@@ -58,11 +58,11 @@ BOOST_AUTO_TEST_CASE(read_transform_test)
     
     some_reads = a_read_manager.fetch_reads(the_sample_id, another_region);
     
-    auto& read_with_adapter = some_reads[6];
+    //auto& read_with_adapter = some_reads[6];
     
     //std::cout << read_with_adapter << std::endl;
     
-    a_read_transform.transform_reads(some_reads.begin(), some_reads.end());
+    transformer.transform_reads(some_reads.begin(), some_reads.end());
     
     
 }

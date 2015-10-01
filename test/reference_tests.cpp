@@ -14,8 +14,8 @@
 #include <string>
 #include <future>
 
-#include "test_common.h"
-#include "reference_genome.h"
+#include "test_common.hpp"
+#include "reference_genome.hpp"
 
 using std::cout;
 using std::endl;
@@ -38,7 +38,7 @@ BOOST_AUTO_TEST_CASE(ReferemceGenome_handles_basic_queries)
     
     BOOST_CHECK(human.get_name() == "human_g1k_v37");
     BOOST_CHECK(human.contains_region(GenomicRegion("1", 100, 10000)));
-    BOOST_CHECK(!human.contains_region(GenomicRegion("1", 100, 1e10))); // too big
+    BOOST_CHECK(!human.contains_region(GenomicRegion("1", 100, 3e8))); // too big
     BOOST_CHECK(human.get_contig_size("20") == 63025520);
     BOOST_CHECK(human.has_contig("X"));
     BOOST_CHECK(!human.has_contig("y"));
@@ -150,31 +150,31 @@ BOOST_AUTO_TEST_CASE(parse_region_throws_when_region_is_not_formatted_correctly)
 ////    cout << human_cached.get_sequence(region6) << endl;
 //}
 
-BOOST_AUTO_TEST_CASE(ReferenceGenome_can_be_made_threadsafe)
-{
-    auto reference = make_reference(human_reference_fasta, 0, true);
-    
-    auto fut1 = std::async(std::launch::async, [&reference] () {
-        return reference.get_sequence(parse_region("1:1,000,000-1,000,100", reference));
-    });
-    auto fut2 = std::async(std::launch::async, [&reference] () {
-        return reference.get_sequence(parse_region("2:1,000,000-1,000,100", reference));
-    });
-    auto fut3 = std::async(std::launch::async, [&reference] () {
-        return reference.get_sequence(parse_region("3:1,000,000-1,000,100", reference));
-    });
-    auto fut4 = std::async(std::launch::async, [&reference] () {
-        return reference.get_sequence(parse_region("4:1,000,000-1,000,100", reference));
-    });
-    auto fut5 = std::async(std::launch::async, [&reference] () {
-        return reference.get_sequence(parse_region("5:1,000,000-1,000,100", reference));
-    });
-    
-    cout << fut1.get() << endl;
-    cout << fut2.get() << endl;
-    cout << fut3.get() << endl;
-    cout << fut4.get() << endl;
-    cout << fut5.get() << endl;
-}
+//BOOST_AUTO_TEST_CASE(ReferenceGenome_can_be_made_threadsafe)
+//{
+//    auto reference = make_reference(human_reference_fasta, 0, true);
+//    
+//    auto fut1 = std::async(std::launch::async, [&reference] () {
+//        return reference.get_sequence(parse_region("1:1,000,000-1,000,100", reference));
+//    });
+//    auto fut2 = std::async(std::launch::async, [&reference] () {
+//        return reference.get_sequence(parse_region("2:1,000,000-1,000,100", reference));
+//    });
+//    auto fut3 = std::async(std::launch::async, [&reference] () {
+//        return reference.get_sequence(parse_region("3:1,000,000-1,000,100", reference));
+//    });
+//    auto fut4 = std::async(std::launch::async, [&reference] () {
+//        return reference.get_sequence(parse_region("4:1,000,000-1,000,100", reference));
+//    });
+//    auto fut5 = std::async(std::launch::async, [&reference] () {
+//        return reference.get_sequence(parse_region("5:1,000,000-1,000,100", reference));
+//    });
+//    
+//    cout << fut1.get() << endl;
+//    cout << fut2.get() << endl;
+//    cout << fut3.get() << endl;
+//    cout << fut4.get() << endl;
+//    cout << fut5.get() << endl;
+//}
 
 BOOST_AUTO_TEST_SUITE_END()

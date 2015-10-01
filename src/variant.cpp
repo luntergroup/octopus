@@ -6,7 +6,14 @@
 //  Copyright (c) 2015 Oxford University. All rights reserved.
 //
 
-#include "variant.h"
+#include "variant.hpp"
+
+Variant::Variant(const Allele& reference, const Allele& alternative)
+:
+reference_allele_sequence_ {reference.get_sequence()},
+reference_allele_region_ {reference.get_region()},
+alternative_allele_sequence_ {alternative.get_sequence()}
+{}
 
 const GenomicRegion& Variant::get_region() const noexcept
 {
@@ -41,6 +48,23 @@ const Variant::SequenceType& Variant::get_reference_allele_sequence() const noex
 const Variant::SequenceType& Variant::get_alternative_allele_sequence() const noexcept
 {
     return alternative_allele_sequence_;
+}
+
+bool operator==(const Variant& lhs, const Variant& rhs)
+{
+    return lhs.get_region() == rhs.get_region() &&
+    lhs.get_reference_allele_sequence() == rhs.get_reference_allele_sequence() &&
+    lhs.get_alternative_allele_sequence() == rhs.get_alternative_allele_sequence();
+}
+
+bool operator<(const Variant& lhs, const Variant& rhs)
+{
+    if (lhs.get_region() == rhs.get_region()) { // This check is required for consistency with operator==
+        return (lhs.get_reference_allele_sequence() < rhs.get_reference_allele_sequence()) ? true :
+        lhs.get_alternative_allele_sequence() < rhs.get_alternative_allele_sequence();
+    } else {
+        return lhs.get_region() < rhs.get_region();
+    }
 }
 
 std::ostream& operator<<(std::ostream& os, const Variant& a_variant)

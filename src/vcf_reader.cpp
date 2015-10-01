@@ -6,16 +6,16 @@
 //  Copyright (c) 2015 Oxford University. All rights reserved.
 //
 
-#include "vcf_reader.h"
+#include "vcf_reader.hpp"
 
 #include <fstream>
 #include <iostream>
 #include <stdexcept>
 
-#include "vcf_header.h"
-#include "vcf_record.h"
-#include "htslib_bcf_facade.h"
-#include "vcf_parser.h"
+#include "vcf_header.hpp"
+#include "vcf_record.hpp"
+#include "htslib_bcf_facade.hpp"
+#include "vcf_parser.hpp"
 
 std::unique_ptr<IVcfReaderImpl> make_vcf_reader(const fs::path& file_path)
 {
@@ -39,19 +39,24 @@ file_path_ {file_path},
 reader_ {make_vcf_reader(file_path)}
 {}
 
+const fs::path VcfReader::path() const
+{
+    return file_path_;
+}
+
 VcfHeader VcfReader::fetch_header()
 {
     return reader_->fetch_header();
 }
 
-std::size_t VcfReader::num_records() const
+size_t VcfReader::count_records() const
 {
-    return reader_->num_records();
+    return reader_->count_records();
 }
 
-std::size_t VcfReader::num_records(const GenomicRegion& region) const
+size_t VcfReader::count_records(const GenomicRegion& region) const
 {
-    return reader_->num_records(region);
+    return reader_->count_records(region);
 }
 
 std::vector<VcfRecord> VcfReader::fetch_records(Unpack level)

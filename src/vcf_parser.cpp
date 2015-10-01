@@ -6,15 +6,15 @@
 //  Copyright (c) 2015 Oxford University. All rights reserved.
 //
 
-#include "vcf_parser.h"
+#include "vcf_parser.hpp"
 
 #include <string>
 #include <algorithm> // std::count_if, std::copy, std::transform, std::for_each, std::count
 #include <iterator>  // std::cbegin, std::cend, std::advance, std::next
 #include <stdexcept>
 
-#include "genomic_region.h"
-#include "vcf_record.h"
+#include "genomic_region.hpp"
+#include "vcf_record.hpp"
 
 #include <iostream> // TEST
 
@@ -59,7 +59,7 @@ VcfHeader VcfParser::fetch_header()
     return header_;
 }
 
-std::size_t VcfParser::num_records()
+size_t VcfParser::count_records()
 {
     reset_vcf();
     
@@ -69,7 +69,7 @@ std::size_t VcfParser::num_records()
                          });
 }
 
-std::size_t VcfParser::num_records(const GenomicRegion& region)
+size_t VcfParser::count_records(const GenomicRegion& region)
 {
     reset_vcf();
     
@@ -240,7 +240,7 @@ VcfHeader parse_header(std::ifstream& vcf_file)
     std::getline(vcf_file, line);
     
     if (!is_header_meta_line(line)) {
-        throw std::runtime_error {"Bad VCF: the first line of a VCF file must be ##fileformat"};
+        throw std::runtime_error {"the first line of a VCF file must be ##fileformat"};
     }
     
     hb.set_file_format(line.substr(line.find_first_of('=') + 1));

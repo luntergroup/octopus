@@ -6,7 +6,7 @@
 //  Copyright (c) 2015 Oxford University. All rights reserved.
 //
 
-#include "program_options.h"
+#include "program_options.hpp"
 
 #include <iostream>
 #include <fstream>
@@ -15,21 +15,39 @@
 #include <algorithm>  // std::transform, std::min
 #include <functional> // std::function
 #include <unordered_map>
+#include <memory>     // std::make_unique
 #include <boost/filesystem/path.hpp>
 #include <boost/filesystem/operations.hpp>
 
-#include "genomic_region.h"
-#include "reference_genome.h"
-#include "read_manager.h"
-#include "mappable_algorithms.h"
-#include "string_utils.h"
+#include "genomic_region.hpp"
+#include "reference_genome.hpp"
+#include "aligned_read.hpp"
+#include "read_manager.hpp"
+
+#include "read_filters.hpp"
+#include "read_transform.hpp"
+#include "read_transformations.hpp"
+#include "candidate_generators.hpp"
+
+#include "population_caller.hpp"
+#include "cancer_caller.hpp"
+
+#include "vcf_reader.hpp"
+#include "vcf_writer.hpp"
+
+#include "mappable_algorithms.hpp"
+#include "string_utils.hpp"
 
 namespace fs = boost::filesystem;
 
 namespace Octopus
 {
+    namespace Options
+    {
     std::pair<po::variables_map, bool> parse_options(int argc, const char** argv)
     {
+        using QualityType = AlignedRead::QualityType;
+        
         try {
             po::positional_options_description p;
             p.add("command", -1);
@@ -43,7 +61,8 @@ namespace Octopus
             
             po::options_description backend("Backend options");
             backend.add_options()
-            ("max-threads,t", po::value<unsigned>(), "the maximum number of threads allowed")
+            ("max-threads,t", po::value<unsigned>()->default_value(1), "maximum number of threads")
+            ("memory", po::value<size_t>()->default_value(8000), "target memory usage in MB")
             ("compress-reads", po::value<bool>()->default_value(false), "compress the reads (slower)")
             ("max-open-files", po::value<unsigned>()->default_value(20), "the maximum number of files that can be open at one time")
             ;
@@ -53,19 +72,26 @@ namespace Octopus
             ("reference,R", po::value<std::string>()->required(), "the reference genome file")
             ("reads,I", po::value<std::vector<std::string>>()->multitoken(), "space-seperated list of read file paths")
             ("reads-file", po::value<std::string>(), "path to a text file containing read file paths")
-            ("regions,R", po::value<std::vector<std::string>>()->multitoken(), "space-seperated list of one-indexed variant search regions (chrom:begin-end)")
-            ("regions-file,R", po::value<std::string>(), "path to a file containing list of one-indexed variant search regions (chrom:begin-end)")
+            ("regions", po::value<std::vector<std::string>>()->multitoken(), "space-seperated list of one-indexed variant search regions (chrom:begin-end)")
+            ("regions-file", po::value<std::string>(), "path to a file containing list of one-indexed variant search regions (chrom:begin-end)")
             ("skip-regions", po::value<std::vector<std::string>>()->multitoken(), "space-seperated list of one-indexed regions (chrom:begin-end) to skip")
             ("skip-regions-file", po::value<std::string>(), "path to a file containing list of one-indexed regions (chrom:begin-end) to skip")
-            ("known-variants", po::value<std::string>(), "variant file path containing known variants. These variants will automatically become candidates")
-            ("output,o", po::value<std::string>(), "path of the output variant file")
+            ("samples,S", po::value<std::vector<std::string>>()->multitoken(), "space-seperated list of sample names to consider")
+            ("samples-file", po::value<std::string>(), "path to a file containing list of sample names to consider")
+            ("output,o", po::value<std::string>()->default_value("octopus_variants.vcf"), "path of the output variant file")
             ("log-file", po::value<std::string>(), "path of the output log file")
             ;
             
             po::options_description filters("Read filter options");
             filters.add_options()
-            ("min-mapping-quality", po::value<unsigned>()->default_value(20), "reads with smaller mapping quality are ignored")
-            ("remove-duplicates", po::value<bool>()->default_value(false), "removes duplicate reads")
+            ("min-mapping-quality", po::value<QualityType>()->default_value(20), "reads with smaller mapping quality are ignored")
+            ("min-base-quality", po::value<QualityType>()->default_value(20), "base quality threshold used by min-good-bases filter")
+            ("min-good-bases", po::value<unsigned>()->default_value(0), "minimum number of bases with quality min-base-quality before read is considered")
+            ("no-duplicates", po::value<bool>()->default_value(false), "removes duplicate reads")
+            ;
+            
+            po::options_description transforms("Read filter options");
+            transforms.add_options()
             ("trim-soft-clipped", po::value<bool>()->default_value(false), "trims soft clipped parts of the read")
             ("trim-flanks", po::value<bool>()->default_value(false), "trims the flanks of all reads")
             ("trim-adapters", po::value<bool>()->default_value(true), "trims any overlapping regions that pass the fragment size")
@@ -75,13 +101,16 @@ namespace Octopus
             candidates.add_options()
             ("candidates-from-alignments", po::value<bool>()->default_value(true), "generate candidate variants from the aligned reads")
             ("candidates-from-assembler", po::value<bool>()->default_value(true), "generate candidate variants with the assembler")
+            ("candidates-from-source", po::value<std::string>(), "variant file path containing known variants. These variants will automatically become candidates")
             ("min-base-quality", po::value<unsigned>()->default_value(15), "only base changes with quality above this value are considered for snp generation")
+            ("max-variant-size", po::value<unsigned>()->default_value(100), "maximum candidate varaint size from alignmenet CIGAR")
             ("k", po::value<unsigned>()->default_value(15), "k-mer size to use")
             ("no-cycles", po::value<bool>()->default_value(false), "dissalow cycles in assembly graph")
             ;
             
             po::options_description model("Model options");
             model.add_options()
+            ("model", po::value<std::string>()->default_value("population"), "the calling model used")
             ("ploidy", po::value<unsigned>()->default_value(2), "the organism ploidy")
             ("snp-prior", po::value<double>()->default_value(0.003), "the prior probability of a snp")
             ("insertion-prior", po::value<double>()->default_value(0.003), "the prior probability of an insertion into the reference")
@@ -249,9 +278,14 @@ namespace Octopus
         }
     } // end namespace detail
     
-    unsigned get_num_threads(const po::variables_map& options)
+    unsigned get_max_threads(const po::variables_map& options)
     {
-        return options.at("num_threads").as<unsigned>();
+        return options.at("max-threads").as<unsigned>();
+    }
+    
+    size_t get_memory_quota(const po::variables_map& options)
+    {
+        return options.at("memory").as<size_t>();
     }
     
     ReferenceGenome get_reference(const po::variables_map& options)
@@ -266,7 +300,7 @@ namespace Octopus
         if (options.count("regions") == 0 && options.count("regions-file") == 0) {
             std::vector<GenomicRegion> skip_regions {};
             
-            if (options.count("skip-regions") != 0) {
+            if (options.count("skip-regions") == 1) {
                 const auto& regions = options.at("skip-regions").as<std::vector<std::string>>();
                 skip_regions.reserve(skip_regions.size());
                 std::transform(std::cbegin(regions), std::cend(regions), std::back_inserter(skip_regions),
@@ -275,7 +309,7 @@ namespace Octopus
                                });
             }
             
-            if (options.count("skip-regions-file") != 0) {
+            if (options.count("skip-regions-file") == 1) {
                 const auto& skip_path = options.at("skip-regions-file").as<std::string>();
                 auto skip_regions_from_file = detail::get_regions_from_file(skip_path, the_reference);
                 skip_regions.insert(skip_regions.end(), std::make_move_iterator(std::begin(skip_regions_from_file)),
@@ -284,7 +318,7 @@ namespace Octopus
             
             return detail::get_all_regions_not_skipped(the_reference, skip_regions);
         } else {
-            if (options.count("regions") != 0) {
+            if (options.count("regions") == 1) {
                 const auto& regions = options.at("regions").as<std::vector<std::string>>();
                 input_regions.reserve(regions.size());
                 std::transform(std::cbegin(regions), std::cend(regions), std::back_inserter(input_regions),
@@ -293,7 +327,7 @@ namespace Octopus
                                });
             }
             
-            if (options.count("regions-file") != 0) {
+            if (options.count("regions-file") == 1) {
                 const auto& regions_path = options.at("regions-file").as<std::string>();
                 auto regions_from_file = detail::get_regions_from_file(regions_path, the_reference);
                 input_regions.insert(input_regions.end(), std::make_move_iterator(std::begin(regions_from_file)),
@@ -304,16 +338,29 @@ namespace Octopus
         return detail::make_search_regions(input_regions);
     }
     
+    std::vector<SampleIdType> get_samples(const po::variables_map& options)
+    {
+        std::vector<SampleIdType> result {};
+        
+        if (options.count("samples") == 1) {
+            auto samples = options.at("samples").as<std::vector<std::string>>();
+            result.reserve(samples.size());
+            std::copy(std::cbegin(samples), std::cend(samples), std::back_inserter(result));
+        }
+        
+        return result;
+    }
+    
     std::vector<fs::path> get_read_paths(const po::variables_map& options)
     {
         std::vector<fs::path> result {};
         
-        if (options.count("reads") != 0) {
+        if (options.count("reads") == 1) {
             const auto& read_paths = options.at("reads").as<std::vector<std::string>>();
             result.insert(result.end(), std::cbegin(read_paths), std::cend(read_paths));
         }
         
-        if (options.count("reads-file") != 0) {
+        if (options.count("reads-file") == 1) {
             const auto& read_file_path = options.at("reads-file").as<std::string>();
             auto regions_from_file = detail::get_read_paths_file(read_file_path);
             result.insert(result.end(), std::make_move_iterator(std::begin(regions_from_file)),
@@ -328,9 +375,82 @@ namespace Octopus
     
     ReadManager get_read_manager(const po::variables_map& options)
     {
-        auto read_paths     = get_read_paths(options);
-        auto max_open_files = options.at("max-open-files").as<unsigned>();
-        
-        return ReadManager {std::move(read_paths), max_open_files};
+        return ReadManager {get_read_paths(options), options.at("max-open-files").as<unsigned>()};
     }
-} // end namespace Octopus
+    
+    ReadFilter<ReadContainer::const_iterator> get_read_filter(const po::variables_map& options)
+    {
+        ReadFilter<ReadContainer::const_iterator> result {};
+        
+        auto min_mapping_quality = options.at("min-mapping-quality").as<AlignedRead::QualityType>();
+        
+        if (min_mapping_quality > 0) {
+            result.register_filter([min_mapping_quality] (const AlignedRead& read) {
+                return is_good_mapping_quality(read, min_mapping_quality);
+            });
+        }
+        
+        auto min_good_bases = options.at("min-good-bases").as<unsigned>();
+        
+        if (min_good_bases > 0) {
+            auto min_base_quality = options.at("min-base-quality").as<AlignedRead::QualityType>();
+            
+            result.register_filter([min_base_quality, min_good_bases] (const AlignedRead& read) {
+                return has_sufficient_good_quality_bases(read, min_base_quality, min_good_bases);
+            });
+        }
+        
+        if (options.at("no-duplicates").as<bool>()) {
+            result.register_filter(is_not_duplicate<ReadContainer::const_iterator>);
+        }
+        
+        return result;
+    }
+    
+    ReadTransform get_read_transformer(const po::variables_map& options)
+    {
+        ReadTransform result {};
+        
+        if (options.count("trim-soft-clipped") == 1) {
+            result.register_transform(trim_soft_clipped);
+        }
+        
+        if (options.count("trim-adapters") == 1) {
+            result.register_transform(trim_adapters);
+        }
+        
+        return result;
+    }
+    
+    CandidateVariantGenerator get_candidate_generator(const po::variables_map& options, ReferenceGenome& reference)
+    {
+        CandidateVariantGenerator result {};
+        
+        if (options.count("candidates-from-alignments") == 1) {
+            auto min_base_quality = options.at("min-base-quality").as<AlignmentCandidateVariantGenerator::QualityType>();
+            auto max_variant_size = options.at("max-variant-size").as<AlignmentCandidateVariantGenerator::SizeType>();
+            result.register_generator(std::make_unique<AlignmentCandidateVariantGenerator>(reference, min_base_quality, max_variant_size));
+        }
+        
+        return result;
+    }
+    
+//    std::unique_ptr<VariantCaller> get_variant_caller(const po::variables_map& options)
+//    {
+//        const auto& model = options.at("model").as<std::string>();
+//        if (model == "population") {
+//            
+//            return std::make_unique<PopulationVariantCaller>();
+//        } else if (model == "cancer"){
+//            return std::make_unique<PopulationVariantCaller>();
+//        }
+//        throw std::runtime_error {"unknown calling model " + model};
+//    }
+    
+    VcfWriter get_output_vcf(const po::variables_map& options)
+    {
+        return VcfWriter {options.at("output").as<std::string>()};
+    }
+    
+    } // namespace Options
+} // namespace Octopus

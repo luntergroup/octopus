@@ -6,7 +6,7 @@
 //  Copyright (c) 2015 Oxford University. All rights reserved.
 //
 
-#include "read_utils.h"
+#include "read_utils.hpp"
 
 #include <chrono>
 #include <random>

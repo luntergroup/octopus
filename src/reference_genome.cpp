@@ -6,7 +6,7 @@
 //  Copyright (c) 2015 Oxford University. All rights reserved.
 //
 
-#include "reference_genome.h"
+#include "reference_genome.hpp"
 
 #include <algorithm> // std::find, std::sort, std::remove_copy
 #include <iterator>  // std::cbegin, std::cend, std::back_inserter
@@ -14,9 +14,9 @@
 #include <regex>     // std::regex, std::smatch, std::regex_search
 #include <stdexcept>
 
-#include "fasta.h"
-#include "caching_fasta.h"
-#include "threadsafe_fasta.h"
+#include "fasta.hpp"
+#include "caching_fasta.hpp"
+#include "threadsafe_fasta.hpp"
 
 ReferenceGenome::ReferenceGenome(std::unique_ptr<ReferenceGenomeImpl> impl)
 :
@@ -70,7 +70,7 @@ GenomicRegion ReferenceGenome::get_contig_region(const std::string& contig_name)
 
 bool ReferenceGenome::contains_region(const GenomicRegion& region) const noexcept
 {
-    return region.get_end() <= get_contig_size(region);
+    return has_contig(region.get_contig_name()) && region.get_end() <= get_contig_size(region.get_contig_name());
 }
 
 ReferenceGenome::SequenceType ReferenceGenome::get_sequence(const GenomicRegion& region)
@@ -91,13 +91,13 @@ ReferenceGenome make_reference(fs::path file_path, std::size_t max_base_pair_cac
     }
 }
 
-std::vector<GenomicRegion> get_all_contig_regions(const ReferenceGenome& the_reference)
+std::vector<GenomicRegion> get_all_contig_regions(const ReferenceGenome& reference)
 {
     std::vector<GenomicRegion> result {};
-    result.reserve(the_reference.num_contigs());
+    result.reserve(reference.num_contigs());
     
-    for (const auto& contig : the_reference.get_contig_names()) {
-        result.emplace_back(the_reference.get_contig_region(contig));
+    for (const auto& contig : reference.get_contig_names()) {
+        result.emplace_back(reference.get_contig_region(contig));
     }
     
     std::sort(result.begin(), result.end(), [] (const auto& lhs, const auto& rhs) {

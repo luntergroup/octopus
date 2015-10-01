@@ -6,9 +6,9 @@
 //  Copyright (c) 2015 Oxford University. All rights reserved.
 //
 
-#include "aligned_read.h"
+#include "aligned_read.hpp"
 
-#include "compression.h"
+#include "compression.hpp"
 
 AlignedRead::AlignedRead(const AlignedRead& other)
 :
@@ -282,19 +282,31 @@ bool operator==(const AlignedRead& lhs, const AlignedRead& rhs)
 {
     return lhs.get_mapping_quality() == rhs.get_mapping_quality() &&
             lhs.get_region() == rhs.get_region() &&
-            lhs.get_cigar_string() == rhs.get_cigar_string();
+            lhs.get_cigar_string() == rhs.get_cigar_string() &&
+            lhs.get_qualities() == rhs.get_qualities();
 }
 
 bool operator<(const AlignedRead& lhs, const AlignedRead& rhs)
 {
-    // This check is required for consistency with operator==
+    // These checks are required for consistency with operator==
     if (lhs.get_region() == rhs.get_region()) {
-        return (lhs.get_mapping_quality() == rhs.get_mapping_quality()) ?
-        lhs.get_cigar_string() < rhs.get_cigar_string() :
-        lhs.get_mapping_quality() < rhs.get_mapping_quality();
+        if (lhs.get_mapping_quality() == rhs.get_mapping_quality()) {
+            if (lhs.get_cigar_string() == rhs.get_cigar_string()) {
+                return lhs.get_qualities() < rhs.get_qualities();
+            } else {
+                return lhs.get_cigar_string() < rhs.get_cigar_string();
+            }
+        } else {
+            return lhs.get_mapping_quality() < rhs.get_mapping_quality();
+        }
     } else {
         return lhs.get_region() < rhs.get_region();
     }
+}
+
+bool IsDuplicate::operator()(const AlignedRead &lhs, const AlignedRead &rhs)
+{
+    return lhs.get_region() == rhs.get_region() && lhs.get_cigar_string() == rhs.get_cigar_string();
 }
 
 bool operator==(const AlignedRead::NextSegment& lhs, const AlignedRead::NextSegment& rhs)

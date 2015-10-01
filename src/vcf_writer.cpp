@@ -6,12 +6,12 @@
 //  Copyright (c) 2015 Oxford University. All rights reserved.
 //
 
-#include "vcf_writer.h"
+#include "vcf_writer.hpp"
 
 #include <stdexcept>
 
-#include "vcf_header.h"
-#include "vcf_record.h"
+#include "vcf_header.hpp"
+#include "vcf_record.hpp"
 
 #include <iostream> // TEST
 
@@ -30,6 +30,11 @@ writer_ {file_path_, "w"}
     is_header_written_ = true;
 }
 
+const fs::path VcfWriter::path() const
+{
+    return file_path_;
+}
+
 void VcfWriter::write(const VcfHeader& header)
 {
     writer_.write_header(header);
@@ -41,6 +46,6 @@ void VcfWriter::write(const VcfRecord& record)
     if (is_header_written_) {
         writer_.write_record(record);
     } else {
-        throw std::runtime_error {"Cannot write VCF record as header has not beein written"};
+        throw std::runtime_error {"cannot write VCF record as header has not been written"};
     }
 }

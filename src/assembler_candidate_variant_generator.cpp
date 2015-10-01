@@ -6,19 +6,19 @@
 //  Copyright (c) 2015 Oxford University. All rights reserved.
 //
 
-#include "assembler_candidate_variant_generator.h"
+#include "assembler_candidate_variant_generator.hpp"
 
 #include <algorithm> // std::for_each
 
-#include "reference_genome.h"
-#include "aligned_read.h"
-#include "variant.h"
+#include "reference_genome.hpp"
+#include "aligned_read.hpp"
+#include "variant.hpp"
 
-AssemblerCandidateVariantGenerator::AssemblerCandidateVariantGenerator(ReferenceGenome& the_reference,
+AssemblerCandidateVariantGenerator::AssemblerCandidateVariantGenerator(ReferenceGenome& reference,
                                                                        unsigned kmer_size,
                                                                        double generator_confidence)
 :
-the_reference_ {the_reference},
+reference_ {reference},
 the_variant_assembler_ {kmer_size},
 generator_confidence_ {generator_confidence}
 {}
@@ -38,11 +38,11 @@ void AssemblerCandidateVariantGenerator::add_reads(MappableSet<AlignedRead>::con
     std::for_each(first, last, [this] (const auto& a_read ) { add_read(a_read); });
 }
 
-std::vector<Variant> AssemblerCandidateVariantGenerator::get_candidates(const GenomicRegion& a_region)
+std::vector<Variant> AssemblerCandidateVariantGenerator::get_candidates(const GenomicRegion& region)
 {
-    auto reference_sequence = the_reference_.get_sequence(a_region);
-    the_variant_assembler_.add_reference_sequence(a_region, reference_sequence);
-    return the_variant_assembler_.get_variants(a_region);
+    auto reference_sequence = reference_.get_sequence(region);
+    the_variant_assembler_.add_reference_sequence(region, reference_sequence);
+    return the_variant_assembler_.get_variants(region);
 }
 
 void AssemblerCandidateVariantGenerator::clear()

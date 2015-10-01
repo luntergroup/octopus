@@ -14,11 +14,11 @@
 #include <string>
 #include <chrono>
 #include <fstream>
-#include "benchmark_utils.h"
+#include "benchmark_utils.hpp"
 
-#include "test_common.h"
-#include "reference_genome.h"
-#include "bioio.h"
+#include "test_common.hpp"
+#include "reference_genome.hpp"
+#include "bioio.hpp"
 
 //BOOST_AUTO_TEST_CASE(reference_benchmark)
 //{

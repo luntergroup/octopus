@@ -17,17 +17,17 @@
 #include <algorithm>
 #include <set>
 
-#include "test_common.h"
-#include "reference_genome.h"
-#include "read_manager.h"
-#include "variant.h"
-#include "candidate_variant_generator.h"
-#include "alignment_candidate_variant_generator.h"
-#include "haplotype.h"
-#include "haplotype_tree.h"
-#include "mappable_algorithms.h"
-#include "read_filter.h"
-#include "read_filters.h"
+#include "test_common.hpp"
+#include "reference_genome.hpp"
+#include "read_manager.hpp"
+#include "variant.hpp"
+#include "candidate_variant_generator.hpp"
+#include "alignment_candidate_variant_generator.hpp"
+#include "haplotype.hpp"
+#include "haplotype_tree.hpp"
+#include "mappable_algorithms.hpp"
+#include "read_filter.hpp"
+#include "read_filters.hpp"
 
 using std::cout;
 using std::endl;
@@ -398,7 +398,7 @@ BOOST_AUTO_TEST_CASE(haplotype_tree_survives_serious_pruning)
     
     candidate_generator.register_generator(std::make_unique<AlignmentCandidateVariantGenerator>(human, 0));
     
-    auto sample_ids = a_read_manager.get_sample_ids();
+    auto sample_ids = a_read_manager.get_samples();
     auto the_sample_id = sample_ids.at(0);
     
     auto a_region = parse_region("16:9299940-9300055", human);
@@ -470,7 +470,7 @@ BOOST_AUTO_TEST_CASE(prune_unqiue_leaves_a_single_haplotype_which_contains_the_s
     
     candidate_generator.register_generator(std::make_unique<AlignmentCandidateVariantGenerator>(human, 0));
     
-    auto sample_ids = a_read_manager.get_sample_ids();
+    auto sample_ids = a_read_manager.get_samples();
     auto the_sample_id = sample_ids.at(0);
     
     auto a_region = parse_region("16:9299940-9300055", human);

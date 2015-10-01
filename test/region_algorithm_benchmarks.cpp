@@ -13,11 +13,11 @@
 #include <iostream>
 #include <algorithm>
 
-#include "benchmark_utils.h"
-#include "test_common.h"
-#include "genomic_region.h"
-#include "mappable_algorithms.h"
-#include "read_manager.h"
+#include "benchmark_utils.hpp"
+#include "test_common.hpp"
+#include "genomic_region.hpp"
+#include "mappable_algorithms.hpp"
+#include "read_manager.hpp"
 
 //BOOST_AUTO_TEST_CASE(overlap_range performance)
 //{
