@@ -36,7 +36,9 @@ namespace Octopus
         PopulationVariantCaller& operator=(PopulationVariantCaller&&)      = delete;
         
     private:
-        unsigned ploidy_;
+        const unsigned ploidy_;
+        const double min_posterior_ = 0.95;
+        const bool make_ref_calls_ = true;
         
         GenomicRegion get_init_region(const GenomicRegion& region) override;
         GenomicRegion get_next_region(const GenomicRegion& current_region) override;

@@ -72,11 +72,6 @@ namespace Octopus
         return result;
     }
     
-    static unsigned to_phred_quality(double p)
-    {
-        return -10 * static_cast<unsigned>(std::log10(1.0 - p));
-    }
-    
     auto find_map_genotype(const GenotypeModel::Cancer::GenotypeProbabilities& genotype_posteriors)
     {
         return *std::max_element(std::cbegin(genotype_posteriors), std::cend(genotype_posteriors),
@@ -134,7 +129,7 @@ namespace Octopus
         
         auto map_genotype = find_map_genotype(latents.genotype_posteriors);
         
-        if (map_genotype.second >= min_genotype_posterior_) {
+        if (map_genotype.second >= min_posterior_) {
             Haplotype reference_haplotype {reference_, region};
             
             auto has_variant = !is_homozygous_reference(map_genotype.first, reference_haplotype);

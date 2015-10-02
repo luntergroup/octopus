@@ -195,6 +195,17 @@ Genotype<MappableType2> splice(const Genotype<MappableType1>& genotype, const Ge
 }
 
 template <typename MappableType>
+bool is_homozygous_reference(const Genotype<MappableType>& genotype, const MappableType& reference)
+{
+    return genotype.num_occurences(reference) == genotype.ploidy();
+}
+
+inline bool is_homozygous_reference(const Genotype<Haplotype>& genotype, const Allele& reference)
+{
+    return splice<Allele>(genotype, get_region(reference)).num_occurences(reference) == genotype.ploidy();
+}
+
+template <typename MappableType>
 bool operator==(const Genotype<MappableType>& lhs, const Genotype<MappableType>& rhs)
 {
     return lhs.ploidy() == rhs.ploidy() && std::equal(std::cbegin(lhs), std::cend(lhs), std::cbegin(rhs));

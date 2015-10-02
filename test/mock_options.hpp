@@ -23,8 +23,8 @@ inline po::variables_map get_basic_mock_options()
         "--reads", human_1000g_bam1.c_str(), human_1000g_bam2.c_str(), human_1000g_bam3.c_str(),
         //"--regions", "5:157,031,410-157,031,449",
         //"--regions", "11:67503118-67503253",
-        "--regions", "2:104142870-104142884",
-        //"--regions", "2:142376817-142376922",
+        //"--regions", "2:104142870-104142884",
+        "--regions", "2:142376817-142376922",
         //"--regions", "20",
         "--output", test_out_vcf.c_str(),
         nullptr};

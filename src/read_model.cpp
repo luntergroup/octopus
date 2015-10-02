@@ -63,16 +63,16 @@ ReadModel::RealType ReadModel::log_probability_haploid(const AlignedRead& read, 
 ReadModel::RealType ReadModel::log_probability_diploid(const AlignedRead& read, const Genotype<Haplotype>& genotype,
                                                        SampleIdType sample)
 {
-    return log_sum_exp(log_probability(read, genotype.at(0), sample),
-                       log_probability(read, genotype.at(1), sample)) - ln_ploidy_;
+    return Maths::log_sum_exp(log_probability(read, genotype.at(0), sample),
+                              log_probability(read, genotype.at(1), sample)) - ln_ploidy_;
 }
 
 ReadModel::RealType ReadModel::log_probability_triploid(const AlignedRead& read, const Genotype<Haplotype>& genotype,
                                                         SampleIdType sample)
 {
-    return log_sum_exp(log_probability(read, genotype.at(0), sample),
-                       log_probability(read, genotype.at(1), sample),
-                       log_probability(read, genotype.at(2), sample)) - ln_ploidy_;
+    return Maths::log_sum_exp(log_probability(read, genotype.at(0), sample),
+                              log_probability(read, genotype.at(1), sample),
+                              log_probability(read, genotype.at(2), sample)) - ln_ploidy_;
 }
 
 ReadModel::RealType ReadModel::log_probability_polyploid(const AlignedRead& read, const Genotype<Haplotype>& genotype,
@@ -85,8 +85,8 @@ ReadModel::RealType ReadModel::log_probability_polyploid(const AlignedRead& read
                        return log_probability(read, haplotype, sample);
                    });
     
-    return log_sum_exp<RealType>(log_haplotype_probabilities.cbegin(),
-                                 log_haplotype_probabilities.cend()) - ln_ploidy_;
+    return Maths::log_sum_exp<RealType>(log_haplotype_probabilities.cbegin(),
+                                        log_haplotype_probabilities.cend()) - ln_ploidy_;
 }
     
 } // namespace Octopus

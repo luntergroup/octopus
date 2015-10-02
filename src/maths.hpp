@@ -11,22 +11,38 @@
 
 #include <vector>
 #include <cstddef>     // size_t
-#include <cmath>       // std::exp, std::log
+#include <cmath>       // std::exp, std::log, std::sqrt
 #include <numeric>     // std::accumulate, std::iota, std::inner_product
-#include <algorithm>   // std::max, std::max_element, std::transform
+#include <algorithm>   // std::max, std::max_element, std::transform, std::all_of
 #include <type_traits> // std::enable_if, std::is_integral
-#include <iterator>    // std::distance
-#include <functional>  // std::plus
+#include <iterator>    // std::begin, std::end, std::cbegin, std::cend, std::distance
+#include <functional>  // std::plus, std::minus
+
+#include <iostream> // TEST
 
 #include <boost/math/special_functions/gamma.hpp>
 #include <boost/math/special_functions/factorials.hpp>
 #include <boost/math/special_functions/sign.hpp>
 #include <boost/math/special_functions/digamma.hpp>
 
+namespace Octopus { namespace Maths {
+
 template <typename T, typename = typename std::enable_if_t<!std::is_integral<T>::value, bool>>
-inline bool almost_equal(T lhs, T rhs, int ulp = 1)
+bool almost_equal(T lhs, T rhs, int ulp = 1)
 {
     return lhs == rhs || std::abs(lhs - rhs) < std::numeric_limits<T>::epsilon() * std::abs(lhs + rhs) * ulp;
+}
+
+template <typename T, typename = typename std::enable_if_t<!std::is_integral<T>::value, bool>>
+bool almost_zero(T x, int ulp = 1)
+{
+    return almost_equal(x, T {0}, ulp);
+}
+
+template <typename T, typename = typename std::enable_if_t<!std::is_integral<T>::value, bool>>
+bool almost_one(T x, int ulp = 1)
+{
+    return almost_equal(x, T {1}, ulp);
 }
 
 template <typename InputIterator>
@@ -41,7 +57,7 @@ double stdev(InputIterator first, InputIterator last)
     auto m = mean(first, last);
     auto n = std::distance(first, last);
     std::vector<double> diff(n);
-    std::transform(first, last, diff.begin(), std::bind2nd(std::minus<double>(), m));
+    std::transform(first, last, std::begin(diff), std::bind2nd(std::minus<double>(), m));
     return std::sqrt(std::inner_product(diff.begin(), diff.end(), diff.begin(), 0.0) / n);
 }
 
@@ -113,11 +129,11 @@ inline RealType log_factorial(IntegerType x)
         return x * std::log(x) - x; // Stirling's approximation
     } else {
         std::vector<IntegerType> lx(x);
-        std::iota(lx.begin(), lx.end(), 1);
+        std::iota(std::begin(lx), std::end(lx), 1);
         std::vector<RealType> tx(x);
-        std::transform(lx.cbegin(), lx.cend(), tx.begin(),
+        std::transform(std::cbegin(lx), std::cend(lx), std::begin(tx),
                        [] (IntegerType a) { return std::log(static_cast<RealType>(a)); });
-        return std::accumulate(tx.cbegin(), tx.cend(), RealType {});
+        return std::accumulate(std::cbegin(tx), std::cend(tx), RealType {});
     }
 }
 
@@ -125,33 +141,34 @@ template <typename RealType, typename InputIterator>
 inline RealType log_beta(InputIterator first, InputIterator last)
 {
     return std::accumulate(first, last, RealType {},
-                           [] (auto v, auto x) { return v + boost::math::lgamma(x); }) -
-            boost::math::lgamma(std::accumulate(first, last, RealType {}));
+                           [] (auto v, auto x) { return v + boost::math::lgamma(x); })
+            - boost::math::lgamma(std::accumulate(first, last, RealType {}));
 }
 
 template <typename RealType, typename InputIterator1, typename InputIterator2>
 inline RealType log_dirichlet(InputIterator1 firstalpha, InputIterator1 lastalpha, InputIterator2 firstpi)
 {
     return std::inner_product(firstalpha, lastalpha, firstpi, RealType {}, std::plus<RealType>(),
-                              [] (auto a, auto p) { return (a - 1) * std::log(p); }) -
-            log_beta<RealType>(firstalpha, lastalpha);
+                              [] (auto a, auto p) { return (a - 1) * std::log(p); })
+            - log_beta<RealType>(firstalpha, lastalpha);
 }
 
 template <typename RealType, typename IntegerType>
 inline RealType log_multinomial_coefficient(std::initializer_list<IntegerType> il)
 {
+    using std::begin; using std::end; using std::cbegin; using std::cend; using std::accumulate;
     std::vector<RealType> denoms(il.size());
-    std::transform(il.begin(), il.end(), denoms.begin(), log_factorial<RealType, IntegerType>);
-    return log_factorial<RealType>(std::accumulate(il.begin(), il.end(), 0)) -
-    std::accumulate(denoms.cbegin(), denoms.cend(), RealType {});
+    std::transform(cbegin(il), cend(il), begin(denoms), log_factorial<RealType, IntegerType>);
+    return log_factorial<RealType>(accumulate(cbegin(il), cend(il), 0))
+            - accumulate(cbegin(denoms), cend(denoms), RealType {});
 }
 
 template <typename RealType, typename Iterator>
 inline RealType log_multinomial_coefficient(Iterator first, Iterator last)
 {
-    std::vector<RealType> denoms(std::distance(first, last));
     using IntegerType = typename Iterator::value_type;
-    std::transform(first, last, denoms.begin(), log_factorial<RealType, IntegerType>);
+    std::vector<RealType> denoms(std::distance(first, last));
+    std::transform(first, last, std::begin(denoms), log_factorial<RealType, IntegerType>);
     return log_factorial<RealType, IntegerType>(std::accumulate(first, last, IntegerType {})) -
                 std::accumulate(denoms.cbegin(), denoms.cend(), RealType {});
 }
@@ -177,7 +194,7 @@ inline RealType multinomial_pdf(const std::vector<IntegerType>& z, const std::ve
         r *= std::pow(p[i], z[i]);
     }
     
-    return multinomial_coefficient<IntegerType, RealType>(z.cbegin(), z.cend()) * r;
+    return multinomial_coefficient<IntegerType, RealType>(std::cbegin(z), std::cend(z)) * r;
 }
 
 // Returns approximate y such that digamma(y) = x
@@ -226,8 +243,8 @@ RealType dirichlet_multinomial(RealType z1, RealType z2, RealType z3, RealType a
 template <typename RealType>
 RealType dirichlet_multinomial(const std::vector<RealType>& z, const std::vector<RealType>& a)
 {
-    auto z_0 = std::accumulate(z.cbegin(), z.cend(), RealType {});
-    auto a_0 = std::accumulate(a.cbegin(), a.cend(), RealType {});
+    auto z_0 = std::accumulate(std::cbegin(z), std::cend(z), RealType {});
+    auto a_0 = std::accumulate(std::cbegin(a), std::cend(a), RealType {});
     
     RealType z_m {1};
     for (auto z_i : z) {
@@ -249,33 +266,47 @@ RealType beta_binomial(RealType k, RealType n, RealType alpha, RealType beta)
     return dirichlet_multinomial<RealType>(k, n - k, alpha, beta);
 }
 
+namespace detail {
+template <typename RealType>
+bool is_mldp_converged(std::vector<RealType>& lhs, const std::vector<RealType>& rhs, const RealType epsilon = 0.0001)
+{
+    using std::cbegin; using std::cend; using std::begin;
+    std::transform(cbegin(lhs), cend(lhs), cbegin(rhs), begin(lhs), [] (auto a, auto b) { return std::abs(a - b); });
+    return std::all_of(cbegin(lhs), cend(lhs), [epsilon] (auto x) { return x < epsilon; });
+}
+} // namespace detail
+
+
 template <typename RealType>
 std::vector<RealType>
-maximum_likelihood_dirichlet_params(std::vector<RealType>& expected_probabilities, RealType precision,
-                                    unsigned max_iterations)
+maximum_likelihood_dirichlet_params(std::vector<RealType> pi, const RealType precision,
+                                    const unsigned max_iterations = 100, const RealType epsilon = 0.0001)
 {
-    auto l = expected_probabilities.size();
-    std::vector<RealType> alphas(l, 1.0 / l), means(l, 1.0 / l), log_expected_probabilities(l);
+    using std::cbegin; using std::cend; using std::begin;
     
-    std::transform(expected_probabilities.cbegin(), expected_probabilities.cend(), log_expected_probabilities.begin(),
-                   [] (RealType p) { return std::log(p); });
+    std::transform(cbegin(pi), cend(pi), begin(pi), [] (auto p) { return std::log(p); });
     
-    RealType v;
-    size_t j {}, k {};
+    const auto l = pi.size();
+    std::vector<RealType> result(l, 1.0 / l), curr_result(l, 1.0 / l), means(l, 1.0 / l);
     
     for (unsigned n {}; n < max_iterations; ++n) {
-        v = 0;
-        for (j = 0; j < l; ++j) {
-            v += means[j] * (log_expected_probabilities[j] - boost::math::digamma<RealType>(precision * means[j]));
+        RealType v {};
+        
+        for (size_t j {}; j < l; ++j) {
+            v += means[j] * (pi[j] - boost::math::digamma<RealType>(precision * means[j]));
         }
         
-        for (k = 0; k < l; ++k) {
-            alphas[k] = digamma_inv<RealType>(log_expected_probabilities[k] - v);
-            means[k]  = alphas[k] / std::accumulate(alphas.cbegin(), alphas.cend(), RealType {});
+        for (size_t k {}; k < l; ++k) {
+            curr_result[k] = digamma_inv<RealType>(pi[k] - v);
+            means[k]       = curr_result[k] / std::accumulate(cbegin(curr_result), cend(curr_result), RealType {});
         }
+        
+        if (detail::is_mldp_converged(result, curr_result, epsilon)) return curr_result;
+        
+        result = curr_result;
     }
     
-    return alphas;
+    return result;
 }
 
 template <typename MapType>
@@ -321,5 +352,8 @@ size_t sum_sizes(const Map& map)
     return std::accumulate(std::cbegin(map), std::cend(map), size_t {},
                            [] (const auto& p, const auto& v) { return p + v.second.size(); });
 }
+
+} // namespace Maths
+} // namespace Octopus
 
 #endif /* defined(__Octopus__maths__) */

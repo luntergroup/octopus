@@ -11,6 +11,9 @@
 
 #include <vector>
 #include <iterator>
+#include <algorithm> // std::max
+#include <limits>    // std::numeric_limits
+#include <cmath>     // std::log10
 
 #include "common.hpp"
 #include "reference_genome.hpp"
@@ -61,7 +64,12 @@ namespace Octopus
                                                      const std::vector<Variant>& candidates,
                                                      const ReadMap& reads) = 0;
     };
-
+    
+    inline unsigned to_phred_quality(double p)
+    {
+        return static_cast<unsigned>(-10.0 * std::log10(std::max(1.0 - p, std::numeric_limits<double>::epsilon())));
+    }
+    
 } // namespace Octopus
 
 #endif

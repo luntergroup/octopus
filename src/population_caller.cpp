@@ -156,11 +156,6 @@ std::vector<VcfRecord::SequenceType> to_vcf_genotype(const Genotype<Allele>& gen
     return result;
 }
 
-static unsigned to_phred_quality(double p)
-{
-    return -10 * static_cast<unsigned>(std::log10(1.0 - p));
-}
-
 double max_posterior(const Allele& allele, const AllelePosteriors& allele_posteriors)
 {
     double result {};
@@ -221,18 +216,46 @@ std::vector<Variant> call_segment_variants(const std::vector<Allele>& segment,
     return result;
 }
 
-VcfRecord call_segment(const Allele& ref_allele, const std::vector<Variant>& variants,
-                       const GenotypeCalls& genotype_calls, unsigned phred_quality)
+double get_homozygous_reference_posterior(const Allele& reference, const GenotypeCalls& genotype_calls)
+{
+    if (genotype_calls.empty()) return 0.0;
+    
+    double min_posterior {1.0};
+    
+    for (const auto& sample_genotype_call : genotype_calls) {
+        if (is_homozygous_reference(sample_genotype_call.second.first, reference)) {
+            if (sample_genotype_call.second.second < min_posterior) {
+                min_posterior = sample_genotype_call.second.second;
+            }
+        } else {
+            return 0.0;
+        }
+    }
+    
+    return min_posterior;
+}
+
+VcfRecord call_segment(const Allele& reference_allele, const std::vector<Variant>& variants,
+                       const GenotypeCalls& genotype_calls, unsigned phred_quality,
+                       ReferenceGenome& reference)
 {
     auto result = VcfRecord::Builder();
     
-    result.set_chromosome(get_contig_name(ref_allele));
-    result.set_position(get_begin(ref_allele));
-    result.set_ref_allele(ref_allele.get_sequence());
+    result.set_chromosome(get_contig_name(reference_allele));
+    
+    //auto parsimonious_variants = make_parsimonious(variants, reference);
+    
+    result.set_position(get_begin(reference_allele));
+    result.set_ref_allele(reference_allele.get_sequence());
     result.set_alt_alleles(get_alt_allele_sequences(variants));
+    
     result.set_quality(phred_quality);
     result.add_info("NS", std::to_string(genotype_calls.size()));
     result.set_format({"GT", "GP"});
+    
+    if (variants.empty()) {
+        result.set_filters({"REFCALL"});
+    }
     
     for (const auto& sample_call : genotype_calls) {
         const auto& sample = sample_call.first;
@@ -269,7 +292,7 @@ std::vector<VcfRecord> PopulationVariantCaller::call_variants(const GenomicRegio
     
     auto allele_posteriors = compute_allele_posteriors(genotype_posteriors, haplotypes, alleles);
     
-//    for (const auto& ap : allele_posteriors.at("HG00101")) {
+//    for (const auto& ap : allele_posteriors.at("HG00102")) {
 //        std::cout << ap.first << " " << ap.second << std::endl;
 //    }
     
@@ -280,9 +303,22 @@ std::vector<VcfRecord> PopulationVariantCaller::call_variants(const GenomicRegio
     auto genotype_calls_itr = std::cbegin(genotype_calls);
     
     for (const auto& segment : segments) {
-        auto variants = call_segment_variants(segment, allele_posteriors, 0.95);
-        auto segment_quality = to_phred_quality(max_posterior(variants, allele_posteriors));
-        result.emplace_back(call_segment(segment.front(), variants, *genotype_calls_itr, segment_quality));
+        auto variants = call_segment_variants(segment, allele_posteriors, min_posterior_);
+        
+        const auto& reference_allele = segment.front();
+        
+        if (variants.empty() && make_ref_calls_) {
+            auto homozygous_reference_posterior = get_homozygous_reference_posterior(reference_allele, *genotype_calls_itr);
+            
+            if (homozygous_reference_posterior >= min_posterior_) {
+                auto segment_quality = to_phred_quality(homozygous_reference_posterior);
+                result.emplace_back(call_segment(reference_allele, variants, *genotype_calls_itr, segment_quality, reference_));
+            }
+        } else {
+            auto segment_quality = to_phred_quality(max_posterior(variants, allele_posteriors));
+            result.emplace_back(call_segment(reference_allele, variants, *genotype_calls_itr, segment_quality, reference_));
+        }
+        
         ++genotype_calls_itr;
     }
     

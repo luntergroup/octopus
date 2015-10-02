@@ -52,7 +52,7 @@ namespace Octopus
                 r += num_occurences * std::log(haplotype_frequencies.at(haplotype));
             }
             
-            return log_multinomial_coefficient<double>(occurences.cbegin(), occurences.cend()) + r;
+            return Maths::log_multinomial_coefficient<double>(occurences.cbegin(), occurences.cend()) + r;
         }
         
         inline HaplotypeFrequencies init_haplotype_frequencies(const std::vector<Haplotype>& haplotypes)
@@ -74,7 +74,7 @@ namespace Octopus
             HaplotypeFrequencies result {};
             result.reserve(haplotype_counts.size());
             
-            auto n = sum_values(haplotype_counts);
+            auto n = Maths::sum_values(haplotype_counts);
             
             for (const auto& haplotype_count : haplotype_counts) {
                 result.emplace(haplotype_count.first, haplotype_count.second / n);
@@ -106,9 +106,7 @@ namespace Octopus
             
             if (haplotypes.empty()) return result;
             
-            Haplotype reference_haplotype {reference, haplotypes.front().get_region()};
-            
-            return haplotype_prior_model.evaluate(haplotypes, reference_haplotype);
+            const Haplotype reference_haplotype {reference, haplotypes.front().get_region()};
             
             std::vector<double> p(haplotypes.size());
             transform(cbegin(haplotypes), cend(haplotypes), begin(p),
@@ -116,7 +114,9 @@ namespace Octopus
                           return haplotype_prior_model.evaluate(haplotype, reference_haplotype);
                       });
             
-            auto alphas = maximum_likelihood_dirichlet_params(p, 0.05, 100);
+            constexpr double precision {1'000.0};
+            constexpr unsigned max_iterations {20};
+            const auto alphas = Maths::maximum_likelihood_dirichlet_params(p, precision, max_iterations);
             
             result.reserve(haplotypes.size());
             

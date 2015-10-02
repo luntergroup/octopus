@@ -196,7 +196,7 @@ void HtslibBcfFacade::write_header(const VcfHeader& header)
     for (auto& tag : header.get_structured_field_tags()) {
         auto type = get_hts_tag_type(tag);
         
-        for (auto& fields : header.get_structured_fields(tag)) {
+        for (auto fields : header.get_structured_fields(tag)) {
            auto hrec = (bcf_hrec_t*) malloc(sizeof(bcf_hrec_t));
             
             hrec->type  = type;
@@ -204,10 +204,25 @@ void HtslibBcfFacade::write_header(const VcfHeader& header)
             hrec->nkeys = static_cast<int>(fields.size());
             hrec->keys  = (char**) malloc(sizeof(char*) * fields.size());
             hrec->vals  = (char**) malloc(sizeof(char*) * fields.size());
+            
             unsigned i {};
-            for (auto& p : fields) {
-                hrec->keys[i] = stringcopy(p.first);
-                hrec->vals[i] = stringcopy(p.second);
+            
+            const std::vector<std::string> preset_fields {"ID", "Number", "Type", "Source", "Version"};
+            
+            // explicitly writing these preset fields first to get nice ordering in file
+            for (const auto& field : preset_fields) {
+                if (fields.count(field) == 1) {
+                    hrec->keys[i] = stringcopy(field);
+                    hrec->vals[i] = stringcopy(fields[field]);
+                    fields.erase(field);
+                    ++i;
+                }
+            }
+            
+            // the rest of the fields go in whatever order they come in the map
+            for (const auto& field : fields) {
+                hrec->keys[i] = stringcopy(field.first);
+                hrec->vals[i] = stringcopy(field.second);
                 ++i;
             }
             

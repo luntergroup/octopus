@@ -85,7 +85,7 @@ namespace Octopus
         double result {};
         
         for (const auto read : reads) {
-            result += log_sum_exp(std::log(genotype_weights[0]) + rm.log_probability(read, genotype[0]),
+            result += Maths::log_sum_exp(std::log(genotype_weights[0]) + rm.log_probability(read, genotype[0]),
                                   std::log(genotype_weights[1]) + rm.log_probability(read, genotype[1]),
                                   std::log(genotype_weights[2]) + rm.log_probability(read, genotype[2]));
         }
@@ -101,7 +101,7 @@ namespace Octopus
                        std::cend(unnormalised_log_genotype_probabilities), std::begin(tmp),
                        [] (const auto& p) { return p.second; });
         
-        auto norm = log_sum_exp<double>(std::cbegin(tmp), std::cend(tmp));
+        auto norm = Maths::log_sum_exp<double>(std::cbegin(tmp), std::cend(tmp));
         
         for (auto& p : unnormalised_log_genotype_probabilities) {
             p.second -= norm;
@@ -142,7 +142,7 @@ namespace Octopus
         
     void normalise_exp(std::array<double, 3>& arr)
     {
-        auto norm = log_sum_exp(arr[0], arr[1], arr[2]);
+        auto norm = Maths::log_sum_exp(arr[0], arr[1], arr[2]);
         
         for (auto& e : arr) {
             e -= norm;
@@ -176,7 +176,7 @@ namespace Octopus
                         lg.push_back(std::log(p.second) + log_weight[k] + rm.log_probability(read, p.first[k]));
                     }
                     
-                    p[k] = log_sum_exp<double>(std::cbegin(lg), std::cend(lg));
+                    p[k] = Maths::log_sum_exp<double>(std::cbegin(lg), std::cend(lg));
                 }
                 
                 normalise_exp(p);

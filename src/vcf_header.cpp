@@ -264,6 +264,14 @@ VcfHeader::Builder& VcfHeader::Builder::add_structured_field(std::string tag, st
     return *this;
 }
 
+std::string add_quotes(const std::string& str)
+{
+    std::string result {};
+    if (str.front() != '"') result = '"' + str;
+    if (str.back() != '"') result.push_back('"');
+    return result;
+}
+
 VcfHeader::Builder& VcfHeader::Builder::add_info(std::string id, std::string number, std::string type, std::string description,
                                                  std::unordered_map<std::string, std::string> other_values)
 {
@@ -272,7 +280,7 @@ VcfHeader::Builder& VcfHeader::Builder::add_info(std::string id, std::string num
     other_values.emplace("ID", std::move(id));
     other_values.emplace("Number", std::move(number));
     other_values.emplace("Type", std::move(type));
-    other_values.emplace("Description", std::move(description));
+    other_values.emplace("Description", add_quotes(description));
     
     structured_fields_.emplace("INFO", std::move(other_values));
     
@@ -285,7 +293,7 @@ VcfHeader::Builder& VcfHeader::Builder::add_filter(std::string id, std::string d
     other_values.reserve(other_values.size() + 2);
     
     other_values.emplace("ID", std::move(id));
-    other_values.emplace("Description", std::move(description));
+    other_values.emplace("Description", add_quotes(description));
     
     structured_fields_.emplace("FILTER", std::move(other_values));
     
@@ -300,7 +308,7 @@ VcfHeader::Builder& VcfHeader::Builder::add_format(std::string id, std::string n
     other_values.emplace("ID", std::move(id));
     other_values.emplace("Number", std::move(number));
     other_values.emplace("Type", std::move(type));
-    other_values.emplace("Description", std::move(description));
+    other_values.emplace("Description", add_quotes(description));
     
     structured_fields_.emplace("FORMAT", std::move(other_values));
     
@@ -362,6 +370,8 @@ VcfHeader::Builder get_default_header_builder()
     result.add_format("PQ", "1", "String", "phasing quality");
     result.add_format("EC", "1", "String", "expected alternate allele counts");
     result.add_format("MQ", "1", "String", "RMS mapping quality");
+    
+    result.add_filter("REFCALL", "All samples are homozygous reference at the site/block");
     
     return result;
 }

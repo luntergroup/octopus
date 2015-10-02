@@ -8,7 +8,7 @@
 
 #include <haplotype_prior_model.hpp>
 
-#include <algorithm>
+#include <algorithm> // std::any_of
 
 #include "haplotype.hpp"
 #include "variant_utils.hpp"
@@ -68,7 +68,7 @@ HaplotypePriorModel::evaluate(const std::vector<Haplotype>& haplotypes, const Ha
         result.emplace(haplotype, evaluate(haplotype, reference));
     }
     
-    auto norm = sum_values(result);
+    auto norm = Maths::sum_values(result);
     
     for (auto& p : result) p.second /= norm;
     
