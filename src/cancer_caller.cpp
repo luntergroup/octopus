@@ -9,7 +9,7 @@
 #include "cancer_caller.hpp"
 
 #include <unordered_map>
-#include <algorithm>
+#include <algorithm> // std::max_element, std::any_of
 #include <numeric>
 
 #include "genomic_region.hpp"
@@ -95,15 +95,13 @@ namespace Octopus
     
     bool is_homozygous_reference(const CancerGenotype<Haplotype>& genotype, const Haplotype& reference)
     {
-        return genotype.get_normal_genotype().num_occurences(reference) == genotype.ploidy();
+        return genotype.get_normal_genotype().count(reference) == genotype.ploidy();
     }
     
     bool has_cancer_sample(const GenotypeModel::Cancer::GenotypeWeights& genotype_weights, double min_weight = 0.1)
     {
         return std::any_of(std::cbegin(genotype_weights), std::cend(genotype_weights),
-                           [min_weight] (const auto& p) {
-                               return p.second[2] >= min_weight;
-                           });
+                           [min_weight] (const auto& p) { return p.second[2] >= min_weight; });
     }
     
     

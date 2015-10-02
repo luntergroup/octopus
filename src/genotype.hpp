@@ -11,15 +11,13 @@
 
 #include <vector>
 #include <unordered_map>
-#include <ostream>
-#include <iterator>    // std::cbegin etc
 #include <initializer_list>
-#include <algorithm>   // std::std::sort, std::inplace_merge, std::all_of, std::adjacent_find,
-                       // std::binary_search, std::equal_range, std::unique_copy, std::equal, std::fill_n
-#include <functional>  // std::not_equal_to
+#include <ostream>
+#include <iterator>    // std::cbegin, std::cend, std::distance, std::back_inserter
+#include <algorithm>   // std::std::sort, std::inplace_merge, std::all_of, std::binary_search,
+                       // std::equal_range, std::unique_copy, std::equal, std::fill_n
 #include <type_traits> // std::enable_if_t, std::is_base_of
 #include <boost/functional/hash.hpp> // boost::hash_range
-#include <boost/math/special_functions/binomial.hpp>
 
 #include "allele.hpp"
 #include "haplotype.hpp"
@@ -58,7 +56,7 @@ public:
     
     unsigned ploidy() const noexcept;
     bool contains(const MappableType& element) const;
-    unsigned num_occurences(const MappableType& element) const;
+    unsigned count(const MappableType& element) const;
     bool is_homozygous() const;
     unsigned zygosity() const;
     std::vector<MappableType> get_unique() const;
@@ -136,7 +134,7 @@ typename Genotype<MappableType>::Iterator Genotype<MappableType>::cend() const n
 template <typename MappableType>
 bool Genotype<MappableType>::is_homozygous() const
 {
-    return std::adjacent_find(std::cbegin(elements_), std::cend(elements_), std::not_equal_to<MappableType>()) == std::cend(elements_);
+    return elements_.front() == elements_.back();
 }
 
 template <typename MappableType>
@@ -159,7 +157,7 @@ bool Genotype<MappableType>::contains(const MappableType& element) const
 }
 
 template <typename MappableType>
-unsigned Genotype<MappableType>::num_occurences(const MappableType& element) const
+unsigned Genotype<MappableType>::count(const MappableType& element) const
 {
     auto equal_range = std::equal_range(std::cbegin(elements_), std::cend(elements_), element);
     return static_cast<unsigned>(std::distance(equal_range.first, equal_range.second));
@@ -182,6 +180,51 @@ std::vector<MappableType> Genotype<MappableType>::get_unique() const
     return result;
 }
 
+template <>
+class Genotype<Allele> : public Equitable<Genotype<Allele>>
+{
+public:
+    using Iterator = typename std::vector<Allele>::const_iterator;
+    
+    Genotype() = default;
+    explicit Genotype(unsigned ploidy);
+    explicit Genotype(unsigned ploidy, const Allele& init);
+    explicit Genotype(std::initializer_list<Allele> alleles);
+    ~Genotype() = default;
+    
+    Genotype(const Genotype&)            = default;
+    Genotype& operator=(const Genotype&) = default;
+    Genotype(Genotype&&)                 = default;
+    Genotype& operator=(Genotype&&)      = default;
+    
+    const Allele& at(unsigned n) const;
+    const Allele& operator[](unsigned n) const;
+    template <typename T> void emplace(T&& allele);
+    
+    Iterator begin() const noexcept;
+    Iterator end() const noexcept ;
+    Iterator cbegin() const noexcept ;
+    Iterator cend() const noexcept ;
+    
+    unsigned ploidy() const noexcept;
+    bool contains(const Allele& allele) const;
+    unsigned count(const Allele& allele) const;
+    bool is_homozygous() const;
+    unsigned zygosity() const;
+    std::vector<Allele> get_unique() const;
+    
+private:
+    std::vector<Allele> alleles_;
+};
+
+template <typename T>
+void Genotype<Allele>::emplace(T&& allele)
+{
+    alleles_.emplace_back(std::forward<T>(allele));
+}
+
+// non-member methods
+
 template <typename MappableType2, typename MappableType1>
 Genotype<MappableType2> splice(const Genotype<MappableType1>& genotype, const GenomicRegion& region)
 {
@@ -197,13 +240,10 @@ Genotype<MappableType2> splice(const Genotype<MappableType1>& genotype, const Ge
 template <typename MappableType>
 bool is_homozygous_reference(const Genotype<MappableType>& genotype, const MappableType& reference)
 {
-    return genotype.num_occurences(reference) == genotype.ploidy();
+    return genotype.count(reference) == genotype.ploidy();
 }
 
-inline bool is_homozygous_reference(const Genotype<Haplotype>& genotype, const Allele& reference)
-{
-    return splice<Allele>(genotype, get_region(reference)).num_occurences(reference) == genotype.ploidy();
-}
+bool is_homozygous_reference(const Genotype<Haplotype>& genotype, const Allele& reference);
 
 template <typename MappableType>
 bool operator==(const Genotype<MappableType>& lhs, const Genotype<MappableType>& rhs)
@@ -225,15 +265,11 @@ namespace std
 template <typename MappableType1, typename MappableType2>
 bool contains(const Genotype<MappableType1>& lhs, const Genotype<MappableType2>& rhs)
 {
-    return std::all_of(std::cbegin(lhs), std::cend(lhs), [&rhs] (const auto& element) {
-        return rhs.contains(element);
-    });
+    return std::all_of(std::cbegin(lhs), std::cend(lhs),
+                       [&rhs] (const auto& element) { return rhs.contains(element); });
 }
 
-inline unsigned num_genotypes(unsigned num_elements, unsigned ploidy)
-{
-    return static_cast<unsigned>(boost::math::binomial_coefficient<double>(num_elements + ploidy - 1, num_elements - 1));
-}
+unsigned num_genotypes(unsigned num_elements, unsigned ploidy);
 
 namespace detail
 {
@@ -289,9 +325,10 @@ std::vector<Genotype<MappableType>> generate_all_genotypes(const std::vector<Map
 }
 
 template <typename MappableType>
-std::unordered_map<MappableType, unsigned> get_element_occurence_map(const Genotype<MappableType>& genotype)
+std::unordered_map<MappableType, unsigned> get_element_count_map(const Genotype<MappableType>& genotype)
 {
     std::unordered_map<MappableType, unsigned> result {};
+    result.reserve(genotype.ploidy());
     
     for (unsigned i {}; i < genotype.ploidy(); ++i) {
         ++result[genotype.at(i)];
@@ -307,8 +344,8 @@ std::ostream& operator<<(std::ostream& os, const Genotype<MappableType>& genotyp
         os << "empty genotype";
         return os;
     }
-    auto element_occurences = get_element_occurence_map(genotype);
-    std::vector<std::pair<MappableType, unsigned>> p {element_occurences.begin(), element_occurences.end()};
+    auto element_counts = get_element_count_map(genotype);
+    std::vector<std::pair<MappableType, unsigned>> p {element_counts.begin(), element_counts.end()};
     for (unsigned i {}; i < p.size() - 1; ++i) {
         os << p[i].first << "(" << p[i].second << "),";
     }
@@ -316,13 +353,6 @@ std::ostream& operator<<(std::ostream& os, const Genotype<MappableType>& genotyp
     return os;
 }
 
-inline void print_alleles(const Genotype<Haplotype>& genotype)
-{
-    for (unsigned i {}; i < genotype.ploidy() - 1; ++i) {
-        print_alleles(genotype[i]);
-        std::cout << std::endl;
-    }
-    print_alleles(genotype[genotype.ploidy() - 1]);
-}
+void print_alleles(const Genotype<Haplotype>& genotype);
 
 #endif /* defined(__Octopus__genotype__) */

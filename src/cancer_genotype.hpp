@@ -10,7 +10,7 @@
 #define cancer_genotype_hpp
 
 #include <initializer_list>
-#include <utility>
+#include <utility> // std::move
 #include <ostream>
 #include <boost/functional/hash.hpp> // boost::hash_combine
 
@@ -39,7 +39,7 @@ public:
     
     unsigned ploidy() const noexcept;
     bool contains(const MappableType& element) const;
-    unsigned num_occurences(const MappableType& element) const;
+    unsigned count(const MappableType& element) const;
     bool is_homozygous() const;
     unsigned zygosity() const;
     std::vector<MappableType> get_unique() const;
@@ -100,9 +100,9 @@ bool CancerGenotype<MappableType>::contains(const MappableType& element) const
 }
 
 template <typename MappableType>
-unsigned CancerGenotype<MappableType>::num_occurences(const MappableType& element) const
+unsigned CancerGenotype<MappableType>::count(const MappableType& element) const
 {
-    return normal_genotype_.num_occurences(element) + (cancer_element_ == element) ? 1 : 0;
+    return normal_genotype_.count(element) + ((cancer_element_ == element) ? 1 : 0);
 }
 
 template <typename MappableType>
@@ -114,7 +114,7 @@ bool CancerGenotype<MappableType>::is_homozygous() const
 template <typename MappableType>
 unsigned CancerGenotype<MappableType>::zygosity() const
 {
-    return normal_genotype_.zygosity() + (normal_genotype_.contains(cancer_element_)) ? 0 : 1;
+    return normal_genotype_.zygosity() + ((normal_genotype_.contains(cancer_element_)) ? 0 : 1);
 }
 
 template <typename MappableType>

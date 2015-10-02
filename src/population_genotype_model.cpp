@@ -152,7 +152,7 @@ namespace Octopus
             double p {};
             
             for (const auto& genotype : genotypes) {
-                auto n = genotype.num_occurences(haplotype);
+                auto n = genotype.count(haplotype);
                 if (n > 0) {
                     double t {};
                     for (const auto& sample_genotype_posteriors : genotype_posteriors) {
@@ -186,7 +186,7 @@ namespace Octopus
             auto p = haplotype_count.second;
             
             for (const auto& genotype : genotypes) {
-                auto n = genotype.num_occurences(haplotype_count.first);
+                auto n = genotype.count(haplotype_count.first);
                 if (n > 0) {
                     double t {};
                     for (const auto& sample_genotype_posteriors : genotype_posteriors) {

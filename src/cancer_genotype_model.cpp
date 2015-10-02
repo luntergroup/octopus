@@ -201,7 +201,7 @@ namespace Octopus
             double p {};
             
             for (const auto& genotype_posterior : genotype_posteriors) {
-                p += genotype_posterior.first.num_occurences(haplotype) * genotype_posterior.second;
+                p += genotype_posterior.first.count(haplotype) * genotype_posterior.second;
             }
             
             result.emplace(haplotype, p / 3);

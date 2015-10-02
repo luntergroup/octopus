@@ -309,11 +309,10 @@ void parse_sample(const std::string& column, const VcfRecord::SampleIdType& samp
         std::vector<unsigned> allele_numbers {};
         allele_numbers.reserve(alleles.size());
         std::transform(alleles.cbegin(), alleles.cend(), std::back_inserter(allele_numbers),
-                       [] (const std::string& a) {
-                           return static_cast<unsigned>(std::stoul(a));
-                       });
+                       [] (const std::string& a) { return static_cast<unsigned>(std::stoul(a)); });
         
-        rb.add_genotype(sample, allele_numbers, is_phased);
+        rb.add_genotype(sample, allele_numbers,
+                        (is_phased) ? VcfRecord::Builder::Phasing::Phased : VcfRecord::Builder::Phasing::Unphased);
     }
     
     auto key_it = std::cbegin(format);

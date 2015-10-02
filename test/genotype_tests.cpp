@@ -76,10 +76,10 @@ BOOST_AUTO_TEST_CASE(Genotype_can_be_tested_for_haplotype_occurence)
     BOOST_CHECK(g1.contains(hap3));
     BOOST_CHECK(!g1.contains(hap4));
     
-    BOOST_CHECK(g1.num_occurences(hap1) == 1);
-    BOOST_CHECK(g1.num_occurences(hap2) == 1);
-    BOOST_CHECK(g1.num_occurences(hap3) == 1);
-    BOOST_CHECK(g1.num_occurences(hap4) == 0);
+    BOOST_CHECK(g1.count(hap1) == 1);
+    BOOST_CHECK(g1.count(hap2) == 1);
+    BOOST_CHECK(g1.count(hap3) == 1);
+    BOOST_CHECK(g1.count(hap4) == 0);
     
     Genotype<Haplotype> g2 {hap1, hap1, hap2};
     
@@ -88,10 +88,10 @@ BOOST_AUTO_TEST_CASE(Genotype_can_be_tested_for_haplotype_occurence)
     BOOST_CHECK(!g2.contains(hap3));
     BOOST_CHECK(!g2.contains(hap4));
     
-    BOOST_CHECK(g2.num_occurences(hap1) == 2);
-    BOOST_CHECK(g2.num_occurences(hap2) == 1);
-    BOOST_CHECK(g2.num_occurences(hap3) == 0);
-    BOOST_CHECK(g2.num_occurences(hap4) == 0);
+    BOOST_CHECK(g2.count(hap1) == 2);
+    BOOST_CHECK(g2.count(hap2) == 1);
+    BOOST_CHECK(g2.count(hap3) == 0);
+    BOOST_CHECK(g2.count(hap4) == 0);
     
     Genotype<Haplotype> g3 {hap1, hap3, hap4};
     
@@ -100,10 +100,10 @@ BOOST_AUTO_TEST_CASE(Genotype_can_be_tested_for_haplotype_occurence)
     BOOST_CHECK(g3.contains(hap3));
     BOOST_CHECK(g3.contains(hap4));
     
-    BOOST_CHECK(g3.num_occurences(hap1) == 1);
-    BOOST_CHECK(g3.num_occurences(hap2) == 0);
-    BOOST_CHECK(g3.num_occurences(hap3) == 1);
-    BOOST_CHECK(g3.num_occurences(hap4) == 1);
+    BOOST_CHECK(g3.count(hap1) == 1);
+    BOOST_CHECK(g3.count(hap2) == 0);
+    BOOST_CHECK(g3.count(hap3) == 1);
+    BOOST_CHECK(g3.count(hap4) == 1);
     
     Genotype<Haplotype> g4 {hap4, hap4, hap4};
     
@@ -112,10 +112,10 @@ BOOST_AUTO_TEST_CASE(Genotype_can_be_tested_for_haplotype_occurence)
     BOOST_CHECK(!g4.contains(hap3));
     BOOST_CHECK(g4.contains(hap4));
     
-    BOOST_CHECK(g4.num_occurences(hap1) == 0);
-    BOOST_CHECK(g4.num_occurences(hap2) == 0);
-    BOOST_CHECK(g4.num_occurences(hap3) == 0);
-    BOOST_CHECK(g4.num_occurences(hap4) == 3);
+    BOOST_CHECK(g4.count(hap1) == 0);
+    BOOST_CHECK(g4.count(hap2) == 0);
+    BOOST_CHECK(g4.count(hap3) == 0);
+    BOOST_CHECK(g4.count(hap4) == 3);
 }
 
 BOOST_AUTO_TEST_CASE(Genotypes_are_equal_if_they_contain_the_same_haplotypes)
@@ -197,8 +197,8 @@ BOOST_AUTO_TEST_CASE(Genotypes_are_not_influenced_by_haplotype_entry_order)
     g2.emplace(hap1);
     g2.emplace(hap2);
     
-    BOOST_CHECK(g1.num_occurences(hap1) == g2.num_occurences(hap1));
-    BOOST_CHECK(g1.num_occurences(hap2) == g2.num_occurences(hap2));
+    BOOST_CHECK(g1.count(hap1) == g2.count(hap1));
+    BOOST_CHECK(g1.count(hap2) == g2.count(hap2));
     
     BOOST_CHECK(g1 == g2);
     BOOST_CHECK(std::hash<Genotype<Haplotype>>()(g1) == std::hash<Genotype<Haplotype>>()(g2));

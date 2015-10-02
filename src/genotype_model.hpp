@@ -47,7 +47,7 @@ namespace Octopus
             double r {};
             
             for (const auto& haplotype : unique_haplotypes) {
-                auto num_occurences = genotype.num_occurences(haplotype);
+                auto num_occurences = genotype.count(haplotype);
                 occurences.push_back(num_occurences);
                 r += num_occurences * std::log(haplotype_frequencies.at(haplotype));
             }

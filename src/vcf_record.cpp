@@ -431,20 +431,22 @@ VcfRecord::Builder& VcfRecord::Builder::set_format(const std::initializer_list<K
     return *this;
 }
 
-VcfRecord::Builder& VcfRecord::Builder::add_genotype(const SampleIdType& sample, const std::vector<SequenceType>& alleles, bool is_phased)
+VcfRecord::Builder& VcfRecord::Builder::add_genotype(const SampleIdType& sample,
+                                                     const std::vector<SequenceType>& alleles, Phasing phasing)
 {
-    genotypes_.emplace(sample, std::make_pair(alleles, is_phased));
+    genotypes_.emplace(sample, std::make_pair(alleles, phasing == Phasing::Phased));
     return *this;
 }
 
-VcfRecord::Builder& VcfRecord::Builder::add_genotype(const SampleIdType& sample, const std::vector<unsigned>& alleles, bool is_phased)
+VcfRecord::Builder& VcfRecord::Builder::add_genotype(const SampleIdType& sample,
+                                                     const std::vector<unsigned>& alleles, Phasing phasing)
 {
     std::vector<SequenceType> a {};
     a.reserve(alleles.size());
     std::transform(alleles.cbegin(), alleles.cend(), std::back_inserter(a),
                    [this] (unsigned allele) { return (allele == 0) ? ref_allele_ : alt_alleles_[allele - 1]; });
     
-    genotypes_.emplace(sample, std::make_pair(a, is_phased));
+    genotypes_.emplace(sample, std::make_pair(a, phasing == Phasing::Phased));
     return *this;
 }
 
