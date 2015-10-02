@@ -61,20 +61,6 @@ namespace Octopus
         auto n = sum(counts);
         return SampleGenotypeWeights {counts[0] / n, counts[1] / n, counts[2] / n};
     }
-    
-    HaplotypeFrequencies init_haplotype_frequencies(const HaplotypePriorCounts& haplotype_counts)
-    {
-        HaplotypeFrequencies result {};
-        result.reserve(haplotype_counts.size());
-        
-        auto n = sum_values(haplotype_counts);
-        
-        for (const auto& haplotype_count : haplotype_counts) {
-            result.emplace(haplotype_count.first, haplotype_count.second / n);
-        }
-        
-        return result;
-    }
         
     Cancer::GenotypeWeights init_genotype_weights(const Cancer::GenotypeWeightsPriors& weight_counts)
     {
@@ -293,8 +279,11 @@ namespace Octopus
     
     // private methods
     
-    Cancer::Latents Cancer::evaluate(const std::vector<Haplotype>& haplotypes, const ReadMap& reads)
+    Cancer::Latents
+    Cancer::evaluate(const std::vector<Haplotype>& haplotypes, const ReadMap& reads, ReferenceGenome& reference)
     {
+        auto haplotype_prior_counts = compute_haplotype_prior_counts(haplotypes, reference, haplotype_prior_model_);
+        
         auto genotypes = generate_all_cancer_genotypes(haplotypes, 2);
         
         GenotypeWeightsPriors weight_priors {};
@@ -306,7 +295,7 @@ namespace Octopus
             }
         }
         
-        auto haplotype_frequencies = init_haplotype_frequencies(haplotypes);
+        auto haplotype_frequencies = init_haplotype_frequencies(haplotype_prior_counts);
         auto genotype_weights      = init_genotype_weights(weight_priors);
         
         auto genotype_posteriors = compute_genotype_posteriors(genotypes, reads, haplotype_frequencies, genotype_weights);

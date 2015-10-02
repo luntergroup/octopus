@@ -30,6 +30,7 @@
 #include "cancer_genotype_model.hpp"
 
 #include <iostream> // TEST
+#include "haplotype_prior_model.hpp"
 
 namespace Octopus
 {
@@ -110,6 +111,8 @@ namespace Octopus
                            });
     }
     
+    
+    
     std::vector<VcfRecord> CancerVariantCaller::call_variants(const GenomicRegion& region,
                                                               const std::vector<Variant>& candidates,
                                                               const ReadMap& reads)
@@ -127,7 +130,7 @@ namespace Octopus
         
         GenotypeModel::Cancer genotype_model {normal_sample};
         
-        auto latents = genotype_model.evaluate(haplotypes, reads);
+        auto latents = genotype_model.evaluate(haplotypes, reads, reference_);
         
         auto map_genotype = find_map_genotype(latents.genotype_posteriors);
         

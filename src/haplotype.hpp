@@ -48,6 +48,7 @@ public:
     SequenceType get_sequence() const;
     SequenceType get_sequence(const GenomicRegion& region) const;
     
+    std::vector<Variant> difference(const Haplotype& from) const;
     unsigned num_transitions() const noexcept;
     unsigned num_transversions() const noexcept;
     
@@ -146,7 +147,7 @@ namespace std
             return seed;
         }
     };
-} // end namespace std
+} // namespace std
 
 namespace boost
 {

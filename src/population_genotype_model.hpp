@@ -16,6 +16,8 @@
 #include "genotype_model.hpp"
 #include "mappable_map.hpp"
 #include "genotype.hpp"
+#include "reference_genome.hpp"
+#include "haplotype_prior_model.hpp"
 
 class AlignedRead;
 class Haplotype;
@@ -38,9 +40,11 @@ namespace Octopus
         
         Population(unsigned ploidy, unsigned max_em_iterations = 100, double em_epsilon = 0.001);
         
-        Latents evaluate(const std::vector<Haplotype>& haplotypes, const ReadMap& reads);
+        Latents evaluate(const std::vector<Haplotype>& haplotypes, const ReadMap& reads, ReferenceGenome& reference);
         
     private:
+        HaplotypePriorModel haplotype_prior_model_;
+        
         const unsigned ploidy_;
         const unsigned max_em_iterations_;
         const double em_epsilon_;

@@ -258,11 +258,20 @@ std::vector<VcfRecord> PopulationVariantCaller::call_variants(const GenomicRegio
     
     GenotypeModel::Population genotype_model {ploidy_};
     
-    auto genotype_posteriors = genotype_model.evaluate(haplotypes, reads).genotype_posteriors;
+    auto genotype_posteriors = genotype_model.evaluate(haplotypes, reads, reference_).genotype_posteriors;
+    
+//    for (auto& g : genotype_posteriors.at("HG00101")) {
+//        print_alleles(g.first);
+//        std::cout << g.second << std::endl;
+//    }
     
     auto alleles = decompose(candidates);
     
     auto allele_posteriors = compute_allele_posteriors(genotype_posteriors, haplotypes, alleles);
+    
+//    for (const auto& ap : allele_posteriors.at("HG00101")) {
+//        std::cout << ap.first << " " << ap.second << std::endl;
+//    }
     
     auto segments = segment(alleles);
     auto regions  = get_segment_regions(segments);

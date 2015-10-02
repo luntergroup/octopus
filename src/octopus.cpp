@@ -129,7 +129,7 @@ namespace Octopus
             
             cout << "looking at region " << region << endl;
             
-            std::unique_ptr<VariantCaller> caller = std::make_unique<CancerVariantCaller>(reference, read_manager, read_filter, read_transform, candidate_generator);
+            std::unique_ptr<VariantCaller> caller = std::make_unique<PopulationVariantCaller>(reference, read_manager, read_filter, read_transform, candidate_generator);
             
             auto calls = caller->call_variants(region);
             

@@ -160,6 +160,22 @@ Haplotype::SequenceType Haplotype::get_sequence(const GenomicRegion& region) con
     return result;
 }
 
+std::vector<Variant> Haplotype::difference(const Haplotype& from) const
+{
+    std::vector<Variant> result {};
+    result.reserve(explicit_alleles_.size());
+    
+    for (const auto& allele : explicit_alleles_) {
+        if (!from.contains(allele)) {
+            result.emplace_back(allele.get_region(), from.get_sequence(allele.get_region()), allele.get_sequence());
+        }
+    }
+    
+    result.shrink_to_fit();
+    
+    return result;
+}
+
 unsigned Haplotype::num_transitions() const noexcept
 {
     return static_cast<unsigned>(std::count_if(std::cbegin(explicit_alleles_), std::cend(explicit_alleles_),

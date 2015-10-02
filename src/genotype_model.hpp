@@ -12,6 +12,9 @@
 #include <string>
 #include <vector>
 #include <unordered_map>
+#include <algorithm> // std::transform
+#include <iterator>  // std::begin, std::cbegin, std::cend, std::inserter
+#include <cmath>     // std::abs
 
 #include "common.hpp"
 #include "mappable_map.hpp"
@@ -19,6 +22,8 @@
 #include "haplotype.hpp"
 #include "genotype.hpp"
 #include "maths.hpp"
+#include "reference_genome.hpp"
+#include "haplotype_prior_model.hpp"
 
 namespace Octopus
 {
@@ -64,6 +69,20 @@ namespace Octopus
             return result;
         }
         
+        inline HaplotypeFrequencies init_haplotype_frequencies(const HaplotypePriorCounts& haplotype_counts)
+        {
+            HaplotypeFrequencies result {};
+            result.reserve(haplotype_counts.size());
+            
+            auto n = sum_values(haplotype_counts);
+            
+            for (const auto& haplotype_count : haplotype_counts) {
+                result.emplace(haplotype_count.first, haplotype_count.second / n);
+            }
+            
+            return result;
+        }
+        
         inline double max_haplotype_frequency_change(const HaplotypeFrequencies& old_frequencies,
                                                      const HaplotypeFrequencies& new_frequencies)
         {
@@ -73,6 +92,36 @@ namespace Octopus
                 auto change = std::abs(h.second - old_frequencies.at(h.first));
                 if (change > result) result = change;
             }
+            
+            return result;
+        }
+        
+        inline HaplotypePriorCounts compute_haplotype_prior_counts(const std::vector<Haplotype>& haplotypes,
+                                                                   ReferenceGenome& reference,
+                                                                   HaplotypePriorModel& haplotype_prior_model)
+        {
+            using std::begin; using std::cbegin; using std::cend; using std::transform;
+            
+            HaplotypePriorCounts result {};
+            
+            if (haplotypes.empty()) return result;
+            
+            Haplotype reference_haplotype {reference, haplotypes.front().get_region()};
+            
+            return haplotype_prior_model.evaluate(haplotypes, reference_haplotype);
+            
+            std::vector<double> p(haplotypes.size());
+            transform(cbegin(haplotypes), cend(haplotypes), begin(p),
+                      [&haplotype_prior_model, &reference_haplotype] (const auto& haplotype) {
+                          return haplotype_prior_model.evaluate(haplotype, reference_haplotype);
+                      });
+            
+            auto alphas = maximum_likelihood_dirichlet_params(p, 0.05, 100);
+            
+            result.reserve(haplotypes.size());
+            
+            transform(cbegin(haplotypes), cend(haplotypes), cbegin(alphas), std::inserter(result, begin(result)),
+                      [] (const auto& haplotype, double a) { return std::make_pair(haplotype, a); });
             
             return result;
         }
