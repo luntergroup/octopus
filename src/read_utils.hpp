@@ -240,11 +240,29 @@ namespace detail
     }
     
     template <typename T>
+    size_t count_reads(const T& reads, NonMapTypeTag)
+    {
+        return reads.size();
+    }
+    
+    template <typename T>
+    size_t count_reads(const T& reads, const GenomicRegion& region, NonMapTypeTag)
+    {
+        return count_overlapped(std::cbegin(reads), std::cend(reads), region);
+    }
+    
+    inline size_t count_reads(const MappableSet<AlignedRead>& reads, const GenomicRegion& region, NonMapTypeTag)
+    {
+        return reads.count_overlapped(region);
+    }
+    
+    template <typename T>
     size_t count_forward(const T& reads, NonMapTypeTag)
     {
         return std::count_if(std::cbegin(reads), std::cend(reads),
                              [] (const auto& read) { return !read.is_marked_reverse_mapped(); });
     }
+    
     
     template <typename T>
     size_t count_forward(const T& reads, const GenomicRegion& region, NonMapTypeTag)
@@ -499,6 +517,21 @@ namespace detail
     }
     
     template <typename T>
+    size_t count_reads(const T& reads, MapTypeTag)
+    {
+        return Maths::sum_sizes(reads);
+    }
+    
+    template <typename T>
+    size_t count_reads(const T& reads, const GenomicRegion& region, MapTypeTag)
+    {
+        return std::accumulate(std::cbegin(reads), std::cend(reads), 0,
+                               [&region] (auto curr, const auto& sample_reads) {
+                                   return curr + count_reads(sample_reads.second, region, NonMapTypeTag());
+                               });
+    }
+    
+    template <typename T>
     size_t count_forward(const T& reads, MapTypeTag)
     {
         return std::accumulate(std::cbegin(reads), std::cend(reads), 0,
@@ -681,6 +714,18 @@ template <typename T>
 bool count_base_pairs(const T& reads, const GenomicRegion& region)
 {
     return detail::count_base_pairs(reads, region, detail::IsMapType<!std::is_same<typename T::value_type, AlignedRead>::value>());
+}
+
+template <typename T>
+size_t count_reads(const T& reads)
+{
+    return detail::count_reads(reads, detail::IsMapType<!std::is_same<typename T::value_type, AlignedRead>::value>());
+}
+
+template <typename T>
+size_t count_reads(const T& reads, const GenomicRegion& region)
+{
+    return detail::count_reads(reads, region, detail::IsMapType<!std::is_same<typename T::value_type, AlignedRead>::value>());
 }
 
 template <typename T>

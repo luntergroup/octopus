@@ -63,8 +63,8 @@ namespace Octopus
             backend.add_options()
             ("max-threads,t", po::value<unsigned>()->default_value(1), "maximum number of threads")
             ("memory", po::value<size_t>()->default_value(8000), "target memory usage in MB")
-            ("compress-reads", po::value<bool>()->default_value(false), "compress the reads (slower)")
-            ("max-open-files", po::value<unsigned>()->default_value(20), "the maximum number of files that can be open at one time")
+            ("compress-reads", po::bool_switch()->default_value(false), "compress the reads (slower)")
+            ("max-open-files", po::value<unsigned>()->default_value(200), "the maximum number of files that can be open at one time")
             ;
             
             po::options_description input("Input/output options");
@@ -84,28 +84,36 @@ namespace Octopus
             
             po::options_description filters("Read filter options");
             filters.add_options()
+            ("no-unmapped", po::bool_switch()->default_value(false), "filter reads marked as unmapped")
             ("min-mapping-quality", po::value<QualityType>()->default_value(20), "reads with smaller mapping quality are ignored")
             ("min-base-quality", po::value<QualityType>()->default_value(20), "base quality threshold used by min-good-bases filter")
-            ("min-good-bases", po::value<unsigned>()->default_value(0), "minimum number of bases with quality min-base-quality before read is considered")
-            ("no-duplicates", po::value<bool>()->default_value(false), "removes duplicate reads")
+            ("min-good-base-fraction", po::value<double>(), "base quality threshold used by min-good-bases filter")
+            ("min-good-bases", po::value<AlignedRead::SizeType>()->default_value(0), "minimum number of bases with quality min-base-quality before read is considered")
+            ("no-qc-fails", po::bool_switch()->default_value(false), "filter reads marked as QC failed")
+            ("min-read-length", po::value<AlignedRead::SizeType>(), "filter reads shorter than this")
+            ("max-read-length", po::value<AlignedRead::SizeType>(), "filter reads longer than this")
+            ("no-duplicates", po::bool_switch()->default_value(false), "filters duplicate reads")
+            ("no-secondary-alignmenets", po::bool_switch()->default_value(false), "filters reads marked as secondary alignments")
+            ("no-supplementary-alignmenets", po::bool_switch()->default_value(false), "filters reads marked as supplementary alignments")
+            ("no-unmapped-mates", po::bool_switch()->default_value(false), "filters reads with unmapped mates")
             ;
             
             po::options_description transforms("Read filter options");
             transforms.add_options()
-            ("trim-soft-clipped", po::value<bool>()->default_value(false), "trims soft clipped parts of the read")
-            ("trim-flanks", po::value<bool>()->default_value(false), "trims the flanks of all reads")
-            ("trim-adapters", po::value<bool>()->default_value(true), "trims any overlapping regions that pass the fragment size")
+            ("trim-soft-clipped", po::bool_switch()->default_value(false), "trims soft clipped parts of the read")
+            ("tail-trim-size", po::value<AlignedRead::SizeType>()->default_value(0), "trims this number of bases off the tail of all reads")
+            ("trim-adapters", po::bool_switch()->default_value(true), "trims any overlapping regions that pass the fragment size")
             ;
             
             po::options_description candidates("Candidate generation options");
             candidates.add_options()
-            ("candidates-from-alignments", po::value<bool>()->default_value(true), "generate candidate variants from the aligned reads")
-            ("candidates-from-assembler", po::value<bool>()->default_value(true), "generate candidate variants with the assembler")
+            ("candidates-from-alignments", po::bool_switch()->default_value(true), "generate candidate variants from the aligned reads")
+            ("candidates-from-assembler", po::bool_switch()->default_value(false), "generate candidate variants with the assembler")
             ("candidates-from-source", po::value<std::string>(), "variant file path containing known variants. These variants will automatically become candidates")
-            ("min-base-quality", po::value<unsigned>()->default_value(15), "only base changes with quality above this value are considered for snp generation")
-            ("max-variant-size", po::value<unsigned>()->default_value(100), "maximum candidate varaint size from alignmenet CIGAR")
+            ("min-base-quality", po::value<QualityType>()->default_value(15), "only base changes with quality above this value are considered for snp generation")
+            ("max-variant-size", po::value<AlignedRead::SizeType>()->default_value(100), "maximum candidate varaint size from alignmenet CIGAR")
             ("k", po::value<unsigned>()->default_value(15), "k-mer size to use")
-            ("no-cycles", po::value<bool>()->default_value(false), "dissalow cycles in assembly graph")
+            ("no-cycles", po::bool_switch()->default_value(false), "dissalow cycles in assembly graph")
             ;
             
             po::options_description model("Model options");
@@ -123,7 +131,7 @@ namespace Octopus
             ;
             
             po::options_description all("Allowed options");
-            all.add(general).add(backend).add(input).add(filters).add(candidates).add(model).add(calling);
+            all.add(general).add(backend).add(input).add(filters).add(transforms).add(candidates).add(model).add(calling);
             
             po::variables_map vm;
             po::store(po::command_line_parser(argc, argv).options(all).positional(p).run(), vm);
@@ -380,28 +388,59 @@ namespace Octopus
     
     ReadFilter<ReadContainer::const_iterator> get_read_filter(const po::variables_map& options)
     {
+        using QualityType = AlignedRead::QualityType;
+        using SizeType    = AlignedRead::SizeType;
+        
         ReadFilter<ReadContainer::const_iterator> result {};
         
-        auto min_mapping_quality = options.at("min-mapping-quality").as<AlignedRead::QualityType>();
-        
-        if (min_mapping_quality > 0) {
-            result.register_filter([min_mapping_quality] (const AlignedRead& read) {
-                return is_good_mapping_quality(read, min_mapping_quality);
-            });
+        if (options.at("no-unmapped").as<bool>()) {
+            result.register_filter(ReadFilters::is_mapped());
         }
         
+        auto min_mapping_quality = options.at("min-mapping-quality").as<QualityType>();
+        
+        if (min_mapping_quality > 0) {
+            result.register_filter(ReadFilters::is_good_mapping_quality(min_mapping_quality));
+        }
+        
+        auto min_base_quality = options.at("min-base-quality").as<QualityType>();
         auto min_good_bases = options.at("min-good-bases").as<unsigned>();
         
         if (min_good_bases > 0) {
-            auto min_base_quality = options.at("min-base-quality").as<AlignedRead::QualityType>();
-            
-            result.register_filter([min_base_quality, min_good_bases] (const AlignedRead& read) {
-                return has_sufficient_good_quality_bases(read, min_base_quality, min_good_bases);
-            });
+            result.register_filter(ReadFilters::has_sufficient_good_quality_bases(min_base_quality, min_good_bases));
+        }
+        
+        if (options.count("min-good-base-fraction") == 1) {
+            auto min_good_base_fraction =  options.at("min-good-base-fraction").as<double>();
+            result.register_filter(ReadFilters::has_good_base_fraction(min_base_quality, min_good_base_fraction));
+        }
+        
+        if (options.count("min-read-length") == 1) {
+            result.register_filter(ReadFilters::is_short(options.at("min-read-length").as<SizeType>()));
+        }
+        
+        if (options.count("max-read-length") == 1) {
+            result.register_filter(ReadFilters::is_long(options.at("max-read-length").as<SizeType>()));
         }
         
         if (options.at("no-duplicates").as<bool>()) {
-            result.register_filter(is_not_duplicate<ReadContainer::const_iterator>);
+            result.register_filter(ReadFilters::is_not_duplicate());
+        }
+        
+        if (options.at("no-qc-fails").as<bool>()) {
+            result.register_filter(ReadFilters::is_not_marked_qc_fail());
+        }
+        
+        if (options.at("no-secondary-alignmenets").as<bool>()) {
+            result.register_filter(ReadFilters::is_not_secondary_alignment());
+        }
+        
+        if (options.at("no-supplementary-alignmenets").as<bool>()) {
+            result.register_filter(ReadFilters::is_not_supplementary_alignment());
+        }
+        
+        if (options.at("no-unmapped-mates").as<bool>()) {
+            result.register_filter(ReadFilters::mate_is_mapped());
         }
         
         return result;
@@ -409,14 +448,22 @@ namespace Octopus
     
     ReadTransform get_read_transformer(const po::variables_map& options)
     {
+        using SizeType = AlignedRead::SizeType;
+        
         ReadTransform result {};
         
-        if (options.count("trim-soft-clipped") == 1) {
-            result.register_transform(trim_soft_clipped);
+        if (options.at("trim-soft-clipped").as<bool>()) {
+            result.register_transform(ReadTransforms::trim_soft_clipped());
         }
         
-        if (options.count("trim-adapters") == 1) {
-            result.register_transform(trim_adapters);
+        if (options.at("trim-adapters").as<bool>()) {
+            result.register_transform(ReadTransforms::trim_adapters());
+        }
+        
+        auto tail_trim_size = options.at("tail-trim-size").as<SizeType>();
+        
+        if (tail_trim_size > 0) {
+            result.register_transform(ReadTransforms::trim_tail(tail_trim_size));
         }
         
         return result;

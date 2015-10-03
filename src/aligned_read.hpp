@@ -112,7 +112,6 @@ public:
     
     friend void swap(AlignedRead& lhs, AlignedRead& rhs) noexcept;
     
-    // basic accessors
     const std::string& get_read_group() const;
     const GenomicRegion& get_region() const noexcept;
     const SequenceType& get_sequence() const noexcept;
@@ -120,10 +119,10 @@ public:
     QualityType get_mapping_quality() const noexcept;
     SizeType get_sequence_size() const noexcept;
     const CigarString& get_cigar_string() const noexcept;
-    const std::unique_ptr<NextSegment>& get_next_segment() const;
+    bool has_mate() const noexcept;
+    const NextSegment& get_next_segment() const;
     FlagData get_flags() const;
     
-    // flags
     bool is_chimeric() const noexcept;
     bool is_marked_all_segments_in_read_aligned() const;
     bool is_marked_multiple_read_template() const;

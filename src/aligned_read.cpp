@@ -112,10 +112,15 @@ const CigarString& AlignedRead::get_cigar_string() const noexcept
     return cigar_string_;
 }
 
-const std::unique_ptr<AlignedRead::NextSegment>& AlignedRead::get_next_segment() const
+bool AlignedRead::has_mate() const noexcept
+{
+    return next_segment_ != nullptr;
+}
+
+const AlignedRead::NextSegment& AlignedRead::get_next_segment() const
 {
     if (is_chimeric()) {
-        return next_segment_;
+        return *next_segment_;
     } else {
         throw std::runtime_error {"Read does not have a next segment"};
     }
@@ -331,9 +336,9 @@ std::ostream& operator<<(std::ostream& os, const AlignedRead& a_read)
     os << static_cast<unsigned>(a_read.get_mapping_quality());
     if (a_read.is_chimeric()) {
         os << '\n';
-        os << a_read.get_next_segment()->get_contig_name() << '\n';
-        os << a_read.get_next_segment()->get_begin() << '\n';
-        os << a_read.get_next_segment()->get_inferred_template_length();
+        os << a_read.get_next_segment().get_contig_name() << '\n';
+        os << a_read.get_next_segment().get_begin() << '\n';
+        os << a_read.get_next_segment().get_inferred_template_length();
     } else {
         os << '\n';
         os << "no other segments";

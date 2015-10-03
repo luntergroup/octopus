@@ -46,13 +46,13 @@ BOOST_AUTO_TEST_CASE(read_transform_test)
     
     BOOST_CHECK(is_back_soft_clipped(a_read.get_cigar_string()));
     
-    ReadTransform transformer {};
-    transformer.register_transform(trim_adapters);
-    transformer.register_transform(trim_soft_clipped);
+    Octopus::ReadTransform transformer {};
+    transformer.register_transform(Octopus::ReadTransforms::trim_adapters());
+    transformer.register_transform(Octopus::ReadTransforms::trim_soft_clipped());
     transformer.transform_reads(some_reads.begin(), some_reads.end());
     
     BOOST_CHECK(std::all_of(a_read.get_qualities().rbegin(), a_read.get_qualities().rbegin() + 13,
-                        [] (auto q) { return q == 0; }));
+                            [] (auto q) { return q == 0; }));
     
     GenomicRegion another_region {"18", 389260, 389361};
     
@@ -63,7 +63,6 @@ BOOST_AUTO_TEST_CASE(read_transform_test)
     //std::cout << read_with_adapter << std::endl;
     
     transformer.transform_reads(some_reads.begin(), some_reads.end());
-    
     
 }
 

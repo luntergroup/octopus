@@ -50,8 +50,8 @@ public:
     bool advances_sequence() const noexcept;
     
 private:
-    SizeType size_;
-    char flag_;
+    const SizeType size_;
+    const char flag_;
 };
 
 using CigarString = std::vector<CigarOperation>;

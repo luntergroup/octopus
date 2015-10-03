@@ -9,84 +9,210 @@
 #ifndef __Octopus__read_filters__
 #define __Octopus__read_filters__
 
-#include <functional>
 #include <algorithm> // std::count_if
 #include <iterator>  // std::prev, std::cbegin, std::cend
 
 #include "aligned_read.hpp"
 #include "cigar_string.hpp"
 
+namespace Octopus { namespace ReadFilters {
+
 // Context-free filters
 
-inline bool is_not_secondary_alignment(const AlignedRead& read)
+struct is_not_secondary_alignment
 {
-    return !read.is_marked_secondary_alignment();
-}
-
-inline bool is_good_mapping_quality(const AlignedRead& read, AlignedRead::QualityType min_mapping_quality)
+    is_not_secondary_alignment() = default;
+    
+    bool operator()(const AlignedRead& read) const
+    {
+        return !read.is_marked_secondary_alignment();
+    }
+};
+    
+struct is_not_supplementary_alignment
 {
-    return read.get_mapping_quality() >= min_mapping_quality;
-}
+    is_not_supplementary_alignment() = default;
+    
+    bool operator()(const AlignedRead& read) const
+    {
+        return !read.is_marked_supplementary_alignment();
+    }
+};
 
-inline bool has_sufficient_good_quality_bases(const AlignedRead& read, AlignedRead::QualityType min_base_quality,
-                                              unsigned min_good_bases)
+struct is_good_mapping_quality
 {
-    const auto& qualities = read.get_qualities();
-    return std::count_if(std::cbegin(qualities), std::cend(qualities),
-                         [min_base_quality] (const auto& qual) { return qual >= min_base_quality; }) >= min_good_bases;
-}
+    using QualityType = AlignedRead::QualityType;
+    
+    is_good_mapping_quality() = default;
+    explicit is_good_mapping_quality(QualityType good_mapping_quality) : good_mapping_quality_ {good_mapping_quality} {}
+    
+    bool operator()(const AlignedRead& read) const
+    {
+        return read.get_mapping_quality() >= good_mapping_quality_;
+    }
+    
+private:
+    const QualityType good_mapping_quality_;
+};
 
-inline bool is_mapped(const AlignedRead& read)
+struct has_good_base_fraction
 {
-    return !read.is_marked_unmapped();
-}
+    using QualityType = AlignedRead::QualityType;
+    
+    has_good_base_fraction() = default;
+    explicit has_good_base_fraction(QualityType good_base_quality, double min_good_base_fraction)
+    : good_base_quality_ {good_base_quality}, min_good_base_fraction_ {min_good_base_fraction} {}
+    
+    bool operator()(const AlignedRead& read) const
+    {
+        const auto& qualities = read.get_qualities();
+        auto num_good_bases = std::count_if(std::cbegin(qualities), std::cend(qualities), [this]
+                                            (auto quality) { return quality >= good_base_quality_; });
+        auto good_base_fraction = static_cast<double>(num_good_bases) / static_cast<double>(read.get_sequence_size());
+        return good_base_fraction >= min_good_base_fraction_;
+    }
+    
+private:
+    const QualityType good_base_quality_;
+    double min_good_base_fraction_;
+};
 
-inline bool is_not_chimeric(const AlignedRead& read)
+struct has_sufficient_good_quality_bases
 {
-    return !read.is_chimeric();
-}
+    using QualityType = AlignedRead::QualityType;
+    
+    has_sufficient_good_quality_bases() = default;
+    explicit has_sufficient_good_quality_bases(QualityType good_base_quality, unsigned min_good_bases)
+    : good_base_quality_ {good_base_quality}, min_good_bases_ {min_good_bases} {}
+    
+    bool operator()(const AlignedRead& read) const
+    {
+        const auto& qualities = read.get_qualities();
+        return std::count_if(std::cbegin(qualities), std::cend(qualities), [this]
+                             (auto quality) { return quality >= good_base_quality_; }) >= min_good_bases_;
+    }
+    
+private:
+    const QualityType good_base_quality_;
+    const unsigned min_good_bases_;
+};
 
-//inline bool is_next_segment_mapped(const AlignedRead& read)
+struct is_mapped
+{
+    is_mapped() = default;
+    
+    bool operator()(const AlignedRead& read) const
+    {
+        return !read.is_marked_unmapped();
+    }
+};
+
+struct is_not_chimeric
+{
+    is_not_chimeric() = default;
+    
+    bool operator()(const AlignedRead& read) const
+    {
+        return !read.is_chimeric();
+    }
+};
+
+//struct is_next_segment_mapped
 //{
-//    return (read.has_mate_pair()) ? read.is_marked_proper_pair() : true;
-//}
+//    is_next_segment_mapped() = default;
+//    
+//    bool operator()(const AlignedRead& read) const
+//    {
+//        return !read.has_mate_pair() || read.is_marked_proper_pair();
+//    }
+//};
 
-inline bool is_not_marked_duplicate(const AlignedRead& read)
+struct is_not_marked_duplicate
 {
-    return !read.is_marked_duplicate();
-}
+    is_not_marked_duplicate() = default;
+    
+    bool operator()(const AlignedRead& read) const
+    {
+        return !read.is_marked_duplicate();
+    }
+};
 
-inline bool is_short(const AlignedRead& read, AlignedRead::SizeType max_length)
+struct is_short
 {
-    return read.get_sequence_size() <= max_length;
-}
+    using SizeType = AlignedRead::SizeType;
+    
+    is_short() = default;
+    explicit is_short(SizeType max_length) : max_length_ {max_length} {}
+    
+    bool operator()(const AlignedRead& read) const
+    {
+        return read.get_sequence_size() <= max_length_;
+    }
+    
+private:
+    const SizeType max_length_;
+};
 
-inline bool is_long(const AlignedRead& read, AlignedRead::SizeType min_length)
+struct is_long
 {
-    return read.get_sequence_size() <= min_length;
-}
+    using SizeType = AlignedRead::SizeType;
+    
+    is_long() = default;
+    explicit is_long(SizeType min_length) : min_length_ {min_length} {}
+    
+    bool operator()(const AlignedRead& read) const
+    {
+        return read.get_mapping_quality() >= min_length_;
+    }
+    
+private:
+    const SizeType min_length_;
+};
 
-inline bool is_not_contaminated(const AlignedRead& read)
+struct is_not_contaminated
 {
-    return (read.is_chimeric()) ? read.get_sequence_size() >= read.get_next_segment()->get_inferred_template_length() : true;
-}
+    is_not_contaminated() = default;
+    
+    bool operator()(const AlignedRead& read) const
+    {
+        return !read.is_chimeric() || read.get_sequence_size() >= read.get_next_segment().get_inferred_template_length();
+    }
+};
 
-inline bool not_marked_qc_fail(const AlignedRead& read)
+struct is_not_marked_qc_fail
 {
-    return !read.is_marked_qc_fail();
-}
+    is_not_marked_qc_fail() = default;
+    
+    bool operator()(const AlignedRead& read) const
+    {
+        return !read.is_marked_qc_fail();
+    }
+};
+
+struct mate_is_mapped
+{
+    mate_is_mapped() = default;
+    
+    bool operator()(const AlignedRead& read) const
+    {
+        return !read.has_mate() || !read.get_next_segment().is_marked_unmapped();
+    }
+};
 
 // Context-based filters
 
-template <typename BidirectionalIterator>
-bool is_not_duplicate(const AlignedRead& read, BidirectionalIterator first_good_read,
-                      BidirectionalIterator previous_good_read)
+struct is_not_duplicate
 {
-    if (first_good_read != previous_good_read) {
-        return !IsDuplicate()(read, *previous_good_read);
-    } else {
-        return true;
+    is_not_duplicate() = default;
+    
+    template <typename Iterator>
+    bool operator()(const AlignedRead& read, Iterator first_good_read, Iterator last_good_read) const
+    {
+        return first_good_read == last_good_read || !IsDuplicate()(read, *last_good_read);
     }
-}
+};
+
+} // namespace ReadFilters
+} // namespace Octopus
 
 #endif /* defined(__Octopus__read_filters__) */

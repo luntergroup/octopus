@@ -27,6 +27,7 @@ inline po::variables_map get_basic_mock_options()
         //"--regions", "2:142376817-142376922",
         //"--regions", "20",
         "--output", test_out_vcf.c_str(),
+        "--no-duplicates",
         nullptr};
     
     int argc = sizeof(argv) / sizeof(char*) - 1;

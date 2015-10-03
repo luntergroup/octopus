@@ -89,10 +89,11 @@ int main(int argc, const char **argv)
     } catch (std::runtime_error& e) {
         cerr << "Error: " << e.what() << endl;
         return EXIT_FAILURE;
-    } catch (...) {
-        cerr << "Error: encountered unknown error. Quiting now" << endl;
-        return EXIT_FAILURE;
     }
+//    catch (...) {
+//        cerr << "Error: encountered unknown error. Quiting now" << endl;
+//        return EXIT_FAILURE;
+//    }
     
     return EXIT_SUCCESS;
 }

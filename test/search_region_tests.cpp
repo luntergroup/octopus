@@ -87,10 +87,8 @@ BOOST_AUTO_TEST_CASE(search_regions_contains_all_variants_in_list_exactly_once_w
     auto reads = a_read_manager.fetch_reads(samples, a_region);
     
     using ReadIterator = std::vector<AlignedRead>::const_iterator;
-    ReadFilter<ReadIterator> a_read_filter {};
-    a_read_filter.register_filter([] (const AlignedRead& the_read) {
-        return is_good_mapping_quality(the_read, 5);
-    });
+    Octopus::ReadFilter<ReadIterator> a_read_filter {};
+    a_read_filter.register_filter(Octopus::ReadFilters::is_good_mapping_quality(5));
     
     auto good_reads = Octopus::filter_reads(std::move(reads), a_read_filter).first;
     
@@ -211,10 +209,8 @@ BOOST_AUTO_TEST_CASE(advance_regions_bounds_are_respected)
     auto reads = a_read_manager.fetch_reads(samples, a_region);
     
     using ReadIterator = std::vector<AlignedRead>::const_iterator;
-    ReadFilter<ReadIterator> a_read_filter {};
-    a_read_filter.register_filter([] (const AlignedRead& the_read) {
-        return is_good_mapping_quality(the_read, 5);
-    });
+    Octopus::ReadFilter<ReadIterator> a_read_filter {};
+    a_read_filter.register_filter(Octopus::ReadFilters::is_good_mapping_quality(5));
     
     auto good_reads = Octopus::filter_reads(std::move(reads), a_read_filter).first;
     
@@ -356,10 +352,8 @@ BOOST_AUTO_TEST_CASE(setting_max_included_to_zero_in_advance_region_results_in_t
     auto reads = a_read_manager.fetch_reads(samples, a_region);
     
     using ReadIterator = std::vector<AlignedRead>::const_iterator;
-    ReadFilter<ReadIterator> a_read_filter {};
-    a_read_filter.register_filter([] (const AlignedRead& the_read) {
-        return is_good_mapping_quality(the_read, 5);
-    });
+    Octopus::ReadFilter<ReadIterator> a_read_filter {};
+    a_read_filter.register_filter(Octopus::ReadFilters::is_good_mapping_quality(5));
     
     auto good_reads = Octopus::filter_reads(std::move(reads), a_read_filter).first;
     

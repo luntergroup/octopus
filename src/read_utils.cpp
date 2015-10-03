@@ -152,7 +152,7 @@ AlignedRead find_next_segment(const AlignedRead& read, const MappableMap<Genomic
         throw std::runtime_error {"cannot find next segment as read is not chimeric"};
     }
     
-    auto segment_region = read.get_next_segment()->get_inferred_region();
+    auto segment_region = read.get_next_segment().get_inferred_region();
     
     return read;
 }

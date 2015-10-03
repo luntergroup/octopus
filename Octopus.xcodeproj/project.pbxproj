@@ -563,6 +563,16 @@
 				D463C1A11B0A160000739A66 /* allele.cpp */,
 				CAA4DC621A88238C00DD3E9A /* variant.hpp */,
 				D463C1A31B0A174B00739A66 /* variant.cpp */,
+				CAE3E2BF1AA3D91C00C01B2C /* variant_utils.hpp */,
+				CAE3E2BE1AA3D91C00C01B2C /* variant_utils.cpp */,
+				CAB0DFDB1BBFF6D1001D2F99 /* generators */,
+			);
+			name = variants;
+			sourceTree = "<group>";
+		};
+		CAB0DFDB1BBFF6D1001D2F99 /* generators */ = {
+			isa = PBXGroup;
+			children = (
 				CAF23F6D1BA17B47006B673F /* candidate_generators.hpp */,
 				CAE3E2A41AA24C5500C01B2C /* i_candidate_variant_generator.hpp */,
 				CAE3E2A21AA1DBE000C01B2C /* candidate_variant_generator.hpp */,
@@ -575,10 +585,8 @@
 				CAE3E2B11AA3342B00C01B2C /* assembler_candidate_variant_generator.cpp */,
 				CA2827C01B2A4CD0007712D4 /* online_candidate_variant_generator.hpp */,
 				CA2827BF1B2A4CD0007712D4 /* online_candidate_variant_generator.cpp */,
-				CAE3E2BF1AA3D91C00C01B2C /* variant_utils.hpp */,
-				CAE3E2BE1AA3D91C00C01B2C /* variant_utils.cpp */,
 			);
-			name = variants;
+			name = generators;
 			sourceTree = "<group>";
 		};
 		CABA37791A8F668E00BBE598 /* reference */ = {

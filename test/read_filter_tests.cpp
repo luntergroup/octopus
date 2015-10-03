@@ -47,27 +47,21 @@ BOOST_AUTO_TEST_CASE(read_filter_test)
     
     using ReadIterator = std::vector<AlignedRead>::const_iterator;
     
-    ReadFilter<ReadIterator> a_read_filter {};
+    Octopus::ReadFilter<ReadIterator> read_filter {};
     
-    a_read_filter.register_filter(is_not_secondary_alignment);
-    a_read_filter.register_filter([] (const AlignedRead& the_read) {
-        return is_good_mapping_quality(the_read, 20);
-    });
-    a_read_filter.register_filter([] (const AlignedRead& the_read) {
-        return has_sufficient_good_quality_bases(the_read, 20, 10);
-    });
-    
-    // context-based filters
-    a_read_filter.register_filter(is_not_duplicate<ReadIterator>);
+    read_filter.register_filter(Octopus::ReadFilters::is_not_secondary_alignment());
+    read_filter.register_filter(Octopus::ReadFilters::is_good_mapping_quality(20));
+    read_filter.register_filter(Octopus::ReadFilters::has_sufficient_good_quality_bases(20, 10));
+    read_filter.register_filter(Octopus::ReadFilters::is_not_duplicate());
     
     std::vector<AlignedRead> good_reads {}, bad_reads {};
     good_reads.reserve(some_reads.size());
     bad_reads.reserve(some_reads.size());
     
-    a_read_filter.filter_reads(std::make_move_iterator(some_reads.begin()),
-                               std::make_move_iterator(some_reads.end()),
-                               ContextBackInserter(good_reads),
-                               ContextBackInserter(bad_reads));
+    read_filter.filter_reads(std::make_move_iterator(some_reads.begin()),
+                             std::make_move_iterator(some_reads.end()),
+                             ContextBackInserter(good_reads),
+                             ContextBackInserter(bad_reads));
     
     // TODO: check these numbers are actually correct!
     BOOST_CHECK(good_reads.size() == 649);

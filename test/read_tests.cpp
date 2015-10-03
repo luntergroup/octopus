@@ -183,17 +183,17 @@ BOOST_AUTO_TEST_CASE(aligned_read_copies_and_moves_correctly)
         AlignedRead::NextSegment::FlagData {}};
     
     BOOST_CHECK(a_read.is_chimeric());
-    BOOST_CHECK(a_read.get_next_segment()->get_inferred_template_length() == 30);
+    BOOST_CHECK(a_read.get_next_segment().get_inferred_template_length() == 30);
     
     auto a_moved_read = std::move(a_read);
     
     BOOST_CHECK(a_moved_read.is_chimeric());
-    BOOST_CHECK(a_moved_read.get_next_segment()->get_inferred_template_length() == 30);
+    BOOST_CHECK(a_moved_read.get_next_segment().get_inferred_template_length() == 30);
     
     auto a_copied_read = a_moved_read;
     
     BOOST_CHECK(a_copied_read.is_chimeric());
-    BOOST_CHECK(a_copied_read.get_next_segment()->get_inferred_template_length() == 30);
+    BOOST_CHECK(a_copied_read.get_next_segment().get_inferred_template_length() == 30);
     BOOST_CHECK(a_moved_read == a_copied_read);
 }
 

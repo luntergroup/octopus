@@ -101,7 +101,7 @@ namespace Octopus
         
         //auto max_threads  = Octopus::get_num_threads(options);
         
-        auto memory_quota = Options::get_memory_quota(options);
+        //auto memory_quota = Options::get_memory_quota(options);
         
         auto reference           = Options::get_reference(options);
         auto read_manager        = Options::get_read_manager(options);
@@ -110,6 +110,9 @@ namespace Octopus
         auto read_transform      = Options::get_read_transformer(options);
         auto candidate_generator = Options::get_candidate_generator(options, reference);
         auto vcf                 = Options::get_output_vcf(options);
+        
+        //std::cout << "there are " << read_filter.num_filters() << " read filters" << std::endl;
+        //std::cout << "there are " << read_transform.num_transforms() << " read transforms" << std::endl;
         
         const auto samples = get_samples(options, read_manager);
         
