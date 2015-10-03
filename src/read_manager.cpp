@@ -10,7 +10,7 @@
 
 #include <memory> // std::make_unique
 #include <iterator>  // std::make_move_iterator, std::cbegin etc
-#include <algorithm> // std::copy_if, std::min, std::nth_element, std::partition, std::for_each
+#include <algorithm> // std::sort, std::copy_if, std::min, std::nth_element, std::partition, std::for_each
 #include <utility>   // std::move
 #include <boost/filesystem/operations.hpp>
 
@@ -57,6 +57,8 @@ std::vector<ReadManager::SampleIdType> ReadManager::get_samples() const
     for (const auto& pair : reader_paths_containing_sample_) {
         result.emplace_back(pair.first);
     }
+    
+    std::sort(std::begin(result), std::end(result)); // just for consistency
     
     return result;
 }

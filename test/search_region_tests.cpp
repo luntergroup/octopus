@@ -92,7 +92,7 @@ BOOST_AUTO_TEST_CASE(search_regions_contains_all_variants_in_list_exactly_once_w
         return is_good_mapping_quality(the_read, 5);
     });
     
-    auto good_reads = filter_reads(std::move(reads), a_read_filter).first;
+    auto good_reads = Octopus::filter_reads(std::move(reads), a_read_filter).first;
     
     CandidateVariantGenerator candidate_generator {};
     candidate_generator.register_generator(std::make_unique<AlignmentCandidateVariantGenerator>(human, 0));
@@ -216,7 +216,7 @@ BOOST_AUTO_TEST_CASE(advance_regions_bounds_are_respected)
         return is_good_mapping_quality(the_read, 5);
     });
     
-    auto good_reads = filter_reads(std::move(reads), a_read_filter).first;
+    auto good_reads = Octopus::filter_reads(std::move(reads), a_read_filter).first;
     
     CandidateVariantGenerator candidate_generator {};
     candidate_generator.register_generator(std::make_unique<AlignmentCandidateVariantGenerator>(human, 0));
@@ -361,7 +361,7 @@ BOOST_AUTO_TEST_CASE(setting_max_included_to_zero_in_advance_region_results_in_t
         return is_good_mapping_quality(the_read, 5);
     });
     
-    auto good_reads = filter_reads(std::move(reads), a_read_filter).first;
+    auto good_reads = Octopus::filter_reads(std::move(reads), a_read_filter).first;
     
     CandidateVariantGenerator candidate_generator {};
     candidate_generator.register_generator(std::make_unique<AlignmentCandidateVariantGenerator>(human, 0));

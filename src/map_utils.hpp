@@ -181,8 +181,7 @@ value_sorted_keys(const MapType& map)
     std::transform(std::cbegin(map), std::cend(map), std::back_inserter(pairs),
                    [] (const auto& p) { return std::make_pair(p.second, p.first); });
     
-    std::sort(pairs.begin(), pairs.end(),
-              [] (const auto& lhs, const auto& rhs) { return lhs.first > rhs.first; });
+    std::sort(pairs.begin(), pairs.end(), [] (const auto& lhs, const auto& rhs) { return lhs.first > rhs.first; });
     
     std::vector<typename MapType::key_type> result {};
     result.reserve(pairs.size());

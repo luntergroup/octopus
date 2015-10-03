@@ -71,7 +71,7 @@ namespace Octopus
     }
     
     template <typename K, typename V>
-    std::vector<V> get_values(const std::unordered_map<K, V>& map)
+    static std::vector<V> get_values(const std::unordered_map<K, V>& map)
     {
         std::vector<V> result(map.size());
         std::transform(std::cbegin(map), std::cend(map), std::begin(result),
@@ -79,14 +79,14 @@ namespace Octopus
         return result;
     }
     
-    void normalise(Population::SampleGenotypeProbabilities& unnormalised_log_posteriors)
+    static void normalise(Population::SampleGenotypeProbabilities& unnormalised_log_posteriors)
     {
         auto log_posteriors = get_values(unnormalised_log_posteriors);
-        const auto norm = Maths::log_sum_exp<double>(std::cbegin(log_posteriors), std::cend(log_posteriors));
+        const auto norm = Maths::log_sum_exp<double>(log_posteriors);
         for (auto& p : unnormalised_log_posteriors) p.second -= norm;
     }
     
-    void exponentiate(Population::SampleGenotypeProbabilities& log_posteriors)
+    static void exponentiate(Population::SampleGenotypeProbabilities& log_posteriors)
     {
         for (auto& p : log_posteriors) p.second = std::exp(p.second);
     }

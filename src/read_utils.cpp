@@ -13,6 +13,9 @@
 #include <list>
 #include <stdexcept>
 
+namespace Octopus
+{
+
 AlignedRead find_next_segment(const AlignedRead& read, const MappableMap<GenomicRegion::StringType, AlignedRead>& reads)
 {
     if (!read.is_chimeric()) {
@@ -111,13 +114,38 @@ std::vector<AlignedRead> sample(const MappableSet<AlignedRead>& reads, const Gen
     return result;
 }
 
-MappableSet<AlignedRead> downsample(const MappableSet<AlignedRead>& reads, unsigned maximum_coverage,
-                                    unsigned minimum_downsample_coverage)
+template <typename T>
+std::vector<GenomicRegion>
+find_good_coverage_regions_containing_high_coverage_positions(const T& reads, const GenomicRegion& region,
+                                                              unsigned max_coverage, unsigned min_downsample_coverage)
+{
+    auto above_max_coverage_regions = find_high_coverage_regions(reads, region, max_coverage);
+    
+    std::vector<GenomicRegion> result {};
+    
+    if (above_max_coverage_regions.empty()) return result;
+    
+    result.reserve(above_max_coverage_regions.size());
+    
+    auto above_min_coverage_regions = find_high_coverage_regions(reads, region, min_downsample_coverage);
+    
+    std::copy_if(std::cbegin(above_min_coverage_regions), std::cend(above_min_coverage_regions), std::back_inserter(result),
+                 [&above_max_coverage_regions] (const auto& r) {
+                     return has_contained(std::cbegin(above_max_coverage_regions), std::cend(above_max_coverage_regions), r);
+                 });
+    
+    result.shrink_to_fit();
+    
+    return result;
+}
+
+MappableSet<AlignedRead> downsample(const MappableSet<AlignedRead>& reads, unsigned max_coverage,
+                                    unsigned min_downsample_coverage)
 {
     auto region = get_encompassing_region(reads.cbegin(), reads.cend());
     
-    auto regions_to_sample = find_good_coverage_regions_containing_high_coverage_positions(reads, region, maximum_coverage,
-                                                                                           minimum_downsample_coverage);
+    auto regions_to_sample = find_good_coverage_regions_containing_high_coverage_positions(reads, region, max_coverage,
+                                                                                           min_downsample_coverage);
     
     MappableSet<AlignedRead> result {};
     result.reserve(reads.size());
@@ -131,7 +159,7 @@ MappableSet<AlignedRead> downsample(const MappableSet<AlignedRead>& reads, unsig
         
         result.insert(last_sampled, contained.begin().base());
         
-        auto samples = sample(reads, region, maximum_coverage, minimum_downsample_coverage);
+        auto samples = sample(reads, region, max_coverage, min_downsample_coverage);
         
         result.insert(std::make_move_iterator(std::begin(samples)), std::make_move_iterator(std::end(samples)));
         
@@ -144,3 +172,5 @@ MappableSet<AlignedRead> downsample(const MappableSet<AlignedRead>& reads, unsig
     
     return result;
 }
+
+} // namespace Octopus

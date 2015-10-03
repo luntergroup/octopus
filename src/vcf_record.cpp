@@ -87,7 +87,7 @@ bool VcfRecord::has_format(const KeyType& key) const noexcept
 
 unsigned VcfRecord::format_cardinality(const KeyType& key) const noexcept
 {
-    return (has_format(key)) ? static_cast<unsigned>(samples_.cbegin()->second.at(key).size()) : 0;
+    return (has_format(key)) ? static_cast<unsigned>(std::cbegin(samples_)->second.at(key).size()) : 0;
 }
 
 const std::vector<VcfRecord::KeyType>& VcfRecord::get_format() const noexcept
@@ -108,7 +108,7 @@ bool VcfRecord::has_genotypes() const noexcept
 unsigned VcfRecord::sample_ploidy() const noexcept
 {
     // all samples must have the same ploidy
-    return (has_genotypes()) ? static_cast<unsigned>(genotypes_.cbegin()->second.first.size()) : 0;
+    return (has_genotypes()) ? static_cast<unsigned>(std::cbegin(genotypes_)->second.first.size()) : 0;
 }
 
 bool VcfRecord::is_sample_phased(const SampleIdType& sample) const

@@ -12,8 +12,8 @@
 #include <thread>
 #include <future>
 #include <memory>
-#include <algorithm>
-#include <cstddef> // size_t
+#include <algorithm> // std::transform, std::find
+#include <cstddef>   // size_t
 #include <stdexcept>
 
 #include "common.hpp"
@@ -111,7 +111,7 @@ namespace Octopus
         auto candidate_generator = Options::get_candidate_generator(options, reference);
         auto vcf                 = Options::get_output_vcf(options);
         
-        auto samples = get_samples(options, read_manager);
+        const auto samples = get_samples(options, read_manager);
         
         cout << "writing results to " << vcf.path().string() << endl;
         
@@ -119,8 +119,10 @@ namespace Octopus
         
         auto vcf_header_builder = get_default_header_builder().set_samples(samples);
         for (const auto& contig : contigs) vcf_header_builder.add_contig(contig);
+        vcf_header_builder.add_basic_field("reference", reference.get_name());
+        vcf_header_builder.add_structured_field("Octopus", {{"some", "option"}});
         
-        auto vcf_header = vcf_header_builder.build_once();
+        const auto vcf_header = vcf_header_builder.build_once();
         
         vcf.write(vcf_header);
         

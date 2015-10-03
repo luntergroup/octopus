@@ -243,6 +243,8 @@ bool contains(const Haplotype& lhs, const Haplotype& rhs)
 
 Haplotype splice(const Haplotype& haplotype, const GenomicRegion& region)
 {
+    if (get_region(haplotype) == region) return haplotype;
+    
     Haplotype result {*haplotype.reference_, region};
     
     auto contained = bases(contained_range(std::cbegin(haplotype.explicit_alleles_),

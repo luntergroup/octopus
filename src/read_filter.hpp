@@ -99,7 +99,7 @@ namespace detail
     {
         return (first != last) ? std::prev(last) : last;
     }
-} // end namespace detail
+} // namespace detail
 
 template <typename BidirectionalIterator>
 template <typename InputIterator, typename OutputIterator1, typename OutputIterator2>

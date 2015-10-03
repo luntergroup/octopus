@@ -11,8 +11,8 @@
 #include <vector>
 #include <unordered_map>
 #include <stdexcept>
-#include <algorithm> // std::transform, std::for_each
-#include <iterator>  // std::cbegin, std::cend, std::next
+#include <algorithm> // std::transform, std::for_each, std::find
+#include <iterator>  // std::cbegin, std::cend, std::next, std::distance, std::back_inserter
 #include <utility>   // std::move
 #include <cstring>   // std::strcpy
 #include <cstdint>
@@ -411,23 +411,20 @@ auto get_info(bcf_hdr_t* header, bcf1_t* record)
         switch (bcf_hdr_id2type(header, BCF_HL_INFO, record->d.info[i].key)) {
             case BCF_HT_INT:
                 if (bcf_get_info_int32(header, record, key, &intinfo, &ninfo) > 0) {
-                    std::transform(intinfo, intinfo + ninfo, std::back_inserter(values), [] (auto v) {
-                        return std::to_string(v);
-                    });
+                    std::transform(intinfo, intinfo + ninfo, std::back_inserter(values),
+                                   [] (auto v) { return std::to_string(v); });
                 }
                 break;
             case BCF_HT_REAL:
                 if (bcf_get_info_float(header, record, key, &floatinfo, &ninfo) > 0) {
-                    std::transform(floatinfo, floatinfo + ninfo, std::back_inserter(values), [] (auto v) {
-                        return std::to_string(v);
-                    });
+                    std::transform(floatinfo, floatinfo + ninfo, std::back_inserter(values),
+                                   [] (auto v) { return std::to_string(v); });
                 }
                 break;
             case BCF_HT_STR:
                 if (bcf_get_info_string(header, record, key, &stringinfo, &ninfo) > 0) {
-                    std::for_each(stringinfo, stringinfo + ninfo, [&values] (const char* str) {
-                        values.emplace_back(str);
-                    });
+                    std::for_each(stringinfo, stringinfo + ninfo,
+                                  [&values] (const char* str) { values.emplace_back(str); });
                 }
                 break;
             case BCF_HT_FLAG:
@@ -456,18 +453,16 @@ void set_info(bcf_hdr_t* header, bcf1_t* dest, const VcfRecord& source)
             case BCF_HT_INT:
             {
                 auto vals = (int*) malloc(sizeof(int) * num_values);
-                std::transform(std::cbegin(values), std::cend(values), vals, [] (const auto& v) {
-                    return std::stoi(v);
-                });
+                std::transform(std::cbegin(values), std::cend(values), vals,
+                               [] (const auto& v) { return std::stoi(v); });
                 bcf_update_info_int32(header, dest, key.c_str(), vals, num_values);
                 break;
             }
             case BCF_HT_REAL:
             {
                 auto vals = (float*) malloc(sizeof(float) * num_values);
-                std::transform(std::cbegin(values), std::cend(values), vals, [] (const auto& v) {
-                    return std::stof(v);
-                });
+                std::transform(std::cbegin(values), std::cend(values), vals,
+                               [] (const auto& v) { return std::stof(v); });
                 bcf_update_info_float(header, dest, key.c_str(), vals, num_values);
                 break;
             }
@@ -550,23 +545,20 @@ auto get_samples(bcf_hdr_t* header, bcf1_t* record, const std::vector<VcfRecord:
         switch (bcf_hdr_id2type(header, BCF_HL_FMT, bcf_hdr_id2int(header, BCF_DT_ID, key.c_str()))) {
             case BCF_HT_INT:
                 if (bcf_get_format_int32(header, record, key.c_str(), &intformat, &nformat) > 0) {
-                    std::transform(intformat, intformat + record->n_sample, std::back_inserter(values), [] (auto v) {
-                        return std::to_string(v);
-                    });
+                    std::transform(intformat, intformat + record->n_sample, std::back_inserter(values),
+                                   [] (auto v) { return std::to_string(v); });
                 }
                 break;
             case BCF_HT_REAL:
                 if (bcf_get_format_float(header, record, key.c_str(), &floatformat, &nformat) > 0) {
-                    std::transform(floatformat, floatformat + record->n_sample, std::back_inserter(values), [] (auto v) {
-                        return std::to_string(v);
-                    });
+                    std::transform(floatformat, floatformat + record->n_sample, std::back_inserter(values),
+                                   [] (auto v) { return std::to_string(v); });
                 }
                 break;
             case BCF_HT_STR:
                 if (bcf_get_format_string(header, record, key.c_str(), &stringformat, &nformat) > 0) {
-                    std::for_each(stringformat, stringformat + record->n_sample, [&values] (const char* str) {
-                        values.emplace_back(str);
-                    });
+                    std::for_each(stringformat, stringformat + record->n_sample,
+                                  [&values] (const char* str) { values.emplace_back(str); });
                 }
                 break;
         }

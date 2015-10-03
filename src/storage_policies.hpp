@@ -49,6 +49,6 @@ namespace policies {
         }
     };
     
-} // end namespace policies
+} // namespace policies
 
 #endif

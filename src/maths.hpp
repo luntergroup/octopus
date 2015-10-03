@@ -11,7 +11,7 @@
 
 #include <vector>
 #include <cstddef>     // size_t
-#include <cmath>       // std::exp, std::log, std::sqrt
+#include <cmath>       // std::exp, std::log, std::sqrt, std::pow
 #include <numeric>     // std::accumulate, std::iota, std::inner_product
 #include <algorithm>   // std::max, std::max_element, std::transform, std::all_of
 #include <type_traits> // std::enable_if, std::is_integral
@@ -45,10 +45,26 @@ bool almost_one(T x, int ulp = 1)
     return almost_equal(x, T {1}, ulp);
 }
 
+template <typename RealType>
+inline constexpr RealType exp_maclaurin(RealType x) {
+    return (6 + x * (6 + x * (3 + x))) * 0.16666666;
+}
+
+template <typename RealType>
+inline constexpr RealType mercator(RealType x) {
+    return x - x * x / 2 + x * x * x / 3;
+}
+
 template <typename InputIterator>
 double mean(InputIterator first, InputIterator last)
 {
     return std::accumulate(first, last, 0.0) / std::distance(first, last);
+}
+
+template <typename Container>
+double mean(const Container& values)
+{
+    return mean(std::cbegin(values), std::cend(values));
 }
 
 template <typename InputIterator>
@@ -61,14 +77,22 @@ double stdev(InputIterator first, InputIterator last)
     return std::sqrt(std::inner_product(diff.begin(), diff.end(), diff.begin(), 0.0) / n);
 }
 
-template <typename RealType>
-inline constexpr RealType exp_maclaurin(RealType x) {
-    return (6 + x * (6 + x * (3 + x))) * 0.16666666;
+template <typename Container>
+double stdev(const Container& values)
+{
+    return stdev(std::cbegin(values), std::cend(values));
 }
 
-template <typename RealType>
-inline constexpr RealType mercator(RealType x) {
-    return x - x * x / 2 + x * x * x / 3;
+template <typename RealType, typename InputIterator>
+RealType rmq(InputIterator first, InputIterator last)
+{
+    return std::sqrt((std::inner_product(first, last, first, RealType {})) / static_cast<RealType>(std::distance(first, last)));
+}
+
+template <typename RealType, typename Container>
+RealType rmq(const Container& values)
+{
+    return rmq<RealType>(std::cbegin(values), std::cend(values));
 }
 
 template <typename RealType>
@@ -115,6 +139,12 @@ inline RealType log_sum_exp(Iterator first, Iterator last)
     return max + std::log(exp_sum);
 }
 
+template <typename RealType, typename Container>
+RealType log_sum_exp(const Container& values)
+{
+    return log_sum_exp<RealType>(std::cbegin(values), std::cend(values));
+}
+
 template <typename RealType, typename IntegerType,
           typename = typename std::enable_if<std::is_floating_point<RealType>::value>::type,
           typename = typename std::enable_if<std::is_integral<IntegerType>::value>::type>
@@ -145,12 +175,24 @@ inline RealType log_beta(InputIterator first, InputIterator last)
             - boost::math::lgamma(std::accumulate(first, last, RealType {}));
 }
 
+template <typename RealType, typename Container>
+inline RealType log_beta(const Container& values)
+{
+    return log_beta<RealType>(std::cbegin(values), std::cend(values));
+}
+
 template <typename RealType, typename InputIterator1, typename InputIterator2>
 inline RealType log_dirichlet(InputIterator1 firstalpha, InputIterator1 lastalpha, InputIterator2 firstpi)
 {
     return std::inner_product(firstalpha, lastalpha, firstpi, RealType {}, std::plus<RealType>(),
                               [] (auto a, auto p) { return (a - 1) * std::log(p); })
             - log_beta<RealType>(firstalpha, lastalpha);
+}
+
+template <typename RealType, typename Container1, typename Container2>
+inline RealType log_dirichlet(const Container1& alpha, const Container2& pi)
+{
+    return log_dirichlet<RealType>(std::cbegin(alpha), std::cend(alpha), std::cbegin(pi));
 }
 
 template <typename RealType, typename IntegerType>
@@ -183,6 +225,12 @@ template <typename IntegerType, typename RealType, typename Iterator>
 inline IntegerType multinomial_coefficient(Iterator first, Iterator last)
 {
     return static_cast<IntegerType>(std::exp(log_multinomial_coefficient<RealType>(first, last)));
+}
+
+template <typename IntegerType, typename RealType, typename Container>
+inline IntegerType multinomial_coefficient(const Container& values)
+{
+    return multinomial_coefficient<IntegerType, RealType>(std::cbegin(values), std::cend(values));
 }
 
 template <typename IntegerType, typename RealType>

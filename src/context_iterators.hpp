@@ -77,6 +77,6 @@ namespace Octopus
     {
         return ContextInsertIterator<Container>(x);
     }
-} // end namespace Octopus
+} // namespace Octopus
 
 #endif

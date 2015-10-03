@@ -23,6 +23,8 @@
 #include "contig_region.hpp"
 #include "tandem.hpp"
 
+namespace Octopus {
+
 namespace detail
 {
     static constexpr std::array<char, 4> DnaBases {'A', 'C', 'G', 'T'};
@@ -49,7 +51,7 @@ namespace detail
     
     static constexpr std::array<char, 11> AmbiguousCodes {'N', 'R', 'Y', 'K', 'M', 'S', 'W', 'B', 'D', 'H', 'V'};
     
-} // end namespace detail
+} // namespace detail
 
 template <typename SequenceType>
 bool has_ns(const SequenceType& sequence)
@@ -256,5 +258,7 @@ double gc_bias(const SequenceType& sequence)
                                   [] (char base) { return base == 'G' || base == 'C'; });
     return static_cast<double>(gc_count) / sequence.length();
 }
+
+} // namespace Octopus
 
 #endif /* defined(__Octopus__sequence_utils__) */

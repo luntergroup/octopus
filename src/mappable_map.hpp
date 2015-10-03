@@ -90,8 +90,8 @@ count_contained(const MappableMap<KeyType, MappableType1>& mappables, const Mapp
 }
 
 template <typename KeyType, typename MappableType1, typename MappableType2, typename MappableType3>
-bool
-has_shared(const MappableMap<KeyType, MappableType1>& mappables, const MappableType2& mappable1, const MappableType3& mappable2)
+bool has_shared(const MappableMap<KeyType, MappableType1>& mappables,
+                const MappableType2& mappable1, const MappableType3& mappable2)
 {
     return std::any_of(std::cbegin(mappables), std::cend(mappables),
                        [&mappable1, &mappable2] (const auto& p) {
@@ -101,7 +101,8 @@ has_shared(const MappableMap<KeyType, MappableType1>& mappables, const MappableT
 
 template <typename KeyType, typename MappableType1, typename MappableType2, typename MappableType3>
 typename MappableSet<MappableType1>::size_type
-count_shared(const MappableMap<KeyType, MappableType1>& mappables, const MappableType2& mappable1, const MappableType3& mappable2)
+count_shared(const MappableMap<KeyType, MappableType1>& mappables, const MappableType2& mappable1,
+             const MappableType3& mappable2)
 {
     using SizeType = typename MappableSet<MappableType1>::size_type;
     return std::accumulate(std::cbegin(mappables), std::cend(mappables), SizeType {},
@@ -112,8 +113,8 @@ count_shared(const MappableMap<KeyType, MappableType1>& mappables, const Mappabl
 
 template <typename ForwardIterator, typename KeyType, typename MappableType1, typename MappableType2>
 ForwardIterator
-find_first_shared(const MappableMap<KeyType, MappableType1>& mappables, ForwardIterator first, ForwardIterator last,
-                  const MappableType2& mappable)
+find_first_shared(const MappableMap<KeyType, MappableType1>& mappables, ForwardIterator first,
+                  ForwardIterator last, const MappableType2& mappable)
 {
     if (mappables.empty()) return last;
     

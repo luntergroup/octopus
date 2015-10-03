@@ -38,6 +38,6 @@ namespace Octopus
         boost::iostreams::copy(stream, decompressed);
         return decompressed.str();
     }
-} // end namespace Octopus
+} // namespace Octopus
 
 #endif
