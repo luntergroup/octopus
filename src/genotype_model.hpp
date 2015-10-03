@@ -52,7 +52,7 @@ namespace Octopus
                 r += num_occurences * std::log(haplotype_frequencies.at(haplotype));
             }
             
-            return Maths::log_multinomial_coefficient<double>(occurences.cbegin(), occurences.cend()) + r;
+            return Maths::log_multinomial_coefficient<double>(occurences) + r;
         }
         
         inline HaplotypeFrequencies init_haplotype_frequencies(const std::vector<Haplotype>& haplotypes)

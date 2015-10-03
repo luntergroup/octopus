@@ -11,7 +11,7 @@
 
 #include <vector>
 #include <unordered_map>
-#include <iterator>  // std::begin, std::end, std::make_move_iterator
+#include <iterator>  // std::begin, std::end, std::make_move_iterator, std::back_inserter, std::distance
 #include <utility>   // std::move
 #include <algorithm> // std::min_element, std::max_element, std::transform, std::for_each, std::min,
                      // std::find_if, std::find_if_not, std::copy_if, std::any_of, std::count_if
@@ -26,14 +26,8 @@
 #include "mappable_set.hpp"
 #include "mappable_map.hpp"
 
-#include <iostream> // TEST
-
 namespace Octopus
 {
-
-AlignedRead find_next_segment(const AlignedRead& read, const MappableMap<GenomicRegion::StringType, AlignedRead>& reads);
-
-MappableSet<AlignedRead> find_chimeras(const AlignedRead& read, const MappableSet<AlignedRead>& reads);
 
 namespace detail {
     template <typename Container>
@@ -150,35 +144,37 @@ filter_reads(std::unordered_map<T, Container>&& reads, ReadFilter& read_filter)
 template <typename ReadMap>
 void transform_reads(ReadMap& reads, ReadTransform& transformer)
 {
-    for (auto& p : reads) {
-        transformer.transform_reads(std::begin(p.second), std::end(p.second));
-    }
+    for (auto& p : reads) transformer.transform_reads(std::begin(p.second), std::end(p.second));
 }
 
 template <typename InputIterator>
-std::vector<unsigned> positional_coverage(InputIterator first, InputIterator last, const GenomicRegion& a_region)
+std::vector<unsigned> positional_coverage(InputIterator first, InputIterator last, const GenomicRegion& region)
 {
-    auto num_positions = size(a_region);
+    auto num_positions = size(region);
     
     std::vector<unsigned> result(num_positions, 0);
     
-    auto first_position = get_begin(a_region);
+    auto first_position = get_begin(region);
     
     std::for_each(first, last, [&result, first_position, num_positions] (const auto& read) {
         auto first = std::next(std::begin(result), (get_begin(read) <= first_position) ? 0 : get_begin(read) - first_position);
         auto last  = std::next(std::begin(result), std::min(get_end(read) - first_position, num_positions));
-        std::transform(first, last, first, [] (unsigned count) { return count + 1; });
+        std::transform(first, last, first, [] (auto count) { return count + 1; });
     });
     
     return result;
 }
 
-std::vector<unsigned> positional_coverage(const MappableSet<AlignedRead>& reads, const GenomicRegion& region);
+inline std::vector<unsigned> positional_coverage(const MappableSet<AlignedRead>& reads, const GenomicRegion& region)
+{
+    auto overlapped = reads.overlap_range(region);
+    return positional_coverage(overlapped.begin(), overlapped.end(), region);
+}
 
 template <typename T>
 std::vector<unsigned> positional_coverage(const T& reads, const GenomicRegion& region)
 {
-    auto overlapped = overlap_range(reads.cbegin(), reads.cend(), region);
+    auto overlapped = overlap_range(std::cbegin(reads), std::cend(reads), region);
     return positional_coverage(overlapped.begin(), overlapped.end(), region);
 }
 
@@ -799,7 +795,7 @@ std::unordered_map<AlignedRead, unsigned> get_max_coverages_in_read_regions(cons
 
 template <typename T>
 std::vector<GenomicRegion>
-find_high_coverage_regions(const T& reads, const GenomicRegion& region, unsigned max_coverage)
+find_high_coverage_regions(const T& reads, const GenomicRegion& region, const unsigned max_coverage)
 {
     using SizeType = GenomicRegion::SizeType;
     
@@ -840,7 +836,7 @@ find_high_coverage_regions(const T& reads, const GenomicRegion& region, unsigned
 
 template <typename ReadMap>
 std::unordered_map<typename ReadMap::key_type, std::vector<GenomicRegion>>
-find_high_coverage_regions(const ReadMap& reads, const GenomicRegion& region, unsigned max_coverage)
+find_high_coverage_regions(const ReadMap& reads, const GenomicRegion& region, const unsigned max_coverage)
 {
     std::unordered_map<typename ReadMap::key_type, std::vector<GenomicRegion>> result {};
     result.reserve(reads.size());
@@ -853,11 +849,11 @@ find_high_coverage_regions(const ReadMap& reads, const GenomicRegion& region, un
 }
 
 MappableSet<AlignedRead>
-downsample(const MappableSet<AlignedRead>& reads, unsigned max_coverage, unsigned min_downsample_coverage);
+downsample(const MappableSet<AlignedRead>& reads, const unsigned max_coverage, const unsigned min_downsample_coverage);
 
 template <typename T>
 MappableMap<T, AlignedRead>
-downsample(const MappableMap<T, AlignedRead>& reads, unsigned max_coverage, unsigned min_downsample_coverage)
+downsample(const MappableMap<T, AlignedRead>& reads, const unsigned max_coverage, const unsigned min_downsample_coverage)
 {
     MappableMap<T, AlignedRead> result {};
     result.reserve(reads.size());
@@ -868,6 +864,12 @@ downsample(const MappableMap<T, AlignedRead>& reads, unsigned max_coverage, unsi
     
     return result;
 }
+
+// TODO
+AlignedRead find_next_segment(const AlignedRead& read, const MappableMap<GenomicRegion::StringType, AlignedRead>& reads);
+    
+// TODO
+MappableSet<AlignedRead> find_chimeras(const AlignedRead& read, const MappableSet<AlignedRead>& reads);
 
 } // namespace Octopus
 

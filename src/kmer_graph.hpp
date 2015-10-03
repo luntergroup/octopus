@@ -27,6 +27,8 @@
 
 #include <iostream>
 
+namespace Octopus {
+
 template <typename ColourType, typename StringStoragePolicy>
 class KmerGraph : StringStoragePolicy
 {
@@ -355,5 +357,7 @@ void KmerGraph<C, T>::print_kmers() const
     }
     std::cout << std::endl;
 }
+
+} // end namespace Octopus
 
 #endif

@@ -11,14 +11,13 @@
 
 #include <vector>
 #include <cstddef>     // size_t
-#include <cmath>       // std::exp, std::log, std::sqrt, std::pow
+#include <cmath>       // std::abs, std::exp, std::log, std::sqrt, std::pow
 #include <numeric>     // std::accumulate, std::iota, std::inner_product
 #include <algorithm>   // std::max, std::max_element, std::transform, std::all_of
-#include <type_traits> // std::enable_if, std::is_integral
+#include <type_traits> // std::enable_if_t, std::is_integral
 #include <iterator>    // std::begin, std::end, std::cbegin, std::cend, std::distance
 #include <functional>  // std::plus, std::minus
-
-#include <iostream> // TEST
+#include <limits>      // std::numeric_limits
 
 #include <boost/math/special_functions/gamma.hpp>
 #include <boost/math/special_functions/factorials.hpp>
@@ -28,30 +27,30 @@
 namespace Octopus { namespace Maths {
 
 template <typename T, typename = typename std::enable_if_t<!std::is_integral<T>::value, bool>>
-bool almost_equal(T lhs, T rhs, int ulp = 1)
+bool almost_equal(const T lhs, T rhs, const int ulp = 1)
 {
     return lhs == rhs || std::abs(lhs - rhs) < std::numeric_limits<T>::epsilon() * std::abs(lhs + rhs) * ulp;
 }
 
 template <typename T, typename = typename std::enable_if_t<!std::is_integral<T>::value, bool>>
-bool almost_zero(T x, int ulp = 1)
+bool almost_zero(const T x, const int ulp = 1)
 {
     return almost_equal(x, T {0}, ulp);
 }
 
 template <typename T, typename = typename std::enable_if_t<!std::is_integral<T>::value, bool>>
-bool almost_one(T x, int ulp = 1)
+bool almost_one(const T x, const int ulp = 1)
 {
     return almost_equal(x, T {1}, ulp);
 }
 
 template <typename RealType>
-inline constexpr RealType exp_maclaurin(RealType x) {
+inline constexpr RealType exp_maclaurin(const RealType x) {
     return (6 + x * (6 + x * (3 + x))) * 0.16666666;
 }
 
 template <typename RealType>
-inline constexpr RealType mercator(RealType x) {
+inline constexpr RealType mercator(const RealType x) {
     return x - x * x / 2 + x * x * x / 3;
 }
 
@@ -96,47 +95,33 @@ RealType rmq(const Container& values)
 }
 
 template <typename RealType>
-inline RealType log_sum_exp(RealType log_a, RealType log_b)
+inline RealType log_sum_exp(const RealType log_a, const RealType log_b)
 {
     auto r = std::minmax(log_a, log_b);
     return r.second + std::log(1 + std::exp(r.first - r.second));
 }
 
 template <typename RealType>
-inline RealType log_sum_exp(RealType log_a, RealType log_b, RealType log_c)
+inline RealType log_sum_exp(const RealType log_a, const RealType log_b, const RealType log_c)
 {
     auto max = std::max({log_a, log_b, log_c});
     return max + std::log(std::exp(log_a - max) + std::exp(log_b - max) + std::exp(log_c - max));
 }
 
 template <typename RealType>
-inline RealType log_sum_exp(RealType log_a, RealType log_b, RealType log_c, RealType log_d)
-{
-    auto max = std::max({log_a, log_b, log_c, log_d});
-    return max + std::log(std::exp(log_a - max) + std::exp(log_b - max) + std::exp(log_c - max) +
-                          std::exp(log_d - max));
-}
-
-template <typename RealType>
 inline RealType log_sum_exp(std::initializer_list<RealType> il)
 {
     auto max = std::max(il);
-    RealType exp_sum {};
-    for (auto x : il) {
-        exp_sum += std::exp(x - max);
-    }
-    return max + std::log(exp_sum);
+    return max + std::log(std::accumulate(std::cbegin(il), std::cend(il), RealType {},
+                                          [max] (auto curr, auto x) { return curr + std::exp(x - max); }));
 }
 
 template <typename RealType, typename Iterator>
 inline RealType log_sum_exp(Iterator first, Iterator last)
 {
     auto max = *std::max_element(first, last);
-    RealType exp_sum {};
-    for (; first != last; ++first) {
-        exp_sum += std::exp(*first - max);
-    }
-    return max + std::log(exp_sum);
+    return max + std::log(std::accumulate(first, last, RealType {},
+                                          [max] (auto curr, auto x) { return curr + std::exp(x - max); }));
 }
 
 template <typename RealType, typename Container>
@@ -215,6 +200,12 @@ inline RealType log_multinomial_coefficient(Iterator first, Iterator last)
                 std::accumulate(denoms.cbegin(), denoms.cend(), RealType {});
 }
 
+template <typename RealType, typename Container>
+inline RealType log_multinomial_coefficient(const Container& values)
+{
+    return log_multinomial_coefficient<RealType>(std::cbegin(values), std::cend(values));
+}
+
 template <typename RealType, typename IntegerType>
 inline IntegerType multinomial_coefficient(std::initializer_list<IntegerType> il)
 {
@@ -247,12 +238,12 @@ inline RealType multinomial_pdf(const std::vector<IntegerType>& z, const std::ve
 
 // Returns approximate y such that digamma(y) = x
 template <typename RealType>
-inline RealType digamma_inv(RealType x)
+inline RealType digamma_inv(const RealType x, const RealType epsilon = 10e-8)
 {
     RealType l {1.0};
     auto y = std::exp(x);
     
-    while (l > 10e-8) {
+    while (l > epsilon) {
         y += l * boost::math::sign(x - boost::math::digamma<RealType>(y));
         l /= 2;
     }
@@ -261,7 +252,7 @@ inline RealType digamma_inv(RealType x)
 }
 
 template <typename RealType>
-RealType dirichlet_multinomial(RealType z1, RealType z2, RealType a1, RealType a2)
+RealType dirichlet_multinomial(const RealType z1, const RealType z2, const RealType a1, const RealType a2)
 {
     auto z_0 = z1 + z2;
     auto a_0 = a1 + a2;
@@ -274,7 +265,8 @@ RealType dirichlet_multinomial(RealType z1, RealType z2, RealType a1, RealType a
 }
 
 template <typename RealType>
-RealType dirichlet_multinomial(RealType z1, RealType z2, RealType z3, RealType a1, RealType a2, RealType a3)
+RealType dirichlet_multinomial(const RealType z1, const RealType z2, const RealType z3,
+                               const RealType a1, const RealType a2, const RealType a3)
 {
     auto z_0 = z1 + z2 + z3;
     auto a_0 = a1 + a2 + a3;
@@ -309,7 +301,7 @@ RealType dirichlet_multinomial(const std::vector<RealType>& z, const std::vector
 }
 
 template <typename RealType>
-RealType beta_binomial(RealType k, RealType n, RealType alpha, RealType beta)
+RealType beta_binomial(const RealType k, const RealType n, const RealType alpha, const RealType beta)
 {
     return dirichlet_multinomial<RealType>(k, n - k, alpha, beta);
 }

@@ -30,7 +30,7 @@
 #include "genotype_model.hpp"
 #include "population_genotype_model.hpp"
 #include "read_utils.hpp"
-
+#include "string_utils.hpp"
 #include "sequence_utils.hpp"
 #include "search_regions.hpp"
 
@@ -276,24 +276,6 @@ std::vector<unsigned> count_alleles(const std::vector<Variant>& variants, const 
     return result;
 }
 
-template <typename T>
-std::string to_string(const T val, const int n = 6)
-{
-    std::ostringstream out;
-    out << std::setprecision(n) << val;
-    return out.str();
-}
-
-template <typename T>
-std::vector<std::string> to_string(const std::vector<T>& values)
-{
-    std::vector<std::string> result {};
-    result.reserve(values.size());
-    std::transform(std::cbegin(values), std::cend(values), std::back_inserter(result),
-                   [] (auto value) { return std::to_string(value); });
-    return result;
-}
-
 VcfRecord call_segment(const Allele& reference_allele, const std::vector<Variant>& variants,
                        const GenotypeCalls& genotype_calls, unsigned phred_quality,
                        ReferenceGenome& reference, const ReadMap& reads,
@@ -313,7 +295,7 @@ VcfRecord call_segment(const Allele& reference_allele, const std::vector<Variant
     
     result.set_quality(phred_quality);
     
-    result.add_info("AC", to_string(count_alleles(variants, genotype_calls)));
+    result.add_info("AC", to_strings(count_alleles(variants, genotype_calls)));
     result.add_info("AN", std::to_string(count_alleles(genotype_calls)));
     result.add_info("NS", std::to_string(count_samples_with_coverage(reads, region)));
     result.add_info("DP", std::to_string(sum_max_coverages(reads, region)));

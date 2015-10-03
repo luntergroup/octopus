@@ -85,8 +85,7 @@ ReadModel::RealType ReadModel::log_probability_polyploid(const AlignedRead& read
                        return log_probability(read, haplotype, sample);
                    });
     
-    return Maths::log_sum_exp<RealType>(log_haplotype_probabilities.cbegin(),
-                                        log_haplotype_probabilities.cend()) - ln_ploidy_;
+    return Maths::log_sum_exp<RealType>(log_haplotype_probabilities) - ln_ploidy_;
 }
     
 } // namespace Octopus

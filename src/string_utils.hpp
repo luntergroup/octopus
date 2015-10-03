@@ -11,14 +11,18 @@
 
 #include <vector>
 #include <string>
-#include <cstring>   // std::strlen
-#include <sstream>   // std::stringstream
-#include <algorithm> // std::equal, std::swap
-#include <iterator>  // std::next
-#include <cstddef>   // std::size_t
+#include <cstring>     // std::strlen
+#include <sstream>     // std::stringstream
+#include <algorithm>   // std::equal, std::swap, std::transform
+#include <iterator>    // std::cbegin, std::cend, std::next, std::back_inserter
+#include <cstddef>     // size_t
+#include <type_traits> // std::enable_if_t, std::is_floating_point
+#include <iomanip>     // std::setprecision
+
+namespace Octopus {
 
 template <typename T>
-std::vector<std::string> split(T&& str, char delim) {
+std::vector<std::string> split(const T& str, char delim) {
     std::vector<std::string> elems;
     std::stringstream ss(str);
     std::string item;
@@ -40,12 +44,12 @@ bool is_suffix(const T& lhs, const T& rhs)
     return std::equal(std::cbegin(lhs), std::cend(lhs), std::next(std::cbegin(rhs)));
 }
 
-inline std::size_t stringlen(const char* str)
+inline size_t stringlen(const char* str)
 {
     return std::strlen(str);
 }
 
-inline std::size_t stringlen(const std::string& str)
+inline size_t stringlen(const std::string& str)
 {
     return str.size();
 }
@@ -54,5 +58,35 @@ inline bool contains(const std::string& lhs, const std::string& rhs)
 {
     return lhs.find(rhs) != std::string::npos;
 }
+
+template <typename T, typename = typename std::enable_if_t<std::is_floating_point<T>::value>>
+std::string to_string(const T val, const unsigned precision = 2)
+{
+    std::ostringstream out;
+    out << std::setprecision(precision) << val;
+    return out.str();
+}
+
+template <typename T>
+std::vector<std::string> to_strings(const std::vector<T>& values)
+{
+    std::vector<std::string> result {};
+    result.reserve(values.size());
+    std::transform(std::cbegin(values), std::cend(values), std::back_inserter(result),
+                   [] (auto value) { return std::to_string(value); });
+    return result;
+}
+
+template <typename T, typename = typename std::enable_if_t<std::is_floating_point<T>::value>>
+std::vector<std::string> to_strings(const std::vector<T>& values, const unsigned precision = 2)
+{
+    std::vector<std::string> result {};
+    result.reserve(values.size());
+    std::transform(std::cbegin(values), std::cend(values), std::back_inserter(result),
+                   [precision] (auto value) { return to_string(value, precision); });
+    return result;
+}
+
+} // namespace Octopus
 
 #endif /* defined(__Octopus__string_utils__) */

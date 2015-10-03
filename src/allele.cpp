@@ -77,7 +77,7 @@ bool contains(const Allele& lhs, const Allele& rhs)
         // If the alleles are both insertions then both regions will be the same so we can only test
         // if the inserted rhs sequence is a subsequence of the lhs sequence. The rhs sequence
         // is required to be non-empty otherwise it would be a subsequence of everything.
-        return !rhs.get_sequence().empty() && ::contains(lhs.get_sequence(), rhs.get_sequence());
+        return !rhs.get_sequence().empty() && Octopus::contains(lhs.get_sequence(), rhs.get_sequence());
     } else {
         return get_subsequence(lhs, rhs.get_region()) == rhs.get_sequence();
     }
