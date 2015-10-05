@@ -103,12 +103,12 @@ inline bool operator<(const ContigRegion& lhs, const ContigRegion& rhs) noexcept
 
 inline bool is_before(const ContigRegion& lhs, const ContigRegion& rhs) noexcept
 {
-    return (lhs == rhs) ? false : lhs.get_end() <= rhs.get_begin() && lhs.get_begin() != rhs.get_begin();
+    return lhs != rhs && lhs.get_end() <= rhs.get_begin() && lhs.get_begin() != rhs.get_begin();
 }
 
 inline bool is_after(const ContigRegion& lhs, const ContigRegion& rhs) noexcept
 {
-    return  (lhs == rhs) ? false : rhs.get_end() <= lhs.get_begin();
+    return  lhs != rhs && rhs.get_end() <= lhs.get_begin();
 }
 
 inline bool are_adjacent(const ContigRegion& lhs, const ContigRegion& rhs) noexcept

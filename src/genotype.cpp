@@ -95,6 +95,12 @@ std::vector<Allele> Genotype<Allele>::get_unique() const
 
 // non-member methods
 
+bool contains(const Genotype<Haplotype>& genotype, const Allele& allele)
+{
+    return std::any_of(std::cbegin(genotype), std::cend(genotype),
+                       [&allele] (const auto& haplotype) { return haplotype.contains(allele); });
+}
+
 bool is_homozygous_reference(const Genotype<Haplotype>& genotype, const Allele& reference)
 {
     return splice<Allele>(genotype, get_region(reference)).count(reference) == genotype.ploidy();
@@ -107,9 +113,32 @@ unsigned num_genotypes(const unsigned num_elements, const unsigned ploidy)
 
 void print_alleles(const Genotype<Haplotype>& genotype)
 {
-    for (unsigned i {}; i < genotype.ploidy() - 1; ++i) {
-        print_alleles(genotype[i]);
-        std::cout << std::endl;
+    if (genotype.ploidy() == 0) {
+        std::cout << "[]";
     }
-    print_alleles(genotype[genotype.ploidy() - 1]);
+    auto element_counts = get_element_count_map(genotype);
+    std::vector<std::pair<Haplotype, unsigned>> p {element_counts.begin(), element_counts.end()};
+    std::cout << "[";
+    for (unsigned i {}; i < p.size() - 1; ++i) {
+        print_alleles(p[i].first);
+        std::cout << "(" << p[i].second << "),";
+    }
+    print_alleles(p.back().first);
+    std::cout << "(" << p.back().second << ")]";
+}
+
+void print_variant_alleles(const Genotype<Haplotype>& genotype)
+{
+    if (genotype.ploidy() == 0) {
+        std::cout << "[]";
+    }
+    auto element_counts = get_element_count_map(genotype);
+    std::vector<std::pair<Haplotype, unsigned>> p {element_counts.begin(), element_counts.end()};
+    std::cout << "[";
+    for (unsigned i {}; i < p.size() - 1; ++i) {
+        print_variant_alleles(p[i].first);
+        std::cout << "(" << p[i].second << "),";
+    }
+    print_variant_alleles(p.back().first);
+    std::cout << "(" << p.back().second << ")]";
 }

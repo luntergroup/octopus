@@ -14,9 +14,8 @@
 #include "genomic_region.hpp"
 
 /**
- More template black magic. Anything that inherits from Mappable and define the get_region() method 
- will automatically get all the following region comparisons. This is very useful for comparing
- classes that exist on a sequence (i.e. they are mapplable).
+ More template black magic. Anything that inherits from Mappable and defines the get_region() method
+ can use all of these methods.
  */
 
 template <typename T>
@@ -36,8 +35,20 @@ inline GenomicRegion get_region(const Mappable<T>& m)
     return static_cast<const T&>(m).get_region();
 }
 
+template <typename T>
+inline bool is_same_region(const GenomicRegion& lhs, const Mappable<T>& rhs)
+{
+    return lhs == get_region(rhs);
+}
+
+template <typename T>
+inline bool is_same_region(const Mappable<T>& lhs, const GenomicRegion& rhs)
+{
+    return get_region(lhs) == rhs;
+}
+
 template <typename T1, typename T2>
-inline bool same_region(const Mappable<T1>& lhs, const Mappable<T2>& rhs)
+inline bool is_same_region(const Mappable<T1>& lhs, const Mappable<T2>& rhs)
 {
     return get_region(lhs) == get_region(rhs);
 }

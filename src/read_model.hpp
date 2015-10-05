@@ -12,8 +12,8 @@
 #include <vector>
 #include <string>
 #include <unordered_map>
-#include <cstddef>   // std::size_t
-#include <algorithm> // std::for_each
+#include <cstddef>   // size_t
+#include <numeric>   // std::accumulate
 #include <boost/functional/hash.hpp> // boost::hash_combine
 
 #include "common.hpp"
@@ -104,15 +104,10 @@ ReadModel::RealType ReadModel::log_probability(ForwardIterator first_read, Forwa
 //        return get_log_probability_from_cache(sample, first_read, last_read, genotype);
 //    }
     
-    RealType result {0};
-    
-    std::for_each(first_read, last_read, [this, &genotype, &sample, &result] (const auto& read) {
-        result += log_probability(read, genotype, sample);
-    });
-    
-    //add_genotype_to_cache(sample, first_read, last_read, genotype, result);
-    
-    return result;
+    return std::accumulate(first_read, last_read, RealType {},
+                           [this, &genotype, &sample] (auto curr, const auto& read) {
+                               return curr + log_probability(read, genotype, sample);
+                           });
 }
 
 template <typename ForwardIterator>

@@ -27,7 +27,8 @@ namespace Octopus
     public:
         PopulationVariantCaller() = delete;
         PopulationVariantCaller(ReferenceGenome& reference, CandidateVariantGenerator& candidate_generator,
-                                RefCall refcalls, double min_posterior, unsigned ploidy = 2);
+                                RefCallType refcalls, double min_variant_posterior,
+                                double min_refcall_posterior, unsigned ploidy = 2);
         ~PopulationVariantCaller() = default;
         
         PopulationVariantCaller(const PopulationVariantCaller&)            = delete;
@@ -37,7 +38,8 @@ namespace Octopus
         
     private:
         const unsigned ploidy_;
-        const double min_posterior_ = 0.95;
+        const double min_variant_posterior_ = 0.95;
+        const double min_refcall_posterior_ = 0.5;
         
         std::string do_get_details() const override;
         

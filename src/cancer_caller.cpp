@@ -36,9 +36,9 @@ namespace Octopus
 {
 
     CancerVariantCaller::CancerVariantCaller(ReferenceGenome& reference, CandidateVariantGenerator& candidate_generator,
-                                             RefCall refcalls, double min_posterior)
+                                             RefCallType refcall_type, double min_posterior)
     :
-    VariantCaller {reference, candidate_generator, refcalls},
+    VariantCaller {reference, candidate_generator, refcall_type},
     min_posterior_ {min_posterior}
     {}
     

@@ -443,6 +443,12 @@ VcfRecord::Builder& VcfRecord::Builder::set_format(const std::initializer_list<K
     return *this;
 }
 
+VcfRecord::Builder&VcfRecord::Builder:: add_homozygous_ref_genotype(const SampleIdType& sample, unsigned ploidy)
+{
+    genotypes_.emplace(sample, std::make_pair(std::vector<SequenceType>(ploidy, ref_allele_), true));
+    return *this;
+}
+
 VcfRecord::Builder& VcfRecord::Builder::add_genotype(const SampleIdType& sample,
                                                      const std::vector<SequenceType>& alleles, Phasing phasing)
 {
@@ -455,7 +461,7 @@ VcfRecord::Builder& VcfRecord::Builder::add_genotype(const SampleIdType& sample,
 {
     std::vector<SequenceType> a {};
     a.reserve(alleles.size());
-    std::transform(alleles.cbegin(), alleles.cend(), std::back_inserter(a),
+    std::transform(std::cbegin(alleles), std::cend(alleles), std::back_inserter(a),
                    [this] (unsigned allele) { return (allele == 0) ? ref_allele_ : alt_alleles_[allele - 1]; });
     
     genotypes_.emplace(sample, std::make_pair(a, phasing == Phasing::Phased));

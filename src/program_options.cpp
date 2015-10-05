@@ -47,8 +47,6 @@ namespace Octopus
     {
     std::pair<po::variables_map, bool> parse_options(int argc, const char** argv)
     {
-        using QualityType = AlignedRead::QualityType;
-        
         try {
             po::positional_options_description p;
             p.add("command", -1);
@@ -86,8 +84,8 @@ namespace Octopus
             po::options_description filters("Read filter options");
             filters.add_options()
             ("no-unmapped", po::bool_switch()->default_value(false), "filter reads marked as unmapped")
-            ("min-mapping-quality", po::value<QualityType>()->default_value(20), "reads with smaller mapping quality are ignored")
-            ("min-base-quality", po::value<QualityType>()->default_value(20), "base quality threshold used by min-good-bases filter")
+            ("min-mapping-quality", po::value<unsigned>()->default_value(20), "reads with smaller mapping quality are ignored")
+            ("good-base-quality", po::value<unsigned>()->default_value(20), "base quality threshold used by min-good-bases filter")
             ("min-good-base-fraction", po::value<double>(), "base quality threshold used by min-good-bases filter")
             ("min-good-bases", po::value<AlignedRead::SizeType>()->default_value(0), "minimum number of bases with quality min-base-quality before read is considered")
             ("no-qc-fails", po::bool_switch()->default_value(false), "filter reads marked as QC failed")
@@ -111,7 +109,7 @@ namespace Octopus
             ("candidates-from-alignments", po::bool_switch()->default_value(true), "generate candidate variants from the aligned reads")
             ("candidates-from-assembler", po::bool_switch()->default_value(false), "generate candidate variants with the assembler")
             ("candidates-from-source", po::value<std::string>(), "variant file path containing known variants. These variants will automatically become candidates")
-            ("min-base-quality", po::value<QualityType>()->default_value(15), "only base changes with quality above this value are considered for snp generation")
+            ("min-snp-base-quality", po::value<unsigned>()->default_value(20), "only base changes with quality above this value are considered for snp generation")
             ("max-variant-size", po::value<AlignedRead::SizeType>()->default_value(100), "maximum candidate varaint size from alignmenet CIGAR")
             ("k", po::value<unsigned>()->default_value(15), "k-mer size to use")
             ("no-cycles", po::bool_switch()->default_value(false), "dissalow cycles in assembly graph")
@@ -128,7 +126,8 @@ namespace Octopus
             
             po::options_description calling("Caller options");
             calling.add_options()
-            ("min-posterior", po::value<unsigned>()->default_value(20), "the minimum variant posterior probability (phred scale)")
+            ("min-variant-posterior", po::value<unsigned>()->default_value(20), "the minimum variant posterior probability (phred scale)")
+            ("min-refcall-posterior", po::value<unsigned>()->default_value(10), "the minimum homozygous reference posterior probability (phred scale)")
             ("make-positional-refcalls", po::bool_switch()->default_value(false), "caller will output positional REFCALLs")
             ("make-blocked-refcalls", po::bool_switch()->default_value(false), "caller will output blocked REFCALLs")
             ;
@@ -404,13 +403,13 @@ namespace Octopus
             result.register_filter(ReadFilters::is_mapped());
         }
         
-        auto min_mapping_quality = options.at("min-mapping-quality").as<QualityType>();
+        auto min_mapping_quality = options.at("min-mapping-quality").as<unsigned>();
         
         if (min_mapping_quality > 0) {
             result.register_filter(ReadFilters::is_good_mapping_quality(min_mapping_quality));
         }
         
-        auto min_base_quality = options.at("min-base-quality").as<QualityType>();
+        auto min_base_quality = options.at("good-base-quality").as<unsigned>();
         auto min_good_bases = options.at("min-good-bases").as<unsigned>();
         
         if (min_good_bases > 0) {
@@ -481,9 +480,9 @@ namespace Octopus
         CandidateVariantGenerator result {};
         
         if (options.count("candidates-from-alignments") == 1) {
-            auto min_base_quality = options.at("min-base-quality").as<AlignmentCandidateVariantGenerator::QualityType>();
+            auto min_snp_base_quality = options.at("min-snp-base-quality").as<unsigned>();
             auto max_variant_size = options.at("max-variant-size").as<AlignmentCandidateVariantGenerator::SizeType>();
-            result.register_generator(std::make_unique<AlignmentCandidateVariantGenerator>(reference, min_base_quality, max_variant_size));
+            result.register_generator(std::make_unique<AlignmentCandidateVariantGenerator>(reference, min_snp_base_quality, max_variant_size));
         }
         
         return result;
@@ -494,20 +493,25 @@ namespace Octopus
     {
         const auto& model = options.at("model").as<std::string>();
         
-        auto refcalls = VariantCaller::RefCall::None;
+        auto refcall_type = VariantCaller::RefCallType::None;
         
         if (options.at("make-positional-refcalls").as<bool>()) {
-            refcalls = VariantCaller::RefCall::Positional;
+            refcall_type = VariantCaller::RefCallType::Positional;
         } else if (options.at("make-blocked-refcalls").as<bool>()) {
-            refcalls = VariantCaller::RefCall::Blocked;
+            refcall_type = VariantCaller::RefCallType::Blocked;
         }
         
         auto ploidy = options.at("ploidy").as<unsigned>();
         
-        auto min_posterior_phred = options.at("min-posterior").as<unsigned>();
-        auto min_posterior = Maths::phred_to_probability(min_posterior_phred);
+        auto min_variant_posterior_phred = options.at("min-variant-posterior").as<unsigned>();
+        auto min_variant_posterior        = Maths::phred_to_probability(min_variant_posterior_phred);
         
-        return make_variant_caller(model, reference, candidate_generator, refcalls, min_posterior, ploidy);
+        auto min_refcall_posterior_phred = options.at("min-refcall-posterior").as<unsigned>();
+        auto min_refcall_posterior       = Maths::phred_to_probability(min_refcall_posterior_phred);
+        
+        return make_variant_caller(model, reference, candidate_generator, refcall_type,
+                                   min_variant_posterior, min_refcall_posterior,
+                                   ploidy);
     }
     
     VcfWriter get_output_vcf(const po::variables_map& options)

@@ -693,4 +693,17 @@ auto segment_by_region(const Container& mappables)
     return segment_equal(std::cbegin(mappables), std::cend(mappables));
 }
 
+template <typename Mappable>
+std::vector<GenomicRegion> get_segment_regions(const std::vector<std::vector<Mappable>>& segments)
+{
+    std::vector<GenomicRegion> result {};
+    result.reserve(segments.size());
+    
+    for (const auto& segment : segments) {
+        result.push_back(get_encompassing_region(segment));
+    }
+    
+    return result;
+}
+
 #endif

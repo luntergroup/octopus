@@ -26,11 +26,11 @@ namespace Octopus
     // public methods
     
     VariantCaller::VariantCaller(ReferenceGenome& reference, CandidateVariantGenerator& candidate_generator,
-                                 RefCall refcalls)
+                                 RefCallType refcall_type)
     :
     reference_ {reference},
     candidate_generator_ {candidate_generator},
-    refcalls_ {refcalls}
+    refcall_type_ {refcall_type}
     {}
 
     std::string VariantCaller::get_details() const
@@ -55,9 +55,9 @@ namespace Octopus
         while (!done_calling(current_region)) {
             std::cout << "processing sub-region " << current_region << std::endl;
             
-            auto overlapped = overlap_range(candidates.cbegin(), candidates.cend(), current_region);
+            auto overlapped = overlap_range(std::cbegin(candidates), std::cend(candidates), current_region);
             
-            std::vector<Variant> sub_candidates {overlapped.begin(), overlapped.end()};
+            std::vector<Variant> sub_candidates {std::begin(overlapped), std::end(overlapped)};
             
             auto reads_in_region = copy_overlapped(reads, current_region);
             
@@ -76,7 +76,7 @@ namespace Octopus
 
     bool VariantCaller::refcalls_requested() const noexcept
     {
-        return refcalls_ == RefCall::Positional || refcalls_ == RefCall::Blocked;
+        return refcall_type_ != RefCallType::None;
     }
 
     // private methods
@@ -90,17 +90,17 @@ namespace Octopus
     
     std::vector<Allele>
     generate_callable_alleles(const GenomicRegion& region, const std::vector<Variant>& variants,
-                              VariantCaller::RefCall refcalls, ReferenceGenome& reference)
+                              VariantCaller::RefCallType refcall_type, ReferenceGenome& reference)
     {
         using std::begin; using std::end; using std::make_move_iterator; using std::back_inserter;
         
         if (empty(region)) return {};
         
         if (variants.empty()) {
-            switch (refcalls) {
-                case VariantCaller::RefCall::Positional:
+            switch (refcall_type) {
+                case VariantCaller::RefCallType::Positional:
                     return get_positional_reference_alleles(region, reference);
-                case VariantCaller::RefCall::Blocked:
+                case VariantCaller::RefCallType::Blocked:
                     return {get_reference_allele(region, reference)};
                 default:
                     return {};
@@ -109,14 +109,14 @@ namespace Octopus
         
         auto variant_alleles = decompose(variants);
         
-        if (refcalls == VariantCaller::RefCall::None) return variant_alleles;
+        if (refcall_type == VariantCaller::RefCallType::None) return variant_alleles;
         
         auto covered_regions   = get_covered_regions(variants);
         auto uncovered_regions = get_all_intervening(covered_regions, region);
         
         std::vector<Allele> result {};
         
-        if (refcalls == VariantCaller::RefCall::Blocked) {
+        if (refcall_type == VariantCaller::RefCallType::Blocked) {
             auto reference_alleles = get_reference_alleles(uncovered_regions, reference);
             result.reserve(reference_alleles.size() + variant_alleles.size());
             std::merge(make_move_iterator(begin(reference_alleles)),make_move_iterator(end(reference_alleles)),

@@ -23,16 +23,20 @@ namespace Octopus {
 inline std::unique_ptr<VariantCaller>
 make_variant_caller(const std::string& model, ReferenceGenome& reference,
                     CandidateVariantGenerator& candidate_generator,
-                    VariantCaller::RefCall refcalls, double min_posterior, unsigned ploidy)
+                    VariantCaller::RefCallType refcall_type,
+                    double min_variant_posterior, double min_refcall_posterior,
+                    unsigned ploidy)
 {
     std::unordered_map<std::string, std::function<std::unique_ptr<VariantCaller>()>> model_map {
         {"population", [&] () {
             return std::make_unique<PopulationVariantCaller>(reference, candidate_generator,
-                                                             refcalls, min_posterior, ploidy);
+                                                             refcall_type,
+                                                             min_variant_posterior, min_refcall_posterior,
+                                                             ploidy);
         }},
         {"cancer",     [&] () {
             return std::make_unique<CancerVariantCaller>(reference, candidate_generator,
-                                                         refcalls, min_posterior);
+                                                         refcall_type, min_variant_posterior);
         }}
         };
     

@@ -26,7 +26,7 @@ namespace Octopus
     public:
         CancerVariantCaller() = delete;
         CancerVariantCaller(ReferenceGenome& reference, CandidateVariantGenerator& candidate_generator,
-                            RefCall refcalls, double min_posterior);
+                            RefCallType refcalls, double min_posterior);
         ~CancerVariantCaller() = default;
         
         CancerVariantCaller(const CancerVariantCaller&)            = delete;

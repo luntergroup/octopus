@@ -225,6 +225,8 @@ void Genotype<Allele>::emplace(T&& allele)
 
 // non-member methods
 
+bool contains(const Genotype<Haplotype>& genotype, const Allele& allele);
+
 template <typename MappableType2, typename MappableType1>
 Genotype<MappableType2> splice(const Genotype<MappableType1>& genotype, const GenomicRegion& region)
 {
@@ -355,5 +357,6 @@ std::ostream& operator<<(std::ostream& os, const Genotype<MappableType>& genotyp
 }
 
 void print_alleles(const Genotype<Haplotype>& genotype);
+void print_variant_alleles(const Genotype<Haplotype>& genotype);
 
 #endif /* defined(__Octopus__genotype__) */

@@ -29,13 +29,13 @@ namespace Octopus
     class VariantCaller
     {
     public:
-        enum class RefCall { Positional, Blocked, None };
+        enum class RefCallType { Positional, Blocked, None };
         
         using ReadMap = Octopus::ReadMap;
         
         VariantCaller() = delete;
         VariantCaller(ReferenceGenome& reference, CandidateVariantGenerator& candidate_generator,
-                      RefCall refcalls = RefCall::None);
+                      RefCallType refcall_type = RefCallType::None);
         virtual ~VariantCaller() = default;
         
         VariantCaller(const VariantCaller&)            = delete;
@@ -50,7 +50,7 @@ namespace Octopus
     protected:
         ReferenceGenome& reference_;
         
-        const RefCall refcalls_ = RefCall::Positional;
+        const RefCallType refcall_type_ = RefCallType::Positional;
         
         bool refcalls_requested() const noexcept;
         
@@ -72,7 +72,7 @@ namespace Octopus
     
     std::vector<Allele>
     generate_callable_alleles(const GenomicRegion& region, const std::vector<Variant>& variants,
-                              VariantCaller::RefCall refcalls, ReferenceGenome& reference);
+                              VariantCaller::RefCallType refcall_type, ReferenceGenome& reference);
     
 } // namespace Octopus
 

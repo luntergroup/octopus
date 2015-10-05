@@ -59,6 +59,7 @@ public:
     friend Haplotype splice(const Haplotype& haplotype, const GenomicRegion& region);
     friend bool have_same_alleles(const Haplotype& lhs, const Haplotype& rhs);
     friend void print_alleles(const Haplotype& haplotype);
+    friend void print_variant_alleles(const Haplotype& haplotype);
     
 private:
     ReferenceGenome* reference_; // non-owning pointer rather than a reference so Haplotype copyable
@@ -125,7 +126,9 @@ void Haplotype::push_front(T&& allele)
 
 bool contains(const Haplotype& lhs, const Allele& rhs);
 bool contains(const Haplotype& lhs, const Haplotype& rhs);
+
 Haplotype splice(const Haplotype& haplotype, const GenomicRegion& region);
+
 bool is_reference(const Haplotype& haplotype, ReferenceGenome& reference);
 bool is_less_complex(const Haplotype& lhs, const Haplotype& rhs) noexcept;
 void unique_least_complex(std::vector<Haplotype>& haplotypes);
@@ -166,5 +169,6 @@ void add_to_back(const Variant& a_variant, Haplotype& haplotype);
 void add_to_front(const Variant& a_variant, Haplotype& haplotype);
 bool contains(const Haplotype& haplotype, const Variant& a_variant);
 void print_alleles(const Haplotype& haplotype);
+void print_variant_alleles(const Haplotype& haplotype);
 
 #endif /* defined(__Octopus__haplotype__) */
