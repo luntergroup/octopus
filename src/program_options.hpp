@@ -56,7 +56,8 @@ namespace Octopus
     
     CandidateVariantGenerator get_candidate_generator(const po::variables_map& options, ReferenceGenome& reference);
     
-    //std::unique_ptr<VariantCaller> get_variant_caller(const po::variables_map& options);
+    std::unique_ptr<VariantCaller> get_variant_caller(const po::variables_map& options, ReferenceGenome& reference,
+                                                      CandidateVariantGenerator& candidate_generator);
     
     VcfWriter get_output_vcf(const po::variables_map& options);
     

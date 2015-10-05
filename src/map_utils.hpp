@@ -63,7 +63,7 @@ count_shared(const MappableMap& mappables, const MappableType1& lhs, const Mappa
 template <typename ForwardIterator, typename MappableMap, typename MappableType>
 ForwardIterator
 find_first_shared(const MappableMap& mappables, ForwardIterator first, ForwardIterator last,
-                  const MappableType& mappable, MappableRangeOrder order=MappableRangeOrder::ForwardSorted)
+                  const MappableType& mappable, MappableRangeOrder order = MappableRangeOrder::ForwardSorted)
 {
     if (mappables.empty()) return last;
     

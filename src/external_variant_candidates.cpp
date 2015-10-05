@@ -13,6 +13,8 @@
 #include "vcf_record.hpp"
 #include "variant.hpp"
 
+namespace Octopus {
+    
 ExternalVariantCandidates::ExternalVariantCandidates(VcfReader& reader)
 :
 reader_ {reader}
@@ -56,3 +58,5 @@ std::vector<Variant> ExternalVariantCandidates::get_candidates(const GenomicRegi
 {
     return fetch_variants(region, reader_);
 }
+
+} // namespace Octopus

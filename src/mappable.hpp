@@ -36,6 +36,12 @@ inline GenomicRegion get_region(const Mappable<T>& m)
     return static_cast<const T&>(m).get_region();
 }
 
+template <typename T1, typename T2>
+inline bool same_region(const Mappable<T1>& lhs, const Mappable<T2>& rhs)
+{
+    return get_region(lhs) == get_region(rhs);
+}
+
 template <typename T>
 inline bool empty(const Mappable<T>& m)
 {
@@ -307,6 +313,24 @@ inline GenomicRegion::DifferenceType outer_distance(const Mappable<T1>& lhs, con
 }
 
 template <typename T>
+inline GenomicRegion next_position(const Mappable<T>& mappable)
+{
+    return next_position(static_cast<const T&>(mappable).get_region());
+}
+
+template <typename T>
+inline GenomicRegion compress_left(const Mappable<T>& mappable, GenomicRegion::DifferenceType n)
+{
+    return compress_left(static_cast<const T&>(mappable).get_region(), n);
+}
+
+template <typename T>
+inline GenomicRegion compress_right(const Mappable<T>& mappable, GenomicRegion::DifferenceType n)
+{
+    return compress_right(static_cast<const T&>(mappable).get_region(), n);
+}
+
+template <typename T>
 inline GenomicRegion get_encompassing(const Mappable<T>& lhs, const GenomicRegion& rhs)
 {
     return get_encompassing(static_cast<const T&>(lhs).get_region(), rhs);
@@ -358,6 +382,42 @@ template <typename T1, typename T2>
 inline GenomicRegion get_overlapped(const Mappable<T1>& lhs, const Mappable<T2>& rhs)
 {
     return get_overlapped(static_cast<const T1&>(lhs).get_region(), static_cast<const T2&>(rhs).get_region());
+}
+
+template <typename T>
+inline GenomicRegion::SizeType left_overhang_size(const Mappable<T>& lhs, const GenomicRegion& rhs)
+{
+    return left_overhang_size(static_cast<const T&>(lhs).get_region(), rhs);
+}
+
+template <typename T>
+inline GenomicRegion::SizeType left_overhang_size(const GenomicRegion& lhs, const Mappable<T>& rhs)
+{
+    return left_overhang_size(lhs, static_cast<const T&>(rhs).get_region());
+}
+
+template <typename T1, typename T2>
+inline GenomicRegion::SizeType left_overhang_size(const Mappable<T1>& lhs, const Mappable<T2>& rhs)
+{
+    return left_overhang_size(static_cast<const T1&>(lhs).get_region(), static_cast<const T2&>(rhs).get_region());
+}
+
+template <typename T>
+inline GenomicRegion::SizeType right_overhang_size(const Mappable<T>& lhs, const GenomicRegion& rhs)
+{
+    return right_overhang_size(static_cast<const T&>(lhs).get_region(), rhs);
+}
+
+template <typename T>
+inline GenomicRegion::SizeType right_overhang_size(const GenomicRegion& lhs, const Mappable<T>& rhs)
+{
+    return right_overhang_size(lhs, static_cast<const T&>(rhs).get_region());
+}
+
+template <typename T1, typename T2>
+inline GenomicRegion::SizeType right_overhang_size(const Mappable<T1>& lhs, const Mappable<T2>& rhs)
+{
+    return right_overhang_size(static_cast<const T1&>(lhs).get_region(), static_cast<const T2&>(rhs).get_region());
 }
 
 template <typename T>
@@ -415,9 +475,15 @@ inline GenomicRegion get_closed(const Mappable<T1>& lhs, const Mappable<T2>& rhs
 }
 
 template <typename T>
-inline GenomicRegion next_position(const Mappable<T>& m)
+inline GenomicRegion get_head(const Mappable<T>& m, GenomicRegion::SizeType n = 0)
 {
-    return next_position(static_cast<const T&>(m).get_region());
+    return get_head(static_cast<const T&>(m).get_region(), n);
+}
+
+template <typename T>
+inline GenomicRegion get_tail(const Mappable<T>& m, GenomicRegion::SizeType n = 0)
+{
+    return get_tail(static_cast<const T&>(m).get_region(), n);
 }
 
 #endif

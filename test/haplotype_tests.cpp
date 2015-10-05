@@ -93,8 +93,8 @@ BOOST_AUTO_TEST_CASE(haplotypes_work_with_real_data)
     
     ReadManager a_read_manager {ecoli_bam};
     
-    CandidateVariantGenerator candidate_generator {};
-    candidate_generator.register_generator(std::make_unique<AlignmentCandidateVariantGenerator>(ecoli, 0));
+    Octopus::CandidateVariantGenerator candidate_generator {};
+    candidate_generator.register_generator(std::make_unique<Octopus::AlignmentCandidateVariantGenerator>(ecoli, 0));
     
     auto region = parse_region("R00000042:99640-99745", ecoli);
     

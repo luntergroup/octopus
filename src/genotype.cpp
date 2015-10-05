@@ -100,7 +100,7 @@ bool is_homozygous_reference(const Genotype<Haplotype>& genotype, const Allele& 
     return splice<Allele>(genotype, get_region(reference)).count(reference) == genotype.ploidy();
 }
 
-unsigned num_genotypes(unsigned num_elements, unsigned ploidy)
+unsigned num_genotypes(const unsigned num_elements, const unsigned ploidy)
 {
     return static_cast<unsigned>(boost::math::binomial_coefficient<double>(num_elements + ploidy - 1, num_elements - 1));
 }

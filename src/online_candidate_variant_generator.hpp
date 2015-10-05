@@ -18,6 +18,8 @@ class ReferenceGenome;
 class Variant;
 class AlignedRead;
 
+namespace Octopus {
+    
 class OnlineCandidateVariantGenerator : public ICandidateVariantGenerator
 {
 public:
@@ -38,5 +40,7 @@ private:
     ReferenceGenome& reference_;
     SizeType max_variant_size_;
 };
+
+} // namespace Octopus
 
 #endif /* defined(__Octopus__online_candidate_variant_generator__) */

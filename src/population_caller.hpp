@@ -10,6 +10,7 @@
 #define __Octopus__population_caller__
 
 #include <vector>
+#include <string>
 
 #include "variant_caller.hpp"
 
@@ -25,9 +26,8 @@ namespace Octopus
     {
     public:
         PopulationVariantCaller() = delete;
-        PopulationVariantCaller(ReferenceGenome& reference, ReadManager& read_manager,
-                                ReadFilter read_filter, ReadTransform read_transform,
-                                CandidateVariantGenerator& candidate_generator, unsigned ploidy = 2);
+        PopulationVariantCaller(ReferenceGenome& reference, CandidateVariantGenerator& candidate_generator,
+                                RefCall refcalls, double min_posterior, unsigned ploidy = 2);
         ~PopulationVariantCaller() = default;
         
         PopulationVariantCaller(const PopulationVariantCaller&)            = delete;
@@ -38,10 +38,13 @@ namespace Octopus
     private:
         const unsigned ploidy_;
         const double min_posterior_ = 0.95;
-        const bool make_ref_calls_ = true;
         
-        GenomicRegion get_init_region(const GenomicRegion& region) override;
-        GenomicRegion get_next_region(const GenomicRegion& current_region) override;
+        std::string do_get_details() const override;
+        
+        GenomicRegion get_init_region(const GenomicRegion& region, const ReadMap& reads,
+                                      const std::vector<Variant>& candidates) override;
+        GenomicRegion get_next_region(const GenomicRegion& current_region, const ReadMap& reads,
+                                      const std::vector<Variant>& candidates) override;
         std::vector<VcfRecord> call_variants(const GenomicRegion& region, const std::vector<Variant>& candidates,
                                              const ReadMap& reads) override;
     };

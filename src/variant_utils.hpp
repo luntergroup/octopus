@@ -58,12 +58,20 @@ Variant left_align(const Variant& variant, ReferenceGenome& reference,
 Variant normalise(const Variant& variant, ReferenceGenome& reference,
                   Variant::SizeType extension_size = 30);
 
+Variant pad_left(const Variant& variant, const Variant::SequenceType& sequence);
+Variant pad_right(const Variant& variant, const Variant::SequenceType& sequence);
+Variant pad_right(const Variant& variant, ReferenceGenome& reference, Variant::SizeType n);
+Variant pad_left(const Variant& variant, ReferenceGenome& reference, Variant::SizeType n);
+Variant pad_right(const Variant& variant, ReferenceGenome& reference, Variant::SizeType n);
+
 /*
  Left aligns all input Variants and removes any resulting duplicates. The returned variants are sorted.
  */
 std::vector<Variant> unique_left_align(const std::vector<Variant>& variants, ReferenceGenome& reference);
 
-std::vector<Variant> make_parsimonious(const std::vector<Variant>& variants, ReferenceGenome& reference);
+std::vector<Variant> parsimonise_each(const std::vector<Variant>& variants, ReferenceGenome& reference);
+
+std::vector<Variant> parsimonise_together(const std::vector<Variant>& variants, ReferenceGenome& reference);
 
 bool is_snp(const Variant& variant) noexcept;
 
@@ -78,5 +86,7 @@ bool is_mnv(const Variant& variant) noexcept;
 bool is_transition(const Variant& variant) noexcept;
 
 bool is_transversion(const Variant& variant) noexcept;
+
+std::vector<Allele::SequenceType> get_alt_allele_sequences(const std::vector<Variant>& variants);
 
 #endif /* defined(__Octopus__variant_utils__) */

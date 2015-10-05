@@ -29,14 +29,15 @@
 #include "read_transformations.hpp"
 #include "candidate_generators.hpp"
 
-#include "population_caller.hpp"
-#include "cancer_caller.hpp"
+#include "variant_caller_factory.hpp"
 
 #include "vcf_reader.hpp"
 #include "vcf_writer.hpp"
 
 #include "mappable_algorithms.hpp"
 #include "string_utils.hpp"
+
+#include "maths.hpp"
 
 namespace fs = boost::filesystem;
 
@@ -127,7 +128,9 @@ namespace Octopus
             
             po::options_description calling("Caller options");
             calling.add_options()
-            ("min-posterior", po::value<unsigned>()->default_value(15), "the minimum variant posterior probability")
+            ("min-posterior", po::value<unsigned>()->default_value(20), "the minimum variant posterior probability (phred scale)")
+            ("make-positional-refcalls", po::bool_switch()->default_value(false), "caller will output positional REFCALLs")
+            ("make-blocked-refcalls", po::bool_switch()->default_value(false), "caller will output blocked REFCALLs")
             ;
             
             po::options_description all("Allowed options");
@@ -146,6 +149,10 @@ namespace Octopus
             
             if (vm.count("reads") == 0 && vm.count("reads-file") == 0) {
                 throw boost::program_options::required_option {"--reads | --reads-file"};
+            }
+            
+            if (vm.count("make-positional-refcalls") == 1 && vm.count("make-blocked-refcalls") ==  1) {
+                //throw boost::program_options::ambiguous_option {"--make-positional-refcalls | --make-blocked-refcalls"};
             }
             
             po::notify(vm);
@@ -482,17 +489,26 @@ namespace Octopus
         return result;
     }
     
-//    std::unique_ptr<VariantCaller> get_variant_caller(const po::variables_map& options)
-//    {
-//        const auto& model = options.at("model").as<std::string>();
-//        if (model == "population") {
-//            
-//            return std::make_unique<PopulationVariantCaller>();
-//        } else if (model == "cancer"){
-//            return std::make_unique<PopulationVariantCaller>();
-//        }
-//        throw std::runtime_error {"unknown calling model " + model};
-//    }
+    std::unique_ptr<VariantCaller> get_variant_caller(const po::variables_map& options, ReferenceGenome& reference,
+                                                      CandidateVariantGenerator& candidate_generator)
+    {
+        const auto& model = options.at("model").as<std::string>();
+        
+        auto refcalls = VariantCaller::RefCall::None;
+        
+        if (options.at("make-positional-refcalls").as<bool>()) {
+            refcalls = VariantCaller::RefCall::Positional;
+        } else if (options.at("make-blocked-refcalls").as<bool>()) {
+            refcalls = VariantCaller::RefCall::Blocked;
+        }
+        
+        auto ploidy = options.at("ploidy").as<unsigned>();
+        
+        auto min_posterior_phred = options.at("min-posterior").as<unsigned>();
+        auto min_posterior = Maths::phred_to_probability(min_posterior_phred);
+        
+        return make_variant_caller(model, reference, candidate_generator, refcalls, min_posterior, ploidy);
+    }
     
     VcfWriter get_output_vcf(const po::variables_map& options)
     {

@@ -59,6 +59,8 @@ inline ContigRegion::SizeType ContigRegion::get_end() const noexcept
     return end_;
 }
 
+// non-member methods
+
 inline bool empty(const ContigRegion& region) noexcept
 {
     return region.get_begin() == region.get_end();
@@ -219,6 +221,16 @@ inline ContigRegion get_intervening(const ContigRegion& lhs, const ContigRegion&
     return ContigRegion {lhs.get_end(), rhs.get_begin()};
 }
 
+inline ContigRegion::SizeType left_overhang_size(const ContigRegion& lhs, const ContigRegion& rhs) noexcept
+{
+    return (begins_before(lhs, rhs)) ? (rhs.get_begin() - lhs.get_begin()) : 0;
+}
+
+inline ContigRegion::SizeType right_overhang_size(const ContigRegion& lhs, const ContigRegion& rhs) noexcept
+{
+    return (ends_before(lhs, rhs)) ? 0 : (lhs.get_end() - rhs.get_end());
+}
+
 inline ContigRegion get_left_overhang(const ContigRegion& lhs, const ContigRegion& rhs) noexcept
 {
     if (begins_before(rhs, lhs)) return ContigRegion {lhs.get_begin(), lhs.get_begin()};
@@ -236,6 +248,18 @@ inline ContigRegion get_right_overhang(const ContigRegion& lhs, const ContigRegi
 inline ContigRegion get_closed(const ContigRegion& lhs, const ContigRegion& rhs) noexcept
 {
     return ContigRegion {lhs.get_begin(), rhs.get_end()};
+}
+
+inline ContigRegion get_head(const ContigRegion& region, ContigRegion::SizeType n = 0) noexcept
+{
+    auto begin = region.get_begin();
+    return ContigRegion {begin, std::min(begin + n, region.get_end())};
+}
+
+inline ContigRegion get_tail(const ContigRegion& region, ContigRegion::SizeType n = 0) noexcept
+{
+    auto end = region.get_end();
+    return ContigRegion {(end >= n) ? end - n : 0, end};
 }
 
 namespace std {

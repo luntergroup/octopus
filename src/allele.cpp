@@ -37,6 +37,33 @@ Allele get_reference_allele(const GenomicRegion& region, ReferenceGenome& refere
     return Allele {region, reference.get_sequence(region)};
 }
 
+std::vector<Allele> get_reference_alleles(const std::vector<GenomicRegion>& regions, ReferenceGenome& reference)
+{
+    std::vector<Allele> result {};
+    result.reserve(regions.size());
+    
+    std::transform(std::cbegin(regions), std::cend(regions), std::back_inserter(result),
+                   [&reference] (const auto& region) { return get_reference_allele(region, reference); });
+    
+    return result;
+}
+
+std::vector<Allele> get_positional_reference_alleles(const GenomicRegion& region, ReferenceGenome& reference)
+{
+    auto sequence  = reference.get_sequence(region);
+    auto positions = decompose(region);
+    
+    std::vector<Allele> result {};
+    result.reserve(positions.size());
+    
+    std::transform(std::cbegin(positions), std::cend(positions), std::cbegin(sequence), std::back_inserter(result),
+                   [&reference] (const auto& region, auto base) {
+                       return Allele {region, base};
+                   });
+    
+    return result;
+}
+
 Allele::SequenceType get_subsequence(const Allele& allele, const GenomicRegion& region)
 {
     if (!contains(allele, region)) {

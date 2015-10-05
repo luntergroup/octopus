@@ -11,7 +11,7 @@
 
 #include <vector>
 #include <cstddef>     // size_t
-#include <cmath>       // std::abs, std::exp, std::log, std::sqrt, std::pow
+#include <cmath>       // std::abs, std::exp, std::log, std::sqrt, std::pow, std::log10
 #include <numeric>     // std::accumulate, std::iota, std::inner_product
 #include <algorithm>   // std::max, std::max_element, std::transform, std::all_of
 #include <type_traits> // std::enable_if_t, std::is_integral
@@ -347,6 +347,16 @@ maximum_likelihood_dirichlet_params(std::vector<RealType> pi, const RealType pre
     }
     
     return result;
+}
+
+inline unsigned probability_to_phred(double p)
+{
+    return static_cast<unsigned>(-10.0 * std::log10(std::max(1.0 - p, std::numeric_limits<double>::epsilon())));
+}
+
+inline double phred_to_probability(unsigned phred)
+{
+    return 1.0 - std::pow(10, -1.0 * static_cast<double>(phred) / 10.0);
 }
 
 template <typename MapType>

@@ -287,6 +287,48 @@ Variant normalise(const Variant& variant, ReferenceGenome& reference, Variant::S
     return make_parsimonious(left_align(variant, reference, extension_size), reference);
 }
 
+Variant pad_left(const Variant& variant, const Variant::SequenceType& sequence)
+{
+    return Variant {
+        compress_left(variant, -static_cast<GenomicRegion::DifferenceType>(sequence.size())),
+        sequence + variant.get_reference_allele_sequence(),
+        sequence + variant.get_alternative_allele_sequence()
+    };
+}
+
+Variant pad_right(const Variant& variant, const Variant::SequenceType& sequence)
+{
+    return Variant {
+        compress_right(variant, static_cast<GenomicRegion::DifferenceType>(sequence.size())),
+        variant.get_reference_allele_sequence() + sequence,
+        variant.get_alternative_allele_sequence() + sequence
+    };
+}
+
+Variant pad_left(const Variant& variant, ReferenceGenome& reference, Variant::SizeType n)
+{
+    auto pad_region   = compress_left(get_head(variant), -static_cast<GenomicRegion::DifferenceType>(n));
+    auto pad_sequence = reference.get_sequence(pad_region);
+    
+    return Variant {
+        get_encompassing(pad_region, variant),
+        pad_sequence + variant.get_reference_allele_sequence(),
+        pad_sequence + variant.get_alternative_allele_sequence()
+    };
+}
+
+Variant pad_right(const Variant& variant, ReferenceGenome& reference, Variant::SizeType n)
+{
+    auto pad_region   = compress_right(get_tail(variant), static_cast<GenomicRegion::DifferenceType>(n));
+    auto pad_sequence = reference.get_sequence(pad_region);
+    
+    return Variant {
+        get_encompassing(variant, pad_region),
+        variant.get_reference_allele_sequence() + pad_sequence,
+        variant.get_alternative_allele_sequence() + pad_sequence
+    };
+}
+
 std::vector<Variant> unique_left_align(const std::vector<Variant>& variants, ReferenceGenome& reference)
 {
     std::vector<Variant> result {};
@@ -306,12 +348,39 @@ std::vector<Variant> unique_left_align(const std::vector<Variant>& variants, Ref
     return result;
 }
 
-std::vector<Variant> make_parsimonious(const std::vector<Variant>& variants, ReferenceGenome& reference)
+std::vector<Variant> parsimonise_each(const std::vector<Variant>& variants, ReferenceGenome& reference)
 {
     std::vector<Variant> result {};
     result.reserve(variants.size());
     std::transform(std::cbegin(variants), std::cend(variants), std::back_inserter(result),
                    [&reference] (const auto& variant) { return make_parsimonious(variant, reference); });
+    return result;
+}
+
+std::vector<Variant> parsimonise_together(const std::vector<Variant>& segment, ReferenceGenome& reference)
+{
+    if (segment.empty()) return {};
+    
+    auto parsimonised_variants = parsimonise_each(segment, reference);
+    
+    auto leftmost  = *leftmost_mappable(parsimonised_variants);
+    auto rightmost = *rightmost_mappable(parsimonised_variants);
+    
+    std::vector<Variant> result {};
+    result.reserve(segment.size());
+    
+    for (auto& variant : parsimonised_variants) {
+        if (begins_before(leftmost, variant)) {
+            variant = pad_left(variant, reference, left_overhang_size(leftmost, variant));
+        }
+        
+        if (ends_before(variant, rightmost)) {
+            variant = pad_right(variant, reference, right_overhang_size(rightmost, variant));
+        }
+        
+        result.push_back(variant);
+    }
+    
     return result;
 }
 
@@ -353,4 +422,13 @@ bool is_transition(const Variant& variant) noexcept
 bool is_transversion(const Variant& variant) noexcept
 {
     return is_snp(variant) && !is_transition(variant);
+}
+
+std::vector<Allele::SequenceType> get_alt_allele_sequences(const std::vector<Variant>& variants)
+{
+    std::vector<Allele::SequenceType> result {};
+    result.reserve(variants.size());
+    std::transform(std::cbegin(variants), std::cend(variants), std::back_inserter(result),
+                   [] (const auto& variant) { return variant.get_alternative_allele_sequence(); });
+    return result;
 }

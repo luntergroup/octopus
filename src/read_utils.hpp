@@ -195,6 +195,7 @@ namespace detail
     template <typename T>
     unsigned min_coverage(const T& reads, const GenomicRegion& region, NonMapTypeTag)
     {
+        if (reads.empty() || empty(region)) return 0;
         auto positions_coverage = positional_coverage(reads, region);
         return *std::min_element(std::cbegin(positions_coverage), std::cend(positions_coverage));
     }
@@ -202,6 +203,7 @@ namespace detail
     template <typename T>
     unsigned max_coverage(const T& reads, const GenomicRegion& region, NonMapTypeTag)
     {
+        if (reads.empty() || empty(region)) return 0;
         auto positions_coverage = positional_coverage(reads, region);
         return *std::max_element(std::cbegin(positions_coverage), std::cend(positions_coverage));
     }
@@ -209,6 +211,7 @@ namespace detail
     template <typename T>
     double mean_coverage(const T& reads, const GenomicRegion& region, NonMapTypeTag)
     {
+        if (reads.empty() || empty(region)) return 0;
         auto positions_coverage = positional_coverage(reads, region);
         return Maths::mean(positions_coverage);
     }
@@ -216,6 +219,7 @@ namespace detail
     template <typename T>
     double stdev_coverage(const T& reads, const GenomicRegion& region, NonMapTypeTag)
     {
+        if (reads.empty() || empty(region)) return 0;
         auto positions_coverage = positional_coverage(reads, region);
         return Maths::stdev(positions_coverage);
     }

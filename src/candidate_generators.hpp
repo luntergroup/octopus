@@ -14,5 +14,6 @@
 #include "alignment_candidate_variant_generator.hpp"
 #include "assembler_candidate_variant_generator.hpp"
 #include "online_candidate_variant_generator.hpp"
+#include "random_candidate_variant_generator.hpp"
 
 #endif

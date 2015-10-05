@@ -265,6 +265,16 @@ inline GenomicRegion get_overlapped(const GenomicRegion& lhs, const GenomicRegio
                                                                 rhs.get_contig_region())};
 }
 
+inline GenomicRegion::SizeType left_overhang_size(const GenomicRegion& lhs, const GenomicRegion& rhs) noexcept
+{
+    return (is_same_contig(lhs, rhs)) ? left_overhang_size(lhs.get_contig_region(), rhs.get_contig_region()) : 0;
+}
+
+inline GenomicRegion::SizeType right_overhang_size(const GenomicRegion& lhs, const GenomicRegion& rhs) noexcept
+{
+    return (is_same_contig(lhs, rhs)) ? right_overhang_size(lhs.get_contig_region(), rhs.get_contig_region()) : 0;
+}
+
 inline GenomicRegion get_left_overhang(const GenomicRegion& lhs, const GenomicRegion& rhs)
 {
     if (is_same_contig(lhs, rhs)) {
@@ -290,6 +300,16 @@ inline GenomicRegion get_closed(const GenomicRegion& lhs, const GenomicRegion& r
                                                                 rhs.get_contig_region())};
     }
     throw RegionError {to_string(lhs), to_string(rhs)};
+}
+
+inline GenomicRegion get_head(const GenomicRegion& region, GenomicRegion::SizeType n = 0)
+{
+    return GenomicRegion {region.get_contig_name(), get_head(region.get_contig_region(), n)};
+}
+
+inline GenomicRegion get_tail(const GenomicRegion& region, GenomicRegion::SizeType n = 0)
+{
+    return GenomicRegion {region.get_contig_name(), get_tail(region.get_contig_region(), n)};
 }
 
 namespace std {

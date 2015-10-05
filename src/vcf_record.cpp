@@ -365,9 +365,21 @@ VcfRecord::Builder& VcfRecord::Builder::set_id(const std::string& id)
     return *this;
 }
 
+VcfRecord::Builder& VcfRecord::Builder::set_ref_allele(const char ref_allele)
+{
+    ref_allele_ = ref_allele;
+    return *this;
+}
+
 VcfRecord::Builder& VcfRecord::Builder::set_ref_allele(const SequenceType& ref_allele)
 {
     ref_allele_ = ref_allele;
+    return *this;
+}
+
+VcfRecord::Builder& VcfRecord::Builder::set_alt_allele(const char alt_allele)
+{
+    alt_alleles_[0] = alt_allele;
     return *this;
 }
 

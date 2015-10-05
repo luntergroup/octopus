@@ -56,8 +56,8 @@ BOOST_AUTO_TEST_CASE(advance_region_always_gives_a_region_more_advanced_than_the
     
     auto reads = a_read_manager.fetch_reads(samples, a_region);
     
-    CandidateVariantGenerator candidate_generator {};
-    candidate_generator.register_generator(std::make_unique<AlignmentCandidateVariantGenerator>(human, 0));
+    Octopus::CandidateVariantGenerator candidate_generator {};
+    candidate_generator.register_generator(std::make_unique<Octopus::AlignmentCandidateVariantGenerator>(human, 0));
     
     for (auto& sample_reads : reads) {
         std::sort(sample_reads.second.begin(), sample_reads.second.end());
@@ -92,8 +92,8 @@ BOOST_AUTO_TEST_CASE(search_regions_contains_all_variants_in_list_exactly_once_w
     
     auto good_reads = Octopus::filter_reads(std::move(reads), a_read_filter).first;
     
-    CandidateVariantGenerator candidate_generator {};
-    candidate_generator.register_generator(std::make_unique<AlignmentCandidateVariantGenerator>(human, 0));
+    Octopus::CandidateVariantGenerator candidate_generator {};
+    candidate_generator.register_generator(std::make_unique<Octopus::AlignmentCandidateVariantGenerator>(human, 0));
     
     for (auto& sample_reads : good_reads) {
         std::sort(sample_reads.second.begin(), sample_reads.second.end());
@@ -214,8 +214,8 @@ BOOST_AUTO_TEST_CASE(advance_regions_bounds_are_respected)
     
     auto good_reads = Octopus::filter_reads(std::move(reads), a_read_filter).first;
     
-    CandidateVariantGenerator candidate_generator {};
-    candidate_generator.register_generator(std::make_unique<AlignmentCandidateVariantGenerator>(human, 0));
+    Octopus::CandidateVariantGenerator candidate_generator {};
+    candidate_generator.register_generator(std::make_unique<Octopus::AlignmentCandidateVariantGenerator>(human, 0));
     
     for (auto& sample_reads : good_reads) {
         std::sort(sample_reads.second.begin(), sample_reads.second.end());
@@ -357,8 +357,8 @@ BOOST_AUTO_TEST_CASE(setting_max_included_to_zero_in_advance_region_results_in_t
     
     auto good_reads = Octopus::filter_reads(std::move(reads), a_read_filter).first;
     
-    CandidateVariantGenerator candidate_generator {};
-    candidate_generator.register_generator(std::make_unique<AlignmentCandidateVariantGenerator>(human, 0));
+    Octopus::CandidateVariantGenerator candidate_generator {};
+    candidate_generator.register_generator(std::make_unique<Octopus::AlignmentCandidateVariantGenerator>(human, 0));
     
     for (auto& sample_reads : good_reads) {
         std::sort(sample_reads.second.begin(), sample_reads.second.end());
@@ -394,8 +394,8 @@ BOOST_AUTO_TEST_CASE(search_regions_includes_all_possible_indicators)
     
     auto reads = a_read_manager.fetch_reads(samples, a_region);
     
-    CandidateVariantGenerator candidate_generator {};
-    candidate_generator.register_generator(std::make_unique<AlignmentCandidateVariantGenerator>(human, 0));
+    Octopus::CandidateVariantGenerator candidate_generator {};
+    candidate_generator.register_generator(std::make_unique<Octopus::AlignmentCandidateVariantGenerator>(human, 0));
     
     for (auto& sample_reads : reads) {
         std::sort(sample_reads.second.begin(), sample_reads.second.end());

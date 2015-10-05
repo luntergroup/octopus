@@ -109,6 +109,7 @@ namespace Octopus
         auto read_filter         = Options::get_read_filter(options);
         auto read_transform      = Options::get_read_transformer(options);
         auto candidate_generator = Options::get_candidate_generator(options, reference);
+        auto caller              = Options::get_variant_caller(options, reference, candidate_generator);
         auto vcf                 = Options::get_output_vcf(options);
         
         //std::cout << "there are " << read_filter.num_filters() << " read filters" << std::endl;
@@ -116,6 +117,7 @@ namespace Octopus
         
         const auto samples = get_samples(options, read_manager);
         
+        cout << "model details: " << caller->get_details() << endl;
         cout << "writing results to " << vcf.path().string() << endl;
         
         auto contigs = get_contigs(regions);
@@ -132,11 +134,13 @@ namespace Octopus
         for (const auto& contig_region : regions) {
             auto region = *contig_region.second.cbegin();
             
-            cout << "looking at region " << region << endl;
+            cout << "processing region " << region << endl;
             
-            std::unique_ptr<VariantCaller> caller = std::make_unique<PopulationVariantCaller>(reference, read_manager, read_filter, read_transform, candidate_generator);
+            auto good_reads = filter_reads(make_mappable_map(read_manager.fetch_reads(region)), read_filter).first;
             
-            auto calls = caller->call_variants(region);
+            transform_reads(good_reads, read_transform);
+            
+            auto calls = caller->call_variants(region, std::move(good_reads));
             
             cout << "writing " << calls.size() << " calls to VCF" << endl;
             

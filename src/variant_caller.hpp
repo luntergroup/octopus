@@ -10,10 +10,8 @@
 #define Octopus_variant_caller_hpp
 
 #include <vector>
+#include <string>
 #include <iterator>
-#include <algorithm> // std::max
-#include <limits>    // std::numeric_limits
-#include <cmath>     // std::log10
 
 #include "common.hpp"
 #include "reference_genome.hpp"
@@ -31,12 +29,13 @@ namespace Octopus
     class VariantCaller
     {
     public:
-        using ReadFilter = ReadFilter<Octopus::ReadContainer::const_iterator>;
+        enum class RefCall { Positional, Blocked, None };
+        
+        using ReadMap = Octopus::ReadMap;
         
         VariantCaller() = delete;
-        VariantCaller(ReferenceGenome& reference, ReadManager& read_manager,
-                      ReadFilter read_filter, ReadTransform read_transform,
-                      CandidateVariantGenerator& candidate_generator);
+        VariantCaller(ReferenceGenome& reference, CandidateVariantGenerator& candidate_generator,
+                      RefCall refcalls = RefCall::None);
         virtual ~VariantCaller() = default;
         
         VariantCaller(const VariantCaller&)            = delete;
@@ -44,31 +43,36 @@ namespace Octopus
         VariantCaller(VariantCaller&&)                 = delete;
         VariantCaller& operator=(VariantCaller&&)      = delete;
         
-        std::vector<VcfRecord> call_variants(const GenomicRegion& region);
+        std::string get_details() const;
+        
+        std::vector<VcfRecord> call_variants(const GenomicRegion& region, ReadMap reads);
         
     protected:
-        using ReadMap = Octopus::ReadMap;
-        
         ReferenceGenome& reference_;
-        ReadManager& read_manager_;
-        ReadFilter read_filter_;
-        ReadTransform read_transform_;
-        CandidateVariantGenerator& candidate_generator_;
+        
+        const RefCall refcalls_ = RefCall::Positional;
+        
+        bool refcalls_requested() const noexcept;
         
     private:
+        CandidateVariantGenerator& candidate_generator_;
+        
         bool done_calling(const GenomicRegion& region) const noexcept;
         
-        virtual GenomicRegion get_init_region(const GenomicRegion& region) = 0;
-        virtual GenomicRegion get_next_region(const GenomicRegion& current_region) = 0;
+        virtual std::string do_get_details() const = 0;
+        
+        virtual GenomicRegion get_init_region(const GenomicRegion& region, const ReadMap& reads,
+                                              const std::vector<Variant>& candidates) = 0;
+        virtual GenomicRegion get_next_region(const GenomicRegion& current_region, const ReadMap& reads,
+                                              const std::vector<Variant>& candidates) = 0;
         virtual std::vector<VcfRecord> call_variants(const GenomicRegion& region,
                                                      const std::vector<Variant>& candidates,
                                                      const ReadMap& reads) = 0;
     };
     
-    inline unsigned to_phred_quality(double p)
-    {
-        return static_cast<unsigned>(-10.0 * std::log10(std::max(1.0 - p, std::numeric_limits<double>::epsilon())));
-    }
+    std::vector<Allele>
+    generate_callable_alleles(const GenomicRegion& region, const std::vector<Variant>& variants,
+                              VariantCaller::RefCall refcalls, ReferenceGenome& reference);
     
 } // namespace Octopus
 

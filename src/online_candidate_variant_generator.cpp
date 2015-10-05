@@ -13,8 +13,8 @@
 #include "aligned_read.hpp"
 #include "variant.hpp"
 
-namespace http = boost::network::http;
-
+namespace Octopus {
+    
 OnlineCandidateVariantGenerator::OnlineCandidateVariantGenerator(ReferenceGenome& reference,
                                                                  SizeType max_variant_size)
 :
@@ -24,6 +24,8 @@ max_variant_size_ {max_variant_size}
 
 std::vector<Variant> OnlineCandidateVariantGenerator::get_candidates(const GenomicRegion& region)
 {
+    namespace http = boost::network::http;
+    
 //    <?xml version="1.0" encoding="UTF-8"?>
 //    <!DOCTYPE Query>
 //    <Query  virtualSchemaName = "default" formatter = "TSV" header = "0" uniqueRows = "0" count = "" datasetConfigVersion = "0.6" >
@@ -54,3 +56,5 @@ std::vector<Variant> OnlineCandidateVariantGenerator::get_candidates(const Genom
         throw;
     }
 }
+
+} // namespace Octopus

@@ -61,6 +61,7 @@
 		CAA4DC351A83A39D00DD3E9A /* Octopus in CopyFiles */ = {isa = PBXBuildFile; fileRef = CAA4DC211A81981400DD3E9A /* Octopus */; };
 		CAB0DFD81BBDB9E5001D2F99 /* haplotype_prior_model.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CAB0DFD71BBDB9E5001D2F99 /* haplotype_prior_model.cpp */; settings = {ASSET_TAGS = (); }; };
 		CAB0DFDA1BBF035D001D2F99 /* genotype.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CAB0DFD91BBF035D001D2F99 /* genotype.cpp */; settings = {ASSET_TAGS = (); }; };
+		CAB0DFE01BC01E2A001D2F99 /* random_candidate_variant_generator.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CAB0DFDE1BC01E2A001D2F99 /* random_candidate_variant_generator.cpp */; settings = {ASSET_TAGS = (); }; };
 		CABA377F1A8FA11000BBE598 /* read_benchmarks.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CABA377E1A8FA11000BBE598 /* read_benchmarks.cpp */; };
 		CABA37821A8FA49800BBE598 /* read_manager.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CABA37801A8FA49800BBE598 /* read_manager.cpp */; };
 		CAD5EC071AD5BBEA00892816 /* genotype_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CAD5EC061AD5BBEA00892816 /* genotype_tests.cpp */; };
@@ -221,6 +222,9 @@
 		CAB0DFD61BBD5CA9001D2F99 /* cancer_genotype.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = cancer_genotype.hpp; sourceTree = "<group>"; };
 		CAB0DFD71BBDB9E5001D2F99 /* haplotype_prior_model.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = haplotype_prior_model.cpp; sourceTree = "<group>"; };
 		CAB0DFD91BBF035D001D2F99 /* genotype.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = genotype.cpp; sourceTree = "<group>"; };
+		CAB0DFDE1BC01E2A001D2F99 /* random_candidate_variant_generator.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = random_candidate_variant_generator.cpp; sourceTree = "<group>"; };
+		CAB0DFDF1BC01E2A001D2F99 /* random_candidate_variant_generator.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = random_candidate_variant_generator.hpp; sourceTree = "<group>"; };
+		CAB0DFE11BC03D50001D2F99 /* variant_caller_factory.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = variant_caller_factory.hpp; sourceTree = "<group>"; };
 		CABA377D1A8F9E0A00BBE598 /* test_common.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = test_common.hpp; sourceTree = "<group>"; };
 		CABA377E1A8FA11000BBE598 /* read_benchmarks.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = read_benchmarks.cpp; sourceTree = "<group>"; };
 		CABA37801A8FA49800BBE598 /* read_manager.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = read_manager.cpp; sourceTree = "<group>"; };
@@ -449,6 +453,7 @@
 				D4807FAE1BA826DB00657D4F /* population_caller.cpp */,
 				D4807FB41BA9716700657D4F /* cancer_caller.hpp */,
 				D4807FB31BA9716700657D4F /* cancer_caller.cpp */,
+				CAB0DFE11BC03D50001D2F99 /* variant_caller_factory.hpp */,
 			);
 			name = callers;
 			sourceTree = "<group>";
@@ -577,14 +582,16 @@
 				CAE3E2A41AA24C5500C01B2C /* i_candidate_variant_generator.hpp */,
 				CAE3E2A21AA1DBE000C01B2C /* candidate_variant_generator.hpp */,
 				D4807FA91BA6FA4900657D4F /* candidate_variant_generator.cpp */,
-				CAE3E2AA1AA2736D00C01B2C /* external_variant_candidates.hpp */,
-				CAE3E2A91AA2736D00C01B2C /* external_variant_candidates.cpp */,
 				CAE3E2A71AA25F7D00C01B2C /* alignment_candidate_variant_generator.hpp */,
 				CAE3E2A61AA25F7D00C01B2C /* alignment_candidate_variant_generator.cpp */,
 				CAE3E2B21AA3342B00C01B2C /* assembler_candidate_variant_generator.hpp */,
 				CAE3E2B11AA3342B00C01B2C /* assembler_candidate_variant_generator.cpp */,
+				CAE3E2AA1AA2736D00C01B2C /* external_variant_candidates.hpp */,
+				CAE3E2A91AA2736D00C01B2C /* external_variant_candidates.cpp */,
 				CA2827C01B2A4CD0007712D4 /* online_candidate_variant_generator.hpp */,
 				CA2827BF1B2A4CD0007712D4 /* online_candidate_variant_generator.cpp */,
+				CAB0DFDF1BC01E2A001D2F99 /* random_candidate_variant_generator.hpp */,
+				CAB0DFDE1BC01E2A001D2F99 /* random_candidate_variant_generator.cpp */,
 			);
 			name = generators;
 			sourceTree = "<group>";
@@ -936,6 +943,7 @@
 				CA0B46691AE860FC00158BBA /* 1000G_test1.cpp in Sources */,
 				CA90C55A1ACDB95D00CBEE34 /* haplotype_tests.cpp in Sources */,
 				CAE3E2CD1AAB46BC00C01B2C /* read_filters.hpp in Sources */,
+				CAB0DFE01BC01E2A001D2F99 /* random_candidate_variant_generator.cpp in Sources */,
 				CA0B46771AE8657F00158BBA /* 1000G_test6.cpp in Sources */,
 				D4636C641B6788C500FEA7D2 /* vcf_record.cpp in Sources */,
 				CA4551741AEB09DC00FDAAE8 /* 1000G_test20.cpp in Sources */,
@@ -1032,7 +1040,7 @@
 				ALWAYS_SEARCH_USER_PATHS = YES;
 				CLANG_CXX_LANGUAGE_STANDARD = "c++14";
 				FRAMEWORK_SEARCH_PATHS = "$(inherited)";
-				GCC_OPTIMIZATION_LEVEL = 3;
+				GCC_OPTIMIZATION_LEVEL = 0;
 				HEADER_SEARCH_PATHS = (
 					"$(inherited)",
 					/usr/local/Cellar/boost/1.58.0/include,
@@ -1057,7 +1065,7 @@
 				ALWAYS_SEARCH_USER_PATHS = YES;
 				CLANG_CXX_LANGUAGE_STANDARD = "c++14";
 				FRAMEWORK_SEARCH_PATHS = "$(inherited)";
-				GCC_OPTIMIZATION_LEVEL = 3;
+				GCC_OPTIMIZATION_LEVEL = 0;
 				HEADER_SEARCH_PATHS = (
 					"$(inherited)",
 					/usr/local/Cellar/boost/1.58.0/include,

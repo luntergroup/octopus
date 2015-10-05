@@ -97,7 +97,6 @@ GenomicRegion advance_region(const GenomicRegion& previous_region,
     }
     
     auto candidate_order = MappableRangeOrder::BidirectionallySorted;
-    auto read_order      = MappableRangeOrder::BidirectionallySorted;
     
     auto last_variant_it = std::cend(variants);
     
@@ -105,6 +104,8 @@ GenomicRegion advance_region(const GenomicRegion& previous_region,
                                                  candidate_order));
     auto first_previous_it = previous_variants.begin();
     auto included_it       = previous_variants.end();
+    
+    if (included_it == last_variant_it) return get_tail(previous_region, 0);
     
     if (max_included == 0) {
         return (included_it != last_variant_it) ? get_intervening(previous_region, *included_it) :
@@ -115,8 +116,7 @@ GenomicRegion advance_region(const GenomicRegion& previous_region,
     
     if (indicator_limit == IndicatorLimit::SharedWithPreviousRegion) {
         auto first_shared_in_previous_range_it = find_first_shared(reads, first_previous_it,
-                                                                   included_it, *included_it,
-                                                                   read_order);
+                                                                   included_it, *included_it);
         auto num_possible_indicators = static_cast<unsigned>(std::distance(first_shared_in_previous_range_it, included_it));
         
         num_indicators = std::min(num_possible_indicators, num_indicators);
@@ -130,7 +130,7 @@ GenomicRegion advance_region(const GenomicRegion& previous_region,
     
     if (extension_limit == ExtensionLimit::WithinReadLengthOfFirstIncluded) {
         auto max_num_variants_within_read_length = static_cast<unsigned>(max_count_if_shared_with_first(reads,
-                                                                    included_it, last_variant_it, read_order));
+                                                                    included_it, last_variant_it));
         max_included = std::min({max_included, num_remaining_variants, max_num_variants_within_read_length + 1});
         num_excluded_variants = max_num_variants_within_read_length - max_included;
     } else {
@@ -164,7 +164,7 @@ std::vector<GenomicRegion> cover_region(const GenomicRegion& region,
 {
     std::vector<GenomicRegion> result {};
     
-    auto sub_region = compress_right(region, -size(region));
+    auto sub_region = get_head(region, 0);
     
     while (ends_before(sub_region, region)) {
         sub_region = advance_region(sub_region, reads, variants, max_included, max_indicators,

@@ -247,6 +247,8 @@ Haplotype splice(const Haplotype& haplotype, const GenomicRegion& region)
     
     Haplotype result {*haplotype.reference_, region};
     
+    if (haplotype.explicit_alleles_.empty()) return result;
+    
     auto contained = bases(contained_range(std::cbegin(haplotype.explicit_alleles_),
                                            std::cend(haplotype.explicit_alleles_), region));
     

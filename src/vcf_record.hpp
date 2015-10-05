@@ -181,7 +181,9 @@ public:
     Builder& set_chromosome(const std::string& chromosome);
     Builder& set_position(SizeType position);
     Builder& set_id(const std::string& id);
+    Builder& set_ref_allele(const char ref_allele);
     Builder& set_ref_allele(const SequenceType& ref_allele);
+    Builder& set_alt_allele(const char alt_allele); // if just one
     Builder& set_alt_allele(const SequenceType& alt_allele); // if just one
     Builder& set_alt_alleles(const std::vector<SequenceType>& alt_alleles);
     Builder& set_quality(QualityType quality);

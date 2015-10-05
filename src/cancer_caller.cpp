@@ -21,33 +21,40 @@
 #include "haplotype_tree.hpp"
 #include "search_regions.hpp"
 #include "vcf_record.hpp"
-
 #include "mappable_algorithms.hpp"
 #include "variant_utils.hpp"
-
+#include "maths.hpp"
 #include "cancer_genotype.hpp"
 #include "genotype_model.hpp"
 #include "cancer_genotype_model.hpp"
 
-#include <iostream> // TEST
 #include "haplotype_prior_model.hpp"
+
+#include <iostream> // TEST
 
 namespace Octopus
 {
 
-    CancerVariantCaller::CancerVariantCaller(ReferenceGenome& reference, ReadManager& read_manager,
-                                             ReadFilter read_filter, ReadTransform read_transform,
-                                             CandidateVariantGenerator& candidate_generator)
+    CancerVariantCaller::CancerVariantCaller(ReferenceGenome& reference, CandidateVariantGenerator& candidate_generator,
+                                             RefCall refcalls, double min_posterior)
     :
-    VariantCaller {reference, read_manager, read_filter, read_transform, candidate_generator}
+    VariantCaller {reference, candidate_generator, refcalls},
+    min_posterior_ {min_posterior}
     {}
+    
+    std::string CancerVariantCaller::do_get_details() const
+    {
+        return "cancer caller";
+    }
 
-    GenomicRegion CancerVariantCaller::get_init_region(const GenomicRegion& region)
+    GenomicRegion CancerVariantCaller::get_init_region(const GenomicRegion& region, const ReadMap& reads,
+                                                       const std::vector<Variant>& candidates)
     {
         return region;
     }
     
-    GenomicRegion CancerVariantCaller::get_next_region(const GenomicRegion& current_region)
+    GenomicRegion CancerVariantCaller::get_next_region(const GenomicRegion& current_region, const ReadMap& reads,
+                                                       const std::vector<Variant>& candidates)
     {
         return GenomicRegion {"TEST", 0, 0};
     }
@@ -117,7 +124,7 @@ namespace Octopus
         
         auto haplotypes = tree.get_haplotypes(region);
         
-        //std::cout << "there are " << haplotypes.size() << " haplotypes" << std::endl;
+        std::cout << "there are " << haplotypes.size() << " haplotypes" << std::endl;
         
         SampleIdType normal_sample {"HG00102"};
         
@@ -143,9 +150,9 @@ namespace Octopus
                 }
             }
             
-            auto alleles  = decompose(candidates);
-            auto segments = segment(alleles);
-            auto regions  = get_segment_regions(segments);
+//            auto alleles  = decompose(candidates);
+//            auto segments = segment(alleles);
+//            auto regions  = get_segment_regions(segments);
             
             
         }

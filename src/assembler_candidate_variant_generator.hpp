@@ -20,6 +20,8 @@ class AlignedRead;
 class GenomicRegion;
 class Variant;
 
+namespace Octopus {
+    
 class AssemblerCandidateVariantGenerator : public ICandidateVariantGenerator
 {
 public:
@@ -33,7 +35,7 @@ public:
     AssemblerCandidateVariantGenerator(AssemblerCandidateVariantGenerator&&)                 = default;
     AssemblerCandidateVariantGenerator& operator=(AssemblerCandidateVariantGenerator&&)      = default;
     
-    void add_read(const AlignedRead& a_read) override;
+    void add_read(const AlignedRead& read) override;
     void add_reads(std::vector<AlignedRead>::const_iterator first, std::vector<AlignedRead>::const_iterator last) override;
     void add_reads(MappableSet<AlignedRead>::const_iterator first, MappableSet<AlignedRead>::const_iterator last) override;
     std::vector<Variant> get_candidates(const GenomicRegion& region) override;
@@ -44,5 +46,7 @@ private:
     VariantAssembler the_variant_assembler_;
     double generator_confidence_;
 };
+
+} // namespace Octopus
 
 #endif /* defined(__Octopus__assembler_candidate_variant_generator__) */

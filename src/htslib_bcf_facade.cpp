@@ -582,7 +582,7 @@ void set_samples(bcf_hdr_t* header, bcf1_t* dest, const VcfRecord& source)
     const auto& alt_alleles = source.get_alt_alleles();
     alleles.insert(alleles.end(), std::cbegin(alt_alleles), std::cend(alt_alleles));
     
-    auto samples     = get_samples(header); // maybe pass this instead?
+    auto samples     = get_samples(header); // TODO: maybe pass this instead?
     auto num_samples = static_cast<int>(source.num_samples());
     
     if (source.has_genotypes()) {

@@ -15,6 +15,8 @@
 #include "variant.hpp"
 #include "variant_utils.hpp"
 
+namespace Octopus {
+    
 void CandidateVariantGenerator::register_generator(std::unique_ptr<ICandidateVariantGenerator> generator)
 {
     generator_list_.emplace_back(std::move(generator));
@@ -71,3 +73,5 @@ void CandidateVariantGenerator::clear()
         generator->clear();
     }
 }
+
+} // namespace Octopus

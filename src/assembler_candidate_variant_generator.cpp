@@ -14,6 +14,8 @@
 #include "aligned_read.hpp"
 #include "variant.hpp"
 
+namespace Octopus {
+    
 AssemblerCandidateVariantGenerator::AssemblerCandidateVariantGenerator(ReferenceGenome& reference,
                                                                        unsigned kmer_size,
                                                                        double generator_confidence)
@@ -23,19 +25,19 @@ the_variant_assembler_ {kmer_size},
 generator_confidence_ {generator_confidence}
 {}
 
-void AssemblerCandidateVariantGenerator::add_read(const AlignedRead& a_read)
+void AssemblerCandidateVariantGenerator::add_read(const AlignedRead& read)
 {
-    the_variant_assembler_.add_read(a_read);
+    the_variant_assembler_.add_read(read);
 }
 
 void AssemblerCandidateVariantGenerator::add_reads(std::vector<AlignedRead>::const_iterator first, std::vector<AlignedRead>::const_iterator last)
 {
-    std::for_each(first, last, [this] (const auto& a_read ) { add_read(a_read); });
+    std::for_each(first, last, [this] (const auto& read ) { add_read(read); });
 }
 
 void AssemblerCandidateVariantGenerator::add_reads(MappableSet<AlignedRead>::const_iterator first, MappableSet<AlignedRead>::const_iterator last)
 {
-    std::for_each(first, last, [this] (const auto& a_read ) { add_read(a_read); });
+    std::for_each(first, last, [this] (const auto& read ) { add_read(read); });
 }
 
 std::vector<Variant> AssemblerCandidateVariantGenerator::get_candidates(const GenomicRegion& region)
@@ -49,3 +51,5 @@ void AssemblerCandidateVariantGenerator::clear()
 {
     the_variant_assembler_.clear();
 }
+
+} // namespace Octopus

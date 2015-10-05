@@ -16,6 +16,8 @@
 
 class GenomicRegion;
 
+namespace Octopus {
+    
 class ExternalVariantCandidates : public ICandidateVariantGenerator
 {
 public:
@@ -33,5 +35,7 @@ public:
 private:
     VcfReader& reader_;
 };
+
+} // namespace Octopus
 
 #endif /* defined(__Octopus__external_variant_candidates__) */

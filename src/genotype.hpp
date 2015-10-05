@@ -269,7 +269,7 @@ bool contains(const Genotype<MappableType1>& lhs, const Genotype<MappableType2>&
                        [&rhs] (const auto& element) { return rhs.contains(element); });
 }
 
-unsigned num_genotypes(unsigned num_elements, unsigned ploidy);
+unsigned num_genotypes(const unsigned num_elements, const unsigned ploidy);
 
 namespace detail
 {
@@ -289,9 +289,10 @@ namespace detail
 
 // Assumes the input haplotypes are unique
 template <typename MappableType>
-std::vector<Genotype<MappableType>> generate_all_genotypes(const std::vector<MappableType>& elements, unsigned ploidy)
+std::vector<Genotype<MappableType>>
+generate_all_genotypes(const std::vector<MappableType>& elements, const unsigned ploidy)
 {
-    if (elements.empty()) return {};
+    if (ploidy == 0 || elements.empty()) return {};
     
     auto num_elements = static_cast<unsigned>(elements.size());
     

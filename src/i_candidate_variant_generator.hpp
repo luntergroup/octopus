@@ -10,7 +10,7 @@
 #define Octopus_i_candidate_variant_generator__
 
 #include <vector>
-#include <cstddef> // std::size_t
+#include <cstddef> // size_t
 
 #include "common.hpp"
 #include "variant.hpp"
@@ -18,6 +18,8 @@
 
 class AlignedRead;
 class GenomicRegion;
+
+namespace Octopus {
 
 class ICandidateVariantGenerator
 {
@@ -39,8 +41,10 @@ public:
     virtual void add_reads(std::vector<AlignedRead>::const_iterator first, std::vector<AlignedRead>::const_iterator last) {};
     virtual void add_reads(MappableSet<AlignedRead>::const_iterator first, MappableSet<AlignedRead>::const_iterator last) {};
     
-    virtual void reserve(std::size_t n) {};
+    virtual void reserve(size_t n) {};
     virtual void clear() {};
 };
+
+} // namespace Octopus
 
 #endif

@@ -125,8 +125,8 @@ find_first_shared(const MappableMap<KeyType, MappableType1>& mappables, ForwardI
     std::vector<ForwardIterator> smallest(mappables.size());
     
     std::transform(std::cbegin(mappables), std::cend(mappables), smallest.begin(),
-                   [first, last, &mappables, &mappable] (const auto& p) {
-                       return find_first_shared(mappables, first, last, mappable);
+                   [first, last, &mappable] (const auto& p) {
+                       return find_first_shared(p.second, first, last, mappable);
                    });
     
     return *std::min_element(std::cbegin(smallest), std::cend(smallest), []
@@ -185,6 +185,20 @@ rightmost_overlapped(const MappableMap<KeyType, MappableType1>& mappables, const
                              (auto lhs, auto rhs) {
                                  return ends_before(*lhs, *rhs);
                              });
+}
+
+template <typename KeyType, typename MappableType1, typename MappableType2>
+MappableMap<KeyType, MappableType1>
+copy_overlapped(const MappableMap<KeyType, MappableType1>& mappables, const MappableType2& mappable)
+{
+    MappableMap<KeyType, MappableType1> result {};
+    result.reserve(mappables.size());
+    
+    for (const auto& p : mappables) {
+        result.emplace(p.first, copy_overlapped(p.second, mappable));
+    }
+    
+    return result;
 }
 
 #endif

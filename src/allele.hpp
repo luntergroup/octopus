@@ -54,6 +54,10 @@ bool is_reference(const Allele& allele, ReferenceGenome& reference);
 
 Allele get_reference_allele(const GenomicRegion& region, ReferenceGenome& reference);
 
+std::vector<Allele> get_reference_alleles(const std::vector<GenomicRegion>& regions, ReferenceGenome& reference);
+
+std::vector<Allele> get_positional_reference_alleles(const GenomicRegion& region, ReferenceGenome& reference);
+
 //Allele::SequenceType get_subsequence(const Allele& allele, const GenomicRegion& region);
 
 Allele splice(const Allele& allele, const GenomicRegion& region);
