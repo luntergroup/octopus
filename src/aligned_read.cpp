@@ -260,6 +260,8 @@ AlignedRead splice(const AlignedRead& read, const GenomicRegion& region)
         throw std::runtime_error {"cannot splice AlignedRead region that is not contained"};
     }
     
+    if (is_same_region(read, region)) return read;
+    
     auto reference_offset = get_begin(region) - get_begin(read);
     
     auto uncontained_cigar_splice = reference_splice(read.get_cigar_string(), GenomicRegion::SizeType {}, reference_offset);

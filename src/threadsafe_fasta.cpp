@@ -39,8 +39,8 @@ ThreadsafeFasta::SizeType ThreadsafeFasta::do_get_contig_size(const std::string&
     return fasta_.get_contig_size(contig_name);
 }
 
-ThreadsafeFasta::SequenceType ThreadsafeFasta::do_get_sequence(const GenomicRegion& region)
+ThreadsafeFasta::SequenceType ThreadsafeFasta::do_fetch_sequence(const GenomicRegion& region)
 {
     std::lock_guard<std::mutex> lock {fasta_mutex_};
-    return fasta_.get_sequence(region);
+    return fasta_.fetch_sequence(region);
 }

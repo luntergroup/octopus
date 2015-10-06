@@ -392,7 +392,7 @@ BOOST_AUTO_TEST_CASE(haplotype_tree_survives_serious_pruning)
 {
     auto human = make_reference(human_reference_fasta);
     
-    ReadManager a_read_manager {human_1000g_bam1};
+    ReadManager a_read_manager {HG00101};
     
     Octopus::CandidateVariantGenerator candidate_generator {};
     
@@ -464,7 +464,7 @@ BOOST_AUTO_TEST_CASE(prune_unqiue_leaves_a_single_haplotype_which_contains_the_s
 {
     auto human = make_reference(human_reference_fasta);
     
-    ReadManager a_read_manager {human_1000g_bam1};
+    ReadManager a_read_manager {HG00101};
     
     Octopus::CandidateVariantGenerator candidate_generator {};
     

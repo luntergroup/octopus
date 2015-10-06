@@ -25,7 +25,7 @@ make_variant_caller(const std::string& model, ReferenceGenome& reference,
                     CandidateVariantGenerator& candidate_generator,
                     VariantCaller::RefCallType refcall_type,
                     double min_variant_posterior, double min_refcall_posterior,
-                    unsigned ploidy)
+                    unsigned ploidy, const SampleIdType& normal_sample)
 {
     std::unordered_map<std::string, std::function<std::unique_ptr<VariantCaller>()>> model_map {
         {"population", [&] () {
@@ -36,7 +36,8 @@ make_variant_caller(const std::string& model, ReferenceGenome& reference,
         }},
         {"cancer",     [&] () {
             return std::make_unique<CancerVariantCaller>(reference, candidate_generator,
-                                                         refcall_type, min_variant_posterior);
+                                                         refcall_type, min_variant_posterior,
+                                                         min_refcall_posterior, normal_sample);
         }}
         };
     

@@ -48,7 +48,7 @@ private:
     std::string do_get_reference_name() const override;
     std::vector<std::string> do_get_contig_names() override;
     SizeType do_get_contig_size(const std::string& contig_name) override;
-    SequenceType do_get_sequence(const GenomicRegion& region) override;
+    SequenceType do_fetch_sequence(const GenomicRegion& region) override;
     
     bool is_valid_fasta() const noexcept;
 };

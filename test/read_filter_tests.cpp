@@ -29,25 +29,23 @@ BOOST_AUTO_TEST_SUITE(Components)
 
 BOOST_AUTO_TEST_CASE(read_filter_test)
 {
-    ReadManager a_read_manager {human_1000g_bam1};
+    ReadManager read_manager {NA12878_low_coverage};
     
-    auto sample_ids = a_read_manager.get_samples();
+    auto sample_ids = read_manager.get_samples();
     
-    auto the_sample_id = sample_ids.at(0);
+    auto sample = sample_ids.front();
     
-    GenomicRegion a_region {"X", 1000000, 1010000};
+    GenomicRegion region {"X", 1000000, 1010000};
     
-    auto some_reads = a_read_manager.fetch_reads(the_sample_id, a_region);
+    auto reads = read_manager.fetch_reads(sample, region);
     
-    if (!std::is_sorted(some_reads.begin(), some_reads.end())) {
-        std::sort(some_reads.begin(), some_reads.end());
+    if (!std::is_sorted(reads.begin(), reads.end())) {
+        std::sort(reads.begin(), reads.end());
     }
     
-    BOOST_CHECK(some_reads.size() == 669);
+    BOOST_CHECK(reads.size() == 485);
     
-    using ReadIterator = std::vector<AlignedRead>::const_iterator;
-    
-    Octopus::ReadFilter<ReadIterator> read_filter {};
+    Octopus::ReadFilter<std::vector<AlignedRead>::const_iterator> read_filter {};
     
     read_filter.register_filter(Octopus::ReadFilters::is_not_secondary_alignment());
     read_filter.register_filter(Octopus::ReadFilters::is_good_mapping_quality(20));
@@ -55,17 +53,15 @@ BOOST_AUTO_TEST_CASE(read_filter_test)
     read_filter.register_filter(Octopus::ReadFilters::is_not_duplicate());
     
     std::vector<AlignedRead> good_reads {}, bad_reads {};
-    good_reads.reserve(some_reads.size());
-    bad_reads.reserve(some_reads.size());
+    good_reads.reserve(reads.size());
+    bad_reads.reserve(reads.size());
     
-    read_filter.filter_reads(std::make_move_iterator(some_reads.begin()),
-                             std::make_move_iterator(some_reads.end()),
-                             ContextBackInserter(good_reads),
-                             ContextBackInserter(bad_reads));
+    read_filter.filter_reads(std::make_move_iterator(reads.begin()), std::make_move_iterator(reads.end()),
+                             ContextBackInserter(good_reads), ContextBackInserter(bad_reads));
     
     // TODO: check these numbers are actually correct!
-    BOOST_CHECK(good_reads.size() == 649);
-    BOOST_CHECK(bad_reads.size() == 20);
+    BOOST_CHECK(good_reads.size() == 436);
+    BOOST_CHECK(bad_reads.size() == 49);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

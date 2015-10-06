@@ -58,7 +58,9 @@ ReferenceGenome make_reference(fs::path file_path, std::size_t max_base_pair_cac
 
 std::vector<GenomicRegion> get_all_contig_regions(const ReferenceGenome& reference);
 
+GenomicRegion::SizeType get_genome_size(const ReferenceGenome& reference);
+
 // Requires reference access to get contig sizes for partially specified regions (e.g. "4")
-GenomicRegion parse_region(const std::string& a_region, const ReferenceGenome& reference);
+GenomicRegion parse_region(const std::string& region, const ReferenceGenome& reference);
 
 #endif /* defined(__Octopus__reference_genome__) */

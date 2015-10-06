@@ -14,6 +14,7 @@
 #include <list>
 #include <cstddef>
 #include <boost/filesystem/path.hpp>
+#include <boost/range/iterator_range_core.hpp>
 
 #include "reference_genome_impl.hpp"
 #include "fasta.hpp"
@@ -45,13 +46,15 @@ private:
     
     using ContigSequenceCache = std::map<GenomicRegion, SequenceType>;
     using CacheIterator       = ContigSequenceCache::const_iterator;
+    using OverlapRange        = boost::iterator_range<CacheIterator>;
     
     std::string do_get_reference_name() const override;
     std::vector<std::string> do_get_contig_names() override;
     SizeType do_get_contig_size(const std::string& contig_name) override;
-    SequenceType do_get_sequence(const GenomicRegion& region) override;
+    SequenceType do_fetch_sequence(const GenomicRegion& region) override;
     
     std::unordered_map<std::string, SizeType> contig_size_cache_;
+    
     std::unordered_map<std::string, ContigSequenceCache> sequence_cache_;
     std::list<GenomicRegion> recently_used_regions_;
     
@@ -60,13 +63,16 @@ private:
     
     void setup_cache();
     
-    GenomicRegion region_to_fetch(const GenomicRegion& requested_region) const;
+    GenomicRegion get_region_to_fetch(const GenomicRegion& requested_region) const;
+    
+    GenomicRegion get_new_contig_chunk(const GenomicRegion& requested_region) const;
+    GenomicRegion get_hit_contig_chunk(const GenomicRegion& requested_region) const;
     
     bool is_region_cached(const GenomicRegion& region) const;
     void add_sequence_to_cache(const SequenceType& sequence, const GenomicRegion& region);
     void update_cache_position(const GenomicRegion& region);
     CacheIterator get_cache_iterator(const GenomicRegion& requested_region) const;
-    std::pair<CacheIterator, CacheIterator> overlap_range(const GenomicRegion& region) const;
+    OverlapRange overlap_range(const GenomicRegion& region) const;
     void remove_from_cache(const GenomicRegion& region);
     void recache_overlapped_regions(const SequenceType& sequence, const GenomicRegion& region);
     

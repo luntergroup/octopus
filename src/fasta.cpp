@@ -60,7 +60,7 @@ Fasta::SizeType Fasta::do_get_contig_size(const std::string& contig_name)
     return static_cast<SizeType>(fasta_contig_indices_.at(contig_name).length);
 }
 
-Fasta::SequenceType Fasta::do_get_sequence(const GenomicRegion& region)
+Fasta::SequenceType Fasta::do_fetch_sequence(const GenomicRegion& region)
 {
     return bioio::read_fasta_contig(fasta_, fasta_contig_indices_.at(get_contig_name(region)),
                                     get_begin(region), size(region));

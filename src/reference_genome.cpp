@@ -11,6 +11,7 @@
 #include <algorithm> // std::find, std::sort, std::remove_copy
 #include <iterator>  // std::cbegin, std::cend, std::back_inserter
 #include <utility>   // std::move
+#include <numeric>   // std::accumulate
 #include <regex>     // std::regex, std::smatch, std::regex_search
 #include <stdexcept>
 
@@ -75,7 +76,7 @@ bool ReferenceGenome::contains_region(const GenomicRegion& region) const noexcep
 
 ReferenceGenome::SequenceType ReferenceGenome::get_sequence(const GenomicRegion& region)
 {
-    return impl_->get_sequence(region);
+    return impl_->fetch_sequence(region);
 }
 
 // non-member functions
@@ -105,6 +106,15 @@ std::vector<GenomicRegion> get_all_contig_regions(const ReferenceGenome& referen
     });
     
     return result;
+}
+
+GenomicRegion::SizeType get_genome_size(const ReferenceGenome& reference)
+{
+    auto contigs = reference.get_contig_names();
+    return std::accumulate(std::cbegin(contigs), std::cend(contigs), GenomicRegion::SizeType {},
+                           [&reference] (auto curr, const auto& contig) {
+                               return curr + reference.get_contig_size(contig);
+                           });
 }
 
 // Requires reference access to get contig sizes for partially specified regions (e.g. "4")

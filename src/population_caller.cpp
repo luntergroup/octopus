@@ -161,7 +161,21 @@ compute_allele_posteriors(const GenotypeModel::Population::GenotypeProbabilities
     return result;
 }
 
-auto call_genotype(const GenotypeModel::Population::SampleGenotypeProbabilities& genotype_posteriors)
+std::unordered_map<Genotype<Allele>, double>
+marginalise(const GenomicRegion& region, const GenotypeModel::Population::SampleGenotypeProbabilities& genotype_posteriors)
+{
+    std::unordered_map<Genotype<Allele>, double> result {};
+    result.reserve(genotype_posteriors.size());
+    
+    for (const auto& genotype_posterior : genotype_posteriors) {
+        result[splice<Allele>(genotype_posterior.first, region)] += genotype_posterior.second;
+    }
+    
+    return result;
+}
+
+template <typename Map>
+auto call_genotype(const Map& genotype_posteriors)
 {
     return *std::max_element(std::cbegin(genotype_posteriors), std::cend(genotype_posteriors),
                              [] (const auto& lhs, const auto& rhs) {
@@ -176,6 +190,7 @@ call_genotypes(const GenotypeModel::Population::GenotypeProbabilities& genotype_
     std::vector<GenotypeCalls> result(regions.size());
     
     for (const auto sample_genotype_posteriors : genotype_posteriors) {
+        // A better way would be to splice out the region and marginalise over this spliced region
         const auto& sample_genotype_call = call_genotype(sample_genotype_posteriors.second);
         for (size_t i {}; i < regions.size(); ++i) {
             result[i].emplace(sample_genotype_posteriors.first,
@@ -186,6 +201,22 @@ call_genotypes(const GenotypeModel::Population::GenotypeProbabilities& genotype_
     
     return result;
 }
+    
+//    std::vector<GenotypeCalls>
+//    call_genotypes(const GenotypeModel::Population::GenotypeProbabilities& genotype_posteriors,
+//                   const std::vector<GenomicRegion>& regions)
+//    {
+//        std::vector<GenotypeCalls> result(regions.size());
+//        
+//        for (const auto sample_genotype_posteriors : genotype_posteriors) {
+//            for (size_t i {}; i < regions.size(); ++i) {
+//                result[i].emplace(sample_genotype_posteriors.first,
+//                                  call_genotype(marginalise(regions[i], sample_genotype_posteriors.second)));
+//            }
+//        }
+//        
+//        return result;
+//    }
 
 double max_posterior(const Allele& allele, const AllelePosteriors& allele_posteriors)
 {
@@ -655,6 +686,13 @@ PopulationVariantCaller::call_variants(const GenomicRegion& region, const std::v
     GenotypeModel::Population genotype_model {ploidy_};
     
     auto genotype_posteriors = genotype_model.evaluate(haplotypes, reads, reference_).genotype_posteriors;
+    
+//    std::cout << "phased allele genotype posteriors" << std::endl;
+//    auto gm = marginalise(parse_region("13:28265129-28265130", reference_), genotype_posteriors.at("NA12878"));
+//    for (const auto& gp : gm) {
+//        std::cout << gp.first << " " << gp.second << std::endl;
+//    }
+//    exit(0);
     
     auto alleles = generate_callable_alleles(region, candidates, refcall_type_, reference_);
     

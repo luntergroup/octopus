@@ -24,7 +24,7 @@ public:
     std::string get_reference_name() const;
     std::vector<std::string> get_contig_names();
     SizeType get_contig_size(const std::string& contig_name);
-    SequenceType get_sequence(const GenomicRegion& region);
+    SequenceType fetch_sequence(const GenomicRegion& region);
     
     virtual ~ReferenceGenomeImpl() noexcept = default;
     
@@ -32,7 +32,7 @@ private:
     virtual std::string do_get_reference_name() const = 0;
     virtual std::vector<std::string> do_get_contig_names() = 0;
     virtual SizeType do_get_contig_size(const std::string& contig_name) = 0;
-    virtual SequenceType do_get_sequence(const GenomicRegion& region) = 0;
+    virtual SequenceType do_fetch_sequence(const GenomicRegion& region) = 0;
 };
 
 inline std::string ReferenceGenomeImpl::get_reference_name() const
@@ -50,9 +50,9 @@ inline ReferenceGenomeImpl::SizeType ReferenceGenomeImpl::get_contig_size(const 
     return do_get_contig_size(contig_name);
 }
 
-inline ReferenceGenomeImpl::SequenceType ReferenceGenomeImpl::get_sequence(const GenomicRegion& region)
+inline ReferenceGenomeImpl::SequenceType ReferenceGenomeImpl::fetch_sequence(const GenomicRegion& region)
 {
-    return do_get_sequence(region);
+    return do_fetch_sequence(region);
 }
 
 #endif

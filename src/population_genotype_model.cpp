@@ -364,6 +364,7 @@ namespace Octopus
         }
         
         //print(genotype_posteriors, 10);
+        //exit(0);
         
         return Latents {std::move(genotype_posteriors), std::move(haplotype_frequencies)};
     }

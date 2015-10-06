@@ -134,6 +134,7 @@ namespace Octopus
         model.add_options()
         ("model", po::value<std::string>()->default_value("population"), "the calling model used")
         ("ploidy", po::value<unsigned>()->default_value(2), "the organism ploidy")
+        ("normal-sample", po::value<std::string>(), "the normal sample used in cancer calling model")
         ("snp-prior", po::value<double>()->default_value(0.003), "the prior probability of a snp")
         ("insertion-prior", po::value<double>()->default_value(0.003), "the prior probability of an insertion into the reference")
         ("deletion-prior", po::value<double>()->default_value(0.003), "the prior probability of a deletion from the reference")
@@ -165,9 +166,13 @@ namespace Octopus
             throw boost::program_options::required_option {"--reads | --reads-file"};
         }
         
-        po::notify(vm);
+        if (vm.at("model").as<std::string>() == "cancer" && vm.count("normal-sample") == 0) {
+            throw std::logic_error {"Option model requires option normal-sample when model=cancer"};
+        }
         
         conflicting_options(vm, "make-positional-refcalls", "make-blocked-refcalls");
+        
+        po::notify(vm);
         
         return vm;
     }
@@ -513,9 +518,14 @@ namespace Octopus
         auto min_refcall_posterior_phred = options.at("min-refcall-posterior").as<unsigned>();
         auto min_refcall_posterior       = Maths::phred_to_probability(min_refcall_posterior_phred);
         
+        SampleIdType normal_sample {};
+        if (model == "cancer") {
+            normal_sample = options.at("normal-sample").as<std::string>();
+        }
+        
         return make_variant_caller(model, reference, candidate_generator, refcall_type,
                                    min_variant_posterior, min_refcall_posterior,
-                                   ploidy);
+                                   ploidy, normal_sample);
     }
     
     VcfWriter get_output_vcf(const po::variables_map& options)

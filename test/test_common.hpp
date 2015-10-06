@@ -9,6 +9,11 @@
 #ifndef Octopus_test_common_h
 #define Octopus_test_common_h
 
+#include <vector>
+#include <boost/filesystem.hpp>
+
+namespace fs = boost::filesystem;
+
 namespace detail
 {
     static std::string home_dir {getenv("HOME")};
@@ -25,14 +30,21 @@ namespace detail
     static std::string lambda_reference_name {"lambda_ref.fasta"};
     
     // BAM
-    static std::string human_1000g_bam_name0 {"HG00100.mapped.ILLUMINA.bwa.GBR.low_coverage.20130415.bam"};
-    static std::string human_1000g_bam_name1 {"HG00101.mapped.ILLUMINA.bwa.GBR.low_coverage.20130415.bam"};
-    static std::string human_1000g_bam_name2 {"HG00102.mapped.ILLUMINA.bwa.GBR.low_coverage.20130415.bam"};
-    static std::string human_1000g_bam_name3 {"HG00103.mapped.ILLUMINA.bwa.GBR.low_coverage.20120522.bam"};
+    
+    // 1000G
+    
+    static std::string NA12878_low_coverage_name {"NA12878.mapped.ILLUMINA.bwa.CEU.low_coverage.20121211.bam"};
+    static std::string NA12878_high_coverage_name {"NA12878.mapped.ILLUMINA.bwa.CEU.high_coverage_pcr_free.20130906.bam"};
+    static std::string HG00101_name {"HG00101.mapped.ILLUMINA.bwa.GBR.low_coverage.20130415.bam"};
+    static std::string HG00102_name {"HG00102.mapped.ILLUMINA.bwa.GBR.low_coverage.20130415.bam"};
+    static std::string HG00103_name {"HG00103.mapped.ILLUMINA.bwa.GBR.low_coverage.20120522.bam"};
+    
+    // other
+    
     static std::string ecoli_bam_name {"WTCHG_119208_201103.bam"};
     
     // CRAM
-    static std::string human_1000g_cram_name {"HG00101.mapped.ILLUMINA.bwa.GBR.low_coverage.20130415.cram"};
+    static std::string HG00101_cram_name {"HG00101.mapped.ILLUMINA.bwa.GBR.low_coverage.20130415.cram"};
     
     // VCF/BCF
     //static std::string sample_vcf_name {"test_triploid.vcf.gz"};
@@ -60,72 +72,79 @@ namespace detail
 
 // regions
 
-static std::string regions_txt_file {detail::home_dir + detail::octopus_test_dir + "test_regions.txt"};
-static std::string regions_bed_file {detail::home_dir + detail::octopus_test_dir + "test_regions.bed"};
-static std::string reads_file {detail::home_dir + detail::octopus_test_dir + "test_files.txt"};
+static const fs::path regions_txt_file {detail::home_dir + detail::octopus_test_dir + "test_regions.txt"};
+static const fs::path regions_bed_file {detail::home_dir + detail::octopus_test_dir + "test_regions.bed"};
+static const fs::path reads_file {detail::home_dir + detail::octopus_test_dir + "test_files.txt"};
 
 // references
 
-static std::string human_reference_fasta {detail::home_dir + detail::genomics_dir +
-                detail::reference_dir + detail::human_reference_name};
+static const fs::path human_reference_fasta {detail::home_dir + detail::genomics_dir +
+                    detail::reference_dir + detail::human_reference_name};
 
-static std::string human_reference_fasta_index {human_reference_fasta + ".fai"};
+static const fs::path human_reference_fasta_index {human_reference_fasta.string() + ".fai"};
 
-static std::string ecoli_reference_fasta {detail::home_dir + detail::genomics_dir +
+static const fs::path ecoli_reference_fasta {detail::home_dir + detail::genomics_dir +
         detail::reference_dir + detail::ecoli_reference_name};
 
-static std::string lambda_reference_fasta {detail::home_dir + detail::genomics_dir +
+static const fs::path lambda_reference_fasta {detail::home_dir + detail::genomics_dir +
         detail::reference_dir + detail::lambda_reference_name};
 
 // reads
 
-static std::string human_1000g_bam0 {detail::home_dir + detail::genomics_dir + detail::bam_dir +
-    detail::human_1000g_bam_name0};
+static const fs::path NA12878_low_coverage {detail::home_dir + detail::genomics_dir + detail::bam_dir +
+    detail::NA12878_low_coverage_name};
+    
+    static const fs::path NA12878_high_coverage {detail::home_dir + detail::genomics_dir + detail::bam_dir +
+        detail::NA12878_low_coverage_name};
 
-static std::string human_1000g_bam1 {detail::home_dir + detail::genomics_dir + detail::bam_dir +
-        detail::human_1000g_bam_name1};
+static const fs::path HG00101 {detail::home_dir + detail::genomics_dir + detail::bam_dir +
+        detail::HG00101_name};
 
-static std::string human_1000g_bam2 {detail::home_dir + detail::genomics_dir + detail::bam_dir +
-        detail::human_1000g_bam_name2};
+static const fs::path HG00102 {detail::home_dir + detail::genomics_dir + detail::bam_dir +
+        detail::HG00102_name};
 
-static std::string human_1000g_bam3 {detail::home_dir + detail::genomics_dir + detail::bam_dir +
-    detail::human_1000g_bam_name3};
+static const fs::path HG00103 {detail::home_dir + detail::genomics_dir + detail::bam_dir +
+    detail::HG00103_name};
 
-static std::string human_1000g_cram {detail::home_dir + detail::genomics_dir + detail::bam_dir +
-        detail::human_1000g_cram_name};
+static const fs::path HG00101_cram {detail::home_dir + detail::genomics_dir + detail::bam_dir +
+        detail::HG00101_cram_name};
 
-static std::string ecoli_bam {detail::home_dir + detail::genomics_dir + detail::bam_dir +
+static const fs::path ecoli_bam {detail::home_dir + detail::genomics_dir + detail::bam_dir +
     detail::ecoli_bam_name};
+
+static const std::vector<fs::path> bams_1000G {NA12878_low_coverage, };
 
 // vcfs
 
-static std::string sample_vcf {detail::home_dir + detail::genomics_dir  + detail::sample_vcf_dir +
+static const fs::path sample_vcf {detail::home_dir + detail::genomics_dir  + detail::sample_vcf_dir +
     detail::sample_vcf_name};
 
-static std::string test_out_vcf {detail::home_dir + detail::octopus_test_dir + "test.vcf"};
-static std::string test_out_vcfgz {detail::home_dir + detail::octopus_test_dir + "test.vcf.gz"};
-static std::string test_out_bcf {detail::home_dir + detail::octopus_test_dir + "test.bcf"};
+static const fs::path test_out_vcf {detail::home_dir + detail::octopus_test_dir + "test.vcf"};
+static const fs::path test_out_vcfgz {detail::home_dir + detail::octopus_test_dir + "test.vcf.gz"};
+static const fs::path test_out_bcf {detail::home_dir + detail::octopus_test_dir + "test.bcf"};
 
 // hiv
 
-static std::string hiv_reference {detail::home_dir + detail::genomics_dir + detail::hiv_dir +
+static const fs::path hiv_reference {detail::home_dir + detail::genomics_dir + detail::hiv_dir +
     detail::hiv_reference_dir + detail::hiv_reference_name};
 
-static std::string hiv_bam1 {detail::home_dir + detail::genomics_dir + detail::hiv_dir +
+static const fs::path hiv_bam1 {detail::home_dir + detail::genomics_dir + detail::hiv_dir +
     detail::hiv_reads_dir + detail::hiv_bam_name1};
-static std::string hiv_bam2 {detail::home_dir + detail::genomics_dir + detail::hiv_dir +
+static const fs::path hiv_bam2 {detail::home_dir + detail::genomics_dir + detail::hiv_dir +
     detail::hiv_reads_dir + detail::hiv_bam_name2};
-static std::string hiv_bam3 {detail::home_dir + detail::genomics_dir + detail::hiv_dir +
+static const fs::path hiv_bam3 {detail::home_dir + detail::genomics_dir + detail::hiv_dir +
     detail::hiv_reads_dir + detail::hiv_bam_name3};
-static std::string hiv_bam4 {detail::home_dir + detail::genomics_dir + detail::hiv_dir +
+static const fs::path hiv_bam4 {detail::home_dir + detail::genomics_dir + detail::hiv_dir +
     detail::hiv_reads_dir + detail::hiv_bam_name4};
-static std::string hiv_bam5 {detail::home_dir + detail::genomics_dir + detail::hiv_dir +
+static const fs::path hiv_bam5 {detail::home_dir + detail::genomics_dir + detail::hiv_dir +
     detail::hiv_reads_dir + detail::hiv_bam_name5};
-static std::string hiv_bam6 {detail::home_dir + detail::genomics_dir + detail::hiv_dir +
+static const fs::path hiv_bam6 {detail::home_dir + detail::genomics_dir + detail::hiv_dir +
     detail::hiv_reads_dir + detail::hiv_bam_name6};
-static std::string hiv_bam7 {detail::home_dir + detail::genomics_dir + detail::hiv_dir +
+static const fs::path hiv_bam7 {detail::home_dir + detail::genomics_dir + detail::hiv_dir +
     detail::hiv_reads_dir + detail::hiv_bam_name7};
-static std::string hiv_bam8 {detail::home_dir + detail::genomics_dir + detail::hiv_dir +
+static const fs::path hiv_bam8 {detail::home_dir + detail::genomics_dir + detail::hiv_dir +
     detail::hiv_reads_dir + detail::hiv_bam_name8};
+
+static const std::vector<fs::path> hiv_bams {hiv_bam1, hiv_bam2, hiv_bam3, hiv_bam4, hiv_bam5, hiv_bam6, hiv_bam7, hiv_bam8};
 
 #endif

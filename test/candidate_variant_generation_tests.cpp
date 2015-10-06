@@ -29,7 +29,7 @@ BOOST_AUTO_TEST_CASE(CandidateVariantGenerator_does_not_give_duplicate_candidate
 {
     auto human = make_reference(human_reference_fasta);
     
-    ReadManager a_read_manager {human_1000g_bam1};
+    ReadManager a_read_manager {HG00101};
     
     Octopus::CandidateVariantGenerator candidate_generator {};
     
@@ -53,7 +53,7 @@ BOOST_AUTO_TEST_CASE(AlignmentCandidateVariantGenerator_ignores_snps_with_low_ba
 {
     auto human = make_reference(human_reference_fasta);
     
-    ReadManager a_read_manager {human_1000g_bam1};
+    ReadManager a_read_manager {HG00101};
     
     Octopus::AlignmentCandidateVariantGenerator candidate_generator {human, 10};
     
@@ -75,7 +75,7 @@ BOOST_AUTO_TEST_CASE(AlignmentCandidateVariantGenerator_includes_all_alleles_in_
 {
     auto human = make_reference(human_reference_fasta);
     
-    ReadManager a_read_manager {human_1000g_bam1};
+    ReadManager a_read_manager {HG00101};
     
     Octopus::AlignmentCandidateVariantGenerator candidate_generator {human, 10};
     

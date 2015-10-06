@@ -13,6 +13,7 @@
 #include <iostream>
 #include <string>
 #include <future>
+#include <random>
 
 #include "test_common.hpp"
 #include "reference_genome.hpp"
@@ -116,7 +117,14 @@ BOOST_AUTO_TEST_CASE(parse_region_throws_when_region_is_not_formatted_correctly)
 
 BOOST_AUTO_TEST_CASE(cached_and_uncached_reference_genome_give_same_sequence)
 {
-    std::string contig {"20"};
+    // First test simple walk along a single contig
+    
+    std::string contig {"1"};
+    
+    std::random_device rd;
+    std::mt19937 g(rd());
+    
+    std::uniform_int_distribution<GenomicRegion::SizeType> dis(1, 50000);
     
     auto uncached_reference = make_reference(human_reference_fasta, 0);
     auto cached_reference   = make_reference(human_reference_fasta, 10'000'000);
@@ -126,6 +134,59 @@ BOOST_AUTO_TEST_CASE(cached_and_uncached_reference_genome_give_same_sequence)
     cached_sequence.reserve(cached_reference.get_contig_size(contig));
     
     auto regions = decompose(parse_region(contig, uncached_reference), 100);
+    
+    for (const auto& region : regions) {
+        uncached_sequence += uncached_reference.get_sequence(region);
+        cached_sequence += cached_reference.get_sequence(region);
+    }
+    
+    BOOST_CHECK(uncached_sequence == cached_sequence);
+    
+    exit(0);
+    
+//    // Next test walks along multiple contigs
+//    
+//    regions.clear();
+//    
+//    for (const auto& c : std::vector<std::string> {"1", "2", "3"}) {
+//        auto more_regions = decompose(uncached_reference.get_contig_region(c), dis(g));
+//        regions.insert(regions.end(), more_regions.begin(), more_regions.end());
+//    }
+//    
+//    
+    
+    // Next test accesses to random points on a single contig
+    
+    uncached_sequence.clear();
+    cached_sequence.clear();
+    
+    std::shuffle(regions.begin(), regions.end(), g);
+    
+    for (const auto& region : regions) {
+        uncached_sequence += uncached_reference.get_sequence(region);
+        cached_sequence += cached_reference.get_sequence(region);
+    }
+    
+    BOOST_CHECK(uncached_sequence == cached_sequence);
+    
+    // Finally test random access to lots of contigs with different region sizes - may take a while
+    
+    //uncached_sequence.reserve(uncached_reference.g)
+    regions.clear();
+    regions.reserve(100'000'000); // ?
+    
+    for (const auto& region : get_all_contig_regions(uncached_reference)) {
+        auto more_regions = decompose(region, dis(g));
+        regions.insert(regions.end(), more_regions.begin(), more_regions.end());
+    }
+    
+    std::shuffle(regions.begin(), regions.end(), g);
+    
+    uncached_sequence.clear();
+    cached_sequence.clear();
+    
+    uncached_sequence.reserve(get_genome_size(uncached_reference));
+    cached_sequence.reserve(get_genome_size(cached_reference));
     
     for (const auto& region : regions) {
         uncached_sequence += uncached_reference.get_sequence(region);

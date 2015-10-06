@@ -175,8 +175,15 @@ std::ostream& operator<<(std::ostream& os, const CancerGenotype<MappableType>& g
 inline void print_alleles(const CancerGenotype<Haplotype>& genotype)
 {
     print_alleles(genotype.get_normal_genotype());
-    std::cout << std::endl;
+    std::cout << " + ";
     print_alleles(genotype.get_cancer_element());
+}
+
+inline void print_variant_alleles(const CancerGenotype<Haplotype>& genotype)
+{
+    print_variant_alleles(genotype.get_normal_genotype());
+    std::cout << " + ";
+    print_variant_alleles(genotype.get_cancer_element());
 }
 
 #endif /* cancer_genotype_h */

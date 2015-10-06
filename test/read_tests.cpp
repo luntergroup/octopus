@@ -30,7 +30,7 @@ BOOST_AUTO_TEST_SUITE(Components)
 
 BOOST_AUTO_TEST_CASE(read_reader_handles_BAM)
 {
-    HtslibSamFacade a_reader {human_1000g_bam1};
+    HtslibSamFacade a_reader {HG00101};
     
     GenomicRegion a_region {"10", 1000000, 1000100};
     GenomicRegion another_region {"3", 100000, 100100};
@@ -46,7 +46,7 @@ BOOST_AUTO_TEST_CASE(read_reader_handles_BAM)
 
 BOOST_AUTO_TEST_CASE(read_reader_handles_CRAM)
 {
-    HtslibSamFacade a_reader {human_1000g_cram};
+    HtslibSamFacade a_reader {HG00101_cram};
     
     GenomicRegion a_region {"10", 1000000, 1000100};
     GenomicRegion another_region {"3", 100000, 100100};
@@ -63,7 +63,7 @@ BOOST_AUTO_TEST_CASE(read_reader_handles_CRAM)
 
 BOOST_AUTO_TEST_CASE(ReadManager_works_with_single_file)
 {
-    ReadManager a_read_manager {human_1000g_bam1};
+    ReadManager a_read_manager {HG00101};
     
     BOOST_CHECK(a_read_manager.num_samples() == 1);
     
@@ -199,7 +199,7 @@ BOOST_AUTO_TEST_CASE(aligned_read_copies_and_moves_correctly)
 
 BOOST_AUTO_TEST_CASE(aligned_read_overlap_sanity_checks)
 {
-    ReadManager a_read_manager {human_1000g_bam1};
+    ReadManager a_read_manager {HG00101};
     
     GenomicRegion a_region {"4", 93235280, 93235585};
     
@@ -294,7 +294,7 @@ BOOST_AUTO_TEST_CASE(can_splice_reads)
 
 BOOST_AUTO_TEST_CASE(AlignedRead_can_be_compressed_and_decompressed)
 {
-    ReadManager a_read_manager {human_1000g_bam1};
+    ReadManager a_read_manager {HG00101};
     
     GenomicRegion a_region {"4", 93235280, 93235585};
     

@@ -161,7 +161,7 @@ namespace boost
             return std::hash<Haplotype>()(h);
         }
     };
-} // end namespace boost
+} // namespace boost
 
 std::ostream& operator<<(std::ostream& os, const Haplotype& haplotype);
 

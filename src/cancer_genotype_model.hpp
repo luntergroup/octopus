@@ -38,6 +38,14 @@ namespace Octopus
         
         struct Latents
         {
+            Latents() = default;
+            template <typename G, typename W>
+            Latents(G&& genotype_posteriors, W&& genotype_weights)
+            :
+            genotype_posteriors {std::forward<G>(genotype_posteriors)},
+            genotype_weights {std::forward<W>(genotype_weights)}
+            {}
+            
             GenotypeProbabilities genotype_posteriors;
             GenotypeWeights genotype_weights;
         };

@@ -84,7 +84,18 @@ namespace std {
             return seed;
         }
     };
-} // end namespace std
+} // namespace std
+
+namespace boost
+{
+    template <> struct hash<Allele> : std::unary_function<Allele, std::size_t>
+    {
+        std::size_t operator()(const Allele& a) const
+        {
+            return std::hash<Allele>()(a);
+        }
+    };
+} // namespace boost
 
 std::ostream& operator<<(std::ostream& os, const Allele& allele);
 

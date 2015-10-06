@@ -25,8 +25,7 @@ BOOST_AUTO_TEST_SUITE(Components)
 
 BOOST_AUTO_TEST_CASE(read_transform_test)
 {
-    
-    ReadManager a_read_manager {human_1000g_bam1};
+    ReadManager a_read_manager {HG00101};
     
     auto sample_ids = a_read_manager.get_samples();
     
