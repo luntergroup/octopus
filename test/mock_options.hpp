@@ -23,7 +23,7 @@ inline po::variables_map get_basic_mock_options()
         "--reads", human_1000g_bam1.c_str(), human_1000g_bam2.c_str(), human_1000g_bam3.c_str(),
         "--model", "population",
         //"--ploidy", "2",
-        "--make-blocked-refcalls",
+        //"--make-blocked-refcalls",
         //"--make-positional-refcalls",
         //"--regions", "5:157,031,410-157,031,449",
         //"--regions", "11:67503118-67503253",
@@ -39,18 +39,22 @@ inline po::variables_map get_basic_mock_options()
         //"--regions", "5:157,030,955-157,031,902",
         //"--regions", "5:157,031,214-157,031,280",
         //"--regions", "2:104,142,525-104,142,742",
-        "--regions", "2:104,142,403-104,142,527",
-        "--min-variant-posterior", "1",
+        //"--regions", "2:104,141,138-104,141,448", // really nice example of phasing
+        //"--regions", "4:141,265,067-141,265,142", // another nice example of phasing
+        //"--regions", "7:58,000,994-58,001,147", // very interesting example
+        //"--regions", "7:103,614,916-103,615,058",
+        "--regions", "13:28,265,032-28,265,228",
+        "--min-variant-posterior", "10",
         "--min-refcall-posterior", "10",
         "--output", test_out_vcf.c_str(),
         //"--min-mapping-quality", "20",
-        //"--min-snp-base-quality", "15",
+        "--min-snp-base-quality", "20",
         //"--no-duplicates",
         nullptr};
     
     int argc = sizeof(argv) / sizeof(char*) - 1;
     
-    return Octopus::Options::parse_options(argc, argv).first;
+    return Octopus::Options::parse_options(argc, argv);
 }
 
 #endif

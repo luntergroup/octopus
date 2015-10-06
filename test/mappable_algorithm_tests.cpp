@@ -1,5 +1,5 @@
 //
-//  region_algorithm_tests.cpp
+//  mappable_algorithm_tests.cpp
 //  Octopus
 //
 //  Created by Daniel Cooke on 14/07/2015.

@@ -21,10 +21,7 @@ namespace Octopus
     class SingleReadModel
     {
     public:
-        using RealType = Octopus::ProbabilityType;
-        
         SingleReadModel()  = delete;
-        explicit SingleReadModel(size_t max_cache_size = 10000);
         explicit SingleReadModel(size_t max_num_reads, size_t max_num_haplotypes);
         ~SingleReadModel() = default;
         
@@ -33,19 +30,20 @@ namespace Octopus
         SingleReadModel(SingleReadModel&&)                 = default;
         SingleReadModel& operator=(SingleReadModel&&)      = default;
         
-        RealType log_probability(const AlignedRead& read, const Haplotype& haplotype); // ln p(read | haplotype)
+        double log_probability(const AlignedRead& read, const Haplotype& haplotype); // ln p(read | haplotype)
+        
         void clear_cache();
         
     private:
-        using Cache = std::unordered_map<AlignedRead, std::unordered_map<Haplotype, RealType>>;
+        using Cache = std::unordered_map<AlignedRead, std::unordered_map<Haplotype, double>>;
         
         Cache cache_;
-        size_t max_cache_size_;
-        size_t cache_size_;
+        size_t max_num_reads_;
+        size_t max_num_haplotypes_;
         
         bool is_cached(const AlignedRead& read, const Haplotype& haplotype) const noexcept;
-        void cache(const AlignedRead& read, const Haplotype& haplotype, RealType value);
-        RealType get_cached(const AlignedRead& read, const Haplotype& haplotype) const;
+        void cache(const AlignedRead& read, const Haplotype& haplotype, double value);
+        double get_cached(const AlignedRead& read, const Haplotype& haplotype) const;
     };
     
 } // namespace Octopus

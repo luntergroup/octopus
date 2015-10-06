@@ -33,7 +33,7 @@ BOOST_AUTO_TEST_CASE(get_reference_returns_a_ReferenceGenome)
     const char *argv[] = {"octopus", "--reference", human_reference_fasta.c_str(), "--reads", "test", nullptr};
     int argc = sizeof(argv) / sizeof(char*) - 1;
     
-    auto options = Octopus::Options::parse_options(argc, argv).first;
+    auto options = Octopus::Options::parse_options(argc, argv);
     
     auto reference = Octopus::Options::get_reference(options);
     
@@ -45,7 +45,7 @@ BOOST_AUTO_TEST_CASE(get_search_regions_returns_all_chromosome_regions_when_no_r
     const char *argv[] = {"octopus", "--reference", human_reference_fasta.c_str(), "--reads", "test", nullptr};
     int argc = sizeof(argv) / sizeof(char*) - 1;
     
-    auto options = Octopus::Options::parse_options(argc, argv).first;
+    auto options = Octopus::Options::parse_options(argc, argv);
     
     auto reference = Octopus::Options::get_reference(options);
     
@@ -71,7 +71,7 @@ BOOST_AUTO_TEST_CASE(parse_search_region_option_parses_manually_entered_regions)
         nullptr};
     int argc = sizeof(argv) / sizeof(char*) - 1;
     
-    auto options = Octopus::Options::parse_options(argc, argv).first;
+    auto options = Octopus::Options::parse_options(argc, argv);
     
     auto reference = Octopus::Options::get_reference(options);
     
@@ -92,7 +92,7 @@ BOOST_AUTO_TEST_CASE(parse_search_region_option_extracts_regions_from_text_files
         nullptr};
     int argc = sizeof(argv) / sizeof(char*) - 1;
     
-    auto options = Octopus::Options::parse_options(argc, argv).first;
+    auto options = Octopus::Options::parse_options(argc, argv);
     
     auto reference = Octopus::Options::get_reference(options);
     
@@ -111,7 +111,7 @@ BOOST_AUTO_TEST_CASE(parse_search_region_option_extracts_regions_from_bed_files)
         nullptr};
     int argc = sizeof(argv) / sizeof(char*) - 1;
     
-    auto options = Octopus::Options::parse_options(argc, argv).first;
+    auto options = Octopus::Options::parse_options(argc, argv);
     
     auto reference = Octopus::Options::get_reference(options);
     

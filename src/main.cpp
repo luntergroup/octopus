@@ -68,23 +68,19 @@ int main(int argc, const char **argv)
     
     try {
         //auto options = Octopus::parse_options(argc, argv);
-        auto options = std::make_pair(get_basic_mock_options(), true);
+        auto options = get_basic_mock_options();
         
-        if (options.second) {
-            auto start   = std::chrono::system_clock::now();
-            
-            cout << "started running Octopus at " << start << endl;
-            
-            Octopus::run_octopus(options.first);
-            
-            auto end = std::chrono::system_clock::now();
-            
-            cout << "finished running Octopus at " << end << endl;
-            
-            cout << "elapsed time: " << std::make_pair(start, end) << endl;
-        } else {
-            cout << "did not run Octopus" << endl;
-        }
+        auto start   = std::chrono::system_clock::now();
+        
+        cout << "started running Octopus at " << start << endl;
+        
+        Octopus::run_octopus(options);
+        
+        auto end = std::chrono::system_clock::now();
+        
+        cout << "finished running Octopus at " << end << endl;
+        
+        cout << "elapsed time: " << std::make_pair(start, end) << endl;
         
     } catch (std::runtime_error& e) {
         cerr << "Error: " << e.what() << endl;

@@ -9,14 +9,9 @@
 #ifndef __Octopus__read_model__
 #define __Octopus__read_model__
 
-#include <vector>
-#include <string>
-#include <unordered_map>
 #include <cstddef>   // size_t
 #include <numeric>   // std::accumulate
-#include <boost/functional/hash.hpp> // boost::hash_combine
 
-#include "common.hpp"
 #include "haplotype.hpp"
 #include "genotype.hpp"
 #include "aligned_read.hpp"
@@ -28,11 +23,8 @@ namespace Octopus
 class ReadModel
 {
 public:
-    using RealType     = Octopus::ProbabilityType;
-    using SampleIdType = Octopus::SampleIdType;
-    
     ReadModel()  = delete;
-    explicit ReadModel(unsigned ploidy, bool can_cache_reads = true);
+    explicit ReadModel(unsigned ploidy);
     ~ReadModel() = default;
     
     ReadModel(const ReadModel&)            = default;
@@ -41,110 +33,39 @@ public:
     ReadModel& operator=(ReadModel&&)      = default;
     
     // ln p(read | haplotype)
-    RealType log_probability(const AlignedRead& read, const Haplotype& haplotype, SampleIdType sample);
+    double log_probability(const AlignedRead& read, const Haplotype& haplotype);
     
     // ln p(read | genotype)
-    RealType log_probability(const AlignedRead& read, const Genotype<Haplotype>& genotype, SampleIdType sample);
+    double log_probability(const AlignedRead& read, const Genotype<Haplotype>& genotype);
     
     // ln p(reads | genotype)
     template <typename ForwardIterator>
-    RealType log_probability(ForwardIterator first_read, ForwardIterator last_read,
-                             const Genotype<Haplotype>& genotype, SampleIdType sample);
+    double log_probability(ForwardIterator first_read, ForwardIterator last_read, const Genotype<Haplotype>& genotype);
     
     void clear_cache();
     
 private:
     SingleReadModel read_model_;
     
-    unsigned ploidy_;
-    bool can_cache_reads_;
-    
-    using GenotypeReadKey = std::tuple<Genotype<Haplotype>, AlignedRead, std::size_t>;
-    
-    struct GenotypeReadKeyHash
-    {
-        std::size_t operator()(const GenotypeReadKey& key) const;
-    };
-    
-    using GenotypeCache = std::unordered_map<SampleIdType, std::unordered_map<GenotypeReadKey, RealType, GenotypeReadKeyHash>>;
-    
-    GenotypeCache genotype_log_probability_cache_;
-    
+    const unsigned ploidy_;
     const double ln_ploidy_;
     
-    template <typename ForwardIterator>
-    bool is_genotype_in_cache(SampleIdType sample, ForwardIterator first_read, ForwardIterator last_read,
-                              const Genotype<Haplotype>& genotype) const noexcept;
-    
-    template <typename ForwardIterator>
-    void add_genotype_to_cache(SampleIdType sample, ForwardIterator first_read, ForwardIterator last_read,
-                               const Genotype<Haplotype>& genotype, RealType genotype_log_probability);
-    
-    template <typename ForwardIterator>
-    RealType get_log_probability_from_cache(SampleIdType sample, ForwardIterator first_read, ForwardIterator last_read,
-                                            const Genotype<Haplotype>& genotype) const;
-    
     // These are just for optimisation
-    RealType log_probability_haploid(const AlignedRead& read, const Genotype<Haplotype>& genotype,
-                                     SampleIdType sample);
-    RealType log_probability_diploid(const AlignedRead& read, const Genotype<Haplotype>& genotype,
-                                     SampleIdType sample);
-    RealType log_probability_triploid(const AlignedRead& read, const Genotype<Haplotype>& genotype,
-                                      SampleIdType sample);
-    RealType log_probability_polyploid(const AlignedRead& read, const Genotype<Haplotype>& genotype,
-                                       SampleIdType sample);
+    double log_probability_haploid(const AlignedRead& read, const Genotype<Haplotype>& genotype);
+    double log_probability_diploid(const AlignedRead& read, const Genotype<Haplotype>& genotype);
+    double log_probability_triploid(const AlignedRead& read, const Genotype<Haplotype>& genotype);
+    double log_probability_polyploid(const AlignedRead& read, const Genotype<Haplotype>& genotype);
 };
 
 // ln p(reads | genotype) = sum (read in reads} ln p(read | genotype)
 template <typename ForwardIterator>
-ReadModel::RealType ReadModel::log_probability(ForwardIterator first_read, ForwardIterator last_read,
-                                               const Genotype<Haplotype>& genotype, SampleIdType sample)
+double ReadModel::log_probability(ForwardIterator first_read, ForwardIterator last_read,
+                                  const Genotype<Haplotype>& genotype)
 {
-//    if (is_genotype_in_cache(sample, first_read, last_read, genotype)) {
-//        return get_log_probability_from_cache(sample, first_read, last_read, genotype);
-//    }
-    
-    return std::accumulate(first_read, last_read, RealType {},
-                           [this, &genotype, &sample] (auto curr, const auto& read) {
-                               return curr + log_probability(read, genotype, sample);
+    return std::accumulate(first_read, last_read, 0.0,
+                           [this, &genotype] (auto curr, const auto& read) {
+                               return curr + log_probability(read, genotype);
                            });
-}
-
-template <typename ForwardIterator>
-inline
-bool ReadModel::is_genotype_in_cache(SampleIdType sample, ForwardIterator first_read, ForwardIterator last_read,
-                                     const Genotype<Haplotype>& genotype) const noexcept
-{
-    if (genotype_log_probability_cache_.count(sample) == 0) return false;
-    return genotype_log_probability_cache_.at(sample).count(std::make_tuple(genotype, *first_read,
-                                                                            std::distance(first_read, last_read))) > 0;
-}
-
-template <typename ForwardIterator>
-inline
-void ReadModel::add_genotype_to_cache(SampleIdType sample, ForwardIterator first_read, ForwardIterator last_read,
-                                      const Genotype<Haplotype>& genotype, RealType genotype_log_probability)
-{
-    genotype_log_probability_cache_[sample][std::make_tuple(genotype, *first_read,
-                                                            std::distance(first_read, last_read))] = genotype_log_probability;
-}
-
-template <typename ForwardIterator>
-inline
-ReadModel::RealType
-ReadModel::get_log_probability_from_cache(SampleIdType sample, ForwardIterator first_read, ForwardIterator last_read,
-                                          const Genotype<Haplotype>& genotype) const
-{
-    return genotype_log_probability_cache_.at(sample).at(std::make_tuple(genotype, *first_read, std::distance(first_read, last_read)));
-}
-
-inline std::size_t ReadModel::GenotypeReadKeyHash::operator()(const GenotypeReadKey &key) const
-{
-    std::size_t seed {};
-    boost::hash_combine(seed, std::hash<Genotype<Haplotype>>()(std::get<0>(key)));
-    boost::hash_combine(seed, std::hash<AlignedRead>()(std::get<1>(key)));
-    boost::hash_combine(seed, std::get<2>(key));
-    return seed;
 }
 
 } // namespace Octopus

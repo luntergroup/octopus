@@ -34,8 +34,8 @@ public:
     std::unordered_map<Haplotype, double> evaluate(const std::vector<Haplotype>& haplotypes, const Haplotype& reference);
     
 private:
-    double transition_rate_   = 0.000222;
-    double transversion_rate_ = 0.000111;
+    const double transition_rate_   = 0.000222;
+    const double transversion_rate_ = 0.000111;
 };
 
 } // namespace Octopus

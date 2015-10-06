@@ -8,6 +8,7 @@
 
 #include "read_model.hpp"
 
+#include <vector>
 #include <cmath>     // std::log
 
 #include "maths.hpp"
@@ -17,75 +18,67 @@
 namespace Octopus
 {
 
-ReadModel::ReadModel(unsigned ploidy, bool can_cache_reads)
+ReadModel::ReadModel(unsigned ploidy)
 :
-read_model_ {1000},
+read_model_ {1000, 100},
 ploidy_ {ploidy},
-can_cache_reads_ {can_cache_reads},
-genotype_log_probability_cache_ {},
 ln_ploidy_ {std::log(ploidy)}
 {}
 
-ReadModel::RealType ReadModel::log_probability(const AlignedRead& read, const Haplotype& haplotype,
-                                               SampleIdType sample)
+double ReadModel::log_probability(const AlignedRead& read, const Haplotype& haplotype)
 {
     return read_model_.log_probability(read, haplotype);
 }
 
 // ln p(read | genotype) = ln sum {haplotype in genotype} p(read | haplotype) - ln ploidy
-ReadModel::RealType ReadModel::log_probability(const AlignedRead& read, const Genotype<Haplotype>& genotype,
-                                               SampleIdType sample)
+double ReadModel::log_probability(const AlignedRead& read, const Genotype<Haplotype>& genotype)
 {
     // These cases are just for optimisation
     switch (ploidy_) {
         case 1:
-            return log_probability_haploid(read, genotype, sample);
+            return log_probability_haploid(read, genotype);
         case 2:
-            return log_probability_diploid(read, genotype, sample);
+            return log_probability_diploid(read, genotype);
         case 3:
-            return log_probability_triploid(read, genotype, sample);
+            return log_probability_triploid(read, genotype);
         default:
-            return log_probability_polyploid(read, genotype, sample);
+            return log_probability_polyploid(read, genotype);
     }
 }
 
 void ReadModel::clear_cache()
 {
-    genotype_log_probability_cache_.clear();
+    read_model_.clear_cache();
 }
 
-ReadModel::RealType ReadModel::log_probability_haploid(const AlignedRead& read, const Genotype<Haplotype>& genotype,
-                                                       SampleIdType sample)
+double ReadModel::log_probability_haploid(const AlignedRead& read, const Genotype<Haplotype>& genotype)
 {
-    return log_probability(read, genotype.at(0), sample);
+    return log_probability(read, genotype.at(0));
 }
 
-ReadModel::RealType ReadModel::log_probability_diploid(const AlignedRead& read, const Genotype<Haplotype>& genotype,
-                                                       SampleIdType sample)
+double ReadModel::log_probability_diploid(const AlignedRead& read, const Genotype<Haplotype>& genotype)
 {
-    return Maths::log_sum_exp(log_probability(read, genotype.at(0), sample),
-                              log_probability(read, genotype.at(1), sample)) - ln_ploidy_;
+    return Maths::log_sum_exp(log_probability(read, genotype.at(0)),
+                              log_probability(read, genotype.at(1))) - ln_ploidy_;
 }
 
-ReadModel::RealType ReadModel::log_probability_triploid(const AlignedRead& read, const Genotype<Haplotype>& genotype,
-                                                        SampleIdType sample)
+double ReadModel::log_probability_triploid(const AlignedRead& read, const Genotype<Haplotype>& genotype)
 {
-    return Maths::log_sum_exp(log_probability(read, genotype.at(0), sample),
-                              log_probability(read, genotype.at(1), sample),
-                              log_probability(read, genotype.at(2), sample)) - ln_ploidy_;
+    return Maths::log_sum_exp(log_probability(read, genotype.at(0)),
+                              log_probability(read, genotype.at(1)),
+                              log_probability(read, genotype.at(2))) - ln_ploidy_;
 }
 
-ReadModel::RealType ReadModel::log_probability_polyploid(const AlignedRead& read, const Genotype<Haplotype>& genotype,
-                                                         SampleIdType sample)
+double ReadModel::log_probability_polyploid(const AlignedRead& read, const Genotype<Haplotype>& genotype)
 {
-    std::vector<RealType> log_haplotype_probabilities(ploidy_);
+    std::vector<double> log_haplotype_probabilities(ploidy_);
     
-    std::transform(std::cbegin(genotype), std::cend(genotype), log_haplotype_probabilities.begin(),
-                   [this, &read, &sample] (const Haplotype& haplotype) {
-                       return log_probability(read, haplotype, sample);
+    std::transform(std::cbegin(genotype), std::cend(genotype), std::begin(log_haplotype_probabilities),
+                   [this, &read] (const auto& haplotype) {
+                       return log_probability(read, haplotype);
                    });
     
-    return Maths::log_sum_exp<RealType>(log_haplotype_probabilities) - ln_ploidy_;
+    return Maths::log_sum_exp<double>(log_haplotype_probabilities) - ln_ploidy_;
 }
     
 } // namespace Octopus

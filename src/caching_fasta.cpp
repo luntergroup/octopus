@@ -85,7 +85,7 @@ CachingFasta::SequenceType CachingFasta::do_get_sequence(const GenomicRegion& re
     } else {
         std::cout << "not in cache" << std::endl;
         auto fetch_region = region_to_fetch(region);
-        //std::cout << "fetching " << fetch_region << " from file" << std::endl;
+        std::cout << "fetching " << fetch_region << " from file" << std::endl;
         add_sequence_to_cache(fasta_.get_sequence(fetch_region), fetch_region);
     }
     

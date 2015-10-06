@@ -39,133 +39,137 @@
 
 #include "maths.hpp"
 
-namespace fs = boost::filesystem;
-
 namespace Octopus
 {
     namespace Options
     {
-    std::pair<po::variables_map, bool> parse_options(int argc, const char** argv)
+    
+    void conflicting_options(const po::variables_map& vm, const std::string& opt1, const std::string& opt2)
     {
-        try {
-            po::positional_options_description p;
-            p.add("command", -1);
-            
-            po::options_description general("General options");
-            general.add_options()
-            ("help,h", "produce help message")
-            ("version", "output the version number")
-            ("verbosity", po::value<unsigned>()->default_value(0), "level of logging. Verbosity 0 switches off logging")
-            ;
-            
-            po::options_description backend("Backend options");
-            backend.add_options()
-            ("max-threads,t", po::value<unsigned>()->default_value(1), "maximum number of threads")
-            ("memory", po::value<size_t>()->default_value(8000), "target memory usage in MB")
-            ("compress-reads", po::bool_switch()->default_value(false), "compress the reads (slower)")
-            ("max-open-files", po::value<unsigned>()->default_value(200), "the maximum number of files that can be open at one time")
-            ;
-            
-            po::options_description input("Input/output options");
-            input.add_options()
-            ("reference,R", po::value<std::string>()->required(), "the reference genome file")
-            ("reads,I", po::value<std::vector<std::string>>()->multitoken(), "space-seperated list of read file paths")
-            ("reads-file", po::value<std::string>(), "path to a text file containing read file paths")
-            ("regions", po::value<std::vector<std::string>>()->multitoken(), "space-seperated list of one-indexed variant search regions (chrom:begin-end)")
-            ("regions-file", po::value<std::string>(), "path to a file containing list of one-indexed variant search regions (chrom:begin-end)")
-            ("skip-regions", po::value<std::vector<std::string>>()->multitoken(), "space-seperated list of one-indexed regions (chrom:begin-end) to skip")
-            ("skip-regions-file", po::value<std::string>(), "path to a file containing list of one-indexed regions (chrom:begin-end) to skip")
-            ("samples,S", po::value<std::vector<std::string>>()->multitoken(), "space-seperated list of sample names to consider")
-            ("samples-file", po::value<std::string>(), "path to a file containing list of sample names to consider")
-            ("output,o", po::value<std::string>()->default_value("octopus_variants.vcf"), "path of the output variant file")
-            ("log-file", po::value<std::string>(), "path of the output log file")
-            ;
-            
-            po::options_description filters("Read filter options");
-            filters.add_options()
-            ("no-unmapped", po::bool_switch()->default_value(false), "filter reads marked as unmapped")
-            ("min-mapping-quality", po::value<unsigned>()->default_value(20), "reads with smaller mapping quality are ignored")
-            ("good-base-quality", po::value<unsigned>()->default_value(20), "base quality threshold used by min-good-bases filter")
-            ("min-good-base-fraction", po::value<double>(), "base quality threshold used by min-good-bases filter")
-            ("min-good-bases", po::value<AlignedRead::SizeType>()->default_value(0), "minimum number of bases with quality min-base-quality before read is considered")
-            ("no-qc-fails", po::bool_switch()->default_value(false), "filter reads marked as QC failed")
-            ("min-read-length", po::value<AlignedRead::SizeType>(), "filter reads shorter than this")
-            ("max-read-length", po::value<AlignedRead::SizeType>(), "filter reads longer than this")
-            ("no-duplicates", po::bool_switch()->default_value(false), "filters duplicate reads")
-            ("no-secondary-alignmenets", po::bool_switch()->default_value(false), "filters reads marked as secondary alignments")
-            ("no-supplementary-alignmenets", po::bool_switch()->default_value(false), "filters reads marked as supplementary alignments")
-            ("no-unmapped-mates", po::bool_switch()->default_value(false), "filters reads with unmapped mates")
-            ;
-            
-            po::options_description transforms("Read filter options");
-            transforms.add_options()
-            ("trim-soft-clipped", po::bool_switch()->default_value(false), "trims soft clipped parts of the read")
-            ("tail-trim-size", po::value<AlignedRead::SizeType>()->default_value(0), "trims this number of bases off the tail of all reads")
-            ("trim-adapters", po::bool_switch()->default_value(true), "trims any overlapping regions that pass the fragment size")
-            ;
-            
-            po::options_description candidates("Candidate generation options");
-            candidates.add_options()
-            ("candidates-from-alignments", po::bool_switch()->default_value(true), "generate candidate variants from the aligned reads")
-            ("candidates-from-assembler", po::bool_switch()->default_value(false), "generate candidate variants with the assembler")
-            ("candidates-from-source", po::value<std::string>(), "variant file path containing known variants. These variants will automatically become candidates")
-            ("min-snp-base-quality", po::value<unsigned>()->default_value(20), "only base changes with quality above this value are considered for snp generation")
-            ("max-variant-size", po::value<AlignedRead::SizeType>()->default_value(100), "maximum candidate varaint size from alignmenet CIGAR")
-            ("k", po::value<unsigned>()->default_value(15), "k-mer size to use")
-            ("no-cycles", po::bool_switch()->default_value(false), "dissalow cycles in assembly graph")
-            ;
-            
-            po::options_description model("Model options");
-            model.add_options()
-            ("model", po::value<std::string>()->default_value("population"), "the calling model used")
-            ("ploidy", po::value<unsigned>()->default_value(2), "the organism ploidy")
-            ("snp-prior", po::value<double>()->default_value(0.003), "the prior probability of a snp")
-            ("insertion-prior", po::value<double>()->default_value(0.003), "the prior probability of an insertion into the reference")
-            ("deletion-prior", po::value<double>()->default_value(0.003), "the prior probability of a deletion from the reference")
-            ;
-            
-            po::options_description calling("Caller options");
-            calling.add_options()
-            ("min-variant-posterior", po::value<unsigned>()->default_value(20), "the minimum variant posterior probability (phred scale)")
-            ("min-refcall-posterior", po::value<unsigned>()->default_value(10), "the minimum homozygous reference posterior probability (phred scale)")
-            ("make-positional-refcalls", po::bool_switch()->default_value(false), "caller will output positional REFCALLs")
-            ("make-blocked-refcalls", po::bool_switch()->default_value(false), "caller will output blocked REFCALLs")
-            ;
-            
-            po::options_description all("Allowed options");
-            all.add(general).add(backend).add(input).add(filters).add(transforms).add(candidates).add(model).add(calling);
-            
-            po::variables_map vm;
-            po::store(po::command_line_parser(argc, argv).options(all).positional(p).run(), vm);
-            
-            if (vm.count("help")) {
-                std::cout << "Usage: octopus <command> [options]" << std::endl;
-                std::cout << all << std::endl;
-                return {vm, false};
-            }
-            
-            // boost::option cannot handle option dependencies so we must do our own checks
-            
-            if (vm.count("reads") == 0 && vm.count("reads-file") == 0) {
-                throw boost::program_options::required_option {"--reads | --reads-file"};
-            }
-            
-            if (vm.count("make-positional-refcalls") == 1 && vm.count("make-blocked-refcalls") ==  1) {
-                //throw boost::program_options::ambiguous_option {"--make-positional-refcalls | --make-blocked-refcalls"};
-            }
-            
-            po::notify(vm);
-            
-            return {vm, true};
+        if (vm.count(opt1) && !vm[opt1].defaulted() && vm.count(opt2) && !vm[opt2].defaulted()) {
+            throw std::logic_error(std::string("Conflicting options '") + opt1 + "' and '" + opt2 + "'.");
         }
-        catch(std::exception& e) {
-            std::cerr << e.what() << std::endl;
-            return {po::variables_map {}, false};
+    }
+    
+    void option_dependency(const po::variables_map& vm, const std::string& for_what,
+                           const std::string& required_option)
+    {
+        if (vm.count(for_what) && !vm[for_what].defaulted())
+            if (vm.count(required_option) == 0 || vm[required_option].defaulted()) {
+                throw std::logic_error(std::string("Option '") + for_what
+                                       + "' requires option '" + required_option + "'.");
+            }
+    }
+    
+    po::variables_map parse_options(int argc, const char** argv)
+    {
+        po::positional_options_description p;
+        p.add("command", -1);
+        
+        po::options_description general("General options");
+        general.add_options()
+        ("help,h", "produce help message")
+        ("version", "output the version number")
+        ("verbosity", po::value<unsigned>()->default_value(0), "level of logging. Verbosity 0 switches off logging")
+        ;
+        
+        po::options_description backend("Backend options");
+        backend.add_options()
+        ("max-threads,t", po::value<unsigned>()->default_value(1), "maximum number of threads")
+        ("memory", po::value<size_t>()->default_value(8000), "target memory usage in MB")
+        ("compress-reads", po::bool_switch()->default_value(false), "compress the reads (slower)")
+        ("max-open-files", po::value<unsigned>()->default_value(200), "the maximum number of files that can be open at one time")
+        ;
+        
+        po::options_description input("Input/output options");
+        input.add_options()
+        ("reference,R", po::value<std::string>()->required(), "the reference genome file")
+        ("reads,I", po::value<std::vector<std::string>>()->multitoken(), "space-seperated list of read file paths")
+        ("reads-file", po::value<std::string>(), "path to a text file containing read file paths")
+        ("regions", po::value<std::vector<std::string>>()->multitoken(), "space-seperated list of one-indexed variant search regions (chrom:begin-end)")
+        ("regions-file", po::value<std::string>(), "path to a file containing list of one-indexed variant search regions (chrom:begin-end)")
+        ("skip-regions", po::value<std::vector<std::string>>()->multitoken(), "space-seperated list of one-indexed regions (chrom:begin-end) to skip")
+        ("skip-regions-file", po::value<std::string>(), "path to a file containing list of one-indexed regions (chrom:begin-end) to skip")
+        ("samples,S", po::value<std::vector<std::string>>()->multitoken(), "space-seperated list of sample names to consider")
+        ("samples-file", po::value<std::string>(), "path to a file containing list of sample names to consider")
+        ("output,o", po::value<std::string>()->default_value("octopus_variants.vcf"), "path of the output variant file")
+        ("log-file", po::value<std::string>(), "path of the output log file")
+        ;
+        
+        po::options_description filters("Read filter options");
+        filters.add_options()
+        ("no-unmapped", po::bool_switch()->default_value(false), "filter reads marked as unmapped")
+        ("min-mapping-quality", po::value<unsigned>()->default_value(20), "reads with smaller mapping quality are ignored")
+        ("good-base-quality", po::value<unsigned>()->default_value(20), "base quality threshold used by min-good-bases filter")
+        ("min-good-base-fraction", po::value<double>(), "base quality threshold used by min-good-bases filter")
+        ("min-good-bases", po::value<AlignedRead::SizeType>()->default_value(0), "minimum number of bases with quality min-base-quality before read is considered")
+        ("no-qc-fails", po::bool_switch()->default_value(false), "filter reads marked as QC failed")
+        ("min-read-length", po::value<AlignedRead::SizeType>(), "filter reads shorter than this")
+        ("max-read-length", po::value<AlignedRead::SizeType>(), "filter reads longer than this")
+        ("no-duplicates", po::bool_switch()->default_value(false), "filters duplicate reads")
+        ("no-secondary-alignmenets", po::bool_switch()->default_value(false), "filters reads marked as secondary alignments")
+        ("no-supplementary-alignmenets", po::bool_switch()->default_value(false), "filters reads marked as supplementary alignments")
+        ("no-unmapped-mates", po::bool_switch()->default_value(false), "filters reads with unmapped mates")
+        ;
+        
+        po::options_description transforms("Read filter options");
+        transforms.add_options()
+        ("trim-soft-clipped", po::bool_switch()->default_value(false), "trims soft clipped parts of the read")
+        ("tail-trim-size", po::value<AlignedRead::SizeType>()->default_value(0), "trims this number of bases off the tail of all reads")
+        ("trim-adapters", po::bool_switch()->default_value(true), "trims any overlapping regions that pass the fragment size")
+        ;
+        
+        po::options_description candidates("Candidate generation options");
+        candidates.add_options()
+        ("candidates-from-alignments", po::bool_switch()->default_value(true), "generate candidate variants from the aligned reads")
+        ("candidates-from-assembler", po::bool_switch()->default_value(false), "generate candidate variants with the assembler")
+        ("candidates-from-source", po::value<std::string>(), "variant file path containing known variants. These variants will automatically become candidates")
+        ("min-snp-base-quality", po::value<unsigned>()->default_value(20), "only base changes with quality above this value are considered for snp generation")
+        ("max-variant-size", po::value<AlignedRead::SizeType>()->default_value(100), "maximum candidate varaint size from alignmenet CIGAR")
+        ("k", po::value<unsigned>()->default_value(15), "k-mer size to use")
+        ("no-cycles", po::bool_switch()->default_value(false), "dissalow cycles in assembly graph")
+        ;
+        
+        po::options_description model("Model options");
+        model.add_options()
+        ("model", po::value<std::string>()->default_value("population"), "the calling model used")
+        ("ploidy", po::value<unsigned>()->default_value(2), "the organism ploidy")
+        ("snp-prior", po::value<double>()->default_value(0.003), "the prior probability of a snp")
+        ("insertion-prior", po::value<double>()->default_value(0.003), "the prior probability of an insertion into the reference")
+        ("deletion-prior", po::value<double>()->default_value(0.003), "the prior probability of a deletion from the reference")
+        ;
+        
+        po::options_description calling("Caller options");
+        calling.add_options()
+        ("min-variant-posterior", po::value<unsigned>()->default_value(20), "the minimum variant posterior probability (phred scale)")
+        ("min-refcall-posterior", po::value<unsigned>()->default_value(10), "the minimum homozygous reference posterior probability (phred scale)")
+        ("make-positional-refcalls", po::bool_switch()->default_value(false), "caller will output positional REFCALLs")
+        ("make-blocked-refcalls", po::bool_switch()->default_value(false), "caller will output blocked REFCALLs")
+        ;
+        
+        po::options_description all("Allowed options");
+        all.add(general).add(backend).add(input).add(filters).add(transforms).add(candidates).add(model).add(calling);
+        
+        po::variables_map vm;
+        po::store(po::command_line_parser(argc, argv).options(all).positional(p).run(), vm);
+        
+        if (vm.count("help")) {
+            std::cout << "Usage: octopus <command> [options]" << std::endl;
+            std::cout << all << std::endl;
+            return vm;
         }
-        catch(...) {
-            std::cerr << "unknown error in option parsing" << std::endl;
-            return {po::variables_map {}, false};;
+        
+        // boost::option cannot handle option dependencies so we must do our own checks
+        
+        if (vm.count("reads") == 0 && vm.count("reads-file") == 0) {
+            throw boost::program_options::required_option {"--reads | --reads-file"};
         }
+        
+        po::notify(vm);
+        
+        conflicting_options(vm, "make-positional-refcalls", "make-blocked-refcalls");
+        
+        return vm;
     }
     
     namespace detail

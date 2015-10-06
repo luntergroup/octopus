@@ -535,6 +535,8 @@ VcfRecord output_variant_call(const Allele& reference_allele, const std::vector<
     result.set_alt_alleles(get_alt_allele_sequences(variants));
     result.set_quality(phred_quality);
     
+    //result.set_filters({"PASS"}); // TODO
+    
     result.add_info("AC", to_strings(count_alleles(variants, genotype_calls)));
     result.add_info("AN", std::to_string(count_alleles(genotype_calls)));
     result.add_info("NS", std::to_string(count_samples_with_coverage(reads, region)));
@@ -550,9 +552,9 @@ VcfRecord output_variant_call(const Allele& reference_allele, const std::vector<
         const auto& sample = sample_call.first;
         result.add_genotype(sample, to_vcf_genotype(sample_call.second.first), VcfRecord::Builder::Phasing::Phased);
         
-        result.add_genotype_field(sample, "FT", "PASS"); // TODO
+        result.add_genotype_field(sample, "FT", "."); // TODO
         result.add_genotype_field(sample, "GP", std::to_string(Maths::probability_to_phred(sample_call.second.second)));
-        result.add_genotype_field(sample, "PS", std::to_string(get_begin(phase_region)));
+        result.add_genotype_field(sample, "PS", std::to_string(get_begin(phase_region) + 1));
         result.add_genotype_field(sample, "PQ", "60"); // TODO
         result.add_genotype_field(sample, "DP", std::to_string(max_coverage(reads.at(sample), region)));
         result.add_genotype_field(sample, "BQ", std::to_string(static_cast<unsigned>(rmq_base_quality(reads.at(sample), region))));
@@ -578,7 +580,7 @@ VcfRecord output_reference_call(RefCall call, ReferenceGenome& reference, const 
     
     result.set_filters({"REFCALL"});
     if (size(region) > 1) {
-        result.add_info("END", std::to_string(get_end(region) - 1)); // -1 as VCF uses closed intervals
+        result.add_info("END", std::to_string(get_end(region))); // - 1 as VCF uses closed intervals
     }
     
     result.add_info("NS", std::to_string(count_samples_with_coverage(reads, region)));

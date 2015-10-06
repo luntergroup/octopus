@@ -34,7 +34,7 @@ namespace Octopus
 {
     namespace Options
     {
-    std::pair<po::variables_map, bool> parse_options(int argc, const char** argv);
+    boost::program_options::variables_map parse_options(int argc, const char** argv);
     
     unsigned get_max_threads(const po::variables_map& options);
     

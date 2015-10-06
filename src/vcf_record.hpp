@@ -211,7 +211,7 @@ private:
     SequenceType ref_allele_ = ".";
     std::vector<SequenceType> alt_alleles_ = {"."};
     QualityType quality_ = 0;
-    std::vector<KeyType> filters_ = {"PASS"};
+    std::vector<KeyType> filters_ = {};
     std::unordered_map<KeyType, std::vector<ValueType>> info_ = {};
     std::vector<KeyType> format_ = {};
     std::unordered_map<SampleIdType, Genotype> genotypes_ = {};

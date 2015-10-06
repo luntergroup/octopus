@@ -12,6 +12,7 @@
 #include <string>
 #include <vector>
 #include <unordered_map>
+#include <utility> // std::forward
 
 #include "genotype_model.hpp"
 #include "mappable_map.hpp"
@@ -34,6 +35,14 @@ namespace Octopus
         
         struct Latents
         {
+            Latents() = default;
+            template <typename G, typename F>
+            Latents(G&& genotype_posteriors, F&& haplotype_frequencies)
+            :
+            genotype_posteriors {std::forward<G>(genotype_posteriors)},
+            haplotype_frequencies {std::forward<F>(haplotype_frequencies)}
+            {}
+            
             GenotypeProbabilities genotype_posteriors;
             HaplotypeFrequencies haplotype_frequencies;
         };

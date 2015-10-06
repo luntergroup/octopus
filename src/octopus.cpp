@@ -30,6 +30,8 @@
 #include "population_caller.hpp"
 #include "cancer_caller.hpp"
 
+#include "test_common.hpp"
+
 namespace Octopus
 {
     size_t count_reads(ReadManager& read_manager, ReferenceGenome& reference)

@@ -464,10 +464,35 @@ std::vector<GenomicRegion> decompose(const MappableType& mappable)
     
     result.reserve(num_elements);
     
-    unsigned n {0};
+    GenomicRegion::SizeType n {0};
     
     std::generate_n(std::back_inserter(result), num_elements, [&n, &mappable] () {
         return GenomicRegion {get_contig_name(mappable), get_begin(mappable) + n, get_begin(mappable) + ++n};
+    });
+    
+    return result;
+}
+
+template <typename MappableType>
+std::vector<GenomicRegion> decompose(const MappableType& mappable, GenomicRegion::SizeType n)
+{
+    std::vector<GenomicRegion> result {};
+    
+    if (n == 0) return result;
+    
+    auto num_elements = size(mappable) / n;
+    
+    if (num_elements == 0) return result;
+    
+    result.reserve(num_elements);
+    
+    const auto& contig = get_contig_name(mappable);
+    auto curr = get_begin(mappable);
+    
+    std::generate_n(std::back_inserter(result), num_elements, [&contig, &curr, n] () {
+        auto tmp = curr;
+        curr += n;
+        return GenomicRegion {contig, tmp, tmp + n};
     });
     
     return result;

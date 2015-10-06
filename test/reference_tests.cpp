@@ -16,6 +16,7 @@
 
 #include "test_common.hpp"
 #include "reference_genome.hpp"
+#include "mappable_algorithms.hpp"
 
 using std::cout;
 using std::endl;
@@ -111,6 +112,27 @@ BOOST_AUTO_TEST_CASE(parse_region_throws_when_region_is_not_formatted_correctly)
 //    }
 //    
 //    BOOST_CHECK(throwed);
+}
+
+BOOST_AUTO_TEST_CASE(cached_and_uncached_reference_genome_give_same_sequence)
+{
+    std::string contig {"20"};
+    
+    auto uncached_reference = make_reference(human_reference_fasta, 0);
+    auto cached_reference   = make_reference(human_reference_fasta, 10'000'000);
+    
+    std::string uncached_sequence {}, cached_sequence {};
+    uncached_sequence.reserve(uncached_reference.get_contig_size(contig));
+    cached_sequence.reserve(cached_reference.get_contig_size(contig));
+    
+    auto regions = decompose(parse_region(contig, uncached_reference), 100);
+    
+    for (const auto& region : regions) {
+        uncached_sequence += uncached_reference.get_sequence(region);
+        cached_sequence += cached_reference.get_sequence(region);
+    }
+    
+    BOOST_CHECK(uncached_sequence == cached_sequence);
 }
 
 //BOOST_AUTO_TEST_CASE(CachingFasta_works_the_same_as_Fasta)

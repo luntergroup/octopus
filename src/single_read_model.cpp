@@ -20,40 +20,31 @@ namespace Octopus
 {
     // public methods
     
-    SingleReadModel::SingleReadModel(size_t max_cache_size)
-    :
-    cache_ {},
-    max_cache_size_ {max_cache_size},
-    cache_size_ {}
-    {
-        cache_.reserve(max_cache_size / 2);
-    }
-    
     SingleReadModel::SingleReadModel(size_t max_num_reads, size_t max_num_haplotypes)
     :
     cache_ {},
-    max_cache_size_ {max_num_reads * max_num_haplotypes},
-    cache_size_ {}
+    max_num_reads_ {max_num_reads},
+    max_num_haplotypes_ {max_num_haplotypes}
     {
         cache_.reserve(max_num_reads);
     }
     
-    SingleReadModel::RealType SingleReadModel::log_probability(const AlignedRead& read, const Haplotype& haplotype)
+    double SingleReadModel::log_probability(const AlignedRead& read, const Haplotype& haplotype)
     {
         if (is_cached(read, haplotype)) return get_cached(read, haplotype);
         
         // TODO: make these members when pair_hmm is finalised
         
-        RandomModel<RealType> lhs_random {};
+        RandomModel<double> lhs_random {};
         lhs_random.target_emission_probability = 0.25;
         lhs_random.query_emission_probability  = 0.25;
         
-        MatchModel<RealType> match {};
+        MatchModel<double> match {};
         match.match_probability      = 0.25;
         match.gap_open_probability   = 0.015; // TODO: should be part of an error model
         match.gap_extend_probability = 0.020; // TODO: should be part of an error model
         
-        RandomModel<RealType> rhs_random {};
+        RandomModel<double> rhs_random {};
         rhs_random.target_emission_probability = 0.25;
         rhs_random.query_emission_probability  = 0.25;
         
@@ -94,9 +85,9 @@ namespace Octopus
             rhs_random.query_end_probability  = 0.99;
         }
         
-        auto joint_log_probability = nuc_log_viterbi_local<RealType>(haplotype.get_sequence(), read.get_sequence(),
-                                                                     read.get_qualities(),
-                                                                     lhs_random, match, rhs_random);
+        auto joint_log_probability = nuc_log_viterbi_local<double>(haplotype.get_sequence(), read.get_sequence(),
+                                                                   read.get_qualities(),
+                                                                   lhs_random, match, rhs_random);
         
         auto conditional_log_probability = joint_log_probability -
         haplotype.get_sequence().size() * std::log(lhs_random.target_emission_probability);
@@ -109,7 +100,6 @@ namespace Octopus
     void SingleReadModel::clear_cache()
     {
         cache_.clear();
-        cache_size_ = 0;
     }
     
     // private methods
@@ -119,15 +109,15 @@ namespace Octopus
         return cache_.count(read) == 1 && cache_.at(read).count(haplotype) == 1;
     }
     
-    void SingleReadModel::cache(const AlignedRead& read, const Haplotype& haplotype, RealType value)
+    void SingleReadModel::cache(const AlignedRead& read, const Haplotype& haplotype, double value)
     {
-        if (cache_size_ < max_cache_size_) {
-            cache_[read][haplotype] = value;
-            ++cache_size_;
+        if (cache_[read].empty()) {
+            cache_[read].reserve(max_num_haplotypes_);
         }
+        cache_[read][haplotype] = value;
     }
     
-    SingleReadModel::RealType SingleReadModel::get_cached(const AlignedRead& read, const Haplotype& haplotype) const
+    double SingleReadModel::get_cached(const AlignedRead& read, const Haplotype& haplotype) const
     {
         return cache_.at(read).at(haplotype);
     }

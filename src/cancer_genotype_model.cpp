@@ -80,7 +80,7 @@ namespace Octopus
                                    const Cancer::SampleGenotypeWeights& genotype_weights,
                                    const MappableSet<AlignedRead>& reads)
     {
-        static SingleReadModel rm {1000};
+        static SingleReadModel rm {reads.size(), 100};
         
         double result {};
         
@@ -154,7 +154,7 @@ namespace Octopus
     compute_genotype_weight_responsibilities(const Cancer::GenotypeProbabilities& genotype_probabilities,
                                              const ReadMap& reads, const Cancer::GenotypeWeights& genotype_weights)
     {
-        static SingleReadModel rm {1000};
+        static SingleReadModel rm {reads.size(), 100};
         
         Cancer::GenotypeWeightResponsibilities result {};
         result.reserve(reads.size());

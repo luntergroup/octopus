@@ -59,9 +59,9 @@ namespace Octopus
             likelihoods.reserve(genotypes.size());
             
             for (const auto& genotype : genotypes) {
-                likelihoods.emplace(genotype, read_model.log_probability(sample_reads.second.cbegin(),
-                                                                         sample_reads.second.cend(),
-                                                                         genotype, sample));
+                likelihoods.emplace(genotype, read_model.log_probability(std::cbegin(sample_reads.second),
+                                                                         std::cend(sample_reads.second),
+                                                                         genotype));
             }
             
             result.emplace(sample, std::move(likelihoods));
@@ -242,7 +242,7 @@ namespace Octopus
                     std::vector<std::pair<Haplotype, double>> top {};
                     top.reserve(haplotypes.size());
                     for (const auto& haplotype : haplotypes) {
-                        top.emplace_back(haplotype, ReadModel(2).log_probability(read, haplotype, sample_reads.first));
+                        top.emplace_back(haplotype, ReadModel(2).log_probability(read, haplotype));
                     }
                     std::sort(std::begin(top), std::end(top), [] (const auto& lhs, const auto& rhs) {
                         return lhs.second > rhs.second;
@@ -266,7 +266,7 @@ namespace Octopus
                 std::vector<std::pair<Haplotype, double>> top {};
                 top.reserve(haplotypes.size());
                 for (const auto& haplotype : haplotypes) {
-                    top.emplace_back(haplotype, ReadModel(2).log_probability(read, haplotype, sample));
+                    top.emplace_back(haplotype, ReadModel(2).log_probability(read, haplotype));
                 }
                 std::sort(std::begin(top), std::end(top), [] (const auto& lhs, const auto& rhs) {
                     return lhs.second > rhs.second;
@@ -290,7 +290,7 @@ namespace Octopus
                     std::vector<std::pair<Genotype<Haplotype>, double>> top {};
                     top.reserve(genotypes.size());
                     for (const auto& genotype : genotypes) {
-                        top.emplace_back(genotype, ReadModel(2).log_probability(read, genotype, sample_reads.first));
+                        top.emplace_back(genotype, ReadModel(2).log_probability(read, genotype));
                     }
                     std::sort(std::begin(top), std::end(top), [] (const auto& lhs, const auto& rhs) {
                         return lhs.second > rhs.second;
@@ -314,7 +314,7 @@ namespace Octopus
                 std::vector<std::pair<Genotype<Haplotype>, double>> top {};
                 top.reserve(genotypes.size());
                 for (const auto& genotype : genotypes) {
-                    top.emplace_back(genotype, ReadModel(2).log_probability(read, genotype, sample));
+                    top.emplace_back(genotype, ReadModel(2).log_probability(read, genotype));
                 }
                 std::sort(std::begin(top), std::end(top), [] (const auto& lhs, const auto& rhs) {
                     return lhs.second > rhs.second;
@@ -334,13 +334,13 @@ namespace Octopus
         
         const auto genotype_log_likilhoods = compute_genotype_log_likelihoods(genotypes, reads);
         
-//        print_top_haplotypes(haplotypes, reads, "HG00101", 10);
+//        print_top_haplotypes(haplotypes, reads, "HG00102", 10);
 //        std::cout << std::endl;
-//        print_top_genotypes(genotypes, reads, "HG00101", 10);
+//        print_top_genotypes(genotypes, reads, "HG00102", 10);
 //        std::cout << std::endl;
 //        print(genotype_log_likilhoods, 10);
 //        std::cout << std::endl;
-//        exit(0);
+        //exit(0);
         
         auto haplotype_prior_counts = compute_haplotype_prior_counts(haplotypes, reference, haplotype_prior_model_);
         
@@ -352,6 +352,7 @@ namespace Octopus
 //        print(haplotype_prior_counts);
 //        std::cout << std::endl;
 //        print(genotype_posteriors, 10);
+//        std::cout << std::endl;
         //exit(0);
         
         for (unsigned n {0}; n < max_em_iterations_; ++n) {
@@ -362,11 +363,9 @@ namespace Octopus
             if (c < em_epsilon_) break;
         }
         
-        Latents result {};
-        result.genotype_posteriors   = std::move(genotype_posteriors);
-        result.haplotype_frequencies = std::move(haplotype_frequencies);
+        //print(genotype_posteriors, 10);
         
-        return result;
+        return Latents {std::move(genotype_posteriors), std::move(haplotype_frequencies)};
     }
     
     } // namespace GenotypeModel

@@ -55,8 +55,8 @@ private:
     std::unordered_map<std::string, ContigSequenceCache> sequence_cache_;
     std::list<GenomicRegion> recently_used_regions_;
     
-    SizeType used_cache_size_ = 0;
-    const SizeType max_cache_size_ = 1000000;
+    SizeType used_cache_size_      = 0;
+    const SizeType max_cache_size_ = 10'000'000;
     
     void setup_cache();
     
