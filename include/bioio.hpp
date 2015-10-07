@@ -284,6 +284,7 @@ namespace bioio {
             FastaIndex fai(line);
             index[fai.contig_name] = std::move(fai);
         }
+        index.reserve(index.size());
         return index;
     }
     

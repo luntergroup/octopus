@@ -77,6 +77,7 @@ namespace Octopus
         backend.add_options()
         ("max-threads,t", po::value<unsigned>()->default_value(1), "maximum number of threads")
         ("memory", po::value<size_t>()->default_value(8000), "target memory usage in MB")
+        ("reference-cache-size", po::value<size_t>()->default_value(0), "the maximum number of bytes that can be used to cache reference sequence")
         ("compress-reads", po::bool_switch()->default_value(false), "compress the reads (slower)")
         ("max-open-files", po::value<unsigned>()->default_value(200), "the maximum number of files that can be open at one time")
         ;
@@ -313,7 +314,9 @@ namespace Octopus
     
     ReferenceGenome get_reference(const po::variables_map& options)
     {
-        return make_reference(options.at("reference").as<std::string>());
+        auto cache_size = options.at("reference-cache-size").as<size_t>();
+        return make_reference(options.at("reference").as<std::string>(),
+                              static_cast<ReferenceGenome::SizeType>(cache_size));
     }
     
     SearchRegions get_search_regions(const po::variables_map& options, const ReferenceGenome& the_reference)

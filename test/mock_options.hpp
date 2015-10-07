@@ -54,6 +54,7 @@ inline po::variables_map get_basic_mock_options()
         //"--min-mapping-quality", "20",
         "--min-snp-base-quality", "20",
         //"--no-duplicates",
+        "--reference-cache-size", "1000",
         nullptr};
     
     int argc = sizeof(argv) / sizeof(char*) - 1;
