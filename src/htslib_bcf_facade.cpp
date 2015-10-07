@@ -475,7 +475,7 @@ void set_info(bcf_hdr_t* header, bcf1_t* dest, const VcfRecord& source)
             }
             case BCF_HT_FLAG:
             {
-                bcf_update_info_flag(header, dest, key.c_str(), "", values.front() == "1");
+                bcf_update_info_flag(header, dest, key.c_str(), "", values.empty() || values.front() == "1");
                 break;
             }
         }

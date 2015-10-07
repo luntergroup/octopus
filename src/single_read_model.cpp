@@ -111,14 +111,17 @@ namespace Octopus
     
     void SingleReadModel::cache(const AlignedRead& read, const Haplotype& haplotype, double value)
     {
+        //std::cout << "caching result" << std::endl;
         if (cache_[read].empty()) {
+            //std::cout << "is first haplotype to cache.. reserving space for " << max_num_haplotypes_ << " haplotypes" << std::endl;
             cache_[read].reserve(max_num_haplotypes_);
         }
-        cache_[read][haplotype] = value;
+        cache_[read].emplace(haplotype, value);
     }
     
     double SingleReadModel::get_cached(const AlignedRead& read, const Haplotype& haplotype) const
     {
+        //std::cout << "fetching cached result" << std::endl;
         return cache_.at(read).at(haplotype);
     }
 

@@ -497,7 +497,7 @@ BOOST_AUTO_TEST_CASE(Haplotype_can_be_spliced)
     
     auto splice_region = parse_region("16:9299964-9300083", human);
     
-    auto spliced = splice(haplotype, splice_region);
+    auto spliced = splice<Haplotype>(haplotype, splice_region);
     
     BOOST_CHECK(get_region(spliced) == splice_region);
     BOOST_CHECK(contains(haplotype, spliced));

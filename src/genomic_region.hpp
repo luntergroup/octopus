@@ -331,5 +331,4 @@ inline std::ostream& operator<<(std::ostream& os, const GenomicRegion& region)
     return os;
 }
 
-
 #endif /* defined(__Octopus__genomic_region__) */

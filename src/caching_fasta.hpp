@@ -82,7 +82,7 @@ private:
     const SizeType max_cache_size_ = 10'000'000;
     SizeType current_cache_size_   = 0;
     
-    const double locality_bias_ = 0.8;
+    const double locality_bias_ = 0.5;
     const double forward_bias_  = 0.8;
     
     void setup_cache();
@@ -92,9 +92,9 @@ private:
     GenomicRegion get_region_to_fetch(const GenomicRegion& requested_region) const;
     GenomicRegion get_new_contig_chunk(const GenomicRegion& requested_region) const;
     GenomicRegion get_hit_contig_chunk(const GenomicRegion& requested_region) const;
-    bool is_region_cached(const GenomicRegion& region) const;
+    bool is_contig_cached(const GenomicRegion& region) const;
     CacheIterator get_cache_iterator(const GenomicRegion& requested_region) const;
-    void add_sequence_to_cache(const SequenceType& sequence, const GenomicRegion& region);
+    void add_sequence_to_cache(SequenceType&& sequence, const GenomicRegion& region);
     void update_cache_position(const GenomicRegion& region);
     OverlapRange overlap_range(const GenomicRegion& region) const;
     void remove_from_sequence_cache(const GenomicRegion& region);

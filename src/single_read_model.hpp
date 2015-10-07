@@ -21,7 +21,7 @@ namespace Octopus
     class SingleReadModel
     {
     public:
-        SingleReadModel()  = delete;
+        SingleReadModel()  = default;
         explicit SingleReadModel(size_t max_num_reads, size_t max_num_haplotypes);
         ~SingleReadModel() = default;
         

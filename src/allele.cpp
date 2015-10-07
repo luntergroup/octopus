@@ -120,6 +120,11 @@ bool is_deletion(const Allele& allele)
     return allele.get_sequence().size() < size(allele);
 }
 
+bool is_indel(const Allele& allele)
+{
+    return is_insertion(allele) || is_deletion(allele);
+}
+
 std::vector<Allele> decompose(const Allele& allele)
 {
     std::vector<Allele> result {};

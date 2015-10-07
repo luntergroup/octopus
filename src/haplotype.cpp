@@ -257,7 +257,8 @@ bool contains(const Haplotype& lhs, const Haplotype& rhs)
     return lhs.get_sequence(rhs_explicit_allele_region) == rhs.get_sequence_bounded_by_explicit_alleles();
 }
 
-Haplotype splice(const Haplotype& haplotype, const GenomicRegion& region)
+namespace detail {
+Haplotype do_splice(const Haplotype& haplotype, const GenomicRegion& region, Haplotype)
 {
     if (get_region(haplotype) == region) return haplotype;
     
@@ -285,6 +286,13 @@ Haplotype splice(const Haplotype& haplotype, const GenomicRegion& region)
     return result;
 }
 
+Allele do_splice(const Haplotype& haplotype, const GenomicRegion& region, Allele)
+{
+    // TODO: improve this
+    return static_cast<Allele>(do_splice(haplotype, region, Haplotype{}));
+}
+} // namespace detail
+    
 bool is_reference(const Haplotype& haplotype, ReferenceGenome& reference)
 {
     return haplotype.get_sequence() == reference.get_sequence(haplotype.get_region());

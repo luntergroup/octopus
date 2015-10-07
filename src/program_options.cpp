@@ -143,8 +143,9 @@ namespace Octopus
         
         po::options_description calling("Caller options");
         calling.add_options()
-        ("min-variant-posterior", po::value<unsigned>()->default_value(20), "the minimum variant posterior probability (phred scale)")
-        ("min-refcall-posterior", po::value<unsigned>()->default_value(10), "the minimum homozygous reference posterior probability (phred scale)")
+        ("min-variant-posterior", po::value<unsigned>()->default_value(20), "the minimum variant call posterior probability (phred scale)")
+        ("min-refcall-posterior", po::value<unsigned>()->default_value(10), "the minimum homozygous reference call posterior probability (phred scale)")
+        ("min-somatic-posterior", po::value<unsigned>()->default_value(10), "the minimum somaitc mutation call posterior probability (phred scale)")
         ("make-positional-refcalls", po::bool_switch()->default_value(false), "caller will output positional REFCALLs")
         ("make-blocked-refcalls", po::bool_switch()->default_value(false), "caller will output blocked REFCALLs")
         ;
@@ -522,13 +523,16 @@ namespace Octopus
         auto min_refcall_posterior       = Maths::phred_to_probability(min_refcall_posterior_phred);
         
         SampleIdType normal_sample {};
+        double min_somatic_posterior {};
         if (model == "cancer") {
             normal_sample = options.at("normal-sample").as<std::string>();
+            auto min_somatic_posterior_phred = options.at("min-somatic-posterior").as<unsigned>();
+            min_somatic_posterior = Maths::phred_to_probability(min_somatic_posterior_phred);
         }
         
         return make_variant_caller(model, reference, candidate_generator, refcall_type,
                                    min_variant_posterior, min_refcall_posterior,
-                                   ploidy, normal_sample);
+                                   ploidy, normal_sample, min_somatic_posterior);
     }
     
     VcfWriter get_output_vcf(const po::variables_map& options)

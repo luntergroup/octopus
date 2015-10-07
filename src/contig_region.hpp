@@ -9,6 +9,7 @@
 #ifndef __Octopus__contig_region__
 #define __Octopus__contig_region__
 
+#include <ostream>
 #include <cstdint>
 #include <algorithm> // std::min, std::max
 #include <stdexcept>
@@ -273,6 +274,17 @@ namespace std {
             return seed;
         }
     };
+}
+
+inline std::string to_string(const ContigRegion& region)
+{
+    return std::to_string(region.get_begin()) + '-' + std::to_string(region.get_end());
+}
+
+inline std::ostream& operator<<(std::ostream& os, const ContigRegion& region)
+{
+    os << to_string(region);
+    return os;
 }
 
 #endif /* defined(__Octopus__contig_region__) */

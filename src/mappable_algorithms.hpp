@@ -377,6 +377,21 @@ std::size_t count_shared(ForwardIterator first, ForwardIterator last,
                           [&lhs] (const auto& region) { return overlaps(region, lhs); });
 }
 
+template <typename ForwardIterator>
+inline
+bool has_exact(ForwardIterator first, ForwardIterator last, const typename ForwardIterator::value_type& mappable)
+{
+    auto contained = contained_range(first, last, mappable);
+    return std::find(std::cbegin(contained), std::cend(contained), mappable) == std::cend(contained);
+}
+
+template <typename Container>
+inline
+bool has_exact(const Container& mappables, const typename Container::value_type& mappable)
+{
+    return has_exact(std::cbegin(mappables), std::cend(mappables), mappable);
+}
+
 /**
  Returns if any of the Mappable elements in the range [first, last) overlaps both lhs and rhs.
  

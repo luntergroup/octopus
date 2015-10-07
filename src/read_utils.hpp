@@ -808,6 +808,16 @@ double rmq_base_quality(const T& reads, const GenomicRegion& region)
     return detail::rmq_base_quality(reads, region, detail::IsMapType<!std::is_same<typename T::value_type, AlignedRead>::value>());
 }
 
+template <typename Map>
+size_t max_sample_read_count(const Map& reads)
+{
+    if (reads.empty()) return 0;
+    return std::max_element(std::cbegin(reads), std::cend(reads),
+                            [] (const auto& lhs, const auto& rhs) {
+                                return lhs.second.size() < rhs.second.size();
+                            })->second.size();
+}
+
 namespace detail
 {
     template <typename T, typename F>

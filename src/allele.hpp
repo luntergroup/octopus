@@ -68,6 +68,8 @@ bool is_insertion(const Allele& allele);
 
 bool is_deletion(const Allele& allele);
 
+bool is_indel(const Allele& allele);
+
 std::vector<Allele> decompose(const Allele& allele);
 
 bool operator==(const Allele& lhs, const Allele& rhs);

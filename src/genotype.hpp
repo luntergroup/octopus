@@ -233,7 +233,7 @@ Genotype<MappableType2> splice(const Genotype<MappableType1>& genotype, const Ge
     Genotype<MappableType2> result {genotype.ploidy()};
     
     for (const auto& mappable : genotype) {
-        result.emplace(static_cast<MappableType2>(splice(mappable, region)));
+        result.emplace(splice<MappableType2>(mappable, region));
     }
     
     return result;

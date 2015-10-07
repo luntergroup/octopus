@@ -74,6 +74,24 @@ namespace Octopus
     generate_callable_alleles(const GenomicRegion& region, const std::vector<Variant>& variants,
                               VariantCaller::RefCallType refcall_type, ReferenceGenome& reference);
     
+    std::vector<Allele>
+    generate_candidate_reference_alleles(const std::vector<Allele>& callable_alleles,
+                                         const std::vector<GenomicRegion>& called_regions,
+                                         const std::vector<Variant>& candidates,
+                                         VariantCaller::RefCallType refcall_type);
+    
+    template <typename Map>
+    void remove_low_posteriors(Map& map, double min_posterior)
+    {
+        for (auto it = std::begin(map); it != std::end(map);) {
+            if (it->second < min_posterior) {
+                it = map.erase(it);
+            } else {
+                ++it;
+            }
+        }
+    }
+    
 } // namespace Octopus
 
 #endif

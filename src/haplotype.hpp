@@ -22,6 +22,13 @@
 class ReferenceGenome;
 class GenomicRegion;
 
+class Haplotype;
+
+namespace detail {
+    Haplotype do_splice(const Haplotype& haplotype, const GenomicRegion& region, Haplotype);
+    Allele do_splice(const Haplotype& haplotype, const GenomicRegion& region, Allele);
+} // namespace detail
+
 class Haplotype : public Comparable<Haplotype>, public Mappable<Haplotype>
 {
 public:
@@ -56,7 +63,8 @@ public:
     
     friend bool is_less_complex(const Haplotype& lhs, const Haplotype& rhs) noexcept;
     friend bool contains(const Haplotype& lhs, const Haplotype& rhs);
-    friend Haplotype splice(const Haplotype& haplotype, const GenomicRegion& region);
+    friend Haplotype detail::do_splice(const Haplotype& haplotype, const GenomicRegion& region, Haplotype);
+    friend Allele detail::do_splice(const Haplotype& haplotype, const GenomicRegion& region, Allele);
     friend bool have_same_alleles(const Haplotype& lhs, const Haplotype& rhs);
     friend void print_alleles(const Haplotype& haplotype);
     friend void print_variant_alleles(const Haplotype& haplotype);
@@ -127,7 +135,11 @@ void Haplotype::push_front(T&& allele)
 bool contains(const Haplotype& lhs, const Allele& rhs);
 bool contains(const Haplotype& lhs, const Haplotype& rhs);
 
-Haplotype splice(const Haplotype& haplotype, const GenomicRegion& region);
+template <typename MappableType>
+MappableType splice(const Haplotype& haplotype, const GenomicRegion& region)
+{
+    return detail::do_splice(haplotype, region, MappableType());
+}
 
 bool is_reference(const Haplotype& haplotype, ReferenceGenome& reference);
 bool is_less_complex(const Haplotype& lhs, const Haplotype& rhs) noexcept;
