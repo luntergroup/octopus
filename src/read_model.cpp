@@ -25,6 +25,13 @@ ploidy_ {ploidy},
 ln_ploidy_ {std::log(ploidy)}
 {}
 
+ReadModel::ReadModel(unsigned ploidy, size_t max_num_reads, size_t max_num_haplotypes)
+:
+read_model_ {max_num_reads, max_num_haplotypes},
+ploidy_ {ploidy},
+ln_ploidy_ {std::log(ploidy)}
+{}
+
 double ReadModel::log_probability(const AlignedRead& read, const Haplotype& haplotype)
 {
     return read_model_.log_probability(read, haplotype);

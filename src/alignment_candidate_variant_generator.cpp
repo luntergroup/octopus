@@ -9,6 +9,7 @@
 #include "alignment_candidate_variant_generator.hpp"
 
 #include <iterator>  // std::cbegin etc, std::distance
+#include <algorithm> // std::for_each, std::sort, std::unique, std::adjacent_find, std::find_if_not
 #include <boost/range/combine.hpp>
 
 #include "reference_genome.hpp"
@@ -17,14 +18,18 @@
 #include "cigar_string.hpp"
 #include "mappable_algorithms.hpp"
 
+#include <iostream> // DEBUG
+
 namespace Octopus {
     
 AlignmentCandidateVariantGenerator::AlignmentCandidateVariantGenerator(ReferenceGenome& reference,
                                                                        QualityType min_base_quality,
+                                                                       unsigned min_supporting_reads,
                                                                        SizeType max_variant_size)
 :
 reference_ {reference},
 min_base_quality_ {min_base_quality},
+min_supporting_reads_ {min_supporting_reads},
 max_variant_size_ {max_variant_size},
 candidates_ {},
 are_candidates_sorted_ {true},
@@ -138,13 +143,45 @@ std::vector<Variant> AlignmentCandidateVariantGenerator::get_candidates(const Ge
     
     if (!are_candidates_sorted_) {
         std::sort(begin(candidates_), end(candidates_));
-        candidates_.erase(std::unique(begin(candidates_), end(candidates_)), end(candidates_));
+        
+        if (min_supporting_reads_ == 1) {
+            candidates_.erase(std::unique(begin(candidates_), end(candidates_)), end(candidates_));
+        }
+        
         are_candidates_sorted_ = true;
     }
     
     auto overlapped = overlap_range(cbegin(candidates_), cend(candidates_), region, max_seen_candidate_size_);
     
-    return std::vector<Variant> {begin(overlapped), end(overlapped)};
+    if (min_supporting_reads_ == 1) {
+        return std::vector<Variant> {begin(overlapped), end(overlapped)};
+    } else {
+        std::vector<Variant> result {};
+        result.reserve(bases(overlapped).size());
+        
+        while (!overlapped.empty()) {
+            auto it = std::adjacent_find(overlapped.begin(), overlapped.end());
+            
+            if (it == overlapped.end()) break;
+            
+            const Variant& duplicate = *it;
+            
+            auto it2 = std::find_if_not(std::next(it), overlapped.end(),
+                                        [&duplicate] (const auto& variant) { return variant == duplicate; });
+            
+            auto duplicate_count = std::distance(it, it2);
+            
+            if (duplicate_count >= min_supporting_reads_) {
+                result.emplace_back(overlapped.front());
+            }
+            
+            overlapped.advance_begin(duplicate_count);
+        }
+        
+        result.shrink_to_fit();
+        
+        return result;
+    }
 }
 
 void AlignmentCandidateVariantGenerator::reserve(size_t n)

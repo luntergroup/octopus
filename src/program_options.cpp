@@ -126,6 +126,7 @@ namespace Octopus
         ("candidates-from-assembler", po::bool_switch()->default_value(false), "generate candidate variants with the assembler")
         ("candidates-from-source", po::value<std::string>(), "variant file path containing known variants. These variants will automatically become candidates")
         ("min-snp-base-quality", po::value<unsigned>()->default_value(20), "only base changes with quality above this value are considered for snp generation")
+        ("min-supporting-reads", po::value<unsigned>()->default_value(1), "minimum number of reads that must support a variant if it is to be considered a candidate")
         ("max-variant-size", po::value<AlignedRead::SizeType>()->default_value(100), "maximum candidate varaint size from alignmenet CIGAR")
         ("k", po::value<unsigned>()->default_value(15), "k-mer size to use")
         ("no-cycles", po::bool_switch()->default_value(false), "dissalow cycles in assembly graph")
@@ -494,8 +495,13 @@ namespace Octopus
         
         if (options.count("candidates-from-alignments") == 1) {
             auto min_snp_base_quality = options.at("min-snp-base-quality").as<unsigned>();
-            auto max_variant_size = options.at("max-variant-size").as<AlignmentCandidateVariantGenerator::SizeType>();
-            result.register_generator(std::make_unique<AlignmentCandidateVariantGenerator>(reference, min_snp_base_quality, max_variant_size));
+            auto max_variant_size     = options.at("max-variant-size").as<AlignmentCandidateVariantGenerator::SizeType>();
+            auto min_supporting_reads = options.at("min-supporting-reads").as<unsigned>();
+            
+            if (min_supporting_reads == 0) ++min_supporting_reads; // probably input error; 0 is meaningless
+            
+            result.register_generator(std::make_unique<AlignmentCandidateVariantGenerator>(reference, min_snp_base_quality,
+                                                                                           min_supporting_reads, max_variant_size));
         }
         
         return result;

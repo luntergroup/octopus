@@ -11,7 +11,6 @@
 
 #include <vector>
 #include <cstddef>   // size_t
-#include <algorithm> // std::for_each, std::sort, std::unique, std::lower_bound, std::upper_bound, std::max
 #include <utility>   // std::forward
 
 #include "i_candidate_variant_generator.hpp"
@@ -31,7 +30,7 @@ public:
     
     AlignmentCandidateVariantGenerator() = delete;
     explicit AlignmentCandidateVariantGenerator(ReferenceGenome& reference, QualityType min_base_quality = 0,
-                                                SizeType max_variant_size = 100);
+                                                unsigned min_supporting_reads = 1, SizeType max_variant_size = 100);
     ~AlignmentCandidateVariantGenerator() override = default;
     
     AlignmentCandidateVariantGenerator(const AlignmentCandidateVariantGenerator&)            = default;
@@ -53,6 +52,7 @@ private:
     
     ReferenceGenome& reference_;
     QualityType min_base_quality_;
+    unsigned min_supporting_reads_;
     SizeType max_variant_size_;
     
     std::vector<Variant> candidates_;

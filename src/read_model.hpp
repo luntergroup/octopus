@@ -25,6 +25,7 @@ class ReadModel
 public:
     ReadModel()  = delete;
     explicit ReadModel(unsigned ploidy);
+    explicit ReadModel(unsigned ploidy, size_t max_num_reads, size_t max_num_haplotypes);
     ~ReadModel() = default;
     
     ReadModel(const ReadModel&)            = default;

@@ -22,16 +22,19 @@ inline po::variables_map get_basic_mock_options()
         "--reference", human_reference_fasta.c_str(),
         "--reads", NA12878_low_coverage.string().c_str(), HG00101.string().c_str(), HG00102.string().c_str(), HG00103.string().c_str(),
         //"--reads", HG00102.string().c_str(), NA12878_low_coverage.string().c_str(),
-        //"--model", "cancer", // default "population"
+        "--model", "cancer", // default "population"
         "--normal-sample", "HG00101", //"NA12878", // for cancer model
         //"--ploidy", "2",
         //"--make-blocked-refcalls",
         //"--make-positional-refcalls",
+        
         //"--regions", "5:157,031,410-157,031,449",
         //"--regions", "11:67503118-67503253",
-        //"--regions", "2:104142870-104142984",
-        //"--regions", "2:104,142,854-104,142,925",
-        //"--regions", "2:104,142,897-104,142,936",
+        
+        "--regions", "2:104,142,854-104,142,925", // population caller fails here
+        //"--regions", "2:104,142,897-104,142,936", // but is ok here
+        //"--regions", "2:104142870-104142984", // and here
+        
         //"--regions", "2:142376817-142376922",
         //"--regions", "20",
         //"--regions", "8:94,786,581-94,786,835", // empty region
@@ -49,13 +52,14 @@ inline po::variables_map get_basic_mock_options()
         //"--regions", "13:96,095,387-96,095,455",
         //"--regions", "11:81,266,010-81,266,122", // all homo-alt
         //"--regions", "11:81,266,084-81,266,123",
-        "--regions", "2:160,128,475-160,128,576",
+        //"--regions", "2:160,128,475-160,128,576",
         "--min-variant-posterior", "10",
         "--min-refcall-posterior", "10",
         "--min-somatic-posterior", "2",
         "--output", test_out_vcf.c_str(),
         //"--min-mapping-quality", "20",
         "--min-snp-base-quality", "20",
+        "--min-supporting-reads", "2",
         //"--no-duplicates",
         "--reference-cache-size", "1000",
         nullptr};
