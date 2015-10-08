@@ -227,12 +227,12 @@ namespace std {
         {
             size_t seed {};
             boost::hash_combine(seed, hash<GenomicRegion>()(r.get_region()));
-            boost::hash_combine(seed, hash<CigarString>()(r.get_cigar_string()));
+            //boost::hash_combine(seed, hash<CigarString>()(r.get_cigar_string()));
             boost::hash_combine(seed, r.get_mapping_quality());
             return seed;
         }
     };
-} // end namespace std
+} // namespace std
 
 std::ostream& operator<<(std::ostream& os, const AlignedRead::Qualities& qualities);
 

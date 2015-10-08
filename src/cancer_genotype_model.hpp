@@ -31,7 +31,6 @@ namespace Octopus
     {
     public:
         using GenotypeProbabilities          = std::unordered_map<CancerGenotype<Haplotype>, double>;
-        using GenotypeWeightResponsibilities = std::unordered_map<SampleIdType, std::vector<std::array<double, 3>>>;
         using SampleGenotypeWeightsPriors    = std::array<double, 3>;
         using SampleGenotypeWeights          = std::array<double, 3>;
         using GenotypeWeightsPriors          = std::unordered_map<SampleIdType, SampleGenotypeWeightsPriors>;

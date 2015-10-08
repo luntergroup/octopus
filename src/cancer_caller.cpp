@@ -171,7 +171,7 @@ namespace Octopus
     
     bool is_homozygous_reference(const CancerGenotype<Haplotype>& genotype, const Haplotype& reference)
     {
-        return is_homozygous_reference(genotype.get_germline_genotype(), reference);
+        return is_homozygous(genotype.get_germline_genotype(), reference);
     }
     
     GermlineGenotypeMarginals
@@ -483,6 +483,18 @@ namespace Octopus
 //        return result;
 //    }
     
+    auto get_regions(const VariantCalls& variant_calls)
+    {
+        std::vector<GenomicRegion> result {};
+        result.reserve(variant_calls.size());
+        
+        for (const auto& segment_calls : variant_calls) {
+            result.emplace_back(get_encompassing_region(segment_calls.variants));
+        }
+        
+        return result;
+    }
+    
     static std::vector<VcfRecord::SequenceType> to_vcf_genotype(const Genotype<Allele>& genotype)
     {
         std::vector<VcfRecord::SequenceType> result {};
@@ -637,7 +649,8 @@ namespace Octopus
     }
     
     std::vector<VcfRecord>
-    CancerVariantCaller::call_variants(const GenomicRegion& region, const std::vector<Variant>& candidates,
+    CancerVariantCaller::call_variants(const GenomicRegion& region,
+                                       const std::vector<Variant>& candidates,
                                        const ReadMap& reads)
     {
         std::vector<VcfRecord> result {};
@@ -694,7 +707,8 @@ namespace Octopus
         
         auto alleles = generate_callable_alleles(region, candidates, refcall_type_, reference_);
         
-        auto germline_allele_posteriors = compute_germline_allele_posteriors(germline_genotype_posteriors, latents.genotype_weights, alleles);
+        auto germline_allele_posteriors = compute_germline_allele_posteriors(germline_genotype_posteriors,
+                                                                             latents.genotype_weights, alleles);
         
         for (const auto& sa : germline_allele_posteriors) {
             std::cout << "germline allele posteriors for sample: " << sa.first << std::endl;
@@ -703,7 +717,8 @@ namespace Octopus
             }
         }
         
-        auto cancer_allele_posteriors = compute_cancer_allele_posteriors(cancer_haplotype_posteriors, latents.genotype_weights, alleles);
+        auto cancer_allele_posteriors = compute_cancer_allele_posteriors(cancer_haplotype_posteriors,
+                                                                         latents.genotype_weights, alleles);
         
         for (const auto& sa : cancer_allele_posteriors) {
             std::cout << "cancer allele posteriors for sample: " << sa.first << std::endl;
@@ -747,7 +762,8 @@ namespace Octopus
         
         auto called_regions = get_called_regions(germline_variant_calls, somatic_mutation_calls);
         
-        auto candidate_refcall_alleles = generate_candidate_reference_alleles(alleles, called_regions, candidates, refcall_type_);
+        auto candidate_refcall_alleles = generate_candidate_reference_alleles(alleles, called_regions,
+                                                                              candidates, refcall_type_);
         
         std::cout << "candidate refcall alleles:" << std::endl;
         for (const auto& allele : candidate_refcall_alleles) {
@@ -757,6 +773,9 @@ namespace Octopus
         auto phase_region = (called_regions.empty()) ? get_head(region) : get_encompassing(called_regions.front(), called_regions.back());
         
         result.reserve(germline_variant_calls.size() + somatic_mutation_calls.size());
+        
+        germline_genotype_calls = call_germline_genotypes(map_germline_genotype.first,
+                                                          get_regions(germline_variant_calls));
         
         merge_transform(std::cbegin(germline_variant_calls), std::cend(germline_variant_calls), std::cbegin(germline_genotype_calls),
                         std::cbegin(somatic_mutation_calls), std::cend(somatic_mutation_calls), std::back_inserter(result),

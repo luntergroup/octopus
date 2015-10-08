@@ -101,14 +101,14 @@ bool contains(const Genotype<Haplotype>& genotype, const Allele& allele)
                        [&allele] (const auto& haplotype) { return haplotype.contains(allele); });
 }
 
-bool is_homozygous_reference(const Genotype<Haplotype>& genotype, const Allele& reference)
+bool is_homozygous(const Genotype<Haplotype>& genotype, const Allele& allele)
 {
-    return splice<Allele>(genotype, get_region(reference)).count(reference) == genotype.ploidy();
+    return splice<Allele>(genotype, get_region(allele)).count(allele) == genotype.ploidy();
 }
 
-unsigned num_genotypes(const unsigned num_elements, const unsigned ploidy)
+size_t num_genotypes(const size_t num_elements, const unsigned ploidy)
 {
-    return static_cast<unsigned>(boost::math::binomial_coefficient<double>(num_elements + ploidy - 1, num_elements - 1));
+    return static_cast<size_t>(boost::math::binomial_coefficient<double>(num_elements + ploidy - 1, num_elements - 1));
 }
 
 void print_alleles(const Genotype<Haplotype>& genotype)

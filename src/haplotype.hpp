@@ -29,6 +29,8 @@ namespace detail {
     Allele do_splice(const Haplotype& haplotype, const GenomicRegion& region, Allele);
 } // namespace detail
 
+template<> struct std::hash<Haplotype>;
+
 class Haplotype : public Comparable<Haplotype>, public Mappable<Haplotype>
 {
 public:
@@ -68,6 +70,8 @@ public:
     friend bool have_same_alleles(const Haplotype& lhs, const Haplotype& rhs);
     friend void print_alleles(const Haplotype& haplotype);
     friend void print_variant_alleles(const Haplotype& haplotype);
+    
+    friend struct std::hash<Haplotype>;
     
 private:
     ReferenceGenome* reference_; // non-owning pointer rather than a reference so Haplotype copyable
@@ -158,6 +162,9 @@ namespace std
         {
             size_t seed {};
             boost::hash_combine(seed, hash<GenomicRegion>()(h.get_region()));
+//            for (const auto& allele : h.explicit_alleles_) {
+//                boost::hash_combine(seed, hash<Allele::SequenceType>()(allele.get_sequence()));
+//            }
             boost::hash_combine(seed, hash<Haplotype::SequenceType>()(h.get_sequence()));
             return seed;
         }

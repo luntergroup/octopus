@@ -35,8 +35,6 @@ namespace Octopus
         
         using HaplotypePriorCounts = std::unordered_map<Haplotype, double>;
         using HaplotypeFrequencies = std::unordered_map<Haplotype, double>;
-        using GenotypeMarginals    = std::unordered_map<Genotype<Haplotype>, double>;
-        using GenotypeLikelihoods  = std::unordered_map<SampleIdType, std::unordered_map<Genotype<Haplotype>, double>>;
         
         template <typename Genotype>
         double log_hardy_weinberg(const Genotype& genotype, const HaplotypeFrequencies& haplotype_frequencies)
@@ -127,35 +125,6 @@ namespace Octopus
             
             return result;
         }
-        
-            // TEST methods
-            
-            inline void print(const HaplotypePriorCounts& prior_counts)
-            {
-                for (const auto& h : prior_counts) {
-                    print_variant_alleles(h.first);
-                    std::cout << " " << h.second << std::endl;
-                }
-            }
-            
-            inline void print(const GenotypeLikelihoods& likelihoods, size_t n = 5)
-            {
-                std::cout << "top " << n << " genotype likelihoods for each sample" << std::endl;
-                for (const auto& sample_likelihoods : likelihoods) {
-                    std::cout << sample_likelihoods.first << ":" << std::endl;
-                    std::vector<std::pair<Genotype<Haplotype>, double>> v {};
-                    v.reserve(sample_likelihoods.second.size());
-                    std::copy(std::cbegin(sample_likelihoods.second), std::cend(sample_likelihoods.second),
-                              std::back_inserter(v));
-                    std::sort(std::begin(v), std::end(v), [] (const auto& lhs, const auto& rhs) {
-                        return lhs.second > rhs.second;
-                    });
-                    for (unsigned i {}; i < std::min(n, v.size()); ++i) {
-                        print_variant_alleles(v[i].first);
-                        std::cout << " " << v[i].second << std::endl;
-                    }
-                }
-            }
             
     } // namespace GenotypeModel
 } // namespace Octopus

@@ -310,7 +310,7 @@ double compute_homozygous_reference_posterior(const Allele& reference_allele, co
     double result {1.0};
     
     for (const auto& sample_genotype_call : genotype_calls) {
-        if (is_homozygous_reference(sample_genotype_call.second.first, reference_allele)) {
+        if (is_homozygous(sample_genotype_call.second.first, reference_allele)) {
             auto curr = sample_genotype_call.second.second;
             if (curr < result) {
                 result = curr;
@@ -367,7 +367,7 @@ double marginalise_reference_genotype(const Allele& reference_allele,
     double result {};
     
     for (const auto& genotype_posterior : sample_genotype_posteriors) {
-        if (is_homozygous_reference(genotype_posterior.first, reference_allele)) {
+        if (is_homozygous(genotype_posterior.first, reference_allele)) {
             result += genotype_posterior.second;
         }
     }

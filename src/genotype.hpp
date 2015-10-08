@@ -13,6 +13,7 @@
 #include <unordered_map>
 #include <initializer_list>
 #include <ostream>
+#include <cstddef>
 #include <iterator>    // std::cbegin, std::cend, std::distance, std::back_inserter
 #include <algorithm>   // std::std::sort, std::inplace_merge, std::all_of, std::binary_search,
                        // std::equal_range, std::unique_copy, std::equal, std::fill_n
@@ -240,12 +241,12 @@ Genotype<MappableType2> splice(const Genotype<MappableType1>& genotype, const Ge
 }
 
 template <typename MappableType>
-bool is_homozygous_reference(const Genotype<MappableType>& genotype, const MappableType& reference)
+bool is_homozygous(const Genotype<MappableType>& genotype, const MappableType& element)
 {
-    return genotype.count(reference) == genotype.ploidy();
+    return genotype.count(element) == genotype.ploidy();
 }
 
-bool is_homozygous_reference(const Genotype<Haplotype>& genotype, const Allele& reference);
+bool is_homozygous(const Genotype<Haplotype>& genotype, const Allele& allele);
 
 template <typename MappableType>
 bool operator==(const Genotype<MappableType>& lhs, const Genotype<MappableType>& rhs)
@@ -271,7 +272,7 @@ bool contains(const Genotype<MappableType1>& lhs, const Genotype<MappableType2>&
                        [&rhs] (const auto& element) { return rhs.contains(element); });
 }
 
-unsigned num_genotypes(const unsigned num_elements, const unsigned ploidy);
+size_t num_genotypes(const size_t num_elements, const unsigned ploidy);
 
 namespace detail
 {
