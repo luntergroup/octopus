@@ -302,7 +302,7 @@ namespace Octopus
             if (s.first == normal_sample_) {
                 weight_priors.emplace(s.first, SampleGenotypeWeightsPriors {100.0, 100.0, 0.01});
             } else {
-                weight_priors.emplace(s.first, SampleGenotypeWeightsPriors {0.6, 0.6, 0.5});
+                weight_priors.emplace(s.first, SampleGenotypeWeightsPriors {10.0, 10.0, 0.1});
             }
         }
         
@@ -312,8 +312,12 @@ namespace Octopus
         auto genotype_log_posteriors  = compute_genotype_log_posteriors(genotypes, reads, haplotype_frequencies,
                                                                         genotype_weights, read_model_);
         
+        debug::print_top_genotypes(genotypes, genotype_log_posteriors);
+        
         auto genotype_weight_responsibilities = compute_genotype_weight_responsibilities(genotype_log_posteriors,
                                                                                          genotype_weights, reads, read_model_);
+        
+        debug::print_weight_responsabilities(genotype_weight_responsibilities, reads);
         
         for (unsigned n {0}; n < max_em_iterations_; ++n) {
             std::cout << "EM iteration " << n << std::endl;

@@ -8,7 +8,7 @@
 
 #include "variant_caller.hpp"
 
-#include <algorithm> // std::stable_sort
+#include <algorithm> // std::merge, std::copy
 
 #include "genomic_region.hpp"
 #include "mappable.hpp"
@@ -47,6 +47,9 @@ namespace Octopus
         candidate_generator_.clear();
         
         std::cout << "found " << candidates.size() << " candidates in " << count_reads(reads) << " reads" << std::endl;
+        
+//        std::cout << "candidates are:" << std::endl;
+//        for (const auto& c : candidates) std::cout << c << std::endl;
         
         auto current_region = get_init_region(region, reads, candidates);
         
@@ -145,10 +148,6 @@ namespace Octopus
             }
         }
         
-//        std::stable_sort(begin(result), end(result), [] (const auto& lhs, const auto& rhs) {
-//            return get_region(lhs) < get_region(rhs);
-//        });
-        
         return result;
     }
     
@@ -164,6 +163,8 @@ namespace Octopus
         }
     }
     
+    // TODO: we should catch the case where an insertion has been called and push the refcall
+    // block up a position, otherwise the returned reference allele (block) will never be called.
     std::vector<Allele>
     generate_candidate_reference_alleles(const std::vector<Allele>& callable_alleles,
                                          const std::vector<GenomicRegion>& called_regions,

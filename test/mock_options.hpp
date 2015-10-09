@@ -20,11 +20,13 @@ inline po::variables_map get_basic_mock_options()
 {
     const char *argv[] = {"octopus",
         "--reference", human_reference_fasta.c_str(),
-        "--reads", NA12878_low_coverage.string().c_str(), HG00101.string().c_str(), HG00102.string().c_str(), HG00103.string().c_str(),
-        //"--reads", HG00102.string().c_str(), NA12878_low_coverage.string().c_str(),
-        //"--model", "cancer", // default "population"
-        "--normal-sample", "HG00101", //"NA12878", // for cancer model
-        "--ploidy", "1",
+        
+        //"--reads", NA12878_low_coverage.string().c_str(), HG00101.string().c_str(), HG00102.string().c_str(), HG00103.string().c_str(),
+        "--reads", NA12878_high_coverage.string().c_str(), HG00102.string().c_str(),
+        
+        "--model", "cancer", // default "population"
+        "--normal-sample", "NA12878", // for cancer model
+        "--ploidy", "2",
         //"--make-blocked-refcalls",
         //"--make-positional-refcalls",
         
@@ -52,16 +54,29 @@ inline po::variables_map get_basic_mock_options()
         //"--regions", "13:96,095,387-96,095,455",
         //"--regions", "11:81,266,010-81,266,122", // all homo-alt
         //"--regions", "11:81,266,084-81,266,123",
-        //"--regions", "2:160,128,475-160,128,576",
-        "--regions", "MT:11,669-11,768", // very high coverage snp
+        
+        //"--regions", "16:9,299,984-9,300,090", // complex indels
+        "--regions", "13:96,733,039-96,733,124", // complex indels
+        //"--regions", "13:96732801-96733349",
+        
+        //"--regions", "7:122579662-122579817", // complex indels (unverified)
+        
+        //"--regions", "16:9,378,560-9,378,687", // very complex indel region
+        
+        //"--regions", "16:62,646,838-62,647,242", // complex phasable insertion and SNPs (in NA12878-HC)
+        
+        //"--regions", "MT:11,669-11,768", // very high coverage snp
         //"--regions", "MT",
-        "--min-variant-posterior", "10",
-        "--min-refcall-posterior", "10",
+        
+        "--min-variant-posterior", "5",
+        "--min-refcall-posterior", "1",
         "--min-somatic-posterior", "2",
+        
         "--output", test_out_vcf.c_str(),
-        "--min-mapping-quality", "20",
-        "--min-snp-base-quality", "20",
+        
         "--min-supporting-reads", "2",
+        "--min-mapping-quality", "20",
+        "--min-snp-base-quality", "30",
         "--tail-trim-size", "3",
         "--trim-soft-clipped",
         "--remove-duplicate-reads",

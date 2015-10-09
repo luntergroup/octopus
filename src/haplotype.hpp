@@ -63,7 +63,8 @@ public:
     
     void operator+=(const Haplotype& other);
     
-    friend bool is_less_complex(const Haplotype& lhs, const Haplotype& rhs) noexcept;
+    friend struct IsLessComplex;
+    
     friend bool contains(const Haplotype& lhs, const Haplotype& rhs);
     friend Haplotype detail::do_splice(const Haplotype& haplotype, const GenomicRegion& region, Haplotype);
     friend Allele detail::do_splice(const Haplotype& haplotype, const GenomicRegion& region, Allele);
@@ -146,7 +147,12 @@ MappableType splice(const Haplotype& haplotype, const GenomicRegion& region)
 }
 
 bool is_reference(const Haplotype& haplotype, ReferenceGenome& reference);
-bool is_less_complex(const Haplotype& lhs, const Haplotype& rhs) noexcept;
+
+struct IsLessComplex
+{
+    bool operator()(const Haplotype& lhs, const Haplotype& rhs) noexcept;
+};
+
 void unique_least_complex(std::vector<Haplotype>& haplotypes);
 
 bool operator==(const Haplotype& lhs, const Haplotype& rhs);

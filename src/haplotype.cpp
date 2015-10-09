@@ -138,27 +138,43 @@ Haplotype::SequenceType Haplotype::get_sequence(const GenomicRegion& region) con
     auto overlapped_explicit_alleles = bases(overlap_range(cbegin(explicit_alleles_), cend(explicit_alleles_), region,
                                                            MappableRangeOrder::BidirectionallySorted));
     
-    // captures insertion
+    // captures insertion at the end... this breaks the rules of region overlaps as normally
+    // insertions are only consdiered overlapped at the start of a region.
     if (overlapped_explicit_alleles.end() != cend(explicit_alleles_) && ::contains(region, *overlapped_explicit_alleles.end())) {
         overlapped_explicit_alleles.advance_end(1);
     }
     
-    if (!empty(overlapped_explicit_alleles)) {
-        if (::contains(overlapped_explicit_alleles.front(), region)) {
-            append(result, splice(overlapped_explicit_alleles.front(), region));
-            result.shrink_to_fit();
-            return result;
-        } else if (begins_before(overlapped_explicit_alleles.front(), region)) {
-            append(result, splice(overlapped_explicit_alleles.front(), get_overlapped(overlapped_explicit_alleles.front(), region)));
-            overlapped_explicit_alleles.advance_begin(1);
-        }
+    if (empty(overlapped_explicit_alleles)) { // can this ever happen?
+        result.shrink_to_fit();
+        return result;
     }
     
-    bool region_ends_before_last_overlapped_allele {false};
+//    if (region.get_begin() == 96733105 && region.get_end() == 96733106) {
+//        std::cout << "current result: " << result << std::endl;
+//        std::cout << std::endl;
+//    }
     
-    if (!empty(overlapped_explicit_alleles) && overlapped_explicit_alleles.end() != cend(explicit_alleles_) &&
-        ends_before(region, *overlapped_explicit_alleles.end())) {
-        overlapped_explicit_alleles.advance_end(-1);
+    if (::contains(overlapped_explicit_alleles.front(), region)) {
+        if (is_same_region(overlapped_explicit_alleles.front(), region)) {
+            append(result, overlapped_explicit_alleles.front());
+            overlapped_explicit_alleles.advance_begin(1);
+            if (!empty(overlapped_explicit_alleles) && is_insertion(overlapped_explicit_alleles.front())) {
+                append(result, overlapped_explicit_alleles.front());
+            }
+        } else {
+            append(result, splice(overlapped_explicit_alleles.front(), region));
+        }
+        result.shrink_to_fit();
+        return result;
+    } else if (begins_before(overlapped_explicit_alleles.front(), region)) {
+        append(result, splice(overlapped_explicit_alleles.front(), get_overlapped(overlapped_explicit_alleles.front(), region)));
+        overlapped_explicit_alleles.advance_begin(1);
+    }
+    
+    bool region_ends_before_last_overlapped_allele {ends_before(region, overlapped_explicit_alleles.back())};
+    
+    if (region_ends_before_last_overlapped_allele) {
+        overlapped_explicit_alleles.advance_end(-1); // as we don't want all of the last allele
         region_ends_before_last_overlapped_allele = true;
     }
     
@@ -166,7 +182,8 @@ Haplotype::SequenceType Haplotype::get_sequence(const GenomicRegion& region) con
                                                        overlapped_explicit_alleles.end());
     
     if (region_ends_before_last_overlapped_allele) {
-        append(result, splice(*overlapped_explicit_alleles.end(), get_overlapped(*overlapped_explicit_alleles.end(), region)));
+        overlapped_explicit_alleles.advance_end(1); // as we previously removed this allele
+        append(result, splice(overlapped_explicit_alleles.back(), get_overlapped(overlapped_explicit_alleles.back(), region)));
     } else if (ends_before(region_bounded_by_alleles, region)) {
         result += reference_->get_sequence(get_right_overhang(region, region_bounded_by_alleles));
     }
@@ -260,6 +277,8 @@ bool contains(const Haplotype& lhs, const Haplotype& rhs)
 namespace detail {
 Haplotype do_splice(const Haplotype& haplotype, const GenomicRegion& region, Haplotype)
 {
+    // TODO: this is buggy.. test more
+    
     if (get_region(haplotype) == region) return haplotype;
     
     Haplotype result {*haplotype.reference_, region};
@@ -288,8 +307,7 @@ Haplotype do_splice(const Haplotype& haplotype, const GenomicRegion& region, Hap
 
 Allele do_splice(const Haplotype& haplotype, const GenomicRegion& region, Allele)
 {
-    // TODO: improve this
-    return static_cast<Allele>(do_splice(haplotype, region, Haplotype{}));
+    return Allele {region, haplotype.get_sequence(region)};
 }
 } // namespace detail
     
@@ -298,18 +316,20 @@ bool is_reference(const Haplotype& haplotype, ReferenceGenome& reference)
     return haplotype.get_sequence() == reference.get_sequence(haplotype.get_region());
 }
 
-bool is_less_complex(const Haplotype& lhs, const Haplotype& rhs) noexcept
+bool IsLessComplex::operator()(const Haplotype& lhs, const Haplotype& rhs) noexcept
 {
     return lhs.explicit_alleles_.size() < rhs.explicit_alleles_.size();
 }
 
 void unique_least_complex(std::vector<Haplotype>& haplotypes)
 {
-    std::sort(haplotypes.begin(), haplotypes.end());
+    using std::begin; using std::end;
     
-    auto first_equal = haplotypes.begin();
-    auto last_equal  = haplotypes.begin();
-    auto last        = haplotypes.end();
+    std::sort(begin(haplotypes), end(haplotypes));
+    
+    auto first_equal = begin(haplotypes);
+    auto last_equal  = begin(haplotypes);
+    auto last        = end(haplotypes);
     
     while (true) {
         first_equal = std::adjacent_find(first_equal, last);
@@ -322,7 +342,7 @@ void unique_least_complex(std::vector<Haplotype>& haplotypes)
                                           return haplotype == *first_equal;
                                       });
         
-        std::nth_element(first_equal, first_equal, last_equal, is_less_complex);
+        std::nth_element(first_equal, first_equal, last_equal, IsLessComplex());
         
         first_equal = last_equal;
     }

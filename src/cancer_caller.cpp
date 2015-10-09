@@ -660,7 +660,13 @@ namespace Octopus
         
         auto haplotypes = tree.get_haplotypes(region);
         
+        tree.clear(); // for now
+        
         std::cout << "there are " << haplotypes.size() << " haplotypes" << std::endl;
+        
+        unique_least_complex(haplotypes);
+        
+        std::cout << "there are " << haplotypes.size() << " unique haplotypes" << std::endl;
         
         GenotypeModel::Cancer genotype_model {normal_sample_};
         

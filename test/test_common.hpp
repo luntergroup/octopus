@@ -66,7 +66,7 @@ namespace detail
     static std::string hiv_bam_name6 {"12426_1_49_2_B.FR.83.HXB2_LAI_IIIB_BRU.K03455_bwa.bam"};
     static std::string hiv_bam_name7 {"13591_1_16_1_B.FR.83.HXB2_LAI_IIIB_BRU.K03455_bwa.bam"};
     static std::string hiv_bam_name8 {"13591_1_16_2_B.FR.83.HXB2_LAI_IIIB_BRU.K03455_bwa.bam"};
-} // end namespace detail
+} // namespace detail
 
 // Full paths
 
@@ -95,7 +95,7 @@ static const fs::path NA12878_low_coverage {detail::home_dir + detail::genomics_
     detail::NA12878_low_coverage_name};
     
     static const fs::path NA12878_high_coverage {detail::home_dir + detail::genomics_dir + detail::bam_dir +
-        detail::NA12878_low_coverage_name};
+        detail::NA12878_high_coverage_name};
 
 static const fs::path HG00101 {detail::home_dir + detail::genomics_dir + detail::bam_dir +
         detail::HG00101_name};

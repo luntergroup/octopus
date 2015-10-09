@@ -496,7 +496,7 @@ BOOST_AUTO_TEST_CASE(prune_unqiue_leaves_a_single_haplotype_which_contains_the_s
     
     auto er = std::equal_range(haplotypes.begin(), haplotypes.end(), the_reference_haplotype);
     
-    std::sort(er.first, er.second, is_less_complex);
+    std::sort(er.first, er.second, IsLessComplex());
     
     BOOST_CHECK(std::distance(er.first, er.second) == 5);
     

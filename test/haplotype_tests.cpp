@@ -387,7 +387,7 @@ BOOST_AUTO_TEST_CASE(haplotypes_can_be_compared_for_structural_complexity)
     hap2.push_back(allele1);
     hap2.push_back(allele2);
     
-    BOOST_CHECK(is_less_complex(hap1, hap2));
+    BOOST_CHECK(IsLessComplex()(hap1, hap2));
 }
 
 BOOST_AUTO_TEST_CASE(haplotypes_behave_at_boundries)
