@@ -46,7 +46,7 @@ namespace Octopus
         
         candidate_generator_.clear();
         
-        std::cout << "found " << candidates.size() << " candidates" << std::endl;
+        std::cout << "found " << candidates.size() << " candidates in " << count_reads(reads) << " reads" << std::endl;
         
         auto current_region = get_init_region(region, reads, candidates);
         

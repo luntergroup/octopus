@@ -9,6 +9,7 @@
 #include "population_genotype_model.hpp"
 
 #include <algorithm> // std::transform
+#include <numeric>   // std::accumulate
 #include <cmath>
 
 #include "read_model.hpp"
@@ -32,6 +33,10 @@ namespace Octopus
     
     // non member methods
     
+    using GenotypeLogLikelihood        = double;
+    using SampleGenotypeLogLikelihoods = std::vector<GenotypeLogLikelihood>;
+    using GenotypeLogLikelihoods       = std::unordered_map<SampleIdType, SampleGenotypeLogLikelihoods>;
+    
     struct GenotypeLogProbability
     {
         GenotypeLogProbability() = delete;
@@ -41,157 +46,24 @@ namespace Octopus
         const Genotype<Haplotype>& genotype;
         double log_probability;
     };
-        
+    
     using GenotypeLogMarginals = std::vector<GenotypeLogProbability>;
     
-    using GenotypeLogLikelihood = double;
-    using SampleGenotypeLogLikelihoods = std::vector<GenotypeLogLikelihood>;
-    using GenotypeLogLikelihoods = std::unordered_map<SampleIdType, SampleGenotypeLogLikelihoods>;
-    
-    using GenotypePosterior = double;
+    using GenotypePosterior        = double;
     using SampleGenotypePosteriors = std::vector<GenotypePosterior>;
-    using GenotypePosteriors = std::unordered_map<SampleIdType, SampleGenotypePosteriors>;
+    using GenotypePosteriors       = std::unordered_map<SampleIdType, SampleGenotypePosteriors>;
     
-    // DEBUG methods
+    using HaplotypeLogFrequencies = std::unordered_map<Haplotype, double>;
     
-    inline void print(const HaplotypePriorCounts& prior_counts)
-    {
-        for (const auto& h : prior_counts) {
-            print_variant_alleles(h.first);
-            std::cout << " " << h.second << std::endl;
-        }
-    }
-    
-//    inline void print(const GenotypeLikelihoods& likelihoods, size_t n = 5)
-//    {
-//        std::cout << "top " << n << " genotype likelihoods for each sample" << std::endl;
-//        for (const auto& sample_likelihoods : likelihoods) {
-//            std::cout << sample_likelihoods.first << ":" << std::endl;
-//            std::vector<std::pair<Genotype<Haplotype>, double>> v {};
-//            v.reserve(sample_likelihoods.second.size());
-//            std::copy(std::cbegin(sample_likelihoods.second), std::cend(sample_likelihoods.second),
-//                      std::back_inserter(v));
-//            std::sort(std::begin(v), std::end(v), [] (const auto& lhs, const auto& rhs) {
-//                return lhs.second > rhs.second;
-//            });
-//            for (unsigned i {}; i < std::min(n, v.size()); ++i) {
-//                print_variant_alleles(v[i].first);
-//                std::cout << " " << v[i].second << std::endl;
-//            }
-//        }
-//    }
-//
-//    void print_top_haplotypes(const std::vector<Haplotype>& haplotypes, const ReadMap& reads, size_t n = 3)
-//    {
-//        std::cout << "top " << n << " haplotype likelihoods for each read in each sample" << std::endl;
-//        auto m = std::min(n, haplotypes.size());
-//        for (const auto& sample_reads : reads) {
-//            std::cout << sample_reads.first << ":" << std::endl;
-//            for (const auto& read : sample_reads.second) {
-//                std::cout << read.get_region() << " " << read.get_cigar_string() << ":" << std::endl;
-//                std::vector<std::pair<Haplotype, double>> top {};
-//                top.reserve(haplotypes.size());
-//                for (const auto& haplotype : haplotypes) {
-//                    top.emplace_back(haplotype, ReadModel(2).log_probability(read, haplotype));
-//                }
-//                std::sort(std::begin(top), std::end(top), [] (const auto& lhs, const auto& rhs) {
-//                    return lhs.second > rhs.second;
-//                });
-//                for (unsigned i {}; i < m; ++i) {
-//                    std::cout << "\t* ";
-//                    print_variant_alleles(top[i].first);
-//                    std::cout << " " << top[i].second << std::endl;
-//                }
-//            }
-//        }
-//    }
-//    
-//    void print_top_haplotypes(const std::vector<Haplotype>& haplotypes, const ReadMap& reads,
-//                              const SampleIdType& sample, size_t n = 3)
-//    {
-//        std::cout << "top " << n << " haplotype likelihoods for each read in sample " << sample << std::endl;
-//        auto m = std::min(n, haplotypes.size());
-//        for (const auto& read : reads.at(sample)) {
-//            std::cout << read.get_region() << " " << read.get_cigar_string() << ":" << std::endl;
-//            std::vector<std::pair<Haplotype, double>> top {};
-//            top.reserve(haplotypes.size());
-//            for (const auto& haplotype : haplotypes) {
-//                top.emplace_back(haplotype, ReadModel(2).log_probability(read, haplotype));
-//            }
-//            std::sort(std::begin(top), std::end(top), [] (const auto& lhs, const auto& rhs) {
-//                return lhs.second > rhs.second;
-//            });
-//            for (unsigned i {}; i < m; ++i) {
-//                std::cout << "\t* ";
-//                print_variant_alleles(top[i].first);
-//                std::cout << " " << top[i].second << std::endl;
-//            }
-//        }
-//    }
-//    
-//    void print_top_genotypes(const std::vector<Genotype<Haplotype>>& genotypes, const ReadMap& reads, size_t n = 3)
-//    {
-//        std::cout << "top " << n << " genotype likelihoods for each read in each sample" << std::endl;
-//        auto m = std::min(n, genotypes.size());
-//        for (const auto& sample_reads : reads) {
-//            std::cout << sample_reads.first << ":" << std::endl;
-//            for (const auto& read : sample_reads.second) {
-//                std::cout << read.get_region() << " " << read.get_cigar_string() << ":" << std::endl;
-//                std::vector<std::pair<Genotype<Haplotype>, double>> top {};
-//                top.reserve(genotypes.size());
-//                for (const auto& genotype : genotypes) {
-//                    top.emplace_back(genotype, ReadModel(2).log_probability(read, genotype));
-//                }
-//                std::sort(std::begin(top), std::end(top), [] (const auto& lhs, const auto& rhs) {
-//                    return lhs.second > rhs.second;
-//                });
-//                for (unsigned i {}; i < m; ++i) {
-//                    std::cout << "\t* ";
-//                    print_variant_alleles(top[i].first);
-//                    std::cout << " " << top[i].second << std::endl;
-//                }
-//            }
-//        }
-//    }
-//    
-//    void print_top_genotypes(const std::vector<Genotype<Haplotype>>& genotypes, const ReadMap& reads,
-//                             const SampleIdType& sample, size_t n = 3)
-//    {
-//        std::cout << "top " << n << " genotype likelihoods for each read in sample " << sample << std::endl;
-//        auto m = std::min(n, genotypes.size());
-//        for (const auto& read : reads.at(sample)) {
-//            std::cout << read.get_region() << " " << read.get_cigar_string() << ":" << std::endl;
-//            std::vector<std::pair<Genotype<Haplotype>, double>> top {};
-//            top.reserve(genotypes.size());
-//            for (const auto& genotype : genotypes) {
-//                top.emplace_back(genotype, ReadModel(2).log_probability(read, genotype));
-//            }
-//            std::sort(std::begin(top), std::end(top), [] (const auto& lhs, const auto& rhs) {
-//                return lhs.second > rhs.second;
-//            });
-//            for (unsigned i {}; i < m; ++i) {
-//                std::cout << "\t* ";
-//                print_variant_alleles(top[i].first);
-//                std::cout << " " << top[i].second << std::endl;
-//            }
-//        }
-//    }
+        namespace debug {
+            void print_haplotype_priors(const HaplotypePriorCounts& prior_counts, size_t n = 5);
+            void print_genotype_log_likelihoods(const std::vector<Genotype<Haplotype>>& genotypes,
+                                                const GenotypeLogLikelihoods& log_likelihoods, size_t n = 5);
+            void print_top_haplotypes(const std::vector<Haplotype>& haplotypes, const ReadMap& reads, size_t n = 3);
+            void print_top_genotypes(const std::vector<Genotype<Haplotype>>& genotypes, const ReadMap& reads, size_t n = 3);
+        } // namespace debug
     
     // non member methods
-    
-    GenotypeLogMarginals
-    init_genotype_log_marginals(const std::vector<Genotype<Haplotype>>& genotypes,
-                                const HaplotypeFrequencies& haplotype_frequencies)
-    {
-        GenotypeLogMarginals result {};
-        result.reserve(genotypes.size());
-        
-        for (const auto& genotype : genotypes) {
-            result.emplace_back(genotype, log_hardy_weinberg(genotype, haplotype_frequencies));
-        }
-        
-        return result;
-    }
     
     GenotypeLogLikelihoods
     compute_genotype_log_likelihoods(const std::vector<Genotype<Haplotype>>& genotypes,
@@ -218,9 +90,32 @@ namespace Octopus
         return result;
     }
     
+    GenotypeLogMarginals
+    init_genotype_log_marginals(const std::vector<Genotype<Haplotype>>& genotypes,
+                                const HaplotypeFrequencies& haplotype_frequencies)
+    {
+        GenotypeLogMarginals result {};
+        result.reserve(genotypes.size());
+        
+        for (const auto& genotype : genotypes) {
+            result.emplace_back(genotype, log_hardy_weinberg(genotype, haplotype_frequencies));
+        }
+        
+        return result;
+    }
+    
+    void update_genotype_log_marginals(GenotypeLogMarginals& current_log_marginals,
+                                       const HaplotypeFrequencies& haplotype_frequencies)
+    {
+        for (auto& p : current_log_marginals) {
+            p.log_probability = log_hardy_weinberg(p.genotype, haplotype_frequencies);
+        }
+    }
+    
     static void normalise_exp(SampleGenotypePosteriors& unnormalised_log_posteriors)
     {
         const auto norm = Maths::log_sum_exp<double>(unnormalised_log_posteriors);
+        
         for (auto& p : unnormalised_log_posteriors) {
             p -= norm;
             p = std::exp(p);
@@ -251,20 +146,12 @@ namespace Octopus
         return result;
     }
     
-    void update_genotype_log_marginals(GenotypeLogMarginals& marginals,
-                                       const HaplotypeFrequencies& haplotype_frequencies)
-    {
-        for (auto& p : marginals) {
-            p.log_probability = log_hardy_weinberg(p.genotype, haplotype_frequencies);
-        }
-    }
-    
-    void update_genotype_posteriors(GenotypePosteriors& genotype_posteriors,
+    void update_genotype_posteriors(GenotypePosteriors& current_genotype_posteriors,
                                     const HaplotypeFrequencies& haplotype_frequencies,
                                     const GenotypeLogMarginals& genotype_log_marginals,
                                     const GenotypeLogLikelihoods& genotype_log_likilhoods)
     {
-        for (auto& sample_genotype_posteriors : genotype_posteriors) {
+        for (auto& sample_genotype_posteriors : current_genotype_posteriors) {
             
             const auto& sample_genotype_log_likilhoods = genotype_log_likilhoods.at(sample_genotype_posteriors.first);
             
@@ -280,38 +167,58 @@ namespace Octopus
     }
     
     HaplotypeFrequencies
-    compute_haplotype_frequencies(const HaplotypePriorCounts& haplotype_prior_counts,
-                                  const std::vector<Genotype<Haplotype>>& genotypes,
-                                  const GenotypePosteriors& genotype_posteriors)
+    init_haplotype_frequencies(const HaplotypePriorCounts& haplotype_prior_counts, const double prior_count_sum)
     {
         HaplotypeFrequencies result {};
         result.reserve(haplotype_prior_counts.size());
         
-        const double norm = genotype_posteriors.size() * genotypes.front().ploidy();
+        for (const auto& haplotype_count : haplotype_prior_counts) {
+            result.emplace(haplotype_count.first, haplotype_count.second / prior_count_sum);
+        }
+        
+        return result;
+    }
+    
+    double update_haplotype_frequencies(HaplotypeFrequencies& current_haplotype_frequencies,
+                                        const HaplotypePriorCounts& haplotype_prior_counts,
+                                        const std::vector<Genotype<Haplotype>>& genotypes,
+                                        const GenotypePosteriors& genotype_posteriors,
+                                        const double prior_count_sum)
+    {
+        double max_frequency_change {0.0};
+        
+        const double norm = genotype_posteriors.size() * genotypes.front().ploidy() + prior_count_sum;
         
         for (const auto& haplotype_count : haplotype_prior_counts) {
             const auto& haplotype = haplotype_count.first;
             
-            double haplotype_frequency = haplotype_count.second;
+            double new_frequency {haplotype_count.second};
             
             for (size_t k {}; k < genotypes.size(); ++k) {
                 auto n = genotypes[k].count(haplotype);
                 
                 if (n > 0) {
-                    double t {};
+                    auto s = std::accumulate(std::cbegin(genotype_posteriors), std::cend(genotype_posteriors), 0.0,
+                                             [k] (double curr, const auto& sample_genotype_log_posteriors) {
+                                                 return curr + sample_genotype_log_posteriors.second[k];
+                                             });
                     
-                    for (const auto& sample_genotype_log_posteriors : genotype_posteriors) {
-                        t += sample_genotype_log_posteriors.second[k];
-                    }
-                    
-                    haplotype_frequency += n * t;
+                    new_frequency += n * s;
                 }
             }
             
-            result.emplace(haplotype, haplotype_frequency / norm);
+            new_frequency /= norm;
+            
+            auto curr_fequency_change = std::abs(current_haplotype_frequencies[haplotype] - new_frequency);
+            
+            if (curr_fequency_change > max_frequency_change) {
+                max_frequency_change = curr_fequency_change;
+            }
+            
+            current_haplotype_frequencies[haplotype] = new_frequency;
         }
         
-        return result;
+        return max_frequency_change;
     }
     
     double do_em_iteration(const std::vector<Haplotype>& haplotypes,
@@ -320,25 +227,22 @@ namespace Octopus
                            HaplotypeFrequencies& haplotype_frequencies,
                            GenotypeLogMarginals& genotype_log_marginals,
                            const GenotypeLogLikelihoods& genotype_log_likilhoods,
-                           const HaplotypePriorCounts& haplotype_prior_counts)
+                           const HaplotypePriorCounts& haplotype_prior_counts,
+                           const double prior_count_sum)
     {
-        auto new_frequencies = compute_haplotype_frequencies(haplotype_prior_counts, genotypes,
-                                                             genotype_posteriors);
+        auto max_change = update_haplotype_frequencies(haplotype_frequencies, haplotype_prior_counts,
+                                                       genotypes, genotype_posteriors, prior_count_sum);
         
-        auto max_change = max_haplotype_frequency_change(haplotype_frequencies, new_frequencies);
+        update_genotype_log_marginals(genotype_log_marginals, haplotype_frequencies);
         
-        update_genotype_log_marginals(genotype_log_marginals, new_frequencies);
-        update_genotype_posteriors(genotype_posteriors, new_frequencies,
+        update_genotype_posteriors(genotype_posteriors, haplotype_frequencies,
                                    genotype_log_marginals, genotype_log_likilhoods);
-        
-        haplotype_frequencies = new_frequencies;
         
         return max_change;
     }
     
     Population::Latents
-    make_latents(std::vector<Genotype<Haplotype>>&& genotypes,
-                 GenotypePosteriors&& genotype_posteriors,
+    make_latents(std::vector<Genotype<Haplotype>>&& genotypes, GenotypePosteriors&& genotype_posteriors,
                  HaplotypeFrequencies&& haplotype_frequencies)
     {
         Population::GenotypeProbabilities result {};
@@ -374,21 +278,138 @@ namespace Octopus
         
         auto haplotype_prior_counts = compute_haplotype_prior_counts(haplotypes, reference, haplotype_prior_model_);
         
-        auto haplotype_frequencies  = init_haplotype_frequencies(haplotype_prior_counts);
+        auto prior_count_sum = Maths::sum_values(haplotype_prior_counts);
+        
+        auto haplotype_frequencies  = init_haplotype_frequencies(haplotype_prior_counts, prior_count_sum);
         auto genotype_log_marginals = init_genotype_log_marginals(genotypes, haplotype_frequencies);
         
         auto genotype_posteriors = init_genotype_posteriors(genotype_log_marginals, genotype_log_likilhoods);
         
         for (unsigned n {}; n < max_em_iterations_; ++n) {
-            //std::cout << "EM iteration " << n << std::endl;
-            double c = do_em_iteration(haplotypes, genotypes, genotype_posteriors, haplotype_frequencies,
-                                       genotype_log_marginals, genotype_log_likilhoods, haplotype_prior_counts);
-            if (c < em_epsilon_) break;
+            std::cout << "EM iteration " << n << std::endl;
+            if (do_em_iteration(haplotypes, genotypes, genotype_posteriors, haplotype_frequencies,
+                                genotype_log_marginals, genotype_log_likilhoods,
+                                haplotype_prior_counts, prior_count_sum) < em_epsilon_) break;
         }
         
         return make_latents(std::move(genotypes), std::move(genotype_posteriors), std::move(haplotype_frequencies));
     }
     
+    namespace debug {
+        template <typename T, typename N>
+        struct IsBigger
+        {
+            bool operator()(const std::pair<T, N>& lhs, const std::pair<T, N>& rhs) {
+                return lhs.second > rhs.second;
+            }
+        };
+        
+        void print_haplotype_priors(const HaplotypePriorCounts& prior_counts, size_t n)
+        {
+            auto m = std::min(prior_counts.size(), n);
+            
+            std::cout << "printing top " << m << " haplotype prior counts" << std::endl;
+            
+            std::vector<std::pair<Haplotype, double>> v {};
+            v.reserve(prior_counts.size());
+            
+            std::copy(std::cbegin(prior_counts), std::cend(prior_counts), std::back_inserter(v));
+            
+            std::sort(std::begin(v), std::end(v), IsBigger<Haplotype, double>());
+            
+            for (unsigned i {}; i < m; ++i) {
+                print_variant_alleles(v[i].first);
+                std::cout << " " << v[i].second << std::endl;
+            }
+        }
+        
+        void print_genotype_log_likelihoods(const std::vector<Genotype<Haplotype>>& genotypes,
+                                            const GenotypeLogLikelihoods& log_likelihoods, size_t n)
+        {
+            auto m = std::min(genotypes.size(), n);
+            
+            std::cout << "top " << m << " genotype likelihoods for each sample" << std::endl;
+            
+            for (const auto& sample_likelihoods : log_likelihoods) {
+                std::cout << sample_likelihoods.first << ":" << std::endl;
+                
+                std::vector<std::pair<Genotype<Haplotype>, double>> v {};
+                v.reserve(sample_likelihoods.second.size());
+                
+                std::transform(std::cbegin(genotypes), std::cend(genotypes),
+                               std::cbegin(sample_likelihoods.second), std::back_inserter(v),
+                               [] (const auto& genotype, auto log_liklihood) {
+                                   return std::make_pair(genotype, log_liklihood);
+                               });
+                
+                std::sort(std::begin(v), std::end(v), IsBigger<Genotype<Haplotype>, double>());
+                
+                for (unsigned i {}; i < std::min(n, v.size()); ++i) {
+                    print_variant_alleles(v[i].first);
+                    std::cout << " " << v[i].second << std::endl;
+                }
+            }
+        }
+        
+        void print_top_haplotypes(const std::vector<Haplotype>& haplotypes, const ReadMap& reads, size_t n)
+        {
+            auto m = std::min(n, haplotypes.size());
+            
+            std::cout << "top " << m << " haplotype likelihoods for each read in each sample" << std::endl;
+            
+            for (const auto& sample_reads : reads) {
+                std::cout << sample_reads.first << ":" << std::endl;
+                
+                for (const auto& read : sample_reads.second) {
+                    std::cout << read.get_region() << " " << read.get_cigar_string() << ":" << std::endl;
+                    
+                    std::vector<std::pair<Haplotype, double>> top {};
+                    top.reserve(haplotypes.size());
+                    
+                    for (const auto& haplotype : haplotypes) {
+                        top.emplace_back(haplotype, ReadModel(2).log_probability(read, haplotype));
+                    }
+                    
+                    std::sort(std::begin(top), std::end(top), IsBigger<Haplotype, double>());
+                    
+                    for (unsigned i {}; i < m; ++i) {
+                        std::cout << "\t* ";
+                        print_variant_alleles(top[i].first);
+                        std::cout << " " << top[i].second << std::endl;
+                    }
+                }
+            }
+        }
+        
+        void print_top_genotypes(const std::vector<Genotype<Haplotype>>& genotypes, const ReadMap& reads, size_t n)
+        {
+            auto m = std::min(n, genotypes.size());
+            
+            std::cout << "top " << n << " genotype likelihoods for each read in each sample" << std::endl;
+            
+            for (const auto& sample_reads : reads) {
+                std::cout << sample_reads.first << ":" << std::endl;
+                for (const auto& read : sample_reads.second) {
+                    std::cout << read.get_region() << " " << read.get_cigar_string() << ":" << std::endl;
+                    
+                    std::vector<std::pair<Genotype<Haplotype>, double>> top {};
+                    top.reserve(genotypes.size());
+                    
+                    for (const auto& genotype : genotypes) {
+                        top.emplace_back(genotype, ReadModel(2).log_probability(read, genotype));
+                    }
+                    std::sort(std::begin(top), std::end(top), IsBigger<Genotype<Haplotype>, double>());
+                    
+                    for (unsigned i {}; i < m; ++i) {
+                        std::cout << "\t* ";
+                        print_variant_alleles(top[i].first);
+                        std::cout << " " << top[i].second << std::endl;
+                    }
+                }
+            }
+        }
+    }
+        
     } // namespace GenotypeModel
 } // namespace Octopus
 

@@ -54,68 +54,15 @@ namespace Octopus
     
     using GenotypeLogPosteriors = std::vector<GenotypeLogPosterior>;
     
-        namespace Debug {
-    
-            std::ostream& operator<<(std::ostream& os, const std::array<double, 3>& arr)
-            {
-                os << arr[0] << " " << arr[1] << " " << arr[2];
-                return os;
-            }
-            
-            std::ostream& operator<<(std::ostream& os, const std::unordered_map<Octopus::SampleIdType, std::array<double, 3>>& m)
-            {
-                for (const auto& p : m) os << p.first << ": " << p.second << "\n";
-                return os;
-            }
-            
+        namespace debug {
+            std::ostream& operator<<(std::ostream& os, const std::array<double, 3>& arr);
+            std::ostream& operator<<(std::ostream& os, const std::unordered_map<Octopus::SampleIdType, std::array<double, 3>>& m);
             void print_top_genotypes(const std::vector<CancerGenotype<Haplotype>>& genotypes,
                                      const GenotypeLogPosteriors& genotype_log_posteriors,
-                                     const size_t n = 20)
-            
-            {
-                std::vector<std::pair<const CancerGenotype<Haplotype>*, double>> v {};
-                v.reserve(genotypes.size());
-                
-                std::transform(std::cbegin(genotypes), std::cend(genotypes),
-                               std::cbegin(genotype_log_posteriors),
-                               std::back_inserter(v),
-                               [] (const auto& genotype, const auto& glp) {
-                                   return std::make_pair(&genotype, glp.log_posterior);
-                               });
-                
-                std::sort(std::begin(v), std::end(v), [] (const auto& lhs, const auto& rhs) {
-                    return lhs.second > rhs.second;
-                });
-                
-                auto m = std::min(genotype_log_posteriors.size(), n);
-                
-                std::cout << "DEBUG: print top " << m << " log genotype posteriors" << std::endl;
-                
-                for (unsigned i {}; i < m; ++i) {
-                    print_variant_alleles(*v[i].first);
-                    std::cout << " " << v[i].second << std::endl;
-                }
-            }
-            
+                                     const size_t n = 20);
             void print_weight_responsabilities(const GenotypeWeightResponsibilities& responsabilities,
-                                               const ReadMap& reads)
-            {
-                std::cout << "DEBUG: printing all read responsabilities" << std::endl;
-                
-                for (const auto& sample_reads : reads) {
-                    std::cout << sample_reads.first << ": " << std::endl;
-                    
-                    auto read_itr     = std::cbegin(sample_reads.second);
-                    auto read_end_itr = std::cend(sample_reads.second);
-                    auto r_itr = std::cbegin(responsabilities.at(sample_reads.first));
-                    
-                    for (; read_itr != read_end_itr; ++read_itr, ++r_itr) {
-                        std::cout << read_itr->get_region() << " " << read_itr->get_cigar_string() << " " << *r_itr << std::endl;
-                    }
-                }
-            }
-        
-        } // namespace DEBUG
+                                               const ReadMap& reads);
+        } // namespace debug
     
     double sum(const std::array<double, 3>& arr)
     {
@@ -176,14 +123,13 @@ namespace Octopus
             for (const auto& sample_reads : reads) {
                 p += genotype_log_likelihood(genotype, genotype_weights.at(sample_reads.first),
                                              sample_reads.second, read_model);
-                p -= std::log(sample_reads.second.size());
             }
             
             result.emplace_back(genotype, p);
             ps.push_back(p);
         }
         
-        auto norm = Maths::log_sum_exp<double>(ps);
+        const auto norm = Maths::log_sum_exp<double>(ps);
         
         for (auto& p : result) p.log_posterior -= norm;
         
@@ -366,23 +312,16 @@ namespace Octopus
         auto genotype_log_posteriors  = compute_genotype_log_posteriors(genotypes, reads, haplotype_frequencies,
                                                                         genotype_weights, read_model_);
         
-        Debug::print_top_genotypes(genotypes, genotype_log_posteriors, 10);
-        
-        //exit(0);
-        
         auto genotype_weight_responsibilities = compute_genotype_weight_responsibilities(genotype_log_posteriors,
                                                                                          genotype_weights, reads, read_model_);
         
         for (unsigned n {0}; n < max_em_iterations_; ++n) {
             std::cout << "EM iteration " << n << std::endl;
-            double c = do_em_iteration(genotypes, haplotype_frequencies, weight_priors,
+            if (do_em_iteration(genotypes, haplotype_frequencies, weight_priors,
                                        genotype_weights, genotype_log_posteriors,
                                        genotype_weight_responsibilities, reads,
-                                       haplotype_prior_counts, read_model_);
-            if (c < em_epsilon_) break;
+                                       haplotype_prior_counts, read_model_) < em_epsilon_) break;
         }
-        
-        Debug::print_weight_responsabilities(genotype_weight_responsibilities, reads);
         
         Cancer::GenotypeProbabilities genotype_posteriors {};
         genotype_posteriors.reserve(genotypes.size());
@@ -393,6 +332,69 @@ namespace Octopus
         
         return Latents {std::move(genotype_posteriors), std::move(genotype_weights)};
     }
+        
+        namespace debug {
+            
+            std::ostream& operator<<(std::ostream& os, const std::array<double, 3>& arr)
+            {
+                os << arr[0] << " " << arr[1] << " " << arr[2];
+                return os;
+            }
+            
+            std::ostream& operator<<(std::ostream& os, const std::unordered_map<Octopus::SampleIdType, std::array<double, 3>>& m)
+            {
+                for (const auto& p : m) os << p.first << ": " << p.second << "\n";
+                return os;
+            }
+            
+            void print_top_genotypes(const std::vector<CancerGenotype<Haplotype>>& genotypes,
+                                     const GenotypeLogPosteriors& genotype_log_posteriors,
+                                     const size_t n)
+            
+            {
+                std::vector<std::pair<const CancerGenotype<Haplotype>*, double>> v {};
+                v.reserve(genotypes.size());
+                
+                std::transform(std::cbegin(genotypes), std::cend(genotypes),
+                               std::cbegin(genotype_log_posteriors),
+                               std::back_inserter(v),
+                               [] (const auto& genotype, const auto& glp) {
+                                   return std::make_pair(&genotype, glp.log_posterior);
+                               });
+                
+                std::sort(std::begin(v), std::end(v), [] (const auto& lhs, const auto& rhs) {
+                    return lhs.second > rhs.second;
+                });
+                
+                auto m = std::min(genotype_log_posteriors.size(), n);
+                
+                std::cout << "DEBUG: print top " << m << " log genotype posteriors" << std::endl;
+                
+                for (unsigned i {}; i < m; ++i) {
+                    print_variant_alleles(*v[i].first);
+                    std::cout << " " << v[i].second << std::endl;
+                }
+            }
+            
+            void print_weight_responsabilities(const GenotypeWeightResponsibilities& responsabilities,
+                                               const ReadMap& reads)
+            {
+                std::cout << "DEBUG: printing all read responsabilities" << std::endl;
+                
+                for (const auto& sample_reads : reads) {
+                    std::cout << sample_reads.first << ": " << std::endl;
+                    
+                    auto read_itr     = std::cbegin(sample_reads.second);
+                    auto read_end_itr = std::cend(sample_reads.second);
+                    auto r_itr = std::cbegin(responsabilities.at(sample_reads.first));
+                    
+                    for (; read_itr != read_end_itr; ++read_itr, ++r_itr) {
+                        std::cout << read_itr->get_region() << " " << read_itr->get_cigar_string() << " " << *r_itr << std::endl;
+                    }
+                }
+            }
+            
+        } // namespace debug
     
     } // namespace GenotypeModel
 } // namespace Octopus

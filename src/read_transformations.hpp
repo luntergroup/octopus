@@ -72,6 +72,29 @@ namespace Octopus { namespace ReadTransforms {
             }
         }
     };
+    
+    struct trim_soft_clipped_tails
+    {
+        using SizeType = AlignedRead::SizeType;
+        
+        trim_soft_clipped_tails() = default;
+        explicit trim_soft_clipped_tails(SizeType num_bases) : num_bases_ {num_bases} {};
+        
+        void operator()(AlignedRead& read) const
+        {
+            if (is_soft_clipped(read)) {
+                auto qualities = read.get_qualities();
+                auto soft_clipped_sizes = get_soft_clipped_sizes(read);
+                read.zero_front_qualities(soft_clipped_sizes.first + num_bases_);
+                read.zero_back_qualities(soft_clipped_sizes.second + num_bases_);
+            } else {
+                trim_tail{num_bases_}(read);
+            }
+        }
+        
+    private:
+        const SizeType num_bases_;
+    };
 
 } // namespace ReadTransforms
 } // namespace Octopus

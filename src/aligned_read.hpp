@@ -207,6 +207,11 @@ flags_ {get_flags(data)}
 
 // Non-member methods
 
+bool is_soft_clipped(const AlignedRead& read);
+
+std::pair<AlignedRead::SizeType, AlignedRead::SizeType>
+get_soft_clipped_sizes(const AlignedRead& read);
+
 AlignedRead splice(const AlignedRead& read, const GenomicRegion& region);
 
 bool operator==(const AlignedRead& lhs, const AlignedRead& rhs);

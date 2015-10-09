@@ -86,15 +86,15 @@ namespace Octopus
         input.add_options()
         ("reference,R", po::value<std::string>()->required(), "the reference genome file")
         ("reads,I", po::value<std::vector<std::string>>()->multitoken(), "space-seperated list of read file paths")
-        ("reads-file", po::value<std::string>(), "path to a text file containing read file paths")
+        ("reads-file", po::value<std::string>(), "list of read file paths, one per line")
         ("regions", po::value<std::vector<std::string>>()->multitoken(), "space-seperated list of one-indexed variant search regions (chrom:begin-end)")
-        ("regions-file", po::value<std::string>(), "path to a file containing list of one-indexed variant search regions (chrom:begin-end)")
+        ("regions-file", po::value<std::string>(), "list of one-indexed variant search regions (chrom:begin-end), one per line")
         ("skip-regions", po::value<std::vector<std::string>>()->multitoken(), "space-seperated list of one-indexed regions (chrom:begin-end) to skip")
-        ("skip-regions-file", po::value<std::string>(), "path to a file containing list of one-indexed regions (chrom:begin-end) to skip")
+        ("skip-regions-file", po::value<std::string>(), "list of one-indexed regions (chrom:begin-end) to skip, one per line")
         ("samples,S", po::value<std::vector<std::string>>()->multitoken(), "space-seperated list of sample names to consider")
-        ("samples-file", po::value<std::string>(), "path to a file containing list of sample names to consider")
-        ("output,o", po::value<std::string>()->default_value("octopus_variants.vcf"), "path of the output variant file")
-        ("log-file", po::value<std::string>(), "path of the output log file")
+        ("samples-file", po::value<std::string>(), "list of sample names to consider, one per line")
+        ("output,o", po::value<std::string>()->default_value("octopus_variants.vcf"), "write output to file")
+        //("log-file", po::value<std::string>(), "path of the output log file")
         ;
         
         po::options_description filters("Read filter options");
@@ -107,7 +107,7 @@ namespace Octopus
         ("no-qc-fails", po::bool_switch()->default_value(false), "filter reads marked as QC failed")
         ("min-read-length", po::value<AlignedRead::SizeType>(), "filter reads shorter than this")
         ("max-read-length", po::value<AlignedRead::SizeType>(), "filter reads longer than this")
-        ("no-duplicates", po::bool_switch()->default_value(false), "filters duplicate reads")
+        ("remove-duplicate-reads", po::bool_switch()->default_value(false), "filters duplicate reads")
         ("no-secondary-alignmenets", po::bool_switch()->default_value(false), "filters reads marked as secondary alignments")
         ("no-supplementary-alignmenets", po::bool_switch()->default_value(false), "filters reads marked as supplementary alignments")
         ("no-unmapped-mates", po::bool_switch()->default_value(false), "filters reads with unmapped mates")
@@ -135,7 +135,9 @@ namespace Octopus
         po::options_description model("Model options");
         model.add_options()
         ("model", po::value<std::string>()->default_value("population"), "the calling model used")
-        ("ploidy", po::value<unsigned>()->default_value(2), "the organism ploidy")
+        ("ploidy", po::value<unsigned>()->default_value(2), "the organism ploidy, all contigs with unspecified ploidy are assumed this ploidy")
+        ("contig-ploidies", po::value<std::vector<std::string>>()->multitoken(), "the ploidy of individual contigs")
+        ("contig-ploidies-file", po::value<std::string>(), "list of contig=ploidy pairs, one per line")
         ("normal-sample", po::value<std::string>(), "the normal sample used in cancer calling model")
         ("snp-prior", po::value<double>()->default_value(0.003), "the prior probability of a snp")
         ("insertion-prior", po::value<double>()->default_value(0.003), "the prior probability of an insertion into the reference")
@@ -443,7 +445,7 @@ namespace Octopus
             result.register_filter(ReadFilters::is_long(options.at("max-read-length").as<SizeType>()));
         }
         
-        if (options.at("no-duplicates").as<bool>()) {
+        if (options.at("remove-duplicate-reads").as<bool>()) {
             result.register_filter(ReadFilters::is_not_duplicate());
         }
         
@@ -472,18 +474,20 @@ namespace Octopus
         
         ReadTransform result {};
         
-        if (options.at("trim-soft-clipped").as<bool>()) {
+        bool trim_soft_clipped = options.at("trim-soft-clipped").as<bool>();
+        
+        auto tail_trim_size = options.at("tail-trim-size").as<SizeType>();
+        
+        if (trim_soft_clipped && tail_trim_size > 0) {
+            result.register_transform(ReadTransforms::trim_soft_clipped_tails(tail_trim_size));
+        } else if (tail_trim_size > 0) {
+            result.register_transform(ReadTransforms::trim_tail(tail_trim_size));
+        } else if (trim_soft_clipped) {
             result.register_transform(ReadTransforms::trim_soft_clipped());
         }
         
         if (options.at("trim-adapters").as<bool>()) {
             result.register_transform(ReadTransforms::trim_adapters());
-        }
-        
-        auto tail_trim_size = options.at("tail-trim-size").as<SizeType>();
-        
-        if (tail_trim_size > 0) {
-            result.register_transform(ReadTransforms::trim_tail(tail_trim_size));
         }
         
         return result;
@@ -521,6 +525,14 @@ namespace Octopus
         }
         
         auto ploidy = options.at("ploidy").as<unsigned>();
+        
+        if (options.count("contig-plodies") == 1) {
+            
+        }
+        
+        if (options.count("contig-ploidies-file") == 1) {
+            
+        }
         
         auto min_variant_posterior_phred = options.at("min-variant-posterior").as<unsigned>();
         auto min_variant_posterior        = Maths::phred_to_probability(min_variant_posterior_phred);

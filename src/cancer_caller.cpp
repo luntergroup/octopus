@@ -687,18 +687,19 @@ namespace Octopus
         
         auto map_germline_genotype = find_map_genotype(germline_genotype_posteriors);
         
-        if (map_germline_genotype.second < 0.99) {
+        std::cout << "germline genotype posteriors: " << std::endl;
+        for (const auto& gp : germline_genotype_posteriors) {
+            print_variant_alleles(gp.first);
+            std::cout << " " << gp.second << std::endl;
+        }
+        
+        if (map_germline_genotype.second < 0.95) {
             std::cout << "too much uncertainty in germline genotype to call variants" << std::endl;
             return result;
         }
         
         auto cancer_haplotype_posteriors  = marginalise_cancer_haplotypes(latents.genotype_posteriors, num_haplotypes);
         
-        std::cout << "germline genotype posteriors: " << std::endl;
-        for (const auto& gp : germline_genotype_posteriors) {
-            print_variant_alleles(gp.first);
-            std::cout << " " << gp.second << std::endl;
-        }
         std::cout << "cancer haplotype posteriors: " << std::endl;
         for (const auto& hp : cancer_haplotype_posteriors) {
             print_variant_alleles(hp.first);

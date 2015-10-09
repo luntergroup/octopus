@@ -187,6 +187,7 @@ std::ostream& operator<<(std::ostream& os, const Haplotype& haplotype);
 void add_to_back(const Variant& a_variant, Haplotype& haplotype);
 void add_to_front(const Variant& a_variant, Haplotype& haplotype);
 bool contains(const Haplotype& haplotype, const Variant& a_variant);
+
 void print_alleles(const Haplotype& haplotype);
 void print_variant_alleles(const Haplotype& haplotype);
 

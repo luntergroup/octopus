@@ -188,13 +188,13 @@ bool AlignedRead::is_marked_supplementary_alignment() const
 
 void AlignedRead::zero_front_qualities(SizeType num_bases) noexcept
 {
-    std::for_each(std::begin(qualities_), std::begin(qualities_) + num_bases,
+    std::for_each(std::begin(qualities_), std::begin(qualities_) + std::min(num_bases, get_sequence_size()),
                   [] (auto& quality) { quality = 0; });
 }
 
 void AlignedRead::zero_back_qualities(SizeType num_bases) noexcept
 {
-    std::for_each(std::rbegin(qualities_), std::rbegin(qualities_) + num_bases,
+    std::for_each(std::rbegin(qualities_), std::rbegin(qualities_) + std::min(num_bases, get_sequence_size()),
                   [] (auto& quality) { quality = 0; });
 }
 
@@ -253,6 +253,17 @@ AlignedRead::NextSegment::Flags AlignedRead::NextSegment::get_flags(const FlagDa
 }
 
 // Non-member methods
+
+bool is_soft_clipped(const AlignedRead& read)
+{
+    return is_soft_clipped(read.get_cigar_string());
+}
+
+std::pair<AlignedRead::SizeType, AlignedRead::SizeType>
+get_soft_clipped_sizes(const AlignedRead& read)
+{
+    return get_soft_clipped_sizes(read.get_cigar_string());
+}
 
 AlignedRead splice(const AlignedRead& read, const GenomicRegion& region)
 {
