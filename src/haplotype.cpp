@@ -150,20 +150,11 @@ Haplotype::SequenceType Haplotype::get_sequence(const GenomicRegion& region) con
         return result;
     }
     
-//    if (region.get_begin() == 96733105 && region.get_end() == 96733106) {
-//        std::cout << "current result: " << result << std::endl;
-//        std::cout << std::endl;
-//    }
-    
     if (::contains(overlapped_explicit_alleles.front(), region)) {
-        if (is_same_region(overlapped_explicit_alleles.front(), region)) {
+        append(result, splice(overlapped_explicit_alleles.front(), region));
+        overlapped_explicit_alleles.advance_begin(1);
+        if (!empty(overlapped_explicit_alleles) && is_insertion(overlapped_explicit_alleles.front())) {
             append(result, overlapped_explicit_alleles.front());
-            overlapped_explicit_alleles.advance_begin(1);
-            if (!empty(overlapped_explicit_alleles) && is_insertion(overlapped_explicit_alleles.front())) {
-                append(result, overlapped_explicit_alleles.front());
-            }
-        } else {
-            append(result, splice(overlapped_explicit_alleles.front(), region));
         }
         result.shrink_to_fit();
         return result;

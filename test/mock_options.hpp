@@ -64,6 +64,7 @@ inline po::variables_map get_basic_mock_options()
         //"--regions", "16:9,378,560-9,378,687", // very complex indel region
         
         //"--regions", "16:62,646,838-62,647,242", // complex phasable insertion and SNPs (in NA12878-HC)
+        //"--regions", "16:62,646,885-62,647,013",
         
         //"--regions", "MT:11,669-11,768", // very high coverage snp
         //"--regions", "MT",
