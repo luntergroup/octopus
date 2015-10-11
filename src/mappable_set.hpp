@@ -171,7 +171,7 @@ MappableSet<MappableType, Allocator>::MappableSet(InputIterator first, InputIter
 :
 elements_ {first, second},
 is_bidirectionally_sorted_ {is_bidirectionally_sorted(std::cbegin(elements_), std::cend(elements_))},
-max_element_size_ {::size(*largest_element(std::cbegin(elements_), std::cend(elements_)))}
+max_element_size_ {(elements_.empty()) ? 0 : ::size(*largest_element(std::cbegin(elements_), std::cend(elements_)))}
 {}
 
 template <typename MappableType, typename Allocator>

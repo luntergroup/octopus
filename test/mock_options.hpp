@@ -27,6 +27,7 @@ inline po::variables_map get_basic_mock_options()
         //"--model", "cancer", // default "population"
         "--normal-sample", "NA12878", // for cancer model
         "--ploidy", "2",
+        "--contig-ploidies", "MT=1", "Y=1",
         //"--make-blocked-refcalls",
         //"--make-positional-refcalls",
         
@@ -55,7 +56,7 @@ inline po::variables_map get_basic_mock_options()
         //"--regions", "11:81,266,010-81,266,122", // all homo-alt
         //"--regions", "11:81,266,084-81,266,123",
         
-        "--regions", "16:9,299,984-9,300,090", // complex indels
+        //"--regions", "16:9,299,984-9,300,090", // complex indels
         //"--regions", "13:96,733,039-96,733,124", // complex indels
         //"--regions", "13:96732801-96733349",
         
@@ -66,6 +67,8 @@ inline po::variables_map get_basic_mock_options()
         //"--regions", "16:62,646,838-62,647,242", // complex phasable insertion and SNPs (in NA12878-HC)
         //"--regions", "16:62,646,885-62,647,013",
         
+        //"--regions", "Y:22,510,914-22,510,973",
+        "--regions", "Y:17,398,830-17,398,917",
         //"--regions", "MT:11,669-11,768", // very high coverage snp
         //"--regions", "MT",
         
@@ -75,9 +78,9 @@ inline po::variables_map get_basic_mock_options()
         
         "--output", test_out_vcf.c_str(),
         
-        "--min-supporting-reads", "2",
+        "--min-supporting-reads", "1",
         "--min-mapping-quality", "20",
-        "--min-snp-base-quality", "30",
+        "--min-snp-base-quality", "20",
         "--tail-trim-size", "3",
         "--trim-soft-clipped",
         "--remove-duplicate-reads",

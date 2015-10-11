@@ -759,17 +759,19 @@ size_t count_reverse(const T& reads, const GenomicRegion& region)
 template <typename T>
 double strand_bias(const T& reads)
 {
-    auto num_forward_reads = count_forward(reads);
-    auto num_reverse_reads = count_reverse(reads);
-    return static_cast<double>(num_forward_reads) / num_reverse_reads;
+    auto num_forward_reads = static_cast<double>(count_forward(reads));
+    auto num_reverse_reads = static_cast<double>(count_reverse(reads));
+    auto total             = num_forward_reads + num_reverse_reads;
+    return (total > 0) ? (num_forward_reads / total) : 0.0;
 }
 
 template <typename T>
 double strand_bias(const T& reads, const GenomicRegion& region)
 {
-    auto num_forward_reads = count_forward(reads, region);
-    auto num_reverse_reads = count_reverse(reads, region);
-    return static_cast<double>(num_forward_reads) / num_reverse_reads;
+    auto num_forward_reads = static_cast<double>(count_forward(reads, region));
+    auto num_reverse_reads = static_cast<double>(count_reverse(reads, region));
+    auto total             = num_forward_reads + num_reverse_reads;
+    return (total > 0) ? (num_forward_reads / total) : 0.0;
 }
 
 template <typename T>

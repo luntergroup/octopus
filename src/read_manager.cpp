@@ -244,6 +244,12 @@ ReadManager::SampleReadMap ReadManager::fetch_reads(const std::vector<SampleIdTy
           }
       });
     
+    for (const auto& sample : samples) {
+        if (result.count(sample) == 0) {
+            result.emplace(sample, SampleReadMap::mapped_type {});
+        }
+    }
+    
     return result;
 }
 

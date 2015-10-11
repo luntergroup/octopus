@@ -57,9 +57,9 @@ namespace Octopus
     
     CandidateVariantGenerator get_candidate_generator(const po::variables_map& options, ReferenceGenome& reference);
     
-    std::unordered_map<GenomicRegion::StringType, std::unique_ptr<VariantCaller>>
-    get_variant_callers(const po::variables_map& options, ReferenceGenome& reference,
-                        CandidateVariantGenerator& candidate_generator);
+    std::unique_ptr<VariantCaller> get_variant_caller(const po::variables_map& options, ReferenceGenome& reference,
+                                                      CandidateVariantGenerator& candidate_generator,
+                                                      const GenomicRegion::StringType& contig);
     
     std::unique_ptr<VariantCaller> get_variant_caller(const po::variables_map& options, ReferenceGenome& reference,
                                                       CandidateVariantGenerator& candidate_generator);
