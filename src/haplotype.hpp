@@ -10,10 +10,12 @@
 #define __Octopus__haplotype__
 
 #include <queue>
+#include <cstddef>   // size_t
 #include <stdexcept> // std::runtime_error
 #include <iostream>
-#include <boost/functional/hash.hpp> // boost::hash_combine
 
+#include "contig_region.hpp"
+#include "mappable.hpp"
 #include "allele.hpp"
 #include "variant.hpp"
 #include "comparable.hpp"
@@ -28,8 +30,6 @@ namespace detail {
     Haplotype do_splice(const Haplotype& haplotype, const GenomicRegion& region, Haplotype);
     Allele do_splice(const Haplotype& haplotype, const GenomicRegion& region, Allele);
 } // namespace detail
-
-template<> struct std::hash<Haplotype>;
 
 class Haplotype : public Comparable<Haplotype>, public Mappable<Haplotype>
 {
@@ -63,22 +63,42 @@ public:
     
     void operator+=(const Haplotype& other);
     
+    size_t get_hash() const;
+    
     friend struct IsLessComplex;
     
     friend bool contains(const Haplotype& lhs, const Haplotype& rhs);
     friend Haplotype detail::do_splice(const Haplotype& haplotype, const GenomicRegion& region, Haplotype);
-    friend Allele detail::do_splice(const Haplotype& haplotype, const GenomicRegion& region, Allele);
     friend bool have_same_alleles(const Haplotype& lhs, const Haplotype& rhs);
+    
     friend void print_alleles(const Haplotype& haplotype);
     friend void print_variant_alleles(const Haplotype& haplotype);
     
-    friend struct std::hash<Haplotype>;
-    
 private:
+    // TODO: store these instead of Allele's... don't need to keep the Contig name in each allele.. it will
+    // save some space
+    class ContigAllele : Mappable<ContigAllele>
+    {
+    public:
+        using SequenceType = Allele::SequenceType;
+        
+        ContigAllele() = default;
+        template <typename R, typename S> ContigAllele(R&& region, S&& sequence);
+        //template <typename S> ContigAllele(const GenomicRegion& region, S&& sequence);
+        
+        const ContigRegion& get_region() const;
+        const SequenceType& get_sequence() const;
+        
+    private:
+        const ContigRegion region_;
+        const SequenceType sequence_;
+    };
+    
     ReferenceGenome* reference_; // non-owning pointer rather than a reference so Haplotype copyable
     GenomicRegion region_;
     mutable SequenceType cached_sequence_;
     std::deque<Allele> explicit_alleles_;
+    mutable size_t cached_hash_;
     bool is_region_set_;
     mutable bool is_cached_sequence_outdated_;
     
@@ -88,6 +108,13 @@ private:
     SequenceType get_sequence_bounded_by_explicit_alleles(AlleleIterator first, AlleleIterator last) const;
     SequenceType get_sequence_bounded_by_explicit_alleles() const;
 };
+
+template <typename R, typename S>
+Haplotype::ContigAllele::ContigAllele(R&& region, S&& sequence)
+:
+region_ {std::forward<R>(region)},
+sequence_ {std::forward<S>(sequence)}
+{}
 
 template <typename T>
 void Haplotype::push_back(T&& allele)
@@ -166,22 +193,16 @@ namespace std
     {
         size_t operator()(const Haplotype& h) const
         {
-            size_t seed {};
-            boost::hash_combine(seed, hash<GenomicRegion>()(h.get_region()));
-//            for (const auto& allele : h.explicit_alleles_) {
-//                boost::hash_combine(seed, hash<Allele::SequenceType>()(allele.get_sequence()));
-//            }
-            boost::hash_combine(seed, hash<Haplotype::SequenceType>()(h.get_sequence()));
-            return seed;
+            return h.get_hash();
         }
     };
 } // namespace std
 
 namespace boost
 {
-    template <> struct hash<Haplotype> : std::unary_function<Haplotype, std::size_t>
+    template <> struct hash<Haplotype> : std::unary_function<Haplotype, size_t>
     {
-        std::size_t operator()(const Haplotype& h) const
+        size_t operator()(const Haplotype& h) const
         {
             return std::hash<Haplotype>()(h);
         }

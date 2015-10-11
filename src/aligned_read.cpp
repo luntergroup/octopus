@@ -8,11 +8,13 @@
 
 #include "aligned_read.hpp"
 
+#include <boost/functional/hash.hpp> // boost::hash_combine, boost::hash_range
+
 #include "compression.hpp"
 
 AlignedRead::AlignedRead(const AlignedRead& other)
 :
-reference_region_ {other.reference_region_},
+region_ {other.region_},
 read_group_ {other.read_group_},
 sequence_ {other.sequence_},
 qualities_ {other.qualities_},
@@ -20,6 +22,7 @@ cigar_string_ {other.cigar_string_},
 next_segment_ {((other.next_segment_ != nullptr) ?
                 std::make_unique<NextSegment>(*other.next_segment_) : nullptr) },
 flags_ {other.flags_},
+hash_ {other.hash_},
 mapping_quality_ {other.mapping_quality_},
 is_compressed_ {other.is_compressed()}
 {}
@@ -33,13 +36,14 @@ AlignedRead& AlignedRead::operator=(const AlignedRead& other)
 
 void swap(AlignedRead& lhs, AlignedRead& rhs) noexcept
 {
-    std::swap(lhs.reference_region_, rhs.reference_region_);
+    std::swap(lhs.region_, rhs.region_);
     std::swap(lhs.read_group_, rhs.read_group_);
     std::swap(lhs.sequence_, rhs.sequence_);
     std::swap(lhs.cigar_string_, rhs.cigar_string_);
     std::swap(lhs.qualities_, rhs.qualities_);
     std::swap(lhs.next_segment_, rhs.next_segment_);
     std::swap(lhs.flags_, rhs.flags_);
+    std::swap(lhs.hash_, rhs.hash_);
     std::swap(lhs.mapping_quality_, rhs.mapping_quality_);
     std::swap(lhs.is_compressed_, rhs.is_compressed_);
 }
@@ -84,7 +88,7 @@ bool AlignedRead::NextSegment::is_marked_reverse_mapped() const
 
 const GenomicRegion& AlignedRead::get_region() const noexcept
 {
-    return reference_region_;
+    return region_;
 }
 
 const AlignedRead::SequenceType& AlignedRead::get_sequence() const noexcept
@@ -186,6 +190,14 @@ bool AlignedRead::is_marked_supplementary_alignment() const
     return flags_[7];
 }
 
+size_t AlignedRead::get_hash() const
+{
+    if (hash_ == 0) { // 0 is reserved
+        hash_ = make_hash(); // lazy evaluation
+    }
+    return hash_;
+}
+
 void AlignedRead::zero_front_qualities(SizeType num_bases) noexcept
 {
     std::for_each(std::begin(qualities_), std::begin(qualities_) + std::min(num_bases, get_sequence_size()),
@@ -250,6 +262,18 @@ AlignedRead::NextSegment::Flags AlignedRead::NextSegment::get_flags(const FlagDa
     result[0] = flags.is_marked_unmapped;
     result[1] = flags.is_marked_reverse_mapped;
     return result;
+}
+
+size_t AlignedRead::make_hash() const
+{
+    size_t seed {};
+    boost::hash_combine(seed, std::hash<GenomicRegion>()(region_));
+    boost::hash_combine(seed, std::hash<CigarString>()(cigar_string_));
+    boost::hash_combine(seed, boost::hash_range(std::cbegin(qualities_), std::cend(qualities_)));
+    boost::hash_combine(seed, mapping_quality_);
+    if (seed != 0) return seed;
+    boost::hash_combine(seed, std::hash<CigarString>()(cigar_string_));
+    return (seed == 0) ? 1 : seed; // 0 is reserved
 }
 
 // Non-member methods

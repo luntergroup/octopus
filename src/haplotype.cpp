@@ -11,6 +11,7 @@
 #include <algorithm> // std::for_each, std::binary_search, std::equal_range, std::sort,
                      // std::nth_element, std::find_if_not, std::adjacent_find, std::unique
 #include <iterator>  // std::cbegin, std::cend, std::distance, std::next
+#include <boost/functional/hash.hpp> // boost::hash_combine
 
 #include "reference_genome.hpp"
 #include "genomic_region.hpp"
@@ -231,7 +232,28 @@ void Haplotype::operator+=(const Haplotype& other)
                                  std::cend(other.explicit_alleles_));
 }
 
+size_t Haplotype::get_hash() const
+{
+    if (is_cached_sequence_outdated_) {
+        size_t seed {};
+        boost::hash_combine(seed, std::hash<GenomicRegion>()(region_));
+        boost::hash_combine(seed, std::hash<SequenceType>()(cached_sequence_));
+        cached_hash_ = seed;
+    }
+    return cached_hash_;
+}
+
 // private methods
+
+const ContigRegion& Haplotype::ContigAllele::get_region() const
+{
+    return region_;
+}
+
+const Haplotype::ContigAllele::SequenceType& Haplotype::ContigAllele::get_sequence() const
+{
+    return sequence_;
+}
 
 GenomicRegion Haplotype::get_region_bounded_by_explicit_alleles() const
 {

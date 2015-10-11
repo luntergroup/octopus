@@ -136,7 +136,7 @@ CancerGenotype<MappableType2> splice(const CancerGenotype<MappableType1>& genoty
     };
 }
 
-inline size_t num_cancer_genotypes(const size_t num_elements, const unsigned ploidy)
+inline size_t num_cancer_genotypes(const unsigned num_elements, const unsigned ploidy)
 {
     return (num_genotypes(num_elements, ploidy) - 1) * num_elements;
 }
@@ -148,7 +148,7 @@ generate_all_cancer_genotypes(const std::vector<MappableType>& elements, const u
     auto germline_genotypes = generate_all_genotypes(elements, ploidy);
     
     std::vector<CancerGenotype<MappableType>> result {};
-    result.reserve(num_cancer_genotypes(elements.size(), ploidy));
+    result.reserve(num_cancer_genotypes(static_cast<unsigned>(elements.size()), ploidy));
     
     for (auto germline_genotype : germline_genotypes) {
         for (const auto& element : elements) {

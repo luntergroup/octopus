@@ -106,9 +106,10 @@ bool is_homozygous(const Genotype<Haplotype>& genotype, const Allele& allele)
     return splice<Allele>(genotype, get_region(allele)).count(allele) == genotype.ploidy();
 }
 
-size_t num_genotypes(const size_t num_elements, const unsigned ploidy)
+size_t num_genotypes(const unsigned num_elements, const unsigned ploidy)
 {
-    return static_cast<size_t>(boost::math::binomial_coefficient<double>(num_elements + ploidy - 1, num_elements - 1));
+    return static_cast<size_t>(boost::math::binomial_coefficient<double>(num_elements + ploidy - 1,
+                                                                         num_elements - 1));
 }
 
 void print_alleles(const Genotype<Haplotype>& genotype)

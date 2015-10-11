@@ -11,6 +11,7 @@
 
 #include <string>
 #include <cstdint>
+#include <cstddef>
 #include <ostream>
 #include <vector>
 #include <bitset>
@@ -18,7 +19,6 @@
 #include <memory>    // std::unique_ptr, std::make_unique
 #include <iterator>  // std::begin etc
 #include <utility>   // std::forward
-#include <boost/functional/hash.hpp> // boost::hash_combine
 
 #include "genomic_region.hpp"
 #include "cigar_string.hpp"
@@ -61,6 +61,8 @@ public:
         GenomicRegion get_inferred_region() const;
         bool is_marked_unmapped() const;
         bool is_marked_reverse_mapped() const;
+        
+        size_t get_hash() const;
         
     private:
         using Flags = std::bitset<2>;
@@ -133,6 +135,8 @@ public:
     bool is_marked_duplicate() const;
     bool is_marked_supplementary_alignment() const;
     
+    size_t get_hash() const;
+    
     // mutables
     void zero_front_qualities(SizeType num_bases) noexcept;
     void zero_back_qualities(SizeType num_bases) noexcept;
@@ -142,13 +146,14 @@ public:
 private:
     using Flags = std::bitset<8>;
     
-    GenomicRegion reference_region_;
+    GenomicRegion region_;
     std::string read_group_;
     SequenceType sequence_;
     CigarString cigar_string_;
     Qualities qualities_;
     std::unique_ptr<NextSegment> next_segment_;
     Flags flags_;
+    mutable size_t hash_ = 0; // 0 is reserved so can be lazy evaluated
     QualityType mapping_quality_;
     bool is_compressed_;
     
@@ -156,6 +161,7 @@ private:
     bool is_compressed() const noexcept;
     void set_compressed() noexcept;
     void set_uncompressed() noexcept;
+    size_t make_hash() const;
 };
 
 template <typename GenomicRegion_, typename String1_, typename Qualities_, typename CigarString_>
@@ -163,7 +169,7 @@ inline AlignedRead::AlignedRead(GenomicRegion_&& reference_region, String1_&& se
                                 Qualities_&& qualities, CigarString_&& cigar_string,
                                 QualityType mapping_quality, FlagData flags)
 :
-reference_region_ {std::forward<GenomicRegion_>(reference_region)},
+region_ {std::forward<GenomicRegion_>(reference_region)},
 read_group_ {},
 sequence_ {std::forward<String1_>(sequence)},
 qualities_ {std::forward<Qualities_>(qualities)},
@@ -182,7 +188,7 @@ AlignedRead::AlignedRead(GenomicRegion_&& reference_region, String1_&& sequence,
                          String2_&& next_segment_contig_name, SizeType next_segment_begin,
                          SizeType inferred_template_length, NextSegment::FlagData next_segment_flags)
 :
-reference_region_ {std::forward<GenomicRegion_>(reference_region)},
+region_ {std::forward<GenomicRegion_>(reference_region)},
 read_group_ {},
 sequence_ {std::forward<String1_>(sequence)},
 qualities_ {std::forward<Qualities_>(qualities)},
@@ -230,14 +236,21 @@ namespace std {
     {
         size_t operator()(const AlignedRead& r) const
         {
-            size_t seed {};
-            boost::hash_combine(seed, hash<GenomicRegion>()(r.get_region()));
-            //boost::hash_combine(seed, hash<CigarString>()(r.get_cigar_string()));
-            boost::hash_combine(seed, r.get_mapping_quality());
-            return seed;
+            return r.get_hash();
         }
     };
 } // namespace std
+
+namespace boost
+{
+    template <> struct hash<AlignedRead> : std::unary_function<AlignedRead, size_t>
+    {
+        size_t operator()(const AlignedRead& r) const
+        {
+            return std::hash<AlignedRead>()(r);
+        }
+    };
+} // namespace boost
 
 std::ostream& operator<<(std::ostream& os, const AlignedRead::Qualities& qualities);
 

@@ -111,9 +111,10 @@ namespace Octopus
         ("no-secondary-alignmenets", po::bool_switch()->default_value(false), "filters reads marked as secondary alignments")
         ("no-supplementary-alignmenets", po::bool_switch()->default_value(false), "filters reads marked as supplementary alignments")
         ("no-unmapped-mates", po::bool_switch()->default_value(false), "filters reads with unmapped mates")
+        ("downsample", po::value<unsigned>()->default_value(10000), "downsample reads in regions where coverage is over this")
         ;
         
-        po::options_description transforms("Read filter options");
+        po::options_description transforms("Read transform options");
         transforms.add_options()
         ("trim-soft-clipped", po::bool_switch()->default_value(false), "trims soft clipped parts of the read")
         ("tail-trim-size", po::value<AlignedRead::SizeType>()->default_value(0), "trims this number of bases off the tail of all reads")
@@ -510,6 +511,14 @@ namespace Octopus
         
         return result;
     }
+    
+    std::unordered_map<GenomicRegion::StringType, std::unique_ptr<VariantCaller>>
+    get_variant_callers(const po::variables_map& options, ReferenceGenome& reference,
+                        CandidateVariantGenerator& candidate_generator)
+        {
+            std::unordered_map<GenomicRegion::StringType, std::unique_ptr<VariantCaller>> result {};
+            return result;
+        }
     
     std::unique_ptr<VariantCaller> get_variant_caller(const po::variables_map& options, ReferenceGenome& reference,
                                                       CandidateVariantGenerator& candidate_generator)

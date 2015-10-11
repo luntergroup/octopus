@@ -11,17 +11,18 @@
 
 #include <string>
 #include <vector>
+#include <unordered_map>
 #include <cstddef>
 #include <memory>
 #include <boost/program_options.hpp>
 #include <boost/filesystem.hpp>
 
 #include "common.hpp"
+#include "genomic_region.hpp"
 #include "read_filter.hpp"
 #include "variant_caller.hpp"
 
 class ReferenceGenome;
-class GenomicRegion;
 class ReadManager;
 class ReadTransform;
 class CandidateVariantGenerator;
@@ -55,6 +56,10 @@ namespace Octopus
     ReadTransform get_read_transformer(const po::variables_map& options);
     
     CandidateVariantGenerator get_candidate_generator(const po::variables_map& options, ReferenceGenome& reference);
+    
+    std::unordered_map<GenomicRegion::StringType, std::unique_ptr<VariantCaller>>
+    get_variant_callers(const po::variables_map& options, ReferenceGenome& reference,
+                        CandidateVariantGenerator& candidate_generator);
     
     std::unique_ptr<VariantCaller> get_variant_caller(const po::variables_map& options, ReferenceGenome& reference,
                                                       CandidateVariantGenerator& candidate_generator);

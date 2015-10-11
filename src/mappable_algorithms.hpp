@@ -652,7 +652,7 @@ auto segment_overlapped(ForwardIterator first, ForwardIterator last)
     auto rightmost = first;
     
     while (first != last) {
-        while (it != last && overlaps(*it, *rightmost)) {
+        while (it != last && (overlaps(*it, *rightmost) || ends_equal(*it, *rightmost))) {
             if (ends_before(*rightmost, *it)) {
                 rightmost = it;
             }

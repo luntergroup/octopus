@@ -21,10 +21,10 @@ inline po::variables_map get_basic_mock_options()
     const char *argv[] = {"octopus",
         "--reference", human_reference_fasta.c_str(),
         
-        //"--reads", NA12878_low_coverage.string().c_str(), HG00101.string().c_str(), HG00102.string().c_str(), HG00103.string().c_str(),
-        "--reads", NA12878_high_coverage.string().c_str(), HG00102.string().c_str(),
+        "--reads", NA12878_low_coverage.string().c_str(), HG00101.string().c_str(), HG00102.string().c_str(), HG00103.string().c_str(),
+        //"--reads", NA12878_high_coverage.string().c_str(), HG00102.string().c_str(),
         
-        "--model", "cancer", // default "population"
+        //"--model", "cancer", // default "population"
         "--normal-sample", "NA12878", // for cancer model
         "--ploidy", "2",
         //"--make-blocked-refcalls",
@@ -55,8 +55,8 @@ inline po::variables_map get_basic_mock_options()
         //"--regions", "11:81,266,010-81,266,122", // all homo-alt
         //"--regions", "11:81,266,084-81,266,123",
         
-        //"--regions", "16:9,299,984-9,300,090", // complex indels
-        "--regions", "13:96,733,039-96,733,124", // complex indels
+        "--regions", "16:9,299,984-9,300,090", // complex indels
+        //"--regions", "13:96,733,039-96,733,124", // complex indels
         //"--regions", "13:96732801-96733349",
         
         //"--regions", "7:122579662-122579817", // complex indels (unverified)
