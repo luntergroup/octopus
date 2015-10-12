@@ -23,6 +23,7 @@ namespace detail
     static std::string bam_dir {"Illumina/"};
     static std::string octopus_test_dir {"/Development/Octopus/test/"};
     static std::string sample_vcf_dir {"sample_vcf/"};
+    static std::string cancer_test_dir {"cancer/simulated/"};
     
     // Reference
     static std::string ecoli_reference_name {"R00000042.fasta"};
@@ -35,6 +36,7 @@ namespace detail
     
     static std::string NA12878_low_coverage_name {"NA12878.mapped.ILLUMINA.bwa.CEU.low_coverage.20121211.bam"};
     static std::string NA12878_high_coverage_name {"NA12878.mapped.ILLUMINA.bwa.CEU.high_coverage_pcr_free.20130906.bam"};
+    static std::string NA12891_high_coverage_name {"NA12891.mapped.ILLUMINA.bwa.CEU.high_coverage_pcr_free.20130906.bam"};
     static std::string HG00101_name {"HG00101.mapped.ILLUMINA.bwa.GBR.low_coverage.20130415.bam"};
     static std::string HG00102_name {"HG00102.mapped.ILLUMINA.bwa.GBR.low_coverage.20130415.bam"};
     static std::string HG00103_name {"HG00103.mapped.ILLUMINA.bwa.GBR.low_coverage.20120522.bam"};
@@ -42,6 +44,8 @@ namespace detail
     // other
     
     static std::string ecoli_bam_name {"WTCHG_119208_201103.bam"};
+    
+    static std::string NA12878_simulated_cancer_basic {"NA12878_simulated_cancer_basic.bam"};
     
     // CRAM
     static std::string HG00101_cram_name {"HG00101.mapped.ILLUMINA.bwa.GBR.low_coverage.20130415.cram"};
@@ -94,8 +98,11 @@ static const fs::path lambda_reference_fasta {detail::home_dir + detail::genomic
 static const fs::path NA12878_low_coverage {detail::home_dir + detail::genomics_dir + detail::bam_dir +
     detail::NA12878_low_coverage_name};
     
-    static const fs::path NA12878_high_coverage {detail::home_dir + detail::genomics_dir + detail::bam_dir +
-        detail::NA12878_high_coverage_name};
+static const fs::path NA12878_high_coverage {detail::home_dir + detail::genomics_dir + detail::bam_dir +
+    detail::NA12878_high_coverage_name};
+
+static const fs::path NA12891_high_coverage {detail::home_dir + detail::genomics_dir + detail::bam_dir +
+    detail::NA12891_high_coverage_name};
 
 static const fs::path HG00101 {detail::home_dir + detail::genomics_dir + detail::bam_dir +
         detail::HG00101_name};
@@ -146,5 +153,10 @@ static const fs::path hiv_bam8 {detail::home_dir + detail::genomics_dir + detail
     detail::hiv_reads_dir + detail::hiv_bam_name8};
 
 static const std::vector<fs::path> hiv_bams {hiv_bam1, hiv_bam2, hiv_bam3, hiv_bam4, hiv_bam5, hiv_bam6, hiv_bam7, hiv_bam8};
+
+// simulated cancer
+
+static const fs::path NA12878_simulated_cancer_basic {detail::home_dir + detail::genomics_dir +
+    detail::cancer_test_dir + detail::NA12878_simulated_cancer_basic};
 
 #endif

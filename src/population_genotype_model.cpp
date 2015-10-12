@@ -60,7 +60,8 @@ namespace Octopus
             void print_genotype_log_likelihoods(const std::vector<Genotype<Haplotype>>& genotypes,
                                                 const GenotypeLogLikelihoods& log_likelihoods, size_t n = 5);
             void print_top_haplotypes(const std::vector<Haplotype>& haplotypes, const ReadMap& reads, size_t n = 3);
-            void print_top_genotypes(const std::vector<Genotype<Haplotype>>& genotypes, const ReadMap& reads, size_t n = 3);
+            void print_top_genotypes(const std::vector<Genotype<Haplotype>>& genotypes, const ReadMap& reads,
+                                     ReadModel& read_model, size_t n = 3);
         } // namespace debug
     
     // non member methods
@@ -277,6 +278,11 @@ namespace Octopus
         
         const auto genotype_log_likilhoods = compute_genotype_log_likelihoods(genotypes, reads, read_model);
         
+//        debug::print_genotype_log_likelihoods(genotypes, genotype_log_likilhoods, 20);
+//        std::cout << std::endl;
+//        debug::print_top_genotypes(genotypes, reads, read_model, 10);
+//        exit(0);
+        
         read_model.clear_cache();
         
         auto haplotype_prior_counts = compute_haplotype_prior_counts(haplotypes, reference, haplotype_prior_model_);
@@ -294,8 +300,6 @@ namespace Octopus
                                 genotype_log_marginals, genotype_log_likilhoods,
                                 haplotype_prior_counts, prior_count_sum) < em_epsilon_) break;
         }
-        
-        //debug::print_genotype_log_likelihoods(genotypes, genotype_log_likilhoods);
         
         return make_latents(std::move(genotypes), std::move(genotype_posteriors), std::move(haplotype_frequencies));
     }
@@ -386,7 +390,8 @@ namespace Octopus
             }
         }
         
-        void print_top_genotypes(const std::vector<Genotype<Haplotype>>& genotypes, const ReadMap& reads, size_t n)
+        void print_top_genotypes(const std::vector<Genotype<Haplotype>>& genotypes, const ReadMap& reads,
+                                 ReadModel& read_model, size_t n)
         {
             auto m = std::min(n, genotypes.size());
             
@@ -401,7 +406,7 @@ namespace Octopus
                     top.reserve(genotypes.size());
                     
                     for (const auto& genotype : genotypes) {
-                        top.emplace_back(genotype, ReadModel(2).log_probability(read, genotype));
+                        top.emplace_back(genotype, read_model.log_probability(read, genotype));
                     }
                     std::sort(std::begin(top), std::end(top), IsBigger<Genotype<Haplotype>, double>());
                     

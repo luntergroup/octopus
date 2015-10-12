@@ -65,7 +65,7 @@ GenomicRegion PopulationVariantCaller::get_init_region(const GenomicRegion& regi
         return region;
     }
     
-    auto r = advance_region(get_head(region, 0), reads, candidates, 13, 0, IndicatorLimit::NoLimit, ExtensionLimit::NoLimit);
+    auto r = advance_region(get_head(region, 0), reads, candidates, 20, 0, IndicatorLimit::NoLimit, ExtensionLimit::NoLimit);
     
     if (contains(r, region)) {
         return region;
@@ -593,6 +593,8 @@ PopulationVariantCaller::call_variants(const GenomicRegion& region, const std::v
     } else {
         extend_tree(candidates, tree);
     }
+    
+    std::cout << "tree grown" << std::endl;
     
     auto haplotypes = tree.get_haplotypes(region);
     

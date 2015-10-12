@@ -293,31 +293,36 @@ namespace Octopus
         
         auto haplotype_prior_counts = compute_haplotype_prior_counts(haplotypes, reference, haplotype_prior_model_);
         
-        auto genotypes = generate_all_cancer_genotypes(haplotypes, 2);
+        auto genotypes = generate_all_cancer_genotypes(haplotypes, 2); // diploid only for now
         
         std::cout << "there are " << genotypes.size() << " candidate cancer genotypes" << std::endl;
         
         GenotypeWeightsPriors weight_priors {};
         for (const auto& s : reads) {
             if (s.first == normal_sample_) {
-                weight_priors.emplace(s.first, SampleGenotypeWeightsPriors {100.0, 100.0, 0.01});
+                weight_priors.emplace(s.first, SampleGenotypeWeightsPriors {100.0, 100.0, 0.001});
             } else {
-                weight_priors.emplace(s.first, SampleGenotypeWeightsPriors {10.0, 10.0, 0.1});
+                weight_priors.emplace(s.first, SampleGenotypeWeightsPriors {1.5, 1.5, 0.5});
             }
         }
         
         auto haplotype_frequencies = init_haplotype_frequencies(haplotype_prior_counts);
         auto genotype_weights      = init_genotype_weights(weight_priors);
         
+        for (const auto& w : genotype_weights) {
+            std::cout << w.second[0] << " " << w.second[1] << " " << w.second[2] << std::endl;
+        }
+        
         auto genotype_log_posteriors  = compute_genotype_log_posteriors(genotypes, reads, haplotype_frequencies,
                                                                         genotype_weights, read_model_);
         
-        debug::print_top_genotypes(genotypes, genotype_log_posteriors);
+        //debug::print_top_genotypes(genotypes, genotype_log_posteriors);
+        //exit(0);
         
         auto genotype_weight_responsibilities = compute_genotype_weight_responsibilities(genotype_log_posteriors,
                                                                                          genotype_weights, reads, read_model_);
         
-        debug::print_weight_responsabilities(genotype_weight_responsibilities, reads);
+        //debug::print_weight_responsabilities(genotype_weight_responsibilities, reads);
         
         for (unsigned n {0}; n < max_em_iterations_; ++n) {
             std::cout << "EM iteration " << n << std::endl;

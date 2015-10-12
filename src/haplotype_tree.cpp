@@ -116,6 +116,7 @@ void HaplotypeTree::extend(const Allele& allele)
 std::vector<Haplotype> HaplotypeTree::get_haplotypes(const GenomicRegion& region)
 {
     haplotype_leaf_cache_.clear();
+    haplotype_leaf_cache_.reserve(haplotype_leafs_.size());
     
     std::vector<Haplotype> result {};
     result.reserve(haplotype_leafs_.size());
@@ -129,6 +130,8 @@ std::vector<Haplotype> HaplotypeTree::get_haplotypes(const GenomicRegion& region
         
         result.emplace_back(std::move(haplotype));
     }
+    
+    haplotype_leaf_cache_.rehash(haplotype_leaf_cache_.size());
     
     result.shrink_to_fit();
     

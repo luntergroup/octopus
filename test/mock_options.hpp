@@ -20,14 +20,19 @@ inline po::variables_map get_basic_mock_options()
 {
     const char *argv[] = {"octopus",
         "--reference", human_reference_fasta.c_str(),
+        //"--reference", ecoli_reference_fasta.string().c_str(),
         
-        "--reads", NA12878_low_coverage.string().c_str(), HG00101.string().c_str(), HG00102.string().c_str(), HG00103.string().c_str(),
-        //"--reads", NA12878_high_coverage.string().c_str(), HG00102.string().c_str(),
+        //"--reads", NA12878_low_coverage.string().c_str(), HG00101.string().c_str(), HG00102.string().c_str(), HG00103.string().c_str(),
         
-        //"--model", "cancer", // default "population"
+        "--reads", NA12878_high_coverage.string().c_str(), NA12878_simulated_cancer_basic.string().c_str(), //cancer test
+        
+        //"--reads", ecoli_bam.string().c_str(),
+        
+        "--model", "cancer", // default "population"
         "--normal-sample", "NA12878", // for cancer model
         "--ploidy", "2",
         "--contig-ploidies", "MT=1", "Y=1",
+        
         //"--make-blocked-refcalls",
         //"--make-positional-refcalls",
         
@@ -66,11 +71,20 @@ inline po::variables_map get_basic_mock_options()
         
         //"--regions", "16:62,646,838-62,647,242", // complex phasable insertion and SNPs (in NA12878-HC)
         //"--regions", "16:62,646,885-62,647,013",
+        //"--regions", "6:29,921,451-29,921,623",
+        //"--regions", "6:34,410,558-34,410,614",
         
         //"--regions", "Y:22,510,914-22,510,973",
-        "--regions", "Y:17,398,830-17,398,917",
+        //"--regions", "Y:17,398,830-17,398,917",
         //"--regions", "MT:11,669-11,768", // very high coverage snp
         //"--regions", "MT",
+        
+        //"--regions", "21:22,137,226-22,137,409", // potential cancer spike in (basic)
+        //"--regions", "21:22,137,351-22,137,404",
+        //"--regions", "21:22,137,272-22,137,311",
+        "--regions", "21:22,137,214-22,137,342",
+        
+        //"//--regions", "R00000042:686,055-686,094", // ecoli alignment whim
         
         "--min-variant-posterior", "5",
         "--min-refcall-posterior", "1",
@@ -78,7 +92,7 @@ inline po::variables_map get_basic_mock_options()
         
         "--output", test_out_vcf.c_str(),
         
-        "--min-supporting-reads", "1",
+        "--min-supporting-reads", "2",
         "--min-mapping-quality", "20",
         "--min-snp-base-quality", "20",
         "--tail-trim-size", "3",
