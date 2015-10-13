@@ -141,6 +141,9 @@ Haplotype::SequenceType Haplotype::get_sequence(const GenomicRegion& region) con
     
     // captures insertion at the end... this breaks the rules of region overlaps as normally
     // insertions are only consdiered overlapped at the start of a region.
+//    if (overlapped_explicit_alleles.size() > 1 && is_insertion(overlapped_explicit_alleles.front())) {
+//        
+//    }
     if (overlapped_explicit_alleles.end() != cend(explicit_alleles_) && ::contains(region, *overlapped_explicit_alleles.end())) {
         overlapped_explicit_alleles.advance_end(1);
     }

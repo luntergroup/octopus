@@ -309,9 +309,10 @@ namespace Octopus
         auto haplotype_frequencies = init_haplotype_frequencies(haplotype_prior_counts);
         auto genotype_weights      = init_genotype_weights(weight_priors);
         
-        for (const auto& w : genotype_weights) {
-            std::cout << w.second[0] << " " << w.second[1] << " " << w.second[2] << std::endl;
-        }
+//        std::cout << "prior mixture weights" << std::endl;
+//        for (const auto& w : genotype_weights) {
+//            std::cout << w.second[0] << " " << w.second[1] << " " << w.second[2] << std::endl;
+//        }
         
         auto genotype_log_posteriors  = compute_genotype_log_posteriors(genotypes, reads, haplotype_frequencies,
                                                                         genotype_weights, read_model_);

@@ -301,6 +301,8 @@ namespace Octopus
                                 haplotype_prior_counts, prior_count_sum) < em_epsilon_) break;
         }
         
+        std::cout << "finished EM" << std::endl;
+        
         return make_latents(std::move(genotypes), std::move(genotype_posteriors), std::move(haplotype_frequencies));
     }
     

@@ -83,7 +83,7 @@ BOOST_AUTO_TEST_CASE(assembler_path_test)
     
     //Assembler assembler {15};
     
-    Octopus::KmerGraph<int, policies::StoreStringReference> kmer_assembler {10};
+    KmerGraph<int, policies::StoreStringReference> kmer_assembler {10};
     kmer_assembler.add_sequence("AAAAAAAAAACCCCCCCCCC", 0, 1);
     kmer_assembler.add_sequence("CCCCCCCCCCGGGGGGGGGG", 10, 2);
     kmer_assembler.add_sequence("GGGGGGGGGGAAAAAAAAAA", 20, 2);

@@ -40,7 +40,7 @@ public:
 private:
     enum class Colour {Reference, Read};
     
-    Octopus::KmerGraph<Colour, policies::StoreStringReference> the_assembler_;
+    KmerGraph<Colour, policies::StoreStringReference> the_assembler_;
 };
 
 #endif /* defined(__Octopus__variant_assembler__) */

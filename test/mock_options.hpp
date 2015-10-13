@@ -81,10 +81,9 @@ inline po::variables_map get_basic_mock_options()
         
         //"--regions", "21:22,137,226-22,137,409", // potential cancer spike in (basic)
         //"--regions", "21:22,137,351-22,137,404",
-        //"--regions", "21:22,137,272-22,137,311",
-        "--regions", "21:22,137,214-22,137,342",
+        "--regions", "21:22,137,271-22,137,310",
         
-        //"//--regions", "R00000042:686,055-686,094", // ecoli alignment whim
+        //"--regions", "R00000042:686,055-686,094", // ecoli alignment whim
         
         "--min-variant-posterior", "5",
         "--min-refcall-posterior", "1",

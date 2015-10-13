@@ -27,7 +27,7 @@
 
 #include <iostream>
 
-namespace Octopus {
+//namespace Octopus {
 
 template <typename ColourType, typename StringStoragePolicy>
 class KmerGraph : StringStoragePolicy
@@ -224,10 +224,10 @@ KmerGraph<C, T>::get_vertex(ReferenceType a_kmer_prefix_or_suffix) const
 {
     EdgePair ep;
     for (ep = boost::edges(the_graph_); ep.first != ep.second; ++ep.first) {
-        if (is_prefix(a_kmer_prefix_or_suffix, the_graph_[*ep.first].the_kmer)) {
+        if (Octopus::is_prefix(a_kmer_prefix_or_suffix, the_graph_[*ep.first].the_kmer)) {
             return {boost::source(*ep.first, the_graph_), true};
         }
-        if (is_suffix(a_kmer_prefix_or_suffix, the_graph_[*ep.first].the_kmer)) {
+        if (Octopus::is_suffix(a_kmer_prefix_or_suffix, the_graph_[*ep.first].the_kmer)) {
             return {boost::target(*ep.first, the_graph_), true};
         }
     }
@@ -358,6 +358,6 @@ void KmerGraph<C, T>::print_kmers() const
     std::cout << std::endl;
 }
 
-} // end namespace Octopus
+//} // namespace Octopus
 
 #endif
