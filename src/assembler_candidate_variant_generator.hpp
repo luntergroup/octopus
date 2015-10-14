@@ -25,9 +25,11 @@ namespace Octopus {
 class AssemblerCandidateVariantGenerator : public ICandidateVariantGenerator
 {
 public:
+    using SizeType = GenomicRegion::SizeType;
+    
     AssemblerCandidateVariantGenerator() = delete;
     explicit AssemblerCandidateVariantGenerator(ReferenceGenome& reference, unsigned kmer_size,
-                                                double generator_confidence);
+                                                SizeType max_variant_size = 100);
     ~AssemblerCandidateVariantGenerator() override = default;
     
     AssemblerCandidateVariantGenerator(const AssemblerCandidateVariantGenerator&)            = default;
@@ -43,8 +45,8 @@ public:
     
 private:
     ReferenceGenome& reference_;
-    VariantAssembler the_variant_assembler_;
-    double generator_confidence_;
+    VariantAssembler assembler_;
+    SizeType max_variant_size_;
 };
 
 } // namespace Octopus

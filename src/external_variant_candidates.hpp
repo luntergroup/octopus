@@ -17,23 +17,23 @@
 class GenomicRegion;
 
 namespace Octopus {
-    
-class ExternalVariantCandidates : public ICandidateVariantGenerator
+
+class ExternalCandidateVariantGenerator : public ICandidateVariantGenerator
 {
 public:
-    ExternalVariantCandidates() = delete;
-    explicit ExternalVariantCandidates(VcfReader& reader);
-    ~ExternalVariantCandidates() override = default;
+    ExternalCandidateVariantGenerator() = delete;
+    explicit ExternalCandidateVariantGenerator(VcfReader&& reader);
+    ~ExternalCandidateVariantGenerator() override = default;
     
-    ExternalVariantCandidates(const ExternalVariantCandidates&)            = default;
-    ExternalVariantCandidates& operator=(const ExternalVariantCandidates&) = default;
-    ExternalVariantCandidates(ExternalVariantCandidates&&)                 = default;
-    ExternalVariantCandidates& operator=(ExternalVariantCandidates&&)      = default;
+    ExternalCandidateVariantGenerator(const ExternalCandidateVariantGenerator&)            = default;
+    ExternalCandidateVariantGenerator& operator=(const ExternalCandidateVariantGenerator&) = default;
+    ExternalCandidateVariantGenerator(ExternalCandidateVariantGenerator&&)                 = default;
+    ExternalCandidateVariantGenerator& operator=(ExternalCandidateVariantGenerator&&)      = default;
     
     std::vector<Variant> get_candidates(const GenomicRegion& region) override;
     
 private:
-    VcfReader& reader_;
+    VcfReader reader_;
 };
 
 } // namespace Octopus

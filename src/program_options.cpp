@@ -129,7 +129,7 @@ namespace Octopus
         ("min-snp-base-quality", po::value<unsigned>()->default_value(20), "only base changes with quality above this value are considered for snp generation")
         ("min-supporting-reads", po::value<unsigned>()->default_value(1), "minimum number of reads that must support a variant if it is to be considered a candidate")
         ("max-variant-size", po::value<AlignedRead::SizeType>()->default_value(100), "maximum candidate varaint size from alignmenet CIGAR")
-        ("k", po::value<unsigned>()->default_value(15), "k-mer size to use")
+        ("kmer-size", po::value<unsigned>()->default_value(15), "k-mer size to use for assembly")
         ("no-cycles", po::bool_switch()->default_value(false), "dissalow cycles in assembly graph")
         ;
         
@@ -498,15 +498,27 @@ namespace Octopus
     {
         CandidateVariantGenerator result {};
         
-        if (options.count("candidates-from-alignments") == 1) {
+        auto max_variant_size = options.at("max-variant-size").as<AlignmentCandidateVariantGenerator::SizeType>();
+        
+        if (options.at("candidates-from-alignments").as<bool>()) {
             auto min_snp_base_quality = options.at("min-snp-base-quality").as<unsigned>();
-            auto max_variant_size     = options.at("max-variant-size").as<AlignmentCandidateVariantGenerator::SizeType>();
             auto min_supporting_reads = options.at("min-supporting-reads").as<unsigned>();
             
             if (min_supporting_reads == 0) ++min_supporting_reads; // probably input error; 0 is meaningless
             
             result.register_generator(std::make_unique<AlignmentCandidateVariantGenerator>(reference, min_snp_base_quality,
                                                                                            min_supporting_reads, max_variant_size));
+        }
+        
+        if (options.at("candidates-from-assembler").as<bool>()) {
+            auto kmer_size    = options.at("kmer-size").as<unsigned>();
+            //auto allow_cycles = !options.at("no-cycles").as<bool>();
+            result.register_generator(std::make_unique<AssemblerCandidateVariantGenerator>(reference, kmer_size, max_variant_size));
+        }
+        
+        if (options.count("candidates-from-source") == 1) {
+            auto variant_file_path = options.at("candidates-from-source").as<std::string>();
+            result.register_generator(std::make_unique<ExternalCandidateVariantGenerator>(VcfReader {variant_file_path}));
         }
         
         return result;

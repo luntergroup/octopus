@@ -18,24 +18,26 @@ namespace Octopus {
     
 AssemblerCandidateVariantGenerator::AssemblerCandidateVariantGenerator(ReferenceGenome& reference,
                                                                        unsigned kmer_size,
-                                                                       double generator_confidence)
+                                                                       SizeType max_variant_size)
 :
 reference_ {reference},
-the_variant_assembler_ {kmer_size},
-generator_confidence_ {generator_confidence}
+assembler_ {kmer_size},
+max_variant_size_ {max_variant_size}
 {}
 
 void AssemblerCandidateVariantGenerator::add_read(const AlignedRead& read)
 {
-    the_variant_assembler_.add_read(read);
+    assembler_.add_read(read);
 }
 
-void AssemblerCandidateVariantGenerator::add_reads(std::vector<AlignedRead>::const_iterator first, std::vector<AlignedRead>::const_iterator last)
+void AssemblerCandidateVariantGenerator::add_reads(std::vector<AlignedRead>::const_iterator first,
+                                                   std::vector<AlignedRead>::const_iterator last)
 {
     std::for_each(first, last, [this] (const auto& read ) { add_read(read); });
 }
 
-void AssemblerCandidateVariantGenerator::add_reads(MappableSet<AlignedRead>::const_iterator first, MappableSet<AlignedRead>::const_iterator last)
+void AssemblerCandidateVariantGenerator::add_reads(MappableSet<AlignedRead>::const_iterator first,
+                                                   MappableSet<AlignedRead>::const_iterator last)
 {
     std::for_each(first, last, [this] (const auto& read ) { add_read(read); });
 }
@@ -43,13 +45,13 @@ void AssemblerCandidateVariantGenerator::add_reads(MappableSet<AlignedRead>::con
 std::vector<Variant> AssemblerCandidateVariantGenerator::get_candidates(const GenomicRegion& region)
 {
     auto reference_sequence = reference_.get_sequence(region);
-    the_variant_assembler_.add_reference_sequence(region, reference_sequence);
-    return the_variant_assembler_.get_variants(region);
+    assembler_.add_reference_sequence(region, reference_sequence);
+    return assembler_.get_variants(region);
 }
 
 void AssemblerCandidateVariantGenerator::clear()
 {
-    the_variant_assembler_.clear();
+    assembler_.clear();
 }
 
 } // namespace Octopus

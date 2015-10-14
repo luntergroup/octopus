@@ -48,8 +48,8 @@ namespace Octopus
         
         std::cout << "found " << candidates.size() << " candidates in " << count_reads(reads) << " reads" << std::endl;
         
-//        std::cout << "candidates are:" << std::endl;
-//        for (const auto& c : candidates) std::cout << c << std::endl;
+        std::cout << "candidates are:" << std::endl;
+        for (const auto& c : candidates) std::cout << c << std::endl;
         
         auto current_region = get_init_region(region, reads, candidates);
         

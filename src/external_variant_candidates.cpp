@@ -15,9 +15,9 @@
 
 namespace Octopus {
     
-ExternalVariantCandidates::ExternalVariantCandidates(VcfReader& reader)
+ExternalCandidateVariantGenerator::ExternalCandidateVariantGenerator(VcfReader&& reader)
 :
-reader_ {reader}
+reader_ {std::move(reader)}
 {}
 
 std::vector<GenomicRegion> get_batch_regions(const GenomicRegion& region, const VcfReader& reader, std::size_t max_batch_size)
@@ -46,7 +46,7 @@ std::vector<Variant> fetch_variants(const GenomicRegion& region, VcfReader& read
         auto vcf_records = reader.fetch_records(batch, VcfReader::Unpack::AllButSamples);
         for (const auto& record : vcf_records) {
             for (const auto& alt_allele : record.get_alt_alleles()) {
-                result.emplace_back(record.get_chromosome_name(), record.get_position(), record.get_ref_allele(), alt_allele);
+                result.emplace_back(record.get_chromosome_name(), record.get_position() - 1, record.get_ref_allele(), alt_allele);
             }
         }
     }
@@ -54,7 +54,7 @@ std::vector<Variant> fetch_variants(const GenomicRegion& region, VcfReader& read
     return result;
 }
 
-std::vector<Variant> ExternalVariantCandidates::get_candidates(const GenomicRegion& region)
+std::vector<Variant> ExternalCandidateVariantGenerator::get_candidates(const GenomicRegion& region)
 {
     return fetch_variants(region, reader_);
 }

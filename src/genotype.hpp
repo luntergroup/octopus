@@ -272,7 +272,7 @@ bool contains(const Genotype<MappableType1>& lhs, const Genotype<MappableType2>&
                        [&rhs] (const auto& element) { return rhs.contains(element); });
 }
 
-size_t num_genotypes(const unsigned num_elements, const unsigned ploidy);
+size_t num_genotypes(unsigned num_elements, unsigned ploidy);
 
 namespace detail
 {

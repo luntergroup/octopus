@@ -52,7 +52,15 @@ double HaplotypePriorModel::evaluate(const Haplotype& to, const Haplotype& from)
                 }
             }
         } else {
-            // mnp?
+            auto itr1 = std::cbegin(variant.get_reference_allele_sequence());
+            auto itr2 = std::cbegin(variant.get_alternative_allele_sequence());
+            std::for_each(itr1, std::cend(variant.get_reference_allele_sequence()),
+                          [this, &itr2, &result] (char base) {
+                              if (base != *itr2) {
+                                  result *= 0.9 * transversion_rate_;
+                              }
+                              ++itr2;
+                          });
         }
     }
     
@@ -69,7 +77,7 @@ HaplotypePriorModel::evaluate(const std::vector<Haplotype>& haplotypes, const Ha
         result.emplace(haplotype, evaluate(haplotype, reference));
     }
     
-    auto norm = Maths::sum_values(result);
+    const auto norm = Maths::sum_values(result);
     
     for (auto& p : result) p.second /= norm;
     

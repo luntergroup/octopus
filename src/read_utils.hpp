@@ -910,7 +910,7 @@ find_high_coverage_regions(const ReadMap& reads, const GenomicRegion& region, co
 }
 
 MappableSet<AlignedRead>
-downsample(const MappableSet<AlignedRead>& reads, const unsigned max_coverage, const unsigned min_downsample_coverage);
+downsample(const MappableSet<AlignedRead>& reads, unsigned max_coverage, unsigned min_downsample_coverage);
 
 template <typename T>
 MappableMap<T, AlignedRead>

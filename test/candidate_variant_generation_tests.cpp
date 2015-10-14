@@ -142,14 +142,14 @@ BOOST_AUTO_TEST_CASE(OnlineCandidateVariantGenerator_can_fetch_variants_from_onl
 //    //    }
 //}
 
-BOOST_AUTO_TEST_CASE(ExternalVariantCandidates_gets_candidates_from_vcf)
+BOOST_AUTO_TEST_CASE(ExternalCandidateVariantGenerator_gets_candidates_from_vcf)
 {
     auto reference = make_reference(human_reference_fasta);
     
     VcfReader reader {sample_vcf};
     
     Octopus::CandidateVariantGenerator generator {};
-    generator.register_generator(std::make_unique<Octopus::ExternalVariantCandidates>(reader));
+    generator.register_generator(std::make_unique<Octopus::ExternalCandidateVariantGenerator>(std::move(reader)));
     
     auto region = parse_region("X:10,095,000-10,100,000", reference);
     

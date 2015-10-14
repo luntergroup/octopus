@@ -45,14 +45,16 @@ public:
     KmerGraph(KmerGraph&&)                 = default;
     KmerGraph& operator=(KmerGraph&&)      = default;
     
-    void add_sequence(InputType a_sequence, SizeType the_index, ColourType the_colour);
+    void add_sequence(InputType sequence, SizeType index, ColourType colour);
     void set_colour_weight_map(std::function<int(ColourType)> f_colour_weight);
     
     std::vector<std::string> get_contigs(unsigned max_num_paths);
     
+    std::string get_longest_path_from_from(const std::string& kmer, ColourType colour) const;
+    
     bool is_acyclic() const;
-    unsigned get_num_kmers() const noexcept;
-    unsigned get_num_connections() const noexcept;
+    unsigned num_kmers() const noexcept;
+    unsigned num_connections() const noexcept;
     void clear();
     
     void print_kmers() const;
@@ -64,7 +66,7 @@ private:
     struct KmerEdge
     {
         ReferenceType the_kmer;
-        std::unordered_map<ColourType, unsigned> the_colours;
+        std::unordered_map<ColourType, unsigned> colours;
         int weight;
         std::vector<SizeType> the_indices;
     };
@@ -102,12 +104,12 @@ private:
     VertexIndexMapImpl vertex_indices_impl_;
     VertexIndexMap vertex_indices_;
     
-    void add_kmer(ReferenceType the_kmer, SizeType the_index, ColourType the_colour);
+    void add_kmer(ReferenceType the_kmer, SizeType index, ColourType colour);
     std::pair<Vertex, Vertex> get_vertices(ReferenceType a_kmer);
     std::pair<Vertex, bool> get_vertex(ReferenceType a_kmer_prefix_or_suffix) const;
     Vertex add_vertex(ReferenceType a_k_minus_1_mer);
-    void add_edge(Vertex source, Vertex target, ReferenceType the_kmer, SizeType the_index,
-                  ColourType the_colour);
+    void add_edge(Vertex source, Vertex target, ReferenceType the_kmer, SizeType index,
+                  ColourType colour);
     
     bool is_in_graph(ReferenceType a_k_minus_1_mer) const;
     unsigned get_next_index() const;
@@ -140,14 +142,14 @@ void KmerGraph<ColourType, T>::set_colour_weight_map(std::function<int(ColourTyp
 }
 
 template <typename ColourType, typename T>
-void KmerGraph<ColourType, T>::add_sequence(InputType a_sequence, SizeType the_index,
-                                                ColourType the_colour)
+void KmerGraph<ColourType, T>::add_sequence(InputType sequence, SizeType index,
+                                                ColourType colour)
 {
-    if (a_sequence.size() < k_) return;
-    ReferenceType sequence_ref = store(a_sequence);
+    if (sequence.size() < k_) return;
+    ReferenceType sequence_ref = store(sequence);
     unsigned num_kmers = static_cast<unsigned>(sequence_ref.size()) - (k_ - 1);
     for (unsigned i = 0; i < num_kmers; ++i) {
-        add_kmer(sequence_ref.substr(i, k_), the_index, the_colour);
+        add_kmer(sequence_ref.substr(i, k_), index, colour);
     }
 }
 
@@ -155,6 +157,18 @@ template <typename C, typename T>
 std::vector<std::string> KmerGraph<C, T>::get_contigs(unsigned max_num_paths)
 {
     return get_all_euler_paths(boost::vertex(0, the_graph_), max_num_paths);
+}
+
+template <typename ColourType, typename T>
+std::string KmerGraph<ColourType, T>::get_longest_path_from_from(const std::string& kmer, ColourType colour) const
+{
+    std::string result {};
+    
+    auto vertices = get_vertices(kmer);
+    
+    
+    
+    return result;
 }
 
 template <typename C, typename T>
@@ -173,13 +187,13 @@ bool KmerGraph<C, T>::is_acyclic() const
 }
 
 template <typename C, typename T>
-unsigned KmerGraph<C, T>::get_num_kmers() const noexcept
+unsigned KmerGraph<C, T>::num_kmers() const noexcept
 {
     return static_cast<unsigned>(boost::num_edges(the_graph_));
 }
 
 template <typename C, typename T>
-unsigned KmerGraph<C, T>::get_num_connections() const noexcept
+unsigned KmerGraph<C, T>::num_connections() const noexcept
 {
     return static_cast<unsigned>(boost::num_vertices(the_graph_));
 }
@@ -193,12 +207,12 @@ void KmerGraph<C, T>::clear()
 }
 
 template <typename ColourType, typename T>
-void KmerGraph<ColourType, T>::add_kmer(ReferenceType the_kmer, SizeType the_index,
-                                            ColourType the_colour)
+void KmerGraph<ColourType, T>::add_kmer(ReferenceType the_kmer, SizeType index,
+                                            ColourType colour)
 {
     Vertex source, target;
     std::tie(source, target) = get_vertices(the_kmer);
-    add_edge(source, target, the_kmer, the_index, the_colour);
+    add_edge(source, target, the_kmer, index, colour);
 }
 
 template <typename C, typename T>
@@ -245,19 +259,19 @@ typename KmerGraph<C, T>::Vertex KmerGraph<C, T>::add_vertex(ReferenceType a_k_m
 
 template <typename ColourType, typename T>
 void KmerGraph<ColourType, T>::add_edge(Vertex source, Vertex target, ReferenceType the_kmer,
-                                            SizeType the_index, ColourType the_colour)
+                                            SizeType index, ColourType colour)
 {
     auto the_existing_edge = boost::edge(source, target, the_graph_);
     if (the_existing_edge.second) {
-        ++the_graph_[the_existing_edge.first].the_colours[the_colour];
-        the_graph_[the_existing_edge.first].weight += f_colour_weight_(the_colour);
-        the_graph_[the_existing_edge.first].the_indices.emplace_back(the_index);
+        ++the_graph_[the_existing_edge.first].colours[colour];
+        the_graph_[the_existing_edge.first].weight += f_colour_weight_(colour);
+        the_graph_[the_existing_edge.first].the_indices.emplace_back(index);
     } else {
         auto a_new_edge = boost::add_edge(source, target, the_graph_).first;
         the_graph_[a_new_edge].the_kmer = the_kmer;
-        ++the_graph_[a_new_edge].the_colours[the_colour];
-        the_graph_[a_new_edge].weight = f_colour_weight_(the_colour);
-        the_graph_[a_new_edge].the_indices.emplace_back(the_index);
+        ++the_graph_[a_new_edge].colours[colour];
+        the_graph_[a_new_edge].weight = f_colour_weight_(colour);
+        the_graph_[a_new_edge].the_indices.emplace_back(index);
     }
 }
 
@@ -284,13 +298,13 @@ std::vector<std::string> KmerGraph<C, T>::get_all_euler_paths(Vertex the_source,
 //    auto all_verticies = boost::vertices(the_graph_);
 //    std::unordered_set<Vertex> unvisited_verticies {all_verticies.first, all_verticies.second};
 //    Vertex current_vertex {the_source};
-//    unsigned num_edges_to_vist {get_num_kmers()};
+//    unsigned num_edges_to_vist {num_kmers()};
 //    OutEdgeIterator out_edge_begin, out_edge_end;
 //    
 //    while (num_edges_to_vist > 0) {
 //        std::tie(out_edge_begin, out_edge_end) = boost::out_edges(current_vertex, the_graph_);
 //        for (; out_edge_begin != out_edge_end; ++out_edge_begin) {
-//            if (edge_counts[*out_edge_begin] < the_graph_[*out_edge_begin].the_colours.size()) {
+//            if (edge_counts[*out_edge_begin] < the_graph_[*out_edge_begin].colours.size()) {
 //                ++edge_counts[*out_edge_begin];
 //                an_euler_path.emplace_back(current_vertex);
 //                path.emplace_back(*out_edge_begin);
@@ -353,7 +367,7 @@ void KmerGraph<C, T>::print_kmers() const
     auto kmer_map = boost::get(&KmerEdge::the_kmer, the_graph_);
     for (auto ep = edges(the_graph_); ep.first != ep.second; ++ep.first) {
         Edge e = *ep.first;
-        std::cout << kmer_map[e] << "(" << the_graph_[e].the_colours.size() << ") ";
+        std::cout << kmer_map[e] << "(" << the_graph_[e].colours.size() << ") ";
     }
     std::cout << std::endl;
 }

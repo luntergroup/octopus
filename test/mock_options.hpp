@@ -19,16 +19,16 @@ namespace po = boost::program_options;
 inline po::variables_map get_basic_mock_options()
 {
     const char *argv[] = {"octopus",
-        "--reference", human_reference_fasta.c_str(),
-        //"--reference", ecoli_reference_fasta.string().c_str(),
+        //"--reference", human_reference_fasta.c_str(),
+        "--reference", ecoli_reference_fasta.string().c_str(),
         
         //"--reads", NA12878_low_coverage.string().c_str(), HG00101.string().c_str(), HG00102.string().c_str(), HG00103.string().c_str(),
         
-        "--reads", NA12878_high_coverage.string().c_str(), NA12878_simulated_cancer_basic.string().c_str(), //cancer test
+        //"--reads", NA12878_high_coverage.string().c_str(), NA12878_simulated_cancer_basic.string().c_str(), //cancer test
         
-        //"--reads", ecoli_bam.string().c_str(),
+        "--reads", ecoli_bam.string().c_str(),
         
-        "--model", "cancer", // default "population"
+        //"--model", "cancer", // default "population"
         "--normal-sample", "NA12878", // for cancer model
         "--ploidy", "2",
         "--contig-ploidies", "MT=1", "Y=1",
@@ -81,9 +81,9 @@ inline po::variables_map get_basic_mock_options()
         
         //"--regions", "21:22,137,226-22,137,409", // potential cancer spike in (basic)
         //"--regions", "21:22,137,351-22,137,404",
-        "--regions", "21:22,137,271-22,137,310",
+        //"--regions", "21:22,137,271-22,137,310",
         
-        //"--regions", "R00000042:686,055-686,094", // ecoli alignment whim
+        "--regions", "R00000042:686,055-686,094", // ecoli alignment whim
         
         "--min-variant-posterior", "5",
         "--min-refcall-posterior", "1",
@@ -98,6 +98,10 @@ inline po::variables_map get_basic_mock_options()
         "--trim-soft-clipped",
         "--remove-duplicate-reads",
         "--reference-cache-size", "20000",
+        
+        //"--candidates-from-assembler",
+        "--candidates-from-source", "/Users/danielcooke/Genomics/octopus_test/AllVariants.vcf",
+        
         nullptr};
     
     int argc = sizeof(argv) / sizeof(char*) - 1;

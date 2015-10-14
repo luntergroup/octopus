@@ -278,19 +278,22 @@ namespace Octopus
         
         const auto genotype_log_likilhoods = compute_genotype_log_likelihoods(genotypes, reads, read_model);
         
-//        debug::print_genotype_log_likelihoods(genotypes, genotype_log_likilhoods, 20);
-//        std::cout << std::endl;
-//        debug::print_top_genotypes(genotypes, reads, read_model, 10);
-//        exit(0);
+        //debug::print_genotype_log_likelihoods(genotypes, genotype_log_likilhoods, 20);
+        //std::cout << std::endl;
+        //debug::print_top_genotypes(genotypes, reads, read_model, 10);
+        //exit(0);
         
         read_model.clear_cache();
         
         auto haplotype_prior_counts = compute_haplotype_prior_counts(haplotypes, reference, haplotype_prior_model_);
         
-        auto prior_count_sum = Maths::sum_values(haplotype_prior_counts);
+        const auto prior_count_sum = Maths::sum_values(haplotype_prior_counts);
         
         auto haplotype_frequencies  = init_haplotype_frequencies(haplotype_prior_counts, prior_count_sum);
         auto genotype_log_marginals = init_genotype_log_marginals(genotypes, haplotype_frequencies);
+        
+        //debug::print_haplotype_priors(haplotype_frequencies, 150);
+        //exit(0);
         
         auto genotype_posteriors = init_genotype_posteriors(genotype_log_marginals, genotype_log_likilhoods);
         

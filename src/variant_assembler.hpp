@@ -32,15 +32,15 @@ public:
     VariantAssembler(VariantAssembler&&)                 = default;
     VariantAssembler& operator=(VariantAssembler&&)      = default;
     
-    void add_read(const AlignedRead& a_read);
-    void add_reference_sequence(const GenomicRegion& the_region, const std::string& the_sequence);
-    std::vector<Variant> get_variants(const GenomicRegion& a_region);
+    void add_read(const AlignedRead& read);
+    void add_reference_sequence(const GenomicRegion& region, const std::string& sequence);
+    std::vector<Variant> get_variants(const GenomicRegion& region);
     void clear() noexcept;
     
 private:
     enum class Colour {Reference, Read};
     
-    KmerGraph<Colour, policies::StoreStringReference> the_assembler_;
+    KmerGraph<Colour, policies::StoreStringReference> de_bruijn_graph_;
 };
 
 #endif /* defined(__Octopus__variant_assembler__) */
