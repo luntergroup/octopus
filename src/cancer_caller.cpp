@@ -655,6 +655,8 @@ namespace Octopus
     {
         std::vector<VcfRecord> result {};
         
+        if (candidates.empty()) return result; // for now, could spike in random mutations for refcalls
+        
         Octopus::HaplotypeTree tree {reference_};
         extend_tree(candidates, tree);
         
@@ -676,7 +678,7 @@ namespace Octopus
         
         remove_low_posteriors(latents.genotype_posteriors, 1.0e-06);
         
-        std::cout << "infered genotype weights: " << std::endl;
+        std::cout << "posterior genotype weights: " << std::endl;
         for (const auto& sw : latents.genotype_weights) {
             std::cout << sw.first << ": " << sw.second << std::endl;
         }

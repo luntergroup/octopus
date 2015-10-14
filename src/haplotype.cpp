@@ -326,7 +326,7 @@ Allele do_splice(const Haplotype& haplotype, const GenomicRegion& region, Allele
     return Allele {region, haplotype.get_sequence(region)};
 }
 } // namespace detail
-    
+
 bool is_reference(const Haplotype& haplotype, ReferenceGenome& reference)
 {
     return haplotype.get_sequence() == reference.get_sequence(haplotype.get_region());

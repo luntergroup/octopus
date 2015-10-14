@@ -19,14 +19,17 @@ namespace po = boost::program_options;
 inline po::variables_map get_basic_mock_options()
 {
     const char *argv[] = {"octopus",
-        //"--reference", human_reference_fasta.c_str(),
-        "--reference", ecoli_reference_fasta.string().c_str(),
+        "--reference", human_reference_fasta.c_str(),
+        //"--reference", ecoli_reference_fasta.string().c_str(),
         
-        //"--reads", NA12878_low_coverage.string().c_str(), HG00101.string().c_str(), HG00102.string().c_str(), HG00103.string().c_str(),
+        //"--reads", NA12878_low_coverage.c_str(), HG00101.c_str(), HG00102.string().c_str(), HG00103.c_str(),
         
-        //"--reads", NA12878_high_coverage.string().c_str(), NA12878_simulated_cancer_basic.string().c_str(), //cancer test
+        //"--reads", NA12878_high_coverage.c_str(), NA12878_simulated_cancer_basic.c_str(), //cancer test
+        //"--reads", NA12891_high_coverage.c_str(), NA12878_simulated_cancer_basic.c_str(), //cancer test
         
-        "--reads", ecoli_bam.string().c_str(),
+        "--reads", NA12878_high_coverage.c_str(), NA12891_high_coverage.c_str(),
+        
+        //"--reads", ecoli_bam.string().c_str(),
         
         //"--model", "cancer", // default "population"
         "--normal-sample", "NA12878", // for cancer model
@@ -61,6 +64,9 @@ inline po::variables_map get_basic_mock_options()
         //"--regions", "11:81,266,010-81,266,122", // all homo-alt
         //"--regions", "11:81,266,084-81,266,123",
         
+        //"--regions", "13:36,803,661-36,803,808", // simple insertion alignment error
+        //"--regions", "13:36,803,715-36,803,807",
+        
         //"--regions", "16:9,299,984-9,300,090", // complex indels
         //"--regions", "13:96,733,039-96,733,124", // complex indels
         //"--regions", "13:96732801-96733349",
@@ -79,11 +85,15 @@ inline po::variables_map get_basic_mock_options()
         //"--regions", "MT:11,669-11,768", // very high coverage snp
         //"--regions", "MT",
         
+        //"--regions", "5:80,465,625-80,465,862", // crazy indel region
+        
         //"--regions", "21:22,137,226-22,137,409", // potential cancer spike in (basic)
         //"--regions", "21:22,137,351-22,137,404",
         //"--regions", "21:22,137,271-22,137,310",
         
-        "--regions", "R00000042:686,055-686,094", // ecoli alignment whim
+        //"--regions", "R00000042:686,055-686,094", // ecoli alignment whim
+        
+        "--regions", "2:99,042,722-99,043,403", // region should not be phasable, but is getting phased
         
         "--min-variant-posterior", "5",
         "--min-refcall-posterior", "1",
@@ -98,9 +108,11 @@ inline po::variables_map get_basic_mock_options()
         "--trim-soft-clipped",
         "--remove-duplicate-reads",
         "--reference-cache-size", "20000",
+        //"--downsample-above", "500",
+        //"--downsample-target", "100",
         
         //"--candidates-from-assembler",
-        "--candidates-from-source", "/Users/danielcooke/Genomics/octopus_test/AllVariants.vcf",
+        //"--candidates-from-source", "/Users/danielcooke/Genomics/octopus_test/AllVariants.vcf",
         
         nullptr};
     

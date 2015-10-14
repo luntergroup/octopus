@@ -23,7 +23,7 @@ bool has_minimum_coverage(const std::vector<unsigned>& required_coverage)
 
 std::vector<AlignedRead>
 sample(const MappableSet<AlignedRead>& reads, const GenomicRegion& region, const unsigned max_coverage,
-       const unsigned min_downsample_coverage)
+       const unsigned min_coverage)
 {
     using std::begin; using std::end; using std::cbegin; using std::cend; using std::distance;
     using std::transform;
@@ -38,8 +38,8 @@ sample(const MappableSet<AlignedRead>& reads, const GenomicRegion& region, const
     std::vector<unsigned> required_coverage(num_positions);
     
     transform(cbegin(old_position_coverages), cend(old_position_coverages), begin(required_coverage),
-              [min_downsample_coverage] (auto old_coverage) {
-                  return std::min(old_coverage, min_downsample_coverage);
+              [min_coverage] (auto old_coverage) {
+                  return std::min(old_coverage, min_coverage);
               });
     
     std::vector<unsigned> new_position_coverages(num_positions, 0);
@@ -90,7 +90,7 @@ sample(const MappableSet<AlignedRead>& reads, const GenomicRegion& region, const
 template <typename T>
 std::vector<GenomicRegion>
 find_target_regions(const T& reads, const GenomicRegion& region, const unsigned max_coverage,
-                    const unsigned min_downsample_coverage)
+                    const unsigned min_coverage)
 {
     auto above_max_coverage_regions = find_high_coverage_regions(reads, region, max_coverage);
     
@@ -100,7 +100,7 @@ find_target_regions(const T& reads, const GenomicRegion& region, const unsigned 
     
     result.reserve(above_max_coverage_regions.size());
     
-    auto above_min_coverage_regions = find_high_coverage_regions(reads, region, min_downsample_coverage);
+    auto above_min_coverage_regions = find_high_coverage_regions(reads, region, min_coverage);
     
     std::copy_if(std::cbegin(above_min_coverage_regions), std::cend(above_min_coverage_regions), std::back_inserter(result),
                  [&above_max_coverage_regions] (const auto& r) {
@@ -113,32 +113,38 @@ find_target_regions(const T& reads, const GenomicRegion& region, const unsigned 
 }
 
 MappableSet<AlignedRead>
-downsample(const MappableSet<AlignedRead>& reads, const unsigned max_coverage, const unsigned min_downsample_coverage)
+downsample(const MappableSet<AlignedRead>& reads, const unsigned max_coverage, const unsigned min_coverage)
 {
-    auto region = get_encompassing_region(std::cbegin(reads), std::cend(reads));
+    using std::begin; using std::end; using std::cbegin; using std::cend; using std::make_move_iterator;
     
-    auto regions_to_sample = find_target_regions(reads, region, max_coverage, min_downsample_coverage);
+    if (reads.empty()) return reads;
+    
+    auto region = get_encompassing_region(cbegin(reads), cend(reads));
+    
+    auto regions_to_sample = find_target_regions(reads, region, max_coverage, min_coverage);
+    
+    if (regions_to_sample.empty()) return reads;
     
     MappableSet<AlignedRead> result {};
     result.reserve(reads.size());
     
-    MappableSet<AlignedRead>::const_iterator last_sampled {std::cbegin(reads)};
+    auto last_sampled_itr = cbegin(reads);
     
     for (auto& region : regions_to_sample) {
         auto contained = reads.contained_range(region);
         
         if (contained.empty()) continue;
         
-        result.insert(last_sampled, std::begin(contained).base());
+        result.insert(last_sampled_itr, begin(contained).base());
         
-        auto samples = sample(reads, region, max_coverage, min_downsample_coverage);
+        auto samples = sample(reads, region, max_coverage, min_coverage);
         
-        result.insert(std::make_move_iterator(std::begin(samples)), std::make_move_iterator(std::end(samples)));
+        result.insert(make_move_iterator(begin(samples)), make_move_iterator(end(samples)));
         
-        last_sampled = std::end(contained).base();
+        last_sampled_itr = end(contained).base();
     }
     
-    result.insert(last_sampled, std::cend(reads));
+    result.insert(last_sampled_itr, cend(reads));
     
     result.shrink_to_fit();
     

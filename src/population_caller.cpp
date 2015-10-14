@@ -65,7 +65,7 @@ GenomicRegion PopulationVariantCaller::get_init_region(const GenomicRegion& regi
         return region;
     }
     
-    auto r = advance_region(get_head(region, 0), reads, candidates, 20, 0, IndicatorLimit::NoLimit, ExtensionLimit::NoLimit);
+    auto r = advance_region(get_head(region, 0), reads, candidates, 12, 0, IndicatorLimit::NoLimit, ExtensionLimit::NoLimit);
     
     if (contains(r, region)) {
         return region;
@@ -125,6 +125,20 @@ struct RefCall
 //    return result;
 //}
 
+void remove_low_posterior_genotypes(GenotypeModel::Population::GenotypeProbabilities& genotype_posteriors,
+                                    double min_posterior)
+{
+    for (auto& sample_genotype_posteriors : genotype_posteriors) {
+        for (auto itr = std::begin(sample_genotype_posteriors.second); itr != std::end(sample_genotype_posteriors.second); ) {
+            if (itr->second < min_posterior) {
+                itr = sample_genotype_posteriors.second.erase(itr);
+            } else {
+                ++itr;
+            }
+        }
+    }
+}
+    
 double marginalise(const Allele& allele, const GenotypeModel::Population::SampleGenotypeProbabilities& genotype_posteriors)
 {
     double result {0.0};
@@ -609,6 +623,8 @@ PopulationVariantCaller::call_variants(const GenomicRegion& region, const std::v
     GenotypeModel::Population genotype_model {ploidy_};
     
     auto genotype_posteriors = genotype_model.evaluate(haplotypes, reads, reference_).genotype_posteriors;
+    
+    //remove_low_posterior_genotypes(genotype_posteriors, 0.0000000001);
     
     auto alleles = generate_callable_alleles(region, candidates, refcall_type_, reference_);
     

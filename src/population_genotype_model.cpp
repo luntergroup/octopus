@@ -209,7 +209,7 @@ namespace Octopus
             
             new_frequency /= norm;
             
-            auto curr_fequency_change = std::abs(current_haplotype_frequencies[haplotype] - new_frequency);
+            const auto curr_fequency_change = std::abs(current_haplotype_frequencies[haplotype] - new_frequency);
             
             if (curr_fequency_change > max_frequency_change) {
                 max_frequency_change = curr_fequency_change;
@@ -278,7 +278,7 @@ namespace Octopus
         
         const auto genotype_log_likilhoods = compute_genotype_log_likelihoods(genotypes, reads, read_model);
         
-        //debug::print_genotype_log_likelihoods(genotypes, genotype_log_likilhoods, 20);
+        debug::print_genotype_log_likelihoods(genotypes, genotype_log_likilhoods, 20);
         //std::cout << std::endl;
         //debug::print_top_genotypes(genotypes, reads, read_model, 10);
         //exit(0);
@@ -292,7 +292,7 @@ namespace Octopus
         auto haplotype_frequencies  = init_haplotype_frequencies(haplotype_prior_counts, prior_count_sum);
         auto genotype_log_marginals = init_genotype_log_marginals(genotypes, haplotype_frequencies);
         
-        //debug::print_haplotype_priors(haplotype_frequencies, 150);
+        debug::print_haplotype_priors(haplotype_prior_counts, 150);
         //exit(0);
         
         auto genotype_posteriors = init_genotype_posteriors(genotype_log_marginals, genotype_log_likilhoods);

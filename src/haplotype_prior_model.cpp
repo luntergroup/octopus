@@ -54,6 +54,7 @@ double HaplotypePriorModel::evaluate(const Haplotype& to, const Haplotype& from)
         } else {
             auto itr1 = std::cbegin(variant.get_reference_allele_sequence());
             auto itr2 = std::cbegin(variant.get_alternative_allele_sequence());
+            
             std::for_each(itr1, std::cend(variant.get_reference_allele_sequence()),
                           [this, &itr2, &result] (char base) {
                               if (base != *itr2) {

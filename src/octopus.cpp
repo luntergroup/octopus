@@ -112,6 +112,7 @@ namespace Octopus
         auto read_manager        = Options::get_read_manager(options);
         auto regions             = Options::get_search_regions(options, reference);
         auto read_filter         = Options::get_read_filter(options);
+        auto downsampler         = Options::get_downsampler(options);
         auto read_transform      = Options::get_read_transformer(options);
         auto candidate_generator = Options::get_candidate_generator(options, reference);
         auto vcf                 = Options::get_output_vcf(options);
@@ -141,13 +142,19 @@ namespace Octopus
             
             auto good_reads = filter_reads(make_mappable_map(read_manager.fetch_reads(samples, region)), read_filter).first;
             
-            transform_reads(good_reads, read_transform);
+            std::cout << "found " << count_reads(good_reads) << " good reads" << std::endl;
+            
+            auto downsampled_reads = downsampler(std::move(good_reads));
+            
+            std::cout << "downsampled to " << count_reads(downsampled_reads) << " reads" << std::endl;
+            
+            transform_reads(downsampled_reads, read_transform);
             
             auto caller = Options::get_variant_caller(options, reference, candidate_generator, contig_region.first);
             
             cout << "model details: " << caller->get_details() << endl;
             
-            auto calls = caller->call_variants(region, std::move(good_reads));
+            auto calls = caller->call_variants(region, std::move(downsampled_reads));
             
             cout << "writing " << calls.size() << " calls to VCF" << endl;
             

@@ -32,7 +32,7 @@ namespace Octopus
     candidate_generator_ {candidate_generator},
     refcall_type_ {refcall_type}
     {}
-
+    
     std::string VariantCaller::get_details() const
     {
         return do_get_details();
@@ -74,14 +74,14 @@ namespace Octopus
         
         return result;
     }
-
+    
     // protected methods
-
+    
     bool VariantCaller::refcalls_requested() const noexcept
     {
         return refcall_type_ != RefCallType::None;
     }
-
+    
     // private methods
 
     bool VariantCaller::done_calling(const GenomicRegion& region) const noexcept

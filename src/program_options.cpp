@@ -111,7 +111,8 @@ namespace Octopus
         ("no-secondary-alignmenets", po::bool_switch()->default_value(false), "filters reads marked as secondary alignments")
         ("no-supplementary-alignmenets", po::bool_switch()->default_value(false), "filters reads marked as supplementary alignments")
         ("no-unmapped-mates", po::bool_switch()->default_value(false), "filters reads with unmapped mates")
-        ("downsample", po::value<unsigned>()->default_value(10000), "downsample reads in regions where coverage is over this")
+        ("downsample-above", po::value<unsigned>()->default_value(10000), "downsample reads in regions where coverage is over this")
+        ("downsample-target", po::value<unsigned>()->default_value(10000), "the target coverage for the downsampler")
         ;
         
         po::options_description transforms("Read transform options");
@@ -140,9 +141,11 @@ namespace Octopus
         ("contig-ploidies", po::value<std::vector<std::string>>()->multitoken(), "the ploidy of individual contigs")
         ("contig-ploidies-file", po::value<std::string>(), "list of contig=ploidy pairs, one per line")
         ("normal-sample", po::value<std::string>(), "the normal sample used in cancer calling model")
-        ("snp-prior", po::value<double>()->default_value(0.003), "the prior probability of a snp")
+        ("transition-prior", po::value<double>()->default_value(0.003), "the prior probability of a transition snp from the reference")
+        ("transversion-prior", po::value<double>()->default_value(0.003), "the prior probability of a transversion snp from the reference")
         ("insertion-prior", po::value<double>()->default_value(0.003), "the prior probability of an insertion into the reference")
         ("deletion-prior", po::value<double>()->default_value(0.003), "the prior probability of a deletion from the reference")
+        ("prior-precision", po::value<double>()->default_value(0.003), "the precision (inverse variance) of the given variant priors")
         ;
         
         po::options_description calling("Caller options");
@@ -305,7 +308,7 @@ namespace Octopus
             
             return result;
         }
-    } // end namespace detail
+    } // namespace detail
     
     unsigned get_max_threads(const po::variables_map& options)
     {
@@ -469,6 +472,14 @@ namespace Octopus
         return result;
     }
     
+    Downsampler<SampleIdType> get_downsampler(const po::variables_map& options)
+    {
+        auto max_coverage    = options.at("downsample-above").as<unsigned>();
+        auto target_coverage = options.at("downsample-target").as<unsigned>();
+        
+        return Downsampler<SampleIdType>(max_coverage, target_coverage);
+    }
+    
     ReadTransform get_read_transformer(const po::variables_map& options)
     {
         using SizeType = AlignedRead::SizeType;
@@ -524,55 +535,55 @@ namespace Octopus
         return result;
     }
     
-        std::unique_ptr<VariantCaller> get_variant_caller(const po::variables_map& options, ReferenceGenome& reference,
-                                                          CandidateVariantGenerator& candidate_generator,
-                                                          const GenomicRegion::StringType& contig)
-        {
-            const auto& model = options.at("model").as<std::string>();
-            
-            auto refcall_type = VariantCaller::RefCallType::None;
-            
-            if (options.at("make-positional-refcalls").as<bool>()) {
-                refcall_type = VariantCaller::RefCallType::Positional;
-            } else if (options.at("make-blocked-refcalls").as<bool>()) {
-                refcall_type = VariantCaller::RefCallType::Blocked;
-            }
-            
-            auto ploidy = options.at("ploidy").as<unsigned>();
-            
-            if (options.count("contig-ploidies") == 1) {
-                auto contig_ploidies = options.at("contig-ploidies").as<std::vector<std::string>>();
-                
-                for (const auto& contig_ploidy : contig_ploidies) {
-                    if (contig_ploidy.find(contig) == 0) {
-                        if (contig_ploidy[contig.size()] != '=') {
-                            throw std::runtime_error {"Could not pass contig-plodies option"};
-                        }
-                        ploidy = static_cast<unsigned>(std::stoul(contig_ploidy.substr(contig.size() + 1)));
-                    }
-                }
-            } else if (options.count("contig-ploidies-file") == 1) {
-                // TODO: fetch from file
-            }
-            
-            auto min_variant_posterior_phred = options.at("min-variant-posterior").as<unsigned>();
-            auto min_variant_posterior        = Maths::phred_to_probability(min_variant_posterior_phred);
-            
-            auto min_refcall_posterior_phred = options.at("min-refcall-posterior").as<unsigned>();
-            auto min_refcall_posterior       = Maths::phred_to_probability(min_refcall_posterior_phred);
-            
-            SampleIdType normal_sample {};
-            double min_somatic_posterior {};
-            if (model == "cancer") {
-                normal_sample = options.at("normal-sample").as<std::string>();
-                auto min_somatic_posterior_phred = options.at("min-somatic-posterior").as<unsigned>();
-                min_somatic_posterior = Maths::phred_to_probability(min_somatic_posterior_phred);
-            }
-            
-            return make_variant_caller(model, reference, candidate_generator, refcall_type,
-                                       min_variant_posterior, min_refcall_posterior,
-                                       ploidy, normal_sample, min_somatic_posterior);
+    std::unique_ptr<VariantCaller> get_variant_caller(const po::variables_map& options, ReferenceGenome& reference,
+                                                      CandidateVariantGenerator& candidate_generator,
+                                                      const GenomicRegion::StringType& contig)
+    {
+        const auto& model = options.at("model").as<std::string>();
+        
+        auto refcall_type = VariantCaller::RefCallType::None;
+        
+        if (options.at("make-positional-refcalls").as<bool>()) {
+            refcall_type = VariantCaller::RefCallType::Positional;
+        } else if (options.at("make-blocked-refcalls").as<bool>()) {
+            refcall_type = VariantCaller::RefCallType::Blocked;
         }
+        
+        auto ploidy = options.at("ploidy").as<unsigned>();
+        
+        if (options.count("contig-ploidies") == 1) {
+            auto contig_ploidies = options.at("contig-ploidies").as<std::vector<std::string>>();
+            
+            for (const auto& contig_ploidy : contig_ploidies) {
+                if (contig_ploidy.find(contig) == 0) {
+                    if (contig_ploidy[contig.size()] != '=') {
+                        throw std::runtime_error {"Could not pass contig-plodies option"};
+                    }
+                    ploidy = static_cast<unsigned>(std::stoul(contig_ploidy.substr(contig.size() + 1)));
+                }
+            }
+        } else if (options.count("contig-ploidies-file") == 1) {
+            // TODO: fetch from file
+        }
+        
+        auto min_variant_posterior_phred = options.at("min-variant-posterior").as<unsigned>();
+        auto min_variant_posterior        = Maths::phred_to_probability(min_variant_posterior_phred);
+        
+        auto min_refcall_posterior_phred = options.at("min-refcall-posterior").as<unsigned>();
+        auto min_refcall_posterior       = Maths::phred_to_probability(min_refcall_posterior_phred);
+        
+        SampleIdType normal_sample {};
+        double min_somatic_posterior {};
+        if (model == "cancer") {
+            normal_sample = options.at("normal-sample").as<std::string>();
+            auto min_somatic_posterior_phred = options.at("min-somatic-posterior").as<unsigned>();
+            min_somatic_posterior = Maths::phred_to_probability(min_somatic_posterior_phred);
+        }
+        
+        return make_variant_caller(model, reference, candidate_generator, refcall_type,
+                                   min_variant_posterior, min_refcall_posterior,
+                                   ploidy, normal_sample, min_somatic_posterior);
+    }
     
     std::unique_ptr<VariantCaller> get_variant_caller(const po::variables_map& options, ReferenceGenome& reference,
                                                       CandidateVariantGenerator& candidate_generator)
