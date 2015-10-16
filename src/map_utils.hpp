@@ -143,7 +143,7 @@ leftmost_overlapped(const MappableMap& mappables, const MappableType& mappable,
     for (const auto& map_pair : mappables) {
         auto overlapped = overlap_range(std::cbegin(map_pair.second), std::cend(map_pair.second), mappable, order);
         
-        if (overlapped.begin() != std::cend(map_pair.second) && begins_before(overlapped.front(), *result)) {
+        if (!overlapped.empty() && overlapped.begin() != std::cend(map_pair.second) && begins_before(overlapped.front(), *result)) {
             result = overlapped.begin().base();
         }
     }
@@ -163,7 +163,7 @@ rightmost_overlapped(const MappableMap& mappables, const MappableType& mappable,
     for (const auto& map_pair : mappables) {
         auto overlapped = overlap_range(std::cbegin(map_pair.second), std::cend(map_pair.second), mappable, order);
         
-        if (overlapped.begin() != overlapped.end() && ends_before(*result, overlapped.back())) {
+        if (!overlapped.empty() && overlapped.begin() != overlapped.end() && ends_before(*result, overlapped.back())) {
             result = std::prev(overlapped.end().base());
         }
     }

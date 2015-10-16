@@ -43,7 +43,8 @@ public:
     bool is_unique(const Haplotype& haplotype) const;
     GenomicRegion get_seperation_region(const Haplotype& first, const Haplotype& second) const;
     void extend(const Allele& allele);
-    std::vector<Haplotype> get_haplotypes(const GenomicRegion& region);
+    //std::vector<Haplotype> get_haplotypes() const; // TODO: all haplotypes
+    std::vector<Haplotype> get_haplotypes(const GenomicRegion& region) const;
     void prune_all(const Haplotype& haplotype);
     void prune_unique(const Haplotype& haplotype);
     void clear();
@@ -57,7 +58,7 @@ private:
     Vertex root_;
     std::list<Vertex> haplotype_leafs_;
     ReferenceGenome& reference_;
-    std::unordered_multimap<Haplotype, Vertex> haplotype_leaf_cache_;
+    mutable std::unordered_multimap<Haplotype, Vertex> haplotype_leaf_cache_;
     std::unordered_set<Haplotype> recently_removed_haplotypes_;
     
     using LeafIterator  = decltype(haplotype_leafs_)::const_iterator;

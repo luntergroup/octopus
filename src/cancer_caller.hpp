@@ -12,6 +12,7 @@
 #include <string>
 
 #include "variant_caller.hpp"
+#include "haplotype_phaser.hpp"
 
 class GenomicRegion;
 class ReadManager;
@@ -27,7 +28,8 @@ namespace Octopus
         CancerVariantCaller() = delete;
         CancerVariantCaller(ReferenceGenome& reference, CandidateVariantGenerator& candidate_generator,
                             RefCallType refcalls, double min_variant_posterior, double min_somatic_posterior,
-                            double min_refcall_posterior, const SampleIdType& normal_sample);
+                            double min_refcall_posterior, const SampleIdType& normal_sample,
+                            bool call_somatics_only);
         ~CancerVariantCaller() = default;
         
         CancerVariantCaller(const CancerVariantCaller&)            = delete;
@@ -36,17 +38,17 @@ namespace Octopus
         CancerVariantCaller& operator=(CancerVariantCaller&&)      = delete;
         
     private:
+        HaplotypePhaser phaser_;
+        
         const SampleIdType normal_sample_;
-        const double min_variant_posterior_ = 0.95;
+        const double min_variant_posterior_          = 0.95;
         const double min_somatic_mutation_posterior_ = 0.9;
-        const double min_refcall_posterior_ = 0.5;
+        const double min_refcall_posterior_          = 0.5;
+        
+        bool call_somatics_only_;
         
         std::string do_get_details() const override;
         
-        GenomicRegion get_init_region(const GenomicRegion& region, const ReadMap& reads,
-                                      const std::vector<Variant>& candidates) override;
-        GenomicRegion get_next_region(const GenomicRegion& current_region, const ReadMap& reads,
-                                      const std::vector<Variant>& candidates) override;
         std::vector<VcfRecord> call_variants(const GenomicRegion& region, const std::vector<Variant>& candidates,
                                              const ReadMap& reads) override;
     };

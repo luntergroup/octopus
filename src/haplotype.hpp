@@ -75,25 +75,6 @@ public:
     friend void print_variant_alleles(const Haplotype& haplotype);
     
 private:
-    // TODO: store these instead of Allele's... don't need to keep the Contig name in each allele.. it will
-    // save some space
-    class ContigAllele : Mappable<ContigAllele>
-    {
-    public:
-        using SequenceType = Allele::SequenceType;
-        
-        ContigAllele() = default;
-        template <typename R, typename S> ContigAllele(R&& region, S&& sequence);
-        //template <typename S> ContigAllele(const GenomicRegion& region, S&& sequence);
-        
-        const ContigRegion& get_region() const;
-        const SequenceType& get_sequence() const;
-        
-    private:
-        const ContigRegion region_;
-        const SequenceType sequence_;
-    };
-    
     ReferenceGenome* reference_; // non-owning pointer rather than a reference so Haplotype copyable
     GenomicRegion region_;
     mutable SequenceType cached_sequence_;
@@ -108,13 +89,6 @@ private:
     SequenceType get_sequence_bounded_by_explicit_alleles(AlleleIterator first, AlleleIterator last) const;
     SequenceType get_sequence_bounded_by_explicit_alleles() const;
 };
-
-template <typename R, typename S>
-Haplotype::ContigAllele::ContigAllele(R&& region, S&& sequence)
-:
-region_ {std::forward<R>(region)},
-sequence_ {std::forward<S>(sequence)}
-{}
 
 template <typename T>
 void Haplotype::push_back(T&& allele)

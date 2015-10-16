@@ -65,9 +65,6 @@ namespace Octopus
                                                       CandidateVariantGenerator& candidate_generator,
                                                       const GenomicRegion::StringType& contig);
     
-    std::unique_ptr<VariantCaller> get_variant_caller(const po::variables_map& options, ReferenceGenome& reference,
-                                                      CandidateVariantGenerator& candidate_generator);
-    
     VcfWriter get_output_vcf(const po::variables_map& options);
     
     } // namespace Options

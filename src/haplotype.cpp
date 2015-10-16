@@ -239,16 +239,6 @@ size_t Haplotype::get_hash() const
 
 // private methods
 
-const ContigRegion& Haplotype::ContigAllele::get_region() const
-{
-    return region_;
-}
-
-const Haplotype::ContigAllele::SequenceType& Haplotype::ContigAllele::get_sequence() const
-{
-    return sequence_;
-}
-
 GenomicRegion Haplotype::get_region_bounded_by_explicit_alleles() const
 {
     if (explicit_alleles_.empty()) throw std::runtime_error {"Cannot get region from empty allele list"};

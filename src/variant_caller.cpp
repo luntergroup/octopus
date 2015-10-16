@@ -38,6 +38,11 @@ namespace Octopus
         return do_get_details();
     }
     
+    size_t VariantCaller::num_buffered_reads() const noexcept
+    {
+        return 0;
+    }
+    
     std::vector<VcfRecord> VariantCaller::call_variants(const GenomicRegion& region, ReadMap reads)
     {
         add_reads(reads, candidate_generator_);
@@ -51,28 +56,7 @@ namespace Octopus
         std::cout << "candidates are:" << std::endl;
         for (const auto& c : candidates) std::cout << c << std::endl;
         
-        auto current_region = get_init_region(region, reads, candidates);
-        
-        std::vector<VcfRecord> result {};
-        
-        while (!done_calling(current_region)) {
-            std::cout << "processing sub-region " << current_region << std::endl;
-            
-            auto overlapped = overlap_range(std::cbegin(candidates), std::cend(candidates), current_region);
-            
-            std::vector<Variant> sub_candidates {std::begin(overlapped), std::end(overlapped)};
-            
-            auto reads_in_region = copy_overlapped(reads, current_region);
-            
-            auto calls_in_region = call_variants(current_region, sub_candidates, reads_in_region);
-            
-            result.insert(std::end(result), std::make_move_iterator(std::begin(calls_in_region)),
-                          std::make_move_iterator(std::end(calls_in_region)));
-            
-            current_region = get_next_region(current_region, reads, candidates);
-        }
-        
-        return result;
+        return call_variants(region, candidates, reads);
     }
     
     // protected methods

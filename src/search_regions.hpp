@@ -74,7 +74,7 @@ namespace detail
 enum class IndicatorLimit { SharedWithPreviousRegion, NoLimit };
 enum class ExtensionLimit { WithinReadLengthOfFirstIncluded, NoLimit };
 
-/**
+/*
  Determines the optimal sub-region given the conditions. Up to 'max_included' non-overlapping variants are included
  in the returned region, of which up to 'max_indicators' may be present in 'the_previous_sub_region'.
  
@@ -83,7 +83,7 @@ enum class ExtensionLimit { WithinReadLengthOfFirstIncluded, NoLimit };
  
  The algorithm only uses indicators that may share reads containing variants with the new region (note
  this does not actually look at the read sequence, only the position). Unless 
- 'limit_indicators_to_shared_with_previous_region' is false, in which case all indicators are used.
+ 'limit_indicators_to_shared_with_previous_region' is NoLimit, in which case all indicators are used.
  */
 template <typename SampleReadMap, typename Container>
 GenomicRegion advance_region(const GenomicRegion& previous_region,
@@ -176,7 +176,7 @@ std::vector<GenomicRegion> cover_region(const GenomicRegion& region,
     
     return result;
 }
-    
+
 } // namespace Octopus
 
 #endif

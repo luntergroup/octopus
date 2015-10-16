@@ -58,8 +58,6 @@ std::vector<Allele> get_reference_alleles(const std::vector<GenomicRegion>& regi
 
 std::vector<Allele> get_positional_reference_alleles(const GenomicRegion& region, ReferenceGenome& reference);
 
-//Allele::SequenceType get_subsequence(const Allele& allele, const GenomicRegion& region);
-
 Allele splice(const Allele& allele, const GenomicRegion& region);
 
 bool contains(const Allele& lhs, const Allele& rhs);

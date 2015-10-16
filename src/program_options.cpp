@@ -93,7 +93,7 @@ namespace Octopus
         ("skip-regions-file", po::value<std::string>(), "list of one-indexed regions (chrom:begin-end) to skip, one per line")
         ("samples,S", po::value<std::vector<std::string>>()->multitoken(), "space-seperated list of sample names to consider")
         ("samples-file", po::value<std::string>(), "list of sample names to consider, one per line")
-        ("output,o", po::value<std::string>()->default_value("octopus_variants.vcf"), "write output to file")
+        ("output,o", po::value<std::string>()->default_value("octopus_calls.vcf"), "write output to file")
         //("log-file", po::value<std::string>(), "path of the output log file")
         ;
         
@@ -575,40 +575,6 @@ namespace Octopus
         
         SampleIdType normal_sample {};
         double min_somatic_posterior {};
-        if (model == "cancer") {
-            normal_sample = options.at("normal-sample").as<std::string>();
-            auto min_somatic_posterior_phred = options.at("min-somatic-posterior").as<unsigned>();
-            min_somatic_posterior = Maths::phred_to_probability(min_somatic_posterior_phred);
-        }
-        
-        return make_variant_caller(model, reference, candidate_generator, refcall_type,
-                                   min_variant_posterior, min_refcall_posterior,
-                                   ploidy, normal_sample, min_somatic_posterior);
-    }
-    
-    std::unique_ptr<VariantCaller> get_variant_caller(const po::variables_map& options, ReferenceGenome& reference,
-                                                      CandidateVariantGenerator& candidate_generator)
-    {
-        const auto& model = options.at("model").as<std::string>();
-        
-        auto refcall_type = VariantCaller::RefCallType::None;
-        
-        if (options.at("make-positional-refcalls").as<bool>()) {
-            refcall_type = VariantCaller::RefCallType::Positional;
-        } else if (options.at("make-blocked-refcalls").as<bool>()) {
-            refcall_type = VariantCaller::RefCallType::Blocked;
-        }
-        
-        auto ploidy = options.at("ploidy").as<unsigned>();
-        
-        auto min_variant_posterior_phred = options.at("min-variant-posterior").as<unsigned>();
-        auto min_variant_posterior       = Maths::phred_to_probability(min_variant_posterior_phred);
-        
-        auto min_refcall_posterior_phred = options.at("min-refcall-posterior").as<unsigned>();
-        auto min_refcall_posterior       = Maths::phred_to_probability(min_refcall_posterior_phred);
-        
-        SampleIdType normal_sample {};
-        double min_somatic_posterior {};
         bool call_somatics_only {false};
         
         if (model == "cancer") {
@@ -620,7 +586,8 @@ namespace Octopus
         
         return make_variant_caller(model, reference, candidate_generator, refcall_type,
                                    min_variant_posterior, min_refcall_posterior,
-                                   ploidy, normal_sample, min_somatic_posterior);
+                                   ploidy, normal_sample, min_somatic_posterior,
+                                   call_somatics_only);
     }
     
     VcfWriter get_output_vcf(const po::variables_map& options)

@@ -22,8 +22,6 @@
 #include "variant.hpp"
 #include "haplotype.hpp"
 #include "genotype.hpp"
-#include "haplotype_tree.hpp"
-#include "search_regions.hpp"
 #include "vcf_record.hpp"
 #include "maths.hpp"
 #include "mappable_algorithms.hpp"
@@ -33,7 +31,6 @@
 #include "read_utils.hpp"
 #include "string_utils.hpp"
 #include "sequence_utils.hpp"
-#include "search_regions.hpp"
 #include "random_candidate_variant_generator.hpp"
 
 #include <iostream> // TEST
@@ -48,6 +45,7 @@ PopulationVariantCaller::PopulationVariantCaller(ReferenceGenome& reference, Can
                                                  double min_refcall_posterior, unsigned ploidy)
 :
 VariantCaller {reference, candidate_generator, refcall_type},
+phaser_ {reference, 1000, 0},
 ploidy_ {ploidy},
 min_variant_posterior_ {min_variant_posterior},
 min_refcall_posterior_ {min_refcall_posterior}
@@ -56,28 +54,6 @@ min_refcall_posterior_ {min_refcall_posterior}
 std::string PopulationVariantCaller::do_get_details() const
 {
     return "population caller. ploidy = " + std::to_string(ploidy_);
-}
-
-GenomicRegion PopulationVariantCaller::get_init_region(const GenomicRegion& region, const ReadMap& reads,
-                                                       const std::vector<Variant>& candidates)
-{
-    if (candidates.empty() && refcalls_requested()) {
-        return region;
-    }
-    
-    auto r = advance_region(get_head(region, 0), reads, candidates, 12, 0, IndicatorLimit::NoLimit, ExtensionLimit::NoLimit);
-    
-    if (contains(r, region)) {
-        return region;
-    }
-    
-    return r;
-}
-
-GenomicRegion PopulationVariantCaller::get_next_region(const GenomicRegion& current_region, const ReadMap& reads,
-                                                       const std::vector<Variant>& candidates)
-{
-    return get_tail(current_region); //advance_region(current_region, reads, candidates, 6, 0);
 }
 
 // non member methods
@@ -587,7 +563,7 @@ OutputIt merge_transform(InputIt1 first1, InputIt1 last1, InputIt2 first2,
     }
     return std::transform(first3, last3, d_first, unary_op);
 }
-    
+
 std::vector<VcfRecord>
 PopulationVariantCaller::call_variants(const GenomicRegion& region, const std::vector<Variant>& candidates,
                                        const ReadMap& reads)
@@ -596,98 +572,101 @@ PopulationVariantCaller::call_variants(const GenomicRegion& region, const std::v
     
     if (empty(region)) return result;
     
-    HaplotypeTree tree {reference_};
+    phaser_.setup(candidates, reads);
     
-    if (candidates.empty()) {
-        if (refcalls_requested()) {
-            extend_tree(generate_random_variants(region, reference_), tree);
-        } else {
-            return result;
-        }
-    } else {
-        extend_tree(candidates, tree);
+    while (!phaser_.expended_candidates()) {
+        auto haplotypes = phaser_.get_haplotypes();
+        
+        //    if (candidates.empty()) {
+        //        if (refcalls_requested()) {
+        //            extend_tree(generate_random_variants(region, reference_), tree);
+        //        } else {
+        //            return result;
+        //        }
+        //    } else {
+        //        extend_tree(candidates, tree);
+        //    }
+        
+        std::cout << "there are " << haplotypes.size() << " unique haplotypes" << std::endl;
+        
+        auto haplotype_region = get_region(haplotypes.front());
+        
+        std::cout << "haplotype region is " << haplotype_region << std::endl;
+        
+        auto haplotype_region_reads = copy_overlapped(reads, haplotype_region);
+        
+        std::cout << "there are " << count_reads(haplotype_region_reads) << " reads in haplotype region" << std::endl;
+        
+        GenotypeModel::Population genotype_model {ploidy_};
+        
+        auto genotype_posteriors = genotype_model.evaluate(haplotypes, haplotype_region_reads, reference_).genotype_posteriors;
+        
+        auto phased_gps = phaser_.phase(haplotypes, genotype_posteriors, reads);
+        
+        //remove_low_posterior_genotypes(genotype_posteriors, 0.0000000001);
+        
+        auto alleles = generate_callable_alleles(region, candidates, refcall_type_, reference_);
+        
+        auto allele_posteriors = compute_allele_posteriors(genotype_posteriors, alleles);
+        
+        auto variant_calls = call_segment_variants(segment_overlapped(candidates), allele_posteriors, min_variant_posterior_);
+        
+        parsimonise_variant_calls(variant_calls, reference_);
+        
+        auto called_regions = get_regions(variant_calls);
+        
+        auto variant_genotype_calls = call_genotypes(genotype_posteriors, called_regions);
+        
+        //debug::print_top_genotype_posteriors(genotype_posteriors);
+        
+        //debug::print_top_allele_posteriors(allele_posteriors);
+        
+//        std::cout << "variants" << std::endl;
+//        for (auto v : variant_calls) {
+//            std::cout << v.first.front() << std::endl;
+//        }
+//        
+//        std::cout << "variant regions" << std::endl;
+//        for (auto r : called_regions) {
+//            std::cout << r << std::endl;
+//        }
+//        
+//        std::cout << "variant genotypes" << std::endl;
+//        for (auto g : variant_genotype_calls) {
+//            for (auto sc : g) {
+//                std::cout << sc.first << std::endl;
+//                std::cout << sc.second.first << std::endl;
+//            }
+//        }
+        
+        auto candidate_ref_alleles = generate_candidate_reference_alleles(alleles, called_regions, candidates, refcall_type_);
+        
+        //    std::cout << "candidate refcall alleles are" << std::endl;
+        //    for (const auto& allele : candidate_ref_alleles) {
+        //        std::cout << allele << std::endl;
+        //    }
+        
+        //auto refcalls = call_reference(genotype_posteriors, candidate_ref_alleles, min_refcall_posterior_);
+        auto refcalls = call_reference_better(genotype_posteriors, candidate_ref_alleles, min_refcall_posterior_);
+        
+        auto phase_region = (called_regions.empty()) ? get_head(region) : get_encompassing(called_regions.front(), called_regions.back());
+        
+        result.reserve(variant_calls.size() + refcalls.size());
+        
+        merge_transform(std::cbegin(variant_calls), std::cend(variant_calls), std::cbegin(variant_genotype_calls),
+                        std::cbegin(refcalls), std::cend(refcalls), std::back_inserter(result),
+                        [this, &reads, &phase_region] (const auto& variant_call, const auto& genotype_call) {
+                            return output_variant_call(variant_call.first.front().get_reference_allele(),
+                                                       variant_call.first, genotype_call,
+                                                       variant_call.second, reference_, reads, phase_region);
+                        },
+                        [this, &reads] (const auto& refcall) {
+                            return output_reference_call(refcall, reference_, reads, ploidy_);
+                        },
+                        [] (const auto& lhs, const auto& rhs) {
+                            return is_before(lhs.reference_allele, rhs.first.front());
+                        });
     }
-    
-    std::cout << "tree grown" << std::endl;
-    
-    auto haplotypes = tree.get_haplotypes(region);
-    
-    tree.clear(); // for now
-    
-    std::cout << "there are " << haplotypes.size() << " haplotypes" << std::endl;
-    
-    unique_least_complex(haplotypes);
-    
-    std::cout << "there are " << haplotypes.size() << " unique haplotypes" << std::endl;
-    
-    GenotypeModel::Population genotype_model {ploidy_};
-    
-    auto genotype_posteriors = genotype_model.evaluate(haplotypes, reads, reference_).genotype_posteriors;
-    
-    //remove_low_posterior_genotypes(genotype_posteriors, 0.0000000001);
-    
-    auto alleles = generate_callable_alleles(region, candidates, refcall_type_, reference_);
-    
-    auto allele_posteriors = compute_allele_posteriors(genotype_posteriors, alleles);
-    
-    auto variant_calls = call_segment_variants(segment_overlapped(candidates), allele_posteriors, min_variant_posterior_);
-    
-    parsimonise_variant_calls(variant_calls, reference_);
-    
-    auto called_regions = get_regions(variant_calls);
-    
-    auto variant_genotype_calls = call_genotypes(genotype_posteriors, called_regions);
-    
-    debug::print_top_genotype_posteriors(genotype_posteriors);
-    
-    debug::print_top_allele_posteriors(allele_posteriors);
-    
-    std::cout << "variants" << std::endl;
-    for (auto v : variant_calls) {
-        std::cout << v.first.front() << std::endl;
-    }
-    
-    std::cout << "variant regions" << std::endl;
-    for (auto r : called_regions) {
-        std::cout << r << std::endl;
-    }
-    
-    std::cout << "variant genotypes" << std::endl;
-    for (auto g : variant_genotype_calls) {
-        for (auto sc : g) {
-            std::cout << sc.first << std::endl;
-            std::cout << sc.second.first << std::endl;
-        }
-    }
-//    exit(0);
-    
-    auto candidate_ref_alleles = generate_candidate_reference_alleles(alleles, called_regions, candidates, refcall_type_);
-    
-//    std::cout << "candidate refcall alleles are" << std::endl;
-//    for (const auto& allele : candidate_ref_alleles) {
-//        std::cout << allele << std::endl;
-//    }
-    
-    //auto refcalls = call_reference(genotype_posteriors, candidate_ref_alleles, min_refcall_posterior_);
-    auto refcalls = call_reference_better(genotype_posteriors, candidate_ref_alleles, min_refcall_posterior_);
-    
-    auto phase_region = (called_regions.empty()) ? get_head(region) : get_encompassing(called_regions.front(), called_regions.back());
-    
-    result.reserve(variant_calls.size() + refcalls.size());
-    
-    merge_transform(std::cbegin(variant_calls), std::cend(variant_calls), std::cbegin(variant_genotype_calls),
-                    std::cbegin(refcalls), std::cend(refcalls), std::back_inserter(result),
-                    [this, &reads, &phase_region] (const auto& variant_call, const auto& genotype_call) {
-                        return output_variant_call(variant_call.first.front().get_reference_allele(),
-                                                   variant_call.first, genotype_call,
-                                                   variant_call.second, reference_, reads, phase_region);
-                    },
-                    [this, &reads] (const auto& refcall) {
-                        return output_reference_call(refcall, reference_, reads, ploidy_);
-                    },
-                    [] (const auto& lhs, const auto& rhs) {
-                        return is_before(lhs.reference_allele, rhs.first.front());
-                    });
     
     return result;
 }

@@ -22,18 +22,20 @@ inline po::variables_map get_basic_mock_options()
         "--reference", human_reference_fasta.c_str(),
         //"--reference", ecoli_reference_fasta.c_str(),
         
-        "--reads", NA12878_low_coverage.c_str(), HG00101.c_str(), HG00102.c_str(), HG00103.c_str(),
+        //"--reads", NA12878_low_coverage.c_str(), HG00101.c_str(), HG00102.c_str(), HG00103.c_str(),
         //"--reads", HG00102.c_str(),
         
         //"--reads", NA12878_high_coverage.c_str(), NA12878_simulated_cancer_basic.c_str(), //cancer test
         //"--reads", NA12891_high_coverage.c_str(), NA12878_simulated_cancer_basic.c_str(), //cancer test
         
+        "--reads", "/Users/dcooke/Genomics/cancer/TCGA/benchmark/HCC1143.NORMAL.7x.compare.chr17.bam", "/Users/dcooke/Genomics/cancer/TCGA/benchmark/HCC1143.7x.n25t65s10.chr17.bam",
+        
         //"--reads", NA12878_high_coverage.c_str(), NA12891_high_coverage.c_str(),
         
         //"--reads", ecoli_bam.string().c_str(),
         
-        //"--model", "cancer", // default "population"
-        "--normal-sample", "NA12878", // for cancer model
+        "--model", "cancer", // default "population"
+        "--normal-sample", "HCC1143.NORMAL.30x.compare", // for cancer model
         "--ploidy", "2",
         "--contig-ploidies", "MT=1", "Y=1",
         
@@ -98,11 +100,18 @@ inline po::variables_map get_basic_mock_options()
         //"--regions", "13:33,749,244-33,749,585", // is this a real SNP?
         //"--regions", "13:47,354,553-47,354,592", // real SNP?
         
-        "--regions", "4:122,184,623-122,184,764",
+        //"--regions", "13:36,802,064-36,805,395", // entire region in NA12878_simulated_cancer_basic..
+        //"--regions", "13:36,803,643-36,803,828", // just the region containing the somatic
+        //"--regions", "13:36,803,666-36,803,705",
+        
+        //"--regions", "17:1000000-5000000",
+        "--regions", "17:49,530,500-49,530,911",
         
         "--min-variant-posterior", "5",
         "--min-refcall-posterior", "1",
         "--min-somatic-posterior", "2",
+        
+        "--somatics-only",
         
         "--output", test_out_vcf.c_str(),
         

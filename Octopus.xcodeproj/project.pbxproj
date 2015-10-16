@@ -315,6 +315,7 @@
 		D463C19C1B062F7F00739A66 /* vcf_tests.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = vcf_tests.cpp; sourceTree = "<group>"; };
 		D463C1A11B0A160000739A66 /* allele.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = allele.cpp; sourceTree = "<group>"; };
 		D463C1A31B0A174B00739A66 /* variant.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = variant.cpp; sourceTree = "<group>"; };
+		D47686611BD0F48A0067E03D /* todo.md */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = net.daringfireball.markdown; name = todo.md; path = doc/todo.md; sourceTree = "<group>"; };
 		D4807FA91BA6FA4900657D4F /* candidate_variant_generator.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = candidate_variant_generator.cpp; sourceTree = "<group>"; };
 		D4807FAD1BA710A400657D4F /* mock_options.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = mock_options.hpp; sourceTree = "<group>"; };
 		D4807FAE1BA826DB00657D4F /* population_caller.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = population_caller.cpp; sourceTree = "<group>"; };
@@ -464,6 +465,7 @@
 				D435E9F81B2B345700945EC7 /* Makefile */,
 				CAA4DC361A83A3BA00DD3E9A /* bin */,
 				CAA4DC311A82B36300DD3E9A /* README.md */,
+				D47686611BD0F48A0067E03D /* todo.md */,
 				CAA4DC301A82B28800DD3E9A /* .gitignore */,
 				CAA4DC2E1A8219DD00DD3E9A /* doc */,
 				CAA4DC2D1A8219D900DD3E9A /* test */,

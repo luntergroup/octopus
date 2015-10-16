@@ -41,16 +41,6 @@ namespace Octopus
         return result;
     }
     
-    std::vector<GenomicRegion> split_region_by_coverage(const GenomicRegion& region, size_t target_region_coverage,
-                                                        ReadManager& read_manager)
-    {
-        std::vector<GenomicRegion> result {};
-        
-        
-        
-        return result;
-    }
-    
     auto get_contigs(const SearchRegions& regions)
     {
         std::vector<GenomicRegion::StringType> result {};
@@ -110,13 +100,13 @@ namespace Octopus
         auto downsampler         = Options::get_downsampler(options);
         auto read_transform      = Options::get_read_transformer(options);
         auto candidate_generator = Options::get_candidate_generator(options, reference);
-        auto vcf                 = Options::get_output_vcf(options);
+        auto output              = Options::get_output_vcf(options);
         
         const auto samples = get_samples(options, read_manager);
         
-        cout << "writing results to " << vcf.path().string() << endl;
+        cout << "writing results to " << output.path().string() << endl;
         
-        auto contigs = get_contigs(regions);
+        const auto contigs = get_contigs(regions);
         
         auto vcf_header_builder = get_default_header_builder().set_samples(samples);
         for (const auto& contig : contigs) vcf_header_builder.add_contig(contig);
@@ -125,34 +115,43 @@ namespace Octopus
         
         const auto vcf_header = vcf_header_builder.build_once();
         
-        vcf.write(vcf_header);
+        output.write(vcf_header);
         
-        for (const auto& contig_region : regions) {
-            auto region = *contig_region.second.cbegin();
+        for (const auto& contig_regions : regions) {
+            const auto& contig = contig_regions.first;
             
-            cout << "processing region " << region << endl;
+            size_t num_buffered_reads {};
             
-            auto good_reads = filter_reads(make_mappable_map(read_manager.fetch_reads(samples, region)), read_filter).first;
-            
-            std::cout << "found " << count_reads(good_reads) << " good reads" << std::endl;
-            
-            auto downsampled_reads = downsampler(std::move(good_reads));
-            
-            std::cout << "downsampled to " << count_reads(downsampled_reads) << " reads" << std::endl;
-            
-            transform_reads(downsampled_reads, read_transform);
-            
-            auto caller = Options::get_variant_caller(options, reference, candidate_generator, contig_region.first);
-            
-            cout << "model details: " << caller->get_details() << endl;
-            
-            auto calls = caller->call_variants(region, std::move(downsampled_reads));
-            
-            cout << "writing " << calls.size() << " calls to VCF" << endl;
-            
-            for (auto& call : calls) {
-                cout << call << endl;
-                vcf.write(call);
+            for (const auto& region : contig_regions.second) {
+                cout << "processing input region " << region << endl;
+                
+//                std::cout << "num reads in BAMS is " << read_manager.count_reads(region) << std::endl;
+//                exit(0);
+                
+                auto good_reads = filter_reads(make_mappable_map(read_manager.fetch_reads(samples, region)), read_filter).first;
+                
+                std::cout << "found " << count_reads(good_reads) << " good reads" << std::endl;
+                
+                auto downsampled_reads = downsampler(std::move(good_reads));
+                
+                std::cout << "downsampled to " << count_reads(downsampled_reads) << " reads" << std::endl;
+                
+                transform_reads(downsampled_reads, read_transform);
+                
+                auto caller = Options::get_variant_caller(options, reference, candidate_generator, contig);
+                
+                cout << "model details: " << caller->get_details() << endl;
+                
+                auto calls = caller->call_variants(region, std::move(downsampled_reads));
+                
+                cout << "writing " << calls.size() << " calls to VCF" << endl;
+                
+                for (auto&& call : calls) {
+                    cout << call << endl;
+                    output.write(std::move(call));
+                }
+                
+                num_buffered_reads = caller->num_buffered_reads();
             }
         }
     }

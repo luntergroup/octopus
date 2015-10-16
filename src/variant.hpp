@@ -18,7 +18,7 @@
 #include "comparable.hpp"
 #include "mappable.hpp"
 
-/**
+/*
  A variant is a combination of a reference allele and an alternative allele.
  */
 class Variant : public Comparable<Variant>, public Mappable<Variant>

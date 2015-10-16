@@ -14,6 +14,8 @@
 
 #include "variant_caller.hpp"
 
+#include "haplotype_phaser.hpp"
+
 class GenomicRegion;
 class ReadManager;
 class ReadTransform;
@@ -37,16 +39,14 @@ namespace Octopus
         PopulationVariantCaller& operator=(PopulationVariantCaller&&)      = delete;
         
     private:
+        HaplotypePhaser phaser_;
+        
         const unsigned ploidy_;
         const double min_variant_posterior_ = 0.95;
         const double min_refcall_posterior_ = 0.5;
         
         std::string do_get_details() const override;
         
-        GenomicRegion get_init_region(const GenomicRegion& region, const ReadMap& reads,
-                                      const std::vector<Variant>& candidates) override;
-        GenomicRegion get_next_region(const GenomicRegion& current_region, const ReadMap& reads,
-                                      const std::vector<Variant>& candidates) override;
         std::vector<VcfRecord> call_variants(const GenomicRegion& region, const std::vector<Variant>& candidates,
                                              const ReadMap& reads) override;
     };

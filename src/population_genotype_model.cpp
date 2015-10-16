@@ -326,13 +326,13 @@ namespace Octopus
         //exit(0);
         
         for (unsigned n {}; n < max_em_iterations_; ++n) {
-            std::cout << "******* EM iteration " << n << " *******" << std::endl;
+            //std::cout << "******* EM iteration " << n << " *******" << std::endl;
             if (do_em_iteration(haplotypes, genotypes, genotype_posteriors, haplotype_frequencies,
                                 genotype_log_marginals, genotype_log_likilhoods,
                                 haplotype_prior_counts, prior_count_sum) < em_epsilon_) break;
         }
         
-        std::cout << "finished EM" << std::endl;
+        //std::cout << "finished EM" << std::endl;
         
         return make_latents(std::move(genotypes), std::move(genotype_posteriors), std::move(haplotype_frequencies));
     }

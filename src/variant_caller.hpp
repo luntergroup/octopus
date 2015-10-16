@@ -44,7 +44,7 @@ namespace Octopus
         VariantCaller& operator=(VariantCaller&&)      = delete;
         
         std::string get_details() const;
-        
+        size_t num_buffered_reads() const noexcept;
         std::vector<VcfRecord> call_variants(const GenomicRegion& region, ReadMap reads);
         
     protected:
@@ -61,10 +61,8 @@ namespace Octopus
         
         virtual std::string do_get_details() const = 0;
         
-        virtual GenomicRegion get_init_region(const GenomicRegion& region, const ReadMap& reads,
-                                              const std::vector<Variant>& candidates) = 0;
-        virtual GenomicRegion get_next_region(const GenomicRegion& current_region, const ReadMap& reads,
-                                              const std::vector<Variant>& candidates) = 0;
+        //virtual size_t do_num_buffered_reads() const noexcept = 0;
+        
         virtual std::vector<VcfRecord> call_variants(const GenomicRegion& region,
                                                      const std::vector<Variant>& candidates,
                                                      const ReadMap& reads) = 0;

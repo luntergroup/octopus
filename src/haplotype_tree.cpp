@@ -113,7 +113,30 @@ void HaplotypeTree::extend(const Allele& allele)
     recently_removed_haplotypes_.clear();
 }
 
-std::vector<Haplotype> HaplotypeTree::get_haplotypes(const GenomicRegion& region)
+//std::vector<Haplotype> HaplotypeTree::get_haplotypes() const
+//{
+//    haplotype_leaf_cache_.clear();
+//    haplotype_leaf_cache_.reserve(haplotype_leafs_.size());
+//    
+//    std::vector<Haplotype> result {};
+//    result.reserve(haplotype_leafs_.size());
+//    
+//    for (auto leaf : haplotype_leafs_) {
+//        auto haplotype = get_haplotype(leaf, region);
+//        
+//        // recently retreived haplotypes are added to the cache as it is likely these
+//        // are the haplotypes that will be pruned next
+//        haplotype_leaf_cache_.emplace(haplotype, leaf);
+//        
+//        result.emplace_back(std::move(haplotype));
+//    }
+//    
+//    haplotype_leaf_cache_.rehash(haplotype_leaf_cache_.size());
+//    
+//    return result;
+//}
+
+std::vector<Haplotype> HaplotypeTree::get_haplotypes(const GenomicRegion& region) const
 {
     haplotype_leaf_cache_.clear();
     haplotype_leaf_cache_.reserve(haplotype_leafs_.size());
