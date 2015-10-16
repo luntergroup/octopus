@@ -10,7 +10,6 @@
 
 #include <list>
 #include <stdexcept>
-#include <chrono>
 #include <random>
 
 namespace Octopus
@@ -22,8 +21,8 @@ bool has_minimum_coverage(const std::vector<unsigned>& required_coverage)
 }
 
 std::vector<AlignedRead>
-sample(const MappableSet<AlignedRead>& reads, const GenomicRegion& region, const unsigned max_coverage,
-       const unsigned min_coverage)
+sample(const MappableSet<AlignedRead>& reads, const GenomicRegion& region,
+       const unsigned max_coverage, const unsigned min_coverage)
 {
     using std::begin; using std::end; using std::cbegin; using std::cend; using std::distance;
     using std::transform;
@@ -46,18 +45,18 @@ sample(const MappableSet<AlignedRead>& reads, const GenomicRegion& region, const
     
     auto positions = decompose(region);
     
-    static const auto seed = std::chrono::system_clock::now().time_since_epoch().count();
-    static std::default_random_engine generator {static_cast<unsigned>(seed)};
+    static std::mt19937_64 generator {1};
     
     // first pass ensures minimum coverage requirements are satisfied
     
     std::vector<AlignedRead> result {};
     result.reserve(reads.count_contained(region) * max_coverage);
     
-    std::list<AlignedRead> unsampled_reads(begin(contained), end(contained));
+    std::list<AlignedRead> unsampled_reads {begin(contained), end(contained)};
     
     while (!has_minimum_coverage(required_coverage)) {
-        std::discrete_distribution<unsigned> covers(cbegin(required_coverage), cend(required_coverage));
+        std::discrete_distribution<unsigned> covers {cbegin(required_coverage), cend(required_coverage)};
+        
         auto sample_position = covers(generator);
         
         auto overlapped = overlap_range(cbegin(unsampled_reads), cend(unsampled_reads), positions[sample_position]);
@@ -79,7 +78,8 @@ sample(const MappableSet<AlignedRead>& reads, const GenomicRegion& region, const
                   begin(new_position_coverages) + offset, [] (auto count) { return count + 1; });
     }
     
-    //    // second pass increases coverage up to maximum coverage bound
+    // second pass increases coverage up to maximum coverage bound
+    
     //    while (!unsampled_reads.empty()) {
     //        // TODO
     //    }

@@ -27,13 +27,8 @@
 #include "candidate_generators.hpp"
 #include "vcf.hpp"
 #include "variant_caller.hpp"
-#include "population_caller.hpp"
-#include "cancer_caller.hpp"
 
 #include "test_common.hpp"
-
-#include "genotype.hpp"
-#include "cancer_genotype.hpp"
 
 namespace Octopus
 {
@@ -116,9 +111,6 @@ namespace Octopus
         auto read_transform      = Options::get_read_transformer(options);
         auto candidate_generator = Options::get_candidate_generator(options, reference);
         auto vcf                 = Options::get_output_vcf(options);
-        
-        //std::cout << "there are " << read_filter.num_filters() << " read filters" << std::endl;
-        //std::cout << "there are " << read_transform.num_transforms() << " read transforms" << std::endl;
         
         const auto samples = get_samples(options, read_manager);
         

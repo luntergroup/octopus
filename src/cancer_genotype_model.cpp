@@ -9,8 +9,8 @@
 #include "cancer_genotype_model.hpp"
 
 #include <array>
-#include <numeric>
-#include <algorithm>
+#include <numeric>    // std::accumulate
+#include <algorithm>  // std::transform, std::nth_element
 #include <iterator>
 #include <cmath>
 
@@ -86,21 +86,34 @@ namespace Octopus
         return {std::log(arr[0]), std::log(arr[1]), std::log(arr[2])};
     }
     
+    double genotype_log_probability(const CancerGenotype<Haplotype>& genotype,
+                                    const HaplotypeFrequencies& haplotype_frequencies)
+    {
+        return log_hardy_weinberg(genotype.get_germline_genotype(), haplotype_frequencies) +
+                std::log(haplotype_frequencies.at(genotype.get_cancer_element()));
+    }
+    
     double genotype_log_likelihood(const CancerGenotype<Haplotype>& genotype,
                                    const Cancer::SampleGenotypeWeights& genotype_weights,
                                    const MappableSet<AlignedRead>& reads, SingleReadModel& rm)
     {
-        double result {};
+        using std::cbegin; using std::cend; using std::accumulate;
         
-        auto log_weights = log(genotype_weights);
+        const auto log_weights = log(genotype_weights);
         
-        for (const auto& read : reads) {
-            result += Maths::log_sum_exp(log_weights[0] + rm.log_probability(read, genotype[0]),
-                                         log_weights[1] + rm.log_probability(read, genotype[1]),
-                                         log_weights[2] + rm.log_probability(read, genotype[2]));
-        }
+//        for (const auto& read : reads) {
+//            std::cout << get_begin(read) << " " << read.get_cigar_string() << std::endl;
+//            std::cout << "\t* " << rm.log_probability(read, genotype[0]) << std::endl;
+//            std::cout << "\t* " << rm.log_probability(read, genotype[1]) << std::endl;
+//            std::cout << "\t* " << rm.log_probability(read, genotype[2]) << std::endl;
+//        }
         
-        return result;
+        return accumulate(cbegin(reads), cend(reads), 0.0,
+                          [&log_weights, &genotype, &rm] (double curr, const auto& read) {
+                              return curr + Maths::log_sum_exp(log_weights[0] + rm.log_probability(read, genotype[0]),
+                                                               log_weights[1] + rm.log_probability(read, genotype[1]),
+                                                               log_weights[2] + rm.log_probability(read, genotype[2]));
+                          });
     }
     
     GenotypeLogPosteriors
@@ -110,20 +123,22 @@ namespace Octopus
                                  const Cancer::GenotypeWeights& genotype_weights,
                                  SingleReadModel& read_model)
     {
+        using std::cbegin; using std::cend; using std::begin; using std::transform;
+        
         GenotypeLogPosteriors result(genotypes.size());
         
-        threaded_transform(std::cbegin(genotypes), std::cend(genotypes), std::begin(result),
-                       [&haplotype_frequencies, &genotype_weights, &reads, &read_model]
-                       (const auto& genotype) {
-                           double p {log_hardy_weinberg(genotype, haplotype_frequencies)};
-                           
-                           for (const auto& sample_reads : reads) {
-                               p += genotype_log_likelihood(genotype, genotype_weights.at(sample_reads.first),
-                                                            sample_reads.second, read_model);
-                           }
-                           
-                           return p;
-                       });
+        transform(cbegin(genotypes), cend(genotypes), begin(result),
+                  [&haplotype_frequencies, &genotype_weights, &reads, &read_model]
+                  (const auto& genotype) {
+                      double p {genotype_log_probability(genotype, haplotype_frequencies)};
+                      
+                      for (const auto& sample_reads : reads) {
+                          p += genotype_log_likelihood(genotype, genotype_weights.at(sample_reads.first),
+                                                       sample_reads.second, read_model);
+                      }
+                      
+                      return p;
+                  });
         
         const auto norm = Maths::log_sum_exp<double>(result);
         
@@ -171,21 +186,23 @@ namespace Octopus
                                         const Cancer::GenotypeWeights& genotype_weights,
                                         SingleReadModel& read_model)
     {
+        using std::cbegin; using std::cend; using std::begin; using std::transform;
+        
         std::vector<double> ps {};
         ps.reserve(current.size());
         
-        std::transform(std::cbegin(genotypes), std::cend(genotypes), std::cbegin(current), std::begin(current),
-                       [&haplotype_frequencies, &genotype_weights, &reads, &read_model]
-                       (const auto& genotype, double curr) {
-                           double p {log_hardy_weinberg(genotype, haplotype_frequencies)};
-                           
-                           for (const auto& sample_reads : reads) {
-                               p += genotype_log_likelihood(genotype, genotype_weights.at(sample_reads.first),
-                                                            sample_reads.second, read_model);
-                           }
-                           
-                           return p;
-                       });
+        transform(cbegin(genotypes), cend(genotypes), cbegin(current), begin(current),
+                  [&haplotype_frequencies, &genotype_weights, &reads, &read_model]
+                  (const auto& genotype, double curr) {
+                      double p {genotype_log_probability(genotype, haplotype_frequencies)};
+                      
+                      for (const auto& sample_reads : reads) {
+                          p += genotype_log_likelihood(genotype, genotype_weights.at(sample_reads.first),
+                                                       sample_reads.second, read_model);
+                      }
+                      
+                      return p;
+                  });
         
         const auto norm = Maths::log_sum_exp<double>(current);
         
@@ -208,6 +225,8 @@ namespace Octopus
                                           const Cancer::GenotypeWeights& genotype_weights,
                                           const ReadMap& reads, SingleReadModel& rm)
     {
+        using std::cbegin; using std::cend; using std::begin; using std::transform;
+        
         GenotypeWeightResponsibilities result {};
         result.reserve(reads.size());
         
@@ -223,11 +242,11 @@ namespace Octopus
                 for (unsigned k {}; k < 3; ++k) {
                     std::vector<double> lg(genotypes.size());
                     
-                    std::transform(std::cbegin(genotypes), std::cend(genotypes), std::cbegin(genotype_posteriors),
-                                   std::begin(lg), [&read, &log_weights, &rm, k]
-                                   (const auto& genotype, double log_posterior) {
-                                       return log_posterior + log_weights[k] + rm.log_probability(read, genotype[k]);
-                                   });
+                    transform(cbegin(genotypes), cend(genotypes), cbegin(genotype_posteriors),
+                              begin(lg), [&read, &log_weights, &rm, k]
+                              (const auto& genotype, double log_posterior) {
+                                  return log_posterior + log_weights[k] + rm.log_probability(read, genotype[k]);
+                              });
                     
                     p[k] = Maths::log_sum_exp<double>(lg);
                 }
@@ -250,6 +269,8 @@ namespace Octopus
                                                  const ReadMap& reads,
                                                  SingleReadModel& rm)
     {
+        using std::cbegin; using std::cend; using std::begin; using std::transform;
+        
         for (auto& sample_p : current) {
             const auto& sample = sample_p.first;
             
@@ -263,11 +284,11 @@ namespace Octopus
                 for (unsigned k {}; k < 3; ++k) {
                     std::vector<double> lg(genotypes.size());
                     
-                    std::transform(std::cbegin(genotypes), std::cend(genotypes), std::cbegin(genotype_log_posteriors),
-                                   std::begin(lg), [&read, &log_weights, &rm, k]
-                                   (const auto& genotype, double log_posterior) {
-                                       return log_posterior + log_weights[k] + rm.log_probability(read, genotype[k]);
-                                   });
+                    transform(cbegin(genotypes), cend(genotypes), cbegin(genotype_log_posteriors),
+                              begin(lg), [&read, &log_weights, &rm, k]
+                              (const auto& genotype, double log_posterior) {
+                                  return log_posterior + log_weights[k] + rm.log_probability(read, genotype[k]);
+                              });
                     
                     p[k] = Maths::log_sum_exp<double>(lg);
                 }
@@ -416,18 +437,24 @@ namespace Octopus
         GenotypeWeightsPriors weight_priors {};
         for (const auto& s : reads) {
             if (s.first == normal_sample_) {
-                weight_priors.emplace(s.first, SampleGenotypeWeightsPriors {100.0, 100.0, 0.001});
+                weight_priors.emplace(s.first, SampleGenotypeWeightsPriors {1000.0, 1000.0, 0.0001});
             } else {
-                weight_priors.emplace(s.first, SampleGenotypeWeightsPriors {1.5, 1.5, 0.5});
+                weight_priors.emplace(s.first, SampleGenotypeWeightsPriors {1.0, 1.0, 0.8});
             }
         }
         
         auto haplotype_frequencies = init_haplotype_frequencies(haplotype_prior_counts);
+        
+        for (const auto& hf : haplotype_frequencies) {
+            print_variant_alleles(hf.first);
+            std::cout << " : " << hf.second << std::endl;
+        }
+        
         auto genotype_weights      = init_genotype_weights(weight_priors);
         
         std::cout << "prior mixture weights" << std::endl;
         for (const auto& w : genotype_weights) {
-            std::cout << w.second[0] << " " << w.second[1] << " " << w.second[2] << std::endl;
+            std::cout << w.first << ": " << w.second[0] << " " << w.second[1] << " " << w.second[2] << std::endl;
         }
         
         auto genotype_log_posteriors = init_genotype_log_posteriors(genotypes, reads, haplotype_frequencies,

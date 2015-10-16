@@ -155,6 +155,7 @@ namespace Octopus
         ("min-somatic-posterior", po::value<unsigned>()->default_value(10), "the minimum somaitc mutation call posterior probability (phred scale)")
         ("make-positional-refcalls", po::bool_switch()->default_value(false), "caller will output positional REFCALLs")
         ("make-blocked-refcalls", po::bool_switch()->default_value(false), "caller will output blocked REFCALLs")
+        ("somatics-only", po::bool_switch()->default_value(false), "only output somatic calls (for somatic calling models only)")
         ;
         
         po::options_description all("Allowed options");
@@ -601,17 +602,20 @@ namespace Octopus
         auto ploidy = options.at("ploidy").as<unsigned>();
         
         auto min_variant_posterior_phred = options.at("min-variant-posterior").as<unsigned>();
-        auto min_variant_posterior        = Maths::phred_to_probability(min_variant_posterior_phred);
+        auto min_variant_posterior       = Maths::phred_to_probability(min_variant_posterior_phred);
         
         auto min_refcall_posterior_phred = options.at("min-refcall-posterior").as<unsigned>();
         auto min_refcall_posterior       = Maths::phred_to_probability(min_refcall_posterior_phred);
         
         SampleIdType normal_sample {};
         double min_somatic_posterior {};
+        bool call_somatics_only {false};
+        
         if (model == "cancer") {
             normal_sample = options.at("normal-sample").as<std::string>();
             auto min_somatic_posterior_phred = options.at("min-somatic-posterior").as<unsigned>();
             min_somatic_posterior = Maths::phred_to_probability(min_somatic_posterior_phred);
+            call_somatics_only = options.at("somatics-only").as<bool>();
         }
         
         return make_variant_caller(model, reference, candidate_generator, refcall_type,

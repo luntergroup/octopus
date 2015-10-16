@@ -13,7 +13,7 @@
                      // std::find_if, std::min_element, std::max_element, std::lower_bound, std::find_if_not
                      // std::generate_n, std::transform
 #include <numeric>   // std::accumulate
-#include <cstddef>   // std::size_t
+#include <cstddef>   // size_t
 #include <iterator>  // std::distance, std::cbegin, std::cend, std::prev, std::next, std::reverse_iterator
 #include <stdexcept>
 #include <boost/iterator/filter_iterator.hpp>
@@ -281,7 +281,7 @@ bool has_overlapped(BidirectionalIterator first, BidirectionalIterator last,
  */
 template <typename ForwardIterator, typename MappableType>
 inline
-std::size_t count_overlapped(ForwardIterator first, ForwardIterator last, const MappableType& mappable,
+size_t count_overlapped(ForwardIterator first, ForwardIterator last, const MappableType& mappable,
                              MappableRangeOrder order = MappableRangeOrder::ForwardSorted)
 {
     auto overlapped = overlap_range(first, last, mappable, order);
@@ -295,7 +295,7 @@ std::size_t count_overlapped(ForwardIterator first, ForwardIterator last, const 
  */
 template <typename ForwardIterator, typename MappableType>
 inline
-std::size_t count_overlapped(ForwardIterator first, ForwardIterator last, const MappableType& mappable,
+size_t count_overlapped(ForwardIterator first, ForwardIterator last, const MappableType& mappable,
                              GenomicRegion::SizeType max_mappable_size)
 {
     auto overlapped = overlap_range(first, last, mappable, max_mappable_size);
@@ -350,7 +350,7 @@ bool has_contained(BidirectionalIterator first, BidirectionalIterator last, cons
  */
 template <typename BidirectionalIterator, typename MappableType>
 inline
-std::size_t count_contained(BidirectionalIterator first, BidirectionalIterator last, const MappableType& mappable)
+size_t count_contained(BidirectionalIterator first, BidirectionalIterator last, const MappableType& mappable)
 {
     auto contained = contained_range(first, last, mappable);
     return std::distance(contained.begin(), contained.end());
@@ -363,7 +363,7 @@ std::size_t count_contained(BidirectionalIterator first, BidirectionalIterator l
  */
 template <typename ForwardIterator, typename MappableType1, typename MappableType2>
 inline
-std::size_t count_shared(ForwardIterator first, ForwardIterator last,
+size_t count_shared(ForwardIterator first, ForwardIterator last,
                          const MappableType1& lhs, const MappableType2& rhs,
                          MappableRangeOrder order=MappableRangeOrder::ForwardSorted)
 {
@@ -439,9 +439,9 @@ ForwardIterator2 find_first_shared(ForwardIterator1 first1, ForwardIterator1 las
  Requires [first1, last1) and [first2, last2) to be sorted w.r.t GenomicRegion::operator<
  */
 template <typename ForwardIterator1, typename ForwardIterator2>
-std::size_t count_if_shared_with_first(ForwardIterator1 first1, ForwardIterator1 last1,
-                                       ForwardIterator2 first2, ForwardIterator2 last2,
-                                       MappableRangeOrder order=MappableRangeOrder::ForwardSorted)
+size_t count_if_shared_with_first(ForwardIterator1 first1, ForwardIterator1 last1,
+                                  ForwardIterator2 first2, ForwardIterator2 last2,
+                                  MappableRangeOrder order=MappableRangeOrder::ForwardSorted)
 {
     if (first2 == last2) return 0;
     
@@ -453,9 +453,9 @@ std::size_t count_if_shared_with_first(ForwardIterator1 first1, ForwardIterator1
 }
 
 template <typename Container>
-std::vector<GenomicRegion> get_regions(const Container& mappables)
+auto get_regions(const Container& mappables)
 {
-    std::vector<GenomicRegion> result {};
+    std::vector<decltype(get_region(typename Container::value_type()))> result {};
     result.reserve(mappables.size());
     
     for (const auto& mappable : mappables) {

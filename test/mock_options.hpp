@@ -20,14 +20,15 @@ inline po::variables_map get_basic_mock_options()
 {
     const char *argv[] = {"octopus",
         "--reference", human_reference_fasta.c_str(),
-        //"--reference", ecoli_reference_fasta.string().c_str(),
+        //"--reference", ecoli_reference_fasta.c_str(),
         
-        //"--reads", NA12878_low_coverage.c_str(), HG00101.c_str(), HG00102.string().c_str(), HG00103.c_str(),
+        "--reads", NA12878_low_coverage.c_str(), HG00101.c_str(), HG00102.c_str(), HG00103.c_str(),
+        //"--reads", HG00102.c_str(),
         
         //"--reads", NA12878_high_coverage.c_str(), NA12878_simulated_cancer_basic.c_str(), //cancer test
         //"--reads", NA12891_high_coverage.c_str(), NA12878_simulated_cancer_basic.c_str(), //cancer test
         
-        "--reads", NA12878_high_coverage.c_str(), NA12891_high_coverage.c_str(),
+        //"--reads", NA12878_high_coverage.c_str(), NA12891_high_coverage.c_str(),
         
         //"--reads", ecoli_bam.string().c_str(),
         
@@ -93,7 +94,11 @@ inline po::variables_map get_basic_mock_options()
         
         //"--regions", "R00000042:686,055-686,094", // ecoli alignment whim
         
-        "--regions", "2:99,042,722-99,043,403", // region should not be phasable, but is getting phased
+        //"--regions", "2:99,042,722-99,043,403", // region should not be phasable, but is getting phased
+        //"--regions", "13:33,749,244-33,749,585", // is this a real SNP?
+        //"--regions", "13:47,354,553-47,354,592", // real SNP?
+        
+        "--regions", "4:122,184,623-122,184,764",
         
         "--min-variant-posterior", "5",
         "--min-refcall-posterior", "1",

@@ -36,23 +36,84 @@ namespace Octopus
         using HaplotypePriorCounts = std::unordered_map<Haplotype, double>;
         using HaplotypeFrequencies = std::unordered_map<Haplotype, double>;
         
+        namespace detail {
+            template <typename Genotype>
+            double log_hardy_weinberg_haploid(const Genotype& genotype,
+                                              const HaplotypeFrequencies& haplotype_frequencies)
+            {
+                return std::log(haplotype_frequencies.at(genotype[0]));
+            }
+            
+            template <typename Genotype>
+            double log_hardy_weinberg_diploid(const Genotype& genotype,
+                                              const HaplotypeFrequencies& haplotype_frequencies)
+            {
+                static const double ln_2 {std::log(2.0)};
+                
+                if (genotype.is_homozygous()) {
+                    return 2 * std::log(haplotype_frequencies.at(genotype[0]));
+                } else {
+                    return std::log(haplotype_frequencies.at(genotype[0])) + std::log(haplotype_frequencies.at(genotype[1])) + ln_2;
+                }
+            }
+            
+            template <typename Genotype>
+            double log_hardy_weinberg_triploid(const Genotype& genotype,
+                                               const HaplotypeFrequencies& haplotype_frequencies)
+            {
+//                if (genotype.is_homozygous()) {
+//                    return 3 * std::log(haplotype_frequencies.at(genotype[0]));
+//                }
+//                
+                // TODO: other cases
+                
+                auto unique_haplotypes = genotype.get_unique();
+                
+                std::vector<unsigned> occurences {};
+                occurences.reserve(unique_haplotypes.size());
+                
+                double r {};
+                
+                for (const auto& haplotype : unique_haplotypes) {
+                    auto num_occurences = genotype.count(haplotype);
+                    occurences.push_back(num_occurences);
+                    r += num_occurences * std::log(haplotype_frequencies.at(haplotype));
+                }
+                
+                return Maths::log_multinomial_coefficient<double>(occurences) + r;
+            }
+            
+            template <typename Genotype>
+            double log_hardy_weinberg_polyploid(const Genotype& genotype,
+                                                const HaplotypeFrequencies& haplotype_frequencies)
+            {
+                auto unique_haplotypes = genotype.get_unique();
+                
+                std::vector<unsigned> occurences {};
+                occurences.reserve(unique_haplotypes.size());
+                
+                double r {};
+                
+                for (const auto& haplotype : unique_haplotypes) {
+                    auto num_occurences = genotype.count(haplotype);
+                    occurences.push_back(num_occurences);
+                    r += num_occurences * std::log(haplotype_frequencies.at(haplotype));
+                }
+                
+                return Maths::log_multinomial_coefficient<double>(occurences) + r;
+            }
+        }
+        
+        // TODO: improve this, possible bottleneck in EM update at the moment
         template <typename Genotype>
         double log_hardy_weinberg(const Genotype& genotype, const HaplotypeFrequencies& haplotype_frequencies)
         {
-            auto unique_haplotypes = genotype.get_unique();
-            
-            std::vector<unsigned> occurences {};
-            occurences.reserve(unique_haplotypes.size());
-            
-            double r {};
-            
-            for (const auto& haplotype : unique_haplotypes) {
-                auto num_occurences = genotype.count(haplotype);
-                occurences.push_back(num_occurences);
-                r += num_occurences * std::log(haplotype_frequencies.at(haplotype));
+            switch (genotype.ploidy()) {
+                case 1 : return detail::log_hardy_weinberg_haploid(genotype, haplotype_frequencies);
+                case 2 : return detail::log_hardy_weinberg_diploid(genotype, haplotype_frequencies);
+                case 3 : return detail::log_hardy_weinberg_triploid(genotype, haplotype_frequencies);
+                default: return detail::log_hardy_weinberg_polyploid(genotype, haplotype_frequencies);
             }
-            
-            return Maths::log_multinomial_coefficient<double>(occurences) + r;
         }
         
         inline HaplotypeFrequencies init_haplotype_frequencies(const std::vector<Haplotype>& haplotypes)
@@ -83,19 +144,6 @@ namespace Octopus
             return result;
         }
         
-        inline double max_haplotype_frequency_change(const HaplotypeFrequencies& old_frequencies,
-                                                     const HaplotypeFrequencies& new_frequencies)
-        {
-            double result {};
-            
-            for (const auto& h : new_frequencies) {
-                auto change = std::abs(h.second - old_frequencies.at(h.first));
-                if (change > result) result = change;
-            }
-            
-            return result;
-        }
-        
         inline HaplotypePriorCounts compute_haplotype_prior_counts(const std::vector<Haplotype>& haplotypes,
                                                                    ReferenceGenome& reference,
                                                                    HaplotypePriorModel& haplotype_prior_model)
@@ -115,17 +163,19 @@ namespace Octopus
                       });
             
             constexpr double precision {35.0};
-            constexpr unsigned max_iterations {20};
+            constexpr unsigned max_iterations {2000};
             const auto alphas = Maths::maximum_likelihood_dirichlet_params(p, precision, max_iterations);
             
             result.reserve(haplotypes.size());
+            
+//            transform(cbegin(haplotypes), cend(haplotypes), cbegin(p), std::inserter(result, begin(result)),
+//                      [] (const auto& haplotype, double a) { return std::make_pair(haplotype, 10 * a); });
             
             transform(cbegin(haplotypes), cend(haplotypes), cbegin(alphas), std::inserter(result, begin(result)),
                       [] (const auto& haplotype, double a) { return std::make_pair(haplotype, a); });
             
             return result;
         }
-            
     } // namespace GenotypeModel
 } // namespace Octopus
 
