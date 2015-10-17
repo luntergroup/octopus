@@ -21,6 +21,7 @@
 #include "reference_genome.hpp"
 #include "haplotype_tree.hpp"
 #include "mappable_set.hpp"
+#include "genome_walker.hpp"
 
 //namespace Octopus
 //{
@@ -54,6 +55,8 @@ private:
     
     unsigned max_haplotypes_ = 10'000;
     unsigned max_indicators_ = 5;
+    
+    GenomeWalker walker_;
     
     void extend_tree(const ReadMap& reads);
 };

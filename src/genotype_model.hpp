@@ -168,9 +168,6 @@ namespace Octopus
             
             result.reserve(haplotypes.size());
             
-//            transform(cbegin(haplotypes), cend(haplotypes), cbegin(p), std::inserter(result, begin(result)),
-//                      [] (const auto& haplotype, double a) { return std::make_pair(haplotype, 10 * a); });
-            
             transform(cbegin(haplotypes), cend(haplotypes), cbegin(alphas), std::inserter(result, begin(result)),
                       [] (const auto& haplotype, double a) { return std::make_pair(haplotype, a); });
             

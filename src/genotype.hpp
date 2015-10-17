@@ -228,6 +228,19 @@ void Genotype<Allele>::emplace(T&& allele)
 
 bool contains(const Genotype<Haplotype>& genotype, const Allele& allele);
 
+template <typename MappableType>
+bool contains(const Genotype<MappableType>& genotype, const MappableType& element)
+{
+    return genotype.contains(element);
+}
+
+template <typename MappableType1, typename MappableType2>
+bool contains(const Genotype<MappableType1>& lhs, const Genotype<MappableType2>& rhs)
+{
+    return std::all_of(std::cbegin(rhs), std::cend(rhs),
+                       [&lhs] (const auto& element) { return contains(lhs, element); });
+}
+
 template <typename MappableType2, typename MappableType1>
 Genotype<MappableType2> splice(const Genotype<MappableType1>& genotype, const GenomicRegion& region)
 {
@@ -264,13 +277,6 @@ namespace std
         }
     };
 } // namespace std
-
-template <typename MappableType1, typename MappableType2>
-bool contains(const Genotype<MappableType1>& lhs, const Genotype<MappableType2>& rhs)
-{
-    return std::all_of(std::cbegin(lhs), std::cend(lhs),
-                       [&rhs] (const auto& element) { return rhs.contains(element); });
-}
 
 size_t num_genotypes(unsigned num_elements, unsigned ploidy);
 

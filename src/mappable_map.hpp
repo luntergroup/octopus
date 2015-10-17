@@ -139,52 +139,74 @@ template <typename KeyType, typename MappableType1, typename MappableType2>
 typename MappableSet<MappableType1>::const_iterator
 leftmost_overlapped(const MappableMap<KeyType, MappableType1>& mappables, const MappableType2& mappable)
 {
+    using std::cbegin; using std::cend;
+    
     if (mappables.empty()) {
         throw std::runtime_error {"cannot find leftmost_overlapped of empty MappableMap"};
     }
     
-    if (mappables.size() == 1) {
-        return mappables.cbegin()->second.overlap_range(mappable).begin().base();
+    auto first = cbegin(mappables);
+    auto last  = cend(mappables);
+    
+    auto result = cbegin(first->second);
+    
+    while (first != last) {
+        if (!first->second.empty()) {
+            auto overlapped = first->second.overlap_range(mappable);
+            if (!overlapped.empty()) {
+                result = cbegin(overlapped).base();
+                ++first;
+                break;
+            }
+        }
+        ++first;
     }
     
-    std::vector<typename MappableSet<MappableType1>::const_iterator> smallest(mappables.size());
+    std::for_each(first, last, [&mappable, &result] (const auto& p) {
+        auto overlapped = p.second.overlap_range(mappable);
+        if (!overlapped.empty() && begins_before(overlapped.front(), *result)) {
+            result = cbegin(overlapped).base();
+        }
+    });
     
-    std::transform(std::cbegin(mappables), std::cend(mappables), smallest.begin(),
-                   [&mappable] (const auto& p) {
-                       return p.second.overlap_range(mappable).begin().base();
-                   });
-    
-    return *std::min_element(std::cbegin(smallest), std::cend(smallest), []
-                             (auto lhs, auto rhs) {
-                                 return *lhs < *rhs;
-                             });
+    return result;
 }
 
 template <typename KeyType, typename MappableType1, typename MappableType2>
 typename MappableSet<MappableType1>::const_iterator
 rightmost_overlapped(const MappableMap<KeyType, MappableType1>& mappables, const MappableType2& mappable)
 {
+    using std::cbegin; using std::cend; using std::prev;
+    
     if (mappables.empty()) {
-        throw std::runtime_error {"cannot find leftmost_overlapped of empty MappableMap"};
+        throw std::runtime_error {"cannot find rightmost_overlapped of empty MappableMap"};
     }
     
-    if (mappables.size() == 1) {
-        auto overlapped = mappables.cbegin()->second.overlap_range(mappable);
-        return rightmost_mappable(overlapped.begin(), overlapped.end()).base();
+    auto first = cbegin(mappables);
+    auto last  = cend(mappables);
+    
+    auto result = cend(first->second);
+    
+    while (first != last) {
+        if (!first->second.empty()) {
+            auto overlapped = first->second.overlap_range(mappable);
+            if (!overlapped.empty()) {
+                result = prev(cend(overlapped)).base();
+                ++first;
+                break;
+            }
+        }
+        ++first;
     }
     
-    std::vector<typename MappableSet<MappableType1>::const_iterator> largest(mappables.size());
+    std::for_each(first, last, [&mappable, &result] (const auto& p) {
+        auto overlapped = p.second.overlap_range(mappable);
+        if (!overlapped.empty() && ends_before(*result, overlapped.back())) {
+            result = prev(cend(overlapped)).base();
+        }
+    });
     
-    std::transform(std::cbegin(mappables), std::cend(mappables), largest.begin(),
-                   [&mappable] (const auto& p) {
-                       auto overlapped = p.second.overlap_range(mappable);
-                       return rightmost_mappable(overlapped.begin(), overlapped.end()).base();
-                   });
-    
-    return *std::max_element(std::cbegin(largest), std::cend(largest), []
-                             (auto lhs, auto rhs) {
-                                 return ends_before(*lhs, *rhs);
-                             });
+    return result;
 }
 
 template <typename KeyType, typename MappableType1, typename MappableType2>

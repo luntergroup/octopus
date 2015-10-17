@@ -22,19 +22,19 @@ inline po::variables_map get_basic_mock_options()
         "--reference", human_reference_fasta.c_str(),
         //"--reference", ecoli_reference_fasta.c_str(),
         
-        //"--reads", NA12878_low_coverage.c_str(), HG00101.c_str(), HG00102.c_str(), HG00103.c_str(),
+        "--reads", NA12878_low_coverage.c_str(), HG00101.c_str(), HG00102.c_str(), HG00103.c_str(),
         //"--reads", HG00102.c_str(),
         
         //"--reads", NA12878_high_coverage.c_str(), NA12878_simulated_cancer_basic.c_str(), //cancer test
         //"--reads", NA12891_high_coverage.c_str(), NA12878_simulated_cancer_basic.c_str(), //cancer test
         
-        "--reads", "/Users/dcooke/Genomics/cancer/TCGA/benchmark/HCC1143.NORMAL.7x.compare.chr17.bam", "/Users/dcooke/Genomics/cancer/TCGA/benchmark/HCC1143.7x.n25t65s10.chr17.bam",
+        //"--reads", "/Users/dcooke/Genomics/cancer/TCGA/benchmark/HCC1143.NORMAL.7x.compare.chr17.bam", "/Users/dcooke/Genomics/cancer/TCGA/benchmark/HCC1143.7x.n25t65s10.chr17.bam",
         
         //"--reads", NA12878_high_coverage.c_str(), NA12891_high_coverage.c_str(),
         
         //"--reads", ecoli_bam.string().c_str(),
         
-        "--model", "cancer", // default "population"
+        //"--model", "cancer", // default "population"
         "--normal-sample", "HCC1143.NORMAL.30x.compare", // for cancer model
         "--ploidy", "2",
         "--contig-ploidies", "MT=1", "Y=1",
@@ -105,7 +105,10 @@ inline po::variables_map get_basic_mock_options()
         //"--regions", "13:36,803,666-36,803,705",
         
         //"--regions", "17:1000000-5000000",
-        "--regions", "17:49,530,500-49,530,911",
+        
+        //"--regions", "3:36,629,892-36,630,038", // SNP error here due to alignment error in soft clipping in HG00102 + HG00103
+        
+        "--regions", "Y:4,313,467-4,314,172",
         
         "--min-variant-posterior", "5",
         "--min-refcall-posterior", "1",

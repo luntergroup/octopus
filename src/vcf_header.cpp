@@ -177,6 +177,18 @@ std::vector<VcfType> get_typed_format_values(const VcfHeader& header, const VcfH
     return get_typed_values(header, "FORMAT", field_key, values);
 }
 
+bool operator==(const VcfHeader& lhs, const VcfHeader& rhs)
+{
+    return lhs.get_file_format() == rhs.get_file_format() && lhs.get_samples() == rhs.get_samples()
+            && lhs.get_basic_fields() == rhs.get_basic_fields()
+            && lhs.get_structured_fields() == rhs.get_structured_fields();
+}
+
+bool operator!=(const VcfHeader& lhs, const VcfHeader& rhs)
+{
+    return !operator==(lhs, rhs);
+}
+
 //void print_vector(std::ostream& os, const std::vector<std::string>& v,
 //                  const std::string& delim = ",", const std::string& empty_value = ".")
 //{

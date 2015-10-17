@@ -329,6 +329,29 @@ bool is_validated(const VcfRecord& record) noexcept
     return record.has_info(Info_validated);
 }
 
+bool operator==(const VcfRecord& lhs, const VcfRecord& rhs)
+{
+    // TODO: this should really compare other fields
+    return lhs.get_chromosome_name() == rhs.get_chromosome_name() && lhs.get_position() == rhs.get_position();
+}
+
+bool operator<(const VcfRecord& lhs, const VcfRecord& rhs)
+{
+    if (lhs.get_chromosome_name() == rhs.get_chromosome_name()) {
+        if (lhs.get_position() == rhs.get_position()) {
+            if (lhs.get_ref_allele().size() == rhs.get_ref_allele().size()) {
+                return false; // TODO: also compare alt allele sizes
+            } else {
+                return lhs.get_ref_allele().size() < rhs.get_ref_allele().size();
+            }
+        } else {
+            return lhs.get_position() < rhs.get_position();
+        }
+    } else {
+        return lhs.get_chromosome_name() < rhs.get_chromosome_name();
+    }
+}
+
 std::ostream& operator<<(std::ostream& os, const VcfRecord& record)
 {
     os << record.chromosome_ << "\t";

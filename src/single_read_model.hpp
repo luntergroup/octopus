@@ -10,11 +10,23 @@
 #define single_read_model_hpp
 
 #include <unordered_map>
+#include <functional>
 #include <cstddef> // size_t
 
 #include "common.hpp"
 #include "haplotype.hpp"
 #include "aligned_read.hpp"
+
+namespace std
+{
+    template <typename T> struct hash<reference_wrapper<const T>>
+    {
+        size_t operator()(reference_wrapper<const T> r) const
+        {
+            return hash<T>()(r);
+        }
+    };
+} // namespace std
 
 namespace Octopus
 {
@@ -35,7 +47,9 @@ namespace Octopus
         void clear_cache();
         
     private:
-        using Cache = std::unordered_map<AlignedRead, std::unordered_map<Haplotype, double>>;
+        using ReadReference      = std::reference_wrapper<const AlignedRead>;
+        using HaplotypeReference = std::reference_wrapper<const Haplotype>;
+        using Cache = std::unordered_map<ReadReference, std::unordered_map<HaplotypeReference, double>>;
         
         Cache cache_;
         size_t max_num_reads_;

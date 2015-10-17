@@ -44,7 +44,7 @@ const fs::path VcfReader::path() const
     return file_path_;
 }
 
-VcfHeader VcfReader::fetch_header()
+VcfHeader VcfReader::fetch_header() const
 {
     return reader_->fetch_header();
 }

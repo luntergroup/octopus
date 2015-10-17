@@ -33,7 +33,7 @@ public:
     VcfParser(VcfParser&&)                 = default;
     VcfParser& operator=(VcfParser&&)      = default;
     
-    VcfHeader fetch_header() override;
+    VcfHeader fetch_header() const override;
     size_t count_records() override;
     size_t count_records(const GenomicRegion& region) override;
     std::vector<VcfRecord> fetch_records(Unpack level = Unpack::All) override;
@@ -41,7 +41,7 @@ public:
     
 private:
     fs::path file_path_;
-    std::ifstream file_;
+    mutable std::ifstream file_;
     VcfHeader header_;
     const std::vector<std::string> samples_;
     const std::streampos first_record_pos_; // must go after header_!

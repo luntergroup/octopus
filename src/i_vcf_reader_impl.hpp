@@ -21,7 +21,7 @@ class IVcfReaderImpl
 public:
     enum class Unpack { All, AllButSamples };
     
-    virtual VcfHeader fetch_header() = 0;
+    virtual VcfHeader fetch_header() const = 0;
     virtual size_t count_records() = 0;
     virtual size_t count_records(const GenomicRegion& region) = 0;
     virtual std::vector<VcfRecord> fetch_records(Unpack level = Unpack::All) = 0; // fetches all records

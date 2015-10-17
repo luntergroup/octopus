@@ -54,7 +54,7 @@ samples_ {header_.get_samples()},
 first_record_pos_ {file_.tellg()}
 {}
 
-VcfHeader VcfParser::fetch_header()
+VcfHeader VcfParser::fetch_header() const
 {
     return header_;
 }

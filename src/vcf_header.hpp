@@ -14,9 +14,10 @@
 #include <unordered_map>
 #include <ostream>
 
+#include "equitable.hpp"
 #include "vcf_type.hpp"
 
-/**
+/*
  There are two types of header lines in VCF.
  
  basic:      key=value
@@ -25,7 +26,7 @@
  basic field 'key's must be unique. structured field 'TAG's may not be unique (e.g. INFO), but then there must
  be some unique 'key' within <>.
  */
-class VcfHeader
+class VcfHeader : public Equitable<VcfHeader>
 {
 public:
     class Builder;
@@ -106,6 +107,8 @@ std::vector<VcfType> get_typed_info_values(const VcfHeader& header, const VcfHea
 
 std::vector<VcfType> get_typed_format_values(const VcfHeader& header, const VcfHeader::KeyType& field_key,
                                              const std::vector<VcfHeader::ValueType>& values);
+
+bool operator==(const VcfHeader& lhs, const VcfHeader& rhs);
 
 std::ostream& operator<<(std::ostream& os, const VcfHeader& header);
 

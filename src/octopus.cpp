@@ -82,6 +82,49 @@ namespace Octopus
         return bytes_available / sizeof(AlignedRead);
     }
     
+    VcfHeader make_header(const std::vector<SampleIdType>& samples,
+                          const std::vector<GenomicRegion::StringType>& contigs,
+                          const ReferenceGenome& reference)
+    {
+        auto vcf_header_builder = get_default_header_builder().set_samples(samples);
+        for (const auto& contig : contigs) vcf_header_builder.add_contig(contig);
+        vcf_header_builder.add_basic_field("reference", reference.get_name());
+        vcf_header_builder.add_structured_field("Octopus", {{"some", "option"}});
+        
+        return vcf_header_builder.build_once();
+    }
+    
+    struct ReadPipe
+    {
+        ReadPipe() = delete;
+        ReadPipe(ReadManager& read_manager, ReadFilter<ReadContainer::const_iterator>& read_filter,
+                 Downsampler<SampleIdType>& downsampler, ReadTransform& read_transform)
+        : read_manager {read_manager}, read_filter {read_filter},
+          downsampler {downsampler}, read_transform {read_transform}
+        {}
+        
+        ReadMap fetch_reads(const std::vector<SampleIdType>& samples, const GenomicRegion& region)
+        {
+            auto good_reads = filter_reads(make_mappable_map(read_manager.fetch_reads(samples, region)), read_filter).first;
+            
+            std::cout << "found " << count_reads(good_reads) << " good reads" << std::endl;
+            
+            auto result = downsampler(std::move(good_reads));
+            
+            std::cout << "downsampled to " << count_reads(result) << " reads" << std::endl;
+            
+            transform_reads(result, read_transform);
+            
+            return result;
+        }
+        
+    private:
+        ReadManager& read_manager;
+        ReadFilter<ReadContainer::const_iterator>& read_filter;
+        Downsampler<SampleIdType>& downsampler;
+        ReadTransform& read_transform;
+    };
+    
     void run_octopus(po::variables_map& options)
     {
         using std::cout; using std::endl;
@@ -102,18 +145,15 @@ namespace Octopus
         auto candidate_generator = Options::get_candidate_generator(options, reference);
         auto output              = Options::get_output_vcf(options);
         
+        ReadPipe read_pipe {read_manager, read_filter, downsampler, read_transform};
+        
         const auto samples = get_samples(options, read_manager);
         
         cout << "writing results to " << output.path().string() << endl;
         
         const auto contigs = get_contigs(regions);
         
-        auto vcf_header_builder = get_default_header_builder().set_samples(samples);
-        for (const auto& contig : contigs) vcf_header_builder.add_contig(contig);
-        vcf_header_builder.add_basic_field("reference", reference.get_name());
-        vcf_header_builder.add_structured_field("Octopus", {{"some", "option"}});
-        
-        const auto vcf_header = vcf_header_builder.build_once();
+        auto vcf_header = make_header(samples, contigs, reference);
         
         output.write(vcf_header);
         
@@ -122,27 +162,14 @@ namespace Octopus
             
             size_t num_buffered_reads {};
             
+            auto caller = Options::get_variant_caller(options, reference, candidate_generator, contig);
+            
             for (const auto& region : contig_regions.second) {
                 cout << "processing input region " << region << endl;
                 
-//                std::cout << "num reads in BAMS is " << read_manager.count_reads(region) << std::endl;
-//                exit(0);
+                auto reads = read_pipe.fetch_reads(samples, region);
                 
-                auto good_reads = filter_reads(make_mappable_map(read_manager.fetch_reads(samples, region)), read_filter).first;
-                
-                std::cout << "found " << count_reads(good_reads) << " good reads" << std::endl;
-                
-                auto downsampled_reads = downsampler(std::move(good_reads));
-                
-                std::cout << "downsampled to " << count_reads(downsampled_reads) << " reads" << std::endl;
-                
-                transform_reads(downsampled_reads, read_transform);
-                
-                auto caller = Options::get_variant_caller(options, reference, candidate_generator, contig);
-                
-                cout << "model details: " << caller->get_details() << endl;
-                
-                auto calls = caller->call_variants(region, std::move(downsampled_reads));
+                auto calls = caller->call_variants(region, std::move(reads));
                 
                 cout << "writing " << calls.size() << " calls to VCF" << endl;
                 

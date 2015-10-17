@@ -87,7 +87,7 @@ samples_ {}
 
 std::unordered_map<std::string, std::string> get_format(bcf_hrec_t* line);
 
-VcfHeader HtslibBcfFacade::fetch_header()
+VcfHeader HtslibBcfFacade::fetch_header() const
 {
     VcfHeader::Builder hb {};
     

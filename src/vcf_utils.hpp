@@ -9,9 +9,15 @@
 #ifndef __Octopus__vcf_utils__
 #define __Octopus__vcf_utils__
 
+#include <boost/filesystem/path.hpp>
+
 #include "vcf_type.hpp"
 #include "vcf_header.hpp"
 #include "vcf_record.hpp"
+#include "vcf_reader.hpp"
+#include "vcf_writer.hpp"
+
+namespace fs = boost::filesystem;
 
 unsigned get_field_cardinality(const VcfHeader::KeyType& key, const VcfRecord& record);
 
@@ -21,5 +27,9 @@ std::vector<VcfType> get_typed_info_values(const VcfHeader& header, const VcfRec
 std::vector<VcfType> get_typed_format_values(const VcfHeader& header, const VcfRecord& record,
                                              const VcfRecord::SampleIdType sample,
                                              const VcfHeader::KeyType& key);
+
+VcfHeader merge(const std::vector<VcfHeader>& headers);
+
+VcfWriter merge(const std::vector<VcfReader>& readers, fs::path result_path);
 
 #endif /* defined(__Octopus__vcf_utils__) */

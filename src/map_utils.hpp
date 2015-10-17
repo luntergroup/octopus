@@ -20,7 +20,7 @@
 
 template <typename MappableMap, typename MappableType>
 std::size_t count_overlapped(const MappableMap& mappables, const MappableType& m,
-                             MappableRangeOrder order=MappableRangeOrder::ForwardSorted)
+                             MappableRangeOrder order = MappableRangeOrder::ForwardSorted)
 {
     std::size_t result {};
     
@@ -33,7 +33,7 @@ std::size_t count_overlapped(const MappableMap& mappables, const MappableType& m
 
 template <typename MappableMap, typename MappableType1, typename MappableType2>
 bool has_shared(const MappableMap& mappables, const MappableType1& lhs, const MappableType2& rhs,
-                MappableRangeOrder order=MappableRangeOrder::ForwardSorted)
+                MappableRangeOrder order = MappableRangeOrder::ForwardSorted)
 {
     return std::any_of(std::cbegin(mappables), std::cend(mappables),
                        [&lhs, &rhs, order] (const auto& map_pair) {
@@ -45,7 +45,7 @@ bool has_shared(const MappableMap& mappables, const MappableType1& lhs, const Ma
 template <typename MappableMap, typename MappableType1, typename MappableType2>
 std::size_t
 count_shared(const MappableMap& mappables, const MappableType1& lhs, const MappableType2& rhs,
-             MappableRangeOrder order=MappableRangeOrder::ForwardSorted)
+             MappableRangeOrder order = MappableRangeOrder::ForwardSorted)
 {
     std::size_t result {};
     
@@ -90,7 +90,7 @@ find_first_shared(const MappableMap& mappables, ForwardIterator first, ForwardIt
 template <typename MappableMap, typename ForwardIterator>
 std::size_t
 max_count_if_shared_with_first(const MappableMap& mappables, ForwardIterator first, ForwardIterator last,
-                               MappableRangeOrder order=MappableRangeOrder::ForwardSorted)
+                               MappableRangeOrder order = MappableRangeOrder::ForwardSorted)
 {
     std::size_t maximum {0};
     std::size_t count {};
@@ -126,7 +126,7 @@ leftmost_sorted_mappable(const MappableMap& mappables)
 template <typename MappableMap, typename MappableType>
 typename MappableMap::mapped_type::const_iterator
 leftmost_overlapped(const MappableMap& mappables, const MappableType& mappable,
-                    MappableRangeOrder order=MappableRangeOrder::ForwardSorted)
+                    MappableRangeOrder order = MappableRangeOrder::ForwardSorted)
 {
     using Iterator = typename MappableMap::mapped_type::const_iterator;
     
@@ -134,7 +134,7 @@ leftmost_overlapped(const MappableMap& mappables, const MappableType& mappable,
     
     // To find a default value
     for (const auto& map_pair : mappables) {
-        if (map_pair.second.size() > 0) {
+        if (!map_pair.second.empty()) {
             result = std::prev(std::cend(map_pair.second));
             break;
         }
@@ -154,16 +154,24 @@ leftmost_overlapped(const MappableMap& mappables, const MappableType& mappable,
 template <typename MappableMap, typename MappableType>
 typename MappableMap::mapped_type::const_iterator
 rightmost_overlapped(const MappableMap& mappables, const MappableType& mappable,
-                     MappableRangeOrder order=MappableRangeOrder::ForwardSorted)
+                     MappableRangeOrder order = MappableRangeOrder::ForwardSorted)
 {
     using Iterator = typename MappableMap::mapped_type::const_iterator;
     
-    Iterator result {std::cbegin(std::cbegin(mappables)->second)};
+    Iterator result;
+    
+    // To find a default value
+    for (const auto& map_pair : mappables) {
+        if (!map_pair.second.empty()) {
+            result = std::begin(map_pair.second);
+            break;
+        }
+    }
     
     for (const auto& map_pair : mappables) {
         auto overlapped = overlap_range(std::cbegin(map_pair.second), std::cend(map_pair.second), mappable, order);
         
-        if (!overlapped.empty() && overlapped.begin() != overlapped.end() && ends_before(*result, overlapped.back())) {
+        if (!overlapped.empty() && overlapped.begin() != std::cend(map_pair.second) && ends_before(*result, overlapped.back())) {
             result = std::prev(overlapped.end().base());
         }
     }

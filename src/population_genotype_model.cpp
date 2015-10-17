@@ -67,8 +67,8 @@ namespace Octopus
                                        const GenotypePosteriors& genotype_posteriors,
                                        size_t n = 5);
         
-        void print_top_haplotypes(const std::vector<Haplotype>& haplotypes, const ReadMap& reads, size_t n = 3);
-        void print_top_genotypes(const std::vector<Genotype<Haplotype>>& genotypes, const ReadMap& reads,
+        void print_read_haplotype_liklihoods(const std::vector<Haplotype>& haplotypes, const ReadMap& reads, size_t n = 3);
+        void print_read_genotype_liklihoods(const std::vector<Genotype<Haplotype>>& genotypes, const ReadMap& reads,
                                  ReadModel& read_model, size_t n = 3);
     } // namespace debug
     
@@ -295,6 +295,10 @@ namespace Octopus
     {
         auto genotypes = generate_all_genotypes(haplotypes, ploidy_);
         
+        if (genotypes.size() == 1) {
+            // TODO: catch this case to avoid computing
+        }
+        
         std::cout << "there are " << genotypes.size() << " candidate genotypes" << std::endl;
         
         ReadModel read_model {ploidy_, max_sample_read_count(reads), haplotypes.size()};
@@ -303,8 +307,7 @@ namespace Octopus
         
         //debug::print_genotype_log_likelihoods(genotypes, genotype_log_likilhoods, 20);
         //std::cout << std::endl;
-        //debug::print_top_genotypes(genotypes, reads, read_model, 10);
-        //exit(0);
+        //debug::print_read_genotype_liklihoods(genotypes, reads, read_model, 10);
         
         read_model.clear_cache();
         
@@ -466,7 +469,7 @@ namespace Octopus
             }
         }
         
-        void print_top_haplotypes(const std::vector<Haplotype>& haplotypes, const ReadMap& reads, size_t n)
+        void print_read_haplotype_liklihoods(const std::vector<Haplotype>& haplotypes, const ReadMap& reads, size_t n)
         {
             auto m = std::min(n, haplotypes.size());
             
@@ -496,7 +499,7 @@ namespace Octopus
             }
         }
         
-        void print_top_genotypes(const std::vector<Genotype<Haplotype>>& genotypes, const ReadMap& reads,
+        void print_read_genotype_liklihoods(const std::vector<Genotype<Haplotype>>& genotypes, const ReadMap& reads,
                                  ReadModel& read_model, size_t n)
         {
             auto m = std::min(n, genotypes.size());

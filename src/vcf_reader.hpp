@@ -39,7 +39,7 @@ public:
     VcfReader& operator=(VcfReader&&)      = default;
     
     const fs::path path() const;
-    VcfHeader fetch_header();
+    VcfHeader fetch_header() const;
     size_t count_records() const;
     size_t count_records(const GenomicRegion& region) const;
     std::vector<VcfRecord> fetch_records(Unpack level = Unpack::All); // fetches all records

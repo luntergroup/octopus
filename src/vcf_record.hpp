@@ -18,9 +18,11 @@
 #include <utility> // std::forward
 #include <initializer_list>
 
+#include "comparable.hpp"
+
 // TODO: consider using #include <boost/container/small_vector.hpp> for INFO and genotype fields
 
-class VcfRecord
+class VcfRecord : public Comparable<VcfRecord>
 {
 public:
     class Builder;
@@ -161,6 +163,9 @@ bool is_hapmap3_member(const VcfRecord& record) noexcept;
 bool is_1000g_member(const VcfRecord& record) noexcept;
 bool is_somatic(const VcfRecord& record) noexcept;
 bool is_validated(const VcfRecord& record) noexcept;
+
+bool operator==(const VcfRecord& lhs, const VcfRecord& rhs);
+bool operator<(const VcfRecord& lhs, const VcfRecord& rhs);
 
 std::ostream& operator<<(std::ostream& os, const VcfRecord& record);
 

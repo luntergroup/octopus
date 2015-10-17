@@ -23,20 +23,23 @@
 
 HaplotypePhaser::HaplotypePhaser(ReferenceGenome& reference)
 :
-tree_ {reference}
+tree_ {reference},
+walker_ {max_indicators_, 4, GenomeWalker::IndicatorLimit::NoLimit, GenomeWalker::ExtensionLimit::WithinReadLengthOfFirstIncluded}
 {}
 
 HaplotypePhaser::HaplotypePhaser(ReferenceGenome& reference, unsigned max_haplotypes)
 :
 tree_ {reference},
-max_haplotypes_ {max_haplotypes}
+max_haplotypes_ {max_haplotypes},
+walker_ {max_indicators_, 4, GenomeWalker::IndicatorLimit::NoLimit, GenomeWalker::ExtensionLimit::WithinReadLengthOfFirstIncluded}
 {}
 
 HaplotypePhaser::HaplotypePhaser(ReferenceGenome& reference, unsigned max_haplotypes, unsigned max_indicators)
 :
 tree_ {reference},
 max_haplotypes_ {max_haplotypes},
-max_indicators_ {max_indicators}
+max_indicators_ {max_indicators},
+walker_ {max_indicators_, 4, GenomeWalker::IndicatorLimit::NoLimit, GenomeWalker::ExtensionLimit::WithinReadLengthOfFirstIncluded}
 {}
 
 void extend(HaplotypeTree& tree, const Variant& variant)
@@ -138,9 +141,7 @@ HaplotypePhaser::phase(const std::vector<Haplotype>& haplotypes,
 
 void HaplotypePhaser::extend_tree(const ReadMap& reads)
 {
-    auto region = advance_region(tree_region_, reads,
-                                 buffered_candidates_, 3, max_indicators_,
-                                 IndicatorLimit::NoLimit, ExtensionLimit::NoLimit);
+    auto region = walker_.continue_walk(tree_region_, reads, buffered_candidates_);
     
     if (tree_.empty()) {
         tree_region_ = region;
