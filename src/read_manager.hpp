@@ -88,8 +88,11 @@ private:
     
     ReadReader make_reader(const fs::path& reader_path);
     bool is_open(const fs::path& reader_path) const noexcept;
+    std::vector<fs::path>::iterator partition_open(std::vector<fs::path>& reader_paths) const;
+    unsigned num_open_readers() const noexcept;
+    unsigned num_reader_spaces() const noexcept;
     void open_reader(const fs::path& reader_path);
-    void open_readers(std::vector<fs::path>::iterator first, std::vector<fs::path>::iterator last);
+    std::vector<fs::path>::iterator open_readers(std::vector<fs::path>::iterator first, std::vector<fs::path>::iterator last);
     void close_reader(const fs::path& reader_path);
     fs::path choose_reader_to_close() const;
     void close_readers(unsigned n);
@@ -99,6 +102,7 @@ private:
     bool could_reader_contain_region(const fs::path& the_reader_path, const GenomicRegion& region) const;
     std::vector<fs::path> get_reader_paths_containing_samples(const std::vector<SampleIdType>& sample) const;
     std::vector<fs::path> get_reader_paths_possibly_containing_region(const GenomicRegion& region) const;
+    std::vector<fs::path> get_possible_reader_paths(const std::vector<SampleIdType>& samples, const GenomicRegion& region) const;
 };
 
 #endif /* defined(__Octopus__read_manager__) */
