@@ -9,8 +9,9 @@
 #include "read_manager.hpp"
 
 #include <memory> // std::make_unique
-#include <iterator>  // std::make_move_iterator, std::cbegin etc
+#include <iterator>  // std::make_move_iterator, std::cbegin, std::cend, std::distance
 #include <algorithm> // std::sort, std::copy_if, std::min, std::nth_element, std::partition, std::for_each
+                     // std::remove_if
 #include <utility>   // std::move
 #include <boost/filesystem/operations.hpp>
 
@@ -92,17 +93,17 @@ size_t ReadManager::count_reads(const std::vector<SampleIdType>& samples, const 
     
     auto reader_paths = get_possible_reader_paths(samples, region);
     
-   auto it = partition_open(reader_paths);
+    auto it = partition_open(reader_paths);
     
     size_t result {};
     
     while (!reader_paths.empty()) {
-    std:for_each(it, end(reader_paths),
-                 [this, &samples, &region, &result] (const auto& reader_path) {
-                     for (const auto& sample : samples) {
-                         result += open_readers_.at(reader_path).count_reads(sample, region);
-                     }
-                 });
+        std:for_each(it, end(reader_paths),
+                     [this, &samples, &region, &result] (const auto& reader_path) {
+                         for (const auto& sample : samples) {
+                             result += open_readers_.at(reader_path).count_reads(sample, region);
+                         }
+                     });
         
         reader_paths.erase(it, end(reader_paths));
         it = open_readers(begin(reader_paths), end(reader_paths));
@@ -311,14 +312,12 @@ ReadManager::open_readers(std::vector<fs::path>::iterator first, std::vector<fs:
     auto num_available_spaces = num_reader_spaces();
     auto num_requested_spaces = static_cast<unsigned>(std::distance(first, last));
     
-    unsigned num_readers_to_close {};
-    
-    if (num_requested_spaces > num_available_spaces) {
-        num_readers_to_close = std::min(num_open_readers(), num_requested_spaces - num_available_spaces);
-    } else {
+    if (num_requested_spaces <= num_available_spaces) {
         std::for_each(first, last, [this] (const auto& path) { open_reader(path); });
         return first;
     }
+    
+    auto num_readers_to_close = std::min(num_open_readers(), num_requested_spaces - num_available_spaces);
     
     close_readers(num_readers_to_close);
     
@@ -404,15 +403,15 @@ void ReadManager::add_reader_to_sample_map(const fs::path& the_reader_path,
 std::vector<fs::path> ReadManager::get_reader_paths_containing_samples(const std::vector<SampleIdType>& samples) const
 {
     std::unordered_set<fs::path> unique_reader_paths {};
+    unique_reader_paths.reserve(num_files_);
     
     for (const auto& sample : samples) {
-        const auto& sample_reader_paths = reader_paths_containing_sample_.at(sample);
-        for (const auto& reader_path : sample_reader_paths) {
+        for (const auto& reader_path : reader_paths_containing_sample_.at(sample)) {
             unique_reader_paths.emplace(reader_path);
         }
     }
     
-    return std::vector<fs::path>(unique_reader_paths.begin(), unique_reader_paths.end());
+    return std::vector<fs::path> {std::begin(unique_reader_paths), std::end(unique_reader_paths)};
 }
 
 std::vector<fs::path>

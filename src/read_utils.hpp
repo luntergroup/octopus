@@ -917,6 +917,22 @@ find_high_coverage_regions(const ReadMap& reads, const GenomicRegion& region, co
     return result;
 }
 
+template <typename Reads>
+void compress_reads(Reads& reads)
+{
+    for (auto& read : reads) {
+        read.compress();
+    }
+}
+
+template <typename Reads>
+void decompress_reads(Reads& reads)
+{
+    for (auto& read : reads) {
+        read.decompress();
+    }
+}
+
 // TODO
 AlignedRead find_next_segment(const AlignedRead& read, const MappableMap<GenomicRegion::StringType, AlignedRead>& reads);
 

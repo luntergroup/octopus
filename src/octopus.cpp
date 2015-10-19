@@ -140,7 +140,7 @@ namespace Octopus
                 
                 auto reads = read_pipe.fetch_reads(samples, region);
                 
-                return;
+                //return; // uncomment for ReadPipe performance benchmarking
                 
                 auto calls = caller->call_variants(region, std::move(reads));
                 

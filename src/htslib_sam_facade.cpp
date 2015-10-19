@@ -230,11 +230,13 @@ std::vector<GenomicRegion> HtslibSamFacade::get_possible_regions_in_file()
     result.reserve(get_num_reference_contigs());
     
     for (HtsTidType hts_tid {}; hts_tid < get_num_reference_contigs(); ++hts_tid) {
-        auto contig_name = get_contig_name(hts_tid);
+        const auto& contig_name = get_contig_name(hts_tid);
         // CRAM files don't seem to have the same index stats as BAM files so
         // we don't know which contigs have been mapped to
         if (hts_file_->is_cram || get_num_mapped_reads(contig_name) > 0) {
-            result.emplace_back(std::move(contig_name), 0, get_reference_contig_size(contig_name));
+            // without actually looking at the reads we don't know what coverage there is so
+            // we just assume the entire contig is possible
+            result.emplace_back(contig_name, 0, get_reference_contig_size(contig_name));
         }
     }
     
