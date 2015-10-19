@@ -25,6 +25,7 @@
 #include "read_manager.hpp"
 
 #include "read_filters.hpp"
+#include "downsampler.hpp"
 #include "read_transform.hpp"
 #include "read_transformations.hpp"
 #include "candidate_generators.hpp"
@@ -79,7 +80,7 @@ namespace Octopus
         ("memory", po::value<size_t>()->default_value(8000), "target memory usage in MB")
         ("reference-cache-size", po::value<size_t>()->default_value(0), "the maximum number of bytes that can be used to cache reference sequence")
         ("compress-reads", po::bool_switch()->default_value(false), "compress the reads (slower)")
-        ("max-open-files", po::value<unsigned>()->default_value(200), "the maximum number of files that can be open at one time")
+        ("max-open-read-files", po::value<unsigned>()->default_value(200), "the maximum number of read files that can be open at one time")
         ;
         
         po::options_description input("Input/output options");
@@ -99,15 +100,16 @@ namespace Octopus
         
         po::options_description filters("Read filter options");
         filters.add_options()
-        ("no-unmapped", po::bool_switch()->default_value(false), "filter reads marked as unmapped")
+        ("allow-unmapped", po::bool_switch()->default_value(false), "filter reads marked as unmapped")
         ("min-mapping-quality", po::value<unsigned>()->default_value(20), "reads with smaller mapping quality are ignored")
         ("good-base-quality", po::value<unsigned>()->default_value(20), "base quality threshold used by min-good-bases filter")
         ("min-good-base-fraction", po::value<double>(), "base quality threshold used by min-good-bases filter")
         ("min-good-bases", po::value<AlignedRead::SizeType>()->default_value(0), "minimum number of bases with quality min-base-quality before read is considered")
-        ("no-qc-fails", po::bool_switch()->default_value(false), "filter reads marked as QC failed")
+        ("allow-qc-fails", po::bool_switch()->default_value(false), "filter reads marked as QC failed")
         ("min-read-length", po::value<AlignedRead::SizeType>(), "filter reads shorter than this")
         ("max-read-length", po::value<AlignedRead::SizeType>(), "filter reads longer than this")
-        ("remove-duplicate-reads", po::bool_switch()->default_value(false), "filters duplicate reads")
+        ("no-marked-duplicates", po::bool_switch()->default_value(false), "filters reads marked as duplicate in alignment record")
+        ("no-octopus-duplicates", po::bool_switch()->default_value(false), "filters reads considered duplicates by Octopus")
         ("no-secondary-alignmenets", po::bool_switch()->default_value(false), "filters reads marked as secondary alignments")
         ("no-supplementary-alignmenets", po::bool_switch()->default_value(false), "filters reads marked as supplementary alignments")
         ("no-unmapped-mates", po::bool_switch()->default_value(false), "filters reads with unmapped mates")
@@ -119,7 +121,7 @@ namespace Octopus
         transforms.add_options()
         ("trim-soft-clipped", po::bool_switch()->default_value(false), "trims soft clipped parts of the read")
         ("tail-trim-size", po::value<AlignedRead::SizeType>()->default_value(0), "trims this number of bases off the tail of all reads")
-        ("trim-adapters", po::bool_switch()->default_value(true), "trims any overlapping regions that pass the fragment size")
+        ("trim-adapters", po::bool_switch()->default_value(false), "trims any overlapping regions that pass the fragment size")
         ;
         
         po::options_description candidates("Candidate generation options");
@@ -410,17 +412,17 @@ namespace Octopus
     
     ReadManager get_read_manager(const po::variables_map& options)
     {
-        return ReadManager {get_read_paths(options), options.at("max-open-files").as<unsigned>()};
+        return ReadManager {get_read_paths(options), options.at("max-open-read-files").as<unsigned>()};
     }
     
-    ReadFilter<ReadContainer::const_iterator> get_read_filter(const po::variables_map& options)
+    ReadFilterer get_read_filter(const po::variables_map& options)
     {
         using QualityType = AlignedRead::QualityType;
         using SizeType    = AlignedRead::SizeType;
         
-        ReadFilter<ReadContainer::const_iterator> result {};
+        ReadFilterer result {};
         
-        if (options.at("no-unmapped").as<bool>()) {
+        if (!options.at("allow-unmapped").as<bool>()) {
             result.register_filter(ReadFilters::is_mapped());
         }
         
@@ -450,11 +452,15 @@ namespace Octopus
             result.register_filter(ReadFilters::is_long(options.at("max-read-length").as<SizeType>()));
         }
         
-        if (options.at("remove-duplicate-reads").as<bool>()) {
+        if (options.at("no-marked-duplicates").as<bool>()) {
+            result.register_filter(ReadFilters::is_not_marked_duplicate());
+        }
+        
+        if (options.at("no-octopus-duplicates").as<bool>()) {
             result.register_filter(ReadFilters::is_not_duplicate());
         }
         
-        if (options.at("no-qc-fails").as<bool>()) {
+        if (!options.at("allow-qc-fails").as<bool>()) {
             result.register_filter(ReadFilters::is_not_marked_qc_fail());
         }
         
@@ -473,12 +479,12 @@ namespace Octopus
         return result;
     }
     
-    Downsampler<SampleIdType> get_downsampler(const po::variables_map& options)
+    Downsampler get_downsampler(const po::variables_map& options)
     {
         auto max_coverage    = options.at("downsample-above").as<unsigned>();
         auto target_coverage = options.at("downsample-target").as<unsigned>();
         
-        return Downsampler<SampleIdType>(max_coverage, target_coverage);
+        return Downsampler(max_coverage, target_coverage);
     }
     
     ReadTransform get_read_transformer(const po::variables_map& options)

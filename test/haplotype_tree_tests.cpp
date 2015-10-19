@@ -477,7 +477,7 @@ BOOST_AUTO_TEST_CASE(prune_unqiue_leaves_a_single_haplotype_which_contains_the_s
     
     auto reads = a_read_manager.fetch_reads(the_sample_id, a_region);
     
-    candidate_generator.add_reads(reads.cbegin(), reads.cend());
+    //candidate_generator.add_reads(reads.cbegin(), reads.cend());
     
     auto candidates = candidate_generator.get_candidates(a_region);
     

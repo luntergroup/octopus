@@ -17,6 +17,7 @@
 #include "mappable_set.hpp"
 #include "mappable_map.hpp"
 #include "aligned_read.hpp"
+#include "read_filter.hpp"
 
 namespace Octopus
 {
@@ -27,6 +28,8 @@ namespace Octopus
     
     using ReadContainer = MappableSet<AlignedRead>;
     using ReadMap       = MappableMap<std::string, AlignedRead>;
+    
+    using ReadFilterer = ReadFilter<ReadContainer::iterator>;
 }
 
 #endif

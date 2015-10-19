@@ -40,7 +40,8 @@ class ReadManager
 {
 public:
     using SampleIdType  = IReadReaderImpl::SampleIdType;
-    using SampleReadMap = std::unordered_map<SampleIdType, std::vector<AlignedRead>>;
+    using Reads         = IReadReaderImpl::Reads;
+    using SampleReadMap = IReadReaderImpl::SampleReadMap;
     
     ReadManager() = default;
     explicit ReadManager(std::vector<fs::path> read_file_paths, unsigned max_open_files);
@@ -62,7 +63,7 @@ public:
     GenomicRegion find_head_region(const std::vector<SampleIdType>& samples, const GenomicRegion& region, size_t target_coverage);
     GenomicRegion find_head_region(const GenomicRegion& region, size_t target_coverage);
     
-    std::vector<AlignedRead> fetch_reads(const SampleIdType& sample, const GenomicRegion& region);
+    Reads fetch_reads(const SampleIdType& sample, const GenomicRegion& region);
     SampleReadMap fetch_reads(const std::vector<SampleIdType>& samples, const GenomicRegion& region);
     SampleReadMap fetch_reads(const GenomicRegion& region); // all samples
     

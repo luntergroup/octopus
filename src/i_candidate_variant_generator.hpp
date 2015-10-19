@@ -24,8 +24,6 @@ namespace Octopus {
 class ICandidateVariantGenerator
 {
 public:
-    using RealType = Octopus::ProbabilityType;
-    
     // pure virtual functions
     virtual std::vector<Variant> get_candidates(const GenomicRegion&) = 0;
     virtual ~ICandidateVariantGenerator() = default;
@@ -35,7 +33,7 @@ public:
     // add_reads is not strictly necessary as the effect of calling add_reads must be the same as
     // calling add_read for each read. However, there may be significant performance benifits
     // to having an add_reads method to avoid many virtual dispatches.
-    // Ideally add_reads would be templates to accept any InputIterator, but it is not possible
+    // Ideally add_reads would be templated to accept any InputIterator, but it is not possible
     // to have template virtual methods. The best solution is therefore to just overload add_reads
     // for common container iterators, more can easily be added if needed.
     virtual void add_reads(std::vector<AlignedRead>::const_iterator first, std::vector<AlignedRead>::const_iterator last) {};

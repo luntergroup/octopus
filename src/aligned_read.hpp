@@ -37,9 +37,9 @@ public:
     class NextSegment : public Equitable<NextSegment>
     {
     public:
-        struct FlagData
+        struct Flags
         {
-            FlagData() = default;
+            Flags() = default;
             
             bool is_marked_unmapped;
             bool is_marked_reverse_mapped;
@@ -47,7 +47,7 @@ public:
         
         NextSegment() = default;
         template <typename String_> NextSegment(String_&& contig_name, SizeType begin,
-                                                SizeType inferred_template_length, FlagData data);
+                                                SizeType inferred_template_length, Flags data);
         ~NextSegment() = default;
         
         NextSegment(const NextSegment&)            = default;
@@ -65,19 +65,19 @@ public:
         size_t get_hash() const;
         
     private:
-        using Flags = std::bitset<2>;
+        using FlagBits = std::bitset<2>;
         
         std::string contig_name_;
         SizeType begin_;
         SizeType inferred_template_length_;
-        Flags flags_;
+        FlagBits flags_;
         
-        Flags get_flags(const FlagData& data);
+        FlagBits compress_flags(const Flags& data);
     };
     
-    struct FlagData
+    struct Flags
     {
-        FlagData() = default;
+        Flags() = default;
         
         bool is_marked_multiple_read_template;
         bool is_marked_all_segments_in_read_aligned;
@@ -97,15 +97,15 @@ public:
     template <typename GenomicRegion_, typename String1_, typename Qualities_, typename CigarString_>
     explicit AlignedRead(GenomicRegion_&& reference_region, String1_&& sequence,
                          Qualities_&& qualities, CigarString_&& cigar_string,
-                         QualityType mapping_quality, FlagData flags);
+                         QualityType mapping_quality, Flags flags);
     
     template <typename GenomicRegion_, typename String1_, typename Qualities_, typename CigarString_,
               typename String2_>
     explicit AlignedRead(GenomicRegion_&& reference_region, String1_&& sequence,
                          Qualities_&& qualities, CigarString_&& cigar_string,
-                         QualityType mapping_quality, FlagData flags,
+                         QualityType mapping_quality, Flags flags,
                          String2_&& next_segment_contig_name, SizeType next_segment_begin,
-                         SizeType inferred_template_length, NextSegment::FlagData next_segment_flags);
+                         SizeType inferred_template_length, NextSegment::Flags next_segment_flags);
     
     AlignedRead(const AlignedRead& other);
     AlignedRead& operator=(const AlignedRead& other);
@@ -123,7 +123,7 @@ public:
     const CigarString& get_cigar_string() const noexcept;
     bool has_mate() const noexcept;
     const NextSegment& get_next_segment() const;
-    FlagData get_flags() const;
+    Flags get_flags() const;
     
     bool is_chimeric() const noexcept;
     bool is_marked_all_segments_in_read_aligned() const;
@@ -144,7 +144,9 @@ public:
     void decompress();
     
 private:
-    using Flags = std::bitset<8>;
+    using FlagBits = std::bitset<9>;
+    
+    static constexpr size_t compression_flag_ {8};
     
     GenomicRegion region_;
     std::string read_group_;
@@ -152,12 +154,11 @@ private:
     CigarString cigar_string_;
     Qualities qualities_;
     std::unique_ptr<NextSegment> next_segment_;
-    Flags flags_;
     mutable size_t hash_ = 0; // 0 is reserved so can be lazy evaluated
+    FlagBits flags_;
     QualityType mapping_quality_;
-    bool is_compressed_;
     
-    Flags get_flags(const FlagData& data);
+    FlagBits compress_flags(const Flags& data);
     bool is_compressed() const noexcept;
     void set_compressed() noexcept;
     void set_uncompressed() noexcept;
@@ -167,7 +168,7 @@ private:
 template <typename GenomicRegion_, typename String1_, typename Qualities_, typename CigarString_>
 inline AlignedRead::AlignedRead(GenomicRegion_&& reference_region, String1_&& sequence,
                                 Qualities_&& qualities, CigarString_&& cigar_string,
-                                QualityType mapping_quality, FlagData flags)
+                                QualityType mapping_quality, Flags flags)
 :
 region_ {std::forward<GenomicRegion_>(reference_region)},
 read_group_ {},
@@ -175,18 +176,17 @@ sequence_ {std::forward<String1_>(sequence)},
 qualities_ {std::forward<Qualities_>(qualities)},
 cigar_string_ {std::forward<CigarString_>(cigar_string)},
 next_segment_ {nullptr},
-flags_ {get_flags(flags)},
-mapping_quality_ {mapping_quality},
-is_compressed_ {false}
+flags_ {compress_flags(flags)},
+mapping_quality_ {mapping_quality}
 {}
 
 template <typename GenomicRegion_, typename String1_, typename Qualities_, typename CigarString_,
           typename String2_>
 AlignedRead::AlignedRead(GenomicRegion_&& reference_region, String1_&& sequence,
                          Qualities_&& qualities, CigarString_&& cigar_string,
-                         QualityType mapping_quality, FlagData flags,
+                         QualityType mapping_quality, Flags flags,
                          String2_&& next_segment_contig_name, SizeType next_segment_begin,
-                         SizeType inferred_template_length, NextSegment::FlagData next_segment_flags)
+                         SizeType inferred_template_length, NextSegment::Flags next_segment_flags)
 :
 region_ {std::forward<GenomicRegion_>(reference_region)},
 read_group_ {},
@@ -196,37 +196,34 @@ cigar_string_ {std::forward<CigarString_>(cigar_string)},
 next_segment_ {std::make_unique<NextSegment>(std::forward<String2_>(next_segment_contig_name),
                                                  next_segment_begin, inferred_template_length,
                                                  next_segment_flags)},
-flags_ {get_flags(flags)},
-mapping_quality_ {mapping_quality},
-is_compressed_ {false}
+flags_ {compress_flags(flags)},
+mapping_quality_ {mapping_quality}
 {}
 
 template <typename String_>
 AlignedRead::NextSegment::NextSegment(String_&& contig_name, SizeType begin,
-                                      SizeType inferred_template_length, FlagData data)
+                                      SizeType inferred_template_length, Flags data)
 :
 contig_name_ {std::forward<String_>(contig_name)},
 begin_ {begin},
 inferred_template_length_ {inferred_template_length},
-flags_ {get_flags(data)}
+flags_ {compress_flags(data)}
 {}
 
 // Non-member methods
 
 bool is_soft_clipped(const AlignedRead& read);
 
-std::pair<AlignedRead::SizeType, AlignedRead::SizeType>
-get_soft_clipped_sizes(const AlignedRead& read);
+std::pair<AlignedRead::SizeType, AlignedRead::SizeType> get_soft_clipped_sizes(const AlignedRead& read);
 
 AlignedRead splice(const AlignedRead& read, const GenomicRegion& region);
 
 bool operator==(const AlignedRead& lhs, const AlignedRead& rhs);
-
 bool operator<(const AlignedRead& lhs, const AlignedRead& rhs);
 
 struct IsDuplicate
 {
-    bool operator()(const AlignedRead& lhs, const AlignedRead& rhs);
+    bool operator()(const AlignedRead& lhs, const AlignedRead& rhs) const;
 };
 
 bool operator==(const AlignedRead::NextSegment& lhs, const AlignedRead::NextSegment& rhs);
@@ -253,7 +250,6 @@ namespace boost
 } // namespace boost
 
 std::ostream& operator<<(std::ostream& os, const AlignedRead::Qualities& qualities);
-
 std::ostream& operator<<(std::ostream& os, const AlignedRead& a_read);
 
 #endif /* defined(__Octopus__aligned_read__) */

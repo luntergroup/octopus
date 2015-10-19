@@ -38,8 +38,8 @@ BOOST_AUTO_TEST_CASE(read_reader_handles_BAM)
     auto reads      = a_reader.fetch_reads(a_region).begin()->second;
     auto more_reads = a_reader.fetch_reads(another_region).begin()->second;
     
-    reads.insert(std::end(reads), std::make_move_iterator(std::begin(more_reads)),
-                  std::make_move_iterator(std::end(more_reads)));
+    reads.insert(std::make_move_iterator(std::begin(more_reads)),
+                 std::make_move_iterator(std::end(more_reads)));
     
     BOOST_CHECK(reads.size() == 25);
 }
@@ -55,7 +55,7 @@ BOOST_AUTO_TEST_CASE(read_reader_handles_CRAM)
     
     auto more_reads = a_reader.fetch_reads(another_region).begin()->second;
     
-    reads.insert(std::end(reads), std::make_move_iterator(std::begin(more_reads)),
+    reads.insert(std::make_move_iterator(std::begin(more_reads)),
                  std::make_move_iterator(std::end(more_reads)));
     
     BOOST_CHECK(reads.size() == 25);
@@ -78,7 +78,7 @@ BOOST_AUTO_TEST_CASE(ReadManager_works_with_single_file)
     auto reads      = a_read_manager.fetch_reads(the_sample_id, a_small_region);
     auto more_reads = a_read_manager.fetch_reads(the_sample_id, another_region);
     
-    reads.insert(std::end(reads), std::make_move_iterator(std::begin(more_reads)),
+    reads.insert(std::make_move_iterator(std::begin(more_reads)),
                  std::make_move_iterator(std::end(more_reads)));
     
     BOOST_CHECK(reads.size() == 25);
@@ -179,8 +179,8 @@ BOOST_AUTO_TEST_CASE(ReadManager_works_with_single_file)
 BOOST_AUTO_TEST_CASE(aligned_read_copies_and_moves_correctly)
 {
     AlignedRead a_read {get_mock_region(), "ACGT", AlignedRead::Qualities {1, 2, 3, 4},
-        parse_cigar_string("4M"), 10, AlignedRead::FlagData {}, "1", 10, 30,
-        AlignedRead::NextSegment::FlagData {}};
+        parse_cigar_string("4M"), 10, AlignedRead::Flags {}, "1", 10, 30,
+        AlignedRead::NextSegment::Flags {}};
     
     BOOST_CHECK(a_read.is_chimeric());
     BOOST_CHECK(a_read.get_next_segment().get_inferred_template_length() == 30);
@@ -278,7 +278,7 @@ BOOST_AUTO_TEST_CASE(can_splice_reads)
         AlignedRead::Qualities(23, 0),
         parse_cigar_string("5M1D10M3I4M"),
         0,
-        AlignedRead::FlagData {}
+        AlignedRead::Flags {}
     };
     
     BOOST_CHECK(splice(read, GenomicRegion {"1", 100, 105}).get_sequence() == "AAAAA");

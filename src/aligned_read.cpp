@@ -19,12 +19,10 @@ read_group_ {other.read_group_},
 sequence_ {other.sequence_},
 qualities_ {other.qualities_},
 cigar_string_ {other.cigar_string_},
-next_segment_ {((other.next_segment_ != nullptr) ?
-                std::make_unique<NextSegment>(*other.next_segment_) : nullptr) },
+next_segment_ {((other.next_segment_ != nullptr) ? std::make_unique<NextSegment>(*other.next_segment_) : nullptr) },
 flags_ {other.flags_},
 hash_ {other.hash_},
-mapping_quality_ {other.mapping_quality_},
-is_compressed_ {other.is_compressed()}
+mapping_quality_ {other.mapping_quality_}
 {}
 
 AlignedRead& AlignedRead::operator=(const AlignedRead& other)
@@ -45,7 +43,6 @@ void swap(AlignedRead& lhs, AlignedRead& rhs) noexcept
     std::swap(lhs.flags_, rhs.flags_);
     std::swap(lhs.hash_, rhs.hash_);
     std::swap(lhs.mapping_quality_, rhs.mapping_quality_);
-    std::swap(lhs.is_compressed_, rhs.is_compressed_);
 }
 
 //
@@ -130,9 +127,10 @@ const AlignedRead::NextSegment& AlignedRead::get_next_segment() const
     }
 }
 
-AlignedRead::FlagData AlignedRead::get_flags() const
+AlignedRead::Flags AlignedRead::get_flags() const
 {
-    FlagData flags {};
+    Flags flags {};
+    
     flags.is_marked_multiple_read_template       = is_marked_multiple_read_template();
     flags.is_marked_all_segments_in_read_aligned = is_marked_all_segments_in_read_aligned();
     flags.is_marked_unmapped                     = is_marked_unmapped();
@@ -229,22 +227,23 @@ void AlignedRead::decompress()
 
 bool AlignedRead::is_compressed() const noexcept
 {
-    return is_compressed_;
+    return flags_[compression_flag_];
 }
 
 void AlignedRead::set_compressed() noexcept
 {
-    is_compressed_ = true;
+    flags_[compression_flag_] = true;
 }
 
 void AlignedRead::set_uncompressed() noexcept
 {
-    is_compressed_ = false;
+    flags_[compression_flag_] = false;
 }
 
-AlignedRead::Flags AlignedRead::get_flags(const FlagData& flags)
+AlignedRead::FlagBits AlignedRead::compress_flags(const Flags& flags)
 {
-    Flags result {};
+    FlagBits result {};
+    
     result[0] = flags.is_marked_all_segments_in_read_aligned;
     result[1] = flags.is_marked_multiple_read_template;
     result[2] = flags.is_marked_unmapped;
@@ -253,12 +252,15 @@ AlignedRead::Flags AlignedRead::get_flags(const FlagData& flags)
     result[5] = flags.is_marked_qc_fail;
     result[6] = flags.is_marked_duplicate;
     result[7] = flags.is_marked_supplementary_alignment;
+    
+    result[compression_flag_] = false;
+    
     return result;
 }
 
-AlignedRead::NextSegment::Flags AlignedRead::NextSegment::get_flags(const FlagData& flags)
+AlignedRead::NextSegment::FlagBits AlignedRead::NextSegment::compress_flags(const Flags& flags)
 {
-    Flags result {};
+    FlagBits result {};
     result[0] = flags.is_marked_unmapped;
     result[1] = flags.is_marked_reverse_mapped;
     return result;
@@ -346,7 +348,7 @@ bool operator<(const AlignedRead& lhs, const AlignedRead& rhs)
     }
 }
 
-bool IsDuplicate::operator()(const AlignedRead &lhs, const AlignedRead &rhs)
+bool IsDuplicate::operator()(const AlignedRead &lhs, const AlignedRead &rhs) const
 {
     return lhs.get_region() == rhs.get_region() && lhs.get_cigar_string() == rhs.get_cigar_string();
 }

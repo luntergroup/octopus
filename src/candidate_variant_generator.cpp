@@ -22,10 +22,10 @@ void CandidateVariantGenerator::register_generator(std::unique_ptr<ICandidateVar
     generator_list_.emplace_back(std::move(generator));
 }
 
-void CandidateVariantGenerator::add_read(const AlignedRead& a_read)
+void CandidateVariantGenerator::add_read(const AlignedRead& read)
 {
     for (auto& generator : generator_list_) {
-        generator->add_read(a_read);
+        generator->add_read(read);
     }
 }
 
@@ -43,12 +43,12 @@ void CandidateVariantGenerator::add_reads(MappableSet<AlignedRead>::const_iterat
     }
 }
 
-std::vector<Variant> CandidateVariantGenerator::get_candidates(const GenomicRegion& a_region)
+std::vector<Variant> CandidateVariantGenerator::get_candidates(const GenomicRegion& region)
 {
     std::vector<Variant> result {};
     
     for (auto& generator : generator_list_) {
-        auto generator_result = generator->get_candidates(a_region);
+        auto generator_result = generator->get_candidates(region);
         auto it = result.insert(std::end(result),
                                 std::make_move_iterator(std::begin(generator_result)),
                                 std::make_move_iterator(std::end(generator_result)));

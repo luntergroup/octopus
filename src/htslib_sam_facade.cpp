@@ -58,7 +58,7 @@ private:
 HtslibSamFacade::HtslibSamFacade(const fs::path& file_path)
 :
 file_path_ {file_path},
-hts_file_ {sam_open(file_path_.string().c_str(), "r"), htslib_file_deleter},
+hts_file_ {sam_open(file_path_.string().c_str(), "r"), hts_file_deleter},
 hts_header_ {sam_hdr_read(hts_file_.get()), htslib_header_deleter},
 hts_index_ {sam_index_load(hts_file_.get(), file_path_.string().c_str()), htslib_index_deleter},
 hts_tid_map_ {},
@@ -133,8 +133,9 @@ std::vector<std::string> HtslibSamFacade::get_read_groups_in_sample(const Sample
 
 size_t HtslibSamFacade::count_reads(const GenomicRegion& region)
 {
-    size_t result {0};
     HtslibIterator it {*this, region};
+    
+    size_t result {};
     
     while (++it) ++result;
     
@@ -143,8 +144,9 @@ size_t HtslibSamFacade::count_reads(const GenomicRegion& region)
 
 size_t HtslibSamFacade::count_reads(const SampleIdType& sample, const GenomicRegion& region)
 {
-    size_t result {0};
     HtslibIterator it {*this, region};
+    
+    size_t result {};
     
     while (++it && sample_map_.at(it.get_read_group()) == sample) ++result;
     
@@ -157,19 +159,18 @@ GenomicRegion HtslibSamFacade::find_head_region(const GenomicRegion& region, siz
     
     while (++it && target_coverage > 0) --target_coverage;
     
-    return GenomicRegion {region.get_contig_name(), region.get_begin(), (*it).first.get_region().get_end()};
+    return GenomicRegion {region.get_contig_name(), region.get_begin(), (*it).get_region().get_end()};
 }
 
-HtslibSamFacade::SampleIdToReadsMap HtslibSamFacade::fetch_reads(const GenomicRegion& region)
+HtslibSamFacade::SampleReadMap HtslibSamFacade::fetch_reads(const GenomicRegion& region)
 {
     HtslibIterator it {*this, region};
-    SampleIdToReadsMap result {};
+    
+    SampleReadMap result {};
     
     while (++it) {
         try {
-            auto a_read_and_its_group = *it;
-            const auto& sample = sample_map_.at(a_read_and_its_group.second);
-            result[std::move(sample)].emplace_back(std::move(a_read_and_its_group.first));
+            result[sample_map_.at(it.get_read_group())].emplace(*it);
         } catch (InvalidBamRecord& e) {
             // TODO: Just ignore? Could log or something.
             //std::clog << "Warning: " << e.what() << std::endl;
@@ -186,15 +187,16 @@ HtslibSamFacade::SampleIdToReadsMap HtslibSamFacade::fetch_reads(const GenomicRe
     return result;
 }
 
-std::vector<AlignedRead> HtslibSamFacade::fetch_reads(const SampleIdType& sample, const GenomicRegion& region)
+HtslibSamFacade::Reads HtslibSamFacade::fetch_reads(const SampleIdType& sample, const GenomicRegion& region)
 {
     HtslibIterator it {*this, region};
-    std::vector<AlignedRead> result {};
+    
+    Reads result {};
     
     while (++it) {
         try {
             if (sample_map_.at(it.get_read_group()) == sample) {
-                result.push_back((*it).first);
+                result.emplace(*it);
             }
         } catch (InvalidBamRecord& e) {
             // TODO: Just ignore? Could log or something.
@@ -205,6 +207,8 @@ std::vector<AlignedRead> HtslibSamFacade::fetch_reads(const SampleIdType& sample
         }
     }
     
+    result.shrink_to_fit();
+    
     return result;
 }
 
@@ -213,7 +217,7 @@ std::vector<std::string> HtslibSamFacade::get_reference_contig_names()
     std::vector<std::string> result {};
     result.reserve(get_num_reference_contigs());
     
-    for (HtsTidType hts_tid {0}; hts_tid < get_num_reference_contigs(); ++hts_tid) {
+    for (HtsTidType hts_tid {}; hts_tid < get_num_reference_contigs(); ++hts_tid) {
         result.emplace_back(get_contig_name(hts_tid));
     }
     
@@ -225,7 +229,7 @@ std::vector<GenomicRegion> HtslibSamFacade::get_possible_regions_in_file()
     std::vector<GenomicRegion> result {};
     result.reserve(get_num_reference_contigs());
     
-    for (HtsTidType hts_tid {0}; hts_tid < get_num_reference_contigs(); ++hts_tid) {
+    for (HtsTidType hts_tid {}; hts_tid < get_num_reference_contigs(); ++hts_tid) {
         auto contig_name = get_contig_name(hts_tid);
         // CRAM files don't seem to have the same index stats as BAM files so
         // we don't know which contigs have been mapped to
@@ -268,7 +272,7 @@ void HtslibSamFacade::init_maps()
     hts_tid_map_.reserve(get_num_reference_contigs());
     contig_name_map_.reserve(get_num_reference_contigs());
     
-    for (HtsTidType hts_tid {0}; hts_tid < get_num_reference_contigs(); ++hts_tid) {
+    for (HtsTidType hts_tid {}; hts_tid < get_num_reference_contigs(); ++hts_tid) {
         hts_tid_map_.emplace(hts_header_->target_name[hts_tid], hts_tid);
         contig_name_map_.emplace(hts_tid, hts_header_->target_name[hts_tid]);
     }
@@ -276,18 +280,20 @@ void HtslibSamFacade::init_maps()
     std::string the_header_text (hts_header_->text, hts_header_->l_text);
     std::stringstream ss {the_header_text};
     std::string line {};
-    unsigned num_read_groups {0};
+    unsigned num_read_groups {};
     
     while (std::getline(ss, line, '\n')) {
         if (is_tag_type(line, Read_group_tag)) {
             if (!has_tag(line, Read_group_id_tag)) {
                 throw InvalidBamHeader {file_path_, "no read group identifier tag (ID) in @RG line"};
             }
+            
             if (!has_tag(line, Sample_id_tag)) {
                 // The SAM specification does not specify the sample tag 'SM' as a required,
                 // however we can't do much without it.
                 throw InvalidBamHeader {file_path_, "no sample tag (SM) in @RG line"};
             }
+            
             sample_map_.emplace(get_tag_value(line, Read_group_id_tag), get_tag_value(line, Sample_id_tag));
             ++num_read_groups;
         }
@@ -365,23 +371,28 @@ char get_base(uint8_t* hts_sequence, uint32_t index) noexcept
 
 AlignedRead::SequenceType get_sequence(bam1_t* b)
 {
-    AlignedRead::SequenceType result {};
-    auto length = get_sequence_length(b);
-    result.reserve(length);
-    auto bam_seq = bam_get_seq(b);
-    for (uint32_t i {0}; i < length; ++i) {
-        result.push_back(get_base(bam_seq, i));
-    }
+    using SequenceType = AlignedRead::SequenceType;
+    
+    const auto sequence_length  = static_cast<SequenceType::size_type>(get_sequence_length(b));
+    const auto hts_sequence     = bam_get_seq(b);
+    
+    SequenceType result(sequence_length, 'N');
+    
+    uint32_t i {};
+    std::generate_n(std::begin(result), sequence_length,
+                    [&i, &hts_sequence] () { return get_base(hts_sequence, i++); });
+    
     return result;
 }
 
 std::vector<AlignedRead::QualityType> get_qualities(bam1_t* b)
 {
-    auto qualities = bam_get_qual(b);
-    auto length = get_sequence_length(b);
+    const auto qualities = bam_get_qual(b);
+    const auto length    = get_sequence_length(b);
+    
     std::vector<AlignedRead::QualityType> result {};
-    result.reserve(length);
-    result.insert(result.begin(), qualities, qualities + length);
+    result.insert(std::begin(result), qualities, qualities + length);
+    
     return result;
 }
 
@@ -392,25 +403,22 @@ auto get_cigar_length(bam1_t* b) noexcept
 
 CigarString get_cigar_string(bam1_t* b)
 {
-    auto cigar_operations = bam_get_cigar(b);
-    auto length = get_cigar_length(b);
+    const auto cigar_operations = bam_get_cigar(b);
+    const auto cigar_length     = get_cigar_length(b);
     
-    std::vector<CigarOperation> result;
-    result.reserve(length);
+    CigarString result(cigar_length);
+    std::transform(cigar_operations, cigar_operations + cigar_length, std::begin(result),
+                   [] (auto op) { return CigarOperation {bam_cigar_oplen(op), bam_cigar_opchr(op)}; });
     
-    for (uint32_t i {0}; i < length; ++i) {
-        result.emplace_back(bam_cigar_oplen(cigar_operations[i]), bam_cigar_opchr(cigar_operations[i]));
-    };
-    
-    return CigarString {std::move(result)};
+    return result;
 }
 
 // Some of these flags will need to be changes when htslib catches up to the new SAM spec
-AlignedRead::FlagData get_flags(bam1_t* b)
+AlignedRead::Flags get_flags(bam1_t* b)
 {
     auto c = b->core;
     
-    AlignedRead::FlagData result {};
+    AlignedRead::Flags result {};
     
     result.is_marked_multiple_read_template       = (c.flag & BAM_FPAIRED)        != 0;
     result.is_marked_all_segments_in_read_aligned = (c.flag & BAM_FPROPER_PAIR)   != 0;
@@ -426,10 +434,11 @@ AlignedRead::FlagData get_flags(bam1_t* b)
     return result;
 }
 
-AlignedRead::NextSegment::FlagData get_next_segment_flags(bam1_t* b)
+AlignedRead::NextSegment::Flags get_next_segment_flags(bam1_t* b)
 {
     auto c = b->core;
-    AlignedRead::NextSegment::FlagData result {};
+    
+    AlignedRead::NextSegment::Flags result {};
     
     result.is_marked_unmapped       = (c.flag & BAM_FMUNMAP)   != 0;
     result.is_marked_reverse_mapped = (c.flag & BAM_FMREVERSE) != 0;
@@ -437,7 +446,7 @@ AlignedRead::NextSegment::FlagData get_next_segment_flags(bam1_t* b)
     return result;
 }
 
-std::pair<AlignedRead, HtslibSamFacade::ReadGroupIdType> HtslibSamFacade::HtslibIterator::operator*() const
+AlignedRead HtslibSamFacade::HtslibIterator::operator*() const
 {
     auto qualities = get_qualities(hts_bam1_.get());
     
@@ -458,28 +467,40 @@ std::pair<AlignedRead, HtslibSamFacade::ReadGroupIdType> HtslibSamFacade::Htslib
     auto sequence = get_sequence(hts_bam1_.get());
     
     if (read_begin_tmp < 0) {
-        // i.e. if the read hangs off the left of the contig
-        auto overhang = std::abs(read_begin_tmp);
-        sequence.erase(std::begin(sequence), std::next(std::begin(sequence), overhang));
-        qualities.erase(std::begin(qualities), std::next(std::begin(qualities), overhang));
+        // Then the read hangs off the left of the contig, and we must remove bases, qualities, and
+        // adjust the cigar string as we cannot have a negative begin position
+        
+        auto overhang_size = std::abs(read_begin_tmp);
+        
+        sequence.erase(std::begin(sequence), std::next(std::begin(sequence), overhang_size));
+        qualities.erase(std::begin(qualities), std::next(std::begin(qualities), overhang_size));
+        
+        auto soft_clip_size = cigar.front().get_size();
+        
+        if (overhang_size == soft_clip_size) {
+            cigar.erase(std::begin(cigar));
+        } else { // then soft_clip_size > overhang_size
+            cigar.front() = CigarOperation {soft_clip_size - overhang_size, CigarOperation::SOFT_CLIPPED};
+        }
+        
         read_begin_tmp = 0;
     }
     
-    auto read_begin = static_cast<AlignedRead::SizeType>(read_begin_tmp);
+    const auto read_begin = static_cast<AlignedRead::SizeType>(read_begin_tmp);
     
     const auto& contig_name = hts_facade_.get_contig_name(c.tid);
     
     if (c.mtid == -1) { // i.e. has no mate TODO: check if this is always true
-        return {AlignedRead {
+        return AlignedRead {
             GenomicRegion {contig_name, read_begin, read_begin + reference_size<GenomicRegion::SizeType>(cigar)},
             std::move(sequence),
             std::move(qualities),
             std::move(cigar),
             static_cast<AlignedRead::QualityType>(c.qual),
             get_flags(hts_bam1_.get())
-        }, get_read_group()};
+        };
     } else {
-        return {AlignedRead {
+        return AlignedRead {
             GenomicRegion {contig_name, read_begin, read_begin + reference_size<GenomicRegion::SizeType>(cigar)},
             std::move(sequence),
             std::move(qualities),
@@ -490,6 +511,6 @@ std::pair<AlignedRead, HtslibSamFacade::ReadGroupIdType> HtslibSamFacade::Htslib
             static_cast<AlignedRead::SizeType>(c.mpos),
             static_cast<AlignedRead::SizeType>(std::abs(c.isize)),
             get_next_segment_flags(hts_bam1_.get())
-        }, get_read_group()};
+        };
     }
 }

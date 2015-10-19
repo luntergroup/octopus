@@ -33,7 +33,7 @@ BOOST_AUTO_TEST_CASE(read_transform_test)
     
     GenomicRegion a_region {"Y", 3000000, 3000010};
     
-    std::vector<AlignedRead> some_reads = a_read_manager.fetch_reads(the_sample_id, a_region);
+    auto some_reads = a_read_manager.fetch_reads(the_sample_id, a_region);
     
     if (!std::is_sorted(some_reads.begin(), some_reads.end())) {
         std::sort(some_reads.begin(), some_reads.end());

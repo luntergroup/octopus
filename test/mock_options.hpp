@@ -23,7 +23,7 @@ inline po::variables_map get_basic_mock_options()
         //"--reference", ecoli_reference_fasta.c_str(),
         
         "--reads", NA12878_low_coverage.c_str(), HG00101.c_str(), HG00102.c_str(), HG00103.c_str(),
-        //"--reads", HG00102.c_str(),
+        //"--reads", HG00101.c_str(),
         
         //"--reads", NA12878_high_coverage.c_str(), NA12878_simulated_cancer_basic.c_str(), //cancer test
         //"--reads", NA12891_high_coverage.c_str(), NA12878_simulated_cancer_basic.c_str(), //cancer test
@@ -86,7 +86,7 @@ inline po::variables_map get_basic_mock_options()
         //"--regions", "Y:22,510,914-22,510,973",
         //"--regions", "Y:17,398,830-17,398,917",
         //"--regions", "MT:11,669-11,768", // very high coverage snp
-        //"--regions", "MT",
+        "--regions", "X:0-5,000,000",
         
         //"--regions", "5:80,465,625-80,465,862", // crazy indel region
         
@@ -108,7 +108,26 @@ inline po::variables_map get_basic_mock_options()
         
         //"--regions", "3:36,629,892-36,630,038", // SNP error here due to alignment error in soft clipping in HG00102 + HG00103
         
-        "--regions", "Y:4,313,467-4,314,172",
+        //"--regions", "Y:4,313,467-4,314,172",
+        
+        // read filters
+        "--min-supporting-reads", "2",
+        "--min-mapping-quality", "20",
+        "--min-snp-base-quality", "20",
+        "--no-marked-duplicates",
+        "--no-octopus-duplicates",
+        
+        // read transforms
+        "--trim-soft-clipped",
+        "--tail-trim-size", "3",
+        "--trim-adapters",
+        
+        "--reference-cache-size", "20000",
+        //"--downsample-above", "500",
+        //"--downsample-target", "100",
+        
+        //"--candidates-from-assembler",
+        //"--candidates-from-source", "/Users/danielcooke/Genomics/octopus_test/AllVariants.vcf",
         
         "--min-variant-posterior", "5",
         "--min-refcall-posterior", "1",
@@ -116,20 +135,9 @@ inline po::variables_map get_basic_mock_options()
         
         "--somatics-only",
         
+        "--max-open-read-files", "1",
+        
         "--output", test_out_vcf.c_str(),
-        
-        "--min-supporting-reads", "2",
-        "--min-mapping-quality", "20",
-        "--min-snp-base-quality", "20",
-        "--tail-trim-size", "3",
-        "--trim-soft-clipped",
-        "--remove-duplicate-reads",
-        "--reference-cache-size", "20000",
-        //"--downsample-above", "500",
-        //"--downsample-target", "100",
-        
-        //"--candidates-from-assembler",
-        //"--candidates-from-source", "/Users/danielcooke/Genomics/octopus_test/AllVariants.vcf",
         
         nullptr};
     

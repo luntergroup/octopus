@@ -22,7 +22,9 @@
 #include "reference_genome.hpp"
 #include "read_manager.hpp"
 #include "read_filter.hpp"
+#include "downsampler.hpp"
 #include "read_transform.hpp"
+#include "read_pipe.hpp"
 #include "read_utils.hpp"
 #include "candidate_generators.hpp"
 #include "vcf.hpp"
@@ -94,37 +96,6 @@ namespace Octopus
         return vcf_header_builder.build_once();
     }
     
-    struct ReadPipe
-    {
-        ReadPipe() = delete;
-        ReadPipe(ReadManager& read_manager, ReadFilter<ReadContainer::const_iterator>& read_filter,
-                 Downsampler<SampleIdType>& downsampler, ReadTransform& read_transform)
-        : read_manager {read_manager}, read_filter {read_filter},
-          downsampler {downsampler}, read_transform {read_transform}
-        {}
-        
-        ReadMap fetch_reads(const std::vector<SampleIdType>& samples, const GenomicRegion& region)
-        {
-            auto good_reads = filter_reads(make_mappable_map(read_manager.fetch_reads(samples, region)), read_filter).first;
-            
-            std::cout << "found " << count_reads(good_reads) << " good reads" << std::endl;
-            
-            auto result = downsampler(std::move(good_reads));
-            
-            std::cout << "downsampled to " << count_reads(result) << " reads" << std::endl;
-            
-            transform_reads(result, read_transform);
-            
-            return result;
-        }
-        
-    private:
-        ReadManager& read_manager;
-        ReadFilter<ReadContainer::const_iterator>& read_filter;
-        Downsampler<SampleIdType>& downsampler;
-        ReadTransform& read_transform;
-    };
-    
     void run_octopus(po::variables_map& options)
     {
         using std::cout; using std::endl;
@@ -168,6 +139,8 @@ namespace Octopus
                 cout << "processing input region " << region << endl;
                 
                 auto reads = read_pipe.fetch_reads(samples, region);
+                
+                return;
                 
                 auto calls = caller->call_variants(region, std::move(reads));
                 

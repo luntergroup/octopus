@@ -34,7 +34,7 @@ using std::uint8_t;
 using std::uint32_t;
 using std::int32_t;
 
-auto htslib_file_deleter     = [] (htsFile* file)       { hts_close(file); };
+auto hts_file_deleter        = [] (htsFile* file)       { hts_close(file); };
 auto htslib_header_deleter   = [] (bam_hdr_t* header)   { bam_hdr_destroy(header); };
 auto htslib_index_deleter    = [] (hts_idx_t* index)    { hts_idx_destroy(index); };
 auto htslib_iterator_deleter = [] (hts_itr_t* iterator) { sam_itr_destroy(iterator); };
@@ -43,11 +43,12 @@ auto htslib_bam1_deleter     = [] (bam1_t* b)           { bam_destroy1(b); };
 class HtslibSamFacade : public IReadReaderImpl
 {
 public:
-    using SequenceType       = AlignedRead::SequenceType;
-    using SampleIdType       = IReadReaderImpl::SampleIdType;
-    using SampleIdToReadsMap = IReadReaderImpl::SampleIdToReadsMap;
-    using SizeType           = IReadReaderImpl::SizeType;
-    using ReadGroupIdType    = std::string;
+    using SequenceType    = AlignedRead::SequenceType;
+    using SampleIdType    = IReadReaderImpl::SampleIdType;
+    using Reads           = IReadReaderImpl::Reads;
+    using SampleReadMap   = IReadReaderImpl::SampleReadMap;
+    using SizeType        = IReadReaderImpl::SizeType;
+    using ReadGroupIdType = std::string;
     
     HtslibSamFacade() = delete;
     HtslibSamFacade(const fs::path& file_path);
@@ -63,8 +64,8 @@ public:
     size_t count_reads(const GenomicRegion& region) override;
     size_t count_reads(const SampleIdType& sample, const GenomicRegion& region) override;
     GenomicRegion find_head_region(const GenomicRegion& region, size_t target_coverage) override;
-    SampleIdToReadsMap fetch_reads(const GenomicRegion& region) override;
-    std::vector<AlignedRead> fetch_reads(const SampleIdType& sample, const GenomicRegion& region) override;
+    SampleReadMap fetch_reads(const GenomicRegion& region) override;
+    Reads fetch_reads(const SampleIdType& sample, const GenomicRegion& region) override;
     unsigned get_num_reference_contigs() noexcept override;
     std::vector<std::string> get_reference_contig_names() override;
     SizeType get_reference_contig_size(const std::string& contig_name) override;
@@ -80,15 +81,15 @@ private:
     {
     public:
         HtslibIterator() = delete;
-        HtslibIterator(HtslibSamFacade& hts_facade, const GenomicRegion& a_region);
+        HtslibIterator(HtslibSamFacade& hts_facade, const GenomicRegion& region);
         ~HtslibIterator() noexcept = default;
         
         HtslibIterator(const HtslibIterator&) = delete;
         HtslibIterator& operator=(const HtslibIterator&) = delete;
         
-        HtslibSamFacade::ReadGroupIdType get_read_group() const;
         bool operator++();
-        std::pair<AlignedRead, HtslibSamFacade::ReadGroupIdType> operator*() const;
+        AlignedRead operator*() const;
+        HtslibSamFacade::ReadGroupIdType get_read_group() const;
         
     private:
         HtslibSamFacade& hts_facade_;
@@ -101,7 +102,7 @@ private:
     static constexpr const char* Sample_id_tag     {"SM"};
     
     fs::path file_path_;
-    std::unique_ptr<htsFile, decltype(htslib_file_deleter)> hts_file_;
+    std::unique_ptr<htsFile, decltype(hts_file_deleter)> hts_file_;
     std::unique_ptr<bam_hdr_t, decltype(htslib_header_deleter)> hts_header_;
     std::unique_ptr<hts_idx_t, decltype(htslib_index_deleter)> hts_index_;
     

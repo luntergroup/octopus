@@ -147,6 +147,8 @@ GenomicRegion GenomeWalker::walk(const GenomicRegion& previous_region, const Rea
     
     advance(included_it, candidates.count_overlapped(*rightmost_mappable(first_included_it, next(included_it))) - 1);
     
+    if (included_it == cend(candidates)) --included_it;
+    
     first_excluded_it = next(included_it);
     
     auto lhs_read = *leftmost_overlapped(reads, *first_included_it);

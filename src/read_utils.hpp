@@ -45,44 +45,50 @@ namespace detail {
 
 template <typename ReadFilter>
 std::pair<MappableSet<AlignedRead>, MappableSet<AlignedRead>>
-filter_reads(const MappableSet<AlignedRead>& reads, ReadFilter& filter)
+filter_reads(const MappableSet<AlignedRead>& reads, const ReadFilter& filter)
 {
     MappableSet<AlignedRead> good_reads {}, bad_reads {};
+    
     good_reads.reserve(reads.size());
     bad_reads.reserve(reads.size());
     
-    filter.filter_reads(std::cbegin(reads), std::cend(reads), ContextInserter(good_reads),
-                        ContextInserter(bad_reads));
-    
-    good_reads.shrink_to_fit();
-    bad_reads.shrink_to_fit();
-    
-    return {good_reads, bad_reads};
-}
-
-template <typename ReadFilter>
-std::pair<MappableSet<AlignedRead>, MappableSet<AlignedRead>>
-filter_reads(MappableSet<AlignedRead>&& reads, ReadFilter& filter)
-{
-    MappableSet<AlignedRead> good_reads {}, bad_reads {};
-    good_reads.reserve(reads.size());
-    bad_reads.reserve(reads.size());
-    
-    filter.filter_reads(std::make_move_iterator(std::begin(reads)),
-                        std::make_move_iterator(std::end(reads)),
+    filter.filter_reads(std::cbegin(reads), std::cend(reads),
                         ContextInserter(good_reads), ContextInserter(bad_reads));
     
     good_reads.shrink_to_fit();
     bad_reads.shrink_to_fit();
     
-    return {good_reads, bad_reads};
+    return std::make_pair(std::move(good_reads), std::move(bad_reads));
+}
+
+template <typename ReadFilter>
+std::pair<MappableSet<AlignedRead>, MappableSet<AlignedRead>>
+filter_reads(MappableSet<AlignedRead>&& reads, const ReadFilter& filter)
+{
+    using std::begin; using std::end; using std::make_move_iterator;
+    
+    MappableSet<AlignedRead> good_reads {}, bad_reads {};
+    
+    good_reads.reserve(reads.size() / 2);
+    bad_reads.reserve(reads.size() / 2);
+    
+    filter.filter_reads(make_move_iterator(begin(reads)), make_move_iterator(end(reads)),
+                        ContextInserter(good_reads), ContextInserter(bad_reads));
+    
+    reads.clear();
+    
+    good_reads.shrink_to_fit();
+    bad_reads.shrink_to_fit();
+    
+    return std::make_pair(std::move(good_reads), std::move(bad_reads));
 }
 
 template <typename KeyType, typename ReadFilter>
 std::pair<MappableMap<KeyType, AlignedRead>, MappableMap<KeyType, AlignedRead>>
-filter_reads(const MappableMap<KeyType, AlignedRead>& reads, ReadFilter& filter)
+filter_reads(const MappableMap<KeyType, AlignedRead>& reads, const ReadFilter& filter)
 {
     MappableMap<KeyType, AlignedRead> good_reads {}, bad_reads {};
+    
     good_reads.reserve(reads.size());
     bad_reads.reserve(reads.size());
     
@@ -92,14 +98,15 @@ filter_reads(const MappableMap<KeyType, AlignedRead>& reads, ReadFilter& filter)
         bad_reads.emplace(sample_reads.first, std::move(sample_filtered_reads.second));
     }
     
-    return {good_reads, bad_reads};
+    return std::make_pair(std::move(good_reads), std::move(bad_reads));
 }
 
 template <typename KeyType, typename ReadFilter>
 std::pair<MappableMap<KeyType, AlignedRead>, MappableMap<KeyType, AlignedRead>>
-filter_reads(MappableMap<KeyType, AlignedRead>&& reads, ReadFilter& filter)
+filter_reads(MappableMap<KeyType, AlignedRead>&& reads, const ReadFilter& filter)
 {
     MappableMap<KeyType, AlignedRead> good_reads {}, bad_reads {};
+    
     good_reads.reserve(reads.size());
     bad_reads.reserve(reads.size());
     
@@ -109,14 +116,15 @@ filter_reads(MappableMap<KeyType, AlignedRead>&& reads, ReadFilter& filter)
         bad_reads.emplace(sample_reads.first, std::move(sample_filtered_reads.second));
     }
     
-    return {good_reads, bad_reads};
+    return std::make_pair(std::move(good_reads), std::move(bad_reads));
 }
 
 template <typename T, typename Container, typename ReadFilter>
 auto
-filter_reads(std::unordered_map<T, Container>&& reads, ReadFilter& read_filter)
+filter_reads(std::unordered_map<T, Container>&& reads, const ReadFilter& read_filter)
 {
     std::unordered_map<T, Container> good_read_map {}, bad_read_map {};
+    
     good_read_map.reserve(reads.size());
     bad_read_map.reserve(reads.size());
     
@@ -142,7 +150,7 @@ filter_reads(std::unordered_map<T, Container>&& reads, ReadFilter& read_filter)
 }
 
 template <typename ReadMap>
-void transform_reads(ReadMap& reads, ReadTransform& transformer)
+void transform_reads(ReadMap& reads, const ReadTransform& transformer)
 {
     for (auto& p : reads) transformer.transform_reads(std::begin(p.second), std::end(p.second));
 }
@@ -908,41 +916,6 @@ find_high_coverage_regions(const ReadMap& reads, const GenomicRegion& region, co
     
     return result;
 }
-
-MappableSet<AlignedRead>
-downsample(const MappableSet<AlignedRead>& reads, unsigned max_coverage, unsigned min_coverage);
-
-template <typename T>
-MappableMap<T, AlignedRead>
-downsample(const MappableMap<T, AlignedRead>& reads, const unsigned max_coverage, const unsigned min_coverage)
-{
-    MappableMap<T, AlignedRead> result {};
-    result.reserve(reads.size());
-    
-    for (const auto& sample_reads : reads) {
-        result.emplace(sample_reads.first, downsample(sample_reads.second, max_coverage, min_coverage));
-    }
-    
-    return result;
-}
-
-template <typename T>
-struct Downsampler
-{
-    Downsampler() = default;
-    Downsampler(unsigned max_coverage, unsigned min_coverage)
-    : max_coverage_ {max_coverage}, min_coverage_ {min_coverage} {}
-    
-    template <typename R>
-    R operator()(R&& reads)
-    {
-        return downsample(std::forward<R>(reads), max_coverage_, min_coverage_);
-    }
-    
-private:
-    unsigned max_coverage_ = 100'000;
-    unsigned min_coverage_ = 100'000;
-};
 
 // TODO
 AlignedRead find_next_segment(const AlignedRead& read, const MappableMap<GenomicRegion::StringType, AlignedRead>& reads);

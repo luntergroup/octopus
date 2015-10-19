@@ -25,6 +25,8 @@
 		CA0B46821AEA210300158BBA /* 1000G_test9.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA0B46811AEA210300158BBA /* 1000G_test9.cpp */; };
 		CA0B46841AEA222B00158BBA /* 1000G_test10.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA0B46831AEA222B00158BBA /* 1000G_test10.cpp */; };
 		CA0D83E81BD2B0210020366B /* genome_walker.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA0D83E61BD2B0210020366B /* genome_walker.cpp */; settings = {ASSET_TAGS = (); }; };
+		CA0D83EB1BD466F40020366B /* read_pipe.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA0D83E91BD466F40020366B /* read_pipe.cpp */; settings = {ASSET_TAGS = (); }; };
+		CA0D83EE1BD467BE0020366B /* downsampler.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA0D83EC1BD467BE0020366B /* downsampler.cpp */; settings = {ASSET_TAGS = (); }; };
 		CA14727A1AACECF1005FDCD1 /* octopus.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA1472781AACECF1005FDCD1 /* octopus.cpp */; };
 		CA14727C1AACED6E005FDCD1 /* octopus_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA14727B1AACED6E005FDCD1 /* octopus_tests.cpp */; };
 		CA2827C11B2A4CD0007712D4 /* online_candidate_variant_generator.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA2827BF1B2A4CD0007712D4 /* online_candidate_variant_generator.cpp */; };
@@ -165,6 +167,10 @@
 		CA0B46831AEA222B00158BBA /* 1000G_test10.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = 1000G_test10.cpp; sourceTree = "<group>"; };
 		CA0D83E61BD2B0210020366B /* genome_walker.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = genome_walker.cpp; sourceTree = "<group>"; };
 		CA0D83E71BD2B0210020366B /* genome_walker.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = genome_walker.hpp; sourceTree = "<group>"; };
+		CA0D83E91BD466F40020366B /* read_pipe.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = read_pipe.cpp; sourceTree = "<group>"; };
+		CA0D83EA1BD466F40020366B /* read_pipe.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = read_pipe.hpp; sourceTree = "<group>"; };
+		CA0D83EC1BD467BE0020366B /* downsampler.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = downsampler.cpp; sourceTree = "<group>"; };
+		CA0D83ED1BD467BE0020366B /* downsampler.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = downsampler.hpp; sourceTree = "<group>"; };
 		CA1472741AACC7E2005FDCD1 /* context_iterators.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = context_iterators.hpp; sourceTree = "<group>"; };
 		CA1472781AACECF1005FDCD1 /* octopus.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = octopus.cpp; sourceTree = "<group>"; };
 		CA1472791AACECF1005FDCD1 /* octopus.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = octopus.hpp; sourceTree = "<group>"; };
@@ -769,6 +775,10 @@
 				CA28EBF31AABA2FC009F8622 /* read_transformations.hpp */,
 				CAD5EC091AD6FD1E00892816 /* read_utils.hpp */,
 				CAD5EC081AD6FD1E00892816 /* read_utils.cpp */,
+				CA0D83ED1BD467BE0020366B /* downsampler.hpp */,
+				CA0D83EC1BD467BE0020366B /* downsampler.cpp */,
+				CA0D83EA1BD466F40020366B /* read_pipe.hpp */,
+				CA0D83E91BD466F40020366B /* read_pipe.cpp */,
 			);
 			name = reads;
 			sourceTree = "<group>";
@@ -899,6 +909,7 @@
 				D4BEA9FC1B861BE200E53CFD /* sssort.c in Sources */,
 				D435E9F91B2B345700945EC7 /* Makefile in Sources */,
 				D4BEA9FE1B861BE200E53CFD /* utils.c in Sources */,
+				CA0D83EB1BD466F40020366B /* read_pipe.cpp in Sources */,
 				D463C19D1B062F7F00739A66 /* vcf_tests.cpp in Sources */,
 				CA0B46821AEA210300158BBA /* 1000G_test9.cpp in Sources */,
 				CAFA19661ABF84AC00F953D9 /* haplotype_tree_tests.cpp in Sources */,
@@ -934,6 +945,7 @@
 				CA4551681AEB096900FDAAE8 /* 1000G_test14.cpp in Sources */,
 				CAFA19641ABF75D400F953D9 /* haplotype.cpp in Sources */,
 				CA2827C11B2A4CD0007712D4 /* online_candidate_variant_generator.cpp in Sources */,
+				CA0D83EE1BD467BE0020366B /* downsampler.cpp in Sources */,
 				CAE3E2971A9D292000C01B2C /* variant_assembler.cpp in Sources */,
 				CA28EBF81AABE178009F8622 /* read_transform_tests.cpp in Sources */,
 				CA4551761AEC1C8600FDAAE8 /* haplotype_prior_model_tests.cpp in Sources */,

@@ -16,14 +16,18 @@
 
 #include "genomic_region.hpp"
 
+#include "common.hpp"
+#include "mappable_set.hpp"
+
 class AlignedRead;
 
 class IReadReaderImpl
 {
 public:
-    using SampleIdType       = std::string;
-    using SizeType           = GenomicRegion::SizeType;
-    using SampleIdToReadsMap = std::unordered_map<SampleIdType, std::vector<AlignedRead>>;
+    using SampleIdType  = std::string;
+    using SizeType      = GenomicRegion::SizeType;
+    using Reads         = Octopus::ReadContainer;
+    using SampleReadMap = Octopus::ReadMap;
     
     virtual std::vector<SampleIdType> get_samples() = 0;
     virtual std::vector<std::string> get_read_groups_in_sample(const SampleIdType& sample) = 0;
@@ -31,8 +35,8 @@ public:
     virtual size_t count_reads(const GenomicRegion& region) = 0;
     virtual size_t count_reads(const SampleIdType& sample, const GenomicRegion& region) = 0;
     virtual GenomicRegion find_head_region(const GenomicRegion& region, size_t target_coverage) = 0;
-    virtual SampleIdToReadsMap fetch_reads(const GenomicRegion& region) = 0;
-    virtual std::vector<AlignedRead> fetch_reads(const SampleIdType& sample, const GenomicRegion& region) = 0;
+    virtual SampleReadMap fetch_reads(const GenomicRegion& region) = 0;
+    virtual Reads fetch_reads(const SampleIdType& sample, const GenomicRegion& region) = 0;
     
     virtual unsigned get_num_reference_contigs() noexcept = 0;
     virtual std::vector<std::string> get_reference_contig_names() = 0;

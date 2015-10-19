@@ -11,10 +11,12 @@
 
 #include <memory>     // std::allocator
 #include <functional> // std::less
-#include <algorithm>  // std::max, std::minmax
-#include <iterator>   // std::begin, std::end, std::cbegin, std::cend
+#include <algorithm>  // std::max, std::minmax, std::swap
+#include <iterator>   // std::begin, std::end, std::cbegin, std::cend, std::next, std::prev
+#include <stdexcept>  // std::out_of_range
 #include <boost/container/flat_set.hpp>
 
+#include "comparable.hpp"
 #include "genomic_region.hpp"
 #include "mappable.hpp"
 #include "mappable_ranges.hpp"
@@ -27,7 +29,7 @@
  memory overhead.
  */
 template <typename MappableType, typename Allocator = std::allocator<MappableType>>
-class MappableSet
+class MappableSet : public Comparable<MappableSet<MappableType, Allocator>>
 {
 protected:
     using base_t = boost::container::flat_multiset<MappableType, std::less<MappableType>, Allocator>;
@@ -55,18 +57,27 @@ public:
     MappableSet(MappableSet&&)                 = default;
     MappableSet& operator=(MappableSet&&)      = default;
     
-    iterator begin();
-    const_iterator begin() const;
-    const_iterator cbegin() const;
-    iterator end();
-    const_iterator end() const;
-    const_iterator cend() const;
-    reverse_iterator rbegin();
-    const_reverse_iterator rbegin() const;
-    const_reverse_iterator crbegin() const;
-    reverse_iterator rend();
-    const_reverse_iterator rend() const;
-    const_reverse_iterator crend() const;
+    iterator begin() noexcept;
+    const_iterator begin() const noexcept;
+    const_iterator cbegin() const noexcept;
+    iterator end() noexcept;
+    const_iterator end() const noexcept;
+    const_iterator cend() const noexcept;
+    reverse_iterator rbegin() noexcept;
+    const_reverse_iterator rbegin() const noexcept;
+    const_reverse_iterator crbegin() const noexcept;
+    reverse_iterator rend() noexcept;
+    const_reverse_iterator rend() const noexcept;
+    const_reverse_iterator crend() const noexcept;
+    
+    reference at(size_type pos);
+    const_reference at(size_type pos) const;
+    reference operator[](size_type pos);
+    const_reference operator[](size_type pos) const;
+    reference front();
+    const_reference front() const;
+    reference back();
+    const_reference back() const;
     
     template <typename ...Args>
     iterator emplace(Args...);
@@ -90,10 +101,10 @@ public:
     void reserve(size_type n);
     void shrink_to_fit();
     
-    allocator_type get_allocator();
+    allocator_type get_allocator() noexcept;
     
-    const MappableType& leftmost() const noexcept;
-    const MappableType& rightmost() const noexcept;
+    const MappableType& leftmost() const;
+    const MappableType& rightmost() const;
     
     template <typename MappableType_>
     bool has_overlapped(const MappableType_& mappable) const;
@@ -158,9 +169,15 @@ public:
     template <typename MappableType1_, typename MappableType2_>
     SharedRange<const_iterator> shared_range(const_iterator first, const_iterator last, const MappableType1_& mappable1, const MappableType2_& mappable2) const;
     
+    template <typename M, typename A>
+    friend bool operator==(const MappableSet<M, A>& lhs, const MappableSet<M, A>& rhs);
+    template <typename M, typename A>
+    friend bool operator<(const MappableSet<M, A>& lhs, const MappableSet<M, A>& rhs);
+    template <typename M, typename A>
+    friend void swap(MappableSet<M, A>& lhs, MappableSet<M, A>& rhs);
+    
 private:
     base_t elements_;
-    
     bool is_bidirectionally_sorted_;
     GenomicRegion::SizeType max_element_size_;
 };
@@ -176,86 +193,150 @@ max_element_size_ {(elements_.empty()) ? 0 : ::size(*largest_element(std::cbegin
 
 template <typename MappableType, typename Allocator>
 typename MappableSet<MappableType, Allocator>::iterator
-MappableSet<MappableType, Allocator>::begin()
+MappableSet<MappableType, Allocator>::begin() noexcept
 {
     return elements_.begin();
 }
 
 template <typename MappableType, typename Allocator>
 typename MappableSet<MappableType, Allocator>::const_iterator
-MappableSet<MappableType, Allocator>::begin() const
+MappableSet<MappableType, Allocator>::begin() const noexcept
 {
     return elements_.begin();
 }
 
 template <typename MappableType, typename Allocator>
 typename MappableSet<MappableType, Allocator>::const_iterator
-MappableSet<MappableType, Allocator>::cbegin() const
+MappableSet<MappableType, Allocator>::cbegin() const noexcept
 {
     return elements_.cbegin();
 }
 
 template <typename MappableType, typename Allocator>
 typename MappableSet<MappableType, Allocator>::iterator
-MappableSet<MappableType, Allocator>::end()
+MappableSet<MappableType, Allocator>::end() noexcept
 {
     return elements_.end();
 }
 
 template <typename MappableType, typename Allocator>
 typename MappableSet<MappableType, Allocator>::const_iterator
-MappableSet<MappableType, Allocator>::end() const
+MappableSet<MappableType, Allocator>::end() const noexcept
 {
     return elements_.end();
 }
 
 template <typename MappableType, typename Allocator>
 typename MappableSet<MappableType, Allocator>::const_iterator
-MappableSet<MappableType, Allocator>::cend() const
+MappableSet<MappableType, Allocator>::cend() const noexcept
 {
     return elements_.cend();
 }
 
 template <typename MappableType, typename Allocator>
 typename MappableSet<MappableType, Allocator>::reverse_iterator
-MappableSet<MappableType, Allocator>::rbegin()
+MappableSet<MappableType, Allocator>::rbegin() noexcept
 {
     return elements_.rbegin();
 }
 
 template <typename MappableType, typename Allocator>
 typename MappableSet<MappableType, Allocator>::const_reverse_iterator
-MappableSet<MappableType, Allocator>::rbegin() const
+MappableSet<MappableType, Allocator>::rbegin() const noexcept
 {
     return elements_.rbegin();
 }
 
 template <typename MappableType, typename Allocator>
 typename MappableSet<MappableType, Allocator>::const_reverse_iterator
-MappableSet<MappableType, Allocator>::crbegin() const
+MappableSet<MappableType, Allocator>::crbegin() const noexcept
 {
     return elements_.crbegin();
 }
 
 template <typename MappableType, typename Allocator>
 typename MappableSet<MappableType, Allocator>::reverse_iterator
-MappableSet<MappableType, Allocator>::rend()
+MappableSet<MappableType, Allocator>::rend() noexcept
 {
     return elements_.rend();
 }
 
 template <typename MappableType, typename Allocator>
 typename MappableSet<MappableType, Allocator>::const_reverse_iterator
-MappableSet<MappableType, Allocator>::rend() const
+MappableSet<MappableType, Allocator>::rend() const noexcept
 {
     return elements_.rend();
 }
 
 template <typename MappableType, typename Allocator>
 typename MappableSet<MappableType, Allocator>::const_reverse_iterator
-MappableSet<MappableType, Allocator>::crend() const
+MappableSet<MappableType, Allocator>::crend() const noexcept
 {
     return elements_.crend();
+}
+
+template <typename MappableType, typename Allocator>
+typename MappableSet<MappableType, Allocator>::reference
+MappableSet<MappableType, Allocator>::at(size_type pos)
+{
+    if (pos < size()) {
+        return *std::next(begin(), pos);
+    } else {
+        throw std::out_of_range {"MappableSet"};
+    }
+}
+
+template <typename MappableType, typename Allocator>
+typename MappableSet<MappableType, Allocator>::const_reference
+MappableSet<MappableType, Allocator>::at(size_type pos) const
+{
+    if (pos < size()) {
+        return *std::next(cbegin(), pos);
+    } else {
+        throw std::out_of_range {"MappableSet"};
+    }
+}
+
+template <typename MappableType, typename Allocator>
+typename MappableSet<MappableType, Allocator>::reference
+MappableSet<MappableType, Allocator>::operator[](size_type pos)
+{
+    return *std::next(begin(), pos);
+}
+
+template <typename MappableType, typename Allocator>
+typename MappableSet<MappableType, Allocator>::const_reference
+MappableSet<MappableType, Allocator>::operator[](size_type pos) const
+{
+    return *std::next(cbegin(), pos);
+}
+
+template <typename MappableType, typename Allocator>
+typename MappableSet<MappableType, Allocator>::reference
+MappableSet<MappableType, Allocator>::front()
+{
+    return *begin();
+}
+
+template <typename MappableType, typename Allocator>
+typename MappableSet<MappableType, Allocator>::const_reference
+MappableSet<MappableType, Allocator>::front() const
+{
+    return *cbegin();
+}
+
+template <typename MappableType, typename Allocator>
+typename MappableSet<MappableType, Allocator>::reference
+MappableSet<MappableType, Allocator>::back()
+{
+    return *std::prev(end());
+}
+
+template <typename MappableType, typename Allocator>
+typename MappableSet<MappableType, Allocator>::const_reference
+MappableSet<MappableType, Allocator>::back() const
+{
+    return *std::prev(cend());
 }
 
 template <typename MappableType, typename Allocator>
@@ -391,14 +472,16 @@ template <typename MappableType, typename Allocator>
 void MappableSet<MappableType, Allocator>::clear()
 {
     elements_.clear();
-    max_element_size_ = 0;
     is_bidirectionally_sorted_ = true;
+    max_element_size_ = 0;
 }
 
 template <typename MappableType, typename Allocator>
 void MappableSet<MappableType, Allocator>::swap(const MappableSet& m)
 {
-    elements_.swap(m.elements_);
+    std::swap(elements_, m.elements_);
+    std::swap(is_bidirectionally_sorted_, m.is_bidirectionally_sorted_);
+    std::swap(max_element_size_, m.max_element_size_);
 }
 
 template <typename MappableType, typename Allocator>
@@ -444,19 +527,19 @@ MappableSet<MappableType, Allocator>::shrink_to_fit()
 
 template <typename MappableType, typename Allocator>
 typename MappableSet<MappableType, Allocator>::allocator_type
-MappableSet<MappableType, Allocator>::get_allocator()
+MappableSet<MappableType, Allocator>::get_allocator() noexcept
 {
     return elements_.get_allocator();
 }
 
 template <typename MappableType, typename Allocator>
-const MappableType& MappableSet<MappableType, Allocator>::leftmost() const noexcept
+const MappableType& MappableSet<MappableType, Allocator>::leftmost() const
 {
-    return *elements_.cbegin();
+    return front();
 }
 
 template <typename MappableType, typename Allocator>
-const MappableType& MappableSet<MappableType, Allocator>::rightmost() const noexcept
+const MappableType& MappableSet<MappableType, Allocator>::rightmost() const
 {
     const auto& last = *std::prev(elements_.cend());
     if (is_bidirectionally_sorted_) {
@@ -742,6 +825,26 @@ MappableSet<MappableType, Allocator>::shared_range(const_iterator first, const_i
 }
 
 // non-member methods
+
+template <typename MappableType, typename Allocator>
+bool operator==(const MappableSet<MappableType, Allocator>& lhs, const MappableSet<MappableType, Allocator>& rhs)
+{
+    return lhs.elements_ == rhs.elements_;
+}
+
+template <typename MappableType, typename Allocator>
+bool operator<(const MappableSet<MappableType, Allocator>& lhs, const MappableSet<MappableType, Allocator>& rhs)
+{
+    return lhs.elements_ < rhs.elements_;
+}
+
+template <typename MappableType, typename Allocator>
+void swap(MappableSet<MappableType, Allocator>& lhs, MappableSet<MappableType, Allocator>& rhs)
+{
+    std::swap(lhs.elements_, rhs.elements_);
+    std::swap(lhs.is_bidirectionally_sorted_, rhs.is_bidirectionally_sorted_);
+    std::swap(lhs.max_element_size_, rhs.max_element_size_);
+}
 
 template <typename ForwardIterator, typename MappableType1, typename MappableType2>
 ForwardIterator

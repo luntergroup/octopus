@@ -59,12 +59,12 @@ CigarString parse_cigar_string(const std::string& cigar_string)
 
 bool is_front_soft_clipped(const CigarString& cigar_string) noexcept
 {
-    return (cigar_string.size() > 0) ? cigar_string.front().get_flag() == 'S' : false;
+    return cigar_string.empty() || cigar_string.front().get_flag() == CigarOperation::SOFT_CLIPPED;
 }
 
 bool is_back_soft_clipped(const CigarString& cigar_string) noexcept
 {
-    return (cigar_string.size() > 0) ? cigar_string.back().get_flag() == 'S' : false;
+    return cigar_string.empty() || cigar_string.back().get_flag() == CigarOperation::SOFT_CLIPPED;
 }
 
 bool is_soft_clipped(const CigarString& cigar_string) noexcept

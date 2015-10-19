@@ -25,9 +25,10 @@ namespace fs = boost::filesystem;
 class ReadReader : public Equitable<ReadReader>
 {
 public:
-    using SampleIdType       = IReadReaderImpl::SampleIdType;
-    using SizeType           = IReadReaderImpl::SizeType;
-    using SampleIdToReadsMap = IReadReaderImpl::SampleIdToReadsMap;
+    using SampleIdType  = IReadReaderImpl::SampleIdType;
+    using SizeType      = IReadReaderImpl::SizeType;
+    using Reads         = IReadReaderImpl::Reads;
+    using SampleReadMap = IReadReaderImpl::SampleReadMap;
     
     ReadReader() = delete;
     explicit ReadReader(const fs::path& file_path, std::unique_ptr<IReadReaderImpl> the_impl);
@@ -49,8 +50,8 @@ public:
     size_t count_reads(const GenomicRegion& region);
     size_t count_reads(const SampleIdType& sample, const GenomicRegion& region);
     GenomicRegion find_head_region(const GenomicRegion& region, size_t target_coverage);
-    SampleIdToReadsMap fetch_reads(const GenomicRegion& region);
-    std::vector<AlignedRead> fetch_reads(const SampleIdType& sample, const GenomicRegion& region);
+    SampleReadMap fetch_reads(const GenomicRegion& region);
+    Reads fetch_reads(const SampleIdType& sample, const GenomicRegion& region);
     
 private:
     fs::path file_path_;
@@ -108,12 +109,12 @@ inline GenomicRegion ReadReader::find_head_region(const GenomicRegion& region, s
     return the_impl_->find_head_region(region, target_coverage);
 }
 
-inline ReadReader::SampleIdToReadsMap ReadReader::fetch_reads(const GenomicRegion& region)
+inline ReadReader::SampleReadMap ReadReader::fetch_reads(const GenomicRegion& region)
 {
     return the_impl_->fetch_reads(region);
 }
 
-inline std::vector<AlignedRead> ReadReader::fetch_reads(const SampleIdType& sample, const GenomicRegion& region)
+inline ReadReader::Reads ReadReader::fetch_reads(const SampleIdType& sample, const GenomicRegion& region)
 {
     return the_impl_->fetch_reads(sample, region);
 }

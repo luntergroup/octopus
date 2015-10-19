@@ -24,8 +24,6 @@ class CigarOperation : public Comparable<CigarOperation> // Comparable so can co
 public:
     using SizeType = std::uint_fast32_t;
     
-    // No getting around these really - they have to go somewhere. Could go into a config,
-    // but would loose constexpr-ness.
     static constexpr char ALIGNMENT_MATCH {'M'};
     static constexpr char SEQUENCE_MATCH  {'='};
     static constexpr char SUBSTITUTION    {'X'};
@@ -36,8 +34,9 @@ public:
     static constexpr char PADDING         {'P'};
     static constexpr char SKIPPED         {'N'};
     
-    CigarOperation() = delete;
+    CigarOperation() = default;
     explicit CigarOperation(SizeType size, char type) noexcept;
+    ~CigarOperation() = default;
     
     CigarOperation(const CigarOperation&)            = default;
     CigarOperation& operator=(const CigarOperation&) = default;
@@ -50,8 +49,8 @@ public:
     bool advances_sequence() const noexcept;
     
 private:
-    const SizeType size_;
-    const char flag_;
+    SizeType size_;
+    char flag_;
 };
 
 using CigarString = std::vector<CigarOperation>;
@@ -70,7 +69,7 @@ template <typename SizeType>
 SizeType soft_clipped_read_begin(const CigarString& cigar_string, SizeType hard_clipped_begin) noexcept
 {
     if (is_front_soft_clipped(cigar_string)) {
-        hard_clipped_begin -= static_cast<SizeType>(cigar_string.at(0).get_size());
+        hard_clipped_begin -= static_cast<SizeType>(cigar_string.front().get_size());
     }
     return hard_clipped_begin;
 }
