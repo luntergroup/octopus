@@ -54,6 +54,11 @@ size_t VcfReader::count_records() const
     return reader_->count_records();
 }
 
+size_t VcfReader::count_records(const std::string& contig) const
+{
+    return reader_->count_records(contig);
+}
+
 size_t VcfReader::count_records(const GenomicRegion& region) const
 {
     return reader_->count_records(region);
@@ -64,7 +69,19 @@ std::vector<VcfRecord> VcfReader::fetch_records(Unpack level)
     return reader_->fetch_records((level == Unpack::All) ? HtslibBcfFacade::Unpack::All : HtslibBcfFacade::Unpack::AllButSamples);
 }
 
+std::vector<VcfRecord> VcfReader::fetch_records(const std::string& contig, Unpack level)
+{
+    return reader_->fetch_records(contig, (level == Unpack::All) ? HtslibBcfFacade::Unpack::All : HtslibBcfFacade::Unpack::AllButSamples);
+}
+
 std::vector<VcfRecord> VcfReader::fetch_records(const GenomicRegion& region, Unpack level)
 {
     return reader_->fetch_records(region, (level == Unpack::All) ? HtslibBcfFacade::Unpack::All : HtslibBcfFacade::Unpack::AllButSamples);
+}
+
+// non member methods
+
+bool operator==(const VcfReader& lhs, const VcfReader& rhs)
+{
+    return lhs.path() == rhs.path();
 }

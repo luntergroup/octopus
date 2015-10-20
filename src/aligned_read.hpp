@@ -148,20 +148,23 @@ private:
     
     static constexpr size_t compression_flag_ {8};
     
+    // should be ordered by sizeof
     GenomicRegion region_;
-    std::string read_group_;
     SequenceType sequence_;
-    CigarString cigar_string_;
     Qualities qualities_;
+    CigarString cigar_string_;
+    std::string read_group_;
     std::unique_ptr<NextSegment> next_segment_;
     mutable size_t hash_ = 0; // 0 is reserved so can be lazy evaluated
     FlagBits flags_;
     QualityType mapping_quality_;
     
     FlagBits compress_flags(const Flags& data);
+    
     bool is_compressed() const noexcept;
     void set_compressed() noexcept;
     void set_uncompressed() noexcept;
+    
     size_t make_hash() const;
 };
 
@@ -171,10 +174,10 @@ inline AlignedRead::AlignedRead(GenomicRegion_&& reference_region, String1_&& se
                                 QualityType mapping_quality, Flags flags)
 :
 region_ {std::forward<GenomicRegion_>(reference_region)},
-read_group_ {},
 sequence_ {std::forward<String1_>(sequence)},
 qualities_ {std::forward<Qualities_>(qualities)},
 cigar_string_ {std::forward<CigarString_>(cigar_string)},
+read_group_ {},
 next_segment_ {nullptr},
 flags_ {compress_flags(flags)},
 mapping_quality_ {mapping_quality}
@@ -189,10 +192,10 @@ AlignedRead::AlignedRead(GenomicRegion_&& reference_region, String1_&& sequence,
                          SizeType inferred_template_length, NextSegment::Flags next_segment_flags)
 :
 region_ {std::forward<GenomicRegion_>(reference_region)},
-read_group_ {},
 sequence_ {std::forward<String1_>(sequence)},
 qualities_ {std::forward<Qualities_>(qualities)},
 cigar_string_ {std::forward<CigarString_>(cigar_string)},
+read_group_ {},
 next_segment_ {std::make_unique<NextSegment>(std::forward<String2_>(next_segment_contig_name),
                                                  next_segment_begin, inferred_template_length,
                                                  next_segment_flags)},

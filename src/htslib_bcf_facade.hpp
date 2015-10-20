@@ -38,16 +38,18 @@ public:
     HtslibBcfFacade()  = delete;
     explicit HtslibBcfFacade(const fs::path& file_path, const std::string& mode = "r");
     
-    HtslibBcfFacade(const HtslibBcfFacade&)            = default;
-    HtslibBcfFacade& operator=(const HtslibBcfFacade&) = default;
+    HtslibBcfFacade(const HtslibBcfFacade&)            = delete;
+    HtslibBcfFacade& operator=(const HtslibBcfFacade&) = delete;
     HtslibBcfFacade(HtslibBcfFacade&&)                 = default;
     HtslibBcfFacade& operator=(HtslibBcfFacade&&)      = default;
     
     VcfHeader fetch_header() const override;
     size_t count_records() override;
+    size_t count_records(const std::string& contig) override;
     size_t count_records(const GenomicRegion& region) override;
-    std::vector<VcfRecord> fetch_records(Unpack level = Unpack::All) override;
-    std::vector<VcfRecord> fetch_records(const GenomicRegion& region, Unpack level = Unpack::All) override;
+    std::vector<VcfRecord> fetch_records(Unpack level) override;
+    std::vector<VcfRecord> fetch_records(const std::string& contig, Unpack level) override;
+    std::vector<VcfRecord> fetch_records(const GenomicRegion& region, Unpack level) override;
     
     void write_header(const VcfHeader& header);
     void write_record(const VcfRecord& record);

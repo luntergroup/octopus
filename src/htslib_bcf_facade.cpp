@@ -113,7 +113,24 @@ size_t HtslibBcfFacade::count_records()
 {
     HtsBcfSrPtr sr {bcf_sr_init(), htslib_bcf_srs_deleter};
     
-    if (!bcf_sr_add_reader(sr.get(), file_path_.string().c_str())) {
+    if (bcf_sr_add_reader(sr.get(), file_path_.string().c_str()) != 1) {
+        sr.release();
+        throw std::runtime_error {"failed to open file " + file_path_.string()};
+    }
+    
+    return num_records(sr);
+}
+
+size_t HtslibBcfFacade::count_records(const std::string& contig)
+{
+    HtsBcfSrPtr sr {bcf_sr_init(), htslib_bcf_srs_deleter};
+    
+    if (bcf_sr_set_regions(sr.get(), contig.c_str(), 0) != 0) { // must go before bcf_sr_add_reader
+        throw std::runtime_error {"failed load contig " + contig};
+    }
+    
+    if (bcf_sr_add_reader(sr.get(), file_path_.string().c_str()) != 1) {
+        sr.release();
         throw std::runtime_error {"failed to open file " + file_path_.string()};
     }
     
@@ -124,9 +141,12 @@ size_t HtslibBcfFacade::count_records(const GenomicRegion& region)
 {
     HtsBcfSrPtr sr {bcf_sr_init(), htslib_bcf_srs_deleter};
     
-    bcf_sr_set_regions(sr.get(), to_string(region).c_str(), 0); // must go before bcf_sr_add_reader
+    if (bcf_sr_set_regions(sr.get(), to_string(region).c_str(), 0) != 0) { // must go before bcf_sr_add_reader
+        throw std::runtime_error {"failed load region " + to_string(region)};
+    }
     
-    if (!bcf_sr_add_reader(sr.get(), file_path_.string().c_str())) {
+    if (bcf_sr_add_reader(sr.get(), file_path_.string().c_str()) != 1) {
+        sr.release();
         throw std::runtime_error {"failed to open file " + file_path_.string()};
     }
     
@@ -139,7 +159,26 @@ std::vector<VcfRecord> HtslibBcfFacade::fetch_records(Unpack level)
     
     HtsBcfSrPtr sr {bcf_sr_init(), htslib_bcf_srs_deleter};
     
-    if (!bcf_sr_add_reader(sr.get(), file_path_.string().c_str())) {
+    if (bcf_sr_add_reader(sr.get(), file_path_.string().c_str()) != 1) {
+        sr.release();
+        throw std::runtime_error {"failed to open file " + file_path_.string()};
+    }
+    
+    return fetch_records(sr, level, n_records);
+}
+
+std::vector<VcfRecord> HtslibBcfFacade::fetch_records(const std::string& contig, Unpack level)
+{
+    auto n_records = count_records(contig);
+    
+    HtsBcfSrPtr sr {bcf_sr_init(), htslib_bcf_srs_deleter};
+    
+    if (bcf_sr_set_regions(sr.get(), contig.c_str(), 0) != 0) { // must go before bcf_sr_add_reader
+        throw std::runtime_error {"failed load contig " + contig};
+    }
+    
+    if (bcf_sr_add_reader(sr.get(), file_path_.string().c_str()) != 1) {
+        sr.release();
         throw std::runtime_error {"failed to open file " + file_path_.string()};
     }
     
@@ -152,9 +191,12 @@ std::vector<VcfRecord> HtslibBcfFacade::fetch_records(const GenomicRegion& regio
     
     HtsBcfSrPtr sr {bcf_sr_init(), htslib_bcf_srs_deleter};
     
-    bcf_sr_set_regions(sr.get(), to_string(region).c_str(), 0); // must go before bcf_sr_add_reader
+    if (bcf_sr_set_regions(sr.get(), to_string(region).c_str(), 0) != 0) { // must go before bcf_sr_add_reader
+        throw std::runtime_error {"failed load region " + to_string(region)};
+    }
     
-    if (!bcf_sr_add_reader(sr.get(), file_path_.string().c_str())) {
+    if (bcf_sr_add_reader(sr.get(), file_path_.string().c_str()) != 1) {
+        sr.release();
         throw std::runtime_error {"failed to open file " + file_path_.string()};
     }
     
@@ -393,10 +435,13 @@ void set_filters(bcf_hdr_t* header, bcf1_t* record, const std::vector<std::strin
 
 auto get_info(bcf_hdr_t* header, bcf1_t* record)
 {
-    int ninfo {};
+    int nintinfo {};
     int* intinfo      {nullptr};
+    int nfloatinfo {};
     float* floatinfo  {nullptr};
+    int nstringinfo {};
     char** stringinfo {nullptr};
+    int nflaginfo {};
     int* flaginfo     {nullptr}; // not actually populated
     
     std::unordered_map<VcfRecord::KeyType, std::vector<std::string>> result {};
@@ -406,29 +451,31 @@ auto get_info(bcf_hdr_t* header, bcf1_t* record)
         const char* key {header->id[BCF_DT_ID][record->d.info[i].key].key};
         
         std::vector<std::string> values {};
-        values.reserve(ninfo);
         
         switch (bcf_hdr_id2type(header, BCF_HL_INFO, record->d.info[i].key)) {
             case BCF_HT_INT:
-                if (bcf_get_info_int32(header, record, key, &intinfo, &ninfo) > 0) {
-                    std::transform(intinfo, intinfo + ninfo, std::back_inserter(values),
+                if (bcf_get_info_int32(header, record, key, &intinfo, &nintinfo) > 0) {
+                    values.reserve(nintinfo);
+                    std::transform(intinfo, intinfo + nintinfo, std::back_inserter(values),
                                    [] (auto v) { return std::to_string(v); });
                 }
                 break;
             case BCF_HT_REAL:
-                if (bcf_get_info_float(header, record, key, &floatinfo, &ninfo) > 0) {
-                    std::transform(floatinfo, floatinfo + ninfo, std::back_inserter(values),
+                if (bcf_get_info_float(header, record, key, &floatinfo, &nfloatinfo) > 0) {
+                    values.reserve(nfloatinfo);
+                    std::transform(floatinfo, floatinfo + nfloatinfo, std::back_inserter(values),
                                    [] (auto v) { return std::to_string(v); });
                 }
                 break;
             case BCF_HT_STR:
-                if (bcf_get_info_string(header, record, key, &stringinfo, &ninfo) > 0) {
-                    std::for_each(stringinfo, stringinfo + ninfo,
+                if (bcf_get_info_string(header, record, key, &stringinfo, &nstringinfo) > 0) {
+                    values.reserve(nstringinfo);
+                    std::for_each(stringinfo, stringinfo + nstringinfo,
                                   [&values] (const char* str) { values.emplace_back(str); });
                 }
                 break;
             case BCF_HT_FLAG:
-                values.emplace_back((bcf_get_info_flag(header, record, key, &flaginfo, &ninfo) == 1) ? "1" : "0");
+                values.emplace_back((bcf_get_info_flag(header, record, key, &flaginfo, &nflaginfo) == 1) ? "1" : "0");
                 break;
         }
         
@@ -501,12 +548,7 @@ auto get_format(bcf_hdr_t* header, bcf1_t* record)
 
 auto get_samples(bcf_hdr_t* header, bcf1_t* record, const std::vector<VcfRecord::KeyType>& format)
 {
-    int nformat {};
-    int* intformat      {nullptr};
-    float* floatformat  {nullptr};
-    char** stringformat {nullptr};
-    
-    auto num_samples = record->n_sample;
+    const auto num_samples = record->n_sample;
     
     std::unordered_map<VcfRecord::SampleIdType, std::pair<std::vector<VcfRecord::SequenceType>, bool>> genotypes {};
     genotypes.reserve(num_samples);
@@ -516,7 +558,7 @@ auto get_samples(bcf_hdr_t* header, bcf1_t* record, const std::vector<VcfRecord:
         int* gt {nullptr};
         
         bcf_get_genotypes(header, record, &gt, &ngt);
-        auto ploidy = record->d.fmt->n;
+        const auto ploidy = record->d.fmt->n;
         
         for (unsigned sample {}, i {}; sample < num_samples; ++sample, i += ploidy) {
             std::vector<VcfRecord::SequenceType> alleles {};
@@ -535,29 +577,37 @@ auto get_samples(bcf_hdr_t* header, bcf1_t* record, const std::vector<VcfRecord:
     
     std::unordered_map<VcfRecord::SampleIdType, std::unordered_map<VcfRecord::KeyType, std::vector<std::string>>> other_data {};
     
-    auto end = std::cend(format);
-    for (auto it = std::next(std::cbegin(format)); it != end; ++it) {
+    int nintformat {};
+    int* intformat {nullptr};
+    int nfloatformat {};
+    float* floatformat {nullptr};
+    int nstringformat {};
+    char** stringformat {nullptr};
+    
+    for (auto it = std::next(std::cbegin(format)), end = std::cend(format); it != end; ++it) {
         const auto& key = *it;
         
         std::vector<std::string> values {};
-        values.reserve(num_samples);
         
         switch (bcf_hdr_id2type(header, BCF_HL_FMT, bcf_hdr_id2int(header, BCF_DT_ID, key.c_str()))) {
             case BCF_HT_INT:
-                if (bcf_get_format_int32(header, record, key.c_str(), &intformat, &nformat) > 0) {
-                    std::transform(intformat, intformat + record->n_sample, std::back_inserter(values),
+                if (bcf_get_format_int32(header, record, key.c_str(), &intformat, &nintformat) > 0) {
+                    values.reserve(nintformat);
+                    std::transform(intformat, intformat + num_samples, std::back_inserter(values),
                                    [] (auto v) { return std::to_string(v); });
                 }
                 break;
             case BCF_HT_REAL:
-                if (bcf_get_format_float(header, record, key.c_str(), &floatformat, &nformat) > 0) {
-                    std::transform(floatformat, floatformat + record->n_sample, std::back_inserter(values),
+                if (bcf_get_format_float(header, record, key.c_str(), &floatformat, &nfloatformat) > 0) {
+                    values.reserve(nfloatformat);
+                    std::transform(floatformat, floatformat + num_samples, std::back_inserter(values),
                                    [] (auto v) { return std::to_string(v); });
                 }
                 break;
             case BCF_HT_STR:
-                if (bcf_get_format_string(header, record, key.c_str(), &stringformat, &nformat) > 0) {
-                    std::for_each(stringformat, stringformat + record->n_sample,
+                if (bcf_get_format_string(header, record, key.c_str(), &stringformat, &nstringformat) > 0) {
+                    values.reserve(nstringformat);
+                    std::for_each(stringformat, stringformat + num_samples,
                                   [&values] (const char* str) { values.emplace_back(str); });
                 }
                 break;
@@ -572,7 +622,7 @@ auto get_samples(bcf_hdr_t* header, bcf1_t* record, const std::vector<VcfRecord:
     free(floatformat);
     free(stringformat);
     
-    return std::make_pair(genotypes, other_data);
+    return std::make_pair(std::move(genotypes), std::move(other_data));
 }
 
 void set_samples(bcf_hdr_t* header, bcf1_t* dest, const VcfRecord& source)

@@ -9,6 +9,8 @@
 #ifndef __Octopus__vcf_utils__
 #define __Octopus__vcf_utils__
 
+#include <vector>
+#include <string>
 #include <boost/filesystem/path.hpp>
 
 #include "vcf_type.hpp"
@@ -18,6 +20,8 @@
 #include "vcf_writer.hpp"
 
 namespace fs = boost::filesystem;
+
+std::vector<std::string> get_contigs(const VcfHeader& header);
 
 unsigned get_field_cardinality(const VcfHeader::KeyType& key, const VcfRecord& record);
 
@@ -30,6 +34,6 @@ std::vector<VcfType> get_typed_format_values(const VcfHeader& header, const VcfR
 
 VcfHeader merge(const std::vector<VcfHeader>& headers);
 
-VcfWriter merge(const std::vector<VcfReader>& readers, fs::path result_path);
+VcfWriter merge(std::vector<VcfReader>& readers, fs::path result_path);
 
 #endif /* defined(__Octopus__vcf_utils__) */

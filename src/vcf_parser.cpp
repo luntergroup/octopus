@@ -8,7 +8,6 @@
 
 #include "vcf_parser.hpp"
 
-#include <string>
 #include <algorithm> // std::count_if, std::copy, std::transform, std::for_each, std::count
 #include <iterator>  // std::cbegin, std::cend, std::advance, std::next
 #include <stdexcept>
@@ -69,6 +68,16 @@ size_t VcfParser::count_records()
                          });
 }
 
+size_t VcfParser::count_records(const std::string& contig)
+{
+    reset_vcf();
+    
+    return std::count_if(std::istream_iterator<Line>(file_), std::istream_iterator<Line>(),
+                         [&contig] (const auto& line) {
+                             return is_same_contig(line, contig);
+                         });
+}
+
 size_t VcfParser::count_records(const GenomicRegion& region)
 {
     reset_vcf();
@@ -91,6 +100,24 @@ std::vector<VcfRecord> VcfParser::fetch_records(Unpack level)
                    std::back_inserter(result), [this, unpack_all] (const auto& line) {
                        return (unpack_all) ? parse_record(line, samples_) : parse_record(line);
                    });
+    
+    return result;
+}
+
+std::vector<VcfRecord> VcfParser::fetch_records(const std::string& contig, Unpack level)
+{
+    reset_vcf();
+    
+    std::vector<VcfRecord> result {};
+    
+    bool unpack_all {level == Unpack::All};
+    
+    std::for_each(std::istream_iterator<Line>(file_), std::istream_iterator<Line>(),
+                  [this, &result, &contig, unpack_all] (const auto& line) {
+                      if (is_same_contig(line, contig)) {
+                          result.emplace_back((unpack_all) ? parse_record(line, samples_) : parse_record(line));
+                      }
+                  });
     
     return result;
 }
@@ -252,6 +279,15 @@ VcfHeader parse_header(std::ifstream& vcf_file)
     parse_header_sample_names(line, hb); // last line is column names, including sample names
     
     return hb.build_once();
+}
+
+bool is_same_contig(const std::string& line, const std::string& contig)
+{
+    std::istringstream ss {line};
+    
+    std::istream_iterator<Column> it {ss};
+    
+    return it->data == contig;
 }
 
 bool overlaps(const std::string& line, const GenomicRegion& region)

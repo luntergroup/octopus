@@ -22,7 +22,7 @@ inline po::variables_map get_basic_mock_options()
         "--reference", human_reference_fasta.c_str(),
         //"--reference", ecoli_reference_fasta.c_str(),
         
-        //"--reads", NA12878_low_coverage.c_str(), HG00101.c_str(), HG00102.c_str(), HG00103.c_str(),
+        "--reads", NA12878_low_coverage.c_str(), HG00101.c_str(), HG00102.c_str(), HG00103.c_str(),
         //"--reads", HG00101.c_str(),
         
         //"--reads", NA12878_high_coverage.c_str(), NA12878_simulated_cancer_basic.c_str(), //cancer test
@@ -30,7 +30,7 @@ inline po::variables_map get_basic_mock_options()
         
         //"--reads", "/Users/dcooke/Genomics/cancer/TCGA/benchmark/HCC1143.NORMAL.7x.compare.chr17.bam", "/Users/dcooke/Genomics/cancer/TCGA/benchmark/HCC1143.7x.n25t65s10.chr17.bam",
         
-        "--reads", NA12878_high_coverage.c_str(), NA12891_high_coverage.c_str(),
+        //"--reads", NA12878_high_coverage.c_str(), NA12891_high_coverage.c_str(),
         
         //"--reads", ecoli_bam.string().c_str(),
         
@@ -139,6 +139,7 @@ inline po::variables_map get_basic_mock_options()
         //"--max-open-read-files", "1",
         
         "--output", test_out_vcf.c_str(),
+        //"--output", "/Users/danielcooke/test2.vcf.gz",
         
         nullptr};
     

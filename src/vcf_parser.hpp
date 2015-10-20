@@ -10,6 +10,7 @@
 #define __Octopus__vcf_parser__
 
 #include <vector>
+#include <string>
 #include <cstddef> // size_t
 #include <fstream>
 #include <boost/filesystem/path.hpp>
@@ -28,16 +29,18 @@ public:
     VcfParser() = delete;
     explicit VcfParser(const fs::path& file_path);
     
-    VcfParser(const VcfParser&)            = default;
-    VcfParser& operator=(const VcfParser&) = default;
+    VcfParser(const VcfParser&)            = delete;
+    VcfParser& operator=(const VcfParser&) = delete;
     VcfParser(VcfParser&&)                 = default;
     VcfParser& operator=(VcfParser&&)      = default;
     
     VcfHeader fetch_header() const override;
     size_t count_records() override;
+    size_t count_records(const std::string& contig) override;
     size_t count_records(const GenomicRegion& region) override;
-    std::vector<VcfRecord> fetch_records(Unpack level = Unpack::All) override;
-    std::vector<VcfRecord> fetch_records(const GenomicRegion& region, Unpack level = Unpack::All) override;
+    std::vector<VcfRecord> fetch_records(Unpack level) override;
+    std::vector<VcfRecord> fetch_records(const std::string& contig, Unpack level) override;
+    std::vector<VcfRecord> fetch_records(const GenomicRegion& region, Unpack level) override;
     
 private:
     fs::path file_path_;

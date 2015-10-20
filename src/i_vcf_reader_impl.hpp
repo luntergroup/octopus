@@ -10,6 +10,7 @@
 #define Octopus_i_vcf_reader_impl_h
 
 #include <vector>
+#include <string>
 #include <cstddef> // size_t
 
 class GenomicRegion;
@@ -23,8 +24,10 @@ public:
     
     virtual VcfHeader fetch_header() const = 0;
     virtual size_t count_records() = 0;
+    virtual size_t count_records(const std::string& contig) = 0;
     virtual size_t count_records(const GenomicRegion& region) = 0;
     virtual std::vector<VcfRecord> fetch_records(Unpack level = Unpack::All) = 0; // fetches all records
+    virtual std::vector<VcfRecord> fetch_records(const std::string& contig, Unpack level = Unpack::All) = 0;
     virtual std::vector<VcfRecord> fetch_records(const GenomicRegion& region, Unpack level = Unpack::All) = 0;
     
     virtual ~IVcfReaderImpl() noexcept = default;

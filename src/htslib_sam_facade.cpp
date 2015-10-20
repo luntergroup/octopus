@@ -102,7 +102,7 @@ HtslibSamFacade::SizeType HtslibSamFacade::get_reference_contig_size(const std::
 
 uint64_t HtslibSamFacade::get_num_mapped_reads(const std::string& contig_name) const
 {
-    uint64_t num_mapped, num_unmapped;
+    uint64_t num_mapped {}, num_unmapped {};
     hts_idx_get_stat(hts_index_.get(), get_htslib_tid(contig_name), &num_mapped, &num_unmapped);
     return num_mapped;
 }
@@ -117,6 +117,8 @@ std::vector<HtslibSamFacade::SampleIdType> HtslibSamFacade::get_samples()
         }
     }
     
+    result.shrink_to_fit();
+    
     return result;
 }
 
@@ -127,6 +129,8 @@ std::vector<std::string> HtslibSamFacade::get_read_groups_in_sample(const Sample
     for (const auto pair : sample_map_) {
         if (pair.second == sample) result.emplace_back(pair.first);
     }
+    
+    result.shrink_to_fit();
     
     return result;
 }
@@ -334,7 +338,7 @@ hts_bam1_ {bam_init1(), htslib_bam1_deleter}
     }
 }
 
-std::string get_read_name(bam1_t* b)
+std::string get_read_name(const bam1_t* b)
 {
     return std::string {bam_get_qname(b)};
 }
@@ -355,23 +359,23 @@ bool HtslibSamFacade::HtslibIterator::operator++()
     return sam_itr_next(hts_facade_.hts_file_.get(), hts_iterator_.get(), hts_bam1_.get()) >= 0;
 }
 
-auto get_read_pos(bam1_t* b) noexcept
+auto get_read_pos(const bam1_t* b) noexcept
 {
     return b->core.pos;
 }
 
-auto get_sequence_length(bam1_t* b) noexcept
+auto get_sequence_length(const bam1_t* b) noexcept
 {
     return b->core.l_qseq;
 }
 
-char get_base(uint8_t* hts_sequence, uint32_t index) noexcept
+char get_base(const uint8_t* hts_sequence, const uint32_t index) noexcept
 {
     static constexpr const char* symbol_table {"=ACMGRSVTWYHKDBN"};
     return symbol_table[bam_seqi(hts_sequence, index)];
 }
 
-AlignedRead::SequenceType get_sequence(bam1_t* b)
+AlignedRead::SequenceType get_sequence(const bam1_t* b)
 {
     using SequenceType = AlignedRead::SequenceType;
     
@@ -387,23 +391,23 @@ AlignedRead::SequenceType get_sequence(bam1_t* b)
     return result;
 }
 
-std::vector<AlignedRead::QualityType> get_qualities(bam1_t* b)
+AlignedRead::Qualities get_qualities(const bam1_t* b)
 {
     const auto qualities = bam_get_qual(b);
     const auto length    = get_sequence_length(b);
     
-    std::vector<AlignedRead::QualityType> result {};
+    AlignedRead::Qualities result {};
     result.insert(std::begin(result), qualities, qualities + length);
     
     return result;
 }
 
-auto get_cigar_length(bam1_t* b) noexcept
+auto get_cigar_length(const bam1_t* b) noexcept
 {
     return b->core.n_cigar;
 }
 
-CigarString get_cigar_string(bam1_t* b)
+CigarString get_cigar_string(const bam1_t* b)
 {
     const auto cigar_operations = bam_get_cigar(b);
     const auto cigar_length     = get_cigar_length(b);
@@ -416,9 +420,9 @@ CigarString get_cigar_string(bam1_t* b)
 }
 
 // Some of these flags will need to be changes when htslib catches up to the new SAM spec
-AlignedRead::Flags get_flags(bam1_t* b)
+AlignedRead::Flags get_flags(const bam1_t* b) noexcept
 {
-    auto c = b->core;
+    const auto c = b->core;
     
     AlignedRead::Flags result {};
     
@@ -436,9 +440,9 @@ AlignedRead::Flags get_flags(bam1_t* b)
     return result;
 }
 
-AlignedRead::NextSegment::Flags get_next_segment_flags(bam1_t* b)
+AlignedRead::NextSegment::Flags get_next_segment_flags(const bam1_t* b)
 {
-    auto c = b->core;
+    const auto c = b->core;
     
     AlignedRead::NextSegment::Flags result {};
     
@@ -450,6 +454,8 @@ AlignedRead::NextSegment::Flags get_next_segment_flags(bam1_t* b)
 
 AlignedRead HtslibSamFacade::HtslibIterator::operator*() const
 {
+    using std::begin; using std::end; using std::next; using std::move;
+    
     auto qualities = get_qualities(hts_bam1_.get());
     
     if (qualities.empty() || qualities[0] == 0xff) {
@@ -462,7 +468,7 @@ AlignedRead HtslibSamFacade::HtslibIterator::operator*() const
         throw InvalidBamRecord {hts_facade_.file_path_, get_read_name(hts_bam1_.get()), "empty cigar string"};
     }
     
-    auto c = hts_bam1_->core;
+    const auto c = hts_bam1_->core;
     
     auto read_begin_tmp = soft_clipped_read_begin(cigar, c.pos);
     
@@ -474,13 +480,13 @@ AlignedRead HtslibSamFacade::HtslibIterator::operator*() const
         
         auto overhang_size = std::abs(read_begin_tmp);
         
-        sequence.erase(std::begin(sequence), std::next(std::begin(sequence), overhang_size));
-        qualities.erase(std::begin(qualities), std::next(std::begin(qualities), overhang_size));
+        sequence.erase(begin(sequence), next(begin(sequence), overhang_size));
+        qualities.erase(begin(qualities), next(begin(qualities), overhang_size));
         
         auto soft_clip_size = cigar.front().get_size();
         
         if (overhang_size == soft_clip_size) {
-            cigar.erase(std::begin(cigar));
+            cigar.erase(begin(cigar));
         } else { // then soft_clip_size > overhang_size
             cigar.front() = CigarOperation {soft_clip_size - overhang_size, CigarOperation::SOFT_CLIPPED};
         }
@@ -495,18 +501,18 @@ AlignedRead HtslibSamFacade::HtslibIterator::operator*() const
     if (c.mtid == -1) { // i.e. has no mate TODO: check if this is always true
         return AlignedRead {
             GenomicRegion {contig_name, read_begin, read_begin + reference_size<GenomicRegion::SizeType>(cigar)},
-            std::move(sequence),
-            std::move(qualities),
-            std::move(cigar),
+            move(sequence),
+            move(qualities),
+            move(cigar),
             static_cast<AlignedRead::QualityType>(c.qual),
             get_flags(hts_bam1_.get())
         };
     } else {
         return AlignedRead {
             GenomicRegion {contig_name, read_begin, read_begin + reference_size<GenomicRegion::SizeType>(cigar)},
-            std::move(sequence),
-            std::move(qualities),
-            std::move(cigar),
+            move(sequence),
+            move(qualities),
+            move(cigar),
             static_cast<AlignedRead::QualityType>(c.qual),
             get_flags(hts_bam1_.get()),
             contig_name,

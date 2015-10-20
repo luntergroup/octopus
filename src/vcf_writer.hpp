@@ -27,8 +27,8 @@ public:
     explicit VcfWriter(const fs::path& file_path, const VcfHeader& header);
     ~VcfWriter() = default;
     
-    VcfWriter(const VcfWriter&)            = default;
-    VcfWriter& operator=(const VcfWriter&) = default;
+    VcfWriter(const VcfWriter&)            = delete;
+    VcfWriter& operator=(const VcfWriter&) = delete;
     VcfWriter(VcfWriter&&)                 = default;
     VcfWriter& operator=(VcfWriter&&)      = default;
     
@@ -41,5 +41,17 @@ private:
     bool is_header_written_;
     HtslibBcfFacade writer_;
 };
+
+bool operator==(const VcfWriter& lhs, const VcfWriter& rhs);
+
+namespace std {
+    template <> struct hash<VcfWriter>
+    {
+        size_t operator()(const VcfWriter& writer) const
+        {
+            return hash<string>()(writer.path().string());
+        }
+    };
+} // namespace std
 
 #endif /* defined(__Octopus__vcf_writer__) */

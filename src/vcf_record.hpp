@@ -167,6 +167,16 @@ bool is_validated(const VcfRecord& record) noexcept;
 bool operator==(const VcfRecord& lhs, const VcfRecord& rhs);
 bool operator<(const VcfRecord& lhs, const VcfRecord& rhs);
 
+namespace std {
+    template <> struct hash<VcfRecord>
+    {
+        size_t operator()(const VcfRecord& record) const
+        {
+            return hash<string>()(record.get_id());
+        }
+    };
+} // namespace std
+
 std::ostream& operator<<(std::ostream& os, const VcfRecord& record);
 
 class VcfRecord::Builder

@@ -110,6 +110,16 @@ std::vector<VcfType> get_typed_format_values(const VcfHeader& header, const VcfH
 
 bool operator==(const VcfHeader& lhs, const VcfHeader& rhs);
 
+namespace std {
+    template <> struct hash<VcfHeader>
+    {
+        size_t operator()(const VcfHeader& header) const
+        {
+            return hash<VcfHeader::ValueType>()(header.get_file_format());
+        }
+    };
+} // namespace std
+
 std::ostream& operator<<(std::ostream& os, const VcfHeader& header);
 
 class VcfHeader::Builder

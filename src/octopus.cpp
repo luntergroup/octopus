@@ -28,6 +28,7 @@
 #include "read_utils.hpp"
 #include "candidate_generators.hpp"
 #include "vcf.hpp"
+#include "vcf_utils.hpp"
 #include "variant_caller.hpp"
 
 #include "test_common.hpp"
@@ -99,6 +100,17 @@ namespace Octopus
     void run_octopus(po::variables_map& options)
     {
         using std::cout; using std::endl;
+        
+        VcfReader r1 {"/Users/danielcooke/test1.vcf.gz"};
+        VcfReader r2 {"/Users/danielcooke/test2.vcf.gz"};
+        
+        std::vector<VcfReader> readers {};
+        readers.emplace_back(std::move(r1));
+        readers.emplace_back(std::move(r2));
+        
+        auto writer = merge(readers, "/Users/danielcooke/test_merge.vcf");
+        
+        return;
         
         //auto num_system_threads = std::thread::hardware_concurrency(); // just a hint
         //if (num_system_threads == 0) num_system_threads = 1;

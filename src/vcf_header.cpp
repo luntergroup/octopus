@@ -372,10 +372,10 @@ VcfHeader::Builder get_default_header_builder()
     result.add_format("GT", "1", "String", "Genotype");
     result.add_format("DP", "1", "Integer", "Read depth at this position for this sample");
     result.add_format("FT", "1", "String", "Sample genotype filter indicating if this genotype was “called”");
-    result.add_format("GL", "1", "Integer", "log10-scaled genotype likelihoods");
+    result.add_format("GL", "G", "Float", "log10-scaled genotype likelihoods");
     result.add_format("GLE", "1", "Integer", "Genotype likelihoods of heterogeneous ploidy");
-    result.add_format("PL", "1", "Integer", "Phred-scaled genotype likelihoods");
-    result.add_format("GP", "1", "Integer", "Phred-scaled genotype posterior probabilities");
+    result.add_format("PL", "G", "Integer", "Phred-scaled genotype likelihoods");
+    result.add_format("GP", "G", "Float", "Phred-scaled genotype posterior probabilities");
     result.add_format("GQ", "1", "Integer", "Conditional genotype quality (phred-scaled)");
     result.add_format("HQ", "1", "Integer", "Haplotype qualities");
     result.add_format("PS", "1", "String", "Phase set");

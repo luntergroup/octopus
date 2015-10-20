@@ -43,15 +43,15 @@ ReadMap ReadPipe::fetch_reads(std::vector<SampleIdType> samples, const GenomicRe
     auto batches = batch_samples(std::move(samples));
     
     for (const auto& batch : batches) {
-         std::cout << "fetching batch" << std::endl;
+        //std::cout << "fetching batch" << std::endl;
         
         auto batch_reads = read_manager.fetch_reads(batch, region);
         
-        std::cout << "fetched " << count_reads(batch_reads) << " batch reads" << std::endl;
+        //std::cout << "fetched " << count_reads(batch_reads) << " batch reads" << std::endl;
         
         auto filtered_batch = filter_reads(std::move(batch_reads), read_filter).first;
         
-        std::cout << "found " << count_reads(filtered_batch) << " good batch reads" << std::endl;
+        //std::cout << "found " << count_reads(filtered_batch) << " good batch reads" << std::endl;
         
         transform_reads(filtered_batch, read_transform);
         
@@ -60,7 +60,7 @@ ReadMap ReadPipe::fetch_reads(std::vector<SampleIdType> samples, const GenomicRe
         }
     }
     
-    std::cout << "fetched " << count_reads(result) << " total reads" << std::endl;
+    //std::cout << "fetched " << count_reads(result) << " total reads" << std::endl;
     
     return result;
 }

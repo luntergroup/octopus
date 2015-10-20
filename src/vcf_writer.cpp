@@ -26,8 +26,7 @@ VcfWriter::VcfWriter(const fs::path& file_path, const VcfHeader& header)
 file_path_ {file_path},
 writer_ {file_path_, "w"}
 {
-    write(header);
-    is_header_written_ = true;
+    this->write(header);
 }
 
 const fs::path VcfWriter::path() const
@@ -48,4 +47,11 @@ void VcfWriter::write(const VcfRecord& record)
     } else {
         throw std::runtime_error {"cannot write VCF record as header has not been written"};
     }
+}
+
+// non member methods
+
+bool operator==(const VcfWriter& lhs, const VcfWriter& rhs)
+{
+    return lhs.path() == rhs.path();
 }

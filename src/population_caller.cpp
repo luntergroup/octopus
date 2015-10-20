@@ -449,14 +449,14 @@ VcfRecord output_variant_call(const Allele& reference_allele, const std::vector<
     result.add_info("MQ", std::to_string(static_cast<unsigned>(rmq_mapping_quality(reads, region))));
     result.add_info("MQ0", std::to_string(count_mapq_zero(reads, region)));
     
-    result.set_format({"GT", "FT", "GP", "PS", "PQ", "DP", "BQ", "MQ"});
+    result.set_format({"GT", "FT", "GQ", "PS", "PQ", "DP", "BQ", "MQ"});
     
     for (const auto& sample_call : genotype_calls) {
         const auto& sample = sample_call.first;
         result.add_genotype(sample, to_vcf_genotype(sample_call.second.genotype), VcfRecord::Builder::Phasing::Phased);
         
         result.add_genotype_field(sample, "FT", "."); // TODO
-        result.add_genotype_field(sample, "GP", std::to_string(Maths::probability_to_phred(sample_call.second.posterior)));
+        result.add_genotype_field(sample, "GQ", std::to_string(Maths::probability_to_phred(sample_call.second.posterior)));
         result.add_genotype_field(sample, "PS", std::to_string(get_begin(phase_region) + 1));
         result.add_genotype_field(sample, "PQ", "60"); // TODO
         result.add_genotype_field(sample, "DP", std::to_string(max_coverage(reads.at(sample), region)));
@@ -493,12 +493,12 @@ VcfRecord output_reference_call(RefCall call, ReferenceGenome& reference, const 
     result.add_info("MQ", std::to_string(static_cast<unsigned>(rmq_mapping_quality(reads, region))));
     result.add_info("MQ0", std::to_string(count_mapq_zero(reads, region)));
     
-    result.set_format({"GT", "GP", "DP", "BQ", "MQ"});
+    result.set_format({"GT", "GQ", "DP", "BQ", "MQ"});
     
     for (const auto& sample_posteior : call.sample_posteriors) {
         const auto& sample = sample_posteior.first;
         result.add_homozygous_ref_genotype(sample, ploidy);
-        result.add_genotype_field(sample, "GP", std::to_string(Maths::probability_to_phred(sample_posteior.second)));
+        result.add_genotype_field(sample, "GQ", std::to_string(Maths::probability_to_phred(sample_posteior.second)));
         result.add_genotype_field(sample, "DP", std::to_string(max_coverage(reads.at(sample), region)));
         result.add_genotype_field(sample, "BQ", std::to_string(static_cast<unsigned>(rmq_base_quality(reads.at(sample), region))));
         result.add_genotype_field(sample, "MQ", std::to_string(static_cast<unsigned>(rmq_mapping_quality(reads.at(sample), region))));

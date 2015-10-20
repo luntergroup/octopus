@@ -10,6 +10,7 @@
 #define __Octopus__vcf_reader__
 
 #include <vector>
+#include <string>
 #include <cstddef>
 #include <memory>
 #include <boost/filesystem.hpp>
@@ -33,21 +34,35 @@ public:
     explicit VcfReader(const fs::path& file_path);
     ~VcfReader() = default;
     
-    VcfReader(const VcfReader&)            = default;
-    VcfReader& operator=(const VcfReader&) = default;
+    VcfReader(const VcfReader&)            = delete;
+    VcfReader& operator=(const VcfReader&) = delete;
     VcfReader(VcfReader&&)                 = default;
     VcfReader& operator=(VcfReader&&)      = default;
     
     const fs::path path() const;
     VcfHeader fetch_header() const;
     size_t count_records() const;
+    size_t count_records(const std::string& contig) const;
     size_t count_records(const GenomicRegion& region) const;
     std::vector<VcfRecord> fetch_records(Unpack level = Unpack::All); // fetches all records
+    std::vector<VcfRecord> fetch_records(const std::string& contig, Unpack level = Unpack::All);
     std::vector<VcfRecord> fetch_records(const GenomicRegion& region, Unpack level = Unpack::All);
     
 private:
     fs::path file_path_;
     std::unique_ptr<IVcfReaderImpl> reader_;
 };
+
+bool operator==(const VcfReader& lhs, const VcfReader& rhs);
+
+namespace std {
+    template <> struct hash<VcfReader>
+    {
+        size_t operator()(const VcfReader& reader) const
+        {
+            return hash<string>()(reader.path().string());
+        }
+    };
+} // namespace std
 
 #endif /* defined(__Octopus__vcf_reader__) */
