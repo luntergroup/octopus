@@ -39,7 +39,7 @@ public:
     
 private:
     Fasta fasta_;
-    std::mutex fasta_mutex_;
+    std::mutex mutex_;
     
     std::string do_get_reference_name() const override;
     std::vector<std::string> do_get_contig_names() override;

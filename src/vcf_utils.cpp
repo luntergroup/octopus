@@ -116,24 +116,13 @@ std::vector<VcfHeader> get_headers(const std::vector<VcfReader>& readers)
     return result;
 }
 
-namespace std
-{
-    template <> struct hash<reference_wrapper<const VcfReader>>
-    {
-        size_t operator()(reference_wrapper<const VcfReader> reader) const
-        {
-            return hash<VcfReader>()(reader);
-        }
-    };
-} // namespace std
-
 auto get_contig_count_map(std::vector<VcfReader>& readers, const std::vector<std::string>& contigs)
 {
     std::unordered_map<std::reference_wrapper<const VcfReader>, std::unordered_map<std::string, size_t>> result {};
     
     result.reserve(readers.size());
     
-    for (const auto& reader : readers) {
+    for (auto& reader : readers) {
         std::unordered_map<std::string, size_t> contig_counts {};
         contig_counts.reserve(contigs.size());
         

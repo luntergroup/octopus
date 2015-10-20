@@ -19,6 +19,7 @@
 #include <boost/iterator/filter_iterator.hpp>
 #include <boost/range/iterator_range_core.hpp>
 
+#include "contig_region.hpp"
 #include "genomic_region.hpp"
 #include "mappable.hpp"
 #include "mappable_ranges.hpp"

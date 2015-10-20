@@ -85,6 +85,11 @@ void HtslibSamFacade::open()
     hts_file_.reset(sam_open(file_path_.string().c_str(), "r"));
 }
 
+bool HtslibSamFacade::is_open() const noexcept
+{
+    return hts_file_ != nullptr;
+}
+
 void HtslibSamFacade::close()
 {
     hts_file_.reset(nullptr);

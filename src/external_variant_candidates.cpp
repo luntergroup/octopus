@@ -20,7 +20,7 @@ ExternalCandidateVariantGenerator::ExternalCandidateVariantGenerator(VcfReader&&
 reader_ {std::move(reader)}
 {}
 
-std::vector<GenomicRegion> get_batch_regions(const GenomicRegion& region, const VcfReader& reader, std::size_t max_batch_size)
+std::vector<GenomicRegion> get_batch_regions(const GenomicRegion& region, VcfReader& reader, std::size_t max_batch_size)
 {
     std::vector<GenomicRegion> result {};
     

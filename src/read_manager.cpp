@@ -8,16 +8,13 @@
 
 #include "read_manager.hpp"
 
-#include <memory> // std::make_unique
 #include <iterator>  // std::make_move_iterator, std::cbegin, std::cend, std::distance
 #include <algorithm> // std::sort, std::copy_if, std::min, std::nth_element, std::partition, std::for_each
                      // std::remove_if
 #include <utility>   // std::move
 #include <boost/filesystem/operations.hpp>
 
-#include "htslib_sam_facade.hpp"
 #include "aligned_read.hpp"
-#include "mappable_algorithms.hpp"
 
 #include <iostream> // TEST
 
@@ -98,12 +95,12 @@ size_t ReadManager::count_reads(const std::vector<SampleIdType>& samples, const 
     size_t result {};
     
     while (!reader_paths.empty()) {
-        std:for_each(it, end(reader_paths),
-                     [this, &samples, &region, &result] (const auto& reader_path) {
-                         for (const auto& sample : samples) {
-                             result += open_readers_.at(reader_path).count_reads(sample, region);
-                         }
-                     });
+        for_each(it, end(reader_paths),
+                 [this, &samples, &region, &result] (const auto& reader_path) {
+                     for (const auto& sample : samples) {
+                         result += open_readers_.at(reader_path).count_reads(sample, region);
+                     }
+                 });
         
         reader_paths.erase(it, end(reader_paths));
         it = open_readers(begin(reader_paths), end(reader_paths));
@@ -148,7 +145,7 @@ GenomicRegion ReadManager::find_head_region(const GenomicRegion& region, size_t 
 
 ReadManager::Reads ReadManager::fetch_reads(const SampleIdType& sample, const GenomicRegion& region)
 {
-    using std::begin; using std::end; using std::move; using std::make_move_iterator; using std::for_each;
+    using std::begin; using std::end; using std::make_move_iterator; using std::for_each;
     
     auto reader_paths = get_possible_reader_paths({sample}, region);
     
@@ -159,7 +156,7 @@ ReadManager::Reads ReadManager::fetch_reads(const SampleIdType& sample, const Ge
     while (!reader_paths.empty()) {
         for_each(it, end(reader_paths),
                  [this, &sample, &region, &result] (const auto& reader_path) {
-                     auto reads = move(open_readers_.at(reader_path).fetch_reads(sample, region));
+                     auto reads = open_readers_.at(reader_path).fetch_reads(sample, region);
                      result.insert(make_move_iterator(begin(reads)), make_move_iterator(end(reads)));
                  });
         
@@ -271,7 +268,7 @@ void ReadManager::open_initial_files()
 
 ReadReader ReadManager::make_reader(const fs::path& reader_path)
 {
-    return ReadReader {reader_path, std::make_unique<HtslibSamFacade>(reader_path)};
+    return ReadReader {reader_path};
 }
 
 bool ReadManager::is_open(const fs::path& reader_path) const noexcept
@@ -350,26 +347,20 @@ void ReadManager::close_readers(unsigned n)
     }
 }
 
-void ReadManager::add_possible_regions_to_reader_map(const fs::path& the_reader_path,
-                                                     const std::vector<GenomicRegion>& the_regions)
+void ReadManager::add_possible_regions_to_reader_map(const fs::path& reader_path,
+                                                     const std::vector<GenomicRegion>& regions)
 {
-    for (const auto& region : the_regions) {
-        possible_regions_in_readers_[the_reader_path][region.get_contig_name()].emplace_back(region.get_contig_region());
-    }
-    
-    for (auto& contig_regions : possible_regions_in_readers_[the_reader_path]) {
-        std::sort(std::begin(contig_regions.second), std::end(contig_regions.second));
+    for (const auto& region : regions) {
+        possible_regions_in_readers_[reader_path][region.get_contig_name()].emplace(region.get_contig_region());
     }
 }
 
-bool ReadManager::could_reader_contain_region(const fs::path& the_reader_path, const GenomicRegion& region) const
+bool ReadManager::could_reader_contain_region(const fs::path& reader_path, const GenomicRegion& region) const
 {
-    if (possible_regions_in_readers_.count(the_reader_path) == 0) return false;
-    if (possible_regions_in_readers_.at(the_reader_path).count(region.get_contig_name()) == 0) return false;
+    if (possible_regions_in_readers_.count(reader_path) == 0) return false;
+    if (possible_regions_in_readers_.at(reader_path).count(region.get_contig_name()) == 0) return false;
     
-    const auto& contig_regions = possible_regions_in_readers_.at(the_reader_path).at(region.get_contig_name());
-    
-    return has_overlapped(std::cbegin(contig_regions), std::cend(contig_regions), region.get_contig_region());
+    return possible_regions_in_readers_.at(reader_path).at(region.get_contig_name()).has_overlapped(region.get_contig_region());
 }
 
 std::vector<fs::path> ReadManager::get_reader_paths_possibly_containing_region(const GenomicRegion& region) const
@@ -392,11 +383,10 @@ std::vector<fs::path> ReadManager::get_reader_paths_possibly_containing_region(c
     return result;
 }
 
-void ReadManager::add_reader_to_sample_map(const fs::path& the_reader_path,
-                                           const std::vector<SampleIdType>& the_samples_in_reader)
+void ReadManager::add_reader_to_sample_map(const fs::path& reader_path, const std::vector<SampleIdType>& samples_in_reader)
 {
-    for (auto sample : the_samples_in_reader) {
-        reader_paths_containing_sample_[sample].emplace_back(the_reader_path);
+    for (const auto& sample : samples_in_reader) {
+        reader_paths_containing_sample_[sample].emplace_back(reader_path);
     }
 }
 

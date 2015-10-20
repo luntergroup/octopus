@@ -13,6 +13,7 @@
 #include <string>
 #include <cstddef>
 #include <memory>
+#include <mutex>
 #include <boost/filesystem.hpp>
 
 #include "i_vcf_reader_impl.hpp"
@@ -36,14 +37,14 @@ public:
     
     VcfReader(const VcfReader&)            = delete;
     VcfReader& operator=(const VcfReader&) = delete;
-    VcfReader(VcfReader&&)                 = default;
+    VcfReader(VcfReader&&);
     VcfReader& operator=(VcfReader&&)      = default;
     
     const fs::path path() const;
     VcfHeader fetch_header() const;
-    size_t count_records() const;
-    size_t count_records(const std::string& contig) const;
-    size_t count_records(const GenomicRegion& region) const;
+    size_t count_records();
+    size_t count_records(const std::string& contig);
+    size_t count_records(const GenomicRegion& region);
     std::vector<VcfRecord> fetch_records(Unpack level = Unpack::All); // fetches all records
     std::vector<VcfRecord> fetch_records(const std::string& contig, Unpack level = Unpack::All);
     std::vector<VcfRecord> fetch_records(const GenomicRegion& region, Unpack level = Unpack::All);
@@ -51,6 +52,8 @@ public:
 private:
     fs::path file_path_;
     std::unique_ptr<IVcfReaderImpl> reader_;
+    
+    std::mutex mutex_;
 };
 
 bool operator==(const VcfReader& lhs, const VcfReader& rhs);
@@ -61,6 +64,17 @@ namespace std {
         size_t operator()(const VcfReader& reader) const
         {
             return hash<string>()(reader.path().string());
+        }
+    };
+} // namespace std
+
+namespace std
+{
+    template <> struct hash<reference_wrapper<const VcfReader>>
+    {
+        size_t operator()(reference_wrapper<const VcfReader> reader) const
+        {
+            return hash<VcfReader>()(reader);
         }
     };
 } // namespace std

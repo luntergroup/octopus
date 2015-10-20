@@ -38,6 +38,7 @@ public:
     explicit GenomicRegion(T&& contig_name, SizeType begin, SizeType end);
     template <typename T, typename R>
     explicit GenomicRegion(T&& contig_name, R&& contig_region);
+    ~GenomicRegion() = default;
     
     GenomicRegion(const GenomicRegion&)            = default;
     GenomicRegion& operator=(const GenomicRegion&) = default;

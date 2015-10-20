@@ -15,10 +15,12 @@
 #include <unordered_set>
 #include <initializer_list>
 #include <cstddef> // size_t
+#include <mutex>
 #include <boost/filesystem.hpp>
 
 #include "contig_region.hpp"
 #include "genomic_region.hpp"
+#include "mappable_map.hpp"
 #include "read_reader.hpp"
 #include "read_reader_impl.hpp"
 #include "hash_functions.hpp"
@@ -71,8 +73,8 @@ private:
     using OpenReaderMap           = std::map<fs::path, ReadReader, decltype(detail::file_size_compare)>;
     using ClosedReaders           = std::unordered_set<fs::path>;
     using SampleIdToReaderPathMap = std::unordered_map<SampleIdType, std::vector<fs::path>>;
-    using ReaderRegionsMap        = std::unordered_map<fs::path, std::unordered_map<GenomicRegion::StringType,
-                                                                                std::vector<ContigRegion>>>;
+    using ContigMap               = MappableMap<GenomicRegion::StringType, ContigRegion>;
+    using ReaderRegionsMap        = std::unordered_map<fs::path, ContigMap>;
     
     const unsigned max_open_files_ = 200;
     const unsigned num_files_;
@@ -97,9 +99,9 @@ private:
     fs::path choose_reader_to_close() const;
     void close_readers(unsigned n);
     
-    void add_possible_regions_to_reader_map(const fs::path& the_reader_path, const std::vector<GenomicRegion>& the_regions);
-    void add_reader_to_sample_map(const fs::path& the_reader_path, const std::vector<SampleIdType>& the_samples_in_reader);
-    bool could_reader_contain_region(const fs::path& the_reader_path, const GenomicRegion& region) const;
+    void add_possible_regions_to_reader_map(const fs::path& reader_path, const std::vector<GenomicRegion>& regions);
+    void add_reader_to_sample_map(const fs::path& reader_path, const std::vector<SampleIdType>& samples_in_reader);
+    bool could_reader_contain_region(const fs::path& reader_path, const GenomicRegion& region) const;
     std::vector<fs::path> get_reader_paths_containing_samples(const std::vector<SampleIdType>& sample) const;
     std::vector<fs::path> get_reader_paths_possibly_containing_region(const GenomicRegion& region) const;
     std::vector<fs::path> get_possible_reader_paths(const std::vector<SampleIdType>& samples, const GenomicRegion& region) const;

@@ -39,6 +39,13 @@ file_path_ {file_path},
 reader_ {make_vcf_reader(file_path)}
 {}
 
+VcfReader::VcfReader(VcfReader&& other)
+{
+    std::lock_guard<std::mutex> lock {other.mutex_};
+    file_path_ = std::move(other.file_path_);
+    reader_  = std::move(other.reader_);
+}
+
 const fs::path VcfReader::path() const
 {
     return file_path_;
@@ -49,33 +56,39 @@ VcfHeader VcfReader::fetch_header() const
     return reader_->fetch_header();
 }
 
-size_t VcfReader::count_records() const
+size_t VcfReader::count_records()
 {
+    std::lock_guard<std::mutex> lock {mutex_};
     return reader_->count_records();
 }
 
-size_t VcfReader::count_records(const std::string& contig) const
+size_t VcfReader::count_records(const std::string& contig)
 {
+    std::lock_guard<std::mutex> lock {mutex_};
     return reader_->count_records(contig);
 }
 
-size_t VcfReader::count_records(const GenomicRegion& region) const
+size_t VcfReader::count_records(const GenomicRegion& region)
 {
+    std::lock_guard<std::mutex> lock {mutex_};
     return reader_->count_records(region);
 }
 
 std::vector<VcfRecord> VcfReader::fetch_records(Unpack level)
 {
+    std::lock_guard<std::mutex> lock {mutex_};
     return reader_->fetch_records((level == Unpack::All) ? HtslibBcfFacade::Unpack::All : HtslibBcfFacade::Unpack::AllButSamples);
 }
 
 std::vector<VcfRecord> VcfReader::fetch_records(const std::string& contig, Unpack level)
 {
+    std::lock_guard<std::mutex> lock {mutex_};
     return reader_->fetch_records(contig, (level == Unpack::All) ? HtslibBcfFacade::Unpack::All : HtslibBcfFacade::Unpack::AllButSamples);
 }
 
 std::vector<VcfRecord> VcfReader::fetch_records(const GenomicRegion& region, Unpack level)
 {
+    std::lock_guard<std::mutex> lock {mutex_};
     return reader_->fetch_records(region, (level == Unpack::All) ? HtslibBcfFacade::Unpack::All : HtslibBcfFacade::Unpack::AllButSamples);
 }
 

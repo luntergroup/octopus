@@ -126,9 +126,10 @@ namespace Octopus
         
         po::options_description candidates("Candidate generation options");
         candidates.add_options()
-        ("candidates-from-alignments", po::bool_switch()->default_value(true), "generate candidate variants from the aligned reads")
+        ("no-candidates-from-alignments", po::bool_switch()->default_value(false), "disables candidate variants from aligned reads")
         ("candidates-from-assembler", po::bool_switch()->default_value(false), "generate candidate variants with the assembler")
         ("candidates-from-source", po::value<std::string>(), "variant file path containing known variants. These variants will automatically become candidates")
+        ("regenotype", po::bool_switch()->default_value(false), "disables all generators other than source which must be present")
         ("min-snp-base-quality", po::value<unsigned>()->default_value(20), "only base changes with quality above this value are considered for snp generation")
         ("min-supporting-reads", po::value<unsigned>()->default_value(1), "minimum number of reads that must support a variant if it is to be considered a candidate")
         ("max-variant-size", po::value<AlignedRead::SizeType>()->default_value(100), "maximum candidate varaint size from alignmenet CIGAR")
@@ -189,129 +190,142 @@ namespace Octopus
         return vm;
     }
     
-    namespace detail
+    fs::path get_home_dir()
     {
-        bool is_region_file_path(const std::string& region_option)
-        {
-            return fs::native(region_option);
-        }
-        
-        struct Line
-        {
-            std::string line_data;
-            
-            operator std::string() const
-            {
-                return line_data;
-            }
-        };
-        
-        std::istream& operator>>(std::istream& str, Line& data)
-        {
-            std::getline(str, data.line_data);
-            return str;
-        }
-        
-        std::string to_region_format(const std::string& bed_line)
-        {
-            auto tokens = split(bed_line, '\t');
-            
-            switch (tokens.size()) {
-                case 0:
-                    throw std::runtime_error {"Empty line in input region bed file"};
-                case 1:
-                    return std::string {tokens[0]};
-                case 2:
-                    // Assume this represents a half range rather than a point
-                    return std::string {tokens[0] + ':' + tokens[1] + '-'};
-                default:
-                    return std::string {tokens[0] + ':' + tokens[1] + '-' + tokens[2]};
+        return fs::path(getenv("HOME"));
+    }
+    
+    fs::path expand_user_path(const fs::path& path)
+    {
+        if (!path.empty() && path.string().front() == '~') {
+            if (path.string().size() > 1 && path.string()[1] == '/') {
+                auto home_dir = get_home_dir().string();
+                return fs::path {home_dir + path.string().substr(1)};
             }
         }
+        return path;
+    }
+    
+    bool is_region_file_path(const std::string& region_option)
+    {
+        return fs::native(region_option);
+    }
+    
+    struct Line
+    {
+        std::string line_data;
         
-        std::function<GenomicRegion(std::string)> get_line_parser(const fs::path& the_region_path,
-                                                                  const ReferenceGenome& the_reference)
+        operator std::string() const
         {
-            if (the_region_path.extension().string() == ".bed") {
-                return [&the_reference] (const std::string& line) {
-                    return parse_region(detail::to_region_format(line), the_reference);
-                };
-            } else {
-                return [&the_reference] (const std::string& line) {
-                    return parse_region(line, the_reference);
-                };
-            }
+            return line_data;
+        }
+    };
+    
+    std::istream& operator>>(std::istream& str, Line& data)
+    {
+        std::getline(str, data.line_data);
+        return str;
+    }
+    
+    std::string to_region_format(const std::string& bed_line)
+    {
+        auto tokens = split(bed_line, '\t');
+        
+        switch (tokens.size()) {
+            case 0:
+                throw std::runtime_error {"Empty line in input region bed file"};
+            case 1:
+                return std::string {tokens[0]};
+            case 2:
+                // Assume this represents a half range rather than a point
+                return std::string {tokens[0] + ':' + tokens[1] + '-'};
+            default:
+                return std::string {tokens[0] + ':' + tokens[1] + '-' + tokens[2]};
+        }
+    }
+    
+    std::function<GenomicRegion(std::string)> get_line_parser(const fs::path& the_region_path,
+                                                              const ReferenceGenome& the_reference)
+    {
+        if (the_region_path.extension().string() == ".bed") {
+            return [&the_reference] (const std::string& line) {
+                return parse_region(to_region_format(line), the_reference);
+            };
+        } else {
+            return [&the_reference] (const std::string& line) {
+                return parse_region(line, the_reference);
+            };
+        }
+    }
+    
+    std::vector<GenomicRegion> get_regions_from_file(const std::string& file_path, const ReferenceGenome& the_reference)
+    {
+        std::vector<GenomicRegion> result {};
+        
+        fs::path the_path {file_path};
+        
+        if (!fs::exists(the_path)) {
+            throw std::runtime_error {"cannot find given region file " + the_path.string()};
         }
         
-        std::vector<GenomicRegion> get_regions_from_file(const std::string& file_path, const ReferenceGenome& the_reference)
-        {
-            std::vector<GenomicRegion> result {};
-            
-            fs::path the_path {file_path};
-            
-            if (!fs::exists(the_path)) {
-                throw std::runtime_error {"cannot find given region file " + the_path.string()};
-            }
-            
-            std::ifstream the_file {the_path.string()};
-            
-            std::transform(std::istream_iterator<Line>(the_file), std::istream_iterator<Line>(),
-                           std::back_inserter(result), get_line_parser(the_path, the_reference));
-            
-            return result;
+        std::ifstream the_file {the_path.string()};
+        
+        std::transform(std::istream_iterator<Line>(the_file), std::istream_iterator<Line>(),
+                       std::back_inserter(result), get_line_parser(the_path, the_reference));
+        
+        return result;
+    }
+    
+    SearchRegions make_search_regions(const std::vector<GenomicRegion>& regions)
+    {
+        SearchRegions contig_mapped_regions {};
+        
+        for (const auto& region : regions) {
+            contig_mapped_regions[region.get_contig_name()].insert(region);
         }
         
-        SearchRegions make_search_regions(const std::vector<GenomicRegion>& regions)
-        {
-            SearchRegions contig_mapped_regions {};
-            
-            for (const auto& region : regions) {
-                contig_mapped_regions[region.get_contig_name()].insert(region);
-            }
+        SearchRegions result {};
+        
+        for (auto& contig_regions : contig_mapped_regions) {
+            auto covered_contig_regions = get_covered_regions(std::cbegin(contig_regions.second),
+                                                              std::cend(contig_regions.second));
+            result[contig_regions.first].insert(std::make_move_iterator(std::begin(covered_contig_regions)),
+                                                std::make_move_iterator(std::end(covered_contig_regions)));
+        }
+        
+        return result;
+    }
+    
+    SearchRegions get_all_regions_not_skipped(const ReferenceGenome& the_reference, std::vector<GenomicRegion>& skip_regions)
+    {
+        if (skip_regions.empty()) {
+            return make_search_regions(get_all_contig_regions(the_reference));
+        } else {
+            auto skipped = make_search_regions(skip_regions);
             
             SearchRegions result {};
             
-            for (auto& contig_regions : contig_mapped_regions) {
-                auto covered_contig_regions = get_covered_regions(std::cbegin(contig_regions.second),
-                                                                  std::cend(contig_regions.second));
-                result[contig_regions.first].insert(std::make_move_iterator(std::begin(covered_contig_regions)),
-                                                    std::make_move_iterator(std::end(covered_contig_regions)));
-            }
-            
             return result;
         }
+    }
+    
+    std::vector<std::string> get_read_paths_file(const std::string& file_path)
+    {
+        std::vector<std::string> result {};
         
-        SearchRegions get_all_regions_not_skipped(const ReferenceGenome& the_reference, std::vector<GenomicRegion>& skip_regions)
-        {
-            if (skip_regions.empty()) {
-                return make_search_regions(get_all_contig_regions(the_reference));
-            } else {
-                auto skipped = make_search_regions(skip_regions);
-                
-                SearchRegions result {};
-                
-                return result;
-            }
+        fs::path the_path {file_path};
+        
+        if (!fs::exists(the_path)) {
+            throw std::runtime_error {"cannot find given read path file " + the_path.string()};
         }
         
-        std::vector<std::string> get_read_paths_file(const std::string& file_path)
-        {
-            std::vector<std::string> result {};
-            
-            fs::path the_path {file_path};
-            
-            if (!fs::exists(the_path)) {
-                throw std::runtime_error {"cannot find given read path file " + the_path.string()};
-            }
-            
-            std::ifstream the_file {the_path.string()};
-            
-            std::transform(std::istream_iterator<Line>(the_file), std::istream_iterator<Line>(),
-                           std::back_inserter(result), [] (const Line& line) { return line.line_data; });
-            
-            return result;
-        }
-    } // namespace detail
+        std::ifstream the_file {the_path.string()};
+        
+        std::transform(std::istream_iterator<Line>(the_file), std::istream_iterator<Line>(),
+                       std::back_inserter(result), [] (const Line& line) { return line.line_data; });
+        
+        return result;
+    }
     
     unsigned get_max_threads(const po::variables_map& options)
     {
@@ -348,12 +362,12 @@ namespace Octopus
             
             if (options.count("skip-regions-file") == 1) {
                 const auto& skip_path = options.at("skip-regions-file").as<std::string>();
-                auto skip_regions_from_file = detail::get_regions_from_file(skip_path, the_reference);
+                auto skip_regions_from_file = get_regions_from_file(skip_path, the_reference);
                 skip_regions.insert(skip_regions.end(), std::make_move_iterator(std::begin(skip_regions_from_file)),
                                     std::make_move_iterator(std::end(skip_regions_from_file)));
             }
             
-            return detail::get_all_regions_not_skipped(the_reference, skip_regions);
+            return get_all_regions_not_skipped(the_reference, skip_regions);
         } else {
             if (options.count("regions") == 1) {
                 const auto& regions = options.at("regions").as<std::vector<std::string>>();
@@ -366,13 +380,13 @@ namespace Octopus
             
             if (options.count("regions-file") == 1) {
                 const auto& regions_path = options.at("regions-file").as<std::string>();
-                auto regions_from_file = detail::get_regions_from_file(regions_path, the_reference);
+                auto regions_from_file = get_regions_from_file(regions_path, the_reference);
                 input_regions.insert(input_regions.end(), std::make_move_iterator(std::begin(regions_from_file)),
                                     std::make_move_iterator(std::end(regions_from_file)));
             }
         }
         
-        return detail::make_search_regions(input_regions);
+        return make_search_regions(input_regions);
     }
     
     std::vector<SampleIdType> get_samples(const po::variables_map& options)
@@ -399,7 +413,7 @@ namespace Octopus
         
         if (options.count("reads-file") == 1) {
             const auto& read_file_path = options.at("reads-file").as<std::string>();
-            auto regions_from_file = detail::get_read_paths_file(read_file_path);
+            auto regions_from_file = get_read_paths_file(read_file_path);
             result.insert(result.end(), std::make_move_iterator(std::begin(regions_from_file)),
                           std::make_move_iterator(std::end(regions_from_file)));
         }
@@ -518,7 +532,20 @@ namespace Octopus
         
         auto max_variant_size = options.at("max-variant-size").as<AlignmentCandidateVariantGenerator::SizeType>();
         
-        if (options.at("candidates-from-alignments").as<bool>()) {
+        if (options.count("candidates-from-source") == 1) {
+            auto variant_file_path = expand_user_path(options.at("candidates-from-source").as<std::string>());
+            result.register_generator(std::make_unique<ExternalCandidateVariantGenerator>(VcfReader {variant_file_path}));
+        }
+        
+        if (options.at("regenotype").as<bool>()) {
+            if (options.count("candidates-from-source") == 0) {
+                throw std::logic_error {"source variant file(s) must be present to regenotype"};
+            } else {
+                return result;
+            }
+        }
+        
+        if (!options.at("no-candidates-from-alignments").as<bool>()) {
             auto min_snp_base_quality = options.at("min-snp-base-quality").as<unsigned>();
             auto min_supporting_reads = options.at("min-supporting-reads").as<unsigned>();
             
@@ -532,11 +559,6 @@ namespace Octopus
             auto kmer_size    = options.at("kmer-size").as<unsigned>();
             //auto allow_cycles = !options.at("no-cycles").as<bool>();
             result.register_generator(std::make_unique<AssemblerCandidateVariantGenerator>(reference, kmer_size, max_variant_size));
-        }
-        
-        if (options.count("candidates-from-source") == 1) {
-            auto variant_file_path = options.at("candidates-from-source").as<std::string>();
-            result.register_generator(std::make_unique<ExternalCandidateVariantGenerator>(VcfReader {variant_file_path}));
         }
         
         return result;
@@ -598,7 +620,7 @@ namespace Octopus
     
     VcfWriter get_output_vcf(const po::variables_map& options)
     {
-        return VcfWriter {options.at("output").as<std::string>()};
+        return VcfWriter {expand_user_path(options.at("output").as<std::string>())};
     }
     
     } // namespace Options

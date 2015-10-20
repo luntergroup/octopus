@@ -47,7 +47,6 @@ public:
     typename Filters_, typename Info_, typename Format_, typename Genotypes_, typename Samples_>
     VcfRecord(StringType1_&& chrom, SizeType pos, StringType2_&& id, SequenceType1_&& ref, SequenceType2_&& alt,
               QualityType qual, Filters_&& filters, Info_&& info, Format_&& format, Genotypes_&& genotypes, Samples_&& samples);
-    
     ~VcfRecord() = default;
     
     VcfRecord(const VcfRecord&)            = default;

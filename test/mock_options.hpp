@@ -87,8 +87,6 @@ inline po::variables_map get_basic_mock_options()
         //"--regions", "Y:17,398,830-17,398,917",
         //"--regions", "MT:11,669-11,768", // very high coverage snp
         
-        "--regions", "22:24,752,773-24,753,304",
-        
         //"--regions", "5:80,465,625-80,465,862", // crazy indel region
         
         //"--regions", "21:22,137,226-22,137,409", // potential cancer spike in (basic)
@@ -111,8 +109,10 @@ inline po::variables_map get_basic_mock_options()
         
         //"--regions", "Y:4,313,467-4,314,172",
         
+        "--regions", "4:63,663,328-63,663,368",
+        
         // read filters
-        "--min-supporting-reads", "2",
+        "--min-supporting-reads", "1",
         "--min-mapping-quality", "20",
         "--min-snp-base-quality", "20",
         "--no-marked-duplicates",
@@ -136,10 +136,13 @@ inline po::variables_map get_basic_mock_options()
         
         "--somatics-only",
         
+        //"--candidates-from-source", "~/test.bcf",
+        //"--regenotype",
+        
         //"--max-open-read-files", "1",
         
         "--output", test_out_vcf.c_str(),
-        //"--output", "/Users/danielcooke/test2.vcf.gz",
+        //"--output", "~/test2.bcf",
         
         nullptr};
     

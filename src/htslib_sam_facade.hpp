@@ -59,6 +59,10 @@ public:
     HtslibSamFacade(HtslibSamFacade&&)                 = default;
     HtslibSamFacade& operator=(HtslibSamFacade&&)      = default;
     
+    void open() override;
+    bool is_open() const noexcept override;
+    void close() override;
+    
     std::vector<SampleIdType> get_samples() override;
     std::vector<ReadGroupIdType> get_read_groups_in_sample(const SampleIdType& sample) override;
     size_t count_reads(const GenomicRegion& region) override;
@@ -70,9 +74,6 @@ public:
     std::vector<std::string> get_reference_contig_names() override;
     SizeType get_reference_contig_size(const std::string& contig_name) override;
     std::vector<GenomicRegion> get_possible_regions_in_file() override;
-    
-    void open() override;
-    void close() override;
     
 private:
     using HtsTidType = int32_t;

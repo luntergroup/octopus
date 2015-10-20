@@ -12,14 +12,12 @@
 
 ThreadsafeFasta::ThreadsafeFasta(fs::path fasta_path)
 :
-fasta_ {std::move(fasta_path)},
-fasta_mutex_ {}
+fasta_ {std::move(fasta_path)}
 {}
 
 ThreadsafeFasta::ThreadsafeFasta(fs::path fasta_path, fs::path fasta_index_path)
 :
-fasta_ {std::move(fasta_path), std::move(fasta_index_path)},
-fasta_mutex_ {}
+fasta_ {std::move(fasta_path), std::move(fasta_index_path)}
 {}
 
 std::string ThreadsafeFasta::do_get_reference_name() const
@@ -29,18 +27,18 @@ std::string ThreadsafeFasta::do_get_reference_name() const
 
 std::vector<std::string> ThreadsafeFasta::do_get_contig_names()
 {
-    std::lock_guard<std::mutex> lock {fasta_mutex_};
+    std::lock_guard<std::mutex> lock {mutex_};
     return fasta_.get_contig_names();
 }
 
 ThreadsafeFasta::SizeType ThreadsafeFasta::do_get_contig_size(const std::string& contig_name)
 {
-    std::lock_guard<std::mutex> lock {fasta_mutex_};
+    std::lock_guard<std::mutex> lock {mutex_};
     return fasta_.get_contig_size(contig_name);
 }
 
 ThreadsafeFasta::SequenceType ThreadsafeFasta::do_fetch_sequence(const GenomicRegion& region)
 {
-    std::lock_guard<std::mutex> lock {fasta_mutex_};
+    std::lock_guard<std::mutex> lock {mutex_};
     return fasta_.fetch_sequence(region);
 }
