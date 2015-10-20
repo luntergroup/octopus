@@ -242,23 +242,23 @@ namespace Octopus
     
     AllelePosteriors
     compute_germline_allele_posteriors(const GermlineGenotypeMarginals& germline_genotype_posteriors,
-                                       const GenotypeModel::Cancer::GenotypeWeights& genotype_weights,
+                                       const GenotypeModel::Cancer::GenotypeMixtures& genotype_mixtures,
                                        const std::vector<Allele>& alleles)
     {
         AllelePosteriors result {};
         result.reserve(alleles.size());
         
-        for (const auto& sample_weights : genotype_weights) {
+        for (const auto& sample_mixtures : genotype_mixtures) {
             MarginalAllelePosteriors marginals {};
             marginals.reserve(alleles.size());
             
-            const double germline_fraction = 1.0 - genotype_weights.at(sample_weights.first).back();
+            const double germline_fraction = 1.0 - genotype_mixtures.at(sample_mixtures.first).back();
             
             for (const auto& allele : alleles) {
                 marginals.emplace(allele, germline_fraction * marginalise(allele, germline_genotype_posteriors));
             }
             
-            result.emplace(sample_weights.first, std::move(marginals));
+            result.emplace(sample_mixtures.first, std::move(marginals));
         }
         
         return result;
@@ -266,24 +266,24 @@ namespace Octopus
     
     AllelePosteriors
     compute_cancer_allele_posteriors(const CancerHaplotypeMarginals& cancer_haplotype_posteriors,
-                                     const GenotypeModel::Cancer::GenotypeWeights& genotype_weights,
+                                     const GenotypeModel::Cancer::GenotypeMixtures& genotype_mixtures,
                                      const std::vector<Allele>& alleles)
     {
         AllelePosteriors result {};
-        result.reserve(genotype_weights.size());
+        result.reserve(genotype_mixtures.size());
         
-        for (const auto& sample_weights : genotype_weights) {
+        for (const auto& sample_mixtures : genotype_mixtures) {
             MarginalAllelePosteriors marginals {};
             marginals.reserve(alleles.size());
             
-            const double cancer_fraction    = genotype_weights.at(sample_weights.first).back();
+            const double cancer_fraction    = genotype_mixtures.at(sample_mixtures.first).back();
             const double cancer_probability = (2 * cancer_fraction) / ((1.0 - cancer_fraction) + 2 * cancer_fraction);
             
             for (const auto& allele : alleles) {
                 marginals.emplace(allele, cancer_probability * marginalise(allele, cancer_haplotype_posteriors));
             }
             
-            result.emplace(sample_weights.first, std::move(marginals));
+            result.emplace(sample_mixtures.first, std::move(marginals));
         }
         
         return result;
@@ -304,12 +304,12 @@ namespace Octopus
     }
     
     double compute_germline_segment_posterior(double called_genotype_posterior,
-                                              const GenotypeModel::Cancer::GenotypeWeights& genotype_weights)
+                                              const GenotypeModel::Cancer::GenotypeMixtures& genotype_mixtures)
     {
         auto result = called_genotype_posterior;
         
-        for (const auto& sample_weights : genotype_weights) {
-            result *= (1.0 - sample_weights.second.back());
+        for (const auto& sample_mixtures : genotype_mixtures) {
+            result *= (1.0 - sample_mixtures.second.back());
         }
         
         return result;
@@ -461,7 +461,7 @@ namespace Octopus
     
 //    RefCalls call_reference(const std::vector<Allele>& candidate_reference_alleles,
 //                            const Genotype<Haplotype>& map_germline_genotype,
-//                            const GenotypeModel::Cancer::GenotypeWeights& genotype_weights,
+//                            const GenotypeModel::Cancer::Genotypemixtures& genotype_mixtures,
 //                            double min_posterior)
 //    {
 //        RefCalls result {};
@@ -683,14 +683,14 @@ namespace Octopus
             
             auto map_cancer_genotype = find_map_genotype(latents.genotype_posteriors);
             
-//            std::cout << "map cancer genotype: " << std::endl;
-//            print_variant_alleles(map_cancer_genotype.first);
-//            std::cout << " " << map_cancer_genotype.second << std::endl;
-//            
-//            std::cout << "posterior genotype weights: " << std::endl;
-//            for (const auto& sw : latents.genotype_weights) {
-//                std::cout << sw.first << ": " << sw.second << std::endl;
-//            }
+            std::cout << "map cancer genotype: " << std::endl;
+            print_variant_alleles(map_cancer_genotype.first);
+            std::cout << " " << map_cancer_genotype.second << std::endl;
+            
+            std::cout << "posterior genotype mixtures: " << std::endl;
+            for (const auto& sw : latents.genotype_mixtures) {
+                std::cout << sw.first << ": " << sw.second << std::endl;
+            }
             
             auto germline_genotype_posteriors = marginalise_germline_genotypes(latents.genotype_posteriors, num_haplotypes);
             
@@ -720,7 +720,7 @@ namespace Octopus
             auto alleles = generate_callable_alleles(region, candidates, refcall_type_, reference_);
             
             auto germline_allele_posteriors = compute_germline_allele_posteriors(germline_genotype_posteriors,
-                                                                                 latents.genotype_weights, alleles);
+                                                                                 latents.genotype_mixtures, alleles);
             
 //            for (const auto& sa : germline_allele_posteriors) {
 //                std::cout << "germline allele posteriors for sample: " << sa.first << std::endl;
@@ -730,7 +730,7 @@ namespace Octopus
 //            }
             
             auto cancer_allele_posteriors = compute_cancer_allele_posteriors(cancer_haplotype_posteriors,
-                                                                             latents.genotype_weights, alleles);
+                                                                             latents.genotype_mixtures, alleles);
             
 //            for (const auto& sa : cancer_allele_posteriors) {
 //                std::cout << "cancer allele posteriors for sample: " << sa.first << std::endl;
@@ -748,12 +748,12 @@ namespace Octopus
             
             auto germline_genotype_calls = call_germline_genotypes(map_germline_genotype.first, get_regions(germline_variant_calls));
             
-//            std::cout << "called germline variants" << std::endl;
-//            for (const auto& call : germline_variant_calls) {
-//                for (const auto& variant : call.variants) {
-//                    std::cout << variant << " " << call.posterior << std::endl;
-//                }
-//            }
+            std::cout << "called germline variants" << std::endl;
+            for (const auto& call : germline_variant_calls) {
+                for (const auto& variant : call.variants) {
+                    std::cout << variant << " " << call.posterior << std::endl;
+                }
+            }
           
 //            std::cout << "germline genotype (allele) calls" << std::endl;
 //            for (const auto& call : germline_genotype_calls) {

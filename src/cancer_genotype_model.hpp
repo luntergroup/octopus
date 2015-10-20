@@ -30,24 +30,24 @@ namespace Octopus
     class Cancer
     {
     public:
-        using GenotypeProbabilities          = std::unordered_map<CancerGenotype<Haplotype>, double>;
-        using SampleGenotypeWeightsPriors    = std::array<double, 3>;
-        using SampleGenotypeWeights          = std::array<double, 3>;
-        using GenotypeWeightsPriors          = std::unordered_map<SampleIdType, SampleGenotypeWeightsPriors>;
-        using GenotypeWeights                = std::unordered_map<SampleIdType, SampleGenotypeWeights>;
+        using GenotypeProbabilities        = std::unordered_map<CancerGenotype<Haplotype>, double>;
+        using SampleGenotypeMixturesPriors = std::array<double, 3>;
+        using SampleGenotypeMixtures       = std::array<double, 3>;
+        using GenotypeMixturesPriors       = std::unordered_map<SampleIdType, SampleGenotypeMixturesPriors>;
+        using GenotypeMixtures             = std::unordered_map<SampleIdType, SampleGenotypeMixtures>;
         
         struct Latents
         {
             Latents() = default;
             template <typename G, typename W>
-            Latents(G&& genotype_posteriors, W&& genotype_weights)
+            Latents(G&& genotype_posteriors, W&& genotype_mixtures)
             :
             genotype_posteriors {std::forward<G>(genotype_posteriors)},
-            genotype_weights {std::forward<W>(genotype_weights)}
+            genotype_mixtures {std::forward<W>(genotype_mixtures)}
             {}
             
             GenotypeProbabilities genotype_posteriors;
-            GenotypeWeights genotype_weights;
+            GenotypeMixtures genotype_mixtures;
         };
         
         Cancer(SampleIdType normal_sample, unsigned max_em_iterations = 100, double em_epsilon = 0.001);

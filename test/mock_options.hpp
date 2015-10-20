@@ -34,14 +34,17 @@ inline po::variables_map get_basic_mock_options()
         
         //"--reads", ecoli_bam.string().c_str(),
         
-        //"--model", "cancer", // default "population"
-        "--normal-sample", "HCC1143.NORMAL.30x.compare", // for cancer model
+        /* model parameters */
+        "--model", "cancer", // default "population"
+        "--normal-sample", "HG00102", // for cancer model
+        
         "--ploidy", "2",
         "--contig-ploidies", "MT=1", "Y=1",
         
         //"--make-blocked-refcalls",
         //"--make-positional-refcalls",
         
+        /* input regions */
         //"--regions", "5:157,031,410-157,031,449",
         //"--regions", "11:67503118-67503253",
         
@@ -109,7 +112,9 @@ inline po::variables_map get_basic_mock_options()
         
         //"--regions", "Y:4,313,467-4,314,172",
         
-        "--regions", "4:63,663,328-63,663,368",
+        //"--regions", "4:63,663,404-63,663,639",
+        //"--regions", "4:63,663,761-63,663,996",
+        "--regions", "4:91,144,739-91,144,822",
         
         // read filters
         "--min-supporting-reads", "1",
@@ -134,7 +139,7 @@ inline po::variables_map get_basic_mock_options()
         "--min-refcall-posterior", "1",
         "--min-somatic-posterior", "2",
         
-        "--somatics-only",
+        //"--somatics-only",
         
         //"--candidates-from-source", "~/test.bcf",
         //"--regenotype",

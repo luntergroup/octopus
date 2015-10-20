@@ -143,6 +143,25 @@ inline size_t num_cancer_genotypes(const unsigned num_elements, const unsigned p
 
 template <typename MappableType>
 std::vector<CancerGenotype<MappableType>>
+generate_all_cancer_genotypes(const std::vector<Genotype<MappableType>>& germline_genotypes,
+                              const std::vector<MappableType>& elements)
+{
+    std::vector<CancerGenotype<MappableType>> result {};
+    result.reserve((germline_genotypes.size() - 1) * elements.size());
+    
+    for (const auto& germline_genotype : germline_genotypes) {
+        for (const auto& element : elements) {
+            if (!is_homozygous(germline_genotype, element)) {
+                result.emplace_back(germline_genotype, element);
+            }
+        }
+    }
+    
+    return result;
+}
+
+template <typename MappableType>
+std::vector<CancerGenotype<MappableType>>
 generate_all_cancer_genotypes(const std::vector<MappableType>& elements, const unsigned ploidy)
 {
     auto germline_genotypes = generate_all_genotypes(elements, ploidy);
@@ -150,7 +169,7 @@ generate_all_cancer_genotypes(const std::vector<MappableType>& elements, const u
     std::vector<CancerGenotype<MappableType>> result {};
     result.reserve(num_cancer_genotypes(static_cast<unsigned>(elements.size()), ploidy));
     
-    for (auto germline_genotype : germline_genotypes) {
+    for (const auto& germline_genotype : germline_genotypes) {
         for (const auto& element : elements) {
             if (!is_homozygous(germline_genotype, element)) {
                 result.emplace_back(germline_genotype, element);
