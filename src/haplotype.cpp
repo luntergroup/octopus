@@ -21,34 +21,17 @@
 
 // public methods
 
-Haplotype::Haplotype(ReferenceGenome& reference)
-:
-reference_ {reference},
-region_ {},
-explicit_alleles_ {},
-cached_sequence_ {},
-is_region_set_ {false},
-is_cached_sequence_outdated_ {false}
-{}
-
 Haplotype::Haplotype(ReferenceGenome& reference, const GenomicRegion& region)
 :
 reference_ {reference},
 region_ {region},
 explicit_alleles_ {},
-cached_sequence_ {},
-is_region_set_ {true},
-is_cached_sequence_outdated_ {true}
+cached_sequence_ {}
 {}
-
-Haplotype::operator Allele() const
-{
-    return Allele {region_, get_sequence(region_)};
-}
 
 bool Haplotype::contains(const Allele& allele) const
 {
-    if (explicit_alleles_.empty() && !is_region_set_) return false;
+    if (explicit_alleles_.empty()) return false;
     
     if (::contains(get_region(), allele)) {
         // these binary searches are just optimisations
@@ -81,25 +64,17 @@ bool Haplotype::contains(const Allele& allele) const
     }
 }
 
-void Haplotype::set_region(const GenomicRegion& region)
+const GenomicRegion& Haplotype::get_region() const
 {
-    region_                      = region;
-    is_region_set_               = true;
-    is_cached_sequence_outdated_ = true;
-}
-
-GenomicRegion Haplotype::get_region() const
-{
-    return (is_region_set_) ? region_ : get_region_bounded_by_explicit_alleles();
+    return region_;
 }
 
 Haplotype::SequenceType Haplotype::get_sequence() const
 {
-    if (!is_cached_sequence_outdated_) {
+    if (is_cached_sequence_good()) {
         return cached_sequence_;
     } else {
-        cached_sequence_ = (is_region_set_) ? get_sequence(region_) : get_sequence_bounded_by_explicit_alleles();
-        is_cached_sequence_outdated_ = false;
+        cached_sequence_ = get_sequence(region_);
         return cached_sequence_;
     }
 }
@@ -135,7 +110,7 @@ Haplotype::SequenceType Haplotype::get_sequence(const GenomicRegion& region) con
         result += get_reference_sequence(region);
     }
     
-    // we know the alleles are bidirectionally sorted as it is a condition of them being on a single haplotype
+    // we know the alleles are bidirectionally sorted as it is a condition of them being on a haplotype
     auto overlapped_explicit_alleles = bases(overlap_range(cbegin(explicit_alleles_), cend(explicit_alleles_), region,
                                                            MappableRangeOrder::BidirectionallySorted));
     
@@ -228,12 +203,19 @@ void Haplotype::operator+=(const Haplotype& other)
 
 size_t Haplotype::get_hash() const
 {
-    if (is_cached_sequence_outdated_) {
+    if (cached_hash_ == 0) {
         size_t seed {};
+        
         boost::hash_combine(seed, std::hash<GenomicRegion>()(region_));
-        boost::hash_combine(seed, std::hash<SequenceType>()(cached_sequence_));
+        boost::hash_combine(seed, std::hash<SequenceType>()(get_sequence()));
+        
+        if (seed == 0) {
+            ++seed; // 0 is reserved
+        }
+        
         cached_hash_ = seed;
     }
+    
     return cached_hash_;
 }
 
@@ -267,6 +249,16 @@ Haplotype::SequenceType Haplotype::get_sequence_bounded_by_explicit_alleles() co
 {
     return get_sequence_bounded_by_explicit_alleles(std::cbegin(explicit_alleles_),
                                                     std::cend(explicit_alleles_));
+}
+
+bool Haplotype::is_cached_sequence_good() const noexcept
+{
+    return !cached_sequence_.empty() || (explicit_alleles_.empty() && empty(region_));
+}
+
+void Haplotype::reset_cached_sequence()
+{
+    cached_sequence_.clear();
 }
 
 // non-member methods

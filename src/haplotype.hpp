@@ -40,7 +40,6 @@ public:
     using SizeType     = Allele::SizeType;
     
     Haplotype() = default;
-    explicit Haplotype(ReferenceGenome& reference);
     explicit Haplotype(ReferenceGenome& reference, const GenomicRegion& region);
     ~Haplotype() = default;
     
@@ -49,13 +48,11 @@ public:
     Haplotype(Haplotype&&)                 = default;
     Haplotype& operator=(Haplotype&&)      = default;
     
-    explicit operator Allele() const;
-    
     template <typename T> void push_back(T&& allele);
     template <typename T> void push_front(T&& allele);
+    
     bool contains(const Allele& allele) const;
-    void set_region(const GenomicRegion& region);
-    GenomicRegion get_region() const;
+    const GenomicRegion& get_region() const;
     SequenceType get_sequence() const;
     SequenceType get_sequence(const GenomicRegion& region) const;
     
@@ -78,12 +75,10 @@ public:
     
 private:
     GenomicRegion region_;
-    mutable SequenceType cached_sequence_;
     std::deque<Allele> explicit_alleles_;
+    mutable SequenceType cached_sequence_;
     std::reference_wrapper<ReferenceGenome> reference_;
-    mutable size_t cached_hash_;
-    bool is_region_set_;
-    mutable bool is_cached_sequence_outdated_;
+    mutable size_t cached_hash_ = 0;
     
     using AlleleIterator = decltype(explicit_alleles_)::const_iterator;
     
@@ -91,6 +86,9 @@ private:
     GenomicRegion get_region_bounded_by_explicit_alleles() const;
     SequenceType get_sequence_bounded_by_explicit_alleles(AlleleIterator first, AlleleIterator last) const;
     SequenceType get_sequence_bounded_by_explicit_alleles() const;
+    
+    bool is_cached_sequence_good() const noexcept;
+    void reset_cached_sequence();
 };
 
 template <typename T>
@@ -104,16 +102,16 @@ void Haplotype::push_back(T&& allele)
             explicit_alleles_.push_back(get_reference_allele(intervening_region, reference_));
         }
         
-        if (is_region_set_ && ends_before(region_, allele)) {
+        if (ends_before(region_, allele)) {
             region_ = get_encompassing(region_, allele);
         }
-    } else if (is_region_set_ && begins_before(allele, region_)) {
+    } else if (begins_before(allele, region_)) {
         region_ = get_encompassing(allele, region_);
     }
     
     explicit_alleles_.push_back(std::forward<T>(allele));
     
-    is_cached_sequence_outdated_ = true;
+    reset_cached_sequence();
 }
 
 template <typename T>
@@ -127,16 +125,16 @@ void Haplotype::push_front(T&& allele)
             explicit_alleles_.push_front(get_reference_allele(intervening_region, reference_));
         }
         
-        if (is_region_set_ && begins_before(allele, region_)) {
+        if (begins_before(allele, region_)) {
             region_ = get_encompassing(allele, region_);
         }
-    } else if (is_region_set_ && ends_before(region_, allele)) {
+    } else if (ends_before(region_, allele)) {
         region_ = get_encompassing(region_, allele);
     }
     
     explicit_alleles_.push_front(std::forward<T>(allele));
     
-    is_cached_sequence_outdated_ = true;
+    reset_cached_sequence();
 }
 
 // non-members
