@@ -32,6 +32,10 @@ std::vector<VcfType> get_typed_format_values(const VcfHeader& header, const VcfR
                                              const VcfRecord::SampleIdType sample,
                                              const VcfHeader::KeyType& key);
 
+void index_vcf(const fs::path& vcf_file);
+
+void index_vcf(const fs::path& vcf_file, const fs::path& out_index_path);
+
 VcfHeader merge(const std::vector<VcfHeader>& headers);
 
 VcfWriter merge(std::vector<VcfReader>& readers, fs::path result_path);

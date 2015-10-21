@@ -10,8 +10,10 @@
 #define __Octopus__haplotype__
 
 #include <queue>
-#include <cstddef>   // size_t
-#include <stdexcept> // std::runtime_error
+#include <cstddef>     // size_t
+#include <stdexcept>   // std::runtime_error
+#include <functional>  // std::reference_wrapper
+#include <type_traits> // std::true_type, std::false_type, std::is_same, std::decay_t
 #include <iostream>
 
 #include "contig_region.hpp"
@@ -27,8 +29,8 @@ class GenomicRegion;
 class Haplotype;
 
 namespace detail {
-    Haplotype do_splice(const Haplotype& haplotype, const GenomicRegion& region, Haplotype);
-    Allele do_splice(const Haplotype& haplotype, const GenomicRegion& region, Allele);
+    Haplotype do_splice(const Haplotype& haplotype, const GenomicRegion& region, std::true_type);
+    Allele do_splice(const Haplotype& haplotype, const GenomicRegion& region, std::false_type);
 } // namespace detail
 
 class Haplotype : public Comparable<Haplotype>, public Mappable<Haplotype>
@@ -68,23 +70,24 @@ public:
     friend struct IsLessComplex;
     
     friend bool contains(const Haplotype& lhs, const Haplotype& rhs);
-    friend Haplotype detail::do_splice(const Haplotype& haplotype, const GenomicRegion& region, Haplotype);
+    friend Haplotype detail::do_splice(const Haplotype& haplotype, const GenomicRegion& region, std::true_type);
     friend bool have_same_alleles(const Haplotype& lhs, const Haplotype& rhs);
     
     friend void print_alleles(const Haplotype& haplotype);
     friend void print_variant_alleles(const Haplotype& haplotype);
     
 private:
-    ReferenceGenome* reference_; // non-owning pointer rather than a reference so Haplotype copyable
     GenomicRegion region_;
     mutable SequenceType cached_sequence_;
     std::deque<Allele> explicit_alleles_;
+    std::reference_wrapper<ReferenceGenome> reference_;
     mutable size_t cached_hash_;
     bool is_region_set_;
     mutable bool is_cached_sequence_outdated_;
     
     using AlleleIterator = decltype(explicit_alleles_)::const_iterator;
     
+    SequenceType get_reference_sequence(const GenomicRegion& region) const;
     GenomicRegion get_region_bounded_by_explicit_alleles() const;
     SequenceType get_sequence_bounded_by_explicit_alleles(AlleleIterator first, AlleleIterator last) const;
     SequenceType get_sequence_bounded_by_explicit_alleles() const;
@@ -98,7 +101,7 @@ void Haplotype::push_back(T&& allele)
             throw std::runtime_error {"cannot append out of order allele to back of haplotype"};
         } else if (!are_adjacent(explicit_alleles_.back(), allele)) {
             auto intervening_region = get_intervening(explicit_alleles_.back(), allele);
-            explicit_alleles_.push_back(get_reference_allele(intervening_region, *reference_));
+            explicit_alleles_.push_back(get_reference_allele(intervening_region, reference_));
         }
         
         if (is_region_set_ && ends_before(region_, allele)) {
@@ -121,7 +124,7 @@ void Haplotype::push_front(T&& allele)
             throw std::runtime_error {"cannot append out of order allele to front of haplotype"};
         } else if (!are_adjacent(allele, explicit_alleles_.front())) {
             auto intervening_region = get_intervening(allele, explicit_alleles_.front());
-            explicit_alleles_.push_front(get_reference_allele(intervening_region, *reference_));
+            explicit_alleles_.push_front(get_reference_allele(intervening_region, reference_));
         }
         
         if (is_region_set_ && begins_before(allele, region_)) {
@@ -144,7 +147,7 @@ bool contains(const Haplotype& lhs, const Haplotype& rhs);
 template <typename MappableType>
 MappableType splice(const Haplotype& haplotype, const GenomicRegion& region)
 {
-    return detail::do_splice(haplotype, region, MappableType());
+    return detail::do_splice(haplotype, region, typename std::is_same<Haplotype, std::decay_t<MappableType>>::type {});
 }
 
 bool is_reference(const Haplotype& haplotype, ReferenceGenome& reference);

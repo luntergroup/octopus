@@ -23,7 +23,7 @@
 
 Haplotype::Haplotype(ReferenceGenome& reference)
 :
-reference_ {&reference},
+reference_ {reference},
 region_ {},
 explicit_alleles_ {},
 cached_sequence_ {},
@@ -33,7 +33,7 @@ is_cached_sequence_outdated_ {false}
 
 Haplotype::Haplotype(ReferenceGenome& reference, const GenomicRegion& region)
 :
-reference_ {&reference},
+reference_ {reference},
 region_ {region},
 explicit_alleles_ {},
 cached_sequence_ {},
@@ -114,7 +114,7 @@ Haplotype::SequenceType Haplotype::get_sequence(const GenomicRegion& region) con
     using std::cbegin; using std::cend;
     
     if (explicit_alleles_.empty()) {
-        return reference_->get_sequence(region);
+        return get_reference_sequence(region);
     }
     
     auto region_bounded_by_alleles = get_region_bounded_by_explicit_alleles();
@@ -123,7 +123,7 @@ Haplotype::SequenceType Haplotype::get_sequence(const GenomicRegion& region) con
     result.reserve(size(region)); // may be more or less depending on indels
     
     if (begins_before(region, region_bounded_by_alleles)) {
-        result += reference_->get_sequence(get_left_overhang(region, region_bounded_by_alleles));
+        result += get_reference_sequence(get_left_overhang(region, region_bounded_by_alleles));
         if (is_before(region, region_bounded_by_alleles)) {
             if (!explicit_alleles_.empty() && ::contains(region, explicit_alleles_.front())) {
                 result += explicit_alleles_.front().get_sequence();
@@ -132,7 +132,7 @@ Haplotype::SequenceType Haplotype::get_sequence(const GenomicRegion& region) con
             return result;
         }
     } else if (is_after(region, region_bounded_by_alleles)) {
-        result += reference_->get_sequence(region);
+        result += get_reference_sequence(region);
     }
     
     // we know the alleles are bidirectionally sorted as it is a condition of them being on a single haplotype
@@ -180,7 +180,7 @@ Haplotype::SequenceType Haplotype::get_sequence(const GenomicRegion& region) con
         overlapped_explicit_alleles.advance_end(1); // as we previously removed this allele
         append(result, splice(overlapped_explicit_alleles.back(), get_overlapped(overlapped_explicit_alleles.back(), region)));
     } else if (ends_before(region_bounded_by_alleles, region)) {
-        result += reference_->get_sequence(get_right_overhang(region, region_bounded_by_alleles));
+        result += get_reference_sequence(get_right_overhang(region, region_bounded_by_alleles));
     }
     
     result.shrink_to_fit();
@@ -239,6 +239,11 @@ size_t Haplotype::get_hash() const
 
 // private methods
 
+Haplotype::SequenceType Haplotype::get_reference_sequence(const GenomicRegion& region) const
+{
+    return reference_.get().get_sequence(region);
+}
+
 GenomicRegion Haplotype::get_region_bounded_by_explicit_alleles() const
 {
     if (explicit_alleles_.empty()) throw std::runtime_error {"Cannot get region from empty allele list"};
@@ -281,13 +286,13 @@ bool contains(const Haplotype& lhs, const Haplotype& rhs)
 }
 
 namespace detail {
-Haplotype do_splice(const Haplotype& haplotype, const GenomicRegion& region, Haplotype)
+Haplotype do_splice(const Haplotype& haplotype, const GenomicRegion& region, std::true_type)
 {
     // TODO: this is buggy.. test more
     
     if (get_region(haplotype) == region) return haplotype;
     
-    Haplotype result {*haplotype.reference_, region};
+    Haplotype result {haplotype.reference_, region};
     
     if (haplotype.explicit_alleles_.empty()) return result;
     
@@ -311,7 +316,7 @@ Haplotype do_splice(const Haplotype& haplotype, const GenomicRegion& region, Hap
     return result;
 }
 
-Allele do_splice(const Haplotype& haplotype, const GenomicRegion& region, Allele)
+Allele do_splice(const Haplotype& haplotype, const GenomicRegion& region, std::false_type)
 {
     return Allele {region, haplotype.get_sequence(region)};
 }
@@ -404,12 +409,12 @@ void print_alleles(const Haplotype& haplotype)
 
 void print_variant_alleles(const Haplotype& haplotype)
 {
-    if (is_reference(haplotype, *haplotype.reference_)) {
+    if (is_reference(haplotype, haplotype.reference_)) {
         std::cout << "< >";
     } else {
         std::cout << "< ";
         for (const auto& allele : haplotype.explicit_alleles_) {
-            if (!is_reference(allele, *haplotype.reference_)) std::cout << "{" << allele << "} ";
+            if (!is_reference(allele, haplotype.reference_)) std::cout << "{" << allele << "} ";
         }
         std::cout << ">";
     }

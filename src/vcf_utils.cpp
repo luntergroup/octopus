@@ -18,6 +18,10 @@
 #include "contig_region.hpp"
 #include "genomic_region.hpp"
 
+#include "htslib/hts.h"
+#include "htslib/vcf.h"
+#include "htslib/tbx.h"
+
 #include <iostream> // DEBUG
 
 std::vector<std::string> get_contigs(const VcfHeader& header)
@@ -51,6 +55,22 @@ std::vector<VcfType> get_typed_format_values(const VcfHeader& header, const VcfR
                                 const VcfRecord::SampleIdType sample, const VcfHeader::KeyType& key)
 {
     return get_typed_format_values(header, key, record.get_sample_value(sample, key));
+}
+
+void index_vcf(const fs::path& vcf_file)
+{
+    
+}
+
+void index_vcf(const fs::path& vcf_file, const fs::path& out_index_path)
+{
+    htsFile *fp {hts_open(vcf_file.c_str(), "r")};
+    htsFormat type {*hts_get_format(fp)};
+    hts_close(fp);
+    
+//    if ((type.format != .bcf && type.format ! =vcf) || type.compression != bgzf) {
+//        
+//    }
 }
 
 bool all_same_format(const std::vector<VcfHeader>& headers)
