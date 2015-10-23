@@ -135,6 +135,24 @@ find_first_shared(const MappableMap<KeyType, MappableType1>& mappables, ForwardI
                              });
 }
 
+template <typename KeyType, typename MappableType, typename ForwardIterator>
+size_t
+max_count_if_shared_with_first(const MappableMap<KeyType, MappableType>& mappables,
+                               ForwardIterator first, ForwardIterator last)
+{
+    size_t maximum {0};
+    size_t count {};
+    
+    for (const auto& map_pair : mappables) {
+        count = count_if_shared_with_first(map_pair.second, first, last);
+        if (count > maximum) {
+            maximum = count;
+        }
+    }
+    
+    return maximum;
+}
+
 template <typename KeyType, typename MappableType1, typename MappableType2>
 typename MappableSet<MappableType1>::const_iterator
 leftmost_overlapped(const MappableMap<KeyType, MappableType1>& mappables, const MappableType2& mappable)

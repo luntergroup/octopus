@@ -17,9 +17,6 @@ class Variant;
 
 using namespace Octopus;
 
-/*
- Stuff
- */
 class GenomeWalker
 {
 public:
@@ -28,11 +25,13 @@ public:
     
     enum class IndicatorLimit { SharedWithPreviousRegion, NoLimit };
     enum class ExtensionLimit { WithinReadLengthOfFirstIncluded, SharedWithFrontier, NoLimit };
-    enum class ExpansionPolicy { UptoExcluded, WithinReadLength };
+    enum class ExpansionLimit { UpToExcluded, WithinReadLength, UpToExcludedWithinReadLength,
+                                NoExpansion };
     
     GenomeWalker() = delete;
     explicit GenomeWalker(unsigned max_indicators, unsigned max_included,
-                          IndicatorLimit indicator_limit, ExtensionLimit extension_limit);
+                          IndicatorLimit indicator_limit, ExtensionLimit extension_limit,
+                          ExpansionLimit expansion_limit = ExpansionLimit::UpToExcludedWithinReadLength);
     ~GenomeWalker() = default;
     
     GenomeWalker(const GenomeWalker&)            = default;
@@ -40,16 +39,20 @@ public:
     GenomeWalker(GenomeWalker&&)                 = default;
     GenomeWalker& operator=(GenomeWalker&&)      = default;
     
-    GenomicRegion start_walk(const ContigNameType& contig, const ReadMap& reads, const Candidates& candidates);
-    GenomicRegion continue_walk(const GenomicRegion& previous_region, const ReadMap& reads, const Candidates& candidates);
+    GenomicRegion start_walk(const ContigNameType& contig, const ReadMap& reads,
+                             const Candidates& candidates);
+    GenomicRegion continue_walk(const GenomicRegion& previous_region, const ReadMap& reads,
+                                const Candidates& candidates);
     
 private:
     const unsigned max_indicators_;
     const unsigned max_included_;
     const IndicatorLimit indicator_limit_;
     const ExtensionLimit extension_limit_;
+    const ExpansionLimit expansion_limit_;
     
-    GenomicRegion walk(const GenomicRegion& previous_region, const ReadMap& reads, const Candidates& candidates);
+    GenomicRegion walk(const GenomicRegion& previous_region, const ReadMap& reads,
+                       const Candidates& candidates);
 };
 
 #endif /* genome_walker_hpp */

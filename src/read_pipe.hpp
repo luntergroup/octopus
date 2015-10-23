@@ -44,10 +44,10 @@ public:
     ReadMap fetch_reads(std::vector<SampleIdType> samples, const GenomicRegion& region);
     
 private:
-    ReadManager& read_manager;
-    ReadFilterer read_filter;
-    Downsampler downsampler;
-    ReadTransform read_transform;
+    ReadManager& read_manager_;
+    ReadFilterer read_filter_;
+    Downsampler downsampler_;
+    ReadTransform read_transform_;
     
     using ContigIdType = GenomicRegion::StringType;
     

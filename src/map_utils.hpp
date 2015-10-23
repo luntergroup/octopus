@@ -19,10 +19,10 @@
 #include "mappable_algorithms.hpp"
 
 template <typename MappableMap, typename MappableType>
-std::size_t count_overlapped(const MappableMap& mappables, const MappableType& m,
+size_t count_overlapped(const MappableMap& mappables, const MappableType& m,
                              MappableRangeOrder order = MappableRangeOrder::ForwardSorted)
 {
-    std::size_t result {};
+    size_t result {};
     
     for (const auto& map_pair : mappables) {
         result += count_overlapped(std::cbegin(map_pair.second), std::cend(map_pair.second), m, order);
@@ -43,11 +43,11 @@ bool has_shared(const MappableMap& mappables, const MappableType1& lhs, const Ma
 }
 
 template <typename MappableMap, typename MappableType1, typename MappableType2>
-std::size_t
+size_t
 count_shared(const MappableMap& mappables, const MappableType1& lhs, const MappableType2& rhs,
              MappableRangeOrder order = MappableRangeOrder::ForwardSorted)
 {
-    std::size_t result {};
+    size_t result {};
     
     for (const auto& map_pair : mappables) {
         result += count_shared(std::cbegin(map_pair.second), std::cend(map_pair.second), lhs, rhs, order);
@@ -88,12 +88,12 @@ find_first_shared(const MappableMap& mappables, ForwardIterator first, ForwardIt
 }
 
 template <typename MappableMap, typename ForwardIterator>
-std::size_t
+size_t
 max_count_if_shared_with_first(const MappableMap& mappables, ForwardIterator first, ForwardIterator last,
                                MappableRangeOrder order = MappableRangeOrder::ForwardSorted)
 {
-    std::size_t maximum {0};
-    std::size_t count {};
+    size_t maximum {0};
+    size_t count {};
     
     for (const auto& map_pair : mappables) {
         count = count_if_shared_with_first(std::cbegin(map_pair.second), std::cend(map_pair.second),

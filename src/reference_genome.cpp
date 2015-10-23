@@ -56,7 +56,7 @@ ReferenceGenome::SizeType ReferenceGenome::get_contig_size(const std::string& co
     if (has_contig(contig_name)) {
         return contig_sizes_.at(contig_name);
     }
-    throw std::runtime_error {"contig " + contig_name + " is not in reference genome " + name_};
+    throw std::runtime_error {"contig \"" + contig_name + "\" is not in reference genome \"" + name_ + "\""};
 }
 
 ReferenceGenome::SizeType ReferenceGenome::get_contig_size(const GenomicRegion& region) const
@@ -152,5 +152,5 @@ GenomicRegion parse_region(const std::string& region, const ReferenceGenome& ref
         return GenomicRegion {std::move(contig_name), begin, end};
     }
     
-    throw std::runtime_error {"region" + region + " has invalid format"};
+    throw std::runtime_error {"region " + region + " has invalid format"};
 }

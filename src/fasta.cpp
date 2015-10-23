@@ -24,18 +24,18 @@ fasta_path_ {std::move(fasta_path)},
 fasta_index_path_ {std::move(fasta_index_path)}
 {
     if (!fs::exists(fasta_path_)) {
-        throw std::runtime_error {"Cannot find FASTA " + fasta_path.string()};
+        throw std::runtime_error {"Cannot find FASTA \"" + fasta_path.string() + "\""};
     }
     
     if (!fs::exists(fasta_index_path_)) {
         fasta_index_path_ = fasta_path_.replace_extension("fai");
         if (!fs::exists(fasta_index_path_)) {
-            throw std::runtime_error {"Cannot find FASTA index " + fasta_index_path_.string()};
+            throw std::runtime_error {"Cannot find FASTA index \"" + fasta_index_path_.string() + "\""};
         }
     }
     
     if (!is_valid_fasta()) {
-        throw std::runtime_error {"Invalid FASTA " + fasta_path.string()};
+        throw std::runtime_error {"Invalid FASTA \"" + fasta_path.string() + "\""};
     }
     
     fasta_ = std::ifstream(fasta_path_.string());
@@ -55,7 +55,7 @@ std::vector<std::string> Fasta::do_get_contig_names()
 Fasta::SizeType Fasta::do_get_contig_size(const std::string& contig_name)
 {
     if (fasta_contig_indices_.count(contig_name) == 0) {
-        throw std::runtime_error {"contig " + contig_name + " not found in fasta index " + fasta_index_path_.string()};
+        throw std::runtime_error {"contig \"" + contig_name + "\" not found in fasta index \"" + fasta_index_path_.string() + "\""};
     }
     return static_cast<SizeType>(fasta_contig_indices_.at(contig_name).length);
 }

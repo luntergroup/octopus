@@ -42,12 +42,6 @@ max_indicators_ {max_indicators},
 walker_ {max_indicators_, 4, GenomeWalker::IndicatorLimit::NoLimit, GenomeWalker::ExtensionLimit::WithinReadLengthOfFirstIncluded}
 {}
 
-void extend(HaplotypeTree& tree, const Variant& variant)
-{
-    tree.extend(variant.get_reference_allele());
-    tree.extend(variant.get_alternative_allele());
-}
-
 void HaplotypePhaser::setup(const std::vector<Variant>& candidates, const ReadMap& reads)
 {
     if (candidates.empty()) return;
@@ -138,6 +132,12 @@ HaplotypePhaser::phase(const std::vector<Haplotype>& haplotypes,
 }
 
 // private methods
+
+void extend(HaplotypeTree& tree, const Variant& variant)
+{
+    tree.extend(variant.get_reference_allele());
+    tree.extend(variant.get_alternative_allele());
+}
 
 void HaplotypePhaser::extend_tree(const ReadMap& reads)
 {
