@@ -65,7 +65,6 @@ public:
     size_t get_hash() const;
     
     friend struct IsLessComplex;
-    
     friend bool contains(const Haplotype& lhs, const Haplotype& rhs);
     friend Haplotype detail::do_splice(const Haplotype& haplotype, const GenomicRegion& region, std::true_type);
     friend bool have_same_alleles(const Haplotype& lhs, const Haplotype& rhs);

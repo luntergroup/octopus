@@ -25,12 +25,12 @@ class Mappable {};
 template <typename T, typename R = void>
 using EnableIfMappable = std::enable_if_t<std::is_same<T, GenomicRegion>::value || std::is_base_of<Mappable<T>, T>::value, R>;
 
-inline ContigRegion get_region(const ContigRegion& region)
+inline const ContigRegion& get_region(const ContigRegion& region)
 {
     return region;
 }
 
-inline GenomicRegion get_region(const GenomicRegion& region)
+inline const GenomicRegion& get_region(const GenomicRegion& region)
 {
     return region;
 }

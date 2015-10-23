@@ -31,10 +31,6 @@
 #include "vcf_utils.hpp"
 #include "variant_caller.hpp"
 
-#include "haplotype.hpp"
-#include "genotype.hpp"
-#include "cancer_genotype.hpp"
-
 #include "test_common.hpp"
 
 namespace Octopus

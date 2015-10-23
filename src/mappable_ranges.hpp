@@ -10,7 +10,8 @@
 #define Octopus_mappable_ranges_h
 
 #include <iterator>
-#include <cstddef> // size_t
+#include <cstddef>     // size_t
+#include <type_traits> // std::decay_t
 #include <boost/iterator/filter_iterator.hpp>
 #include <boost/range/iterator_range_core.hpp>
 
@@ -34,7 +35,7 @@ namespace detail
         bool operator()(const MappableType& mappable) { return overlaps(mappable, region_); }
         
     private:
-        decltype(get_region(MappableType())) region_; // ContigRegion or GenomicRegion
+        std::decay_t<decltype(get_region(MappableType()))> region_; // ContigRegion or GenomicRegion
     };
 } // namespace detail
 
@@ -115,7 +116,7 @@ namespace detail
         bool operator()(const MappableType& mappable) { return contains(region_, mappable); }
         
     private:
-        decltype(get_region(MappableType())) region_; // ContigRegion or GenomicRegion
+        std::decay_t<decltype(get_region(MappableType()))> region_; // ContigRegion or GenomicRegion
     };
 } // namespace detail
 
@@ -200,7 +201,7 @@ namespace detail
         }
         
     private:
-        decltype(get_region(MappableType())) lhs_, rhs_; // ContigRegion or GenomicRegion
+        std::decay_t<decltype(get_region(MappableType()))> lhs_, rhs_; // ContigRegion or GenomicRegion
     };
 } // namespace detail
 
