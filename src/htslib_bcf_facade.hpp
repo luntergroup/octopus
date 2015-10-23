@@ -37,6 +37,7 @@ class HtslibBcfFacade : public IVcfReaderImpl
 public:
     HtslibBcfFacade()  = delete;
     explicit HtslibBcfFacade(const fs::path& file_path, const std::string& mode = "r");
+    ~HtslibBcfFacade() noexcept override = default;
     
     HtslibBcfFacade(const HtslibBcfFacade&)            = delete;
     HtslibBcfFacade& operator=(const HtslibBcfFacade&) = delete;

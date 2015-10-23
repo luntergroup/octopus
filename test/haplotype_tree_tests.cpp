@@ -203,9 +203,9 @@ BOOST_AUTO_TEST_CASE(leading_haplotypes_can_be_removed_from_the_tree)
     haplotype_tree.extend(allele4);
     haplotype_tree.extend(allele5);
     
-    auto a_region = parse_region("4:1000000-1000005", human);
+    auto region = get_encompassing(allele1, allele5);
     
-    auto haplotypes = haplotype_tree.get_haplotypes(a_region);
+    auto haplotypes = haplotype_tree.get_haplotypes(region);
     
     BOOST_CHECK(haplotypes.size() == 4);
     
@@ -219,7 +219,7 @@ BOOST_AUTO_TEST_CASE(leading_haplotypes_can_be_removed_from_the_tree)
     
     BOOST_CHECK(haplotype_tree.num_haplotypes() == 2);
     
-    haplotypes = haplotype_tree.get_haplotypes(a_region);
+    haplotypes = haplotype_tree.get_haplotypes(region);
     
     std::sort(haplotypes.begin(), haplotypes.end());
     
@@ -251,7 +251,7 @@ BOOST_AUTO_TEST_CASE(pruned_branches_can_still_be_extended)
     
     BOOST_CHECK(haplotype_tree.num_haplotypes() == 4);
     
-    Haplotype hap1 {human};
+    Haplotype hap1 {human, a_region};
     hap1.push_back(allele3);
     hap1.push_back(allele4);
     hap1.push_back(allele6);
@@ -268,7 +268,7 @@ BOOST_AUTO_TEST_CASE(pruned_branches_can_still_be_extended)
     BOOST_CHECK(haplotypes[1].get_sequence() == "ATCCTAA");
     BOOST_CHECK(haplotypes[2].get_sequence() == "ATGCCAA");
     
-    Haplotype hap2 {human};
+    Haplotype hap2 {human, a_region};
     hap2.push_back(allele5);
     hap2.push_back(allele6);
     
@@ -523,6 +523,8 @@ BOOST_AUTO_TEST_CASE(contains_returns_true_if_the_given_haplotype_is_in_the_tree
     Allele allele4 {parse_region("4:1000001-1000002", human), "G"};
     Allele allele5 {parse_region("4:1000001-1000002", human), "C"};
     
+    auto region = get_encompassing(allele1, allele5);
+    
     HaplotypeTree haplotype_tree {human};
     
     haplotype_tree.extend(allele1);
@@ -531,13 +533,13 @@ BOOST_AUTO_TEST_CASE(contains_returns_true_if_the_given_haplotype_is_in_the_tree
     haplotype_tree.extend(allele4);
     haplotype_tree.extend(allele5);
     
-    Haplotype haplotype1 {human};
+    Haplotype haplotype1 {human, region};
     haplotype1.push_back(allele1);
     haplotype1.push_back(allele4);
     
     BOOST_CHECK(haplotype_tree.contains(haplotype1));
     
-    Haplotype haplotype2 {human};
+    Haplotype haplotype2 {human, region};
     haplotype2.push_back(allele1);
     haplotype2.push_back(Allele {parse_region("4:1000001-1000002", human), "A"});
     
@@ -558,6 +560,8 @@ BOOST_AUTO_TEST_CASE(get_seperation_region_returns_the_allele_region_before_two_
     Allele allele3 {parse_region("4:1000001-1000002", human), "G"};
     Allele allele4 {parse_region("4:1000001-1000002", human), "T"};
     
+    auto region = get_encompassing(allele1, allele4);
+    
     HaplotypeTree haplotype_tree {human};
     
     haplotype_tree.extend(allele1);
@@ -565,15 +569,15 @@ BOOST_AUTO_TEST_CASE(get_seperation_region_returns_the_allele_region_before_two_
     haplotype_tree.extend(allele3);
     haplotype_tree.extend(allele4);
     
-    Haplotype haplotype1 {human};
+    Haplotype haplotype1 {human, region};
     haplotype1.push_back(allele1);
     haplotype1.push_back(allele3);
     
-    Haplotype haplotype2 {human};
+    Haplotype haplotype2 {human, region};
     haplotype2.push_back(allele1);
     haplotype2.push_back(allele4);
     
-    Haplotype haplotype3 {human};
+    Haplotype haplotype3 {human, region};
     haplotype3.push_back(allele2);
     haplotype3.push_back(allele3);
     
