@@ -35,7 +35,7 @@ inline po::variables_map get_basic_mock_options()
         //"--reads", ecoli_bam.string().c_str(),
         
         /* model parameters */
-        "--model", "cancer", // default "population"
+        //"--model", "cancer", // default "population"
         "--normal-sample", "HG00102", // for cancer model
         
         "--ploidy", "2",
@@ -114,10 +114,12 @@ inline po::variables_map get_basic_mock_options()
         
         //"--regions", "4:63,663,404-63,663,639",
         //"--regions", "4:63,663,761-63,663,996",
-        "--regions", "4:91,144,739-91,144,822",
+        //"--regions", "4:91,144,739-91,144,822",
+        
+        "--regions", "6:29,913,617-29,913,761",
         
         // read filters
-        "--min-supporting-reads", "1",
+        "--min-supporting-reads", "2",
         "--min-mapping-quality", "20",
         "--min-snp-base-quality", "20",
         "--no-marked-duplicates",
@@ -146,8 +148,8 @@ inline po::variables_map get_basic_mock_options()
         
         //"--max-open-read-files", "1",
         
-        "--output", test_out_vcf.c_str(),
-        //"--output", "~/test2.bcf",
+        //"--output", test_out_vcf.c_str(),
+        "--output", "~/test.vcf",
         
         nullptr};
     

@@ -14,7 +14,7 @@
                      // std::generate_n, std::transform
 #include <numeric>   // std::accumulate
 #include <cstddef>   // size_t
-#include <iterator>  // std::distance, std::cbegin, std::cend, std::prev, std::next, std::reverse_iterator
+#include <iterator>  // std::distance, std::cbegin, std::cend, std::prev, std::next, std::make_reverse_iterator
 #include <stdexcept>
 #include <boost/iterator/filter_iterator.hpp>
 #include <boost/range/iterator_range_core.hpp>
@@ -265,13 +265,13 @@ bool has_overlapped(BidirectionalIterator first, BidirectionalIterator last,
     } else {
         auto it = find_first_after(first, last, mappable);
         
-        using RIter = std::reverse_iterator<BidirectionalIterator>;
-        
         // searches in reverse order on the assumption regions closer to the boundry with
         // mappable are more likely to overlap with mappable.
-        
-        return overlaps(*first, mappable) || std::any_of(RIter(it), RIter(std::next(first)),
-                                    [&mappable] (const auto& m) { return overlaps(mappable, m); });
+        return overlaps(*first, mappable) || std::any_of(std::make_reverse_iterator(it),
+                                                         std::make_reverse_iterator(std::next(first)),
+                                                         [&mappable] (const auto& m) {
+                                                             return overlaps(mappable, m);
+                                                         });
     }
 }
 
@@ -321,9 +321,7 @@ contained_range(BidirectionalIterator first, BidirectionalIterator last, const M
     
     if (it == it2) return make_contained_range(it, it2, mappable);
     
-    using RIter = std::reverse_iterator<BidirectionalIterator>;
-    
-    auto rit = std::find_if(RIter(it2), RIter(std::next(it)),
+    auto rit = std::find_if(std::make_reverse_iterator(it2), std::make_reverse_iterator(std::next(it)),
                             [&mappable] (const auto& m) { return contains(mappable, m); });
     
     return make_contained_range(it, rit.base(), mappable);
@@ -434,15 +432,15 @@ ForwardIterator2 find_first_shared(ForwardIterator1 first1, ForwardIterator1 las
 }
 
 /**
- Counts the number of Mappable elements in the range [first2 + 1, last2) that have shared overalapped
- elements in the range [first1, last1) with the first2
+ Counts the number of Mappable elements in the range [first2 + 1, last2) that have shared
+ elements in the range [first1, last1) with first2
  
  Requires [first1, last1) and [first2, last2) to be sorted w.r.t GenomicRegion::operator<
  */
 template <typename ForwardIterator1, typename ForwardIterator2>
 size_t count_if_shared_with_first(ForwardIterator1 first1, ForwardIterator1 last1,
                                   ForwardIterator2 first2, ForwardIterator2 last2,
-                                  MappableRangeOrder order=MappableRangeOrder::ForwardSorted)
+                                  MappableRangeOrder order = MappableRangeOrder::ForwardSorted)
 {
     if (first2 == last2) return 0;
     

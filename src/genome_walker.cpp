@@ -18,17 +18,18 @@
 #include "variant.hpp"
 #include "mappable_algorithms.hpp"
 #include "mappable_map.hpp"
-#include "map_utils.hpp"
 
 #include <iostream> // DEBUG
 
 GenomeWalker::GenomeWalker(unsigned max_indicators, unsigned max_included,
-                           IndicatorLimit indicator_limit, ExtensionLimit extension_limit)
+                           IndicatorLimit indicator_limit, ExtensionLimit extension_limit,
+                           ExpansionLimit expansion_limit)
 :
 max_indicators_ {(max_included > 0 && max_included <= max_indicators) ? max_included - 1 : max_indicators},
 max_included_ {max_included},
 indicator_limit_ {indicator_limit},
-extension_limit_ {extension_limit}
+extension_limit_ {extension_limit},
+expansion_limit_ {expansion_limit}
 {}
 
 GenomicRegion GenomeWalker::start_walk(const ContigNameType& contig, const ReadMap& reads,
@@ -65,8 +66,8 @@ expand_around_included(BidirectionalIterator first_previous, BidirectionalIterat
 {
     auto last_included = std::prev(first_excluded);
     
-    auto leftmost_region  = get_region(*leftmost_overlapped(reads, *first_included, MappableRangeOrder::BidirectionallySorted));
-    auto rightmost_region = get_region(*rightmost_overlapped(reads, *last_included, MappableRangeOrder::BidirectionallySorted));
+    auto leftmost_region  = get_region(*leftmost_overlapped(reads, *first_included));
+    auto rightmost_region = get_region(*rightmost_overlapped(reads, *last_included));
     
     if (count_overlapped(first_previous, first_included, leftmost_region, MappableRangeOrder::BidirectionallySorted) > 0) {
         auto max_left_flank_size = inner_distance(*first_included, *rightmost_mappable(first_previous, first_included));
@@ -94,65 +95,91 @@ GenomicRegion GenomeWalker::walk(const GenomicRegion& previous_region, const Rea
     
     //std::cout << "walking from " << previous_region << std::endl;
     
-    auto last_variant_it = cend(candidates);
+    auto last_variant_itr = cend(candidates);
     
     auto previous_candidates = bases(candidates.overlap_range(previous_region));
     
-    auto first_previous_it = cbegin(previous_candidates);
-    auto included_it       = cend(previous_candidates);
+    auto first_previous_itr = cbegin(previous_candidates);
+    auto included_itr       = cend(previous_candidates);
     
-    if (included_it == last_variant_it) return get_tail(previous_region, 0);
+    if (included_itr == last_variant_itr) return get_tail(previous_region, 0);
     
     if (max_included_ == 0) {
-        if (included_it != last_variant_it) {
-            return get_intervening(previous_region, *included_it);
+        if (included_itr != last_variant_itr) {
+            return get_intervening(previous_region, *included_itr);
         } else {
             return previous_region;
         }
     }
     
-    unsigned num_indicators {max_indicators_};
+    auto num_indicators = max_indicators_;
     
     if (indicator_limit_ == IndicatorLimit::SharedWithPreviousRegion) {
-        auto first_shared_in_previous_range_it = find_first_shared(reads, first_previous_it,
-                                                                   included_it, *included_it);
-        auto num_possible_indicators = static_cast<unsigned>(distance(first_shared_in_previous_range_it, included_it));
-        
-        num_indicators = min(num_possible_indicators, num_indicators);
+        auto it = find_first_shared(reads, first_previous_itr, included_itr, *included_itr);
+        auto max_possible_indicators = static_cast<unsigned>(distance(it, included_itr));
+        num_indicators = min(max_possible_indicators, num_indicators);
     }
     
     auto num_included = max_included_ - num_indicators;
     
-    auto first_included_it = prev(included_it, num_indicators);
+    auto first_included_itr = prev(included_itr, num_indicators);
     
-    auto num_remaining_candidates = static_cast<unsigned>(distance(included_it, last_variant_it));
+    auto num_remaining_candidates = static_cast<unsigned>(distance(included_itr, last_variant_itr));
+    
     unsigned num_excluded_candidates {0};
     
     if (extension_limit_ == ExtensionLimit::WithinReadLengthOfFirstIncluded) {
-        auto max_num_candidates_within_read_length = static_cast<unsigned>(max_count_if_shared_with_first(reads,
-                                                                                                        included_it, last_variant_it));
-        num_included = min({num_included, num_remaining_candidates, max_num_candidates_within_read_length + 1});
-        num_excluded_candidates = max_num_candidates_within_read_length - num_included;
+        auto max_candidates_within_read_length = static_cast<unsigned>(max_count_if_shared_with_first(reads, included_itr, last_variant_itr));
+        num_included = min({num_included, num_remaining_candidates, max_candidates_within_read_length + 1});
+        num_excluded_candidates = max_candidates_within_read_length - num_included;
     } else {
         num_included = min(num_included, num_remaining_candidates);
     }
     
-    auto first_excluded_it = next(included_it, num_included);
+    auto first_excluded_itr = next(included_itr, num_included);
     
     while (--num_included > 0 &&
-           is_optimal_to_extend(first_included_it, next(included_it), first_excluded_it,
-                                last_variant_it, reads, num_included + num_excluded_candidates)) {
-               ++included_it;
+           is_optimal_to_extend(first_included_itr, next(included_itr), first_excluded_itr,
+                                last_variant_itr, reads, num_included + num_excluded_candidates)) {
+               ++included_itr;
            }
     
-    advance(included_it, candidates.count_overlapped(*rightmost_mappable(first_included_it, next(included_it))) - 1);
+    advance(included_itr, candidates.count_overlapped(*rightmost_mappable(first_included_itr, next(included_itr))) - 1);
     
-    if (included_it == cend(candidates)) --included_it;
+    if (included_itr == cend(candidates)) --included_itr;
     
-    first_excluded_it = next(included_it);
+    first_excluded_itr = next(included_itr);
     
-    auto lhs_read = *leftmost_overlapped(reads, *first_included_it);
-    auto rhs_read = *rightmost_overlapped(reads, *included_it);
-    
-    return get_encompassing(lhs_read, rhs_read);
+    switch (expansion_limit_) {
+        case ExpansionLimit::UpToExcluded:
+        {
+            return expand_around_included(first_previous_itr, first_included_itr,
+                                          first_excluded_itr, last_variant_itr, reads);
+        }
+        case ExpansionLimit::WithinReadLength:
+        {
+            auto lhs_read = *leftmost_overlapped(reads, *first_included_itr);
+            auto rhs_read = *rightmost_overlapped(reads, *included_itr);
+            return get_encompassing(lhs_read, rhs_read);
+        }
+        case ExpansionLimit::UpToExcludedWithinReadLength:
+        {
+            auto lhs_read = *leftmost_overlapped(reads, *first_included_itr);
+            
+            while (first_previous_itr != first_included_itr && begins_before(lhs_read, *first_previous_itr)) {
+                ++first_previous_itr;
+            }
+            
+            auto rhs_read = *rightmost_overlapped(reads, *included_itr);
+            
+            while (last_variant_itr != first_excluded_itr && ends_before(rhs_read, *prev(last_variant_itr))) {
+                --last_variant_itr;
+            }
+            
+            return expand_around_included(first_previous_itr, first_included_itr,
+                                          first_excluded_itr, last_variant_itr, reads);
+        }
+        case ExpansionLimit::NoExpansion:
+            return get_encompassing(*first_included_itr, *included_itr);
+    }
 }

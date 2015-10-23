@@ -121,6 +121,8 @@ namespace Octopus
         
         const auto samples = get_samples(options, read_manager);
         
+        cout << "there are " << samples.size() << " samples" << endl;
+        
         cout << "writing results to " << output.path().string() << endl;
         
         const auto contigs = get_contigs(regions);

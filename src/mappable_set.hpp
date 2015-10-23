@@ -857,6 +857,19 @@ find_first_shared(const MappableSet<MappableType1>& mappables, ForwardIterator f
                         });
 }
 
+template <typename MappableType, typename ForwardIterator>
+size_t count_if_shared_with_first(const MappableSet<MappableType>& mappables,
+                                  ForwardIterator first, ForwardIterator last)
+{
+    if (first == last) return 0;
+    
+    auto overlapped = mappables.overlap_range(*first);
+    
+    if (empty(overlapped)) return 0;
+    
+    return count_overlapped(std::next(first), last, overlapped.back());
+}
+
 template <typename MappableType1, typename MappableType2>
 MappableSet<MappableType1>
 copy_overlapped(const MappableSet<MappableType1>& mappables, const MappableType2& mappable)
