@@ -178,6 +178,8 @@ std::vector<MappableType> Genotype<MappableType>::get_unique() const
     
     std::unique_copy(std::cbegin(elements_), std::cend(elements_), std::back_inserter(result));
     
+    result.shrink_to_fit();
+    
     return result;
 }
 
@@ -338,7 +340,7 @@ template <typename MappableType>
 std::unordered_map<MappableType, unsigned> get_element_count_map(const Genotype<MappableType>& genotype)
 {
     std::unordered_map<MappableType, unsigned> result {};
-    result.reserve(genotype.ploidy());
+    result.reserve(genotype.zygosity());
     
     for (unsigned i {}; i < genotype.ploidy(); ++i) {
         ++result[genotype.at(i)];

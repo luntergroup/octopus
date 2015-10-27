@@ -65,6 +65,11 @@ bool Genotype<Allele>::is_homozygous() const
 
 unsigned Genotype<Allele>::zygosity() const
 {
+    if (ploidy() == 1 || is_homozygous()) {
+        return 1;
+    } else if (ploidy() == 2) {
+        return 2;
+    }
     return static_cast<unsigned>(get_unique().size());
 }
 
@@ -85,10 +90,11 @@ unsigned Genotype<Allele>::ploidy() const noexcept
 
 std::vector<Allele> Genotype<Allele>::get_unique() const
 {
-    std::vector<Allele> result {};
-    result.reserve(ploidy());
+    auto result = alleles_;
     
-    std::unique_copy(std::cbegin(alleles_), std::cend(alleles_), std::back_inserter(result));
+    std::sort(std::begin(result), std::end(result));
+    
+    result.erase(std::unique(std::begin(result), std::end(result), std::end(result)));
     
     return result;
 }
