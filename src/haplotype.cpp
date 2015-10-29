@@ -8,7 +8,7 @@
 
 #include "haplotype.hpp"
 
-#include <algorithm> // std::for_each, std::binary_search, std::equal_range, std::sort,
+#include <algorithm> // std::for_each, std::binary_search, std::lower_bound, std::sort,
                      // std::nth_element, std::find_if_not, std::adjacent_find, std::unique
 #include <iterator>  // std::cbegin, std::cend, std::distance, std::next
 #include <boost/functional/hash.hpp> // boost::hash_combine
@@ -31,28 +31,28 @@ cached_sequence_ {}
 
 bool Haplotype::contains(const Allele& allele) const
 {
+    using std::cbegin; using std::cend; using std::binary_search;
+    
     if (explicit_alleles_.empty()) return false;
     
     if (::contains(get_region(), allele)) {
         // these binary searches are just optimisations
-        if (std::binary_search(std::cbegin(explicit_alleles_), std::cend(explicit_alleles_), allele)) {
+        if (binary_search(cbegin(explicit_alleles_), cend(explicit_alleles_), allele)) {
             return true;
-        } else if (std::binary_search(std::cbegin(explicit_alleles_), std::cend(explicit_alleles_),
-                                      allele.get_region())) {
+        } else if (binary_search(cbegin(explicit_alleles_), cend(explicit_alleles_), ::get_region(allele))) {
             // If the allele is not explcitly contained but the region is then it must be a different
             // allele, unless it is an insertion, in which case we must check the sequence
-            if (empty(allele.get_region())) {
-                const auto& haplotype_allele = *std::equal_range(std::cbegin(explicit_alleles_),
-                                                                 std::cend(explicit_alleles_),
-                                                                 allele.get_region()).first;
-                return ::contains(haplotype_allele, allele);
+            if (is_insertion(allele)) {
+                auto it = std::lower_bound(cbegin(explicit_alleles_), cend(explicit_alleles_),
+                                           allele.get_region());
+                return ::contains(*it, allele);
             } else {
                 return false;
             }
         }
         
-        auto overlapped = bases(overlap_range(std::cbegin(explicit_alleles_), std::cend(explicit_alleles_),
-                                              allele));
+        auto overlapped = bases(overlap_range(cbegin(explicit_alleles_), cend(explicit_alleles_), allele,
+                                              MappableRangeOrder::BidirectionallySorted));
         
         if (overlapped.size() == 1 && ::contains(overlapped.front(), allele)) {
             return allele == splice(overlapped.front(), get_overlapped(overlapped.front(), allele));
