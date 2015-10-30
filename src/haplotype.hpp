@@ -19,12 +19,12 @@
 #include "contig_region.hpp"
 #include "mappable.hpp"
 #include "allele.hpp"
-#include "variant.hpp"
 #include "comparable.hpp"
 #include "mappable.hpp"
 
 class ReferenceGenome;
 class GenomicRegion;
+class Variant;
 
 class Haplotype;
 
@@ -50,17 +50,14 @@ public:
     
     template <typename T> void push_back(T&& allele);
     template <typename T> void push_front(T&& allele);
+    void operator+=(const Haplotype& other);
     
-    bool contains(const Allele& allele) const;
     const GenomicRegion& get_region() const;
+    bool contains(const Allele& allele) const;
     SequenceType get_sequence() const;
     SequenceType get_sequence(const GenomicRegion& region) const;
     
     std::vector<Variant> difference(const Haplotype& from) const;
-    unsigned num_transitions() const noexcept;
-    unsigned num_transversions() const noexcept;
-    
-    void operator+=(const Haplotype& other);
     
     size_t get_hash() const;
     
@@ -185,10 +182,6 @@ namespace boost
 } // namespace boost
 
 std::ostream& operator<<(std::ostream& os, const Haplotype& haplotype);
-
-void add_to_back(const Variant& a_variant, Haplotype& haplotype);
-void add_to_front(const Variant& a_variant, Haplotype& haplotype);
-bool contains(const Haplotype& haplotype, const Variant& a_variant);
 
 void print_alleles(const Haplotype& haplotype);
 void print_variant_alleles(const Haplotype& haplotype);

@@ -131,8 +131,8 @@ RealType log_sum_exp(const Container& values)
 }
 
 template <typename RealType, typename IntegerType,
-          typename = typename std::enable_if<std::is_floating_point<RealType>::value>::type,
-          typename = typename std::enable_if<std::is_integral<IntegerType>::value>::type>
+          typename = std::enable_if_t<std::is_floating_point<RealType>::value>,
+          typename = std::enable_if_t<std::is_integral<IntegerType>::value>>
 inline RealType log_factorial(IntegerType x)
 {
     if (x == 0 || x == 1) return 0;

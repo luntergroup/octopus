@@ -21,7 +21,7 @@ class GenomicRegion;
 class Variant;
 
 namespace Octopus {
-    
+
 class AssemblerCandidateVariantGenerator : public ICandidateVariantGenerator
 {
 public:

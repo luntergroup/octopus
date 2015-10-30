@@ -1,0 +1,56 @@
+//
+//  trio_caller.hpp
+//  Octopus
+//
+//  Created by Daniel Cooke on 30/10/2015.
+//  Copyright © 2015 Oxford University. All rights reserved.
+//
+
+#ifndef trio_caller_hpp
+#define trio_caller_hpp
+
+#include <vector>
+#include <string>
+
+#include "variant_caller.hpp"
+
+#include "haplotype_phaser.hpp"
+
+class GenomicRegion;
+class ReadManager;
+class ReadTransform;
+class Variant;
+class VcfRecord;
+
+namespace Octopus
+{
+    class TrioVariantCaller : public VariantCaller
+    {
+    public:
+        TrioVariantCaller() = delete;
+        explicit TrioVariantCaller(ReferenceGenome& reference, CandidateVariantGenerator& candidate_generator,
+                                   unsigned ploidy, SampleIdType mother, SampleIdType father,
+                                   double min_variant_posterior);
+        ~TrioVariantCaller() = default;
+        
+        TrioVariantCaller(const TrioVariantCaller&)            = delete;
+        TrioVariantCaller& operator=(const TrioVariantCaller&) = delete;
+        TrioVariantCaller(TrioVariantCaller&&)                 = delete;
+        TrioVariantCaller& operator=(TrioVariantCaller&&)      = delete;
+        
+    private:
+        HaplotypePhaser phaser_;
+        
+        const unsigned ploidy_;
+        const SampleIdType mother_, father_;
+        const double min_variant_posterior_ = 0.95;
+        
+        std::string do_get_details() const override;
+        
+        std::vector<VcfRecord> call_variants(const GenomicRegion& region, const std::vector<Variant>& candidates,
+                                             const ReadMap& reads) override;
+    };
+    
+} // namespace Octopus
+
+#endif /* trio_caller_hpp */

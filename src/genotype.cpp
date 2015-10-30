@@ -94,7 +94,7 @@ std::vector<Allele> Genotype<Allele>::get_unique() const
     
     std::sort(std::begin(result), std::end(result));
     
-    result.erase(std::unique(std::begin(result), std::end(result), std::end(result)));
+    result.erase(std::unique(std::begin(result), std::end(result)), std::end(result));
     
     return result;
 }

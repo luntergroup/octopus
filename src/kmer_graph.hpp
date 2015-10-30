@@ -21,6 +21,7 @@
 #include <unordered_map>
 #include <boost/graph/adjacency_list.hpp>
 #include <boost/graph/depth_first_search.hpp>
+#include <boost/functional/hash.hpp> // boost::hash_combine
 
 #include "string_utils.hpp"
 #include "hash_functions.hpp"
@@ -33,11 +34,13 @@ template <typename ColourType, typename StringStoragePolicy>
 class KmerGraph : StringStoragePolicy
 {
 public:
-    using SizeType = std::uint_fast32_t;
     using typename StringStoragePolicy::InputType;
+    
+    using SizeType = std::uint_fast32_t;
     
     KmerGraph() = delete;
     explicit KmerGraph(unsigned k);
+    //explicit KmerGraph(unsigned k, std::function<int(ColourType)> f_colour_weight);
     ~KmerGraph() = default;
     
     KmerGraph(const KmerGraph&)            = default;
@@ -45,12 +48,9 @@ public:
     KmerGraph(KmerGraph&&)                 = default;
     KmerGraph& operator=(KmerGraph&&)      = default;
     
-    void add_sequence(InputType sequence, SizeType index, ColourType colour);
-    void set_colour_weight_map(std::function<int(ColourType)> f_colour_weight);
+    void add_sequence(InputType sequence, SizeType position, ColourType colour);
     
     std::vector<std::string> get_contigs(unsigned max_num_paths);
-    
-    std::string get_longest_path_from_from(const std::string& kmer, ColourType colour) const;
     
     bool is_acyclic() const;
     unsigned num_kmers() const noexcept;
@@ -58,6 +58,7 @@ public:
     void clear();
     
     void print_kmers() const;
+    void print_kmers(SizeType position) const;
     
 private:
     using typename StringStoragePolicy::ReferenceType;
@@ -65,25 +66,25 @@ private:
     
     struct KmerEdge
     {
-        ReferenceType the_kmer;
+        ReferenceType kmer;
         std::unordered_map<ColourType, unsigned> colours;
         int weight;
-        std::vector<SizeType> the_indices;
+        std::vector<SizeType> positions;
     };
     
     using Graph = boost::adjacency_list<
         boost::listS, boost::listS, boost::directedS, boost::no_property, KmerEdge
     >;
-    using Vertex                 = typename boost::graph_traits<Graph>::vertex_descriptor;
-    using Edge                   = typename boost::graph_traits<Graph>::edge_descriptor;
-    using VertexIterator         = typename boost::graph_traits<Graph>::vertex_iterator;
-    using EdgeIterator           = typename boost::graph_traits<Graph>::edge_iterator;
-    using OutEdgeIterator        = typename boost::graph_traits<Graph>::out_edge_iterator;
-    using VertexPair             = std::pair<VertexIterator, VertexIterator>;
-    using EdgePair               = std::pair<EdgeIterator, EdgeIterator>;
-    using OutEdgePair            = std::pair<OutEdgeIterator, OutEdgeIterator>;
-    using VertexIndexMapImpl     = std::unordered_map<Vertex, unsigned>;
-    using VertexIndexMap         = boost::associative_property_map<VertexIndexMapImpl>;
+    using Vertex             = typename boost::graph_traits<Graph>::vertex_descriptor;
+    using Edge               = typename boost::graph_traits<Graph>::edge_descriptor;
+    using VertexIterator     = typename boost::graph_traits<Graph>::vertex_iterator;
+    using EdgeIterator       = typename boost::graph_traits<Graph>::edge_iterator;
+    using OutEdgeIterator    = typename boost::graph_traits<Graph>::out_edge_iterator;
+    using VertexPair         = std::pair<VertexIterator, VertexIterator>;
+    using EdgePair           = std::pair<EdgeIterator, EdgeIterator>;
+    using OutEdgePair        = std::pair<OutEdgeIterator, OutEdgeIterator>;
+    using VertexIndexMapImpl = std::unordered_map<Vertex, unsigned>;
+    using VertexIndexMap     = boost::associative_property_map<VertexIndexMapImpl>;
     
     using Bubble  = std::pair<std::vector<Edge>, std::vector<Edge>>;
     using Bubbles = std::vector<Bubble>;
@@ -91,44 +92,56 @@ private:
     class DfsVisitor : public boost::default_dfs_visitor
     {
     public:
-        DfsVisitor(bool& is_acyclic) : is_acyclic_ {is_acyclic} {}
+        explicit DfsVisitor(bool& is_acyclic) : is_acyclic_ {is_acyclic} {}
         void back_edge(Edge e, const Graph& g);
     private:
         bool& is_acyclic_;
     };
     
+    struct EdgeHash
+    {
+        size_t operator()(const Edge& edge) const
+        {
+            size_t seed {};
+            //boost::hash_combine(seed, boost::hash<Vertex>()(boost::source(edge, graph_)));
+            //boost::hash_combine(seed, boost::hash<Vertex>()(boost::target(edge, graph_)));
+            return seed;
+        }
+    };
+    
+    using PositionMap = std::unordered_map<SizeType, std::unordered_set<Edge, EdgeHash>>;
+    
     const unsigned k_;
-    Graph the_graph_;
+    Graph graph_;
     std::unordered_map<ReferenceType, Vertex> kmer_vertex_map_;
     std::function<int(ColourType)> f_colour_weight_;
     VertexIndexMapImpl vertex_indices_impl_;
     VertexIndexMap vertex_indices_;
+    PositionMap positions_;
     
-    void add_kmer(ReferenceType the_kmer, SizeType index, ColourType colour);
-    std::pair<Vertex, Vertex> get_vertices(ReferenceType a_kmer);
-    std::pair<Vertex, bool> get_vertex(ReferenceType a_kmer_prefix_or_suffix) const;
-    Vertex add_vertex(ReferenceType a_k_minus_1_mer);
-    void add_edge(Vertex source, Vertex target, ReferenceType the_kmer, SizeType index,
-                  ColourType colour);
+    void add_kmer(ReferenceType kmer, SizeType index, ColourType colour);
+    std::pair<Vertex, Vertex> get_vertices(ReferenceType kmer);
+    std::pair<Vertex, bool> get_vertex(ReferenceType kmer_prefix_or_suffix) const;
+    Vertex add_vertex(ReferenceType k_minus_1_mer);
+    void add_edge(Vertex source, Vertex target, ReferenceType kmer, SizeType index, ColourType colour);
     
-    bool is_in_graph(ReferenceType a_k_minus_1_mer) const;
+    bool is_in_graph(ReferenceType k_minus_1_mer) const;
     unsigned get_next_index() const;
     
-    Bubbles find_bubbles(Vertex the_source, SizeType min_index, SizeType max_index,
-                         ColourType to_follow) const;
-    std::vector<std::string> get_all_euler_paths(Vertex the_source, unsigned max_num_paths);
+    Bubbles find_bubbles(Vertex source, SizeType min_index, SizeType max_index, ColourType to_follow) const;
+    std::vector<std::string> get_all_euler_paths(Vertex source, unsigned max_num_paths);
     template <typename ForwardIterator>
     std::string convert_path_to_string(ForwardIterator begin, ForwardIterator end) const;
     
-    ReferenceType get_prefix(ReferenceType a_kmer) const;
-    ReferenceType get_suffix(ReferenceType a_kmer) const;
+    ReferenceType get_prefix(ReferenceType kmer) const;
+    ReferenceType get_suffix(ReferenceType kmer) const;
 };
 
 template <typename ColourType, typename T>
 KmerGraph<ColourType, T>::KmerGraph(unsigned k)
 :
 k_ {k},
-the_graph_ {},
+graph_ {},
 kmer_vertex_map_ {},
 f_colour_weight_ {[] (ColourType c) { return 1; }},
 vertex_indices_impl_ {},
@@ -136,39 +149,23 @@ vertex_indices_ {vertex_indices_impl_}
 {}
 
 template <typename ColourType, typename T>
-void KmerGraph<ColourType, T>::set_colour_weight_map(std::function<int(ColourType)> f_colour_weight)
-{
-    f_colour_weight_ = f_colour_weight;
-}
-
-template <typename ColourType, typename T>
-void KmerGraph<ColourType, T>::add_sequence(InputType sequence, SizeType index,
-                                                ColourType colour)
+void KmerGraph<ColourType, T>::add_sequence(InputType sequence, SizeType position, ColourType colour)
 {
     if (sequence.size() < k_) return;
+    
     ReferenceType sequence_ref = store(sequence);
-    unsigned num_kmers = static_cast<unsigned>(sequence_ref.size()) - (k_ - 1);
-    for (unsigned i = 0; i < num_kmers; ++i) {
-        add_kmer(sequence_ref.substr(i, k_), index, colour);
+    
+    auto num_kmers = static_cast<unsigned>(sequence_ref.size()) - (k_ - 1);
+    
+    for (unsigned i = 0; i < num_kmers; ++i, ++position) {
+        add_kmer(sequence_ref.substr(i, k_), position, colour);
     }
 }
 
 template <typename C, typename T>
 std::vector<std::string> KmerGraph<C, T>::get_contigs(unsigned max_num_paths)
 {
-    return get_all_euler_paths(boost::vertex(0, the_graph_), max_num_paths);
-}
-
-template <typename ColourType, typename T>
-std::string KmerGraph<ColourType, T>::get_longest_path_from_from(const std::string& kmer, ColourType colour) const
-{
-    std::string result {};
-    
-    auto vertices = get_vertices(kmer);
-    
-    
-    
-    return result;
+    return get_all_euler_paths(boost::vertex(0, graph_), max_num_paths);
 }
 
 template <typename C, typename T>
@@ -181,46 +178,46 @@ template <typename C, typename T>
 bool KmerGraph<C, T>::is_acyclic() const
 {
     bool is_acyclic {true};
-    DfsVisitor a_visitor {is_acyclic};
-    boost::depth_first_search(the_graph_, visitor(a_visitor).vertex_index_map(vertex_indices_));
+    DfsVisitor visitor {is_acyclic};
+    boost::depth_first_search(graph_, visitor(visitor).vertex_index_map(vertex_indices_));
     return is_acyclic;
 }
 
 template <typename C, typename T>
 unsigned KmerGraph<C, T>::num_kmers() const noexcept
 {
-    return static_cast<unsigned>(boost::num_edges(the_graph_));
+    return static_cast<unsigned>(boost::num_edges(graph_));
 }
 
 template <typename C, typename T>
 unsigned KmerGraph<C, T>::num_connections() const noexcept
 {
-    return static_cast<unsigned>(boost::num_vertices(the_graph_));
+    return static_cast<unsigned>(boost::num_vertices(graph_));
 }
 
 template <typename C, typename T>
 void KmerGraph<C, T>::clear()
 {
-    the_graph_.clear();
+    graph_.clear();
     kmer_vertex_map_.clear();
     vertex_indices_impl_.clear();
 }
 
 template <typename ColourType, typename T>
-void KmerGraph<ColourType, T>::add_kmer(ReferenceType the_kmer, SizeType index,
-                                            ColourType colour)
+void KmerGraph<ColourType, T>::add_kmer(ReferenceType kmer, SizeType index, ColourType colour)
 {
     Vertex source, target;
-    std::tie(source, target) = get_vertices(the_kmer);
-    add_edge(source, target, the_kmer, index, colour);
+    std::tie(source, target) = get_vertices(kmer);
+    add_edge(source, target, kmer, index, colour);
 }
 
 template <typename C, typename T>
 std::pair<typename KmerGraph<C, T>::Vertex, typename KmerGraph<C, T>::Vertex>
-KmerGraph<C, T>::get_vertices(ReferenceType a_kmer)
+KmerGraph<C, T>::get_vertices(ReferenceType kmer)
 {
-    auto kmer_prefix = get_prefix(a_kmer);
-    auto kmer_suffix = get_suffix(a_kmer);
+    auto kmer_prefix = get_prefix(kmer);
+    auto kmer_suffix = get_suffix(kmer);
+    
     Vertex source, target;
     if (kmer_prefix == kmer_suffix) {
         source = (is_in_graph(kmer_prefix)) ? get_vertex(kmer_prefix).first : add_vertex(kmer_prefix);
@@ -229,86 +226,92 @@ KmerGraph<C, T>::get_vertices(ReferenceType a_kmer)
         source = (is_in_graph(kmer_prefix)) ? get_vertex(kmer_prefix).first : add_vertex(kmer_prefix);
         target = (is_in_graph(kmer_suffix)) ? get_vertex(kmer_suffix).first : add_vertex(kmer_suffix);
     }
+    
     return {source, target};
 }
 
 template <typename C, typename T>
 std::pair<typename KmerGraph<C, T>::Vertex, bool>
-KmerGraph<C, T>::get_vertex(ReferenceType a_kmer_prefix_or_suffix) const
+KmerGraph<C, T>::get_vertex(ReferenceType kmer_prefix_or_suffix) const
 {
     EdgePair ep;
-    for (ep = boost::edges(the_graph_); ep.first != ep.second; ++ep.first) {
-        if (Octopus::is_prefix(a_kmer_prefix_or_suffix, the_graph_[*ep.first].the_kmer)) {
-            return {boost::source(*ep.first, the_graph_), true};
+    
+    for (ep = boost::edges(graph_); ep.first != ep.second; ++ep.first) {
+        if (Octopus::is_prefix(kmer_prefix_or_suffix, graph_[*ep.first].kmer)) {
+            return {boost::source(*ep.first, graph_), true};
         }
-        if (Octopus::is_suffix(a_kmer_prefix_or_suffix, the_graph_[*ep.first].the_kmer)) {
-            return {boost::target(*ep.first, the_graph_), true};
+        if (Octopus::is_suffix(kmer_prefix_or_suffix, graph_[*ep.first].kmer)) {
+            return {boost::target(*ep.first, graph_), true};
         }
     }
-    return {boost::source(*ep.first, the_graph_), false};
+    
+    return {boost::source(*ep.first, graph_), false};
 }
 
 template <typename C, typename T>
-typename KmerGraph<C, T>::Vertex KmerGraph<C, T>::add_vertex(ReferenceType a_k_minus_1_mer)
+typename KmerGraph<C, T>::Vertex KmerGraph<C, T>::add_vertex(ReferenceType k_minus_1_mer)
 {
-    auto the_new_vertex = boost::add_vertex(the_graph_);
-    kmer_vertex_map_.emplace(a_k_minus_1_mer, the_new_vertex);
-    boost::put(vertex_indices_, the_new_vertex, get_next_index());
-    return the_new_vertex;
+    auto result = boost::add_vertex(graph_);
+    kmer_vertex_map_.emplace(k_minus_1_mer, result);
+    boost::put(vertex_indices_, result, get_next_index());
+    return result;
 }
 
 template <typename ColourType, typename T>
-void KmerGraph<ColourType, T>::add_edge(Vertex source, Vertex target, ReferenceType the_kmer,
-                                            SizeType index, ColourType colour)
+void KmerGraph<ColourType, T>::add_edge(Vertex source, Vertex target, ReferenceType kmer,
+                                        SizeType position, ColourType colour)
 {
-    auto the_existing_edge = boost::edge(source, target, the_graph_);
-    if (the_existing_edge.second) {
-        ++the_graph_[the_existing_edge.first].colours[colour];
-        the_graph_[the_existing_edge.first].weight += f_colour_weight_(colour);
-        the_graph_[the_existing_edge.first].the_indices.emplace_back(index);
+    auto existing_edge = boost::edge(source, target, graph_);
+    
+    if (existing_edge.second) {
+        ++graph_[existing_edge.first].colours[colour];
+        graph_[existing_edge.first].weight += f_colour_weight_(colour);
+        graph_[existing_edge.first].positions.emplace_back(position);
+        positions_[position].emplace(existing_edge.first);
     } else {
-        auto a_new_edge = boost::add_edge(source, target, the_graph_).first;
-        the_graph_[a_new_edge].the_kmer = the_kmer;
-        ++the_graph_[a_new_edge].colours[colour];
-        the_graph_[a_new_edge].weight = f_colour_weight_(colour);
-        the_graph_[a_new_edge].the_indices.emplace_back(index);
+        auto new_edge = boost::add_edge(source, target, graph_).first;
+        
+        graph_[new_edge].kmer = kmer;
+        ++graph_[new_edge].colours[colour];
+        graph_[new_edge].weight = f_colour_weight_(colour);
+        graph_[new_edge].positions.emplace_back(position);
+        positions_[position].emplace(new_edge);
     }
 }
 
 template <typename C, typename T>
-bool KmerGraph<C, T>::is_in_graph(ReferenceType a_k_minus_1_mer) const
+bool KmerGraph<C, T>::is_in_graph(ReferenceType k_minus_1_mer) const
 {
-    return kmer_vertex_map_.count(a_k_minus_1_mer) > 0;
+    return kmer_vertex_map_.count(k_minus_1_mer) > 0;
 }
 
 template <typename C, typename T>
 unsigned KmerGraph<C, T>::get_next_index() const
 {
-    return static_cast<unsigned>(boost::num_vertices(the_graph_)) - 1;
+    return static_cast<unsigned>(boost::num_vertices(graph_)) - 1;
 }
 
 template <typename C, typename T>
-std::vector<std::string> KmerGraph<C, T>::get_all_euler_paths(Vertex the_source,
-                                                                  unsigned max_num_paths)
+std::vector<std::string> KmerGraph<C, T>::get_all_euler_paths(Vertex source, unsigned max_num_paths)
 {
     std::vector<std::string> euler_paths {};
     
 //    std::list<Vertex> an_euler_path {};
 //    std::list<Edge> path {};
-//    auto all_verticies = boost::vertices(the_graph_);
+//    auto all_verticies = boost::vertices(graph_);
 //    std::unordered_set<Vertex> unvisited_verticies {all_verticies.first, all_verticies.second};
 //    Vertex current_vertex {the_source};
 //    unsigned num_edges_to_vist {num_kmers()};
 //    OutEdgeIterator out_edge_begin, out_edge_end;
 //    
 //    while (num_edges_to_vist > 0) {
-//        std::tie(out_edge_begin, out_edge_end) = boost::out_edges(current_vertex, the_graph_);
+//        std::tie(out_edge_begin, out_edge_end) = boost::out_edges(current_vertex, graph_);
 //        for (; out_edge_begin != out_edge_end; ++out_edge_begin) {
-//            if (edge_counts[*out_edge_begin] < the_graph_[*out_edge_begin].colours.size()) {
+//            if (edge_counts[*out_edge_begin] < graph_[*out_edge_begin].colours.size()) {
 //                ++edge_counts[*out_edge_begin];
 //                an_euler_path.emplace_back(current_vertex);
 //                path.emplace_back(*out_edge_begin);
-//                current_vertex = boost::target(*out_edge_begin, the_graph_);
+//                current_vertex = boost::target(*out_edge_begin, graph_);
 //                --num_edges_to_vist;
 //                break;
 //            }
@@ -326,12 +329,10 @@ std::vector<std::string> KmerGraph<C, T>::get_all_euler_paths(Vertex the_source,
 
 template <typename ColourType, typename T>
 typename KmerGraph<ColourType, T>::Bubbles
-KmerGraph<ColourType, T>::find_bubbles(Vertex the_source, SizeType min_index, SizeType max_index,
+KmerGraph<ColourType, T>::find_bubbles(Vertex source, SizeType min_index, SizeType max_index,
                                        ColourType to_follow) const
 {
     Bubbles result {};
-    
-    
     
     return result;
 }
@@ -340,36 +341,49 @@ template <typename C, typename T>
 template <typename ForwardIterator>
 std::string KmerGraph<C, T>::convert_path_to_string(ForwardIterator begin, ForwardIterator end) const
 {
-    auto the_first_kmer_prefix = get_prefix(the_graph_[*begin].the_kmer);
-    std::string result {the_first_kmer_prefix.cbegin(), the_first_kmer_prefix.cend()};
+    auto first_kmer_prefix = get_prefix(graph_[*begin].kmer);
+    
+    std::string result {first_kmer_prefix.cbegin(), first_kmer_prefix.cend()};
     result.reserve(k_ + std::distance(begin, end));
+    
     for (; begin != end; ++begin) {
-        result.push_back(the_graph_[*begin].the_kmer.back());
+        result.push_back(graph_[*begin].kmer.back());
     }
+    
     return result;
 }
 
 template <typename C, typename T>
-typename KmerGraph<C, T>::ReferenceType KmerGraph<C, T>::get_prefix(ReferenceType a_kmer) const
+typename KmerGraph<C, T>::ReferenceType KmerGraph<C, T>::get_prefix(ReferenceType kmer) const
 {
-    return a_kmer.substr(0, k_ - 1);
+    return kmer.substr(0, k_ - 1);
 }
 
 template <typename C, typename T>
-typename KmerGraph<C, T>::ReferenceType KmerGraph<C, T>::get_suffix(ReferenceType a_kmer) const
+typename KmerGraph<C, T>::ReferenceType KmerGraph<C, T>::get_suffix(ReferenceType kmer) const
 {
-    return a_kmer.substr(1, k_ - 1);
+    return kmer.substr(1, k_ - 1);
 }
 
 template <typename C, typename T>
 void KmerGraph<C, T>::print_kmers() const
 {
-    auto kmer_map = boost::get(&KmerEdge::the_kmer, the_graph_);
-    for (auto ep = edges(the_graph_); ep.first != ep.second; ++ep.first) {
+    auto kmer_map = boost::get(&KmerEdge::kmer, graph_);
+    for (auto ep = edges(graph_); ep.first != ep.second; ++ep.first) {
         Edge e = *ep.first;
-        std::cout << kmer_map[e] << "(" << the_graph_[e].colours.size() << ") ";
+        std::cout << kmer_map[e] << "(" << graph_[e].colours.size() << ") ";
     }
     std::cout << std::endl;
+}
+
+template <typename C, typename T>
+void KmerGraph<C, T>::print_kmers(SizeType position) const
+{
+    auto kmer_map = boost::get(&KmerEdge::kmer, graph_);
+    
+    for (const auto& edge : positions_.at(position)) {
+        std::cout << kmer_map[edge] << "(" << graph_[edge].colours.size() << ") ";
+    }
 }
 
 //} // namespace Octopus

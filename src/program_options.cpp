@@ -139,23 +139,25 @@ namespace Octopus
         
         po::options_description model("Model options");
         model.add_options()
-        ("model", po::value<std::string>()->default_value("population"), "the calling model used")
-        ("ploidy", po::value<unsigned>()->default_value(2), "the organism ploidy, all contigs with unspecified ploidy are assumed this ploidy")
-        ("contig-ploidies", po::value<std::vector<std::string>>()->multitoken(), "the ploidy of individual contigs")
+        ("model", po::value<std::string>()->default_value("population"), "calling model used")
+        ("ploidy", po::value<unsigned>()->default_value(2), "organism ploidy, all contigs with unspecified ploidy are assumed this ploidy")
+        ("contig-ploidies", po::value<std::vector<std::string>>()->multitoken(), "ploidy of individual contigs")
         ("contig-ploidies-file", po::value<std::string>(), "list of contig=ploidy pairs, one per line")
-        ("normal-sample", po::value<std::string>(), "the normal sample used in cancer calling model")
-        ("transition-prior", po::value<double>()->default_value(0.003), "the prior probability of a transition snp from the reference")
-        ("transversion-prior", po::value<double>()->default_value(0.003), "the prior probability of a transversion snp from the reference")
-        ("insertion-prior", po::value<double>()->default_value(0.003), "the prior probability of an insertion into the reference")
-        ("deletion-prior", po::value<double>()->default_value(0.003), "the prior probability of a deletion from the reference")
-        ("prior-precision", po::value<double>()->default_value(0.003), "the precision (inverse variance) of the given variant priors")
+        ("normal-sample", po::value<std::string>(), "normal sample used in cancer model")
+        ("maternal-sample", po::value<std::string>(), "maternal sample for trio model")
+        ("paternal-sample", po::value<std::string>(), "paternal sample for trio model")
+        ("transition-prior", po::value<double>()->default_value(0.003), "prior probability of a transition snp from the reference")
+        ("transversion-prior", po::value<double>()->default_value(0.003), "prior probability of a transversion snp from the reference")
+        ("insertion-prior", po::value<double>()->default_value(0.003), "prior probability of an insertion into the reference")
+        ("deletion-prior", po::value<double>()->default_value(0.003), "prior probability of a deletion from the reference")
+        ("prior-precision", po::value<double>()->default_value(0.003), "precision (inverse variance) of the given variant priors")
         ;
         
         po::options_description calling("Caller options");
         calling.add_options()
-        ("min-variant-posterior", po::value<unsigned>()->default_value(20), "the minimum variant call posterior probability (phred scale)")
-        ("min-refcall-posterior", po::value<unsigned>()->default_value(10), "the minimum homozygous reference call posterior probability (phred scale)")
-        ("min-somatic-posterior", po::value<unsigned>()->default_value(10), "the minimum somaitc mutation call posterior probability (phred scale)")
+        ("min-variant-posterior", po::value<unsigned>()->default_value(20), "minimum variant call posterior probability (phred scale)")
+        ("min-refcall-posterior", po::value<unsigned>()->default_value(10), "minimum homozygous reference call posterior probability (phred scale)")
+        ("min-somatic-posterior", po::value<unsigned>()->default_value(10), "minimum somaitc mutation call posterior probability (phred scale)")
         ("make-positional-refcalls", po::bool_switch()->default_value(false), "caller will output positional REFCALLs")
         ("make-blocked-refcalls", po::bool_switch()->default_value(false), "caller will output blocked REFCALLs")
         ("somatics-only", po::bool_switch()->default_value(false), "only output somatic calls (for somatic calling models only)")
@@ -180,7 +182,11 @@ namespace Octopus
         }
         
         if (vm.at("model").as<std::string>() == "cancer" && vm.count("normal-sample") == 0) {
-            throw std::logic_error {"Option model requires option normal-sample when model=cancer"};
+            throw std::logic_error {"option normal-sample is required when model=cancer"};
+        }
+        
+        if (vm.at("model").as<std::string>() == "trio" && (vm.count("maternal-sample") == 0 || vm.count("paternal-sample") == 0)) {
+            throw std::logic_error {"option maternal-sample and paternal-sample are required when model=trio"};
         }
         
         conflicting_options(vm, "make-positional-refcalls", "make-blocked-refcalls");
@@ -601,7 +607,7 @@ namespace Octopus
         auto min_refcall_posterior_phred = options.at("min-refcall-posterior").as<unsigned>();
         auto min_refcall_posterior       = Maths::phred_to_probability(min_refcall_posterior_phred);
         
-        SampleIdType normal_sample {};
+        SampleIdType normal_sample {}, maternal_sample, paternal_sample;
         double min_somatic_posterior {};
         bool call_somatics_only {false};
         
@@ -610,6 +616,9 @@ namespace Octopus
             auto min_somatic_posterior_phred = options.at("min-somatic-posterior").as<unsigned>();
             min_somatic_posterior = Maths::phred_to_probability(min_somatic_posterior_phred);
             call_somatics_only = options.at("somatics-only").as<bool>();
+        } else if (model == "trio") {
+            maternal_sample = options.at("maternal-sample").as<std::string>();
+            paternal_sample = options.at("paternal-sample").as<std::string>();
         }
         
         return make_variant_caller(model, reference, candidate_generator, refcall_type,

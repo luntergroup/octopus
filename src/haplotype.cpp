@@ -16,6 +16,7 @@
 #include "reference_genome.hpp"
 #include "genomic_region.hpp"
 #include "mappable_algorithms.hpp"
+#include "variant.hpp"
 
 #include <iostream> // TEST
 
@@ -28,6 +29,17 @@ region_ {region},
 explicit_alleles_ {},
 cached_sequence_ {}
 {}
+
+void Haplotype::operator+=(const Haplotype& other)
+{
+    explicit_alleles_.insert(std::end(explicit_alleles_), std::cbegin(other.explicit_alleles_),
+                             std::cend(other.explicit_alleles_));
+}
+
+const GenomicRegion& Haplotype::get_region() const
+{
+    return region_;
+}
 
 bool Haplotype::contains(const Allele& allele) const
 {
@@ -62,11 +74,6 @@ bool Haplotype::contains(const Allele& allele) const
     } else {
         return false;
     }
-}
-
-const GenomicRegion& Haplotype::get_region() const
-{
-    return region_;
 }
 
 Haplotype::SequenceType Haplotype::get_sequence() const
@@ -177,28 +184,6 @@ std::vector<Variant> Haplotype::difference(const Haplotype& from) const
     result.shrink_to_fit();
     
     return result;
-}
-
-unsigned Haplotype::num_transitions() const noexcept
-{
-    return static_cast<unsigned>(std::count_if(std::cbegin(explicit_alleles_), std::cend(explicit_alleles_),
-                                               [] (const auto& allele) {
-                                                   return true;
-                                               }));
-}
-
-unsigned Haplotype::num_transversions() const noexcept
-{
-    return static_cast<unsigned>(std::count_if(std::cbegin(explicit_alleles_), std::cend(explicit_alleles_),
-                                               [] (const auto& allele) {
-                                                   return true;
-                                               }));
-}
-
-void Haplotype::operator+=(const Haplotype& other)
-{
-    explicit_alleles_.insert(std::end(explicit_alleles_), std::cbegin(other.explicit_alleles_),
-                                 std::cend(other.explicit_alleles_));
 }
 
 size_t Haplotype::get_hash() const
@@ -373,21 +358,6 @@ std::ostream& operator<<(std::ostream& os, const Haplotype& haplotype)
 {
     os << haplotype.get_region() << " " << haplotype.get_sequence();
     return os;
-}
-
-void add_to_back(const Variant& a_variant, Haplotype& haplotype)
-{
-    haplotype.push_back(a_variant.get_alternative_allele());
-}
-
-void add_to_front(const Variant& a_variant, Haplotype& haplotype)
-{
-    haplotype.push_front(a_variant.get_alternative_allele());
-}
-
-bool contains(const Haplotype& haplotype, const Variant& a_variant)
-{
-    return haplotype.contains(a_variant.get_alternative_allele());
 }
 
 void print_alleles(const Haplotype& haplotype)

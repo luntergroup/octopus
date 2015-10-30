@@ -59,7 +59,6 @@ private:
     bool are_candidates_sorted_;
     SizeType max_seen_candidate_size_;
     
-    bool is_good_sequence(const SequenceType& sequence) const noexcept;
     template <typename T1, typename T2, typename T3>
     void add_candidate(T1&& region, T2&& sequence_removed, T3&& sequence_added);
     void add_snvs_in_match_range(const GenomicRegion& region, SequenceIterator first_base,

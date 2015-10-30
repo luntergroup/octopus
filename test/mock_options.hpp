@@ -22,8 +22,8 @@ inline po::variables_map get_basic_mock_options()
         "--reference", human_reference_fasta.c_str(),
         //"--reference", ecoli_reference_fasta.c_str(),
         
-        "--reads", NA12878_low_coverage.c_str(), HG00101.c_str(), HG00102.c_str(), HG00103.c_str(),
-        //"--reads", HG00101.c_str(),
+        // "--reads", NA12878_low_coverage.c_str(), HG00101.c_str(), HG00102.c_str(), HG00103.c_str(),
+        "--reads", NA12878_low_coverage.c_str(),
         
         //"--reads", NA12878_high_coverage.c_str(), NA12878_simulated_cancer_basic.c_str(), //cancer test
         //"--reads", NA12891_high_coverage.c_str(), NA12878_simulated_cancer_basic.c_str(), //cancer test
@@ -79,7 +79,7 @@ inline po::variables_map get_basic_mock_options()
         
         //"--regions", "7:122579662-122579817", // complex indels (unverified)
         
-        //"--regions", "16:9,378,560-9,378,687", // very complex indel region
+        "--regions", "16:9,378,560-9,378,687", // very complex indel region
         
         //"--regions", "16:62,646,838-62,647,242", // complex phasable insertion and SNPs (in NA12878-HC)
         //"--regions", "16:62,646,885-62,647,013",
@@ -116,25 +116,27 @@ inline po::variables_map get_basic_mock_options()
         //"--regions", "4:63,663,761-63,663,996",
         //"--regions", "4:91,144,739-91,144,822",
         
-        "--regions", "6:29,913,617-29,913,761",
+        //"--regions", "6:29,902,062-29,902,276",
         
         // read filters
         "--min-supporting-reads", "2",
-        "--min-mapping-quality", "20",
+        "--min-mapping-quality", "10",
         "--min-snp-base-quality", "20",
         "--no-marked-duplicates",
         "--no-octopus-duplicates",
         
         // read transforms
         "--trim-soft-clipped",
-        "--tail-trim-size", "3",
-        "--trim-adapters",
+        //"--tail-trim-size", "3",
+        //"--trim-adapters",
         
         "--reference-cache-size", "20000",
         //"--downsample-above", "500",
         //"--downsample-target", "100",
         
-        //"--candidates-from-assembler",
+        "--no-candidates-from-alignments",
+        "--candidates-from-assembler",
+        "--kmer-size", "5",
         //"--candidates-from-source", "/Users/danielcooke/Genomics/octopus_test/AllVariants.vcf",
         
         "--min-variant-posterior", "5",

@@ -32,6 +32,8 @@ std::vector<Variant> VariantAssembler::get_variants(const GenomicRegion& a_regio
 {
     std::vector<Variant> result {};
     
+    de_bruijn_graph_.print_kmers(9378586);
+    
     de_bruijn_graph_.get_contigs(1);
     
     return result;

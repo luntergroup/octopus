@@ -67,6 +67,7 @@
 		CAB0DFE01BC01E2A001D2F99 /* random_candidate_variant_generator.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CAB0DFDE1BC01E2A001D2F99 /* random_candidate_variant_generator.cpp */; };
 		CABA377F1A8FA11000BBE598 /* read_benchmarks.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CABA377E1A8FA11000BBE598 /* read_benchmarks.cpp */; };
 		CABA37821A8FA49800BBE598 /* read_manager.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CABA37801A8FA49800BBE598 /* read_manager.cpp */; };
+		CAD552E81BE3BC6E00362016 /* trio_caller.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CAD552E61BE3BC6E00362016 /* trio_caller.cpp */; };
 		CAD5EC071AD5BBEA00892816 /* genotype_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CAD5EC061AD5BBEA00892816 /* genotype_tests.cpp */; };
 		CAD5EC0A1AD6FD1E00892816 /* read_utils.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CAD5EC081AD6FD1E00892816 /* read_utils.cpp */; };
 		CAE3E2971A9D292000C01B2C /* variant_assembler.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CAE3E2951A9D292000C01B2C /* variant_assembler.cpp */; };
@@ -319,6 +320,8 @@
 		CABA377E1A8FA11000BBE598 /* read_benchmarks.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = read_benchmarks.cpp; sourceTree = "<group>"; };
 		CABA37801A8FA49800BBE598 /* read_manager.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = read_manager.cpp; sourceTree = "<group>"; };
 		CABA37811A8FA49800BBE598 /* read_manager.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = read_manager.hpp; sourceTree = "<group>"; };
+		CAD552E61BE3BC6E00362016 /* trio_caller.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = trio_caller.cpp; sourceTree = "<group>"; };
+		CAD552E71BE3BC6E00362016 /* trio_caller.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = trio_caller.hpp; sourceTree = "<group>"; };
 		CAD5EC061AD5BBEA00892816 /* genotype_tests.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = genotype_tests.cpp; sourceTree = "<group>"; };
 		CAD5EC081AD6FD1E00892816 /* read_utils.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = read_utils.cpp; sourceTree = "<group>"; };
 		CAD5EC091AD6FD1E00892816 /* read_utils.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = read_utils.hpp; sourceTree = "<group>"; };
@@ -634,13 +637,15 @@
 		CA91C2CC1B8DE63A00609FFA /* callers */ = {
 			isa = PBXGroup;
 			children = (
+				CAB0DFE11BC03D50001D2F99 /* variant_caller_factory.hpp */,
 				CA91C2D11B8DF76300609FFA /* variant_caller.hpp */,
 				D4807FB11BA843B900657D4F /* variant_caller.cpp */,
 				D4807FAF1BA826DB00657D4F /* population_caller.hpp */,
 				D4807FAE1BA826DB00657D4F /* population_caller.cpp */,
 				D4807FB41BA9716700657D4F /* cancer_caller.hpp */,
 				D4807FB31BA9716700657D4F /* cancer_caller.cpp */,
-				CAB0DFE11BC03D50001D2F99 /* variant_caller_factory.hpp */,
+				CAD552E71BE3BC6E00362016 /* trio_caller.hpp */,
+				CAD552E61BE3BC6E00362016 /* trio_caller.cpp */,
 			);
 			name = callers;
 			sourceTree = "<group>";
@@ -1084,6 +1089,7 @@
 				CAE3E2C71AA895D600C01B2C /* variant_benchmarks.cpp in Sources */,
 				CABA377F1A8FA11000BBE598 /* read_benchmarks.cpp in Sources */,
 				D47686631BD672940067E03D /* read_reader.cpp in Sources */,
+				CAD552E81BE3BC6E00362016 /* trio_caller.cpp in Sources */,
 				D463C1A41B0A174B00739A66 /* variant.cpp in Sources */,
 				CA4551621AEB06D800FDAAE8 /* 1000G_test11.cpp in Sources */,
 				D4BEA9FC1B861BE200E53CFD /* sssort.c in Sources */,
@@ -1240,7 +1246,7 @@
 				ALWAYS_SEARCH_USER_PATHS = YES;
 				CLANG_CXX_LANGUAGE_STANDARD = "c++14";
 				FRAMEWORK_SEARCH_PATHS = "$(inherited)";
-				GCC_OPTIMIZATION_LEVEL = 3;
+				GCC_OPTIMIZATION_LEVEL = 0;
 				HEADER_SEARCH_PATHS = (
 					"$(inherited)",
 					/usr/local/Cellar/boost/1.58.0/include,
@@ -1266,7 +1272,7 @@
 				ALWAYS_SEARCH_USER_PATHS = YES;
 				CLANG_CXX_LANGUAGE_STANDARD = "c++14";
 				FRAMEWORK_SEARCH_PATHS = "$(inherited)";
-				GCC_OPTIMIZATION_LEVEL = 3;
+				GCC_OPTIMIZATION_LEVEL = 0;
 				HEADER_SEARCH_PATHS = (
 					"$(inherited)",
 					/usr/local/Cellar/boost/1.58.0/include,
