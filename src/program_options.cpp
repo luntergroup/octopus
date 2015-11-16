@@ -250,21 +250,21 @@ namespace Octopus
         }
     }
     
-    std::function<GenomicRegion(std::string)> get_line_parser(const fs::path& the_region_path,
-                                                              const ReferenceGenome& the_reference)
+    std::function<GenomicRegion(std::string)>
+    get_line_parser(const fs::path& region_path, const ReferenceGenome& reference)
     {
-        if (the_region_path.extension().string() == ".bed") {
-            return [&the_reference] (const std::string& line) {
-                return parse_region(to_region_format(line), the_reference);
+        if (region_path.extension().string() == ".bed") {
+            return [&reference] (const std::string& line) {
+                return parse_region(to_region_format(line), reference);
             };
         } else {
-            return [&the_reference] (const std::string& line) {
-                return parse_region(line, the_reference);
+            return [&reference] (const std::string& line) {
+                return parse_region(line, reference);
             };
         }
     }
     
-    std::vector<GenomicRegion> get_regions_from_file(const std::string& file_path, const ReferenceGenome& the_reference)
+    std::vector<GenomicRegion> get_regions_from_file(const std::string& file_path, const ReferenceGenome& reference)
     {
         std::vector<GenomicRegion> result {};
         
@@ -277,7 +277,7 @@ namespace Octopus
         std::ifstream the_file {the_path.string()};
         
         std::transform(std::istream_iterator<Line>(the_file), std::istream_iterator<Line>(),
-                       std::back_inserter(result), get_line_parser(the_path, the_reference));
+                       std::back_inserter(result), get_line_parser(the_path, reference));
         
         return result;
     }
@@ -302,17 +302,25 @@ namespace Octopus
         return result;
     }
     
-    SearchRegions get_all_regions_not_skipped(const ReferenceGenome& the_reference, std::vector<GenomicRegion>& skip_regions)
+    SearchRegions get_all_regions_not_skipped(const ReferenceGenome& reference, std::vector<GenomicRegion>& skip_regions)
     {
+        auto result = make_search_regions(get_all_contig_regions(reference));
+        
         if (skip_regions.empty()) {
-            return make_search_regions(get_all_contig_regions(the_reference));
-        } else {
-            auto skipped = make_search_regions(skip_regions);
-            
-            SearchRegions result {};
-            
             return result;
         }
+        
+        for (auto& skipped : make_search_regions(skip_regions)) {
+            const auto& contig = skipped.first;
+            
+            for (const auto& region : skipped.second) {
+                if (result.at(contig).has_overlapped(region)) {
+                    std::cout << region << std::endl;
+                }
+            }
+        }
+        
+        return result;
     }
     
     std::vector<std::string> get_read_paths_file(const std::string& file_path)
@@ -350,7 +358,7 @@ namespace Octopus
                               static_cast<ReferenceGenome::SizeType>(cache_size));
     }
     
-    SearchRegions get_search_regions(const po::variables_map& options, const ReferenceGenome& the_reference)
+    SearchRegions get_search_regions(const po::variables_map& options, const ReferenceGenome& reference)
     {
         std::vector<GenomicRegion> input_regions {};
         
@@ -361,32 +369,28 @@ namespace Octopus
                 const auto& regions = options.at("skip-regions").as<std::vector<std::string>>();
                 skip_regions.reserve(skip_regions.size());
                 std::transform(std::cbegin(regions), std::cend(regions), std::back_inserter(skip_regions),
-                               [&the_reference] (const auto& region) {
-                                   return parse_region(region, the_reference);
-                               });
+                               [&reference] (const auto& region) { return parse_region(region, reference); });
             }
             
             if (options.count("skip-regions-file") == 1) {
                 const auto& skip_path = options.at("skip-regions-file").as<std::string>();
-                auto skip_regions_from_file = get_regions_from_file(skip_path, the_reference);
+                auto skip_regions_from_file = get_regions_from_file(skip_path, reference);
                 skip_regions.insert(skip_regions.end(), std::make_move_iterator(std::begin(skip_regions_from_file)),
                                     std::make_move_iterator(std::end(skip_regions_from_file)));
             }
             
-            return get_all_regions_not_skipped(the_reference, skip_regions);
+            return get_all_regions_not_skipped(reference, skip_regions);
         } else {
             if (options.count("regions") == 1) {
                 const auto& regions = options.at("regions").as<std::vector<std::string>>();
                 input_regions.reserve(regions.size());
                 std::transform(std::cbegin(regions), std::cend(regions), std::back_inserter(input_regions),
-                               [&the_reference] (const auto& region) {
-                                   return parse_region(region, the_reference);
-                               });
+                               [&reference] (const auto& region) { return parse_region(region, reference); });
             }
             
             if (options.count("regions-file") == 1) {
                 const auto& regions_path = options.at("regions-file").as<std::string>();
-                auto regions_from_file = get_regions_from_file(regions_path, the_reference);
+                auto regions_from_file = get_regions_from_file(regions_path, reference);
                 input_regions.insert(input_regions.end(), std::make_move_iterator(std::begin(regions_from_file)),
                                     std::make_move_iterator(std::end(regions_from_file)));
             }

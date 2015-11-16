@@ -159,4 +159,6 @@ static const std::vector<fs::path> hiv_bams {hiv_bam1, hiv_bam2, hiv_bam3, hiv_b
 static const fs::path NA12878_simulated_cancer_basic {detail::home_dir + detail::genomics_dir +
     detail::cancer_test_dir + "NA12878.13.36802245-36805221.final.bam"};
 
+static const fs::path human_skip_regions {detail::home_dir + detail::octopus_test_dir + "human_skip_regions.txt"};
+
 #endif

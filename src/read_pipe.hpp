@@ -40,6 +40,12 @@ public:
     ReadPipe() = delete;
     ReadPipe(ReadManager& read_manager, ReadFilterer read_filter,
              Downsampler downsampler, ReadTransform read_transform);
+    ~ReadPipe() = default;
+    
+    ReadPipe(const ReadPipe&)            = delete;
+    ReadPipe& operator=(const ReadPipe&) = delete;
+    ReadPipe(ReadPipe&&)                 = default;
+    ReadPipe& operator=(ReadPipe&&)      = default;
     
     ReadMap fetch_reads(std::vector<SampleIdType> samples, const GenomicRegion& region);
     

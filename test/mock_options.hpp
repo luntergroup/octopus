@@ -79,7 +79,7 @@ inline po::variables_map get_basic_mock_options()
         
         //"--regions", "7:122579662-122579817", // complex indels (unverified)
         
-        "--regions", "16:9,378,560-9,378,687", // very complex indel region
+        //"--regions", "16:9,378,560-9,378,687", // very complex indel region
         
         //"--regions", "16:62,646,838-62,647,242", // complex phasable insertion and SNPs (in NA12878-HC)
         //"--regions", "16:62,646,885-62,647,013",
@@ -118,6 +118,8 @@ inline po::variables_map get_basic_mock_options()
         
         //"--regions", "6:29,902,062-29,902,276",
         
+        "--skip-regions-file", human_skip_regions.c_str(),
+        
         // read filters
         "--min-supporting-reads", "2",
         "--min-mapping-quality", "10",
@@ -134,9 +136,9 @@ inline po::variables_map get_basic_mock_options()
         //"--downsample-above", "500",
         //"--downsample-target", "100",
         
-        "--no-candidates-from-alignments",
-        "--candidates-from-assembler",
-        "--kmer-size", "5",
+        //"--no-candidates-from-alignments",
+        //"--candidates-from-assembler",
+        //"--kmer-size", "5",
         //"--candidates-from-source", "/Users/danielcooke/Genomics/octopus_test/AllVariants.vcf",
         
         "--min-variant-posterior", "5",

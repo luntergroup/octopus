@@ -59,6 +59,7 @@ public:
     
     void print_kmers() const;
     void print_kmers(SizeType position) const;
+    void print_kmers(SizeType from, ColourType colour) const;
     
 private:
     using typename StringStoragePolicy::ReferenceType;
@@ -384,6 +385,20 @@ void KmerGraph<C, T>::print_kmers(SizeType position) const
     for (const auto& edge : positions_.at(position)) {
         std::cout << kmer_map[edge] << "(" << graph_[edge].colours.size() << ") ";
     }
+}
+
+template <typename ColourType, typename T>
+void KmerGraph<ColourType, T>::print_kmers(SizeType from, ColourType colour) const
+{
+    auto kmer_map = boost::get(&KmerEdge::kmer, graph_);
+    auto edges = positions_.at(from);
+    
+    auto edge = *std::find_if(std::cbegin(edges), std::cend(edges),
+                              [this, colour] (const auto& edge) {
+                                  return graph_[edge].colours.count(colour) > 0;
+                              });
+    
+    std::cout <<  kmer_map[edge] << std::endl;
 }
 
 //} // namespace Octopus
