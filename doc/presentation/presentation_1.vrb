@@ -1,0 +1,26 @@
+\frametitle{Cancer genotype model: maths}
+
+\begin{columns}[c]
+
+\begin{column}{.35\textwidth}
+    \includegraphics[width=\linewidth]{images/cancer_model}
+\end{column}
+
+\begin{column}{.65\textwidth}
+\begin{itemize}
+\item One unknown 'cancer' genotype $\tilde{\boldsymbol{g}}$
+\item Unknown haplotype mixtures $\boldsymbol{\phi}_s$
+\item Mixture priors $\boldsymbol{\theta}_s$ implicitly model 'normal'
+\end{itemize}
+\end{column}
+\end{columns}
+
+\begin{exampleblock}{Marginal distribution: diploid case}
+\setlength\abovedisplayskip{0pt}
+\begin{equation*}
+p(\boldsymbol{R}, \boldsymbol{\pi}) = p(\boldsymbol{\pi} | \boldsymbol{\alpha}) \sum_{\tilde{\boldsymbol{g}}} p(\tilde{\boldsymbol{g}} | \boldsymbol{\pi}) \prod_{s=1}^S \int d \boldsymbol{\phi}_s   p(\boldsymbol{\phi}_s | \boldsymbol{\theta}_s) \prod_{r \in R_s} \sum_{i = 1}^3 p(\tilde{\boldsymbol{g}}_i | \boldsymbol{\phi}_{si}) p(r | \tilde{\boldsymbol{g}}_i)
+\end{equation*}
+\end{exampleblock}
+
+% MAP estimates of $\boldsymbol{\phi}_s$ and $\tilde{\boldsymbol{g}}$ using EM
+

@@ -1,0 +1,7 @@
+Title slide:
+
+As I'm sure you are aware, over the last few years, haplotype based variant calling methods have become an increasingly popular choice for finding common variation within populations, and genotyping individuals. And, thanks to better specificity and generally adequate sensitivity, have even been preferred to bespoke cancer callers for finding somatic mutations in tumour samples.
+
+Here I introduce a very general haplotype based variant calling algorithm, that in addition to the population model already employed by the majority of popular haplotype based callers, also offers a separate cancer model for finding somatic mutations in tumour-normal paired samples.
+
+
