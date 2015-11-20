@@ -21,6 +21,7 @@ class HaplotypePriorModel
 {
 public:
     HaplotypePriorModel()  = default;
+    explicit HaplotypePriorModel(double transition_rate, double transversion_rate);
     ~HaplotypePriorModel() = default;
     
     HaplotypePriorModel(const HaplotypePriorModel&)            = default;

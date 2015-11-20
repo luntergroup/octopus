@@ -290,7 +290,7 @@ Variant normalise(const Variant& variant, ReferenceGenome& reference, Variant::S
 Variant pad_left(const Variant& variant, const Variant::SequenceType& sequence)
 {
     return Variant {
-        compress_left(variant, -static_cast<GenomicRegion::DifferenceType>(sequence.size())),
+        compress_lhs(variant, -static_cast<GenomicRegion::DifferenceType>(sequence.size())),
         sequence + variant.get_reference_allele_sequence(),
         sequence + variant.get_alternative_allele_sequence()
     };
@@ -299,7 +299,7 @@ Variant pad_left(const Variant& variant, const Variant::SequenceType& sequence)
 Variant pad_right(const Variant& variant, const Variant::SequenceType& sequence)
 {
     return Variant {
-        compress_right(variant, static_cast<GenomicRegion::DifferenceType>(sequence.size())),
+        compress_rhs(variant, static_cast<GenomicRegion::DifferenceType>(sequence.size())),
         variant.get_reference_allele_sequence() + sequence,
         variant.get_alternative_allele_sequence() + sequence
     };
@@ -307,7 +307,7 @@ Variant pad_right(const Variant& variant, const Variant::SequenceType& sequence)
 
 Variant pad_left(const Variant& variant, ReferenceGenome& reference, Variant::SizeType n)
 {
-    auto pad_region   = compress_left(get_head(variant), -static_cast<GenomicRegion::DifferenceType>(n));
+    auto pad_region   = compress_lhs(get_head(variant), -static_cast<GenomicRegion::DifferenceType>(n));
     auto pad_sequence = reference.get_sequence(pad_region);
     
     return Variant {
@@ -319,7 +319,7 @@ Variant pad_left(const Variant& variant, ReferenceGenome& reference, Variant::Si
 
 Variant pad_right(const Variant& variant, ReferenceGenome& reference, Variant::SizeType n)
 {
-    auto pad_region   = compress_right(get_tail(variant), static_cast<GenomicRegion::DifferenceType>(n));
+    auto pad_region   = compress_rhs(get_tail(variant), static_cast<GenomicRegion::DifferenceType>(n));
     auto pad_sequence = reference.get_sequence(pad_region);
     
     return Variant {

@@ -29,7 +29,7 @@ public:
     
     using SizeType     = std::uint_fast32_t;
     using SequenceType = std::string;
-    using QualityType  = std::uint_fast8_t;
+    using QualityType  = float;
     using SampleIdType = std::string;
     using KeyType      = std::string;
     using ValueType    = std::string;

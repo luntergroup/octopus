@@ -18,6 +18,12 @@
 namespace Octopus
 {
 
+HaplotypePriorModel::HaplotypePriorModel(double transition_rate, double transversion_rate)
+:
+transition_rate_ {transition_rate},
+transversion_rate_ {transversion_rate}
+{}
+
 std::vector<TandemRepeat> find_exact_tandem_repeats(const Haplotype& haplotype)
 {
     return find_exact_tandem_repeats(haplotype.get_sequence(), haplotype.get_region(), 1);

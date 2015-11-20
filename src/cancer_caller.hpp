@@ -26,10 +26,10 @@ namespace Octopus
     {
     public:
         CancerVariantCaller() = delete;
-        CancerVariantCaller(ReferenceGenome& reference, CandidateVariantGenerator& candidate_generator,
-                            RefCallType refcalls, double min_variant_posterior, double min_somatic_posterior,
-                            double min_refcall_posterior, const SampleIdType& normal_sample,
-                            bool call_somatics_only);
+        explicit CancerVariantCaller(ReferenceGenome& reference, CandidateVariantGenerator& candidate_generator,
+                                     RefCallType refcalls, double min_variant_posterior, double min_somatic_posterior,
+                                     double min_refcall_posterior, const SampleIdType& normal_sample,
+                                     bool call_somatics_only);
         ~CancerVariantCaller() = default;
         
         CancerVariantCaller(const CancerVariantCaller&)            = delete;

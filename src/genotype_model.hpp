@@ -162,7 +162,7 @@ namespace Octopus
                           return haplotype_prior_model.evaluate(haplotype, reference_haplotype);
                       });
             
-            constexpr double precision {35.0};
+            constexpr double precision {40.0};
             constexpr unsigned max_iterations {2000};
             const auto alphas = Maths::maximum_likelihood_dirichlet_params(p, precision, max_iterations);
             

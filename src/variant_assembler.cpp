@@ -17,20 +17,21 @@ VariantAssembler::VariantAssembler(unsigned k)
 de_bruijn_graph_ {k}
 {}
 
-void VariantAssembler::add_read(const AlignedRead& a_read)
+void VariantAssembler::add_read(const AlignedRead& read)
 {
-    de_bruijn_graph_.add_sequence(a_read.get_sequence(), get_begin(a_read), Colour::Read);
+    de_bruijn_graph_.add_sequence(read.get_sequence(), get_begin(read), Colour::Read);
 }
 
-void VariantAssembler::add_reference_sequence(const GenomicRegion& the_region,
-                                              const std::string& the_sequence)
+void VariantAssembler::add_reference_sequence(const GenomicRegion& region, const std::string& sequence)
 {
-    de_bruijn_graph_.add_sequence(the_sequence, the_region.get_begin(), Colour::Reference);
+    de_bruijn_graph_.add_sequence(sequence, get_begin(region), Colour::Reference);
 }
 
-std::vector<Variant> VariantAssembler::get_variants(const GenomicRegion& a_region)
+std::vector<Variant> VariantAssembler::get_variants(const GenomicRegion& region)
 {
     std::vector<Variant> result {};
+    
+    de_bruijn_graph_.print_kmers(9378586, Colour::Reference);
     
     de_bruijn_graph_.get_contigs(1);
     

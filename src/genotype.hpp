@@ -178,6 +178,8 @@ std::vector<MappableType> Genotype<MappableType>::get_unique() const
     
     std::unique_copy(std::cbegin(elements_), std::cend(elements_), std::back_inserter(result));
     
+    result.shrink_to_fit();
+    
     return result;
 }
 
@@ -226,6 +228,18 @@ void Genotype<Allele>::emplace(T&& allele)
 
 // non-member methods
 
+template <typename MappableType2, typename MappableType1>
+Genotype<MappableType2> splice(const Genotype<MappableType1>& genotype, const GenomicRegion& region)
+{
+    Genotype<MappableType2> result {genotype.ploidy()};
+    
+    for (const auto& mappable : genotype) {
+        result.emplace(splice<MappableType2>(mappable, region));
+    }
+    
+    return result;
+}
+
 bool contains(const Genotype<Haplotype>& genotype, const Allele& allele);
 
 template <typename MappableType>
@@ -237,20 +251,9 @@ bool contains(const Genotype<MappableType>& genotype, const MappableType& elemen
 template <typename MappableType1, typename MappableType2>
 bool contains(const Genotype<MappableType1>& lhs, const Genotype<MappableType2>& rhs)
 {
-    return std::all_of(std::cbegin(rhs), std::cend(rhs),
-                       [&lhs] (const auto& element) { return contains(lhs, element); });
-}
-
-template <typename MappableType2, typename MappableType1>
-Genotype<MappableType2> splice(const Genotype<MappableType1>& genotype, const GenomicRegion& region)
-{
-    Genotype<MappableType2> result {genotype.ploidy()};
-    
-    for (const auto& mappable : genotype) {
-        result.emplace(splice<MappableType2>(mappable, region));
-    }
-    
-    return result;
+    return splice<MappableType2>(lhs, rhs[0].get_region()) == rhs;
+//    return std::all_of(std::cbegin(rhs), std::cend(rhs),
+//                       [&lhs] (const auto& element) { return contains(lhs, element); });
 }
 
 template <typename MappableType>
@@ -338,7 +341,7 @@ template <typename MappableType>
 std::unordered_map<MappableType, unsigned> get_element_count_map(const Genotype<MappableType>& genotype)
 {
     std::unordered_map<MappableType, unsigned> result {};
-    result.reserve(genotype.ploidy());
+    result.reserve(genotype.zygosity());
     
     for (unsigned i {}; i < genotype.ploidy(); ++i) {
         ++result[genotype.at(i)];

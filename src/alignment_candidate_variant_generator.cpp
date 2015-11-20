@@ -22,6 +22,14 @@
 
 namespace Octopus {
 
+template <typename SequenceType>
+bool is_good_sequence(const SequenceType& sequence) noexcept
+{
+    return std::none_of(std::cbegin(sequence), std::cend(sequence), [] (auto base) { return base == 'N'; });
+}
+
+// public methods
+
 AlignmentCandidateVariantGenerator::AlignmentCandidateVariantGenerator(ReferenceGenome& reference,
                                                                        QualityType min_base_quality,
                                                                        unsigned min_supporting_reads,
@@ -188,6 +196,8 @@ void AlignmentCandidateVariantGenerator::clear()
     candidates_.clear();
 }
 
+// private methods    
+
 void AlignmentCandidateVariantGenerator::
 add_snvs_in_match_range(const GenomicRegion& region, SequenceIterator first_base,
                         SequenceIterator last_base, QualitiesIterator first_quality)
@@ -213,11 +223,6 @@ add_snvs_in_match_range(const GenomicRegion& region, SequenceIterator first_base
             
             ++ref_index;
     });
-}
-
-bool AlignmentCandidateVariantGenerator::is_good_sequence(const SequenceType& sequence) const noexcept
-{
-    return std::none_of(std::cbegin(sequence), std::cend(sequence), [] (auto base) { return base == 'N'; });
 }
 
 } // namespace Octopus

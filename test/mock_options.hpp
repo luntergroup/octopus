@@ -36,7 +36,7 @@ inline po::variables_map get_basic_mock_options()
         //"--model", "cancer", // default "population"
         "--normal-sample", "HG00102", // for cancer model
         
-        "--ploidy", "2",
+        //"--ploidy", "2",
         "--contig-ploidies", "MT=1", "Y=1",
         
         //"--make-blocked-refcalls",
@@ -47,20 +47,22 @@ inline po::variables_map get_basic_mock_options()
         "--regions", "6:89,236,560-89,236,812", // NA12878_high_coverage very nice phasing test
         
         "--min-supporting-reads", "2",
-        "--min-mapping-quality", "20",
+        "--min-mapping-quality", "10",
         "--min-snp-base-quality", "20",
         "--no-marked-duplicates",
         "--no-octopus-duplicates",
         
         "--trim-soft-clipped",
-        "--tail-trim-size", "3",
-        "--trim-adapters",
+        //"--tail-trim-size", "3",
+        //"--trim-adapters",
         
         "--reference-cache-size", "20000",
         //"--downsample-above", "500",
         //"--downsample-target", "100",
         
+        //"--no-candidates-from-alignments",
         //"--candidates-from-assembler",
+        //"--kmer-size", "5",
         //"--candidates-from-source", "/Users/danielcooke/Genomics/octopus_test/AllVariants.vcf",
         
         "--min-variant-posterior", "5",

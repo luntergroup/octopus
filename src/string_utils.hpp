@@ -63,7 +63,7 @@ template <typename T, typename = typename std::enable_if_t<std::is_floating_poin
 std::string to_string(const T val, const unsigned precision = 2)
 {
     std::ostringstream out;
-    out << std::setprecision(precision) << val;
+    out << std::fixed << std::setprecision(precision) << val;
     return out.str();
 }
 

@@ -235,14 +235,14 @@ inline GenomicRegion next_position(const GenomicRegion& region)
     return GenomicRegion {region.get_contig_name(), next_position(region.get_contig_region())};
 }
 
-inline GenomicRegion compress_left(const GenomicRegion& region, GenomicRegion::DifferenceType n)
+inline GenomicRegion compress_lhs(const GenomicRegion& region, GenomicRegion::DifferenceType n)
 {
-    return GenomicRegion {region.get_contig_name(), compress_left(region.get_contig_region(), n)};
+    return GenomicRegion {region.get_contig_name(), compress_lhs(region.get_contig_region(), n)};
 }
 
-inline GenomicRegion compress_right(const GenomicRegion& region, GenomicRegion::DifferenceType n)
+inline GenomicRegion compress_rhs(const GenomicRegion& region, GenomicRegion::DifferenceType n)
 {
-    return GenomicRegion {region.get_contig_name(), compress_right(region.get_contig_region(), n)};
+    return GenomicRegion {region.get_contig_name(), compress_rhs(region.get_contig_region(), n)};
 }
 
 inline GenomicRegion get_encompassing(const GenomicRegion& lhs, const GenomicRegion& rhs)

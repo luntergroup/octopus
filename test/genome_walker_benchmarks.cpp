@@ -1,5 +1,5 @@
 //
-//  search_region_benchmarks.cpp
+//  genome_walker_benchmarks.cpp
 //  Octopus
 //
 //  Created by Daniel Cooke on 17/07/2015.
@@ -34,16 +34,7 @@
 #include "alignment_candidate_variant_generator.hpp"
 #include "haplotype.hpp"
 #include "genotype.hpp"
-#include "haplotype_tree.hpp"
-#include "read_model.hpp"
-#include "search_regions.hpp"
-#include "read_utils.hpp"
-
-using std::cout;
-using std::endl;
-
-using Octopus::advance_region;
-using Octopus::cover_region;
+#include "genome_walker.hpp"
 
 //BOOST_AUTO_TEST_CASE(advance_region is reasonably fast)
 //{

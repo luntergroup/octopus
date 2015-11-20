@@ -34,8 +34,8 @@ namespace Octopus
         using ReadMap = Octopus::ReadMap;
         
         VariantCaller() = delete;
-        VariantCaller(ReferenceGenome& reference, CandidateVariantGenerator& candidate_generator,
-                      RefCallType refcall_type = RefCallType::None);
+        explicit VariantCaller(ReferenceGenome& reference, CandidateVariantGenerator& candidate_generator,
+                               RefCallType refcall_type = RefCallType::None);
         virtual ~VariantCaller() = default;
         
         VariantCaller(const VariantCaller&)            = delete;

@@ -11,10 +11,10 @@
 
 #include <vector>
 #include <cstddef>     // size_t
-#include <cmath>       // std::abs, std::exp, std::log, std::sqrt, std::pow, std::log10
+#include <cmath>       // std::round, std::abs, std::exp, std::log, std::sqrt, std::pow, std::log10
 #include <numeric>     // std::accumulate, std::iota, std::inner_product
 #include <algorithm>   // std::max, std::max_element, std::transform, std::all_of
-#include <type_traits> // std::enable_if_t, std::is_integral
+#include <type_traits> // std::enable_if_t, std::is_floating_point, std::is_integral
 #include <iterator>    // std::begin, std::end, std::cbegin, std::cend, std::distance
 #include <functional>  // std::plus, std::minus
 #include <limits>      // std::numeric_limits
@@ -25,6 +25,13 @@
 #include <boost/math/special_functions/digamma.hpp>
 
 namespace Octopus { namespace Maths {
+
+template <typename RealType, typename = std::enable_if_t<std::is_floating_point<RealType>::value, bool>>
+RealType round(const RealType val, const unsigned precision = 2)
+{
+    const auto factor = std::pow(RealType {10.0}, precision);
+    return std::round(val * factor) / factor;
+}
 
 template <typename T, typename = typename std::enable_if_t<!std::is_integral<T>::value, bool>>
 bool almost_equal(const T lhs, T rhs, const int ulp = 1)
@@ -131,8 +138,8 @@ RealType log_sum_exp(const Container& values)
 }
 
 template <typename RealType, typename IntegerType,
-          typename = typename std::enable_if<std::is_floating_point<RealType>::value>::type,
-          typename = typename std::enable_if<std::is_integral<IntegerType>::value>::type>
+          typename = std::enable_if_t<std::is_floating_point<RealType>::value>,
+          typename = std::enable_if_t<std::is_integral<IntegerType>::value>>
 inline RealType log_factorial(IntegerType x)
 {
     if (x == 0 || x == 1) return 0;
@@ -349,14 +356,16 @@ maximum_likelihood_dirichlet_params(std::vector<RealType> pi, const RealType pre
     return result;
 }
 
-inline unsigned probability_to_phred(double p)
+template <typename NumericType = float, typename RealType>
+NumericType probability_to_phred(RealType p)
 {
-    return static_cast<unsigned>(-10.0 * std::log10(std::max(1.0 - p, std::numeric_limits<double>::epsilon())));
+    return static_cast<NumericType>(-10.0 * std::log10(std::max(1.0 - p, std::numeric_limits<RealType>::epsilon())));
 }
 
-inline double phred_to_probability(unsigned phred)
+template <typename RealType = double, typename NumericType>
+RealType phred_to_probability(NumericType phred)
 {
-    return 1.0 - std::pow(10, -1.0 * static_cast<double>(phred) / 10.0);
+    return 1.0 - std::pow(10.0, -1.0 * static_cast<RealType>(phred) / 10.0);
 }
 
 template <typename MapType>
