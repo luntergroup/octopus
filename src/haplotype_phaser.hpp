@@ -23,10 +23,8 @@
 #include "mappable_set.hpp"
 #include "genome_walker.hpp"
 
-//namespace Octopus
-//{
-
-using namespace Octopus; // for now
+namespace Octopus
+{
 
 class HaplotypePhaser
 {
@@ -61,6 +59,6 @@ private:
     void extend_tree(const ReadMap& reads);
 };
 
-//} // namespace Octopus
+} // namespace Octopus
 
 #endif /* defined(__Octopus__haplotype_phaser__) */

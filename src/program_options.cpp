@@ -155,9 +155,9 @@ namespace Octopus
         
         po::options_description calling("Caller options");
         calling.add_options()
-        ("min-variant-posterior", po::value<unsigned>()->default_value(20), "minimum variant call posterior probability (phred scale)")
-        ("min-refcall-posterior", po::value<unsigned>()->default_value(10), "minimum homozygous reference call posterior probability (phred scale)")
-        ("min-somatic-posterior", po::value<unsigned>()->default_value(10), "minimum somaitc mutation call posterior probability (phred scale)")
+        ("min-variant-posterior", po::value<float>()->default_value(20.0), "minimum variant call posterior probability (phred scale)")
+        ("min-refcall-posterior", po::value<float>()->default_value(10.0), "minimum homozygous reference call posterior probability (phred scale)")
+        ("min-somatic-posterior", po::value<float>()->default_value(10.0), "minimum somaitc mutation call posterior probability (phred scale)")
         ("make-positional-refcalls", po::bool_switch()->default_value(false), "caller will output positional REFCALLs")
         ("make-blocked-refcalls", po::bool_switch()->default_value(false), "caller will output blocked REFCALLs")
         ("somatics-only", po::bool_switch()->default_value(false), "only output somatic calls (for somatic calling models only)")
@@ -302,25 +302,30 @@ namespace Octopus
         return result;
     }
     
-    SearchRegions get_all_regions_not_skipped(const ReferenceGenome& reference, std::vector<GenomicRegion>& skip_regions)
+    SearchRegions make_search_regions(const ReferenceGenome& reference)
     {
-        auto result = make_search_regions(get_all_contig_regions(reference));
+        return make_search_regions(get_all_contig_regions(reference));
+    }
+    
+    SearchRegions make_search_regions(const std::vector<GenomicRegion>& regions,
+                                      std::vector<GenomicRegion>& skip_regions)
+    {
+        auto input_regions = make_search_regions(regions);
+        auto skipped = make_search_regions(skip_regions);
         
-        if (skip_regions.empty()) {
-            return result;
-        }
+        SearchRegions result {};
+        result.reserve(input_regions.size());
         
-        for (auto& skipped : make_search_regions(skip_regions)) {
-            const auto& contig = skipped.first;
-            
-            for (const auto& region : skipped.second) {
-                if (result.at(contig).has_overlapped(region)) {
-                    std::cout << region << std::endl;
-                }
-            }
+        for (const auto& contig_regions : input_regions) {
+            result.emplace(contig_regions.first, splice_all(contig_regions.second, skipped[contig_regions.first]));
         }
         
         return result;
+    }
+    
+    SearchRegions make_search_regions(const ReferenceGenome& reference, std::vector<GenomicRegion>& skip_regions)
+    {
+        return make_search_regions(get_all_contig_regions(reference), skip_regions);
     }
     
     std::vector<std::string> get_read_paths_file(const std::string& file_path)
@@ -360,27 +365,28 @@ namespace Octopus
     
     SearchRegions get_search_regions(const po::variables_map& options, const ReferenceGenome& reference)
     {
-        std::vector<GenomicRegion> input_regions {};
+        std::vector<GenomicRegion> skip_regions {};
+        
+        if (options.count("skip-regions") == 1) {
+            const auto& regions = options.at("skip-regions").as<std::vector<std::string>>();
+            skip_regions.reserve(skip_regions.size());
+            std::transform(std::cbegin(regions), std::cend(regions), std::back_inserter(skip_regions),
+                           [&reference] (const auto& region) { return parse_region(region, reference); });
+        }
+        
+        if (options.count("skip-regions-file") == 1) {
+            const auto& skip_path = options.at("skip-regions-file").as<std::string>();
+            auto skip_regions_from_file = get_regions_from_file(skip_path, reference);
+            skip_regions.insert(std::end(skip_regions),
+                                std::make_move_iterator(std::begin(skip_regions_from_file)),
+                                std::make_move_iterator(std::end(skip_regions_from_file)));
+        }
         
         if (options.count("regions") == 0 && options.count("regions-file") == 0) {
-            std::vector<GenomicRegion> skip_regions {};
-            
-            if (options.count("skip-regions") == 1) {
-                const auto& regions = options.at("skip-regions").as<std::vector<std::string>>();
-                skip_regions.reserve(skip_regions.size());
-                std::transform(std::cbegin(regions), std::cend(regions), std::back_inserter(skip_regions),
-                               [&reference] (const auto& region) { return parse_region(region, reference); });
-            }
-            
-            if (options.count("skip-regions-file") == 1) {
-                const auto& skip_path = options.at("skip-regions-file").as<std::string>();
-                auto skip_regions_from_file = get_regions_from_file(skip_path, reference);
-                skip_regions.insert(skip_regions.end(), std::make_move_iterator(std::begin(skip_regions_from_file)),
-                                    std::make_move_iterator(std::end(skip_regions_from_file)));
-            }
-            
-            return get_all_regions_not_skipped(reference, skip_regions);
+            return make_search_regions(reference, skip_regions);
         } else {
+            std::vector<GenomicRegion> input_regions {};
+            
             if (options.count("regions") == 1) {
                 const auto& regions = options.at("regions").as<std::vector<std::string>>();
                 input_regions.reserve(regions.size());
@@ -391,12 +397,13 @@ namespace Octopus
             if (options.count("regions-file") == 1) {
                 const auto& regions_path = options.at("regions-file").as<std::string>();
                 auto regions_from_file = get_regions_from_file(regions_path, reference);
-                input_regions.insert(input_regions.end(), std::make_move_iterator(std::begin(regions_from_file)),
-                                    std::make_move_iterator(std::end(regions_from_file)));
+                input_regions.insert(std::end(input_regions),
+                                     std::make_move_iterator(std::begin(regions_from_file)),
+                                     std::make_move_iterator(std::end(regions_from_file)));
             }
+            
+            return make_search_regions(input_regions, skip_regions);
         }
-        
-        return make_search_regions(input_regions);
     }
     
     std::vector<SampleIdType> get_samples(const po::variables_map& options)
@@ -605,10 +612,10 @@ namespace Octopus
             // TODO: fetch from file
         }
         
-        auto min_variant_posterior_phred = options.at("min-variant-posterior").as<unsigned>();
+        auto min_variant_posterior_phred = options.at("min-variant-posterior").as<float>();
         auto min_variant_posterior        = Maths::phred_to_probability(min_variant_posterior_phred);
         
-        auto min_refcall_posterior_phred = options.at("min-refcall-posterior").as<unsigned>();
+        auto min_refcall_posterior_phred = options.at("min-refcall-posterior").as<float>();
         auto min_refcall_posterior       = Maths::phred_to_probability(min_refcall_posterior_phred);
         
         SampleIdType normal_sample {}, maternal_sample, paternal_sample;
@@ -617,7 +624,7 @@ namespace Octopus
         
         if (model == "cancer") {
             normal_sample = options.at("normal-sample").as<std::string>();
-            auto min_somatic_posterior_phred = options.at("min-somatic-posterior").as<unsigned>();
+            auto min_somatic_posterior_phred = options.at("min-somatic-posterior").as<float>();
             min_somatic_posterior = Maths::phred_to_probability(min_somatic_posterior_phred);
             call_somatics_only = options.at("somatics-only").as<bool>();
         } else if (model == "trio") {

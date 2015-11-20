@@ -41,6 +41,11 @@ inline GenomicRegion get_region(const Mappable<T>& m)
     return static_cast<const T&>(m).get_region();
 }
 
+inline bool is_same_region(const GenomicRegion& lhs, const GenomicRegion& rhs)
+{
+    return lhs == rhs;
+}
+
 template <typename T>
 inline bool is_same_region(const GenomicRegion& lhs, const Mappable<T>& rhs)
 {
@@ -336,15 +341,15 @@ inline GenomicRegion next_position(const Mappable<T>& mappable)
 }
 
 template <typename T>
-inline GenomicRegion compress_left(const Mappable<T>& mappable, GenomicRegion::DifferenceType n)
+inline GenomicRegion compress_lhs(const Mappable<T>& mappable, GenomicRegion::DifferenceType n)
 {
-    return compress_left(static_cast<const T&>(mappable).get_region(), n);
+    return compress_lhs(static_cast<const T&>(mappable).get_region(), n);
 }
 
 template <typename T>
-inline GenomicRegion compress_right(const Mappable<T>& mappable, GenomicRegion::DifferenceType n)
+inline GenomicRegion compress_rhs(const Mappable<T>& mappable, GenomicRegion::DifferenceType n)
 {
-    return compress_right(static_cast<const T&>(mappable).get_region(), n);
+    return compress_rhs(static_cast<const T&>(mappable).get_region(), n);
 }
 
 template <typename T>

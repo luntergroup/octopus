@@ -12,12 +12,11 @@
 
 #include "allele.hpp"
 #include "mappable_algorithms.hpp"
-#include "search_regions.hpp"
 
 #include <iostream> // DEBUG
 
-//namespace Octopus
-//{
+namespace Octopus
+{
 
 // public methods
 
@@ -113,7 +112,8 @@ HaplotypePhaser::phase(const std::vector<Haplotype>& haplotypes,
         
         std::sort(std::begin(low_posterior_haplotypes), std::end(low_posterior_haplotypes));
         
-        low_posterior_haplotypes.erase(std::unique(std::begin(low_posterior_haplotypes), std::end(low_posterior_haplotypes)),
+        low_posterior_haplotypes.erase(std::unique(std::begin(low_posterior_haplotypes),
+                                                   std::end(low_posterior_haplotypes)),
                                        std::end(low_posterior_haplotypes));
         
         for (const auto& haplotype : low_posterior_haplotypes) {
@@ -141,7 +141,7 @@ void extend(HaplotypeTree& tree, const Variant& variant)
 
 void HaplotypePhaser::extend_tree(const ReadMap& reads)
 {
-    auto region = walker_.continue_walk(tree_region_, reads, buffered_candidates_);
+    auto region = walker_.walk(tree_region_, reads, buffered_candidates_);
     
     if (tree_.empty()) {
         tree_region_ = region;
@@ -157,4 +157,4 @@ void HaplotypePhaser::extend_tree(const ReadMap& reads)
                   });
 }
 
-//} // namespace Octopus
+} // namespace Octopus

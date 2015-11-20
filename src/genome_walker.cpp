@@ -21,6 +21,8 @@
 
 #include <iostream> // DEBUG
 
+namespace Octopus {
+    
 GenomeWalker::GenomeWalker(unsigned max_indicators, unsigned max_included,
                            IndicatorLimit indicator_limit, ExtensionLimit extension_limit,
                            ExpansionLimit expansion_limit)
@@ -32,16 +34,10 @@ extension_limit_ {extension_limit},
 expansion_limit_ {expansion_limit}
 {}
 
-GenomicRegion GenomeWalker::start_walk(const ContigNameType& contig, const ReadMap& reads,
+GenomicRegion GenomeWalker::walk(const ContigNameType& contig, const ReadMap& reads,
                                        const Candidates& candidates)
 {
     return walk(GenomicRegion {contig, 0, 0}, reads, candidates);
-}
-
-GenomicRegion GenomeWalker::continue_walk(const GenomicRegion& previous_region, const ReadMap& reads,
-                                          const Candidates& candidates)
-{
-    return walk(previous_region, reads, candidates);
 }
 
 template <typename BidirectionalIterator, typename SampleReadMap>
@@ -183,3 +179,5 @@ GenomicRegion GenomeWalker::walk(const GenomicRegion& previous_region, const Rea
             return get_encompassing(*first_included_itr, *included_itr);
     }
 }
+
+} // namespace Octopus

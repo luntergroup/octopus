@@ -11,7 +11,7 @@
 
 #include <memory>     // std::allocator
 #include <functional> // std::less
-#include <algorithm>  // std::max, std::minmax, std::swap
+#include <algorithm>  // std::max, std::minmax, std::swap, std::for_each
 #include <iterator>   // std::begin, std::end, std::cbegin, std::cend, std::next, std::prev
 #include <stdexcept>  // std::out_of_range
 #include <boost/container/flat_set.hpp>
@@ -950,6 +950,44 @@ copy_noncontained(const MappableSet<MappableType1>& mappables, const MappableTyp
     result.insert(base_end, std::cend(mappables));
     
     return result;
+}
+
+template <typename Region, typename Mappable>
+MappableSet<Region> splice_all(const MappableSet<Region>& regions, const MappableSet<Mappable>& mappables)
+{
+    if (mappables.empty()) return regions;
+    
+    MappableSet<Region> result {};
+    result.reserve(regions.size());
+    
+    for (const auto& region : regions) {
+        auto overlapped = mappables.overlap_range(region);
+        
+        if (empty(overlapped)) {
+            result.emplace(region);
+        } else if (!is_same_region(region, overlapped.front())) {
+            auto spliced = region;
+            
+            if (begins_before(overlapped.front(), spliced)) {
+                spliced = get_right_overhang(spliced, overlapped.front());
+                overlapped.advance_begin(1);
+            }
+            
+            std::for_each(std::cbegin(overlapped), std::cend(overlapped),
+                          [&result, &spliced] (const auto& region) {
+                result.emplace(get_left_overhang(spliced, region));
+                spliced = compress_lhs(spliced, get_begin(region) - get_begin(spliced));
+            });
+            
+            if (ends_before(overlapped.back(), spliced)) {
+                result.emplace(get_right_overhang(spliced, overlapped.back()));
+            }
+        }
+   }
+   
+   result.shrink_to_fit();
+   
+   return result;
 }
 
 #endif

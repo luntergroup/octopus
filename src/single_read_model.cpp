@@ -90,7 +90,7 @@ namespace Octopus
                                                                    lhs_random, match, rhs_random);
         
         auto conditional_log_probability = joint_log_probability -
-        haplotype.get_sequence().size() * std::log(lhs_random.target_emission_probability);
+                haplotype.get_sequence().size() * std::log(lhs_random.target_emission_probability);
         
         cache(read, haplotype, conditional_log_probability);
         

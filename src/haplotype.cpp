@@ -45,8 +45,6 @@ bool Haplotype::contains(const Allele& allele) const
 {
     using std::cbegin; using std::cend; using std::binary_search;
     
-    if (explicit_alleles_.empty()) return false;
-    
     if (::contains(get_region(), allele)) {
         // these binary searches are just optimisations
         if (binary_search(cbegin(explicit_alleles_), cend(explicit_alleles_), allele)) {
@@ -170,14 +168,14 @@ Haplotype::SequenceType Haplotype::get_sequence(const GenomicRegion& region) con
     return result;
 }
 
-std::vector<Variant> Haplotype::difference(const Haplotype& from) const
+std::vector<Variant> Haplotype::difference(const Haplotype& other) const
 {
     std::vector<Variant> result {};
     result.reserve(explicit_alleles_.size());
     
     for (const auto& allele : explicit_alleles_) {
-        if (!from.contains(allele)) {
-            result.emplace_back(allele.get_region(), from.get_sequence(allele.get_region()), allele.get_sequence());
+        if (!other.contains(allele)) {
+            result.emplace_back(allele.get_region(), other.get_sequence(allele.get_region()), allele.get_sequence());
         }
     }
     

@@ -57,7 +57,7 @@ public:
     SequenceType get_sequence() const;
     SequenceType get_sequence(const GenomicRegion& region) const;
     
-    std::vector<Variant> difference(const Haplotype& from) const;
+    std::vector<Variant> difference(const Haplotype& other) const;
     
     size_t get_hash() const;
     
