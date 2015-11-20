@@ -100,7 +100,7 @@ namespace Octopus
         
         po::options_description filters("Read filter options");
         filters.add_options()
-        ("allow-unmapped", po::bool_switch()->default_value(false), "filter reads marked as unmapped")
+        ("allow-unmapped", po::bool_switch()->default_value(false), "turns off marked unmapped read filter")
         ("min-mapping-quality", po::value<unsigned>()->default_value(20), "reads with smaller mapping quality are ignored")
         ("good-base-quality", po::value<unsigned>()->default_value(20), "base quality threshold used by min-good-bases filter")
         ("min-good-base-fraction", po::value<double>(), "base quality threshold used by min-good-bases filter")
@@ -108,8 +108,8 @@ namespace Octopus
         ("allow-qc-fails", po::bool_switch()->default_value(false), "filter reads marked as QC failed")
         ("min-read-length", po::value<AlignedRead::SizeType>(), "filter reads shorter than this")
         ("max-read-length", po::value<AlignedRead::SizeType>(), "filter reads longer than this")
-        ("no-marked-duplicates", po::bool_switch()->default_value(false), "filters reads marked as duplicate in alignment record")
-        ("no-octopus-duplicates", po::bool_switch()->default_value(false), "filters reads considered duplicates by Octopus")
+        ("allow-marked-duplicates", po::bool_switch()->default_value(false), "allows reads marked as duplicate in alignment record")
+        ("allow-octopus-duplicates", po::bool_switch()->default_value(false), "allows reads considered duplicates by Octopus")
         ("no-secondary-alignmenets", po::bool_switch()->default_value(false), "filters reads marked as secondary alignments")
         ("no-supplementary-alignmenets", po::bool_switch()->default_value(false), "filters reads marked as supplementary alignments")
         ("no-unmapped-mates", po::bool_switch()->default_value(false), "filters reads with unmapped mates")
@@ -151,6 +151,7 @@ namespace Octopus
         ("insertion-prior", po::value<double>()->default_value(0.003), "prior probability of an insertion into the reference")
         ("deletion-prior", po::value<double>()->default_value(0.003), "prior probability of a deletion from the reference")
         ("prior-precision", po::value<double>()->default_value(0.003), "precision (inverse variance) of the given variant priors")
+        ("max-haplotypes", po::value<unsigned>()->default_value(128), "the maximum number of haplotypes the model may consider")
         ;
         
         po::options_description calling("Caller options");
@@ -483,11 +484,11 @@ namespace Octopus
             result.register_filter(ReadFilters::is_long(options.at("max-read-length").as<SizeType>()));
         }
         
-        if (options.at("no-marked-duplicates").as<bool>()) {
+        if (!options.at("allow-marked-duplicates").as<bool>()) {
             result.register_filter(ReadFilters::is_not_marked_duplicate());
         }
         
-        if (options.at("no-octopus-duplicates").as<bool>()) {
+        if (!options.at("allow-octopus-duplicates").as<bool>()) {
             result.register_filter(ReadFilters::is_not_duplicate());
         }
         

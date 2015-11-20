@@ -463,7 +463,7 @@ namespace Octopus
 //            std::cout << " : " << hf.second << std::endl;
 //        }
         
-        auto genotype_mixtures      = init_genotype_mixtures(weight_priors);
+        auto genotype_mixtures = init_genotype_mixtures(weight_priors);
         
 //        std::cout << "prior mixture mixtures" << std::endl;
 //        for (const auto& w : genotype_mixtures) {

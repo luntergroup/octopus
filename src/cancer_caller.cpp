@@ -329,7 +329,7 @@ namespace Octopus
     
     std::vector<Variant> call_segment_variants(const std::vector<Variant>& variants,
                                                const MarginalAllelePosteriors& allele_posteriors,
-                                               double min_posterior)
+                                               const double min_posterior)
     {
         std::vector<Variant> result {};
         result.reserve(variants.size());
@@ -346,7 +346,7 @@ namespace Octopus
     
     VariantCalls call_germline_variants(const std::vector<std::vector<Variant>>& segments,
                                         const MarginalAllelePosteriors& normal_sample_germline_allele_posteriors,
-                                        double min_posterior)
+                                        const double min_posterior)
     {
         VariantCalls result {};
         
@@ -395,10 +395,11 @@ namespace Octopus
         return called_alleles.count(allele) == 1;
     }
     
+    // TODO: this doesn't quite work
     SomaticCalls call_somatic_mutations(const std::vector<Allele>& alleles,
                                         const AllelePosteriors& cancer_allele_posteriors,
                                         const GermlineGenotypeCalls& germline_genotype_calls,
-                                        double min_posterior)
+                                        const double min_posterior)
     {
         SomaticCalls result {};
         
@@ -651,16 +652,6 @@ namespace Octopus
         while (!phaser_.expended_candidates()) {
             auto haplotypes = phaser_.get_haplotypes();
             
-            //    if (candidates.empty()) {
-            //        if (refcalls_requested()) {
-            //            extend_tree(generate_random_variants(region, reference_), tree);
-            //        } else {
-            //            return result;
-            //        }
-            //    } else {
-            //        extend_tree(candidates, tree);
-            //    }
-            
             std::cout << "there are " << haplotypes.size() << " unique haplotypes" << std::endl;
             
             auto haplotype_region = get_region(haplotypes.front());
@@ -711,33 +702,33 @@ namespace Octopus
             
             auto cancer_haplotype_posteriors  = marginalise_cancer_haplotypes(latents.genotype_posteriors, num_haplotypes);
             
-            std::cout << "cancer haplotype posteriors: " << std::endl;
-            for (const auto& hp : cancer_haplotype_posteriors) {
-                print_variant_alleles(hp.first);
-                std::cout << " " << hp.second << std::endl;
-            }
+//            std::cout << "cancer haplotype posteriors: " << std::endl;
+//            for (const auto& hp : cancer_haplotype_posteriors) {
+//                print_variant_alleles(hp.first);
+//                std::cout << " " << hp.second << std::endl;
+//            }
             
             auto alleles = generate_callable_alleles(region, candidates, refcall_type_, reference_);
             
             auto germline_allele_posteriors = compute_germline_allele_posteriors(germline_genotype_posteriors,
                                                                                  latents.genotype_mixtures, alleles);
             
-//            for (const auto& sa : germline_allele_posteriors) {
-//                std::cout << "germline allele posteriors for sample: " << sa.first << std::endl;
-//                for (const auto& ap : sa.second) {
-//                    std::cout << ap.first << " " << ap.second << std::endl;
-//                }
-//            }
+            for (const auto& sa : germline_allele_posteriors) {
+                std::cout << "germline allele posteriors for sample: " << sa.first << std::endl;
+                for (const auto& ap : sa.second) {
+                    std::cout << ap.first << " " << ap.second << std::endl;
+                }
+            }
             
             auto cancer_allele_posteriors = compute_cancer_allele_posteriors(cancer_haplotype_posteriors,
                                                                              latents.genotype_mixtures, alleles);
             
-//            for (const auto& sa : cancer_allele_posteriors) {
-//                std::cout << "cancer allele posteriors for sample: " << sa.first << std::endl;
-//                for (const auto& ap : sa.second) {
-//                    std::cout << ap.first << " " << ap.second << std::endl;
-//                }
-//            }
+            for (const auto& sa : cancer_allele_posteriors) {
+                std::cout << "cancer allele posteriors for sample: " << sa.first << std::endl;
+                for (const auto& ap : sa.second) {
+                    std::cout << ap.first << " " << ap.second << std::endl;
+                }
+            }
             
             auto segments = segment_overlapped(candidates);
             
@@ -755,20 +746,20 @@ namespace Octopus
                 }
             }
           
-//            std::cout << "germline genotype (allele) calls" << std::endl;
-//            for (const auto& call : germline_genotype_calls) {
-//                std::cout << call.genotype << std::endl;
-//            }
+            std::cout << "germline genotype (allele) calls" << std::endl;
+            for (const auto& call : germline_genotype_calls) {
+                std::cout << call.genotype << std::endl;
+            }
             
             // need germline genotype calls to catch reversion to reference somatics
             auto somatic_mutation_calls = call_somatic_mutations(alleles, cancer_allele_posteriors,
                                                                  germline_genotype_calls,
                                                                  min_somatic_mutation_posterior_);
             
-//            std::cout << "called somatic mutations" << std::endl;
-//            for (const auto& call : somatic_mutation_calls) {
-//                std::cout << call.allele << " " << call.posterior << std::endl;
-//            }
+            std::cout << "called somatic mutations" << std::endl;
+            for (const auto& call : somatic_mutation_calls) {
+                std::cout << call.allele << " " << call.posterior << std::endl;
+            }
             
             parsimonise_germline_variant_calls(germline_variant_calls, reference_);
             parsimonise_somatic_mutation_calls(somatic_mutation_calls, reference_);

@@ -8,7 +8,10 @@
 
 #include "haplotype_phaser.hpp"
 
-#include <algorithm>
+#include <deque>
+#include <algorithm> // std::max, std::sort, std::unique, std::for_each
+#include <iterator>  // std::begin, std::end, std::cbegin, std::cend
+#include <cmath>     // std::log2
 
 #include "allele.hpp"
 #include "mappable_algorithms.hpp"
@@ -20,6 +23,11 @@ namespace Octopus
 
 // public methods
 
+unsigned calculate_max_indcluded(unsigned max_haplotypes, unsigned max_indicators_)
+{
+    return static_cast<unsigned>(std::max(1.0, std::log2(max_haplotypes) - max_indicators_));
+}
+    
 HaplotypePhaser::HaplotypePhaser(ReferenceGenome& reference)
 :
 tree_ {reference},
@@ -91,7 +99,7 @@ HaplotypePhaser::phase(const std::vector<Haplotype>& haplotypes,
 {
     if (max_indicators_ == 0) { // no phasing
         tree_.clear();
-        // TODO: need to add an erase method to MappableSet API to rmeove contained range
+        // TODO: need to add an erase method to MappableSet API to remove contained range
         auto contained = bases(buffered_candidates_.contained_range(tree_region_));
         buffered_candidates_.erase(contained.begin(), contained.end());
         if (!buffered_candidates_.empty()) {
@@ -156,5 +164,12 @@ void HaplotypePhaser::extend_tree(const ReadMap& reads)
                       extend(tree_, candidate);
                   });
 }
+
+    // non-member methods
+    
+    bool are_phase_complements(const Genotype<Haplotype>& lhs, const Genotype<Haplotype>& rhs)
+    {
+        return true;
+    }
 
 } // namespace Octopus
