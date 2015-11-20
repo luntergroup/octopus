@@ -11,7 +11,6 @@
 
 #include <vector>
 #include <unordered_map>
-#include <map>
 
 #include "common.hpp"
 #include "genomic_region.hpp"

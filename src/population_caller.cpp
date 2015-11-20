@@ -26,8 +26,6 @@
 #include "maths.hpp"
 #include "mappable_algorithms.hpp"
 #include "variant_utils.hpp"
-#include "genotype_model.hpp"
-#include "population_genotype_model.hpp"
 #include "read_utils.hpp"
 #include "string_utils.hpp"
 #include "sequence_utils.hpp"
@@ -45,6 +43,7 @@ PopulationVariantCaller::PopulationVariantCaller(ReferenceGenome& reference, Can
                                                  double min_refcall_posterior, unsigned ploidy)
 :
 VariantCaller {reference, candidate_generator, refcall_type},
+genotype_model_ {ploidy},
 phaser_ {reference, 1000, 0},
 ploidy_ {ploidy},
 min_variant_posterior_ {min_variant_posterior},
@@ -564,9 +563,7 @@ PopulationVariantCaller::call_variants(const GenomicRegion& region, const std::v
         
         std::cout << "there are " << count_reads(haplotype_region_reads) << " reads in haplotype region" << std::endl;
         
-        GenotypeModel::Population genotype_model {ploidy_};
-        
-        auto genotype_posteriors = genotype_model.evaluate(haplotypes, haplotype_region_reads, reference_).genotype_posteriors;
+        auto genotype_posteriors = genotype_model_.evaluate(haplotypes, haplotype_region_reads, reference_).genotype_posteriors;
         
         //debug::print_genotype_posteriors(genotype_posteriors);
         
