@@ -22,11 +22,8 @@ inline po::variables_map get_basic_mock_options()
         "--reference", human_reference_fasta.c_str(),
         //"--reference", ecoli_reference_fasta.c_str(),
         
-        "--reads", NA12878_high_coverage.c_str(),
-        //"--reads", NA12878_low_coverage.c_str(),
-        
-        //"--reads", NA12878_low_coverage.c_str(), HG00101.c_str(), HG00102.c_str(), HG00103.c_str(),
-        //"--reads", HG00101.c_str(),
+        "--reads", NA12878_low_coverage.c_str(),
+        // "--reads", NA12878_low_coverage.c_str(), HG00101.c_str(), HG00102.c_str(), HG00103.c_str(),
         //"--reads", NA12878_high_coverage.c_str(), NA12878_simulated_cancer_basic.c_str(), //cancer test
         //"--reads", NA12891_high_coverage.c_str(), NA12878_simulated_cancer_basic.c_str(), //cancer test
         //"--reads", "/Users/dcooke/Genomics/cancer/TCGA/benchmark/HCC1143.NORMAL.7x.compare.chr17.bam", "/Users/dcooke/Genomics/cancer/TCGA/benchmark/HCC1143.7x.n25t65s10.chr17.bam",
@@ -42,10 +39,20 @@ inline po::variables_map get_basic_mock_options()
         //"--make-blocked-refcalls",
         //"--make-positional-refcalls",
         
+        /* input regions */
+        "--regions", "4:40,436,430-40,436,571",
+        //"--regions", "6:93,705,800-93,706,166", // NA12878_low_coverage phase error
+        //"--regions", "6:22,877,929-22,878,012", // NA12878_low_coverage HMM error
         //"--regions", "6:29,915,924-29,916,412",
         //"--regions", "6:144,712,021-144,712,273",
-        "--regions", "6:89,236,560-89,236,812", // NA12878_high_coverage very nice phasing test
+        //"--regions", "6:89,236,560-89,236,812", // NA12878_high_coverage very nice phasing test
         
+//        "--regions", "1",
+//        "--skip-regions", "1:1,000,000-2,000,000", "1:1,500,000-10,000,000",
+        
+        //"--skip-regions-file", human_skip_regions.c_str(),
+        
+        // read filters
         "--min-supporting-reads", "2",
         "--min-mapping-quality", "10",
         "--min-snp-base-quality", "20",

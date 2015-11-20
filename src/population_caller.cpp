@@ -560,7 +560,7 @@ PopulationVariantCaller::call_variants(const GenomicRegion& region, const std::v
         
         auto genotype_posteriors = genotype_model_.evaluate(haplotypes, haplotype_region_reads, reference_).genotype_posteriors;
         
-        debug::print_genotype_posteriors(genotype_posteriors);
+        //debug::print_genotype_posteriors(genotype_posteriors);
         
         auto phased_gps = phaser_.phase(haplotypes, genotype_posteriors, reads);
         
