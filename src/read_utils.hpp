@@ -158,11 +158,11 @@ void transform_reads(ReadMap& reads, const ReadTransform& transformer)
 template <typename InputIterator>
 std::vector<unsigned> positional_coverage(InputIterator first, InputIterator last, const GenomicRegion& region)
 {
-    auto num_positions = size(region);
+    const auto num_positions = size(region);
     
     std::vector<unsigned> result(num_positions, 0);
     
-    auto first_position = get_begin(region);
+    const auto first_position = get_begin(region);
     
     std::for_each(first, last, [&result, first_position, num_positions] (const auto& read) {
         auto first = std::next(std::begin(result), (get_begin(read) <= first_position) ? 0 : get_begin(read) - first_position);
@@ -916,6 +916,45 @@ find_high_coverage_regions(const ReadMap& reads, const GenomicRegion& region, co
     
     return result;
 }
+
+    template <typename T>
+    std::vector<GenomicRegion> find_uniform_coverage_regions(const T& reads, const GenomicRegion& region)
+    {
+        const auto coverages = positional_coverage(reads, region);
+        
+        std::vector<GenomicRegion> result {};
+        result.reserve(size(region));
+        
+        if (coverages.empty()) return result;
+        
+        const auto contig = get_contig_name(region);
+        
+        auto begin = get_begin(region);
+        auto end   = begin;
+        
+        auto previous_coverage = coverages.front();
+        
+        for (const auto coverage : coverages) {
+            if (coverage != previous_coverage) {
+                result.emplace_back(contig, begin, end);
+                begin = end;
+                previous_coverage = coverage;
+            }
+            ++end;
+        }
+        
+        result.emplace_back(contig, begin, end);
+        
+        result.shrink_to_fit();
+        
+        return result;
+    }
+    
+    template <typename T>
+    std::vector<GenomicRegion> find_uniform_coverage_regions(const T& reads)
+    {
+        return find_uniform_coverage_regions(reads, get_encompassing_region(reads));
+    }
 
 template <typename Reads>
 void compress_reads(Reads& reads)

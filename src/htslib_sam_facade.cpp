@@ -162,7 +162,7 @@ size_t HtslibSamFacade::count_reads(const SampleIdType& sample, const GenomicReg
     return result;
 }
 
-GenomicRegion HtslibSamFacade::find_head_region(const GenomicRegion& region, size_t target_coverage)
+GenomicRegion HtslibSamFacade::find_covered_subregion(const GenomicRegion& region, size_t target_coverage)
 {
     HtslibIterator it {*this, region};
     

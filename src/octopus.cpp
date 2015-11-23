@@ -108,6 +108,8 @@ namespace Octopus
         
         //auto memory_quota = Options::get_memory_quota(options);
         
+        const size_t max_reads = 1'000'000;
+        
         auto reference           = Options::get_reference(options);
         auto read_manager        = Options::get_read_manager(options);
         auto regions             = Options::get_search_regions(options, reference);
@@ -141,20 +143,29 @@ namespace Octopus
             for (const auto& region : contig_regions.second) {
                 cout << "processing input region " << region << endl;
                 
-                auto reads = read_pipe.fetch_reads(samples, region);
+                auto subregion = read_manager.find_covered_subregion(samples, region, max_reads);
                 
-                //return; // uncomment for ReadPipe performance benchmarking
-                
-                auto calls = caller->call_variants(region, std::move(reads));
-                
-                cout << "writing " << calls.size() << " calls to VCF" << endl;
-                
-                for (auto&& call : calls) {
-                    cout << call << endl;
-                    output.write(std::move(call));
+                while (get_begin(subregion) != get_end(region)) {
+                    cout << "processing subregion " << subregion << endl;
+                    
+                    auto reads = read_pipe.fetch_reads(samples, subregion);
+                    
+                    //return; // uncomment for ReadPipe performance benchmarking
+                    
+                    auto calls = caller->call_variants(subregion, std::move(reads));
+                    
+                    cout << "writing " << calls.size() << " calls to VCF" << endl;
+                    
+                    for (auto&& call : calls) {
+                        cout << call << endl;
+                        output.write(std::move(call));
+                    }
+                    
+                    num_buffered_reads = caller->num_buffered_reads();
+                    
+                    subregion = get_right_overhang(region, subregion);
+                    subregion = read_manager.find_covered_subregion(samples, subregion, max_reads);
                 }
-                
-                num_buffered_reads = caller->num_buffered_reads();
             }
         }
     }

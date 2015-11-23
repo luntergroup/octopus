@@ -67,7 +67,7 @@ public:
     std::vector<ReadGroupIdType> get_read_groups_in_sample(const SampleIdType& sample) override;
     size_t count_reads(const GenomicRegion& region) override;
     size_t count_reads(const SampleIdType& sample, const GenomicRegion& region) override;
-    GenomicRegion find_head_region(const GenomicRegion& region, size_t target_coverage) override;
+    GenomicRegion find_covered_subregion(const GenomicRegion& region, size_t target_coverage) override;
     SampleReadMap fetch_reads(const GenomicRegion& region) override;
     Reads fetch_reads(const SampleIdType& sample, const GenomicRegion& region) override;
     unsigned get_num_reference_contigs() noexcept override;

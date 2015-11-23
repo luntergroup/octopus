@@ -636,7 +636,7 @@ namespace Octopus
         return make_variant_caller(model, reference, candidate_generator, refcall_type,
                                    min_variant_posterior, min_refcall_posterior,
                                    ploidy, normal_sample, min_somatic_posterior,
-                                   call_somatics_only);
+                                   call_somatics_only, maternal_sample, paternal_sample);
     }
     
     VcfWriter get_output_vcf(const po::variables_map& options)

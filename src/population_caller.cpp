@@ -98,12 +98,14 @@ struct RefCall
     std::vector<std::pair<SampleIdType, double>> sample_posteriors;
 };
 
-    namespace debug {
-        void print_genotype_posteriors(const GenotypeModel::Population::GenotypeProbabilities& genotype_posteriors, size_t n = 5);
-        void print_allele_posteriors(const AllelePosteriors& allele_posteriors, size_t n = 10);
-        void print_variant_calls(const VariantCalls& calls);
-        void print_genotype_calls(const GenotypeCalls& calls);
-    } // namespace debug
+using RefCalls = std::vector<RefCall>;
+
+namespace debug {
+    void print_genotype_posteriors(const GenotypeModel::Population::GenotypeProbabilities& genotype_posteriors, size_t n = 5);
+    void print_allele_posteriors(const AllelePosteriors& allele_posteriors, size_t n = 10);
+    void print_variant_calls(const VariantCalls& calls);
+    void print_genotype_calls(const GenotypeCalls& calls);
+} // namespace debug
 
 void remove_low_posterior_genotypes(GenotypeModel::Population::GenotypeProbabilities& genotype_posteriors,
                                     double min_posterior)
@@ -334,11 +336,11 @@ double marginalise_reference_genotype(const Allele& reference_allele,
     return result;
 }
 
-std::vector<RefCall>
+RefCalls
 call_reference(const GenotypeModel::Population::GenotypeProbabilities& genotype_posteriors,
                const std::vector<Allele>& reference_alleles, const ReadMap& reads, double min_posterior)
 {
-    std::vector<RefCall> result {};
+    RefCalls result {};
     
     if (reference_alleles.empty()) return result;
     
@@ -512,7 +514,7 @@ VcfRecord output_reference_call(RefCall call, ReferenceGenome& reference, const 
 }
 
 template <typename InputIt1, typename InputIt2, typename InputIt3, typename OutputIt,
-typename BinaryOperation, typename UnaryOperation, typename Compare>
+          typename BinaryOperation, typename UnaryOperation, typename Compare>
 OutputIt merge_transform(InputIt1 first1, InputIt1 last1, InputIt2 first2,
                          InputIt3 first3, InputIt3 last3,
                          OutputIt d_first,
@@ -534,7 +536,7 @@ OutputIt merge_transform(InputIt1 first1, InputIt1 last1, InputIt2 first2,
     }
     return std::transform(first3, last3, d_first, unary_op);
 }
-
+    
 std::vector<VcfRecord>
 PopulationVariantCaller::call_variants(const GenomicRegion& region, const std::vector<Variant>& candidates,
                                        const ReadMap& reads)
@@ -560,7 +562,7 @@ PopulationVariantCaller::call_variants(const GenomicRegion& region, const std::v
         
         auto genotype_posteriors = genotype_model_.evaluate(haplotypes, haplotype_region_reads, reference_).genotype_posteriors;
         
-        debug::print_genotype_posteriors(genotype_posteriors);
+        //debug::print_genotype_posteriors(genotype_posteriors);
         
         auto phased_gps = phaser_.phase(haplotypes, genotype_posteriors, reads);
         
@@ -593,7 +595,7 @@ PopulationVariantCaller::call_variants(const GenomicRegion& region, const std::v
         
         auto refcalls = call_reference(genotype_posteriors, candidate_ref_alleles, reads, min_refcall_posterior_);
         
-        std::cout << called_regions.front() << std::endl;
+        //std::cout << called_regions.front() << std::endl;
         
         const auto phase_region = (called_regions.empty()) ? get_head(region) : get_encompassing(called_regions.front(), called_regions.back());
         

@@ -76,10 +76,10 @@ size_t ReadReader::count_reads(const SampleIdType& sample, const GenomicRegion& 
     return the_impl_->count_reads(sample, region);
 }
 
-GenomicRegion ReadReader::find_head_region(const GenomicRegion& region, size_t target_coverage)
+GenomicRegion ReadReader::find_covered_subregion(const GenomicRegion& region, size_t target_coverage)
 {
     std::lock_guard<std::mutex> lock {mutex_};
-    return the_impl_->find_head_region(region, target_coverage);
+    return the_impl_->find_covered_subregion(region, target_coverage);
 }
 
 ReadReader::SampleReadMap ReadReader::fetch_reads(const GenomicRegion& region)

@@ -17,6 +17,7 @@
 #include "variant_caller.hpp"
 #include "population_caller.hpp"
 #include "cancer_caller.hpp"
+#include "trio_caller.hpp"
 
 namespace Octopus {
 
@@ -26,7 +27,8 @@ make_variant_caller(const std::string& model, ReferenceGenome& reference,
                     VariantCaller::RefCallType refcall_type,
                     double min_variant_posterior, double min_refcall_posterior,
                     unsigned ploidy, const SampleIdType& normal_sample,
-                    double min_somatic_posterior, bool call_somatics_only)
+                    double min_somatic_posterior, bool call_somatics_only,
+                    const SampleIdType& maternal_sample, const SampleIdType& paternal_sample)
 {
     std::unordered_map<std::string, std::function<std::unique_ptr<VariantCaller>()>> model_map {
         {"population", [&] () {
@@ -39,6 +41,11 @@ make_variant_caller(const std::string& model, ReferenceGenome& reference,
             return std::make_unique<CancerVariantCaller>(reference, candidate_generator,
                                                          refcall_type, min_variant_posterior, min_somatic_posterior, 
                                                          min_refcall_posterior, normal_sample, call_somatics_only);
+        }},
+        {"trio",     [&] () {
+            return std::make_unique<TrioVariantCaller>(reference, candidate_generator,
+                                                       ploidy, maternal_sample, paternal_sample,
+                                                       min_variant_posterior);
         }}
         };
     

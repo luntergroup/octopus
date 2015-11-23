@@ -62,8 +62,9 @@ public:
     size_t count_reads(const std::vector<SampleIdType>& samples, const GenomicRegion& region);
     size_t count_reads(const GenomicRegion& region); // all samples
     
-    GenomicRegion find_head_region(const std::vector<SampleIdType>& samples, const GenomicRegion& region, size_t target_coverage);
-    GenomicRegion find_head_region(const GenomicRegion& region, size_t target_coverage);
+    GenomicRegion find_covered_subregion(const SampleIdType& sample, const GenomicRegion& region, size_t max_sample_coverage);
+    GenomicRegion find_covered_subregion(const std::vector<SampleIdType>& samples, const GenomicRegion& region, size_t max_sample_coverage);
+    GenomicRegion find_covered_subregion(const GenomicRegion& region, size_t max_sample_coverage);
     
     Reads fetch_reads(const SampleIdType& sample, const GenomicRegion& region);
     SampleReadMap fetch_reads(const std::vector<SampleIdType>& samples, const GenomicRegion& region);

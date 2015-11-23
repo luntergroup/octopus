@@ -40,7 +40,7 @@ public:
     
     virtual size_t count_reads(const GenomicRegion& region) = 0;
     virtual size_t count_reads(const SampleIdType& sample, const GenomicRegion& region) = 0;
-    virtual GenomicRegion find_head_region(const GenomicRegion& region, size_t target_coverage) = 0;
+    virtual GenomicRegion find_covered_subregion(const GenomicRegion& region, size_t target_coverage) = 0;
     virtual SampleReadMap fetch_reads(const GenomicRegion& region) = 0;
     virtual Reads fetch_reads(const SampleIdType& sample, const GenomicRegion& region) = 0;
     

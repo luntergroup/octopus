@@ -56,7 +56,7 @@ public:
     std::vector<GenomicRegion> get_possible_regions_in_file();
     size_t count_reads(const GenomicRegion& region);
     size_t count_reads(const SampleIdType& sample, const GenomicRegion& region);
-    GenomicRegion find_head_region(const GenomicRegion& region, size_t target_coverage);
+    GenomicRegion find_covered_subregion(const GenomicRegion& region, size_t target_coverage);
     SampleReadMap fetch_reads(const GenomicRegion& region);
     Reads fetch_reads(const SampleIdType& sample, const GenomicRegion& region);
     

@@ -22,7 +22,7 @@ inline po::variables_map get_basic_mock_options()
         "--reference", human_reference_fasta.c_str(),
         //"--reference", ecoli_reference_fasta.c_str(),
         
-        //"--reads", NA12878_low_coverage.c_str(),
+        "--reads", NA12878_low_coverage.c_str(),
         //"--reads", NA12878_high_coverage.c_str(),
         //"--reads", NA12878_low_coverage.c_str(), HG00101.c_str(), HG00102.c_str(), HG00103.c_str(),
         //"--reads", NA12878_high_coverage.c_str(), NA12878_simulated_cancer_basic.c_str(), //cancer test
@@ -30,9 +30,9 @@ inline po::variables_map get_basic_mock_options()
         //"--reads", NA12878_high_coverage.c_str(), NA12891_high_coverage.c_str(),
         //"--reads", ecoli_bam.string().c_str(),
         
-        "--reads", "/Users/dcooke/Genomics/cancer/TCGA/benchmark/HCC1143.NORMAL.7x.compare.bam", "/Users/dcooke/Genomics/cancer/TCGA/benchmark/HCC1143.7x.n25t65s10.bam",
+        //"--reads", "/Users/dcooke/Genomics/cancer/TCGA/benchmark/HCC1143.NORMAL.7x.compare.bam", "/Users/dcooke/Genomics/cancer/TCGA/benchmark/HCC1143.7x.n25t65s10.bam",
         
-        "--model", "cancer", // default "population"
+        //"--model", "cancer", // default "population"
         "--normal-sample", "HCC1143.NORMAL.30x.compare", // for cancer model
         
         //"--ploidy", "2",
@@ -52,9 +52,13 @@ inline po::variables_map get_basic_mock_options()
         //"--regions", "6:89,236,560-89,236,812", // NA12878_high_coverage very nice phasing test
         //"--regions", "6:89,236,734-89,236,784",
         
+        //"--regions", "21:11,062,774-11,062,920",
+        //"--regions", "21:11062880-11063100",
+        "--regions", "21:11,063,185-11,063,327",
+        
         // for cancer
         //"--regions", "6:52,873,970-52,882,816",
-        "--regions", "5:76,747,066-76,747,106", // not a reversion
+        //"--regions", "5:76,747,066-76,747,106", // not a reversion
         //"--regions", "5:76,781,703-76,781,743", // not a reversion
         //"--regions", "5:76,785,333-76,785,478", // HMM error
         
@@ -63,7 +67,7 @@ inline po::variables_map get_basic_mock_options()
         
         // read filters
         "--min-supporting-reads", "2",
-        "--min-mapping-quality", "10",
+        "--min-mapping-quality", "20",
         "--min-snp-base-quality", "20",
         //"--allow-marked-duplicates",
         //"--allow-octopus-duplicates",

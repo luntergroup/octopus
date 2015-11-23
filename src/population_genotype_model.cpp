@@ -16,6 +16,8 @@
 #include "maths.hpp"
 #include "read_utils.hpp"
 
+#include "haplotype_filter.hpp"
+
 #include <iostream> // TEST
 
 namespace Octopus
@@ -293,7 +295,15 @@ namespace Octopus
     Population::Latents
     Population::evaluate(const std::vector<Haplotype>& haplotypes, const ReadMap& reads, ReferenceGenome& reference)
     {
-        auto genotypes = generate_all_genotypes(haplotypes, ploidy_);
+        auto filtered_haplotypes = filter_haplotypes(haplotypes, reads, 50);
+        
+//        std::cout << "filtered_haplotypes  " << filtered_haplotypes.size() << std::endl;
+//        for (const auto& h : filtered_haplotypes) {
+//            print_variant_alleles(h);
+//            std::cout << std::endl;
+//        }
+        
+        auto genotypes = generate_all_genotypes(filtered_haplotypes, ploidy_);
         
         if (genotypes.size() == 1) {
             // TODO: catch this case to avoid computing
@@ -311,7 +321,7 @@ namespace Octopus
         
         read_model.clear_cache();
         
-        auto haplotype_prior_counts = compute_haplotype_prior_counts(haplotypes, reference, haplotype_prior_model_);
+        auto haplotype_prior_counts = compute_haplotype_prior_counts(filtered_haplotypes, reference, haplotype_prior_model_);
         
         const auto prior_count_sum = Maths::sum_values(haplotype_prior_counts);
         

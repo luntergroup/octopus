@@ -114,8 +114,16 @@ size_t ReadManager::count_reads(const GenomicRegion& region)
     return count_reads(get_samples(), region);
 }
 
-GenomicRegion ReadManager::find_head_region(const std::vector<SampleIdType>& samples,
-                                            const GenomicRegion& region, size_t target_coverage)
+GenomicRegion ReadManager::find_covered_subregion(const SampleIdType& sample,
+                                                  const GenomicRegion& region,
+                                                  size_t max_sample_coverage)
+{
+    return find_covered_subregion({sample}, region, max_sample_coverage);
+}
+
+GenomicRegion ReadManager::find_covered_subregion(const std::vector<SampleIdType>& samples,
+                                                  const GenomicRegion& region,
+                                                  size_t max_sample_coverage)
 {
     using std::begin; using std::end; using std::for_each;
     
@@ -127,20 +135,20 @@ GenomicRegion ReadManager::find_head_region(const std::vector<SampleIdType>& sam
     
     while (!reader_paths.empty()) {
         for_each(it, end(reader_paths),
-                 [this, &samples, &region, &result, target_coverage] (const auto& reader_path) {
-                     result.push_back(open_readers_.at(reader_path).find_head_region(region, target_coverage));
+                 [this, &samples, &region, &result, max_sample_coverage] (const auto& reader_path) {
+                     result.push_back(open_readers_.at(reader_path).find_covered_subregion(region, max_sample_coverage));
                  });
         
         reader_paths.erase(it, end(reader_paths));
         it = open_readers(begin(reader_paths), end(reader_paths));
     }
     
-    return *leftmost_mappable(std::cbegin(result), std::cend(result));
+    return get_overlapped(*leftmost_mappable(result), region);
 }
 
-GenomicRegion ReadManager::find_head_region(const GenomicRegion& region, size_t target_coverage)
+GenomicRegion ReadManager::find_covered_subregion(const GenomicRegion& region, size_t max_sample_coverage)
 {
-    return find_head_region(get_samples(), region, target_coverage);
+    return find_covered_subregion(get_samples(), region, max_sample_coverage);
 }
 
 ReadManager::Reads ReadManager::fetch_reads(const SampleIdType& sample, const GenomicRegion& region)
