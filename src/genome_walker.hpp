@@ -9,6 +9,8 @@
 #ifndef genome_walker_hpp
 #define genome_walker_hpp
 
+#include <functional>
+
 #include "common.hpp"
 #include "mappable_set.hpp"
 
@@ -48,9 +50,22 @@ public:
 private:
     const unsigned max_indicators_;
     const unsigned max_included_;
+    
     const IndicatorLimit indicator_limit_;
     const ExtensionLimit extension_limit_;
     const ExpansionLimit expansion_limit_;
+    
+    using CandidateIterator = Candidates::const_iterator;
+    
+    struct CandidateRanges
+    {
+        CandidateRanges() = delete;
+        CandidateRanges(CandidateIterator first_previous_itr, CandidateIterator first_included_itr,
+                        CandidateIterator first_excluded_itr, CandidateIterator last_itr);
+        CandidateIterator first_previous_itr, first_included_itr, first_excluded_itr, last_itr;
+    };
+    
+    std::function<GenomicRegion(CandidateRanges, const ReadMap&)> expander_;
 };
 
 } // namespace Octopus

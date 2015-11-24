@@ -70,7 +70,7 @@ int main(int argc, const char **argv)
         //auto options = Octopus::parse_options(argc, argv);
         auto options = get_basic_mock_options();
         
-        auto start   = std::chrono::system_clock::now();
+        auto start = std::chrono::system_clock::now();
         
         cout << "started running Octopus at " << start << endl;
         

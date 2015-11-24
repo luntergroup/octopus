@@ -15,6 +15,7 @@
 #include "pair_hmm.hpp"
 
 #include <iostream> // TEST
+#include <chrono>   // TEST
 
 namespace Octopus
 {
@@ -31,7 +32,14 @@ namespace Octopus
     
     double SingleReadModel::log_probability(const AlignedRead& read, const Haplotype& haplotype)
     {
-        if (is_cached(read, haplotype)) return get_cached(read, haplotype);
+        if (is_cached(read, haplotype)) {
+            return get_cached(read, haplotype);
+//            auto start = std::chrono::system_clock::now();
+//            auto result = get_cached(read, haplotype);
+//            auto end = std::chrono::system_clock::now();
+//            std::cout << std::chrono::duration_cast<std::chrono::microseconds>(end - start).count() << "us" << std::endl;
+//            return result;
+        }
         
         // TODO: make these members when pair_hmm is finalised
         

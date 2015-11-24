@@ -285,35 +285,37 @@ bool is_soft_clipped(const AlignedRead& read)
     return is_soft_clipped(read.get_cigar_string());
 }
 
-std::pair<AlignedRead::SizeType, AlignedRead::SizeType>
-get_soft_clipped_sizes(const AlignedRead& read)
+std::pair<AlignedRead::SizeType, AlignedRead::SizeType> get_soft_clipped_sizes(const AlignedRead& read)
 {
     return get_soft_clipped_sizes(read.get_cigar_string());
 }
 
 AlignedRead splice(const AlignedRead& read, const GenomicRegion& region)
 {
-    if (!contains(read, region)) {
-        throw std::runtime_error {"cannot splice AlignedRead region that is not contained"};
+    if (!overlaps(read, region)) {
+        throw std::runtime_error {"cannot splice AlignedRead region that is not overlapped"};
     }
     
-    if (is_same_region(read, region)) return read;
+    auto splice_region = get_overlapped(read, region);
     
-    auto reference_offset = get_begin(region) - get_begin(read);
+    if (is_same_region(read, splice_region)) return read;
+    
+    auto reference_offset = get_begin(splice_region) - get_begin(read);
     
     auto uncontained_cigar_splice = reference_splice(read.get_cigar_string(), GenomicRegion::SizeType {}, reference_offset);
-    auto contained_cigar_splice   = reference_splice(read.get_cigar_string(), reference_offset, size(region));
+    auto contained_cigar_splice   = reference_splice(read.get_cigar_string(), reference_offset, size(splice_region));
     
     auto sequence_offset = sequence_size(uncontained_cigar_splice);
     auto sequence_length = sequence_size(contained_cigar_splice);
     
     AlignedRead::SequenceType sequence_splice(read.get_sequence().cbegin() + sequence_offset,
                                               read.get_sequence().cbegin() + sequence_offset + sequence_length);
+    
     AlignedRead::Qualities qualities_splice(read.get_qualities().cbegin() + sequence_offset,
                                             read.get_qualities().cbegin() + sequence_offset + sequence_length);
     
     return AlignedRead {
-        region,
+        splice_region,
         std::move(sequence_splice),
         std::move(qualities_splice),
         std::move(contained_cigar_splice),

@@ -320,6 +320,25 @@ size_t count_overlapped(const Container& container, const MappableType& mappable
 }
 
 /**
+ Returns true if the range [first, last) contains the exact region given my mappable
+ 
+ Requires [first, last) is sorted w.r.t GenomicRegion::operator<
+ */
+template <typename ForwardIterator, typename MappableType>
+bool has_exact_overlap(ForwardIterator first, ForwardIterator last, const MappableType& mappable,
+                       MappableRangeOrder order = MappableRangeOrder::ForwardSorted)
+{
+    if (order == MappableRangeOrder::BidirectionallySorted) {
+        return std::binary_search(first, last, mappable);
+    }
+    
+    auto overlapped = overlap_range(first, last, mappable);
+    
+    return std::find_if(std::cbegin(overlapped), std::cend(overlapped),
+                        [&mappable] (const auto& e) { return is_same_region(mappable, e); }) != std::cend(overlapped);
+}
+
+/**
  Returns the sub-range of Mappable elements in the range [first, last) such that each element
  in the sub-range is contained within mappable.
  

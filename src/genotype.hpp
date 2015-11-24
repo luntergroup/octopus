@@ -252,8 +252,6 @@ template <typename MappableType1, typename MappableType2>
 bool contains(const Genotype<MappableType1>& lhs, const Genotype<MappableType2>& rhs)
 {
     return splice<MappableType2>(lhs, rhs[0].get_region()) == rhs;
-//    return std::all_of(std::cbegin(rhs), std::cend(rhs),
-//                       [&lhs] (const auto& element) { return contains(lhs, element); });
 }
 
 template <typename MappableType>

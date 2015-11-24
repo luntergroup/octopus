@@ -12,7 +12,7 @@
 #include <unordered_set>
 #include <unordered_map>
 #include <utility>   // std::pair, std::make_pair, std::move, std::forward
-#include <algorithm> // std::max_element, std::copy_if, std::copy, std::transform
+#include <algorithm> // std::max_element, std::copy, std::transform
 #include <iterator>  // std::begin, std::end, std::cbegin, std::cend, std::back_inserter, std::advance, std::next
 
 #include "common.hpp"
@@ -44,7 +44,7 @@ PopulationVariantCaller::PopulationVariantCaller(ReferenceGenome& reference, Can
 :
 VariantCaller {reference, candidate_generator, refcall_type},
 genotype_model_ {ploidy},
-phaser_ {reference, 1000, 0},
+phaser_ {reference, 64, 2},
 ploidy_ {ploidy},
 min_variant_posterior_ {min_variant_posterior},
 min_refcall_posterior_ {min_refcall_posterior}
@@ -69,18 +69,33 @@ struct GenotypeCall
 
 using GenotypeCalls = std::unordered_map<Octopus::SampleIdType, GenotypeCall>;
 
-struct VariantCall
+using AllelePosteriors = std::unordered_map<Octopus::SampleIdType, std::unordered_map<Allele, double>>;
+
+struct VariantCall : public Mappable<VariantCall>
 {
     VariantCall() = default;
     template <typename T>
-    VariantCall(T&& variants, double posterior) : variants {std::forward<T>(variants)}, posterior {posterior} {}
+    VariantCall(T&& variant, double posterior) : variant {std::forward<T>(variant)}, posterior {posterior} {}
+    
+    GenomicRegion get_region() const { return variant.get_region(); }
+    
+    Variant variant;
+    double posterior;
+};
+
+using VariantCalls = std::vector<VariantCall>;
+
+struct VariantCallBlock
+{
+    VariantCallBlock() = default;
+    template <typename T>
+    VariantCallBlock(T&& variants, double posterior) : variants {std::forward<T>(variants)}, posterior {posterior} {}
     
     std::vector<Variant> variants;
     double posterior;
 };
 
-using VariantCalls = std::vector<VariantCall>;
-using AllelePosteriors = std::unordered_map<Octopus::SampleIdType, std::unordered_map<Allele, double>>;
+using VariantCallBlocks = std::vector<VariantCallBlock>;
 
 struct RefCall
 {
@@ -103,8 +118,9 @@ using RefCalls = std::vector<RefCall>;
 namespace debug {
     void print_genotype_posteriors(const GenotypeModel::Population::GenotypeProbabilities& genotype_posteriors, size_t n = 5);
     void print_allele_posteriors(const AllelePosteriors& allele_posteriors, size_t n = 10);
-    void print_variant_calls(const VariantCalls& calls);
+    void print_variant_calls(const VariantCallBlocks& calls);
     void print_genotype_calls(const GenotypeCalls& calls);
+    void print_genotype_calls(const std::vector<GenotypeCalls>& calls);
 } // namespace debug
 
 void remove_low_posterior_genotypes(GenotypeModel::Population::GenotypeProbabilities& genotype_posteriors,
@@ -120,13 +136,15 @@ void remove_low_posterior_genotypes(GenotypeModel::Population::GenotypeProbabili
         }
     }
 }
-    
+
 double marginalise(const Allele& allele, const GenotypeModel::Population::SampleGenotypeProbabilities& genotype_posteriors)
 {
     double result {0.0};
     
     for (const auto& genotype_posterior : genotype_posteriors) {
-        if (contains(genotype_posterior.first, allele)) result += genotype_posterior.second;
+        if (contains(genotype_posterior.first, allele)) {
+            result += genotype_posterior.second;
+        }
     }
     
     return result;
@@ -226,55 +244,55 @@ double max_posterior(const Allele& allele, const AllelePosteriors& allele_poster
     return result;
 }
 
-double max_posterior(const std::vector<Variant>& variants, const AllelePosteriors& allele_posteriors)
-{
-    double result {};
-    
-    for (const auto& sample_allele_posteriors : allele_posteriors) {
-        for (const auto& variant : variants) {
-            auto curr = sample_allele_posteriors.second.at(variant.get_alternative_allele());
-            if (curr > result) result = curr;
-        }
-    }
-    
-    return result;
-}
-
-std::vector<Variant> call_segment_variants(const std::vector<Variant>& variants,
-                                           const AllelePosteriors& allele_posteriors,
-                                           const double min_posterior)
-{
-    std::vector<Variant> result {};
-    result.reserve(variants.size());
-    
-    std::copy_if(std::cbegin(variants), std::cend(variants), std::back_inserter(result),
-                 [&allele_posteriors, min_posterior] (const auto& variant) {
-                     return max_posterior(variant.get_alternative_allele(), allele_posteriors) >= min_posterior;
-                 });
-    
-    result.shrink_to_fit();
-    
-    return result;
-}
-
-VariantCalls call_segment_variants(const std::vector<std::vector<Variant>>& segments,
-                                   const AllelePosteriors& allele_posteriors,
-                                   const double min_posterior)
+static VariantCalls call_variants(const std::vector<Variant>& candidates,
+                                  const AllelePosteriors& allele_posteriors,
+                                  const double min_posterior)
 {
     VariantCalls result {};
-    result.reserve(segments.size());
+    result.reserve(candidates.size());
     
-    for (const auto& segment : segments) {
-        const auto calls = call_segment_variants(segment, allele_posteriors, min_posterior);
+    for (const Variant& candidate : candidates) {
+        auto posterior = max_posterior(candidate.get_alternative_allele(), allele_posteriors);
         
-        if (!calls.empty()) {
-            result.emplace_back(std::move(calls), max_posterior(calls, allele_posteriors));
+        if (posterior >= min_posterior) {
+            result.emplace_back(candidate, posterior);
         }
     }
     
     result.shrink_to_fit();
     
     return result;
+}
+
+double max_posterior(const VariantCalls& calls)
+{
+    return std::max_element(std::cbegin(calls), std::cend(calls),
+                            [] (const auto& lhs, const auto& rhs) {
+                                return lhs.posterior < rhs.posterior;
+                            })->posterior;
+}
+
+VariantCallBlocks block_variant_calls(const std::vector<VariantCalls>& segmented_calls)
+{
+    VariantCallBlocks result {};
+    result.reserve(segmented_calls.size());
+    
+    for (const auto& calls : segmented_calls) {
+        std::vector<Variant> variants {};
+        variants.reserve(calls.size());
+        std::transform(std::cbegin(calls), std::cend(calls), std::back_inserter(variants),
+                       [] (const auto& call) { return call.variant; });
+        result.emplace_back(std::move(variants), max_posterior(calls));
+    }
+    
+    return result;
+}
+
+VariantCallBlocks call_blocked_variants(const std::vector<Variant>& candidates,
+                                        const AllelePosteriors& allele_posteriors,
+                                        const double min_posterior)
+{
+    return block_variant_calls(segment_overlapped(call_variants(candidates, allele_posteriors, min_posterior)));
 }
 
 std::vector<Variant> generate_random_variants(const GenomicRegion& region, ReferenceGenome& reference)
@@ -283,7 +301,7 @@ std::vector<Variant> generate_random_variants(const GenomicRegion& region, Refer
     return generator.get_candidates(region);
 }
 
-static auto get_regions(const VariantCalls& variant_calls)
+static auto get_regions(const VariantCallBlocks& variant_calls)
 {
     std::vector<GenomicRegion> result {};
     result.reserve(variant_calls.size());
@@ -295,7 +313,7 @@ static auto get_regions(const VariantCalls& variant_calls)
     return result;
 }
 
-void parsimonise_variant_calls(VariantCalls& variant_calls, ReferenceGenome& reference)
+void parsimonise_variant_calls(VariantCallBlocks& variant_calls, ReferenceGenome& reference)
 {
     for (auto& segment_calls : variant_calls) {
         segment_calls.variants = parsimonise_together(segment_calls.variants, reference);
@@ -548,23 +566,27 @@ PopulationVariantCaller::call_variants(const GenomicRegion& region, const std::v
     phaser_.setup(candidates, reads);
     
     while (!phaser_.expended_candidates()) {
-        auto haplotypes = phaser_.get_haplotypes();
+        GenotypeModel::Population::GenotypeProbabilities genotype_posteriors;
         
-        std::cout << "there are " << haplotypes.size() << " unique haplotypes" << std::endl;
+        while (true) {
+            auto haplotypes = phaser_.get_haplotypes();
+            
+            std::cout << "there are " << haplotypes.size() << " unique haplotypes" << std::endl;
+            
+            auto haplotype_region = get_region(haplotypes.front());
+            
+            std::cout << "haplotype region is " << haplotype_region << std::endl;
+            
+            auto haplotype_region_reads = copy_overlapped(reads, haplotype_region);
+            
+            std::cout << "there are " << count_reads(haplotype_region_reads) << " reads in haplotype region" << std::endl;
+            
+            genotype_posteriors = genotype_model_.evaluate(haplotypes, haplotype_region_reads, reference_).genotype_posteriors;
+            
+            if (phaser_.phase(haplotypes, genotype_posteriors, reads)) break;
+        }
         
-        auto haplotype_region = get_region(haplotypes.front());
-        
-        std::cout << "haplotype region is " << haplotype_region << std::endl;
-        
-        auto haplotype_region_reads = copy_overlapped(reads, haplotype_region);
-        
-        std::cout << "there are " << count_reads(haplotype_region_reads) << " reads in haplotype region" << std::endl;
-        
-        auto genotype_posteriors = genotype_model_.evaluate(haplotypes, haplotype_region_reads, reference_).genotype_posteriors;
-        
-        //debug::print_genotype_posteriors(genotype_posteriors);
-        
-        auto phased_gps = phaser_.phase(haplotypes, genotype_posteriors, reads);
+        debug::print_genotype_posteriors(genotype_posteriors);
         
         //remove_low_posterior_genotypes(genotype_posteriors, 0.0000000001);
         
@@ -572,11 +594,11 @@ PopulationVariantCaller::call_variants(const GenomicRegion& region, const std::v
         
         auto allele_posteriors = compute_allele_posteriors(genotype_posteriors, alleles);
         
-        //debug::print_allele_posteriors(allele_posteriors);
+        debug::print_allele_posteriors(allele_posteriors);
         
-        auto variant_calls = call_segment_variants(segment_overlapped(candidates), allele_posteriors, min_variant_posterior_);
+        auto variant_calls = call_blocked_variants(candidates, allele_posteriors, min_variant_posterior_);
         
-        //debug::print_variant_calls(variant_calls);
+        debug::print_variant_calls(variant_calls);
         
         parsimonise_variant_calls(variant_calls, reference_);
         
@@ -584,7 +606,7 @@ PopulationVariantCaller::call_variants(const GenomicRegion& region, const std::v
         
         auto variant_genotype_calls = call_genotypes(genotype_posteriors, called_regions);
         
-        //debug::print_genotype_calls(variant_genotype_calls);
+        debug::print_genotype_calls(variant_genotype_calls);
         
         auto candidate_ref_alleles = generate_candidate_reference_alleles(alleles, called_regions, candidates, refcall_type_);
         
@@ -666,7 +688,7 @@ PopulationVariantCaller::call_variants(const GenomicRegion& region, const std::v
             }
         }
         
-        void print_variant_calls(const VariantCalls& calls)
+        void print_variant_calls(const VariantCallBlocks& calls)
         {
             std::cout << "printing all variant calls" << std::endl;
             for (const auto& segment_calls : calls) {
@@ -680,6 +702,13 @@ PopulationVariantCaller::call_variants(const GenomicRegion& region, const std::v
             std::cout << "printing genotype calls for each sample" << std::endl;
             for (const auto& call : calls) {
                 std::cout << call.first << " " << call.second.genotype << " " << call.second.posterior << std::endl;
+            }
+        }
+        
+        void print_genotype_calls(const std::vector<GenotypeCalls>& calls)
+        {
+            for (const auto& c : calls) {
+                print_genotype_calls(c);
             }
         }
     } // namespace debug

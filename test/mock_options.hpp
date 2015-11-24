@@ -22,8 +22,8 @@ inline po::variables_map get_basic_mock_options()
         "--reference", human_reference_fasta.c_str(),
         //"--reference", ecoli_reference_fasta.c_str(),
         
-        "--reads", NA12878_low_coverage.c_str(),
-        //"--reads", NA12878_high_coverage.c_str(),
+        //"--reads", NA12878_low_coverage.c_str(),
+        "--reads", NA12878_high_coverage.c_str(),
         //"--reads", NA12878_low_coverage.c_str(), HG00101.c_str(), HG00102.c_str(), HG00103.c_str(),
         //"--reads", NA12878_high_coverage.c_str(), NA12878_simulated_cancer_basic.c_str(), //cancer test
         //"--reads", NA12891_high_coverage.c_str(), NA12878_simulated_cancer_basic.c_str(), //cancer test
@@ -49,12 +49,15 @@ inline po::variables_map get_basic_mock_options()
         //"--regions", "6:22,877,929-22,878,012", // NA12878_low_coverage HMM error
         //"--regions", "6:29,915,924-29,916,412",
         //"--regions", "6:144,712,021-144,712,273",
-        //"--regions", "6:89,236,560-89,236,812", // NA12878_high_coverage very nice phasing test
+        //"--regions", "6:89,236,310-89,237,082", // NA12878_high_coverage very nice phasing test
         //"--regions", "6:89,236,734-89,236,784",
         
         //"--regions", "21:11,062,774-11,062,920",
         //"--regions", "21:11062880-11063100",
-        "--regions", "21:11,063,185-11,063,327",
+        //"--regions", "21:11,063,185-11,063,327", // weird haplotpes
+        
+        //"--regions", "3:47,251,793-47,251,839", // NA12878_high_coverage interesting indels
+        "--regions", "3:47,251,808-47,251,847",
         
         // for cancer
         //"--regions", "6:52,873,970-52,882,816",
@@ -97,7 +100,7 @@ inline po::variables_map get_basic_mock_options()
         //"--max-open-read-files", "1",
         
         //"--output", test_out_vcf.c_str(),
-        "--output", "~/test.vcf",
+        "--output", "~/Genomics/octopus_test/octopus_variants.vcf",
         
         nullptr};
     

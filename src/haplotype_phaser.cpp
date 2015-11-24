@@ -23,30 +23,18 @@ namespace Octopus
 
 // public methods
 
-unsigned calculate_max_indcluded(unsigned max_haplotypes, unsigned max_indicators_)
+unsigned calculate_max_indcluded(unsigned max_haplotypes)
 {
-    return static_cast<unsigned>(std::max(1.0, std::log2(max_haplotypes) - max_indicators_));
+    return static_cast<unsigned>(std::max(1.0, std::log2(max_haplotypes)));
 }
-    
-HaplotypePhaser::HaplotypePhaser(ReferenceGenome& reference)
-:
-tree_ {reference},
-walker_ {max_indicators_, 4, GenomeWalker::IndicatorLimit::NoLimit, GenomeWalker::ExtensionLimit::WithinReadLengthOfFirstIncluded}
-{}
-
-HaplotypePhaser::HaplotypePhaser(ReferenceGenome& reference, unsigned max_haplotypes)
-:
-tree_ {reference},
-max_haplotypes_ {max_haplotypes},
-walker_ {max_indicators_, 4, GenomeWalker::IndicatorLimit::NoLimit, GenomeWalker::ExtensionLimit::WithinReadLengthOfFirstIncluded}
-{}
 
 HaplotypePhaser::HaplotypePhaser(ReferenceGenome& reference, unsigned max_haplotypes, unsigned max_indicators)
 :
 tree_ {reference},
 max_haplotypes_ {max_haplotypes},
 max_indicators_ {max_indicators},
-walker_ {max_indicators_, 4, GenomeWalker::IndicatorLimit::NoLimit, GenomeWalker::ExtensionLimit::WithinReadLengthOfFirstIncluded}
+walker_ {max_indicators_, calculate_max_indcluded(max_haplotypes_),
+         GenomeWalker::IndicatorLimit::NoLimit, GenomeWalker::ExtensionLimit::SharedWithFrontier}
 {}
 
 void HaplotypePhaser::setup(const std::vector<Variant>& candidates, const ReadMap& reads)
@@ -92,7 +80,7 @@ compute_haplotype_posteriors(const std::vector<Haplotype>& haplotypes,
     return result;
 }
 
-HaplotypePhaser::PhasedGenotypePosteriors
+bool
 HaplotypePhaser::phase(const std::vector<Haplotype>& haplotypes,
                        const UnphasedGenotypePosteriors& genotype_posteriors,
                        const ReadMap& reads)
@@ -101,7 +89,9 @@ HaplotypePhaser::phase(const std::vector<Haplotype>& haplotypes,
         tree_.clear();
         // TODO: need to add an erase method to MappableSet API to remove contained range
         auto contained = bases(buffered_candidates_.contained_range(tree_region_));
+        
         buffered_candidates_.erase(contained.begin(), contained.end());
+        
         if (!buffered_candidates_.empty()) {
             tree_region_ = shift(get_head(buffered_candidates_.leftmost()), -1);
         }
@@ -112,13 +102,15 @@ HaplotypePhaser::phase(const std::vector<Haplotype>& haplotypes,
             auto sample_haplotype_posteriors = compute_haplotype_posteriors(haplotypes, sample_genotype_posteriors.second);
             
             for (const auto& haplotype_posterior : sample_haplotype_posteriors) {
-                if (haplotype_posterior.second < 0.01) {
+                if (haplotype_posterior.second < 0.0001) {
                     low_posterior_haplotypes.push_back(haplotype_posterior.first);
                 }
             }
         }
         
         std::sort(std::begin(low_posterior_haplotypes), std::end(low_posterior_haplotypes));
+        
+        //std::cout << "removing " << low_posterior_haplotypes.size() << " haplotypes" << std::endl;
         
         low_posterior_haplotypes.erase(std::unique(std::begin(low_posterior_haplotypes),
                                                    std::end(low_posterior_haplotypes)),
@@ -129,14 +121,15 @@ HaplotypePhaser::phase(const std::vector<Haplotype>& haplotypes,
         }
     }
     
+    auto last_region = tree_region_;
+    
     extend_tree(reads);
     
-    return genotype_posteriors;
+    if (last_region == tree_region_) {
+        buffered_candidates_.clear();
+    }
     
-//    HaplotypePhaser::PhasedGenotypePosteriors result {};
-//    result.reserve(genotype_posteriors.size());
-//    
-//    return result;
+    return expended_candidates() || !buffered_candidates_.has_shared(last_region, tree_region_);
 }
 
 // private methods
@@ -160,9 +153,7 @@ void HaplotypePhaser::extend_tree(const ReadMap& reads)
     auto contained_candidates = buffered_candidates_.contained_range(region);
     
     std::for_each(std::cbegin(contained_candidates), std::cend(contained_candidates),
-                  [this] (const auto& candidate) {
-                      extend(tree_, candidate);
-                  });
+                  [this] (const auto& candidate) { extend(tree_, candidate); });
 }
 
     // non-member methods

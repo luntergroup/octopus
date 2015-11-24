@@ -90,7 +90,9 @@ namespace Octopus
                           const ReferenceGenome& reference)
     {
         auto vcf_header_builder = get_default_header_builder().set_samples(samples);
-        for (const auto& contig : contigs) vcf_header_builder.add_contig(contig);
+        for (const auto& contig : contigs) {
+            vcf_header_builder.add_contig(contig, {{"length", std::to_string(reference.get_contig_size(contig))}});
+        }
         vcf_header_builder.add_basic_field("reference", reference.get_name());
         vcf_header_builder.add_structured_field("Octopus", {{"some", "option"}});
         
