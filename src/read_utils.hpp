@@ -955,6 +955,51 @@ find_high_coverage_regions(const ReadMap& reads, const GenomicRegion& region, co
     {
         return find_uniform_coverage_regions(reads, get_encompassing_region(reads));
     }
+    
+namespace detail {
+    inline MappableSet<AlignedRead> splice_all(const MappableSet<AlignedRead>& reads, const GenomicRegion& region, NonMapTypeTag)
+    {
+        MappableSet<AlignedRead> result {};
+        result.reserve(reads.size());
+        
+        for (const auto& read : reads) {
+            result.emplace(splice(read, region));
+        }
+        
+        return result;
+    }
+    
+    template <typename T>
+    T splice_all(const T& reads, const GenomicRegion& region, NonMapTypeTag)
+    {
+        T result {};
+        result.reserve(reads.size());
+        
+        std::transform(std::cbegin(reads), std::cend(reads), std::back_inserter(result),
+                       [&region] (const auto& read) { return splice(read, region); });
+        
+        return result;
+    }
+    
+    template <typename T>
+    T splice_all(const T& reads, const GenomicRegion& region, MapTypeTag)
+    {
+        T result {};
+        result.reserve(reads.size());
+        
+        for (const auto& p : reads) {
+            result.emplace(p.first, splice_all(p.second, region, NonMapTypeTag()));
+        }
+        
+        return result;
+    }
+} // namespace detail
+    
+template <typename T>
+T splice_all(const T& reads, const GenomicRegion& region)
+{
+    return detail::splice_all(reads, region, detail::IsMapType<!std::is_same<typename T::value_type, AlignedRead>::value>());
+}
 
 template <typename Reads>
 void compress_reads(Reads& reads)

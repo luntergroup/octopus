@@ -34,14 +34,12 @@ public:
     using PhasedGenotypePosteriors         = std::unordered_map<SampleIdType, PhasedSampleGenotypePosteriors>;
     
     HaplotypePhaser() = delete;
-    HaplotypePhaser(ReferenceGenome& reference);
-    HaplotypePhaser(ReferenceGenome& reference, unsigned max_haplotypes);
-    HaplotypePhaser(ReferenceGenome& reference, unsigned max_haplotypes, unsigned max_indicators);
+    HaplotypePhaser(ReferenceGenome& reference, unsigned max_haplotypes = 128, unsigned max_indicators = 3);
     
     void setup(const std::vector<Variant>& candidates, const ReadMap& reads);
     bool expended_candidates() const noexcept;
     std::vector<Haplotype> get_haplotypes() const;
-    PhasedGenotypePosteriors phase(const std::vector<Haplotype>& haplotypes,
+    bool phase(const std::vector<Haplotype>& haplotypes,
                                    const UnphasedGenotypePosteriors& genotype_posteriors,
                                    const ReadMap& reads);
     

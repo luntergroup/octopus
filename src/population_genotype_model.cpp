@@ -19,6 +19,7 @@
 #include "haplotype_filter.hpp"
 
 #include <iostream> // TEST
+#include <chrono>   // TEST
 
 namespace Octopus
 {
@@ -93,8 +94,7 @@ namespace Octopus
             
             transform(cbegin(genotypes), cend(genotypes), begin(sample_log_likelihoods),
                       [&sample_reads, &read_model] (const auto& genotype) {
-                          return read_model.log_probability(cbegin(sample_reads), cend(sample_reads),
-                                                            genotype);
+                          return read_model.log_probability(cbegin(sample_reads), cend(sample_reads), genotype);
                       });
             
             result.emplace(sample, std::move(sample_log_likelihoods));
@@ -295,15 +295,15 @@ namespace Octopus
     Population::Latents
     Population::evaluate(const std::vector<Haplotype>& haplotypes, const ReadMap& reads, ReferenceGenome& reference)
     {
-        auto filtered_haplotypes = filter_haplotypes(haplotypes, reads, 50);
-        
+//        auto filtered_haplotypes = filter_haplotypes(haplotypes, reads, 10);
+//        
 //        std::cout << "filtered_haplotypes  " << filtered_haplotypes.size() << std::endl;
 //        for (const auto& h : filtered_haplotypes) {
 //            print_variant_alleles(h);
 //            std::cout << std::endl;
 //        }
         
-        auto genotypes = generate_all_genotypes(filtered_haplotypes, ploidy_);
+        auto genotypes = generate_all_genotypes(haplotypes, ploidy_);
         
         if (genotypes.size() == 1) {
             // TODO: catch this case to avoid computing
@@ -311,9 +311,14 @@ namespace Octopus
         
         std::cout << "there are " << genotypes.size() << " candidate genotypes" << std::endl;
         
-        ReadModel read_model {ploidy_, max_sample_read_count(reads), haplotypes.size()};
+        ReadModel read_model {ploidy_, count_reads(reads), haplotypes.size()};
+        
+        //auto start = std::chrono::system_clock::now();
         
         const auto genotype_log_likilhoods = compute_genotype_log_likelihoods(genotypes, reads, read_model);
+        
+        //auto end = std::chrono::system_clock::now();
+        //std::cout << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << "ms" << std::endl;
         
         //debug::print_genotype_log_likelihoods(genotypes, genotype_log_likilhoods, 20);
         //std::cout << std::endl;
@@ -321,7 +326,7 @@ namespace Octopus
         
         read_model.clear_cache();
         
-        auto haplotype_prior_counts = compute_haplotype_prior_counts(filtered_haplotypes, reference, haplotype_prior_model_);
+        auto haplotype_prior_counts = compute_haplotype_prior_counts(haplotypes, reference, haplotype_prior_model_);
         
         const auto prior_count_sum = Maths::sum_values(haplotype_prior_counts);
         
@@ -339,7 +344,7 @@ namespace Octopus
         //exit(0);
         
         for (unsigned n {}; n < max_em_iterations_; ++n) {
-            //std::cout << "******* EM iteration " << n << " *******" << std::endl;
+            std::cout << "******* EM iteration " << n << " *******" << std::endl;
             if (do_em_iteration(haplotypes, genotypes, genotype_posteriors, haplotype_frequencies,
                                 genotype_log_marginals, genotype_log_likilhoods,
                                 haplotype_prior_counts, prior_count_sum) < em_epsilon_) break;

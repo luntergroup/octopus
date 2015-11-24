@@ -55,6 +55,7 @@ bool Haplotype::contains(const Allele& allele) const
             if (is_insertion(allele)) {
                 auto it = std::lower_bound(cbegin(explicit_alleles_), cend(explicit_alleles_),
                                            allele.get_region());
+                //return *it == allele;
                 return ::contains(*it, allele);
             } else {
                 return false;

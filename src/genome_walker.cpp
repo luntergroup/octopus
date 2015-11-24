@@ -54,11 +54,11 @@ bool is_optimal_to_extend(BidirectionalIterator first_included, BidirectionalIte
     return !increases_density || inner_distance(*std::prev(proposed_included), *proposed_included) <= inner_distance(*proposed_included, *first_excluded);
 }
 
-template <typename BidirectionalIterator, typename SampleReadMap>
+template <typename BidirectionalIterator>
 GenomicRegion
 expand_around_included(BidirectionalIterator first_previous, BidirectionalIterator first_included,
                        BidirectionalIterator first_excluded, BidirectionalIterator last,
-                       const SampleReadMap& reads)
+                       const ReadMap& reads)
 {
     auto last_included = std::prev(first_excluded);
     
@@ -89,7 +89,7 @@ GenomicRegion GenomeWalker::walk(const GenomicRegion& previous_region, const Rea
     using std::cbegin; using std::cend; using std::next; using std::prev; using std::min;
     using std::distance; using std::advance;
     
-    //std::cout << "walking from " << previous_region << std::endl;
+    std::cout << "walking from " << previous_region << std::endl;
     
     auto last_variant_itr = cend(candidates);
     
@@ -108,7 +108,7 @@ GenomicRegion GenomeWalker::walk(const GenomicRegion& previous_region, const Rea
         }
     }
     
-    auto num_indicators = max_indicators_;
+    auto num_indicators = min(max_indicators_, static_cast<unsigned>(distance(first_previous_itr, included_itr)));
     
     if (indicator_limit_ == IndicatorLimit::SharedWithPreviousRegion) {
         auto it = find_first_shared(reads, first_previous_itr, included_itr, *included_itr);
@@ -125,7 +125,7 @@ GenomicRegion GenomeWalker::walk(const GenomicRegion& previous_region, const Rea
     unsigned num_excluded_candidates {0};
     
     if (extension_limit_ == ExtensionLimit::WithinReadLengthOfFirstIncluded) {
-        auto max_candidates_within_read_length = static_cast<unsigned>(max_count_if_shared_with_first(reads, included_itr, last_variant_itr));
+        auto max_candidates_within_read_length = static_cast<unsigned>(max_count_if_shared_with_first(reads, first_included_itr, last_variant_itr));
         num_included = min({num_included, num_remaining_candidates, max_candidates_within_read_length + 1});
         num_excluded_candidates = max_candidates_within_read_length - num_included;
     } else {
@@ -137,12 +137,16 @@ GenomicRegion GenomeWalker::walk(const GenomicRegion& previous_region, const Rea
     while (--num_included > 0 &&
            is_optimal_to_extend(first_included_itr, next(included_itr), first_excluded_itr,
                                 last_variant_itr, reads, num_included + num_excluded_candidates)) {
+               if (extension_limit_ == ExtensionLimit::SharedWithFrontier && !has_shared(reads, *included_itr, *next(included_itr))) {
+                   break;
+               }
                ++included_itr;
            }
     
-    advance(included_itr, candidates.count_overlapped(*rightmost_mappable(first_included_itr, next(included_itr))) - 1);
+    auto num_remaining  = static_cast<size_t>(distance(included_itr, last_variant_itr)) - 1;
+    auto num_overlapped = candidates.count_overlapped(*rightmost_mappable(first_included_itr, next(included_itr))) - 1;
     
-    if (included_itr == cend(candidates)) --included_itr;
+    advance(included_itr, min(num_remaining, num_overlapped));
     
     first_excluded_itr = next(included_itr);
     
@@ -179,5 +183,12 @@ GenomicRegion GenomeWalker::walk(const GenomicRegion& previous_region, const Rea
             return get_encompassing(*first_included_itr, *included_itr);
     }
 }
+
+GenomeWalker::CandidateRanges::CandidateRanges(CandidateIterator first_previous_itr,
+                                               CandidateIterator first_included_itr,
+                                               CandidateIterator first_excluded_itr,
+                                               CandidateIterator last_itr)
+: first_previous_itr {first_previous_itr}, first_included_itr {first_included_itr},
+  first_excluded_itr {first_excluded_itr}, last_itr {last_itr} {}
 
 } // namespace Octopus

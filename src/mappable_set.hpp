@@ -546,7 +546,7 @@ const MappableType& MappableSet<MappableType, Allocator>::rightmost() const
         return last;
     } else {
         auto overlapped = ::overlap_range(elements_.cbegin(), elements_.cend(), last, max_element_size_);
-        return rightmost_mappable(overlapped.begin(), overlapped.end());
+        return *rightmost_mappable(overlapped.begin(), overlapped.end());
     }
 }
 
