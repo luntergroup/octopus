@@ -50,7 +50,7 @@ public:
     void clear();
     
 private:
-    using Tree   = boost::adjacency_list< boost::listS, boost::listS, boost::bidirectionalS, Allele, boost::no_property>;
+    using Tree   = boost::adjacency_list<boost::listS, boost::listS, boost::bidirectionalS, Allele, boost::no_property>;
     using Vertex = typename boost::graph_traits<Tree>::vertex_descriptor;
     using Edge   = typename boost::graph_traits<Tree>::edge_descriptor;
     

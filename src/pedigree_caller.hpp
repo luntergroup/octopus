@@ -1,13 +1,13 @@
 //
-//  trio_caller.hpp
+//  Pedigree_caller.hpp
 //  Octopus
 //
 //  Created by Daniel Cooke on 30/10/2015.
 //  Copyright © 2015 Oxford University. All rights reserved.
 //
 
-#ifndef trio_caller_hpp
-#define trio_caller_hpp
+#ifndef pedigree_caller_hpp
+#define pedigree_caller_hpp
 
 #include <vector>
 #include <string>
@@ -24,19 +24,19 @@ class VcfRecord;
 
 namespace Octopus
 {
-    class TrioVariantCaller : public VariantCaller
+    class PedigreeVariantCaller : public VariantCaller
     {
     public:
-        TrioVariantCaller() = delete;
-        explicit TrioVariantCaller(ReferenceGenome& reference, CandidateVariantGenerator& candidate_generator,
+        PedigreeVariantCaller() = delete;
+        explicit PedigreeVariantCaller(ReferenceGenome& reference, CandidateVariantGenerator& candidate_generator,
                                    unsigned ploidy, SampleIdType mother, SampleIdType father,
                                    double min_variant_posterior);
-        ~TrioVariantCaller() = default;
+        ~PedigreeVariantCaller() = default;
         
-        TrioVariantCaller(const TrioVariantCaller&)            = delete;
-        TrioVariantCaller& operator=(const TrioVariantCaller&) = delete;
-        TrioVariantCaller(TrioVariantCaller&&)                 = delete;
-        TrioVariantCaller& operator=(TrioVariantCaller&&)      = delete;
+        PedigreeVariantCaller(const PedigreeVariantCaller&)            = delete;
+        PedigreeVariantCaller& operator=(const PedigreeVariantCaller&) = delete;
+        PedigreeVariantCaller(PedigreeVariantCaller&&)                 = delete;
+        PedigreeVariantCaller& operator=(PedigreeVariantCaller&&)      = delete;
         
     private:
         HaplotypePhaser phaser_;
@@ -53,4 +53,4 @@ namespace Octopus
     
 } // namespace Octopus
 
-#endif /* trio_caller_hpp */
+#endif /* pedigree_caller_hpp */
