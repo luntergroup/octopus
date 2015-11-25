@@ -30,6 +30,7 @@
 #include "read_transformations.hpp"
 #include "candidate_generators.hpp"
 
+#include "haplotype_prior_model.hpp"
 #include "variant_caller_factory.hpp"
 
 #include "vcf_reader.hpp"
@@ -581,6 +582,8 @@ namespace Octopus
         
         return result;
     }
+    
+        
     
     std::unique_ptr<VariantCaller> get_variant_caller(const po::variables_map& options, ReferenceGenome& reference,
                                                       CandidateVariantGenerator& candidate_generator,

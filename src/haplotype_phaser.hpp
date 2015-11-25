@@ -39,12 +39,14 @@ public:
     void setup(const std::vector<Variant>& candidates, const ReadMap& reads);
     bool expended_candidates() const noexcept;
     std::vector<Haplotype> get_haplotypes() const;
+    void unique(const std::vector<Haplotype>& haplotypes);
     bool phase(const std::vector<Haplotype>& haplotypes,
                                    const UnphasedGenotypePosteriors& genotype_posteriors,
                                    const ReadMap& reads);
     
 private:
     HaplotypeTree tree_;
+    
     MappableSet<Variant> buffered_candidates_;
     GenomicRegion tree_region_; // until HaplotypeTree supports get_haplotypes()
     

@@ -652,6 +652,10 @@ namespace Octopus
         while (!phaser_.expended_candidates()) {
             auto haplotypes = phaser_.get_haplotypes();
             
+            unique(haplotypes, haplotype_prior_model_);
+            
+            phaser_.unique(haplotypes);
+            
             std::cout << "there are " << haplotypes.size() << " unique haplotypes" << std::endl;
             
             auto haplotype_region = get_region(haplotypes.front());

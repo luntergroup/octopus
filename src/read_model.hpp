@@ -11,11 +11,12 @@
 
 #include <cstddef>   // size_t
 #include <numeric>   // std::accumulate
+#include <functional>
 
 #include "haplotype.hpp"
 #include "genotype.hpp"
 #include "aligned_read.hpp"
-#include "single_read_model.hpp"
+#include "haplotype_likelihood_cache.hpp"
 
 namespace Octopus
 {
@@ -24,8 +25,7 @@ class ReadModel
 {
 public:
     ReadModel()  = delete;
-    explicit ReadModel(unsigned ploidy);
-    explicit ReadModel(unsigned ploidy, size_t max_num_reads, size_t max_num_haplotypes);
+    explicit ReadModel(unsigned ploidy, HaplotypeLikelihoodCache& haplotype_likelihoods);
     ~ReadModel() = default;
     
     ReadModel(const ReadModel&)            = default;
@@ -43,10 +43,8 @@ public:
     template <typename ForwardIterator>
     double log_probability(ForwardIterator first_read, ForwardIterator last_read, const Genotype<Haplotype>& genotype);
     
-    void clear_cache();
-    
 private:
-    SingleReadModel read_model_;
+    std::reference_wrapper<HaplotypeLikelihoodCache> haplotype_likelihoods_;
     
     const unsigned ploidy_;
     const double ln_ploidy_;

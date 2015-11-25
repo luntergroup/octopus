@@ -325,8 +325,7 @@ bool is_mldp_converged(std::vector<RealType>& lhs, const std::vector<RealType>& 
 
 
 template <typename RealType>
-std::vector<RealType>
-maximum_likelihood_dirichlet_params(std::vector<RealType> pi, const RealType precision,
+std::vector<RealType> dirichlet_mle(std::vector<RealType> pi, const RealType precision,
                                     const unsigned max_iterations = 100, const RealType epsilon = 0.0001)
 {
     using std::cbegin; using std::cend; using std::begin;

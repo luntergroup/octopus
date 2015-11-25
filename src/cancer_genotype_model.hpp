@@ -18,7 +18,6 @@
 #include "cancer_genotype.hpp"
 #include "reference_genome.hpp"
 #include "haplotype_prior_model.hpp"
-#include "single_read_model.hpp"
 
 class AlignedRead;
 class Haplotype;
@@ -56,7 +55,6 @@ namespace Octopus
         
     private:
         HaplotypePriorModel haplotype_prior_model_;
-        SingleReadModel read_model_;
         
         unsigned max_em_iterations_;
         double em_epsilon_;

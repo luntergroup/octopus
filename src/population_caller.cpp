@@ -30,6 +30,7 @@
 #include "string_utils.hpp"
 #include "sequence_utils.hpp"
 #include "random_candidate_variant_generator.hpp"
+#include "haplotype_prior_model.hpp"
 
 #include <iostream> // TEST
 
@@ -554,7 +555,7 @@ OutputIt merge_transform(InputIt1 first1, InputIt1 last1, InputIt2 first2,
     }
     return std::transform(first3, last3, d_first, unary_op);
 }
-    
+
 std::vector<VcfRecord>
 PopulationVariantCaller::call_variants(const GenomicRegion& region, const std::vector<Variant>& candidates,
                                        const ReadMap& reads)
@@ -570,6 +571,10 @@ PopulationVariantCaller::call_variants(const GenomicRegion& region, const std::v
         
         while (true) {
             auto haplotypes = phaser_.get_haplotypes();
+            
+            unique(haplotypes, haplotype_prior_model_);
+            
+            phaser_.unique(haplotypes);
             
             std::cout << "there are " << haplotypes.size() << " unique haplotypes" << std::endl;
             

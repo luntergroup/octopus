@@ -17,6 +17,7 @@
 #include "common.hpp"
 #include "maths.hpp"
 #include "read_utils.hpp"
+#include "haplotype_likelihood_cache.hpp"
 
 #include "threaded_transform.hpp" // TEST
 
@@ -96,7 +97,7 @@ namespace Octopus
     
     double genotype_log_likelihood(const CancerGenotype<Haplotype>& genotype,
                                    const Cancer::SampleGenotypeMixtures& genotype_mixtures,
-                                   const MappableSet<AlignedRead>& reads, SingleReadModel& rm)
+                                   const MappableSet<AlignedRead>& reads, HaplotypeLikelihoodCache& rm)
     {
         using std::cbegin; using std::cend; using std::accumulate;
         
@@ -122,7 +123,7 @@ namespace Octopus
                                  const ReadMap& reads,
                                  const HaplotypeFrequencies& haplotype_frequencies,
                                  const Cancer::GenotypeMixtures& genotype_mixtures,
-                                 SingleReadModel& read_model)
+                                 HaplotypeLikelihoodCache& read_model)
     {
         using std::cbegin; using std::cend; using std::begin; using std::transform;
         
@@ -185,7 +186,7 @@ namespace Octopus
                                         const ReadMap& reads,
                                         const HaplotypeFrequencies& haplotype_frequencies,
                                         const Cancer::GenotypeMixtures& genotype_mixtures,
-                                        SingleReadModel& read_model)
+                                        HaplotypeLikelihoodCache& read_model)
     {
         using std::cbegin; using std::cend; using std::begin; using std::transform;
         
@@ -224,7 +225,7 @@ namespace Octopus
     init_genotype_weight_responsibilities(const GenotypeLogPosteriors& genotype_posteriors,
                                           const std::vector<CancerGenotype<Haplotype>>& genotypes,
                                           const Cancer::GenotypeMixtures& genotype_mixtures,
-                                          const ReadMap& reads, SingleReadModel& rm)
+                                          const ReadMap& reads, HaplotypeLikelihoodCache& rm)
     {
         using std::cbegin; using std::cend; using std::begin; using std::transform;
         
@@ -268,7 +269,7 @@ namespace Octopus
                                                  const GenotypeLogPosteriors& genotype_log_posteriors,
                                                  const Cancer::GenotypeMixtures& genotype_mixtures,
                                                  const ReadMap& reads,
-                                                 SingleReadModel& rm)
+                                                 HaplotypeLikelihoodCache& rm)
     {
         using std::cbegin; using std::cend; using std::begin; using std::transform;
         
@@ -404,7 +405,7 @@ namespace Octopus
                            GenotypeMixtureResponsibilities& genotype_weight_responsibilities,
                            const ReadMap& reads,
                            const HaplotypePriorCounts& haplotype_prior_counts,
-                           SingleReadModel& read_model)
+                           HaplotypeLikelihoodCache& read_model)
     {
         auto max_frequency_change = update_haplotype_frequencies(haplotype_frequencies, haplotype_prior_counts,
                                                                  genotypes_log_probabilities, genotypes);
@@ -427,16 +428,7 @@ namespace Octopus
     Cancer::Latents
     Cancer::evaluate(const std::vector<Haplotype>& haplotypes, const ReadMap& reads, ReferenceGenome& reference)
     {
-        read_model_ = SingleReadModel {max_sample_read_count(reads), haplotypes.size()};
-        
-        // init read model here so cached haplotype references don't get invalidated when we prune genotypes
-        for (const auto& sample_reads : reads) {
-            for (const auto& read : sample_reads.second) {
-                for (const auto& haplotype : haplotypes) {
-                    read_model_.log_probability(read, haplotype);
-                }
-            }
-        }
+        HaplotypeLikelihoodCache haplotype_likelihoods {reads, haplotypes};
         
         //debug::print_read_haplotype_liklihoods(haplotypes, reads, 20);
         //exit(0);
@@ -471,7 +463,7 @@ namespace Octopus
 //        }
         
         auto genotype_log_posteriors = init_genotype_log_posteriors(genotypes, reads, haplotype_frequencies,
-                                                                    genotype_mixtures, read_model_);
+                                                                    genotype_mixtures, haplotype_likelihoods);
         
         debug::print_top_genotypes(genotypes, genotype_log_posteriors);
         //exit(0);
@@ -483,7 +475,7 @@ namespace Octopus
         auto genotype_weight_responsibilities = init_genotype_weight_responsibilities(genotype_log_posteriors,
                                                                                       genotypes,
                                                                                       genotype_mixtures, reads,
-                                                                                      read_model_);
+                                                                                      haplotype_likelihoods);
         
         //debug::print_weight_responsabilities(genotype_weight_responsibilities, reads);
         
@@ -492,7 +484,7 @@ namespace Octopus
             if (do_em_iteration(genotypes, haplotype_frequencies, weight_priors,
                                        genotype_mixtures, genotype_log_posteriors,
                                        genotype_weight_responsibilities, reads,
-                                       haplotype_prior_counts, read_model_) < em_epsilon_) break;
+                                       haplotype_prior_counts, haplotype_likelihoods) < em_epsilon_) break;
         }
         
         Cancer::GenotypeProbabilities genotype_posteriors {};

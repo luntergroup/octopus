@@ -334,7 +334,7 @@ void unique_least_complex(std::vector<Haplotype>& haplotypes)
         first_equal = last_equal;
     }
     
-    haplotypes.erase(std::unique(haplotypes.begin(), haplotypes.end()), last);
+    haplotypes.erase(std::unique(begin(haplotypes), end(haplotypes)), last);
 }
 
 bool operator==(const Haplotype& lhs, const Haplotype& rhs)

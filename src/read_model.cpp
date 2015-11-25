@@ -18,23 +18,16 @@
 namespace Octopus
 {
 
-ReadModel::ReadModel(unsigned ploidy)
+ReadModel::ReadModel(unsigned ploidy, HaplotypeLikelihoodCache& haplotype_likelihoods)
 :
-read_model_ {1000, 100},
-ploidy_ {ploidy},
-ln_ploidy_ {std::log(ploidy)}
-{}
-
-ReadModel::ReadModel(unsigned ploidy, size_t max_num_reads, size_t max_num_haplotypes)
-:
-read_model_ {max_num_reads, max_num_haplotypes},
+haplotype_likelihoods_ {haplotype_likelihoods},
 ploidy_ {ploidy},
 ln_ploidy_ {std::log(ploidy)}
 {}
 
 double ReadModel::log_probability(const AlignedRead& read, const Haplotype& haplotype)
 {
-    return read_model_.log_probability(read, haplotype);
+    return haplotype_likelihoods_.get().log_probability(read, haplotype);
 }
 
 // ln p(read | genotype) = ln sum {haplotype in genotype} p(read | haplotype) - ln ploidy
@@ -51,11 +44,6 @@ double ReadModel::log_probability(const AlignedRead& read, const Genotype<Haplot
         default:
             return log_probability_polyploid(read, genotype);
     }
-}
-
-void ReadModel::clear_cache()
-{
-    read_model_.clear_cache();
 }
 
 double ReadModel::log_probability_haploid(const AlignedRead& read, const Genotype<Haplotype>& genotype)
