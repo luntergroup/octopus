@@ -88,7 +88,7 @@ namespace Octopus
         ("reference,R", po::value<std::string>()->required(), "the reference genome file")
         ("reads,I", po::value<std::vector<std::string>>()->multitoken(), "space-seperated list of read file paths")
         ("reads-file", po::value<std::string>(), "list of read file paths, one per line")
-        ("regions", po::value<std::vector<std::string>>()->multitoken(), "space-seperated list of one-indexed variant search regions (chrom:begin-end)")
+        ("regions,L", po::value<std::vector<std::string>>()->multitoken(), "space-seperated list of one-indexed variant search regions (chrom:begin-end)")
         ("regions-file", po::value<std::string>(), "list of one-indexed variant search regions (chrom:begin-end), one per line")
         ("skip-regions", po::value<std::vector<std::string>>()->multitoken(), "space-seperated list of one-indexed regions (chrom:begin-end) to skip")
         ("skip-regions-file", po::value<std::string>(), "list of one-indexed regions (chrom:begin-end) to skip, one per line")
