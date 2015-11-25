@@ -13,16 +13,15 @@
 #include <utility>    // std::pair
 #include <functional> // std::reference_wrapper
 
-#include "single_read_model.hpp"
+#include "haplotype_likelihood_cache.hpp"
 #include "read_utils.hpp"
 
 namespace Octopus {
 
-std::vector<Haplotype> filter_haplotypes(const std::vector<Haplotype>& haplotypes, const ReadMap& reads, size_t n)
+std::vector<Haplotype> filter_haplotypes(const std::vector<Haplotype>& haplotypes, const ReadMap& reads, size_t n,
+                                         HaplotypeLikelihoodCache& haplotype_likelihoods)
 {
     if (haplotypes.size() <= n) return haplotypes;
-    
-    SingleReadModel read_model {count_reads(reads), haplotypes.size()};
     
     std::vector<std::pair<std::reference_wrapper<const Haplotype>, double>> haplotype_scores {};
     haplotype_scores.reserve(haplotypes.size());
@@ -32,7 +31,7 @@ std::vector<Haplotype> filter_haplotypes(const std::vector<Haplotype>& haplotype
         
         for (const auto& sample_reads : reads) {
             for (const auto& read : sample_reads.second) {
-                auto curr = read_model.log_probability(read, haplotype);
+                auto curr = haplotype_likelihoods.log_probability(read, haplotype);
                 if (curr > max) max = curr;
             }
         }

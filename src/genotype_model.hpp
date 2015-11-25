@@ -13,6 +13,7 @@
 #include <vector>
 #include <unordered_map>
 #include <algorithm> // std::transform
+#include <numeric>   // std::accumulate
 #include <iterator>  // std::begin, std::cbegin, std::cend, std::inserter
 #include <cmath>     // std::abs
 
@@ -162,14 +163,41 @@ namespace Octopus
                           return haplotype_prior_model.evaluate(haplotype, reference_haplotype);
                       });
             
-            constexpr double precision {40.0};
-            constexpr unsigned max_iterations {2000};
-            const auto alphas = Maths::maximum_likelihood_dirichlet_params(p, precision, max_iterations);
+            const auto norm = std::accumulate(cbegin(p), cend(p), 0.0);
             
-            result.reserve(haplotypes.size());
+            transform(cbegin(p), cend(p), begin(p), [norm] (auto x) { return x / norm; });
             
-            transform(cbegin(haplotypes), cend(haplotypes), cbegin(alphas), std::inserter(result, begin(result)),
-                      [] (const auto& haplotype, double a) { return std::make_pair(haplotype, a); });
+//            constexpr double precision {40.0};
+//            constexpr unsigned max_iterations {100};
+//            const auto alphas = Maths::dirichlet_mle(p, precision, max_iterations);
+//            
+//            result.reserve(haplotypes.size());
+//            
+//            transform(cbegin(haplotypes), cend(haplotypes), cbegin(alphas), std::inserter(result, begin(result)),
+//                      [] (const auto& haplotype, double a) { return std::make_pair(haplotype, a); });
+            
+//            //DEBUG
+//
+            transform(cbegin(haplotypes), cend(haplotypes), std::inserter(result, begin(result)),
+                      [&haplotype_prior_model, &reference_haplotype] (const auto& haplotype) {
+                          return std::make_pair(haplotype, 100 * haplotype_prior_model.evaluate(haplotype, reference_haplotype));
+                      });
+            
+//            //haplotype_prior_model.evaluate(haplotypes, reference_haplotype); // DEBUG
+//            
+//            for (auto& h : result) h.second = 0;
+//            
+//            const auto& h1 = haplotypes[1]; // <>
+//            const auto& h2 = haplotypes[2]; // < {6:93705886-93705887 C} {6:93706063-93706064 A} >
+//            const auto& h3 = haplotypes[3]; // < {6:93705886-93705887 C} >
+//            const auto& h4 = haplotypes[0]; // < {6:93706063-93706064 A} >
+//            
+//            result[h1] = 25;
+//            result[h2] = 1;
+//            result[h3] = 5.6;
+//            result[h4] = 5.6;
+//            
+//            //DEBUG
             
             return result;
         }

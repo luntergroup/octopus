@@ -29,7 +29,7 @@ std::vector<TandemRepeat> find_exact_tandem_repeats(const Haplotype& haplotype)
     return find_exact_tandem_repeats(haplotype.get_sequence(), haplotype.get_region(), 1);
 }
 
-double HaplotypePriorModel::evaluate(const Haplotype& to, const Haplotype& from)
+double HaplotypePriorModel::evaluate(const Haplotype& to, const Haplotype& from) const
 {
     auto mutations = to.difference(from);
     
@@ -75,7 +75,7 @@ double HaplotypePriorModel::evaluate(const Haplotype& to, const Haplotype& from)
 }
 
 std::unordered_map<Haplotype, double>
-HaplotypePriorModel::evaluate(const std::vector<Haplotype>& haplotypes, const Haplotype& reference)
+HaplotypePriorModel::evaluate(const std::vector<Haplotype>& haplotypes, const Haplotype& reference) const
 {
     std::unordered_map<Haplotype, double> result {};
     result.reserve(haplotypes.size());
@@ -88,7 +88,20 @@ HaplotypePriorModel::evaluate(const std::vector<Haplotype>& haplotypes, const Ha
     
     for (auto& p : result) p.second /= norm;
     
+    std::cout << "printing haplotype priors" << std::endl;
+    for (const auto& hp : result) {
+        print_variant_alleles(hp.first);
+        std::cout << hp.second << std::endl;
+    }
+    
     return result;
 }
 
+// non-member methods
+
+void unique(std::vector<Haplotype>& haplotypes, const HaplotypePriorModel& prior_model)
+{
+    unique_least_complex(haplotypes);
+}
+    
 } // namespace Octopus

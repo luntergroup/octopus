@@ -30,14 +30,16 @@ public:
     HaplotypePriorModel& operator=(HaplotypePriorModel&&)      = default;
     
     // ln p(to | from)
-    double evaluate(const Haplotype& to, const Haplotype& from);
+    double evaluate(const Haplotype& to, const Haplotype& from) const;
     
-    std::unordered_map<Haplotype, double> evaluate(const std::vector<Haplotype>& haplotypes, const Haplotype& reference);
+    std::unordered_map<Haplotype, double> evaluate(const std::vector<Haplotype>& haplotypes, const Haplotype& reference) const;
     
 private:
     const double transition_rate_   = 0.000222;
     const double transversion_rate_ = 0.000111;
 };
+
+void unique(std::vector<Haplotype>& haplotypes, const HaplotypePriorModel& prior_model);
 
 } // namespace Octopus
 

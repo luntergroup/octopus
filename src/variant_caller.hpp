@@ -19,6 +19,7 @@
 #include "read_filter.hpp"
 #include "read_transform.hpp"
 #include "candidate_variant_generator.hpp"
+#include "haplotype_prior_model.hpp"
 
 class GenomicRegion;
 class Variant;
@@ -36,6 +37,9 @@ namespace Octopus
         VariantCaller() = delete;
         explicit VariantCaller(ReferenceGenome& reference, CandidateVariantGenerator& candidate_generator,
                                RefCallType refcall_type = RefCallType::None);
+        explicit VariantCaller(ReferenceGenome& reference, CandidateVariantGenerator& candidate_generator,
+                               HaplotypePriorModel haplotype_prior_model,
+                               RefCallType refcall_type = RefCallType::None);
         virtual ~VariantCaller() = default;
         
         VariantCaller(const VariantCaller&)            = delete;
@@ -49,6 +53,7 @@ namespace Octopus
         
     protected:
         ReferenceGenome& reference_;
+        HaplotypePriorModel haplotype_prior_model_;
         
         const RefCallType refcall_type_ = RefCallType::Positional;
         

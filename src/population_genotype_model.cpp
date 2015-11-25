@@ -14,6 +14,7 @@
 
 #include "read_model.hpp"
 #include "maths.hpp"
+#include "haplotype_likelihood_cache.hpp"
 #include "read_utils.hpp"
 
 #include "haplotype_filter.hpp"
@@ -65,12 +66,13 @@ namespace Octopus
                                             const GenotypeLogLikelihoods& log_likelihoods, size_t n = 5);
         void print_genotype_log_marginals(const std::vector<Genotype<Haplotype>>& genotypes,
                                           const GenotypeLogMarginals& genotype_log_marginals,
-                                          size_t n = 5);
+                                          size_t n = 10);
         void print_genotype_posteriors(const std::vector<Genotype<Haplotype>>& genotypes,
                                        const GenotypePosteriors& genotype_posteriors,
-                                       size_t n = 5);
+                                       size_t n = 10);
         
-        void print_read_haplotype_liklihoods(const std::vector<Haplotype>& haplotypes, const ReadMap& reads, size_t n = 3);
+        void print_read_haplotype_liklihoods(const std::vector<Haplotype>& haplotypes, const ReadMap& reads,
+                                             HaplotypeLikelihoodCache& haplotype_likelihoods, size_t n = 3);
         void print_read_genotype_liklihoods(const std::vector<Genotype<Haplotype>>& genotypes, const ReadMap& reads,
                                  ReadModel& read_model, size_t n = 3);
     } // namespace debug
@@ -254,14 +256,14 @@ namespace Octopus
         auto max_change = update_haplotype_frequencies(haplotype_frequencies, haplotype_prior_counts,
                                                        genotypes, genotype_posteriors, prior_count_sum);
         
-        //debug::print_haplotype_frequencies(haplotype_frequencies);
+        debug::print_haplotype_frequencies(haplotype_frequencies);
         
         update_genotype_log_marginals(genotype_log_marginals, haplotype_frequencies);
         
         update_genotype_posteriors(genotype_posteriors, haplotype_frequencies,
                                    genotype_log_marginals, genotype_log_likilhoods);
         
-        //debug::print_genotype_posteriors(genotypes, genotype_posteriors);
+        debug::print_genotype_posteriors(genotypes, genotype_posteriors);
         
         return max_change;
     }
@@ -303,6 +305,8 @@ namespace Octopus
 //            std::cout << std::endl;
 //        }
         
+        HaplotypeLikelihoodCache haplotype_likelihoods {reads, haplotypes};
+        
         auto genotypes = generate_all_genotypes(haplotypes, ploidy_);
         
         if (genotypes.size() == 1) {
@@ -311,7 +315,7 @@ namespace Octopus
         
         std::cout << "there are " << genotypes.size() << " candidate genotypes" << std::endl;
         
-        ReadModel read_model {ploidy_, count_reads(reads), haplotypes.size()};
+        ReadModel read_model {ploidy_, haplotype_likelihoods};
         
         //auto start = std::chrono::system_clock::now();
         
@@ -320,11 +324,13 @@ namespace Octopus
         //auto end = std::chrono::system_clock::now();
         //std::cout << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << "ms" << std::endl;
         
-        //debug::print_genotype_log_likelihoods(genotypes, genotype_log_likilhoods, 20);
-        //std::cout << std::endl;
-        //debug::print_read_genotype_liklihoods(genotypes, reads, read_model, 10);
+        debug::print_genotype_log_likelihoods(genotypes, genotype_log_likilhoods, 20);
+        std::cout << std::endl;
+//        debug::print_read_haplotype_liklihoods(haplotypes, reads, haplotype_likelihoods);
+//        std::cout << std::endl;
+//        debug::print_read_genotype_liklihoods(genotypes, reads, read_model, 10);
         
-        read_model.clear_cache();
+        haplotype_likelihoods.clear();
         
         auto haplotype_prior_counts = compute_haplotype_prior_counts(haplotypes, reference, haplotype_prior_model_);
         
@@ -333,14 +339,14 @@ namespace Octopus
         auto haplotype_frequencies  = init_haplotype_frequencies(haplotype_prior_counts, prior_count_sum);
         auto genotype_log_marginals = init_genotype_log_marginals(genotypes, haplotype_frequencies);
         
-        //debug::print_haplotype_priors(haplotype_prior_counts);
-        //debug::print_haplotype_frequencies(haplotype_frequencies);
-        //debug::print_genotype_log_marginals(genotypes, genotype_log_marginals);
+        debug::print_haplotype_priors(haplotype_prior_counts);
+        debug::print_haplotype_frequencies(haplotype_frequencies);
+        debug::print_genotype_log_marginals(genotypes, genotype_log_marginals);
         //exit(0);
         
         auto genotype_posteriors = init_genotype_posteriors(genotype_log_marginals, genotype_log_likilhoods);
         
-        //debug::print_genotype_posteriors(genotypes, genotype_posteriors);
+        debug::print_genotype_posteriors(genotypes, genotype_posteriors);
         //exit(0);
         
         for (unsigned n {}; n < max_em_iterations_; ++n) {
@@ -484,7 +490,8 @@ namespace Octopus
             }
         }
         
-        void print_read_haplotype_liklihoods(const std::vector<Haplotype>& haplotypes, const ReadMap& reads, size_t n)
+        void print_read_haplotype_liklihoods(const std::vector<Haplotype>& haplotypes, const ReadMap& reads,
+                                             HaplotypeLikelihoodCache& haplotype_likelihoods, size_t n)
         {
             auto m = std::min(n, haplotypes.size());
             
@@ -500,7 +507,7 @@ namespace Octopus
                     top.reserve(haplotypes.size());
                     
                     for (const auto& haplotype : haplotypes) {
-                        top.emplace_back(haplotype, ReadModel(2).log_probability(read, haplotype));
+                        top.emplace_back(haplotype, haplotype_likelihoods.log_probability(read, haplotype));
                     }
                     
                     std::sort(std::begin(top), std::end(top), IsBigger<Haplotype, double>());

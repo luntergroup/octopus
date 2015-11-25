@@ -34,7 +34,7 @@ tree_ {reference},
 max_haplotypes_ {max_haplotypes},
 max_indicators_ {max_indicators},
 walker_ {max_indicators_, calculate_max_indcluded(max_haplotypes_),
-         GenomeWalker::IndicatorLimit::NoLimit, GenomeWalker::ExtensionLimit::SharedWithFrontier}
+    GenomeWalker::IndicatorLimit::NoLimit, GenomeWalker::ExtensionLimit::NoLimit}
 {}
 
 void HaplotypePhaser::setup(const std::vector<Variant>& candidates, const ReadMap& reads)
@@ -55,11 +55,14 @@ bool HaplotypePhaser::expended_candidates() const noexcept
 
 std::vector<Haplotype> HaplotypePhaser::get_haplotypes() const
 {
-    auto haplotypes = tree_.get_haplotypes(tree_region_);
-    
-    unique_least_complex(haplotypes);
-    
-    return haplotypes;
+    return tree_.get_haplotypes(tree_region_);
+}
+
+void HaplotypePhaser::unique(const std::vector<Haplotype>& haplotypes)
+{
+    for (const auto& haplotype : haplotypes) {
+        tree_.prune_unique(haplotype);
+    }
 }
 
 std::unordered_map<Haplotype, double>

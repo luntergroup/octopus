@@ -29,6 +29,16 @@ namespace Octopus
                                  RefCallType refcall_type)
     :
     reference_ {reference},
+    haplotype_prior_model_ {},
+    candidate_generator_ {candidate_generator},
+    refcall_type_ {refcall_type}
+    {}
+    
+    VariantCaller::VariantCaller(ReferenceGenome& reference, CandidateVariantGenerator& candidate_generator,
+                                 HaplotypePriorModel haplotype_prior_model, RefCallType refcall_type)
+    :
+    reference_ {reference},
+    haplotype_prior_model_ {std::move(haplotype_prior_model)},
     candidate_generator_ {candidate_generator},
     refcall_type_ {refcall_type}
     {}
