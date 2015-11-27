@@ -28,34 +28,44 @@ namespace Octopus
 class HaplotypePhaser
 {
 public:
-    using UnphasedSampleGenotypePosteriors = std::unordered_map<Genotype<Haplotype>, double>;
-    using UnphasedGenotypePosteriors       = std::unordered_map<SampleIdType, UnphasedSampleGenotypePosteriors>;
-    using PhasedSampleGenotypePosteriors   = std::unordered_map<Genotype<Haplotype>, double>;
-    using PhasedGenotypePosteriors         = std::unordered_map<SampleIdType, PhasedSampleGenotypePosteriors>;
+    using SampleGenotypePosteriors = std::unordered_map<Genotype<Haplotype>, double>;
+    using GenotypePosteriors       = std::unordered_map<SampleIdType, SampleGenotypePosteriors>;
+    
+    struct PhaseRegion
+    {
+        PhaseRegion() = default;
+        template <typename Region> PhaseRegion(Region&& region, double probability);
+        
+        GenomicRegion region;
+        double probability;
+    };
+    using PhaseSet  = std::vector<PhaseRegion>;
+    using PhaseSets = std::unordered_map<SampleIdType, PhaseSet>;
     
     HaplotypePhaser() = delete;
-    HaplotypePhaser(ReferenceGenome& reference, unsigned max_haplotypes = 128, unsigned max_indicators = 3);
+    explicit HaplotypePhaser(ReferenceGenome& reference, const std::vector<Variant>& candidates, const ReadMap& reads,
+                             unsigned max_haplotypes = 128, unsigned max_indicators = 3);
+    ~HaplotypePhaser() = default;
     
-    void setup(const std::vector<Variant>& candidates, const ReadMap& reads);
-    bool expended_candidates() const noexcept;
-    std::vector<Haplotype> get_haplotypes() const;
+    bool done() const noexcept;
+    
+    std::vector<Haplotype> get_haplotypes();
     void unique(const std::vector<Haplotype>& haplotypes);
-    bool phase(const std::vector<Haplotype>& haplotypes,
-                                   const UnphasedGenotypePosteriors& genotype_posteriors,
-                                   const ReadMap& reads);
+    
+    PhaseSets phase(const std::vector<Haplotype>& haplotypes, const GenotypePosteriors& genotype_posteriors);
     
 private:
     HaplotypeTree tree_;
     
     MappableSet<Variant> buffered_candidates_;
-    GenomicRegion tree_region_; // until HaplotypeTree supports get_haplotypes()
-    
-    unsigned max_haplotypes_ = 10'000;
-    unsigned max_indicators_ = 5;
+    const ReadMap* reads_;
     
     GenomeWalker walker_;
     
-    void extend_tree(const ReadMap& reads);
+    bool is_phasing_enabled_;
+    
+    GenomicRegion tree_region_;
+    GenomicRegion next_region_;
 };
 
 } // namespace Octopus

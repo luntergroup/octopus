@@ -21,7 +21,6 @@ namespace Octopus
                                          double min_variant_posterior)
     :
     VariantCaller {reference, candidate_generator, RefCallType::None},
-    phaser_ {reference, 1000, 0},
     ploidy_ {ploidy},
     mother_ {std::move(mother)},
     father_ {std::move(father)},

@@ -31,6 +31,7 @@
 #include "sequence_utils.hpp"
 #include "random_candidate_variant_generator.hpp"
 #include "haplotype_prior_model.hpp"
+#include "haplotype_phaser.hpp"
 
 #include <iostream> // TEST
 
@@ -45,7 +46,6 @@ PopulationVariantCaller::PopulationVariantCaller(ReferenceGenome& reference, Can
 :
 VariantCaller {reference, candidate_generator, refcall_type},
 genotype_model_ {ploidy},
-phaser_ {reference, 64, 2},
 ploidy_ {ploidy},
 min_variant_posterior_ {min_variant_posterior},
 min_refcall_posterior_ {min_refcall_posterior}
@@ -564,17 +564,17 @@ PopulationVariantCaller::call_variants(const GenomicRegion& region, const std::v
     
     if (empty(region)) return result;
     
-    phaser_.setup(candidates, reads);
+    HaplotypePhaser phaser {reference_, candidates, reads, 64, 2};
     
-    while (!phaser_.expended_candidates()) {
+    while (!phaser.done()) {
         GenotypeModel::Population::GenotypeProbabilities genotype_posteriors;
         
-        while (true) {
-            auto haplotypes = phaser_.get_haplotypes();
+        while (!phaser.done()) {
+            auto haplotypes = phaser.get_haplotypes();
             
             unique(haplotypes, haplotype_prior_model_);
             
-            phaser_.unique(haplotypes);
+            phaser.unique(haplotypes);
             
             std::cout << "there are " << haplotypes.size() << " unique haplotypes" << std::endl;
             
@@ -588,7 +588,7 @@ PopulationVariantCaller::call_variants(const GenomicRegion& region, const std::v
             
             genotype_posteriors = genotype_model_.evaluate(haplotypes, haplotype_region_reads, reference_).genotype_posteriors;
             
-            if (phaser_.phase(haplotypes, genotype_posteriors, reads)) break;
+            phaser.phase(haplotypes, genotype_posteriors);
         }
         
         debug::print_genotype_posteriors(genotype_posteriors);
@@ -666,7 +666,7 @@ PopulationVariantCaller::call_variants(const GenomicRegion& region, const std::v
                 for (size_t i {}; i < m; ++i) {
                     std::cout << "\t* ";
                     print_variant_alleles(v[i].first);
-                    std::cout << " " << v[i].second << std::endl;
+                    std::cout << " " << std::setprecision(20) << v[i].second << std::endl;
                 }
             }
         }
@@ -688,7 +688,7 @@ PopulationVariantCaller::call_variants(const GenomicRegion& region, const std::v
                 
                 for (size_t i {}; i < m; ++i) {
                     std::cout << "\t* ";
-                    std::cout << v[i].first << " " << v[i].second << std::endl;
+                    std::cout << v[i].first << " " << std::setprecision(20) << v[i].second << std::endl;
                 }
             }
         }

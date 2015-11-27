@@ -32,6 +32,8 @@
 
 #include "haplotype_prior_model.hpp"
 
+#include "haplotype_phaser.hpp"
+
 #include <iostream> // TEST
 
 namespace Octopus
@@ -45,7 +47,6 @@ namespace Octopus
                                              const SampleIdType& normal_sample, bool call_somatics_only)
     :
     VariantCaller {reference, candidate_generator, refcall_type},
-    phaser_ {reference, 1000, 0},
     normal_sample_ {normal_sample},
     min_variant_posterior_ {min_variant_posterior},
     min_somatic_mutation_posterior_ {min_somatic_posterior},
@@ -647,14 +648,14 @@ namespace Octopus
         
         if (candidates.empty()) return result; // for now, could spike in random mutations for refcalls
         
-        phaser_.setup(candidates, reads);
+        HaplotypePhaser phaser {reference_, candidates, reads, 64, 2};
         
-        while (!phaser_.expended_candidates()) {
-            auto haplotypes = phaser_.get_haplotypes();
+        while (!phaser.done()) {
+            auto haplotypes = phaser.get_haplotypes();
             
             unique(haplotypes, haplotype_prior_model_);
             
-            phaser_.unique(haplotypes);
+            phaser.unique(haplotypes);
             
             std::cout << "there are " << haplotypes.size() << " unique haplotypes" << std::endl;
             
@@ -689,7 +690,7 @@ namespace Octopus
             
             auto germline_genotype_posteriors = marginalise_germline_genotypes(latents.genotype_posteriors, num_haplotypes);
             
-            auto phased_gps = phaser_.phase(haplotypes, {{"germline", germline_genotype_posteriors}}, reads);
+            auto phased_gps = phaser.phase(haplotypes, {{"germline", germline_genotype_posteriors}});
             
             auto map_germline_genotype = find_map_genotype(germline_genotype_posteriors);
             

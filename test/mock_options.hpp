@@ -45,7 +45,7 @@ inline po::variables_map get_basic_mock_options()
         
         // for population
         //"--regions", "4:40,436,430-40,436,571",
-        "--regions", "6:93,705,800-93,706,166", // NA12878_low_coverage phase error
+        //"--regions", "6:93,705,800-93,706,166", // NA12878_low_coverage phase error
         //"--regions", "6:22,877,929-22,878,012", // NA12878_low_coverage HMM error
         //"--regions", "6:29,915,924-29,916,412",
         //"--regions", "6:144,712,021-144,712,273",
@@ -61,7 +61,10 @@ inline po::variables_map get_basic_mock_options()
         
         //"-L", "16:61,477,371-61,477,907",
         
-        "-L", "4:40,436,510-40,436,694",
+        //"-L", "4:40,436,510-40,436,694",
+        
+        "-L", "5:34,465,575-34,465,722",
+        //"-L", "5:34,465,568-34,465,836",
         
         // for cancer
         //"--regions", "6:52,873,970-52,882,816",

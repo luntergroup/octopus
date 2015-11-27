@@ -256,14 +256,14 @@ namespace Octopus
         auto max_change = update_haplotype_frequencies(haplotype_frequencies, haplotype_prior_counts,
                                                        genotypes, genotype_posteriors, prior_count_sum);
         
-        debug::print_haplotype_frequencies(haplotype_frequencies);
+        //debug::print_haplotype_frequencies(haplotype_frequencies);
         
         update_genotype_log_marginals(genotype_log_marginals, haplotype_frequencies);
         
         update_genotype_posteriors(genotype_posteriors, haplotype_frequencies,
                                    genotype_log_marginals, genotype_log_likilhoods);
         
-        debug::print_genotype_posteriors(genotypes, genotype_posteriors);
+        //debug::print_genotype_posteriors(genotypes, genotype_posteriors);
         
         return max_change;
     }
@@ -297,6 +297,10 @@ namespace Octopus
     Population::Latents
     Population::evaluate(const std::vector<Haplotype>& haplotypes, const ReadMap& reads, ReferenceGenome& reference)
     {
+        if (haplotypes.size() == 1) {
+            // TODO: catch this case to avoid computing
+        }
+        
 //        auto filtered_haplotypes = filter_haplotypes(haplotypes, reads, 10);
 //        
 //        std::cout << "filtered_haplotypes  " << filtered_haplotypes.size() << std::endl;
@@ -309,10 +313,6 @@ namespace Octopus
         
         auto genotypes = generate_all_genotypes(haplotypes, ploidy_);
         
-        if (genotypes.size() == 1) {
-            // TODO: catch this case to avoid computing
-        }
-        
         std::cout << "there are " << genotypes.size() << " candidate genotypes" << std::endl;
         
         ReadModel read_model {ploidy_, haplotype_likelihoods};
@@ -324,8 +324,8 @@ namespace Octopus
         //auto end = std::chrono::system_clock::now();
         //std::cout << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << "ms" << std::endl;
         
-        debug::print_genotype_log_likelihoods(genotypes, genotype_log_likilhoods, 20);
-        std::cout << std::endl;
+//        debug::print_genotype_log_likelihoods(genotypes, genotype_log_likilhoods, 20);
+//        std::cout << std::endl;
 //        debug::print_read_haplotype_liklihoods(haplotypes, reads, haplotype_likelihoods);
 //        std::cout << std::endl;
 //        debug::print_read_genotype_liklihoods(genotypes, reads, read_model, 10);
@@ -339,18 +339,18 @@ namespace Octopus
         auto haplotype_frequencies  = init_haplotype_frequencies(haplotype_prior_counts, prior_count_sum);
         auto genotype_log_marginals = init_genotype_log_marginals(genotypes, haplotype_frequencies);
         
-        debug::print_haplotype_priors(haplotype_prior_counts);
-        debug::print_haplotype_frequencies(haplotype_frequencies);
-        debug::print_genotype_log_marginals(genotypes, genotype_log_marginals);
+//        debug::print_haplotype_priors(haplotype_prior_counts);
+//        debug::print_haplotype_frequencies(haplotype_frequencies);
+//        debug::print_genotype_log_marginals(genotypes, genotype_log_marginals);
         //exit(0);
         
         auto genotype_posteriors = init_genotype_posteriors(genotype_log_marginals, genotype_log_likilhoods);
         
-        debug::print_genotype_posteriors(genotypes, genotype_posteriors);
+        //debug::print_genotype_posteriors(genotypes, genotype_posteriors);
         //exit(0);
         
         for (unsigned n {}; n < max_em_iterations_; ++n) {
-            std::cout << "******* EM iteration " << n << " *******" << std::endl;
+            //std::cout << "******* EM iteration " << n << " *******" << std::endl;
             if (do_em_iteration(haplotypes, genotypes, genotype_posteriors, haplotype_frequencies,
                                 genotype_log_marginals, genotype_log_likilhoods,
                                 haplotype_prior_counts, prior_count_sum) < em_epsilon_) break;
@@ -385,7 +385,7 @@ namespace Octopus
             
             for (unsigned i {}; i < m; ++i) {
                 print_variant_alleles(v[i].first);
-                std::cout << " " << v[i].second << std::endl;
+                std::cout << " " << std::setprecision(10) << v[i].second << std::endl;
             }
         }
         
@@ -404,7 +404,7 @@ namespace Octopus
             
             for (unsigned i {}; i < m; ++i) {
                 print_variant_alleles(v[i].first);
-                std::cout << " " << v[i].second << std::endl;
+                std::cout << " " << std::setprecision(10) << v[i].second << std::endl;
             }
         }
         
@@ -429,7 +429,7 @@ namespace Octopus
             
             for (unsigned i {}; i < std::min(n, v.size()); ++i) {
                 print_variant_alleles(v[i].first);
-                std::cout << " " << v[i].second << std::endl;
+                std::cout << " " << std::setprecision(10) << v[i].second << std::endl;
             }
         }
         
@@ -456,7 +456,7 @@ namespace Octopus
                 
                 for (unsigned i {}; i < std::min(n, v.size()); ++i) {
                     print_variant_alleles(v[i].first);
-                    std::cout << " " << v[i].second << std::endl;
+                    std::cout << " " << std::setprecision(10) << v[i].second << std::endl;
                 }
             }
         }
@@ -485,7 +485,7 @@ namespace Octopus
                 
                 for (unsigned i {}; i < std::min(n, v.size()); ++i) {
                     print_variant_alleles(v[i].first);
-                    std::cout << " " << v[i].second << std::endl;
+                    std::cout << " " << std::setprecision(10) << v[i].second << std::endl;
                 }
             }
         }
@@ -515,7 +515,7 @@ namespace Octopus
                     for (unsigned i {}; i < m; ++i) {
                         std::cout << "\t* ";
                         print_variant_alleles(top[i].first);
-                        std::cout << " " << top[i].second << std::endl;
+                        std::cout << " " << std::setprecision(10) << top[i].second << std::endl;
                     }
                 }
             }
@@ -544,7 +544,7 @@ namespace Octopus
                     for (unsigned i {}; i < m; ++i) {
                         std::cout << "\t* ";
                         print_variant_alleles(top[i].first);
-                        std::cout << " " << top[i].second << std::endl;
+                        std::cout << " " << std::setprecision(10) << top[i].second << std::endl;
                     }
                 }
             }

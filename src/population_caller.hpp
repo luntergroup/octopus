@@ -15,7 +15,6 @@
 #include "variant_caller.hpp"
 #include "genotype_model.hpp"
 #include "population_genotype_model.hpp"
-#include "haplotype_phaser.hpp"
 
 class GenomicRegion;
 class ReadManager;
@@ -41,7 +40,6 @@ namespace Octopus
         
     private:
         GenotypeModel::Population genotype_model_;
-        HaplotypePhaser phaser_;
         
         const unsigned ploidy_;
         const double min_variant_posterior_ = 0.95;

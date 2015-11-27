@@ -87,7 +87,7 @@ public:
     void insert(InputIterator, InputIterator);
     iterator insert(std::initializer_list<MappableType>);
     iterator erase(const_iterator);
-    iterator erase(const MappableType&);
+    size_type erase(const MappableType&);
     iterator erase(const_iterator, const_iterator);
     //void erase(OverlapRange<const_iterator>);
     //void erase(ContainedRange<const_iterator>);
@@ -128,6 +128,9 @@ public:
     OverlapRange<const_iterator> overlap_range(const_iterator first, const_iterator last, const MappableType_& mappable) const;
     
     template <typename MappableType_>
+    void erase_overlapped(const MappableType_& mappable);
+    
+    template <typename MappableType_>
     bool has_contained(const MappableType_& mappable) const;
     template <typename MappableType_>
     bool has_contained(iterator first, iterator last, const MappableType_& mappable) const;
@@ -147,6 +150,9 @@ public:
     ContainedRange<iterator> contained_range(iterator first, iterator last, const MappableType_& mappable) const;
     template <typename MappableType_>
     ContainedRange<const_iterator> contained_range(const_iterator first, const_iterator last, const MappableType_& mappable) const;
+    
+    template <typename MappableType_>
+    void erase_contained(const MappableType_& mappable);
     
     template <typename MappableType1_, typename MappableType2_>
     bool has_shared(const MappableType1_& mappable1, const MappableType2_& mappable2) const;
@@ -418,13 +424,13 @@ MappableSet<MappableType, Allocator>::erase(const_iterator p)
 }
 
 template <typename MappableType, typename Allocator>
-typename MappableSet<MappableType, Allocator>::iterator
+typename MappableSet<MappableType, Allocator>::size_type
 MappableSet<MappableType, Allocator>::erase(const MappableType& m)
 {
     if (max_element_size_ == ::size(m)) {
-        auto it = elements_.erase(m);
+        auto result = elements_.erase(m);
         max_element_size_ = ::size(*largest_element(std::cbegin(elements_), std::cend(elements_)));
-        return it;
+        return result;
     }
     if (!is_bidirectionally_sorted_) {
         is_bidirectionally_sorted_ = is_bidirectionally_sorted(std::cbegin(elements_), std::cend(elements_));
@@ -639,6 +645,16 @@ MappableSet<MappableType, Allocator>::overlap_range(const_iterator first, const_
 
 template <typename MappableType, typename Allocator>
 template <typename MappableType_>
+void MappableSet<MappableType, Allocator>::erase_overlapped(const MappableType_& mappable)
+{
+    auto overlapped = this->overlap_range(mappable);
+    std::for_each(std::begin(overlapped), std::end(overlapped), [this] (auto& e) {
+        this->erase(e);
+    });
+}
+
+template <typename MappableType, typename Allocator>
+template <typename MappableType_>
 bool
 MappableSet<MappableType, Allocator>::has_contained(const MappableType_& mappable) const
 {
@@ -709,6 +725,16 @@ ContainedRange<typename MappableSet<MappableType, Allocator>::const_iterator>
 MappableSet<MappableType, Allocator>::contained_range(const_iterator first, const_iterator last, const MappableType_& mappable) const
 {
     return ::contained_range(first, last, mappable);
+}
+
+template <typename MappableType, typename Allocator>
+template <typename MappableType_>
+void MappableSet<MappableType, Allocator>::erase_contained(const MappableType_& mappable)
+{
+    auto contained = this->contained_range(mappable);
+    std::for_each(std::begin(contained), std::end(contained), [this] (auto& e) {
+        this->erase(e);
+    });
 }
 
 template <typename MappableType, typename Allocator>
@@ -851,8 +877,7 @@ ForwardIterator
 find_first_shared(const MappableSet<MappableType1>& mappables, ForwardIterator first, ForwardIterator last,
                   const MappableType2& mappable)
 {
-    return std::find_if(first, last,
-                        [&mappables, &mappable] (const auto& m) {
+    return std::find_if(first, last, [&mappables, &mappable] (const auto& m) {
                             return mappables.has_shared(m, mappable);
                         });
 }

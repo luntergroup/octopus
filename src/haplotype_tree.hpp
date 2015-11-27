@@ -41,12 +41,15 @@ public:
     unsigned num_haplotypes() const noexcept;
     bool contains(const Haplotype& haplotype) const;
     bool is_unique(const Haplotype& haplotype) const;
-    GenomicRegion get_seperation_region(const Haplotype& first, const Haplotype& second) const;
     void extend(const Allele& allele);
-    //std::vector<Haplotype> get_haplotypes() const; // TODO: all haplotypes
+    
+    GenomicRegion get_region() const;
+    std::vector<Haplotype> get_haplotypes() const;
     std::vector<Haplotype> get_haplotypes(const GenomicRegion& region) const;
+    
     void prune_all(const Haplotype& haplotype);
     void prune_unique(const Haplotype& haplotype);
+    void clear(const GenomicRegion& region);
     void clear();
     
 private:

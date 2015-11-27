@@ -12,7 +12,6 @@
 #include <string>
 
 #include "variant_caller.hpp"
-#include "haplotype_phaser.hpp"
 
 class GenomicRegion;
 class ReadManager;
@@ -38,8 +37,6 @@ namespace Octopus
         CancerVariantCaller& operator=(CancerVariantCaller&&)      = delete;
         
     private:
-        HaplotypePhaser phaser_;
-        
         const SampleIdType normal_sample_;
         const double min_variant_posterior_          = 0.95;
         const double min_somatic_mutation_posterior_ = 0.9;

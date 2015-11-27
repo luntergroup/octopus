@@ -25,12 +25,12 @@ template <typename Map>
 MappableMap<typename Map::key_type, typename Map::mapped_type::value_type>
 make_mappable_map(Map map)
 {
+    using std::make_move_iterator; using std::begin; using std::end;
+    
     using T = typename Map::mapped_type::value_type;
     
     MappableMap<typename Map::key_type, T> result {};
     result.reserve(map.size());
-    
-    using std::make_move_iterator; using std::begin; using std::end;
     
     std::for_each(make_move_iterator(begin(map)), make_move_iterator(end(map)), [&result] (auto&& p) {
         result.emplace(std::move(p.first),
@@ -62,6 +62,7 @@ typename MappableSet<MappableType1>::size_type
 count_overlapped(const MappableMap<KeyType, MappableType1>& mappables, const MappableType2& mappable)
 {
     using SizeType = typename MappableSet<MappableType1>::size_type;
+    
     return std::accumulate(std::cbegin(mappables), std::cend(mappables), SizeType {},
                            [&mappable] (SizeType x, const auto& p) {
                                return x + p.second.count_overlapped(mappable);
@@ -83,6 +84,7 @@ typename MappableSet<MappableType1>::size_type
 count_contained(const MappableMap<KeyType, MappableType1>& mappables, const MappableType2& mappable)
 {
     using SizeType = typename MappableSet<MappableType1>::size_type;
+    
     return std::accumulate(std::cbegin(mappables), std::cend(mappables), SizeType {},
                            [&mappable] (SizeType x, const auto& p) {
                                return x + p.second.count_contained(mappable);
@@ -105,6 +107,7 @@ count_shared(const MappableMap<KeyType, MappableType1>& mappables, const Mappabl
              const MappableType3& mappable2)
 {
     using SizeType = typename MappableSet<MappableType1>::size_type;
+    
     return std::accumulate(std::cbegin(mappables), std::cend(mappables), SizeType {},
                            [&mappable1, &mappable2] (SizeType x, const auto& p) {
                                return x + p.second.count_shared(mappable1, mappable2);
@@ -116,23 +119,29 @@ ForwardIterator
 find_first_shared(const MappableMap<KeyType, MappableType1>& mappables, ForwardIterator first,
                   ForwardIterator last, const MappableType2& mappable)
 {
+    using std::cbegin; using std::cend; using std::begin; using std::end;
+    
     if (mappables.empty()) return last;
     
     if (mappables.size() == 1) {
-        return find_first_shared(mappables, first, last, mappable);
+        return find_first_shared(cbegin(mappables)->second, first, last, mappable);
     }
     
     std::vector<ForwardIterator> smallest(mappables.size());
     
-    std::transform(std::cbegin(mappables), std::cend(mappables), smallest.begin(),
+    std::transform(cbegin(mappables), cend(mappables), begin(smallest),
                    [first, last, &mappable] (const auto& p) {
                        return find_first_shared(p.second, first, last, mappable);
                    });
     
-    return *std::min_element(std::cbegin(smallest), std::cend(smallest), []
-                             (auto lhs, auto rhs) {
-                                 return *lhs < *rhs;
-                             });
+    smallest.erase(std::remove_if(begin(smallest), end(smallest),
+                                  [last] (auto it) { return it == last; }),
+                   end(smallest));
+    
+    if (smallest.empty()) return last;
+    
+    return *std::min_element(cbegin(smallest), cend(smallest), []
+                             (auto lhs, auto rhs) { return *lhs < *rhs; });
 }
 
 template <typename KeyType, typename MappableType, typename ForwardIterator>

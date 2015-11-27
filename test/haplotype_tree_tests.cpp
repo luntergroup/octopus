@@ -551,38 +551,38 @@ BOOST_AUTO_TEST_CASE(contains_returns_true_if_the_given_haplotype_is_in_the_tree
 //    
 //}
 
-BOOST_AUTO_TEST_CASE(get_seperation_region_returns_the_allele_region_before_two_unique_haplotypes_seperate_if_the_haplotypes_seperate_at_the_root_then_the_entire_region_covered_by_the_first_haplotype_is_returned)
-{
-    auto human = make_reference(human_reference_fasta);
-    
-    Allele allele1 {parse_region("4:1000000-1000001", human), "A"};
-    Allele allele2 {parse_region("4:1000000-1000001", human), "C"};
-    Allele allele3 {parse_region("4:1000001-1000002", human), "G"};
-    Allele allele4 {parse_region("4:1000001-1000002", human), "T"};
-    
-    auto region = get_encompassing(allele1, allele4);
-    
-    HaplotypeTree haplotype_tree {human};
-    
-    haplotype_tree.extend(allele1);
-    haplotype_tree.extend(allele2);
-    haplotype_tree.extend(allele3);
-    haplotype_tree.extend(allele4);
-    
-    Haplotype haplotype1 {human, region};
-    haplotype1.push_back(allele1);
-    haplotype1.push_back(allele3);
-    
-    Haplotype haplotype2 {human, region};
-    haplotype2.push_back(allele1);
-    haplotype2.push_back(allele4);
-    
-    Haplotype haplotype3 {human, region};
-    haplotype3.push_back(allele2);
-    haplotype3.push_back(allele3);
-    
-    BOOST_CHECK(haplotype_tree.get_seperation_region(haplotype1, haplotype2) == GenomicRegion("4", 1000000, 1000001));
-    BOOST_CHECK(haplotype_tree.get_seperation_region(haplotype1, haplotype3) == GenomicRegion("4", 1000000, 1000002));
-}
+//BOOST_AUTO_TEST_CASE(get_seperation_region_returns_the_allele_region_before_two_unique_haplotypes_seperate_if_the_haplotypes_seperate_at_the_root_then_the_entire_region_covered_by_the_first_haplotype_is_returned)
+//{
+//    auto human = make_reference(human_reference_fasta);
+//    
+//    Allele allele1 {parse_region("4:1000000-1000001", human), "A"};
+//    Allele allele2 {parse_region("4:1000000-1000001", human), "C"};
+//    Allele allele3 {parse_region("4:1000001-1000002", human), "G"};
+//    Allele allele4 {parse_region("4:1000001-1000002", human), "T"};
+//    
+//    auto region = get_encompassing(allele1, allele4);
+//    
+//    HaplotypeTree haplotype_tree {human};
+//    
+//    haplotype_tree.extend(allele1);
+//    haplotype_tree.extend(allele2);
+//    haplotype_tree.extend(allele3);
+//    haplotype_tree.extend(allele4);
+//    
+//    Haplotype haplotype1 {human, region};
+//    haplotype1.push_back(allele1);
+//    haplotype1.push_back(allele3);
+//    
+//    Haplotype haplotype2 {human, region};
+//    haplotype2.push_back(allele1);
+//    haplotype2.push_back(allele4);
+//    
+//    Haplotype haplotype3 {human, region};
+//    haplotype3.push_back(allele2);
+//    haplotype3.push_back(allele3);
+//    
+//    BOOST_CHECK(haplotype_tree.get_seperation_region(haplotype1, haplotype2) == GenomicRegion("4", 1000000, 1000001));
+//    BOOST_CHECK(haplotype_tree.get_seperation_region(haplotype1, haplotype3) == GenomicRegion("4", 1000000, 1000002));
+//}
 
 BOOST_AUTO_TEST_SUITE_END()

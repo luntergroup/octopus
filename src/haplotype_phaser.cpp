@@ -21,6 +21,10 @@
 namespace Octopus
 {
 
+// non-member methods
+
+bool are_phase_complements(const Genotype<Haplotype>& lhs, const Genotype<Haplotype>& rhs);
+
 // public methods
 
 unsigned calculate_max_indcluded(unsigned max_haplotypes)
@@ -28,33 +32,36 @@ unsigned calculate_max_indcluded(unsigned max_haplotypes)
     return static_cast<unsigned>(std::max(1.0, std::log2(max_haplotypes)));
 }
 
-HaplotypePhaser::HaplotypePhaser(ReferenceGenome& reference, unsigned max_haplotypes, unsigned max_indicators)
+HaplotypePhaser::HaplotypePhaser(ReferenceGenome& reference, const std::vector<Variant>& candidates,
+                                 const ReadMap& reads, unsigned max_haplotypes, unsigned max_indicators)
 :
 tree_ {reference},
-max_haplotypes_ {max_haplotypes},
-max_indicators_ {max_indicators},
-walker_ {max_indicators_, calculate_max_indcluded(max_haplotypes_),
-    GenomeWalker::IndicatorLimit::NoLimit, GenomeWalker::ExtensionLimit::NoLimit}
+buffered_candidates_ {std::cbegin(candidates), std::cend(candidates)},
+reads_ {&reads},
+walker_ {max_indicators, calculate_max_indcluded(max_haplotypes),
+    GenomeWalker::IndicatorLimit::SharedWithPreviousRegion, GenomeWalker::ExtensionLimit::SharedWithFrontier},
+is_phasing_enabled_ {max_indicators != 0},
+tree_region_ {shift(get_head(buffered_candidates_.leftmost()), -1)},
+next_region_ {walker_.walk(tree_region_, *reads_, buffered_candidates_)}
 {}
 
-void HaplotypePhaser::setup(const std::vector<Variant>& candidates, const ReadMap& reads)
-{
-    if (candidates.empty()) return;
-    
-    buffered_candidates_.insert(std::cbegin(candidates), std::cend(candidates));
-    
-    tree_region_ = shift(get_head(buffered_candidates_.leftmost()), -1);
-    
-    extend_tree(reads);
-}
-
-bool HaplotypePhaser::expended_candidates() const noexcept
+bool HaplotypePhaser::done() const noexcept
 {
     return buffered_candidates_.empty();
 }
 
-std::vector<Haplotype> HaplotypePhaser::get_haplotypes() const
+std::vector<Haplotype> HaplotypePhaser::get_haplotypes()
 {
+    auto contained_candidates = buffered_candidates_.contained_range(next_region_);
+    
+    std::for_each(std::cbegin(contained_candidates), std::cend(contained_candidates),
+                  [this] (const auto& candidate) {
+                      tree_.extend(candidate.get_reference_allele());
+                      tree_.extend(candidate.get_alternative_allele());
+                  });
+    
+    tree_region_ = next_region_;
+    
     return tree_.get_haplotypes(tree_region_);
 }
 
@@ -67,7 +74,7 @@ void HaplotypePhaser::unique(const std::vector<Haplotype>& haplotypes)
 
 std::unordered_map<Haplotype, double>
 compute_haplotype_posteriors(const std::vector<Haplotype>& haplotypes,
-                             const HaplotypePhaser::UnphasedSampleGenotypePosteriors& genotype_posteriors)
+                             const HaplotypePhaser::SampleGenotypePosteriors& genotype_posteriors)
 {
     std::unordered_map<Haplotype, double> result {};
     result.reserve(haplotypes.size());
@@ -83,22 +90,11 @@ compute_haplotype_posteriors(const std::vector<Haplotype>& haplotypes,
     return result;
 }
 
-bool
+HaplotypePhaser::PhaseSets
 HaplotypePhaser::phase(const std::vector<Haplotype>& haplotypes,
-                       const UnphasedGenotypePosteriors& genotype_posteriors,
-                       const ReadMap& reads)
+                       const GenotypePosteriors& genotype_posteriors)
 {
-    if (max_indicators_ == 0) { // no phasing
-        tree_.clear();
-        // TODO: need to add an erase method to MappableSet API to remove contained range
-        auto contained = bases(buffered_candidates_.contained_range(tree_region_));
-        
-        buffered_candidates_.erase(contained.begin(), contained.end());
-        
-        if (!buffered_candidates_.empty()) {
-            tree_region_ = shift(get_head(buffered_candidates_.leftmost()), -1);
-        }
-    } else {
+    if (is_phasing_enabled_) {
         std::deque<Haplotype> low_posterior_haplotypes {};
         
         for (const auto& sample_genotype_posteriors : genotype_posteriors) {
@@ -113,7 +109,7 @@ HaplotypePhaser::phase(const std::vector<Haplotype>& haplotypes,
         
         std::sort(std::begin(low_posterior_haplotypes), std::end(low_posterior_haplotypes));
         
-        //std::cout << "removing " << low_posterior_haplotypes.size() << " haplotypes" << std::endl;
+        std::cout << "removing " << low_posterior_haplotypes.size() << " haplotypes" << std::endl;
         
         low_posterior_haplotypes.erase(std::unique(std::begin(low_posterior_haplotypes),
                                                    std::end(low_posterior_haplotypes)),
@@ -122,48 +118,43 @@ HaplotypePhaser::phase(const std::vector<Haplotype>& haplotypes,
         for (const auto& haplotype : low_posterior_haplotypes) {
             tree_.prune_all(haplotype);
         }
+    } else {
+        tree_.clear();
     }
     
-    auto last_region = tree_region_;
+    std::cout << "there are " << buffered_candidates_.size() << " candidates" << std::endl;
     
-    extend_tree(reads);
+    std::cout << "current region is " << tree_region_ << std::endl;
     
-    if (last_region == tree_region_) {
-        buffered_candidates_.clear();
-    }
+    next_region_ = walker_.walk(tree_region_, *reads_, buffered_candidates_);
     
-    return expended_candidates() || !buffered_candidates_.has_shared(last_region, tree_region_);
+    std::cout << "next region will be " << next_region_ << std::endl;
+    
+    auto phased_region = get_left_overhang(tree_region_, next_region_);
+    
+    std::cout << "phased region is " << phased_region << std::endl;
+    
+    tree_.clear(phased_region);
+    buffered_candidates_.erase_contained(phased_region);
+    
+    std::cout << "there are " << buffered_candidates_.size() << " candidates" << std::endl;
+    
+    exit(0);
+    
+    PhaseSets result {};
+    
+    
+    
+    return result;
 }
 
 // private methods
 
-void extend(HaplotypeTree& tree, const Variant& variant)
-{
-    tree.extend(variant.get_reference_allele());
-    tree.extend(variant.get_alternative_allele());
-}
+// non-member methods
 
-void HaplotypePhaser::extend_tree(const ReadMap& reads)
+bool are_phase_complements(const Genotype<Haplotype>& lhs, const Genotype<Haplotype>& rhs)
 {
-    auto region = walker_.walk(tree_region_, reads, buffered_candidates_);
-    
-    if (tree_.empty()) {
-        tree_region_ = region;
-    } else {
-        tree_region_ = get_encompassing(tree_region_, region);
-    }
-    
-    auto contained_candidates = buffered_candidates_.contained_range(region);
-    
-    std::for_each(std::cbegin(contained_candidates), std::cend(contained_candidates),
-                  [this] (const auto& candidate) { extend(tree_, candidate); });
+    return true;
 }
-
-    // non-member methods
-    
-    bool are_phase_complements(const Genotype<Haplotype>& lhs, const Genotype<Haplotype>& rhs)
-    {
-        return true;
-    }
 
 } // namespace Octopus

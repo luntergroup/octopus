@@ -10,6 +10,7 @@
 
 #include <algorithm> // std::transform
 
+#include "haplotype_likelihood_cache.hpp"
 #include "read_model.hpp"
 #include "maths.hpp"
 #include "read_utils.hpp"
@@ -93,15 +94,17 @@ namespace Octopus
         Pedigree::Latents
         Pedigree::evaluate(const std::vector<Haplotype>& haplotypes, const ReadMap& reads, ReferenceGenome& reference)
         {
-            auto genotypes = generate_all_genotypes(haplotypes, ploidy_);
-            
-            if (genotypes.size() == 1) {
+            if (haplotypes.size() == 1) {
                 // TODO: catch this case to avoid computing
             }
             
-            std::cout << "there are " << genotypes.size() << " candidate genotypes" << std::endl;
+            HaplotypeLikelihoodCache haplotype_likelihoods {reads, haplotypes};
             
-            ReadModel read_model {ploidy_, max_sample_read_count(reads), haplotypes.size()};
+            ReadModel read_model {ploidy_, haplotype_likelihoods};
+            
+            auto genotypes = generate_all_genotypes(haplotypes, ploidy_);
+            
+            std::cout << "there are " << genotypes.size() << " candidate genotypes" << std::endl;
             
 //            const auto genotype_log_likilhoods = compute_genotype_log_likelihoods(genotypes, reads,
 //                                                                                  read_model, mother_,

@@ -167,26 +167,26 @@ namespace Octopus
             
             transform(cbegin(p), cend(p), begin(p), [norm] (auto x) { return x / norm; });
             
-//            constexpr double precision {40.0};
-//            constexpr unsigned max_iterations {100};
-//            const auto alphas = Maths::dirichlet_mle(p, precision, max_iterations);
-//            
-//            result.reserve(haplotypes.size());
-//            
-//            transform(cbegin(haplotypes), cend(haplotypes), cbegin(alphas), std::inserter(result, begin(result)),
-//                      [] (const auto& haplotype, double a) { return std::make_pair(haplotype, a); });
+            constexpr double precision {40.0};
+            constexpr unsigned max_iterations {100};
+            const auto alphas = Maths::dirichlet_mle(p, precision, max_iterations);
+            
+            result.reserve(haplotypes.size());
+            
+            transform(cbegin(haplotypes), cend(haplotypes), cbegin(alphas), std::inserter(result, begin(result)),
+                      [] (const auto& haplotype, double a) { return std::make_pair(haplotype, a); });
             
 //            //DEBUG
 //
-            transform(cbegin(haplotypes), cend(haplotypes), std::inserter(result, begin(result)),
-                      [&haplotype_prior_model, &reference_haplotype] (const auto& haplotype) {
-                          return std::make_pair(haplotype, 100 * haplotype_prior_model.evaluate(haplotype, reference_haplotype));
-                      });
+//            transform(cbegin(haplotypes), cend(haplotypes), std::inserter(result, begin(result)),
+//                      [&haplotype_prior_model, &reference_haplotype] (const auto& haplotype) {
+//                          return std::make_pair(haplotype, 100 * haplotype_prior_model.evaluate(haplotype, reference_haplotype));
+//                      });
             
 //            //haplotype_prior_model.evaluate(haplotypes, reference_haplotype); // DEBUG
-//            
-//            for (auto& h : result) h.second = 0;
-//            
+            
+            for (auto& h : result) h.second = 1;
+            
 //            const auto& h1 = haplotypes[1]; // <>
 //            const auto& h2 = haplotypes[2]; // < {6:93705886-93705887 C} {6:93706063-93706064 A} >
 //            const auto& h3 = haplotypes[3]; // < {6:93705886-93705887 C} >

@@ -110,7 +110,7 @@ GenomicRegion GenomeWalker::walk(const GenomicRegion& previous_region, const Rea
     
     auto num_indicators = min(max_indicators_, static_cast<unsigned>(distance(first_previous_itr, included_itr)));
     
-    if (indicator_limit_ == IndicatorLimit::SharedWithPreviousRegion) {
+    if (num_indicators > 0 && indicator_limit_ == IndicatorLimit::SharedWithPreviousRegion) {
         auto it = find_first_shared(reads, first_previous_itr, included_itr, *included_itr);
         auto max_possible_indicators = static_cast<unsigned>(distance(it, included_itr));
         num_indicators = min(max_possible_indicators, num_indicators);

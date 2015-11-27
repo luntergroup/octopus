@@ -14,8 +14,6 @@
 
 #include "variant_caller.hpp"
 
-#include "haplotype_phaser.hpp"
-
 class GenomicRegion;
 class ReadManager;
 class ReadTransform;
@@ -39,8 +37,6 @@ namespace Octopus
         PedigreeVariantCaller& operator=(PedigreeVariantCaller&&)      = delete;
         
     private:
-        HaplotypePhaser phaser_;
-        
         const unsigned ploidy_;
         const SampleIdType mother_, father_;
         const double min_variant_posterior_ = 0.95;

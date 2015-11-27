@@ -70,39 +70,6 @@ bool HaplotypeTree::is_unique(const Haplotype& haplotype) const
     }
 }
 
-GenomicRegion HaplotypeTree::get_seperation_region(const Haplotype& first, const Haplotype& second) const
-{
-    if (first == second) return first.get_region();
-    
-    if (!(is_unique(first) && is_unique(second))) {
-        throw std::runtime_error {"cannot find seperation region in non-unique haplotypes"};
-    }
-    
-    Vertex first_allele, second_allele;
-    
-    if (haplotype_leaf_cache_.count(first) > 0) {
-        first_allele = haplotype_leaf_cache_.find(first)->second;
-    } else {
-        first_allele = *find_equal_haplotype_leaf(std::cbegin(haplotype_leafs_),
-                                                  std::cend(haplotype_leafs_), first);
-    }
-    if (haplotype_leaf_cache_.count(second) > 0) {
-        second_allele = haplotype_leaf_cache_.find(second)->second;
-    } else {
-        second_allele = *find_equal_haplotype_leaf(std::cbegin(haplotype_leafs_),
-                                                   std::cend(haplotype_leafs_), second);
-    }
-    
-    while (first_allele != root_ && second_allele != root_) {
-        if (first_allele == second_allele) return tree_[first_allele].get_region();
-        
-        first_allele  = get_previous_allele(first_allele);
-        second_allele = get_previous_allele(second_allele);
-    }
-    
-    return first.get_region();
-}
-
 void HaplotypeTree::extend(const Allele& allele)
 {
     for (auto leaf_it = std::cbegin(haplotype_leafs_), end = std::cend(haplotype_leafs_); leaf_it != end; ++leaf_it) {
@@ -113,28 +80,27 @@ void HaplotypeTree::extend(const Allele& allele)
     recently_removed_haplotypes_.clear();
 }
 
-//std::vector<Haplotype> HaplotypeTree::get_haplotypes() const
-//{
-//    haplotype_leaf_cache_.clear();
-//    haplotype_leaf_cache_.reserve(haplotype_leafs_.size());
-//    
-//    std::vector<Haplotype> result {};
-//    result.reserve(haplotype_leafs_.size());
-//    
-//    for (auto leaf : haplotype_leafs_) {
-//        auto haplotype = get_haplotype(leaf, region);
-//        
-//        // recently retreived haplotypes are added to the cache as it is likely these
-//        // are the haplotypes that will be pruned next
-//        haplotype_leaf_cache_.emplace(haplotype, leaf);
-//        
-//        result.emplace_back(std::move(haplotype));
-//    }
-//    
-//    haplotype_leaf_cache_.rehash(haplotype_leaf_cache_.size());
-//    
-//    return result;
-//}
+GenomicRegion HaplotypeTree::get_region() const
+{
+    auto vertex_range = boost::adjacent_vertices(root_, tree_);
+    
+    auto leftmost = *std::min_element(vertex_range.first, vertex_range.second,
+                                      [this] (const auto& lhs, const auto& rhs) {
+                                          return tree_[lhs] < tree_[rhs];
+                                      });
+    
+    auto rightmost = *std::max_element(std::cbegin(haplotype_leafs_), std::cend(haplotype_leafs_),
+                                       [this] (const auto& lhs, const auto& rhs) {
+                                           return tree_[lhs] < tree_[rhs];
+                                       });
+    
+    return get_encompassing(tree_[leftmost], tree_[rightmost]);
+}
+    
+std::vector<Haplotype> HaplotypeTree::get_haplotypes() const
+{
+    return get_haplotypes(get_region());
+}
 
 std::vector<Haplotype> HaplotypeTree::get_haplotypes(const GenomicRegion& region) const
 {
@@ -268,6 +234,15 @@ void HaplotypeTree::prune_unique(const Haplotype& haplotype)
             }
         }
 
+    }
+}
+
+void HaplotypeTree::clear(const GenomicRegion& region)
+{
+    if (::contains(region, get_region())) {
+        clear();
+    } else {
+        // hard
     }
 }
 
