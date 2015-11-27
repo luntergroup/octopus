@@ -129,6 +129,7 @@ std::vector<Haplotype> HaplotypeTree::get_haplotypes(const GenomicRegion& region
 
 void HaplotypeTree::prune_all(const Haplotype& haplotype)
 {
+    if (empty()) return;
     if (recently_removed_haplotypes_.count(haplotype) > 1) return;
     
     Vertex new_haplotype_end;
@@ -180,6 +181,8 @@ void HaplotypeTree::prune_all(const Haplotype& haplotype)
 
 void HaplotypeTree::prune_unique(const Haplotype& haplotype)
 {
+    if (empty()) return;
+    
     Vertex new_haplotype_end;
     Vertex leaf_to_keep;
     LeafIterator leaf_it;

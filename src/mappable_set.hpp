@@ -47,7 +47,7 @@ public:
     using reverse_iterator       = typename base_t::reverse_iterator;
     using const_reverse_iterator = typename base_t::const_reverse_iterator;
     
-    MappableSet() = default;
+    MappableSet();
     template <typename InputIterator>
     MappableSet(InputIterator first, InputIterator second);
     ~MappableSet() = default;
@@ -189,12 +189,20 @@ private:
 };
 
 template <typename MappableType, typename Allocator>
+MappableSet<MappableType, Allocator>::MappableSet()
+:
+elements_ {},
+is_bidirectionally_sorted_ {true},
+max_element_size_ {}
+{}
+
+template <typename MappableType, typename Allocator>
 template <typename InputIterator>
 MappableSet<MappableType, Allocator>::MappableSet(InputIterator first, InputIterator second)
 :
 elements_ {first, second},
-is_bidirectionally_sorted_ {is_bidirectionally_sorted(std::cbegin(elements_), std::cend(elements_))},
-max_element_size_ {(elements_.empty()) ? 0 : ::size(*largest_element(std::cbegin(elements_), std::cend(elements_)))}
+is_bidirectionally_sorted_ {is_bidirectionally_sorted(elements_)},
+max_element_size_ {(elements_.empty()) ? 0 : ::size(*largest_element(elements_))}
 {}
 
 template <typename MappableType, typename Allocator>
@@ -353,7 +361,7 @@ MappableSet<MappableType, Allocator>::emplace(Args... args)
     auto it = elements_.emplace(std::forward<Args>(args)...);
     if (is_bidirectionally_sorted_) {
         auto overlapped = overlap_range(*it);
-        is_bidirectionally_sorted_ = is_bidirectionally_sorted(overlapped.begin(), overlapped.end());
+        is_bidirectionally_sorted_ = is_bidirectionally_sorted(std::cbegin(overlapped), std::cend(overlapped));
     }
     max_element_size_ = std::max(max_element_size_, ::size(*it));
     return it;
@@ -366,7 +374,7 @@ MappableSet<MappableType, Allocator>::insert(const MappableType& m)
     auto it = elements_.insert(m);
     if (is_bidirectionally_sorted_) {
         auto overlapped = overlap_range(*it);
-        is_bidirectionally_sorted_ = is_bidirectionally_sorted(overlapped.begin(), overlapped.end());
+        is_bidirectionally_sorted_ = is_bidirectionally_sorted(std::cbegin(overlapped), std::cend(overlapped));
     }
     max_element_size_ = std::max(max_element_size_, ::size(*it));
     return it;
@@ -379,7 +387,7 @@ MappableSet<MappableType, Allocator>::insert(MappableType&& m)
     auto it = elements_.insert(std::move(m));
     if (is_bidirectionally_sorted_) {
         auto overlapped = overlap_range(*it);
-        is_bidirectionally_sorted_ = is_bidirectionally_sorted(overlapped.begin(), overlapped.end());
+        is_bidirectionally_sorted_ = is_bidirectionally_sorted(std::cbegin(overlapped), std::cend(overlapped));
     }
     max_element_size_ = std::max(max_element_size_, ::size(*it));
     return it;
@@ -401,7 +409,7 @@ template <typename MappableType, typename Allocator>
 typename MappableSet<MappableType, Allocator>::iterator
 MappableSet<MappableType, Allocator>::insert(std::initializer_list<MappableType> il)
 {
-    max_element_size_ = std::max(max_element_size_, ::size(*largest_element(il.begin(), il.end())));
+    max_element_size_ = std::max(max_element_size_, ::size(*largest_element(std::cbegin(il), std::cend(il))));
     return elements_.insert(std::move(il));
     if (is_bidirectionally_sorted_) {
         is_bidirectionally_sorted_ = is_bidirectionally_sorted(std::cbegin(elements_), std::cend(elements_));
@@ -552,7 +560,7 @@ const MappableType& MappableSet<MappableType, Allocator>::rightmost() const
         return last;
     } else {
         auto overlapped = ::overlap_range(elements_.cbegin(), elements_.cend(), last, max_element_size_);
-        return *rightmost_mappable(overlapped.begin(), overlapped.end());
+        return *rightmost_mappable(std::cbegin(overlapped), std::cend(overlapped));
     }
 }
 
@@ -648,9 +656,16 @@ template <typename MappableType_>
 void MappableSet<MappableType, Allocator>::erase_overlapped(const MappableType_& mappable)
 {
     auto overlapped = this->overlap_range(mappable);
-    std::for_each(std::begin(overlapped), std::end(overlapped), [this] (auto& e) {
-        this->erase(e);
-    });
+    
+    if (is_bidirectionally_sorted_ || ::size(overlapped) == bases(overlapped).size()) {
+        this->erase(std::cbegin(overlapped).base(), std::cend(overlapped).base());
+    } else {
+        // TODO: find better implementation
+        while (!overlapped.empty()) {
+            this->erase(overlapped.front());
+            overlapped = this->overlap_range(mappable);
+        }
+    }
 }
 
 template <typename MappableType, typename Allocator>
@@ -732,9 +747,16 @@ template <typename MappableType_>
 void MappableSet<MappableType, Allocator>::erase_contained(const MappableType_& mappable)
 {
     auto contained = this->contained_range(mappable);
-    std::for_each(std::begin(contained), std::end(contained), [this] (auto& e) {
-        this->erase(e);
-    });
+    
+    if (is_bidirectionally_sorted_ || ::size(contained) == bases(contained).size()) {
+        this->erase(std::cbegin(contained).base(), std::cend(contained).base());
+    } else {
+        // TODO: find better implementation
+        while (!contained.empty()) {
+            this->erase(contained.front());
+            contained = this->contained_range(mappable);
+        }
+    }
 }
 
 template <typename MappableType, typename Allocator>
@@ -766,10 +788,8 @@ MappableSet<MappableType, Allocator>::has_shared(const_iterator first, const_ite
     
     auto overlapped_lhs = overlap_range(first, last, m.first);
     
-    return std::any_of(overlapped_lhs.begin(), overlapped_lhs.end(),
-                       [&m] (const auto& region) {
-                           return overlaps(region, m.second);
-                       });
+    return std::any_of(std::cbegin(overlapped_lhs), std::cend(overlapped_lhs),
+                       [&m] (const auto& region) { return overlaps(region, m.second); });
 }
 
 template <typename MappableType, typename Allocator>
@@ -801,10 +821,8 @@ MappableSet<MappableType, Allocator>::count_shared(const_iterator first, const_i
     
     auto overlapped_lhs = overlap_range(first, last, m.first);
     
-    return std::count_if(overlapped_lhs.begin(), overlapped_lhs.end(),
-                       [&m] (const auto& region) {
-                           return overlaps(region, m.second);
-                       });
+    return std::count_if(std::cbegin(overlapped_lhs), std::cend(overlapped_lhs),
+                       [&m] (const auto& region) { return overlaps(region, m.second); });
 }
 
 template <typename MappableType, typename Allocator>
@@ -838,10 +856,8 @@ MappableSet<MappableType, Allocator>::shared_range(const_iterator first, const_i
     
     auto overlapped_lhs = overlap_range(first, last, m.first);
     
-    auto it = std::find_if(overlapped_lhs.begin(), overlapped_lhs.end(),
-                           [&m] (const auto& region) {
-                               return overlaps(region, m.second);
-                           });
+    auto it = std::find_if(std::cbegin(overlapped_lhs), std::cend(overlapped_lhs),
+                           [&m] (const auto& region) { return overlaps(region, m.second); });
     
     auto end = std::prev(overlapped_lhs.end());
     
@@ -907,6 +923,8 @@ template <typename MappableType1, typename MappableType2>
 MappableSet<MappableType1>
 copy_nonoverlapped(const MappableSet<MappableType1>& mappables, const MappableType2& mappable)
 {
+    using std::cbegin; using std::cend;
+    
     auto num_overlapped = mappables.count_overlapped(mappable);
     
     if (num_overlapped == 0) return mappables;
@@ -916,22 +934,22 @@ copy_nonoverlapped(const MappableSet<MappableType1>& mappables, const MappableTy
     
     auto overlapped = mappables.overlap_range(mappable);
     
-    auto base_begin = overlapped.begin().base();
-    auto base_end   = overlapped.end().base();
+    auto base_begin = cbegin(overlapped).base();
+    auto base_end   = cend(overlapped).base();
     
-    result.insert(std::cbegin(mappables), base_begin);
+    result.insert(cbegin(mappables), base_begin);
     
     while (!overlapped.empty()) {
         overlapped.advance_begin(1);
         ++base_begin;
         
         if (overlapped.begin() != base_begin) {
-            result.insert(base_begin, overlapped.begin().base());
-            base_begin = overlapped.begin().base();
+            result.insert(base_begin, cbegin(overlapped).base());
+            base_begin = cbegin(overlapped).base();
         }
     }
     
-    result.insert(base_end, std::cend(mappables));
+    result.insert(base_end, cend(mappables));
     
     return result;
 }
@@ -948,6 +966,8 @@ template <typename MappableType1, typename MappableType2>
 MappableSet<MappableType1>
 copy_noncontained(const MappableSet<MappableType1>& mappables, const MappableType2& mappable)
 {
+    using std::cbegin; using std::cend;
+    
     auto num_overlapped = mappables.count_overlapped(mappable);
     
     if (num_overlapped == 0) return mappables;
@@ -957,22 +977,22 @@ copy_noncontained(const MappableSet<MappableType1>& mappables, const MappableTyp
     
     auto contained = mappables.contained_range(mappable);
     
-    auto base_begin = contained.begin().base();
-    auto base_end   = contained.end().base();
+    auto base_begin = cbegin(contained).base();
+    auto base_end   = cend(contained).base();
     
-    result.insert(std::cbegin(mappables), base_begin);
+    result.insert(cbegin(mappables), base_begin);
     
     while (!contained.empty()) {
         contained.advance_begin(1);
         std::advance(base_begin);
         
         if (contained.begin() != base_begin) {
-            result.insert(base_begin, contained.begin().base());
-            base_begin = contained.begin().base();
+            result.insert(base_begin, cbegin(contained).base());
+            base_begin = cbegin(contained).base();
         }
     }
     
-    result.insert(base_end, std::cend(mappables));
+    result.insert(base_end, cend(mappables));
     
     return result;
 }

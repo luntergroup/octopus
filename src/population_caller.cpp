@@ -567,80 +567,78 @@ PopulationVariantCaller::call_variants(const GenomicRegion& region, const std::v
     HaplotypePhaser phaser {reference_, candidates, reads, 64, 2};
     
     while (!phaser.done()) {
-        GenotypeModel::Population::GenotypeProbabilities genotype_posteriors;
+        auto haplotypes = phaser.get_haplotypes();
         
-        while (!phaser.done()) {
-            auto haplotypes = phaser.get_haplotypes();
+        unique(haplotypes, haplotype_prior_model_);
+        
+        phaser.unique(haplotypes);
+        
+        std::cout << "there are " << haplotypes.size() << " unique haplotypes" << std::endl;
+        
+        auto haplotype_region = get_region(haplotypes.front());
+        
+        std::cout << "haplotype region is " << haplotype_region << std::endl;
+        
+        auto haplotype_region_reads = copy_overlapped(reads, haplotype_region);
+        
+        std::cout << "there are " << count_reads(haplotype_region_reads) << " reads in haplotype region" << std::endl;
+        
+        auto genotype_posteriors = genotype_model_.evaluate(haplotypes, haplotype_region_reads, reference_).genotype_posteriors;
+        
+        auto phase_set = phaser.phase(haplotypes, genotype_posteriors);
+        
+        if (!empty(phase_set.region)) {
+            debug::print_genotype_posteriors(genotype_posteriors);
             
-            unique(haplotypes, haplotype_prior_model_);
+            //remove_low_posterior_genotypes(genotype_posteriors, 0.0000000001);
             
-            phaser.unique(haplotypes);
+            auto alleles = generate_callable_alleles(region, candidates, refcall_type_, reference_);
             
-            std::cout << "there are " << haplotypes.size() << " unique haplotypes" << std::endl;
+            auto allele_posteriors = compute_allele_posteriors(genotype_posteriors, alleles);
             
-            auto haplotype_region = get_region(haplotypes.front());
+            debug::print_allele_posteriors(allele_posteriors);
             
-            std::cout << "haplotype region is " << haplotype_region << std::endl;
+            auto variant_calls = call_blocked_variants(candidates, allele_posteriors, min_variant_posterior_);
             
-            auto haplotype_region_reads = copy_overlapped(reads, haplotype_region);
+            debug::print_variant_calls(variant_calls);
             
-            std::cout << "there are " << count_reads(haplotype_region_reads) << " reads in haplotype region" << std::endl;
+            parsimonise_variant_calls(variant_calls, reference_);
             
-            genotype_posteriors = genotype_model_.evaluate(haplotypes, haplotype_region_reads, reference_).genotype_posteriors;
+            auto called_regions = get_regions(variant_calls);
             
-            phaser.phase(haplotypes, genotype_posteriors);
+            auto variant_genotype_calls = call_genotypes(genotype_posteriors, called_regions);
+            
+            debug::print_genotype_calls(variant_genotype_calls);
+            
+            auto candidate_ref_alleles = generate_candidate_reference_alleles(alleles, called_regions, candidates, refcall_type_);
+            
+            //    std::cout << "candidate refcall alleles are" << std::endl;
+            //    for (const auto& allele : candidate_ref_alleles) {
+            //        std::cout << allele << std::endl;
+            //    }
+            
+            auto refcalls = call_reference(genotype_posteriors, candidate_ref_alleles, reads, min_refcall_posterior_);
+            
+            //std::cout << called_regions.front() << std::endl;
+            
+            const auto phase_region = (called_regions.empty()) ? get_head(region) : get_encompassing(called_regions.front(), called_regions.back());
+            
+            result.reserve(variant_calls.size() + refcalls.size());
+            
+            merge_transform(std::cbegin(variant_calls), std::cend(variant_calls), std::cbegin(variant_genotype_calls),
+                            std::cbegin(refcalls), std::cend(refcalls), std::back_inserter(result),
+                            [this, &reads, &phase_region] (const auto& variant_call, const auto& genotype_call) {
+                                return output_variant_call(variant_call.variants.front().get_reference_allele(),
+                                                           variant_call.variants, genotype_call,
+                                                           variant_call.posterior, reference_, reads, phase_region);
+                            },
+                            [this, &reads] (const auto& refcall) {
+                                return output_reference_call(refcall, reference_, reads, ploidy_);
+                            },
+                            [] (const auto& lhs, const auto& rhs) {
+                                return is_before(lhs.reference_allele, rhs.variants.front());
+                            });
         }
-        
-        debug::print_genotype_posteriors(genotype_posteriors);
-        
-        //remove_low_posterior_genotypes(genotype_posteriors, 0.0000000001);
-        
-        auto alleles = generate_callable_alleles(region, candidates, refcall_type_, reference_);
-        
-        auto allele_posteriors = compute_allele_posteriors(genotype_posteriors, alleles);
-        
-        debug::print_allele_posteriors(allele_posteriors);
-        
-        auto variant_calls = call_blocked_variants(candidates, allele_posteriors, min_variant_posterior_);
-        
-        debug::print_variant_calls(variant_calls);
-        
-        parsimonise_variant_calls(variant_calls, reference_);
-        
-        auto called_regions = get_regions(variant_calls);
-        
-        auto variant_genotype_calls = call_genotypes(genotype_posteriors, called_regions);
-        
-        debug::print_genotype_calls(variant_genotype_calls);
-        
-        auto candidate_ref_alleles = generate_candidate_reference_alleles(alleles, called_regions, candidates, refcall_type_);
-        
-        //    std::cout << "candidate refcall alleles are" << std::endl;
-        //    for (const auto& allele : candidate_ref_alleles) {
-        //        std::cout << allele << std::endl;
-        //    }
-        
-        auto refcalls = call_reference(genotype_posteriors, candidate_ref_alleles, reads, min_refcall_posterior_);
-        
-        //std::cout << called_regions.front() << std::endl;
-        
-        const auto phase_region = (called_regions.empty()) ? get_head(region) : get_encompassing(called_regions.front(), called_regions.back());
-        
-        result.reserve(variant_calls.size() + refcalls.size());
-        
-        merge_transform(std::cbegin(variant_calls), std::cend(variant_calls), std::cbegin(variant_genotype_calls),
-                        std::cbegin(refcalls), std::cend(refcalls), std::back_inserter(result),
-                        [this, &reads, &phase_region] (const auto& variant_call, const auto& genotype_call) {
-                            return output_variant_call(variant_call.variants.front().get_reference_allele(),
-                                                       variant_call.variants, genotype_call,
-                                                       variant_call.posterior, reference_, reads, phase_region);
-                        },
-                        [this, &reads] (const auto& refcall) {
-                            return output_reference_call(refcall, reference_, reads, ploidy_);
-                        },
-                        [] (const auto& lhs, const auto& rhs) {
-                            return is_before(lhs.reference_allele, rhs.variants.front());
-                        });
     }
     
     return result;

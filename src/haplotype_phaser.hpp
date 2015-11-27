@@ -11,6 +11,7 @@
 
 #include <vector>
 #include <unordered_map>
+#include <utility>
 
 #include "common.hpp"
 #include "genomic_region.hpp"
@@ -31,16 +32,27 @@ public:
     using SampleGenotypePosteriors = std::unordered_map<Genotype<Haplotype>, double>;
     using GenotypePosteriors       = std::unordered_map<SampleIdType, SampleGenotypePosteriors>;
     
-    struct PhaseRegion
+    struct PhaseSet
     {
-        PhaseRegion() = default;
-        template <typename Region> PhaseRegion(Region&& region, double probability);
+        struct PhaseRegion
+        {
+            PhaseRegion() = default;
+            template <typename Region> PhaseRegion(Region&& region, double probability);
+            
+            GenomicRegion region;
+            double probability;
+        };
+        
+        using SamplePhaseRegions = std::vector<PhaseRegion>;
+        using PhaseRegions       = std::unordered_map<SampleIdType, SamplePhaseRegions>;
+        
+        PhaseSet() = default;
+        template <typename R> PhaseSet(R&& region);
+        template <typename R, typename T> PhaseSet(R&& region, T&& phase_regions);
         
         GenomicRegion region;
-        double probability;
+        PhaseRegions phase_regions;
     };
-    using PhaseSet  = std::vector<PhaseRegion>;
-    using PhaseSets = std::unordered_map<SampleIdType, PhaseSet>;
     
     HaplotypePhaser() = delete;
     explicit HaplotypePhaser(ReferenceGenome& reference, const std::vector<Variant>& candidates, const ReadMap& reads,
@@ -52,7 +64,7 @@ public:
     std::vector<Haplotype> get_haplotypes();
     void unique(const std::vector<Haplotype>& haplotypes);
     
-    PhaseSets phase(const std::vector<Haplotype>& haplotypes, const GenotypePosteriors& genotype_posteriors);
+    PhaseSet phase(const std::vector<Haplotype>& haplotypes, const GenotypePosteriors& genotype_posteriors);
     
 private:
     HaplotypeTree tree_;
@@ -67,6 +79,18 @@ private:
     GenomicRegion tree_region_;
     GenomicRegion next_region_;
 };
+
+template <typename Region>
+HaplotypePhaser::PhaseSet::PhaseRegion::PhaseRegion(Region&& region, double probability)
+: region {std::forward<Region>(region)}, probability {probability} {}
+
+template <typename R>
+HaplotypePhaser::PhaseSet::PhaseSet(R&& region)
+: region {std::forward<R>(region)}, phase_regions {} {}
+
+template <typename R, typename T>
+HaplotypePhaser::PhaseSet::PhaseSet(R&& region, T&& phase_regions)
+: region {std::forward<R>(region)}, phase_regions {std::forward<T>(phase_regions)} {}
 
 } // namespace Octopus
 
