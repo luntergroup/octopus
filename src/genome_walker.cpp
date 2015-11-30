@@ -89,7 +89,7 @@ GenomicRegion GenomeWalker::walk(const GenomicRegion& previous_region, const Rea
     using std::cbegin; using std::cend; using std::next; using std::prev; using std::min;
     using std::distance; using std::advance;
     
-    std::cout << "walking from " << previous_region << std::endl;
+    //std::cout << "walking from " << previous_region << std::endl;
     
     auto last_variant_itr = cend(candidates);
     

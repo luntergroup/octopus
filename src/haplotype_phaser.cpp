@@ -15,16 +15,12 @@
 
 #include "allele.hpp"
 #include "mappable_algorithms.hpp"
+#include "map_utils.hpp"
 
 #include <iostream> // DEBUG
 
 namespace Octopus
 {
-
-// non-member methods
-
-std::vector<std::vector<Genotype<Haplotype>>>
-partition_phase_complements(const std::vector<Genotype<Haplotype>>& genotypes, const std::vector<Variant>& variants);
 
 // public methods
 
@@ -101,7 +97,7 @@ HaplotypePhaser::phase(const std::vector<Haplotype>& haplotypes,
     
     auto contained = buffered_candidates_.contained_range(phased_region);
     
-    std::vector<Variant> variants {contained.begin(), contained.end()};
+    MappableSet<Variant> variants {contained.begin(), contained.end()};
     
     buffered_candidates_.erase_contained(phased_region);
     
@@ -135,67 +131,21 @@ HaplotypePhaser::phase(const std::vector<Haplotype>& haplotypes,
         tree_.clear();
     }
     
-    PhaseSet result {phased_region};
-    
-    for (const auto& p : genotype_posteriors) {
-        const auto& sample_genotype_posteriors = p.second;
-        
-        std::vector<Genotype<Haplotype>> genotypes {};
-        genotypes.reserve(genotype_posteriors.size());
-        
-        std::transform(std::cbegin(sample_genotype_posteriors), std::cend(sample_genotype_posteriors),
-                       std::back_inserter(genotypes), [] (const auto& p) { return p.first; });
-        
-        auto phase_complements = partition_phase_complements(genotypes, variants);
-        
-        double phase_quality {1.0};
-        
-        for (const auto& set : phase_complements) {
-            if (set.size() > 1) {
-                auto c = std::count_if(std::cbegin(set), std::cend(set),
-                                       [&sample_genotype_posteriors] (const auto& genotype) {
-                                           return sample_genotype_posteriors.at(genotype) > 0.000001;
-                                       });
-                
-                if (c > 1) {
-                    std::cout << "phase complements set: " << std::endl;
-                    for (const auto& g : set) {
-                        print_variant_alleles(g);
-                        std::cout << std::endl;
-                    }
-                    
-                    auto entropy = -std::accumulate(std::cbegin(set), std::cend(set), 0.0,
-                                                   [sample_genotype_posteriors] (auto curr, const auto& genotype) {
-                                                       auto p = sample_genotype_posteriors.at(genotype);
-                                                       return curr + (p * std::log2(p));
-                                                   });
-                    
-                    phase_quality -= entropy;
-                }
-            }
-        }
-        
-        if (phase_quality < 0.0) phase_quality = 0.0;
-        
-        std::cout << "phase quality is " << phase_quality << std::endl;
-    }
-    
-    exit(0);
-    
-    for (const auto& sp : genotype_posteriors) {
-        result.phase_regions.emplace(sp.first, PhaseSet::SamplePhaseRegions {PhaseSet::PhaseRegion {phased_region, 1.0}});
-    }
-    
-    return result;
+    return find_optimal_phase_set(phased_region, std::move(variants), genotype_posteriors);
 }
 
 // private methods
 
-    
 // non-member methods
     
+    using PhaseComplementSet  = std::vector<Genotype<Haplotype>>;
+    using PhaseComplementSets = std::vector<PhaseComplementSet>;
+    
+    PhaseComplementSets partition_phase_complements(const std::vector<Genotype<Haplotype>>& genotypes,
+                                                    const std::vector<Variant>& variants);
+    
     bool are_phase_complements(const Genotype<Haplotype>& lhs, const Genotype<Haplotype>& rhs,
-                               const std::vector<Variant>& variants)
+                               const MappableSet<Variant>& variants)
     {
         if (lhs.ploidy() == 1) return false;
         
@@ -203,15 +153,17 @@ HaplotypePhaser::phase(const std::vector<Haplotype>& haplotypes,
         
         return std::all_of(std::cbegin(regions), std::cend(regions),
                            [&lhs, &rhs] (const auto& region) {
-                               return splice<Haplotype>(lhs, region) == splice<Haplotype>(rhs, region);
+                               return equal_in_region(lhs, rhs, region);
                            });
     }
     
-    std::vector<std::vector<Genotype<Haplotype>>>
+    PhaseComplementSets
     partition_phase_complements(const std::vector<Genotype<Haplotype>>& genotypes,
-                                const std::vector<Variant>& variants)
+                                const MappableSet<Variant>& variants)
     {
-        std::vector<std::vector<Genotype<Haplotype>>> result {};
+        using std::cbegin; using std::cend; using std::begin; using std::end; using std::for_each;
+        
+        PhaseComplementSets result {};
         
         if (genotypes.empty()) return result;
         
@@ -219,93 +171,116 @@ HaplotypePhaser::phase(const std::vector<Haplotype>& haplotypes,
         
         result.emplace_back(1, genotypes.front());
         
-        std::for_each(std::next(std::cbegin(genotypes)), std::cend(genotypes),
-                      [&result, &variants] (const auto& genotype) {
-                          auto it = std::find_if(std::begin(result), std::end(result),
-                                                 [&genotype, &variants] (const auto& complements) {
-                                                     return std::any_of(std::cbegin(complements), std::cend(complements),
-                                                                        [&genotype, &variants] (const auto& complement) {
-                                                                            return are_phase_complements(genotype, complement, variants);
-                                                                        });
-                                                 });
-                          
-                          if (it == std::end(result)) {
-                              result.emplace_back(1, genotype);
-                          } else {
-                              it->emplace_back(genotype);
-                          }
-                      });
+        for_each(std::next(cbegin(genotypes)), cend(genotypes),
+                 [&result, &variants] (const auto& genotype) {
+                     auto it = std::find_if(begin(result), end(result),
+                                            [&genotype, &variants] (const auto& complements) {
+                                                return std::any_of(cbegin(complements), cend(complements),
+                                                                   [&genotype, &variants] (const auto& complement) {
+                                                                       return are_phase_complements(genotype, complement, variants);
+                                                                   });
+                                            });
+                     
+                     if (it == end(result)) {
+                         result.emplace_back(1, genotype);
+                     } else {
+                         it->emplace_back(genotype);
+                     }
+                 });
         
         return result;
     }
     
-    bool are_phase_complements(const Genotype<Haplotype>& lhs, const Genotype<Haplotype>& rhs)
+    double marginalise(const PhaseComplementSet& phase_set,
+                       const HaplotypePhaser::SampleGenotypePosteriors& genotype_posteriors)
     {
-        if (lhs.ploidy() == 1) return false;
-        
-        //        std::cout << "comparing " << std::endl;
-        //        print_variant_alleles(lhs);
-        //        std::cout << std::endl;
-        //        print_variant_alleles(rhs);
-        //        std::cout << std::endl;
-        
-        if (lhs == rhs) return true;
-        
-        // TODO: Generalise... currently diploid only
-        const auto& h1 = lhs[0];
-        const auto& h2 = lhs[1];
-        const auto& h3 = rhs[0];
-        const auto& h4 = rhs[1];
-        
-        auto diff1 = h1.difference(h2);
-        
-        if (diff1.empty()) return false;
-        
-        auto diff2 = h3.difference(h4);
-        
-        if (diff2.empty() || diff1.size() != diff2.size()) return false;
-        
-        auto regions = get_covered_regions(diff1);
-        
-        if (regions != get_covered_regions(diff2)) return false;
-        
-        //        for (const auto& region : regions) {
-        //            std::cout << region << std::endl;
-        //        }
-        
-        return std::all_of(std::cbegin(regions), std::cend(regions),
-                           [&lhs, &rhs] (const auto& region) {
-                               return splice<Haplotype>(lhs, region) == splice<Haplotype>(rhs, region);
-                           });
+        return std::accumulate(std::cbegin(phase_set), std::cend(phase_set), 0.0,
+                               [&genotype_posteriors] (auto curr, const auto& genotype) {
+                                   return curr + genotype_posteriors.at(genotype);
+                               });
     }
     
-    std::vector<std::vector<Genotype<Haplotype>>>
-    partition_phase_complements(const std::vector<Genotype<Haplotype>>& genotypes)
+    double calculate_entropy(const PhaseComplementSet& phase_set,
+                             const HaplotypePhaser::SampleGenotypePosteriors& genotype_posteriors)
     {
-        std::vector<std::vector<Genotype<Haplotype>>> result {};
+        return std::max(0.0, -std::accumulate(std::cbegin(phase_set), std::cend(phase_set), 0.0,
+                                              [&genotype_posteriors] (auto curr, const auto& genotype) {
+                                                  const auto p = genotype_posteriors.at(genotype);
+                                                  return curr + p * std::log2(p);
+                                              }));
+    }
+    
+    double maximum_entropy(const size_t num_elements)
+    {
+        return std::log2(num_elements);
+    }
+    
+    double calculate_relative_entropy(const PhaseComplementSet& phase_set,
+                                      const HaplotypePhaser::SampleGenotypePosteriors& genotype_posteriors)
+    {
+        if (phase_set.size() < 2) return 1.0;
+        return 1.0 - calculate_entropy(phase_set, genotype_posteriors) / maximum_entropy(phase_set.size());
+    }
+    
+    double calculate_phase_score(const PhaseComplementSet& phase_set,
+                                 const HaplotypePhaser::SampleGenotypePosteriors& genotype_posteriors)
+    {
+        return marginalise(phase_set, genotype_posteriors) * calculate_relative_entropy(phase_set, genotype_posteriors);
+    }
+    
+    double calculate_phase_score(const PhaseComplementSets& phase_sets,
+                                 const HaplotypePhaser::SampleGenotypePosteriors& genotype_posteriors)
+    {
+        return std::accumulate(std::cbegin(phase_sets), std::cend(phase_sets), 0.0,
+                               [&genotype_posteriors] (auto curr, const auto& phase_set) {
+                                   return curr + calculate_phase_score(phase_set, genotype_posteriors);
+                               });
+    }
+    
+    HaplotypePhaser::SampleGenotypePosteriors
+    marginalise(const HaplotypePhaser::SampleGenotypePosteriors& genotype_posteriors, const GenomicRegion& region)
+    {
+        HaplotypePhaser::SampleGenotypePosteriors result {};
+        result.reserve(genotype_posteriors.size());
         
-        if (genotypes.empty()) return result;
+        for (const auto& p : genotype_posteriors) {
+            result[splice<Haplotype>(p.first, region)] += p.second;
+        }
         
-        result.reserve(genotypes.size());
+        result.reserve(result.size());
         
-        result.emplace_back(1, genotypes.front());
+        return result;
+    }
+    
+    HaplotypePhaser::PhaseSet::SamplePhaseRegions
+    find_optimal_phase_regions(const GenomicRegion& region,
+                               MappableSet<Variant> variants,
+                               const HaplotypePhaser::SampleGenotypePosteriors& genotype_posteriors)
+    {
+        auto genotypes = get_keys(genotype_posteriors);
         
-        std::for_each(std::next(std::cbegin(genotypes)), std::cend(genotypes),
-                      [&result] (const auto& genotype) {
-                          auto it = std::find_if(std::begin(result), std::end(result),
-                                                 [&genotype] (const auto& complements) {
-                                                     return std::any_of(std::cbegin(complements), std::cend(complements),
-                                                                        [&genotype] (const auto& complement) {
-                                                                            return are_phase_complements(genotype, complement);
-                                                                        });
-                                                 });
-                          
-                          if (it == std::end(result)) {
-                              result.emplace_back(1, genotype);
-                          } else {
-                              it->emplace_back(genotype);
-                          }
-                      });
+        auto phase_set = partition_phase_complements(genotypes, variants);
+        
+        auto phase_score = calculate_phase_score(phase_set, genotype_posteriors);
+        
+        std::cout << "phase score is " << phase_score << std::endl;
+        
+        HaplotypePhaser::PhaseSet::PhaseRegion result {region, phase_score};
+        
+        return {result};
+    }
+    
+    HaplotypePhaser::PhaseSet
+    HaplotypePhaser::find_optimal_phase_set(const GenomicRegion& region,
+                                            MappableSet<Variant> variants,
+                                            const HaplotypePhaser::GenotypePosteriors& genotype_posteriors)
+    {
+        HaplotypePhaser::PhaseSet result {region};
+        result.phase_regions.reserve(genotype_posteriors.size());
+        
+        for (const auto& p : genotype_posteriors) {
+            result.phase_regions.emplace(p.first, find_optimal_phase_regions(region, variants, p.second));
+        }
         
         return result;
     }

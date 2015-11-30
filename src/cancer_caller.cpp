@@ -20,6 +20,7 @@
 #include "variant.hpp"
 #include "haplotype.hpp"
 #include "genotype.hpp"
+#include "merge_transform.hpp"
 #include "vcf_record.hpp"
 #include "mappable_algorithms.hpp"
 #include "variant_utils.hpp"
@@ -615,30 +616,6 @@ namespace Octopus
         return result.build_once();
     }
     
-    template <typename InputIt1, typename InputIt2, typename InputIt3, typename OutputIt,
-    typename BinaryOperation, typename UnaryOperation, typename Compare>
-    OutputIt merge_transform(InputIt1 first1, InputIt1 last1, InputIt2 first2,
-                             InputIt3 first3, InputIt3 last3,
-                             OutputIt d_first,
-                             BinaryOperation binary_op, UnaryOperation unary_op,
-                             Compare cmp)
-    {
-        for (; first1 != last1; ++d_first) {
-            if (first3 == last3) {
-                return std::transform(first1, last1, first2, d_first, binary_op);
-            }
-            if (cmp(*first3, *first1)) {
-                *d_first = unary_op(*first3);
-                ++first3;
-            } else {
-                *d_first = binary_op(*first1, *first2);
-                ++first1;
-                ++first2;
-            }
-        }
-        return std::transform(first3, last3, d_first, unary_op);
-    }
-    
     std::vector<VcfRecord>
     CancerVariantCaller::call_variants(const GenomicRegion& region,
                                        const std::vector<Variant>& candidates,
@@ -791,8 +768,8 @@ namespace Octopus
                                                                   get_regions(germline_variant_calls));
             }
             
-            merge_transform(std::cbegin(germline_variant_calls), std::cend(germline_variant_calls), std::cbegin(germline_genotype_calls),
-                            std::cbegin(somatic_mutation_calls), std::cend(somatic_mutation_calls), std::back_inserter(result),
+            merge_transform(germline_variant_calls, germline_genotype_calls,
+                            somatic_mutation_calls, std::back_inserter(result),
                             [this, &reads, &phase_region] (const auto& variant_call, const auto& genotype_call) {
                                 return output_germline_variant_call(variant_call.variants.front().get_reference_allele(),
                                                                     variant_call.variants, genotype_call,

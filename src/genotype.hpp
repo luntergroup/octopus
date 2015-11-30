@@ -255,6 +255,13 @@ bool contains(const Genotype<MappableType1>& lhs, const Genotype<MappableType2>&
 }
 
 template <typename MappableType>
+bool equal_in_region(const Genotype<MappableType>& lhs, const Genotype<MappableType>& rhs,
+                     const GenomicRegion& region)
+{
+    return splice<MappableType>(lhs, region) == splice<MappableType>(rhs, region);
+}
+
+template <typename MappableType>
 bool is_homozygous(const Genotype<MappableType>& genotype, const MappableType& element)
 {
     return genotype.count(element) == genotype.ploidy();

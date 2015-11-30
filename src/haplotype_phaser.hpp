@@ -37,10 +37,10 @@ public:
         struct PhaseRegion
         {
             PhaseRegion() = default;
-            template <typename Region> PhaseRegion(Region&& region, double probability);
+            template <typename Region> PhaseRegion(Region&& region, double score);
             
             GenomicRegion region;
-            double probability;
+            double score;
         };
         
         using SamplePhaseRegions = std::vector<PhaseRegion>;
@@ -78,11 +78,15 @@ private:
     
     GenomicRegion tree_region_;
     GenomicRegion next_region_;
+    
+    PhaseSet find_optimal_phase_set(const GenomicRegion& region,
+                                    MappableSet<Variant> variants,
+                                    const GenotypePosteriors& genotype_posteriors);
 };
 
 template <typename Region>
-HaplotypePhaser::PhaseSet::PhaseRegion::PhaseRegion(Region&& region, double probability)
-: region {std::forward<Region>(region)}, probability {probability} {}
+HaplotypePhaser::PhaseSet::PhaseRegion::PhaseRegion(Region&& region, double score)
+: region {std::forward<Region>(region)}, score {score} {}
 
 template <typename R>
 HaplotypePhaser::PhaseSet::PhaseSet(R&& region)

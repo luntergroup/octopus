@@ -22,6 +22,7 @@
 #include "variant.hpp"
 #include "haplotype.hpp"
 #include "genotype.hpp"
+#include "merge_transform.hpp"
 #include "vcf_record.hpp"
 #include "maths.hpp"
 #include "mappable_algorithms.hpp"
@@ -64,8 +65,13 @@ struct GenotypeCall
     template <typename T>
     GenotypeCall(T&& genotype, double posterior) : genotype {std::forward<T>(genotype)}, posterior {posterior} {}
     
+    //const GenomicRegion& get_region() const { return genotype.get_region(); }
+    
     Genotype<Allele> genotype;
     double posterior;
+    
+    GenomicRegion phase_region;
+    double phase_score;
 };
 
 using GenotypeCalls = std::unordered_map<Octopus::SampleIdType, GenotypeCall>;
@@ -86,11 +92,13 @@ struct VariantCall : public Mappable<VariantCall>
 
 using VariantCalls = std::vector<VariantCall>;
 
-struct VariantCallBlock
+struct VariantCallBlock : public Mappable<VariantCallBlock>
 {
     VariantCallBlock() = default;
     template <typename T>
     VariantCallBlock(T&& variants, double posterior) : variants {std::forward<T>(variants)}, posterior {posterior} {}
+    
+    GenomicRegion get_region() const { return variants.front().get_region(); }
     
     std::vector<Variant> variants;
     double posterior;
@@ -98,7 +106,7 @@ struct VariantCallBlock
 
 using VariantCallBlocks = std::vector<VariantCallBlock>;
 
-struct RefCall
+struct RefCall : public Mappable<RefCall>
 {
     RefCall() = default;
     template <typename A, typename T>
@@ -108,6 +116,8 @@ struct RefCall
     posterior {posterior},
     sample_posteriors {std::forward<T>(sample_posteriors)}
     {}
+    
+    const GenomicRegion& get_region() const { return reference_allele.get_region(); }
     
     Allele reference_allele;
     double posterior;
@@ -428,8 +438,7 @@ std::vector<unsigned> count_alleles(const std::vector<Variant>& variants, const 
     result.reserve(variants.size());
     
     for (const auto& variant : variants) {
-        const auto& alt_allele = variant.get_alternative_allele();
-        result.push_back(allele_counts[alt_allele]);
+        result.push_back(allele_counts[variant.get_alternative_allele()]);
     }
     
     return result;
@@ -443,26 +452,26 @@ std::vector<VcfRecord::SequenceType> to_vcf_genotype(const Genotype<Allele>& gen
     return result;
 }
 
-VcfRecord output_variant_call(const Allele& reference_allele, const std::vector<Variant>& variants,
-                              const GenotypeCalls& genotype_calls, double posterior,
-                              ReferenceGenome& reference, const ReadMap& reads,
-                              const GenomicRegion& phase_region)
+VcfRecord output_variant_call(const VariantCallBlock& block, const GenotypeCalls& genotype_calls,
+                              ReferenceGenome& reference, const ReadMap& reads)
 {
     auto result = VcfRecord::Builder();
     
-    const auto phred_quality = Maths::probability_to_phred<float>(posterior);
+    const auto phred_quality = Maths::probability_to_phred<float>(block.posterior);
+    
+    const auto reference_allele = block.variants.front().get_reference_allele();
     
     const auto& region = get_region(reference_allele);
     
     result.set_chromosome(get_contig_name(region));
     result.set_position(get_begin(region));
     result.set_ref_allele(reference_allele.get_sequence());
-    result.set_alt_alleles(get_alt_allele_sequences(variants));
+    result.set_alt_alleles(get_alt_allele_sequences(block.variants));
     result.set_quality(phred_quality);
     
     //result.set_filters({"PASS"}); // TODO
     
-    result.add_info("AC", to_strings(count_alleles(variants, genotype_calls)));
+    result.add_info("AC", to_strings(count_alleles(block.variants, genotype_calls)));
     result.add_info("AN", std::to_string(count_alleles(genotype_calls)));
     result.add_info("NS", std::to_string(count_samples_with_coverage(reads, region)));
     result.add_info("DP", std::to_string(sum_max_coverages(reads, region)));
@@ -479,8 +488,8 @@ VcfRecord output_variant_call(const Allele& reference_allele, const std::vector<
         
         result.add_genotype_field(sample, "FT", "."); // TODO
         result.add_genotype_field(sample, "GQ", to_string(Maths::probability_to_phred<float>(sample_call.second.posterior), 2));
-        result.add_genotype_field(sample, "PS", std::to_string(get_begin(phase_region) + 1));
-        result.add_genotype_field(sample, "PQ", "60"); // TODO
+        result.add_genotype_field(sample, "PS", std::to_string(get_begin(sample_call.second.phase_region) + 1));
+        result.add_genotype_field(sample, "PQ", to_string(Maths::probability_to_phred<float>(sample_call.second.phase_score), 2)); // TODO
         result.add_genotype_field(sample, "DP", std::to_string(max_coverage(reads.at(sample), region)));
         result.add_genotype_field(sample, "BQ", std::to_string(static_cast<unsigned>(rmq_base_quality(reads.at(sample), region))));
         result.add_genotype_field(sample, "MQ", std::to_string(static_cast<unsigned>(rmq_mapping_quality(reads.at(sample), region))));
@@ -532,30 +541,6 @@ VcfRecord output_reference_call(RefCall call, ReferenceGenome& reference, const 
     return result.build_once();
 }
 
-template <typename InputIt1, typename InputIt2, typename InputIt3, typename OutputIt,
-          typename BinaryOperation, typename UnaryOperation, typename Compare>
-OutputIt merge_transform(InputIt1 first1, InputIt1 last1, InputIt2 first2,
-                         InputIt3 first3, InputIt3 last3,
-                         OutputIt d_first,
-                         BinaryOperation binary_op, UnaryOperation unary_op,
-                         Compare cmp)
-{
-    for (; first1 != last1; ++d_first) {
-        if (first3 == last3) {
-            return std::transform(first1, last1, first2, d_first, binary_op);
-        }
-        if (cmp(*first3, *first1)) {
-            *d_first = unary_op(*first3);
-            ++first3;
-        } else {
-            *d_first = binary_op(*first1, *first2);
-            ++first1;
-            ++first2;
-        }
-    }
-    return std::transform(first3, last3, d_first, unary_op);
-}
-
 std::vector<VcfRecord>
 PopulationVariantCaller::call_variants(const GenomicRegion& region, const std::vector<Variant>& candidates,
                                        const ReadMap& reads)
@@ -600,13 +585,40 @@ PopulationVariantCaller::call_variants(const GenomicRegion& region, const std::v
             
             auto variant_calls = call_blocked_variants(candidates, allele_posteriors, min_variant_posterior_);
             
-            debug::print_variant_calls(variant_calls);
+            //debug::print_variant_calls(variant_calls);
             
             parsimonise_variant_calls(variant_calls, reference_);
             
             auto called_regions = get_regions(variant_calls);
             
             auto variant_genotype_calls = call_genotypes(genotype_posteriors, called_regions);
+            
+            // TODO
+            for (auto& g : variant_genotype_calls) {
+                for (auto& p : g) {
+                    const auto& phase_regions = phase_set.phase_regions.at(p.first);
+                    const auto& call_region = p.second.genotype[0].get_region();
+                    auto it = std::find_if(std::cbegin(phase_regions), std::cend(phase_regions),
+                                           [&call_region] (const auto& phase_region) {
+                                               return contains(phase_region.region, call_region);
+                                           });
+                    
+                    auto it2 = std::find_if(std::cbegin(called_regions), std::cend(called_regions),
+                                            [it] (const auto& region) {
+                                                return contains(it->region, region);
+                                            });
+                    
+                    p.second.phase_region = *it2;
+                    p.second.phase_score  = it->score;
+                }
+            }
+            
+            for (const auto& p : phase_set.phase_regions) {
+                std::cout << "phase regions for sample " << p.first << std::endl;
+                for (const auto& r : p.second) {
+                    std::cout << r.region << " " << r.score << std::endl;
+                }
+            }
             
             debug::print_genotype_calls(variant_genotype_calls);
             
@@ -621,22 +633,15 @@ PopulationVariantCaller::call_variants(const GenomicRegion& region, const std::v
             
             //std::cout << called_regions.front() << std::endl;
             
-            const auto phase_region = (called_regions.empty()) ? get_head(region) : get_encompassing(called_regions.front(), called_regions.back());
-            
             result.reserve(variant_calls.size() + refcalls.size());
             
-            merge_transform(std::cbegin(variant_calls), std::cend(variant_calls), std::cbegin(variant_genotype_calls),
-                            std::cbegin(refcalls), std::cend(refcalls), std::back_inserter(result),
-                            [this, &reads, &phase_region] (const auto& variant_call, const auto& genotype_call) {
-                                return output_variant_call(variant_call.variants.front().get_reference_allele(),
-                                                           variant_call.variants, genotype_call,
-                                                           variant_call.posterior, reference_, reads, phase_region);
+            merge_transform(variant_calls, variant_genotype_calls, refcalls, std::back_inserter(result),
+                            [this, &reads] (const auto& variant_call, const auto& genotype_call) {
+                                return output_variant_call(variant_call, genotype_call, reference_,
+                                                           reads);
                             },
                             [this, &reads] (const auto& refcall) {
                                 return output_reference_call(refcall, reference_, reads, ploidy_);
-                            },
-                            [] (const auto& lhs, const auto& rhs) {
-                                return is_before(lhs.reference_allele, rhs.variants.front());
                             });
         }
     }

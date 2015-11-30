@@ -296,6 +296,7 @@
 		CA53D3001C03AF46009A216D /* pedigree_genotype_model.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = pedigree_genotype_model.hpp; sourceTree = "<group>"; };
 		CA53D3021C03B746009A216D /* pedigree.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = pedigree.cpp; sourceTree = "<group>"; };
 		CA53D3031C03B746009A216D /* pedigree.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = pedigree.hpp; sourceTree = "<group>"; };
+		CA53D3051C0A7881009A216D /* merge_transform.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = merge_transform.hpp; sourceTree = "<group>"; };
 		CA5C8E011ADC4CBB000BA230 /* haplotype_benchmarks.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = haplotype_benchmarks.cpp; sourceTree = "<group>"; };
 		CA76E6F31BF155A90074E336 /* human_skip_regions.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = human_skip_regions.txt; sourceTree = "<group>"; };
 		CA8A66431B7E2CC7008CE1D8 /* i_vcf_reader_impl.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = i_vcf_reader_impl.hpp; sourceTree = "<group>"; };
@@ -856,6 +857,7 @@
 				CA14727D1AAE63A8005FDCD1 /* hash_functions.hpp */,
 				D4907F5E1A8A3ADD00639203 /* string_utils.hpp */,
 				CA8A66451B7E5E0C008CE1D8 /* sequence_utils.hpp */,
+				CA53D3051C0A7881009A216D /* merge_transform.hpp */,
 			);
 			name = utils;
 			sourceTree = "<group>";
@@ -921,8 +923,6 @@
 			children = (
 				CA91C2CD1B8DF4CC00609FFA /* haplotype_prior_model.hpp */,
 				CAB0DFD71BBDB9E5001D2F99 /* haplotype_prior_model.cpp */,
-				CA53D2FD1C021C70009A216D /* haplotype_filter.hpp */,
-				CA53D2FC1C021C70009A216D /* haplotype_filter.cpp */,
 				CAFA19761AC5E67100F953D9 /* pair_hmm.hpp */,
 				D48D2AE31BB5753F00C5596E /* single_read_model.hpp */,
 				D48D2AE21BB5753F00C5596E /* single_read_model.cpp */,

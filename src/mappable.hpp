@@ -106,6 +106,12 @@ inline bool operator==(const GenomicRegion& lhs, const Mappable<T>& rhs)
     return lhs == static_cast<const T&>(rhs).get_region();
 }
 
+template <typename T1, typename T2>
+inline bool operator==(const Mappable<T1>& lhs, const Mappable<T2>& rhs)
+{
+    return static_cast<const T1&>(lhs).get_region() == static_cast<const T2&>(rhs).get_region();
+}
+
 template <typename T>
 inline bool operator<(const Mappable<T>& lhs, const GenomicRegion& rhs)
 {
@@ -116,6 +122,12 @@ template <typename T>
 inline bool operator<(const GenomicRegion& lhs, const Mappable<T>& rhs)
 {
     return lhs < static_cast<const T&>(rhs).get_region();
+}
+
+template <typename T1, typename T2>
+inline bool operator<(const Mappable<T1>& lhs, const Mappable<T2>& rhs)
+{
+    return static_cast<const T1&>(lhs).get_region() < static_cast<const T2&>(rhs).get_region();
 }
 
 template <typename T>
