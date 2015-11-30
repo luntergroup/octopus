@@ -70,13 +70,15 @@ private:
     Vertex get_previous_allele(Vertex allele) const;
     bool allele_exists(Vertex leaf, const Allele& allele) const;
     LeafIterator extend_haplotype(LeafIterator haplotype_leaf, const Allele& new_allele);
-    Haplotype get_haplotype(Vertex haplotype_end, const GenomicRegion& region) const;
+    Haplotype get_haplotype(Vertex haplotype_leaf, const GenomicRegion& region) const;
     
+    bool define_same_haplotype(Vertex leaf1, Vertex leaf2) const;
     bool is_branch_exact_haplotype(Vertex branch_vertex, const Haplotype& haplotype) const;
     bool is_branch_equal_haplotype(Vertex branch_vertex, const Haplotype& haplotype) const;
     LeafIterator find_exact_haplotype_leaf(LeafIterator first, LeafIterator last, const Haplotype& haplotype) const;
     LeafIterator find_equal_haplotype_leaf(LeafIterator first, LeafIterator last, const Haplotype& haplotype) const;
     std::pair<Vertex, bool> prune_branch(Vertex leaf, const GenomicRegion& region);
+    std::pair<Vertex, bool> splice_region(Vertex leaf, const GenomicRegion& region);
 };
 
 // non-member methods

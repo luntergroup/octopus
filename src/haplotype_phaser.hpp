@@ -55,7 +55,8 @@ public:
     };
     
     HaplotypePhaser() = delete;
-    explicit HaplotypePhaser(ReferenceGenome& reference, const std::vector<Variant>& candidates, const ReadMap& reads,
+    explicit HaplotypePhaser(ReferenceGenome& reference, const std::vector<Variant>& candidates,
+                             const ReadMap& reads,
                              unsigned max_haplotypes = 128, unsigned max_indicators = 3);
     ~HaplotypePhaser() = default;
     
@@ -78,6 +79,9 @@ private:
     
     GenomicRegion tree_region_;
     GenomicRegion next_region_;
+    
+    void remove_low_posterior_haplotypes(const std::vector<Haplotype>& haplotypes,
+                                         const GenotypePosteriors& genotype_posteriors);
     
     PhaseSet find_optimal_phase_set(const GenomicRegion& region,
                                     MappableSet<Variant> variants,

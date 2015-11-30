@@ -24,7 +24,7 @@ inline po::variables_map get_basic_mock_options()
         
         //"--reads", HG00101.c_str(),
         "--reads", NA12878_low_coverage.c_str(),
-        //"--reads", NA12891_high_coverage.c_str(),
+        "--reads", NA12891_high_coverage.c_str(),
         
         //"--reads", NA12878_high_coverage.c_str(),
         //"--reads", NA12878_low_coverage.c_str(), HG00101.c_str(), HG00102.c_str(), HG00103.c_str(),
@@ -53,13 +53,17 @@ inline po::variables_map get_basic_mock_options()
         //"--regions", "6:58,605,652-58,606,061",   // NA12878_low_coverage partial phase
         //"--regions", "6:58,605,687-58,605,779",   // NA12878_low_coverage phase strong
         //"--regions", "3:108,803,741-108,803,854", // NA12878_low_coverage phase weak
-        "-L", "7:47,799,909-47,800,044",
+        //"-L", "7:47,799,909-47,800,044",
         
         //"--regions", "6:22,877,929-22,878,012", // NA12878_low_coverage HMM error
         //"--regions", "6:29,915,924-29,916,412",
         //"--regions", "6:144,712,021-144,712,273",
         //"--regions", "6:89,236,310-89,237,082", // NA12878_high_coverage very nice phasing test
         //"--regions", "6:89,236,734-89,236,784",
+        
+        //"-L", "6:29,910,550-29,911,088", // HLA
+        "-L", "6:30,731,274-30,731,783", // HLA
+        
         
         //"--regions", "21:11,062,774-11,062,920",
         //"--regions", "21:11062880-11063100",

@@ -33,6 +33,8 @@
 
 #include "test_common.hpp"
 
+#include "haplotype_tree.hpp"
+
 namespace Octopus
 {
     size_t count_reads(ReadManager& read_manager, ReferenceGenome& reference)

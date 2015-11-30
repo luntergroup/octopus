@@ -8,6 +8,7 @@
 
 #include "haplotype_tree.hpp"
 
+#include <deque>
 #include <stdexcept>
 #include <iterator>  // std::next, std::tie, std::cbegin etc
 #include <algorithm> // std::find, std::find_if, std::any_of
@@ -82,6 +83,10 @@ void HaplotypeTree::extend(const Allele& allele)
 
 GenomicRegion HaplotypeTree::get_region() const
 {
+    if (empty()) {
+        throw std::runtime_error {"empty HaplotypeTree does not have a defined region"};
+    }
+    
     auto vertex_range = boost::adjacent_vertices(root_, tree_);
     
     auto leftmost = *std::min_element(vertex_range.first, vertex_range.second,
@@ -242,10 +247,47 @@ void HaplotypeTree::prune_unique(const Haplotype& haplotype)
 
 void HaplotypeTree::clear(const GenomicRegion& region)
 {
-    if (::contains(region, get_region())) {
+    if (empty()) return;
+    
+    const auto tree_region = get_region();
+    
+    if (::contains(region, tree_region)) {
         clear();
     } else {
-        // hard
+        haplotype_leaf_cache_.clear();
+        recently_removed_haplotypes_.clear();
+        
+        std::deque<Vertex> new_leafs {};
+        
+        std::for_each(std::cbegin(haplotype_leafs_), std::cend(haplotype_leafs_),
+                      [this, &region, &new_leafs] (Vertex leaf) {
+                          auto p = prune_branch(leaf, region);
+                          if (p.second) {
+                              new_leafs.push_back(p.first);
+                          }
+                      });
+        
+        haplotype_leafs_.clear();
+        
+        std::deque<Vertex> leaves_to_prune {};
+        
+        std::for_each(std::begin(new_leafs), std::end(new_leafs),
+                      [this, &leaves_to_prune] (Vertex new_leaf) {
+                          auto seen_before = std::any_of(std::cbegin(haplotype_leafs_), std::cend(haplotype_leafs_),
+                                                         [this, new_leaf] (Vertex leaf) {
+                                                             return define_same_haplotype(new_leaf, leaf);
+                                                         });
+                          if (seen_before) {
+                              leaves_to_prune.push_back(new_leaf);
+                          } else {
+                              haplotype_leafs_.push_back(new_leaf);
+                          }
+        });
+        
+        std::for_each(std::begin(leaves_to_prune), std::end(leaves_to_prune),
+                      [this, &tree_region] (Vertex leaf) {
+                          prune_branch(leaf, tree_region);
+                      });
     }
 }
 
@@ -268,7 +310,7 @@ HaplotypeTree::Vertex HaplotypeTree::get_previous_allele(Vertex allele) const
 
 bool HaplotypeTree::allele_exists(Vertex leaf, const Allele& allele) const
 {
-    auto vertex_range = boost::adjacent_vertices(leaf, tree_);
+    const auto vertex_range = boost::adjacent_vertices(leaf, tree_);
     return std::any_of(vertex_range.first, vertex_range.second,
                        [this, &allele] (Vertex vertex) {
                            return tree_[vertex] == allele;
@@ -331,6 +373,19 @@ Haplotype HaplotypeTree::get_haplotype(Vertex haplotype_leaf, const GenomicRegio
     return result;
 }
 
+bool HaplotypeTree::define_same_haplotype(Vertex leaf1, Vertex leaf2) const
+{
+    if (leaf1 == leaf2) return true;
+    
+    while (leaf1 != root_) {
+        if (leaf2 == root_ || tree_[leaf1] != tree_[leaf2]) return false;
+        leaf1 = get_previous_allele(leaf1);
+        leaf2 = get_previous_allele(leaf2);
+    }
+    
+    return leaf2 == root_;
+}
+
 bool HaplotypeTree::is_branch_exact_haplotype(Vertex branch_vertex, const Haplotype& haplotype) const
 {
     if (branch_vertex == root_) return false;
@@ -386,23 +441,82 @@ HaplotypeTree::LeafIterator HaplotypeTree::find_equal_haplotype_leaf(LeafIterato
 
 std::pair<HaplotypeTree::Vertex, bool> HaplotypeTree::prune_branch(Vertex leaf, const GenomicRegion& region)
 {
-    Vertex new_leaf;
+    if (ends_before(region, tree_[leaf])) {
+        return splice_region(leaf, region);
+    }
     
     while (leaf != root_) {
         if (boost::out_degree(leaf, tree_) > 0) {
-            return {leaf, false};
+            return std::make_pair(leaf, false);
         } else if (begins_before(tree_[leaf], region)) {
-            return {leaf, true};
+            return std::make_pair(leaf, true);
         }
         
-        new_leaf = get_previous_allele(leaf);
+        auto new_leaf = get_previous_allele(leaf);
+        
         boost::remove_edge(new_leaf, leaf, tree_);
         boost::remove_vertex(leaf, tree_);
+        
         leaf = new_leaf;
     }
     
     // the root should only be indicated as a leaf node if there are no other nodes in the tree
-    return {leaf, num_haplotypes() == 1};
+    return std::make_pair(leaf, num_haplotypes() == 1);
+}
+
+std::pair<HaplotypeTree::Vertex, bool> HaplotypeTree::splice_region(const Vertex leaf, const GenomicRegion& region)
+{
+    if (leaf == root_ || is_after(region, tree_[leaf])) {
+        return std::make_pair(leaf, true);
+    }
+    
+    //std::cout << "splicing" << std::endl;
+    
+    auto curr = leaf;
+    auto prev = curr;
+    
+    bool is_single_branch {true};
+    
+    while (curr != root_) {
+        prev = get_previous_allele(curr);
+        is_single_branch = is_single_branch && boost::out_degree(curr, tree_) == 1;
+        if (prev == root_ || overlaps(tree_[prev], region)) break;
+        curr = prev;
+    }
+    
+    auto splice_end = curr;
+    
+    //std::cout << "splice end: " << tree_[splice_end] << std::endl;
+    //std::cout << "prev: " << tree_[prev] << std::endl;
+    
+    boost::remove_edge(prev, splice_end, tree_);
+    
+    curr = prev;
+    
+    while (curr != root_ && overlaps(region, tree_[curr])) {
+        prev = get_previous_allele(curr);
+        
+        //std::cout << "curr: " << tree_[curr] << std::endl;
+        //std::cout << "prev: " << tree_[prev] << std::endl;
+        
+        is_single_branch = is_single_branch && boost::out_degree(curr, tree_) == 0;
+        
+        if (is_single_branch) {
+            //std::cout << "removing" << std::endl;
+            boost::remove_edge(prev, curr, tree_);
+            boost::remove_vertex(curr, tree_);
+        }
+        
+        curr = prev;
+    }
+    
+    //std::cout << "adding edge between " << tree_[curr] << " and " << tree_[splice_end] << std::endl;
+    
+    boost::add_edge(curr, splice_end, tree_);
+    
+    //exit(0);
+    
+    return std::make_pair(leaf, true);
 }
 
 } // namespace Octopus

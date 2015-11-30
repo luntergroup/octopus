@@ -167,6 +167,14 @@ namespace std
             return h.get_hash();
         }
     };
+    
+    template <> struct hash<reference_wrapper<const Haplotype>>
+    {
+        size_t operator()(reference_wrapper<const Haplotype> r) const
+        {
+            return hash<Haplotype>()(r);
+        }
+    };
 } // namespace std
 
 namespace boost

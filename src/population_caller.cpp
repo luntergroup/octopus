@@ -549,7 +549,7 @@ PopulationVariantCaller::call_variants(const GenomicRegion& region, const std::v
     
     if (empty(region)) return result;
     
-    HaplotypePhaser phaser {reference_, candidates, reads, 64, 2};
+    HaplotypePhaser phaser {reference_, candidates, reads, 128, 5};
     
     while (!phaser.done()) {
         auto haplotypes = phaser.get_haplotypes();
@@ -572,7 +572,7 @@ PopulationVariantCaller::call_variants(const GenomicRegion& region, const std::v
         
         auto phase_set = phaser.phase(haplotypes, genotype_posteriors);
         
-        if (!empty(phase_set.region)) {
+        if (has_contained(candidates, phase_set.region)) {
             debug::print_genotype_posteriors(genotype_posteriors);
             
             //remove_low_posterior_genotypes(genotype_posteriors, 0.0000000001);

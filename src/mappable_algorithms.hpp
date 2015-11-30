@@ -376,10 +376,9 @@ bool has_contained(BidirectionalIterator first, BidirectionalIterator last, cons
 }
 
 template <typename Container, typename MappableType>
-bool has_contained(const Container& container, const MappableType& mappable,
-                   MappableRangeOrder order = MappableRangeOrder::ForwardSorted)
+bool has_contained(const Container& container, const MappableType& mappable)
 {
-    return has_contained(std::cbegin(container), std::cend(container), mappable, order);
+    return has_contained(std::cbegin(container), std::cend(container), mappable);
 }
 
 /**

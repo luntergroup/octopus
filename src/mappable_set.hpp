@@ -915,8 +915,8 @@ template <typename MappableType1, typename MappableType2>
 MappableSet<MappableType1>
 copy_overlapped(const MappableSet<MappableType1>& mappables, const MappableType2& mappable)
 {
-    auto overlapped = mappables.overlap_range(mappable);
-    return MappableSet<MappableType1>(overlapped.begin(), overlapped.end());
+    const auto overlapped = mappables.overlap_range(mappable);
+    return MappableSet<MappableType1>(std::begin(overlapped), std::end(overlapped));
 }
 
 template <typename MappableType1, typename MappableType2>
@@ -958,8 +958,8 @@ template <typename MappableType1, typename MappableType2>
 MappableSet<MappableType1>
 copy_contained(const MappableSet<MappableType1>& mappables, const MappableType2& mappable)
 {
-    auto contained = mappables.contained_range(mappable);
-    return MappableSet<MappableType1>(contained.begin(), contained.end());
+    const auto contained = mappables.contained_range(mappable);
+    return MappableSet<MappableType1>(std::begin(contained), std::end(contained));
 }
 
 template <typename MappableType1, typename MappableType2>
