@@ -125,27 +125,36 @@ namespace Octopus
         
         HaplotypeTree tree {reference};
         
-        tree.extend(Allele {parse_region("6:31338901-31338905", reference), "AATT"});
-        tree.extend(Allele {parse_region("6:31338901-31338905", reference), ""});
-//        tree.extend(Allele {parse_region("6:31338910-31338911", reference), "T"});
-//        tree.extend(Allele {parse_region("6:31338910-31338911", reference), "G"});
-//        tree.extend(Allele {parse_region("6:31338940-31338941", reference), "C"});
-//        tree.extend(Allele {parse_region("6:31338940-31338941", reference), "T"});
-//        tree.extend(Allele {parse_region("6:31338945-31338946", reference), "G"});
-//        tree.extend(Allele {parse_region("6:31338945-31338946", reference), "A"});
-        tree.extend(Allele {parse_region("6:31338984-31338988", reference), "ATCT"});
-        tree.extend(Allele {parse_region("6:31338984-31338988", reference), ""});
-        tree.extend(Allele {parse_region("6:31339011-31339012", reference), "T"});
-        tree.extend(Allele {parse_region("6:31339011-31339012", reference), "C"});
-        tree.extend(Allele {parse_region("6:31339041-31339042", reference), "A"});
-        tree.extend(Allele {parse_region("6:31339041-31339042", reference), ""});
+        tree.extend(Allele {parse_region("1:100-101", reference), "A"});
+        tree.extend(Allele {parse_region("1:100-101", reference), "T"});
+        tree.extend(Allele {parse_region("1:105-106", reference), "C"});
+        tree.extend(Allele {parse_region("1:105-106", reference), "G"});
+        tree.extend(Allele {parse_region("1:110-111", reference), "A"});
+        tree.extend(Allele {parse_region("1:110-111", reference), "T"});
         
-        std::cout << "num_haplotypes: " << tree.num_haplotypes() << std::endl;
+        tree.clear(parse_region("1:105-106", reference));
         
-        tree.clear(parse_region("6:31338801-31338988", reference));
-        
-        std::cout << "tree region: " << tree.get_region() << std::endl;
-        
+//        tree.extend(Allele {parse_region("6:31338901-31338905", reference), "AATT"});
+//        tree.extend(Allele {parse_region("6:31338901-31338905", reference), ""});
+////        tree.extend(Allele {parse_region("6:31338910-31338911", reference), "T"});
+////        tree.extend(Allele {parse_region("6:31338910-31338911", reference), "G"});
+////        tree.extend(Allele {parse_region("6:31338940-31338941", reference), "C"});
+////        tree.extend(Allele {parse_region("6:31338940-31338941", reference), "T"});
+////        tree.extend(Allele {parse_region("6:31338945-31338946", reference), "G"});
+////        tree.extend(Allele {parse_region("6:31338945-31338946", reference), "A"});
+//        tree.extend(Allele {parse_region("6:31338984-31338988", reference), "ATCT"});
+//        tree.extend(Allele {parse_region("6:31338984-31338988", reference), ""});
+//        tree.extend(Allele {parse_region("6:31339011-31339012", reference), "T"});
+//        tree.extend(Allele {parse_region("6:31339011-31339012", reference), "C"});
+//        tree.extend(Allele {parse_region("6:31339041-31339042", reference), "A"});
+//        tree.extend(Allele {parse_region("6:31339041-31339042", reference), ""});
+//        
+//        std::cout << "num_haplotypes: " << tree.num_haplotypes() << std::endl;
+//        
+//        tree.clear(parse_region("6:31338801-31338988", reference));
+//        
+//        std::cout << "tree region: " << tree.get_region() << std::endl;
+//        
 //        std::cout << "num_haplotypes: " << tree.num_haplotypes() << std::endl;
 //        
 //        for (auto h : tree.get_haplotypes()) {
@@ -168,6 +177,9 @@ namespace Octopus
 //        }
 //        
 //        tree.clear(parse_region("6:31338988-31339135", reference));
+//        
+//        std::cout << "num_haplotypes: " << tree.num_haplotypes() << std::endl;
+//        std::cout << "empty: " << tree.empty() << std::endl;
         
         exit(0);
         
