@@ -33,7 +33,7 @@
 
 #include "test_common.hpp"
 
-#include "haplotype_tree.hpp"
+#include "haplotype_tree.hpp" // DEBUG
 
 namespace Octopus
 {
@@ -122,6 +122,54 @@ namespace Octopus
         auto read_transform      = Options::get_read_transformer(options);
         auto candidate_generator = Options::get_candidate_generator(options, reference);
         auto output              = Options::get_output_vcf(options);
+        
+        HaplotypeTree tree {reference};
+        
+        tree.extend(Allele {parse_region("6:31338901-31338905", reference), "AATT"});
+        tree.extend(Allele {parse_region("6:31338901-31338905", reference), ""});
+//        tree.extend(Allele {parse_region("6:31338910-31338911", reference), "T"});
+//        tree.extend(Allele {parse_region("6:31338910-31338911", reference), "G"});
+//        tree.extend(Allele {parse_region("6:31338940-31338941", reference), "C"});
+//        tree.extend(Allele {parse_region("6:31338940-31338941", reference), "T"});
+//        tree.extend(Allele {parse_region("6:31338945-31338946", reference), "G"});
+//        tree.extend(Allele {parse_region("6:31338945-31338946", reference), "A"});
+        tree.extend(Allele {parse_region("6:31338984-31338988", reference), "ATCT"});
+        tree.extend(Allele {parse_region("6:31338984-31338988", reference), ""});
+        tree.extend(Allele {parse_region("6:31339011-31339012", reference), "T"});
+        tree.extend(Allele {parse_region("6:31339011-31339012", reference), "C"});
+        tree.extend(Allele {parse_region("6:31339041-31339042", reference), "A"});
+        tree.extend(Allele {parse_region("6:31339041-31339042", reference), ""});
+        
+        std::cout << "num_haplotypes: " << tree.num_haplotypes() << std::endl;
+        
+        tree.clear(parse_region("6:31338801-31338988", reference));
+        
+        std::cout << "tree region: " << tree.get_region() << std::endl;
+        
+//        std::cout << "num_haplotypes: " << tree.num_haplotypes() << std::endl;
+//        
+//        for (auto h : tree.get_haplotypes()) {
+//            print_variant_alleles(h);
+//            std::cout << std::endl;
+//        }
+//        
+//        tree.extend(Allele {parse_region("6:31339011-31339012", reference), "T"});
+//        tree.extend(Allele {parse_region("6:31339011-31339012", reference), "C"});
+//        tree.extend(Allele {parse_region("6:31339041-31339042", reference), "A"});
+//        tree.extend(Allele {parse_region("6:31339041-31339042", reference), ""});
+//        tree.extend(Allele {parse_region("6:31339085-31339086", reference), "G"});
+//        tree.extend(Allele {parse_region("6:31339085-31339086", reference), "A"});
+//        
+//        std::cout << "num_haplotypes: " << tree.num_haplotypes() << std::endl;
+//        
+//        for (auto h : tree.get_haplotypes()) {
+//            print_variant_alleles(h);
+//            std::cout << std::endl;
+//        }
+//        
+//        tree.clear(parse_region("6:31338988-31339135", reference));
+        
+        exit(0);
         
         ReadPipe read_pipe {read_manager, read_filter, downsampler, read_transform};
         

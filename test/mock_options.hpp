@@ -22,9 +22,9 @@ inline po::variables_map get_basic_mock_options()
         "--reference", human_reference_fasta.c_str(),
         //"--reference", ecoli_reference_fasta.c_str(),
         
-        //"--reads", HG00101.c_str(),
+        "--reads", HG00101.c_str(),
         "--reads", NA12878_low_coverage.c_str(),
-        "--reads", NA12891_high_coverage.c_str(),
+        //"--reads", NA12891_high_coverage.c_str(),
         
         //"--reads", NA12878_high_coverage.c_str(),
         //"--reads", NA12878_low_coverage.c_str(), HG00101.c_str(), HG00102.c_str(), HG00103.c_str(),
@@ -62,8 +62,9 @@ inline po::variables_map get_basic_mock_options()
         //"--regions", "6:89,236,734-89,236,784",
         
         //"-L", "6:29,910,550-29,911,088", // HLA
-        "-L", "6:30,731,274-30,731,783", // HLA
+        "-L", "6:31,338,897-31,339,914", // HLA
         
+        //"-L", "7:47,800,286-47,800,512",
         
         //"--regions", "21:11,062,774-11,062,920",
         //"--regions", "21:11062880-11063100",

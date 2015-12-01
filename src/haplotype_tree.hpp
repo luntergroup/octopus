@@ -60,18 +60,19 @@ private:
     Tree tree_;
     Vertex root_;
     std::list<Vertex> haplotype_leafs_;
+    
     ReferenceGenome& reference_;
+    
     mutable std::unordered_multimap<Haplotype, Vertex> haplotype_leaf_cache_;
-    std::unordered_set<Haplotype> recently_removed_haplotypes_;
+    mutable std::unordered_set<Haplotype> recently_removed_haplotypes_;
     
     using LeafIterator  = decltype(haplotype_leafs_)::const_iterator;
     using CacheIterator = decltype(haplotype_leaf_cache_)::iterator;
     
     Vertex get_previous_allele(Vertex allele) const;
     bool allele_exists(Vertex leaf, const Allele& allele) const;
-    LeafIterator extend_haplotype(LeafIterator haplotype_leaf, const Allele& new_allele);
-    Haplotype get_haplotype(Vertex haplotype_leaf, const GenomicRegion& region) const;
-    
+    LeafIterator extend_haplotype(LeafIterator leaf, const Allele& new_allele);
+    Haplotype get_haplotype(Vertex leaf, const GenomicRegion& region) const;
     bool define_same_haplotype(Vertex leaf1, Vertex leaf2) const;
     bool is_branch_exact_haplotype(Vertex branch_vertex, const Haplotype& haplotype) const;
     bool is_branch_equal_haplotype(Vertex branch_vertex, const Haplotype& haplotype) const;

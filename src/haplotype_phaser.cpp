@@ -10,7 +10,7 @@
 
 #include <deque>
 #include <algorithm>  // std::max, std::sort, std::unique, std::for_each
-#include <iterator>   // std::begin, std::end, std::cbegin, std::cend
+#include <iterator>   // std::begin, std::end, std::cbegin, std::cend, std::next, std::prev
 #include <cmath>      // std::log2
 #include <functional> // std::reference_wrapper
 
@@ -50,7 +50,7 @@ bool HaplotypePhaser::done() const noexcept
 
 std::vector<Haplotype> HaplotypePhaser::get_haplotypes()
 {
-    auto contained_candidates = buffered_candidates_.contained_range(next_region_);
+    const auto contained_candidates = buffered_candidates_.contained_range(next_region_);
     
     std::for_each(std::cbegin(contained_candidates), std::cend(contained_candidates),
                   [this] (const auto& candidate) {
@@ -74,6 +74,8 @@ HaplotypePhaser::PhaseSet
 HaplotypePhaser::phase(const std::vector<Haplotype>& haplotypes,
                        const GenotypePosteriors& genotype_posteriors)
 {
+    std::cout << "phasing" << std::endl;
+    
     remove_low_posterior_haplotypes(haplotypes, genotype_posteriors);
     
     next_region_ = walker_.walk(tree_region_, *reads_, buffered_candidates_);
@@ -86,8 +88,31 @@ HaplotypePhaser::phase(const std::vector<Haplotype>& haplotypes,
     
     auto variants = copy_contained(buffered_candidates_, phased_region);
     
+    std::cout << "clearing tree" << std::endl;
+    
     buffered_candidates_.erase_contained(phased_region);
+    
+    std::cout << "there are " << tree_.num_haplotypes() << " haplotypes in the tree" << std::endl;
+    for (auto h : tree_.get_haplotypes()) {
+        print_variant_alleles(h);
+        std::cout << std::endl;
+    }
+    
     tree_.clear(phased_region);
+    
+    std::cout << "there are " << buffered_candidates_.size() << " candidates remaining" << std::endl;
+    
+    if (tree_.empty()) {
+        std::cout << "tree is empty" << std::endl;
+    } else {
+        std::cout << "there are " << tree_.num_haplotypes() << " haplotypes in the tree" << std::endl;
+        for (auto h : tree_.get_haplotypes()) {
+            print_variant_alleles(h);
+            std::cout << std::endl;
+        }
+    }
+    
+    std::cout << "finding phase sets" << std::endl;
     
     return find_optimal_phase_set(phased_region, std::move(variants), genotype_posteriors);
 }
@@ -160,7 +185,7 @@ HaplotypePhaser::phase(const std::vector<Haplotype>& haplotypes,
     {
         if (lhs.ploidy() == 1) return false;
         
-        auto regions = get_regions(variants);
+        const auto regions = get_regions(variants);
         
         return std::all_of(std::cbegin(regions), std::cend(regions),
                            [&lhs, &rhs] (const auto& region) {
@@ -186,10 +211,11 @@ HaplotypePhaser::phase(const std::vector<Haplotype>& haplotypes,
                  [&result, &variants] (const auto& genotype) {
                      auto it = std::find_if(begin(result), end(result),
                                             [&genotype, &variants] (const auto& complements) {
-                                                return std::any_of(cbegin(complements), cend(complements),
-                                                                   [&genotype, &variants] (const auto& complement) {
-                                                                       return are_phase_complements(genotype, complement, variants);
-                                                                   });
+                                                return are_phase_complements(genotype, complements.front(), variants);
+//                                                return std::any_of(cbegin(complements), cend(complements),
+//                                                                   [&genotype, &variants] (const auto& complement) {
+//                                                                       return are_phase_complements(genotype, complement, variants);
+//                                                                   });
                                             });
                      
                      if (it == end(result)) {
@@ -214,9 +240,10 @@ HaplotypePhaser::phase(const std::vector<Haplotype>& haplotypes,
     double calculate_entropy(const PhaseComplementSet& phase_set,
                              const HaplotypePhaser::SampleGenotypePosteriors& genotype_posteriors)
     {
+        const auto norm = marginalise(phase_set, genotype_posteriors);
         return std::max(0.0, -std::accumulate(std::cbegin(phase_set), std::cend(phase_set), 0.0,
-                                              [&genotype_posteriors] (auto curr, const auto& genotype) {
-                                                  const auto p = genotype_posteriors.at(genotype);
+                                              [&genotype_posteriors, norm] (auto curr, const auto& genotype) {
+                                                  const auto p = genotype_posteriors.at(genotype) / norm;
                                                   return curr + p * std::log2(p);
                                               }));
     }
@@ -247,7 +274,7 @@ HaplotypePhaser::phase(const std::vector<Haplotype>& haplotypes,
 //                                   std::cout << "phase set" << std::endl;
 //                                   for (const auto& g : phase_set) {
 //                                       print_variant_alleles(g);
-//                                       std::cout << std::endl;
+//                                       std::cout << " " << genotype_posteriors.at(g) << std::endl;
 //                                   }
 //                                   std::cout << calculate_phase_score(phase_set, genotype_posteriors) << std::endl;
                                    return curr + calculate_phase_score(phase_set, genotype_posteriors);
@@ -281,8 +308,9 @@ HaplotypePhaser::phase(const std::vector<Haplotype>& haplotypes,
         
         auto phase_score = calculate_phase_score(phase_set, genotype_posteriors);
         
+        std::cout << "phase score is " << phase_score << std::endl;
+        
         if (phase_score >= 0.95) {
-            std::cout << "phase score is " << phase_score << std::endl;
             return {HaplotypePhaser::PhaseSet::PhaseRegion {region, phase_score}};
         }
         
