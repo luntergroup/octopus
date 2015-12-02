@@ -136,7 +136,7 @@ inline ContigRegion::DifferenceType overlap_size(const ContigRegion& lhs, const 
 
 inline bool overlaps(const ContigRegion& lhs, const ContigRegion& rhs) noexcept
 {
-    auto num_bases_overlaped = overlap_size(lhs, rhs);
+    const auto num_bases_overlaped = overlap_size(lhs, rhs);
     // if lhs & rhs have no bases overlapping and are not adjacent then one must be 'empty' and
     // contained by the other
     return (num_bases_overlaped == 0) ? !are_adjacent(lhs, rhs) || empty(std::min(lhs, rhs)) : num_bases_overlaped > 0;
@@ -264,13 +264,13 @@ inline ContigRegion get_closed(const ContigRegion& lhs, const ContigRegion& rhs)
 
 inline ContigRegion get_head(const ContigRegion& region, ContigRegion::SizeType n = 0) noexcept
 {
-    auto begin = region.get_begin();
+    const auto begin = region.get_begin();
     return ContigRegion {begin, std::min(begin + n, region.get_end())};
 }
 
 inline ContigRegion get_tail(const ContigRegion& region, ContigRegion::SizeType n = 0) noexcept
 {
-    auto end = region.get_end();
+    const auto end = region.get_end();
     return ContigRegion {(end >= n) ? end - n : 0, end};
 }
 

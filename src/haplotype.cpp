@@ -75,6 +75,12 @@ bool Haplotype::contains(const Allele& allele) const
     }
 }
 
+bool Haplotype::contains_exact(const Allele& allele) const
+{
+    return has_exact_overlap(std::cbegin(explicit_alleles_), std::cend(explicit_alleles_), allele,
+                             MappableRangeOrder::BidirectionallySorted);
+}
+
 Haplotype::SequenceType Haplotype::get_sequence() const
 {
     if (is_cached_sequence_good()) {
@@ -348,9 +354,14 @@ bool operator<(const Haplotype& lhs, const Haplotype& rhs)
             lhs.get_region() < rhs.get_region();
 }
 
-bool have_same_alleles(const Haplotype& lhs, const Haplotype& rhs)
+bool HaveSameAlleles::operator()(const Haplotype &lhs, const Haplotype &rhs) const
 {
     return lhs.explicit_alleles_ == rhs.explicit_alleles_;
+}
+
+bool have_same_alleles(const Haplotype& lhs, const Haplotype& rhs)
+{
+    return HaveSameAlleles()(lhs, rhs);
 }
 
 std::ostream& operator<<(std::ostream& os, const Haplotype& haplotype)

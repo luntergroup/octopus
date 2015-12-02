@@ -54,6 +54,7 @@ public:
     
     const GenomicRegion& get_region() const;
     bool contains(const Allele& allele) const;
+    bool contains_exact(const Allele& allele) const;
     SequenceType get_sequence() const;
     SequenceType get_sequence(const GenomicRegion& region) const;
     
@@ -62,9 +63,10 @@ public:
     size_t get_hash() const;
     
     friend struct IsLessComplex;
+    friend struct HaveSameAlleles;
+    
     friend bool contains(const Haplotype& lhs, const Haplotype& rhs);
     friend Haplotype detail::do_splice(const Haplotype& haplotype, const GenomicRegion& region, std::true_type);
-    friend bool have_same_alleles(const Haplotype& lhs, const Haplotype& rhs);
     
     friend void print_alleles(const Haplotype& haplotype);
     friend void print_variant_alleles(const Haplotype& haplotype);
@@ -155,6 +157,11 @@ void unique_least_complex(std::vector<Haplotype>& haplotypes);
 
 bool operator==(const Haplotype& lhs, const Haplotype& rhs);
 bool operator<(const Haplotype& lhs, const Haplotype& rhs);
+
+struct HaveSameAlleles
+{
+    bool operator()(const Haplotype& lhs, const Haplotype& rhs) const;
+};
 
 bool have_same_alleles(const Haplotype& lhs, const Haplotype& rhs);
 

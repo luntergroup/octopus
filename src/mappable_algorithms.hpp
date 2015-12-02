@@ -288,7 +288,7 @@ template <typename ForwardIterator, typename MappableType>
 size_t count_overlapped(ForwardIterator first, ForwardIterator last, const MappableType& mappable,
                         MappableRangeOrder order = MappableRangeOrder::ForwardSorted)
 {
-    auto overlapped = overlap_range(first, last, mappable, order);
+    const auto overlapped = overlap_range(first, last, mappable, order);
     return std::distance(overlapped.begin(), overlapped.end());
 }
 
@@ -308,7 +308,7 @@ template <typename ForwardIterator, typename MappableType>
 size_t count_overlapped(ForwardIterator first, ForwardIterator last, const MappableType& mappable,
                         GenomicRegion::SizeType max_mappable_size)
 {
-    auto overlapped = overlap_range(first, last, mappable, max_mappable_size);
+    const auto overlapped = overlap_range(first, last, mappable, max_mappable_size);
     return std::distance(overlapped.begin(), overlapped.end());
 }
 
@@ -332,7 +332,7 @@ bool has_exact_overlap(ForwardIterator first, ForwardIterator last, const Mappab
         return std::binary_search(first, last, mappable);
     }
     
-    auto overlapped = overlap_range(first, last, mappable);
+    const auto overlapped = overlap_range(first, last, mappable);
     
     return std::find_if(std::cbegin(overlapped), std::cend(overlapped),
                         [&mappable] (const auto& e) { return is_same_region(mappable, e); }) != std::cend(overlapped);
@@ -389,7 +389,7 @@ bool has_contained(const Container& container, const MappableType& mappable)
 template <typename BidirectionalIterator, typename MappableType>
 size_t count_contained(BidirectionalIterator first, BidirectionalIterator last, const MappableType& mappable)
 {
-    auto contained = contained_range(first, last, mappable);
+    const auto contained = contained_range(first, last, mappable);
     return std::distance(contained.begin(), contained.end());
 }
 
@@ -409,8 +409,8 @@ size_t count_shared(ForwardIterator first, ForwardIterator last,
                     const MappableType1& lhs, const MappableType2& rhs,
                     MappableRangeOrder order = MappableRangeOrder::ForwardSorted)
 {
-    auto lhs_overlapped = overlap_range(first, last, lhs, order);
-    auto rhs_overlapped = overlap_range(first, last, rhs, order);
+    const auto lhs_overlapped = overlap_range(first, last, lhs, order);
+    const auto rhs_overlapped = overlap_range(first, last, rhs, order);
     
     return (size(lhs_overlapped) <= size(rhs_overlapped)) ?
             std::count_if(lhs_overlapped.begin(), lhs_overlapped.end(),
@@ -430,7 +430,7 @@ size_t count_shared(const Container& container,
 template <typename ForwardIterator>
 bool has_exact(ForwardIterator first, ForwardIterator last, const typename ForwardIterator::value_type& mappable)
 {
-    auto contained = contained_range(first, last, mappable);
+    const auto contained = contained_range(first, last, mappable);
     return std::find(std::cbegin(contained), std::cend(contained), mappable) == std::cend(contained);
 }
 
@@ -450,8 +450,8 @@ bool has_shared(ForwardIterator first, ForwardIterator last,
                 const MappableType1& lhs, const MappableType2& rhs,
                 MappableRangeOrder order = MappableRangeOrder::ForwardSorted)
 {
-    auto lhs_overlapped = overlap_range(first, last, lhs, order);
-    auto rhs_overlapped = overlap_range(first, last, rhs, order);
+    const auto lhs_overlapped = overlap_range(first, last, lhs, order);
+    const auto rhs_overlapped = overlap_range(first, last, rhs, order);
     
     return (size(lhs_overlapped) <= size(rhs_overlapped)) ?
             std::any_of(lhs_overlapped.begin(), lhs_overlapped.end(),
@@ -491,7 +491,7 @@ size_t count_if_shared_with_first(ForwardIterator1 first1, ForwardIterator1 last
 {
     if (first2 == last2) return 0;
     
-    auto overlapped = overlap_range(first1, last1, *first2, order);
+    const auto overlapped = overlap_range(first1, last1, *first2, order);
     
     if (empty(overlapped)) return 0;
     
@@ -519,7 +519,7 @@ std::vector<GenomicRegion> decompose(const MappableType& mappable)
 {
     std::vector<GenomicRegion> result {};
     
-    auto num_elements = size(mappable);
+    const auto num_elements = size(mappable);
     
     if (num_elements == 0) return result;
     
@@ -541,7 +541,7 @@ std::vector<GenomicRegion> decompose(const MappableType& mappable, GenomicRegion
     
     if (n == 0) return result;
     
-    auto num_elements = size(mappable) / n;
+    const auto num_elements = size(mappable) / n;
     
     if (num_elements == 0) return result;
     

@@ -69,6 +69,9 @@ private:
     using LeafIterator  = decltype(haplotype_leafs_)::const_iterator;
     using CacheIterator = decltype(haplotype_leaf_cache_)::iterator;
     
+    bool is_bifurcating(Vertex v) const;
+    Vertex remove_forward(Vertex u);
+    Vertex remove_backward(Vertex v);
     Vertex get_previous_allele(Vertex allele) const;
     bool allele_exists(Vertex leaf, const Allele& allele) const;
     LeafIterator extend_haplotype(LeafIterator leaf, const Allele& new_allele);

@@ -93,10 +93,6 @@ HaplotypePhaser::phase(const std::vector<Haplotype>& haplotypes,
     buffered_candidates_.erase_contained(phased_region);
     
     std::cout << "there are " << tree_.num_haplotypes() << " haplotypes in the tree" << std::endl;
-    for (auto h : tree_.get_haplotypes()) {
-        print_variant_alleles(h);
-        std::cout << std::endl;
-    }
     
     tree_.clear(phased_region);
     
@@ -106,10 +102,6 @@ HaplotypePhaser::phase(const std::vector<Haplotype>& haplotypes,
         std::cout << "tree is empty" << std::endl;
     } else {
         std::cout << "there are " << tree_.num_haplotypes() << " haplotypes in the tree" << std::endl;
-        for (auto h : tree_.get_haplotypes()) {
-            print_variant_alleles(h);
-            std::cout << std::endl;
-        }
     }
     
     std::cout << "finding phase sets" << std::endl;
