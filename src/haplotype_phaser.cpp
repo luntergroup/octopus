@@ -94,7 +94,7 @@ HaplotypePhaser::phase(const std::vector<Haplotype>& haplotypes,
     
     std::cout << "there are " << tree_.num_haplotypes() << " haplotypes in the tree" << std::endl;
     
-    tree_.clear(phased_region);
+    tree_.remove(phased_region);
     
     std::cout << "there are " << buffered_candidates_.size() << " candidates remaining" << std::endl;
     

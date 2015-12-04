@@ -13,6 +13,7 @@
 #include <list>
 #include <unordered_map>
 #include <unordered_set>
+#include <utility> // std::pair
 #include <boost/graph/adjacency_list.hpp>
 
 #include "allele.hpp"
@@ -49,7 +50,7 @@ public:
     
     void prune_all(const Haplotype& haplotype);
     void prune_unique(const Haplotype& haplotype);
-    void clear(const GenomicRegion& region);
+    void remove(const GenomicRegion& region);
     void clear();
     
 private:
@@ -60,6 +61,8 @@ private:
     Tree tree_;
     Vertex root_;
     std::list<Vertex> haplotype_leafs_;
+    
+    GenomicRegion region_;
     
     ReferenceGenome& reference_;
     
@@ -81,8 +84,9 @@ private:
     bool is_branch_equal_haplotype(Vertex branch_vertex, const Haplotype& haplotype) const;
     LeafIterator find_exact_haplotype_leaf(LeafIterator first, LeafIterator last, const Haplotype& haplotype) const;
     LeafIterator find_equal_haplotype_leaf(LeafIterator first, LeafIterator last, const Haplotype& haplotype) const;
-    std::pair<Vertex, bool> prune_branch(Vertex leaf, const GenomicRegion& region);
-    std::pair<Vertex, bool> splice_region(Vertex leaf, const GenomicRegion& region);
+    std::pair<Vertex, bool> remove(Vertex leaf, const GenomicRegion& region);
+    std::pair<Vertex, bool> remove_external(Vertex leaf, const GenomicRegion& region);
+    std::pair<Vertex, bool> remove_internal(Vertex leaf, const GenomicRegion& region);
 };
 
 // non-member methods

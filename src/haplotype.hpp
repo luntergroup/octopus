@@ -73,10 +73,13 @@ public:
     
 private:
     GenomicRegion region_;
+    
     std::deque<Allele> explicit_alleles_;
+    
     mutable SequenceType cached_sequence_;
-    std::reference_wrapper<ReferenceGenome> reference_;
     mutable size_t cached_hash_ = 0;
+    
+    std::reference_wrapper<ReferenceGenome> reference_;
     
     using AlleleIterator = decltype(explicit_alleles_)::const_iterator;
     
@@ -169,17 +172,17 @@ namespace std
 {
     template <> struct hash<Haplotype>
     {
-        size_t operator()(const Haplotype& h) const
+        size_t operator()(const Haplotype& haplotype) const
         {
-            return h.get_hash();
+            return haplotype.get_hash();
         }
     };
     
     template <> struct hash<reference_wrapper<const Haplotype>>
     {
-        size_t operator()(reference_wrapper<const Haplotype> r) const
+        size_t operator()(const reference_wrapper<const Haplotype> haplotype) const
         {
-            return hash<Haplotype>()(r);
+            return hash<Haplotype>()(haplotype);
         }
     };
 } // namespace std

@@ -75,7 +75,7 @@ elements_ {}
 }
 
 template <typename MappableType>
-Genotype<MappableType>::Genotype(unsigned ploidy, const MappableType& init)
+Genotype<MappableType>::Genotype(const unsigned ploidy, const MappableType& init)
 :
 elements_ {ploidy, init}
 {}
@@ -89,13 +89,13 @@ elements_ {elements}
 }
 
 template <typename MappableType>
-const MappableType& Genotype<MappableType>::at(unsigned n) const
+const MappableType& Genotype<MappableType>::at(const unsigned n) const
 {
     return elements_.at(n);
 }
 
 template <typename MappableType>
-const MappableType& Genotype<MappableType>::operator[](unsigned n) const
+const MappableType& Genotype<MappableType>::operator[](const unsigned n) const
 {
     return elements_[n];
 }
@@ -282,6 +282,14 @@ namespace std
         size_t operator()(const Genotype<MappableType>& genotype) const
         {
             return boost::hash_range(std::cbegin(genotype), std::cend(genotype));
+        }
+    };
+    
+    template <typename MappableType> struct hash<reference_wrapper<const Genotype<MappableType>>>
+    {
+        size_t operator()(const reference_wrapper<const Genotype<MappableType>> genotype) const
+        {
+            return hash<Genotype<MappableType>>()(genotype);
         }
     };
 } // namespace std
