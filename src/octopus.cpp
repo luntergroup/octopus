@@ -123,32 +123,25 @@ namespace Octopus
         auto candidate_generator = Options::get_candidate_generator(options, reference);
         auto output              = Options::get_output_vcf(options);
         
-        HaplotypeTree tree {reference};
-        
-        tree.extend(Allele {parse_region("1:100-100", reference), ""});
-        tree.extend(Allele {parse_region("1:100-100", reference), "A"});
-        
-        tree.extend(Allele {parse_region("1:105-106", reference), "C"});
-        tree.extend(Allele {parse_region("1:105-106", reference), "G"});
-        
-        tree.extend(Allele {parse_region("1:110-110", reference), ""});
-        tree.extend(Allele {parse_region("1:110-110", reference), "T"});
-        
-        std::cout << "tree region: " << tree.get_region() << std::endl;
-        
-        for (auto h : tree.get_haplotypes()) {
-            print_variant_alleles(h);
-            std::cout << std::endl;
-        }
-        
-//        std::cout << "next" << std::endl;
+//        HaplotypeTree tree {reference};
 //        
-//        for (auto h : tree.get_haplotypes(parse_region("6:31339211-31339486", reference))) {
+//        tree.extend(Allele {parse_region("1:100-100", reference), ""});
+//        tree.extend(Allele {parse_region("1:100-100", reference), "A"});
+//        
+//        tree.extend(Allele {parse_region("1:105-106", reference), "C"});
+//        tree.extend(Allele {parse_region("1:105-106", reference), "G"});
+//        
+//        tree.extend(Allele {parse_region("1:110-110", reference), ""});
+//        tree.extend(Allele {parse_region("1:110-110", reference), "T"});
+//        
+//        std::cout << "tree region: " << tree.get_region() << std::endl;
+//        
+//        for (auto h : tree.get_haplotypes()) {
 //            print_variant_alleles(h);
 //            std::cout << std::endl;
 //        }
-        
-        exit(0);
+//        
+//        exit(0);
         
         ReadPipe read_pipe {read_manager, read_filter, downsampler, read_transform};
         

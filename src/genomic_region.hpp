@@ -25,7 +25,7 @@
  
     All comparison operations (<, ==, is_before, etc) throw exceptions if the arguements
     are not from the same contig.
- */
+*/
 class GenomicRegion : public Comparable<GenomicRegion>
 {
 public:
@@ -34,10 +34,8 @@ public:
     using DifferenceType = ContigRegion::DifferenceType;
     
     GenomicRegion() = default;
-    template <typename T>
-    explicit GenomicRegion(T&& contig_name, SizeType begin, SizeType end);
-    template <typename T, typename R>
-    explicit GenomicRegion(T&& contig_name, R&& contig_region);
+    template <typename T> explicit GenomicRegion(T&& contig_name, SizeType begin, SizeType end);
+    template <typename T, typename R> explicit GenomicRegion(T&& contig_name, R&& contig_region);
     ~GenomicRegion() = default;
     
     GenomicRegion(const GenomicRegion&)            = default;
@@ -72,6 +70,8 @@ private:
     GenomicRegion::StringType first_, second_;
 };
 
+// public member methods
+
 template <typename T>
 GenomicRegion::GenomicRegion(T&& contig_name, SizeType begin, SizeType end)
 :
@@ -105,6 +105,8 @@ inline GenomicRegion::SizeType GenomicRegion::get_end() const noexcept
 {
     return contig_region_.get_end();
 }
+
+// non-member methods
 
 inline const GenomicRegion::StringType& get_contig_name(const GenomicRegion& region) noexcept
 {
@@ -191,7 +193,7 @@ inline bool is_after(const GenomicRegion& lhs, const GenomicRegion& rhs) noexcep
 
 inline bool are_adjacent(const GenomicRegion& lhs, const GenomicRegion& rhs) noexcept
 {
-    return is_same_contig(lhs, rhs) ? are_adjacent(lhs.get_contig_region(), rhs.get_contig_region()) : false;
+    return is_same_contig(lhs, rhs) && are_adjacent(lhs.get_contig_region(), rhs.get_contig_region());
 }
 
 inline GenomicRegion::DifferenceType overlap_size(const GenomicRegion& lhs, const GenomicRegion& rhs) noexcept
@@ -201,7 +203,7 @@ inline GenomicRegion::DifferenceType overlap_size(const GenomicRegion& lhs, cons
 
 inline bool overlaps(const GenomicRegion& lhs, const GenomicRegion& rhs) noexcept
 {
-    return is_same_contig(lhs, rhs) ? overlaps(lhs.get_contig_region(), rhs.get_contig_region()) : false;
+    return is_same_contig(lhs, rhs) && overlaps(lhs.get_contig_region(), rhs.get_contig_region());
 }
 
 inline bool contains(const GenomicRegion& lhs, const GenomicRegion& rhs) noexcept

@@ -231,7 +231,6 @@ void HaplotypeTree::prune_unique(const Haplotype& haplotype)
                 leaf_itr = haplotype_leafs_.insert(leaf_itr, p.first);
             }
         }
-
     }
 }
 
@@ -314,23 +313,22 @@ bool HaplotypeTree::allele_exists(Vertex leaf, const Allele& allele) const
 
 HaplotypeTree::LeafIterator HaplotypeTree::extend_haplotype(LeafIterator leaf_itr, const Allele& new_allele)
 {
-    const Allele& the_leaf_allele = tree_[*leaf_itr];
+    const Allele& leaf_allele = tree_[*leaf_itr];
     
-    if (are_adjacent(the_leaf_allele, new_allele) &&
-        ((is_insertion(the_leaf_allele) && is_deletion(new_allele)) ||
-        (is_deletion(the_leaf_allele) && is_insertion(new_allele)))) {
+    if (are_adjacent(leaf_allele, new_allele) &&
+        ((is_insertion(leaf_allele) && is_deletion(new_allele)) ||
+        (is_deletion(leaf_allele) && is_insertion(new_allele)))) {
         return leaf_itr;
     }
     
-    if (*leaf_itr == root_ || is_after(new_allele, the_leaf_allele)) {
-        Vertex new_leaf = boost::add_vertex(tree_);
-        tree_[new_leaf] = new_allele;
+    if (*leaf_itr == root_ || is_after(new_allele, leaf_allele)) {
+        auto new_leaf = boost::add_vertex(new_allele, tree_);
         boost::add_edge(*leaf_itr, new_leaf, tree_);
         
         leaf_itr = haplotype_leafs_.erase(leaf_itr);
         leaf_itr = haplotype_leafs_.insert(leaf_itr, new_leaf);
-    } else if (overlaps(new_allele, the_leaf_allele)) {
-        Vertex previous_allele = get_previous_allele(*leaf_itr);
+    } else if (overlaps(new_allele, leaf_allele)) {
+        auto previous_allele = get_previous_allele(*leaf_itr);
         
         const Allele& the_previous_allele = tree_[previous_allele];
         
@@ -355,20 +353,14 @@ Haplotype HaplotypeTree::get_haplotype(Vertex leaf, const GenomicRegion& region)
 {
     Haplotype result {reference_, region};
     
-    std::cout << "initial leaf: " << tree_[leaf] << std::endl;
-    
-    while (leaf != root_ && is_after(tree_[leaf], region)) {
+    while (leaf != root_ && !overlaps(tree_[leaf], region)) {
         leaf = get_previous_allele(leaf);
     }
-    
-    std::cout << "middle leaf: " << tree_[leaf] << std::endl;
     
     while (leaf != root_ && overlaps(tree_[leaf], region)) {
         result.push_front(tree_[leaf]);
         leaf = get_previous_allele(leaf);
     }
-    
-    std::cout << "final leaf: " << tree_[leaf] << std::endl;
     
     return result;
 }
@@ -396,37 +388,6 @@ bool HaplotypeTree::is_branch_exact_haplotype(Vertex leaf, const Haplotype& hapl
     }
     
     return true;
-    
-//    if (leaf == root_) return false;
-//    
-//    const Allele* this_allele {&tree_[leaf]};
-//    
-//    if (!overlaps(haplotype, *this_allele)) return false;
-//    
-//    const Allele* previous_allele;
-//    
-//    while (!is_before(*this_allele, haplotype)) {
-//        if (!haplotype.contains(*this_allele)) return false;
-//        
-//        auto previous_vertex = get_previous_allele(leaf);
-//        
-//        if (previous_vertex == root_) break;
-//        
-//        previous_allele = &tree_[previous_vertex];
-//        
-//        if (is_before(*previous_allele, haplotype)) break;
-//        
-//        if (!are_adjacent(*previous_allele, *this_allele) &&
-//            !haplotype.contains(get_reference_allele(get_intervening(*previous_allele, *this_allele),
-//                                                       reference_))) {
-//            return false;
-//        }
-//        
-//        leaf = previous_vertex;
-//        this_allele = previous_allele;
-//    }
-//    
-//    return true;
 }
 
 bool HaplotypeTree::is_branch_equal_haplotype(const Vertex leaf, const Haplotype& haplotype) const

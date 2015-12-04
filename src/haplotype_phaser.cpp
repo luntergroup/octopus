@@ -88,15 +88,15 @@ HaplotypePhaser::phase(const std::vector<Haplotype>& haplotypes,
     
     auto variants = copy_contained(buffered_candidates_, phased_region);
     
-    std::cout << "clearing tree" << std::endl;
-    
     buffered_candidates_.erase_contained(phased_region);
+    
+    std::cout << "there are " << buffered_candidates_.size() << " candidates remaining" << std::endl;
     
     std::cout << "there are " << tree_.num_haplotypes() << " haplotypes in the tree" << std::endl;
     
-    tree_.remove(phased_region);
+    std::cout << "clearing " << phased_region << " from tree" << std::endl;
     
-    std::cout << "there are " << buffered_candidates_.size() << " candidates remaining" << std::endl;
+    tree_.remove(phased_region);
     
     if (tree_.empty()) {
         std::cout << "tree is empty" << std::endl;
@@ -143,7 +143,7 @@ HaplotypePhaser::phase(const std::vector<Haplotype>& haplotypes,
             auto sample_haplotype_posteriors = compute_haplotype_posteriors(haplotypes, sample_genotype_posteriors.second);
             
             for (const auto& haplotype_posterior : sample_haplotype_posteriors) {
-                if (haplotype_posterior.second < 1e-30) {
+                if (haplotype_posterior.second < 1e-4) {
                     //print_variant_alleles(haplotype_posterior.first);
                     //std::cout << std::endl;
                     low_posterior_haplotypes.push_back(haplotype_posterior.first);

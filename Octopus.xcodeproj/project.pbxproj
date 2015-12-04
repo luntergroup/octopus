@@ -116,6 +116,7 @@
 		D463C1A21B0A160000739A66 /* allele.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D463C1A11B0A160000739A66 /* allele.cpp */; };
 		D463C1A41B0A174B00739A66 /* variant.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D463C1A31B0A174B00739A66 /* variant.cpp */; };
 		D46F9EDD1C05D4E700DCC18D /* haplotype_likelihood_cache.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D46F9EDB1C05D4E700DCC18D /* haplotype_likelihood_cache.cpp */; };
+		D46F9EDF1C11A8AE00DCC18D /* contig_allele.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D46F9EDE1C11A8AE00DCC18D /* contig_allele.cpp */; };
 		D47686631BD672940067E03D /* read_reader.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D47686621BD672940067E03D /* read_reader.cpp */; };
 		D4807FAA1BA6FA4900657D4F /* candidate_variant_generator.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D4807FA91BA6FA4900657D4F /* candidate_variant_generator.cpp */; };
 		D4807FB01BA826DB00657D4F /* population_caller.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D4807FAE1BA826DB00657D4F /* population_caller.cpp */; };
@@ -421,9 +422,10 @@
 		D463C1A31B0A174B00739A66 /* variant.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = variant.cpp; sourceTree = "<group>"; };
 		D46F9EDB1C05D4E700DCC18D /* haplotype_likelihood_cache.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = haplotype_likelihood_cache.cpp; sourceTree = "<group>"; };
 		D46F9EDC1C05D4E700DCC18D /* haplotype_likelihood_cache.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = haplotype_likelihood_cache.hpp; sourceTree = "<group>"; };
+		D46F9EDE1C11A8AE00DCC18D /* contig_allele.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = contig_allele.cpp; sourceTree = "<group>"; };
 		D47686611BD0F48A0067E03D /* todo.md */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = net.daringfireball.markdown; name = todo.md; path = doc/todo.md; sourceTree = "<group>"; };
 		D47686621BD672940067E03D /* read_reader.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = read_reader.cpp; sourceTree = "<group>"; };
-		D47686641BD7BB320067E03D /* contig_allele.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = contig_allele.h; sourceTree = "<group>"; };
+		D47686641BD7BB320067E03D /* contig_allele.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = contig_allele.hpp; sourceTree = "<group>"; };
 		D4807FA91BA6FA4900657D4F /* candidate_variant_generator.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = candidate_variant_generator.cpp; sourceTree = "<group>"; };
 		D4807FAD1BA710A400657D4F /* mock_options.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = mock_options.hpp; sourceTree = "<group>"; };
 		D4807FAE1BA826DB00657D4F /* population_caller.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = population_caller.cpp; sourceTree = "<group>"; };
@@ -900,7 +902,8 @@
 		CAFA19771AC62BEB00F953D9 /* core */ = {
 			isa = PBXGroup;
 			children = (
-				D47686641BD7BB320067E03D /* contig_allele.h */,
+				D47686641BD7BB320067E03D /* contig_allele.hpp */,
+				D46F9EDE1C11A8AE00DCC18D /* contig_allele.cpp */,
 				CAFA19631ABF75D400F953D9 /* haplotype.hpp */,
 				CAFA19621ABF75D400F953D9 /* haplotype.cpp */,
 				CAFA196D1AC1B4AF00F953D9 /* genotype.hpp */,
@@ -1134,6 +1137,7 @@
 				CA4551641AEB075E00FDAAE8 /* 1000G_test12.cpp in Sources */,
 				CA0B46651AE3CD6800158BBA /* read_model_benchmarks.cpp in Sources */,
 				CA386DA81B5BBCB90057A5A8 /* mappable_set_tests.cpp in Sources */,
+				D46F9EDF1C11A8AE00DCC18D /* contig_allele.cpp in Sources */,
 				CA0B466B1AE8611800158BBA /* 1000G_test2.cpp in Sources */,
 				CA8A664A1B81CA7E008CE1D8 /* threadsafe_fasta.cpp in Sources */,
 				D4907F571A8A2A9B00639203 /* reference_tests.cpp in Sources */,

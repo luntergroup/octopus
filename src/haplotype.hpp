@@ -18,6 +18,7 @@
 
 #include "contig_region.hpp"
 #include "mappable.hpp"
+#include "contig_allele.hpp"
 #include "allele.hpp"
 #include "comparable.hpp"
 #include "mappable.hpp"
@@ -84,6 +85,7 @@ private:
     using AlleleIterator = decltype(explicit_alleles_)::const_iterator;
     
     SequenceType get_reference_sequence(const GenomicRegion& region) const;
+    Allele get_intervening_reference_allele(const Allele& lhs, const Allele& rhs) const;
     GenomicRegion get_region_bounded_by_explicit_alleles() const;
     SequenceType get_sequence_bounded_by_explicit_alleles(AlleleIterator first, AlleleIterator last) const;
     SequenceType get_sequence_bounded_by_explicit_alleles() const;
@@ -97,20 +99,15 @@ void Haplotype::push_back(T&& allele)
 {
     if (!explicit_alleles_.empty()) {
         if (!is_after(allele, explicit_alleles_.back())) {
-            throw std::runtime_error {"cannot append out of order allele to back of haplotype"};
+            throw std::runtime_error {"cannot append out of order Allele to back of Haplotype"};
         } else if (!are_adjacent(explicit_alleles_.back(), allele)) {
-            auto intervening_region = get_intervening(explicit_alleles_.back(), allele);
-            explicit_alleles_.push_back(get_reference_allele(intervening_region, reference_));
+            explicit_alleles_.emplace_back(get_intervening_reference_allele(explicit_alleles_.back(), allele));
         }
-        
-        if (ends_before(region_, allele)) {
-            region_ = get_encompassing(region_, allele);
-        }
-    } else if (begins_before(allele, region_)) {
-        region_ = get_encompassing(allele, region_);
     }
     
-    explicit_alleles_.push_back(std::forward<T>(allele));
+    explicit_alleles_.emplace_back(std::forward<T>(allele));
+    
+    region_ = get_encompassing(region_, allele);
     
     reset_cached_sequence();
 }
@@ -120,20 +117,15 @@ void Haplotype::push_front(T&& allele)
 {
     if (!explicit_alleles_.empty()) {
         if (!is_after(explicit_alleles_.front(), allele)) {
-            throw std::runtime_error {"cannot append out of order allele to front of haplotype"};
+            throw std::runtime_error {"cannot append out of order Allele to front of Haplotype"};
         } else if (!are_adjacent(allele, explicit_alleles_.front())) {
-            auto intervening_region = get_intervening(allele, explicit_alleles_.front());
-            explicit_alleles_.push_front(get_reference_allele(intervening_region, reference_));
+            explicit_alleles_.emplace_front(get_intervening_reference_allele(allele, explicit_alleles_.front()));
         }
-        
-        if (begins_before(allele, region_)) {
-            region_ = get_encompassing(allele, region_);
-        }
-    } else if (ends_before(region_, allele)) {
-        region_ = get_encompassing(region_, allele);
     }
     
-    explicit_alleles_.push_front(std::forward<T>(allele));
+    explicit_alleles_.emplace_front(std::forward<T>(allele));
+    
+    region_ = get_encompassing(region_, allele);
     
     reset_cached_sequence();
 }

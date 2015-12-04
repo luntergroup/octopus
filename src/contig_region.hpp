@@ -19,8 +19,8 @@
 
 /*
     Represents a region of continuous sequence.
-    begin and end positions are zero-indexed half open - [begin,end) - indexes.
- */
+    begin and end positions are zero-indexed half open indices [begin,end).
+*/
 class ContigRegion : public Comparable<ContigRegion>
 {
 public:
@@ -43,12 +43,14 @@ private:
     SizeType begin_, end_;
 };
 
+// public member methods
+
 inline ContigRegion::ContigRegion(SizeType begin, SizeType end)
 :
 begin_ {begin},
 end_ {end}
 {
-    if (end < begin) throw std::runtime_error {"invalid sequence region: end < begin"};
+    if (end < begin) throw std::runtime_error {"invalid ContigRegion: end < begin"};
 }
 
 inline ContigRegion::SizeType ContigRegion::get_begin() const noexcept
@@ -110,17 +112,17 @@ inline bool operator==(const ContigRegion& lhs, const ContigRegion& rhs) noexcep
 
 inline bool operator<(const ContigRegion& lhs, const ContigRegion& rhs) noexcept
 {
-    return (begins_equal(lhs, rhs)) ? ends_before(lhs, rhs) : begins_before(lhs, rhs);
+    return begins_before(lhs, rhs) || (begins_equal(lhs, rhs) && ends_before(lhs, rhs));
 }
 
 inline bool is_before(const ContigRegion& lhs, const ContigRegion& rhs) noexcept
 {
-    return lhs != rhs && lhs.get_end() <= rhs.get_begin() && lhs.get_begin() != rhs.get_begin();
+    return lhs.get_end() <= rhs.get_begin() && lhs != rhs;
 }
 
 inline bool is_after(const ContigRegion& lhs, const ContigRegion& rhs) noexcept
 {
-    return  lhs != rhs && rhs.get_end() <= lhs.get_begin();
+    return rhs.get_end() <= lhs.get_begin() && lhs != rhs;
 }
 
 inline bool are_adjacent(const ContigRegion& lhs, const ContigRegion& rhs) noexcept
@@ -130,16 +132,15 @@ inline bool are_adjacent(const ContigRegion& lhs, const ContigRegion& rhs) noexc
 
 inline ContigRegion::DifferenceType overlap_size(const ContigRegion& lhs, const ContigRegion& rhs) noexcept
 {
-    return static_cast<ContigRegion::DifferenceType>(std::min(lhs.get_end(), rhs.get_end())) -
-            static_cast<ContigRegion::DifferenceType>(std::max(lhs.get_begin(), rhs.get_begin()));
+    using DifferenceType = ContigRegion::DifferenceType;
+    return static_cast<DifferenceType>(std::min(lhs.get_end(), rhs.get_end())) -
+                    static_cast<DifferenceType>(std::max(lhs.get_begin(), rhs.get_begin()));
 }
 
 inline bool overlaps(const ContigRegion& lhs, const ContigRegion& rhs) noexcept
 {
-    const auto num_bases_overlaped = overlap_size(lhs, rhs);
-    // if lhs & rhs have no bases overlapping and are not adjacent then one must be 'empty' and
-    // contained by the other
-    return (num_bases_overlaped == 0) ? !are_adjacent(lhs, rhs) || empty(std::min(lhs, rhs)) : num_bases_overlaped > 0;
+    const auto overlapped = overlap_size(lhs, rhs);
+    return overlapped > 0 || (overlapped == 0 && (empty(lhs) || empty(rhs)));
 }
 
 inline bool contains(const ContigRegion& lhs, const ContigRegion& rhs) noexcept
@@ -159,21 +160,23 @@ inline ContigRegion::DifferenceType inner_distance(const ContigRegion& lhs,
 inline ContigRegion::DifferenceType outer_distance(const ContigRegion& lhs,
                                                      const ContigRegion& rhs) noexcept
 {
+    using DifferenceType = ContigRegion::DifferenceType;
+    
     if (contains(lhs, rhs) || contains(rhs, lhs)) return 0;
     
-    return static_cast<ContigRegion::DifferenceType>(rhs.get_end()) -
-            static_cast<ContigRegion::DifferenceType>(lhs.get_begin());
+    return static_cast<DifferenceType>(rhs.get_end()) - static_cast<DifferenceType>(lhs.get_begin());
 }
 
 inline ContigRegion shift(const ContigRegion& region, ContigRegion::DifferenceType n)
 {
+    using SizeType = ContigRegion::SizeType;
+    
     if (n < 0 && region.get_begin() + n > region.get_begin()) {
         throw std::out_of_range {"shifted past contig start"};
     }
     
     return ContigRegion {
-            static_cast<ContigRegion::SizeType>(region.get_begin() + n),
-            static_cast<ContigRegion::SizeType>(region.get_end() + n)
+            static_cast<SizeType>(region.get_begin() + n), static_cast<SizeType>(region.get_end() + n)
     };
 }
 

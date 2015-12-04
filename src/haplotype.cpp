@@ -216,9 +216,14 @@ Haplotype::SequenceType Haplotype::get_reference_sequence(const GenomicRegion& r
     return reference_.get().get_sequence(region);
 }
 
+Allele Haplotype::get_intervening_reference_allele(const Allele& lhs, const Allele& rhs) const
+{
+    return get_reference_allele(get_intervening(lhs, rhs), reference_);
+}
+
 GenomicRegion Haplotype::get_region_bounded_by_explicit_alleles() const
 {
-    if (explicit_alleles_.empty()) throw std::runtime_error {"Cannot get region from empty allele list"};
+    if (explicit_alleles_.empty()) throw std::runtime_error {"cannot get region from empty allele list"};
     
     return get_encompassing(explicit_alleles_.front(), explicit_alleles_.back());
 }

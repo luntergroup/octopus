@@ -231,12 +231,11 @@ call_genotypes(const GenotypeModel::Population::GenotypeProbabilities& genotype_
         const auto& sample_genotype_call = call_genotype(sample_genotype_posteriors.second);
         
         for (size_t i {}; i < regions.size(); ++i) {
-            auto spliced_genotype = splice<Allele>(sample_genotype_call.first, regions[i]);
+            const auto spliced_genotype = splice<Allele>(sample_genotype_call.first, regions[i]);
             
-            auto posterior = marginalise(spliced_genotype, sample_genotype_posteriors.second);
+            const auto posterior = marginalise(spliced_genotype, sample_genotype_posteriors.second);
             
-            result[i].emplace(sample_genotype_posteriors.first,
-                              GenotypeCall(std::move(spliced_genotype), posterior));
+            result[i].emplace(sample_genotype_posteriors.first, GenotypeCall(std::move(spliced_genotype), posterior));
         }
     }
     
@@ -549,7 +548,7 @@ PopulationVariantCaller::call_variants(const GenomicRegion& region, const std::v
     
     if (empty(region)) return result;
     
-    HaplotypePhaser phaser {reference_, candidates, reads, 128, 5};
+    HaplotypePhaser phaser {reference_, candidates, reads, 32, 2};
     
     while (!phaser.done()) {
         auto haplotypes = phaser.get_haplotypes();
