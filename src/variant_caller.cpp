@@ -91,24 +91,26 @@ namespace Octopus
     {
         using std::begin; using std::end; using std::make_move_iterator; using std::back_inserter;
         
-        if (empty(region)) return {};
+        auto overlapped_variants = copy_overlapped(variants, region);
         
-        if (variants.empty()) {
+        if (empty(region) && overlapped_variants.empty()) return std::vector<Allele> {};
+        
+        if (overlapped_variants.empty()) {
             switch (refcall_type) {
                 case VariantCaller::RefCallType::Positional:
                     return get_positional_reference_alleles(region, reference);
                 case VariantCaller::RefCallType::Blocked:
-                    return {get_reference_allele(region, reference)};
+                    return std::vector<Allele> {get_reference_allele(region, reference)};
                 default:
                     return {};
             }
         }
         
-        auto variant_alleles = decompose(variants);
+        auto variant_alleles = decompose(overlapped_variants);
         
         if (refcall_type == VariantCaller::RefCallType::None) return variant_alleles;
         
-        auto covered_regions   = get_covered_regions(variants);
+        auto covered_regions   = get_covered_regions(overlapped_variants);
         auto uncovered_regions = get_all_intervening(covered_regions, region);
         
         std::vector<Allele> result {};

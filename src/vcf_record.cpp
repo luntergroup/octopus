@@ -355,7 +355,7 @@ bool operator<(const VcfRecord& lhs, const VcfRecord& rhs)
 std::ostream& operator<<(std::ostream& os, const VcfRecord& record)
 {
     os << record.chromosome_ << "\t";
-    os << record.position_ << "\t";
+    os << (record.position_ + 1) << "\t";
     os << record.id_ << "\t";
     os << record.ref_allele_ << "\t";
     os << record.alt_alleles_ << "\t";

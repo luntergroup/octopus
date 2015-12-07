@@ -63,6 +63,8 @@ public:
     bool done() const noexcept;
     
     std::vector<Haplotype> get_haplotypes();
+    std::vector<Haplotype> get_haplotypes(const GenotypePosteriors& genotype_posteriors);
+    
     void unique(const std::vector<Haplotype>& haplotypes);
     
     PhaseSet phase(const std::vector<Haplotype>& haplotypes, const GenotypePosteriors& genotype_posteriors);
@@ -77,8 +79,7 @@ private:
     
     bool is_phasing_enabled_;
     
-    GenomicRegion tree_region_;
-    GenomicRegion next_region_;
+    GenomicRegion current_region_, next_region_;
     
     void remove_low_posterior_haplotypes(const std::vector<Haplotype>& haplotypes,
                                          const GenotypePosteriors& genotype_posteriors);

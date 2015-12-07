@@ -39,8 +39,8 @@ reads_ {&reads},
 walker_ {max_indicators, calculate_max_indcluded(max_haplotypes),
     GenomeWalker::IndicatorLimit::SharedWithPreviousRegion, GenomeWalker::ExtensionLimit::SharedWithFrontier},
 is_phasing_enabled_ {max_indicators != 0},
-tree_region_ {shift(get_head(buffered_candidates_.leftmost()), -1)},
-next_region_ {walker_.walk(tree_region_, *reads_, buffered_candidates_)}
+current_region_ {shift(get_head(buffered_candidates_.leftmost()), -1)},
+next_region_ {walker_.walk(current_region_, *reads_, buffered_candidates_)}
 {}
 
 bool HaplotypePhaser::done() const noexcept
@@ -50,17 +50,32 @@ bool HaplotypePhaser::done() const noexcept
 
 std::vector<Haplotype> HaplotypePhaser::get_haplotypes()
 {
-    const auto contained_candidates = buffered_candidates_.contained_range(next_region_);
+    const auto next_candidates = buffered_candidates_.overlap_range(next_region_);
     
-    std::for_each(std::cbegin(contained_candidates), std::cend(contained_candidates),
+    std::for_each(std::cbegin(next_candidates), std::cend(next_candidates),
                   [this] (const auto& candidate) {
                       tree_.extend(candidate.get_reference_allele());
                       tree_.extend(candidate.get_alternative_allele());
                   });
     
-    tree_region_ = next_region_;
+    current_region_ = next_region_;
     
-    return tree_.get_haplotypes(tree_region_);
+    return tree_.get_haplotypes(current_region_);
+}
+
+std::vector<Haplotype> HaplotypePhaser::get_haplotypes(const GenotypePosteriors& genotype_posteriors)
+{
+    const auto next_candidates = buffered_candidates_.overlap_range(next_region_);
+    
+    std::for_each(std::cbegin(next_candidates), std::cend(next_candidates),
+                  [this] (const auto& candidate) {
+                      tree_.extend(candidate.get_reference_allele());
+                      tree_.extend(candidate.get_alternative_allele());
+                  });
+    
+    current_region_ = next_region_;
+    
+    return tree_.get_haplotypes(current_region_);
 }
 
 void HaplotypePhaser::unique(const std::vector<Haplotype>& haplotypes)
@@ -78,17 +93,17 @@ HaplotypePhaser::phase(const std::vector<Haplotype>& haplotypes,
     
     remove_low_posterior_haplotypes(haplotypes, genotype_posteriors);
     
-    next_region_ = walker_.walk(tree_region_, *reads_, buffered_candidates_);
+    next_region_ = walker_.walk(current_region_, *reads_, buffered_candidates_);
     
     std::cout << "next region is " << next_region_ << std::endl;
     
-    const auto phased_region = get_left_overhang(tree_region_, next_region_);
+    const auto phased_region = get_left_overhang(current_region_, next_region_);
     
     std::cout << "phased region is " << phased_region << std::endl;
     
-    auto variants = copy_contained(buffered_candidates_, phased_region);
+    auto variants = copy_overlapped(buffered_candidates_, phased_region);
     
-    buffered_candidates_.erase_contained(phased_region);
+    buffered_candidates_.erase_overlapped(phased_region);
     
     std::cout << "there are " << buffered_candidates_.size() << " candidates remaining" << std::endl;
     
@@ -145,7 +160,7 @@ HaplotypePhaser::phase(const std::vector<Haplotype>& haplotypes,
             for (const auto& haplotype_posterior : sample_haplotype_posteriors) {
                 if (haplotype_posterior.second < 1e-4) {
                     //print_variant_alleles(haplotype_posterior.first);
-                    //std::cout << std::endl;
+                    //std::cout << " " << haplotype_posterior.second << std::endl;
                     low_posterior_haplotypes.push_back(haplotype_posterior.first);
                 }
             }
@@ -153,11 +168,11 @@ HaplotypePhaser::phase(const std::vector<Haplotype>& haplotypes,
         
         std::sort(std::begin(low_posterior_haplotypes), std::end(low_posterior_haplotypes));
         
-        std::cout << "removing " << low_posterior_haplotypes.size() << " haplotypes" << std::endl;
-        
         low_posterior_haplotypes.erase(std::unique(std::begin(low_posterior_haplotypes),
                                                    std::end(low_posterior_haplotypes)),
                                        std::end(low_posterior_haplotypes));
+        
+        std::cout << "removing " << low_posterior_haplotypes.size() << " haplotypes" << std::endl;
         
         for (const auto& haplotype : low_posterior_haplotypes) {
             tree_.prune_all(haplotype);

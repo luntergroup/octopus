@@ -548,7 +548,7 @@ PopulationVariantCaller::call_variants(const GenomicRegion& region, const std::v
     
     if (empty(region)) return result;
     
-    HaplotypePhaser phaser {reference_, candidates, reads, 32, 2};
+    HaplotypePhaser phaser {reference_, candidates, reads, 64, 4};
     
     while (!phaser.done()) {
         auto haplotypes = phaser.get_haplotypes();
@@ -559,7 +559,7 @@ PopulationVariantCaller::call_variants(const GenomicRegion& region, const std::v
         
         std::cout << "there are " << haplotypes.size() << " unique haplotypes" << std::endl;
         
-        auto haplotype_region = get_region(haplotypes.front());
+        const auto haplotype_region = get_region(haplotypes.front());
         
         std::cout << "haplotype region is " << haplotype_region << std::endl;
         
@@ -571,18 +571,22 @@ PopulationVariantCaller::call_variants(const GenomicRegion& region, const std::v
         
         auto phase_set = phaser.phase(haplotypes, genotype_posteriors);
         
-        if (has_contained(candidates, phase_set.region)) {
+        std::cout << "phased region is " << phase_set.region << std::endl;
+        
+        if (!empty(phase_set.region)) {
+            auto overlapped_candidates = copy_overlapped(candidates, phase_set.region);
+            
             debug::print_genotype_posteriors(genotype_posteriors);
             
             //remove_low_posterior_genotypes(genotype_posteriors, 0.0000000001);
             
-            auto alleles = generate_callable_alleles(region, candidates, refcall_type_, reference_);
+            auto alleles = generate_callable_alleles(phase_set.region, overlapped_candidates, refcall_type_, reference_);
             
             auto allele_posteriors = compute_allele_posteriors(genotype_posteriors, alleles);
             
             debug::print_allele_posteriors(allele_posteriors);
             
-            auto variant_calls = call_blocked_variants(candidates, allele_posteriors, min_variant_posterior_);
+            auto variant_calls = call_blocked_variants(overlapped_candidates, allele_posteriors, min_variant_posterior_);
             
             //debug::print_variant_calls(variant_calls);
             
@@ -621,7 +625,7 @@ PopulationVariantCaller::call_variants(const GenomicRegion& region, const std::v
             
             debug::print_genotype_calls(variant_genotype_calls);
             
-            auto candidate_ref_alleles = generate_candidate_reference_alleles(alleles, called_regions, candidates, refcall_type_);
+            auto candidate_ref_alleles = generate_candidate_reference_alleles(alleles, called_regions, overlapped_candidates, refcall_type_);
             
             //    std::cout << "candidate refcall alleles are" << std::endl;
             //    for (const auto& allele : candidate_ref_alleles) {

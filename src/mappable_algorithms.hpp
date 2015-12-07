@@ -220,6 +220,14 @@ overlap_range(ForwardIterator first, ForwardIterator last, const MappableType& m
                                             return overlaps(m, mappable); }), it, mappable);
 }
 
+template <typename Container, typename MappableType>
+OverlapRange<typename Container::const_iterator>
+overlap_range(const Container& mappables, const MappableType& mappable,
+              MappableRangeOrder order = MappableRangeOrder::ForwardSorted)
+{
+    return overlap_range(std::cbegin(mappables), std::cend(mappables), mappable, order);
+}
+
 /**
  Returns the sub-range(s) of Mappable elements in the range [first, last) such that each element
  in the sub-range overlaps a_region.
@@ -246,6 +254,32 @@ overlap_range(ForwardIterator first, ForwardIterator last, const MappableType& m
     return make_overlap_range(it2, it, mappable);
 }
 
+template <typename Container, typename MappableType>
+OverlapRange<typename Container::const_iterator>
+overlap_range(const Container& mappables, const MappableType& mappable,
+              GenomicRegion::SizeType max_mappable_size)
+{
+    return overlap_range(std::cbegin(mappables), std::cend(mappables), mappable, max_mappable_size);
+}
+
+template <typename Container, typename MappableType>
+Container
+copy_overlapped(const Container& mappables, const MappableType& mappable,
+                MappableRangeOrder order = MappableRangeOrder::ForwardSorted)
+{
+    const auto overlapped = overlap_range(mappables, mappable, order);
+    return Container {std::cbegin(overlapped), std::cend(overlapped)};
+}
+
+template <typename Container, typename MappableType>
+Container
+copy_overlapped(const Container& mappables, const MappableType& mappable,
+                GenomicRegion::SizeType max_mappable_size)
+{
+    const auto overlapped = overlap_range(mappables, mappable, max_mappable_size);
+    return Container {std::cbegin(overlapped), std::cend(overlapped)};
+}
+
 /**
  Returns true if any of the mappable elements in the range [first, last) overlap with mappable.
  
@@ -260,12 +294,13 @@ bool has_overlapped(BidirectionalIterator first, BidirectionalIterator last,
         return std::binary_search(first, last, mappable,
                                   [] (const auto& lhs, const auto& rhs) { return is_before(lhs, rhs); });
     } else {
+        if (first == last) return false;
+        
         auto it = find_first_after(first, last, mappable);
         
         // searches in reverse order on the assumption regions closer to the boundry with
         // mappable are more likely to overlap with mappable.
-        return overlaps(*first, mappable) || std::any_of(std::make_reverse_iterator(it),
-                                                         std::make_reverse_iterator(std::next(first)),
+        return std::any_of(std::make_reverse_iterator(it), std::make_reverse_iterator(first),
                                                          [&mappable] (const auto& m) {
                                                              return overlaps(mappable, m);
                                                          });

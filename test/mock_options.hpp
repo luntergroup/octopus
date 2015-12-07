@@ -22,7 +22,7 @@ inline po::variables_map get_basic_mock_options()
         "--reference", human_reference_fasta.c_str(),
         //"--reference", ecoli_reference_fasta.c_str(),
         
-        "--reads", HG00101.c_str(),
+        //"--reads", HG00101.c_str(),
         "--reads", NA12878_low_coverage.c_str(),
         //"--reads", NA12891_high_coverage.c_str(),
         
@@ -62,7 +62,9 @@ inline po::variables_map get_basic_mock_options()
         //"--regions", "6:89,236,734-89,236,784",
         
         //"-L", "6:29,910,550-29,911,088", // HLA
-        "-L", "6:31,338,897-31,339,914", // HLA
+        //"-L", "6:31,338,897-31,339,914", // HLA
+        
+        //"-L", "11:67,447,414-67,559,102",
         
         //"-L", "7:47,800,286-47,800,512",
         
@@ -73,14 +75,9 @@ inline po::variables_map get_basic_mock_options()
         //"--regions", "3:47,251,793-47,251,839", // NA12878_high_coverage interesting indels
         //"--regions", "3:47,251,808-47,251,847",
         
-        //"-L", "16:61,477,371-61,477,907",
+        //"-L", "4:40,436,510-40,436,694", // NA12878_low_coverage odd genotype call (should be 1/1)
         
-        //"-L", "4:40,436,510-40,436,694",
-        
-        //"-L", "5:34,465,575-34,465,722",
-        //"-L", "5:34,465,568-34,465,836",
-        
-        //"-L", "6:29,917,598-29,917,730",
+        "-L", "Y:13447283-13447483",
         
         // for cancer
         //"--regions", "6:52,873,970-52,882,816",

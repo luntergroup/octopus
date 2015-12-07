@@ -188,10 +188,10 @@ void HaplotypeTree::prune_unique(const Haplotype& haplotype)
     if (haplotype_leaf_cache_.count(haplotype) > 0) {
         const auto possible_leafs = haplotype_leaf_cache_.equal_range(haplotype);
         
-        auto leaf_to_keep_itr = find_if(possible_leafs.first, possible_leafs.second,
-                                    [this, &haplotype] (const auto& leaf_pair) {
-                                        return is_branch_exact_haplotype(leaf_pair.second, haplotype);
-                                    })->second;
+        const auto leaf_to_keep_itr = find_if(possible_leafs.first, possible_leafs.second,
+                                              [this, &haplotype] (const auto& leaf_pair) {
+                                                  return is_branch_exact_haplotype(leaf_pair.second, haplotype);
+                                              })->second;
         
         for_each(possible_leafs.first, possible_leafs.second,
                  [this, &haplotype, leaf_to_keep_itr] (auto& leaf_pair) {
@@ -211,17 +211,20 @@ void HaplotypeTree::prune_unique(const Haplotype& haplotype)
         haplotype_leaf_cache_.erase(haplotype);
         haplotype_leaf_cache_.emplace(haplotype, leaf_to_keep_itr);
     } else {
-        auto leaf_to_keep_itr = *find_exact_haplotype_leaf(cbegin(haplotype_leafs_), cend(haplotype_leafs_),
-                                                           haplotype);
-        
         auto leaf_itr = cbegin(haplotype_leafs_);
+        
+        const auto leaf_to_keep_itr = find_exact_haplotype_leaf(leaf_itr, cend(haplotype_leafs_),
+                                                                haplotype);
         
         while (true) {
             leaf_itr = find_equal_haplotype_leaf(leaf_itr, cend(haplotype_leafs_), haplotype);
             
-            if (*leaf_itr == leaf_to_keep_itr) continue;
-            
             if (leaf_itr == cend(haplotype_leafs_)) return;
+            
+            if (leaf_itr == leaf_to_keep_itr) {
+                std::advance(leaf_itr, 1);
+                continue;
+            }
             
             const auto p = remove(*leaf_itr, haplotype.get_region());
             
@@ -380,7 +383,7 @@ bool HaplotypeTree::define_same_haplotype(Vertex leaf1, Vertex leaf2) const
 
 bool HaplotypeTree::is_branch_exact_haplotype(Vertex leaf, const Haplotype& haplotype) const
 {
-    if (leaf == root_ || is_after(tree_[leaf], haplotype)) return false;
+    if (leaf == root_ || !overlaps(tree_[leaf], haplotype)) return false;
     
     while (leaf != root_) {
         if (!haplotype.contains_exact(tree_[leaf])) return false;
