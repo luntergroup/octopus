@@ -123,8 +123,21 @@ namespace Octopus
         auto candidate_generator = Options::get_candidate_generator(options, reference);
         auto output              = Options::get_output_vcf(options);
         
-//        HaplotypeTree tree {reference};
-//        
+        HaplotypeTree tree {reference};
+        
+        tree.extend(Allele {parse_region("1:100-101", reference), "A"});
+        tree.extend(Allele {parse_region("1:101-101", reference), "C"});
+        tree.extend(Allele {parse_region("1:101-102", reference), "G"});
+        
+        std::cout << "tree region: " << tree.get_region() << std::endl;
+        
+        for (auto h : tree.get_haplotypes()) {
+            print_alleles(h);
+            std::cout << std::endl;
+        }
+        
+        tree.extend(Allele {parse_region("1:101-101", reference), ""});
+        
 //        tree.extend(Allele {parse_region("1:100-100", reference), ""});
 //        tree.extend(Allele {parse_region("1:100-100", reference), "A"});
 //        
@@ -134,14 +147,20 @@ namespace Octopus
 //        tree.extend(Allele {parse_region("1:110-110", reference), ""});
 //        tree.extend(Allele {parse_region("1:110-110", reference), "T"});
 //        
-//        std::cout << "tree region: " << tree.get_region() << std::endl;
+//        tree.extend(Allele {parse_region("1:115-116", reference), "C"});
+//        tree.extend(Allele {parse_region("1:115-116", reference), "G"});
 //        
-//        for (auto h : tree.get_haplotypes()) {
-//            print_variant_alleles(h);
-//            std::cout << std::endl;
-//        }
-//        
-//        exit(0);
+//        tree.extend(Allele {parse_region("1:105-105", reference), ""});
+//        tree.extend(Allele {parse_region("1:105-105", reference), "A"});
+        
+        std::cout << "tree region: " << tree.get_region() << std::endl;
+        
+        for (auto h : tree.get_haplotypes()) {
+            print_alleles(h);
+            std::cout << std::endl;
+        }
+        
+        exit(0);
         
         ReadPipe read_pipe {read_manager, read_filter, downsampler, read_transform};
         

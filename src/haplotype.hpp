@@ -99,8 +99,10 @@ void Haplotype::push_back(T&& allele)
 {
     if (!explicit_alleles_.empty()) {
         if (!is_after(allele, explicit_alleles_.back())) {
-            throw std::runtime_error {"cannot append out of order Allele to back of Haplotype"};
-        } else if (!are_adjacent(explicit_alleles_.back(), allele)) {
+            throw std::runtime_error {"Haplotype::push_back called with out-of-order Allele"};
+        }
+        
+        if (!are_adjacent(explicit_alleles_.back(), allele)) {
             explicit_alleles_.emplace_back(get_intervening_reference_allele(explicit_alleles_.back(), allele));
         }
     }
@@ -117,8 +119,12 @@ void Haplotype::push_front(T&& allele)
 {
     if (!explicit_alleles_.empty()) {
         if (!is_after(explicit_alleles_.front(), allele)) {
-            throw std::runtime_error {"cannot append out of order Allele to front of Haplotype"};
-        } else if (!are_adjacent(allele, explicit_alleles_.front())) {
+            std::cout << explicit_alleles_.front() << std::endl;
+            std::cout << allele << std::endl;
+            throw std::runtime_error {"Haplotype::push_front called with out-of-order Allele"};
+        }
+        
+        if (!are_adjacent(allele, explicit_alleles_.front())) {
             explicit_alleles_.emplace_front(get_intervening_reference_allele(allele, explicit_alleles_.front()));
         }
     }

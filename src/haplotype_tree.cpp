@@ -101,6 +101,7 @@ GenomicRegion HaplotypeTree::get_region() const
 
 std::vector<Haplotype> HaplotypeTree::get_haplotypes() const
 {
+    if (empty()) return std::vector<Haplotype> {};
     return get_haplotypes(get_region());
 }
 
@@ -111,7 +112,7 @@ std::vector<Haplotype> HaplotypeTree::get_haplotypes(const GenomicRegion& region
     
     std::vector<Haplotype> result {};
     
-    if (!overlaps(region, get_region())) return result;
+    if (empty() || !overlaps(region, get_region())) return result;
     
     result.reserve(haplotype_leafs_.size());
     
@@ -314,40 +315,53 @@ bool HaplotypeTree::allele_exists(Vertex leaf, const Allele& allele) const
                        });
 }
 
+bool can_add_to_branch(const Allele& new_allele, const Allele& leaf)
+{
+    return !are_adjacent(leaf, new_allele) ||
+        !((is_insertion(leaf) && is_deletion(new_allele)) || (is_deletion(leaf) && is_insertion(new_allele)));
+}
+
 HaplotypeTree::LeafIterator HaplotypeTree::extend_haplotype(LeafIterator leaf_itr, const Allele& new_allele)
 {
-    const Allele& leaf_allele = tree_[*leaf_itr];
+    const auto& leaf_allele = tree_[*leaf_itr];
     
-    if (are_adjacent(leaf_allele, new_allele) &&
-        ((is_insertion(leaf_allele) && is_deletion(new_allele)) ||
-        (is_deletion(leaf_allele) && is_insertion(new_allele)))) {
-        return leaf_itr;
-    }
+    if (!can_add_to_branch(new_allele, leaf_allele)) return leaf_itr;
     
     if (*leaf_itr == root_ || is_after(new_allele, leaf_allele)) {
-        auto new_leaf = boost::add_vertex(new_allele, tree_);
+        const auto new_leaf = boost::add_vertex(new_allele, tree_);
+        
         boost::add_edge(*leaf_itr, new_leaf, tree_);
         
         leaf_itr = haplotype_leafs_.erase(leaf_itr);
         leaf_itr = haplotype_leafs_.insert(leaf_itr, new_leaf);
-    } else if (overlaps(new_allele, leaf_allele)) {
-        auto previous_allele = get_previous_allele(*leaf_itr);
+    } else {
+        auto curr_allele = *leaf_itr;
         
-        const Allele& the_previous_allele = tree_[previous_allele];
-        
-        if (are_adjacent(the_previous_allele, new_allele) &&
-            ((is_insertion(the_previous_allele) && is_deletion(new_allele)) ||
-             (is_deletion(the_previous_allele) && is_insertion(new_allele)))) {
-            return leaf_itr;
+        while (curr_allele != root_ && overlaps(new_allele, tree_[curr_allele])) {
+            curr_allele = get_previous_allele(curr_allele);
         }
         
-        if (!allele_exists(previous_allele, new_allele)) {
-            auto new_leaf = boost::add_vertex(new_allele, tree_);
-            boost::add_edge(previous_allele, new_leaf, tree_);
+        if (can_add_to_branch(new_allele, tree_[curr_allele]) && !allele_exists(curr_allele, new_allele)) {
+            const auto new_leaf = boost::add_vertex(new_allele, tree_);
+            
+            boost::add_edge(curr_allele, new_leaf, tree_);
             
             haplotype_leafs_.insert(leaf_itr, new_leaf);
         }
     }
+//    } else if (overlaps(new_allele, leaf_allele)) {
+//        const auto previous_allele = get_previous_allele(*leaf_itr);
+//        
+//        if (!can_add_to_branch(new_allele, tree_[previous_allele])) return leaf_itr;
+//        
+//        if (!allele_exists(previous_allele, new_allele)) {
+//            const auto new_leaf = boost::add_vertex(new_allele, tree_);
+//            
+//            boost::add_edge(previous_allele, new_leaf, tree_);
+//            
+//            haplotype_leafs_.insert(leaf_itr, new_leaf);
+//        }
+//    }
     
     return leaf_itr;
 }

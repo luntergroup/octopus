@@ -50,13 +50,29 @@ bool HaplotypePhaser::done() const noexcept
 
 std::vector<Haplotype> HaplotypePhaser::get_haplotypes()
 {
+    if (!tree_.empty()) {
+        std::cout << tree_.num_haplotypes() << std::endl;
+        print_alleles(tree_.get_haplotypes().front());
+        std::cout << std::endl;
+    }
+    
+    std::cout << "extending tree with candidates in region " << next_region_ << std::endl;
+    
     const auto next_candidates = buffered_candidates_.overlap_range(next_region_);
     
     std::for_each(std::cbegin(next_candidates), std::cend(next_candidates),
                   [this] (const auto& candidate) {
+                      std::cout << candidate << std::endl;
                       tree_.extend(candidate.get_reference_allele());
                       tree_.extend(candidate.get_alternative_allele());
+                      std::cout << tree_.num_haplotypes() << std::endl;
                   });
+    
+    std::cout << tree_.num_haplotypes() << std::endl;
+    for (auto h : tree_.get_haplotypes()) {
+        print_alleles(h);
+        std::cout << std::endl;
+    }
     
     current_region_ = next_region_;
     
@@ -121,7 +137,11 @@ HaplotypePhaser::phase(const std::vector<Haplotype>& haplotypes,
     
     std::cout << "finding phase sets" << std::endl;
     
-    return find_optimal_phase_set(phased_region, std::move(variants), genotype_posteriors);
+    auto result = find_optimal_phase_set(phased_region, std::move(variants), genotype_posteriors);
+    
+    std::cout << "done finding phase sets" << std::endl;
+    
+    return result;
 }
 
 // private methods
