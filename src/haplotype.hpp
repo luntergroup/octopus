@@ -119,8 +119,6 @@ void Haplotype::push_front(T&& allele)
 {
     if (!explicit_alleles_.empty()) {
         if (!is_after(explicit_alleles_.front(), allele)) {
-            std::cout << explicit_alleles_.front() << std::endl;
-            std::cout << allele << std::endl;
             throw std::runtime_error {"Haplotype::push_front called with out-of-order Allele"};
         }
         

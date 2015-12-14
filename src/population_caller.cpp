@@ -548,7 +548,7 @@ PopulationVariantCaller::call_variants(const GenomicRegion& region, const std::v
     
     if (empty(region)) return result;
     
-    HaplotypePhaser phaser {reference_, candidates, reads, 64, 4};
+    HaplotypePhaser phaser {reference_, candidates, reads, 128, 5};
     
     while (!phaser.done()) {
         auto haplotypes = phaser.get_haplotypes();

@@ -84,7 +84,7 @@ void HaplotypeTree::extend(const Allele& allele)
 GenomicRegion HaplotypeTree::get_region() const
 {
     if (empty()) {
-        throw std::runtime_error {"empty HaplotypeTree does not have a defined region"};
+        throw std::runtime_error {"HaplotypeTree::get_region called on empty tree"};
     }
     
     const auto vertex_range = boost::adjacent_vertices(root_, tree_);
@@ -334,10 +334,14 @@ HaplotypeTree::LeafIterator HaplotypeTree::extend_haplotype(LeafIterator leaf_it
         
         leaf_itr = haplotype_leafs_.erase(leaf_itr);
         leaf_itr = haplotype_leafs_.insert(leaf_itr, new_leaf);
-    } else {
+    } else if (overlaps(new_allele, tree_[*leaf_itr])) {
         auto curr_allele = *leaf_itr;
         
         while (curr_allele != root_ && overlaps(new_allele, tree_[curr_allele])) {
+            if (is_same_region(new_allele, tree_[curr_allele])) { // for insertions
+                curr_allele = get_previous_allele(curr_allele);
+                break;
+            }
             curr_allele = get_previous_allele(curr_allele);
         }
         
@@ -349,19 +353,6 @@ HaplotypeTree::LeafIterator HaplotypeTree::extend_haplotype(LeafIterator leaf_it
             haplotype_leafs_.insert(leaf_itr, new_leaf);
         }
     }
-//    } else if (overlaps(new_allele, leaf_allele)) {
-//        const auto previous_allele = get_previous_allele(*leaf_itr);
-//        
-//        if (!can_add_to_branch(new_allele, tree_[previous_allele])) return leaf_itr;
-//        
-//        if (!allele_exists(previous_allele, new_allele)) {
-//            const auto new_leaf = boost::add_vertex(new_allele, tree_);
-//            
-//            boost::add_edge(previous_allele, new_leaf, tree_);
-//            
-//            haplotype_leafs_.insert(leaf_itr, new_leaf);
-//        }
-//    }
     
     return leaf_itr;
 }

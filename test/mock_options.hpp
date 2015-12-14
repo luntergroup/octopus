@@ -64,9 +64,7 @@ inline po::variables_map get_basic_mock_options()
         //"-L", "6:29,910,550-29,911,088", // HLA
         //"-L", "6:31,338,897-31,339,914", // HLA
         
-        //"-L", "11:67,447,414-67,559,102",
-        
-        //"-L", "7:47,800,286-47,800,512",
+        "-L", "11:67,447,414-67,559,102",
         
         //"--regions", "21:11,062,774-11,062,920",
         //"--regions", "21:11062880-11063100",
@@ -77,7 +75,7 @@ inline po::variables_map get_basic_mock_options()
         
         //"-L", "4:40,436,510-40,436,694", // NA12878_low_coverage odd genotype call (should be 1/1)
         
-        "-L", "Y:13447283-13447483",
+        //"-L", "Y:13447283-13447483", // NA12878_low_coverage too many haplotypes
         
         // for cancer
         //"--regions", "6:52,873,970-52,882,816",
@@ -91,7 +89,7 @@ inline po::variables_map get_basic_mock_options()
         // read filters
         "--min-supporting-reads", "2",
         "--min-mapping-quality", "20",
-        "--min-snp-base-quality", "20",
+        "--min-snp-base-quality", "15",
         //"--allow-marked-duplicates",
         //"--allow-octopus-duplicates",
         
