@@ -50,7 +50,7 @@ inline ContigRegion::ContigRegion(SizeType begin, SizeType end)
 begin_ {begin},
 end_ {end}
 {
-    if (end < begin) throw std::runtime_error {"invalid ContigRegion: end < begin"};
+    if (end < begin) throw std::runtime_error {"ContigRegion constructed with end < begin"};
 }
 
 inline ContigRegion::SizeType ContigRegion::get_begin() const noexcept

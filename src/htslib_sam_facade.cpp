@@ -201,6 +201,7 @@ HtslibSamFacade::Reads HtslibSamFacade::fetch_reads(const SampleIdType& sample, 
     HtslibIterator it {*this, region};
     
     Reads result {};
+    result.reserve(1000);
     
     while (++it) {
         try {

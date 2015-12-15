@@ -77,6 +77,8 @@ inline po::variables_map get_basic_mock_options()
         
         //"-L", "Y:13447283-13447483", // NA12878_low_coverage too many haplotypes
         
+        //"-L", "Y:3554000-3554100",
+        
         // for cancer
         //"--regions", "6:52,873,970-52,882,816",
         //"--regions", "5:76,747,066-76,747,106", // not a reversion

@@ -291,6 +291,7 @@
 		CA4551751AEC1C8600FDAAE8 /* haplotype_prior_model_tests.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = haplotype_prior_model_tests.cpp; sourceTree = "<group>"; };
 		CA4551861AF27A4100FDAAE8 /* haplotype_phaser.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = haplotype_phaser.cpp; sourceTree = "<group>"; };
 		CA4551871AF27A4100FDAAE8 /* haplotype_phaser.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = haplotype_phaser.hpp; sourceTree = "<group>"; };
+		CA487AF11C1F06D600488577 /* mappable_debug.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = mappable_debug.hpp; sourceTree = "<group>"; };
 		CA53D2FC1C021C70009A216D /* haplotype_filter.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = haplotype_filter.cpp; sourceTree = "<group>"; };
 		CA53D2FD1C021C70009A216D /* haplotype_filter.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = haplotype_filter.hpp; sourceTree = "<group>"; };
 		CA53D2FF1C03AF46009A216D /* pedigree_genotype_model.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = pedigree_genotype_model.cpp; sourceTree = "<group>"; };
@@ -860,6 +861,7 @@
 				D4907F5E1A8A3ADD00639203 /* string_utils.hpp */,
 				CA8A66451B7E5E0C008CE1D8 /* sequence_utils.hpp */,
 				CA53D3051C0A7881009A216D /* merge_transform.hpp */,
+				CA487AF11C1F06D600488577 /* mappable_debug.hpp */,
 			);
 			name = utils;
 			sourceTree = "<group>";
@@ -1294,6 +1296,10 @@
 					"/usr/local/Cellar/cpp-netlib/0.11.1_1/lib",
 				);
 				LLVM_LTO = YES;
+				OTHER_CPLUSPLUSFLAGS = (
+					"$(OTHER_CFLAGS)",
+					"-ffast-math",
+				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Debug;
@@ -1320,6 +1326,10 @@
 					"/usr/local/Cellar/cpp-netlib/0.11.1_1/lib",
 				);
 				LLVM_LTO = YES;
+				OTHER_CPLUSPLUSFLAGS = (
+					"$(OTHER_CFLAGS)",
+					"-ffast-math",
+				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Release;

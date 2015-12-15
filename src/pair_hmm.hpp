@@ -18,13 +18,6 @@
 #include <cstdint>
 #include <limits>
 #include <numeric>
-#include <array>
-
-#include "maths.hpp"
-
-#include <iostream> // TEST
-
-using std::size_t;
 
 template <typename RealType>
 struct RandomModel

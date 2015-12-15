@@ -13,6 +13,7 @@
 #include <ostream>
 #include <stdexcept>
 #include <vector>
+#include <cassert>
 #include <boost/functional/hash.hpp> // boost::hash_combine
 
 #include "contig_region.hpp"
@@ -146,26 +147,26 @@ inline bool is_same_contig(const GenomicRegion& lhs, const GenomicRegion& rhs) n
 
 inline bool begins_equal(const GenomicRegion& lhs, const GenomicRegion& rhs)
 {
-    if (is_same_contig(lhs, rhs)) return begins_equal(lhs.get_contig_region(), rhs.get_contig_region());
-    throw RegionError {to_string(lhs), to_string(rhs)};
+    if (!is_same_contig(lhs, rhs)) throw RegionError {to_string(lhs), to_string(rhs)};
+    return begins_equal(lhs.get_contig_region(), rhs.get_contig_region());
 }
 
 inline bool ends_equal(const GenomicRegion& lhs, const GenomicRegion& rhs)
 {
-    if (is_same_contig(lhs, rhs)) return ends_equal(lhs.get_contig_region(), rhs.get_contig_region());
-    throw RegionError {to_string(lhs), to_string(rhs)};
+    if (!is_same_contig(lhs, rhs)) throw RegionError {to_string(lhs), to_string(rhs)};
+    return ends_equal(lhs.get_contig_region(), rhs.get_contig_region());
 }
 
 inline bool begins_before(const GenomicRegion& lhs, const GenomicRegion& rhs)
 {
-    if (is_same_contig(lhs, rhs)) return begins_before(lhs.get_contig_region(), rhs.get_contig_region());
-    throw RegionError {to_string(lhs), to_string(rhs)};
+    if (!is_same_contig(lhs, rhs)) throw RegionError {to_string(lhs), to_string(rhs)};
+    return begins_before(lhs.get_contig_region(), rhs.get_contig_region());
 }
 
 inline bool ends_before(const GenomicRegion& lhs, const GenomicRegion& rhs)
 {
-    if (is_same_contig(lhs, rhs)) return ends_before(lhs.get_contig_region(), rhs.get_contig_region());
-    throw RegionError {to_string(lhs), to_string(rhs)};
+    if (!is_same_contig(lhs, rhs)) throw RegionError {to_string(lhs), to_string(rhs)};
+    return ends_before(lhs.get_contig_region(), rhs.get_contig_region());
 }
 
 inline bool operator==(const GenomicRegion& lhs, const GenomicRegion& rhs) noexcept
@@ -175,20 +176,20 @@ inline bool operator==(const GenomicRegion& lhs, const GenomicRegion& rhs) noexc
 
 inline bool operator<(const GenomicRegion& lhs, const GenomicRegion& rhs)
 {
-    if (is_same_contig(lhs, rhs)) return lhs.get_contig_region() < rhs.get_contig_region();
-    throw RegionError {to_string(lhs), to_string(rhs)};
+    if (!is_same_contig(lhs, rhs)) throw RegionError {to_string(lhs), to_string(rhs)};
+    return lhs.get_contig_region() < rhs.get_contig_region();
 }
 
 inline bool is_before(const GenomicRegion& lhs, const GenomicRegion& rhs) noexcept
 {
-    if (is_same_contig(lhs, rhs)) return is_before(lhs.get_contig_region(), rhs.get_contig_region());
-    throw RegionError {to_string(lhs), to_string(rhs)};
+    if (!is_same_contig(lhs, rhs)) throw RegionError {to_string(lhs), to_string(rhs)};
+    return is_before(lhs.get_contig_region(), rhs.get_contig_region());
 }
 
 inline bool is_after(const GenomicRegion& lhs, const GenomicRegion& rhs) noexcept
 {
-    if (is_same_contig(lhs, rhs)) return is_after(lhs.get_contig_region(), rhs.get_contig_region());
-    throw RegionError {to_string(lhs), to_string(rhs)};
+    if (!is_same_contig(lhs, rhs)) throw RegionError {to_string(lhs), to_string(rhs)};
+    return is_after(lhs.get_contig_region(), rhs.get_contig_region());
 }
 
 inline bool are_adjacent(const GenomicRegion& lhs, const GenomicRegion& rhs) noexcept
@@ -213,18 +214,14 @@ inline bool contains(const GenomicRegion& lhs, const GenomicRegion& rhs) noexcep
 
 inline GenomicRegion::DifferenceType inner_distance(const GenomicRegion& lhs, const GenomicRegion& rhs)
 {
-    if (is_same_contig(lhs, rhs)) {
-        return inner_distance(lhs.get_contig_region(), rhs.get_contig_region());
-    }
-    throw RegionError {to_string(lhs), to_string(rhs)};
+    if (!is_same_contig(lhs, rhs)) throw RegionError {to_string(lhs), to_string(rhs)};
+    return inner_distance(lhs.get_contig_region(), rhs.get_contig_region());
 }
 
 inline GenomicRegion::DifferenceType outer_distance(const GenomicRegion& lhs, const GenomicRegion& rhs)
 {
-    if (is_same_contig(lhs, rhs)) {
-        return outer_distance(lhs.get_contig_region(), rhs.get_contig_region());
-    }
-    throw RegionError {to_string(lhs), to_string(rhs)};
+    if (!is_same_contig(lhs, rhs)) throw RegionError {to_string(lhs), to_string(rhs)};
+    return outer_distance(lhs.get_contig_region(), rhs.get_contig_region());
 }
 
 inline GenomicRegion shift(const GenomicRegion& region, GenomicRegion::DifferenceType n)
@@ -249,11 +246,9 @@ inline GenomicRegion compress_rhs(const GenomicRegion& region, GenomicRegion::Di
 
 inline GenomicRegion get_encompassing(const GenomicRegion& lhs, const GenomicRegion& rhs)
 {
-    if (is_same_contig(lhs, rhs)) {
-        return GenomicRegion {lhs.get_contig_name(), get_encompassing(lhs.get_contig_region(),
-                                                                      rhs.get_contig_region())};
-    }
-    throw RegionError {to_string(lhs), to_string(rhs)};
+    if (!is_same_contig(lhs, rhs)) throw RegionError {to_string(lhs), to_string(rhs)};
+    return GenomicRegion {lhs.get_contig_name(), get_encompassing(lhs.get_contig_region(),
+                                                                  rhs.get_contig_region())};
 }
 
 inline GenomicRegion get_intervening(const GenomicRegion& lhs, const GenomicRegion& rhs)
@@ -280,29 +275,23 @@ inline GenomicRegion::SizeType right_overhang_size(const GenomicRegion& lhs, con
 
 inline GenomicRegion get_left_overhang(const GenomicRegion& lhs, const GenomicRegion& rhs)
 {
-    if (is_same_contig(lhs, rhs)) {
-        return GenomicRegion {lhs.get_contig_name(), get_left_overhang(lhs.get_contig_region(),
-                                                                       rhs.get_contig_region())};
-    }
-    throw RegionError {to_string(lhs), to_string(rhs)};
+    if (!is_same_contig(lhs, rhs)) throw RegionError {to_string(lhs), to_string(rhs)};
+    return GenomicRegion {lhs.get_contig_name(), get_left_overhang(lhs.get_contig_region(),
+                                                                   rhs.get_contig_region())};
 }
 
 inline GenomicRegion get_right_overhang(const GenomicRegion& lhs, const GenomicRegion& rhs)
 {
-    if (is_same_contig(lhs, rhs)) {
-        return GenomicRegion {lhs.get_contig_name(), get_right_overhang(lhs.get_contig_region(),
-                                                                        rhs.get_contig_region())};
-    }
-    throw RegionError {to_string(lhs), to_string(rhs)};
+    if (!is_same_contig(lhs, rhs)) throw RegionError {to_string(lhs), to_string(rhs)};
+    return GenomicRegion {lhs.get_contig_name(), get_right_overhang(lhs.get_contig_region(),
+                                                                    rhs.get_contig_region())};
 }
 
 inline GenomicRegion get_closed(const GenomicRegion& lhs, const GenomicRegion& rhs)
 {
-    if (is_same_contig(lhs, rhs)) {
-        return GenomicRegion {lhs.get_contig_name(), get_closed(lhs.get_contig_region(),
-                                                                rhs.get_contig_region())};
-    }
-    throw RegionError {to_string(lhs), to_string(rhs)};
+    if (!is_same_contig(lhs, rhs)) throw RegionError {to_string(lhs), to_string(rhs)};
+    return GenomicRegion {lhs.get_contig_name(), get_closed(lhs.get_contig_region(),
+                                                            rhs.get_contig_region())};
 }
 
 inline GenomicRegion get_head(const GenomicRegion& region, GenomicRegion::SizeType n = 0)
@@ -320,10 +309,10 @@ namespace std {
     {
         size_t operator()(const GenomicRegion& r) const
         {
-            size_t seed {};
-            boost::hash_combine(seed, hash<GenomicRegion::StringType>()(r.get_contig_name()));
-            boost::hash_combine(seed, hash<ContigRegion>()(r.get_contig_region()));
-            return seed;
+            size_t result {};
+            boost::hash_combine(result, hash<GenomicRegion::StringType>()(r.get_contig_name()));
+            boost::hash_combine(result, hash<ContigRegion>()(r.get_contig_region()));
+            return result;
         }
     };
 }

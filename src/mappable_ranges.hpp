@@ -9,7 +9,7 @@
 #ifndef Octopus_mappable_ranges_h
 #define Octopus_mappable_ranges_h
 
-#include <iterator>
+#include <iterator>    // std::std::iterator_traits, std::distance
 #include <cstddef>     // size_t
 #include <type_traits> // std::decay_t
 #include <boost/iterator/filter_iterator.hpp>
@@ -26,8 +26,9 @@ enum class MappableRangeOrder { ForwardSorted, BidirectionallySorted, Unsorted }
 namespace detail
 {
     template <typename MappableType>
-    struct IsOverlapped
+    class IsOverlapped
     {
+    public:
         IsOverlapped() = delete;
         template <typename MappableType2>
         IsOverlapped(const MappableType2& mappable) : region_ {get_region(mappable)} {}
@@ -40,7 +41,7 @@ namespace detail
 } // namespace detail
 
 template <typename Iterator>
-using OverlapIterator = boost::filter_iterator<detail::IsOverlapped<typename Iterator::value_type>, Iterator>;
+using OverlapIterator = boost::filter_iterator<detail::IsOverlapped<typename std::iterator_traits<Iterator>::value_type>, Iterator>;
 
 template <typename Iterator>
 inline bool operator==(Iterator lhs, OverlapIterator<Iterator> rhs) noexcept
@@ -77,9 +78,11 @@ template <typename Iterator>
 inline
 size_t size(const OverlapRange<Iterator>& range, MappableRangeOrder order = MappableRangeOrder::ForwardSorted)
 {
-    return (order == MappableRangeOrder::BidirectionallySorted) ?
-    std::distance(range.begin().base(), range.end().base()) :
-    std::distance(range.begin(), range.end());
+    if (order == MappableRangeOrder::BidirectionallySorted) {
+        return std::distance(range.begin().base(), range.end().base());
+    } else {
+        return std::distance(range.begin(), range.end());
+    }
 }
 
 template <typename Iterator>
@@ -94,9 +97,9 @@ inline
 OverlapRange<Iterator>
 make_overlap_range(Iterator first, Iterator last, const MappableType& mappable)
 {
-    using MappableType2 = typename Iterator::value_type;
-    using boost::make_iterator_range; using boost::make_filter_iterator;
-    using detail::IsOverlapped;
+    using boost::make_iterator_range; using boost::make_filter_iterator; using detail::IsOverlapped;
+    
+    using MappableType2 = typename std::iterator_traits<Iterator>::value_type;
     
     return make_iterator_range(
         make_filter_iterator<IsOverlapped<MappableType2>>(IsOverlapped<MappableType2>(mappable), first, last),
@@ -107,8 +110,9 @@ make_overlap_range(Iterator first, Iterator last, const MappableType& mappable)
 namespace detail
 {
     template <typename MappableType>
-    struct IsContained
+    class IsContained
     {
+    public:
         IsContained() = delete;
         template <typename MappableType_>
         IsContained(const MappableType_& mappable) : region_ {get_region(mappable)} {}
@@ -121,7 +125,7 @@ namespace detail
 } // namespace detail
 
 template <typename Iterator>
-using ContainedIterator = boost::filter_iterator<detail::IsContained<typename Iterator::value_type>, Iterator>;
+using ContainedIterator = boost::filter_iterator<detail::IsContained<typename std::iterator_traits<Iterator>::value_type>, Iterator>;
 
 template <typename Iterator>
 inline bool operator==(Iterator lhs, ContainedIterator<Iterator> rhs) noexcept
@@ -158,9 +162,11 @@ template <typename Iterator>
 inline
 size_t size(const ContainedRange<Iterator>& range, MappableRangeOrder order = MappableRangeOrder::ForwardSorted)
 {
-    return (order == MappableRangeOrder::BidirectionallySorted) ?
-        std::distance(range.begin().base(), range.end().base()) :
-        std::distance(range.begin(), range.end());
+    if (order == MappableRangeOrder::BidirectionallySorted) {
+        return std::distance(range.begin().base(), range.end().base());
+    } else {
+        return std::distance(range.begin(), range.end());
+    }
 }
 
 template <typename Iterator>
@@ -175,9 +181,9 @@ inline
 ContainedRange<Iterator>
 make_contained_range(Iterator first, Iterator last, const MappableType& mappable)
 {
-    using MappableType2 = typename Iterator::value_type;
-    using boost::make_iterator_range; using boost::make_filter_iterator;
-    using detail::IsContained;
+    using boost::make_iterator_range; using boost::make_filter_iterator; using detail::IsContained;
+    
+    using MappableType2 = typename std::iterator_traits<Iterator>::value_type;
     
     return make_iterator_range(
         make_filter_iterator<IsContained<MappableType2>>(IsContained<MappableType2>(mappable), first, last),
@@ -188,8 +194,9 @@ make_contained_range(Iterator first, Iterator last, const MappableType& mappable
 namespace detail
 {
     template <typename MappableType>
-    struct IsShared
+    class IsShared
     {
+    public:
         IsShared() = delete;
         template <typename MappableType1_, typename MappableType2_>
         IsShared(const MappableType1_& lhs, MappableType2_ rhs)
@@ -206,7 +213,7 @@ namespace detail
 } // namespace detail
 
 template <typename Iterator>
-using SharedIterator = boost::filter_iterator<detail::IsShared<typename Iterator::value_type>, Iterator>;
+using SharedIterator = boost::filter_iterator<detail::IsShared<typename std::iterator_traits<Iterator>::value_type>, Iterator>;
 
 template <typename Iterator>
 inline bool operator==(Iterator lhs, SharedIterator<Iterator> rhs) noexcept
@@ -262,9 +269,9 @@ inline
 SharedRange<Iterator>
 make_shared_range(Iterator first, Iterator last, const MappableType1& mappable1, const MappableType2& mappable2)
 {
-    using MappableType_ = typename Iterator::value_type;
-    using boost::make_iterator_range; using boost::make_filter_iterator;
-    using detail::IsShared;
+    using boost::make_iterator_range; using boost::make_filter_iterator; using detail::IsShared;
+    
+    using MappableType_ = typename std::iterator_traits<Iterator>::value_type;
     
     return make_iterator_range(
         make_filter_iterator<IsShared<MappableType_>>(IsShared<MappableType_>(mappable1, mappable2), first, last),

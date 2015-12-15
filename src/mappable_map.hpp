@@ -169,7 +169,7 @@ leftmost_overlapped(const MappableMap<KeyType, MappableType1>& mappables, const 
     using std::cbegin; using std::cend;
     
     if (mappables.empty()) {
-        throw std::runtime_error {"cannot find leftmost_overlapped of empty MappableMap"};
+        throw std::runtime_error {"leftmost_overlapped given empty MappableMap"};
     }
     
     auto first = cbegin(mappables);
@@ -179,7 +179,7 @@ leftmost_overlapped(const MappableMap<KeyType, MappableType1>& mappables, const 
     
     while (first != last) {
         if (!first->second.empty()) {
-            auto overlapped = first->second.overlap_range(mappable);
+            const auto overlapped = first->second.overlap_range(mappable);
             if (!overlapped.empty()) {
                 result = cbegin(overlapped).base();
                 ++first;
@@ -190,7 +190,7 @@ leftmost_overlapped(const MappableMap<KeyType, MappableType1>& mappables, const 
     }
     
     std::for_each(first, last, [&mappable, &result] (const auto& p) {
-        auto overlapped = p.second.overlap_range(mappable);
+        const auto overlapped = p.second.overlap_range(mappable);
         if (!overlapped.empty() && begins_before(overlapped.front(), *result)) {
             result = cbegin(overlapped).base();
         }
@@ -206,7 +206,7 @@ rightmost_overlapped(const MappableMap<KeyType, MappableType1>& mappables, const
     using std::cbegin; using std::cend; using std::prev;
     
     if (mappables.empty()) {
-        throw std::runtime_error {"cannot find rightmost_overlapped of empty MappableMap"};
+        throw std::runtime_error {"rightmost_overlapped given empty MappableMap"};
     }
     
     auto first = cbegin(mappables);
@@ -216,7 +216,7 @@ rightmost_overlapped(const MappableMap<KeyType, MappableType1>& mappables, const
     
     while (first != last) {
         if (!first->second.empty()) {
-            auto overlapped = first->second.overlap_range(mappable);
+            const auto overlapped = first->second.overlap_range(mappable);
             if (!overlapped.empty()) {
                 result = prev(cend(overlapped)).base();
                 ++first;
@@ -227,7 +227,7 @@ rightmost_overlapped(const MappableMap<KeyType, MappableType1>& mappables, const
     }
     
     std::for_each(first, last, [&mappable, &result] (const auto& p) {
-        auto overlapped = p.second.overlap_range(mappable);
+        const auto overlapped = p.second.overlap_range(mappable);
         if (!overlapped.empty() && ends_before(*result, overlapped.back())) {
             result = prev(cend(overlapped)).base();
         }

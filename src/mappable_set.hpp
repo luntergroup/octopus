@@ -360,7 +360,7 @@ MappableSet<MappableType, Allocator>::emplace(Args... args)
 {
     auto it = elements_.emplace(std::forward<Args>(args)...);
     if (is_bidirectionally_sorted_) {
-        auto overlapped = overlap_range(*it);
+        const auto overlapped = overlap_range(*it);
         is_bidirectionally_sorted_ = is_bidirectionally_sorted(std::cbegin(overlapped), std::cend(overlapped));
     }
     max_element_size_ = std::max(max_element_size_, ::size(*it));
@@ -373,7 +373,7 @@ MappableSet<MappableType, Allocator>::insert(const MappableType& m)
 {
     auto it = elements_.insert(m);
     if (is_bidirectionally_sorted_) {
-        auto overlapped = overlap_range(*it);
+        const auto overlapped = overlap_range(*it);
         is_bidirectionally_sorted_ = is_bidirectionally_sorted(std::cbegin(overlapped), std::cend(overlapped));
     }
     max_element_size_ = std::max(max_element_size_, ::size(*it));
@@ -386,7 +386,7 @@ MappableSet<MappableType, Allocator>::insert(MappableType&& m)
 {
     auto it = elements_.insert(std::move(m));
     if (is_bidirectionally_sorted_) {
-        auto overlapped = overlap_range(*it);
+        const auto overlapped = overlap_range(*it);
         is_bidirectionally_sorted_ = is_bidirectionally_sorted(std::cbegin(overlapped), std::cend(overlapped));
     }
     max_element_size_ = std::max(max_element_size_, ::size(*it));
@@ -436,7 +436,7 @@ typename MappableSet<MappableType, Allocator>::size_type
 MappableSet<MappableType, Allocator>::erase(const MappableType& m)
 {
     if (max_element_size_ == ::size(m)) {
-        auto result = elements_.erase(m);
+        const auto result = elements_.erase(m);
         max_element_size_ = ::size(*largest_element(std::cbegin(elements_), std::cend(elements_)));
         return result;
     }
@@ -555,12 +555,13 @@ const MappableType& MappableSet<MappableType, Allocator>::leftmost() const
 template <typename MappableType, typename Allocator>
 const MappableType& MappableSet<MappableType, Allocator>::rightmost() const
 {
+    using std::cbegin; using std::cend;
     const auto& last = *std::prev(elements_.cend());
     if (is_bidirectionally_sorted_) {
         return last;
     } else {
-        auto overlapped = ::overlap_range(elements_.cbegin(), elements_.cend(), last, max_element_size_);
-        return *rightmost_mappable(std::cbegin(overlapped), std::cend(overlapped));
+        const auto overlapped = ::overlap_range(cbegin(elements_), cend(elements_), last, max_element_size_);
+        return *rightmost_mappable(cbegin(overlapped), cend(overlapped));
     }
 }
 
@@ -674,7 +675,6 @@ bool
 MappableSet<MappableType, Allocator>::has_contained(const MappableType_& mappable) const
 {
     return has_contained(std::cbegin(elements_), std::cend(elements_), mappable);
-    
 }
 
 template <typename MappableType, typename Allocator>

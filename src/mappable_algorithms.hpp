@@ -14,7 +14,8 @@
                      // std::generate_n, std::transform
 #include <numeric>   // std::accumulate
 #include <cstddef>   // size_t
-#include <iterator>  // std::distance, std::cbegin, std::cend, std::prev, std::next, std::make_reverse_iterator
+#include <iterator>  // std::distance, std::cbegin, std::cend, std::prev, std::next,
+                     // std::make_reverse_iterator, std::iterator_traits
 #include <stdexcept>
 #include <boost/iterator/filter_iterator.hpp>
 #include <boost/range/iterator_range_core.hpp>
@@ -208,13 +209,25 @@ overlap_range(ForwardIterator first, ForwardIterator last, const MappableType& m
               MappableRangeOrder order = MappableRangeOrder::ForwardSorted)
 {
     if (order == MappableRangeOrder::BidirectionallySorted) {
-        auto range = std::equal_range(first, last, mappable,
-                                      [] (const auto& lhs, const auto& rhs) { return is_before(lhs, rhs); });
+        auto overlapped = std::equal_range(first, last, mappable,
+                                           [] (const auto& lhs, const auto& rhs) {
+                                               return is_before(lhs, rhs);
+                                           });
         
-        return make_overlap_range(range.first, range.second, mappable);
+        // now we need to try and push these boundries out as the range does not fully capture
+        // insertions
+        
+        overlapped.second = std::find_if_not(overlapped.second, last,
+                                             [&mappable] (const auto& m) { return overlaps(m, mappable); });
+        
+        auto it = std::find_if_not(std::make_reverse_iterator(overlapped.first),
+                                   std::make_reverse_iterator(first),
+                                   [&mappable] (const auto& m) { return overlaps(m, mappable); });
+        
+        return make_overlap_range(it.base(), overlapped.second, mappable);
     }
     
-    auto it = find_first_after(first, last, mappable);
+    const auto it = find_first_after(first, last, mappable);
     
     return make_overlap_range(std::find_if(first, it, [&mappable] (const auto& m) {
                                             return overlaps(m, mappable); }), it, mappable);
@@ -241,7 +254,7 @@ OverlapRange<ForwardIterator>
 overlap_range(ForwardIterator first, ForwardIterator last, const MappableType& mappable,
               GenomicRegion::SizeType max_mappable_size)
 {
-    using MappableType2 = typename ForwardIterator::value_type;
+    using MappableType2 = typename std::iterator_traits<ForwardIterator>::value_type;
     
     auto it = find_first_after(first, last, mappable);
     
@@ -394,6 +407,13 @@ contained_range(BidirectionalIterator first, BidirectionalIterator last, const M
                             [&mappable] (const auto& m) { return contains(mappable, m); });
     
     return make_contained_range(it, rit.base(), mappable);
+}
+
+template <typename Container, typename MappableType>
+ContainedRange<typename Container::const_iterator>
+contained_range(const Container& mappables, const MappableType& mappable)
+{
+    return contained_range(std::cbegin(mappables), std::cend(mappables), mappable);
 }
 
 /**
@@ -603,7 +623,7 @@ template <typename ForwardIterator>
 GenomicRegion get_encompassing_region(ForwardIterator first, ForwardIterator last)
 {
     if (first == last) {
-        throw std::runtime_error {"cannot get encompassing region of empty range"};
+        throw std::runtime_error {"get_encompassing_region given empty range"};
     }
     
     return get_encompassing(*first, *rightmost_mappable(first, last));
@@ -758,7 +778,7 @@ auto segment_overlapped(const Container& mappables)
 template <typename ForwardIterator>
 auto segment_by_begin(ForwardIterator first, ForwardIterator last)
 {
-    using MappableType = typename ForwardIterator::value_type;
+    using MappableType = typename std::iterator_traits<ForwardIterator>::value_type;
     
     std::vector<std::vector<MappableType>> result {};
     
@@ -787,7 +807,7 @@ auto segment_by_begin(const Container& mappables)
 template <typename ForwardIterator>
 auto segment_by_region(ForwardIterator first, ForwardIterator last)
 {
-    using MappableType = typename ForwardIterator::value_type;
+    using MappableType = typename std::iterator_traits<ForwardIterator>::value_type;
     
     std::vector<std::vector<MappableType>> result {};
     
