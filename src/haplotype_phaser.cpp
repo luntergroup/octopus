@@ -223,10 +223,6 @@ HaplotypePhaser::phase(const std::vector<Haplotype>& haplotypes,
                      auto it = std::find_if(begin(result), end(result),
                                             [&genotype, &variants] (const auto& complements) {
                                                 return are_phase_complements(genotype, complements.front(), variants);
-//                                                return std::any_of(cbegin(complements), cend(complements),
-//                                                                   [&genotype, &variants] (const auto& complement) {
-//                                                                       return are_phase_complements(genotype, complement, variants);
-//                                                                   });
                                             });
                      
                      if (it == end(result)) {
@@ -282,12 +278,6 @@ HaplotypePhaser::phase(const std::vector<Haplotype>& haplotypes,
     {
         return std::accumulate(std::cbegin(phase_sets), std::cend(phase_sets), 0.0,
                                [&genotype_posteriors] (auto curr, const auto& phase_set) {
-//                                   std::cout << "phase set" << std::endl;
-//                                   for (const auto& g : phase_set) {
-//                                       print_variant_alleles(g);
-//                                       std::cout << " " << genotype_posteriors.at(g) << std::endl;
-//                                   }
-//                                   std::cout << calculate_phase_score(phase_set, genotype_posteriors) << std::endl;
                                    return curr + calculate_phase_score(phase_set, genotype_posteriors);
                                });
     }
@@ -307,7 +297,7 @@ HaplotypePhaser::phase(const std::vector<Haplotype>& haplotypes,
         return result;
     }
     
-    // TODO: this algorithm is very naive right now.. needs much improvement
+    // TODO: this algorithm is very naive/slow right now.. needs much improvement
     HaplotypePhaser::PhaseSet::SamplePhaseRegions
     find_optimal_phase_regions(const GenomicRegion& region,
                                MappableSet<Variant> variants,

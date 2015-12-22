@@ -23,10 +23,10 @@ inline po::variables_map get_basic_mock_options()
         //"--reference", ecoli_reference_fasta.c_str(),
         
         //"--reads", HG00101.c_str(),
-        "--reads", NA12878_low_coverage.c_str(),
+        //"--reads", NA12878_low_coverage.c_str(),
         //"--reads", NA12891_high_coverage.c_str(),
         
-        //"--reads", NA12878_high_coverage.c_str(),
+        "--reads", NA12878_high_coverage.c_str(),
         //"--reads", NA12878_low_coverage.c_str(), HG00101.c_str(), HG00102.c_str(), HG00103.c_str(),
         //"--reads", NA12878_high_coverage.c_str(), NA12878_simulated_cancer_basic.c_str(), //cancer test
         //"--reads", NA12891_high_coverage.c_str(), NA12878_simulated_cancer_basic.c_str(), //cancer test
@@ -47,13 +47,11 @@ inline po::variables_map get_basic_mock_options()
         /* input regions */
         
         // for population
-        //"--regions", "4:40,436,430-40,436,571",
         
         //"--regions", "6:93,705,800-93,706,166", // NA12878_low_coverage no phase
         //"--regions", "6:58,605,652-58,606,061",   // NA12878_low_coverage partial phase
         //"--regions", "6:58,605,687-58,605,779",   // NA12878_low_coverage phase strong
         //"--regions", "3:108,803,741-108,803,854", // NA12878_low_coverage phase weak
-        //"-L", "7:47,799,909-47,800,044",
         
         //"--regions", "6:22,877,929-22,878,012", // NA12878_low_coverage HMM error
         //"--regions", "6:29,915,924-29,916,412",
@@ -70,14 +68,12 @@ inline po::variables_map get_basic_mock_options()
         //"--regions", "21:11062880-11063100",
         //"--regions", "21:11,063,185-11,063,327", // weird haplotpes
         
-        //"--regions", "3:47,251,793-47,251,839", // NA12878_high_coverage interesting indels
+        "--regions", "3:47,251,793-47,251,839", // NA12878_high_coverage interesting indels
         //"--regions", "3:47,251,808-47,251,847",
         
         //"-L", "4:40,436,510-40,436,694", // NA12878_low_coverage odd genotype call (should be 1/1)
         
         //"-L", "Y:13447283-13447483", // NA12878_low_coverage too many haplotypes
-        
-        //"-L", "Y:3554000-3554100",
         
         // for cancer
         //"--regions", "6:52,873,970-52,882,816",

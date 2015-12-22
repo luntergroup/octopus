@@ -51,11 +51,12 @@ public:
     
     template <typename T> void push_back(T&& allele);
     template <typename T> void push_front(T&& allele);
-    void operator+=(const Haplotype& other);
     
     const GenomicRegion& get_region() const;
+    
     bool contains(const Allele& allele) const;
     bool contains_exact(const Allele& allele) const;
+    
     SequenceType get_sequence() const;
     SequenceType get_sequence(const GenomicRegion& region) const;
     

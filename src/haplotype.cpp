@@ -30,12 +30,6 @@ explicit_alleles_ {},
 cached_sequence_ {}
 {}
 
-void Haplotype::operator+=(const Haplotype& other)
-{
-    explicit_alleles_.insert(std::end(explicit_alleles_), std::cbegin(other.explicit_alleles_),
-                             std::cend(other.explicit_alleles_));
-}
-
 const GenomicRegion& Haplotype::get_region() const
 {
     return region_;

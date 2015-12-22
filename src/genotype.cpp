@@ -107,6 +107,12 @@ bool contains(const Genotype<Haplotype>& genotype, const Allele& allele)
                        [&allele] (const auto& haplotype) { return haplotype.contains(allele); });
 }
 
+bool contains_exact(const Genotype<Haplotype>& genotype, const Allele& allele)
+{
+    return std::any_of(std::cbegin(genotype), std::cend(genotype),
+                       [&allele] (const auto& haplotype) { return haplotype.contains_exact(allele); });
+}
+
 bool is_homozygous(const Genotype<Haplotype>& genotype, const Allele& allele)
 {
     return splice<Allele>(genotype, get_region(allele)).count(allele) == genotype.ploidy();
