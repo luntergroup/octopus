@@ -23,10 +23,10 @@ inline po::variables_map get_basic_mock_options()
         //"--reference", ecoli_reference_fasta.c_str(),
         
         //"--reads", HG00101.c_str(),
-        "--reads", NA12878_low_coverage.c_str(),
+        //"--reads", NA12878_low_coverage.c_str(),
         //"--reads", NA12891_high_coverage.c_str(),
         
-        //"--reads", NA12878_high_coverage.c_str(),
+        "--reads", NA12878_high_coverage.c_str(),
         //"--reads", NA12878_low_coverage.c_str(), HG00101.c_str(), HG00102.c_str(), HG00103.c_str(),
         //"--reads", NA12878_high_coverage.c_str(), NA12878_simulated_cancer_basic.c_str(), //cancer test
         //"--reads", NA12891_high_coverage.c_str(), NA12878_simulated_cancer_basic.c_str(), //cancer test
@@ -47,13 +47,11 @@ inline po::variables_map get_basic_mock_options()
         /* input regions */
         
         // for population
-        //"--regions", "4:40,436,430-40,436,571",
         
         //"--regions", "6:93,705,800-93,706,166", // NA12878_low_coverage no phase
         //"--regions", "6:58,605,652-58,606,061",   // NA12878_low_coverage partial phase
         //"--regions", "6:58,605,687-58,605,779",   // NA12878_low_coverage phase strong
         //"--regions", "3:108,803,741-108,803,854", // NA12878_low_coverage phase weak
-        //"-L", "7:47,799,909-47,800,044",
         
         //"--regions", "6:22,877,929-22,878,012", // NA12878_low_coverage HMM error
         //"--regions", "6:29,915,924-29,916,412",
@@ -61,23 +59,28 @@ inline po::variables_map get_basic_mock_options()
         //"--regions", "6:89,236,310-89,237,082", // NA12878_high_coverage very nice phasing test
         //"--regions", "6:89,236,734-89,236,784",
         
-        //"-L", "6:29,910,550-29,911,088", // HLA
-        //"-L", "6:31,338,897-31,339,914", // HLA
-        
-        "-L", "11:67,447,414-67,559,102",
+//        "-L", "6:29,690,822-29,717,432", // HLA-F
+//        "-L", "6:29,794,350-29,799,548", // HLA-G
+//        "-L", "6:29,854,439-29,860,076", // HLA-H
+//        "-L", "6:29,909,260-29,914,705", // HLA-A
+//        "-L", "6:31,320,151-31,326,581", // HLA-B
+//        "-L", "6:31,235,509-31,241,047", // HLA-C
+//        "-L", "6:30,456,690-30,462,845", // HLA-E
+//        "-L", "6:33,030,330-33,060,358", // HLA-DPA1
+//        "-L", "6:33,079,213-33,098,080", // HLA-DPB2
+//        "-L", "6:32,971,604-32,978,159", // HLA-DOA
+//        "-L", "6:32,472,179-32,786,639", // HLA-rest
         
         //"--regions", "21:11,062,774-11,062,920",
         //"--regions", "21:11062880-11063100",
         //"--regions", "21:11,063,185-11,063,327", // weird haplotpes
         
-        //"--regions", "3:47,251,793-47,251,839", // NA12878_high_coverage interesting indels
+        "--regions", "3:47,251,793-47,251,839", // NA12878_high_coverage interesting indels
         //"--regions", "3:47,251,808-47,251,847",
         
         //"-L", "4:40,436,510-40,436,694", // NA12878_low_coverage odd genotype call (should be 1/1)
         
         //"-L", "Y:13447283-13447483", // NA12878_low_coverage too many haplotypes
-        
-        //"-L", "Y:3554000-3554100",
         
         // for cancer
         //"--regions", "6:52,873,970-52,882,816",
