@@ -31,7 +31,7 @@ template <typename ForwardIterator>
 GenomicRegion::SizeType sum_sizes(ForwardIterator first, ForwardIterator last)
 {
     return std::accumulate(first, last, GenomicRegion::SizeType {},
-                           [] (auto curr, const auto& mappable) { return curr + size(mappable); });
+                           [] (const auto curr, const auto& mappable) { return curr + size(mappable); });
 }
 
 template <typename Container>

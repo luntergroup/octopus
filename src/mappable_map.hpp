@@ -41,10 +41,27 @@ make_mappable_map(Map map)
 }
 
 template <typename KeyType, typename MappableType>
-size_t count_mappables(const MappableMap<KeyType, MappableType>& map)
+auto get_encompassing_region(const MappableMap<KeyType, MappableType>& mappables)
 {
-    return std::accumulate(std::cbegin(map), std::cend(map), size_t {},
-                           [] (size_t prev, const auto& v) { return prev + v.second.size(); });
+    if (mappables.empty()) {
+        throw std::runtime_error {"get_encompassing_region called on empty MappableMap"};
+    }
+    
+    auto result = get_encompassing_region(std::cbegin(mappables)->second);
+    
+    std::for_each(std::next(std::cbegin(mappables)), std::cend(mappables),
+                  [&result] (const auto& p) {
+                      result = get_encompassing(result, get_encompassing_region(p.second));
+                  });
+    
+    return result;
+}
+
+template <typename KeyType, typename MappableType>
+size_t count_mappables(const MappableMap<KeyType, MappableType>& mappables)
+{
+    return std::accumulate(std::cbegin(mappables), std::cend(mappables), size_t {},
+                           [] (const auto prev, const auto& v) { return prev + v.second.size(); });
 }
 
 template <typename KeyType, typename MappableType1, typename MappableType2>
@@ -64,7 +81,7 @@ count_overlapped(const MappableMap<KeyType, MappableType1>& mappables, const Map
     using SizeType = typename MappableSet<MappableType1>::size_type;
     
     return std::accumulate(std::cbegin(mappables), std::cend(mappables), SizeType {},
-                           [&mappable] (SizeType x, const auto& p) {
+                           [&mappable] (const auto x, const auto& p) {
                                return x + p.second.count_overlapped(mappable);
                            });
 }
@@ -86,7 +103,7 @@ count_contained(const MappableMap<KeyType, MappableType1>& mappables, const Mapp
     using SizeType = typename MappableSet<MappableType1>::size_type;
     
     return std::accumulate(std::cbegin(mappables), std::cend(mappables), SizeType {},
-                           [&mappable] (SizeType x, const auto& p) {
+                           [&mappable] (const auto x, const auto& p) {
                                return x + p.second.count_contained(mappable);
                            });
 }
@@ -109,7 +126,7 @@ count_shared(const MappableMap<KeyType, MappableType1>& mappables, const Mappabl
     using SizeType = typename MappableSet<MappableType1>::size_type;
     
     return std::accumulate(std::cbegin(mappables), std::cend(mappables), SizeType {},
-                           [&mappable1, &mappable2] (SizeType x, const auto& p) {
+                           [&mappable1, &mappable2] (const auto x, const auto& p) {
                                return x + p.second.count_shared(mappable1, mappable2);
                            });
 }

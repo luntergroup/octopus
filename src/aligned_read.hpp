@@ -215,6 +215,8 @@ flags_ {compress_flags(data)}
 
 // Non-member methods
 
+AlignedRead::SizeType num_overlapped_bases(const AlignedRead& read, const GenomicRegion& region);
+
 bool is_soft_clipped(const AlignedRead& read);
 
 std::pair<AlignedRead::SizeType, AlignedRead::SizeType> get_soft_clipped_sizes(const AlignedRead& read);

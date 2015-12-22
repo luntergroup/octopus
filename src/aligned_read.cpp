@@ -280,6 +280,13 @@ size_t AlignedRead::make_hash() const
 
 // Non-member methods
 
+AlignedRead::SizeType num_overlapped_bases(const AlignedRead& read, const GenomicRegion& region)
+{
+    if (contains(region, read)) return read.get_sequence_size();
+    // TODO: not quite right as doesn't account for indels
+    return static_cast<AlignedRead::SizeType>(std::max(GenomicRegion::DifferenceType {}, overlap_size(read, region)));
+}
+
 bool is_soft_clipped(const AlignedRead& read)
 {
     return is_soft_clipped(read.get_cigar_string());

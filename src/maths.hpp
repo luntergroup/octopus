@@ -120,7 +120,7 @@ inline RealType log_sum_exp(std::initializer_list<RealType> il)
 {
     auto max = std::max(il);
     return max + std::log(std::accumulate(std::cbegin(il), std::cend(il), RealType {},
-                                          [max] (auto curr, auto x) { return curr + std::exp(x - max); }));
+                                          [max] (const auto curr, auto x) { return curr + std::exp(x - max); }));
 }
 
 template <typename RealType, typename Iterator>
@@ -128,7 +128,7 @@ inline RealType log_sum_exp(Iterator first, Iterator last)
 {
     auto max = *std::max_element(first, last);
     return max + std::log(std::accumulate(first, last, RealType {},
-                                          [max] (auto curr, auto x) { return curr + std::exp(x - max); }));
+                                          [max] (const auto curr, auto x) { return curr + std::exp(x - max); }));
 }
 
 template <typename RealType, typename Container>
@@ -163,7 +163,7 @@ template <typename RealType, typename InputIterator>
 inline RealType log_beta(InputIterator first, InputIterator last)
 {
     return std::accumulate(first, last, RealType {},
-                           [] (auto v, auto x) { return v + boost::math::lgamma(x); })
+                           [] (const auto v, const auto x) { return v + boost::math::lgamma(x); })
             - boost::math::lgamma(std::accumulate(first, last, RealType {}));
 }
 

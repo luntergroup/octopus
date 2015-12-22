@@ -38,8 +38,13 @@ class Downsampler
 {
 public:
     Downsampler() = default;
-    Downsampler(unsigned max_coverage, unsigned min_coverage)
-    : max_coverage_ {max_coverage}, min_coverage_ {min_coverage} {}
+    Downsampler(unsigned max_coverage, unsigned min_coverage);
+    ~Downsampler() = default;
+    
+    Downsampler(const Downsampler&)            = default;
+    Downsampler& operator=(const Downsampler&) = default;
+    Downsampler(Downsampler&&)                 = default;
+    Downsampler& operator=(Downsampler&&)      = default;
     
     template <typename R>
     R operator()(R&& reads)

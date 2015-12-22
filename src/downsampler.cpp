@@ -14,8 +14,15 @@
 
 #include "read_utils.hpp"
 
-namespace Octopus {
-    
+namespace Octopus
+{
+
+Downsampler::Downsampler(unsigned max_coverage, unsigned min_coverage)
+:
+max_coverage_ {max_coverage},
+min_coverage_ {min_coverage}
+{}
+
 bool has_minimum_coverage(const std::vector<unsigned>& required_coverage)
 {
     return std::all_of(std::cbegin(required_coverage), std::cend(required_coverage),
@@ -121,9 +128,8 @@ downsample(const MappableSet<AlignedRead>& reads, const unsigned max_coverage, c
     
     if (reads.empty()) return reads;
     
-    auto region = get_encompassing_region(cbegin(reads), cend(reads));
-    
-    auto regions_to_sample = find_target_regions(reads, region, max_coverage, min_coverage);
+    const auto regions_to_sample = find_target_regions(reads, get_encompassing_region(reads),
+                                                       max_coverage, min_coverage);
     
     if (regions_to_sample.empty()) return reads;
     
@@ -132,7 +138,7 @@ downsample(const MappableSet<AlignedRead>& reads, const unsigned max_coverage, c
     
     auto last_sampled_itr = cbegin(reads);
     
-    for (auto& region : regions_to_sample) {
+    for (const auto& region : regions_to_sample) {
         auto contained = reads.contained_range(region);
         
         if (contained.empty()) continue;

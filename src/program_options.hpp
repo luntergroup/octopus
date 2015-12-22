@@ -9,7 +9,6 @@
 #ifndef __Octopus__program_options__
 #define __Octopus__program_options__
 
-#include <string>
 #include <vector>
 #include <unordered_map>
 #include <cstddef>

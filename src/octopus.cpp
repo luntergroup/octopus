@@ -122,18 +122,6 @@ namespace Octopus
         auto candidate_generator = Options::get_candidate_generator(options, reference);
         auto output              = Options::get_output_vcf(options);
         
-//        MappableSet<GenomicRegion> rs {};
-//        
-//        rs.emplace("1", 100, 101);
-//        rs.emplace("1", 104, 105);
-//        rs.emplace("1", 105, 105);
-//        rs.emplace("1", 105, 108);
-//        rs.emplace("1", 110, 111);
-//        
-//        print_overlapped(rs, GenomicRegion("1", 105, 105));
-//        
-//        exit(0);
-        
         ReadPipe read_pipe {read_manager, read_filter, downsampler, read_transform};
         
         const auto samples = get_samples(options, read_manager);

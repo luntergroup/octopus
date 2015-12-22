@@ -8,6 +8,7 @@
 
 #include "program_options.hpp"
 
+#include <string>
 #include <iostream>
 #include <fstream>
 #include <stdexcept>

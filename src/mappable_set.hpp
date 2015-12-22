@@ -888,6 +888,12 @@ void swap(MappableSet<MappableType, Allocator>& lhs, MappableSet<MappableType, A
     std::swap(lhs.max_element_size_, rhs.max_element_size_);
 }
 
+template <typename MappableType>
+auto get_encompassing_region(const MappableSet<MappableType>& mappables)
+{
+    return get_encompassing(mappables.leftmost(), mappables.rightmost());
+}
+
 template <typename ForwardIterator, typename MappableType1, typename MappableType2>
 ForwardIterator
 find_first_shared(const MappableSet<MappableType1>& mappables, ForwardIterator first, ForwardIterator last,
