@@ -11,7 +11,7 @@
 
 #include <string>
 #include <ostream>
-#include <boost/functional/hash.hpp> // boost::hash_combine
+#include <boost/functional/hash.hpp>
 
 #include "genomic_region.hpp"
 #include "allele.hpp"

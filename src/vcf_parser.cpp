@@ -8,8 +8,8 @@
 
 #include "vcf_parser.hpp"
 
-#include <algorithm> // std::count_if, std::copy, std::transform, std::for_each, std::count
-#include <iterator>  // std::cbegin, std::cend, std::advance, std::next
+#include <algorithm>
+#include <iterator>
 #include <stdexcept>
 
 #include "genomic_region.hpp"

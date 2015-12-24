@@ -10,9 +10,9 @@
 #define __Octopus__candidate_variant_generator__
 
 #include <vector>
-#include <memory>    // std::unique_ptr
-#include <cstddef>   // size_t
-#include <iterator>  // std::cbegin, std::cend
+#include <memory>
+#include <cstddef>
+#include <iterator>
 
 #include "i_candidate_variant_generator.hpp"
 

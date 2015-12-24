@@ -10,8 +10,8 @@
 #define Octopus_read_transform_hpp
 
 #include <vector>
-#include <functional> // std::function
-#include <algorithm>  // std::for_each
+#include <functional>
+#include <algorithm>
 
 #include "aligned_read.hpp"
 

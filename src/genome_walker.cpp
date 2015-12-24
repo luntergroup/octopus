@@ -8,9 +8,9 @@
 
 #include "genome_walker.hpp"
 
-#include <iterator>  // std::distance, std::next, std::prev, std::advance, std::cbegin, std::cend
-#include <algorithm> // std::min
-#include <cmath>     // std::abs
+#include <iterator>
+#include <algorithm>
+#include <cmath>
 
 #include "genomic_region.hpp"
 #include "mappable.hpp"

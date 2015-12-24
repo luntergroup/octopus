@@ -14,7 +14,7 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <initializer_list>
-#include <cstddef> // size_t
+#include <cstddef>
 #include <mutex>
 #include <boost/filesystem.hpp>
 

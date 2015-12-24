@@ -14,7 +14,7 @@
 #include <stdexcept>
 #include <vector>
 #include <cassert>
-#include <boost/functional/hash.hpp> // boost::hash_combine
+#include <boost/functional/hash.hpp>
 
 #include "contig_region.hpp"
 #include "comparable.hpp"

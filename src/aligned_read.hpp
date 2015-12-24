@@ -15,10 +15,10 @@
 #include <ostream>
 #include <vector>
 #include <bitset>
-#include <algorithm> // std::transform, std::swap
-#include <memory>    // std::unique_ptr, std::make_unique
-#include <iterator>  // std::begin etc
-#include <utility>   // std::forward
+#include <algorithm>
+#include <memory>
+#include <iterator>
+#include <utility>
 
 #include "genomic_region.hpp"
 #include "cigar_string.hpp"

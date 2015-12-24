@@ -10,11 +10,11 @@
 #define __Octopus__read_filter__
 
 #include <vector>
-#include <functional>  // std::function
-#include <algorithm>   // std::all_of, std::remove_if, std::partition_copy, std::stable_partition
-#include <iterator>    // std::prev, std::begin, std::end, std::cbegin, std::cend
-#include <type_traits> // std::is_void
-#include <utility>     // std::move
+#include <functional>
+#include <algorithm>
+#include <iterator>
+#include <type_traits>
+#include <utility>
 
 #include <iostream> // DEBUG
 

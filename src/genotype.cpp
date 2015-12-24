@@ -8,7 +8,7 @@
 
 #include "genotype.hpp"
 
-#include <functional>  // std::not_equal_to
+#include <functional>
 #include <boost/math/special_functions/binomial.hpp>
 
 Genotype<Allele>::Genotype(unsigned ploidy)

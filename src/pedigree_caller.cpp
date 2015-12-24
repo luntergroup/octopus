@@ -8,7 +8,7 @@
 
 #include "pedigree_caller.hpp"
 
-#include <utility> // std::move
+#include <utility>
 
 #include "vcf_record.hpp"
 

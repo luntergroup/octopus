@@ -8,8 +8,8 @@
 
 #include "population_genotype_model.hpp"
 
-#include <algorithm> // std::transform, std::for_each
-#include <numeric>   // std::accumulate
+#include <algorithm>
+#include <numeric>
 #include <cmath>
 
 #include "read_model.hpp"

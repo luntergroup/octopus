@@ -8,7 +8,7 @@
 
 #include "candidate_variant_generator.hpp"
 
-#include <algorithm> // std::inplace_merge
+#include <algorithm>
 
 #include "genomic_region.hpp"
 #include "aligned_read.hpp"

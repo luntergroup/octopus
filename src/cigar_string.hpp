@@ -9,13 +9,13 @@
 #ifndef Octopus_cigar_string_hpp
 #define Octopus_cigar_string_hpp
 
-#include <string>    // std::stoi
+#include <string>
 #include <cstdint>
 #include <iterator>
 #include <vector>
 #include <ostream>
-#include <numeric>   // std::accumulate
-#include <boost/functional/hash.hpp> // boost::hash_combine, boost::hash_range
+#include <numeric>
+#include <boost/functional/hash.hpp>
 
 #include "comparable.hpp"
 

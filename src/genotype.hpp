@@ -14,11 +14,10 @@
 #include <initializer_list>
 #include <ostream>
 #include <cstddef>
-#include <iterator>    // std::cbegin, std::cend, std::distance, std::back_inserter
-#include <algorithm>   // std::std::sort, std::inplace_merge, std::all_of, std::binary_search,
-                       // std::equal_range, std::unique_copy, std::equal, std::fill_n
-#include <type_traits> // std::enable_if_t, std::is_base_of
-#include <boost/functional/hash.hpp> // boost::hash_range
+#include <iterator>
+#include <algorithm>
+#include <type_traits>
+#include <boost/functional/hash.hpp>
 
 #include "allele.hpp"
 #include "haplotype.hpp"

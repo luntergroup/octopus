@@ -12,12 +12,12 @@
 #include <string>
 #include <vector>
 #include <unordered_map>
-#include <cstddef>   // size_t
-#include <cstdint>   // std::uint_fast32_t etc
-#include <algorithm> // std::find
-#include <stdexcept> // std::runtime_error
-#include <memory>    // std::unique_ptr
-#include <tuple>     // std::pair
+#include <cstddef>
+#include <cstdint>
+#include <algorithm>
+#include <stdexcept>
+#include <memory>
+#include <tuple>
 #include <boost/filesystem/path.hpp>
 
 #include "htslib/hts.h"

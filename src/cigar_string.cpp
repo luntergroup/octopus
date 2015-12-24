@@ -8,8 +8,8 @@
 
 #include "cigar_string.hpp"
 
-#include <ctype.h>   // std::isdigit
-#include <algorithm> // std::copy
+#include <ctype.h>
+#include <algorithm>
 
 CigarOperation::CigarOperation(SizeType size, char flag) noexcept
 :

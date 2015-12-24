@@ -8,7 +8,7 @@
 
 #include <haplotype_prior_model.hpp>
 
-#include <algorithm> // std::any_of
+#include <algorithm>
 
 #include "haplotype.hpp"
 #include "variant_utils.hpp"

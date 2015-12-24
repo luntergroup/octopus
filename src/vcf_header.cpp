@@ -8,9 +8,9 @@
 
 #include "vcf_header.hpp"
 
-#include <algorithm> // std::find_if, std::transform, std::sort, std::unique
-#include <utility>   // std::move
-#include <iterator>  // std::back_inserter
+#include <algorithm>
+#include <utility>
+#include <iterator>
 
 bool is_valid_line(const std::string& line);
 bool is_valid_field(const std::string& str);

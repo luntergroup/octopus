@@ -8,10 +8,9 @@
 
 #include "read_manager.hpp"
 
-#include <iterator>  // std::make_move_iterator, std::cbegin, std::cend, std::distance
-#include <algorithm> // std::sort, std::copy_if, std::min, std::nth_element, std::partition, std::for_each
-                     // std::remove_if
-#include <utility>   // std::move
+#include <iterator>
+#include <algorithm>
+#include <utility>
 #include <boost/filesystem/operations.hpp>
 
 #include "aligned_read.hpp"

@@ -10,7 +10,7 @@
 #define haplotype_likelihood_cache_hpp
 
 #include <unordered_map>
-#include <cstddef> // size_t
+#include <cstddef>
 
 #include "common.hpp"
 #include "haplotype.hpp"

@@ -10,9 +10,9 @@
 #define cancer_genotype_hpp
 
 #include <initializer_list>
-#include <utility> // std::move
+#include <utility>
 #include <ostream>
-#include <boost/functional/hash.hpp> // boost::hash_combine
+#include <boost/functional/hash.hpp>
 
 #include "equitable.hpp"
 #include "genotype.hpp"

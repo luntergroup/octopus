@@ -11,12 +11,12 @@
 //#include <boost/test/unit_test.hpp>
 
 #include <iostream>
-#include <cstdlib>   // EXIT_SUCCESS/EXIT_FAILURE
+#include <cstdlib>
 #include <stdexcept>
 #include <chrono>
 #include <ctime>
-#include <iomanip>   // std::put_time
-#include <utility>   // std::pair, std::make_pair
+#include <iomanip>
+#include <utility>
 
 #include "program_options.hpp"
 #include "octopus.hpp"

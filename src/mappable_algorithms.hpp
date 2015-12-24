@@ -9,13 +9,10 @@
 #ifndef Octopus_mappable_algorithms_hpp
 #define Octopus_mappable_algorithms_hpp
 
-#include <algorithm> // std::equal_range, std::is_sorted, std::binary_search, std::count_if, std::any_of,
-                     // std::find_if, std::min_element, std::max_element, std::lower_bound, std::find_if_not
-                     // std::generate_n, std::transform
-#include <numeric>   // std::accumulate
-#include <cstddef>   // size_t
-#include <iterator>  // std::distance, std::cbegin, std::cend, std::prev, std::next,
-                     // std::make_reverse_iterator, std::iterator_traits
+#include <algorithm>
+#include <numeric>
+#include <cstddef>
+#include <iterator>
 #include <stdexcept>
 #include <boost/iterator/filter_iterator.hpp>
 #include <boost/range/iterator_range_core.hpp>

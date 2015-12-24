@@ -12,7 +12,7 @@
 #include <string>
 #include <vector>
 #include <unordered_map>
-#include <utility> // std::forward
+#include <utility>
 
 #include "genotype_model.hpp"
 #include "mappable_map.hpp"

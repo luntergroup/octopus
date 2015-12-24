@@ -8,8 +8,8 @@
 
 #include "alignment_candidate_variant_generator.hpp"
 
-#include <iterator>  // std::cbegin etc, std::distance
-#include <algorithm> // std::for_each, std::sort, std::unique, std::adjacent_find, std::find_if_not
+#include <iterator>
+#include <algorithm>
 #include <boost/range/combine.hpp>
 
 #include "reference_genome.hpp"

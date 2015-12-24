@@ -9,9 +9,9 @@
 #ifndef Octopus_mappable_ranges_h
 #define Octopus_mappable_ranges_h
 
-#include <iterator>    // std::std::iterator_traits, std::distance
-#include <cstddef>     // size_t
-#include <type_traits> // std::decay_t
+#include <iterator>
+#include <cstddef>
+#include <type_traits>
 #include <boost/iterator/filter_iterator.hpp>
 #include <boost/range/iterator_range_core.hpp>
 

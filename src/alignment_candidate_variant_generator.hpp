@@ -11,8 +11,8 @@
 
 #include <vector>
 #include <deque>
-#include <cstddef>   // size_t
-#include <utility>   // std::forward
+#include <cstddef>
+#include <utility>
 
 #include "i_candidate_variant_generator.hpp"
 #include "aligned_read.hpp"

@@ -9,7 +9,7 @@
 #ifndef Octopus_mappable_hpp
 #define Octopus_mappable_hpp
 
-#include <type_traits> // std::enable_if_t, std::is_same, std::is_base_of
+#include <type_traits>
 
 #include "contig_region.hpp"
 #include "genomic_region.hpp"

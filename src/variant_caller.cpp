@@ -8,7 +8,7 @@
 
 #include "variant_caller.hpp"
 
-#include <algorithm> // std::merge, std::copy
+#include <algorithm>
 
 #include "genomic_region.hpp"
 #include "mappable.hpp"

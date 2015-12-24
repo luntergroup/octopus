@@ -9,9 +9,9 @@
 #include "htslib_sam_facade.hpp"
 
 #include <sstream>
-#include <cmath>    // std::abs
-#include <utility>  // std::move
-#include <iterator> // std::begin, std::end, std::next
+#include <cmath>
+#include <utility>
+#include <iterator>
 
 #include <iostream> // TEST
 

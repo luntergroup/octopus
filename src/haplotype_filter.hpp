@@ -10,7 +10,7 @@
 #define haplotype_filter_hpp
 
 #include <vector>
-#include <cstddef> // size_t
+#include <cstddef>
 
 #include "common.hpp"
 #include "haplotype.hpp"

@@ -12,8 +12,8 @@
 #include <string>
 #include <vector>
 #include <unordered_map>
-#include <cstddef> // std::size_t
-#include <memory>  // std::unique_ptr
+#include <cstddef>
+#include <memory>
 #include <boost/filesystem/path.hpp>
 
 #include "genomic_region.hpp"

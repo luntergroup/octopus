@@ -9,8 +9,8 @@
 #ifndef __Octopus__read_filters__
 #define __Octopus__read_filters__
 
-#include <algorithm> // std::count_if
-#include <iterator>  // std::prev, std::cbegin, std::cend
+#include <algorithm>
+#include <iterator>
 
 #include "aligned_read.hpp"
 #include "cigar_string.hpp"

@@ -11,7 +11,7 @@
 
 #include <unordered_map>
 #include <string>
-#include <memory> // std::unique_ptr
+#include <memory>
 #include <stdexcept>
 
 #include "variant_caller.hpp"

@@ -9,9 +9,9 @@
 #include "caching_fasta.hpp"
 
 #include <iterator>
-#include <algorithm> // std::min, std::find_if, std::find_if_not, std::for_each
+#include <algorithm>
 #include <stdexcept>
-#include <utility>   // std::move
+#include <utility>
 
 #include "genomic_region.hpp"
 

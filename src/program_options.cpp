@@ -13,10 +13,10 @@
 #include <fstream>
 #include <stdexcept>
 #include <iterator>
-#include <algorithm>  // std::transform, std::min
-#include <functional> // std::function
+#include <algorithm>
+#include <functional>
 #include <unordered_map>
-#include <memory>     // std::make_unique
+#include <memory>
 #include <boost/filesystem/path.hpp>
 #include <boost/filesystem/operations.hpp>
 

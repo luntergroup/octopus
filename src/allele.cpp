@@ -8,9 +8,9 @@
 
 #include "allele.hpp"
 
-#include <algorithm> // std::min, std::transform
-#include <iterator>  // std::back_inserter
-#include <cstddef>   // size_t
+#include <algorithm>
+#include <iterator>
+#include <cstddef>
 
 #include "string_utils.hpp"
 #include "mappable_algorithms.hpp"

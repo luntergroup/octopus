@@ -9,8 +9,8 @@
 #include "cancer_genotype_model.hpp"
 
 #include <array>
-#include <numeric>    // std::accumulate
-#include <algorithm>  // std::transform, std::nth_element
+#include <numeric>
+#include <algorithm>
 #include <iterator>
 #include <cmath>
 

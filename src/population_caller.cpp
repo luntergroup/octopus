@@ -11,9 +11,9 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <unordered_map>
-#include <utility>   // std::pair, std::make_pair, std::move, std::forward
-#include <algorithm> // std::max_element, std::copy, std::transform
-#include <iterator>  // std::begin, std::end, std::cbegin, std::cend, std::back_inserter, std::advance, std::next
+#include <utility>
+#include <algorithm>
+#include <iterator>
 
 #include "common.hpp"
 #include "genomic_region.hpp"

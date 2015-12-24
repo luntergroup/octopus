@@ -10,8 +10,8 @@
 
 #include <deque>
 #include <stdexcept>
-#include <iterator>  // std::next, std::tie, std::cbegin, std::cend
-#include <algorithm> // std::find, std::find_if, std::any_of, std::for_each
+#include <iterator>
+#include <algorithm>
 
 #include "genomic_region.hpp"
 #include "reference_genome.hpp"

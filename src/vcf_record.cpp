@@ -8,8 +8,8 @@
 
 #include "vcf_record.hpp"
 
-#include <algorithm> // std::find
-#include <iterator>  // std::cbegin, std::cend
+#include <algorithm>
+#include <iterator>
 
 // public methods
 

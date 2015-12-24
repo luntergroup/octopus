@@ -12,10 +12,10 @@
 #include <string>
 #include <vector>
 #include <unordered_map>
-#include <algorithm> // std::transform
-#include <numeric>   // std::accumulate
-#include <iterator>  // std::begin, std::cbegin, std::cend, std::inserter
-#include <cmath>     // std::abs
+#include <algorithm>
+#include <numeric>
+#include <iterator>
+#include <cmath>
 
 #include <iostream> // TEST
 

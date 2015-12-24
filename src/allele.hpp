@@ -11,8 +11,8 @@
 
 #include <string>
 #include <ostream>
-#include <utility> // std::forward
-#include <boost/functional/hash.hpp> // boost::hash_combine
+#include <utility>
+#include <boost/functional/hash.hpp>
 
 #include "genomic_region.hpp"
 #include "comparable.hpp"

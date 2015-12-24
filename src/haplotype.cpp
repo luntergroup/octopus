@@ -8,10 +8,9 @@
 
 #include "haplotype.hpp"
 
-#include <algorithm> // std::for_each, std::binary_search, std::lower_bound, std::sort,
-                     // std::nth_element, std::find_if_not, std::adjacent_find, std::unique
-#include <iterator>  // std::cbegin, std::cend, std::distance, std::next
-#include <boost/functional/hash.hpp> // boost::hash_combine
+#include <algorithm>
+#include <iterator>
+#include <boost/functional/hash.hpp>
 
 #include "reference_genome.hpp"
 #include "genomic_region.hpp"

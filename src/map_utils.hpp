@@ -9,8 +9,8 @@
 #ifndef Octopus_map_utils_hpp
 #define Octopus_map_utils_hpp
 
-#include <algorithm> // std::sort, std::transform, std::min_element
-#include <iterator>  // std::distance, std::cbegin, std::cend, std::back_inserter
+#include <algorithm>
+#include <iterator>
 #include <vector>
 
 template <typename MapType>

@@ -10,11 +10,11 @@
 #define Octopus_mappable_map_hpp
 
 #include <unordered_map>
-#include <algorithm> // std::for_each, std::any_of, std::transform
-#include <numeric>   // std::accumulate
-#include <iterator>  // std::begin, std::end, std::make_move_iterator
+#include <algorithm>
+#include <numeric>
+#include <iterator>
 #include <stdexcept>
-#include <cstddef>   // size_t
+#include <cstddef>
 
 #include "mappable_set.hpp"
 

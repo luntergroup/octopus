@@ -11,10 +11,10 @@
 #include <vector>
 #include <unordered_map>
 #include <stdexcept>
-#include <algorithm> // std::transform, std::for_each, std::find
-#include <iterator>  // std::cbegin, std::cend, std::next, std::distance, std::back_inserter
-#include <utility>   // std::move
-#include <cstring>   // std::strcpy
+#include <algorithm>
+#include <iterator>
+#include <utility>
+#include <cstring>
 #include <cstdint>
 #include <boost/filesystem/operations.hpp>
 

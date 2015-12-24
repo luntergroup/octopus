@@ -9,10 +9,10 @@
 #include "haplotype_phaser.hpp"
 
 #include <deque>
-#include <algorithm>  // std::max, std::sort, std::unique, std::for_each
-#include <iterator>   // std::begin, std::end, std::cbegin, std::cend, std::next, std::prev
-#include <cmath>      // std::log2
-#include <functional> // std::reference_wrapper
+#include <algorithm>
+#include <iterator>
+#include <cmath>
+#include <functional>
 
 #include "allele.hpp"
 #include "mappable_algorithms.hpp"

@@ -10,14 +10,14 @@
 #define __Octopus__maths__
 
 #include <vector>
-#include <cstddef>     // size_t
-#include <cmath>       // std::round, std::abs, std::exp, std::log, std::sqrt, std::pow, std::log10
-#include <numeric>     // std::accumulate, std::iota, std::inner_product
-#include <algorithm>   // std::max, std::max_element, std::transform, std::all_of
-#include <type_traits> // std::enable_if_t, std::is_floating_point, std::is_integral
-#include <iterator>    // std::begin, std::end, std::cbegin, std::cend, std::distance
-#include <functional>  // std::plus, std::minus
-#include <limits>      // std::numeric_limits
+#include <cstddef>
+#include <cmath>
+#include <numeric>
+#include <algorithm>
+#include <type_traits>
+#include <iterator>
+#include <functional>
+#include <limits>
 
 #include <boost/math/special_functions/gamma.hpp>
 #include <boost/math/special_functions/factorials.hpp>

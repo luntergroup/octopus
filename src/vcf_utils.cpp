@@ -11,8 +11,8 @@
 #include <unordered_map>
 #include <deque>
 #include <queue>
-#include <algorithm>  // std::transform, std::adjacent_find
-#include <functional> // std::not_equal_to
+#include <algorithm>
+#include <functional>
 #include <stdexcept>
 
 #include "contig_region.hpp"

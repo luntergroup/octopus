@@ -11,9 +11,9 @@
 
 #include <ostream>
 #include <cstdint>
-#include <algorithm> // std::min, std::max
+#include <algorithm>
 #include <stdexcept>
-#include <boost/functional/hash.hpp> // boost::hash_combine
+#include <boost/functional/hash.hpp>
 
 #include "comparable.hpp"
 

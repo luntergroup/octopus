@@ -8,11 +8,11 @@
 
 #include "reference_genome.hpp"
 
-#include <algorithm> // std::find, std::sort, std::remove_copy
-#include <iterator>  // std::cbegin, std::cend, std::back_inserter
-#include <utility>   // std::move
-#include <numeric>   // std::accumulate
-#include <regex>     // std::regex, std::smatch, std::regex_search
+#include <algorithm>
+#include <iterator>
+#include <utility>
+#include <numeric>
+#include <regex>
 #include <stdexcept>
 
 #include "fasta.hpp"

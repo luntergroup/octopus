@@ -12,16 +12,16 @@
 #include <string>
 #include <vector>
 #include <unordered_set>
-#include <functional> // std::function
-#include <tuple>      // std::tie
+#include <functional>
+#include <tuple>
 #include <list>
-#include <iterator>   // std::cbegin etc
+#include <iterator>
 #include <stdexcept>
 #include <cstdint>
 #include <unordered_map>
 #include <boost/graph/adjacency_list.hpp>
 #include <boost/graph/depth_first_search.hpp>
-#include <boost/functional/hash.hpp> // boost::hash_combine
+#include <boost/functional/hash.hpp>
 
 #include "string_utils.hpp"
 #include "hash_functions.hpp"

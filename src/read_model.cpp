@@ -9,7 +9,7 @@
 #include "read_model.hpp"
 
 #include <vector>
-#include <cmath>     // std::log
+#include <cmath>
 
 #include "maths.hpp"
 

@@ -10,7 +10,7 @@
 #define Octopus_context_iterators_hpp
 
 #include <iterator>
-#include <memory> // std::addressof
+#include <memory>
 
 /*
  ContextIterator's are iterator adapters that allow iteration over a container, but also allow

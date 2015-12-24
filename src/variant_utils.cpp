@@ -9,7 +9,7 @@
 #include "variant_utils.hpp"
 
 #include <list>
-#include <utility> // std::move
+#include <utility>
 
 #include "reference_genome.hpp"
 #include "candidate_variant_generator.hpp"

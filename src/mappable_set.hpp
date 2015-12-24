@@ -9,11 +9,11 @@
 #ifndef Octopus_mappable_set_hpp
 #define Octopus_mappable_set_hpp
 
-#include <memory>     // std::allocator
-#include <functional> // std::less
-#include <algorithm>  // std::max, std::minmax, std::swap, std::for_each
-#include <iterator>   // std::begin, std::end, std::cbegin, std::cend, std::next, std::prev
-#include <stdexcept>  // std::out_of_range
+#include <memory>
+#include <functional>
+#include <algorithm>
+#include <iterator>
+#include <stdexcept>
 #include <boost/container/flat_set.hpp>
 
 #include "comparable.hpp"

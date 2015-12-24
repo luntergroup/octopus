@@ -10,7 +10,7 @@
 #define __Octopus__assembler_candidate_variant_generator__
 
 #include <vector>
-#include <cstddef> // std::size_t
+#include <cstddef>
 
 #include "i_candidate_variant_generator.hpp"
 #include "variant_assembler.hpp"

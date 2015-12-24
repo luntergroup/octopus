@@ -8,10 +8,10 @@
 
 #include "haplotype_filter.hpp"
 
-#include <algorithm>  // std::sort, std::transform
-#include <iterator>   // std::begin, std::end, std::cbegin, std::cend, std::next, std::back_inserter
-#include <utility>    // std::pair
-#include <functional> // std::reference_wrapper
+#include <algorithm>
+#include <iterator>
+#include <utility>
+#include <functional>
 
 #include "haplotype_likelihood_cache.hpp"
 #include "read_utils.hpp"

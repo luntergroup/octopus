@@ -11,7 +11,7 @@
 
 #include <vector>
 #include <string>
-#include <cstddef> // size_t
+#include <cstddef>
 
 class GenomicRegion;
 class VcfHeader;

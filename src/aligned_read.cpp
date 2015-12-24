@@ -8,7 +8,7 @@
 
 #include "aligned_read.hpp"
 
-#include <boost/functional/hash.hpp> // boost::hash_combine, boost::hash_range
+#include <boost/functional/hash.hpp>
 
 #include "compression.hpp"
 

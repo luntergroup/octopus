@@ -15,7 +15,7 @@
 #include <map>
 #include <unordered_map>
 #include <ostream>
-#include <utility> // std::forward
+#include <utility>
 #include <initializer_list>
 
 #include "comparable.hpp"

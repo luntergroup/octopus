@@ -11,7 +11,7 @@
 
 #include <string>
 #include <set>
-#include <memory> // std::unique_ptr
+#include <memory>
 #include <cstddef>
 #include <boost/filesystem/path.hpp>
 

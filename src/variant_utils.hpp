@@ -10,9 +10,9 @@
 #define __Octopus__variant_utils__
 
 #include <vector>
-#include <algorithm> // std::mismatch, std::max, std::minmax
-#include <iterator>  // std::distance
-#include <cstddef>   // std::size_t
+#include <algorithm>
+#include <iterator>
+#include <cstddef>
 
 #include "allele.hpp"
 #include "variant.hpp"

@@ -11,11 +11,10 @@
 
 #include <vector>
 #include <unordered_map>
-#include <iterator>  // std::begin, std::end, std::make_move_iterator, std::back_inserter, std::distance
-#include <utility>   // std::move
-#include <algorithm> // std::min_element, std::max_element, std::transform, std::for_each, std::min,
-                     // std::find_if, std::find_if_not, std::copy_if, std::any_of, std::count_if
-#include <numeric>   // std::accumulate
+#include <iterator>
+#include <utility>
+#include <algorithm>
+#include <numeric>
 
 #include "aligned_read.hpp"
 #include "read_filter.hpp"

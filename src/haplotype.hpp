@@ -10,10 +10,10 @@
 #define __Octopus__haplotype__
 
 #include <queue>
-#include <cstddef>     // size_t
-#include <stdexcept>   // std::runtime_error
-#include <functional>  // std::reference_wrapper
-#include <type_traits> // std::true_type, std::false_type, std::is_same, std::decay_t
+#include <cstddef>
+#include <stdexcept>
+#include <functional>
+#include <type_traits>
 #include <iostream>
 
 #include "contig_region.hpp"

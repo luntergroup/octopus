@@ -12,8 +12,8 @@
 #include <thread>
 #include <future>
 #include <memory>
-#include <algorithm> // std::transform, std::find
-#include <cstddef>   // size_t
+#include <algorithm>
+#include <cstddef>
 #include <stdexcept>
 
 #include "common.hpp"

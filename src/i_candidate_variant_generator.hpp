@@ -10,7 +10,7 @@
 #define Octopus_i_candidate_variant_generator__
 
 #include <vector>
-#include <cstddef> // size_t
+#include <cstddef>
 
 #include "common.hpp"
 #include "variant.hpp"

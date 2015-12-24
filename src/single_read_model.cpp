@@ -8,8 +8,8 @@
 
 #include "single_read_model.hpp"
 
-#include <cmath>     // std::log
-#include <algorithm> // std::max, std::min
+#include <cmath>
+#include <algorithm>
 
 #include "mappable.hpp"
 #include "pair_hmm.hpp"

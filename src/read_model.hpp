@@ -9,8 +9,8 @@
 #ifndef __Octopus__read_model__
 #define __Octopus__read_model__
 
-#include <cstddef>   // size_t
-#include <numeric>   // std::accumulate
+#include <cstddef>
+#include <numeric>
 #include <functional>
 
 #include "haplotype.hpp"

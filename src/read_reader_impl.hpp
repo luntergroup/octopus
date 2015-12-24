@@ -11,7 +11,7 @@
 
 #include <string>
 #include <vector>
-#include <cstddef> // size_t
+#include <cstddef>
 #include <unordered_map>
 
 #include "genomic_region.hpp"

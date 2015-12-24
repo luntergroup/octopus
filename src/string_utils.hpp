@@ -11,13 +11,13 @@
 
 #include <vector>
 #include <string>
-#include <cstring>     // std::strlen
-#include <sstream>     // std::stringstream
-#include <algorithm>   // std::equal, std::swap, std::transform
-#include <iterator>    // std::cbegin, std::cend, std::next, std::back_inserter
-#include <cstddef>     // size_t
-#include <type_traits> // std::enable_if_t, std::is_floating_point
-#include <iomanip>     // std::setprecision
+#include <cstring>
+#include <sstream>
+#include <algorithm>
+#include <iterator>
+#include <cstddef>
+#include <type_traits>
+#include <iomanip>
 
 namespace Octopus {
 

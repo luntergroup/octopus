@@ -8,7 +8,7 @@
 
 #include "pedigree_genotype_model.hpp"
 
-#include <algorithm> // std::transform
+#include <algorithm>
 
 #include "haplotype_likelihood_cache.hpp"
 #include "read_model.hpp"

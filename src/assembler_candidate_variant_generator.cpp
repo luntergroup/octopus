@@ -8,7 +8,7 @@
 
 #include "assembler_candidate_variant_generator.hpp"
 
-#include <algorithm> // std::for_each
+#include <algorithm>
 
 #include "reference_genome.hpp"
 #include "aligned_read.hpp"

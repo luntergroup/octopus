@@ -10,8 +10,8 @@
 #define __Octopus__read_reader__
 
 #include <vector>
-#include <cstddef> // size_t
-#include <memory>  // std::unique_ptr
+#include <cstddef>
+#include <memory>
 #include <mutex>
 #include <boost/filesystem/path.hpp>
 

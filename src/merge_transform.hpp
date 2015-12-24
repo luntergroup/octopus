@@ -9,9 +9,9 @@
 #ifndef merge_transform_hpp
 #define merge_transform_hpp
 
-#include <algorithm>  // std::transform
-#include <iterator>   // std::cbegin, std::cend
-#include <functional> // std::less
+#include <algorithm>
+#include <iterator>
+#include <functional>
 
 namespace detail
 {
