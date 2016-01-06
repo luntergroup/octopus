@@ -46,13 +46,13 @@ bool is_left_alignable(const Variant& variant) noexcept;
  A variant is left aligned if and only if it is no longer possible to shift its position
  to the left while keeping the length of all its alleles constant.
  */
-Variant left_align(const Variant& variant, ReferenceGenome& reference,
+Variant left_align(const Variant& variant, const ReferenceGenome& reference,
                    Variant::SizeType extension_size = 30);
 
 /*
   A variant is normalised if and only if it is parsimonious and left aligned.
  */
-Variant normalise(const Variant& variant, ReferenceGenome& reference,
+Variant normalise(const Variant& variant, const ReferenceGenome& reference,
                   Variant::SizeType extension_size = 30);
 
 Variant pad_left(const Variant& variant, const Variant::SequenceType& sequence);

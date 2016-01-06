@@ -32,17 +32,18 @@ Allele::SizeType sequence_size(const Allele& allele) noexcept
     return static_cast<Allele::SizeType>(allele.get_sequence().size());
 }
 
-bool is_reference(const Allele& allele, ReferenceGenome& reference)
+bool is_reference(const Allele& allele, const ReferenceGenome& reference)
 {
     return allele.get_sequence() == reference.get_sequence(allele.get_region());
 }
 
-Allele get_reference_allele(const GenomicRegion& region, ReferenceGenome& reference)
+Allele get_reference_allele(const GenomicRegion& region, const ReferenceGenome& reference)
 {
     return Allele {region, reference.get_sequence(region)};
 }
 
-std::vector<Allele> get_reference_alleles(const std::vector<GenomicRegion>& regions, ReferenceGenome& reference)
+std::vector<Allele> get_reference_alleles(const std::vector<GenomicRegion>& regions,
+                                          const ReferenceGenome& reference)
 {
     std::vector<Allele> result {};
     result.reserve(regions.size());
@@ -53,7 +54,8 @@ std::vector<Allele> get_reference_alleles(const std::vector<GenomicRegion>& regi
     return result;
 }
 
-std::vector<Allele> get_positional_reference_alleles(const GenomicRegion& region, ReferenceGenome& reference)
+std::vector<Allele> get_positional_reference_alleles(const GenomicRegion& region,
+                                                     const ReferenceGenome& reference)
 {
     auto sequence  = reference.get_sequence(region);
     auto positions = decompose(region);

@@ -412,8 +412,8 @@ BOOST_AUTO_TEST_CASE(haplotype_tree_survives_serious_pruning)
     HaplotypeTree haplotype_tree {human};
     
     for (const auto& candidate : candidates) {
-        haplotype_tree.extend(candidate.get_reference_allele());
-        haplotype_tree.extend(candidate.get_alternative_allele());
+        haplotype_tree.extend(candidate.get_ref_allele());
+        haplotype_tree.extend(candidate.get_alt_allele());
     }
     
     auto haplotypes = haplotype_tree.get_haplotypes(a_region);
@@ -484,8 +484,8 @@ BOOST_AUTO_TEST_CASE(prune_unqiue_leaves_a_single_haplotype_which_contains_the_s
     HaplotypeTree haplotype_tree {human};
     
     for (const auto& candidate : candidates) {
-        haplotype_tree.extend(candidate.get_reference_allele());
-        haplotype_tree.extend(candidate.get_alternative_allele());
+        haplotype_tree.extend(candidate.get_ref_allele());
+        haplotype_tree.extend(candidate.get_alt_allele());
     }
     
     auto haplotypes = haplotype_tree.get_haplotypes(a_region);

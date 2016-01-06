@@ -68,9 +68,7 @@ template <typename SequenceType1, typename SequenceType2, typename SequenceType3
 Variant::Variant(SequenceType1&& ref_contig_name, SizeType ref_begin,
                  SequenceType2&& ref_sequence, SequenceType3&& alt_sequence)
 :
-ref_ {GenomicRegion {std::forward<SequenceType1>(ref_contig_name),
-    ref_begin, ref_begin + static_cast<SizeType>(ref_sequence.size())},
-    std::forward<SequenceType2>(ref_sequence)},
+ref_ {std::forward<SequenceType1>(ref_contig_name), ref_begin, std::forward<SequenceType2>(ref_sequence)},
 alt_ {ref_.get_region(), std::forward<SequenceType3>(alt_sequence)}
 {}
 

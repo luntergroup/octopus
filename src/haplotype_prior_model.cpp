@@ -46,9 +46,9 @@ double HaplotypePriorModel::evaluate(const Haplotype& to, const Haplotype& from)
         } else if (is_indel(variant)) {
             if (is_insertion(variant)) {
                 if (repeats.empty()) {
-                    result *= transversion_rate_ * variant.alternative_allele_size();
+                    result *= transversion_rate_ * alt_sequence_size(variant);
                 } else {
-                    result *= transition_rate_ * variant.alternative_allele_size();
+                    result *= transition_rate_ * alt_sequence_size(variant);
                 }
             } else {
                 if (repeats.empty()) {
@@ -58,10 +58,10 @@ double HaplotypePriorModel::evaluate(const Haplotype& to, const Haplotype& from)
                 }
             }
         } else {
-            auto itr1 = std::cbegin(variant.get_reference_allele_sequence());
-            auto itr2 = std::cbegin(variant.get_alternative_allele_sequence());
+            auto itr1 = std::cbegin(get_ref_sequence(variant));
+            auto itr2 = std::cbegin(get_alt_sequence(variant));
             
-            std::for_each(itr1, std::cend(variant.get_reference_allele_sequence()),
+            std::for_each(itr1, std::cend(get_ref_sequence(variant)),
                           [this, &itr2, &result] (char base) {
                               if (base != *itr2) {
                                   result *= 0.9 * transversion_rate_;

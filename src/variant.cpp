@@ -14,6 +14,11 @@ ref_ {std::move(reference)},
 alt_ {std::move(alternative)}
 {}
 
+const GenomicRegion& Variant::get_region() const noexcept
+{
+    return ref_.get_region();
+}
+
 const Allele& Variant::get_ref_allele() const noexcept
 {
     return ref_;

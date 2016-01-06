@@ -322,7 +322,7 @@ namespace Octopus
         double result {};
         
         for (const auto& variant : variants) {
-            auto curr = allele_posteriors.at(variant.get_alternative_allele());
+            auto curr = allele_posteriors.at(variant.get_alt_allele());
             if (curr > result) result = curr;
         }
         
@@ -338,7 +338,7 @@ namespace Octopus
         
         std::copy_if(std::cbegin(variants), std::cend(variants), std::back_inserter(result),
                      [&allele_posteriors, min_posterior] (const auto& variant) {
-                         return allele_posteriors.at(variant.get_alternative_allele()) >= min_posterior;
+                         return allele_posteriors.at(variant.get_alt_allele()) >= min_posterior;
                      });
         
         result.shrink_to_fit();
@@ -436,7 +436,7 @@ namespace Octopus
         for (auto& call : somatic_mutation_calls) {
             if (is_indel(call.allele) && !is_reference(call.allele, reference)) {
                 Variant v {get_reference_allele(call.allele.get_region(), reference), call.allele};
-                call.allele = make_parsimonious(v, reference).get_alternative_allele();
+                call.allele = make_parsimonious(v, reference).get_alt_allele();
             }
         }
     }
@@ -771,7 +771,7 @@ namespace Octopus
             merge_transform(germline_variant_calls, germline_genotype_calls,
                             somatic_mutation_calls, std::back_inserter(result),
                             [this, &reads, &phase_region] (const auto& variant_call, const auto& genotype_call) {
-                                return output_germline_variant_call(variant_call.variants.front().get_reference_allele(),
+                                return output_germline_variant_call(variant_call.variants.front().get_ref_allele(),
                                                                     variant_call.variants, genotype_call,
                                                                     variant_call.posterior, reference_, reads, phase_region);
                             },

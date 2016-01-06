@@ -29,6 +29,8 @@ public:
     Allele() = default;
     template <typename GenomicRegion_, typename SequenceType_>
     Allele(GenomicRegion_&& reference_region, SequenceType_&& sequence);
+    template <typename StringType_, typename SequenceType_>
+    Allele(StringType_&& contig_name, SizeType begin_pos, SequenceType_&& sequence);
     ~Allele() = default;
     
     Allele(const Allele&)            = default;
@@ -40,26 +42,36 @@ public:
     const SequenceType& get_sequence() const noexcept;
     
 private:
-    GenomicRegion reference_region_;
     SequenceType sequence_;
+    GenomicRegion reference_region_;
 };
 
 template <typename GenomicRegion_, typename SequenceType_>
 Allele::Allele(GenomicRegion_&& reference_region, SequenceType_&& sequence)
 :
-reference_region_ {std::forward<GenomicRegion_>(reference_region)},
-sequence_ {std::forward<SequenceType_>(sequence)}
+sequence_ {std::forward<SequenceType_>(sequence)},
+reference_region_ {std::forward<GenomicRegion_>(reference_region)}
+{}
+
+template <typename StringType_, typename SequenceType_>
+Allele::Allele(StringType_&& contig_name, SizeType begin_pos, SequenceType_&& sequence)
+:
+sequence_ {std::forward<SequenceType_>(sequence)},
+reference_region_ {std::forward<StringType_>(contig_name), begin_pos,
+        static_cast<SizeType>(begin_pos + sequence_.size())}
 {}
 
 Allele::SizeType sequence_size(const Allele& allele) noexcept;
 
-bool is_reference(const Allele& allele, ReferenceGenome& reference);
+bool is_reference(const Allele& allele, const ReferenceGenome& reference);
 
-Allele get_reference_allele(const GenomicRegion& region, ReferenceGenome& reference);
+Allele get_reference_allele(const GenomicRegion& region, const ReferenceGenome& reference);
 
-std::vector<Allele> get_reference_alleles(const std::vector<GenomicRegion>& regions, ReferenceGenome& reference);
+std::vector<Allele> get_reference_alleles(const std::vector<GenomicRegion>& regions,
+                                          const ReferenceGenome& reference);
 
-std::vector<Allele> get_positional_reference_alleles(const GenomicRegion& region, ReferenceGenome& reference);
+std::vector<Allele> get_positional_reference_alleles(const GenomicRegion& region,
+                                                     const ReferenceGenome& reference);
 
 Allele splice(const Allele& allele, const GenomicRegion& region);
 

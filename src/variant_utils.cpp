@@ -443,7 +443,7 @@ std::vector<Allele::SequenceType> get_alt_allele_sequences(const std::vector<Var
     result.reserve(variants.size());
     
     boost::transform(variants, std::back_inserter(result),
-                     [] (const auto& variant) { return variant.get_alternative_allele_sequence(); });
+                     [] (const auto& variant) { return get_alt_sequence(variant); });
     
     return result;
 }

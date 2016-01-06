@@ -262,7 +262,7 @@ static VariantCalls call_variants(const std::vector<Variant>& candidates,
     result.reserve(candidates.size());
     
     for (const Variant& candidate : candidates) {
-        auto posterior = max_posterior(candidate.get_alternative_allele(), allele_posteriors);
+        auto posterior = max_posterior(candidate.get_alt_allele(), allele_posteriors);
         
         if (posterior >= min_posterior) {
             result.emplace_back(candidate, posterior);
@@ -437,7 +437,7 @@ std::vector<unsigned> count_alleles(const std::vector<Variant>& variants, const 
     result.reserve(variants.size());
     
     for (const auto& variant : variants) {
-        result.push_back(allele_counts[variant.get_alternative_allele()]);
+        result.push_back(allele_counts[variant.get_alt_allele()]);
     }
     
     return result;
@@ -458,7 +458,7 @@ VcfRecord output_variant_call(const VariantCallBlock& block, const GenotypeCalls
     
     const auto phred_quality = Maths::probability_to_phred<float>(block.posterior);
     
-    const auto reference_allele = block.variants.front().get_reference_allele();
+    const auto reference_allele = block.variants.front().get_ref_allele();
     
     const auto& region = get_region(reference_allele);
     
