@@ -13,6 +13,7 @@
 #include <cstddef>
 #include <memory>
 #include <mutex>
+
 #include <boost/filesystem/path.hpp>
 
 #include "read_reader_impl.hpp"

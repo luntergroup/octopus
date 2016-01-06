@@ -10,6 +10,7 @@
 #define __Octopus__octopus__
 
 #include <vector>
+
 #include <boost/program_options.hpp>
 
 #include "genomic_region.hpp"

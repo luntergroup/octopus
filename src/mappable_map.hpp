@@ -15,11 +15,12 @@
 #include <iterator>
 #include <stdexcept>
 #include <cstddef>
+#include <functional>
 
 #include "mappable_set.hpp"
 
-template <typename KeyType, typename MappableType>
-using MappableMap = std::unordered_map<KeyType, MappableSet<MappableType>>;
+template <typename KeyType, typename MappableType, typename Allocator = std::allocator<MappableType>>
+using MappableMap = std::unordered_map<KeyType, MappableSet<MappableType, Allocator>>;
 
 template <typename Map>
 MappableMap<typename Map::key_type, typename Map::mapped_type::value_type>
@@ -34,7 +35,7 @@ make_mappable_map(Map map)
     
     std::for_each(make_move_iterator(begin(map)), make_move_iterator(end(map)), [&result] (auto&& p) {
         result.emplace(std::move(p.first),
-                       MappableSet<T> { make_move_iterator(begin(p.second)), make_move_iterator(end(p.second)) });
+                       MappableSet<T> {make_move_iterator(begin(p.second)), make_move_iterator(end(p.second))});
     });
     
     return result;
@@ -265,6 +266,29 @@ copy_overlapped(const MappableMap<KeyType, MappableType1>& mappables, const Mapp
     }
     
     return result;
+}
+
+template <typename KeyType, typename MappableType>
+std::vector<unsigned>
+positional_coverage(const MappableMap<KeyType, MappableType>& mappables, const GenomicRegion& region)
+{
+    std::vector<unsigned> result(size(region), 0);
+    
+    for (const auto& p : mappables) {
+        const auto pcoverage = positional_coverage(p.second, region);
+        
+        std::transform(std::cbegin(result), std::cend(result), std::cbegin(pcoverage),
+                       std::begin(result), std::plus<unsigned>{});
+    }
+    
+    return result;
+}
+
+template <typename KeyType, typename MappableType>
+std::vector<unsigned>
+positional_coverage(const MappableMap<KeyType, MappableType>& mappables)
+{
+    return positional_coverage(mappables, get_encompassing_region(mappables));
 }
 
 #endif

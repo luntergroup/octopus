@@ -52,11 +52,10 @@ std::vector<Haplotype> HaplotypePhaser::get_haplotypes()
 {
     const auto next_candidates = buffered_candidates_.overlap_range(next_region_);
     
-    std::for_each(std::cbegin(next_candidates), std::cend(next_candidates),
-                  [this] (const auto& candidate) {
-                      tree_.extend(candidate.get_reference_allele());
-                      tree_.extend(candidate.get_alternative_allele());
-                  });
+    for (const auto candidate : buffered_candidates_.overlap_range(next_region_)) {
+        tree_.extend(candidate.get_ref_allele());
+        tree_.extend(candidate.get_alt_allele());
+    }
     
     current_region_ = next_region_;
     
@@ -67,11 +66,10 @@ std::vector<Haplotype> HaplotypePhaser::get_haplotypes(const GenotypePosteriors&
 {
     const auto next_candidates = buffered_candidates_.overlap_range(next_region_);
     
-    std::for_each(std::cbegin(next_candidates), std::cend(next_candidates),
-                  [this] (const auto& candidate) {
-                      tree_.extend(candidate.get_reference_allele());
-                      tree_.extend(candidate.get_alternative_allele());
-                  });
+    for (const auto candidate : next_candidates) {
+        tree_.extend(candidate.get_ref_allele());
+        tree_.extend(candidate.get_alt_allele());
+    }
     
     current_region_ = next_region_;
     

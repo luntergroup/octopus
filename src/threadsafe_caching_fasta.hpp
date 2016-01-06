@@ -12,6 +12,7 @@
 #include <string>
 #include <vector>
 #include <mutex>
+
 #include <boost/filesystem/path.hpp>
 
 #include "reference_genome_impl.hpp"
@@ -39,12 +40,12 @@ public:
     
 private:
     CachingFasta fasta_;
-    std::mutex fasta_mutex_;
+    mutable std::mutex fasta_mutex_;
     
     std::string do_get_reference_name() const override;
-    std::vector<std::string> do_get_contig_names() override;
-    SizeType do_get_contig_size(const std::string& contig_name) override;
-    SequenceType do_fetch_sequence(const GenomicRegion& region) override;
+    std::vector<std::string> do_get_contig_names() const override;
+    SizeType do_get_contig_size(const std::string& contig_name) const override;
+    SequenceType do_fetch_sequence(const GenomicRegion& region) const override;
 };
 
 #endif /* defined(__Octopus__threadsafe_caching_fasta__) */

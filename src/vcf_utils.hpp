@@ -11,6 +11,7 @@
 
 #include <vector>
 #include <string>
+
 #include <boost/filesystem/path.hpp>
 
 #include "vcf_type.hpp"

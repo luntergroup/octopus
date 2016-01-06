@@ -14,6 +14,7 @@
 #include <stdexcept>
 #include <vector>
 #include <cassert>
+
 #include <boost/functional/hash.hpp>
 
 #include "contig_region.hpp"

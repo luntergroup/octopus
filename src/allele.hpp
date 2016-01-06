@@ -12,6 +12,7 @@
 #include <string>
 #include <ostream>
 #include <utility>
+
 #include <boost/functional/hash.hpp>
 
 #include "genomic_region.hpp"
@@ -50,6 +51,8 @@ reference_region_ {std::forward<GenomicRegion_>(reference_region)},
 sequence_ {std::forward<SequenceType_>(sequence)}
 {}
 
+Allele::SizeType sequence_size(const Allele& allele) noexcept;
+
 bool is_reference(const Allele& allele, ReferenceGenome& reference);
 
 Allele get_reference_allele(const GenomicRegion& region, ReferenceGenome& reference);
@@ -76,12 +79,13 @@ bool operator<(const Allele& lhs, const Allele& rhs);
 namespace std {
     template <> struct hash<Allele>
     {
-        size_t operator()(const Allele& a) const
+        size_t operator()(const Allele& allele) const
         {
-            size_t seed {};
-            boost::hash_combine(seed, hash<GenomicRegion>()(a.get_region()));
-            boost::hash_combine(seed, hash<Allele::SequenceType>()(a.get_sequence()));
-            return seed;
+            using boost::hash_combine;
+            size_t result {};
+            hash_combine(result, hash<GenomicRegion>()(allele.get_region()));
+            hash_combine(result, hash<Allele::SequenceType>()(allele.get_sequence()));
+            return result;
         }
     };
 } // namespace std

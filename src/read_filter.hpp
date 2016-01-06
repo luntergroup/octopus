@@ -132,7 +132,8 @@ namespace detail
 
 template <typename BidirectionalIterator>
 BidirectionalIterator
-ReadFilter<BidirectionalIterator>::filter(BidirectionalIterator first, BidirectionalIterator last) const
+ReadFilter<BidirectionalIterator>::filter(BidirectionalIterator first,
+                                          BidirectionalIterator last) const
 {
     using std::remove_if; using std::all_of; using std::cbegin; using std::cend;
     
@@ -157,47 +158,12 @@ ReadFilter<BidirectionalIterator>::filter(BidirectionalIterator first, Bidirecti
     });
 }
 
-//template <typename BidirectionalIterator>
-//BidirectionalIterator
-//ReadFilter<BidirectionalIterator>::partition(BidirectionalIterator first, BidirectionalIterator last) const
-//{
-//    using std::stable_partition; using std::all_of; using std::cbegin; using std::cend;
-//    
-//    auto it = stable_partition(first, last, [this] (const auto& read) {
-//        return all_of(cbegin(noncontext_filters_), cend(noncontext_filters_),
-//                      [&read] (const auto& filter) { return filter(read); });
-//    });
-//    
-//    // now we have potentially it - begin passes
-//    
-//    std::vector<typename BidirectionalIterator::value_type> buffer(std::distance(first, it));
-//    std::move(first, it, begin(buffer));
-//    
-//    auto prev = first;
-//    
-//    std::partition_copy(std::make_move_iterator(begin(buffer)),
-//                        std::make_move_iterator(end(buffer)),
-//                        first, std::reverse_iterator<BidirectionalIterator> {it},
-//                        [this, first, &prev] (const auto& read) {
-//                            auto all_good = all_of(cbegin(context_filters_), cend(context_filters_),
-//                                                   [&read, first, prev] (const auto& filter) {
-//                                                       return filter(read, detail::get_first(first, prev),
-//                                                                     detail::get_last(first, prev));
-//                                                   });
-//                            
-//                            if (all_good) ++prev;
-//                            
-//                            return all_good;
-//                        });
-//    
-//    return prev;
-//}
-
 template <typename BidirectionalIterator>
 template <typename InputIterator, typename OutputIterator1, typename OutputIterator2>
 std::pair<OutputIterator1, OutputIterator2>
 ReadFilter<BidirectionalIterator>::filter_reads(InputIterator first, InputIterator last,
-                                                OutputIterator1 good_reads, OutputIterator2 bad_reads) const
+                                                OutputIterator1 good_reads,
+                                                OutputIterator2 bad_reads) const
 {
     auto good_reads_last = good_reads;
     
@@ -213,7 +179,8 @@ ReadFilter<BidirectionalIterator>::filter_reads(InputIterator first, InputIterat
 }
 
 template <typename Iterator>
-bool ReadFilter<Iterator>::filter_read(const AlignedRead& read, Iterator first_good, Iterator prev_good) const
+bool ReadFilter<Iterator>::filter_read(const AlignedRead& read,
+                                       Iterator first_good, Iterator prev_good) const
 {
     using std::cbegin; using std::cend; using std::all_of;
     

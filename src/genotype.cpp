@@ -9,6 +9,7 @@
 #include "genotype.hpp"
 
 #include <functional>
+
 #include <boost/math/special_functions/binomial.hpp>
 
 Genotype<Allele>::Genotype(unsigned ploidy)
@@ -60,7 +61,8 @@ typename Genotype<Allele>::Iterator Genotype<Allele>::cend() const noexcept
 
 bool Genotype<Allele>::is_homozygous() const
 {
-    return std::adjacent_find(std::cbegin(alleles_), std::cend(alleles_), std::not_equal_to<Allele>()) == std::cend(alleles_);
+    return std::adjacent_find(std::cbegin(alleles_), std::cend(alleles_),
+                              std::not_equal_to<Allele>()) == std::cend(alleles_);
 }
 
 unsigned Genotype<Allele>::zygosity() const

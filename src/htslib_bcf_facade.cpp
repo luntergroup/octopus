@@ -16,6 +16,7 @@
 #include <utility>
 #include <cstring>
 #include <cstdint>
+
 #include <boost/filesystem/operations.hpp>
 
 #include "genomic_region.hpp"

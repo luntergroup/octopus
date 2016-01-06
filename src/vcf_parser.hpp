@@ -13,6 +13,7 @@
 #include <string>
 #include <cstddef>
 #include <fstream>
+
 #include <boost/filesystem/path.hpp>
 
 #include "i_vcf_reader_impl.hpp"

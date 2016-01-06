@@ -63,6 +63,7 @@ private:
     void add_candidate(T1&& region, T2&& sequence_removed, T3&& sequence_added);
     void add_snvs_in_match_range(const GenomicRegion& region, SequenceIterator first_base,
                                  SequenceIterator last_base, QualitiesIterator first_quality);
+    void sort_candiates_if_needed();
 };
 
 template <typename T1, typename T2, typename T3>

@@ -100,6 +100,14 @@ namespace Octopus
         return vcf_header_builder.build_once();
     }
     
+    GenomicRegion::SizeType search_regions_size(const SearchRegions& regions)
+    {
+        return std::accumulate(std::cbegin(regions), std::cend(regions), GenomicRegion::SizeType {},
+                               [] (const auto curr, const auto& p) {
+                                   return curr + sum_sizes(p.second);
+                               });
+    }
+    
     void run_octopus(po::variables_map& options)
     {
         using std::cout; using std::endl;
@@ -160,7 +168,7 @@ namespace Octopus
                     cout << "writing " << calls.size() << " calls to VCF" << endl;
                     
                     for (auto&& call : calls) {
-                        cout << call << endl;
+                        //cout << call << endl;
                         output.write(std::move(call));
                     }
                     
@@ -171,6 +179,8 @@ namespace Octopus
                 }
             }
         }
+        
+        cout << "processed " << search_regions_size(regions) << "bp" << std::endl;
     }
     
 } // namespace Octopus

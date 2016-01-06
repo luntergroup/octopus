@@ -13,6 +13,7 @@
 #include <cstdint>
 #include <algorithm>
 #include <stdexcept>
+
 #include <boost/functional/hash.hpp>
 
 #include "comparable.hpp"

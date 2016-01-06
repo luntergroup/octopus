@@ -14,6 +14,7 @@
 #include <cstddef>
 #include <iterator>
 #include <stdexcept>
+
 #include <boost/iterator/filter_iterator.hpp>
 #include <boost/range/iterator_range_core.hpp>
 
@@ -842,6 +843,69 @@ std::vector<GenomicRegion> get_segment_regions(const std::vector<std::vector<Map
     }
     
     return result;
+}
+
+//template <typename InputIterator>
+//bool has_coverage(InputIterator first, InputIterator last, const GenomicRegion& region)
+//{
+//    const auto overlapped = overlap_range(first, last);
+//    return std::any_of(std::cbegin(overlapped), std::cend(overlapped),
+//                       [] (const auto& mappable) { return !empty(mappable); });
+//}
+//
+//template <typename InputIterator>
+//bool has_coverage(InputIterator first, InputIterator last)
+//{
+//    return std::any_of(first, last, [] (const auto& mappable) { return !empty(mappable); });
+//}
+//
+//template <typename Container>
+//bool has_coverage(const Container& mappables)
+//{
+//    return has_coverage(std::cbegin(mappables), std::cend(mappables));
+//}
+//
+//template <typename Container>
+//bool has_coverage(const Container& mappables, const GenomicRegion& region)
+//{
+//    return has_coverage(std::cbegin(mappables), std::cend(mappables), region);
+//}
+
+template <typename InputIterator>
+std::vector<unsigned>
+positional_coverage(InputIterator first, InputIterator last, const GenomicRegion& region)
+{
+    using std::for_each; using std::next; using std::min;
+    
+    const auto num_positions = size(region);
+    
+    std::vector<unsigned> result(num_positions, 0);
+    
+    const auto result_begin_itr = std::begin(result);
+    
+    const auto first_position = get_begin(region);
+    
+    for_each(first, last, [result_begin_itr, first_position, num_positions] (const auto& mappable) {
+        const auto it1 = next(result_begin_itr, (get_begin(mappable) <= first_position) ? 0 : get_begin(mappable) - first_position);
+        const auto it2 = next(result_begin_itr, min(get_end(mappable) - first_position, num_positions));
+        std::transform(it1, it2, it1, [] (const auto count) { return count + 1; });
+    });
+    
+    return result;
+}
+
+template <typename Container>
+std::vector<unsigned> positional_coverage(const Container& mappables)
+{
+    return positional_coverage(std::cbegin(mappables), std::cend(mappables),
+                               get_encompassing_region(mappables));
+}
+
+template <typename Container>
+std::vector<unsigned> positional_coverage(const Container& mappables, const GenomicRegion& region)
+{
+    const auto overlapped = overlap_range(mappables, region);
+    return positional_coverage(std::cbegin(overlapped), std::cend(overlapped), region);
 }
 
 #endif

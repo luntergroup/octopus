@@ -16,14 +16,16 @@
 #include <algorithm>
 #include <numeric>
 
+#include <boost/range/algorithm.hpp>
+
 #include "aligned_read.hpp"
 #include "read_filter.hpp"
 #include "read_transform.hpp"
 #include "context_iterators.hpp"
 #include "mappable_algorithms.hpp"
-#include "maths.hpp"
 #include "mappable_set.hpp"
 #include "mappable_map.hpp"
+#include "maths.hpp"
 
 namespace Octopus
 {
@@ -154,42 +156,6 @@ void transform_reads(ReadMap& reads, const ReadTransform& transformer)
     for (auto& p : reads) transformer.transform_reads(std::begin(p.second), std::end(p.second));
 }
 
-template <typename InputIterator>
-std::vector<unsigned> positional_coverage(InputIterator first, InputIterator last, const GenomicRegion& region)
-{
-    const auto num_positions = size(region);
-    
-    std::vector<unsigned> result(num_positions, 0);
-    
-    const auto first_position = get_begin(region);
-    
-    std::for_each(first, last, [&result, first_position, num_positions] (const auto& read) {
-        auto first = std::next(std::begin(result), (get_begin(read) <= first_position) ? 0 : get_begin(read) - first_position);
-        auto last  = std::next(std::begin(result), std::min(get_end(read) - first_position, num_positions));
-        std::transform(first, last, first, [] (auto count) { return count + 1; });
-    });
-    
-    return result;
-}
-
-inline std::vector<unsigned> positional_coverage(const MappableSet<AlignedRead>& reads)
-{
-    return positional_coverage(std::cbegin(reads), std::cend(reads), get_encompassing_region(reads));
-}
-
-inline std::vector<unsigned> positional_coverage(const MappableSet<AlignedRead>& reads, const GenomicRegion& region)
-{
-    const auto overlapped = reads.overlap_range(region);
-    return positional_coverage(std::cbegin(overlapped), std::cend(overlapped), region);
-}
-
-template <typename T>
-std::vector<unsigned> positional_coverage(const T& reads, const GenomicRegion& region)
-{
-    const auto overlapped = overlap_range(reads, region);
-    return positional_coverage(std::cbegin(overlapped), std::cend(overlapped), region);
-}
-
 namespace detail
 {
     template <bool> struct IsMapType {};
@@ -223,17 +189,15 @@ namespace detail
     template <typename T>
     bool has_coverage(const T& reads, const GenomicRegion& region, NonMapTypeTag)
     {
-        const auto positions_coverage = positional_coverage(reads, region);
-        return std::any_of(std::cbegin(positions_coverage), std::cend(positions_coverage),
-                           [] (auto coverage) { return coverage > 0; });
+        const auto overlapped = overlap_range(reads, region);
+        return std::any_of(std::cbegin(overlapped), std::cend(overlapped),
+                           [] (const auto& read) { return !empty(read); });
     }
     
     inline bool has_coverage(const MappableSet<AlignedRead>& reads, NonMapTypeTag)
     {
-        if (reads.empty()) return false;
-        const auto positions_coverage = positional_coverage(reads);
-        return std::any_of(std::cbegin(positions_coverage), std::cend(positions_coverage),
-                           [] (auto coverage) { return coverage > 0; });
+        return std::any_of(std::cbegin(reads), std::cend(reads),
+                           [] (const auto& read) { return !empty(read); });
     }
     
     template <typename T>
@@ -494,7 +458,7 @@ namespace detail
     
     inline double rmq_base_quality(const MappableSet<AlignedRead>& reads, const GenomicRegion& region, NonMapTypeTag)
     {
-        auto overlapped = reads.overlap_range(region);
+        const auto overlapped = reads.overlap_range(region);
         
         std::vector<double> qualities {};
         qualities.reserve(count_base_pairs(reads, region, NonMapTypeTag()));

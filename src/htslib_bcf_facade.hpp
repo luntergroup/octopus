@@ -13,6 +13,7 @@
 #include <set>
 #include <memory>
 #include <cstddef>
+
 #include <boost/filesystem/path.hpp>
 
 #include "i_vcf_reader_impl.hpp"

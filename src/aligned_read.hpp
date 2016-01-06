@@ -236,9 +236,9 @@ bool operator==(const AlignedRead::NextSegment& lhs, const AlignedRead::NextSegm
 namespace std {
     template <> struct hash<AlignedRead>
     {
-        size_t operator()(const AlignedRead& r) const
+        size_t operator()(const AlignedRead& read) const
         {
-            return r.get_hash();
+            return read.get_hash();
         }
     };
 } // namespace std
@@ -247,14 +247,14 @@ namespace boost
 {
     template <> struct hash<AlignedRead> : std::unary_function<AlignedRead, size_t>
     {
-        size_t operator()(const AlignedRead& r) const
+        size_t operator()(const AlignedRead& read) const
         {
-            return std::hash<AlignedRead>()(r);
+            return std::hash<AlignedRead>()(read);
         }
     };
 } // namespace boost
 
 std::ostream& operator<<(std::ostream& os, const AlignedRead::Qualities& qualities);
-std::ostream& operator<<(std::ostream& os, const AlignedRead& a_read);
+std::ostream& operator<<(std::ostream& os, const AlignedRead& read);
 
 #endif /* defined(__Octopus__aligned_read__) */

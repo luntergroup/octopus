@@ -27,6 +27,11 @@ const Allele::SequenceType& Allele::get_sequence() const noexcept
 
 // non-member functions
 
+Allele::SizeType sequence_size(const Allele& allele) noexcept
+{
+    return static_cast<Allele::SizeType>(allele.get_sequence().size());
+}
+
 bool is_reference(const Allele& allele, ReferenceGenome& reference)
 {
     return allele.get_sequence() == reference.get_sequence(allele.get_region());

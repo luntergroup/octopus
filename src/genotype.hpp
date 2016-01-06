@@ -17,6 +17,7 @@
 #include <iterator>
 #include <algorithm>
 #include <type_traits>
+
 #include <boost/functional/hash.hpp>
 
 #include "allele.hpp"
@@ -159,7 +160,7 @@ bool Genotype<MappableType>::contains(const MappableType& element) const
 template <typename MappableType>
 unsigned Genotype<MappableType>::count(const MappableType& element) const
 {
-    auto equal_range = std::equal_range(std::cbegin(elements_), std::cend(elements_), element);
+    const auto equal_range = std::equal_range(std::cbegin(elements_), std::cend(elements_), element);
     return static_cast<unsigned>(std::distance(equal_range.first, equal_range.second));
 }
 

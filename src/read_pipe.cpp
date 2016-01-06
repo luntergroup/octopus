@@ -50,6 +50,11 @@ ReadMap ReadPipe::fetch_reads(std::vector<SampleIdType> samples, const GenomicRe
         
         //std::cout << "fetched " << count_reads(batch_reads) << " batch reads" << std::endl;
         
+//        for (auto r : filter_reads(batch_reads, read_filter_).second.cbegin()->second) {
+//            std::cout << r << std::endl;
+//        }
+//        exit(0);
+        
         auto filtered_batch = filter_reads(std::move(batch_reads), read_filter_).first;
         
         //std::cout << "found " << count_reads(filtered_batch) << " good batch reads" << std::endl;

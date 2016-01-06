@@ -15,6 +15,7 @@
 #include <vector>
 #include <ostream>
 #include <numeric>
+
 #include <boost/functional/hash.hpp>
 
 #include "comparable.hpp"

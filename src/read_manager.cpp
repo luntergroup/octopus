@@ -11,6 +11,7 @@
 #include <iterator>
 #include <algorithm>
 #include <utility>
+
 #include <boost/filesystem/operations.hpp>
 
 #include "aligned_read.hpp"

@@ -10,13 +10,10 @@
 #define __Octopus__variant_utils__
 
 #include <vector>
-#include <algorithm>
-#include <iterator>
 #include <cstddef>
 
 #include "allele.hpp"
 #include "variant.hpp"
-#include "genomic_region.hpp"
 
 class ReferenceGenome;
 class VariantFactory;
@@ -30,7 +27,7 @@ void remove_duplicates(std::vector<Variant>& variants);
 std::vector<Allele> decompose(const std::vector<Variant>& variants);
 
 std::vector<Allele> get_intervening_reference_alleles(const std::vector<Variant>& variants,
-                                                      ReferenceGenome& reference);
+                                                      const ReferenceGenome& reference);
 
 /*
  A variant is parsimonious if and only if it is represented in as few nucleotides as possible
@@ -38,7 +35,7 @@ std::vector<Allele> get_intervening_reference_alleles(const std::vector<Variant>
  */
 bool is_parsimonious(const Variant& variant) noexcept;
 
-Variant make_parsimonious(const Variant& variant, ReferenceGenome& reference);
+Variant make_parsimonious(const Variant& variant, const ReferenceGenome& reference);
 
 bool is_left_alignable(const Variant& variant) noexcept;
 
@@ -60,18 +57,18 @@ Variant normalise(const Variant& variant, ReferenceGenome& reference,
 
 Variant pad_left(const Variant& variant, const Variant::SequenceType& sequence);
 Variant pad_right(const Variant& variant, const Variant::SequenceType& sequence);
-Variant pad_right(const Variant& variant, ReferenceGenome& reference, Variant::SizeType n);
-Variant pad_left(const Variant& variant, ReferenceGenome& reference, Variant::SizeType n);
-Variant pad_right(const Variant& variant, ReferenceGenome& reference, Variant::SizeType n);
+Variant pad_right(const Variant& variant, const ReferenceGenome& reference, Variant::SizeType n);
+Variant pad_left(const Variant& variant, const ReferenceGenome& reference, Variant::SizeType n);
+Variant pad_right(const Variant& variant, const ReferenceGenome& reference, Variant::SizeType n);
 
 /*
  Left aligns all input Variants and removes any resulting duplicates. The returned variants are sorted.
  */
-std::vector<Variant> unique_left_align(const std::vector<Variant>& variants, ReferenceGenome& reference);
+std::vector<Variant> unique_left_align(const std::vector<Variant>& variants, const ReferenceGenome& reference);
 
-std::vector<Variant> parsimonise_each(const std::vector<Variant>& variants, ReferenceGenome& reference);
+std::vector<Variant> parsimonise_each(const std::vector<Variant>& variants, const ReferenceGenome& reference);
 
-std::vector<Variant> parsimonise_together(const std::vector<Variant>& variants, ReferenceGenome& reference);
+std::vector<Variant> parsimonise_together(const std::vector<Variant>& variants, const ReferenceGenome& reference);
 
 bool is_snp(const Variant& variant) noexcept;
 

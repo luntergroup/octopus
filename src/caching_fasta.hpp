@@ -13,6 +13,7 @@
 #include <map>
 #include <list>
 #include <cstddef>
+
 #include <boost/filesystem/path.hpp>
 #include <boost/range/iterator_range_core.hpp>
 
@@ -68,19 +69,19 @@ private:
     using OverlapRange        = boost::iterator_range<CacheIterator>;
     
     std::string do_get_reference_name() const override;
-    std::vector<std::string> do_get_contig_names() override;
-    SizeType do_get_contig_size(const std::string& contig_name) override;
-    SequenceType do_fetch_sequence(const GenomicRegion& region) override;
+    std::vector<std::string> do_get_contig_names() const override;
+    SizeType do_get_contig_size(const std::string& contig_name) const override;
+    SequenceType do_fetch_sequence(const GenomicRegion& region) const override;
     
     std::unordered_map<std::string, SizeType> contig_size_cache_;
     
-    SequenceCache sequence_cache_;
-    std::list<GenomicRegion> recently_used_regions_; // TODO: also make into map of contigs?
+    mutable SequenceCache sequence_cache_;
+    mutable std::list<GenomicRegion> recently_used_regions_; // TODO: also make into map of contigs?
     
     SizeType genome_size_;
     
     const SizeType max_cache_size_ = 10'000'000;
-    SizeType current_cache_size_   = 0;
+    mutable SizeType current_cache_size_   = 0;
     
     const double locality_bias_ = 0.5;
     const double forward_bias_  = 0.8;
@@ -94,13 +95,13 @@ private:
     GenomicRegion get_hit_contig_chunk(const GenomicRegion& requested_region) const;
     bool is_contig_cached(const GenomicRegion& region) const;
     CacheIterator get_cache_iterator(const GenomicRegion& requested_region) const;
-    void add_sequence_to_cache(SequenceType&& sequence, const GenomicRegion& region);
-    void update_cache_position(const GenomicRegion& region);
+    void add_sequence_to_cache(SequenceType&& sequence, const GenomicRegion& region) const;
+    void update_cache_position(const GenomicRegion& region) const;
     OverlapRange overlap_range(const GenomicRegion& region) const;
-    void remove_from_sequence_cache(const GenomicRegion& region);
-    void remove_from_usage_cache(const GenomicRegion& region);
-    void replace_in_usage_cache(const GenomicRegion& from, const GenomicRegion& to);
-    void recache_overlapped_regions(const SequenceType& sequence, const GenomicRegion& region);
+    void remove_from_sequence_cache(const GenomicRegion& region) const;
+    void remove_from_usage_cache(const GenomicRegion& region) const;
+    void replace_in_usage_cache(const GenomicRegion& from, const GenomicRegion& to) const;
+    void recache_overlapped_regions(const SequenceType& sequence, const GenomicRegion& region) const;
     SequenceType get_subsequence(const ContigRegion& requested_region, const ContigRegion& sequence_region,
                                  const SequenceType& sequence) const;
 };

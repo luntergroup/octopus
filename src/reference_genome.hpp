@@ -14,6 +14,7 @@
 #include <unordered_map>
 #include <cstddef>
 #include <memory>
+
 #include <boost/filesystem/path.hpp>
 
 #include "genomic_region.hpp"
@@ -29,6 +30,7 @@ public:
     
     ReferenceGenome() = delete;
     explicit ReferenceGenome(std::unique_ptr<ReferenceGenomeImpl> impl);
+    ~ReferenceGenome() = default;
     
     ReferenceGenome(const ReferenceGenome&)            = delete;
     ReferenceGenome& operator=(const ReferenceGenome&) = delete;
@@ -43,7 +45,7 @@ public:
     SizeType get_contig_size(const GenomicRegion& region) const;
     GenomicRegion get_contig_region(const std::string& contig_name) const;
     bool contains_region(const GenomicRegion& region) const noexcept;
-    SequenceType get_sequence(const GenomicRegion& region);
+    SequenceType get_sequence(const GenomicRegion& region) const;
     
 private:
     std::unique_ptr<ReferenceGenomeImpl> impl_;
@@ -61,6 +63,6 @@ std::vector<GenomicRegion> get_all_contig_regions(const ReferenceGenome& referen
 GenomicRegion::SizeType get_genome_size(const ReferenceGenome& reference);
 
 // Requires reference access to get contig sizes for partially specified regions (e.g. "4")
-GenomicRegion parse_region(const std::string& region, const ReferenceGenome& reference);
+GenomicRegion parse_region(std::string region, const ReferenceGenome& reference);
 
 #endif /* defined(__Octopus__reference_genome__) */

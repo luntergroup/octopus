@@ -14,6 +14,7 @@
 #include <cstddef>
 #include <memory>
 #include <mutex>
+
 #include <boost/filesystem.hpp>
 
 #include "i_vcf_reader_impl.hpp"

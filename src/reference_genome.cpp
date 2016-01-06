@@ -23,11 +23,11 @@ ReferenceGenome::ReferenceGenome(std::unique_ptr<ReferenceGenomeImpl> impl)
 :
 impl_ {std::move(impl)},
 name_ {impl_->get_reference_name()},
-contig_names_(std::move(impl_->get_contig_names())),
+contig_names_(impl_->get_contig_names()),
 contig_sizes_ {}
 {
     for (const auto& contig_name : contig_names_) {
-        contig_sizes_[contig_name] = impl_->get_contig_size(contig_name);
+        contig_sizes_.emplace(contig_name, impl_->get_contig_size(contig_name));
     }
 }
 
@@ -74,7 +74,7 @@ bool ReferenceGenome::contains_region(const GenomicRegion& region) const noexcep
     return has_contig(region.get_contig_name()) && region.get_end() <= get_contig_size(region.get_contig_name());
 }
 
-ReferenceGenome::SequenceType ReferenceGenome::get_sequence(const GenomicRegion& region)
+ReferenceGenome::SequenceType ReferenceGenome::get_sequence(const GenomicRegion& region) const
 {
     return impl_->fetch_sequence(region);
 }
@@ -101,56 +101,57 @@ std::vector<GenomicRegion> get_all_contig_regions(const ReferenceGenome& referen
         result.emplace_back(reference.get_contig_region(contig));
     }
     
-    std::sort(result.begin(), result.end(), [] (const auto& lhs, const auto& rhs) {
-        return size(lhs) < size(rhs);
-    });
+    std::sort(std::begin(result), std::end(result),
+              [] (const auto& lhs, const auto& rhs) { return size(lhs) < size(rhs); });
     
     return result;
 }
 
 GenomicRegion::SizeType get_genome_size(const ReferenceGenome& reference)
 {
-    auto contigs = reference.get_contig_names();
+    const auto contigs = reference.get_contig_names();
     return std::accumulate(std::cbegin(contigs), std::cend(contigs), GenomicRegion::SizeType {},
-                           [&reference] (auto curr, const auto& contig) {
+                           [&reference] (const auto curr, const auto& contig) {
                                return curr + reference.get_contig_size(contig);
                            });
 }
 
 // Requires reference access to get contig sizes for partially specified regions (e.g. "4")
-GenomicRegion parse_region(const std::string& region, const ReferenceGenome& reference)
+GenomicRegion parse_region(std::string region, const ReferenceGenome& reference)
 {
-    std::string filtered_region;
-    std::remove_copy(region.cbegin(), region.cend(), std::back_inserter(filtered_region), ',');
+    region.erase(std::remove(std::begin(region), std::end(region), ','), std::end(region));
     
     const static std::regex re {"([^:]+)(?::(\\d+)(-)?(\\d*))?"};
     std::smatch match;
     
-    if (std::regex_search(filtered_region, match, re) && match.size() == 5) {
+    if (std::regex_search(region, match, re) && match.size() == 5) {
         auto contig_name = match.str(1);
+        
         GenomicRegion::SizeType begin {}, end {};
-        auto the_contig_size = reference.get_contig_size(contig_name);
+        
+        const auto contig_size = reference.get_contig_size(contig_name);
         
         if (match.str(2).empty()) {
-            end = the_contig_size;
+            end = contig_size;
         } else {
             begin = static_cast<GenomicRegion::SizeType>(std::stoul(match.str(2)));
             
             if (match.str(3).empty()) {
                 end = begin;
             } else if (match.str(4).empty()) {
-                end = the_contig_size;
+                end = contig_size;
             } else {
                 end = static_cast<GenomicRegion::SizeType>(std::stoul(match.str(4)));
             }
             
-            if (begin > the_contig_size || end > the_contig_size) {
-                throw std::runtime_error {"region " + region + " is larger than contig in " + reference.get_name()};
+            if (begin > contig_size || end > contig_size) {
+                throw std::runtime_error {"parse_region given region " + region +
+                    " that is larger than contig in " + reference.get_name()};
             }
         }
         
         return GenomicRegion {std::move(contig_name), begin, end};
     }
     
-    throw std::runtime_error {"region " + region + " has invalid format"};
+    throw std::runtime_error {"parse_region given region " + region + " that has invalid format"};
 }

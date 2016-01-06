@@ -19,6 +19,7 @@
 #include <stdexcept>
 #include <cstdint>
 #include <unordered_map>
+
 #include <boost/graph/adjacency_list.hpp>
 #include <boost/graph/depth_first_search.hpp>
 #include <boost/functional/hash.hpp>

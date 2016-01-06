@@ -16,6 +16,7 @@
 #include <initializer_list>
 #include <cstddef>
 #include <mutex>
+
 #include <boost/filesystem.hpp>
 
 #include "contig_region.hpp"

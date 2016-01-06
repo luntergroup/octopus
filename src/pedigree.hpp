@@ -10,6 +10,7 @@
 #define pedigree_hpp
 
 #include <vector>
+
 #include <boost/graph/adjacency_list.hpp>
 
 #include "common.hpp"

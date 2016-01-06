@@ -12,6 +12,7 @@
 #include <initializer_list>
 #include <utility>
 #include <ostream>
+
 #include <boost/functional/hash.hpp>
 
 #include "equitable.hpp"

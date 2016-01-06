@@ -12,6 +12,7 @@
 #include <string>
 #include <type_traits>
 #include <stdexcept>
+
 #include <boost/variant.hpp>
 #include <boost/type_index.hpp>
 

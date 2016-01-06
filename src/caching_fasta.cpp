@@ -89,17 +89,17 @@ std::string CachingFasta::do_get_reference_name() const
     return fasta_.get_reference_name();
 }
 
-std::vector<std::string> CachingFasta::do_get_contig_names()
+std::vector<std::string> CachingFasta::do_get_contig_names() const
 {
     return fasta_.get_contig_names();
 }
 
-CachingFasta::SizeType CachingFasta::do_get_contig_size(const std::string& contig_name)
+CachingFasta::SizeType CachingFasta::do_get_contig_size(const std::string& contig_name) const
 {
     return contig_size_cache_.at(contig_name);
 }
 
-CachingFasta::SequenceType CachingFasta::do_fetch_sequence(const GenomicRegion& region)
+CachingFasta::SequenceType CachingFasta::do_fetch_sequence(const GenomicRegion& region) const
 {
     //std::cout << "requested " << region << std::endl;
     
@@ -222,7 +222,7 @@ GenomicRegion CachingFasta::get_hit_contig_chunk(const GenomicRegion& requested_
     return get_new_contig_chunk(requested_region);
 }
 
-void CachingFasta::add_sequence_to_cache(SequenceType&& sequence, const GenomicRegion& region)
+void CachingFasta::add_sequence_to_cache(SequenceType&& sequence, const GenomicRegion& region) const
 {
     recache_overlapped_regions(sequence, region);
     
@@ -254,7 +254,7 @@ void CachingFasta::add_sequence_to_cache(SequenceType&& sequence, const GenomicR
     //std::cout << "used cache size is " << current_cache_size_ << std::endl;
 }
 
-void CachingFasta::update_cache_position(const GenomicRegion& region)
+void CachingFasta::update_cache_position(const GenomicRegion& region) const
 {
     auto it = std::find_if(recently_used_regions_.cbegin(), recently_used_regions_.cend(),
                            [&region] (const auto& cached_region) {
@@ -282,18 +282,18 @@ CachingFasta::OverlapRange CachingFasta::overlap_range(const GenomicRegion& regi
                                  })};
 }
 
-void CachingFasta::remove_from_sequence_cache(const GenomicRegion& region)
+void CachingFasta::remove_from_sequence_cache(const GenomicRegion& region) const
 {
     //std::cout << "removing " << region << " from cache" << std::endl;
     sequence_cache_[region.get_contig_name()].erase(region.get_contig_region());
 }
 
-void CachingFasta::remove_from_usage_cache(const GenomicRegion& region)
+void CachingFasta::remove_from_usage_cache(const GenomicRegion& region) const
 {
     recently_used_regions_.remove(region);
 }
 
-void CachingFasta::replace_in_usage_cache(const GenomicRegion& from, const GenomicRegion& to)
+void CachingFasta::replace_in_usage_cache(const GenomicRegion& from, const GenomicRegion& to) const
 {
     auto it = std::find(recently_used_regions_.begin(), recently_used_regions_.end(), from);
     recently_used_regions_.insert(recently_used_regions_.erase(it), to);
@@ -305,7 +305,7 @@ T get_nonoverlapped(const T& lhs, const T& rhs)
     return (begins_before(lhs, rhs)) ? get_left_overhang(lhs, rhs) : get_right_overhang(lhs, rhs);
 }
 
-void CachingFasta::recache_overlapped_regions(const SequenceType& sequence, const GenomicRegion& region)
+void CachingFasta::recache_overlapped_regions(const SequenceType& sequence, const GenomicRegion& region) const
 {
     if (sequence_cache_.count(region.get_contig_name()) == 1) {
         auto cached_overlapped = this->overlap_range(region);

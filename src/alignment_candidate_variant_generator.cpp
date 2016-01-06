@@ -10,6 +10,7 @@
 
 #include <iterator>
 #include <algorithm>
+
 #include <boost/range/combine.hpp>
 
 #include "reference_genome.hpp"
@@ -148,47 +149,42 @@ std::vector<Variant> AlignmentCandidateVariantGenerator::get_candidates(const Ge
 {
     using std::begin; using std::end; using std::cbegin; using std::cend;
     
-    if (!are_candidates_sorted_) {
-        std::sort(begin(candidates_), end(candidates_));
-        
-        if (min_supporting_reads_ == 1) {
-            candidates_.erase(std::unique(begin(candidates_), end(candidates_)), end(candidates_));
-        }
-        
-        are_candidates_sorted_ = true;
-    }
+    sort_candiates_if_needed();
     
-    auto overlapped = overlap_range(cbegin(candidates_), cend(candidates_), region, max_seen_candidate_size_);
+    auto overlapped = overlap_range(cbegin(candidates_), cend(candidates_), region,
+                                    max_seen_candidate_size_);
     
     if (min_supporting_reads_ == 1) {
         return std::vector<Variant> {begin(overlapped), end(overlapped)};
-    } else {
-        std::vector<Variant> result {};
-        result.reserve(bases(overlapped).size());
+    }
+    
+    std::vector<Variant> result {};
+    result.reserve(bases(overlapped).size());
+    
+    while (!overlapped.empty()) {
+        const auto it = std::adjacent_find(begin(overlapped), end(overlapped));
         
-        while (!overlapped.empty()) {
-            auto it = std::adjacent_find(overlapped.begin(), overlapped.end());
-            
-            if (it == overlapped.end()) break;
-            
-            const Variant& duplicate = *it;
-            
-            auto it2 = std::find_if_not(std::next(it), overlapped.end(),
-                                        [&duplicate] (const auto& variant) { return variant == duplicate; });
-            
-            auto duplicate_count = std::distance(it, it2);
-            
-            if (duplicate_count >= min_supporting_reads_) {
-                result.emplace_back(duplicate);
-            }
-            
-            overlapped.advance_begin(duplicate_count);
+        if (it == end(overlapped)) break;
+        
+        const Variant& duplicate {*it};
+        
+        const auto it2 = std::find_if_not(std::next(it), end(overlapped),
+                                          [&duplicate] (const auto& variant) {
+                                              return variant == duplicate;
+                                          });
+        
+        const auto duplicate_count = std::distance(it, it2);
+        
+        if (duplicate_count >= min_supporting_reads_) {
+            result.emplace_back(duplicate);
         }
         
-        result.shrink_to_fit();
-        
-        return result;
+        overlapped.advance_begin(duplicate_count);
     }
+    
+    result.shrink_to_fit();
+    
+    return result;
 }
 
 void AlignmentCandidateVariantGenerator::clear()
@@ -196,7 +192,7 @@ void AlignmentCandidateVariantGenerator::clear()
     candidates_.clear();
 }
 
-// private methods    
+// private methods
 
 void AlignmentCandidateVariantGenerator::
 add_snvs_in_match_range(const GenomicRegion& region, SequenceIterator first_base,
@@ -213,8 +209,8 @@ add_snvs_in_match_range(const GenomicRegion& region, SequenceIterator first_base
                   make_zip_iterator(boost::make_tuple(std::cend(ref_segment), last_base, first_quality
                                                    + std::distance(first_base, last_base))),
         [this, &region, &ref_index] (const Tuple& t) {
-            auto ref_base  = t.get<0>();
-            auto read_base = t.get<1>();
+            char ref_base  {t.get<0>()};
+            char read_base {t.get<1>()};
             
             if (ref_base != read_base && ref_base != 'N' && read_base != 'N' && t.get<2>() >= min_base_quality_) {
                 add_candidate(GenomicRegion {region.get_contig_name(), ref_index, ref_index + 1},
@@ -225,4 +221,17 @@ add_snvs_in_match_range(const GenomicRegion& region, SequenceIterator first_base
     });
 }
 
+void AlignmentCandidateVariantGenerator::sort_candiates_if_needed()
+{
+    if (!are_candidates_sorted_) {
+        std::sort(begin(candidates_), end(candidates_));
+        
+        if (min_supporting_reads_ == 1) {
+            // just an optimisation
+            candidates_.erase(std::unique(begin(candidates_), end(candidates_)), end(candidates_));
+        }
+        
+        are_candidates_sorted_ = true;
+    }
+}
 } // namespace Octopus

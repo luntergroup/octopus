@@ -14,6 +14,7 @@
 #include <algorithm>
 #include <iterator>
 #include <stdexcept>
+
 #include <boost/container/flat_set.hpp>
 
 #include "comparable.hpp"
@@ -888,15 +889,16 @@ void swap(MappableSet<MappableType, Allocator>& lhs, MappableSet<MappableType, A
     std::swap(lhs.max_element_size_, rhs.max_element_size_);
 }
 
-template <typename MappableType>
-auto get_encompassing_region(const MappableSet<MappableType>& mappables)
+template <typename MappableType, typename Allocator>
+auto get_encompassing_region(const MappableSet<MappableType, Allocator>& mappables)
 {
     return get_encompassing(mappables.leftmost(), mappables.rightmost());
 }
 
-template <typename ForwardIterator, typename MappableType1, typename MappableType2>
+template <typename ForwardIterator, typename MappableType1, typename MappableType2, typename Allocator>
 ForwardIterator
-find_first_shared(const MappableSet<MappableType1>& mappables, ForwardIterator first, ForwardIterator last,
+find_first_shared(const MappableSet<MappableType1, Allocator>& mappables,
+                  ForwardIterator first, ForwardIterator last,
                   const MappableType2& mappable)
 {
     return std::find_if(first, last, [&mappables, &mappable] (const auto& m) {
@@ -904,8 +906,8 @@ find_first_shared(const MappableSet<MappableType1>& mappables, ForwardIterator f
                         });
 }
 
-template <typename MappableType, typename ForwardIterator>
-size_t count_if_shared_with_first(const MappableSet<MappableType>& mappables,
+template <typename MappableType, typename ForwardIterator, typename Allocator>
+size_t count_if_shared_with_first(const MappableSet<MappableType, Allocator>& mappables,
                                   ForwardIterator first, ForwardIterator last)
 {
     if (first == last) return 0;
@@ -917,17 +919,17 @@ size_t count_if_shared_with_first(const MappableSet<MappableType>& mappables,
     return count_overlapped(std::next(first), last, overlapped.back());
 }
 
-template <typename MappableType1, typename MappableType2>
-MappableSet<MappableType1>
-copy_overlapped(const MappableSet<MappableType1>& mappables, const MappableType2& mappable)
+template <typename MappableType1, typename MappableType2, typename Allocator>
+MappableSet<MappableType1, Allocator>
+copy_overlapped(const MappableSet<MappableType1, Allocator>& mappables, const MappableType2& mappable)
 {
     const auto overlapped = mappables.overlap_range(mappable);
     return MappableSet<MappableType1>(std::begin(overlapped), std::end(overlapped));
 }
 
-template <typename MappableType1, typename MappableType2>
-MappableSet<MappableType1>
-copy_nonoverlapped(const MappableSet<MappableType1>& mappables, const MappableType2& mappable)
+template <typename MappableType1, typename MappableType2, typename Allocator>
+MappableSet<MappableType1, Allocator>
+copy_nonoverlapped(const MappableSet<MappableType1, Allocator>& mappables, const MappableType2& mappable)
 {
     using std::cbegin; using std::cend;
     
@@ -960,17 +962,17 @@ copy_nonoverlapped(const MappableSet<MappableType1>& mappables, const MappableTy
     return result;
 }
 
-template <typename MappableType1, typename MappableType2>
+template <typename MappableType1, typename MappableType2, typename Allocator>
 MappableSet<MappableType1>
-copy_contained(const MappableSet<MappableType1>& mappables, const MappableType2& mappable)
+copy_contained(const MappableSet<MappableType1, Allocator>& mappables, const MappableType2& mappable)
 {
     const auto contained = mappables.contained_range(mappable);
     return MappableSet<MappableType1>(std::begin(contained), std::end(contained));
 }
 
-template <typename MappableType1, typename MappableType2>
+template <typename MappableType1, typename MappableType2, typename Allocator>
 MappableSet<MappableType1>
-copy_noncontained(const MappableSet<MappableType1>& mappables, const MappableType2& mappable)
+copy_noncontained(const MappableSet<MappableType1, Allocator>& mappables, const MappableType2& mappable)
 {
     using std::cbegin; using std::cend;
     
@@ -1003,8 +1005,9 @@ copy_noncontained(const MappableSet<MappableType1>& mappables, const MappableTyp
     return result;
 }
 
-template <typename Region, typename Mappable>
-MappableSet<Region> splice_all(const MappableSet<Region>& regions, const MappableSet<Mappable>& mappables)
+template <typename Region, typename Mappable, typename Allocator1, typename Allocator2>
+MappableSet<Region> splice_all(const MappableSet<Region, Allocator1>& regions,
+                               const MappableSet<Mappable, Allocator2>& mappables)
 {
     if (mappables.empty()) return regions;
     
@@ -1039,6 +1042,19 @@ MappableSet<Region> splice_all(const MappableSet<Region>& regions, const Mappabl
    result.shrink_to_fit();
    
    return result;
+}
+
+template <typename MappableType, typename Allocator>
+std::vector<unsigned> positional_coverage(const MappableSet<MappableType, Allocator>& mappables)
+{
+    return positional_coverage(std::cbegin(mappables), std::cend(mappables), get_encompassing_region(mappables));
+}
+
+template <typename MappableType>
+std::vector<unsigned> positional_coverage(const MappableSet<MappableType>& mappables, const GenomicRegion& region)
+{
+    const auto overlapped = mappables.overlap_range(region);
+    return positional_coverage(std::cbegin(overlapped), std::cend(overlapped), region);
 }
 
 #endif

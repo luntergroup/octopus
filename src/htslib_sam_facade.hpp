@@ -18,6 +18,7 @@
 #include <stdexcept>
 #include <memory>
 #include <tuple>
+
 #include <boost/filesystem/path.hpp>
 
 #include "htslib/hts.h"

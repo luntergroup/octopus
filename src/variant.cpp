@@ -8,68 +8,57 @@
 
 #include "variant.hpp"
 
-Variant::Variant(const Allele& reference, const Allele& alternative)
+Variant::Variant(Allele reference, Allele alternative)
 :
-reference_allele_sequence_ {reference.get_sequence()},
-reference_allele_region_ {reference.get_region()},
-alternative_allele_sequence_ {alternative.get_sequence()}
+ref_ {std::move(reference)},
+alt_ {std::move(alternative)}
 {}
 
-const GenomicRegion& Variant::get_region() const noexcept
+const Allele& Variant::get_ref_allele() const noexcept
 {
-    return reference_allele_region_;
+    return ref_;
 }
 
-Allele Variant::get_reference_allele() const
+const Allele&  Variant::get_alt_allele() const noexcept
 {
-    return Allele {reference_allele_region_, reference_allele_sequence_};
+    return alt_;
 }
 
-Allele Variant::get_alternative_allele() const
+// non-member methods
+
+const Variant::SequenceType& get_ref_sequence(const Variant& variant)
 {
-    return Allele {reference_allele_region_, alternative_allele_sequence_};
+    return variant.get_ref_allele().get_sequence();
 }
 
-Variant::SizeType Variant::reference_allele_size() const noexcept
+const Variant::SequenceType& get_alt_sequence(const Variant& variant)
 {
-    return size(reference_allele_region_);
+    return variant.get_alt_allele().get_sequence();
 }
 
-Variant::SizeType Variant::alternative_allele_size() const noexcept
+Variant::SizeType ref_sequence_size(const Variant& variant)
 {
-    return static_cast<Variant::SizeType>(alternative_allele_sequence_.size());
+    return sequence_size(variant.get_ref_allele());
 }
 
-const Variant::SequenceType& Variant::get_reference_allele_sequence() const noexcept
+Variant::SizeType alt_sequence_size(const Variant& variant)
 {
-    return reference_allele_sequence_;
-}
-
-const Variant::SequenceType& Variant::get_alternative_allele_sequence() const noexcept
-{
-    return alternative_allele_sequence_;
+    return sequence_size(variant.get_alt_allele());
 }
 
 bool operator==(const Variant& lhs, const Variant& rhs)
 {
-    return lhs.get_region() == rhs.get_region() &&
-    lhs.get_reference_allele_sequence() == rhs.get_reference_allele_sequence() &&
-    lhs.get_alternative_allele_sequence() == rhs.get_alternative_allele_sequence();
+    return lhs.get_ref_allele() == rhs.get_ref_allele() && get_alt_sequence(lhs) == get_alt_sequence(rhs);
 }
 
 bool operator<(const Variant& lhs, const Variant& rhs)
 {
-    if (lhs.get_region() == rhs.get_region()) { // This check is required for consistency with operator==
-        return (lhs.get_reference_allele_sequence() < rhs.get_reference_allele_sequence()) ? true :
-        lhs.get_alternative_allele_sequence() < rhs.get_alternative_allele_sequence();
-    } else {
-        return lhs.get_region() < rhs.get_region();
-    }
+    return (lhs.get_ref_allele() < rhs.get_ref_allele() ||
+            (lhs.get_ref_allele() == rhs.get_ref_allele() && lhs.get_alt_allele() < rhs.get_alt_allele()));
 }
 
-std::ostream& operator<<(std::ostream& os, const Variant& a_variant)
+std::ostream& operator<<(std::ostream& os, const Variant& variant)
 {
-    os << a_variant.get_region() << " " << a_variant.get_reference_allele_sequence() << " " <<
-        a_variant.get_alternative_allele_sequence();
+    os << get_region(variant) << " " << get_ref_sequence(variant) << " " << get_alt_sequence(variant);
     return os;
 }

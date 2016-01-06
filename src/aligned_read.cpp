@@ -34,15 +34,17 @@ AlignedRead& AlignedRead::operator=(const AlignedRead& other)
 
 void swap(AlignedRead& lhs, AlignedRead& rhs) noexcept
 {
-    std::swap(lhs.region_, rhs.region_);
-    std::swap(lhs.read_group_, rhs.read_group_);
-    std::swap(lhs.sequence_, rhs.sequence_);
-    std::swap(lhs.cigar_string_, rhs.cigar_string_);
-    std::swap(lhs.qualities_, rhs.qualities_);
-    std::swap(lhs.next_segment_, rhs.next_segment_);
-    std::swap(lhs.flags_, rhs.flags_);
-    std::swap(lhs.hash_, rhs.hash_);
-    std::swap(lhs.mapping_quality_, rhs.mapping_quality_);
+    using std::swap;
+    
+    swap(lhs.region_, rhs.region_);
+    swap(lhs.read_group_, rhs.read_group_);
+    swap(lhs.sequence_, rhs.sequence_);
+    swap(lhs.cigar_string_, rhs.cigar_string_);
+    swap(lhs.qualities_, rhs.qualities_);
+    swap(lhs.next_segment_, rhs.next_segment_);
+    swap(lhs.flags_, rhs.flags_);
+    swap(lhs.hash_, rhs.hash_);
+    swap(lhs.mapping_quality_, rhs.mapping_quality_);
 }
 
 //
@@ -198,13 +200,15 @@ size_t AlignedRead::get_hash() const
 
 void AlignedRead::zero_front_qualities(SizeType num_bases) noexcept
 {
-    std::for_each(std::begin(qualities_), std::begin(qualities_) + std::min(num_bases, get_sequence_size()),
+    std::for_each(std::begin(qualities_),
+                  std::next(std::begin(qualities_), std::min(num_bases, get_sequence_size())),
                   [] (auto& quality) { quality = 0; });
 }
 
 void AlignedRead::zero_back_qualities(SizeType num_bases) noexcept
 {
-    std::for_each(std::rbegin(qualities_), std::rbegin(qualities_) + std::min(num_bases, get_sequence_size()),
+    std::for_each(std::rbegin(qualities_),
+                  std::next(std::rbegin(qualities_), std::min(num_bases, get_sequence_size())),
                   [] (auto& quality) { quality = 0; });
 }
 
@@ -269,12 +273,16 @@ AlignedRead::NextSegment::FlagBits AlignedRead::NextSegment::compress_flags(cons
 size_t AlignedRead::make_hash() const
 {
     size_t seed {};
+    
     boost::hash_combine(seed, std::hash<GenomicRegion>()(region_));
     boost::hash_combine(seed, std::hash<CigarString>()(cigar_string_));
     boost::hash_combine(seed, boost::hash_range(std::cbegin(qualities_), std::cend(qualities_)));
     boost::hash_combine(seed, mapping_quality_);
+    
     if (seed != 0) return seed;
+    
     boost::hash_combine(seed, std::hash<CigarString>()(cigar_string_));
+    
     return (seed == 0) ? 1 : seed; // 0 is reserved
 }
 
@@ -371,24 +379,23 @@ std::ostream& operator<<(std::ostream& os, const AlignedRead::Qualities& qualiti
 {
     std::transform(std::cbegin(qualities), std::cend(qualities),
                    std::ostream_iterator<AlignedRead::QualityType>(os, ""),
-                   [] (auto q) { return q + 33; });
+                   [] (const auto q) { return q + 33; }
+                   );
     return os;
 }
 
-std::ostream& operator<<(std::ostream& os, const AlignedRead& a_read)
+std::ostream& operator<<(std::ostream& os, const AlignedRead& read)
 {
-    os << a_read.get_region() << '\n';
-    os << a_read.get_sequence() << '\n';
-    os << a_read.get_qualities() << '\n';
-    os << a_read.get_cigar_string() << '\n';
-    os << static_cast<unsigned>(a_read.get_mapping_quality());
-    if (a_read.is_chimeric()) {
-        os << '\n';
-        os << a_read.get_next_segment().get_contig_name() << '\n';
-        os << a_read.get_next_segment().get_begin() << '\n';
-        os << a_read.get_next_segment().get_inferred_template_length();
+    os << read.get_region() << '\n';
+    os << read.get_sequence() << '\n';
+    os << read.get_qualities() << '\n';
+    os << read.get_cigar_string() << '\n';
+    os << static_cast<unsigned>(read.get_mapping_quality()) << '\n';
+    if (read.is_chimeric()) {
+        os << read.get_next_segment().get_contig_name() << '\n';
+        os << read.get_next_segment().get_begin() << '\n';
+        os << read.get_next_segment().get_inferred_template_length();
     } else {
-        os << '\n';
         os << "no other segments";
     }
     return os;

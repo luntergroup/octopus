@@ -10,6 +10,7 @@
 
 #include <algorithm>
 #include <iterator>
+
 #include <boost/functional/hash.hpp>
 
 #include "reference_genome.hpp"
@@ -186,17 +187,19 @@ std::vector<Variant> Haplotype::difference(const Haplotype& other) const
 
 size_t Haplotype::get_hash() const
 {
+    using boost::hash_combine;
+    
     if (cached_hash_ == 0) {
-        size_t seed {};
+        size_t result {};
         
-        boost::hash_combine(seed, std::hash<GenomicRegion>()(region_));
-        boost::hash_combine(seed, std::hash<SequenceType>()(get_sequence()));
+        hash_combine(result, std::hash<GenomicRegion>()(region_));
+        hash_combine(result, std::hash<SequenceType>()(get_sequence()));
         
-        if (seed == 0) {
-            ++seed; // 0 is reserved
+        if (result == 0) {
+            ++result; // 0 is reserved
         }
         
-        cached_hash_ = seed;
+        cached_hash_ = result;
     }
     
     return cached_hash_;
