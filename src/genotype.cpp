@@ -59,6 +59,16 @@ typename Genotype<Allele>::Iterator Genotype<Allele>::cend() const noexcept
     return alleles_.cend();
 }
 
+const GenomicRegion& Genotype<Allele>::get_region() const noexcept
+{
+    return alleles_.front().get_region();
+}
+
+unsigned Genotype<Allele>::ploidy() const noexcept
+{
+    return static_cast<unsigned>(alleles_.size());
+}
+
 bool Genotype<Allele>::is_homozygous() const
 {
     return std::adjacent_find(std::cbegin(alleles_), std::cend(alleles_),
@@ -72,7 +82,7 @@ unsigned Genotype<Allele>::zygosity() const
     } else if (ploidy() == 2) {
         return 2;
     }
-    return static_cast<unsigned>(get_unique().size());
+    return static_cast<unsigned>(copy_unique().size());
 }
 
 bool Genotype<Allele>::contains(const Allele& allele) const
@@ -85,12 +95,7 @@ unsigned Genotype<Allele>::count(const Allele& element) const
     return static_cast<unsigned>(std::count(std::cbegin(alleles_), std::cend(alleles_), element));
 }
 
-unsigned Genotype<Allele>::ploidy() const noexcept
-{
-    return static_cast<unsigned>(alleles_.size());
-}
-
-std::vector<Allele> Genotype<Allele>::get_unique() const
+std::vector<Allele> Genotype<Allele>::copy_unique() const
 {
     auto result = alleles_;
     

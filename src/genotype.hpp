@@ -30,7 +30,7 @@ template <typename MappableType, typename = std::enable_if_t<std::is_base_of<Map
 class Genotype;
 
 template <typename MappableType>
-class Genotype<MappableType> : public Equitable<Genotype<MappableType>>
+class Genotype<MappableType> : public Equitable<Genotype<MappableType>>, public Mappable<Genotype<MappableType>>
 {
 public:
     using Iterator = typename std::vector<MappableType>::const_iterator;
@@ -55,19 +55,23 @@ public:
     Iterator cbegin() const noexcept ;
     Iterator cend() const noexcept ;
     
+    const GenomicRegion& get_region() const noexcept;
+    
     unsigned ploidy() const noexcept;
+    
     bool contains(const MappableType& element) const;
     unsigned count(const MappableType& element) const;
     bool is_homozygous() const;
     unsigned zygosity() const;
-    std::vector<MappableType> get_unique() const;
+    
+    std::vector<MappableType> copy_unique() const;
     
 private:
     std::vector<MappableType> elements_;
 };
 
 template <typename MappableType>
-Genotype<MappableType>::Genotype(unsigned ploidy)
+Genotype<MappableType>::Genotype(const unsigned ploidy)
 :
 elements_ {}
 {
@@ -133,6 +137,18 @@ typename Genotype<MappableType>::Iterator Genotype<MappableType>::cend() const n
 }
 
 template <typename MappableType>
+const GenomicRegion& Genotype<MappableType>::get_region() const noexcept
+{
+    return elements_.front().get_region();
+}
+
+template <typename MappableType>
+unsigned Genotype<MappableType>::ploidy() const noexcept
+{
+    return static_cast<unsigned>(elements_.size());
+}
+
+template <typename MappableType>
 bool Genotype<MappableType>::is_homozygous() const
 {
     return elements_.front() == elements_.back();
@@ -165,13 +181,7 @@ unsigned Genotype<MappableType>::count(const MappableType& element) const
 }
 
 template <typename MappableType>
-unsigned Genotype<MappableType>::ploidy() const noexcept
-{
-    return static_cast<unsigned>(elements_.size());
-}
-
-template <typename MappableType>
-std::vector<MappableType> Genotype<MappableType>::get_unique() const
+std::vector<MappableType> Genotype<MappableType>::copy_unique() const
 {
     std::vector<MappableType> result {};
     result.reserve(ploidy());
@@ -184,7 +194,7 @@ std::vector<MappableType> Genotype<MappableType>::get_unique() const
 }
 
 template <>
-class Genotype<Allele> : public Equitable<Genotype<Allele>>
+class Genotype<Allele> : public Equitable<Genotype<Allele>>, public Mappable<Genotype<Allele>>
 {
 public:
     using Iterator = typename std::vector<Allele>::const_iterator;
@@ -210,11 +220,15 @@ public:
     Iterator cend() const noexcept ;
     
     unsigned ploidy() const noexcept;
+    
+    const GenomicRegion& get_region() const noexcept;
+    
     bool contains(const Allele& allele) const;
     unsigned count(const Allele& allele) const;
     bool is_homozygous() const;
     unsigned zygosity() const;
-    std::vector<Allele> get_unique() const;
+    
+    std::vector<Allele> copy_unique() const;
     
 private:
     std::vector<Allele> alleles_;
@@ -256,8 +270,8 @@ bool contains(const Genotype<MappableType1>& lhs, const Genotype<MappableType2>&
 }
 
 template <typename MappableType>
-bool equal_in_region(const Genotype<MappableType>& lhs, const Genotype<MappableType>& rhs,
-                     const GenomicRegion& region)
+bool are_equal_in_region(const Genotype<MappableType>& lhs, const Genotype<MappableType>& rhs,
+                         const GenomicRegion& region)
 {
     return splice<MappableType>(lhs, region) == splice<MappableType>(rhs, region);
 }

@@ -30,7 +30,8 @@ public:
     
     Variant() = default;
     
-    explicit Variant(Allele reference, Allele alternative);
+    explicit Variant(const Allele& reference, const Allele& alternative);
+    explicit Variant(Allele&& reference, Allele&& alternative);
     
     template <typename GenomicRegion_, typename SequenceType1, typename SequenceType2>
     explicit Variant(GenomicRegion_&& reference_allele_region, SequenceType1&& reference_allele,
@@ -53,23 +54,23 @@ public:
     const Allele& get_alt_allele() const noexcept;
     
 private:
-    Allele ref_, alt_;
+    Allele reference_, alternative_;
 };
 
 template <typename GenomicRegion_, typename SequenceType1, typename SequenceType2>
 Variant::Variant(GenomicRegion_&& ref_region, SequenceType1&& ref_sequence,
                  SequenceType2&& alt_sequence)
 :
-ref_ {ref_region, std::forward<SequenceType1>(ref_sequence)},
-alt_ {std::forward<GenomicRegion_>(ref_region), std::forward<SequenceType2>(alt_sequence)}
+reference_ {ref_region, std::forward<SequenceType1>(ref_sequence)},
+alternative_ {std::forward<GenomicRegion_>(ref_region), std::forward<SequenceType2>(alt_sequence)}
 {}
 
 template <typename SequenceType1, typename SequenceType2, typename SequenceType3>
 Variant::Variant(SequenceType1&& ref_contig_name, SizeType ref_begin,
                  SequenceType2&& ref_sequence, SequenceType3&& alt_sequence)
 :
-ref_ {std::forward<SequenceType1>(ref_contig_name), ref_begin, std::forward<SequenceType2>(ref_sequence)},
-alt_ {ref_.get_region(), std::forward<SequenceType3>(alt_sequence)}
+reference_ {std::forward<SequenceType1>(ref_contig_name), ref_begin, std::forward<SequenceType2>(ref_sequence)},
+alternative_ {reference_.get_region(), std::forward<SequenceType3>(alt_sequence)}
 {}
 
 // non-member methods

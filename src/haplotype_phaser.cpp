@@ -198,7 +198,7 @@ HaplotypePhaser::phase(const std::vector<Haplotype>& haplotypes,
         
         return std::all_of(std::cbegin(regions), std::cend(regions),
                            [&lhs, &rhs] (const auto& region) {
-                               return equal_in_region(lhs, rhs, region);
+                               return are_equal_in_region(lhs, rhs, region);
                            });
     }
     

@@ -385,7 +385,7 @@ namespace Octopus
         result.reserve(germline_genotype_calls.size() * germline_genotype_calls.front().genotype.ploidy());
         
         for (const auto& call : germline_genotype_calls) {
-            auto alleles = call.genotype.get_unique();
+            auto alleles = call.genotype.copy_unique();
             result.insert(std::make_move_iterator(std::begin(alleles)), std::make_move_iterator(std::end(alleles)));
         }
         

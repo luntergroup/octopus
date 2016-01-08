@@ -365,6 +365,11 @@ bool have_same_alleles(const Haplotype& lhs, const Haplotype& rhs)
     return HaveSameAlleles()(lhs, rhs);
 }
 
+bool are_equal_in_region(const Haplotype& lhs, const Haplotype& rhs, const GenomicRegion& region)
+{
+    return splice<Haplotype>(lhs, region) == splice<Haplotype>(rhs, region);
+}
+
 std::ostream& operator<<(std::ostream& os, const Haplotype& haplotype)
 {
     os << haplotype.get_region() << " " << haplotype.get_sequence();

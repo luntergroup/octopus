@@ -8,25 +8,33 @@
 
 #include "variant.hpp"
 
-Variant::Variant(Allele reference, Allele alternative)
+// public methods
+
+Variant::Variant(const Allele& reference, const Allele& alternative)
 :
-ref_ {std::move(reference)},
-alt_ {std::move(alternative)}
+reference_ {reference},
+alternative_ {alternative}
+{}
+
+Variant::Variant(Allele&& reference, Allele&& alternative)
+:
+reference_ {std::move(reference)},
+alternative_ {std::move(alternative)}
 {}
 
 const GenomicRegion& Variant::get_region() const noexcept
 {
-    return ref_.get_region();
+    return reference_.get_region();
 }
 
 const Allele& Variant::get_ref_allele() const noexcept
 {
-    return ref_;
+    return reference_;
 }
 
-const Allele&  Variant::get_alt_allele() const noexcept
+const Allele& Variant::get_alt_allele() const noexcept
 {
-    return alt_;
+    return alternative_;
 }
 
 // non-member methods

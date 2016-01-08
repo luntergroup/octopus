@@ -68,7 +68,7 @@ namespace Octopus
 //                
                 // TODO: other cases
                 
-                auto unique_haplotypes = genotype.get_unique();
+                auto unique_haplotypes = genotype.copy_unique();
                 
                 std::vector<unsigned> occurences {};
                 occurences.reserve(unique_haplotypes.size());
@@ -88,7 +88,7 @@ namespace Octopus
             double log_hardy_weinberg_polyploid(const Genotype& genotype,
                                                 const HaplotypeFrequencies& haplotype_frequencies)
             {
-                auto unique_haplotypes = genotype.get_unique();
+                auto unique_haplotypes = genotype.copy_unique();
                 
                 std::vector<unsigned> occurences {};
                 occurences.reserve(unique_haplotypes.size());

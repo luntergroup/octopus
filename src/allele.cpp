@@ -15,6 +15,8 @@
 #include "string_utils.hpp"
 #include "mappable_algorithms.hpp"
 
+// public methods
+
 const GenomicRegion& Allele::get_region() const noexcept
 {
     return reference_region_;
@@ -97,8 +99,7 @@ Allele::SequenceType get_subsequence(const Allele& allele, const GenomicRegion& 
 Allele splice(const Allele& allele, const GenomicRegion& region)
 {
     if (!contains(allele, region)) {
-        throw std::runtime_error {"cannot splice region " + to_string(region) +
-            " from Allele as the region is not contained"};
+        throw std::runtime_error {"tried to splice an uncontained region from Allele"};
     }
     return Allele {region, get_subsequence(allele, region)};
 }

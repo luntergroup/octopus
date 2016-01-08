@@ -61,6 +61,8 @@ reference_region_ {std::forward<StringType_>(contig_name), begin_pos,
         static_cast<SizeType>(begin_pos + sequence_.size())}
 {}
 
+// non-member methods
+
 Allele::SizeType sequence_size(const Allele& allele) noexcept;
 
 bool is_reference(const Allele& allele, const ReferenceGenome& reference);

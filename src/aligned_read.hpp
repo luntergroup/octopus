@@ -137,9 +137,9 @@ public:
     
     size_t get_hash() const;
     
-    // mutables
     void zero_front_qualities(SizeType num_bases) noexcept;
     void zero_back_qualities(SizeType num_bases) noexcept;
+    
     void compress();
     void decompress();
     
@@ -169,9 +169,9 @@ private:
 };
 
 template <typename GenomicRegion_, typename String1_, typename Qualities_, typename CigarString_>
-inline AlignedRead::AlignedRead(GenomicRegion_&& reference_region, String1_&& sequence,
-                                Qualities_&& qualities, CigarString_&& cigar_string,
-                                QualityType mapping_quality, Flags flags)
+AlignedRead::AlignedRead(GenomicRegion_&& reference_region, String1_&& sequence,
+                         Qualities_&& qualities, CigarString_&& cigar_string,
+                         QualityType mapping_quality, Flags flags)
 :
 region_ {std::forward<GenomicRegion_>(reference_region)},
 sequence_ {std::forward<String1_>(sequence)},

@@ -165,6 +165,8 @@ struct HaveSameAlleles
 
 bool have_same_alleles(const Haplotype& lhs, const Haplotype& rhs);
 
+bool are_equal_in_region(const Haplotype& lhs, const Haplotype& rhs, const GenomicRegion& region);
+
 namespace std
 {
     template <> struct hash<Haplotype>

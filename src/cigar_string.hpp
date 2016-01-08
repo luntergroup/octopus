@@ -46,6 +46,7 @@ public:
     
     SizeType get_size() const noexcept;
     char get_flag() const noexcept;
+    
     bool advances_reference() const noexcept;
     bool advances_sequence() const noexcept;
     
@@ -64,9 +65,10 @@ bool is_back_soft_clipped(const CigarString& cigar_string) noexcept;
 
 bool is_soft_clipped(const CigarString& cigar_string) noexcept;
 
-std::pair<CigarOperation::SizeType, CigarOperation::SizeType> get_soft_clipped_sizes(const CigarString& cigar_string) noexcept;
+std::pair<CigarOperation::SizeType, CigarOperation::SizeType>
+get_soft_clipped_sizes(const CigarString& cigar_string) noexcept;
 
-template <typename SizeType>
+template <typename SizeType = CigarOperation::SizeType>
 SizeType soft_clipped_read_begin(const CigarString& cigar_string, SizeType hard_clipped_begin) noexcept
 {
     if (is_front_soft_clipped(cigar_string)) {
@@ -75,51 +77,42 @@ SizeType soft_clipped_read_begin(const CigarString& cigar_string, SizeType hard_
     return hard_clipped_begin;
 }
 
-template <typename SizeType = unsigned>
+template <typename SizeType = CigarOperation::SizeType>
 SizeType operations_size(const CigarString& cigar_string) noexcept
 {
     return std::accumulate(std::cbegin(cigar_string), std::cend(cigar_string), SizeType {},
-                           [] (const unsigned lhs, const CigarOperation& rhs) {
-                               return lhs + rhs.get_size();
+                           [] (const SizeType curr, const CigarOperation& op) {
+                               return curr + op.get_size();
                            });
 }
 
-template <typename SizeType = unsigned>
+template <typename SizeType = CigarOperation::SizeType>
 SizeType reference_size(const CigarString& cigar_string) noexcept
 {
-    SizeType result {};
-    
-    for (const auto& op : cigar_string) {
-        if (op.advances_reference()) {
-            result += op.get_size();
-        }
-    }
-    
-    return result;
+    return std::accumulate(std::cbegin(cigar_string), std::cend(cigar_string), SizeType {},
+                           [] (const SizeType curr, const CigarOperation& op) {
+                               return curr + ((op.advances_reference()) ? op.get_size() : 0);
+                           });
 }
 
-template <typename SizeType = unsigned>
+template <typename SizeType = CigarOperation::SizeType>
 SizeType sequence_size(const CigarString& cigar_string) noexcept
 {
-    SizeType result {};
-    
-    for (const auto& op : cigar_string) {
-        if (op.advances_sequence()) {
-            result += op.get_size();
-        }
-    }
-    
-    return result;
+    return std::accumulate(std::cbegin(cigar_string), std::cend(cigar_string), SizeType {},
+                           [] (const SizeType curr, const CigarOperation& op) {
+                               return curr + ((op.advances_sequence()) ? op.get_size() : 0);
+                           });
 }
 
-template <typename SizeType>
-CigarOperation get_operation_at_sequence_index(const CigarString& cigar_string, SizeType the_sequence_index)
+template <typename SizeType = CigarOperation::SizeType>
+CigarOperation get_operation_at_sequence_position(const CigarString& cigar_string,
+                                                  const SizeType sequence_pos)
 {
     auto first = std::cbegin(cigar_string);
     
-    while (the_sequence_index >= first->get_size()) {
+    while (sequence_pos >= first->get_size()) {
         ++first;
-        the_sequence_index -= first->get_size();
+        sequence_pos -= first->get_size();
     }
     
     return *first;
@@ -179,21 +172,21 @@ namespace detail
         
         return result;
     }
-} // end namespace detail
+} // namespace detail
 
-template <typename SizeType>
+template <typename SizeType = CigarOperation::SizeType>
 CigarString operation_splice(const CigarString& cigar_string, SizeType offset, SizeType size)
 {
     return detail::splice(cigar_string, offset, size, [] (const auto& op) { return true; });
 }
 
-template <typename SizeType>
+template <typename SizeType = CigarOperation::SizeType>
 CigarString reference_splice(const CigarString& cigar_string, SizeType offset, SizeType size)
 {
     return detail::splice(cigar_string, offset, size, [] (const auto& op) { return detail::advances_reference(op); });
 }
 
-template <typename SizeType>
+template <typename SizeType = CigarOperation::SizeType>
 CigarString sequence_splice(const CigarString& cigar_string, SizeType offset, SizeType size)
 {
     return detail::splice(cigar_string, offset, size, [] (const auto& op) { return detail::advances_sequence(op); });
@@ -209,9 +202,6 @@ inline bool operator<(const CigarOperation& lhs, const CigarOperation& rhs)
     return (lhs.get_flag() == rhs.get_flag()) ? lhs.get_size() < rhs.get_size() :
                                                 lhs.get_flag() < rhs.get_flag();
 }
-
-// Note CigarString gets all of std::vector comparison methods. In particular, operator< uses
-// std::lexicographical_compare
 
 std::ostream& operator<<(std::ostream& os, const CigarOperation& cigar_operation);
 
