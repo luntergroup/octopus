@@ -10,6 +10,7 @@
 #define random_candidate_variant_generator_hpp
 
 #include <vector>
+#include <functional>
 
 #include "i_candidate_variant_generator.hpp"
 #include "aligned_read.hpp"
@@ -26,7 +27,7 @@ namespace Octopus {
         using SizeType = AlignedRead::SizeType;
         
         RandomCandidateVariantGenerator() = delete;
-        explicit RandomCandidateVariantGenerator(ReferenceGenome& reference);
+        explicit RandomCandidateVariantGenerator(const ReferenceGenome& reference);
         ~RandomCandidateVariantGenerator() override = default;
         
         RandomCandidateVariantGenerator(const RandomCandidateVariantGenerator&)            = default;
@@ -40,7 +41,7 @@ namespace Octopus {
         std::vector<Variant> get_candidates(const GenomicRegion& region) override;
         
     private:
-        ReferenceGenome& reference_;
+        std::reference_wrapper<const ReferenceGenome> reference_;
         SizeType max_read_size_ = 100;
     };
     

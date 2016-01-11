@@ -26,14 +26,14 @@
 #include "aligned_read.hpp"
 #include "read_manager.hpp"
 
+#include "read_utils.hpp"
 #include "read_filters.hpp"
 #include "downsampler.hpp"
 #include "read_transform.hpp"
 #include "read_transformations.hpp"
-#include "candidate_generators.hpp"
 
 #include "haplotype_prior_model.hpp"
-#include "variant_caller_factory.hpp"
+#include "variant_caller_builder.hpp"
 
 #include "vcf_reader.hpp"
 #include "vcf_writer.hpp"
@@ -74,28 +74,40 @@ namespace Octopus
         general.add_options()
         ("help,h", "produce help message")
         ("version", "output the version number")
-        ("verbosity", po::value<unsigned>()->default_value(0), "level of logging. Verbosity 0 switches off logging")
+        ("verbosity", po::value<unsigned>()->default_value(0),
+            "level of logging. Verbosity 0 switches off logging")
         ;
         
         po::options_description backend("Backend options");
         backend.add_options()
-        ("max-threads,t", po::value<unsigned>()->default_value(1), "maximum number of threads")
-        ("memory", po::value<size_t>()->default_value(8000), "target memory usage in MB")
-        ("reference-cache-size", po::value<size_t>()->default_value(0), "the maximum number of bytes that can be used to cache reference sequence")
-        ("compress-reads", po::bool_switch()->default_value(false), "compress the reads (slower)")
-        ("max-open-read-files", po::value<unsigned>()->default_value(200), "the maximum number of read files that can be open at one time")
+        ("max-threads,t", po::value<unsigned>()->default_value(1),
+            "maximum number of threads")
+        ("memory", po::value<size_t>()->default_value(8000),
+            "target memory usage in MB")
+        ("reference-cache-size", po::value<size_t>()->default_value(0),
+            "the maximum number of bytes that can be used to cache reference sequence")
+        ("compress-reads", po::bool_switch()->default_value(false),
+            "compress the reads (slower)")
+        ("max-open-read-files", po::value<unsigned>()->default_value(200),
+            "the maximum number of read files that can be open at one time")
         ;
         
         po::options_description input("Input/output options");
         input.add_options()
         ("reference,R", po::value<std::string>()->required(), "the reference genome file")
-        ("reads,I", po::value<std::vector<std::string>>()->multitoken(), "space-seperated list of read file paths")
+        ("reads,I", po::value<std::vector<std::string>>()->multitoken(),
+            "space-seperated list of read file paths")
         ("reads-file", po::value<std::string>(), "list of read file paths, one per line")
-        ("regions,L", po::value<std::vector<std::string>>()->multitoken(), "space-seperated list of one-indexed variant search regions (chrom:begin-end)")
-        ("regions-file", po::value<std::string>(), "list of one-indexed variant search regions (chrom:begin-end), one per line")
-        ("skip-regions", po::value<std::vector<std::string>>()->multitoken(), "space-seperated list of one-indexed regions (chrom:begin-end) to skip")
-        ("skip-regions-file", po::value<std::string>(), "list of one-indexed regions (chrom:begin-end) to skip, one per line")
-        ("samples,S", po::value<std::vector<std::string>>()->multitoken(), "space-seperated list of sample names to consider")
+        ("regions,L", po::value<std::vector<std::string>>()->multitoken(),
+            "space-seperated list of one-indexed variant search regions (chrom:begin-end)")
+        ("regions-file", po::value<std::string>(),
+            "list of one-indexed variant search regions (chrom:begin-end), one per line")
+        ("skip-regions", po::value<std::vector<std::string>>()->multitoken(),
+            "space-seperated list of one-indexed regions (chrom:begin-end) to skip")
+        ("skip-regions-file", po::value<std::string>(),
+            "list of one-indexed regions (chrom:begin-end) to skip, one per line")
+        ("samples,S", po::value<std::vector<std::string>>()->multitoken(),
+            "space-seperated list of sample names to consider")
         ("samples-file", po::value<std::string>(), "list of sample names to consider, one per line")
         ("output,o", po::value<std::string>()->default_value("octopus_calls.vcf"), "write output to file")
         //("log-file", po::value<std::string>(), "path of the output log file")
@@ -103,68 +115,105 @@ namespace Octopus
         
         po::options_description filters("Read filter options");
         filters.add_options()
-        ("allow-unmapped", po::bool_switch()->default_value(false), "turns off marked unmapped read filter")
-        ("min-mapping-quality", po::value<unsigned>()->default_value(20), "reads with smaller mapping quality are ignored")
-        ("good-base-quality", po::value<unsigned>()->default_value(20), "base quality threshold used by min-good-bases filter")
-        ("min-good-base-fraction", po::value<double>(), "base quality threshold used by min-good-bases filter")
-        ("min-good-bases", po::value<AlignedRead::SizeType>()->default_value(0), "minimum number of bases with quality min-base-quality before read is considered")
+        ("allow-unmapped", po::bool_switch()->default_value(false),
+            "turns off marked unmapped read filter")
+        ("min-mapping-quality", po::value<unsigned>()->default_value(20),
+            "reads with smaller mapping quality are ignored")
+        ("good-base-quality", po::value<unsigned>()->default_value(20),
+            "base quality threshold used by min-good-bases filter")
+        ("min-good-base-fraction", po::value<double>(),
+            "base quality threshold used by min-good-bases filter")
+        ("min-good-bases", po::value<AlignedRead::SizeType>()->default_value(0),
+            "minimum number of bases with quality min-base-quality before read is considered")
         ("allow-qc-fails", po::bool_switch()->default_value(false), "filter reads marked as QC failed")
         ("min-read-length", po::value<AlignedRead::SizeType>(), "filter reads shorter than this")
         ("max-read-length", po::value<AlignedRead::SizeType>(), "filter reads longer than this")
-        ("allow-marked-duplicates", po::bool_switch()->default_value(false), "allows reads marked as duplicate in alignment record")
-        ("allow-octopus-duplicates", po::bool_switch()->default_value(false), "allows reads considered duplicates by Octopus")
-        ("no-secondary-alignmenets", po::bool_switch()->default_value(false), "filters reads marked as secondary alignments")
-        ("no-supplementary-alignmenets", po::bool_switch()->default_value(false), "filters reads marked as supplementary alignments")
-        ("no-unmapped-mates", po::bool_switch()->default_value(false), "filters reads with unmapped mates")
-        ("downsample-above", po::value<unsigned>()->default_value(10000), "downsample reads in regions where coverage is over this")
-        ("downsample-target", po::value<unsigned>()->default_value(10000), "the target coverage for the downsampler")
+        ("allow-marked-duplicates", po::bool_switch()->default_value(false),
+            "allows reads marked as duplicate in alignment record")
+        ("allow-octopus-duplicates", po::bool_switch()->default_value(false),
+            "allows reads considered duplicates by Octopus")
+        ("no-secondary-alignmenets", po::bool_switch()->default_value(false),
+            "filters reads marked as secondary alignments")
+        ("no-supplementary-alignmenets", po::bool_switch()->default_value(false),
+            "filters reads marked as supplementary alignments")
+        ("no-unmapped-mates", po::bool_switch()->default_value(false),
+            "filters reads with unmapped mates")
+        ("downsample-above", po::value<unsigned>()->default_value(10000),
+            "downsample reads in regions where coverage is over this")
+        ("downsample-target", po::value<unsigned>()->default_value(10000),
+            "the target coverage for the downsampler")
         ;
         
         po::options_description transforms("Read transform options");
         transforms.add_options()
-        ("trim-soft-clipped", po::bool_switch()->default_value(false), "trims soft clipped parts of the read")
-        ("tail-trim-size", po::value<AlignedRead::SizeType>()->default_value(0), "trims this number of bases off the tail of all reads")
-        ("trim-adapters", po::bool_switch()->default_value(false), "trims any overlapping regions that pass the fragment size")
+        ("trim-soft-clipped", po::bool_switch()->default_value(false),
+            "trims soft clipped parts of the read")
+        ("tail-trim-size", po::value<AlignedRead::SizeType>()->default_value(0),
+            "trims this number of bases off the tail of all reads")
+        ("trim-adapters", po::bool_switch()->default_value(false),
+            "trims any overlapping regions that pass the fragment size")
         ;
         
         po::options_description candidates("Candidate generation options");
         candidates.add_options()
-        ("no-candidates-from-alignments", po::bool_switch()->default_value(false), "disables candidate variants from aligned reads")
-        ("candidates-from-assembler", po::bool_switch()->default_value(false), "generate candidate variants with the assembler")
-        ("candidates-from-source", po::value<std::string>(), "variant file path containing known variants. These variants will automatically become candidates")
-        ("regenotype", po::bool_switch()->default_value(false), "disables all generators other than source which must be present")
-        ("min-snp-base-quality", po::value<unsigned>()->default_value(20), "only base changes with quality above this value are considered for snp generation")
-        ("min-supporting-reads", po::value<unsigned>()->default_value(1), "minimum number of reads that must support a variant if it is to be considered a candidate")
-        ("max-variant-size", po::value<AlignedRead::SizeType>()->default_value(100), "maximum candidate varaint size from alignmenet CIGAR")
-        ("kmer-size", po::value<unsigned>()->default_value(15), "k-mer size to use for assembly")
+        ("no-candidates-from-alignments", po::bool_switch()->default_value(false),
+            "disables candidate variants from aligned reads")
+        ("candidates-from-assembler", po::bool_switch()->default_value(false),
+            "generate candidate variants with the assembler")
+        ("candidates-from-source", po::value<std::string>(),
+            "variant file path containing known variants. These variants will automatically become candidates")
+        ("regenotype", po::bool_switch()->default_value(false),
+            "disables all generators other than source which must be present")
+        ("min-snp-base-quality", po::value<unsigned>()->default_value(20),
+            "only base changes with quality above this value are considered for snp generation")
+        ("min-supporting-reads", po::value<unsigned>()->default_value(1),
+            "minimum number of reads that must support a variant if it is to be considered a candidate")
+        ("max-variant-size", po::value<AlignedRead::SizeType>()->default_value(100),
+            "maximum candidate varaint size from alignmenet CIGAR")
+        ("kmer-size", po::value<unsigned>()->default_value(15),
+            "k-mer size to use for assembly")
         ("no-cycles", po::bool_switch()->default_value(false), "dissalow cycles in assembly graph")
         ;
         
         po::options_description model("Model options");
         model.add_options()
         ("model", po::value<std::string>()->default_value("population"), "calling model used")
-        ("ploidy", po::value<unsigned>()->default_value(2), "organism ploidy, all contigs with unspecified ploidy are assumed this ploidy")
-        ("contig-ploidies", po::value<std::vector<std::string>>()->multitoken(), "ploidy of individual contigs")
+        ("ploidy", po::value<unsigned>()->default_value(2),
+            "organism ploidy, all contigs with unspecified ploidy are assumed this ploidy")
+        ("contig-ploidies", po::value<std::vector<std::string>>()->multitoken(),
+            "ploidy of individual contigs")
         ("contig-ploidies-file", po::value<std::string>(), "list of contig=ploidy pairs, one per line")
         ("normal-sample", po::value<std::string>(), "normal sample used in cancer model")
         ("maternal-sample", po::value<std::string>(), "maternal sample for trio model")
         ("paternal-sample", po::value<std::string>(), "paternal sample for trio model")
-        ("transition-prior", po::value<double>()->default_value(0.003), "prior probability of a transition snp from the reference")
-        ("transversion-prior", po::value<double>()->default_value(0.003), "prior probability of a transversion snp from the reference")
-        ("insertion-prior", po::value<double>()->default_value(0.003), "prior probability of an insertion into the reference")
-        ("deletion-prior", po::value<double>()->default_value(0.003), "prior probability of a deletion from the reference")
-        ("prior-precision", po::value<double>()->default_value(0.003), "precision (inverse variance) of the given variant priors")
-        ("max-haplotypes", po::value<unsigned>()->default_value(128), "the maximum number of haplotypes the model may consider")
+        ("transition-prior", po::value<double>()->default_value(0.003),
+            "prior probability of a transition snp from the reference")
+        ("transversion-prior", po::value<double>()->default_value(0.003),
+            "prior probability of a transversion snp from the reference")
+        ("insertion-prior", po::value<double>()->default_value(0.003),
+            "prior probability of an insertion into the reference")
+        ("deletion-prior", po::value<double>()->default_value(0.003),
+            "prior probability of a deletion from the reference")
+        ("prior-precision", po::value<double>()->default_value(0.003),
+            "precision (inverse variance) of the given variant priors")
+        ("max-haplotypes", po::value<unsigned>()->default_value(128),
+            "the maximum number of haplotypes the model may consider")
         ;
         
         po::options_description calling("Caller options");
         calling.add_options()
-        ("min-variant-posterior", po::value<float>()->default_value(20.0), "minimum variant call posterior probability (phred scale)")
-        ("min-refcall-posterior", po::value<float>()->default_value(10.0), "minimum homozygous reference call posterior probability (phred scale)")
-        ("min-somatic-posterior", po::value<float>()->default_value(10.0), "minimum somaitc mutation call posterior probability (phred scale)")
-        ("make-positional-refcalls", po::bool_switch()->default_value(false), "caller will output positional REFCALLs")
-        ("make-blocked-refcalls", po::bool_switch()->default_value(false), "caller will output blocked REFCALLs")
-        ("somatics-only", po::bool_switch()->default_value(false), "only output somatic calls (for somatic calling models only)")
+        ("min-variant-posterior", po::value<float>()->default_value(20.0),
+            "minimum variant call posterior probability (phred scale)")
+        ("min-refcall-posterior", po::value<float>()->default_value(10.0),
+            "minimum homozygous reference call posterior probability (phred scale)")
+        ("min-somatic-posterior", po::value<float>()->default_value(10.0),
+            "minimum somaitc mutation call posterior probability (phred scale)")
+        ("make-positional-refcalls", po::bool_switch()->default_value(false),
+            "caller will output positional REFCALLs")
+        ("make-blocked-refcalls", po::bool_switch()->default_value(false),
+            "caller will output blocked REFCALLs")
+        ("somatics-only", po::bool_switch()->default_value(false),
+            "only output somatic calls (for somatic calling models only)")
         ;
         
         po::options_description all("Allowed options");
@@ -321,7 +370,7 @@ namespace Octopus
         result.reserve(input_regions.size());
         
         for (const auto& contig_regions : input_regions) {
-            result.emplace(contig_regions.first, splice_all(contig_regions.second, skipped[contig_regions.first]));
+            result.emplace(contig_regions.first, splice_all(skipped[contig_regions.first], contig_regions.second));
         }
         
         return result;
@@ -360,11 +409,11 @@ namespace Octopus
         return options.at("memory").as<size_t>();
     }
     
-    ReferenceGenome get_reference(const po::variables_map& options)
+    ReferenceGenome make_reference(const po::variables_map& options)
     {
-        auto cache_size = options.at("reference-cache-size").as<size_t>();
-        return make_reference(options.at("reference").as<std::string>(),
-                              static_cast<ReferenceGenome::SizeType>(cache_size));
+        const auto cache_size = options.at("reference-cache-size").as<size_t>();
+        return ::make_reference(options.at("reference").as<std::string>(),
+                                static_cast<ReferenceGenome::SizeType>(cache_size));
     }
     
     SearchRegions get_search_regions(const po::variables_map& options, const ReferenceGenome& reference)
@@ -445,12 +494,12 @@ namespace Octopus
         return result;
     }
     
-    ReadManager get_read_manager(const po::variables_map& options)
+    ReadManager make_read_manager(const po::variables_map& options)
     {
         return ReadManager {get_read_paths(options), options.at("max-open-read-files").as<unsigned>()};
     }
     
-    ReadFilterer get_read_filter(const po::variables_map& options)
+    ReadFilterer make_read_filter(const po::variables_map& options)
     {
         using QualityType = AlignedRead::QualityType;
         using SizeType    = AlignedRead::SizeType;
@@ -514,7 +563,7 @@ namespace Octopus
         return result;
     }
     
-    Downsampler get_downsampler(const po::variables_map& options)
+    Downsampler make_downsampler(const po::variables_map& options)
     {
         auto max_coverage    = options.at("downsample-above").as<unsigned>();
         auto target_coverage = options.at("downsample-target").as<unsigned>();
@@ -522,7 +571,7 @@ namespace Octopus
         return Downsampler(max_coverage, target_coverage);
     }
     
-    ReadTransform get_read_transformer(const po::variables_map& options)
+    ReadTransform make_read_transform(const po::variables_map& options)
     {
         using SizeType = AlignedRead::SizeType;
         
@@ -547,15 +596,15 @@ namespace Octopus
         return result;
     }
     
-    CandidateVariantGenerator get_candidate_generator(const po::variables_map& options, ReferenceGenome& reference)
+    CandidateGeneratorBuilder make_candidate_generator_builder(const po::variables_map& options,
+                                                               const ReferenceGenome& reference)
     {
-        CandidateVariantGenerator result {};
-        
-        auto max_variant_size = options.at("max-variant-size").as<AlignmentCandidateVariantGenerator::SizeType>();
+        CandidateGeneratorBuilder result {};
         
         if (options.count("candidates-from-source") == 1) {
-            auto variant_file_path = expand_user_path(options.at("candidates-from-source").as<std::string>());
-            result.register_generator(std::make_unique<ExternalCandidateVariantGenerator>(VcfReader {variant_file_path}));
+            result.add_generator(CandidateGeneratorBuilder::Generator::External);
+            result.set_variant_source(expand_user_path(options.at("candidates-from-source").as<std::string>()));
+
         }
         
         if (options.at("regenotype").as<bool>()) {
@@ -567,84 +616,123 @@ namespace Octopus
         }
         
         if (!options.at("no-candidates-from-alignments").as<bool>()) {
-            auto min_snp_base_quality = options.at("min-snp-base-quality").as<unsigned>();
+            result.add_generator(CandidateGeneratorBuilder::Generator::Alignment);
+            
+            result.set_reference(reference);
+            result.set_min_snp_base_quality(options.at("min-snp-base-quality").as<unsigned>());
+            
             auto min_supporting_reads = options.at("min-supporting-reads").as<unsigned>();
             
             if (min_supporting_reads == 0) ++min_supporting_reads; // probably input error; 0 is meaningless
             
-            result.register_generator(std::make_unique<AlignmentCandidateVariantGenerator>(reference, min_snp_base_quality,
-                                                                                           min_supporting_reads, max_variant_size));
+            result.set_min_supporting_reads(min_supporting_reads);
         }
         
         if (options.at("candidates-from-assembler").as<bool>()) {
-            auto kmer_size    = options.at("kmer-size").as<unsigned>();
+            result.add_generator(CandidateGeneratorBuilder::Generator::Assembler);
+            result.set_kmer_size(options.at("kmer-size").as<unsigned>());
             //auto allow_cycles = !options.at("no-cycles").as<bool>();
-            result.register_generator(std::make_unique<AssemblerCandidateVariantGenerator>(reference, kmer_size, max_variant_size));
         }
+        
+        result.set_max_variant_size(options.at("max-variant-size").as<CandidateGeneratorBuilder::SizeType>());
         
         return result;
     }
     
+//        std::unordered_map<std::string, unsigned> parse_contig_ploidies(const po::variables_map& options)
+//        {
+//            std::unordered_map<std::string, unsigned> result {};
+//            
+//            if (options.count("contig-ploidies") == 1) {
+//                auto contig_ploidies = options.at("contig-ploidies").as<std::vector<std::string>>();
+//                
+//                for (const auto& contig_ploidy : contig_ploidies) {
+//                    
+//                    if (contig_ploidy.find(contig) == 0) {
+//                        if (contig_ploidy[contig.size()] != '=') {
+//                            throw std::runtime_error {"Could not pass contig-plodies option"};
+//                        }
+//                        ploidy = static_cast<unsigned>(std::stoul(contig_ploidy.substr(contig.size() + 1)));
+//                    }
+//                }
+//            }
+//            
+//            if (options.count("contig-ploidies-file") == 1) {
+//                
+//            }
+//            
+//            return result;
+//        }
         
+        unsigned get_contig_ploidy(const GenomicRegion::StringType& contig, const po::variables_map& options)
+        {
+            unsigned result {options.at("ploidy").as<unsigned>()};
+            
+            if (options.count("contig-ploidies") == 1) {
+                auto contig_ploidies = options.at("contig-ploidies").as<std::vector<std::string>>();
+                
+                for (const auto& contig_ploidy : contig_ploidies) {
+                    if (contig_ploidy.find(contig) == 0) {
+                        if (contig_ploidy[contig.size()] != '=') {
+                            throw std::runtime_error {"Could not pass contig-plodies option"};
+                        }
+                        result = static_cast<unsigned>(std::stoul(contig_ploidy.substr(contig.size() + 1)));
+                    }
+                }
+            } else if (options.count("contig-ploidies-file") == 1) {
+                // TODO: fetch from file
+            }
+            
+            return result;
+        }
     
-    std::unique_ptr<VariantCaller> get_variant_caller(const po::variables_map& options, ReferenceGenome& reference,
-                                                      CandidateVariantGenerator& candidate_generator,
-                                                      const GenomicRegion::StringType& contig)
+    std::unique_ptr<VariantCaller> make_variant_caller(const po::variables_map& options,
+                                                       const ReferenceGenome& reference,
+                                                       const CandidateGeneratorBuilder& candidate_generator_builder,
+                                                       const GenomicRegion::StringType& contig)
     {
+        using Maths::phred_to_probability;
+        
+        VariantCallerBuilder vc_builder {reference, candidate_generator_builder};
+        
         const auto& model = options.at("model").as<std::string>();
         
-        auto refcall_type = VariantCaller::RefCallType::None;
+        vc_builder.set_model(model);
         
         if (options.at("make-positional-refcalls").as<bool>()) {
-            refcall_type = VariantCaller::RefCallType::Positional;
+            vc_builder.set_refcall_type(VariantCaller::RefCallType::Positional);
         } else if (options.at("make-blocked-refcalls").as<bool>()) {
-            refcall_type = VariantCaller::RefCallType::Blocked;
+            vc_builder.set_refcall_type(VariantCaller::RefCallType::Blocked);
         }
         
-        auto ploidy = options.at("ploidy").as<unsigned>();
+        vc_builder.set_ploidy(get_contig_ploidy(contig, options));
         
-        if (options.count("contig-ploidies") == 1) {
-            auto contig_ploidies = options.at("contig-ploidies").as<std::vector<std::string>>();
-            
-            for (const auto& contig_ploidy : contig_ploidies) {
-                if (contig_ploidy.find(contig) == 0) {
-                    if (contig_ploidy[contig.size()] != '=') {
-                        throw std::runtime_error {"Could not pass contig-plodies option"};
-                    }
-                    ploidy = static_cast<unsigned>(std::stoul(contig_ploidy.substr(contig.size() + 1)));
-                }
-            }
-        } else if (options.count("contig-ploidies-file") == 1) {
-            // TODO: fetch from file
-        }
+        const auto min_variant_posterior_phred = options.at("min-variant-posterior").as<float>();
+        vc_builder.set_min_variant_posterior(phred_to_probability(min_variant_posterior_phred));
         
-        auto min_variant_posterior_phred = options.at("min-variant-posterior").as<float>();
-        auto min_variant_posterior        = Maths::phred_to_probability(min_variant_posterior_phred);
-        
-        auto min_refcall_posterior_phred = options.at("min-refcall-posterior").as<float>();
-        auto min_refcall_posterior       = Maths::phred_to_probability(min_refcall_posterior_phred);
-        
-        SampleIdType normal_sample {}, maternal_sample, paternal_sample;
-        double min_somatic_posterior {};
-        bool call_somatics_only {false};
+        const auto min_refcall_posterior_phred = options.at("min-refcall-posterior").as<float>();
+        vc_builder.set_min_refcall_posterior(phred_to_probability(min_refcall_posterior_phred));
         
         if (model == "cancer") {
-            normal_sample = options.at("normal-sample").as<std::string>();
-            auto min_somatic_posterior_phred = options.at("min-somatic-posterior").as<float>();
-            min_somatic_posterior = Maths::phred_to_probability(min_somatic_posterior_phred);
-            call_somatics_only = options.at("somatics-only").as<bool>();
+            vc_builder.set_normal_sample(options.at("normal-sample").as<std::string>());
+            
+            const auto min_somatic_posterior_phred = options.at("min-somatic-posterior").as<float>();
+            vc_builder.set_min_somatic_posterior(phred_to_probability(min_somatic_posterior_phred));
+            
+            if (options.at("somatics-only").as<bool>()) {
+                vc_builder.set_somatic_only_calls();
+            } else {
+                vc_builder.set_somatic_and_variant_calls();
+            }
         } else if (model == "trio") {
-            maternal_sample = options.at("maternal-sample").as<std::string>();
-            paternal_sample = options.at("paternal-sample").as<std::string>();
+            vc_builder.set_maternal_sample(options.at("maternal-sample").as<std::string>());
+            vc_builder.set_paternal_sample(options.at("paternal-sample").as<std::string>());
         }
         
-        return make_variant_caller(model, reference, candidate_generator, refcall_type,
-                                   min_variant_posterior, min_refcall_posterior,
-                                   ploidy, normal_sample, min_somatic_posterior,
-                                   call_somatics_only, maternal_sample, paternal_sample);
+        return vc_builder.build();
     }
     
-    VcfWriter get_output_vcf(const po::variables_map& options)
+    VcfWriter make_output_vcf_writer(const po::variables_map& options)
     {
         return VcfWriter {expand_user_path(options.at("output").as<std::string>())};
     }

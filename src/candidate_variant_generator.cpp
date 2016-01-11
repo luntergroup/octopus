@@ -19,26 +19,26 @@ namespace Octopus {
     
 void CandidateVariantGenerator::register_generator(std::unique_ptr<ICandidateVariantGenerator> generator)
 {
-    generator_list_.emplace_back(std::move(generator));
+    generators_.emplace_back(std::move(generator));
 }
 
 void CandidateVariantGenerator::add_read(const AlignedRead& read)
 {
-    for (auto& generator : generator_list_) {
+    for (auto& generator : generators_) {
         generator->add_read(read);
     }
 }
 
 void CandidateVariantGenerator::add_reads(std::vector<AlignedRead>::const_iterator first, std::vector<AlignedRead>::const_iterator last)
 {
-    for (auto& generator : generator_list_) {
+    for (auto& generator : generators_) {
         generator->add_reads(first, last);
     }
 }
 
 void CandidateVariantGenerator::add_reads(MappableSet<AlignedRead>::const_iterator first, MappableSet<AlignedRead>::const_iterator last)
 {
-    for (auto& generator : generator_list_) {
+    for (auto& generator : generators_) {
         generator->add_reads(first, last);
     }
 }
@@ -47,7 +47,7 @@ std::vector<Variant> CandidateVariantGenerator::get_candidates(const GenomicRegi
 {
     std::vector<Variant> result {};
     
-    for (auto& generator : generator_list_) {
+    for (auto& generator : generators_) {
         auto generator_result = generator->get_candidates(region);
         auto it = result.insert(std::end(result),
                                 std::make_move_iterator(std::begin(generator_result)),
@@ -60,16 +60,16 @@ std::vector<Variant> CandidateVariantGenerator::get_candidates(const GenomicRegi
     return result;
 }
 
-void CandidateVariantGenerator::reserve(size_t n)
+void CandidateVariantGenerator::reserve(const size_t n)
 {
-    for (auto& generator : generator_list_) {
+    for (auto& generator : generators_) {
         generator->reserve(n);
     }
 }
 
 void CandidateVariantGenerator::clear()
 {
-    for (auto& generator : generator_list_) {
+    for (auto& generator : generators_) {
         generator->clear();
     }
 }

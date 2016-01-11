@@ -12,6 +12,7 @@
 #include <vector>
 #include <string>
 #include <iterator>
+#include <functional>
 
 #include "common.hpp"
 #include "reference_genome.hpp"
@@ -35,11 +36,16 @@ namespace Octopus
         using ReadMap = Octopus::ReadMap;
         
         VariantCaller() = delete;
-        explicit VariantCaller(ReferenceGenome& reference, CandidateVariantGenerator& candidate_generator,
+        
+        explicit VariantCaller(const ReferenceGenome& reference,
+                               CandidateVariantGenerator&& candidate_generator,
                                RefCallType refcall_type = RefCallType::None);
-        explicit VariantCaller(ReferenceGenome& reference, CandidateVariantGenerator& candidate_generator,
+        
+        explicit VariantCaller(const ReferenceGenome& reference,
+                               CandidateVariantGenerator&& candidate_generator,
                                HaplotypePriorModel haplotype_prior_model,
                                RefCallType refcall_type = RefCallType::None);
+        
         virtual ~VariantCaller() = default;
         
         VariantCaller(const VariantCaller&)            = delete;
@@ -52,7 +58,7 @@ namespace Octopus
         std::vector<VcfRecord> call_variants(const GenomicRegion& region, ReadMap reads);
         
     protected:
-        ReferenceGenome& reference_;
+        std::reference_wrapper<const ReferenceGenome> reference_;
         HaplotypePriorModel haplotype_prior_model_;
         
         const RefCallType refcall_type_ = RefCallType::Positional;
@@ -60,7 +66,7 @@ namespace Octopus
         bool refcalls_requested() const noexcept;
         
     private:
-        CandidateVariantGenerator& candidate_generator_;
+        CandidateVariantGenerator candidate_generator_;
         
         bool done_calling(const GenomicRegion& region) const noexcept;
         
@@ -75,7 +81,7 @@ namespace Octopus
     
     std::vector<Allele>
     generate_callable_alleles(const GenomicRegion& region, const std::vector<Variant>& variants,
-                              VariantCaller::RefCallType refcall_type, ReferenceGenome& reference);
+                              VariantCaller::RefCallType refcall_type, const ReferenceGenome& reference);
     
     std::vector<Allele>
     generate_candidate_reference_alleles(const std::vector<Allele>& callable_alleles,

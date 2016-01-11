@@ -295,7 +295,8 @@ namespace Octopus
     // private methods
     
     Population::Latents
-    Population::evaluate(const std::vector<Haplotype>& haplotypes, const ReadMap& reads, ReferenceGenome& reference)
+    Population::evaluate(const std::vector<Haplotype>& haplotypes, const ReadMap& reads,
+                         const ReferenceGenome& reference)
     {
         if (haplotypes.size() == 1) {
             // TODO: catch this case to avoid computing

@@ -1005,9 +1005,9 @@ copy_noncontained(const MappableSet<MappableType1, Allocator>& mappables, const 
     return result;
 }
 
-template <typename Region, typename Mappable, typename Allocator1, typename Allocator2>
-MappableSet<Region> splice_all(const MappableSet<Region, Allocator1>& regions,
-                               const MappableSet<Mappable, Allocator2>& mappables)
+template <typename Mappable, typename Region, typename Allocator1, typename Allocator2>
+MappableSet<Region> splice_all(const MappableSet<Mappable, Allocator1>& mappables,
+                               const MappableSet<Region, Allocator2>& regions)
 {
     if (mappables.empty()) return regions;
     
@@ -1047,11 +1047,13 @@ MappableSet<Region> splice_all(const MappableSet<Region, Allocator1>& regions,
 template <typename MappableType, typename Allocator>
 std::vector<unsigned> positional_coverage(const MappableSet<MappableType, Allocator>& mappables)
 {
-    return positional_coverage(std::cbegin(mappables), std::cend(mappables), get_encompassing_region(mappables));
+    return positional_coverage(std::cbegin(mappables), std::cend(mappables),
+                               get_encompassing_region(mappables));
 }
 
 template <typename MappableType>
-std::vector<unsigned> positional_coverage(const MappableSet<MappableType>& mappables, const GenomicRegion& region)
+std::vector<unsigned> positional_coverage(const MappableSet<MappableType>& mappables,
+                                          const GenomicRegion& region)
 {
     const auto overlapped = mappables.overlap_range(region);
     return positional_coverage(std::cbegin(overlapped), std::cend(overlapped), region);

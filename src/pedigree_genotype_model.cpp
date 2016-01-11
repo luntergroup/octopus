@@ -92,7 +92,8 @@ namespace Octopus
 //        }
         
         Pedigree::Latents
-        Pedigree::evaluate(const std::vector<Haplotype>& haplotypes, const ReadMap& reads, ReferenceGenome& reference)
+        Pedigree::evaluate(const std::vector<Haplotype>& haplotypes, const ReadMap& reads,
+                           const ReferenceGenome& reference)
         {
             if (haplotypes.size() == 1) {
                 // TODO: catch this case to avoid computing

@@ -41,7 +41,7 @@ public:
     using SizeType     = Allele::SizeType;
     
     Haplotype() = default;
-    explicit Haplotype(ReferenceGenome& reference, const GenomicRegion& region);
+    explicit Haplotype(const ReferenceGenome& reference, const GenomicRegion& region);
     ~Haplotype() = default;
     
     Haplotype(const Haplotype&)            = default;
@@ -81,7 +81,7 @@ private:
     mutable SequenceType cached_sequence_;
     mutable size_t cached_hash_ = 0;
     
-    std::reference_wrapper<ReferenceGenome> reference_;
+    std::reference_wrapper<const ReferenceGenome> reference_;
     
     using AlleleIterator = decltype(explicit_alleles_)::const_iterator;
     
@@ -146,7 +146,7 @@ MappableType splice(const Haplotype& haplotype, const GenomicRegion& region)
     return detail::do_splice(haplotype, region, std::is_same<Haplotype, std::decay_t<MappableType>> {});
 }
 
-bool is_reference(const Haplotype& haplotype, ReferenceGenome& reference);
+bool is_reference(const Haplotype& haplotype, const ReferenceGenome& reference);
 
 struct IsLessComplex
 {

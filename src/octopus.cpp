@@ -26,7 +26,7 @@
 #include "read_transform.hpp"
 #include "read_pipe.hpp"
 #include "read_utils.hpp"
-#include "candidate_generators.hpp"
+#include "candidate_generator_builder.hpp"
 #include "vcf.hpp"
 #include "vcf_utils.hpp"
 #include "variant_caller.hpp"
@@ -121,14 +121,16 @@ namespace Octopus
         
         const size_t max_reads = 1'000'000;
         
-        auto reference           = Options::get_reference(options);
-        auto read_manager        = Options::get_read_manager(options);
+        const auto reference     = Options::make_reference(options);
+        
+        auto read_manager        = Options::make_read_manager(options);
         auto regions             = Options::get_search_regions(options, reference);
-        auto read_filter         = Options::get_read_filter(options);
-        auto downsampler         = Options::get_downsampler(options);
-        auto read_transform      = Options::get_read_transformer(options);
-        auto candidate_generator = Options::get_candidate_generator(options, reference);
-        auto output              = Options::get_output_vcf(options);
+        auto read_filter         = Options::make_read_filter(options);
+        auto downsampler         = Options::make_downsampler(options);
+        auto read_transform      = Options::make_read_transform(options);
+        auto output              = Options::make_output_vcf_writer(options);
+        
+        auto candidate_generator_builder = Options::make_candidate_generator_builder(options, reference);
         
         ReadPipe read_pipe {read_manager, read_filter, downsampler, read_transform};
         
@@ -149,7 +151,7 @@ namespace Octopus
             
             size_t num_buffered_reads {};
             
-            auto caller = Options::get_variant_caller(options, reference, candidate_generator, contig);
+            auto caller = Options::make_variant_caller(options, reference, candidate_generator_builder, contig);
             
             for (const auto& region : contig_regions.second) {
                 cout << "processing input region " << region << endl;

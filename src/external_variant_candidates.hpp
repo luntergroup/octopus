@@ -10,6 +10,9 @@
 #define __Octopus__external_variant_candidates__
 
 #include <vector>
+#include <memory>
+
+#include <boost/filesystem.hpp>
 
 #include "i_candidate_variant_generator.hpp"
 #include "vcf_reader.hpp"
@@ -22,7 +25,9 @@ class ExternalCandidateVariantGenerator : public ICandidateVariantGenerator
 {
 public:
     ExternalCandidateVariantGenerator() = delete;
-    explicit ExternalCandidateVariantGenerator(VcfReader&& reader);
+    explicit ExternalCandidateVariantGenerator(boost::filesystem::path path);
+    explicit ExternalCandidateVariantGenerator(std::unique_ptr<VcfReader> reader);
+    explicit ExternalCandidateVariantGenerator(const std::shared_ptr<VcfReader>& reader);
     ~ExternalCandidateVariantGenerator() override = default;
     
     ExternalCandidateVariantGenerator(const ExternalCandidateVariantGenerator&)            = default;
@@ -33,7 +38,7 @@ public:
     std::vector<Variant> get_candidates(const GenomicRegion& region) override;
     
 private:
-    VcfReader reader_;
+    std::shared_ptr<VcfReader> reader_;
 };
 
 } // namespace Octopus

@@ -31,7 +31,7 @@ bool is_good_sequence(const SequenceType& sequence) noexcept
 
 // public methods
 
-AlignmentCandidateVariantGenerator::AlignmentCandidateVariantGenerator(ReferenceGenome& reference,
+AlignmentCandidateVariantGenerator::AlignmentCandidateVariantGenerator(const ReferenceGenome& reference,
                                                                        QualityType min_base_quality,
                                                                        unsigned min_supporting_reads,
                                                                        SizeType max_variant_size)
@@ -79,7 +79,7 @@ void AlignmentCandidateVariantGenerator::add_read(const AlignedRead& read)
             {
                 region = GenomicRegion {contig_name, ref_index, ref_index + op_size};
                 
-                auto removed_sequence = reference_.get_sequence(region);
+                auto removed_sequence = reference_.get().get_sequence(region);
                 auto added_sequence   = read_sequence.substr(read_index, op_size);
                 
                 if (is_good_sequence(removed_sequence) && is_good_sequence(added_sequence)) {
@@ -108,7 +108,7 @@ void AlignmentCandidateVariantGenerator::add_read(const AlignedRead& read)
             {
                 region = GenomicRegion {contig_name, ref_index, ref_index + op_size};
                 
-                auto removed_sequence = reference_.get_sequence(region);
+                auto removed_sequence = reference_.get().get_sequence(region);
                 
                 if (is_good_sequence(removed_sequence)) {
                     add_candidate(region, std::move(removed_sequence), "");
@@ -202,7 +202,7 @@ add_snvs_in_match_range(const GenomicRegion& region, SequenceIterator first_base
     
     using Tuple = boost::tuple<SequenceType::value_type, SequenceType::value_type, QualityType>;
     
-    auto ref_segment = reference_.get_sequence(region);
+    auto ref_segment = reference_.get().get_sequence(region);
     auto ref_index   = get_begin(region);
     
     std::for_each(make_zip_iterator(boost::make_tuple(std::cbegin(ref_segment), first_base, first_quality)),

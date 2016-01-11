@@ -57,9 +57,13 @@ public:
     };
     
     HaplotypePhaser() = delete;
-    explicit HaplotypePhaser(ReferenceGenome& reference, const std::vector<Variant>& candidates,
+    
+    explicit HaplotypePhaser(const ReferenceGenome& reference,
+                             const std::vector<Variant>& candidates,
                              const ReadMap& reads,
-                             unsigned max_haplotypes = 128, unsigned max_indicators = 3);
+                             unsigned max_haplotypes = 128,
+                             unsigned max_indicators = 3);
+    
     ~HaplotypePhaser() = default;
     
     HaplotypePhaser(const HaplotypePhaser&)            = default;

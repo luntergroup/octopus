@@ -28,9 +28,14 @@ namespace Octopus
     {
     public:
         PopulationVariantCaller() = delete;
-        explicit PopulationVariantCaller(ReferenceGenome& reference, CandidateVariantGenerator& candidate_generator,
-                                         RefCallType refcalls, double min_variant_posterior,
-                                         double min_refcall_posterior, unsigned ploidy = 2);
+        
+        explicit PopulationVariantCaller(const ReferenceGenome& reference,
+                                         CandidateVariantGenerator&& candidate_generator,
+                                         RefCallType refcalls,
+                                         double min_variant_posterior,
+                                         double min_refcall_posterior,
+                                         unsigned ploidy);
+        
         ~PopulationVariantCaller() = default;
         
         PopulationVariantCaller(const PopulationVariantCaller&)            = delete;

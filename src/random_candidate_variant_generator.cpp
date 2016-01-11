@@ -20,7 +20,7 @@
 
 namespace Octopus {
     
-    RandomCandidateVariantGenerator::RandomCandidateVariantGenerator(ReferenceGenome& reference)
+    RandomCandidateVariantGenerator::RandomCandidateVariantGenerator(const ReferenceGenome& reference)
     :
     reference_ {reference}
     {}

@@ -16,7 +16,7 @@
 
 namespace Octopus {
     
-AssemblerCandidateVariantGenerator::AssemblerCandidateVariantGenerator(ReferenceGenome& reference,
+AssemblerCandidateVariantGenerator::AssemblerCandidateVariantGenerator(const ReferenceGenome& reference,
                                                                        unsigned kmer_size,
                                                                        SizeType max_variant_size)
 :
@@ -44,7 +44,7 @@ void AssemblerCandidateVariantGenerator::add_reads(MappableSet<AlignedRead>::con
 
 std::vector<Variant> AssemblerCandidateVariantGenerator::get_candidates(const GenomicRegion& region)
 {
-    auto reference_sequence = reference_.get_sequence(region);
+    auto reference_sequence = reference_.get().get_sequence(region);
     assembler_.add_reference_sequence(region, reference_sequence);
     return assembler_.get_variants(region);
 }

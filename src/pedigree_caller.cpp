@@ -16,11 +16,13 @@ namespace Octopus
 {
     // public methods
     
-    PedigreeVariantCaller::PedigreeVariantCaller(ReferenceGenome& reference, CandidateVariantGenerator& candidate_generator,
-                                         unsigned ploidy, SampleIdType mother, SampleIdType father,
-                                         double min_variant_posterior)
+    PedigreeVariantCaller::PedigreeVariantCaller(const ReferenceGenome& reference,
+                                                 CandidateVariantGenerator&& candidate_generator,
+                                                 unsigned ploidy,
+                                                 SampleIdType mother, SampleIdType father,
+                                                 double min_variant_posterior)
     :
-    VariantCaller {reference, candidate_generator, RefCallType::None},
+    VariantCaller {reference, std::move(candidate_generator), RefCallType::None},
     ploidy_ {ploidy},
     mother_ {std::move(mother)},
     father_ {std::move(father)},

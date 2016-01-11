@@ -20,8 +20,6 @@
 #include "genomic_region.hpp"
 #include "reference_genome_impl.hpp"
 
-namespace fs = boost::filesystem;
-
 class ReferenceGenome
 {
 public:
@@ -38,17 +36,22 @@ public:
     ReferenceGenome& operator=(ReferenceGenome&&)      = default;
     
     const std::string& get_name() const;
+    
     bool has_contig(const std::string& contig_name) const noexcept;
+    bool contains_region(const GenomicRegion& region) const noexcept;
+    
     std::size_t num_contigs() const noexcept;
     const std::vector<std::string>& get_contig_names() const noexcept;
+    
     SizeType get_contig_size(const std::string& contig_name) const;
     SizeType get_contig_size(const GenomicRegion& region) const;
     GenomicRegion get_contig_region(const std::string& contig_name) const;
-    bool contains_region(const GenomicRegion& region) const noexcept;
+    
     SequenceType get_sequence(const GenomicRegion& region) const;
     
 private:
     std::unique_ptr<ReferenceGenomeImpl> impl_;
+    
     std::string name_;
     std::vector<std::string> contig_names_;
     std::unordered_map<std::string, SizeType> contig_sizes_;
@@ -56,11 +59,12 @@ private:
 
 // non-member functions
 
-ReferenceGenome make_reference(fs::path file_path, std::size_t max_base_pair_cache = 0, bool is_threaded = false);
+ReferenceGenome make_reference(boost::filesystem::path file_path, std::size_t max_base_pair_cache = 0,
+                               bool is_threaded = false);
 
 std::vector<GenomicRegion> get_all_contig_regions(const ReferenceGenome& reference);
 
-GenomicRegion::SizeType get_genome_size(const ReferenceGenome& reference);
+GenomicRegion::SizeType calculate_genome_size(const ReferenceGenome& reference);
 
 // Requires reference access to get contig sizes for partially specified regions (e.g. "4")
 GenomicRegion parse_region(std::string region, const ReferenceGenome& reference);

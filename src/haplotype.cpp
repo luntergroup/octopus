@@ -22,7 +22,7 @@
 
 // public methods
 
-Haplotype::Haplotype(ReferenceGenome& reference, const GenomicRegion& region)
+Haplotype::Haplotype(const ReferenceGenome& reference, const GenomicRegion& region)
 :
 reference_ {reference},
 region_ {region},
@@ -305,7 +305,7 @@ Allele do_splice(const Haplotype& haplotype, const GenomicRegion& region, std::f
 }
 } // namespace detail
 
-bool is_reference(const Haplotype& haplotype, ReferenceGenome& reference)
+bool is_reference(const Haplotype& haplotype, const ReferenceGenome& reference)
 {
     return haplotype.get_sequence() == reference.get_sequence(haplotype.get_region());
 }

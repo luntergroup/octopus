@@ -41,6 +41,11 @@ bool ReferenceGenome::has_contig(const std::string& contig_name) const noexcept
     return std::find(std::cbegin(contig_names_), std::cend(contig_names_), contig_name) != std::cend(contig_names_);
 }
 
+bool ReferenceGenome::contains_region(const GenomicRegion& region) const noexcept
+{
+    return has_contig(region.get_contig_name()) && region.get_end() <= get_contig_size(region.get_contig_name());
+}
+
 std::size_t ReferenceGenome::num_contigs() const noexcept
 {
     return contig_names_.size();
@@ -56,7 +61,8 @@ ReferenceGenome::SizeType ReferenceGenome::get_contig_size(const std::string& co
     if (has_contig(contig_name)) {
         return contig_sizes_.at(contig_name);
     }
-    throw std::runtime_error {"contig \"" + contig_name + "\" is not in reference genome \"" + name_ + "\""};
+    throw std::runtime_error {"get_contig_size: contig \"" + contig_name +
+            "\" is not in reference genome \"" + name_ + "\""};
 }
 
 ReferenceGenome::SizeType ReferenceGenome::get_contig_size(const GenomicRegion& region) const
@@ -69,11 +75,6 @@ GenomicRegion ReferenceGenome::get_contig_region(const std::string& contig_name)
     return GenomicRegion {contig_name, 0, get_contig_size(contig_name)};
 }
 
-bool ReferenceGenome::contains_region(const GenomicRegion& region) const noexcept
-{
-    return has_contig(region.get_contig_name()) && region.get_end() <= get_contig_size(region.get_contig_name());
-}
-
 ReferenceGenome::SequenceType ReferenceGenome::get_sequence(const GenomicRegion& region) const
 {
     return impl_->fetch_sequence(region);
@@ -81,7 +82,8 @@ ReferenceGenome::SequenceType ReferenceGenome::get_sequence(const GenomicRegion&
 
 // non-member functions
 
-ReferenceGenome make_reference(fs::path file_path, std::size_t max_base_pair_cache, bool is_threaded)
+ReferenceGenome make_reference(boost::filesystem::path file_path, const std::size_t max_base_pair_cache,
+                               const bool is_threaded)
 {
     if (max_base_pair_cache > 0) {
         return ReferenceGenome {std::make_unique<CachingFasta>(std::move(file_path), max_base_pair_cache)};
@@ -107,10 +109,10 @@ std::vector<GenomicRegion> get_all_contig_regions(const ReferenceGenome& referen
     return result;
 }
 
-GenomicRegion::SizeType get_genome_size(const ReferenceGenome& reference)
+GenomicRegion::SizeType calculate_genome_size(const ReferenceGenome& reference)
 {
     const auto contigs = reference.get_contig_names();
-    return std::accumulate(std::cbegin(contigs), std::cend(contigs), GenomicRegion::SizeType {},
+    return std::accumulate(std::cbegin(contigs), std::cend(contigs), GenomicRegion::SizeType {0},
                            [&reference] (const auto curr, const auto& contig) {
                                return curr + reference.get_contig_size(contig);
                            });
@@ -122,6 +124,7 @@ GenomicRegion parse_region(std::string region, const ReferenceGenome& reference)
     region.erase(std::remove(std::begin(region), std::end(region), ','), std::end(region));
     
     const static std::regex re {"([^:]+)(?::(\\d+)(-)?(\\d*))?"};
+    
     std::smatch match;
     
     if (std::regex_search(region, match, re) && match.size() == 5) {
@@ -145,13 +148,13 @@ GenomicRegion parse_region(std::string region, const ReferenceGenome& reference)
             }
             
             if (begin > contig_size || end > contig_size) {
-                throw std::runtime_error {"parse_region given region " + region +
-                    " that is larger than contig in " + reference.get_name()};
+                throw std::runtime_error {"parse_region: given region (" + region +
+                    ") larger than contig in " + reference.get_name()};
             }
         }
         
         return GenomicRegion {std::move(contig_name), begin, end};
     }
     
-    throw std::runtime_error {"parse_region given region " + region + " that has invalid format"};
+    throw std::runtime_error {"parse_region: given region (" + region + ") with invalid format"};
 }

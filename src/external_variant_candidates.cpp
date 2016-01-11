@@ -14,13 +14,24 @@
 #include "variant.hpp"
 
 namespace Octopus {
-    
-ExternalCandidateVariantGenerator::ExternalCandidateVariantGenerator(VcfReader&& reader)
+
+ExternalCandidateVariantGenerator::ExternalCandidateVariantGenerator(boost::filesystem::path path)
+:
+reader_ {std::make_shared<VcfReader>(std::move(path))}
+{}
+
+ExternalCandidateVariantGenerator::ExternalCandidateVariantGenerator(std::unique_ptr<VcfReader> reader)
 :
 reader_ {std::move(reader)}
 {}
 
-std::vector<GenomicRegion> get_batch_regions(const GenomicRegion& region, VcfReader& reader, std::size_t max_batch_size)
+ExternalCandidateVariantGenerator::ExternalCandidateVariantGenerator(const std::shared_ptr<VcfReader>& reader)
+:
+reader_ {reader}
+{}
+
+std::vector<GenomicRegion> get_batch_regions(const GenomicRegion& region, VcfReader& reader,
+                                             std::size_t max_batch_size)
 {
     std::vector<GenomicRegion> result {};
     
@@ -56,7 +67,7 @@ std::vector<Variant> fetch_variants(const GenomicRegion& region, VcfReader& read
 
 std::vector<Variant> ExternalCandidateVariantGenerator::get_candidates(const GenomicRegion& region)
 {
-    return fetch_variants(region, reader_);
+    return fetch_variants(region, *reader_);
 }
 
 } // namespace Octopus

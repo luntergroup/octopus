@@ -35,7 +35,7 @@ BOOST_AUTO_TEST_CASE(get_reference_returns_a_ReferenceGenome)
     
     auto options = Octopus::Options::parse_options(argc, argv);
     
-    auto reference = Octopus::Options::get_reference(options);
+    auto reference = Octopus::Options::make_reference(options);
     
     BOOST_CHECK(reference.get_name() == "human_g1k_v37");
 }
@@ -47,7 +47,7 @@ BOOST_AUTO_TEST_CASE(get_search_regions_returns_all_chromosome_regions_when_no_r
     
     auto options = Octopus::Options::parse_options(argc, argv);
     
-    auto reference = Octopus::Options::get_reference(options);
+    auto reference = Octopus::Options::make_reference(options);
     
     auto regions = Octopus::Options::get_search_regions(options, reference);
     
@@ -73,7 +73,7 @@ BOOST_AUTO_TEST_CASE(parse_search_region_option_parses_manually_entered_regions)
     
     auto options = Octopus::Options::parse_options(argc, argv);
     
-    auto reference = Octopus::Options::get_reference(options);
+    auto reference = Octopus::Options::make_reference(options);
     
     auto regions = Octopus::Options::get_search_regions(options, reference);
     
@@ -94,7 +94,7 @@ BOOST_AUTO_TEST_CASE(parse_search_region_option_extracts_regions_from_text_files
     
     auto options = Octopus::Options::parse_options(argc, argv);
     
-    auto reference = Octopus::Options::get_reference(options);
+    auto reference = Octopus::Options::make_reference(options);
     
     auto regions = Octopus::Options::get_search_regions(options, reference);
     
@@ -113,7 +113,7 @@ BOOST_AUTO_TEST_CASE(parse_search_region_option_extracts_regions_from_bed_files)
     
     auto options = Octopus::Options::parse_options(argc, argv);
     
-    auto reference = Octopus::Options::get_reference(options);
+    auto reference = Octopus::Options::make_reference(options);
     
     auto regions = Octopus::Options::get_search_regions(options, reference);
     

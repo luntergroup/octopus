@@ -22,7 +22,7 @@
 namespace Octopus {
 
 inline std::unique_ptr<VariantCaller>
-make_variant_caller(const std::string& model, ReferenceGenome& reference,
+make_variant_caller(const std::string& model, const ReferenceGenome& reference,
                     CandidateVariantGenerator& candidate_generator,
                     VariantCaller::RefCallType refcall_type,
                     double min_variant_posterior, double min_refcall_posterior,

@@ -21,28 +21,33 @@ class AlignedRead;
 class Variant;
 
 namespace Octopus {
-    
+
 class CandidateVariantGenerator : public ICandidateVariantGenerator
 {
 public:
     CandidateVariantGenerator()           = default;
     ~CandidateVariantGenerator() override = default;
     
-    CandidateVariantGenerator(const CandidateVariantGenerator&)            = default;
-    CandidateVariantGenerator& operator=(const CandidateVariantGenerator&) = default;
+    CandidateVariantGenerator(const CandidateVariantGenerator&)            = delete;
+    CandidateVariantGenerator& operator=(const CandidateVariantGenerator&) = delete;
     CandidateVariantGenerator(CandidateVariantGenerator&&)                 = default;
     CandidateVariantGenerator& operator=(CandidateVariantGenerator&&)      = default;
     
     void register_generator(std::unique_ptr<ICandidateVariantGenerator> generator);
+    
     void add_read(const AlignedRead& read) override;
-    void add_reads(std::vector<AlignedRead>::const_iterator first, std::vector<AlignedRead>::const_iterator last) override;
-    void add_reads(MappableSet<AlignedRead>::const_iterator first, MappableSet<AlignedRead>::const_iterator last) override;
+    void add_reads(std::vector<AlignedRead>::const_iterator first,
+                   std::vector<AlignedRead>::const_iterator last) override;
+    void add_reads(MappableSet<AlignedRead>::const_iterator first,
+                   MappableSet<AlignedRead>::const_iterator last) override;
+    
     std::vector<Variant> get_candidates(const GenomicRegion& region) override;
+    
     void reserve(size_t n) override;
     void clear() override;
     
 private:
-    std::vector<std::unique_ptr<ICandidateVariantGenerator>> generator_list_;
+    std::vector<std::unique_ptr<ICandidateVariantGenerator>> generators_;
 };
 
 template <typename Map>

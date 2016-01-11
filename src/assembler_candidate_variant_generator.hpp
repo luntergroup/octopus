@@ -11,6 +11,7 @@
 
 #include <vector>
 #include <cstddef>
+#include <functional>
 
 #include "i_candidate_variant_generator.hpp"
 #include "variant_assembler.hpp"
@@ -28,7 +29,8 @@ public:
     using SizeType = GenomicRegion::SizeType;
     
     AssemblerCandidateVariantGenerator() = delete;
-    explicit AssemblerCandidateVariantGenerator(ReferenceGenome& reference, unsigned kmer_size,
+    explicit AssemblerCandidateVariantGenerator(const ReferenceGenome& reference,
+                                                unsigned kmer_size,
                                                 SizeType max_variant_size = 100);
     ~AssemblerCandidateVariantGenerator() override = default;
     
@@ -44,7 +46,7 @@ public:
     void clear() override;
     
 private:
-    ReferenceGenome& reference_;
+    std::reference_wrapper<const ReferenceGenome> reference_;
     VariantAssembler assembler_;
     SizeType max_variant_size_;
 };

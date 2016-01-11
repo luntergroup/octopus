@@ -15,7 +15,7 @@
 
 namespace Octopus {
     
-OnlineCandidateVariantGenerator::OnlineCandidateVariantGenerator(ReferenceGenome& reference,
+OnlineCandidateVariantGenerator::OnlineCandidateVariantGenerator(const ReferenceGenome& reference,
                                                                  SizeType max_variant_size)
 :
 reference_ {reference},

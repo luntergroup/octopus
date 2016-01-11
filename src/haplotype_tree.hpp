@@ -14,6 +14,7 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
+#include <functional>
 
 #include <boost/graph/adjacency_list.hpp>
 
@@ -31,7 +32,7 @@ class HaplotypeTree
 {
 public:
     HaplotypeTree() = delete;
-    explicit HaplotypeTree(ReferenceGenome& reference);
+    explicit HaplotypeTree(const ReferenceGenome& reference);
     ~HaplotypeTree() = default;
     
     HaplotypeTree(const HaplotypeTree&)            = default;
@@ -65,7 +66,7 @@ private:
     
     GenomicRegion region_;
     
-    ReferenceGenome& reference_;
+    std::reference_wrapper<const ReferenceGenome> reference_;
     
     mutable std::unordered_multimap<Haplotype, Vertex> haplotype_leaf_cache_;
     mutable std::unordered_set<Haplotype> recently_removed_haplotypes_;

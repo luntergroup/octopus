@@ -82,8 +82,8 @@ count_overlapped(const MappableMap<KeyType, MappableType1>& mappables, const Map
     using SizeType = typename MappableSet<MappableType1>::size_type;
     
     return std::accumulate(std::cbegin(mappables), std::cend(mappables), SizeType {},
-                           [&mappable] (const auto x, const auto& p) {
-                               return x + p.second.count_overlapped(mappable);
+                           [&mappable] (const auto curr, const auto& p) {
+                               return curr + p.second.count_overlapped(mappable);
                            });
 }
 
@@ -104,8 +104,8 @@ count_contained(const MappableMap<KeyType, MappableType1>& mappables, const Mapp
     using SizeType = typename MappableSet<MappableType1>::size_type;
     
     return std::accumulate(std::cbegin(mappables), std::cend(mappables), SizeType {},
-                           [&mappable] (const auto x, const auto& p) {
-                               return x + p.second.count_contained(mappable);
+                           [&mappable] (const auto curr, const auto& p) {
+                               return curr + p.second.count_contained(mappable);
                            });
 }
 
@@ -127,8 +127,8 @@ count_shared(const MappableMap<KeyType, MappableType1>& mappables, const Mappabl
     using SizeType = typename MappableSet<MappableType1>::size_type;
     
     return std::accumulate(std::cbegin(mappables), std::cend(mappables), SizeType {},
-                           [&mappable1, &mappable2] (const auto x, const auto& p) {
-                               return x + p.second.count_shared(mappable1, mappable2);
+                           [&mappable1, &mappable2] (const auto curr, const auto& p) {
+                               return curr + p.second.count_shared(mappable1, mappable2);
                            });
 }
 

@@ -146,7 +146,7 @@ namespace Octopus
         }
         
         inline HaplotypePriorCounts compute_haplotype_prior_counts(const std::vector<Haplotype>& haplotypes,
-                                                                   ReferenceGenome& reference,
+                                                                   const ReferenceGenome& reference,
                                                                    HaplotypePriorModel& haplotype_prior_model)
         {
             using std::begin; using std::cbegin; using std::cend; using std::transform;

@@ -20,7 +20,7 @@
 namespace Octopus
 {
 
-HaplotypeTree::HaplotypeTree(ReferenceGenome& reference)
+HaplotypeTree::HaplotypeTree(const ReferenceGenome& reference)
 :
 reference_ {reference},
 tree_ {},

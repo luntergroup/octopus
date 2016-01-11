@@ -13,6 +13,7 @@
 #include <deque>
 #include <cstddef>
 #include <utility>
+#include <functional>
 
 #include "i_candidate_variant_generator.hpp"
 #include "aligned_read.hpp"
@@ -30,8 +31,12 @@ public:
     using SizeType    = GenomicRegion::SizeType;
     
     AlignmentCandidateVariantGenerator() = delete;
-    explicit AlignmentCandidateVariantGenerator(ReferenceGenome& reference, QualityType min_base_quality = 0,
-                                                unsigned min_supporting_reads = 1, SizeType max_variant_size = 100);
+    
+    explicit AlignmentCandidateVariantGenerator(const ReferenceGenome& reference,
+                                                QualityType min_base_quality = 0,
+                                                unsigned min_supporting_reads = 1,
+                                                SizeType max_variant_size = 100);
+    
     ~AlignmentCandidateVariantGenerator() override = default;
     
     AlignmentCandidateVariantGenerator(const AlignmentCandidateVariantGenerator&)            = default;
@@ -50,7 +55,7 @@ private:
     using SequenceIterator  = SequenceType::const_iterator;
     using QualitiesIterator = AlignedRead::Qualities::const_iterator;
     
-    ReferenceGenome& reference_;
+    std::reference_wrapper<const ReferenceGenome> reference_;
     QualityType min_base_quality_;
     unsigned min_supporting_reads_;
     SizeType max_variant_size_;

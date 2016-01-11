@@ -20,13 +20,12 @@
 #include "common.hpp"
 #include "genomic_region.hpp"
 #include "downsampler.hpp"
-#include "read_utils.hpp"
+#include "candidate_generator_builder.hpp"
 #include "variant_caller.hpp"
 
 class ReferenceGenome;
 class ReadManager;
 class ReadTransform;
-class CandidateVariantGenerator;
 class VcfWriter;
 
 namespace po = boost::program_options;
@@ -42,29 +41,32 @@ namespace Octopus
     
     size_t get_memory_quota(const po::variables_map& options);
     
-    ReferenceGenome get_reference(const po::variables_map& options);
+    ReferenceGenome make_reference(const po::variables_map& options);
     
-    SearchRegions get_search_regions(const po::variables_map& options, const ReferenceGenome& reference);
+    SearchRegions get_search_regions(const po::variables_map& options,
+                                     const ReferenceGenome& reference);
     
     std::vector<SampleIdType> get_samples(const po::variables_map& options);
     
     std::vector<fs::path> get_read_paths(const po::variables_map& options);
     
-    ReadManager get_read_manager(const po::variables_map& options);
+    ReadManager make_read_manager(const po::variables_map& options);
     
-    ReadFilterer get_read_filter(const po::variables_map& options);
+    ReadFilterer make_read_filter(const po::variables_map& options);
     
-    Downsampler get_downsampler(const po::variables_map& options);
+    Downsampler make_downsampler(const po::variables_map& options);
         
-    ReadTransform get_read_transformer(const po::variables_map& options);
+    ReadTransform make_read_transform(const po::variables_map& options);
     
-    CandidateVariantGenerator get_candidate_generator(const po::variables_map& options, ReferenceGenome& reference);
+    CandidateGeneratorBuilder make_candidate_generator_builder(const po::variables_map& options,
+                                                               const ReferenceGenome& reference);
     
-    std::unique_ptr<VariantCaller> get_variant_caller(const po::variables_map& options, ReferenceGenome& reference,
-                                                      CandidateVariantGenerator& candidate_generator,
-                                                      const GenomicRegion::StringType& contig);
+    std::unique_ptr<VariantCaller> make_variant_caller(const po::variables_map& options,
+                                                       const ReferenceGenome& reference,
+                                                       const CandidateGeneratorBuilder& candidate_generator_builder,
+                                                       const GenomicRegion::StringType& contig);
     
-    VcfWriter get_output_vcf(const po::variables_map& options);
+    VcfWriter make_output_vcf_writer(const po::variables_map& options);
     
     } // namespace Options
 } // namespace Octopus

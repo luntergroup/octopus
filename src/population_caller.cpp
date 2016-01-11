@@ -43,11 +43,12 @@ namespace Octopus
 
 // public methods
 
-PopulationVariantCaller::PopulationVariantCaller(ReferenceGenome& reference, CandidateVariantGenerator& candidate_generator,
+PopulationVariantCaller::PopulationVariantCaller(const ReferenceGenome& reference,
+                                                 CandidateVariantGenerator&& candidate_generator,
                                                  RefCallType refcall_type, double min_variant_posterior,
                                                  double min_refcall_posterior, unsigned ploidy)
 :
-VariantCaller {reference, candidate_generator, refcall_type},
+    VariantCaller {reference, std::move(candidate_generator), refcall_type},
 genotype_model_ {ploidy},
 ploidy_ {ploidy},
 min_variant_posterior_ {min_variant_posterior},
@@ -150,7 +151,8 @@ void remove_low_posterior_genotypes(GenotypeModel::Population::GenotypeProbabili
     }
 }
 
-double marginalise(const Allele& allele, const GenotypeModel::Population::SampleGenotypeProbabilities& genotype_posteriors)
+double marginalise(const Allele& allele,
+                   const GenotypeModel::Population::SampleGenotypeProbabilities& genotype_posteriors)
 {
     double result {0.0};
     
@@ -193,7 +195,8 @@ compute_allele_posteriors(const GenotypeModel::Population::GenotypeProbabilities
 }
 
 std::unordered_map<Genotype<Allele>, double>
-marginalise(const GenomicRegion& region, const GenotypeModel::Population::SampleGenotypeProbabilities& genotype_posteriors)
+marginalise(const GenomicRegion& region,
+            const GenotypeModel::Population::SampleGenotypeProbabilities& genotype_posteriors)
 {
     std::unordered_map<Genotype<Allele>, double> result {};
     result.reserve(genotype_posteriors.size());
@@ -307,7 +310,7 @@ VariantCallBlocks call_blocked_variants(const std::vector<Variant>& candidates,
     return block_variant_calls(segment_overlapped(call_variants(candidates, allele_posteriors, min_posterior)));
 }
 
-std::vector<Variant> generate_random_variants(const GenomicRegion& region, ReferenceGenome& reference)
+std::vector<Variant> generate_random_variants(const GenomicRegion& region, const ReferenceGenome& reference)
 {
     RandomCandidateVariantGenerator generator {reference};
     return generator.get_candidates(region);
@@ -325,7 +328,7 @@ static auto get_regions(const VariantCallBlocks& variant_calls)
     return result;
 }
 
-void parsimonise_variant_calls(VariantCallBlocks& variant_calls, ReferenceGenome& reference)
+void parsimonise_variant_calls(VariantCallBlocks& variant_calls, const ReferenceGenome& reference)
 {
     for (auto& segment_calls : variant_calls) {
         segment_calls.variants = parsimonise_together(segment_calls.variants, reference);
@@ -454,7 +457,7 @@ std::vector<VcfRecord::SequenceType> to_vcf_genotype(const Genotype<Allele>& gen
 }
 
 VcfRecord output_variant_call(const VariantCallBlock& block, const GenotypeCalls& genotype_calls,
-                              ReferenceGenome& reference, const ReadMap& reads)
+                              const ReferenceGenome& reference, const ReadMap& reads)
 {
     auto result = VcfRecord::Builder();
     
@@ -499,7 +502,8 @@ VcfRecord output_variant_call(const VariantCallBlock& block, const GenotypeCalls
     return result.build_once();
 }
 
-VcfRecord output_reference_call(RefCall call, ReferenceGenome& reference, const ReadMap& reads, unsigned ploidy)
+VcfRecord output_reference_call(RefCall call, const ReferenceGenome& reference,
+                                const ReadMap& reads, unsigned ploidy)
 {
     auto result = VcfRecord::Builder();
     
@@ -543,7 +547,8 @@ VcfRecord output_reference_call(RefCall call, ReferenceGenome& reference, const 
 }
 
 std::vector<VcfRecord>
-PopulationVariantCaller::call_variants(const GenomicRegion& region, const std::vector<Variant>& candidates,
+PopulationVariantCaller::call_variants(const GenomicRegion& region,
+                                       const std::vector<Variant>& candidates,
                                        const ReadMap& reads)
 {
     std::vector<VcfRecord> result {};
@@ -574,7 +579,7 @@ PopulationVariantCaller::call_variants(const GenomicRegion& region, const std::v
         
         const auto phase_set = phaser.phase(haplotypes, genotype_posteriors);
         
-        if (phase_set != boost::none) {
+        if (phase_set) {
             std::cout << "phased region is " << phase_set->region << std::endl;
             
             auto overlapped_candidates = copy_overlapped(candidates, phase_set->region);

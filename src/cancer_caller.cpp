@@ -41,13 +41,13 @@ namespace Octopus
 {
 // public methods
     
-    CancerVariantCaller::CancerVariantCaller(ReferenceGenome& reference,
-                                             CandidateVariantGenerator& candidate_generator,
+    CancerVariantCaller::CancerVariantCaller(const ReferenceGenome& reference,
+                                             CandidateVariantGenerator&& candidate_generator,
                                              RefCallType refcall_type, double min_variant_posterior,
                                              double min_somatic_posterior, double min_refcall_posterior,
                                              const SampleIdType& normal_sample, bool call_somatics_only)
     :
-    VariantCaller {reference, candidate_generator, refcall_type},
+    VariantCaller {reference, std::move(candidate_generator), refcall_type},
     normal_sample_ {normal_sample},
     min_variant_posterior_ {min_variant_posterior},
     min_somatic_mutation_posterior_ {min_somatic_posterior},
@@ -424,14 +424,16 @@ namespace Octopus
         return result;
     }
     
-    void parsimonise_germline_variant_calls(VariantCalls& germline_variant_calls, ReferenceGenome& reference)
+    void parsimonise_germline_variant_calls(VariantCalls& germline_variant_calls,
+                                            const ReferenceGenome& reference)
     {
         for (auto& call : germline_variant_calls) {
             call.variants = parsimonise_together(call.variants, reference);
         }
     }
     
-    void parsimonise_somatic_mutation_calls(SomaticCalls& somatic_mutation_calls, ReferenceGenome& reference)
+    void parsimonise_somatic_mutation_calls(SomaticCalls& somatic_mutation_calls,
+                                            const ReferenceGenome& reference)
     {
         for (auto& call : somatic_mutation_calls) {
             if (is_indel(call.allele) && !is_reference(call.allele, reference)) {
@@ -495,9 +497,12 @@ namespace Octopus
         return result;
     }
     
-    VcfRecord output_germline_variant_call(const Allele& reference_allele, const std::vector<Variant>& variants,
-                                           const GermlineGenotypeCall& genotype_call, double posterior,
-                                           ReferenceGenome& reference, const ReadMap& reads,
+    VcfRecord output_germline_variant_call(const Allele& reference_allele,
+                                           const std::vector<Variant>& variants,
+                                           const GermlineGenotypeCall& genotype_call,
+                                           double posterior,
+                                           const ReferenceGenome& reference,
+                                           const ReadMap& reads,
                                            const GenomicRegion& phase_region)
     {
         auto result = VcfRecord::Builder();
@@ -541,8 +546,10 @@ namespace Octopus
         return result.build_once();
     }
     
-    VcfRecord output_somatic_variant_call(const Allele& somatic_mutation, double posterior,
-                                          ReferenceGenome& reference, const ReadMap& reads)
+    VcfRecord output_somatic_variant_call(const Allele& somatic_mutation,
+                                          double posterior,
+                                          const ReferenceGenome& reference,
+                                          const ReadMap& reads)
     {
         auto result = VcfRecord::Builder();
         

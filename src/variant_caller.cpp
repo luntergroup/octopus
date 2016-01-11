@@ -25,21 +25,24 @@ namespace Octopus
 
     // public methods
     
-    VariantCaller::VariantCaller(ReferenceGenome& reference, CandidateVariantGenerator& candidate_generator,
+    VariantCaller::VariantCaller(const ReferenceGenome& reference,
+                                 CandidateVariantGenerator&& candidate_generator,
                                  RefCallType refcall_type)
     :
     reference_ {reference},
     haplotype_prior_model_ {},
-    candidate_generator_ {candidate_generator},
+    candidate_generator_ {std::move(candidate_generator)},
     refcall_type_ {refcall_type}
     {}
     
-    VariantCaller::VariantCaller(ReferenceGenome& reference, CandidateVariantGenerator& candidate_generator,
-                                 HaplotypePriorModel haplotype_prior_model, RefCallType refcall_type)
+    VariantCaller::VariantCaller(const ReferenceGenome& reference,
+                                 CandidateVariantGenerator&& candidate_generator,
+                                 HaplotypePriorModel haplotype_prior_model,
+                                 RefCallType refcall_type)
     :
     reference_ {reference},
     haplotype_prior_model_ {std::move(haplotype_prior_model)},
-    candidate_generator_ {candidate_generator},
+    candidate_generator_ {std::move(candidate_generator)},
     refcall_type_ {refcall_type}
     {}
     
@@ -87,7 +90,7 @@ namespace Octopus
     
     std::vector<Allele>
     generate_callable_alleles(const GenomicRegion& region, const std::vector<Variant>& variants,
-                              VariantCaller::RefCallType refcall_type, ReferenceGenome& reference)
+                              VariantCaller::RefCallType refcall_type, const ReferenceGenome& reference)
     {
         using std::begin; using std::end; using std::make_move_iterator; using std::back_inserter;
         

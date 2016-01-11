@@ -146,10 +146,7 @@ BOOST_AUTO_TEST_CASE(ExternalCandidateVariantGenerator_gets_candidates_from_vcf)
 {
     auto reference = make_reference(human_reference_fasta);
     
-    VcfReader reader {sample_vcf};
-    
-    Octopus::CandidateVariantGenerator generator {};
-    generator.register_generator(std::make_unique<Octopus::ExternalCandidateVariantGenerator>(std::move(reader)));
+    Octopus::ExternalCandidateVariantGenerator generator {sample_vcf};
     
     auto region = parse_region("X:10,095,000-10,100,000", reference);
     
