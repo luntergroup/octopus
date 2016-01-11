@@ -76,14 +76,14 @@ std::vector<Haplotype> HaplotypePhaser::get_haplotypes(const GenotypePosteriors&
     return tree_.get_haplotypes(current_region_);
 }
 
-void HaplotypePhaser::unique(const std::vector<Haplotype>& haplotypes)
+void HaplotypePhaser::set_haplotypes(const std::vector<Haplotype>& haplotypes)
 {
     for (const auto& haplotype : haplotypes) {
         tree_.prune_unique(haplotype);
     }
 }
 
-HaplotypePhaser::PhaseSet
+boost::optional<HaplotypePhaser::PhaseSet>
 HaplotypePhaser::phase(const std::vector<Haplotype>& haplotypes,
                        const GenotypePosteriors& genotype_posteriors)
 {
@@ -96,6 +96,10 @@ HaplotypePhaser::phase(const std::vector<Haplotype>& haplotypes,
     std::cout << "next region is " << next_region_ << std::endl;
     
     const auto phased_region = get_left_overhang(current_region_, next_region_);
+    
+    if (empty(phased_region)) {
+        return boost::none;
+    }
     
     std::cout << "phased region is " << phased_region << std::endl;
     

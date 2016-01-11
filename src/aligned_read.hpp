@@ -215,7 +215,9 @@ flags_ {compress_flags(data)}
 
 // Non-member methods
 
-AlignedRead::SizeType num_overlapped_bases(const AlignedRead& read, const GenomicRegion& region);
+CigarString splice_cigar(const AlignedRead& read, const GenomicRegion& region);
+
+AlignedRead::SizeType count_overlapped_bases(const AlignedRead& read, const GenomicRegion& region);
 
 bool is_soft_clipped(const AlignedRead& read);
 

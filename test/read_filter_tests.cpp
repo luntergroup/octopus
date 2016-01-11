@@ -23,7 +23,7 @@
 #include "context_iterators.hpp"
 //#include "read_filter_factory.hpp"
 
-using Octopus::ContextBackInserter;
+using Octopus::context_back_inserter;
 
 BOOST_AUTO_TEST_SUITE(Components)
 
@@ -57,7 +57,7 @@ BOOST_AUTO_TEST_CASE(read_filter_test)
     bad_reads.reserve(reads.size());
     
     read_filter.filter_reads(std::make_move_iterator(reads.begin()), std::make_move_iterator(reads.end()),
-                             ContextBackInserter(good_reads), ContextBackInserter(bad_reads));
+                             context_back_inserter(good_reads), context_back_inserter(bad_reads));
     
     // TODO: check these numbers are actually correct!
     BOOST_CHECK(good_reads.size() == 436);

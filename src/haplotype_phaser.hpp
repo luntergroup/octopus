@@ -13,6 +13,8 @@
 #include <unordered_map>
 #include <utility>
 
+#include <boost/optional.hpp>
+
 #include "common.hpp"
 #include "genomic_region.hpp"
 #include "variant.hpp"
@@ -60,14 +62,20 @@ public:
                              unsigned max_haplotypes = 128, unsigned max_indicators = 3);
     ~HaplotypePhaser() = default;
     
+    HaplotypePhaser(const HaplotypePhaser&)            = default;
+    HaplotypePhaser& operator=(const HaplotypePhaser&) = default;
+    HaplotypePhaser(HaplotypePhaser&&)                 = default;
+    HaplotypePhaser& operator=(HaplotypePhaser&&)      = default;
+    
     bool done() const noexcept;
     
     std::vector<Haplotype> get_haplotypes();
     std::vector<Haplotype> get_haplotypes(const GenotypePosteriors& genotype_posteriors);
     
-    void unique(const std::vector<Haplotype>& haplotypes);
+    void set_haplotypes(const std::vector<Haplotype>& haplotypes);
     
-    PhaseSet phase(const std::vector<Haplotype>& haplotypes, const GenotypePosteriors& genotype_posteriors);
+    boost::optional<PhaseSet> phase(const std::vector<Haplotype>& haplotypes,
+                                    const GenotypePosteriors& genotype_posteriors);
     
 private:
     HaplotypeTree tree_;

@@ -143,7 +143,7 @@ bool contains(const Haplotype& lhs, const Haplotype& rhs);
 template <typename MappableType>
 MappableType splice(const Haplotype& haplotype, const GenomicRegion& region)
 {
-    return detail::do_splice(haplotype, region, typename std::is_same<Haplotype, std::decay_t<MappableType>>::type {});
+    return detail::do_splice(haplotype, region, std::is_same<Haplotype, std::decay_t<MappableType>> {});
 }
 
 bool is_reference(const Haplotype& haplotype, ReferenceGenome& reference);

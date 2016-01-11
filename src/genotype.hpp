@@ -89,7 +89,7 @@ Genotype<MappableType>::Genotype(std::initializer_list<MappableType> elements)
 :
 elements_ {elements}
 {
-    std::sort(elements_.begin(), elements_.end());
+    std::sort(std::begin(elements_), std::end(elements_));
 }
 
 template <typename MappableType>
@@ -157,11 +157,11 @@ bool Genotype<MappableType>::is_homozygous() const
 template <typename MappableType>
 unsigned Genotype<MappableType>::zygosity() const
 {
-    unsigned result {};
+    unsigned result {0};
     
-    for (auto first = std::cbegin(elements_), last = std::cend(elements_); first != last;) {
-        ++result;
-        first = std::upper_bound(first, last, *first);
+    for (auto it = std::cbegin(elements_), last = std::cend(elements_); it != last; ++result) {
+        // naive algorithm faster in practice than binary searching
+        it = std::find_if_not(std::next(it), last, [it] (const auto& x) { return x == *it; });
     }
     
     return result;
@@ -319,7 +319,7 @@ namespace detail
     {
         Genotype<MappableType> result {static_cast<unsigned>(element_indicies.size())};
         
-        for (auto i : element_indicies) {
+        for (const auto i : element_indicies) {
             result.emplace(elements[i]);
         }
         
@@ -410,7 +410,7 @@ generate_all_genotypes(const std::vector<MappableType>& elements, const unsigned
     
     std::vector<unsigned> element_indicies(ploidy, 0);
     
-    unsigned i {};
+    unsigned i {0};
     
     while (true) {
         if (element_indicies[i] == num_elements) {
@@ -438,7 +438,7 @@ std::unordered_map<MappableType, unsigned> get_element_count_map(const Genotype<
     std::unordered_map<MappableType, unsigned> result {};
     result.reserve(genotype.zygosity());
     
-    for (unsigned i {}; i < genotype.ploidy(); ++i) {
+    for (unsigned i {0}; i < genotype.ploidy(); ++i) {
         ++result[genotype.at(i)];
     }
     

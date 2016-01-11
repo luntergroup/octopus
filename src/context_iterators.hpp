@@ -53,8 +53,8 @@ namespace Octopus
         const_iterator cend() const { return container->cend(); }
     };
     
-    template <class Container>
-    ContextBackInsertIterator<Container> ContextBackInserter(Container& x)
+    template <typename Container>
+    ContextBackInsertIterator<Container> context_back_inserter(Container& x)
     {
         return ContextBackInsertIterator<Container>(x);
     }
@@ -93,8 +93,8 @@ namespace Octopus
         const_iterator cend() const { return container->cend(); }
     };
     
-    template <class Container>
-    ContextInsertIterator<Container> ContextInserter(Container& x)
+    template <typename Container>
+    ContextInsertIterator<Container> context_inserter(Container& x)
     {
         return ContextInsertIterator<Container>(x);
     }

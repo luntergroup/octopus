@@ -260,14 +260,14 @@ BOOST_AUTO_TEST_CASE(can_splice_CigarString)
 {
     auto cigar = parse_cigar_string("5M1D10M3I4M");
     
-    BOOST_CHECK(operation_splice(cigar, 3, 10)  == parse_cigar_string("2M1D7M"));
-    BOOST_CHECK(operation_splice(cigar, 3, 15)  == parse_cigar_string("2M1D10M2I"));
-    BOOST_CHECK(operation_splice(cigar, 0, 10)  == parse_cigar_string("5M1D4M"));
-    BOOST_CHECK(operation_splice(cigar, 0, 50)  == cigar);
-    BOOST_CHECK(operation_splice(cigar, 20, 10) == parse_cigar_string("3M"));
-    BOOST_CHECK(operation_splice(cigar, 20, 3)  == parse_cigar_string("3M"));
-    BOOST_CHECK(operation_splice(cigar, 24, 10) == parse_cigar_string(""));
-    BOOST_CHECK(operation_splice(cigar, 16, 7)  == parse_cigar_string("3I4M"));
+    BOOST_CHECK(splice(cigar, 3, 10)  == parse_cigar_string("2M1D7M"));
+    BOOST_CHECK(splice(cigar, 3, 15)  == parse_cigar_string("2M1D10M2I"));
+    BOOST_CHECK(splice(cigar, 0, 10)  == parse_cigar_string("5M1D4M"));
+    BOOST_CHECK(splice(cigar, 0, 50)  == cigar);
+    BOOST_CHECK(splice(cigar, 20, 10) == parse_cigar_string("3M"));
+    BOOST_CHECK(splice(cigar, 20, 3)  == parse_cigar_string("3M"));
+    BOOST_CHECK(splice(cigar, 24, 10) == parse_cigar_string(""));
+    BOOST_CHECK(splice(cigar, 16, 7)  == parse_cigar_string("3I4M"));
 }
 
 BOOST_AUTO_TEST_CASE(can_splice_reads)

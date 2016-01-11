@@ -20,8 +20,7 @@ class Pedigree
 public:
     using Member = Octopus::SampleIdType;
     
-    Pedigree() = delete;
-    Pedigree(Member root_mother, Member root_father);
+    Pedigree() = default;
     ~Pedigree() = default;
     
     Pedigree(const Pedigree&)            = default;
@@ -29,7 +28,7 @@ public:
     Pedigree(Pedigree&&)                 = default;
     Pedigree& operator=(Pedigree&&)      = default;
     
-    void add_relationship(Member mother, Member father, Member child);
+    void add_relationship(Member parent, Member child);
     
     bool is_child(Member child, Member parent) const;
     bool is_descendant(Member descendant, Member ancestor) const;
@@ -39,12 +38,11 @@ public:
     
 private:
     using Tree   = boost::adjacency_list<boost::listS, boost::listS, boost::bidirectionalS, Member, boost::no_property>;
+    
     using Vertex = typename boost::graph_traits<Tree>::vertex_descriptor;
     using Edge   = typename boost::graph_traits<Tree>::edge_descriptor;
     
     Tree tree_;
-    
-    
 };
 
 #endif /* pedigree_hpp */

@@ -12,6 +12,8 @@
 #include <vector>
 #include <functional>
 #include <algorithm>
+#include <iterator>
+#include <type_traits>
 
 #include "aligned_read.hpp"
 
@@ -43,31 +45,38 @@ private:
     void transform_read_(AlignedRead& read) const;
 };
 
-// public methods
-
-inline void ReadTransform::register_transform(ReadTransformation transform)
-{
-    transforms_.emplace_back(std::move(transform));
-}
-
-inline unsigned ReadTransform::num_transforms() const noexcept
-{
-    return static_cast<unsigned>(transforms_.size());
-}
-
-inline void ReadTransform::transform_read_(AlignedRead& read) const
-{
-    for (const auto& transform : transforms_) {
-        transform(read);
-    }
-}
-
 // private methods
 
 template <typename InputIterator>
 void ReadTransform::transform_reads(InputIterator first, InputIterator last) const
 {
     std::for_each(first, last, [this] (auto& read) { transform_read_(read); });
+}
+
+// non-member methods
+
+namespace detail
+{
+    template <typename Container>
+    void transform_reads(Container& reads, const ReadTransform& transformer, std::true_type)
+    {
+        transformer.transform_reads(std::begin(reads), std::end(reads));
+    }
+    
+    template <typename ReadMap>
+    void transform_reads(ReadMap& reads, const ReadTransform& transformer, std::false_type)
+    {
+        for (auto& p : reads) {
+            transform_reads(p.second, transformer, std::true_type {});
+        }
+    }
+} // namespace detail
+
+template <typename Container>
+void transform_reads(Container& reads, const ReadTransform& transformer)
+{
+    using ValueType = typename std::decay_t<typename Container::value_type>;
+    detail::transform_reads(reads, transformer, std::is_same<ValueType, AlignedRead> {});
 }
 
 } // namespace Octopus

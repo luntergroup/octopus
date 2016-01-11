@@ -632,7 +632,7 @@ namespace Octopus
             
             unique(haplotypes, haplotype_prior_model_);
             
-            phaser.unique(haplotypes);
+            phaser.set_haplotypes(haplotypes);
             
             std::cout << "there are " << haplotypes.size() << " unique haplotypes" << std::endl;
             
