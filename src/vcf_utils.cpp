@@ -57,12 +57,12 @@ std::vector<VcfType> get_typed_format_values(const VcfHeader& header, const VcfR
     return get_typed_format_values(header, key, record.get_sample_value(sample, key));
 }
 
-void index_vcf(const fs::path& vcf_file)
+void index_vcf(const boost::filesystem::path& vcf_file)
 {
     
 }
 
-void index_vcf(const fs::path& vcf_file, const fs::path& out_index_path)
+void index_vcf(const boost::filesystem::path& vcf_file, const boost::filesystem::path& out_index_path)
 {
     htsFile *fp {hts_open(vcf_file.c_str(), "r")};
     htsFormat type {*hts_get_format(fp)};
@@ -156,7 +156,7 @@ auto get_contig_count_map(std::vector<VcfReader>& readers, const std::vector<std
     return result;
 }
 
-VcfWriter merge(std::vector<VcfReader>& readers, fs::path result_path)
+VcfWriter merge(std::vector<VcfReader>& readers, boost::filesystem::path result_path)
 {
     auto header = merge(get_headers(readers));
     

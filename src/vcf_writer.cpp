@@ -15,13 +15,13 @@
 
 #include <iostream> // TEST
 
-VcfWriter::VcfWriter(const fs::path& file_path)
+VcfWriter::VcfWriter(const Path& file_path)
 :
 file_path_ {file_path},
 writer_ {file_path_, "w"}
 {}
 
-VcfWriter::VcfWriter(const fs::path& file_path, const VcfHeader& header)
+VcfWriter::VcfWriter(const Path& file_path, const VcfHeader& header)
 :
 file_path_ {file_path},
 writer_ {file_path_, "w"}
@@ -29,7 +29,7 @@ writer_ {file_path_, "w"}
     this->write(header);
 }
 
-const fs::path VcfWriter::path() const
+const VcfWriter::Path VcfWriter::path() const
 {
     return file_path_;
 }

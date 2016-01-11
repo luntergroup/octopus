@@ -17,7 +17,6 @@
 #include <algorithm>
 #include <stdexcept>
 #include <memory>
-#include <tuple>
 
 #include <boost/filesystem/path.hpp>
 
@@ -27,23 +26,11 @@
 #include "read_reader_impl.hpp"
 #include "aligned_read.hpp"
 
-namespace fs = boost::filesystem;
-
-using std::uint_fast32_t;
-using std::uint_fast8_t;
-using std::uint8_t;
-using std::uint32_t;
-using std::int32_t;
-
-auto hts_file_deleter        = [] (htsFile* file)       { hts_close(file); };
-auto htslib_header_deleter   = [] (bam_hdr_t* header)   { bam_hdr_destroy(header); };
-auto htslib_index_deleter    = [] (hts_idx_t* index)    { hts_idx_destroy(index); };
-auto htslib_iterator_deleter = [] (hts_itr_t* iterator) { sam_itr_destroy(iterator); };
-auto htslib_bam1_deleter     = [] (bam1_t* b)           { bam_destroy1(b); };
-
 class HtslibSamFacade : public IReadReaderImpl
 {
 public:
+    using Path = boost::filesystem::path;
+    
     using SequenceType    = AlignedRead::SequenceType;
     using SampleIdType    = IReadReaderImpl::SampleIdType;
     using Reads           = IReadReaderImpl::Reads;
@@ -52,7 +39,7 @@ public:
     using ReadGroupIdType = std::string;
     
     HtslibSamFacade() = delete;
-    HtslibSamFacade(const fs::path& file_path);
+    HtslibSamFacade(Path file_path);
     ~HtslibSamFacade() noexcept override = default;
     
     HtslibSamFacade(const HtslibSamFacade&)            = delete;
@@ -94,19 +81,41 @@ private:
         HtslibSamFacade::ReadGroupIdType get_read_group() const;
         
     private:
+        struct HtsIteratorDeleter
+        {
+            void operator()(hts_itr_t* iterator) const { sam_itr_destroy(iterator); }
+        };
+        struct HtsBam1Deleter
+        {
+            void operator()(bam1_t* b) const { bam_destroy1(b); }
+        };
+        
         HtslibSamFacade& hts_facade_;
-        std::unique_ptr<hts_itr_t, decltype(htslib_iterator_deleter)> hts_iterator_;
-        std::unique_ptr<bam1_t, decltype(htslib_bam1_deleter)> hts_bam1_;
+        std::unique_ptr<hts_itr_t, HtsIteratorDeleter> hts_iterator_;
+        std::unique_ptr<bam1_t, HtsBam1Deleter> hts_bam1_;
+    };
+    
+    struct HtsFileDeleter
+    {
+        void operator()(htsFile* file) const { hts_close(file); }
+    };
+    struct HtsHeaderDeleter
+    {
+        void operator()(bam_hdr_t* header) const { bam_hdr_destroy(header); }
+    };
+    struct HtsIndexDeleter
+    {
+        void operator()(hts_idx_t* index) const { hts_idx_destroy(index); }
     };
     
     static constexpr const char* Read_group_tag    {"RG"};
     static constexpr const char* Read_group_id_tag {"ID"};
     static constexpr const char* Sample_id_tag     {"SM"};
     
-    fs::path file_path_;
-    std::unique_ptr<htsFile, decltype(hts_file_deleter)> hts_file_;
-    std::unique_ptr<bam_hdr_t, decltype(htslib_header_deleter)> hts_header_;
-    std::unique_ptr<hts_idx_t, decltype(htslib_index_deleter)> hts_index_;
+    Path file_path_;
+    std::unique_ptr<htsFile, HtsFileDeleter> hts_file_;
+    std::unique_ptr<bam_hdr_t, HtsHeaderDeleter> hts_header_;
+    std::unique_ptr<hts_idx_t, HtsIndexDeleter> hts_index_;
     
     std::unordered_map<std::string, HtsTidType> hts_tid_map_;
     std::unordered_map<HtsTidType, std::string> contig_name_map_;

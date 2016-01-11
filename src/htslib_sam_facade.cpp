@@ -19,7 +19,7 @@
 
 class InvalidBamHeader : std::runtime_error {
 public:
-    InvalidBamHeader(fs::path file_path, std::string message)
+    InvalidBamHeader(boost::filesystem::path file_path, std::string message)
     :
     runtime_error {"invalid BAM header"},
     file_path_ {file_path.string()},
@@ -37,7 +37,7 @@ private:
 
 class InvalidBamRecord : std::runtime_error {
 public:
-    InvalidBamRecord(fs::path file_path, std::string read_name, std::string message)
+    InvalidBamRecord(boost::filesystem::path file_path, std::string read_name, std::string message)
     :
     runtime_error {"invalid BAM record"},
     file_path_ {file_path.string()},
@@ -55,12 +55,14 @@ private:
     std::string message_, read_name_, file_path_;
 };
 
-HtslibSamFacade::HtslibSamFacade(const fs::path& file_path)
+// public methods
+
+HtslibSamFacade::HtslibSamFacade(Path file_path)
 :
-file_path_ {file_path},
-hts_file_ {sam_open(file_path_.string().c_str(), "r"), hts_file_deleter},
-hts_header_ {sam_hdr_read(hts_file_.get()), htslib_header_deleter},
-hts_index_ {sam_index_load(hts_file_.get(), file_path_.string().c_str()), htslib_index_deleter},
+file_path_ {std::move(file_path)},
+hts_file_ {sam_open(file_path_.string().c_str(), "r"), HtsFileDeleter {}},
+hts_header_ {sam_hdr_read(hts_file_.get()), HtsHeaderDeleter {}},
+hts_index_ {sam_index_load(hts_file_.get(), file_path_.string().c_str()), HtsIndexDeleter {}},
 hts_tid_map_ {},
 contig_name_map_ {},
 sample_map_ {}
@@ -144,7 +146,7 @@ size_t HtslibSamFacade::count_reads(const GenomicRegion& region)
 {
     HtslibIterator it {*this, region};
     
-    size_t result {};
+    size_t result {0};
     
     while (++it) ++result;
     
@@ -155,7 +157,7 @@ size_t HtslibSamFacade::count_reads(const SampleIdType& sample, const GenomicReg
 {
     HtslibIterator it {*this, region};
     
-    size_t result {};
+    size_t result {0};
     
     while (++it && sample_map_.at(it.get_read_group()) == sample) ++result;
     
@@ -332,8 +334,8 @@ HtslibSamFacade::HtslibIterator::HtslibIterator(HtslibSamFacade& hts_facade, con
 :
 hts_facade_ {hts_facade},
 hts_iterator_ {sam_itr_querys(hts_facade_.hts_index_.get(), hts_facade_.hts_header_.get(),
-                              to_string(region).c_str()), htslib_iterator_deleter},
-hts_bam1_ {bam_init1(), htslib_bam1_deleter}
+                              to_string(region).c_str()), HtsIteratorDeleter {}},
+hts_bam1_ {bam_init1(), HtsBam1Deleter {}}
 {
     if (hts_iterator_ == nullptr) {
         throw std::runtime_error {"could not load read iterator for " + hts_facade.file_path_.string()};

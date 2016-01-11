@@ -22,17 +22,17 @@
 
 class GenomicRegion;
 
-namespace fs = boost::filesystem;
-
 class Fasta : public ReferenceGenomeImpl
 {
 public:
+    using Path = boost::filesystem::path;
+    
     using SequenceType = ReferenceGenomeImpl::SequenceType;
     using SizeType     = ReferenceGenomeImpl::SizeType;
     
     Fasta() = delete;
-    explicit Fasta(fs::path fasta_path);
-    explicit Fasta(fs::path fasta_path, fs::path fasta_index_path);
+    explicit Fasta(Path fasta_path);
+    explicit Fasta(Path fasta_path, Path fasta_index_path);
     ~Fasta() noexcept override = default;
     
     Fasta(const Fasta&)            = default;
@@ -41,8 +41,8 @@ public:
     Fasta& operator=(Fasta&&)      = default;
 
 private:
-    fs::path fasta_path_;
-    fs::path fasta_index_path_;
+    Path fasta_path_;
+    Path fasta_index_path_;
     mutable std::ifstream fasta_;
     std::unordered_map<std::string, bioio::FastaIndex> fasta_contig_indices_;
     

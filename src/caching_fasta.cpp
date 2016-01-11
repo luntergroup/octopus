@@ -19,7 +19,7 @@
 
 // public methods
 
-CachingFasta::CachingFasta(fs::path fasta_path)
+CachingFasta::CachingFasta(Path fasta_path)
 :
 fasta_ {std::move(fasta_path)},
 contig_size_cache_ {},
@@ -29,7 +29,7 @@ recently_used_regions_ {}
     setup_cache();
 }
 
-CachingFasta::CachingFasta(fs::path fasta_path, SizeType max_cache_size)
+CachingFasta::CachingFasta(Path fasta_path, SizeType max_cache_size)
 :
 fasta_ {std::move(fasta_path)},
 contig_size_cache_ {},
@@ -40,7 +40,7 @@ max_cache_size_ {max_cache_size}
     setup_cache();
 }
 
-CachingFasta::CachingFasta(fs::path fasta_path, fs::path fasta_index_path)
+CachingFasta::CachingFasta(Path fasta_path, Path fasta_index_path)
 :
 fasta_ {std::move(fasta_path), std::move(fasta_index_path)},
 contig_size_cache_ {},
@@ -50,7 +50,7 @@ recently_used_regions_ {}
     setup_cache();
 }
 
-CachingFasta::CachingFasta(fs::path fasta_path, fs::path fasta_index_path, SizeType max_cache_size)
+CachingFasta::CachingFasta(Path fasta_path, Path fasta_index_path, SizeType max_cache_size)
 :
 fasta_ {std::move(fasta_path), std::move(fasta_index_path)},
 contig_size_cache_ {},
@@ -61,7 +61,7 @@ max_cache_size_ {max_cache_size}
     setup_cache();
 }
 
-CachingFasta::CachingFasta(fs::path fasta_path, SizeType max_cache_size, double locality_bias, double forward_bias)
+CachingFasta::CachingFasta(Path fasta_path, SizeType max_cache_size, double locality_bias, double forward_bias)
 :
 fasta_ {std::move(fasta_path)},
 contig_size_cache_ {},

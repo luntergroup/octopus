@@ -14,24 +14,26 @@
 
 #include "genomic_region.hpp"
 
-Fasta::Fasta(fs::path fasta_path)
+Fasta::Fasta(Path fasta_path)
 :
 Fasta {fasta_path, fasta_path.string() + ".fai"}
 {}
 
-Fasta::Fasta(fs::path fasta_path, fs::path fasta_index_path)
+Fasta::Fasta(Path fasta_path, Path fasta_index_path)
 :
 fasta_path_ {std::move(fasta_path)},
 fasta_index_path_ {std::move(fasta_index_path)}
 {
-    if (!fs::exists(fasta_path_)) {
+    using boost::filesystem::exists;
+    
+    if (!exists(fasta_path_)) {
         throw std::runtime_error {"Cannot find FASTA \"" + fasta_path.string() + "\""};
     }
     
-    if (!fs::exists(fasta_index_path_)) {
+    if (!exists(fasta_index_path_)) {
         fasta_index_path_ = fasta_path_.replace_extension("fai");
         
-        if (!fs::exists(fasta_index_path_)) {
+        if (!exists(fasta_index_path_)) {
             throw std::runtime_error {"Cannot find FASTA index \"" + fasta_index_path_.string() + "\""};
         }
     }

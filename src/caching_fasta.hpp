@@ -22,8 +22,6 @@
 #include "contig_region.hpp"
 #include "genomic_region.hpp"
 
-namespace fs = boost::filesystem;
-
 /*
  CachingFasta attempts to reduce the number of file reads in two ways:
  
@@ -44,15 +42,17 @@ namespace fs = boost::filesystem;
 class CachingFasta : public ReferenceGenomeImpl
 {
 public:
+    using Path = Fasta::Path;
+    
     using SequenceType = ReferenceGenomeImpl::SequenceType;
     using SizeType     = ReferenceGenomeImpl::SizeType;
     
     CachingFasta() = delete;
-    explicit CachingFasta(fs::path fasta_path);
-    explicit CachingFasta(fs::path fasta_path, SizeType max_cache_size);
-    explicit CachingFasta(fs::path fasta_path, fs::path fasta_index_path);
-    explicit CachingFasta(fs::path fasta_path, fs::path fasta_index_path, SizeType max_cache_size);
-    explicit CachingFasta(fs::path fasta_path, SizeType max_cache_size, double locality_bias, double forward_bias);
+    explicit CachingFasta(Path fasta_path);
+    explicit CachingFasta(Path fasta_path, SizeType max_cache_size);
+    explicit CachingFasta(Path fasta_path, Path fasta_index_path);
+    explicit CachingFasta(Path fasta_path, Path fasta_index_path, SizeType max_cache_size);
+    explicit CachingFasta(Path fasta_path, SizeType max_cache_size, double locality_bias, double forward_bias);
     ~CachingFasta() noexcept override = default;
     
     CachingFasta(const CachingFasta&)            = default;

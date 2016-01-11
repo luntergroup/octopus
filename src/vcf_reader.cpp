@@ -17,7 +17,7 @@
 #include "htslib_bcf_facade.hpp"
 #include "vcf_parser.hpp"
 
-std::unique_ptr<IVcfReaderImpl> make_vcf_reader(const fs::path& file_path)
+std::unique_ptr<IVcfReaderImpl> make_vcf_reader(const VcfReader::Path& file_path)
 {
     auto file_type = file_path.extension().string();
     
@@ -33,7 +33,7 @@ std::unique_ptr<IVcfReaderImpl> make_vcf_reader(const fs::path& file_path)
     }
 }
 
-VcfReader::VcfReader(const fs::path& file_path)
+VcfReader::VcfReader(const Path& file_path)
 :
 file_path_ {file_path},
 reader_ {make_vcf_reader(file_path)}
@@ -46,7 +46,7 @@ VcfReader::VcfReader(VcfReader&& other)
     reader_  = std::move(other.reader_);
 }
 
-const fs::path VcfReader::path() const
+const VcfReader::Path VcfReader::path() const
 {
     return file_path_;
 }
