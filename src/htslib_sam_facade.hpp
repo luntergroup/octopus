@@ -113,6 +113,7 @@ private:
     static constexpr const char* Sample_id_tag     {"SM"};
     
     Path file_path_;
+    
     std::unique_ptr<htsFile, HtsFileDeleter> hts_file_;
     std::unique_ptr<bam_hdr_t, HtsHeaderDeleter> hts_header_;
     std::unique_ptr<hts_idx_t, HtsIndexDeleter> hts_index_;

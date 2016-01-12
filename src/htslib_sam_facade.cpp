@@ -351,17 +351,6 @@ std::string get_read_name(const bam1_t* b)
     return std::string {bam_get_qname(b)};
 }
 
-HtslibSamFacade::ReadGroupIdType HtslibSamFacade::HtslibIterator::get_read_group() const
-{
-    const auto ptr = bam_aux_get(hts_bam1_.get(), Read_group_tag);
-    
-    if (ptr == nullptr) {
-        throw InvalidBamRecord {hts_facade_.file_path_, get_read_name(hts_bam1_.get()), "no read group"};
-    }
-    
-    return HtslibSamFacade::ReadGroupIdType {bam_aux2Z(ptr)};
-}
-
 bool HtslibSamFacade::HtslibIterator::operator++()
 {
     return sam_itr_next(hts_facade_.hts_file_.get(), hts_iterator_.get(), hts_bam1_.get()) >= 0;
@@ -529,4 +518,15 @@ AlignedRead HtslibSamFacade::HtslibIterator::operator*() const
             get_next_segment_flags(hts_bam1_.get())
         };
     }
+}
+
+HtslibSamFacade::ReadGroupIdType HtslibSamFacade::HtslibIterator::get_read_group() const
+{
+    const auto ptr = bam_aux_get(hts_bam1_.get(), Read_group_tag);
+    
+    if (ptr == nullptr) {
+        throw InvalidBamRecord {hts_facade_.file_path_, get_read_name(hts_bam1_.get()), "no read group"};
+    }
+    
+    return HtslibSamFacade::ReadGroupIdType {bam_aux2Z(ptr)};
 }
