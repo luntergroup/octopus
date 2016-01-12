@@ -22,21 +22,21 @@
 class GenomicRegion;
 class AlignedRead;
 
-namespace fs = boost::filesystem;
-
 /*
  ReadReader provides a RAII threadsafe wrapper around a IReadReaderImpl
  */
 class ReadReader : public Equitable<ReadReader>
 {
 public:
+    using Path = boost::filesystem::path;
+    
     using SampleIdType  = IReadReaderImpl::SampleIdType;
     using SizeType      = IReadReaderImpl::SizeType;
     using Reads         = IReadReaderImpl::Reads;
     using SampleReadMap = IReadReaderImpl::SampleReadMap;
     
     ReadReader() = default;
-    explicit ReadReader(const fs::path& file_path);
+    explicit ReadReader(const Path& file_path);
     ~ReadReader() = default;
     
     ReadReader(const ReadReader&)            = delete;
@@ -48,7 +48,7 @@ public:
     bool is_open() const noexcept;
     void close();
     
-    const fs::path& path() const noexcept;
+    const Path& path() const noexcept;
     
     std::vector<std::string> get_reference_contig_names();
     std::vector<SampleIdType> get_samples();
@@ -62,7 +62,7 @@ public:
     Reads fetch_reads(const SampleIdType& sample, const GenomicRegion& region);
     
 private:
-    fs::path file_path_;
+    Path file_path_;
     std::unique_ptr<IReadReaderImpl> the_impl_;
     mutable std::mutex mutex_;
 };

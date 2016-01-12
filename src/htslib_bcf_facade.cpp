@@ -47,7 +47,7 @@ std::vector<std::string> get_samples(const bcf_hdr_t* header)
 
 // public methods
 
-std::string get_hts_mode(const fs::path& file_path, const std::string& mode)
+std::string get_hts_mode(const HtslibBcfFacade::Path& file_path, const std::string& mode)
 {
     if (!(mode == "r" || mode == "w")) {
         throw std::runtime_error {"invalid mode " + mode + " given to HtslibBcfFacade; must be r or w"};
@@ -67,19 +67,19 @@ std::string get_hts_mode(const fs::path& file_path, const std::string& mode)
     return result;
 }
 
-static fs::path check_path(const fs::path& path)
+static HtslibBcfFacade::Path check_path(const HtslibBcfFacade::Path& path)
 {
-    if (!fs::exists(path)) {
+    if (!boost::filesystem::exists(path)) {
         throw std::runtime_error {path.string() + " does not exist"};
     }
     return path;
 }
 
-HtslibBcfFacade::HtslibBcfFacade(const fs::path& file_path, const std::string& mode)
+HtslibBcfFacade::HtslibBcfFacade(Path file_path, const std::string& mode)
 :
 file_path_ {(mode == "r") ? check_path(file_path) : file_path},
-file_ {bcf_open(file_path_.string().c_str(), get_hts_mode(file_path, mode).c_str()), htslib_file_deleter},
-header_ {(file_ != nullptr && mode == "r") ? bcf_hdr_read(file_.get()) : bcf_hdr_init(mode.c_str()), htslib_bcf_header_deleter},
+file_ {bcf_open(file_path_.string().c_str(), get_hts_mode(file_path, mode).c_str()), HtsFileDeleter {}},
+header_ {(file_ != nullptr && mode == "r") ? bcf_hdr_read(file_.get()) : bcf_hdr_init(mode.c_str()), HtsHeaderDeleter {}},
 samples_ {}
 {
     if (mode == "r" && file_ == nullptr) {
@@ -121,7 +121,7 @@ VcfHeader HtslibBcfFacade::fetch_header() const
 
 size_t HtslibBcfFacade::count_records()
 {
-    HtsBcfSrPtr sr {bcf_sr_init(), htslib_bcf_srs_deleter};
+    HtsBcfSrPtr sr {bcf_sr_init(), HtsSrsDeleter {}};
     
     if (bcf_sr_add_reader(sr.get(), file_path_.string().c_str()) != 1) {
         sr.release();
@@ -133,7 +133,7 @@ size_t HtslibBcfFacade::count_records()
 
 size_t HtslibBcfFacade::count_records(const std::string& contig)
 {
-    HtsBcfSrPtr sr {bcf_sr_init(), htslib_bcf_srs_deleter};
+    HtsBcfSrPtr sr {bcf_sr_init(), HtsSrsDeleter {}};
     
     if (bcf_sr_set_regions(sr.get(), contig.c_str(), 0) != 0) { // must go before bcf_sr_add_reader
         throw std::runtime_error {"failed load contig " + contig};
@@ -149,7 +149,7 @@ size_t HtslibBcfFacade::count_records(const std::string& contig)
 
 size_t HtslibBcfFacade::count_records(const GenomicRegion& region)
 {
-    HtsBcfSrPtr sr {bcf_sr_init(), htslib_bcf_srs_deleter};
+    HtsBcfSrPtr sr {bcf_sr_init(), HtsSrsDeleter {}};
     
     if (bcf_sr_set_regions(sr.get(), to_string(region).c_str(), 0) != 0) { // must go before bcf_sr_add_reader
         throw std::runtime_error {"failed load region " + to_string(region)};
@@ -167,7 +167,7 @@ std::vector<VcfRecord> HtslibBcfFacade::fetch_records(Unpack level)
 {
     auto n_records = count_records();
     
-    HtsBcfSrPtr sr {bcf_sr_init(), htslib_bcf_srs_deleter};
+    HtsBcfSrPtr sr {bcf_sr_init(), HtsSrsDeleter {}};
     
     if (bcf_sr_add_reader(sr.get(), file_path_.string().c_str()) != 1) {
         sr.release();
@@ -181,7 +181,7 @@ std::vector<VcfRecord> HtslibBcfFacade::fetch_records(const std::string& contig,
 {
     auto n_records = count_records(contig);
     
-    HtsBcfSrPtr sr {bcf_sr_init(), htslib_bcf_srs_deleter};
+    HtsBcfSrPtr sr {bcf_sr_init(), HtsSrsDeleter {}};
     
     if (bcf_sr_set_regions(sr.get(), contig.c_str(), 0) != 0) { // must go before bcf_sr_add_reader
         throw std::runtime_error {"failed load contig " + contig};
@@ -199,7 +199,7 @@ std::vector<VcfRecord> HtslibBcfFacade::fetch_records(const GenomicRegion& regio
 {
     auto n_records = count_records(region);
     
-    HtsBcfSrPtr sr {bcf_sr_init(), htslib_bcf_srs_deleter};
+    HtsBcfSrPtr sr {bcf_sr_init(), HtsSrsDeleter {}};
     
     if (bcf_sr_set_regions(sr.get(), to_string(region).c_str(), 0) != 0) { // must go before bcf_sr_add_reader
         throw std::runtime_error {"failed load region " + to_string(region)};

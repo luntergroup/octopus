@@ -20,8 +20,6 @@
 #include "vcf_reader.hpp"
 #include "vcf_writer.hpp"
 
-namespace fs = boost::filesystem;
-
 std::vector<std::string> get_contigs(const VcfHeader& header);
 
 unsigned get_field_cardinality(const VcfHeader::KeyType& key, const VcfRecord& record);
@@ -33,12 +31,12 @@ std::vector<VcfType> get_typed_format_values(const VcfHeader& header, const VcfR
                                              const VcfRecord::SampleIdType sample,
                                              const VcfHeader::KeyType& key);
 
-void index_vcf(const fs::path& vcf_file);
+void index_vcf(const boost::filesystem::path& vcf_file);
 
-void index_vcf(const fs::path& vcf_file, const fs::path& out_index_path);
+void index_vcf(const boost::filesystem::path& vcf_file, const boost::filesystem::path& out_index_path);
 
 VcfHeader merge(const std::vector<VcfHeader>& headers);
 
-VcfWriter merge(std::vector<VcfReader>& readers, fs::path result_path);
+VcfWriter merge(std::vector<VcfReader>& readers, boost::filesystem::path result_path);
 
 #endif /* defined(__Octopus__vcf_utils__) */

@@ -10,7 +10,7 @@
 
 #include "htslib_sam_facade.hpp"
 
-ReadReader::ReadReader(const fs::path& file_path)
+ReadReader::ReadReader(const boost::filesystem::path& file_path)
 :
 file_path_ {file_path},
 the_impl_ {std::make_unique<HtslibSamFacade>(file_path_)}
@@ -41,7 +41,7 @@ void ReadReader::close()
     the_impl_->close();
 }
 
-const fs::path& ReadReader::path() const noexcept
+const ReadReader::Path& ReadReader::path() const noexcept
 {
     return file_path_;
 }

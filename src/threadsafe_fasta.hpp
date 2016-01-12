@@ -20,17 +20,17 @@
 
 class GenomicRegion;
 
-namespace fs = boost::filesystem;
-
 class ThreadsafeFasta : public ReferenceGenomeImpl
 {
 public:
+    using Path = Fasta::Path;
+    
     using SequenceType = ReferenceGenomeImpl::SequenceType;
     using SizeType     = ReferenceGenomeImpl::SizeType;
     
     ThreadsafeFasta() = delete;
-    explicit ThreadsafeFasta(fs::path fasta_path);
-    explicit ThreadsafeFasta(fs::path fasta_path, fs::path fasta_index_path);
+    explicit ThreadsafeFasta(Path fasta_path);
+    explicit ThreadsafeFasta(Path fasta_path, Path fasta_index_path);
     ~ThreadsafeFasta() noexcept override = default;
     
     ThreadsafeFasta(const ThreadsafeFasta&)            = default;

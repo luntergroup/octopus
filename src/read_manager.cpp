@@ -18,24 +18,24 @@
 
 #include <iostream> // TEST
 
-ReadManager::ReadManager(std::vector<fs::path> read_file_paths, unsigned max_open_files)
+ReadManager::ReadManager(std::vector<Path> read_file_paths, unsigned max_open_files)
 :
 max_open_files_ {max_open_files},
 num_files_ {static_cast<unsigned>(read_file_paths.size())},
 closed_readers_ {std::make_move_iterator(std::begin(read_file_paths)),
                  std::make_move_iterator(std::end(read_file_paths))},
-open_readers_ {detail::file_size_compare},
+open_readers_ {FileSizeCompare {}},
 reader_paths_containing_sample_ {},
 possible_regions_in_readers_ {}
 {
     setup();
 }
 
-ReadManager::ReadManager(std::initializer_list<fs::path> read_file_paths)
+ReadManager::ReadManager(std::initializer_list<Path> read_file_paths)
 :
 num_files_ {static_cast<unsigned>(read_file_paths.size())},
 closed_readers_ {std::begin(read_file_paths), std::end(read_file_paths)},
-open_readers_ {detail::file_size_compare},
+open_readers_ {FileSizeCompare {}},
 reader_paths_containing_sample_ {},
 possible_regions_in_readers_ {}
 {
@@ -218,6 +218,11 @@ ReadManager::SampleReadMap ReadManager::fetch_reads(const GenomicRegion& region)
 
 // Private methods
 
+bool ReadManager::FileSizeCompare::operator()(const Path& lhs, const Path& rhs) const
+{
+    return boost::filesystem::file_size(lhs) < boost::filesystem::file_size(rhs);
+}
+
 void ReadManager::setup()
 {
     auto bad_paths = get_bad_paths();
@@ -238,14 +243,14 @@ void ReadManager::setup()
     }
 }
 
-std::vector<fs::path> ReadManager::get_bad_paths() const
+std::vector<ReadManager::Path> ReadManager::get_bad_paths() const
 {
-    std::vector<fs::path> result {};
+    std::vector<Path> result {};
     result.reserve(num_files_);
     
     std::copy_if(std::cbegin(closed_readers_), std::cend(closed_readers_), std::back_inserter(result),
                  [] (const auto& path) {
-                     return !fs::exists(path);
+                     return !boost::filesystem::exists(path);
                  });
     
     return result;
@@ -264,27 +269,27 @@ void ReadManager::open_initial_files()
 {
     using std::begin; using std::end; using std::cbegin; using std::cend;
     
-    std::vector<fs::path> reader_paths {cbegin(closed_readers_), cend(closed_readers_)};
+    std::vector<Path> reader_paths {cbegin(closed_readers_), cend(closed_readers_)};
     
     auto num_files_to_open = std::min(max_open_files_, static_cast<unsigned>(closed_readers_.size()));
     
     std::nth_element(begin(reader_paths), begin(reader_paths) + num_files_to_open, end(reader_paths),
-                     detail::file_size_compare);
+                     FileSizeCompare {});
     
     open_readers(begin(reader_paths), begin(reader_paths) + num_files_to_open);
 }
 
-ReadReader ReadManager::make_reader(const fs::path& reader_path)
+ReadReader ReadManager::make_reader(const Path& reader_path)
 {
     return ReadReader {reader_path};
 }
 
-bool ReadManager::is_open(const fs::path& reader_path) const noexcept
+bool ReadManager::is_open(const Path& reader_path) const noexcept
 {
     return open_readers_.count(reader_path) == 1;
 }
 
-std::vector<fs::path>::iterator ReadManager::partition_open(std::vector<fs::path>& reader_paths) const
+std::vector<ReadManager::Path>::iterator ReadManager::partition_open(std::vector<Path>& reader_paths) const
 {
     return std::partition(std::begin(reader_paths), std::end(reader_paths),
                           [this] (auto& reader_path) { return !is_open(reader_path); });
@@ -300,7 +305,7 @@ unsigned ReadManager::num_reader_spaces() const noexcept
     return max_open_files_ - num_open_readers();
 }
 
-void ReadManager::open_reader(const fs::path& reader_path)
+void ReadManager::open_reader(const Path& reader_path)
 {
     if (num_open_readers() == max_open_files_) { // do we need this?
         close_reader(choose_reader_to_close());
@@ -309,8 +314,8 @@ void ReadManager::open_reader(const fs::path& reader_path)
     closed_readers_.erase(reader_path);
 }
 
-std::vector<fs::path>::iterator
-ReadManager::open_readers(std::vector<fs::path>::iterator first, std::vector<fs::path>::iterator last)
+std::vector<ReadManager::Path>::iterator
+ReadManager::open_readers(std::vector<Path>::iterator first, std::vector<Path>::iterator last)
 {
     if (first == last) return first;
     
@@ -336,14 +341,14 @@ ReadManager::open_readers(std::vector<fs::path>::iterator first, std::vector<fs:
     return first_open;
 }
 
-void ReadManager::close_reader(const fs::path& reader_path)
+void ReadManager::close_reader(const Path& reader_path)
 {
     // TODO: we can make use of IReadReaderImpl::close to avoid calling deconstructor on the file.
     open_readers_.erase(reader_path);
     closed_readers_.insert(reader_path);
 }
 
-fs::path ReadManager::choose_reader_to_close() const
+ReadManager::Path ReadManager::choose_reader_to_close() const
 {
     return open_readers_.begin()->first; // i.e. smallest file size
 }
@@ -355,7 +360,7 @@ void ReadManager::close_readers(unsigned n)
     }
 }
 
-void ReadManager::add_possible_regions_to_reader_map(const fs::path& reader_path,
+void ReadManager::add_possible_regions_to_reader_map(const Path& reader_path,
                                                      const std::vector<GenomicRegion>& regions)
 {
     for (const auto& region : regions) {
@@ -363,7 +368,7 @@ void ReadManager::add_possible_regions_to_reader_map(const fs::path& reader_path
     }
 }
 
-bool ReadManager::could_reader_contain_region(const fs::path& reader_path, const GenomicRegion& region) const
+bool ReadManager::could_reader_contain_region(const Path& reader_path, const GenomicRegion& region) const
 {
     if (possible_regions_in_readers_.count(reader_path) == 0) return false;
     if (possible_regions_in_readers_.at(reader_path).count(region.get_contig_name()) == 0) return false;
@@ -371,9 +376,10 @@ bool ReadManager::could_reader_contain_region(const fs::path& reader_path, const
     return possible_regions_in_readers_.at(reader_path).at(region.get_contig_name()).has_overlapped(region.get_contig_region());
 }
 
-std::vector<fs::path> ReadManager::get_reader_paths_possibly_containing_region(const GenomicRegion& region) const
+std::vector<ReadManager::Path>
+ReadManager::get_reader_paths_possibly_containing_region(const GenomicRegion& region) const
 {
-    std::vector<fs::path> result {};
+    std::vector<Path> result {};
     result.reserve(num_files_);
     
     for (const auto& reader_path : closed_readers_) {
@@ -391,16 +397,18 @@ std::vector<fs::path> ReadManager::get_reader_paths_possibly_containing_region(c
     return result;
 }
 
-void ReadManager::add_reader_to_sample_map(const fs::path& reader_path, const std::vector<SampleIdType>& samples_in_reader)
+void ReadManager::add_reader_to_sample_map(const Path& reader_path,
+                                           const std::vector<SampleIdType>& samples_in_reader)
 {
     for (const auto& sample : samples_in_reader) {
         reader_paths_containing_sample_[sample].emplace_back(reader_path);
     }
 }
 
-std::vector<fs::path> ReadManager::get_reader_paths_containing_samples(const std::vector<SampleIdType>& samples) const
+std::vector<ReadManager::Path>
+ReadManager::get_reader_paths_containing_samples(const std::vector<SampleIdType>& samples) const
 {
-    std::unordered_set<fs::path> unique_reader_paths {};
+    std::unordered_set<Path> unique_reader_paths {};
     unique_reader_paths.reserve(num_files_);
     
     for (const auto& sample : samples) {
@@ -409,16 +417,18 @@ std::vector<fs::path> ReadManager::get_reader_paths_containing_samples(const std
         }
     }
     
-    return std::vector<fs::path> {std::begin(unique_reader_paths), std::end(unique_reader_paths)};
+    return std::vector<Path> {std::begin(unique_reader_paths), std::end(unique_reader_paths)};
 }
 
-std::vector<fs::path>
+std::vector<ReadManager::Path>
 ReadManager::get_possible_reader_paths(const std::vector<SampleIdType>& samples, const GenomicRegion& region) const
 {
     auto result = get_reader_paths_containing_samples(samples);
     
     auto it = std::remove_if(std::begin(result), std::end(result),
-                             [this, &region] (const auto& path) { return !could_reader_contain_region(path, region); });
+                             [this, &region] (const auto& path) {
+                                 return !could_reader_contain_region(path, region);
+                             });
     
     result.erase(it, std::end(result));
     

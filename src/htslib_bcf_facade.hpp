@@ -26,18 +26,13 @@ class GenomicRegion;
 class VcfHeader;
 class VcfRecord;
 
-namespace fs = boost::filesystem;
-
-auto htslib_file_deleter       = [] (htsFile* file) { hts_close(file); };
-auto htslib_bcf_header_deleter = [] (bcf_hdr_t* header) { bcf_hdr_destroy(header); };
-auto htslib_bcf_srs_deleter    = [] (bcf_srs_t* file) { bcf_sr_destroy(file); };
-auto htslib_bcf1_deleter       = [] (bcf1_t* bcf1) { bcf_destroy(bcf1); };
-
 class HtslibBcfFacade : public IVcfReaderImpl
 {
 public:
+    using Path = boost::filesystem::path;
+    
     HtslibBcfFacade()  = delete;
-    explicit HtslibBcfFacade(const fs::path& file_path, const std::string& mode = "r");
+    explicit HtslibBcfFacade(Path file_path, const std::string& mode = "r");
     ~HtslibBcfFacade() noexcept override = default;
     
     HtslibBcfFacade(const HtslibBcfFacade&)            = delete;
@@ -57,12 +52,30 @@ public:
     void write_record(const VcfRecord& record);
     
 private:
-    using HtsBcfSrPtr = std::unique_ptr<bcf_srs_t, decltype(htslib_bcf_srs_deleter)>;
-    using HtsBcf1Ptr  = std::unique_ptr<bcf1_t, decltype(htslib_bcf1_deleter)>;
+    struct HtsFileDeleter
+    {
+        void operator()(htsFile* file) const { hts_close(file); }
+    };
+    struct HtsHeaderDeleter
+    {
+        void operator()(bcf_hdr_t* header) const { bcf_hdr_destroy(header); }
+    };
+    struct HtsSrsDeleter
+    {
+        void operator()(bcf_srs_t* file) const { bcf_sr_destroy(file); }
+    };
+    struct HtsBcf1Deleter
+    {
+        void operator()(bcf1_t* bcf1) const { bcf_destroy(bcf1); }
+    };
     
-    fs::path file_path_;
-    std::unique_ptr<htsFile, decltype(htslib_file_deleter)> file_;
-    std::unique_ptr<bcf_hdr_t, decltype(htslib_bcf_header_deleter)> header_;
+    using HtsBcfSrPtr = std::unique_ptr<bcf_srs_t, HtsSrsDeleter>;
+    using HtsBcf1Ptr  = std::unique_ptr<bcf1_t, HtsBcf1Deleter>;
+    
+    Path file_path_;
+    
+    std::unique_ptr<htsFile, HtsFileDeleter> file_;
+    std::unique_ptr<bcf_hdr_t, HtsHeaderDeleter> header_;
     
     std::vector<std::string> samples_;
     

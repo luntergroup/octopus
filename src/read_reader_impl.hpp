@@ -17,7 +17,6 @@
 #include "genomic_region.hpp"
 
 #include "common.hpp"
-#include "mappable_set.hpp"
 
 class AlignedRead;
 

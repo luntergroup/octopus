@@ -36,7 +36,6 @@
 		CA386DA31B5AC2870057A5A8 /* cigar_string.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA386DA21B5AC2870057A5A8 /* cigar_string.cpp */; };
 		CA386DA51B5AC3850057A5A8 /* aligned_read.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA386DA41B5AC3850057A5A8 /* aligned_read.cpp */; };
 		CA386DA81B5BBCB90057A5A8 /* mappable_set_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA386DA71B5BBCB90057A5A8 /* mappable_set_tests.cpp */; };
-		CA386DAA1B6007FF0057A5A8 /* libboost_unit_test_framework.a in Frameworks */ = {isa = PBXBuildFile; fileRef = CA386DA91B6007FF0057A5A8 /* libboost_unit_test_framework.a */; };
 		CA386DAD1B603C380057A5A8 /* caching_fasta.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA386DAB1B603C380057A5A8 /* caching_fasta.cpp */; };
 		CA4551621AEB06D800FDAAE8 /* 1000G_test11.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA4551611AEB06D800FDAAE8 /* 1000G_test11.cpp */; };
 		CA4551641AEB075E00FDAAE8 /* 1000G_test12.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA4551631AEB075E00FDAAE8 /* 1000G_test12.cpp */; };
@@ -51,6 +50,7 @@
 		CA4551761AEC1C8600FDAAE8 /* haplotype_prior_model_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA4551751AEC1C8600FDAAE8 /* haplotype_prior_model_tests.cpp */; };
 		CA4551881AF27A4100FDAAE8 /* haplotype_phaser.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA4551861AF27A4100FDAAE8 /* haplotype_phaser.cpp */; };
 		CA487B251C42833000488577 /* read_transform.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA487B241C42833000488577 /* read_transform.cpp */; };
+		CA487B2A1C44390A00488577 /* libboost_unit_test_framework.a in Frameworks */ = {isa = PBXBuildFile; fileRef = CA487B291C44390A00488577 /* libboost_unit_test_framework.a */; };
 		CA53D2FE1C021C70009A216D /* haplotype_filter.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA53D2FC1C021C70009A216D /* haplotype_filter.cpp */; };
 		CA53D3011C03AF46009A216D /* pedigree_genotype_model.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA53D2FF1C03AF46009A216D /* pedigree_genotype_model.cpp */; };
 		CA53D3041C03B746009A216D /* pedigree.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA53D3021C03B746009A216D /* pedigree.cpp */; };
@@ -278,7 +278,6 @@
 		CA386DA41B5AC3850057A5A8 /* aligned_read.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = aligned_read.cpp; sourceTree = "<group>"; };
 		CA386DA61B5BBBDE0057A5A8 /* mappable_set.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = mappable_set.hpp; sourceTree = "<group>"; };
 		CA386DA71B5BBCB90057A5A8 /* mappable_set_tests.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = mappable_set_tests.cpp; sourceTree = "<group>"; };
-		CA386DA91B6007FF0057A5A8 /* libboost_unit_test_framework.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libboost_unit_test_framework.a; path = /usr/local/Cellar/boost/1.58.0/lib/libboost_unit_test_framework.a; sourceTree = "<absolute>"; };
 		CA386DAB1B603C380057A5A8 /* caching_fasta.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = caching_fasta.cpp; sourceTree = "<group>"; };
 		CA386DAC1B603C380057A5A8 /* caching_fasta.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = caching_fasta.hpp; sourceTree = "<group>"; };
 		CA4551611AEB06D800FDAAE8 /* 1000G_test11.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = 1000G_test11.cpp; sourceTree = "<group>"; };
@@ -297,6 +296,7 @@
 		CA487AF11C1F06D600488577 /* mappable_debug.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = mappable_debug.hpp; sourceTree = "<group>"; };
 		CA487B241C42833000488577 /* read_transform.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = read_transform.cpp; sourceTree = "<group>"; };
 		CA487B261C4318C100488577 /* type_tricks.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = type_tricks.hpp; sourceTree = "<group>"; };
+		CA487B291C44390A00488577 /* libboost_unit_test_framework.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libboost_unit_test_framework.a; path = /usr/local/Cellar/boost/1.59.0/lib/libboost_unit_test_framework.a; sourceTree = "<absolute>"; };
 		CA53D2FC1C021C70009A216D /* haplotype_filter.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = haplotype_filter.cpp; sourceTree = "<group>"; };
 		CA53D2FD1C021C70009A216D /* haplotype_filter.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = haplotype_filter.hpp; sourceTree = "<group>"; };
 		CA53D2FF1C03AF46009A216D /* pedigree_genotype_model.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = pedigree_genotype_model.cpp; sourceTree = "<group>"; };
@@ -474,9 +474,9 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				CA487B2A1C44390A00488577 /* libboost_unit_test_framework.a in Frameworks */,
 				CA91C2D61B98424300609FFA /* libcppnetlib-client-connections.a in Frameworks */,
 				CA91C2D71B98424300609FFA /* libcppnetlib-uri.a in Frameworks */,
-				CA386DAA1B6007FF0057A5A8 /* libboost_unit_test_framework.a in Frameworks */,
 				D413B0451B5E54F7007EFDE0 /* libboost_iostreams.a in Frameworks */,
 				D45D2E661B2AD93500F6A89D /* libboost_filesystem.a in Frameworks */,
 				D45D2E671B2AD93500F6A89D /* libboost_program_options.a in Frameworks */,
@@ -720,9 +720,9 @@
 		CAA4DC2B1A8219C700DD3E9A /* lib */ = {
 			isa = PBXGroup;
 			children = (
+				CA487B291C44390A00488577 /* libboost_unit_test_framework.a */,
 				CA91C2D41B98424300609FFA /* libcppnetlib-client-connections.a */,
 				CA91C2D51B98424300609FFA /* libcppnetlib-uri.a */,
-				CA386DA91B6007FF0057A5A8 /* libboost_unit_test_framework.a */,
 				D413B0441B5E54F7007EFDE0 /* libboost_iostreams.a */,
 				D45D2E631B2AD93500F6A89D /* libboost_filesystem.a */,
 				D45D2E641B2AD93500F6A89D /* libboost_program_options.a */,
@@ -1299,17 +1299,17 @@
 				GCC_OPTIMIZATION_LEVEL = 0;
 				HEADER_SEARCH_PATHS = (
 					"$(inherited)",
-					/usr/local/Cellar/boost/1.58.0/include,
+					/usr/local/Cellar/boost/1.59.0/include,
 					/usr/local/include,
 				);
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
-					/usr/local/Cellar/boost/1.58.0/lib,
 					"$(PROJECT_DIR)/lib",
 					/usr/local/lib,
 					/usr/local/Cellar/htslib/1.2.1/lib,
 					"/usr/local/Cellar/cpp-netlib/netlib/lib",
 					"/usr/local/Cellar/cpp-netlib/0.11.1_1/lib",
+					/usr/local/Cellar/boost/1.59.0/lib,
 				);
 				LLVM_LTO = YES;
 				OTHER_CPLUSPLUSFLAGS = (
@@ -1329,17 +1329,17 @@
 				GCC_OPTIMIZATION_LEVEL = 0;
 				HEADER_SEARCH_PATHS = (
 					"$(inherited)",
-					/usr/local/Cellar/boost/1.58.0/include,
+					/usr/local/Cellar/boost/1.59.0/include,
 					/usr/local/include,
 				);
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
-					/usr/local/Cellar/boost/1.58.0/lib,
 					"$(PROJECT_DIR)/lib",
 					/usr/local/lib,
 					/usr/local/Cellar/htslib/1.2.1/lib,
 					"/usr/local/Cellar/cpp-netlib/netlib/lib",
 					"/usr/local/Cellar/cpp-netlib/0.11.1_1/lib",
+					/usr/local/Cellar/boost/1.59.0/lib,
 				);
 				LLVM_LTO = YES;
 				OTHER_CPLUSPLUSFLAGS = (

@@ -10,13 +10,13 @@
 
 #include "genomic_region.hpp"
 
-ThreadsafeCachingFasta::ThreadsafeCachingFasta(fs::path fasta_path)
+ThreadsafeCachingFasta::ThreadsafeCachingFasta(Path fasta_path)
 :
 fasta_ {std::move(fasta_path)},
 fasta_mutex_ {}
 {}
 
-ThreadsafeCachingFasta::ThreadsafeCachingFasta(fs::path fasta_path, fs::path fasta_index_path)
+ThreadsafeCachingFasta::ThreadsafeCachingFasta(Path fasta_path, Path fasta_index_path)
 :
 fasta_ {std::move(fasta_path), std::move(fasta_index_path)},
 fasta_mutex_ {}

@@ -17,14 +17,14 @@ class VcfHeader;
 class VcfRecord;
 class GenomicRegion;
 
-namespace fs = boost::filesystem;
-
 class VcfWriter
 {
 public:
+    using Path = boost::filesystem::path;
+    
     VcfWriter()  = delete;
-    explicit VcfWriter(const fs::path& file_path);
-    explicit VcfWriter(const fs::path& file_path, const VcfHeader& header);
+    explicit VcfWriter(const Path& file_path);
+    explicit VcfWriter(const Path& file_path, const VcfHeader& header);
     ~VcfWriter() = default;
     
     VcfWriter(const VcfWriter&)            = delete;
@@ -32,12 +32,12 @@ public:
     VcfWriter(VcfWriter&&)                 = default;
     VcfWriter& operator=(VcfWriter&&)      = default;
     
-    const fs::path path() const;
+    const Path path() const;
     void write(const VcfHeader& header);
     void write(const VcfRecord& record);
     
 private:
-    fs::path file_path_;
+    Path file_path_;
     bool is_header_written_;
     HtslibBcfFacade writer_;
 };
