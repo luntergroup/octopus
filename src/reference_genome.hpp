@@ -23,8 +23,9 @@
 class ReferenceGenome
 {
 public:
-    using SizeType     = ReferenceGenomeImpl::SizeType;
-    using SequenceType = ReferenceGenomeImpl::SequenceType;
+    using ContigNameType = ReferenceGenomeImpl::ContigNameType;
+    using SizeType       = ReferenceGenomeImpl::SizeType;
+    using SequenceType   = ReferenceGenomeImpl::SequenceType;
     
     ReferenceGenome() = delete;
     explicit ReferenceGenome(std::unique_ptr<ReferenceGenomeImpl> impl);
@@ -37,15 +38,13 @@ public:
     
     const std::string& get_name() const;
     
-    bool has_contig(const std::string& contig_name) const noexcept;
+    bool has_contig(const ContigNameType& contig) const noexcept;
     bool contains_region(const GenomicRegion& region) const noexcept;
-    
     std::size_t num_contigs() const noexcept;
-    const std::vector<std::string>& get_contig_names() const noexcept;
-    
-    SizeType get_contig_size(const std::string& contig_name) const;
+    const std::vector<ContigNameType>& get_contig_names() const noexcept;
+    SizeType get_contig_size(const ContigNameType& contig) const;
     SizeType get_contig_size(const GenomicRegion& region) const;
-    GenomicRegion get_contig_region(const std::string& contig_name) const;
+    GenomicRegion get_contig_region(const ContigNameType& contig) const;
     
     SequenceType get_sequence(const GenomicRegion& region) const;
     
@@ -53,13 +52,14 @@ private:
     std::unique_ptr<ReferenceGenomeImpl> impl_;
     
     std::string name_;
-    std::vector<std::string> contig_names_;
-    std::unordered_map<std::string, SizeType> contig_sizes_;
+    std::vector<ContigNameType> contig_names_;
+    std::unordered_map<ContigNameType, SizeType> contig_sizes_;
 };
 
 // non-member functions
 
-ReferenceGenome make_reference(boost::filesystem::path file_path, std::size_t max_base_pair_cache = 0,
+ReferenceGenome make_reference(boost::filesystem::path reference_path,
+                               std::size_t max_base_pair_cache = 0,
                                bool is_threaded = false);
 
 std::vector<GenomicRegion> get_all_contig_regions(const ReferenceGenome& reference);

@@ -25,8 +25,9 @@ class ThreadsafeCachingFasta : public ReferenceGenomeImpl
 public:
     using Path = Fasta::Path;
     
-    using SequenceType = ReferenceGenomeImpl::SequenceType;
-    using SizeType     = ReferenceGenomeImpl::SizeType;
+    using ContigNameType = ReferenceGenomeImpl::ContigNameType;
+    using SizeType       = ReferenceGenomeImpl::SizeType;
+    using SequenceType   = ReferenceGenomeImpl::SequenceType;
     
     ThreadsafeCachingFasta() = delete;
     explicit ThreadsafeCachingFasta(Path fasta_path);
@@ -43,8 +44,8 @@ private:
     mutable std::mutex fasta_mutex_;
     
     std::string do_get_reference_name() const override;
-    std::vector<std::string> do_get_contig_names() const override;
-    SizeType do_get_contig_size(const std::string& contig_name) const override;
+    std::vector<ContigNameType> do_get_contig_names() const override;
+    SizeType do_get_contig_size(const ContigNameType& contig) const override;
     SequenceType do_fetch_sequence(const GenomicRegion& region) const override;
 };
 

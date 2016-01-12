@@ -75,7 +75,7 @@ private:
     using OpenReaderMap           = std::map<Path, ReadReader, FileSizeCompare>;
     using ClosedReaders           = std::unordered_set<Path>;
     using SampleIdToReaderPathMap = std::unordered_map<SampleIdType, std::vector<Path>>;
-    using ContigMap               = MappableMap<GenomicRegion::StringType, ContigRegion>;
+    using ContigMap               = MappableMap<GenomicRegion::ContigNameType, ContigRegion>;
     using ReaderRegionsMap        = std::unordered_map<Path, ContigMap>;
     
     const unsigned max_open_files_ = 200;

@@ -55,7 +55,7 @@ private:
     Downsampler downsampler_;
     ReadTransform read_transform_;
     
-    using ContigIdType = GenomicRegion::StringType;
+    using ContigIdType = GenomicRegion::ContigNameType;
     
     struct ContigStats
     {

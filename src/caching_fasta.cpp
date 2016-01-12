@@ -89,14 +89,14 @@ std::string CachingFasta::do_get_reference_name() const
     return fasta_.get_reference_name();
 }
 
-std::vector<std::string> CachingFasta::do_get_contig_names() const
+std::vector<CachingFasta::ContigNameType> CachingFasta::do_get_contig_names() const
 {
     return fasta_.get_contig_names();
 }
 
-CachingFasta::SizeType CachingFasta::do_get_contig_size(const std::string& contig_name) const
+CachingFasta::SizeType CachingFasta::do_get_contig_size(const ContigNameType& contig) const
 {
-    return contig_size_cache_.at(contig_name);
+    return contig_size_cache_.at(contig);
 }
 
 CachingFasta::SequenceType CachingFasta::do_fetch_sequence(const GenomicRegion& region) const

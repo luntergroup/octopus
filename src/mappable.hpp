@@ -77,7 +77,7 @@ inline GenomicRegion::SizeType size(const Mappable<T>& m)
 }
 
 template <typename T>
-inline GenomicRegion::StringType get_contig_name(const Mappable<T>& m)
+inline GenomicRegion::ContigNameType get_contig_name(const Mappable<T>& m)
 {
     return get_contig_name(static_cast<const T&>(m).get_region());
 }

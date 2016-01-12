@@ -1117,7 +1117,7 @@ void decompress_reads(Reads& reads)
 }
 
 // TODO
-AlignedRead find_next_segment(const AlignedRead& read, const MappableMap<GenomicRegion::StringType, AlignedRead>& reads);
+AlignedRead find_next_segment(const AlignedRead& read, const MappableMap<GenomicRegion::ContigNameType, AlignedRead>& reads);
 
 // TODO
 MappableSet<AlignedRead> find_chimeras(const AlignedRead& read, const MappableSet<AlignedRead>& reads);

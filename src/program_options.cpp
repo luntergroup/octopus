@@ -664,7 +664,7 @@ namespace Octopus
 //            return result;
 //        }
         
-        unsigned get_contig_ploidy(const GenomicRegion::StringType& contig, const po::variables_map& options)
+        unsigned get_contig_ploidy(const GenomicRegion::ContigNameType& contig, const po::variables_map& options)
         {
             unsigned result {options.at("ploidy").as<unsigned>()};
             
@@ -689,7 +689,7 @@ namespace Octopus
     std::unique_ptr<VariantCaller> make_variant_caller(const po::variables_map& options,
                                                        const ReferenceGenome& reference,
                                                        const CandidateGeneratorBuilder& candidate_generator_builder,
-                                                       const GenomicRegion::StringType& contig)
+                                                       const GenomicRegion::ContigNameType& contig)
     {
         using Maths::phred_to_probability;
         

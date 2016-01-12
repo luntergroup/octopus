@@ -12,7 +12,8 @@ namespace Octopus
 {
 
 // TODO
-AlignedRead find_next_segment(const AlignedRead& read, const MappableMap<GenomicRegion::StringType, AlignedRead>& reads)
+AlignedRead find_next_segment(const AlignedRead& read,
+                              const MappableMap<GenomicRegion::ContigNameType, AlignedRead>& reads)
 {
     if (!read.is_chimeric()) {
         throw std::runtime_error {"cannot find next segment as read is not chimeric"};

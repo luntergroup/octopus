@@ -27,16 +27,16 @@ std::string ThreadsafeCachingFasta::do_get_reference_name() const
     return fasta_.get_reference_name(); // don't need mutex as const
 }
 
-std::vector<std::string> ThreadsafeCachingFasta::do_get_contig_names() const
+std::vector<ThreadsafeCachingFasta::ContigNameType> ThreadsafeCachingFasta::do_get_contig_names() const
 {
     std::lock_guard<std::mutex> lock {fasta_mutex_};
     return fasta_.get_contig_names();
 }
 
-ThreadsafeCachingFasta::SizeType ThreadsafeCachingFasta::do_get_contig_size(const std::string& contig_name) const
+ThreadsafeCachingFasta::SizeType ThreadsafeCachingFasta::do_get_contig_size(const ContigNameType& contig) const
 {
     std::lock_guard<std::mutex> lock {fasta_mutex_};
-    return fasta_.get_contig_size(contig_name);
+    return fasta_.get_contig_size(contig);
 }
 
 ThreadsafeCachingFasta::SequenceType ThreadsafeCachingFasta::do_fetch_sequence(const GenomicRegion& region) const

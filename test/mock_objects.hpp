@@ -27,7 +27,7 @@ inline std::vector<GenomicRegion> generate_random_regions(GenomicRegion::SizeTyp
     std::vector<GenomicRegion> result {};
     result.reserve(num_regions);
     
-    GenomicRegion::StringType contig_name = "test";
+    GenomicRegion::ContigNameType contig_name = "test";
     
     const auto seed = std::chrono::system_clock::now().time_since_epoch().count();
     std::default_random_engine generator {static_cast<unsigned>(seed)};

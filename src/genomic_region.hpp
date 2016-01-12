@@ -31,7 +31,7 @@
 class GenomicRegion : public Comparable<GenomicRegion>
 {
 public:
-    using StringType     = std::string;
+    using ContigNameType = std::string;
     using SizeType       = ContigRegion::SizeType;
     using DifferenceType = ContigRegion::DifferenceType;
     
@@ -45,20 +45,20 @@ public:
     GenomicRegion(GenomicRegion&&)                 = default;
     GenomicRegion& operator=(GenomicRegion&&)      = default;
     
-    const StringType& get_contig_name() const noexcept;
+    const ContigNameType& get_contig_name() const noexcept;
     const ContigRegion& get_contig_region() const noexcept;
     SizeType get_begin() const noexcept;
     SizeType get_end() const noexcept;
 
 private:
-    StringType contig_name_;
+    ContigNameType contig_name_;
     ContigRegion contig_region_;
 };
 
 class RegionError : std::runtime_error
 {
 public:
-    RegionError(GenomicRegion::StringType first, GenomicRegion::StringType second)
+    RegionError(GenomicRegion::ContigNameType first, GenomicRegion::ContigNameType second)
     :
     runtime_error {"cannot compare regions on different contigs"},
     first_ {first}, second_ {second} {}
@@ -69,7 +69,7 @@ public:
     }
     
 private:
-    GenomicRegion::StringType first_, second_;
+    GenomicRegion::ContigNameType first_, second_;
 };
 
 // public member methods
@@ -88,7 +88,7 @@ contig_name_ {std::forward<T>(contig_name)},
 contig_region_ {std::forward<R>(contig_region)}
 {}
 
-inline const GenomicRegion::StringType& GenomicRegion::get_contig_name() const noexcept
+inline const GenomicRegion::ContigNameType& GenomicRegion::get_contig_name() const noexcept
 {
     return contig_name_;
 }
@@ -110,7 +110,7 @@ inline GenomicRegion::SizeType GenomicRegion::get_end() const noexcept
 
 // non-member methods
 
-inline const GenomicRegion::StringType& get_contig_name(const GenomicRegion& region) noexcept
+inline const GenomicRegion::ContigNameType& get_contig_name(const GenomicRegion& region) noexcept
 {
     return region.get_contig_name();
 }
@@ -311,7 +311,7 @@ namespace std {
         size_t operator()(const GenomicRegion& r) const
         {
             size_t result {};
-            boost::hash_combine(result, hash<GenomicRegion::StringType>()(r.get_contig_name()));
+            boost::hash_combine(result, hash<GenomicRegion::ContigNameType>()(r.get_contig_name()));
             boost::hash_combine(result, hash<ContigRegion>()(r.get_contig_region()));
             return result;
         }

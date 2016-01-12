@@ -27,8 +27,9 @@ class Fasta : public ReferenceGenomeImpl
 public:
     using Path = boost::filesystem::path;
     
-    using SequenceType = ReferenceGenomeImpl::SequenceType;
-    using SizeType     = ReferenceGenomeImpl::SizeType;
+    using ContigNameType = ReferenceGenomeImpl::ContigNameType;
+    using SizeType       = ReferenceGenomeImpl::SizeType;
+    using SequenceType   = ReferenceGenomeImpl::SequenceType;
     
     Fasta() = delete;
     explicit Fasta(Path fasta_path);
@@ -44,11 +45,11 @@ private:
     Path fasta_path_;
     Path fasta_index_path_;
     mutable std::ifstream fasta_;
-    std::unordered_map<std::string, bioio::FastaIndex> fasta_contig_indices_;
+    std::unordered_map<ContigNameType, bioio::FastaIndex> fasta_contig_indices_;
     
     std::string do_get_reference_name() const override;
-    std::vector<std::string> do_get_contig_names() const override;
-    SizeType do_get_contig_size(const std::string& contig_name) const override;
+    std::vector<ContigNameType> do_get_contig_names() const override;
+    SizeType do_get_contig_size(const ContigNameType& contig) const override;
     SequenceType do_fetch_sequence(const GenomicRegion& region) const override;
     
     bool is_valid_fasta() const noexcept;

@@ -47,7 +47,7 @@ namespace Octopus
     
     auto get_contigs(const SearchRegions& regions)
     {
-        std::vector<GenomicRegion::StringType> result {};
+        std::vector<GenomicRegion::ContigNameType> result {};
         result.reserve(regions.size());
         std::transform(std::cbegin(regions), std::cend(regions), std::back_inserter(result),
                        [] (const auto& p) { return p.first; });
@@ -87,7 +87,7 @@ namespace Octopus
     }
     
     VcfHeader make_header(const std::vector<SampleIdType>& samples,
-                          const std::vector<GenomicRegion::StringType>& contigs,
+                          const std::vector<GenomicRegion::ContigNameType>& contigs,
                           const ReferenceGenome& reference)
     {
         auto vcf_header_builder = get_default_header_builder().set_samples(samples);

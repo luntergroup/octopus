@@ -22,7 +22,7 @@ namespace Octopus {
 class GenomeWalker
 {
 public:
-    using ContigNameType = GenomicRegion::StringType;
+    using ContigNameType = GenomicRegion::ContigNameType;
     using Candidates     = MappableSet<Variant>;
     
     enum class IndicatorLimit { SharedWithPreviousRegion, NoLimit };

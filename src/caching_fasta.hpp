@@ -44,8 +44,9 @@ class CachingFasta : public ReferenceGenomeImpl
 public:
     using Path = Fasta::Path;
     
-    using SequenceType = ReferenceGenomeImpl::SequenceType;
-    using SizeType     = ReferenceGenomeImpl::SizeType;
+    using ContigNameType = ReferenceGenomeImpl::ContigNameType;
+    using SizeType       = ReferenceGenomeImpl::SizeType;
+    using SequenceType   = ReferenceGenomeImpl::SequenceType;
     
     CachingFasta() = delete;
     explicit CachingFasta(Path fasta_path);
@@ -69,11 +70,11 @@ private:
     using OverlapRange        = boost::iterator_range<CacheIterator>;
     
     std::string do_get_reference_name() const override;
-    std::vector<std::string> do_get_contig_names() const override;
-    SizeType do_get_contig_size(const std::string& contig_name) const override;
+    std::vector<ContigNameType> do_get_contig_names() const override;
+    SizeType do_get_contig_size(const ContigNameType& contig) const override;
     SequenceType do_fetch_sequence(const GenomicRegion& region) const override;
     
-    std::unordered_map<std::string, SizeType> contig_size_cache_;
+    std::unordered_map<ContigNameType, SizeType> contig_size_cache_;
     
     mutable SequenceCache sequence_cache_;
     mutable std::list<GenomicRegion> recently_used_regions_; // TODO: also make into map of contigs?

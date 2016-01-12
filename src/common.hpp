@@ -24,7 +24,7 @@ namespace Octopus
     using ProbabilityType = double;
     using SampleIdType    = std::string;
     
-    using SearchRegions = MappableMap<GenomicRegion::StringType, GenomicRegion>;
+    using SearchRegions = MappableMap<GenomicRegion::ContigNameType, GenomicRegion>;
     
     using ReadContainer = MappableSet<AlignedRead>;
     using ReadMap       = MappableMap<std::string, AlignedRead>;
