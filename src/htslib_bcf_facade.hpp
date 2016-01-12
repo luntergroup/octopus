@@ -31,7 +31,7 @@ class HtslibBcfFacade : public IVcfReaderImpl
 public:
     using Path = boost::filesystem::path;
     
-    HtslibBcfFacade()  = delete;
+    HtslibBcfFacade() = delete;
     explicit HtslibBcfFacade(Path file_path, const std::string& mode = "r");
     ~HtslibBcfFacade() noexcept override = default;
     

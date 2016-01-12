@@ -10,13 +10,14 @@
 #define Octopus_mock_options_h
 
 #include <boost/program_options.hpp>
+#include <boost/optional.hpp>
 
 #include "program_options.hpp"
 #include "test_common.hpp"
 
 namespace po = boost::program_options;
 
-inline po::variables_map get_basic_mock_options()
+inline boost::optional<po::variables_map> get_basic_mock_options()
 {
     const char *argv[] = {"octopus",
         "--reference", human_reference_fasta.c_str(),

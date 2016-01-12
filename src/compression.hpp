@@ -10,35 +10,21 @@
 #define Octopus_compression_hpp
 
 #include <string>
-#include <sstream>
-
-#include <boost/iostreams/filtering_streambuf.hpp>
-#include <boost/iostreams/filter/zlib.hpp>
-#include <boost/iostreams/copy.hpp>
 
 namespace Octopus
 {
-    inline std::string compress(const std::string& data)
-    {
-        std::stringstream decompressed {data};
-        boost::iostreams::filtering_streambuf<boost::iostreams::input> stream;
-        stream.push(boost::iostreams::zlib_compressor());
-        stream.push(decompressed);
-        std::stringstream compressed {};
-        boost::iostreams::copy(stream, compressed);
-        return compressed.str();
-    }
+    std::string compress(const std::string& data);
+    std::string decompress(const std::string& data);
     
-    inline std::string decompress(const std::string& data)
+    struct Compress
     {
-        std::stringstream compressed {data};
-        boost::iostreams::filtering_streambuf<boost::iostreams::input> stream;
-        stream.push(boost::iostreams::zlib_decompressor());
-        stream.push(compressed);
-        std::stringstream decompressed;
-        boost::iostreams::copy(stream, decompressed);
-        return decompressed.str();
-    }
+        std::string operator()(const std::string str) const;
+    };
+    
+    struct Decompress
+    {
+        std::string operator()(const std::string str) const;
+    };
 } // namespace Octopus
 
 #endif

@@ -54,7 +54,23 @@ namespace Octopus
         return result;
     }
     
-    std::vector<SampleIdType> get_samples(const po::variables_map& options, const ReadManager& read_manager)
+    bool check_search_regions(const SearchRegions& regions, const ReferenceGenome& reference)
+    {
+        bool result {true};
+        
+        for (const auto& p : regions) {
+            if (!reference.has_contig(p.first)) {
+                std::cout << "Bad input: contig " << p.first <<
+                    " does not exist in reference " << reference.get_name() << std::endl;
+                result = false;
+            }
+        }
+        
+        return result;
+    }
+    
+    std::vector<SampleIdType> get_samples(const po::variables_map& options,
+                                          const ReadManager& read_manager)
     {
         auto user_samples = Options::get_samples(options);
         auto file_samples = read_manager.get_samples();
@@ -108,35 +124,44 @@ namespace Octopus
                                });
     }
     
-    void run_octopus(po::variables_map& options)
+    void run_octopus(const po::variables_map& options)
     {
         using std::cout; using std::endl;
         
-        //auto num_system_threads = std::thread::hardware_concurrency(); // just a hint
-        //if (num_system_threads == 0) num_system_threads = 1;
+        const auto reference = Options::make_reference(options);
         
-        //auto max_threads  = Octopus::get_num_threads(options);
+        if (!reference.is_good()) {
+            cout << "quiting as got bad reference genome" << endl;
+            return;
+        }
         
-        //auto memory_quota = Options::get_memory_quota(options);
+        const auto regions = Options::get_search_regions(options, reference);
         
-        const size_t max_reads = 1'000'000;
+        if (!check_search_regions(regions, reference)) {
+            cout << "quiting as got bad input regions" << endl;
+            return;
+        }
         
-        const auto reference     = Options::make_reference(options);
-        
-        auto read_manager        = Options::make_read_manager(options);
-        auto regions             = Options::get_search_regions(options, reference);
-        auto read_filter         = Options::make_read_filter(options);
-        auto downsampler         = Options::make_downsampler(options);
-        auto read_transform      = Options::make_read_transform(options);
-        auto output              = Options::make_output_vcf_writer(options);
-        
-        auto candidate_generator_builder = Options::make_candidate_generator_builder(options, reference);
-        
-        ReadPipe read_pipe {read_manager, read_filter, downsampler, read_transform};
+        auto read_manager = Options::make_read_manager(options);
         
         const auto samples = get_samples(options, read_manager);
         
         cout << "there are " << samples.size() << " samples" << endl;
+        
+        auto read_filter    = Options::make_read_filter(options);
+        auto downsampler    = Options::make_downsampler(options);
+        auto read_transform = Options::make_read_transform(options);
+        
+        auto output = Options::make_output_vcf_writer(options);
+        
+        if (!output.is_open()) {
+            cout << "quiting as could not make output file" << endl;
+            return;
+        }
+        
+        auto candidate_generator_builder = Options::make_candidate_generator_builder(options, reference);
+        
+        ReadPipe read_pipe {read_manager, read_filter, downsampler, read_transform};
         
         cout << "writing results to " << output.path().string() << endl;
         
@@ -145,6 +170,8 @@ namespace Octopus
         auto vcf_header = make_header(samples, contigs, reference);
         
         output.write(vcf_header);
+        
+        const size_t max_reads = 1'000'000;
         
         for (const auto& contig_regions : regions) {
             const auto& contig = contig_regions.first;

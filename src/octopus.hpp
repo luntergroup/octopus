@@ -21,7 +21,7 @@ class ReferenceGenome;
 
 namespace Octopus
 {
-    void run_octopus(po::variables_map& options);
+    void run_octopus(const po::variables_map& options);
     
 } // namespace Octopus
 

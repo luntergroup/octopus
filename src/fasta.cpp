@@ -8,6 +8,7 @@
 
 #include "fasta.hpp"
 
+#include <iostream>
 #include <stdexcept>
 
 #include <boost/filesystem/operations.hpp>
@@ -27,23 +28,33 @@ fasta_index_path_ {std::move(fasta_index_path)}
     using boost::filesystem::exists;
     
     if (!exists(fasta_path_)) {
-        throw std::runtime_error {"Cannot find FASTA \"" + fasta_path.string() + "\""};
+        std::clog << "Fasta: given fasta path " << fasta_path.string() << " does not exist." << std::endl;
     }
     
     if (!exists(fasta_index_path_)) {
         fasta_index_path_ = fasta_path_.replace_extension("fai");
         
         if (!exists(fasta_index_path_)) {
-            throw std::runtime_error {"Cannot find FASTA index \"" + fasta_index_path_.string() + "\""};
+            std::clog << "Fasta: given fasta index path " << fasta_index_path_.string() << " does not exist." << std::endl;
         }
     }
     
-    if (!is_valid_fasta()) {
-        throw std::runtime_error {"Invalid FASTA \"" + fasta_path.string() + "\""};
+    if (is_valid_fasta()) {
+        fasta_ = std::ifstream(fasta_path_.string());
+        fasta_contig_indices_ = bioio::read_fasta_index(fasta_index_path_.string());
     }
-    
-    fasta_ = std::ifstream(fasta_path_.string());
-    fasta_contig_indices_ = bioio::read_fasta_index(fasta_index_path_.string());
+}
+
+// virtual private methods
+
+bool Fasta::do_is_open() const noexcept
+{
+    try {
+        return fasta_.is_open();
+    } catch (...) {
+        // only because std::ifstream::is_open is not declared noexcept
+        return false;
+    }
 }
 
 std::string Fasta::do_get_reference_name() const

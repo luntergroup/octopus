@@ -9,43 +9,80 @@
 #include "vcf_writer.hpp"
 
 #include <stdexcept>
+#include <utility>
 
 #include "vcf_header.hpp"
 #include "vcf_record.hpp"
 
 #include <iostream> // TEST
 
-VcfWriter::VcfWriter(const Path& file_path)
+VcfWriter::VcfWriter(Path file_path)
 :
-file_path_ {file_path},
-writer_ {file_path_, "w"}
+file_path_ {std::move(file_path)},
+writer_ {std::make_unique<HtslibBcfFacade>(file_path_, "w")}
 {}
 
-VcfWriter::VcfWriter(const Path& file_path, const VcfHeader& header)
+VcfWriter::VcfWriter(Path file_path, const VcfHeader& header)
 :
-file_path_ {file_path},
-writer_ {file_path_, "w"}
+VcfWriter {std::move(file_path)}
 {
-    this->write(header);
+    this->write(std::move(header));
+}
+
+VcfWriter::VcfWriter(VcfWriter&& other)
+{
+    std::lock_guard<std::mutex> lock {other.mutex_};
+    file_path_         = std::move(other.file_path_);
+    is_header_written_ = other.is_header_written_;
+    writer_            = std::move(other.writer_);
+}
+
+bool VcfWriter::is_open() const noexcept
+{
+    std::lock_guard<std::mutex> lock {mutex_};
+    return writer_ != nullptr;
+}
+
+void VcfWriter::open(Path file_path) noexcept
+{
+    std::lock_guard<std::mutex> lock {mutex_};
+    try {
+        file_path_         = std::move(file_path);
+        is_header_written_ = false;
+        writer_            = std::make_unique<HtslibBcfFacade>(file_path_, "w");
+    } catch (...) {
+        this->close();
+    }
+}
+
+void VcfWriter::close() noexcept
+{
+    std::lock_guard<std::mutex> lock {mutex_};
+    writer_.reset(nullptr);
+    is_header_written_ = false;
+    file_path_.clear();
 }
 
 const VcfWriter::Path VcfWriter::path() const
 {
+    std::lock_guard<std::mutex> lock {mutex_};
     return file_path_;
 }
 
 void VcfWriter::write(const VcfHeader& header)
 {
-    writer_.write_header(header);
+    std::lock_guard<std::mutex> lock {mutex_};
+    writer_->write_header(header);
     is_header_written_ = true;
 }
 
 void VcfWriter::write(const VcfRecord& record)
 {
+    std::lock_guard<std::mutex> lock {mutex_};
     if (is_header_written_) {
-        writer_.write_record(record);
+        writer_->write_record(record);
     } else {
-        throw std::runtime_error {"cannot write VCF record as header has not been written"};
+        throw std::runtime_error {"VcfWriter::write: cannot write record as header has not been written"};
     }
 }
 

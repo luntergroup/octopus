@@ -11,6 +11,7 @@
 #include <fstream>
 #include <iostream>
 #include <stdexcept>
+#include <utility>
 
 #include "vcf_header.hpp"
 #include "vcf_record.hpp"
@@ -33,9 +34,9 @@ std::unique_ptr<IVcfReaderImpl> make_vcf_reader(const VcfReader::Path& file_path
     }
 }
 
-VcfReader::VcfReader(const Path& file_path)
+VcfReader::VcfReader(Path file_path)
 :
-file_path_ {file_path},
+file_path_ {std::move(file_path)},
 reader_ {make_vcf_reader(file_path)}
 {}
 
@@ -46,13 +47,39 @@ VcfReader::VcfReader(VcfReader&& other)
     reader_  = std::move(other.reader_);
 }
 
+bool VcfReader::is_open() const noexcept
+{
+    std::lock_guard<std::mutex> lock {mutex_};
+    return reader_ != nullptr;
+}
+
+void VcfReader::open(Path file_path) noexcept
+{
+    std::lock_guard<std::mutex> lock {mutex_};
+    try {
+        file_path_ = std::move(file_path);
+        reader_    = std::make_unique<HtslibBcfFacade>(file_path_, "w");
+    } catch (...) {
+        this->close();
+    }
+}
+
+void VcfReader::close() noexcept
+{
+    std::lock_guard<std::mutex> lock {mutex_};
+    reader_.reset(nullptr);
+    file_path_.clear();
+}
+
 const VcfReader::Path VcfReader::path() const
 {
+    std::lock_guard<std::mutex> lock {mutex_};
     return file_path_;
 }
 
 VcfHeader VcfReader::fetch_header() const
 {
+    std::lock_guard<std::mutex> lock {mutex_};
     return reader_->fetch_header();
 }
 

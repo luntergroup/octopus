@@ -16,6 +16,7 @@
 
 #include <boost/program_options.hpp>
 #include <boost/filesystem.hpp>
+#include <boost/optional.hpp>
 
 #include "common.hpp"
 #include "genomic_region.hpp"
@@ -35,7 +36,7 @@ namespace Octopus
 {
     namespace Options
     {
-    boost::program_options::variables_map parse_options(int argc, const char** argv);
+    boost::optional<po::variables_map> parse_options(int argc, const char** argv);
     
     unsigned get_max_threads(const po::variables_map& options);
     

@@ -84,6 +84,11 @@ forward_bias_ {forward_bias}
 
 // virtual private methods
 
+bool CachingFasta::do_is_open() const noexcept
+{
+    return fasta_.is_open();
+}
+
 std::string CachingFasta::do_get_reference_name() const
 {
     return fasta_.get_reference_name();

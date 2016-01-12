@@ -22,6 +22,8 @@ public:
     using SizeType       = GenomicRegion::SizeType;
     using SequenceType   = std::string;
     
+    bool is_open() const noexcept;
+    
     std::string get_reference_name() const;
     std::vector<ContigNameType> get_contig_names() const;
     SizeType get_contig_size(const ContigNameType& contig) const;
@@ -30,11 +32,17 @@ public:
     virtual ~ReferenceGenomeImpl() noexcept = default;
     
 private:
+    virtual bool do_is_open() const noexcept = 0;
     virtual std::string do_get_reference_name() const = 0;
     virtual std::vector<ContigNameType> do_get_contig_names() const = 0;
     virtual SizeType do_get_contig_size(const ContigNameType& contig) const = 0;
     virtual SequenceType do_fetch_sequence(const GenomicRegion& region) const = 0;
 };
+
+inline bool ReferenceGenomeImpl::is_open() const noexcept
+{
+    return do_is_open();
+}
 
 inline std::string ReferenceGenomeImpl::get_reference_name() const
 {

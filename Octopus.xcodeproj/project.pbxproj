@@ -100,6 +100,7 @@
 		D435E9F91B2B345700945EC7 /* Makefile in Sources */ = {isa = PBXBuildFile; fileRef = D435E9F81B2B345700945EC7 /* Makefile */; };
 		D44ADE731C43C22700A854C6 /* variant_caller_builder.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D44ADE711C43C22700A854C6 /* variant_caller_builder.cpp */; };
 		D44ADE761C43D89B00A854C6 /* candidate_generator_builder.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D44ADE741C43D89B00A854C6 /* candidate_generator_builder.cpp */; };
+		D44ADE781C452B9B00A854C6 /* compression.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D44ADE771C452B9B00A854C6 /* compression.cpp */; };
 		D45D2E601B2AD88A00F6A89D /* libhts.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D45D2E5F1B2AD88A00F6A89D /* libhts.a */; };
 		D45D2E661B2AD93500F6A89D /* libboost_filesystem.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D45D2E631B2AD93500F6A89D /* libboost_filesystem.a */; };
 		D45D2E671B2AD93500F6A89D /* libboost_program_options.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D45D2E641B2AD93500F6A89D /* libboost_program_options.a */; };
@@ -401,6 +402,7 @@
 		D44ADE721C43C22700A854C6 /* variant_caller_builder.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = variant_caller_builder.hpp; sourceTree = "<group>"; };
 		D44ADE741C43D89B00A854C6 /* candidate_generator_builder.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = candidate_generator_builder.cpp; sourceTree = "<group>"; };
 		D44ADE751C43D89B00A854C6 /* candidate_generator_builder.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = candidate_generator_builder.hpp; sourceTree = "<group>"; };
+		D44ADE771C452B9B00A854C6 /* compression.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = compression.cpp; sourceTree = "<group>"; };
 		D45D2E5F1B2AD88A00F6A89D /* libhts.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libhts.a; path = /usr/local/Cellar/htslib/1.2.1/lib/libhts.a; sourceTree = "<absolute>"; };
 		D45D2E631B2AD93500F6A89D /* libboost_filesystem.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libboost_filesystem.a; path = /usr/local/Cellar/boost/1.58.0/lib/libboost_filesystem.a; sourceTree = "<absolute>"; };
 		D45D2E641B2AD93500F6A89D /* libboost_program_options.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libboost_program_options.a; path = /usr/local/Cellar/boost/1.58.0/lib/libboost_program_options.a; sourceTree = "<absolute>"; };
@@ -867,6 +869,7 @@
 				CAFA196A1AC0D0D500F953D9 /* maths.hpp */,
 				CAE3E2941A9CF97700C01B2C /* storage_policies.hpp */,
 				CAE3E2A01AA1D39100C01B2C /* compression.hpp */,
+				D44ADE771C452B9B00A854C6 /* compression.cpp */,
 				CA1472741AACC7E2005FDCD1 /* context_iterators.hpp */,
 				CA14727D1AAE63A8005FDCD1 /* hash_functions.hpp */,
 				D4907F5E1A8A3ADD00639203 /* string_utils.hpp */,
@@ -1138,6 +1141,7 @@
 				D463C1A41B0A174B00739A66 /* variant.cpp in Sources */,
 				CA4551621AEB06D800FDAAE8 /* 1000G_test11.cpp in Sources */,
 				D4BEA9FC1B861BE200E53CFD /* sssort.c in Sources */,
+				D44ADE781C452B9B00A854C6 /* compression.cpp in Sources */,
 				D435E9F91B2B345700945EC7 /* Makefile in Sources */,
 				D4BEA9FE1B861BE200E53CFD /* utils.c in Sources */,
 				CA0D83EB1BD466F40020366B /* read_pipe.cpp in Sources */,

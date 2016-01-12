@@ -32,8 +32,8 @@ public:
     // required, performance can be vastly improved by simply not extracting it from file.
     enum class Unpack { All, AllButSamples };
     
-    VcfReader()  = delete;
-    explicit VcfReader(const Path& file_path);
+    VcfReader()  = default;
+    explicit VcfReader(Path file_path);
     ~VcfReader() = default;
     
     VcfReader(const VcfReader&)            = delete;
@@ -41,11 +41,18 @@ public:
     VcfReader(VcfReader&&);
     VcfReader& operator=(VcfReader&&)      = default;
     
+    bool is_open() const noexcept;
+    void open(Path file_path) noexcept;
+    void close() noexcept;
+    
     const Path path() const;
+    
     VcfHeader fetch_header() const;
+    
     size_t count_records();
     size_t count_records(const std::string& contig);
     size_t count_records(const GenomicRegion& region);
+    
     std::vector<VcfRecord> fetch_records(Unpack level = Unpack::All); // fetches all records
     std::vector<VcfRecord> fetch_records(const std::string& contig, Unpack level = Unpack::All);
     std::vector<VcfRecord> fetch_records(const GenomicRegion& region, Unpack level = Unpack::All);
@@ -54,7 +61,7 @@ private:
     Path file_path_;
     std::unique_ptr<IVcfReaderImpl> reader_;
     
-    std::mutex mutex_;
+    mutable std::mutex mutex_;
 };
 
 bool operator==(const VcfReader& lhs, const VcfReader& rhs);

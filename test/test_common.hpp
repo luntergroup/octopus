@@ -74,6 +74,10 @@ namespace detail
 
 // Full paths
 
+// bad input
+
+static const fs::path non_existent {detail::home_dir + detail::octopus_test_dir + "non_existent"};
+
 // regions
 
 static const fs::path regions_txt_file {detail::home_dir + detail::octopus_test_dir + "test_regions.txt"};

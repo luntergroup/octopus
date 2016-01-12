@@ -22,13 +22,31 @@
 ReferenceGenome::ReferenceGenome(std::unique_ptr<ReferenceGenomeImpl> impl)
 :
 impl_ {std::move(impl)},
-name_ {impl_->get_reference_name()},
-contig_names_(impl_->get_contig_names()),
+name_{},
+contig_names_ {},
 contig_sizes_ {}
 {
-    for (const auto& contig_name : contig_names_) {
-        contig_sizes_.emplace(contig_name, impl_->get_contig_size(contig_name));
+    if (impl_->is_open()) {
+        try {
+            name_         = impl_->get_reference_name();
+            contig_names_ = impl_->get_contig_names();
+            
+            contig_sizes_.reserve(contig_names_.size());
+            
+            for (const auto& contig_name : contig_names_) {
+                contig_sizes_.emplace(contig_name, impl_->get_contig_size(contig_name));
+            }
+        } catch (...) {
+            impl_.reset(nullptr);
+        }
+    } else {
+        impl_.reset(nullptr); // no point in keeping bad handle
     }
+}
+
+bool ReferenceGenome::is_good() const noexcept
+{
+    return impl_ != nullptr;
 }
 
 const std::string& ReferenceGenome::get_name() const
@@ -58,11 +76,7 @@ const std::vector<ReferenceGenome::ContigNameType>& ReferenceGenome::get_contig_
 
 ReferenceGenome::SizeType ReferenceGenome::get_contig_size(const ContigNameType& contig) const
 {
-    if (has_contig(contig)) {
-        return contig_sizes_.at(contig);
-    }
-    throw std::runtime_error {"get_contig_size: contig \"" + contig +
-            "\" is not in reference genome \"" + name_ + "\""};
+    return contig_sizes_.at(contig);
 }
 
 ReferenceGenome::SizeType ReferenceGenome::get_contig_size(const GenomicRegion& region) const
@@ -72,7 +86,7 @@ ReferenceGenome::SizeType ReferenceGenome::get_contig_size(const GenomicRegion& 
 
 GenomicRegion ReferenceGenome::get_contig_region(const ContigNameType& contig) const
 {
-    return GenomicRegion {contig, 0, get_contig_size(contig)};
+    return GenomicRegion {contig, GenomicRegion::SizeType {0}, get_contig_size(contig)};
 }
 
 ReferenceGenome::SequenceType ReferenceGenome::get_sequence(const GenomicRegion& region) const

@@ -79,21 +79,24 @@ int main(int argc, const char **argv)
     using std::cout; using std::cerr; using std::endl;
     
     try {
-        //auto options = Octopus::parse_options(argc, argv);
-        auto options = get_basic_mock_options();
+        //const auto options = Octopus::parse_options(argc, argv);
+        const auto options = get_basic_mock_options();
         
-        auto start = std::chrono::system_clock::now();
-        
-        cout << "started running Octopus at " << start << endl;
-        
-        Octopus::run_octopus(options);
-        
-        auto end = std::chrono::system_clock::now();
-        
-        cout << "finished running Octopus at " << end << endl;
-        
-        cout << "elapsed time: " << TimeInterval {start, end} << endl;
-        
+        if (options) {
+            auto start = std::chrono::system_clock::now();
+            
+            cout << "Started running Octopus at " << start << endl;
+            
+            Octopus::run_octopus(options.get());
+            
+            auto end = std::chrono::system_clock::now();
+            
+            cout << "Finished running Octopus at " << end << endl;
+            
+            cout << "Elapsed time: " << TimeInterval {start, end} << endl;
+        } else {
+            cout << "Could not parse input options. Did not run Octopus." << endl;
+        }
     } catch (std::runtime_error& e) {
         cerr << "Error: " << e.what() << endl;
         return EXIT_FAILURE;

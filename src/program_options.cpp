@@ -16,7 +16,8 @@
 #include <algorithm>
 #include <functional>
 #include <unordered_map>
-#include <memory>
+#include <utility>
+#include <thread>
 
 #include <boost/filesystem/path.hpp>
 #include <boost/filesystem/operations.hpp>
@@ -51,7 +52,7 @@ namespace Octopus
     void conflicting_options(const po::variables_map& vm, const std::string& opt1, const std::string& opt2)
     {
         if (vm.count(opt1) && !vm[opt1].defaulted() && vm.count(opt2) && !vm[opt2].defaulted()) {
-            throw std::logic_error(std::string("Conflicting options '") + opt1 + "' and '" + opt2 + "'.");
+            throw std::logic_error(std::string("conflicting options '") + opt1 + "' and '" + opt2 + "'.");
         }
     }
     
@@ -60,214 +61,199 @@ namespace Octopus
     {
         if (vm.count(for_what) && !vm[for_what].defaulted())
             if (vm.count(required_option) == 0 || vm[required_option].defaulted()) {
-                throw std::logic_error(std::string("Option '") + for_what
+                throw std::logic_error(std::string("option '") + for_what
                                        + "' requires option '" + required_option + "'.");
             }
     }
     
-    po::variables_map parse_options(int argc, const char** argv)
+    boost::optional<po::variables_map> parse_options(int argc, const char** argv)
     {
-        po::positional_options_description p;
-        p.add("command", -1);
-        
-        po::options_description general("General options");
-        general.add_options()
-        ("help,h", "produce help message")
-        ("version", "output the version number")
-        ("verbosity", po::value<unsigned>()->default_value(0),
-            "level of logging. Verbosity 0 switches off logging")
-        ;
-        
-        po::options_description backend("Backend options");
-        backend.add_options()
-        ("max-threads,t", po::value<unsigned>()->default_value(1),
-            "maximum number of threads")
-        ("memory", po::value<size_t>()->default_value(8000),
-            "target memory usage in MB")
-        ("reference-cache-size", po::value<size_t>()->default_value(0),
-            "the maximum number of bytes that can be used to cache reference sequence")
-        ("compress-reads", po::bool_switch()->default_value(false),
-            "compress the reads (slower)")
-        ("max-open-read-files", po::value<unsigned>()->default_value(200),
-            "the maximum number of read files that can be open at one time")
-        ;
-        
-        po::options_description input("Input/output options");
-        input.add_options()
-        ("reference,R", po::value<std::string>()->required(), "the reference genome file")
-        ("reads,I", po::value<std::vector<std::string>>()->multitoken(),
-            "space-seperated list of read file paths")
-        ("reads-file", po::value<std::string>(), "list of read file paths, one per line")
-        ("regions,L", po::value<std::vector<std::string>>()->multitoken(),
-            "space-seperated list of one-indexed variant search regions (chrom:begin-end)")
-        ("regions-file", po::value<std::string>(),
-            "list of one-indexed variant search regions (chrom:begin-end), one per line")
-        ("skip-regions", po::value<std::vector<std::string>>()->multitoken(),
-            "space-seperated list of one-indexed regions (chrom:begin-end) to skip")
-        ("skip-regions-file", po::value<std::string>(),
-            "list of one-indexed regions (chrom:begin-end) to skip, one per line")
-        ("samples,S", po::value<std::vector<std::string>>()->multitoken(),
-            "space-seperated list of sample names to consider")
-        ("samples-file", po::value<std::string>(), "list of sample names to consider, one per line")
-        ("output,o", po::value<std::string>()->default_value("octopus_calls.vcf"), "write output to file")
-        //("log-file", po::value<std::string>(), "path of the output log file")
-        ;
-        
-        po::options_description filters("Read filter options");
-        filters.add_options()
-        ("allow-unmapped", po::bool_switch()->default_value(false),
-            "turns off marked unmapped read filter")
-        ("min-mapping-quality", po::value<unsigned>()->default_value(20),
-            "reads with smaller mapping quality are ignored")
-        ("good-base-quality", po::value<unsigned>()->default_value(20),
-            "base quality threshold used by min-good-bases filter")
-        ("min-good-base-fraction", po::value<double>(),
-            "base quality threshold used by min-good-bases filter")
-        ("min-good-bases", po::value<AlignedRead::SizeType>()->default_value(0),
-            "minimum number of bases with quality min-base-quality before read is considered")
-        ("allow-qc-fails", po::bool_switch()->default_value(false), "filter reads marked as QC failed")
-        ("min-read-length", po::value<AlignedRead::SizeType>(), "filter reads shorter than this")
-        ("max-read-length", po::value<AlignedRead::SizeType>(), "filter reads longer than this")
-        ("allow-marked-duplicates", po::bool_switch()->default_value(false),
-            "allows reads marked as duplicate in alignment record")
-        ("allow-octopus-duplicates", po::bool_switch()->default_value(false),
-            "allows reads considered duplicates by Octopus")
-        ("no-secondary-alignmenets", po::bool_switch()->default_value(false),
-            "filters reads marked as secondary alignments")
-        ("no-supplementary-alignmenets", po::bool_switch()->default_value(false),
-            "filters reads marked as supplementary alignments")
-        ("no-unmapped-mates", po::bool_switch()->default_value(false),
-            "filters reads with unmapped mates")
-        ("downsample-above", po::value<unsigned>()->default_value(10000),
-            "downsample reads in regions where coverage is over this")
-        ("downsample-target", po::value<unsigned>()->default_value(10000),
-            "the target coverage for the downsampler")
-        ;
-        
-        po::options_description transforms("Read transform options");
-        transforms.add_options()
-        ("trim-soft-clipped", po::bool_switch()->default_value(false),
-            "trims soft clipped parts of the read")
-        ("tail-trim-size", po::value<AlignedRead::SizeType>()->default_value(0),
-            "trims this number of bases off the tail of all reads")
-        ("trim-adapters", po::bool_switch()->default_value(false),
-            "trims any overlapping regions that pass the fragment size")
-        ;
-        
-        po::options_description candidates("Candidate generation options");
-        candidates.add_options()
-        ("no-candidates-from-alignments", po::bool_switch()->default_value(false),
-            "disables candidate variants from aligned reads")
-        ("candidates-from-assembler", po::bool_switch()->default_value(false),
-            "generate candidate variants with the assembler")
-        ("candidates-from-source", po::value<std::string>(),
-            "variant file path containing known variants. These variants will automatically become candidates")
-        ("regenotype", po::bool_switch()->default_value(false),
-            "disables all generators other than source which must be present")
-        ("min-snp-base-quality", po::value<unsigned>()->default_value(20),
-            "only base changes with quality above this value are considered for snp generation")
-        ("min-supporting-reads", po::value<unsigned>()->default_value(1),
-            "minimum number of reads that must support a variant if it is to be considered a candidate")
-        ("max-variant-size", po::value<AlignedRead::SizeType>()->default_value(100),
-            "maximum candidate varaint size from alignmenet CIGAR")
-        ("kmer-size", po::value<unsigned>()->default_value(15),
-            "k-mer size to use for assembly")
-        ("no-cycles", po::bool_switch()->default_value(false), "dissalow cycles in assembly graph")
-        ;
-        
-        po::options_description model("Model options");
-        model.add_options()
-        ("model", po::value<std::string>()->default_value("population"), "calling model used")
-        ("ploidy", po::value<unsigned>()->default_value(2),
-            "organism ploidy, all contigs with unspecified ploidy are assumed this ploidy")
-        ("contig-ploidies", po::value<std::vector<std::string>>()->multitoken(),
-            "ploidy of individual contigs")
-        ("contig-ploidies-file", po::value<std::string>(), "list of contig=ploidy pairs, one per line")
-        ("normal-sample", po::value<std::string>(), "normal sample used in cancer model")
-        ("maternal-sample", po::value<std::string>(), "maternal sample for trio model")
-        ("paternal-sample", po::value<std::string>(), "paternal sample for trio model")
-        ("transition-prior", po::value<double>()->default_value(0.003),
-            "prior probability of a transition snp from the reference")
-        ("transversion-prior", po::value<double>()->default_value(0.003),
-            "prior probability of a transversion snp from the reference")
-        ("insertion-prior", po::value<double>()->default_value(0.003),
-            "prior probability of an insertion into the reference")
-        ("deletion-prior", po::value<double>()->default_value(0.003),
-            "prior probability of a deletion from the reference")
-        ("prior-precision", po::value<double>()->default_value(0.003),
-            "precision (inverse variance) of the given variant priors")
-        ("max-haplotypes", po::value<unsigned>()->default_value(128),
-            "the maximum number of haplotypes the model may consider")
-        ;
-        
-        po::options_description calling("Caller options");
-        calling.add_options()
-        ("min-variant-posterior", po::value<float>()->default_value(20.0),
-            "minimum variant call posterior probability (phred scale)")
-        ("min-refcall-posterior", po::value<float>()->default_value(10.0),
-            "minimum homozygous reference call posterior probability (phred scale)")
-        ("min-somatic-posterior", po::value<float>()->default_value(10.0),
-            "minimum somaitc mutation call posterior probability (phred scale)")
-        ("make-positional-refcalls", po::bool_switch()->default_value(false),
-            "caller will output positional REFCALLs")
-        ("make-blocked-refcalls", po::bool_switch()->default_value(false),
-            "caller will output blocked REFCALLs")
-        ("somatics-only", po::bool_switch()->default_value(false),
-            "only output somatic calls (for somatic calling models only)")
-        ;
-        
-        po::options_description all("Allowed options");
-        all.add(general).add(backend).add(input).add(filters).add(transforms).add(candidates).add(model).add(calling);
-        
-        po::variables_map vm;
-        po::store(po::command_line_parser(argc, argv).options(all).positional(p).run(), vm);
-        
-        if (vm.count("help")) {
-            std::cout << "Usage: octopus <command> [options]" << std::endl;
-            std::cout << all << std::endl;
-            return vm;
-        }
-        
-        // boost::option cannot handle option dependencies so we must do our own checks
-        
-        if (vm.count("reads") == 0 && vm.count("reads-file") == 0) {
-            throw boost::program_options::required_option {"--reads | --reads-file"};
-        }
-        
-        if (vm.at("model").as<std::string>() == "cancer" && vm.count("normal-sample") == 0) {
-            throw std::logic_error {"option normal-sample is required when model=cancer"};
-        }
-        
-        if (vm.at("model").as<std::string>() == "trio" && (vm.count("maternal-sample") == 0 || vm.count("paternal-sample") == 0)) {
-            throw std::logic_error {"option maternal-sample and paternal-sample are required when model=trio"};
-        }
-        
-        conflicting_options(vm, "make-positional-refcalls", "make-blocked-refcalls");
-        
-        po::notify(vm);
-        
-        return vm;
-    }
-    
-    fs::path get_home_dir()
-    {
-        return fs::path(getenv("HOME"));
-    }
-    
-    fs::path expand_user_path(const fs::path& path)
-    {
-        if (!path.empty() && path.string().front() == '~') {
-            if (path.string().size() > 1 && path.string()[1] == '/') {
-                auto home_dir = get_home_dir().string();
-                return fs::path {home_dir + path.string().substr(1)};
+        try {
+            po::positional_options_description p;
+            
+            p.add("command", -1);
+            
+            po::options_description general("General options");
+            general.add_options()
+            ("help,h", "produce help message")
+            ("version", "output the version number")
+            ("verbosity", po::value<unsigned>()->default_value(0),
+             "level of logging. Verbosity 0 switches off logging")
+            ;
+            
+            po::options_description backend("Backend options");
+            backend.add_options()
+            ("max-threads,t", po::value<unsigned>()->default_value(1),
+             "maximum number of threads")
+            ("memory", po::value<size_t>()->default_value(8000),
+             "target memory usage in MB")
+            ("reference-cache-size", po::value<size_t>()->default_value(0),
+             "the maximum number of bytes that can be used to cache reference sequence")
+            ("compress-reads", po::bool_switch()->default_value(false),
+             "compress the reads (slower)")
+            ("max-open-read-files", po::value<unsigned>()->default_value(200),
+             "the maximum number of read files that can be open at one time")
+            ;
+            
+            po::options_description input("Input/output options");
+            input.add_options()
+            ("reference,R", po::value<std::string>()->required(), "the reference genome file")
+            ("reads,I", po::value<std::vector<std::string>>()->multitoken(),
+             "space-seperated list of read file paths")
+            ("reads-file", po::value<std::string>(), "list of read file paths, one per line")
+            ("regions,L", po::value<std::vector<std::string>>()->multitoken(),
+             "space-seperated list of one-indexed variant search regions (chrom:begin-end)")
+            ("regions-file", po::value<std::string>(),
+             "list of one-indexed variant search regions (chrom:begin-end), one per line")
+            ("skip-regions", po::value<std::vector<std::string>>()->multitoken(),
+             "space-seperated list of one-indexed regions (chrom:begin-end) to skip")
+            ("skip-regions-file", po::value<std::string>(),
+             "list of one-indexed regions (chrom:begin-end) to skip, one per line")
+            ("samples,S", po::value<std::vector<std::string>>()->multitoken(),
+             "space-seperated list of sample names to consider")
+            ("samples-file", po::value<std::string>(), "list of sample names to consider, one per line")
+            ("output,o", po::value<std::string>()->default_value("octopus_calls.vcf"), "write output to file")
+            //("log-file", po::value<std::string>(), "path of the output log file")
+            ;
+            
+            po::options_description filters("Read filter options");
+            filters.add_options()
+            ("allow-unmapped", po::bool_switch()->default_value(false),
+             "turns off marked unmapped read filter")
+            ("min-mapping-quality", po::value<unsigned>()->default_value(20),
+             "reads with smaller mapping quality are ignored")
+            ("good-base-quality", po::value<unsigned>()->default_value(20),
+             "base quality threshold used by min-good-bases filter")
+            ("min-good-base-fraction", po::value<double>(),
+             "base quality threshold used by min-good-bases filter")
+            ("min-good-bases", po::value<AlignedRead::SizeType>()->default_value(0),
+             "minimum number of bases with quality min-base-quality before read is considered")
+            ("allow-qc-fails", po::bool_switch()->default_value(false), "filter reads marked as QC failed")
+            ("min-read-length", po::value<AlignedRead::SizeType>(), "filter reads shorter than this")
+            ("max-read-length", po::value<AlignedRead::SizeType>(), "filter reads longer than this")
+            ("allow-marked-duplicates", po::bool_switch()->default_value(false),
+             "allows reads marked as duplicate in alignment record")
+            ("allow-octopus-duplicates", po::bool_switch()->default_value(false),
+             "allows reads considered duplicates by Octopus")
+            ("no-secondary-alignmenets", po::bool_switch()->default_value(false),
+             "filters reads marked as secondary alignments")
+            ("no-supplementary-alignmenets", po::bool_switch()->default_value(false),
+             "filters reads marked as supplementary alignments")
+            ("no-unmapped-mates", po::bool_switch()->default_value(false),
+             "filters reads with unmapped mates")
+            ("downsample-above", po::value<unsigned>()->default_value(10000),
+             "downsample reads in regions where coverage is over this")
+            ("downsample-target", po::value<unsigned>()->default_value(10000),
+             "the target coverage for the downsampler")
+            ;
+            
+            po::options_description transforms("Read transform options");
+            transforms.add_options()
+            ("trim-soft-clipped", po::bool_switch()->default_value(false),
+             "trims soft clipped parts of the read")
+            ("tail-trim-size", po::value<AlignedRead::SizeType>()->default_value(0),
+             "trims this number of bases off the tail of all reads")
+            ("trim-adapters", po::bool_switch()->default_value(false),
+             "trims any overlapping regions that pass the fragment size")
+            ;
+            
+            po::options_description candidates("Candidate generation options");
+            candidates.add_options()
+            ("no-candidates-from-alignments", po::bool_switch()->default_value(false),
+             "disables candidate variants from aligned reads")
+            ("candidates-from-assembler", po::bool_switch()->default_value(false),
+             "generate candidate variants with the assembler")
+            ("candidates-from-source", po::value<std::string>(),
+             "variant file path containing known variants. These variants will automatically become candidates")
+            ("regenotype", po::bool_switch()->default_value(false),
+             "disables all generators other than source which must be present")
+            ("min-snp-base-quality", po::value<unsigned>()->default_value(20),
+             "only base changes with quality above this value are considered for snp generation")
+            ("min-supporting-reads", po::value<unsigned>()->default_value(1),
+             "minimum number of reads that must support a variant if it is to be considered a candidate")
+            ("max-variant-size", po::value<AlignedRead::SizeType>()->default_value(100),
+             "maximum candidate varaint size from alignmenet CIGAR")
+            ("kmer-size", po::value<unsigned>()->default_value(15),
+             "k-mer size to use for assembly")
+            ("no-cycles", po::bool_switch()->default_value(false), "dissalow cycles in assembly graph")
+            ;
+            
+            po::options_description model("Model options");
+            model.add_options()
+            ("model", po::value<std::string>()->default_value("population"), "calling model used")
+            ("ploidy", po::value<unsigned>()->default_value(2),
+             "organism ploidy, all contigs with unspecified ploidy are assumed this ploidy")
+            ("contig-ploidies", po::value<std::vector<std::string>>()->multitoken(),
+             "ploidy of individual contigs")
+            ("contig-ploidies-file", po::value<std::string>(), "list of contig=ploidy pairs, one per line")
+            ("normal-sample", po::value<std::string>(), "normal sample used in cancer model")
+            ("maternal-sample", po::value<std::string>(), "maternal sample for trio model")
+            ("paternal-sample", po::value<std::string>(), "paternal sample for trio model")
+            ("transition-prior", po::value<double>()->default_value(0.003),
+             "prior probability of a transition snp from the reference")
+            ("transversion-prior", po::value<double>()->default_value(0.003),
+             "prior probability of a transversion snp from the reference")
+            ("insertion-prior", po::value<double>()->default_value(0.003),
+             "prior probability of an insertion into the reference")
+            ("deletion-prior", po::value<double>()->default_value(0.003),
+             "prior probability of a deletion from the reference")
+            ("prior-precision", po::value<double>()->default_value(0.003),
+             "precision (inverse variance) of the given variant priors")
+            ("max-haplotypes", po::value<unsigned>()->default_value(128),
+             "the maximum number of haplotypes the model may consider")
+            ;
+            
+            po::options_description calling("Caller options");
+            calling.add_options()
+            ("min-variant-posterior", po::value<float>()->default_value(20.0),
+             "minimum variant call posterior probability (phred scale)")
+            ("min-refcall-posterior", po::value<float>()->default_value(10.0),
+             "minimum homozygous reference call posterior probability (phred scale)")
+            ("min-somatic-posterior", po::value<float>()->default_value(10.0),
+             "minimum somaitc mutation call posterior probability (phred scale)")
+            ("make-positional-refcalls", po::bool_switch()->default_value(false),
+             "caller will output positional REFCALLs")
+            ("make-blocked-refcalls", po::bool_switch()->default_value(false),
+             "caller will output blocked REFCALLs")
+            ("somatics-only", po::bool_switch()->default_value(false),
+             "only output somatic calls (for somatic calling models only)")
+            ;
+            
+            po::options_description all("Allowed options");
+            all.add(general).add(backend).add(input).add(filters).add(transforms).add(candidates).add(model).add(calling);
+            
+            po::variables_map vm;
+            po::store(po::command_line_parser(argc, argv).options(all).positional(p).run(), vm);
+            
+            if (vm.count("help")) {
+                std::cout << "Usage: octopus <command> [options]" << std::endl;
+                std::cout << all << std::endl;
+                return vm;
             }
+            
+            // boost::option cannot handle option dependencies so we must do our own checks
+            
+            if (vm.count("reads") == 0 && vm.count("reads-file") == 0) {
+                throw boost::program_options::required_option {"--reads | --reads-file"};
+            }
+            
+            if (vm.at("model").as<std::string>() == "cancer" && vm.count("normal-sample") == 0) {
+                throw std::logic_error {"option normal-sample is required when model=cancer"};
+            }
+            
+            if (vm.at("model").as<std::string>() == "trio" && (vm.count("maternal-sample") == 0 || vm.count("paternal-sample") == 0)) {
+                throw std::logic_error {"option maternal-sample and paternal-sample are required when model=trio"};
+            }
+            
+            conflicting_options(vm, "make-positional-refcalls", "make-blocked-refcalls");
+            
+            po::notify(vm);
+            
+            return vm;
+        } catch (std::exception& e) {
+            std::cout << "Option error: " << e.what() << std::endl;
+            return boost::none;
         }
-        return path;
-    }
-    
-    bool is_region_file_path(const std::string& region_option)
-    {
-        return fs::native(region_option);
     }
     
     struct Line
@@ -288,7 +274,7 @@ namespace Octopus
     
     std::string to_region_format(const std::string& bed_line)
     {
-        auto tokens = split(bed_line, '\t');
+        const auto tokens = split(bed_line, '\t');
         
         switch (tokens.size()) {
             case 0:
@@ -307,24 +293,25 @@ namespace Octopus
     get_line_parser(const fs::path& region_path, const ReferenceGenome& reference)
     {
         if (region_path.extension().string() == ".bed") {
-            return [&reference] (const std::string& line) {
+            return [&] (const std::string& line) {
                 return parse_region(to_region_format(line), reference);
             };
         } else {
-            return [&reference] (const std::string& line) {
+            return [&] (const std::string& line) {
                 return parse_region(line, reference);
             };
         }
     }
     
-    std::vector<GenomicRegion> get_regions_from_file(const std::string& file_path, const ReferenceGenome& reference)
+    std::vector<GenomicRegion> extract_regions_from_file(const std::string& file_path,
+                                                         const ReferenceGenome& reference)
     {
         std::vector<GenomicRegion> result {};
         
         fs::path the_path {file_path};
         
         if (!fs::exists(the_path)) {
-            throw std::runtime_error {"cannot find given region file " + the_path.string()};
+            throw std::runtime_error {"cannot find region file " + the_path.string()};
         }
         
         std::ifstream the_file {the_path.string()};
@@ -345,9 +332,10 @@ namespace Octopus
         
         SearchRegions result {};
         
-        for (auto& contig_regions : contig_mapped_regions) {
+        for (const auto& contig_regions : contig_mapped_regions) {
             auto covered_contig_regions = get_covered_regions(std::cbegin(contig_regions.second),
                                                               std::cend(contig_regions.second));
+            
             result[contig_regions.first].insert(std::make_move_iterator(std::begin(covered_contig_regions)),
                                                 std::make_move_iterator(std::end(covered_contig_regions)));
         }
@@ -381,27 +369,106 @@ namespace Octopus
         return make_search_regions(get_all_contig_regions(reference), skip_regions);
     }
     
-    std::vector<std::string> get_read_paths_file(const std::string& file_path)
+    boost::optional<fs::path> get_home_dir()
     {
-        std::vector<std::string> result {};
+        const auto result = fs::path(getenv("HOME"));
         
-        fs::path the_path {file_path};
-        
-        if (!fs::exists(the_path)) {
-            throw std::runtime_error {"cannot find given read path file " + the_path.string()};
+        if (fs::is_directory(result)) {
+            return result;
         }
         
-        std::ifstream the_file {the_path.string()};
+        return boost::none;
+    }
+    
+    boost::optional<fs::path> expand_user_path(const fs::path& path)
+    {
+        if (!path.empty() && path.string().front() == '~') {
+            if (path.string().size() > 1 && path.string()[1] == '/') {
+                const auto home_dir = get_home_dir();
+                
+                if (home_dir) {
+                    return fs::path {home_dir.get().string() + path.string().substr(1)};
+                }
+                
+                if (fs::exists(path)) {
+                    return path;
+                }
+                
+                return boost::none;
+            }
+        }
+        return path;
+    }
+    
+    std::vector<fs::path> extract_paths_from_file(const fs::path& file_path)
+    {
+        std::vector<fs::path> result {};
         
-        std::transform(std::istream_iterator<Line>(the_file), std::istream_iterator<Line>(),
+        if (!fs::exists(file_path)) {
+            std::cout << "Input error: file does not exist " << file_path.string() << std::endl;
+            return result;
+        }
+        
+        std::ifstream file {file_path.string()};
+        
+        if (!file.good()) {
+            return result;
+        }
+        
+        std::transform(std::istream_iterator<Line>(file), std::istream_iterator<Line>(),
                        std::back_inserter(result), [] (const Line& line) { return line.line_data; });
         
         return result;
     }
     
+    struct ExpandedPaths
+    {
+        ExpandedPaths() = default;
+        template <typename T1, typename T2>
+        ExpandedPaths(T1&& good_paths, T2&& bad_paths)
+        : good_paths {std::forward<T1>(good_paths)}, bad_paths {std::forward<T1>(bad_paths)} {}
+        std::vector<fs::path> good_paths, bad_paths;
+        bool has_good() const noexcept { return !good_paths.empty(); }
+        bool has_bad() const noexcept { return !bad_paths.empty(); }
+    };
+    
+    ExpandedPaths expand_user_paths(const std::vector<fs::path>& paths)
+    {
+        ExpandedPaths result {};
+        
+        result.good_paths.reserve(paths.size());
+        
+        for (const auto& path : paths) {
+            auto expanded_path = expand_user_path(path);
+            
+            if (expanded_path) {
+                result.good_paths.emplace_back(std::move(expanded_path.get()));
+            } else {
+                result.bad_paths.emplace_back(std::move(expanded_path.get()));
+            }
+        }
+        
+        result.good_paths.shrink_to_fit();
+        result.bad_paths.shrink_to_fit();
+        
+        return result;
+    }
+    
+    ExpandedPaths extract_expanded_user_paths_from_file(const fs::path& file_path)
+    {
+        return expand_user_paths(extract_paths_from_file(file_path));
+    }
+        
     unsigned get_max_threads(const po::variables_map& options)
     {
-        return options.at("max-threads").as<unsigned>();
+        auto result = options.at("max-threads").as<unsigned>();
+        
+        if (result == 0) {
+            result = std::thread::hardware_concurrency(); // just a hint
+            if (result == 0) ++result;
+        }
+        
+        return result;
     }
     
     size_t get_memory_quota(const po::variables_map& options)
@@ -429,7 +496,7 @@ namespace Octopus
         
         if (options.count("skip-regions-file") == 1) {
             const auto& skip_path = options.at("skip-regions-file").as<std::string>();
-            auto skip_regions_from_file = get_regions_from_file(skip_path, reference);
+            auto skip_regions_from_file = extract_regions_from_file(skip_path, reference);
             skip_regions.insert(std::end(skip_regions),
                                 std::make_move_iterator(std::begin(skip_regions_from_file)),
                                 std::make_move_iterator(std::end(skip_regions_from_file)));
@@ -449,7 +516,7 @@ namespace Octopus
             
             if (options.count("regions-file") == 1) {
                 const auto& regions_path = options.at("regions-file").as<std::string>();
-                auto regions_from_file = get_regions_from_file(regions_path, reference);
+                auto regions_from_file = extract_regions_from_file(regions_path, reference);
                 input_regions.insert(std::end(input_regions),
                                      std::make_move_iterator(std::begin(regions_from_file)),
                                      std::make_move_iterator(std::end(regions_from_file)));
@@ -474,22 +541,32 @@ namespace Octopus
     
     std::vector<fs::path> get_read_paths(const po::variables_map& options)
     {
+        using std::begin; using std::end;
+        
         std::vector<fs::path> result {};
         
         if (options.count("reads") == 1) {
             const auto& read_paths = options.at("reads").as<std::vector<std::string>>();
-            result.insert(result.end(), std::cbegin(read_paths), std::cend(read_paths));
+            result.insert(end(result), std::cbegin(read_paths), std::cend(read_paths));
         }
         
         if (options.count("reads-file") == 1) {
             const auto& read_file_path = options.at("reads-file").as<std::string>();
-            auto regions_from_file = get_read_paths_file(read_file_path);
-            result.insert(result.end(), std::make_move_iterator(std::begin(regions_from_file)),
-                          std::make_move_iterator(std::end(regions_from_file)));
+            
+            auto read_paths_from_file = extract_expanded_user_paths_from_file(read_file_path);
+            
+            if (read_paths_from_file.has_bad()) {
+                
+            }
+            
+            result.insert(end(result),
+                          std::make_move_iterator(begin(read_paths_from_file.good_paths)),
+                          std::make_move_iterator(end(read_paths_from_file.good_paths)));
         }
         
-        std::sort(result.begin(), result.end());
-        result.erase(std::unique(result.begin(), result.end()), result.end());
+        std::sort(begin(result), end(result));
+        
+        result.erase(std::unique(begin(result), end(result)), end(result));
         
         return result;
     }
@@ -603,8 +680,14 @@ namespace Octopus
         
         if (options.count("candidates-from-source") == 1) {
             result.add_generator(CandidateGeneratorBuilder::Generator::External);
-            result.set_variant_source(expand_user_path(options.at("candidates-from-source").as<std::string>()));
-
+            
+            auto source_path = expand_user_path(options.at("candidates-from-source").as<std::string>());
+            
+            if (source_path) {
+                result.set_variant_source(std::move(source_path.get()));
+            } else {
+                std::cout << "Input warning: could not expand candidate source file." << std::endl;
+            }
         }
         
         if (options.at("regenotype").as<bool>()) {
@@ -734,7 +817,13 @@ namespace Octopus
     
     VcfWriter make_output_vcf_writer(const po::variables_map& options)
     {
-        return VcfWriter {expand_user_path(options.at("output").as<std::string>())};
+        auto out_path = expand_user_path(options.at("output").as<std::string>());
+        
+        if (out_path) {
+            return VcfWriter {std::move(out_path.get())};
+        }
+        
+        return VcfWriter {};
     }
     
     } // namespace Options

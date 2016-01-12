@@ -22,6 +22,11 @@ fasta_ {std::move(fasta_path), std::move(fasta_index_path)},
 fasta_mutex_ {}
 {}
 
+bool ThreadsafeCachingFasta::do_is_open() const noexcept
+{
+    return fasta_.is_open();
+}
+
 std::string ThreadsafeCachingFasta::do_get_reference_name() const
 {
     return fasta_.get_reference_name(); // don't need mutex as const

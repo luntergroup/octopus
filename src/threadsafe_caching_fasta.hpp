@@ -43,6 +43,7 @@ private:
     CachingFasta fasta_;
     mutable std::mutex fasta_mutex_;
     
+    bool do_is_open() const noexcept override;
     std::string do_get_reference_name() const override;
     std::vector<ContigNameType> do_get_contig_names() const override;
     SizeType do_get_contig_size(const ContigNameType& contig) const override;

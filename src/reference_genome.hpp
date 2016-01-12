@@ -36,6 +36,8 @@ public:
     ReferenceGenome(ReferenceGenome&&)                 = default;
     ReferenceGenome& operator=(ReferenceGenome&&)      = default;
     
+    bool is_good() const noexcept;
+    
     const std::string& get_name() const;
     
     bool has_contig(const ContigNameType& contig) const noexcept;
