@@ -334,7 +334,6 @@
 		CAB0DFD91BBF035D001D2F99 /* genotype.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = genotype.cpp; sourceTree = "<group>"; };
 		CAB0DFDE1BC01E2A001D2F99 /* random_candidate_variant_generator.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = random_candidate_variant_generator.cpp; sourceTree = "<group>"; };
 		CAB0DFDF1BC01E2A001D2F99 /* random_candidate_variant_generator.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = random_candidate_variant_generator.hpp; sourceTree = "<group>"; };
-		CAB0DFE11BC03D50001D2F99 /* variant_caller_factory.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = variant_caller_factory.hpp; sourceTree = "<group>"; };
 		CABA377D1A8F9E0A00BBE598 /* test_common.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = test_common.hpp; sourceTree = "<group>"; };
 		CABA377E1A8FA11000BBE598 /* read_benchmarks.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = read_benchmarks.cpp; sourceTree = "<group>"; };
 		CABA37801A8FA49800BBE598 /* read_manager.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = read_manager.cpp; sourceTree = "<group>"; };
@@ -665,7 +664,6 @@
 			children = (
 				D44ADE721C43C22700A854C6 /* variant_caller_builder.hpp */,
 				D44ADE711C43C22700A854C6 /* variant_caller_builder.cpp */,
-				CAB0DFE11BC03D50001D2F99 /* variant_caller_factory.hpp */,
 				CA91C2D11B8DF76300609FFA /* variant_caller.hpp */,
 				D4807FB11BA843B900657D4F /* variant_caller.cpp */,
 				D4807FAF1BA826DB00657D4F /* population_caller.hpp */,

@@ -83,10 +83,10 @@ namespace Octopus
             size_t operator()(Generator type) const { return static_cast<std::size_t>(type); }
         };
         
-        using GeneratorMap = std::unordered_map<Generator,
+        using GeneratorFactoryMap = std::unordered_map<Generator,
                 std::function<std::unique_ptr<ICandidateVariantGenerator>()>, GeneratorTypeHash>;
         
-        const GeneratorMap generator_factory_;
+        const GeneratorFactoryMap generator_factory_;
     };
 } // namespace Octopus
 

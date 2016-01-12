@@ -31,6 +31,11 @@ namespace Octopus {
                              const CandidateGeneratorBuilder& candidate_generator_builder);
         ~VariantCallerBuilder() = default;
         
+        VariantCallerBuilder(const VariantCallerBuilder&)            = default;
+        VariantCallerBuilder& operator=(const VariantCallerBuilder&) = default;
+        VariantCallerBuilder(VariantCallerBuilder&&)                 = default;
+        VariantCallerBuilder& operator=(VariantCallerBuilder&&)      = default;
+        
         // common
         void set_reference(const ReferenceGenome& reference);
         void set_ploidy(unsigned ploidy);
@@ -88,7 +93,7 @@ namespace Octopus {
         
         using ModelFactoryMap = std::unordered_map<std::string, std::function<std::unique_ptr<VariantCaller>()>>;
         
-        ModelFactoryMap model_map_;
+        const ModelFactoryMap model_map_;
     };
 } // namespace Octopus
 
