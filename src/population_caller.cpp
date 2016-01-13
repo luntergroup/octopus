@@ -553,7 +553,9 @@ PopulationVariantCaller::call_variants(const GenomicRegion& region,
 {
     std::vector<VcfRecord> result {};
     
-    if (empty(region)) return result;
+    if (empty(region) || (candidates.empty() && refcall_type_ == RefCallType::None)) {
+        return result;
+    }
     
     HaplotypePhaser phaser {reference_, candidates, reads, 64, 5};
     

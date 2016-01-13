@@ -35,6 +35,8 @@ public:
     
     void register_generator(std::unique_ptr<ICandidateVariantGenerator> generator);
     
+    bool requires_reads() const noexcept override;
+    
     void add_read(const AlignedRead& read) override;
     void add_reads(std::vector<AlignedRead>::const_iterator first,
                    std::vector<AlignedRead>::const_iterator last) override;

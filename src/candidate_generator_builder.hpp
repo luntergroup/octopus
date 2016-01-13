@@ -42,6 +42,8 @@ namespace Octopus
         
         void add_generator(Generator type);
         
+        unsigned num_generators() const noexcept;
+        
         void set_reference(const ReferenceGenome& reference);
         void set_min_snp_base_quality(QualityType quality);
         void set_min_supporting_reads(unsigned num_reads);

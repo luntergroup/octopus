@@ -64,7 +64,7 @@ namespace Octopus
         
         candidate_generator_.clear();
         
-        std::cout << "found " << candidates.size() << " candidates in " << count_reads(reads) << " reads" << std::endl;
+        std::cout << "found " << candidates.size() << " candidates" << std::endl;
         
         std::cout << "candidates are:" << std::endl;
         for (const auto& c : candidates) std::cout << c << std::endl;

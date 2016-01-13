@@ -25,6 +25,11 @@ assembler_ {kmer_size},
 max_variant_size_ {max_variant_size}
 {}
 
+bool AssemblerCandidateVariantGenerator::requires_reads() const noexcept
+{
+    return true;
+}
+
 void AssemblerCandidateVariantGenerator::add_read(const AlignedRead& read)
 {
     assembler_.add_read(read);

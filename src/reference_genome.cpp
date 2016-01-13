@@ -135,8 +135,7 @@ GenomicRegion::SizeType calculate_genome_size(const ReferenceGenome& reference)
                            });
 }
 
-// Requires reference access to get contig sizes for partially specified regions (e.g. "4")
-GenomicRegion parse_region(std::string region, const ReferenceGenome& reference)
+boost::optional<GenomicRegion> parse_region(std::string region, const ReferenceGenome& reference)
 {
     region.erase(std::remove(std::begin(region), std::end(region), ','), std::end(region));
     
@@ -147,9 +146,11 @@ GenomicRegion parse_region(std::string region, const ReferenceGenome& reference)
     if (std::regex_search(region, match, re) && match.size() == 5) {
         GenomicRegion::ContigNameType contig {match.str(1)};
         
-        GenomicRegion::SizeType begin {0}, end {0};
+        if (!reference.has_contig(contig)) return boost::none;
         
         const auto contig_size = reference.get_contig_size(contig);
+        
+        GenomicRegion::SizeType begin {0}, end {0};
         
         if (match.str(2).empty()) {
             end = contig_size;
@@ -164,14 +165,13 @@ GenomicRegion parse_region(std::string region, const ReferenceGenome& reference)
                 end = static_cast<GenomicRegion::SizeType>(std::stoul(match.str(4)));
             }
             
-            if (begin > contig_size || end > contig_size) {
-                throw std::runtime_error {"parse_region: given region (" + region +
-                    ") larger than contig in " + reference.get_name()};
-            }
+            if (begin > contig_size) return boost::none;
+            
+            if (end > contig_size) end = contig_size;
         }
         
         return GenomicRegion {std::move(contig), begin, end};
     }
     
-    throw std::runtime_error {"parse_region: given region (" + region + ") with invalid format"};
+    return boost::none;
 }

@@ -45,6 +45,11 @@ are_candidates_sorted_ {true},
 max_seen_candidate_size_ {}
 {}
 
+bool AlignmentCandidateVariantGenerator::requires_reads() const noexcept
+{
+    return true;
+}
+
 void AlignmentCandidateVariantGenerator::add_read(const AlignedRead& read)
 {
     const auto& contig_name   = get_contig_name(read);

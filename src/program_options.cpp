@@ -272,13 +272,13 @@ namespace Octopus
         return str;
     }
     
-    std::string to_region_format(const std::string& bed_line)
+    boost::optional<std::string> convert_bed_line_to_region_str(const std::string& bed_line)
     {
         const auto tokens = split(bed_line, '\t');
         
         switch (tokens.size()) {
             case 0:
-                throw std::runtime_error {"Empty line in input region bed file"};
+                return boost::none;
             case 1:
                 return std::string {tokens[0]};
             case 2:
@@ -289,35 +289,50 @@ namespace Octopus
         }
     }
     
-    std::function<GenomicRegion(std::string)>
-    get_line_parser(const fs::path& region_path, const ReferenceGenome& reference)
+    std::function<boost::optional<GenomicRegion>(const std::string&)>
+    make_region_parser(const fs::path& region_path, const ReferenceGenome& reference)
     {
         if (region_path.extension().string() == ".bed") {
-            return [&] (const std::string& line) {
-                return parse_region(to_region_format(line), reference);
+            return [&] (const std::string& line) -> boost::optional<GenomicRegion>
+            {
+                auto region_str = convert_bed_line_to_region_str(line);
+                if (region_str) {
+                    return parse_region(std::move(*region_str), reference);
+                }
+                return boost::none;
             };
         } else {
-            return [&] (const std::string& line) {
-                return parse_region(line, reference);
-            };
+            return [&] (const std::string& line) { return parse_region(line, reference); };
         }
     }
     
-    std::vector<GenomicRegion> extract_regions_from_file(const std::string& file_path,
+    std::vector<GenomicRegion> extract_regions_from_file(const fs::path& file_path,
                                                          const ReferenceGenome& reference)
     {
-        std::vector<GenomicRegion> result {};
-        
-        fs::path the_path {file_path};
-        
-        if (!fs::exists(the_path)) {
-            throw std::runtime_error {"cannot find region file " + the_path.string()};
+        if (!fs::exists(file_path)) {
+            std::cout << "Input error: file does not exist " << file_path.string() << std::endl;
+            return {};
         }
         
-        std::ifstream the_file {the_path.string()};
+        std::ifstream file {file_path.string()};
         
-        std::transform(std::istream_iterator<Line>(the_file), std::istream_iterator<Line>(),
-                       std::back_inserter(result), get_line_parser(the_path, reference));
+        std::vector<boost::optional<GenomicRegion>> parsed_lines {};
+        
+        std::transform(std::istream_iterator<Line>(file), std::istream_iterator<Line>(),
+                       std::back_inserter(parsed_lines), make_region_parser(file_path, reference));
+        
+        file.close();
+        
+        std::vector<GenomicRegion> result {};
+        result.reserve(parsed_lines.size());
+        
+        for (auto&& region : parsed_lines) {
+            if (region) {
+                result.emplace_back(std::move(*region));
+            }
+        }
+        
+        result.shrink_to_fit();
         
         return result;
     }
@@ -343,13 +358,13 @@ namespace Octopus
         return result;
     }
     
-    SearchRegions make_search_regions(const ReferenceGenome& reference)
+    SearchRegions extract_search_regions(const ReferenceGenome& reference)
     {
         return make_search_regions(get_all_contig_regions(reference));
     }
     
-    SearchRegions make_search_regions(const std::vector<GenomicRegion>& regions,
-                                      std::vector<GenomicRegion>& skip_regions)
+    SearchRegions extract_search_regions(const std::vector<GenomicRegion>& regions,
+                                         std::vector<GenomicRegion>& skip_regions)
     {
         auto input_regions = make_search_regions(regions);
         auto skipped = make_search_regions(skip_regions);
@@ -364,9 +379,9 @@ namespace Octopus
         return result;
     }
     
-    SearchRegions make_search_regions(const ReferenceGenome& reference, std::vector<GenomicRegion>& skip_regions)
+    SearchRegions extract_search_regions(const ReferenceGenome& reference, std::vector<GenomicRegion>& skip_regions)
     {
-        return make_search_regions(get_all_contig_regions(reference), skip_regions);
+        return extract_search_regions(get_all_contig_regions(reference), skip_regions);
     }
     
     boost::optional<fs::path> get_home_dir()
@@ -387,7 +402,7 @@ namespace Octopus
                 const auto home_dir = get_home_dir();
                 
                 if (home_dir) {
-                    return fs::path {home_dir.get().string() + path.string().substr(1)};
+                    return fs::path {home_dir->string() + path.string().substr(1)};
                 }
                 
                 if (fs::exists(path)) {
@@ -442,9 +457,9 @@ namespace Octopus
             auto expanded_path = expand_user_path(path);
             
             if (expanded_path) {
-                result.good_paths.emplace_back(std::move(expanded_path.get()));
+                result.good_paths.emplace_back(std::move(*expanded_path));
             } else {
-                result.bad_paths.emplace_back(std::move(expanded_path.get()));
+                result.bad_paths.emplace_back(std::move(*expanded_path));
             }
         }
         
@@ -483,6 +498,22 @@ namespace Octopus
                                 static_cast<ReferenceGenome::SizeType>(cache_size));
     }
     
+    template <typename T, typename S>
+    void append(std::vector<T>& target, const std::vector<S>& source)
+    {
+        target.insert(std::end(target), std::begin(source), std::end(source));
+    }
+    
+    template <typename T>
+    void append(std::vector<T>& target, std::vector<T>&& source)
+    {
+        target.insert(std::end(target),
+                      std::make_move_iterator(std::begin(source)),
+                      std::make_move_iterator(std::end(source)));
+        source.clear();
+        source.shrink_to_fit();
+    }
+    
     SearchRegions get_search_regions(const po::variables_map& options, const ReferenceGenome& reference)
     {
         std::vector<GenomicRegion> skip_regions {};
@@ -490,39 +521,41 @@ namespace Octopus
         if (options.count("skip-regions") == 1) {
             const auto& regions = options.at("skip-regions").as<std::vector<std::string>>();
             skip_regions.reserve(skip_regions.size());
-            std::transform(std::cbegin(regions), std::cend(regions), std::back_inserter(skip_regions),
-                           [&reference] (const auto& region) { return parse_region(region, reference); });
+            
+            std::transform(std::cbegin(regions), std::cend(regions),
+                           std::back_inserter(skip_regions),
+                           [&reference] (const auto& region) {
+                               return parse_region(region, reference);
+                           });
         }
         
         if (options.count("skip-regions-file") == 1) {
             const auto& skip_path = options.at("skip-regions-file").as<std::string>();
-            auto skip_regions_from_file = extract_regions_from_file(skip_path, reference);
-            skip_regions.insert(std::end(skip_regions),
-                                std::make_move_iterator(std::begin(skip_regions_from_file)),
-                                std::make_move_iterator(std::end(skip_regions_from_file)));
+            append(skip_regions, extract_regions_from_file(skip_path, reference));
         }
         
         if (options.count("regions") == 0 && options.count("regions-file") == 0) {
-            return make_search_regions(reference, skip_regions);
+            return extract_search_regions(reference, skip_regions);
         } else {
             std::vector<GenomicRegion> input_regions {};
             
             if (options.count("regions") == 1) {
                 const auto& regions = options.at("regions").as<std::vector<std::string>>();
                 input_regions.reserve(regions.size());
-                std::transform(std::cbegin(regions), std::cend(regions), std::back_inserter(input_regions),
-                               [&reference] (const auto& region) { return parse_region(region, reference); });
+                
+                std::transform(std::cbegin(regions), std::cend(regions),
+                               std::back_inserter(input_regions),
+                               [&reference] (const auto& region) {
+                                   return parse_region(region, reference);
+                               });
             }
             
             if (options.count("regions-file") == 1) {
                 const auto& regions_path = options.at("regions-file").as<std::string>();
-                auto regions_from_file = extract_regions_from_file(regions_path, reference);
-                input_regions.insert(std::end(input_regions),
-                                     std::make_move_iterator(std::begin(regions_from_file)),
-                                     std::make_move_iterator(std::end(regions_from_file)));
+                append(input_regions, extract_regions_from_file(regions_path, reference));
             }
             
-            return make_search_regions(input_regions, skip_regions);
+            return extract_search_regions(input_regions, skip_regions);
         }
     }
     
@@ -547,7 +580,7 @@ namespace Octopus
         
         if (options.count("reads") == 1) {
             const auto& read_paths = options.at("reads").as<std::vector<std::string>>();
-            result.insert(end(result), std::cbegin(read_paths), std::cend(read_paths));
+            append(result, read_paths);
         }
         
         if (options.count("reads-file") == 1) {
@@ -559,9 +592,7 @@ namespace Octopus
                 
             }
             
-            result.insert(end(result),
-                          std::make_move_iterator(begin(read_paths_from_file.good_paths)),
-                          std::make_move_iterator(end(read_paths_from_file.good_paths)));
+            append(result, std::move(read_paths_from_file.good_paths));
         }
         
         std::sort(begin(result), end(result));
@@ -684,7 +715,7 @@ namespace Octopus
             auto source_path = expand_user_path(options.at("candidates-from-source").as<std::string>());
             
             if (source_path) {
-                result.set_variant_source(std::move(source_path.get()));
+                result.set_variant_source(std::move(*source_path));
             } else {
                 std::cout << "Input warning: could not expand candidate source file." << std::endl;
             }
@@ -692,10 +723,9 @@ namespace Octopus
         
         if (options.at("regenotype").as<bool>()) {
             if (options.count("candidates-from-source") == 0) {
-                throw std::logic_error {"source variant file(s) must be present to regenotype"};
-            } else {
-                return result;
+                std::cout << "Input warning: source variant file(s) must be present in regenotype mode" << std::endl;
             }
+            return result;
         }
         
         if (!options.at("no-candidates-from-alignments").as<bool>()) {
@@ -747,7 +777,8 @@ namespace Octopus
 //            return result;
 //        }
         
-        unsigned get_contig_ploidy(const GenomicRegion::ContigNameType& contig, const po::variables_map& options)
+        unsigned extract_contig_ploidy(const GenomicRegion::ContigNameType& contig,
+                                       const po::variables_map& options)
         {
             unsigned result {options.at("ploidy").as<unsigned>()};
             
@@ -788,7 +819,7 @@ namespace Octopus
             vc_builder.set_refcall_type(VariantCaller::RefCallType::Blocked);
         }
         
-        vc_builder.set_ploidy(get_contig_ploidy(contig, options));
+        vc_builder.set_ploidy(extract_contig_ploidy(contig, options));
         
         const auto min_variant_posterior_phred = options.at("min-variant-posterior").as<float>();
         vc_builder.set_min_variant_posterior(phred_to_probability(min_variant_posterior_phred));
@@ -820,7 +851,7 @@ namespace Octopus
         auto out_path = expand_user_path(options.at("output").as<std::string>());
         
         if (out_path) {
-            return VcfWriter {std::move(out_path.get())};
+            return VcfWriter {std::move(*out_path)};
         }
         
         return VcfWriter {};

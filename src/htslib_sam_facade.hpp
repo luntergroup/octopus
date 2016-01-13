@@ -47,8 +47,8 @@ public:
     HtslibSamFacade(HtslibSamFacade&&)                 = default;
     HtslibSamFacade& operator=(HtslibSamFacade&&)      = default;
     
-    void open() override;
     bool is_open() const noexcept override;
+    void open() override;
     void close() override;
     
     std::vector<SampleIdType> get_samples() override;

@@ -131,22 +131,20 @@ namespace Octopus
         const auto reference = Options::make_reference(options);
         
         if (!reference.is_good()) {
-            cout << "quiting as got bad reference genome" << endl;
+            cout << "Octopus: quiting as got bad reference genome" << endl;
             return;
         }
         
         const auto regions = Options::get_search_regions(options, reference);
         
         if (!check_search_regions(regions, reference)) {
-            cout << "quiting as got bad input regions" << endl;
+            cout << "Octopus: quiting as got bad input regions" << endl;
             return;
         }
         
         auto read_manager = Options::make_read_manager(options);
         
         const auto samples = get_samples(options, read_manager);
-        
-        cout << "there are " << samples.size() << " samples" << endl;
         
         auto read_filter    = Options::make_read_filter(options);
         auto downsampler    = Options::make_downsampler(options);
@@ -155,15 +153,21 @@ namespace Octopus
         auto output = Options::make_output_vcf_writer(options);
         
         if (!output.is_open()) {
-            cout << "quiting as could not make output file" << endl;
+            cout << "Octopus: quiting as could not make output file" << endl;
             return;
         }
         
         auto candidate_generator_builder = Options::make_candidate_generator_builder(options, reference);
         
+        if (candidate_generator_builder.num_generators() == 0) {
+            std::cout << "Octopus: quiting as there are no candidate generators" << std::endl;
+            return;
+        }
+        
         ReadPipe read_pipe {read_manager, read_filter, downsampler, read_transform};
         
         cout << "writing results to " << output.path().string() << endl;
+        cout << "there are " << samples.size() << " samples" << endl;
         
         const auto contigs = get_contigs(regions);
         

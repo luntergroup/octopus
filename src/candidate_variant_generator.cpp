@@ -22,6 +22,14 @@ void CandidateVariantGenerator::register_generator(std::unique_ptr<ICandidateVar
     generators_.emplace_back(std::move(generator));
 }
 
+bool CandidateVariantGenerator::requires_reads() const noexcept
+{
+    return std::any_of(std::cbegin(generators_), std::cend(generators_),
+                       [] (const auto& generator) {
+                           return generator->requires_reads();
+                       });
+}
+
 void CandidateVariantGenerator::add_read(const AlignedRead& read)
 {
     for (auto& generator : generators_) {
@@ -29,14 +37,16 @@ void CandidateVariantGenerator::add_read(const AlignedRead& read)
     }
 }
 
-void CandidateVariantGenerator::add_reads(std::vector<AlignedRead>::const_iterator first, std::vector<AlignedRead>::const_iterator last)
+void CandidateVariantGenerator::add_reads(std::vector<AlignedRead>::const_iterator first,
+                                          std::vector<AlignedRead>::const_iterator last)
 {
     for (auto& generator : generators_) {
         generator->add_reads(first, last);
     }
 }
 
-void CandidateVariantGenerator::add_reads(MappableSet<AlignedRead>::const_iterator first, MappableSet<AlignedRead>::const_iterator last)
+void CandidateVariantGenerator::add_reads(MappableSet<AlignedRead>::const_iterator first,
+                                          MappableSet<AlignedRead>::const_iterator last)
 {
     for (auto& generator : generators_) {
         generator->add_reads(first, last);

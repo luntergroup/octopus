@@ -23,16 +23,16 @@ ReadReader::ReadReader(ReadReader&& other)
     the_impl_  = std::move(other.the_impl_);
 }
 
-void ReadReader::open()
-{
-    std::lock_guard<std::mutex> lock {mutex_};
-    the_impl_->open();
-}
-
 bool ReadReader::is_open() const noexcept
 {
     std::lock_guard<std::mutex> lock {mutex_};
     return the_impl_->is_open();
+}
+
+void ReadReader::open()
+{
+    std::lock_guard<std::mutex> lock {mutex_};
+    the_impl_->open();
 }
 
 void ReadReader::close()

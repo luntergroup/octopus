@@ -44,8 +44,6 @@ ReadMap ReadPipe::fetch_reads(std::vector<SampleIdType> samples, const GenomicRe
     auto batches = std::vector<std::vector<SampleIdType>> {samples};
     
     for (const auto& batch : batches) {
-        std::cout << "fetching batch" << std::endl;
-        
         auto batch_reads = read_manager_.fetch_reads(batch, region);
         
         //std::cout << "fetched " << count_reads(batch_reads) << " batch reads" << std::endl;

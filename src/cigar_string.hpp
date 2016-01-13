@@ -153,10 +153,19 @@ namespace std {
     {
         size_t operator()(const CigarOperation& op) const
         {
-            size_t seed {};
-            boost::hash_combine(seed, op.get_flag());
-            boost::hash_combine(seed, op.get_size());
-            return seed;
+            using boost::hash_combine;
+            size_t result {};
+            hash_combine(result, op.get_flag());
+            hash_combine(result, op.get_size());
+            return result;
+        }
+    };
+    
+    template <> struct hash<CigarString>
+    {
+        size_t operator()(const CigarString& cigar) const
+        {
+            return boost::hash_range(std::cbegin(cigar), std::cend(cigar));
         }
     };
 } // namespace std
@@ -170,15 +179,5 @@ namespace boost {
         }
     };
 } // namespace boost
-
-namespace std {
-    template <> struct hash<CigarString>
-    {
-        size_t operator()(const CigarString& cigar) const
-        {
-            return boost::hash_range(std::cbegin(cigar), std::cend(cigar));
-        }
-    };
-} // namespace std
 
 #endif

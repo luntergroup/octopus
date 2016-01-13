@@ -44,8 +44,8 @@ public:
     ReadReader(ReadReader&&);
     ReadReader& operator=(ReadReader&&)      = delete;
     
-    void open();
     bool is_open() const noexcept;
+    void open();
     void close();
     
     const Path& path() const noexcept;

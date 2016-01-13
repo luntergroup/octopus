@@ -50,6 +50,11 @@ namespace Octopus
         }
     }
     
+    unsigned CandidateGeneratorBuilder::num_generators() const noexcept
+    {
+        return static_cast<unsigned>(generators_.size());
+    }
+    
     void CandidateGeneratorBuilder::set_reference(const ReferenceGenome& reference)
     {
         reference_ = reference;

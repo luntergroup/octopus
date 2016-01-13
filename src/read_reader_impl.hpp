@@ -30,8 +30,8 @@ public:
     
     virtual ~IReadReaderImpl() noexcept = default;
     
+    virtual bool is_open() const noexcept = 0;
     virtual void open() = 0;
-    virtual bool is_open() const noexcept= 0;
     virtual void close() = 0;
     
     virtual std::vector<SampleIdType> get_samples() = 0;

@@ -630,7 +630,9 @@ namespace Octopus
     {
         std::vector<VcfRecord> result {};
         
-        if (candidates.empty()) return result; // for now, could spike in random mutations for refcalls
+        if (empty(region) || (candidates.empty() && refcall_type_ == RefCallType::None)) {
+            return result;
+        }
         
         HaplotypePhaser phaser {reference_, candidates, reads, 64, 2};
         

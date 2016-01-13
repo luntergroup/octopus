@@ -11,7 +11,7 @@
 #include <ctype.h>
 #include <algorithm>
 
-CigarOperation::CigarOperation(SizeType size, char flag) noexcept
+CigarOperation::CigarOperation(const SizeType size, const char flag) noexcept
 :
 size_ {size},
 flag_ {flag}
@@ -40,14 +40,16 @@ bool CigarOperation::advances_sequence() const noexcept
 CigarString parse_cigar_string(const std::string& cigar_string)
 {
     CigarString result {};
-    result.reserve(cigar_string.size() / 2);
+    
+    result.reserve(cigar_string.size() / 2); // max possible CigarOperation
+    
     std::string digits {};
     
     for (const char c : cigar_string) {
         if (std::isdigit(c)) {
             digits += c;
         } else {
-            result.emplace_back(std::stoi(digits), c);
+            result.emplace_back(static_cast<CigarOperation::SizeType>(std::stoi(digits)), c);
             digits.clear();
         }
     }
@@ -126,35 +128,35 @@ CigarString splice(const CigarString& cigar_string, CigarOperation::SizeType off
     return result;
 }
 
-CigarString splice(const CigarString& cigar_string, CigarOperation::SizeType offset,
-                   CigarOperation::SizeType size)
+CigarString splice(const CigarString& cigar_string, const CigarOperation::SizeType offset,
+                   const CigarOperation::SizeType size)
 {
     return splice(cigar_string, offset, size, [] (const auto& op) { return true; });
 }
 
-CigarString splice(const CigarString& cigar_string, CigarOperation::SizeType size)
+CigarString splice(const CigarString& cigar_string, const CigarOperation::SizeType size)
 {
     return splice(cigar_string, 0, size);
 }
 
-CigarString splice_reference(const CigarString& cigar_string, CigarOperation::SizeType offset,
-                             CigarOperation::SizeType size)
+CigarString splice_reference(const CigarString& cigar_string, const CigarOperation::SizeType offset,
+                             const CigarOperation::SizeType size)
 {
     return splice(cigar_string, offset, size, [] (const auto& op) { return op.advances_reference(); });
 }
 
-CigarString splice_reference(const CigarString& cigar_string, CigarOperation::SizeType size)
+CigarString splice_reference(const CigarString& cigar_string, const CigarOperation::SizeType size)
 {
     return splice(cigar_string, 0, size);
 }
 
-CigarString splice_sequence(const CigarString& cigar_string, CigarOperation::SizeType offset,
-                            CigarOperation::SizeType size)
+CigarString splice_sequence(const CigarString& cigar_string, const CigarOperation::SizeType offset,
+                            const CigarOperation::SizeType size)
 {
     return splice(cigar_string, offset, size, [] (const auto& op) { return op.advances_sequence(); });
 }
 
-CigarString splice_sequence(const CigarString& cigar_string, CigarOperation::SizeType size)
+CigarString splice_sequence(const CigarString& cigar_string, const CigarOperation::SizeType size)
 {
     return splice(cigar_string, 0, size);
 }

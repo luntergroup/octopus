@@ -28,6 +28,8 @@ public:
     virtual std::vector<Variant> get_candidates(const GenomicRegion&) = 0;
     virtual ~ICandidateVariantGenerator() = default;
     
+    virtual bool requires_reads() const noexcept { return false; };
+    
     virtual void add_read(const AlignedRead&) {};
     
     // add_reads is not strictly necessary as the effect of calling add_reads must be the same as

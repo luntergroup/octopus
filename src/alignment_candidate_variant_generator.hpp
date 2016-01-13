@@ -44,6 +44,7 @@ public:
     AlignmentCandidateVariantGenerator(AlignmentCandidateVariantGenerator&&)                 = default;
     AlignmentCandidateVariantGenerator& operator=(AlignmentCandidateVariantGenerator&&)      = default;
     
+    bool requires_reads() const noexcept override;
     void add_read(const AlignedRead& read) override;
     void add_reads(std::vector<AlignedRead>::const_iterator first, std::vector<AlignedRead>::const_iterator last) override;
     void add_reads(MappableSet<AlignedRead>::const_iterator first, MappableSet<AlignedRead>::const_iterator last) override;
