@@ -294,7 +294,7 @@ BOOST_AUTO_TEST_CASE(indels_can_be_left_aligned)
     auto human = make_reference(human_reference_fasta);
     
     // Huntingtin region CCAGCAGCAGCAGCAG...
-    auto a_region = parse_region("4:3076657-3076660", human);
+    auto a_region = *parse_region("4:3076657-3076660", human);
     
     auto the_sequence = human.get_sequence(a_region);
     
@@ -320,7 +320,7 @@ BOOST_AUTO_TEST_CASE(indels_can_be_left_aligned)
     BOOST_CHECK(get_alt_sequence(left_aligned_insertion) == "CAG");
     
     // Region is CCAACAACAACAACAC (94594947-94594962)
-    a_region = parse_region("5:94594956-94594959", human);
+    a_region = *parse_region("5:94594956-94594959", human);
     
     the_sequence = human.get_sequence(a_region);
     
@@ -427,7 +427,7 @@ BOOST_AUTO_TEST_CASE(can_normalise_variants)
     
     BOOST_CHECK(a_normalised_snp == a_snp);
     
-    auto a_region = parse_region("4:3076657-3076660", human);
+    auto a_region = *parse_region("4:3076657-3076660", human);
     
     auto the_sequence = human.get_sequence(a_region);
     

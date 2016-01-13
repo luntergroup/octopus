@@ -499,19 +499,21 @@ namespace Octopus
     }
     
     template <typename T, typename S>
-    void append(std::vector<T>& target, const std::vector<S>& source)
+    std::vector<T>& append(std::vector<T>& target, const std::vector<S>& source)
     {
         target.insert(std::end(target), std::begin(source), std::end(source));
+        return target;
     }
     
     template <typename T>
-    void append(std::vector<T>& target, std::vector<T>&& source)
+    std::vector<T>& append(std::vector<T>& target, std::vector<T>&& source)
     {
         target.insert(std::end(target),
                       std::make_move_iterator(std::begin(source)),
                       std::make_move_iterator(std::end(source)));
         source.clear();
         source.shrink_to_fit();
+        return target;
     }
     
     SearchRegions get_search_regions(const po::variables_map& options, const ReferenceGenome& reference)
@@ -519,13 +521,28 @@ namespace Octopus
         std::vector<GenomicRegion> skip_regions {};
         
         if (options.count("skip-regions") == 1) {
-            const auto& regions = options.at("skip-regions").as<std::vector<std::string>>();
-            skip_regions.reserve(skip_regions.size());
+            const auto& regions_strings = options.at("skip-regions").as<std::vector<std::string>>();
             
-            std::transform(std::cbegin(regions), std::cend(regions),
-                           std::back_inserter(skip_regions),
-                           [&reference] (const auto& region) {
+            std::vector<boost::optional<GenomicRegion>> parsed_regions {};
+            parsed_regions.reserve(skip_regions.size());
+            
+            std::transform(std::cbegin(regions_strings), std::cend(regions_strings),
+                           std::back_inserter(parsed_regions),
+                           [&] (const auto& region) {
                                return parse_region(region, reference);
+                           });
+            
+            const auto it = std::partition(std::begin(parsed_regions), std::end(parsed_regions),
+                                           [] (const auto& region) {
+                                               return static_cast<bool>(region);
+                                           });
+            
+            skip_regions.reserve(std::distance(std::begin(parsed_regions), it));
+            
+            std::transform(std::make_move_iterator(std::begin(parsed_regions)),
+                           std::make_move_iterator(it), std::back_inserter(skip_regions),
+                           [] (auto&& parsed_region) -> GenomicRegion&& {
+                               return std::move(*parsed_region);
                            });
         }
         
@@ -545,7 +562,7 @@ namespace Octopus
                 
                 std::transform(std::cbegin(regions), std::cend(regions),
                                std::back_inserter(input_regions),
-                               [&reference] (const auto& region) {
+                               [&] (const auto& region) {
                                    return parse_region(region, reference);
                                });
             }
