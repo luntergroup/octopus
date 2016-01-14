@@ -305,17 +305,15 @@ BOOST_AUTO_TEST_CASE(indels_can_be_left_aligned)
     Variant left_aligned_deletion = left_align(a_deletion, human);
     
     BOOST_CHECK(left_aligned_deletion.get_region() ==
-            parse_region("4:3076603-3076606", human));
+            *parse_region("4:3076603-3076606", human));
     BOOST_CHECK(get_ref_sequence(left_aligned_deletion) == "CAG");
     BOOST_CHECK(get_alt_sequence(left_aligned_deletion) == "");
     
-    Variant an_insertion {parse_region("4:3076660-3076660", human),
-                                               "", the_sequence};
+    Variant an_insertion {*parse_region("4:3076660-3076660", human), "", the_sequence};
     
     auto left_aligned_insertion = left_align(an_insertion, human);
     
-    BOOST_CHECK(left_aligned_insertion.get_region() ==
-            parse_region("4:3076603-3076603", human));
+    BOOST_CHECK(left_aligned_insertion.get_region() == *parse_region("4:3076603-3076603", human));
     BOOST_CHECK(get_ref_sequence(left_aligned_insertion) == "");
     BOOST_CHECK(get_alt_sequence(left_aligned_insertion) == "CAG");
     
@@ -330,17 +328,16 @@ BOOST_AUTO_TEST_CASE(indels_can_be_left_aligned)
     
     left_aligned_deletion = left_align(a_deletion, human);
     
-    BOOST_CHECK(left_aligned_deletion.get_region() ==
-            parse_region("5:94594949-94594952", human));
+    BOOST_CHECK(left_aligned_deletion.get_region() == *parse_region("5:94594949-94594952", human));
     BOOST_CHECK(get_ref_sequence(left_aligned_deletion) == "ACA");
     BOOST_CHECK(get_alt_sequence(left_aligned_deletion) == "");
     
-    an_insertion = Variant {parse_region("5:94594959-94594959", human), "", the_sequence};
+    an_insertion = Variant {*parse_region("5:94594959-94594959", human), "", the_sequence};
     
     left_aligned_insertion = left_align(an_insertion, human);
     
     BOOST_CHECK(left_aligned_insertion.get_region() ==
-            parse_region("5:94594949-94594949", human));
+            *parse_region("5:94594949-94594949", human));
     BOOST_CHECK(get_ref_sequence(left_aligned_insertion) == "");
     BOOST_CHECK(get_alt_sequence(left_aligned_insertion) == "ACA");
 }
@@ -349,12 +346,12 @@ BOOST_AUTO_TEST_CASE(can_make_variants_parsimonious)
 {
     auto human = make_reference(human_reference_fasta);
     
-    Variant a_snp {parse_region("12:10001330-10001331", human), std::string {"G"}, std::string {"C"}};
+    Variant a_snp {*parse_region("12:10001330-10001331", human), std::string {"G"}, std::string {"C"}};
     
     BOOST_CHECK(is_parsimonious(a_snp));
     BOOST_CHECK(make_parsimonious(a_snp, human) == a_snp);
     
-    Variant an_unparsimonious_snp {parse_region("12:10001330-10001332", human), std::string {"GT"}, std::string {"CT"}};
+    Variant an_unparsimonious_snp {*parse_region("12:10001330-10001332", human), std::string {"GT"}, std::string {"CT"}};
     
     BOOST_CHECK(!is_parsimonious(an_unparsimonious_snp));
     
@@ -363,7 +360,7 @@ BOOST_AUTO_TEST_CASE(can_make_variants_parsimonious)
     BOOST_CHECK(is_parsimonious(parsimonised_snp));
     BOOST_CHECK(parsimonised_snp == a_snp);
     
-    Variant another_unparsimonious_snp {parse_region("12:10001329-10001332", human), std::string {"TGT"}, std::string {"TCT"}};
+    Variant another_unparsimonious_snp {*parse_region("12:10001329-10001332", human), std::string {"TGT"}, std::string {"TCT"}};
     
     BOOST_CHECK(!is_parsimonious(another_unparsimonious_snp));
     
@@ -372,7 +369,7 @@ BOOST_AUTO_TEST_CASE(can_make_variants_parsimonious)
     BOOST_CHECK(is_parsimonious(another_parsimonised_snp));
     BOOST_CHECK(another_parsimonised_snp == a_snp);
     
-    auto a_region = parse_region("12:10001330-10001335", human);
+    auto a_region = *parse_region("12:10001330-10001335", human);
     
     auto the_sequence = human.get_sequence(a_region);
     
@@ -383,20 +380,19 @@ BOOST_AUTO_TEST_CASE(can_make_variants_parsimonious)
     auto parsimonious_deletion = make_parsimonious(a_deletion, human);
     
     BOOST_CHECK(parsimonious_deletion.get_region() ==
-            parse_region("12:10001329-10001335", human));
+            *parse_region("12:10001329-10001335", human));
     BOOST_CHECK(get_ref_sequence(parsimonious_deletion) == "CGTGGA");
     BOOST_CHECK(get_alt_sequence(parsimonious_deletion) == "C");
     
-    Variant an_insertion {parse_region("12:10001330-10001330", human), "", the_sequence};
+    Variant an_insertion {*parse_region("12:10001330-10001330", human), "", the_sequence};
     
     auto parsimonious_insertion = make_parsimonious(an_insertion, human);
     
-    BOOST_CHECK(parsimonious_insertion.get_region() ==
-            parse_region("12:10001329-10001330", human));
+    BOOST_CHECK(parsimonious_insertion.get_region() == *parse_region("12:10001329-10001330", human));
     BOOST_CHECK(get_ref_sequence(parsimonious_insertion) == "C");
     BOOST_CHECK(get_alt_sequence(parsimonious_insertion) == "CGTGGA");
     
-    Variant an_unparsimonious_deletion {parse_region("12:10001328-10001335", human), "TCGTGGA", "TC"};
+    Variant an_unparsimonious_deletion {*parse_region("12:10001328-10001335", human), "TCGTGGA", "TC"};
     
     BOOST_CHECK(!is_parsimonious(an_unparsimonious_deletion));
     
@@ -404,7 +400,7 @@ BOOST_AUTO_TEST_CASE(can_make_variants_parsimonious)
     
     BOOST_CHECK(is_parsimonious(parsimonised_deletion));
     
-    Variant an_unparsimonious_insertion {parse_region("12:10001329-10001331", human), "CG", "CGTGGA"};
+    Variant an_unparsimonious_insertion {*parse_region("12:10001329-10001331", human), "CG", "CGTGGA"};
     
     BOOST_CHECK(!is_parsimonious(an_unparsimonious_insertion));
     
@@ -419,7 +415,7 @@ BOOST_AUTO_TEST_CASE(can_normalise_variants)
     
     // Huntingtin region CCAGCAGCAGCAGCAG...
     
-    Variant a_snp {parse_region("4:3076657-3076658", human), std::string {"G"}, std::string {"C"}};
+    Variant a_snp {*parse_region("4:3076657-3076658", human), std::string {"G"}, std::string {"C"}};
     
     BOOST_CHECK(is_parsimonious(a_snp));
     
@@ -452,12 +448,11 @@ BOOST_AUTO_TEST_CASE(can_normalise_variants)
     auto normilised_deletion = normalise(a_deletion, human);
     
     BOOST_CHECK(is_parsimonious(normilised_deletion));
-    BOOST_CHECK(normilised_deletion.get_region() ==
-            parse_region("4:3076602-3076606", human));
+    BOOST_CHECK(normilised_deletion.get_region() == *parse_region("4:3076602-3076606", human));
     BOOST_CHECK(get_ref_sequence(normilised_deletion) == "CCAG");
     BOOST_CHECK(get_alt_sequence(normilised_deletion) == "C");
     
-    Variant an_insertion {parse_region("4:3076660-3076660", human), "", the_sequence};
+    Variant an_insertion {*parse_region("4:3076660-3076660", human), "", the_sequence};
     
     BOOST_CHECK(!is_parsimonious(an_insertion));
     
@@ -468,48 +463,46 @@ BOOST_AUTO_TEST_CASE(can_normalise_variants)
     auto normilised_insertion = normalise(an_insertion, human);
     
     BOOST_CHECK(is_parsimonious(normilised_insertion));
-    BOOST_CHECK(normilised_insertion.get_region() ==
-            parse_region("4:3076602-3076603", human));
+    BOOST_CHECK(normilised_insertion.get_region() == *parse_region("4:3076602-3076603", human));
     BOOST_CHECK(get_ref_sequence(normilised_insertion) == "C");
     BOOST_CHECK(get_alt_sequence(normilised_insertion) == "CCAG");
     
     // Some hard ones
     
-    Variant an_unormilised_snp {parse_region("4:3076656-3076659", human), std::string {"AGC"}, std::string {"ACC"}};
+    Variant an_unormilised_snp {*parse_region("4:3076656-3076659", human), std::string {"AGC"}, std::string {"ACC"}};
     
     BOOST_CHECK(!is_parsimonious(an_unormilised_snp));
     
     a_normalised_snp = normalise(an_unormilised_snp, human);
     
     BOOST_CHECK(is_parsimonious(a_normalised_mnp));
-    BOOST_CHECK(a_normalised_snp.get_region() == parse_region("4:3076657-3076658", human));
+    BOOST_CHECK(a_normalised_snp.get_region() == *parse_region("4:3076657-3076658", human));
     BOOST_CHECK(get_ref_sequence(a_normalised_snp) == "G");
     BOOST_CHECK(get_alt_sequence(a_normalised_snp) == "C");
     
-    Variant an_unormilised_mnp {parse_region("4:3076656-3076661", human), std::string {"GCAGC"}, std::string {"GGACC"}};
+    Variant an_unormilised_mnp {*parse_region("4:3076656-3076661", human), std::string {"GCAGC"}, std::string {"GGACC"}};
     
     BOOST_CHECK(!is_parsimonious(an_unormilised_mnp));
     
     a_normalised_mnp = normalise(an_unormilised_mnp, human);
     
     BOOST_CHECK(is_parsimonious(a_normalised_mnp));
-    BOOST_CHECK(a_normalised_mnp.get_region() == parse_region("4:3076657-3076660", human));
+    BOOST_CHECK(a_normalised_mnp.get_region() == *parse_region("4:3076657-3076660", human));
     BOOST_CHECK(get_ref_sequence(a_normalised_mnp) == "CAG");
     BOOST_CHECK(get_alt_sequence(a_normalised_mnp) == "GAC");
     
-    Variant an_unnormilised_deletion {parse_region("4:3076655-3076660", human), std::string {"AGCAG"}, std::string {"AG"}};
+    Variant an_unnormilised_deletion {*parse_region("4:3076655-3076660", human), std::string {"AGCAG"}, std::string {"AG"}};
     
     BOOST_CHECK(!is_parsimonious(an_unnormilised_deletion));
     
     auto a_normalised_deletion = normalise(an_unnormilised_deletion, human);
     
     BOOST_CHECK(is_parsimonious(a_normalised_deletion));
-    BOOST_CHECK(a_normalised_deletion.get_region() ==
-            parse_region("4:3076602-3076606", human));
+    BOOST_CHECK(a_normalised_deletion.get_region() == *parse_region("4:3076602-3076606", human));
     BOOST_CHECK(get_ref_sequence(a_normalised_deletion) == "CCAG");
     BOOST_CHECK(get_alt_sequence(a_normalised_deletion) == "C");
     
-    Variant an_unnormilised_insertion {parse_region("4:3076655-3076657", human),
+    Variant an_unnormilised_insertion {*parse_region("4:3076655-3076657", human),
                                     std::string {"AG"}, std::string {"AGCAG"}};
     
     BOOST_CHECK(!is_parsimonious(an_unnormilised_insertion));
@@ -517,8 +510,7 @@ BOOST_AUTO_TEST_CASE(can_normalise_variants)
     auto a_normalised_insertion = normalise(an_unnormilised_insertion, human);
     
     BOOST_CHECK(is_parsimonious(a_normalised_insertion));
-    BOOST_CHECK(a_normalised_insertion.get_region() ==
-            parse_region("4:3076602-3076603", human));
+    BOOST_CHECK(a_normalised_insertion.get_region() == *parse_region("4:3076602-3076603", human));
     BOOST_CHECK(get_ref_sequence(a_normalised_insertion) == "C");
     BOOST_CHECK(get_alt_sequence(a_normalised_insertion) == "CCAG");
 }

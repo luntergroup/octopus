@@ -40,11 +40,11 @@ BOOST_AUTO_TEST_CASE(haplotype_tree_does_not_bifurcate_on_alleles_positioned_pas
 {
     auto human = make_reference(human_reference_fasta);
     
-    Allele allele1 {parse_region("4:1000000-1000001", human), "A"};
-    Allele allele2 {parse_region("4:1000001-1000002", human), "C"};
-    Allele allele3 {parse_region("4:1000002-1000002", human), "GC"};
-    Allele allele4 {parse_region("4:1000005-1000007", human), ""};
-    Allele allele5 {parse_region("4:1000007-1000008", human), "G"};
+    Allele allele1 {*parse_region("4:1000000-1000001", human), "A"};
+    Allele allele2 {*parse_region("4:1000001-1000002", human), "C"};
+    Allele allele3 {*parse_region("4:1000002-1000002", human), "GC"};
+    Allele allele4 {*parse_region("4:1000005-1000007", human), ""};
+    Allele allele5 {*parse_region("4:1000007-1000008", human), "G"};
     
     HaplotypeTree haplotype_tree {human};
     haplotype_tree.extend(allele1);
@@ -60,9 +60,9 @@ BOOST_AUTO_TEST_CASE(haplotype_tree_ignores_duplicate_alleles_coming_from_same_a
 {
     auto human = make_reference(human_reference_fasta);
     
-    Allele allele1 {parse_region("4:1000000-1000001", human), "A"};
-    Allele allele2 {parse_region("4:1000000-1000001", human), "C"};
-    Allele allele3 {parse_region("4:1000000-1000001", human), "A"};
+    Allele allele1 {*parse_region("4:1000000-1000001", human), "A"};
+    Allele allele2 {*parse_region("4:1000000-1000001", human), "C"};
+    Allele allele3 {*parse_region("4:1000000-1000001", human), "A"};
     
     HaplotypeTree haplotype_tree {human};
     haplotype_tree.extend(allele1);
@@ -76,8 +76,8 @@ BOOST_AUTO_TEST_CASE(haplotype_tree_ignores_insertions_followed_immediatly_by_de
 {
     auto human = make_reference(human_reference_fasta);
     
-    Allele allele1 {parse_region("16:9300037-9300037", human), "TG"};
-    Allele allele2 {parse_region("16:9300037-9300051 ", human), ""};
+    Allele allele1 {*parse_region("16:9300037-9300037", human), "TG"};
+    Allele allele2 {*parse_region("16:9300037-9300051 ", human), ""};
     
     HaplotypeTree haplotype_tree {human};
     haplotype_tree.extend(allele1);
@@ -85,7 +85,7 @@ BOOST_AUTO_TEST_CASE(haplotype_tree_ignores_insertions_followed_immediatly_by_de
     
     BOOST_CHECK(haplotype_tree.num_haplotypes() == 1);
     
-    auto a_region = parse_region("16:9300037-9300037", human);
+    auto a_region = *parse_region("16:9300037-9300037", human);
     
     auto haplotypes = haplotype_tree.get_haplotypes(a_region);
     
@@ -97,12 +97,12 @@ BOOST_AUTO_TEST_CASE(haplotype_tree_splits_overlapping_snps_into_different_branc
 {
     auto human = make_reference(human_reference_fasta);
     
-    Allele allele1 {parse_region("4:1000000-1000001", human), "A"};
-    Allele allele2 {parse_region("4:1000000-1000001", human), "C"};
-    Allele allele3 {parse_region("4:1000000-1000001", human), "G"};
+    Allele allele1 {*parse_region("4:1000000-1000001", human), "A"};
+    Allele allele2 {*parse_region("4:1000000-1000001", human), "C"};
+    Allele allele3 {*parse_region("4:1000000-1000001", human), "G"};
     
-    Allele allele4 {parse_region("4:1000001-1000002", human), "G"};
-    Allele allele5 {parse_region("4:1000001-1000002", human), "C"};
+    Allele allele4 {*parse_region("4:1000001-1000002", human), "G"};
+    Allele allele5 {*parse_region("4:1000001-1000002", human), "C"};
     
     HaplotypeTree haplotype_tree {human};
     
@@ -133,17 +133,17 @@ BOOST_AUTO_TEST_CASE(haplotype_tree_can_generate_haplotypes_in_a_region)
     
     HaplotypeTree haplotype_tree {human};
     
-    Allele allele1 {parse_region("4:1000000-1000001", human), "A"};
-    Allele allele2 {parse_region("4:1000002-1000003", human), "C"};
-    Allele allele3 {parse_region("4:1000002-1000003", human), "G"};
-    Allele allele4 {parse_region("4:1000004-1000005", human), "T"};
+    Allele allele1 {*parse_region("4:1000000-1000001", human), "A"};
+    Allele allele2 {*parse_region("4:1000002-1000003", human), "C"};
+    Allele allele3 {*parse_region("4:1000002-1000003", human), "G"};
+    Allele allele4 {*parse_region("4:1000004-1000005", human), "T"};
     
     haplotype_tree.extend(allele1);
     haplotype_tree.extend(allele2);
     haplotype_tree.extend(allele3);
     haplotype_tree.extend(allele4);
     
-    auto a_region = parse_region("4:1000000-1000005", human);
+    auto a_region = *parse_region("4:1000000-1000005", human);
     
     auto haplotypes = haplotype_tree.get_haplotypes(a_region);
     
@@ -159,9 +159,9 @@ BOOST_AUTO_TEST_CASE(haplotype_tree_can_generate_haplotypes_ending_in_different_
     
     HaplotypeTree haplotype_tree {human};
     
-    Allele allele1 {parse_region("4:1000000-1000001", human), "A"};
-    Allele allele2 {parse_region("4:1000002-1000006", human), ""};
-    Allele allele3 {parse_region("4:1000002-1000003", human), "G"};
+    Allele allele1 {*parse_region("4:1000000-1000001", human), "A"};
+    Allele allele2 {*parse_region("4:1000002-1000006", human), ""};
+    Allele allele3 {*parse_region("4:1000002-1000003", human), "G"};
     
     haplotype_tree.extend(allele1);
     haplotype_tree.extend(allele2);
@@ -169,13 +169,13 @@ BOOST_AUTO_TEST_CASE(haplotype_tree_can_generate_haplotypes_ending_in_different_
     
     BOOST_CHECK(haplotype_tree.num_haplotypes() == 2);
     
-    auto a_region = parse_region("4:1000000-1000006", human);
+    auto a_region = *parse_region("4:1000000-1000006", human);
     
     auto haplotypes = haplotype_tree.get_haplotypes(a_region);
     
     BOOST_CHECK(haplotypes.size() == 2);
     
-    a_region = parse_region("4:1000000-1000003", human);
+    a_region = *parse_region("4:1000000-1000003", human);
     
     haplotypes = haplotype_tree.get_haplotypes(a_region);
     
@@ -191,11 +191,11 @@ BOOST_AUTO_TEST_CASE(leading_haplotypes_can_be_removed_from_the_tree)
     
     HaplotypeTree haplotype_tree {human};
     
-    Allele allele1 {parse_region("4:1000000-1000001", human), "A"};
-    Allele allele2 {parse_region("4:1000002-1000003", human), "C"};
-    Allele allele3 {parse_region("4:1000002-1000003", human), "G"};
-    Allele allele4 {parse_region("4:1000004-1000005", human), "T"};
-    Allele allele5 {parse_region("4:1000004-1000005", human), "C"};
+    Allele allele1 {*parse_region("4:1000000-1000001", human), "A"};
+    Allele allele2 {*parse_region("4:1000002-1000003", human), "C"};
+    Allele allele3 {*parse_region("4:1000002-1000003", human), "G"};
+    Allele allele4 {*parse_region("4:1000004-1000005", human), "T"};
+    Allele allele5 {*parse_region("4:1000004-1000005", human), "C"};
     
     haplotype_tree.extend(allele1);
     haplotype_tree.extend(allele2);
@@ -233,12 +233,12 @@ BOOST_AUTO_TEST_CASE(pruned_branches_can_still_be_extended)
     
     HaplotypeTree haplotype_tree {human};
     
-    Allele allele1 {parse_region("4:1000000-1000001", human), "A"};
-    Allele allele2 {parse_region("4:1000002-1000003", human), "C"};
-    Allele allele3 {parse_region("4:1000002-1000003", human), "G"};
-    Allele allele4 {parse_region("4:1000004-1000005", human), "T"};
-    Allele allele5 {parse_region("4:1000004-1000005", human), "C"};
-    Allele allele6 {parse_region("4:1000006-1000007", human), "A"};
+    Allele allele1 {*parse_region("4:1000000-1000001", human), "A"};
+    Allele allele2 {*parse_region("4:1000002-1000003", human), "C"};
+    Allele allele3 {*parse_region("4:1000002-1000003", human), "G"};
+    Allele allele4 {*parse_region("4:1000004-1000005", human), "T"};
+    Allele allele5 {*parse_region("4:1000004-1000005", human), "C"};
+    Allele allele6 {*parse_region("4:1000006-1000007", human), "A"};
     
     haplotype_tree.extend(allele1);
     haplotype_tree.extend(allele2);
@@ -247,7 +247,7 @@ BOOST_AUTO_TEST_CASE(pruned_branches_can_still_be_extended)
     haplotype_tree.extend(allele5);
     haplotype_tree.extend(allele6);
     
-    auto a_region = parse_region("4:1000000-1000007", human);
+    auto a_region = *parse_region("4:1000000-1000007", human);
     
     BOOST_CHECK(haplotype_tree.num_haplotypes() == 4);
     
@@ -299,13 +299,13 @@ BOOST_AUTO_TEST_CASE(extending_on_mnps_results_in_backtracked_bifurification)
 {
     auto human = make_reference(human_reference_fasta);
     
-    Allele allele1 {parse_region("16:9300039-9300051", human), "TGTGTGTGCGTT"};
-    Allele allele2 {parse_region("16:9300039-9300051", human), ""};
+    Allele allele1 {*parse_region("16:9300039-9300051", human), "TGTGTGTGCGTT"};
+    Allele allele2 {*parse_region("16:9300039-9300051", human), ""};
     
-    Allele allele3 {parse_region("16:9300047-9300048", human), "C"};
-    Allele allele4 {parse_region("16:9300047-9300048", human), "T"};
-    Allele allele5 {parse_region("16:9300050-9300051", human), "T"};
-    Allele allele6 {parse_region("16:9300050-9300051", human), "G"};
+    Allele allele3 {*parse_region("16:9300047-9300048", human), "C"};
+    Allele allele4 {*parse_region("16:9300047-9300048", human), "T"};
+    Allele allele5 {*parse_region("16:9300050-9300051", human), "T"};
+    Allele allele6 {*parse_region("16:9300050-9300051", human), "G"};
     
     HaplotypeTree haplotype_tree {human};
     
@@ -330,7 +330,7 @@ BOOST_AUTO_TEST_CASE(extending_on_mnps_results_in_backtracked_bifurification)
     
     BOOST_CHECK(haplotype_tree.num_haplotypes() == 8);
     
-    auto a_region = parse_region("16:9300039-9300051", human);
+    auto a_region = *parse_region("16:9300039-9300051", human);
     
     auto haplotypes = haplotype_tree.get_haplotypes(a_region);
     
@@ -351,8 +351,8 @@ BOOST_AUTO_TEST_CASE(haplotype_tree_can_selectively_extend_branches)
     
     HaplotypeTree haplotype_tree {human};
     
-    Allele allele1 {parse_region("4:1000000-1000001", human), "A"};
-    Allele allele2 {parse_region("4:1000000-1000003", human), ""};
+    Allele allele1 {*parse_region("4:1000000-1000001", human), "A"};
+    Allele allele2 {*parse_region("4:1000000-1000003", human), ""};
     
     haplotype_tree.extend(allele1);
     haplotype_tree.extend(allele2);
@@ -364,8 +364,8 @@ BOOST_AUTO_TEST_CASE(haplotype_tree_can_selectively_extend_branches)
     
     BOOST_CHECK(haplotype_tree.num_haplotypes() == 2);
     
-    Allele allele3 {parse_region("4:1000001-1000002", human), "C"};
-    Allele allele4 {parse_region("4:1000002-1000003", human), "G"};
+    Allele allele3 {*parse_region("4:1000001-1000002", human), "C"};
+    Allele allele4 {*parse_region("4:1000002-1000003", human), "G"};
     
     haplotype_tree.extend(allele3);
     
@@ -375,13 +375,13 @@ BOOST_AUTO_TEST_CASE(haplotype_tree_can_selectively_extend_branches)
     
     BOOST_CHECK(haplotype_tree.num_haplotypes() == 4);
     
-    Allele allele5 {parse_region("4:1000003-1000004", human), "T"};
+    Allele allele5 {*parse_region("4:1000003-1000004", human), "T"};
     
     haplotype_tree.extend(allele5);
     
     BOOST_CHECK(haplotype_tree.num_haplotypes() == 4);
     
-    Allele allele6 {parse_region("4:1000003-1000004", human), "A"};
+    Allele allele6 {*parse_region("4:1000003-1000004", human), "A"};
     
     haplotype_tree.extend(allele6);
     
@@ -401,7 +401,7 @@ BOOST_AUTO_TEST_CASE(haplotype_tree_survives_serious_pruning)
     auto sample_ids = a_read_manager.get_samples();
     auto the_sample_id = sample_ids.at(0);
     
-    auto a_region = parse_region("16:9299940-9300055", human);
+    auto a_region = *parse_region("16:9299940-9300055", human);
     
     auto reads = a_read_manager.fetch_reads(the_sample_id, a_region);
     
@@ -473,7 +473,7 @@ BOOST_AUTO_TEST_CASE(prune_unqiue_leaves_a_single_haplotype_which_contains_the_s
     auto sample_ids = a_read_manager.get_samples();
     auto the_sample_id = sample_ids.at(0);
     
-    auto a_region = parse_region("16:9299940-9300055", human);
+    auto a_region = *parse_region("16:9299940-9300055", human);
     
     auto reads = a_read_manager.fetch_reads(the_sample_id, a_region);
     
@@ -517,11 +517,11 @@ BOOST_AUTO_TEST_CASE(contains_returns_true_if_the_given_haplotype_is_in_the_tree
 {
     auto human = make_reference(human_reference_fasta);
     
-    Allele allele1 {parse_region("4:1000000-1000001", human), "A"};
-    Allele allele2 {parse_region("4:1000000-1000001", human), "C"};
-    Allele allele3 {parse_region("4:1000000-1000001", human), "G"};
-    Allele allele4 {parse_region("4:1000001-1000002", human), "G"};
-    Allele allele5 {parse_region("4:1000001-1000002", human), "C"};
+    Allele allele1 {*parse_region("4:1000000-1000001", human), "A"};
+    Allele allele2 {*parse_region("4:1000000-1000001", human), "C"};
+    Allele allele3 {*parse_region("4:1000000-1000001", human), "G"};
+    Allele allele4 {*parse_region("4:1000001-1000002", human), "G"};
+    Allele allele5 {*parse_region("4:1000001-1000002", human), "C"};
     
     auto region = get_encompassing(allele1, allele5);
     
@@ -541,7 +541,7 @@ BOOST_AUTO_TEST_CASE(contains_returns_true_if_the_given_haplotype_is_in_the_tree
     
     Haplotype haplotype2 {human, region};
     haplotype2.push_back(allele1);
-    haplotype2.push_back(Allele {parse_region("4:1000001-1000002", human), "A"});
+    haplotype2.push_back(Allele {*parse_region("4:1000001-1000002", human), "A"});
     
     BOOST_CHECK(!haplotype_tree.contains(haplotype2));
 }
@@ -555,10 +555,10 @@ BOOST_AUTO_TEST_CASE(contains_returns_true_if_the_given_haplotype_is_in_the_tree
 //{
 //    auto human = make_reference(human_reference_fasta);
 //    
-//    Allele allele1 {parse_region("4:1000000-1000001", human), "A"};
-//    Allele allele2 {parse_region("4:1000000-1000001", human), "C"};
-//    Allele allele3 {parse_region("4:1000001-1000002", human), "G"};
-//    Allele allele4 {parse_region("4:1000001-1000002", human), "T"};
+//    Allele allele1 {*parse_region("4:1000000-1000001", human), "A"};
+//    Allele allele2 {*parse_region("4:1000000-1000001", human), "C"};
+//    Allele allele3 {*parse_region("4:1000001-1000002", human), "G"};
+//    Allele allele4 {*parse_region("4:1000001-1000002", human), "T"};
 //    
 //    auto region = get_encompassing(allele1, allele4);
 //    

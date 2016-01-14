@@ -137,6 +137,11 @@ namespace Octopus
         
         const auto regions = Options::get_search_regions(options, reference);
         
+        if (regions.empty()) {
+            cout << "Octopus: quiting as got no input regions" << endl;
+            return;
+        }
+        
         if (!check_search_regions(regions, reference)) {
             cout << "Octopus: quiting as got bad input regions" << endl;
             return;

@@ -38,7 +38,7 @@ BOOST_AUTO_TEST_CASE(CandidateVariantGenerator_does_not_give_duplicate_candidate
     auto sample_ids = a_read_manager.get_samples();
     auto the_sample_id = sample_ids.at(0);
     
-    auto a_region = parse_region("7:122579662-122579817", human);
+    auto a_region = *parse_region("7:122579662-122579817", human);
     
     auto reads = a_read_manager.fetch_reads(the_sample_id, a_region);
     
@@ -57,7 +57,7 @@ BOOST_AUTO_TEST_CASE(AlignmentCandidateVariantGenerator_ignores_snps_with_low_ba
     
     Octopus::AlignmentCandidateVariantGenerator candidate_generator {human, 10};
     
-    auto a_region = parse_region("7:122579662-122579817", human);
+    auto a_region = *parse_region("7:122579662-122579817", human);
     
     auto sample_ids = a_read_manager.get_samples();
     auto the_sample_id = sample_ids.at(0);
@@ -79,7 +79,7 @@ BOOST_AUTO_TEST_CASE(AlignmentCandidateVariantGenerator_includes_all_alleles_in_
     
     Octopus::AlignmentCandidateVariantGenerator candidate_generator {human, 10};
     
-    auto a_region = parse_region("7:122579662-122579817", human);
+    auto a_region = *parse_region("7:122579662-122579817", human);
     
     auto sample_ids = a_read_manager.get_samples();
     auto the_sample_id = sample_ids.at(0);
@@ -124,7 +124,7 @@ BOOST_AUTO_TEST_CASE(OnlineCandidateVariantGenerator_can_fetch_variants_from_onl
 //    auto sample_ids = a_read_manager.get_sample_ids();
 //    auto the_sample_id = sample_ids.at(0);
 //    
-//    auto a_region = parse_region("10:1000000-1000100", human);
+//    auto a_region = *parse_region("10:1000000-1000100", human);
 //    
 //    auto reads = a_read_manager.fetch_reads(the_sample_id, a_region);
 //    
@@ -148,7 +148,7 @@ BOOST_AUTO_TEST_CASE(ExternalCandidateVariantGenerator_gets_candidates_from_vcf)
     
     Octopus::ExternalCandidateVariantGenerator generator {sample_vcf};
     
-    auto region = parse_region("X:10,095,000-10,100,000", reference);
+    auto region = *parse_region("X:10,095,000-10,100,000", reference);
     
     auto candidates = generator.get_candidates(region);
     

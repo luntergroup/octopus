@@ -516,34 +516,30 @@ namespace Octopus
         return target;
     }
     
+    std::vector<GenomicRegion> parse_regions(const std::vector<std::string>& unparsed_regions,
+                                             const ReferenceGenome& reference)
+    {
+        std::vector<GenomicRegion> result {};
+        result.reserve(unparsed_regions.size());
+        
+        for (const auto& unparsed_region : unparsed_regions) {
+            auto parsed_region = parse_region(unparsed_region, reference);
+            if (parsed_region) {
+                result.emplace_back(std::move(*parsed_region));
+            }
+        }
+        
+        return result;
+    }
+    
     SearchRegions get_search_regions(const po::variables_map& options, const ReferenceGenome& reference)
     {
         std::vector<GenomicRegion> skip_regions {};
         
         if (options.count("skip-regions") == 1) {
             const auto& regions_strings = options.at("skip-regions").as<std::vector<std::string>>();
-            
-            std::vector<boost::optional<GenomicRegion>> parsed_regions {};
-            parsed_regions.reserve(skip_regions.size());
-            
-            std::transform(std::cbegin(regions_strings), std::cend(regions_strings),
-                           std::back_inserter(parsed_regions),
-                           [&] (const auto& region) {
-                               return parse_region(region, reference);
-                           });
-            
-            const auto it = std::partition(std::begin(parsed_regions), std::end(parsed_regions),
-                                           [] (const auto& region) {
-                                               return static_cast<bool>(region);
-                                           });
-            
-            skip_regions.reserve(std::distance(std::begin(parsed_regions), it));
-            
-            std::transform(std::make_move_iterator(std::begin(parsed_regions)),
-                           std::make_move_iterator(it), std::back_inserter(skip_regions),
-                           [] (auto&& parsed_region) -> GenomicRegion&& {
-                               return std::move(*parsed_region);
-                           });
+            auto parsed_regions = parse_regions(regions_strings, reference);
+            append(skip_regions, std::move(parsed_regions));
         }
         
         if (options.count("skip-regions-file") == 1) {
@@ -557,14 +553,9 @@ namespace Octopus
             std::vector<GenomicRegion> input_regions {};
             
             if (options.count("regions") == 1) {
-                const auto& regions = options.at("regions").as<std::vector<std::string>>();
-                input_regions.reserve(regions.size());
-                
-                std::transform(std::cbegin(regions), std::cend(regions),
-                               std::back_inserter(input_regions),
-                               [&] (const auto& region) {
-                                   return parse_region(region, reference);
-                               });
+                const auto& region_strings = options.at("regions").as<std::vector<std::string>>();
+                auto parsed_regions = parse_regions(region_strings, reference);
+                append(input_regions, std::move(parsed_regions));
             }
             
             if (options.count("regions-file") == 1) {
@@ -588,6 +579,15 @@ namespace Octopus
         
         return result;
     }
+        
+    void print_bad_paths(const std::vector<fs::path>& bad_paths)
+    {
+        std::cout << "Octopus: the following paths could not be resolved:" << std::endl;
+        for (const auto& path : bad_paths) {
+            std::cout << "\t" << path.string() << std::endl;
+        }
+        std::cout << std::endl;
+    }
     
     std::vector<fs::path> get_read_paths(const po::variables_map& options)
     {
@@ -606,7 +606,8 @@ namespace Octopus
             auto read_paths_from_file = extract_expanded_user_paths_from_file(read_file_path);
             
             if (read_paths_from_file.has_bad()) {
-                
+                print_bad_paths(read_paths_from_file.bad_paths);
+                return {};
             }
             
             append(result, std::move(read_paths_from_file.good_paths));
