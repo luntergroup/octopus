@@ -53,8 +53,8 @@ namespace Octopus
     
     ReadFilterer make_read_filter(const po::variables_map& options);
     
-    Downsampler make_downsampler(const po::variables_map& options);
-        
+    boost::optional<Downsampler> make_downsampler(const po::variables_map& options);
+    
     ReadTransform make_read_transform(const po::variables_map& options);
     
     CandidateGeneratorBuilder make_candidate_generator_builder(const po::variables_map& options,

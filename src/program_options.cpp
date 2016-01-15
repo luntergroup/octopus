@@ -141,6 +141,8 @@ namespace Octopus
              "filters reads marked as supplementary alignments")
             ("no-unmapped-mates", po::bool_switch()->default_value(false),
              "filters reads with unmapped mates")
+            ("no-downsampling", po::bool_switch()->default_value(false),
+             "turns off any downsampling")
             ("downsample-above", po::value<unsigned>()->default_value(10000),
              "downsample reads in regions where coverage is over this")
             ("downsample-target", po::value<unsigned>()->default_value(10000),
@@ -603,9 +605,7 @@ namespace Octopus
         std::vector<SampleIdType> result {};
         
         if (options.count("samples") == 1) {
-            auto samples = options.at("samples").as<std::vector<std::string>>();
-            result.reserve(samples.size());
-            std::copy(std::cbegin(samples), std::cend(samples), std::back_inserter(result));
+            append(result, options.at("samples").as<std::vector<std::string>>());
         }
         
         return result;
@@ -739,8 +739,12 @@ namespace Octopus
         return result;
     }
     
-    Downsampler make_downsampler(const po::variables_map& options)
+    boost::optional<Downsampler> make_downsampler(const po::variables_map& options)
     {
+        if (options.at("no-downsampling").as<bool>()) {
+            return boost::none;
+        }
+        
         auto max_coverage    = options.at("downsample-above").as<unsigned>();
         auto target_coverage = options.at("downsample-target").as<unsigned>();
         

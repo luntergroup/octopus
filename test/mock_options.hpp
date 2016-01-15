@@ -106,6 +106,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--trim-adapters",
         
         "--reference-cache-size", "20000",
+        "--no-downsampling",
         //"--downsample-above", "500",
         //"--downsample-target", "100",
         

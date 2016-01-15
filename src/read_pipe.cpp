@@ -15,7 +15,7 @@
 namespace Octopus {
 
 ReadPipe::ReadPipe(ReadManager& read_manager, ReadFilterer read_filter,
-                   Downsampler downsampler, ReadTransform read_transform)
+                   boost::optional<Downsampler> downsampler, ReadTransform read_transform)
 :
 read_manager_ {read_manager},
 read_filter_ {std::move(read_filter)},
@@ -57,7 +57,9 @@ ReadMap ReadPipe::fetch_reads(std::vector<SampleIdType> samples, const GenomicRe
         
         //std::cout << "found " << count_reads(filtered_batch) << " good batch reads" << std::endl;
         
-        //filtered_batch = downsampler_(std::move(filtered_batch));
+        if (downsampler_) {
+            filtered_batch = downsampler_->sample(std::move(filtered_batch));
+        }
         
         transform_reads(filtered_batch, read_transform_);
         

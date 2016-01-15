@@ -16,9 +16,7 @@
 
 #include "common.hpp"
 #include "reference_genome.hpp"
-#include "read_manager.hpp"
-#include "read_filter.hpp"
-#include "read_transform.hpp"
+#include "read_pipe.hpp"
 #include "candidate_variant_generator.hpp"
 #include "haplotype_prior_model.hpp"
 

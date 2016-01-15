@@ -13,6 +13,8 @@
 #include <unordered_map>
 #include <cstddef>
 
+#include <boost/optional.hpp>
+
 #include "common.hpp"
 #include "genomic_region.hpp"
 #include "read_manager.hpp"
@@ -38,8 +40,10 @@ class ReadPipe
 {
 public:
     ReadPipe() = delete;
-    ReadPipe(ReadManager& read_manager, ReadFilterer read_filter,
-             Downsampler downsampler, ReadTransform read_transform);
+    explicit ReadPipe(ReadManager& read_manager,
+                      ReadFilterer read_filter,
+                      boost::optional<Downsampler> downsampler,
+                      ReadTransform read_transform);
     ~ReadPipe() = default;
     
     ReadPipe(const ReadPipe&)            = delete;
@@ -52,7 +56,7 @@ public:
 private:
     ReadManager& read_manager_;
     ReadFilterer read_filter_;
-    Downsampler downsampler_;
+    boost::optional<Downsampler> downsampler_;
     ReadTransform read_transform_;
     
     using ContigIdType = GenomicRegion::ContigNameType;

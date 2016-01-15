@@ -47,7 +47,7 @@ public:
     Downsampler& operator=(Downsampler&&)      = default;
     
     template <typename R>
-    R operator()(R&& reads)
+    R sample(R&& reads)
     {
         return downsample(std::forward<R>(reads), max_coverage_, min_coverage_);
     }

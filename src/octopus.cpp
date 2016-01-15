@@ -16,6 +16,8 @@
 #include <cstddef>
 #include <stdexcept>
 
+#include <boost/optional.hpp>
+
 #include "common.hpp"
 #include "program_options.hpp"
 #include "mappable_map.hpp"
@@ -85,10 +87,11 @@ namespace Octopus
             }
             
             if (!bad_samples.empty()) {
-                std::string error {"input samples not in read files: "};
-                for (const auto& sample : bad_samples) error += sample + ',';
-                error.erase(--error.end()); // removes last ','
-                throw std::runtime_error {error};
+                std::cout << "Octopus: input samples not present in read files: ";
+                std::copy(std::cbegin(bad_samples), std::cend(bad_samples),
+                          std::ostream_iterator<SampleIdType>(std::cout, " "));
+                std::cout << std::endl;
+                return {};
             }
             
             return user_samples;
@@ -124,6 +127,15 @@ namespace Octopus
                                });
     }
     
+    ReadPipe make_read_pipe(ReadManager& read_manager, const po::variables_map& options)
+    {
+        auto read_filter    = Options::make_read_filter(options);
+        auto downsampler    = Options::make_downsampler(options);
+        auto read_transform = Options::make_read_transform(options);
+        return ReadPipe {read_manager, std::move(read_filter),
+            std::move(downsampler), std::move(read_transform)};
+    }
+    
     void run_octopus(const po::variables_map& options)
     {
         using std::cout; using std::endl;
@@ -156,14 +168,8 @@ namespace Octopus
         
         const auto samples = get_samples(options, *read_manager);
         
-        auto read_filter    = Options::make_read_filter(options);
-        auto downsampler    = Options::make_downsampler(options);
-        auto read_transform = Options::make_read_transform(options);
-        
-        auto output = Options::make_output_vcf_writer(options);
-        
-        if (!output.is_open()) {
-            cout << "Octopus: quiting as could not make output file" << endl;
+        if (samples.empty()) {
+            cout << "Octopus: quiting as no samples found" << std::endl;
             return;
         }
         
@@ -174,7 +180,14 @@ namespace Octopus
             return;
         }
         
-        ReadPipe read_pipe {*read_manager, read_filter, downsampler, read_transform};
+        auto output = Options::make_output_vcf_writer(options);
+        
+        if (!output.is_open()) {
+            cout << "Octopus: quiting as could not make output file" << endl;
+            return;
+        }
+        
+        auto read_pipe = make_read_pipe(*read_manager, options);
         
         cout << "writing results to " << output.path().string() << endl;
         cout << "there are " << samples.size() << " samples" << endl;
