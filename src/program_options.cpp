@@ -379,14 +379,15 @@ namespace Octopus
         return result;
     }
     
-    SearchRegions extract_search_regions(const ReferenceGenome& reference, std::vector<GenomicRegion>& skip_regions)
+    SearchRegions extract_search_regions(const ReferenceGenome& reference,
+                                         std::vector<GenomicRegion>& skip_regions)
     {
         return extract_search_regions(get_all_contig_regions(reference), skip_regions);
     }
     
     boost::optional<fs::path> get_home_dir()
     {
-        const auto result = fs::path(getenv("HOME"));
+        static const auto result = fs::path(std::getenv("HOME"));
         
         if (fs::is_directory(result)) {
             return result;
@@ -405,33 +406,44 @@ namespace Octopus
                     return fs::path {home_dir->string() + path.string().substr(1)};
                 }
                 
-                if (fs::exists(path)) {
-                    return path;
-                }
-                
+                return boost::none;
+            } else {
                 return boost::none;
             }
         }
         return path;
     }
     
-    std::vector<fs::path> extract_paths_from_file(const fs::path& file_path)
+    boost::optional<std::vector<fs::path>> extract_paths_from_file(const fs::path& file_path)
     {
+        const auto expanded_path = expand_user_path(file_path);
+        
         std::vector<fs::path> result {};
         
-        if (!fs::exists(file_path)) {
-            std::cout << "Input error: file does not exist " << file_path.string() << std::endl;
-            return result;
+        if (!expanded_path) {
+            std::cout << "Octopus: could not expand file path " << file_path << std::endl;
+            return boost::none;
+        }
+        
+        if (!fs::exists(*expanded_path)) {
+            std::cout << "Octopus: could not find file " << expanded_path << std::endl;
+            return boost::none;
         }
         
         std::ifstream file {file_path.string()};
         
         if (!file.good()) {
-            return result;
+            std::cout << "Octopus: could not open file " << expanded_path << std::endl;
+            return boost::none;
         }
         
         std::transform(std::istream_iterator<Line>(file), std::istream_iterator<Line>(),
                        std::back_inserter(result), [] (const Line& line) { return line.line_data; });
+        
+        const auto it = std::remove_if(std::begin(result), std::end(result),
+                                       [] (const auto& path) { return path.empty(); });
+        
+        result.erase(it, std::end(result));
         
         return result;
     }
@@ -439,9 +451,6 @@ namespace Octopus
     struct ExpandedPaths
     {
         ExpandedPaths() = default;
-        template <typename T1, typename T2>
-        ExpandedPaths(T1&& good_paths, T2&& bad_paths)
-        : good_paths {std::forward<T1>(good_paths)}, bad_paths {std::forward<T1>(bad_paths)} {}
         std::vector<fs::path> good_paths, bad_paths;
         bool has_good() const noexcept { return !good_paths.empty(); }
         bool has_bad() const noexcept { return !bad_paths.empty(); }
@@ -469,9 +478,10 @@ namespace Octopus
         return result;
     }
     
-    ExpandedPaths extract_expanded_user_paths_from_file(const fs::path& file_path)
+    ExpandedPaths expand_user_paths(const std::vector<std::string>& path_strings)
     {
-        return expand_user_paths(extract_paths_from_file(file_path));
+        std::vector<fs::path> paths {std::cbegin(path_strings), std::cend(path_strings)};
+        return expand_user_paths(paths);
     }
         
     unsigned get_max_threads(const po::variables_map& options)
@@ -491,11 +501,32 @@ namespace Octopus
         return options.at("memory").as<size_t>();
     }
     
-    ReferenceGenome make_reference(const po::variables_map& options)
+    bool is_run_threaded(const po::variables_map& options)
     {
-        const auto cache_size = options.at("reference-cache-size").as<size_t>();
-        return ::make_reference(options.at("reference").as<std::string>(),
-                                static_cast<ReferenceGenome::SizeType>(cache_size));
+        const auto num_threads = options.at("max-threads").as<unsigned>();
+        return num_threads == 0 || num_threads > 1;
+    }
+    
+    boost::optional<ReferenceGenome> make_reference(const po::variables_map& options)
+    {
+        const auto& path_str = options.at("reference").as<std::string>();
+        
+        auto path = expand_user_path(path_str);
+        
+        if (path) {
+            if (fs::exists(*path)) {
+                const auto ref_cache_size = options.at("reference-cache-size").as<size_t>();
+                return ::make_reference(std::move(*path),
+                                        static_cast<ReferenceGenome::SizeType>(ref_cache_size),
+                                        is_run_threaded(options));
+            } else {
+                std::cout << "Octopus: could not find reference path " << *path << std::endl;
+            }
+        } else {
+            std::cout << "Octopus: could not expand reference path " << path_str << std::endl;
+        }
+        
+        return boost::none;
     }
     
     template <typename T, typename S>
@@ -579,7 +610,7 @@ namespace Octopus
         
         return result;
     }
-        
+    
     void print_bad_paths(const std::vector<fs::path>& bad_paths)
     {
         std::cout << "Octopus: the following paths could not be resolved:" << std::endl;
@@ -589,7 +620,7 @@ namespace Octopus
         std::cout << std::endl;
     }
     
-    std::vector<fs::path> get_read_paths(const po::variables_map& options)
+    boost::optional<std::vector<fs::path>> get_read_paths(const po::variables_map& options)
     {
         using std::begin; using std::end;
         
@@ -597,20 +628,32 @@ namespace Octopus
         
         if (options.count("reads") == 1) {
             const auto& read_paths = options.at("reads").as<std::vector<std::string>>();
-            append(result, read_paths);
+            
+            auto expanded_paths = expand_user_paths(read_paths);
+            
+            if (!expanded_paths.bad_paths.empty()) {
+                print_bad_paths(expanded_paths.bad_paths);
+                return boost::none;
+            }
+            
+            append(result, std::move(expanded_paths.good_paths));
         }
         
         if (options.count("reads-file") == 1) {
             const auto& read_file_path = options.at("reads-file").as<std::string>();
             
-            auto read_paths_from_file = extract_expanded_user_paths_from_file(read_file_path);
+            auto paths = extract_paths_from_file(read_file_path);
             
-            if (read_paths_from_file.has_bad()) {
-                print_bad_paths(read_paths_from_file.bad_paths);
-                return {};
+            if (!paths) return boost::none;
+            
+            auto expanded_paths = expand_user_paths(*paths);
+            
+            if (!expanded_paths.bad_paths.empty()) {
+                print_bad_paths(expanded_paths.bad_paths);
+                return boost::none;
             }
             
-            append(result, std::move(read_paths_from_file.good_paths));
+            append(result, std::move(expanded_paths.good_paths));
         }
         
         std::sort(begin(result), end(result));
@@ -620,9 +663,16 @@ namespace Octopus
         return result;
     }
     
-    ReadManager make_read_manager(const po::variables_map& options)
+    boost::optional<ReadManager> make_read_manager(const po::variables_map& options)
     {
-        return ReadManager {get_read_paths(options), options.at("max-open-read-files").as<unsigned>()};
+        auto read_paths = get_read_paths(options);
+        
+        if (read_paths) {
+            const auto max_open_files = options.at("max-open-read-files").as<unsigned>();
+            return ReadManager {std::move(*read_paths), max_open_files};
+        }
+        
+        return boost::none;
     }
     
     ReadFilterer make_read_filter(const po::variables_map& options)

@@ -130,26 +130,31 @@ namespace Octopus
         
         const auto reference = Options::make_reference(options);
         
-        if (!reference.is_good()) {
-            cout << "Octopus: quiting as got bad reference genome" << endl;
+        if (!reference) {
+            cout << "Octopus: quiting as could not make reference genome" << endl;
             return;
         }
         
-        const auto regions = Options::get_search_regions(options, reference);
+        const auto regions = Options::get_search_regions(options, *reference);
         
         if (regions.empty()) {
             cout << "Octopus: quiting as got no input regions" << endl;
             return;
         }
         
-        if (!check_search_regions(regions, reference)) {
+        if (!check_search_regions(regions, *reference)) {
             cout << "Octopus: quiting as got bad input regions" << endl;
             return;
         }
         
         auto read_manager = Options::make_read_manager(options);
         
-        const auto samples = get_samples(options, read_manager);
+        if (!read_manager) {
+            cout << "Octopus: quiting as could not load read files" << endl;
+            return;
+        }
+        
+        const auto samples = get_samples(options, *read_manager);
         
         auto read_filter    = Options::make_read_filter(options);
         auto downsampler    = Options::make_downsampler(options);
@@ -162,21 +167,21 @@ namespace Octopus
             return;
         }
         
-        auto candidate_generator_builder = Options::make_candidate_generator_builder(options, reference);
+        auto candidate_generator_builder = Options::make_candidate_generator_builder(options, *reference);
         
         if (candidate_generator_builder.num_generators() == 0) {
             std::cout << "Octopus: quiting as there are no candidate generators" << std::endl;
             return;
         }
         
-        ReadPipe read_pipe {read_manager, read_filter, downsampler, read_transform};
+        ReadPipe read_pipe {*read_manager, read_filter, downsampler, read_transform};
         
         cout << "writing results to " << output.path().string() << endl;
         cout << "there are " << samples.size() << " samples" << endl;
         
         const auto contigs = get_contigs(regions);
         
-        auto vcf_header = make_header(samples, contigs, reference);
+        auto vcf_header = make_header(samples, contigs, *reference);
         
         output.write(vcf_header);
         
@@ -187,12 +192,12 @@ namespace Octopus
             
             size_t num_buffered_reads {};
             
-            auto caller = Options::make_variant_caller(options, reference, candidate_generator_builder, contig);
+            auto caller = Options::make_variant_caller(options, *reference, candidate_generator_builder, contig);
             
             for (const auto& region : contig_regions.second) {
                 cout << "processing input region " << region << endl;
                 
-                auto subregion = read_manager.find_covered_subregion(samples, region, max_reads);
+                auto subregion = read_manager->find_covered_subregion(samples, region, max_reads);
                 
                 while (get_begin(subregion) != get_end(region)) {
                     cout << "processing subregion " << subregion << endl;
@@ -213,7 +218,7 @@ namespace Octopus
                     num_buffered_reads = caller->num_buffered_reads();
                     
                     subregion = get_right_overhang(region, subregion);
-                    subregion = read_manager.find_covered_subregion(samples, subregion, max_reads);
+                    subregion = read_manager->find_covered_subregion(samples, subregion, max_reads);
                 }
             }
         }

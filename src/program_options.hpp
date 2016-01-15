@@ -42,16 +42,14 @@ namespace Octopus
     
     size_t get_memory_quota(const po::variables_map& options);
     
-    ReferenceGenome make_reference(const po::variables_map& options);
+    boost::optional<ReferenceGenome> make_reference(const po::variables_map& options);
     
     SearchRegions get_search_regions(const po::variables_map& options,
                                      const ReferenceGenome& reference);
     
     std::vector<SampleIdType> get_samples(const po::variables_map& options);
     
-    std::vector<fs::path> get_read_paths(const po::variables_map& options);
-    
-    ReadManager make_read_manager(const po::variables_map& options);
+    boost::optional<ReadManager> make_read_manager(const po::variables_map& options);
     
     ReadFilterer make_read_filter(const po::variables_map& options);
     

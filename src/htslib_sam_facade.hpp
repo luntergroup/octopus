@@ -19,6 +19,7 @@
 #include <memory>
 
 #include <boost/filesystem/path.hpp>
+#include <boost/optional.hpp>
 
 #include "htslib/hts.h"
 #include "htslib/sam.h"
@@ -77,7 +78,7 @@ private:
         HtslibIterator& operator=(const HtslibIterator&) = delete;
         
         bool operator++();
-        AlignedRead operator*() const;
+        boost::optional<AlignedRead> operator*() const;
         HtslibSamFacade::ReadGroupIdType get_read_group() const;
         
     private:
