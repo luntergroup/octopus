@@ -21,13 +21,16 @@ namespace Octopus
     // public methods
     
     VariantCallerBuilder::VariantCallerBuilder(const ReferenceGenome& reference,
+                                               ReadPipe& read_pipe,
                                                const CandidateGeneratorBuilder& candidate_generator_builder)
     :
     reference_ {reference},
+    read_pipe_ {read_pipe},
     candidate_generator_builder_ {candidate_generator_builder},
     model_map_ {
         {"population", [&] () {
             return std::make_unique<PopulationVariantCaller>(reference_,
+                                                             read_pipe_,
                                                              candidate_generator_builder_.get().build(),
                                                              refcall_type_,
                                                              min_variant_posterior_,
@@ -36,6 +39,7 @@ namespace Octopus
         }},
         {"cancer", [&] () {
             return std::make_unique<CancerVariantCaller>(reference_,
+                                                         read_pipe_,
                                                          candidate_generator_builder_.get().build(),
                                                          refcall_type_,
                                                          min_variant_posterior_,
@@ -46,6 +50,7 @@ namespace Octopus
         }},
         {"trio", [&] () {
             return std::make_unique<PedigreeVariantCaller>(reference_,
+                                                           read_pipe_,
                                                            candidate_generator_builder_.get().build(),
                                                            ploidy_,
                                                            maternal_sample_.get(),

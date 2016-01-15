@@ -43,7 +43,8 @@ public:
     explicit ReadPipe(ReadManager& read_manager,
                       ReadFilterer read_filter,
                       boost::optional<Downsampler> downsampler,
-                      ReadTransform read_transform);
+                      ReadTransform read_transform,
+                      std::vector<SampleIdType> samples);
     ~ReadPipe() = default;
     
     ReadPipe(const ReadPipe&)            = delete;
@@ -51,13 +52,15 @@ public:
     ReadPipe(ReadPipe&&)                 = default;
     ReadPipe& operator=(ReadPipe&&)      = default;
     
-    ReadMap fetch_reads(std::vector<SampleIdType> samples, const GenomicRegion& region);
+    ReadMap fetch_reads(const GenomicRegion& region);
     
 private:
     ReadManager& read_manager_;
     ReadFilterer read_filter_;
     boost::optional<Downsampler> downsampler_;
     ReadTransform read_transform_;
+    
+    std::vector<SampleIdType> samples_;
     
     using ContigIdType = GenomicRegion::ContigNameType;
     

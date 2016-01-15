@@ -14,8 +14,7 @@
 #include "variant_caller.hpp"
 
 class GenomicRegion;
-class ReadManager;
-class ReadTransform;
+class ReadPipe;
 class Variant;
 class VcfRecord;
 
@@ -27,6 +26,7 @@ namespace Octopus
         CancerVariantCaller() = delete;
         
         explicit CancerVariantCaller(const ReferenceGenome& reference,
+                                     ReadPipe& read_pipe,
                                      CandidateVariantGenerator&& candidate_generator,
                                      RefCallType refcalls,
                                      double min_variant_posterior,
@@ -52,7 +52,8 @@ namespace Octopus
         
         std::string do_get_details() const override;
         
-        std::vector<VcfRecord> call_variants(const GenomicRegion& region, const std::vector<Variant>& candidates,
+        std::vector<VcfRecord> call_variants(const GenomicRegion& region,
+                                             const std::vector<Variant>& candidates,
                                              const ReadMap& reads) override;
     };
     

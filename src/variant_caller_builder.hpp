@@ -18,6 +18,7 @@
 
 #include "common.hpp"
 #include "variant_caller.hpp"
+#include "read_pipe.hpp"
 #include "candidate_generator_builder.hpp"
 #include "pedigree.hpp"
 
@@ -28,6 +29,7 @@ namespace Octopus {
     public:
         VariantCallerBuilder()  = delete;
         VariantCallerBuilder(const ReferenceGenome& reference,
+                             ReadPipe& read_pipe,
                              const CandidateGeneratorBuilder& candidate_generator_builder);
         ~VariantCallerBuilder() = default;
         
@@ -67,6 +69,7 @@ namespace Octopus {
     private:
         // common parameters
         std::reference_wrapper<const ReferenceGenome> reference_;
+        std::reference_wrapper<ReadPipe> read_pipe_;
         
         unsigned ploidy_ = 2;
         std::string model_ = "population";

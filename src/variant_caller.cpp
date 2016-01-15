@@ -12,6 +12,7 @@
 
 #include "genomic_region.hpp"
 #include "mappable.hpp"
+#include "mappable_algorithms.hpp"
 #include "read_utils.hpp"
 #include "variant_utils.hpp"
 #include "vcf_record.hpp"
@@ -26,21 +27,25 @@ namespace Octopus
     // public methods
     
     VariantCaller::VariantCaller(const ReferenceGenome& reference,
+                                 ReadPipe& read_pipe,
                                  CandidateVariantGenerator&& candidate_generator,
                                  RefCallType refcall_type)
     :
     reference_ {reference},
+    read_pipe_ {read_pipe},
     haplotype_prior_model_ {},
     candidate_generator_ {std::move(candidate_generator)},
     refcall_type_ {refcall_type}
     {}
     
     VariantCaller::VariantCaller(const ReferenceGenome& reference,
+                                 ReadPipe& read_pipe,
                                  CandidateVariantGenerator&& candidate_generator,
                                  HaplotypePriorModel haplotype_prior_model,
                                  RefCallType refcall_type)
     :
     reference_ {reference},
+    read_pipe_ {read_pipe},
     haplotype_prior_model_ {std::move(haplotype_prior_model)},
     candidate_generator_ {std::move(candidate_generator)},
     refcall_type_ {refcall_type}
@@ -56,18 +61,33 @@ namespace Octopus
         return 0;
     }
     
-    std::vector<VcfRecord> VariantCaller::call_variants(const GenomicRegion& region, ReadMap reads)
+    std::vector<VcfRecord> VariantCaller::call_variants(const GenomicRegion& region)
     {
-        add_reads(reads, candidate_generator_);
+        ReadMap reads {};
         
-        auto candidates = unique_left_align(candidate_generator_.get_candidates(region), reference_);
+        if (candidate_generator_.requires_reads()) {
+            reads = read_pipe_.get().fetch_reads(region);
+            add_reads(reads, candidate_generator_);
+        }
+        
+        const auto candidates = unique_left_align(candidate_generator_.get_candidates(region), reference_);
         
         candidate_generator_.clear();
         
         std::cout << "found " << candidates.size() << " candidates" << std::endl;
         
+        if (candidates.empty()) {
+            return {};
+        }
+        
         std::cout << "candidates are:" << std::endl;
         for (const auto& c : candidates) std::cout << c << std::endl;
+        
+        if (reads.empty()) {
+            // i.e. if the candidate generator didn't use reads
+            // TODO: we could be more selective and only fetch reads overlapping candidates
+            reads = read_pipe_.get().fetch_reads(region);
+        }
         
         return call_variants(region, candidates, reads);
     }

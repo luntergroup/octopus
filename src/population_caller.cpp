@@ -19,7 +19,7 @@
 
 #include "common.hpp"
 #include "genomic_region.hpp"
-#include "read_manager.hpp"
+#include "read_pipe.hpp"
 #include "allele.hpp"
 #include "variant.hpp"
 #include "haplotype.hpp"
@@ -44,11 +44,12 @@ namespace Octopus
 // public methods
 
 PopulationVariantCaller::PopulationVariantCaller(const ReferenceGenome& reference,
+                                                 ReadPipe& read_pipe,
                                                  CandidateVariantGenerator&& candidate_generator,
                                                  RefCallType refcall_type, double min_variant_posterior,
                                                  double min_refcall_posterior, unsigned ploidy)
 :
-    VariantCaller {reference, std::move(candidate_generator), refcall_type},
+VariantCaller {reference, read_pipe, std::move(candidate_generator), refcall_type},
 genotype_model_ {ploidy},
 ploidy_ {ploidy},
 min_variant_posterior_ {min_variant_posterior},

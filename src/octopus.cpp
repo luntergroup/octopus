@@ -9,12 +9,11 @@
 #include "octopus.hpp"
 
 #include <iostream>
-#include <thread>
-#include <future>
 #include <memory>
 #include <algorithm>
 #include <cstddef>
-#include <stdexcept>
+#include <thread>
+#include <future>
 
 #include <boost/optional.hpp>
 
@@ -127,13 +126,21 @@ namespace Octopus
                                });
     }
     
-    ReadPipe make_read_pipe(ReadManager& read_manager, const po::variables_map& options)
+    ReadPipe make_read_pipe(ReadManager& read_manager, std::vector<SampleIdType> samples,
+                            const po::variables_map& options)
     {
         auto read_filter    = Options::make_read_filter(options);
         auto downsampler    = Options::make_downsampler(options);
         auto read_transform = Options::make_read_transform(options);
         return ReadPipe {read_manager, std::move(read_filter),
-            std::move(downsampler), std::move(read_transform)};
+                std::move(downsampler), std::move(read_transform),
+                std::move(samples)};
+    }
+    
+    void write_calls(VcfWriter& out, std::vector<VcfRecord>&& calls)
+    {
+        std::cout << "Octopus: writing " << calls.size() << " calls to VCF" << std::endl;
+        for (auto&& call : calls) out.write(std::move(call));
     }
     
     void run_octopus(const po::variables_map& options)
@@ -187,16 +194,12 @@ namespace Octopus
             return;
         }
         
-        auto read_pipe = make_read_pipe(*read_manager, options);
+        auto read_pipe = make_read_pipe(*read_manager, samples, options);
         
-        cout << "writing results to " << output.path().string() << endl;
-        cout << "there are " << samples.size() << " samples" << endl;
+        cout << "Octopus: calling variants in " << samples.size() << " samples" << endl;
+        cout << "Octopus: writing calls to " << output.path() << endl;
         
-        const auto contigs = get_contigs(regions);
-        
-        auto vcf_header = make_header(samples, contigs, *reference);
-        
-        output.write(vcf_header);
+        output.write(make_header(samples, get_contigs(regions), *reference));
         
         const size_t max_reads = 1'000'000;
         
@@ -205,28 +208,19 @@ namespace Octopus
             
             size_t num_buffered_reads {};
             
-            auto caller = Options::make_variant_caller(options, *reference, candidate_generator_builder, contig);
+            auto caller = Options::make_variant_caller(*reference, read_pipe,
+                                                       candidate_generator_builder,
+                                                       contig, options);
             
             for (const auto& region : contig_regions.second) {
-                cout << "processing input region " << region << endl;
+                cout << "Octopus: processing input region " << region << endl;
                 
                 auto subregion = read_manager->find_covered_subregion(samples, region, max_reads);
                 
                 while (get_begin(subregion) != get_end(region)) {
-                    cout << "processing subregion " << subregion << endl;
+                    cout << "Octopus: processing subregion " << subregion << endl;
                     
-                    auto reads = read_pipe.fetch_reads(samples, subregion);
-                    
-                    //return; // uncomment for ReadPipe performance benchmarking
-                    
-                    auto calls = caller->call_variants(subregion, std::move(reads));
-                    
-                    cout << "writing " << calls.size() << " calls to VCF" << endl;
-                    
-                    for (auto&& call : calls) {
-                        //cout << call << endl;
-                        output.write(std::move(call));
-                    }
+                    write_calls(output, caller->call_variants(subregion));
                     
                     num_buffered_reads = caller->num_buffered_reads();
                     

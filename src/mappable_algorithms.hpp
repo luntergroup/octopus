@@ -709,7 +709,8 @@ std::vector<GenomicRegion> get_all_intervening(const Container& mappables)
  Requires [first, last) is sorted w.r.t GenomicRegion::operator<
  */
 template <typename ForwardIterator, typename Mappable>
-std::vector<GenomicRegion> get_all_intervening(ForwardIterator first, ForwardIterator last, const Mappable& mappable)
+std::vector<GenomicRegion> get_all_intervening(ForwardIterator first, ForwardIterator last,
+                                               const Mappable& mappable)
 {
     if (first == last) return std::vector<GenomicRegion> {};
     

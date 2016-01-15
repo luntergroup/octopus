@@ -10,6 +10,7 @@
 
 #include <utility>
 
+#include "read_pipe.hpp"
 #include "vcf_record.hpp"
 
 namespace Octopus
@@ -17,12 +18,13 @@ namespace Octopus
     // public methods
     
     PedigreeVariantCaller::PedigreeVariantCaller(const ReferenceGenome& reference,
+                                                 ReadPipe& read_pipe,
                                                  CandidateVariantGenerator&& candidate_generator,
                                                  unsigned ploidy,
                                                  SampleIdType mother, SampleIdType father,
                                                  double min_variant_posterior)
     :
-    VariantCaller {reference, std::move(candidate_generator), RefCallType::None},
+    VariantCaller {reference, read_pipe, std::move(candidate_generator), RefCallType::None},
     ploidy_ {ploidy},
     mother_ {std::move(mother)},
     father_ {std::move(father)},

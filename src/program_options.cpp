@@ -872,14 +872,15 @@ namespace Octopus
             return result;
         }
     
-    std::unique_ptr<VariantCaller> make_variant_caller(const po::variables_map& options,
-                                                       const ReferenceGenome& reference,
+    std::unique_ptr<VariantCaller> make_variant_caller(const ReferenceGenome& reference,
+                                                       ReadPipe& read_pipe,
                                                        const CandidateGeneratorBuilder& candidate_generator_builder,
-                                                       const GenomicRegion::ContigNameType& contig)
+                                                       const GenomicRegion::ContigNameType& contig,
+                                                       const po::variables_map& options)
     {
         using Maths::phred_to_probability;
         
-        VariantCallerBuilder vc_builder {reference, candidate_generator_builder};
+        VariantCallerBuilder vc_builder {reference, read_pipe, candidate_generator_builder};
         
         const auto& model = options.at("model").as<std::string>();
         

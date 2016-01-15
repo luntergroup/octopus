@@ -36,10 +36,12 @@ namespace Octopus
         VariantCaller() = delete;
         
         explicit VariantCaller(const ReferenceGenome& reference,
+                               ReadPipe& read_pipe,
                                CandidateVariantGenerator&& candidate_generator,
                                RefCallType refcall_type = RefCallType::None);
         
         explicit VariantCaller(const ReferenceGenome& reference,
+                               ReadPipe& read_pipe,
                                CandidateVariantGenerator&& candidate_generator,
                                HaplotypePriorModel haplotype_prior_model,
                                RefCallType refcall_type = RefCallType::None);
@@ -53,10 +55,12 @@ namespace Octopus
         
         std::string get_details() const;
         size_t num_buffered_reads() const noexcept;
-        std::vector<VcfRecord> call_variants(const GenomicRegion& region, ReadMap reads);
+        std::vector<VcfRecord> call_variants(const GenomicRegion& region);
         
     protected:
         std::reference_wrapper<const ReferenceGenome> reference_;
+        std::reference_wrapper<ReadPipe> read_pipe_;
+        
         HaplotypePriorModel haplotype_prior_model_;
         
         const RefCallType refcall_type_ = RefCallType::Positional;

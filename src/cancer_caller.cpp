@@ -15,7 +15,7 @@
 #include <iterator>
 
 #include "genomic_region.hpp"
-#include "read_manager.hpp"
+#include "read_pipe.hpp"
 #include "allele.hpp"
 #include "variant.hpp"
 #include "haplotype.hpp"
@@ -42,12 +42,13 @@ namespace Octopus
 // public methods
     
     CancerVariantCaller::CancerVariantCaller(const ReferenceGenome& reference,
+                                             ReadPipe& read_pipe,
                                              CandidateVariantGenerator&& candidate_generator,
                                              RefCallType refcall_type, double min_variant_posterior,
                                              double min_somatic_posterior, double min_refcall_posterior,
                                              const SampleIdType& normal_sample, bool call_somatics_only)
     :
-    VariantCaller {reference, std::move(candidate_generator), refcall_type},
+    VariantCaller {reference, read_pipe, std::move(candidate_generator), refcall_type},
     normal_sample_ {normal_sample},
     min_variant_posterior_ {min_variant_posterior},
     min_somatic_mutation_posterior_ {min_somatic_posterior},

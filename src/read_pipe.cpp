@@ -8,6 +8,8 @@
 
 #include "read_pipe.hpp"
 
+#include <utility>
+
 #include "read_utils.hpp"
 
 #include <iostream> // DEBUG
@@ -15,12 +17,14 @@
 namespace Octopus {
 
 ReadPipe::ReadPipe(ReadManager& read_manager, ReadFilterer read_filter,
-                   boost::optional<Downsampler> downsampler, ReadTransform read_transform)
+                   boost::optional<Downsampler> downsampler, ReadTransform read_transform,
+                   std::vector<SampleIdType> samples)
 :
 read_manager_ {read_manager},
 read_filter_ {std::move(read_filter)},
 downsampler_ {std::move(downsampler)},
-read_transform_ {std::move(read_transform)}
+read_transform_ {std::move(read_transform)},
+samples_ {std::move(samples)}
 {}
 
 std::vector<std::vector<SampleIdType>> batch_samples(std::vector<SampleIdType> samples)
@@ -35,13 +39,13 @@ std::vector<std::vector<SampleIdType>> batch_samples(std::vector<SampleIdType> s
     return result;
 }
 
-ReadMap ReadPipe::fetch_reads(std::vector<SampleIdType> samples, const GenomicRegion& region)
+ReadMap ReadPipe::fetch_reads(const GenomicRegion& region)
 {
     ReadMap result {};
-    result.reserve(samples.size());
+    result.reserve(samples_.size());
     
     //auto batches = batch_samples(std::move(samples));
-    auto batches = std::vector<std::vector<SampleIdType>> {samples};
+    auto batches = std::vector<std::vector<SampleIdType>> {samples_};
     
     for (const auto& batch : batches) {
         auto batch_reads = read_manager_.fetch_reads(batch, region);
