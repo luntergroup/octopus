@@ -23,7 +23,7 @@ VcfRecord::SizeType VcfRecord::get_position() const noexcept
     return position_;
 }
 
-const std::string& VcfRecord::get_id() const noexcept
+const VcfRecord::IdType& VcfRecord::get_id() const noexcept
 {
     return id_;
 }
@@ -382,9 +382,9 @@ VcfRecord::Builder& VcfRecord::Builder::set_position(SizeType position)
     return *this;
 }
 
-VcfRecord::Builder& VcfRecord::Builder::set_id(const std::string& id)
+VcfRecord::Builder& VcfRecord::Builder::set_id(IdType id)
 {
-    id_ = id;
+    id_ = std::move(id);
     return *this;
 }
 
@@ -394,9 +394,9 @@ VcfRecord::Builder& VcfRecord::Builder::set_ref_allele(const char ref_allele)
     return *this;
 }
 
-VcfRecord::Builder& VcfRecord::Builder::set_ref_allele(const SequenceType& ref_allele)
+VcfRecord::Builder& VcfRecord::Builder::set_ref_allele(SequenceType ref_allele)
 {
-    ref_allele_ = ref_allele;
+    ref_allele_ = std::move(ref_allele);
     return *this;
 }
 
@@ -406,15 +406,15 @@ VcfRecord::Builder& VcfRecord::Builder::set_alt_allele(const char alt_allele)
     return *this;
 }
 
-VcfRecord::Builder& VcfRecord::Builder::set_alt_allele(const SequenceType& alt_allele)
+VcfRecord::Builder& VcfRecord::Builder::set_alt_allele(SequenceType alt_allele)
 {
-    alt_alleles_[0] = alt_allele;
+    alt_alleles_[0] = std::move(alt_allele);
     return *this;
 }
 
-VcfRecord::Builder& VcfRecord::Builder::set_alt_alleles(const std::vector<SequenceType>& alt_alleles)
+VcfRecord::Builder& VcfRecord::Builder::set_alt_alleles(std::vector<SequenceType> alt_alleles)
 {
-    alt_alleles_ = alt_alleles;
+    alt_alleles_ = std::move(alt_alleles);
     return *this;
 }
 

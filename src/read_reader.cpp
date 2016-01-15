@@ -94,6 +94,13 @@ ReadReader::Reads ReadReader::fetch_reads(const SampleIdType& sample, const Geno
     return the_impl_->fetch_reads(sample, region);
 }
 
+ReadReader::SampleReadMap ReadReader::fetch_reads(const std::vector<SampleIdType>& samples,
+                                                  const GenomicRegion& region)
+{
+    std::lock_guard<std::mutex> lock {mutex_};
+    return the_impl_->fetch_reads(samples, region);
+}
+
 std::vector<std::string> ReadReader::get_reference_contig_names()
 {
     std::lock_guard<std::mutex> lock {mutex_};

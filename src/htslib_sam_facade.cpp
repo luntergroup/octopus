@@ -65,7 +65,8 @@ hts_header_ {sam_hdr_read(hts_file_.get()), HtsHeaderDeleter {}},
 hts_index_ {sam_index_load(hts_file_.get(), file_path_.string().c_str()), HtsIndexDeleter {}},
 hts_tid_map_ {},
 contig_name_map_ {},
-sample_map_ {}
+sample_map_ {},
+samples_ {}
 {
     if (hts_file_ == nullptr) {
         throw std::runtime_error {"could not open " + file_path_.string()};
@@ -80,6 +81,14 @@ sample_map_ {}
     }
     
     init_maps();
+    
+    for (const auto pair : sample_map_) {
+        if (std::find(std::cbegin(samples_), std::cend(samples_), pair.second) == std::cend(samples_)) {
+            samples_.emplace_back(pair.second);
+        }
+    }
+    
+    samples_.shrink_to_fit();
 }
 
 bool HtslibSamFacade::is_open() const noexcept
@@ -116,17 +125,7 @@ uint64_t HtslibSamFacade::get_num_mapped_reads(const std::string& contig_name) c
 
 std::vector<HtslibSamFacade::SampleIdType> HtslibSamFacade::get_samples()
 {
-    std::vector<HtslibSamFacade::SampleIdType> result {};
-    
-    for (const auto pair : sample_map_) {
-        if (std::find(std::cbegin(result), std::cend(result), pair.second) == std::cend(result)) {
-            result.emplace_back(pair.second);
-        }
-    }
-    
-    result.shrink_to_fit();
-    
-    return result;
+    return samples_;
 }
 
 std::vector<std::string> HtslibSamFacade::get_read_groups_in_sample(const SampleIdType& sample)
@@ -170,7 +169,17 @@ GenomicRegion HtslibSamFacade::find_covered_subregion(const GenomicRegion& regio
     
     while (++it && target_coverage > 0) --target_coverage;
     
-    return GenomicRegion {region.get_contig_name(), region.get_begin(), (*it).get_region().get_end()};
+    auto next_read = *it;
+    
+    while (!next_read && ++it) {
+        next_read = *it;
+    }
+    
+    if (!next_read) {
+        return region;
+    }
+    
+    return GenomicRegion {region.get_contig_name(), region.get_begin(), next_read->get_region().get_end()};
 }
 
 HtslibSamFacade::SampleReadMap HtslibSamFacade::fetch_reads(const GenomicRegion& region)
@@ -178,22 +187,22 @@ HtslibSamFacade::SampleReadMap HtslibSamFacade::fetch_reads(const GenomicRegion&
     HtslibIterator it {*this, region};
     
     SampleReadMap result {};
+    result.reserve(samples_.size());
+    
+    for (const auto& sample : samples_) {
+        SampleReadMap::mapped_type c {};
+        c.reserve(1000);
+        result.emplace(sample, std::move(c));
+    }
     
     while (++it) {
-        try {
-            result[sample_map_.at(it.get_read_group())].emplace(*it);
-        } catch (InvalidBamRecord& e) {
-            // TODO: Just ignore? Could log or something.
-            //std::clog << "Warning: " << e.what() << std::endl;
-        } catch (...) {
-            // Could be something really bad.
-            throw;
+        auto read = *it;
+        if (read) {
+             result[sample_map_.at(it.get_read_group())].emplace(std::move(*read));
         }
     }
     
-    for (auto& sample_reads_pair : result) {
-        sample_reads_pair.second.shrink_to_fit();
-    }
+    for (auto& p : result) p.second.shrink_to_fit();
     
     return result;
 }
@@ -203,23 +212,56 @@ HtslibSamFacade::Reads HtslibSamFacade::fetch_reads(const SampleIdType& sample, 
     HtslibIterator it {*this, region};
     
     Reads result {};
+    
+    if (std::find(std::cbegin(samples_), std::cend(samples_), sample) == std::cend(samples_)) {
+        return result;
+    }
+    
     result.reserve(1000);
     
     while (++it) {
-        try {
-            if (sample_map_.at(it.get_read_group()) == sample) {
-                result.emplace(*it);
+        if (sample_map_.at(it.get_read_group()) == sample) {
+            auto read = *it;
+            if (read) {
+                result.emplace(std::move(*read));
             }
-        } catch (InvalidBamRecord& e) {
-            // TODO: Just ignore? Could log or something.
-            //std::clog << "Warning: " << e.what() << std::endl;
-        } catch (...) {
-            // Could be something really bad.
-            throw;
         }
     }
     
     result.shrink_to_fit();
+    
+    return result;
+}
+
+HtslibSamFacade::SampleReadMap HtslibSamFacade::fetch_reads(const std::vector<SampleIdType>& samples,
+                                                            const GenomicRegion& region)
+{
+    HtslibIterator it {*this, region};
+    
+    SampleReadMap result {};
+    result.reserve(samples.size());
+    
+    for (const auto& sample : samples) {
+        if (std::find(std::cbegin(samples_), std::cend(samples_), sample) != std::cend(samples_)) {
+            SampleReadMap::mapped_type c {};
+            c.reserve(1000);
+            result.emplace(sample, std::move(c));
+        }
+    }
+    
+    if (result.empty()) return result; // no matching samples
+    
+    while (++it) {
+        const auto& sample = sample_map_.at(it.get_read_group());
+        if (result.count(sample) == 1) {
+            auto read = *it;
+            if (read) {
+                result[sample].emplace(std::move(*read));
+            }
+        }
+    }
+    
+    for (auto& p : result) p.second.shrink_to_fit();
     
     return result;
 }
@@ -410,8 +452,11 @@ CigarString get_cigar_string(const bam1_t* b)
     const auto cigar_length     = get_cigar_length(b);
     
     CigarString result(cigar_length);
+    
     std::transform(cigar_operations, cigar_operations + cigar_length, std::begin(result),
-                   [] (auto op) { return CigarOperation {bam_cigar_oplen(op), bam_cigar_opchr(op)}; });
+                   [] (auto op) {
+                       return CigarOperation {bam_cigar_oplen(op), bam_cigar_opchr(op)};
+                   });
     
     return result;
 }
@@ -449,21 +494,17 @@ AlignedRead::NextSegment::Flags get_next_segment_flags(const bam1_t* b)
     return result;
 }
 
-AlignedRead HtslibSamFacade::HtslibIterator::operator*() const
+boost::optional<AlignedRead> HtslibSamFacade::HtslibIterator::operator*() const
 {
     using std::begin; using std::end; using std::next; using std::move;
     
     auto qualities = get_qualities(hts_bam1_.get());
     
-    if (qualities.empty() || qualities[0] == 0xff) {
-        throw InvalidBamRecord {hts_facade_.file_path_, get_read_name(hts_bam1_.get()), "corrupt sequence data"};
-    }
+    if (qualities.empty() || qualities[0] == 0xff) return boost::none;
     
     auto cigar = get_cigar_string(hts_bam1_.get());
     
-    if (cigar.empty()) {
-        throw InvalidBamRecord {hts_facade_.file_path_, get_read_name(hts_bam1_.get()), "empty cigar string"};
-    }
+    if (!is_valid_cigar(cigar)) return boost::none;
     
     const auto c = hts_bam1_->core;
     

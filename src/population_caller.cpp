@@ -680,7 +680,8 @@ PopulationVariantCaller::call_variants(const GenomicRegion& region,
                 std::vector<std::pair<Genotype<Haplotype>, double>> v {};
                 v.reserve(sample_posteriors.second.size());
                 
-                std::copy(std::cbegin(sample_posteriors.second), std::cend(sample_posteriors.second), std::back_inserter(v));
+                std::copy(std::cbegin(sample_posteriors.second), std::cend(sample_posteriors.second),
+                          std::back_inserter(v));
                 
                 std::sort(std::begin(v), std::end(v), [] (const auto& lhs, const auto& rhs) {
                     return lhs.second > rhs.second;
@@ -703,7 +704,8 @@ PopulationVariantCaller::call_variants(const GenomicRegion& region,
                 std::vector<std::pair<Allele, double>> v {};
                 v.reserve(sample_posteriors.second.size());
                 
-                std::copy(std::cbegin(sample_posteriors.second), std::cend(sample_posteriors.second), std::back_inserter(v));
+                std::copy(std::cbegin(sample_posteriors.second), std::cend(sample_posteriors.second),
+                          std::back_inserter(v));
                 
                 std::sort(std::begin(v), std::end(v), [] (const auto& lhs, const auto& rhs) {
                     return lhs.second > rhs.second;
@@ -721,7 +723,8 @@ PopulationVariantCaller::call_variants(const GenomicRegion& region,
             std::cout << "printing all variant calls" << std::endl;
             for (const auto& segment_calls : calls) {
                 std::cout << "printing calls in segment " << get_encompassing_region(segment_calls.variants) << std::endl;
-                std::copy(std::cbegin(segment_calls.variants), std::cend(segment_calls.variants), std::ostream_iterator<Variant>(std::cout, "\n"));
+                std::copy(std::cbegin(segment_calls.variants), std::cend(segment_calls.variants),
+                          std::ostream_iterator<Variant>(std::cout, "\n"));
             }
         }
         

@@ -8,8 +8,11 @@
 
 #include "cigar_string.hpp"
 
-#include <ctype.h>
+#include <cctype>
 #include <algorithm>
+#include <array>
+
+#include <boost/lexical_cast.hpp>
 
 CigarOperation::CigarOperation(const SizeType size, const char flag) noexcept
 :
@@ -37,26 +40,70 @@ bool CigarOperation::advances_sequence() const noexcept
     return !(flag_ == DELETION || flag_ == HARD_CLIPPED);
 }
 
-CigarString parse_cigar_string(const std::string& cigar_string)
+boost::optional<CigarString> parse_cigar_string(const std::string& cigar_string)
 {
     CigarString result {};
-    
     result.reserve(cigar_string.size() / 2); // max possible CigarOperation
     
     std::string digits {};
+    digits.reserve(3); // 100+ matches are common
     
     for (const char c : cigar_string) {
         if (std::isdigit(c)) {
             digits += c;
         } else {
-            result.emplace_back(static_cast<CigarOperation::SizeType>(std::stoi(digits)), c);
-            digits.clear();
+            try {
+                result.emplace_back(boost::lexical_cast<CigarOperation::SizeType>(digits), c);
+                digits.clear();
+            } catch (const boost::bad_lexical_cast&) {
+                return boost::none;
+            }
         }
+    }
+    
+    if (!digits.empty()) {
+        return boost::none; // there are unparsed tokens
     }
     
     result.shrink_to_fit();
     
     return result;
+}
+
+bool is_valid_flag(const CigarOperation& op)
+{
+    static constexpr std::array<char, 9> valid_flags {
+        CigarOperation::ALIGNMENT_MATCH,
+        CigarOperation::INSERTION,
+        CigarOperation::DELETION,
+        CigarOperation::SOFT_CLIPPED,
+        CigarOperation::HARD_CLIPPED,
+        CigarOperation::SKIPPED,
+        CigarOperation::SEQUENCE_MATCH,
+        CigarOperation::SUBSTITUTION,
+        CigarOperation::PADDING
+    };
+    
+    static const auto first_valid = std::cbegin(valid_flags);
+    static const auto last_valid  = std::cend(valid_flags);
+    
+    return std::find(first_valid, last_valid, op.get_flag()) != last_valid;
+}
+
+bool is_valid_cigar(const CigarString& cigar) noexcept
+{
+    return !cigar.empty() && std::all_of(std::cbegin(cigar), std::cend(cigar),
+                                         [] (const auto& op) {
+                                             return op.get_size() > 0 && is_valid_flag(op);
+                                         });
+}
+
+bool is_minimal_cigar(const CigarString& cigar) noexcept
+{
+    return std::adjacent_find(std::cbegin(cigar), std::cend(cigar),
+                              [] (const auto& lhs, const auto& rhs) {
+                                  return lhs.get_flag() == rhs.get_flag();
+                              }) == std::cend(cigar);
 }
 
 bool is_front_soft_clipped(const CigarString& cigar_string) noexcept

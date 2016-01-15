@@ -28,6 +28,7 @@ public:
     class Builder;
     
     using SizeType     = std::uint_fast32_t;
+    using IdType       = std::string;
     using SequenceType = std::string;
     using QualityType  = float;
     using SampleIdType = std::string;
@@ -56,7 +57,7 @@ public:
     
     const std::string& get_chromosome_name() const noexcept;
     SizeType get_position() const noexcept;
-    const std::string& get_id() const noexcept;
+    const IdType& get_id() const noexcept;
     const SequenceType& get_ref_allele() const noexcept;
     unsigned num_alt_alleles() const noexcept;
     const std::vector<SequenceType>& get_alt_alleles() const noexcept;
@@ -92,7 +93,7 @@ private:
     // mandatory fields
     std::string chromosome_;
     SizeType position_;
-    std::string id_;
+    IdType id_;
     SequenceType ref_allele_;
     std::vector<SequenceType> alt_alleles_;
     QualityType quality_;
@@ -182,6 +183,7 @@ class VcfRecord::Builder
 {
 public:
     using SizeType     = VcfRecord::SizeType;
+    using IdType       = VcfRecord::IdType;
     using SequenceType = VcfRecord::SequenceType;
     using QualityType  = VcfRecord::QualityType;
     using SampleIdType = VcfRecord::SampleIdType;
@@ -194,12 +196,12 @@ public:
     
     Builder& set_chromosome(const std::string& chromosome);
     Builder& set_position(SizeType position);
-    Builder& set_id(const std::string& id);
+    Builder& set_id(IdType id);
     Builder& set_ref_allele(const char ref_allele);
-    Builder& set_ref_allele(const SequenceType& ref_allele);
+    Builder& set_ref_allele(SequenceType ref_allele);
     Builder& set_alt_allele(const char alt_allele); // if just one
-    Builder& set_alt_allele(const SequenceType& alt_allele); // if just one
-    Builder& set_alt_alleles(const std::vector<SequenceType>& alt_alleles);
+    Builder& set_alt_allele(SequenceType alt_allele); // if just one
+    Builder& set_alt_alleles(std::vector<SequenceType> alt_alleles);
     Builder& set_quality(QualityType quality);
     Builder& set_filters(const std::vector<KeyType>& filters);
     Builder& set_filters(const std::initializer_list<KeyType>& filters);
@@ -221,7 +223,7 @@ public:
 private:
     std::string chromosome_ = ".";
     SizeType position_ = 0;
-    std::string id_ = ".";
+    IdType id_ = ".";
     SequenceType ref_allele_ = ".";
     std::vector<SequenceType> alt_alleles_ = {"."};
     QualityType quality_ = 0;

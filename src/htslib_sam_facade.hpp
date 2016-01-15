@@ -59,6 +59,7 @@ public:
     GenomicRegion find_covered_subregion(const GenomicRegion& region, size_t target_coverage) override;
     SampleReadMap fetch_reads(const GenomicRegion& region) override;
     Reads fetch_reads(const SampleIdType& sample, const GenomicRegion& region) override;
+    SampleReadMap fetch_reads(const std::vector<SampleIdType>& samples, const GenomicRegion& region) override;
     unsigned get_num_reference_contigs() noexcept override;
     std::vector<std::string> get_reference_contig_names() override;
     SizeType get_reference_contig_size(const std::string& contig_name) override;
@@ -122,6 +123,8 @@ private:
     std::unordered_map<std::string, HtsTidType> hts_tid_map_;
     std::unordered_map<HtsTidType, std::string> contig_name_map_;
     std::unordered_map<ReadGroupIdType, SampleIdType> sample_map_;
+    
+    std::vector<SampleIdType> samples_;
     
     void init_maps();
     HtsTidType get_htslib_tid(const std::string& contig_name) const;

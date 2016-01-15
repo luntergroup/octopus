@@ -60,6 +60,7 @@ public:
     GenomicRegion find_covered_subregion(const GenomicRegion& region, size_t target_coverage);
     SampleReadMap fetch_reads(const GenomicRegion& region);
     Reads fetch_reads(const SampleIdType& sample, const GenomicRegion& region);
+    SampleReadMap fetch_reads(const std::vector<SampleIdType>& samples, const GenomicRegion& region);
     
 private:
     Path file_path_;

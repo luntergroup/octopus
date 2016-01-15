@@ -163,7 +163,7 @@ ReadManager::Reads ReadManager::fetch_reads(const SampleIdType& sample, const Ge
     
     while (!reader_paths.empty()) {
         for_each(it, end(reader_paths),
-                 [this, &sample, &region, &result] (const auto& reader_path) {
+                 [&] (const auto& reader_path) {
                      auto reads = open_readers_.at(reader_path).fetch_reads(sample, region);
                      result.insert(make_move_iterator(begin(reads)), make_move_iterator(end(reads)));
                  });
@@ -189,8 +189,8 @@ ReadManager::SampleReadMap ReadManager::fetch_reads(const std::vector<SampleIdTy
     
     while (!reader_paths.empty()) {
         for_each(it, end(reader_paths),
-                 [this, &region, &result] (const auto& reader_path) {
-                     auto reads = open_readers_.at(reader_path).fetch_reads(region);
+                 [&] (const auto& reader_path) {
+                     auto reads = open_readers_.at(reader_path).fetch_reads(samples, region);
                      for (auto& sample_reads : reads) {
                          result[sample_reads.first].insert(make_move_iterator(begin(sample_reads.second)),
                                                            make_move_iterator(end(sample_reads.second)));

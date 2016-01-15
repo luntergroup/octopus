@@ -17,6 +17,7 @@
 #include <numeric>
 
 #include <boost/functional/hash.hpp>
+#include <boost/optional.hpp>
 
 #include "comparable.hpp"
 
@@ -57,7 +58,11 @@ private:
 
 using CigarString = std::vector<CigarOperation>;
 
-CigarString parse_cigar_string(const std::string& cigar_string);
+boost::optional<CigarString> parse_cigar_string(const std::string& cigar_string);
+
+bool is_valid_cigar(const CigarString& cigar) noexcept;
+
+bool is_minimal_cigar(const CigarString& cigar) noexcept;
 
 bool is_front_soft_clipped(const CigarString& cigar_string) noexcept;
 

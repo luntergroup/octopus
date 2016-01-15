@@ -426,14 +426,14 @@ namespace Octopus
         }
         
         if (!fs::exists(*expanded_path)) {
-            std::cout << "Octopus: could not find file " << expanded_path << std::endl;
+            std::cout << "Octopus: could not find file " << *expanded_path << std::endl;
             return boost::none;
         }
         
         std::ifstream file {file_path.string()};
         
         if (!file.good()) {
-            std::cout << "Octopus: could not open file " << expanded_path << std::endl;
+            std::cout << "Octopus: could not open file " << *expanded_path << std::endl;
             return boost::none;
         }
         
