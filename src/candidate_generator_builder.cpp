@@ -20,25 +20,25 @@ namespace Octopus
     :
     generator_factory_ {
         {Generator::Alignment, [&] () {
-            return std::make_unique<AlignmentCandidateVariantGenerator>(reference_.get(),
+            return std::make_unique<AlignmentCandidateVariantGenerator>(*reference_,
                                                                         min_snp_base_quality_,
                                                                         min_supporting_reads_,
                                                                         max_variant_size_);
         }},
         {Generator::Assembler, [&] () {
-            return std::make_unique<AssemblerCandidateVariantGenerator>(reference_.get(),
-                                                                        kmer_size_.get(),
+            return std::make_unique<AssemblerCandidateVariantGenerator>(*reference_,
+                                                                        *kmer_size_,
                                                                         max_variant_size_);
         }},
         {Generator::External, [&] () {
             return std::make_unique<ExternalCandidateVariantGenerator>(variant_source_);
         }},
         {Generator::Online, [&] () {
-            return std::make_unique<OnlineCandidateVariantGenerator>(reference_.get(),
+            return std::make_unique<OnlineCandidateVariantGenerator>(*reference_,
                                                                      max_variant_size_);
         }},
         {Generator::Random, [&] () {
-            return std::make_unique<RandomCandidateVariantGenerator>(reference_.get());
+            return std::make_unique<RandomCandidateVariantGenerator>(*reference_);
         }}
     }
     {}

@@ -49,7 +49,7 @@ namespace Octopus
         
         std::vector<VcfRecord> call_variants(const GenomicRegion& region,
                                              const std::vector<Variant>& candidates,
-                                             const ReadMap& reads) override;
+                                             const ReadMap& reads) const override;
     };
     
 } // namespace Octopus

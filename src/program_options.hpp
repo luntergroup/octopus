@@ -36,9 +36,17 @@ namespace Octopus
 {
     namespace Options
     {
+    enum class ContigOutputOrder
+    {
+        LexicographicalAscending, LexicographicalDescending,
+        ContigSizeAscending, ContigSizeDescending,
+        AsInReferenceIndex, AsInReferenceIndexReversed,
+        Unspecified
+    };
+    
     boost::optional<po::variables_map> parse_options(int argc, const char** argv);
     
-    unsigned get_max_threads(const po::variables_map& options);
+    bool is_threading_allowed(const po::variables_map& options);
     
     size_t get_memory_quota(const po::variables_map& options);
     

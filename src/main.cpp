@@ -85,17 +85,17 @@ int main(int argc, const char **argv)
         if (options) {
             auto start = std::chrono::system_clock::now();
             
-            cout << "Started running Octopus at " << start << endl;
+            cout << "Octopus: started run at " << start << endl;
             
-            Octopus::run_octopus(options.get());
+            Octopus::run_octopus(*options);
             
             auto end = std::chrono::system_clock::now();
             
-            cout << "Finished running Octopus at " << end << endl;
+            cout << "Octopus: finished run at " << end << ". ";
             
-            cout << "Elapsed time: " << TimeInterval {start, end} << endl;
+            cout << "Took " << TimeInterval {start, end} << endl;
         } else {
-            cout << "Could not parse input options. Did not run Octopus." << endl;
+            cout << "Octopus: could not parse input options. Did not start run." << endl;
         }
     } catch (std::runtime_error& e) {
         cerr << "Error: " << e.what() << endl;

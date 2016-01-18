@@ -55,11 +55,11 @@ namespace Octopus
         
         std::string get_details() const;
         size_t num_buffered_reads() const noexcept;
-        std::vector<VcfRecord> call_variants(const GenomicRegion& region);
+        std::vector<VcfRecord> call_variants(const GenomicRegion& region) const;
         
     protected:
         std::reference_wrapper<const ReferenceGenome> reference_;
-        std::reference_wrapper<ReadPipe> read_pipe_;
+        mutable std::reference_wrapper<ReadPipe> read_pipe_;
         
         HaplotypePriorModel haplotype_prior_model_;
         
@@ -68,7 +68,7 @@ namespace Octopus
         bool refcalls_requested() const noexcept;
         
     private:
-        CandidateVariantGenerator candidate_generator_;
+        mutable CandidateVariantGenerator candidate_generator_;
         
         bool done_calling(const GenomicRegion& region) const noexcept;
         
@@ -78,7 +78,7 @@ namespace Octopus
         
         virtual std::vector<VcfRecord> call_variants(const GenomicRegion& region,
                                                      const std::vector<Variant>& candidates,
-                                                     const ReadMap& reads) = 0;
+                                                     const ReadMap& reads) const = 0;
     };
     
     std::vector<Allele>

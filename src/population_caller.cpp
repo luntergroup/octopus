@@ -550,7 +550,7 @@ VcfRecord output_reference_call(RefCall call, const ReferenceGenome& reference,
 std::vector<VcfRecord>
 PopulationVariantCaller::call_variants(const GenomicRegion& region,
                                        const std::vector<Variant>& candidates,
-                                       const ReadMap& reads)
+                                       const ReadMap& reads) const
 {
     std::vector<VcfRecord> result {};
     

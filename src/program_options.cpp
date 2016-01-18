@@ -65,6 +65,28 @@ namespace Octopus
                                        + "' requires option '" + required_option + "'.");
             }
     }
+        
+    static std::istream& operator>>(std::istream& in, ContigOutputOrder order)
+    {
+        std::string token;
+        in >> token;
+        if (token == "lex-asc")
+            order = ContigOutputOrder::LexicographicalAscending;
+        else if (token == "lex-desc")
+            order = ContigOutputOrder::LexicographicalDescending;
+        else if (token == "contig-asc")
+            order = ContigOutputOrder::ContigSizeAscending;
+        else if (token == "contig-desc")
+            order = ContigOutputOrder::ContigSizeDescending;
+        else if (token == "ref")
+            order = ContigOutputOrder::AsInReferenceIndex;
+        else if (token == "ref-reversed")
+            order = ContigOutputOrder::AsInReferenceIndexReversed;
+        else if (token == "unspecified")
+            order = ContigOutputOrder::Unspecified;
+        //else throw po::validation_error("Invalid unit");
+        return in;
+    }
     
     boost::optional<po::variables_map> parse_options(int argc, const char** argv)
     {
@@ -83,8 +105,8 @@ namespace Octopus
             
             po::options_description backend("Backend options");
             backend.add_options()
-            ("max-threads,t", po::value<unsigned>()->default_value(1),
-             "maximum number of threads")
+            ("threaded,t", po::bool_switch()->default_value(false),
+             "turns on multi-threading, the number of threads is determined by the application")
             ("memory", po::value<size_t>()->default_value(8000),
              "target memory usage in MB")
             ("reference-cache-size", po::value<size_t>()->default_value(0),
@@ -111,8 +133,12 @@ namespace Octopus
              "list of one-indexed regions (chrom:begin-end) to skip, one per line")
             ("samples,S", po::value<std::vector<std::string>>()->multitoken(),
              "space-seperated list of sample names to consider")
-            ("samples-file", po::value<std::string>(), "list of sample names to consider, one per line")
-            ("output,o", po::value<std::string>()->default_value("octopus_calls.vcf"), "write output to file")
+            ("samples-file", po::value<std::string>(),
+             "list of sample names to consider, one per line")
+            ("output,o", po::value<std::string>()->default_value("octopus_calls.vcf"),
+             "write output to file")
+//            ("contig-output-order", po::value<Conti>(&units)->multitoken(),
+//             "list of sample names to consider, one per line")
             //("log-file", po::value<std::string>(), "path of the output log file")
             ;
             
@@ -486,27 +512,14 @@ namespace Octopus
         return expand_user_paths(paths);
     }
         
-    unsigned get_max_threads(const po::variables_map& options)
+    bool is_threading_allowed(const po::variables_map& options)
     {
-        auto result = options.at("max-threads").as<unsigned>();
-        
-        if (result == 0) {
-            result = std::thread::hardware_concurrency(); // just a hint
-            if (result == 0) ++result;
-        }
-        
-        return result;
+        return options.at("threaded").as<bool>();
     }
     
     size_t get_memory_quota(const po::variables_map& options)
     {
         return options.at("memory").as<size_t>();
-    }
-    
-    bool is_run_threaded(const po::variables_map& options)
-    {
-        const auto num_threads = options.at("max-threads").as<unsigned>();
-        return num_threads == 0 || num_threads > 1;
     }
     
     boost::optional<ReferenceGenome> make_reference(const po::variables_map& options)
@@ -520,7 +533,7 @@ namespace Octopus
                 const auto ref_cache_size = options.at("reference-cache-size").as<size_t>();
                 return ::make_reference(std::move(*path),
                                         static_cast<ReferenceGenome::SizeType>(ref_cache_size),
-                                        is_run_threaded(options));
+                                        is_threading_allowed(options));
             } else {
                 std::cout << "Octopus: could not find reference path " << *path << std::endl;
             }
@@ -781,6 +794,8 @@ namespace Octopus
     {
         CandidateGeneratorBuilder result {};
         
+        result.set_reference(reference);
+        
         if (options.count("candidates-from-source") == 1) {
             result.add_generator(CandidateGeneratorBuilder::Generator::External);
             
@@ -803,7 +818,6 @@ namespace Octopus
         if (!options.at("no-candidates-from-alignments").as<bool>()) {
             result.add_generator(CandidateGeneratorBuilder::Generator::Alignment);
             
-            result.set_reference(reference);
             result.set_min_snp_base_quality(options.at("min-snp-base-quality").as<unsigned>());
             
             auto min_supporting_reads = options.at("min-supporting-reads").as<unsigned>();
@@ -824,53 +838,28 @@ namespace Octopus
         return result;
     }
     
-//        std::unordered_map<std::string, unsigned> parse_contig_ploidies(const po::variables_map& options)
-//        {
-//            std::unordered_map<std::string, unsigned> result {};
-//            
-//            if (options.count("contig-ploidies") == 1) {
-//                auto contig_ploidies = options.at("contig-ploidies").as<std::vector<std::string>>();
-//                
-//                for (const auto& contig_ploidy : contig_ploidies) {
-//                    
-//                    if (contig_ploidy.find(contig) == 0) {
-//                        if (contig_ploidy[contig.size()] != '=') {
-//                            throw std::runtime_error {"Could not pass contig-plodies option"};
-//                        }
-//                        ploidy = static_cast<unsigned>(std::stoul(contig_ploidy.substr(contig.size() + 1)));
-//                    }
-//                }
-//            }
-//            
-//            if (options.count("contig-ploidies-file") == 1) {
-//                
-//            }
-//            
-//            return result;
-//        }
+    unsigned extract_contig_ploidy(const GenomicRegion::ContigNameType& contig,
+                                   const po::variables_map& options)
+    {
+        unsigned result {options.at("ploidy").as<unsigned>()};
         
-        unsigned extract_contig_ploidy(const GenomicRegion::ContigNameType& contig,
-                                       const po::variables_map& options)
-        {
-            unsigned result {options.at("ploidy").as<unsigned>()};
+        if (options.count("contig-ploidies") == 1) {
+            auto contig_ploidies = options.at("contig-ploidies").as<std::vector<std::string>>();
             
-            if (options.count("contig-ploidies") == 1) {
-                auto contig_ploidies = options.at("contig-ploidies").as<std::vector<std::string>>();
-                
-                for (const auto& contig_ploidy : contig_ploidies) {
-                    if (contig_ploidy.find(contig) == 0) {
-                        if (contig_ploidy[contig.size()] != '=') {
-                            throw std::runtime_error {"Could not pass contig-plodies option"};
-                        }
-                        result = static_cast<unsigned>(std::stoul(contig_ploidy.substr(contig.size() + 1)));
+            for (const auto& contig_ploidy : contig_ploidies) {
+                if (contig_ploidy.find(contig) == 0) {
+                    if (contig_ploidy[contig.size()] != '=') {
+                        throw std::runtime_error {"Could not pass contig-plodies option"};
                     }
+                    result = static_cast<unsigned>(std::stoul(contig_ploidy.substr(contig.size() + 1)));
                 }
-            } else if (options.count("contig-ploidies-file") == 1) {
-                // TODO: fetch from file
             }
-            
-            return result;
+        } else if (options.count("contig-ploidies-file") == 1) {
+            // TODO: fetch from file
         }
+        
+        return result;
+    }
     
     std::unique_ptr<VariantCaller> make_variant_caller(const ReferenceGenome& reference,
                                                        ReadPipe& read_pipe,

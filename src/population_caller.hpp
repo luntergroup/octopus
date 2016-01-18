@@ -45,7 +45,7 @@ namespace Octopus
         PopulationVariantCaller& operator=(PopulationVariantCaller&&)      = delete;
         
     private:
-        GenotypeModel::Population genotype_model_;
+        mutable GenotypeModel::Population genotype_model_;
         
         const unsigned ploidy_;
         const double min_variant_posterior_ = 0.95;
@@ -55,7 +55,7 @@ namespace Octopus
         
         std::vector<VcfRecord> call_variants(const GenomicRegion& region,
                                              const std::vector<Variant>& candidates,
-                                             const ReadMap& reads) override;
+                                             const ReadMap& reads) const override;
     };
     
 } // namespace Octopus

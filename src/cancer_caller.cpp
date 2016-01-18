@@ -627,7 +627,7 @@ namespace Octopus
     std::vector<VcfRecord>
     CancerVariantCaller::call_variants(const GenomicRegion& region,
                                        const std::vector<Variant>& candidates,
-                                       const ReadMap& reads)
+                                       const ReadMap& reads) const
     {
         std::vector<VcfRecord> result {};
         

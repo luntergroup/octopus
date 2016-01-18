@@ -61,7 +61,7 @@ namespace Octopus
         return 0;
     }
     
-    std::vector<VcfRecord> VariantCaller::call_variants(const GenomicRegion& region)
+    std::vector<VcfRecord> VariantCaller::call_variants(const GenomicRegion& region) const
     {
         ReadMap reads {};
         

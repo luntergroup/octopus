@@ -39,7 +39,7 @@ public:
     using Reads         = IReadReaderImpl::Reads;
     using SampleReadMap = IReadReaderImpl::SampleReadMap;
     
-    ReadManager() = delete;
+    ReadManager() = default;
     explicit ReadManager(std::vector<Path> read_file_paths, unsigned max_open_files);
     explicit ReadManager(std::initializer_list<Path> read_file_paths);
     ~ReadManager() = default;
