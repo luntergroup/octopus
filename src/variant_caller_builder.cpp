@@ -28,7 +28,7 @@ namespace Octopus
     read_pipe_ {read_pipe},
     candidate_generator_builder_ {candidate_generator_builder},
     model_map_ {
-        {"population", [&] () {
+        {"population", [this] () {
             return std::make_unique<PopulationVariantCaller>(reference_,
                                                              read_pipe_,
                                                              candidate_generator_builder_.get().build(),
@@ -37,7 +37,7 @@ namespace Octopus
                                                              min_refcall_posterior_,
                                                              ploidy_);
         }},
-        {"cancer", [&] () {
+        {"cancer", [this] () {
             return std::make_unique<CancerVariantCaller>(reference_,
                                                          read_pipe_,
                                                          candidate_generator_builder_.get().build(),
@@ -48,7 +48,7 @@ namespace Octopus
                                                          normal_sample_.get(),
                                                          call_somatics_only_);
         }},
-        {"trio", [&] () {
+        {"trio", [this] () {
             return std::make_unique<PedigreeVariantCaller>(reference_,
                                                            read_pipe_,
                                                            candidate_generator_builder_.get().build(),
@@ -60,12 +60,12 @@ namespace Octopus
     }
     {}
     
-    void VariantCallerBuilder::set_reference(const ReferenceGenome& reference)
+    void VariantCallerBuilder::set_reference(const ReferenceGenome& reference) noexcept
     {
         reference_ = reference;
     }
     
-    void VariantCallerBuilder::set_ploidy(const unsigned ploidy)
+    void VariantCallerBuilder::set_ploidy(const unsigned ploidy) noexcept
     {
         ploidy_ = ploidy;
     }
@@ -75,17 +75,17 @@ namespace Octopus
         model_ = std::move(model);
     }
     
-    void VariantCallerBuilder::set_refcall_type(const VariantCaller::RefCallType refcall_type)
+    void VariantCallerBuilder::set_refcall_type(const VariantCaller::RefCallType refcall_type) noexcept
     {
         refcall_type_ = refcall_type;
     }
     
-    void VariantCallerBuilder::set_min_variant_posterior(const double min_posterior)
+    void VariantCallerBuilder::set_min_variant_posterior(const double min_posterior) noexcept
     {
         min_variant_posterior_ = min_posterior;
     }
     
-    void VariantCallerBuilder::set_min_refcall_posterior(const double min_posterior)
+    void VariantCallerBuilder::set_min_refcall_posterior(const double min_posterior) noexcept
     {
         min_refcall_posterior_ = min_posterior;
     }
@@ -96,22 +96,22 @@ namespace Octopus
         normal_sample_ = std::move(normal_sample);
     }
     
-    void VariantCallerBuilder::set_min_somatic_posterior(const double min_posterior)
+    void VariantCallerBuilder::set_min_somatic_posterior(const double min_posterior) noexcept
     {
         min_somatic_posterior_ = min_posterior;
     }
     
-    void VariantCallerBuilder::set_somatic_only_calls()
+    void VariantCallerBuilder::set_somatic_only_calls() noexcept
     {
         call_somatics_only_ = true;
     }
     
-    void VariantCallerBuilder::set_somatic_and_variant_calls()
+    void VariantCallerBuilder::set_somatic_and_variant_calls() noexcept
     {
         call_somatics_only_ = false;
     }
     
-    void VariantCallerBuilder::set_somatic_and_variant_and_refcalls_calls()
+    void VariantCallerBuilder::set_somatic_and_variant_and_refcalls_calls() noexcept
     {
         call_somatics_only_ = false;
     }

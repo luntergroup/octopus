@@ -95,7 +95,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--skip-regions-file", human_skip_regions.c_str(),
         
         // read filters
-        "--min-supporting-reads", "1",
+        "--min-supporting-reads", "2",
         "--min-mapping-quality", "20",
         "--min-snp-base-quality", "15",
         //"--allow-marked-duplicates",

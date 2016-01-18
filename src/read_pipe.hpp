@@ -12,6 +12,7 @@
 #include <vector>
 #include <unordered_map>
 #include <cstddef>
+#include <functional>
 
 #include <boost/optional.hpp>
 
@@ -52,10 +53,12 @@ public:
     ReadPipe(ReadPipe&&)                 = default;
     ReadPipe& operator=(ReadPipe&&)      = default;
     
+    void set_read_manager(ReadManager& read_manager) noexcept;
+    
     ReadMap fetch_reads(const GenomicRegion& region);
     
 private:
-    ReadManager& read_manager_;
+    std::reference_wrapper<ReadManager> read_manager_;
     ReadFilterer read_filter_;
     boost::optional<Downsampler> downsampler_;
     ReadTransform read_transform_;

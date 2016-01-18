@@ -39,6 +39,11 @@ std::vector<std::vector<SampleIdType>> batch_samples(std::vector<SampleIdType> s
     return result;
 }
 
+void ReadPipe::set_read_manager(ReadManager& read_manager) noexcept
+{
+    read_manager_ = read_manager;
+}
+
 ReadMap ReadPipe::fetch_reads(const GenomicRegion& region)
 {
     ReadMap result {};
@@ -48,7 +53,7 @@ ReadMap ReadPipe::fetch_reads(const GenomicRegion& region)
     auto batches = std::vector<std::vector<SampleIdType>> {samples_};
     
     for (const auto& batch : batches) {
-        auto batch_reads = read_manager_.fetch_reads(batch, region);
+        auto batch_reads = read_manager_.get().fetch_reads(batch, region);
         
         //std::cout << "fetched " << count_reads(batch_reads) << " batch reads" << std::endl;
         

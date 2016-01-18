@@ -41,6 +41,8 @@ public:
     VcfReader(VcfReader&&);
     VcfReader& operator=(VcfReader&&)      = default;
     
+    friend void swap(VcfReader& lhs, VcfReader& rhs) noexcept;
+    
     bool is_open() const noexcept;
     void open(Path file_path) noexcept;
     void close() noexcept;

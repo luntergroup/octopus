@@ -44,6 +44,8 @@ public:
     ReadReader(ReadReader&&);
     ReadReader& operator=(ReadReader&&)      = delete;
     
+    friend void swap(ReadReader& lhs, ReadReader& rhs) noexcept;
+    
     bool is_open() const noexcept;
     void open();
     void close();

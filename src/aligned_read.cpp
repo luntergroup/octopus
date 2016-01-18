@@ -35,7 +35,6 @@ AlignedRead& AlignedRead::operator=(const AlignedRead& other)
 void swap(AlignedRead& lhs, AlignedRead& rhs) noexcept
 {
     using std::swap;
-    
     swap(lhs.region_, rhs.region_);
     swap(lhs.read_group_, rhs.read_group_);
     swap(lhs.sequence_, rhs.sequence_);

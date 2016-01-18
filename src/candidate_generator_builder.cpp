@@ -18,26 +18,27 @@ namespace Octopus
 {
     CandidateGeneratorBuilder::CandidateGeneratorBuilder()
     :
+    reference_ {nullptr},
     generator_factory_ {
-        {Generator::Alignment, [&] () {
+        {Generator::Alignment, [this] () {
             return std::make_unique<AlignmentCandidateVariantGenerator>(*reference_,
                                                                         min_snp_base_quality_,
                                                                         min_supporting_reads_,
                                                                         max_variant_size_);
         }},
-        {Generator::Assembler, [&] () {
+        {Generator::Assembler, [this] () {
             return std::make_unique<AssemblerCandidateVariantGenerator>(*reference_,
                                                                         *kmer_size_,
                                                                         max_variant_size_);
         }},
-        {Generator::External, [&] () {
+        {Generator::External, [this] () {
             return std::make_unique<ExternalCandidateVariantGenerator>(variant_source_);
         }},
-        {Generator::Online, [&] () {
+        {Generator::Online, [this] () {
             return std::make_unique<OnlineCandidateVariantGenerator>(*reference_,
                                                                      max_variant_size_);
         }},
-        {Generator::Random, [&] () {
+        {Generator::Random, [this] () {
             return std::make_unique<RandomCandidateVariantGenerator>(*reference_);
         }}
     }
@@ -57,7 +58,7 @@ namespace Octopus
     
     void CandidateGeneratorBuilder::set_reference(const ReferenceGenome& reference)
     {
-        reference_ = reference;
+        reference_ = &reference;
     }
     
     void CandidateGeneratorBuilder::set_min_snp_base_quality(const QualityType quality)

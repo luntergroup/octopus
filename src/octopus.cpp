@@ -70,7 +70,8 @@ namespace Octopus
             std::vector<SampleIdType> bad_samples {};
             
             for (const auto& user_sample : user_samples) {
-                if (std::find(std::cbegin(file_samples), std::cend(file_samples), user_sample) == std::cend(file_samples)) {
+                if (std::find(std::cbegin(file_samples), std::cend(file_samples),
+                              user_sample) == std::cend(file_samples)) {
                     bad_samples.push_back(user_sample);
                 }
             }
@@ -138,7 +139,8 @@ namespace Octopus
         CandidateGeneratorBuilder candidate_generator_builder;
         VcfWriter output;
         
-        // We need this constructor as some of the components are dependent on others
+        GenomeCallingComponents() = delete;
+        
         explicit GenomeCallingComponents(ReferenceGenome&& reference,
                                          ReadManager&& read_manager,
                                          VcfWriter&& output,
@@ -152,6 +154,44 @@ namespace Octopus
         candidate_generator_builder {Options::make_candidate_generator_builder(options, this->reference)},
         output {std::move(output)}
         {}
+        
+        ~GenomeCallingComponents() = default;
+        
+        GenomeCallingComponents(const GenomeCallingComponents&)            = delete;
+        GenomeCallingComponents& operator=(const GenomeCallingComponents&) = delete;
+        
+        GenomeCallingComponents(GenomeCallingComponents&& other) noexcept
+        :
+        reference {std::move(other.reference)},
+        read_manager {std::move(other.read_manager)},
+        samples {std::move(other.samples)},
+        regions {std::move(other.regions)},
+        read_pipe {std::move(other.read_pipe)},
+        candidate_generator_builder {std::move(other.candidate_generator_builder)},
+        output {std::move(other.output)}
+        {
+            // need to update or will be pointing to dangling reference
+            read_pipe.set_read_manager(read_manager);
+            candidate_generator_builder.set_reference(reference);
+        }
+        
+        GenomeCallingComponents& operator=(GenomeCallingComponents&& other) noexcept
+        {
+            using std::swap;
+            swap(reference, other.reference);
+            swap(read_manager, other.read_manager);
+            swap(samples, other.samples);
+            swap(regions, other.regions);
+            swap(read_pipe, other.read_pipe);
+            swap(candidate_generator_builder, other.candidate_generator_builder);
+            swap(output, other.output);
+            
+            // need to update or will be pointing to dangling reference
+            read_pipe.set_read_manager(read_manager);
+            candidate_generator_builder.set_reference(reference);
+            
+            return *this;
+        }
     };
     
     bool are_components_valid(const GenomeCallingComponents& components)
@@ -221,6 +261,7 @@ namespace Octopus
         std::reference_wrapper<VcfWriter> output;
         
         ContigCallingComponents() = delete;
+        
         ContigCallingComponents(const GenomicRegion::ContigNameType& contig,
                                 GenomeCallingComponents& genome_components,
                                 const po::variables_map& options)
@@ -229,12 +270,20 @@ namespace Octopus
         read_manager {genome_components.read_manager},
         regions {genome_components.regions.at(contig)},
         samples {genome_components.samples},
-        caller {Options::make_variant_caller(this->reference,
+        caller {Options::make_variant_caller(genome_components.reference,
                                              genome_components.read_pipe,
                                              genome_components.candidate_generator_builder,
-                                             contig, options)},
+                                             contig,
+                                             options)},
         output {genome_components.output}
         {}
+        
+        ~ContigCallingComponents() = default;
+        
+        ContigCallingComponents(const ContigCallingComponents&)            = delete;
+        ContigCallingComponents& operator=(const ContigCallingComponents&) = delete;
+        ContigCallingComponents(ContigCallingComponents&&)                 = default;
+        ContigCallingComponents& operator=(ContigCallingComponents&&)      = default;
     };
     
     void write_final_output_header(GenomeCallingComponents& components)

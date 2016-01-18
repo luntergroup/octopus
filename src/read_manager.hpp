@@ -49,6 +49,8 @@ public:
     ReadManager(ReadManager&&)                 = default;
     ReadManager& operator=(ReadManager&&)      = default;
     
+    friend void swap(ReadManager& lhs, ReadManager& rhs) noexcept;
+    
     unsigned num_samples() const noexcept;
     std::vector<SampleIdType> get_samples() const;
     

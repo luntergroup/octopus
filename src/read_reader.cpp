@@ -23,6 +23,16 @@ ReadReader::ReadReader(ReadReader&& other)
     the_impl_  = std::move(other.the_impl_);
 }
 
+void swap(ReadReader& lhs, ReadReader& rhs) noexcept
+{
+    using std::swap;
+    if (&lhs == &rhs) return;
+    std::lock(lhs.mutex_, rhs.mutex_);
+    std::lock_guard<std::mutex> lock_lhs {lhs.mutex_, std::adopt_lock}, lock_rhs {rhs.mutex_, std::adopt_lock};
+    swap(lhs.file_path_, rhs.file_path_);
+    swap(lhs.the_impl_, rhs.the_impl_);
+}
+
 bool ReadReader::is_open() const noexcept
 {
     std::lock_guard<std::mutex> lock {mutex_};

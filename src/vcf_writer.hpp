@@ -35,6 +35,8 @@ public:
     VcfWriter(VcfWriter&&);
     VcfWriter& operator=(VcfWriter&&)      = default;
     
+    friend void swap(VcfWriter& lhs, VcfWriter& rhs) noexcept;
+    
     bool is_open() const noexcept;
     void open(Path file_path) noexcept;
     void close() noexcept;

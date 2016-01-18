@@ -12,6 +12,7 @@
 #include <iostream>
 #include <stdexcept>
 #include <utility>
+#include <algorithm>
 
 #include "vcf_header.hpp"
 #include "vcf_record.hpp"
@@ -45,6 +46,16 @@ VcfReader::VcfReader(VcfReader&& other)
     std::lock_guard<std::mutex> lock {other.mutex_};
     file_path_ = std::move(other.file_path_);
     reader_  = std::move(other.reader_);
+}
+
+void swap(VcfReader& lhs, VcfReader& rhs) noexcept
+{
+    using std::swap;
+    if (&lhs == &rhs) return;
+    std::lock(lhs.mutex_, rhs.mutex_);
+    std::lock_guard<std::mutex> lock_lhs {lhs.mutex_, std::adopt_lock}, lock_rhs {rhs.mutex_, std::adopt_lock};
+    swap(lhs.file_path_, rhs.file_path_);
+    swap(lhs.reader_, rhs.reader_);
 }
 
 bool VcfReader::is_open() const noexcept

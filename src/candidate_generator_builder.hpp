@@ -35,10 +35,10 @@ namespace Octopus
         CandidateGeneratorBuilder();
         ~CandidateGeneratorBuilder() = default;
         
-        CandidateGeneratorBuilder(const CandidateGeneratorBuilder&)            = default;
-        CandidateGeneratorBuilder& operator=(const CandidateGeneratorBuilder&) = default;
-        CandidateGeneratorBuilder(CandidateGeneratorBuilder&&)                 = default;
-        CandidateGeneratorBuilder& operator=(CandidateGeneratorBuilder&&)      = default;
+        CandidateGeneratorBuilder(const CandidateGeneratorBuilder&);
+        CandidateGeneratorBuilder& operator=(const CandidateGeneratorBuilder&);
+        CandidateGeneratorBuilder(CandidateGeneratorBuilder&&);
+        CandidateGeneratorBuilder& operator=(CandidateGeneratorBuilder&&);
         
         void add_generator(Generator type);
         
@@ -58,7 +58,8 @@ namespace Octopus
         std::deque<Generator> generators_;
         
         // common
-        boost::optional<std::reference_wrapper<const ReferenceGenome>> reference_;
+        const ReferenceGenome* reference_;
+        //boost::optional<std::reference_wrapper<const ReferenceGenome>> reference_;
         
         // alignment
         
@@ -88,7 +89,7 @@ namespace Octopus
         using GeneratorFactoryMap = std::unordered_map<Generator,
                 std::function<std::unique_ptr<ICandidateVariantGenerator>()>, GeneratorTypeHash>;
         
-        const GeneratorFactoryMap generator_factory_;
+        GeneratorFactoryMap generator_factory_;
     };
 } // namespace Octopus
 
