@@ -8,8 +8,6 @@
 
 #include "variant_caller_builder.hpp"
 
-#include <stdexcept>
-
 #include "population_caller.hpp"
 #include "cancer_caller.hpp"
 #include "pedigree_caller.hpp"
@@ -139,10 +137,7 @@ namespace Octopus
     
     std::unique_ptr<VariantCaller> VariantCallerBuilder::build() const
     {
-        if (model_map_.count(model_) == 0) {
-            throw std::runtime_error {"VariantCallerBuilder: trying to build unknown model " + model_};
-        }
-        
+        if (model_map_.count(model_) == 0) return nullptr;
         return model_map_.at(model_)();
     }
 } // namespace Octopus
