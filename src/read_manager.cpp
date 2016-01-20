@@ -42,6 +42,29 @@ possible_regions_in_readers_ {}
     setup();
 }
 
+ReadManager::ReadManager(ReadManager&& other)
+: num_files_ {std::move(other.num_files_)}
+{
+    std::lock_guard<std::mutex> lock {other.mutex_};
+    closed_readers_                 = std::move(other.closed_readers_);
+    open_readers_                   = std::move(other.open_readers_);
+    reader_paths_containing_sample_ = std::move(other.reader_paths_containing_sample_);
+    possible_regions_in_readers_    = std::move(other.possible_regions_in_readers_);
+}
+
+void swap(ReadManager& lhs, ReadManager& rhs) noexcept
+{
+    using std::swap;
+    if (&lhs == &rhs) return;
+    std::lock(lhs.mutex_, rhs.mutex_);
+    std::lock_guard<std::mutex> lock_lhs {lhs.mutex_, std::adopt_lock}, lock_rhs {rhs.mutex_, std::adopt_lock};
+    //swap(lhs.num_files_, rhs.num_files_);
+    swap(lhs.closed_readers_, rhs.closed_readers_);
+    swap(lhs.open_readers_, rhs.open_readers_);
+    swap(lhs.reader_paths_containing_sample_, rhs.reader_paths_containing_sample_);
+    swap(lhs.possible_regions_in_readers_, rhs.possible_regions_in_readers_);
+}
+
 unsigned ReadManager::num_samples() const noexcept
 {
     return static_cast<unsigned>(reader_paths_containing_sample_.size());
@@ -65,6 +88,8 @@ size_t ReadManager::count_reads(const SampleIdType& sample, const GenomicRegion&
 {
     using std::begin; using std::end; using std::for_each;
     
+    std::lock_guard<std::mutex> lock {mutex_};
+    
     auto reader_paths = get_possible_reader_paths({sample}, region);
     
     auto it = partition_open(reader_paths);
@@ -87,6 +112,8 @@ size_t ReadManager::count_reads(const SampleIdType& sample, const GenomicRegion&
 size_t ReadManager::count_reads(const std::vector<SampleIdType>& samples, const GenomicRegion& region)
 {
     using std::begin; using std::end; using std::for_each;
+    
+    std::lock_guard<std::mutex> lock {mutex_};
     
     auto reader_paths = get_possible_reader_paths(samples, region);
     
@@ -127,6 +154,8 @@ GenomicRegion ReadManager::find_covered_subregion(const std::vector<SampleIdType
 {
     using std::begin; using std::end; using std::for_each;
     
+    std::lock_guard<std::mutex> lock {mutex_};
+    
     auto reader_paths = get_possible_reader_paths(samples, region);
     
     auto it = partition_open(reader_paths);
@@ -155,6 +184,8 @@ ReadManager::Reads ReadManager::fetch_reads(const SampleIdType& sample, const Ge
 {
     using std::begin; using std::end; using std::make_move_iterator; using std::for_each;
     
+    std::lock_guard<std::mutex> lock {mutex_};
+    
     auto reader_paths = get_possible_reader_paths({sample}, region);
     
     auto it = partition_open(reader_paths);
@@ -179,6 +210,8 @@ ReadManager::SampleReadMap ReadManager::fetch_reads(const std::vector<SampleIdTy
                                                     const GenomicRegion& region)
 {
     using std::begin; using std::end; using std::make_move_iterator; using std::for_each;
+    
+    std::lock_guard<std::mutex> lock {mutex_};
     
     auto reader_paths = get_possible_reader_paths(samples, region);
     

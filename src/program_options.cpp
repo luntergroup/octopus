@@ -919,5 +919,13 @@ namespace Octopus
         return VcfWriter {};
     }
     
+    boost::optional<fs::path> get_temp_file_directory(const po::variables_map& options)
+    {
+        auto curr_path = fs::current_path();
+        
+        // TODO: create temp directory
+        
+        return curr_path;
+    }
     } // namespace Options
 } // namespace Octopus

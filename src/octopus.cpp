@@ -338,6 +338,16 @@ namespace Octopus
         std::cout << "Octopus: processed " << calculate_total_search_size(components.regions) << "bp" << std::endl;
     }
     
+    VcfWriter create_temp_output_file(const GenomicRegion::ContigNameType& contig,
+                                      const po::variables_map& options)
+    {
+        const auto temp_directory = Options::get_temp_file_directory(options);
+        
+        VcfWriter result {*temp_directory};
+        
+        return result;
+    }
+    
     void run_octopus(const po::variables_map& options)
     {
         auto components = collate_genome_calling_components(options);

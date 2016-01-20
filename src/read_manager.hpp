@@ -46,7 +46,7 @@ public:
     
     ReadManager(const ReadManager&)            = delete;
     ReadManager& operator=(const ReadManager&) = delete;
-    ReadManager(ReadManager&&)                 = default;
+    ReadManager(ReadManager&&);
     ReadManager& operator=(ReadManager&&)      = default;
     
     friend void swap(ReadManager& lhs, ReadManager& rhs) noexcept;
@@ -86,6 +86,8 @@ private:
     ClosedReaders closed_readers_;
     SampleIdToReaderPathMap reader_paths_containing_sample_;
     ReaderRegionsMap possible_regions_in_readers_;
+    
+    mutable std::mutex mutex_;
     
     void setup();
     std::vector<Path> get_bad_paths() const;

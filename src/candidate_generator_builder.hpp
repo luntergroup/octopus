@@ -58,8 +58,7 @@ namespace Octopus
         std::deque<Generator> generators_;
         
         // common
-        const ReferenceGenome* reference_;
-        //boost::optional<std::reference_wrapper<const ReferenceGenome>> reference_;
+        boost::optional<std::reference_wrapper<const ReferenceGenome>> reference_;
         
         // alignment
         
@@ -90,6 +89,8 @@ namespace Octopus
                 std::function<std::unique_ptr<ICandidateVariantGenerator>()>, GeneratorTypeHash>;
         
         GeneratorFactoryMap generator_factory_;
+        
+        GeneratorFactoryMap generate_factory() const;
     };
 } // namespace Octopus
 
