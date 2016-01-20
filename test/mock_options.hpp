@@ -20,6 +20,11 @@ namespace po = boost::program_options;
 inline boost::optional<po::variables_map> get_basic_mock_options()
 {
     const char *argv[] = {"octopus",
+        //"--help",
+        "--version",
+        
+        "--working-directory", "~/",
+        
         "--reference", human_reference_fasta.c_str(),
         //"--reference", ecoli_reference_fasta.c_str(),
         

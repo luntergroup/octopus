@@ -76,7 +76,7 @@ namespace Octopus
     
     VcfWriter make_output_vcf_writer(const po::variables_map& options);
     
-    boost::optional<fs::path> get_temp_file_directory(const po::variables_map& options);
+    boost::optional<fs::path> create_temp_file_directory(const po::variables_map& options);
         
     } // namespace Options
 } // namespace Octopus

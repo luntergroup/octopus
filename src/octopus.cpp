@@ -341,7 +341,7 @@ namespace Octopus
     VcfWriter create_temp_output_file(const GenomicRegion::ContigNameType& contig,
                                       const po::variables_map& options)
     {
-        const auto temp_directory = Options::get_temp_file_directory(options);
+        const auto temp_directory = Options::create_temp_file_directory(options);
         
         VcfWriter result {*temp_directory};
         
@@ -350,19 +350,22 @@ namespace Octopus
     
     void run_octopus(const po::variables_map& options)
     {
-        auto components = collate_genome_calling_components(options);
+        const auto temp_directory = Options::create_temp_file_directory(options);
+//        auto components = collate_genome_calling_components(options);
+//        
+//        if (!components) return;
+//        
+//        print_startup_info(*components);
+//        
+//        write_final_output_header(*components);
+//        
+//        for (const auto& p : components->regions) {
+//            run_octopus_on_contig({p.first, *components, options});
+//        }
+//        
+//        print_final_info(*components);
         
-        if (!components) return;
-        
-        print_startup_info(*components);
-        
-        write_final_output_header(*components);
-        
-        for (const auto& p : components->regions) {
-            run_octopus_on_contig({p.first, *components, options});
-        }
-        
-        print_final_info(*components);
+        fs::remove_all(*temp_directory);
     }
     
 } // namespace Octopus

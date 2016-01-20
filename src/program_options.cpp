@@ -99,8 +99,8 @@ namespace Octopus
             general.add_options()
             ("help,h", "produce help message")
             ("version", "output the version number")
-            ("verbosity", po::value<unsigned>()->default_value(0),
-             "level of logging. Verbosity 0 switches off logging")
+//            ("verbosity", po::value<unsigned>()->default_value(0),
+//             "level of logging. Verbosity 0 switches off logging")
             ;
             
             po::options_description backend("Backend options");
@@ -115,6 +115,7 @@ namespace Octopus
              "compress the reads (slower)")
             ("max-open-read-files", po::value<unsigned>()->default_value(200),
              "the maximum number of read files that can be open at one time")
+            ("working-directory,w", po::value<std::string>(), "sets the working directory")
             ;
             
             po::options_description input("Input/output options");
@@ -256,7 +257,12 @@ namespace Octopus
             if (vm.count("help")) {
                 std::cout << "Usage: octopus <command> [options]" << std::endl;
                 std::cout << all << std::endl;
-                return vm;
+                return boost::none;
+            }
+            
+            if (vm.count("version")) {
+                std::cout << "Octopus version " + Octopus_version << std::endl;
+                return boost::none;
             }
             
             // boost::option cannot handle option dependencies so we must do our own checks
@@ -424,9 +430,14 @@ namespace Octopus
         return boost::none;
     }
     
+    bool is_shorthand_user_path(const fs::path& path)
+    {
+        return !path.empty() && path.string().front() == '~';
+    }
+    
     boost::optional<fs::path> expand_user_path(const fs::path& path)
     {
-        if (!path.empty() && path.string().front() == '~') {
+        if (is_shorthand_user_path(path)) {
             if (path.string().size() > 1 && path.string()[1] == '/') {
                 const auto home_dir = get_home_dir();
                 
@@ -435,11 +446,45 @@ namespace Octopus
                 }
                 
                 return boost::none;
-            } else {
-                return boost::none;
             }
+            return boost::none;
         }
         return path;
+    }
+    
+    boost::optional<fs::path> get_working_directory(const po::variables_map& options)
+    {
+        if (options.count("working-directory") == 1) {
+            return expand_user_path(options.at("working-directory").as<std::string>());
+        }
+        return fs::current_path();
+    }
+    
+    boost::optional<fs::path> resolve_path(const fs::path& path, const po::variables_map& options)
+    {
+        if (is_shorthand_user_path(path)) {
+            return expand_user_path(path); // must be a root path
+        }
+        
+        if (fs::exists(path)) {
+            return path; // must be a root path
+        }
+        
+        const auto parent_dir = path.parent_path();
+        
+        if (fs::exists(parent_dir)) {
+            return path; // must yet-to-be-created root path
+        }
+        
+        auto result = get_working_directory(options);
+        
+        if (result) {
+            *result /= path;
+            
+            return *result;
+        }
+        
+        return result;
     }
     
     boost::optional<std::vector<fs::path>> extract_paths_from_file(const fs::path& file_path)
@@ -511,7 +556,7 @@ namespace Octopus
         std::vector<fs::path> paths {std::cbegin(path_strings), std::cend(path_strings)};
         return expand_user_paths(paths);
     }
-        
+    
     bool is_threading_allowed(const po::variables_map& options)
     {
         return options.at("threaded").as<bool>();
@@ -908,9 +953,14 @@ namespace Octopus
         return vc_builder.build();
     }
     
+    boost::optional<fs::path> get_final_output_path(const po::variables_map& options)
+    {
+        return resolve_path(options.at("output").as<std::string>(), options);
+    }
+    
     VcfWriter make_output_vcf_writer(const po::variables_map& options)
     {
-        auto out_path = expand_user_path(options.at("output").as<std::string>());
+        auto out_path = get_final_output_path(options);
         
         if (out_path) {
             return VcfWriter {std::move(*out_path)};
@@ -919,13 +969,40 @@ namespace Octopus
         return VcfWriter {};
     }
     
-    boost::optional<fs::path> get_temp_file_directory(const po::variables_map& options)
+    boost::optional<fs::path> create_temp_file_directory(const po::variables_map& options)
     {
-        auto curr_path = fs::current_path();
+        const auto working_directory = get_working_directory(options);
         
-        // TODO: create temp directory
+        if (working_directory) {
+            auto result = *working_directory;
+            
+            const fs::path temp_dir_base_name {"octopus-temp"};
+            
+            result /= temp_dir_base_name;
+            
+            constexpr unsigned temp_dir_name_count_limit {10000};
+            
+            unsigned temp_dir_counter {2};
+            
+            while (fs::exists(result) && !fs::is_empty(result)
+                   && temp_dir_counter <= temp_dir_name_count_limit) {
+                result = *working_directory;
+                result /= temp_dir_base_name.string() + "-" + std::to_string(temp_dir_counter);
+                ++temp_dir_counter;
+            }
+            
+            if (temp_dir_counter > temp_dir_name_count_limit) {
+                return boost::none;
+            }
+            
+            if (!fs::create_directory(result)) {
+                return boost::none;
+            }
+            
+            return result;
+        }
         
-        return curr_path;
+        return boost::none;
     }
     } // namespace Options
 } // namespace Octopus

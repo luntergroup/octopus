@@ -21,6 +21,8 @@
 
 namespace Octopus
 {
+    const static std::string Octopus_version {"1.0"};
+    
     using ProbabilityType = double;
     using SampleIdType    = std::string;
     
