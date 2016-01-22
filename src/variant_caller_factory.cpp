@@ -10,6 +10,10 @@
 
 #include <utility>
 
+#include "reference_genome.hpp"
+#include "read_pipe.hpp"
+#include "candidate_generator_builder.hpp"
+
 namespace Octopus
 {
     VariantCallerFactory::VariantCallerFactory(VariantCallerBuilder template_builder,
@@ -20,14 +24,6 @@ namespace Octopus
     default_ploidy_ {default_ploidy}
     {}
     
-    void swap(VariantCallerFactory& lhs, VariantCallerFactory& rhs) noexcept
-    {
-        using std::swap;
-        swap(lhs.template_builder_, rhs.template_builder_);
-        swap(lhs.contig_ploidies_,  rhs.contig_ploidies_);
-        swap(lhs.default_ploidy_,   rhs.default_ploidy_);
-    }
-    
     void VariantCallerFactory::set_reference(const ReferenceGenome& reference) noexcept
     {
         template_builder_.set_reference(reference);
@@ -36,6 +32,11 @@ namespace Octopus
     void VariantCallerFactory::set_read_pipe(ReadPipe& read_pipe) noexcept
     {
         template_builder_.set_read_pipe(read_pipe);
+    }
+    
+    void VariantCallerFactory::set_candidate_generator_builder(const CandidateGeneratorBuilder& candidate_generator_builder) noexcept
+    {
+        template_builder_.set_candidate_generator_builder(candidate_generator_builder);
     }
     
     void VariantCallerFactory::set_contig_ploidy(const ContigNameType& contig, const unsigned ploidy)

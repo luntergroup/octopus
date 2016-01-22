@@ -25,6 +25,8 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         
         "--working-directory", "~/",
         
+        //"--contig-output-order", "unspecified",
+        
         "--reference", human_reference_fasta.c_str(),
         //"--reference", ecoli_reference_fasta.c_str(),
         
@@ -52,6 +54,10 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         
         /* input regions */
         
+        "--regions", "1:79,444,421-79,445,332",
+        "--regions", "2:58,296,633-58,298,175",
+        "--regions", "3:136,287,452-136,288,828",
+        
         // for population
         
         //"--regions", "6:93,705,800-93,706,166", // NA12878_low_coverage no phase
@@ -65,7 +71,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--regions", "6:89,236,310-89,237,082", // NA12878_high_coverage very nice phasing test
         //"--regions", "6:89,236,734-89,236,784",
         
-        "-L", "6:29,690,822-29,717,432", // HLA-F
+        //"-L", "6:29,690,822-29,717,432", // HLA-F
 //        "-L", "6:29,794,350-29,799,548", // HLA-G
 //        "-L", "6:29,854,439-29,860,076", // HLA-H
 //        "-L", "6:29,909,260-29,914,705", // HLA-A

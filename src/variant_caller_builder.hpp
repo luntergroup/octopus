@@ -28,19 +28,21 @@ namespace Octopus {
     {
     public:
         VariantCallerBuilder()  = delete;
-        VariantCallerBuilder(const ReferenceGenome& reference,
-                             ReadPipe& read_pipe,
-                             const CandidateGeneratorBuilder& candidate_generator_builder);
+        explicit VariantCallerBuilder(const ReferenceGenome& reference,
+                                      ReadPipe& read_pipe,
+                                      const CandidateGeneratorBuilder& candidate_generator_builder);
         ~VariantCallerBuilder() = default;
         
-        VariantCallerBuilder(const VariantCallerBuilder&)            = default;
-        VariantCallerBuilder& operator=(const VariantCallerBuilder&) = default;
-        VariantCallerBuilder(VariantCallerBuilder&&)                 = default;
-        VariantCallerBuilder& operator=(VariantCallerBuilder&&)      = default;
+        VariantCallerBuilder(const VariantCallerBuilder&);
+        VariantCallerBuilder& operator=(const VariantCallerBuilder&);
+        VariantCallerBuilder(VariantCallerBuilder&&);
+        VariantCallerBuilder& operator=(VariantCallerBuilder&&);
         
         // common
         void set_reference(const ReferenceGenome& reference) noexcept;
         void set_read_pipe(ReadPipe& read_pipe) noexcept;
+        void set_candidate_generator_builder(const CandidateGeneratorBuilder& candidate_generator_builder) noexcept;
+        
         void set_ploidy(unsigned ploidy) noexcept;
         void set_model(std::string model);
         void set_refcall_type(VariantCaller::RefCallType refcall_type) noexcept;
@@ -97,7 +99,9 @@ namespace Octopus {
         
         using ModelFactoryMap = std::unordered_map<std::string, std::function<std::unique_ptr<VariantCaller>()>>;
         
-        ModelFactoryMap model_map_;
+        ModelFactoryMap factory_;
+        
+        ModelFactoryMap generate_factory() const;
     };
 } // namespace Octopus
 

@@ -14,7 +14,6 @@
 #include <cstdlib>
 #include <stdexcept>
 #include <chrono>
-#include <utility>
 
 #include "program_options.hpp"
 #include "octopus.hpp"
@@ -36,7 +35,7 @@ int main(int argc, const char **argv)
                 
                 cout << "Octopus: started run at " << start << endl;
                 
-                Octopus::run_octopus(std::move(*options));
+                Octopus::run_octopus(*options);
                 
                 const auto end = std::chrono::system_clock::now();
                 

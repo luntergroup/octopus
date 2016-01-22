@@ -18,6 +18,7 @@
 
 class ReferenceGenome;
 class ReadPipe;
+class CandidateGeneratorBuilder;
 
 namespace Octopus
 {
@@ -35,10 +36,10 @@ namespace Octopus
         VariantCallerFactory(VariantCallerFactory&&)                 = default;
         VariantCallerFactory& operator=(VariantCallerFactory&&)      = default;
         
-        friend void swap(VariantCallerFactory& lhs, VariantCallerFactory& rhs) noexcept;
-        
         void set_reference(const ReferenceGenome& reference) noexcept;
         void set_read_pipe(ReadPipe& read_pipe) noexcept;
+        void set_candidate_generator_builder(const CandidateGeneratorBuilder& candidate_generator_builder) noexcept;
+        
         void set_contig_ploidy(const ContigNameType& contig, unsigned ploidy);
         
         std::unique_ptr<VariantCaller> make(const ContigNameType& contig) const;

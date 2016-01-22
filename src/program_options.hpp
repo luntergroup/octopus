@@ -56,6 +56,8 @@ namespace Octopus
     SearchRegions get_search_regions(const po::variables_map& options,
                                      const ReferenceGenome& reference);
     
+    ContigOutputOrder get_contig_output_order(const po::variables_map& options);
+    
     std::vector<SampleIdType> get_samples(const po::variables_map& options);
     
     boost::optional<ReadManager> make_read_manager(const po::variables_map& options);

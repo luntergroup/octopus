@@ -65,27 +65,56 @@ namespace Octopus
                                        + "' requires option '" + required_option + "'.");
             }
     }
-        
-    static std::istream& operator>>(std::istream& in, ContigOutputOrder order)
+    
+    static std::istream& operator>>(std::istream& in, ContigOutputOrder& order)
     {
         std::string token;
         in >> token;
-        if (token == "lex-asc")
+        if (token == "lexicographical-ascending")
             order = ContigOutputOrder::LexicographicalAscending;
-        else if (token == "lex-desc")
+        else if (token == "lexicographical-descending")
             order = ContigOutputOrder::LexicographicalDescending;
-        else if (token == "contig-asc")
+        else if (token == "contig-size-ascending")
             order = ContigOutputOrder::ContigSizeAscending;
-        else if (token == "contig-desc")
+        else if (token == "contig-size-descending")
             order = ContigOutputOrder::ContigSizeDescending;
-        else if (token == "ref")
+        else if (token == "as-in-reference")
             order = ContigOutputOrder::AsInReferenceIndex;
-        else if (token == "ref-reversed")
+        else if (token == "as-in-reference-reversed")
             order = ContigOutputOrder::AsInReferenceIndexReversed;
         else if (token == "unspecified")
             order = ContigOutputOrder::Unspecified;
-        //else throw po::validation_error("Invalid unit");
+        else throw po::validation_error {po::validation_error::kind_t::invalid_option_value, token,
+            "contig-output-order"};
         return in;
+    }
+    
+    static std::ostream& operator<<(std::ostream& out, const ContigOutputOrder order)
+    {
+        switch (order) {
+            case ContigOutputOrder::LexicographicalAscending:
+                out << "lexicographical-ascending";
+                break;
+            case ContigOutputOrder::LexicographicalDescending:
+                out << "lexicographical-descending";
+                break;
+            case ContigOutputOrder::ContigSizeAscending:
+                out << "contig-size-ascending";
+                break;
+            case ContigOutputOrder::ContigSizeDescending:
+                out << "contig-size-descending";
+                break;
+            case ContigOutputOrder::AsInReferenceIndex:
+                out << "as-in-reference";
+                break;
+            case ContigOutputOrder::AsInReferenceIndexReversed:
+                out << "as-in-reference-reversed";
+                break;
+            case ContigOutputOrder::Unspecified:
+                out << "unspecified";
+                break;
+        }
+        return out;
     }
     
     boost::optional<po::variables_map> parse_options(int argc, const char** argv)
@@ -138,8 +167,8 @@ namespace Octopus
              "list of sample names to consider, one per line")
             ("output,o", po::value<std::string>()->default_value("octopus_calls.vcf"),
              "write output to file")
-//            ("contig-output-order", po::value<Conti>(&units)->multitoken(),
-//             "list of sample names to consider, one per line")
+            ("contig-output-order", po::value<ContigOutputOrder>()->default_value(ContigOutputOrder::AsInReferenceIndex),
+             "list of sample names to consider, one per line")
             //("log-file", po::value<std::string>(), "path of the output log file")
             ;
             
@@ -668,6 +697,11 @@ namespace Octopus
         }
     }
     
+    ContigOutputOrder get_contig_output_order(const po::variables_map& options)
+    {
+        return options.at("contig-output-order").as<ContigOutputOrder>();
+    }
+    
     std::vector<SampleIdType> get_samples(const po::variables_map& options)
     {
         std::vector<SampleIdType> result {};
@@ -891,11 +925,9 @@ namespace Octopus
         return result;
     }
     
-    unsigned extract_contig_ploidy(const GenomicRegion::ContigNameType& contig,
-                                   const po::variables_map& options)
+    boost::optional<unsigned> extract_contig_ploidy(const GenomicRegion::ContigNameType& contig,
+                                                    const po::variables_map& options)
     {
-        unsigned result {options.at("organism-ploidy").as<unsigned>()};
-        
         if (options.count("contig-ploidies") == 1) {
             auto contig_ploidies = options.at("contig-ploidies").as<std::vector<std::string>>();
             
@@ -904,14 +936,14 @@ namespace Octopus
                     if (contig_ploidy[contig.size()] != '=') {
                         throw std::runtime_error {"Could not pass contig-plodies option"};
                     }
-                    result = static_cast<unsigned>(std::stoul(contig_ploidy.substr(contig.size() + 1)));
+                    return static_cast<unsigned>(std::stoul(contig_ploidy.substr(contig.size() + 1)));
                 }
             }
         } else if (options.count("contig-ploidies-file") == 1) {
             // TODO: fetch from file
         }
         
-        return result;
+        return boost::none;
     }
     
     VariantCallerFactory make_variant_caller_factory(const ReferenceGenome& reference,
@@ -959,7 +991,10 @@ namespace Octopus
         VariantCallerFactory result {std::move(vc_builder), options.at("organism-ploidy").as<unsigned>()};
         
         for (const auto& p : regions) {
-            result.set_contig_ploidy(p.first, extract_contig_ploidy(p.first, options));
+            const auto maybe_ploidy = extract_contig_ploidy(p.first, options);
+            if (maybe_ploidy) {
+                result.set_contig_ploidy(p.first, *maybe_ploidy);
+            }
         }
         
         return result;
