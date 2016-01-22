@@ -15,8 +15,7 @@ namespace po = boost::program_options;
 
 namespace Octopus
 {
-    void run_octopus(const po::variables_map& options);
-    
-} // namespace Octopus
+    void run_octopus(po::variables_map&& options);
+}
 
 #endif /* defined(__Octopus__octopus__) */

@@ -12,7 +12,6 @@
 #include <vector>
 #include <unordered_map>
 #include <cstddef>
-#include <memory>
 
 #include <boost/program_options.hpp>
 #include <boost/filesystem.hpp>
@@ -22,7 +21,7 @@
 #include "genomic_region.hpp"
 #include "downsampler.hpp"
 #include "candidate_generator_builder.hpp"
-#include "variant_caller.hpp"
+#include "variant_caller_factory.hpp"
 
 class ReferenceGenome;
 class ReadManager;
@@ -46,6 +45,8 @@ namespace Octopus
     
     boost::optional<po::variables_map> parse_options(int argc, const char** argv);
     
+    bool is_run_command(const po::variables_map& options);
+        
     bool is_threading_allowed(const po::variables_map& options);
     
     size_t get_memory_quota(const po::variables_map& options);
@@ -68,11 +69,11 @@ namespace Octopus
     CandidateGeneratorBuilder make_candidate_generator_builder(const po::variables_map& options,
                                                                const ReferenceGenome& reference);
     
-    std::unique_ptr<VariantCaller> make_variant_caller(const ReferenceGenome& reference,
-                                                       ReadPipe& read_pipe,
-                                                       const CandidateGeneratorBuilder& candidate_generator_builder,
-                                                       const GenomicRegion::ContigNameType& contig,
-                                                       const po::variables_map& options);
+    VariantCallerFactory make_variant_caller_factory(const ReferenceGenome& reference,
+                                                     ReadPipe& read_pipe,
+                                                     const CandidateGeneratorBuilder& candidate_generator_builder,
+                                                     const SearchRegions& regions,
+                                                     const po::variables_map& options);
     
     VcfWriter make_output_vcf_writer(const po::variables_map& options);
     

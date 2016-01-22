@@ -21,7 +21,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
 {
     const char *argv[] = {"octopus",
         //"--help",
-        "--version",
+        //"--version",
         
         "--working-directory", "~/",
         

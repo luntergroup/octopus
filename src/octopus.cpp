@@ -33,9 +33,9 @@
 #include "read_pipe.hpp"
 #include "read_utils.hpp"
 #include "candidate_generator_builder.hpp"
-#include "vcf.hpp"
-#include "vcf_utils.hpp"
+#include "variant_caller_factory.hpp"
 #include "variant_caller.hpp"
+#include "vcf.hpp"
 
 #include "test_common.hpp"
 #include "mappable_debug.hpp"
@@ -51,7 +51,7 @@ namespace Octopus
         return result;
     }
     
-    auto get_contigs(const SearchRegions& regions)
+    static auto get_contigs(const SearchRegions& regions)
     {
         std::vector<GenomicRegion::ContigNameType> result {};
         result.reserve(regions.size());
@@ -137,7 +137,9 @@ namespace Octopus
         SearchRegions regions;
         ReadPipe read_pipe;
         CandidateGeneratorBuilder candidate_generator_builder;
+        VariantCallerFactory variant_caller_factory;
         VcfWriter output;
+        boost::optional<fs::path> temp_directory;
         
         GenomeCallingComponents() = delete;
         
@@ -152,6 +154,11 @@ namespace Octopus
         regions {Options::get_search_regions(options, this->reference)},
         read_pipe {make_read_pipe(this->read_manager, this->samples, options)},
         candidate_generator_builder {Options::make_candidate_generator_builder(options, this->reference)},
+        variant_caller_factory {Options::make_variant_caller_factory(this->reference,
+                                                                     this->read_pipe,
+                                                                     this->candidate_generator_builder,
+                                                                     this->regions,
+                                                                     options)},
         output {std::move(output)}
         {}
         
@@ -168,11 +175,14 @@ namespace Octopus
         regions {std::move(other.regions)},
         read_pipe {std::move(other.read_pipe)},
         candidate_generator_builder {std::move(other.candidate_generator_builder)},
+        variant_caller_factory {std::move(other.variant_caller_factory)},
         output {std::move(other.output)}
         {
             // need to update or will be pointing to dangling reference
             read_pipe.set_read_manager(read_manager);
             candidate_generator_builder.set_reference(reference);
+            variant_caller_factory.set_reference(reference);
+            variant_caller_factory.set_read_pipe(read_pipe);
         }
         
         GenomeCallingComponents& operator=(GenomeCallingComponents&& other) noexcept
@@ -184,6 +194,7 @@ namespace Octopus
             swap(regions, other.regions);
             swap(read_pipe, other.read_pipe);
             swap(candidate_generator_builder, other.candidate_generator_builder);
+            swap(variant_caller_factory, other.variant_caller_factory);
             swap(output, other.output);
             
             // need to update or will be pointing to dangling reference
@@ -263,18 +274,13 @@ namespace Octopus
         ContigCallingComponents() = delete;
         
         ContigCallingComponents(const GenomicRegion::ContigNameType& contig,
-                                GenomeCallingComponents& genome_components,
-                                const po::variables_map& options)
+                                GenomeCallingComponents& genome_components)
         :
         reference {genome_components.reference},
         read_manager {genome_components.read_manager},
         regions {genome_components.regions.at(contig)},
         samples {genome_components.samples},
-        caller {Options::make_variant_caller(genome_components.reference,
-                                             genome_components.read_pipe,
-                                             genome_components.candidate_generator_builder,
-                                             contig,
-                                             options)},
+        caller {genome_components.variant_caller_factory.make(contig)},
         output {genome_components.output}
         {}
         
@@ -338,6 +344,13 @@ namespace Octopus
         std::cout << "Octopus: processed " << calculate_total_search_size(components.regions) << "bp" << std::endl;
     }
     
+    void cleanup(GenomeCallingComponents& components)
+    {
+        if (components.temp_directory) {
+            fs::remove_all(*components.temp_directory);
+        }
+    }
+    
     VcfWriter create_temp_output_file(const GenomicRegion::ContigNameType& contig,
                                       const po::variables_map& options)
     {
@@ -348,24 +361,52 @@ namespace Octopus
         return result;
     }
     
-    void run_octopus(const po::variables_map& options)
+    void run_octopus_single_threaded(GenomeCallingComponents& components)
     {
-        const auto temp_directory = Options::create_temp_file_directory(options);
-//        auto components = collate_genome_calling_components(options);
-//        
-//        if (!components) return;
-//        
-//        print_startup_info(*components);
-//        
-//        write_final_output_header(*components);
-//        
-//        for (const auto& p : components->regions) {
-//            run_octopus_on_contig({p.first, *components, options});
-//        }
-//        
-//        print_final_info(*components);
+        print_startup_info(components);
         
-        fs::remove_all(*temp_directory);
+        write_final_output_header(components);
+        
+        for (const auto& p : components.regions) {
+            run_octopus_on_contig({p.first, components});
+        }
+    }
+    
+    void run_octopus_multi_threaded(GenomeCallingComponents& components)
+    {
+        print_startup_info(components);
+        
+        write_final_output_header(components);
+        
+        for (const auto& p : components.regions) {
+            run_octopus_on_contig({p.first, components});
+        }
+    }
+    
+    void run_octopus(po::variables_map&& options)
+    {
+        auto components = collate_genome_calling_components(options);
+        
+        if (!components) return;
+        
+        try {
+            auto threaded = Options::is_threading_allowed(options);
+            
+            options.clear();
+            
+            if (threaded) {
+                run_octopus_multi_threaded(*components);
+            } else {
+                run_octopus_single_threaded(*components);
+            }
+        } catch (...) {
+            std::cout << "Octopus: encountered fatal error. Attempting to cleanup" << std::endl;
+            cleanup(*components);
+            throw;
+        }
+        
+        print_final_info(*components);
+        cleanup(*components);
     }
     
 } // namespace Octopus

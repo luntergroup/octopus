@@ -85,6 +85,7 @@
 		CAE3E2C71AA895D600C01B2C /* variant_benchmarks.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CAE3E2C61AA895D600C01B2C /* variant_benchmarks.cpp */; };
 		CAE3E2CB1AAB42C900C01B2C /* read_filter_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CAE3E2CA1AAB42C900C01B2C /* read_filter_tests.cpp */; };
 		CAE3E2CD1AAB46BC00C01B2C /* read_filters.hpp in Sources */ = {isa = PBXBuildFile; fileRef = CAE3E2CC1AAB46BC00C01B2C /* read_filters.hpp */; };
+		CAE7DC2D1C510905009411B6 /* variant_caller_factory.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CAE7DC2B1C510905009411B6 /* variant_caller_factory.cpp */; };
 		CAEC8E1A1B73ACB9008FC858 /* vcf_type.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CAEC8E191B73ACB9008FC858 /* vcf_type.cpp */; };
 		CAF23F6B1B9DFF04006B673F /* threadsafe_caching_fasta.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CAF23F691B9DFF04006B673F /* threadsafe_caching_fasta.cpp */; };
 		CAF23F701BA2C308006B673F /* vcf_utils.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CAF23F6E1BA2C308006B673F /* vcf_utils.cpp */; };
@@ -369,6 +370,8 @@
 		CAE3E2C81AA9129000C01B2C /* notes.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = notes.txt; sourceTree = "<group>"; };
 		CAE3E2CA1AAB42C900C01B2C /* read_filter_tests.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = read_filter_tests.cpp; sourceTree = "<group>"; };
 		CAE3E2CC1AAB46BC00C01B2C /* read_filters.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = read_filters.hpp; sourceTree = "<group>"; };
+		CAE7DC2B1C510905009411B6 /* variant_caller_factory.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = variant_caller_factory.cpp; sourceTree = "<group>"; };
+		CAE7DC2C1C510905009411B6 /* variant_caller_factory.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = variant_caller_factory.hpp; sourceTree = "<group>"; };
 		CAEC8E181B73A9E5008FC858 /* vcf_type.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = vcf_type.hpp; sourceTree = "<group>"; };
 		CAEC8E191B73ACB9008FC858 /* vcf_type.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = vcf_type.cpp; sourceTree = "<group>"; };
 		CAF23F691B9DFF04006B673F /* threadsafe_caching_fasta.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = threadsafe_caching_fasta.cpp; sourceTree = "<group>"; };
@@ -563,7 +566,8 @@
 				CAE3E29B1AA139A000C01B2C /* program_options.cpp */,
 				CA1472791AACECF1005FDCD1 /* octopus.hpp */,
 				CA1472781AACECF1005FDCD1 /* octopus.cpp */,
-				D4B69CC41C4FEF2700F3135B /* timing.hpp */,
+				CAE7DC2C1C510905009411B6 /* variant_caller_factory.hpp */,
+				CAE7DC2B1C510905009411B6 /* variant_caller_factory.cpp */,
 			);
 			name = octopus;
 			sourceTree = "<group>";
@@ -879,6 +883,7 @@
 				CA53D3051C0A7881009A216D /* merge_transform.hpp */,
 				CA487AF11C1F06D600488577 /* mappable_debug.hpp */,
 				CA487B261C4318C100488577 /* type_tricks.hpp */,
+				D4B69CC41C4FEF2700F3135B /* timing.hpp */,
 			);
 			name = utils;
 			sourceTree = "<group>";
@@ -1199,6 +1204,7 @@
 				D463C1931B00FF5400739A66 /* variant_caller_tests.cpp in Sources */,
 				CAB0DFD81BBDB9E5001D2F99 /* haplotype_prior_model.cpp in Sources */,
 				CA8FACC41A96515A002760F2 /* assembler_tests.cpp in Sources */,
+				CAE7DC2D1C510905009411B6 /* variant_caller_factory.cpp in Sources */,
 				D4807FB21BA843B900657D4F /* variant_caller.cpp in Sources */,
 				CA487B251C42833000488577 /* read_transform.cpp in Sources */,
 				CA0B46691AE860FC00158BBA /* 1000G_test1.cpp in Sources */,

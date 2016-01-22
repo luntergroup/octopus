@@ -40,6 +40,7 @@ namespace Octopus {
         
         // common
         void set_reference(const ReferenceGenome& reference) noexcept;
+        void set_read_pipe(ReadPipe& read_pipe) noexcept;
         void set_ploidy(unsigned ploidy) noexcept;
         void set_model(std::string model);
         void set_refcall_type(VariantCaller::RefCallType refcall_type) noexcept;
@@ -96,7 +97,7 @@ namespace Octopus {
         
         using ModelFactoryMap = std::unordered_map<std::string, std::function<std::unique_ptr<VariantCaller>()>>;
         
-        const ModelFactoryMap model_map_;
+        ModelFactoryMap model_map_;
     };
 } // namespace Octopus
 

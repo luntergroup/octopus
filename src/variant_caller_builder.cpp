@@ -63,6 +63,11 @@ namespace Octopus
         reference_ = reference;
     }
     
+    void VariantCallerBuilder::set_read_pipe(ReadPipe& read_pipe) noexcept
+    {
+        read_pipe_ = read_pipe;
+    }
+    
     void VariantCallerBuilder::set_ploidy(const unsigned ploidy) noexcept
     {
         ploidy_ = ploidy;

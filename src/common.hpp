@@ -29,7 +29,7 @@ namespace Octopus
     using SearchRegions = MappableMap<GenomicRegion::ContigNameType, GenomicRegion>;
     
     using ReadContainer = MappableSet<AlignedRead>;
-    using ReadMap       = MappableMap<std::string, AlignedRead>;
+    using ReadMap       = MappableMap<SampleIdType, AlignedRead>;
     
     using ReadFilterer = ReadFilter<ReadContainer::iterator>;
 }
