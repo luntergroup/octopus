@@ -25,7 +25,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         
         "--working-directory", "~/",
         
-        //"--contig-output-order", "unspecified",
+        //"--contig-output-order", "as-in-reference-reversed",
         
         "--reference", human_reference_fasta.c_str(),
         //"--reference", ecoli_reference_fasta.c_str(),
@@ -46,7 +46,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--model", "cancer", // default "population"
         "--normal-sample", "HCC1143.NORMAL.30x.compare", // for cancer model
         
-        //"--ploidy", "2",
+        //"--organism-ploidy", "2",
         "--contig-ploidies", "MT=1", "Y=1",
         
         //"--make-blocked-refcalls",

@@ -10,6 +10,7 @@
 
 #include <string>
 #include <iostream>
+#include <cctype>
 #include <fstream>
 #include <stdexcept>
 #include <iterator>
@@ -64,6 +65,23 @@ namespace Octopus
                 throw std::logic_error(std::string("option '") + for_what
                                        + "' requires option '" + required_option + "'.");
             }
+    }
+    
+    bool validate_contig_ploidy_format(const std::string& str)
+    {
+        if (std::count(std::cbegin(str), std::cend(str), '=') == 1) {
+            const auto it = std::find(std::cbegin(str), std::cend(str), '=');
+            return std::all_of(std::next(it), std::cend(str), [] (const char c) { return std::isdigit(c); });
+        }
+        return false;
+    }
+    
+    bool validate_contig_ploidy_formats(const std::vector<std::string>& contig_ploidies)
+    {
+        return std::all_of(std::cbegin(contig_ploidies), std::cend(contig_ploidies),
+                           [] (const auto& str) {
+                               return validate_contig_ploidy_format(str);
+                           });
     }
     
     static std::istream& operator>>(std::istream& in, ContigOutputOrder& order)
@@ -242,7 +260,7 @@ namespace Octopus
             ("organism-ploidy", po::value<unsigned>()->default_value(2),
              "organism ploidy, all contigs with unspecified ploidy are assumed this ploidy")
             ("contig-ploidies", po::value<std::vector<std::string>>()->multitoken(),
-             "ploidy of individual contigs")
+             "space-seperated list of contig=ploidy pairs")
             ("contig-ploidies-file", po::value<std::string>(), "list of contig=ploidy pairs, one per line")
             ("normal-sample", po::value<std::string>(), "normal sample used in cancer model")
             ("maternal-sample", po::value<std::string>(), "maternal sample for trio model")
@@ -304,8 +322,14 @@ namespace Octopus
                 throw std::logic_error {"option normal-sample is required when model=cancer"};
             }
             
-            if (vm.at("model").as<std::string>() == "trio" && (vm.count("maternal-sample") == 0 || vm.count("paternal-sample") == 0)) {
+            if (vm.at("model").as<std::string>() == "trio"
+                && (vm.count("maternal-sample") == 0 || vm.count("paternal-sample") == 0)) {
                 throw std::logic_error {"option maternal-sample and paternal-sample are required when model=trio"};
+            }
+            
+            if (!validate_contig_ploidy_formats(vm.at("contig-ploidies").as<std::vector<std::string>>())) {
+                throw po::validation_error {po::validation_error::kind_t::invalid_option_value, "",
+                    "contig-ploidies"};
             }
             
             conflicting_options(vm, "make-positional-refcalls", "make-blocked-refcalls");
