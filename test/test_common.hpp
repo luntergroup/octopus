@@ -84,6 +84,10 @@ static const fs::path regions_txt_file {detail::home_dir + detail::octopus_test_
 static const fs::path regions_bed_file {detail::home_dir + detail::octopus_test_dir + "test_regions.bed"};
 static const fs::path reads_file {detail::home_dir + detail::octopus_test_dir + "test_files.txt"};
 
+// other test files
+
+static const fs::path contig_ploidies_txt_file {detail::home_dir + detail::octopus_test_dir + "contig_ploidies.txt"};
+
 // references
 
 static const fs::path human_reference_fasta {detail::home_dir + detail::genomics_dir +

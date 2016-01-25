@@ -19,9 +19,11 @@
 #include <unordered_map>
 #include <utility>
 #include <thread>
+#include <sstream>
 
 #include <boost/filesystem/path.hpp>
 #include <boost/filesystem/operations.hpp>
+#include <boost/lexical_cast.hpp>
 
 #include "genomic_region.hpp"
 #include "reference_genome.hpp"
@@ -67,41 +69,65 @@ namespace Octopus
             }
     }
     
-    bool validate_contig_ploidy_format(const std::string& str)
+    struct ContigPloidy
     {
-        if (std::count(std::cbegin(str), std::cend(str), '=') == 1) {
-            const auto it = std::find(std::cbegin(str), std::cend(str), '=');
-            return std::all_of(std::next(it), std::cend(str), [] (const char c) { return std::isdigit(c); });
+        GenomicRegion::ContigNameType contig;
+        unsigned ploidy;
+    };
+    
+    std::istream& operator>>(std::istream& in, ContigPloidy& result)
+    {
+        std::string token;
+        in >> token;
+        
+        if (std::count(std::cbegin(token), std::cend(token), '=') != 1) {
+            throw po::validation_error {po::validation_error::kind_t::invalid_option_value, token,
+                "contig-ploidies"};
         }
-        return false;
+        
+        const auto pos = token.find('=');
+        
+        const auto rhs = token.substr(pos + 1);
+        
+        try {
+            using PloidyType = decltype(result.ploidy);
+            result.ploidy = boost::lexical_cast<PloidyType>(rhs);
+        } catch (const boost::bad_lexical_cast&) {
+            throw po::validation_error {po::validation_error::kind_t::invalid_option_value, token,
+                "contig-ploidies"};
+        }
+        
+        token.erase(pos);
+        
+        result.contig = std::move(token);
+        
+        return in;
     }
     
-    bool validate_contig_ploidy_formats(const std::vector<std::string>& contig_ploidies)
+    std::ostream& operator<<(std::ostream& out, const ContigPloidy contig_ploidy)
     {
-        return std::all_of(std::cbegin(contig_ploidies), std::cend(contig_ploidies),
-                           [] (const auto& str) {
-                               return validate_contig_ploidy_format(str);
-                           });
+        out << contig_ploidy.contig << "=" << contig_ploidy.ploidy;
+        return out;
     }
     
-    static std::istream& operator>>(std::istream& in, ContigOutputOrder& order)
+    static std::istream& operator>>(std::istream& in, ContigOutputOrder& result)
     {
         std::string token;
         in >> token;
         if (token == "lexicographical-ascending")
-            order = ContigOutputOrder::LexicographicalAscending;
+            result = ContigOutputOrder::LexicographicalAscending;
         else if (token == "lexicographical-descending")
-            order = ContigOutputOrder::LexicographicalDescending;
+            result = ContigOutputOrder::LexicographicalDescending;
         else if (token == "contig-size-ascending")
-            order = ContigOutputOrder::ContigSizeAscending;
+            result = ContigOutputOrder::ContigSizeAscending;
         else if (token == "contig-size-descending")
-            order = ContigOutputOrder::ContigSizeDescending;
+            result = ContigOutputOrder::ContigSizeDescending;
         else if (token == "as-in-reference")
-            order = ContigOutputOrder::AsInReferenceIndex;
+            result = ContigOutputOrder::AsInReferenceIndex;
         else if (token == "as-in-reference-reversed")
-            order = ContigOutputOrder::AsInReferenceIndexReversed;
+            result = ContigOutputOrder::AsInReferenceIndexReversed;
         else if (token == "unspecified")
-            order = ContigOutputOrder::Unspecified;
+            result = ContigOutputOrder::Unspecified;
         else throw po::validation_error {po::validation_error::kind_t::invalid_option_value, token,
             "contig-output-order"};
         return in;
@@ -259,7 +285,7 @@ namespace Octopus
             ("model", po::value<std::string>()->default_value("population"), "calling model used")
             ("organism-ploidy", po::value<unsigned>()->default_value(2),
              "organism ploidy, all contigs with unspecified ploidy are assumed this ploidy")
-            ("contig-ploidies", po::value<std::vector<std::string>>()->multitoken(),
+            ("contig-ploidies", po::value<std::vector<ContigPloidy>>()->multitoken(),
              "space-seperated list of contig=ploidy pairs")
             ("contig-ploidies-file", po::value<std::string>(), "list of contig=ploidy pairs, one per line")
             ("normal-sample", po::value<std::string>(), "normal sample used in cancer model")
@@ -315,7 +341,7 @@ namespace Octopus
             // boost::option cannot handle option dependencies so we must do our own checks
             
             if (vm.count("reads") == 0 && vm.count("reads-file") == 0) {
-                throw boost::program_options::required_option {"--reads | --reads-file"};
+                throw po::required_option {"--reads | --reads-file"};
             }
             
             if (vm.at("model").as<std::string>() == "cancer" && vm.count("normal-sample") == 0) {
@@ -325,11 +351,6 @@ namespace Octopus
             if (vm.at("model").as<std::string>() == "trio"
                 && (vm.count("maternal-sample") == 0 || vm.count("paternal-sample") == 0)) {
                 throw std::logic_error {"option maternal-sample and paternal-sample are required when model=trio"};
-            }
-            
-            if (!validate_contig_ploidy_formats(vm.at("contig-ploidies").as<std::vector<std::string>>())) {
-                throw po::validation_error {po::validation_error::kind_t::invalid_option_value, "",
-                    "contig-ploidies"};
             }
             
             conflicting_options(vm, "make-positional-refcalls", "make-blocked-refcalls");
@@ -949,25 +970,94 @@ namespace Octopus
         return result;
     }
     
-    boost::optional<unsigned> extract_contig_ploidy(const GenomicRegion::ContigNameType& contig,
-                                                    const po::variables_map& options)
+    void print_ambiguous_contig_ploidies(const std::vector<ContigPloidy>& contig_ploidies,
+                                         const po::variables_map& options)
     {
-        if (options.count("contig-ploidies") == 1) {
-            auto contig_ploidies = options.at("contig-ploidies").as<std::vector<std::string>>();
-            
-            for (const auto& contig_ploidy : contig_ploidies) {
-                if (contig_ploidy.find(contig) == 0) {
-                    if (contig_ploidy[contig.size()] != '=') {
-                        throw std::runtime_error {"Could not pass contig-plodies option"};
-                    }
-                    return static_cast<unsigned>(std::stoul(contig_ploidy.substr(contig.size() + 1)));
-                }
+        std::cout << "Option eror: ambiguous ploidies found";
+        for (auto it = std::cbegin(contig_ploidies), end = std::cend(contig_ploidies); it != end;) {
+            it = std::adjacent_find(it, std::cend(contig_ploidies),
+                                    [] (const auto& lhs, const auto& rhs) {
+                                        return lhs.contig == rhs.contig;
+                                    });
+            if (it != std::cend(contig_ploidies)) {
+                const auto it2 = std::find_if(std::next(it), std::cend(contig_ploidies),
+                                              [=] (const auto& cp) {
+                                                  return it->contig != cp.contig;
+                                              });
+                std::cout << "\n";
+                std::copy(it, it2, std::ostream_iterator<ContigPloidy>(std::cout, " "));
+                it = it2;
             }
-        } else if (options.count("contig-ploidies-file") == 1) {
-            // TODO: fetch from file
+        }
+        std::cout << std::endl;
+    }
+    
+    void remove_duplicate_ploidies(std::vector<ContigPloidy>& contig_ploidies)
+    {
+        std::sort(std::begin(contig_ploidies), std::end(contig_ploidies),
+                  [] (const auto& lhs, const auto& rhs) {
+                      return (lhs.contig == rhs.contig) ? lhs.ploidy < rhs.ploidy : lhs.contig < rhs.contig;
+                  });
+        
+        const auto it = std::unique(std::begin(contig_ploidies), std::end(contig_ploidies),
+                                    [] (const auto& lhs, const auto& rhs) {
+                                        return lhs.contig == rhs.contig && lhs.ploidy == rhs.ploidy;
+                                    });
+        
+        contig_ploidies.erase(it, std::end(contig_ploidies));
+    }
+    
+    bool has_ambiguous_ploidies(const std::vector<ContigPloidy>& contig_ploidies)
+    {
+        const auto it2 = std::adjacent_find(std::cbegin(contig_ploidies), std::cend(contig_ploidies),
+                                            [] (const auto& lhs, const auto& rhs) {
+                                                return lhs.contig == rhs.contig;
+                                            });
+        return it2 != std::cend(contig_ploidies);
+    }
+    
+    void print_parsed_contig_ploidies(const std::vector<ContigPloidy>& contig_ploidies)
+    {
+        std::copy(std::cbegin(contig_ploidies), std::cend(contig_ploidies),
+                  std::ostream_iterator<ContigPloidy>(std::cout, " "));
+        std::cout << std::endl;
+    }
+    
+    boost::optional<std::vector<ContigPloidy>> extract_contig_ploidies(const po::variables_map& options)
+    {
+        std::vector<ContigPloidy> result {};
+        
+        if (options.count("contig-ploidies-file") == 1) {
+            const auto path = resolve_path(options.at("contig-ploidies-file").as<std::string>(), options);
+            
+            if (!path || !fs::exists(*path)) {
+                std::cout << "Octopus: could not resolve contig-ploidy-file path" << std::endl;
+                return boost::none;
+            }
+            
+            std::ifstream file {path->string()};
+            
+            std::transform(std::istream_iterator<Line>(file), std::istream_iterator<Line>(),
+                           std::back_inserter(result), [] (const Line& line) {
+                               std::istringstream ss {line.line_data};
+                               ContigPloidy result {};
+                               ss >> result;
+                               return result;
+                           });
         }
         
-        return boost::none;
+        if (options.count("contig-ploidies") == 1) {
+            append(result, options.at("contig-ploidies").as<std::vector<ContigPloidy>>());
+        }
+        
+        remove_duplicate_ploidies(result);
+        
+        if (has_ambiguous_ploidies(result)) {
+            print_ambiguous_contig_ploidies(result, options);
+            return boost::none;
+        }
+        
+        return result;
     }
     
     VariantCallerFactory make_variant_caller_factory(const ReferenceGenome& reference,
@@ -1012,12 +1102,19 @@ namespace Octopus
             vc_builder.set_paternal_sample(options.at("paternal-sample").as<std::string>());
         }
         
+        const auto contig_ploidies = extract_contig_ploidies(options);
+        
+        if (!contig_ploidies) {
+            // TODO
+        }
+        
         VariantCallerFactory result {std::move(vc_builder), options.at("organism-ploidy").as<unsigned>()};
         
         for (const auto& p : regions) {
-            const auto maybe_ploidy = extract_contig_ploidy(p.first, options);
-            if (maybe_ploidy) {
-                result.set_contig_ploidy(p.first, *maybe_ploidy);
+            const auto it = std::find_if(std::cbegin(*contig_ploidies), std::cend(*contig_ploidies),
+                                         [&] (const auto& cp) { return cp.contig == p.first; });
+            if (it != std::cend(*contig_ploidies)) {
+                result.set_contig_ploidy(p.first, it->ploidy);
             }
         }
         

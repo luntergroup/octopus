@@ -47,7 +47,8 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         "--normal-sample", "HCC1143.NORMAL.30x.compare", // for cancer model
         
         //"--organism-ploidy", "2",
-        "--contig-ploidies", "MT=1", "Y=1",
+        "--contig-ploidies", "MT=1", "Y=1",// "MT=2",
+        //"--contig-ploidies-file", contig_ploidies_txt_file.c_str(),
         
         //"--make-blocked-refcalls",
         //"--make-positional-refcalls",
