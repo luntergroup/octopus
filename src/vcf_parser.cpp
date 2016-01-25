@@ -53,6 +53,11 @@ samples_ {header_.get_samples()},
 first_record_pos_ {file_.tellg()}
 {}
 
+bool VcfParser::is_header_written() const noexcept
+{
+    return true; // always the case as can only read
+}
+
 VcfHeader VcfParser::fetch_header() const
 {
     return header_;
@@ -196,10 +201,9 @@ void parse_basic_header_line(const std::string& line, VcfHeader::Builder& hb)
 
 std::pair<std::string, std::string> parse_field(const std::string& field)
 {
-    if (std::count(field.cbegin(), field.cend(), '=') != 1) {
+    if (std::count(field.cbegin(), field.cend(), '=') == 0) {
         throw std::runtime_error {"VCF header field " + field + " is incorrectly formatted"};
     }
-    
     auto pos = field.find_first_of('=');
     return std::make_pair(field.substr(0, pos), field.substr(pos + 1));
 }
@@ -219,7 +223,6 @@ void parse_structured_header_line(const std::string& line, VcfHeader::Builder& h
     try {
         auto pos = line.find_first_of('=');
         auto tag = line.substr(2, pos - 2);
-        
         hb.add_structured_field(std::move(tag), parse_fields(line.substr(pos + 2, line.length() - pos - 3)));
     } catch (...) {
         throw std::runtime_error {"VCF header line " + line + " is incorrectly formatted"};

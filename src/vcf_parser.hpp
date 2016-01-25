@@ -35,6 +35,7 @@ public:
     VcfParser(VcfParser&&)                 = default;
     VcfParser& operator=(VcfParser&&)      = default;
     
+    bool is_header_written() const noexcept override;
     VcfHeader fetch_header() const override;
     size_t count_records() override;
     size_t count_records(const std::string& contig) override;

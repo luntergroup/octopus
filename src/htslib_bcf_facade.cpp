@@ -78,7 +78,7 @@ static HtslibBcfFacade::Path check_path(const HtslibBcfFacade::Path& path)
 HtslibBcfFacade::HtslibBcfFacade(Path file_path, const std::string& mode)
 :
 file_path_ {(mode == "r") ? check_path(file_path) : file_path},
-file_ {bcf_open(file_path_.string().c_str(), get_hts_mode(file_path, mode).c_str()), HtsFileDeleter {}},
+file_ {bcf_open(file_path_.c_str(), get_hts_mode(file_path, mode).c_str()), HtsFileDeleter {}},
 header_ {(file_ != nullptr && mode == "r") ? bcf_hdr_read(file_.get()) : bcf_hdr_init(mode.c_str()), HtsHeaderDeleter {}},
 samples_ {}
 {
@@ -90,12 +90,24 @@ samples_ {}
         throw std::runtime_error {"could not make header for file " + file_path_.string()};
     }
     
+//    if (mode == "w") {
+//        std::unique_ptr<bcf_hdr_t, HtsHeaderDeleter> tmp_header {bcf_hdr_read(file_.get()), HtsHeaderDeleter {}};
+//        if (tmp_header != nullptr) {
+//            header_ = std::move(tmp_header);
+//        }
+//    }
+    
     if (mode == "r") {
         samples_ = get_samples(header_.get());
     }
 }
 
 std::unordered_map<std::string, std::string> get_format(const bcf_hrec_t* line);
+
+bool HtslibBcfFacade::is_header_written() const noexcept
+{
+    return header_ != nullptr;
+}
 
 VcfHeader HtslibBcfFacade::fetch_header() const
 {
@@ -123,7 +135,7 @@ size_t HtslibBcfFacade::count_records()
 {
     HtsBcfSrPtr sr {bcf_sr_init(), HtsSrsDeleter {}};
     
-    if (bcf_sr_add_reader(sr.get(), file_path_.string().c_str()) != 1) {
+    if (bcf_sr_add_reader(sr.get(), file_path_.c_str()) != 1) {
         sr.release();
         throw std::runtime_error {"failed to open file " + file_path_.string()};
     }
@@ -136,10 +148,10 @@ size_t HtslibBcfFacade::count_records(const std::string& contig)
     HtsBcfSrPtr sr {bcf_sr_init(), HtsSrsDeleter {}};
     
     if (bcf_sr_set_regions(sr.get(), contig.c_str(), 0) != 0) { // must go before bcf_sr_add_reader
-        throw std::runtime_error {"failed load contig " + contig};
+        throw std::runtime_error {"failed to load contig " + contig};
     }
     
-    if (bcf_sr_add_reader(sr.get(), file_path_.string().c_str()) != 1) {
+    if (bcf_sr_add_reader(sr.get(), file_path_.c_str()) != 1) {
         sr.release();
         throw std::runtime_error {"failed to open file " + file_path_.string()};
     }
@@ -152,10 +164,10 @@ size_t HtslibBcfFacade::count_records(const GenomicRegion& region)
     HtsBcfSrPtr sr {bcf_sr_init(), HtsSrsDeleter {}};
     
     if (bcf_sr_set_regions(sr.get(), to_string(region).c_str(), 0) != 0) { // must go before bcf_sr_add_reader
-        throw std::runtime_error {"failed load region " + to_string(region)};
+        throw std::runtime_error {"failed to load region " + to_string(region)};
     }
     
-    if (bcf_sr_add_reader(sr.get(), file_path_.string().c_str()) != 1) {
+    if (bcf_sr_add_reader(sr.get(), file_path_.c_str()) != 1) {
         sr.release();
         throw std::runtime_error {"failed to open file " + file_path_.string()};
     }
@@ -169,7 +181,7 @@ std::vector<VcfRecord> HtslibBcfFacade::fetch_records(Unpack level)
     
     HtsBcfSrPtr sr {bcf_sr_init(), HtsSrsDeleter {}};
     
-    if (bcf_sr_add_reader(sr.get(), file_path_.string().c_str()) != 1) {
+    if (bcf_sr_add_reader(sr.get(), file_path_.c_str()) != 1) {
         sr.release();
         throw std::runtime_error {"failed to open file " + file_path_.string()};
     }
@@ -187,7 +199,7 @@ std::vector<VcfRecord> HtslibBcfFacade::fetch_records(const std::string& contig,
         throw std::runtime_error {"failed load contig " + contig};
     }
     
-    if (bcf_sr_add_reader(sr.get(), file_path_.string().c_str()) != 1) {
+    if (bcf_sr_add_reader(sr.get(), file_path_.c_str()) != 1) {
         sr.release();
         throw std::runtime_error {"failed to open file " + file_path_.string()};
     }
@@ -205,7 +217,7 @@ std::vector<VcfRecord> HtslibBcfFacade::fetch_records(const GenomicRegion& regio
         throw std::runtime_error {"failed load region " + to_string(region)};
     }
     
-    if (bcf_sr_add_reader(sr.get(), file_path_.string().c_str()) != 1) {
+    if (bcf_sr_add_reader(sr.get(), file_path_.c_str()) != 1) {
         sr.release();
         throw std::runtime_error {"failed to open file " + file_path_.string()};
     }

@@ -22,6 +22,7 @@ class IVcfReaderImpl
 public:
     enum class Unpack { All, AllButSamples };
     
+    virtual bool is_header_written() const noexcept = 0;
     virtual VcfHeader fetch_header() const = 0;
     virtual size_t count_records() = 0;
     virtual size_t count_records(const std::string& contig) = 0;

@@ -36,8 +36,14 @@ void index_vcf(const boost::filesystem::path& vcf_file);
 
 void index_vcf(const boost::filesystem::path& vcf_file, const boost::filesystem::path& out_index_path);
 
+void index_vcfs(const std::vector<VcfReader>& readers);
+
+std::vector<VcfReader> writers_to_readers(std::vector<VcfWriter>& writers);
+
 VcfHeader merge(const std::vector<VcfHeader>& headers);
 
-VcfWriter merge(std::vector<VcfReader>& readers, boost::filesystem::path result_path);
+void merge(std::vector<VcfReader>& readers, const std::vector<std::string>& contigs, VcfWriter& result);
+
+//VcfWriter merge(std::vector<VcfReader>& readers, boost::filesystem::path result_path);
 
 #endif /* defined(__Octopus__vcf_utils__) */

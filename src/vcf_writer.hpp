@@ -41,6 +41,8 @@ public:
     void open(Path file_path) noexcept;
     void close() noexcept;
     
+    bool is_header_written() const noexcept;
+    
     const Path path() const;
     
     void write(const VcfHeader& header);

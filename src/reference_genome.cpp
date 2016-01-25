@@ -18,6 +18,7 @@
 #include "fasta.hpp"
 #include "caching_fasta.hpp"
 #include "threadsafe_fasta.hpp"
+#include "threadsafe_caching_fasta.hpp"
 
 ReferenceGenome::ReferenceGenome(std::unique_ptr<ReferenceGenomeImpl> impl)
 :
@@ -100,14 +101,20 @@ ReferenceGenome make_reference(boost::filesystem::path reference_path,
                                const std::size_t max_base_pair_cache,
                                const bool is_threaded)
 {
-    using std::make_unique; using std::move;
-    
-    if (max_base_pair_cache > 0) {
-        return ReferenceGenome {make_unique<CachingFasta>(move(reference_path), max_base_pair_cache)};
-    } else if (is_threaded) {
-        return ReferenceGenome {make_unique<ThreadsafeFasta>(move(reference_path))};
+    if (is_threaded) {
+        if (max_base_pair_cache > 0) {
+            return ReferenceGenome {std::make_unique<ThreadsafeCachingFasta>(std::move(reference_path),
+                                                                             max_base_pair_cache)};
+        } else {
+            return ReferenceGenome {std::make_unique<ThreadsafeFasta>(std::move(reference_path))};
+        }
     } else {
-        return ReferenceGenome {make_unique<Fasta>(move(reference_path))};
+        if (max_base_pair_cache > 0) {
+            return ReferenceGenome {std::make_unique<CachingFasta>(std::move(reference_path),
+                                                                   max_base_pair_cache)};
+        } else {
+            return ReferenceGenome {std::make_unique<Fasta>(std::move(reference_path))};
+        }
     }
 }
 

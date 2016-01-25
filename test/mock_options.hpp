@@ -25,6 +25,8 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         
         "--working-directory", "~/",
         
+        "--threaded",
+        
         //"--contig-output-order", "as-in-reference-reversed",
         
         "--reference", human_reference_fasta.c_str(),

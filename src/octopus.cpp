@@ -149,6 +149,13 @@ namespace Octopus
         return vcf_header_builder.build_once();
     }
     
+    VcfHeader make_header(const std::vector<SampleIdType>& samples,
+                          const GenomicRegion::ContigNameType& contig,
+                          const ReferenceGenome& reference)
+    {
+        return make_header(samples, std::vector<GenomicRegion::ContigNameType> {contig}, reference);
+    }
+    
     GenomicRegion::SizeType calculate_total_search_size(const SearchRegions& regions)
     {
         return std::accumulate(std::cbegin(regions), std::cend(regions), GenomicRegion::SizeType {},
@@ -307,16 +314,21 @@ namespace Octopus
             return boost::none;
         }
         
-        GenomeCallingComponents result {
-            std::move(*reference),
-            std::move(*read_manager),
-            std::move(output),
-            options
-        };
-        
-        if (!are_components_valid(result)) return boost::none;
-        
-        return boost::optional<GenomeCallingComponents> {std::move(result)};
+        try {
+            GenomeCallingComponents result {
+                std::move(*reference),
+                std::move(*read_manager),
+                std::move(output),
+                options
+            };
+            
+            if (!are_components_valid(result)) return boost::none;
+            
+            return boost::optional<GenomeCallingComponents> {std::move(result)};
+        } catch (...) {
+            std::cout << "Octopus: could not collate options" << std::endl;
+            return boost::none;
+        }
     }
     
     struct ContigCallingComponents
@@ -339,6 +351,18 @@ namespace Octopus
         samples {genome_components.samples},
         caller {genome_components.variant_caller_factory.make(contig)},
         output {genome_components.output}
+        {}
+        
+        explicit ContigCallingComponents(const GenomicRegion::ContigNameType& contig,
+                                         VcfWriter& output,
+                                         GenomeCallingComponents& genome_components)
+        :
+        reference {genome_components.reference},
+        read_manager {genome_components.read_manager},
+        regions {genome_components.regions.at(contig)},
+        samples {genome_components.samples},
+        caller {genome_components.variant_caller_factory.make(contig)},
+        output {output}
         {}
         
         ~ContigCallingComponents() = default;
@@ -414,16 +438,6 @@ namespace Octopus
         }
     }
     
-    VcfWriter create_temp_output_file(const GenomicRegion::ContigNameType& contig,
-                                      const po::variables_map& options)
-    {
-        const auto temp_directory = Options::create_temp_file_directory(options);
-        
-        VcfWriter result {*temp_directory};
-        
-        return result;
-    }
-    
     void run_octopus_single_threaded(GenomeCallingComponents& components)
     {
         for (const auto& contig : components.contigs_in_output_order) {
@@ -431,17 +445,59 @@ namespace Octopus
         }
     }
     
+    VcfWriter create_unique_temp_output_file(const GenomicRegion& region,
+                                             const GenomeCallingComponents& components)
+    {
+        auto path = *components.temp_directory;
+        const auto& contig = region.get_contig_name();
+        const auto begin   = std::to_string(region.get_begin());
+        const auto end     = std::to_string(region.get_end());
+        
+        auto file_name = fs::path {contig + "_" + begin + "-" + end + "_temp.bcf"};
+        
+        path /= file_name;
+        
+        return VcfWriter {path, make_header(components.samples, contig, components.reference)};
+    }
+    
+    VcfWriter create_unique_temp_output_file(const GenomicRegion::ContigNameType& contig,
+                                             const GenomeCallingComponents& components)
+    {
+        return create_unique_temp_output_file(components.reference.get_contig_region(contig), components);
+    }
+    
+    std::vector<VcfWriter> create_temp_writers(const GenomeCallingComponents& components)
+    {
+        std::vector<VcfWriter> result {};
+        result.reserve(components.contigs_in_output_order.size());
+        for (const auto& contig : components.contigs_in_output_order) {
+            result.emplace_back(create_unique_temp_output_file(contig, components));
+        }
+        return result;
+    }
+    
     void run_octopus_multi_threaded(GenomeCallingComponents& components)
     {
+        auto temp_writers = create_temp_writers(components);
+        
         std::vector<std::future<void>> tasks {};
         
-        for (const auto& contig : components.contigs_in_output_order) {
-            tasks.push_back(std::async(run_octopus_on_contig, ContigCallingComponents {contig, components}));
-        }
+        const auto& contigs = components.contigs_in_output_order;
         
-        for (auto& task : tasks) {
-            task.get();
-        }
+        std::transform(std::cbegin(contigs), std::cend(contigs), std::begin(temp_writers),
+                       std::back_inserter(tasks),
+                       [&] (const auto& contig, auto& writer) {
+                           return std::async(run_octopus_on_contig,
+                                             ContigCallingComponents {contig, writer, components});
+                       });
+        
+        for (auto& task : tasks) task.get();
+        
+        auto results = writers_to_readers(temp_writers);
+        
+        index_vcfs(results);
+        
+        merge(results, contigs, components.output);
     }
     
     void run_octopus(po::variables_map& options)

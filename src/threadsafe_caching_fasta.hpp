@@ -31,7 +31,10 @@ public:
     
     ThreadsafeCachingFasta() = delete;
     explicit ThreadsafeCachingFasta(Path fasta_path);
+    explicit ThreadsafeCachingFasta(Path fasta_path, SizeType max_cache_size);
     explicit ThreadsafeCachingFasta(Path fasta_path, Path fasta_index_path);
+    explicit ThreadsafeCachingFasta(Path fasta_path, Path fasta_index_path, SizeType max_cache_size);
+    explicit ThreadsafeCachingFasta(Path fasta_path, SizeType max_cache_size, double locality_bias, double forward_bias);
     ~ThreadsafeCachingFasta() noexcept override = default;
     
     ThreadsafeCachingFasta(const ThreadsafeCachingFasta&)            = default;

@@ -73,6 +73,29 @@ void index_vcf(const boost::filesystem::path& vcf_file, const boost::filesystem:
 //    }
 }
 
+void index_vcfs(const std::vector<VcfReader>& readers)
+{
+    for (const auto& reader : readers) {
+        index_vcf(reader.path());
+    }
+}
+
+std::vector<VcfReader> writers_to_readers(std::vector<VcfWriter>& writers)
+{
+    std::vector<VcfReader> result {};
+    result.reserve(writers.size());
+    
+    for (auto& writer : writers) {
+        auto path = writer.path();
+        writer.close();
+        result.emplace_back(std::move(path));
+    }
+    
+    writers.clear();
+    
+    return result;
+}
+
 bool all_same_format(const std::vector<VcfHeader>& headers)
 {
     using std::cbegin; using std::cend;
@@ -156,21 +179,17 @@ auto get_contig_count_map(std::vector<VcfReader>& readers, const std::vector<std
     return result;
 }
 
-VcfWriter merge(std::vector<VcfReader>& readers, boost::filesystem::path result_path)
+void merge(std::vector<VcfReader>& readers, const std::vector<std::string>& contigs, VcfWriter& result)
 {
-    auto header = merge(get_headers(readers));
-    
-    auto contigs = get_contigs(header);
-    
-    std::sort(std::begin(contigs), std::end(contigs));
+    if (!result.is_header_written()) {
+        result.write(merge(get_headers(readers)));
+    }
     
     auto reader_contig_counts = get_contig_count_map(readers, contigs);
     
     std::priority_queue<VcfRecord, std::deque<VcfRecord>, std::greater<VcfRecord>> record_queue {};
     
     static constexpr GenomicRegion::SizeType buffer_size {10000}; // maybe make contig dependent
-    
-    VcfWriter result {std::move(result_path), header};
     
     for (const auto& contig : contigs) {
         GenomicRegion region {contig, 0, buffer_size};
@@ -202,6 +221,11 @@ VcfWriter merge(std::vector<VcfReader>& readers, boost::filesystem::path result_
             region = shift(region, buffer_size);
         }
     }
-    
-    return result;
 }
+
+//VcfWriter merge(std::vector<VcfReader>& readers, boost::filesystem::path result_path)
+//{
+//    VcfWriter result {std::move(result_path)};
+//    merge(readers, get_contigs(readers), result);
+//    return result;
+//}

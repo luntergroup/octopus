@@ -12,14 +12,27 @@
 
 ThreadsafeCachingFasta::ThreadsafeCachingFasta(Path fasta_path)
 :
-fasta_ {std::move(fasta_path)},
-fasta_mutex_ {}
+fasta_ {std::move(fasta_path)}
+{}
+
+ThreadsafeCachingFasta::ThreadsafeCachingFasta(Path fasta_path, SizeType max_cache_size)
+:
+fasta_ {std::move(fasta_path), max_cache_size}
 {}
 
 ThreadsafeCachingFasta::ThreadsafeCachingFasta(Path fasta_path, Path fasta_index_path)
 :
-fasta_ {std::move(fasta_path), std::move(fasta_index_path)},
-fasta_mutex_ {}
+fasta_ {std::move(fasta_path), std::move(fasta_index_path)}
+{}
+
+ThreadsafeCachingFasta::ThreadsafeCachingFasta(Path fasta_path, Path fasta_index_path, SizeType max_cache_size)
+:
+fasta_ {std::move(fasta_path), std::move(fasta_index_path), max_cache_size}
+{}
+
+ThreadsafeCachingFasta::ThreadsafeCachingFasta(Path fasta_path, SizeType max_cache_size, double locality_bias, double forward_bias)
+:
+fasta_ {std::move(fasta_path), max_cache_size, locality_bias, forward_bias}
 {}
 
 bool ThreadsafeCachingFasta::do_is_open() const noexcept

@@ -59,8 +59,8 @@ void VcfWriter::open(Path file_path) noexcept
     std::lock_guard<std::mutex> lock {mutex_};
     try {
         file_path_         = std::move(file_path);
-        is_header_written_ = false;
         writer_            = std::make_unique<HtslibBcfFacade>(file_path_, "w");
+        is_header_written_ = writer_->is_header_written();
     } catch (...) {
         this->close();
     }
@@ -72,6 +72,12 @@ void VcfWriter::close() noexcept
     writer_.reset(nullptr);
     is_header_written_ = false;
     file_path_.clear();
+}
+
+bool VcfWriter::is_header_written() const noexcept
+{
+    std::lock_guard<std::mutex> lock {mutex_};
+    return is_header_written_;
 }
 
 const VcfWriter::Path VcfWriter::path() const
