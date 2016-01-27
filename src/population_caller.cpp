@@ -667,6 +667,8 @@ PopulationVariantCaller::call_variants(const GenomicRegion& region,
         }
     }
     
+    result.shrink_to_fit();
+    
     return result;
 }
     

@@ -59,7 +59,7 @@ namespace Octopus
         
     protected:
         std::reference_wrapper<const ReferenceGenome> reference_;
-        mutable std::reference_wrapper<ReadPipe> read_pipe_;
+        std::reference_wrapper<ReadPipe> read_pipe_;
         
         HaplotypePriorModel haplotype_prior_model_;
         
@@ -92,7 +92,7 @@ namespace Octopus
                                          VariantCaller::RefCallType refcall_type);
     
     template <typename Map>
-    void remove_low_posteriors(Map& map, double min_posterior)
+    void remove_low_posteriors(Map& map, const double min_posterior)
     {
         for (auto it = std::begin(map); it != std::end(map);) {
             if (it->second < min_posterior) {

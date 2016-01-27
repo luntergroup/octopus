@@ -11,6 +11,7 @@
 #include <utility>
 
 #include "read_utils.hpp"
+#include "mappable_algorithms.hpp"
 
 #include <iostream> // DEBUG
 
@@ -78,6 +79,17 @@ ReadMap ReadPipe::fetch_reads(const GenomicRegion& region)
     }
     
     std::cout << "fetched " << count_reads(result) << " total reads" << std::endl;
+    
+    return result;
+}
+
+ReadMap ReadPipe::fetch_reads(const std::vector<GenomicRegion>& regions)
+{
+    ReadMap result {};
+    
+    for (const auto& region : regions) {
+        
+    }
     
     return result;
 }

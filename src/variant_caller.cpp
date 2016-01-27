@@ -76,15 +76,16 @@ namespace Octopus
         
         std::cout << "found " << candidates.size() << " candidates" << std::endl;
         
-        if (candidates.empty()) {
+        if (candidates.empty() && !refcalls_requested()) {
             return {};
         }
         
-        std::cout << "candidates are:" << std::endl;
-        for (const auto& c : candidates) std::cout << c << std::endl;
+        if (!candidates.empty()) {
+            std::cout << "candidates are:" << std::endl;
+            for (const auto& c : candidates) std::cout << c << std::endl;
+        }
         
-        if (reads.empty()) {
-            // i.e. if the candidate generator didn't use reads
+        if (!candidate_generator_.requires_reads()) {
             // TODO: we could be more selective and only fetch reads overlapping candidates
             reads = read_pipe_.get().fetch_reads(region);
         }
@@ -109,8 +110,10 @@ namespace Octopus
     // non-member methods
     
     std::vector<Allele>
-    generate_callable_alleles(const GenomicRegion& region, const std::vector<Variant>& variants,
-                              VariantCaller::RefCallType refcall_type, const ReferenceGenome& reference)
+    generate_callable_alleles(const GenomicRegion& region,
+                              const std::vector<Variant>& variants,
+                              const VariantCaller::RefCallType refcall_type,
+                              const ReferenceGenome& reference)
     {
         using std::begin; using std::end; using std::make_move_iterator; using std::back_inserter;
         
@@ -170,7 +173,8 @@ namespace Octopus
         return result;
     }
     
-    void append_allele(std::vector<Allele>& alleles, const Allele& allele, VariantCaller::RefCallType refcall_type)
+    void append_allele(std::vector<Allele>& alleles, const Allele& allele,
+                       const VariantCaller::RefCallType refcall_type)
     {
         if (refcall_type == VariantCaller::RefCallType::Blocked && !alleles.empty() && are_adjacent(alleles.back(), allele)) {
             alleles.back() = Allele {
@@ -188,7 +192,7 @@ namespace Octopus
     generate_candidate_reference_alleles(const std::vector<Allele>& callable_alleles,
                                          const std::vector<GenomicRegion>& called_regions,
                                          const std::vector<Variant>& candidates,
-                                         VariantCaller::RefCallType refcall_type)
+                                         const VariantCaller::RefCallType refcall_type)
     {
         using std::cbegin; using std::cend; using std::advance;
         

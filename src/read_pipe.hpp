@@ -56,6 +56,7 @@ public:
     void set_read_manager(ReadManager& read_manager) noexcept;
     
     ReadMap fetch_reads(const GenomicRegion& region);
+    ReadMap fetch_reads(const std::vector<GenomicRegion>& regions);
     
 private:
     std::reference_wrapper<ReadManager> read_manager_;

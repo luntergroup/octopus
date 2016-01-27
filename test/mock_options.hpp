@@ -25,7 +25,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         
         "--working-directory", "~/",
         
-        "--threaded",
+        //"--threaded",
         
         //"--contig-output-order", "as-in-reference-reversed",
         
@@ -57,10 +57,10 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         
         /* input regions */
         
-        "--regions", "1:50,000,000-50,100,000",
-        "--regions", "2:50,000,000-50,100,000",
-        "--regions", "3:50,000,000-50,100,000",
-        "--regions", "4:50,000,000-50,100,000",
+        //"--regions", "1:50,000,000-50,100,000",
+        //"--regions", "2:50,000,000-50,100,000",
+        //"--regions", "3:50,000,000-50,100,000",
+        //"--regions", "4:50,000,000-50,100,000",
         "--regions", "5:50,000,000-50,100,000",
         
         // for population
