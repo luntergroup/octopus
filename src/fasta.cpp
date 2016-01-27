@@ -41,7 +41,7 @@ fasta_index_path_ {std::move(fasta_index_path)}
     
     if (is_valid_fasta()) {
         fasta_ = std::ifstream(fasta_path_.string());
-        fasta_contig_indices_ = bioio::read_fasta_index(fasta_index_path_.string());
+        fasta_index_ = bioio::read_fasta_index(fasta_index_path_.string());
     }
 }
 
@@ -64,22 +64,21 @@ std::string Fasta::do_get_reference_name() const
 
 std::vector<Fasta::ContigNameType> Fasta::do_get_contig_names() const
 {
-    return bioio::get_fasta_index_contig_names(fasta_index_path_.string());
+    return bioio::read_fasta_index_contig_names(fasta_index_path_.string());
 }
 
 Fasta::SizeType Fasta::do_get_contig_size(const ContigNameType& contig) const
 {
-    if (fasta_contig_indices_.count(contig) == 0) {
+    if (fasta_index_.count(contig) == 0) {
         throw std::runtime_error {"contig \"" + contig +
             "\" not found in fasta index \"" + fasta_index_path_.string() + "\""};
     }
-    
-    return static_cast<SizeType>(fasta_contig_indices_.at(contig).length);
+    return static_cast<SizeType>(fasta_index_.at(contig).length);
 }
 
 Fasta::SequenceType Fasta::do_fetch_sequence(const GenomicRegion& region) const
 {
-    return bioio::read_fasta_contig(fasta_, fasta_contig_indices_.at(get_contig_name(region)),
+    return bioio::read_fasta_contig(fasta_, fasta_index_.at(get_contig_name(region)),
                                     get_begin(region), size(region));
 }
 

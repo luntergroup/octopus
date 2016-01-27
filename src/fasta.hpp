@@ -13,7 +13,6 @@
 #include <vector>
 #include <cstdint>
 #include <fstream>
-#include <unordered_map>
 
 #include <boost/filesystem/path.hpp>
 
@@ -44,8 +43,9 @@ public:
 private:
     Path fasta_path_;
     Path fasta_index_path_;
+    
     mutable std::ifstream fasta_;
-    std::unordered_map<ContigNameType, bioio::FastaIndex> fasta_contig_indices_;
+    bioio::FastaIndex fasta_index_;
     
     bool do_is_open() const noexcept override;
     std::string do_get_reference_name() const override;

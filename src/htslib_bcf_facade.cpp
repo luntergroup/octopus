@@ -434,15 +434,10 @@ void set_qual(bcf1_t* record, VcfRecord::QualityType qual)
 auto get_filter(const bcf_hdr_t* header, const bcf1_t* record)
 {
     std::vector<VcfRecord::KeyType> result {};
+    result.reserve(record->d.n_flt);
     
-    if (record->d.n_flt == 0) {
-        result.reserve(1);
-        result.emplace_back("PASS");
-    } else {
-        result.reserve(record->d.n_flt);
-        for (unsigned i {}; i < record->d.n_flt; ++i) {
-            result.emplace_back(bcf_hdr_int2id(header, BCF_DT_ID, record->d.flt[i]));
-        }
+    for (unsigned i {}; i < record->d.n_flt; ++i) {
+        result.emplace_back(bcf_hdr_int2id(header, BCF_DT_ID, record->d.flt[i]));
     }
     
     return result;

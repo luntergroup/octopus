@@ -32,10 +32,8 @@ std::vector<VcfType> get_typed_format_values(const VcfHeader& header, const VcfR
                                              const VcfRecord::SampleIdType sample,
                                              const VcfHeader::KeyType& key);
 
-void index_vcf(const boost::filesystem::path& vcf_file);
-
-void index_vcf(const boost::filesystem::path& vcf_file, const boost::filesystem::path& out_index_path);
-
+void index_vcf(const boost::filesystem::path& vcf_path);
+void index_vcf(const VcfReader& reader);
 void index_vcfs(const std::vector<VcfReader>& readers);
 
 std::vector<VcfReader> writers_to_readers(std::vector<VcfWriter>& writers);

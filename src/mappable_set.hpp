@@ -399,7 +399,9 @@ template <typename InputIterator>
 void
 MappableSet<MappableType, Allocator>::insert(InputIterator first, InputIterator last)
 {
-    max_element_size_ = std::max(max_element_size_, ::size(*largest_element(first, last)));
+    if (first != last) {
+        max_element_size_ = std::max(max_element_size_, ::size(*largest_element(first, last)));
+    }
     elements_.insert(first, last);
     if (is_bidirectionally_sorted_) {
         is_bidirectionally_sorted_ = is_bidirectionally_sorted(std::cbegin(elements_), std::cend(elements_));
@@ -410,7 +412,9 @@ template <typename MappableType, typename Allocator>
 typename MappableSet<MappableType, Allocator>::iterator
 MappableSet<MappableType, Allocator>::insert(std::initializer_list<MappableType> il)
 {
-    max_element_size_ = std::max(max_element_size_, ::size(*largest_element(std::cbegin(il), std::cend(il))));
+    if (!il.empty()) {
+        max_element_size_ = std::max(max_element_size_, ::size(*largest_element(std::cbegin(il), std::cend(il))));
+    }
     return elements_.insert(std::move(il));
     if (is_bidirectionally_sorted_) {
         is_bidirectionally_sorted_ = is_bidirectionally_sorted(std::cbegin(elements_), std::cend(elements_));

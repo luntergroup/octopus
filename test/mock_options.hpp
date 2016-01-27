@@ -57,9 +57,11 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         
         /* input regions */
         
-        "--regions", "1:79,444,421-79,445,332",
-        "--regions", "2:58,296,633-58,298,175",
-        "--regions", "3:136,287,452-136,288,828",
+        "--regions", "1:50,000,000-50,100,000",
+        "--regions", "2:50,000,000-50,100,000",
+        "--regions", "3:50,000,000-50,100,000",
+        "--regions", "4:50,000,000-50,100,000",
+        "--regions", "5:50,000,000-50,100,000",
         
         // for population
         

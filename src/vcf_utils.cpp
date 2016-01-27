@@ -14,11 +14,11 @@
 #include <algorithm>
 #include <functional>
 #include <stdexcept>
+#include <numeric>
 
 #include "contig_region.hpp"
 #include "genomic_region.hpp"
 
-#include "htslib/hts.h"
 #include "htslib/vcf.h"
 #include "htslib/tbx.h"
 
@@ -57,27 +57,30 @@ std::vector<VcfType> get_typed_format_values(const VcfHeader& header, const VcfR
     return get_typed_format_values(header, key, record.get_sample_value(sample, key));
 }
 
-void index_vcf(const boost::filesystem::path& vcf_file)
+void index_vcf(const boost::filesystem::path& vcf_path)
 {
+    static constexpr int BCF_LIDX_SHIFT {14};
     
-}
-
-void index_vcf(const boost::filesystem::path& vcf_file, const boost::filesystem::path& out_index_path)
-{
-    htsFile *fp {hts_open(vcf_file.c_str(), "r")};
-    htsFormat type {*hts_get_format(fp)};
+    auto fp = hts_open(vcf_path.c_str(), "r");
+    auto type = *hts_get_format(fp);
     hts_close(fp);
     
-//    if ((type.format != .bcf && type.format ! =vcf) || type.compression != bgzf) {
-//        
-//    }
+    if (type.format == bcf) {
+        bcf_index_build(vcf_path.c_str(), BCF_LIDX_SHIFT);
+    } else {
+        tbx_index_build(vcf_path.c_str(), BCF_LIDX_SHIFT, &tbx_conf_vcf);
+    }
 }
+
+void index_vcf(const VcfReader& reader)
+{
+    index_vcf(reader.path());
+}
+
 
 void index_vcfs(const std::vector<VcfReader>& readers)
 {
-    for (const auto& reader : readers) {
-        index_vcf(reader.path());
-    }
+    for (const auto& reader : readers) index_vcf(reader);
 }
 
 std::vector<VcfReader> writers_to_readers(std::vector<VcfWriter>& writers)
@@ -159,10 +162,13 @@ std::vector<VcfHeader> get_headers(const std::vector<VcfReader>& readers)
     return result;
 }
 
-auto get_contig_count_map(std::vector<VcfReader>& readers, const std::vector<std::string>& contigs)
+using ReaderContigRecordCountMap = std::unordered_map<std::reference_wrapper<const VcfReader>,
+                                                        std::unordered_map<std::string, size_t>>;
+
+ReaderContigRecordCountMap get_contig_count_map(std::vector<VcfReader>& readers,
+                                                const std::vector<std::string>& contigs)
 {
-    std::unordered_map<std::reference_wrapper<const VcfReader>, std::unordered_map<std::string, size_t>> result {};
-    
+    ReaderContigRecordCountMap result {};
     result.reserve(readers.size());
     
     for (auto& reader : readers) {
@@ -179,6 +185,20 @@ auto get_contig_count_map(std::vector<VcfReader>& readers, const std::vector<std
     return result;
 }
 
+size_t calculate_total_number_of_records(const ReaderContigRecordCountMap& counts)
+{
+    return std::accumulate(std::cbegin(counts), std::cend(counts), size_t {0},
+                           [] (const auto curr, const auto& reader_counts) {
+                               const auto reader_total = std::accumulate(std::cbegin(reader_counts.second),
+                                                                         std::cend(reader_counts.second),
+                                                                         size_t {0},
+                                                                         [] (const auto r_curr, const auto& p) {
+                                                                             return r_curr + p.second;
+                                                                         });
+                               return curr + reader_total;
+                           });
+}
+
 void merge(std::vector<VcfReader>& readers, const std::vector<std::string>& contigs, VcfWriter& result)
 {
     if (!result.is_header_written()) {
@@ -188,6 +208,26 @@ void merge(std::vector<VcfReader>& readers, const std::vector<std::string>& cont
     auto reader_contig_counts = get_contig_count_map(readers, contigs);
     
     std::priority_queue<VcfRecord, std::deque<VcfRecord>, std::greater<VcfRecord>> record_queue {};
+    
+    auto total_record_count = calculate_total_number_of_records(reader_contig_counts);
+    
+    if (total_record_count <= 100'000) {
+        for (const auto& contig : contigs) {
+            for (auto& reader : readers) {
+                if (reader_contig_counts[reader].count(contig) == 1) {
+                    auto records = reader.fetch_records(contig, VcfReader::Unpack::All);
+                    for (auto&& record : records) {
+                        record_queue.emplace(std::move(record));
+                    }
+                }
+            }
+            while (!record_queue.empty()) {
+                result.write(record_queue.top());
+                record_queue.pop();
+            }
+        }
+        return;
+    }
     
     static constexpr GenomicRegion::SizeType buffer_size {10000}; // maybe make contig dependent
     
