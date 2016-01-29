@@ -53,11 +53,13 @@ namespace Octopus
     private:
         using ReadReference      = std::reference_wrapper<const AlignedRead>;
         using HaplotypeReference = std::reference_wrapper<const Haplotype>;
+        
         using Cache = std::unordered_map<ReadReference, std::unordered_map<HaplotypeReference, double>>;
         
         SingleReadModel read_model_;
         
         Cache cache_;
+        
         size_t max_num_reads_;
         size_t max_num_haplotypes_;
         

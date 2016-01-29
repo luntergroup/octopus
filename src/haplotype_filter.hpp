@@ -15,8 +15,10 @@
 #include "common.hpp"
 #include "haplotype.hpp"
 
-namespace Octopus {
-    std::vector<Haplotype> filter_haplotypes(const std::vector<Haplotype>& haplotypes, const ReadMap& reads, size_t n);
-} // namespace Octopus
+namespace Octopus
+{
+    std::vector<Haplotype> filter_haplotypes(const std::vector<Haplotype>& haplotypes,
+                                             const ReadMap& reads, size_t n);
+}
 
 #endif /* haplotype_filter_hpp */

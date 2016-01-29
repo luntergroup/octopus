@@ -13,6 +13,7 @@
 #include <set>
 #include <memory>
 #include <cstddef>
+#include <iterator>
 
 #include <boost/filesystem/path.hpp>
 
@@ -25,6 +26,21 @@
 class GenomicRegion;
 class VcfHeader;
 class VcfRecord;
+
+//class IRecordIterator;
+//
+//namespace std
+//{
+//    template <>
+//    struct iterator_traits<IRecordIterator>
+//    {
+//        using iterator_category = input_iterator_tag;
+//        using value_type        = VcfRecord;
+//        using difference_type   = ptrdiff_t;
+//        using pointer           = const VcfRecord*;
+//        using reference         = const VcfRecord&;
+//    };
+//} // namespace std
 
 class HtslibBcfFacade : public IVcfReaderImpl
 {
@@ -39,6 +55,21 @@ public:
     HtslibBcfFacade& operator=(const HtslibBcfFacade&) = delete;
     HtslibBcfFacade(HtslibBcfFacade&&)                 = default;
     HtslibBcfFacade& operator=(HtslibBcfFacade&&)      = default;
+    
+//    class IRecordIterator
+//    {
+//    public:
+//        using iterator_category = std::iterator_traits<IRecordIterator>::iterator_category;
+//        using value_type        = std::iterator_traits<IRecordIterator>::value_type;
+//        using difference_type   = std::iterator_traits<IRecordIterator>::difference_type;
+//        using pointer           = std::iterator_traits<IRecordIterator>::pointer;
+//        using reference         = std::iterator_traits<IRecordIterator>::reference;
+//        
+//        RecordIterator();
+//        ~RecordIterator() = default;
+//    private:
+//        
+//    };
     
     bool is_header_written() const noexcept override;
     VcfHeader fetch_header() const override;

@@ -10,9 +10,6 @@
 
 #include "maths.hpp"
 
-#include <iostream> // TEST
-#include <chrono>   // TEST
-
 namespace Octopus
 {
     // public methods
@@ -75,9 +72,7 @@ namespace Octopus
     
     void HaplotypeLikelihoodCache::cache(const AlignedRead& read, const Haplotype& haplotype, double value)
     {
-        //std::cout << "caching result" << std::endl;
         if (cache_[read].empty()) {
-            //std::cout << "is first haplotype to cache.. reserving space for " << max_num_haplotypes_ << " haplotypes" << std::endl;
             cache_[read].reserve(max_num_haplotypes_);
         }
         cache_[read].emplace(haplotype, value);
@@ -85,7 +80,6 @@ namespace Octopus
     
     double HaplotypeLikelihoodCache::get_cached(const AlignedRead& read, const Haplotype& haplotype) const
     {
-        //std::cout << "fetching cached result" << std::endl;
         return cache_.at(read).at(haplotype);
     }
 } // namespace Octopus

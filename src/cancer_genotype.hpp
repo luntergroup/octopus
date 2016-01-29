@@ -193,10 +193,11 @@ namespace std
     {
         size_t operator()(const CancerGenotype<MappableType>& genotype) const
         {
-            size_t seed {};
-            boost::hash_combine(seed, hash<Genotype<MappableType>>()(genotype.get_germline_genotype()));
-            boost::hash_combine(seed, hash<MappableType>()(genotype.get_cancer_element()));
-            return seed;
+            using boost::hash_combine;
+            size_t result {0};
+            hash_combine(result, hash<Genotype<MappableType>>()(genotype.get_germline_genotype()));
+            hash_combine(result, hash<MappableType>()(genotype.get_cancer_element()));
+            return result;
         }
     };
 } // namespace std

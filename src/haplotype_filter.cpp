@@ -16,9 +16,10 @@
 #include "haplotype_likelihood_cache.hpp"
 #include "read_utils.hpp"
 
-namespace Octopus {
-
-std::vector<Haplotype> filter_haplotypes(const std::vector<Haplotype>& haplotypes, const ReadMap& reads, size_t n,
+namespace Octopus
+{
+std::vector<Haplotype> filter_haplotypes(const std::vector<Haplotype>& haplotypes,
+                                         const ReadMap& reads, size_t n,
                                          HaplotypeLikelihoodCache& haplotype_likelihoods)
 {
     if (haplotypes.size() <= n) return haplotypes;

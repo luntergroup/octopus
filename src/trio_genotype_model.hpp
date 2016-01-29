@@ -1,13 +1,13 @@
 //
-//  pedigree_genotype_model.hpp
+//  trio_genotype_model.hpp
 //  Octopus
 //
-//  Created by Daniel Cooke on 23/11/2015.
-//  Copyright © 2015 Oxford University. All rights reserved.
+//  Created by Daniel Cooke on 29/01/2016.
+//  Copyright © 2016 Oxford University. All rights reserved.
 //
 
-#ifndef pedigree_genotype_model_hpp
-#define pedigree_genotype_model_hpp
+#ifndef trio_genotype_model_hpp
+#define trio_genotype_model_hpp
 
 #include <string>
 #include <vector>
@@ -27,7 +27,7 @@ namespace Octopus
 {
     namespace GenotypeModel
     {
-        class Pedigree
+        class Trio
         {
         public:
             using SampleGenotypeProbabilities = std::unordered_map<Genotype<Haplotype>, double>;
@@ -47,7 +47,7 @@ namespace Octopus
                 HaplotypeFrequencies haplotype_frequencies;
             };
             
-            Pedigree(unsigned ploidy, unsigned max_em_iterations = 100, double em_epsilon = 0.001);
+            Trio(unsigned ploidy, unsigned max_em_iterations = 100, double em_epsilon = 0.001);
             
             Latents evaluate(const std::vector<Haplotype>& haplotypes, const ReadMap& reads,
                              const ReferenceGenome& reference);
@@ -63,4 +63,4 @@ namespace Octopus
     } // namespace GenotypeModel
 } // namespace Octopus
 
-#endif /* pedigree_genotype_model_hpp */
+#endif /* trio_genotype_model_hpp */
