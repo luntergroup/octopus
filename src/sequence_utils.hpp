@@ -15,7 +15,8 @@
 #include <map>
 #include <cstddef>
 #include <iterator>
-#include <algorithm> // std::count_if
+#include <algorithm>
+#include <functional>
 #include <random>
 
 #include <iostream> // TEST
@@ -49,8 +50,10 @@ namespace detail
         {'N', {'A', 'C', 'G', 'T', 'U'}} // Nucleic acid
     };
     
-    static constexpr std::array<char, 11> AmbiguousCodes {'N', 'R', 'Y', 'K', 'M', 'S', 'W', 'B', 'D', 'H', 'V'};
-    
+    static constexpr std::array<char, 11> AmbiguousCodes
+    {
+        'N', 'R', 'Y', 'K', 'M', 'S', 'W', 'B', 'D', 'H', 'V'
+    };
 } // namespace detail
 
 template <typename SequenceType>
@@ -110,7 +113,7 @@ bool has_mixed_case(SequenceType& sequence)
 }
 
 template <typename SequenceType>
-void capitalise(SequenceType& sequence)
+static void capitalise(SequenceType& sequence)
 {
     std::transform(std::begin(sequence), std::end(sequence), std::begin(sequence),
                    [] (char base) {
@@ -136,10 +139,10 @@ namespace detail
         std::uniform_int_distribution<size_t> distribution {0, values.size() - 1};
         return *std::next(std::cbegin(values), distribution(generator));
     }
-} // end namespace detail
+} // namespace detail
 
 template <typename SequenceType>
-void randomise(SequenceType& sequence)
+static void randomise(SequenceType& sequence)
 {
     for (auto& base : sequence) {
         base = detail::random_member(detail::AminoAcidCodes.at(base));
@@ -148,7 +151,8 @@ void randomise(SequenceType& sequence)
 
 namespace detail
 {
-    static const constexpr std::array<char, 128> rc_table {
+    static constexpr std::array<char, 128> complement_table
+    {
         4, 4,  4, 4,  4,  4,  4, 4,  4, 4, 4, 4,  4, 4, 4,  4,
         4, 4,  4, 4,  4,  4,  4, 4,  4, 4, 4, 4,  4, 4, 4,  4,
         4, 4,  4, 4,  4,  4,  4, 4,  4, 4, 4, 4,  4, 4, 4,  4,
@@ -158,42 +162,133 @@ namespace detail
         4, 84, 4, 71, 4,  4,  4, 67, 4, 4, 4, 4,  4, 4, 4,  4,
         4, 4,  4, 4,  65, 65, 4, 4,  4, 4, 4, 4,  4, 4, 4,  4
     };
-} // end namespace detail
+} // namespace detail
 
-inline constexpr char complement(char base)
+static inline constexpr char complement(const char base) noexcept
 {
-    return detail::rc_table[base];
+    return detail::complement_table[base];
+}
+
+template <typename BidirIt, typename OutputIt>
+OutputIt reverse_complement_copy(BidirIt first, BidirIt last, OutputIt result)
+{
+    return std::transform(std::make_reverse_iterator(last), std::make_reverse_iterator(first),
+                          result, [] (const char base) { return complement(base); });
 }
 
 template <typename SequenceType>
-SequenceType reverse_complement(SequenceType sequence)
+SequenceType reverse_complement_copy(const SequenceType& sequence)
 {
-    auto f_itr = std::begin(sequence);
-    auto r_itr = std::prev(std::end(sequence));
-    
-    for (; f_itr < r_itr; ++f_itr, --r_itr) {
-        char c {complement(*f_itr)};
-        *f_itr = complement(*r_itr);
-        *r_itr = c;
+    SequenceType result {};
+    result.resize(sequence.size());
+    reverse_complement_copy(std::cbegin(sequence), std::cend(sequence), std::begin(result));
+    return result;
+}
+
+namespace detail
+{
+    static inline void complement_swap(char& lhs, char& rhs) noexcept
+    {
+        const auto tmp = complement(lhs);
+        lhs = complement(rhs);
+        rhs = tmp;
     }
     
-    if (f_itr == r_itr) {
-        *f_itr = complement(*f_itr); // complement middle base if sequence is odd length
+    template <typename BidirIt>
+    void reverse_complement(BidirIt first, BidirIt last, std::bidirectional_iterator_tag)
+    {
+        while (first != last)
+        {
+            if (first == --last) {
+                *first = complement(*first);
+                break;
+            }
+            complement_swap(*first, *last);
+            ++first;
+        }
     }
     
-    return sequence;
+    template <typename BidirIt>
+    void reverse_complement(BidirIt first, BidirIt last, std::random_access_iterator_tag)
+    {
+        if (first != last)
+            for (; first < --last; ++first)
+                complement_swap(*first, *last);
+        if (first == last)
+            *first = complement(*first);
+    }
+} // namespace detail
+
+template <typename BidirIt>
+void reverse_complement(BidirIt first, BidirIt last)
+{
+    detail::reverse_complement(first, last, typename std::iterator_traits<BidirIt>::iterator_category {});
+}
+
+template <typename SequenceType>
+void reverse_complement(SequenceType& sequence)
+{
+    reverse_complement(std::begin(sequence), std::end(sequence));
+}
+
+template <typename InputIt, typename BidirIt>
+bool is_reverse_complement(InputIt first1, InputIt last1, BidirIt first2, BidirIt last2)
+{
+    return std::equal(first1, last1,
+                      std::make_reverse_iterator(last2), std::make_reverse_iterator(first2),
+                      [] (const char lhs, const char rhs) {
+                          return lhs == complement(rhs);
+                      });
+}
+
+template <typename SeqType1, typename SeqType2>
+bool is_reverse_complement(const SeqType1& lhs, const SeqType2& rhs)
+{
+    return is_reverse_complement(std::cbegin(lhs), std::cend(lhs), std::cbegin(rhs), std::cend(rhs));
+}
+
+namespace detail
+{
+    template <typename RandomIt>
+    bool is_palindromic(RandomIt first, RandomIt last, std::random_access_iterator_tag)
+    {
+        if (first == last) return true;
+        
+        const auto size = std::distance(first, last);
+        
+        if (size % 2 != 0) return false;
+        
+        return std::equal(first, std::next(first, size / 2), std::make_reverse_iterator(last),
+                          [] (const char lhs, const char rhs) {
+                              return lhs == complement(rhs);
+                          });
+    }
+    
+    template <typename BidirIt>
+    bool is_palindromic(BidirIt first, BidirIt last, std::bidirectional_iterator_tag)
+    {
+        if (first == last)   return true;
+        if (first == --last) return false;
+        
+        for (; first != last; ++first, --last) {
+            if (*first != complement(*last)) return false;
+            if (std::next(first) == last) return true;
+        }
+        
+        return false;
+    }
+} // namespace detail
+
+template <typename BidirIt>
+bool is_palindromic(BidirIt first, BidirIt last)
+{
+    return detail::is_palindromic(first, last, typename std::iterator_traits<BidirIt>::iterator_category {});
 }
 
 template <typename SequenceType>
 bool is_palindromic(const SequenceType& sequence)
 {
-    if (sequence.empty() || sequence.size() % 2 != 0) return false;
-    
-    for (auto f_itr = std::cbegin(sequence), r_itr = std::prev(std::cend(sequence)); f_itr < r_itr; ++f_itr, --r_itr) {
-        if (*f_itr != complement(*r_itr)) return false;
-    }
-    
-    return true;
+    return is_palindromic(std::cbegin(sequence), std::cend(sequence));
 }
 
 template <typename SequenceType>
@@ -214,16 +309,18 @@ struct TandemRepeat
     using SizeType = GenomicRegion::SizeType;
     TandemRepeat() = delete;
     template <typename T>
-    explicit TandemRepeat(T region, GenomicRegion::SizeType period) : region {std::forward<T>(region)}, period {period} {}
+    explicit TandemRepeat(T region, GenomicRegion::SizeType period)
+    : region {std::forward<T>(region)}, period {period} {}
     
     GenomicRegion region;
     GenomicRegion::SizeType period;
 };
 
 template <typename SequenceType>
-std::vector<TandemRepeat> find_exact_tandem_repeats(SequenceType sequence, const GenomicRegion& region,
-                                                    GenomicRegion::SizeType min_repeat_size = 2,
-                                                    GenomicRegion::SizeType max_repeat_size = 10000)
+std::vector<TandemRepeat>
+find_exact_tandem_repeats(SequenceType sequence, const GenomicRegion& region,
+                          GenomicRegion::SizeType min_repeat_size = 2,
+                          GenomicRegion::SizeType max_repeat_size = 10000)
 {
     if (sequence.back() != 'N') {
         sequence.reserve(sequence.size() + 1);
@@ -232,9 +329,12 @@ std::vector<TandemRepeat> find_exact_tandem_repeats(SequenceType sequence, const
     
     auto n_shift_map = Tandem::collapse(sequence, 'N');
     
-    auto maximal_repetitions = Tandem::find_maximal_repetitions(sequence , min_repeat_size, max_repeat_size);
+    auto maximal_repetitions = Tandem::find_maximal_repetitions(sequence , min_repeat_size,
+                                                                max_repeat_size);
     
     Tandem::rebase(maximal_repetitions, n_shift_map);
+    
+    n_shift_map.clear();
     
     std::vector<TandemRepeat> result {};
     result.reserve(maximal_repetitions.size());
@@ -254,9 +354,9 @@ std::vector<TandemRepeat> find_exact_tandem_repeats(SequenceType sequence, const
 template <typename SequenceType>
 double gc_bias(const SequenceType& sequence)
 {
-    auto gc_count = std::count_if(std::cbegin(sequence), std::cend(sequence),
-                                  [] (char base) { return base == 'G' || base == 'C'; });
-    return static_cast<double>(gc_count) / sequence.length();
+    const auto gc_count = std::count_if(std::cbegin(sequence), std::cend(sequence),
+                                        [] (const char base) { return base == 'G' || base == 'C'; });
+    return static_cast<double>(gc_count) / sequence.size();
 }
 
 } // namespace Octopus

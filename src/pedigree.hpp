@@ -10,6 +10,7 @@
 #define pedigree_hpp
 
 #include <vector>
+#include <cstddef>
 
 #include <boost/graph/adjacency_list.hpp>
 
@@ -29,6 +30,8 @@ public:
     Pedigree& operator=(Pedigree&&)      = default;
     
     void add_relationship(Member parent, Member child);
+    void clear();
+    std::size_t size() const;
     
     bool is_child(Member child, Member parent) const;
     bool is_descendant(Member descendant, Member ancestor) const;
@@ -37,12 +40,17 @@ public:
     std::vector<Member> get_descendants(Member parent) const;
     
 private:
-    using Tree   = boost::adjacency_list<boost::listS, boost::listS, boost::bidirectionalS, Member, boost::no_property>;
+    using Tree = boost::adjacency_list<
+                    boost::listS, boost::listS, boost::bidirectionalS, Member, boost::no_property
+                >;
     
     using Vertex = typename boost::graph_traits<Tree>::vertex_descriptor;
     using Edge   = typename boost::graph_traits<Tree>::edge_descriptor;
     
     Tree tree_;
+    
+    std::vector<Member> roots_;
+    std::vector<Member> leafs_;
 };
 
 #endif /* pedigree_hpp */

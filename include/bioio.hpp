@@ -36,7 +36,7 @@
 #include <algorithm>
 #include <iterator>
 #include <utility>
-
+#include <type_traits>
 
 namespace bioio
 {   
@@ -95,14 +95,14 @@ namespace bioio
     template <typename StringType = std::string, typename SequenceType = std::string>
     struct FastaRecord
     {
-        StringType contig_name;
+        StringType name;
         SequenceType sequence;
         
         FastaRecord() = delete;
         template<typename StringType_, typename SequenceType_>
-        explicit FastaRecord(StringType_&& contig_name, SequenceType_&& sequence)
+        explicit FastaRecord(StringType_&& name, SequenceType_&& sequence)
         : 
-        contig_name {std::forward<StringType_>(contig_name)}, 
+        name {std::forward<StringType_>(name)}, 
         sequence {std::forward<SequenceType_>(sequence)}
         {}
     };
@@ -117,7 +117,7 @@ namespace bioio
         
         FastqRecord() = delete;
         template<typename StringType_, typename SequenceType1_, typename SequenceType2_>
-        FastqRecord(StringType_&& name, SequenceType1_&& seq, SequenceType2_&& qual)
+        explicit FastqRecord(StringType_&& name, SequenceType1_&& seq, SequenceType2_&& qual)
         :
         name {std::forward<StringType_>(name)}, 
         seq {std::forward<SequenceType1_>(seq)}, 
@@ -162,37 +162,57 @@ namespace bioio
             return result;
         }
         
+        static constexpr char fasta_delim {'>'};
+        static constexpr char fastq_delim {'@'};
+        
         template<typename StringType = std::string, typename SequenceType = std::string>
         ::bioio::FastaRecord<StringType, SequenceType>
         read_fasta_record(std::istream& fasta)
         {
-            StringType contig_name;
-            std::getline(fasta, contig_name); // contig_name always a single line
+            StringType name;
+            std::getline(fasta, name); // name is always a single line
             
             SequenceType line;
             std::getline(fasta, line);
             
             // The FASTA format is not as simple as FASTQ - the sequence
-            // may be broken into multiple lines.
-            if (!fasta.good() || fasta.peek() == '>') {
-                return ::bioio::FastaRecord<StringType, SequenceType> {contig_name, line};
+            // may be broken into multiple lines. We assume each line is the same size.
+            if (!fasta.good() || fasta.peek() == fasta_delim) {
+                return ::bioio::FastaRecord<StringType, SequenceType> {std::move(name), std::move(line)};
             } else {
-                line.shrink_to_fit();
-                auto line_size = line.size();
+                const auto line_size = line.size();
+                
+                line.resize(line_size);
                 
                 SequenceType seq {};
-                auto it = std::back_inserter(seq);
-                std::copy(std::begin(line), std::end(line), it);
+                seq.reserve(line_size * 100);
                 
-                while (fasta.good() && fasta.peek() != '>') {
+                const auto line_begin = line.cbegin(), line_end = line.cend();
+                
+                seq.insert(seq.end(), line_begin, line_end);
+                
+                while (fasta.good()) {
                     fasta.getline(&line[0], line_size + 1);
-                    std::copy(std::begin(line), std::begin(line) + fasta.gcount(), it);
+                    
+                    if (line.front() == fasta_delim) {
+                        if (fasta.good()) fasta.seekg(-fasta.gcount(), std::ios_base::cur);
+                        break;
+                    }
+                    
+                    if (fasta.gcount() < line_size) {
+                        seq.insert(seq.end(), line_begin, line_begin + fasta.gcount() - 1);
+                        break;
+                    }
+                    
+                    seq.insert(seq.end(), line_begin, line_end);
                 }
                 
-                return ::bioio::FastaRecord<StringType, SequenceType> {std::move(contig_name), std::move(seq)};
+                seq.shrink_to_fit();
+                
+                return ::bioio::FastaRecord<StringType, SequenceType> {std::move(name), std::move(seq)};
             }
         }
-       
+        
         template<typename StringType = std::string, typename SequenceType1 = std::string,
                  typename SequenceType2 = std::string>
         ::bioio::FastqRecord<StringType, SequenceType1, SequenceType2>
@@ -211,7 +231,7 @@ namespace bioio
             return ::bioio::FastqRecord<StringType, SequenceType1, SequenceType2> 
                     {std::move(name), std::move(seq), std::move(quals)};
         }
-    } // detail namespace
+    } // namespace detail
     
     /*=======================================================================================
      INDEX: For reading FASTA index files
@@ -407,17 +427,17 @@ namespace bioio
         
         fasta.seekg(0, std::ios::beg);
         
-        StringType contig_name;
-        std::getline(fasta, contig_name);
+        StringType name;
+        std::getline(fasta, name);
         
         SequenceType sequence;
-        sequence.resize(file_length - contig_name.size() - 1);
+        sequence.resize(file_length - name.size() - 1);
         
         fasta.read(&sequence[0], sequence.size());
         
-        sequence.erase(std::remove(std::begin(sequence), std::end(sequence), '\n'), std::end(sequence));
+        sequence.erase(std::remove(sequence.begin(), sequence.end(), '\n'), sequence.end());
         
-        return FastaRecord<StringType, SequenceType> {std::move(contig_name), std::move(sequence)};
+        return FastaRecord<StringType, SequenceType> {std::move(name), std::move(sequence)};
     }
     
     /*=======================================================================================
@@ -426,7 +446,7 @@ namespace bioio
     
     inline size_t count_fasta_records(std::istream& fasta)
     {
-        return detail::count_records(fasta, '>');
+        return detail::count_records(fasta, detail::fasta_delim);
     }
     
     inline size_t count_fasta_records(const std::string& fasta_path)
@@ -435,19 +455,85 @@ namespace bioio
         return count_fasta_records(fasta);
     }
     
-    template <typename SequenceType = std::string>
-    std::vector<SequenceType> read_fasta_seqs(std::istream& fasta)
+    template <typename UnaryPredicate,
+              typename = typename std::enable_if<
+                                      !std::is_convertible<UnaryPredicate, std::string>::value
+                                  >::type>
+    bool seek_fasta_record(std::istream& fasta, UnaryPredicate pred)
     {
-        auto num_records = detail::count_records(fasta, '>');
-        
+        std::string record;
+        while (std::getline(fasta, record)) {
+            if (pred(record)) {
+                fasta.seekg(-(record.size() + 1), std::ios_base::cur);
+                return true;
+            }
+            while (fasta) {
+                if (fasta.peek() == detail::fasta_delim) break;
+                fasta.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+            }
+        }
+        return false;
+    }
+    
+    inline bool seek_fasta_record(std::istream& fasta, const std::string& name)
+    {
+        return seek_fasta_record(fasta,
+                                 [&] (const std::string& fasta_record) {
+                                     if (fasta_record.size() < name.size()) return false;
+                                     return std::equal(name.cbegin(), name.cend(),
+                                                       std::next(fasta_record.cbegin()));
+                                 });
+    }
+    
+    template <typename SequenceType = std::string, typename UnaryPredicate>
+    SequenceType read_fasta_seq(std::istream& fasta, UnaryPredicate pred)
+    {
+        if (seek_fasta_record(fasta, pred)) {
+            return detail::read_fasta_record<std::string, SequenceType>(fasta).sequence;
+        }
+        return SequenceType {};
+    }
+    
+    template <typename SequenceType = std::string, typename UnaryPredicate>
+    SequenceType read_fasta_seq(const std::string& fasta_path, UnaryPredicate pred)
+    {
+        std::ifstream fasta {fasta_path, std::ios::binary};
+        return read_fasta_seq(fasta, pred);
+    }
+    
+    template <typename SequenceType = std::string>
+    SequenceType read_fasta_seq(std::istream& fasta, const std::string& name)
+    {
+        if (seek_fasta_record(fasta, name)) {
+            return detail::read_fasta_record<std::string, SequenceType>(fasta).sequence;
+        }
+        return SequenceType {};
+    }
+    
+    template <typename SequenceType = std::string>
+    SequenceType read_fasta_seq(const std::string& fasta_path, const std::string& name)
+    {
+        std::ifstream fasta {fasta_path, std::ios::binary};
+        return read_fasta_seq(fasta, name);
+    }
+    
+    template <typename SequenceType = std::string>
+    std::vector<SequenceType> read_fasta_seqs(std::istream& fasta, size_t num_records)
+    {
         std::vector<SequenceType> result {};
         result.reserve(num_records);
         
         for (; num_records > 0; --num_records) {
-            result.emplace_back(detail::read_fasta_record<std::string, SequenceType>(fasta).seq);
+            result.emplace_back(detail::read_fasta_record<std::string, SequenceType>(fasta).sequence);
         }
         
         return result;
+    }
+    
+    template <typename SequenceType = std::string>
+    std::vector<SequenceType> read_fasta_seqs(std::istream& fasta)
+    {
+        return read_fasta_seqs<SequenceType>(fasta, count_fasta_records(fasta));
     }
     
     template <typename SequenceType = std::string>
@@ -457,11 +543,18 @@ namespace bioio
         return read_fasta_seqs<SequenceType>(fasta);
     }
     
-    template <typename StringType = std::string, typename SequenceType = std::string>
-    std::vector<FastaRecord<StringType, SequenceType>> read_fasta(std::istream& fasta)
+    template <typename SequenceType = std::string>
+    std::vector<SequenceType> read_fasta_seqs(const std::string& fasta_path,
+                                              const size_t num_records)
     {
-        auto num_records = count_fasta_records(fasta);
-        
+        std::ifstream fasta {fasta_path, std::ios::binary};
+        return read_fasta_seqs<SequenceType>(fasta, num_records);
+    }
+    
+    template <typename StringType = std::string, typename SequenceType = std::string>
+    std::vector<FastaRecord<StringType, SequenceType>> read_fasta(std::istream& fasta,
+                                                                  size_t num_records)
+    {
         std::vector<FastaRecord<StringType, SequenceType>> result {};
         result.reserve(num_records);
         
@@ -473,17 +566,32 @@ namespace bioio
     }
     
     template <typename StringType = std::string, typename SequenceType = std::string>
+    std::vector<FastaRecord<StringType, SequenceType>> read_fasta(std::istream& fasta)
+    {
+        return read_fasta<StringType, SequenceType>(fasta, count_fasta_records(fasta));
+    }
+    
+    template <typename StringType = std::string, typename SequenceType = std::string>
     std::vector<FastaRecord<StringType, SequenceType>> read_fasta(const std::string& fasta_path)
     {
         std::ifstream fasta {fasta_path, std::ios::binary};
         return read_fasta<StringType, SequenceType>(fasta);
     }
     
-    template <typename StringType = std::string, typename SequenceType = std::string, typename F>
-    FastaReads<StringType, SequenceType> read_fasta_map(std::istream& fasta, F f)
+    template <typename StringType = std::string, typename SequenceType = std::string>
+    std::vector<FastaRecord<StringType, SequenceType>> read_fasta(const std::string& fasta_path,
+                                                                  const size_t num_records)
     {
-        auto num_records = count_fasta_records(fasta);
-        
+        std::ifstream fasta {fasta_path, std::ios::binary};
+        return read_fasta<StringType, SequenceType>(fasta, num_records);
+    }
+    
+    template <typename StringType = std::string, typename SequenceType = std::string,
+              typename UnaryOperation>
+    FastaReads<StringType, SequenceType> read_fasta_map(std::istream& fasta,
+                                                        size_t num_records,
+                                                        UnaryOperation unary_op)
+    {
         FastaMap<StringType, SequenceType> records {};
         records.reserve(num_records);
         ReadIds<StringType> contig_names {};
@@ -491,73 +599,100 @@ namespace bioio
         
         for (; num_records > 0; --num_records) {
             auto record = detail::read_fasta_record<StringType, SequenceType>(fasta);
-            auto f_contig_name = f(std::move(record.contig_name));
-            records.emplace(f_contig_name, std::move(record.seq));
-            contig_names.insert(std::move(f_contig_name));
+            auto f_name = unary_op(std::move(record.name));
+            records.emplace(f_name, std::move(record.sequence));
+            contig_names.insert(std::move(f_name));
         }
         
         return FastaReads<StringType, SequenceType> {std::move(contig_names), std::move(records)};
     }
     
-    template <typename StringType = std::string, typename SequenceType = std::string, typename F>
-    FastaReads<StringType, SequenceType> read_fasta_map(const std::string& fasta_path, F f)
+    template <typename StringType = std::string, typename SequenceType = std::string,
+              typename UnaryOperation>
+    FastaReads<StringType, SequenceType> read_fasta_map(std::istream& fasta,
+                                                        UnaryOperation unary_op)
+    {
+        return read_fasta_map<StringType, SequenceType, UnaryOperation>(fasta,
+                                                                        count_fasta_records(fasta),
+                                                                        unary_op);
+    }
+    
+    template <typename StringType = std::string, typename SequenceType = std::string,
+              typename UnaryOperation>
+    FastaReads<StringType, SequenceType> read_fasta_map(const std::string& fasta_path,
+                                                        UnaryOperation unary_op)
     {
         std::ifstream fasta {fasta_path, std::ios::binary};
-        return read_fasta_map<StringType, SequenceType, F>(fasta, f);
+        return read_fasta_map<StringType, SequenceType, UnaryOperation>(fasta, unary_op);
+    }
+    
+    template <typename StringType = std::string, typename SequenceType = std::string,
+              typename UnaryOperation>
+    FastaReads<StringType, SequenceType> read_fasta_map(const std::string& fasta_path,
+                                                        size_t num_records,
+                                                        UnaryOperation unary_op)
+    {
+        std::ifstream fasta {fasta_path, std::ios::binary};
+        return read_fasta_map<StringType, SequenceType, UnaryOperation>(fasta, num_records, unary_op);
     }
     
     template <typename StringType = std::string, typename SequenceType = std::string>
     FastaReads<StringType, SequenceType> read_fasta_map(const std::string& fasta_path)
     {
-        return read_fasta_map<StringType, SequenceType>(fasta_path, [] (StringType&& contig_name) { 
-            return contig_name; 
-        });
+        return read_fasta_map<StringType, SequenceType>(fasta_path,
+                                                        [] (StringType&& name) {
+                                                            return name;
+                                                        });
     }
     
-    template <typename StringType = std::string, typename SequenceType = std::string, typename F>
+    template <typename StringType = std::string, typename SequenceType = std::string,
+              typename UnaryOperation>
     FastaReads<StringType, SequenceType>
-    read_fasta_map(std::istream& fasta, const ReadIds<StringType>& contig_names, F f)
+    read_fasta_map(std::istream& fasta, const ReadIds<StringType>& names,
+                   UnaryOperation unary_op)
     {
-        auto num_records = contig_names.size();
+        auto num_records = names.size();
         
         FastaMap<StringType, SequenceType> records {};
         records.reserve(num_records);
-        ReadIds<StringType> f_contig_names {};
-        f_contig_names.reserve(num_records);
+        ReadIds<StringType> f_names {};
+        f_names.reserve(num_records);
         
         for (; num_records > 0; --num_records) {
             auto record = detail::read_fasta_record<StringType, SequenceType>(fasta);
-            auto f_contig_name = f(std::move(record.contig_name));
-            if (contig_names.find(f_contig_name) != std::end(contig_names)) {
-                records.emplace(f_contig_name, std::move(record.seq));
-                f_contig_names.insert(std::move(f_contig_name));
+            auto f_name = unary_op(std::move(record.name));
+            if (names.find(f_name) != names.end()) {
+                records.emplace(f_name, std::move(record.sequence));
+                f_names.insert(std::move(f_name));
             }
         }
         
-        return FastaReads<StringType, SequenceType> {std::move(f_contig_names), std::move(records)};
+        return FastaReads<StringType, SequenceType> {std::move(f_names), std::move(records)};
     }
     
-    template <typename StringType = std::string, typename SequenceType = std::string, typename F>
+    template <typename StringType = std::string, typename SequenceType = std::string,
+              typename UnaryOperation>
     FastaReads<StringType, SequenceType>
-    read_fasta_map(const std::string& fasta_path, const ReadIds<StringType>& contig_names, F f)
+    read_fasta_map(const std::string& fasta_path, const ReadIds<StringType>& names,
+                   UnaryOperation unary_op)
     {
         std::ifstream fasta {fasta_path, std::ios::binary};
-        return read_fasta_map<StringType, SequenceType, F>(fasta, contig_names, f);
+        return read_fasta_map<StringType, SequenceType, UnaryOperation>(fasta, names, unary_op);
     }
     
     template <typename StringType = std::string, typename SequenceType = std::string>
     FastaReads<StringType, SequenceType>
-    read_fasta_map(const std::string& path, const ReadIds<StringType>& contig_names)
+    read_fasta_map(const std::string& path, const ReadIds<StringType>& names)
     {
-        return read_fasta_map(path, contig_names, 
-                              [] (StringType&& contig_name) { return contig_name; });
+        return read_fasta_map(path, names, 
+                              [] (StringType&& name) { return name; });
     }
     
     template <typename T, typename U>
     std::ostream& operator<<(std::ostream& os, const FastaReads<T, U>& records)
     {
-        for (auto contig_name : records.first) {
-            os << ">" << contig_name << "\n" << records.second.at(contig_name);
+        for (auto name : records.first) {
+            os << ">" << name << "\n" << records.second.at(name);
         }
         return os;
     }
@@ -575,7 +710,7 @@ namespace bioio
     
     inline size_t count_fastq_records(std::istream& fastq)
     {
-        return detail::count_records(fastq, '@');
+        return detail::count_records(fastq, detail::fastq_delim);
     }
     
     inline size_t count_fastq_records(const std::string& fastq_path)
@@ -709,6 +844,6 @@ namespace bioio
         return {names, data};
     }
     
-} // bioio namespace
+} // namespace bioio
 
 #endif /* defined(__bioio__bioio__) */

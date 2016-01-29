@@ -7,3 +7,15 @@
 //
 
 #include "pedigree.hpp"
+
+// public methods
+
+void Pedigree::clear()
+{
+    tree_.clear();
+}
+
+std::size_t Pedigree::size() const
+{
+    return boost::num_vertices(tree_);
+}

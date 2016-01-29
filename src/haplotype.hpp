@@ -9,7 +9,7 @@
 #ifndef __Octopus__haplotype__
 #define __Octopus__haplotype__
 
-#include <queue>
+#include <deque>
 #include <cstddef>
 #include <stdexcept>
 #include <functional>

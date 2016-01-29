@@ -567,8 +567,6 @@
 				CAE3E29B1AA139A000C01B2C /* program_options.cpp */,
 				CA1472791AACECF1005FDCD1 /* octopus.hpp */,
 				CA1472781AACECF1005FDCD1 /* octopus.cpp */,
-				CAE7DC2C1C510905009411B6 /* variant_caller_factory.hpp */,
-				CAE7DC2B1C510905009411B6 /* variant_caller_factory.cpp */,
 			);
 			name = octopus;
 			sourceTree = "<group>";
@@ -671,6 +669,8 @@
 		CA91C2CC1B8DE63A00609FFA /* callers */ = {
 			isa = PBXGroup;
 			children = (
+				CAE7DC2C1C510905009411B6 /* variant_caller_factory.hpp */,
+				CAE7DC2B1C510905009411B6 /* variant_caller_factory.cpp */,
 				D44ADE721C43C22700A854C6 /* variant_caller_builder.hpp */,
 				D44ADE711C43C22700A854C6 /* variant_caller_builder.cpp */,
 				CA91C2D11B8DF76300609FFA /* variant_caller.hpp */,
