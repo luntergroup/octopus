@@ -10,6 +10,8 @@
 #define contig_allele_hpp
 
 #include <string>
+#include <cstddef>
+#include <ostream>
 
 #include "comparable.hpp"
 #include "contig_region.hpp"
@@ -28,10 +30,9 @@ public:
     using SequenceType = Allele::SequenceType;
     
     ContigAllele() = default;
-    template <typename SequenceType_> ContigAllele(ContigRegion region, SequenceType_&& sequence);
-    template <typename SequenceType_> ContigAllele(const GenomicRegion& region, SequenceType_&& sequence);
-    ContigAllele(const Allele& allele);
-    //ContigAllele(Allele&& allele);
+    template <typename SequenceType_> explicit ContigAllele(ContigRegion region, SequenceType_&& sequence);
+    template <typename SequenceType_> explicit ContigAllele(const GenomicRegion& region, SequenceType_&& sequence);
+    explicit ContigAllele(const Allele& allele);
     ~ContigAllele() = default;
     
     ContigAllele(const ContigAllele&)            = default;
@@ -49,13 +50,27 @@ private:
 
 template <typename SequenceType_>
 ContigAllele::ContigAllele(ContigRegion region, SequenceType_&& sequence)
-: region_ {region}, sequence_ {std::forward<SequenceType_>(sequence)}
+:
+region_ {region},
+sequence_ {std::forward<SequenceType_>(sequence)}
 {}
 
 template <typename SequenceType_>
 ContigAllele::ContigAllele(const GenomicRegion& region, SequenceType_&& sequence)
-: region_ {region.get_contig_region()}, sequence_ {std::forward<SequenceType_>(sequence)}
+:
+region_ {region.get_contig_region()},
+sequence_ {std::forward<SequenceType_>(sequence)}
 {}
+
+// non-member methods
+
+ContigAllele::SizeType sequence_size(const ContigAllele& allele) noexcept;
+
+ContigAllele splice(const ContigAllele& allele, const ContigRegion& region);
+
+bool is_insertion(const ContigAllele& allele);
+bool is_deletion(const ContigAllele& allele);
+bool is_indel(const ContigAllele& allele);
 
 bool operator==(const ContigAllele& lhs, const ContigAllele& rhs);
 bool operator<(const ContigAllele& lhs, const ContigAllele& rhs);
@@ -63,12 +78,13 @@ bool operator<(const ContigAllele& lhs, const ContigAllele& rhs);
 namespace std {
     template <> struct hash<ContigAllele>
     {
-        size_t operator()(const ContigAllele& a) const
+        size_t operator()(const ContigAllele& allele) const
         {
-            size_t seed {};
-            boost::hash_combine(seed, hash<ContigRegion>()(a.get_region()));
-            boost::hash_combine(seed, hash<ContigAllele::SequenceType>()(a.get_sequence()));
-            return seed;
+            using boost::hash_combine;
+            size_t result {0};
+            hash_combine(result, hash<ContigRegion>()(allele.get_region()));
+            hash_combine(result, hash<ContigAllele::SequenceType>()(allele.get_sequence()));
+            return result;
         }
     };
 } // namespace std

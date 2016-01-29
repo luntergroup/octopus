@@ -16,9 +16,19 @@
 #include "reference_genome.hpp"
 #include "genomic_region.hpp"
 #include "mappable_algorithms.hpp"
+#include "mappable_ranges.hpp"
 #include "variant.hpp"
 
 #include <iostream> // TEST
+
+// helper
+
+template <typename T, typename M>
+auto haplotype_overlap_range(const T& alleles, const M& mappable)
+{
+    return bases(overlap_range(std::cbegin(alleles), std::cend(alleles),
+                               mappable, MappableRangeOrder::BidirectionallySorted));
+}
 
 // public methods
 
@@ -39,40 +49,37 @@ bool Haplotype::contains(const Allele& allele) const
 {
     using std::cbegin; using std::cend; using std::binary_search;
     
-    if (::contains(get_region(), allele)) {
+    if (::contains(region_, allele)) {
         // these binary searches are just optimisations
-        if (binary_search(cbegin(explicit_alleles_), cend(explicit_alleles_), allele)) {
-            return true;
-        } else if (binary_search(cbegin(explicit_alleles_), cend(explicit_alleles_), ::get_region(allele))) {
+        if (binary_search(cbegin(explicit_alleles_), cend(explicit_alleles_), allele)) return true;
+        
+        if (binary_search(cbegin(explicit_alleles_), cend(explicit_alleles_), ::get_region(allele))) {
             // If the allele is not explcitly contained but the region is then it must be a different
             // allele, unless it is an insertion, in which case we must check the sequence
             if (is_insertion(allele)) {
                 auto it = std::lower_bound(cbegin(explicit_alleles_), cend(explicit_alleles_),
                                            allele.get_region());
-                //return *it == allele;
                 return ::contains(*it, allele);
             } else {
                 return false;
             }
         }
         
-        auto overlapped = bases(overlap_range(cbegin(explicit_alleles_), cend(explicit_alleles_), allele,
-                                              MappableRangeOrder::BidirectionallySorted));
+        const auto overlapped = haplotype_overlap_range(explicit_alleles_, allele);
         
         if (overlapped.size() == 1 && ::contains(overlapped.front(), allele)) {
-            return allele == splice(overlapped.front(), get_overlapped(overlapped.front(), allele));
+            return allele == splice(overlapped.front(), get_contig_region(allele));
         }
         
         return get_sequence(allele.get_region()) == allele.get_sequence();
-    } else {
-        return false;
     }
+    
+    return false;
 }
 
 bool Haplotype::contains_exact(const Allele& allele) const
 {
-    return has_exact_overlap(std::cbegin(explicit_alleles_), std::cend(explicit_alleles_), allele,
-                             MappableRangeOrder::BidirectionallySorted);
+    return has_exact_overlap(explicit_alleles_, allele, MappableRangeOrder::BidirectionallySorted);
 }
 
 Haplotype::SequenceType Haplotype::get_sequence() const
@@ -85,88 +92,22 @@ Haplotype::SequenceType Haplotype::get_sequence() const
     }
 }
 
-void append(Haplotype::SequenceType& sequence, const Allele& allele)
+void append(Haplotype::SequenceType& sequence, const ContigAllele& allele)
 {
     sequence += allele.get_sequence();
 }
 
 Haplotype::SequenceType Haplotype::get_sequence(const GenomicRegion& region) const
 {
-    using std::cbegin; using std::cend;
-    
     if (explicit_alleles_.empty()) {
         return get_reference_sequence(region);
     }
     
-    auto region_bounded_by_alleles = get_region_bounded_by_explicit_alleles();
-    
-    SequenceType result {};
-    result.reserve(size(region)); // may be more or less depending on indels
-    
-    if (begins_before(region, region_bounded_by_alleles)) {
-        result += get_reference_sequence(get_left_overhang(region, region_bounded_by_alleles));
-        if (is_before(region, region_bounded_by_alleles)) {
-            if (!explicit_alleles_.empty() && ::contains(region, explicit_alleles_.front())) {
-                result += explicit_alleles_.front().get_sequence();
-            }
-            result.shrink_to_fit();
-            return result;
-        }
-    } else if (is_after(region, region_bounded_by_alleles)) {
-        result += get_reference_sequence(region);
+    if (!is_same_contig(region, region_)) {
+        throw std::logic_error {"Haplotype: cannot get_sequence from different contig"};
     }
     
-    // we know the alleles are bidirectionally sorted as it is a condition of them being on a haplotype
-    auto overlapped_explicit_alleles = bases(overlap_range(cbegin(explicit_alleles_), cend(explicit_alleles_), region,
-                                                           MappableRangeOrder::BidirectionallySorted));
-    
-    // captures insertion at the end... this breaks the rules of region overlaps as normally
-    // insertions are only consdiered overlapped at the start of a region.
-//    if (overlapped_explicit_alleles.size() > 1 && is_insertion(overlapped_explicit_alleles.front())) {
-//        
-//    }
-    if (overlapped_explicit_alleles.end() != cend(explicit_alleles_) && ::contains(region, *overlapped_explicit_alleles.end())) {
-        overlapped_explicit_alleles.advance_end(1);
-    }
-    
-    if (empty(overlapped_explicit_alleles)) { // can this ever happen?
-        result.shrink_to_fit();
-        return result;
-    }
-    
-    if (::contains(overlapped_explicit_alleles.front(), region)) {
-        append(result, splice(overlapped_explicit_alleles.front(), region));
-        overlapped_explicit_alleles.advance_begin(1);
-        if (!empty(overlapped_explicit_alleles) && is_insertion(overlapped_explicit_alleles.front())) {
-            append(result, overlapped_explicit_alleles.front());
-        }
-        result.shrink_to_fit();
-        return result;
-    } else if (begins_before(overlapped_explicit_alleles.front(), region)) {
-        append(result, splice(overlapped_explicit_alleles.front(), get_overlapped(overlapped_explicit_alleles.front(), region)));
-        overlapped_explicit_alleles.advance_begin(1);
-    }
-    
-    bool region_ends_before_last_overlapped_allele {ends_before(region, overlapped_explicit_alleles.back())};
-    
-    if (region_ends_before_last_overlapped_allele) {
-        overlapped_explicit_alleles.advance_end(-1); // as we don't want all of the last allele
-        region_ends_before_last_overlapped_allele = true;
-    }
-    
-    result += get_sequence_bounded_by_explicit_alleles(overlapped_explicit_alleles.begin(),
-                                                       overlapped_explicit_alleles.end());
-    
-    if (region_ends_before_last_overlapped_allele) {
-        overlapped_explicit_alleles.advance_end(1); // as we previously removed this allele
-        append(result, splice(overlapped_explicit_alleles.back(), get_overlapped(overlapped_explicit_alleles.back(), region)));
-    } else if (ends_before(region_bounded_by_alleles, region)) {
-        result += get_reference_sequence(get_right_overhang(region, region_bounded_by_alleles));
-    }
-    
-    result.shrink_to_fit();
-    
-    return result;
+    return get_sequence(region.get_contig_region());
 }
 
 std::vector<Variant> Haplotype::difference(const Haplotype& other) const
@@ -176,7 +117,8 @@ std::vector<Variant> Haplotype::difference(const Haplotype& other) const
     
     for (const auto& allele : explicit_alleles_) {
         if (!other.contains(allele)) {
-            result.emplace_back(allele.get_region(), other.get_sequence(allele.get_region()), allele.get_sequence());
+            result.emplace_back(allele.get_region(), other.get_sequence(allele.get_region()),
+                                allele.get_sequence());
         }
     }
     
@@ -207,9 +149,125 @@ size_t Haplotype::get_hash() const
 
 // private methods
 
+bool Haplotype::contains(const ContigAllele& allele) const
+{
+    using std::cbegin; using std::cend; using std::binary_search;
+    
+    if (::contains(region_, allele)) {
+        // these binary searches are just optimisations
+        if (binary_search(cbegin(explicit_alleles_), cend(explicit_alleles_), allele)) return true;
+        
+        if (binary_search(cbegin(explicit_alleles_), cend(explicit_alleles_), ::get_region(allele))) {
+            // If the allele is not explcitly contained but the region is then it must be a different
+            // allele, unless it is an insertion, in which case we must check the sequence
+            if (is_insertion(allele)) {
+                auto it = std::lower_bound(cbegin(explicit_alleles_), cend(explicit_alleles_),
+                                           allele.get_region());
+                return ::contains(*it, allele);
+            } else {
+                return false;
+            }
+        }
+        
+        const auto overlapped = haplotype_overlap_range(explicit_alleles_, allele);
+        
+        if (overlapped.size() == 1 && ::contains(overlapped.front(), allele)) {
+            return allele == splice(overlapped.front(), get_contig_region(allele));
+        }
+        
+        return get_sequence(allele.get_region()) == allele.get_sequence();
+    }
+    
+    return false;
+}
+
+bool Haplotype::contains_exact(const ContigAllele& allele) const
+{
+    return has_exact_overlap(explicit_alleles_, allele, MappableRangeOrder::BidirectionallySorted);
+}
+
+Haplotype::SequenceType Haplotype::get_sequence(const ContigRegion& region) const
+{
+    using std::cbegin; using std::cend;
+    
+    auto region_bounded_by_alleles = get_region_bounded_by_explicit_alleles();
+    
+    SequenceType result {};
+    result.reserve(size(region)); // may be more or less depending on indels
+    
+    if (begins_before(region, region_bounded_by_alleles)) {
+        result += get_reference_sequence(get_left_overhang(region, region_bounded_by_alleles));
+        if (is_before(region, region_bounded_by_alleles)) {
+            if (!explicit_alleles_.empty() && ::contains(region, explicit_alleles_.front())) {
+                result += explicit_alleles_.front().get_sequence();
+            }
+            result.shrink_to_fit();
+            return result;
+        }
+    } else if (is_after(region, region_bounded_by_alleles)) {
+        result += get_reference_sequence(region);
+    }
+    
+    // we know the alleles are bidirectionally sorted as it is a condition of them being on a haplotype
+    auto overlapped_explicit_alleles = haplotype_overlap_range(explicit_alleles_, region);
+    
+    // captures insertion at the end... this breaks the rules of region overlaps as normally
+    // insertions are only consdiered overlapped at the start of a region.
+    if (overlapped_explicit_alleles.end() != cend(explicit_alleles_)
+        && ::contains(region, *overlapped_explicit_alleles.end())) {
+        overlapped_explicit_alleles.advance_end(1);
+    }
+    
+    if (empty(overlapped_explicit_alleles)) { // can this ever happen?
+        result.shrink_to_fit();
+        return result;
+    }
+    
+    if (::contains(overlapped_explicit_alleles.front(), region)) {
+        append(result, splice(overlapped_explicit_alleles.front(), region));
+        overlapped_explicit_alleles.advance_begin(1);
+        if (!empty(overlapped_explicit_alleles) && is_insertion(overlapped_explicit_alleles.front())) {
+            append(result, overlapped_explicit_alleles.front());
+        }
+        result.shrink_to_fit();
+        return result;
+    } else if (begins_before(overlapped_explicit_alleles.front(), region)) {
+        append(result, splice(overlapped_explicit_alleles.front(),
+                              get_overlapped(overlapped_explicit_alleles.front(), region)));
+        overlapped_explicit_alleles.advance_begin(1);
+    }
+    
+    bool region_ends_before_last_overlapped_allele {ends_before(region, overlapped_explicit_alleles.back())};
+    
+    if (region_ends_before_last_overlapped_allele) {
+        overlapped_explicit_alleles.advance_end(-1); // as we don't want all of the last allele
+        region_ends_before_last_overlapped_allele = true;
+    }
+    
+    result += get_sequence_bounded_by_explicit_alleles(overlapped_explicit_alleles.begin(),
+                                                       overlapped_explicit_alleles.end());
+    
+    if (region_ends_before_last_overlapped_allele) {
+        overlapped_explicit_alleles.advance_end(1); // as we previously removed this allele
+        append(result, splice(overlapped_explicit_alleles.back(),
+                              get_overlapped(overlapped_explicit_alleles.back(), region)));
+    } else if (ends_before(region_bounded_by_alleles, region)) {
+        result += get_reference_sequence(get_right_overhang(region, region_bounded_by_alleles));
+    }
+    
+    result.shrink_to_fit();
+    
+    return result;
+}
+
 Haplotype::SequenceType Haplotype::get_reference_sequence(const GenomicRegion& region) const
 {
     return reference_.get().get_sequence(region);
+}
+
+Haplotype::SequenceType Haplotype::get_reference_sequence(const ContigRegion& region) const
+{
+    return get_reference_sequence(GenomicRegion {region_.get_contig_region(), region});
 }
 
 Allele Haplotype::get_intervening_reference_allele(const Allele& lhs, const Allele& rhs) const
@@ -217,10 +275,10 @@ Allele Haplotype::get_intervening_reference_allele(const Allele& lhs, const Alle
     return get_reference_allele(get_intervening(lhs, rhs), reference_);
 }
 
-GenomicRegion Haplotype::get_region_bounded_by_explicit_alleles() const
+ContigRegion Haplotype::get_region_bounded_by_explicit_alleles() const
 {
-    if (explicit_alleles_.empty()) throw std::runtime_error {"cannot get region from empty allele list"};
-    
+    if (explicit_alleles_.empty())
+        throw std::runtime_error {"Haplotype: trying to get region from empty allele list"};
     return get_encompassing(explicit_alleles_.front(), explicit_alleles_.back());
 }
 
@@ -228,10 +286,13 @@ Haplotype::SequenceType Haplotype::get_sequence_bounded_by_explicit_alleles(Alle
                                                                             AlleleIterator last) const
 {
     SequenceType result {};
+    result.reserve(64);
     
     std::for_each(first, last, [this, &result] (const auto& allele) {
         result += allele.get_sequence();
     });
+    
+    result.shrink_to_fit();
     
     return result;
 }
@@ -247,7 +308,7 @@ bool Haplotype::is_cached_sequence_good() const noexcept
     return !cached_sequence_.empty() || (explicit_alleles_.empty() && empty(region_));
 }
 
-void Haplotype::reset_cached_sequence()
+void Haplotype::clear_cached_sequence()
 {
     cached_sequence_.clear();
 }
@@ -376,6 +437,8 @@ std::ostream& operator<<(std::ostream& os, const Haplotype& haplotype)
     return os;
 }
 
+// debug
+
 void print_alleles(const Haplotype& haplotype)
 {
     std::cout << "< ";
@@ -390,8 +453,10 @@ void print_variant_alleles(const Haplotype& haplotype)
     if (is_reference(haplotype, haplotype.reference_)) {
         std::cout << "< >";
     } else {
+        const auto& contig = get_contig_name(haplotype);
         std::cout << "< ";
-        for (const auto& allele : haplotype.explicit_alleles_) {
+        for (const auto& contig_allele : haplotype.explicit_alleles_) {
+            Allele allele {GenomicRegion {contig, contig_allele.get_region()}, contig_allele.get_sequence()};
             if (!is_reference(allele, haplotype.reference_)) std::cout << "{" << allele << "} ";
         }
         std::cout << ">";

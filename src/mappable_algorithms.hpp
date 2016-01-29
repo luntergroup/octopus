@@ -26,14 +26,14 @@
 #include <iostream> // DEBUG
 
 template <typename ForwardIterator>
-GenomicRegion::SizeType sum_sizes(ForwardIterator first, ForwardIterator last)
+auto sum_sizes(ForwardIterator first, ForwardIterator last)
 {
     return std::accumulate(first, last, GenomicRegion::SizeType {},
                            [] (const auto curr, const auto& mappable) { return curr + size(mappable); });
 }
 
 template <typename Container>
-GenomicRegion::SizeType sum_sizes(const Container& mappables)
+auto sum_sizes(const Container& mappables)
 {
     return sum_sizes(std::cbegin(mappables), std::cend(mappables));
 }
@@ -382,6 +382,13 @@ bool has_exact_overlap(ForwardIterator first, ForwardIterator last, const Mappab
     
     return std::find_if(std::cbegin(overlapped), std::cend(overlapped),
                         [&mappable] (const auto& e) { return is_same_region(mappable, e); }) != std::cend(overlapped);
+}
+
+template <typename Container, typename MappableType>
+bool has_exact_overlap(const Container& container, const MappableType& mappable,
+                       MappableRangeOrder order = MappableRangeOrder::ForwardSorted)
+{
+    return has_exact_overlap(std::cbegin(container), std::cend(container), mappable, order);
 }
 
 /**

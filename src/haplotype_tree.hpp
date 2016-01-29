@@ -18,12 +18,11 @@
 
 #include <boost/graph/adjacency_list.hpp>
 
-#include "allele.hpp"
+#include "contig_allele.hpp"
 #include "variant.hpp"
 #include "haplotype.hpp"
-
-class GenomicRegion;
-class ReferenceGenome;
+#include "genomic_region.hpp"
+#include "reference_genome.hpp"
 
 namespace Octopus
 {
@@ -56,7 +55,11 @@ public:
     void clear();
     
 private:
-    using Tree   = boost::adjacency_list<boost::listS, boost::listS, boost::bidirectionalS, Allele, boost::no_property>;
+    using Tree = boost::adjacency_list<
+                     boost::listS, boost::listS, boost::bidirectionalS,
+                     ContigAllele, boost::no_property
+                 >;
+    
     using Vertex = typename boost::graph_traits<Tree>::vertex_descriptor;
     using Edge   = typename boost::graph_traits<Tree>::edge_descriptor;
     

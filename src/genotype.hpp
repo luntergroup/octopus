@@ -51,9 +51,9 @@ public:
     template <typename T> void emplace(T&& element);
     
     Iterator begin() const noexcept;
-    Iterator end() const noexcept ;
-    Iterator cbegin() const noexcept ;
-    Iterator cend() const noexcept ;
+    Iterator end() const noexcept;
+    Iterator cbegin() const noexcept;
+    Iterator cend() const noexcept;
     
     const GenomicRegion& get_region() const noexcept;
     

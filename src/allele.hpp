@@ -75,14 +75,12 @@ std::vector<Allele> get_reference_alleles(const std::vector<GenomicRegion>& regi
 std::vector<Allele> get_positional_reference_alleles(const GenomicRegion& region,
                                                      const ReferenceGenome& reference);
 
-Allele splice(const Allele& allele, const GenomicRegion& region);
-
 bool contains(const Allele& lhs, const Allele& rhs);
 
+Allele splice(const Allele& allele, const GenomicRegion& region);
+
 bool is_insertion(const Allele& allele);
-
 bool is_deletion(const Allele& allele);
-
 bool is_indel(const Allele& allele);
 
 std::vector<Allele> decompose(const Allele& allele);

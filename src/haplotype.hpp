@@ -21,7 +21,6 @@
 #include "contig_allele.hpp"
 #include "allele.hpp"
 #include "comparable.hpp"
-#include "mappable.hpp"
 
 class ReferenceGenome;
 class GenomicRegion;
@@ -29,10 +28,11 @@ class Variant;
 
 class Haplotype;
 
-namespace detail {
+namespace detail
+{
     Haplotype do_splice(const Haplotype& haplotype, const GenomicRegion& region, std::true_type);
     Allele do_splice(const Haplotype& haplotype, const GenomicRegion& region, std::false_type);
-} // namespace detail
+}
 
 class Haplotype : public Comparable<Haplotype>, public Mappable<Haplotype>
 {
@@ -76,7 +76,7 @@ public:
 private:
     GenomicRegion region_;
     
-    std::deque<Allele> explicit_alleles_;
+    std::deque<ContigAllele> explicit_alleles_;
     
     mutable SequenceType cached_sequence_;
     mutable size_t cached_hash_ = 0;
@@ -85,14 +85,20 @@ private:
     
     using AlleleIterator = decltype(explicit_alleles_)::const_iterator;
     
+    bool contains(const ContigAllele& allele) const;
+    bool contains_exact(const ContigAllele& allele) const;
+    
+    SequenceType get_sequence(const ContigRegion& region) const;
+    
     SequenceType get_reference_sequence(const GenomicRegion& region) const;
+    SequenceType get_reference_sequence(const ContigRegion& region) const;
     Allele get_intervening_reference_allele(const Allele& lhs, const Allele& rhs) const;
-    GenomicRegion get_region_bounded_by_explicit_alleles() const;
+    ContigRegion get_region_bounded_by_explicit_alleles() const;
     SequenceType get_sequence_bounded_by_explicit_alleles(AlleleIterator first, AlleleIterator last) const;
     SequenceType get_sequence_bounded_by_explicit_alleles() const;
     
     bool is_cached_sequence_good() const noexcept;
-    void reset_cached_sequence();
+    void clear_cached_sequence();
 };
 
 template <typename T>
@@ -102,17 +108,13 @@ void Haplotype::push_back(T&& allele)
         if (!is_after(allele, explicit_alleles_.back())) {
             throw std::runtime_error {"Haplotype::push_back called with out-of-order Allele"};
         }
-        
         if (!are_adjacent(explicit_alleles_.back(), allele)) {
             explicit_alleles_.emplace_back(get_intervening_reference_allele(explicit_alleles_.back(), allele));
         }
     }
-    
-    explicit_alleles_.emplace_back(std::forward<T>(allele));
-    
     region_ = get_encompassing(region_, allele);
-    
-    reset_cached_sequence();
+    explicit_alleles_.emplace_back(std::forward<T>(allele));
+    clear_cached_sequence();
 }
 
 template <typename T>
@@ -122,17 +124,13 @@ void Haplotype::push_front(T&& allele)
         if (!is_after(explicit_alleles_.front(), allele)) {
             throw std::runtime_error {"Haplotype::push_front called with out-of-order Allele"};
         }
-        
         if (!are_adjacent(allele, explicit_alleles_.front())) {
             explicit_alleles_.emplace_front(get_intervening_reference_allele(allele, explicit_alleles_.front()));
         }
     }
-    
-    explicit_alleles_.emplace_front(std::forward<T>(allele));
-    
     region_ = get_encompassing(region_, allele);
-    
-    reset_cached_sequence();
+    explicit_alleles_.emplace_front(std::forward<T>(allele));
+    clear_cached_sequence();
 }
 
 // non-members

@@ -13,8 +13,6 @@
 #include <iterator>
 #include <algorithm>
 
-#include "genomic_region.hpp"
-#include "reference_genome.hpp"
 #include "mappable_algorithms.hpp"
 
 namespace Octopus
@@ -76,7 +74,6 @@ void HaplotypeTree::extend(const Allele& allele)
     for (auto leaf_it = std::cbegin(haplotype_leafs_), end = std::cend(haplotype_leafs_); leaf_it != end; ++leaf_it) {
         leaf_it = extend_haplotype(leaf_it, allele);
     }
-    
     haplotype_leaf_cache_.clear();
     recently_removed_haplotypes_.clear();
 }

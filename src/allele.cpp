@@ -96,14 +96,6 @@ Allele::SequenceType get_subsequence(const Allele& allele, const GenomicRegion& 
     return Allele::SequenceType {first, first + std::min(sequence.size(), static_cast<size_t>(size(region)))};
 }
 
-Allele splice(const Allele& allele, const GenomicRegion& region)
-{
-    if (!contains(allele, region)) {
-        throw std::runtime_error {"tried to splice an uncontained region from Allele"};
-    }
-    return Allele {region, get_subsequence(allele, region)};
-}
-
 bool contains(const Allele& lhs, const Allele& rhs)
 {
     if (!contains(get_region(lhs), get_region(rhs))) {
@@ -116,6 +108,14 @@ bool contains(const Allele& lhs, const Allele& rhs)
     } else {
         return get_subsequence(lhs, rhs.get_region()) == rhs.get_sequence();
     }
+}
+
+Allele splice(const Allele& allele, const GenomicRegion& region)
+{
+    if (!contains(allele, region)) {
+        throw std::logic_error {"Allele: trying to splice an uncontained region"};
+    }
+    return Allele {region, get_subsequence(allele, region)};
 }
 
 bool is_insertion(const Allele& allele)

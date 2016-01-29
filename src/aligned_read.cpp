@@ -321,7 +321,7 @@ AlignedRead splice(const AlignedRead& read, const GenomicRegion& region)
     using std::cbegin;
     
     if (!overlaps(read, region)) {
-        throw std::runtime_error {"cannot splice AlignedRead region that is not overlapped"};
+        throw std::logic_error {"AlignedRead: trying to splice non-overlapped region"};
     }
     
     if (contains(region, read)) return read;
