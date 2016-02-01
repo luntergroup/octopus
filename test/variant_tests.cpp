@@ -291,6 +291,8 @@ BOOST_AUTO_TEST_CASE(inner_distance_respects_insertion_lhs_ordering_rule)
 
 BOOST_AUTO_TEST_CASE(indels_can_be_left_aligned)
 {
+    BOOST_REQUIRE(test_file_exists(human_reference_fasta));
+    
     auto human = make_reference(human_reference_fasta);
     
     // Huntingtin region CCAGCAGCAGCAGCAG...
@@ -344,6 +346,8 @@ BOOST_AUTO_TEST_CASE(indels_can_be_left_aligned)
 
 BOOST_AUTO_TEST_CASE(can_make_variants_parsimonious)
 {
+    BOOST_REQUIRE(test_file_exists(human_reference_fasta));
+    
     auto human = make_reference(human_reference_fasta);
     
     Variant a_snp {*parse_region("12:10001330-10001331", human), std::string {"G"}, std::string {"C"}};
@@ -411,6 +415,8 @@ BOOST_AUTO_TEST_CASE(can_make_variants_parsimonious)
 
 BOOST_AUTO_TEST_CASE(can_normalise_variants)
 {
+    BOOST_REQUIRE(test_file_exists(human_reference_fasta));
+    
     auto human = make_reference(human_reference_fasta);
     
     // Huntingtin region CCAGCAGCAGCAGCAG...

@@ -11,10 +11,9 @@
 
 #include <deque>
 #include <cstddef>
-#include <stdexcept>
 #include <functional>
 #include <type_traits>
-#include <iostream>
+#include <ostream>
 
 #include "contig_region.hpp"
 #include "mappable.hpp"

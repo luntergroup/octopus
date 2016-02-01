@@ -75,6 +75,8 @@ BOOST_AUTO_TEST_SUITE(Components)
 
 BOOST_AUTO_TEST_CASE(assembler_path_test)
 {
+    BOOST_REQUIRE(test_file_exists(lambda_reference_fasta));
+    
     auto lambda = make_reference(lambda_reference_fasta);
     
     auto contig_name = lambda.get_contig_names()[0];

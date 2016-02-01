@@ -172,7 +172,7 @@ boost::optional<GenomicRegion> parse_region(std::string region, const ReferenceG
                 end = static_cast<GenomicRegion::SizeType>(std::stoul(match.str(4)));
             }
             
-            if (begin > contig_size) return boost::none;
+            if (begin > end || begin > contig_size) return boost::none;
             
             if (end > contig_size) end = contig_size;
         }

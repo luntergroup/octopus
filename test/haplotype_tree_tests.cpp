@@ -36,9 +36,16 @@ using Octopus::HaplotypeTree;
 
 BOOST_AUTO_TEST_SUITE(Components)
 
+static void sort(std::vector<Haplotype>& haplotypes)
+{
+    std::sort(std::begin(haplotypes), std::end(haplotypes));
+}
+
 BOOST_AUTO_TEST_CASE(haplotype_tree_does_not_bifurcate_on_alleles_positioned_past_the_leading_alleles)
 {
-    auto human = make_reference(human_reference_fasta);
+    BOOST_REQUIRE(test_file_exists(human_reference_fasta));
+    
+    const auto human = make_reference(human_reference_fasta);
     
     Allele allele1 {*parse_region("4:1000000-1000001", human), "A"};
     Allele allele2 {*parse_region("4:1000001-1000002", human), "C"};
@@ -58,7 +65,9 @@ BOOST_AUTO_TEST_CASE(haplotype_tree_does_not_bifurcate_on_alleles_positioned_pas
 
 BOOST_AUTO_TEST_CASE(haplotype_tree_ignores_duplicate_alleles_coming_from_same_allele)
 {
-    auto human = make_reference(human_reference_fasta);
+    BOOST_REQUIRE(test_file_exists(human_reference_fasta));
+    
+    const auto human = make_reference(human_reference_fasta);
     
     Allele allele1 {*parse_region("4:1000000-1000001", human), "A"};
     Allele allele2 {*parse_region("4:1000000-1000001", human), "C"};
@@ -74,20 +83,22 @@ BOOST_AUTO_TEST_CASE(haplotype_tree_ignores_duplicate_alleles_coming_from_same_a
 
 BOOST_AUTO_TEST_CASE(haplotype_tree_ignores_insertions_followed_immediatly_by_deletions_and_vice_versa)
 {
-    auto human = make_reference(human_reference_fasta);
+    BOOST_REQUIRE(test_file_exists(human_reference_fasta));
+    
+    const auto human = make_reference(human_reference_fasta);
     
     Allele allele1 {*parse_region("16:9300037-9300037", human), "TG"};
     Allele allele2 {*parse_region("16:9300037-9300051 ", human), ""};
     
-    HaplotypeTree haplotype_tree {"4", human};
+    HaplotypeTree haplotype_tree {"16", human};
     haplotype_tree.extend(allele1);
     haplotype_tree.extend(allele2);
     
     BOOST_CHECK(haplotype_tree.num_haplotypes() == 1);
     
-    auto a_region = *parse_region("16:9300037-9300037", human);
+    auto region = *parse_region("16:9300037-9300037", human);
     
-    auto haplotypes = haplotype_tree.get_haplotypes(a_region);
+    auto haplotypes = haplotype_tree.get_haplotypes(region);
     
     BOOST_CHECK(haplotypes[0].contains(allele1));
     BOOST_CHECK(!haplotypes[0].contains(allele2));
@@ -95,7 +106,9 @@ BOOST_AUTO_TEST_CASE(haplotype_tree_ignores_insertions_followed_immediatly_by_de
 
 BOOST_AUTO_TEST_CASE(haplotype_tree_splits_overlapping_snps_into_different_branches)
 {
-    auto human = make_reference(human_reference_fasta);
+    BOOST_REQUIRE(test_file_exists(human_reference_fasta));
+    
+    const auto human = make_reference(human_reference_fasta);
     
     Allele allele1 {*parse_region("4:1000000-1000001", human), "A"};
     Allele allele2 {*parse_region("4:1000000-1000001", human), "C"};
@@ -129,33 +142,38 @@ BOOST_AUTO_TEST_CASE(haplotype_tree_splits_overlapping_snps_into_different_branc
 
 BOOST_AUTO_TEST_CASE(haplotype_tree_can_generate_haplotypes_in_a_region)
 {
-    auto human = make_reference(human_reference_fasta);
+    BOOST_REQUIRE(test_file_exists(human_reference_fasta));
     
-    HaplotypeTree haplotype_tree {"4", human};
+    const auto human = make_reference(human_reference_fasta);
     
     Allele allele1 {*parse_region("4:1000000-1000001", human), "A"};
     Allele allele2 {*parse_region("4:1000002-1000003", human), "C"};
     Allele allele3 {*parse_region("4:1000002-1000003", human), "G"};
     Allele allele4 {*parse_region("4:1000004-1000005", human), "T"};
     
+    HaplotypeTree haplotype_tree {"4", human};
     haplotype_tree.extend(allele1);
     haplotype_tree.extend(allele2);
     haplotype_tree.extend(allele3);
     haplotype_tree.extend(allele4);
     
-    auto a_region = *parse_region("4:1000000-1000005", human);
+    auto region = *parse_region("4:1000000-1000005", human);
     
-    auto haplotypes = haplotype_tree.get_haplotypes(a_region);
+    auto haplotypes = haplotype_tree.get_haplotypes(region);
     
     BOOST_CHECK(haplotypes.size() == 2);
-    std::sort(haplotypes.begin(), haplotypes.end());
+    
+    sort(haplotypes);
+    
     BOOST_CHECK(haplotypes[0].get_sequence() == "ATCCT");
     BOOST_CHECK(haplotypes[1].get_sequence() == "ATGCT");
 }
 
 BOOST_AUTO_TEST_CASE(haplotype_tree_can_generate_haplotypes_ending_in_different_regions)
 {
-    auto human = make_reference(human_reference_fasta);
+    BOOST_REQUIRE(test_file_exists(human_reference_fasta));
+    
+    const auto human = make_reference(human_reference_fasta);
     
     HaplotypeTree haplotype_tree {"4", human};
     
@@ -169,25 +187,29 @@ BOOST_AUTO_TEST_CASE(haplotype_tree_can_generate_haplotypes_ending_in_different_
     
     BOOST_CHECK(haplotype_tree.num_haplotypes() == 2);
     
-    auto a_region = *parse_region("4:1000000-1000006", human);
+    const auto region1 = *parse_region("4:1000000-1000006", human);
     
-    auto haplotypes = haplotype_tree.get_haplotypes(a_region);
+    auto haplotypes = haplotype_tree.get_haplotypes(region1);
+    
+    BOOST_CHECK(haplotypes.size() == 2);
+    
+    const auto region2 = *parse_region("4:1000000-1000003", human);
+    
+    haplotypes = haplotype_tree.get_haplotypes(region2);
     
     BOOST_CHECK(haplotypes.size() == 2);
     
-    a_region = *parse_region("4:1000000-1000003", human);
+    sort(haplotypes);
     
-    haplotypes = haplotype_tree.get_haplotypes(a_region);
-    
-    BOOST_CHECK(haplotypes.size() == 2);
-    std::sort(haplotypes.begin(), haplotypes.end());
     BOOST_CHECK(haplotypes[0].get_sequence() == "ATG");
     BOOST_CHECK(haplotypes[1].get_sequence() == "AT");
 }
 
 BOOST_AUTO_TEST_CASE(leading_haplotypes_can_be_removed_from_the_tree)
 {
-    auto human = make_reference(human_reference_fasta);
+    BOOST_REQUIRE(test_file_exists(human_reference_fasta));
+    
+    const auto human = make_reference(human_reference_fasta);
     
     HaplotypeTree haplotype_tree {"4", human};
     
@@ -203,13 +225,13 @@ BOOST_AUTO_TEST_CASE(leading_haplotypes_can_be_removed_from_the_tree)
     haplotype_tree.extend(allele4);
     haplotype_tree.extend(allele5);
     
-    auto region = get_encompassing(allele1, allele5);
+    const auto region = get_encompassing(allele1, allele5);
     
     auto haplotypes = haplotype_tree.get_haplotypes(region);
     
     BOOST_CHECK(haplotypes.size() == 4);
     
-    std::sort(haplotypes.begin(), haplotypes.end());
+    sort(haplotypes);
     
     haplotype_tree.prune_all(haplotypes[0]); // ATCCC
     
@@ -221,7 +243,7 @@ BOOST_AUTO_TEST_CASE(leading_haplotypes_can_be_removed_from_the_tree)
     
     haplotypes = haplotype_tree.get_haplotypes(region);
     
-    std::sort(haplotypes.begin(), haplotypes.end());
+    sort(haplotypes);
     
     BOOST_CHECK(haplotypes[0].get_sequence() == "ATGCC");
     BOOST_CHECK(haplotypes[1].get_sequence() == "ATGCT");
@@ -229,7 +251,9 @@ BOOST_AUTO_TEST_CASE(leading_haplotypes_can_be_removed_from_the_tree)
 
 BOOST_AUTO_TEST_CASE(pruned_branches_can_still_be_extended)
 {
-    auto human = make_reference(human_reference_fasta);
+    BOOST_REQUIRE(test_file_exists(human_reference_fasta));
+    
+    const auto human = make_reference(human_reference_fasta);
     
     HaplotypeTree haplotype_tree {"4", human};
     
@@ -247,7 +271,7 @@ BOOST_AUTO_TEST_CASE(pruned_branches_can_still_be_extended)
     haplotype_tree.extend(allele5);
     haplotype_tree.extend(allele6);
     
-    auto region = *parse_region("4:1000000-1000007", human);
+    const auto region = *parse_region("4:1000000-1000007", human);
     
     BOOST_CHECK(haplotype_tree.num_haplotypes() == 4);
     
@@ -262,7 +286,7 @@ BOOST_AUTO_TEST_CASE(pruned_branches_can_still_be_extended)
     
     auto haplotypes = haplotype_tree.get_haplotypes(region);
     
-    std::sort(haplotypes.begin(), haplotypes.end());
+    sort(haplotypes);
     
     BOOST_CHECK(haplotypes[0].get_sequence() == "ATCCCAA");
     BOOST_CHECK(haplotypes[1].get_sequence() == "ATCCTAA");
@@ -278,7 +302,7 @@ BOOST_AUTO_TEST_CASE(pruned_branches_can_still_be_extended)
     
     haplotypes = haplotype_tree.get_haplotypes(region);
     
-    std::sort(haplotypes.begin(), haplotypes.end());
+    sort(haplotypes);
     
     BOOST_CHECK(haplotypes[0].get_sequence() == "ATCCTAA");
     BOOST_CHECK(haplotypes[1].get_sequence() == "ATGCCAG");
@@ -289,7 +313,7 @@ BOOST_AUTO_TEST_CASE(pruned_branches_can_still_be_extended)
     
     haplotypes = haplotype_tree.get_haplotypes(region);
     
-    std::sort(haplotypes.begin(), haplotypes.end());
+    sort(haplotypes);
     
     BOOST_CHECK(haplotypes[0].get_sequence() == "ATCCTAA");
     BOOST_CHECK(haplotypes[1].get_sequence() == "ATGCTAG");
@@ -297,7 +321,9 @@ BOOST_AUTO_TEST_CASE(pruned_branches_can_still_be_extended)
 
 BOOST_AUTO_TEST_CASE(extending_on_mnps_results_in_backtracked_bifurification)
 {
-    auto human = make_reference(human_reference_fasta);
+    BOOST_REQUIRE(test_file_exists(human_reference_fasta));
+    
+    const auto human = make_reference(human_reference_fasta);
     
     Allele allele1 {*parse_region("16:9300039-9300051", human), "TGTGTGTGCGTT"};
     Allele allele2 {*parse_region("16:9300039-9300051", human), ""};
@@ -336,7 +362,7 @@ BOOST_AUTO_TEST_CASE(extending_on_mnps_results_in_backtracked_bifurification)
     
     BOOST_CHECK(haplotypes.size() == 8);
     
-    std::sort(haplotypes.begin(), haplotypes.end());
+    sort(haplotypes);
     
     auto it = std::unique(haplotypes.begin(), haplotypes.end());
     
@@ -347,7 +373,9 @@ BOOST_AUTO_TEST_CASE(extending_on_mnps_results_in_backtracked_bifurification)
 
 BOOST_AUTO_TEST_CASE(haplotype_tree_can_selectively_extend_branches)
 {
-    auto human = make_reference(human_reference_fasta);
+    BOOST_REQUIRE(test_file_exists(human_reference_fasta));
+    
+    const auto human = make_reference(human_reference_fasta);
     
     HaplotypeTree haplotype_tree {"4", human};
     
@@ -390,20 +418,22 @@ BOOST_AUTO_TEST_CASE(haplotype_tree_can_selectively_extend_branches)
 
 BOOST_AUTO_TEST_CASE(haplotype_tree_survives_serious_pruning)
 {
-    auto human = make_reference(human_reference_fasta);
+    BOOST_REQUIRE(test_file_exists(human_reference_fasta));
+    BOOST_REQUIRE(test_file_exists(NA12878_low_coverage));
     
-    ReadManager a_read_manager {HG00101};
+    const auto human = make_reference(human_reference_fasta);
+    
+    ReadManager read_manager {NA12878_low_coverage};
     
     Octopus::CandidateVariantGenerator candidate_generator {};
     
     candidate_generator.register_generator(std::make_unique<Octopus::AlignmentCandidateVariantGenerator>(human, 0));
     
-    auto sample_ids = a_read_manager.get_samples();
-    auto the_sample_id = sample_ids.at(0);
+    const auto sample = read_manager.get_samples().front();
     
-    auto region = *parse_region("16:9299940-9300055", human);
+    const auto region = *parse_region("16:9299940-9300055", human);
     
-    auto reads = a_read_manager.fetch_reads(the_sample_id, region);
+    auto reads = read_manager.fetch_reads(sample, region);
     
     candidate_generator.add_reads(reads.cbegin(), reads.cend());
     
@@ -418,7 +448,7 @@ BOOST_AUTO_TEST_CASE(haplotype_tree_survives_serious_pruning)
     
     auto haplotypes = haplotype_tree.get_haplotypes(region);
     
-    std::sort(haplotypes.begin(), haplotypes.end());
+    sort(haplotypes);
     
     Haplotype the_reference_haplotype {region, human};
     
@@ -462,22 +492,24 @@ BOOST_AUTO_TEST_CASE(haplotype_tree_survives_serious_pruning)
 
 BOOST_AUTO_TEST_CASE(prune_unqiue_leaves_a_single_haplotype_which_contains_the_same_alleles_as_the_given_haplotype)
 {
-    auto human = make_reference(human_reference_fasta);
+    BOOST_REQUIRE(test_file_exists(human_reference_fasta));
+    BOOST_REQUIRE(test_file_exists(NA12878_low_coverage));
     
-    ReadManager a_read_manager {HG00101};
+    const auto human = make_reference(human_reference_fasta);
+    
+    ReadManager read_manager {NA12878_low_coverage};
+    
+    const auto region = *parse_region("16:9299940-9300055", human);
+    
+    const auto sample = read_manager.get_samples().front();
+    
+    auto reads = read_manager.fetch_reads(sample, region);
     
     Octopus::CandidateVariantGenerator candidate_generator {};
     
     candidate_generator.register_generator(std::make_unique<Octopus::AlignmentCandidateVariantGenerator>(human, 0));
     
-    auto sample_ids = a_read_manager.get_samples();
-    auto the_sample_id = sample_ids.at(0);
-    
-    auto region = *parse_region("16:9299940-9300055", human);
-    
-    auto reads = a_read_manager.fetch_reads(the_sample_id, region);
-    
-    //candidate_generator.add_reads(reads.cbegin(), reads.cend());
+    add_reads(reads, candidate_generator);
     
     auto candidates = candidate_generator.get_candidates(region);
     
@@ -492,7 +524,7 @@ BOOST_AUTO_TEST_CASE(prune_unqiue_leaves_a_single_haplotype_which_contains_the_s
     
     Haplotype the_reference_haplotype {region, human};
     
-    std::sort(haplotypes.begin(), haplotypes.end());
+    sort(haplotypes);
     
     auto er = std::equal_range(haplotypes.begin(), haplotypes.end(), the_reference_haplotype);
     
@@ -506,7 +538,7 @@ BOOST_AUTO_TEST_CASE(prune_unqiue_leaves_a_single_haplotype_which_contains_the_s
     
     auto new_haplotypes = haplotype_tree.get_haplotypes(region);
     
-    std::sort(new_haplotypes.begin(), new_haplotypes.end());
+    sort(new_haplotypes);
     
     er = std::equal_range(new_haplotypes.begin(), new_haplotypes.end(), the_reference_haplotype);
     
@@ -515,7 +547,9 @@ BOOST_AUTO_TEST_CASE(prune_unqiue_leaves_a_single_haplotype_which_contains_the_s
 
 BOOST_AUTO_TEST_CASE(contains_returns_true_if_the_given_haplotype_is_in_the_tree_in_any_form)
 {
-    auto human = make_reference(human_reference_fasta);
+    BOOST_REQUIRE(test_file_exists(human_reference_fasta));
+    
+    const auto human = make_reference(human_reference_fasta);
     
     Allele allele1 {*parse_region("4:1000000-1000001", human), "A"};
     Allele allele2 {*parse_region("4:1000000-1000001", human), "C"};
@@ -523,7 +557,7 @@ BOOST_AUTO_TEST_CASE(contains_returns_true_if_the_given_haplotype_is_in_the_tree
     Allele allele4 {*parse_region("4:1000001-1000002", human), "G"};
     Allele allele5 {*parse_region("4:1000001-1000002", human), "C"};
     
-    auto region = get_encompassing(allele1, allele5);
+    const auto region = get_encompassing(allele1, allele5);
     
     HaplotypeTree haplotype_tree {"4", human};
     
@@ -546,43 +580,9 @@ BOOST_AUTO_TEST_CASE(contains_returns_true_if_the_given_haplotype_is_in_the_tree
     BOOST_CHECK(!haplotype_tree.contains(haplotype2));
 }
 
-//BOOST_AUTO_TEST_CASE(is_unique_return_true_if_the_given_haplotype_occurs_extactly_once_in_the_tree)
-//{
-//    
-//}
-
-//BOOST_AUTO_TEST_CASE(get_seperation_region_returns_the_allele_region_before_two_unique_haplotypes_seperate_if_the_haplotypes_seperate_at_the_root_then_the_entire_region_covered_by_the_first_haplotype_is_returned)
-//{
-//    auto human = make_reference(human_reference_fasta);
-//    
-//    Allele allele1 {*parse_region("4:1000000-1000001", human), "A"};
-//    Allele allele2 {*parse_region("4:1000000-1000001", human), "C"};
-//    Allele allele3 {*parse_region("4:1000001-1000002", human), "G"};
-//    Allele allele4 {*parse_region("4:1000001-1000002", human), "T"};
-//    
-//    auto region = get_encompassing(allele1, allele4);
-//    
-//    HaplotypeTree haplotype_tree {human};
-//    
-//    haplotype_tree.extend(allele1);
-//    haplotype_tree.extend(allele2);
-//    haplotype_tree.extend(allele3);
-//    haplotype_tree.extend(allele4);
-//    
-//    Haplotype haplotype1 {human, region};
-//    haplotype1.push_back(allele1);
-//    haplotype1.push_back(allele3);
-//    
-//    Haplotype haplotype2 {human, region};
-//    haplotype2.push_back(allele1);
-//    haplotype2.push_back(allele4);
-//    
-//    Haplotype haplotype3 {human, region};
-//    haplotype3.push_back(allele2);
-//    haplotype3.push_back(allele3);
-//    
-//    BOOST_CHECK(haplotype_tree.get_seperation_region(haplotype1, haplotype2) == GenomicRegion("4", 1000000, 1000001));
-//    BOOST_CHECK(haplotype_tree.get_seperation_region(haplotype1, haplotype3) == GenomicRegion("4", 1000000, 1000002));
-//}
+BOOST_AUTO_TEST_CASE(is_unique_return_true_if_the_given_haplotype_occurs_extactly_once_in_the_tree)
+{
+    // TODO
+}
 
 BOOST_AUTO_TEST_SUITE_END()

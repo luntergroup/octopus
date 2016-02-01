@@ -29,6 +29,8 @@ BOOST_AUTO_TEST_SUITE(Components)
 
 BOOST_AUTO_TEST_CASE(read_filter_test)
 {
+    BOOST_REQUIRE(test_file_exists(NA12878_low_coverage));
+    
     ReadManager read_manager {NA12878_low_coverage};
     
     auto sample_ids = read_manager.get_samples();
@@ -39,9 +41,7 @@ BOOST_AUTO_TEST_CASE(read_filter_test)
     
     auto reads = read_manager.fetch_reads(sample, region);
     
-    if (!std::is_sorted(reads.begin(), reads.end())) {
-        std::sort(reads.begin(), reads.end());
-    }
+    BOOST_REQUIRE(std::is_sorted(std::cbegin(reads), std::cend(reads)));
     
     BOOST_CHECK(reads.size() == 485);
     

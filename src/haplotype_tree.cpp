@@ -82,6 +82,9 @@ void HaplotypeTree::extend(const ContigAllele& allele)
 
 void HaplotypeTree::extend(const Allele& allele)
 {
+    if (get_contig_name(allele) != region_.get_contig_name()) {
+        throw std::logic_error {"HaplotypeTree: trying to extend with Allele on different contig"};
+    }
     extend(ContigAllele {allele});
 }
 

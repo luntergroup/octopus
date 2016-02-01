@@ -11,6 +11,7 @@
 #include <algorithm>
 #include <iterator>
 #include <utility>
+#include <stdexcept>
 
 #include <boost/functional/hash.hpp>
 
@@ -35,10 +36,10 @@ auto haplotype_overlap_range(const T& alleles, const M& mappable)
 
 Haplotype::Haplotype(const GenomicRegion& region, const ReferenceGenome& reference)
 :
-reference_ {reference},
 region_ {region},
 explicit_alleles_ {},
-cached_sequence_ {}
+cached_sequence_ {},
+reference_ {reference}
 {}
 
 const GenomicRegion& Haplotype::get_region() const
@@ -197,6 +198,10 @@ void append(Haplotype::SequenceType& sequence, const ContigAllele& allele)
 Haplotype::SequenceType Haplotype::get_sequence(const ContigRegion& region) const
 {
     using std::cbegin; using std::cend;
+    
+    if (!::contains(region_.get_contig_region(), region)) {
+        throw std::out_of_range {"Haplotype: attempting to get_sequence from region not contained by Haplotype region"};
+    }
     
     if (explicit_alleles_.empty()) {
         if (is_cached_sequence_good()) {

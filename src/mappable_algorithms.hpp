@@ -518,8 +518,15 @@ bool has_shared(ForwardIt first, ForwardIt last,
                         [&lhs] (const auto& region) { return overlaps(region, lhs); });
 }
 
+template <typename Container, typename MappableTp1, typename MappableTp2>
+bool has_shared(const Container& container, const MappableTp1& lhs, const MappableTp2& rhs,
+                MappableRangeOrder order = MappableRangeOrder::ForwardSorted)
+{
+    return has_shared(std::cbegin(container), std::cend(container), lhs, rhs, order);
+}
+
 /**
- Returns the first Mappable element in the range [first2, last2) such that the element shares a region 
+ Returns the first Mappable element in the range [first2, last2) such that the element shares a region
  in the range [first1, last1) with mappable.
  
  Requires [first1, last1) and [first2, last2) are sorted w.r.t GenomicRegion::operator<

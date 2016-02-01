@@ -30,6 +30,8 @@ BOOST_AUTO_TEST_SUITE(Components)
 
 BOOST_AUTO_TEST_CASE(make_reference_maybe_returns_a_ReferenceGenome)
 {
+    BOOST_REQUIRE(test_file_exists(human_reference_fasta));
+    
     const char *argv[] = {"octopus", "--reference", human_reference_fasta.c_str(), "--reads", "test", nullptr};
     int argc = sizeof(argv) / sizeof(char*) - 1;
     
@@ -42,6 +44,8 @@ BOOST_AUTO_TEST_CASE(make_reference_maybe_returns_a_ReferenceGenome)
 
 BOOST_AUTO_TEST_CASE(get_search_regions_returns_all_chromosome_regions_when_no_region_option_is_given)
 {
+    BOOST_REQUIRE(test_file_exists(human_reference_fasta));
+    
     const char *argv[] = {"octopus", "--reference", human_reference_fasta.c_str(), "--reads", "test", nullptr};
     int argc = sizeof(argv) / sizeof(char*) - 1;
     
@@ -64,6 +68,8 @@ BOOST_AUTO_TEST_CASE(get_search_regions_returns_all_chromosome_regions_when_no_r
 
 BOOST_AUTO_TEST_CASE(parse_search_region_option_parses_manually_entered_regions)
 {
+    BOOST_REQUIRE(test_file_exists(human_reference_fasta));
+    
     const char *argv[] = {
         "octopus",
         "--reference", human_reference_fasta.c_str(),
@@ -85,6 +91,9 @@ BOOST_AUTO_TEST_CASE(parse_search_region_option_parses_manually_entered_regions)
 
 BOOST_AUTO_TEST_CASE(parse_search_region_option_extracts_regions_from_text_files)
 {
+    BOOST_REQUIRE(test_file_exists(human_reference_fasta));
+    BOOST_REQUIRE(test_file_exists(regions_txt_file));
+    
     const char *argv[] = {
         "octopus",
         "--reference", human_reference_fasta.c_str(),
@@ -104,6 +113,9 @@ BOOST_AUTO_TEST_CASE(parse_search_region_option_extracts_regions_from_text_files
 
 BOOST_AUTO_TEST_CASE(parse_search_region_option_extracts_regions_from_bed_files)
 {
+    BOOST_REQUIRE(test_file_exists(human_reference_fasta));
+    BOOST_REQUIRE(test_file_exists(regions_bed_file));
+    
     const char *argv[] = {
         "octopus",
         "--reference", human_reference_fasta.c_str(),

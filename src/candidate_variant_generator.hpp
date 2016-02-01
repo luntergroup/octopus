@@ -52,14 +52,6 @@ private:
     std::vector<std::unique_ptr<ICandidateVariantGenerator>> generators_;
 };
 
-template <typename Map>
-void add_reads(const Map& map, CandidateVariantGenerator& generator)
-{
-    for (const auto& m : map) {
-        generator.add_reads(std::cbegin(m.second), std::cend(m.second));
-    }
-}
-
 } // namespace Octopus
 
 #endif /* defined(__Octopus__variant_candidate_generator__) */

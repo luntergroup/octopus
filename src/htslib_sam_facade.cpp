@@ -60,50 +60,48 @@ private:
 HtslibSamFacade::HtslibSamFacade(Path file_path)
 :
 file_path_ {std::move(file_path)},
-hts_file_ {sam_open(file_path_.string().c_str(), "r"), HtsFileDeleter {}},
-hts_header_ {sam_hdr_read(hts_file_.get()), HtsHeaderDeleter {}},
-hts_index_ {sam_index_load(hts_file_.get(), file_path_.string().c_str()), HtsIndexDeleter {}},
+hts_file_ {sam_open(file_path_.c_str(), "r"), HtsFileDeleter {}},
+hts_header_ {(hts_file_) ? sam_hdr_read(hts_file_.get()) : nullptr, HtsHeaderDeleter {}},
+hts_index_ {(hts_file_) ? sam_index_load(hts_file_.get(), file_path_.c_str()) : nullptr, HtsIndexDeleter {}},
 hts_tid_map_ {},
 contig_name_map_ {},
 sample_map_ {},
 samples_ {}
 {
-    if (hts_file_ == nullptr) {
-        throw std::runtime_error {"could not open " + file_path_.string()};
-    }
-    
-    if (hts_header_ == nullptr) {
-        throw std::runtime_error {"could not open file header for " + file_path_.string()};
-    }
-    
-    if (hts_index_ == nullptr) {
-        throw std::runtime_error {"could not open index file for " + file_path_.string()};
-    }
-    
-    init_maps();
-    
-    for (const auto pair : sample_map_) {
-        if (std::find(std::cbegin(samples_), std::cend(samples_), pair.second) == std::cend(samples_)) {
-            samples_.emplace_back(pair.second);
+    if (is_open()) {
+        init_maps();
+        
+        for (const auto pair : sample_map_) {
+            if (std::find(std::cbegin(samples_), std::cend(samples_), pair.second) == std::cend(samples_)) {
+                samples_.emplace_back(pair.second);
+            }
         }
+        
+        samples_.shrink_to_fit();
+    } else {
+        close();
     }
-    
-    samples_.shrink_to_fit();
 }
 
 bool HtslibSamFacade::is_open() const noexcept
 {
-    return hts_file_ != nullptr;
+    return hts_file_ != nullptr && hts_header_ != nullptr && hts_index_ != nullptr;
 }
 
 void HtslibSamFacade::open()
 {
     hts_file_.reset(sam_open(file_path_.string().c_str(), "r"));
+    if (hts_file_) {
+        hts_header_.reset(sam_hdr_read(hts_file_.get()));
+        hts_index_.reset(sam_index_load(hts_file_.get(), file_path_.c_str()));
+    }
 }
 
 void HtslibSamFacade::close()
 {
     hts_file_.reset(nullptr);
+    hts_header_.reset(nullptr);
+    hts_index_.reset(nullptr);
 }
 
 unsigned HtslibSamFacade::get_num_reference_contigs() noexcept
@@ -375,16 +373,16 @@ const std::string& HtslibSamFacade::get_contig_name(HtsTidType hts_tid) const
 HtslibSamFacade::HtslibIterator::HtslibIterator(HtslibSamFacade& hts_facade, const GenomicRegion& region)
 :
 hts_facade_ {hts_facade},
-hts_iterator_ {sam_itr_querys(hts_facade_.hts_index_.get(), hts_facade_.hts_header_.get(),
-                              to_string(region).c_str()), HtsIteratorDeleter {}},
+hts_iterator_ {hts_facade.is_open() ? sam_itr_querys(hts_facade_.hts_index_.get(), hts_facade_.hts_header_.get(),
+                                                     to_string(region).c_str()) : nullptr, HtsIteratorDeleter {}},
 hts_bam1_ {bam_init1(), HtsBam1Deleter {}}
 {
     if (hts_iterator_ == nullptr) {
-        throw std::runtime_error {"could not load read iterator for " + hts_facade.file_path_.string()};
+        throw std::runtime_error {"HtslibIterator: could not load iterator for " + hts_facade.file_path_.string()};
     }
     
     if (hts_bam1_ == nullptr) {
-        throw std::runtime_error {"error creating bam1 for " + hts_facade.file_path_.string()};
+        throw std::runtime_error {"HtslibIterator: error creating bam1 for " + hts_facade.file_path_.string()};
     }
 }
 

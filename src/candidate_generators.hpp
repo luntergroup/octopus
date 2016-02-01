@@ -15,5 +15,6 @@
 #include "assembler_candidate_variant_generator.hpp"
 #include "online_candidate_variant_generator.hpp"
 #include "random_candidate_variant_generator.hpp"
+#include "candidate_generator_builder.hpp"
 
 #endif

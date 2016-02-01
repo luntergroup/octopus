@@ -27,132 +27,121 @@ BOOST_AUTO_TEST_SUITE(Components)
 
 BOOST_AUTO_TEST_CASE(CandidateVariantGenerator_does_not_give_duplicate_candidates)
 {
-    auto human = make_reference(human_reference_fasta);
+    BOOST_REQUIRE(test_file_exists(human_reference_fasta));
+    BOOST_REQUIRE(test_file_exists(NA12878_low_coverage));
     
-    ReadManager a_read_manager {HG00101};
+    const auto human = make_reference(human_reference_fasta);
+    
+    ReadManager read_manager {NA12878_low_coverage};
+    
+    const auto sample = read_manager.get_samples().front();
+    
+    const auto region = *parse_region("7:122579662-122579817", human);
     
     Octopus::CandidateVariantGenerator candidate_generator {};
-    
     candidate_generator.register_generator(std::make_unique<Octopus::AlignmentCandidateVariantGenerator>(human, 0));
     
-    auto sample_ids = a_read_manager.get_samples();
-    auto the_sample_id = sample_ids.at(0);
+    auto reads = read_manager.fetch_reads(sample, region);
     
-    auto a_region = *parse_region("7:122579662-122579817", human);
+    add_reads(reads, candidate_generator);
     
-    auto reads = a_read_manager.fetch_reads(the_sample_id, a_region);
-    
-    candidate_generator.add_reads(reads.cbegin(), reads.cend());
-    
-    auto candidates = candidate_generator.get_candidates(a_region);
+    auto candidates = candidate_generator.get_candidates(region);
     
     BOOST_CHECK(candidates.size() == 15);
 }
 
 BOOST_AUTO_TEST_CASE(AlignmentCandidateVariantGenerator_ignores_snps_with_low_base_qualities)
 {
-    auto human = make_reference(human_reference_fasta);
+    BOOST_REQUIRE(test_file_exists(human_reference_fasta));
+    BOOST_REQUIRE(test_file_exists(NA12878_low_coverage));
     
-    ReadManager a_read_manager {HG00101};
+    const auto human = make_reference(human_reference_fasta);
+    
+    const auto region = *parse_region("7:122579662-122579817", human);
+    
+    ReadManager read_manager {NA12878_low_coverage};
+    
+    const auto sample = read_manager.get_samples().front();
+    
+    auto reads = read_manager.fetch_reads(sample, region);
     
     Octopus::AlignmentCandidateVariantGenerator candidate_generator {human, 10};
     
-    auto a_region = *parse_region("7:122579662-122579817", human);
+    add_reads(reads, candidate_generator);
     
-    auto sample_ids = a_read_manager.get_samples();
-    auto the_sample_id = sample_ids.at(0);
-    
-    auto reads = a_read_manager.fetch_reads(the_sample_id, a_region);
-    
-    candidate_generator.add_reads(reads.cbegin(), reads.cend());
-    
-    auto candidates = candidate_generator.get_candidates(a_region);
+    auto candidates = candidate_generator.get_candidates(region);
     
     BOOST_CHECK(candidates.size() == 12);
 }
 
 BOOST_AUTO_TEST_CASE(AlignmentCandidateVariantGenerator_includes_all_alleles_in_the_same_region)
 {
-    auto human = make_reference(human_reference_fasta);
+    BOOST_REQUIRE(test_file_exists(human_reference_fasta));
+    BOOST_REQUIRE(test_file_exists(NA12878_low_coverage));
     
-    ReadManager a_read_manager {HG00101};
+    const auto human = make_reference(human_reference_fasta);
+    
+    const auto region = *parse_region("7:122579662-122579817", human);
+    
+    ReadManager read_manager {NA12878_low_coverage};
+    
+    const auto sample = read_manager.get_samples().front();
+    
+    auto reads = read_manager.fetch_reads(sample, region);
     
     Octopus::AlignmentCandidateVariantGenerator candidate_generator {human, 10};
     
-    auto a_region = *parse_region("7:122579662-122579817", human);
+    add_reads(reads, candidate_generator);
     
-    auto sample_ids = a_read_manager.get_samples();
-    auto the_sample_id = sample_ids.at(0);
-    
-    auto reads = a_read_manager.fetch_reads(the_sample_id, a_region);
-    
-    candidate_generator.add_reads(reads.cbegin(), reads.cend());
-    
-    auto candidates = candidate_generator.get_candidates(a_region);
+    auto candidates = candidate_generator.get_candidates(region);
 }
 
 BOOST_AUTO_TEST_CASE(OnlineCandidateVariantGenerator_can_fetch_variants_from_online_web_service)
 {
-    auto human = make_reference(human_reference_fasta);
+    BOOST_REQUIRE(test_file_exists(human_reference_fasta));
+    
+    const auto human = make_reference(human_reference_fasta);
+    
+    const auto region = *parse_region("X:10000-10500", human);
     
     Octopus::OnlineCandidateVariantGenerator candidate_generator {human};
     
-    GenomicRegion a_region {"X", 10000, 10500};
+    auto candidates = candidate_generator.get_candidates(region);
     
-    auto candidates = candidate_generator.get_candidates(a_region);
-    
-    for (const auto& candidate : candidates) {
-        cout << candidate << endl;
-    }
+    // TODO
 }
 
-//BOOST_AUTO_TEST_CASE(CandidateVariantGenerator_combines_multiple_generators)
-//{
-//    const constexpr unsigned kmer_size {15};
-//    
-//    ReferenceGenomeFactory a_factory {};
-//    ReferenceGenome human {a_factory.make(human_reference_fasta)};
-//    
-//    ReadManager a_read_manager(std::vector<std::string> {human_1000g_bam1});
-//    
-//    CandidateVariantGenerator candidate_generator {};
-//    
-//    candidate_generator.register_generator(
-//            std::make_unique<AssemblerCandidateVariantGenerator>(human, kmer_size, 0)
-//    );
-//    
-//    auto sample_ids = a_read_manager.get_sample_ids();
-//    auto the_sample_id = sample_ids.at(0);
-//    
-//    auto a_region = *parse_region("10:1000000-1000100", human);
-//    
-//    auto reads = a_read_manager.fetch_reads(the_sample_id, a_region);
-//    
-//    for (const auto& read : reads) {
-//        candidate_generator.add_read(read);
-//    }
-//    
-//    auto candidates = candidate_generator.get_candidates(a_region);
-//    
-//    //std::cout << "Num assembler candidates: " << candidates.size() << std::endl;
-//    
-//    //    for (const auto& candidate : candidates) {
-//    //        std::cout << candidate.get_removed_region() << " " << candidate.get_sequence_removed() << " "
-//    //        << candidate.get_sequence_added() << std::endl;
-//    //    }
-//}
+BOOST_AUTO_TEST_CASE(CandidateVariantGenerator_combines_multiple_generators)
+{
+    // TODO
+}
 
 BOOST_AUTO_TEST_CASE(ExternalCandidateVariantGenerator_gets_candidates_from_vcf)
 {
-    auto reference = make_reference(human_reference_fasta);
+    BOOST_REQUIRE(test_file_exists(human_reference_fasta));
+    
+    const auto human = make_reference(human_reference_fasta);
     
     Octopus::ExternalCandidateVariantGenerator generator {sample_vcf};
     
-    auto region = *parse_region("X:10,095,000-10,100,000", reference);
+    const auto region = *parse_region("X:10,095,000-10,100,000", human);
     
     auto candidates = generator.get_candidates(region);
     
     BOOST_CHECK(candidates.size() == 16);
+}
+
+BOOST_AUTO_TEST_CASE(CandidateGeneratorBuilder_can_construct_candidate_generators)
+{
+    BOOST_REQUIRE(test_file_exists(human_reference_fasta));
+    
+    using Octopus::CandidateGeneratorBuilder;
+    
+    Octopus::CandidateGeneratorBuilder builder {};
+    
+    builder.add_generator(CandidateGeneratorBuilder::Generator::Alignment);
+    
+    // TODO
 }
 
 BOOST_AUTO_TEST_SUITE_END()
