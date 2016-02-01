@@ -30,8 +30,10 @@ namespace Octopus
 class HaplotypeTree
 {
 public:
+    using ContigNameType = GenomicRegion::ContigNameType;
+    
     HaplotypeTree() = delete;
-    explicit HaplotypeTree(const ReferenceGenome& reference);
+    explicit HaplotypeTree(const ContigNameType& contig, const ReferenceGenome& reference);
     ~HaplotypeTree() = default;
     
     HaplotypeTree(const HaplotypeTree&)            = default;
@@ -43,9 +45,11 @@ public:
     unsigned num_haplotypes() const noexcept;
     bool contains(const Haplotype& haplotype) const;
     bool is_unique(const Haplotype& haplotype) const;
+    void extend(const ContigAllele& allele);
     void extend(const Allele& allele);
     
     GenomicRegion get_region() const;
+    
     std::vector<Haplotype> get_haplotypes() const;
     std::vector<Haplotype> get_haplotypes(const GenomicRegion& region) const;
     
@@ -63,13 +67,13 @@ private:
     using Vertex = typename boost::graph_traits<Tree>::vertex_descriptor;
     using Edge   = typename boost::graph_traits<Tree>::edge_descriptor;
     
+    std::reference_wrapper<const ReferenceGenome> reference_;
+    
     Tree tree_;
     Vertex root_;
     std::list<Vertex> haplotype_leafs_;
     
     GenomicRegion region_;
-    
-    std::reference_wrapper<const ReferenceGenome> reference_;
     
     mutable std::unordered_multimap<Haplotype, Vertex> haplotype_leaf_cache_;
     mutable std::unordered_set<Haplotype> recently_removed_haplotypes_;
@@ -81,17 +85,19 @@ private:
     Vertex remove_forward(Vertex u);
     Vertex remove_backward(Vertex v);
     Vertex get_previous_allele(Vertex allele) const;
-    bool allele_exists(Vertex leaf, const Allele& allele) const;
-    LeafIterator extend_haplotype(LeafIterator leaf, const Allele& new_allele);
+    bool allele_exists(Vertex leaf, const ContigAllele& allele) const;
+    LeafIterator extend_haplotype(LeafIterator leaf, const ContigAllele& new_allele);
     Haplotype get_haplotype(Vertex leaf, const GenomicRegion& region) const;
     bool define_same_haplotype(Vertex leaf1, Vertex leaf2) const;
     bool is_branch_exact_haplotype(Vertex branch_vertex, const Haplotype& haplotype) const;
     bool is_branch_equal_haplotype(Vertex branch_vertex, const Haplotype& haplotype) const;
-    LeafIterator find_exact_haplotype_leaf(LeafIterator first, LeafIterator last, const Haplotype& haplotype) const;
-    LeafIterator find_equal_haplotype_leaf(LeafIterator first, LeafIterator last, const Haplotype& haplotype) const;
-    std::pair<Vertex, bool> remove(Vertex leaf, const GenomicRegion& region);
-    std::pair<Vertex, bool> remove_external(Vertex leaf, const GenomicRegion& region);
-    std::pair<Vertex, bool> remove_internal(Vertex leaf, const GenomicRegion& region);
+    LeafIterator find_exact_haplotype_leaf(LeafIterator first, LeafIterator last,
+                                           const Haplotype& haplotype) const;
+    LeafIterator find_equal_haplotype_leaf(LeafIterator first, LeafIterator last,
+                                           const Haplotype& haplotype) const;
+    std::pair<Vertex, bool> remove(Vertex leaf, const ContigRegion& region);
+    std::pair<Vertex, bool> remove_external(Vertex leaf, const ContigRegion& region);
+    std::pair<Vertex, bool> remove_internal(Vertex leaf, const ContigRegion& region);
 };
 
 // non-member methods

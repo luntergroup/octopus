@@ -635,7 +635,7 @@ namespace Octopus
             return result;
         }
         
-        HaplotypePhaser phaser {reference_, candidates, reads, 64, 2};
+        HaplotypePhaser phaser {region.get_contig_name(), reference_, candidates, reads, 64, 2};
         
         while (!phaser.done()) {
             auto haplotypes = phaser.get_haplotypes();

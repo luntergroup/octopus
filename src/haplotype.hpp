@@ -41,7 +41,7 @@ public:
     using SizeType     = Allele::SizeType;
     
     Haplotype() = default;
-    explicit Haplotype(const ReferenceGenome& reference, const GenomicRegion& region);
+    explicit Haplotype(const GenomicRegion& region, const ReferenceGenome& reference);
     ~Haplotype() = default;
     
     Haplotype(const Haplotype&)            = default;
@@ -49,16 +49,25 @@ public:
     Haplotype(Haplotype&&)                 = default;
     Haplotype& operator=(Haplotype&&)      = default;
     
-    template <typename T> void push_back(T&& allele);
-    template <typename T> void push_front(T&& allele);
+    void push_back(const ContigAllele& allele);
+    void push_front(const ContigAllele& allele);
+    void push_back(ContigAllele&& allele);
+    void push_front(ContigAllele&& allele);
+    void push_back(const Allele& allele);
+    void push_front(const Allele& allele);
+    void push_back(Allele&& allele);
+    void push_front(Allele&& allele);
     
     const GenomicRegion& get_region() const;
     
+    bool contains(const ContigAllele& allele) const;
+    bool contains_exact(const ContigAllele& allele) const;
     bool contains(const Allele& allele) const;
     bool contains_exact(const Allele& allele) const;
     
-    SequenceType get_sequence() const;
+    SequenceType get_sequence(const ContigRegion& region) const;
     SequenceType get_sequence(const GenomicRegion& region) const;
+    SequenceType get_sequence() const;
     
     std::vector<Variant> difference(const Haplotype& other) const;
     
@@ -85,53 +94,19 @@ private:
     
     using AlleleIterator = decltype(explicit_alleles_)::const_iterator;
     
-    bool contains(const ContigAllele& allele) const;
-    bool contains_exact(const ContigAllele& allele) const;
-    
-    SequenceType get_sequence(const ContigRegion& region) const;
-    
     SequenceType get_reference_sequence(const GenomicRegion& region) const;
     SequenceType get_reference_sequence(const ContigRegion& region) const;
-    Allele get_intervening_reference_allele(const Allele& lhs, const Allele& rhs) const;
+    ContigAllele get_intervening_reference_allele(const ContigAllele& lhs, const ContigAllele& rhs) const;
     ContigRegion get_region_bounded_by_explicit_alleles() const;
     SequenceType get_sequence_bounded_by_explicit_alleles(AlleleIterator first, AlleleIterator last) const;
     SequenceType get_sequence_bounded_by_explicit_alleles() const;
     
+    void update_region(const ContigAllele& allele) noexcept;
+    void update_region(const Allele& allele);
+    
     bool is_cached_sequence_good() const noexcept;
     void clear_cached_sequence();
 };
-
-template <typename T>
-void Haplotype::push_back(T&& allele)
-{
-    if (!explicit_alleles_.empty()) {
-        if (!is_after(allele, explicit_alleles_.back())) {
-            throw std::runtime_error {"Haplotype::push_back called with out-of-order Allele"};
-        }
-        if (!are_adjacent(explicit_alleles_.back(), allele)) {
-            explicit_alleles_.emplace_back(get_intervening_reference_allele(explicit_alleles_.back(), allele));
-        }
-    }
-    region_ = get_encompassing(region_, allele);
-    explicit_alleles_.emplace_back(std::forward<T>(allele));
-    clear_cached_sequence();
-}
-
-template <typename T>
-void Haplotype::push_front(T&& allele)
-{
-    if (!explicit_alleles_.empty()) {
-        if (!is_after(explicit_alleles_.front(), allele)) {
-            throw std::runtime_error {"Haplotype::push_front called with out-of-order Allele"};
-        }
-        if (!are_adjacent(allele, explicit_alleles_.front())) {
-            explicit_alleles_.emplace_front(get_intervening_reference_allele(allele, explicit_alleles_.front()));
-        }
-    }
-    region_ = get_encompassing(region_, allele);
-    explicit_alleles_.emplace_front(std::forward<T>(allele));
-    clear_cached_sequence();
-}
 
 // non-members
 

@@ -35,11 +35,11 @@
 //{
 //    auto human = make_reference(human_reference_fasta);
 //    
-//    auto region = parse_region("3:1000000-1000010", human);
+//    auto region = *parse_region("3:1000000-1000010", human);
 //    
 //    auto the_reference_sequence = human.get_sequence(region); // CCAACAAGCA
 //    
-//    Haplotype reference_haplotype {human, region};
+//    Haplotype reference_haplotype {region, human};
 //    
 //    BOOST_CHECK(reference_haplotype.get_sequence() == the_reference_sequence);
 //    
@@ -50,7 +50,7 @@
 //    
 //    BOOST_CHECK(haplotype2.get_sequence(region) == "CCAAAAAGCA");
 //    
-//    Haplotype haplotype3 {human, region};
+//    Haplotype haplotype3 {region, human};
 //    add_to_back(variant_1, haplotype3);
 //    
 //    BOOST_CHECK(haplotype2.get_sequence(region) == haplotype3.get_sequence());
@@ -58,7 +58,7 @@
 //    Variant variant_2 {"3", 1000004, "CA", ""};
 //    Variant variant_3 {"3", 1000008, "", "C"};
 //    
-//    Haplotype haplotype4 {human, region};
+//    Haplotype haplotype4 {region, human};
 //    add_to_back(variant_2, haplotype4);
 //    add_to_back(variant_3, haplotype4);
 //    
@@ -72,7 +72,7 @@
 //    
 //    Variant variant_4 {"3", 1000004, "CA", "GG"};
 //    
-//    Haplotype haplotype6 {human, region};
+//    Haplotype haplotype6 {region, human};
 //    add_to_back(variant_4, haplotype6);
 //    
 //    BOOST_CHECK(haplotype6.get_sequence() == "CCAAGGAGCA");
@@ -80,7 +80,7 @@
 //    Variant variant_5 {"3", 1000004, "C", "G"};
 //    Variant variant_6 {"3", 1000005, "A", "G"};
 //    
-//    Haplotype haplotype7 {human, region};
+//    Haplotype haplotype7 {region, human};
 //    add_to_back(variant_6, haplotype7);
 //    add_to_front(variant_5, haplotype7);
 //    
@@ -96,7 +96,7 @@
 //    Octopus::CandidateVariantGenerator candidate_generator {};
 //    candidate_generator.register_generator(std::make_unique<Octopus::AlignmentCandidateVariantGenerator>(ecoli, 0));
 //    
-//    auto region = parse_region("R00000042:99640-99745", ecoli);
+//    auto region = *parse_region("R00000042:99640-99745", ecoli);
 //    
 //    auto reference_sequence = ecoli.get_sequence(region);
 //    
@@ -111,7 +111,7 @@
 //    
 //    BOOST_CHECK(variants.size() == 12);
 //    
-//    Haplotype haplotype1 {ecoli, region};
+//    Haplotype haplotype1 {region, ecoli};
 //    for (const auto& variant : variants) {
 //        if (is_snp(variant)) {
 //            add_to_back(variant, haplotype1);
@@ -128,7 +128,7 @@
 //    
 //    GenomicRegion region {"7", 1000000, 1000100};
 //    
-//    Haplotype a_reference_haplotype {human, region};
+//    Haplotype a_reference_haplotype {region, human};
 //    
 //    BOOST_CHECK(a_reference_haplotype.contains(get_reference_allele(region, human)));
 //    
@@ -170,7 +170,7 @@
 //    Variant false_variant_3 {"3", 1000010, "TT", "AC"};
 //    Variant false_variant_4 {"3", 1000014, "T", "A"};
 //    
-//    Haplotype haplotype_unbounded {human};
+//    Haplotype haplotype_unbounded {region, human};
 //    add_to_back(variant_1, haplotype_unbounded);
 //    add_to_back(variant_2, haplotype_unbounded);
 //    add_to_back(variant_3, haplotype_unbounded);
@@ -251,8 +251,8 @@
 ////    
 ////    auto region = parse_region("3:1000000-1000020", human);
 ////    
-////    Allele a1 {parse_region("3:1000005-1000005", human), "ACGT"};
-////    Allele a2 {parse_region("3:1000004-1000005", human), "CACGT"}; // parsimonious version
+////    Allele a1 {*parse_region("3:1000005-1000005", human), "ACGT"};
+////    Allele a2 {*parse_region("3:1000004-1000005", human), "CACGT"}; // parsimonious version
 ////    
 ////    Haplotype hap1 {human, region};
 ////    Haplotype hap2 {human, region};
@@ -272,13 +272,13 @@
 //{
 //    auto human = make_reference(human_reference_fasta);
 //    
-//    auto region = parse_region("3:1000000-1000020", human);
+//    auto region = *parse_region("3:1000000-1000020", human);
 //    
-//    Allele an_allele {parse_region("3:1000010-1000012", human), "GG"};
+//    Allele an_allele {*parse_region("3:1000010-1000012", human), "GG"};
 //    
-//    Allele a_sub_allele {parse_region("3:1000010-1000011", human), "G"};
-//    Allele another_sub_allele {parse_region("3:1000011-1000012", human), "G"};
-//    Allele not_a_sub_allele {parse_region("3:1000010-1000011", human), "C"};
+//    Allele a_sub_allele {*parse_region("3:1000010-1000011", human), "G"};
+//    Allele another_sub_allele {*parse_region("3:1000011-1000012", human), "G"};
+//    Allele not_a_sub_allele {*parse_region("3:1000010-1000011", human), "C"};
 //    
 //    Haplotype hap {human, region};
 //    hap.push_back(an_allele);
@@ -293,16 +293,16 @@
 //{
 //    auto human = make_reference(human_reference_fasta);
 //    
-//    auto region = parse_region("3:1000000-1000020", human);
+//    auto region = *parse_region("3:1000000-1000020", human);
 //    
-//    Allele an_allele {parse_region("3:1000010-1000012", human), ""};
+//    Allele an_allele {*parse_region("3:1000010-1000012", human), ""};
 //    
-//    Allele a_sub_allele {parse_region("3:1000010-1000011", human), ""};
-//    Allele another_sub_allele {parse_region("3:1000011-1000012", human), ""};
-//    Allele not_a_sub_allele1 {parse_region("3:1000010-1000011", human), "C"};
-//    Allele not_a_sub_allele2 {parse_region("3:1000010-1000013", human), ""};
+//    Allele a_sub_allele {*parse_region("3:1000010-1000011", human), ""};
+//    Allele another_sub_allele {*parse_region("3:1000011-1000012", human), ""};
+//    Allele not_a_sub_allele1 {*parse_region("3:1000010-1000011", human), "C"};
+//    Allele not_a_sub_allele2 {*parse_region("3:1000010-1000013", human), ""};
 //    
-//    Haplotype hap {human, region};
+//    Haplotype hap {region, human};
 //    hap.push_back(an_allele);
 //    
 //    BOOST_CHECK(hap.contains(an_allele));
@@ -316,16 +316,16 @@
 //{
 //    auto human = make_reference(human_reference_fasta);
 //    
-//    auto region = parse_region("3:1000000-1000020", human);
+//    auto region = *parse_region("3:1000000-1000020", human);
 //    
-//    Allele an_allele {parse_region("3:1000010-1000010", human), "AT"};
+//    Allele an_allele {*parse_region("3:1000010-1000010", human), "AT"};
 //    
-//    Allele a_sub_allele {parse_region("3:1000010-1000010", human), "A"};
-//    Allele another_sub_allele {parse_region("3:1000010-1000010", human), "T"};
-//    Allele not_a_sub_allele1 {parse_region("3:1000010-1000010", human), "C"};
-//    Allele not_a_sub_allele2 {parse_region("3:1000010-1000011", human), "A"};
+//    Allele a_sub_allele {*parse_region("3:1000010-1000010", human), "A"};
+//    Allele another_sub_allele {*parse_region("3:1000010-1000010", human), "T"};
+//    Allele not_a_sub_allele1 {*parse_region("3:1000010-1000010", human), "C"};
+//    Allele not_a_sub_allele2 {*parse_region("3:1000010-1000011", human), "A"};
 //    
-//    Haplotype hap {human, region};
+//    Haplotype hap {region, human};
 //    hap.push_back(an_allele);
 //    
 //    BOOST_CHECK(hap.contains(an_allele));
@@ -339,31 +339,31 @@
 //{
 //    auto human = make_reference(human_reference_fasta);
 //    
-//    auto region = parse_region("16:9300000-9300100", human);
+//    auto region = *parse_region("16:9300000-9300100", human);
 //    
-//    Allele allele1 {parse_region("16:9300037-9300037", human), "TG"};
-//    Allele allele2 {parse_region("16:9300039-9300051", human), ""};
-//    Allele allele3 {parse_region("16:9300041-9300051", human), ""};
+//    Allele allele1 {*parse_region("16:9300037-9300037", human), "TG"};
+//    Allele allele2 {*parse_region("16:9300039-9300051", human), ""};
+//    Allele allele3 {*parse_region("16:9300041-9300051", human), ""};
 //    
-//    Haplotype hap1 {human, region};
+//    Haplotype hap1 {region, human};
 //    hap1.push_back(allele3);
 //    
-//    Haplotype hap2 {human, region};
+//    Haplotype hap2 {region, human};
 //    hap2.push_back(allele1);
 //    hap2.push_back(allele2);
 //    
 //    BOOST_CHECK(hap1.get_sequence() == hap2.get_sequence());
 //    BOOST_CHECK(hap1 == hap2);
 //    
-//    Allele allele4 {parse_region("16:9300037-9300038", human), "T"};
-//    Allele allele5 {parse_region("16:9300038-9300039", human), "C"};
-//    Allele allele6 {parse_region("16:9300037-9300039", human), "TC"};
+//    Allele allele4 {*parse_region("16:9300037-9300038", human), "T"};
+//    Allele allele5 {*parse_region("16:9300038-9300039", human), "C"};
+//    Allele allele6 {*parse_region("16:9300037-9300039", human), "TC"};
 //    
-//    Haplotype hap3 {human, region};
+//    Haplotype hap3 {region, human};
 //    hap3.push_back(allele4);
 //    hap3.push_back(allele5);
 //    
-//    Haplotype hap4 {human, region};
+//    Haplotype hap4 {region, human};
 //    hap4.push_back(allele6);
 //    
 //    BOOST_CHECK(hap3.get_sequence() == hap4.get_sequence());
@@ -374,16 +374,16 @@
 //{
 //    auto human = make_reference(human_reference_fasta);
 //    
-//    auto region = parse_region("16:9300000-9300100", human);
+//    auto region = *parse_region("16:9300000-9300100", human);
 //    
-//    Allele allele1 {parse_region("16:9300037-9300037", human), "TG"};
-//    Allele allele2 {parse_region("16:9300039-9300051", human), ""};
-//    Allele allele3 {parse_region("16:9300041-9300051", human), ""};
+//    Allele allele1 {*parse_region("16:9300037-9300037", human), "TG"};
+//    Allele allele2 {*parse_region("16:9300039-9300051", human), ""};
+//    Allele allele3 {*parse_region("16:9300041-9300051", human), ""};
 //    
-//    Haplotype hap1 {human, region};
+//    Haplotype hap1 {region, human};
 //    hap1.push_back(allele3);
 //    
-//    Haplotype hap2 {human, region};
+//    Haplotype hap2 {region, human};
 //    hap2.push_back(allele1);
 //    hap2.push_back(allele2);
 //    
@@ -394,23 +394,23 @@
 //{
 //    auto human = make_reference(human_reference_fasta);
 //    
-//    auto region = parse_region("16:9299940-9300100", human);
+//    auto region = *parse_region("16:9299940-9300100", human);
 //    
-//    Allele allele1 {parse_region("16:9299945-9299946", human), "T"};
-//    Allele allele2 {parse_region("16:9299946-9299957", human), "CGCATTACAAC"};
-//    Allele allele3 {parse_region("16:9299957-9299958", human), "C"};
+//    Allele allele1 {*parse_region("16:9299945-9299946", human), "T"};
+//    Allele allele2 {*parse_region("16:9299946-9299957", human), "CGCATTACAAC"};
+//    Allele allele3 {*parse_region("16:9299957-9299958", human), "C"};
 //    Allele allele4 {get_reference_allele(parse_region("16:9299958-9300037", human), human)};
-//    Allele allele5 {parse_region("16:9300037-9300037", human), ""};
-//    Allele allele6 {parse_region("16:9300037-9300039", human), "TG"};
-//    Allele allele7 {parse_region("16:9300039-9300051", human), "TGTGTGTGCGTT"};
-//    Allele allele8 {parse_region("16:9300051-9300061", human), "TGTGTGTGTG"};
-//    Allele allele9 {parse_region("16:9300061-9300062", human), "G"};
-//    Allele allele10 {parse_region("16:9300062-9300072", human), "GTGTGTGTGT"};
-//    Allele allele11 {parse_region("16:9300072-9300073", human), "G"};
-//    Allele allele12 {parse_region("16:9300073-9300074", human), "G"};
-//    Allele allele13 {parse_region("16:9300074-9300075", human), "G"};
+//    Allele allele5 {*parse_region("16:9300037-9300037", human), ""};
+//    Allele allele6 {*parse_region("16:9300037-9300039", human), "TG"};
+//    Allele allele7 {*parse_region("16:9300039-9300051", human), "TGTGTGTGCGTT"};
+//    Allele allele8 {*parse_region("16:9300051-9300061", human), "TGTGTGTGTG"};
+//    Allele allele9 {*parse_region("16:9300061-9300062", human), "G"};
+//    Allele allele10 {*parse_region("16:9300062-9300072", human), "GTGTGTGTGT"};
+//    Allele allele11 {*parse_region("16:9300072-9300073", human), "G"};
+//    Allele allele12 {*parse_region("16:9300073-9300074", human), "G"};
+//    Allele allele13 {*parse_region("16:9300074-9300075", human), "G"};
 //    
-//    Haplotype haplotype {human, region};
+//    Haplotype haplotype {region, human};
 //    
 //    haplotype.push_back(allele1);
 //    haplotype.push_back(allele2);
@@ -426,9 +426,9 @@
 //    haplotype.push_back(allele12);
 //    haplotype.push_back(allele13);
 //    
-//    Allele test_allele1 {parse_region("16:9300037-9300050", human), ""};
-//    Allele test_allele2 {parse_region("16:9300037-9300051", human), ""};
-//    Allele test_allele3 {parse_region("16:9300037-9300052", human), ""};
+//    Allele test_allele1 {*parse_region("16:9300037-9300050", human), ""};
+//    Allele test_allele2 {*parse_region("16:9300037-9300051", human), ""};
+//    Allele test_allele3 {*parse_region("16:9300037-9300052", human), ""};
 //    
 //    BOOST_CHECK(!haplotype.contains(test_allele1));
 //    BOOST_CHECK(!haplotype.contains(test_allele2));
@@ -441,8 +441,8 @@
 //    
 //    auto region = parse_region("16:9299940-9300100", human);
 //    
-//    Allele allele1 {parse_region("16:9300037-9300037", human), "TG"};
-//    Allele allele2 {parse_region("16:9300039-9300051", human), ""};
+//    Allele allele1 {*parse_region("16:9300037-9300037", human), "TG"};
+//    Allele allele2 {*parse_region("16:9300039-9300051", human), ""};
 //    
 //    Haplotype hap {human, region};
 //    hap.push_back(allele1);
@@ -463,23 +463,23 @@
 //{
 //    auto human = make_reference(human_reference_fasta);
 //    
-//    auto region = parse_region("16:9299940-9300100", human);
+//    auto region = *parse_region("16:9299940-9300100", human);
 //    
-//    Allele allele1 {parse_region("16:9299945-9299946", human), "T"};
-//    Allele allele2 {parse_region("16:9299946-9299957", human), "CGCATTACAAC"};
-//    Allele allele3 {parse_region("16:9299957-9299958", human), "C"};
-//    Allele allele4 {get_reference_allele(parse_region("16:9299958-9300037", human), human)};
-//    Allele allele5 {parse_region("16:9300037-9300037", human), ""};
-//    Allele allele6 {parse_region("16:9300037-9300039", human), "TG"};
-//    Allele allele7 {parse_region("16:9300039-9300051", human), "TGTGTGTGCGTT"};
-//    Allele allele8 {parse_region("16:9300051-9300061", human), "TGTGTGTGTG"};
-//    Allele allele9 {parse_region("16:9300061-9300062", human), "G"};
-//    Allele allele10 {parse_region("16:9300062-9300072", human), "GTGTGTGTGT"};
-//    Allele allele11 {parse_region("16:9300072-9300073", human), "G"};
-//    Allele allele12 {parse_region("16:9300073-9300074", human), "G"};
-//    Allele allele13 {parse_region("16:9300074-9300075", human), "G"};
+//    Allele allele1 {*parse_region("16:9299945-9299946", human), "T"};
+//    Allele allele2 {*parse_region("16:9299946-9299957", human), "CGCATTACAAC"};
+//    Allele allele3 {*parse_region("16:9299957-9299958", human), "C"};
+//    Allele allele4 {get_reference_allele(*parse_region("16:9299958-9300037", human), human)};
+//    Allele allele5 {*parse_region("16:9300037-9300037", human), ""};
+//    Allele allele6 {*parse_region("16:9300037-9300039", human), "TG"};
+//    Allele allele7 {*parse_region("16:9300039-9300051", human), "TGTGTGTGCGTT"};
+//    Allele allele8 {*parse_region("16:9300051-9300061", human), "TGTGTGTGTG"};
+//    Allele allele9 {*parse_region("16:9300061-9300062", human), "G"};
+//    Allele allele10 {*parse_region("16:9300062-9300072", human), "GTGTGTGTGT"};
+//    Allele allele11 {*parse_region("16:9300072-9300073", human), "G"};
+//    Allele allele12 {*parse_region("16:9300073-9300074", human), "G"};
+//    Allele allele13 {*parse_region("16:9300074-9300075", human), "G"};
 //    
-//    Haplotype haplotype {human, region};
+//    Haplotype haplotype {region, human};
 //    
 //    haplotype.push_back(allele1);
 //    haplotype.push_back(allele2);
@@ -495,7 +495,7 @@
 //    haplotype.push_back(allele12);
 //    haplotype.push_back(allele13);
 //    
-//    auto splice_region = parse_region("16:9299964-9300083", human);
+//    auto splice_region = *parse_region("16:9299964-9300083", human);
 //    
 //    auto spliced = splice<Haplotype>(haplotype, splice_region);
 //    
@@ -509,20 +509,20 @@
 ////    ReferenceGenomeFactory a_factory {};
 ////    ReferenceGenome human {a_factory.make(human_reference_fasta)};
 ////    
-////    auto region = parse_region("16:9300000-9300100", human);
+////    auto region = *parse_region("16:9300000-9300100", human);
 ////    
-////    Allele allele1 {parse_region("16:9300037-9300037", human), "TG"};
-////    Allele allele2 {parse_region("16:9300037-9300051", human), ""};
-////    Allele allele3 {parse_region("16:9300051-9300051", human), ""};
-////    Allele allele4 {parse_region("16:9300051-9300061", human), "TGTGTGTGTG"};
-////    Allele allele5 {parse_region("16:9300061-9300062", human), "T"};
-////    Allele allele6 {parse_region("16:9300062-9300072", human), "GTGTGTGTGT"};
-////    Allele allele7 {parse_region("16:9300072-9300073", human), "T"};
-////    Allele allele8 {parse_region("16:9300073-9300074", human), "G"};
-////    Allele allele9 {parse_region("16:9300074-9300075", human), "G"};
+////    Allele allele1 {*parse_region("16:9300037-9300037", human), "TG"};
+////    Allele allele2 {*parse_region("16:9300037-9300051", human), ""};
+////    Allele allele3 {*parse_region("16:9300051-9300051", human), ""};
+////    Allele allele4 {*parse_region("16:9300051-9300061", human), "TGTGTGTGTG"};
+////    Allele allele5 {*parse_region("16:9300061-9300062", human), "T"};
+////    Allele allele6 {*parse_region("16:9300062-9300072", human), "GTGTGTGTGT"};
+////    Allele allele7 {*parse_region("16:9300072-9300073", human), "T"};
+////    Allele allele8 {*parse_region("16:9300073-9300074", human), "G"};
+////    Allele allele9 {*parse_region("16:9300074-9300075", human), "G"};
 ////    
-////    Allele allele10 {parse_region("16:9300037-9300039", human), "TG"};
-////    Allele allele11 {parse_region("16:9300039-9300051", human), ""};
+////    Allele allele10 {*parse_region("16:9300037-9300039", human), "TG"};
+////    Allele allele11 {*parse_region("16:9300039-9300051", human), ""};
 ////    
 ////    Haplotype hap1 {human, region};
 ////    hap1.push_back(allele1);

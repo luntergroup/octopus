@@ -155,7 +155,7 @@ namespace Octopus
             
             if (haplotypes.empty()) return result;
             
-            const Haplotype reference_haplotype {reference, haplotypes.front().get_region()};
+            const Haplotype reference_haplotype {haplotypes.front().get_region(), reference};
             
             std::vector<double> p(haplotypes.size());
             transform(cbegin(haplotypes), cend(haplotypes), begin(p),

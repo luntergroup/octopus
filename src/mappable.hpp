@@ -15,339 +15,431 @@
 #include "genomic_region.hpp"
 
 /**
- More template black magic. Anything that inherits from Mappable and defines the get_region() method
+ Template black magic. Anything that inherits from Mappable and has a get_region() member method
  can use all of these methods.
 */
 
 template <typename T>
 class Mappable {};
 
+template <typename T>
+constexpr bool is_contig_region = std::is_same<std::decay_t<T>, ContigRegion>::value;
+
+template <typename T>
+constexpr bool is_genomic_region = std::is_same<std::decay_t<T>, GenomicRegion>::value;
+
+template <typename T>
+constexpr bool is_region = is_contig_region<T> || is_genomic_region<T>;
+
+template <typename T>
+constexpr bool is_mappable = std::is_base_of<Mappable<T>, T>::value;
+
+template <typename T>
+constexpr bool is_region_or_mappable = is_region<T> || is_mappable<T>;
+
 template <typename T, typename R = void>
-using EnableIfMappable = std::enable_if_t<std::is_same<T, GenomicRegion>::value || std::is_base_of<Mappable<T>, T>::value, R>;
+using EnableIfMappable = std::enable_if_t<is_mappable<T>, R>;
 
-inline const ContigRegion& get_region(const ContigRegion& region)
+template <typename T, typename R = void>
+using EnableIfRegionOrMappable = std::enable_if_t<is_region_or_mappable<T>, R>;
+
+inline decltype(auto) get_region(const ContigRegion& region)
 {
     return region;
 }
 
-inline const GenomicRegion& get_region(const GenomicRegion& region)
+inline decltype(auto) get_region(const GenomicRegion& region)
 {
     return region;
-}
-
-template <typename MappableType>
-inline const ContigRegion& get_contig_region(const MappableType& mappable) noexcept
-{
-    return static_cast<const MappableType&>(mappable).get_region().get_contig_region();
 }
 
 template <typename T>
-inline GenomicRegion get_region(const Mappable<T>& m)
+inline decltype(auto) get_region(const Mappable<T>& m)
 {
     return static_cast<const T&>(m).get_region();
 }
 
-inline bool is_same_region(const GenomicRegion& lhs, const GenomicRegion& rhs)
+template <typename T>
+using RegionType = std::decay_t<decltype(get_region(std::declval<std::decay_t<T>>()))>;
+
+inline decltype(auto) get_contig_region(const ContigRegion& region) noexcept
+{
+    return region;
+}
+
+inline decltype(auto) get_contig_region(const GenomicRegion& region) noexcept
+{
+    return region.get_contig_region();
+}
+
+template <typename T>
+inline decltype(auto) get_contig_region(const T& mappable) noexcept
+{
+    return get_contig_region(static_cast<const T&>(mappable).get_region());
+}
+
+inline auto is_same_region(const ContigRegion& lhs, const ContigRegion& rhs)
+{
+    return lhs == rhs;
+}
+
+inline auto is_same_region(const GenomicRegion& lhs, const GenomicRegion& rhs)
 {
     return lhs == rhs;
 }
 
 template <typename T>
-inline bool is_same_region(const GenomicRegion& lhs, const Mappable<T>& rhs)
+inline auto is_same_region(const ContigRegion& lhs, const Mappable<T>& rhs)
 {
-    return lhs == get_region(rhs);
+    return is_same_region(lhs, static_cast<const T&>(rhs).get_region());
 }
 
 template <typename T>
-inline bool is_same_region(const Mappable<T>& lhs, const GenomicRegion& rhs)
+inline auto is_same_region(const GenomicRegion& lhs, const Mappable<T>& rhs)
 {
-    return get_region(lhs) == rhs;
+    return is_same_region(lhs, static_cast<const T&>(rhs).get_region());
+}
+
+template <typename T>
+inline auto is_same_region(const Mappable<T>& lhs, const ContigRegion& rhs)
+{
+    return is_same_region(static_cast<const T&>(lhs).get_region(), rhs);
+}
+
+template <typename T>
+inline auto is_same_region(const Mappable<T>& lhs, const GenomicRegion& rhs)
+{
+    return is_same_region(static_cast<const T&>(lhs).get_region(), rhs);
 }
 
 template <typename T1, typename T2>
-inline bool is_same_region(const Mappable<T1>& lhs, const Mappable<T2>& rhs)
+inline auto is_same_region(const Mappable<T1>& lhs, const Mappable<T2>& rhs)
 {
-    return get_region(lhs) == get_region(rhs);
+    return is_same_region(static_cast<const T1&>(lhs).get_region(),
+                          static_cast<const T2&>(rhs).get_region());
 }
 
 template <typename T>
-inline bool empty(const Mappable<T>& m)
+inline auto empty(const Mappable<T>& m)
 {
     return empty(static_cast<const T&>(m).get_region());
 }
 
 template <typename T>
-inline GenomicRegion::SizeType size(const Mappable<T>& m)
+inline auto size(const Mappable<T>& m)
 {
     return size(static_cast<const T&>(m).get_region());
 }
 
 template <typename T>
-inline GenomicRegion::ContigNameType get_contig_name(const Mappable<T>& m)
+inline decltype(auto) get_contig_name(const Mappable<T>& m)
 {
     return get_contig_name(static_cast<const T&>(m).get_region());
 }
 
 template <typename T>
-inline GenomicRegion::SizeType get_begin(const Mappable<T>& m)
+inline auto is_same_contig(const Mappable<T>& lhs, const ContigRegion& rhs)
+{
+    return is_same_contig(static_cast<const T&>(lhs).get_region(), rhs);
+}
+
+template <typename T>
+inline auto is_same_contig(const Mappable<T>& lhs, const GenomicRegion& rhs)
+{
+    return is_same_contig(static_cast<const T&>(lhs).get_region(), rhs);
+}
+
+template <typename T1, typename T2>
+inline auto is_same_contig(const Mappable<T1>& lhs, const Mappable<T2>& rhs)
+{
+    return is_same_contig(static_cast<const T1&>(lhs).get_region(),
+                          static_cast<const T2&>(rhs).get_region());
+}
+
+template <typename T>
+inline auto get_begin(const Mappable<T>& m)
 {
     return get_begin(static_cast<const T&>(m).get_region());
 }
 
 template <typename T>
-inline GenomicRegion::SizeType get_end(const Mappable<T>& m)
+inline auto get_end(const Mappable<T>& m)
 {
     return get_end(static_cast<const T&>(m).get_region());
 }
 
 template <typename T>
-inline bool operator==(const Mappable<T>& lhs, const GenomicRegion& rhs)
+inline auto operator==(const Mappable<T>& lhs, const ContigRegion& rhs)
 {
     return static_cast<const T&>(lhs).get_region() == rhs;
 }
 
 template <typename T>
-inline bool operator==(const GenomicRegion& lhs, const Mappable<T>& rhs)
+inline auto operator==(const Mappable<T>& lhs, const GenomicRegion& rhs)
+{
+    return static_cast<const T&>(lhs).get_region() == rhs;
+}
+
+template <typename T>
+inline auto operator==(const ContigRegion& lhs, const Mappable<T>& rhs)
+{
+    return lhs == static_cast<const T&>(rhs).get_region();
+}
+
+template <typename T>
+inline auto operator==(const GenomicRegion& lhs, const Mappable<T>& rhs)
 {
     return lhs == static_cast<const T&>(rhs).get_region();
 }
 
 template <typename T1, typename T2>
-inline bool operator==(const Mappable<T1>& lhs, const Mappable<T2>& rhs)
+inline auto operator==(const Mappable<T1>& lhs, const Mappable<T2>& rhs)
 {
     return static_cast<const T1&>(lhs).get_region() == static_cast<const T2&>(rhs).get_region();
 }
 
 template <typename T>
-inline bool operator<(const Mappable<T>& lhs, const GenomicRegion& rhs)
+inline auto operator<(const Mappable<T>& lhs, const ContigRegion& rhs)
 {
     return static_cast<const T&>(lhs).get_region() < rhs;
 }
 
 template <typename T>
-inline bool operator<(const GenomicRegion& lhs, const Mappable<T>& rhs)
+inline auto operator<(const Mappable<T>& lhs, const GenomicRegion& rhs)
+{
+    return static_cast<const T&>(lhs).get_region() < rhs;
+}
+
+template <typename T>
+inline auto operator<(const ContigRegion& lhs, const Mappable<T>& rhs)
+{
+    return lhs < static_cast<const T&>(rhs).get_region();
+}
+
+template <typename T>
+inline auto operator<(const GenomicRegion& lhs, const Mappable<T>& rhs)
 {
     return lhs < static_cast<const T&>(rhs).get_region();
 }
 
 template <typename T1, typename T2>
-inline bool operator<(const Mappable<T1>& lhs, const Mappable<T2>& rhs)
+inline auto operator<(const Mappable<T1>& lhs, const Mappable<T2>& rhs)
 {
     return static_cast<const T1&>(lhs).get_region() < static_cast<const T2&>(rhs).get_region();
 }
 
 template <typename T>
-inline bool begins_equal(const ContigRegion& lhs, const Mappable<T>& rhs)
+inline auto begins_equal(const ContigRegion& lhs, const Mappable<T>& rhs)
 {
     return begins_equal(lhs, static_cast<const T&>(rhs).get_region());
 }
 
 template <typename T>
-inline bool begins_equal(const GenomicRegion& lhs, const Mappable<T>& rhs)
+inline auto begins_equal(const GenomicRegion& lhs, const Mappable<T>& rhs)
 {
     return begins_equal(lhs, static_cast<const T&>(rhs).get_region());
 }
 
 template <typename T>
-inline bool begins_equal(const Mappable<T>& lhs, const ContigRegion& rhs)
+inline auto begins_equal(const Mappable<T>& lhs, const ContigRegion& rhs)
 {
     return begins_equal(static_cast<const T&>(lhs).get_region(), rhs);
 }
 
 template <typename T>
-inline bool begins_equal(const Mappable<T>& lhs, const GenomicRegion& rhs)
+inline auto begins_equal(const Mappable<T>& lhs, const GenomicRegion& rhs)
 {
     return begins_equal(static_cast<const T&>(lhs).get_region(), rhs);
 }
 
 template <typename T1, typename T2>
-inline bool begins_equal(const Mappable<T1>& lhs, const Mappable<T2>& rhs)
+inline auto begins_equal(const Mappable<T1>& lhs, const Mappable<T2>& rhs)
 {
     return begins_equal(static_cast<const T1&>(lhs).get_region(),
                         static_cast<const T2&>(rhs).get_region());
 }
 
 template <typename T>
-inline bool ends_equal(const ContigRegion& lhs, const Mappable<T>& rhs)
+inline auto ends_equal(const ContigRegion& lhs, const Mappable<T>& rhs)
 {
     return ends_equal(lhs, static_cast<const T&>(rhs).get_region());
 }
 
 template <typename T>
-inline bool ends_equal(const GenomicRegion& lhs, const Mappable<T>& rhs)
+inline auto ends_equal(const GenomicRegion& lhs, const Mappable<T>& rhs)
 {
     return ends_equal(lhs, static_cast<const T&>(rhs).get_region());
 }
 
 template <typename T>
-inline bool ends_equal(const Mappable<T>& lhs, const ContigRegion& rhs)
+inline auto ends_equal(const Mappable<T>& lhs, const ContigRegion& rhs)
 {
     return ends_equal(static_cast<const T&>(lhs).get_region(), rhs);
 }
 
 template <typename T>
-inline bool ends_equal(const Mappable<T>& lhs, const GenomicRegion& rhs)
+inline auto ends_equal(const Mappable<T>& lhs, const GenomicRegion& rhs)
 {
     return ends_equal(static_cast<const T&>(lhs).get_region(), rhs);
 }
 
 template <typename T1, typename T2>
-inline bool ends_equal(const Mappable<T1>& lhs, const Mappable<T2>& rhs)
+inline auto ends_equal(const Mappable<T1>& lhs, const Mappable<T2>& rhs)
 {
     return ends_equal(static_cast<const T1&>(lhs).get_region(),
                       static_cast<const T2&>(rhs).get_region());
 }
 
 template <typename T>
-inline bool begins_before(const Mappable<T>& lhs, const ContigRegion& rhs)
+inline auto begins_before(const Mappable<T>& lhs, const ContigRegion& rhs)
 {
     return begins_before(static_cast<const T&>(lhs).get_region(), rhs);
 }
 
 template <typename T>
-inline bool begins_before(const Mappable<T>& lhs, const GenomicRegion& rhs)
+inline auto begins_before(const Mappable<T>& lhs, const GenomicRegion& rhs)
 {
     return begins_before(static_cast<const T&>(lhs).get_region(), rhs);
 }
 
 template <typename T>
-inline bool begins_before(const ContigRegion& lhs, const Mappable<T>& rhs)
+inline auto begins_before(const ContigRegion& lhs, const Mappable<T>& rhs)
 {
     return begins_before(lhs, static_cast<const T&>(rhs).get_region());
 }
 
 template <typename T>
-inline bool begins_before(const GenomicRegion& lhs, const Mappable<T>& rhs)
+inline auto begins_before(const GenomicRegion& lhs, const Mappable<T>& rhs)
 {
     return begins_before(lhs, static_cast<const T&>(rhs).get_region());
 }
 
 template <typename T1, typename T2>
-inline bool begins_before(const Mappable<T1>& lhs, const Mappable<T2>& rhs)
+inline auto begins_before(const Mappable<T1>& lhs, const Mappable<T2>& rhs)
 {
     return begins_before(static_cast<const T1&>(lhs).get_region(),
                          static_cast<const T2&>(rhs).get_region());
 }
 
 template <typename T>
-inline bool ends_before(const Mappable<T>& lhs, const ContigRegion& rhs)
+inline auto ends_before(const Mappable<T>& lhs, const ContigRegion& rhs)
 {
     return ends_before(static_cast<const T&>(lhs).get_region(), rhs);
 }
 
 template <typename T>
-inline bool ends_before(const Mappable<T>& lhs, const GenomicRegion& rhs)
+inline auto ends_before(const Mappable<T>& lhs, const GenomicRegion& rhs)
 {
     return ends_before(static_cast<const T&>(lhs).get_region(), rhs);
 }
 
 template <typename T>
-inline bool ends_before(const ContigRegion& lhs, const Mappable<T>& rhs)
+inline auto ends_before(const ContigRegion& lhs, const Mappable<T>& rhs)
 {
     return ends_before(lhs, static_cast<const T&>(rhs).get_region());
 }
 
 template <typename T>
-inline bool ends_before(const GenomicRegion& lhs, const Mappable<T>& rhs)
+inline auto ends_before(const GenomicRegion& lhs, const Mappable<T>& rhs)
 {
     return ends_before(lhs, static_cast<const T&>(rhs).get_region());
 }
 
 template <typename T1, typename T2>
-inline bool ends_before(const Mappable<T1>& lhs, const Mappable<T2>& rhs)
+inline auto ends_before(const Mappable<T1>& lhs, const Mappable<T2>& rhs)
 {
     return ends_before(static_cast<const T1&>(lhs).get_region(),
                        static_cast<const T2&>(rhs).get_region());
 }
 
 template <typename T>
-inline bool is_before(const Mappable<T>& lhs, const ContigRegion& rhs) noexcept
+inline auto is_before(const Mappable<T>& lhs, const ContigRegion& rhs) noexcept
 {
     return is_before(static_cast<const T&>(lhs).get_region(), rhs);
 }
 
 template <typename T>
-inline bool is_before(const Mappable<T>& lhs, const GenomicRegion& rhs) noexcept
+inline auto is_before(const Mappable<T>& lhs, const GenomicRegion& rhs) noexcept
 {
     return is_before(static_cast<const T&>(lhs).get_region(), rhs);
 }
 
 template <typename T>
-inline bool is_before(const ContigRegion& lhs, const Mappable<T>& rhs) noexcept
+inline auto is_before(const ContigRegion& lhs, const Mappable<T>& rhs) noexcept
 {
     return is_before(lhs, static_cast<const T&>(rhs).get_region());
 }
 
 template <typename T>
-inline bool is_before(const GenomicRegion& lhs, const Mappable<T>& rhs) noexcept
+inline auto is_before(const GenomicRegion& lhs, const Mappable<T>& rhs) noexcept
 {
     return is_before(lhs, static_cast<const T&>(rhs).get_region());
 }
 
 template <typename T1, typename T2>
-inline bool is_before(const Mappable<T1>& lhs, const Mappable<T2>& rhs) noexcept
+inline auto is_before(const Mappable<T1>& lhs, const Mappable<T2>& rhs) noexcept
 {
     return is_before(static_cast<const T1&>(lhs).get_region(),
                      static_cast<const T2&>(rhs).get_region());
 }
 
 template <typename T>
-inline bool is_after(const Mappable<T>& lhs, const ContigRegion& rhs) noexcept
+inline auto is_after(const Mappable<T>& lhs, const ContigRegion& rhs) noexcept
 {
     return is_after(static_cast<const T&>(lhs).get_region(), rhs);
 }
 
 template <typename T>
-inline bool is_after(const Mappable<T>& lhs, const GenomicRegion& rhs) noexcept
+inline auto is_after(const Mappable<T>& lhs, const GenomicRegion& rhs) noexcept
 {
     return is_after(static_cast<const T&>(lhs).get_region(), rhs);
 }
 
 template <typename T>
-inline bool is_after(const ContigRegion& lhs, const Mappable<T>& rhs) noexcept
+inline auto is_after(const ContigRegion& lhs, const Mappable<T>& rhs) noexcept
 {
     return is_after(lhs, static_cast<const T&>(rhs).get_region());
 }
 
 template <typename T>
-inline bool is_after(const GenomicRegion& lhs, const Mappable<T>& rhs) noexcept
+inline auto is_after(const GenomicRegion& lhs, const Mappable<T>& rhs) noexcept
 {
     return is_after(lhs, static_cast<const T&>(rhs).get_region());
 }
 
 template <typename T1, typename T2>
-inline bool is_after(const Mappable<T1>& lhs, const Mappable<T2>& rhs) noexcept
+inline auto is_after(const Mappable<T1>& lhs, const Mappable<T2>& rhs) noexcept
 {
     return is_after(static_cast<const T1&>(lhs).get_region(),
                     static_cast<const T2&>(rhs).get_region());
 }
 
 template <typename T>
-inline bool are_adjacent(const Mappable<T>& lhs, const ContigRegion& rhs) noexcept
+inline auto are_adjacent(const Mappable<T>& lhs, const ContigRegion& rhs) noexcept
 {
     return are_adjacent(static_cast<const T&>(lhs).get_region(), rhs);
 }
 
 template <typename T>
-inline bool are_adjacent(const Mappable<T>& lhs, const GenomicRegion& rhs) noexcept
+inline auto are_adjacent(const Mappable<T>& lhs, const GenomicRegion& rhs) noexcept
 {
     return are_adjacent(static_cast<const T&>(lhs).get_region(), rhs);
 }
 
 template <typename T>
-inline bool are_adjacent(const ContigRegion& lhs, const Mappable<T>& rhs) noexcept
+inline auto are_adjacent(const ContigRegion& lhs, const Mappable<T>& rhs) noexcept
 {
     return are_adjacent(lhs, static_cast<const T&>(rhs).get_region());
 }
 
 template <typename T>
-inline bool are_adjacent(const GenomicRegion& lhs, const Mappable<T>& rhs) noexcept
+inline auto are_adjacent(const GenomicRegion& lhs, const Mappable<T>& rhs) noexcept
 {
     return are_adjacent(lhs, static_cast<const T&>(rhs).get_region());
 }
 
 template <typename T1, typename T2>
-inline bool are_adjacent(const Mappable<T1>& lhs, const Mappable<T2>& rhs) noexcept
+inline auto are_adjacent(const Mappable<T1>& lhs, const Mappable<T2>& rhs) noexcept
 {
     return are_adjacent(static_cast<const T1&>(lhs).get_region(),
                         static_cast<const T2&>(rhs).get_region());
@@ -373,62 +465,62 @@ inline auto overlap_size(const Mappable<T1>& lhs, const Mappable<T2>& rhs) noexc
 }
 
 template <typename T>
-inline bool overlaps(const Mappable<T>& lhs, const ContigRegion& rhs) noexcept
+inline auto overlaps(const Mappable<T>& lhs, const ContigRegion& rhs) noexcept
 {
     return overlaps(static_cast<const T&>(lhs).get_region(), rhs);
 }
 
 template <typename T>
-inline bool overlaps(const Mappable<T>& lhs, const GenomicRegion& rhs) noexcept
+inline auto overlaps(const Mappable<T>& lhs, const GenomicRegion& rhs) noexcept
 {
     return overlaps(static_cast<const T&>(lhs).get_region(), rhs);
 }
 
 template <typename T>
-inline bool overlaps(const ContigRegion& lhs, const Mappable<T>& rhs) noexcept
+inline auto overlaps(const ContigRegion& lhs, const Mappable<T>& rhs) noexcept
 {
     return overlaps(lhs, static_cast<const T&>(rhs).get_region());
 }
 
 template <typename T>
-inline bool overlaps(const GenomicRegion& lhs, const Mappable<T>& rhs) noexcept
+inline auto overlaps(const GenomicRegion& lhs, const Mappable<T>& rhs) noexcept
 {
     return overlaps(lhs, static_cast<const T&>(rhs).get_region());
 }
 
 template <typename T1, typename T2>
-inline bool overlaps(const Mappable<T1>& lhs, const Mappable<T2>& rhs) noexcept
+inline auto overlaps(const Mappable<T1>& lhs, const Mappable<T2>& rhs) noexcept
 {
     return overlaps(static_cast<const T1&>(lhs).get_region(),
                     static_cast<const T2&>(rhs).get_region());
 }
 
 template <typename T>
-inline bool contains(const Mappable<T>& lhs, const ContigRegion& rhs) noexcept
-{
-    return contains(static_cast<const T&>(lhs).get_region().get_contig_region(), rhs);
-}
-
-template <typename T>
-inline bool contains(const Mappable<T>& lhs, const GenomicRegion& rhs) noexcept
+inline auto contains(const Mappable<T>& lhs, const ContigRegion& rhs) noexcept
 {
     return contains(static_cast<const T&>(lhs).get_region(), rhs);
 }
 
 template <typename T>
-inline bool contains(const ContigRegion& lhs, const Mappable<T>& rhs) noexcept
+inline auto contains(const Mappable<T>& lhs, const GenomicRegion& rhs) noexcept
+{
+    return contains(static_cast<const T&>(lhs).get_region(), rhs);
+}
+
+template <typename T>
+inline auto contains(const ContigRegion& lhs, const Mappable<T>& rhs) noexcept
 {
     return contains(lhs, static_cast<const T&>(rhs).get_region());
 }
 
 template <typename T>
-inline bool contains(const GenomicRegion& lhs, const Mappable<T>& rhs) noexcept
+inline auto contains(const GenomicRegion& lhs, const Mappable<T>& rhs) noexcept
 {
     return contains(lhs, static_cast<const T&>(rhs).get_region());
 }
 
 template <typename T1, typename T2>
-inline bool contains(const Mappable<T1>& lhs, const Mappable<T2>& rhs) noexcept
+inline auto contains(const Mappable<T1>& lhs, const Mappable<T2>& rhs) noexcept
 {
     return contains(static_cast<const T1&>(lhs).get_region(),
                     static_cast<const T2&>(rhs).get_region());

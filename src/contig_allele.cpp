@@ -37,7 +37,7 @@ ContigAllele::SizeType sequence_size(const ContigAllele& allele) noexcept
 
 ContigAllele::SequenceType get_subsequence(const ContigAllele& allele, const ContigRegion& region)
 {
-    if (!contains(allele, region)) {
+    if (!::contains(allele, region)) {
         return ContigAllele::SequenceType {};
     }
     

@@ -14,6 +14,7 @@
 #include <cstddef>
 #include <iterator>
 #include <stdexcept>
+#include <type_traits>
 
 #include <boost/iterator/filter_iterator.hpp>
 #include <boost/range/iterator_range_core.hpp>
@@ -25,8 +26,8 @@
 
 #include <iostream> // DEBUG
 
-template <typename ForwardIterator>
-auto sum_sizes(ForwardIterator first, ForwardIterator last)
+template <typename ForwardIt>
+auto sum_sizes(ForwardIt first, ForwardIt last)
 {
     return std::accumulate(first, last, GenomicRegion::SizeType {},
                            [] (const auto curr, const auto& mappable) { return curr + size(mappable); });
@@ -43,14 +44,14 @@ auto sum_sizes(const Container& mappables)
  
  The range [first, last) is not required to be sorted.
  */
-template <typename ForwardIterator>
-ForwardIterator leftmost_mappable(ForwardIterator first, ForwardIterator last)
+template <typename ForwardIt>
+ForwardIt leftmost_mappable(ForwardIt first, ForwardIt last)
 {
     return std::min_element(first, last);
 }
 
 template <typename Container>
-typename Container::const_iterator leftmost_mappable(const Container& mappables)
+auto leftmost_mappable(const Container& mappables)
 {
     return leftmost_mappable(std::cbegin(mappables), std::cend(mappables));
 }
@@ -60,9 +61,9 @@ typename Container::const_iterator leftmost_mappable(const Container& mappables)
  
  The range [first, last) is not required to be sorted.
  */
-template <typename ForwardIterator>
+template <typename ForwardIt>
 inline
-ForwardIterator rightmost_mappable(ForwardIterator first, ForwardIterator last)
+ForwardIt rightmost_mappable(ForwardIt first, ForwardIt last)
 {
     return std::max_element(first, last, [] (const auto& lhs, const auto& rhs) {
         return (ends_equal(lhs, rhs)) ? begins_before(lhs, rhs) : ends_before(lhs, rhs);
@@ -70,7 +71,7 @@ ForwardIterator rightmost_mappable(ForwardIterator first, ForwardIterator last)
 }
 
 template <typename Container>
-typename Container::const_iterator rightmost_mappable(const Container& mappables)
+auto rightmost_mappable(const Container& mappables)
 {
     return rightmost_mappable(std::cbegin(mappables), std::cend(mappables));
 }
@@ -80,16 +81,16 @@ typename Container::const_iterator rightmost_mappable(const Container& mappables
  
  The range [first, last) is not required to be sorted.
  */
-template <typename ForwardIterator>
+template <typename ForwardIt>
 inline
-ForwardIterator largest_element(ForwardIterator first, ForwardIterator last)
+ForwardIt largest_element(ForwardIt first, ForwardIt last)
 {
     return std::max_element(first, last,
                             [] (const auto& lhs, const auto& rhs) { return size(lhs) < size(rhs); });
 }
 
 template <typename Container>
-typename Container::const_iterator largest_element(const Container& mappables)
+auto largest_element(const Container& mappables)
 {
     return largest_element(std::cbegin(mappables), std::cend(mappables));
 }
@@ -99,16 +100,16 @@ typename Container::const_iterator largest_element(const Container& mappables)
  
  The range [first, last) is not required to be sorted.
  */
-template <typename ForwardIterator>
+template <typename ForwardIt>
 inline
-ForwardIterator smallest_element(ForwardIterator first, ForwardIterator last)
+ForwardIt smallest_element(ForwardIt first, ForwardIt last)
 {
     return std::min_element(first, last,
                             [] (const auto& lhs, const auto& rhs) { return size(lhs) < size(rhs); });
 }
 
 template <typename Container>
-typename Container::const_iterator smallest_element(const Container& mappables)
+auto smallest_element(const Container& mappables)
 {
     return smallest_element(std::cbegin(mappables), std::cend(mappables));
 }
@@ -118,15 +119,15 @@ typename Container::const_iterator smallest_element(const Container& mappables)
  
  Requires [first, last) is sorted w.r.t GenomicRegion::operator<
  */
-template <typename ForwardIterator, typename MappableType>
+template <typename ForwardIt, typename MappableTp>
 inline
-ForwardIterator find_first_after(ForwardIterator first, ForwardIterator last, const MappableType& mappable)
+ForwardIt find_first_after(ForwardIt first, ForwardIt last, const MappableTp& mappable)
 {
     return std::lower_bound(first, last, next_position(mappable));
 }
 
-template <typename Container, typename MappableType>
-typename Container::const_iterator find_first_after(const Container& mappables, const MappableType& mappable)
+template <typename Container, typename MappableTp>
+auto find_first_after(const Container& mappables, const MappableTp& mappable)
 {
     return find_first_after(std::cbegin(mappables), std::cend(mappables), mappable);
 }
@@ -135,9 +136,8 @@ typename Container::const_iterator find_first_after(const Container& mappables, 
  Returns true if the range of Mappable elements in the range [first, last) is sorted
  w.r.t GenomicRegion::operator<, and satisfies the condition 'if lhs < rhs then end(lhs) < end(rhs)
  */
-template <typename ForwardIterator>
-inline
-bool is_bidirectionally_sorted(ForwardIterator first, ForwardIterator last)
+template <typename ForwardIt>
+bool is_bidirectionally_sorted(ForwardIt first, ForwardIt last)
 {
     return std::is_sorted(first, last,
                           [] (const auto& lhs, const auto& rhs) { return lhs < rhs || ends_before(lhs, rhs); });
@@ -153,9 +153,8 @@ bool is_bidirectionally_sorted(const Container& mappables)
  Returns the an iterator to the first element in the range [first, last) that is not sorted
  according w.r.t GenomicRegion::operator< and 'if lhs < rhs then end(lhs) < end(rhs)
  */
-template <typename ForwardIterator>
-inline
-ForwardIterator is_bidirectionally_sorted_until(ForwardIterator first, ForwardIterator last)
+template <typename ForwardIt>
+ForwardIt is_bidirectionally_sorted_until(ForwardIt first, ForwardIt last)
 {
     return std::is_sorted_until(first, last,
                                 [] (const auto& lhs, const auto& rhs) { return lhs < rhs || ends_before(lhs, rhs); });
@@ -171,12 +170,11 @@ typename Container::const_iterator is_bidirectionally_sorted_until(const Contain
  Returns the minimum number of sub-ranges in each within the range [first, last) such that each
  sub-range is bidirectionally_sorted.
  */
-template <typename ForwardIterator>
-inline
-std::vector<boost::iterator_range<ForwardIterator>>
-bidirectionally_sorted_ranges(ForwardIterator first, ForwardIterator last)
+template <typename ForwardIt>
+std::vector<boost::iterator_range<ForwardIt>>
+bidirectionally_sorted_ranges(ForwardIt first, ForwardIt last)
 {
-    std::vector<boost::iterator_range<ForwardIterator>> result {};
+    std::vector<boost::iterator_range<ForwardIt>> result {};
     
     auto it = first;
     
@@ -201,9 +199,9 @@ bidirectionally_sorted_ranges(ForwardIterator first, ForwardIterator last)
  
  Requires [first, last) is sorted w.r.t GenomicRegion::operator<
  */
-template <typename ForwardIterator, typename MappableType>
-OverlapRange<ForwardIterator>
-overlap_range(ForwardIterator first, ForwardIterator last, const MappableType& mappable,
+template <typename ForwardIt, typename MappableTp>
+OverlapRange<ForwardIt>
+overlap_range(ForwardIt first, ForwardIt last, const MappableTp& mappable,
               MappableRangeOrder order = MappableRangeOrder::ForwardSorted)
 {
     if (order == MappableRangeOrder::BidirectionallySorted) {
@@ -231,9 +229,9 @@ overlap_range(ForwardIterator first, ForwardIterator last, const MappableType& m
                                             return overlaps(m, mappable); }), it, mappable);
 }
 
-template <typename Container, typename MappableType>
+template <typename Container, typename MappableTp>
 OverlapRange<typename Container::const_iterator>
-overlap_range(const Container& mappables, const MappableType& mappable,
+overlap_range(const Container& mappables, const MappableTp& mappable,
               MappableRangeOrder order = MappableRangeOrder::ForwardSorted)
 {
     return overlap_range(std::cbegin(mappables), std::cend(mappables), mappable, order);
@@ -247,12 +245,12 @@ overlap_range(const Container& mappables, const MappableType& mappable,
  
  Requires [first, last) is sorted w.r.t GenomicRegion::operator<
  */
-template <typename ForwardIterator, typename MappableType>
-OverlapRange<ForwardIterator>
-overlap_range(ForwardIterator first, ForwardIterator last, const MappableType& mappable,
+template <typename ForwardIt, typename MappableTp>
+OverlapRange<ForwardIt>
+overlap_range(ForwardIt first, ForwardIt last, const MappableTp& mappable,
               GenomicRegion::SizeType max_mappable_size)
 {
-    using MappableType2 = typename std::iterator_traits<ForwardIterator>::value_type;
+    using MappableTp2 = typename std::iterator_traits<ForwardIt>::value_type;
     
     auto it = find_first_after(first, last, mappable);
     
@@ -265,26 +263,26 @@ overlap_range(ForwardIterator first, ForwardIterator last, const MappableType& m
     return make_overlap_range(it2, it, mappable);
 }
 
-template <typename Container, typename MappableType>
+template <typename Container, typename MappableTp>
 OverlapRange<typename Container::const_iterator>
-overlap_range(const Container& mappables, const MappableType& mappable,
+overlap_range(const Container& mappables, const MappableTp& mappable,
               GenomicRegion::SizeType max_mappable_size)
 {
     return overlap_range(std::cbegin(mappables), std::cend(mappables), mappable, max_mappable_size);
 }
 
-template <typename Container, typename MappableType>
+template <typename Container, typename MappableTp>
 Container
-copy_overlapped(const Container& mappables, const MappableType& mappable,
+copy_overlapped(const Container& mappables, const MappableTp& mappable,
                 MappableRangeOrder order = MappableRangeOrder::ForwardSorted)
 {
     const auto overlapped = overlap_range(mappables, mappable, order);
     return Container {std::cbegin(overlapped), std::cend(overlapped)};
 }
 
-template <typename Container, typename MappableType>
+template <typename Container, typename MappableTp>
 Container
-copy_overlapped(const Container& mappables, const MappableType& mappable,
+copy_overlapped(const Container& mappables, const MappableTp& mappable,
                 GenomicRegion::SizeType max_mappable_size)
 {
     const auto overlapped = overlap_range(mappables, mappable, max_mappable_size);
@@ -296,9 +294,9 @@ copy_overlapped(const Container& mappables, const MappableType& mappable,
  
  Requires [first, last) is sorted w.r.t GenomicRegion::operator<
  */
-template <typename BidirectionalIterator, typename MappableType>
+template <typename BidirectionalIterator, typename MappableTp>
 bool has_overlapped(BidirectionalIterator first, BidirectionalIterator last,
-                    const MappableType& mappable,
+                    const MappableTp& mappable,
                     MappableRangeOrder order = MappableRangeOrder::ForwardSorted)
 {
     if (order == MappableRangeOrder::BidirectionallySorted) {
@@ -318,8 +316,8 @@ bool has_overlapped(BidirectionalIterator first, BidirectionalIterator last,
     }
 }
 
-template <typename Container, typename MappableType>
-bool has_overlapped(const Container& container, const MappableType& mappable,
+template <typename Container, typename MappableTp>
+bool has_overlapped(const Container& container, const MappableTp& mappable,
                     MappableRangeOrder order = MappableRangeOrder::ForwardSorted)
 {
     return has_overlapped(std::cbegin(container), std::cend(container), mappable, order);
@@ -330,16 +328,16 @@ bool has_overlapped(const Container& container, const MappableType& mappable,
  
  Requires [first, last) is sorted w.r.t GenomicRegion::operator<
  */
-template <typename ForwardIterator, typename MappableType>
-size_t count_overlapped(ForwardIterator first, ForwardIterator last, const MappableType& mappable,
+template <typename ForwardIt, typename MappableTp>
+size_t count_overlapped(ForwardIt first, ForwardIt last, const MappableTp& mappable,
                         MappableRangeOrder order = MappableRangeOrder::ForwardSorted)
 {
     const auto overlapped = overlap_range(first, last, mappable, order);
     return std::distance(overlapped.begin(), overlapped.end());
 }
 
-template <typename Container, typename MappableType>
-size_t count_overlapped(const Container& container, const MappableType& mappable,
+template <typename Container, typename MappableTp>
+size_t count_overlapped(const Container& container, const MappableTp& mappable,
                         MappableRangeOrder order = MappableRangeOrder::ForwardSorted)
 {
     return count_overlapped(std::cbegin(container), std::cend(container), mappable, order);
@@ -350,16 +348,16 @@ size_t count_overlapped(const Container& container, const MappableType& mappable
  
  Requires [first, last) is sorted w.r.t GenomicRegion::operator<
  */
-template <typename ForwardIterator, typename MappableType>
-size_t count_overlapped(ForwardIterator first, ForwardIterator last, const MappableType& mappable,
+template <typename ForwardIt, typename MappableTp>
+size_t count_overlapped(ForwardIt first, ForwardIt last, const MappableTp& mappable,
                         GenomicRegion::SizeType max_mappable_size)
 {
     const auto overlapped = overlap_range(first, last, mappable, max_mappable_size);
     return std::distance(overlapped.begin(), overlapped.end());
 }
 
-template <typename Container, typename MappableType>
-size_t count_overlapped(const Container& container, const MappableType& mappable,
+template <typename Container, typename MappableTp>
+size_t count_overlapped(const Container& container, const MappableTp& mappable,
                         GenomicRegion::SizeType max_mappable_size)
 {
     return count_overlapped(std::cbegin(container), std::cend(container), mappable, max_mappable_size);
@@ -370,8 +368,8 @@ size_t count_overlapped(const Container& container, const MappableType& mappable
  
  Requires [first, last) is sorted w.r.t GenomicRegion::operator<
  */
-template <typename ForwardIterator, typename MappableType>
-bool has_exact_overlap(ForwardIterator first, ForwardIterator last, const MappableType& mappable,
+template <typename ForwardIt, typename MappableTp>
+bool has_exact_overlap(ForwardIt first, ForwardIt last, const MappableTp& mappable,
                        MappableRangeOrder order = MappableRangeOrder::ForwardSorted)
 {
     if (order == MappableRangeOrder::BidirectionallySorted) {
@@ -384,8 +382,8 @@ bool has_exact_overlap(ForwardIterator first, ForwardIterator last, const Mappab
                         [&mappable] (const auto& e) { return is_same_region(mappable, e); }) != std::cend(overlapped);
 }
 
-template <typename Container, typename MappableType>
-bool has_exact_overlap(const Container& container, const MappableType& mappable,
+template <typename Container, typename MappableTp>
+bool has_exact_overlap(const Container& container, const MappableTp& mappable,
                        MappableRangeOrder order = MappableRangeOrder::ForwardSorted)
 {
     return has_exact_overlap(std::cbegin(container), std::cend(container), mappable, order);
@@ -397,9 +395,9 @@ bool has_exact_overlap(const Container& container, const MappableType& mappable,
  
  Requires [first, last) is sorted w.r.t GenomicRegion::operator<
  */
-template <typename BidirectionalIterator, typename MappableType>
+template <typename BidirectionalIterator, typename MappableTp>
 ContainedRange<BidirectionalIterator>
-contained_range(BidirectionalIterator first, BidirectionalIterator last, const MappableType& mappable)
+contained_range(BidirectionalIterator first, BidirectionalIterator last, const MappableTp& mappable)
 {
     auto it = std::lower_bound(first, last, mappable,
                                [] (const auto& lhs, const auto& rhs) { return begins_before(lhs, rhs); });
@@ -414,9 +412,9 @@ contained_range(BidirectionalIterator first, BidirectionalIterator last, const M
     return make_contained_range(it, rit.base(), mappable);
 }
 
-template <typename Container, typename MappableType>
+template <typename Container, typename MappableTp>
 ContainedRange<typename Container::const_iterator>
-contained_range(const Container& mappables, const MappableType& mappable)
+contained_range(const Container& mappables, const MappableTp& mappable)
 {
     return contained_range(std::cbegin(mappables), std::cend(mappables), mappable);
 }
@@ -426,8 +424,8 @@ contained_range(const Container& mappables, const MappableType& mappable)
  
  Requires [first, last) is sorted w.r.t GenomicRegion::operator<
  */
-template <typename BidirectionalIterator, typename MappableType>
-bool has_contained(BidirectionalIterator first, BidirectionalIterator last, const MappableType& mappable)
+template <typename BidirectionalIterator, typename MappableTp>
+bool has_contained(BidirectionalIterator first, BidirectionalIterator last, const MappableTp& mappable)
 {
     auto it = std::lower_bound(first, last, mappable,
                                [] (const auto& lhs, const auto& rhs) { return begins_before(lhs, rhs); });
@@ -435,8 +433,8 @@ bool has_contained(BidirectionalIterator first, BidirectionalIterator last, cons
     return (it != last) && get_end(*it) <= get_end(mappable);
 }
 
-template <typename Container, typename MappableType>
-bool has_contained(const Container& container, const MappableType& mappable)
+template <typename Container, typename MappableTp>
+bool has_contained(const Container& container, const MappableTp& mappable)
 {
     return has_contained(std::cbegin(container), std::cend(container), mappable);
 }
@@ -446,15 +444,15 @@ bool has_contained(const Container& container, const MappableType& mappable)
  
  Requires [first, last) is sorted w.r.t GenomicRegion::operator<
  */
-template <typename BidirectionalIterator, typename MappableType>
-size_t count_contained(BidirectionalIterator first, BidirectionalIterator last, const MappableType& mappable)
+template <typename BidirectionalIterator, typename MappableTp>
+size_t count_contained(BidirectionalIterator first, BidirectionalIterator last, const MappableTp& mappable)
 {
     const auto contained = contained_range(first, last, mappable);
     return std::distance(contained.begin(), contained.end());
 }
 
-template <typename Container, typename MappableType>
-size_t count_contained(const Container& container, const MappableType& mappable)
+template <typename Container, typename MappableTp>
+size_t count_contained(const Container& container, const MappableTp& mappable)
 {
     return count_contained(std::cbegin(container), std::cend(container), mappable);
 }
@@ -464,9 +462,9 @@ size_t count_contained(const Container& container, const MappableType& mappable)
  
  Requires [first, last) is sorted w.r.t GenomicRegion::operator<
  */
-template <typename ForwardIterator, typename MappableType1, typename MappableType2>
-size_t count_shared(ForwardIterator first, ForwardIterator last,
-                    const MappableType1& lhs, const MappableType2& rhs,
+template <typename ForwardIt, typename MappableTp1, typename MappableTp2>
+size_t count_shared(ForwardIt first, ForwardIt last,
+                    const MappableTp1& lhs, const MappableTp2& rhs,
                     MappableRangeOrder order = MappableRangeOrder::ForwardSorted)
 {
     const auto lhs_overlapped = overlap_range(first, last, lhs, order);
@@ -479,16 +477,16 @@ size_t count_shared(ForwardIterator first, ForwardIterator last,
                           [&lhs] (const auto& region) { return overlaps(region, lhs); });
 }
 
-template <typename Container, typename MappableType1, typename MappableType2>
+template <typename Container, typename MappableTp1, typename MappableTp2>
 size_t count_shared(const Container& container,
-                       const MappableType1& lhs, const MappableType2& rhs,
+                       const MappableTp1& lhs, const MappableTp2& rhs,
                        MappableRangeOrder order = MappableRangeOrder::ForwardSorted)
 {
     return count_shared(std::cbegin(container), std::cend(container), lhs, rhs, order);
 }
 
-template <typename ForwardIterator>
-bool has_exact(ForwardIterator first, ForwardIterator last, const typename ForwardIterator::value_type& mappable)
+template <typename ForwardIt>
+bool has_exact(ForwardIt first, ForwardIt last, const typename ForwardIt::value_type& mappable)
 {
     const auto contained = contained_range(first, last, mappable);
     return std::find(std::cbegin(contained), std::cend(contained), mappable) == std::cend(contained);
@@ -505,9 +503,9 @@ bool has_exact(const Container& mappables, const typename Container::value_type&
  
  Requires [first, last) is sorted w.r.t GenomicRegion::operator<
  */
-template <typename ForwardIterator, typename MappableType1, typename MappableType2>
-bool has_shared(ForwardIterator first, ForwardIterator last,
-                const MappableType1& lhs, const MappableType2& rhs,
+template <typename ForwardIt, typename MappableTp1, typename MappableTp2>
+bool has_shared(ForwardIt first, ForwardIt last,
+                const MappableTp1& lhs, const MappableTp2& rhs,
                 MappableRangeOrder order = MappableRangeOrder::ForwardSorted)
 {
     const auto lhs_overlapped = overlap_range(first, last, lhs, order);
@@ -526,10 +524,10 @@ bool has_shared(ForwardIterator first, ForwardIterator last,
  
  Requires [first1, last1) and [first2, last2) are sorted w.r.t GenomicRegion::operator<
  */
-template <typename ForwardIterator1, typename ForwardIterator2, typename MappableType>
-ForwardIterator2 find_first_shared(ForwardIterator1 first1, ForwardIterator1 last1,
-                                   ForwardIterator2 first2, ForwardIterator2 last2,
-                                   const MappableType& mappable,
+template <typename ForwardIt1, typename ForwardIt2, typename MappableTp>
+ForwardIt2 find_first_shared(ForwardIt1 first1, ForwardIt1 last1,
+                                   ForwardIt2 first2, ForwardIt2 last2,
+                                   const MappableTp& mappable,
                                    MappableRangeOrder order = MappableRangeOrder::ForwardSorted)
 {
     return std::find_if(first2, last2,
@@ -544,9 +542,9 @@ ForwardIterator2 find_first_shared(ForwardIterator1 first1, ForwardIterator1 las
  
  Requires [first1, last1) and [first2, last2) to be sorted w.r.t GenomicRegion::operator<
  */
-template <typename ForwardIterator1, typename ForwardIterator2>
-size_t count_if_shared_with_first(ForwardIterator1 first1, ForwardIterator1 last1,
-                                  ForwardIterator2 first2, ForwardIterator2 last2,
+template <typename ForwardIt1, typename ForwardIt2>
+size_t count_if_shared_with_first(ForwardIt1 first1, ForwardIt1 last1,
+                                  ForwardIt2 first2, ForwardIt2 last2,
                                   MappableRangeOrder order = MappableRangeOrder::ForwardSorted)
 {
     if (first2 == last2) return 0;
@@ -561,7 +559,7 @@ size_t count_if_shared_with_first(ForwardIterator1 first1, ForwardIterator1 last
 template <typename Container>
 auto get_regions(const Container& mappables)
 {
-    std::vector<decltype(get_region(typename Container::value_type()))> result {};
+    std::vector<RegionType<typename Container::value_type>> result {};
     result.reserve(mappables.size());
     
     for (const auto& mappable : mappables) {
@@ -571,31 +569,62 @@ auto get_regions(const Container& mappables)
     return result;
 }
 
+namespace detail
+{
+    template <typename MappableTp>
+    auto decompose(const MappableTp& mappable, ContigRegion)
+    {
+        std::vector<ContigRegion> result {};
+        
+        const auto num_elements = size(mappable);
+        
+        if (num_elements == 0) return result;
+        
+        result.reserve(num_elements);
+        
+        ContigRegion::SizeType n {0};
+        
+        std::generate_n(std::back_inserter(result), num_elements, [&] () {
+            return ContigRegion {get_begin(mappable) + n, get_begin(mappable) + ++n};
+        });
+        
+        return result;
+    }
+    
+    template <typename MappableTp>
+    auto decompose(const MappableTp& mappable, GenomicRegion)
+    {
+        std::vector<GenomicRegion> result {};
+        
+        const auto num_elements = size(mappable);
+        
+        if (num_elements == 0) return result;
+        
+        result.reserve(num_elements);
+        
+        GenomicRegion::SizeType n {0};
+        
+        const auto& contig = get_contig_name(mappable);
+        
+        std::generate_n(std::back_inserter(result), num_elements, [&] () {
+            return GenomicRegion {contig, get_begin(mappable) + n, get_begin(mappable) + ++n};
+        });
+        
+        return result;
+    }
+} // namespace detail
+
 /**
  Splits mappable into an ordered vector of GenomicRegions of size 1
  */
-template <typename MappableType>
-std::vector<GenomicRegion> decompose(const MappableType& mappable)
+template <typename MappableTp>
+auto decompose(const MappableTp& mappable)
 {
-    std::vector<GenomicRegion> result {};
-    
-    const auto num_elements = size(mappable);
-    
-    if (num_elements == 0) return result;
-    
-    result.reserve(num_elements);
-    
-    GenomicRegion::SizeType n {0};
-    
-    std::generate_n(std::back_inserter(result), num_elements, [&n, &mappable] () {
-        return GenomicRegion {get_contig_name(mappable), get_begin(mappable) + n, get_begin(mappable) + ++n};
-    });
-    
-    return result;
+    return detail::decompose(mappable, RegionType<MappableTp> {});
 }
 
-template <typename MappableType>
-std::vector<GenomicRegion> decompose(const MappableType& mappable, GenomicRegion::SizeType n)
+template <typename MappableTp>
+auto decompose(const MappableTp& mappable, GenomicRegion::SizeType n)
 {
     std::vector<GenomicRegion> result {};
     
@@ -624,8 +653,8 @@ std::vector<GenomicRegion> decompose(const MappableType& mappable, GenomicRegion
  
  Requires [first, last) is sorted w.r.t GenomicRegion::operator<
  */
-template <typename ForwardIterator>
-GenomicRegion get_encompassing_region(ForwardIterator first, ForwardIterator last)
+template <typename ForwardIt>
+auto get_encompassing_region(ForwardIt first, ForwardIt last)
 {
     if (first == last) {
         throw std::runtime_error {"get_encompassing_region given empty range"};
@@ -635,7 +664,7 @@ GenomicRegion get_encompassing_region(ForwardIterator first, ForwardIterator las
 }
 
 template <typename Container>
-GenomicRegion get_encompassing_region(const Container& mappables)
+auto get_encompassing_region(const Container& mappables)
 {
     return get_encompassing_region(std::cbegin(mappables), std::cend(mappables));
 }
@@ -646,10 +675,12 @@ GenomicRegion get_encompassing_region(const Container& mappables)
  
  Requires [first_mappable, last_mappable) is sorted w.r.t GenomicRegion::operator<
  */
-template <typename ForwardIterator>
-std::vector<GenomicRegion> get_covered_regions(ForwardIterator first, ForwardIterator last)
+template <typename ForwardIt>
+auto get_covered_regions(ForwardIt first, ForwardIt last)
 {
-    std::vector<GenomicRegion> result {};
+    using ResultType = std::vector<RegionType<typename std::iterator_traits<ForwardIt>::value_type>>;
+    
+    ResultType result {};
     
     if (first == last) return result;
     
@@ -675,7 +706,8 @@ std::vector<GenomicRegion> get_covered_regions(ForwardIterator first, ForwardIte
 }
 
 template <typename Container>
-std::vector<GenomicRegion> get_covered_regions(const Container& mappables)
+std::vector<GenomicRegion>
+get_covered_regions(const Container& mappables)
 {
     return get_covered_regions(std::cbegin(mappables), std::cend(mappables));
 }
@@ -686,12 +718,14 @@ std::vector<GenomicRegion> get_covered_regions(const Container& mappables)
  
  Requires [first, last) is sorted w.r.t GenomicRegion::operator<
  */
-template <typename ForwardIterator>
-std::vector<GenomicRegion> get_all_intervening(ForwardIterator first, ForwardIterator last)
+template <typename ForwardIt>
+auto get_all_intervening(ForwardIt first, ForwardIt last)
 {
-    if (first == last) return std::vector<GenomicRegion> {};
+    using ResultType = std::vector<RegionType<typename std::iterator_traits<ForwardIt>::value_type>>;
     
-    std::vector<GenomicRegion> result {};
+    if (first == last) return ResultType {};
+    
+    ResultType result {};
     result.reserve(std::distance(first, last) - 1);
     
     std::transform(first, std::prev(last), std::next(first), std::back_inserter(result),
@@ -703,7 +737,8 @@ std::vector<GenomicRegion> get_all_intervening(ForwardIterator first, ForwardIte
 }
 
 template <typename Container>
-std::vector<GenomicRegion> get_all_intervening(const Container& mappables)
+std::vector<GenomicRegion>
+get_all_intervening(const Container& mappables)
 {
     return get_all_intervening(std::cbegin(mappables), std::cend(mappables));
 }
@@ -715,13 +750,18 @@ std::vector<GenomicRegion> get_all_intervening(const Container& mappables)
  
  Requires [first, last) is sorted w.r.t GenomicRegion::operator<
  */
-template <typename ForwardIterator, typename Mappable>
-std::vector<GenomicRegion> get_all_intervening(ForwardIterator first, ForwardIterator last,
-                                               const Mappable& mappable)
+template <typename ForwardIt, typename Mappable>
+auto get_all_intervening(ForwardIt first, ForwardIt last, const Mappable& mappable)
 {
-    if (first == last) return std::vector<GenomicRegion> {};
+    using ResultType = std::vector<RegionType<Mappable>>;
     
-    std::vector<GenomicRegion> result {};
+    static_assert(std::is_same<RegionType<typename std::iterator_traits<ForwardIt>::value_type>,
+                  RegionType<Mappable>>::value,
+                  "RegionType of input range must match RegionType of mappable");
+    
+    if (first == last) return ResultType {};
+    
+    ResultType result {};
     result.reserve(std::distance(first, last) + 1);
     
     if (begins_before(mappable, *first)) {
@@ -741,15 +781,15 @@ std::vector<GenomicRegion> get_all_intervening(ForwardIterator first, ForwardIte
 }
 
 template <typename Container, typename Mappable>
-std::vector<GenomicRegion> get_all_intervening(const Container& mappables, const Mappable& mappable)
+auto get_all_intervening(const Container& mappables, const Mappable& mappable)
 {
     return get_all_intervening(std::cbegin(mappables), std::cend(mappables), mappable);
 }
 
-template <typename ForwardIterator>
-auto segment_overlapped(ForwardIterator first, ForwardIterator last)
+template <typename ForwardIt>
+auto segment_overlapped(ForwardIt first, ForwardIt last)
 {
-    std::vector<std::vector<typename ForwardIterator::value_type>> result {};
+    std::vector<std::vector<typename ForwardIt::value_type>> result {};
     
     if (first == last) return result;
     
@@ -781,12 +821,12 @@ auto segment_overlapped(const Container& mappables)
     return segment_overlapped(std::cbegin(mappables), std::cend(mappables));
 }
 
-template <typename ForwardIterator>
-auto segment_by_begin(ForwardIterator first, ForwardIterator last)
+template <typename ForwardIt>
+auto segment_by_begin(ForwardIt first, ForwardIt last)
 {
-    using MappableType = typename std::iterator_traits<ForwardIterator>::value_type;
+    using MappableTp = typename std::iterator_traits<ForwardIt>::value_type;
     
-    std::vector<std::vector<MappableType>> result {};
+    std::vector<std::vector<MappableTp>> result {};
     
     if (first == last) return result;
     
@@ -810,12 +850,12 @@ auto segment_by_begin(const Container& mappables)
     return segment_by_begin(std::cbegin(mappables), std::cend(mappables));
 }
 
-template <typename ForwardIterator>
-auto segment_by_region(ForwardIterator first, ForwardIterator last)
+template <typename ForwardIt>
+auto segment_by_region(ForwardIt first, ForwardIt last)
 {
-    using MappableType = typename std::iterator_traits<ForwardIterator>::value_type;
+    using MappableTp = typename std::iterator_traits<ForwardIt>::value_type;
     
-    std::vector<std::vector<MappableType>> result {};
+    std::vector<std::vector<MappableTp>> result {};
     
     if (first == last) return result;
     
@@ -841,9 +881,9 @@ auto segment_by_region(const Container& mappables)
 }
 
 template <typename Mappable>
-std::vector<GenomicRegion> get_segment_regions(const std::vector<std::vector<Mappable>>& segments)
+auto get_segment_regions(const std::vector<std::vector<Mappable>>& segments)
 {
-    std::vector<GenomicRegion> result {};
+    std::vector<RegionType<Mappable>> result {};
     result.reserve(segments.size());
     
     for (const auto& segment : segments) {
@@ -853,16 +893,16 @@ std::vector<GenomicRegion> get_segment_regions(const std::vector<std::vector<Map
     return result;
 }
 
-//template <typename InputIterator>
-//bool has_coverage(InputIterator first, InputIterator last, const GenomicRegion& region)
+//template <typename InputIt>
+//bool has_coverage(InputIt first, InputIt last, const GenomicRegion& region)
 //{
 //    const auto overlapped = overlap_range(first, last);
 //    return std::any_of(std::cbegin(overlapped), std::cend(overlapped),
 //                       [] (const auto& mappable) { return !empty(mappable); });
 //}
 //
-//template <typename InputIterator>
-//bool has_coverage(InputIterator first, InputIterator last)
+//template <typename InputIt>
+//bool has_coverage(InputIt first, InputIt last)
 //{
 //    return std::any_of(first, last, [] (const auto& mappable) { return !empty(mappable); });
 //}
@@ -879,10 +919,13 @@ std::vector<GenomicRegion> get_segment_regions(const std::vector<std::vector<Map
 //    return has_coverage(std::cbegin(mappables), std::cend(mappables), region);
 //}
 
-template <typename InputIterator>
-std::vector<unsigned>
-positional_coverage(InputIterator first, InputIterator last, const GenomicRegion& region)
+template <typename InputIt, typename RegionTp>
+auto positional_coverage(InputIt first, InputIt last, const RegionTp& region)
 {
+    static_assert(std::is_same<RegionType<typename std::iterator_traits<InputIt>::value_type>,
+                  RegionTp>::value,
+                  "RegionType of input range must match RegionTp");
+    
     using std::for_each; using std::next; using std::min;
     
     const auto num_positions = size(region);
@@ -903,15 +946,18 @@ positional_coverage(InputIterator first, InputIterator last, const GenomicRegion
 }
 
 template <typename Container>
-std::vector<unsigned> positional_coverage(const Container& mappables)
+auto positional_coverage(const Container& mappables)
 {
     return positional_coverage(std::cbegin(mappables), std::cend(mappables),
                                get_encompassing_region(mappables));
 }
 
-template <typename Container>
-std::vector<unsigned> positional_coverage(const Container& mappables, const GenomicRegion& region)
+template <typename Container, typename RegionTp>
+auto positional_coverage(const Container& mappables, const RegionTp& region)
 {
+    static_assert(std::is_same<RegionType<typename Container::value_type>, RegionTp>::value,
+                  "RegionType of input container must match RegionTp");
+    
     const auto overlapped = overlap_range(mappables, region);
     return positional_coverage(std::cbegin(overlapped), std::cend(overlapped), region);
 }

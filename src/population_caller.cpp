@@ -558,7 +558,7 @@ PopulationVariantCaller::call_variants(const GenomicRegion& region,
         return result;
     }
     
-    HaplotypePhaser phaser {reference_, candidates, reads, 64, 5};
+    HaplotypePhaser phaser {region.get_contig_name(), reference_, candidates, reads, 64, 5};
     
     while (!phaser.done()) {
         auto haplotypes = phaser.get_haplotypes();

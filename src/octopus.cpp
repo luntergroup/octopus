@@ -508,21 +508,31 @@ namespace Octopus
         
         options.clear();
         
-        try {
-            print_startup_info(*components);
-            
-            write_final_output_header(*components);
-            
-            if (components->is_threaded) {
-                run_octopus_multi_threaded(*components);
-            } else {
-                run_octopus_single_threaded(*components);
-            }
-        } catch (...) {
-            std::cout << "Octopus: encountered fatal error. Attempting to cleanup..." << std::endl;
-            cleanup(*components);
-            throw;
+        print_startup_info(*components);
+        
+        write_final_output_header(*components);
+        
+        if (components->is_threaded) {
+            run_octopus_multi_threaded(*components);
+        } else {
+            run_octopus_single_threaded(*components);
         }
+        
+//        try {
+//            print_startup_info(*components);
+//            
+//            write_final_output_header(*components);
+//            
+//            if (components->is_threaded) {
+//                run_octopus_multi_threaded(*components);
+//            } else {
+//                run_octopus_single_threaded(*components);
+//            }
+//        } catch (...) {
+//            std::cout << "Octopus: encountered fatal error. Attempting to cleanup..." << std::endl;
+//            cleanup(*components);
+//            throw;
+//        }
         
         print_final_info(*components);
         cleanup(*components);

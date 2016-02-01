@@ -30,10 +30,11 @@ unsigned calculate_max_indcluded(unsigned max_haplotypes)
     return static_cast<unsigned>(std::max(1.0, std::log2(max_haplotypes)));
 }
 
-HaplotypePhaser::HaplotypePhaser(const ReferenceGenome& reference, const std::vector<Variant>& candidates,
-                                 const ReadMap& reads, unsigned max_haplotypes, unsigned max_indicators)
+HaplotypePhaser::HaplotypePhaser(ContigNameType contig, const ReferenceGenome& reference,
+                                 const std::vector<Variant>& candidates, const ReadMap& reads,
+                                 unsigned max_haplotypes, unsigned max_indicators)
 :
-tree_ {reference},
+tree_ {contig, reference},
 buffered_candidates_ {std::cbegin(candidates), std::cend(candidates)},
 reads_ {&reads},
 walker_ {max_indicators, calculate_max_indcluded(max_haplotypes),

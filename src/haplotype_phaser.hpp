@@ -31,6 +31,8 @@ namespace Octopus
 class HaplotypePhaser
 {
 public:
+    using ContigNameType = GenomicRegion::ContigNameType;
+    
     using SampleGenotypePosteriors = std::unordered_map<Genotype<Haplotype>, double>;
     using GenotypePosteriors       = std::unordered_map<SampleIdType, SampleGenotypePosteriors>;
     
@@ -58,7 +60,8 @@ public:
     
     HaplotypePhaser() = delete;
     
-    explicit HaplotypePhaser(const ReferenceGenome& reference,
+    explicit HaplotypePhaser(ContigNameType contig,
+                             const ReferenceGenome& reference,
                              const std::vector<Variant>& candidates,
                              const ReadMap& reads,
                              unsigned max_haplotypes = 128,
