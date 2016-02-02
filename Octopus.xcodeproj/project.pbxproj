@@ -103,6 +103,7 @@
 		D42F72EF1C5B8A4D00995F54 /* trio.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D42F72ED1C5B8A4D00995F54 /* trio.cpp */; };
 		D42F72F21C5BA2C600995F54 /* trio_genotype_model.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D42F72F01C5BA2C600995F54 /* trio_genotype_model.cpp */; };
 		D42F72FA1C5F7B6200995F54 /* read_manager_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D42F72F91C5F7B6200995F54 /* read_manager_tests.cpp */; };
+		D42F72FD1C61098600995F54 /* mappable_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D42F72FC1C61098600995F54 /* mappable_tests.cpp */; };
 		D435E9F91B2B345700945EC7 /* Makefile in Sources */ = {isa = PBXBuildFile; fileRef = D435E9F81B2B345700945EC7 /* Makefile */; };
 		D44ADE731C43C22700A854C6 /* variant_caller_builder.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D44ADE711C43C22700A854C6 /* variant_caller_builder.cpp */; };
 		D44ADE761C43D89B00A854C6 /* candidate_generator_builder.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D44ADE741C43D89B00A854C6 /* candidate_generator_builder.cpp */; };
@@ -413,6 +414,7 @@
 		D42F72F11C5BA2C600995F54 /* trio_genotype_model.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = trio_genotype_model.hpp; sourceTree = "<group>"; };
 		D42F72F91C5F7B6200995F54 /* read_manager_tests.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = read_manager_tests.cpp; sourceTree = "<group>"; };
 		D42F72FB1C60C82F00995F54 /* test_regions.bed */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = test_regions.bed; sourceTree = "<group>"; };
+		D42F72FC1C61098600995F54 /* mappable_tests.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = mappable_tests.cpp; sourceTree = "<group>"; };
 		D42F90131AE7A8000003F791 /* testing.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = testing.txt; sourceTree = "<group>"; };
 		D435E9F81B2B345700945EC7 /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
 		D44ADE711C43C22700A854C6 /* variant_caller_builder.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = variant_caller_builder.cpp; sourceTree = "<group>"; };
@@ -575,6 +577,7 @@
 		CA0C55BA1C5FC63E009F3704 /* utils */ = {
 			isa = PBXGroup;
 			children = (
+				D42F72FC1C61098600995F54 /* mappable_tests.cpp */,
 				D46094F11B550A2400AE72A1 /* mappable_algorithm_tests.cpp */,
 				CA386DA71B5BBCB90057A5A8 /* mappable_set_tests.cpp */,
 			);
@@ -1275,6 +1278,7 @@
 				CA0D83EB1BD466F40020366B /* read_pipe.cpp in Sources */,
 				D463C19D1B062F7F00739A66 /* vcf_tests.cpp in Sources */,
 				CA0B46821AEA210300158BBA /* 1000G_test9.cpp in Sources */,
+				D42F72FD1C61098600995F54 /* mappable_tests.cpp in Sources */,
 				CAFA19661ABF84AC00F953D9 /* haplotype_tree_tests.cpp in Sources */,
 				D44ADE731C43C22700A854C6 /* variant_caller_builder.cpp in Sources */,
 				D4636C6D1B7A24F400FEA7D2 /* vcf_parser.cpp in Sources */,

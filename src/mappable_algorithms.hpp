@@ -83,16 +83,16 @@ auto rightmost_mappable(const Container& mappables)
  */
 template <typename ForwardIt>
 inline
-ForwardIt largest_element(ForwardIt first, ForwardIt last)
+ForwardIt largest_mappable(ForwardIt first, ForwardIt last)
 {
     return std::max_element(first, last,
                             [] (const auto& lhs, const auto& rhs) { return size(lhs) < size(rhs); });
 }
 
 template <typename Container>
-auto largest_element(const Container& mappables)
+auto largest_mappable(const Container& mappables)
 {
-    return largest_element(std::cbegin(mappables), std::cend(mappables));
+    return largest_mappable(std::cbegin(mappables), std::cend(mappables));
 }
 
 /**
@@ -102,16 +102,16 @@ auto largest_element(const Container& mappables)
  */
 template <typename ForwardIt>
 inline
-ForwardIt smallest_element(ForwardIt first, ForwardIt last)
+ForwardIt smallest_mappable(ForwardIt first, ForwardIt last)
 {
     return std::min_element(first, last,
                             [] (const auto& lhs, const auto& rhs) { return size(lhs) < size(rhs); });
 }
 
 template <typename Container>
-auto smallest_element(const Container& mappables)
+auto smallest_mappable(const Container& mappables)
 {
-    return smallest_element(std::cbegin(mappables), std::cend(mappables));
+    return smallest_mappable(std::cbegin(mappables), std::cend(mappables));
 }
 
 /**
@@ -140,7 +140,9 @@ template <typename ForwardIt>
 bool is_bidirectionally_sorted(ForwardIt first, ForwardIt last)
 {
     return std::is_sorted(first, last,
-                          [] (const auto& lhs, const auto& rhs) { return lhs < rhs || ends_before(lhs, rhs); });
+                          [] (const auto& lhs, const auto& rhs) {
+                              return lhs < rhs || ends_before(lhs, rhs);
+                          });
 }
 
 template <typename Container>
@@ -157,7 +159,9 @@ template <typename ForwardIt>
 ForwardIt is_bidirectionally_sorted_until(ForwardIt first, ForwardIt last)
 {
     return std::is_sorted_until(first, last,
-                                [] (const auto& lhs, const auto& rhs) { return lhs < rhs || ends_before(lhs, rhs); });
+                                [] (const auto& lhs, const auto& rhs) {
+                                    return lhs < rhs || ends_before(lhs, rhs);
+                                });
 }
 
 template <typename Container>

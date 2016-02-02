@@ -55,6 +55,22 @@ inline auto get_mock_region()
     return GenomicRegion {"1", 0, 1};
 }
 
+inline auto region_to_read(const GenomicRegion& region)
+{
+    return AlignedReadBuilder().set_region(region).set_sequence("").build_once();
+}
+
+template <typename Container>
+auto regions_to_reads(const Container& regions)
+{
+    std::vector<AlignedRead> result {};
+    result.reserve(regions.size());
+    for (const auto& region : regions) {
+        result.push_back(region_to_read(region));
+    }
+    return result;
+}
+
 inline auto get_mock_aligned_read(std::string sequence)
 {
     return AlignedReadBuilder().set_region(get_mock_region()).set_sequence(std::move(sequence)).build_once();

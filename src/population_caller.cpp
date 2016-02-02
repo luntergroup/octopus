@@ -563,7 +563,7 @@ PopulationVariantCaller::call_variants(const GenomicRegion& region,
     while (!phaser.done()) {
         auto haplotypes = phaser.get_haplotypes();
         
-        unique(haplotypes, haplotype_prior_model_);
+        make_unique(haplotypes, haplotype_prior_model_);
         
         phaser.set_haplotypes(haplotypes);
         
@@ -577,8 +577,9 @@ PopulationVariantCaller::call_variants(const GenomicRegion& region,
         
         std::cout << "there are " << count_reads(haplotype_region_reads) << " reads in haplotype region" << std::endl;
         
-        const auto genotype_posteriors = genotype_model_.evaluate(haplotypes, haplotype_region_reads,
-                                                                  reference_).genotype_posteriors;
+        auto latents = genotype_model_.evaluate(haplotypes, haplotype_region_reads, reference_);
+        
+        auto& genotype_posteriors = latents.genotype_posteriors;
         
         const auto phase_set = phaser.phase(haplotypes, genotype_posteriors);
         

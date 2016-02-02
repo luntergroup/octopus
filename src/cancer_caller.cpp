@@ -640,7 +640,7 @@ namespace Octopus
         while (!phaser.done()) {
             auto haplotypes = phaser.get_haplotypes();
             
-            unique(haplotypes, haplotype_prior_model_);
+            make_unique(haplotypes, haplotype_prior_model_);
             
             phaser.set_haplotypes(haplotypes);
             

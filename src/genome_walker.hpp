@@ -17,8 +17,8 @@
 class GenomicRegion;
 class Variant;
 
-namespace Octopus {
-
+namespace Octopus
+{
 class GenomeWalker
 {
 public:
@@ -31,9 +31,13 @@ public:
                                 NoExpansion };
     
     GenomeWalker() = delete;
-    explicit GenomeWalker(unsigned max_indicators, unsigned max_included,
-                          IndicatorLimit indicator_limit, ExtensionLimit extension_limit,
+    
+    explicit GenomeWalker(unsigned max_indicators,
+                          unsigned max_included,
+                          IndicatorLimit indicator_limit = IndicatorLimit::SharedWithPreviousRegion,
+                          ExtensionLimit extension_limit = ExtensionLimit::SharedWithFrontier,
                           ExpansionLimit expansion_limit = ExpansionLimit::UpToExcludedWithinReadLength);
+    
     ~GenomeWalker() = default;
     
     GenomeWalker(const GenomeWalker&)            = default;
@@ -67,7 +71,6 @@ private:
     
     std::function<GenomicRegion(CandidateRanges, const ReadMap&)> expander_;
 };
-
 } // namespace Octopus
 
 #endif /* genome_walker_hpp */

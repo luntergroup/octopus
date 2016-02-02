@@ -16,6 +16,7 @@
 #include <numeric>
 
 #include "mock_objects.hpp"
+#include "contig_region.hpp"
 #include "genomic_region.hpp"
 #include "mappable_algorithms.hpp"
 
@@ -23,8 +24,27 @@ using std::cout;
 using std::endl;
 
 BOOST_AUTO_TEST_SUITE(Components)
+BOOST_AUTO_TEST_SUITE(MappableAlgorithms)
 
-BOOST_AUTO_TEST_CASE(overlap_range_returns_a_filter_iterator_range_that_includes_all_overlapped_elements)
+BOOST_AUTO_TEST_CASE(find_first_after_returns_the_first_element_that_is_after_the_given_region)
+{
+    const std::vector<ContigRegion> regions {
+        ContigRegion {0, 1}, ContigRegion {0, 2}, ContigRegion {2, 5}, ContigRegion {3, 3},
+        ContigRegion {3, 4}, ContigRegion {5, 5}, ContigRegion {5, 6}, ContigRegion {5, 8}
+    };
+    
+    BOOST_CHECK(*find_first_after(regions, regions[0]) == regions[2]);
+    BOOST_CHECK(*find_first_after(regions, regions[1]) == regions[2]);
+    BOOST_CHECK(*find_first_after(regions, regions[3]) == regions[4]);
+    BOOST_CHECK(*find_first_after(regions, regions[4]) == regions[5]);
+    BOOST_CHECK(*find_first_after(regions, regions[5]) == regions[6]);
+    BOOST_CHECK(find_first_after(regions, regions[6])  == std::cend(regions));
+    
+    BOOST_CHECK(*find_first_after(regions, ContigRegion {2, 3}) == regions[4]);
+    BOOST_CHECK(*find_first_after(regions, ContigRegion {2, 4}) == regions[5]);
+}
+
+BOOST_AUTO_TEST_CASE(overlap_range_returns_an_iterator_range_that_includes_all_overlapped_elements)
 {
     auto regions = generate_random_regions(10000, 100, 10000);
     
@@ -32,7 +52,7 @@ BOOST_AUTO_TEST_CASE(overlap_range_returns_a_filter_iterator_range_that_includes
     
     std::vector<GenomicRegion> true_overlaps {};
     std::copy_if(regions.cbegin(), regions.cend(), std::back_inserter(true_overlaps),
-                 [&test_region] (const auto& region) { return overlaps(region, test_region); });
+                 [&] (const auto& region) { return overlaps(region, test_region); });
     
     auto overlapped = overlap_range(regions.cbegin(), regions.cend(), test_region);
     
@@ -92,9 +112,9 @@ BOOST_AUTO_TEST_CASE(overlap_range_returns_correct_range_if_given_the_maximum_re
     
     auto bisorted_ranges = bidirectionally_sorted_ranges(regions.cbegin(), regions.cend());
     
-    auto max_region_size = size(*largest_element(regions.cbegin(), regions.cend()));
+    auto max_region_size = size(*largest_mappable(regions));
     
-    auto overlapped = overlap_range(regions.cbegin(), regions.cend(), test_region, max_region_size);
+    auto overlapped = overlap_range(regions, test_region, max_region_size);
     
     BOOST_CHECK(std::equal(true_overlaps.cbegin(), true_overlaps.cend(), overlapped.begin()));
 }
@@ -109,62 +129,25 @@ BOOST_AUTO_TEST_CASE(contained_range_returns_a_range_of_iterators_that_span_all_
     std::copy_if(regions.cbegin(), regions.cend(), std::back_inserter(true_contained),
                  [&test_region] (const auto& region) { return contains(test_region, region); });
     
-    auto contained = contained_range(regions.cbegin(), regions.cend(), test_region);
+    auto contained = contained_range(regions, test_region);
     
     BOOST_CHECK(std::equal(true_contained.cbegin(), true_contained.cend(), contained.begin()));
 }
 
 BOOST_AUTO_TEST_CASE(get_covered_regions_returns_regions_which_contain_all_elements_in_the_given_range_with_no_inter_range_overlaps)
 {
-    std::vector<GenomicRegion> regions {GenomicRegion {"18", 10000, 20000}, GenomicRegion {"18", 20000, 30000}, GenomicRegion {"18", 30000, 40000}, GenomicRegion {"18", 40001, 50000}, GenomicRegion {"18", 45000, 60000}};
+    std::vector<GenomicRegion> regions {
+        GenomicRegion {"test", 10000, 20000}, GenomicRegion {"test", 20000, 30000},
+        GenomicRegion {"test", 30000, 40000}, GenomicRegion {"test", 40001, 50000},
+        GenomicRegion {"test", 45000, 60000}
+    };
     
     auto covered = get_covered_regions(regions.cbegin(), regions.cend());
     
     BOOST_CHECK(covered.size() == 2);
-    BOOST_CHECK(covered[0] == GenomicRegion("18", 10000, 40000));
-    BOOST_CHECK(covered[1] == GenomicRegion("18", 40001, 60000));
-}
-
-BOOST_AUTO_TEST_CASE(find_first_after_returns_the_first_element_that_is_after_the_given_region)
-{
-    auto regions = generate_random_regions(10000, 100, 10000);
-    
-    GenomicRegion test1 {"test", 500, 600};
-    GenomicRegion test2 {"test", 2000, 2500};
-    GenomicRegion test3 {"test", 7000, 9800};
-    
-    auto after1 = *find_first_after(regions.cbegin(), regions.cend(), test1);
-    auto after2 = *find_first_after(regions.cbegin(), regions.cend(), test2);
-    auto after3 = *find_first_after(regions.cbegin(), regions.cend(), test3);
-    
-    auto true_after1 = *std::find_if(regions.cbegin(), regions.cend(),
-                                    [&test1] (const auto& region) {
-                                        return is_after(region, test1);
-                                    });
-    
-    auto true_after2 = *std::find_if(regions.cbegin(), regions.cend(),
-                                    [&test2] (const auto& region) {
-                                        return is_after(region, test2);
-                                    });
-    
-    auto true_after3 = *std::find_if(regions.cbegin(), regions.cend(),
-                                    [&test3] (const auto& region) {
-                                        return is_after(region, test3);
-                                    });
-    
-    BOOST_CHECK(after1 == true_after1);
-    BOOST_CHECK(after2 == true_after2);
-    BOOST_CHECK(after3 == true_after3);
+    BOOST_CHECK(covered[0] == GenomicRegion("test", 10000, 40000));
+    BOOST_CHECK(covered[1] == GenomicRegion("test", 40001, 60000));
 }
 
 BOOST_AUTO_TEST_SUITE_END()
-
-//BOOST_AUTO_TEST_CASE(", "[region_algorithms]")
-//{
-//    
-//}
-//
-//BOOST_AUTO_TEST_CASE(", "[region_algorithms]")
-//{
-//    
-//}
+BOOST_AUTO_TEST_SUITE_END()

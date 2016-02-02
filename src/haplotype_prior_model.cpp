@@ -99,7 +99,7 @@ HaplotypePriorModel::evaluate(const std::vector<Haplotype>& haplotypes, const Ha
 
 // non-member methods
 
-void unique(std::vector<Haplotype>& haplotypes, const HaplotypePriorModel& prior_model)
+void make_unique(std::vector<Haplotype>& haplotypes, const HaplotypePriorModel& prior_model)
 {
     unique_least_complex(haplotypes);
 }

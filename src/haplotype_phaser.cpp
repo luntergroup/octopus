@@ -37,8 +37,7 @@ HaplotypePhaser::HaplotypePhaser(ContigNameType contig, const ReferenceGenome& r
 tree_ {contig, reference},
 buffered_candidates_ {std::cbegin(candidates), std::cend(candidates)},
 reads_ {&reads},
-walker_ {max_indicators, calculate_max_indcluded(max_haplotypes),
-    GenomeWalker::IndicatorLimit::SharedWithPreviousRegion, GenomeWalker::ExtensionLimit::SharedWithFrontier},
+walker_ {max_indicators, calculate_max_indcluded(max_haplotypes)},
 is_phasing_enabled_ {max_indicators != 0},
 current_region_ {shift(get_head(buffered_candidates_.leftmost()), -1)},
 next_region_ {walker_.walk(current_region_, *reads_, buffered_candidates_)}
@@ -98,15 +97,13 @@ HaplotypePhaser::phase(const std::vector<Haplotype>& haplotypes,
     
     const auto phased_region = get_left_overhang(current_region_, next_region_);
     
-    if (empty(phased_region)) {
-        return boost::none;
-    }
+    if (empty(phased_region)) return boost::none;
     
     std::cout << "phased region is " << phased_region << std::endl;
     
-    auto variants = copy_overlapped(buffered_candidates_, phased_region);
+    auto variants = copy_contained(buffered_candidates_, phased_region);
     
-    buffered_candidates_.erase_overlapped(phased_region);
+    buffered_candidates_.erase_contained(phased_region);
     
     std::cout << "there are " << buffered_candidates_.size() << " candidates remaining" << std::endl;
     

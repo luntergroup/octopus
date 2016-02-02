@@ -203,7 +203,7 @@ MappableSet<MappableType, Allocator>::MappableSet(InputIterator first, InputIter
 :
 elements_ {first, second},
 is_bidirectionally_sorted_ {is_bidirectionally_sorted(elements_)},
-max_element_size_ {(elements_.empty()) ? 0 : ::size(*largest_element(elements_))}
+max_element_size_ {(elements_.empty()) ? 0 : ::size(*largest_mappable(elements_))}
 {}
 
 template <typename MappableType, typename Allocator>
@@ -400,7 +400,7 @@ void
 MappableSet<MappableType, Allocator>::insert(InputIterator first, InputIterator last)
 {
     if (first != last) {
-        max_element_size_ = std::max(max_element_size_, ::size(*largest_element(first, last)));
+        max_element_size_ = std::max(max_element_size_, ::size(*largest_mappable(first, last)));
     }
     elements_.insert(first, last);
     if (is_bidirectionally_sorted_) {
@@ -442,7 +442,7 @@ MappableSet<MappableType, Allocator>::erase(const MappableType& m)
 {
     if (max_element_size_ == ::size(m)) {
         const auto result = elements_.erase(m);
-        max_element_size_ = ::size(*largest_element(std::cbegin(elements_), std::cend(elements_)));
+        max_element_size_ = ::size(*largest_mappable(std::cbegin(elements_), std::cend(elements_)));
         return result;
     }
     if (!is_bidirectionally_sorted_) {
@@ -455,9 +455,9 @@ template <typename MappableType, typename Allocator>
 typename MappableSet<MappableType, Allocator>::iterator
 MappableSet<MappableType, Allocator>::erase(const_iterator first, const_iterator last)
 {
-    if (max_element_size_ == ::size(*largest_element(first, last))) {
+    if (max_element_size_ == ::size(*largest_mappable(first, last))) {
         auto it = elements_.erase(first, last);
-        max_element_size_ = ::size(*largest_element(std::cbegin(elements_), std::cend(elements_)));
+        max_element_size_ = ::size(*largest_mappable(std::cbegin(elements_), std::cend(elements_)));
         return it;
     }
     if (!is_bidirectionally_sorted_) {
