@@ -43,7 +43,8 @@ possible_regions_in_readers_ {}
 }
 
 ReadManager::ReadManager(ReadManager&& other)
-: num_files_ {std::move(other.num_files_)}
+:
+num_files_ {std::move(other.num_files_)}
 {
     std::lock_guard<std::mutex> lock {other.mutex_};
     closed_readers_                 = std::move(other.closed_readers_);
@@ -63,6 +64,12 @@ void swap(ReadManager& lhs, ReadManager& rhs) noexcept
     swap(lhs.open_readers_, rhs.open_readers_);
     swap(lhs.reader_paths_containing_sample_, rhs.reader_paths_containing_sample_);
     swap(lhs.possible_regions_in_readers_, rhs.possible_regions_in_readers_);
+}
+
+bool ReadManager::good() const noexcept
+{
+    return std::all_of(std::cbegin(open_readers_), std::cend(open_readers_),
+                       [] (const auto& p) { return p.second.is_open(); });
 }
 
 unsigned ReadManager::num_samples() const noexcept
@@ -101,7 +108,6 @@ size_t ReadManager::count_reads(const SampleIdType& sample, const GenomicRegion&
                  [this, &sample, &region, &result] (const auto& reader_path) {
                      result += open_readers_.at(reader_path).count_reads(sample, region);
                  });
-        
         reader_paths.erase(it, end(reader_paths));
         it = open_readers(begin(reader_paths), end(reader_paths));
     }
@@ -128,7 +134,6 @@ size_t ReadManager::count_reads(const std::vector<SampleIdType>& samples, const 
                          result += open_readers_.at(reader_path).count_reads(sample, region);
                      }
                  });
-        
         reader_paths.erase(it, end(reader_paths));
         it = open_readers(begin(reader_paths), end(reader_paths));
     }
@@ -167,7 +172,6 @@ GenomicRegion ReadManager::find_covered_subregion(const std::vector<SampleIdType
                  [this, &samples, &region, &result, max_sample_coverage] (const auto& reader_path) {
                      result.push_back(open_readers_.at(reader_path).find_covered_subregion(region, max_sample_coverage));
                  });
-        
         reader_paths.erase(it, end(reader_paths));
         it = open_readers(begin(reader_paths), end(reader_paths));
     }
@@ -198,7 +202,6 @@ ReadManager::Reads ReadManager::fetch_reads(const SampleIdType& sample, const Ge
                      auto reads = open_readers_.at(reader_path).fetch_reads(sample, region);
                      result.insert(make_move_iterator(begin(reads)), make_move_iterator(end(reads)));
                  });
-        
         reader_paths.erase(it, end(reader_paths));
         it = open_readers(begin(reader_paths), end(reader_paths));
     }
@@ -230,7 +233,6 @@ ReadManager::SampleReadMap ReadManager::fetch_reads(const std::vector<SampleIdTy
                          sample_reads.second.clear();
                      }
                  });
-        
         reader_paths.erase(it, end(reader_paths));
         it = open_readers(begin(reader_paths), end(reader_paths));
     }

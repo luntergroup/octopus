@@ -21,6 +21,9 @@
 using std::cout;
 using std::endl;
 
+BOOST_AUTO_TEST_SUITE(Components)
+BOOST_AUTO_TEST_SUITE(IO)
+
 BOOST_AUTO_TEST_CASE(can_read_vcf_files)
 {
     BOOST_REQUIRE(test_file_exists(sample_vcf));
@@ -56,25 +59,89 @@ BOOST_AUTO_TEST_CASE(can_use_vcf_types)
 
 BOOST_AUTO_TEST_CASE(can_write_vcf_files)
 {
-    BOOST_REQUIRE(!test_file_exists(test_out_vcf));
-    
     VcfWriter writer {test_out_vcf};
     
     BOOST_REQUIRE(writer.is_open());
     
-    const auto header  = VcfHeader::Builder().add_basic_field("TEST", "TEST").build_once();
-    const auto record  = VcfRecord::Builder().set_chromosome("TEST").set_id("TEST").set_position(0).set_quality(60).set_ref_allele("A").set_alt_allele("C").build_once();
+    const auto header = VcfHeader::Builder().add_contig("TEST").build_once();
+    const auto record = VcfRecord::Builder().set_chromosome("TEST").set_id("TEST").set_position(0).set_quality(60).set_ref_allele("A").set_alt_allele("C").build_once();
     
     writer.write(header);
+    
+    BOOST_REQUIRE(writer.is_open());
+    
     writer.write(record);
+    writer.close();
+    
+    BOOST_CHECK(test_file_exists(test_out_vcf));
     
     remove_test_file(test_out_vcf);
     
     BOOST_CHECK(!test_file_exists(test_out_vcf));
 }
 
+BOOST_AUTO_TEST_CASE(can_write_vcfgz_files)
+{
+    VcfWriter writer {test_out_vcfgz};
+    
+    BOOST_REQUIRE(writer.is_open());
+    
+    const auto header = VcfHeader::Builder().add_contig("TEST").build_once();
+    const auto record = VcfRecord::Builder().set_chromosome("TEST").set_id("TEST").set_position(0).set_quality(60).set_ref_allele("A").set_alt_allele("C").build_once();
+    
+    writer.write(header);
+    
+    BOOST_REQUIRE(writer.is_open());
+    
+    writer.write(record);
+    writer.close();
+    
+    BOOST_CHECK(test_file_exists(test_out_vcfgz));
+    
+    remove_test_file(test_out_vcfgz);
+    
+    BOOST_CHECK(!test_file_exists(test_out_vcfgz));
+}
+
+BOOST_AUTO_TEST_CASE(can_write_bcf_files)
+{
+    VcfWriter writer {test_out_bcf};
+    
+    BOOST_REQUIRE(writer.is_open());
+    
+    const auto header = VcfHeader::Builder().add_contig("TEST").build_once();
+    const auto record = VcfRecord::Builder().set_chromosome("TEST").set_id("TEST").set_position(0).set_quality(60).set_ref_allele("A").set_alt_allele("C").build_once();
+    
+    writer.write(header);
+    
+    BOOST_REQUIRE(writer.is_open());
+    
+    writer.write(record);
+    writer.close();
+    
+    BOOST_CHECK(test_file_exists(test_out_bcf));
+    
+    remove_test_file(test_out_bcf);
+    
+    BOOST_CHECK(!test_file_exists(test_out_bcf));
+}
+
+// This test seems to screw up error reporting for the others so will need to test independently
 BOOST_AUTO_TEST_CASE(can_write_vcf_to_stdout)
 {
-    VcfWriter writer {"-"};
-    BOOST_CHECK(writer.is_open()); // the only practical thing we can check here
+//    VcfWriter writer {"-"};
+//    BOOST_CHECK(writer.is_open()); // the only practical thing we can check here
 }
+
+BOOST_AUTO_TEST_CASE(vcfgz_files_can_be_indexed)
+{
+    
+}
+
+BOOST_AUTO_TEST_CASE(bcf_files_can_be_indexed)
+{
+    
+}
+
+BOOST_AUTO_TEST_SUITE_END() // IO
+BOOST_AUTO_TEST_SUITE_END() // Components

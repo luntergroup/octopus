@@ -133,7 +133,7 @@ size_t HtslibBcfFacade::count_records()
         throw std::runtime_error {"failed to open file " + file_path_.string()};
     }
     
-    return num_records(sr);
+    return count_records(sr);
 }
 
 size_t HtslibBcfFacade::count_records(const std::string& contig)
@@ -149,7 +149,7 @@ size_t HtslibBcfFacade::count_records(const std::string& contig)
         throw std::runtime_error {"failed to open file " + file_path_.string()};
     }
     
-    return num_records(sr);
+    return count_records(sr);
 }
 
 size_t HtslibBcfFacade::count_records(const GenomicRegion& region)
@@ -165,12 +165,12 @@ size_t HtslibBcfFacade::count_records(const GenomicRegion& region)
         throw std::runtime_error {"failed to open file " + file_path_.string()};
     }
     
-    return num_records(sr);
+    return count_records(sr);
 }
 
 std::vector<VcfRecord> HtslibBcfFacade::fetch_records(Unpack level)
 {
-    auto n_records = count_records();
+    const auto n_records = count_records();
     
     HtsBcfSrPtr sr {bcf_sr_init(), HtsSrsDeleter {}};
     
@@ -184,7 +184,7 @@ std::vector<VcfRecord> HtslibBcfFacade::fetch_records(Unpack level)
 
 std::vector<VcfRecord> HtslibBcfFacade::fetch_records(const std::string& contig, Unpack level)
 {
-    auto n_records = count_records(contig);
+    const auto n_records = count_records(contig);
     
     HtsBcfSrPtr sr {bcf_sr_init(), HtsSrsDeleter {}};
     
@@ -202,12 +202,14 @@ std::vector<VcfRecord> HtslibBcfFacade::fetch_records(const std::string& contig,
 
 std::vector<VcfRecord> HtslibBcfFacade::fetch_records(const GenomicRegion& region, Unpack level)
 {
-    auto n_records = count_records(region);
+    const auto n_records = count_records(region);
     
     HtsBcfSrPtr sr {bcf_sr_init(), HtsSrsDeleter {}};
     
-    if (bcf_sr_set_regions(sr.get(), to_string(region).c_str(), 0) != 0) { // must go before bcf_sr_add_reader
-        throw std::runtime_error {"failed load region " + to_string(region)};
+    const auto region_str = to_string(region);
+    
+    if (bcf_sr_set_regions(sr.get(), region_str.c_str(), 0) != 0) { // must go before bcf_sr_add_reader
+        throw std::runtime_error {"failed load region " + region_str};
     }
     
     if (bcf_sr_add_reader(sr.get(), file_path_.c_str()) != 1) {
@@ -237,7 +239,7 @@ void HtslibBcfFacade::write_header(const VcfHeader& header)
     bcf_hdr_set_version(hdr, header.get_file_format().c_str());
     
     for (auto& p : header.get_basic_fields()) {
-       auto hrec = (bcf_hrec_t*) malloc(sizeof(bcf_hrec_t));
+        auto hrec = (bcf_hrec_t*) malloc(sizeof(bcf_hrec_t));
         
         hrec->type  = BCF_HL_GEN;
         hrec->key   = stringcopy(p.first);
@@ -251,7 +253,7 @@ void HtslibBcfFacade::write_header(const VcfHeader& header)
     }
     
     for (auto& tag : header.get_structured_field_tags()) {
-        auto type = get_hts_tag_type(tag);
+        const auto type = get_hts_tag_type(tag);
         
         for (auto fields : header.get_structured_fields(tag)) {
            auto hrec = (bcf_hrec_t*) malloc(sizeof(bcf_hrec_t));
@@ -262,7 +264,7 @@ void HtslibBcfFacade::write_header(const VcfHeader& header)
             hrec->keys  = (char**) malloc(sizeof(char*) * fields.size());
             hrec->vals  = (char**) malloc(sizeof(char*) * fields.size());
             
-            unsigned i {};
+            unsigned i {0};
             
             const std::vector<std::string> preset_fields {"ID", "Number", "Type", "Source", "Version"};
             
@@ -331,7 +333,6 @@ void HtslibBcfFacade::write_record(const VcfRecord& record)
     }
     
     bcf_write(file_.get(), header_.get(), r);
-    
     bcf_destroy(r);
 }
 
@@ -342,7 +343,7 @@ std::unordered_map<std::string, std::string> get_format(const bcf_hrec_t* line)
     std::unordered_map<std::string, std::string> result {};
     result.reserve(line->nkeys);
     
-    for (unsigned k {}; k < line->nkeys; ++k) {
+    for (unsigned k {0}; k < line->nkeys; ++k) {
         if (std::strcmp(line->keys[k], "IDX") != 0) {
             result.emplace(line->keys[k], line->vals[k]);
         }
@@ -402,7 +403,7 @@ void set_alleles(const bcf_hdr_t* header, bcf1_t* record, const VcfRecord::Seque
 
 auto get_alt(const bcf1_t* record)
 {
-    auto num_alleles = record->n_allele;
+    const auto num_alleles = record->n_allele;
     
     std::vector<VcfRecord::SequenceType> result {};
     result.reserve(num_alleles - 1); // one is the reference
@@ -429,7 +430,7 @@ auto get_filter(const bcf_hdr_t* header, const bcf1_t* record)
     std::vector<VcfRecord::KeyType> result {};
     result.reserve(record->d.n_flt);
     
-    for (unsigned i {}; i < record->d.n_flt; ++i) {
+    for (unsigned i {0}; i < record->d.n_flt; ++i) {
         result.emplace_back(bcf_hdr_int2id(header, BCF_DT_ID, record->d.flt[i]));
     }
     
@@ -457,7 +458,7 @@ auto get_info(const bcf_hdr_t* header, bcf1_t* record)
     std::unordered_map<VcfRecord::KeyType, std::vector<std::string>> result {};
     result.reserve(record->n_info);
     
-    for (unsigned i {}; i < record->n_info; ++i) {
+    for (unsigned i {0}; i < record->n_info; ++i) {
         const char* key {header->id[BCF_DT_ID][record->d.info[i].key].key};
         
         std::vector<std::string> values {};
@@ -504,8 +505,8 @@ auto get_info(const bcf_hdr_t* header, bcf1_t* record)
 void set_info(const bcf_hdr_t* header, bcf1_t* dest, const VcfRecord& source)
 {
     for (const auto& key : source.get_info_keys()) {
-        auto values     = source.get_info_value(key);
-        auto num_values = static_cast<int>(values.size());
+        const auto values     = source.get_info_value(key);
+        const auto num_values = static_cast<int>(values.size());
         
         switch (bcf_hdr_id2type(header, BCF_HL_INFO, bcf_hdr_id2int(header, BCF_DT_ID, key.c_str()))) {
             case BCF_HT_INT:
@@ -550,7 +551,7 @@ auto get_format(const bcf_hdr_t* header, const bcf1_t* record)
     std::vector<VcfRecord::KeyType> result {};
     result.reserve(record->n_fmt);
     
-    for (unsigned i {}; i < record->n_fmt; ++i) {
+    for (unsigned i {0}; i < record->n_fmt; ++i) {
         result.emplace_back(header->id[BCF_DT_ID][record->d.fmt[i].id].key);
     }
     
@@ -571,11 +572,11 @@ auto get_samples(const bcf_hdr_t* header, bcf1_t* record, const std::vector<VcfR
         bcf_get_genotypes(header, record, &gt, &ngt);
         const auto ploidy = record->d.fmt->n;
         
-        for (unsigned sample {}, i {}; sample < num_samples; ++sample, i += ploidy) {
+        for (unsigned sample {0}, i {}; sample < num_samples; ++sample, i += ploidy) {
             std::vector<VcfRecord::SequenceType> alleles {};
             alleles.reserve(ploidy);
             
-            for (unsigned p {}; p < ploidy; ++p) {
+            for (unsigned p {0}; p < ploidy; ++p) {
                 g = gt[i + p];
                 alleles.emplace_back(bcf_gt_is_missing(g) ? "." : record->d.allele[bcf_gt_allele(g)]);
             }
@@ -639,26 +640,28 @@ auto get_samples(const bcf_hdr_t* header, bcf1_t* record, const std::vector<VcfR
 void set_samples(const bcf_hdr_t* header, bcf1_t* dest, const VcfRecord& source)
 {
     std::vector<VcfRecord::SequenceType> alleles {};
-    alleles.push_back(source.get_ref_allele());
     const auto& alt_alleles = source.get_alt_alleles();
-    alleles.insert(alleles.end(), std::cbegin(alt_alleles), std::cend(alt_alleles));
+    alleles.reserve(alt_alleles.size() + 1);
+    alleles.push_back(source.get_ref_allele());
+    alleles.insert(std::end(alleles), std::cbegin(alt_alleles), std::cend(alt_alleles));
     
-    auto samples     = get_samples(header); // TODO: maybe pass this instead?
-    auto num_samples = static_cast<int>(source.num_samples());
+    const auto samples     = get_samples(header); // TODO: maybe pass this instead?
+    const auto num_samples = static_cast<int>(source.num_samples());
     
     if (source.has_genotypes()) {
-        auto ngt = num_samples * static_cast<int>(source.sample_ploidy());
+        const auto ngt = num_samples * static_cast<int>(source.sample_ploidy());
+        
         auto gts = (int*) malloc(sizeof(int) * ngt);
         
-        unsigned i {};
+        unsigned i {0};
         for (const auto& sample : samples) {
-            bool is_phased {source.is_sample_phased(sample)};
+            const bool is_phased {source.is_sample_phased(sample)};
             for (const auto& allele : source.get_sample_value(sample, "GT")) {
                 if (allele == ".") {
                     gts[i] = (is_phased) ? bcf_gt_missing + 1 : bcf_gt_missing;
                 } else {
-                    auto it = std::find(alleles.cbegin(), alleles.cend(), allele);
-                    auto allele_num = 2 * static_cast<int>(std::distance(alleles.cbegin(), it)) + 2;
+                    const auto it = std::find(std::cbegin(alleles), std::cend(alleles), allele);
+                    const auto allele_num = 2 * static_cast<int>(std::distance(std::cbegin(alleles), it)) + 2;
                     gts[i] = (is_phased) ? allele_num + 1 : allele_num;
                 }
                 ++i;
@@ -673,7 +676,7 @@ void set_samples(const bcf_hdr_t* header, bcf1_t* dest, const VcfRecord& source)
     for (const auto& key : format) {
         if (key == "GT") continue;
         
-        auto num_values = num_samples * static_cast<int>(source.format_cardinality(key));
+        const auto num_values = num_samples * static_cast<int>(source.format_cardinality(key));
         
         switch (bcf_hdr_id2type(header, BCF_HL_FMT, bcf_hdr_id2int(header, BCF_DT_ID, key.c_str()))) {
             case BCF_HT_INT:
@@ -722,22 +725,20 @@ void set_samples(const bcf_hdr_t* header, bcf1_t* dest, const VcfRecord& source)
     }
 }
 
-size_t HtslibBcfFacade::num_records(HtsBcfSrPtr& sr) const
+size_t HtslibBcfFacade::count_records(HtsBcfSrPtr& sr) const
 {
-    size_t result {};
+    size_t result {0};
     while (bcf_sr_next_line(sr.get())) ++result;
     return result;
 }
 
 std::vector<VcfRecord> HtslibBcfFacade::fetch_records(HtsBcfSrPtr& sr, Unpack level, const size_t num_records)
 {
-    bcf1_t* record; // points into sr - don't need to delete
-    
     std::vector<VcfRecord> result {};
     result.reserve(num_records);
     
     while (bcf_sr_next_line(sr.get())) {
-        record = bcf_sr_get_line(sr.get(), 0);
+        auto record = bcf_sr_get_line(sr.get(), 0);
         
         bcf_unpack(record, (level == Unpack::All) ? BCF_UN_ALL : BCF_UN_SHR);
         

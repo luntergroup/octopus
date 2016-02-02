@@ -108,6 +108,8 @@ std::vector<VcfType> get_typed_info_values(const VcfHeader& header, const VcfHea
 std::vector<VcfType> get_typed_format_values(const VcfHeader& header, const VcfHeader::KeyType& field_key,
                                              const std::vector<VcfHeader::ValueType>& values);
 
+bool contig_line_exists(const VcfHeader& header, const std::string& contig);
+
 bool operator==(const VcfHeader& lhs, const VcfHeader& rhs);
 
 namespace std {

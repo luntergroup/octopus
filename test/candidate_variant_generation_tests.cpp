@@ -11,21 +11,45 @@
 #include <boost/test/unit_test.hpp>
 
 #include <iostream>
-#include <memory>
+#include <algorithm>
 
 #include "test_common.hpp"
 #include "reference_genome.hpp"
 #include "read_manager.hpp"
 #include "variant.hpp"
+#include "variant_utils.hpp"
 #include "candidate_generators.hpp"
 #include "vcf_reader.hpp"
 
 using std::cout;
 using std::endl;
 
-BOOST_AUTO_TEST_SUITE(Components)
+using Octopus::CandidateVariantGenerator;
+using Octopus::CandidateGeneratorBuilder;
 
-BOOST_AUTO_TEST_CASE(CandidateVariantGenerator_does_not_give_duplicate_candidates)
+BOOST_AUTO_TEST_SUITE(Components)
+BOOST_AUTO_TEST_SUITE(CandidateGenerators)
+
+BOOST_AUTO_TEST_CASE(CandidateGeneratorBuilder_can_construct_candidate_generators)
+{
+    BOOST_REQUIRE(test_file_exists(human_reference_fasta));
+    
+    const auto human = make_reference(human_reference_fasta);
+    
+    CandidateGeneratorBuilder builder {};
+    builder.set_reference(human);
+    builder.set_min_snp_base_quality(0);
+    builder.add_generator(CandidateGeneratorBuilder::Generator::Alignment);
+    //builder.add_generator(CandidateGeneratorBuilder::Generator::Assembler);
+    
+    auto generator = builder.build();
+    
+    BOOST_CHECK(generator.requires_reads());
+    
+    // TODO: more checks
+}
+
+BOOST_AUTO_TEST_CASE(get_candidates_returns_sorted_and_unique_candidates)
 {
     BOOST_REQUIRE(test_file_exists(human_reference_fasta));
     BOOST_REQUIRE(test_file_exists(NA12878_low_coverage));
@@ -36,18 +60,23 @@ BOOST_AUTO_TEST_CASE(CandidateVariantGenerator_does_not_give_duplicate_candidate
     
     const auto sample = read_manager.get_samples().front();
     
-    const auto region = *parse_region("7:122579662-122579817", human);
+    const auto region = *parse_region("1:0-2000000", human);
     
-    Octopus::CandidateVariantGenerator candidate_generator {};
-    candidate_generator.register_generator(std::make_unique<Octopus::AlignmentCandidateVariantGenerator>(human, 0));
+    CandidateGeneratorBuilder builder;
+    builder.set_reference(human);
+    builder.set_min_snp_base_quality(0);
+    builder.add_generator(CandidateGeneratorBuilder::Generator::Alignment);
     
-    auto reads = read_manager.fetch_reads(sample, region);
+    auto candidate_generator = builder.build();
+    
+    const auto reads = read_manager.fetch_reads(sample, region);
     
     add_reads(reads, candidate_generator);
     
     auto candidates = candidate_generator.get_candidates(region);
     
-    BOOST_CHECK(candidates.size() == 15);
+    BOOST_REQUIRE(std::is_sorted(std::cbegin(candidates), std::cend(candidates)));
+    BOOST_CHECK(std::unique(std::begin(candidates), std::end(candidates)) == std::end(candidates));
 }
 
 BOOST_AUTO_TEST_CASE(AlignmentCandidateVariantGenerator_ignores_snps_with_low_base_qualities)
@@ -57,7 +86,7 @@ BOOST_AUTO_TEST_CASE(AlignmentCandidateVariantGenerator_ignores_snps_with_low_ba
     
     const auto human = make_reference(human_reference_fasta);
     
-    const auto region = *parse_region("7:122579662-122579817", human);
+    const auto region = *parse_region("1:22,298,915-22,299,027", human);
     
     ReadManager read_manager {NA12878_low_coverage};
     
@@ -65,13 +94,77 @@ BOOST_AUTO_TEST_CASE(AlignmentCandidateVariantGenerator_ignores_snps_with_low_ba
     
     auto reads = read_manager.fetch_reads(sample, region);
     
-    Octopus::AlignmentCandidateVariantGenerator candidate_generator {human, 10};
+    Octopus::AlignmentCandidateVariantGenerator candidate_generator {human, 14};
     
     add_reads(reads, candidate_generator);
     
     auto candidates = candidate_generator.get_candidates(region);
     
-    BOOST_CHECK(candidates.size() == 12);
+    BOOST_CHECK(candidates.empty());
+}
+
+BOOST_AUTO_TEST_CASE(can_specify_the_minimum_number_of_reads_that_must_support_a_candidate)
+{
+    BOOST_REQUIRE(test_file_exists(human_reference_fasta));
+    BOOST_REQUIRE(test_file_exists(NA12878_low_coverage));
+    
+    const auto human = make_reference(human_reference_fasta);
+    
+    // TODO
+}
+
+BOOST_AUTO_TEST_CASE(can_specify_the_maximum_size_of_candidates)
+{
+    BOOST_REQUIRE(test_file_exists(human_reference_fasta));
+    BOOST_REQUIRE(test_file_exists(NA12878_low_coverage));
+    
+    const auto human = make_reference(human_reference_fasta);
+    
+    constexpr unsigned max_variant_size {5};
+    
+    auto candidate_generator = CandidateGeneratorBuilder().set_reference(human)
+    .add_generator(CandidateGeneratorBuilder::Generator::Alignment).set_max_variant_size(max_variant_size).build();
+    
+    ReadManager read_manager {NA12878_low_coverage};
+    
+    const auto region = *parse_region("16:9290000-9300000", human);
+    
+    const auto sample = read_manager.get_samples().front();
+    
+    auto reads = read_manager.fetch_reads(sample, region);
+    
+    add_reads(reads, candidate_generator);
+    
+    auto candidates = candidate_generator.get_candidates(region);
+    
+    BOOST_CHECK(std::all_of(std::cbegin(candidates), std::cend(candidates),
+                            [=] (const auto& candidate) { return size(candidate) <= max_variant_size; }));
+}
+
+BOOST_AUTO_TEST_CASE(only_insertions_are_included_when_the_max_variant_size_is_zero)
+{
+    BOOST_REQUIRE(test_file_exists(human_reference_fasta));
+    BOOST_REQUIRE(test_file_exists(NA12878_low_coverage));
+    
+    const auto human = make_reference(human_reference_fasta);
+    
+    auto candidate_generator = CandidateGeneratorBuilder().set_reference(human)
+    .add_generator(CandidateGeneratorBuilder::Generator::Alignment).set_max_variant_size(0).build();
+    
+    ReadManager read_manager {NA12878_low_coverage};
+    
+    const auto region = *parse_region("16:9299940-9300055", human);
+    
+    const auto sample = read_manager.get_samples().front();
+    
+    auto reads = read_manager.fetch_reads(sample, region);
+    
+    add_reads(reads, candidate_generator);
+    
+    auto candidates = candidate_generator.get_candidates(region);
+    
+    BOOST_CHECK(std::all_of(std::cbegin(candidates), std::cend(candidates),
+                            [] (const auto& candidate) { return is_insertion(candidate); }));
 }
 
 BOOST_AUTO_TEST_CASE(AlignmentCandidateVariantGenerator_includes_all_alleles_in_the_same_region)
@@ -131,17 +224,5 @@ BOOST_AUTO_TEST_CASE(ExternalCandidateVariantGenerator_gets_candidates_from_vcf)
     BOOST_CHECK(candidates.size() == 16);
 }
 
-BOOST_AUTO_TEST_CASE(CandidateGeneratorBuilder_can_construct_candidate_generators)
-{
-    BOOST_REQUIRE(test_file_exists(human_reference_fasta));
-    
-    using Octopus::CandidateGeneratorBuilder;
-    
-    Octopus::CandidateGeneratorBuilder builder {};
-    
-    builder.add_generator(CandidateGeneratorBuilder::Generator::Alignment);
-    
-    // TODO
-}
-
-BOOST_AUTO_TEST_SUITE_END()
+BOOST_AUTO_TEST_SUITE_END() // CandidateGenerators
+BOOST_AUTO_TEST_SUITE_END() // Components

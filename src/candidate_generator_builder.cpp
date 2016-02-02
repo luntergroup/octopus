@@ -20,9 +20,6 @@ namespace Octopus
     :
     generators_           {},
     reference_            {},
-    min_snp_base_quality_ {},
-    min_supporting_reads_ {},
-    max_variant_size_     {},
     kmer_size_            {},
     variant_source_       {},
     generator_factory_    {generate_factory()}

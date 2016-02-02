@@ -147,12 +147,12 @@ bool Haplotype::contains(const ContigAllele& allele) const
         // these binary searches are just optimisations
         if (binary_search(cbegin(explicit_alleles_), cend(explicit_alleles_), allele)) return true;
         
-        if (binary_search(cbegin(explicit_alleles_), cend(explicit_alleles_), ::get_region(allele))) {
+        if (binary_search(cbegin(explicit_alleles_), cend(explicit_alleles_), allele.get_region())) {
             // If the allele is not explcitly contained but the region is then it must be a different
             // allele, unless it is an insertion, in which case we must check the sequence
             if (is_insertion(allele)) {
-                auto it = std::lower_bound(cbegin(explicit_alleles_), cend(explicit_alleles_),
-                                           allele.get_region());
+                const auto it = std::lower_bound(cbegin(explicit_alleles_), cend(explicit_alleles_),
+                                                 allele.get_region());
                 return ::contains(*it, allele);
             } else {
                 return false;

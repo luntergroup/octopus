@@ -163,7 +163,7 @@ inline bool all_test_files_exist()
 
 inline bool is_writable_test_file(const fs::path& file)
 {
-    return file == test_out_vcf;
+    return file == test_out_vcf || file == test_out_vcfgz || file == test_out_bcf;
 }
 
 inline void remove_test_file(const fs::path& file)

@@ -12,6 +12,8 @@
 #include <algorithm>
 #include <iterator>
 
+#include "string_utils.hpp"
+
 ContigAllele::ContigAllele(const Allele& allele)
 :
 region_ {allele.get_region().get_contig_region()},
@@ -48,7 +50,7 @@ ContigAllele::SequenceType get_subsequence(const ContigAllele& allele, const Con
     }
     
     if (begins_equal(region, allele) && empty(region) && is_insertion(allele)) {
-        auto first = std::cbegin(sequence);
+        const auto first = std::cbegin(sequence);
         return ContigAllele::SequenceType {first, first + sequence.size() - size(allele)};
     }
     
@@ -56,6 +58,17 @@ ContigAllele::SequenceType get_subsequence(const ContigAllele& allele, const Con
     // The minimum of the allele sequence size and region size is used as deletions will
     // result in a sequence size smaller than the region size
     return ContigAllele::SequenceType {first, first + std::min(sequence.size(), static_cast<size_t>(size(region)))};
+}
+
+bool contains(const ContigAllele& lhs, const ContigAllele& rhs)
+{
+    if (!contains(get_region(lhs), get_region(rhs))) {
+        return false;
+    } else if (empty(lhs)) {
+        return !rhs.get_sequence().empty() && Octopus::contains(lhs.get_sequence(), rhs.get_sequence());
+    } else {
+        return get_subsequence(lhs, get_region(rhs)) == rhs.get_sequence();
+    }
 }
 
 ContigAllele splice(const ContigAllele& allele, const ContigRegion& region)

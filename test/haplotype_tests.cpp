@@ -30,6 +30,7 @@ static void add_alt_to_back(const Variant& variant, Haplotype& haplotype)
 }
 
 BOOST_AUTO_TEST_SUITE(Components)
+BOOST_AUTO_TEST_SUITE(Haplotypes)
 
 BOOST_AUTO_TEST_CASE(empty_haplotypes_are_the_unaltered_reference_sequence)
 {
@@ -548,4 +549,5 @@ BOOST_AUTO_TEST_CASE(Haplotype_can_be_spliced)
 //    BOOST_CHECK(!haplotypes[0].contains(allele2));
 //}
 
-BOOST_AUTO_TEST_SUITE_END()
+BOOST_AUTO_TEST_SUITE_END() // Haplotypes
+BOOST_AUTO_TEST_SUITE_END() // Components

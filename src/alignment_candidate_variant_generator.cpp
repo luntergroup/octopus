@@ -156,15 +156,14 @@ std::vector<Variant> AlignmentCandidateVariantGenerator::get_candidates(const Ge
     
     sort_candiates_if_needed();
     
-    auto overlapped = overlap_range(cbegin(candidates_), cend(candidates_), region,
-                                    max_seen_candidate_size_);
+    auto overlapped = overlap_range(candidates_, region, max_seen_candidate_size_);
     
     if (min_supporting_reads_ == 1) {
         return std::vector<Variant> {begin(overlapped), end(overlapped)};
     }
     
     std::vector<Variant> result {};
-    result.reserve(bases(overlapped).size());
+    result.reserve(bases(overlapped).size()); // the maximum
     
     while (!overlapped.empty()) {
         const auto it = std::adjacent_find(begin(overlapped), end(overlapped));
@@ -174,9 +173,7 @@ std::vector<Variant> AlignmentCandidateVariantGenerator::get_candidates(const Ge
         const Variant& duplicate {*it};
         
         const auto it2 = std::find_if_not(std::next(it), end(overlapped),
-                                          [&duplicate] (const auto& variant) {
-                                              return variant == duplicate;
-                                          });
+                                          [&] (const auto& variant) { return variant == duplicate; });
         
         const auto duplicate_count = std::distance(it, it2);
         

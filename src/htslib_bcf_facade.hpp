@@ -111,7 +111,7 @@ private:
     
     std::vector<std::string> samples_;
     
-    size_t num_records(HtsBcfSrPtr& sr) const;
+    size_t count_records(HtsBcfSrPtr& sr) const;
     std::vector<VcfRecord> fetch_records(HtsBcfSrPtr& sr, Unpack level, size_t num_records = 0);
 };
 

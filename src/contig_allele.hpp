@@ -66,6 +66,8 @@ sequence_ {std::forward<SequenceType_>(sequence)}
 
 ContigAllele::SizeType sequence_size(const ContigAllele& allele) noexcept;
 
+bool contains(const ContigAllele& lhs, const ContigAllele& rhs);
+
 ContigAllele splice(const ContigAllele& allele, const ContigRegion& region);
 
 bool is_insertion(const ContigAllele& allele);

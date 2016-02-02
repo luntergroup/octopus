@@ -89,7 +89,7 @@ const VcfHeader::ValueType& VcfHeader::get_structured_field_value(const TagType&
                                                                   const ValueType& id_value,
                                                                   const KeyType& lookup_key) const
 {
-    auto er = structured_fields_.equal_range(tag);
+    const auto er = structured_fields_.equal_range(tag);
     return std::find_if(er.first, er.second,
                         [&id_key, &id_value, &lookup_key] (const auto& p) {
                             return p.second.at(id_key) == id_value;
@@ -106,13 +106,14 @@ std::vector<VcfHeader::StructuredField> VcfHeader::get_structured_fields(const T
     std::vector<StructuredField> result {};
     result.reserve(structured_fields_.count(tag));
     
-    auto er = structured_fields_.equal_range(tag);
+    const auto er = structured_fields_.equal_range(tag);
     std::transform(er.first, er.second, std::back_inserter(result), [] (const auto& p) { return p.second; });
     
     return result;
 }
 
-const std::unordered_multimap<VcfHeader::TagType, VcfHeader::StructuredField>& VcfHeader::get_structured_fields() const noexcept
+const std::unordered_multimap<VcfHeader::TagType, VcfHeader::StructuredField>&
+VcfHeader::get_structured_fields() const noexcept
 {
     return structured_fields_;
 }
@@ -175,6 +176,11 @@ std::vector<VcfType> get_typed_format_values(const VcfHeader& header, const VcfH
                                              const std::vector<VcfHeader::ValueType>& values)
 {
     return get_typed_values(header, "FORMAT", field_key, values);
+}
+
+bool contig_line_exists(const VcfHeader& header, const std::string& contig)
+{
+    return header.has_structured_field("contig", contig);
 }
 
 bool operator==(const VcfHeader& lhs, const VcfHeader& rhs)
@@ -270,7 +276,8 @@ VcfHeader::Builder& VcfHeader::Builder::add_basic_field(std::string key, std::st
     return *this;
 }
 
-VcfHeader::Builder& VcfHeader::Builder::add_structured_field(std::string tag, std::unordered_map<std::string, std::string> values)
+VcfHeader::Builder& VcfHeader::Builder::add_structured_field(std::string tag,
+                                                             std::unordered_map<std::string, std::string> values)
 {
     structured_fields_.emplace(std::move(tag), std::move(values));
     return *this;
@@ -284,7 +291,8 @@ std::string add_quotes(const std::string& str)
     return result;
 }
 
-VcfHeader::Builder& VcfHeader::Builder::add_info(std::string id, std::string number, std::string type, std::string description,
+VcfHeader::Builder& VcfHeader::Builder::add_info(std::string id, std::string number,
+                                                 std::string type, std::string description,
                                                  std::unordered_map<std::string, std::string> other_values)
 {
     other_values.reserve(other_values.size() + 4);
@@ -312,7 +320,8 @@ VcfHeader::Builder& VcfHeader::Builder::add_filter(std::string id, std::string d
     return *this;
 }
 
-VcfHeader::Builder& VcfHeader::Builder::add_format(std::string id, std::string number, std::string type, std::string description,
+VcfHeader::Builder& VcfHeader::Builder::add_format(std::string id, std::string number,
+                                                   std::string type, std::string description,
                                                    std::unordered_map<std::string, std::string> other_values)
 {
     other_values.reserve(other_values.size() + 4);
@@ -327,7 +336,8 @@ VcfHeader::Builder& VcfHeader::Builder::add_format(std::string id, std::string n
     return *this;
 }
 
-VcfHeader::Builder& VcfHeader::Builder::add_contig(std::string id, std::unordered_map<std::string, std::string> other_values)
+VcfHeader::Builder& VcfHeader::Builder::add_contig(std::string id,
+                                                   std::unordered_map<std::string, std::string> other_values)
 {
     other_values.emplace("ID", std::move(id));
     

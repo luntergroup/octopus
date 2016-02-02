@@ -248,7 +248,7 @@ overlap_range(const Container& mappables, const MappableTp& mappable,
 template <typename ForwardIt, typename MappableTp>
 OverlapRange<ForwardIt>
 overlap_range(ForwardIt first, ForwardIt last, const MappableTp& mappable,
-              GenomicRegion::SizeType max_mappable_size)
+              const GenomicRegion::SizeType max_mappable_size)
 {
     using MappableTp2 = typename std::iterator_traits<ForwardIt>::value_type;
     
@@ -266,7 +266,7 @@ overlap_range(ForwardIt first, ForwardIt last, const MappableTp& mappable,
 template <typename Container, typename MappableTp>
 OverlapRange<typename Container::const_iterator>
 overlap_range(const Container& mappables, const MappableTp& mappable,
-              GenomicRegion::SizeType max_mappable_size)
+              const GenomicRegion::SizeType max_mappable_size)
 {
     return overlap_range(std::cbegin(mappables), std::cend(mappables), mappable, max_mappable_size);
 }

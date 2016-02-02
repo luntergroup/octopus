@@ -577,9 +577,21 @@ namespace Octopus
         return target;
     }
     
+    static bool is_bed_file(const fs::path& path)
+    {
+        return path.extension().string() == ".bed";
+    }
+    
+    void seek_past_bed_header(std::ifstream& bed_file)
+    {
+        // TODO
+    }
+    
     boost::optional<std::string> convert_bed_line_to_region_str(const std::string& bed_line)
     {
-        const auto tokens = split(bed_line, '\t');
+        constexpr static char bed_delim {'\t'};
+        
+        const auto tokens = split(bed_line, bed_delim);
         
         switch (tokens.size()) {
             case 0:
@@ -595,9 +607,9 @@ namespace Octopus
     }
     
     std::function<boost::optional<GenomicRegion>(const std::string&)>
-    make_region_parser(const fs::path& region_path, const ReferenceGenome& reference)
+    make_region_line_parser(const fs::path& region_path, const ReferenceGenome& reference)
     {
-        if (region_path.extension().string() == ".bed") {
+        if (is_bed_file(region_path)) {
             return [&] (const std::string& line) -> boost::optional<GenomicRegion>
             {
                 auto region_str = convert_bed_line_to_region_str(line);
@@ -621,10 +633,14 @@ namespace Octopus
         
         std::ifstream file {file_path.string()};
         
+        if (is_bed_file(file_path)) {
+            seek_past_bed_header(file);
+        }
+        
         std::vector<boost::optional<GenomicRegion>> parsed_lines {};
         
         std::transform(std::istream_iterator<Line>(file), std::istream_iterator<Line>(),
-                       std::back_inserter(parsed_lines), make_region_parser(file_path, reference));
+                       std::back_inserter(parsed_lines), make_region_line_parser(file_path, reference));
         
         file.close();
         

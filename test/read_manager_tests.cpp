@@ -29,6 +29,7 @@ using std::endl;
 namespace fs = boost::filesystem;
 
 BOOST_AUTO_TEST_SUITE(Components)
+BOOST_AUTO_TEST_SUITE(IO)
 
 BOOST_AUTO_TEST_CASE(can_extract_reads_from_BAM_files)
 {
@@ -157,4 +158,5 @@ BOOST_AUTO_TEST_CASE(read_manager_multiple_files_above_max_file_limit_test)
     BOOST_CHECK(small_reads3.size() == 7);
 }
 
-BOOST_AUTO_TEST_SUITE_END()
+BOOST_AUTO_TEST_SUITE_END() // IO
+BOOST_AUTO_TEST_SUITE_END() // Components

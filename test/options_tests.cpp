@@ -102,11 +102,11 @@ BOOST_AUTO_TEST_CASE(parse_search_region_option_extracts_regions_from_text_files
         nullptr};
     int argc = sizeof(argv) / sizeof(char*) - 1;
     
-    auto options = Octopus::Options::parse_options(argc, argv);
+    const auto options = Octopus::Options::parse_options(argc, argv);
     
-    auto reference = Octopus::Options::make_reference(*options);
+    const auto reference = Octopus::Options::make_reference(*options);
     
-    auto regions = Octopus::Options::get_search_regions(*options, *reference);
+    const auto regions = Octopus::Options::get_search_regions(*options, *reference);
     
     BOOST_CHECK(regions.size() == 8); // 8 contigs
 }
@@ -124,11 +124,11 @@ BOOST_AUTO_TEST_CASE(parse_search_region_option_extracts_regions_from_bed_files)
         nullptr};
     int argc = sizeof(argv) / sizeof(char*) - 1;
     
-    auto options = Octopus::Options::parse_options(argc, argv);
+    const auto options = Octopus::Options::parse_options(argc, argv);
     
-    auto reference = Octopus::Options::make_reference(*options);
+    const auto reference = Octopus::Options::make_reference(*options);
     
-    auto regions = Octopus::Options::get_search_regions(*options, *reference);
+    const auto regions = Octopus::Options::get_search_regions(*options, *reference);
     
     BOOST_CHECK(regions.size() == 8); // 8 contigs
 }

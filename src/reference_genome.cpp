@@ -144,32 +144,34 @@ GenomicRegion::SizeType calculate_genome_size(const ReferenceGenome& reference)
 
 boost::optional<GenomicRegion> parse_region(std::string region, const ReferenceGenome& reference)
 {
+    using SizeType = GenomicRegion::SizeType;
+    
     region.erase(std::remove(std::begin(region), std::end(region), ','), std::end(region));
     
     const static std::regex re {"([^:]+)(?::(\\d+)(-)?(\\d*))?"};
     
     std::smatch match;
     
-    if (std::regex_search(region, match, re) && match.size() == 5) {
+    if (std::regex_match(region, match, re) && match.size() == 5) {
         GenomicRegion::ContigNameType contig {match.str(1)};
         
         if (!reference.has_contig(contig)) return boost::none;
         
         const auto contig_size = reference.get_contig_size(contig);
         
-        GenomicRegion::SizeType begin {0}, end {0};
+        SizeType begin {0}, end {0};
         
         if (match.str(2).empty()) {
             end = contig_size;
         } else {
-            begin = static_cast<GenomicRegion::SizeType>(std::stoul(match.str(2)));
+            begin = static_cast<SizeType>(std::stoul(match.str(2)));
             
             if (match.str(3).empty()) {
-                end = begin;
+                end = begin + 1;
             } else if (match.str(4).empty()) {
                 end = contig_size;
             } else {
-                end = static_cast<GenomicRegion::SizeType>(std::stoul(match.str(4)));
+                end = static_cast<SizeType>(std::stoul(match.str(4)));
             }
             
             if (begin > end || begin > contig_size) return boost::none;
