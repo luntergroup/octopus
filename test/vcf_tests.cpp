@@ -25,11 +25,13 @@ BOOST_AUTO_TEST_CASE(can_read_vcf_files)
 {
     BOOST_REQUIRE(test_file_exists(sample_vcf));
     
-    VcfReader vcf_reader {sample_vcf};
+    VcfReader reader {sample_vcf};
     
-    GenomicRegion region {"X", 2000000, 2001000};
+    BOOST_REQUIRE(reader.is_open());
     
-    auto records = vcf_reader.fetch_records(region);
+    const GenomicRegion region {"X", 2000000, 2001000};
+    
+    auto records = reader.fetch_records(region);
     
     //for (const auto& record : records) cout << record << endl;
 }
@@ -40,7 +42,9 @@ BOOST_AUTO_TEST_CASE(can_use_vcf_types)
     
     VcfReader reader {sample_vcf};
     
-    auto header = reader.fetch_header();
+    BOOST_REQUIRE(reader.is_open());
+    
+    const auto header = reader.fetch_header();
     
     auto v1 = get_typed_info_value(header, "AA", "ACGT");
     auto v2 = get_typed_info_value(header, "DP", "110");
@@ -52,25 +56,25 @@ BOOST_AUTO_TEST_CASE(can_use_vcf_types)
 
 BOOST_AUTO_TEST_CASE(can_write_vcf_files)
 {
+    BOOST_REQUIRE(!test_file_exists(test_out_vcf));
+    
     VcfWriter writer {test_out_vcf};
     
-    auto header  = VcfHeader::Builder().add_basic_field("TEST", "TEST").build_once();
-    auto record  = VcfRecord::Builder().set_chromosome("TEST").set_id("TEST").set_position(0).set_quality(60).set_ref_allele("A").set_alt_allele("C").build_once();
+    BOOST_REQUIRE(writer.is_open());
+    
+    const auto header  = VcfHeader::Builder().add_basic_field("TEST", "TEST").build_once();
+    const auto record  = VcfRecord::Builder().set_chromosome("TEST").set_id("TEST").set_position(0).set_quality(60).set_ref_allele("A").set_alt_allele("C").build_once();
     
     writer.write(header);
     writer.write(record);
     
     remove_test_file(test_out_vcf);
+    
+    BOOST_CHECK(!test_file_exists(test_out_vcf));
 }
 
 BOOST_AUTO_TEST_CASE(can_write_vcf_to_stdout)
 {
-    // TODO
-//    VcfWriter writer {"-"};
-//    
-//    auto header  = VcfHeader::Builder().add_basic_field("TEST", "TEST").build_once();
-//    auto record  = VcfRecord::Builder().set_chromosome("TEST").set_id("TEST").set_position(0).set_quality(60).set_ref_allele("A").set_alt_allele("C").build_once();
-//    
-//    writer.write(header);
-//    writer.write(record);
+    VcfWriter writer {"-"};
+    BOOST_CHECK(writer.is_open()); // the only practical thing we can check here
 }

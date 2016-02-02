@@ -20,10 +20,8 @@
 #include "test_common.hpp"
 #include "genomic_region.hpp"
 #include "aligned_read.hpp"
-#include "htslib_sam_facade.hpp"
 #include "read_manager.hpp"
 #include "mock_objects.hpp"
-#include "mappable_algorithms.hpp"
 
 using std::cout;
 using std::endl;
@@ -32,63 +30,58 @@ namespace fs = boost::filesystem;
 
 BOOST_AUTO_TEST_SUITE(Components)
 
-BOOST_AUTO_TEST_CASE(HtslibSamFacade_can_extract_reads_from_BAM_files)
-{
-    BOOST_REQUIRE(test_file_exists(NA12878_low_coverage));
-    
-    HtslibSamFacade reader {NA12878_low_coverage};
-    
-    GenomicRegion region1 {"10", 1000000, 1000100};
-    GenomicRegion region2 {"3", 100000, 100100};
-    
-    auto reads1 = reader.fetch_reads(region1).begin()->second;
-    auto reads2 = reader.fetch_reads(region2).begin()->second;
-    
-    reads1.insert(std::begin(reads2), std::end(reads2));
-    
-    BOOST_CHECK(reads1.size() == 25);
-}
-
-BOOST_AUTO_TEST_CASE(HtslibSamFacade_can_extract_reads_from_CRAM_files)
-{
-    BOOST_REQUIRE(test_file_exists(HG00101_cram));
-    
-    HtslibSamFacade reader {HG00101_cram};
-    
-    GenomicRegion region1 {"10", 1000000, 1000100};
-    GenomicRegion region2 {"3", 100000, 100100};
-    
-    auto reads1 = reader.fetch_reads(region1).begin()->second;
-    auto reads2 = reader.fetch_reads(region2).begin()->second;
-    
-    reads1.insert(std::begin(reads2), std::end(reads2));
-    
-    BOOST_CHECK(reads1.size() == 25);
-}
-
-BOOST_AUTO_TEST_CASE(ReadManager_can_extract_reads_from_BAM_files)
+BOOST_AUTO_TEST_CASE(can_extract_reads_from_BAM_files)
 {
     BOOST_REQUIRE(test_file_exists(NA12878_low_coverage));
     
     ReadManager read_manager {NA12878_low_coverage};
     
-    BOOST_CHECK(read_manager.num_samples() == 1);
+    BOOST_REQUIRE(read_manager.num_samples() == 1);
     
-    auto sample_ids = read_manager.get_samples();
-    auto the_sample_id = sample_ids.front();
+    const auto sample = read_manager.get_samples().front();
     
-    GenomicRegion a_big_region {"1", 9990, 10000};
-    GenomicRegion a_small_region {"10", 1000000, 1000100};
-    GenomicRegion another_region {"3", 100000, 100100};
+    const GenomicRegion region1 {"1", 9'990, 10'000};
+    const GenomicRegion region2 {"10", 1'000'000, 1'000'100};
+    const GenomicRegion region3 {"3", 100'000, 100'100};
     
-    auto some_reads = read_manager.fetch_reads(the_sample_id, a_big_region);
-    auto reads      = read_manager.fetch_reads(the_sample_id, a_small_region);
-    auto more_reads = read_manager.fetch_reads(the_sample_id, another_region);
+    const auto reads1 = read_manager.fetch_reads(sample, region1);
     
-    reads.insert(std::make_move_iterator(std::begin(more_reads)),
-                 std::make_move_iterator(std::end(more_reads)));
+    BOOST_CHECK(reads1.size() == 1);
     
-    BOOST_CHECK(reads.size() == 25);
+    const auto reads2 = read_manager.fetch_reads(sample, region2);
+    
+    BOOST_CHECK(reads2.size() == 7);
+    
+    const auto reads3 = read_manager.fetch_reads(sample, region3);
+    
+    BOOST_CHECK(reads3.size() == 21);
+}
+
+BOOST_AUTO_TEST_CASE(can_extract_reads_from_CRAM_files)
+{
+    BOOST_REQUIRE(test_file_exists(NA12878_low_coverage_cram));
+    
+    ReadManager read_manager {NA12878_low_coverage_cram};
+    
+    BOOST_REQUIRE(read_manager.num_samples() == 1);
+    
+    const auto sample = read_manager.get_samples().front();
+    
+    const GenomicRegion region1 {"1", 9'990, 10'000};
+    const GenomicRegion region2 {"10", 1'000'000, 1'000'100};
+    const GenomicRegion region3 {"3", 100'000, 100'100};
+    
+    const auto reads1 = read_manager.fetch_reads(sample, region1);
+    
+    BOOST_CHECK(reads1.size() == 1);
+    
+    const auto reads2 = read_manager.fetch_reads(sample, region2);
+    
+    BOOST_CHECK(reads2.size() == 7);
+    
+    const auto reads3 = read_manager.fetch_reads(sample, region3);
+    
+    BOOST_CHECK(reads3.size() == 21);
 }
 
 BOOST_AUTO_TEST_CASE(read_manager_multiple_files_below_max_file_limit_test)
@@ -102,27 +95,30 @@ BOOST_AUTO_TEST_CASE(read_manager_multiple_files_below_max_file_limit_test)
     
     ReadManager read_manager(read_paths, max_open_files);
     
-    BOOST_CHECK(read_manager.num_samples() == 2);
+    BOOST_REQUIRE(read_manager.num_samples() == 2);
     
-    auto samples = read_manager.get_samples();
+    const auto samples = read_manager.get_samples();
     
-    GenomicRegion a_big_region {"1", 2000000, 3000000};
-    GenomicRegion a_small_region {"10", 1000000, 1000100};
+    BOOST_REQUIRE(samples.size() == 2);
     
-    auto first_sample = samples.at(0);
+    const GenomicRegion a_big_region {"1", 2000000, 3000000};
+    const GenomicRegion a_small_region {"10", 1000000, 1000100};
     
-    auto big_region_reads1   = read_manager.fetch_reads(first_sample, a_big_region);
-    auto small_region_reads1 = read_manager.fetch_reads(first_sample, a_small_region);
+    const auto first_sample = samples.front();
     
-    auto second_sample = samples.at(1);
-    
-    auto big_region_reads2   = read_manager.fetch_reads(second_sample, a_big_region);
-    auto small_region_reads2 = read_manager.fetch_reads(second_sample, a_small_region);
+    const auto big_region_reads1   = read_manager.fetch_reads(first_sample, a_big_region);
+    const auto small_region_reads1 = read_manager.fetch_reads(first_sample, a_small_region);
     
     BOOST_CHECK(big_region_reads1.size() == 61225);
     BOOST_CHECK(small_region_reads1.size() == 10);
-    BOOST_CHECK(big_region_reads2.size() == 142606);
-    BOOST_CHECK(small_region_reads2.size() == 29);
+    
+    const auto second_sample = samples.back();
+    
+    const auto big_region_reads2   = read_manager.fetch_reads(second_sample, a_big_region);
+    const auto small_region_reads2 = read_manager.fetch_reads(second_sample, a_small_region);
+    
+    BOOST_CHECK(big_region_reads2.size() == 39200);
+    BOOST_CHECK(small_region_reads2.size() == 7);
 }
 
 BOOST_AUTO_TEST_CASE(read_manager_multiple_files_above_max_file_limit_test)
@@ -137,28 +133,28 @@ BOOST_AUTO_TEST_CASE(read_manager_multiple_files_above_max_file_limit_test)
     
     ReadManager read_manager(read_paths, max_open_files);
     
-    BOOST_CHECK(read_manager.num_samples() == 3);
+    BOOST_REQUIRE(read_manager.num_samples() == 3);
     
-    auto samples = read_manager.get_samples();
+    const auto samples = read_manager.get_samples();
     
-    GenomicRegion a_big_region {"1", 2000000, 3000000};
-    GenomicRegion a_small_region {"10", 1000000, 1000100};
+    const GenomicRegion a_big_region {"1", 2000000, 3000000};
+    const GenomicRegion a_small_region {"10", 1000000, 1000100};
     
-    auto big_reads1 = read_manager.fetch_reads(samples[0], a_big_region);
-    auto big_reads2 = read_manager.fetch_reads(samples[1], a_big_region);
-    auto big_reads3 = read_manager.fetch_reads(samples[2], a_big_region);
+    const auto big_reads1 = read_manager.fetch_reads(samples[0], a_big_region);
+    const auto big_reads2 = read_manager.fetch_reads(samples[1], a_big_region);
+    const auto big_reads3 = read_manager.fetch_reads(samples[2], a_big_region);
     
-    BOOST_CHECK(big_reads1.size() == 142606);
-    BOOST_CHECK(big_reads2.size() == 61225);
-    BOOST_CHECK(big_reads3.size() == 56433);
+    BOOST_CHECK(big_reads1.size() == 61225);
+    BOOST_CHECK(big_reads2.size() == 49810);
+    BOOST_CHECK(big_reads3.size() == 39200);
     
-    auto small_reads1 = read_manager.fetch_reads(samples[0], a_small_region);
-    auto small_reads2 = read_manager.fetch_reads(samples[1], a_small_region);
-    auto small_reads3 = read_manager.fetch_reads(samples[2], a_small_region);
+    const auto small_reads1 = read_manager.fetch_reads(samples[0], a_small_region);
+    const auto small_reads2 = read_manager.fetch_reads(samples[1], a_small_region);
+    const auto small_reads3 = read_manager.fetch_reads(samples[2], a_small_region);
     
-    BOOST_CHECK(small_reads1.size() == 29);
-    BOOST_CHECK(small_reads2.size() == 10);
-    BOOST_CHECK(small_reads3.size() == 8);
+    BOOST_CHECK(small_reads1.size() == 10);
+    BOOST_CHECK(small_reads2.size() == 9);
+    BOOST_CHECK(small_reads3.size() == 7);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

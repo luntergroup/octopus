@@ -38,7 +38,7 @@ std::unique_ptr<IVcfReaderImpl> make_vcf_reader(const VcfReader::Path& file_path
 VcfReader::VcfReader(Path file_path)
 :
 file_path_ {std::move(file_path)},
-reader_ {make_vcf_reader(file_path)}
+reader_ {make_vcf_reader(file_path_)}
 {}
 
 VcfReader::VcfReader(VcfReader&& other)

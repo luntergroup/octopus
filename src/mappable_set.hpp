@@ -359,7 +359,7 @@ template <typename ...Args>
 typename MappableSet<MappableType, Allocator>::iterator
 MappableSet<MappableType, Allocator>::emplace(Args... args)
 {
-    auto it = elements_.emplace(std::forward<Args>(args)...);
+    const auto it = elements_.emplace(std::forward<Args>(args)...);
     if (is_bidirectionally_sorted_) {
         const auto overlapped = overlap_range(*it);
         is_bidirectionally_sorted_ = is_bidirectionally_sorted(std::cbegin(overlapped), std::cend(overlapped));
@@ -372,7 +372,7 @@ template <typename MappableType, typename Allocator>
 typename MappableSet<MappableType, Allocator>::iterator
 MappableSet<MappableType, Allocator>::insert(const MappableType& m)
 {
-    auto it = elements_.insert(m);
+    const auto it = elements_.insert(m);
     if (is_bidirectionally_sorted_) {
         const auto overlapped = overlap_range(*it);
         is_bidirectionally_sorted_ = is_bidirectionally_sorted(std::cbegin(overlapped), std::cend(overlapped));
@@ -385,7 +385,7 @@ template <typename MappableType, typename Allocator>
 typename MappableSet<MappableType, Allocator>::iterator
 MappableSet<MappableType, Allocator>::insert(MappableType&& m)
 {
-    auto it = elements_.insert(std::move(m));
+    const auto it = elements_.insert(std::move(m));
     if (is_bidirectionally_sorted_) {
         const auto overlapped = overlap_range(*it);
         is_bidirectionally_sorted_ = is_bidirectionally_sorted(std::cbegin(overlapped), std::cend(overlapped));

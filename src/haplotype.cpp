@@ -51,7 +51,7 @@ void Haplotype::push_back(const ContigAllele& allele)
 {
     if (!explicit_alleles_.empty()) {
         if (!is_after(allele, explicit_alleles_.back())) {
-            throw std::runtime_error {"Haplotype::push_back called with out-of-order Allele"};
+            throw std::logic_error {"Haplotype::push_back called with out-of-order Allele"};
         }
         if (!are_adjacent(explicit_alleles_.back(), allele)) {
             explicit_alleles_.emplace_back(get_intervening_reference_allele(explicit_alleles_.back(), allele));
@@ -66,7 +66,7 @@ void Haplotype::push_back(ContigAllele&& allele)
 {
     if (!explicit_alleles_.empty()) {
         if (!is_after(allele, explicit_alleles_.back())) {
-            throw std::runtime_error {"Haplotype::push_back called with out-of-order Allele"};
+            throw std::logic_error {"Haplotype::push_back called with out-of-order Allele"};
         }
         if (!are_adjacent(explicit_alleles_.back(), allele)) {
             explicit_alleles_.emplace_back(get_intervening_reference_allele(explicit_alleles_.back(), allele));
@@ -81,7 +81,7 @@ void Haplotype::push_front(const ContigAllele& allele)
 {
     if (!explicit_alleles_.empty()) {
         if (!is_after(explicit_alleles_.front(), allele)) {
-            throw std::runtime_error {"Haplotype::push_front called with out-of-order Allele"};
+            throw std::logic_error {"Haplotype::push_front called with out-of-order Allele"};
         }
         if (!are_adjacent(allele, explicit_alleles_.front())) {
             explicit_alleles_.emplace_front(get_intervening_reference_allele(allele, explicit_alleles_.front()));
@@ -96,7 +96,7 @@ void Haplotype::push_front(ContigAllele&& allele)
 {
     if (!explicit_alleles_.empty()) {
         if (!is_after(explicit_alleles_.front(), allele)) {
-            throw std::runtime_error {"Haplotype::push_front called with out-of-order Allele"};
+            throw std::logic_error {"Haplotype::push_front called with out-of-order Allele"};
         }
         if (!are_adjacent(allele, explicit_alleles_.front())) {
             explicit_alleles_.emplace_front(get_intervening_reference_allele(allele, explicit_alleles_.front()));
@@ -109,15 +109,15 @@ void Haplotype::push_front(ContigAllele&& allele)
 
 void Haplotype::push_back(const Allele& allele)
 {
-    if (!is_same_region(allele, region_)) {
-        throw std::logic_error {"Haplotype::push_front called with Allele on different contig"};
+    if (!is_same_contig(allele, region_)) {
+        throw std::logic_error {"Haplotype::push_back called with Allele on different contig"};
     }
     push_back(ContigAllele {get_contig_region(allele), allele.get_sequence()});
 }
 
 void Haplotype::push_front(const Allele& allele)
 {
-    if (!is_same_region(allele, region_)) {
+    if (!is_same_contig(allele, region_)) {
         throw std::logic_error {"Haplotype::push_front called with Allele on different contig"};
     }
     push_front(ContigAllele {get_contig_region(allele), allele.get_sequence()});
@@ -125,15 +125,15 @@ void Haplotype::push_front(const Allele& allele)
 
 void Haplotype::push_back(Allele&& allele)
 {
-    if (!is_same_region(allele, region_)) {
-        throw std::logic_error {"Haplotype::push_front called with Allele on different contig"};
+    if (!is_same_contig(allele, region_)) {
+        throw std::logic_error {"Haplotype::push_back called with Allele on different contig"};
     }
     push_back(ContigAllele {get_contig_region(allele), allele.get_sequence()});
 }
 
 void Haplotype::push_front(Allele&& allele)
 {
-    if (!is_same_region(allele, region_)) {
+    if (!is_same_contig(allele, region_)) {
         throw std::logic_error {"Haplotype::push_front called with Allele on different contig"};
     }
     push_front(ContigAllele {get_contig_region(allele), allele.get_sequence()});

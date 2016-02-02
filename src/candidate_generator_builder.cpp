@@ -81,51 +81,59 @@ namespace Octopus
         return *this;
     }
     
-    void CandidateGeneratorBuilder::add_generator(const Generator type)
-    {
-        if (std::find(std::cbegin(generators_), std::cend(generators_), type) == std::cend(generators_)) {
-            generators_.push_back(type);
-        }
-    }
-    
     unsigned CandidateGeneratorBuilder::num_generators() const noexcept
     {
         return static_cast<unsigned>(generators_.size());
     }
     
-    void CandidateGeneratorBuilder::set_reference(const ReferenceGenome& reference)
+    CandidateGeneratorBuilder& CandidateGeneratorBuilder::add_generator(const Generator type)
+    {
+        if (std::find(std::cbegin(generators_), std::cend(generators_), type) == std::cend(generators_)) {
+            generators_.push_back(type);
+        }
+        return *this;
+    }
+    
+    CandidateGeneratorBuilder& CandidateGeneratorBuilder::set_reference(const ReferenceGenome& reference)
     {
         reference_ = reference;
+        return *this;
     }
     
-    void CandidateGeneratorBuilder::set_min_snp_base_quality(const QualityType quality)
+    CandidateGeneratorBuilder& CandidateGeneratorBuilder::set_min_snp_base_quality(const QualityType quality)
     {
         min_snp_base_quality_ = quality;
+        return *this;
     }
     
-    void CandidateGeneratorBuilder::set_min_supporting_reads(const unsigned num_reads)
+    CandidateGeneratorBuilder& CandidateGeneratorBuilder::set_min_supporting_reads(const unsigned num_reads)
     {
         min_supporting_reads_ = num_reads;
+        return *this;
     }
     
-    void CandidateGeneratorBuilder::set_max_variant_size(const SizeType size)
+    CandidateGeneratorBuilder& CandidateGeneratorBuilder::set_max_variant_size(const SizeType size)
     {
         max_variant_size_ = size;
+        return *this;
     }
     
-    void CandidateGeneratorBuilder::set_kmer_size(const unsigned kmer_size)
+    CandidateGeneratorBuilder& CandidateGeneratorBuilder::set_kmer_size(const unsigned kmer_size)
     {
         kmer_size_ = kmer_size;
+        return *this;
     }
     
-    void CandidateGeneratorBuilder::set_variant_source(boost::filesystem::path variant_source)
+    CandidateGeneratorBuilder& CandidateGeneratorBuilder::set_variant_source(boost::filesystem::path variant_source)
     {
         variant_source_ = std::make_shared<VcfReader>(std::move(variant_source));
+        return *this;
     }
     
-    void CandidateGeneratorBuilder::set_variant_source(const std::shared_ptr<VcfReader>& variant_source)
+    CandidateGeneratorBuilder& CandidateGeneratorBuilder::set_variant_source(const std::shared_ptr<VcfReader>& variant_source)
     {
         variant_source_ = variant_source;
+        return *this;
     }
     
     CandidateVariantGenerator CandidateGeneratorBuilder::build() const

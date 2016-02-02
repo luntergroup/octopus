@@ -12,151 +12,143 @@
 
 #include <iostream>
 #include <string>
-#include <cstddef>
-#include <set>
 
 #include "test_common.hpp"
 #include "reference_genome.hpp"
 #include "read_manager.hpp"
 #include "variant.hpp"
 #include "variant_utils.hpp"
-#include "candidate_variant_generator.hpp"
-#include "alignment_candidate_variant_generator.hpp"
 #include "haplotype.hpp"
-#include "genotype.hpp"
 #include "mappable_algorithms.hpp"
 
 using std::cout;
 using std::endl;
-
-BOOST_AUTO_TEST_SUITE(Components)
-
-static void add_alt_to_front(const Variant& variant, Haplotype& haplotype)
-{
-    haplotype.push_front(variant.get_alt_allele());
-}
 
 static void add_alt_to_back(const Variant& variant, Haplotype& haplotype)
 {
     haplotype.push_back(variant.get_alt_allele());
 }
 
+BOOST_AUTO_TEST_SUITE(Components)
+
+BOOST_AUTO_TEST_CASE(empty_haplotypes_are_the_unaltered_reference_sequence)
+{
+    BOOST_REQUIRE(test_file_exists(human_reference_fasta));
+    
+    const auto human = make_reference(human_reference_fasta);
+    
+    const auto region = *parse_region("3:1000000-1000010", human);
+    
+    const auto ref_sequence = human.get_sequence(region); // CCAACAAGCA
+    
+    const Haplotype ref_haplotype {region, human};
+    
+    BOOST_REQUIRE(ref_haplotype.get_sequence() == ref_sequence);
+    BOOST_REQUIRE(ref_haplotype.get_sequence(region) == ref_sequence);
+    BOOST_REQUIRE(ref_haplotype.get_sequence(region.get_contig_region()) == ref_sequence);
+}
+
 BOOST_AUTO_TEST_CASE(alleles_can_be_added_to_front_and_back_of_haplotypes)
 {
     BOOST_REQUIRE(test_file_exists(human_reference_fasta));
     
-    auto human = make_reference(human_reference_fasta);
+    const auto human = make_reference(human_reference_fasta);
     
-    auto region = *parse_region("3:1000000-1000010", human);
+    const Allele allele1 {"3", 1000004, "A"};
     
-    auto ref_sequence = human.get_sequence(region); // CCAACAAGCA
+    const auto region1 = allele1.get_region();
     
-    Haplotype ref_haplotype {region, human};
+    Haplotype haplotype1 {region1, human};
+    haplotype1.push_back(allele1);
     
-    BOOST_CHECK(ref_haplotype.get_sequence() == ref_sequence);
+    BOOST_CHECK(haplotype1.get_sequence(region1) == allele1.get_sequence());
+    BOOST_CHECK(haplotype1.get_sequence() == allele1.get_sequence());
     
-    Allele allele1 {"3", 1000004, "A"};
-    
-    Haplotype haplotype2 {region, human};
+    Haplotype haplotype2 {region1, human};
     haplotype2.push_front(allele1);
     
-    BOOST_CHECK(haplotype2.get_sequence(region) == "CCAAAAAGCA");
+    BOOST_CHECK(haplotype2.get_sequence(region1) == haplotype1.get_sequence());
+    BOOST_CHECK(haplotype2.get_sequence() == haplotype1.get_sequence());
     
-    Haplotype haplotype3 {region, human};
+    const Allele allele2 {"3", 1000005, "C"};
+    const Allele allele3 {"3", 1000006, "G"};
+    
+    const auto region2 = get_encompassing(allele1, allele3);
+    
+    Haplotype haplotype3 {region2, human};
     haplotype3.push_back(allele1);
+    haplotype3.push_back(allele2);
+    haplotype3.push_back(allele3);
     
-    BOOST_CHECK(haplotype2.get_sequence(region) == haplotype3.get_sequence(region));
-    BOOST_CHECK(haplotype2.get_sequence() == haplotype3.get_sequence());
+    Haplotype haplotype4 {region2, human};
+    haplotype4.push_front(allele3);
+    haplotype4.push_front(allele2);
+    haplotype4.push_front(allele1);
     
-    Variant variant2 {"3", 1000004, "CA", ""};
-    Variant variant3 {"3", 1000008, "", "C"};
+    BOOST_CHECK(haplotype3.get_sequence() == "ACG");
+    BOOST_CHECK(haplotype3.get_sequence(region2) == "ACG");
     
-    Haplotype haplotype4 {region, human};
-    add_alt_to_back(variant2, haplotype4);
-    add_alt_to_back(variant3, haplotype4);
-    
-    BOOST_CHECK(haplotype4.get_sequence() == "CCAAAGCCA");
-    
-    Haplotype haplotype5 {region, human};
-    add_alt_to_back(variant2, haplotype5);
-    add_alt_to_back(variant3, haplotype5);
-    
-    BOOST_CHECK(haplotype5.get_sequence() == "AGC");
-    
-    Variant variant4 {"3", 1000004, "CA", "GG"};
-    
-    Haplotype haplotype6 {region, human};
-    add_alt_to_back(variant4, haplotype6);
-    
-    BOOST_CHECK(haplotype6.get_sequence() == "CCAAGGAGCA");
-    
-    Variant variant5 {"3", 1000004, "C", "G"};
-    Variant variant6 {"3", 1000005, "A", "G"};
-    
-    Haplotype haplotype7 {region, human};
-    add_alt_to_back(variant6, haplotype7);
-    add_alt_to_front(variant5, haplotype7);
-    
-    BOOST_CHECK(haplotype7.get_sequence() == haplotype6.get_sequence());
+    BOOST_CHECK(haplotype3 == haplotype4);
 }
 
-BOOST_AUTO_TEST_CASE(haplotypes_work_with_real_data)
+BOOST_AUTO_TEST_CASE(regions_within_haplotype_region_flanking_explicitly_added_alleles_are_reference)
 {
-    BOOST_REQUIRE(test_file_exists(ecoli_reference_fasta));
+    BOOST_REQUIRE(test_file_exists(human_reference_fasta));
     
-    auto ecoli = make_reference(ecoli_reference_fasta);
+    const auto human = make_reference(human_reference_fasta);
     
-    ReadManager read_manager {ecoli_bam};
+    const auto region = *parse_region("3:1000000-1000010", human);
     
-    Octopus::CandidateVariantGenerator candidate_generator {};
-    candidate_generator.register_generator(std::make_unique<Octopus::AlignmentCandidateVariantGenerator>(ecoli, 0));
+    const Allele allele1 {"3", 1000004, "A"};
     
-    auto region = *parse_region("R00000042:99640-99745", ecoli);
+    Haplotype haplotype1 {region, human};
+    haplotype1.push_front(allele1);
     
-    auto reference_sequence = ecoli.get_sequence(region);
+    BOOST_CHECK(haplotype1.get_sequence() == "CCAAAAAGCA");
+    BOOST_CHECK(haplotype1.get_sequence(region) == "CCAAAAAGCA");
     
-    const auto sample = read_manager.get_samples().front();
+    const Allele allele2 {"3", 1000003, "C"};
+    const Allele allele3 {"3", 1000005, "G"};
     
-    auto some_reads = read_manager.fetch_reads(sample, region);
+    auto haplotype2 = haplotype1;
+    haplotype2.push_front(allele2);
+    haplotype2.push_back(allele3);
     
-    add_reads(some_reads, candidate_generator);
+    BOOST_CHECK(haplotype2.get_sequence() == "CCACAGAGCA");
+    BOOST_CHECK(haplotype2.get_sequence(region) == "CCACAGAGCA");
     
-    auto variants = candidate_generator.get_candidates(region);
+    const Allele allele4 {*parse_region("3:1000002-1000004", human), ""};
+    const Allele allele5 {*parse_region("3:1000005-1000008", human), ""};
     
-    BOOST_CHECK(variants.size() == 12);
+    auto haplotype3 = haplotype1;
+    haplotype3.push_front(allele4);
+    haplotype3.push_back(allele5);
     
-    Haplotype haplotype1 {region, ecoli};
-    for (const auto& variant : variants) {
-        if (is_snp(variant)) {
-            add_alt_to_back(variant, haplotype1);
-        }
-    }
-    
-    BOOST_CHECK(haplotype1.get_sequence() == "AGCGTGGGTAAACAAAGCCATGCTATCAGCACCGCCAGCGGCGTTGGCGAACA"
-            "TTTTGCTGATAAAACTGCGTTAATTACGCGTCTTAAATTACTGATTGCTGAG");
+    BOOST_CHECK(haplotype3.get_sequence() == "CCACA");
+    BOOST_CHECK(haplotype3.get_sequence(region) == "CCACA");
 }
 
 BOOST_AUTO_TEST_CASE(alleles_not_explicitly_added_to_haplotypes_are_assumed_reference)
 {
     BOOST_REQUIRE(test_file_exists(human_reference_fasta));
     
-    auto human = make_reference(human_reference_fasta);
+    const auto human = make_reference(human_reference_fasta);
     
-    GenomicRegion region {"7", 1000000, 1000100};
+    const GenomicRegion region {"7", 1000000, 1000100};
     
-    Haplotype reference_haplotype {region, human};
+    const Haplotype reference_haplotype {region, human};
     
     BOOST_CHECK(reference_haplotype.contains(get_reference_allele(region, human)));
     
-    GenomicRegion a_sub_region {"7", 1000010, 1000090};
+    const GenomicRegion a_sub_region {"7", 1000010, 1000090};
     
     BOOST_CHECK(reference_haplotype.contains(get_reference_allele(a_sub_region, human)));
     
-    GenomicRegion a_left_overlapping_region {"7", 999999, 1000090};
+    const GenomicRegion a_left_overlapping_region {"7", 999999, 1000090};
     
     BOOST_CHECK(!reference_haplotype.contains(get_reference_allele(a_left_overlapping_region, human)));
     
-    GenomicRegion a_right_overlapping_region {"7", 1000090, 1000101};
+    const GenomicRegion a_right_overlapping_region {"7", 1000090, 1000101};
     
     BOOST_CHECK(!reference_haplotype.contains(get_reference_allele(a_right_overlapping_region, human)));
 }
@@ -165,102 +157,71 @@ BOOST_AUTO_TEST_CASE(alleles_explicitly_added_to_haplotypes_should_be_contained)
 {
     BOOST_REQUIRE(test_file_exists(human_reference_fasta));
     
-    auto human = make_reference(human_reference_fasta);
+    const auto human = make_reference(human_reference_fasta);
     
-    GenomicRegion region {"3", 1000000, 1000020}; // CCAACAAGCATTGGTGTGGC
+    const GenomicRegion region {"3", 1000000, 1000020}; // CCAACAAGCATTGGTGTGGC
     
     // Variants the haplotype will contain
-    Variant variant1 {"3", 1000002, "A", "T"};
-    Variant variant2 {"3", 1000004, "CA", ""};
-    Variant variant3 {"3", 1000008, "", "C"};
-    Variant variant4 {"3", 1000010, "TT", "GG"};
-    Variant variant5 {"3", 1000014, "T", "C"};
-    Variant variant6 {"3", 1000018, "G", "A"};
+    const Variant variant1 {"3", 1000002, "A", "T"};
+    const Variant variant2 {"3", 1000004, "CA", ""};
+    const Variant variant3 {"3", 1000008, "", "C"};
+    const Variant variant4 {"3", 1000010, "TT", "GG"};
+    const Variant variant5 {"3", 1000014, "T", "C"};
+    const Variant variant6 {"3", 1000018, "G", "A"};
     
     // Parts of the haplotype which remain reference
-    GenomicRegion ref_part1 {"3", 1000003, 1000004};
-    GenomicRegion ref_part2 {"3", 1000012, 1000014};
-    GenomicRegion ref_part3 {"3", 1000015, 1000018};
+    const GenomicRegion ref_part1 {"3", 1000003, 1000004};
+    const GenomicRegion ref_part2 {"3", 1000012, 1000014};
+    const GenomicRegion ref_part3 {"3", 1000015, 1000018};
     
-    // Variants which the haplotype does not contain
-    Variant false_variant1 {"3", 1000002, "A", "C"};
-    Variant false_variant2 {"3", 1000008, "", "T"};
-    Variant false_variant3 {"3", 1000010, "TT", "AC"};
-    Variant false_variant4 {"3", 1000014, "T", "A"};
+    // Variants which the haplotype will not contain
+    const Variant false_variant1 {"3", 1000002, "A", "C"};
+    const Variant false_variant2 {"3", 1000008, "", "T"};
+    const Variant false_variant3 {"3", 1000010, "TT", "AC"};
+    const Variant false_variant4 {"3", 1000014, "T", "A"};
     
-    Haplotype haplotype_unbounded {region, human};
-    add_alt_to_back(variant1, haplotype_unbounded);
-    add_alt_to_back(variant2, haplotype_unbounded);
-    add_alt_to_back(variant3, haplotype_unbounded);
-    add_alt_to_back(variant4, haplotype_unbounded);
-    add_alt_to_back(variant5, haplotype_unbounded);
-    add_alt_to_back(variant6, haplotype_unbounded);
+    Haplotype haplotype {region, human};
     
-    BOOST_CHECK(haplotype_unbounded.get_sequence() == "TAAGCCAGGGGCGTGA");
+    BOOST_CHECK(haplotype.get_sequence() == human.get_sequence(region));
     
-    BOOST_CHECK(contains(haplotype_unbounded, variant1));
-    BOOST_CHECK(contains(haplotype_unbounded, variant2));
-    BOOST_CHECK(contains(haplotype_unbounded, variant3));
-    BOOST_CHECK(contains(haplotype_unbounded, variant4));
-    BOOST_CHECK(contains(haplotype_unbounded, variant5));
-    BOOST_CHECK(contains(haplotype_unbounded, variant6));
+    add_alt_to_back(variant1, haplotype);
+    add_alt_to_back(variant2, haplotype);
+    add_alt_to_back(variant3, haplotype);
+    add_alt_to_back(variant4, haplotype);
+    add_alt_to_back(variant5, haplotype);
+    add_alt_to_back(variant6, haplotype);
     
-    BOOST_CHECK(!haplotype_unbounded.contains(variant1.get_ref_allele()));
-    BOOST_CHECK(!haplotype_unbounded.contains(variant2.get_ref_allele()));
-    BOOST_CHECK(!haplotype_unbounded.contains(variant3.get_ref_allele()));
-    BOOST_CHECK(!haplotype_unbounded.contains(variant4.get_ref_allele()));
-    BOOST_CHECK(!haplotype_unbounded.contains(variant5.get_ref_allele()));
-    BOOST_CHECK(!haplotype_unbounded.contains(variant6.get_ref_allele()));
+    BOOST_CHECK(haplotype.get_sequence() == "CCTAAGCCAGGGGCGTGAC");
     
-    BOOST_CHECK(!contains(haplotype_unbounded, false_variant1));
-    BOOST_CHECK(!contains(haplotype_unbounded, false_variant2));
-    BOOST_CHECK(!contains(haplotype_unbounded, false_variant3));
-    BOOST_CHECK(!contains(haplotype_unbounded, false_variant4));
+    // The variant regions should be contained
+    BOOST_CHECK(contains(haplotype, variant1));
+    BOOST_CHECK(contains(haplotype, variant2));
+    BOOST_CHECK(contains(haplotype, variant3));
+    BOOST_CHECK(contains(haplotype, variant4));
+    BOOST_CHECK(contains(haplotype, variant5));
+    BOOST_CHECK(contains(haplotype, variant6));
     
-    BOOST_CHECK(haplotype_unbounded.contains(get_reference_allele(ref_part1, human)));
-    BOOST_CHECK(haplotype_unbounded.contains(get_reference_allele(ref_part2, human)));
-    BOOST_CHECK(haplotype_unbounded.contains(get_reference_allele(ref_part3, human)));
+    // But not the reference alleles (alts were added)
+    BOOST_CHECK(!haplotype.contains(variant1.get_ref_allele()));
+    BOOST_CHECK(!haplotype.contains(variant2.get_ref_allele()));
+    BOOST_CHECK(!haplotype.contains(variant3.get_ref_allele()));
+    BOOST_CHECK(!haplotype.contains(variant4.get_ref_allele()));
+    BOOST_CHECK(!haplotype.contains(variant5.get_ref_allele()));
+    BOOST_CHECK(!haplotype.contains(variant6.get_ref_allele()));
     
-    Haplotype haplotype_bounded {region, human};
+    BOOST_CHECK(!haplotype.contains(false_variant1.get_alt_allele()));
+    BOOST_CHECK(!haplotype.contains(false_variant2.get_alt_allele()));
+    BOOST_CHECK(!haplotype.contains(false_variant3.get_alt_allele()));
+    BOOST_CHECK(!haplotype.contains(false_variant4.get_alt_allele()));
     
-    BOOST_CHECK(haplotype_bounded.get_sequence() == human.get_sequence(region));
+    const GenomicRegion ref_begin_bit {"3", 1000000, 1000002};
+    const GenomicRegion ref_end_bit {"3", 1000019, 1000020};
     
-    add_alt_to_back(variant1, haplotype_bounded);
-    add_alt_to_back(variant2, haplotype_bounded);
-    add_alt_to_back(variant3, haplotype_bounded);
-    add_alt_to_back(variant4, haplotype_bounded);
-    add_alt_to_back(variant5, haplotype_bounded);
-    add_alt_to_back(variant6, haplotype_bounded);
-    
-    BOOST_CHECK(haplotype_bounded.get_sequence() == "CCTAAGCCAGGGGCGTGAC");
-    
-    BOOST_CHECK(contains(haplotype_bounded, variant1));
-    BOOST_CHECK(contains(haplotype_bounded, variant2));
-    BOOST_CHECK(contains(haplotype_bounded, variant3));
-    BOOST_CHECK(contains(haplotype_bounded, variant4));
-    BOOST_CHECK(contains(haplotype_bounded, variant5));
-    BOOST_CHECK(contains(haplotype_bounded, variant6));
-    
-    BOOST_CHECK(!haplotype_bounded.contains(variant1.get_ref_allele()));
-    BOOST_CHECK(!haplotype_bounded.contains(variant2.get_ref_allele()));
-    BOOST_CHECK(!haplotype_bounded.contains(variant3.get_ref_allele()));
-    BOOST_CHECK(!haplotype_bounded.contains(variant4.get_ref_allele()));
-    BOOST_CHECK(!haplotype_bounded.contains(variant5.get_ref_allele()));
-    BOOST_CHECK(!haplotype_bounded.contains(variant6.get_ref_allele()));
-    
-    BOOST_CHECK(!contains(haplotype_bounded, false_variant1));
-    BOOST_CHECK(!contains(haplotype_bounded, false_variant2));
-    BOOST_CHECK(!contains(haplotype_bounded, false_variant3));
-    BOOST_CHECK(!contains(haplotype_bounded, false_variant4));
-    
-    GenomicRegion ref_begin_bit {"3", 1000000, 1000002};
-    GenomicRegion ref_end_bit {"3", 1000019, 1000020};
-    
-    BOOST_CHECK(haplotype_bounded.contains(get_reference_allele(ref_begin_bit, human)));
-    BOOST_CHECK(haplotype_bounded.contains(get_reference_allele(ref_part1,     human)));
-    BOOST_CHECK(haplotype_bounded.contains(get_reference_allele(ref_part2,     human)));
-    BOOST_CHECK(haplotype_bounded.contains(get_reference_allele(ref_part3,     human)));
-    BOOST_CHECK(haplotype_bounded.contains(get_reference_allele(ref_end_bit,   human)));
+    BOOST_CHECK(haplotype.contains(get_reference_allele(ref_begin_bit, human)));
+    BOOST_CHECK(haplotype.contains(get_reference_allele(ref_part1,     human)));
+    BOOST_CHECK(haplotype.contains(get_reference_allele(ref_part2,     human)));
+    BOOST_CHECK(haplotype.contains(get_reference_allele(ref_part3,     human)));
+    BOOST_CHECK(haplotype.contains(get_reference_allele(ref_end_bit,   human)));
 }
 
 //BOOST_AUTO_TEST_CASE(if_a_haplotype_contains_an_insertion_then_it_should_also_contain_the_parsimonious_version)
@@ -290,15 +251,14 @@ BOOST_AUTO_TEST_CASE(mnps_decompose)
 {
     BOOST_REQUIRE(test_file_exists(human_reference_fasta));
     
-    auto human = make_reference(human_reference_fasta);
+    const auto human = make_reference(human_reference_fasta);
     
-    auto region = *parse_region("3:1000000-1000020", human);
+    const auto region = *parse_region("3:1000000-1000020", human);
     
-    Allele an_allele {*parse_region("3:1000010-1000012", human), "GG"};
-    
-    Allele a_sub_allele {*parse_region("3:1000010-1000011", human), "G"};
-    Allele another_sub_allele {*parse_region("3:1000011-1000012", human), "G"};
-    Allele not_a_sub_allele {*parse_region("3:1000010-1000011", human), "C"};
+    const Allele an_allele {*parse_region("3:1000010-1000012", human), "GG"};
+    const Allele a_sub_allele {*parse_region("3:1000010-1000011", human), "G"};
+    const Allele another_sub_allele {*parse_region("3:1000011-1000012", human), "G"};
+    const Allele not_a_sub_allele {*parse_region("3:1000010-1000011", human), "C"};
     
     Haplotype hap {region, human};
     hap.push_back(an_allele);
@@ -313,16 +273,15 @@ BOOST_AUTO_TEST_CASE(deletions_decompose)
 {
     BOOST_REQUIRE(test_file_exists(human_reference_fasta));
     
-    auto human = make_reference(human_reference_fasta);
+    const auto human = make_reference(human_reference_fasta);
     
-    auto region = *parse_region("3:1000000-1000020", human);
+    const auto region = *parse_region("3:1000000-1000020", human);
     
-    Allele allele {*parse_region("3:1000010-1000012", human), ""};
-    
-    Allele sub_allele {*parse_region("3:1000010-1000011", human), ""};
-    Allele another_sub_allele {*parse_region("3:1000011-1000012", human), ""};
-    Allele not_a_sub_allele1 {*parse_region("3:1000010-1000011", human), "C"};
-    Allele not_a_sub_allele2 {*parse_region("3:1000010-1000013", human), ""};
+    const Allele allele {*parse_region("3:1000010-1000012", human), ""};
+    const Allele sub_allele {*parse_region("3:1000010-1000011", human), ""};
+    const Allele another_sub_allele {*parse_region("3:1000011-1000012", human), ""};
+    const Allele not_a_sub_allele1 {*parse_region("3:1000010-1000011", human), "C"};
+    const Allele not_a_sub_allele2 {*parse_region("3:1000010-1000013", human), ""};
     
     Haplotype hap {region, human};
     hap.push_back(allele);
@@ -338,16 +297,15 @@ BOOST_AUTO_TEST_CASE(insertions_decompose)
 {
     BOOST_REQUIRE(test_file_exists(human_reference_fasta));
     
-    auto human = make_reference(human_reference_fasta);
+    const auto human = make_reference(human_reference_fasta);
     
-    auto region = *parse_region("3:1000000-1000020", human);
+    const auto region = *parse_region("3:1000000-1000020", human);
     
-    Allele allele {*parse_region("3:1000010-1000010", human), "AT"};
-    
-    Allele sub_allele {*parse_region("3:1000010-1000010", human), "A"};
-    Allele another_sub_allele {*parse_region("3:1000010-1000010", human), "T"};
-    Allele not_a_sub_allele1 {*parse_region("3:1000010-1000010", human), "C"};
-    Allele not_a_sub_allele2 {*parse_region("3:1000010-1000011", human), "A"};
+    const Allele allele {*parse_region("3:1000010-1000010", human), "AT"};
+    const Allele sub_allele {*parse_region("3:1000010-1000010", human), "A"};
+    const Allele another_sub_allele {*parse_region("3:1000010-1000010", human), "T"};
+    const Allele not_a_sub_allele1 {*parse_region("3:1000010-1000010", human), "C"};
+    const Allele not_a_sub_allele2 {*parse_region("3:1000010-1000011", human), "A"};
     
     Haplotype hap {region, human};
     hap.push_back(allele);
@@ -363,13 +321,13 @@ BOOST_AUTO_TEST_CASE(haplotype_equate_when_alleles_infer_same_sequence)
 {
     BOOST_REQUIRE(test_file_exists(human_reference_fasta));
     
-    auto human = make_reference(human_reference_fasta);
+    const auto human = make_reference(human_reference_fasta);
     
-    auto region = *parse_region("16:9300000-9300100", human);
+    const auto region = *parse_region("16:9300000-9300100", human);
     
-    Allele allele1 {*parse_region("16:9300037-9300037", human), "TG"};
-    Allele allele2 {*parse_region("16:9300039-9300051", human), ""};
-    Allele allele3 {*parse_region("16:9300041-9300051", human), ""};
+    const Allele allele1 {*parse_region("16:9300037-9300037", human), "TG"};
+    const Allele allele2 {*parse_region("16:9300039-9300051", human), ""};
+    const Allele allele3 {*parse_region("16:9300041-9300051", human), ""};
     
     Haplotype hap1 {region, human};
     hap1.push_back(allele3);
@@ -381,9 +339,9 @@ BOOST_AUTO_TEST_CASE(haplotype_equate_when_alleles_infer_same_sequence)
     BOOST_CHECK(hap1.get_sequence() == hap2.get_sequence());
     BOOST_CHECK(hap1 == hap2);
     
-    Allele allele4 {*parse_region("16:9300037-9300038", human), "T"};
-    Allele allele5 {*parse_region("16:9300038-9300039", human), "C"};
-    Allele allele6 {*parse_region("16:9300037-9300039", human), "TC"};
+    const Allele allele4 {*parse_region("16:9300037-9300038", human), "T"};
+    const Allele allele5 {*parse_region("16:9300038-9300039", human), "C"};
+    const Allele allele6 {*parse_region("16:9300037-9300039", human), "TC"};
     
     Haplotype hap3 {region, human};
     hap3.push_back(allele4);
@@ -400,13 +358,13 @@ BOOST_AUTO_TEST_CASE(haplotypes_can_be_compared_for_structural_complexity)
 {
     BOOST_REQUIRE(test_file_exists(human_reference_fasta));
     
-    auto human = make_reference(human_reference_fasta);
+    const auto human = make_reference(human_reference_fasta);
     
-    auto region = *parse_region("16:9300000-9300100", human);
+    const auto region = *parse_region("16:9300000-9300100", human);
     
-    Allele allele1 {*parse_region("16:9300037-9300037", human), "TG"};
-    Allele allele2 {*parse_region("16:9300039-9300051", human), ""};
-    Allele allele3 {*parse_region("16:9300041-9300051", human), ""};
+    const Allele allele1 {*parse_region("16:9300037-9300037", human), "TG"};
+    const Allele allele2 {*parse_region("16:9300039-9300051", human), ""};
+    const Allele allele3 {*parse_region("16:9300041-9300051", human), ""};
     
     Haplotype hap1 {region, human};
     hap1.push_back(allele3);
@@ -422,23 +380,23 @@ BOOST_AUTO_TEST_CASE(haplotypes_behave_at_boundries)
 {
     BOOST_REQUIRE(test_file_exists(human_reference_fasta));
     
-    auto human = make_reference(human_reference_fasta);
+    const auto human = make_reference(human_reference_fasta);
     
-    auto region = *parse_region("16:9299940-9300100", human);
+    const auto region = *parse_region("16:9299940-9300100", human);
     
-    Allele allele1 {*parse_region("16:9299945-9299946", human), "T"};
-    Allele allele2 {*parse_region("16:9299946-9299957", human), "CGCATTACAAC"};
-    Allele allele3 {*parse_region("16:9299957-9299958", human), "C"};
-    Allele allele4 {get_reference_allele(*parse_region("16:9299958-9300037", human), human)};
-    Allele allele5 {*parse_region("16:9300037-9300037", human), ""};
-    Allele allele6 {*parse_region("16:9300037-9300039", human), "TG"};
-    Allele allele7 {*parse_region("16:9300039-9300051", human), "TGTGTGTGCGTT"};
-    Allele allele8 {*parse_region("16:9300051-9300061", human), "TGTGTGTGTG"};
-    Allele allele9 {*parse_region("16:9300061-9300062", human), "G"};
-    Allele allele10 {*parse_region("16:9300062-9300072", human), "GTGTGTGTGT"};
-    Allele allele11 {*parse_region("16:9300072-9300073", human), "G"};
-    Allele allele12 {*parse_region("16:9300073-9300074", human), "G"};
-    Allele allele13 {*parse_region("16:9300074-9300075", human), "G"};
+    const Allele allele1 {*parse_region("16:9299945-9299946", human), "T"};
+    const Allele allele2 {*parse_region("16:9299946-9299957", human), "CGCATTACAAC"};
+    const Allele allele3 {*parse_region("16:9299957-9299958", human), "C"};
+    const Allele allele4 {get_reference_allele(*parse_region("16:9299958-9300037", human), human)};
+    const Allele allele5 {*parse_region("16:9300037-9300037", human), ""};
+    const Allele allele6 {*parse_region("16:9300037-9300039", human), "TG"};
+    const Allele allele7 {*parse_region("16:9300039-9300051", human), "TGTGTGTGCGTT"};
+    const Allele allele8 {*parse_region("16:9300051-9300061", human), "TGTGTGTGTG"};
+    const Allele allele9 {*parse_region("16:9300061-9300062", human), "G"};
+    const Allele allele10 {*parse_region("16:9300062-9300072", human), "GTGTGTGTGT"};
+    const Allele allele11 {*parse_region("16:9300072-9300073", human), "G"};
+    const Allele allele12 {*parse_region("16:9300073-9300074", human), "G"};
+    const Allele allele13 {*parse_region("16:9300074-9300075", human), "G"};
     
     Haplotype haplotype {region, human};
     
@@ -456,9 +414,9 @@ BOOST_AUTO_TEST_CASE(haplotypes_behave_at_boundries)
     haplotype.push_back(allele12);
     haplotype.push_back(allele13);
     
-    Allele test_allele1 {*parse_region("16:9300037-9300050", human), ""};
-    Allele test_allele2 {*parse_region("16:9300037-9300051", human), ""};
-    Allele test_allele3 {*parse_region("16:9300037-9300052", human), ""};
+    const Allele test_allele1 {*parse_region("16:9300037-9300050", human), ""};
+    const Allele test_allele2 {*parse_region("16:9300037-9300051", human), ""};
+    const Allele test_allele3 {*parse_region("16:9300037-9300052", human), ""};
     
     BOOST_CHECK(!haplotype.contains(test_allele1));
     BOOST_CHECK(!haplotype.contains(test_allele2));
@@ -469,23 +427,23 @@ BOOST_AUTO_TEST_CASE(haplotypes_can_be_copied_and_moved)
 {
     BOOST_REQUIRE(test_file_exists(human_reference_fasta));
     
-    auto human = make_reference(human_reference_fasta);
+    const auto human = make_reference(human_reference_fasta);
     
-    auto region = *parse_region("16:9299940-9300100", human);
+    const auto region = *parse_region("16:9299940-9300100", human);
     
-    Allele allele1 {*parse_region("16:9300037-9300037", human), "TG"};
-    Allele allele2 {*parse_region("16:9300039-9300051", human), ""};
+    const Allele allele1 {*parse_region("16:9300037-9300037", human), "TG"};
+    const Allele allele2 {*parse_region("16:9300039-9300051", human), ""};
     
     Haplotype hap {region, human};
     hap.push_back(allele1);
     hap.push_back(allele2);
     
-    auto hap_copy = hap;
+    const auto hap_copy = hap;
     
     BOOST_CHECK(hap_copy.contains(allele1));
     BOOST_CHECK(hap_copy.contains(allele2));
     
-    auto moved_hap = std::move(hap);
+    const auto moved_hap = std::move(hap);
     
     BOOST_CHECK(moved_hap.contains(allele1));
     BOOST_CHECK(moved_hap.contains(allele2));
@@ -495,23 +453,23 @@ BOOST_AUTO_TEST_CASE(Haplotype_can_be_spliced)
 {
     BOOST_REQUIRE(test_file_exists(human_reference_fasta));
     
-    auto human = make_reference(human_reference_fasta);
+    const auto human = make_reference(human_reference_fasta);
     
-    auto region = *parse_region("16:9299940-9300100", human);
+    const auto region = *parse_region("16:9299940-9300100", human);
     
-    Allele allele1 {*parse_region("16:9299945-9299946", human), "T"};
-    Allele allele2 {*parse_region("16:9299946-9299957", human), "CGCATTACAAC"};
-    Allele allele3 {*parse_region("16:9299957-9299958", human), "C"};
-    Allele allele4 {get_reference_allele(*parse_region("16:9299958-9300037", human), human)};
-    Allele allele5 {*parse_region("16:9300037-9300037", human), ""};
-    Allele allele6 {*parse_region("16:9300037-9300039", human), "TG"};
-    Allele allele7 {*parse_region("16:9300039-9300051", human), "TGTGTGTGCGTT"};
-    Allele allele8 {*parse_region("16:9300051-9300061", human), "TGTGTGTGTG"};
-    Allele allele9 {*parse_region("16:9300061-9300062", human), "G"};
-    Allele allele10 {*parse_region("16:9300062-9300072", human), "GTGTGTGTGT"};
-    Allele allele11 {*parse_region("16:9300072-9300073", human), "G"};
-    Allele allele12 {*parse_region("16:9300073-9300074", human), "G"};
-    Allele allele13 {*parse_region("16:9300074-9300075", human), "G"};
+    const Allele allele1 {*parse_region("16:9299945-9299946", human), "T"};
+    const Allele allele2 {*parse_region("16:9299946-9299957", human), "CGCATTACAAC"};
+    const Allele allele3 {*parse_region("16:9299957-9299958", human), "C"};
+    const Allele allele4 {get_reference_allele(*parse_region("16:9299958-9300037", human), human)};
+    const Allele allele5 {*parse_region("16:9300037-9300037", human), ""};
+    const Allele allele6 {*parse_region("16:9300037-9300039", human), "TG"};
+    const Allele allele7 {*parse_region("16:9300039-9300051", human), "TGTGTGTGCGTT"};
+    const Allele allele8 {*parse_region("16:9300051-9300061", human), "TGTGTGTGTG"};
+    const Allele allele9 {*parse_region("16:9300061-9300062", human), "G"};
+    const Allele allele10 {*parse_region("16:9300062-9300072", human), "GTGTGTGTGT"};
+    const Allele allele11 {*parse_region("16:9300072-9300073", human), "G"};
+    const Allele allele12 {*parse_region("16:9300073-9300074", human), "G"};
+    const Allele allele13 {*parse_region("16:9300074-9300075", human), "G"};
     
     Haplotype haplotype {region, human};
     
@@ -529,9 +487,9 @@ BOOST_AUTO_TEST_CASE(Haplotype_can_be_spliced)
     haplotype.push_back(allele12);
     haplotype.push_back(allele13);
     
-    auto splice_region = *parse_region("16:9299964-9300083", human);
+    const auto splice_region = *parse_region("16:9299964-9300083", human);
     
-    auto spliced = splice<Haplotype>(haplotype, splice_region);
+    const auto spliced = splice<Haplotype>(haplotype, splice_region);
     
     BOOST_CHECK(get_region(spliced) == splice_region);
     BOOST_CHECK(contains(haplotype, spliced));

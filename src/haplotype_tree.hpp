@@ -45,8 +45,8 @@ public:
     unsigned num_haplotypes() const noexcept;
     bool contains(const Haplotype& haplotype) const;
     bool is_unique(const Haplotype& haplotype) const;
-    void extend(const ContigAllele& allele);
-    void extend(const Allele& allele);
+    HaplotypeTree& extend(const ContigAllele& allele);
+    HaplotypeTree& extend(const Allele& allele);
     
     GenomicRegion get_region() const;
     
@@ -116,8 +116,8 @@ namespace detail
     void extend_tree(const Container& container, HaplotypeTree& tree, Variant)
     {
         for (const auto& variant : container) {
-            tree.extend(variant.get_reference_allele());
-            tree.extend(variant.get_alternative_allele());
+            tree.extend(variant.get_ref_allele());
+            tree.extend(variant.get_alt_allele());
         }
     }
     

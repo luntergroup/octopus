@@ -27,6 +27,7 @@ namespace detail
     static std::string cancer_test_dir {"cancer/simulated/"};
     
     // Reference
+    
     static std::string ecoli_reference_name {"R00000042.fasta"};
     static std::string human_reference_name {"human_g1k_v37.fasta"};
     static std::string lambda_reference_name {"lambda_ref.fasta"};
@@ -34,7 +35,6 @@ namespace detail
     // BAM
     
     // 1000G
-    
     static std::string NA12878_low_coverage_name {"NA12878.mapped.ILLUMINA.bwa.CEU.low_coverage.20121211.bam"};
     static std::string NA12878_high_coverage_name {"NA12878.mapped.ILLUMINA.bwa.CEU.high_coverage_pcr_free.20130906.bam"};
     static std::string NA12891_high_coverage_name {"NA12891.mapped.ILLUMINA.bwa.CEU.high_coverage_pcr_free.20130906.bam"};
@@ -43,18 +43,17 @@ namespace detail
     static std::string HG00103_name {"HG00103.mapped.ILLUMINA.bwa.GBR.low_coverage.20120522.bam"};
     
     // other
-    
     static std::string ecoli_bam_name {"WTCHG_119208_201103.bam"};
     
     // CRAM
     static std::string HG00101_cram_name {"HG00101.mapped.ILLUMINA.bwa.GBR.low_coverage.20130415.cram"};
+    static std::string NA12878_low_coverage_cram_name {"NA12878.mapped.ILLUMINA.bwa.CEU.low_coverage.20121211.cram"};
     
     // VCF/BCF
-    //static std::string sample_vcf_name {"test_triploid.vcf.gz"};
+    
     static std::string sample_vcf_name {"CEU.low_coverage.2010_07.xchr.genotypes.vcf.gz"};
     static std::string sample_tabix_vcf_name {"CHBJPT.low_coverage.2010_07.xchr.sites.vcf.gz"};
     static std::string sample_bcf_name {"CHBJPT.low_coverage.2010_07.xchr.sites.vcf.gz"};
-    //static std::string sample_vcf_name {"platypus.vcf"};
 } // namespace detail
 
 // Full paths
@@ -79,23 +78,21 @@ static const fs::path lambda_reference_fasta {detail::home_dir + detail::genomic
 // reads
 
 static const fs::path NA12878_low_coverage {detail::home_dir + detail::genomics_dir + detail::bam_dir +
-    detail::NA12878_low_coverage_name};
+        detail::NA12878_low_coverage_name};
 static const fs::path NA12878_high_coverage {detail::home_dir + detail::genomics_dir + detail::bam_dir +
-    detail::NA12878_high_coverage_name};
+        detail::NA12878_high_coverage_name};
 static const fs::path NA12891_high_coverage {detail::home_dir + detail::genomics_dir + detail::bam_dir +
-    detail::NA12891_high_coverage_name};
+        detail::NA12891_high_coverage_name};
 static const fs::path HG00101 {detail::home_dir + detail::genomics_dir + detail::bam_dir +
         detail::HG00101_name};
 static const fs::path HG00102 {detail::home_dir + detail::genomics_dir + detail::bam_dir +
         detail::HG00102_name};
 static const fs::path HG00103 {detail::home_dir + detail::genomics_dir + detail::bam_dir +
-    detail::HG00103_name};
-static const fs::path HG00101_cram {detail::home_dir + detail::genomics_dir + detail::bam_dir +
-        detail::HG00101_cram_name};
+        detail::HG00103_name};
+static const fs::path NA12878_low_coverage_cram {detail::home_dir + detail::genomics_dir + detail::bam_dir +
+        detail::NA12878_low_coverage_cram_name};
 static const fs::path ecoli_bam {detail::home_dir + detail::genomics_dir + detail::bam_dir +
-    detail::ecoli_bam_name};
-
-//static const std::vector<fs::path> bams_1000G {NA12878_low_coverage, };
+        detail::ecoli_bam_name};
 
 // vcfs
 
@@ -110,7 +107,7 @@ static const fs::path test_out_bcf {detail::home_dir + detail::octopus_test_dir 
 static const fs::path non_existent {detail::home_dir + detail::octopus_test_dir + "non_existent"};
 static const fs::path contig_ploidies_txt_file {detail::home_dir + detail::octopus_test_dir + "contig_ploidies.txt"};
 
-// helper methods
+// Helper methods
 
 inline bool test_file_exists(const fs::path& file)
 {
@@ -137,7 +134,7 @@ inline bool all_bam_test_files_exist()
 
 inline bool all_cram_test_files_exist()
 {
-    return test_file_exists(HG00101_cram);
+    return test_file_exists(NA12878_low_coverage_cram);
 }
 
 inline bool all_read_test_files_exist()
@@ -180,7 +177,7 @@ inline void cleanup_test_files()
 {
     remove_test_file(test_out_vcf);
     remove_test_file(test_out_vcfgz);
-    remove_test_file(test_out_vcf);
+    remove_test_file(test_out_bcf);
 }
 
 #endif

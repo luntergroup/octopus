@@ -67,38 +67,31 @@ std::string get_hts_mode(const HtslibBcfFacade::Path& file_path, const std::stri
     return result;
 }
 
-static HtslibBcfFacade::Path check_path(const HtslibBcfFacade::Path& path)
-{
-    if (!boost::filesystem::exists(path)) {
-        throw std::runtime_error {path.string() + " does not exist"};
-    }
-    return path;
-}
-
 HtslibBcfFacade::HtslibBcfFacade(Path file_path, const std::string& mode)
 :
-file_path_ {(mode == "r") ? check_path(file_path) : file_path},
-file_ {bcf_open(file_path_.c_str(), get_hts_mode(file_path, mode).c_str()), HtsFileDeleter {}},
-header_ {(file_ != nullptr && mode == "r") ? bcf_hdr_read(file_.get()) : bcf_hdr_init(mode.c_str()), HtsHeaderDeleter {}},
+file_path_ {std::move(file_path)},
+file_ {nullptr, HtsFileDeleter {}},
+header_ {nullptr, HtsHeaderDeleter {}},
 samples_ {}
 {
-    if (mode == "r" && file_ == nullptr) {
-        throw std::runtime_error {"could not initalise memory for file " + file_path_.string()};
-    }
-    
-    if (header_ == nullptr) {
-        throw std::runtime_error {"could not make header for file " + file_path_.string()};
-    }
-    
-//    if (mode == "w") {
-//        std::unique_ptr<bcf_hdr_t, HtsHeaderDeleter> tmp_header {bcf_hdr_read(file_.get()), HtsHeaderDeleter {}};
-//        if (tmp_header != nullptr) {
-//            header_ = std::move(tmp_header);
-//        }
-//    }
+    const auto hts_mode = get_hts_mode(file_path_, mode);
     
     if (mode == "r") {
-        samples_ = get_samples(header_.get());
+        if (boost::filesystem::exists(file_path_)) {
+            file_.reset(bcf_open(file_path_.c_str(), hts_mode.c_str()));
+            
+            if (file_ == nullptr) return;
+            
+            header_.reset(bcf_hdr_read(file_.get()));
+            
+            if (header_ == nullptr) {
+                throw std::runtime_error {"HtslibBcfFacade: could not make header for file " + file_path_.string()};
+            }
+            samples_ = get_samples(header_.get());
+        }
+    } else {
+        file_.reset(bcf_open(file_path_.c_str(), hts_mode.c_str()));
+        header_.reset(bcf_hdr_init(hts_mode.c_str()));
     }
 }
 

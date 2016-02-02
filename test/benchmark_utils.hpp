@@ -10,19 +10,19 @@
 #define Octopus_benchmark_utils_hpp
 
 #include <chrono>
-#include <vector>
-#include <numeric>
 
-template <typename D=std::chrono::nanoseconds, typename F>
+template <typename D = std::chrono::nanoseconds, typename F>
 D benchmark(F f, unsigned num_tests)
 {
     D total {0};
-    for (unsigned i = 0; i < num_tests; ++i) {
-        auto start = std::chrono::system_clock::now();
+    
+    for (; num_tests > 0; --num_tests) {
+        const auto start = std::chrono::system_clock::now();
         f();
-        auto end = std::chrono::system_clock::now();
+        const auto end = std::chrono::system_clock::now();
         total += std::chrono::duration_cast<D>(end - start);
     }
+    
     return D {total / num_tests};
 }
 

@@ -21,7 +21,6 @@
 #include "read_filter.hpp"
 #include "read_filters.hpp"
 #include "context_iterators.hpp"
-//#include "read_filter_factory.hpp"
 
 using Octopus::context_back_inserter;
 

@@ -70,7 +70,7 @@ bool HaplotypeTree::is_unique(const Haplotype& haplotype) const
     }
 }
 
-void HaplotypeTree::extend(const ContigAllele& allele)
+HaplotypeTree& HaplotypeTree::extend(const ContigAllele& allele)
 {
     for (auto leaf_it = std::cbegin(haplotype_leafs_),
          end = std::cend(haplotype_leafs_); leaf_it != end; ++leaf_it) {
@@ -78,14 +78,15 @@ void HaplotypeTree::extend(const ContigAllele& allele)
     }
     haplotype_leaf_cache_.clear();
     recently_removed_haplotypes_.clear();
+    return *this;
 }
 
-void HaplotypeTree::extend(const Allele& allele)
+HaplotypeTree& HaplotypeTree::extend(const Allele& allele)
 {
     if (get_contig_name(allele) != region_.get_contig_name()) {
         throw std::logic_error {"HaplotypeTree: trying to extend with Allele on different contig"};
     }
-    extend(ContigAllele {allele});
+    return extend(ContigAllele {allele});
 }
 
 GenomicRegion HaplotypeTree::get_region() const

@@ -19,8 +19,6 @@
 #include "read_manager.hpp"
 #include "mappable_set.hpp"
 #include "read_utils.hpp"
-#include "read_filters.hpp"
-#include "context_iterators.hpp"
 #include "mappable_map.hpp"
 
 using std::cout;

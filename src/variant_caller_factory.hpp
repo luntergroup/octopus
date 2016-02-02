@@ -36,11 +36,11 @@ namespace Octopus
         VariantCallerFactory(VariantCallerFactory&&)                 = default;
         VariantCallerFactory& operator=(VariantCallerFactory&&)      = default;
         
-        void set_reference(const ReferenceGenome& reference) noexcept;
-        void set_read_pipe(ReadPipe& read_pipe) noexcept;
-        void set_candidate_generator_builder(const CandidateGeneratorBuilder& candidate_generator_builder) noexcept;
+        VariantCallerFactory& set_reference(const ReferenceGenome& reference) noexcept;
+        VariantCallerFactory& set_read_pipe(ReadPipe& read_pipe) noexcept;
+        VariantCallerFactory& set_candidate_generator_builder(const CandidateGeneratorBuilder& candidate_generator_builder) noexcept;
         
-        void set_contig_ploidy(const ContigNameType& contig, unsigned ploidy);
+        VariantCallerFactory& set_contig_ploidy(const ContigNameType& contig, unsigned ploidy);
         
         std::unique_ptr<VariantCaller> make(const ContigNameType& contig) const;
         

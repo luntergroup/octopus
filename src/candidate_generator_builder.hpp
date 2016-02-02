@@ -40,17 +40,16 @@ namespace Octopus
         CandidateGeneratorBuilder(CandidateGeneratorBuilder&&);
         CandidateGeneratorBuilder& operator=(CandidateGeneratorBuilder&&);
         
-        void add_generator(Generator type);
-        
         unsigned num_generators() const noexcept;
         
-        void set_reference(const ReferenceGenome& reference);
-        void set_min_snp_base_quality(QualityType quality);
-        void set_min_supporting_reads(unsigned num_reads);
-        void set_max_variant_size(SizeType size);
-        void set_kmer_size(unsigned kmer_size);
-        void set_variant_source(boost::filesystem::path variant_source);
-        void set_variant_source(const std::shared_ptr<VcfReader>& variant_source);
+        CandidateGeneratorBuilder& add_generator(Generator type);
+        CandidateGeneratorBuilder& set_reference(const ReferenceGenome& reference);
+        CandidateGeneratorBuilder& set_min_snp_base_quality(QualityType quality);
+        CandidateGeneratorBuilder& set_min_supporting_reads(unsigned num_reads);
+        CandidateGeneratorBuilder& set_max_variant_size(SizeType size);
+        CandidateGeneratorBuilder& set_kmer_size(unsigned kmer_size);
+        CandidateGeneratorBuilder& set_variant_source(boost::filesystem::path variant_source);
+        CandidateGeneratorBuilder& set_variant_source(const std::shared_ptr<VcfReader>& variant_source);
         
         CandidateVariantGenerator build() const;
         

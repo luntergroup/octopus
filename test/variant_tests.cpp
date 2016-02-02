@@ -13,6 +13,7 @@
 #include <iostream>
 #include <vector>
 #include <algorithm>
+#include <iterator>
 
 #include "test_common.hpp"
 #include "reference_genome.hpp"
@@ -28,12 +29,17 @@ using std::endl;
 
 BOOST_AUTO_TEST_SUITE(Components)
 
+static void sort(std::vector<Variant>& variants)
+{
+    std::sort(std::begin(variants), std::end(variants));
+}
+
 BOOST_AUTO_TEST_CASE(operator_are_consistent)
 {
-    Variant snp1 {"chr1", 100, "C", "A"};
-    Variant snp2 {"chr1", 99, "C", "A"};
-    Variant snp3 {"chr1", 100, "C", "T"};
-    Variant snp4 {"chr1", 100, "C", "A"};
+    const Variant snp1 {"test", 100, "C", "A"};
+    const Variant snp2 {"test", 99, "C", "A"};
+    const Variant snp3 {"test", 100, "C", "T"};
+    const Variant snp4 {"test", 100, "C", "A"};
     
     bool r1 = !(snp1 < snp2) && !(snp2 < snp1);
     bool r2 = (snp1 == snp2);
@@ -50,9 +56,9 @@ BOOST_AUTO_TEST_CASE(operator_are_consistent)
     BOOST_CHECK(r2);
     BOOST_CHECK(r1 == r2);
     
-    Variant del1 {"chr1", 100, "C", ""};
-    Variant del2 {"chr1", 100, "CA", ""};
-    Variant del3 {"chr1", 100, "C", ""};
+    const Variant del1 {"test", 100, "C", ""};
+    const Variant del2 {"test", 100, "CA", ""};
+    const Variant del3 {"test", 100, "C", ""};
     
     r1 = !(del1 < del2) && !(del2 < del1);
     r2 = del1 == del2;
@@ -64,9 +70,9 @@ BOOST_AUTO_TEST_CASE(operator_are_consistent)
     BOOST_CHECK(r2);
     BOOST_CHECK(r1 == r2);
     
-    Variant ins1 {"chr1", 100, "", "C"};
-    Variant ins2 {"chr1", 100, "", "CA"};
-    Variant ins3 {"chr1", 100, "", "C"};
+    const Variant ins1 {"test", 100, "", "C"};
+    const Variant ins2 {"test", 100, "", "CA"};
+    const Variant ins3 {"test", 100, "", "C"};
     
     r1 = !(ins1 < ins2) && !(ins2 < ins1);
     r2 = ins1 == ins2;
@@ -81,14 +87,16 @@ BOOST_AUTO_TEST_CASE(operator_are_consistent)
 
 BOOST_AUTO_TEST_CASE(can_binary_search_for_ordered_variants)
 {
-    Variant snp1 {"chr1", 100, "C", "A"};
-    Variant snp2 {"chr1", 105, "G", "T"};
-    Variant del1 {"chr1", 103, "C", ""};
-    Variant del2 {"chr1", 115, "T", ""};
-    Variant ins1 {"chr1", 107, "", "G"};
-    Variant ins2 {"chr1", 110, "", "CA"};
+    const Variant snp1 {"test", 100, "C", "A"};
+    const Variant snp2 {"test", 105, "G", "T"};
+    const Variant del1 {"test", 103, "C", ""};
+    const Variant del2 {"test", 115, "T", ""};
+    const Variant ins1 {"test", 107, "", "G"};
+    const Variant ins2 {"test", 110, "", "CA"};
     
     std::vector<Variant> variants {snp1, del1, snp2, ins1, ins2, del2};
+    
+    sort(variants);
     
     BOOST_CHECK(std::binary_search(variants.cbegin(), variants.cend(), snp1));
     BOOST_CHECK(std::binary_search(variants.cbegin(), variants.cend(), snp2));
@@ -97,12 +105,12 @@ BOOST_AUTO_TEST_CASE(can_binary_search_for_ordered_variants)
     BOOST_CHECK(std::binary_search(variants.cbegin(), variants.cend(), ins1));
     BOOST_CHECK(std::binary_search(variants.cbegin(), variants.cend(), ins2));
     
-    Variant non_snp1 {"chr1", 111, "C", "A"};
-    Variant non_snp2 {"chr1", 105, "G", "A"};
-    Variant non_del1 {"chr1", 104, "C", ""};
-    Variant non_del2 {"chr1", 115, "TA", ""};
-    Variant non_ins1 {"chr1", 108, "", "G"};
-    Variant non_ins2 {"chr1", 110, "", "TA"};
+    const Variant non_snp1 {"test", 111, "C", "A"};
+    const Variant non_snp2 {"test", 105, "G", "A"};
+    const Variant non_del1 {"test", 104, "C", ""};
+    const Variant non_del2 {"test", 115, "TA", ""};
+    const Variant non_ins1 {"test", 108, "", "G"};
+    const Variant non_ins2 {"test", 110, "", "TA"};
     
     BOOST_CHECK(!std::binary_search(variants.cbegin(), variants.cend(), non_snp1));
     BOOST_CHECK(!std::binary_search(variants.cbegin(), variants.cend(), non_snp2));
@@ -111,10 +119,12 @@ BOOST_AUTO_TEST_CASE(can_binary_search_for_ordered_variants)
     BOOST_CHECK(!std::binary_search(variants.cbegin(), variants.cend(), non_ins1));
     BOOST_CHECK(!std::binary_search(variants.cbegin(), variants.cend(), non_ins2));
     
-    Variant del3 {"chr1", 101, "C", ""};
-    Variant snp3 {"chr1", 101, "C", ""};
+    const Variant del3 {"test", 101, "C", ""};
+    const Variant snp3 {"test", 101, "C", ""};
     
     std::vector<Variant> variants2 {snp1, del3, snp3};
+    
+    sort(variants2);
     
     BOOST_CHECK(std::binary_search(variants2.cbegin(), variants2.cend(), snp1));
     BOOST_CHECK(std::binary_search(variants2.cbegin(), variants2.cend(), del3));
@@ -123,12 +133,12 @@ BOOST_AUTO_TEST_CASE(can_binary_search_for_ordered_variants)
 
 BOOST_AUTO_TEST_CASE(snps_do_not_overlap_adjacent_snps)
 {
-    Variant snp1 {"chr1", 100, "C", "A"};
-    Variant snp2 {"chr1", 99, "C", "A"};
-    Variant snp3 {"chr1", 101, "C", "A"};
-    Variant snp4 {"chr1", 100, "C", "T"};
-    Variant snp5 {"chr1", 99, "C", "T"};
-    Variant snp6 {"chr1", 101, "C", "T"};
+    const Variant snp1 {"test", 100, "C", "A"};
+    const Variant snp2 {"test", 99, "C", "A"};
+    const Variant snp3 {"test", 101, "C", "A"};
+    const Variant snp4 {"test", 100, "C", "T"};
+    const Variant snp5 {"test", 99, "C", "T"};
+    const Variant snp6 {"test", 101, "C", "T"};
     
     BOOST_CHECK(overlaps(snp1, snp1));
     BOOST_CHECK(overlaps(snp1, snp4));
@@ -143,18 +153,18 @@ BOOST_AUTO_TEST_CASE(snps_do_not_overlap_adjacent_snps)
 
 BOOST_AUTO_TEST_CASE(mnps_overlap_correctly)
 {
-    Variant mnp1 {"chr1", 100, "CAT", "TAC"};
-    Variant mnp2 {"chr1", 99, "CAT", "TAC"};
-    Variant mnp3 {"chr1", 101, "CAT", "TAC"};
-    Variant mnp4 {"chr1", 100, "CAT", "TAG"};
-    Variant mnp5 {"chr1", 99, "CAT", "TAG"};
-    Variant mnp6 {"chr1", 101, "CAT", "TAG"};
+    const Variant mnp1 {"test", 100, "CAT", "TAC"};
+    const Variant mnp2 {"test", 99, "CAT", "TAC"};
+    const Variant mnp3 {"test", 101, "CAT", "TAC"};
+    const Variant mnp4 {"test", 100, "CAT", "TAG"};
+    const Variant mnp5 {"test", 99, "CAT", "TAG"};
+    const Variant mnp6 {"test", 101, "CAT", "TAG"};
     
     // edge cases
-    Variant mnp7  {"chr1", 98, "CAT", "TAC"};
-    Variant mnp8  {"chr1", 102, "CAT", "TAC"};
-    Variant mnp9  {"chr1", 97, "CAT", "TAC"};
-    Variant mnp10 {"chr1", 103, "CAT", "TAC"};
+    const Variant mnp7  {"test", 98, "CAT", "TAC"};
+    const Variant mnp8  {"test", 102, "CAT", "TAC"};
+    const Variant mnp9  {"test", 97, "CAT", "TAC"};
+    const Variant mnp10 {"test", 103, "CAT", "TAC"};
     
     BOOST_CHECK(overlaps(mnp1, mnp1));
     BOOST_CHECK(overlaps(mnp1, mnp2));
@@ -171,50 +181,41 @@ BOOST_AUTO_TEST_CASE(mnps_overlap_correctly)
 
 BOOST_AUTO_TEST_CASE(insertions_overlap_other_insertions_with_same_region)
 {
-    Variant insert1 {"chr1", 100, "", "TAG"};
-    Variant insert2 {"chr1", 99, "", "TAG"};
-    Variant insert3 {"chr1", 101, "", "TAG"};
+    const Variant insert1 {"test", 1, "", "TAG"};
+    const Variant insert2 {"test", 0, "", "TAG"};
+    const Variant insert3 {"test", 2, "", "TAG"};
     
     BOOST_CHECK(overlaps(insert1, insert1));
     BOOST_CHECK(!overlaps(insert1, insert2));
     BOOST_CHECK(!overlaps(insert1, insert3));
 }
 
+
+
 BOOST_AUTO_TEST_CASE(insertions_overlap_with_other_variants_when_contained_by_their_region)
 {
-    Variant insert {"chr1", 100, "", "TAG"};
-    Variant del {"chr1", 99, "TAG", ""};
-    Variant mnp {"chr1", 100, "TAG", "CAT"};
+    const Variant ins {"test", 1, "",    "TAG"};
+    const Variant del {"test", 0, "TAG", ""};
+    const Variant mnp {"test", 0, "TAG", "CAT"};
     
-    BOOST_CHECK(overlaps(insert, del));
-    BOOST_CHECK(overlaps(insert, mnp));
-}
-
-BOOST_AUTO_TEST_CASE(deletions_overlap_in_the_same_way_as_mnps)
-{
-    Variant del1 {"chr1", 100, "TAG", ""};
-    Variant del2 {"chr1", 99, "TAG", ""};
-    Variant del3 {"chr1", 101, "TAG", ""};
-    
-    BOOST_CHECK(overlaps(del1, del1));
-    BOOST_CHECK(overlaps(del1, del2));
-    BOOST_CHECK(overlaps(del1, del3));
+    BOOST_CHECK(overlaps(ins, del));
+    BOOST_CHECK(overlaps(ins, mnp));
 }
 
 BOOST_AUTO_TEST_CASE(variants_are_ordered_by_region_and_lexicographically_by_sequence)
 {
-    Variant snp1 {"chr1", 100, "T", "A"};
-    Variant snp2 {"chr1", 100, "T", "C"};
-    Variant snp3 {"chr1", 100, "T", "G"};
-    Variant ins1 {"chr1", 100, "", "AG"};
-    Variant ins2 {"chr1", 100, "", "CC"};
-    Variant ins3 {"chr1", 100, "", "CCA"};
-    Variant del1 {"chr1", 100, "TA", ""};
-    Variant del2 {"chr1", 100, "TAG", ""};
+    const Variant snp1 {"test", 0, "T", "A"};
+    const Variant snp2 {"test", 0, "T", "C"};
+    const Variant snp3 {"test", 0, "T", "G"};
+    const Variant ins1 {"test", 0, "", "AG"};
+    const Variant ins2 {"test", 0, "", "CC"};
+    const Variant ins3 {"test", 0, "", "CCA"};
+    const Variant del1 {"test", 0, "TA", ""};
+    const Variant del2 {"test", 0, "TAG", ""};
     
     std::vector<Variant> variants1 {snp1, ins1, snp2};
     
-    std::sort(variants1.begin(), variants1.end());
+    sort(variants1);
     
     std::vector<Variant> variants1_required_sort {ins1, snp1, snp2};
     
@@ -224,7 +225,7 @@ BOOST_AUTO_TEST_CASE(variants_are_ordered_by_region_and_lexicographically_by_seq
     
     std::vector<Variant> variants2 {snp1, del1, snp2, ins1, snp3};
     
-    std::sort(variants2.begin(), variants2.end());
+    sort(variants2);
     
     std::vector<Variant> variants2_required_sort {ins1, snp1, snp2, snp3, del1};
     
@@ -234,7 +235,7 @@ BOOST_AUTO_TEST_CASE(variants_are_ordered_by_region_and_lexicographically_by_seq
     
     std::vector<Variant> variants3 {del2, snp1, del1, snp2, ins1, snp3, ins2};
     
-    std::sort(variants3.begin(), variants3.end());
+    sort(variants3);
     
     std::vector<Variant> variants3_required_sort {ins1, ins2, snp1, snp2, snp3, del1, del2};
     
@@ -244,7 +245,7 @@ BOOST_AUTO_TEST_CASE(variants_are_ordered_by_region_and_lexicographically_by_seq
     
     std::vector<Variant> variants4 {ins2, del2, snp1, del1, snp2, ins1, snp3, ins3};
     
-    std::sort(variants4.begin(), variants4.end());
+    sort(variants4);
     
     std::vector<Variant> variants4_required_sort {ins1, ins2, ins3, snp1, snp2, snp3, del1, del2};
     
@@ -253,35 +254,49 @@ BOOST_AUTO_TEST_CASE(variants_are_ordered_by_region_and_lexicographically_by_seq
     BOOST_CHECK(is_required_sort4);
 }
 
-BOOST_AUTO_TEST_CASE(overlap_range_includes_insertions_on_left_boundry_but_not_the_right)
+BOOST_AUTO_TEST_CASE(insertions_are_overlapped_on_the_left_and_right_boundry)
 {
-    Variant snp1 {"chr1", 100, "T", "A"};
-    Variant snp2 {"chr1", 110, "T", "C"};
-    Variant ins1 {"chr1", 105, "", "A"};
+    const Variant snp1 {"test", 0, "T", "A"};
+    const Variant ins1 {"test", 5, "", "A"};
+    const Variant snp2 {"test", 0, "T", "C"};
     
     std::vector<Variant> variants {snp1, ins1, snp2};
     
-    GenomicRegion region1 {"chr1", 104, 106};
-    GenomicRegion region2 {"chr1", 104, 105};
-    GenomicRegion region3 {"chr1", 105, 106};
-    GenomicRegion region4 {"chr1", 105, 105};
+    sort(variants);
     
-    auto overlapped1 = overlap_range(variants.cbegin(), variants.cend(), region1);
-    auto overlapped2 = overlap_range(variants.cbegin(), variants.cend(), region2);
-    auto overlapped3 = overlap_range(variants.cbegin(), variants.cend(), region3);
-    auto overlapped4 = overlap_range(variants.cbegin(), variants.cend(), region4);
+    const GenomicRegion region1 {"test", 4, 4};
+    const GenomicRegion region2 {"test", 4, 5};
+    const GenomicRegion region3 {"test", 4, 6};
+    const GenomicRegion region4 {"test", 5, 5};
+    const GenomicRegion region5 {"test", 5, 6};
+    const GenomicRegion region6 {"test", 6, 6};
     
-    BOOST_CHECK(size(overlapped1) == 1);
-    BOOST_CHECK(size(overlapped2) == 0);
-    BOOST_CHECK(size(overlapped3) == 1);
-    BOOST_CHECK(size(overlapped4) == 1);
+    BOOST_CHECK(count_overlapped(variants, region1) == 0);
+    BOOST_CHECK(count_overlapped(variants, region2) == 1);
+    BOOST_CHECK(count_overlapped(variants, region3) == 1);
+    BOOST_CHECK(count_overlapped(variants, region4) == 1);
+    BOOST_CHECK(count_overlapped(variants, region5) == 1);
+    BOOST_CHECK(count_overlapped(variants, region6) == 0);
+    
+    const Variant del1 {"test", 0, "TTTTTTTTTT", ""};
+    
+    variants.push_back(del1);
+    
+    sort(variants);
+    
+    BOOST_CHECK(count_overlapped(variants, region1) == 1);
+    BOOST_CHECK(count_overlapped(variants, region2) == 2);
+    BOOST_CHECK(count_overlapped(variants, region3) == 2);
+    BOOST_CHECK(count_overlapped(variants, region4) == 2);
+    BOOST_CHECK(count_overlapped(variants, region5) == 2);
+    BOOST_CHECK(count_overlapped(variants, region6) == 1);
 }
 
 BOOST_AUTO_TEST_CASE(inner_distance_respects_insertion_lhs_ordering_rule)
 {
-    Variant snp1 {"chr1", 99, "T", "A"};
-    Variant snp2 {"chr1", 101, "T", "C"};
-    Variant ins {"chr1", 100, "", "A"};
+    const Variant snp1 {"test", 0, "T", "A"};
+    const Variant ins  {"test", 1, "",  "A"};
+    const Variant snp2 {"test", 2, "T", "C"};
     
     BOOST_CHECK(inner_distance(snp1, ins) == 0);
     BOOST_CHECK(inner_distance(ins, snp1) == 0);
@@ -293,16 +308,16 @@ BOOST_AUTO_TEST_CASE(indels_can_be_left_aligned)
 {
     BOOST_REQUIRE(test_file_exists(human_reference_fasta));
     
-    auto human = make_reference(human_reference_fasta);
+    const auto human = make_reference(human_reference_fasta);
     
     // Huntingtin region CCAGCAGCAGCAGCAG...
-    auto a_region = *parse_region("4:3076657-3076660", human);
+    auto region = *parse_region("4:3076657-3076660", human);
     
-    auto the_sequence = human.get_sequence(a_region);
+    auto the_sequence = human.get_sequence(region);
     
     BOOST_CHECK(the_sequence == "CAG");
     
-    Variant a_deletion {a_region, the_sequence, ""};
+    Variant a_deletion {region, the_sequence, ""};
     
     Variant left_aligned_deletion = left_align(a_deletion, human);
     
@@ -320,13 +335,13 @@ BOOST_AUTO_TEST_CASE(indels_can_be_left_aligned)
     BOOST_CHECK(get_alt_sequence(left_aligned_insertion) == "CAG");
     
     // Region is CCAACAACAACAACAC (94594947-94594962)
-    a_region = *parse_region("5:94594956-94594959", human);
+    region = *parse_region("5:94594956-94594959", human);
     
-    the_sequence = human.get_sequence(a_region);
+    the_sequence = human.get_sequence(region);
     
     BOOST_CHECK(the_sequence == "CAA");
     
-    a_deletion = Variant {a_region, the_sequence, ""};
+    a_deletion = Variant {region, the_sequence, ""};
     
     left_aligned_deletion = left_align(a_deletion, human);
     
@@ -348,7 +363,7 @@ BOOST_AUTO_TEST_CASE(can_make_variants_parsimonious)
 {
     BOOST_REQUIRE(test_file_exists(human_reference_fasta));
     
-    auto human = make_reference(human_reference_fasta);
+    const auto human = make_reference(human_reference_fasta);
     
     Variant a_snp {*parse_region("12:10001330-10001331", human), std::string {"G"}, std::string {"C"}};
     
@@ -520,10 +535,5 @@ BOOST_AUTO_TEST_CASE(can_normalise_variants)
     BOOST_CHECK(get_ref_sequence(a_normalised_insertion) == "C");
     BOOST_CHECK(get_alt_sequence(a_normalised_insertion) == "CCAG");
 }
-
-//BOOST_AUTO_TEST_CASE(decompose_returns_all_alleles_from_given_variants)
-//{
-//    std::vector<Variant> variants {};
-//}
 
 BOOST_AUTO_TEST_SUITE_END()

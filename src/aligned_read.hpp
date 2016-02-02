@@ -29,10 +29,11 @@
 class AlignedRead : public Comparable<AlignedRead>, public Mappable<AlignedRead>
 {
 public:
-    using SizeType     = GenomicRegion::SizeType;
-    using SequenceType = std::string;
-    using QualityType  = std::uint_fast8_t;
-    using Qualities    = std::vector<QualityType>;
+    using SizeType      = GenomicRegion::SizeType;
+    using SequenceType  = std::string;
+    using QualityType   = std::uint_fast8_t;
+    using Qualities     = std::vector<QualityType>;
+    using ReadGroupType = std::string;
     
     class NextSegment : public Equitable<NextSegment>
     {
@@ -114,7 +115,7 @@ public:
     
     friend void swap(AlignedRead& lhs, AlignedRead& rhs) noexcept;
     
-    const std::string& get_read_group() const;
+    const ReadGroupType& get_read_group() const;
     const GenomicRegion& get_region() const noexcept;
     const SequenceType& get_sequence() const noexcept;
     const Qualities& get_qualities() const noexcept;
@@ -153,7 +154,7 @@ private:
     SequenceType sequence_;
     Qualities qualities_;
     CigarString cigar_string_;
-    std::string read_group_;
+    ReadGroupType read_group_;
     std::unique_ptr<NextSegment> next_segment_;
     mutable size_t hash_ = 0; // 0 is reserved so can be lazy evaluated
     FlagBits flags_;

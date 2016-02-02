@@ -39,31 +39,31 @@ namespace Octopus {
         VariantCallerBuilder& operator=(VariantCallerBuilder&&);
         
         // common
-        void set_reference(const ReferenceGenome& reference) noexcept;
-        void set_read_pipe(ReadPipe& read_pipe) noexcept;
-        void set_candidate_generator_builder(const CandidateGeneratorBuilder& candidate_generator_builder) noexcept;
+        VariantCallerBuilder& set_reference(const ReferenceGenome& reference) noexcept;
+        VariantCallerBuilder& set_read_pipe(ReadPipe& read_pipe) noexcept;
+        VariantCallerBuilder& set_candidate_generator_builder(const CandidateGeneratorBuilder& candidate_generator_builder) noexcept;
         
-        void set_ploidy(unsigned ploidy) noexcept;
-        void set_model(std::string model);
-        void set_refcall_type(VariantCaller::RefCallType refcall_type) noexcept;
-        void set_min_variant_posterior(double min_posterior) noexcept;
-        void set_min_refcall_posterior(double min_posterior) noexcept;
+        VariantCallerBuilder& set_ploidy(unsigned ploidy) noexcept;
+        VariantCallerBuilder& set_model(std::string model);
+        VariantCallerBuilder& set_refcall_type(VariantCaller::RefCallType refcall_type) noexcept;
+        VariantCallerBuilder& set_min_variant_posterior(double min_posterior) noexcept;
+        VariantCallerBuilder& set_min_refcall_posterior(double min_posterior) noexcept;
         
         // cancer
-        void set_normal_sample(SampleIdType normal_sample);
-        void set_min_somatic_posterior(double min_posterior) noexcept;
-        void set_somatic_only_calls() noexcept;
-        void set_somatic_and_variant_calls() noexcept;
-        void set_somatic_and_variant_and_refcalls_calls() noexcept;
+        VariantCallerBuilder& set_normal_sample(SampleIdType normal_sample);
+        VariantCallerBuilder& set_min_somatic_posterior(double min_posterior) noexcept;
+        VariantCallerBuilder& set_somatic_only_calls() noexcept;
+        VariantCallerBuilder& set_somatic_and_variant_calls() noexcept;
+        VariantCallerBuilder& set_somatic_and_variant_and_refcalls_calls() noexcept;
         
         // trio
         
-        void set_maternal_sample(SampleIdType mother);
-        void set_paternal_sample(SampleIdType father);
+        VariantCallerBuilder& set_maternal_sample(SampleIdType mother);
+        VariantCallerBuilder& set_paternal_sample(SampleIdType father);
         
         // pedigree
         
-        void set_pedigree(Pedigree pedigree);
+        VariantCallerBuilder& set_pedigree(Pedigree pedigree);
         
         // build
         

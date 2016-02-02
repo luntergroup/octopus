@@ -107,89 +107,106 @@ namespace Octopus
         return *this;
     }
     
-    void VariantCallerBuilder::set_reference(const ReferenceGenome& reference) noexcept
+    VariantCallerBuilder& VariantCallerBuilder::set_reference(const ReferenceGenome& reference) noexcept
     {
         reference_ = reference;
+        return *this;
     }
     
-    void VariantCallerBuilder::set_read_pipe(ReadPipe& read_pipe) noexcept
+    VariantCallerBuilder& VariantCallerBuilder::set_read_pipe(ReadPipe& read_pipe) noexcept
     {
         read_pipe_ = read_pipe;
+        return *this;
     }
     
-    void VariantCallerBuilder::set_candidate_generator_builder(const CandidateGeneratorBuilder& candidate_generator_builder) noexcept
+    VariantCallerBuilder&
+    VariantCallerBuilder::set_candidate_generator_builder(const CandidateGeneratorBuilder& candidate_generator_builder) noexcept
     {
         candidate_generator_builder_ = candidate_generator_builder;
+        return *this;
     }
     
-    void VariantCallerBuilder::set_ploidy(const unsigned ploidy) noexcept
+    VariantCallerBuilder& VariantCallerBuilder::set_ploidy(const unsigned ploidy) noexcept
     {
         ploidy_ = ploidy;
+        return *this;
     }
     
-    void VariantCallerBuilder::set_model(std::string model)
+    VariantCallerBuilder& VariantCallerBuilder::set_model(std::string model)
     {
         model_ = std::move(model);
+        return *this;
     }
     
-    void VariantCallerBuilder::set_refcall_type(const VariantCaller::RefCallType refcall_type) noexcept
+    VariantCallerBuilder& VariantCallerBuilder::set_refcall_type(const VariantCaller::RefCallType refcall_type) noexcept
     {
         refcall_type_ = refcall_type;
+        return *this;
     }
     
-    void VariantCallerBuilder::set_min_variant_posterior(const double min_posterior) noexcept
+    VariantCallerBuilder& VariantCallerBuilder::set_min_variant_posterior(const double min_posterior) noexcept
     {
         min_variant_posterior_ = min_posterior;
+        return *this;
     }
     
-    void VariantCallerBuilder::set_min_refcall_posterior(const double min_posterior) noexcept
+    VariantCallerBuilder& VariantCallerBuilder::set_min_refcall_posterior(const double min_posterior) noexcept
     {
         min_refcall_posterior_ = min_posterior;
+        return *this;
     }
     
     // cancer
-    void VariantCallerBuilder::set_normal_sample(SampleIdType normal_sample)
+    VariantCallerBuilder& VariantCallerBuilder::set_normal_sample(SampleIdType normal_sample)
     {
         normal_sample_ = std::move(normal_sample);
+        return *this;
     }
     
-    void VariantCallerBuilder::set_min_somatic_posterior(const double min_posterior) noexcept
+    VariantCallerBuilder& VariantCallerBuilder::set_min_somatic_posterior(const double min_posterior) noexcept
     {
         min_somatic_posterior_ = min_posterior;
+        return *this;
     }
     
-    void VariantCallerBuilder::set_somatic_only_calls() noexcept
+    VariantCallerBuilder& VariantCallerBuilder::set_somatic_only_calls() noexcept
     {
         call_somatics_only_ = true;
+        return *this;
     }
     
-    void VariantCallerBuilder::set_somatic_and_variant_calls() noexcept
+    VariantCallerBuilder& VariantCallerBuilder::set_somatic_and_variant_calls() noexcept
     {
         call_somatics_only_ = false;
+        return *this;
     }
     
-    void VariantCallerBuilder::set_somatic_and_variant_and_refcalls_calls() noexcept
+    VariantCallerBuilder& VariantCallerBuilder::set_somatic_and_variant_and_refcalls_calls() noexcept
     {
         call_somatics_only_ = false;
+        return *this;
     }
     
     // trio
     
-    void VariantCallerBuilder::set_maternal_sample(SampleIdType mother)
+    VariantCallerBuilder& VariantCallerBuilder::set_maternal_sample(SampleIdType mother)
     {
         maternal_sample_ = std::move(mother);
+        return *this;
     }
     
-    void VariantCallerBuilder::set_paternal_sample(SampleIdType father)
+    VariantCallerBuilder& VariantCallerBuilder::set_paternal_sample(SampleIdType father)
     {
         paternal_sample_ = std::move(father);
+        return *this;
     }
     
     // pedigree
     
-    void VariantCallerBuilder::set_pedigree(Pedigree pedigree)
+    VariantCallerBuilder& VariantCallerBuilder::set_pedigree(Pedigree pedigree)
     {
         pedigree_ = std::move(pedigree);
+        return *this;
     }
     
     // build

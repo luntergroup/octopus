@@ -24,24 +24,29 @@ namespace Octopus
     default_ploidy_ {default_ploidy}
     {}
     
-    void VariantCallerFactory::set_reference(const ReferenceGenome& reference) noexcept
+    VariantCallerFactory& VariantCallerFactory::set_reference(const ReferenceGenome& reference) noexcept
     {
         template_builder_.set_reference(reference);
+        return *this;
     }
     
-    void VariantCallerFactory::set_read_pipe(ReadPipe& read_pipe) noexcept
+    VariantCallerFactory& VariantCallerFactory::set_read_pipe(ReadPipe& read_pipe) noexcept
     {
         template_builder_.set_read_pipe(read_pipe);
+        return *this;
     }
     
-    void VariantCallerFactory::set_candidate_generator_builder(const CandidateGeneratorBuilder& candidate_generator_builder) noexcept
+    VariantCallerFactory&
+    VariantCallerFactory::set_candidate_generator_builder(const CandidateGeneratorBuilder& candidate_generator_builder) noexcept
     {
         template_builder_.set_candidate_generator_builder(candidate_generator_builder);
+        return *this;
     }
     
-    void VariantCallerFactory::set_contig_ploidy(const ContigNameType& contig, const unsigned ploidy)
+    VariantCallerFactory& VariantCallerFactory::set_contig_ploidy(const ContigNameType& contig, const unsigned ploidy)
     {
         contig_ploidies_[contig] = ploidy;
+        return *this;
     }
     
     std::unique_ptr<VariantCaller> VariantCallerFactory::make(const ContigNameType& contig) const
