@@ -86,15 +86,16 @@ public:
     
 private:
     HaplotypeTree tree_;
+    GenomeWalker walker_;
     
     MappableSet<Variant> buffered_candidates_;
     const ReadMap* reads_;
     
-    GenomeWalker walker_;
-    
-    bool is_phasing_enabled_;
-    
     GenomicRegion current_region_, next_region_;
+    bool is_phasing_enabled_;
+    double min_phase_score_ = 0.95;
+    
+    bool is_phasing_enabled() const noexcept;
     
     void remove_low_posterior_haplotypes(const std::vector<Haplotype>& haplotypes,
                                          const GenotypePosteriors& genotype_posteriors);
