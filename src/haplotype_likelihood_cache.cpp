@@ -53,7 +53,7 @@ namespace Octopus
         }
     }
     
-    double HaplotypeLikelihoodCache::log_probability(const AlignedRead& read, const Haplotype& haplotype)
+    double HaplotypeLikelihoodCache::log_probability(const AlignedRead& read, const Haplotype& haplotype) const
     {
         return get_cached(read, haplotype);
     }

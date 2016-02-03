@@ -38,6 +38,7 @@ namespace Octopus
     // non member methods
     
     namespace {
+    
     using GenotypeLogLikelihood        = double;
     using SampleGenotypeLogLikelihoods = std::vector<GenotypeLogLikelihood>;
     using GenotypeLogLikelihoods       = std::unordered_map<SampleIdType, SampleGenotypeLogLikelihoods>;

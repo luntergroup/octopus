@@ -25,7 +25,7 @@ class ReadModel
 {
 public:
     ReadModel()  = delete;
-    explicit ReadModel(unsigned ploidy, HaplotypeLikelihoodCache& haplotype_likelihoods);
+    explicit ReadModel(unsigned ploidy, const HaplotypeLikelihoodCache& haplotype_likelihoods);
     ~ReadModel() = default;
     
     ReadModel(const ReadModel&)            = default;
@@ -44,7 +44,7 @@ public:
     double log_probability(ForwardIterator first_read, ForwardIterator last_read, const Genotype<Haplotype>& genotype);
     
 private:
-    std::reference_wrapper<HaplotypeLikelihoodCache> haplotype_likelihoods_;
+    std::reference_wrapper<const HaplotypeLikelihoodCache> haplotype_likelihoods_;
     
     const unsigned ploidy_;
     const double ln_ploidy_;

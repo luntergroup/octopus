@@ -567,7 +567,7 @@ PopulationVariantCaller::call_variants(const GenomicRegion& region,
         return result;
     }
     
-    HaplotypePhaser phaser {region.get_contig_name(), reference_, candidates, reads, 64, 5};
+    HaplotypePhaser phaser {region.get_contig_name(), reference_, candidates, reads, 128, 5};
     
     while (!phaser.done()) {
         auto haplotypes = phaser.get_haplotypes();
@@ -585,10 +585,13 @@ PopulationVariantCaller::call_variants(const GenomicRegion& region,
         auto haplotype_region_reads = copy_overlapped(reads, haplotype_region);
         
         std::cout << "there are " << count_reads(haplotype_region_reads) << " reads in haplotype region" << std::endl;
+        std::cout << "computing latents" << std::endl;
         
         auto latents = genotype_model_.evaluate(haplotypes, haplotype_region_reads, reference_);
         
         auto& genotype_posteriors = latents.genotype_posteriors;
+        
+        std::cout << "finished computing latents" << std::endl;
         
         const auto phase_set = phaser.phase(haplotypes, genotype_posteriors);
         
