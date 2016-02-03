@@ -37,7 +37,8 @@ namespace Octopus
     {}
     
     // non member methods
-    
+        
+    namespace {
     using HaplotypeFrequencies            = std::unordered_map<Haplotype, double>;
     using SampleGenotypeMixtureCounts     = std::array<double, 3>;
     using SampleGenotypeMixtures          = std::array<double, 3>;
@@ -46,6 +47,7 @@ namespace Octopus
     using GenotypeMixtureResponsibilities = std::unordered_map<SampleIdType, std::vector<std::array<double, 3>>>;
     using GenotypeLogPosterior            = double;
     using GenotypeLogPosteriors           = std::vector<GenotypeLogPosterior>;
+    } // namespace
     
     namespace debug {
         std::ostream& operator<<(std::ostream& os, const std::array<double, 3>& arr);
@@ -57,6 +59,8 @@ namespace Octopus
         void print_weight_responsabilities(const GenotypeMixtureResponsibilities& responsabilities,
                                            const ReadMap& reads);
     } // namespace debug
+    
+    namespace {
     
     double sum(const std::array<double, 3>& arr)
     {
@@ -102,13 +106,6 @@ namespace Octopus
         using std::cbegin; using std::cend; using std::accumulate;
         
         const auto log_mixtures = log(genotype_mixtures);
-        
-//        for (const auto& read : reads) {
-//            std::cout << get_begin(read) << " " << read.get_cigar_string() << std::endl;
-//            std::cout << "\t* " << rm.log_probability(read, genotype[0]) << std::endl;
-//            std::cout << "\t* " << rm.log_probability(read, genotype[1]) << std::endl;
-//            std::cout << "\t* " << rm.log_probability(read, genotype[2]) << std::endl;
-//        }
         
         return accumulate(cbegin(reads), cend(reads), 0.0,
                           [&log_mixtures, &genotype, &rm] (double curr, const auto& read) {
@@ -422,6 +419,7 @@ namespace Octopus
         
         return std::max(max_frequency_change, max_weight_change);
     }
+    } // namespace
     
     // private methods
     

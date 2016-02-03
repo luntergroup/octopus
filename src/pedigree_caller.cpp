@@ -38,6 +38,11 @@ namespace Octopus
         return "Pedigree caller. mother = " + mother_ + ", father = " + father_;
     }
     
+    namespace {
+        using GM = GenotypeModel::Pedigree;
+        
+    } // namespace
+    
     std::vector<VcfRecord>
     PedigreeVariantCaller::call_variants(const GenomicRegion& region,
                                      const std::vector<Variant>& candidates,

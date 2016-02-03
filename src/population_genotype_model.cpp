@@ -37,6 +37,7 @@ namespace Octopus
     
     // non member methods
     
+    namespace {
     using GenotypeLogLikelihood        = double;
     using SampleGenotypeLogLikelihoods = std::vector<GenotypeLogLikelihood>;
     using GenotypeLogLikelihoods       = std::unordered_map<SampleIdType, SampleGenotypeLogLikelihoods>;
@@ -58,6 +59,7 @@ namespace Octopus
     using GenotypePosteriors       = std::unordered_map<SampleIdType, SampleGenotypePosteriors>;
     
     using HaplotypeLogFrequencies = std::unordered_map<Haplotype, double>;
+    } // namespace
     
     namespace debug {
         void print_haplotype_priors(const HaplotypePriorCounts& prior_counts, size_t n = 5);
@@ -79,6 +81,7 @@ namespace Octopus
     
     // non member methods
     
+    namespace {
     GenotypeLogLikelihoods
     compute_genotype_log_likelihoods(const std::vector<Genotype<Haplotype>>& genotypes,
                                      const ReadMap& reads, ReadModel& read_model)
@@ -130,7 +133,7 @@ namespace Octopus
                  });
     }
     
-    static void normalise_exp(SampleGenotypePosteriors& unnormalised_log_probabilities)
+    void normalise_exp(SampleGenotypePosteriors& unnormalised_log_probabilities)
     {
         using std::cbegin; using std::cend; using std::begin; using std::transform;
         
@@ -291,6 +294,7 @@ namespace Octopus
         
         return Population::Latents {std::move(result), std::move(haplotype_frequencies)};
     }
+    } // namespace
     
     // private methods
     

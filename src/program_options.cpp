@@ -51,7 +51,6 @@ namespace Octopus
 {
     namespace Options
     {
-    
     void conflicting_options(const po::variables_map& vm, const std::string& opt1, const std::string& opt2)
     {
         if (vm.count(opt1) && !vm[opt1].defaulted() && vm.count(opt2) && !vm[opt2].defaulted()) {
@@ -110,7 +109,7 @@ namespace Octopus
         return out;
     }
     
-    static std::istream& operator>>(std::istream& in, ContigOutputOrder& result)
+    std::istream& operator>>(std::istream& in, ContigOutputOrder& result)
     {
         std::string token;
         in >> token;
@@ -133,7 +132,7 @@ namespace Octopus
         return in;
     }
     
-    static std::ostream& operator<<(std::ostream& out, const ContigOutputOrder order)
+    std::ostream& operator<<(std::ostream& out, const ContigOutputOrder order)
     {
         switch (order) {
             case ContigOutputOrder::LexicographicalAscending:
@@ -369,8 +368,6 @@ namespace Octopus
         return options.count("help") == 0 && options.count("version") == 0;
     }
     
-    // helpers
-    
     struct Line
     {
         std::string line_data;
@@ -560,14 +557,14 @@ namespace Octopus
     }
     
     template <typename T, typename S>
-    static std::vector<T>& append(std::vector<T>& target, const std::vector<S>& source)
+    std::vector<T>& append(std::vector<T>& target, const std::vector<S>& source)
     {
         target.insert(std::end(target), std::begin(source), std::end(source));
         return target;
     }
     
     template <typename T>
-    static std::vector<T>& append(std::vector<T>& target, std::vector<T>&& source)
+    std::vector<T>& append(std::vector<T>& target, std::vector<T>&& source)
     {
         target.insert(std::end(target),
                       std::make_move_iterator(std::begin(source)),
@@ -577,7 +574,7 @@ namespace Octopus
         return target;
     }
     
-    static bool is_bed_file(const fs::path& path)
+    bool is_bed_file(const fs::path& path)
     {
         return path.extension().string() == ".bed";
     }
@@ -707,8 +704,8 @@ namespace Octopus
         return extract_search_regions(get_all_contig_regions(reference), skip_regions);
     }
     
-    static std::vector<GenomicRegion> parse_regions(const std::vector<std::string>& unparsed_regions,
-                                                    const ReferenceGenome& reference)
+    std::vector<GenomicRegion> parse_regions(const std::vector<std::string>& unparsed_regions,
+                                             const ReferenceGenome& reference)
     {
         std::vector<GenomicRegion> result {};
         result.reserve(unparsed_regions.size());
@@ -774,6 +771,7 @@ namespace Octopus
         return result;
     }
     
+    namespace {
     void print_bad_paths(const std::vector<fs::path>& bad_paths)
     {
         std::cout << "Octopus: the following paths could not be resolved:" << std::endl;
@@ -782,6 +780,7 @@ namespace Octopus
         }
         std::cout << std::endl;
     }
+    } // namespace
     
     boost::optional<std::vector<fs::path>> get_read_paths(const po::variables_map& options)
     {

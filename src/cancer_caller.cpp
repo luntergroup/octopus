@@ -63,11 +63,15 @@ namespace Octopus
     
     // private methods
     
+    namespace {
+        
+    using GM = GenotypeModel::Cancer;
+    
     using GermlineGenotypeMarginals = std::unordered_map<Genotype<Haplotype>, double>;
     using CancerHaplotypeMarginals  = std::unordered_map<Haplotype, double>;
     
     using MarginalAllelePosteriors = std::unordered_map<Allele, double>;
-    using AllelePosteriors         = std::unordered_map<Octopus::SampleIdType, MarginalAllelePosteriors>;
+    using AllelePosteriors         = std::unordered_map<SampleIdType, MarginalAllelePosteriors>;
     
     struct VariantCall
     {
@@ -129,13 +133,13 @@ namespace Octopus
         return os;
     }
     
-    std::ostream& operator<<(std::ostream& os, const std::unordered_map<Octopus::SampleIdType, std::array<double, 3>>& m)
+    std::ostream& operator<<(std::ostream& os, const std::unordered_map<SampleIdType, std::array<double, 3>>& m)
     {
         for (const auto& p : m) os << p.first << ": " << p.second << "\n";
         return os;
     }
     
-    static std::vector<GenomicRegion> get_segment_regions(const std::vector<std::vector<Variant>>& segments)
+    std::vector<GenomicRegion> get_segment_regions(const std::vector<std::vector<Variant>>& segments)
     {
         std::vector<GenomicRegion> result {};
         result.reserve(segments.size());
@@ -143,7 +147,7 @@ namespace Octopus
         return result;
     }
     
-    auto find_map_genotype(const GenotypeModel::Cancer::GenotypeProbabilities& genotype_posteriors)
+    auto find_map_genotype(const GM::GenotypeProbabilities& genotype_posteriors)
     {
         return *std::max_element(std::cbegin(genotype_posteriors), std::cend(genotype_posteriors),
                                  [] (const auto& lhs, const auto& rhs) {
@@ -166,7 +170,7 @@ namespace Octopus
     }
     
     GermlineGenotypeMarginals
-    marginalise_germline_genotypes(const GenotypeModel::Cancer::GenotypeProbabilities& genotype_posteriors,
+    marginalise_germline_genotypes(const GM::GenotypeProbabilities& genotype_posteriors,
                                    unsigned num_haplotypes)
     {
         GermlineGenotypeMarginals result {};
@@ -180,7 +184,7 @@ namespace Octopus
     }
     
     CancerHaplotypeMarginals
-    marginalise_cancer_haplotypes(const GenotypeModel::Cancer::GenotypeProbabilities& genotype_posteriors,
+    marginalise_cancer_haplotypes(const GM::GenotypeProbabilities& genotype_posteriors,
                                   unsigned num_haplotypes)
     {
         CancerHaplotypeMarginals result {};
@@ -245,7 +249,7 @@ namespace Octopus
     
     AllelePosteriors
     compute_germline_allele_posteriors(const GermlineGenotypeMarginals& germline_genotype_posteriors,
-                                       const GenotypeModel::Cancer::GenotypeMixtures& genotype_mixtures,
+                                       const GM::GenotypeMixtures& genotype_mixtures,
                                        const std::vector<Allele>& alleles)
     {
         AllelePosteriors result {};
@@ -269,7 +273,7 @@ namespace Octopus
     
     AllelePosteriors
     compute_cancer_allele_posteriors(const CancerHaplotypeMarginals& cancer_haplotype_posteriors,
-                                     const GenotypeModel::Cancer::GenotypeMixtures& genotype_mixtures,
+                                     const GM::GenotypeMixtures& genotype_mixtures,
                                      const std::vector<Allele>& alleles)
     {
         AllelePosteriors result {};
@@ -307,7 +311,7 @@ namespace Octopus
     }
     
     double compute_germline_segment_posterior(double called_genotype_posterior,
-                                              const GenotypeModel::Cancer::GenotypeMixtures& genotype_mixtures)
+                                              const GM::GenotypeMixtures& genotype_mixtures)
     {
         auto result = called_genotype_posterior;
         
@@ -365,7 +369,7 @@ namespace Octopus
         return result;
     }
     
-    static double max_posterior(const Allele& allele, const AllelePosteriors& allele_posteriors)
+    double max_posterior(const Allele& allele, const AllelePosteriors& allele_posteriors)
     {
         double result {0.0};
         
@@ -465,19 +469,6 @@ namespace Octopus
         return result;
     }
     
-//    RefCalls call_reference(const std::vector<Allele>& candidate_reference_alleles,
-//                            const Genotype<Haplotype>& map_germline_genotype,
-//                            const GenotypeModel::Cancer::Genotypemixtures& genotype_mixtures,
-//                            double min_posterior)
-//    {
-//        RefCalls result {};
-//        result.reserve(candidate_reference_alleles.size());
-//        
-//        result.shrink_to_fit();
-//        
-//        return result;
-//    }
-    
     auto get_regions(const VariantCalls& variant_calls)
     {
         std::vector<GenomicRegion> result {};
@@ -506,6 +497,8 @@ namespace Octopus
                                            const ReadMap& reads,
                                            const GenomicRegion& phase_region)
     {
+        using std::to_string;
+        
         auto result = VcfRecord::Builder();
         
         auto phred_quality = Maths::probability_to_phred(posterior);
@@ -520,12 +513,12 @@ namespace Octopus
         
         //result.set_filters({"PASS"}); // TODO
         
-        result.add_info("NS", std::to_string(count_samples_with_coverage(reads, region)));
-        result.add_info("DP", std::to_string(sum_max_coverages(reads, region)));
-        result.add_info("SB", to_string(strand_bias(reads, region), 2));
-        result.add_info("BQ", std::to_string(static_cast<unsigned>(rmq_base_quality(reads, region))));
-        result.add_info("MQ", std::to_string(static_cast<unsigned>(rmq_mapping_quality(reads, region))));
-        result.add_info("MQ0", std::to_string(count_mapq_zero(reads, region)));
+        result.add_info("NS",  to_string(count_samples_with_coverage(reads, region)));
+        result.add_info("DP",  to_string(sum_max_coverages(reads, region)));
+        result.add_info("SB",  Octopus::to_string(strand_bias(reads, region), 2));
+        result.add_info("BQ",  to_string(static_cast<unsigned>(rmq_base_quality(reads, region))));
+        result.add_info("MQ",  to_string(static_cast<unsigned>(rmq_mapping_quality(reads, region))));
+        result.add_info("MQ0", to_string(count_mapq_zero(reads, region)));
         
         result.set_format({"GT", "FT", "GP", "PS", "PQ", "DP", "BQ", "MQ"});
         
@@ -536,12 +529,12 @@ namespace Octopus
             result.add_genotype(sample, vcf_genotype, VcfRecord::Builder::Phasing::Phased);
             
             result.add_genotype_field(sample, "FT", "."); // TODO
-            result.add_genotype_field(sample, "GP", std::to_string(Maths::probability_to_phred(genotype_call.posterior)));
-            result.add_genotype_field(sample, "PS", std::to_string(get_begin(phase_region) + 1));
+            result.add_genotype_field(sample, "GP", to_string(Maths::probability_to_phred(genotype_call.posterior)));
+            result.add_genotype_field(sample, "PS", to_string(get_begin(phase_region) + 1));
             result.add_genotype_field(sample, "PQ", "60"); // TODO
-            result.add_genotype_field(sample, "DP", std::to_string(max_coverage(reads.at(sample), region)));
-            result.add_genotype_field(sample, "BQ", std::to_string(static_cast<unsigned>(rmq_base_quality(reads.at(sample), region))));
-            result.add_genotype_field(sample, "MQ", std::to_string(static_cast<unsigned>(rmq_mapping_quality(reads.at(sample), region))));
+            result.add_genotype_field(sample, "DP", to_string(max_coverage(reads.at(sample), region)));
+            result.add_genotype_field(sample, "BQ", to_string(static_cast<unsigned>(rmq_base_quality(reads.at(sample), region))));
+            result.add_genotype_field(sample, "MQ", to_string(static_cast<unsigned>(rmq_mapping_quality(reads.at(sample), region))));
         }
         
         return result.build_once();
@@ -552,6 +545,8 @@ namespace Octopus
                                           const ReferenceGenome& reference,
                                           const ReadMap& reads)
     {
+        using std::to_string;
+        
         auto result = VcfRecord::Builder();
         
         auto phred_quality = Maths::probability_to_phred(posterior);
@@ -565,20 +560,20 @@ namespace Octopus
         result.set_quality(phred_quality);
         
         result.add_info("SOMATIC", {});
-        result.add_info("NS", std::to_string(count_samples_with_coverage(reads, region)));
-        result.add_info("DP", std::to_string(sum_max_coverages(reads, region)));
-        result.add_info("SB", to_string(strand_bias(reads, region), 2));
-        result.add_info("BQ", std::to_string(static_cast<unsigned>(rmq_base_quality(reads, region))));
-        result.add_info("MQ", std::to_string(static_cast<unsigned>(rmq_mapping_quality(reads, region))));
-        result.add_info("MQ0", std::to_string(count_mapq_zero(reads, region)));
+        result.add_info("NS",  to_string(count_samples_with_coverage(reads, region)));
+        result.add_info("DP",  to_string(sum_max_coverages(reads, region)));
+        result.add_info("SB",  Octopus::to_string(strand_bias(reads, region), 2));
+        result.add_info("BQ",  to_string(static_cast<unsigned>(rmq_base_quality(reads, region))));
+        result.add_info("MQ",  to_string(static_cast<unsigned>(rmq_mapping_quality(reads, region))));
+        result.add_info("MQ0", to_string(count_mapq_zero(reads, region)));
         
         result.set_format({"DP", "BQ", "MQ"});
         
         for (const auto& sample_reads : reads) {
             const auto& sample = sample_reads.first;
-            result.add_genotype_field(sample, "DP", std::to_string(max_coverage(sample_reads.second, region)));
-            result.add_genotype_field(sample, "BQ", std::to_string(static_cast<unsigned>(rmq_base_quality(sample_reads.second, region))));
-            result.add_genotype_field(sample, "MQ", std::to_string(static_cast<unsigned>(rmq_mapping_quality(sample_reads.second, region))));
+            result.add_genotype_field(sample, "DP", to_string(max_coverage(sample_reads.second, region)));
+            result.add_genotype_field(sample, "BQ", to_string(static_cast<unsigned>(rmq_base_quality(sample_reads.second, region))));
+            result.add_genotype_field(sample, "MQ", to_string(static_cast<unsigned>(rmq_mapping_quality(sample_reads.second, region))));
         }
         
         return result.build_once();
@@ -586,6 +581,8 @@ namespace Octopus
     
     static VcfRecord output_reference_call(RefCall call, ReferenceGenome& reference, const ReadMap& reads)
     {
+        using std::to_string;
+        
         auto result = VcfRecord::Builder();
         
         auto phred_quality = Maths::probability_to_phred(call.posterior);
@@ -600,29 +597,31 @@ namespace Octopus
         
         result.set_filters({"REFCALL"});
         if (size(region) > 1) {
-            result.add_info("END", std::to_string(get_end(region))); // - 1 as VCF uses closed intervals
+            result.add_info("END", to_string(get_end(region))); // - 1 as VCF uses closed intervals
         }
         
-        result.add_info("NS", std::to_string(count_samples_with_coverage(reads, region)));
-        result.add_info("DP", std::to_string(sum_max_coverages(reads, region)));
-        result.add_info("SB", to_string(strand_bias(reads, region), 2));
-        result.add_info("BQ", std::to_string(static_cast<unsigned>(rmq_base_quality(reads, region))));
-        result.add_info("MQ", std::to_string(static_cast<unsigned>(rmq_mapping_quality(reads, region))));
-        result.add_info("MQ0", std::to_string(count_mapq_zero(reads, region)));
+        result.add_info("NS",  to_string(count_samples_with_coverage(reads, region)));
+        result.add_info("DP",  to_string(sum_max_coverages(reads, region)));
+        result.add_info("SB",  Octopus::to_string(strand_bias(reads, region), 2));
+        result.add_info("BQ",  to_string(static_cast<unsigned>(rmq_base_quality(reads, region))));
+        result.add_info("MQ",  to_string(static_cast<unsigned>(rmq_mapping_quality(reads, region))));
+        result.add_info("MQ0", to_string(count_mapq_zero(reads, region)));
         
         result.set_format({"GT", "GP", "DP", "BQ", "MQ"});
         
         for (const auto& sample_posteior : call.sample_posteriors) {
             const auto& sample = sample_posteior.first;
             result.add_homozygous_ref_genotype(sample, 2);
-            result.add_genotype_field(sample, "GP", std::to_string(Maths::probability_to_phred(sample_posteior.second)));
-            result.add_genotype_field(sample, "DP", std::to_string(max_coverage(reads.at(sample), region)));
-            result.add_genotype_field(sample, "BQ", std::to_string(static_cast<unsigned>(rmq_base_quality(reads.at(sample), region))));
-            result.add_genotype_field(sample, "MQ", std::to_string(static_cast<unsigned>(rmq_mapping_quality(reads.at(sample), region))));
+            result.add_genotype_field(sample, "GP", to_string(Maths::probability_to_phred(sample_posteior.second)));
+            result.add_genotype_field(sample, "DP", to_string(max_coverage(reads.at(sample), region)));
+            result.add_genotype_field(sample, "BQ", to_string(static_cast<unsigned>(rmq_base_quality(reads.at(sample), region))));
+            result.add_genotype_field(sample, "MQ", to_string(static_cast<unsigned>(rmq_mapping_quality(reads.at(sample), region))));
         }
         
         return result.build_once();
     }
+        
+    } // namespace
     
     std::vector<VcfRecord>
     CancerVariantCaller::call_variants(const GenomicRegion& region,

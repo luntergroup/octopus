@@ -211,7 +211,7 @@ void merge(std::vector<VcfReader>& readers, const std::vector<std::string>& cont
     
     auto total_record_count = calculate_total_number_of_records(reader_contig_counts);
     
-    if (total_record_count <= 100'000) {
+    if (total_record_count <= 100000) {
         for (const auto& contig : contigs) {
             for (auto& reader : readers) {
                 if (reader_contig_counts[reader].count(contig) == 1) {
@@ -269,3 +269,11 @@ void merge(std::vector<VcfReader>& readers, const std::vector<std::string>& cont
 //    merge(readers, get_contigs(readers), result);
 //    return result;
 //}
+
+std::vector<VcfRecord> annotate_records(const std::vector<VcfRecord>& records, VcfReader& reader)
+{
+    std::vector<VcfRecord> result {};
+    result.reserve(records.size());
+    
+    return result;
+}

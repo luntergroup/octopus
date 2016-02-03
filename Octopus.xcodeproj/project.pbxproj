@@ -104,6 +104,7 @@
 		D42F72F21C5BA2C600995F54 /* trio_genotype_model.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D42F72F01C5BA2C600995F54 /* trio_genotype_model.cpp */; };
 		D42F72FA1C5F7B6200995F54 /* read_manager_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D42F72F91C5F7B6200995F54 /* read_manager_tests.cpp */; };
 		D42F72FD1C61098600995F54 /* mappable_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D42F72FC1C61098600995F54 /* mappable_tests.cpp */; };
+		D42F73001C621C4C00995F54 /* trio_caller.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D42F72FE1C621C4C00995F54 /* trio_caller.cpp */; };
 		D435E9F91B2B345700945EC7 /* Makefile in Sources */ = {isa = PBXBuildFile; fileRef = D435E9F81B2B345700945EC7 /* Makefile */; };
 		D44ADE731C43C22700A854C6 /* variant_caller_builder.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D44ADE711C43C22700A854C6 /* variant_caller_builder.cpp */; };
 		D44ADE761C43D89B00A854C6 /* candidate_generator_builder.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D44ADE741C43D89B00A854C6 /* candidate_generator_builder.cpp */; };
@@ -415,6 +416,8 @@
 		D42F72F91C5F7B6200995F54 /* read_manager_tests.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = read_manager_tests.cpp; sourceTree = "<group>"; };
 		D42F72FB1C60C82F00995F54 /* test_regions.bed */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = test_regions.bed; sourceTree = "<group>"; };
 		D42F72FC1C61098600995F54 /* mappable_tests.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = mappable_tests.cpp; sourceTree = "<group>"; };
+		D42F72FE1C621C4C00995F54 /* trio_caller.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = trio_caller.cpp; sourceTree = "<group>"; };
+		D42F72FF1C621C4C00995F54 /* trio_caller.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = trio_caller.hpp; sourceTree = "<group>"; };
 		D42F90131AE7A8000003F791 /* testing.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = testing.txt; sourceTree = "<group>"; };
 		D435E9F81B2B345700945EC7 /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
 		D44ADE711C43C22700A854C6 /* variant_caller_builder.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = variant_caller_builder.cpp; sourceTree = "<group>"; };
@@ -741,6 +744,8 @@
 				D4807FAE1BA826DB00657D4F /* population_caller.cpp */,
 				D4807FB41BA9716700657D4F /* cancer_caller.hpp */,
 				D4807FB31BA9716700657D4F /* cancer_caller.cpp */,
+				D42F72FF1C621C4C00995F54 /* trio_caller.hpp */,
+				D42F72FE1C621C4C00995F54 /* trio_caller.cpp */,
 				CAD552E71BE3BC6E00362016 /* pedigree_caller.hpp */,
 				CAD552E61BE3BC6E00362016 /* pedigree_caller.cpp */,
 			);
@@ -1310,6 +1315,7 @@
 				CAE3E2A81AA25F7D00C01B2C /* alignment_candidate_variant_generator.cpp in Sources */,
 				CAE3E2B31AA3342B00C01B2C /* assembler_candidate_variant_generator.cpp in Sources */,
 				CAA4DC321A82B36300DD3E9A /* README.md in Sources */,
+				D42F73001C621C4C00995F54 /* trio_caller.cpp in Sources */,
 				CAF23F701BA2C308006B673F /* vcf_utils.cpp in Sources */,
 				D4807FB51BA9716700657D4F /* cancer_caller.cpp in Sources */,
 				CA4551681AEB096900FDAAE8 /* 1000G_test14.cpp in Sources */,

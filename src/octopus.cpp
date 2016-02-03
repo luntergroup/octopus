@@ -42,8 +42,9 @@
 
 namespace Octopus
 {
+    namespace {
     template <typename T>
-    static std::size_t index_of(const std::vector<T>& elements, const T& value)
+    std::size_t index_of(const std::vector<T>& elements, const T& value)
     {
         return std::distance(std::cbegin(elements), std::find(std::cbegin(elements), std::cend(elements), value));
     }
@@ -499,6 +500,7 @@ namespace Octopus
         
         merge(results, contigs, components.output);
     }
+    } // namespace
     
     void run_octopus(po::variables_map& options)
     {
