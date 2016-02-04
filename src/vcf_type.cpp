@@ -95,7 +95,8 @@ bool operator>=(const VcfType& lhs, const VcfType& rhs)
     return !operator<(lhs, rhs);
 }
 
-class UnknownVcfType : std::runtime_error {
+class UnknownVcfType : std::runtime_error
+{
 public:
     UnknownVcfType(std::string type)
     :
@@ -112,7 +113,8 @@ private:
     std::string type_;
 };
 
-class BadVcfType : std::invalid_argument {
+class BadVcfType : std::invalid_argument
+{
 public:
     BadVcfType(std::string type, std::string value)
     :
@@ -152,7 +154,7 @@ VcfType make_vcf_type(const std::string& type, const std::string& value)
         return type_map.at(type)(value);
     } catch (std::invalid_argument& e) {
         throw BadVcfType {type, value};
-    } catch (...) { // e.g. std::out_of_range
+    } catch (...) {
         throw;
     }
     

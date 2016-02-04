@@ -31,10 +31,12 @@ class VcfHeader : public Equitable<VcfHeader>
 public:
     class Builder;
     
-    using KeyType         = std::string; // The same KeyType is used for both basic and structured fields
-    using TagType         = std::string;
-    using ValueType       = std::string;
-    using StructuredField = std::unordered_map<KeyType, ValueType>;
+    using KeyType          = std::string; // The same KeyType is used for both basic and structured fields
+    using TagType          = std::string;
+    using ValueType        = std::string;
+    using BasicFields      = std::unordered_map<KeyType, ValueType>;
+    using StructuredField  = std::unordered_map<KeyType, ValueType>;
+    using StructuredFields = std::unordered_multimap<TagType, StructuredField>;
     
     VcfHeader()  = default;
     explicit VcfHeader(std::string file_format);
@@ -48,31 +50,34 @@ public:
     VcfHeader& operator=(VcfHeader&&)      = default;
     
     const ValueType& get_file_format() const noexcept;
+    
     unsigned num_samples() const noexcept;
     std::vector<std::string> get_samples() const;
+    
     bool has_basic_field(const KeyType& key) const noexcept;
     bool has_structured_field(const TagType& tag) const noexcept;
     bool has_structured_field(const TagType& tag, const KeyType& key) const noexcept;
+    
     std::vector<KeyType> get_basic_field_keys() const;
     std::vector<TagType> get_structured_field_tags() const;
     const ValueType& get_basic_field_value(const KeyType& key) const;
     const ValueType& get_structured_field_value(const TagType& tag, const KeyType& id_key,
                                                 const ValueType& id_value, const KeyType& lookup_key) const;
     
-    const std::unordered_map<KeyType, ValueType>& get_basic_fields() const noexcept;
+    const BasicFields& get_basic_fields() const noexcept;
     std::vector<StructuredField> get_structured_fields(const TagType& tag) const;
-    const std::unordered_multimap<TagType, StructuredField>& get_structured_fields() const noexcept;
+    const StructuredFields& get_structured_fields() const noexcept;
     
     friend std::ostream& operator<<(std::ostream& os, const VcfHeader& header);
     
 private:
-    // required lines
+    // required fields
     std::string file_format_;
     std::vector<std::string> samples_;
     
-    // optional lines
-    std::unordered_map<KeyType, ValueType> basic_fields_;
-    std::unordered_multimap<TagType, StructuredField> structured_fields_;
+    // optional fields
+    BasicFields basic_fields_;
+    StructuredFields structured_fields_;
 };
 
 template <typename T, typename U, typename B, typename S>

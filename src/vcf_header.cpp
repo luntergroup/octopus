@@ -195,23 +195,6 @@ bool operator!=(const VcfHeader& lhs, const VcfHeader& rhs)
     return !operator==(lhs, rhs);
 }
 
-//void print_vector(std::ostream& os, const std::vector<std::string>& v,
-//                  const std::string& delim = ",", const std::string& empty_value = ".")
-//{
-//    if (v.empty()) {
-//        os << empty_value;
-//    } else {
-//        std::copy(v.cbegin(), std::prev(v.cend()), std::ostream_iterator<std::string>(os, delim.c_str()));
-//        os << v.back();
-//    }
-//}
-//
-//std::ostream& operator<<(std::ostream& os, const std::vector<std::string>& v)
-//{
-//    print_vector(os, v);
-//    return os;
-//}
-
 std::ostream& operator<<(std::ostream& os, const std::unordered_map<std::string, std::string>& fields)
 {
     os << "<";
