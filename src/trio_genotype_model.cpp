@@ -12,6 +12,10 @@ namespace Octopus
 {
     namespace GenotypeModel
     {
+        namespace {
+            
+        } // namespace
+        
         Trio::Latents
         Trio::evaluate(const std::vector<Haplotype>& haplotypes, const ReadMap& reads,
                        const ReferenceGenome& reference)

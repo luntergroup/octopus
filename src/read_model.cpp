@@ -18,7 +18,7 @@
 namespace Octopus
 {
 
-ReadModel::ReadModel(unsigned ploidy, HaplotypeLikelihoodCache& haplotype_likelihoods)
+ReadModel::ReadModel(unsigned ploidy, const HaplotypeLikelihoodCache& haplotype_likelihoods)
 :
 haplotype_likelihoods_ {haplotype_likelihoods},
 ploidy_ {ploidy},

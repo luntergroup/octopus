@@ -1,20 +1,20 @@
 //
-//  Pedigree_caller.hpp
+//  trio_caller.hpp
 //  Octopus
 //
-//  Created by Daniel Cooke on 30/10/2015.
-//  Copyright © 2015 Oxford University. All rights reserved.
+//  Created by Daniel Cooke on 03/02/2016.
+//  Copyright © 2016 Oxford University. All rights reserved.
 //
 
-#ifndef pedigree_caller_hpp
-#define pedigree_caller_hpp
+#ifndef trio_caller_hpp
+#define trio_caller_hpp
 
 #include <vector>
 #include <string>
 
 #include "variant_caller.hpp"
 #include "genotype_model.hpp"
-#include "pedigree_genotype_model.hpp"
+#include "trio_genotype_model.hpp"
 
 class GenomicRegion;
 class ReadPipe;
@@ -23,24 +23,24 @@ class VcfRecord;
 
 namespace Octopus
 {
-    class PedigreeVariantCaller : public VariantCaller
+    class TrioVariantCaller : public VariantCaller
     {
     public:
-        PedigreeVariantCaller() = delete;
+        TrioVariantCaller() = delete;
         
-        explicit PedigreeVariantCaller(const ReferenceGenome& reference,
+        explicit TrioVariantCaller(const ReferenceGenome& reference,
                                        ReadPipe& read_pipe,
                                        CandidateVariantGenerator&& candidate_generator,
                                        unsigned ploidy,
                                        SampleIdType mother, SampleIdType father,
                                        double min_variant_posterior);
         
-        ~PedigreeVariantCaller() = default;
+        ~TrioVariantCaller() = default;
         
-        PedigreeVariantCaller(const PedigreeVariantCaller&)            = delete;
-        PedigreeVariantCaller& operator=(const PedigreeVariantCaller&) = delete;
-        PedigreeVariantCaller(PedigreeVariantCaller&&)                 = delete;
-        PedigreeVariantCaller& operator=(PedigreeVariantCaller&&)      = delete;
+        TrioVariantCaller(const TrioVariantCaller&)            = delete;
+        TrioVariantCaller& operator=(const TrioVariantCaller&) = delete;
+        TrioVariantCaller(TrioVariantCaller&&)                 = delete;
+        TrioVariantCaller& operator=(TrioVariantCaller&&)      = delete;
         
     private:
         const unsigned ploidy_;
@@ -56,4 +56,4 @@ namespace Octopus
     
 } // namespace Octopus
 
-#endif /* pedigree_caller_hpp */
+#endif /* trio_caller_hpp */

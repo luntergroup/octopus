@@ -46,7 +46,7 @@ namespace Octopus
         HaplotypeLikelihoodCache(HaplotypeLikelihoodCache&&)                 = default;
         HaplotypeLikelihoodCache& operator=(HaplotypeLikelihoodCache&&)      = default;
         
-        double log_probability(const AlignedRead& read, const Haplotype& haplotype); // ln p(read | haplotype)
+        double log_probability(const AlignedRead& read, const Haplotype& haplotype) const; // ln p(read | haplotype)
         
         void clear();
         
@@ -58,7 +58,7 @@ namespace Octopus
         
         SingleReadModel read_model_;
         
-        Cache cache_;
+        mutable Cache cache_;
         
         size_t max_num_reads_;
         size_t max_num_haplotypes_;
