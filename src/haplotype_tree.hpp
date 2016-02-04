@@ -15,6 +15,9 @@
 #include <unordered_set>
 #include <utility>
 #include <functional>
+#include <iterator>
+#include <algorithm>
+#include <type_traits>
 
 #include <boost/graph/adjacency_list.hpp>
 
@@ -104,29 +107,62 @@ private:
 
 namespace detail
 {
-    template <typename Container>
-    void extend_tree(const Container& container, HaplotypeTree& tree, Allele)
+    template <typename InputIt>
+    void extend_tree(InputIt first, InputIt last, HaplotypeTree& tree, Allele)
     {
-        for (const auto& allele : container) {
+        std::for_each(first, last, [&] (const auto& allele) {
             tree.extend(allele);
-        }
+        });
     }
     
-    template <typename Container>
-    void extend_tree(const Container& container, HaplotypeTree& tree, Variant)
+    template <typename InputIt>
+    void extend_tree(InputIt first, InputIt last, HaplotypeTree& tree, Variant)
     {
-        for (const auto& variant : container) {
+        std::for_each(first, last, [&] (const auto& variant) {
             tree.extend(variant.get_ref_allele());
             tree.extend(variant.get_alt_allele());
-        }
+        });
     }
-    
 } // namespace detail
 
-template <typename Container>
-void extend_tree(const Container& container, HaplotypeTree& tree)
+template <typename InputIt>
+void extend_tree(InputIt first, InputIt last, HaplotypeTree& tree)
 {
-    detail::extend_tree(container, tree, typename Container::value_type {});
+    using MappableType = std::decay_t<typename std::iterator_traits<InputIt>::value_type>;
+    static_assert(std::is_same<MappableType, Allele>::value
+                  || std::is_same<MappableType, Variant>::value,
+                  "extend_tree only works for containers of Alleles or Variants");
+    detail::extend_tree(first, last, tree, MappableType {});
+}
+
+template <typename Container>
+void extend_tree(const Container& elements, HaplotypeTree& tree)
+{
+    extend_tree(std::cbegin(elements), std::cend(elements), tree);
+}
+
+template <typename InputIt>
+std::vector<Haplotype>
+generate_all_haplotypes(InputIt first, InputIt last, const ReferenceGenome& reference)
+{
+    using MappableType = std::decay_t<typename std::iterator_traits<InputIt>::value_type>;
+    static_assert(std::is_same<MappableType, Allele>::value
+                  || std::is_same<MappableType, Variant>::value,
+                  "generate_all_haplotypes only works for containers of Alleles or Variants");
+    
+    if (first == last) return {};
+    
+    HaplotypeTree tree {get_contig_name(*first), reference};
+    
+    extend_tree(first, last, tree);
+    
+    return tree.get_haplotypes();
+}
+
+template <typename Container>
+auto generate_all_haplotypes(const Container& elements, const ReferenceGenome& reference)
+{
+    return generate_all_haplotypes(std::cbegin(elements), std::cend(elements), reference);
 }
     
 } // namespace Octopus

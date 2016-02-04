@@ -263,17 +263,12 @@ void merge(std::vector<VcfReader>& readers, const std::vector<std::string>& cont
     }
 }
 
-//VcfWriter merge(std::vector<VcfReader>& readers, boost::filesystem::path result_path)
-//{
-//    VcfWriter result {std::move(result_path)};
-//    merge(readers, get_contigs(readers), result);
-//    return result;
-//}
-
 std::vector<VcfRecord> annotate_records(const std::vector<VcfRecord>& records, VcfReader& reader)
 {
     std::vector<VcfRecord> result {};
     result.reserve(records.size());
+    
+    
     
     return result;
 }

@@ -51,9 +51,9 @@ namespace detail
     
     // VCF/BCF
     
-    static std::string sample_vcf_name {"CEU.low_coverage.2010_07.xchr.genotypes.vcf.gz"};
-    static std::string sample_tabix_vcf_name {"CHBJPT.low_coverage.2010_07.xchr.sites.vcf.gz"};
-    static std::string sample_bcf_name {"CHBJPT.low_coverage.2010_07.xchr.sites.vcf.gz"};
+    static std::string sample_vcf_name {"CEU.low_coverage.2010_07.xchr.genotypes.vcf"};
+    static std::string sample_vcfgz_name {"CEU.low_coverage.2010_07.xchr.genotypes.vcf.gz"};
+    static std::string sample_bcf_name {"CEU.low_coverage.2010_07.xchr.genotypes.bcf"};
 } // namespace detail
 
 // Full paths
@@ -98,6 +98,10 @@ static const fs::path ecoli_bam {detail::home_dir + detail::genomics_dir + detai
 
 static const fs::path sample_vcf {detail::home_dir + detail::genomics_dir  + detail::sample_vcf_dir +
     detail::sample_vcf_name};
+static const fs::path sample_vcfgz {detail::home_dir + detail::genomics_dir  + detail::sample_vcf_dir +
+    detail::sample_vcfgz_name};
+static const fs::path sample_bcf {detail::home_dir + detail::genomics_dir  + detail::sample_vcf_dir +
+    detail::sample_bcf_name};
 static const fs::path test_out_vcf {detail::home_dir + detail::octopus_test_dir + "test.vcf"};
 static const fs::path test_out_vcfgz {detail::home_dir + detail::octopus_test_dir + "test.vcf.gz"};
 static const fs::path test_out_bcf {detail::home_dir + detail::octopus_test_dir + "test.bcf"};

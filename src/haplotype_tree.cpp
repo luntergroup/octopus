@@ -10,8 +10,6 @@
 
 #include <deque>
 #include <stdexcept>
-#include <iterator>
-#include <algorithm>
 
 #include "mappable_algorithms.hpp"
 

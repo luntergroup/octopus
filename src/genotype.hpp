@@ -426,6 +426,7 @@ generate_all_genotypes(const std::vector<MappableType>& elements, const unsigned
         }
         
         result.push_back(detail::generate_genotype(elements, element_indicies));
+        
         ++element_indicies[i];
     }
     

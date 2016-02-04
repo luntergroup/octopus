@@ -354,6 +354,7 @@
 		CAD5EC061AD5BBEA00892816 /* genotype_tests.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = genotype_tests.cpp; sourceTree = "<group>"; };
 		CAD5EC081AD6FD1E00892816 /* read_utils.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = read_utils.cpp; sourceTree = "<group>"; };
 		CAD5EC091AD6FD1E00892816 /* read_utils.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = read_utils.hpp; sourceTree = "<group>"; };
+		CAE0A90A1C6384DC00F88871 /* genotype_probability_map.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = genotype_probability_map.h; sourceTree = "<group>"; };
 		CAE3E2911A9A031600C01B2C /* kmer_graph.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = kmer_graph.hpp; sourceTree = "<group>"; };
 		CAE3E2921A9A882000C01B2C /* mock_objects.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = mock_objects.hpp; sourceTree = "<group>"; };
 		CAE3E2941A9CF97700C01B2C /* storage_policies.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = storage_policies.hpp; sourceTree = "<group>"; };
@@ -997,6 +998,7 @@
 				D42F72F41C5BAADE00995F54 /* haplotype */,
 				CAFA196D1AC1B4AF00F953D9 /* genotype.hpp */,
 				CAB0DFD91BBF035D001D2F99 /* genotype.cpp */,
+				CAE0A90A1C6384DC00F88871 /* genotype_probability_map.h */,
 				D42F72F61C5BAB6D00995F54 /* common-calling-components */,
 				D42F72F51C5BAB2900995F54 /* caller-specific-components */,
 				CABA377C1A8F762200BBE598 /* assembler */,

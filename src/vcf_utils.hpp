@@ -42,8 +42,6 @@ VcfHeader merge(const std::vector<VcfHeader>& headers);
 
 void merge(std::vector<VcfReader>& readers, const std::vector<std::string>& contigs, VcfWriter& result);
 
-//VcfWriter merge(std::vector<VcfReader>& readers, boost::filesystem::path result_path);
-
 std::vector<VcfRecord> annotate_records(const std::vector<VcfRecord>& records, VcfReader& reader);
 
 #endif /* defined(__Octopus__vcf_utils__) */

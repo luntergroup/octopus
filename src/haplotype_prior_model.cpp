@@ -74,10 +74,10 @@ double HaplotypePriorModel::evaluate(const Haplotype& to, const Haplotype& from)
     return result;
 }
 
-std::unordered_map<Haplotype, double>
+HaplotypePriorModel::HaplotypePriorMap
 HaplotypePriorModel::evaluate(const std::vector<Haplotype>& haplotypes, const Haplotype& reference) const
 {
-    std::unordered_map<Haplotype, double> result {};
+    HaplotypePriorMap result {};
     result.reserve(haplotypes.size());
     
     for (const auto& haplotype : haplotypes) {

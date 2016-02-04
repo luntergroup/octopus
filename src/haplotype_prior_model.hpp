@@ -20,6 +20,8 @@ namespace Octopus
 class HaplotypePriorModel
 {
 public:
+    using HaplotypePriorMap = std::unordered_map<Haplotype, double>;
+    
     HaplotypePriorModel()  = default;
     explicit HaplotypePriorModel(double transition_rate, double transversion_rate);
     ~HaplotypePriorModel() = default;
@@ -32,7 +34,7 @@ public:
     // ln p(to | from)
     double evaluate(const Haplotype& to, const Haplotype& from) const;
     
-    std::unordered_map<Haplotype, double> evaluate(const std::vector<Haplotype>& haplotypes, const Haplotype& reference) const;
+    HaplotypePriorMap evaluate(const std::vector<Haplotype>& haplotypes, const Haplotype& reference) const;
     
 private:
     const double transition_rate_   = 0.000222;

@@ -57,7 +57,9 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         
         /* input regions */
         
-        "-L", "6:31,235,196-31,235,906", // TEST phaser
+        //"-L", "6:31,235,688-31,235,883", // TEST phaser
+        
+        "-L", "6:31,235,196-31,235,971",
         
         //"--regions", "1:50,000,000-50,100,000",
         //"--regions", "2:50,000,000-50,100,000",
@@ -113,7 +115,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--skip-regions-file", human_skip_regions.c_str(),
         
         // read filters
-        "--min-supporting-reads", "1",
+        "--min-supporting-reads", "2",
         "--min-mapping-quality", "20",
         "--min-snp-base-quality", "15",
         //"--allow-marked-duplicates",

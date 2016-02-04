@@ -19,6 +19,7 @@
 #include "read_pipe.hpp"
 #include "candidate_variant_generator.hpp"
 #include "haplotype_prior_model.hpp"
+#include "haplotype_phaser.hpp"
 
 class GenomicRegion;
 class Variant;

@@ -35,7 +35,7 @@ expansion_limit_ {expansion_limit}
 {}
 
 GenomicRegion GenomeWalker::walk(const ContigNameType& contig, const ReadMap& reads,
-                                       const Candidates& candidates)
+                                       const Candidates& candidates) const
 {
     return walk(GenomicRegion {contig, 0, 0}, reads, candidates);
 }
@@ -84,7 +84,7 @@ expand_around_included(BidirectionalIterator first_previous, BidirectionalIterat
 }
 
 GenomicRegion GenomeWalker::walk(const GenomicRegion& previous_region, const ReadMap& reads,
-                                 const Candidates& candidates)
+                                 const Candidates& candidates) const
 {
     using std::cbegin; using std::cend; using std::next; using std::prev; using std::min;
     using std::distance; using std::advance;

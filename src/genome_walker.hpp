@@ -35,7 +35,7 @@ public:
     explicit GenomeWalker(unsigned max_indicators,
                           unsigned max_included,
                           IndicatorLimit indicator_limit = IndicatorLimit::SharedWithPreviousRegion,
-                          ExtensionLimit extension_limit = ExtensionLimit::SharedWithFrontier,
+                          ExtensionLimit extension_limit = ExtensionLimit::NoLimit,
                           ExpansionLimit expansion_limit = ExpansionLimit::UpToExcludedWithinReadLength);
     
     ~GenomeWalker() = default;
@@ -46,10 +46,10 @@ public:
     GenomeWalker& operator=(GenomeWalker&&)      = default;
     
     GenomicRegion walk(const ContigNameType& contig, const ReadMap& reads,
-                       const Candidates& candidates);
+                       const Candidates& candidates) const;
     
     GenomicRegion walk(const GenomicRegion& previous_region, const ReadMap& reads,
-                       const Candidates& candidates);
+                       const Candidates& candidates) const;
     
 private:
     const unsigned max_indicators_;
