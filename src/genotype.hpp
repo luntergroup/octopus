@@ -13,6 +13,8 @@
 #include <memory>
 #include <initializer_list>
 #include <unordered_map>
+#include <unordered_set>
+#include <functional>
 #include <cstddef>
 #include <iterator>
 #include <algorithm>
@@ -389,6 +391,15 @@ bool operator==(const Genotype<MappableType>& lhs, const Genotype<MappableType>&
     return lhs.ploidy() == rhs.ploidy() && std::equal(std::cbegin(lhs), std::cend(lhs), std::cbegin(rhs));
 }
 
+struct GenotypeSortCompare
+{
+    template <typename T>
+    bool operator()(const Genotype<T>& lhs, const Genotype<T>& rhs) const
+    {
+        return std::lexicographical_compare(std::cbegin(lhs), std::cend(lhs), std::cbegin(rhs), std::cend(rhs));
+    }
+};
+
 namespace std
 {
     template <typename MappableType> struct hash<Genotype<MappableType>>
@@ -577,7 +588,69 @@ auto generate_all_genotypes(const std::vector<MappableType>& elements, const uns
 }
 
 template <typename MappableType>
-std::unordered_map<MappableType, unsigned> get_element_count_map(const Genotype<MappableType>& genotype)
+auto extract_all_elements(const std::vector<Genotype<MappableType>>& genotypes)
+{
+    std::unordered_set<std::reference_wrapper<const MappableType>> unique_elements {};
+    unique_elements.reserve();
+    
+    for (const auto& genotype : genotypes) {
+        for (const auto& element : genotype) {
+            unique_elements.emplace(element);
+        }
+    }
+    
+    std::vector<MappableType> result {};
+    result.reserve();
+    
+    std::transform(std::cbegin(unique_elements), std::cend(unique_elements), std::back_inserter(result),
+                   [] (const auto& element_ref) { return element_ref.get(); });
+    
+    return result;
+}
+
+template <typename MappableType>
+auto extract_all_elements(const std::vector<Genotype<MappableType>>& genotypes, const GenomicRegion)
+{
+    std::unordered_set<std::reference_wrapper<const MappableType>> unique_elements {};
+    unique_elements.reserve();
+    
+    for (const auto& genotype : genotypes) {
+        for (const auto& element : genotype) {
+            unique_elements.emplace(element);
+        }
+    }
+    
+    std::vector<MappableType> result {};
+    result.reserve();
+    
+    std::transform(std::cbegin(unique_elements), std::cend(unique_elements), std::back_inserter(result),
+                   [] (const auto& element_ref) { return element_ref.get(); });
+    
+    return result;
+}
+
+template <typename MappableType>
+auto extract_all_element_refs(const std::vector<Genotype<MappableType>>& genotypes)
+{
+    std::unordered_set<std::reference_wrapper<const MappableType>> unique_elements {};
+    unique_elements.reserve();
+    
+    for (const auto& genotype : genotypes) {
+        for (const auto& element : genotype) {
+            unique_elements.emplace(element);
+        }
+    }
+    
+    std::vector<std::reference_wrapper<const MappableType>> result {};
+    result.reserve(unique_elements.size());
+    
+    std::copy(std::cbegin(unique_elements), std::cend(unique_elements), std::back_inserter(result));
+    
+    return result;
+}
+
+template <typename MappableType>
+auto get_element_count_map(const Genotype<MappableType>& genotype)
 {
     std::unordered_map<MappableType, unsigned> result {};
     result.reserve(genotype.zygosity());
@@ -585,6 +658,36 @@ std::unordered_map<MappableType, unsigned> get_element_count_map(const Genotype<
     for (unsigned i {0}; i < genotype.ploidy(); ++i) {
         ++result[genotype.at(i)];
     }
+    
+    return result;
+}
+
+template <typename MappableType>
+auto get_element_ref_count_map(const Genotype<MappableType>& genotype)
+{
+    std::unordered_map<std::reference_wrapper<const MappableType>, unsigned> result {};
+    result.reserve(genotype.zygosity());
+    
+    for (unsigned i {0}; i < genotype.ploidy(); ++i) {
+        ++result[genotype.at(i)];
+    }
+    
+    return result;
+}
+
+template <typename MappableType2, typename MappableType1>
+auto splice_all(const std::vector<Genotype<MappableType1>>& genotypes, const GenomicRegion& region)
+{
+    std::vector<Genotype<MappableType2>> result {};
+    result.reserve(genotypes.size());
+    
+    for (const auto& genotype : genotypes) {
+        result.emplace_back(splice<MappableType2>(genotype, region));
+    }
+    
+    std::sort(std::begin(result), std::end(result), GenotypeSortCompare {});
+    
+    result.erase(std::unique(std::begin(result), std::end(result)), std::end(result));
     
     return result;
 }

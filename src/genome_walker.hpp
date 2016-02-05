@@ -35,7 +35,7 @@ public:
     explicit GenomeWalker(unsigned max_indicators,
                           unsigned max_included,
                           IndicatorLimit indicator_limit = IndicatorLimit::SharedWithPreviousRegion,
-                          ExtensionLimit extension_limit = ExtensionLimit::SharedWithFrontier,
+                          ExtensionLimit extension_limit = ExtensionLimit::NoLimit,
                           ExpansionLimit expansion_limit = ExpansionLimit::UpToExcludedWithinReadLength);
     
     ~GenomeWalker() = default;

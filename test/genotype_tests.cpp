@@ -24,6 +24,7 @@
 #include "candidate_variant_generator.hpp"
 #include "alignment_candidate_variant_generator.hpp"
 #include "haplotype.hpp"
+#include "haplotype_tree.hpp"
 #include "genotype.hpp"
 
 using std::cout;
@@ -299,6 +300,52 @@ BOOST_AUTO_TEST_CASE(generate_all_genotypes_returns_all_possible_unique_genotype
     BOOST_CHECK(genotypes_4.size() == unique_4.size());
 }
 
+BOOST_AUTO_TEST_CASE(copy_unique_returns_all_the_unique_Haplotypes_in_a_Genotype)
+{
+    BOOST_REQUIRE(test_file_exists(human_reference_fasta));
+    
+    const auto human = make_reference(human_reference_fasta);
+    
+    const auto region = *parse_region("1:1000000-1000001", human);
+    
+    const auto hap1 = make_haplotype(Allele {region, "A"}, human);
+    const auto hap2 = make_haplotype(Allele {region, "C"}, human);
+    const auto hap3 = make_haplotype(Allele {region, "G"}, human);
+    
+    Genotype<Haplotype> g1 {};
+    g1.emplace(hap1);
+    g1.emplace(hap2);
+    g1.emplace(hap3);
+    
+    auto g1_unique = g1.copy_unique();
+    
+    BOOST_CHECK(std::count(g1_unique.cbegin(), g1_unique.cend(), hap1) == 1);
+    BOOST_CHECK(std::count(g1_unique.cbegin(), g1_unique.cend(), hap2) == 1);
+    BOOST_CHECK(std::count(g1_unique.cbegin(), g1_unique.cend(), hap3) == 1);
+    
+    Genotype<Haplotype> g2 {};
+    g2.emplace(hap1);
+    g2.emplace(hap3);
+    g2.emplace(hap3);
+    
+    auto g2_unique = g2.copy_unique();
+    
+    BOOST_CHECK(std::count(g2_unique.cbegin(), g2_unique.cend(), hap1) == 1);
+    BOOST_CHECK(std::count(g2_unique.cbegin(), g2_unique.cend(), hap2) == 0);
+    BOOST_CHECK(std::count(g2_unique.cbegin(), g2_unique.cend(), hap3) == 1);
+    
+    Genotype<Haplotype> g3 {};
+    g3.emplace(hap3);
+    g3.emplace(hap3);
+    g3.emplace(hap3);
+    
+    auto g3_unique = g3.copy_unique();
+    
+    BOOST_CHECK(std::count(g3_unique.cbegin(), g3_unique.cend(), hap1) == 0);
+    BOOST_CHECK(std::count(g3_unique.cbegin(), g3_unique.cend(), hap2) == 0);
+    BOOST_CHECK(std::count(g3_unique.cbegin(), g3_unique.cend(), hap3) == 1);
+}
+
 BOOST_AUTO_TEST_CASE(generate_all_genotypes_results_in_correct_ploidy)
 {
     BOOST_REQUIRE(test_file_exists(human_reference_fasta));
@@ -355,50 +402,79 @@ BOOST_AUTO_TEST_CASE(generate_all_genotypes_results_in_correct_ploidy)
     }
 }
 
-BOOST_AUTO_TEST_CASE(copy_unique_returns_all_the_unique_Haplotypes_in_a_Genotype)
+Variant make_variant(const Allele& alt_allele, const ReferenceGenome& reference)
+{
+    return Variant {get_reference_allele(alt_allele.get_region(), reference), alt_allele};
+}
+
+Variant make_variant(const std::string& region_str, Allele::SequenceType alt_sequence,
+                     const ReferenceGenome& reference)
+{
+    return make_variant(Allele {*parse_region(region_str, reference), std::move(alt_sequence)}, reference);
+}
+
+BOOST_AUTO_TEST_CASE(splice_works_correctly)
 {
     BOOST_REQUIRE(test_file_exists(human_reference_fasta));
     
     const auto human = make_reference(human_reference_fasta);
     
-    const auto region = *parse_region("1:1000000-1000001", human);
+    auto variant1 = make_variant("6:31235411-31235412", "A", human);
+    auto variant2 = make_variant("6:31235412-31235413", "A", human);
+    auto variant3 = make_variant("6:31235413-31235414", "A", human);
+    auto variant4 = make_variant("6:31235414-31235415", "A", human);
     
-    const auto hap1 = make_haplotype(Allele {region, "A"}, human);
-    const auto hap2 = make_haplotype(Allele {region, "C"}, human);
-    const auto hap3 = make_haplotype(Allele {region, "G"}, human);
+    std::vector<Variant> variants {variant1, variant2, variant3, variant4};
     
-    Genotype<Haplotype> g1 {};
-    g1.emplace(hap1);
-    g1.emplace(hap2);
-    g1.emplace(hap3);
+    auto haplotypes = Octopus::generate_all_haplotypes(variants, human);
+    auto genotypes  = generate_all_genotypes(haplotypes, 2);
     
-    auto g1_unique = g1.copy_unique();
     
-    BOOST_CHECK(std::count(g1_unique.cbegin(), g1_unique.cend(), hap1) == 1);
-    BOOST_CHECK(std::count(g1_unique.cbegin(), g1_unique.cend(), hap2) == 1);
-    BOOST_CHECK(std::count(g1_unique.cbegin(), g1_unique.cend(), hap3) == 1);
+}
+
+BOOST_AUTO_TEST_CASE(splice_all_works_correctly)
+{
+    BOOST_REQUIRE(test_file_exists(human_reference_fasta));
     
-    Genotype<Haplotype> g2 {};
-    g2.emplace(hap1);
-    g2.emplace(hap3);
-    g2.emplace(hap3);
+    const auto human = make_reference(human_reference_fasta);
     
-    auto g2_unique = g2.copy_unique();
+    auto variant1 = make_variant("6:31235411-31235412", "A", human);
+    auto variant2 = make_variant("6:31235412-31235413", "A", human);
+    auto variant3 = make_variant("6:31235413-31235414", "A", human);
+    auto variant4 = make_variant("6:31235414-31235415", "A", human);
     
-    BOOST_CHECK(std::count(g2_unique.cbegin(), g2_unique.cend(), hap1) == 1);
-    BOOST_CHECK(std::count(g2_unique.cbegin(), g2_unique.cend(), hap2) == 0);
-    BOOST_CHECK(std::count(g2_unique.cbegin(), g2_unique.cend(), hap3) == 1);
+    std::vector<Variant> variants {variant1, variant2, variant3, variant4};
     
-    Genotype<Haplotype> g3 {};
-    g3.emplace(hap3);
-    g3.emplace(hap3);
-    g3.emplace(hap3);
+    auto haplotypes = Octopus::generate_all_haplotypes(variants, human);
+    auto genotypes  = generate_all_genotypes(haplotypes, 2);
     
-    auto g3_unique = g3.copy_unique();
+    auto allele_splices = splice_all<Allele>(genotypes, *parse_region("6:31235412-31235413", human));
     
-    BOOST_CHECK(std::count(g3_unique.cbegin(), g3_unique.cend(), hap1) == 0);
-    BOOST_CHECK(std::count(g3_unique.cbegin(), g3_unique.cend(), hap2) == 0);
-    BOOST_CHECK(std::count(g3_unique.cbegin(), g3_unique.cend(), hap3) == 1);
+    for (const auto& genotype : allele_splices) {
+        cout << genotype << endl;
+    }
+    
+    auto haplotype_splices = splice_all<Haplotype>(genotypes, *parse_region("6:31235412-31235414", human));
+    
+    for (const auto& genotype : haplotype_splices) {
+        print_alleles(genotype);
+        cout << endl;
+    }
+}
+
+BOOST_AUTO_TEST_CASE(contains_works_correctly)
+{
+    
+}
+
+BOOST_AUTO_TEST_CASE(contains_exact_works_correctly)
+{
+    
+}
+
+BOOST_AUTO_TEST_CASE(are_equal_in_region_works_correctly)
+{
+    
 }
 
 BOOST_AUTO_TEST_SUITE_END()

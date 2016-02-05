@@ -20,9 +20,6 @@
 #include "mappable_algorithms.hpp"
 
 #include <iostream> // TEST
-#include "haplotype.hpp"
-#include "genotype.hpp"
-#include "haplotype_tree.hpp"
 
 namespace Octopus
 {

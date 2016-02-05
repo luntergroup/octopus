@@ -13,6 +13,7 @@
 #include <iterator>
 #include <cmath>
 #include <functional>
+#include <unordered_map>
 
 #include "allele.hpp"
 #include "mappable_algorithms.hpp"
@@ -165,8 +166,6 @@ void HaplotypePhaser::remove_low_posterior_haplotypes(const std::vector<Haplotyp
         
         for (const auto& haplotype_posterior : sample_haplotype_posteriors) {
             if (haplotype_posterior.second < 1e-4) {
-                //print_variant_alleles(haplotype_posterior.first);
-                //std::cout << " " << haplotype_posterior.second << std::endl;
                 low_posterior_haplotypes.push_back(haplotype_posterior.first);
             }
         }
@@ -189,48 +188,68 @@ void HaplotypePhaser::remove_low_posterior_haplotypes(const std::vector<Haplotyp
 
 namespace {
 
-using PhaseComplementSet  = std::vector<Genotype<Haplotype>>;
-using PhaseComplementSets = std::vector<PhaseComplementSet>;
+using GenotypeReference   = std::reference_wrapper<const Genotype<Haplotype>>;
+using PhaseComplementSet  = std::vector<GenotypeReference>;
 
-bool are_phase_complements(const Genotype<Haplotype>& lhs, const Genotype<Haplotype>& rhs,
-                           const MappableSet<Variant>& variants)
+struct PhaseComplementEqual
 {
-    if (lhs.ploidy() == 1) return false;
+    PhaseComplementEqual(const std::vector<GenomicRegion>& variant_regions)
+    : variant_regions_ {variant_regions} {}
     
-    const auto regions = get_regions(variants);
-    
-    return std::all_of(std::cbegin(regions), std::cend(regions),
-                       [&] (const auto& region) {
-                           return are_equal_in_region(lhs, rhs, region);
-                       });
+    bool operator()(const GenotypeReference& lhs, const GenotypeReference& rhs) const
+    {
+        if (lhs.get().ploidy() == 1) return false;
+        
+        return std::all_of(std::cbegin(variant_regions_.get()), std::cend(variant_regions_.get()),
+                           [&] (const auto& region) {
+                               return are_equal_in_region(lhs.get(), rhs.get(), region);
+                           });
+    }
+private:
+    std::reference_wrapper<const std::vector<GenomicRegion>> variant_regions_;
+};
+
+using PhaseComplementSetMap = std::unordered_map<GenotypeReference, PhaseComplementSet,
+                                               std::hash<GenotypeReference>,
+                                            PhaseComplementEqual>;
+
+void add_to_phase_complement_set(const Genotype<Haplotype>& genotype,
+                                 PhaseComplementSetMap& curr_result,
+                                 const std::vector<GenomicRegion>& variant_regions)
+{
+    const auto it = curr_result.find(genotype);
+    if (it == std::end(curr_result)) {
+        curr_result[genotype].emplace_back(genotype);
+    } else {
+        it->second.emplace_back(genotype);
+    }
 }
+
+using PhaseComplementSets = std::vector<PhaseComplementSet>;
 
 PhaseComplementSets
 partition_phase_complements(const std::vector<Genotype<Haplotype>>& genotypes,
                             const MappableSet<Variant>& variants)
 {
-    using std::cbegin; using std::cend; using std::begin; using std::end; using std::for_each;
+    if (genotypes.empty()) return {};
+    
+    const auto variant_regions = get_regions(variants);
+    
+    PhaseComplementSetMap result_map {genotypes.size(), std::hash<GenotypeReference> {}, PhaseComplementEqual {variant_regions}};
+    
+    result_map[genotypes.front()].emplace_back(genotypes.front());
+    
+    std::for_each(std::next(std::cbegin(genotypes)), std::cend(genotypes),
+                  [&] (const auto& genotype) {
+                      add_to_phase_complement_set(genotype, result_map, variant_regions);
+                  });
     
     PhaseComplementSets result {};
+    result.reserve(result_map.size());
     
-    if (genotypes.empty()) return result;
-    
-    result.reserve(genotypes.size());
-    
-    result.emplace_back(1, genotypes.front());
-    
-    for_each(std::next(cbegin(genotypes)), cend(genotypes),
-             [&] (const auto& genotype) {
-                 auto it = std::find_if(begin(result), end(result),
-                                        [&] (const auto& complements) {
-                                            return are_phase_complements(genotype, complements.front(), variants);
-                                        });
-                 if (it == end(result)) {
-                     result.emplace_back(1, genotype);
-                 } else {
-                     it->emplace_back(genotype);
-                 }
-             });
+    for (auto&& p : result_map) {
+        result.emplace_back(std::move(p.second));
+    }
     
     return result;
 }
@@ -239,7 +258,7 @@ double marginalise(const PhaseComplementSet& phase_set,
                    const HaplotypePhaser::SampleGenotypePosteriors& genotype_posteriors)
 {
     return std::accumulate(std::cbegin(phase_set), std::cend(phase_set), 0.0,
-                           [&] (auto curr, const auto& genotype) {
+                           [&] (const auto curr, const auto& genotype) {
                                return curr + genotype_posteriors.at(genotype);
                            });
 }
@@ -249,7 +268,7 @@ double calculate_entropy(const PhaseComplementSet& phase_set,
 {
     const auto norm = marginalise(phase_set, genotype_posteriors);
     return std::max(0.0, -std::accumulate(std::cbegin(phase_set), std::cend(phase_set), 0.0,
-                                          [&genotype_posteriors, norm] (auto curr, const auto& genotype) {
+                                          [&genotype_posteriors, norm] (const auto curr, const auto& genotype) {
                                               const auto p = genotype_posteriors.at(genotype) / norm;
                                               return curr + p * std::log2(p);
                                           }));

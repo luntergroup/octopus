@@ -8,7 +8,6 @@
 
 #include "genotype.hpp"
 
-#include <functional>
 #include <iostream>
 
 #include <boost/math/special_functions/binomial.hpp>
