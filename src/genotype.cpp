@@ -30,6 +30,11 @@ Genotype<Allele>::Genotype(std::initializer_list<Allele> alleles)
 alleles_ {alleles}
 {}
 
+const GenomicRegion& Genotype<Allele>::get_region() const noexcept
+{
+    return alleles_.front().get_region();
+}
+
 const Allele& Genotype<Allele>::at(unsigned n) const
 {
     return alleles_.at(n);
@@ -38,31 +43,6 @@ const Allele& Genotype<Allele>::at(unsigned n) const
 const Allele& Genotype<Allele>::operator[](unsigned n) const
 {
     return alleles_[n];
-}
-
-typename Genotype<Allele>::Iterator Genotype<Allele>::begin() const noexcept
-{
-    return alleles_.begin();
-}
-
-typename Genotype<Allele>::Iterator Genotype<Allele>::end() const noexcept
-{
-    return alleles_.end();
-}
-
-typename Genotype<Allele>::Iterator Genotype<Allele>::cbegin() const noexcept
-{
-    return alleles_.cbegin();
-}
-
-typename Genotype<Allele>::Iterator Genotype<Allele>::cend() const noexcept
-{
-    return alleles_.cend();
-}
-
-const GenomicRegion& Genotype<Allele>::get_region() const noexcept
-{
-    return alleles_.front().get_region();
 }
 
 unsigned Genotype<Allele>::ploidy() const noexcept
@@ -105,6 +85,26 @@ std::vector<Allele> Genotype<Allele>::copy_unique() const
     result.erase(std::unique(std::begin(result), std::end(result)), std::end(result));
     
     return result;
+}
+
+typename Genotype<Allele>::Iterator Genotype<Allele>::begin() const noexcept
+{
+    return alleles_.begin();
+}
+
+typename Genotype<Allele>::Iterator Genotype<Allele>::end() const noexcept
+{
+    return alleles_.end();
+}
+
+typename Genotype<Allele>::Iterator Genotype<Allele>::cbegin() const noexcept
+{
+    return alleles_.cbegin();
+}
+
+typename Genotype<Allele>::Iterator Genotype<Allele>::cend() const noexcept
+{
+    return alleles_.cend();
 }
 
 // non-member methods
