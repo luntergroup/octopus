@@ -135,7 +135,7 @@ std::vector<GenomicRegion> get_all_contig_regions(const ReferenceGenome& referen
 
 GenomicRegion::SizeType calculate_genome_size(const ReferenceGenome& reference)
 {
-    const auto contigs = reference.get_contig_names();
+    const auto& contigs = reference.get_contig_names();
     return std::accumulate(std::cbegin(contigs), std::cend(contigs), GenomicRegion::SizeType {0},
                            [&reference] (const auto curr, const auto& contig) {
                                return curr + reference.get_contig_size(contig);

@@ -92,18 +92,6 @@ std::vector<VcfRecord> VariantCaller::call_variants(const GenomicRegion& region)
         reads = read_pipe_.get().fetch_reads(region);
     }
     
-    auto haplotypes = generate_all_haplotypes(candidates.cbegin(), candidates.cbegin() + 8, reference_);
-    
-    std::cout << haplotypes.size() << std::endl;
-    
-    auto genotypes = generate_all_genotypes(haplotypes, 3);
-    
-    std::cout << genotypes.size() << std::endl;
-    
-    print_variant_alleles(genotypes.front());
-    
-    exit(0);
-    
     return call_variants(region, candidates, reads);
 }
 
