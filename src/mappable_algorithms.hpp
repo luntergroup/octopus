@@ -28,16 +28,18 @@
 #include <iostream> // DEBUG
 
 template <typename InputIt>
-auto sum_sizes(InputIt first, InputIt last)
+auto sum_region_sizes(InputIt first, InputIt last)
 {
-    return std::accumulate(first, last, GenomicRegion::SizeType {},
-                           [] (const auto curr, const auto& mappable) { return curr + size(mappable); });
+    return std::accumulate(first, last, GenomicRegion::SizeType {0},
+                           [] (const auto curr, const auto& mappable) {
+                               return curr + region_size(mappable);
+                           });
 }
 
 template <typename Container>
-auto sum_sizes(const Container& mappables)
+auto sum_region_sizes(const Container& mappables)
 {
-    return sum_sizes(std::cbegin(mappables), std::cend(mappables));
+    return sum_region_sizes(std::cbegin(mappables), std::cend(mappables));
 }
 
 /**
@@ -87,7 +89,9 @@ inline
 ForwardIt largest_mappable(ForwardIt first, ForwardIt last)
 {
     return std::max_element(first, last,
-                            [] (const auto& lhs, const auto& rhs) { return size(lhs) < size(rhs); });
+                            [] (const auto& lhs, const auto& rhs) {
+                                return region_size(lhs) < region_size(rhs);
+                            });
 }
 
 template <typename Container>
@@ -106,7 +110,9 @@ inline
 ForwardIt smallest_mappable(ForwardIt first, ForwardIt last)
 {
     return std::min_element(first, last,
-                            [] (const auto& lhs, const auto& rhs) { return size(lhs) < size(rhs); });
+                            [] (const auto& lhs, const auto& rhs) {
+                                return region_size(lhs) < region_size(rhs);
+                            });
 }
 
 template <typename Container>
@@ -611,7 +617,7 @@ namespace detail
     {
         std::vector<GenomicRegion> result {};
         
-        const auto num_elements = size(mappable);
+        const auto num_elements = region_size(mappable);
         
         if (num_elements == 0) return result;
         
@@ -938,9 +944,9 @@ auto get_positional_coverage(ForwardIt first, ForwardIt last, const RegionTp& re
                   RegionTp>::value,
                   "RegionType of input range must match RegionTp");
     
-    using std::for_each; using std::next; using std::min;
+    using std::next; using std::min;
     
-    const auto num_positions = size(region);
+    const auto num_positions = region_size(region);
     
     std::vector<unsigned> result(num_positions, 0);
     
@@ -948,7 +954,7 @@ auto get_positional_coverage(ForwardIt first, ForwardIt last, const RegionTp& re
     
     const auto first_position = get_begin(region);
     
-    for_each(first, last, [=] (const auto& mappable) {
+    std::for_each(first, last, [=] (const auto& mappable) {
         const auto it1 = next(result_begin_itr, (get_begin(mappable) <= first_position) ? 0 : get_begin(mappable) - first_position);
         const auto it2 = next(result_begin_itr, min(get_end(mappable) - first_position, num_positions));
         std::transform(it1, it2, it1, [] (const auto count) { return count + 1; });

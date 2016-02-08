@@ -95,7 +95,7 @@ HaplotypePhaser::phase(const std::vector<Haplotype>& haplotypes,
     
     const auto phased_region = left_overhang_region(current_region_, next_region_);
     
-    if (empty(phased_region)) return boost::none;
+    if (is_empty(phased_region)) return boost::none;
     
     std::cout << "phased region is " << phased_region << std::endl;
     

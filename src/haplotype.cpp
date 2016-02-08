@@ -205,7 +205,7 @@ Haplotype::SequenceType Haplotype::get_sequence(const ContigRegion& region) cons
     
     if (explicit_alleles_.empty()) {
         if (is_cached_sequence_good()) {
-            return cached_sequence_.substr(get_begin(region) - get_begin(region_), size(region));
+            return cached_sequence_.substr(begin_distance(region, region_.get_contig_region()), region_size(region));
         } else {
             return get_reference_sequence(region);
         }
@@ -214,7 +214,7 @@ Haplotype::SequenceType Haplotype::get_sequence(const ContigRegion& region) cons
     const auto region_bounded_by_alleles = get_region_bounded_by_explicit_alleles();
     
     SequenceType result {};
-    result.reserve(size(region)); // may be more or less depending on indels
+    result.reserve(region_size(region)); // may be more or less depending on indels
     
     if (begins_before(region, region_bounded_by_alleles)) {
         result += get_reference_sequence(left_overhang_region(region, region_bounded_by_alleles));
@@ -398,7 +398,7 @@ void Haplotype::update_region(const Allele& allele)
 
 bool Haplotype::is_cached_sequence_good() const noexcept
 {
-    return !cached_sequence_.empty() || (explicit_alleles_.empty() && empty(region_));
+    return !cached_sequence_.empty() || (explicit_alleles_.empty() && is_empty(region_));
 }
 
 void Haplotype::clear_cached_sequence()
@@ -407,6 +407,11 @@ void Haplotype::clear_cached_sequence()
 }
 
 // non-member methods
+
+Haplotype::SizeType sequence_size(const Haplotype& haplotype) noexcept
+{
+    return static_cast<Haplotype::SizeType>(haplotype.get_sequence().size());
+}
 
 bool contains(const Haplotype& lhs, const Allele& rhs)
 {

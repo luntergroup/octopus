@@ -104,11 +104,6 @@ AlignedRead::QualityType AlignedRead::get_mapping_quality() const noexcept
     return mapping_quality_;
 }
 
-AlignedRead::SizeType AlignedRead::get_sequence_size() const noexcept
-{
-    return static_cast<SizeType>(sequence_.size());
-}
-
 const CigarString& AlignedRead::get_cigar_string() const noexcept
 {
     return cigar_string_;
@@ -200,21 +195,21 @@ size_t AlignedRead::get_hash() const
 void AlignedRead::zero_front_qualities(const SizeType num_bases) noexcept
 {
     std::for_each(std::begin(qualities_),
-                  std::next(std::begin(qualities_), std::min(num_bases, get_sequence_size())),
+                  std::next(std::begin(qualities_), std::min(num_bases, static_cast<SizeType>(sequence_.size()))),
                   [] (auto& quality) { quality = 0; });
 }
 
 void AlignedRead::zero_back_qualities(const SizeType num_bases) noexcept
 {
     std::for_each(std::rbegin(qualities_),
-                  std::next(std::rbegin(qualities_), std::min(num_bases, get_sequence_size())),
+                  std::next(std::rbegin(qualities_), std::min(num_bases, static_cast<SizeType>(sequence_.size()))),
                   [] (auto& quality) { quality = 0; });
 }
 
-// TODO: can we also compress qualities and cigar string?
 void AlignedRead::compress()
 {
     sequence_ = Octopus::compress(sequence_);
+    // TODO: can we also compress qualities and cigar string?
     set_compressed();
 }
 
@@ -289,6 +284,11 @@ size_t AlignedRead::make_hash() const
 
 // Non-member methods
 
+AlignedRead::SizeType sequence_size(const AlignedRead& read) noexcept
+{
+    return static_cast<AlignedRead::SizeType>(read.get_sequence().size());
+}
+
 CigarString splice_cigar(const AlignedRead& read, const GenomicRegion& region)
 {
     if (contains(region, read)) return read.get_cigar_string();
@@ -300,7 +300,7 @@ CigarString splice_cigar(const AlignedRead& read, const GenomicRegion& region)
 
 AlignedRead::SizeType count_overlapped_bases(const AlignedRead& read, const GenomicRegion& region)
 {
-    if (contains(region, read)) return read.get_sequence_size();
+    if (contains(region, read)) return sequence_size(read);
     
     // TODO: not quite right as doesn't account for indels
     return static_cast<AlignedRead::SizeType>(std::max(GenomicRegion::DifferenceType {0}, overlap_size(read, region)));
@@ -328,12 +328,12 @@ AlignedRead splice(const AlignedRead& read, const GenomicRegion& region)
     
     const auto splice_region = overlapped_region(read, region);
     
-    const auto reference_offset = get_begin(splice_region) - get_begin(read);
+    const auto reference_offset = static_cast<CigarOperation::SizeType>(begin_distance(splice_region, read));
     
     const auto uncontained_cigar_splice = splice_reference(read.get_cigar_string(), reference_offset);
     
     auto contained_cigar_splice   = splice_reference(read.get_cigar_string(), reference_offset,
-                                                     size(splice_region));
+                                                     region_size(splice_region));
     
     const auto sequence_offset = sequence_size(uncontained_cigar_splice);
     const auto sequence_length = sequence_size(contained_cigar_splice);

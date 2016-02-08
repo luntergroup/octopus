@@ -131,14 +131,14 @@ inline std::string to_string(const GenomicRegion& region)
     + std::to_string(region.get_end());
 }
 
-inline bool empty(const GenomicRegion& region) noexcept
+inline bool is_empty(const GenomicRegion& region) noexcept
 {
-    return empty(region.get_contig_region());
+    return is_empty(region.get_contig_region());
 }
 
-inline GenomicRegion::SizeType size(const GenomicRegion& region) noexcept
+inline GenomicRegion::SizeType region_size(const GenomicRegion& region) noexcept
 {
-    return size(region.get_contig_region());
+    return region_size(region.get_contig_region());
 }
 
 inline bool is_same_contig(const GenomicRegion& lhs, const GenomicRegion& rhs) noexcept

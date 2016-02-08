@@ -62,19 +62,19 @@ namespace detail
     {
         const auto overlapped = overlap_range(reads, region);
         return std::any_of(std::cbegin(overlapped), std::cend(overlapped),
-                           [] (const auto& read) { return !empty(read); });
+                           [] (const auto& read) { return !is_empty(read); });
     }
     
     inline bool has_coverage(const MappableSet<AlignedRead>& reads, NonMapTypeTag)
     {
         return std::any_of(std::cbegin(reads), std::cend(reads),
-                           [] (const auto& read) { return !empty(read); });
+                           [] (const auto& read) { return !is_empty(read); });
     }
     
     template <typename T>
     unsigned min_coverage(const T& reads, const GenomicRegion& region, NonMapTypeTag)
     {
-        if (reads.empty() || empty(region)) return 0;
+        if (reads.empty() || is_empty(region)) return 0;
         const auto positions_coverage = positional_coverage(reads, region);
         return *std::min_element(std::cbegin(positions_coverage), std::cend(positions_coverage));
     }
@@ -89,7 +89,7 @@ namespace detail
     template <typename T>
     unsigned max_coverage(const T& reads, const GenomicRegion& region, NonMapTypeTag)
     {
-        if (reads.empty() || empty(region)) return 0;
+        if (reads.empty() || is_empty(region)) return 0;
         const auto positions_coverage = positional_coverage(reads, region);
         return *std::max_element(std::cbegin(positions_coverage), std::cend(positions_coverage));
     }
@@ -104,7 +104,7 @@ namespace detail
     template <typename T>
     double mean_coverage(const T& reads, const GenomicRegion& region, NonMapTypeTag)
     {
-        if (reads.empty() || empty(region)) return 0;
+        if (reads.empty() || is_empty(region)) return 0;
         return Maths::mean(positional_coverage(reads, region));
     }
     
@@ -117,7 +117,7 @@ namespace detail
     template <typename T>
     double stdev_coverage(const T& reads, const GenomicRegion& region, NonMapTypeTag)
     {
-        if (reads.empty() || empty(region)) return 0;
+        if (reads.empty() || is_empty(region)) return 0;
         return Maths::stdev(positional_coverage(reads, region));
     }
     
@@ -937,7 +937,7 @@ namespace detail
         const auto position_coverages = positional_coverage(reads, region);
         
         const auto first_position = get_begin(region);
-        const auto num_positions  = size(region);
+        const auto num_positions  = region_size(region);
         
         for (const auto& read : reads) {
             auto first = std::next(std::cbegin(position_coverages), (get_begin(read) <= first_position) ? 0 : get_begin(read) - first_position);
@@ -1022,7 +1022,7 @@ std::vector<GenomicRegion> find_uniform_coverage_regions(const T& reads, const G
     const auto coverages = positional_coverage(reads, region);
     
     std::vector<GenomicRegion> result {};
-    result.reserve(size(region));
+    result.reserve(region_size(region));
     
     if (coverages.empty()) return result;
     

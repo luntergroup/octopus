@@ -85,22 +85,22 @@ Allele::SequenceType get_subsequence(const Allele& allele, const GenomicRegion& 
         return sequence;
     }
     
-    if (begins_equal(region, allele) && empty(region) && is_insertion(allele)) {
+    if (begins_equal(region, allele) && is_empty(region) && is_insertion(allele)) {
         auto first = std::cbegin(sequence);
-        return Allele::SequenceType {first, first + sequence.size() - size(allele)};
+        return Allele::SequenceType {first, first + sequence.size() - region_size(allele)};
     }
     
     auto first = std::cbegin(allele.get_sequence()) + get_begin(region) - get_begin(allele);
     // The minimum of the allele sequence size and region size is used as deletions will
     // result in a sequence size smaller than the region size
-    return Allele::SequenceType {first, first + std::min(sequence.size(), static_cast<size_t>(size(region)))};
+    return Allele::SequenceType {first, first + std::min(sequence.size(), static_cast<size_t>(region_size(region)))};
 }
 
 bool contains(const Allele& lhs, const Allele& rhs)
 {
     if (!contains(get_region(lhs), get_region(rhs))) {
         return false;
-    } else if (empty(lhs)) {
+    } else if (is_empty(lhs)) {
         // If the alleles are both insertions then both regions will be the same so we can only test
         // if the inserted rhs sequence is a subsequence of the lhs sequence. The rhs sequence
         // is required to be non-empty otherwise it would be a subsequence of everything.
@@ -120,12 +120,12 @@ Allele splice(const Allele& allele, const GenomicRegion& region)
 
 bool is_insertion(const Allele& allele)
 {
-    return allele.get_sequence().size() > size(allele);
+    return allele.get_sequence().size() > region_size(allele);
 }
 
 bool is_deletion(const Allele& allele)
 {
-    return allele.get_sequence().size() < size(allele);
+    return allele.get_sequence().size() < region_size(allele);
 }
 
 bool is_indel(const Allele& allele)
@@ -146,13 +146,13 @@ std::vector<Allele> decompose(const Allele& allele)
             result.emplace_back(get_region(allele), sequence.substr(i, 1));
         }
     } else if (is_deletion(allele)) {
-        result.reserve(size(allele));
+        result.reserve(region_size(allele));
         auto decomposed_regions = decompose(get_region(allele));
         
         std::transform(std::begin(decomposed_regions), std::end(decomposed_regions), std::back_inserter(result),
                        [] (const auto& region) { return Allele {region, ""}; } );
     } else {
-        result.reserve(size(allele));
+        result.reserve(region_size(allele));
         const auto& sequence = allele.get_sequence();
         unsigned i {};
         

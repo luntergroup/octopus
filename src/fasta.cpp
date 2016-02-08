@@ -79,7 +79,7 @@ Fasta::SizeType Fasta::do_get_contig_size(const ContigNameType& contig) const
 Fasta::SequenceType Fasta::do_fetch_sequence(const GenomicRegion& region) const
 {
     return bioio::read_fasta_contig(fasta_, fasta_index_.at(get_contig_name(region)),
-                                    get_begin(region), size(region));
+                                    get_begin(region), region_size(region));
 }
 
 bool Fasta::is_valid_fasta() const noexcept

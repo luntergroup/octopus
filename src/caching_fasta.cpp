@@ -108,7 +108,7 @@ CachingFasta::SequenceType CachingFasta::do_fetch_sequence(const GenomicRegion& 
 {
     //std::cout << "requested " << region << std::endl;
     
-    if (size(region) > max_cache_size_) {
+    if (region_size(region) > max_cache_size_) {
         //std::cout << "region too big to cache.. fetching from file" << std::endl;
         return fasta_.fetch_sequence(region);
     } else if (is_contig_cached(region)) {
@@ -190,13 +190,13 @@ GenomicRegion CachingFasta::get_region_to_fetch(const GenomicRegion& requested_r
 CachingFasta::SizeType CachingFasta::get_lhs_extension_size(const GenomicRegion& requested_region) const
 {
     return std::min(requested_region.get_begin(),
-                    static_cast<SizeType>((max_cache_size_ - size(requested_region)) * locality_bias_ * (1.0 - forward_bias_)));
+                    static_cast<SizeType>((max_cache_size_ - region_size(requested_region)) * locality_bias_ * (1.0 - forward_bias_)));
 }
 
 CachingFasta::SizeType CachingFasta::get_rhs_extension_size(const GenomicRegion& requested_region) const
 {
     return std::min(contig_size_cache_.at(requested_region.get_contig_name()) - requested_region.get_end(),
-                    static_cast<SizeType>((max_cache_size_ - size(requested_region)) * locality_bias_ * forward_bias_));
+                    static_cast<SizeType>((max_cache_size_ - region_size(requested_region)) * locality_bias_ * forward_bias_));
 }
 
 GenomicRegion CachingFasta::get_new_contig_chunk(const GenomicRegion& requested_region) const
@@ -239,19 +239,19 @@ void CachingFasta::add_sequence_to_cache(SequenceType&& sequence, const GenomicR
         while (current_cache_size_ > target_cache_size) {
             //std::cout << "optimizing cache... removing " << recently_used_regions_.back() << std::endl;
             remove_from_sequence_cache(recently_used_regions_.back());
-            current_cache_size_ -= size(recently_used_regions_.back());
+            current_cache_size_ -= region_size(recently_used_regions_.back());
             recently_used_regions_.pop_back();
         }
     }
     
     sequence_cache_[region.get_contig_name()].emplace(region.get_contig_region(), std::move(sequence));
     recently_used_regions_.push_front(region);
-    current_cache_size_ += size(region);
+    current_cache_size_ += region_size(region);
     
     while (current_cache_size_ > max_cache_size_) {
         //std::cout << "cache full... removing " << recently_used_regions_.back() << std::endl;
         remove_from_sequence_cache(recently_used_regions_.back());
-        current_cache_size_ -= size(recently_used_regions_.back());
+        current_cache_size_ -= region_size(recently_used_regions_.back());
         recently_used_regions_.pop_back();
     }
     
@@ -324,7 +324,7 @@ void CachingFasta::recache_overlapped_regions(const SequenceType& sequence, cons
                 const ContigRegion& overlapped_contig_region {p.first};
                 const GenomicRegion overlapped_region {region.get_contig_name(), overlapped_contig_region};
                 
-                current_cache_size_ -= size(overlapped_region);
+                current_cache_size_ -= region_size(overlapped_region);
                 
                 if (contains(region.get_contig_region(), overlapped_contig_region)) {
                     remove_from_usage_cache(overlapped_region);
@@ -338,7 +338,7 @@ void CachingFasta::recache_overlapped_regions(const SequenceType& sequence, cons
                                                             overlapped_contig_region, p.second));
                     
                     replace_in_usage_cache(overlapped_region, nonoverlapped_region);
-                    current_cache_size_ += size(nonoverlapped_contig_region);
+                    current_cache_size_ += region_size(nonoverlapped_contig_region);
                     //std::cout << "replaced " << overlapped_region << " with " << nonoverlapped_region << " in cache" << std::endl;
                 }
             });
@@ -355,6 +355,6 @@ CachingFasta::SequenceType CachingFasta::get_subsequence(const ContigRegion& req
                                                          const ContigRegion& sequence_region,
                                                          const SequenceType& sequence) const
 {
-    // precondition is contains(sequence_region, requested_region)
-    return sequence.substr(requested_region.get_begin() - sequence_region.get_begin(), size(requested_region));
+    // precondition is contains(sequence_regionrequested_region, requested_region)
+    return sequence.substr(begin_distance(requested_region, sequence_region), region_size(requested_region));
 }

@@ -120,7 +120,6 @@ public:
     const SequenceType& get_sequence() const noexcept;
     const Qualities& get_qualities() const noexcept;
     QualityType get_mapping_quality() const noexcept;
-    SizeType get_sequence_size() const noexcept;
     const CigarString& get_cigar_string() const noexcept;
     bool has_mate() const noexcept;
     const NextSegment& get_next_segment() const;
@@ -215,6 +214,8 @@ flags_ {compress_flags(data)}
 {}
 
 // Non-member methods
+
+AlignedRead::SizeType sequence_size(const AlignedRead& read) noexcept;
 
 CigarString splice_cigar(const AlignedRead& read, const GenomicRegion& region);
 

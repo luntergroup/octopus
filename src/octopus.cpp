@@ -161,7 +161,7 @@ namespace Octopus
     {
         return std::accumulate(std::cbegin(regions), std::cend(regions), GenomicRegion::SizeType {},
                                [] (const auto curr, const auto& p) {
-                                   return curr + sum_sizes(p.second);
+                                   return curr + sum_region_sizes(p.second);
                                });
     }
     

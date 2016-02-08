@@ -52,9 +52,9 @@ double HaplotypePriorModel::evaluate(const Haplotype& to, const Haplotype& from)
                 }
             } else {
                 if (repeats.empty()) {
-                    result *= transversion_rate_ * size(variant);
+                    result *= transversion_rate_ * region_size(variant);
                 } else {
-                    result *= transition_rate_ * size(variant);
+                    result *= transition_rate_ * region_size(variant);
                 }
             }
         } else {

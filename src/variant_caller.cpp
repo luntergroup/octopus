@@ -102,7 +102,7 @@ bool VariantCaller::refcalls_requested() const noexcept
 
 bool VariantCaller::done_calling(const GenomicRegion& region) const noexcept
 {
-    return empty(region);
+    return is_empty(region);
 }
 
 // non-member methods
@@ -117,7 +117,7 @@ generate_callable_alleles(const GenomicRegion& region,
     
     auto overlapped_variants = copy_overlapped(variants, region);
     
-    if (empty(region) && overlapped_variants.empty()) return std::vector<Allele> {};
+    if (is_empty(region) && overlapped_variants.empty()) return std::vector<Allele> {};
     
     if (overlapped_variants.empty()) {
         switch (refcall_type) {
@@ -146,7 +146,7 @@ generate_callable_alleles(const GenomicRegion& region,
                    make_move_iterator(begin(variant_alleles)), make_move_iterator(end(variant_alleles)),
                    back_inserter(result));
     } else {
-        result.reserve(variant_alleles.size() + sum_sizes(uncovered_regions));
+        result.reserve(variant_alleles.size() + sum_region_sizes(uncovered_regions));
         
         auto uncovered_itr = begin(uncovered_regions);
         auto uncovered_end = end(uncovered_regions);

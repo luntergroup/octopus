@@ -38,7 +38,7 @@ sample(const MappableSet<AlignedRead>& reads, const GenomicRegion& region,
     
     if (reads.empty()) return std::vector<AlignedRead> {};
     
-    auto num_positions = size(region);
+    auto num_positions = region_size(region);
     
     auto contained = reads.contained_range(region);
     
@@ -77,8 +77,8 @@ sample(const MappableSet<AlignedRead>& reads, const GenomicRegion& region,
         result.emplace_back(sampled_read);
         unsampled_reads.erase(sampled_read_it.base());
         
-        auto offset    = get_begin(sampled_read) - get_begin(region);
-        auto num_reads = size(sampled_read);
+        const auto offset    = begin_distance(sampled_read, region);
+        const auto num_reads = region_size(sampled_read);
         
         transform(begin(required_coverage) + offset, begin(required_coverage) + offset + num_reads,
                   begin(required_coverage) + offset, [] (auto count) { return (count == 0) ? 0 : count - 1; });

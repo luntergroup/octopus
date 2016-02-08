@@ -595,7 +595,7 @@ namespace Octopus
         result.set_quality(phred_quality);
         
         result.set_filters({"REFCALL"});
-        if (size(region) > 1) {
+        if (region_size(region) > 1) {
             result.add_info("END", to_string(get_end(region))); // - 1 as VCF uses closed intervals
         }
         
@@ -629,7 +629,7 @@ namespace Octopus
     {
         std::vector<VcfRecord> result {};
         
-        if (empty(region) || (candidates.empty() && refcall_type_ == RefCallType::None)) {
+        if (is_empty(region) || (candidates.empty() && refcall_type_ == RefCallType::None)) {
             return result;
         }
         

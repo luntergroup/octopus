@@ -49,22 +49,22 @@ ContigAllele::SequenceType get_subsequence(const ContigAllele& allele, const Con
         return sequence;
     }
     
-    if (begins_equal(region, allele) && empty(region) && is_insertion(allele)) {
+    if (begins_equal(region, allele) && is_empty(region) && is_insertion(allele)) {
         const auto first = std::cbegin(sequence);
-        return ContigAllele::SequenceType {first, first + sequence.size() - size(allele)};
+        return ContigAllele::SequenceType {first, first + sequence.size() - region_size(allele)};
     }
     
     auto first = std::cbegin(allele.get_sequence()) + get_begin(region) - get_begin(allele);
     // The minimum of the allele sequence size and region size is used as deletions will
     // result in a sequence size smaller than the region size
-    return ContigAllele::SequenceType {first, first + std::min(sequence.size(), static_cast<size_t>(size(region)))};
+    return ContigAllele::SequenceType {first, first + std::min(sequence.size(), static_cast<size_t>(region_size(region)))};
 }
 
 bool contains(const ContigAllele& lhs, const ContigAllele& rhs)
 {
     if (!contains(get_region(lhs), get_region(rhs))) {
         return false;
-    } else if (empty(lhs)) {
+    } else if (is_empty(lhs)) {
         return !rhs.get_sequence().empty() && Octopus::contains(lhs.get_sequence(), rhs.get_sequence());
     } else {
         return get_subsequence(lhs, get_region(rhs)) == rhs.get_sequence();
@@ -81,12 +81,12 @@ ContigAllele splice(const ContigAllele& allele, const ContigRegion& region)
 
 bool is_insertion(const ContigAllele& allele)
 {
-    return allele.get_sequence().size() > size(allele);
+    return allele.get_sequence().size() > region_size(allele);
 }
 
 bool is_deletion(const ContigAllele& allele)
 {
-    return allele.get_sequence().size() < size(allele);
+    return allele.get_sequence().size() < region_size(allele);
 }
 
 bool is_indel(const ContigAllele& allele)

@@ -120,15 +120,15 @@ auto is_same_region(const Mappable<T1>& lhs, const Mappable<T2>& rhs)
 }
 
 template <typename T>
-auto empty(const Mappable<T>& m)
+auto is_empty(const Mappable<T>& m)
 {
-    return empty(static_cast<const T&>(m).get_region());
+    return is_empty(static_cast<const T&>(m).get_region());
 }
 
 template <typename T>
-auto size(const Mappable<T>& m)
+auto region_size(const Mappable<T>& m)
 {
-    return size(static_cast<const T&>(m).get_region());
+    return region_size(static_cast<const T&>(m).get_region());
 }
 
 template <typename T>

@@ -28,18 +28,18 @@ namespace Octopus {
     void RandomCandidateVariantGenerator::add_reads(std::vector<AlignedRead>::const_iterator first,
                                                     std::vector<AlignedRead>::const_iterator last)
     {
-        max_read_size_ = size(*largest_mappable(first, last));
+        max_read_size_ = region_size(*largest_mappable(first, last));
     }
     
     void RandomCandidateVariantGenerator::add_reads(MappableSet<AlignedRead>::const_iterator first,
                                                     MappableSet<AlignedRead>::const_iterator last)
     {
-        max_read_size_ = size(*largest_mappable(first, last));
+        max_read_size_ = region_size(*largest_mappable(first, last));
     }
     
     std::vector<Variant> RandomCandidateVariantGenerator::get_candidates(const GenomicRegion& region)
     {
-        auto num_positions = size(region);
+        auto num_positions = region_size(region);
         
         std::vector<Variant> result {};
         

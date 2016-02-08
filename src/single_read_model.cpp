@@ -50,24 +50,24 @@ namespace Octopus
             
             if (begins_before(read, haplotype)) {
                 lhs_random.target_end_probability = 0.99;
-                lhs_random.query_end_probability  = 1.0 / (size(left_overhang_region(covered_region, overlapped_part)) + 1);
+                lhs_random.query_end_probability  = 1.0 / (region_size(left_overhang_region(covered_region, overlapped_part)) + 1);
             } else {
-                lhs_random.target_end_probability = 1.0 / (size(left_overhang_region(covered_region, overlapped_part)) + 1);
+                lhs_random.target_end_probability = 1.0 / (region_size(left_overhang_region(covered_region, overlapped_part)) + 1);
                 lhs_random.query_end_probability  = 0.99;
             }
             
-            match.end_probability = std::min(1.0 / (size(overlapped_part) + 1), max_match_end_prob);
+            match.end_probability = std::min(1.0 / (region_size(overlapped_part) + 1), max_match_end_prob);
             
             if (ends_before(read, haplotype)) {
-                rhs_random.target_end_probability = 1.0 / (size(right_overhang_region(covered_region, overlapped_part)) + 1);
+                rhs_random.target_end_probability = 1.0 / (region_size(right_overhang_region(covered_region, overlapped_part)) + 1);
                 rhs_random.query_end_probability  = 0.99;
             } else {
                 rhs_random.target_end_probability = 0.99;
-                rhs_random.query_end_probability  = 1.0 / (size(right_overhang_region(covered_region, overlapped_part)) + 1);
+                rhs_random.query_end_probability  = 1.0 / (region_size(right_overhang_region(covered_region, overlapped_part)) + 1);
             }
         } else {
-            lhs_random.target_end_probability = 1.0 / (size(haplotype) + 1);
-            lhs_random.query_end_probability  = 1.0 / (size(read) + 1);
+            lhs_random.target_end_probability = 1.0 / (region_size(haplotype) + 1);
+            lhs_random.query_end_probability  = 1.0 / (region_size(read) + 1);
             
             match.end_probability = max_match_end_prob;
             

@@ -68,7 +68,7 @@ struct has_good_base_fraction
         const auto& qualities = read.get_qualities();
         auto num_good_bases = std::count_if(std::cbegin(qualities), std::cend(qualities), [this]
                                             (auto quality) { return quality >= good_base_quality_; });
-        auto good_base_fraction = static_cast<double>(num_good_bases) / static_cast<double>(read.get_sequence_size());
+        auto good_base_fraction = static_cast<double>(num_good_bases) / static_cast<double>(sequence_size(read));
         return good_base_fraction >= min_good_base_fraction_;
     }
     
@@ -146,7 +146,7 @@ struct is_short
     
     bool operator()(const AlignedRead& read) const
     {
-        return read.get_sequence_size() <= max_length_;
+        return sequence_size(read) <= max_length_;
     }
     
 private:
@@ -175,7 +175,7 @@ struct is_not_contaminated
     
     bool operator()(const AlignedRead& read) const
     {
-        return !read.is_chimeric() || read.get_sequence_size() >= read.get_next_segment().get_inferred_template_length();
+        return !read.is_chimeric() || sequence_size(read) >= read.get_next_segment().get_inferred_template_length();
     }
 };
 

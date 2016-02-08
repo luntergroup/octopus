@@ -137,7 +137,7 @@ BOOST_AUTO_TEST_CASE(can_specify_the_maximum_size_of_candidates)
     auto candidates = candidate_generator.get_candidates(region);
     
     BOOST_CHECK(std::all_of(std::cbegin(candidates), std::cend(candidates),
-                            [=] (const auto& candidate) { return size(candidate) <= max_variant_size; }));
+                            [=] (const auto& candidate) { return region_size(candidate) <= max_variant_size; }));
 }
 
 BOOST_AUTO_TEST_CASE(only_insertions_are_included_when_the_max_variant_size_is_zero)

@@ -15,16 +15,15 @@ namespace Octopus { namespace ReadTransforms {
     
     struct trim_adapters
     {
-        trim_adapters() = default;
-        
         void operator()(AlignedRead& read) const
         {
             if (read.is_chimeric()) {
-                auto insert_size = read.get_next_segment().get_inferred_template_length();
-                auto read_size   = read.get_sequence_size();
+                const auto insert_size = read.get_next_segment().get_inferred_template_length();
+                const auto read_size   = sequence_size(read);
                 
                 if (insert_size > 0 && insert_size < read_size) {
-                    auto num_adapter_bases = read_size - insert_size;
+                    const auto num_adapter_bases = read_size - insert_size;
+                    
                     if (read.is_marked_reverse_mapped()) {
                         read.zero_back_qualities(num_adapter_bases);
                     } else {
@@ -60,13 +59,10 @@ namespace Octopus { namespace ReadTransforms {
     
     struct trim_soft_clipped
     {
-        trim_soft_clipped() = default;
-        
         void operator()(AlignedRead& read) const
         {
             if (is_soft_clipped(read.get_cigar_string())) {
-                auto qualities = read.get_qualities();
-                auto soft_clipped_sizes = get_soft_clipped_sizes(read.get_cigar_string());
+                const auto soft_clipped_sizes = get_soft_clipped_sizes(read.get_cigar_string());
                 read.zero_front_qualities(soft_clipped_sizes.first);
                 read.zero_back_qualities(soft_clipped_sizes.second);
             }
@@ -83,8 +79,7 @@ namespace Octopus { namespace ReadTransforms {
         void operator()(AlignedRead& read) const
         {
             if (is_soft_clipped(read)) {
-                auto qualities = read.get_qualities();
-                auto soft_clipped_sizes = get_soft_clipped_sizes(read);
+                const auto soft_clipped_sizes = get_soft_clipped_sizes(read);
                 read.zero_front_qualities(soft_clipped_sizes.first + num_bases_);
                 read.zero_back_qualities(soft_clipped_sizes.second + num_bases_);
             } else {

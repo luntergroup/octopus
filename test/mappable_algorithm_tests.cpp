@@ -112,7 +112,7 @@ BOOST_AUTO_TEST_CASE(overlap_range_returns_correct_range_if_given_the_maximum_re
     
     auto bisorted_ranges = bidirectionally_sorted_ranges(regions.cbegin(), regions.cend());
     
-    auto max_region_size = size(*largest_mappable(regions));
+    auto max_region_size = region_size(*largest_mappable(regions));
     
     auto overlapped = overlap_range(regions, test_region, max_region_size);
     

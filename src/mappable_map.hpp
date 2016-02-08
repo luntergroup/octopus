@@ -272,7 +272,7 @@ template <typename KeyType, typename MappableType>
 std::vector<unsigned>
 positional_coverage(const MappableMap<KeyType, MappableType>& mappables, const GenomicRegion& region)
 {
-    std::vector<unsigned> result(size(region), 0);
+    std::vector<unsigned> result(region_size(region), 0);
     
     for (const auto& p : mappables) {
         const auto pcoverage = positional_coverage(p.second, region);

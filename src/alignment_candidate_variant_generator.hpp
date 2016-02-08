@@ -76,7 +76,7 @@ template <typename T1, typename T2, typename T3>
 void AlignmentCandidateVariantGenerator::add_candidate(T1&& region, T2&& sequence_removed,
                                                        T3&& sequence_added)
 {
-    const auto candidate_size = size(region);
+    const auto candidate_size = region_size(region);
     
     if (candidate_size <= max_variant_size_) {
         candidates_.emplace_back(std::forward<T1>(region), std::forward<T2>(sequence_removed),

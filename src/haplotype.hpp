@@ -109,6 +109,8 @@ private:
 
 // non-members
 
+Haplotype::SizeType sequence_size(const Haplotype& haplotype) noexcept;
+
 bool contains(const Haplotype& lhs, const Allele& rhs);
 bool contains(const Haplotype& lhs, const Haplotype& rhs);
 
