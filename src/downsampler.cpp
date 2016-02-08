@@ -42,7 +42,7 @@ sample(const MappableSet<AlignedRead>& reads, const GenomicRegion& region,
     
     auto contained = reads.contained_range(region);
     
-    std::vector<unsigned> old_position_coverages = positional_coverage(begin(contained), end(contained), region);
+    std::vector<unsigned> old_position_coverages {get_positional_coverage(contained, region)};
     std::vector<unsigned> required_coverage(num_positions);
     
     transform(cbegin(old_position_coverages), cend(old_position_coverages), begin(required_coverage),

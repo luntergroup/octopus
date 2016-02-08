@@ -27,8 +27,8 @@
 
 #include <iostream> // DEBUG
 
-template <typename ForwardIt>
-auto sum_sizes(ForwardIt first, ForwardIt last)
+template <typename InputIt>
+auto sum_sizes(InputIt first, InputIt last)
 {
     return std::accumulate(first, last, GenomicRegion::SizeType {},
                            [] (const auto curr, const auto& mappable) { return curr + size(mappable); });
@@ -568,17 +568,20 @@ size_t count_if_shared_with_first(ForwardIt1 first1, ForwardIt1 last1,
     return size(overlap_range(std::next(first2), last2, *std::prev(overlapped.end()), order));
 }
 
+template <typename InputIt>
+auto get_regions(InputIt first, InputIt last)
+{
+    std::vector<RegionType<typename std::iterator_traits<InputIt>::value_type>> result {};
+    result.reserve(std::distance(first, last));
+    std::transform(first, last, std::back_inserter(result),
+                   [] (const auto& mappable) { return get_region(mappable); });
+    return result;
+}
+
 template <typename Container>
 auto get_regions(const Container& mappables)
 {
-    std::vector<RegionType<typename Container::value_type>> result {};
-    result.reserve(mappables.size());
-    
-    for (const auto& mappable : mappables) {
-        result.emplace_back(get_region(mappable));
-    }
-    
-    return result;
+    return get_regions(std::cbegin(mappables), std::cend(mappables));
 }
 
 namespace detail
@@ -669,9 +672,8 @@ template <typename ForwardIt, typename = enable_if_iterator<ForwardIt>>
 auto get_encompassing(ForwardIt first, ForwardIt last)
 {
     if (first == last) {
-        throw std::runtime_error {"get_encompassing_region given empty range"};
+        throw std::logic_error {"get_encompassing given empty range"};
     }
-    
     return get_encompassing(*first, *rightmost_mappable(first, last));
 }
 
@@ -931,10 +933,10 @@ auto get_segment_regions(const std::vector<std::vector<Mappable>>& segments)
 //    return has_coverage(std::cbegin(mappables), std::cend(mappables), region);
 //}
 
-template <typename InputIt, typename RegionTp>
-auto positional_coverage(InputIt first, InputIt last, const RegionTp& region)
+template <typename ForwardIt, typename RegionTp>
+auto get_positional_coverage(ForwardIt first, ForwardIt last, const RegionTp& region)
 {
-    static_assert(std::is_same<RegionType<typename std::iterator_traits<InputIt>::value_type>,
+    static_assert(std::is_same<RegionType<typename std::iterator_traits<ForwardIt>::value_type>,
                   RegionTp>::value,
                   "RegionType of input range must match RegionTp");
     
@@ -948,7 +950,7 @@ auto positional_coverage(InputIt first, InputIt last, const RegionTp& region)
     
     const auto first_position = get_begin(region);
     
-    for_each(first, last, [result_begin_itr, first_position, num_positions] (const auto& mappable) {
+    for_each(first, last, [=] (const auto& mappable) {
         const auto it1 = next(result_begin_itr, (get_begin(mappable) <= first_position) ? 0 : get_begin(mappable) - first_position);
         const auto it2 = next(result_begin_itr, min(get_end(mappable) - first_position, num_positions));
         std::transform(it1, it2, it1, [] (const auto count) { return count + 1; });
@@ -958,20 +960,17 @@ auto positional_coverage(InputIt first, InputIt last, const RegionTp& region)
 }
 
 template <typename Container>
-auto positional_coverage(const Container& mappables)
+auto get_positional_coverage(const Container& mappables)
 {
     return positional_coverage(std::cbegin(mappables), std::cend(mappables),
                                get_encompassing_region(mappables));
 }
 
 template <typename Container, typename RegionTp>
-auto positional_coverage(const Container& mappables, const RegionTp& region)
+auto get_positional_coverage(const Container& mappables, const RegionTp& region)
 {
-    static_assert(std::is_same<RegionType<typename Container::value_type>, RegionTp>::value,
-                  "RegionType of input container must match RegionTp");
-    
     const auto overlapped = overlap_range(mappables, region);
-    return positional_coverage(std::cbegin(overlapped), std::cend(overlapped), region);
+    return get_positional_coverage(std::cbegin(overlapped), std::cend(overlapped), region);
 }
 
 #endif

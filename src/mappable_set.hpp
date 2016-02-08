@@ -916,7 +916,7 @@ size_t count_if_shared_with_first(const MappableSet<MappableType, Allocator>& ma
 {
     if (first == last) return 0;
     
-    auto overlapped = mappables.overlap_range(*first);
+    const auto overlapped = mappables.overlap_range(*first);
     
     if (empty(overlapped)) return 0;
     
@@ -937,7 +937,7 @@ copy_nonoverlapped(const MappableSet<MappableType1, Allocator>& mappables, const
 {
     using std::cbegin; using std::cend;
     
-    auto num_overlapped = mappables.count_overlapped(mappable);
+    const auto num_overlapped = mappables.count_overlapped(mappable);
     
     if (num_overlapped == 0) return mappables;
     
@@ -980,7 +980,7 @@ copy_noncontained(const MappableSet<MappableType1, Allocator>& mappables, const 
 {
     using std::cbegin; using std::cend;
     
-    auto num_overlapped = mappables.count_overlapped(mappable);
+    const auto num_overlapped = mappables.count_overlapped(mappable);
     
     if (num_overlapped == 0) return mappables;
     
@@ -1009,8 +1009,14 @@ copy_noncontained(const MappableSet<MappableType1, Allocator>& mappables, const 
     return result;
 }
 
-template <typename Mappable, typename Region, typename Allocator1, typename Allocator2>
-MappableSet<Region> splice_all(const MappableSet<Mappable, Allocator1>& mappables,
+template <typename MappableType, typename Allocator>
+auto get_encompassing(const MappableSet<MappableType, Allocator>& mappables)
+{
+    return get_encompassing(mappables.leftmost(), mappables.rightmost());
+}
+
+template <typename MappableType, typename Region, typename Allocator1, typename Allocator2>
+MappableSet<Region> splice_all(const MappableSet<MappableType, Allocator1>& mappables,
                                const MappableSet<Region, Allocator2>& regions)
 {
     if (mappables.empty()) return regions;
@@ -1031,8 +1037,7 @@ MappableSet<Region> splice_all(const MappableSet<Mappable, Allocator1>& mappable
                 overlapped.advance_begin(1);
             }
             
-            std::for_each(std::cbegin(overlapped), std::cend(overlapped),
-                          [&result, &spliced] (const auto& region) {
+            std::for_each(std::cbegin(overlapped), std::cend(overlapped), [&] (const auto& region) {
                 result.emplace(get_left_overhang(spliced, region));
                 spliced = compress_lhs(spliced, get_begin(region) - get_begin(spliced));
             });
@@ -1049,18 +1054,18 @@ MappableSet<Region> splice_all(const MappableSet<Mappable, Allocator1>& mappable
 }
 
 template <typename MappableType, typename Allocator>
-std::vector<unsigned> positional_coverage(const MappableSet<MappableType, Allocator>& mappables)
+auto positional_coverage(const MappableSet<MappableType, Allocator>& mappables)
 {
-    return positional_coverage(std::cbegin(mappables), std::cend(mappables),
-                               get_encompassing_region(mappables));
+    return get_positional_coverage(std::cbegin(mappables), std::cend(mappables),
+                                   get_encompassing_region(mappables));
 }
 
 template <typename MappableType>
-std::vector<unsigned> positional_coverage(const MappableSet<MappableType>& mappables,
+auto positional_coverage(const MappableSet<MappableType>& mappables,
                                           const GenomicRegion& region)
 {
     const auto overlapped = mappables.overlap_range(region);
-    return positional_coverage(std::cbegin(overlapped), std::cend(overlapped), region);
+    return get_positional_coverage(std::cbegin(overlapped), std::cend(overlapped), region);
 }
 
 #endif

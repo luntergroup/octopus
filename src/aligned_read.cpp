@@ -124,7 +124,7 @@ const AlignedRead::NextSegment& AlignedRead::get_next_segment() const
     if (is_chimeric()) {
         return *next_segment_;
     } else {
-        throw std::runtime_error {"Read does not have a next segment"};
+        throw std::runtime_error {"AlignedRead: read does not have a next segment"};
     }
 }
 
