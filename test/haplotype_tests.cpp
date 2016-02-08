@@ -17,17 +17,11 @@
 #include "reference_genome.hpp"
 #include "read_manager.hpp"
 #include "variant.hpp"
-#include "variant_utils.hpp"
 #include "haplotype.hpp"
 #include "mappable_algorithms.hpp"
 
 using std::cout;
 using std::endl;
-
-static void add_alt_to_back(const Variant& variant, Haplotype& haplotype)
-{
-    haplotype.push_back(variant.get_alt_allele());
-}
 
 BOOST_AUTO_TEST_SUITE(Components)
 BOOST_AUTO_TEST_SUITE(Haplotypes)

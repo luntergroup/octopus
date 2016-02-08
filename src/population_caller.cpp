@@ -28,7 +28,6 @@
 #include "vcf_record.hpp"
 #include "maths.hpp"
 #include "mappable_algorithms.hpp"
-#include "variant_utils.hpp"
 #include "read_utils.hpp"
 #include "string_utils.hpp"
 #include "sequence_utils.hpp"
@@ -325,7 +324,7 @@ auto get_regions(const VariantCallBlocks& variant_calls)
     result.reserve(variant_calls.size());
     
     for (const auto& segment_calls : variant_calls) {
-        result.emplace_back(get_encompassing_region(segment_calls.variants));
+        result.emplace_back(get_encompassing(segment_calls.variants));
     }
     
     return result;
@@ -738,7 +737,7 @@ PopulationVariantCaller::call_variants(const GenomicRegion& region,
         {
             std::cout << "printing all variant calls" << std::endl;
             for (const auto& segment_calls : calls) {
-                std::cout << "printing calls in segment " << get_encompassing_region(segment_calls.variants) << std::endl;
+                std::cout << "printing calls in segment " << get_encompassing(segment_calls.variants) << std::endl;
                 std::copy(std::cbegin(segment_calls.variants), std::cend(segment_calls.variants),
                           std::ostream_iterator<Variant>(std::cout, "\n"));
             }

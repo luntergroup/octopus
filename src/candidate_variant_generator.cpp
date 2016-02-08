@@ -13,7 +13,6 @@
 #include "genomic_region.hpp"
 #include "aligned_read.hpp"
 #include "variant.hpp"
-#include "variant_utils.hpp"
 
 namespace Octopus {
     

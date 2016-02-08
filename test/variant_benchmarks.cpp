@@ -18,7 +18,6 @@
 #include "reference_genome.hpp"
 #include "genomic_region.hpp"
 #include "variant.hpp"
-#include "variant_utils.hpp"
 
 //BOOST_AUTO_TEST_CASE(variant_benchmark)
 //{

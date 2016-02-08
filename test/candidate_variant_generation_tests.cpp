@@ -17,7 +17,6 @@
 #include "reference_genome.hpp"
 #include "read_manager.hpp"
 #include "variant.hpp"
-#include "variant_utils.hpp"
 #include "candidate_generators.hpp"
 #include "vcf_reader.hpp"
 

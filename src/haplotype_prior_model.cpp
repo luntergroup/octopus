@@ -11,9 +11,9 @@
 #include <algorithm>
 
 #include "haplotype.hpp"
-#include "variant_utils.hpp"
 #include "sequence_utils.hpp"
 #include "maths.hpp"
+#include "variant.hpp"
 
 namespace Octopus
 {

@@ -45,6 +45,8 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         
         //"--reads", "/Users/dcooke/Genomics/cancer/TCGA/benchmark/HCC1143.NORMAL.7x.compare.bam", "/Users/dcooke/Genomics/cancer/TCGA/benchmark/HCC1143.7x.n25t65s10.bam",
         
+        //"--reads", NA12878_low_coverage_cram.c_str(),
+        
         //"--model", "cancer", // default "population"
         "--normal-sample", "HCC1143.NORMAL.30x.compare", // for cancer model
         

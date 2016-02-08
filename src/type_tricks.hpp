@@ -64,4 +64,25 @@ void shrink_to_fit_if_enabled(Container& c)
     detail::shrink_to_fit_if_enabled(c, detail::HasShrinkToFit<Container> {});
 }
 
+namespace detail
+{
+    template <typename T, typename = void>
+    struct IsIterator
+    {
+        static constexpr bool value = false;
+    };
+    
+    template <typename T>
+    struct IsIterator<T, typename std::enable_if_t<!std::is_same<typename std::iterator_traits<T>::value_type, void>::value>>
+    {
+        static constexpr bool value = true;
+    };
+} // namespace detail
+
+template <typename T>
+constexpr bool is_iterator = detail::IsIterator<T>::value;
+
+template <typename T, typename V = void>
+using enable_if_iterator = std::enable_if_t<is_iterator<T>, V>;
+
 #endif /* type_tricks_hpp */

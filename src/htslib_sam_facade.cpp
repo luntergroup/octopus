@@ -30,7 +30,6 @@ public:
     {
         return (std::string{runtime_error::what()} + ": in " + file_path_ + " - " + message_).c_str();
     }
-    
 private:
     std::string message_, file_path_;
 };
@@ -50,7 +49,6 @@ public:
         return (std::string {runtime_error::what()} + ": in " + file_path_ + ", read " + read_name_ +
                     " - " + message_).c_str();
     }
-    
 private:
     std::string message_, read_name_, file_path_;
 };
@@ -71,7 +69,7 @@ samples_ {}
     if (is_open()) {
         init_maps();
         
-        for (const auto pair : sample_map_) {
+        for (const auto& pair : sample_map_) {
             if (std::find(std::cbegin(samples_), std::cend(samples_), pair.second) == std::cend(samples_)) {
                 samples_.emplace_back(pair.second);
             }
@@ -104,8 +102,11 @@ void HtslibSamFacade::close()
     hts_index_.reset(nullptr);
 }
 
-unsigned HtslibSamFacade::get_num_reference_contigs() noexcept
+unsigned HtslibSamFacade::get_num_reference_contigs()
 {
+    if (!is_open()) {
+        throw std::runtime_error {"HtslibSamFacade: file not open"};
+    }
     return hts_header_->n_targets;
 }
 
@@ -296,6 +297,8 @@ std::vector<GenomicRegion> HtslibSamFacade::get_possible_regions_in_file()
     
     return result;
 }
+
+// private methods
 
 bool is_tag_type(const std::string& header_line, const char* tag)
 {

@@ -19,6 +19,8 @@
 #include "comparable.hpp"
 #include "mappable.hpp"
 
+class ReferenceGenome;
+
 /*
  A variant is a combination of a reference allele and an alternative allele.
  */
@@ -75,6 +77,10 @@ alternative_ {reference_.get_region(), std::forward<SequenceType3>(alt_sequence)
 
 // non-member methods
 
+Variant make_variant(const Allele& alt_allele, const ReferenceGenome& reference);
+Variant make_variant(const std::string& region_str, Variant::SequenceType alt_sequence,
+                     const ReferenceGenome& reference);
+
 const Variant::SequenceType& get_ref_sequence(const Variant& variant);
 const Variant::SequenceType& get_alt_sequence(const Variant& variant);
 
@@ -83,6 +89,74 @@ Variant::SizeType alt_sequence_size(const Variant& variant);
 
 bool operator==(const Variant& lhs, const Variant& rhs);
 bool operator<(const Variant& lhs, const Variant& rhs);
+
+void remove_duplicates(std::vector<Variant>& variants);
+
+/*
+ Decomposes a list of variants into unique alleles in the same order as the given variants.
+ The reference allele for each unique GenomicRegion will appear first in the sub-list.
+ */
+std::vector<Allele> decompose(const std::vector<Variant>& variants);
+
+std::vector<Allele> get_intervening_reference_alleles(const std::vector<Variant>& variants,
+                                                      const ReferenceGenome& reference);
+
+/*
+ A variant is parsimonious if and only if it is represented in as few nucleotides as possible
+ without an allele of length 0.
+ */
+bool is_parsimonious(const Variant& variant) noexcept;
+
+Variant make_parsimonious(const Variant& variant, const ReferenceGenome& reference);
+
+bool is_left_alignable(const Variant& variant) noexcept;
+
+// Note there are no 'is_left_aligned' or 'is_normalised' methods because they
+// would take as much work as calling 'left_align'.
+
+/*
+ A variant is left aligned if and only if it is no longer possible to shift its position
+ to the left while keeping the length of all its alleles constant.
+ */
+Variant left_align(const Variant& variant, const ReferenceGenome& reference,
+                   Variant::SizeType extension_size = 30);
+
+/*
+ A variant is normalised if and only if it is parsimonious and left aligned.
+ */
+Variant normalise(const Variant& variant, const ReferenceGenome& reference,
+                  Variant::SizeType extension_size = 30);
+
+Variant pad_left(const Variant& variant, const Variant::SequenceType& sequence);
+Variant pad_right(const Variant& variant, const Variant::SequenceType& sequence);
+Variant pad_right(const Variant& variant, const ReferenceGenome& reference, Variant::SizeType n);
+Variant pad_left(const Variant& variant, const ReferenceGenome& reference, Variant::SizeType n);
+Variant pad_right(const Variant& variant, const ReferenceGenome& reference, Variant::SizeType n);
+
+/*
+ Left aligns all input Variants and removes any resulting duplicates. The returned variants are sorted.
+ */
+std::vector<Variant> unique_left_align(const std::vector<Variant>& variants, const ReferenceGenome& reference);
+
+std::vector<Variant> parsimonise_each(const std::vector<Variant>& variants, const ReferenceGenome& reference);
+
+std::vector<Variant> parsimonise_together(const std::vector<Variant>& variants, const ReferenceGenome& reference);
+
+bool is_snp(const Variant& variant) noexcept;
+
+bool is_insertion(const Variant& variant) noexcept;
+
+bool is_deletion(const Variant& variant) noexcept;
+
+bool is_indel(const Variant& variant) noexcept;
+
+bool is_mnv(const Variant& variant) noexcept;
+
+bool is_transition(const Variant& variant) noexcept;
+
+bool is_transversion(const Variant& variant) noexcept;
+
+std::vector<Allele::SequenceType> get_alt_allele_sequences(const std::vector<Variant>& variants);
 
 namespace std {
     template <> struct hash<Variant>

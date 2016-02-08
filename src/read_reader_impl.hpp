@@ -44,7 +44,7 @@ public:
     virtual Reads fetch_reads(const SampleIdType& sample, const GenomicRegion& region) = 0;
     virtual SampleReadMap fetch_reads(const std::vector<SampleIdType>& samples, const GenomicRegion& region) = 0;
     
-    virtual unsigned get_num_reference_contigs() noexcept = 0;
+    virtual unsigned get_num_reference_contigs() = 0;
     virtual std::vector<std::string> get_reference_contig_names() = 0;
     virtual SizeType get_reference_contig_size(const std::string& contig_name) = 0;
     virtual std::vector<GenomicRegion> get_possible_regions_in_file() = 0;

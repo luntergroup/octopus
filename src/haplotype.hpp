@@ -139,6 +139,11 @@ bool have_same_alleles(const Haplotype& lhs, const Haplotype& rhs);
 
 bool are_equal_in_region(const Haplotype& lhs, const Haplotype& rhs, const GenomicRegion& region);
 
+void add_ref_to_back(const Variant& variant, Haplotype& haplotype);
+void add_ref_to_front(const Variant& variant, Haplotype& haplotype);
+void add_alt_to_back(const Variant& variant, Haplotype& haplotype);
+void add_alt_to_front(const Variant& variant, Haplotype& haplotype);
+
 namespace std
 {
     template <> struct hash<Haplotype>

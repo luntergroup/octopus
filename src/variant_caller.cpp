@@ -14,7 +14,6 @@
 #include "mappable.hpp"
 #include "mappable_algorithms.hpp"
 #include "read_utils.hpp"
-#include "variant_utils.hpp"
 #include "vcf_record.hpp"
 
 #include "mappable_algorithms.hpp"

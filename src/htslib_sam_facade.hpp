@@ -60,7 +60,7 @@ public:
     SampleReadMap fetch_reads(const GenomicRegion& region) override;
     Reads fetch_reads(const SampleIdType& sample, const GenomicRegion& region) override;
     SampleReadMap fetch_reads(const std::vector<SampleIdType>& samples, const GenomicRegion& region) override;
-    unsigned get_num_reference_contigs() noexcept override;
+    unsigned get_num_reference_contigs() override;
     std::vector<std::string> get_reference_contig_names() override;
     SizeType get_reference_contig_size(const std::string& contig_name) override;
     std::vector<GenomicRegion> get_possible_regions_in_file() override;

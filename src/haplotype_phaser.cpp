@@ -353,7 +353,7 @@ find_optimal_phase_regions(const GenomicRegion& region,
         phase_score = calculate_phase_score(phase_set, curr_genotype_posteriors);
         
         if (phase_score + 0.1 < previous_phase_score) {
-            auto phase_region = get_encompassing_region(phase_begin_itr, std::prev(phase_end_itr));
+            auto phase_region = get_encompassing(phase_begin_itr, std::prev(phase_end_itr));
             result.emplace_back(phase_region, previous_phase_score);
             phase_begin_itr = std::prev(phase_end_itr);
             previous_phase_score = 0.0;

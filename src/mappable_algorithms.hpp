@@ -23,6 +23,7 @@
 #include "genomic_region.hpp"
 #include "mappable.hpp"
 #include "mappable_ranges.hpp"
+#include "type_tricks.hpp"
 
 #include <iostream> // DEBUG
 
@@ -664,8 +665,8 @@ auto decompose(const MappableTp& mappable, GenomicRegion::SizeType n)
  
  Requires [first, last) is sorted w.r.t GenomicRegion::operator<
  */
-template <typename ForwardIt>
-auto get_encompassing_region(ForwardIt first, ForwardIt last)
+template <typename ForwardIt, typename = enable_if_iterator<ForwardIt>>
+auto get_encompassing(ForwardIt first, ForwardIt last)
 {
     if (first == last) {
         throw std::runtime_error {"get_encompassing_region given empty range"};
@@ -675,9 +676,9 @@ auto get_encompassing_region(ForwardIt first, ForwardIt last)
 }
 
 template <typename Container>
-auto get_encompassing_region(const Container& mappables)
+auto get_encompassing(const Container& mappables)
 {
-    return get_encompassing_region(std::cbegin(mappables), std::cend(mappables));
+    return get_encompassing(std::cbegin(mappables), std::cend(mappables));
 }
 
 /**

@@ -23,7 +23,6 @@
 #include "merge_transform.hpp"
 #include "vcf_record.hpp"
 #include "mappable_algorithms.hpp"
-#include "variant_utils.hpp"
 #include "maths.hpp"
 #include "cancer_genotype.hpp"
 #include "genotype_model.hpp"
@@ -455,7 +454,7 @@ namespace Octopus
         result.reserve(germline_variant_calls.size() + somatic_mutation_calls.size());
         
         for (const auto& call : germline_variant_calls) {
-            result.emplace_back(get_encompassing_region(call.variants));
+            result.emplace_back(get_encompassing(call.variants));
         }
         
         for (const auto& call : somatic_mutation_calls) {
@@ -475,7 +474,7 @@ namespace Octopus
         result.reserve(variant_calls.size());
         
         for (const auto& segment_calls : variant_calls) {
-            result.emplace_back(get_encompassing_region(segment_calls.variants));
+            result.emplace_back(get_encompassing(segment_calls.variants));
         }
         
         return result;

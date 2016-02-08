@@ -21,7 +21,6 @@
 #include "mappable_algorithms.hpp"
 #include "allele.hpp"
 #include "variant.hpp"
-#include "variant_utils.hpp"
 #include "mock_objects.hpp"
 
 using std::cout;

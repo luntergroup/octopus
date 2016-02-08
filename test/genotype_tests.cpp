@@ -20,7 +20,6 @@
 #include "reference_genome.hpp"
 #include "read_manager.hpp"
 #include "variant.hpp"
-#include "variant_utils.hpp"
 #include "candidate_variant_generator.hpp"
 #include "alignment_candidate_variant_generator.hpp"
 #include "haplotype.hpp"
@@ -402,15 +401,9 @@ BOOST_AUTO_TEST_CASE(generate_all_genotypes_results_in_correct_ploidy)
     }
 }
 
-Variant make_variant(const Allele& alt_allele, const ReferenceGenome& reference)
+BOOST_AUTO_TEST_CASE(extract_all_elements_works_correctly)
 {
-    return Variant {get_reference_allele(alt_allele.get_region(), reference), alt_allele};
-}
-
-Variant make_variant(const std::string& region_str, Allele::SequenceType alt_sequence,
-                     const ReferenceGenome& reference)
-{
-    return make_variant(Allele {*parse_region(region_str, reference), std::move(alt_sequence)}, reference);
+    
 }
 
 BOOST_AUTO_TEST_CASE(splice_works_correctly)
@@ -424,11 +417,12 @@ BOOST_AUTO_TEST_CASE(splice_works_correctly)
     auto variant3 = make_variant("6:31235413-31235414", "A", human);
     auto variant4 = make_variant("6:31235414-31235415", "A", human);
     
-    std::vector<Variant> variants {variant1, variant2, variant3, variant4};
+    const std::vector<Variant> variants {variant1, variant2, variant3, variant4};
     
-    auto haplotypes = Octopus::generate_all_haplotypes(variants, human);
-    auto genotypes  = generate_all_genotypes(haplotypes, 2);
+    const auto region = get_encompassing(variants);
     
+    Haplotype haplotype1 {region, human};
+    for (const auto& variant : variants) add_ref_to_back(variant, haplotype1);
     
 }
 
@@ -438,28 +432,27 @@ BOOST_AUTO_TEST_CASE(splice_all_works_correctly)
     
     const auto human = make_reference(human_reference_fasta);
     
-    auto variant1 = make_variant("6:31235411-31235412", "A", human);
-    auto variant2 = make_variant("6:31235412-31235413", "A", human);
-    auto variant3 = make_variant("6:31235413-31235414", "A", human);
-    auto variant4 = make_variant("6:31235414-31235415", "A", human);
+    const auto variant1 = make_variant("6:31235411-31235412", "A", human);
+    const auto variant2 = make_variant("6:31235412-31235413", "A", human);
+    const auto variant3 = make_variant("6:31235413-31235414", "A", human);
+    const auto variant4 = make_variant("6:31235414-31235415", "A", human);
     
-    std::vector<Variant> variants {variant1, variant2, variant3, variant4};
+    const std::vector<Variant> variants {variant1, variant2, variant3, variant4};
     
-    auto haplotypes = Octopus::generate_all_haplotypes(variants, human);
-    auto genotypes  = generate_all_genotypes(haplotypes, 2);
+    const auto haplotypes = Octopus::generate_all_haplotypes(variants, human);
+    const auto genotypes  = generate_all_genotypes(haplotypes, 2);
     
-    auto allele_splices = splice_all<Allele>(genotypes, *parse_region("6:31235412-31235413", human));
+    const auto allele_splices = splice_all<Allele>(genotypes, get_region(variant2));
     
-    for (const auto& genotype : allele_splices) {
-        cout << genotype << endl;
-    }
+    BOOST_REQUIRE(allele_splices.size() == 4);
     
-    auto haplotype_splices = splice_all<Haplotype>(genotypes, *parse_region("6:31235412-31235414", human));
+    const auto haplotype_splices1 = splice_all<Haplotype>(genotypes, get_region(variant2));
     
-    for (const auto& genotype : haplotype_splices) {
-        print_alleles(genotype);
-        cout << endl;
-    }
+    BOOST_REQUIRE(haplotype_splices1.size() == num_genotypes(2, 2));
+    
+    const auto haplotype_splices2 = splice_all<Haplotype>(genotypes, get_encompassing(variant2, variant3));
+    
+    BOOST_REQUIRE(haplotype_splices2.size() == num_genotypes(4, 2));
 }
 
 BOOST_AUTO_TEST_CASE(contains_works_correctly)

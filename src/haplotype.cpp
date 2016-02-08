@@ -500,6 +500,26 @@ void unique_least_complex(std::vector<Haplotype>& haplotypes)
     haplotypes.erase(std::unique(begin(haplotypes), end(haplotypes)), last);
 }
 
+void add_ref_to_back(const Variant& variant, Haplotype& haplotype)
+{
+    haplotype.push_back(variant.get_ref_allele());
+}
+
+void add_ref_to_front(const Variant& variant, Haplotype& haplotype)
+{
+    haplotype.push_front(variant.get_ref_allele());
+}
+
+void add_alt_to_back(const Variant& variant, Haplotype& haplotype)
+{
+    haplotype.push_back(variant.get_alt_allele());
+}
+
+void add_alt_to_front(const Variant& variant, Haplotype& haplotype)
+{
+    haplotype.push_front(variant.get_alt_allele());
+}
+
 bool operator==(const Haplotype& lhs, const Haplotype& rhs)
 {
     return lhs.get_region() == rhs.get_region() && lhs.get_sequence() == rhs.get_sequence();
