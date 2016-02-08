@@ -894,9 +894,9 @@ void swap(MappableSet<MappableType, Allocator>& lhs, MappableSet<MappableType, A
 }
 
 template <typename MappableType, typename Allocator>
-auto get_encompassing_region(const MappableSet<MappableType, Allocator>& mappables)
+auto encompassing_region(const MappableSet<MappableType, Allocator>& mappables)
 {
-    return get_encompassing(mappables.leftmost(), mappables.rightmost());
+    return encompassing_region(mappables.leftmost(), mappables.rightmost());
 }
 
 template <typename ForwardIterator, typename MappableType1, typename MappableType2, typename Allocator>
@@ -1033,17 +1033,17 @@ MappableSet<Region> splice_all(const MappableSet<MappableType, Allocator1>& mapp
             auto spliced = region;
             
             if (begins_before(overlapped.front(), spliced)) {
-                spliced = get_right_overhang(spliced, overlapped.front());
+                spliced = right_overhang_region(spliced, overlapped.front());
                 overlapped.advance_begin(1);
             }
             
             std::for_each(std::cbegin(overlapped), std::cend(overlapped), [&] (const auto& region) {
-                result.emplace(get_left_overhang(spliced, region));
-                spliced = compress_lhs(spliced, get_begin(region) - get_begin(spliced));
+                result.emplace(left_overhang_region(spliced, region));
+                spliced = compress_lhs(spliced, begin_distance(region, spliced));
             });
             
             if (ends_before(overlapped.back(), spliced)) {
-                result.emplace(get_right_overhang(spliced, overlapped.back()));
+                result.emplace(right_overhang_region(spliced, overlapped.back()));
             }
         }
    }
@@ -1057,7 +1057,7 @@ template <typename MappableType, typename Allocator>
 auto positional_coverage(const MappableSet<MappableType, Allocator>& mappables)
 {
     return get_positional_coverage(std::cbegin(mappables), std::cend(mappables),
-                                   get_encompassing_region(mappables));
+                                   encompassing_region(mappables));
 }
 
 template <typename MappableType>

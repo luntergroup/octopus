@@ -238,7 +238,7 @@ BOOST_AUTO_TEST_CASE(leading_haplotypes_can_be_removed_from_the_tree)
     
     haplotype_tree.extend(allele1).extend(allele2).extend(allele3).extend(allele4).extend(allele5);
     
-    const auto region = get_encompassing(allele1, allele5);
+    const auto region = encompassing_region(allele1, allele5);
     
     auto haplotypes = haplotype_tree.get_haplotypes(region);
     
@@ -276,7 +276,7 @@ BOOST_AUTO_TEST_CASE(haplotype_tree_only_contains_haplotypes_with_added_alleles)
     HaplotypeTree haplotype_tree {"4", human};
     haplotype_tree.extend(allele1).extend(allele2).extend(allele3).extend(allele4);
     
-    const auto region = get_encompassing(allele1, allele4); // reference = CTC
+    const auto region = encompassing_region(allele1, allele4); // reference = CTC
     
     Haplotype hap1 {region, human};
     hap1.push_back(allele1);
@@ -337,7 +337,7 @@ BOOST_AUTO_TEST_CASE(haplotype_tree_contains_haplotypes_with_implicit_reference_
     HaplotypeTree haplotype_tree {"4", human};
     haplotype_tree.extend(allele1).extend(allele2).extend(allele3).extend(allele4);
     
-    const auto region = get_encompassing(allele1, allele4); // reference = CTC
+    const auto region = encompassing_region(allele1, allele4); // reference = CTC
     
     Haplotype hap1 {region, human};
     
@@ -384,7 +384,7 @@ BOOST_AUTO_TEST_CASE(prune_all_gets_haplotypes_with_implicit_reference_alleles)
     const Allele allele3 {*parse_region("4:1000001-1000002", human), "G"};
     const Allele allele4 {*parse_region("4:1000002-1000003", human), "C"};
     
-    const auto region = get_encompassing(allele1, allele4);
+    const auto region = encompassing_region(allele1, allele4);
     
     Haplotype hap {region, human};
     hap.push_back(allele2);
@@ -415,7 +415,7 @@ BOOST_AUTO_TEST_CASE(pruned_branches_can_still_be_extended)
     HaplotypeTree haplotype_tree {"4", human};
     haplotype_tree.extend(allele1).extend(allele2).extend(allele3).extend(allele4);
     
-    const auto region = get_encompassing(allele1, allele4);
+    const auto region = encompassing_region(allele1, allele4);
     
     Haplotype hap {region, human};
     hap.push_back(allele2);
@@ -658,7 +658,7 @@ BOOST_AUTO_TEST_CASE(contains_returns_true_if_the_given_haplotype_is_in_the_tree
     const Allele allele4 {*parse_region("4:1000001-1000002", human), "G"};
     const Allele allele5 {*parse_region("4:1000001-1000002", human), "C"};
     
-    const auto region = get_encompassing(allele1, allele5);
+    const auto region = encompassing_region(allele1, allele5);
     
     HaplotypeTree haplotype_tree {"4", human};
     

@@ -134,7 +134,7 @@ BOOST_AUTO_TEST_CASE(contained_range_returns_a_range_of_iterators_that_span_all_
     BOOST_CHECK(std::equal(true_contained.cbegin(), true_contained.cend(), contained.begin()));
 }
 
-BOOST_AUTO_TEST_CASE(get_covered_regions_returns_regions_which_contain_all_elements_in_the_given_range_with_no_inter_range_overlaps)
+BOOST_AUTO_TEST_CASE(covered_regions_returns_regions_which_contain_all_elements_in_the_given_range_with_no_inter_range_overlaps)
 {
     std::vector<GenomicRegion> regions {
         GenomicRegion {"test", 10000, 20000}, GenomicRegion {"test", 20000, 30000},
@@ -142,7 +142,7 @@ BOOST_AUTO_TEST_CASE(get_covered_regions_returns_regions_which_contain_all_eleme
         GenomicRegion {"test", 45000, 60000}
     };
     
-    auto covered = get_covered_regions(regions.cbegin(), regions.cend());
+    const auto covered = covered_regions(regions);
     
     BOOST_CHECK(covered.size() == 2);
     BOOST_CHECK(covered[0] == GenomicRegion("test", 10000, 40000));

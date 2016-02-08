@@ -454,7 +454,7 @@ namespace Octopus
         result.reserve(germline_variant_calls.size() + somatic_mutation_calls.size());
         
         for (const auto& call : germline_variant_calls) {
-            result.emplace_back(get_encompassing(call.variants));
+            result.emplace_back(encompassing_region(call.variants));
         }
         
         for (const auto& call : somatic_mutation_calls) {
@@ -474,7 +474,7 @@ namespace Octopus
         result.reserve(variant_calls.size());
         
         for (const auto& segment_calls : variant_calls) {
-            result.emplace_back(get_encompassing(segment_calls.variants));
+            result.emplace_back(encompassing_region(segment_calls.variants));
         }
         
         return result;
@@ -764,7 +764,7 @@ namespace Octopus
 //                std::cout << allele << std::endl;
 //            }
             
-            auto phase_region = (called_regions.empty()) ? get_head(region) : get_encompassing(called_regions.front(), called_regions.back());
+            const auto phase_region = (called_regions.empty()) ? head_region(region) : encompassing_region(called_regions.front(), called_regions.back());
             
             result.reserve(germline_variant_calls.size() + somatic_mutation_calls.size());
             

@@ -68,7 +68,7 @@ BOOST_AUTO_TEST_CASE(alleles_can_be_added_to_front_and_back_of_haplotypes)
     const Allele allele2 {"3", 1000005, "C"};
     const Allele allele3 {"3", 1000006, "G"};
     
-    const auto region2 = get_encompassing(allele1, allele3);
+    const auto region2 = encompassing_region(allele1, allele3);
     
     Haplotype haplotype3 {region2, human};
     haplotype3.push_back(allele1);

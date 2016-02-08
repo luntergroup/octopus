@@ -176,7 +176,7 @@ GenomicRegion ReadManager::find_covered_subregion(const std::vector<SampleIdType
         it = open_readers(begin(reader_paths), end(reader_paths));
     }
     
-    return get_overlapped(*leftmost_mappable(result), region);
+    return overlapped_region(*leftmost_mappable(result), region);
 }
 
 GenomicRegion ReadManager::find_covered_subregion(const GenomicRegion& region, size_t max_sample_coverage)

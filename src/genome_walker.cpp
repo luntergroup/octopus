@@ -80,7 +80,7 @@ expand_around_included(BidirectionalIterator first_previous, BidirectionalIterat
         rightmost_region = shift(get_region(*last_included), max_right_flank_size);
     }
     
-    return get_closed(leftmost_region, rightmost_region);
+    return closed_region(leftmost_region, rightmost_region);
 }
 
 GenomicRegion GenomeWalker::walk(const GenomicRegion& previous_region, const ReadMap& reads,
@@ -98,11 +98,11 @@ GenomicRegion GenomeWalker::walk(const GenomicRegion& previous_region, const Rea
     auto first_previous_itr = cbegin(previous_candidates);
     auto included_itr       = cend(previous_candidates);
     
-    if (included_itr == last_variant_itr) return get_tail(previous_region, 0);
+    if (included_itr == last_variant_itr) return tail_region(previous_region);
     
     if (max_included_ == 0) {
         if (included_itr != last_variant_itr) {
-            return get_intervening(previous_region, *included_itr);
+            return intervening_region(previous_region, *included_itr);
         } else {
             return previous_region;
         }
@@ -160,7 +160,7 @@ GenomicRegion GenomeWalker::walk(const GenomicRegion& previous_region, const Rea
         {
             auto lhs_read = *leftmost_overlapped(reads, *first_included_itr);
             auto rhs_read = *rightmost_overlapped(reads, *included_itr);
-            return get_encompassing(lhs_read, rhs_read);
+            return encompassing_region(lhs_read, rhs_read);
         }
         case ExpansionLimit::UpToExcludedWithinReadLength:
         {
@@ -180,7 +180,7 @@ GenomicRegion GenomeWalker::walk(const GenomicRegion& previous_region, const Rea
                                           first_excluded_itr, last_variant_itr, reads);
         }
         case ExpansionLimit::NoExpansion:
-            return get_encompassing(*first_included_itr, *included_itr);
+            return encompassing_region(*first_included_itr, *included_itr);
     }
 }
 

@@ -307,7 +307,7 @@ void CachingFasta::replace_in_usage_cache(const GenomicRegion& from, const Genom
 template <typename T>
 T get_nonoverlapped(const T& lhs, const T& rhs)
 {
-    return (begins_before(lhs, rhs)) ? get_left_overhang(lhs, rhs) : get_right_overhang(lhs, rhs);
+    return (begins_before(lhs, rhs)) ? left_overhang_region(lhs, rhs) : right_overhang_region(lhs, rhs);
 }
 
 void CachingFasta::recache_overlapped_regions(const SequenceType& sequence, const GenomicRegion& region) const

@@ -217,7 +217,7 @@ Haplotype::SequenceType Haplotype::get_sequence(const ContigRegion& region) cons
     result.reserve(size(region)); // may be more or less depending on indels
     
     if (begins_before(region, region_bounded_by_alleles)) {
-        result += get_reference_sequence(get_left_overhang(region, region_bounded_by_alleles));
+        result += get_reference_sequence(left_overhang_region(region, region_bounded_by_alleles));
         if (is_before(region, region_bounded_by_alleles)) {
             if (!explicit_alleles_.empty() && ::contains(region, explicit_alleles_.front())) {
                 result += explicit_alleles_.front().get_sequence();
@@ -254,7 +254,7 @@ Haplotype::SequenceType Haplotype::get_sequence(const ContigRegion& region) cons
         return result;
     } else if (begins_before(overlapped_explicit_alleles.front(), region)) {
         append(result, splice(overlapped_explicit_alleles.front(),
-                              get_overlapped(overlapped_explicit_alleles.front(), region)));
+                              overlapped_region(overlapped_explicit_alleles.front(), region)));
         overlapped_explicit_alleles.advance_begin(1);
     }
     
@@ -271,9 +271,9 @@ Haplotype::SequenceType Haplotype::get_sequence(const ContigRegion& region) cons
     if (region_ends_before_last_overlapped_allele) {
         overlapped_explicit_alleles.advance_end(1); // as we previously removed this allele
         append(result, splice(overlapped_explicit_alleles.back(),
-                              get_overlapped(overlapped_explicit_alleles.back(), region)));
+                              overlapped_region(overlapped_explicit_alleles.back(), region)));
     } else if (ends_before(region_bounded_by_alleles, region)) {
-        result += get_reference_sequence(get_right_overhang(region, region_bounded_by_alleles));
+        result += get_reference_sequence(right_overhang_region(region, region_bounded_by_alleles));
     }
     
     result.shrink_to_fit();
@@ -353,7 +353,7 @@ Haplotype::SequenceType Haplotype::get_reference_sequence(const ContigRegion& re
 
 ContigAllele Haplotype::get_intervening_reference_allele(const ContigAllele& lhs, const ContigAllele& rhs) const
 {
-    const auto region = get_intervening(lhs, rhs);
+    const auto region = intervening_region(lhs, rhs);
     return ContigAllele {region, reference_.get().get_sequence(GenomicRegion {region_.get_contig_name(), region})};
 }
 
@@ -361,7 +361,7 @@ ContigRegion Haplotype::get_region_bounded_by_explicit_alleles() const
 {
     if (explicit_alleles_.empty())
         throw std::runtime_error {"Haplotype: trying to get region from empty allele list"};
-    return get_encompassing(explicit_alleles_.front(), explicit_alleles_.back());
+    return encompassing_region(explicit_alleles_.front(), explicit_alleles_.back());
 }
 
 Haplotype::SequenceType Haplotype::get_sequence_bounded_by_explicit_alleles(AlleleIterator first,
@@ -387,13 +387,13 @@ Haplotype::SequenceType Haplotype::get_sequence_bounded_by_explicit_alleles() co
 
 void Haplotype::update_region(const ContigAllele& allele) noexcept
 {
-    const auto new_contig_region = get_encompassing(region_.get_contig_region(), allele);
+    const auto new_contig_region = encompassing_region(region_.get_contig_region(), allele);
     region_ = GenomicRegion {region_.get_contig_name(), new_contig_region};
 }
 
 void Haplotype::update_region(const Allele& allele)
 {
-    region_ = get_encompassing(region_, allele);
+    region_ = encompassing_region(region_, allele);
 }
 
 bool Haplotype::is_cached_sequence_good() const noexcept

@@ -119,8 +119,8 @@ std::vector<Allele> decompose(const std::vector<Variant>& variants)
 std::vector<Allele> get_intervening_reference_alleles(const std::vector<Variant>& variants,
                                                       const ReferenceGenome& reference)
 {
-    const auto all_overlapped_regions     = get_covered_regions(variants);
-    const auto regions_between_candidates = get_all_intervening(all_overlapped_regions);
+    const auto all_overlapped_regions     = covered_regions(variants);
+    const auto regions_between_candidates = all_intervening_regions(all_overlapped_regions);
     
     std::vector<Allele> result {};
     result.reserve(regions_between_candidates.size());
@@ -394,12 +394,12 @@ Variant pad_right(const Variant& variant, const Variant::SequenceType& sequence)
 
 Variant pad_left(const Variant& variant, const ReferenceGenome& reference, Variant::SizeType n)
 {
-    const auto pad_region = compress_lhs(get_head(variant), -static_cast<GenomicRegion::DifferenceType>(n));
+    const auto pad_region = compress_lhs(head_region(variant), -static_cast<GenomicRegion::DifferenceType>(n));
     
     const auto pad_sequence = reference.get_sequence(pad_region);
     
     return Variant {
-        get_encompassing(pad_region, variant),
+        encompassing_region(pad_region, variant),
         pad_sequence + get_ref_sequence(variant),
         pad_sequence + get_alt_sequence(variant)
     };
@@ -407,12 +407,12 @@ Variant pad_left(const Variant& variant, const ReferenceGenome& reference, Varia
 
 Variant pad_right(const Variant& variant, const ReferenceGenome& reference, Variant::SizeType n)
 {
-    const auto pad_region = compress_rhs(get_tail(variant), static_cast<GenomicRegion::DifferenceType>(n));
+    const auto pad_region = compress_rhs(tail_region(variant), static_cast<GenomicRegion::DifferenceType>(n));
     
     const auto pad_sequence = reference.get_sequence(pad_region);
     
     return Variant {
-        get_encompassing(variant, pad_region),
+        encompassing_region(variant, pad_region),
         get_ref_sequence(variant) + pad_sequence,
         get_alt_sequence(variant) + pad_sequence
     };

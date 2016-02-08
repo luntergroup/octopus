@@ -419,7 +419,7 @@ BOOST_AUTO_TEST_CASE(splice_works_correctly)
     
     const std::vector<Variant> variants {variant1, variant2, variant3, variant4};
     
-    const auto region = get_encompassing(variants);
+    const auto region = encompassing_region(variants);
     
     Haplotype haplotype1 {region, human};
     for (const auto& variant : variants) add_ref_to_back(variant, haplotype1);
@@ -450,7 +450,7 @@ BOOST_AUTO_TEST_CASE(splice_all_works_correctly)
     
     BOOST_REQUIRE(haplotype_splices1.size() == num_genotypes(2, 2));
     
-    const auto haplotype_splices2 = splice_all<Haplotype>(genotypes, get_encompassing(variant2, variant3));
+    const auto haplotype_splices2 = splice_all<Haplotype>(genotypes, encompassing_region(variant2, variant3));
     
     BOOST_REQUIRE(haplotype_splices2.size() == num_genotypes(4, 2));
 }

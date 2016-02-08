@@ -102,7 +102,7 @@ GenomicRegion HaplotypeTree::get_region() const
     const auto rightmost = *std::max_element(std::cbegin(haplotype_leafs_), std::cend(haplotype_leafs_),
                                              VertexLess);
     
-    return GenomicRegion {region_.get_contig_name(), get_encompassing(tree_[leftmost], tree_[rightmost])};
+    return GenomicRegion {region_.get_contig_name(), encompassing_region(tree_[leftmost], tree_[rightmost])};
 }
 
 std::vector<Haplotype> HaplotypeTree::get_haplotypes() const

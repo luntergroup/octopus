@@ -569,7 +569,7 @@ size_t count_if_shared_with_first(ForwardIt1 first1, ForwardIt1 last1,
 }
 
 template <typename InputIt>
-auto get_regions(InputIt first, InputIt last)
+auto extract_regions(InputIt first, InputIt last)
 {
     std::vector<RegionType<typename std::iterator_traits<InputIt>::value_type>> result {};
     result.reserve(std::distance(first, last));
@@ -579,9 +579,9 @@ auto get_regions(InputIt first, InputIt last)
 }
 
 template <typename Container>
-auto get_regions(const Container& mappables)
+auto extract_regions(const Container& mappables)
 {
-    return get_regions(std::cbegin(mappables), std::cend(mappables));
+    return extract_regions(std::cbegin(mappables), std::cend(mappables));
 }
 
 namespace detail
@@ -669,18 +669,18 @@ auto decompose(const MappableTp& mappable, GenomicRegion::SizeType n)
  Requires [first, last) is sorted w.r.t GenomicRegion::operator<
  */
 template <typename ForwardIt, typename = enable_if_iterator<ForwardIt>>
-auto get_encompassing(ForwardIt first, ForwardIt last)
+auto encompassing_region(ForwardIt first, ForwardIt last)
 {
     if (first == last) {
         throw std::logic_error {"get_encompassing given empty range"};
     }
-    return get_encompassing(*first, *rightmost_mappable(first, last));
+    return encompassing_region(*first, *rightmost_mappable(first, last));
 }
 
 template <typename Container>
-auto get_encompassing(const Container& mappables)
+auto encompassing_region(const Container& mappables)
 {
-    return get_encompassing(std::cbegin(mappables), std::cend(mappables));
+    return encompassing_region(std::cbegin(mappables), std::cend(mappables));
 }
 
 /**
@@ -690,7 +690,7 @@ auto get_encompassing(const Container& mappables)
  Requires [first_mappable, last_mappable) is sorted w.r.t GenomicRegion::operator<
  */
 template <typename ForwardIt>
-auto get_covered_regions(ForwardIt first, ForwardIt last)
+auto covered_regions(ForwardIt first, ForwardIt last)
 {
     using ResultType = std::vector<RegionType<typename std::iterator_traits<ForwardIt>::value_type>>;
     
@@ -720,10 +720,9 @@ auto get_covered_regions(ForwardIt first, ForwardIt last)
 }
 
 template <typename Container>
-std::vector<GenomicRegion>
-get_covered_regions(const Container& mappables)
+auto covered_regions(const Container& mappables)
 {
-    return get_covered_regions(std::cbegin(mappables), std::cend(mappables));
+    return covered_regions(std::cbegin(mappables), std::cend(mappables));
 }
 
 /**
@@ -733,7 +732,7 @@ get_covered_regions(const Container& mappables)
  Requires [first, last) is sorted w.r.t GenomicRegion::operator<
  */
 template <typename ForwardIt>
-auto get_all_intervening(ForwardIt first, ForwardIt last)
+auto all_intervening_regions(ForwardIt first, ForwardIt last)
 {
     using ResultType = std::vector<RegionType<typename std::iterator_traits<ForwardIt>::value_type>>;
     
@@ -744,17 +743,16 @@ auto get_all_intervening(ForwardIt first, ForwardIt last)
     
     std::transform(first, std::prev(last), std::next(first), std::back_inserter(result),
                    [] (const auto& mappable, const auto& next_mappable) {
-                       return get_intervening(mappable, next_mappable);
+                       return intervening_region(mappable, next_mappable);
                    });
     
     return result;
 }
 
 template <typename Container>
-std::vector<GenomicRegion>
-get_all_intervening(const Container& mappables)
+auto all_intervening_regions(const Container& mappables)
 {
-    return get_all_intervening(std::cbegin(mappables), std::cend(mappables));
+    return all_intervening_regions(std::cbegin(mappables), std::cend(mappables));
 }
 
 /**
@@ -765,7 +763,7 @@ get_all_intervening(const Container& mappables)
  Requires [first, last) is sorted w.r.t GenomicRegion::operator<
  */
 template <typename ForwardIt, typename Mappable>
-auto get_all_intervening(ForwardIt first, ForwardIt last, const Mappable& mappable)
+auto all_intervening_regions(ForwardIt first, ForwardIt last, const Mappable& mappable)
 {
     using ResultType = std::vector<RegionType<Mappable>>;
     
@@ -779,25 +777,25 @@ auto get_all_intervening(ForwardIt first, ForwardIt last, const Mappable& mappab
     result.reserve(std::distance(first, last) + 1);
     
     if (begins_before(mappable, *first)) {
-        result.push_back(get_left_overhang(mappable, *first));
+        result.push_back(left_overhang_region(mappable, *first));
     }
     
     std::transform(first, std::prev(last), std::next(first), std::back_inserter(result),
                    [] (const auto& mappable, const auto& next_mappable) {
-                       return get_intervening(mappable, next_mappable);
+                       return intervening_region(mappable, next_mappable);
                    });
     
     if (ends_before(*std::prev(last), mappable)) {
-        result.push_back(get_right_overhang(mappable, *std::prev(last)));
+        result.push_back(right_overhang_region(mappable, *std::prev(last)));
     }
     
     return result;
 }
 
 template <typename Container, typename Mappable>
-auto get_all_intervening(const Container& mappables, const Mappable& mappable)
+auto all_intervening_regions(const Container& mappables, const Mappable& mappable)
 {
-    return get_all_intervening(std::cbegin(mappables), std::cend(mappables), mappable);
+    return all_intervening_regions(std::cbegin(mappables), std::cend(mappables), mappable);
 }
 
 template <typename ForwardIt>
@@ -895,13 +893,13 @@ auto segment_by_region(const Container& mappables)
 }
 
 template <typename Mappable>
-auto get_segment_regions(const std::vector<std::vector<Mappable>>& segments)
+auto all_segment_regions(const std::vector<std::vector<Mappable>>& segments)
 {
     std::vector<RegionType<Mappable>> result {};
     result.reserve(segments.size());
     
     for (const auto& segment : segments) {
-        result.push_back(get_encompassing_region(segment));
+        result.push_back(encompassing_region(segment));
     }
     
     return result;

@@ -128,7 +128,7 @@ downsample(const MappableSet<AlignedRead>& reads, const unsigned max_coverage, c
     
     if (reads.empty()) return reads;
     
-    const auto regions_to_sample = find_target_regions(reads, get_encompassing_region(reads),
+    const auto regions_to_sample = find_target_regions(reads, encompassing_region(reads),
                                                        max_coverage, min_coverage);
     
     if (regions_to_sample.empty()) return reads;

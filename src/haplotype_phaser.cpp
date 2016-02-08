@@ -43,7 +43,7 @@ walker_ {max_indicators, calculate_max_indcluded(max_haplotypes)},
 buffered_candidates_ {std::cbegin(candidates), std::cend(candidates)},
 reads_ {&reads},
 is_phasing_enabled_ {max_indicators != 0},
-current_region_ {shift(get_head(buffered_candidates_.leftmost()), -1)},
+current_region_ {shift(head_region(buffered_candidates_.leftmost()), -1)},
 next_region_ {walker_.walk(current_region_, *reads_, buffered_candidates_)}
 {}
 
@@ -93,7 +93,7 @@ HaplotypePhaser::phase(const std::vector<Haplotype>& haplotypes,
     
     std::cout << "next region is " << next_region_ << std::endl;
     
-    const auto phased_region = get_left_overhang(current_region_, next_region_);
+    const auto phased_region = left_overhang_region(current_region_, next_region_);
     
     if (empty(phased_region)) return boost::none;
     
@@ -233,7 +233,7 @@ partition_phase_complements(const std::vector<Genotype<Haplotype>>& genotypes,
 {
     if (genotypes.empty()) return {};
     
-    const auto variant_regions = get_regions(variants);
+    const auto variant_regions = extract_regions(variants);
     
     PhaseComplementSetMap result_map {genotypes.size(), std::hash<GenotypeReference> {}, PhaseComplementEqual {variant_regions}};
     
@@ -343,7 +343,7 @@ find_optimal_phase_regions(const GenomicRegion& region,
     while (phase_begin_itr != std::cend(variants)) {
         MappableSet<Variant> curr_variants {phase_begin_itr, phase_end_itr};
         
-        auto curr_region = get_encompassing_region(curr_variants);
+        auto curr_region = encompassing_region(curr_variants);
         
         auto curr_genotype_posteriors = marginalise(genotype_posteriors, curr_region);
         
@@ -353,7 +353,7 @@ find_optimal_phase_regions(const GenomicRegion& region,
         phase_score = calculate_phase_score(phase_set, curr_genotype_posteriors);
         
         if (phase_score + 0.1 < previous_phase_score) {
-            auto phase_region = get_encompassing(phase_begin_itr, std::prev(phase_end_itr));
+            auto phase_region = encompassing_region(phase_begin_itr, std::prev(phase_end_itr));
             result.emplace_back(phase_region, previous_phase_score);
             phase_begin_itr = std::prev(phase_end_itr);
             previous_phase_score = 0.0;

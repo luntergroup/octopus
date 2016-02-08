@@ -134,8 +134,8 @@ generate_callable_alleles(const GenomicRegion& region,
     
     if (refcall_type == VariantCaller::RefCallType::None) return variant_alleles;
     
-    auto covered_regions   = get_covered_regions(overlapped_variants);
-    auto uncovered_regions = get_all_intervening(covered_regions, region);
+    auto covered_regions   = ::covered_regions(overlapped_variants);
+    auto uncovered_regions = all_intervening_regions(covered_regions, region);
     
     std::vector<Allele> result {};
     
@@ -176,7 +176,7 @@ void append_allele(std::vector<Allele>& alleles, const Allele& allele,
 {
     if (refcall_type == VariantCaller::RefCallType::Blocked && !alleles.empty() && are_adjacent(alleles.back(), allele)) {
         alleles.back() = Allele {
-            get_encompassing(alleles.back(), allele),
+            encompassing_region(alleles.back(), allele),
             alleles.back().get_sequence() + allele.get_sequence()
         };
     } else {
@@ -238,7 +238,7 @@ generate_candidate_reference_alleles(const std::vector<Allele>& callable_alleles
                     advance(allele_itr, 1);
                 } else {
                     if (begins_before(*allele_itr, *called_itr)) { // when variant has been left padded
-                        append_allele(result, splice(*allele_itr, get_left_overhang(*allele_itr, *called_itr)), refcall_type);
+                        append_allele(result, splice(*allele_itr, left_overhang_region(*allele_itr, *called_itr)), refcall_type);
                     }
                     
                     // skip contained alleles and candidates as they include called variants

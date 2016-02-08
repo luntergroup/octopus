@@ -414,7 +414,7 @@ namespace Octopus
                 
                 num_buffered_reads = components.caller->num_buffered_reads();
                 
-                subregion = get_right_overhang(region, subregion);
+                subregion = right_overhang_region(region, subregion);
                 subregion = components.read_manager.get().find_covered_subregion(components.samples,
                                                                                  subregion, max_reads);
             }

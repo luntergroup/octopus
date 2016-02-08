@@ -293,9 +293,9 @@ CigarString splice_cigar(const AlignedRead& read, const GenomicRegion& region)
 {
     if (contains(region, read)) return read.get_cigar_string();
     
-    const auto splice_region = get_overlapped(read, region);
+    const auto splice_region = overlapped_region(read, region);
     
-    return splice(read.get_cigar_string(), get_begin(splice_region) - get_begin(read), size(splice_region));
+    return splice(read.get_cigar_string(), static_cast<CigarOperation::SizeType>(begin_distance(splice_region, read)));
 }
 
 AlignedRead::SizeType count_overlapped_bases(const AlignedRead& read, const GenomicRegion& region)
@@ -326,7 +326,7 @@ AlignedRead splice(const AlignedRead& read, const GenomicRegion& region)
     
     if (contains(region, read)) return read;
     
-    const auto splice_region = get_overlapped(read, region);
+    const auto splice_region = overlapped_region(read, region);
     
     const auto reference_offset = get_begin(splice_region) - get_begin(read);
     

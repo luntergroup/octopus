@@ -214,24 +214,24 @@ inline ContigRegion compress_rhs(const ContigRegion& region, ContigRegion::Diffe
     };
 }
 
-inline ContigRegion get_overlapped(const ContigRegion& lhs, const ContigRegion& rhs) noexcept
+inline ContigRegion overlapped_region(const ContigRegion& lhs, const ContigRegion& rhs) noexcept
 {
     if (!overlaps(lhs, rhs)) {
-        throw std::runtime_error {"cannot get overlapped region between non overlapping regions"};
+        throw std::runtime_error {"cannot calculate overlapped region between non overlapping regions"};
     }
     
     return ContigRegion {std::max(lhs.get_begin(), rhs.get_begin()), std::min(lhs.get_end(), rhs.get_end())};
 }
 
-inline ContigRegion get_encompassing(const ContigRegion& lhs, const ContigRegion& rhs) noexcept
+inline ContigRegion encompassing_region(const ContigRegion& lhs, const ContigRegion& rhs) noexcept
 {
     return ContigRegion {std::min(lhs.get_begin(), rhs.get_begin()), std::max(lhs.get_end(), rhs.get_end())};
 }
 
-inline ContigRegion get_intervening(const ContigRegion& lhs, const ContigRegion& rhs)
+inline ContigRegion intervening_region(const ContigRegion& lhs, const ContigRegion& rhs)
 {
     if (begins_before(rhs, lhs) || overlaps(lhs, rhs)) {
-        throw std::runtime_error {"cannot get intervening region between overlapping regions"};
+        throw std::runtime_error {"cannot calculate intervening region between overlapping regions"};
     }
     
     return ContigRegion {lhs.get_end(), rhs.get_begin()};
@@ -247,35 +247,55 @@ inline ContigRegion::SizeType right_overhang_size(const ContigRegion& lhs, const
     return (ends_before(lhs, rhs)) ? 0 : (lhs.get_end() - rhs.get_end());
 }
 
-inline ContigRegion get_left_overhang(const ContigRegion& lhs, const ContigRegion& rhs) noexcept
+inline ContigRegion left_overhang_region(const ContigRegion& lhs, const ContigRegion& rhs) noexcept
 {
     if (begins_before(rhs, lhs)) return ContigRegion {lhs.get_begin(), lhs.get_begin()};
     
     return ContigRegion {lhs.get_begin(), rhs.get_begin()};
 }
 
-inline ContigRegion get_right_overhang(const ContigRegion& lhs, const ContigRegion& rhs) noexcept
+inline ContigRegion right_overhang_region(const ContigRegion& lhs, const ContigRegion& rhs) noexcept
 {
     if (ends_before(lhs, rhs)) return ContigRegion {lhs.get_end(), lhs.get_end()};
     
     return ContigRegion {rhs.get_end(), lhs.get_end()};
 }
 
-inline ContigRegion get_closed(const ContigRegion& lhs, const ContigRegion& rhs) noexcept
+inline ContigRegion closed_region(const ContigRegion& lhs, const ContigRegion& rhs) noexcept
 {
     return ContigRegion {lhs.get_begin(), rhs.get_end()};
 }
 
-inline ContigRegion get_head(const ContigRegion& region, ContigRegion::SizeType n = 0) noexcept
+inline ContigRegion head_region(const ContigRegion& region, ContigRegion::SizeType n = 0) noexcept
 {
     const auto begin = region.get_begin();
     return ContigRegion {begin, std::min(begin + n, region.get_end())};
 }
 
-inline ContigRegion get_tail(const ContigRegion& region, ContigRegion::SizeType n = 0) noexcept
+inline ContigRegion head_position(const ContigRegion& region) noexcept
+{
+    return head_region(region, 1);
+}
+
+inline ContigRegion tail_region(const ContigRegion& region, ContigRegion::SizeType n = 0) noexcept
 {
     const auto end = region.get_end();
     return ContigRegion {(end >= n) ? end - n : 0, end};
+}
+
+inline ContigRegion tail_position(const ContigRegion& region) noexcept
+{
+    return tail_region(region, 1);
+}
+
+inline ContigRegion::DifferenceType begin_distance(const ContigRegion& lhs, const ContigRegion& rhs) noexcept
+{
+    return static_cast<ContigRegion::DifferenceType>(lhs.get_begin()) - rhs.get_begin();
+}
+
+inline ContigRegion::DifferenceType end_distance(const ContigRegion& lhs, const ContigRegion& rhs) noexcept
+{
+    return static_cast<ContigRegion::DifferenceType>(lhs.get_end()) - rhs.get_end();
 }
 
 namespace std {

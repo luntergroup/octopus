@@ -45,25 +45,25 @@ namespace Octopus
         auto max_match_end_prob = 1 - std::max(2 * match.gap_open_probability, match.gap_extend_probability);
         
         if (overlaps(read, haplotype)) {
-            auto overlapped_region = get_overlapped(read, haplotype);
-            auto covered_region    = get_encompassing(read, haplotype);
+            const auto overlapped_part = overlapped_region(read, haplotype);
+            const auto covered_region  = encompassing_region(read, haplotype);
             
             if (begins_before(read, haplotype)) {
                 lhs_random.target_end_probability = 0.99;
-                lhs_random.query_end_probability  = 1.0 / (size(get_left_overhang(covered_region, overlapped_region)) + 1);
+                lhs_random.query_end_probability  = 1.0 / (size(left_overhang_region(covered_region, overlapped_part)) + 1);
             } else {
-                lhs_random.target_end_probability = 1.0 / (size(get_left_overhang(covered_region, overlapped_region)) + 1);
+                lhs_random.target_end_probability = 1.0 / (size(left_overhang_region(covered_region, overlapped_part)) + 1);
                 lhs_random.query_end_probability  = 0.99;
             }
             
-            match.end_probability = std::min(1.0 / (size(overlapped_region) + 1), max_match_end_prob);
+            match.end_probability = std::min(1.0 / (size(overlapped_part) + 1), max_match_end_prob);
             
             if (ends_before(read, haplotype)) {
-                rhs_random.target_end_probability = 1.0 / (size(get_right_overhang(covered_region, overlapped_region)) + 1);
+                rhs_random.target_end_probability = 1.0 / (size(right_overhang_region(covered_region, overlapped_part)) + 1);
                 rhs_random.query_end_probability  = 0.99;
             } else {
                 rhs_random.target_end_probability = 0.99;
-                rhs_random.query_end_probability  = 1.0 / (size(get_right_overhang(covered_region, overlapped_region)) + 1);
+                rhs_random.query_end_probability  = 1.0 / (size(right_overhang_region(covered_region, overlapped_part)) + 1);
             }
         } else {
             lhs_random.target_end_probability = 1.0 / (size(haplotype) + 1);
