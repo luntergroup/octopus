@@ -75,7 +75,7 @@ private:
     SizeType do_get_contig_size(const ContigNameType& contig) const override;
     SequenceType do_fetch_sequence(const GenomicRegion& region) const override;
     
-    std::unordered_map<ContigNameType, SizeType> contig_size_cache_;
+    std::unordered_map<ContigNameType, SizeType> contig_sizes_;
     
     mutable SequenceCache sequence_cache_;
     mutable std::list<GenomicRegion> recently_used_regions_; // TODO: also make into map of contigs?

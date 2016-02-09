@@ -89,6 +89,7 @@ public:
     
 private:
     using Genotype = std::pair<std::vector<SequenceType>, bool>;
+    using ValueMap = std::unordered_map<KeyType, std::vector<ValueType>>;
     
     // mandatory fields
     std::string chromosome_;
@@ -98,12 +99,12 @@ private:
     std::vector<SequenceType> alt_alleles_;
     QualityType quality_;
     std::vector<KeyType> filters_;
-    std::unordered_map<KeyType, std::vector<ValueType>> info_;
+    ValueMap info_;
     
     // optional fields
     std::vector<KeyType> format_;
     std::unordered_map<SampleIdType, Genotype> genotypes_;
-    std::unordered_map<SampleIdType, std::unordered_map<KeyType, std::vector<ValueType>>> samples_;
+    std::unordered_map<SampleIdType, ValueMap> samples_;
     
     std::string get_allele_number(const SequenceType& allele) const;
     

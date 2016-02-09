@@ -120,9 +120,9 @@ private:
     std::unique_ptr<bam_hdr_t, HtsHeaderDeleter> hts_header_;
     std::unique_ptr<hts_idx_t, HtsIndexDeleter> hts_index_;
     
-    std::unordered_map<std::string, HtsTidType> hts_tid_map_;
-    std::unordered_map<HtsTidType, std::string> contig_name_map_;
-    std::unordered_map<ReadGroupIdType, SampleIdType> sample_map_;
+    std::unordered_map<std::string, HtsTidType> hts_tids_;
+    std::unordered_map<HtsTidType, std::string> contig_names_;
+    std::unordered_map<ReadGroupIdType, SampleIdType> sample_names_;
     
     std::vector<SampleIdType> samples_;
     

@@ -323,7 +323,7 @@ find_optimal_phase_regions(const GenomicRegion& region,
                            const HaplotypePhaser::SampleGenotypePosteriors& genotype_posteriors,
                            const double min_phase_score = 0.95)
 {
-    auto genotypes = get_keys(genotype_posteriors);
+    auto genotypes = extract_keys(genotype_posteriors);
     
     auto phase_set = partition_phase_complements(genotypes, variants);
     
@@ -347,7 +347,7 @@ find_optimal_phase_regions(const GenomicRegion& region,
         
         auto curr_genotype_posteriors = marginalise(genotype_posteriors, curr_region);
         
-        genotypes = get_keys(curr_genotype_posteriors);
+        genotypes = extract_keys(curr_genotype_posteriors);
         phase_set = partition_phase_complements(genotypes, curr_variants);
         
         phase_score = calculate_phase_score(phase_set, curr_genotype_posteriors);

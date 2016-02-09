@@ -61,15 +61,15 @@ file_path_ {std::move(file_path)},
 hts_file_ {sam_open(file_path_.c_str(), "r"), HtsFileDeleter {}},
 hts_header_ {(hts_file_) ? sam_hdr_read(hts_file_.get()) : nullptr, HtsHeaderDeleter {}},
 hts_index_ {(hts_file_) ? sam_index_load(hts_file_.get(), file_path_.c_str()) : nullptr, HtsIndexDeleter {}},
-hts_tid_map_ {},
-contig_name_map_ {},
-sample_map_ {},
+hts_tids_ {},
+contig_names_ {},
+sample_names_ {},
 samples_ {}
 {
     if (is_open()) {
         init_maps();
         
-        for (const auto& pair : sample_map_) {
+        for (const auto& pair : sample_names_) {
             if (std::find(std::cbegin(samples_), std::cend(samples_), pair.second) == std::cend(samples_)) {
                 samples_.emplace_back(pair.second);
             }
@@ -131,7 +131,7 @@ std::vector<std::string> HtslibSamFacade::get_read_groups_in_sample(const Sample
 {
     std::vector<std::string> result {};
     
-    for (const auto pair : sample_map_) {
+    for (const auto pair : sample_names_) {
         if (pair.second == sample) result.emplace_back(pair.first);
     }
     
@@ -157,7 +157,7 @@ size_t HtslibSamFacade::count_reads(const SampleIdType& sample, const GenomicReg
     
     size_t result {0};
     
-    while (++it && sample_map_.at(it.get_read_group()) == sample) ++result;
+    while (++it && sample_names_.at(it.get_read_group()) == sample) ++result;
     
     return result;
 }
@@ -197,7 +197,7 @@ HtslibSamFacade::SampleReadMap HtslibSamFacade::fetch_reads(const GenomicRegion&
     while (++it) {
         auto read = *it;
         if (read) {
-             result[sample_map_.at(it.get_read_group())].emplace(std::move(*read));
+             result[sample_names_.at(it.get_read_group())].emplace(std::move(*read));
         }
     }
     
@@ -219,7 +219,7 @@ HtslibSamFacade::Reads HtslibSamFacade::fetch_reads(const SampleIdType& sample, 
     result.reserve(1000);
     
     while (++it) {
-        if (sample_map_.at(it.get_read_group()) == sample) {
+        if (sample_names_.at(it.get_read_group()) == sample) {
             auto read = *it;
             if (read) {
                 result.emplace(std::move(*read));
@@ -251,7 +251,7 @@ HtslibSamFacade::SampleReadMap HtslibSamFacade::fetch_reads(const std::vector<Sa
     if (result.empty()) return result; // no matching samples
     
     while (++it) {
-        const auto& sample = sample_map_.at(it.get_read_group());
+        const auto& sample = sample_names_.at(it.get_read_group());
         if (result.count(sample) == 1) {
             auto read = *it;
             if (read) {
@@ -326,12 +326,12 @@ std::string get_tag_value(const std::string& line, const char* tag)
 
 void HtslibSamFacade::init_maps()
 {
-    hts_tid_map_.reserve(get_num_reference_contigs());
-    contig_name_map_.reserve(get_num_reference_contigs());
+    hts_tids_.reserve(get_num_reference_contigs());
+    contig_names_.reserve(get_num_reference_contigs());
     
     for (HtsTidType hts_tid {}; hts_tid < get_num_reference_contigs(); ++hts_tid) {
-        hts_tid_map_.emplace(hts_header_->target_name[hts_tid], hts_tid);
-        contig_name_map_.emplace(hts_tid, hts_header_->target_name[hts_tid]);
+        hts_tids_.emplace(hts_header_->target_name[hts_tid], hts_tid);
+        contig_names_.emplace(hts_tid, hts_header_->target_name[hts_tid]);
     }
     
     std::string the_header_text (hts_header_->text, hts_header_->l_text);
@@ -351,7 +351,7 @@ void HtslibSamFacade::init_maps()
                 throw InvalidBamHeader {file_path_, "no sample tag (SM) in @RG line"};
             }
             
-            sample_map_.emplace(get_tag_value(line, Read_group_id_tag), get_tag_value(line, Sample_id_tag));
+            sample_names_.emplace(get_tag_value(line, Read_group_id_tag), get_tag_value(line, Sample_id_tag));
             ++num_read_groups;
         }
     }
@@ -363,12 +363,12 @@ void HtslibSamFacade::init_maps()
 
 HtslibSamFacade::HtsTidType HtslibSamFacade::get_htslib_tid(const std::string& contig_name) const
 {
-    return hts_tid_map_.at(contig_name);
+    return hts_tids_.at(contig_name);
 }
 
 const std::string& HtslibSamFacade::get_contig_name(HtsTidType hts_tid) const
 {
-    return contig_name_map_.at(hts_tid);
+    return contig_names_.at(hts_tid);
 }
 
 // HtslibIterator

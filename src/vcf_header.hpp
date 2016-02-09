@@ -34,14 +34,16 @@ public:
     using KeyType          = std::string; // The same KeyType is used for both basic and structured fields
     using TagType          = std::string;
     using ValueType        = std::string;
-    using BasicFields      = std::unordered_map<KeyType, ValueType>;
+    using BasicFieldMap      = std::unordered_map<KeyType, ValueType>;
     using StructuredField  = std::unordered_map<KeyType, ValueType>;
-    using StructuredFields = std::unordered_multimap<TagType, StructuredField>;
+    using StructuredFieldMap = std::unordered_multimap<TagType, StructuredField>;
     
     VcfHeader()  = default;
+    
     explicit VcfHeader(std::string file_format);
     template <typename T, typename U, typename B, typename S>
     explicit VcfHeader(T&& file_format, U&& samples, B&& basic_fields, S&& structured_fields);
+    
     ~VcfHeader() = default;
     
     VcfHeader(const VcfHeader&)            = default;
@@ -64,9 +66,9 @@ public:
     const ValueType& get_structured_field_value(const TagType& tag, const KeyType& id_key,
                                                 const ValueType& id_value, const KeyType& lookup_key) const;
     
-    const BasicFields& get_basic_fields() const noexcept;
+    const BasicFieldMap& get_basic_fields() const noexcept;
     std::vector<StructuredField> get_structured_fields(const TagType& tag) const;
-    const StructuredFields& get_structured_fields() const noexcept;
+    const StructuredFieldMap& get_structured_fields() const noexcept;
     
     friend std::ostream& operator<<(std::ostream& os, const VcfHeader& header);
     
@@ -76,8 +78,8 @@ private:
     std::vector<std::string> samples_;
     
     // optional fields
-    BasicFields basic_fields_;
-    StructuredFields structured_fields_;
+    BasicFieldMap basic_fields_;
+    StructuredFieldMap structured_fields_;
 };
 
 template <typename T, typename U, typename B, typename S>

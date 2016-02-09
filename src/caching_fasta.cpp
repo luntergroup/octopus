@@ -22,7 +22,7 @@
 CachingFasta::CachingFasta(Path fasta_path)
 :
 fasta_ {std::move(fasta_path)},
-contig_size_cache_ {},
+contig_sizes_ {},
 sequence_cache_ {},
 recently_used_regions_ {}
 {
@@ -32,7 +32,7 @@ recently_used_regions_ {}
 CachingFasta::CachingFasta(Path fasta_path, SizeType max_cache_size)
 :
 fasta_ {std::move(fasta_path)},
-contig_size_cache_ {},
+contig_sizes_ {},
 sequence_cache_ {},
 recently_used_regions_ {},
 max_cache_size_ {max_cache_size}
@@ -43,7 +43,7 @@ max_cache_size_ {max_cache_size}
 CachingFasta::CachingFasta(Path fasta_path, Path fasta_index_path)
 :
 fasta_ {std::move(fasta_path), std::move(fasta_index_path)},
-contig_size_cache_ {},
+contig_sizes_ {},
 sequence_cache_ {},
 recently_used_regions_ {}
 {
@@ -53,7 +53,7 @@ recently_used_regions_ {}
 CachingFasta::CachingFasta(Path fasta_path, Path fasta_index_path, SizeType max_cache_size)
 :
 fasta_ {std::move(fasta_path), std::move(fasta_index_path)},
-contig_size_cache_ {},
+contig_sizes_ {},
 sequence_cache_ {},
 recently_used_regions_ {},
 max_cache_size_ {max_cache_size}
@@ -64,7 +64,7 @@ max_cache_size_ {max_cache_size}
 CachingFasta::CachingFasta(Path fasta_path, SizeType max_cache_size, double locality_bias, double forward_bias)
 :
 fasta_ {std::move(fasta_path)},
-contig_size_cache_ {},
+contig_sizes_ {},
 sequence_cache_ {},
 recently_used_regions_ {},
 max_cache_size_ {max_cache_size},
@@ -101,7 +101,7 @@ std::vector<CachingFasta::ContigNameType> CachingFasta::do_get_contig_names() co
 
 CachingFasta::SizeType CachingFasta::do_get_contig_size(const ContigNameType& contig) const
 {
-    return contig_size_cache_.at(contig);
+    return contig_sizes_.at(contig);
 }
 
 CachingFasta::SequenceType CachingFasta::do_fetch_sequence(const GenomicRegion& region) const
@@ -140,12 +140,12 @@ void CachingFasta::setup_cache()
 {
     auto contig_names = fasta_.get_contig_names();
     
-    contig_size_cache_.reserve(contig_names.size());
+    contig_sizes_.reserve(contig_names.size());
     
     for (auto&& contig_name : contig_names) {
         auto size = fasta_.get_contig_size(contig_name);
         genome_size_ += size;
-        contig_size_cache_.emplace(std::move(contig_name), size);
+        contig_sizes_.emplace(std::move(contig_name), size);
     }
 }
 
@@ -195,7 +195,7 @@ CachingFasta::SizeType CachingFasta::get_lhs_extension_size(const GenomicRegion&
 
 CachingFasta::SizeType CachingFasta::get_rhs_extension_size(const GenomicRegion& requested_region) const
 {
-    return std::min(contig_size_cache_.at(requested_region.get_contig_name()) - requested_region.get_end(),
+    return std::min(contig_sizes_.at(requested_region.get_contig_name()) - requested_region.get_end(),
                     static_cast<SizeType>((max_cache_size_ - region_size(requested_region)) * locality_bias_ * forward_bias_));
 }
 
@@ -233,7 +233,7 @@ void CachingFasta::add_sequence_to_cache(SequenceType&& sequence, const GenomicR
     
     const auto& contig = region.get_contig_name();
     
-    if (sequence_cache_.count(contig) == 0 && contig_size_cache_.at(contig) >= get_remaining_cache_size()) {
+    if (sequence_cache_.count(contig) == 0 && contig_sizes_.at(contig) >= get_remaining_cache_size()) {
         auto target_cache_size = static_cast<SizeType>(current_cache_size_ * (1.0 - locality_bias_));
         
         while (current_cache_size_ > target_cache_size) {

@@ -72,9 +72,9 @@ std::vector<VcfHeader::TagType> VcfHeader::get_structured_field_tags() const
     std::transform(std::cbegin(structured_fields_), std::cend(structured_fields_),
                    std::back_inserter(result), [] (const auto& p) { return p.first; });
     
-    std::sort(result.begin(), result.end());
+    std::sort(std::begin(result), std::end(result));
     
-    result.erase(std::unique(result.begin(), result.end()), result.end());
+    result.erase(std::unique(std::begin(result), std::end(result)), std::end(result));
     
     return result;
 }
@@ -107,7 +107,9 @@ std::vector<VcfHeader::StructuredField> VcfHeader::get_structured_fields(const T
     result.reserve(structured_fields_.count(tag));
     
     const auto er = structured_fields_.equal_range(tag);
-    std::transform(er.first, er.second, std::back_inserter(result), [] (const auto& p) { return p.second; });
+    
+    std::transform(er.first, er.second, std::back_inserter(result),
+                   [] (const auto& p) { return p.second; });
     
     return result;
 }

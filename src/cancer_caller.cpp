@@ -66,11 +66,11 @@ namespace Octopus
         
     using GM = GenotypeModel::Cancer;
     
-    using GermlineGenotypeMarginals = std::unordered_map<Genotype<Haplotype>, double>;
-    using CancerHaplotypeMarginals  = std::unordered_map<Haplotype, double>;
+    using GermlineGenotypeMarginalMap = std::unordered_map<Genotype<Haplotype>, double>;
+    using CancerHaplotypeMarginalMap  = std::unordered_map<Haplotype, double>;
     
-    using MarginalAllelePosteriors = std::unordered_map<Allele, double>;
-    using AllelePosteriors         = std::unordered_map<SampleIdType, MarginalAllelePosteriors>;
+    using MarginalAllelePosteriorMap = std::unordered_map<Allele, double>;
+    using AllelePosteriorMap         = std::unordered_map<SampleIdType, MarginalAllelePosteriorMap>;
     
     struct VariantCall
     {
@@ -168,11 +168,11 @@ namespace Octopus
         return is_homozygous(genotype.get_germline_genotype(), reference);
     }
     
-    GermlineGenotypeMarginals
+    GermlineGenotypeMarginalMap
     marginalise_germline_genotypes(const GM::GenotypeProbabilities& genotype_posteriors,
                                    unsigned num_haplotypes)
     {
-        GermlineGenotypeMarginals result {};
+        GermlineGenotypeMarginalMap result {};
         result.reserve(num_genotypes(num_haplotypes, 2));
         
         for (const auto& genotype_posterior : genotype_posteriors) {
@@ -182,11 +182,11 @@ namespace Octopus
         return result;
     }
     
-    CancerHaplotypeMarginals
+    CancerHaplotypeMarginalMap
     marginalise_cancer_haplotypes(const GM::GenotypeProbabilities& genotype_posteriors,
                                   unsigned num_haplotypes)
     {
-        CancerHaplotypeMarginals result {};
+        CancerHaplotypeMarginalMap result {};
         result.reserve(num_haplotypes);
         
         for (const auto& genotype_posterior : genotype_posteriors) {
@@ -196,7 +196,7 @@ namespace Octopus
         return result;
     }
     
-    static double marginalise(const Allele& allele, const GermlineGenotypeMarginals& germline_genotype_posteriors)
+    static double marginalise(const Allele& allele, const GermlineGenotypeMarginalMap& germline_genotype_posteriors)
     {
         double result {0.0};
         
@@ -207,11 +207,11 @@ namespace Octopus
         return result;
     }
     
-    MarginalAllelePosteriors
-    compute_germline_allele_posteriors(const GermlineGenotypeMarginals& germline_genotype_posteriors,
+    MarginalAllelePosteriorMap
+    compute_germline_allele_posteriors(const GermlineGenotypeMarginalMap& germline_genotype_posteriors,
                                        const std::vector<Allele>& alleles)
     {
-        MarginalAllelePosteriors result {};
+        MarginalAllelePosteriorMap result {};
         result.reserve(alleles.size());
         
         for (const auto& allele : alleles) {
@@ -221,7 +221,7 @@ namespace Octopus
         return result;
     }
     
-    static double marginalise(const Allele& allele, const CancerHaplotypeMarginals& cancer_haplotype_posteriors)
+    static double marginalise(const Allele& allele, const CancerHaplotypeMarginalMap& cancer_haplotype_posteriors)
     {
         double result {0.0};
         
@@ -232,11 +232,11 @@ namespace Octopus
         return result;
     }
     
-    MarginalAllelePosteriors
-    compute_cancer_allele_posteriors(const CancerHaplotypeMarginals& cancer_haplotype_posteriors,
+    MarginalAllelePosteriorMap
+    compute_cancer_allele_posteriors(const CancerHaplotypeMarginalMap& cancer_haplotype_posteriors,
                                      const std::vector<Allele>& alleles)
     {
-        MarginalAllelePosteriors result {};
+        MarginalAllelePosteriorMap result {};
         result.reserve(alleles.size());
         
         for (const auto& allele : alleles) {
@@ -246,16 +246,16 @@ namespace Octopus
         return result;
     }
     
-    AllelePosteriors
-    compute_germline_allele_posteriors(const GermlineGenotypeMarginals& germline_genotype_posteriors,
+    AllelePosteriorMap
+    compute_germline_allele_posteriors(const GermlineGenotypeMarginalMap& germline_genotype_posteriors,
                                        const GM::GenotypeMixtures& genotype_mixtures,
                                        const std::vector<Allele>& alleles)
     {
-        AllelePosteriors result {};
+        AllelePosteriorMap result {};
         result.reserve(alleles.size());
         
         for (const auto& sample_mixtures : genotype_mixtures) {
-            MarginalAllelePosteriors marginals {};
+            MarginalAllelePosteriorMap marginals {};
             marginals.reserve(alleles.size());
             
             const double germline_fraction = 1.0 - genotype_mixtures.at(sample_mixtures.first).back();
@@ -270,16 +270,16 @@ namespace Octopus
         return result;
     }
     
-    AllelePosteriors
-    compute_cancer_allele_posteriors(const CancerHaplotypeMarginals& cancer_haplotype_posteriors,
+    AllelePosteriorMap
+    compute_cancer_allele_posteriors(const CancerHaplotypeMarginalMap& cancer_haplotype_posteriors,
                                      const GM::GenotypeMixtures& genotype_mixtures,
                                      const std::vector<Allele>& alleles)
     {
-        AllelePosteriors result {};
+        AllelePosteriorMap result {};
         result.reserve(genotype_mixtures.size());
         
         for (const auto& sample_mixtures : genotype_mixtures) {
-            MarginalAllelePosteriors marginals {};
+            MarginalAllelePosteriorMap marginals {};
             marginals.reserve(alleles.size());
             
             const double cancer_fraction    = genotype_mixtures.at(sample_mixtures.first).back();
@@ -321,7 +321,7 @@ namespace Octopus
         return result;
     }
     
-    double max_posterior(const std::vector<Variant>& variants, const MarginalAllelePosteriors& allele_posteriors)
+    double max_posterior(const std::vector<Variant>& variants, const MarginalAllelePosteriorMap& allele_posteriors)
     {
         double result {};
         
@@ -334,7 +334,7 @@ namespace Octopus
     }
     
     std::vector<Variant> call_segment_variants(const std::vector<Variant>& variants,
-                                               const MarginalAllelePosteriors& allele_posteriors,
+                                               const MarginalAllelePosteriorMap& allele_posteriors,
                                                const double min_posterior)
     {
         std::vector<Variant> result {};
@@ -351,7 +351,7 @@ namespace Octopus
     }
     
     VariantCalls call_germline_variants(const std::vector<std::vector<Variant>>& segments,
-                                        const MarginalAllelePosteriors& normal_sample_germline_allele_posteriors,
+                                        const MarginalAllelePosteriorMap& normal_sample_germline_allele_posteriors,
                                         const double min_posterior)
     {
         VariantCalls result {};
@@ -368,7 +368,7 @@ namespace Octopus
         return result;
     }
     
-    double max_posterior(const Allele& allele, const AllelePosteriors& allele_posteriors)
+    double max_posterior(const Allele& allele, const AllelePosteriorMap& allele_posteriors)
     {
         double result {0.0};
         
@@ -403,7 +403,7 @@ namespace Octopus
     
     // TODO: this doesn't quite work
     SomaticCalls call_somatic_mutations(const std::vector<Allele>& alleles,
-                                        const AllelePosteriors& cancer_allele_posteriors,
+                                        const AllelePosteriorMap& cancer_allele_posteriors,
                                         const GermlineGenotypeCalls& germline_genotype_calls,
                                         const double min_posterior)
     {

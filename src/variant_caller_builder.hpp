@@ -28,9 +28,11 @@ namespace Octopus {
     {
     public:
         VariantCallerBuilder()  = delete;
+        
         explicit VariantCallerBuilder(const ReferenceGenome& reference,
                                       ReadPipe& read_pipe,
                                       const CandidateGeneratorBuilder& candidate_generator_builder);
+        
         ~VariantCallerBuilder() = default;
         
         VariantCallerBuilder(const VariantCallerBuilder&);
