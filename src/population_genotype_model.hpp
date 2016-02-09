@@ -31,7 +31,7 @@ namespace Octopus
     {
     public:
         using SampleGenotypeProbabilityMap = std::unordered_map<Genotype<Haplotype>, double>;
-        using GenotypeProbabilities       = std::unordered_map<SampleIdType, SampleGenotypeProbabilityMap>;
+        using GenotypeProbabilities        = std::unordered_map<SampleIdType, SampleGenotypeProbabilityMap>;
         
         struct Latents
         {

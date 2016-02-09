@@ -12,6 +12,9 @@
 #include <string>
 #include <ostream>
 #include <utility>
+#include <algorithm>
+#include <iterator>
+#include <cstddef>
 
 #include <boost/functional/hash.hpp>
 
@@ -20,83 +23,208 @@
 #include "mappable.hpp"
 #include "reference_genome.hpp"
 
-class Allele : public Comparable<Allele>, public Mappable<Allele>
+#include "string_utils.hpp"
+
+template <typename RegionTp>
+class BaseAllele : public Comparable<BaseAllele<RegionTp>>, public Mappable<BaseAllele<RegionTp>>
 {
 public:
-    using SizeType     = GenomicRegion::SizeType;
+    using SizeType     = typename RegionTp::SizeType;
     using SequenceType = ReferenceGenome::SequenceType;
     
-    Allele() = default;
-    template <typename GenomicRegion_, typename SequenceType_>
-    Allele(GenomicRegion_&& reference_region, SequenceType_&& sequence);
-    template <typename StringType_, typename SequenceType_>
-    Allele(StringType_&& contig_name, SizeType begin_pos, SequenceType_&& sequence);
-    ~Allele() = default;
+    BaseAllele() = default;
     
-    Allele(const Allele&)            = default;
-    Allele& operator=(const Allele&) = default;
-    Allele(Allele&&)                 = default;
-    Allele& operator=(Allele&&)      = default;
+    template <typename R, typename S>
+    explicit BaseAllele(R&& region, S&& sequence);
+    template <typename T, typename S>
+    explicit BaseAllele(T&& contig_name, SizeType begin_pos, S&& sequence);
     
-    const GenomicRegion& get_region() const noexcept;
+    ~BaseAllele() = default;
+    
+    BaseAllele(const BaseAllele&)            = default;
+    BaseAllele& operator=(const BaseAllele&) = default;
+    BaseAllele(BaseAllele&&)                 = default;
+    BaseAllele& operator=(BaseAllele&&)      = default;
+    
+    const RegionTp& get_region() const noexcept;
     const SequenceType& get_sequence() const noexcept;
-    
+
 private:
     SequenceType sequence_;
-    GenomicRegion reference_region_;
+    RegionTp region_;
 };
 
-template <typename GenomicRegion_, typename SequenceType_>
-Allele::Allele(GenomicRegion_&& reference_region, SequenceType_&& sequence)
+// concrete types
+
+using Allele       = BaseAllele<GenomicRegion>;
+using ContigAllele = BaseAllele<ContigRegion>;
+
+// template base member methods
+
+template <typename RegionTp>
+template <typename R, typename S>
+BaseAllele<RegionTp>::BaseAllele(R&& region, S&& sequence)
 :
-sequence_ {std::forward<SequenceType_>(sequence)},
-reference_region_ {std::forward<GenomicRegion_>(reference_region)}
+sequence_ {std::forward<S>(sequence)},
+region_ {std::forward<R>(region)}
 {}
 
-template <typename StringType_, typename SequenceType_>
-Allele::Allele(StringType_&& contig_name, SizeType begin_pos, SequenceType_&& sequence)
+template <typename RegionTp>
+template <typename T, typename S>
+BaseAllele<RegionTp>::BaseAllele(T&& contig_name, const SizeType begin_pos, S&& sequence)
 :
-sequence_ {std::forward<SequenceType_>(sequence)},
-reference_region_ {std::forward<StringType_>(contig_name), begin_pos,
-        static_cast<SizeType>(begin_pos + sequence_.size())}
+sequence_ {std::forward<S>(sequence)},
+region_ {std::forward<T>(contig_name), begin_pos, static_cast<SizeType>(begin_pos + sequence_.size())}
 {}
 
-// non-member methods
+template <typename RegionTp>
+const RegionTp& BaseAllele<RegionTp>::get_region() const noexcept
+{
+    return region_;
+}
 
-Allele::SizeType sequence_size(const Allele& allele) noexcept;
+template <typename RegionTp>
+const typename BaseAllele<RegionTp>::SequenceType& BaseAllele<RegionTp>::get_sequence() const noexcept
+{
+    return sequence_;
+}
 
-bool is_reference(const Allele& allele, const ReferenceGenome& reference);
+// template base non-member methods
 
-Allele get_reference_allele(const GenomicRegion& region, const ReferenceGenome& reference);
+ContigAllele demote(const Allele& allele);
 
-std::vector<Allele> get_reference_alleles(const std::vector<GenomicRegion>& regions,
-                                          const ReferenceGenome& reference);
+template <typename RegionTp>
+auto sequence_size(const BaseAllele<RegionTp>& allele) noexcept
+{
+    return static_cast<typename BaseAllele<RegionTp>::SizeType>(allele.get_sequence().size());
+}
 
-std::vector<Allele> get_positional_reference_alleles(const GenomicRegion& region,
-                                                     const ReferenceGenome& reference);
+namespace detail
+{
+    template <typename RegionTp>
+    auto get_subsequence(const BaseAllele<RegionTp>& allele, const RegionTp& region)
+    {
+        using ResultType = typename BaseAllele<RegionTp>::SequenceType;
+        
+        if (!contains(allele, region)) {
+            return ResultType {};
+        }
+        
+        const auto& sequence = allele.get_sequence();
+        
+        if (get_region(allele) == region) {
+            return sequence;
+        }
+        
+        if (begins_equal(region, allele) && is_empty_region(region) && is_insertion(allele)) {
+            auto first = std::cbegin(sequence);
+            return ResultType {first, first + sequence.size() - region_size(allele)};
+        }
+        
+        auto first = std::cbegin(allele.get_sequence()) + get_begin(region) - get_begin(allele);
+        // The minimum of the allele sequence size and region size is used as deletions will
+        // result in a sequence size smaller than the region size
+        return ResultType {first, first + std::min(sequence.size(), static_cast<size_t>(region_size(region)))};
+    }
+}
 
-bool contains(const Allele& lhs, const Allele& rhs);
+template <typename RegionTp>
+bool contains(const BaseAllele<RegionTp>& lhs, const BaseAllele<RegionTp>& rhs)
+{
+    if (!contains(get_region(lhs), get_region(rhs))) {
+        return false;
+    } else if (is_empty_region(lhs)) {
+        // If the alleles are both insertions then both regions will be the same so we can only test
+        // if the inserted rhs sequence is a subsequence of the lhs sequence. The rhs sequence
+        // is required to be non-empty otherwise it would be a subsequence of everything.
+        return !rhs.get_sequence().empty() && Octopus::contains(lhs.get_sequence(), rhs.get_sequence());
+    } else {
+        return detail::get_subsequence(lhs, rhs.get_region()) == rhs.get_sequence();
+    }
+}
 
-Allele splice(const Allele& allele, const GenomicRegion& region);
+template <typename RegionTp>
+BaseAllele<RegionTp> splice(const BaseAllele<RegionTp>& allele, const RegionTp& region)
+{
+    if (!contains(allele, region)) {
+        throw std::logic_error {"Allele: trying to splice an uncontained region"};
+    }
+    return BaseAllele<RegionTp> {region, detail::get_subsequence(allele, region)};
+}
 
-bool is_insertion(const Allele& allele);
-bool is_deletion(const Allele& allele);
-bool is_indel(const Allele& allele);
+template <typename RegionTp>
+bool is_insertion(const BaseAllele<RegionTp>& allele)
+{
+    return allele.get_sequence().size() > region_size(allele);
+}
 
-std::vector<Allele> decompose(const Allele& allele);
+template <typename RegionTp>
+bool is_deletion(const BaseAllele<RegionTp>& allele)
+{
+    return allele.get_sequence().size() < region_size(allele);
+}
 
-bool operator==(const Allele& lhs, const Allele& rhs);
-bool operator<(const Allele& lhs, const Allele& rhs);
+template <typename RegionTp>
+bool is_indel(const BaseAllele<RegionTp>& allele)
+{
+    return is_insertion(allele) || is_deletion(allele);
+}
+
+template <typename RegionTp>
+auto decompose(const BaseAllele<RegionTp>& allele)
+{
+    std::vector<BaseAllele<RegionTp>> result {};
+    
+    if (is_insertion(allele)) {
+        const auto& sequence = allele.get_sequence();
+        auto insertion_size = sequence.size();
+        result.reserve(insertion_size);
+        
+        for (unsigned i {0}; i < insertion_size; ++i) {
+            result.emplace_back(get_region(allele), sequence.substr(i, 1));
+        }
+    } else if (is_deletion(allele)) {
+        result.reserve(region_size(allele));
+        auto decomposed_regions = decompose(get_region(allele));
+        
+        std::transform(std::begin(decomposed_regions), std::end(decomposed_regions), std::back_inserter(result),
+                       [] (const auto& region) { return BaseAllele<RegionTp> {region, ""}; } );
+    } else {
+        result.reserve(region_size(allele));
+        const auto& sequence = allele.get_sequence();
+        unsigned i {};
+        
+        for (const auto& region : decompose(get_region(allele))) {
+            result.emplace_back(region, sequence.substr(i, 1));
+            ++i;
+        }
+    }
+    
+    return result;
+}
+
+template <typename RegionTp>
+bool operator==(const BaseAllele<RegionTp>& lhs, const BaseAllele<RegionTp>& rhs)
+{
+    return lhs.get_region() == rhs.get_region() && lhs.get_sequence() == rhs.get_sequence();
+}
+
+template <typename RegionTp>
+bool operator<(const BaseAllele<RegionTp>& lhs, const BaseAllele<RegionTp>& rhs)
+{
+    return (lhs.get_region() == rhs.get_region()) ? lhs.get_sequence() < rhs.get_sequence() :
+    lhs.get_region() < rhs.get_region();
+}
 
 namespace std {
-    template <> struct hash<Allele>
+    template <typename RegionTp> struct hash<BaseAllele<RegionTp>>
     {
-        size_t operator()(const Allele& allele) const
+        size_t operator()(const BaseAllele<RegionTp>& allele) const
         {
             using boost::hash_combine;
             size_t result {};
-            hash_combine(result, hash<GenomicRegion>()(allele.get_region()));
-            hash_combine(result, hash<Allele::SequenceType>()(allele.get_sequence()));
+            hash_combine(result, hash<RegionTp>()(allele.get_region()));
+            hash_combine(result, hash<typename BaseAllele<RegionTp>::SequenceType>()(allele.get_sequence()));
             return result;
         }
     };
@@ -104,15 +232,33 @@ namespace std {
 
 namespace boost
 {
-    template <> struct hash<Allele> : std::unary_function<Allele, std::size_t>
+    template <typename RegionTp> struct hash<BaseAllele<RegionTp>> : std::unary_function<BaseAllele<RegionTp>, std::size_t>
     {
-        std::size_t operator()(const Allele& a) const
+        std::size_t operator()(const BaseAllele<RegionTp>& a) const
         {
-            return std::hash<Allele>()(a);
+            return std::hash<BaseAllele<RegionTp>>()(a);
         }
     };
 } // namespace boost
 
-std::ostream& operator<<(std::ostream& os, const Allele& allele);
+template <typename RegionTp>
+std::ostream& operator<<(std::ostream& os, const BaseAllele<RegionTp>& allele)
+{
+    os << allele.get_region() << " " << allele.get_sequence();
+    return os;
+}
+
+// Allele specific methods
+
+bool is_reference(const Allele& allele, const ReferenceGenome& reference);
+
+Allele make_reference_allele(const GenomicRegion& region, const ReferenceGenome& reference);
+Allele make_reference_allele(const std::string& region, const ReferenceGenome& reference);
+
+std::vector<Allele> make_reference_alleles(const std::vector<GenomicRegion>& regions,
+                                           const ReferenceGenome& reference);
+
+std::vector<Allele> make_positional_reference_alleles(const GenomicRegion& region,
+                                                      const ReferenceGenome& reference);
 
 #endif

@@ -122,9 +122,9 @@ generate_callable_alleles(const GenomicRegion& region,
     if (overlapped_variants.empty()) {
         switch (refcall_type) {
             case VariantCaller::RefCallType::Positional:
-                return get_positional_reference_alleles(region, reference);
+                return make_positional_reference_alleles(region, reference);
             case VariantCaller::RefCallType::Blocked:
-                return std::vector<Allele> {get_reference_allele(region, reference)};
+                return std::vector<Allele> {make_reference_allele(region, reference)};
             default:
                 return {};
         }
@@ -140,7 +140,7 @@ generate_callable_alleles(const GenomicRegion& region,
     std::vector<Allele> result {};
     
     if (refcall_type == VariantCaller::RefCallType::Blocked) {
-        auto reference_alleles = get_reference_alleles(uncovered_regions, reference);
+        auto reference_alleles = make_reference_alleles(uncovered_regions, reference);
         result.reserve(reference_alleles.size() + variant_alleles.size());
         std::merge(make_move_iterator(begin(reference_alleles)),make_move_iterator(end(reference_alleles)),
                    make_move_iterator(begin(variant_alleles)), make_move_iterator(end(variant_alleles)),
@@ -153,7 +153,7 @@ generate_callable_alleles(const GenomicRegion& region,
         
         for (auto&& variant_allele : variant_alleles) {
             if (uncovered_itr != uncovered_end && begins_before(*uncovered_itr, variant_allele)) {
-                auto alleles = get_positional_reference_alleles(*uncovered_itr, reference);
+                auto alleles = make_positional_reference_alleles(*uncovered_itr, reference);
                 result.insert(end(result), make_move_iterator(begin(alleles)),
                               make_move_iterator(end(alleles)));
                 std::advance(uncovered_itr, 1);
@@ -162,7 +162,7 @@ generate_callable_alleles(const GenomicRegion& region,
         }
         
         if (uncovered_itr != uncovered_end) {
-            auto alleles = get_positional_reference_alleles(*uncovered_itr, reference);
+            auto alleles = make_positional_reference_alleles(*uncovered_itr, reference);
             result.insert(end(result), make_move_iterator(begin(alleles)),
                           make_move_iterator(end(alleles)));
         }

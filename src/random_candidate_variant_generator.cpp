@@ -55,7 +55,7 @@ namespace Octopus {
         for (auto p = uniform(generator); p < num_positions; p += max_read_size_) {
             auto position = positions[p];
             
-            auto reference_allele = get_reference_allele(position, reference_);
+            auto reference_allele = make_reference_allele(position, reference_);
             
             Allele mutation {position, reverse_complement_copy(reference_allele.get_sequence())};
             

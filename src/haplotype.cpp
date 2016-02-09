@@ -180,14 +180,14 @@ bool Haplotype::contains(const Allele& allele) const
 {
     if (!is_same_contig(allele, region_))
         return false;
-    return contains(ContigAllele {allele});
+    return contains(demote(allele));
 }
 
 bool Haplotype::contains_exact(const Allele& allele) const
 {
     if (!is_same_contig(allele, region_))
         return false;
-    return contains_exact(ContigAllele {allele});
+    return contains_exact(demote(allele));
 }
 
 void append(Haplotype::SequenceType& sequence, const ContigAllele& allele)

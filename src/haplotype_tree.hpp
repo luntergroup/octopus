@@ -21,7 +21,6 @@
 
 #include <boost/graph/adjacency_list.hpp>
 
-#include "contig_allele.hpp"
 #include "variant.hpp"
 #include "haplotype.hpp"
 #include "genomic_region.hpp"

@@ -441,7 +441,7 @@ namespace Octopus
     {
         for (auto& call : somatic_mutation_calls) {
             if (is_indel(call.allele) && !is_reference(call.allele, reference)) {
-                Variant v {get_reference_allele(call.allele.get_region(), reference), call.allele};
+                Variant v {make_reference_allele(call.allele.get_region(), reference), call.allele};
                 call.allele = make_parsimonious(v, reference).get_alt_allele();
             }
         }

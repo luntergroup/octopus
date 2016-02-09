@@ -84,7 +84,7 @@ HaplotypeTree& HaplotypeTree::extend(const Allele& allele)
     if (get_contig_name(allele) != region_.get_contig_name()) {
         throw std::logic_error {"HaplotypeTree: trying to extend with Allele on different contig"};
     }
-    return extend(ContigAllele {allele});
+    return extend(demote(allele));
 }
 
 GenomicRegion HaplotypeTree::get_region() const

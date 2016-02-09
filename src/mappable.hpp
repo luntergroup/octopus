@@ -38,6 +38,9 @@ template <typename T>
 constexpr bool is_region_or_mappable = is_region<T> || is_mappable<T>;
 
 template <typename T, typename R = void>
+using EnableIfRegion = std::enable_if_t<is_region<T>, R>;
+
+template <typename T, typename R = void>
 using EnableIfMappable = std::enable_if_t<is_mappable<T>, R>;
 
 template <typename T, typename R = void>

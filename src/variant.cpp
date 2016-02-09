@@ -52,7 +52,7 @@ const Allele& Variant::get_alt_allele() const noexcept
 
 Variant make_variant(const Allele& alt_allele, const ReferenceGenome& reference)
 {
-    return Variant {get_reference_allele(alt_allele.get_region(), reference), alt_allele};
+    return Variant {make_reference_allele(alt_allele.get_region(), reference), alt_allele};
 }
 
 Variant make_variant(const std::string& region_str, Variant::SequenceType alt_sequence,
@@ -116,8 +116,8 @@ std::vector<Allele> decompose(const std::vector<Variant>& variants)
     return result;
 }
 
-std::vector<Allele> get_intervening_reference_alleles(const std::vector<Variant>& variants,
-                                                      const ReferenceGenome& reference)
+std::vector<Allele> extract_intervening_reference_alleles(const std::vector<Variant>& variants,
+                                                          const ReferenceGenome& reference)
 {
     const auto all_overlapped_regions     = extract_covered_regions(variants);
     const auto regions_between_candidates = extract_intervening_regions(all_overlapped_regions);
@@ -127,7 +127,7 @@ std::vector<Allele> get_intervening_reference_alleles(const std::vector<Variant>
     
     boost::transform(regions_between_candidates, std::back_inserter(result),
                      [&reference] (const auto& region) {
-                         return get_reference_allele(region, reference);
+                         return make_reference_allele(region, reference);
                      });
     
     return result;

@@ -17,7 +17,6 @@
 
 #include "contig_region.hpp"
 #include "mappable.hpp"
-#include "contig_allele.hpp"
 #include "allele.hpp"
 #include "comparable.hpp"
 
