@@ -44,7 +44,7 @@ namespace Octopus
                 {}
                 
                 GenotypeProbabilities genotype_posteriors;
-                HaplotypeFrequencies haplotype_frequencies;
+                HaplotypeFrequencyMap haplotype_frequencies;
             };
             
             Trio(unsigned ploidy, unsigned max_em_iterations = 100, double em_epsilon = 0.001);

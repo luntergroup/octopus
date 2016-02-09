@@ -426,7 +426,7 @@ typename MappableSet<MappableType, Allocator>::iterator
 MappableSet<MappableType, Allocator>::erase(const_iterator p)
 {
     if (max_element_size_ == region_size(*p)) {
-        auto it = elements_.erase(p);
+        const auto it = elements_.erase(p);
         max_element_size_ = region_size(*largest_element(std::cbegin(elements_), std::cend(elements_)));
         return it;
     }
@@ -456,7 +456,7 @@ typename MappableSet<MappableType, Allocator>::iterator
 MappableSet<MappableType, Allocator>::erase(const_iterator first, const_iterator last)
 {
     if (max_element_size_ == region_size(*largest_mappable(first, last))) {
-        auto it = elements_.erase(first, last);
+        const auto it = elements_.erase(first, last);
         max_element_size_ = region_size(*largest_mappable(std::cbegin(elements_), std::cend(elements_)));
         return it;
     }
@@ -608,7 +608,7 @@ template <typename MappableType_>
 typename MappableSet<MappableType, Allocator>::size_type
 MappableSet<MappableType, Allocator>::count_overlapped(const MappableType_& mappable) const
 {
-    auto overlapped = overlap_range(mappable);
+    const auto overlapped = overlap_range(mappable);
     return (is_bidirectionally_sorted_) ? ::size(overlapped, MappableRangeOrder::BidirectionallySorted) : ::size(overlapped);
 }
 
@@ -617,7 +617,7 @@ template <typename MappableType_>
 typename MappableSet<MappableType, Allocator>::size_type
 MappableSet<MappableType, Allocator>::count_overlapped(iterator first, iterator last, const MappableType_& mappable) const
 {
-    auto overlapped = overlap_range(first, last, mappable);
+    const auto overlapped = overlap_range(first, last, mappable);
     return (is_bidirectionally_sorted_) ? ::size(overlapped, MappableRangeOrder::BidirectionallySorted) : ::size(overlapped);
 }
 
@@ -626,7 +626,7 @@ template <typename MappableType_>
 typename MappableSet<MappableType, Allocator>::size_type
 MappableSet<MappableType, Allocator>::count_overlapped(const_iterator first, const_iterator last, const MappableType_& mappable) const
 {
-    auto overlapped = overlap_range(first, last, mappable);
+    const auto overlapped = overlap_range(first, last, mappable);
     return (is_bidirectionally_sorted_) ? ::size(overlapped, MappableRangeOrder::BidirectionallySorted) : ::size(overlapped);
 }
 
@@ -719,7 +719,7 @@ template <typename MappableType_>
 typename MappableSet<MappableType, Allocator>::size_type
 MappableSet<MappableType, Allocator>::count_contained(const_iterator first, const_iterator last, const MappableType_& mappable) const
 {
-    auto contained = contained_range(first, last, mappable);
+    const auto contained = contained_range(first, last, mappable);
     return (is_bidirectionally_sorted_) ? ::size(contained, MappableRangeOrder::BidirectionallySorted) : ::size(contained);
 }
 
@@ -789,9 +789,9 @@ MappableSet<MappableType, Allocator>::has_shared(const_iterator first, const_ite
 {
     if (inner_distance(mappable1, mappable2) > max_element_size_) return false;
     
-    auto m = std::minmax(get_region(mappable1), get_region(mappable2));
+    const auto m = std::minmax(get_region(mappable1), get_region(mappable2));
     
-    auto overlapped_lhs = overlap_range(first, last, m.first);
+    const auto overlapped_lhs = overlap_range(first, last, m.first);
     
     return std::any_of(std::cbegin(overlapped_lhs), std::cend(overlapped_lhs),
                        [&m] (const auto& region) { return overlaps(region, m.second); });
@@ -822,9 +822,9 @@ MappableSet<MappableType, Allocator>::count_shared(const_iterator first, const_i
 {
     if (inner_distance(mappable1, mappable2) > max_element_size_) return 0;
     
-    auto m = std::minmax(get_region(mappable1), get_region(mappable2));
+    const auto m = std::minmax(get_region(mappable1), get_region(mappable2));
     
-    auto overlapped_lhs = overlap_range(first, last, m.first);
+    const auto overlapped_lhs = overlap_range(first, last, m.first);
     
     return std::count_if(std::cbegin(overlapped_lhs), std::cend(overlapped_lhs),
                        [&m] (const auto& region) { return overlaps(region, m.second); });
@@ -857,12 +857,12 @@ MappableSet<MappableType, Allocator>::shared_range(const_iterator first, const_i
         return make_shared_range(last, last, mappable1, mappable2);
     }
     
-    auto m = std::minmax(get_region(mappable1), get_region(mappable2));
+    const auto m = std::minmax(get_region(mappable1), get_region(mappable2));
     
-    auto overlapped_lhs = overlap_range(first, last, m.first);
+    const auto overlapped_lhs = overlap_range(first, last, m.first);
     
-    auto it = std::find_if(std::cbegin(overlapped_lhs), std::cend(overlapped_lhs),
-                           [&m] (const auto& region) { return overlaps(region, m.second); });
+    const auto it = std::find_if(std::cbegin(overlapped_lhs), std::cend(overlapped_lhs),
+                                 [&m] (const auto& region) { return overlaps(region, m.second); });
     
     auto end = std::prev(overlapped_lhs.end());
     
@@ -1054,18 +1054,18 @@ MappableSet<Region> splice_all(const MappableSet<MappableType, Allocator1>& mapp
 }
 
 template <typename MappableType, typename Allocator>
-auto positional_coverage(const MappableSet<MappableType, Allocator>& mappables)
+auto calculate_positional_coverage(const MappableSet<MappableType, Allocator>& mappables)
 {
-    return get_positional_coverage(std::cbegin(mappables), std::cend(mappables),
-                                   encompassing_region(mappables));
+    return calculate_positional_coverage(std::cbegin(mappables), std::cend(mappables),
+                                         encompassing_region(mappables));
 }
 
 template <typename MappableType>
-auto positional_coverage(const MappableSet<MappableType>& mappables,
-                                          const GenomicRegion& region)
+auto calculate_positional_coverage(const MappableSet<MappableType>& mappables,
+                                   const GenomicRegion& region)
 {
     const auto overlapped = mappables.overlap_range(region);
-    return get_positional_coverage(std::cbegin(overlapped), std::cend(overlapped), region);
+    return calculate_positional_coverage(overlapped, region);
 }
 
 #endif

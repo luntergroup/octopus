@@ -39,9 +39,9 @@ namespace Octopus
     
     namespace {
     
-    using GenotypeLogLikelihood        = double;
-    using SampleGenotypeLogLikelihoods = std::vector<GenotypeLogLikelihood>;
-    using GenotypeLogLikelihoods       = std::unordered_map<SampleIdType, SampleGenotypeLogLikelihoods>;
+    using GenotypeLogLikelihood          = double;
+    using SampleGenotypeLogLikelihoods   = std::vector<GenotypeLogLikelihood>;
+    using GenotypeLogLikelihoodMap       = std::unordered_map<SampleIdType, SampleGenotypeLogLikelihoods>;
     
     struct GenotypeLogProbability
     {
@@ -63,10 +63,10 @@ namespace Octopus
     } // namespace
     
     namespace debug {
-        void print_haplotype_priors(const HaplotypePriorCounts& prior_counts, size_t n = 5);
-        void print_haplotype_frequencies(const HaplotypeFrequencies& haplotype_frequencies, size_t n = 5);
+        void print_haplotype_priors(const HaplotypePriorCountMap& prior_counts, size_t n = 5);
+        void print_haplotype_frequencies(const HaplotypeFrequencyMap& haplotype_frequencies, size_t n = 5);
         void print_genotype_log_likelihoods(const std::vector<Genotype<Haplotype>>& genotypes,
-                                            const GenotypeLogLikelihoods& log_likelihoods, size_t n = 5);
+                                            const GenotypeLogLikelihoodMap& log_likelihoods, size_t n = 5);
         void print_genotype_log_marginals(const std::vector<Genotype<Haplotype>>& genotypes,
                                           const GenotypeLogMarginals& genotype_log_marginals,
                                           size_t n = 10);
@@ -83,13 +83,13 @@ namespace Octopus
     // non member methods
     
     namespace {
-    GenotypeLogLikelihoods
+    GenotypeLogLikelihoodMap
     compute_genotype_log_likelihoods(const std::vector<Genotype<Haplotype>>& genotypes,
                                      const ReadMap& reads, ReadModel& read_model)
     {
         using std::cbegin; using std::cend; using std::begin; using std::transform;
         
-        GenotypeLogLikelihoods result {};
+        GenotypeLogLikelihoodMap result {};
         result.reserve(reads.size());
         
         for (const auto& sample_reads_p : reads) {
@@ -111,7 +111,7 @@ namespace Octopus
     
     GenotypeLogMarginals
     init_genotype_log_marginals(const std::vector<Genotype<Haplotype>>& genotypes,
-                                const HaplotypeFrequencies& haplotype_frequencies)
+                                const HaplotypeFrequencyMap& haplotype_frequencies)
     {
         GenotypeLogMarginals result {};
         result.reserve(genotypes.size());
@@ -124,7 +124,7 @@ namespace Octopus
     }
     
     void update_genotype_log_marginals(GenotypeLogMarginals& current_log_marginals,
-                                       const HaplotypeFrequencies& haplotype_frequencies)
+                                       const HaplotypeFrequencyMap& haplotype_frequencies)
     {
         using std::begin; using std::end; using std::for_each;
         
@@ -147,7 +147,7 @@ namespace Octopus
     
     GenotypePosteriors
     init_genotype_posteriors(const GenotypeLogMarginals& genotype_log_marginals,
-                             const GenotypeLogLikelihoods& genotype_log_likilhoods)
+                             const GenotypeLogLikelihoodMap& genotype_log_likilhoods)
     {
         using std::cbegin; using std::cend; using std::begin; using std::transform;
         
@@ -172,9 +172,9 @@ namespace Octopus
     }
     
     void update_genotype_posteriors(GenotypePosteriors& current_genotype_posteriors,
-                                    const HaplotypeFrequencies& haplotype_frequencies,
+                                    const HaplotypeFrequencyMap& haplotype_frequencies,
                                     const GenotypeLogMarginals& genotype_log_marginals,
-                                    const GenotypeLogLikelihoods& genotype_log_likilhoods)
+                                    const GenotypeLogLikelihoodMap& genotype_log_likilhoods)
     {
         using std::cbegin; using std::cend; using std::begin; using std::transform;
         
@@ -192,10 +192,10 @@ namespace Octopus
         }
     }
     
-    HaplotypeFrequencies
-    init_haplotype_frequencies(const HaplotypePriorCounts& haplotype_prior_counts, const double prior_count_sum)
+    HaplotypeFrequencyMap
+    init_haplotype_frequencies(const HaplotypePriorCountMap& haplotype_prior_counts, const double prior_count_sum)
     {
-        HaplotypeFrequencies result {};
+        HaplotypeFrequencyMap result {};
         result.reserve(haplotype_prior_counts.size());
         
         for (const auto& haplotype_count : haplotype_prior_counts) {
@@ -205,8 +205,8 @@ namespace Octopus
         return result;
     }
     
-    double update_haplotype_frequencies(HaplotypeFrequencies& current_haplotype_frequencies,
-                                        const HaplotypePriorCounts& haplotype_prior_counts,
+    double update_haplotype_frequencies(HaplotypeFrequencyMap& current_haplotype_frequencies,
+                                        const HaplotypePriorCountMap& haplotype_prior_counts,
                                         const std::vector<Genotype<Haplotype>>& genotypes,
                                         const GenotypePosteriors& genotype_posteriors,
                                         const double prior_count_sum)
@@ -251,10 +251,10 @@ namespace Octopus
     double do_em_iteration(const std::vector<Haplotype>& haplotypes,
                            const std::vector<Genotype<Haplotype>>& genotypes,
                            GenotypePosteriors& genotype_posteriors,
-                           HaplotypeFrequencies& haplotype_frequencies,
+                           HaplotypeFrequencyMap& haplotype_frequencies,
                            GenotypeLogMarginals& genotype_log_marginals,
-                           const GenotypeLogLikelihoods& genotype_log_likilhoods,
-                           const HaplotypePriorCounts& haplotype_prior_counts,
+                           const GenotypeLogLikelihoodMap& genotype_log_likilhoods,
+                           const HaplotypePriorCountMap& haplotype_prior_counts,
                            const double prior_count_sum)
     {
         auto max_change = update_haplotype_frequencies(haplotype_frequencies, haplotype_prior_counts,
@@ -274,13 +274,13 @@ namespace Octopus
     
     Population::Latents
     make_latents(std::vector<Genotype<Haplotype>>&& genotypes, GenotypePosteriors&& genotype_posteriors,
-                 HaplotypeFrequencies&& haplotype_frequencies)
+                 HaplotypeFrequencyMap&& haplotype_frequencies)
     {
         Population::GenotypeProbabilities result {};
         result.reserve(genotype_posteriors.size()); // num samples
         
         for (auto&& sample_genotype_posteriors : genotype_posteriors) {
-            Population::SampleGenotypeProbabilities sample_result {};
+            Population::SampleGenotypeProbabilityMap sample_result {};
             sample_result.reserve(genotypes.size());
             
             auto it = std::cbegin(sample_genotype_posteriors.second);
@@ -376,7 +376,7 @@ namespace Octopus
             }
         };
         
-        void print_haplotype_priors(const HaplotypePriorCounts& prior_counts, size_t n)
+        void print_haplotype_priors(const HaplotypePriorCountMap& prior_counts, size_t n)
         {
             auto m = std::min(prior_counts.size(), n);
             
@@ -395,7 +395,7 @@ namespace Octopus
             }
         }
         
-        void print_haplotype_frequencies(const HaplotypeFrequencies& haplotype_frequencies, size_t n)
+        void print_haplotype_frequencies(const HaplotypeFrequencyMap& haplotype_frequencies, size_t n)
         {
             auto m = std::min(haplotype_frequencies.size(), n);
             
@@ -440,7 +440,7 @@ namespace Octopus
         }
         
         void print_genotype_log_likelihoods(const std::vector<Genotype<Haplotype>>& genotypes,
-                                            const GenotypeLogLikelihoods& log_likelihoods, size_t n)
+                                            const GenotypeLogLikelihoodMap& log_likelihoods, size_t n)
         {
             auto m = std::min(genotypes.size(), n);
             

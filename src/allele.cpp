@@ -85,7 +85,7 @@ Allele::SequenceType get_subsequence(const Allele& allele, const GenomicRegion& 
         return sequence;
     }
     
-    if (begins_equal(region, allele) && is_empty(region) && is_insertion(allele)) {
+    if (begins_equal(region, allele) && is_empty_region(region) && is_insertion(allele)) {
         auto first = std::cbegin(sequence);
         return Allele::SequenceType {first, first + sequence.size() - region_size(allele)};
     }
@@ -100,7 +100,7 @@ bool contains(const Allele& lhs, const Allele& rhs)
 {
     if (!contains(get_region(lhs), get_region(rhs))) {
         return false;
-    } else if (is_empty(lhs)) {
+    } else if (is_empty_region(lhs)) {
         // If the alleles are both insertions then both regions will be the same so we can only test
         // if the inserted rhs sequence is a subsequence of the lhs sequence. The rhs sequence
         // is required to be non-empty otherwise it would be a subsequence of everything.

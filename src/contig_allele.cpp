@@ -49,7 +49,7 @@ ContigAllele::SequenceType get_subsequence(const ContigAllele& allele, const Con
         return sequence;
     }
     
-    if (begins_equal(region, allele) && is_empty(region) && is_insertion(allele)) {
+    if (begins_equal(region, allele) && is_empty_region(region) && is_insertion(allele)) {
         const auto first = std::cbegin(sequence);
         return ContigAllele::SequenceType {first, first + sequence.size() - region_size(allele)};
     }
@@ -64,7 +64,7 @@ bool contains(const ContigAllele& lhs, const ContigAllele& rhs)
 {
     if (!contains(get_region(lhs), get_region(rhs))) {
         return false;
-    } else if (is_empty(lhs)) {
+    } else if (is_empty_region(lhs)) {
         return !rhs.get_sequence().empty() && Octopus::contains(lhs.get_sequence(), rhs.get_sequence());
     } else {
         return get_subsequence(lhs, get_region(rhs)) == rhs.get_sequence();

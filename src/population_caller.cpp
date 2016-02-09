@@ -81,8 +81,7 @@ struct GenotypeCall
     double phase_score;
 };
 
-using GenotypeCallMap = std::unordered_map<SampleIdType, GenotypeCall>;
-
+using GenotypeCallMap    = std::unordered_map<SampleIdType, GenotypeCall>;
 using AllelePosteriorMap = std::unordered_map<SampleIdType, std::unordered_map<Allele, double>>;
 
 struct VariantCall : public Mappable<VariantCall>
@@ -160,7 +159,7 @@ void remove_low_posterior_genotypes(GM::GenotypeProbabilities& genotype_posterio
 }
 
 double marginalise(const Allele& allele,
-                   const GM::SampleGenotypeProbabilities& genotype_posteriors)
+                   const GM::SampleGenotypeProbabilityMap& genotype_posteriors)
 {
     double result {0.0};
     
@@ -174,7 +173,7 @@ double marginalise(const Allele& allele,
 }
 
 std::unordered_map<Allele, double>
-compute_sample_allele_posteriors(const GM::SampleGenotypeProbabilities& genotype_posteriors,
+compute_sample_allele_posteriors(const GM::SampleGenotypeProbabilityMap& genotype_posteriors,
                                  const std::vector<Allele>& alleles)
 {
     std::unordered_map<Allele, double> result {};
@@ -204,7 +203,7 @@ compute_allele_posteriors(const GM::GenotypeProbabilities& genotype_posteriors,
 
 std::unordered_map<Genotype<Allele>, double>
 marginalise(const GenomicRegion& region,
-            const GM::SampleGenotypeProbabilities& genotype_posteriors)
+            const GM::SampleGenotypeProbabilityMap& genotype_posteriors)
 {
     std::unordered_map<Genotype<Allele>, double> result {};
     result.reserve(genotype_posteriors.size());
@@ -226,7 +225,7 @@ auto call_genotype(const Map& genotype_posteriors)
 }
 
 double marginalise(const Genotype<Allele>& genotype,
-                          const GM::SampleGenotypeProbabilities& genotype_posteriors)
+                          const GM::SampleGenotypeProbabilityMap& genotype_posteriors)
 {
     return std::accumulate(std::cbegin(genotype_posteriors), std::cend(genotype_posteriors), 0.0,
                            [&genotype] (double curr, const auto& p) {
@@ -359,7 +358,7 @@ double compute_homozygous_reference_posterior(const Allele& reference_allele,
 }
 
 double marginalise_reference_genotype(const Allele& reference_allele,
-                                      const GM::SampleGenotypeProbabilities& sample_genotype_posteriors)
+                                      const GM::SampleGenotypeProbabilityMap& sample_genotype_posteriors)
 {
     double result {};
     
@@ -562,7 +561,7 @@ PopulationVariantCaller::call_variants(const GenomicRegion& region,
 {
     std::vector<VcfRecord> result {};
     
-    if (is_empty(region) || (candidates.empty() && refcall_type_ == RefCallType::None)) {
+    if (is_empty_region(region) || (candidates.empty() && refcall_type_ == RefCallType::None)) {
         return result;
     }
     

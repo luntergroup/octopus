@@ -123,15 +123,19 @@ namespace detail
             tree.extend(variant.get_alt_allele());
         });
     }
+    
+    template <typename T>
+    constexpr bool is_variant_or_allele = std::is_same<T, Allele>::value || std::is_same<T, Variant>::value;
 } // namespace detail
 
 template <typename InputIt>
 void extend_tree(InputIt first, InputIt last, HaplotypeTree& tree)
 {
     using MappableType = std::decay_t<typename std::iterator_traits<InputIt>::value_type>;
-    static_assert(std::is_same<MappableType, Allele>::value
-                  || std::is_same<MappableType, Variant>::value,
+    
+    static_assert(detail::is_variant_or_allele<MappableType>,
                   "extend_tree only works for containers of Alleles or Variants");
+    
     detail::extend_tree(first, last, tree, MappableType {});
 }
 
@@ -146,8 +150,8 @@ std::vector<Haplotype>
 generate_all_haplotypes(InputIt first, InputIt last, const ReferenceGenome& reference)
 {
     using MappableType = std::decay_t<typename std::iterator_traits<InputIt>::value_type>;
-    static_assert(std::is_same<MappableType, Allele>::value
-                  || std::is_same<MappableType, Variant>::value,
+    
+    static_assert(detail::is_variant_or_allele<MappableType>,
                   "generate_all_haplotypes only works for containers of Alleles or Variants");
     
     if (first == last) return {};

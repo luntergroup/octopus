@@ -30,8 +30,8 @@ namespace Octopus
     class Population
     {
     public:
-        using SampleGenotypeProbabilities = std::unordered_map<Genotype<Haplotype>, double>;
-        using GenotypeProbabilities       = std::unordered_map<SampleIdType, SampleGenotypeProbabilities>;
+        using SampleGenotypeProbabilityMap = std::unordered_map<Genotype<Haplotype>, double>;
+        using GenotypeProbabilities       = std::unordered_map<SampleIdType, SampleGenotypeProbabilityMap>;
         
         struct Latents
         {
@@ -44,7 +44,7 @@ namespace Octopus
             {}
             
             GenotypeProbabilities genotype_posteriors;
-            HaplotypeFrequencies haplotype_frequencies;
+            HaplotypeFrequencyMap haplotype_frequencies;
         };
         
         Population(unsigned ploidy, unsigned max_em_iterations = 100, double em_epsilon = 0.001);

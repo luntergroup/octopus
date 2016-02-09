@@ -13,9 +13,13 @@
 #include <iterator>
 #include <vector>
 
+#include "type_tricks.hpp"
+
 template <typename MapType>
-std::vector<typename MapType::key_type> extract_keys(const MapType& map)
+auto extract_keys(const MapType& map)
 {
+    static_assert(is_map<MapType>, "map must be a map type");
+    
     std::vector<typename MapType::key_type> result {};
     result.reserve(map.size());
     
@@ -26,8 +30,10 @@ std::vector<typename MapType::key_type> extract_keys(const MapType& map)
 }
 
 template <typename MapType>
-std::vector<typename MapType::mapped_type> extract_values(const MapType& map)
+auto extract_values(const MapType& map)
 {
+    static_assert(is_map<MapType>, "map must be a map type");
+    
     std::vector<typename MapType::mapped_type> result {};
     result.reserve(map.size());
     
@@ -38,8 +44,10 @@ std::vector<typename MapType::mapped_type> extract_values(const MapType& map)
 }
 
 template <typename MapType>
-std::vector<typename MapType::key_type> extract_value_sorted_keys(const MapType& map)
+auto extract_value_sorted_keys(const MapType& map)
 {
+    static_assert(is_map<MapType>, "map must be a map type");
+    
     std::vector<std::pair<typename MapType::mapped_type, typename MapType::key_type>> pairs {};
     pairs.reserve(map.size());
     
@@ -61,6 +69,8 @@ std::vector<typename MapType::key_type> extract_value_sorted_keys(const MapType&
 template <typename MapType, typename UnaryFunction>
 void for_each_value(MapType& map, UnaryFunction f)
 {
+    static_assert(is_map<MapType>, "map must be a map type");
+    
     for (auto& p : map) {
         f(*p.second);
     }

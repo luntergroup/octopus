@@ -16,7 +16,6 @@
 #include <iterator>
 #include <algorithm>
 #include <functional>
-#include <unordered_map>
 #include <utility>
 #include <thread>
 #include <sstream>
@@ -666,8 +665,7 @@ namespace Octopus
         SearchRegions result {};
         
         for (const auto& contig_regions : contig_mapped_regions) {
-            auto covered_contig_regions = covered_regions(std::cbegin(contig_regions.second),
-                                                          std::cend(contig_regions.second));
+            auto covered_contig_regions = extract_covered_regions(contig_regions.second);
             
             result[contig_regions.first].insert(std::make_move_iterator(std::begin(covered_contig_regions)),
                                                 std::make_move_iterator(std::end(covered_contig_regions)));

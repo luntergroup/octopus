@@ -10,7 +10,6 @@
 #define __Octopus__program_options__
 
 #include <vector>
-#include <unordered_map>
 #include <cstddef>
 
 #include <boost/program_options.hpp>

@@ -10,6 +10,7 @@
 #define type_tricks_hpp
 
 #include <type_traits>
+#include <utility>
 
 namespace detail
 {
@@ -17,10 +18,9 @@ namespace detail
     struct HasReserve : std::false_type {};
     
     template <typename Container>
-    struct HasReserve<Container,
-    std::enable_if_t<
-    std::is_same<decltype(std::declval<Container>().reserve(std::declval<typename Container::size_type>())),
-    void>::value>>
+    struct HasReserve<Container, std::enable_if_t<
+            std::is_same<decltype(std::declval<Container>().reserve(std::declval<typename Container::size_type>())),
+        void>::value>>
     : std::true_type
     {};
     
@@ -37,8 +37,8 @@ namespace detail
     struct HasShrinkToFit : std::false_type {};
     
     template <typename Container>
-    struct HasShrinkToFit<Container,
-    std::enable_if_t<std::is_same<decltype(std::declval<Container>().shrink_to_fit()), void>::value>>
+    struct HasShrinkToFit<Container, std::enable_if_t<
+            std::is_same<decltype(std::declval<Container>().shrink_to_fit()), void>::value>>
     : std::true_type
     {};
     
@@ -73,7 +73,8 @@ namespace detail
     };
     
     template <typename T>
-    struct IsIterator<T, typename std::enable_if_t<!std::is_same<typename std::iterator_traits<T>::value_type, void>::value>>
+    struct IsIterator<T, typename std::enable_if_t<
+            !std::is_same<typename std::iterator_traits<T>::value_type, void>::value>>
     {
         static constexpr bool value = true;
     };
@@ -84,5 +85,29 @@ constexpr bool is_iterator = detail::IsIterator<T>::value;
 
 template <typename T, typename V = void>
 using enable_if_iterator = std::enable_if_t<is_iterator<T>, V>;
+
+namespace detail
+{
+    template <typename T, typename = void>
+    struct IsMap : std::false_type {};
+    
+    template <typename T>
+    struct IsMap<T, std::enable_if_t<
+                        std::is_same<typename T::value_type,
+                                std::pair<const typename T::key_type,
+                                            typename T::mapped_type>
+                        >::value>
+                > : std::true_type {};
+}
+
+template <typename T>
+constexpr bool is_map = detail::IsMap<T>::value;
+
+namespace { template <bool> struct MapTagImpl {}; }
+using MapTag    = MapTagImpl<true>;
+using NonMapTag = MapTagImpl<false>;
+
+template <typename T>
+using MapTagType = MapTagImpl<is_map<T>>;
 
 #endif /* type_tricks_hpp */

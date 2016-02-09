@@ -398,7 +398,7 @@ void Haplotype::update_region(const Allele& allele)
 
 bool Haplotype::is_cached_sequence_good() const noexcept
 {
-    return !cached_sequence_.empty() || (explicit_alleles_.empty() && is_empty(region_));
+    return !cached_sequence_.empty() || (explicit_alleles_.empty() && is_empty_region(region_));
 }
 
 void Haplotype::clear_cached_sequence()

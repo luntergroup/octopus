@@ -32,22 +32,20 @@ namespace Octopus
 {
     namespace GenotypeModel
     {
-        using ReadMap = MappableMap<SampleIdType, AlignedRead>;
-        
-        using HaplotypePriorCounts = std::unordered_map<Haplotype, double>;
-        using HaplotypeFrequencies = std::unordered_map<Haplotype, double>;
+        using HaplotypePriorCountMap = std::unordered_map<Haplotype, double>;
+        using HaplotypeFrequencyMap  = std::unordered_map<Haplotype, double>;
         
         namespace detail {
             template <typename Genotype>
             double log_hardy_weinberg_haploid(const Genotype& genotype,
-                                              const HaplotypeFrequencies& haplotype_frequencies)
+                                              const HaplotypeFrequencyMap& haplotype_frequencies)
             {
                 return std::log(haplotype_frequencies.at(genotype[0]));
             }
             
             template <typename Genotype>
             double log_hardy_weinberg_diploid(const Genotype& genotype,
-                                              const HaplotypeFrequencies& haplotype_frequencies)
+                                              const HaplotypeFrequencyMap& haplotype_frequencies)
             {
                 static const double ln_2 {std::log(2.0)};
                 
@@ -60,7 +58,7 @@ namespace Octopus
             
             template <typename Genotype>
             double log_hardy_weinberg_triploid(const Genotype& genotype,
-                                               const HaplotypeFrequencies& haplotype_frequencies)
+                                               const HaplotypeFrequencyMap& haplotype_frequencies)
             {
 //                if (genotype.is_homozygous()) {
 //                    return 3 * std::log(haplotype_frequencies.at(genotype[0]));
@@ -86,7 +84,7 @@ namespace Octopus
             
             template <typename Genotype>
             double log_hardy_weinberg_polyploid(const Genotype& genotype,
-                                                const HaplotypeFrequencies& haplotype_frequencies)
+                                                const HaplotypeFrequencyMap& haplotype_frequencies)
             {
                 auto unique_haplotypes = genotype.copy_unique();
                 
@@ -107,7 +105,7 @@ namespace Octopus
         
         // TODO: improve this, possible bottleneck in EM update at the moment
         template <typename Genotype>
-        double log_hardy_weinberg(const Genotype& genotype, const HaplotypeFrequencies& haplotype_frequencies)
+        double log_hardy_weinberg(const Genotype& genotype, const HaplotypeFrequencyMap& haplotype_frequencies)
         {
             switch (genotype.ploidy()) {
                 case 1 : return detail::log_hardy_weinberg_haploid(genotype, haplotype_frequencies);
@@ -117,9 +115,9 @@ namespace Octopus
             }
         }
         
-        inline HaplotypeFrequencies init_haplotype_frequencies(const std::vector<Haplotype>& haplotypes)
+        inline HaplotypeFrequencyMap init_haplotype_frequencies(const std::vector<Haplotype>& haplotypes)
         {
-            HaplotypeFrequencies result {};
+            HaplotypeFrequencyMap result {};
             result.reserve(haplotypes.size());
             
             const double uniform {1.0 / haplotypes.size()};
@@ -131,9 +129,9 @@ namespace Octopus
             return result;
         }
         
-        inline HaplotypeFrequencies init_haplotype_frequencies(const HaplotypePriorCounts& haplotype_counts)
+        inline HaplotypeFrequencyMap init_haplotype_frequencies(const HaplotypePriorCountMap& haplotype_counts)
         {
-            HaplotypeFrequencies result {};
+            HaplotypeFrequencyMap result {};
             result.reserve(haplotype_counts.size());
             
             auto n = Maths::sum_values(haplotype_counts);
@@ -145,13 +143,13 @@ namespace Octopus
             return result;
         }
         
-        inline HaplotypePriorCounts compute_haplotype_prior_counts(const std::vector<Haplotype>& haplotypes,
+        inline HaplotypePriorCountMap compute_haplotype_prior_counts(const std::vector<Haplotype>& haplotypes,
                                                                    const ReferenceGenome& reference,
                                                                    HaplotypePriorModel& haplotype_prior_model)
         {
             using std::begin; using std::cbegin; using std::cend; using std::transform;
             
-            HaplotypePriorCounts result {};
+            HaplotypePriorCountMap result {};
             
             if (haplotypes.empty()) return result;
             

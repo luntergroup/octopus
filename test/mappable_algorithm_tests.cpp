@@ -63,7 +63,7 @@ BOOST_AUTO_TEST_CASE(bidirectionally_sorted_ranges_returns_a_set_of_ranges_that_
 {
     auto regions = generate_random_regions(10000, 100, 10000);
     
-    auto bisorted_ranges = bidirectionally_sorted_ranges(regions.cbegin(), regions.cend());
+    auto bisorted_ranges = extract_bidirectionally_sorted_ranges(regions);
     
     bool are_all_bisorted = std::all_of(bisorted_ranges.cbegin(), bisorted_ranges.cend(),
                                         [] (const auto& range) {
@@ -89,7 +89,7 @@ BOOST_AUTO_TEST_CASE(overlap_range_returns_correct_range_if_regions_are_bidirect
     std::copy_if(regions.cbegin(), regions.cend(), std::back_inserter(true_overlaps),
                  [&test_region] (const auto& region) { return overlaps(region, test_region); });
     
-    auto bisorted_ranges = bidirectionally_sorted_ranges(regions.cbegin(), regions.cend());
+    auto bisorted_ranges = extract_bidirectionally_sorted_ranges(regions);
     
     std::vector<GenomicRegion> overlapped {};
     for (const auto& bisorted_range : bisorted_ranges) {
@@ -110,7 +110,7 @@ BOOST_AUTO_TEST_CASE(overlap_range_returns_correct_range_if_given_the_maximum_re
     std::copy_if(regions.cbegin(), regions.cend(), std::back_inserter(true_overlaps),
                  [&test_region] (const auto& region) { return overlaps(region, test_region); });
     
-    auto bisorted_ranges = bidirectionally_sorted_ranges(regions.cbegin(), regions.cend());
+    auto bisorted_ranges = extract_bidirectionally_sorted_ranges(regions);
     
     auto max_region_size = region_size(*largest_mappable(regions));
     
@@ -134,7 +134,7 @@ BOOST_AUTO_TEST_CASE(contained_range_returns_a_range_of_iterators_that_span_all_
     BOOST_CHECK(std::equal(true_contained.cbegin(), true_contained.cend(), contained.begin()));
 }
 
-BOOST_AUTO_TEST_CASE(covered_regions_returns_regions_which_contain_all_elements_in_the_given_range_with_no_inter_range_overlaps)
+BOOST_AUTO_TEST_CASE(extract_covered_regions_returns_regions_which_contain_all_elements_in_the_given_range_with_no_inter_range_overlaps)
 {
     std::vector<GenomicRegion> regions {
         GenomicRegion {"test", 10000, 20000}, GenomicRegion {"test", 20000, 30000},
@@ -142,7 +142,7 @@ BOOST_AUTO_TEST_CASE(covered_regions_returns_regions_which_contain_all_elements_
         GenomicRegion {"test", 45000, 60000}
     };
     
-    const auto covered = covered_regions(regions);
+    const auto covered = extract_covered_regions(regions);
     
     BOOST_CHECK(covered.size() == 2);
     BOOST_CHECK(covered[0] == GenomicRegion("test", 10000, 40000));

@@ -39,14 +39,14 @@ namespace Octopus
     // non member methods
         
     namespace {
-    using HaplotypeFrequencies            = std::unordered_map<Haplotype, double>;
-    using SampleGenotypeMixtureCounts     = std::array<double, 3>;
-    using SampleGenotypeMixtures          = std::array<double, 3>;
-    using GenotypeMixtureCounts           = std::unordered_map<SampleIdType, SampleGenotypeMixtureCounts>;
-    using GenotypeMixtures                = std::unordered_map<SampleIdType, SampleGenotypeMixtures>;
-    using GenotypeMixtureResponsibilities = std::unordered_map<SampleIdType, std::vector<std::array<double, 3>>>;
-    using GenotypeLogPosterior            = double;
-    using GenotypeLogPosteriors           = std::vector<GenotypeLogPosterior>;
+    using HaplotypeFrequencyMap            = std::unordered_map<Haplotype, double>;
+    using SampleGenotypeMixtureCounts      = std::array<double, 3>;
+    using SampleGenotypeMixtures           = std::array<double, 3>;
+    using GenotypeMixtureCountMap          = std::unordered_map<SampleIdType, SampleGenotypeMixtureCounts>;
+    using GenotypeMixtureMap               = std::unordered_map<SampleIdType, SampleGenotypeMixtures>;
+    using GenotypeMixtureResponsibilityMap = std::unordered_map<SampleIdType, std::vector<std::array<double, 3>>>;
+    using GenotypeLogPosterior             = double;
+    using GenotypeLogPosteriors            = std::vector<GenotypeLogPosterior>;
     } // namespace
     
     namespace debug {
@@ -56,7 +56,7 @@ namespace Octopus
         void print_top_genotypes(const std::vector<CancerGenotype<Haplotype>>& genotypes,
                                  const GenotypeLogPosteriors& genotype_log_posteriors,
                                  const size_t n = 20);
-        void print_weight_responsabilities(const GenotypeMixtureResponsibilities& responsabilities,
+        void print_weight_responsabilities(const GenotypeMixtureResponsibilityMap& responsabilities,
                                            const ReadMap& reads);
     } // namespace debug
     
@@ -93,7 +93,7 @@ namespace Octopus
     }
     
     double genotype_log_probability(const CancerGenotype<Haplotype>& genotype,
-                                    const HaplotypeFrequencies& haplotype_frequencies)
+                                    const HaplotypeFrequencyMap& haplotype_frequencies)
     {
         return log_hardy_weinberg(genotype.get_germline_genotype(), haplotype_frequencies) +
                 std::log(haplotype_frequencies.at(genotype.get_cancer_element()));
@@ -118,7 +118,7 @@ namespace Octopus
     GenotypeLogPosteriors
     init_genotype_log_posteriors(const std::vector<CancerGenotype<Haplotype>>& genotypes,
                                  const ReadMap& reads,
-                                 const HaplotypeFrequencies& haplotype_frequencies,
+                                 const HaplotypeFrequencyMap& haplotype_frequencies,
                                  const Cancer::GenotypeMixtures& genotype_mixtures,
                                  HaplotypeLikelihoodCache& read_model)
     {
@@ -181,7 +181,7 @@ namespace Octopus
     void update_genotype_log_posteriors(GenotypeLogPosteriors& current,
                                         const std::vector<CancerGenotype<Haplotype>>& genotypes,
                                         const ReadMap& reads,
-                                        const HaplotypeFrequencies& haplotype_frequencies,
+                                        const HaplotypeFrequencyMap& haplotype_frequencies,
                                         const Cancer::GenotypeMixtures& genotype_mixtures,
                                         HaplotypeLikelihoodCache& read_model)
     {
@@ -218,7 +218,7 @@ namespace Octopus
         }
     }
     
-    GenotypeMixtureResponsibilities
+    GenotypeMixtureResponsibilityMap
     init_genotype_weight_responsibilities(const GenotypeLogPosteriors& genotype_posteriors,
                                           const std::vector<CancerGenotype<Haplotype>>& genotypes,
                                           const Cancer::GenotypeMixtures& genotype_mixtures,
@@ -226,7 +226,7 @@ namespace Octopus
     {
         using std::cbegin; using std::cend; using std::begin; using std::transform;
         
-        GenotypeMixtureResponsibilities result {};
+        GenotypeMixtureResponsibilityMap result {};
         result.reserve(reads.size());
         
         for (const auto& sample_reads : reads) {
@@ -261,7 +261,7 @@ namespace Octopus
         return result;
     }
     
-    void update_genotype_weight_responsibilities(GenotypeMixtureResponsibilities& current,
+    void update_genotype_weight_responsibilities(GenotypeMixtureResponsibilityMap& current,
                                                  const std::vector<CancerGenotype<Haplotype>>& genotypes,
                                                  const GenotypeLogPosteriors& genotype_log_posteriors,
                                                  const Cancer::GenotypeMixtures& genotype_mixtures,
@@ -300,8 +300,8 @@ namespace Octopus
         }
     }
     
-    double update_haplotype_frequencies(HaplotypeFrequencies& current,
-                                        const HaplotypePriorCounts& haplotype_prior_counts,
+    double update_haplotype_frequencies(HaplotypeFrequencyMap& current,
+                                        const HaplotypePriorCountMap& haplotype_prior_counts,
                                         const GenotypeLogPosteriors& genotype_log_posteriors,
                                         const std::vector<CancerGenotype<Haplotype>>& genotypes)
     {
@@ -333,7 +333,7 @@ namespace Octopus
     
     Cancer::GenotypeMixtures
     compute_genotype_mixtures(const Cancer::GenotypeMixturesPriors& prior_counts,
-                             const GenotypeMixtureResponsibilities& genotype_weight_responsibilities)
+                             const GenotypeMixtureResponsibilityMap& genotype_weight_responsibilities)
     {
         Cancer::GenotypeMixtures result {};
         result.reserve(prior_counts.size());
@@ -361,7 +361,7 @@ namespace Octopus
     
     double update_genotype_mixtures(Cancer::GenotypeMixtures& current,
                                  const Cancer::GenotypeMixturesPriors& prior_counts,
-                                 const GenotypeMixtureResponsibilities& genotype_weight_responsibilities)
+                                 const GenotypeMixtureResponsibilityMap& genotype_weight_responsibilities)
     {
         double max_genotype_weight_change {0.0};
         
@@ -395,13 +395,13 @@ namespace Octopus
     }
     
     double do_em_iteration(const std::vector<CancerGenotype<Haplotype>>& genotypes,
-                           HaplotypeFrequencies& haplotype_frequencies,
+                           HaplotypeFrequencyMap& haplotype_frequencies,
                            const Cancer::GenotypeMixturesPriors& weight_priors,
                            Cancer::GenotypeMixtures& genotype_mixtures,
                            GenotypeLogPosteriors& genotypes_log_probabilities,
-                           GenotypeMixtureResponsibilities& genotype_weight_responsibilities,
+                           GenotypeMixtureResponsibilityMap& genotype_weight_responsibilities,
                            const ReadMap& reads,
-                           const HaplotypePriorCounts& haplotype_prior_counts,
+                           const HaplotypePriorCountMap& haplotype_prior_counts,
                            HaplotypeLikelihoodCache& read_model)
     {
         auto max_frequency_change = update_haplotype_frequencies(haplotype_frequencies, haplotype_prior_counts,
@@ -578,7 +578,7 @@ namespace Octopus
             }
         }
         
-        void print_weight_responsabilities(const GenotypeMixtureResponsibilities& responsabilities,
+        void print_weight_responsabilities(const GenotypeMixtureResponsibilityMap& responsabilities,
                                            const ReadMap& reads)
         {
             std::cout << "DEBUG: printing all read responsabilities" << std::endl;

@@ -119,8 +119,8 @@ std::vector<Allele> decompose(const std::vector<Variant>& variants)
 std::vector<Allele> get_intervening_reference_alleles(const std::vector<Variant>& variants,
                                                       const ReferenceGenome& reference)
 {
-    const auto all_overlapped_regions     = covered_regions(variants);
-    const auto regions_between_candidates = all_intervening_regions(all_overlapped_regions);
+    const auto all_overlapped_regions     = extract_covered_regions(variants);
+    const auto regions_between_candidates = extract_intervening_regions(all_overlapped_regions);
     
     std::vector<Allele> result {};
     result.reserve(regions_between_candidates.size());

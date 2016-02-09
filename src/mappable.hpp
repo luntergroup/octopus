@@ -54,9 +54,9 @@ inline decltype(auto) get_region(const GenomicRegion& region)
 }
 
 template <typename T>
-decltype(auto) get_region(const Mappable<T>& m)
+decltype(auto) get_region(const Mappable<T>& mappable)
 {
-    return static_cast<const T&>(m).get_region();
+    return static_cast<const T&>(mappable).get_region();
 }
 
 template <typename T>
@@ -120,21 +120,27 @@ auto is_same_region(const Mappable<T1>& lhs, const Mappable<T2>& rhs)
 }
 
 template <typename T>
-auto is_empty(const Mappable<T>& m)
+auto is_empty_region(const Mappable<T>& mappable)
 {
-    return is_empty(static_cast<const T&>(m).get_region());
+    return is_empty_region(static_cast<const T&>(mappable).get_region());
 }
 
 template <typename T>
-auto region_size(const Mappable<T>& m)
+auto region_size(const Mappable<T>& mappable)
 {
-    return region_size(static_cast<const T&>(m).get_region());
+    return region_size(static_cast<const T&>(mappable).get_region());
 }
 
 template <typename T>
-decltype(auto) get_contig_name(const Mappable<T>& m)
+auto is_position(const Mappable<T>& mappable) noexcept
 {
-    return get_contig_name(static_cast<const T&>(m).get_region());
+    return is_position(static_cast<const T&>(mappable).get_region());
+}
+
+template <typename T>
+decltype(auto) get_contig_name(const Mappable<T>& mappable)
+{
+    return get_contig_name(static_cast<const T&>(mappable).get_region());
 }
 
 template <typename T>
@@ -157,15 +163,15 @@ auto is_same_contig(const Mappable<T1>& lhs, const Mappable<T2>& rhs)
 }
 
 template <typename T>
-auto get_begin(const Mappable<T>& m)
+auto get_begin(const Mappable<T>& mappable)
 {
-    return get_begin(static_cast<const T&>(m).get_region());
+    return get_begin(static_cast<const T&>(mappable).get_region());
 }
 
 template <typename T>
-auto get_end(const Mappable<T>& m)
+auto get_end(const Mappable<T>& mappable)
 {
-    return get_end(static_cast<const T&>(m).get_region());
+    return get_end(static_cast<const T&>(mappable).get_region());
 }
 
 template <typename T>
@@ -856,27 +862,27 @@ auto closed_region(const Mappable<T1>& lhs, const Mappable<T2>& rhs)
 }
 
 template <typename T>
-auto head_region(const Mappable<T>& m, const GenomicRegion::SizeType n = 0)
+auto head_region(const Mappable<T>& mappable, const GenomicRegion::SizeType n = 0)
 {
-    return head_region(static_cast<const T&>(m).get_region(), n);
+    return head_region(static_cast<const T&>(mappable).get_region(), n);
 }
 
 template <typename T>
-auto head_position(const Mappable<T>& m)
+auto head_position(const Mappable<T>& mappable)
 {
-    return head_position(static_cast<const T&>(m).get_region());
+    return head_position(static_cast<const T&>(mappable).get_region());
 }
 
 template <typename T>
-auto tail_region(const Mappable<T>& m, const GenomicRegion::SizeType n = 0)
+auto tail_region(const Mappable<T>& mappable, const GenomicRegion::SizeType n = 0)
 {
-    return tail_region(static_cast<const T&>(m).get_region(), n);
+    return tail_region(static_cast<const T&>(mappable).get_region(), n);
 }
 
 template <typename T>
-auto tail_position(const Mappable<T>& m)
+auto tail_position(const Mappable<T>& mappable)
 {
-    return tail_position(static_cast<const T&>(m).get_region());
+    return tail_position(static_cast<const T&>(mappable).get_region());
 }
 
 template <typename T>

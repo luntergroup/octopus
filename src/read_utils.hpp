@@ -15,6 +15,7 @@
 #include <utility>
 #include <algorithm>
 #include <numeric>
+#include <type_traits>
 
 #include <boost/range/algorithm.hpp>
 
@@ -23,169 +24,179 @@
 #include "mappable_set.hpp"
 #include "mappable_map.hpp"
 #include "maths.hpp"
+#include "type_tricks.hpp"
 
 namespace Octopus
 {
 
 namespace detail
 {
-    template <bool> struct IsMapType {};
-    using MapTypeTag    = IsMapType<true>;
-    using NonMapTypeTag = IsMapType<false>;
-    
-    struct IsForward
+    namespace
     {
-        bool operator()(const AlignedRead& read) const
+        template <typename T>
+        constexpr bool is_aligned_read = std::is_same<std::decay_t<T>, AlignedRead>::value;
+        
+        template <typename Container>
+        constexpr bool is_aligned_read_container = is_aligned_read<typename Container::value_type>;
+        
+        struct IsForward
         {
-            return !read.is_marked_reverse_mapped();
-        }
-    };
-    
-    struct IsReverse
-    {
-        bool operator()(const AlignedRead& read) const
+            bool operator()(const AlignedRead& read) const
+            {
+                return !read.is_marked_reverse_mapped();
+            }
+        };
+        
+        struct IsReverse
         {
-            return read.is_marked_reverse_mapped();
-        }
-    };
-    
-    struct IsMappingQualityZero
-    {
-        bool operator()(const AlignedRead& read) const
+            bool operator()(const AlignedRead& read) const
+            {
+                return read.is_marked_reverse_mapped();
+            }
+        };
+        
+        struct IsMappingQualityZero
         {
-            return read.get_mapping_quality() == 0;
-        }
-    };
+            bool operator()(const AlignedRead& read) const noexcept
+            {
+                return read.get_mapping_quality() == 0;
+            }
+        };
+    } // namespace
     
     template <typename T>
-    bool has_coverage(const T& reads, const GenomicRegion& region, NonMapTypeTag)
+    bool has_coverage(const T& reads, const GenomicRegion& region, NonMapTag)
     {
         const auto overlapped = overlap_range(reads, region);
         return std::any_of(std::cbegin(overlapped), std::cend(overlapped),
-                           [] (const auto& read) { return !is_empty(read); });
+                           [] (const auto& read) { return !is_empty_region(read); });
     }
     
-    inline bool has_coverage(const MappableSet<AlignedRead>& reads, NonMapTypeTag)
+    inline bool has_coverage(const MappableSet<AlignedRead>& reads, NonMapTag)
     {
         return std::any_of(std::cbegin(reads), std::cend(reads),
-                           [] (const auto& read) { return !is_empty(read); });
+                           [] (const auto& read) { return !is_empty_region(read); });
     }
     
     template <typename T>
-    unsigned min_coverage(const T& reads, const GenomicRegion& region, NonMapTypeTag)
+    unsigned min_coverage(const T& reads, const GenomicRegion& region, NonMapTag)
     {
-        if (reads.empty() || is_empty(region)) return 0;
-        const auto positions_coverage = positional_coverage(reads, region);
-        return *std::min_element(std::cbegin(positions_coverage), std::cend(positions_coverage));
+        if (reads.empty() || is_empty_region(region)) return 0;
+        const auto positional_coverage = calculate_positional_coverage(reads, region);
+        return *std::min_element(std::cbegin(positional_coverage), std::cend(positional_coverage));
     }
     
-    inline unsigned min_coverage(const MappableSet<AlignedRead>& reads, NonMapTypeTag)
+    inline unsigned min_coverage(const MappableSet<AlignedRead>& reads, NonMapTag)
     {
         if (reads.empty()) return 0;
-        const auto positions_coverage = positional_coverage(reads);
-        return *std::min_element(std::cbegin(positions_coverage), std::cend(positions_coverage));
+        const auto positional_coverage = calculate_positional_coverage(reads);
+        return *std::min_element(std::cbegin(positional_coverage), std::cend(positional_coverage));
     }
     
     template <typename T>
-    unsigned max_coverage(const T& reads, const GenomicRegion& region, NonMapTypeTag)
+    unsigned max_coverage(const T& reads, const GenomicRegion& region, NonMapTag)
     {
-        if (reads.empty() || is_empty(region)) return 0;
-        const auto positions_coverage = positional_coverage(reads, region);
-        return *std::max_element(std::cbegin(positions_coverage), std::cend(positions_coverage));
+        if (reads.empty() || is_empty_region(region)) return 0;
+        const auto positional_coverage = calculate_positional_coverage(reads, region);
+        return *std::max_element(std::cbegin(positional_coverage), std::cend(positional_coverage));
     }
     
-    inline unsigned max_coverage(const MappableSet<AlignedRead>& reads, NonMapTypeTag)
+    inline unsigned max_coverage(const MappableSet<AlignedRead>& reads, NonMapTag)
     {
         if (reads.empty()) return 0;
-        const auto positions_coverage = positional_coverage(reads);
-        return *std::max_element(std::cbegin(positions_coverage), std::cend(positions_coverage));
+        const auto positional_coverage = calculate_positional_coverage(reads);
+        return *std::max_element(std::cbegin(positional_coverage), std::cend(positional_coverage));
     }
     
     template <typename T>
-    double mean_coverage(const T& reads, const GenomicRegion& region, NonMapTypeTag)
+    double mean_coverage(const T& reads, const GenomicRegion& region, NonMapTag)
     {
-        if (reads.empty() || is_empty(region)) return 0;
+        if (reads.empty() || is_empty_region(region)) return 0;
         return Maths::mean(positional_coverage(reads, region));
     }
     
-    inline double mean_coverage(const MappableSet<AlignedRead>& reads, NonMapTypeTag)
+    inline double mean_coverage(const MappableSet<AlignedRead>& reads, NonMapTag)
     {
         if (reads.empty()) return 0;
-        return Maths::mean(positional_coverage(reads));
+        return Maths::mean(calculate_positional_coverage(reads));
     }
     
     template <typename T>
-    double stdev_coverage(const T& reads, const GenomicRegion& region, NonMapTypeTag)
+    double stdev_coverage(const T& reads, const GenomicRegion& region, NonMapTag)
     {
-        if (reads.empty() || is_empty(region)) return 0;
+        if (reads.empty() || is_empty_region(region)) return 0;
         return Maths::stdev(positional_coverage(reads, region));
     }
     
-    inline double stdev_coverage(const MappableSet<AlignedRead>& reads, NonMapTypeTag)
+    inline double stdev_coverage(const MappableSet<AlignedRead>& reads, NonMapTag)
     {
         if (reads.empty()) return 0;
-        return Maths::stdev(positional_coverage(reads));
+        return Maths::stdev(calculate_positional_coverage(reads));
     }
     
     template <typename T>
-    size_t count_reads(const T& reads, NonMapTypeTag)
+    size_t count_reads(const T& reads, NonMapTag)
     {
         return reads.size();
     }
     
     template <typename T>
-    size_t count_reads(const T& reads, const GenomicRegion& region, NonMapTypeTag)
+    size_t count_reads(const T& reads, const GenomicRegion& region, NonMapTag)
     {
         return count_overlapped(reads, region);
     }
     
-    inline size_t count_reads(const MappableSet<AlignedRead>& reads, const GenomicRegion& region, NonMapTypeTag)
+    inline size_t count_reads(const MappableSet<AlignedRead>& reads, const GenomicRegion& region, NonMapTag)
     {
         return reads.count_overlapped(region);
     }
     
     template <typename T>
-    size_t count_forward(const T& reads, NonMapTypeTag)
+    size_t count_forward(const T& reads, NonMapTag)
     {
+        static_assert(is_aligned_read_container<T>, "T must be a container of AlignedReads");
         return std::count_if(std::cbegin(reads), std::cend(reads), IsForward {});
     }
     
-    
     template <typename T>
-    size_t count_forward(const T& reads, const GenomicRegion& region, NonMapTypeTag)
+    size_t count_forward(const T& reads, const GenomicRegion& region, NonMapTag)
     {
+        static_assert(is_aligned_read_container<T>, "T must be a container of AlignedReads");
         const auto overlapped = overlap_range(reads, region);
         return std::count_if(std::cbegin(overlapped), std::cend(overlapped), IsForward {});
     }
     
-    inline size_t count_forward(const MappableSet<AlignedRead>& reads, const GenomicRegion& region, NonMapTypeTag)
+    inline size_t count_forward(const MappableSet<AlignedRead>& reads, const GenomicRegion& region, NonMapTag)
     {
         const auto overlapped = reads.overlap_range(region);
         return std::count_if(std::cbegin(overlapped), std::cend(overlapped), IsForward {});
     }
     
     template <typename T>
-    size_t count_reverse(const T& reads, NonMapTypeTag)
+    size_t count_reverse(const T& reads, NonMapTag)
     {
+        static_assert(is_aligned_read_container<T>, "T must be a container of AlignedReads");
         return std::count_if(std::cbegin(reads), std::cend(reads), IsReverse {});
     }
     
     template <typename T>
-    size_t count_reverse(const T& reads, const GenomicRegion& region, NonMapTypeTag)
+    size_t count_reverse(const T& reads, const GenomicRegion& region, NonMapTag)
     {
+        static_assert(is_aligned_read_container<T>, "T must be a container of AlignedReads");
         const auto overlapped = overlap_range(reads, region);
         return std::count_if(std::cbegin(overlapped), std::cend(overlapped), IsReverse {});
     }
     
-    inline size_t count_reverse(const MappableSet<AlignedRead>& reads, const GenomicRegion& region, NonMapTypeTag)
+    inline size_t count_reverse(const MappableSet<AlignedRead>& reads, const GenomicRegion& region, NonMapTag)
     {
         const auto overlapped = reads.overlap_range(region);
         return std::count_if(std::cbegin(overlapped), std::cend(overlapped), IsReverse {});
     }
     
     template <typename T>
-    size_t count_base_pairs(const T& reads, NonMapTypeTag)
+    size_t count_base_pairs(const T& reads, NonMapTag)
     {
+        static_assert(is_aligned_read_container<T>, "T must be a container of AlignedReads");
         return std::accumulate(std::cbegin(reads), std::cend(reads), size_t {},
                                [] (const auto curr, const auto& read) {
                                    return curr + static_cast<size_t>(read.get_sequence_size());
@@ -193,8 +204,9 @@ namespace detail
     }
     
     template <typename T>
-    size_t count_base_pairs(const T& reads, const GenomicRegion& region, NonMapTypeTag)
+    size_t count_base_pairs(const T& reads, const GenomicRegion& region, NonMapTag)
     {
+        static_assert(is_aligned_read_container<T>, "T must be a container of AlignedReads");
         const auto overlapped = overlap_range(reads, region);
         return std::accumulate(std::cbegin(overlapped), std::cend(overlapped), size_t {},
                                [&region] (const auto curr, const auto& read) {
@@ -203,8 +215,9 @@ namespace detail
     }
     
     template <typename T>
-    size_t count_forward_base_pairs(const T& reads, NonMapTypeTag)
+    size_t count_forward_base_pairs(const T& reads, NonMapTag)
     {
+        static_assert(is_aligned_read_container<T>, "T must be a container of AlignedReads");
         return std::accumulate(std::cbegin(reads), std::cend(reads), size_t {},
                                [] (const auto curr, const auto& read) {
                                    return curr + ((IsForward()(read)) ? static_cast<size_t>(read.get_sequence_size()) : 0);
@@ -212,8 +225,9 @@ namespace detail
     }
     
     template <typename T>
-    size_t count_forward_base_pairs(const T& reads, const GenomicRegion& region, NonMapTypeTag)
+    size_t count_forward_base_pairs(const T& reads, const GenomicRegion& region, NonMapTag)
     {
+        static_assert(is_aligned_read_container<T>, "T must be a container of AlignedReads");
         const auto overlapped = overlap_range(reads, region);
         return std::accumulate(std::cbegin(overlapped), std::cend(overlapped), size_t {},
                                [&region] (const auto curr, const auto& read) {
@@ -222,8 +236,9 @@ namespace detail
     }
     
     template <typename T>
-    size_t count_reverse_base_pairs(const T& reads, NonMapTypeTag)
+    size_t count_reverse_base_pairs(const T& reads, NonMapTag)
     {
+        static_assert(is_aligned_read_container<T>, "T must be a container of AlignedReads");
         return std::accumulate(std::cbegin(reads), std::cend(reads), size_t {},
                                [] (const auto curr, const auto& read) {
                                    return curr + ((IsReverse()(read)) ? static_cast<size_t>(read.get_sequence_size()) : 0);
@@ -231,8 +246,9 @@ namespace detail
     }
     
     template <typename T>
-    size_t count_reverse_base_pairs(const T& reads, const GenomicRegion& region, NonMapTypeTag)
+    size_t count_reverse_base_pairs(const T& reads, const GenomicRegion& region, NonMapTag)
     {
+        static_assert(is_aligned_read_container<T>, "T must be a container of AlignedReads");
         const auto overlapped = overlap_range(reads, region);
         return std::accumulate(std::cbegin(overlapped), std::cend(overlapped), size_t {},
                                [&region] (const auto curr, const auto& read) {
@@ -241,27 +257,31 @@ namespace detail
     }
     
     template <typename T>
-    size_t count_mapq_zero(const T& reads, NonMapTypeTag)
+    size_t count_mapq_zero(const T& reads, NonMapTag)
     {
+        static_assert(is_aligned_read_container<T>, "T must be a container of AlignedReads");
         return std::count_if(std::cbegin(reads), std::cend(reads), IsMappingQualityZero {});
     }
     
     template <typename T>
-    size_t count_mapq_zero(const T& reads, const GenomicRegion& region, NonMapTypeTag)
+    size_t count_mapq_zero(const T& reads, const GenomicRegion& region, NonMapTag)
     {
+        static_assert(is_aligned_read_container<T>, "T must be a container of AlignedReads");
         const auto overlapped = overlap_range(reads, region);
         return std::count_if(std::cbegin(overlapped), std::cend(overlapped), IsMappingQualityZero {});
     }
     
-    inline size_t count_mapq_zero(const MappableSet<AlignedRead>& reads, const GenomicRegion& region, NonMapTypeTag)
+    inline size_t count_mapq_zero(const MappableSet<AlignedRead>& reads, const GenomicRegion& region, NonMapTag)
     {
         const auto overlapped = reads.overlap_range(region);
         return std::count_if(std::cbegin(overlapped), std::cend(overlapped), IsMappingQualityZero {});
     }
     
     template <typename T>
-    double rmq_mapping_quality(const T& reads, NonMapTypeTag)
+    double rmq_mapping_quality(const T& reads, NonMapTag)
     {
+        static_assert(is_aligned_read_container<T>, "T must be a container of AlignedReads");
+        
         std::vector<double> qualities(reads.size());
         
         std::transform(std::cbegin(reads), std::cend(reads), std::begin(qualities),
@@ -271,8 +291,10 @@ namespace detail
     }
     
     template <typename T>
-    double rmq_mapping_quality(const T& reads, const GenomicRegion& region, NonMapTypeTag)
+    double rmq_mapping_quality(const T& reads, const GenomicRegion& region, NonMapTag)
     {
+        static_assert(is_aligned_read_container<T>, "T must be a container of AlignedReads");
+        
         const auto overlapped = overlap_range(reads, region);
         
         std::vector<double> qualities(size(overlapped));
@@ -283,7 +305,7 @@ namespace detail
         return Maths::rmq<double>(qualities);
     }
     
-    inline double rmq_mapping_quality(const MappableSet<AlignedRead>& reads, const GenomicRegion& region, NonMapTypeTag)
+    inline double rmq_mapping_quality(const MappableSet<AlignedRead>& reads, const GenomicRegion& region, NonMapTag)
     {
         const auto overlapped = reads.overlap_range(region);
         
@@ -296,10 +318,12 @@ namespace detail
     }
     
     template <typename T>
-    double rmq_base_quality(const T& reads, NonMapTypeTag)
+    double rmq_base_quality(const T& reads, NonMapTag)
     {
+        static_assert(is_aligned_read_container<T>, "T must be a container of AlignedReads");
+        
         std::vector<double> qualities {};
-        qualities.reserve(count_base_pairs(reads, NonMapTypeTag()));
+        qualities.reserve(count_base_pairs(reads, NonMapTag {}));
         
         for (const auto& read : reads) {
             for (const auto quality : read.get_qualities()) {
@@ -311,12 +335,14 @@ namespace detail
     }
     
     template <typename T>
-    double rmq_base_quality(const T& reads, const GenomicRegion& region, NonMapTypeTag)
+    double rmq_base_quality(const T& reads, const GenomicRegion& region, NonMapTag)
     {
+        static_assert(is_aligned_read_container<T>, "T must be a container of AlignedReads");
+        
         const auto overlapped = overlap_range(reads, region);
         
         std::vector<double> qualities {};
-        qualities.reserve(count_base_pairs(reads, region, NonMapTypeTag()));
+        qualities.reserve(count_base_pairs(reads, region, NonMapTag {}));
         
         std::for_each(std::cbegin(overlapped), std::cend(overlapped), [&qualities] (const auto& read) {
             for (const auto quality : read.get_qualities()) {
@@ -327,12 +353,12 @@ namespace detail
         return Maths::rmq<double>(qualities);
     }
     
-    inline double rmq_base_quality(const MappableSet<AlignedRead>& reads, const GenomicRegion& region, NonMapTypeTag)
+    inline double rmq_base_quality(const MappableSet<AlignedRead>& reads, const GenomicRegion& region, NonMapTag)
     {
         const auto overlapped = reads.overlap_range(region);
         
         std::vector<double> qualities {};
-        qualities.reserve(count_base_pairs(reads, region, NonMapTypeTag()));
+        qualities.reserve(count_base_pairs(reads, region, NonMapTag {}));
         
         std::for_each(std::cbegin(overlapped), std::cend(overlapped), [&qualities] (const auto& read) {
             for (const auto quality : read.get_qualities()) {
@@ -344,25 +370,25 @@ namespace detail
     }
     
     template <typename ReadMap>
-    bool has_coverage(const ReadMap& reads, MapTypeTag)
+    bool has_coverage(const ReadMap& reads, MapTag)
     {
         return std::any_of(std::cbegin(reads), std::cend(reads),
                            [] (const auto& sample_reads) {
-                               return has_coverage(sample_reads.second, NonMapTypeTag());
+                               return has_coverage(sample_reads.second, NonMapTag {});
                            });
     }
     
     template <typename ReadMap>
-    bool has_coverage(const ReadMap& reads, const GenomicRegion& region, MapTypeTag)
+    bool has_coverage(const ReadMap& reads, const GenomicRegion& region, MapTag)
     {
         return std::any_of(std::cbegin(reads), std::cend(reads),
                            [&region] (const auto& sample_reads) {
-                               return has_coverage(sample_reads.second, region, NonMapTypeTag());
+                               return has_coverage(sample_reads.second, region, NonMapTag {});
                            });
     }
     
     template <typename ReadMap>
-    unsigned min_coverage(const ReadMap& reads, MapTypeTag)
+    unsigned min_coverage(const ReadMap& reads, MapTag)
     {
         if (reads.empty()) return 0;
         
@@ -370,14 +396,14 @@ namespace detail
         
         std::transform(std::cbegin(reads), std::cend(reads), std::begin(sample_min_coverages),
                        [] (const auto& sample_reads) {
-                           return min_coverage(sample_reads.second, NonMapTypeTag());
+                           return min_coverage(sample_reads.second, NonMapTag {});
                        });
         
         return *std::min_element(cbegin(sample_min_coverages), std::cend(sample_min_coverages));
     }
     
     template <typename ReadMap>
-    unsigned min_coverage(const ReadMap& reads, const GenomicRegion& region, MapTypeTag)
+    unsigned min_coverage(const ReadMap& reads, const GenomicRegion& region, MapTag)
     {
         if (reads.empty()) return 0;
         
@@ -385,14 +411,14 @@ namespace detail
         
         std::transform(std::cbegin(reads), std::cend(reads), std::begin(sample_min_coverages),
                        [&region] (const auto& sample_reads) {
-                           return min_coverage(sample_reads.second, region, NonMapTypeTag());
+                           return min_coverage(sample_reads.second, region, NonMapTag {});
                        });
         
         return *std::min_element(cbegin(sample_min_coverages), std::cend(sample_min_coverages));
     }
     
     template <typename ReadMap>
-    unsigned max_coverage(const ReadMap& reads, MapTypeTag)
+    unsigned max_coverage(const ReadMap& reads, MapTag)
     {
         if (reads.empty()) return 0;
         
@@ -400,14 +426,14 @@ namespace detail
         
         std::transform(std::cbegin(reads), std::cend(reads), std::begin(sample_max_coverages),
                        [] (const auto& sample_reads) {
-                           return max_coverage(sample_reads.second, NonMapTypeTag());
+                           return max_coverage(sample_reads.second, NonMapTag {});
                        });
         
         return *std::max_element(cbegin(sample_max_coverages), std::cend(sample_max_coverages));
     }
     
     template <typename ReadMap>
-    unsigned max_coverage(const ReadMap& reads, const GenomicRegion& region, MapTypeTag)
+    unsigned max_coverage(const ReadMap& reads, const GenomicRegion& region, MapTag)
     {
         if (reads.empty()) return 0;
         
@@ -415,14 +441,14 @@ namespace detail
         
         std::transform(std::cbegin(reads), std::cend(reads), std::begin(sample_max_coverages),
                        [&region] (const auto& sample_reads) {
-                           return max_coverage(sample_reads.second, region, NonMapTypeTag());
+                           return max_coverage(sample_reads.second, region, NonMapTag {});
                        });
         
         return *std::max_element(std::cbegin(sample_max_coverages), std::cend(sample_max_coverages));
     }
     
     template <typename T>
-    double mean_coverage(const T& reads, MapTypeTag)
+    double mean_coverage(const T& reads, MapTag)
     {
         if (reads.empty()) return 0.0;
         
@@ -430,14 +456,14 @@ namespace detail
         
         std::transform(std::cbegin(reads), std::cend(reads), std::begin(sample_mean_coverages),
                        [] (const auto& sample_reads) {
-                           return mean_coverage(sample_reads.second, NonMapTypeTag());
+                           return mean_coverage(sample_reads.second, NonMapTag {});
                        });
         
         return Maths::mean(sample_mean_coverages);
     }
     
     template <typename T>
-    double mean_coverage(const T& reads, const GenomicRegion& region, MapTypeTag)
+    double mean_coverage(const T& reads, const GenomicRegion& region, MapTag)
     {
         if (reads.empty()) return 0.0;
         
@@ -445,14 +471,14 @@ namespace detail
         
         std::transform(std::cbegin(reads), std::cend(reads), std::begin(sample_mean_coverages),
                        [&region] (const auto& sample_reads) {
-                           return mean_coverage(sample_reads.second, region, NonMapTypeTag());
+                           return mean_coverage(sample_reads.second, region, NonMapTag {});
                        });
         
         return Maths::mean(sample_mean_coverages);
     }
     
     template <typename T>
-    double stdev_coverage(const T& reads, MapTypeTag)
+    double stdev_coverage(const T& reads, MapTag)
     {
         if (reads.empty()) return 0.0;
         
@@ -460,14 +486,14 @@ namespace detail
         
         std::transform(std::cbegin(reads), std::cend(reads), std::begin(sample_stdev_coverages),
                        [] (const auto& sample_reads) {
-                           return stdev_coverage(sample_reads.second, NonMapTypeTag());
+                           return stdev_coverage(sample_reads.second, NonMapTag {});
                        });
         
         return Maths::stdev(sample_stdev_coverages);
     }
     
     template <typename T>
-    double stdev_coverage(const T& reads, const GenomicRegion& region, MapTypeTag)
+    double stdev_coverage(const T& reads, const GenomicRegion& region, MapTag)
     {
         if (reads.empty()) return 0.0;
         
@@ -475,137 +501,137 @@ namespace detail
         
         std::transform(std::cbegin(reads), std::cend(reads), std::begin(sample_stdev_coverages),
                        [&region] (const auto& sample_reads) {
-                           return stdev_coverage(sample_reads.second, region, NonMapTypeTag());
+                           return stdev_coverage(sample_reads.second, region, NonMapTag {});
                        });
         
         return Maths::stdev(sample_stdev_coverages);
     }
     
     template <typename T>
-    size_t count_reads(const T& reads, MapTypeTag)
+    size_t count_reads(const T& reads, MapTag)
     {
         return Maths::sum_sizes(reads);
     }
     
     template <typename T>
-    size_t count_reads(const T& reads, const GenomicRegion& region, MapTypeTag)
+    size_t count_reads(const T& reads, const GenomicRegion& region, MapTag)
     {
         return std::accumulate(std::cbegin(reads), std::cend(reads), size_t {},
                                [&region] (const auto curr, const auto& sample_reads) {
-                                   return curr + count_reads(sample_reads.second, region, NonMapTypeTag());
+                                   return curr + count_reads(sample_reads.second, region, NonMapTag {});
                                });
     }
     
     template <typename T>
-    size_t count_forward(const T& reads, MapTypeTag)
+    size_t count_forward(const T& reads, MapTag)
     {
         return std::accumulate(std::cbegin(reads), std::cend(reads), size_t {},
                                [] (const auto curr, const auto& sample_reads) {
-                                   return curr + count_forward(sample_reads.second, NonMapTypeTag());
+                                   return curr + count_forward(sample_reads.second, NonMapTag {});
                                });
     }
     
     template <typename T>
-    size_t count_forward(const T& reads, const GenomicRegion& region, MapTypeTag)
+    size_t count_forward(const T& reads, const GenomicRegion& region, MapTag)
     {
         return std::accumulate(std::cbegin(reads), std::cend(reads), size_t {},
                                [&region] (const auto curr, const auto& sample_reads) {
-                                   return curr + count_forward(sample_reads.second, region, NonMapTypeTag());
+                                   return curr + count_forward(sample_reads.second, region, NonMapTag {});
                                });
     }
     
     template <typename T>
-    size_t count_reverse(const T& reads, MapTypeTag)
+    size_t count_reverse(const T& reads, MapTag)
     {
         return std::accumulate(std::cbegin(reads), std::cend(reads), size_t {},
                                [] (const auto curr, const auto& sample_reads) {
-                                   return curr + count_reverse(sample_reads.second, NonMapTypeTag());
+                                   return curr + count_reverse(sample_reads.second, NonMapTag {});
                                });
     }
     
     template <typename T>
-    size_t count_reverse(const T& reads, const GenomicRegion& region, MapTypeTag)
+    size_t count_reverse(const T& reads, const GenomicRegion& region, MapTag)
     {
         return std::accumulate(std::cbegin(reads), std::cend(reads), size_t {},
                                [&region] (const auto curr, const auto& sample_reads) {
-                                   return curr + count_reverse(sample_reads.second, region, NonMapTypeTag());
+                                   return curr + count_reverse(sample_reads.second, region, NonMapTag {});
                                });
     }
     
     template <typename T>
-    size_t count_base_pairs(const T& reads, MapTypeTag)
+    size_t count_base_pairs(const T& reads, MapTag)
     {
         return std::accumulate(std::cbegin(reads), std::cend(reads), size_t {},
                                [] (const auto curr, const auto& sample_reads) {
-                                   return curr + count_base_pairs(sample_reads.second, NonMapTypeTag());
+                                   return curr + count_base_pairs(sample_reads.second, NonMapTag {});
                                });
     }
     
     template <typename T>
-    size_t count_base_pairs(const T& reads, const GenomicRegion& region, MapTypeTag)
+    size_t count_base_pairs(const T& reads, const GenomicRegion& region, MapTag)
     {
         return std::accumulate(std::cbegin(reads), std::cend(reads), size_t {},
                                [&region] (const auto curr, const auto& sample_reads) {
-                                   return curr + count_base_pairs(sample_reads.second, region, NonMapTypeTag());
+                                   return curr + count_base_pairs(sample_reads.second, region, NonMapTag {});
                                });
     }
     
     template <typename T>
-    size_t count_forward_base_pairs(const T& reads, MapTypeTag)
+    size_t count_forward_base_pairs(const T& reads, MapTag)
     {
         return std::accumulate(std::cbegin(reads), std::cend(reads), size_t {},
                                [] (const auto curr, const auto& sample_reads) {
-                                   return curr + count_forward_base_pairs(sample_reads.second, NonMapTypeTag());
+                                   return curr + count_forward_base_pairs(sample_reads.second, NonMapTag {});
                                });
     }
     
     template <typename T>
-    size_t count_forward_base_pairs(const T& reads, const GenomicRegion& region, MapTypeTag)
+    size_t count_forward_base_pairs(const T& reads, const GenomicRegion& region, MapTag)
     {
         return std::accumulate(std::cbegin(reads), std::cend(reads), size_t {},
                                [&region] (const auto curr, const auto& sample_reads) {
-                                   return curr + count_forward_base_pairs(sample_reads.second, region, NonMapTypeTag());
+                                   return curr + count_forward_base_pairs(sample_reads.second, region, NonMapTag {});
                                });
     }
     
     template <typename T>
-    size_t count_reverse_base_pairs(const T& reads, MapTypeTag)
+    size_t count_reverse_base_pairs(const T& reads, MapTag)
     {
         return std::accumulate(std::cbegin(reads), std::cend(reads), size_t {},
                                [] (const auto curr, const auto& sample_reads) {
-                                   return curr + count_reverse_base_pairs(sample_reads.second, NonMapTypeTag());
+                                   return curr + count_reverse_base_pairs(sample_reads.second, NonMapTag {});
                                });
     }
     
     template <typename T>
-    size_t count_reverse_base_pairs(const T& reads, const GenomicRegion& region, MapTypeTag)
+    size_t count_reverse_base_pairs(const T& reads, const GenomicRegion& region, MapTag)
     {
         return std::accumulate(std::cbegin(reads), std::cend(reads), size_t {},
                                [&region] (const auto curr, const auto& sample_reads) {
-                                   return curr + count_reverse_base_pairs(sample_reads.second, region, NonMapTypeTag());
+                                   return curr + count_reverse_base_pairs(sample_reads.second, region, NonMapTag {});
                                });
     }
     
     template <typename T>
-    size_t count_mapq_zero(const T& reads, MapTypeTag)
+    size_t count_mapq_zero(const T& reads, MapTag)
     {
         return std::accumulate(std::cbegin(reads), std::cend(reads), size_t {},
                                [] (const auto curr, const auto& sample_reads) {
-                                   return curr + count_mapq_zero(sample_reads.second, NonMapTypeTag());
+                                   return curr + count_mapq_zero(sample_reads.second, NonMapTag {});
                                });
     }
     
     template <typename T>
-    size_t count_mapq_zero(const T& reads, const GenomicRegion& region, MapTypeTag)
+    size_t count_mapq_zero(const T& reads, const GenomicRegion& region, MapTag)
     {
         return std::accumulate(std::cbegin(reads), std::cend(reads), size_t {},
                                [&region] (const auto curr, const auto& sample_reads) {
-                                   return curr + count_mapq_zero(sample_reads.second, region, NonMapTypeTag());
+                                   return curr + count_mapq_zero(sample_reads.second, region, NonMapTag {});
                                });
     }
     
     template <typename T>
-    double rmq_mapping_quality(const T& reads, MapTypeTag)
+    double rmq_mapping_quality(const T& reads, MapTag)
     {
         std::vector<double> qualities {};
         qualities.reserve(Maths::sum_sizes(reads));
@@ -621,7 +647,7 @@ namespace detail
     }
     
     template <typename T>
-    double rmq_mapping_quality(const T& reads, const GenomicRegion& region, MapTypeTag)
+    double rmq_mapping_quality(const T& reads, const GenomicRegion& region, MapTag)
     {
         std::vector<double> qualities {};
         qualities.reserve(Maths::sum_sizes(reads));
@@ -639,10 +665,10 @@ namespace detail
     }
     
     template <typename T>
-    double rmq_base_quality(const T& reads, MapTypeTag)
+    double rmq_base_quality(const T& reads, MapTag)
     {
         std::vector<double> qualities {};
-        qualities.reserve(count_base_pairs(reads, MapTypeTag()));
+        qualities.reserve(count_base_pairs(reads, MapTag {}));
         
         for (const auto& sample_reads : reads) {
             for (const auto& read : sample_reads.second) {
@@ -656,10 +682,10 @@ namespace detail
     }
     
     template <typename T>
-    double rmq_base_quality(const T& reads, const GenomicRegion& region, MapTypeTag)
+    double rmq_base_quality(const T& reads, const GenomicRegion& region, MapTag)
     {
         std::vector<double> qualities {};
-        qualities.reserve(count_base_pairs(reads, region, MapTypeTag()));
+        qualities.reserve(count_base_pairs(reads, region, MapTag {}));
         
         for (const auto& sample_reads : reads) {
             const auto overlapped = overlap_range(sample_reads.second, region);
@@ -679,97 +705,97 @@ namespace detail
 template <typename T>
 bool has_coverage(const T& reads)
 {
-    return detail::has_coverage(reads, detail::IsMapType<!std::is_same<typename T::value_type, AlignedRead>::value>());
+    return detail::has_coverage(reads, MapTagType<T> {});
 }
 
 template <typename T>
 bool has_coverage(const T& reads, const GenomicRegion& region)
 {
-    return detail::has_coverage(reads, region, detail::IsMapType<!std::is_same<typename T::value_type, AlignedRead>::value>());
+    return detail::has_coverage(reads, region, MapTagType<T> {});
 }
 
 template <typename T>
 unsigned min_coverage(const T& reads)
 {
-    return detail::min_coverage(reads, detail::IsMapType<!std::is_same<typename T::value_type, AlignedRead>::value>());
+    return detail::min_coverage(reads, MapTagType<T> {});
 }
 
 template <typename T>
 unsigned min_coverage(const T& reads, const GenomicRegion& region)
 {
-    return detail::min_coverage(reads, region, detail::IsMapType<!std::is_same<typename T::value_type, AlignedRead>::value>());
+    return detail::min_coverage(reads, region, MapTagType<T> {});
 }
 
 template <typename T>
 unsigned max_coverage(const T& reads)
 {
-    return detail::max_coverage(reads, detail::IsMapType<!std::is_same<typename T::value_type, AlignedRead>::value>());
+    return detail::max_coverage(reads, MapTagType<T> {});
 }
 
 template <typename T>
 unsigned max_coverage(const T& reads, const GenomicRegion& region)
 {
-    return detail::max_coverage(reads, region, detail::IsMapType<!std::is_same<typename T::value_type, AlignedRead>::value>());
+    return detail::max_coverage(reads, region, MapTagType<T> {});
 }
 
 template <typename T>
 double mean_coverage(const T& reads)
 {
-    return detail::mean_coverage(reads, detail::IsMapType<!std::is_same<typename T::value_type, AlignedRead>::value>());
+    return detail::mean_coverage(reads, MapTagType<T> {});
 }
 
 template <typename T>
 double mean_coverage(const T& reads, const GenomicRegion& region)
 {
-    return detail::mean_coverage(reads, region, detail::IsMapType<!std::is_same<typename T::value_type, AlignedRead>::value>());
+    return detail::mean_coverage(reads, region, MapTagType<T> {});
 }
 
 template <typename T>
 double stdev_coverage(const T& reads)
 {
-    return detail::stdev_coverage(reads, detail::IsMapType<!std::is_same<typename T::value_type, AlignedRead>::value>());
+    return detail::stdev_coverage(reads, MapTagType<T> {});
 }
 
 template <typename T>
 double stdev_coverage(const T& reads, const GenomicRegion& region)
 {
-    return detail::stdev_coverage(reads, region, detail::IsMapType<!std::is_same<typename T::value_type, AlignedRead>::value>());
+    return detail::stdev_coverage(reads, region, MapTagType<T> {});
 }
 
 template <typename T>
 size_t count_reads(const T& reads)
 {
-    return detail::count_reads(reads, detail::IsMapType<!std::is_same<typename T::value_type, AlignedRead>::value>());
+    return detail::count_reads(reads, MapTagType<T> {});
 }
 
 template <typename T>
 size_t count_reads(const T& reads, const GenomicRegion& region)
 {
-    return detail::count_reads(reads, region, detail::IsMapType<!std::is_same<typename T::value_type, AlignedRead>::value>());
+    return detail::count_reads(reads, region, MapTagType<T> {});
 }
 
 template <typename T>
 size_t count_forward(const T& reads)
 {
-    return detail::count_forward(reads, detail::IsMapType<!std::is_same<typename T::value_type, AlignedRead>::value>());
+    return detail::count_forward(reads, MapTagType<T> {});
 }
 
 template <typename T>
 size_t count_forward(const T& reads, const GenomicRegion& region)
 {
-    return detail::count_forward(reads, region, detail::IsMapType<!std::is_same<typename T::value_type, AlignedRead>::value>());
+    return detail::count_forward(reads, region, MapTagType<T> {});
 }
 
 template <typename T>
 size_t count_reverse(const T& reads)
 {
-    return detail::count_reverse(reads, detail::IsMapType<!std::is_same<typename T::value_type, AlignedRead>::value>());
+    return detail::count_reverse(reads, MapTagType<T> {});
 }
 
 template <typename T>
 size_t count_reverse(const T& reads, const GenomicRegion& region)
 {
-    return detail::count_reverse(reads, region, detail::IsMapType<!std::is_same<typename T::value_type, AlignedRead>::value>());
+    return detail::count_reverse(reads, region, MapTagType<T> {});
 }
 
 template <typename T>
@@ -793,73 +819,73 @@ double strand_bias(const T& reads, const GenomicRegion& region)
 template <typename T>
 size_t count_base_pairs(const T& reads)
 {
-    return detail::count_base_pairs(reads, detail::IsMapType<!std::is_same<typename T::value_type, AlignedRead>::value>());
+    return detail::count_base_pairs(reads, MapTagType<T> {});
 }
 
 template <typename T>
 size_t count_base_pairs(const T& reads, const GenomicRegion& region)
 {
-    return detail::count_base_pairs(reads, region, detail::IsMapType<!std::is_same<typename T::value_type, AlignedRead>::value>());
+    return detail::count_base_pairs(reads, region, MapTagType<T> {});
 }
 
 template <typename T>
 size_t count_forward_base_pairs(const T& reads)
 {
-    return detail::count_forward_base_pairs(reads, detail::IsMapType<!std::is_same<typename T::value_type, AlignedRead>::value>());
+    return detail::count_forward_base_pairs(reads, MapTagType<T> {});
 }
 
 template <typename T>
 size_t count_forward_base_pairs(const T& reads, const GenomicRegion& region)
 {
-    return detail::count_forward_base_pairs(reads, region, detail::IsMapType<!std::is_same<typename T::value_type, AlignedRead>::value>());
+    return detail::count_forward_base_pairs(reads, region, MapTagType<T> {});
 }
 
 template <typename T>
 size_t count_reverse_base_pairs(const T& reads)
 {
-    return detail::count_reverse_base_pairs(reads, detail::IsMapType<!std::is_same<typename T::value_type, AlignedRead>::value>());
+    return detail::count_reverse_base_pairs(reads, MapTagType<T> {});
 }
 
 template <typename T>
 size_t count_reverse_base_pairs(const T& reads, const GenomicRegion& region)
 {
-    return detail::count_reverse_base_pairs(reads, region, detail::IsMapType<!std::is_same<typename T::value_type, AlignedRead>::value>());
+    return detail::count_reverse_base_pairs(reads, region, MapTagType<T> {});
 }
 
 template <typename T>
 size_t count_mapq_zero(const T& reads)
 {
-    return detail::count_mapq_zero(reads, detail::IsMapType<!std::is_same<typename T::value_type, AlignedRead>::value>());
+    return detail::count_mapq_zero(reads, MapTagType<T> {});
 }
 
 template <typename T>
 size_t count_mapq_zero(const T& reads, const GenomicRegion& region)
 {
-    return detail::count_mapq_zero(reads, region, detail::IsMapType<!std::is_same<typename T::value_type, AlignedRead>::value>());
+    return detail::count_mapq_zero(reads, region, MapTagType<T> {});
 }
 
 template <typename T>
 double rmq_mapping_quality(const T& reads)
 {
-    return detail::rmq_mapping_quality(reads, detail::IsMapType<!std::is_same<typename T::value_type, AlignedRead>::value>());
+    return detail::rmq_mapping_quality(reads, MapTagType<T> {});
 }
 
 template <typename T>
 double rmq_mapping_quality(const T& reads, const GenomicRegion& region)
 {
-    return detail::rmq_mapping_quality(reads, region, detail::IsMapType<!std::is_same<typename T::value_type, AlignedRead>::value>());
+    return detail::rmq_mapping_quality(reads, region, MapTagType<T> {});
 }
 
 template <typename T>
 double rmq_base_quality(const T& reads)
 {
-    return detail::rmq_base_quality(reads, detail::IsMapType<!std::is_same<typename T::value_type, AlignedRead>::value>());
+    return detail::rmq_base_quality(reads, MapTagType<T> {});
 }
 
 template <typename T>
 double rmq_base_quality(const T& reads, const GenomicRegion& region)
 {
-    return detail::rmq_base_quality(reads, region, detail::IsMapType<!std::is_same<typename T::value_type, AlignedRead>::value>());
+    return detail::rmq_base_quality(reads, region, MapTagType<T> {});
 }
 
 template <typename ReadMap>
@@ -969,13 +995,13 @@ find_high_coverage_regions(const T& reads, const GenomicRegion& region, const un
     
     std::vector<GenomicRegion> result {};
     
-    auto positions_coverage = positional_coverage(reads, region);
+    auto positional_coverage = calculate_positional_coverage(reads, region);
     
-    using Iterator = typename decltype(positions_coverage)::const_iterator;
+    using Iterator = typename decltype(positional_coverage)::const_iterator;
     
-    Iterator first {positions_coverage.cbegin()};
+    Iterator first {positional_coverage.cbegin()};
     Iterator current {first};
-    Iterator last {positions_coverage.cend()};
+    Iterator last {positional_coverage.cend()};
     Iterator high_range_first, high_range_last;
     
     SizeType high_range_begin, high_range_end;
@@ -1056,7 +1082,7 @@ std::vector<GenomicRegion> find_uniform_coverage_regions(const T& reads)
 }
     
 namespace detail {
-    inline MappableSet<AlignedRead> splice_all(const MappableSet<AlignedRead>& reads, const GenomicRegion& region, NonMapTypeTag)
+    inline MappableSet<AlignedRead> splice_all(const MappableSet<AlignedRead>& reads, const GenomicRegion& region, NonMapTag)
     {
         MappableSet<AlignedRead> result {};
         result.reserve(reads.size());
@@ -1069,7 +1095,7 @@ namespace detail {
     }
     
     template <typename T>
-    T splice_all(const T& reads, const GenomicRegion& region, NonMapTypeTag)
+    T splice_all(const T& reads, const GenomicRegion& region, NonMapTag)
     {
         T result {};
         result.reserve(reads.size());
@@ -1081,13 +1107,13 @@ namespace detail {
     }
     
     template <typename T>
-    T splice_all(const T& reads, const GenomicRegion& region, MapTypeTag)
+    T splice_all(const T& reads, const GenomicRegion& region, MapTag)
     {
         T result {};
         result.reserve(reads.size());
         
         for (const auto& p : reads) {
-            result.emplace(p.first, splice_all(p.second, region, NonMapTypeTag()));
+            result.emplace(p.first, splice_all(p.second, region, NonMapTag {}));
         }
         
         return result;
@@ -1097,7 +1123,7 @@ namespace detail {
 template <typename T>
 T splice_all(const T& reads, const GenomicRegion& region)
 {
-    return detail::splice_all(reads, region, detail::IsMapType<!std::is_same<typename T::value_type, AlignedRead>::value>());
+    return detail::splice_all(reads, region, MapTagType<T> {});
 }
 
 template <typename Reads>

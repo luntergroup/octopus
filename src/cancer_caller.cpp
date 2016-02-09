@@ -629,7 +629,7 @@ namespace Octopus
     {
         std::vector<VcfRecord> result {};
         
-        if (is_empty(region) || (candidates.empty() && refcall_type_ == RefCallType::None)) {
+        if (is_empty_region(region) || (candidates.empty() && refcall_type_ == RefCallType::None)) {
             return result;
         }
         
