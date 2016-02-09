@@ -427,34 +427,47 @@ bool contains(const Haplotype& lhs, const Haplotype& rhs)
     return lhs.get_sequence(rhs_explicit_allele_region) == rhs.get_sequence_bounded_by_explicit_alleles();
 }
 
-namespace detail {
+namespace detail
+{
 Haplotype do_splice(const Haplotype& haplotype, const GenomicRegion& region, std::true_type)
 {
-    // TODO: this is buggy.. test more
+    using std::end; using std::cbegin; using std::cend; using std::prev;
     
-    if (get_region(haplotype) == region) return haplotype;
+    if (!is_same_contig(haplotype, region)) {
+        throw std::logic_error {"Haplotype: trying to splice region from different contig"};
+    }
+    
+    if (is_same_region(haplotype, region)) return haplotype;
     
     Haplotype result {region, haplotype.reference_};
     
     if (haplotype.explicit_alleles_.empty()) return result;
     
-    auto contained = bases(contained_range(std::cbegin(haplotype.explicit_alleles_),
-                                           std::cend(haplotype.explicit_alleles_),
-                                           region.get_contig_region()));
+    const auto& contig_region = region.get_contig_region();
     
-    switch (size(contained)) {
-        case 0:
-            break;
-        case 1:
-            result.push_back(contained.front());
-            break;
-        default:
-            result.push_back(contained.front());
-            result.explicit_alleles_.insert(std::end(result.explicit_alleles_),
-                                            std::next(contained.begin()),
-                                            std::prev(contained.end()));
-            result.push_back(contained.back());
-            break;
+    if (contains(contig_region, haplotype.get_region_bounded_by_explicit_alleles())) {
+        result.explicit_alleles_ = haplotype.explicit_alleles_;
+        return result;
+    }
+    
+    auto overlapped = bases(overlap_range(haplotype.explicit_alleles_, region.get_contig_region()));
+    
+    if (overlapped.empty()) return result;
+    
+    if (!contains(contig_region, overlapped.front())) {
+        result.push_front(splice(overlapped.front(), overlapped_region(overlapped.front(), contig_region)));
+        overlapped.advance_begin(1);
+    }
+    
+    if (!overlapped.empty()) {
+        if (contains(contig_region, overlapped.back())) {
+            result.explicit_alleles_.insert(end(result.explicit_alleles_),
+                                            cbegin(overlapped), cend(overlapped));
+        } else {
+            result.explicit_alleles_.insert(end(result.explicit_alleles_),
+                                            cbegin(overlapped), prev(cend(overlapped)));
+            result.push_front(splice(overlapped.back(), overlapped_region(overlapped.back(), contig_region)));
+        }
     }
     
     return result;
