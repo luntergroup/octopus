@@ -658,7 +658,7 @@ auto extract_all_element_refs(const std::vector<Genotype<MappableType>>& genotyp
 }
 
 template <typename MappableType>
-auto get_element_count_map(const Genotype<MappableType>& genotype)
+auto make_element_count_map(const Genotype<MappableType>& genotype)
 {
     std::unordered_map<MappableType, unsigned> result {};
     result.reserve(genotype.zygosity());
@@ -671,7 +671,7 @@ auto get_element_count_map(const Genotype<MappableType>& genotype)
 }
 
 template <typename MappableType>
-auto get_element_ref_count_map(const Genotype<MappableType>& genotype)
+auto make_element_ref_count_map(const Genotype<MappableType>& genotype)
 {
     std::unordered_map<std::reference_wrapper<const MappableType>, unsigned> result {};
     result.reserve(genotype.zygosity());
@@ -707,7 +707,7 @@ std::ostream& operator<<(std::ostream& os, const Genotype<MappableType>& genotyp
         os << "empty genotype";
         return os;
     }
-    auto element_counts = get_element_count_map(genotype);
+    const auto element_counts = make_element_count_map(genotype);
     std::vector<std::pair<MappableType, unsigned>> p {element_counts.begin(), element_counts.end()};
     for (unsigned i {}; i < p.size() - 1; ++i) {
         os << p[i].first << "(" << p[i].second << "),";

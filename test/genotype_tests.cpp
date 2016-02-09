@@ -460,16 +460,42 @@ BOOST_AUTO_TEST_CASE(splice_works_correctly)
     const auto variant1 = make_variant("6:31235411-31235412", "A", human);
     const auto variant2 = make_variant("6:31235412-31235413", "A", human);
     const auto variant3 = make_variant("6:31235413-31235414", "A", human);
-    const auto variant4 = make_variant("6:31235414-31235415", "A", human);
+    const auto variant4 = make_variant("6:31235414-31235414", "A", human);
+    const auto variant5 = make_variant("6:31235414-31235415", "A", human);
     
-    const std::vector<Variant> variants {variant1, variant2, variant3, variant4};
+    const std::vector<Variant> variants {variant1, variant2, variant3, variant4, variant5};
     
     const auto region = encompassing_region(variants);
     
-    Haplotype haplotype1 {region, human};
-    for (const auto& variant : variants) add_ref_to_back(variant, haplotype1);
+    Haplotype ref_haplotype {region, human};
+    Haplotype alt_haplotype {region, human};
+    for (const auto& variant : variants) add_alt_to_back(variant, alt_haplotype);
     
-    // TODO
+    Genotype<Haplotype> genotype {ref_haplotype, alt_haplotype};
+    
+    const auto allele_splice_snp1 = splice<Allele>(genotype, get_region(variant1));
+    
+    BOOST_CHECK(!allele_splice_snp1.is_homozygous());
+    BOOST_CHECK(allele_splice_snp1.contains(variant1.get_ref_allele()));
+    BOOST_CHECK(allele_splice_snp1.contains(variant1.get_alt_allele()));
+    
+    const auto allele_splice_snp2 = splice<Allele>(genotype, get_region(variant2));
+    
+    BOOST_CHECK(!allele_splice_snp2.is_homozygous());
+    BOOST_CHECK(allele_splice_snp2.contains(variant2.get_ref_allele()));
+    BOOST_CHECK(allele_splice_snp2.contains(variant2.get_alt_allele()));
+    
+    const auto allele_splice_snp3 = splice<Allele>(genotype, get_region(variant5));
+    
+    BOOST_CHECK(!allele_splice_snp3.is_homozygous());
+    BOOST_CHECK(allele_splice_snp3.contains(variant5.get_ref_allele()));
+    BOOST_CHECK(allele_splice_snp3.contains(variant5.get_alt_allele()));
+    
+    const auto allele_splice_insertion = splice<Allele>(genotype, get_region(variant4));
+    
+    BOOST_CHECK(!allele_splice_insertion.is_homozygous());
+    BOOST_CHECK(allele_splice_insertion.contains(variant4.get_ref_allele()));
+    BOOST_CHECK(allele_splice_insertion.contains(variant4.get_alt_allele()));
 }
 
 BOOST_AUTO_TEST_CASE(splice_all_works_correctly)
@@ -503,14 +529,38 @@ BOOST_AUTO_TEST_CASE(splice_all_works_correctly)
     // TODO
 }
 
-BOOST_AUTO_TEST_CASE(contains_works_correctly)
+BOOST_AUTO_TEST_CASE(non_member_contains_works_correctly)
 {
     // TODO
 }
 
-BOOST_AUTO_TEST_CASE(contains_exact_works_correctly)
+BOOST_AUTO_TEST_CASE(non_member_contains_exact_works_correctly)
 {
-    // TODO
+    BOOST_REQUIRE(test_file_exists(human_reference_fasta));
+    
+    const auto human = make_reference(human_reference_fasta);
+    
+    const auto variant1 = make_variant("6:31235411-31235412", "A", human);
+    const auto variant2 = make_variant("6:31235412-31235413", "A", human);
+    const auto variant3 = make_variant("6:31235413-31235414", "A", human);
+    const auto variant4 = make_variant("6:31235414-31235414", "A", human);
+    const auto variant5 = make_variant("6:31235414-31235415", "A", human);
+    
+    const std::vector<Variant> variants {variant1, variant2, variant3, variant4, variant5};
+    
+    const auto region = encompassing_region(variants);
+    
+    Haplotype ref_haplotype {region, human};
+    Haplotype alt_haplotype {region, human};
+    for (const auto& variant : variants) add_alt_to_back(variant, alt_haplotype);
+    
+    Genotype<Haplotype> genotype {ref_haplotype, alt_haplotype};
+    
+    BOOST_CHECK(contains_exact(genotype, variant1.get_alt_allele()));
+    BOOST_CHECK(contains_exact(genotype, variant2.get_alt_allele()));
+    BOOST_CHECK(contains_exact(genotype, variant3.get_alt_allele()));
+    BOOST_CHECK(contains_exact(genotype, variant4.get_alt_allele()));
+    BOOST_CHECK(contains_exact(genotype, variant5.get_alt_allele()));
 }
 
 BOOST_AUTO_TEST_CASE(are_equal_in_region_works_correctly)

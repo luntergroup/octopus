@@ -136,7 +136,7 @@ void print_alleles(const Genotype<Haplotype>& genotype)
     if (genotype.ploidy() == 0) {
         std::cout << "[]";
     }
-    auto element_counts = get_element_count_map(genotype);
+    const auto element_counts = make_element_count_map(genotype);
     std::vector<std::pair<Haplotype, unsigned>> p {element_counts.begin(), element_counts.end()};
     std::cout << "[";
     for (unsigned i {}; i < p.size() - 1; ++i) {
@@ -152,7 +152,7 @@ void print_variant_alleles(const Genotype<Haplotype>& genotype)
     if (genotype.ploidy() == 0) {
         std::cout << "[]";
     }
-    auto element_counts = get_element_count_map(genotype);
+    const auto element_counts = make_element_count_map(genotype);
     std::vector<std::pair<Haplotype, unsigned>> p {element_counts.begin(), element_counts.end()};
     std::cout << "[";
     for (unsigned i {}; i < p.size() - 1; ++i) {
