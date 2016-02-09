@@ -485,11 +485,17 @@ BOOST_AUTO_TEST_CASE(splice_works_correctly)
     BOOST_CHECK(allele_splice_snp2.contains(variant2.get_ref_allele()));
     BOOST_CHECK(allele_splice_snp2.contains(variant2.get_alt_allele()));
     
-    const auto allele_splice_snp3 = splice<Allele>(genotype, get_region(variant5));
+    const auto allele_splice_snp3 = splice<Allele>(genotype, get_region(variant3));
     
     BOOST_CHECK(!allele_splice_snp3.is_homozygous());
-    BOOST_CHECK(allele_splice_snp3.contains(variant5.get_ref_allele()));
-    BOOST_CHECK(allele_splice_snp3.contains(variant5.get_alt_allele()));
+    BOOST_CHECK(allele_splice_snp3.contains(variant3.get_ref_allele()));
+    BOOST_CHECK(allele_splice_snp3.contains(variant3.get_alt_allele()));
+    
+    const auto allele_splice_snp4 = splice<Allele>(genotype, get_region(variant5));
+    
+    BOOST_CHECK(!allele_splice_snp4.is_homozygous());
+    BOOST_CHECK(allele_splice_snp4.contains(variant5.get_ref_allele()));
+    BOOST_CHECK(allele_splice_snp4.contains(variant5.get_alt_allele()));
     
     const auto allele_splice_insertion = splice<Allele>(genotype, get_region(variant4));
     

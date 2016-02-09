@@ -250,6 +250,24 @@ auto extract_bidirectionally_sorted_ranges(const Container& mappables)
     return extract_bidirectionally_sorted_ranges(std::cbegin(mappables), std::cend(mappables));
 }
 
+template <typename ForwardIt>
+bool has_exact(ForwardIt first, ForwardIt last, const typename ForwardIt::value_type& mappable)
+{
+    using MappableTp = typename std::iterator_traits<ForwardIt>::value_type;
+    
+    static_assert(is_region_or_mappable<MappableTp>,
+                  "mappable algorithms only work for regions and mappable types");
+    
+    const auto contained = contained_range(first, last, mappable);
+    return std::find(std::cbegin(contained), std::cend(contained), mappable) == std::cend(contained);
+}
+
+template <typename Container, typename MappableTp>
+bool has_exact(const Container& mappables, const MappableTp& mappable)
+{
+    return has_exact(std::cbegin(mappables), std::cend(mappables), mappable);
+}
+
 /**
  Returns the sub-range(s) of Mappable elements in the range [first, last) such that each element
  in the sub-range overlaps mappable.
@@ -680,24 +698,6 @@ size_t count_if_shared_with_first(BidirIt1 first1, BidirIt1 last1,
     if (empty(overlapped)) return 0;
     
     return size(overlap_range(std::next(first2), last2, *std::prev(overlapped.end()), order));
-}
-
-template <typename ForwardIt>
-bool has_exact(ForwardIt first, ForwardIt last, const typename ForwardIt::value_type& mappable)
-{
-    using MappableTp = typename std::iterator_traits<ForwardIt>::value_type;
-    
-    static_assert(is_region_or_mappable<MappableTp>,
-                  "mappable algorithms only work for regions and mappable types");
-    
-    const auto contained = contained_range(first, last, mappable);
-    return std::find(std::cbegin(contained), std::cend(contained), mappable) == std::cend(contained);
-}
-
-template <typename Container, typename MappableTp>
-bool has_exact(const Container& mappables, const MappableTp& mappable)
-{
-    return has_exact(std::cbegin(mappables), std::cend(mappables), mappable);
 }
 
 template <typename InputIt>
