@@ -484,7 +484,7 @@ BOOST_AUTO_TEST_CASE(Haplotype_can_be_spliced)
     
     BOOST_CHECK(splice<Haplotype>(haplotype, region) == haplotype);
     
-    const auto allele_region = encompassing_region(allele1, allele13);
+    const auto allele_region = encompassing_region(alleles);
     
     const auto allele_region_splice = splice<Haplotype>(haplotype, allele_region);
     
@@ -516,6 +516,19 @@ BOOST_AUTO_TEST_CASE(Haplotype_can_be_spliced)
     const auto insertion_region_allele_splice = splice<Allele>(haplotype, insertion_region);
     
     BOOST_CHECK(insertion_region_allele_splice == allele5);
+    
+    const auto insertion_before_snp_region = head_region(allele9);
+    
+    const auto insertion_before_snp_haplotype_splice = splice<Haplotype>(haplotype, insertion_before_snp_region);
+    
+    BOOST_CHECK(insertion_before_snp_haplotype_splice.get_region() == insertion_before_snp_region);
+    BOOST_CHECK(insertion_before_snp_haplotype_splice.get_sequence() == "");
+    BOOST_CHECK(is_reference(insertion_before_snp_haplotype_splice, human));
+    
+    const auto insertion_before_snp_allele_splice = splice<Allele>(haplotype, insertion_before_snp_region);
+    
+    BOOST_CHECK(is_empty_region(insertion_before_snp_allele_splice));
+    BOOST_CHECK(is_reference(insertion_before_snp_allele_splice, human));
 }
 
 //BOOST_AUTO_TEST_CASE(unique_least_complex removes haplotypes that infer the same sequence,"

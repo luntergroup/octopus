@@ -217,6 +217,8 @@ flags_ {compress_flags(data)}
 
 AlignedRead::SizeType sequence_size(const AlignedRead& read) noexcept;
 
+bool is_empty_sequence(const AlignedRead& read) noexcept;
+
 CigarString splice_cigar(const AlignedRead& read, const GenomicRegion& region);
 
 AlignedRead::SizeType count_overlapped_bases(const AlignedRead& read, const GenomicRegion& region);

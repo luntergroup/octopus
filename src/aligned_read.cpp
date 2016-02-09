@@ -289,6 +289,11 @@ AlignedRead::SizeType sequence_size(const AlignedRead& read) noexcept
     return static_cast<AlignedRead::SizeType>(read.get_sequence().size());
 }
 
+bool is_empty_sequence(const AlignedRead& read) noexcept
+{
+    return read.get_sequence().empty();
+}
+
 CigarString splice_cigar(const AlignedRead& read, const GenomicRegion& region)
 {
     if (contains(region, read)) return read.get_cigar_string();

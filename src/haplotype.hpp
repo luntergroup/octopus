@@ -76,6 +76,7 @@ public:
     
     friend bool contains(const Haplotype& lhs, const Haplotype& rhs);
     friend Haplotype detail::do_splice(const Haplotype& haplotype, const GenomicRegion& region, std::true_type);
+    friend bool is_reference(const Haplotype& haplotype, const ReferenceGenome& reference);
     
     friend void print_alleles(const Haplotype& haplotype);
     friend void print_variant_alleles(const Haplotype& haplotype);
@@ -109,6 +110,8 @@ private:
 // non-members
 
 Haplotype::SizeType sequence_size(const Haplotype& haplotype) noexcept;
+
+bool is_empty_sequence(const Haplotype& haplotype) noexcept;
 
 bool contains(const Haplotype& lhs, const Allele& rhs);
 bool contains(const Haplotype& lhs, const Haplotype& rhs);

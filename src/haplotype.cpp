@@ -413,6 +413,11 @@ Haplotype::SizeType sequence_size(const Haplotype& haplotype) noexcept
     return static_cast<Haplotype::SizeType>(haplotype.get_sequence().size());
 }
 
+bool is_empty_sequence(const Haplotype& haplotype) noexcept
+{
+    return haplotype.get_sequence().empty();
+}
+
 bool contains(const Haplotype& lhs, const Allele& rhs)
 {
     return lhs.contains(rhs);
@@ -481,6 +486,7 @@ Allele do_splice(const Haplotype& haplotype, const GenomicRegion& region, std::f
 
 bool is_reference(const Haplotype& haplotype, const ReferenceGenome& reference)
 {
+    if (haplotype.explicit_alleles_.empty()) return true;
     return haplotype.get_sequence() == reference.get_sequence(haplotype.get_region());
 }
 

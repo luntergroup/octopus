@@ -587,11 +587,19 @@ auto generate_all_genotypes(const std::vector<MappableType>& elements, const uns
     return detail::generate_all_genotypes(elements, ploidy, detail::ShouldShareMemory<MappableType> {});
 }
 
+namespace detail
+{
+    inline size_t estimate_num_elements(const size_t num_genotypes)
+    {
+        return num_genotypes;
+    }
+} // namespace detail
+
 template <typename MappableType>
 auto extract_all_elements(const std::vector<Genotype<MappableType>>& genotypes)
 {
     std::unordered_set<std::reference_wrapper<const MappableType>> unique_elements {};
-    unique_elements.reserve();
+    unique_elements.reserve(detail::estimate_num_elements(genotypes.size()));
     
     for (const auto& genotype : genotypes) {
         for (const auto& element : genotype) {
@@ -600,7 +608,7 @@ auto extract_all_elements(const std::vector<Genotype<MappableType>>& genotypes)
     }
     
     std::vector<MappableType> result {};
-    result.reserve();
+    result.reserve(unique_elements.size());
     
     std::transform(std::cbegin(unique_elements), std::cend(unique_elements), std::back_inserter(result),
                    [] (const auto& element_ref) { return element_ref.get(); });
@@ -612,7 +620,7 @@ template <typename MappableType>
 auto extract_all_elements(const std::vector<Genotype<MappableType>>& genotypes, const GenomicRegion)
 {
     std::unordered_set<std::reference_wrapper<const MappableType>> unique_elements {};
-    unique_elements.reserve();
+    unique_elements.reserve(detail::estimate_num_elements(genotypes.size()));
     
     for (const auto& genotype : genotypes) {
         for (const auto& element : genotype) {
@@ -621,7 +629,7 @@ auto extract_all_elements(const std::vector<Genotype<MappableType>>& genotypes, 
     }
     
     std::vector<MappableType> result {};
-    result.reserve();
+    result.reserve(unique_elements.size());
     
     std::transform(std::cbegin(unique_elements), std::cend(unique_elements), std::back_inserter(result),
                    [] (const auto& element_ref) { return element_ref.get(); });

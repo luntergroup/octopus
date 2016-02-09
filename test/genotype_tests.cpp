@@ -403,7 +403,52 @@ BOOST_AUTO_TEST_CASE(generate_all_genotypes_results_in_correct_ploidy)
 
 BOOST_AUTO_TEST_CASE(extract_all_elements_works_correctly)
 {
+    BOOST_REQUIRE(test_file_exists(human_reference_fasta));
     
+    const auto human = make_reference(human_reference_fasta);
+    
+    const auto variant1 = make_variant("6:31235411-31235412", "A", human);
+    const auto variant2 = make_variant("6:31235412-31235413", "A", human);
+    const auto variant3 = make_variant("6:31235413-31235414", "A", human);
+    const auto variant4 = make_variant("6:31235414-31235415", "A", human);
+    
+    const std::vector<Variant> variants {variant1, variant2, variant3, variant4};
+    
+    auto haplotypes = Octopus::generate_all_haplotypes(variants, human);
+    
+    std::sort(std::begin(haplotypes), std::end(haplotypes));
+    
+    const auto haploid_genotypes = generate_all_genotypes(haplotypes, 1);
+    
+    auto haploid_haplotypes = extract_all_elements(haploid_genotypes);
+    
+    std::sort(std::begin(haploid_haplotypes), std::end(haploid_haplotypes));
+    
+    BOOST_CHECK(haplotypes == haploid_haplotypes);
+    
+    const auto diploid_genotypes = generate_all_genotypes(haplotypes, 2);
+    
+    auto diploid_haplotypes = extract_all_elements(diploid_genotypes);
+    
+    std::sort(std::begin(diploid_haplotypes), std::end(diploid_haplotypes));
+    
+    BOOST_CHECK(haplotypes == diploid_haplotypes);
+    
+    const auto triploid_genotypes = generate_all_genotypes(haplotypes, 3);
+    
+    auto triploid_haplotypes = extract_all_elements(triploid_genotypes);
+    
+    std::sort(std::begin(triploid_haplotypes), std::end(triploid_haplotypes));
+    
+    BOOST_CHECK(haplotypes == triploid_haplotypes);
+    
+    const auto tetraploid_genotypes = generate_all_genotypes(haplotypes, 4);
+    
+    auto tetraploid_haplotypes = extract_all_elements(tetraploid_genotypes);
+    
+    std::sort(std::begin(tetraploid_haplotypes), std::end(tetraploid_haplotypes));
+    
+    BOOST_CHECK(haplotypes == tetraploid_haplotypes);
 }
 
 BOOST_AUTO_TEST_CASE(splice_works_correctly)
@@ -412,10 +457,10 @@ BOOST_AUTO_TEST_CASE(splice_works_correctly)
     
     const auto human = make_reference(human_reference_fasta);
     
-    auto variant1 = make_variant("6:31235411-31235412", "A", human);
-    auto variant2 = make_variant("6:31235412-31235413", "A", human);
-    auto variant3 = make_variant("6:31235413-31235414", "A", human);
-    auto variant4 = make_variant("6:31235414-31235415", "A", human);
+    const auto variant1 = make_variant("6:31235411-31235412", "A", human);
+    const auto variant2 = make_variant("6:31235412-31235413", "A", human);
+    const auto variant3 = make_variant("6:31235413-31235414", "A", human);
+    const auto variant4 = make_variant("6:31235414-31235415", "A", human);
     
     const std::vector<Variant> variants {variant1, variant2, variant3, variant4};
     
@@ -424,6 +469,7 @@ BOOST_AUTO_TEST_CASE(splice_works_correctly)
     Haplotype haplotype1 {region, human};
     for (const auto& variant : variants) add_ref_to_back(variant, haplotype1);
     
+    // TODO
 }
 
 BOOST_AUTO_TEST_CASE(splice_all_works_correctly)
@@ -453,21 +499,23 @@ BOOST_AUTO_TEST_CASE(splice_all_works_correctly)
     const auto haplotype_splices2 = splice_all<Haplotype>(genotypes, encompassing_region(variant2, variant3));
     
     BOOST_REQUIRE(haplotype_splices2.size() == num_genotypes(4, 2));
+    
+    // TODO
 }
 
 BOOST_AUTO_TEST_CASE(contains_works_correctly)
 {
-    
+    // TODO
 }
 
 BOOST_AUTO_TEST_CASE(contains_exact_works_correctly)
 {
-    
+    // TODO
 }
 
 BOOST_AUTO_TEST_CASE(are_equal_in_region_works_correctly)
 {
-    
+    // TODO
 }
 
 BOOST_AUTO_TEST_SUITE_END()

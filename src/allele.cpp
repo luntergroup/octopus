@@ -17,6 +17,7 @@ ContigAllele demote(const Allele& allele)
 
 bool is_reference(const Allele& allele, const ReferenceGenome& reference)
 {
+    if (is_empty_region(allele) && is_empty_sequence(allele)) return true;
     return allele.get_sequence() == reference.get_sequence(allele.get_region());
 }
 

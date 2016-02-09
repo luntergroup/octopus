@@ -99,6 +99,12 @@ auto sequence_size(const BaseAllele<RegionTp>& allele) noexcept
     return static_cast<typename BaseAllele<RegionTp>::SizeType>(allele.get_sequence().size());
 }
 
+template <typename RegionTp>
+auto is_empty_sequence(const BaseAllele<RegionTp>& allele) noexcept
+{
+    return allele.get_sequence().empty();
+}
+
 namespace detail
 {
     template <typename RegionTp>
