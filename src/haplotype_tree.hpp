@@ -20,11 +20,43 @@
 #include <type_traits>
 
 #include <boost/graph/adjacency_list.hpp>
+#include <boost/container/slist.hpp>
 
 #include "variant.hpp"
 #include "haplotype.hpp"
 #include "genomic_region.hpp"
 #include "reference_genome.hpp"
+
+/*
+ Clang/Libc++ do not include the old std::slist needed for the boost::adjacency_list 
+ OutEdgeList parameter boost::slistS. We can use boost::container::slist in its place.
+ */
+#ifdef BOOST_NO_SLIST
+namespace boost
+{
+    struct slistS;
+    
+    template <typename ValueType>
+    struct container_gen<slistS, ValueType> { using type = container::slist<ValueType>; };
+    
+    template <>
+    struct parallel_edge_traits<slistS> { using type = allow_parallel_edge_tag; };
+    
+    template <typename T, typename Alloc>
+    struct graph_detail::container_traits<container::slist<T, Alloc>> {
+        typedef front_insertion_sequence_tag category;
+        typedef stable_tag iterator_stability;
+    };
+    
+    template <typename T, typename Alloc>
+    graph_detail::front_insertion_sequence_tag container_category(const container::slist<T, Alloc>&)
+    { return graph_detail::front_insertion_sequence_tag(); }
+    
+    template <typename T, typename Alloc>
+    graph_detail::stable_tag iterator_stability(const container::slist<T, Alloc>&)
+    { return graph_detail::stable_tag(); }
+} // namespace boost
+#endif
 
 namespace Octopus
 {
@@ -62,7 +94,7 @@ public:
     
 private:
     using Tree = boost::adjacency_list<
-                     boost::listS, boost::listS, boost::bidirectionalS,
+                     boost::slistS, boost::listS, boost::bidirectionalS,
                      ContigAllele, boost::no_property
                  >;
     

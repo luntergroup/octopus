@@ -571,6 +571,8 @@ BOOST_AUTO_TEST_CASE(non_member_contains_exact_works_correctly)
 
 BOOST_AUTO_TEST_CASE(are_equal_in_region_works_correctly)
 {
+    using std::cbegin; using std::cend; using std::for_each; using std::next;
+    
     BOOST_REQUIRE(test_file_exists(human_reference_fasta));
     
     const auto human = make_reference(human_reference_fasta);
@@ -580,10 +582,63 @@ BOOST_AUTO_TEST_CASE(are_equal_in_region_works_correctly)
     const auto variant3 = make_variant("6:31235413-31235414", "A", human);
     const auto variant4 = make_variant("6:31235414-31235414", "A", human);
     const auto variant5 = make_variant("6:31235414-31235415", "A", human);
+    const auto variant6 = make_variant("6:31235415-31235415", "A", human);
     
-    const std::vector<Variant> variants {variant1, variant2, variant3, variant4, variant5};
+    const std::vector<Variant> variants {variant1, variant2, variant3, variant4, variant5, variant6};
     
     const auto region = expand(encompassing_region(variants), 10);
+    
+    Haplotype ref_haplotype {region, human};
+    for (const auto& variant : variants) add_ref_to_back(variant, ref_haplotype);
+    
+    Haplotype alt_haplotype {region, human};
+    for (const auto& variant : variants) add_alt_to_back(variant, alt_haplotype);
+    
+    Haplotype mix_haplotype1 {region, human};
+    for_each(cbegin(variants), next(cbegin(variants), 3),
+             [&] (const auto& variant) { add_alt_to_back(variant, mix_haplotype1); });
+    for_each(next(cbegin(variants), 3), cend(variants),
+             [&] (const auto& variant) { add_ref_to_back(variant, mix_haplotype1); });
+    
+    Haplotype mix_haplotype2 {region, human};
+    for_each(cbegin(variants), next(cbegin(variants), 3),
+             [&] (const auto& variant) { add_ref_to_back(variant, mix_haplotype2); });
+    for_each(next(cbegin(variants), 3), cend(variants),
+             [&] (const auto& variant) { add_alt_to_back(variant, mix_haplotype2); });
+    
+    Genotype<Haplotype> genotype1 {ref_haplotype, alt_haplotype};
+    Genotype<Haplotype> genotype2 {mix_haplotype1, mix_haplotype2};
+    
+//    std::cout << "\n\n";
+//    print_alleles(genotype1);
+//    std::cout << "\n\n";
+//    print_alleles(genotype2);
+//    std::cout << "\n\n";
+//    print_alleles(splice<Haplotype>(genotype1, get_region(variant3)));
+//    std::cout << "\n\n";
+//    print_alleles(splice<Haplotype>(genotype2, get_region(variant3)));
+//    std::cout << "\n\n";
+//    print_alleles(splice<Haplotype>(genotype1, get_region(variant4)));
+//    std::cout << "\n\n";
+//    print_alleles(splice<Haplotype>(genotype2, get_region(variant4)));
+//    std::cout << "\n\n";
+//    print_alleles(splice<Haplotype>(genotype1, get_region(variant5)));
+//    std::cout << "\n\n";
+//    print_alleles(splice<Haplotype>(genotype2, get_region(variant5)));
+//    std::cout << "\n\n";
+//    
+//    BOOST_CHECK(are_equal_in_region<Haplotype>(genotype1, genotype2, get_region(variant1)));
+//    BOOST_CHECK(are_equal_in_region<Haplotype>(genotype2, genotype1, get_region(variant1)));
+//    BOOST_CHECK(are_equal_in_region<Haplotype>(genotype1, genotype2, get_region(variant2)));
+//    BOOST_CHECK(are_equal_in_region<Haplotype>(genotype2, genotype1, get_region(variant2)));
+//    BOOST_CHECK(are_equal_in_region<Haplotype>(genotype1, genotype2, get_region(variant3)));
+//    BOOST_CHECK(are_equal_in_region<Haplotype>(genotype2, genotype1, get_region(variant3)));
+//    BOOST_CHECK(are_equal_in_region<Haplotype>(genotype1, genotype2, get_region(variant4)));
+//    BOOST_CHECK(are_equal_in_region<Haplotype>(genotype2, genotype1, get_region(variant4)));
+//    BOOST_CHECK(are_equal_in_region<Haplotype>(genotype1, genotype2, get_region(variant5)));
+//    BOOST_CHECK(are_equal_in_region<Haplotype>(genotype2, genotype1, get_region(variant5)));
+//    BOOST_CHECK(are_equal_in_region<Haplotype>(genotype1, genotype2, get_region(variant6)));
+//    BOOST_CHECK(are_equal_in_region<Haplotype>(genotype2, genotype1, get_region(variant6)));
 }
 
 BOOST_AUTO_TEST_SUITE_END()

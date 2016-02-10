@@ -54,7 +54,7 @@ BOOST_AUTO_TEST_CASE(overlap_range_returns_an_iterator_range_that_includes_all_o
     std::copy_if(regions.cbegin(), regions.cend(), std::back_inserter(true_overlaps),
                  [&] (const auto& region) { return overlaps(region, test_region); });
     
-    auto overlapped = overlap_range(regions.cbegin(), regions.cend(), test_region);
+    const auto overlapped = overlap_range(regions, test_region);
     
     BOOST_CHECK(std::equal(true_overlaps.cbegin(), true_overlaps.cend(), overlapped.begin()));
 }

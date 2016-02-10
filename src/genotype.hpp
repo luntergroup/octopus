@@ -370,11 +370,11 @@ bool contains(const Genotype<MappableType1>& lhs, const Genotype<MappableType2>&
     return splice<MappableType2>(lhs, rhs.get_region()) == rhs;
 }
 
-template <typename MappableType>
-bool are_equal_in_region(const Genotype<MappableType>& lhs, const Genotype<MappableType>& rhs,
+template <typename MappableType2, typename MappableType1>
+bool are_equal_in_region(const Genotype<MappableType1>& lhs, const Genotype<MappableType1>& rhs,
                          const GenomicRegion& region)
 {
-    return splice<MappableType>(lhs, region) == splice<MappableType>(rhs, region);
+    return splice<MappableType2>(lhs, region) == splice<MappableType2>(rhs, region);
 }
 
 template <typename MappableType>

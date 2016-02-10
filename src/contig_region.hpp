@@ -191,7 +191,7 @@ inline ContigRegion next_position(const ContigRegion& region)
     return ContigRegion {region.get_end(), region.get_end() + 1};
 }
 
-inline ContigRegion compress_lhs(const ContigRegion& region, ContigRegion::DifferenceType n)
+inline ContigRegion compress_lhs(const ContigRegion& region, const ContigRegion::DifferenceType n)
 {
     if (n < 0 && region.get_begin() + n > region.get_begin()) {
         throw std::out_of_range {"compressed past contig start"};
@@ -207,7 +207,7 @@ inline ContigRegion compress_lhs(const ContigRegion& region, ContigRegion::Diffe
     };
 }
 
-inline ContigRegion compress_rhs(const ContigRegion& region, ContigRegion::DifferenceType n)
+inline ContigRegion compress_rhs(const ContigRegion& region, const ContigRegion::DifferenceType n)
 {
     if (region.get_end() + n < region.get_begin()) {
         throw std::out_of_range {"compressed past region begin"};
@@ -219,7 +219,7 @@ inline ContigRegion compress_rhs(const ContigRegion& region, ContigRegion::Diffe
     };
 }
 
-inline ContigRegion expand(const ContigRegion& region, ContigRegion::DifferenceType n)
+inline ContigRegion expand(const ContigRegion& region, const ContigRegion::DifferenceType n)
 {
     return ContigRegion {
         static_cast<ContigRegion::SizeType>(region.get_begin() - n),
@@ -290,7 +290,7 @@ inline ContigRegion head_position(const ContigRegion& region) noexcept
     return head_region(region, 1);
 }
 
-inline ContigRegion tail_region(const ContigRegion& region, ContigRegion::SizeType n = 0) noexcept
+inline ContigRegion tail_region(const ContigRegion& region, const ContigRegion::SizeType n = 0) noexcept
 {
     const auto end = region.get_end();
     return ContigRegion {(end >= n) ? end - n : 0, end};

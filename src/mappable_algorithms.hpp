@@ -294,15 +294,19 @@ overlap_range(BidirIt first, BidirIt last, const MappableTp& mappable,
                                                return is_before(lhs, rhs);
                                            });
         
-        // now we need to try and push these boundries out as the range does not fully capture
+        // we need to try and push these boundries out as the range does not fully capture
         // insertions
         
         overlapped.second = std::find_if_not(overlapped.second, last,
-                                             [&mappable] (const auto& m) { return overlaps(m, mappable); });
+                                             [&mappable] (const auto& m) {
+                                                 return overlaps(m, mappable);
+                                             });
         
-        auto it = std::find_if_not(std::make_reverse_iterator(overlapped.first),
-                                   std::make_reverse_iterator(first),
-                                   [&mappable] (const auto& m) { return overlaps(m, mappable); });
+        const auto it = std::find_if_not(std::make_reverse_iterator(overlapped.first),
+                                         std::make_reverse_iterator(first),
+                                         [&mappable] (const auto& m) {
+                                             return overlaps(m, mappable);
+                                         });
         
         return make_overlap_range(it.base(), overlapped.second, mappable);
     }
@@ -323,7 +327,7 @@ overlap_range(const Container& mappables, const MappableTp& mappable,
 
 /**
  Returns the sub-range(s) of Mappable elements in the range [first, last) such that each element
- in the sub-range overlaps a_region.
+ in the sub-range overlaps region.
  
  The returned OverlapRange is a range of filter iterators (i.e. skips over non-overlapped elements).
  

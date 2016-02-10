@@ -202,7 +202,7 @@ struct PhaseComplementEqual
         
         return std::all_of(std::cbegin(variant_regions_.get()), std::cend(variant_regions_.get()),
                            [&] (const auto& region) {
-                               return are_equal_in_region(lhs.get(), rhs.get(), region);
+                               return are_equal_in_region<Haplotype>(lhs.get(), rhs.get(), region);
                            });
     }
 private:

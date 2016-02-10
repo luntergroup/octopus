@@ -505,11 +505,11 @@ BOOST_AUTO_TEST_CASE(Haplotype_can_be_spliced)
                                 return allele_region_splice.contains_exact(allele); })
                 );
     
-    const auto insertion_region = allele5.get_region();
+    const auto insertion_region = get_region(allele5);
     
     const auto insertion_region_haplotype_splice = splice<Haplotype>(haplotype, insertion_region);
     
-    BOOST_CHECK(insertion_region_haplotype_splice.get_region() == insertion_region);
+    BOOST_CHECK(is_same_region(insertion_region_haplotype_splice, insertion_region));
     BOOST_CHECK(insertion_region_haplotype_splice.get_sequence() == "");
     BOOST_CHECK(insertion_region_haplotype_splice.contains_exact(allele5));
     
@@ -521,7 +521,7 @@ BOOST_AUTO_TEST_CASE(Haplotype_can_be_spliced)
     
     const auto insertion_before_snp_haplotype_splice = splice<Haplotype>(haplotype, insertion_before_snp_region);
     
-    BOOST_CHECK(insertion_before_snp_haplotype_splice.get_region() == insertion_before_snp_region);
+    BOOST_CHECK(is_same_region(insertion_before_snp_haplotype_splice, insertion_before_snp_region));
     BOOST_CHECK(insertion_before_snp_haplotype_splice.get_sequence() == "");
     BOOST_CHECK(is_reference(insertion_before_snp_haplotype_splice, human));
     
@@ -531,58 +531,85 @@ BOOST_AUTO_TEST_CASE(Haplotype_can_be_spliced)
     BOOST_CHECK(is_reference(insertion_before_snp_allele_splice, human));
 }
 
-//BOOST_AUTO_TEST_CASE(unique_least_complex removes haplotypes that infer the same sequence,"
-//          "leaving the haplotype with the fewest alterations to the reference)
-//{
-//    ReferenceGenomeFactory a_factory {};
-//    ReferenceGenome human {a_factory.make(human_reference_fasta)};
-//    
-//    auto region = *parse_region("16:9300000-9300100", human);
-//    
-//    Allele allele1 {*parse_region("16:9300037-9300037", human), "TG"};
-//    Allele allele2 {*parse_region("16:9300037-9300051", human), ""};
-//    Allele allele3 {*parse_region("16:9300051-9300051", human), ""};
-//    Allele allele4 {*parse_region("16:9300051-9300061", human), "TGTGTGTGTG"};
-//    Allele allele5 {*parse_region("16:9300061-9300062", human), "T"};
-//    Allele allele6 {*parse_region("16:9300062-9300072", human), "GTGTGTGTGT"};
-//    Allele allele7 {*parse_region("16:9300072-9300073", human), "T"};
-//    Allele allele8 {*parse_region("16:9300073-9300074", human), "G"};
-//    Allele allele9 {*parse_region("16:9300074-9300075", human), "G"};
-//    
-//    Allele allele10 {*parse_region("16:9300037-9300039", human), "TG"};
-//    Allele allele11 {*parse_region("16:9300039-9300051", human), ""};
-//    
-//    Haplotype hap1 {human, region};
-//    hap1.push_back(allele1);
-//    hap1.push_back(allele2);
-//    hap1.push_back(allele3);
-//    hap1.push_back(allele4);
-//    hap1.push_back(allele5);
-//    hap1.push_back(allele6);
-//    hap1.push_back(allele7);
-//    hap1.push_back(allele8);
-//    hap1.push_back(allele9);
-//    
-//    Haplotype hap2 {human, region};
-//    hap2.push_back(allele10);
-//    hap2.push_back(allele11);
-//    hap2.push_back(allele3);
-//    hap2.push_back(allele4);
-//    hap2.push_back(allele5);
-//    hap2.push_back(allele6);
-//    hap2.push_back(allele7);
-//    hap2.push_back(allele8);
-//    hap2.push_back(allele9);
-//    
-//    BOOST_CHECK(hap1 == hap2);
-//    
-//    std::vector<Haplotype> haplotypes {hap1, hap2};
-//    
-//    unique_least_complex(haplotypes);
-//    
-//    BOOST_CHECK(haplotypes.size() == 1);
-//    BOOST_CHECK(!haplotypes[0].contains(allele2));
-//}
+BOOST_AUTO_TEST_CASE(splicing_around_insertions_works)
+{
+    using std::cbegin; using std::cend; using std::for_each; using std::next;
+    
+    BOOST_REQUIRE(test_file_exists(human_reference_fasta));
+    
+    const auto human = make_reference(human_reference_fasta);
+    
+    const auto variant0 = make_variant("6:31235411-31235411", "A", human);
+    const auto variant1 = make_variant("6:31235411-31235412", "A", human);
+    const auto variant2 = make_variant("6:31235412-31235413", "",  human);
+    const auto variant3 = make_variant("6:31235413-31235414", "A", human);
+    const auto variant4 = make_variant("6:31235414-31235414", "A", human);
+    const auto variant5 = make_variant("6:31235414-31235415", "A", human);
+    const auto variant6 = make_variant("6:31235415-31235415", "A", human);
+    
+    const std::vector<Variant> variants {variant0, variant1, variant2, variant3, variant4, variant5, variant6};
+    
+    const auto region = expand(encompassing_region(variants), 10);
+    
+    Haplotype ref_haplotype {region, human};
+    for (const auto& variant : variants) add_ref_to_back(variant, ref_haplotype);
+    
+    Haplotype alt_haplotype {region, human};
+    for (const auto& variant : variants) add_alt_to_back(variant, alt_haplotype);
+    
+    // front
+    
+    // TODO: before insertion
+    
+    // on insertion
+    
+    auto splice_hap_ref0 = splice<Haplotype>(ref_haplotype, get_region(variant0));
+    auto splice_hap_alt0 = splice<Haplotype>(alt_haplotype, get_region(variant0));
+    
+    BOOST_CHECK(is_same_region(splice_hap_ref0, variant0));
+    BOOST_CHECK(splice_hap_ref0.get_sequence() == "");
+    BOOST_CHECK(is_same_region(splice_hap_alt0, variant0));
+    BOOST_CHECK(splice_hap_alt0.get_sequence() == "A");
+    BOOST_CHECK(splice_hap_ref0.difference(splice_hap_alt0).size() == 1);
+    
+    // TODO: after insertion
+    
+    // middle
+    
+    // TODO: before insertion
+    
+    // on insertion
+    
+    auto splice_hap_ref4 = splice<Haplotype>(ref_haplotype, get_region(variant4));
+    auto splice_hap_alt4 = splice<Haplotype>(alt_haplotype, get_region(variant4));
+    
+    BOOST_CHECK(is_same_region(splice_hap_ref4, variant4));
+    BOOST_CHECK(splice_hap_ref4.get_sequence() == "");
+    BOOST_CHECK(is_same_region(splice_hap_alt4, variant4));
+    BOOST_CHECK(splice_hap_alt4.get_sequence() == "A");
+    BOOST_CHECK(splice_hap_ref4.difference(splice_hap_alt4).size() == 1);
+    
+    // TODO: after insertion
+    
+    // back
+    
+    // TODO: before insertion
+    
+    // on insertion
+    
+    auto splice_hap_ref6 = splice<Haplotype>(ref_haplotype, get_region(variant6));
+    auto splice_hap_alt6 = splice<Haplotype>(alt_haplotype, get_region(variant6));
+    
+    BOOST_CHECK(is_same_region(splice_hap_ref6, variant6));
+    BOOST_CHECK(splice_hap_ref6.get_sequence() == "");
+    BOOST_CHECK(is_same_region(splice_hap_alt6, variant6));
+    BOOST_CHECK(splice_hap_alt6.get_sequence() == "A");
+    BOOST_CHECK(splice_hap_ref6.difference(splice_hap_alt6).size() == 1);
+    
+    // TODO: after insertion
+    
+    // TODO
+}
 
 BOOST_AUTO_TEST_SUITE_END() // Haplotypes
 BOOST_AUTO_TEST_SUITE_END() // Components

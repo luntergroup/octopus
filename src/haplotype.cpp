@@ -444,14 +444,32 @@ Haplotype do_splice(const Haplotype& haplotype, const GenomicRegion& region, std
     
     const auto& contig_region = region.get_contig_region();
     
-    if (contains(contig_region, haplotype.get_region_bounded_by_explicit_alleles())) {
+    const auto explicit_allele_region = haplotype.get_region_bounded_by_explicit_alleles();
+    
+    if (contains(contig_region, explicit_allele_region)) {
         result.explicit_alleles_ = haplotype.explicit_alleles_;
         return result;
     }
     
-    auto overlapped = bases(overlap_range(haplotype.explicit_alleles_, region.get_contig_region()));
+    if (!overlaps(contig_region, explicit_allele_region)) return result;
     
-    if (overlapped.empty()) return result;
+    auto overlapped = haplotype_overlap_range(haplotype.explicit_alleles_, region.get_contig_region());
+    
+    // known that !overlapped.empty()
+    
+    if (is_empty_region(contig_region)) {
+        if (!is_empty_region(overlapped.front())) {
+            overlapped.advance_begin(1);
+        }
+        
+        if (is_empty_region(overlapped.front())) {
+            result.push_back(overlapped.front());
+        } else {
+            result.push_back(ContigAllele {contig_region, ""});
+        }
+        
+        return result;
+    }
     
     if (!contains(contig_region, overlapped.front())) {
         result.push_front(splice(overlapped.front(), overlapped_region(overlapped.front(), contig_region)));

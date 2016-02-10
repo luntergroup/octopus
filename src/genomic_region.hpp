@@ -240,17 +240,17 @@ inline GenomicRegion next_position(const GenomicRegion& region)
     return GenomicRegion {region.get_contig_name(), next_position(region.get_contig_region())};
 }
 
-inline GenomicRegion compress_lhs(const GenomicRegion& region, GenomicRegion::DifferenceType n)
+inline GenomicRegion compress_lhs(const GenomicRegion& region, const GenomicRegion::DifferenceType n)
 {
     return GenomicRegion {region.get_contig_name(), compress_lhs(region.get_contig_region(), n)};
 }
 
-inline GenomicRegion compress_rhs(const GenomicRegion& region, GenomicRegion::DifferenceType n)
+inline GenomicRegion compress_rhs(const GenomicRegion& region, const GenomicRegion::DifferenceType n)
 {
     return GenomicRegion {region.get_contig_name(), compress_rhs(region.get_contig_region(), n)};
 }
 
-inline GenomicRegion expand(const GenomicRegion& region, GenomicRegion::DifferenceType n)
+inline GenomicRegion expand(const GenomicRegion& region, const GenomicRegion::DifferenceType n)
 {
     return GenomicRegion {region.get_contig_name(), expand(region.get_contig_region(), n)};
 }
@@ -305,7 +305,7 @@ inline GenomicRegion closed_region(const GenomicRegion& lhs, const GenomicRegion
                                                                rhs.get_contig_region())};
 }
 
-inline GenomicRegion head_region(const GenomicRegion& region, GenomicRegion::SizeType n = 0)
+inline GenomicRegion head_region(const GenomicRegion& region, const GenomicRegion::SizeType n = 0)
 {
     return GenomicRegion {region.get_contig_name(), head_region(region.get_contig_region(), n)};
 }
@@ -315,7 +315,7 @@ inline GenomicRegion head_position(const GenomicRegion& region)
     return GenomicRegion {region.get_contig_name(), head_position(region.get_contig_region())};
 }
 
-inline GenomicRegion tail_region(const GenomicRegion& region, GenomicRegion::SizeType n = 0)
+inline GenomicRegion tail_region(const GenomicRegion& region, const GenomicRegion::SizeType n = 0)
 {
     return GenomicRegion {region.get_contig_name(), tail_region(region.get_contig_region(), n)};
 }
