@@ -52,7 +52,7 @@ const Allele& Variant::get_alt_allele() const noexcept
 
 Variant make_variant(const Allele& alt_allele, const ReferenceGenome& reference)
 {
-    return Variant {make_reference_allele(alt_allele.get_region(), reference), alt_allele};
+    return Variant {make_reference_allele(get_region(alt_allele), reference), alt_allele};
 }
 
 Variant make_variant(const std::string& region_str, Variant::SequenceType alt_sequence,
@@ -105,7 +105,7 @@ std::vector<Allele> decompose(const std::vector<Variant>& variants)
     if (variants.empty()) return result;
     
     for (const auto& variant : variants) {
-        if (result.empty() || get_region(result.back()) != get_region(variant)) {
+        if (result.empty() || !is_same_region(result.back(), variant)) {
             result.emplace_back(variant.get_ref_allele());
         }
         result.emplace_back(variant.get_alt_allele());
@@ -197,7 +197,7 @@ Variant make_parsimonious(const Variant& variant, const ReferenceGenome& referen
     const auto& the_small_allele = alleles.first;
     const auto& the_big_allele   = alleles.second;
     
-    const auto& old_ref_region = variant.get_region();
+    const auto& old_ref_region = get_region(variant);
     
     if (the_small_allele.size() == 0) {
         if (old_ref_region.get_begin() > 0) {
@@ -274,7 +274,7 @@ auto get_allele_lists(const Variant::SequenceType& allele_a, const Variant::Sequ
 
 GenomicRegion extend_allele_lists(LeftAlignmentList& big_allele, LeftAlignmentList& small_allele,
                                   const ReferenceGenome& reference, const GenomicRegion& current_region,
-                                  Variant::SizeType extension_size)
+                                  const Variant::SizeType extension_size)
 {
     using std::begin; using std::cbegin; using std::cend;
     
@@ -291,7 +291,8 @@ GenomicRegion extend_allele_lists(LeftAlignmentList& big_allele, LeftAlignmentLi
     return new_region;
 }
 
-Variant left_align(const Variant& variant, const ReferenceGenome& reference, Variant::SizeType extension_size)
+Variant left_align(const Variant& variant, const ReferenceGenome& reference,
+                   const Variant::SizeType extension_size)
 {
     using std::move; using std::cbegin; using std::cend; using std::crbegin; using std::crend;
     using std::tie; using std::next; using std::mismatch;
@@ -369,7 +370,8 @@ Variant left_align(const Variant& variant, const ReferenceGenome& reference, Var
     }
 }
 
-Variant normalise(const Variant& variant, const ReferenceGenome& reference, Variant::SizeType extension_size)
+Variant normalise(const Variant& variant, const ReferenceGenome& reference,
+                  const Variant::SizeType extension_size)
 {
     return make_parsimonious(left_align(variant, reference, extension_size), reference);
 }
@@ -392,9 +394,11 @@ Variant pad_right(const Variant& variant, const Variant::SequenceType& sequence)
     };
 }
 
-Variant pad_left(const Variant& variant, const ReferenceGenome& reference, Variant::SizeType n)
+Variant pad_left(const Variant& variant, const ReferenceGenome& reference,
+                 const Variant::SizeType n)
 {
-    const auto pad_region = compress_lhs(head_region(variant), -static_cast<GenomicRegion::DifferenceType>(n));
+    const auto pad_region = compress_lhs(head_region(variant),
+                                         -static_cast<GenomicRegion::DifferenceType>(n));
     
     const auto pad_sequence = reference.get_sequence(pad_region);
     
@@ -405,9 +409,11 @@ Variant pad_left(const Variant& variant, const ReferenceGenome& reference, Varia
     };
 }
 
-Variant pad_right(const Variant& variant, const ReferenceGenome& reference, Variant::SizeType n)
+Variant pad_right(const Variant& variant, const ReferenceGenome& reference,
+                  const Variant::SizeType n)
 {
-    const auto pad_region = compress_rhs(tail_region(variant), static_cast<GenomicRegion::DifferenceType>(n));
+    const auto pad_region = compress_rhs(tail_region(variant),
+                                         static_cast<GenomicRegion::DifferenceType>(n));
     
     const auto pad_sequence = reference.get_sequence(pad_region);
     
@@ -418,31 +424,38 @@ Variant pad_right(const Variant& variant, const ReferenceGenome& reference, Vari
     };
 }
 
-std::vector<Variant> unique_left_align(const std::vector<Variant>& variants, const ReferenceGenome& reference)
+std::vector<Variant> unique_left_align(const std::vector<Variant>& variants,
+                                       const ReferenceGenome& reference)
 {
     std::vector<Variant> result {};
     result.reserve(variants.size());
     
     boost::transform(variants, std::back_inserter(result),
-                     [&reference] (const auto& variant) { return left_align(variant, reference); });
+                     [&reference] (const auto& variant) {
+                         return left_align(variant, reference);
+                     });
     
     result.erase(boost::unique<boost::return_found>(boost::sort(result)), std::end(result));
     
     return result;
 }
 
-std::vector<Variant> parsimonise_each(const std::vector<Variant>& variants, const ReferenceGenome& reference)
+std::vector<Variant> parsimonise_each(const std::vector<Variant>& variants,
+                                      const ReferenceGenome& reference)
 {
     std::vector<Variant> result {};
     result.reserve(variants.size());
     
     boost::transform(variants, std::back_inserter(result),
-                     [&reference] (const auto& variant) { return make_parsimonious(variant, reference); });
+                     [&reference] (const auto& variant) {
+                         return make_parsimonious(variant, reference);
+                     });
     
     return result;
 }
 
-std::vector<Variant> parsimonise_together(const std::vector<Variant>& segment, const ReferenceGenome& reference)
+std::vector<Variant> parsimonise_together(const std::vector<Variant>& segment,
+                                          const ReferenceGenome& reference)
 {
     if (segment.empty()) return {};
     
@@ -496,12 +509,12 @@ bool is_mnv(const Variant& variant) noexcept
 
 bool is_transition(const Variant& variant) noexcept
 {
-    return is_snp(variant) && (
-                               (get_ref_sequence(variant) == "A" && get_alt_sequence(variant) == "G")
-                               || (get_ref_sequence(variant) == "G" && get_alt_sequence(variant) == "A")
-                               || (get_ref_sequence(variant) == "C" && get_alt_sequence(variant) == "T")
-                               || (get_ref_sequence(variant) == "T" && get_alt_sequence(variant) == "C")
-                               );
+    return is_snp(variant)
+        && ((get_ref_sequence(variant) == "A" && get_alt_sequence(variant) == "G")
+            || (get_ref_sequence(variant) == "G" && get_alt_sequence(variant) == "A")
+            || (get_ref_sequence(variant) == "C" && get_alt_sequence(variant) == "T")
+            || (get_ref_sequence(variant) == "T" && get_alt_sequence(variant) == "C")
+            );
 }
 
 bool is_transversion(const Variant& variant) noexcept
