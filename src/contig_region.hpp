@@ -219,6 +219,14 @@ inline ContigRegion compress_rhs(const ContigRegion& region, ContigRegion::Diffe
     };
 }
 
+inline ContigRegion expand(const ContigRegion& region, ContigRegion::DifferenceType n)
+{
+    return ContigRegion {
+        static_cast<ContigRegion::SizeType>(region.get_begin() - n),
+        static_cast<ContigRegion::SizeType>(region.get_end() + n)
+    };
+}
+
 inline ContigRegion overlapped_region(const ContigRegion& lhs, const ContigRegion& rhs) noexcept
 {
     if (!overlaps(lhs, rhs)) {

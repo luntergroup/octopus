@@ -571,7 +571,19 @@ BOOST_AUTO_TEST_CASE(non_member_contains_exact_works_correctly)
 
 BOOST_AUTO_TEST_CASE(are_equal_in_region_works_correctly)
 {
-    // TODO
+    BOOST_REQUIRE(test_file_exists(human_reference_fasta));
+    
+    const auto human = make_reference(human_reference_fasta);
+    
+    const auto variant1 = make_variant("6:31235411-31235412", "A", human);
+    const auto variant2 = make_variant("6:31235412-31235413", "",  human);
+    const auto variant3 = make_variant("6:31235413-31235414", "A", human);
+    const auto variant4 = make_variant("6:31235414-31235414", "A", human);
+    const auto variant5 = make_variant("6:31235414-31235415", "A", human);
+    
+    const std::vector<Variant> variants {variant1, variant2, variant3, variant4, variant5};
+    
+    const auto region = expand(encompassing_region(variants), 10);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

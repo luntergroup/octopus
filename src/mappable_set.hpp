@@ -1009,12 +1009,6 @@ copy_noncontained(const MappableSet<MappableType1, Allocator>& mappables, const 
     return result;
 }
 
-template <typename MappableType, typename Allocator>
-auto get_encompassing(const MappableSet<MappableType, Allocator>& mappables)
-{
-    return get_encompassing(mappables.leftmost(), mappables.rightmost());
-}
-
 template <typename MappableType, typename Region, typename Allocator1, typename Allocator2>
 MappableSet<Region> splice_all(const MappableSet<MappableType, Allocator1>& mappables,
                                const MappableSet<Region, Allocator2>& regions)

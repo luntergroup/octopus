@@ -250,6 +250,11 @@ inline GenomicRegion compress_rhs(const GenomicRegion& region, GenomicRegion::Di
     return GenomicRegion {region.get_contig_name(), compress_rhs(region.get_contig_region(), n)};
 }
 
+inline GenomicRegion expand(const GenomicRegion& region, GenomicRegion::DifferenceType n)
+{
+    return GenomicRegion {region.get_contig_name(), expand(region.get_contig_region(), n)};
+}
+
 inline GenomicRegion encompassing_region(const GenomicRegion& lhs, const GenomicRegion& rhs)
 {
     if (!is_same_contig(lhs, rhs)) throw RegionError {to_string(lhs), to_string(rhs)};
