@@ -209,7 +209,8 @@ size_t num_genotypes(const unsigned num_haplotypes, const unsigned ploidy)
                                                                          num_haplotypes - 1));
 }
 
-auto generate_all_genotypes(const std::vector<std::shared_ptr<Haplotype>>& haplotypes, const unsigned ploidy)
+std::vector<Genotype<Haplotype>>
+generate_all_genotypes(const std::vector<std::shared_ptr<Haplotype>>& haplotypes, const unsigned ploidy)
 {
     return detail::generate_all_genotypes(haplotypes, ploidy, std::false_type {});
 }

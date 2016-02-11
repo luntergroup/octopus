@@ -554,12 +554,14 @@ namespace detail
 } // namespace detail
 
 template <typename MappableType>
-auto generate_all_genotypes(const std::vector<MappableType>& elements, const unsigned ploidy)
+std::vector<Genotype<MappableType>>
+generate_all_genotypes(const std::vector<MappableType>& elements, const unsigned ploidy)
 {
     return detail::generate_all_genotypes(elements, ploidy, detail::ShouldShareMemory<MappableType> {});
 }
 
-auto generate_all_genotypes(const std::vector<std::shared_ptr<Haplotype>>& haplotypes, unsigned ploidy);
+std::vector<Genotype<Haplotype>>
+generate_all_genotypes(const std::vector<std::shared_ptr<Haplotype>>& haplotypes, unsigned ploidy);
 
 namespace detail
 {

@@ -6,7 +6,7 @@
 //  Copyright (c) 2015 Oxford University. All rights reserved.
 //
 
-#define RUN_UNIT_TESTS
+//#define RUN_UNIT_TESTS
 
 #ifdef RUN_UNIT_TESTS
 
