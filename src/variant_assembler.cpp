@@ -19,12 +19,12 @@ de_bruijn_graph_ {k}
 
 void VariantAssembler::add_read(const AlignedRead& read)
 {
-    de_bruijn_graph_.add_sequence(read.get_sequence(), get_begin(read), Colour::Read);
+    de_bruijn_graph_.add_sequence(read.get_sequence(), region_begin(read), Colour::Read);
 }
 
 void VariantAssembler::add_reference_sequence(const GenomicRegion& region, const std::string& sequence)
 {
-    de_bruijn_graph_.add_sequence(sequence, get_begin(region), Colour::Reference);
+    de_bruijn_graph_.add_sequence(sequence, region_begin(region), Colour::Reference);
 }
 
 std::vector<Variant> VariantAssembler::get_variants(const GenomicRegion& region)

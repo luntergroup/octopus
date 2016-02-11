@@ -12,98 +12,176 @@
 
 #include <boost/math/special_functions/binomial.hpp>
 
-Genotype<Allele>::Genotype(unsigned ploidy)
+Genotype<Haplotype>::Genotype(const unsigned ploidy)
 :
-alleles_ {}
+haplotypes_ {}
 {
-    alleles_.reserve(ploidy);
+    haplotypes_.reserve(ploidy);
 }
 
-Genotype<Allele>::Genotype(unsigned ploidy, const Allele& init)
-:
-alleles_ {ploidy, init}
-{}
-
-Genotype<Allele>::Genotype(std::initializer_list<Allele> alleles)
-:
-alleles_ {alleles}
-{}
-
-const GenomicRegion& Genotype<Allele>::get_region() const noexcept
+Genotype<Haplotype>::Genotype(const unsigned ploidy, const Haplotype& init)
 {
-    return alleles_.front().get_region();
-}
-
-const Allele& Genotype<Allele>::at(unsigned n) const
-{
-    return alleles_.at(n);
-}
-
-const Allele& Genotype<Allele>::operator[](unsigned n) const
-{
-    return alleles_[n];
-}
-
-unsigned Genotype<Allele>::ploidy() const noexcept
-{
-    return static_cast<unsigned>(alleles_.size());
-}
-
-bool Genotype<Allele>::is_homozygous() const
-{
-    return std::adjacent_find(std::cbegin(alleles_), std::cend(alleles_),
-                              std::not_equal_to<Allele>()) == std::cend(alleles_);
-}
-
-unsigned Genotype<Allele>::zygosity() const
-{
-    if (ploidy() == 1 || is_homozygous()) {
-        return 1;
-    } else if (ploidy() == 2) {
-        return 2;
+    if (ploidy > 0) {
+        haplotypes_.resize(ploidy);
+        haplotypes_.front() = std::make_shared<Haplotype>(init);
+        std::fill_n(std::next(std::begin(haplotypes_)), ploidy - 1, haplotypes_.front());
     }
-    return static_cast<unsigned>(copy_unique().size());
 }
 
-bool Genotype<Allele>::contains(const Allele& allele) const
+Genotype<Haplotype>::Genotype(const unsigned ploidy, const std::shared_ptr<Haplotype>& init)
+:
+haplotypes_ {ploidy, init}
+{}
+
+Genotype<Haplotype>::Genotype(std::initializer_list<Haplotype> haplotypes)
 {
-    return std::find(std::cbegin(alleles_), std::cend(alleles_), allele) != std::cend(alleles_);
+    std::transform(std::cbegin(haplotypes), std::cend(haplotypes), std::back_inserter(haplotypes_),
+                   [] (const auto& haplotype) { return std::make_shared<Haplotype>(haplotype); });
+    std::sort(std::begin(haplotypes_), std::end(haplotypes_), HaplotypePtrLess {});
 }
 
-unsigned Genotype<Allele>::count(const Allele& element) const
+Genotype<Haplotype>::Genotype(std::initializer_list<std::shared_ptr<Haplotype>> haplotypes)
+:
+haplotypes_ {haplotypes}
 {
-    return static_cast<unsigned>(std::count(std::cbegin(alleles_), std::cend(alleles_), element));
+    std::sort(std::begin(haplotypes_), std::end(haplotypes_), HaplotypePtrLess {});
 }
 
-std::vector<Allele> Genotype<Allele>::copy_unique() const
+void Genotype<Haplotype>::emplace(const std::shared_ptr<Haplotype>& haplotype)
 {
-    auto result = alleles_;
+    haplotypes_.emplace_back(haplotype);
+    std::inplace_merge(std::begin(haplotypes_), std::prev(std::end(haplotypes_)), std::end(haplotypes_),
+                       HaplotypePtrLess {});
+}
+
+const Haplotype& Genotype<Haplotype>::at(const unsigned n) const
+{
+    return *haplotypes_.at(n);
+}
+
+const Haplotype& Genotype<Haplotype>::operator[](const unsigned n) const
+{
+    return *haplotypes_[n];
+}
+
+const GenomicRegion& Genotype<Haplotype>::get_region() const noexcept
+{
+    return haplotypes_.front()->get_region();
+}
+
+unsigned Genotype<Haplotype>::ploidy() const noexcept
+{
+    return static_cast<unsigned>(haplotypes_.size());
+}
+
+bool Genotype<Haplotype>::is_homozygous() const
+{
+    return *haplotypes_.front() == *haplotypes_.back();
+}
+
+unsigned Genotype<Haplotype>::zygosity() const
+{
+    unsigned result {0};
     
-    std::sort(std::begin(result), std::end(result));
-    
-    result.erase(std::unique(std::begin(result), std::end(result)), std::end(result));
+    for (auto it = std::cbegin(haplotypes_), last = std::cend(haplotypes_); it != last; ++result) {
+        // naive algorithm faster in practice than binary searching
+        it = std::find_if_not(std::next(it), last, [it] (const auto& x) { return *x == **it; });
+    }
     
     return result;
 }
 
-typename Genotype<Allele>::Iterator Genotype<Allele>::begin() const noexcept
+bool Genotype<Haplotype>::contains(const Haplotype& haplotype) const
 {
-    return alleles_.begin();
+    return std::binary_search(std::cbegin(haplotypes_), std::cend(haplotypes_), haplotype,
+                              HaplotypePtrLess {});
 }
 
-typename Genotype<Allele>::Iterator Genotype<Allele>::end() const noexcept
+unsigned Genotype<Haplotype>::count(const Haplotype& haplotype) const
 {
-    return alleles_.end();
+    const auto equal_range = std::equal_range(std::cbegin(haplotypes_), std::cend(haplotypes_), haplotype,
+                                              HaplotypePtrLess {});
+    return static_cast<unsigned>(std::distance(equal_range.first, equal_range.second));
 }
 
-typename Genotype<Allele>::Iterator Genotype<Allele>::cbegin() const noexcept
+std::vector<Haplotype> Genotype<Haplotype>::copy_unique() const
 {
-    return alleles_.cbegin();
+    std::vector<std::reference_wrapper<const HaplotypePtr>> ptr_copy {};
+    ptr_copy.reserve(ploidy());
+    
+    std::unique_copy(std::cbegin(haplotypes_), std::cend(haplotypes_), std::back_inserter(ptr_copy),
+                     HaplotypePtrEqual {});
+    
+    std::vector<Haplotype> result {};
+    result.reserve(ptr_copy.size());
+    
+    std::transform(std::cbegin(ptr_copy), std::cend(ptr_copy), std::back_inserter(result),
+                   [] (const auto& ptr) { return *ptr.get(); });
+    
+    return result;
 }
 
-typename Genotype<Allele>::Iterator Genotype<Allele>::cend() const noexcept
+bool Genotype<Haplotype>::HaplotypePtrLess::operator()(const HaplotypePtr& lhs,
+                                                       const HaplotypePtr& rhs) const
 {
-    return alleles_.cend();
+    return *lhs < *rhs;
+}
+
+bool Genotype<Haplotype>::HaplotypePtrLess::operator()(const Haplotype& lhs,
+                                                       const HaplotypePtr& rhs) const
+{
+    return lhs < *rhs;
+}
+
+bool Genotype<Haplotype>::HaplotypePtrLess::operator()(const HaplotypePtr& lhs,
+                                                       const Haplotype& rhs) const
+{
+    return *lhs < rhs;
+}
+
+bool Genotype<Haplotype>::HaplotypePtrEqual::operator()(const HaplotypePtr& lhs,
+                                                        const HaplotypePtr& rhs) const
+{
+    return *lhs == *rhs;
+}
+
+bool Genotype<Haplotype>::HaplotypePtrEqual::operator()(const Haplotype& lhs,
+                                                        const HaplotypePtr& rhs) const
+{
+    return lhs == *rhs;
+}
+
+bool Genotype<Haplotype>::HaplotypePtrEqual::operator()(const HaplotypePtr& lhs,
+                                                        const Haplotype& rhs) const
+{
+    return *lhs == rhs;
+}
+
+Genotype<Haplotype>::Iterator::Iterator(BaseIterator it) : BaseIterator {it} {}
+
+Genotype<Haplotype>::Iterator::reference Genotype<Haplotype>::Iterator::operator*() const
+{
+    return *BaseIterator::operator*();
+}
+
+typename Genotype<Haplotype>::Iterator Genotype<Haplotype>::begin() const noexcept
+{
+    return Iterator {std::cbegin(haplotypes_)};
+}
+
+typename Genotype<Haplotype>::Iterator Genotype<Haplotype>::end() const noexcept
+{
+    return Iterator {std::cend(haplotypes_)};
+}
+
+typename Genotype<Haplotype>::Iterator Genotype<Haplotype>::cbegin() const noexcept
+{
+    return Iterator {std::cbegin(haplotypes_)};
+}
+
+typename Genotype<Haplotype>::Iterator Genotype<Haplotype>::cend() const noexcept
+{
+    return Iterator {std::cend(haplotypes_)};
 }
 
 // non-member methods
@@ -122,13 +200,18 @@ bool contains_exact(const Genotype<Haplotype>& genotype, const Allele& allele)
 
 bool is_homozygous(const Genotype<Haplotype>& genotype, const Allele& allele)
 {
-    return splice<Allele>(genotype, get_region(allele)).count(allele) == genotype.ploidy();
+    return splice<Allele>(genotype, mapped_region(allele)).count(allele) == genotype.ploidy();
 }
 
-size_t num_genotypes(const unsigned num_elements, const unsigned ploidy)
+size_t num_genotypes(const unsigned num_haplotypes, const unsigned ploidy)
 {
-    return static_cast<size_t>(boost::math::binomial_coefficient<double>(num_elements + ploidy - 1,
-                                                                         num_elements - 1));
+    return static_cast<size_t>(boost::math::binomial_coefficient<double>(num_haplotypes + ploidy - 1,
+                                                                         num_haplotypes - 1));
+}
+
+auto generate_all_genotypes(const std::vector<std::shared_ptr<Haplotype>>& haplotypes, const unsigned ploidy)
+{
+    return detail::generate_all_genotypes(haplotypes, ploidy, std::false_type {});
 }
 
 void print_alleles(const Genotype<Haplotype>& genotype)
@@ -136,8 +219,8 @@ void print_alleles(const Genotype<Haplotype>& genotype)
     if (genotype.ploidy() == 0) {
         std::cout << "[]";
     }
-    const auto element_counts = make_element_count_map(genotype);
-    std::vector<std::pair<Haplotype, unsigned>> p {element_counts.begin(), element_counts.end()};
+    const auto haplotype_counts = make_element_count_map(genotype);
+    std::vector<std::pair<Haplotype, unsigned>> p {haplotype_counts.begin(), haplotype_counts.end()};
     std::cout << "[";
     for (unsigned i {}; i < p.size() - 1; ++i) {
         print_alleles(p[i].first);
@@ -152,8 +235,8 @@ void print_variant_alleles(const Genotype<Haplotype>& genotype)
     if (genotype.ploidy() == 0) {
         std::cout << "[]";
     }
-    const auto element_counts = make_element_count_map(genotype);
-    std::vector<std::pair<Haplotype, unsigned>> p {element_counts.begin(), element_counts.end()};
+    const auto haplotype_counts = make_element_count_map(genotype);
+    std::vector<std::pair<Haplotype, unsigned>> p {haplotype_counts.begin(), haplotype_counts.end()};
     std::cout << "[";
     for (unsigned i {}; i < p.size() - 1; ++i) {
         print_variant_alleles(p[i].first);

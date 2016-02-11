@@ -81,7 +81,7 @@ HaplotypeTree& HaplotypeTree::extend(const ContigAllele& allele)
 
 HaplotypeTree& HaplotypeTree::extend(const Allele& allele)
 {
-    if (get_contig_name(allele) != region_.get_contig_name()) {
+    if (!is_same_contig(allele, region_)) {
         throw std::logic_error {"HaplotypeTree: trying to extend with Allele on different contig"};
     }
     return extend(demote(allele));
@@ -155,7 +155,7 @@ void HaplotypeTree::prune_all(const Haplotype& haplotype)
         
         for_each(possible_leafs.first, possible_leafs.second,
                  [this, &haplotype] (const auto& leaf_pair) {
-                     const auto p = remove(leaf_pair.second, get_contig_region(haplotype));
+                     const auto p = remove(leaf_pair.second, contig_region(haplotype));
                      
                      auto leaf_itr = find(cbegin(haplotype_leafs_), cend(haplotype_leafs_), leaf_pair.second);
                      
@@ -175,7 +175,7 @@ void HaplotypeTree::prune_all(const Haplotype& haplotype)
             
             if (leaf_itr == cend(haplotype_leafs_)) return;
             
-            const auto p = remove(*leaf_itr, get_contig_region(haplotype));
+            const auto p = remove(*leaf_itr, contig_region(haplotype));
             
             leaf_itr = haplotype_leafs_.erase(leaf_itr);
             
@@ -205,7 +205,7 @@ void HaplotypeTree::prune_unique(const Haplotype& haplotype)
         for_each(possible_leafs.first, possible_leafs.second,
                  [this, &haplotype, leaf_to_keep_itr] (auto& leaf_pair) {
                      if (leaf_pair.second != leaf_to_keep_itr) {
-                         const auto p = remove(leaf_pair.second, get_contig_region(haplotype));
+                         const auto p = remove(leaf_pair.second, contig_region(haplotype));
                          
                          auto leaf_itr = find(cbegin(haplotype_leafs_), cend(haplotype_leafs_), leaf_pair.second);
                          
@@ -235,7 +235,7 @@ void HaplotypeTree::prune_unique(const Haplotype& haplotype)
                 continue;
             }
             
-            const auto p = remove(*leaf_itr, get_contig_region(haplotype));
+            const auto p = remove(*leaf_itr, contig_region(haplotype));
             
             leaf_itr = haplotype_leafs_.erase(leaf_itr);
             
@@ -264,7 +264,7 @@ void HaplotypeTree::remove(const GenomicRegion& region)
         
         std::for_each(std::cbegin(haplotype_leafs_), std::cend(haplotype_leafs_),
                       [this, &region, &new_leafs] (const Vertex leaf) {
-                          const auto p = remove(leaf, get_contig_region(region));
+                          const auto p = remove(leaf, contig_region(region));
                           if (p.second) new_leafs.push_back(p.first);
                       });
         
@@ -399,7 +399,7 @@ bool HaplotypeTree::define_same_haplotype(Vertex leaf1, Vertex leaf2) const
 
 bool HaplotypeTree::is_branch_exact_haplotype(Vertex leaf, const Haplotype& haplotype) const
 {
-    if (leaf == root_ || !overlaps(tree_[leaf], get_contig_region(haplotype)))
+    if (leaf == root_ || !overlaps(tree_[leaf], contig_region(haplotype)))
         return false;
     
     while (leaf != root_) {
@@ -413,7 +413,7 @@ bool HaplotypeTree::is_branch_exact_haplotype(Vertex leaf, const Haplotype& hapl
 
 bool HaplotypeTree::is_branch_equal_haplotype(const Vertex leaf, const Haplotype& haplotype) const
 {
-    return leaf != root_ && overlaps(get_contig_region(haplotype), tree_[leaf])
+    return leaf != root_ && overlaps(contig_region(haplotype), tree_[leaf])
             && get_haplotype(leaf, haplotype.get_region()) == haplotype;
 }
 

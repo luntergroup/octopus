@@ -46,39 +46,39 @@ using EnableIfMappable = std::enable_if_t<is_mappable<T>, R>;
 template <typename T, typename R = void>
 using EnableIfRegionOrMappable = std::enable_if_t<is_region_or_mappable<T>, R>;
 
-inline decltype(auto) get_region(const ContigRegion& region)
+inline decltype(auto) mapped_region(const ContigRegion& region)
 {
     return region;
 }
 
-inline decltype(auto) get_region(const GenomicRegion& region)
+inline decltype(auto) mapped_region(const GenomicRegion& region)
 {
     return region;
 }
 
 template <typename T>
-decltype(auto) get_region(const Mappable<T>& mappable)
+decltype(auto) mapped_region(const Mappable<T>& mappable)
 {
     return static_cast<const T&>(mappable).get_region();
 }
 
 template <typename T>
-using RegionType = std::decay_t<decltype(get_region(std::declval<std::decay_t<T>>()))>;
+using RegionType = std::decay_t<decltype(mapped_region(std::declval<std::decay_t<T>>()))>;
 
-inline decltype(auto) get_contig_region(const ContigRegion& region) noexcept
+inline decltype(auto) contig_region(const ContigRegion& region) noexcept
 {
     return region;
 }
 
-inline decltype(auto) get_contig_region(const GenomicRegion& region) noexcept
+inline decltype(auto) contig_region(const GenomicRegion& region) noexcept
 {
     return region.get_contig_region();
 }
 
 template <typename T>
-decltype(auto) get_contig_region(const T& mappable) noexcept
+decltype(auto) contig_region(const T& mappable) noexcept
 {
-    return get_contig_region(static_cast<const T&>(mappable).get_region());
+    return contig_region(static_cast<const T&>(mappable).get_region());
 }
 
 inline auto is_same_region(const ContigRegion& lhs, const ContigRegion& rhs)
@@ -141,9 +141,9 @@ auto is_position(const Mappable<T>& mappable) noexcept
 }
 
 template <typename T>
-decltype(auto) get_contig_name(const Mappable<T>& mappable)
+decltype(auto) contig_name(const Mappable<T>& mappable)
 {
-    return get_contig_name(static_cast<const T&>(mappable).get_region());
+    return contig_name(static_cast<const T&>(mappable).get_region());
 }
 
 template <typename T>
@@ -166,15 +166,15 @@ auto is_same_contig(const Mappable<T1>& lhs, const Mappable<T2>& rhs)
 }
 
 template <typename T>
-auto get_begin(const Mappable<T>& mappable)
+auto region_begin(const Mappable<T>& mappable)
 {
-    return get_begin(static_cast<const T&>(mappable).get_region());
+    return region_begin(static_cast<const T&>(mappable).get_region());
 }
 
 template <typename T>
-auto get_end(const Mappable<T>& mappable)
+auto region_end(const Mappable<T>& mappable)
 {
-    return get_end(static_cast<const T&>(mappable).get_region());
+    return region_end(static_cast<const T&>(mappable).get_region());
 }
 
 template <typename T>

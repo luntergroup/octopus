@@ -32,12 +32,12 @@ namespace detail
     public:
         IsOverlapped() = delete;
         template <typename MappableType2>
-        IsOverlapped(const MappableType2& mappable) : region_ {get_region(mappable)} {}
+        IsOverlapped(const MappableType2& mappable) : region_ {mapped_region(mappable)} {}
         
         bool operator()(const MappableType& mappable) { return overlaps(mappable, region_); }
         
     private:
-        std::decay_t<decltype(get_region(MappableType()))> region_; // ContigRegion or GenomicRegion
+        RegionType<MappableType> region_;
     };
 } // namespace detail
 
@@ -116,12 +116,12 @@ namespace detail
     public:
         IsContained() = delete;
         template <typename MappableType_>
-        IsContained(const MappableType_& mappable) : region_ {get_region(mappable)} {}
+        IsContained(const MappableType_& mappable) : region_ {mapped_region(mappable)} {}
         
         bool operator()(const MappableType& mappable) { return contains(region_, mappable); }
         
     private:
-        std::decay_t<decltype(get_region(MappableType()))> region_; // ContigRegion or GenomicRegion
+        RegionType<MappableType> region_;
     };
 } // namespace detail
 
@@ -209,7 +209,7 @@ namespace detail
         }
         
     private:
-        std::decay_t<decltype(get_region(MappableType()))> lhs_, rhs_; // ContigRegion or GenomicRegion
+        RegionType<MappableType> lhs_, rhs_;
     };
 } // namespace detail
 

@@ -52,14 +52,14 @@ bool AlignmentCandidateVariantGenerator::requires_reads() const noexcept
 
 void AlignmentCandidateVariantGenerator::add_read(const AlignedRead& read)
 {
-    const auto& contig_name   = get_contig_name(read);
+    const auto& read_contig   = contig_name(read);
     const auto& read_sequence = read.get_sequence();
     
     auto sequence_itr  = std::cbegin(read_sequence);
     auto qualities_itr = std::cbegin(read.get_qualities());
     
-    auto ref_index = get_begin(read);
-    AlignedRead::SizeType read_index {};
+    auto ref_index = region_begin(read);
+    AlignedRead::SizeType read_index {0};
     GenomicRegion region {};
     
     for (const auto& cigar_operation : read.get_cigar_string()) {
@@ -67,7 +67,7 @@ void AlignmentCandidateVariantGenerator::add_read(const AlignedRead& read)
         
         switch (cigar_operation.get_flag()) {
             case CigarOperation::ALIGNMENT_MATCH:
-                add_snvs_in_match_range(GenomicRegion {contig_name, ref_index, ref_index + op_size},
+                add_snvs_in_match_range(GenomicRegion {read_contig, ref_index, ref_index + op_size},
                                         sequence_itr + read_index, sequence_itr + read_index + op_size,
                                         qualities_itr + read_index);
                 
@@ -82,7 +82,7 @@ void AlignmentCandidateVariantGenerator::add_read(const AlignedRead& read)
                 break;
             case CigarOperation::SUBSTITUTION:
             {
-                region = GenomicRegion {contig_name, ref_index, ref_index + op_size};
+                region = GenomicRegion {read_contig, ref_index, ref_index + op_size};
                 
                 auto removed_sequence = reference_.get().get_sequence(region);
                 auto added_sequence   = read_sequence.substr(read_index, op_size);
@@ -101,7 +101,7 @@ void AlignmentCandidateVariantGenerator::add_read(const AlignedRead& read)
                 auto added_sequence = read_sequence.substr(read_index, op_size);
                 
                 if (is_good_sequence(added_sequence)) {
-                    add_candidate(GenomicRegion {contig_name, ref_index, ref_index},
+                    add_candidate(GenomicRegion {read_contig, ref_index, ref_index},
                                   "", std::move(added_sequence));
                 }
                 
@@ -111,7 +111,7 @@ void AlignmentCandidateVariantGenerator::add_read(const AlignedRead& read)
             }
             case CigarOperation::DELETION:
             {
-                region = GenomicRegion {contig_name, ref_index, ref_index + op_size};
+                region = GenomicRegion {read_contig, ref_index, ref_index + op_size};
                 
                 auto removed_sequence = reference_.get().get_sequence(region);
                 
@@ -205,7 +205,7 @@ add_snvs_in_match_range(const GenomicRegion& region, SequenceIterator first_base
     using Tuple = boost::tuple<SequenceType::value_type, SequenceType::value_type, QualityType>;
     
     auto ref_segment = reference_.get().get_sequence(region);
-    auto ref_index   = get_begin(region);
+    auto ref_index   = region_begin(region);
     
     std::for_each(make_zip_iterator(boost::make_tuple(std::cbegin(ref_segment), first_base, first_quality)),
                   make_zip_iterator(boost::make_tuple(std::cend(ref_segment), last_base, first_quality

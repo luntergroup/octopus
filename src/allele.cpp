@@ -12,7 +12,7 @@
 
 ContigAllele demote(const Allele& allele)
 {
-    return ContigAllele {get_contig_region(allele), allele.get_sequence()};
+    return ContigAllele {contig_region(allele), allele.get_sequence()};
 }
 
 bool is_reference(const Allele& allele, const ReferenceGenome& reference)

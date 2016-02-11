@@ -52,7 +52,7 @@ const Allele& Variant::get_alt_allele() const noexcept
 
 Variant make_variant(const Allele& alt_allele, const ReferenceGenome& reference)
 {
-    return Variant {make_reference_allele(get_region(alt_allele), reference), alt_allele};
+    return Variant {make_reference_allele(mapped_region(alt_allele), reference), alt_allele};
 }
 
 Variant make_variant(const std::string& region_str, Variant::SequenceType alt_sequence,
@@ -61,12 +61,12 @@ Variant make_variant(const std::string& region_str, Variant::SequenceType alt_se
     return make_variant(Allele {*parse_region(region_str, reference), std::move(alt_sequence)}, reference);
 }
 
-const Variant::SequenceType& get_ref_sequence(const Variant& variant)
+const Variant::SequenceType& ref_sequence(const Variant& variant)
 {
     return variant.get_ref_allele().get_sequence();
 }
 
-const Variant::SequenceType& get_alt_sequence(const Variant& variant)
+const Variant::SequenceType& alt_sequence(const Variant& variant)
 {
     return variant.get_alt_allele().get_sequence();
 }
@@ -83,7 +83,7 @@ Variant::SizeType alt_sequence_size(const Variant& variant)
 
 bool operator==(const Variant& lhs, const Variant& rhs)
 {
-    return lhs.get_ref_allele() == rhs.get_ref_allele() && get_alt_sequence(lhs) == get_alt_sequence(rhs);
+    return lhs.get_ref_allele() == rhs.get_ref_allele() && alt_sequence(lhs) == alt_sequence(rhs);
 }
 
 bool operator<(const Variant& lhs, const Variant& rhs)
@@ -168,7 +168,7 @@ bool is_parsimonious(const Variant& variant) noexcept
         return false;
     }
     
-    const auto& alleles = allele_minmax(get_ref_sequence(variant), get_alt_sequence(variant));
+    const auto& alleles = allele_minmax(ref_sequence(variant), alt_sequence(variant));
     
     const auto& small_allele = alleles.first;
     const auto& big_allele   = alleles.second;
@@ -190,14 +190,14 @@ Variant make_parsimonious(const Variant& variant, const ReferenceGenome& referen
     
     if (is_parsimonious(variant)) return variant;
     
-    const auto& old_ref_sequence = get_ref_sequence(variant);
-    const auto& old_alt_sequence = get_alt_sequence(variant);
+    const auto& old_ref_sequence = ref_sequence(variant);
+    const auto& old_alt_sequence = alt_sequence(variant);
     
     const auto& alleles = allele_minmax(old_ref_sequence, old_alt_sequence);
     const auto& the_small_allele = alleles.first;
     const auto& the_big_allele   = alleles.second;
     
-    const auto& old_ref_region = get_region(variant);
+    const auto& old_ref_region = mapped_region(variant);
     
     if (the_small_allele.size() == 0) {
         if (old_ref_region.get_begin() > 0) {
@@ -306,8 +306,8 @@ Variant left_align(const Variant& variant, const ReferenceGenome& reference,
     
     using SizeType = Variant::SizeType;
     
-    const auto& ref_allele_sequence = get_ref_sequence(variant);
-    const auto& alt_allele_sequence = get_alt_sequence(variant);
+    const auto& ref_allele_sequence = ref_sequence(variant);
+    const auto& alt_allele_sequence = alt_sequence(variant);
     
     LeftAlignmentList big_allele {}, small_allele {};
     
@@ -380,8 +380,8 @@ Variant pad_left(const Variant& variant, const Variant::SequenceType& sequence)
 {
     return Variant {
         compress_lhs(variant, -static_cast<GenomicRegion::DifferenceType>(sequence.size())),
-        sequence + get_ref_sequence(variant),
-        sequence + get_alt_sequence(variant)
+        sequence + ref_sequence(variant),
+        sequence + alt_sequence(variant)
     };
 }
 
@@ -389,8 +389,8 @@ Variant pad_right(const Variant& variant, const Variant::SequenceType& sequence)
 {
     return Variant {
         compress_rhs(variant, static_cast<GenomicRegion::DifferenceType>(sequence.size())),
-        get_ref_sequence(variant) + sequence,
-        get_alt_sequence(variant) + sequence
+        ref_sequence(variant) + sequence,
+        alt_sequence(variant) + sequence
     };
 }
 
@@ -404,8 +404,8 @@ Variant pad_left(const Variant& variant, const ReferenceGenome& reference,
     
     return Variant {
         encompassing_region(pad_region, variant),
-        pad_sequence + get_ref_sequence(variant),
-        pad_sequence + get_alt_sequence(variant)
+        pad_sequence + ref_sequence(variant),
+        pad_sequence + alt_sequence(variant)
     };
 }
 
@@ -419,8 +419,8 @@ Variant pad_right(const Variant& variant, const ReferenceGenome& reference,
     
     return Variant {
         encompassing_region(variant, pad_region),
-        get_ref_sequence(variant) + pad_sequence,
-        get_alt_sequence(variant) + pad_sequence
+        ref_sequence(variant) + pad_sequence,
+        alt_sequence(variant) + pad_sequence
     };
 }
 
@@ -510,11 +510,10 @@ bool is_mnv(const Variant& variant) noexcept
 bool is_transition(const Variant& variant) noexcept
 {
     return is_snp(variant)
-        && ((get_ref_sequence(variant) == "A" && get_alt_sequence(variant) == "G")
-            || (get_ref_sequence(variant) == "G" && get_alt_sequence(variant) == "A")
-            || (get_ref_sequence(variant) == "C" && get_alt_sequence(variant) == "T")
-            || (get_ref_sequence(variant) == "T" && get_alt_sequence(variant) == "C")
-            );
+        && ((ref_sequence(variant) == "A" && alt_sequence(variant) == "G")
+         || (ref_sequence(variant) == "G" && alt_sequence(variant) == "A")
+         || (ref_sequence(variant) == "C" && alt_sequence(variant) == "T")
+         || (ref_sequence(variant) == "T" && alt_sequence(variant) == "C"));
 }
 
 bool is_transversion(const Variant& variant) noexcept
@@ -528,13 +527,13 @@ std::vector<Allele::SequenceType> get_alt_allele_sequences(const std::vector<Var
     result.reserve(variants.size());
     
     boost::transform(variants, std::back_inserter(result),
-                     [] (const auto& variant) { return get_alt_sequence(variant); });
+                     [] (const auto& variant) { return alt_sequence(variant); });
     
     return result;
 }
 
 std::ostream& operator<<(std::ostream& os, const Variant& variant)
 {
-    os << get_region(variant) << " " << get_ref_sequence(variant) << " " << get_alt_sequence(variant);
+    os << mapped_region(variant) << " " << ref_sequence(variant) << " " << alt_sequence(variant);
     return os;
 }

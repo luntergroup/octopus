@@ -62,12 +62,12 @@ expand_around_included(BidirectionalIterator first_previous, BidirectionalIterat
 {
     auto last_included = std::prev(first_excluded);
     
-    auto leftmost_region  = get_region(*leftmost_overlapped(reads, *first_included));
-    auto rightmost_region = get_region(*rightmost_overlapped(reads, *last_included));
+    auto leftmost_region  = mapped_region(*leftmost_overlapped(reads, *first_included));
+    auto rightmost_region = mapped_region(*rightmost_overlapped(reads, *last_included));
     
     if (count_overlapped(first_previous, first_included, leftmost_region, MappableRangeOrder::BidirectionallySorted) > 0) {
         auto max_left_flank_size = inner_distance(*first_included, *rightmost_mappable(first_previous, first_included));
-        leftmost_region = shift(get_region(*first_included), max_left_flank_size);
+        leftmost_region = shift(mapped_region(*first_included), max_left_flank_size);
         
         if (overlaps(*std::prev(first_included), leftmost_region)) {
             // to deal with case where last previous is insertion, otherwise would be included in overlap_range
@@ -77,7 +77,7 @@ expand_around_included(BidirectionalIterator first_previous, BidirectionalIterat
     
     if (first_excluded != last && contains(rightmost_region, *first_excluded)) {
         auto max_right_flank_size = inner_distance(*last_included, *first_excluded);
-        rightmost_region = shift(get_region(*last_included), max_right_flank_size);
+        rightmost_region = shift(mapped_region(*last_included), max_right_flank_size);
     }
     
     return closed_region(leftmost_region, rightmost_region);

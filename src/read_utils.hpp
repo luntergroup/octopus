@@ -962,11 +962,11 @@ namespace detail
         
         const auto position_coverages = positional_coverage(reads, region);
         
-        const auto first_position = get_begin(region);
+        const auto first_position = region_begin(region);
         const auto num_positions  = region_size(region);
         
         for (const auto& read : reads) {
-            auto first = std::next(std::cbegin(position_coverages), (get_begin(read) <= first_position) ? 0 : get_begin(read) - first_position);
+            auto first = std::next(std::cbegin(position_coverages), (region_begin(read) <= first_position) ? 0 : region_begin(read) - first_position);
             auto last  = std::next(std::cbegin(position_coverages), std::min(get_end(read) - first_position, num_positions));
             result.emplace(read, *f(first, last));
         }
@@ -1015,10 +1015,10 @@ find_high_coverage_regions(const T& reads, const GenomicRegion& region, const un
         
         high_range_last = std::find_if_not(high_range_first, last, is_high_coverage);
         
-        high_range_begin = get_begin(region) + static_cast<SizeType>(std::distance(first, high_range_first));
+        high_range_begin = region_begin(region) + static_cast<SizeType>(std::distance(first, high_range_first));
         high_range_end   = high_range_begin + static_cast<SizeType>(std::distance(high_range_first, high_range_last));
         
-        result.emplace_back(get_contig_name(region), high_range_begin, high_range_end);
+        result.emplace_back(contig_name(region), high_range_begin, high_range_end);
         
         current = high_range_last;
     }
@@ -1052,9 +1052,9 @@ std::vector<GenomicRegion> find_uniform_coverage_regions(const T& reads, const G
     
     if (coverages.empty()) return result;
     
-    const auto contig = get_contig_name(region);
+    const auto contig = contig_name(region);
     
-    auto begin = get_begin(region);
+    auto begin = region_begin(region);
     auto end   = begin;
     
     auto previous_coverage = coverages.front();

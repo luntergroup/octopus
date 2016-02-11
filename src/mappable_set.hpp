@@ -789,7 +789,7 @@ MappableSet<MappableType, Allocator>::has_shared(const_iterator first, const_ite
 {
     if (inner_distance(mappable1, mappable2) > max_element_size_) return false;
     
-    const auto m = std::minmax(get_region(mappable1), get_region(mappable2));
+    const auto m = std::minmax(mapped_region(mappable1), mapped_region(mappable2));
     
     const auto overlapped_lhs = overlap_range(first, last, m.first);
     

@@ -58,10 +58,10 @@ double HaplotypePriorModel::evaluate(const Haplotype& to, const Haplotype& from)
                 }
             }
         } else {
-            auto itr1 = std::cbegin(get_ref_sequence(variant));
-            auto itr2 = std::cbegin(get_alt_sequence(variant));
+            auto itr1 = std::cbegin(ref_sequence(variant));
+            auto itr2 = std::cbegin(alt_sequence(variant));
             
-            std::for_each(itr1, std::cend(get_ref_sequence(variant)),
+            std::for_each(itr1, std::cend(ref_sequence(variant)),
                           [this, &itr2, &result] (char base) {
                               if (base != *itr2) {
                                   result *= 0.9 * transversion_rate_;

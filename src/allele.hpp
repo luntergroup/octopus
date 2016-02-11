@@ -118,7 +118,7 @@ namespace detail
         
         const auto& sequence = allele.get_sequence();
         
-        if (get_region(allele) == region) {
+        if (mapped_region(allele) == region) {
             return sequence;
         }
         
@@ -127,7 +127,7 @@ namespace detail
             return ResultType {first, first + sequence.size() - region_size(allele)};
         }
         
-        auto first = std::cbegin(allele.get_sequence()) + get_begin(region) - get_begin(allele);
+        auto first = std::cbegin(allele.get_sequence()) + begin_distance(region, allele);
         // The minimum of the allele sequence size and region size is used as deletions will
         // result in a sequence size smaller than the region size
         return ResultType {first, first + std::min(sequence.size(), static_cast<size_t>(region_size(region)))};
@@ -137,7 +137,7 @@ namespace detail
 template <typename RegionTp>
 bool contains(const BaseAllele<RegionTp>& lhs, const BaseAllele<RegionTp>& rhs)
 {
-    if (!contains(get_region(lhs), get_region(rhs))) {
+    if (!contains(mapped_region(lhs), mapped_region(rhs))) {
         return false;
     } else if (is_empty_region(lhs)) {
         // If the alleles are both insertions then both regions will be the same so we can only test

@@ -110,17 +110,17 @@ inline GenomicRegion::SizeType GenomicRegion::get_end() const noexcept
 
 // non-member methods
 
-inline const GenomicRegion::ContigNameType& get_contig_name(const GenomicRegion& region) noexcept
+inline const GenomicRegion::ContigNameType& contig_name(const GenomicRegion& region) noexcept
 {
     return region.get_contig_name();
 }
 
-inline GenomicRegion::SizeType get_begin(const GenomicRegion& region) noexcept
+inline GenomicRegion::SizeType region_begin(const GenomicRegion& region) noexcept
 {
     return region.get_begin();
 }
 
-inline GenomicRegion::SizeType get_end(const GenomicRegion& region) noexcept
+inline GenomicRegion::SizeType region_end(const GenomicRegion& region) noexcept
 {
     return region.get_end();
 }

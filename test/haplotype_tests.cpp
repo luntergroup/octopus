@@ -479,7 +479,7 @@ BOOST_AUTO_TEST_CASE(Haplotype_can_be_spliced)
     
     const auto spliced = splice<Haplotype>(haplotype, splice_region);
     
-    BOOST_CHECK(get_region(spliced) == splice_region);
+    BOOST_CHECK(is_same_region(spliced, splice_region));
     BOOST_CHECK(contains(haplotype, spliced));
     
     BOOST_CHECK(splice<Haplotype>(haplotype, region) == haplotype);
@@ -505,7 +505,7 @@ BOOST_AUTO_TEST_CASE(Haplotype_can_be_spliced)
                                 return allele_region_splice.contains_exact(allele); })
                 );
     
-    const auto insertion_region = get_region(allele5);
+    const auto insertion_region = mapped_region(allele5);
     
     const auto insertion_region_haplotype_splice = splice<Haplotype>(haplotype, insertion_region);
     
@@ -563,8 +563,8 @@ BOOST_AUTO_TEST_CASE(splicing_around_insertions_works)
     
     // on insertion
     
-    auto splice_hap_ref0 = splice<Haplotype>(ref_haplotype, get_region(variant0));
-    auto splice_hap_alt0 = splice<Haplotype>(alt_haplotype, get_region(variant0));
+    auto splice_hap_ref0 = splice<Haplotype>(ref_haplotype, mapped_region(variant0));
+    auto splice_hap_alt0 = splice<Haplotype>(alt_haplotype, mapped_region(variant0));
     
     BOOST_CHECK(is_same_region(splice_hap_ref0, variant0));
     BOOST_CHECK(splice_hap_ref0.get_sequence() == "");
@@ -580,8 +580,8 @@ BOOST_AUTO_TEST_CASE(splicing_around_insertions_works)
     
     // on insertion
     
-    auto splice_hap_ref4 = splice<Haplotype>(ref_haplotype, get_region(variant4));
-    auto splice_hap_alt4 = splice<Haplotype>(alt_haplotype, get_region(variant4));
+    auto splice_hap_ref4 = splice<Haplotype>(ref_haplotype, mapped_region(variant4));
+    auto splice_hap_alt4 = splice<Haplotype>(alt_haplotype, mapped_region(variant4));
     
     BOOST_CHECK(is_same_region(splice_hap_ref4, variant4));
     BOOST_CHECK(splice_hap_ref4.get_sequence() == "");
@@ -597,8 +597,8 @@ BOOST_AUTO_TEST_CASE(splicing_around_insertions_works)
     
     // on insertion
     
-    auto splice_hap_ref6 = splice<Haplotype>(ref_haplotype, get_region(variant6));
-    auto splice_hap_alt6 = splice<Haplotype>(alt_haplotype, get_region(variant6));
+    auto splice_hap_ref6 = splice<Haplotype>(ref_haplotype, mapped_region(variant6));
+    auto splice_hap_alt6 = splice<Haplotype>(alt_haplotype, mapped_region(variant6));
     
     BOOST_CHECK(is_same_region(splice_hap_ref6, variant6));
     BOOST_CHECK(splice_hap_ref6.get_sequence() == "");

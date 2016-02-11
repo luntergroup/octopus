@@ -20,7 +20,6 @@
 #include <type_traits>
 
 #include <boost/graph/adjacency_list.hpp>
-#include <boost/container/slist.hpp>
 
 #include "variant.hpp"
 #include "haplotype.hpp"
@@ -156,7 +155,7 @@ generate_all_haplotypes(InputIt first, InputIt last, const ReferenceGenome& refe
     
     if (first == last) return {};
     
-    HaplotypeTree tree {get_contig_name(*first), reference};
+    HaplotypeTree tree {contig_name(*first), reference};
     
     extend_tree(first, last, tree);
     

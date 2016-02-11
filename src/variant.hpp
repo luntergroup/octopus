@@ -81,8 +81,8 @@ Variant make_variant(const Allele& alt_allele, const ReferenceGenome& reference)
 Variant make_variant(const std::string& region_str, Variant::SequenceType alt_sequence,
                      const ReferenceGenome& reference);
 
-const Variant::SequenceType& get_ref_sequence(const Variant& variant);
-const Variant::SequenceType& get_alt_sequence(const Variant& variant);
+const Variant::SequenceType& ref_sequence(const Variant& variant);
+const Variant::SequenceType& alt_sequence(const Variant& variant);
 
 Variant::SizeType ref_sequence_size(const Variant& variant);
 Variant::SizeType alt_sequence_size(const Variant& variant);
@@ -98,8 +98,8 @@ void remove_duplicates(std::vector<Variant>& variants);
  */
 std::vector<Allele> decompose(const std::vector<Variant>& variants);
 
-std::vector<Allele> get_intervening_reference_alleles(const std::vector<Variant>& variants,
-                                                      const ReferenceGenome& reference);
+std::vector<Allele> extract_intervening_reference_alleles(const std::vector<Variant>& variants,
+                                                          const ReferenceGenome& reference);
 
 /*
  A variant is parsimonious if and only if it is represented in as few nucleotides as possible
@@ -166,8 +166,8 @@ namespace std {
             using boost::hash_combine;
             size_t result {};
             hash_combine(result, hash<GenomicRegion>()(variant.get_region()));
-            hash_combine(result, hash<Allele::SequenceType>()(get_ref_sequence(variant)));
-            hash_combine(result, hash<Allele::SequenceType>()(get_alt_sequence(variant)));
+            hash_combine(result, hash<Allele::SequenceType>()(ref_sequence(variant)));
+            hash_combine(result, hash<Allele::SequenceType>()(alt_sequence(variant)));
             return result;
         }
     };

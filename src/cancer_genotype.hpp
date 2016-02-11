@@ -43,7 +43,7 @@ public:
     unsigned count(const MappableType& element) const;
     bool is_homozygous() const;
     unsigned zygosity() const;
-    std::vector<MappableType> get_unique() const;
+    std::vector<MappableType> copy_unique() const;
     
 private:
     Genotype<MappableType> germline_genotype_;
@@ -51,14 +51,16 @@ private:
 };
 
 template <typename MappableType>
-CancerGenotype<MappableType>::CancerGenotype(std::initializer_list<MappableType> germline_elements, MappableType cancer_element)
+CancerGenotype<MappableType>::CancerGenotype(std::initializer_list<MappableType> germline_elements,
+                                             MappableType cancer_element)
 :
 germline_genotype_ {germline_elements},
 cancer_element_ {std::move(cancer_element)}
 {}
 
 template <typename MappableType>
-CancerGenotype<MappableType>::CancerGenotype(Genotype<MappableType> germline_genotype, MappableType cancer_element)
+CancerGenotype<MappableType>::CancerGenotype(Genotype<MappableType> germline_genotype,
+                                             MappableType cancer_element)
 :
 germline_genotype_ {std::move(germline_genotype)},
 cancer_element_ {std::move(cancer_element)}
@@ -119,7 +121,7 @@ unsigned CancerGenotype<MappableType>::zygosity() const
 }
 
 template <typename MappableType>
-std::vector<MappableType> CancerGenotype<MappableType>::get_unique() const
+std::vector<MappableType> CancerGenotype<MappableType>::copy_unique() const
 {
     auto result = germline_genotype_.get_unique();
     if (!germline_genotype_.contains(cancer_element_)) result.push_back(cancer_element_);
@@ -184,7 +186,8 @@ generate_all_cancer_genotypes(const std::vector<MappableType>& elements, const u
 template <typename MappableType>
 bool operator==(const CancerGenotype<MappableType>& lhs, const CancerGenotype<MappableType>& rhs)
 {
-    return lhs.get_cancer_element() == rhs.get_cancer_element() && lhs.get_germline_genotype() == rhs.get_germline_genotype();
+    return lhs.get_cancer_element() == rhs.get_cancer_element()
+            && lhs.get_germline_genotype() == rhs.get_germline_genotype();
 }
 
 namespace std

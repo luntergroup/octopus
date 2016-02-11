@@ -473,31 +473,31 @@ BOOST_AUTO_TEST_CASE(splice_works_correctly)
     
     Genotype<Haplotype> genotype {ref_haplotype, alt_haplotype};
     
-    const auto allele_splice_snp1 = splice<Allele>(genotype, get_region(variant1));
+    const auto allele_splice_snp1 = splice<Allele>(genotype, mapped_region(variant1));
     
     BOOST_CHECK(!allele_splice_snp1.is_homozygous());
     BOOST_CHECK(allele_splice_snp1.contains(variant1.get_ref_allele()));
     BOOST_CHECK(allele_splice_snp1.contains(variant1.get_alt_allele()));
     
-    const auto allele_splice_snp2 = splice<Allele>(genotype, get_region(variant2));
+    const auto allele_splice_snp2 = splice<Allele>(genotype, mapped_region(variant2));
     
     BOOST_CHECK(!allele_splice_snp2.is_homozygous());
     BOOST_CHECK(allele_splice_snp2.contains(variant2.get_ref_allele()));
     BOOST_CHECK(allele_splice_snp2.contains(variant2.get_alt_allele()));
     
-    const auto allele_splice_snp3 = splice<Allele>(genotype, get_region(variant3));
+    const auto allele_splice_snp3 = splice<Allele>(genotype, mapped_region(variant3));
     
     BOOST_CHECK(!allele_splice_snp3.is_homozygous());
     BOOST_CHECK(allele_splice_snp3.contains(variant3.get_ref_allele()));
     BOOST_CHECK(allele_splice_snp3.contains(variant3.get_alt_allele()));
     
-    const auto allele_splice_snp4 = splice<Allele>(genotype, get_region(variant5));
+    const auto allele_splice_snp4 = splice<Allele>(genotype, mapped_region(variant5));
     
     BOOST_CHECK(!allele_splice_snp4.is_homozygous());
     BOOST_CHECK(allele_splice_snp4.contains(variant5.get_ref_allele()));
     BOOST_CHECK(allele_splice_snp4.contains(variant5.get_alt_allele()));
     
-    const auto allele_splice_insertion = splice<Allele>(genotype, get_region(variant4));
+    const auto allele_splice_insertion = splice<Allele>(genotype, mapped_region(variant4));
     
     BOOST_CHECK(!allele_splice_insertion.is_homozygous());
     BOOST_CHECK(allele_splice_insertion.contains(variant4.get_ref_allele()));
@@ -520,11 +520,11 @@ BOOST_AUTO_TEST_CASE(splice_all_works_correctly)
     const auto haplotypes = Octopus::generate_all_haplotypes(variants, human);
     const auto genotypes  = generate_all_genotypes(haplotypes, 2);
     
-    const auto allele_splices = splice_all<Allele>(genotypes, get_region(variant2));
+    const auto allele_splices = splice_all<Allele>(genotypes, mapped_region(variant2));
     
     BOOST_REQUIRE(allele_splices.size() == 4);
     
-    const auto haplotype_splices1 = splice_all<Haplotype>(genotypes, get_region(variant2));
+    const auto haplotype_splices1 = splice_all<Haplotype>(genotypes, mapped_region(variant2));
     
     BOOST_REQUIRE(haplotype_splices1.size() == num_genotypes(2, 2));
     

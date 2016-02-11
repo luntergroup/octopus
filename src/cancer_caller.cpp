@@ -502,10 +502,10 @@ namespace Octopus
         
         auto phred_quality = Maths::probability_to_phred(posterior);
         
-        const auto& region = get_region(reference_allele);
+        const auto& region = mapped_region(reference_allele);
         
-        result.set_chromosome(get_contig_name(region));
-        result.set_position(get_begin(region));
+        result.set_chromosome(contig_name(region));
+        result.set_position(region_begin(region));
         result.set_ref_allele(reference_allele.get_sequence());
         result.set_alt_alleles(get_alt_allele_sequences(variants));
         result.set_quality(phred_quality);
@@ -529,7 +529,7 @@ namespace Octopus
             
             result.add_genotype_field(sample, "FT", "."); // TODO
             result.add_genotype_field(sample, "GP", to_string(Maths::probability_to_phred(genotype_call.posterior)));
-            result.add_genotype_field(sample, "PS", to_string(get_begin(phase_region) + 1));
+            result.add_genotype_field(sample, "PS", to_string(region_begin(phase_region) + 1));
             result.add_genotype_field(sample, "PQ", "60"); // TODO
             result.add_genotype_field(sample, "DP", to_string(max_coverage(reads.at(sample), region)));
             result.add_genotype_field(sample, "BQ", to_string(static_cast<unsigned>(rmq_base_quality(reads.at(sample), region))));
@@ -550,10 +550,10 @@ namespace Octopus
         
         auto phred_quality = Maths::probability_to_phred(posterior);
         
-        const auto& region = get_region(somatic_mutation);
+        const auto& region = mapped_region(somatic_mutation);
         
-        result.set_chromosome(get_contig_name(region));
-        result.set_position(get_begin(region));
+        result.set_chromosome(contig_name(region));
+        result.set_position(region_begin(region));
         result.set_ref_allele(reference.get_sequence(region));
         result.set_alt_allele(somatic_mutation.get_sequence());
         result.set_quality(phred_quality);
@@ -586,17 +586,17 @@ namespace Octopus
         
         auto phred_quality = Maths::probability_to_phred(call.posterior);
         
-        const auto& region = get_region(call.reference_allele);
+        const auto& region = mapped_region(call.reference_allele);
         
-        result.set_chromosome(get_contig_name(region));
-        result.set_position(get_begin(region));
+        result.set_chromosome(contig_name(region));
+        result.set_position(region_begin(region));
         result.set_ref_allele(call.reference_allele.get_sequence().front());
         
         result.set_quality(phred_quality);
         
         result.set_filters({"REFCALL"});
         if (region_size(region) > 1) {
-            result.add_info("END", to_string(get_end(region))); // - 1 as VCF uses closed intervals
+            result.add_info("END", to_string(region_end(region))); // - 1 as VCF uses closed intervals
         }
         
         result.add_info("NS",  to_string(count_samples_with_coverage(reads, region)));
@@ -644,7 +644,7 @@ namespace Octopus
             
             std::cout << "there are " << haplotypes.size() << " unique haplotypes" << std::endl;
             
-            auto haplotype_region = get_region(haplotypes.front());
+            auto haplotype_region = mapped_region(haplotypes.front());
             
             std::cout << "haplotype region is " << haplotype_region << std::endl;
             

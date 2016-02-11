@@ -407,7 +407,7 @@ namespace Octopus
             auto subregion = components.read_manager.get().find_covered_subregion(components.samples,
                                                                                   region, max_reads);
             
-            while (get_begin(subregion) != get_end(region)) {
+            while (region_begin(subregion) != region_end(region)) {
                 cout << "Octopus: processing subregion " << subregion << endl;
                 
                 write_calls(components.output, components.caller->call_variants(subregion));

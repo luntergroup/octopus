@@ -75,7 +75,6 @@ auto leftmost_mappable(const Container& mappables)
  The range [first, last) is not required to be sorted.
  */
 template <typename ForwardIt>
-inline
 ForwardIt rightmost_mappable(ForwardIt first, ForwardIt last)
 {
     using MappableTp = typename std::iterator_traits<ForwardIt>::value_type;
@@ -94,13 +93,36 @@ auto rightmost_mappable(const Container& mappables)
     return rightmost_mappable(std::cbegin(mappables), std::cend(mappables));
 }
 
+template <typename ForwardIt>
+decltype(auto) leftmost_region(ForwardIt first, ForwardIt last)
+{
+    return mapped_region(*leftmost_mappable(first, last));
+}
+
+template <typename Container>
+decltype(auto) leftmost_region(const Container& mappables)
+{
+    return leftmost_region(std::cbegin(mappables), std::cend(mappables));
+}
+
+template <typename ForwardIt>
+decltype(auto) rightmost_region(ForwardIt first, ForwardIt last)
+{
+    return mapped_region(*rightmost_mappable(first, last));
+}
+
+template <typename Container>
+decltype(auto) rightmost_region(const Container& mappables)
+{
+    return rightmost_region(std::cbegin(mappables), std::cend(mappables));
+}
+
 /**
  Returns the mappable element in the range [first, last) with the largest size.
  
  The range [first, last) is not required to be sorted.
  */
 template <typename ForwardIt>
-inline
 ForwardIt largest_mappable(ForwardIt first, ForwardIt last)
 {
     using MappableTp = typename std::iterator_traits<ForwardIt>::value_type;
@@ -126,7 +148,6 @@ auto largest_mappable(const Container& mappables)
  The range [first, last) is not required to be sorted.
  */
 template <typename ForwardIt>
-inline
 ForwardIt smallest_mappable(ForwardIt first, ForwardIt last)
 {
     using MappableTp = typename std::iterator_traits<ForwardIt>::value_type;
@@ -144,6 +165,30 @@ template <typename Container>
 auto smallest_mappable(const Container& mappables)
 {
     return smallest_mappable(std::cbegin(mappables), std::cend(mappables));
+}
+
+template <typename ForwardIt>
+decltype(auto) largest_region(ForwardIt first, ForwardIt last)
+{
+    return mapped_region(*largest_mappable(first, last));
+}
+
+template <typename Container>
+decltype(auto) largest_region(const Container& mappables)
+{
+    return largest_region(std::cbegin(mappables), std::cend(mappables));
+}
+
+template <typename ForwardIt>
+decltype(auto) smallest_region(ForwardIt first, ForwardIt last)
+{
+    return smallest_region(*smallest_mappable(first, last));
+}
+
+template <typename Container>
+decltype(auto) smallest_region(const Container& mappables)
+{
+    return smallest_region(std::cbegin(mappables), std::cend(mappables));
 }
 
 /**
@@ -345,8 +390,8 @@ overlap_range(ForwardIt first, ForwardIt last, const MappableTp& mappable,
     
     auto it = find_first_after(first, last, mappable);
     
-    auto it2 = std::lower_bound(first, it, shift(get_region(mappable),
-                                                 -std::min(get_begin(mappable), max_mappable_size)),
+    auto it2 = std::lower_bound(first, it, shift(mapped_region(mappable),
+                                                 -std::min(region_begin(mappable), max_mappable_size)),
                                 [] (const auto& lhs, const auto& rhs) { return begins_before(lhs, rhs); });
     
     it2 = std::find_if(it2, it, [&mappable] (const auto& m) { return overlaps(m, mappable); });
@@ -554,7 +599,7 @@ bool has_contained(ForwardIt first, ForwardIt last, const MappableTp& mappable)
                                    return begins_before(lhs, rhs);
                                });
     
-    return (it != last) && get_end(*it) <= get_end(mappable);
+    return (it != last) && region_end(*it) <= region_end(mappable);
 }
 
 template <typename Container, typename MappableTp>
@@ -716,7 +761,7 @@ auto extract_regions(InputIt first, InputIt last)
     result.reserve(std::distance(first, last));
     
     std::transform(first, last, std::back_inserter(result),
-                   [] (const auto& mappable) { return get_region(mappable); });
+                   [] (const auto& mappable) { return mapped_region(mappable); });
     
     return result;
 }
@@ -762,10 +807,10 @@ namespace detail
         
         GenomicRegion::SizeType n {0};
         
-        const auto& contig = get_contig_name(mappable);
+        const auto& contig = contig_name(mappable);
         
         std::generate_n(std::back_inserter(result), num_elements, [&] () {
-            return GenomicRegion {contig, get_begin(mappable) + n, get_begin(mappable) + ++n};
+            return GenomicRegion {contig, region_begin(mappable) + n, region_begin(mappable) + ++n};
         });
         
         return result;
@@ -861,8 +906,9 @@ auto extract_covered_regions(ForwardIt first, ForwardIt last)
     auto rightmost        = first;
     
     while (first != last) {
-        if (get_begin(*first) > get_end(*rightmost)) {
-            result.emplace_back(get_contig_name(*first_overlapped), get_begin(*first_overlapped), get_end(*rightmost));
+        if (region_begin(*first) > region_end(*rightmost)) {
+            result.emplace_back(contig_name(*first_overlapped),
+                                region_begin(*first_overlapped), region_end(*rightmost));
             rightmost        = first;
             first_overlapped = first;
         } else if (ends_before(*rightmost, *first)) {
@@ -871,7 +917,8 @@ auto extract_covered_regions(ForwardIt first, ForwardIt last)
         ++first;
     }
     
-    result.emplace_back(get_contig_name(*first_overlapped), get_begin(*first_overlapped), get_end(*rightmost));
+    result.emplace_back(contig_name(*first_overlapped),
+                        region_begin(*first_overlapped), region_end(*rightmost));
     
     result.shrink_to_fit();
     
@@ -1129,11 +1176,11 @@ auto calculate_positional_coverage(ForwardIt first, ForwardIt last, const Region
     
     const auto result_begin_itr = std::begin(result);
     
-    const auto first_position = get_begin(region);
+    const auto first_position = region_begin(region);
     
     std::for_each(first, last, [=] (const auto& mappable) {
-        const auto it1 = next(result_begin_itr, (get_begin(mappable) <= first_position) ? 0 : get_begin(mappable) - first_position);
-        const auto it2 = next(result_begin_itr, min(get_end(mappable) - first_position, num_positions));
+        const auto it1 = next(result_begin_itr, (region_begin(mappable) <= first_position) ? 0 : region_begin(mappable) - first_position);
+        const auto it2 = next(result_begin_itr, min(region_end(mappable) - first_position, num_positions));
         std::transform(it1, it2, it1, [] (const auto count) { return count + 1; });
     });
     

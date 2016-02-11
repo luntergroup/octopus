@@ -390,7 +390,7 @@ RefCalls call_reference(const GM::GenotypeProbabilities& genotype_posteriors,
         for (const auto& sample_genotype_posteriors : genotype_posteriors) {
             double sample_posterior {};
             
-            if (min_coverage(reads.at(sample_genotype_posteriors.first), get_region(reference_allele)) > 0) {
+            if (min_coverage(reads.at(sample_genotype_posteriors.first), mapped_region(reference_allele)) > 0) {
                 sample_posterior = marginalise_reference_genotype(reference_allele, sample_genotype_posteriors.second);
                 
                 if (sample_posterior < min_posterior) {
@@ -469,10 +469,10 @@ VcfRecord output_variant_call(const VariantCallBlock& block, const GenotypeCallM
     
     const auto reference_allele = block.variants.front().get_ref_allele();
     
-    const auto& region = get_region(reference_allele);
+    const auto& region = mapped_region(reference_allele);
     
-    result.set_chromosome(get_contig_name(region));
-    result.set_position(get_begin(region));
+    result.set_chromosome(contig_name(region));
+    result.set_position(region_begin(region));
     result.set_ref_allele(reference_allele.get_sequence());
     result.set_alt_alleles(get_alt_allele_sequences(block.variants));
     result.set_quality(phred_quality);
@@ -496,7 +496,7 @@ VcfRecord output_variant_call(const VariantCallBlock& block, const GenotypeCallM
         
         result.add_genotype_field(sample, "FT", "."); // TODO
         result.add_genotype_field(sample, "GQ", Octopus::to_string(Maths::probability_to_phred<float>(sample_call.second.posterior), 2));
-        result.add_genotype_field(sample, "PS", to_string(get_begin(sample_call.second.phase_region) + 1));
+        result.add_genotype_field(sample, "PS", to_string(region_begin(sample_call.second.phase_region) + 1));
         result.add_genotype_field(sample, "PQ", Octopus::to_string(Maths::probability_to_phred<float>(sample_call.second.phase_score), 2)); // TODO
         result.add_genotype_field(sample, "DP", to_string(max_coverage(reads.at(sample), region)));
         result.add_genotype_field(sample, "BQ", to_string(static_cast<unsigned>(rmq_base_quality(reads.at(sample), region))));
@@ -515,10 +515,10 @@ VcfRecord output_reference_call(RefCall call, const ReferenceGenome& reference,
     
     const auto phred_quality = Maths::probability_to_phred(call.posterior);
     
-    const auto& region = get_region(call.reference_allele);
+    const auto& region = mapped_region(call.reference_allele);
     
-    result.set_chromosome(get_contig_name(region));
-    result.set_position(get_begin(region));
+    result.set_chromosome(contig_name(region));
+    result.set_position(region_begin(region));
     result.set_ref_allele(call.reference_allele.get_sequence().front());
     
     result.set_alt_allele("<NON_REF>");
@@ -528,7 +528,7 @@ VcfRecord output_reference_call(RefCall call, const ReferenceGenome& reference,
     //result.set_filters({"REFCALL"});
     
     if (region_size(region) > 1) {
-        result.add_info("END", to_string(get_end(region))); // - 1 as VCF uses closed intervals
+        result.add_info("END", to_string(region_end(region))); // - 1 as VCF uses closed intervals
     }
     
     result.add_info("NS",  to_string(count_samples_with_coverage(reads, region)));
@@ -576,7 +576,7 @@ PopulationVariantCaller::call_variants(const GenomicRegion& region,
         
         std::cout << "there are " << haplotypes.size() << " unique haplotypes" << std::endl;
         
-        const auto haplotype_region = get_region(haplotypes.front());
+        const auto haplotype_region = mapped_region(haplotypes.front());
         
         std::cout << "haplotype region is " << haplotype_region << std::endl;
         

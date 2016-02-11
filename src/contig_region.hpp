@@ -66,12 +66,12 @@ inline ContigRegion::SizeType ContigRegion::get_end() const noexcept
 
 // non-member methods
 
-inline ContigRegion::SizeType get_begin(const ContigRegion& region) noexcept
+inline ContigRegion::SizeType region_begin(const ContigRegion& region) noexcept
 {
     return region.get_begin();
 }
 
-inline ContigRegion::SizeType get_end(const ContigRegion& region) noexcept
+inline ContigRegion::SizeType region_end(const ContigRegion& region) noexcept
 {
     return region.get_end();
 }

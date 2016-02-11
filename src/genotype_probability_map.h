@@ -31,15 +31,28 @@ public:
     bool empty() const noexcept;
     std::size_t size() const noexcept;
     
-    void reserve(std::size_t n);
+    //void reserve(std::size_t n);
     
     void clear() noexcept;
-    
     
 private:
     std::vector<GenotypeTp> genotypes_;
     std::unordered_map<SampleTp, std::vector<double>> sample_genotype_probabilities_;
     std::unordered_map<std::reference_wrapper<const GenotypeTp>, std::size_t> genotype_indicies_;
 };
+
+template <typename SampleTp, typename GenotypeTp>
+bool GenotypeProbabilityMap<SampleTp, GenotypeTp>::empty() const noexcept
+{
+    return sample_genotype_probabilities_.empty();
+}
+
+template <typename SampleTp, typename GenotypeTp>
+void GenotypeProbabilityMap<SampleTp, GenotypeTp>::clear() noexcept
+{
+    genotypes_.clear();
+    sample_genotype_probabilities_.clear();
+    genotype_indicies_.clear();
+}
 
 #endif /* genotype_probability_map_h */
