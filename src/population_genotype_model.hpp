@@ -19,6 +19,7 @@
 #include "genotype.hpp"
 #include "reference_genome.hpp"
 #include "haplotype_prior_model.hpp"
+#include "probability_matrix.hpp"
 
 class AlignedRead;
 class Haplotype;
@@ -30,8 +31,7 @@ namespace Octopus
     class Population
     {
     public:
-        using SampleGenotypeProbabilityMap = std::unordered_map<Genotype<Haplotype>, double>;
-        using GenotypeProbabilities        = std::unordered_map<SampleIdType, SampleGenotypeProbabilityMap>;
+        using GenotypeProbabilityMap = ProbabilityMatrix<Genotype<Haplotype>>;
         
         struct Latents
         {
@@ -43,14 +43,14 @@ namespace Octopus
             haplotype_frequencies {std::forward<F>(haplotype_frequencies)}
             {}
             
-            GenotypeProbabilities genotype_posteriors;
+            GenotypeProbabilityMap genotype_posteriors;
             HaplotypeFrequencyMap haplotype_frequencies;
         };
         
         Population(unsigned ploidy, unsigned max_em_iterations = 100, double em_epsilon = 0.001);
         
-        Latents evaluate(const std::vector<Haplotype>& haplotypes, const ReadMap& reads,
-                         const ReferenceGenome& reference);
+        Latents infer_latents(const std::vector<Haplotype>& haplotypes, const ReadMap& reads,
+                              const ReferenceGenome& reference);
         
     private:
         HaplotypePriorModel haplotype_prior_model_;

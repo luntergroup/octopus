@@ -17,8 +17,8 @@ namespace Octopus
         } // namespace
         
         Pedigree::Latents
-        Pedigree::evaluate(const std::vector<Haplotype>& haplotypes, const ReadMap& reads,
-                           const ReferenceGenome& reference)
+        Pedigree::infer_latents(const std::vector<Haplotype>& haplotypes, const ReadMap& reads,
+                                const ReferenceGenome& reference)
         {
             Pedigree::Latents result {};
             return result;

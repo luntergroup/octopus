@@ -51,8 +51,6 @@ namespace Octopus
         const double min_variant_posterior_ = 0.95;
         const double min_refcall_posterior_ = 0.5;
         
-        std::string do_get_details() const override;
-        
         std::vector<VcfRecord> call_variants(const GenomicRegion& region,
                                              const std::vector<Variant>& candidates,
                                              const ReadMap& reads) const override;

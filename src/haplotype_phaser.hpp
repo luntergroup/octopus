@@ -24,6 +24,7 @@
 #include "haplotype_tree.hpp"
 #include "mappable_set.hpp"
 #include "genome_walker.hpp"
+#include "probability_matrix.hpp"
 
 namespace Octopus
 {

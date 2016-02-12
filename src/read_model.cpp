@@ -25,13 +25,13 @@ ploidy_ {ploidy},
 ln_ploidy_ {std::log(ploidy)}
 {}
 
-double ReadModel::log_probability(const AlignedRead& read, const Haplotype& haplotype)
+double ReadModel::log_probability(const AlignedRead& read, const Haplotype& haplotype) const
 {
     return haplotype_likelihoods_.get().log_probability(read, haplotype);
 }
 
 // ln p(read | genotype) = ln sum {haplotype in genotype} p(read | haplotype) - ln ploidy
-double ReadModel::log_probability(const AlignedRead& read, const Genotype<Haplotype>& genotype)
+double ReadModel::log_probability(const AlignedRead& read, const Genotype<Haplotype>& genotype) const
 {
     // These cases are just for optimisation
     switch (ploidy_) {
@@ -46,25 +46,25 @@ double ReadModel::log_probability(const AlignedRead& read, const Genotype<Haplot
     }
 }
 
-double ReadModel::log_probability_haploid(const AlignedRead& read, const Genotype<Haplotype>& genotype)
+double ReadModel::log_probability_haploid(const AlignedRead& read, const Genotype<Haplotype>& genotype) const
 {
     return log_probability(read, genotype.at(0));
 }
 
-double ReadModel::log_probability_diploid(const AlignedRead& read, const Genotype<Haplotype>& genotype)
+double ReadModel::log_probability_diploid(const AlignedRead& read, const Genotype<Haplotype>& genotype) const
 {
     return Maths::log_sum_exp(log_probability(read, genotype.at(0)),
                               log_probability(read, genotype.at(1))) - ln_ploidy_;
 }
 
-double ReadModel::log_probability_triploid(const AlignedRead& read, const Genotype<Haplotype>& genotype)
+double ReadModel::log_probability_triploid(const AlignedRead& read, const Genotype<Haplotype>& genotype) const
 {
     return Maths::log_sum_exp(log_probability(read, genotype.at(0)),
                               log_probability(read, genotype.at(1)),
                               log_probability(read, genotype.at(2))) - ln_ploidy_;
 }
 
-double ReadModel::log_probability_polyploid(const AlignedRead& read, const Genotype<Haplotype>& genotype)
+double ReadModel::log_probability_polyploid(const AlignedRead& read, const Genotype<Haplotype>& genotype) const
 {
     std::vector<double> log_haplotype_probabilities(ploidy_);
     

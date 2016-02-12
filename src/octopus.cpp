@@ -383,6 +383,15 @@ namespace Octopus
     void print_startup_info(const GenomeCallingComponents& components)
     {
         using std::cout; using std::endl;
+        
+        if (components.samples.size() == 1) {
+            cout << "Octopus: sample is: ";
+        } else {
+            cout << "Octopus: samples are: ";
+        }
+        std::copy(std::cbegin(components.samples), std::cend(components.samples),
+                  std::ostream_iterator<std::string> {cout, " "});
+        cout << endl;
         cout << "Octopus: calling variants in " << components.samples.size() << " samples" << endl;
         cout << "Octopus: writing calls to " << components.output.path() << endl;
     }

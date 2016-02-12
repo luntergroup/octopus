@@ -33,11 +33,6 @@ namespace Octopus
     
     // private methods
     
-    std::string PedigreeVariantCaller::do_get_details() const
-    {
-        return "Pedigree caller. mother = " + mother_ + ", father = " + father_;
-    }
-    
     namespace {
         using GM = GenotypeModel::Pedigree;
         

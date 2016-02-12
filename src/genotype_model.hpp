@@ -174,28 +174,7 @@ namespace Octopus
             transform(cbegin(haplotypes), cend(haplotypes), cbegin(alphas), std::inserter(result, begin(result)),
                       [] (const auto& haplotype, double a) { return std::make_pair(haplotype, a); });
             
-//            //DEBUG
-//
-//            transform(cbegin(haplotypes), cend(haplotypes), std::inserter(result, begin(result)),
-//                      [&haplotype_prior_model, &reference_haplotype] (const auto& haplotype) {
-//                          return std::make_pair(haplotype, 100 * haplotype_prior_model.evaluate(haplotype, reference_haplotype));
-//                      });
-            
-//            //haplotype_prior_model.evaluate(haplotypes, reference_haplotype); // DEBUG
-            
-            for (auto& h : result) h.second = 1;
-            
-//            const auto& h1 = haplotypes[1]; // <>
-//            const auto& h2 = haplotypes[2]; // < {6:93705886-93705887 C} {6:93706063-93706064 A} >
-//            const auto& h3 = haplotypes[3]; // < {6:93705886-93705887 C} >
-//            const auto& h4 = haplotypes[0]; // < {6:93706063-93706064 A} >
-//            
-//            result[h1] = 25;
-//            result[h2] = 1;
-//            result[h3] = 5.6;
-//            result[h4] = 5.6;
-//            
-//            //DEBUG
+            for (auto& h : result) h.second = 1; // DEBUG - uniform priors
             
             return result;
         }

@@ -424,8 +424,8 @@ namespace Octopus
     // private methods
     
     Cancer::Latents
-    Cancer::evaluate(const std::vector<Haplotype>& haplotypes, const ReadMap& reads,
-                     const ReferenceGenome& reference)
+    Cancer::infer_latents(const std::vector<Haplotype>& haplotypes, const ReadMap& reads,
+                          const ReferenceGenome& reference)
     {
         HaplotypeLikelihoodCache haplotype_likelihoods {reads, haplotypes};
         

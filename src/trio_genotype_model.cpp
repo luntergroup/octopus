@@ -17,8 +17,8 @@ namespace Octopus
         } // namespace
         
         Trio::Latents
-        Trio::evaluate(const std::vector<Haplotype>& haplotypes, const ReadMap& reads,
-                       const ReferenceGenome& reference)
+        Trio::infer_latents(const std::vector<Haplotype>& haplotypes, const ReadMap& reads,
+                            const ReferenceGenome& reference)
         {
             Trio::Latents result {};
             return result;

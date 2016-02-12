@@ -50,11 +50,6 @@ candidate_generator_ {std::move(candidate_generator)},
 refcall_type_ {refcall_type}
 {}
 
-std::string VariantCaller::get_details() const
-{
-    return do_get_details();
-}
-
 size_t VariantCaller::num_buffered_reads() const noexcept
 {
     return 0;
@@ -88,9 +83,6 @@ std::vector<VcfRecord> VariantCaller::call_variants(const GenomicRegion& region)
         // TODO: we could be more selective and only fetch reads overlapping candidates
         reads = read_pipe_.get().fetch_reads(region);
     }
-    
-    auto haplotypes = generate_all_haplotypes(std::cbegin(candidates), std::cbegin(candidates) + 7, reference_);
-    auto genotypes  = generate_all_cancer_genotypes(haplotypes, 2);
     
     return call_variants(region, candidates, reads);
 }

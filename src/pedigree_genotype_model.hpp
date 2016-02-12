@@ -49,8 +49,8 @@ namespace Octopus
             
             Pedigree(unsigned ploidy, unsigned max_em_iterations = 100, double em_epsilon = 0.001);
             
-            Latents evaluate(const std::vector<Haplotype>& haplotypes, const ReadMap& reads,
-                             const ReferenceGenome& reference);
+            Latents infer_latents(const std::vector<Haplotype>& haplotypes, const ReadMap& reads,
+                                  const ReferenceGenome& reference);
             
         private:
             HaplotypePriorModel haplotype_prior_model_;

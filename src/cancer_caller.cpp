@@ -29,10 +29,9 @@
 #include "cancer_genotype_model.hpp"
 #include "read_utils.hpp"
 #include "string_utils.hpp"
-
 #include "haplotype_prior_model.hpp"
-
 #include "haplotype_phaser.hpp"
+#include "probability_matrix.hpp"
 
 #include <iostream> // TEST
 
@@ -54,11 +53,6 @@ namespace Octopus
     min_refcall_posterior_ {min_refcall_posterior},
     call_somatics_only_ {call_somatics_only}
     {}
-    
-    std::string CancerVariantCaller::do_get_details() const
-    {
-        return "cancer caller. normal sample = " + normal_sample_;
-    }
     
     // private methods
     
@@ -654,7 +648,7 @@ namespace Octopus
             
             GenotypeModel::Cancer genotype_model {normal_sample_};
             
-            auto latents = genotype_model.evaluate(haplotypes, haplotype_region_reads, reference_);
+            auto latents = genotype_model.infer_latents(haplotypes, haplotype_region_reads, reference_);
             
             if (latents.genotype_posteriors.empty()) return result;
             

@@ -30,9 +30,9 @@ namespace Octopus
         SingleReadModel(SingleReadModel&&)                 = default;
         SingleReadModel& operator=(SingleReadModel&&)      = default;
         
-        double log_probability(const AlignedRead& read, const Haplotype& haplotype); // ln p(read | haplotype)
+        // ln p(read | haplotype)
+        double log_probability(const AlignedRead& read, const Haplotype& haplotype);
     };
-    
 } // namespace Octopus
 
 #endif /* single_read_model_hpp */

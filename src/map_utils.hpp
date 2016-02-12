@@ -18,7 +18,7 @@
 template <typename MapType>
 auto extract_keys(const MapType& map)
 {
-    static_assert(is_map<MapType>, "map must be a map type");
+    static_assert(is_map<MapType>, "MapType must be a map type");
     
     std::vector<typename MapType::key_type> result {};
     result.reserve(map.size());
@@ -32,7 +32,7 @@ auto extract_keys(const MapType& map)
 template <typename MapType>
 auto extract_values(const MapType& map)
 {
-    static_assert(is_map<MapType>, "map must be a map type");
+    static_assert(is_map<MapType>, "MapType must be a map type");
     
     std::vector<typename MapType::mapped_type> result {};
     result.reserve(map.size());
@@ -46,7 +46,7 @@ auto extract_values(const MapType& map)
 template <typename MapType>
 auto extract_value_sorted_keys(const MapType& map)
 {
-    static_assert(is_map<MapType>, "map must be a map type");
+    static_assert(is_map<MapType>, "MapType must be a map type");
     
     std::vector<std::pair<typename MapType::mapped_type, typename MapType::key_type>> pairs {};
     pairs.reserve(map.size());

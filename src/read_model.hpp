@@ -12,6 +12,7 @@
 #include <cstddef>
 #include <numeric>
 #include <functional>
+#include <iterator>
 
 #include "haplotype.hpp"
 #include "genotype.hpp"
@@ -34,14 +35,15 @@ public:
     ReadModel& operator=(ReadModel&&)      = default;
     
     // ln p(read | haplotype)
-    double log_probability(const AlignedRead& read, const Haplotype& haplotype);
+    double log_probability(const AlignedRead& read, const Haplotype& haplotype) const;
     
     // ln p(read | genotype)
-    double log_probability(const AlignedRead& read, const Genotype<Haplotype>& genotype);
+    double log_probability(const AlignedRead& read, const Genotype<Haplotype>& genotype) const;
     
     // ln p(reads | genotype)
     template <typename ForwardIterator>
-    double log_probability(ForwardIterator first_read, ForwardIterator last_read, const Genotype<Haplotype>& genotype);
+    double log_probability(ForwardIterator first_read, ForwardIterator last_read,
+                           const Genotype<Haplotype>& genotype) const;
     
 private:
     std::reference_wrapper<const HaplotypeLikelihoodCache> haplotype_likelihoods_;
@@ -50,16 +52,16 @@ private:
     const double ln_ploidy_;
     
     // These are just for optimisation
-    double log_probability_haploid(const AlignedRead& read, const Genotype<Haplotype>& genotype);
-    double log_probability_diploid(const AlignedRead& read, const Genotype<Haplotype>& genotype);
-    double log_probability_triploid(const AlignedRead& read, const Genotype<Haplotype>& genotype);
-    double log_probability_polyploid(const AlignedRead& read, const Genotype<Haplotype>& genotype);
+    double log_probability_haploid(const AlignedRead& read, const Genotype<Haplotype>& genotype) const;
+    double log_probability_diploid(const AlignedRead& read, const Genotype<Haplotype>& genotype) const;
+    double log_probability_triploid(const AlignedRead& read, const Genotype<Haplotype>& genotype) const;
+    double log_probability_polyploid(const AlignedRead& read, const Genotype<Haplotype>& genotype) const;
 };
 
 // ln p(reads | genotype) = sum (read in reads} ln p(read | genotype)
 template <typename ForwardIterator>
 double ReadModel::log_probability(ForwardIterator first_read, ForwardIterator last_read,
-                                  const Genotype<Haplotype>& genotype)
+                                  const Genotype<Haplotype>& genotype) const
 {
     return std::accumulate(first_read, last_read, 0.0,
                            [this, &genotype] (auto curr, const auto& read) {
@@ -67,6 +69,13 @@ double ReadModel::log_probability(ForwardIterator first_read, ForwardIterator la
                            });
 }
 
+template <typename Container>
+auto log_probability(const Container& reads, const Genotype<Haplotype>& genotype,
+                     const ReadModel& read_model)
+{
+    return read_model.log_probability(std::cbegin(reads), std::cend(reads), genotype);
+}
+    
 } // namespace Octopus
 
 #endif /* defined(__Octopus__read_model__) */
