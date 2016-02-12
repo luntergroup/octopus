@@ -314,6 +314,7 @@
 		CADA442E1C6CCDCB00D432E8 /* cancer.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = cancer.cpp; sourceTree = "<group>"; };
 		CADA44301C6CCE0800D432E8 /* interesting_1000G_regions.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = interesting_1000G_regions.txt; sourceTree = "<group>"; };
 		CADA44311C6CCF2200D432E8 /* hla_regions.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = hla_regions.txt; sourceTree = "<group>"; };
+		CADA44321C6D41A800D432E8 /* matrix_map.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = matrix_map.hpp; sourceTree = "<group>"; };
 		CAE0A90A1C6384DC00F88871 /* genotype_probability_map.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = genotype_probability_map.h; sourceTree = "<group>"; };
 		CAE3E2911A9A031600C01B2C /* kmer_graph.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = kmer_graph.hpp; sourceTree = "<group>"; };
 		CAE3E2921A9A882000C01B2C /* mock_objects.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = mock_objects.hpp; sourceTree = "<group>"; };
@@ -904,6 +905,7 @@
 				CA487AF11C1F06D600488577 /* mappable_debug.hpp */,
 				CA487B261C4318C100488577 /* type_tricks.hpp */,
 				D4B69CC41C4FEF2700F3135B /* timing.hpp */,
+				CADA44321C6D41A800D432E8 /* matrix_map.hpp */,
 			);
 			name = utils;
 			sourceTree = "<group>";
