@@ -18,6 +18,8 @@
 #include <type_traits>
 #include <algorithm>
 
+#include <memory>
+
 template <
 typename Key1,
 typename Key2,
@@ -258,9 +260,9 @@ public:
         }
         
         // TODO: not working for all forwards
-        if (key2_indices_.count(key) != 0) {
-            return false;
-        }
+        //        if (key2_indices_.count(key) != 0) {
+        //            return false;
+        //        }
         
         for (auto& p : values_) {
             p.second.push_back(*first++);
@@ -373,7 +375,6 @@ public:
     }
     
 private:
-    
     Key2ContainerType key2s_;
     ValueMap values_;
     IndiceMap key2_indices_;
@@ -443,7 +444,7 @@ public:
         using value_type        = std::pair<const Key2&, const T&>;
         using difference_type   = typename std::iterator_traits<Key2Iterator>::difference_type;
         using reference         = value_type;
-        using pointer           = value_type*;
+        using pointer           = const value_type*;
         
         ZipIterator() = delete;
         
@@ -454,14 +455,19 @@ public:
         
         ZipIterator& operator++()
         {
-            key2_itr_++;
-            value_itr_++;
+            ++key2_itr_;
+            ++value_itr_;
             return *this;
         }
         
         value_type operator*() const
         {
             return std::make_pair(std::ref(*key2_itr_), std::ref(*value_itr_));
+        }
+        
+        auto operator->() const
+        {
+            return std::make_unique<value_type>(*key2_itr_, *value_itr_);
         }
         
         friend bool operator==(const ZipIterator& lhs, const ZipIterator& rhs)
@@ -475,31 +481,34 @@ public:
         }
         
         friend InnerMap;
+        
     private:
         Key2Iterator key2_itr_;
         ValueIterator value_itr_;
     };
     
-private:
-    ZipIterator begin(const Key2& key) const
+    ZipIterator begin(const Key1& key) const
     {
         return ZipIterator {std::begin(key2s_), std::begin(values_.at(key))};
     }
     
-    ZipIterator end(const Key2& key) const
+    ZipIterator end(const Key1& key) const
     {
         return ZipIterator {std::end(key2s_), std::end(values_.at(key))};
     }
     
-    ZipIterator cbegin(const Key2& key) const
+    ZipIterator cbegin(const Key1& key) const
     {
         return begin(key);
     }
     
-    ZipIterator cend(const Key2& key) const
+    ZipIterator cend(const Key1& key) const
     {
         return end(key);
     }
+    
+private:
+    using ValueMapIterator = typename ValueMap::const_iterator;
     
 public:
     class InnerMap
@@ -536,12 +545,11 @@ public:
         {
             return *std::next(begin_.value_itr_, key2_indices_.get().at(key));
         }
+        
     private:
         ZipIterator begin_, end_;
         std::reference_wrapper<const IndiceMap> key2_indices_;
     };
-    
-    using ValueMapIterator = typename ValueMap::const_iterator;
     
     class Iterator
     {
@@ -574,6 +582,14 @@ public:
             return std::make_pair(std::ref(map_itr_->first), InnerMap {zip1, zip2, key2_indices_});
         }
         
+        auto operator->() const
+        {
+            const auto zip1 = ZipIterator {key2_begin_itr_, std::begin(map_itr_->second)};
+            const auto zip2 = ZipIterator {std::next(key2_begin_itr_, key2_indices_.get().size()),
+                std::end(map_itr_->second)};
+            return std::make_unique<value_type>(map_itr_->first, InnerMap {zip1, zip2, key2_indices_});
+        }
+        
         friend bool operator==(const Iterator& lhs, const Iterator& rhs)
         {
             return lhs.map_itr_ == rhs.map_itr_;
@@ -583,6 +599,7 @@ public:
         {
             return !operator==(lhs, rhs);
         }
+        
     private:
         ValueMapIterator map_itr_;
         Key2Iterator key2_begin_itr_;

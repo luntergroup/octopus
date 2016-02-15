@@ -521,7 +521,7 @@ bool is_transversion(const Variant& variant) noexcept
     return is_snp(variant) && !is_transition(variant);
 }
 
-std::vector<Allele::SequenceType> get_alt_allele_sequences(const std::vector<Variant>& variants)
+std::vector<Allele::SequenceType> extract_alt_allele_sequences(const std::vector<Variant>& variants)
 {
     std::vector<Allele::SequenceType> result {};
     result.reserve(variants.size());

@@ -11,6 +11,7 @@
 
 #include <vector>
 #include <string>
+#include <memory>
 
 #include "variant_caller.hpp"
 
@@ -24,38 +25,49 @@ class VcfRecord;
 
 namespace Octopus
 {
-    class PopulationVariantCaller : public VariantCaller
+class PopulationVariantCaller : public VariantCaller
+{
+public:
+    PopulationVariantCaller() = delete;
+    
+    explicit PopulationVariantCaller(const ReferenceGenome& reference,
+                                     ReadPipe& read_pipe,
+                                     CandidateVariantGenerator&& candidate_generator,
+                                     RefCallType refcalls,
+                                     double min_variant_posterior,
+                                     double min_refcall_posterior,
+                                     unsigned ploidy);
+    
+    ~PopulationVariantCaller() = default;
+    
+    PopulationVariantCaller(const PopulationVariantCaller&)            = delete;
+    PopulationVariantCaller& operator=(const PopulationVariantCaller&) = delete;
+    PopulationVariantCaller(PopulationVariantCaller&&)                 = delete;
+    PopulationVariantCaller& operator=(PopulationVariantCaller&&)      = delete;
+    
+private:
+    struct Latents : public GenotypeModel::Population::Latents, public CallerLatents
     {
-    public:
-        PopulationVariantCaller() = delete;
-        
-        explicit PopulationVariantCaller(const ReferenceGenome& reference,
-                                         ReadPipe& read_pipe,
-                                         CandidateVariantGenerator&& candidate_generator,
-                                         RefCallType refcalls,
-                                         double min_variant_posterior,
-                                         double min_refcall_posterior,
-                                         unsigned ploidy);
-        
-        ~PopulationVariantCaller() = default;
-        
-        PopulationVariantCaller(const PopulationVariantCaller&)            = delete;
-        PopulationVariantCaller& operator=(const PopulationVariantCaller&) = delete;
-        PopulationVariantCaller(PopulationVariantCaller&&)                 = delete;
-        PopulationVariantCaller& operator=(PopulationVariantCaller&&)      = delete;
-        
-    private:
-        mutable GenotypeModel::Population genotype_model_;
-        
-        const unsigned ploidy_;
-        const double min_variant_posterior_ = 0.95;
-        const double min_refcall_posterior_ = 0.5;
-        
-        std::vector<VcfRecord> call_variants(const GenomicRegion& region,
-                                             const std::vector<Variant>& candidates,
-                                             const ReadMap& reads) const override;
+        Latents(GenotypeModel::Population::Latents&&);
+        ProbabilityMatrix<Genotype<Haplotype>> get_genotype_posteriors() const override;
     };
     
+    mutable GenotypeModel::Population genotype_model_;
+    
+    const unsigned ploidy_;
+    const double min_variant_posterior_ = 0.95;
+    const double min_refcall_posterior_ = 0.5;
+    
+    std::unique_ptr<CallerLatents>
+    infer_latents(const std::vector<Haplotype>& haplotypes, const ReadMap& reads) const override;
+    
+    std::vector<VcfRecord::Builder>
+    call_variants(const std::vector<Variant>& candidates,
+                  const std::vector<Allele>& callable_alleles,
+                  CallerLatents* latents,
+                  const HaplotypePhaser::PhaseSet& phase_set,
+                  const ReadMap& reads) const override;
+};
 } // namespace Octopus
 
 #endif /* defined(__Octopus__population_caller__) */

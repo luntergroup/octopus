@@ -24,7 +24,7 @@ namespace Octopus
                                                  SampleIdType mother, SampleIdType father,
                                                  double min_variant_posterior)
     :
-    VariantCaller {reference, read_pipe, std::move(candidate_generator), RefCallType::None},
+    //VariantCaller {reference, read_pipe, std::move(candidate_generator), RefCallType::None},
     ploidy_ {ploidy},
     mother_ {std::move(mother)},
     father_ {std::move(father)},
@@ -33,18 +33,9 @@ namespace Octopus
     
     // private methods
     
-    namespace {
-        using GM = GenotypeModel::Pedigree;
-        
-    } // namespace
-    
-    std::vector<VcfRecord>
-    PedigreeVariantCaller::call_variants(const GenomicRegion& region,
-                                     const std::vector<Variant>& candidates,
-                                     const ReadMap& reads) const
+    namespace
     {
-        std::vector<VcfRecord> result {};
-        return result;
-    }
+        using GM = GenotypeModel::Pedigree;
+    } // namespace
 
 } // namespace Octopus

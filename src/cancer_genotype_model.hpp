@@ -18,6 +18,7 @@
 #include "cancer_genotype.hpp"
 #include "reference_genome.hpp"
 #include "haplotype_prior_model.hpp"
+#include "map_utils.hpp"
 
 class AlignedRead;
 class Haplotype;
@@ -29,7 +30,7 @@ namespace Octopus
     class Cancer
     {
     public:
-        using GenotypeProbabilities        = std::unordered_map<CancerGenotype<Haplotype>, double>;
+        using GenotypeProbabilityMap       = std::unordered_map<CancerGenotype<Haplotype>, double>;
         using SampleGenotypeMixturesPriors = std::array<double, 3>;
         using SampleGenotypeMixtures       = std::array<double, 3>;
         using GenotypeMixturesPriors       = std::unordered_map<SampleIdType, SampleGenotypeMixturesPriors>;
@@ -45,7 +46,7 @@ namespace Octopus
             genotype_mixtures {std::forward<W>(genotype_mixtures)}
             {}
             
-            GenotypeProbabilities genotype_posteriors;
+            GenotypeProbabilityMap genotype_posteriors;
             GenotypeMixtures genotype_mixtures;
         };
         

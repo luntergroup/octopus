@@ -11,7 +11,8 @@
 #include <iterator>
 #include <algorithm>
 
-#include <boost/range/combine.hpp>
+#include <boost/iterator/zip_iterator.hpp>
+#include <boost/tuple/tuple.hpp>
 
 #include "reference_genome.hpp"
 #include "aligned_read.hpp"
@@ -63,7 +64,7 @@ void AlignmentCandidateVariantGenerator::add_read(const AlignedRead& read)
     GenomicRegion region {};
     
     for (const auto& cigar_operation : read.get_cigar_string()) {
-        auto op_size = cigar_operation.get_size();
+        const auto op_size = cigar_operation.get_size();
         
         switch (cigar_operation.get_flag()) {
             case CigarOperation::ALIGNMENT_MATCH:
@@ -197,30 +198,33 @@ void AlignmentCandidateVariantGenerator::clear()
 // private methods
 
 void AlignmentCandidateVariantGenerator::
-add_snvs_in_match_range(const GenomicRegion& region, SequenceIterator first_base,
-                        SequenceIterator last_base, QualitiesIterator first_quality)
+add_snvs_in_match_range(const GenomicRegion& region, const SequenceIterator first_base,
+                        const SequenceIterator last_base, const QualitiesIterator first_quality)
 {
-    using boost::make_zip_iterator;
+    using boost::make_zip_iterator; using std::for_each; using std::cbegin; using std::cend;
     
-    using Tuple = boost::tuple<SequenceType::value_type, SequenceType::value_type, QualityType>;
+    using Tuple = boost::tuple<char, char, QualityType>;
     
-    auto ref_segment = reference_.get().get_sequence(region);
-    auto ref_index   = region_begin(region);
+    const SequenceType ref_segment {reference_.get().get_sequence(region)};
     
-    std::for_each(make_zip_iterator(boost::make_tuple(std::cbegin(ref_segment), first_base, first_quality)),
-                  make_zip_iterator(boost::make_tuple(std::cend(ref_segment), last_base, first_quality
-                                                   + std::distance(first_base, last_base))),
-        [this, &region, &ref_index] (const Tuple& t) {
-            char ref_base  {t.get<0>()};
-            char read_base {t.get<1>()};
-            
-            if (ref_base != read_base && ref_base != 'N' && read_base != 'N' && t.get<2>() >= min_base_quality_) {
-                add_candidate(GenomicRegion {region.get_contig_name(), ref_index, ref_index + 1},
-                              ref_base, read_base);
-            }
-            
-            ++ref_index;
-    });
+    const auto& contig = region.get_contig_name();
+    
+    const auto last_quality = std::next(first_quality, std::distance(first_base, last_base));
+    
+    auto ref_index = region_begin(region);
+    
+    for_each(make_zip_iterator(boost::make_tuple(cbegin(ref_segment), first_base, first_quality)),
+             make_zip_iterator(boost::make_tuple(cend(ref_segment), last_base, last_quality)),
+             [this, &contig, &ref_index] (const Tuple& t) {
+                 const char ref_base  {t.get<0>()}, read_base {t.get<1>()};
+                 
+                 if (ref_base != read_base && ref_base != 'N' && read_base != 'N'
+                     && t.get<2>() >= min_base_quality_) {
+                     add_candidate(GenomicRegion {contig, ref_index, ref_index + 1}, ref_base, read_base);
+                 }
+                 
+                 ++ref_index;
+             });
 }
 
 void AlignmentCandidateVariantGenerator::sort_candiates_if_needed()

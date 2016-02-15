@@ -486,7 +486,7 @@ namespace Octopus
                                        haplotype_prior_counts, haplotype_likelihoods) < em_epsilon_) break;
         }
         
-        Cancer::GenotypeProbabilities genotype_posteriors {};
+        Cancer::GenotypeProbabilityMap genotype_posteriors {};
         genotype_posteriors.reserve(genotypes.size());
         
         auto itr = std::cbegin(genotype_log_posteriors);

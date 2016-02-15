@@ -48,7 +48,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--reads", NA12878_low_coverage_cram.c_str(),
         
         //"--model", "cancer", // default "population"
-        "--normal-sample", "HCC1143.NORMAL.30x.compare", // for cancer model
+        "--normal-sample", "NA12878", // for cancer model
         
         //"--organism-ploidy", "2",
         "--contig-ploidies", "MT=1", "Y=1",// "MT=2",
@@ -62,9 +62,9 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"-L", "6:31,235,688-31,235,883", // TEST phaser
         
         //"-L", "6:31,235,212-31,235,771",
-        //"-L", "6:31,235,196-31,235,400",
+        "-L", "6:31,235,196-31,235,400",
         
-        "-L", "5:2,726,554-2,726,594",
+        //"-L", "5:2,726,554-2,726,594", // snp just before deletion
         
         // for population
         

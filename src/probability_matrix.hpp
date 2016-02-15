@@ -11,6 +11,7 @@
 
 #include <iterator>
 #include <utility>
+#include <vector>
 
 #include "common.hpp"
 #include "matrix_map.hpp"
@@ -23,16 +24,38 @@ namespace Octopus
     template <typename T>
     using SampleProbabilities = typename ProbabilityMatrix<T>::ZipSlice;
     
-    template <typename Container, typename T>
-    void assign_genotypes(const Container& genotypes,
-                          ProbabilityMatrix<T>& matrix)
+    template <typename T>
+    auto num_samples(const ProbabilityMatrix<T>& matrix)
     {
-        matrix.assign_keys(std::cbegin(genotypes), std::cend(genotypes));
+        return matrix.size1();
+    }
+    
+    template <typename T>
+    auto extract_keys(const ProbabilityMatrix<T>& matrix)
+    {
+        std::vector<T> result {};
+        
+        if (matrix.empty1()) return result;
+        
+        result.reserve(matrix.size2());
+        
+        const auto& test_sample = matrix.begin()->first;
+        
+        for (const auto& p : matrix[test_sample]) {
+            result.emplace_back(p.first);
+        }
+        
+        return result;
+    }
+    
+    template <typename Container, typename T>
+    void assign_keys(const Container& keys, ProbabilityMatrix<T>& matrix)
+    {
+        matrix.assign_keys(std::cbegin(keys), std::cend(keys));
     }
     
     template <typename S, typename Container, typename T>
-    void insert_sample(S&& sample, const Container& probabilities,
-                       ProbabilityMatrix<T>& matrix)
+    void insert_sample(S&& sample, const Container& probabilities, ProbabilityMatrix<T>& matrix)
     {
         matrix.insert_at(std::forward<S>(sample), std::cbegin(probabilities), std::cend(probabilities));
     }

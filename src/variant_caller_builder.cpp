@@ -241,16 +241,16 @@ namespace Octopus
                                                              min_refcall_posterior_,
                                                              normal_sample_.get(),
                                                              call_somatics_only_);
-            }},
-            {"trio", [this] () {
-                return std::make_unique<PedigreeVariantCaller>(reference_,
-                                                               read_pipe_,
-                                                               candidate_generator_builder_.get().build(),
-                                                               ploidy_,
-                                                               maternal_sample_.get(),
-                                                               paternal_sample_.get(),
-                                                               min_variant_posterior_);
-            }}
+            }}//,
+//            {"trio", [this] () {
+//                return std::make_unique<PedigreeVariantCaller>(reference_,
+//                                                               read_pipe_,
+//                                                               candidate_generator_builder_.get().build(),
+//                                                               ploidy_,
+//                                                               maternal_sample_.get(),
+//                                                               paternal_sample_.get(),
+//                                                               min_variant_posterior_);
+//            }}
         };
     }
 } // namespace Octopus

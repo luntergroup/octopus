@@ -15,6 +15,7 @@
 #include "variant_caller.hpp"
 #include "genotype_model.hpp"
 #include "trio_genotype_model.hpp"
+#include "population_genotype_model.hpp"
 
 class GenomicRegion;
 class ReadPipe;
@@ -23,7 +24,7 @@ class VcfRecord;
 
 namespace Octopus
 {
-    class TrioVariantCaller : public VariantCaller
+    class TrioVariantCaller// : public VariantCaller
     {
     public:
         TrioVariantCaller() = delete;
@@ -46,10 +47,6 @@ namespace Octopus
         const unsigned ploidy_;
         const SampleIdType mother_, father_;
         const double min_variant_posterior_ = 0.95;
-        
-        std::vector<VcfRecord> call_variants(const GenomicRegion& region,
-                                             const std::vector<Variant>& candidates,
-                                             const ReadMap& reads) const override;
     };
     
 } // namespace Octopus

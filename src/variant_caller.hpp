@@ -13,6 +13,7 @@
 #include <string>
 #include <iterator>
 #include <functional>
+#include <memory>
 
 #include "common.hpp"
 #include "reference_genome.hpp"
@@ -20,85 +21,97 @@
 #include "candidate_variant_generator.hpp"
 #include "haplotype_prior_model.hpp"
 #include "haplotype_phaser.hpp"
+#include "probability_matrix.hpp"
+#include "vcf_record.hpp"
 
 class GenomicRegion;
 class Variant;
-class VcfRecord;
+class Haplotype;
 
 namespace Octopus
 {
-    class VariantCaller
+class VariantCaller
+{
+public:
+    enum class RefCallType { Positional, Blocked, None };
+    
+    using ReadMap = Octopus::ReadMap;
+    
+    VariantCaller() = delete;
+    
+    explicit VariantCaller(const ReferenceGenome& reference,
+                           ReadPipe& read_pipe,
+                           CandidateVariantGenerator&& candidate_generator,
+                           RefCallType refcall_type = RefCallType::None);
+    
+    explicit VariantCaller(const ReferenceGenome& reference,
+                           ReadPipe& read_pipe,
+                           CandidateVariantGenerator&& candidate_generator,
+                           HaplotypePriorModel haplotype_prior_model,
+                           RefCallType refcall_type = RefCallType::None);
+    
+    virtual ~VariantCaller() = default;
+    
+    VariantCaller(const VariantCaller&)            = delete;
+    VariantCaller& operator=(const VariantCaller&) = delete;
+    VariantCaller(VariantCaller&&)                 = delete;
+    VariantCaller& operator=(VariantCaller&&)      = delete;
+    
+    size_t num_buffered_reads() const noexcept;
+    
+    std::vector<VcfRecord> call_variants(const GenomicRegion& region) const;
+    
+protected:
+    std::reference_wrapper<const ReferenceGenome> reference_;
+    std::reference_wrapper<ReadPipe> read_pipe_;
+    
+    HaplotypePriorModel haplotype_prior_model_;
+    
+    const RefCallType refcall_type_ = RefCallType::Positional;
+    
+    bool refcalls_requested() const noexcept;
+    
+    struct CallerLatents
     {
-    public:
-        enum class RefCallType { Positional, Blocked, None };
-        
-        using ReadMap = Octopus::ReadMap;
-        
-        VariantCaller() = delete;
-        
-        explicit VariantCaller(const ReferenceGenome& reference,
-                               ReadPipe& read_pipe,
-                               CandidateVariantGenerator&& candidate_generator,
-                               RefCallType refcall_type = RefCallType::None);
-        
-        explicit VariantCaller(const ReferenceGenome& reference,
-                               ReadPipe& read_pipe,
-                               CandidateVariantGenerator&& candidate_generator,
-                               HaplotypePriorModel haplotype_prior_model,
-                               RefCallType refcall_type = RefCallType::None);
-        
-        virtual ~VariantCaller() = default;
-        
-        VariantCaller(const VariantCaller&)            = delete;
-        VariantCaller& operator=(const VariantCaller&) = delete;
-        VariantCaller(VariantCaller&&)                 = delete;
-        VariantCaller& operator=(VariantCaller&&)      = delete;
-        
-        size_t num_buffered_reads() const noexcept;
-        std::vector<VcfRecord> call_variants(const GenomicRegion& region) const;
-        
-    protected:
-        std::reference_wrapper<const ReferenceGenome> reference_;
-        std::reference_wrapper<ReadPipe> read_pipe_;
-        
-        HaplotypePriorModel haplotype_prior_model_;
-        
-        const RefCallType refcall_type_ = RefCallType::Positional;
-        
-        bool refcalls_requested() const noexcept;
-        
-    private:
-        mutable CandidateVariantGenerator candidate_generator_;
-        
-        bool done_calling(const GenomicRegion& region) const noexcept;
-        
-        virtual std::vector<VcfRecord> call_variants(const GenomicRegion& region,
-                                                     const std::vector<Variant>& candidates,
-                                                     const ReadMap& reads) const = 0;
+        virtual ProbabilityMatrix<Genotype<Haplotype>> get_genotype_posteriors() const = 0;
+        virtual ~CallerLatents() = default;
     };
     
-    std::vector<Allele>
-    generate_callable_alleles(const GenomicRegion& region, const std::vector<Variant>& variants,
-                              VariantCaller::RefCallType refcall_type, const ReferenceGenome& reference);
+private:
+    mutable CandidateVariantGenerator candidate_generator_;
     
-    std::vector<Allele>
-    generate_candidate_reference_alleles(const std::vector<Allele>& callable_alleles,
-                                         const std::vector<GenomicRegion>& called_regions,
-                                         const std::vector<Variant>& candidates,
-                                         VariantCaller::RefCallType refcall_type);
+    bool done_calling(const GenomicRegion& region) const noexcept;
     
-    template <typename Map>
-    void remove_low_posteriors(Map& map, const double min_posterior)
-    {
-        for (auto it = std::begin(map); it != std::end(map);) {
-            if (it->second < min_posterior) {
-                it = map.erase(it);
-            } else {
-                ++it;
-            }
+    virtual std::unique_ptr<CallerLatents>
+    infer_latents(const std::vector<Haplotype>& haplotypes, const ReadMap& reads) const = 0;
+    
+    virtual std::vector<VcfRecord::Builder>
+    call_variants(const std::vector<Variant>& candidates, const std::vector<Allele>& callable_alleles,
+                  CallerLatents* latents, const HaplotypePhaser::PhaseSet& phase_set,
+                  const ReadMap& reads) const = 0;
+};
+
+std::vector<Allele>
+generate_callable_alleles(const GenomicRegion& region, const std::vector<Variant>& variants,
+                          VariantCaller::RefCallType refcall_type, const ReferenceGenome& reference);
+
+std::vector<Allele>
+generate_candidate_reference_alleles(const std::vector<Allele>& callable_alleles,
+                                     const std::vector<GenomicRegion>& called_regions,
+                                     const std::vector<Variant>& candidates,
+                                     VariantCaller::RefCallType refcall_type);
+
+template <typename Map>
+void remove_low_posteriors(Map& map, const double min_posterior)
+{
+    for (auto it = std::begin(map); it != std::end(map);) {
+        if (it->second < min_posterior) {
+            it = map.erase(it);
+        } else {
+            ++it;
         }
     }
-    
+}
 } // namespace Octopus
 
 #endif

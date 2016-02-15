@@ -156,7 +156,7 @@ bool is_transition(const Variant& variant) noexcept;
 
 bool is_transversion(const Variant& variant) noexcept;
 
-std::vector<Allele::SequenceType> get_alt_allele_sequences(const std::vector<Variant>& variants);
+std::vector<Allele::SequenceType> extract_alt_allele_sequences(const std::vector<Variant>& variants);
 
 namespace std {
     template <> struct hash<Variant>

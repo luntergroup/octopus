@@ -91,37 +91,35 @@ HaplotypePhaser::phase(const std::vector<Haplotype>& haplotypes,
     
     next_region_ = walker_.walk(current_region_, *reads_, buffered_candidates_);
     
-    std::cout << "next region is " << next_region_ << std::endl;
+    //std::cout << "next region is " << next_region_ << std::endl;
     
     const auto phased_region = left_overhang_region(current_region_, next_region_);
     
     if (is_empty_region(phased_region)) return boost::none;
     
-    std::cout << "phased region is " << phased_region << std::endl;
+    //std::cout << "phased region is " << phased_region << std::endl;
     
     auto variants = copy_contained(buffered_candidates_, phased_region);
     
     buffered_candidates_.erase_contained(phased_region);
     
-    std::cout << "there are " << buffered_candidates_.size() << " candidates remaining" << std::endl;
-    
-    std::cout << "there are " << tree_.num_haplotypes() << " haplotypes in the tree" << std::endl;
-    
-    std::cout << "clearing " << phased_region << " from tree" << std::endl;
+    //std::cout << "there are " << buffered_candidates_.size() << " candidates remaining" << std::endl;
+    //std::cout << "there are " << tree_.num_haplotypes() << " haplotypes in the tree" << std::endl;
+    //std::cout << "clearing " << phased_region << " from tree" << std::endl;
     
     tree_.remove(phased_region);
     
-    if (tree_.empty()) {
-        std::cout << "tree is empty" << std::endl;
-    } else {
-        std::cout << "there are " << tree_.num_haplotypes() << " haplotypes in the tree" << std::endl;
-    }
+//    if (tree_.empty()) {
+//        std::cout << "tree is empty" << std::endl;
+//    } else {
+//        std::cout << "there are " << tree_.num_haplotypes() << " haplotypes in the tree" << std::endl;
+//    }
     
-    std::cout << "finding phase sets" << std::endl;
+    //std::cout << "finding phase sets" << std::endl;
     
     auto result = find_optimal_phase_set(phased_region, std::move(variants), genotype_posteriors);
     
-    std::cout << "done finding phase sets" << std::endl;
+    //std::cout << "done finding phase sets" << std::endl;
     
     return result;
 }
@@ -177,7 +175,7 @@ void HaplotypePhaser::remove_low_posterior_haplotypes(const std::vector<Haplotyp
                                                std::end(low_posterior_haplotypes)),
                                    std::end(low_posterior_haplotypes));
     
-    std::cout << "removing " << low_posterior_haplotypes.size() << " haplotypes" << std::endl;
+    //std::cout << "removing " << low_posterior_haplotypes.size() << " haplotypes" << std::endl;
     
     for (const auto& haplotype : low_posterior_haplotypes) {
         tree_.prune_all(haplotype);
@@ -186,10 +184,10 @@ void HaplotypePhaser::remove_low_posterior_haplotypes(const std::vector<Haplotyp
 
 // non-member methods
 
-namespace {
-
-using GenotypeReference   = std::reference_wrapper<const Genotype<Haplotype>>;
-using PhaseComplementSet  = std::vector<GenotypeReference>;
+namespace
+{
+using GenotypeReference  = std::reference_wrapper<const Genotype<Haplotype>>;
+using PhaseComplementSet = std::vector<GenotypeReference>;
 
 struct PhaseComplementEqual
 {
@@ -235,7 +233,8 @@ partition_phase_complements(const std::vector<Genotype<Haplotype>>& genotypes,
     
     const auto variant_regions = extract_regions(variants);
     
-    PhaseComplementSetMap result_map {genotypes.size(), std::hash<GenotypeReference> {}, PhaseComplementEqual {variant_regions}};
+    PhaseComplementSetMap result_map {genotypes.size(), std::hash<GenotypeReference> {},
+                                        PhaseComplementEqual {variant_regions}};
     
     result_map[genotypes.front()].emplace_back(genotypes.front());
     
@@ -311,7 +310,7 @@ marginalise(const HaplotypePhaser::SampleGenotypePosteriors& genotype_posteriors
         result[splice<Haplotype>(p.first, region)] += p.second;
     }
     
-    result.reserve(result.size());
+    result.rehash(result.size());
     
     return result;
 }
@@ -338,7 +337,7 @@ find_optimal_phase_regions(const GenomicRegion& region,
     auto phase_begin_itr = std::cbegin(variants);
     auto phase_end_itr   = std::next(phase_begin_itr);
     
-    double previous_phase_score {};
+    double previous_phase_score {0};
     
     while (phase_begin_itr != std::cend(variants)) {
         MappableSet<Variant> curr_variants {phase_begin_itr, phase_end_itr};
@@ -353,8 +352,8 @@ find_optimal_phase_regions(const GenomicRegion& region,
         phase_score = calculate_phase_score(phase_set, curr_genotype_posteriors);
         
         if (phase_score + 0.1 < previous_phase_score) {
-            auto phase_region = encompassing_region(phase_begin_itr, std::prev(phase_end_itr));
-            result.emplace_back(phase_region, previous_phase_score);
+            result.emplace_back(encompassing_region(phase_begin_itr, std::prev(phase_end_itr)),
+                                previous_phase_score);
             phase_begin_itr = std::prev(phase_end_itr);
             previous_phase_score = 0.0;
         } else {
@@ -370,7 +369,6 @@ find_optimal_phase_regions(const GenomicRegion& region,
     
     return result;
 }
-
 } // namespace
 
 HaplotypePhaser::PhaseSet
@@ -390,4 +388,28 @@ HaplotypePhaser::find_optimal_phase_set(const GenomicRegion& region,
     
     return result;
 }
+
+ProbabilityMatrix<GenomicRegion>
+calculate_phase_scores(const ProbabilityMatrix<Genotype<Haplotype>>& genotype_posteriors)
+{
+    ProbabilityMatrix<GenomicRegion> result {};
+    return result;
+}
+    
+HaplotypePhaser::PhaseSet
+phase(const GenomicRegion& region,
+      const MappableSet<Variant>& variants,
+      const ProbabilityMatrix<Genotype<Haplotype>>& genotype_posteriors)
+{
+    HaplotypePhaser::PhaseSet result {region};
+    
+    if (variants.empty()) return result;
+    
+    result.phase_regions.reserve(genotype_posteriors.size1());
+    
+    
+    
+    return result;
+}
+    
 } // namespace Octopus

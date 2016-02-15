@@ -17,9 +17,9 @@
 #include "vcf_record.hpp"
 
 #include "mappable_algorithms.hpp"
+#include "haplotype.hpp"
 
 #include <iostream> // TEST
-#include "cancer_genotype.hpp"
 
 namespace Octopus
 {
@@ -55,6 +55,20 @@ size_t VariantCaller::num_buffered_reads() const noexcept
     return 0;
 }
 
+VcfRecord annotate_record(VcfRecord::Builder& record, const ReadMap& reads)
+{
+    return record.build_once();
+}
+
+void append_annotated_calls(std::vector<VcfRecord>& curr_calls,
+                            std::vector<VcfRecord::Builder>& new_calls,
+                            const ReadMap& reads)
+{
+    curr_calls.reserve(curr_calls.size() + new_calls.size());
+    std::transform(std::begin(new_calls), std::end(new_calls), std::back_inserter(curr_calls),
+                   [&] (auto& record) { return annotate_record(record, reads); });
+}
+    
 std::vector<VcfRecord> VariantCaller::call_variants(const GenomicRegion& region) const
 {
     ReadMap reads {};
@@ -84,7 +98,63 @@ std::vector<VcfRecord> VariantCaller::call_variants(const GenomicRegion& region)
         reads = read_pipe_.get().fetch_reads(region);
     }
     
-    return call_variants(region, candidates, reads);
+    std::vector<VcfRecord> result {};
+    
+    if (is_empty_region(region) || (candidates.empty() && !refcalls_requested())) {
+        return result;
+    }
+    
+    HaplotypePhaser phaser {region.get_contig_name(), reference_, candidates, reads, 256, 5};
+    
+    while (!phaser.done()) {
+        auto haplotypes = phaser.get_haplotypes();
+        
+        make_unique(haplotypes, haplotype_prior_model_);
+        
+        phaser.set_haplotypes(haplotypes);
+        
+        std::cout << "there are " << haplotypes.size() << " unique haplotypes" << std::endl;
+        
+        const auto haplotype_region = mapped_region(haplotypes.front());
+        
+        std::cout << "haplotype region is " << haplotype_region << std::endl;
+        
+        auto haplotype_region_reads = copy_overlapped(reads, haplotype_region);
+        
+        std::cout << "there are " << count_reads(haplotype_region_reads)
+            << " reads in haplotype region" << std::endl;
+        std::cout << "computing latents" << std::endl;
+        
+        auto caller_latents = infer_latents(haplotypes, haplotype_region_reads);
+        
+        // TEST
+        HaplotypePhaser::GenotypePosteriors tmp {};
+        for (const auto p : caller_latents->get_genotype_posteriors()) {
+            auto& t = tmp[p.first];
+            for (const auto& s : p.second) {
+                t.emplace(s.first, s.second);
+            }
+        }
+        const auto phase_set = phaser.phase(haplotypes, tmp);
+        
+        //const auto phase_set = phaser.phase(haplotypes, latents->get_genotype_posteriors());
+        
+        if (phase_set) {
+            std::cout << "phased region is " << phase_set->region << std::endl;
+            
+            auto overlapped_candidates = copy_overlapped(candidates, phase_set->region);
+            
+            auto alleles = generate_callable_alleles(phase_set->region, overlapped_candidates,
+                                                     refcall_type_, reference_);
+            
+            auto curr_results = call_variants(overlapped_candidates, alleles, caller_latents.get(),
+                                              *phase_set, haplotype_region_reads);
+            
+            append_annotated_calls(result, curr_results, haplotype_region_reads);
+        }
+    }
+    
+    return result;
 }
 
 // protected methods
@@ -170,11 +240,10 @@ generate_callable_alleles(const GenomicRegion& region,
 void append_allele(std::vector<Allele>& alleles, const Allele& allele,
                    const VariantCaller::RefCallType refcall_type)
 {
-    if (refcall_type == VariantCaller::RefCallType::Blocked && !alleles.empty() && are_adjacent(alleles.back(), allele)) {
-        alleles.back() = Allele {
-            encompassing_region(alleles.back(), allele),
-            alleles.back().get_sequence() + allele.get_sequence()
-        };
+    if (refcall_type == VariantCaller::RefCallType::Blocked && !alleles.empty()
+        && are_adjacent(alleles.back(), allele)) {
+        alleles.back() = Allele {encompassing_region(alleles.back(), allele),
+                                    alleles.back().get_sequence() + allele.get_sequence()};
     } else {
         alleles.push_back(allele);
     }

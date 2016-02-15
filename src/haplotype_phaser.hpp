@@ -37,6 +37,9 @@ public:
     using SampleGenotypePosteriors = std::unordered_map<Genotype<Haplotype>, double>;
     using GenotypePosteriors       = std::unordered_map<SampleIdType, SampleGenotypePosteriors>;
     
+    //using GenotypePosteriorMap       = ProbabilityMatrix<Genotype<Haplotype>>;
+    //using SampleGenotypePosteriorMap = GenotypePosteriorMap::InnerMap;
+    
     struct PhaseSet
     {
         struct PhaseRegion

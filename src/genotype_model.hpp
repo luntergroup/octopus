@@ -27,6 +27,7 @@
 #include "maths.hpp"
 #include "reference_genome.hpp"
 #include "haplotype_prior_model.hpp"
+#include "probability_matrix.hpp"
 
 namespace Octopus
 {
