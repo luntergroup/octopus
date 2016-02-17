@@ -546,6 +546,17 @@ namespace detail
     }
     
     template <typename MappableType>
+    auto generate_all_genotypes(const std::vector<std::reference_wrapper<const MappableType>>& elements,
+                                const unsigned ploidy,
+                                std::true_type)
+    {
+        std::vector<std::shared_ptr<MappableType>> temp_pointers(elements.size());
+        std::transform(std::cbegin(elements), std::cend(elements), std::begin(temp_pointers),
+                       [] (const auto& element) { return std::make_shared<MappableType>(element.get()); });
+        return do_generate_all_genotypes(temp_pointers, ploidy);
+    }
+    
+    template <typename MappableType>
     auto generate_all_genotypes(const std::vector<MappableType>& elements, const unsigned ploidy,
                                 std::false_type)
     {
@@ -556,6 +567,14 @@ namespace detail
 template <typename MappableType>
 std::vector<Genotype<MappableType>>
 generate_all_genotypes(const std::vector<MappableType>& elements, const unsigned ploidy)
+{
+    return detail::generate_all_genotypes(elements, ploidy, detail::ShouldShareMemory<MappableType> {});
+}
+
+template <typename MappableType>
+std::vector<Genotype<MappableType>>
+generate_all_genotypes(const std::vector<std::reference_wrapper<const MappableType>>& elements,
+                       const unsigned ploidy)
 {
     return detail::generate_all_genotypes(elements, ploidy, detail::ShouldShareMemory<MappableType> {});
 }

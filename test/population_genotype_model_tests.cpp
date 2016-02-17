@@ -1,9 +1,11 @@
 //
-//  variant_caller_tests.cpp
+//  population_genotype_model_tests.cpp
 //  Octopus
 //
 //  Created by Daniel Cooke on 17/02/2016.
 //  Copyright © 2016 Oxford University. All rights reserved.
 //
 
-#include <stdio.h>
+#define BOOST_TEST_DYN_LINK
+
+#include <boost/test/unit_test.hpp>

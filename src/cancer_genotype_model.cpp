@@ -11,13 +11,15 @@
 #include <array>
 #include <numeric>
 #include <algorithm>
+#include <functional>
 #include <iterator>
 #include <cmath>
 
 #include "common.hpp"
+#include "hardy_weinberg_model.hpp"
+#include "dirichlet_model.hpp"
 #include "maths.hpp"
 #include "read_utils.hpp"
-#include "haplotype_likelihood_cache.hpp"
 
 #include "threaded_transform.hpp" // TEST
 
@@ -39,7 +41,7 @@ namespace Octopus
     // non member methods
         
     namespace {
-    using HaplotypeFrequencyMap            = std::unordered_map<Haplotype, double>;
+    using HaplotypeFrequencyMap            = std::unordered_map<std::reference_wrapper<const Haplotype>, double>;
     using SampleGenotypeMixtureCounts      = std::array<double, 3>;
     using SampleGenotypeMixtures           = std::array<double, 3>;
     using GenotypeMixtureCountMap          = std::unordered_map<SampleIdType, SampleGenotypeMixtureCounts>;
@@ -52,7 +54,6 @@ namespace Octopus
     namespace debug {
         std::ostream& operator<<(std::ostream& os, const std::array<double, 3>& arr);
         std::ostream& operator<<(std::ostream& os, const std::unordered_map<Octopus::SampleIdType, std::array<double, 3>>& m);
-        static void print_read_haplotype_liklihoods(const std::vector<Haplotype>& haplotypes, const ReadMap& reads, size_t n = 3);
         void print_top_genotypes(const std::vector<CancerGenotype<Haplotype>>& genotypes,
                                  const GenotypeLogPosteriors& genotype_log_posteriors,
                                  const size_t n = 20);
@@ -424,15 +425,12 @@ namespace Octopus
     // private methods
     
     Cancer::Latents
-    Cancer::infer_latents(const std::vector<Haplotype>& haplotypes, const ReadMap& reads,
+    Cancer::infer_latents(const std::vector<Haplotype>& haplotypes,
+                          const ReadMap& reads, HaplotypeLikelihoodCache& haplotype_likelihoods,
                           const ReferenceGenome& reference)
     {
-        HaplotypeLikelihoodCache haplotype_likelihoods {reads, haplotypes};
-        
-        //debug::print_read_haplotype_liklihoods(haplotypes, reads, 20);
-        //exit(0);
-        
-        auto haplotype_prior_counts = compute_haplotype_prior_counts(haplotypes, reference, haplotype_prior_model_);
+        auto haplotype_prior_counts = compute_haplotype_prior_counts(haplotypes, reference,
+                                                                     haplotype_prior_model_);
         
         auto genotypes = generate_all_cancer_genotypes(haplotypes, 2); // diploid only for now
         
@@ -518,36 +516,6 @@ namespace Octopus
         {
             for (const auto& p : m) os << p.first << ": " << p.second << "\n";
             return os;
-        }
-        
-        void print_read_haplotype_liklihoods(const std::vector<Haplotype>& haplotypes, const ReadMap& reads, size_t n)
-        {
-            auto m = std::min(n, haplotypes.size());
-            
-            std::cout << "top " << m << " haplotype likelihoods for each read in each sample" << std::endl;
-            
-            for (const auto& sample_reads : reads) {
-                std::cout << sample_reads.first << ":" << std::endl;
-                
-                for (const auto& read : sample_reads.second) {
-                    std::cout << read.get_region() << " " << read.get_cigar_string() << ":" << std::endl;
-                    
-                    std::vector<std::pair<Haplotype, double>> top {};
-                    top.reserve(haplotypes.size());
-                    
-                    for (const auto& haplotype : haplotypes) {
-                        top.emplace_back(haplotype, SingleReadModel().log_probability(read, haplotype));
-                    }
-                    
-                    std::sort(std::begin(top), std::end(top), IsBigger<Haplotype, double>());
-                    
-                    for (unsigned i {}; i < m; ++i) {
-                        std::cout << "\t* ";
-                        print_variant_alleles(top[i].first);
-                        std::cout << " " << top[i].second << std::endl;
-                    }
-                }
-            }
         }
         
         void print_top_genotypes(const std::vector<CancerGenotype<Haplotype>>& genotypes,

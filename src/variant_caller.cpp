@@ -9,15 +9,17 @@
 #include "variant_caller.hpp"
 
 #include <algorithm>
+#include <utility>
+#include <tuple>
 
 #include "genomic_region.hpp"
 #include "mappable.hpp"
 #include "mappable_algorithms.hpp"
 #include "read_utils.hpp"
-#include "vcf_record.hpp"
-
 #include "mappable_algorithms.hpp"
 #include "haplotype.hpp"
+#include "haplotype_filter.hpp"
+#include "vcf_record.hpp"
 
 #include <iostream> // TEST
 
@@ -68,7 +70,7 @@ void append_annotated_calls(std::vector<VcfRecord>& curr_calls,
     std::transform(std::begin(new_calls), std::end(new_calls), std::back_inserter(curr_calls),
                    [&] (auto& record) { return annotate_record(record, reads); });
 }
-    
+
 std::vector<VcfRecord> VariantCaller::call_variants(const GenomicRegion& region) const
 {
     ReadMap reads {};
@@ -84,8 +86,10 @@ std::vector<VcfRecord> VariantCaller::call_variants(const GenomicRegion& region)
     
     std::cout << "found " << candidates.size() << " candidates" << std::endl;
     
+    std::vector<VcfRecord> result {};
+    
     if (candidates.empty() && !refcalls_requested()) {
-        return {};
+        return result;
     }
     
     if (!candidates.empty()) {
@@ -98,34 +102,39 @@ std::vector<VcfRecord> VariantCaller::call_variants(const GenomicRegion& region)
         reads = read_pipe_.get().fetch_reads(region);
     }
     
-    std::vector<VcfRecord> result {};
-    
     if (is_empty_region(region) || (candidates.empty() && !refcalls_requested())) {
         return result;
     }
     
     HaplotypePhaser phaser {region.get_contig_name(), reference_, candidates, reads, 256, 5};
     
+    std::vector<Haplotype> haplotypes;
+    GenomicRegion phasing_region;
+    
     while (!phaser.done()) {
-        auto haplotypes = phaser.get_haplotypes();
+        std::tie(haplotypes, phasing_region) = phaser.get_haplotypes();
         
-        make_unique(haplotypes, haplotype_prior_model_);
-        
-        phaser.set_haplotypes(haplotypes);
+        remove_low_prior_duplicates(haplotypes, haplotype_prior_model_);
         
         std::cout << "there are " << haplotypes.size() << " unique haplotypes" << std::endl;
         
-        const auto haplotype_region = mapped_region(haplotypes.front());
+        std::cout << "current region is " << phasing_region << std::endl;
         
-        std::cout << "haplotype region is " << haplotype_region << std::endl;
+        const auto phasing_region_region_reads = copy_overlapped(reads, phasing_region);
         
-        auto haplotype_region_reads = copy_overlapped(reads, haplotype_region);
-        
-        std::cout << "there are " << count_reads(haplotype_region_reads)
-            << " reads in haplotype region" << std::endl;
+        std::cout << "there are " << count_reads(phasing_region_region_reads)
+                    << " reads in current region" << std::endl;
         std::cout << "computing latents" << std::endl;
         
-        auto caller_latents = infer_latents(haplotypes, haplotype_region_reads);
+        HaplotypeLikelihoodCache haplotype_likelihoods {phasing_region_region_reads, haplotypes};
+        
+        filter_haplotypes(haplotypes, phasing_region_region_reads, 200, haplotype_likelihoods);
+        
+        phaser.set_haplotypes(haplotypes);
+        
+        auto caller_latents = infer_latents(haplotypes, phasing_region_region_reads, haplotype_likelihoods);
+        
+        haplotype_likelihoods.clear();
         
         // TEST
         HaplotypePhaser::GenotypePosteriors tmp {};
@@ -148,9 +157,9 @@ std::vector<VcfRecord> VariantCaller::call_variants(const GenomicRegion& region)
                                                      refcall_type_, reference_);
             
             auto curr_results = call_variants(overlapped_candidates, alleles, caller_latents.get(),
-                                              *phase_set, haplotype_region_reads);
+                                              *phase_set, phasing_region_region_reads);
             
-            append_annotated_calls(result, curr_results, haplotype_region_reads);
+            append_annotated_calls(result, curr_results, phasing_region_region_reads);
         }
     }
     

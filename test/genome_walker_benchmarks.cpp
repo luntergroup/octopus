@@ -10,31 +10,31 @@
 
 #include <boost/test/unit_test.hpp>
 
-#include <iostream>
-#include <string>
-#include <iterator>
-#include <vector>
-#include <algorithm>
-#include <set>
-#include <unordered_map>
-
-#include "test_common.hpp"
-#include "mock_objects.hpp"
-#include "benchmark_utils.hpp"
-#include "reference_genome.hpp"
-#include "mappable_algorithms.hpp"
-#include "test_common.hpp"
-#include "read_manager.hpp"
-#include "read_filter.hpp"
-#include "read_filters.hpp"
-#include "read_utils.hpp"
-#include "allele.hpp"
-#include "variant.hpp"
-#include "candidate_variant_generator.hpp"
-#include "alignment_candidate_variant_generator.hpp"
-#include "haplotype.hpp"
-#include "genotype.hpp"
-#include "genome_walker.hpp"
+//#include <iostream>
+//#include <string>
+//#include <iterator>
+//#include <vector>
+//#include <algorithm>
+//#include <set>
+//#include <unordered_map>
+//
+//#include "test_common.hpp"
+//#include "mock_objects.hpp"
+//#include "benchmark_utils.hpp"
+//#include "reference_genome.hpp"
+//#include "mappable_algorithms.hpp"
+//#include "test_common.hpp"
+//#include "read_manager.hpp"
+//#include "read_filter.hpp"
+//#include "read_filters.hpp"
+//#include "read_utils.hpp"
+//#include "allele.hpp"
+//#include "variant.hpp"
+//#include "candidate_variant_generator.hpp"
+//#include "alignment_candidate_variant_generator.hpp"
+//#include "haplotype.hpp"
+//#include "genotype.hpp"
+//#include "genome_walker.hpp"
 
 //BOOST_AUTO_TEST_CASE(advance_region is reasonably fast)
 //{

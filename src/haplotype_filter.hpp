@@ -11,14 +11,21 @@
 
 #include <vector>
 #include <cstddef>
+#include <functional>
 
 #include "common.hpp"
 #include "haplotype.hpp"
+#include "haplotype_likelihood_cache.hpp"
 
 namespace Octopus
 {
-    std::vector<Haplotype> filter_haplotypes(const std::vector<Haplotype>& haplotypes,
-                                             const ReadMap& reads, size_t n);
+    void filter_haplotypes(std::vector<Haplotype>& haplotypes, const ReadMap& reads, size_t n,
+                           const HaplotypeLikelihoodCache& haplotype_likelihoods);
+    
+    std::vector<Haplotype>
+    copy_filtered_haplotypes(const std::vector<Haplotype>& haplotypes,
+                             const ReadMap& reads, size_t n,
+                             const HaplotypeLikelihoodCache& haplotype_likelihoods);
 }
 
 #endif /* haplotype_filter_hpp */

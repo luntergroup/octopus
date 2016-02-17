@@ -14,8 +14,7 @@
 #include <unordered_map>
 #include <utility>
 
-#include "genotype_model.hpp"
-#include "mappable_map.hpp"
+#include "common.hpp"
 #include "genotype.hpp"
 #include "reference_genome.hpp"
 #include "haplotype_prior_model.hpp"
@@ -30,21 +29,9 @@ namespace Octopus
         class Trio
         {
         public:
-            using SampleGenotypeProbabilities = std::unordered_map<Genotype<Haplotype>, double>;
-            using GenotypeProbabilities       = std::unordered_map<SampleIdType, SampleGenotypeProbabilities>;
-            
             struct Latents
             {
-                Latents() = default;
-                template <typename G, typename F>
-                Latents(G&& genotype_posteriors, F&& haplotype_frequencies)
-                :
-                genotype_posteriors {std::forward<G>(genotype_posteriors)},
-                haplotype_frequencies {std::forward<F>(haplotype_frequencies)}
-                {}
-                
-                GenotypeProbabilities genotype_posteriors;
-                HaplotypeFrequencyMap haplotype_frequencies;
+                // TODO
             };
             
             Trio(unsigned ploidy, unsigned max_em_iterations = 100, double em_epsilon = 0.001);

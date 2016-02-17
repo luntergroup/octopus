@@ -23,62 +23,14 @@ namespace Octopus
     
     double SingleReadModel::log_probability(const AlignedRead& read, const Haplotype& haplotype)
     {
-        // TODO: make these members when pair_hmm is finalised
+        Model model {2, 3};
         
-        RandomModel<double> lhs_random {};
-        lhs_random.target_emission_probability = 0.25;
-        lhs_random.query_emission_probability  = 0.25;
+        std::vector<std::uint8_t> gap_open_penalities(sequence_size(haplotype), 20);
         
-        MatchModel<double> match {};
-        match.match_probability      = 0.25;
-        match.gap_open_probability   = 0.015; // TODO: should be part of an error model
-        match.gap_extend_probability = 0.020; // TODO: should be part of an error model
+        const auto offset_hint = begins_before(haplotype, read) ? begin_distance(read, haplotype) : 0;
         
-        RandomModel<double> rhs_random {};
-        rhs_random.target_emission_probability = 0.25;
-        rhs_random.query_emission_probability  = 0.25;
-        
-        // m.end_probability must satisfy:
-        // m.end_probability <= 1 - 2 * m.gap_open_probability
-        // m.end_probability <= 1 - m.gap_extend_probability
-        
-        auto max_match_end_prob = 1 - std::max(2 * match.gap_open_probability, match.gap_extend_probability);
-        
-        if (overlaps(read, haplotype)) {
-            const auto overlapped_part = overlapped_region(read, haplotype);
-            const auto covered_region  = encompassing_region(read, haplotype);
-            
-            if (begins_before(read, haplotype)) {
-                lhs_random.target_end_probability = 0.99;
-                lhs_random.query_end_probability  = 1.0 / (region_size(left_overhang_region(covered_region, overlapped_part)) + 1);
-            } else {
-                lhs_random.target_end_probability = 1.0 / (region_size(left_overhang_region(covered_region, overlapped_part)) + 1);
-                lhs_random.query_end_probability  = 0.99;
-            }
-            
-            match.end_probability = std::min(1.0 / (region_size(overlapped_part) + 1), max_match_end_prob);
-            
-            if (ends_before(read, haplotype)) {
-                rhs_random.target_end_probability = 1.0 / (region_size(right_overhang_region(covered_region, overlapped_part)) + 1);
-                rhs_random.query_end_probability  = 0.99;
-            } else {
-                rhs_random.target_end_probability = 0.99;
-                rhs_random.query_end_probability  = 1.0 / (region_size(right_overhang_region(covered_region, overlapped_part)) + 1);
-            }
-        } else {
-            lhs_random.target_end_probability = 1.0 / (region_size(haplotype) + 1);
-            lhs_random.query_end_probability  = 1.0 / (region_size(read) + 1);
-            
-            match.end_probability = max_match_end_prob;
-            
-            rhs_random.target_end_probability = 0.99;
-            rhs_random.query_end_probability  = 0.99;
-        }
-        
-        auto joint_log_probability = nuc_log_viterbi_local<double>(haplotype.get_sequence(), read.get_sequence(),
-                                                                   read.get_qualities(),
-                                                                   lhs_random, match, rhs_random);
-        
-        return joint_log_probability - haplotype.get_sequence().size() * std::log(lhs_random.target_emission_probability);
+        return compute_log_conditional_probability(haplotype.get_sequence(), read.get_sequence(),
+                                                   read.get_qualities(), gap_open_penalities,
+                                                   offset_hint, model);
     }
 } // namespace Octopus

@@ -483,7 +483,7 @@ Haplotype do_splice(const Haplotype& haplotype, const GenomicRegion& region, std
         } else {
             result.explicit_alleles_.insert(end(result.explicit_alleles_),
                                             cbegin(overlapped), prev(cend(overlapped)));
-            result.push_front(splice(overlapped.back(), overlapped_region(overlapped.back(), contig_region)));
+            result.push_back(splice(overlapped.back(), overlapped_region(overlapped.back(), contig_region)));
         }
     }
     

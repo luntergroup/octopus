@@ -13,7 +13,6 @@
 #include <string>
 
 #include "variant_caller.hpp"
-#include "genotype_model.hpp"
 #include "pedigree_genotype_model.hpp"
 #include "population_genotype_model.hpp"
 

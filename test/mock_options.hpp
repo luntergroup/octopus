@@ -59,14 +59,17 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         
         /* input regions */
         
-        //"-L", "6:31,235,688-31,235,883", // TEST phaser
+        // for population
         
-        //"-L", "6:31,235,212-31,235,771",
-        "-L", "6:31,235,196-31,235,400",
+        "-L", "6:31,235,688-31,235,883", // TEST phaser
         
         //"-L", "5:2,726,554-2,726,594", // snp just before deletion
         
-        // for population
+        //"-L", "5:92,593,056", // SNP next to another SNP
+        //"-L", "5:92,593,057", // SNP next to another SNP
+        //"-L", "5:64,525,420-64,525,459", // two close SNPS
+        
+        //"--regions", "5:64,525,965-64,526,830", // NA12878_high_coverage crazy alignments
         
         //"--regions", "6:93,705,800-93,706,166", // NA12878_low_coverage no phase
         //"--regions", "6:58,605,652-58,606,061",   // NA12878_low_coverage partial phase

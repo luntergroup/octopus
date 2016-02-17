@@ -769,10 +769,10 @@ VcfRecord::Builder output_reference_call(RefCall call, ReferenceGenome& referenc
 //}
 
 std::unique_ptr<CancerVariantCaller::CallerLatents>
-CancerVariantCaller::infer_latents(const std::vector<Haplotype>& haplotypes,
-                                   const ReadMap& reads) const
+CancerVariantCaller::infer_latents(const std::vector<Haplotype>& haplotypes, const ReadMap& reads,
+                                   HaplotypeLikelihoodCache& haplotype_likelihoods) const
 {
-    auto latents = genotype_model_.infer_latents(haplotypes, reads, reference_);
+    auto latents = genotype_model_.infer_latents(haplotypes, reads, haplotype_likelihoods, reference_);
     
     auto num_haplotypes = static_cast<unsigned>(haplotypes.size());
     

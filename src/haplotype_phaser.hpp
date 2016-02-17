@@ -80,8 +80,8 @@ public:
     
     bool done() const noexcept;
     
-    std::vector<Haplotype> get_haplotypes();
-    std::vector<Haplotype> get_haplotypes(const GenotypePosteriors& genotype_posteriors);
+    std::pair<std::vector<Haplotype>, GenomicRegion> get_haplotypes();
+    //std::vector<Haplotype> get_haplotypes(const GenotypePosteriors& genotype_posteriors);
     
     void set_haplotypes(const std::vector<Haplotype>& haplotypes);
     

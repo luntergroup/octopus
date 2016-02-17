@@ -10,20 +10,20 @@
 
 #include <boost/test/unit_test.hpp>
 
-#include <iostream>
-#include <string>
-
-#include "test_common.hpp"
-#include "benchmark_utils.hpp"
-#include "reference_genome.hpp"
-#include "read_manager.hpp"
-#include "variant.hpp"
-#include "candidate_variant_generator.hpp"
-#include "alignment_candidate_variant_generator.hpp"
-#include "haplotype.hpp"
-#include "genotype.hpp"
-#include "allele.hpp"
-#include "haplotype_tree.hpp"
+//#include <iostream>
+//#include <string>
+//
+//#include "test_common.hpp"
+//#include "benchmark_utils.hpp"
+//#include "reference_genome.hpp"
+//#include "read_manager.hpp"
+//#include "variant.hpp"
+//#include "candidate_variant_generator.hpp"
+//#include "alignment_candidate_variant_generator.hpp"
+//#include "haplotype.hpp"
+//#include "genotype.hpp"
+//#include "allele.hpp"
+//#include "haplotype_tree.hpp"
 
 //BOOST_AUTO_TEST_CASE(haplotype hashing benchmark)
 //{

@@ -61,10 +61,12 @@ ProbabilityMatrix<Genotype<Haplotype>> PopulationVariantCaller::Latents::get_gen
 }
 
 std::unique_ptr<PopulationVariantCaller::CallerLatents>
-PopulationVariantCaller::infer_latents(const std::vector<Haplotype>& haplotypes,
-                                       const ReadMap& reads) const
+PopulationVariantCaller::infer_latents(const std::vector<Haplotype>& haplotypes, const ReadMap& reads,
+                                       HaplotypeLikelihoodCache& haplotype_likelihoods) const
 {
-    return std::make_unique<Latents>(genotype_model_.infer_latents(haplotypes, reads, reference_));
+    return std::make_unique<Latents>(genotype_model_.infer_latents(haplotypes, reads,
+                                                                   haplotype_likelihoods,
+                                                                   reference_));
 }
 
 // non member methods
@@ -72,7 +74,7 @@ PopulationVariantCaller::infer_latents(const std::vector<Haplotype>& haplotypes,
 namespace
 {
 using GM = GenotypeModel::Population;
-using GenotypeProbabilityMap       = GM::GenotypeProbabilityMap;
+using GenotypeProbabilityMap       = GM::Latents::GenotypeProbabilityMap;
 using SampleGenotypeProbabilityMap = GenotypeProbabilityMap::InnerMap;
     
 struct GenotypeCall
@@ -148,7 +150,7 @@ using RefCalls = std::vector<RefCall>;
 } // namespace
 
 namespace debug {
-    void print_genotype_posteriors(const GM::GenotypeProbabilityMap& genotype_posteriors, size_t n = 5);
+    void print_genotype_posteriors(const GenotypeProbabilityMap& genotype_posteriors, size_t n = 5);
     void print_allele_posteriors(const AllelePosteriorMap& allele_posteriors, size_t n = 10);
     void print_variant_calls(const VariantCallBlocks& calls);
     void print_genotype_calls(const GenotypeCallMap& calls);
@@ -578,6 +580,8 @@ PopulationVariantCaller::call_variants(const std::vector<Variant>& candidates,
 {
     const auto dlatents = dynamic_cast<Latents*>(latents);
     
+    debug::print_genotype_posteriors(dlatents->genotype_posteriors);
+    
     auto allele_posteriors = compute_allele_posteriors(dlatents->genotype_posteriors, callable_alleles);
     
     //debug::print_allele_posteriors(allele_posteriors);
@@ -622,7 +626,7 @@ PopulationVariantCaller::call_variants(const std::vector<Variant>& candidates,
 
 namespace debug
 {
-void print_genotype_posteriors(const GM::GenotypeProbabilityMap& genotype_posteriors, const size_t n)
+void print_genotype_posteriors(const GenotypeProbabilityMap& genotype_posteriors, const size_t n)
 {
     for (const auto& sample_posteriors : genotype_posteriors) {
         auto m = std::min(n, sample_posteriors.second.size());

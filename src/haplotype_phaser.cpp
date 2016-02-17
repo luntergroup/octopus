@@ -52,7 +52,7 @@ bool HaplotypePhaser::done() const noexcept
     return buffered_candidates_.empty();
 }
 
-std::vector<Haplotype> HaplotypePhaser::get_haplotypes()
+std::pair<std::vector<Haplotype>, GenomicRegion> HaplotypePhaser::get_haplotypes()
 {
     const auto next_candidates = buffered_candidates_.overlap_range(next_region_);
     
@@ -63,16 +63,18 @@ std::vector<Haplotype> HaplotypePhaser::get_haplotypes()
     
     current_region_ = next_region_;
     
-    return tree_.get_haplotypes(current_region_);
+    const auto haplotype_region = expand(current_region_, 50);
+    
+    return std::make_pair(tree_.get_haplotypes(haplotype_region), current_region_);
 }
 
-std::vector<Haplotype> HaplotypePhaser::get_haplotypes(const GenotypePosteriors& genotype_posteriors)
-{
-    const auto next_candidates = buffered_candidates_.overlap_range(next_region_);
-    extend_tree(next_candidates, tree_);
-    current_region_ = next_region_;
-    return tree_.get_haplotypes(current_region_);
-}
+//std::vector<Haplotype> HaplotypePhaser::get_haplotypes(const GenotypePosteriors& genotype_posteriors)
+//{
+//    const auto next_candidates = buffered_candidates_.overlap_range(next_region_);
+//    extend_tree(next_candidates, tree_);
+//    current_region_ = next_region_;
+//    return tree_.get_haplotypes(current_region_);
+//}
 
 void HaplotypePhaser::set_haplotypes(const std::vector<Haplotype>& haplotypes)
 {

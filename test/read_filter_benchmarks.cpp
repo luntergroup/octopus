@@ -10,17 +10,17 @@
 
 #include <boost/test/unit_test.hpp>
 
-#include <iostream>
-#include <vector>
-#include <algorithm> // std::sort
-#include <iterator>  // std::back_inserter
-
-#include "benchmark_utils.hpp"
-#include "test_common.hpp"
-#include "genomic_region.hpp"
-#include "read_manager.hpp"
-#include "read_filter.hpp"
-#include "read_filters.hpp"
+//#include <iostream>
+//#include <vector>
+//#include <algorithm> // std::sort
+//#include <iterator>  // std::back_inserter
+//
+//#include "benchmark_utils.hpp"
+//#include "test_common.hpp"
+//#include "genomic_region.hpp"
+//#include "read_manager.hpp"
+//#include "read_filter.hpp"
+//#include "read_filters.hpp"
 
 //BOOST_AUTO_TEST_CASE(read_filter_benchmarks)
 //{

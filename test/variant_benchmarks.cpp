@@ -10,14 +10,14 @@
 
 #include <boost/test/unit_test.hpp>
 
-#include <iostream>
-
-#include "test_common.hpp"
-#include "benchmark_utils.hpp"
-
-#include "reference_genome.hpp"
-#include "genomic_region.hpp"
-#include "variant.hpp"
+//#include <iostream>
+//
+//#include "test_common.hpp"
+//#include "benchmark_utils.hpp"
+//
+//#include "reference_genome.hpp"
+//#include "genomic_region.hpp"
+//#include "variant.hpp"
 
 //BOOST_AUTO_TEST_CASE(variant_benchmark)
 //{

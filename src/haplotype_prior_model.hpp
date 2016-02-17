@@ -41,7 +41,7 @@ private:
     const double transversion_rate_ = 0.000111;
 };
 
-void make_unique(std::vector<Haplotype>& haplotypes, const HaplotypePriorModel& prior_model);
+void remove_low_prior_duplicates(std::vector<Haplotype>& haplotypes, const HaplotypePriorModel& prior_model);
 
 } // namespace Octopus
 

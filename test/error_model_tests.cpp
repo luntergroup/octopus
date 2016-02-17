@@ -1,8 +1,8 @@
 //
-//  haplotype_prior_model_tests.cpp
+//  error_model_tests.cpp
 //  Octopus
 //
-//  Created by Daniel Cooke on 25/04/2015.
+//  Created by Daniel Cooke on 01/04/2015.
 //  Copyright (c) 2015 Oxford University. All rights reserved.
 //
 

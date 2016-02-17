@@ -34,11 +34,14 @@ namespace Octopus
     {
     public:
         HaplotypeLikelihoodCache()  = default;
+        
         explicit HaplotypeLikelihoodCache(const ReadMap& reads,
                                           const std::vector<Haplotype>& haplotypes);
+        
         explicit HaplotypeLikelihoodCache(SingleReadModel read_model,
                                           const ReadMap& reads,
                                           const std::vector<Haplotype>& haplotypes);
+        
         ~HaplotypeLikelihoodCache() = default;
         
         HaplotypeLikelihoodCache(const HaplotypeLikelihoodCache&)            = default;
@@ -64,10 +67,17 @@ namespace Octopus
         size_t max_num_haplotypes_;
         
         bool is_cached(const AlignedRead& read, const Haplotype& haplotype) const noexcept;
-        void cache(const AlignedRead& read, const Haplotype& haplotype, double value);
+        void cache(const AlignedRead& read, const Haplotype& haplotype, double value) const;
         double get_cached(const AlignedRead& read, const Haplotype& haplotype) const;
     };
     
+    namespace debug
+    {
+        void print_read_haplotype_liklihoods(const std::vector<Haplotype>& haplotypes,
+                                             const ReadMap& reads,
+                                             HaplotypeLikelihoodCache& haplotype_likelihoods,
+                                             size_t n = 5);
+    } // namespace debug
 } // namespace Octopus
 
 #endif /* haplotype_likelihood_cache_hpp */

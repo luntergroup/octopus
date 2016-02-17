@@ -20,6 +20,7 @@
 #include "read_pipe.hpp"
 #include "candidate_variant_generator.hpp"
 #include "haplotype_prior_model.hpp"
+#include "haplotype_likelihood_cache.hpp"
 #include "haplotype_phaser.hpp"
 #include "probability_matrix.hpp"
 #include "vcf_record.hpp"
@@ -83,7 +84,8 @@ private:
     bool done_calling(const GenomicRegion& region) const noexcept;
     
     virtual std::unique_ptr<CallerLatents>
-    infer_latents(const std::vector<Haplotype>& haplotypes, const ReadMap& reads) const = 0;
+    infer_latents(const std::vector<Haplotype>& haplotypes, const ReadMap& reads,
+                  HaplotypeLikelihoodCache& haplotype_likelihoods) const = 0;
     
     virtual std::vector<VcfRecord::Builder>
     call_variants(const std::vector<Variant>& candidates, const std::vector<Allele>& callable_alleles,

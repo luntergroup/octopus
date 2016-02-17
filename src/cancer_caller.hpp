@@ -13,7 +13,6 @@
 #include <memory>
 
 #include "variant_caller.hpp"
-#include "genotype_model.hpp"
 #include "cancer_genotype_model.hpp"
 
 class GenomicRegion;
@@ -78,7 +77,8 @@ namespace Octopus
 //                                             const ReadMap& reads) const override;
         
         std::unique_ptr<CallerLatents>
-        infer_latents(const std::vector<Haplotype>& haplotypes, const ReadMap& reads) const override;
+        infer_latents(const std::vector<Haplotype>& haplotypes, const ReadMap& reads,
+                      HaplotypeLikelihoodCache& haplotype_likelihoods) const override;
         
         std::vector<VcfRecord::Builder>
         call_variants(const std::vector<Variant>& candidates,

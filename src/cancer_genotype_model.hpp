@@ -13,12 +13,12 @@
 #include <vector>
 #include <unordered_map>
 
-#include "genotype_model.hpp"
-#include "mappable_map.hpp"
+#include "common.hpp"
 #include "cancer_genotype.hpp"
 #include "reference_genome.hpp"
 #include "haplotype_prior_model.hpp"
 #include "map_utils.hpp"
+#include "haplotype_likelihood_cache.hpp"
 
 class AlignedRead;
 class Haplotype;
@@ -52,7 +52,8 @@ namespace Octopus
         
         Cancer(SampleIdType normal_sample, unsigned max_em_iterations = 100, double em_epsilon = 0.001);
         
-        Latents infer_latents(const std::vector<Haplotype>& haplotypes, const ReadMap& reads,
+        Latents infer_latents(const std::vector<Haplotype>& haplotypes,
+                              const ReadMap& reads, HaplotypeLikelihoodCache& haplotype_likelihoods,
                               const ReferenceGenome& reference);
         
     private:
