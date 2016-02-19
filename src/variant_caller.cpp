@@ -20,7 +20,6 @@
 #include "read_utils.hpp"
 #include "mappable_algorithms.hpp"
 #include "haplotype.hpp"
-#include "haplotype_filter.hpp"
 #include "vcf_record.hpp"
 
 #include "basic_haplotype_prior_model.hpp"
@@ -38,7 +37,7 @@ VariantCaller::VariantCaller(const ReferenceGenome& reference,
 :
 reference_ {reference},
 read_pipe_ {read_pipe},
-haplotype_prior_model_ {std::make_unique<BasicHaplotypePriorModel>()},
+haplotype_prior_model_ {std::make_unique<BasicHaplotypePriorModel>(reference_)},
 candidate_generator_ {std::move(candidate_generator)},
 refcall_type_ {refcall_type}
 {}
@@ -75,32 +74,42 @@ void append_annotated_calls(std::vector<VcfRecord>& curr_calls,
                    [&] (auto& record) { return annotate_record(record, reads); });
 }
 
-auto group_duplicates_and_find_reference(std::vector<Haplotype>& haplotypes,
-                                         const ReferenceGenome& reference)
-{
-    if (haplotypes.empty()) return std::cend(haplotypes);
-    
-    std::sort(std::begin(haplotypes), std::end(haplotypes));
-    
-    const auto reference_sequence = reference.get_sequence(haplotypes.front().get_region());
-    
-    return std::lower_bound(std::cbegin(haplotypes), std::cend(haplotypes), reference_sequence,
-                            [] (const Haplotype& lhs, const auto& rhs) {
-                                return lhs.get_sequence() < rhs;
-                            });
-}
-
 namespace debug
 {
-    void print_candidates(const std::vector<Variant>& candidates)
-    {
-        if (!candidates.empty()) {
-            std::cout << "there are no candidates" << '\n';
-        } else {
-            std::cout << "found " << candidates.size() << " candidates: " << '\n';
-            for (const auto& c : candidates) std::cout << c << '\n';
+    void print_candidates(const std::vector<Variant>& candidates);
+    enum class Resolution {Sequence, Alleles, VariantAlleles, SequenceAndAlleles, SequenceAndVariantAlleles};
+    void print_haplotypes(const std::vector<Haplotype>& haplotypes,
+                          Resolution resolution = Resolution::SequenceAndAlleles);
+}
+
+void filter_haplotypes(std::vector<Haplotype>& haplotypes, const ReadMap& reads,
+                       const HaplotypeLikelihoodCache& haplotype_likelihoods, const size_t n)
+{
+    if (haplotypes.size() <= n) return;
+    
+    std::unordered_map<std::reference_wrapper<const Haplotype>, double> max_liklihoods {haplotypes.size()};
+    
+    for (const auto& haplotype : haplotypes) {
+        double max_read_liklihood {0};
+        
+        for (const auto& sample_reads : reads) {
+            for (const auto& read : sample_reads.second) {
+                const auto cur_read_liklihood = haplotype_likelihoods.log_probability(read, haplotype);
+                if (cur_read_liklihood > max_read_liklihood) max_read_liklihood = cur_read_liklihood;
+            }
         }
+        
+        max_liklihoods.emplace(haplotype, max_read_liklihood);
     }
+    
+    const auto nth = std::next(std::begin(haplotypes), n);
+    
+    std::nth_element(std::begin(haplotypes), nth, std::end(haplotypes),
+                     [&] (const auto& lhs, const auto& rhs) {
+                         return max_liklihoods.at(lhs) > max_liklihoods.at(rhs);
+                     });
+    
+    haplotypes.erase(nth, std::end(haplotypes));
 }
 
 std::vector<VcfRecord> VariantCaller::call_variants(const GenomicRegion& call_region) const
@@ -141,14 +150,6 @@ std::vector<VcfRecord> VariantCaller::call_variants(const GenomicRegion& call_re
         
         assert(!haplotypes.empty());
         
-        const auto reference_itr = group_duplicates_and_find_reference(haplotypes, reference_);
-        
-        auto haplotype_priors = evaluate(haplotypes, reference_itr, haplotype_prior_model_.get());
-        
-        //debug::print_haplotype_priors(haplotype_priors);
-        
-        remove_lowest_prior_duplicates(haplotypes, haplotype_priors);
-        
         std::cout << "there are " << haplotypes.size() << " unique haplotypes" << '\n';
         std::cout << "current region is " << phasing_region << '\n';
         
@@ -161,7 +162,12 @@ std::vector<VcfRecord> VariantCaller::call_variants(const GenomicRegion& call_re
         
         HaplotypeLikelihoodCache haplotype_likelihoods {phasing_region_reads, haplotypes};
         
-        filter_haplotypes(haplotypes, phasing_region_reads, 200, haplotype_likelihoods);
+        //filter_haplotypes(haplotypes, phasing_region_reads, haplotype_likelihoods, 200);
+        
+        // Compute haplotype priors after likelihood filtering as prior model may use
+        // interdependencies between haplotypes.
+        
+        auto haplotype_priors = haplotype_prior_model_->compute_maximum_entropy_haplotype_set(haplotypes);
         
         phaser.keep_haplotypes(haplotypes);
         
@@ -374,5 +380,34 @@ generate_candidate_reference_alleles(const std::vector<Allele>& callable_alleles
     result.shrink_to_fit();
     
     return result;
+}
+    
+namespace debug
+{
+    void print_candidates(const std::vector<Variant>& candidates)
+    {
+        if (candidates.empty()) {
+            std::cout << "there are no candidates" << '\n';
+        } else {
+            std::cout << "found " << candidates.size() << " candidates: " << '\n';
+            for (const auto& c : candidates) std::cout << c << '\n';
+        }
+    }
+    
+    void print_haplotypes(const std::vector<Haplotype>& haplotypes, const Resolution resolution)
+    {
+        std::cout << "printing " << haplotypes.size() << " haplotypes" << '\n';
+        for (const auto& haplotype : haplotypes) {
+            if (resolution == Resolution::Sequence || resolution == Resolution::SequenceAndAlleles
+                || resolution == Resolution::SequenceAndVariantAlleles) {
+                std::cout << haplotype << '\n';
+            }
+            if (resolution == Resolution::Alleles || resolution == Resolution::SequenceAndAlleles) {
+                print_alleles(haplotype); std::cout << '\n';
+            } else if (resolution != Resolution::Sequence) {
+                print_variant_alleles(haplotype); std::cout << '\n';
+            }
+        }
+    }
 }
 } // namespace Octopus

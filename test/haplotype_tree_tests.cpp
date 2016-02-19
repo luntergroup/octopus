@@ -138,7 +138,7 @@ BOOST_AUTO_TEST_CASE(haplotype_tree_ignores_insertions_followed_immediatly_by_de
     
     const auto region = *parse_region("16:9300037-9300037", human);
     
-    const auto haplotypes = haplotype_tree.get_haplotypes(region);
+    const auto haplotypes = haplotype_tree.extract_haplotypes(region);
     
     BOOST_CHECK(haplotypes[0].contains(allele1));
     BOOST_CHECK(!haplotypes[0].contains(allele2));
@@ -178,7 +178,7 @@ BOOST_AUTO_TEST_CASE(haplotype_tree_can_generate_haplotypes_in_a_region)
     
     auto region = *parse_region("4:1000000-1000005", human);
     
-    auto haplotypes = haplotype_tree.get_haplotypes(region);
+    auto haplotypes = haplotype_tree.extract_haplotypes(region);
     
     BOOST_CHECK(haplotypes.size() == 2);
     
@@ -206,13 +206,13 @@ BOOST_AUTO_TEST_CASE(haplotype_tree_can_generate_haplotypes_ending_in_different_
     
     const auto region1 = *parse_region("4:1000000-1000006", human);
     
-    auto haplotypes = haplotype_tree.get_haplotypes(region1);
+    auto haplotypes = haplotype_tree.extract_haplotypes(region1);
     
     BOOST_CHECK(haplotypes.size() == 2);
     
     const auto region2 = *parse_region("4:1000000-1000003", human);
     
-    haplotypes = haplotype_tree.get_haplotypes(region2);
+    haplotypes = haplotype_tree.extract_haplotypes(region2);
     
     BOOST_CHECK(haplotypes.size() == 2);
     
@@ -240,7 +240,7 @@ BOOST_AUTO_TEST_CASE(leading_haplotypes_can_be_removed_from_the_tree)
     
     const auto region = encompassing_region(allele1, allele5);
     
-    auto haplotypes = haplotype_tree.get_haplotypes(region);
+    auto haplotypes = haplotype_tree.extract_haplotypes(region);
     
     BOOST_CHECK(haplotypes.size() == 4);
     
@@ -254,7 +254,7 @@ BOOST_AUTO_TEST_CASE(leading_haplotypes_can_be_removed_from_the_tree)
     
     BOOST_CHECK(haplotype_tree.num_haplotypes() == 2);
     
-    haplotypes = haplotype_tree.get_haplotypes(region);
+    haplotypes = haplotype_tree.extract_haplotypes(region);
     
     sort(haplotypes);
     
@@ -398,7 +398,7 @@ BOOST_AUTO_TEST_CASE(prune_all_gets_haplotypes_with_implicit_reference_alleles)
     haplotype_tree.prune_all(hap);
     
     BOOST_REQUIRE(haplotype_tree.num_haplotypes() == 1);
-    BOOST_CHECK(haplotype_tree.get_haplotypes().front().get_sequence() == "CGC");
+    BOOST_CHECK(haplotype_tree.extract_haplotypes().front().get_sequence() == "CGC");
 }
 
 BOOST_AUTO_TEST_CASE(pruned_branches_can_still_be_extended)
@@ -469,7 +469,7 @@ BOOST_AUTO_TEST_CASE(extending_on_mnps_results_in_backtracked_bifurification)
     
     auto a_region = *parse_region("16:9300039-9300051", human);
     
-    auto haplotypes = haplotype_tree.get_haplotypes(a_region);
+    auto haplotypes = haplotype_tree.extract_haplotypes(a_region);
     
     BOOST_CHECK(haplotypes.size() == 8);
     
@@ -554,7 +554,7 @@ BOOST_AUTO_TEST_CASE(prune_unqiue_leaves_a_single_haplotype_which_contains_the_s
     
     extend_tree(candidates, haplotype_tree);
     
-    auto haplotypes = haplotype_tree.get_haplotypes(region);
+    auto haplotypes = haplotype_tree.extract_haplotypes(region);
     
     sort(haplotypes);
     
@@ -568,7 +568,7 @@ BOOST_AUTO_TEST_CASE(prune_unqiue_leaves_a_single_haplotype_which_contains_the_s
     
     haplotype_tree.prune_unique(haplotype_to_prune);
     
-    auto new_haplotypes = haplotype_tree.get_haplotypes(region);
+    auto new_haplotypes = haplotype_tree.extract_haplotypes(region);
     
     sort(new_haplotypes);
     
@@ -607,7 +607,7 @@ BOOST_AUTO_TEST_CASE(haplotype_tree_survives_serious_pruning)
     
     extend_tree(candidates, haplotype_tree);
     
-    auto haplotypes = haplotype_tree.get_haplotypes(region);
+    auto haplotypes = haplotype_tree.extract_haplotypes(region);
     
     sort(haplotypes);
     
@@ -622,7 +622,7 @@ BOOST_AUTO_TEST_CASE(haplotype_tree_survives_serious_pruning)
     
     BOOST_REQUIRE(haplotype_tree.num_haplotypes() > 0);
     
-    auto pruned_haplotypes = haplotype_tree.get_haplotypes(region);
+    auto pruned_haplotypes = haplotype_tree.extract_haplotypes(region);
     
     BOOST_CHECK(std::all_of(std::cbegin(pruned_haplotypes), std::cend(pruned_haplotypes),
                             [&] (const auto& haplotype) { return haplotype == reference_haplotype; }));
@@ -637,7 +637,7 @@ BOOST_AUTO_TEST_CASE(haplotype_tree_survives_serious_pruning)
     
     BOOST_REQUIRE(haplotype_tree.num_haplotypes() == 1);
     
-    const auto last_haplotype = haplotype_tree.get_haplotypes(region).front();
+    const auto last_haplotype = haplotype_tree.extract_haplotypes(region).front();
     
     BOOST_CHECK(last_haplotype == reference_haplotype);
     

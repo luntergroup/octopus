@@ -12,6 +12,7 @@
 #include <iterator>
 #include <utility>
 #include <stdexcept>
+#include <cassert>
 
 #include <boost/functional/hash.hpp>
 
@@ -455,11 +456,12 @@ Haplotype do_splice(const Haplotype& haplotype, const GenomicRegion& region, std
     
     auto overlapped = haplotype_overlap_range(haplotype.explicit_alleles_, region.get_contig_region());
     
-    // known that !overlapped.empty()
+    assert(!overlapped.empty());
     
     if (is_empty_region(contig_region)) {
-        if (!is_empty_region(overlapped.front())) {
+        if (!is_empty_region(overlapped.front()) && are_adjacent(contig_region, overlapped.front())) {
             overlapped.advance_begin(1);
+            assert(!overlapped.empty());
         }
         
         if (is_empty_region(overlapped.front())) {

@@ -16,7 +16,6 @@
 #include "common.hpp"
 #include "cancer_genotype.hpp"
 #include "reference_genome.hpp"
-#include "haplotype_prior_model.hpp"
 #include "map_utils.hpp"
 #include "haplotype_likelihood_cache.hpp"
 
@@ -30,7 +29,8 @@ namespace Octopus
     class Cancer
     {
     public:
-        using HaplotypePrioMap = HaplotypePriorModel::HaplotypePriorMap;
+        using HaplotypeReference = std::reference_wrapper<const Haplotype>;
+        using HaplotypePrioMap   = std::unordered_map<HaplotypeReference, double>;
         
         using GenotypeProbabilityMap       = std::unordered_map<CancerGenotype<Haplotype>, double>;
         using SampleGenotypeMixturesPriors = std::array<double, 3>;

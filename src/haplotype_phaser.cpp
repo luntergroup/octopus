@@ -61,7 +61,7 @@ std::pair<std::vector<Haplotype>, GenomicRegion> HaplotypePhaser::fetch_next_hap
     
     const auto haplotype_region = expand(current_region_, 50);
     
-    return std::make_pair(tree_.get_haplotypes(haplotype_region), current_region_);
+    return std::make_pair(tree_.extract_haplotypes(haplotype_region), current_region_);
 }
 
 void HaplotypePhaser::keep_haplotypes(const std::vector<Haplotype>& haplotypes)

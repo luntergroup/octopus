@@ -13,15 +13,22 @@
 
 #include "haplotype.hpp"
 #include "sequence_utils.hpp"
-#include "maths.hpp"
 #include "variant.hpp"
+#include "maths.hpp"
 
 #include <iostream> // DEBUG
 
 namespace Octopus
 {
-BasicHaplotypePriorModel::BasicHaplotypePriorModel(double transition_rate, double transversion_rate)
+BasicHaplotypePriorModel::BasicHaplotypePriorModel(const ReferenceGenome& reference)
 :
+reference_ {reference}
+{}
+
+BasicHaplotypePriorModel::BasicHaplotypePriorModel(const ReferenceGenome& reference,
+                                                   double transition_rate, double transversion_rate)
+:
+reference_ {reference},
 transition_rate_ {transition_rate},
 transversion_rate_ {transversion_rate}
 {}
@@ -81,35 +88,103 @@ double BasicHaplotypePriorModel::do_evaluate(const Haplotype& to, const Haplotyp
 
 namespace
 {
-    template <typename Map>
-    void normalise(Map& haplotype_priors)
+    void normalise(HaplotypePriorModel::HaplotypePriorMap& priors)
     {
-        const auto norm = Maths::sum_values(haplotype_priors);
-        for (auto& p : haplotype_priors) p.second /= norm;
+        const auto norm = Maths::sum_values(priors);
+        for (auto& p : priors) p.second /= norm;
     }
 } // namespace
 
-BasicHaplotypePriorModel::HaplotypePriorMap
-BasicHaplotypePriorModel::do_evaluate(std::vector<Haplotype>::const_iterator first,
-                                      std::vector<Haplotype>::const_iterator last,
-                                      std::vector<Haplotype>::const_iterator reference) const
+auto group_duplicates(std::vector<Haplotype>& haplotypes)
 {
-    HaplotypePriorMap result(std::distance(first, last));
+    std::sort(std::begin(haplotypes), std::end(haplotypes));
     
-    std::for_each(first, reference, [&]
-                  (const Haplotype& haplotype) {
-                      result.emplace(haplotype, evaluate(haplotype, *reference));
-                  });
+//    const auto reference_sequence = reference.get_sequence(haplotypes.front().get_region());
+//    
+//    using SequenceType = decltype(reference_sequence);
+//    
+//    struct Cmp
+//    {
+//        bool operator()(const Haplotype& lhs, const SequenceType& rhs) const
+//        {
+//            return lhs.get_sequence() < rhs;
+//        }
+//        bool operator()(const SequenceType& lhs, const Haplotype& rhs) const
+//        {
+//            return lhs < rhs.get_sequence();
+//        }
+//    };
+//    
+//    return std::equal_range(std::begin(haplotypes), std::end(haplotypes), reference_sequence, Cmp {});
+}
+
+HaplotypePriorModel::HaplotypePriorMap
+BasicHaplotypePriorModel::do_compute_maximum_entropy_haplotype_set(std::vector<Haplotype>& haplotypes) const
+{
+    using std::begin; using std::end; using std::next; using std::distance;
+    using std::adjacent_find; using std::for_each; using std::nth_element;
     
-    result.emplace(*reference, evaluate(*reference, *reference));
+    const Haplotype reference {haplotypes.front().get_region(), reference_.get()};
     
-    std::for_each(std::next(reference), last,
-                  [&] (const Haplotype& haplotype) {
-                      result.emplace(haplotype, evaluate(haplotype, *reference));
-                  });
+    group_duplicates(haplotypes);
+    
+    auto first_duplicate = adjacent_find(begin(haplotypes), end(haplotypes));
+    
+    if (first_duplicate == end(haplotypes)) {
+        HaplotypePriorMap result {haplotypes.size()};
+        
+        for (const auto& haplotype : haplotypes) {
+            result.emplace(haplotype, evaluate(haplotype, reference));
+        }
+        
+        return result;
+    }
+    
+    // need to store copies to prevent iterator invalidation
+    std::unordered_map<Haplotype, double, std::hash<Haplotype>, HaveSameAlleles> duplicate_priors {};
+    
+    duplicate_priors.reserve(distance(first_duplicate, std::end(haplotypes)));
+    
+    auto it = first_duplicate;
+    
+    do {
+        const auto it2 = std::find_if_not(next(it, 2), end(haplotypes),
+                                          [first_duplicate] (const Haplotype& haplotype) {
+                                              return haplotype == *first_duplicate;
+                                          });
+        
+        for_each(it, it2, [this, &duplicate_priors, &reference] (const Haplotype& duplicate) {
+                duplicate_priors.emplace(duplicate, evaluate(duplicate, reference));
+        });
+        
+        nth_element(it, it, it2, [&duplicate_priors] (const Haplotype& lhs, const Haplotype& rhs) {
+                return duplicate_priors.at(lhs) > duplicate_priors.at(rhs);
+        });
+        
+        for_each(next(it), it2, [&duplicate_priors] (const Haplotype& duplicate) {
+            return duplicate_priors.erase(duplicate);
+        });
+        
+        it = adjacent_find(it2, end(haplotypes));
+    } while (it != end(haplotypes));
+    
+    haplotypes.erase(std::unique(first_duplicate, end(haplotypes)), end(haplotypes));
+    
+    HaplotypePriorMap result {haplotypes.size()};
+    
+    for (const auto& haplotype : haplotypes) {
+        if (duplicate_priors.count(haplotype) == 1) {
+            result.emplace(haplotype, duplicate_priors.at(haplotype));
+        } else {
+            result.emplace(haplotype, evaluate(haplotype, reference));
+        }
+    }
     
     normalise(result);
     
+    assert(haplotypes.size() == result.size());
+    
     return result;
 }
+
 } // namespace Octopus

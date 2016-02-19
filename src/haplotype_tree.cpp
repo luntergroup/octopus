@@ -105,13 +105,13 @@ GenomicRegion HaplotypeTree::get_region() const
     return GenomicRegion {region_.get_contig_name(), encompassing_region(tree_[leftmost], tree_[rightmost])};
 }
 
-std::vector<Haplotype> HaplotypeTree::get_haplotypes() const
+std::vector<Haplotype> HaplotypeTree::extract_haplotypes() const
 {
     if (empty()) return std::vector<Haplotype> {};
-    return get_haplotypes(get_region());
+    return extract_haplotypes(get_region());
 }
 
-std::vector<Haplotype> HaplotypeTree::get_haplotypes(const GenomicRegion& region) const
+std::vector<Haplotype> HaplotypeTree::extract_haplotypes(const GenomicRegion& region) const
 {
     haplotype_leaf_cache_.clear();
     haplotype_leaf_cache_.reserve(haplotype_leafs_.size());
@@ -123,7 +123,7 @@ std::vector<Haplotype> HaplotypeTree::get_haplotypes(const GenomicRegion& region
     result.reserve(haplotype_leafs_.size());
     
     for (const auto leaf : haplotype_leafs_) {
-        auto haplotype = get_haplotype(leaf, region);
+        auto haplotype = extract_haplotype(leaf, region);
         
         // recently retreived haplotypes are added to the cache as it is likely these
         // are the haplotypes that will be pruned next
@@ -157,7 +157,8 @@ void HaplotypeTree::prune_all(const Haplotype& haplotype)
                  [this, &haplotype] (const auto& leaf_pair) {
                      const auto p = remove(leaf_pair.second, contig_region(haplotype));
                      
-                     auto leaf_itr = find(cbegin(haplotype_leafs_), cend(haplotype_leafs_), leaf_pair.second);
+                     auto leaf_itr = find(cbegin(haplotype_leafs_), cend(haplotype_leafs_),
+                                          leaf_pair.second);
                      
                      leaf_itr = haplotype_leafs_.erase(leaf_itr);
                      
@@ -207,7 +208,8 @@ void HaplotypeTree::prune_unique(const Haplotype& haplotype)
                      if (leaf_pair.second != leaf_to_keep_itr) {
                          const auto p = remove(leaf_pair.second, contig_region(haplotype));
                          
-                         auto leaf_itr = find(cbegin(haplotype_leafs_), cend(haplotype_leafs_), leaf_pair.second);
+                         auto leaf_itr = find(cbegin(haplotype_leafs_), cend(haplotype_leafs_),
+                                              leaf_pair.second);
                          
                          leaf_itr = haplotype_leafs_.erase(leaf_itr);
                          
@@ -354,7 +356,8 @@ HaplotypeTree::LeafIterator HaplotypeTree::extend_haplotype(LeafIterator leaf_it
             curr_allele = get_previous_allele(curr_allele);
         }
         
-        if (can_add_to_branch(new_allele, tree_[curr_allele]) && !allele_exists(curr_allele, new_allele)) {
+        if (can_add_to_branch(new_allele, tree_[curr_allele])
+            && !allele_exists(curr_allele, new_allele)) {
             const auto new_leaf = boost::add_vertex(new_allele, tree_);
             
             boost::add_edge(curr_allele, new_leaf, tree_);
@@ -366,7 +369,7 @@ HaplotypeTree::LeafIterator HaplotypeTree::extend_haplotype(LeafIterator leaf_it
     return leaf_itr;
 }
 
-Haplotype HaplotypeTree::get_haplotype(Vertex leaf, const GenomicRegion& region) const
+Haplotype HaplotypeTree::extract_haplotype(Vertex leaf, const GenomicRegion& region) const
 {
     Haplotype result {region, reference_};
     
@@ -399,8 +402,9 @@ bool HaplotypeTree::define_same_haplotype(Vertex leaf1, Vertex leaf2) const
 
 bool HaplotypeTree::is_branch_exact_haplotype(Vertex leaf, const Haplotype& haplotype) const
 {
-    if (leaf == root_ || !overlaps(tree_[leaf], contig_region(haplotype)))
+    if (leaf == root_ || !overlaps(tree_[leaf], contig_region(haplotype))) {
         return false;
+    }
     
     while (leaf != root_) {
         if (!haplotype.contains_exact(tree_[leaf]))
@@ -414,7 +418,7 @@ bool HaplotypeTree::is_branch_exact_haplotype(Vertex leaf, const Haplotype& hapl
 bool HaplotypeTree::is_branch_equal_haplotype(const Vertex leaf, const Haplotype& haplotype) const
 {
     return leaf != root_ && overlaps(contig_region(haplotype), tree_[leaf])
-            && get_haplotype(leaf, haplotype.get_region()) == haplotype;
+            && extract_haplotype(leaf, haplotype.get_region()) == haplotype;
 }
 
 HaplotypeTree::LeafIterator

@@ -11,6 +11,8 @@
 #include <algorithm>
 #include <iostream>
 
+#include "maths.hpp"
+
 namespace Octopus
 {
 double HaplotypePriorModel::evaluate(const Haplotype& to, const Haplotype& from) const
@@ -19,54 +21,22 @@ double HaplotypePriorModel::evaluate(const Haplotype& to, const Haplotype& from)
 }
 
 HaplotypePriorModel::HaplotypePriorMap
-HaplotypePriorModel::evaluate(std::vector<Haplotype>::const_iterator first,
-                              std::vector<Haplotype>::const_iterator last,
-                              std::vector<Haplotype>::const_iterator reference)
+HaplotypePriorModel::compute_maximum_entropy_haplotype_set(std::vector<Haplotype>& haplotypes) const
 {
-    return this->do_evaluate(first, last, reference);
+    return this->do_compute_maximum_entropy_haplotype_set(haplotypes);
 }
 
 // non-member methods
 
-void remove_lowest_prior_duplicates(std::vector<Haplotype>& haplotypes,
-                                    HaplotypePriorModel::HaplotypePriorMap& haplotype_priors)
+namespace
 {
-    assert(std::is_sorted(std::cbegin(haplotypes), std::cend(haplotypes)));
-    
-    auto first_duplicate = std::begin(haplotypes);
-    auto last_duplicate  = first_duplicate;
-    
-    while (true) {
-        first_duplicate = std::adjacent_find(first_duplicate, std::end(haplotypes));
-        
-        if (first_duplicate == std::end(haplotypes)) break;
-        
-        last_duplicate = std::find_if_not(std::next(first_duplicate, 2), std::end(haplotypes),
-                                          [=] (const Haplotype& haplotype) {
-                                              return haplotype == *first_duplicate;
-                                          });
-        
-        std::nth_element(first_duplicate, first_duplicate, last_duplicate,
-                         [&] (const Haplotype& lhs, const Haplotype& rhs) {
-                             return haplotype_priors.at(lhs) > haplotype_priors.at(rhs);
-                         });
-        
-        std::cout << "removing " << std::distance(std::next(first_duplicate), last_duplicate) << " duplicates" << std::endl;
-        
-        std::for_each(std::next(first_duplicate), last_duplicate,
-                      [&] (const Haplotype& haplotype) {
-                          haplotype_priors.erase(haplotype);
-                      });
-        
-        first_duplicate = last_duplicate;
+    template <typename Map>
+    void normalise(Map& haplotype_priors)
+    {
+        const auto norm = Maths::sum_values(haplotype_priors);
+        for (auto& p : haplotype_priors) p.second /= norm;
     }
-    
-    haplotype_priors.rehash(haplotype_priors.size());
-    
-    haplotypes.erase(std::unique(std::begin(haplotypes), std::end(haplotypes)), std::end(haplotypes));
-    
-    assert(haplotypes.size() == haplotype_priors.size());
-}
+} // namespace
 
 namespace debug
 {

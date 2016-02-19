@@ -17,7 +17,6 @@
 
 #include "genotype.hpp"
 #include "reference_genome.hpp"
-#include "haplotype_prior_model.hpp"
 #include "haplotype_likelihood_cache.hpp"
 #include "probability_matrix.hpp"
 
@@ -31,11 +30,12 @@ namespace Octopus
     class Population
     {
     public:
-        using HaplotypePrioMap = HaplotypePriorModel::HaplotypePriorMap;
+        using HaplotypeReference = std::reference_wrapper<const Haplotype>;
+        using HaplotypePrioMap   = std::unordered_map<HaplotypeReference, double>;
         
         struct Latents
         {
-            using HaplotypeFrequencyMap  = std::unordered_map<std::reference_wrapper<const Haplotype>, double>;
+            using HaplotypeFrequencyMap  = std::unordered_map<HaplotypeReference, double>;
             using GenotypeProbabilityMap = ProbabilityMatrix<Genotype<Haplotype>>;
             
             Latents() = default;

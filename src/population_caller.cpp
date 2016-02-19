@@ -581,7 +581,7 @@ PopulationVariantCaller::call_variants(const std::vector<Variant>& candidates,
     
     const auto& genotype_posteriors = *dlatents->genotype_posteriors_;
     
-    //debug::print_genotype_posteriors(genotype_posteriors);
+    debug::print_genotype_posteriors(genotype_posteriors);
     
     auto allele_posteriors = compute_allele_posteriors(genotype_posteriors, callable_alleles);
     

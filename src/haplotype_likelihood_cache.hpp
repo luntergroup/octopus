@@ -49,13 +49,14 @@ namespace Octopus
         HaplotypeLikelihoodCache(HaplotypeLikelihoodCache&&)                 = default;
         HaplotypeLikelihoodCache& operator=(HaplotypeLikelihoodCache&&)      = default;
         
-        double log_probability(const AlignedRead& read, const Haplotype& haplotype) const; // ln p(read | haplotype)
+        // ln p(read | haplotype)
+        double log_probability(const AlignedRead& read, const Haplotype& haplotype) const;
         
         void clear();
         
     private:
         using ReadReference      = std::reference_wrapper<const AlignedRead>;
-        using HaplotypeReference = std::reference_wrapper<const Haplotype>;
+        using HaplotypeReference = Haplotype;
         
         using Cache = std::unordered_map<ReadReference, std::unordered_map<HaplotypeReference, double>>;
         

@@ -52,8 +52,8 @@ public:
     
     GenomicRegion get_region() const;
     
-    std::vector<Haplotype> get_haplotypes() const;
-    std::vector<Haplotype> get_haplotypes(const GenomicRegion& region) const;
+    std::vector<Haplotype> extract_haplotypes() const;
+    std::vector<Haplotype> extract_haplotypes(const GenomicRegion& region) const;
     
     void prune_all(const Haplotype& haplotype);
     void prune_unique(const Haplotype& haplotype);
@@ -89,7 +89,7 @@ private:
     Vertex get_previous_allele(Vertex allele) const;
     bool allele_exists(Vertex leaf, const ContigAllele& allele) const;
     LeafIterator extend_haplotype(LeafIterator leaf, const ContigAllele& new_allele);
-    Haplotype get_haplotype(Vertex leaf, const GenomicRegion& region) const;
+    Haplotype extract_haplotype(Vertex leaf, const GenomicRegion& region) const;
     bool define_same_haplotype(Vertex leaf1, Vertex leaf2) const;
     bool is_branch_exact_haplotype(Vertex branch_vertex, const Haplotype& haplotype) const;
     bool is_branch_equal_haplotype(Vertex branch_vertex, const Haplotype& haplotype) const;
@@ -159,7 +159,7 @@ generate_all_haplotypes(InputIt first, InputIt last, const ReferenceGenome& refe
     
     extend_tree(first, last, tree);
     
-    return tree.get_haplotypes();
+    return tree.extract_haplotypes();
 }
 
 template <typename Container>

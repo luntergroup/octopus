@@ -62,7 +62,8 @@ public:
     std::vector<VcfRecord> call_variants(const GenomicRegion& call_region) const;
     
 protected:
-    using HaplotypePriorMap = HaplotypePriorModel::HaplotypePriorMap;
+    using HaplotypeReference = std::reference_wrapper<const Haplotype>;
+    using HaplotypePriorMap  = std::unordered_map<HaplotypeReference, double>;
     
     std::reference_wrapper<const ReferenceGenome> reference_;
     std::reference_wrapper<ReadPipe> read_pipe_;
@@ -73,7 +74,6 @@ protected:
     
     struct CallerLatents
     {
-        using HaplotypeReference   = std::reference_wrapper<const Haplotype>;
         using HaplotypePosteiorMap = std::unordered_map<HaplotypeReference, double>;
         using GenotypePosteriorMap = ProbabilityMatrix<Genotype<Haplotype>>;
         

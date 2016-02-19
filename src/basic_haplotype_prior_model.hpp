@@ -13,6 +13,9 @@
 
 #include <vector>
 #include <unordered_map>
+#include <functional>
+
+#include "reference_genome.hpp"
 
 class Haplotype;
 
@@ -21,8 +24,13 @@ namespace Octopus
     class BasicHaplotypePriorModel : public HaplotypePriorModel
     {
     public:
-        BasicHaplotypePriorModel()  = default;
-        explicit BasicHaplotypePriorModel(double transition_rate, double transversion_rate);
+        BasicHaplotypePriorModel() = delete;
+        
+        explicit BasicHaplotypePriorModel(const ReferenceGenome& reference);
+        
+        explicit BasicHaplotypePriorModel(const ReferenceGenome& reference,
+                                          double transition_rate, double transversion_rate);
+        
         ~BasicHaplotypePriorModel() = default;
         
         BasicHaplotypePriorModel(const BasicHaplotypePriorModel&)            = default;
@@ -31,16 +39,15 @@ namespace Octopus
         BasicHaplotypePriorModel& operator=(BasicHaplotypePriorModel&&)      = default;
         
     private:
-        using HaplotypePriorModel::HaplotypePriorMap;
-        
         // ln p(to | from)
         double do_evaluate(const Haplotype& to, const Haplotype& from) const override;
         
-        HaplotypePriorMap do_evaluate(std::vector<Haplotype>::const_iterator first,
-                                      std::vector<Haplotype>::const_iterator last,
-                                      std::vector<Haplotype>::const_iterator reference) const override;
+        HaplotypePriorMap
+        do_compute_maximum_entropy_haplotype_set(std::vector<Haplotype>& haplotypes) const override;
         
     private:
+        std::reference_wrapper<const ReferenceGenome> reference_;
+        
         const double transition_rate_   = 0.000222;
         const double transversion_rate_ = 0.000111;
     };
