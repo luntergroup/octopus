@@ -52,21 +52,20 @@ min_refcall_posterior_ {min_refcall_posterior}
 
 PopulationVariantCaller::Latents::Latents(GenotypeModel::Population::Latents&& model_latents)
 :
-GenotypeModel::Population::Latents {std::move(model_latents)}
+haplotype_frequencies_ {std::make_shared<HaplotypePosteiorMap>(std::move(model_latents.haplotype_frequencies))},
+genotype_posteriors_ {std::make_shared<GenotypePosteriorMap>(std::move(model_latents.genotype_posteriors))}
 {}
-    
-ProbabilityMatrix<Genotype<Haplotype>> PopulationVariantCaller::Latents::get_genotype_posteriors() const
-{
-    return this->genotype_posteriors;
-}
 
 std::unique_ptr<PopulationVariantCaller::CallerLatents>
-PopulationVariantCaller::infer_latents(const std::vector<Haplotype>& haplotypes, const ReadMap& reads,
-                                       HaplotypeLikelihoodCache& haplotype_likelihoods) const
+PopulationVariantCaller::infer_latents(const std::vector<Haplotype>& haplotypes,
+                                       const HaplotypePriorMap& haplotype_priors,
+                                       HaplotypeLikelihoodCache& haplotype_likelihoods,
+                                       const ReadMap& reads) const
 {
-    return std::make_unique<Latents>(genotype_model_.infer_latents(haplotypes, reads,
-                                                                   haplotype_likelihoods,
-                                                                   reference_));
+    auto model_latents = genotype_model_.infer_latents(haplotypes, haplotype_priors,
+                                                       haplotype_likelihoods, reads);
+    
+    return std::make_unique<Latents>(std::move(model_latents));
 }
 
 // non member methods
@@ -580,9 +579,11 @@ PopulationVariantCaller::call_variants(const std::vector<Variant>& candidates,
 {
     const auto dlatents = dynamic_cast<Latents*>(latents);
     
-    debug::print_genotype_posteriors(dlatents->genotype_posteriors);
+    const auto& genotype_posteriors = *dlatents->genotype_posteriors_;
     
-    auto allele_posteriors = compute_allele_posteriors(dlatents->genotype_posteriors, callable_alleles);
+    //debug::print_genotype_posteriors(genotype_posteriors);
+    
+    auto allele_posteriors = compute_allele_posteriors(genotype_posteriors, callable_alleles);
     
     //debug::print_allele_posteriors(allele_posteriors);
     
@@ -594,16 +595,16 @@ PopulationVariantCaller::call_variants(const std::vector<Variant>& candidates,
     
     auto called_regions = extract_regions(variant_calls);
     
-    auto variant_genotype_calls = call_genotypes(dlatents->genotype_posteriors, called_regions);
+    auto variant_genotype_calls = call_genotypes(genotype_posteriors, called_regions);
     
     set_phasings(variant_genotype_calls, phase_set, called_regions); // TODO
     
-    debug::print_genotype_calls(variant_genotype_calls);
+    //debug::print_genotype_calls(variant_genotype_calls);
     
     auto candidate_ref_alleles = generate_candidate_reference_alleles(callable_alleles, called_regions,
                                                                       candidates, refcall_type_);
     
-    auto refcalls = call_reference(dlatents->genotype_posteriors, candidate_ref_alleles, reads,
+    auto refcalls = call_reference(genotype_posteriors, candidate_ref_alleles, reads,
                                    min_refcall_posterior_);
     
     std::vector<VcfRecord::Builder> result {};

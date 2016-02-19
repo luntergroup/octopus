@@ -61,7 +61,9 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         
         // for population
         
-        "-L", "6:31,235,688-31,235,883", // TEST phaser
+        "--regions", "22:16231927-16232177",
+        
+        //"-L", "6:31,235,688-31,235,883", // TEST phaser
         
         //"-L", "5:2,726,554-2,726,594", // snp just before deletion
         

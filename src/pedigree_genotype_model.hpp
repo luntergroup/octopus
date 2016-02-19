@@ -40,8 +40,6 @@ namespace Octopus
                                   const ReferenceGenome& reference);
             
         private:
-            HaplotypePriorModel haplotype_prior_model_;
-            
             const unsigned ploidy_;
             const unsigned max_em_iterations_;
             const double em_epsilon_;

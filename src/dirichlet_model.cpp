@@ -8,6 +8,8 @@
 
 #include "dirichlet_model.hpp"
 
+#include "map_utils.hpp"
+
 namespace Octopus
 {
 namespace GenotypeModel
@@ -38,36 +40,26 @@ namespace GenotypeModel
         return result;
     }
     
-    HaplotypePriorCountMap compute_haplotype_prior_counts(const std::vector<Haplotype>& haplotypes,
-                                                          const ReferenceGenome& reference,
-                                                          const HaplotypePriorModel& haplotype_prior_model)
+    HaplotypePriorCountMap
+    compute_haplotype_prior_counts(const HaplotypeFrequencyMap& haplotype_priors)
     {
-        using std::begin; using std::cbegin; using std::cend; using std::transform;
+        static constexpr double   PRECISION      {40.0};
+        static constexpr unsigned MAX_ITERATIONS {100};
         
         HaplotypePriorCountMap result {};
         
-        if (haplotypes.empty()) return result;
+        if (haplotype_priors.empty()) return result;
         
-        const Haplotype reference_haplotype {haplotypes.front().get_region(), reference};
+        const auto alphas = Maths::dirichlet_mle(extract_values(haplotype_priors),
+                                                 PRECISION, MAX_ITERATIONS);
         
-        std::vector<double> p(haplotypes.size());
-        transform(cbegin(haplotypes), cend(haplotypes), begin(p),
-                  [&haplotype_prior_model, &reference_haplotype] (const auto& haplotype) {
-                      return haplotype_prior_model.evaluate(haplotype, reference_haplotype);
-                  });
+        result.reserve(haplotype_priors.size());
         
-        const auto norm = std::accumulate(cbegin(p), cend(p), 0.0);
-        
-        transform(cbegin(p), cend(p), begin(p), [norm] (auto x) { return x / norm; });
-        
-        constexpr double precision {40.0};
-        constexpr unsigned max_iterations {100};
-        const auto alphas = Maths::dirichlet_mle(p, precision, max_iterations);
-        
-        result.reserve(haplotypes.size());
-        
-        transform(cbegin(haplotypes), cend(haplotypes), cbegin(alphas), std::inserter(result, begin(result)),
-                  [] (const auto& haplotype, double a) { return std::make_pair(std::ref(haplotype), a); });
+        std::transform(std::cbegin(haplotype_priors), std::cend(haplotype_priors),
+                       std::cbegin(alphas), std::inserter(result, begin(result)),
+                       [] (const auto& p, const double alpha) {
+                           return std::make_pair(std::ref(p.first), alpha);
+                       });
         
         for (auto& h : result) h.second = 1; // DEBUG - uniform priors
         

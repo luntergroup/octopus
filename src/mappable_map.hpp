@@ -16,6 +16,7 @@
 #include <stdexcept>
 #include <cstddef>
 #include <functional>
+#include <utility>
 
 #include "mappable_set.hpp"
 
@@ -28,31 +29,33 @@ make_mappable_map(Map map)
 {
     using std::make_move_iterator; using std::begin; using std::end;
     
-    using T = typename Map::mapped_type::value_type;
+    using MappableTp = typename Map::mapped_type::value_type;
     
-    MappableMap<typename Map::key_type, T> result {};
-    result.reserve(map.size());
+    MappableMap<typename Map::key_type, MappableTp> result {map.size()};
     
-    std::for_each(make_move_iterator(begin(map)), make_move_iterator(end(map)), [&result] (auto&& p) {
-        result.emplace(std::move(p.first),
-                       MappableSet<T> {make_move_iterator(begin(p.second)), make_move_iterator(end(p.second))});
-    });
+    std::for_each(make_move_iterator(begin(map)), make_move_iterator(end(map)),
+                  [&result] (auto&& p) {
+                      result.emplace(std::piecewise_construct,
+                                     std::forward_as_tuple(std::move(p.first)),
+                                     std::forward_as_tuple(make_move_iterator(begin(p.second)),
+                                                           make_move_iterator(end(p.second))));
+                  });
     
     return result;
 }
 
 template <typename KeyType, typename MappableType>
-auto get_encompassing_region(const MappableMap<KeyType, MappableType>& mappables)
+auto encompassing_region(const MappableMap<KeyType, MappableType>& mappables)
 {
     if (mappables.empty()) {
-        throw std::runtime_error {"get_encompassing_region called on empty MappableMap"};
+        throw std::runtime_error {"get_encompassing_region called with empty MappableMap"};
     }
     
-    auto result = get_encompassing_region(std::cbegin(mappables)->second);
+    auto result = encompassing_region(std::cbegin(mappables)->second);
     
     std::for_each(std::next(std::cbegin(mappables)), std::cend(mappables),
                   [&result] (const auto& p) {
-                      result = get_encompassing(result, get_encompassing_region(p.second));
+                      result = encompassing_region(result, encompassing_region(p.second));
                   });
     
     return result;
@@ -81,7 +84,7 @@ count_overlapped(const MappableMap<KeyType, MappableType1>& mappables, const Map
 {
     using SizeType = typename MappableSet<MappableType1>::size_type;
     
-    return std::accumulate(std::cbegin(mappables), std::cend(mappables), SizeType {},
+    return std::accumulate(std::cbegin(mappables), std::cend(mappables), SizeType {0},
                            [&mappable] (const auto curr, const auto& p) {
                                return curr + p.second.count_overlapped(mappable);
                            });
@@ -103,7 +106,7 @@ count_contained(const MappableMap<KeyType, MappableType1>& mappables, const Mapp
 {
     using SizeType = typename MappableSet<MappableType1>::size_type;
     
-    return std::accumulate(std::cbegin(mappables), std::cend(mappables), SizeType {},
+    return std::accumulate(std::cbegin(mappables), std::cend(mappables), SizeType {0},
                            [&mappable] (const auto curr, const auto& p) {
                                return curr + p.second.count_contained(mappable);
                            });
@@ -126,7 +129,7 @@ count_shared(const MappableMap<KeyType, MappableType1>& mappables, const Mappabl
 {
     using SizeType = typename MappableSet<MappableType1>::size_type;
     
-    return std::accumulate(std::cbegin(mappables), std::cend(mappables), SizeType {},
+    return std::accumulate(std::cbegin(mappables), std::cend(mappables), SizeType {0},
                            [&mappable1, &mappable2] (const auto curr, const auto& p) {
                                return curr + p.second.count_shared(mappable1, mappable2);
                            });
@@ -168,7 +171,7 @@ max_count_if_shared_with_first(const MappableMap<KeyType, MappableType>& mappabl
                                ForwardIterator first, ForwardIterator last)
 {
     size_t maximum {0};
-    size_t count {};
+    size_t count {0};
     
     for (const auto& map_pair : mappables) {
         count = count_if_shared_with_first(map_pair.second, first, last);
@@ -187,7 +190,7 @@ leftmost_overlapped(const MappableMap<KeyType, MappableType1>& mappables, const 
     using std::cbegin; using std::cend;
     
     if (mappables.empty()) {
-        throw std::runtime_error {"leftmost_overlapped given empty MappableMap"};
+        throw std::runtime_error {"leftmost_overlapped called with empty MappableMap"};
     }
     
     auto first = cbegin(mappables);
@@ -224,7 +227,7 @@ rightmost_overlapped(const MappableMap<KeyType, MappableType1>& mappables, const
     using std::cbegin; using std::cend; using std::prev;
     
     if (mappables.empty()) {
-        throw std::runtime_error {"rightmost_overlapped given empty MappableMap"};
+        throw std::runtime_error {"rightmost_overlapped called with empty MappableMap"};
     }
     
     auto first = cbegin(mappables);
@@ -254,20 +257,6 @@ rightmost_overlapped(const MappableMap<KeyType, MappableType1>& mappables, const
     return result;
 }
 
-template <typename KeyType, typename MappableType1, typename MappableType2>
-MappableMap<KeyType, MappableType1>
-copy_overlapped(const MappableMap<KeyType, MappableType1>& mappables, const MappableType2& mappable)
-{
-    MappableMap<KeyType, MappableType1> result {};
-    result.reserve(mappables.size());
-    
-    for (const auto& p : mappables) {
-        result.emplace(p.first, copy_overlapped(p.second, mappable));
-    }
-    
-    return result;
-}
-
 template <typename KeyType, typename MappableType>
 std::vector<unsigned>
 positional_coverage(const MappableMap<KeyType, MappableType>& mappables, const GenomicRegion& region)
@@ -278,7 +267,7 @@ positional_coverage(const MappableMap<KeyType, MappableType>& mappables, const G
         const auto pcoverage = positional_coverage(p.second, region);
         
         std::transform(std::cbegin(result), std::cend(result), std::cbegin(pcoverage),
-                       std::begin(result), std::plus<unsigned>{});
+                       std::begin(result), std::plus<void> {});
     }
     
     return result;
@@ -288,7 +277,33 @@ template <typename KeyType, typename MappableType>
 std::vector<unsigned>
 positional_coverage(const MappableMap<KeyType, MappableType>& mappables)
 {
-    return positional_coverage(mappables, get_encompassing_region(mappables));
+    return positional_coverage(mappables, encompassing_region(mappables));
+}
+
+template <typename KeyType, typename MappableType1, typename MappableType2>
+MappableMap<KeyType, MappableType1>
+copy_overlapped(const MappableMap<KeyType, MappableType1>& mappables, const MappableType2& mappable)
+{
+    MappableMap<KeyType, MappableType1> result {mappables.size()};
+    
+    for (const auto& p : mappables) {
+        result.emplace(p.first, copy_overlapped(p.second, mappable));
+    }
+    
+    return result;
+}
+
+template <typename KeyType, typename MappableType1, typename MappableType2>
+MappableMap<KeyType, MappableType1>
+copy_contained(const MappableMap<KeyType, MappableType1>& mappables, const MappableType2& mappable)
+{
+    MappableMap<KeyType, MappableType1> result {mappables.size()};
+    
+    for (const auto& p : mappables) {
+        result.emplace(p.first, copy_contained(p.second, mappable));
+    }
+    
+    return result;
 }
 
 #endif

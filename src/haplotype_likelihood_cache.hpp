@@ -15,7 +15,7 @@
 #include "common.hpp"
 #include "haplotype.hpp"
 #include "aligned_read.hpp"
-#include "single_read_model.hpp"
+#include "haplotype_liklihood_model.hpp"
 
 namespace std
 {
@@ -38,7 +38,7 @@ namespace Octopus
         explicit HaplotypeLikelihoodCache(const ReadMap& reads,
                                           const std::vector<Haplotype>& haplotypes);
         
-        explicit HaplotypeLikelihoodCache(SingleReadModel read_model,
+        explicit HaplotypeLikelihoodCache(HaplotypeLikelihoodModel error_model,
                                           const ReadMap& reads,
                                           const std::vector<Haplotype>& haplotypes);
         
@@ -59,12 +59,11 @@ namespace Octopus
         
         using Cache = std::unordered_map<ReadReference, std::unordered_map<HaplotypeReference, double>>;
         
-        SingleReadModel read_model_;
+        HaplotypeLikelihoodModel error_model_;
         
         mutable Cache cache_;
         
-        size_t max_num_reads_;
-        size_t max_num_haplotypes_;
+        std::size_t max_num_haplotypes_;
         
         bool is_cached(const AlignedRead& read, const Haplotype& haplotype) const noexcept;
         void cache(const AlignedRead& read, const Haplotype& haplotype, double value) const;

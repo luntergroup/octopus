@@ -30,6 +30,8 @@ namespace Octopus
     class Cancer
     {
     public:
+        using HaplotypePrioMap = HaplotypePriorModel::HaplotypePriorMap;
+        
         using GenotypeProbabilityMap       = std::unordered_map<CancerGenotype<Haplotype>, double>;
         using SampleGenotypeMixturesPriors = std::array<double, 3>;
         using SampleGenotypeMixtures       = std::array<double, 3>;
@@ -50,15 +52,15 @@ namespace Octopus
             GenotypeMixtures genotype_mixtures;
         };
         
-        Cancer(SampleIdType normal_sample, unsigned max_em_iterations = 100, double em_epsilon = 0.001);
+        explicit Cancer(SampleIdType normal_sample, unsigned max_em_iterations = 100,
+                        double em_epsilon = 0.001);
         
         Latents infer_latents(const std::vector<Haplotype>& haplotypes,
-                              const ReadMap& reads, HaplotypeLikelihoodCache& haplotype_likelihoods,
-                              const ReferenceGenome& reference);
+                              const HaplotypePrioMap& haplotype_priors,
+                              HaplotypeLikelihoodCache& haplotype_likelihoods,
+                              const ReadMap& reads);
         
     private:
-        HaplotypePriorModel haplotype_prior_model_;
-        
         unsigned max_em_iterations_;
         double em_epsilon_;
         

@@ -46,10 +46,29 @@ public:
     PopulationVariantCaller& operator=(PopulationVariantCaller&&)      = delete;
     
 private:
-    struct Latents : public GenotypeModel::Population::Latents, public CallerLatents
+    using VariantCaller::HaplotypePriorMap;
+    
+    struct Latents : public CallerLatents
     {
-        Latents(GenotypeModel::Population::Latents&&);
-        ProbabilityMatrix<Genotype<Haplotype>> get_genotype_posteriors() const override;
+        using ModelLatents = GenotypeModel::Population::Latents;
+        
+        using CallerLatents::HaplotypePosteiorMap;
+        using CallerLatents::GenotypePosteriorMap;
+        
+        Latents(ModelLatents &&);
+        
+        std::shared_ptr<HaplotypePosteiorMap> get_haplotype_posteriors() const override
+        {
+            return haplotype_frequencies_;
+        }
+        
+        std::shared_ptr<GenotypePosteriorMap> get_genotype_posteriors() const override
+        {
+            return genotype_posteriors_;
+        }
+        
+        std::shared_ptr<ModelLatents::HaplotypeFrequencyMap> haplotype_frequencies_;
+        std::shared_ptr<ModelLatents::GenotypeProbabilityMap> genotype_posteriors_;
     };
     
     mutable GenotypeModel::Population genotype_model_;
@@ -59,8 +78,10 @@ private:
     const double min_refcall_posterior_ = 0.5;
     
     std::unique_ptr<CallerLatents>
-    infer_latents(const std::vector<Haplotype>& haplotypes, const ReadMap& reads,
-                  HaplotypeLikelihoodCache& haplotype_likelihoods) const override;
+    infer_latents(const std::vector<Haplotype>& haplotypes,
+                  const HaplotypePriorMap& haplotype_priors,
+                  HaplotypeLikelihoodCache& haplotype_likelihoods,
+                  const ReadMap& reads) const override;
     
     std::vector<VcfRecord::Builder>
     call_variants(const std::vector<Variant>& candidates,

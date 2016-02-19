@@ -496,44 +496,10 @@ Allele do_splice(const Haplotype& haplotype, const GenomicRegion& region, std::f
 }
 } // namespace detail
 
-bool is_reference(const Haplotype& haplotype, const ReferenceGenome& reference)
+bool is_reference(const Haplotype& haplotype)
 {
     if (haplotype.explicit_alleles_.empty()) return true;
-    return haplotype.get_sequence() == reference.get_sequence(haplotype.get_region());
-}
-
-bool IsLessComplex::operator()(const Haplotype& lhs, const Haplotype& rhs) noexcept
-{
-    return lhs.explicit_alleles_.size() < rhs.explicit_alleles_.size();
-}
-
-void unique_least_complex(std::vector<Haplotype>& haplotypes)
-{
-    using std::begin; using std::end;
-    
-    std::sort(begin(haplotypes), end(haplotypes));
-    
-    auto first_equal = begin(haplotypes);
-    auto last_equal  = begin(haplotypes);
-    auto last        = end(haplotypes);
-    
-    while (true) {
-        first_equal = std::adjacent_find(first_equal, last);
-        
-        if (first_equal == last) break;
-        
-        // skips 2 as std::next(first_equal, 1) is a duplicate
-        last_equal = std::find_if_not(std::next(first_equal, 2), last,
-                                      [first_equal] (const auto& haplotype) {
-                                          return haplotype == *first_equal;
-                                      });
-        
-        std::nth_element(first_equal, first_equal, last_equal, IsLessComplex());
-        
-        first_equal = last_equal;
-    }
-    
-    haplotypes.erase(std::unique(begin(haplotypes), end(haplotypes)), last);
+    return haplotype.get_sequence() == haplotype.reference_.get().get_sequence(haplotype.get_region());
 }
 
 void add_ref_to_back(const Variant& variant, Haplotype& haplotype)
@@ -601,7 +567,7 @@ void print_alleles(const Haplotype& haplotype)
 
 void print_variant_alleles(const Haplotype& haplotype)
 {
-    if (is_reference(haplotype, haplotype.reference_)) {
+    if (is_reference(haplotype)) {
         std::cout << "< >";
     } else {
         const auto& contig = contig_name(haplotype);

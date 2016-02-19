@@ -12,6 +12,7 @@
 #include <vector>
 #include <unordered_map>
 #include <utility>
+#include <functional>
 
 #include <boost/optional.hpp>
 
@@ -33,6 +34,9 @@ class HaplotypePhaser
 {
 public:
     using ContigNameType = GenomicRegion::ContigNameType;
+    
+    using HaplotypeReference   = std::reference_wrapper<const Haplotype>;
+    using HaplotypePosteiorMap = std::unordered_map<HaplotypeReference, double>;
     
     using SampleGenotypePosteriors = std::unordered_map<Genotype<Haplotype>, double>;
     using GenotypePosteriors       = std::unordered_map<SampleIdType, SampleGenotypePosteriors>;
@@ -64,12 +68,9 @@ public:
     
     HaplotypePhaser() = delete;
     
-    explicit HaplotypePhaser(ContigNameType contig,
-                             const ReferenceGenome& reference,
-                             const std::vector<Variant>& candidates,
-                             const ReadMap& reads,
-                             unsigned max_haplotypes = 128,
-                             unsigned max_indicators = 3);
+    explicit HaplotypePhaser(ContigNameType contig, const ReferenceGenome& reference,
+                             const std::vector<Variant>& candidates, const ReadMap& reads,
+                             unsigned max_haplotypes, unsigned max_indicators);
     
     ~HaplotypePhaser() = default;
     
@@ -80,10 +81,11 @@ public:
     
     bool done() const noexcept;
     
-    std::pair<std::vector<Haplotype>, GenomicRegion> get_haplotypes();
-    //std::vector<Haplotype> get_haplotypes(const GenotypePosteriors& genotype_posteriors);
+    std::pair<std::vector<Haplotype>, GenomicRegion> fetch_next_haplotypes();
     
-    void set_haplotypes(const std::vector<Haplotype>& haplotypes);
+    void keep_haplotypes(const std::vector<Haplotype>& haplotypes);
+    
+    void prepare_for_phasing(const HaplotypePosteiorMap& haplotype_posteriors);
     
     boost::optional<PhaseSet> phase(const std::vector<Haplotype>& haplotypes,
                                     const GenotypePosteriors& genotype_posteriors);
@@ -99,10 +101,12 @@ private:
     bool is_phasing_enabled_;
     double min_phase_score_ = 0.95;
     
+    unsigned max_haplotypes_;
+    double min_haplotype_posterior_ = 1e-10;
+    
     bool is_phasing_enabled() const noexcept;
     
-    void remove_low_posterior_haplotypes(const std::vector<Haplotype>& haplotypes,
-                                         const GenotypePosteriors& genotype_posteriors);
+    unsigned calculate_num_haplotypes_to_remove() const;
     
     PhaseSet find_optimal_phase_set(const GenomicRegion& region,
                                     MappableSet<Variant> variants,

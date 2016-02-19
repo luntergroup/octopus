@@ -39,8 +39,10 @@ namespace Octopus
         // Ideally add_reads would be templated to accept any InputIterator, but it is not possible
         // to have template virtual methods. The best solution is therefore to just overload add_reads
         // for common container iterators, more can easily be added if needed.
-        virtual void add_reads(std::vector<AlignedRead>::const_iterator first, std::vector<AlignedRead>::const_iterator last) {};
-        virtual void add_reads(MappableSet<AlignedRead>::const_iterator first, MappableSet<AlignedRead>::const_iterator last) {};
+        virtual void add_reads(std::vector<AlignedRead>::const_iterator first,
+                               std::vector<AlignedRead>::const_iterator last) {};
+        virtual void add_reads(MappableSet<AlignedRead>::const_iterator first,
+                               MappableSet<AlignedRead>::const_iterator last) {};
         
         virtual void reserve(size_t n) {};
         virtual void clear() {};

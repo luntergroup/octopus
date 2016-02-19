@@ -564,8 +564,6 @@ BOOST_AUTO_TEST_CASE(prune_unqiue_leaves_a_single_haplotype_which_contains_the_s
     
     const auto er = std::equal_range(std::begin(haplotypes), std::end(haplotypes), *duplicate_itr);
     
-    std::sort(er.first, er.second, IsLessComplex());
-    
     const auto haplotype_to_prune= *er.first;
     
     haplotype_tree.prune_unique(haplotype_to_prune);
@@ -629,7 +627,9 @@ BOOST_AUTO_TEST_CASE(haplotype_tree_survives_serious_pruning)
     BOOST_CHECK(std::all_of(std::cbegin(pruned_haplotypes), std::cend(pruned_haplotypes),
                             [&] (const auto& haplotype) { return haplotype == reference_haplotype; }));
     
-    unique_least_complex(pruned_haplotypes);
+    std::sort(std::begin(pruned_haplotypes), std::end(pruned_haplotypes));
+    pruned_haplotypes.erase(std::unique(std::begin(pruned_haplotypes), std::end(pruned_haplotypes)),
+                            std::end(pruned_haplotypes));
     
     BOOST_REQUIRE(pruned_haplotypes.size() == 1);
     

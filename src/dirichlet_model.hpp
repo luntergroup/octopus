@@ -16,7 +16,6 @@
 #include <numeric>
 
 #include "haplotype.hpp"
-#include "haplotype_prior_model.hpp"
 #include "maths.hpp"
 
 namespace Octopus
@@ -30,9 +29,7 @@ namespace GenotypeModel
     
     HaplotypeFrequencyMap init_haplotype_frequencies(const HaplotypePriorCountMap& haplotype_counts);
     
-    HaplotypePriorCountMap compute_haplotype_prior_counts(const std::vector<Haplotype>& haplotypes,
-                                                          const ReferenceGenome& reference,
-                                                          const HaplotypePriorModel& haplotype_prior_model);
+    HaplotypePriorCountMap compute_haplotype_prior_counts(const HaplotypeFrequencyMap& haplotype_priors);
 } // namespace GenotypeModel
 } // namespace Octopus
 

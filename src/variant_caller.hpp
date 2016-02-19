@@ -11,7 +11,6 @@
 
 #include <vector>
 #include <string>
-#include <iterator>
 #include <functional>
 #include <memory>
 
@@ -48,7 +47,7 @@ public:
     explicit VariantCaller(const ReferenceGenome& reference,
                            ReadPipe& read_pipe,
                            CandidateVariantGenerator&& candidate_generator,
-                           HaplotypePriorModel haplotype_prior_model,
+                           std::unique_ptr<HaplotypePriorModel> haplotype_prior_model,
                            RefCallType refcall_type = RefCallType::None);
     
     virtual ~VariantCaller() = default;
@@ -60,13 +59,13 @@ public:
     
     size_t num_buffered_reads() const noexcept;
     
-    std::vector<VcfRecord> call_variants(const GenomicRegion& region) const;
+    std::vector<VcfRecord> call_variants(const GenomicRegion& call_region) const;
     
 protected:
+    using HaplotypePriorMap = HaplotypePriorModel::HaplotypePriorMap;
+    
     std::reference_wrapper<const ReferenceGenome> reference_;
     std::reference_wrapper<ReadPipe> read_pipe_;
-    
-    HaplotypePriorModel haplotype_prior_model_;
     
     const RefCallType refcall_type_ = RefCallType::Positional;
     
@@ -74,18 +73,31 @@ protected:
     
     struct CallerLatents
     {
-        virtual ProbabilityMatrix<Genotype<Haplotype>> get_genotype_posteriors() const = 0;
+        using HaplotypeReference   = std::reference_wrapper<const Haplotype>;
+        using HaplotypePosteiorMap = std::unordered_map<HaplotypeReference, double>;
+        using GenotypePosteriorMap = ProbabilityMatrix<Genotype<Haplotype>>;
+        
+        // Return shared_ptr as the caller may not actually need to use these latents itself,
+        // they just need to be constructable on demand. But if the caller DOES use them, then
+        // we avoid copying.
+        virtual std::shared_ptr<HaplotypePosteiorMap> get_haplotype_posteriors() const = 0;
+        virtual std::shared_ptr<GenotypePosteriorMap> get_genotype_posteriors() const = 0;
+        
         virtual ~CallerLatents() = default;
     };
     
 private:
     mutable CandidateVariantGenerator candidate_generator_;
     
+    std::unique_ptr<HaplotypePriorModel> haplotype_prior_model_;
+    
     bool done_calling(const GenomicRegion& region) const noexcept;
     
     virtual std::unique_ptr<CallerLatents>
-    infer_latents(const std::vector<Haplotype>& haplotypes, const ReadMap& reads,
-                  HaplotypeLikelihoodCache& haplotype_likelihoods) const = 0;
+    infer_latents(const std::vector<Haplotype>& haplotypes,
+                  const HaplotypePriorMap& haplotype_priors,
+                  HaplotypeLikelihoodCache& haplotype_likelihoods,
+                  const ReadMap& reads) const = 0;
     
     virtual std::vector<VcfRecord::Builder>
     call_variants(const std::vector<Variant>& candidates, const std::vector<Allele>& callable_alleles,
@@ -104,15 +116,27 @@ generate_candidate_reference_alleles(const std::vector<Allele>& callable_alleles
                                      VariantCaller::RefCallType refcall_type);
 
 template <typename Map>
-void remove_low_posteriors(Map& map, const double min_posterior)
+auto marginalise_haplotypes(const std::vector<Haplotype>& haplotypes,
+                            const Map& genotype_posteriors)
 {
-    for (auto it = std::begin(map); it != std::end(map);) {
-        if (it->second < min_posterior) {
-            it = map.erase(it);
-        } else {
-            ++it;
+    using HaplotypeReference   = std::reference_wrapper<const Haplotype>;
+    using HaplotypePosteiorMap = std::unordered_map<HaplotypeReference, double>;
+    
+    HaplotypePosteiorMap result {haplotypes.size()};
+    
+    for (const auto& haplotype : haplotypes) {
+        result.emplace(haplotype, 0);
+    }
+    
+    for (const auto& s : genotype_posteriors) {
+        for (const auto& p : s.second) {
+            for (const auto& haplotype : p.first) {
+                result[haplotype] += p.second;
+            }
         }
     }
+    
+    return result;
 }
 } // namespace Octopus
 

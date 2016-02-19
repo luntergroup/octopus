@@ -71,12 +71,11 @@ public:
     
     size_t get_hash() const;
     
-    friend struct IsLessComplex;
     friend struct HaveSameAlleles;
     
     friend bool contains(const Haplotype& lhs, const Haplotype& rhs);
     friend Haplotype detail::do_splice(const Haplotype& haplotype, const GenomicRegion& region, std::true_type);
-    friend bool is_reference(const Haplotype& haplotype, const ReferenceGenome& reference);
+    friend bool is_reference(const Haplotype& haplotype);
     
     friend void print_alleles(const Haplotype& haplotype);
     friend void print_variant_alleles(const Haplotype& haplotype);
@@ -122,14 +121,7 @@ MappableType splice(const Haplotype& haplotype, const GenomicRegion& region)
     return detail::do_splice(haplotype, region, std::is_same<Haplotype, std::decay_t<MappableType>> {});
 }
 
-bool is_reference(const Haplotype& haplotype, const ReferenceGenome& reference);
-
-struct IsLessComplex
-{
-    bool operator()(const Haplotype& lhs, const Haplotype& rhs) noexcept;
-};
-
-void unique_least_complex(std::vector<Haplotype>& haplotypes);
+bool is_reference(const Haplotype& haplotype);
 
 bool operator==(const Haplotype& lhs, const Haplotype& rhs);
 bool operator<(const Haplotype& lhs, const Haplotype& rhs);

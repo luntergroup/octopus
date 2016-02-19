@@ -11,6 +11,8 @@
 #include <algorithm>
 #include <utility>
 #include <tuple>
+#include <iterator>
+#include <cassert>
 
 #include "genomic_region.hpp"
 #include "mappable.hpp"
@@ -20,6 +22,8 @@
 #include "haplotype.hpp"
 #include "haplotype_filter.hpp"
 #include "vcf_record.hpp"
+
+#include "basic_haplotype_prior_model.hpp"
 
 #include <iostream> // TEST
 
@@ -34,7 +38,7 @@ VariantCaller::VariantCaller(const ReferenceGenome& reference,
 :
 reference_ {reference},
 read_pipe_ {read_pipe},
-haplotype_prior_model_ {},
+haplotype_prior_model_ {std::make_unique<BasicHaplotypePriorModel>()},
 candidate_generator_ {std::move(candidate_generator)},
 refcall_type_ {refcall_type}
 {}
@@ -42,7 +46,7 @@ refcall_type_ {refcall_type}
 VariantCaller::VariantCaller(const ReferenceGenome& reference,
                              ReadPipe& read_pipe,
                              CandidateVariantGenerator&& candidate_generator,
-                             HaplotypePriorModel haplotype_prior_model,
+                             std::unique_ptr<HaplotypePriorModel> haplotype_prior_model,
                              RefCallType refcall_type)
 :
 reference_ {reference},
@@ -71,20 +75,50 @@ void append_annotated_calls(std::vector<VcfRecord>& curr_calls,
                    [&] (auto& record) { return annotate_record(record, reads); });
 }
 
-std::vector<VcfRecord> VariantCaller::call_variants(const GenomicRegion& region) const
+auto group_duplicates_and_find_reference(std::vector<Haplotype>& haplotypes,
+                                         const ReferenceGenome& reference)
 {
-    ReadMap reads {};
+    if (haplotypes.empty()) return std::cend(haplotypes);
+    
+    std::sort(std::begin(haplotypes), std::end(haplotypes));
+    
+    const auto reference_sequence = reference.get_sequence(haplotypes.front().get_region());
+    
+    return std::lower_bound(std::cbegin(haplotypes), std::cend(haplotypes), reference_sequence,
+                            [] (const Haplotype& lhs, const auto& rhs) {
+                                return lhs.get_sequence() < rhs;
+                            });
+}
+
+namespace debug
+{
+    void print_candidates(const std::vector<Variant>& candidates)
+    {
+        if (!candidates.empty()) {
+            std::cout << "there are no candidates" << '\n';
+        } else {
+            std::cout << "found " << candidates.size() << " candidates: " << '\n';
+            for (const auto& c : candidates) std::cout << c << '\n';
+        }
+    }
+}
+
+std::vector<VcfRecord> VariantCaller::call_variants(const GenomicRegion& call_region) const
+{
+    assert(!is_empty_region(call_region));
+    
+    ReadMap reads;
     
     if (candidate_generator_.requires_reads()) {
-        reads = read_pipe_.get().fetch_reads(region);
+        reads = read_pipe_.get().fetch_reads(call_region);
         add_reads(reads, candidate_generator_);
     }
     
-    const auto candidates = unique_left_align(candidate_generator_.get_candidates(region), reference_);
+    const auto candidates = unique_left_align(candidate_generator_.get_candidates(call_region), reference_);
     
     candidate_generator_.clear();
     
-    std::cout << "found " << candidates.size() << " candidates" << std::endl;
+    debug::print_candidates(candidates);
     
     std::vector<VcfRecord> result {};
     
@@ -92,53 +126,56 @@ std::vector<VcfRecord> VariantCaller::call_variants(const GenomicRegion& region)
         return result;
     }
     
-    if (!candidates.empty()) {
-        std::cout << "candidates are:" << std::endl;
-        for (const auto& c : candidates) std::cout << c << std::endl;
-    }
-    
     if (!candidate_generator_.requires_reads()) {
         // TODO: we could be more selective and only fetch reads overlapping candidates
-        reads = read_pipe_.get().fetch_reads(region);
+        reads = read_pipe_.get().fetch_reads(call_region);
     }
     
-    if (is_empty_region(region) || (candidates.empty() && !refcalls_requested())) {
-        return result;
-    }
-    
-    HaplotypePhaser phaser {region.get_contig_name(), reference_, candidates, reads, 256, 5};
+    HaplotypePhaser phaser {call_region.get_contig_name(), reference_, candidates, reads, 50, 5};
     
     std::vector<Haplotype> haplotypes;
     GenomicRegion phasing_region;
     
     while (!phaser.done()) {
-        std::tie(haplotypes, phasing_region) = phaser.get_haplotypes();
+        std::tie(haplotypes, phasing_region) = phaser.fetch_next_haplotypes();
         
-        remove_low_prior_duplicates(haplotypes, haplotype_prior_model_);
+        assert(!haplotypes.empty());
         
-        std::cout << "there are " << haplotypes.size() << " unique haplotypes" << std::endl;
+        const auto reference_itr = group_duplicates_and_find_reference(haplotypes, reference_);
         
-        std::cout << "current region is " << phasing_region << std::endl;
+        auto haplotype_priors = evaluate(haplotypes, reference_itr, haplotype_prior_model_.get());
         
-        const auto phasing_region_region_reads = copy_overlapped(reads, phasing_region);
+        //debug::print_haplotype_priors(haplotype_priors);
         
-        std::cout << "there are " << count_reads(phasing_region_region_reads)
-                    << " reads in current region" << std::endl;
-        std::cout << "computing latents" << std::endl;
+        remove_lowest_prior_duplicates(haplotypes, haplotype_priors);
         
-        HaplotypeLikelihoodCache haplotype_likelihoods {phasing_region_region_reads, haplotypes};
+        std::cout << "there are " << haplotypes.size() << " unique haplotypes" << '\n';
+        std::cout << "current region is " << phasing_region << '\n';
         
-        filter_haplotypes(haplotypes, phasing_region_region_reads, 200, haplotype_likelihoods);
+        const auto phasing_region_reads = copy_contained(reads, phasing_region);
         
-        phaser.set_haplotypes(haplotypes);
+        std::cout << "there are " << count_reads(phasing_region_reads)
+                    << " reads in current region" << '\n';
         
-        auto caller_latents = infer_latents(haplotypes, phasing_region_region_reads, haplotype_likelihoods);
+        std::cout << "phasing_region_reads region is " << encompassing_region(phasing_region_reads) << '\n';
         
+        HaplotypeLikelihoodCache haplotype_likelihoods {phasing_region_reads, haplotypes};
+        
+        filter_haplotypes(haplotypes, phasing_region_reads, 200, haplotype_likelihoods);
+        
+        phaser.keep_haplotypes(haplotypes);
+        
+        auto caller_latents = infer_latents(haplotypes, haplotype_priors, haplotype_likelihoods,
+                                            phasing_region_reads);
+        
+        haplotype_priors.clear();
         haplotype_likelihoods.clear();
+        
+        phaser.prepare_for_phasing(*caller_latents->get_haplotype_posteriors());
         
         // TEST
         HaplotypePhaser::GenotypePosteriors tmp {};
-        for (const auto p : caller_latents->get_genotype_posteriors()) {
+        for (const auto p : *caller_latents->get_genotype_posteriors()) {
             auto& t = tmp[p.first];
             for (const auto& s : p.second) {
                 t.emplace(s.first, s.second);
@@ -149,7 +186,7 @@ std::vector<VcfRecord> VariantCaller::call_variants(const GenomicRegion& region)
         //const auto phase_set = phaser.phase(haplotypes, latents->get_genotype_posteriors());
         
         if (phase_set) {
-            std::cout << "phased region is " << phase_set->region << std::endl;
+            std::cout << "phased region is " << phase_set->region << '\n';
             
             auto overlapped_candidates = copy_overlapped(candidates, phase_set->region);
             
@@ -157,9 +194,9 @@ std::vector<VcfRecord> VariantCaller::call_variants(const GenomicRegion& region)
                                                      refcall_type_, reference_);
             
             auto curr_results = call_variants(overlapped_candidates, alleles, caller_latents.get(),
-                                              *phase_set, phasing_region_region_reads);
+                                              *phase_set, phasing_region_reads);
             
-            append_annotated_calls(result, curr_results, phasing_region_region_reads);
+            append_annotated_calls(result, curr_results, phasing_region_reads);
         }
     }
     

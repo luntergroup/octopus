@@ -11,37 +11,54 @@
 
 #include <vector>
 #include <unordered_map>
+#include <functional>
+#include <iterator>
+#include <cstddef>
+#include <cassert>
 
-class Haplotype;
+#include "haplotype.hpp"
 
 namespace Octopus
 {
-
 class HaplotypePriorModel
 {
 public:
-    using HaplotypePriorMap = std::unordered_map<Haplotype, double>;
+    using HaplotypePriorMap = std::unordered_map<std::reference_wrapper<const Haplotype>, double>;
     
-    HaplotypePriorModel()  = default;
-    explicit HaplotypePriorModel(double transition_rate, double transversion_rate);
-    ~HaplotypePriorModel() = default;
+    virtual ~HaplotypePriorModel() = default;
     
-    HaplotypePriorModel(const HaplotypePriorModel&)            = default;
-    HaplotypePriorModel& operator=(const HaplotypePriorModel&) = default;
-    HaplotypePriorModel(HaplotypePriorModel&&)                 = default;
-    HaplotypePriorModel& operator=(HaplotypePriorModel&&)      = default;
-    
-    // ln p(to | from)
     double evaluate(const Haplotype& to, const Haplotype& from) const;
     
-    HaplotypePriorMap evaluate(const std::vector<Haplotype>& haplotypes, const Haplotype& reference) const;
+    HaplotypePriorMap evaluate(std::vector<Haplotype>::const_iterator first,
+                               std::vector<Haplotype>::const_iterator last,
+                               std::vector<Haplotype>::const_iterator reference);
     
 private:
-    const double transition_rate_   = 0.000222;
-    const double transversion_rate_ = 0.000111;
+    // ln p(to | from)
+    virtual double do_evaluate(const Haplotype& to, const Haplotype& from) const = 0;
+    
+    virtual HaplotypePriorMap do_evaluate(std::vector<Haplotype>::const_iterator first,
+                                          std::vector<Haplotype>::const_iterator last,
+                                          std::vector<Haplotype>::const_iterator reference) const = 0;
 };
 
-void remove_low_prior_duplicates(std::vector<Haplotype>& haplotypes, const HaplotypePriorModel& prior_model);
+template <typename Container>
+HaplotypePriorModel::HaplotypePriorMap
+evaluate(const Container& haplotypes, typename Container::const_iterator reference_itr,
+         HaplotypePriorModel* prior_model)
+{
+    assert(reference_itr != std::cend(haplotypes));
+    return prior_model->evaluate(std::cbegin(haplotypes), std::cend(haplotypes), reference_itr);
+}
+
+void remove_lowest_prior_duplicates(std::vector<Haplotype>& haplotypes,
+                                    HaplotypePriorModel::HaplotypePriorMap& haplotype_priors);
+
+namespace debug
+{
+    void print_haplotype_priors(const HaplotypePriorModel::HaplotypePriorMap& haplotype_priors,
+                                std::size_t n = 5);
+} // namespace debug
 
 } // namespace Octopus
 

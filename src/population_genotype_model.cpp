@@ -199,8 +199,7 @@ namespace Octopus
     init_haplotype_frequencies(const HaplotypePriorCountMap& haplotype_prior_counts,
                                const double prior_count_sum)
     {
-        HaplotypeFrequencyMap result {};
-        result.reserve(haplotype_prior_counts.size());
+        HaplotypeFrequencyMap result {haplotype_prior_counts.size()};
         
         for (const auto& haplotype_count : haplotype_prior_counts) {
             result.emplace(haplotype_count.first, haplotype_count.second / prior_count_sum);
@@ -311,9 +310,9 @@ namespace Octopus
     
     Population::Latents
     Population::infer_latents(const std::vector<Haplotype>& haplotypes,
-                              const ReadMap& reads,
+                              const HaplotypePrioMap& haplotype_priors,
                               HaplotypeLikelihoodCache& haplotype_likelihoods,
-                              const ReferenceGenome& reference)
+                              const ReadMap& reads)
     {
         assert(!haplotypes.empty());
         assert(!reads.empty());
@@ -329,8 +328,7 @@ namespace Octopus
         const auto genotype_log_likilhoods = compute_genotype_log_likelihoods(genotypes, reads,
                                                                               haplotype_likelihoods);
         
-        auto haplotype_prior_counts = compute_haplotype_prior_counts(haplotypes, reference,
-                                                                     haplotype_prior_model_);
+        auto haplotype_prior_counts = compute_haplotype_prior_counts(haplotype_priors);
         const auto prior_count_sum  = Maths::sum_values(haplotype_prior_counts);
         
         auto haplotype_frequencies  = init_haplotype_frequencies(haplotype_prior_counts, prior_count_sum);

@@ -426,11 +426,11 @@ namespace Octopus
     
     Cancer::Latents
     Cancer::infer_latents(const std::vector<Haplotype>& haplotypes,
-                          const ReadMap& reads, HaplotypeLikelihoodCache& haplotype_likelihoods,
-                          const ReferenceGenome& reference)
+                          const HaplotypePrioMap& haplotype_priors,
+                          HaplotypeLikelihoodCache& haplotype_likelihoods,
+                          const ReadMap& reads)
     {
-        auto haplotype_prior_counts = compute_haplotype_prior_counts(haplotypes, reference,
-                                                                     haplotype_prior_model_);
+        auto haplotype_prior_counts = compute_haplotype_prior_counts(haplotype_priors);
         
         auto genotypes = generate_all_cancer_genotypes(haplotypes, 2); // diploid only for now
         

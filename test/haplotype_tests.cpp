@@ -349,28 +349,6 @@ BOOST_AUTO_TEST_CASE(haplotype_equate_when_alleles_infer_same_sequence)
     BOOST_CHECK(hap3 == hap4);
 }
 
-BOOST_AUTO_TEST_CASE(haplotypes_can_be_compared_for_structural_complexity)
-{
-    BOOST_REQUIRE(test_file_exists(human_reference_fasta));
-    
-    const auto human = make_reference(human_reference_fasta);
-    
-    const auto region = *parse_region("16:9300000-9300100", human);
-    
-    const Allele allele1 {*parse_region("16:9300037-9300037", human), "TG"};
-    const Allele allele2 {*parse_region("16:9300039-9300051", human), ""};
-    const Allele allele3 {*parse_region("16:9300041-9300051", human), ""};
-    
-    Haplotype hap1 {region, human};
-    hap1.push_back(allele3);
-    
-    Haplotype hap2 {region, human};
-    hap2.push_back(allele1);
-    hap2.push_back(allele2);
-    
-    BOOST_CHECK(IsLessComplex()(hap1, hap2));
-}
-
 BOOST_AUTO_TEST_CASE(haplotypes_behave_at_boundries)
 {
     BOOST_REQUIRE(test_file_exists(human_reference_fasta));
@@ -523,7 +501,7 @@ BOOST_AUTO_TEST_CASE(Haplotype_can_be_spliced)
     
     BOOST_CHECK(is_same_region(insertion_before_snp_haplotype_splice, insertion_before_snp_region));
     BOOST_CHECK(insertion_before_snp_haplotype_splice.get_sequence() == "");
-    BOOST_CHECK(is_reference(insertion_before_snp_haplotype_splice, human));
+    BOOST_CHECK(is_reference(insertion_before_snp_haplotype_splice));
     
     const auto insertion_before_snp_allele_splice = splice<Allele>(haplotype, insertion_before_snp_region);
     

@@ -60,13 +60,14 @@ namespace
                const std::size_t offset_hint,
                const Model& model)
     {
-        const auto score = fastAlignmentRoutine(truth.c_str() + offset_hint, target.c_str(),
+        const auto score = fastAlignmentRoutine(truth.c_str() + offset_hint,
+                                                target.c_str(),
                                                 reinterpret_cast<const char*>(target_qualities.data()),
                                                 static_cast<int>(target.size() + 15),
                                                 static_cast<int>(target.size()),
                                                 static_cast<int>(model.gapextend),
                                                 static_cast<int>(model.nucprior),
-                                                reinterpret_cast<const char*>(target_gap_open_penalties.data()),
+                                                reinterpret_cast<const char*>(target_gap_open_penalties.data()) + offset_hint,
                                                 nullptr, nullptr, nullptr);
         
         //    const auto score = align(truth.c_str() + offset_hint, target.c_str(),

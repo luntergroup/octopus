@@ -6,102 +6,93 @@
 //  Copyright © 2015 Oxford University. All rights reserved.
 //
 
-#include <haplotype_prior_model.hpp>
+#include "haplotype_prior_model.hpp"
 
 #include <algorithm>
-
-#include "haplotype.hpp"
-#include "sequence_utils.hpp"
-#include "maths.hpp"
-#include "variant.hpp"
+#include <iostream>
 
 namespace Octopus
 {
-
-HaplotypePriorModel::HaplotypePriorModel(double transition_rate, double transversion_rate)
-:
-transition_rate_ {transition_rate},
-transversion_rate_ {transversion_rate}
-{}
-
-std::vector<TandemRepeat> find_exact_tandem_repeats(const Haplotype& haplotype)
-{
-    return find_exact_tandem_repeats(haplotype.get_sequence(), haplotype.get_region(), 1);
-}
-
 double HaplotypePriorModel::evaluate(const Haplotype& to, const Haplotype& from) const
 {
-    auto mutations = to.difference(from);
-    
-    double result {1.0};
-    
-    auto has_indels = std::any_of(std::cbegin(mutations), std::cend(mutations),
-                                  [] (const auto& variant) { return is_indel(variant); });
-    
-    auto repeats = (has_indels) ? find_exact_tandem_repeats(from) : std::vector<TandemRepeat> {};
-    
-    for (const auto& variant : mutations) {
-        if (is_snp(variant)) {
-            result *= (is_transition(variant)) ? transition_rate_ : transversion_rate_;
-        } else if (is_indel(variant)) {
-            if (is_insertion(variant)) {
-                if (repeats.empty()) {
-                    result *= transversion_rate_ * alt_sequence_size(variant);
-                } else {
-                    result *= transition_rate_ * alt_sequence_size(variant);
-                }
-            } else {
-                if (repeats.empty()) {
-                    result *= transversion_rate_ * region_size(variant);
-                } else {
-                    result *= transition_rate_ * region_size(variant);
-                }
-            }
-        } else {
-            auto itr1 = std::cbegin(ref_sequence(variant));
-            auto itr2 = std::cbegin(alt_sequence(variant));
-            
-            std::for_each(itr1, std::cend(ref_sequence(variant)),
-                          [this, &itr2, &result] (char base) {
-                              if (base != *itr2) {
-                                  result *= 0.9 * transversion_rate_;
-                              }
-                              ++itr2;
-                          });
-        }
-    }
-    
-    return result;
+    return this->do_evaluate(to, from);
 }
 
 HaplotypePriorModel::HaplotypePriorMap
-HaplotypePriorModel::evaluate(const std::vector<Haplotype>& haplotypes, const Haplotype& reference) const
+HaplotypePriorModel::evaluate(std::vector<Haplotype>::const_iterator first,
+                              std::vector<Haplotype>::const_iterator last,
+                              std::vector<Haplotype>::const_iterator reference)
 {
-    HaplotypePriorMap result {};
-    result.reserve(haplotypes.size());
-    
-    for (const auto& haplotype : haplotypes) {
-        result.emplace(haplotype, evaluate(haplotype, reference));
-    }
-    
-    const auto norm = Maths::sum_values(result);
-    
-    for (auto& p : result) p.second /= norm;
-    
-    std::cout << "printing haplotype priors" << std::endl;
-    for (const auto& hp : result) {
-        print_variant_alleles(hp.first);
-        std::cout << hp.second << std::endl;
-    }
-    
-    return result;
+    return this->do_evaluate(first, last, reference);
 }
 
 // non-member methods
 
-void remove_low_prior_duplicates(std::vector<Haplotype>& haplotypes, const HaplotypePriorModel& prior_model)
+void remove_lowest_prior_duplicates(std::vector<Haplotype>& haplotypes,
+                                    HaplotypePriorModel::HaplotypePriorMap& haplotype_priors)
 {
-    unique_least_complex(haplotypes);
-}
+    assert(std::is_sorted(std::cbegin(haplotypes), std::cend(haplotypes)));
     
+    auto first_duplicate = std::begin(haplotypes);
+    auto last_duplicate  = first_duplicate;
+    
+    while (true) {
+        first_duplicate = std::adjacent_find(first_duplicate, std::end(haplotypes));
+        
+        if (first_duplicate == std::end(haplotypes)) break;
+        
+        last_duplicate = std::find_if_not(std::next(first_duplicate, 2), std::end(haplotypes),
+                                          [=] (const Haplotype& haplotype) {
+                                              return haplotype == *first_duplicate;
+                                          });
+        
+        std::nth_element(first_duplicate, first_duplicate, last_duplicate,
+                         [&] (const Haplotype& lhs, const Haplotype& rhs) {
+                             return haplotype_priors.at(lhs) > haplotype_priors.at(rhs);
+                         });
+        
+        std::cout << "removing " << std::distance(std::next(first_duplicate), last_duplicate) << " duplicates" << std::endl;
+        
+        std::for_each(std::next(first_duplicate), last_duplicate,
+                      [&] (const Haplotype& haplotype) {
+                          haplotype_priors.erase(haplotype);
+                      });
+        
+        first_duplicate = last_duplicate;
+    }
+    
+    haplotype_priors.rehash(haplotype_priors.size());
+    
+    haplotypes.erase(std::unique(std::begin(haplotypes), std::end(haplotypes)), std::end(haplotypes));
+    
+    assert(haplotypes.size() == haplotype_priors.size());
+}
+
+namespace debug
+{
+    void print_haplotype_priors(const HaplotypePriorModel::HaplotypePriorMap& haplotype_priors,
+                                const std::size_t n)
+    {
+        auto m = std::min(haplotype_priors.size(), n);
+        
+        std::cout << "printing top " << m << " haplotype priors" << std::endl;
+        
+        using HaplotypeReference = std::reference_wrapper<const Haplotype>;
+        
+        std::vector<std::pair<HaplotypeReference, double>> v {};
+        v.reserve(haplotype_priors.size());
+        
+        std::copy(std::cbegin(haplotype_priors), std::cend(haplotype_priors), std::back_inserter(v));
+        
+        std::sort(std::begin(v), std::end(v),
+                  [] (const auto& lhs, const auto& rhs) {
+                      return lhs.second > rhs.second;
+                  });
+        
+        for (unsigned i {0}; i < m; ++i) {
+            print_variant_alleles(v[i].first);
+            std::cout << " " << std::setprecision(10) << v[i].second << std::endl;
+        }
+    }
+} // namespace debug
 } // namespace Octopus

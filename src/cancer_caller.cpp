@@ -769,18 +769,24 @@ VcfRecord::Builder output_reference_call(RefCall call, ReferenceGenome& referenc
 //}
 
 std::unique_ptr<CancerVariantCaller::CallerLatents>
-CancerVariantCaller::infer_latents(const std::vector<Haplotype>& haplotypes, const ReadMap& reads,
-                                   HaplotypeLikelihoodCache& haplotype_likelihoods) const
+CancerVariantCaller::infer_latents(const std::vector<Haplotype>& haplotypes,
+                                   const HaplotypePriorMap& haplotype_priors,
+                                   HaplotypeLikelihoodCache& haplotype_likelihoods,
+                                   const ReadMap& reads) const
 {
-    auto latents = genotype_model_.infer_latents(haplotypes, reads, haplotype_likelihoods, reference_);
+    auto model_latents = genotype_model_.infer_latents(haplotypes, haplotype_priors,
+                                                       haplotype_likelihoods, reads);
     
     auto num_haplotypes = static_cast<unsigned>(haplotypes.size());
     
-    auto germline_genotype_posteriors = marginalise_germline_genotypes(latents.genotype_posteriors, num_haplotypes);
+    auto germline_genotype_posteriors = marginalise_germline_genotypes(model_latents.genotype_posteriors,
+                                                                       num_haplotypes);
     
-    auto cancer_haplotype_posteriors  = marginalise_cancer_haplotypes(latents.genotype_posteriors, num_haplotypes);
+    auto cancer_haplotype_posteriors  = marginalise_cancer_haplotypes(model_latents.genotype_posteriors,
+                                                                      num_haplotypes);
     
-    return std::make_unique<Latents>(germline_genotype_posteriors, cancer_haplotype_posteriors, latents.genotype_mixtures);
+    return std::make_unique<Latents>(germline_genotype_posteriors, cancer_haplotype_posteriors,
+                                     model_latents.genotype_mixtures);
 }
 
 std::vector<VcfRecord::Builder>

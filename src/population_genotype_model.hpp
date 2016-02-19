@@ -31,6 +31,8 @@ namespace Octopus
     class Population
     {
     public:
+        using HaplotypePrioMap = HaplotypePriorModel::HaplotypePriorMap;
+        
         struct Latents
         {
             using HaplotypeFrequencyMap  = std::unordered_map<std::reference_wrapper<const Haplotype>, double>;
@@ -48,15 +50,14 @@ namespace Octopus
             HaplotypeFrequencyMap haplotype_frequencies;
         };
         
-        Population(unsigned ploidy, unsigned max_em_iterations = 100, double em_epsilon = 0.001);
+        explicit Population(unsigned ploidy, unsigned max_em_iterations = 100, double em_epsilon = 0.001);
         
         Latents infer_latents(const std::vector<Haplotype>& haplotypes,
-                              const ReadMap& reads, HaplotypeLikelihoodCache& haplotype_likelihoods,
-                              const ReferenceGenome& reference);
+                              const HaplotypePrioMap& haplotype_priors,
+                              HaplotypeLikelihoodCache& haplotype_likelihoods,
+                              const ReadMap& reads);
         
     private:
-        HaplotypePriorModel haplotype_prior_model_;
-        
         const unsigned ploidy_;
         const unsigned max_em_iterations_;
         const double em_epsilon_;

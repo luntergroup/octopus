@@ -45,22 +45,32 @@ namespace Octopus
         CancerVariantCaller& operator=(CancerVariantCaller&&)      = delete;
         
     private:
+        using VariantCaller::HaplotypePriorMap;
+        
         struct Latents : public CallerLatents
         {
-            std::unordered_map<Genotype<Haplotype>, double> germline_genotype_posteriors;
-            std::unordered_map<Haplotype, double> cancer_haplotype_posteriors;
-            GenotypeModel::Cancer::GenotypeMixtures genotype_mixtures;
+            using CallerLatents::HaplotypePosteiorMap;
+            using CallerLatents::GenotypePosteriorMap;
             
             template <typename T1, typename T2, typename T3>
             Latents(T1 g, T2 c, T3 m) : germline_genotype_posteriors {g}, cancer_haplotype_posteriors {c}, genotype_mixtures {m} {}
             
-            ProbabilityMatrix<Genotype<Haplotype>> get_genotype_posteriors() const override
+            std::shared_ptr<HaplotypePosteiorMap> get_haplotype_posteriors() const override
+            {
+                return std::make_shared<HaplotypePosteiorMap>();
+            }
+            
+            std::shared_ptr<GenotypePosteriorMap> get_genotype_posteriors() const override
             {
                 ProbabilityMatrix<Genotype<Haplotype>> result {};
                 assign_keys(extract_keys(germline_genotype_posteriors), result);
                 insert_sample("test", extract_values(germline_genotype_posteriors), result);
-                return result;
+                return std::make_shared<GenotypePosteriorMap>(std::move(result));
             }
+            
+            std::unordered_map<Genotype<Haplotype>, double> germline_genotype_posteriors;
+            std::unordered_map<Haplotype, double> cancer_haplotype_posteriors;
+            GenotypeModel::Cancer::GenotypeMixtures genotype_mixtures;
         };
         
         mutable GenotypeModel::Cancer genotype_model_;
@@ -77,8 +87,10 @@ namespace Octopus
 //                                             const ReadMap& reads) const override;
         
         std::unique_ptr<CallerLatents>
-        infer_latents(const std::vector<Haplotype>& haplotypes, const ReadMap& reads,
-                      HaplotypeLikelihoodCache& haplotype_likelihoods) const override;
+        infer_latents(const std::vector<Haplotype>& haplotypes,
+                      const HaplotypePriorMap& haplotype_priors,
+                      HaplotypeLikelihoodCache& haplotype_likelihoods,
+                      const ReadMap& reads) const override;
         
         std::vector<VcfRecord::Builder>
         call_variants(const std::vector<Variant>& candidates,
