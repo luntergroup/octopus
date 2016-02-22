@@ -63,7 +63,7 @@ BOOST_AUTO_TEST_CASE(advance_region_always_gives_a_region_more_advanced_than_the
     
     GenomeWalker walker1 {3, 5};
     
-    auto next = walker1.walk(region.get_contig_name(), reads, candidates);
+    //auto next = walker1.walk(region, reads, candidates);
     
     // TODO
 }
@@ -92,7 +92,7 @@ BOOST_AUTO_TEST_CASE(a_walker_with_no_indicators_never_give_regions_with_shared_
     
     GenomeWalker walker1 {0, 1};
     
-    auto cur_region = walker1.walk(region.get_contig_name(), reads, candidates);
+    //auto cur_region = walker1.walk(region, reads, candidates);
     
     // TODO
 }

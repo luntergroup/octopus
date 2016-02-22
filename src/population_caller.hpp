@@ -87,7 +87,7 @@ private:
     call_variants(const std::vector<Variant>& candidates,
                   const std::vector<Allele>& callable_alleles,
                   CallerLatents* latents,
-                  const HaplotypePhaser::PhaseSet& phase_set,
+                  const Phaser::PhaseSet& phase_set,
                   const ReadMap& reads) const override;
 };
 } // namespace Octopus

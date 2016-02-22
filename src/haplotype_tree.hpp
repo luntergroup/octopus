@@ -78,7 +78,6 @@ private:
     GenomicRegion region_;
     
     mutable std::unordered_multimap<Haplotype, Vertex> haplotype_leaf_cache_;
-    mutable std::unordered_set<Haplotype> recently_removed_haplotypes_;
     
     using LeafIterator  = decltype(haplotype_leafs_)::const_iterator;
     using CacheIterator = decltype(haplotype_leaf_cache_)::iterator;
@@ -107,6 +106,14 @@ private:
 namespace detail
 {
     template <typename InputIt>
+    void extend_tree(InputIt first, InputIt last, HaplotypeTree& tree, ContigAllele)
+    {
+        std::for_each(first, last, [&] (const auto& allele) {
+            tree.extend(allele);
+        });
+    }
+    
+    template <typename InputIt>
     void extend_tree(InputIt first, InputIt last, HaplotypeTree& tree, Allele)
     {
         std::for_each(first, last, [&] (const auto& allele) {
@@ -124,7 +131,9 @@ namespace detail
     }
     
     template <typename T>
-    constexpr bool is_variant_or_allele = std::is_same<T, Allele>::value || std::is_same<T, Variant>::value;
+    constexpr bool is_variant_or_allele = std::is_same<T, ContigAllele>::value
+                                            || std::is_same<T, Allele>::value
+                                            || std::is_same<T, Variant>::value;
 } // namespace detail
 
 template <typename InputIt>

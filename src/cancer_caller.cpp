@@ -793,7 +793,7 @@ std::vector<VcfRecord::Builder>
 CancerVariantCaller::call_variants(const std::vector<Variant>& candidates,
                                    const std::vector<Allele>& callable_alleles,
                                    CallerLatents* latents,
-                                   const HaplotypePhaser::PhaseSet& phase_set,
+                                   const Phaser::PhaseSet& phase_set,
                                    const ReadMap& reads) const
 {
     const auto dlatents = dynamic_cast<Latents*>(latents);

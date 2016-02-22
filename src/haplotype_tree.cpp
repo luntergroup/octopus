@@ -23,8 +23,7 @@ tree_ {},
 root_ {boost::add_vertex(tree_)},
 haplotype_leafs_ {root_},
 region_ {reference.get_contig_region(contig)},
-haplotype_leaf_cache_ {},
-recently_removed_haplotypes_ {}
+haplotype_leaf_cache_ {}
 {}
 
 bool HaplotypeTree::empty() const noexcept
@@ -75,7 +74,6 @@ HaplotypeTree& HaplotypeTree::extend(const ContigAllele& allele)
         leaf_it = extend_haplotype(leaf_it, allele);
     }
     haplotype_leaf_cache_.clear();
-    recently_removed_haplotypes_.clear();
     return *this;
 }
 
@@ -143,8 +141,7 @@ void HaplotypeTree::prune_all(const Haplotype& haplotype)
 {
     using std::cbegin; using std::cend; using std::for_each; using std::find;
     
-    if (empty() || !is_same_contig(haplotype, region_)
-        || recently_removed_haplotypes_.count(haplotype) > 1)
+    if (empty() || !is_same_contig(haplotype, region_))
         return;
     
     // if any of the haplotypes in cache match the query haplotype then the cache must contain
@@ -185,8 +182,6 @@ void HaplotypeTree::prune_all(const Haplotype& haplotype)
             }
         }
     }
-    
-    recently_removed_haplotypes_.emplace(haplotype);
 }
 
 void HaplotypeTree::prune_unique(const Haplotype& haplotype)
@@ -260,7 +255,6 @@ void HaplotypeTree::remove(const GenomicRegion& region)
         clear();
     } else {
         haplotype_leaf_cache_.clear();
-        recently_removed_haplotypes_.clear();
         
         std::list<Vertex> new_leafs {};
         
@@ -277,7 +271,6 @@ void HaplotypeTree::remove(const GenomicRegion& region)
 void HaplotypeTree::clear()
 {
     haplotype_leaf_cache_.clear();
-    recently_removed_haplotypes_.clear();
     haplotype_leafs_.clear();
     tree_.clear();
     root_ = boost::add_vertex(tree_);

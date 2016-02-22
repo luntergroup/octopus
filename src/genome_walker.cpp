@@ -40,10 +40,10 @@ GenomicRegion GenomeWalker::walk(const ContigNameType& contig, const ReadMap& re
     return walk(GenomicRegion {contig, 0, 0}, reads, candidates);
 }
 
-template <typename BidirectionalIterator, typename SampleReadMap>
-bool is_optimal_to_extend(BidirectionalIterator first_included, BidirectionalIterator proposed_included,
-                          BidirectionalIterator first_excluded, BidirectionalIterator last,
-                          const SampleReadMap& reads, unsigned max_density_increase)
+template <typename BidirIt>
+bool is_optimal_to_extend(BidirIt first_included, BidirIt proposed_included,
+                          BidirIt first_excluded, BidirIt last,
+                          const ReadMap& reads, unsigned max_density_increase)
 {
     if (proposed_included == last) return false;
     if (first_excluded == last) return true;
@@ -54,11 +54,10 @@ bool is_optimal_to_extend(BidirectionalIterator first_included, BidirectionalIte
     return !increases_density || inner_distance(*std::prev(proposed_included), *proposed_included) <= inner_distance(*proposed_included, *first_excluded);
 }
 
-template <typename BidirectionalIterator>
-GenomicRegion
-expand_around_included(BidirectionalIterator first_previous, BidirectionalIterator first_included,
-                       BidirectionalIterator first_excluded, BidirectionalIterator last,
-                       const ReadMap& reads)
+template <typename BidirIt>
+GenomicRegion expand_around_included(BidirIt first_previous, BidirIt first_included,
+                                     BidirIt first_excluded, BidirIt last,
+                                     const ReadMap& reads)
 {
     auto last_included = std::prev(first_excluded);
     

@@ -22,7 +22,9 @@
 #include "haplotype.hpp"
 #include "vcf_record.hpp"
 
-#include "basic_haplotype_prior_model.hpp"
+#include "basic_haplotype_prior_model.hpp" // TODO: turn into factory
+
+#include "haplotype_generator.hpp"
 
 #include <iostream> // TEST
 
@@ -37,9 +39,9 @@ VariantCaller::VariantCaller(const ReferenceGenome& reference,
 :
 reference_ {reference},
 read_pipe_ {read_pipe},
+refcall_type_ {refcall_type},
 haplotype_prior_model_ {std::make_unique<BasicHaplotypePriorModel>(reference_)},
-candidate_generator_ {std::move(candidate_generator)},
-refcall_type_ {refcall_type}
+candidate_generator_ {std::move(candidate_generator)}
 {}
 
 VariantCaller::VariantCaller(const ReferenceGenome& reference,
@@ -50,9 +52,9 @@ VariantCaller::VariantCaller(const ReferenceGenome& reference,
 :
 reference_ {reference},
 read_pipe_ {read_pipe},
+refcall_type_ {refcall_type},
 haplotype_prior_model_ {std::move(haplotype_prior_model)},
-candidate_generator_ {std::move(candidate_generator)},
-refcall_type_ {refcall_type}
+candidate_generator_ {std::move(candidate_generator)}
 {}
 
 size_t VariantCaller::num_buffered_reads() const noexcept
@@ -85,31 +87,34 @@ namespace debug
 void filter_haplotypes(std::vector<Haplotype>& haplotypes, const ReadMap& reads,
                        const HaplotypeLikelihoodCache& haplotype_likelihoods, const size_t n)
 {
-    if (haplotypes.size() <= n) return;
+    return;
+    // TODO: currently invalidating references
     
-    std::unordered_map<std::reference_wrapper<const Haplotype>, double> max_liklihoods {haplotypes.size()};
-    
-    for (const auto& haplotype : haplotypes) {
-        double max_read_liklihood {0};
-        
-        for (const auto& sample_reads : reads) {
-            for (const auto& read : sample_reads.second) {
-                const auto cur_read_liklihood = haplotype_likelihoods.log_probability(read, haplotype);
-                if (cur_read_liklihood > max_read_liklihood) max_read_liklihood = cur_read_liklihood;
-            }
-        }
-        
-        max_liklihoods.emplace(haplotype, max_read_liklihood);
-    }
-    
-    const auto nth = std::next(std::begin(haplotypes), n);
-    
-    std::nth_element(std::begin(haplotypes), nth, std::end(haplotypes),
-                     [&] (const auto& lhs, const auto& rhs) {
-                         return max_liklihoods.at(lhs) > max_liklihoods.at(rhs);
-                     });
-    
-    haplotypes.erase(nth, std::end(haplotypes));
+//    if (haplotypes.size() <= n) return;
+//    
+//    std::unordered_map<std::reference_wrapper<const Haplotype>, double> max_liklihoods {haplotypes.size()};
+//    
+//    for (const auto& haplotype : haplotypes) {
+//        double max_read_liklihood {0};
+//        
+//        for (const auto& sample_reads : reads) {
+//            for (const auto& read : sample_reads.second) {
+//                const auto cur_read_liklihood = haplotype_likelihoods.log_probability(read, haplotype);
+//                if (cur_read_liklihood > max_read_liklihood) max_read_liklihood = cur_read_liklihood;
+//            }
+//        }
+//        
+//        max_liklihoods.emplace(haplotype, max_read_liklihood);
+//    }
+//    
+//    const auto nth = std::next(std::begin(haplotypes), n);
+//    
+//    std::nth_element(std::begin(haplotypes), nth, std::end(haplotypes),
+//                     [&] (const auto& lhs, const auto& rhs) {
+//                         return max_liklihoods.at(lhs) > max_liklihoods.at(rhs);
+//                     });
+//    
+//    haplotypes.erase(nth, std::end(haplotypes));
 }
 
 std::vector<VcfRecord> VariantCaller::call_variants(const GenomicRegion& call_region) const
@@ -140,69 +145,95 @@ std::vector<VcfRecord> VariantCaller::call_variants(const GenomicRegion& call_re
         reads = read_pipe_.get().fetch_reads(call_region);
     }
     
-    HaplotypePhaser phaser {call_region.get_contig_name(), reference_, candidates, reads, 50, 5};
+    HaplotypeGenerator generator {call_region, reference_, candidates, reads, 50, 5};
+    Phaser phaser {0.99};
     
     std::vector<Haplotype> haplotypes;
-    GenomicRegion phasing_region;
+    GenomicRegion active_region;
     
-    while (!phaser.done()) {
-        std::tie(haplotypes, phasing_region) = phaser.fetch_next_haplotypes();
+    while (!generator.done()) {
+        std::tie(haplotypes, active_region) = generator.progress();
         
         assert(!haplotypes.empty());
         
         std::cout << "there are " << haplotypes.size() << " unique haplotypes" << '\n';
-        std::cout << "current region is " << phasing_region << '\n';
+        std::cout << "active region is " << active_region << '\n';
         
-        const auto phasing_region_reads = copy_contained(reads, phasing_region);
+        const auto active_region_reads = copy_contained(reads, active_region);
         
-        std::cout << "there are " << count_reads(phasing_region_reads)
-                    << " reads in current region" << '\n';
+        std::cout << "there are " << count_reads(active_region_reads)
+                    << " reads in active region" << '\n';
         
-        std::cout << "phasing_region_reads region is " << encompassing_region(phasing_region_reads) << '\n';
+        std::cout << "active_region_reads region is " << encompassing_region(active_region_reads) << '\n';
         
-        HaplotypeLikelihoodCache haplotype_likelihoods {phasing_region_reads, haplotypes};
+        HaplotypeLikelihoodCache haplotype_likelihoods {active_region_reads, haplotypes};
         
-        //filter_haplotypes(haplotypes, phasing_region_reads, haplotype_likelihoods, 200);
+        filter_haplotypes(haplotypes, active_region_reads, haplotype_likelihoods, 200);
         
         // Compute haplotype priors after likelihood filtering as prior model may use
         // interdependencies between haplotypes.
-        
         auto haplotype_priors = haplotype_prior_model_->compute_maximum_entropy_haplotype_set(haplotypes);
         
-        phaser.keep_haplotypes(haplotypes);
+        generator.keep_haplotypes(haplotypes);
         
-        auto caller_latents = infer_latents(haplotypes, haplotype_priors, haplotype_likelihoods,
-                                            phasing_region_reads);
+        const auto caller_latents = infer_latents(haplotypes, haplotype_priors,
+                                                  haplotype_likelihoods, active_region_reads);
         
         haplotype_priors.clear();
         haplotype_likelihoods.clear();
         
-        phaser.prepare_for_phasing(*caller_latents->get_haplotype_posteriors());
-        
-        // TEST
-        HaplotypePhaser::GenotypePosteriors tmp {};
-        for (const auto p : *caller_latents->get_genotype_posteriors()) {
-            auto& t = tmp[p.first];
-            for (const auto& s : p.second) {
-                t.emplace(s.first, s.second);
-            }
-        }
-        const auto phase_set = phaser.phase(haplotypes, tmp);
-        
-        //const auto phase_set = phaser.phase(haplotypes, latents->get_genotype_posteriors());
+        const auto phase_set = phaser.try_phase(haplotypes, *caller_latents->get_genotype_posteriors());
         
         if (phase_set) {
             std::cout << "phased region is " << phase_set->region << '\n';
             
-            auto overlapped_candidates = copy_overlapped(candidates, phase_set->region);
+            auto active_candidates = copy_overlapped(candidates, phase_set->region);
             
-            auto alleles = generate_callable_alleles(phase_set->region, overlapped_candidates,
+            auto alleles = generate_callable_alleles(phase_set->region, active_candidates,
                                                      refcall_type_, reference_);
             
-            auto curr_results = call_variants(overlapped_candidates, alleles, caller_latents.get(),
-                                              *phase_set, phasing_region_reads);
+            auto curr_results = call_variants(active_candidates, alleles, caller_latents.get(),
+                                              *phase_set, active_region_reads);
             
-            append_annotated_calls(result, curr_results, phasing_region_reads);
+            append_annotated_calls(result, curr_results, active_region_reads);
+            
+            auto remaining_active_region = right_overhang_region(active_region, phase_set->region);
+            
+            generator.force_forward(remaining_active_region);
+            
+            if (ends_before(phase_set->region, active_region)) {
+                auto remaining_active_region = right_overhang_region(active_region, phase_set->region);
+                
+                // voluntarily remove some haplotypes in remaining_active_region
+            }
+        } else {
+            // voluntarily remove some haplotypes in active_region
+        }
+        
+        auto next_active_region = generator.tell_next_active_region();
+        
+        if (begins_before(active_region, next_active_region)) {
+            auto passed_region = left_overhang_region(active_region, next_active_region);
+            
+            auto uncalled_region = passed_region;
+            
+            if (phase_set && ends_before(phase_set->region, passed_region)) {
+                uncalled_region = right_overhang_region(passed_region, phase_set->region);
+            }
+            
+            if (!is_empty_region(uncalled_region)) {
+                const auto forced_phasing = phaser.force_phase(haplotypes, *caller_latents->get_genotype_posteriors());
+                
+                auto active_candidates = copy_overlapped(candidates, uncalled_region);
+                
+                auto alleles = generate_callable_alleles(uncalled_region, active_candidates,
+                                                         refcall_type_, reference_);
+                
+                auto curr_results = call_variants(active_candidates, alleles, caller_latents.get(),
+                                                  *phase_set, active_region_reads);
+                
+                append_annotated_calls(result, curr_results, active_region_reads);
+            }
         }
     }
     
@@ -221,6 +252,14 @@ bool VariantCaller::refcalls_requested() const noexcept
 bool VariantCaller::done_calling(const GenomicRegion& region) const noexcept
 {
     return is_empty_region(region);
+}
+
+std::deque<std::reference_wrapper<const Haplotype>>
+VariantCaller::get_removable_haplotypes(const std::vector<Haplotype>& haplotypes,
+                                        const CallerLatents::HaplotypePosteiorMap& haplotype_posteriors) const
+{
+    std::deque<std::reference_wrapper<const Haplotype>> result {};
+    return result;
 }
 
 // non-member methods

@@ -13,6 +13,7 @@
 #include <string>
 #include <functional>
 #include <memory>
+#include <deque>
 
 #include "common.hpp"
 #include "reference_genome.hpp"
@@ -20,9 +21,10 @@
 #include "candidate_variant_generator.hpp"
 #include "haplotype_prior_model.hpp"
 #include "haplotype_likelihood_cache.hpp"
-#include "haplotype_phaser.hpp"
 #include "probability_matrix.hpp"
 #include "vcf_record.hpp"
+
+#include "phaser.hpp"
 
 class GenomicRegion;
 class Variant;
@@ -101,8 +103,12 @@ private:
     
     virtual std::vector<VcfRecord::Builder>
     call_variants(const std::vector<Variant>& candidates, const std::vector<Allele>& callable_alleles,
-                  CallerLatents* latents, const HaplotypePhaser::PhaseSet& phase_set,
+                  CallerLatents* latents, const Phaser::PhaseSet& phase_set,
                   const ReadMap& reads) const = 0;
+    
+    std::deque<std::reference_wrapper<const Haplotype>>
+    get_removable_haplotypes(const std::vector<Haplotype>& haplotypes,
+                             const CallerLatents::HaplotypePosteiorMap& haplotype_posteriors) const;
 };
 
 std::vector<Allele>

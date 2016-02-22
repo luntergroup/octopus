@@ -545,7 +545,7 @@ VcfRecord::Builder output_reference_call(RefCall call, const ReferenceGenome& re
 }
 
 void set_phasings(std::vector<GenotypeCallMap>& variant_genotype_calls,
-                  const HaplotypePhaser::PhaseSet& phase_set,
+                  const Phaser::PhaseSet& phase_set,
                   const std::vector<GenomicRegion>& called_regions)
 {
     // TODO
@@ -574,7 +574,7 @@ std::vector<VcfRecord::Builder>
 PopulationVariantCaller::call_variants(const std::vector<Variant>& candidates,
                                        const std::vector<Allele>& callable_alleles,
                                        CallerLatents* latents,
-                                       const HaplotypePhaser::PhaseSet& phase_set,
+                                       const Phaser::PhaseSet& phase_set,
                                        const ReadMap& reads) const
 {
     const auto dlatents = dynamic_cast<Latents*>(latents);

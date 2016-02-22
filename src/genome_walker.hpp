@@ -12,7 +12,9 @@
 #include <functional>
 
 #include "common.hpp"
+#include "mappable.hpp"
 #include "mappable_set.hpp"
+#include "allele.hpp"
 
 class GenomicRegion;
 class Variant;
@@ -23,7 +25,7 @@ class GenomeWalker
 {
 public:
     using ContigNameType = GenomicRegion::ContigNameType;
-    using Candidates     = MappableSet<Variant>;
+    using Candidates     = MappableSet<Allele>;
     
     enum class IndicatorLimit { SharedWithPreviousRegion, NoLimit };
     enum class ExtensionLimit { WithinReadLengthOfFirstIncluded, SharedWithFrontier, NoLimit };
