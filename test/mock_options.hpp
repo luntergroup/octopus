@@ -32,8 +32,8 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         "--reference", human_reference_fasta.c_str(),
         //"--reference", ecoli_reference_fasta.c_str(),
         
-        "--reads", NA12878_low_coverage.c_str(),
-        //"--reads", NA12878_high_coverage.c_str(),
+        //"--reads", NA12878_low_coverage.c_str(),
+        "--reads", NA12878_high_coverage.c_str(),
         
         //"--reads", NA12891_high_coverage.c_str(),
         //"--reads", HG00101.c_str(),
@@ -61,7 +61,10 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         
         // for population
         
-        "--regions", "22:16,231,876-16,232,206", // Complex phasing region
+        //"--regions", "22",
+        
+        //"--regions", "22:16,231,876-16,232,206", // Complex phasing region
+        "--regions", "22:16,139,705-16,140,266", // NA12878_high_coverage complex region
         
         //"-L", "6:31,235,688-31,235,883", // TEST phaser
         

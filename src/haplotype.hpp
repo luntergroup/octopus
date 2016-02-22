@@ -140,6 +140,19 @@ void add_ref_to_front(const Variant& variant, Haplotype& haplotype);
 void add_alt_to_back(const Variant& variant, Haplotype& haplotype);
 void add_alt_to_front(const Variant& variant, Haplotype& haplotype);
 
+template <typename MappableType, typename Container,
+          typename = std::enable_if_t<std::is_same<typename Container::value_type, Haplotype>::value>>
+std::deque<MappableType> splice_all(const Container& haplotypes, const GenomicRegion& region)
+{
+    std::deque<MappableType> result {};
+    
+    for (const auto& haplotype : haplotypes) {
+        result.push_back(splice<MappableType>(haplotype, region));
+    }
+    
+    return result;
+}
+
 namespace std
 {
     template <> struct hash<Haplotype>

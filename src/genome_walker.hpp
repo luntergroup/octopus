@@ -47,11 +47,11 @@ public:
     GenomeWalker(GenomeWalker&&)                 = default;
     GenomeWalker& operator=(GenomeWalker&&)      = default;
     
-    GenomicRegion walk(const ContigNameType& contig, const ReadMap& reads,
-                       const Candidates& candidates) const;
+    GenomicRegion
+    walk(const ContigNameType& contig, const ReadMap& reads, const Candidates& candidates) const;
     
-    GenomicRegion walk(const GenomicRegion& previous_region, const ReadMap& reads,
-                       const Candidates& candidates) const;
+    GenomicRegion
+    walk(const GenomicRegion& previous_region, const ReadMap& reads, const Candidates& candidates) const;
     
 private:
     const unsigned max_indicators_;

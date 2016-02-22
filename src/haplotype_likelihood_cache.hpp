@@ -55,16 +55,16 @@ namespace Octopus
         void clear();
         
     private:
-        using ReadReference      = std::reference_wrapper<const AlignedRead>;
         using HaplotypeReference = Haplotype;
+        using ReadReference      = std::reference_wrapper<const AlignedRead>;
         
-        using Cache = std::unordered_map<ReadReference, std::unordered_map<HaplotypeReference, double>>;
+        using Cache = std::unordered_map<HaplotypeReference, std::unordered_map<ReadReference, double>>;
         
         HaplotypeLikelihoodModel error_model_;
         
         mutable Cache cache_;
         
-        std::size_t max_num_haplotypes_;
+        std::size_t max_num_reads_;
         
         bool is_cached(const AlignedRead& read, const Haplotype& haplotype) const noexcept;
         void cache(const AlignedRead& read, const Haplotype& haplotype, double value) const;

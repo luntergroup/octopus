@@ -106,9 +106,10 @@ private:
                   CallerLatents* latents, const Phaser::PhaseSet& phase_set,
                   const ReadMap& reads) const = 0;
     
-    std::deque<std::reference_wrapper<const Haplotype>>
+    std::vector<Haplotype>
     get_removable_haplotypes(const std::vector<Haplotype>& haplotypes,
-                             const CallerLatents::HaplotypePosteiorMap& haplotype_posteriors) const;
+                             const CallerLatents::HaplotypePosteiorMap& haplotype_posteriors,
+                             const GenomicRegion& region) const;
 };
 
 std::vector<Allele>

@@ -149,38 +149,40 @@ GenomicRegion GenomeWalker::walk(const GenomicRegion& previous_region, const Rea
     
     first_excluded_itr = next(included_itr);
     
-    switch (expansion_limit_) {
-        case ExpansionLimit::UpToExcluded:
-        {
-            return expand_around_included(first_previous_itr, first_included_itr,
-                                          first_excluded_itr, last_variant_itr, reads);
-        }
-        case ExpansionLimit::WithinReadLength:
-        {
-            auto lhs_read = *leftmost_overlapped(reads, *first_included_itr);
-            auto rhs_read = *rightmost_overlapped(reads, *included_itr);
-            return encompassing_region(lhs_read, rhs_read);
-        }
-        case ExpansionLimit::UpToExcludedWithinReadLength:
-        {
-            auto lhs_read = *leftmost_overlapped(reads, *first_included_itr);
-            
-            while (first_previous_itr != first_included_itr && begins_before(lhs_read, *first_previous_itr)) {
-                ++first_previous_itr;
-            }
-            
-            auto rhs_read = *rightmost_overlapped(reads, *included_itr);
-            
-            while (last_variant_itr != first_excluded_itr && ends_before(rhs_read, *prev(last_variant_itr))) {
-                --last_variant_itr;
-            }
-            
-            return expand_around_included(first_previous_itr, first_included_itr,
-                                          first_excluded_itr, last_variant_itr, reads);
-        }
-        case ExpansionLimit::NoExpansion:
-            return encompassing_region(*first_included_itr, *included_itr);
-    }
+    return encompassing_region(*first_included_itr, *included_itr);
+    
+//    switch (expansion_limit_) {
+//        case ExpansionLimit::UpToExcluded:
+//        {
+//            return expand_around_included(first_previous_itr, first_included_itr,
+//                                          first_excluded_itr, last_variant_itr, reads);
+//        }
+//        case ExpansionLimit::WithinReadLength:
+//        {
+//            auto lhs_read = *leftmost_overlapped(reads, *first_included_itr);
+//            auto rhs_read = *rightmost_overlapped(reads, *included_itr);
+//            return encompassing_region(lhs_read, rhs_read);
+//        }
+//        case ExpansionLimit::UpToExcludedWithinReadLength:
+//        {
+//            auto lhs_read = *leftmost_overlapped(reads, *first_included_itr);
+//            
+//            while (first_previous_itr != first_included_itr && begins_before(lhs_read, *first_previous_itr)) {
+//                ++first_previous_itr;
+//            }
+//            
+//            auto rhs_read = *rightmost_overlapped(reads, *included_itr);
+//            
+//            while (last_variant_itr != first_excluded_itr && ends_before(rhs_read, *prev(last_variant_itr))) {
+//                --last_variant_itr;
+//            }
+//            
+//            return expand_around_included(first_previous_itr, first_included_itr,
+//                                          first_excluded_itr, last_variant_itr, reads);
+//        }
+//        case ExpansionLimit::NoExpansion:
+//            return encompassing_region(*first_included_itr, *included_itr);
+//    }
 }
 
 GenomeWalker::CandidateRanges::CandidateRanges(CandidateIterator first_previous_itr,

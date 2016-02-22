@@ -23,8 +23,8 @@ HaplotypeLikelihoodCache::HaplotypeLikelihoodCache(const ReadMap& reads,
                                                    const std::vector<Haplotype>& haplotypes)
 :
 error_model_ {},
-cache_ {Maths::sum_sizes(reads)},
-max_num_haplotypes_ {haplotypes.size()}
+cache_ {haplotypes.size()},
+max_num_reads_ {Maths::sum_sizes(reads)}
 {
     for (const auto& sample_reads : reads) {
         for (const auto& read : sample_reads.second) {
@@ -40,8 +40,8 @@ HaplotypeLikelihoodCache::HaplotypeLikelihoodCache(HaplotypeLikelihoodModel erro
                                                    const std::vector<Haplotype>& haplotypes)
 :
 error_model_ {std::move(error_model)},
-cache_ {Maths::sum_sizes(reads)},
-max_num_haplotypes_ {haplotypes.size()}
+cache_ {haplotypes.size()},
+max_num_reads_ {Maths::sum_sizes(reads)}
 {
     for (const auto& sample_reads : reads) {
         for (const auto& read : sample_reads.second) {
@@ -66,21 +66,24 @@ void HaplotypeLikelihoodCache::clear()
 
 bool HaplotypeLikelihoodCache::is_cached(const AlignedRead& read, const Haplotype& haplotype) const noexcept
 {
-    return cache_.count(read) == 1 && cache_.at(read).count(haplotype) == 1;
+    return cache_.count(haplotype) == 1 && cache_.at(haplotype).count(read) == 1;
 }
 
 void HaplotypeLikelihoodCache::cache(const AlignedRead& read, const Haplotype& haplotype, double value) const
 {
-    if (cache_.count(read) == 0) {
-        cache_.emplace(std::piecewise_construct, std::forward_as_tuple(read),
-                       std::forward_as_tuple(max_num_haplotypes_));
+    auto it = cache_.find(haplotype);
+    if (it == std::end(cache_)) {
+        auto p = cache_.emplace(std::piecewise_construct, std::forward_as_tuple(haplotype),
+                                std::forward_as_tuple(max_num_reads_));
+        p.first->second.emplace(read, value);
+    } else {
+        it->second.emplace(read, value);
     }
-    cache_[read].emplace(haplotype, value);
 }
 
 double HaplotypeLikelihoodCache::get_cached(const AlignedRead& read, const Haplotype& haplotype) const
 {
-    return cache_.at(read).at(haplotype);
+    return cache_.at(haplotype).at(read);
 }
 
 namespace debug

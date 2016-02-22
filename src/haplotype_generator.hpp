@@ -12,6 +12,7 @@
 #include <vector>
 #include <functional>
 #include <utility>
+#include <unordered_map>
 
 #include <boost/optional.hpp>
 
@@ -43,13 +44,12 @@ namespace Octopus
         HaplotypeGenerator(HaplotypeGenerator&&)                 = default;
         HaplotypeGenerator& operator=(HaplotypeGenerator&&)      = default;
         
-        bool done() const noexcept;
-        
         GenomicRegion tell_next_active_region();
         
         std::pair<std::vector<Haplotype>, GenomicRegion> progress();
         
         void keep_haplotypes(const std::vector<Haplotype>& haplotypes);
+        void remove_haplotypes(const std::vector<Haplotype>& haplotypes);
         
         void force_forward(GenomicRegion to);
         
@@ -60,10 +60,14 @@ namespace Octopus
         MappableSet<Allele> alleles_;
         std::reference_wrapper<const ReadMap> reads_;
         
-        GenomicRegion current_region_;
-        boost::optional<GenomicRegion> next_region_;
+        GenomicRegion current_active_region_;
+        boost::optional<GenomicRegion> next_active_region_;
         
         unsigned max_haplotypes_;
+        
+        mutable std::unordered_map<Allele, unsigned> active_allele_counts_;
+        
+        GenomicRegion calculate_haplotype_region() const;
     };
 } // namespace Octopus
 

@@ -25,7 +25,7 @@ namespace Octopus
     
     double HaplotypeLikelihoodModel::log_probability(const AlignedRead& read, const Haplotype& haplotype)
     {
-        Model model {2, 3};
+        Model model {2, 3}; // TODO: make part of an error model
         
         auto gap_open_penalities = indel_error_model_.calculate_gap_open_penalties(haplotype);
         
