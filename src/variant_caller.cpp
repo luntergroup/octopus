@@ -22,6 +22,7 @@
 #include "mappable_algorithms.hpp"
 #include "haplotype.hpp"
 #include "vcf_record.hpp"
+#include "maths.hpp"
 
 #include "basic_haplotype_prior_model.hpp" // TODO: turn into factory
 
@@ -88,6 +89,7 @@ double max_read_likelihood(const ReadMap& reads, const Haplotype& haplotype,
         for (const auto& read : sample_reads.second) {
             const auto cur_read_liklihood = haplotype_likelihoods.log_probability(read, haplotype);
             if (cur_read_liklihood > result) result = cur_read_liklihood;
+            if (Maths::almost_zero(cur_read_liklihood)) break;
         }
     }
     
