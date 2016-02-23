@@ -8,82 +8,70 @@
 
 #include "haplotype_likelihood_cache.hpp"
 
+#include <vector>
 #include <algorithm>
 #include <iostream>
-#include <vector>
 #include <utility>
 
 #include "maths.hpp"
+#include "kmer_mapper.hpp"
 
 namespace Octopus
 {
 // public methods
 
 HaplotypeLikelihoodCache::HaplotypeLikelihoodCache(const ReadMap& reads,
-                                                   const std::vector<Haplotype>& haplotypes)
+                                                   const std::vector<Haplotype>& haplotypes,
+                                                   HaplotypeLikelihoodModel::InactiveRegionState flank_state)
 :
-error_model_ {},
-cache_ {haplotypes.size()},
-max_num_reads_ {Maths::sum_sizes(reads)}
-{
-    for (const auto& sample_reads : reads) {
-        for (const auto& read : sample_reads.second) {
-            for (const auto& haplotype : haplotypes) {
-                cache(read, haplotype, error_model_.log_probability(read, haplotype));
-            }
-        }
-    }
-}
+HaplotypeLikelihoodCache {HaplotypeLikelihoodModel {KmerMapper(reads, haplotypes)}, reads, haplotypes, flank_state}
+{}
 
 HaplotypeLikelihoodCache::HaplotypeLikelihoodCache(HaplotypeLikelihoodModel error_model,
                                                    const ReadMap& reads,
-                                                   const std::vector<Haplotype>& haplotypes)
+                                                   const std::vector<Haplotype>& haplotypes,
+                                                   HaplotypeLikelihoodModel::InactiveRegionState flank_state)
 :
-error_model_ {std::move(error_model)},
-cache_ {haplotypes.size()},
-max_num_reads_ {Maths::sum_sizes(reads)}
+error_model_ {std::move(error_model)}
 {
-    for (const auto& sample_reads : reads) {
-        for (const auto& read : sample_reads.second) {
-            for (const auto& haplotype : haplotypes) {
-                cache(read, haplotype, error_model_.log_probability(read, haplotype));
-            }
-        }
+    std::vector<ReadReference> read_references {};
+    read_references.reserve(Maths::sum_sizes(reads));
+    
+    auto it = std::begin(read_references);
+    for (const auto& s : reads) {
+        it = read_references.insert(it, std::cbegin(s.second), std::cend(s.second));
+    }
+    
+    std::sort(std::begin(read_references), std::end(read_references));
+    
+    read_references.erase(std::unique(std::begin(read_references), std::end(read_references)),
+                          std::end(read_references));
+    
+    cache_.assign_keys(std::cbegin(read_references), std::cend(read_references));
+    
+    cache_.reserve1(haplotypes.size());
+    
+    std::vector<double> probabilities(read_references.size());
+    
+    for (const auto& haplotype : haplotypes) {
+        std::transform(std::cbegin(read_references), std::cend(read_references),
+                       std::begin(probabilities),
+                       [this, &haplotype] (const auto& read) {
+                           return error_model_.log_probability(read, haplotype);
+                       });
+        
+        cache_.insert_at(haplotype, std::cbegin(probabilities), std::cend(probabilities));
     }
 }
 
 double HaplotypeLikelihoodCache::log_probability(const AlignedRead& read, const Haplotype& haplotype) const
 {
-    return get_cached(read, haplotype);
+    return cache_(haplotype, read);
 }
 
 void HaplotypeLikelihoodCache::clear()
 {
     cache_.clear();
-}
-
-// private methods
-
-bool HaplotypeLikelihoodCache::is_cached(const AlignedRead& read, const Haplotype& haplotype) const noexcept
-{
-    return cache_.count(haplotype) == 1 && cache_.at(haplotype).count(read) == 1;
-}
-
-void HaplotypeLikelihoodCache::cache(const AlignedRead& read, const Haplotype& haplotype, double value) const
-{
-    auto it = cache_.find(haplotype);
-    if (it == std::end(cache_)) {
-        auto p = cache_.emplace(std::piecewise_construct, std::forward_as_tuple(haplotype),
-                                std::forward_as_tuple(max_num_reads_));
-        p.first->second.emplace(read, value);
-    } else {
-        it->second.emplace(read, value);
-    }
-}
-
-double HaplotypeLikelihoodCache::get_cached(const AlignedRead& read, const Haplotype& haplotype) const
-{
-    return cache_.at(haplotype).at(read);
 }
 
 namespace debug

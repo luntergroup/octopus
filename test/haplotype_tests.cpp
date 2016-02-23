@@ -422,6 +422,22 @@ BOOST_AUTO_TEST_CASE(haplotypes_can_be_copied_and_moved)
     BOOST_CHECK(moved_hap.contains(allele2));
 }
 
+BOOST_AUTO_TEST_CASE(get_sequence_works_at_boundries)
+{
+    BOOST_REQUIRE(test_file_exists(human_reference_fasta));
+    
+    const auto human = make_reference(human_reference_fasta);
+    
+    Haplotype haplotype {GenomicRegion {"22", 16231802, 16232338}, human};
+    haplotype.push_back(ContigAllele {ContigRegion {16232051, 16232074}, "AAAGAGAAAGAAAGAAAGAAAGA"});
+    
+    const GenomicRegion splice_region {"22", 16232073, 16232077};
+    
+    const auto splice_haplotype = haplotype.get_sequence(splice_region);
+    
+    exit(0);
+}
+
 BOOST_AUTO_TEST_CASE(Haplotype_can_be_spliced)
 {
     BOOST_REQUIRE(test_file_exists(human_reference_fasta));

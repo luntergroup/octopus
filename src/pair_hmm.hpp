@@ -15,7 +15,7 @@
 
 struct Model
 {
-    int nucprior, gapextend;
+    int nucprior, gapextend; bool flank_clear = true;
 };
 
 // p(target | truth, target_qualities, target_gap_open_penalties, model)

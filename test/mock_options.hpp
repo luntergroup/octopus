@@ -62,19 +62,18 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         
         // for population
         
-        "--regions", "22:16190000-16190400",
+        "--regions", "22",
         
+        //"--regions", "22:20656122-20656146", // NA12878_high_coverage causing memory spike
+        
+        //"--regions", "22:16,232,038-16,232,117", // NA12878_high_coverage VERY ineresting deletions!!
+        //"--regions", "Y:13451184-13451197", // crazy Y haplotypes NA12878
         //"--regions", "22:37,276,961-37,277,045", // interesting dual deletions NA12878
-        
         //"--regions", "22:23,474,658-23,475,205", // complex insertion/SNP NA12878
-        
         //"--regions", "22:16,231,876-16,232,206", // Complex phasing region
         //"--regions", "22:16,139,705-16,140,266", // NA12878_high_coverage complex region
-        
         //"-L", "6:31,235,688-31,235,883", // TEST phaser
-        
         //"-L", "5:2,726,554-2,726,594", // snp just before deletion
-        
         //"-L", "5:92,593,056", // SNP next to another SNP
         //"-L", "5:92,593,057", // SNP next to another SNP
         //"-L", "5:64,525,420-64,525,459", // two close SNPS

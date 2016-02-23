@@ -240,16 +240,26 @@ Haplotype::SequenceType Haplotype::get_sequence(const ContigRegion& region) cons
     
     if (::contains(overlapped_explicit_alleles.front(), region)) {
         append(result, splice(overlapped_explicit_alleles.front(), region));
+        
         overlapped_explicit_alleles.advance_begin(1);
+        
         if (!overlapped_explicit_alleles.empty() && is_insertion(overlapped_explicit_alleles.front())) {
             append(result, overlapped_explicit_alleles.front());
         }
+        
         result.shrink_to_fit();
         return result;
     } else if (begins_before(overlapped_explicit_alleles.front(), region)) {
         append(result, splice(overlapped_explicit_alleles.front(),
                               overlapped_region(overlapped_explicit_alleles.front(), region)));
+        
         overlapped_explicit_alleles.advance_begin(1);
+        
+        if (overlapped_explicit_alleles.empty()) {
+            result += get_reference_sequence(right_overhang_region(region, region_bounded_by_alleles));
+            result.shrink_to_fit();
+            return result;
+        }
     }
     
     bool region_ends_before_last_overlapped_allele {ends_before(region, overlapped_explicit_alleles.back())};

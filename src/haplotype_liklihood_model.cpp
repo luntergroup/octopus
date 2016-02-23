@@ -8,6 +8,7 @@
 
 #include "haplotype_liklihood_model.hpp"
 
+#include <utility>
 #include <cmath>
 #include <algorithm>
 #include <cassert>
@@ -15,7 +16,6 @@
 
 #include "mappable.hpp"
 #include "aligned_read.hpp"
-#include "kmer_mapping.hpp"
 #include "pair_hmm.hpp"
 
 #include <iostream> // TEST
@@ -25,15 +25,21 @@ namespace Octopus
 {
     // public methods
     
-    double HaplotypeLikelihoodModel::log_probability(const AlignedRead& read, const Haplotype& haplotype)
+    HaplotypeLikelihoodModel::HaplotypeLikelihoodModel(KmerMapper mapper)
+    :
+    mapper_ {std::move(mapper)}
+    {}
+    
+    double HaplotypeLikelihoodModel::log_probability(const AlignedRead& read, const Haplotype& haplotype,
+                                                     InactiveRegionState flank_state) const
     {
         Model model {2, 3}; // TODO: make part of an error model
         
+        //if (flank_state == InactiveRegionState::Unclear) model.flank_clear = false;
+        
         auto gap_open_penalities = indel_error_model_.calculate_gap_open_penalties(haplotype);
         
-        // TODO: we can cache the kmer-hashes to speed this up
-        const auto best_mapping_positions = map_query_to_target<5>(read.get_sequence(), haplotype.get_sequence());
-        //std::vector<std::size_t> best_mapping_positions {};
+        const auto best_mapping_positions = mapper_.map(read, haplotype);
         
         auto max_log_probability = std::numeric_limits<double>::lowest();
         
@@ -47,8 +53,6 @@ namespace Octopus
         assert(contains(haplotype, read));
         
         const auto original_mapping_position = begin_distance(read, haplotype);
-        
-        assert(std::is_sorted(std::cbegin(best_mapping_positions), std::cend(best_mapping_positions)));
         
         if (!std::binary_search(std::cbegin(best_mapping_positions),
                                 std::cend(best_mapping_positions),

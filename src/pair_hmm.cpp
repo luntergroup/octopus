@@ -58,17 +58,44 @@ namespace
                const std::size_t offset_hint,
                const Model& model)
     {
+        const auto haplotype_alignment_size = static_cast<int>(target.size() + 15);
+        
+        if (model.flank_clear) {
+            const auto score = fastAlignmentRoutine(truth.c_str() + offset_hint,
+                                                    target.c_str(),
+                                                    reinterpret_cast<const char*>(target_qualities.data()),
+                                                    haplotype_alignment_size,
+                                                    static_cast<int>(target.size()),
+                                                    static_cast<int>(model.gapextend),
+                                                    static_cast<int>(model.nucprior),
+                                                    reinterpret_cast<const char*>(target_gap_open_penalties.data()) + offset_hint);
+            
+            return -ln_10_div_10 * static_cast<double>(score);
+        }
+        
+        int first_pos;
+        std::vector<char> align1(2 * target.size() + 16), align2(2 * target.size() + 16);
+        
         const auto score = fastAlignmentRoutine(truth.c_str() + offset_hint,
                                                 target.c_str(),
                                                 reinterpret_cast<const char*>(target_qualities.data()),
-                                                static_cast<int>(target.size() + 15),
+                                                haplotype_alignment_size,
                                                 static_cast<int>(target.size()),
                                                 static_cast<int>(model.gapextend),
                                                 static_cast<int>(model.nucprior),
                                                 reinterpret_cast<const char*>(target_gap_open_penalties.data()) + offset_hint,
-                                                nullptr, nullptr, nullptr);
+                                                align1.data(), align2.data(), &first_pos);
         
-        return -ln_10_div_10 * static_cast<double>(score);
+        const auto flank_score = calculateFlankScore(haplotype_alignment_size,
+                                                     0,
+                                                     reinterpret_cast<const char*>(target_qualities.data()),
+                                                     reinterpret_cast<const char*>(target_gap_open_penalties.data()),
+                                                     static_cast<int>(model.gapextend),
+                                                     static_cast<int>(model.nucprior),
+                                                     static_cast<int>(first_pos + offset_hint),
+                                                     align1.data(), align2.data());
+        
+        return -ln_10_div_10 * static_cast<double>(score - flank_score);
     }
 } // namespace
 

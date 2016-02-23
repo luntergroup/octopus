@@ -75,7 +75,7 @@ private:
     Vertex root_;
     std::list<Vertex> haplotype_leafs_;
     
-    GenomicRegion region_;
+    ContigNameType contig_;
     
     mutable std::unordered_multimap<Haplotype, Vertex> haplotype_leaf_cache_;
     

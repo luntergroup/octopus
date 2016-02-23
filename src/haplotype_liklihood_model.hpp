@@ -9,14 +9,10 @@
 #ifndef haplotype_liklihood_model_hpp
 #define haplotype_liklihood_model_hpp
 
-#include <unordered_map>
-#include <functional>
-#include <cstddef>
-#include <unordered_map>
-
 #include "common.hpp"
 #include "haplotype.hpp"
 #include "read_indel_error_model.hpp"
+#include "kmer_mapper.hpp"
 
 class AlignedRead;
 
@@ -25,7 +21,10 @@ namespace Octopus
     class HaplotypeLikelihoodModel
     {
     public:
-        HaplotypeLikelihoodModel()  = default;
+        enum class InactiveRegionState { Clear, Unclear };
+        
+        HaplotypeLikelihoodModel()  = delete;
+        HaplotypeLikelihoodModel(KmerMapper mapper);
         ~HaplotypeLikelihoodModel() = default;
         
         HaplotypeLikelihoodModel(const HaplotypeLikelihoodModel&)            = default;
@@ -34,15 +33,12 @@ namespace Octopus
         HaplotypeLikelihoodModel& operator=(HaplotypeLikelihoodModel&&)      = default;
         
         // ln p(read | haplotype)
-        double log_probability(const AlignedRead& read, const Haplotype& haplotype);
+        double log_probability(const AlignedRead& read, const Haplotype& haplotype,
+                               InactiveRegionState flank_state = InactiveRegionState::Clear) const;
         
     private:
         ReadIndelErrorModel indel_error_model_;
-        
-        using CacheKeyType       = Haplotype::SequenceType;
-        using GapOpenPenalities  = std::vector<short>;
-        
-        mutable std::unordered_map<CacheKeyType, GapOpenPenalities> cached_gap_penalities_;
+        KmerMapper mapper_;
     };
 } // namespace Octopus
 

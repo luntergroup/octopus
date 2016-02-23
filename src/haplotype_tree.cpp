@@ -22,7 +22,7 @@ reference_ {reference},
 tree_ {},
 root_ {boost::add_vertex(tree_)},
 haplotype_leafs_ {root_},
-region_ {reference.get_contig_region(contig)},
+contig_ {contig},
 haplotype_leaf_cache_ {}
 {}
 
@@ -50,21 +50,21 @@ bool HaplotypeTree::is_unique(const Haplotype& haplotype) const
 {
     if (haplotype_leaf_cache_.count(haplotype) > 0) {
         return haplotype_leaf_cache_.count(haplotype) == 1;
-    } else {
-        bool haplotype_seen {false};
-        
-        for (const Vertex& leaf : haplotype_leafs_) {
-            if (is_branch_equal_haplotype(leaf, haplotype)) {
-                if (haplotype_seen) {
-                    return false;
-                } else {
-                    haplotype_seen = true;
-                }
+    }
+    
+    bool haplotype_seen {false};
+    
+    for (const Vertex& leaf : haplotype_leafs_) {
+        if (is_branch_equal_haplotype(leaf, haplotype)) {
+            if (haplotype_seen) {
+                return false;
+            } else {
+                haplotype_seen = true;
             }
         }
-        
-        return haplotype_seen;
     }
+    
+    return haplotype_seen;
 }
 
 HaplotypeTree& HaplotypeTree::extend(const ContigAllele& allele)
@@ -79,7 +79,7 @@ HaplotypeTree& HaplotypeTree::extend(const ContigAllele& allele)
 
 HaplotypeTree& HaplotypeTree::extend(const Allele& allele)
 {
-    if (!is_same_contig(allele, region_)) {
+    if (contig_name(allele) != contig_) {
         throw std::logic_error {"HaplotypeTree: trying to extend with Allele on different contig"};
     }
     return extend(demote(allele));
@@ -100,7 +100,7 @@ GenomicRegion HaplotypeTree::get_region() const
     const auto rightmost = *std::max_element(std::cbegin(haplotype_leafs_), std::cend(haplotype_leafs_),
                                              VertexLess);
     
-    return GenomicRegion {region_.get_contig_name(), encompassing_region(tree_[leftmost], tree_[rightmost])};
+    return GenomicRegion {contig_, encompassing_region(tree_[leftmost], tree_[rightmost])};
 }
 
 std::vector<Haplotype> HaplotypeTree::extract_haplotypes() const
@@ -141,7 +141,7 @@ void HaplotypeTree::prune_all(const Haplotype& haplotype)
 {
     using std::cbegin; using std::cend; using std::for_each; using std::find;
     
-    if (empty() || !is_same_contig(haplotype, region_))
+    if (empty() || contig_name(haplotype) != contig_)
         return;
     
     // if any of the haplotypes in cache match the query haplotype then the cache must contain
@@ -249,11 +249,9 @@ void HaplotypeTree::remove(const GenomicRegion& region)
     
     const auto tree_region = get_region();
     
-    if (is_before(region, tree_region) || is_after(region, tree_region)) return;
-    
     if (::contains(region, tree_region)) {
         clear();
-    } else {
+    } else if (overlaps(region, tree_region)) {
         haplotype_leaf_cache_.clear();
         
         std::list<Vertex> new_leafs {};

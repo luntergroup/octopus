@@ -9,13 +9,11 @@
 #ifndef haplotype_likelihood_cache_hpp
 #define haplotype_likelihood_cache_hpp
 
-#include <unordered_map>
-#include <cstddef>
-
 #include "common.hpp"
 #include "haplotype.hpp"
 #include "aligned_read.hpp"
 #include "haplotype_liklihood_model.hpp"
+#include "matrix_map.hpp"
 
 namespace Octopus
 {
@@ -25,11 +23,13 @@ namespace Octopus
         HaplotypeLikelihoodCache()  = default;
         
         explicit HaplotypeLikelihoodCache(const ReadMap& reads,
-                                          const std::vector<Haplotype>& haplotypes);
+                                          const std::vector<Haplotype>& haplotypes,
+                                          HaplotypeLikelihoodModel::InactiveRegionState flank_state);
         
         explicit HaplotypeLikelihoodCache(HaplotypeLikelihoodModel error_model,
                                           const ReadMap& reads,
-                                          const std::vector<Haplotype>& haplotypes);
+                                          const std::vector<Haplotype>& haplotypes,
+                                          HaplotypeLikelihoodModel::InactiveRegionState flank_state);
         
         ~HaplotypeLikelihoodCache() = default;
         
@@ -50,27 +50,19 @@ namespace Octopus
         using HaplotypeReference = Haplotype;
         using ReadReference      = std::reference_wrapper<const AlignedRead>;
         
-        using Cache = std::unordered_map<HaplotypeReference, std::unordered_map<ReadReference, double>>;
+        using Cache = MatrixMap<HaplotypeReference, ReadReference, double>;
         
         HaplotypeLikelihoodModel error_model_;
         
         mutable Cache cache_;
-        
-        std::size_t max_num_reads_;
-        
-        bool is_cached(const AlignedRead& read, const Haplotype& haplotype) const noexcept;
-        void cache(const AlignedRead& read, const Haplotype& haplotype, double value) const;
-        double get_cached(const AlignedRead& read, const Haplotype& haplotype) const;
     };
     
     template <typename Container>
     void HaplotypeLikelihoodCache::erase(const Container& haplotypes)
     {
         for (const auto& haplotype : haplotypes) {
-            cache_.erase(haplotype);
+            cache_.erase1(haplotype);
         }
-        
-        //cache_.rehash(cache_.size());
     }
     
     namespace debug

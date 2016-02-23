@@ -187,22 +187,20 @@ template <typename KeyType, typename MappableType1, typename MappableType2>
 typename MappableSet<MappableType1>::const_iterator
 leftmost_overlapped(const MappableMap<KeyType, MappableType1>& mappables, const MappableType2& mappable)
 {
-    using std::cbegin; using std::cend;
-    
     if (mappables.empty()) {
-        throw std::runtime_error {"leftmost_overlapped called with empty MappableMap"};
+        throw std::logic_error {"leftmost_overlapped called with empty MappableMap"};
     }
     
-    auto first = cbegin(mappables);
-    auto last  = cend(mappables);
+    auto first = std::cbegin(mappables);
+    auto last  = std::cend(mappables);
     
-    auto result = cbegin(first->second);
+    auto result = std::cbegin(first->second);
     
     while (first != last) {
         if (!first->second.empty()) {
             const auto overlapped = first->second.overlap_range(mappable);
             if (!overlapped.empty()) {
-                result = cbegin(overlapped).base();
+                result = std::cbegin(overlapped).base();
                 ++first;
                 break;
             }
@@ -213,7 +211,7 @@ leftmost_overlapped(const MappableMap<KeyType, MappableType1>& mappables, const 
     std::for_each(first, last, [&mappable, &result] (const auto& p) {
         const auto overlapped = p.second.overlap_range(mappable);
         if (!overlapped.empty() && begins_before(overlapped.front(), *result)) {
-            result = cbegin(overlapped).base();
+            result = std::cbegin(overlapped).base();
         }
     });
     
@@ -224,22 +222,20 @@ template <typename KeyType, typename MappableType1, typename MappableType2>
 typename MappableSet<MappableType1>::const_iterator
 rightmost_overlapped(const MappableMap<KeyType, MappableType1>& mappables, const MappableType2& mappable)
 {
-    using std::cbegin; using std::cend; using std::prev;
-    
     if (mappables.empty()) {
-        throw std::runtime_error {"rightmost_overlapped called with empty MappableMap"};
+        throw std::logic_error {"rightmost_overlapped called with empty MappableMap"};
     }
     
-    auto first = cbegin(mappables);
-    auto last  = cend(mappables);
+    auto first = std::cbegin(mappables);
+    auto last  = std::cend(mappables);
     
-    auto result = cend(first->second);
+    auto result = std::cend(first->second);
     
     while (first != last) {
         if (!first->second.empty()) {
             const auto overlapped = first->second.overlap_range(mappable);
             if (!overlapped.empty()) {
-                result = prev(cend(overlapped)).base();
+                result = rightmost_mappable(overlapped).base();
                 ++first;
                 break;
             }
@@ -249,8 +245,8 @@ rightmost_overlapped(const MappableMap<KeyType, MappableType1>& mappables, const
     
     std::for_each(first, last, [&mappable, &result] (const auto& p) {
         const auto overlapped = p.second.overlap_range(mappable);
-        if (!overlapped.empty() && ends_before(*result, overlapped.back())) {
-            result = prev(cend(overlapped)).base();
+        if (!overlapped.empty()) {
+            result = rightmost_mappable(overlapped).base();
         }
     });
     

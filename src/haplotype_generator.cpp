@@ -205,12 +205,8 @@ namespace Octopus
     {
         constexpr GenomicRegion::SizeType additional_padding {20};
         
-        const auto active_alleles = alleles_.overlap_range(current_active_region_);
-        
-        assert(!active_alleles.empty());
-        
-        const auto lhs_read = *leftmost_overlapped(reads_.get(), active_alleles.front());
-        const auto rhs_read = *rightmost_overlapped(reads_.get(), active_alleles.back());
+        const auto lhs_read = *leftmost_overlapped(reads_.get(), current_active_region_);
+        const auto rhs_read = *rightmost_overlapped(reads_.get(), current_active_region_);
         
         const auto unpadded_region = encompassing_region(lhs_read, rhs_read);
         

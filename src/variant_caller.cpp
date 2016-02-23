@@ -140,6 +140,36 @@ filter_haplotypes(std::vector<Haplotype>& haplotypes, const ReadMap& reads,
     return result;
 }
 
+std::pair<unsigned, unsigned>
+count_overlapped_inactive_candidates(const GenomicRegion& haplotype_region,
+                                     const GenomicRegion& active_region,
+                                     const std::vector<Variant>& candidates)
+{
+    const auto lhs_count = count_overlapped(candidates, left_overhang_region(haplotype_region, active_region));
+    const auto rhs_count = count_overlapped(candidates, right_overhang_region(haplotype_region, active_region));
+    return std::make_pair(lhs_count, rhs_count);
+}
+
+auto flank_state(const std::vector<Haplotype>& haplotypes,
+                 const GenomicRegion& active_region,
+                 const std::vector<Variant>& candidates)
+{
+    const auto p = count_overlapped_inactive_candidates(haplotypes.front().get_region(),
+                                                        active_region, candidates);
+    
+    if (p.first > 2 || p.second > 2) {
+        return HaplotypeLikelihoodModel::InactiveRegionState::Unclear;
+    }
+    
+    return HaplotypeLikelihoodModel::InactiveRegionState::Clear;
+}
+
+auto build_likelihood_cache(const std::vector<Haplotype>& haplotypes, const ReadMap& reads,
+                            const GenomicRegion& active_region, const std::vector<Variant>& candidates)
+{
+    return HaplotypeLikelihoodCache {reads, haplotypes, flank_state(haplotypes, active_region, candidates)};
+}
+
 std::deque<VcfRecord> VariantCaller::call_variants(const GenomicRegion& call_region) const
 {
     assert(!is_empty_region(call_region));
@@ -151,7 +181,10 @@ std::deque<VcfRecord> VariantCaller::call_variants(const GenomicRegion& call_reg
         add_reads(reads, candidate_generator_);
     }
     
-    const auto candidates = unique_left_align(candidate_generator_.get_candidates(call_region), reference_);
+    const auto candidate_region = candidate_generator_.requires_reads() ? encompassing_region(reads) : call_region;
+    //const auto candidate_region = call_region; // DEBUG
+    
+    const auto candidates = unique_left_align(candidate_generator_.get_candidates(candidate_region), reference_);
     
     candidate_generator_.clear();
     
@@ -170,7 +203,7 @@ std::deque<VcfRecord> VariantCaller::call_variants(const GenomicRegion& call_reg
     constexpr unsigned max_indicators {0};
     constexpr double min_phase_score {0.99};
     
-    HaplotypeGenerator generator {call_region, reference_, candidates, reads, max_haplotypes_, max_indicators};
+    HaplotypeGenerator generator {candidate_region, reference_, candidates, reads, max_haplotypes_, max_indicators};
     Phaser phaser {min_phase_score};
     
     std::vector<Haplotype> haplotypes;
@@ -181,7 +214,7 @@ std::deque<VcfRecord> VariantCaller::call_variants(const GenomicRegion& call_reg
         
         std::cout << "active region is " << active_region << '\n';
         
-        if (haplotypes.empty()) {
+        if (is_after(active_region, call_region) || haplotypes.empty()) {
             break;
         }
         
@@ -193,12 +226,20 @@ std::deque<VcfRecord> VariantCaller::call_variants(const GenomicRegion& call_reg
         
         //std::cout << "there are " << haplotypes.size() << " initial haplotypes" << '\n';
         
-        HaplotypeLikelihoodCache haplotype_likelihoods {active_region_reads, haplotypes};
+        auto haplotype_likelihoods = build_likelihood_cache(haplotypes, active_region_reads,
+                                                            active_region, candidates);
         
         //std::cout << "computed haplotype likelihoods" << '\n';
         
         auto removed_haplotypes = filter_haplotypes(haplotypes, active_region_reads, haplotype_likelihoods,
                                                     max_haplotypes_);
+        
+        if (haplotypes.empty()) {
+            // This can only happen if all haplotypes have equal likelihood.
+            // TODO: is there anything else we can do?
+            generator.remove_haplotypes(removed_haplotypes);
+            continue;
+        }
         
         haplotype_likelihoods.erase(removed_haplotypes);
         
@@ -223,7 +264,7 @@ std::deque<VcfRecord> VariantCaller::call_variants(const GenomicRegion& call_reg
         
         auto unphased_active_region = active_region;
         
-        if (phase_set) {
+        if (overlaps(active_region, call_region) && phase_set) {
             assert(!is_empty_region(phase_set->region));
             
             //std::cout << "phased region is " << phase_set->region << '\n';
@@ -252,7 +293,7 @@ std::deque<VcfRecord> VariantCaller::call_variants(const GenomicRegion& call_reg
         
         auto next_active_region = generator.tell_next_active_region();
         
-        if (begins_before(active_region, next_active_region)) {
+        if (overlaps(active_region, call_region) && begins_before(active_region, next_active_region)) {
             auto passed_region = left_overhang_region(active_region, next_active_region);
             
             auto uncalled_region = passed_region;
@@ -274,8 +315,6 @@ std::deque<VcfRecord> VariantCaller::call_variants(const GenomicRegion& call_reg
                 
                 append_annotated_calls(result, curr_results, active_region_reads);
             }
-            
-            erase_contained(reads, passed_region);
         }
     }
     
@@ -298,8 +337,8 @@ bool VariantCaller::done_calling(const GenomicRegion& region) const noexcept
 
 std::vector<Haplotype>
 VariantCaller::get_removable_haplotypes(const std::vector<Haplotype>& haplotypes,
-                         const CallerLatents::HaplotypePosteiorMap& haplotype_posteriors,
-                         const GenomicRegion& region) const
+                                        const CallerLatents::HaplotypePosteiorMap& haplotype_posteriors,
+                                        const GenomicRegion& region) const
 {
     assert(!haplotypes.empty() && contains(haplotypes.front().get_region(), region));
     

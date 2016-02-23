@@ -78,7 +78,7 @@ ReadMap ReadPipe::fetch_reads(const GenomicRegion& region)
         }
     }
     
-    std::cout << "fetched " << count_reads(result) << " total reads" << std::endl;
+    //std::cout << "fetched " << count_reads(result) << " total reads" << std::endl;
     
     return result;
 }
