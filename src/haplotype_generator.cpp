@@ -14,6 +14,9 @@
 #include <cassert>
 
 #include "variant.hpp"
+#include "haplotype.hpp"
+#include "mappable.hpp"
+#include "mappable_algorithms.hpp"
 
 #include <iostream> // DEBUG
 
@@ -91,6 +94,10 @@ namespace Octopus
         }
         
         force_forward(*next_active_region_);
+        
+        if (is_empty_region(*next_active_region_)) {
+            return std::make_pair(std::vector<Haplotype> {}, *next_active_region_);
+        }
         
         extend_tree(alleles_.overlap_range(*next_active_region_), tree_);
         
@@ -172,8 +179,21 @@ namespace Octopus
         
         next_active_region_ = std::move(to);
         
-        if (begins_before(current_active_region_, *next_active_region_)) {
-            const auto passed_region = left_overhang_region(current_active_region_, *next_active_region_);
+        if (!is_empty_region(current_active_region_)
+            && begins_before(current_active_region_, *next_active_region_)) {
+            auto passed_region = left_overhang_region(current_active_region_, *next_active_region_);
+            
+            const auto overlapped = alleles_.overlap_range(passed_region);
+            
+            assert(!overlapped.empty());
+            
+            if (is_insertion(overlapped.back())) {
+                // Moving the rhs boundry one to the right avoids erasing insertions, which
+                // are always considered at the start of active regions. Note this may leave
+                // already considered single base alleles in the active allele set and tree.
+                passed_region = expand_rhs(passed_region, -1);
+            }
+            
             alleles_.erase_overlapped(passed_region);
             tree_.remove(passed_region);
         }
@@ -183,8 +203,29 @@ namespace Octopus
     
     GenomicRegion HaplotypeGenerator::calculate_haplotype_region() const
     {
-        // TODO
-        return expand(current_active_region_, 100);
+        constexpr GenomicRegion::SizeType additional_padding {20};
+        
+        const auto active_alleles = alleles_.overlap_range(current_active_region_);
+        
+        assert(!active_alleles.empty());
+        
+        const auto lhs_read = *leftmost_overlapped(reads_.get(), active_alleles.front());
+        const auto rhs_read = *rightmost_overlapped(reads_.get(), active_alleles.back());
+        
+        const auto unpadded_region = encompassing_region(lhs_read, rhs_read);
+        
+        if (region_begin(lhs_read) < additional_padding / 2) {
+            if (region_begin(lhs_read) == 0) {
+                return expand_rhs(unpadded_region, additional_padding);
+            }
+            
+            const auto lhs_padding = (additional_padding / 2) - region_begin(lhs_read);
+            const auto rhs_padding = additional_padding - lhs_padding;
+            
+            return expand_lhs(expand_rhs(unpadded_region, rhs_padding), lhs_padding);
+        }
+        
+        return expand(unpadded_region, additional_padding / 2);
     }
     
 } // namespace Octopus

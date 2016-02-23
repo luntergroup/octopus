@@ -306,4 +306,20 @@ copy_contained(const MappableMap<KeyType, MappableType1>& mappables, const Mappa
     return result;
 }
 
+template <typename KeyType, typename MappableType1, typename MappableType2>
+void erase_overlapped(MappableMap<KeyType, MappableType1>& mappables, const MappableType2& mappable)
+{
+    for (auto& p : mappables) {
+        p.second.erase_overlapped(mappable);
+    }
+}
+
+template <typename KeyType, typename MappableType1, typename MappableType2>
+void erase_contained(MappableMap<KeyType, MappableType1>& mappables, const MappableType2& mappable)
+{
+    for (auto& p : mappables) {
+        p.second.erase_contained(mappable);
+    }
+}
+
 #endif

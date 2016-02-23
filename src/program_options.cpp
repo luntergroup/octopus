@@ -178,10 +178,10 @@ namespace Octopus
             backend.add_options()
             ("threaded,t", po::bool_switch()->default_value(false),
              "turns on multi-threading, the number of threads is determined by the application")
-            ("memory", po::value<size_t>()->default_value(8000),
-             "target memory usage in MB")
             ("reference-cache-size", po::value<size_t>()->default_value(0),
              "the maximum number of bytes that can be used to cache reference sequence")
+            ("target-read-buffer-size", po::value<float>()->default_value(1.0),
+             "will try to limit the amount of memory (in gigabytes) occupied by reads to this amount")
             ("compress-reads", po::bool_switch()->default_value(false),
              "compress the reads (slower)")
             ("max-open-read-files", po::value<unsigned>()->default_value(200),
@@ -528,9 +528,10 @@ namespace Octopus
         return options.at("threaded").as<bool>();
     }
     
-    size_t get_memory_quota(const po::variables_map& options)
+    std::size_t get_target_read_buffer_size(const po::variables_map& options)
     {
-        return options.at("memory").as<size_t>();
+        constexpr std::size_t scale {1'000'000'000};
+        return static_cast<std::size_t>(scale * options.at("target-read-buffer-size").as<float>());
     }
     
     boost::optional<ReferenceGenome> make_reference(const po::variables_map& options)
@@ -1098,6 +1099,8 @@ namespace Octopus
         
         const auto min_refcall_posterior_phred = options.at("min-refcall-posterior").as<float>();
         vc_builder.set_min_refcall_posterior(phred_to_probability(min_refcall_posterior_phred));
+        
+        vc_builder.set_max_haplotypes(options.at("max-haplotypes").as<unsigned>());
         
         if (model == "cancer") {
             vc_builder.set_normal_sample(options.at("normal-sample").as<std::string>());

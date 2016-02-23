@@ -48,7 +48,7 @@ namespace Octopus
         
     bool is_threading_allowed(const po::variables_map& options);
     
-    size_t get_memory_quota(const po::variables_map& options);
+    std::size_t get_target_read_buffer_size(const po::variables_map& options);
     
     boost::optional<ReferenceGenome> make_reference(const po::variables_map& options);
     

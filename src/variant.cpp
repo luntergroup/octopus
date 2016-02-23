@@ -379,7 +379,7 @@ Variant normalise(const Variant& variant, const ReferenceGenome& reference,
 Variant pad_left(const Variant& variant, const Variant::SequenceType& sequence)
 {
     return Variant {
-        compress_lhs(variant, -static_cast<GenomicRegion::DifferenceType>(sequence.size())),
+        expand_lhs(variant, static_cast<GenomicRegion::DifferenceType>(sequence.size())),
         sequence + ref_sequence(variant),
         sequence + alt_sequence(variant)
     };
@@ -388,7 +388,7 @@ Variant pad_left(const Variant& variant, const Variant::SequenceType& sequence)
 Variant pad_right(const Variant& variant, const Variant::SequenceType& sequence)
 {
     return Variant {
-        compress_rhs(variant, static_cast<GenomicRegion::DifferenceType>(sequence.size())),
+        expand_rhs(variant, static_cast<GenomicRegion::DifferenceType>(sequence.size())),
         ref_sequence(variant) + sequence,
         alt_sequence(variant) + sequence
     };
@@ -397,8 +397,7 @@ Variant pad_right(const Variant& variant, const Variant::SequenceType& sequence)
 Variant pad_left(const Variant& variant, const ReferenceGenome& reference,
                  const Variant::SizeType n)
 {
-    const auto pad_region = compress_lhs(head_region(variant),
-                                         -static_cast<GenomicRegion::DifferenceType>(n));
+    const auto pad_region = expand_lhs(head_region(variant), static_cast<GenomicRegion::DifferenceType>(n));
     
     const auto pad_sequence = reference.get_sequence(pad_region);
     
@@ -412,8 +411,7 @@ Variant pad_left(const Variant& variant, const ReferenceGenome& reference,
 Variant pad_right(const Variant& variant, const ReferenceGenome& reference,
                   const Variant::SizeType n)
 {
-    const auto pad_region = compress_rhs(tail_region(variant),
-                                         static_cast<GenomicRegion::DifferenceType>(n));
+    const auto pad_region = expand_rhs(tail_region(variant), static_cast<GenomicRegion::DifferenceType>(n));
     
     const auto pad_sequence = reference.get_sequence(pad_region);
     

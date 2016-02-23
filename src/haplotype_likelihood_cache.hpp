@@ -17,17 +17,6 @@
 #include "aligned_read.hpp"
 #include "haplotype_liklihood_model.hpp"
 
-namespace std
-{
-    template <typename T> struct hash<reference_wrapper<const T>>
-    {
-        size_t operator()(reference_wrapper<const T> r) const
-        {
-            return hash<T>()(r);
-        }
-    };
-} // namespace std
-
 namespace Octopus
 {
     class HaplotypeLikelihoodCache
@@ -52,6 +41,9 @@ namespace Octopus
         // ln p(read | haplotype)
         double log_probability(const AlignedRead& read, const Haplotype& haplotype) const;
         
+        template <typename Container>
+        void erase(const Container& haplotypes);
+        
         void clear();
         
     private:
@@ -70,6 +62,16 @@ namespace Octopus
         void cache(const AlignedRead& read, const Haplotype& haplotype, double value) const;
         double get_cached(const AlignedRead& read, const Haplotype& haplotype) const;
     };
+    
+    template <typename Container>
+    void HaplotypeLikelihoodCache::erase(const Container& haplotypes)
+    {
+        for (const auto& haplotype : haplotypes) {
+            cache_.erase(haplotype);
+        }
+        
+        //cache_.rehash(cache_.size());
+    }
     
     namespace debug
     {

@@ -50,6 +50,7 @@ namespace Octopus {
         VariantCallerBuilder& set_refcall_type(VariantCaller::RefCallType refcall_type) noexcept;
         VariantCallerBuilder& set_min_variant_posterior(double min_posterior) noexcept;
         VariantCallerBuilder& set_min_refcall_posterior(double min_posterior) noexcept;
+        VariantCallerBuilder& set_max_haplotypes(unsigned max_haplotypes) noexcept;
         
         // cancer
         VariantCallerBuilder& set_normal_sample(SampleIdType normal_sample);
@@ -82,6 +83,7 @@ namespace Octopus {
         VariantCaller::RefCallType refcall_type_ = VariantCaller::RefCallType::None;
         double min_variant_posterior_ = 0.99;
         double min_refcall_posterior_ = 0.99;
+        unsigned max_haplotypes_ = 128;
         
         // cancer
         

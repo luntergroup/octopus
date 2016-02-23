@@ -342,18 +342,18 @@ overlap_range(BidirIt first, BidirIt last, const MappableTp& mappable,
         // we need to try and push these boundries out as the range does not fully capture
         // insertions
         
+        overlapped.first = std::find_if_not(std::make_reverse_iterator(overlapped.first),
+                                            std::make_reverse_iterator(first),
+                                            [&mappable] (const auto& m) {
+                                                return overlaps(m, mappable);
+                                            }).base();
+        
         overlapped.second = std::find_if_not(overlapped.second, last,
                                              [&mappable] (const auto& m) {
                                                  return overlaps(m, mappable);
                                              });
         
-        const auto it = std::find_if_not(std::make_reverse_iterator(overlapped.first),
-                                         std::make_reverse_iterator(first),
-                                         [&mappable] (const auto& m) {
-                                             return overlaps(m, mappable);
-                                         });
-        
-        return make_overlap_range(it.base(), overlapped.second, mappable);
+        return make_overlap_range(overlapped.first, overlapped.second, mappable);
     }
     
     const auto it = find_first_after(first, last, mappable);

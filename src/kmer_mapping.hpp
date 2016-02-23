@@ -14,6 +14,7 @@
 #include <array>
 #include <cstddef>
 #include <iterator>
+#include <numeric>
 
 constexpr auto num_kmers(const unsigned char k) noexcept
 {
@@ -29,7 +30,7 @@ constexpr auto perfect_hash(const char base) noexcept
         4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
         4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
         4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
-        4, 0, 4, 1, 4, 4, 4, 2, 4, 4, 4, 4, 4, 4, 4, 4,
+        4, 0, 4, 1, 4, 4, 4, 2, 4, 4, 4, 4, 4, 4, 0, 4, // N -> A
         4, 4, 4, 4, 3, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
         4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
         4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4
@@ -40,16 +41,14 @@ constexpr auto perfect_hash(const char base) noexcept
 template <unsigned char K, typename InputIt>
 constexpr auto perfect_kmer_hash(InputIt first)
 {
-    unsigned k {1}, result {0};
+    unsigned k {1};
     
-    const auto last = std::next(first, K);
-    
-    for (; first != last; ++first) {
-        result += k * perfect_hash(*first);
-        k *= 4;
-    }
-    
-    return result;
+    return std::accumulate(first, std::next(first, K), 0,
+                           [&k] (const unsigned curr, const char base) {
+                               const auto result = curr + k * perfect_hash(base);
+                               k *= 4;
+                               return result;
+                           });
 }
 
 using KmerPerfectHashes = std::vector<std::size_t>;

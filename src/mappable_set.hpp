@@ -1033,7 +1033,7 @@ MappableSet<Region> splice_all(const MappableSet<MappableType, Allocator1>& mapp
             
             std::for_each(std::cbegin(overlapped), std::cend(overlapped), [&] (const auto& region) {
                 result.emplace(left_overhang_region(spliced, region));
-                spliced = compress_lhs(spliced, begin_distance(region, spliced));
+                spliced = expand_lhs(spliced, -begin_distance(region, spliced));
             });
             
             if (ends_before(overlapped.back(), spliced)) {

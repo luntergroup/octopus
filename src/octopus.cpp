@@ -9,6 +9,7 @@
 #include "octopus.hpp"
 
 #include <vector>
+#include <deque>
 #include <iostream>
 #include <memory>
 #include <algorithm>
@@ -177,6 +178,17 @@ namespace Octopus
         };
     }
     
+    constexpr auto estimate_read_size() noexcept
+    {
+        // TODO: could actually look at a few reads to get better estimate
+        return sizeof(AlignedRead) + 300; // Using average Illumina read size
+    }
+    
+    std::size_t calculate_max_num_reads(const std::size_t max_buffer_size_in_bytes)
+    {
+        return max_buffer_size_in_bytes / estimate_read_size();
+    }
+    
     class GenomeCallingComponents
     {
     public:
@@ -190,6 +202,7 @@ namespace Octopus
         VariantCallerFactory variant_caller_factory;
         VcfWriter output;
         bool is_threaded;
+        std::size_t read_buffer_size;
         boost::optional<fs::path> temp_directory;
         
         GenomeCallingComponents() = delete;
@@ -214,6 +227,7 @@ namespace Octopus
                                                                      options)},
         output {std::move(output)},
         is_threaded {Options::is_threading_allowed(options)},
+        read_buffer_size {calculate_max_num_reads(Options::get_target_read_buffer_size(options))},
         temp_directory {is_threaded ? Options::create_temp_file_directory(options) : boost::none}
         {}
         
@@ -234,6 +248,7 @@ namespace Octopus
         variant_caller_factory      {std::move(other.variant_caller_factory)},
         output                      {std::move(other.output)},
         is_threaded                 {std::move(other.is_threaded)},
+        read_buffer_size            {std::move(other.read_buffer_size)},
         temp_directory              {std::move(other.temp_directory)}
         {
             update_dependents();
@@ -252,6 +267,7 @@ namespace Octopus
             swap(variant_caller_factory,      other.variant_caller_factory);
             swap(output,                      other.output);
             swap(is_threaded,                 other.is_threaded);
+            swap(read_buffer_size,            other.read_buffer_size);
             swap(temp_directory,              other.temp_directory);
             update_dependents();
             return *this;
@@ -339,6 +355,7 @@ namespace Octopus
         const MappableSet<GenomicRegion> regions;
         std::reference_wrapper<const std::vector<SampleIdType>> samples;
         std::unique_ptr<const VariantCaller> caller;
+        std::size_t read_buffer_size;
         std::reference_wrapper<VcfWriter> output;
         
         ContigCallingComponents() = delete;
@@ -351,6 +368,7 @@ namespace Octopus
         regions {genome_components.regions.at(contig)},
         samples {genome_components.samples},
         caller {genome_components.variant_caller_factory.make(contig)},
+        read_buffer_size {genome_components.read_buffer_size},
         output {genome_components.output}
         {}
         
@@ -363,6 +381,7 @@ namespace Octopus
         regions {genome_components.regions.at(contig)},
         samples {genome_components.samples},
         caller {genome_components.variant_caller_factory.make(contig)},
+        read_buffer_size {genome_components.read_buffer_size},
         output {output}
         {}
         
@@ -396,36 +415,45 @@ namespace Octopus
         cout << "Octopus: writing calls to " << components.output.path() << endl;
     }
     
-    void write_calls(VcfWriter& out, std::vector<VcfRecord>&& calls)
+    void write_calls(VcfWriter& out, std::deque<VcfRecord>&& calls)
     {
         std::cout << "Octopus: writing " << calls.size() << " calls to VCF" << std::endl;
         for (auto&& call : calls) out.write(std::move(call));
+    }
+    
+    auto propose_call_subregion(const ContigCallingComponents& components,
+                                const GenomicRegion& remaining_call_region)
+    {
+        if (is_empty_region(remaining_call_region)) {
+            return remaining_call_region;
+        }
+        
+        auto max_window = components.read_manager.get().find_covered_subregion(components.samples,
+                                                                               remaining_call_region,
+                                                                               components.read_buffer_size);
+        
+        if (ends_before(remaining_call_region, max_window)) {
+            return remaining_call_region;
+        }
+        
+        return max_window;
     }
     
     void run_octopus_on_contig(ContigCallingComponents&& components)
     {
         using std::cout; using std::endl;
         
-        const size_t max_reads = 1'000'000;
-        
-        size_t num_buffered_reads {};
-        
         for (const auto& region : components.regions) {
             cout << "Octopus: processing input region " << region << endl;
             
-            auto subregion = components.read_manager.get().find_covered_subregion(components.samples,
-                                                                                  region, max_reads);
+            auto subregion = propose_call_subregion(components, region);
             
-            while (region_begin(subregion) != region_end(region)) {
+            while (!is_empty_region(subregion)) {
                 cout << "Octopus: processing subregion " << subregion << endl;
                 
                 write_calls(components.output, components.caller->call_variants(subregion));
                 
-                num_buffered_reads = components.caller->num_buffered_reads();
-                
-                subregion = right_overhang_region(region, subregion);
-                subregion = components.read_manager.get().find_covered_subregion(components.samples,
-                                                                                 subregion, max_reads);
+                subregion = propose_call_subregion(components, right_overhang_region(region, subregion));
             }
         }
     }

@@ -10,6 +10,7 @@
 
 #include <algorithm>
 #include <iterator>
+#include <cassert>
 
 #include "haplotype.hpp"
 #include "sequence_utils.hpp"
@@ -95,38 +96,16 @@ namespace
     }
 } // namespace
 
-auto group_duplicates(std::vector<Haplotype>& haplotypes)
-{
-    std::sort(std::begin(haplotypes), std::end(haplotypes));
-    
-//    const auto reference_sequence = reference.get_sequence(haplotypes.front().get_region());
-//    
-//    using SequenceType = decltype(reference_sequence);
-//    
-//    struct Cmp
-//    {
-//        bool operator()(const Haplotype& lhs, const SequenceType& rhs) const
-//        {
-//            return lhs.get_sequence() < rhs;
-//        }
-//        bool operator()(const SequenceType& lhs, const Haplotype& rhs) const
-//        {
-//            return lhs < rhs.get_sequence();
-//        }
-//    };
-//    
-//    return std::equal_range(std::begin(haplotypes), std::end(haplotypes), reference_sequence, Cmp {});
-}
-
 HaplotypePriorModel::HaplotypePriorMap
 BasicHaplotypePriorModel::do_compute_maximum_entropy_haplotype_set(std::vector<Haplotype>& haplotypes) const
 {
     using std::begin; using std::end; using std::next; using std::distance;
     using std::adjacent_find; using std::for_each; using std::nth_element;
     
-    const Haplotype reference {haplotypes.front().get_region(), reference_.get()};
+    assert(!haplotypes.empty());
+    assert(std::is_sorted(std::cbegin(haplotypes), std::cend(haplotypes)));
     
-    group_duplicates(haplotypes);
+    const Haplotype reference {haplotypes.front().get_region(), reference_.get()};
     
     auto first_duplicate = adjacent_find(begin(haplotypes), end(haplotypes));
     

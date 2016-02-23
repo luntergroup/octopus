@@ -19,6 +19,7 @@
 #include <memory>
 #include <iterator>
 #include <utility>
+#include <functional>
 
 #include "genomic_region.hpp"
 #include "cigar_string.hpp"
@@ -245,6 +246,14 @@ namespace std {
         size_t operator()(const AlignedRead& read) const
         {
             return read.get_hash();
+        }
+    };
+    
+    template <> struct hash<reference_wrapper<const AlignedRead>>
+    {
+        size_t operator()(const reference_wrapper<const AlignedRead> read) const
+        {
+            return hash<AlignedRead>()(read);
         }
     };
 } // namespace std

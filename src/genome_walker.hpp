@@ -29,16 +29,13 @@ public:
     
     enum class IndicatorLimit { SharedWithPreviousRegion, NoLimit };
     enum class ExtensionLimit { WithinReadLengthOfFirstIncluded, SharedWithFrontier, NoLimit };
-    enum class ExpansionLimit { UpToExcluded, WithinReadLength, UpToExcludedWithinReadLength,
-                                NoExpansion };
     
     GenomeWalker() = delete;
     
     explicit GenomeWalker(unsigned max_indicators,
                           unsigned max_included,
                           IndicatorLimit indicator_limit = IndicatorLimit::SharedWithPreviousRegion,
-                          ExtensionLimit extension_limit = ExtensionLimit::SharedWithFrontier,
-                          ExpansionLimit expansion_limit = ExpansionLimit::UpToExcludedWithinReadLength);
+                          ExtensionLimit extension_limit = ExtensionLimit::SharedWithFrontier);
     
     ~GenomeWalker() = default;
     
@@ -59,19 +56,8 @@ private:
     
     const IndicatorLimit indicator_limit_;
     const ExtensionLimit extension_limit_;
-    const ExpansionLimit expansion_limit_;
     
     using CandidateIterator = Candidates::const_iterator;
-    
-    struct CandidateRanges
-    {
-        CandidateRanges() = delete;
-        CandidateRanges(CandidateIterator first_previous_itr, CandidateIterator first_included_itr,
-                        CandidateIterator first_excluded_itr, CandidateIterator last_itr);
-        CandidateIterator first_previous_itr, first_included_itr, first_excluded_itr, last_itr;
-    };
-    
-    std::function<GenomicRegion(CandidateRanges, const ReadMap&)> expander_;
 };
 } // namespace Octopus
 

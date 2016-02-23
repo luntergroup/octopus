@@ -319,7 +319,7 @@ namespace Octopus
         
         auto genotypes = generate_all_genotypes(haplotypes, ploidy_);
         
-        std::cout << "there are " << genotypes.size() << " candidate genotypes" << std::endl;
+        //std::cout << "there are " << genotypes.size() << " candidate genotypes" << std::endl;
         
         if (genotypes.size() == 1) {
             return make_single_genotype_latents(genotypes.front(), reads);

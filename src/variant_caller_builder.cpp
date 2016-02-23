@@ -156,6 +156,12 @@ namespace Octopus
         return *this;
     }
     
+    VariantCallerBuilder& VariantCallerBuilder::set_max_haplotypes(const unsigned max_haplotypes) noexcept
+    {
+        max_haplotypes_ = max_haplotypes;
+        return *this;
+    }
+    
     // cancer
     VariantCallerBuilder& VariantCallerBuilder::set_normal_sample(SampleIdType normal_sample)
     {

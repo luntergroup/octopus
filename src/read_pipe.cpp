@@ -85,13 +85,8 @@ ReadMap ReadPipe::fetch_reads(const GenomicRegion& region)
 
 ReadMap ReadPipe::fetch_reads(const std::vector<GenomicRegion>& regions)
 {
-    ReadMap result {};
-    
-    for (const auto& region : regions) {
-        // TODO: implement this
-    }
-    
-    return result;
+    // TODO: improve this
+    return fetch_reads(encompassing_region(regions));
 }
 
 } // namespace Octopus

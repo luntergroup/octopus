@@ -604,15 +604,15 @@ auto next_position(const Mappable<T>& mappable)
 }
 
 template <typename T>
-auto compress_lhs(const Mappable<T>& mappable, const GenomicRegion::DifferenceType n)
+auto expand_lhs(const Mappable<T>& mappable, const GenomicRegion::DifferenceType n)
 {
-    return compress_lhs(static_cast<const T&>(mappable).get_region(), n);
+    return expand_lhs(static_cast<const T&>(mappable).get_region(), n);
 }
 
 template <typename T>
-auto compress_rhs(const Mappable<T>& mappable, const GenomicRegion::DifferenceType n)
+auto expand_rhs(const Mappable<T>& mappable, const GenomicRegion::DifferenceType n)
 {
-    return compress_rhs(static_cast<const T&>(mappable).get_region(), n);
+    return expand_rhs(static_cast<const T&>(mappable).get_region(), n);
 }
 
 template <typename T>

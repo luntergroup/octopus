@@ -59,9 +59,7 @@ public:
     VariantCaller(VariantCaller&&)                 = delete;
     VariantCaller& operator=(VariantCaller&&)      = delete;
     
-    size_t num_buffered_reads() const noexcept;
-    
-    std::vector<VcfRecord> call_variants(const GenomicRegion& call_region) const;
+    std::deque<VcfRecord> call_variants(const GenomicRegion& call_region) const;
     
 protected:
     using HaplotypeReference = std::reference_wrapper<const Haplotype>;
@@ -71,6 +69,8 @@ protected:
     std::reference_wrapper<ReadPipe> read_pipe_;
     
     const RefCallType refcall_type_ = RefCallType::Positional;
+    
+    unsigned max_haplotypes_ = 64;
     
     bool refcalls_requested() const noexcept;
     

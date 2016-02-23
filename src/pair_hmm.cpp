@@ -22,8 +22,6 @@
 #include "banded_simd_viterbi.hpp"
 
 #include <iostream> // DEBUG
-using std::cout;
-using std::endl;
 
 namespace
 {
@@ -69,14 +67,6 @@ namespace
                                                 static_cast<int>(model.nucprior),
                                                 reinterpret_cast<const char*>(target_gap_open_penalties.data()) + offset_hint,
                                                 nullptr, nullptr, nullptr);
-        
-        //    const auto score = align(truth.c_str() + offset_hint, target.c_str(),
-        //                             reinterpret_cast<const char*>(target_qualities.data()),
-        //                             static_cast<unsigned>(truth.size()),
-        //                             static_cast<unsigned>(target.size()),
-        //                             static_cast<std::uint8_t>(model.gapextend),
-        //                             static_cast<std::uint8_t>(model.nucprior),
-        //                             reinterpret_cast<const std::uint8_t*>(target_gap_open_penalties.data()));
         
         return -ln_10_div_10 * static_cast<double>(score);
     }
