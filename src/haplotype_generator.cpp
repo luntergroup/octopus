@@ -187,7 +187,7 @@ namespace Octopus
             
             assert(!overlapped.empty());
             
-            if (is_insertion(overlapped.back())) {
+            if (is_empty_region(overlapped.back())) {
                 // Moving the rhs boundry one to the right avoids erasing insertions, which
                 // are always considered at the start of active regions. Note this may leave
                 // already considered single base alleles in the active allele set and tree.
@@ -201,12 +201,33 @@ namespace Octopus
     
     // private methods
     
+    template <typename Range>
+    bool is_solo_active_insertion(const GenomicRegion& active_region,
+                                  const Range& overlapped)
+    {
+        return is_empty_region(encompassing_region(overlapped));
+    }
+    
+    const GenomicRegion& resolve_active_region(const GenomicRegion& active_region,
+                                               const MappableSet<Allele>& alleles)
+    {
+        const auto overlapped = alleles.overlap_range(active_region);
+        
+        if (is_solo_active_insertion(active_region, overlapped)) {
+            return mapped_region(overlapped.front());
+        }
+        
+        return active_region;
+    }
+    
     GenomicRegion HaplotypeGenerator::calculate_haplotype_region() const
     {
         constexpr GenomicRegion::SizeType additional_padding {20};
         
-        const auto lhs_read = *leftmost_overlapped(reads_.get(), current_active_region_);
-        const auto rhs_read = *rightmost_overlapped(reads_.get(), current_active_region_);
+        const auto& lookup_region = resolve_active_region(current_active_region_, alleles_);
+        
+        const auto lhs_read = *leftmost_overlapped(reads_.get(), lookup_region);
+        const auto rhs_read = *rightmost_overlapped(reads_.get(), lookup_region);
         
         const auto unpadded_region = encompassing_region(lhs_read, rhs_read);
         

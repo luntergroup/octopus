@@ -390,9 +390,16 @@ overlap_range(ForwardIt first, ForwardIt last, const MappableTp& mappable,
     
     auto it = find_first_after(first, last, mappable);
     
+    it = std::find_if_not(it, last,
+                          [&mappable] (const auto& m) {
+                              return overlaps(m, mappable);
+                          });
+    
     auto it2 = std::lower_bound(first, it, shift(mapped_region(mappable),
                                                  -std::min(region_begin(mappable), max_mappable_size)),
-                                [] (const auto& lhs, const auto& rhs) { return begins_before(lhs, rhs); });
+                                [] (const auto& lhs, const auto& rhs) {
+                                    return begins_before(lhs, rhs);
+                                });
     
     it2 = std::find_if(it2, it, [&mappable] (const auto& m) { return overlaps(m, mappable); });
     

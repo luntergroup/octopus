@@ -74,10 +74,12 @@ void append_annotated_calls(std::deque<VcfRecord>& curr_calls,
 
 namespace debug
 {
-    void print_candidates(const std::vector<Variant>& candidates);
+    void print_candidates(const std::vector<Variant>& candidates, bool number_only = false);
     enum class Resolution {Sequence, Alleles, VariantAlleles, SequenceAndAlleles, SequenceAndVariantAlleles};
     void print_haplotypes(const std::vector<Haplotype>& haplotypes,
                           Resolution resolution = Resolution::SequenceAndAlleles);
+//    void print_active_region(const GenomicRegion& completed_region,
+//                             GenomicRegion::SizeType step_size);
 }
 
 double max_read_likelihood(const ReadMap& reads, const Haplotype& haplotype,
@@ -188,9 +190,11 @@ std::deque<VcfRecord> VariantCaller::call_variants(const GenomicRegion& call_reg
     
     candidate_generator_.clear();
     
-    debug::print_candidates(candidates);
+    //debug::print_candidates(candidates);
     
     std::deque<VcfRecord> result {};
+    
+    return result; // ReadPipe debug
     
     if (candidates.empty() && !refcalls_requested()) {
         return result;
@@ -209,10 +213,12 @@ std::deque<VcfRecord> VariantCaller::call_variants(const GenomicRegion& call_reg
     std::vector<Haplotype> haplotypes;
     GenomicRegion active_region;
     
+    auto completed_region = head_region(call_region);
+    
     while (true) {
         std::tie(haplotypes, active_region) = generator.progress();
         
-        std::cout << "active region is " << active_region << '\n';
+        //std::cout << "active region is " << active_region << '\n';
         
         if (is_after(active_region, call_region) || haplotypes.empty()) {
             break;
@@ -315,6 +321,8 @@ std::deque<VcfRecord> VariantCaller::call_variants(const GenomicRegion& call_reg
                 
                 append_annotated_calls(result, curr_results, active_region_reads);
             }
+            
+            completed_region = encompassing_region(completed_region, passed_region);
         }
     }
     
@@ -515,13 +523,15 @@ generate_candidate_reference_alleles(const std::vector<Allele>& callable_alleles
     
 namespace debug
 {
-    void print_candidates(const std::vector<Variant>& candidates)
+    void print_candidates(const std::vector<Variant>& candidates, bool number_only)
     {
         if (candidates.empty()) {
             std::cout << "there are no candidates" << '\n';
         } else {
             std::cout << "found " << candidates.size() << " candidates: " << '\n';
-            for (const auto& c : candidates) std::cout << c << '\n';
+            if (!number_only) {
+                for (const auto& c : candidates) std::cout << c << '\n';
+            }
         }
     }
     
@@ -540,5 +550,12 @@ namespace debug
             }
         }
     }
+    
+//    void print_active_region(const GenomicRegion& completed_region, GenomicRegion::SizeType step_size)
+//    {
+//        const auto bps_processed = region_size(completed_region);
+//        
+//        if (bps_processed % step_size)
+//    }
 }
 } // namespace Octopus

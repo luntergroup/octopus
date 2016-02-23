@@ -119,14 +119,17 @@ public:
     template <typename MappableType_>
     size_type count_overlapped(iterator first, iterator last, const MappableType_& mappable) const;
     template <typename MappableType_>
-    size_type count_overlapped(const_iterator first, const_iterator last, const MappableType_& mappable) const;
+    size_type count_overlapped(const_iterator first, const_iterator last,
+                               const MappableType_& mappable) const;
     
     template <typename MappableType_>
     OverlapRange<const_iterator> overlap_range(const MappableType_& mappable) const;
     template <typename MappableType_>
-    OverlapRange<iterator> overlap_range(iterator first, iterator last, const MappableType_& mappable) const;
+    OverlapRange<iterator> overlap_range(iterator first, iterator last,
+                                         const MappableType_& mappable) const;
     template <typename MappableType_>
-    OverlapRange<const_iterator> overlap_range(const_iterator first, const_iterator last, const MappableType_& mappable) const;
+    OverlapRange<const_iterator> overlap_range(const_iterator first, const_iterator last,
+                                               const MappableType_& mappable) const;
     
     template <typename MappableType_>
     void erase_overlapped(const MappableType_& mappable);
@@ -143,14 +146,17 @@ public:
     template <typename MappableType_>
     size_type count_contained(iterator first, iterator last, const MappableType_& mappable) const;
     template <typename MappableType_>
-    size_type count_contained(const_iterator first, const_iterator last, const MappableType_& mappable) const;
+    size_type count_contained(const_iterator first, const_iterator last,
+                              const MappableType_& mappable) const;
     
     template <typename MappableType_>
     ContainedRange<const_iterator> contained_range(const MappableType_& mappable) const;
     template <typename MappableType_>
-    ContainedRange<iterator> contained_range(iterator first, iterator last, const MappableType_& mappable) const;
+    ContainedRange<iterator> contained_range(iterator first, iterator last,
+                                             const MappableType_& mappable) const;
     template <typename MappableType_>
-    ContainedRange<const_iterator> contained_range(const_iterator first, const_iterator last, const MappableType_& mappable) const;
+    ContainedRange<const_iterator> contained_range(const_iterator first, const_iterator last,
+                                                   const MappableType_& mappable) const;
     
     template <typename MappableType_>
     void erase_contained(const MappableType_& mappable);
@@ -158,23 +164,32 @@ public:
     template <typename MappableType1_, typename MappableType2_>
     bool has_shared(const MappableType1_& mappable1, const MappableType2_& mappable2) const;
     template <typename MappableType1_, typename MappableType2_>
-    bool has_shared(iterator first, iterator last, const MappableType1_& mappable1, const MappableType2_& mappable2) const;
+    bool has_shared(iterator first, iterator last,
+                    const MappableType1_& mappable1, const MappableType2_& mappable2) const;
     template <typename MappableType1_, typename MappableType2_>
-    bool has_shared(const_iterator first, const_iterator last, const MappableType1_& mappable1, const MappableType2_& mappable2) const;
+    bool has_shared(const_iterator first, const_iterator last,
+                    const MappableType1_& mappable1, const MappableType2_& mappable2) const;
     
     template <typename MappableType1_, typename MappableType2_>
     size_type count_shared(const MappableType1_& mappable1, const MappableType2_& mappable2) const;
     template <typename MappableType1_, typename MappableType2_>
-    size_type count_shared(iterator first, iterator last, const MappableType1_& mappable1, const MappableType2_& mappable2) const;
+    size_type count_shared(iterator first, iterator last,
+                           const MappableType1_& mappable1, const MappableType2_& mappable2) const;
     template <typename MappableType1_, typename MappableType2_>
-    size_type count_shared(const_iterator first, const_iterator last, const MappableType1_& mappable1, const MappableType2_& mappable2) const;
+    size_type count_shared(const_iterator first, const_iterator last,
+                           const MappableType1_& mappable1, const MappableType2_& mappable2) const;
     
     template <typename MappableType1_, typename MappableType2_>
-    SharedRange<const_iterator> shared_range(const MappableType1_& mappable1, const MappableType2_& mappable2) const;
+    SharedRange<const_iterator> shared_range(const MappableType1_& mappable1,
+                                             const MappableType2_& mappable2) const;
     template <typename MappableType1_, typename MappableType2_>
-    SharedRange<iterator> shared_range(iterator first, iterator last, const MappableType1_& mappable1, const MappableType2_& mappable2) const;
+    SharedRange<iterator> shared_range(iterator first, iterator last,
+                                       const MappableType1_& mappable1,
+                                       const MappableType2_& mappable2) const;
     template <typename MappableType1_, typename MappableType2_>
-    SharedRange<const_iterator> shared_range(const_iterator first, const_iterator last, const MappableType1_& mappable1, const MappableType2_& mappable2) const;
+    SharedRange<const_iterator> shared_range(const_iterator first, const_iterator last,
+                                             const MappableType1_& mappable1,
+                                             const MappableType2_& mappable2) const;
     
     template <typename M, typename A>
     friend bool operator==(const MappableSet<M, A>& lhs, const MappableSet<M, A>& rhs);
@@ -565,7 +580,8 @@ const MappableType& MappableSet<MappableType, Allocator>::rightmost() const
     if (is_bidirectionally_sorted_) {
         return last;
     } else {
-        const auto overlapped = ::overlap_range(cbegin(elements_), cend(elements_), last, max_element_size_);
+        const auto overlapped = ::overlap_range(cbegin(elements_), cend(elements_), last,
+                                                max_element_size_);
         return *rightmost_mappable(cbegin(overlapped), cend(overlapped));
     }
 }
@@ -584,7 +600,8 @@ MappableSet<MappableType, Allocator>::has_overlapped(const MappableType_& mappab
 template <typename MappableType, typename Allocator>
 template <typename MappableType_>
 bool
-MappableSet<MappableType, Allocator>::has_overlapped(iterator first, iterator last, const MappableType_& mappable) const
+MappableSet<MappableType, Allocator>::has_overlapped(iterator first, iterator last,
+                                                     const MappableType_& mappable) const
 {
     return (is_bidirectionally_sorted_) ?
     ::has_overlapped(first, last, mappable, MappableRangeOrder::BidirectionallySorted)
@@ -595,7 +612,8 @@ MappableSet<MappableType, Allocator>::has_overlapped(iterator first, iterator la
 template <typename MappableType, typename Allocator>
 template <typename MappableType_>
 bool
-MappableSet<MappableType, Allocator>::has_overlapped(const_iterator first, const_iterator last, const MappableType_& mappable) const
+MappableSet<MappableType, Allocator>::has_overlapped(const_iterator first, const_iterator last,
+                                                     const MappableType_& mappable) const
 {
     return (is_bidirectionally_sorted_) ?
     ::has_overlapped(first, last, mappable, MappableRangeOrder::BidirectionallySorted)
@@ -615,7 +633,8 @@ MappableSet<MappableType, Allocator>::count_overlapped(const MappableType_& mapp
 template <typename MappableType, typename Allocator>
 template <typename MappableType_>
 typename MappableSet<MappableType, Allocator>::size_type
-MappableSet<MappableType, Allocator>::count_overlapped(iterator first, iterator last, const MappableType_& mappable) const
+MappableSet<MappableType, Allocator>::count_overlapped(iterator first, iterator last,
+                                                       const MappableType_& mappable) const
 {
     const auto overlapped = overlap_range(first, last, mappable);
     return (is_bidirectionally_sorted_) ? ::size(overlapped, MappableRangeOrder::BidirectionallySorted) : ::size(overlapped);
@@ -624,7 +643,8 @@ MappableSet<MappableType, Allocator>::count_overlapped(iterator first, iterator 
 template <typename MappableType, typename Allocator>
 template <typename MappableType_>
 typename MappableSet<MappableType, Allocator>::size_type
-MappableSet<MappableType, Allocator>::count_overlapped(const_iterator first, const_iterator last, const MappableType_& mappable) const
+MappableSet<MappableType, Allocator>::count_overlapped(const_iterator first, const_iterator last,
+                                                       const MappableType_& mappable) const
 {
     const auto overlapped = overlap_range(first, last, mappable);
     return (is_bidirectionally_sorted_) ? ::size(overlapped, MappableRangeOrder::BidirectionallySorted) : ::size(overlapped);
@@ -641,7 +661,8 @@ MappableSet<MappableType, Allocator>::overlap_range(const MappableType_& mappabl
 template <typename MappableType, typename Allocator>
 template <typename MappableType_>
 OverlapRange<typename MappableSet<MappableType, Allocator>::iterator>
-MappableSet<MappableType, Allocator>::overlap_range(iterator first, iterator last, const MappableType_& mappable) const
+MappableSet<MappableType, Allocator>::overlap_range(iterator first, iterator last,
+                                                    const MappableType_& mappable) const
 {
     return overlap_range(const_iterator(first), const_iterator(last), mappable);
 }
@@ -649,7 +670,8 @@ MappableSet<MappableType, Allocator>::overlap_range(iterator first, iterator las
 template <typename MappableType, typename Allocator>
 template <typename MappableType_>
 OverlapRange<typename MappableSet<MappableType, Allocator>::const_iterator>
-MappableSet<MappableType, Allocator>::overlap_range(const_iterator first, const_iterator last, const MappableType_& mappable) const
+MappableSet<MappableType, Allocator>::overlap_range(const_iterator first, const_iterator last,
+                                                    const MappableType_& mappable) const
 {
     return (is_bidirectionally_sorted_) ?
         ::overlap_range(first, last, mappable, MappableRangeOrder::BidirectionallySorted)
@@ -685,7 +707,8 @@ MappableSet<MappableType, Allocator>::has_contained(const MappableType_& mappabl
 template <typename MappableType, typename Allocator>
 template <typename MappableType_>
 bool
-MappableSet<MappableType, Allocator>::has_contained(iterator first, iterator last, const MappableType_& mappable) const
+MappableSet<MappableType, Allocator>::has_contained(iterator first, iterator last,
+                                                    const MappableType_& mappable) const
 {
     return has_contained(const_iterator(first), const_iterator(last), mappable);
 }
@@ -693,7 +716,8 @@ MappableSet<MappableType, Allocator>::has_contained(iterator first, iterator las
 template <typename MappableType, typename Allocator>
 template <typename MappableType_>
 bool
-MappableSet<MappableType, Allocator>::has_contained(const_iterator first, const_iterator last, const MappableType_& mappable) const
+MappableSet<MappableType, Allocator>::has_contained(const_iterator first, const_iterator last,
+                                                    const MappableType_& mappable) const
 {
     return ::has_contained(first, last, mappable);
 }
@@ -709,7 +733,8 @@ MappableSet<MappableType, Allocator>::count_contained(const MappableType_& mappa
 template <typename MappableType, typename Allocator>
 template <typename MappableType_>
 typename MappableSet<MappableType, Allocator>::size_type
-MappableSet<MappableType, Allocator>::count_contained(iterator first, iterator last, const MappableType_& mappable) const
+MappableSet<MappableType, Allocator>::count_contained(iterator first, iterator last,
+                                                      const MappableType_& mappable) const
 {
     return count_contained(const_iterator(first), const_iterator(last), mappable);
 }
@@ -717,7 +742,8 @@ MappableSet<MappableType, Allocator>::count_contained(iterator first, iterator l
 template <typename MappableType, typename Allocator>
 template <typename MappableType_>
 typename MappableSet<MappableType, Allocator>::size_type
-MappableSet<MappableType, Allocator>::count_contained(const_iterator first, const_iterator last, const MappableType_& mappable) const
+MappableSet<MappableType, Allocator>::count_contained(const_iterator first, const_iterator last,
+                                                      const MappableType_& mappable) const
 {
     const auto contained = contained_range(first, last, mappable);
     return (is_bidirectionally_sorted_) ? ::size(contained, MappableRangeOrder::BidirectionallySorted) : ::size(contained);
@@ -734,7 +760,8 @@ MappableSet<MappableType, Allocator>::contained_range(const MappableType_& mappa
 template <typename MappableType, typename Allocator>
 template <typename MappableType_>
 ContainedRange<typename MappableSet<MappableType, Allocator>::iterator>
-MappableSet<MappableType, Allocator>::contained_range(iterator first, iterator last, const MappableType_& mappable) const
+MappableSet<MappableType, Allocator>::contained_range(iterator first, iterator last,
+                                                      const MappableType_& mappable) const
 {
     return contained_range(const_iterator(first), const_iterator(last), mappable);
 }
@@ -742,7 +769,8 @@ MappableSet<MappableType, Allocator>::contained_range(iterator first, iterator l
 template <typename MappableType, typename Allocator>
 template <typename MappableType_>
 ContainedRange<typename MappableSet<MappableType, Allocator>::const_iterator>
-MappableSet<MappableType, Allocator>::contained_range(const_iterator first, const_iterator last, const MappableType_& mappable) const
+MappableSet<MappableType, Allocator>::contained_range(const_iterator first, const_iterator last,
+                                                      const MappableType_& mappable) const
 {
     return ::contained_range(first, last, mappable);
 }
@@ -767,7 +795,8 @@ void MappableSet<MappableType, Allocator>::erase_contained(const MappableType_& 
 template <typename MappableType, typename Allocator>
 template <typename MappableType1_, typename MappableType2_>
 bool
-MappableSet<MappableType, Allocator>::has_shared(const MappableType1_& mappable1, const MappableType2_& mappable2) const
+MappableSet<MappableType, Allocator>::has_shared(const MappableType1_& mappable1,
+                                                 const MappableType2_& mappable2) const
 {
     return has_shared(std::cbegin(elements_), std::cend(elements_), mappable1, mappable2);
 }
@@ -776,7 +805,8 @@ template <typename MappableType, typename Allocator>
 template <typename MappableType1_, typename MappableType2_>
 bool
 MappableSet<MappableType, Allocator>::has_shared(iterator first, iterator last,
-                                                 const MappableType1_& mappable1, const MappableType2_& mappable2) const
+                                                 const MappableType1_& mappable1,
+                                                 const MappableType2_& mappable2) const
 {
     return has_shared(const_iterator(first), const_iterator(last), mappable1, mappable2);
 }
@@ -785,7 +815,8 @@ template <typename MappableType, typename Allocator>
 template <typename MappableType1_, typename MappableType2_>
 bool
 MappableSet<MappableType, Allocator>::has_shared(const_iterator first, const_iterator last,
-                                                 const MappableType1_& mappable1, const MappableType2_& mappable2) const
+                                                 const MappableType1_& mappable1,
+                                                 const MappableType2_& mappable2) const
 {
     if (inner_distance(mappable1, mappable2) > max_element_size_) return false;
     
@@ -800,7 +831,8 @@ MappableSet<MappableType, Allocator>::has_shared(const_iterator first, const_ite
 template <typename MappableType, typename Allocator>
 template <typename MappableType1_, typename MappableType2_>
 typename MappableSet<MappableType, Allocator>::size_type
-MappableSet<MappableType, Allocator>::count_shared(const MappableType1_& mappable1, const MappableType2_& mappable2) const
+MappableSet<MappableType, Allocator>::count_shared(const MappableType1_& mappable1,
+                                                   const MappableType2_& mappable2) const
 {
     return count_shared(std::cbegin(elements_), std::cend(elements_), mappable1, mappable2);
 }
@@ -809,7 +841,8 @@ template <typename MappableType, typename Allocator>
 template <typename MappableType1_, typename MappableType2_>
 typename MappableSet<MappableType, Allocator>::size_type
 MappableSet<MappableType, Allocator>::count_shared(iterator first, iterator last,
-                                                   const MappableType1_& mappable1, const MappableType2_& mappable2) const
+                                                   const MappableType1_& mappable1,
+                                                   const MappableType2_& mappable2) const
 {
     return count_shared(const_iterator(first), const_iterator(last), mappable1, mappable2);
 }
@@ -818,7 +851,8 @@ template <typename MappableType, typename Allocator>
 template <typename MappableType1_, typename MappableType2_>
 typename MappableSet<MappableType, Allocator>::size_type
 MappableSet<MappableType, Allocator>::count_shared(const_iterator first, const_iterator last,
-                                                   const MappableType1_& mappable1, const MappableType2_& mappable2) const
+                                                   const MappableType1_& mappable1,
+                                                   const MappableType2_& mappable2) const
 {
     if (inner_distance(mappable1, mappable2) > max_element_size_) return 0;
     
@@ -833,7 +867,8 @@ MappableSet<MappableType, Allocator>::count_shared(const_iterator first, const_i
 template <typename MappableType, typename Allocator>
 template <typename MappableType1_, typename MappableType2_>
 SharedRange<typename MappableSet<MappableType, Allocator>::const_iterator>
-MappableSet<MappableType, Allocator>::shared_range(const MappableType1_& mappable1, const MappableType2_& mappable2) const
+MappableSet<MappableType, Allocator>::shared_range(const MappableType1_& mappable1,
+                                                   const MappableType2_& mappable2) const
 {
     return shared_range(std::cbegin(elements_), std::cend(elements_), mappable1, mappable2);
 }
@@ -842,7 +877,8 @@ template <typename MappableType, typename Allocator>
 template <typename MappableType1_, typename MappableType2_>
 SharedRange<typename MappableSet<MappableType, Allocator>::iterator>
 MappableSet<MappableType, Allocator>::shared_range(iterator first, iterator last,
-                                                   const MappableType1_& mappable1, const MappableType2_& mappable2) const
+                                                   const MappableType1_& mappable1,
+                                                   const MappableType2_& mappable2) const
 {
     return shared_range(const_iterator(first), const_iterator(last), mappable1, mappable2);
 }
@@ -851,7 +887,8 @@ template <typename MappableType, typename Allocator>
 template <typename MappableType1_, typename MappableType2_>
 SharedRange<typename MappableSet<MappableType, Allocator>::const_iterator>
 MappableSet<MappableType, Allocator>::shared_range(const_iterator first, const_iterator last,
-                                                   const MappableType1_& mappable1, const MappableType2_& mappable2) const
+                                                   const MappableType1_& mappable1,
+                                                   const MappableType2_& mappable2) const
 {
     if (inner_distance(mappable1, mappable2) > max_element_size_) {
         return make_shared_range(last, last, mappable1, mappable2);
@@ -874,13 +911,15 @@ MappableSet<MappableType, Allocator>::shared_range(const_iterator first, const_i
 // non-member methods
 
 template <typename MappableType, typename Allocator>
-bool operator==(const MappableSet<MappableType, Allocator>& lhs, const MappableSet<MappableType, Allocator>& rhs)
+bool operator==(const MappableSet<MappableType, Allocator>& lhs,
+                const MappableSet<MappableType, Allocator>& rhs)
 {
     return lhs.elements_ == rhs.elements_;
 }
 
 template <typename MappableType, typename Allocator>
-bool operator<(const MappableSet<MappableType, Allocator>& lhs, const MappableSet<MappableType, Allocator>& rhs)
+bool operator<(const MappableSet<MappableType, Allocator>& lhs,
+               const MappableSet<MappableType, Allocator>& rhs)
 {
     return lhs.elements_ < rhs.elements_;
 }
@@ -925,7 +964,8 @@ size_t count_if_shared_with_first(const MappableSet<MappableType, Allocator>& ma
 
 template <typename MappableType1, typename MappableType2, typename Allocator>
 MappableSet<MappableType1, Allocator>
-copy_overlapped(const MappableSet<MappableType1, Allocator>& mappables, const MappableType2& mappable)
+copy_overlapped(const MappableSet<MappableType1, Allocator>& mappables,
+                const MappableType2& mappable)
 {
     const auto overlapped = mappables.overlap_range(mappable);
     return MappableSet<MappableType1>(std::begin(overlapped), std::end(overlapped));
@@ -933,7 +973,8 @@ copy_overlapped(const MappableSet<MappableType1, Allocator>& mappables, const Ma
 
 template <typename MappableType1, typename MappableType2, typename Allocator>
 MappableSet<MappableType1, Allocator>
-copy_nonoverlapped(const MappableSet<MappableType1, Allocator>& mappables, const MappableType2& mappable)
+copy_nonoverlapped(const MappableSet<MappableType1, Allocator>& mappables,
+                   const MappableType2& mappable)
 {
     using std::cbegin; using std::cend;
     
@@ -968,7 +1009,8 @@ copy_nonoverlapped(const MappableSet<MappableType1, Allocator>& mappables, const
 
 template <typename MappableType1, typename MappableType2, typename Allocator>
 MappableSet<MappableType1>
-copy_contained(const MappableSet<MappableType1, Allocator>& mappables, const MappableType2& mappable)
+copy_contained(const MappableSet<MappableType1, Allocator>& mappables,
+               const MappableType2& mappable)
 {
     const auto contained = mappables.contained_range(mappable);
     return MappableSet<MappableType1>(std::begin(contained), std::end(contained));
@@ -976,7 +1018,8 @@ copy_contained(const MappableSet<MappableType1, Allocator>& mappables, const Map
 
 template <typename MappableType1, typename MappableType2, typename Allocator>
 MappableSet<MappableType1>
-copy_noncontained(const MappableSet<MappableType1, Allocator>& mappables, const MappableType2& mappable)
+copy_noncontained(const MappableSet<MappableType1, Allocator>& mappables,
+                  const MappableType2& mappable)
 {
     using std::cbegin; using std::cend;
     

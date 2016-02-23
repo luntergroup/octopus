@@ -25,7 +25,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         
         "--working-directory", "~/",
         
-        "--target-read-buffer-size", "1.0",
+        "--target-read-buffer-size", "2.0",
         //"--threaded",
         
         //"--contig-output-order", "as-in-reference-reversed",
@@ -62,7 +62,10 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         
         // for population
         
-        "--regions", "22",
+        "-L", "2",
+        
+        //"--regions", "1:224,024,837-224,024,877", // NA12878_low_coverage edge case insertions
+        //"--regions", "1:874950-874951", // NA12878_low_coverage edge case insertions
         
         //"--regions", "22:20656122-20656146", // NA12878_high_coverage causing memory spike
         
@@ -134,7 +137,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--max-open-read-files", "1",
         
         //"--output", test_out_vcf.c_str(),
-        "--output", "~/Genomics/octopus_test/octopus_variants.vcf",
+        "--output", "~/Genomics/octopus_test/octopus_variants.bcf",
         
         nullptr};
     
