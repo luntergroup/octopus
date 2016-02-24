@@ -52,18 +52,18 @@ public:
     void open() override;
     void close() override;
     
-    std::vector<SampleIdType> get_samples() override;
-    std::vector<ReadGroupIdType> get_read_groups_in_sample(const SampleIdType& sample) override;
+    std::vector<SampleIdType> extract_samples() override;
+    std::vector<ReadGroupIdType> extract_read_groups_in_sample(const SampleIdType& sample) override;
     size_t count_reads(const GenomicRegion& region) override;
     size_t count_reads(const SampleIdType& sample, const GenomicRegion& region) override;
     GenomicRegion find_covered_subregion(const GenomicRegion& region, size_t target_coverage) override;
     SampleReadMap fetch_reads(const GenomicRegion& region) override;
     Reads fetch_reads(const SampleIdType& sample, const GenomicRegion& region) override;
     SampleReadMap fetch_reads(const std::vector<SampleIdType>& samples, const GenomicRegion& region) override;
-    unsigned get_num_reference_contigs() override;
-    std::vector<std::string> get_reference_contig_names() override;
+    unsigned count_reference_contigs() override;
+    std::vector<std::string> extract_reference_contig_names() override;
     SizeType get_reference_contig_size(const std::string& contig_name) override;
-    std::vector<GenomicRegion> get_possible_regions_in_file() override;
+    std::vector<GenomicRegion> extract_possible_regions_in_file() override;
     
 private:
     using HtsTidType = int32_t;

@@ -26,21 +26,39 @@ closed_readers_ {std::make_move_iterator(std::begin(read_file_paths)),
                  std::make_move_iterator(std::end(read_file_paths))},
 open_readers_ {FileSizeCompare {}},
 reader_paths_containing_sample_ {},
-possible_regions_in_readers_ {}
+possible_regions_in_readers_ {},
+samples_ {}
 {
-    setup();
+    auto bad_paths = get_bad_paths();
+    
+    if (!bad_paths.empty()) {
+        std::string error {"bad read files: \n"};
+        
+        for (const auto& path : bad_paths) {
+            error += "\t* " + path.string() + ": does not exist\n";
+        }
+        
+        error.erase(--error.end()); // removes last \n
+        
+        throw std::runtime_error {error};
+    }
+    
+    setup_reader_samples_and_regions();
+    open_initial_files();
+    
+    samples_.reserve(reader_paths_containing_sample_.size());
+    
+    for (const auto& pair : reader_paths_containing_sample_) {
+        samples_.emplace_back(pair.first);
+    }
+    
+    std::sort(std::begin(samples_), std::end(samples_)); // just for consistency
 }
 
 ReadManager::ReadManager(std::initializer_list<Path> read_file_paths)
 :
-num_files_ {static_cast<unsigned>(read_file_paths.size())},
-closed_readers_ {std::begin(read_file_paths), std::end(read_file_paths)},
-open_readers_ {FileSizeCompare {}},
-reader_paths_containing_sample_ {},
-possible_regions_in_readers_ {}
-{
-    setup();
-}
+ReadManager {std::vector<Path> {read_file_paths}, static_cast<unsigned>(read_file_paths.size())}
+{}
 
 ReadManager::ReadManager(ReadManager&& other)
 :
@@ -51,6 +69,7 @@ num_files_ {std::move(other.num_files_)}
     open_readers_                   = std::move(other.open_readers_);
     reader_paths_containing_sample_ = std::move(other.reader_paths_containing_sample_);
     possible_regions_in_readers_    = std::move(other.possible_regions_in_readers_);
+    samples_                        = std::move(other.samples_);
 }
 
 void swap(ReadManager& lhs, ReadManager& rhs) noexcept
@@ -64,6 +83,7 @@ void swap(ReadManager& lhs, ReadManager& rhs) noexcept
     swap(lhs.open_readers_, rhs.open_readers_);
     swap(lhs.reader_paths_containing_sample_, rhs.reader_paths_containing_sample_);
     swap(lhs.possible_regions_in_readers_, rhs.possible_regions_in_readers_);
+    swap(lhs.samples_, rhs.samples_);
 }
 
 bool ReadManager::good() const noexcept
@@ -74,21 +94,12 @@ bool ReadManager::good() const noexcept
 
 unsigned ReadManager::num_samples() const noexcept
 {
-    return static_cast<unsigned>(reader_paths_containing_sample_.size());
+    return static_cast<unsigned>(samples_.size());
 }
 
-std::vector<ReadManager::SampleIdType> ReadManager::get_samples() const
+const std::vector<ReadManager::SampleIdType>& ReadManager::get_samples() const
 {
-    std::vector<SampleIdType> result {};
-    result.reserve(num_samples());
-    
-    for (const auto& pair : reader_paths_containing_sample_) {
-        result.emplace_back(pair.first);
-    }
-    
-    std::sort(std::begin(result), std::end(result)); // just for consistency
-    
-    return result;
+    return samples_;
 }
 
 size_t ReadManager::count_reads(const SampleIdType& sample, const GenomicRegion& region)
@@ -176,6 +187,8 @@ GenomicRegion ReadManager::find_covered_subregion(const std::vector<SampleIdType
         it = open_readers(begin(reader_paths), end(reader_paths));
     }
     
+    if (result.empty()) return region;
+    
     return overlapped_region(*leftmost_mappable(result), region);
 }
 
@@ -258,26 +271,6 @@ bool ReadManager::FileSizeCompare::operator()(const Path& lhs, const Path& rhs) 
     return boost::filesystem::file_size(lhs) < boost::filesystem::file_size(rhs);
 }
 
-void ReadManager::setup()
-{
-    auto bad_paths = get_bad_paths();
-    
-    if (bad_paths.empty()) {
-        setup_reader_samples_and_regions();
-        open_initial_files();
-    } else {
-        std::string error {"bad read files: \n"};
-        
-        for (const auto& path : bad_paths) {
-            error += "\t* " + path.string() + ": does not exist\n";
-        }
-        
-        error.erase(--error.end()); // removes last \n
-        
-        throw std::runtime_error {error};
-    }
-}
-
 std::vector<ReadManager::Path> ReadManager::get_bad_paths() const
 {
     std::vector<Path> result {};
@@ -295,8 +288,8 @@ void ReadManager::setup_reader_samples_and_regions()
 {
     for (const auto& reader_path : closed_readers_) {
         auto reader = make_reader(reader_path);
-        add_possible_regions_to_reader_map(reader_path, reader.get_possible_regions_in_file());
-        add_reader_to_sample_map(reader_path, reader.get_samples());
+        add_possible_regions_to_reader_map(reader_path, reader.extract_possible_regions_in_file());
+        add_reader_to_sample_map(reader_path, reader.extract_samples());
     }
 }
 

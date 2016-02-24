@@ -102,7 +102,7 @@ void HtslibSamFacade::close()
     hts_index_.reset(nullptr);
 }
 
-unsigned HtslibSamFacade::get_num_reference_contigs()
+unsigned HtslibSamFacade::count_reference_contigs()
 {
     if (!is_open()) {
         throw std::runtime_error {"HtslibSamFacade: file not open"};
@@ -122,12 +122,12 @@ uint64_t HtslibSamFacade::get_num_mapped_reads(const std::string& contig_name) c
     return num_mapped;
 }
 
-std::vector<HtslibSamFacade::SampleIdType> HtslibSamFacade::get_samples()
+std::vector<HtslibSamFacade::SampleIdType> HtslibSamFacade::extract_samples()
 {
     return samples_;
 }
 
-std::vector<std::string> HtslibSamFacade::get_read_groups_in_sample(const SampleIdType& sample)
+std::vector<std::string> HtslibSamFacade::extract_read_groups_in_sample(const SampleIdType& sample)
 {
     std::vector<std::string> result {};
     
@@ -185,8 +185,7 @@ HtslibSamFacade::SampleReadMap HtslibSamFacade::fetch_reads(const GenomicRegion&
 {
     HtslibIterator it {*this, region};
     
-    SampleReadMap result {};
-    result.reserve(samples_.size());
+    SampleReadMap result {samples_.size()};
     
     for (const auto& sample : samples_) {
         SampleReadMap::mapped_type c {};
@@ -237,8 +236,7 @@ HtslibSamFacade::SampleReadMap HtslibSamFacade::fetch_reads(const std::vector<Sa
 {
     HtslibIterator it {*this, region};
     
-    SampleReadMap result {};
-    result.reserve(samples.size());
+    SampleReadMap result {samples.size()};
     
     for (const auto& sample : samples) {
         if (std::find(std::cbegin(samples_), std::cend(samples_), sample) != std::cend(samples_)) {
@@ -265,24 +263,24 @@ HtslibSamFacade::SampleReadMap HtslibSamFacade::fetch_reads(const std::vector<Sa
     return result;
 }
 
-std::vector<std::string> HtslibSamFacade::get_reference_contig_names()
+std::vector<std::string> HtslibSamFacade::extract_reference_contig_names()
 {
     std::vector<std::string> result {};
-    result.reserve(get_num_reference_contigs());
+    result.reserve(count_reference_contigs());
     
-    for (HtsTidType hts_tid {}; hts_tid < get_num_reference_contigs(); ++hts_tid) {
+    for (HtsTidType hts_tid {}; hts_tid < count_reference_contigs(); ++hts_tid) {
         result.emplace_back(get_contig_name(hts_tid));
     }
     
     return result;
 }
 
-std::vector<GenomicRegion> HtslibSamFacade::get_possible_regions_in_file()
+std::vector<GenomicRegion> HtslibSamFacade::extract_possible_regions_in_file()
 {
     std::vector<GenomicRegion> result {};
-    result.reserve(get_num_reference_contigs());
+    result.reserve(count_reference_contigs());
     
-    for (HtsTidType hts_tid {}; hts_tid < get_num_reference_contigs(); ++hts_tid) {
+    for (HtsTidType hts_tid {}; hts_tid < count_reference_contigs(); ++hts_tid) {
         const auto& contig_name = get_contig_name(hts_tid);
         // CRAM files don't seem to have the same index stats as BAM files so
         // we don't know which contigs have been mapped to
@@ -326,10 +324,10 @@ std::string get_tag_value(const std::string& line, const char* tag)
 
 void HtslibSamFacade::init_maps()
 {
-    hts_tids_.reserve(get_num_reference_contigs());
-    contig_names_.reserve(get_num_reference_contigs());
+    hts_tids_.reserve(count_reference_contigs());
+    contig_names_.reserve(count_reference_contigs());
     
-    for (HtsTidType hts_tid {}; hts_tid < get_num_reference_contigs(); ++hts_tid) {
+    for (HtsTidType hts_tid {}; hts_tid < count_reference_contigs(); ++hts_tid) {
         hts_tids_.emplace(hts_header_->target_name[hts_tid], hts_tid);
         contig_names_.emplace(hts_tid, hts_header_->target_name[hts_tid]);
     }

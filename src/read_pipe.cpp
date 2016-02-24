@@ -15,7 +15,10 @@
 
 #include <iostream> // DEBUG
 
-namespace Octopus {
+namespace Octopus
+{
+
+// public members
 
 ReadPipe::ReadPipe(ReadManager& read_manager, ReadFilterer read_filter,
                    boost::optional<Downsampler> downsampler, ReadTransform read_transform,
@@ -31,11 +34,8 @@ samples_ {std::move(samples)}
 std::vector<std::vector<SampleIdType>> batch_samples(std::vector<SampleIdType> samples)
 {
     std::vector<std::vector<SampleIdType>> result {};
-    result.reserve(samples.size());
     
-    for (auto&& sample : samples) {
-        result.emplace_back(std::vector<SampleIdType> {std::move(sample)});
-    }
+    result.emplace_back(std::move(samples)); // TODO: find a better strategy for this
     
     return result;
 }
@@ -47,25 +47,14 @@ void ReadPipe::set_read_manager(ReadManager& read_manager) noexcept
 
 ReadMap ReadPipe::fetch_reads(const GenomicRegion& region)
 {
-    ReadMap result {};
-    result.reserve(samples_.size());
+    ReadMap result {samples_.size()};
     
-    //auto batches = batch_samples(std::move(samples));
-    auto batches = std::vector<std::vector<SampleIdType>> {samples_};
+    const auto batches = batch_samples(samples_);
     
     for (const auto& batch : batches) {
         auto batch_reads = read_manager_.get().fetch_reads(batch, region);
         
-        //std::cout << "fetched " << count_reads(batch_reads) << " batch reads" << std::endl;
-        
-//        for (auto r : filter_reads(batch_reads, read_filter_).second.cbegin()->second) {
-//            std::cout << r << std::endl;
-//        }
-//        exit(0);
-        
         auto filtered_batch = filter_reads(std::move(batch_reads), read_filter_).first;
-        
-        //std::cout << "found " << count_reads(filtered_batch) << " good batch reads" << std::endl;
         
         if (downsampler_) {
             filtered_batch = downsampler_->sample(std::move(filtered_batch));
@@ -77,8 +66,6 @@ ReadMap ReadPipe::fetch_reads(const GenomicRegion& region)
             result.emplace(std::move(sample_batch.first), std::move(sample_batch.second));
         }
     }
-    
-    //std::cout << "fetched " << count_reads(result) << " total reads" << std::endl;
     
     return result;
 }

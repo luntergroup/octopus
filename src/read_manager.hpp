@@ -54,7 +54,7 @@ public:
     bool good() const noexcept;
     
     unsigned num_samples() const noexcept;
-    std::vector<SampleIdType> get_samples() const;
+    const std::vector<SampleIdType>& get_samples() const;
     
     size_t count_reads(const SampleIdType& sample, const GenomicRegion& region);
     size_t count_reads(const std::vector<SampleIdType>& samples, const GenomicRegion& region);
@@ -89,9 +89,10 @@ private:
     SampleIdToReaderPathMap reader_paths_containing_sample_;
     ReaderRegionsMap possible_regions_in_readers_;
     
+    std::vector<SampleIdType> samples_;
+    
     mutable std::mutex mutex_;
     
-    void setup();
     std::vector<Path> get_bad_paths() const;
     void setup_reader_samples_and_regions();
     void open_initial_files();

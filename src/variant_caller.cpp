@@ -172,19 +172,43 @@ auto build_likelihood_cache(const std::vector<Haplotype>& haplotypes, const Read
     return HaplotypeLikelihoodCache {reads, haplotypes, flank_state(haplotypes, active_region, candidates)};
 }
 
+bool all_empty(const ReadMap& reads)
+{
+    return std::all_of(std::cbegin(reads), std::cend(reads),
+                       [] (const auto& p) { return p.second.empty(); });
+}
+    
+auto calculate_candidate_region(const GenomicRegion& call_region, const ReadMap& reads,
+                                const CandidateVariantGenerator& candidate_generator)
+{
+    if (!candidate_generator.requires_reads()) return call_region;
+    
+    if (all_empty(reads)) {
+        return call_region;
+    }
+    
+    return encompassing_region(reads);
+}
+
 std::deque<VcfRecord> VariantCaller::call_variants(const GenomicRegion& call_region) const
 {
     assert(!is_empty_region(call_region));
     
     ReadMap reads;
     
+    std::deque<VcfRecord> result {};
+    
     if (candidate_generator_.requires_reads()) {
         reads = read_pipe_.get().fetch_reads(call_region);
+        
         add_reads(reads, candidate_generator_);
+        
+        if (!refcalls_requested() && all_empty(reads)) {
+            return result;
+        }
     }
     
-    const auto candidate_region = candidate_generator_.requires_reads() ? encompassing_region(reads) : call_region;
-    //const auto candidate_region = call_region; // DEBUG
+    const auto candidate_region = calculate_candidate_region(call_region, reads, candidate_generator_);
     
     const auto candidates = unique_left_align(candidate_generator_.get_candidates(candidate_region), reference_);
     
@@ -192,15 +216,12 @@ std::deque<VcfRecord> VariantCaller::call_variants(const GenomicRegion& call_reg
     
     //debug::print_candidates(candidates);
     
-    std::deque<VcfRecord> result {};
-    
-    return result; // ReadPipe debug
-    
-    if (candidates.empty() && !refcalls_requested()) {
+    if (!refcalls_requested() && candidates.empty()) {
         return result;
     }
     
     if (!candidate_generator_.requires_reads()) {
+        // as we didn't fetch them earlier
         reads = read_pipe_.get().fetch_reads(extract_regions(candidates));
     }
     

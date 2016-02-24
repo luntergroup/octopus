@@ -52,14 +52,19 @@ public:
     
     const Path& path() const noexcept;
     
-    std::vector<std::string> get_reference_contig_names();
-    std::vector<SampleIdType> get_samples();
-    std::vector<std::string> get_read_groups_in_sample(const SampleIdType& sample);
-    unsigned get_num_reference_contigs();
-    std::vector<GenomicRegion> get_possible_regions_in_file();
+    std::vector<std::string> extract_reference_contig_names();
+    unsigned count_reference_contigs();
+    
+    std::vector<SampleIdType> extract_samples();
+    std::vector<std::string> extract_read_groups_in_sample(const SampleIdType& sample);
+    
+    std::vector<GenomicRegion> extract_possible_regions_in_file();
+    
     size_t count_reads(const GenomicRegion& region);
     size_t count_reads(const SampleIdType& sample, const GenomicRegion& region);
+    
     GenomicRegion find_covered_subregion(const GenomicRegion& region, size_t target_coverage);
+    
     SampleReadMap fetch_reads(const GenomicRegion& region);
     Reads fetch_reads(const SampleIdType& sample, const GenomicRegion& region);
     SampleReadMap fetch_reads(const std::vector<SampleIdType>& samples, const GenomicRegion& region);

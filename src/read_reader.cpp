@@ -56,22 +56,22 @@ const ReadReader::Path& ReadReader::path() const noexcept
     return file_path_;
 }
 
-std::vector<ReadReader::SampleIdType> ReadReader::get_samples()
+std::vector<ReadReader::SampleIdType> ReadReader::extract_samples()
 {
     std::lock_guard<std::mutex> lock {mutex_};
-    return the_impl_->get_samples();
+    return the_impl_->extract_samples();
 }
 
-std::vector<std::string> ReadReader::get_read_groups_in_sample(const SampleIdType& sample)
+std::vector<std::string> ReadReader::extract_read_groups_in_sample(const SampleIdType& sample)
 {
     std::lock_guard<std::mutex> lock {mutex_};
-    return the_impl_->get_read_groups_in_sample(sample);
+    return the_impl_->extract_read_groups_in_sample(sample);
 }
 
-unsigned ReadReader::get_num_reference_contigs()
+unsigned ReadReader::count_reference_contigs()
 {
     std::lock_guard<std::mutex> lock {mutex_};
-    return the_impl_->get_num_reference_contigs();
+    return the_impl_->count_reference_contigs();
 }
 
 size_t ReadReader::count_reads(const GenomicRegion& region)
@@ -111,16 +111,16 @@ ReadReader::SampleReadMap ReadReader::fetch_reads(const std::vector<SampleIdType
     return the_impl_->fetch_reads(samples, region);
 }
 
-std::vector<std::string> ReadReader::get_reference_contig_names()
+std::vector<std::string> ReadReader::extract_reference_contig_names()
 {
     std::lock_guard<std::mutex> lock {mutex_};
-    return the_impl_->get_reference_contig_names();
+    return the_impl_->extract_reference_contig_names();
 }
 
-std::vector<GenomicRegion> ReadReader::get_possible_regions_in_file()
+std::vector<GenomicRegion> ReadReader::extract_possible_regions_in_file()
 {
     std::lock_guard<std::mutex> lock {mutex_};
-    return the_impl_->get_possible_regions_in_file();
+    return the_impl_->extract_possible_regions_in_file();
 }
 
 bool operator==(const ReadReader& lhs, const ReadReader& rhs)
