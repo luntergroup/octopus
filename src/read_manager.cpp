@@ -179,7 +179,7 @@ GenomicRegion ReadManager::find_covered_subregion(const SampleIdType& sample,
                                                   const GenomicRegion& region,
                                                   size_t max_reads)
 {
-    return find_covered_subregion({sample}, region, max_reads);
+    return find_covered_subregion(std::vector<SampleIdType> {sample}, region, max_reads);
 }
 
 GenomicRegion ReadManager::find_covered_subregion(const std::vector<SampleIdType>& samples,
@@ -244,9 +244,15 @@ GenomicRegion ReadManager::find_covered_subregion(const std::vector<SampleIdType
     
     const auto limit = std::lower_bound(begin(position_coverage), end(position_coverage), max_reads);
     
-    const auto max_bases = std::distance(begin(position_coverage), limit);
+    const auto result_begin = std::max(result.get_begin(), region.get_begin());
     
-    return expand_rhs(result, -(region_size(result) - max_bases));
+    auto result_size = static_cast<GenomicRegion::SizeType>(std::distance(begin(position_coverage), limit));
+    
+    if (begins_before(result, region)) {
+        result_size -= begin_distance(region, result);
+    }
+    
+    return GenomicRegion {region.get_contig_name(), result_begin, result_begin + result_size};
 }
 
 GenomicRegion ReadManager::find_covered_subregion(const GenomicRegion& region, size_t max_reads)

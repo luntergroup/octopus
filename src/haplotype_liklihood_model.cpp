@@ -35,7 +35,7 @@ namespace Octopus
     {
         Model model {2, 3}; // TODO: make part of an error model
         
-        //if (flank_state == InactiveRegionState::Unclear) model.flank_clear = false;
+        if (flank_state == InactiveRegionState::Unclear) model.flank_clear = false;
         
         auto gap_open_penalities = indel_error_model_.calculate_gap_open_penalties(haplotype);
         

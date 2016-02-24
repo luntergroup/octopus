@@ -63,7 +63,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         
         // for population
         
-        "-L", "1",
+        "--regions", "22:50000000-",
         
         //"--regions", "1:224,024,837-224,024,877", // NA12878_low_coverage edge case insertions
         //"--regions", "1:874950-874951", // NA12878_low_coverage edge case insertions
@@ -138,7 +138,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--max-open-read-files", "1",
         
         //"--output", test_out_vcf.c_str(),
-        "--output", "~/Genomics/octopus_test/octopus_variants.bcf",
+        "--output", "~/Genomics/octopus_test/octopus_variants.vcf",
         
         nullptr};
     

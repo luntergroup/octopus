@@ -18,6 +18,7 @@
 #include <thread>
 #include <future>
 #include <functional>
+#include <random>
 
 #include <boost/optional.hpp>
 
@@ -37,9 +38,10 @@
 #include "variant_caller_factory.hpp"
 #include "variant_caller.hpp"
 #include "vcf.hpp"
+#include "maths.hpp"
 
-#include "test_common.hpp"
-#include "mappable_debug.hpp"
+#include <cassert>
+#include "timers.hpp" // BENCHMARK
 
 namespace Octopus
 {
@@ -177,16 +179,68 @@ namespace Octopus
             std::move(samples)
         };
     }
-    
-    constexpr auto estimate_read_size() noexcept
-    {
-        // TODO: could actually look at a few reads to get better estimate
-        return sizeof(AlignedRead) + 300; // Using average Illumina read size
+        
+    template <typename InputIt, typename RandomGenerator>
+    InputIt random_select(InputIt first, InputIt last, RandomGenerator& g) {
+        std::uniform_int_distribution<> dis(0, std::distance(first, last) - 1);
+        std::advance(first, dis(g));
+        return first;
     }
     
-    std::size_t calculate_max_num_reads(const std::size_t max_buffer_size_in_bytes)
+    template <typename InputIt>
+    InputIt random_select(InputIt first, InputIt last) {
+        static std::random_device rd {};
+        static std::mt19937 gen(rd());
+        return random_select(first, last, gen);
+    }
+    
+    auto estimate_read_size(const AlignedRead& read)
     {
-        return max_buffer_size_in_bytes / estimate_read_size();
+        return sizeof(AlignedRead)
+            // Now the dynamically allocated bits
+            + sequence_size(read) * sizeof(char)
+            + sequence_size(read) * sizeof(AlignedRead::QualityType)
+            + read.get_cigar_string().size() * sizeof(CigarOperation)
+            + contig_name(read).size()
+            + (read.is_chimeric() ? sizeof(AlignedRead::NextSegment) : 0);
+    }
+    
+    auto estimate_mean_read_size(const std::vector<SampleIdType>& samples,
+                                 const SearchRegions& input_regions,
+                                 ReadManager& read_manager,
+                                 unsigned max_sample_size = 1000)
+    {
+        assert(!input_regions.empty());
+        
+        const auto num_samples_per_sample = max_sample_size / samples.size();
+        
+        std::vector<std::size_t> read_sizes {};
+        read_sizes.reserve(max_sample_size);
+        
+        for (const auto& sample : samples) {
+            const auto it  = random_select(std::cbegin(input_regions), std::cend(input_regions));
+            
+            assert(!it->second.empty());
+            
+            const auto it2 = random_select(std::cbegin(it->second), std::cend(it->second));
+            
+            const auto test_region = read_manager.find_covered_subregion(sample, *it2, num_samples_per_sample);
+            
+            const auto reads = read_manager.fetch_reads(sample, test_region);
+            
+            std::transform(std::cbegin(reads), std::cend(reads), std::back_inserter(read_sizes),
+                           estimate_read_size);
+        }
+        
+        return static_cast<std::size_t>(Maths::mean(read_sizes) + Maths::stdev(read_sizes));
+    }
+    
+    std::size_t calculate_max_num_reads(const std::size_t max_buffer_size_in_bytes,
+                                        const std::vector<SampleIdType>& samples,
+                                        const SearchRegions& input_regions,
+                                        ReadManager& read_manager)
+    {
+        return max_buffer_size_in_bytes / estimate_mean_read_size(samples, input_regions, read_manager);
     }
     
     class GenomeCallingComponents
@@ -227,7 +281,8 @@ namespace Octopus
                                                                      options)},
         output {std::move(output)},
         is_threaded {Options::is_threading_allowed(options)},
-        read_buffer_size {calculate_max_num_reads(Options::get_target_read_buffer_size(options))},
+        read_buffer_size {calculate_max_num_reads(Options::get_target_read_buffer_size(options),
+                                                  this->samples, this->regions, this->read_manager)},
         temp_directory {is_threaded ? Options::create_temp_file_directory(options) : boost::none}
         {}
         
@@ -417,7 +472,7 @@ namespace Octopus
     
     void write_calls(VcfWriter& out, std::deque<VcfRecord>&& calls)
     {
-        std::cout << "Octopus: writing " << calls.size() << " calls to VCF" << std::endl;
+        //std::cout << "Octopus: writing " << calls.size() << " calls to VCF" << std::endl;
         for (auto&& call : calls) out.write(std::move(call));
     }
     
@@ -443,6 +498,10 @@ namespace Octopus
     {
         using std::cout; using std::endl;
         
+        std::size_t num_calls {0};
+        
+        init_timers();
+        
         for (const auto& region : components.regions) {
             cout << "Octopus: processing input region " << region << endl;
             
@@ -451,11 +510,19 @@ namespace Octopus
             while (!is_empty_region(subregion)) {
                 cout << "Octopus: processing subregion " << subregion << endl;
                 
-                write_calls(components.output, components.caller->call_variants(subregion));
+                auto calls = components.caller->call_variants(subregion);
+                
+                num_calls += calls.size();
+                
+                write_calls(components.output, std::move(calls));
                 
                 subregion = propose_call_subregion(components, right_overhang_region(region, subregion));
             }
         }
+        
+        std::cout << "Octopus: total number of calls = " << num_calls << std::endl;
+        
+        print_timers();
     }
     
     void print_final_info(const GenomeCallingComponents& components)

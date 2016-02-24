@@ -512,6 +512,11 @@ VcfRecord::Builder& VcfRecord::Builder::add_genotype_field(const SampleIdType& s
     return *this;
 }
 
+VcfRecord::SizeType VcfRecord::Builder::get_position() const noexcept
+{
+    return position_;
+}
+
 VcfRecord VcfRecord::Builder::build() const
 {
     if (genotypes_.empty() && samples_.empty()) {

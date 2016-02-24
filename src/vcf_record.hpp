@@ -217,6 +217,8 @@ public:
     Builder& add_genotype_field(const SampleIdType& sample, const KeyType& key, const std::vector<ValueType>& values);
     Builder& add_genotype_field(const SampleIdType& sample, const KeyType& key, const std::initializer_list<ValueType>& values);
     
+    SizeType get_position() const noexcept;
+    
     VcfRecord build() const;
     VcfRecord build_once() noexcept;
     

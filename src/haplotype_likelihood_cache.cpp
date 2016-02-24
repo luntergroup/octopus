@@ -56,8 +56,8 @@ error_model_ {std::move(error_model)}
     for (const auto& haplotype : haplotypes) {
         std::transform(std::cbegin(read_references), std::cend(read_references),
                        std::begin(probabilities),
-                       [this, &haplotype] (const auto& read) {
-                           return error_model_.log_probability(read, haplotype);
+                       [this, &haplotype, flank_state] (const auto& read) {
+                           return error_model_.log_probability(read, haplotype, flank_state);
                        });
         
         cache_.insert_at(haplotype, std::cbegin(probabilities), std::cend(probabilities));

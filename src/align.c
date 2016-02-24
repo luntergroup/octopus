@@ -80,7 +80,7 @@ int fastAlignmentRoutine(const char* seq1, const char* seq2, const char* qual2, 
     // of the seq2win/qual arrays, to simplify getting back pointers
     int s;
     
-    for (s = 0; s <= len1; s += 2) {
+    for (s = 0; s <= 2 * (len2 + 8); s += 2) {
         // seq1 is current; seq2 needs updating
         _seq2win  = _mm_slli_si128(_seq2win, 2);
         _qual2win = _mm_slli_si128(_qual2win, 2);
@@ -140,7 +140,6 @@ int fastAlignmentRoutine(const char* seq1, const char* seq2, const char* qual2, 
         // be y==len2-1, so that current position has y==len2; i==0 so d=0 and y=s/2
         if (s/2 >= len2) {
             _score = _mm_extract_epi16(_m2, s/2 - len2);
-            
             if (_score < minscore) {
                 minscore = _score;
             }
@@ -247,7 +246,7 @@ int fastAlignmentRoutine(const char* seq1, const char* seq2, const char* qual2, 
   // of the seq2win/qual arrays, to simplify getting back pointers
   int s;
   
-  for (s = 0; s <= len1; s += 2) {
+  for (s = 0; s <= 2 * (len2 + 8); s += 2) {
     // seq1 is current; seq2 needs updating
     _seq2win  = _mm_slli_si128(_seq2win, 2);
     _qual2win = _mm_slli_si128(_qual2win, 2);

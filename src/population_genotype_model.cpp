@@ -20,7 +20,8 @@
 #include "read_utils.hpp"
 
 #include <iostream> // TEST
-#include <chrono>   // TEST
+
+#include "timers.hpp"
 
 namespace Octopus
 {
@@ -317,7 +318,9 @@ namespace Octopus
         assert(!haplotypes.empty());
         assert(!reads.empty());
         
+        genotype_generation_timer.resume();
         auto genotypes = generate_all_genotypes(haplotypes, ploidy_);
+        genotype_generation_timer.stop();
         
         //std::cout << "there are " << genotypes.size() << " candidate genotypes" << std::endl;
         
@@ -325,8 +328,10 @@ namespace Octopus
             return make_single_genotype_latents(genotypes.front(), reads);
         }
         
+        genotype_likelihood_timer.resume();
         const auto genotype_log_likilhoods = compute_genotype_log_likelihoods(genotypes, reads,
                                                                               haplotype_likelihoods);
+        genotype_likelihood_timer.stop();
         
         auto haplotype_prior_counts = compute_haplotype_prior_counts(haplotype_priors);
         const auto prior_count_sum  = Maths::sum_values(haplotype_prior_counts);
@@ -335,12 +340,14 @@ namespace Octopus
         auto genotype_log_marginals = init_genotype_log_marginals(genotypes, haplotype_frequencies);
         auto genotype_posteriors    = init_genotype_posteriors(genotype_log_marginals, genotype_log_likilhoods);
         
+        em_timer.resume();
         for (unsigned n {}; n < max_em_iterations_; ++n) {
             //std::cout << "******* EM iteration " << n << " *******" << std::endl;
             if (do_em_iteration(haplotypes, genotypes, genotype_posteriors, haplotype_frequencies,
                                 genotype_log_marginals, genotype_log_likilhoods,
                                 haplotype_prior_counts, prior_count_sum) < em_epsilon_) break;
         }
+        em_timer.stop();
         
         //std::cout << "finished EM" << std::endl;
         
