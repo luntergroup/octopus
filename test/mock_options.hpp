@@ -33,11 +33,11 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         "--reference", human_reference_fasta.c_str(),
         //"--reference", ecoli_reference_fasta.c_str(),
         
-        //"--reads", NA12878_low_coverage.c_str(),
+        "--reads", NA12878_low_coverage.c_str(),
         //"--reads", NA12878_high_coverage.c_str(),
-        "--reads", "~/Genomics/Illumina/NA12878.mapped.ILLUMINA.bwa.CEU.high_coverage_pcr_free.20130906.chr22.bam",
         
         //"--reads", NA12891_high_coverage.c_str(),
+        
         //"--reads", HG00101.c_str(),
         //"--reads", NA12878_low_coverage.c_str(), HG00101.c_str(), HG00102.c_str(), HG00103.c_str(),
         //"--reads", NA12878_high_coverage.c_str(), NA12878_simulated_cancer_basic.c_str(), //cancer test
@@ -63,7 +63,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         
         // for population
         
-        //"-L", "2",
+        "-L", "1",
         
         //"--regions", "1:224,024,837-224,024,877", // NA12878_low_coverage edge case insertions
         //"--regions", "1:874950-874951", // NA12878_low_coverage edge case insertions

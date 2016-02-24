@@ -74,6 +74,12 @@ unsigned ReadReader::count_reference_contigs()
     return the_impl_->count_reference_contigs();
 }
 
+bool ReadReader::has_contig_reads(const GenomicRegion::ContigNameType& contig)
+{
+    std::lock_guard<std::mutex> lock {mutex_};
+    return the_impl_->has_contig_reads(contig);
+}
+
 size_t ReadReader::count_reads(const GenomicRegion& region)
 {
     std::lock_guard<std::mutex> lock {mutex_};
@@ -86,10 +92,19 @@ size_t ReadReader::count_reads(const SampleIdType& sample, const GenomicRegion& 
     return the_impl_->count_reads(sample, region);
 }
 
-GenomicRegion ReadReader::find_covered_subregion(const GenomicRegion& region, size_t target_coverage)
+std::pair<GenomicRegion, std::vector<unsigned>>
+ReadReader::find_covered_subregion(const GenomicRegion& region, size_t max_coverage)
 {
     std::lock_guard<std::mutex> lock {mutex_};
-    return the_impl_->find_covered_subregion(region, target_coverage);
+    return the_impl_->find_covered_subregion(region, max_coverage);
+}
+
+std::pair<GenomicRegion, std::vector<unsigned>>
+ReadReader::find_covered_subregion(const std::vector<SampleIdType>& samples,
+                                   const GenomicRegion& region, size_t max_coverage)
+{
+    std::lock_guard<std::mutex> lock {mutex_};
+    return the_impl_->find_covered_subregion(samples, region, max_coverage);
 }
 
 ReadReader::SampleReadMap ReadReader::fetch_reads(const GenomicRegion& region)

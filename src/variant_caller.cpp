@@ -201,6 +201,9 @@ std::deque<VcfRecord> VariantCaller::call_variants(const GenomicRegion& call_reg
     if (candidate_generator_.requires_reads()) {
         reads = read_pipe_.get().fetch_reads(call_region);
         
+        std::cout << "there are " << count_reads(reads) << " read" << '\n';
+        exit(0);
+        
         add_reads(reads, candidate_generator_);
         
         if (!refcalls_requested() && all_empty(reads)) {

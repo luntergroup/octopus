@@ -13,6 +13,7 @@
 #include <vector>
 #include <cstddef>
 #include <unordered_map>
+#include <utility>
 
 #include "genomic_region.hpp"
 
@@ -37,10 +38,16 @@ public:
     virtual std::vector<SampleIdType> extract_samples() = 0;
     virtual std::vector<std::string> extract_read_groups_in_sample(const SampleIdType& sample) = 0;
     
+    virtual bool has_contig_reads(const GenomicRegion::ContigNameType& contig) = 0;
+    
     virtual size_t count_reads(const GenomicRegion& region) = 0;
     virtual size_t count_reads(const SampleIdType& sample, const GenomicRegion& region) = 0;
     
-    virtual GenomicRegion find_covered_subregion(const GenomicRegion& region, size_t target_coverage) = 0;
+    virtual std::pair<GenomicRegion, std::vector<unsigned>>
+    find_covered_subregion(const GenomicRegion& region, size_t max_coverage) = 0;
+    virtual std::pair<GenomicRegion, std::vector<unsigned>>
+    find_covered_subregion(const std::vector<SampleIdType>& samples, const GenomicRegion& region,
+                           size_t max_coverage) = 0;
     
     virtual SampleReadMap fetch_reads(const GenomicRegion& region) = 0;
     virtual Reads fetch_reads(const SampleIdType& sample, const GenomicRegion& region) = 0;

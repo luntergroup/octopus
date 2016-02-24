@@ -28,8 +28,6 @@
 
 class AlignedRead;
 
-// TODO: make this thread-safe
-
 class ReadManager
 {
 public:
@@ -56,19 +54,24 @@ public:
     unsigned num_samples() const noexcept;
     const std::vector<SampleIdType>& get_samples() const;
     
+    bool has_contig_reads(const SampleIdType& sample, const GenomicRegion::ContigNameType& contig);
+    bool has_contig_reads(const std::vector<SampleIdType>& samples,
+                          const GenomicRegion::ContigNameType& contig);
+    bool has_contig_reads(const GenomicRegion::ContigNameType& contig);
+    
     size_t count_reads(const SampleIdType& sample, const GenomicRegion& region);
     size_t count_reads(const std::vector<SampleIdType>& samples, const GenomicRegion& region);
-    size_t count_reads(const GenomicRegion& region); // all samples
+    size_t count_reads(const GenomicRegion& region);
     
     GenomicRegion find_covered_subregion(const SampleIdType& sample, const GenomicRegion& region,
-                                         size_t max_sample_coverage);
+                                         size_t max_reads);
     GenomicRegion find_covered_subregion(const std::vector<SampleIdType>& samples,
-                                         const GenomicRegion& region, size_t max_sample_coverage);
-    GenomicRegion find_covered_subregion(const GenomicRegion& region, size_t max_sample_coverage);
+                                         const GenomicRegion& region, size_t max_reads);
+    GenomicRegion find_covered_subregion(const GenomicRegion& region, size_t max_reads);
     
     Reads fetch_reads(const SampleIdType& sample, const GenomicRegion& region);
     SampleReadMap fetch_reads(const std::vector<SampleIdType>& samples, const GenomicRegion& region);
-    SampleReadMap fetch_reads(const GenomicRegion& region); // all samples
+    SampleReadMap fetch_reads(const GenomicRegion& region);
     
 private:
     struct FileSizeCompare
@@ -84,9 +87,12 @@ private:
     
     const unsigned max_open_files_ = 200;
     const unsigned num_files_;
+    
     OpenReaderMap open_readers_;
     ClosedReaders closed_readers_;
+    
     SampleIdToReaderPathMap reader_paths_containing_sample_;
+    
     ReaderRegionsMap possible_regions_in_readers_;
     
     std::vector<SampleIdType> samples_;

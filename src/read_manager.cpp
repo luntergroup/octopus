@@ -11,6 +11,8 @@
 #include <iterator>
 #include <algorithm>
 #include <utility>
+#include <deque>
+#include <numeric>
 
 #include <boost/filesystem/operations.hpp>
 
@@ -102,6 +104,22 @@ const std::vector<ReadManager::SampleIdType>& ReadManager::get_samples() const
     return samples_;
 }
 
+bool ReadManager::has_contig_reads(const SampleIdType& sample, const GenomicRegion::ContigNameType& contig)
+{
+    return has_contig_reads({sample}, contig);
+}
+
+bool ReadManager::has_contig_reads(const std::vector<SampleIdType>& samples,
+                                   const GenomicRegion::ContigNameType& contig)
+{
+    return true; // TODO
+}
+
+bool ReadManager::has_contig_reads(const GenomicRegion::ContigNameType& contig)
+{
+    return has_contig_reads(get_samples(), contig);
+}
+
 size_t ReadManager::count_reads(const SampleIdType& sample, const GenomicRegion& region)
 {
     using std::begin; using std::end; using std::for_each;
@@ -159,16 +177,18 @@ size_t ReadManager::count_reads(const GenomicRegion& region)
 
 GenomicRegion ReadManager::find_covered_subregion(const SampleIdType& sample,
                                                   const GenomicRegion& region,
-                                                  size_t max_sample_coverage)
+                                                  size_t max_reads)
 {
-    return find_covered_subregion({sample}, region, max_sample_coverage);
+    return find_covered_subregion({sample}, region, max_reads);
 }
 
 GenomicRegion ReadManager::find_covered_subregion(const std::vector<SampleIdType>& samples,
                                                   const GenomicRegion& region,
-                                                  size_t max_sample_coverage)
+                                                  size_t max_reads)
 {
-    using std::begin; using std::end; using std::for_each;
+    using std::begin; using std::end; using std::next; using std::for_each;
+    
+    if (samples.empty()) return region;
     
     std::lock_guard<std::mutex> lock {mutex_};
     
@@ -176,25 +196,62 @@ GenomicRegion ReadManager::find_covered_subregion(const std::vector<SampleIdType
     
     auto it = partition_open(reader_paths);
     
-    std::vector<GenomicRegion> result {};
+    auto result = head_region(region);
+    std::deque<unsigned> position_coverage {};
     
     while (!reader_paths.empty()) {
         for_each(it, end(reader_paths),
-                 [this, &samples, &region, &result, max_sample_coverage] (const auto& reader_path) {
-                     result.push_back(open_readers_.at(reader_path).find_covered_subregion(region, max_sample_coverage));
+                 [this, &samples, &region, &result, &position_coverage, max_reads] (const auto& reader_path) {
+                     auto p = open_readers_.at(reader_path).find_covered_subregion(samples, region, max_reads);
+                     
+                     if (is_empty_region(result) || is_before(p.first, result)) {
+                         position_coverage.assign(begin(p.second), end(p.second));
+                         result = std::move(p.first);
+                         return;
+                     }
+                     
+                     if (is_after(p.first, result)) return;
+                     
+                     auto overlap_begin = make_pair(begin(position_coverage), begin(p.second));
+                     
+                     if (begins_before(p.first, result)) {
+                         overlap_begin.second = next(begin(p.second), begin_distance(result, p.first));
+                         overlap_begin.first = position_coverage.insert(begin(position_coverage),
+                                                                        begin(p.second), overlap_begin.second);
+                         result = expand_lhs(result, begin_distance(result, p.first));
+                     }
+                     
+                     auto overlap_end = end(position_coverage);
+                     
+                     if (ends_before(p.first, result)) {
+                         overlap_end = std::prev(end(position_coverage), end_distance(result, p.first));
+                         overlap_end = position_coverage.erase(overlap_end, end(position_coverage));
+                         result = expand_rhs(result, -end_distance(result, p.first));
+                     }
+                     
+                     std::transform(overlap_begin.first, overlap_end, overlap_begin.second,
+                                    overlap_begin.first,
+                                    [] (const unsigned curr, const unsigned x) {
+                                        return curr + x;
+                                    });
                  });
+        
         reader_paths.erase(it, end(reader_paths));
         it = open_readers(begin(reader_paths), end(reader_paths));
     }
     
-    if (result.empty()) return region;
+    std::partial_sum(begin(position_coverage), end(position_coverage), begin(position_coverage));
     
-    return overlapped_region(*leftmost_mappable(result), region);
+    const auto limit = std::lower_bound(begin(position_coverage), end(position_coverage), max_reads);
+    
+    const auto max_bases = std::distance(begin(position_coverage), limit);
+    
+    return expand_rhs(result, -(region_size(result) - max_bases));
 }
 
-GenomicRegion ReadManager::find_covered_subregion(const GenomicRegion& region, size_t max_sample_coverage)
+GenomicRegion ReadManager::find_covered_subregion(const GenomicRegion& region, size_t max_reads)
 {
-    return find_covered_subregion(get_samples(), region, max_sample_coverage);
+    return find_covered_subregion(get_samples(), region, max_reads);
 }
 
 ReadManager::Reads ReadManager::fetch_reads(const SampleIdType& sample, const GenomicRegion& region)

@@ -14,9 +14,8 @@
 #include <unordered_map>
 #include <cstddef>
 #include <cstdint>
-#include <algorithm>
-#include <stdexcept>
 #include <memory>
+#include <utility>
 
 #include <boost/filesystem/path.hpp>
 #include <boost/optional.hpp>
@@ -26,6 +25,9 @@
 
 #include "read_reader_impl.hpp"
 #include "aligned_read.hpp"
+
+class GenomicRegion;
+class ContigRegion;
 
 class HtslibSamFacade : public IReadReaderImpl
 {
@@ -54,12 +56,22 @@ public:
     
     std::vector<SampleIdType> extract_samples() override;
     std::vector<ReadGroupIdType> extract_read_groups_in_sample(const SampleIdType& sample) override;
+    
+    bool has_contig_reads(const GenomicRegion::ContigNameType& contig) override;
+    
     size_t count_reads(const GenomicRegion& region) override;
     size_t count_reads(const SampleIdType& sample, const GenomicRegion& region) override;
-    GenomicRegion find_covered_subregion(const GenomicRegion& region, size_t target_coverage) override;
+    
+    std::pair<GenomicRegion, std::vector<unsigned>>
+    find_covered_subregion(const GenomicRegion& region, size_t max_coverage) override;
+    std::pair<GenomicRegion, std::vector<unsigned>>
+    find_covered_subregion(const std::vector<SampleIdType>& samples, const GenomicRegion& region,
+                           size_t max_coverage) override;
+    
     SampleReadMap fetch_reads(const GenomicRegion& region) override;
     Reads fetch_reads(const SampleIdType& sample, const GenomicRegion& region) override;
     SampleReadMap fetch_reads(const std::vector<SampleIdType>& samples, const GenomicRegion& region) override;
+    
     unsigned count_reference_contigs() override;
     std::vector<std::string> extract_reference_contig_names() override;
     SizeType get_reference_contig_size(const std::string& contig_name) override;
@@ -73,6 +85,7 @@ private:
     public:
         HtslibIterator() = delete;
         HtslibIterator(HtslibSamFacade& hts_facade, const GenomicRegion& region);
+        HtslibIterator(HtslibSamFacade& hts_facade, const GenomicRegion::ContigNameType& contig);
         ~HtslibIterator() noexcept = default;
         
         HtslibIterator(const HtslibIterator&) = delete;
@@ -80,7 +93,11 @@ private:
         
         bool operator++();
         boost::optional<AlignedRead> operator*() const;
+        
         HtslibSamFacade::ReadGroupIdType get_read_group() const;
+        
+        bool is_good() const noexcept;
+        std::size_t get_begin() const noexcept;
         
     private:
         struct HtsIteratorDeleter
