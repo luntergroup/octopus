@@ -49,29 +49,34 @@ namespace GenotypeModel
         }
     }
     
-    double FixedPloidyGenotypeLikelihoodModel::log_probability_haploid(const AlignedRead& read, const Genotype<Haplotype>& genotype) const
+    double FixedPloidyGenotypeLikelihoodModel::log_probability_haploid(const AlignedRead& read,
+                                                                       const Genotype<Haplotype>& genotype) const
     {
-        return log_probability(read, genotype.at(0));
+        return log_probability(read, genotype[0]);
     }
     
-    double FixedPloidyGenotypeLikelihoodModel::log_probability_diploid(const AlignedRead& read, const Genotype<Haplotype>& genotype) const
+    double FixedPloidyGenotypeLikelihoodModel::log_probability_diploid(const AlignedRead& read,
+                                                                       const Genotype<Haplotype>& genotype) const
     {
-        return Maths::log_sum_exp(log_probability(read, genotype.at(0)),
-                                  log_probability(read, genotype.at(1))) - ln_ploidy_;
+        return Maths::log_sum_exp(log_probability(read, genotype[0]),
+                                  log_probability(read, genotype[1])) - ln_ploidy_;
     }
     
-    double FixedPloidyGenotypeLikelihoodModel::log_probability_triploid(const AlignedRead& read, const Genotype<Haplotype>& genotype) const
+    double FixedPloidyGenotypeLikelihoodModel::log_probability_triploid(const AlignedRead& read,
+                                                                        const Genotype<Haplotype>& genotype) const
     {
-        return Maths::log_sum_exp(log_probability(read, genotype.at(0)),
-                                  log_probability(read, genotype.at(1)),
-                                  log_probability(read, genotype.at(2))) - ln_ploidy_;
+        return Maths::log_sum_exp(log_probability(read, genotype[0]),
+                                  log_probability(read, genotype[1]),
+                                  log_probability(read, genotype[2])) - ln_ploidy_;
     }
     
-    double FixedPloidyGenotypeLikelihoodModel::log_probability_polyploid(const AlignedRead& read, const Genotype<Haplotype>& genotype) const
+    double FixedPloidyGenotypeLikelihoodModel::log_probability_polyploid(const AlignedRead& read,
+                                                                         const Genotype<Haplotype>& genotype) const
     {
         std::vector<double> log_haplotype_probabilities(ploidy_);
         
-        std::transform(std::cbegin(genotype), std::cend(genotype), std::begin(log_haplotype_probabilities),
+        std::transform(std::cbegin(genotype), std::cend(genotype),
+                       std::begin(log_haplotype_probabilities),
                        [this, &read] (const auto& haplotype) {
                            return log_probability(read, haplotype);
                        });

@@ -46,14 +46,12 @@ namespace GenotypeModel
         static constexpr double   PRECISION      {40.0};
         static constexpr unsigned MAX_ITERATIONS {100};
         
-        HaplotypePriorCountMap result {};
+        HaplotypePriorCountMap result {haplotype_priors.size()};
         
         if (haplotype_priors.empty()) return result;
         
         const auto alphas = Maths::dirichlet_mle(extract_values(haplotype_priors),
                                                  PRECISION, MAX_ITERATIONS);
-        
-        result.reserve(haplotype_priors.size());
         
         std::transform(std::cbegin(haplotype_priors), std::cend(haplotype_priors),
                        std::cbegin(alphas), std::inserter(result, begin(result)),

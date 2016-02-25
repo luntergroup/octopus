@@ -58,9 +58,15 @@ namespace Octopus
     
     using GenotypePosterior        = double;
     using SampleGenotypePosteriors = std::vector<GenotypePosterior>;
-    using GenotypePosteriors       = std::unordered_map<SampleIdType, SampleGenotypePosteriors>;
+    using GenotypePosteriorMap     = std::unordered_map<SampleIdType, SampleGenotypePosteriors>;
     
     using HaplotypeLogFrequencies = std::unordered_map<Haplotype, double>;
+        
+    struct HaplotypeFrequencyUpdateConstants
+    {
+        double norm;
+        std::vector<std::vector<unsigned char>> genotype_counts;
+    };
     } // namespace
     
     namespace debug {
@@ -72,7 +78,7 @@ namespace Octopus
                                           const GenotypeLogMarginals& genotype_log_marginals,
                                           size_t n = 10);
         void print_genotype_posteriors(const std::vector<Genotype<Haplotype>>& genotypes,
-                                       const GenotypePosteriors& genotype_posteriors,
+                                       const GenotypePosteriorMap& genotype_posteriors,
                                        size_t n = 10);
     } // namespace debug
     
@@ -80,6 +86,15 @@ namespace Octopus
     
     namespace
     {
+        
+        HaplotypeFrequencyUpdateConstants
+        make_haplotype_frequency_update_constants()
+        {
+            HaplotypeFrequencyUpdateConstants result;
+            
+            return result;
+        }
+        
     GenotypeLogLikelihoodMap
     compute_genotype_log_likelihoods(const std::vector<Genotype<Haplotype>>& genotypes,
                                      const ReadMap& reads,
@@ -147,14 +162,13 @@ namespace Octopus
                        });
     }
     
-    GenotypePosteriors
+    GenotypePosteriorMap
     init_genotype_posteriors(const GenotypeLogMarginals& genotype_log_marginals,
                              const GenotypeLogLikelihoodMap& genotype_log_likilhoods)
     {
         using std::cbegin; using std::cend; using std::begin; using std::transform;
         
-        GenotypePosteriors result {};
-        result.reserve(genotype_log_likilhoods.size());
+        GenotypePosteriorMap result {genotype_log_likilhoods.size()};
         
         for (const auto& sample_genotype_log_likilhoods : genotype_log_likilhoods) {
             SampleGenotypePosteriors sample_result(genotype_log_marginals.size());
@@ -174,7 +188,7 @@ namespace Octopus
         return result;
     }
     
-    void update_genotype_posteriors(GenotypePosteriors& current_genotype_posteriors,
+    void update_genotype_posteriors(GenotypePosteriorMap& current_genotype_posteriors,
                                     const HaplotypeFrequencyMap& haplotype_frequencies,
                                     const GenotypeLogMarginals& genotype_log_marginals,
                                     const GenotypeLogLikelihoodMap& genotype_log_likilhoods)
@@ -182,16 +196,12 @@ namespace Octopus
         using std::cbegin; using std::cend; using std::begin; using std::transform;
         
         for (auto& sample_genotype_posteriors : current_genotype_posteriors) {
-            
-            const auto& sample_genotype_log_likilhoods = genotype_log_likilhoods.at(sample_genotype_posteriors.first);
-            
             transform(cbegin(genotype_log_marginals), cend(genotype_log_marginals),
-                      cbegin(sample_genotype_log_likilhoods),
+                      cbegin(genotype_log_likilhoods.at(sample_genotype_posteriors.first)),
                       begin(sample_genotype_posteriors.second),
                       [] (const auto& genotype_log_marginal, const auto& genotype_log_likilhood) {
                           return genotype_log_marginal.log_probability + genotype_log_likilhood;
                       });
-            
             normalise_exp(sample_genotype_posteriors.second);
         }
     }
@@ -209,13 +219,34 @@ namespace Octopus
         return result;
     }
     
+    auto collapse_genotype_posteriors(const GenotypePosteriorMap& genotype_posteriors)
+    {
+        assert(!genotype_posteriors.empty());
+        
+        if (genotype_posteriors.size() == 1) {
+            return std::cbegin(genotype_posteriors)->second;
+        }
+        
+        std::vector<double> result(std::cbegin(genotype_posteriors)->second.size());
+        
+        for (const auto& sample_posteriors : genotype_posteriors) {
+            std::transform(std::cbegin(result), std::cend(result),
+                           std::cbegin(sample_posteriors.second), std::begin(result),
+                           [] (const auto curr, const auto p) {
+                               return curr + p;
+                           });
+        }
+        
+        return result;
+    }
+    
     double update_haplotype_frequencies(HaplotypeFrequencyMap& current_haplotype_frequencies,
                                         const HaplotypePriorCountMap& haplotype_prior_counts,
                                         const std::vector<Genotype<Haplotype>>& genotypes,
-                                        const GenotypePosteriors& genotype_posteriors,
+                                        const GenotypePosteriorMap& genotype_posteriors,
                                         const double prior_count_sum)
     {
-        using std::cbegin; using std::cend; using std::accumulate;
+        const auto collaped_posteriors = collapse_genotype_posteriors(genotype_posteriors);
         
         double max_frequency_change {0};
         
@@ -226,16 +257,8 @@ namespace Octopus
             
             double new_frequency {haplotype_prior_counts.at(haplotype)};
             
-            for (size_t k {}; k < genotypes.size(); ++k) {
-                const auto n = genotypes[k].count(haplotype);
-                
-                if (n > 0) {
-                    auto s = accumulate(cbegin(genotype_posteriors), cend(genotype_posteriors), 0.0,
-                                        [k] (double curr, const auto& sample_genotype_posteriors) {
-                                            return curr + sample_genotype_posteriors.second[k];
-                                        });
-                    new_frequency += n * s;
-                }
+            for (size_t k {0}; k < genotypes.size(); ++k) {
+                new_frequency += genotypes[k].count(haplotype) * collaped_posteriors[k];
             }
             
             new_frequency /= norm;
@@ -254,25 +277,31 @@ namespace Octopus
     
     double do_em_iteration(const std::vector<Haplotype>& haplotypes,
                            const std::vector<Genotype<Haplotype>>& genotypes,
-                           GenotypePosteriors& genotype_posteriors,
+                           GenotypePosteriorMap& genotype_posteriors,
                            HaplotypeFrequencyMap& haplotype_frequencies,
                            GenotypeLogMarginals& genotype_log_marginals,
                            const GenotypeLogLikelihoodMap& genotype_log_likilhoods,
                            const HaplotypePriorCountMap& haplotype_prior_counts,
                            const double prior_count_sum)
     {
+        frequency_update_timer.resume();
         const auto max_change = update_haplotype_frequencies(haplotype_frequencies,
                                                              haplotype_prior_counts,
                                                              genotypes,
                                                              genotype_posteriors,
                                                              prior_count_sum);
+        frequency_update_timer.stop();
         
         //debug::print_haplotype_frequencies(haplotype_frequencies);
         
+        marginal_update_timer.resume();
         update_genotype_log_marginals(genotype_log_marginals, haplotype_frequencies);
+        marginal_update_timer.stop();
         
+        posterior_update_timer.resume();
         update_genotype_posteriors(genotype_posteriors, haplotype_frequencies,
                                    genotype_log_marginals, genotype_log_likilhoods);
+        posterior_update_timer.stop();
         
         //debug::print_genotype_posteriors(genotypes, genotype_posteriors);
         
@@ -289,14 +318,14 @@ namespace Octopus
             insert_sample(s.first, std::vector<double> {1}, result);
         }
         
-        Population::Latents::HaplotypeFrequencyMap haps {{genotype.at(0), 1}};
+        Population::Latents::HaplotypeFrequencyMap haps {{genotype[0], 1}};
         
         return Population::Latents {std::move(result), std::move(haps)};
     }
     
     Population::Latents
     make_latents(std::vector<Genotype<Haplotype>>&& genotypes,
-                 GenotypePosteriors&& genotype_posteriors,
+                 GenotypePosteriorMap&& genotype_posteriors,
                  HaplotypeFrequencyMap&& haplotype_frequencies)
     {
         Population::Latents::GenotypeProbabilityMap result {std::make_move_iterator(std::begin(genotypes)),
@@ -322,7 +351,7 @@ namespace Octopus
         auto genotypes = generate_all_genotypes(haplotypes, ploidy_);
         genotype_generation_timer.stop();
         
-        //std::cout << "there are " << genotypes.size() << " candidate genotypes" << std::endl;
+        assert(!genotypes.empty());
         
         if (genotypes.size() == 1) {
             return make_single_genotype_latents(genotypes.front(), reads);
@@ -333,23 +362,30 @@ namespace Octopus
                                                                               haplotype_likelihoods);
         genotype_likelihood_timer.stop();
         
+        prior_count_timer.resume();
         auto haplotype_prior_counts = compute_haplotype_prior_counts(haplotype_priors);
         const auto prior_count_sum  = Maths::sum_values(haplotype_prior_counts);
+        prior_count_timer.stop();
         
+        frequency_init_timer.resume();
         auto haplotype_frequencies  = init_haplotype_frequencies(haplotype_prior_counts, prior_count_sum);
+        frequency_init_timer.stop();
+        
+        marginal_init_timer.resume();
         auto genotype_log_marginals = init_genotype_log_marginals(genotypes, haplotype_frequencies);
+        marginal_init_timer.stop();
+        
+        posterior_init_timer.resume();
         auto genotype_posteriors    = init_genotype_posteriors(genotype_log_marginals, genotype_log_likilhoods);
+        posterior_init_timer.stop();
         
         em_timer.resume();
-        for (unsigned n {}; n < max_em_iterations_; ++n) {
-            //std::cout << "******* EM iteration " << n << " *******" << std::endl;
+        for (unsigned n {0}; n < max_em_iterations_; ++n) {
             if (do_em_iteration(haplotypes, genotypes, genotype_posteriors, haplotype_frequencies,
                                 genotype_log_marginals, genotype_log_likilhoods,
                                 haplotype_prior_counts, prior_count_sum) < em_epsilon_) break;
         }
         em_timer.stop();
-        
-        //std::cout << "finished EM" << std::endl;
         
         return make_latents(std::move(genotypes), std::move(genotype_posteriors), std::move(haplotype_frequencies));
     }
@@ -457,7 +493,7 @@ namespace Octopus
         }
         
         void print_genotype_posteriors(const std::vector<Genotype<Haplotype>>& genotypes,
-                                       const GenotypePosteriors& genotype_posteriors,
+                                       const GenotypePosteriorMap& genotype_posteriors,
                                        size_t n)
         {
             auto m = std::min(genotypes.size(), n);

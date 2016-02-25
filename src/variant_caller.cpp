@@ -82,6 +82,8 @@ void append_annotated_calls(std::deque<VcfRecord>& curr_calls,
                                       return call.get_position() < region_end(call_region);
                                   }).base();
     
+    std::cout << "calling " << std::distance(it, it2) << " variants" << std::endl;
+    
     std::transform(it, it2, std::back_inserter(curr_calls),
                    [&] (auto& record) { return annotate_record(record, reads); });
 }
@@ -261,7 +263,7 @@ std::deque<VcfRecord> VariantCaller::call_variants(const GenomicRegion& call_reg
         std::tie(haplotypes, active_region) = generator.progress();
         haplotype_generation_timer.stop();
         
-        //std::cout << "active region is " << active_region << '\n';
+        std::cout << "active region is " << active_region << '\n';
         
         if (is_after(active_region, call_region) || haplotypes.empty()) {
             break;

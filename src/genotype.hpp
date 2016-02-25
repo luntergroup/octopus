@@ -59,7 +59,6 @@ public:
     
     const RegionType& get_region() const noexcept;
     
-    const MappableType& at(unsigned n) const;
     const MappableType& operator[](unsigned n) const;
     
     unsigned ploidy() const noexcept;
@@ -105,7 +104,6 @@ public:
     template <typename T> void emplace(T&& element);
     void emplace(const std::shared_ptr<Haplotype>& element);
     
-    const Haplotype& at(unsigned n) const;
     const Haplotype& operator[](unsigned n) const;
     
     const GenomicRegion& get_region() const noexcept;
@@ -191,12 +189,6 @@ template <typename MappableType>
 const typename Genotype<MappableType>::RegionType& Genotype<MappableType>::get_region() const noexcept
 {
     return elements_.front().get_region();
-}
-
-template <typename MappableType>
-const MappableType& Genotype<MappableType>::at(const unsigned n) const
-{
-    return elements_.at(n);
 }
 
 template <typename MappableType>
@@ -649,7 +641,7 @@ auto make_element_count_map(const Genotype<MappableType>& genotype)
     result.reserve(genotype.zygosity());
     
     for (unsigned i {0}; i < genotype.ploidy(); ++i) {
-        ++result[genotype.at(i)];
+        ++result[genotype[i]];
     }
     
     return result;

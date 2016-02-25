@@ -76,11 +76,11 @@ double mean(const Container& values)
 template <typename InputIterator>
 double stdev(InputIterator first, InputIterator last)
 {
-    auto m = mean(first, last);
-    auto n = std::distance(first, last);
+    const auto m = mean(first, last);
+    const auto n = std::distance(first, last);
     std::vector<double> diff(n);
     std::transform(first, last, std::begin(diff), std::bind2nd(std::minus<double>(), m));
-    return std::sqrt(std::inner_product(diff.begin(), diff.end(), diff.begin(), 0.0) / n);
+    return std::sqrt(std::inner_product(std::begin(diff), std::end(diff), std::begin(diff), 0.0) / n);
 }
 
 template <typename Container>
@@ -92,7 +92,8 @@ double stdev(const Container& values)
 template <typename RealType, typename InputIterator>
 RealType rmq(InputIterator first, InputIterator last)
 {
-    return std::sqrt((std::inner_product(first, last, first, RealType {})) / static_cast<RealType>(std::distance(first, last)));
+    return std::sqrt((std::inner_product(first, last, first, RealType {0}))
+                     / static_cast<RealType>(std::distance(first, last)));
 }
 
 template <typename RealType, typename Container>
@@ -102,33 +103,37 @@ RealType rmq(const Container& values)
 }
 
 template <typename RealType>
-inline RealType log_sum_exp(const RealType log_a, const RealType log_b)
+inline RealType log_sum_exp(const RealType a, const RealType b)
 {
-    auto r = std::minmax(log_a, log_b);
+    auto r = std::minmax(a, b);
     return r.second + std::log(1 + std::exp(r.first - r.second));
 }
 
 template <typename RealType>
-inline RealType log_sum_exp(const RealType log_a, const RealType log_b, const RealType log_c)
+inline RealType log_sum_exp(const RealType a, const RealType b, const RealType c)
 {
-    auto max = std::max({log_a, log_b, log_c});
-    return max + std::log(std::exp(log_a - max) + std::exp(log_b - max) + std::exp(log_c - max));
+    auto max = std::max({a, b, c});
+    return max + std::log(std::exp(a - max) + std::exp(b - max) + std::exp(c - max));
 }
 
 template <typename RealType>
 inline RealType log_sum_exp(std::initializer_list<RealType> il)
 {
     auto max = std::max(il);
-    return max + std::log(std::accumulate(std::cbegin(il), std::cend(il), RealType {},
-                                          [max] (const auto curr, auto x) { return curr + std::exp(x - max); }));
+    return max + std::log(std::accumulate(std::cbegin(il), std::cend(il), RealType {0},
+                                          [max] (const auto curr, auto x) {
+                                              return curr + std::exp(x - max);
+                                          }));
 }
 
 template <typename RealType, typename Iterator>
 inline RealType log_sum_exp(Iterator first, Iterator last)
 {
     auto max = *std::max_element(first, last);
-    return max + std::log(std::accumulate(first, last, RealType {},
-                                          [max] (const auto curr, auto x) { return curr + std::exp(x - max); }));
+    return max + std::log(std::accumulate(first, last, RealType {0},
+                                          [max] (const auto curr, auto x) {
+                                              return curr + std::exp(x - max);
+                                          }));
 }
 
 template <typename RealType, typename Container>
@@ -155,16 +160,16 @@ inline RealType log_factorial(IntegerType x)
         std::vector<RealType> tx(x);
         std::transform(std::cbegin(lx), std::cend(lx), std::begin(tx),
                        [] (IntegerType a) { return std::log(static_cast<RealType>(a)); });
-        return std::accumulate(std::cbegin(tx), std::cend(tx), RealType {});
+        return std::accumulate(std::cbegin(tx), std::cend(tx), RealType {0});
     }
 }
 
 template <typename RealType, typename InputIterator>
 inline RealType log_beta(InputIterator first, InputIterator last)
 {
-    return std::accumulate(first, last, RealType {},
+    return std::accumulate(first, last, RealType {0},
                            [] (const auto v, const auto x) { return v + boost::math::lgamma(x); })
-            - boost::math::lgamma(std::accumulate(first, last, RealType {}));
+            - boost::math::lgamma(std::accumulate(first, last, RealType {0}));
 }
 
 template <typename RealType, typename Container>
@@ -176,7 +181,7 @@ inline RealType log_beta(const Container& values)
 template <typename RealType, typename InputIterator1, typename InputIterator2>
 inline RealType log_dirichlet(InputIterator1 firstalpha, InputIterator1 lastalpha, InputIterator2 firstpi)
 {
-    return std::inner_product(firstalpha, lastalpha, firstpi, RealType {}, std::plus<RealType>(),
+    return std::inner_product(firstalpha, lastalpha, firstpi, RealType {0}, std::plus<RealType>(),
                               [] (auto a, auto p) { return (a - 1) * std::log(p); })
             - log_beta<RealType>(firstalpha, lastalpha);
 }
@@ -194,7 +199,7 @@ inline RealType log_multinomial_coefficient(std::initializer_list<IntegerType> i
     std::vector<RealType> denoms(il.size());
     std::transform(cbegin(il), cend(il), begin(denoms), log_factorial<RealType, IntegerType>);
     return log_factorial<RealType>(accumulate(cbegin(il), cend(il), 0))
-            - accumulate(cbegin(denoms), cend(denoms), RealType {});
+            - accumulate(cbegin(denoms), cend(denoms), RealType {0});
 }
 
 template <typename RealType, typename Iterator>
@@ -203,8 +208,8 @@ inline RealType log_multinomial_coefficient(Iterator first, Iterator last)
     using IntegerType = typename Iterator::value_type;
     std::vector<RealType> denoms(std::distance(first, last));
     std::transform(first, last, std::begin(denoms), log_factorial<RealType, IntegerType>);
-    return log_factorial<RealType, IntegerType>(std::accumulate(first, last, IntegerType {})) -
-                std::accumulate(denoms.cbegin(), denoms.cend(), RealType {});
+    return log_factorial<RealType, IntegerType>(std::accumulate(first, last, IntegerType {0}))
+                - std::accumulate(denoms.cbegin(), denoms.cend(), RealType {0});
 }
 
 template <typename RealType, typename Container>
@@ -236,7 +241,7 @@ inline RealType multinomial_pdf(const std::vector<IntegerType>& z, const std::ve
 {
     RealType r {1};
     
-    for (size_t i {}; i < z.size(); ++i) {
+    for (size_t i {0}; i < z.size(); ++i) {
         r *= std::pow(p[i], z[i]);
     }
     
@@ -290,8 +295,8 @@ RealType dirichlet_multinomial(const RealType z1, const RealType z2, const RealT
 template <typename RealType>
 RealType dirichlet_multinomial(const std::vector<RealType>& z, const std::vector<RealType>& a)
 {
-    auto z_0 = std::accumulate(std::cbegin(z), std::cend(z), RealType {});
-    auto a_0 = std::accumulate(std::cbegin(a), std::cend(a), RealType {});
+    auto z_0 = std::accumulate(std::cbegin(z), std::cend(z), RealType {0});
+    auto a_0 = std::accumulate(std::cbegin(a), std::cend(a), RealType {0});
     
     RealType z_m {1};
     for (auto z_i : z) {
@@ -335,16 +340,17 @@ std::vector<RealType> dirichlet_mle(std::vector<RealType> pi, const RealType pre
     const auto l = pi.size();
     std::vector<RealType> result(l, 1.0 / l), curr_result(l, 1.0 / l), means(l, 1.0 / l);
     
-    for (unsigned n {}; n < max_iterations; ++n) {
-        RealType v {};
+    for (unsigned n {0}; n < max_iterations; ++n) {
+        RealType v {0};
         
-        for (size_t j {}; j < l; ++j) {
+        for (std::size_t j {0}; j < l; ++j) {
             v += means[j] * (pi[j] - boost::math::digamma<RealType>(precision * means[j]));
         }
         
-        for (size_t k {}; k < l; ++k) {
+        for (std::size_t k {0}; k < l; ++k) {
             curr_result[k] = digamma_inv<RealType>(pi[k] - v);
-            means[k]       = curr_result[k] / std::accumulate(cbegin(curr_result), cend(curr_result), RealType {});
+            means[k]       = curr_result[k] / std::accumulate(cbegin(curr_result),
+                                                              cend(curr_result), RealType {0});
         }
         
         if (detail::is_mldp_converged(result, curr_result, epsilon)) return curr_result;
@@ -381,7 +387,7 @@ inline
 ResultType
 sum_keys(const MapType& map, UnaryOperation op)
 {
-    return std::accumulate(std::cbegin(map), std::cend(map), ResultType {},
+    return std::accumulate(std::cbegin(map), std::cend(map), ResultType {0},
                            [op] (const auto previous, const auto& p) { return previous + op(p.first); });
 }
 
@@ -399,7 +405,7 @@ inline
 ResultType
 sum_values(const MapType& map, UnaryOperation op)
 {
-    return std::accumulate(std::cbegin(map), std::cend(map), ResultType {},
+    return std::accumulate(std::cbegin(map), std::cend(map), ResultType {0},
                            [op] (const auto previous, const auto& p) { return previous + op(p.second); });
 }
 
@@ -407,7 +413,7 @@ template <typename Map>
 inline
 size_t sum_sizes(const Map& map)
 {
-    return std::accumulate(std::cbegin(map), std::cend(map), size_t {},
+    return std::accumulate(std::cbegin(map), std::cend(map), size_t {0},
                            [] (const auto& p, const auto& v) { return p + v.second.size(); });
 }
 

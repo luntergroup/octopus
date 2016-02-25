@@ -43,7 +43,6 @@ public:
     CancerGenotype(CancerGenotype&&)                 = default;
     CancerGenotype& operator=(CancerGenotype&&)      = default;
     
-    const MappableType& at(unsigned n) const;
     const MappableType& operator[](unsigned n) const;
     
     const Genotype<MappableType>& get_germline_genotype() const;
@@ -93,12 +92,6 @@ CancerGenotype<MappableType>::CancerGenotype(G&& germline_genotype, C&& cancer_e
 germline_genotype_ {std::forward<G>(germline_genotype)},
 cancer_element_ {std::make_shared<MappableType>(std::forward<C>(cancer_element))}
 {}
-
-template <typename MappableType>
-const MappableType& CancerGenotype<MappableType>::at(unsigned n) const
-{
-    return (n < ploidy()) ? germline_genotype_.at(n) : cancer_element_;
-}
 
 template <typename MappableType>
 const MappableType& CancerGenotype<MappableType>::operator[](unsigned n) const

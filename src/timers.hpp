@@ -27,6 +27,13 @@ extern boost::timer::cpu_timer calling_timer;
 // population model timers
 extern boost::timer::cpu_timer genotype_generation_timer;
 extern boost::timer::cpu_timer genotype_likelihood_timer;
+extern boost::timer::cpu_timer prior_count_timer;
+extern boost::timer::cpu_timer frequency_init_timer;
+extern boost::timer::cpu_timer marginal_init_timer;
+extern boost::timer::cpu_timer posterior_init_timer;
+extern boost::timer::cpu_timer frequency_update_timer;
+extern boost::timer::cpu_timer marginal_update_timer;
+extern boost::timer::cpu_timer posterior_update_timer;
 extern boost::timer::cpu_timer em_timer;
 
 inline void init_timers()
@@ -43,10 +50,17 @@ inline void init_timers()
     
     genotype_generation_timer.stop();
     genotype_likelihood_timer.stop();
+    prior_count_timer.stop();
+    frequency_init_timer.stop();
+    marginal_init_timer.stop();
+    posterior_init_timer.stop();
+    frequency_update_timer.stop();
+    marginal_update_timer.stop();
+    posterior_update_timer.stop();
     em_timer.stop();
 }
 
-inline void print_timers()
+inline void print_all_timers()
 {
     std::cout << "init timer" << '\n';
     std::cout << init_timer.format() << std::endl;
@@ -80,6 +94,42 @@ inline void print_timers()
     
     std::cout << "genotype likelihood timer" << '\n';
     std::cout << genotype_likelihood_timer.format() << std::endl;
+    
+    std::cout << "prior count timer" << '\n';
+    std::cout << prior_count_timer.format() << std::endl;
+    
+    std::cout << "em timer" << '\n';
+    std::cout << em_timer.format() << std::endl;
+}
+
+inline void print_model_timers()
+{
+    std::cout << "genotype generation timer" << '\n';
+    std::cout << calling_timer.format() << std::endl;
+    
+    std::cout << "genotype likelihood timer" << '\n';
+    std::cout << genotype_likelihood_timer.format() << std::endl;
+    
+    std::cout << "prior count timer" << '\n';
+    std::cout << prior_count_timer.format() << std::endl;
+    
+    std::cout << "freqency init timer" << '\n';
+    std::cout << frequency_init_timer.format() << std::endl;
+    
+    std::cout << "marginal init timer" << '\n';
+    std::cout << marginal_init_timer.format() << std::endl;
+    
+    std::cout << "posterior init timer" << '\n';
+    std::cout << posterior_init_timer.format() << std::endl;
+    
+    std::cout << "frequency update timer" << '\n';
+    std::cout << frequency_update_timer.format() << std::endl;
+    
+    std::cout << "marginal update timer" << '\n';
+    std::cout << marginal_update_timer.format() << std::endl;
+    
+    std::cout << "posterior update timer" << '\n';
+    std::cout << posterior_update_timer.format() << std::endl;
     
     std::cout << "em timer" << '\n';
     std::cout << em_timer.format() << std::endl;

@@ -553,6 +553,7 @@ void set_phasings(std::vector<GenotypeCallMap>& variant_genotype_calls,
         for (auto& p : g) {
             const auto& phase_regions = phase_set.phase_regions.at(p.first);
             const auto& call_region = p.second.genotype[0].get_region();
+            
             auto it = std::find_if(std::cbegin(phase_regions), std::cend(phase_regions),
                                    [&call_region] (const auto& phase_region) {
                                        return contains(phase_region.region, call_region);

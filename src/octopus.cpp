@@ -522,7 +522,7 @@ namespace Octopus
         
         std::cout << "Octopus: total number of calls = " << num_calls << std::endl;
         
-        print_timers();
+        //print_model_timers();
     }
     
     void print_final_info(const GenomeCallingComponents& components)

@@ -54,11 +54,6 @@ void Genotype<Haplotype>::emplace(const std::shared_ptr<Haplotype>& haplotype)
                        HaplotypePtrLess {});
 }
 
-const Haplotype& Genotype<Haplotype>::at(const unsigned n) const
-{
-    return *haplotypes_.at(n);
-}
-
 const Haplotype& Genotype<Haplotype>::operator[](const unsigned n) const
 {
     return *haplotypes_[n];
@@ -99,8 +94,8 @@ bool Genotype<Haplotype>::contains(const Haplotype& haplotype) const
 
 unsigned Genotype<Haplotype>::count(const Haplotype& haplotype) const
 {
-    const auto equal_range = std::equal_range(std::cbegin(haplotypes_), std::cend(haplotypes_), haplotype,
-                                              HaplotypePtrLess {});
+    const auto equal_range = std::equal_range(std::cbegin(haplotypes_), std::cend(haplotypes_),
+                                              haplotype, HaplotypePtrLess {});
     return static_cast<unsigned>(std::distance(equal_range.first, equal_range.second));
 }
 

@@ -63,7 +63,10 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         
         // for population
         
-        "--regions", "22:50000000-",
+        "--regions", "22:51000000-",
+        
+        //"--regions", "Y",
+        //"--regions", "22:50000000-",
         
         //"--regions", "1:224,024,837-224,024,877", // NA12878_low_coverage edge case insertions
         //"--regions", "1:874950-874951", // NA12878_low_coverage edge case insertions

@@ -21,4 +21,11 @@ boost::timer::cpu_timer calling_timer {};
 // population model timers
 boost::timer::cpu_timer genotype_generation_timer {};
 boost::timer::cpu_timer genotype_likelihood_timer {};
+boost::timer::cpu_timer prior_count_timer {};
+boost::timer::cpu_timer frequency_init_timer {};
+boost::timer::cpu_timer marginal_init_timer {};
+boost::timer::cpu_timer posterior_init_timer {};
+boost::timer::cpu_timer frequency_update_timer {};
+boost::timer::cpu_timer marginal_update_timer {};
+boost::timer::cpu_timer posterior_update_timer {};
 boost::timer::cpu_timer em_timer {};
