@@ -1070,10 +1070,10 @@
 			children = (
 				CAB89DF21C753551002D6F8E /* read_indel_error_model.hpp */,
 				CAB89DF11C753551002D6F8E /* read_indel_error_model.cpp */,
-				D490E41E1C74CE1200883184 /* align.h */,
-				D490E41C1C74CE1200883184 /* align.c */,
 				D490E41D1C74CE1200883184 /* banded_simd_viterbi.hpp */,
 				D490E41B1C74CE1200883184 /* banded_simd_viterbi.cpp */,
+				D490E41E1C74CE1200883184 /* align.h */,
+				D490E41C1C74CE1200883184 /* align.c */,
 				D490E4251C74CE2300883184 /* pair_hmm.hpp */,
 				D490E41A1C74CE1200883184 /* pair_hmm.cpp */,
 				D48D2AE31BB5753F00C5596E /* haplotype_liklihood_model.hpp */,

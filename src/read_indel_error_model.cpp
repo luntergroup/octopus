@@ -28,7 +28,7 @@ std::vector<std::uint8_t> ReadIndelErrorModel::calculate_gap_open_penalties(cons
 //        
 //    }
     
-    std::vector<std::uint8_t> result(sequence_size(haplotype), 30);
+    std::vector<std::uint8_t> result(sequence_size(haplotype), 53);
     
     return result;
 }

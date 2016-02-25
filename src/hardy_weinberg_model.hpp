@@ -30,13 +30,8 @@ namespace Octopus
                                           const Map& haplotype_frequencies)
         {
             static const double ln_2 {std::log(2.0)};
-            
-            if (genotype.is_homozygous()) {
-                return 2 * std::log(haplotype_frequencies.at(genotype[0]));
-            } else {
-                return std::log(haplotype_frequencies.at(genotype[0]))
-                + std::log(haplotype_frequencies.at(genotype[1])) + ln_2;
-            }
+            return std::log(haplotype_frequencies.at(genotype[0]))
+                        + std::log(haplotype_frequencies.at(genotype[1])) + ln_2;
         }
         
         template <typename Genotype, typename Map>

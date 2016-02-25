@@ -63,7 +63,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         
         // for population
         
-        "--regions", "22:51000000-",
+        "--regions", "22",
         
         //"--regions", "Y",
         //"--regions", "22:50000000-",

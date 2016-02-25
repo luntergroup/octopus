@@ -44,15 +44,15 @@ namespace GenotypeModel
         double log_probability(const AlignedRead& read, const Genotype<Haplotype>& genotype) const;
         
         // ln p(reads | genotype)
-        template <typename ForwardIterator>
-        double log_probability(ForwardIterator first_read, ForwardIterator last_read,
+        template <typename ForwardIt>
+        double log_probability(ForwardIt first_read, ForwardIt last_read,
                                const Genotype<Haplotype>& genotype) const;
         
     private:
         std::reference_wrapper<const HaplotypeLikelihoodCache> haplotype_likelihoods_;
         
-        const unsigned ploidy_;
-        const double ln_ploidy_;
+        unsigned ploidy_;
+        double ln_ploidy_;
         
         // These are just for optimisation
         double log_probability_haploid(const AlignedRead& read, const Genotype<Haplotype>& genotype) const;
@@ -62,30 +62,30 @@ namespace GenotypeModel
     };
     
     // ln p(reads | genotype) = sum (read in reads} ln p(read | genotype)
-    template <typename ForwardIterator>
-    double FixedPloidyGenotypeLikelihoodModel::log_probability(ForwardIterator first_read, ForwardIterator last_read,
+    template <typename ForwardIt>
+    double FixedPloidyGenotypeLikelihoodModel::log_probability(ForwardIt first_read, ForwardIt last_read,
                                                                const Genotype<Haplotype>& genotype) const
     {
         // These cases are just for optimisation
         switch (genotype.ploidy()) {
             case 1:
                 return std::accumulate(first_read, last_read, 0.0,
-                                       [this, &genotype] (auto curr, const auto& read) {
+                                       [this, &genotype] (const auto curr, const auto& read) {
                                            return curr + log_probability_haploid(read, genotype);
                                        });
             case 2:
                 return std::accumulate(first_read, last_read, 0.0,
-                                       [this, &genotype] (auto curr, const auto& read) {
+                                       [this, &genotype] (const auto curr, const auto& read) {
                                            return curr + log_probability_diploid(read, genotype);
                                        });
             case 3:
                 return std::accumulate(first_read, last_read, 0.0,
-                                       [this, &genotype] (auto curr, const auto& read) {
+                                       [this, &genotype] (const auto curr, const auto& read) {
                                            return curr + log_probability_triploid(read, genotype);
                                        });
             default:
                 return std::accumulate(first_read, last_read, 0.0,
-                                       [this, &genotype] (auto curr, const auto& read) {
+                                       [this, &genotype] (const auto curr, const auto& read) {
                                            return curr + log_probability_polyploid(read, genotype);
                                        });
         }

@@ -500,7 +500,9 @@ namespace Octopus
         
         std::size_t num_calls {0};
         
+        #ifdef BENCHMARK
         init_timers();
+        #endif
         
         for (const auto& region : components.regions) {
             cout << "Octopus: processing input region " << region << endl;
@@ -522,7 +524,9 @@ namespace Octopus
         
         std::cout << "Octopus: total number of calls = " << num_calls << std::endl;
         
-        //print_model_timers();
+        #ifdef BENCHMARK
+        print_all_timers();
+        #endif
     }
     
     void print_final_info(const GenomeCallingComponents& components)

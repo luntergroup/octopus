@@ -30,8 +30,18 @@ namespace Octopus
     mapper_ {std::move(mapper)}
     {}
     
+    namespace
+    {
+        bool contains(const std::vector<std::size_t>& mapped_positions,
+                      const std::size_t original_mapping_position)
+        {
+            return std::binary_search(std::cbegin(mapped_positions), std::cend(mapped_positions),
+                                      original_mapping_position);
+        }
+    } // namespace
+    
     double HaplotypeLikelihoodModel::log_probability(const AlignedRead& read, const Haplotype& haplotype,
-                                                     InactiveRegionState flank_state) const
+                                                     const InactiveRegionState flank_state) const
     {
         Model model {2, 3}; // TODO: make part of an error model
         
@@ -54,13 +64,10 @@ namespace Octopus
         
         const auto original_mapping_position = begin_distance(read, haplotype);
         
-        if (!std::binary_search(std::cbegin(best_mapping_positions),
-                                std::cend(best_mapping_positions),
-                                original_mapping_position) && max_log_probability < 0) {
+        if (!contains(best_mapping_positions, original_mapping_position) && max_log_probability < 0) {
             auto cur = compute_log_conditional_probability(haplotype.get_sequence(), read.get_sequence(),
                                                            read.get_qualities(), gap_open_penalities,
                                                            original_mapping_position, model);
-            
             if (cur > max_log_probability) max_log_probability = cur;
         }
         

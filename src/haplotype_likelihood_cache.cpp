@@ -106,7 +106,7 @@ namespace debug
                           });
                 
                 for (unsigned i {}; i < m; ++i) {
-                    std::cout << "\t\t* ";
+                    std::cout << "\t\t ";
                     print_variant_alleles(top[i].first);
                     std::cout << " " << std::setprecision(10) << top[i].second << std::endl;
                 }

@@ -9,6 +9,8 @@
 #ifndef timers_h
 #define timers_h
 
+#define BENCHMARK
+
 #include <iostream>
 
 #include <boost/timer/timer.hpp> // BENCHMARK
@@ -35,6 +37,20 @@ extern boost::timer::cpu_timer frequency_update_timer;
 extern boost::timer::cpu_timer marginal_update_timer;
 extern boost::timer::cpu_timer posterior_update_timer;
 extern boost::timer::cpu_timer em_timer;
+
+inline void resume_timer(boost::timer::cpu_timer& timer)
+{
+    #ifdef BENCHMARK
+    timer.resume();
+    #endif
+}
+
+inline void pause_timer(boost::timer::cpu_timer& timer)
+{
+    #ifdef BENCHMARK
+    timer.stop();
+    #endif
+}
 
 inline void init_timers()
 {
@@ -97,6 +113,24 @@ inline void print_all_timers()
     
     std::cout << "prior count timer" << '\n';
     std::cout << prior_count_timer.format() << std::endl;
+    
+    std::cout << "freqency init timer" << '\n';
+    std::cout << frequency_init_timer.format() << std::endl;
+    
+    std::cout << "marginal init timer" << '\n';
+    std::cout << marginal_init_timer.format() << std::endl;
+    
+    std::cout << "posterior init timer" << '\n';
+    std::cout << posterior_init_timer.format() << std::endl;
+    
+    std::cout << "frequency update timer" << '\n';
+    std::cout << frequency_update_timer.format() << std::endl;
+    
+    std::cout << "marginal update timer" << '\n';
+    std::cout << marginal_update_timer.format() << std::endl;
+    
+    std::cout << "posterior update timer" << '\n';
+    std::cout << posterior_update_timer.format() << std::endl;
     
     std::cout << "em timer" << '\n';
     std::cout << em_timer.format() << std::endl;

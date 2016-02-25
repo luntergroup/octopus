@@ -17,6 +17,7 @@
 #include <type_traits>
 #include <limits>
 #include <array>
+#include <cassert>
 
 #include "align.h"
 #include "banded_simd_viterbi.hpp"
@@ -52,23 +53,43 @@ namespace
                                   std::plus<void>(), std::not_equal_to<void>());
     }
     
+    namespace
+    {
+        std::vector<char> truncate(const std::vector<std::uint8_t>& qualities)
+        {
+            std::vector<char> result(qualities.size());
+            std::transform(std::cbegin(qualities), std::cend(qualities), std::begin(result),
+                           [] (const std::uint8_t quality) {
+                               constexpr std::uint8_t max_quality {std::numeric_limits<char>::max()};
+                               return static_cast<char>(std::min(quality, max_quality));
+                           });
+            return result;
+        }
+    } // namespace
+    
     auto align(const std::string& truth, const std::string& target,
                const std::vector<std::uint8_t>& target_qualities,
-               const std::vector<std::uint8_t>& target_gap_open_penalties,
+               const std::vector<std::uint8_t>& truth_gap_open_penalties,
                const std::size_t offset_hint,
                const Model& model)
     {
-        const auto haplotype_alignment_size = static_cast<int>(target.size() + 15);
+        const auto truth_alignment_size                = static_cast<int>(target.size() + 15);
+        const auto truncated_target_qualities          = truncate(target_qualities);
+        const auto truncated_truth_gap_open_penalities = truncate(truth_gap_open_penalties);
+        
+        if (offset_hint + truth_alignment_size > truth.size()) {
+            return std::numeric_limits<double>::lowest();
+        }
         
         if (model.flank_clear) {
-            const auto score = fastAlignmentRoutine(truth.c_str() + offset_hint,
-                                                    target.c_str(),
-                                                    reinterpret_cast<const char*>(target_qualities.data()),
-                                                    haplotype_alignment_size,
+            const auto score = fastAlignmentRoutine(truth.data() + offset_hint,
+                                                    target.data(),
+                                                    truncated_target_qualities.data(),
+                                                    truth_alignment_size,
                                                     static_cast<int>(target.size()),
                                                     static_cast<int>(model.gapextend),
                                                     static_cast<int>(model.nucprior),
-                                                    reinterpret_cast<const char*>(target_gap_open_penalties.data()) + offset_hint);
+                                                    truncated_truth_gap_open_penalities.data() + offset_hint);
             
             return -ln_10_div_10 * static_cast<double>(score);
         }
@@ -76,20 +97,20 @@ namespace
         int first_pos;
         std::vector<char> align1(2 * target.size() + 16), align2(2 * target.size() + 16);
         
-        const auto score = fastAlignmentRoutine(truth.c_str() + offset_hint,
-                                                target.c_str(),
-                                                reinterpret_cast<const char*>(target_qualities.data()),
-                                                haplotype_alignment_size,
+        const auto score = fastAlignmentRoutine(truth.data() + offset_hint,
+                                                target.data(),
+                                                truncated_target_qualities.data(),
+                                                truth_alignment_size,
                                                 static_cast<int>(target.size()),
                                                 static_cast<int>(model.gapextend),
                                                 static_cast<int>(model.nucprior),
-                                                reinterpret_cast<const char*>(target_gap_open_penalties.data()) + offset_hint,
+                                                truncated_truth_gap_open_penalities.data() + offset_hint,
                                                 align1.data(), align2.data(), &first_pos);
         
-        const auto flank_score = calculateFlankScore(haplotype_alignment_size,
+        const auto flank_score = calculateFlankScore(truth_alignment_size,
                                                      0,
-                                                     reinterpret_cast<const char*>(target_qualities.data()),
-                                                     reinterpret_cast<const char*>(target_gap_open_penalties.data()),
+                                                     truncated_target_qualities.data(),
+                                                     truncated_truth_gap_open_penalities.data(),
                                                      static_cast<int>(model.gapextend),
                                                      static_cast<int>(model.nucprior),
                                                      static_cast<int>(first_pos + offset_hint),
@@ -101,7 +122,7 @@ namespace
 
 double compute_log_conditional_probability(const std::string& truth, const std::string& target,
                                            const std::vector<std::uint8_t>& target_qualities,
-                                           const std::vector<std::uint8_t>& target_gap_open_penalties,
+                                           const std::vector<std::uint8_t>& truth_gap_open_penalties,
                                            const std::size_t target_offset_into_truth_hint,
                                            const Model& model)
 {
@@ -116,7 +137,7 @@ double compute_log_conditional_probability(const std::string& truth, const std::
                                 " target_qualities size"};
     }
     
-    if (truth.size() != target_gap_open_penalties.size()) {
+    if (truth.size() != truth_gap_open_penalties.size()) {
         throw std::logic_error {"compute_log_conditional_probability: truth size does not match"
                                 " target_gap_open_penalties size"};
     }
@@ -124,6 +145,10 @@ double compute_log_conditional_probability(const std::string& truth, const std::
     if (std::max(truth.size(), target.size()) <= target_offset_into_truth_hint) {
         throw std::logic_error {"compute_log_conditional_probability: offset hint is not"
                                 " in range"};
+    }
+    
+    if (target_offset_into_truth_hint + target.size() > truth.size()) {
+        return std::numeric_limits<double>::lowest();
     }
     
     const auto hinted_truth_begin_itr = next(cbegin(truth), target_offset_into_truth_hint);
@@ -139,18 +164,18 @@ double compute_log_conditional_probability(const std::string& truth, const std::
     if (num_mismatches == 1) {
         const auto mismatch_index = std::distance(hinted_truth_begin_itr, p.second);
         
-        if (target_qualities[mismatch_index] <= target_gap_open_penalties[mismatch_index]) {
+        if (target_qualities[mismatch_index] <= truth_gap_open_penalties[mismatch_index]) {
             return phred_to_ln_probability[target_qualities[mismatch_index]];
         }
         
         if (std::equal(next(p.first), cend(target), p.second)) {
-            return phred_to_ln_probability[target_gap_open_penalties[mismatch_index]];
+            return phred_to_ln_probability[truth_gap_open_penalties[mismatch_index]];
         }
         
         return phred_to_ln_probability[target_qualities[mismatch_index]];
     }
     
-    return align(truth, target, target_qualities, target_gap_open_penalties,
+    return align(truth, target, target_qualities, truth_gap_open_penalties,
                  target_offset_into_truth_hint, model);
     
     return 0;

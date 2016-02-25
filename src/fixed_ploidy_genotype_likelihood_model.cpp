@@ -28,13 +28,15 @@ namespace GenotypeModel
     ln_ploidy_ {std::log(ploidy)}
     {}
     
-    double FixedPloidyGenotypeLikelihoodModel::log_probability(const AlignedRead& read, const Haplotype& haplotype) const
+    double FixedPloidyGenotypeLikelihoodModel::log_probability(const AlignedRead& read,
+                                                               const Haplotype& haplotype) const
     {
         return haplotype_likelihoods_.get().log_probability(read, haplotype);
     }
     
     // ln p(read | genotype) = ln sum {haplotype in genotype} p(read | haplotype) - ln ploidy
-    double FixedPloidyGenotypeLikelihoodModel::log_probability(const AlignedRead& read, const Genotype<Haplotype>& genotype) const
+    double FixedPloidyGenotypeLikelihoodModel::log_probability(const AlignedRead& read,
+                                                               const Genotype<Haplotype>& genotype) const
     {
         // These cases are just for optimisation
         switch (ploidy_) {
@@ -102,6 +104,7 @@ namespace GenotypeModel
                                             const FixedPloidyGenotypeLikelihoodModel& read_model,
                                             const size_t n)
         {
+            std::cout << "TODO!" << std::endl;
             // TODO
         }
         
