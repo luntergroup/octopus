@@ -165,18 +165,15 @@ namespace Octopus
         GenotypeLogLikelihoodMap result {reads.size()};
         
         for (const auto& p : reads) {
-            const auto& sample       = p.first;
             const auto& sample_reads = p.second;
             
-            SampleGenotypeLogLikelihoods sample_log_likelihoods(genotypes.size());
+            const auto it = result.emplace(std::piecewise_construct, std::forward_as_tuple(p.first),
+                                           std::forward_as_tuple(genotypes.size())).first;
             
-            std::transform(std::cbegin(genotypes), std::cend(genotypes),
-                           std::begin(sample_log_likelihoods),
+            std::transform(std::cbegin(genotypes), std::cend(genotypes), std::begin(it->second),
                            [&sample_reads, &likelihood_model] (const auto& genotype) {
                                return log_probability(sample_reads, genotype, likelihood_model);
                            });
-            
-            result.emplace(sample, std::move(sample_log_likelihoods));
         }
         
         haplotype_likelihoods.clear();
@@ -401,7 +398,7 @@ namespace Octopus
                                                                               haplotype_likelihoods);
         pause_timer(genotype_likelihood_timer);
         
-        //debug::print_genotype_log_likelihoods(genotypes, genotype_log_likilhoods);
+        debug::print_genotype_log_likelihoods(genotypes, genotype_log_likilhoods);
         
         resume_timer(prior_count_timer);
         auto haplotype_prior_count_map = compute_haplotype_prior_counts(haplotype_priors);

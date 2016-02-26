@@ -246,10 +246,12 @@ GenomicRegion ReadManager::find_covered_subregion(const std::vector<SampleIdType
     
     const auto result_begin = std::max(result.get_begin(), region.get_begin());
     
-    auto result_size = static_cast<GenomicRegion::SizeType>(std::distance(begin(position_coverage), limit));
+    using SizeType = GenomicRegion::SizeType;
+    
+    auto result_size = static_cast<SizeType>(std::distance(begin(position_coverage), limit));
     
     if (begins_before(result, region)) {
-        result_size -= begin_distance(region, result);
+        result_size -= std::min(result_size, static_cast<SizeType>(begin_distance(region, result)));
     }
     
     return GenomicRegion {region.get_contig_name(), result_begin, result_begin + result_size};

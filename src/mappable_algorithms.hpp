@@ -1041,8 +1041,10 @@ auto segment_overlapped(ForwardIt first, ForwardIt last)
             }
             ++it;
         }
+        
         result.emplace_back(first, it);
-        first = it;
+        
+        first     = it;
         rightmost = it;
     }
     

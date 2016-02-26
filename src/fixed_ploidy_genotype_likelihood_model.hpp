@@ -76,6 +76,7 @@ namespace GenotypeModel
             case 2:
                 return std::accumulate(first_read, last_read, 0.0,
                                        [this, &genotype] (const auto curr, const auto& read) {
+                                           std::cout << log_probability_diploid(read, genotype) << std::endl;
                                            return curr + log_probability_diploid(read, genotype);
                                        });
             case 3:

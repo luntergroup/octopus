@@ -237,7 +237,7 @@ std::deque<VcfRecord> VariantCaller::call_variants(const GenomicRegion& call_reg
     
     candidate_generator_.clear();
     
-    //debug::print_candidates(candidates);
+    debug::print_candidates(candidates);
     
     if (!refcalls_requested() && candidates.empty()) {
         return result;
@@ -309,6 +309,8 @@ std::deque<VcfRecord> VariantCaller::call_variants(const GenomicRegion& call_reg
         pause_timer(haplotype_generation_timer);
         
         //std::cout << "there are " << haplotypes.size() << " final haplotypes" << '\n';
+        
+        //debug::print_read_haplotype_liklihoods(haplotypes, active_region_reads, haplotype_likelihoods);
         
         resume_timer(latent_timer);
         const auto caller_latents = infer_latents(haplotypes, haplotype_priors,

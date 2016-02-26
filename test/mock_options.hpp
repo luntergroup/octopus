@@ -61,18 +61,19 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         
         /* input regions */
         
+        "--use-one-based-indexing",
+        
         // for population
         
-        "--regions", "22",
-        
-        //"--regions", "Y",
-        //"--regions", "22:50000000-",
-        
-        //"--regions", "1:224,024,837-224,024,877", // NA12878_low_coverage edge case insertions
-        //"--regions", "1:874950-874951", // NA12878_low_coverage edge case insertions
+        //"--regions", "22:40012775",
+        //"--regions", "22:40016167",
+        "--regions", "22:40363000",
+        //"--regions", "22:40806940",
         
         //"--regions", "22:20656122-20656146", // NA12878_high_coverage causing memory spike
         
+        //"--regions", "1:224,024,837-224,024,877", // NA12878_low_coverage edge case insertions
+        //"--regions", "1:874950-874951", // NA12878_low_coverage edge case insertions
         //"--regions", "22:16,232,038-16,232,117", // NA12878_high_coverage VERY ineresting deletions!!
         //"--regions", "Y:13451184-13451197", // crazy Y haplotypes NA12878
         //"--regions", "22:37,276,961-37,277,045", // interesting dual deletions NA12878

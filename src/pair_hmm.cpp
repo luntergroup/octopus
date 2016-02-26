@@ -73,13 +73,14 @@ namespace
                const std::size_t offset_hint,
                const Model& model)
     {
-        const auto truth_alignment_size                = static_cast<int>(target.size() + 15);
-        const auto truncated_target_qualities          = truncate(target_qualities);
-        const auto truncated_truth_gap_open_penalities = truncate(truth_gap_open_penalties);
+        const auto truth_alignment_size = static_cast<int>(target.size() + 15);
         
         if (offset_hint + truth_alignment_size > truth.size()) {
             return std::numeric_limits<double>::lowest();
         }
+        
+        const auto truncated_target_qualities          = truncate(target_qualities);
+        const auto truncated_truth_gap_open_penalities = truncate(truth_gap_open_penalties);
         
         if (model.flank_clear) {
             const auto score = fastAlignmentRoutine(truth.data() + offset_hint,

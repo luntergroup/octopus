@@ -194,7 +194,7 @@ public:
     
     Builder() = default;
     
-    Builder& set_chromosome(const std::string& chromosome);
+    Builder& set_chromosome(std::string chromosome);
     Builder& set_position(SizeType position);
     Builder& set_id(IdType id);
     Builder& set_ref_allele(const char ref_allele);

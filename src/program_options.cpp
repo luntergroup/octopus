@@ -211,6 +211,8 @@ namespace Octopus
              "write output to file")
             ("contig-output-order", po::value<ContigOutputOrder>()->default_value(ContigOutputOrder::AsInReferenceIndex),
              "list of sample names to consider, one per line")
+            ("use-one-based-indexing", po::bool_switch()->default_value(false),
+             "uses one based indexing for input regions rather than zero based")
             //("log-file", po::value<std::string>(), "path of the output log file")
             ;
             
@@ -667,10 +669,11 @@ namespace Octopus
         
         for (const auto& contig_regions : contig_mapped_regions) {
             auto covered_contig_regions = extract_covered_regions(contig_regions.second);
-            
             result[contig_regions.first].insert(std::make_move_iterator(std::begin(covered_contig_regions)),
                                                 std::make_move_iterator(std::end(covered_contig_regions)));
         }
+        
+        result.rehash(result.size());
         
         return result;
     }
@@ -686,8 +689,7 @@ namespace Octopus
         auto input_regions = make_search_regions(regions);
         auto skipped = make_search_regions(skip_regions);
         
-        SearchRegions result {};
-        result.reserve(input_regions.size());
+        SearchRegions result {input_regions.size()};
         
         for (const auto& contig_regions : input_regions) {
             result.emplace(contig_regions.first,
@@ -719,6 +721,41 @@ namespace Octopus
         return result;
     }
     
+    auto transform_to_zero_based(std::vector<GenomicRegion>&& one_based_regions)
+    {
+        std::vector<GenomicRegion> result {};
+        result.reserve(one_based_regions.size());
+        
+        for (auto&& region : one_based_regions) {
+            result.emplace_back(shift(std::move(region), -1));
+        }
+        
+        return result;
+    }
+    
+    auto transform_to_zero_based(MappableSet<GenomicRegion>&& one_based_regions)
+    {
+        MappableSet<GenomicRegion> result {};
+        result.reserve(one_based_regions.size());
+        
+        for (auto&& region : one_based_regions) {
+            result.emplace(shift(std::move(region), -1));
+        }
+        
+        return result;
+    }
+    
+    auto transform_to_zero_based(SearchRegions&& one_based_search_regions)
+    {
+        SearchRegions result {one_based_search_regions.size()};
+        
+        for (auto&& contig_regions : one_based_search_regions) {
+            result.emplace(contig_regions.first, transform_to_zero_based(std::move(contig_regions.second)));
+        }
+        
+        return result;
+    }
+    
     SearchRegions get_search_regions(const po::variables_map& options, const ReferenceGenome& reference)
     {
         std::vector<GenomicRegion> skip_regions {};
@@ -734,24 +771,34 @@ namespace Octopus
             append(skip_regions, extract_regions_from_file(skip_path, reference));
         }
         
+        if (options.at("use-one-based-indexing").as<bool>()) {
+            skip_regions = transform_to_zero_based(std::move(skip_regions));
+        }
+        
         if (options.count("regions") == 0 && options.count("regions-file") == 0) {
             return extract_search_regions(reference, skip_regions);
-        } else {
-            std::vector<GenomicRegion> input_regions {};
-            
-            if (options.count("regions") == 1) {
-                const auto& region_strings = options.at("regions").as<std::vector<std::string>>();
-                auto parsed_regions = parse_regions(region_strings, reference);
-                append(input_regions, std::move(parsed_regions));
-            }
-            
-            if (options.count("regions-file") == 1) {
-                const auto& regions_path = options.at("regions-file").as<std::string>();
-                append(input_regions, extract_regions_from_file(regions_path, reference));
-            }
-            
-            return extract_search_regions(input_regions, skip_regions);
         }
+        
+        std::vector<GenomicRegion> input_regions {};
+        
+        if (options.count("regions") == 1) {
+            const auto& region_strings = options.at("regions").as<std::vector<std::string>>();
+            auto parsed_regions = parse_regions(region_strings, reference);
+            append(input_regions, std::move(parsed_regions));
+        }
+        
+        if (options.count("regions-file") == 1) {
+            const auto& regions_path = options.at("regions-file").as<std::string>();
+            append(input_regions, extract_regions_from_file(regions_path, reference));
+        }
+        
+        auto result = extract_search_regions(input_regions, skip_regions);
+        
+        if (options.at("use-one-based-indexing").as<bool>()) {
+            return transform_to_zero_based(std::move(result));
+        }
+        
+        return result;
     }
     
     ContigOutputOrder get_contig_output_order(const po::variables_map& options)

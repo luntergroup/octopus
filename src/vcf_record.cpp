@@ -370,9 +370,9 @@ std::ostream& operator<<(std::ostream& os, const VcfRecord& record)
 
 // VcfRecord::Builder
 
-VcfRecord::Builder& VcfRecord::Builder::set_chromosome(const std::string& chromosome)
+VcfRecord::Builder& VcfRecord::Builder::set_chromosome(std::string chromosome)
 {
-    chromosome_ = chromosome;
+    chromosome_ = std::move(chromosome);
     return *this;
 }
 

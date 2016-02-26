@@ -232,6 +232,10 @@ namespace Octopus
                            estimate_read_size);
         }
         
+        if (read_sizes.empty()) {
+            return sizeof(AlignedRead) + 300;
+        }
+        
         return static_cast<std::size_t>(Maths::mean(read_sizes) + Maths::stdev(read_sizes));
     }
     
@@ -448,6 +452,11 @@ namespace Octopus
         ContigCallingComponents& operator=(ContigCallingComponents&&)      = default;
     };
     
+    bool region_has_reads(const GenomicRegion& region, ContigCallingComponents& components)
+    {
+        return components.read_manager.get().count_reads(components.samples.get(), region) > 0;
+    }
+    
     void write_final_output_header(GenomeCallingComponents& components)
     {
         components.output.write(make_header(components.samples, components.contigs_in_output_order,
@@ -508,6 +517,11 @@ namespace Octopus
             cout << "Octopus: processing input region " << region << endl;
             
             auto subregion = propose_call_subregion(components, region);
+            
+            if (is_empty_region(subregion) && region_has_reads(region, components)) {
+                // This can happen if the input region is very small
+                subregion = region;
+            }
             
             while (!is_empty_region(subregion)) {
                 cout << "Octopus: processing subregion " << subregion << endl;
