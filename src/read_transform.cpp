@@ -21,7 +21,7 @@ namespace Octopus {
         return static_cast<unsigned>(transforms_.size());
     }
     
-    void ReadTransform::transform_read_(AlignedRead& read) const
+    void ReadTransform::transform_read(AlignedRead& read) const
     {
         for (const auto& transform : transforms_) {
             transform(read);

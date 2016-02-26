@@ -546,7 +546,7 @@ BOOST_AUTO_TEST_CASE(prune_unqiue_leaves_a_single_haplotype_which_contains_the_s
     
     add_reads(reads, candidate_generator);
     
-    auto candidates = candidate_generator.get_candidates(region);
+    auto candidates = candidate_generator.generate_candidates(region);
     
     BOOST_REQUIRE(candidates.size() < 20);
     
@@ -599,7 +599,7 @@ BOOST_AUTO_TEST_CASE(haplotype_tree_survives_serious_pruning)
     auto reads = read_manager.fetch_reads(sample, region);
     add_reads(reads, candidate_generator);
     
-    const auto candidates = candidate_generator.get_candidates(region);
+    const auto candidates = candidate_generator.generate_candidates(region);
     
     BOOST_REQUIRE(candidates.size() >= 15); // to make the test interesting
     

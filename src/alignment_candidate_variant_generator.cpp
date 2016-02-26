@@ -151,7 +151,7 @@ void AlignmentCandidateVariantGenerator::add_reads(MappableSet<AlignedRead>::con
     candidates_.shrink_to_fit();
 }
 
-std::vector<Variant> AlignmentCandidateVariantGenerator::get_candidates(const GenomicRegion& region)
+std::vector<Variant> AlignmentCandidateVariantGenerator::generate_candidates(const GenomicRegion& region)
 {
     using std::begin; using std::end; using std::cbegin; using std::cend;
     

@@ -136,6 +136,36 @@ inline void print_all_timers()
     std::cout << em_timer.format() << std::endl;
 }
 
+inline void print_caller_timers()
+{
+    std::cout << "init timer" << '\n';
+    std::cout << init_timer.format() << std::endl;
+    
+    std::cout << "haplotype generation timer" << '\n';
+    std::cout << haplotype_generation_timer.format() << std::endl;
+    
+    std::cout << "likelihood timer" << '\n';
+    std::cout << likelihood_timer.format() << std::endl;
+    
+    std::cout << "haplotype fitler timer" << '\n';
+    std::cout << haplotype_fitler_timer.format() << std::endl;
+    
+    std::cout << "prior model timer timer" << '\n';
+    std::cout << prior_model_timer.format() << std::endl;
+    
+    std::cout << "latent timer" << '\n';
+    std::cout << latent_timer.format() << std::endl;
+    
+    std::cout << "phasing timer" << '\n';
+    std::cout << phasing_timer.format() << std::endl;
+    
+    std::cout << "allele generator timer" << '\n';
+    std::cout << allele_generator_timer.format() << std::endl;
+    
+    std::cout << "calling timer" << '\n';
+    std::cout << calling_timer.format() << std::endl;
+}
+
 inline void print_model_timers()
 {
     std::cout << "genotype generation timer" << '\n';

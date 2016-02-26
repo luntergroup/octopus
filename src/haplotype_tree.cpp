@@ -193,6 +193,19 @@ void HaplotypeTree::prune_unique(const Haplotype& haplotype)
     if (haplotype_leaf_cache_.count(haplotype) > 0) {
         const auto possible_leafs = haplotype_leaf_cache_.equal_range(haplotype);
         
+//        // DEBUG
+//        if ( find_if(possible_leafs.first, possible_leafs.second,
+//                     [this, &haplotype] (const auto& leaf_pair) {
+//                         return is_branch_exact_haplotype(leaf_pair.second, haplotype);
+//                     }) == possible_leafs.second)
+//        {
+//            auto i = is_branch_exact_haplotype(possible_leafs.first->second, haplotype);
+//             print_alleles(haplotype); std::cout << std::endl;
+//            print_alleles(extract_haplotype(possible_leafs.first->second, haplotype.get_region())); std::cout << std::endl;
+//             exit(0);
+//        }
+//        // END DEBUG
+        
         const auto leaf_to_keep_itr = find_if(possible_leafs.first, possible_leafs.second,
                                               [this, &haplotype] (const auto& leaf_pair) {
                                                   return is_branch_exact_haplotype(leaf_pair.second, haplotype);
@@ -246,6 +259,8 @@ void HaplotypeTree::prune_unique(const Haplotype& haplotype)
 void HaplotypeTree::remove(const GenomicRegion& region)
 {
     if (empty()) return;
+    
+    std::cout << "removing " << region << std::endl;
     
     const auto tree_region = get_region();
     

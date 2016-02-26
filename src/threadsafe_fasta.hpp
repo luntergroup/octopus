@@ -30,8 +30,10 @@ public:
     using SequenceType   = ReferenceGenomeImpl::SequenceType;
     
     ThreadsafeFasta() = delete;
+    
     explicit ThreadsafeFasta(Path fasta_path);
     explicit ThreadsafeFasta(Path fasta_path, Path fasta_index_path);
+    
     ~ThreadsafeFasta() noexcept override = default;
     
     ThreadsafeFasta(const ThreadsafeFasta&)            = default;

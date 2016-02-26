@@ -59,7 +59,7 @@ BOOST_AUTO_TEST_CASE(advance_region_always_gives_a_region_more_advanced_than_the
     
     add_reads(reads, candidate_generator);
     
-    const auto candidates = make_mappable_set(candidate_generator.get_candidates(region));
+    const auto candidates = make_mappable_set(candidate_generator.generate_candidates(region));
     
     GenomeWalker walker1 {3, 5};
     
@@ -88,7 +88,7 @@ BOOST_AUTO_TEST_CASE(a_walker_with_no_indicators_never_give_regions_with_shared_
     
     add_reads(reads, candidate_generator);
     
-    const auto candidates = make_mappable_set(candidate_generator.get_candidates(region));
+    const auto candidates = make_mappable_set(candidate_generator.generate_candidates(region));
     
     GenomeWalker walker1 {0, 1};
     

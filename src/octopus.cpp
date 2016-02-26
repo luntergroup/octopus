@@ -539,7 +539,7 @@ namespace Octopus
         std::cout << "Octopus: total number of calls = " << num_calls << std::endl;
         
         #ifdef BENCHMARK
-        print_all_timers();
+        print_caller_timers();
         #endif
     }
     
@@ -572,6 +572,7 @@ namespace Octopus
                                              const GenomeCallingComponents& components)
     {
         auto path = *components.temp_directory;
+        
         const auto& contig = region.get_contig_name();
         const auto begin   = std::to_string(region.get_begin());
         const auto end     = std::to_string(region.get_end());
@@ -593,9 +594,11 @@ namespace Octopus
     {
         std::vector<VcfWriter> result {};
         result.reserve(components.contigs_in_output_order.size());
+        
         for (const auto& contig : components.contigs_in_output_order) {
             result.emplace_back(create_unique_temp_output_file(contig, components));
         }
+        
         return result;
     }
     

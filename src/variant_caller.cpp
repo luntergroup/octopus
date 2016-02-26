@@ -233,11 +233,11 @@ std::deque<VcfRecord> VariantCaller::call_variants(const GenomicRegion& call_reg
     
     const auto candidate_region = calculate_candidate_region(call_region, reads, candidate_generator_);
     
-    const auto candidates = unique_left_align(candidate_generator_.get_candidates(candidate_region), reference_);
+    const auto candidates = unique_left_align(candidate_generator_.generate_candidates(candidate_region), reference_);
     
     candidate_generator_.clear();
     
-    debug::print_candidates(candidates);
+    //debug::print_candidates(candidates);
     
     if (!refcalls_requested() && candidates.empty()) {
         return result;
@@ -266,7 +266,7 @@ std::deque<VcfRecord> VariantCaller::call_variants(const GenomicRegion& call_reg
         std::tie(haplotypes, active_region) = generator.progress();
         pause_timer(haplotype_generation_timer);
         
-        //std::cout << "active region is " << active_region << '\n';
+        std::cout << "active region is " << active_region << '\n';
         
         if (is_after(active_region, call_region) || haplotypes.empty()) {
             break;

@@ -42,7 +42,7 @@ public:
 private:
     std::vector<ReadTransformation> transforms_;
     
-    void transform_read_(AlignedRead& read) const;
+    void transform_read(AlignedRead& read) const;
 };
 
 // private methods
@@ -50,7 +50,7 @@ private:
 template <typename InputIterator>
 void ReadTransform::transform_reads(InputIterator first, InputIterator last) const
 {
-    std::for_each(first, last, [this] (auto& read) { transform_read_(read); });
+    std::for_each(first, last, [this] (auto& read) { transform_read(read); });
 }
 
 // non-member methods

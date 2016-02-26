@@ -36,7 +36,7 @@ public:
     OnlineCandidateVariantGenerator(OnlineCandidateVariantGenerator&&)                 = default;
     OnlineCandidateVariantGenerator& operator=(OnlineCandidateVariantGenerator&&)      = default;
     
-    std::vector<Variant> get_candidates(const GenomicRegion& region) override;
+    std::vector<Variant> generate_candidates(const GenomicRegion& region) override;
 
 private:
     std::reference_wrapper<const ReferenceGenome> reference_;

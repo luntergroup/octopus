@@ -127,7 +127,8 @@ CachingFasta::SequenceType CachingFasta::do_fetch_sequence(const GenomicRegion& 
     
     auto fetched_sequence = fasta_.fetch_sequence(fetch_region);
     
-    auto result = get_subsequence(region.get_contig_region(), fetch_region.get_contig_region(), fetched_sequence);
+    auto result = get_subsequence(region.get_contig_region(), fetch_region.get_contig_region(),
+                                  fetched_sequence);
     
     add_sequence_to_cache(std::move(fetched_sequence), fetch_region);
     

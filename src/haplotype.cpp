@@ -184,7 +184,23 @@ bool Haplotype::contains(const ContigAllele& allele) const
 
 bool Haplotype::contains_exact(const ContigAllele& allele) const
 {
-    return has_exact_overlap(explicit_alleles_, allele, MappableRangeOrder::BidirectionallySorted);
+    if (!::contains(region_.get_contig_region(), allele)) return false;
+    
+    if (::contains(get_region_bounded_by_explicit_alleles(), allele)) {
+        return has_exact_overlap(explicit_alleles_, allele, MappableRangeOrder::BidirectionallySorted);
+    }
+    
+    if (is_cached_sequence_good()) {
+        const auto offset = begin_distance(allele, region_.get_contig_region());
+        
+        const auto it = std::next(std::cbegin(cached_sequence_), offset);
+        
+        if (std::distance(it, std::cend(cached_sequence_)) < sequence_size(allele)) return false;
+        
+        return std::equal(std::cbegin(allele.get_sequence()), std::cend(allele.get_sequence()), it);
+    }
+    
+    return get_reference_sequence(mapped_region(allele)) == allele.get_sequence();
 }
 
 bool Haplotype::contains(const Allele& allele) const
@@ -223,7 +239,7 @@ Haplotype::SequenceType Haplotype::get_sequence(const ContigRegion& region) cons
     
     const auto region_bounded_by_alleles = get_region_bounded_by_explicit_alleles();
     
-    if (is_before(region, region_bounded_by_alleles) || is_after(region, region_bounded_by_alleles)) {
+    if (!overlaps(region, region_bounded_by_alleles)) {
         return get_reference_sequence(region);
     }
     

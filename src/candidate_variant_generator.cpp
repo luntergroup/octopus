@@ -50,13 +50,12 @@ void CandidateVariantGenerator::add_reads(MappableSet<AlignedRead>::const_iterat
     }
 }
 
-std::vector<Variant> CandidateVariantGenerator::get_candidates(const GenomicRegion& region)
+std::vector<Variant> CandidateVariantGenerator::generate_candidates(const GenomicRegion& region)
 {
     std::vector<Variant> result {};
-    result.reserve(256);
     
     for (auto& generator : generators_) {
-        auto generator_result = generator->get_candidates(region); // results are sorted
+        auto generator_result = generator->generate_candidates(region); // results are sorted
         const auto it = result.insert(std::end(result),
                                       std::make_move_iterator(std::begin(generator_result)),
                                       std::make_move_iterator(std::end(generator_result)));

@@ -160,6 +160,9 @@ namespace debug {
 
 namespace
 {
+
+// allele posterior calculations
+
 auto marginalise(const SampleGenotypePosteriorMap& genotype_posteriors,
                  const std::deque<bool>& contained_alleles)
 {
@@ -233,43 +236,7 @@ AllelePosteriorMap compute_allele_posteriors(const GenotypePosteriorMap& genotyp
     return result;
 }
 
-auto call_genotype(const SampleGenotypePosteriorMap& genotype_posteriors)
-{
-    return *std::max_element(std::cbegin(genotype_posteriors), std::cend(genotype_posteriors),
-                             [] (const auto& lhs, const auto& rhs) {
-                                 return lhs.second < rhs.second;
-                             });
-}
-
-double marginalise(const Genotype<Allele>& genotype, const SampleGenotypePosteriorMap& genotype_posteriors)
-{
-    return std::accumulate(std::cbegin(genotype_posteriors), std::cend(genotype_posteriors), 0.0,
-                           [&genotype] (const double curr, const auto& p) {
-                               return curr + ((contains(p.first, genotype)) ? p.second : 0.0);
-                           });
-}
-
-GenotypeCalls call_genotypes(const GenotypePosteriorMap& genotype_posteriors,
-                             const std::vector<GenomicRegion>& variant_regions)
-{
-    GenotypeCalls result(variant_regions.size());
-    
-    for (const auto& sample_genotype_posteriors : genotype_posteriors) {
-        const auto& sample_genotype_call = call_genotype(sample_genotype_posteriors.second);
-        
-        for (size_t i {0}; i < variant_regions.size(); ++i) {
-            auto spliced_genotype = splice<Allele>(sample_genotype_call.first, variant_regions[i]);
-            
-            const auto posterior = marginalise(spliced_genotype, sample_genotype_posteriors.second);
-            
-            result[i].emplace(std::piecewise_construct,
-                              std::forward_as_tuple(sample_genotype_posteriors.first),
-                              std::forward_as_tuple(std::move(spliced_genotype), posterior));
-        }
-    }
-    
-    return result;
-}
+// variant calling
 
 double max_posterior(const Allele& allele, const AllelePosteriorMap& allele_posteriors)
 {
@@ -369,6 +336,48 @@ void parsimonise_variant_calls(VariantCallBlocks& variant_calls, const Reference
         segment_calls.variants = parsimonise_together(segment_calls.variants, reference);
     }
 }
+
+// variant genotype calling
+
+auto call_genotype(const SampleGenotypePosteriorMap& genotype_posteriors)
+{
+    return *std::max_element(std::cbegin(genotype_posteriors), std::cend(genotype_posteriors),
+                             [] (const auto& lhs, const auto& rhs) {
+                                 return lhs.second < rhs.second;
+                             });
+}
+
+double marginalise(const Genotype<Allele>& genotype, const SampleGenotypePosteriorMap& genotype_posteriors)
+{
+    return std::accumulate(std::cbegin(genotype_posteriors), std::cend(genotype_posteriors), 0.0,
+                           [&genotype] (const double curr, const auto& p) {
+                               return curr + ((contains(p.first, genotype)) ? p.second : 0.0);
+                           });
+}
+
+GenotypeCalls call_genotypes(const GenotypePosteriorMap& genotype_posteriors,
+                             const std::vector<GenomicRegion>& variant_regions)
+{
+    GenotypeCalls result(variant_regions.size());
+    
+    for (const auto& sample_genotype_posteriors : genotype_posteriors) {
+        const auto& sample_genotype_call = call_genotype(sample_genotype_posteriors.second);
+        
+        for (size_t i {0}; i < variant_regions.size(); ++i) {
+            auto spliced_genotype = splice<Allele>(sample_genotype_call.first, variant_regions[i]);
+            
+            const auto posterior = marginalise(spliced_genotype, sample_genotype_posteriors.second);
+            
+            result[i].emplace(std::piecewise_construct,
+                              std::forward_as_tuple(sample_genotype_posteriors.first),
+                              std::forward_as_tuple(std::move(spliced_genotype), posterior));
+        }
+    }
+    
+    return result;
+}
+
+// reference genotype calling
 
 double marginalise_reference_genotype(const Allele& reference_allele,
                                       const SampleGenotypePosteriorMap& sample_genotype_posteriors)
@@ -634,17 +643,17 @@ PopulationVariantCaller::call_variants(const std::vector<Variant>& candidates,
     
     const auto& genotype_posteriors = *dlatents->genotype_posteriors_;
     
-    debug::print_genotype_posteriors(genotype_posteriors);
+    //debug::print_genotype_posteriors(genotype_posteriors);
     
     const auto allele_posteriors = compute_allele_posteriors(genotype_posteriors, callable_alleles);
     
-    debug::print_allele_posteriors(allele_posteriors);
+    //debug::print_allele_posteriors(allele_posteriors);
     
     auto variant_calls = call_blocked_variants(candidates, allele_posteriors, min_variant_posterior_);
     
-    //debug::print_variant_calls(variant_calls);
-    
     parsimonise_variant_calls(variant_calls, reference_);
+    
+    //debug::print_variant_calls(variant_calls);
     
     const auto called_regions = extract_regions(variant_calls);
     
@@ -652,7 +661,7 @@ PopulationVariantCaller::call_variants(const std::vector<Variant>& candidates,
     
     set_phasings(variant_genotype_calls, phase_set, called_regions); // TODO
     
-    debug::print_genotype_calls(variant_genotype_calls);
+    //debug::print_genotype_calls(variant_genotype_calls);
     
     auto candidate_ref_alleles = generate_candidate_reference_alleles(callable_alleles, called_regions,
                                                                       candidates, refcall_type_);

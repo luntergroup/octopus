@@ -25,9 +25,9 @@ namespace Octopus
     class ICandidateVariantGenerator
     {
     public:
-        // pure virtual functions
-        virtual std::vector<Variant> get_candidates(const GenomicRegion&) = 0;
         virtual ~ICandidateVariantGenerator() = default;
+        
+        virtual std::vector<Variant> generate_candidates(const GenomicRegion& region) = 0;
         
         virtual bool requires_reads() const noexcept { return false; };
         

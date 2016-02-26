@@ -48,7 +48,7 @@ BOOST_AUTO_TEST_CASE(CandidateGeneratorBuilder_can_construct_candidate_generator
     // TODO: more checks
 }
 
-BOOST_AUTO_TEST_CASE(get_candidates_returns_sorted_and_unique_candidates)
+BOOST_AUTO_TEST_CASE(generate_candidates_returns_sorted_and_unique_candidates)
 {
     BOOST_REQUIRE(test_file_exists(human_reference_fasta));
     BOOST_REQUIRE(test_file_exists(NA12878_low_coverage));
@@ -72,7 +72,7 @@ BOOST_AUTO_TEST_CASE(get_candidates_returns_sorted_and_unique_candidates)
     
     add_reads(reads, candidate_generator);
     
-    auto candidates = candidate_generator.get_candidates(region);
+    auto candidates = candidate_generator.generate_candidates(region);
     
     BOOST_REQUIRE(std::is_sorted(std::cbegin(candidates), std::cend(candidates)));
     BOOST_CHECK(std::unique(std::begin(candidates), std::end(candidates)) == std::end(candidates));
@@ -97,7 +97,7 @@ BOOST_AUTO_TEST_CASE(AlignmentCandidateVariantGenerator_ignores_snps_with_low_ba
     
     add_reads(reads, candidate_generator);
     
-    auto candidates = candidate_generator.get_candidates(region);
+    auto candidates = candidate_generator.generate_candidates(region);
     
     BOOST_CHECK(candidates.empty());
 }
@@ -134,7 +134,7 @@ BOOST_AUTO_TEST_CASE(can_specify_the_maximum_size_of_candidates)
     
     add_reads(reads, candidate_generator);
     
-    auto candidates = candidate_generator.get_candidates(region);
+    auto candidates = candidate_generator.generate_candidates(region);
     
     BOOST_CHECK(std::all_of(std::cbegin(candidates), std::cend(candidates),
                             [=] (const auto& candidate) { return region_size(candidate) <= max_variant_size; }));
@@ -160,7 +160,7 @@ BOOST_AUTO_TEST_CASE(only_insertions_are_included_when_the_max_variant_size_is_z
     
     add_reads(reads, candidate_generator);
     
-    auto candidates = candidate_generator.get_candidates(region);
+    auto candidates = candidate_generator.generate_candidates(region);
     
     BOOST_CHECK(std::all_of(std::cbegin(candidates), std::cend(candidates),
                             [] (const auto& candidate) { return is_insertion(candidate); }));
@@ -185,7 +185,7 @@ BOOST_AUTO_TEST_CASE(AlignmentCandidateVariantGenerator_includes_all_alleles_in_
     
     add_reads(reads, candidate_generator);
     
-    auto candidates = candidate_generator.get_candidates(region);
+    auto candidates = candidate_generator.generate_candidates(region);
 }
 
 BOOST_AUTO_TEST_CASE(OnlineCandidateVariantGenerator_can_fetch_variants_from_online_web_service)
@@ -198,7 +198,7 @@ BOOST_AUTO_TEST_CASE(OnlineCandidateVariantGenerator_can_fetch_variants_from_onl
     
     Octopus::OnlineCandidateVariantGenerator candidate_generator {human};
     
-    auto candidates = candidate_generator.get_candidates(region);
+    auto candidates = candidate_generator.generate_candidates(region);
     
     // TODO
 }
@@ -218,7 +218,7 @@ BOOST_AUTO_TEST_CASE(ExternalCandidateVariantGenerator_gets_candidates_from_vcf)
     
     const auto region = *parse_region("X:10,095,000-10,100,000", human);
     
-    auto candidates = generator.get_candidates(region);
+    auto candidates = generator.generate_candidates(region);
     
     BOOST_CHECK(candidates.size() == 16);
 }

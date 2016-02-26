@@ -61,14 +61,11 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         
         /* input regions */
         
-        "--use-one-based-indexing",
+        //"--use-one-based-indexing",
         
         // for population
         
-        //"--regions", "22:40012775",
-        //"--regions", "22:40016167",
-        "--regions", "22:40363000",
-        //"--regions", "22:40806940",
+        "--regions", "16:46391700-46392000", // BUG: Bad tree removal region at 16:46391683-46391693
         
         //"--regions", "22:20656122-20656146", // NA12878_high_coverage causing memory spike
         

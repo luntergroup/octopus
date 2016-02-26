@@ -398,7 +398,7 @@ namespace Octopus
                                                                               haplotype_likelihoods);
         pause_timer(genotype_likelihood_timer);
         
-        debug::print_genotype_log_likelihoods(genotypes, genotype_log_likilhoods);
+        //debug::print_genotype_log_likelihoods(genotypes, genotype_log_likilhoods);
         
         resume_timer(prior_count_timer);
         auto haplotype_prior_count_map = compute_haplotype_prior_counts(haplotype_priors);

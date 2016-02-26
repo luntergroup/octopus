@@ -49,11 +49,15 @@ public:
     using SequenceType   = ReferenceGenomeImpl::SequenceType;
     
     CachingFasta() = delete;
+    
     explicit CachingFasta(Path fasta_path);
     explicit CachingFasta(Path fasta_path, SizeType max_cache_size);
     explicit CachingFasta(Path fasta_path, Path fasta_index_path);
-    explicit CachingFasta(Path fasta_path, Path fasta_index_path, SizeType max_cache_size);
-    explicit CachingFasta(Path fasta_path, SizeType max_cache_size, double locality_bias, double forward_bias);
+    explicit CachingFasta(Path fasta_path, Path fasta_index_path,
+                          SizeType max_cache_size);
+    explicit CachingFasta(Path fasta_path, SizeType max_cache_size,
+                          double locality_bias, double forward_bias);
+    
     ~CachingFasta() noexcept override = default;
     
     CachingFasta(const CachingFasta&)            = default;
@@ -82,11 +86,11 @@ private:
     
     SizeType genome_size_;
     
-    const SizeType max_cache_size_ = 10'000'000;
-    mutable SizeType current_cache_size_   = 0;
+    SizeType max_cache_size_             = 10'000'000;
+    mutable SizeType current_cache_size_ = 0;
     
-    const double locality_bias_ = 0.5;
-    const double forward_bias_  = 0.8;
+    double locality_bias_ = 0.5;
+    double forward_bias_  = 0.8;
     
     void setup_cache();
     SizeType get_remaining_cache_size() const;

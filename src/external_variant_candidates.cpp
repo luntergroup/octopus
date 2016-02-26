@@ -65,7 +65,7 @@ std::vector<Variant> fetch_variants(const GenomicRegion& region, VcfReader& read
     return result;
 }
 
-std::vector<Variant> ExternalCandidateVariantGenerator::get_candidates(const GenomicRegion& region)
+std::vector<Variant> ExternalCandidateVariantGenerator::generate_candidates(const GenomicRegion& region)
 {
     return fetch_variants(region, *reader_);
 }

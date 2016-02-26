@@ -12,6 +12,7 @@
 #include <deque>
 #include <iterator>
 #include <cassert>
+#include <numeric>
 
 #include "variant.hpp"
 #include "haplotype.hpp"
@@ -208,23 +209,42 @@ namespace Octopus
         return is_empty_region(encompassing_region(overlapped));
     }
     
+    template <typename Range>
     const GenomicRegion& resolve_active_region(const GenomicRegion& active_region,
-                                               const MappableSet<Allele>& alleles)
+                                               const Range& alleles)
     {
-        const auto overlapped = alleles.overlap_range(active_region);
-        
-        if (is_solo_active_insertion(active_region, overlapped)) {
-            return mapped_region(overlapped.front());
+        if (is_solo_active_insertion(active_region, alleles)) {
+            return mapped_region(alleles.front());
         }
         
         return active_region;
     }
     
+    template <typename Range>
+    auto sum_indel_sizes(const Range& alleles)
+    {
+        return std::accumulate(std::cbegin(alleles), std::cend(alleles), GenomicRegion::SizeType {0},
+                               [] (const auto curr, const Allele& allele) {
+                                   if (is_insertion(allele)) {
+                                       return curr + sequence_size(allele);
+                                   } else if (is_deletion(allele)) {
+                                       return curr + region_size(allele);
+                                   }
+                                   return curr;
+                               });
+    }
+    
     GenomicRegion HaplotypeGenerator::calculate_haplotype_region() const
     {
-        constexpr GenomicRegion::SizeType additional_padding {20};
+        const auto overlapped = alleles_.overlap_range(current_active_region_);
         
-        const auto& lookup_region = resolve_active_region(current_active_region_, alleles_);
+        // We want to keep haplotypes as small as possible, while allowing sufficient flanking
+        // reference sequence for full read re-mapping and alignment (i.e. the read must be
+        // contained by the haplotype). Note the sum of the indel sizes may not be sufficient
+        // as the candidate generator may not propopse all variation in the original reads.
+        const auto additional_padding = 2 * sum_indel_sizes(overlapped) + 30;
+        
+        const auto& lookup_region = resolve_active_region(current_active_region_, overlapped);
         
         const auto lhs_read = *leftmost_overlapped(reads_.get(), lookup_region);
         const auto rhs_read = *rightmost_overlapped(reads_.get(), lookup_region);

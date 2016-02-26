@@ -27,7 +27,7 @@
 
 char* stringcopy(const std::string& source)
 {
-    auto result = (char*) malloc(source.length() + 1);
+    auto result = (char*) std::malloc(source.length() + 1);
     std::strcpy(result, source.c_str());
     return result;
 }
@@ -318,22 +318,23 @@ void HtslibBcfFacade::write_record(const VcfRecord& record)
         throw std::runtime_error {"required contig header line missing for contig " + contig};
     }
     
-    auto r = bcf_init();
+    auto hts_record = bcf_init();
     
-    set_chrom(header_.get(), r, contig);
-    set_pos(r, record.get_position());
-    set_id(r, record.get_id());
-    set_alleles(header_.get(), r, record.get_ref_allele(), record.get_alt_alleles());
-    set_qual(r, record.get_quality());
-    set_filters(header_.get(), r, record.get_filters());
-    set_info(header_.get(), r, record);
+    set_chrom(header_.get(), hts_record, contig);
+    set_pos(hts_record, record.get_position());
+    set_id(hts_record, record.get_id());
+    set_alleles(header_.get(), hts_record, record.get_ref_allele(), record.get_alt_alleles());
+    set_qual(hts_record, record.get_quality());
+    set_filters(header_.get(), hts_record, record.get_filters());
+    set_info(header_.get(), hts_record, record);
     
     if (record.num_samples() > 0) {
-        set_samples(header_.get(), r, record);
+        set_samples(header_.get(), hts_record, record);
     }
     
-    bcf_write(file_.get(), header_.get(), r);
-    bcf_destroy(r);
+    bcf_write(file_.get(), header_.get(), hts_record);
+    
+    bcf_destroy(hts_record);
 }
 
 // private and non-member methods
@@ -390,7 +391,7 @@ auto get_ref(const bcf1_t* record)
 void set_alleles(const bcf_hdr_t* header, bcf1_t* record, const VcfRecord::SequenceType& ref,
                  const std::vector<VcfRecord::SequenceType>& alts)
 {
-    auto alleles = (char**) malloc(sizeof(char*) * (alts.size() + 1));
+    auto alleles = (char**) std::malloc(sizeof(char*) * (alts.size() + 1));
     
     alleles[0] = stringcopy(ref);
     
@@ -494,10 +495,10 @@ auto get_info(const bcf_hdr_t* header, bcf1_t* record)
         result.emplace(key, std::move(values));
     }
     
-    free(intinfo);
-    free(floatinfo);
-    free(stringinfo);
-    free(flaginfo);
+    std::free(intinfo);
+    std::free(floatinfo);
+    std::free(stringinfo);
+    std::free(flaginfo);
     
     return result;
 }
@@ -511,7 +512,7 @@ void set_info(const bcf_hdr_t* header, bcf1_t* dest, const VcfRecord& source)
         switch (bcf_hdr_id2type(header, BCF_HL_INFO, bcf_hdr_id2int(header, BCF_DT_ID, key.c_str()))) {
             case BCF_HT_INT:
             {
-                auto vals = (int*) malloc(sizeof(int) * num_values);
+                auto vals = (int*) std::malloc(sizeof(int) * num_values);
                 std::transform(std::cbegin(values), std::cend(values), vals,
                                [] (const auto& v) { return std::stoi(v); });
                 bcf_update_info_int32(header, dest, key.c_str(), vals, num_values);
@@ -519,7 +520,7 @@ void set_info(const bcf_hdr_t* header, bcf1_t* dest, const VcfRecord& source)
             }
             case BCF_HT_REAL:
             {
-                auto vals = (float*) malloc(sizeof(float) * num_values);
+                auto vals = (float*) std::malloc(sizeof(float) * num_values);
                 std::transform(std::cbegin(values), std::cend(values), vals,
                                [] (const auto& v) { return std::stof(v); });
                 bcf_update_info_float(header, dest, key.c_str(), vals, num_values);
@@ -527,7 +528,7 @@ void set_info(const bcf_hdr_t* header, bcf1_t* dest, const VcfRecord& source)
             }
             case BCF_HT_STR:
             {
-                auto vals = (char**) malloc(sizeof(char*) * num_values);
+                auto vals = (char**) std::malloc(sizeof(char*) * num_values);
                 std::transform(std::cbegin(values), std::cend(values), vals, stringcopy);
                 bcf_update_info_string(header, dest, key.c_str(), (const char**) vals);
                 break;
@@ -584,7 +585,7 @@ auto get_samples(const bcf_hdr_t* header, bcf1_t* record, const std::vector<VcfR
             genotypes.emplace(header->samples[sample], std::make_pair(std::move(alleles), bcf_gt_is_phased(g)));
         }
         
-        free(gt);
+        std::free(gt);
     }
     
     std::unordered_map<VcfRecord::SampleIdType, std::unordered_map<VcfRecord::KeyType, std::vector<std::string>>> other_data {};
@@ -630,9 +631,9 @@ auto get_samples(const bcf_hdr_t* header, bcf1_t* record, const std::vector<VcfR
         }
     }
     
-    free(intformat);
-    free(floatformat);
-    free(stringformat);
+    std::free(intformat);
+    std::free(floatformat);
+    std::free(stringformat);
     
     return std::make_pair(std::move(genotypes), std::move(other_data));
 }
@@ -651,7 +652,7 @@ void set_samples(const bcf_hdr_t* header, bcf1_t* dest, const VcfRecord& source)
     if (source.has_genotypes()) {
         const auto ngt = num_samples * static_cast<int>(source.sample_ploidy());
         
-        auto gts = (int*) malloc(sizeof(int) * ngt);
+        auto gts = (int*) std::malloc(sizeof(int) * ngt);
         
         unsigned i {0};
         for (const auto& sample : samples) {
@@ -681,7 +682,7 @@ void set_samples(const bcf_hdr_t* header, bcf1_t* dest, const VcfRecord& source)
         switch (bcf_hdr_id2type(header, BCF_HL_FMT, bcf_hdr_id2int(header, BCF_DT_ID, key.c_str()))) {
             case BCF_HT_INT:
             {
-                auto vals = (int*) malloc(sizeof(int) * num_values);
+                auto vals = (int*) std::malloc(sizeof(int) * num_values);
                 unsigned i {};
                 for (const auto& sample : samples) {
                     auto values = source.get_sample_value(sample, key);
@@ -695,7 +696,7 @@ void set_samples(const bcf_hdr_t* header, bcf1_t* dest, const VcfRecord& source)
             }
             case BCF_HT_REAL:
             {
-                auto vals = (float*) malloc(sizeof(float) * num_values);
+                auto vals = (float*) std::malloc(sizeof(float) * num_values);
                 unsigned i {};
                 for (const auto& sample : samples) {
                     auto values = source.get_sample_value(sample, key);
@@ -709,7 +710,7 @@ void set_samples(const bcf_hdr_t* header, bcf1_t* dest, const VcfRecord& source)
             }
             case BCF_HT_STR:
             {
-                auto vals = (char**) malloc(sizeof(char*) * num_values);
+                auto vals = (char**) std::malloc(sizeof(char*) * num_values);
                 unsigned i {};
                 for (const auto& sample : samples) {
                     auto values = source.get_sample_value(sample, key);

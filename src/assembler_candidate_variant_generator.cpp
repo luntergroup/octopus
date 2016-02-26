@@ -47,7 +47,7 @@ void AssemblerCandidateVariantGenerator::add_reads(MappableSet<AlignedRead>::con
     std::for_each(first, last, [this] (const auto& read ) { add_read(read); });
 }
 
-std::vector<Variant> AssemblerCandidateVariantGenerator::get_candidates(const GenomicRegion& region)
+std::vector<Variant> AssemblerCandidateVariantGenerator::generate_candidates(const GenomicRegion& region)
 {
     auto reference_sequence = reference_.get().get_sequence(region);
     assembler_.add_reference_sequence(region, reference_sequence);

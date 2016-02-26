@@ -31,8 +31,10 @@ public:
     using SequenceType   = ReferenceGenomeImpl::SequenceType;
     
     Fasta() = delete;
+    
     explicit Fasta(Path fasta_path);
     explicit Fasta(Path fasta_path, Path fasta_index_path);
+    
     ~Fasta() noexcept override = default;
     
     Fasta(const Fasta&)            = default;

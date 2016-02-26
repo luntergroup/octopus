@@ -133,20 +133,9 @@ double compute_log_conditional_probability(const std::string& truth, const std::
     
     static const auto phred_to_ln_probability = make_phred_to_ln_prob_lookup<NUM_QUALITIES>();
     
-    if (target.size() != target_qualities.size()) {
-        throw std::logic_error {"compute_log_conditional_probability: target size does not match"
-                                " target_qualities size"};
-    }
-    
-    if (truth.size() != truth_gap_open_penalties.size()) {
-        throw std::logic_error {"compute_log_conditional_probability: truth size does not match"
-                                " target_gap_open_penalties size"};
-    }
-    
-    if (std::max(truth.size(), target.size()) <= target_offset_into_truth_hint) {
-        throw std::logic_error {"compute_log_conditional_probability: offset hint is not"
-                                " in range"};
-    }
+    assert(target.size() == target_qualities.size());
+    assert(truth.size() == truth_gap_open_penalties.size());
+    assert(std::max(truth.size(), target.size()) > target_offset_into_truth_hint);
     
     if (target_offset_into_truth_hint + target.size() > truth.size()) {
         return std::numeric_limits<double>::lowest();

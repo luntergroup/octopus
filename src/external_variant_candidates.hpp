@@ -35,7 +35,7 @@ public:
     ExternalCandidateVariantGenerator(ExternalCandidateVariantGenerator&&)                 = default;
     ExternalCandidateVariantGenerator& operator=(ExternalCandidateVariantGenerator&&)      = default;
     
-    std::vector<Variant> get_candidates(const GenomicRegion& region) override;
+    std::vector<Variant> generate_candidates(const GenomicRegion& region) override;
     
 private:
     std::shared_ptr<VcfReader> reader_;

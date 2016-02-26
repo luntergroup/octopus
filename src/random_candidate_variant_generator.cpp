@@ -37,7 +37,7 @@ namespace Octopus {
         max_read_size_ = region_size(*largest_mappable(first, last));
     }
     
-    std::vector<Variant> RandomCandidateVariantGenerator::get_candidates(const GenomicRegion& region)
+    std::vector<Variant> RandomCandidateVariantGenerator::generate_candidates(const GenomicRegion& region)
     {
         auto num_positions = region_size(region);
         

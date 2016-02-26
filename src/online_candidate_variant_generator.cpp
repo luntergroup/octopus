@@ -22,7 +22,7 @@ reference_ {reference},
 max_variant_size_ {max_variant_size}
 {}
 
-std::vector<Variant> OnlineCandidateVariantGenerator::get_candidates(const GenomicRegion& region)
+std::vector<Variant> OnlineCandidateVariantGenerator::generate_candidates(const GenomicRegion& region)
 {
     namespace http = boost::network::http;
     

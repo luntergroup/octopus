@@ -43,7 +43,7 @@ public:
     void add_reads(MappableSet<AlignedRead>::const_iterator first,
                    MappableSet<AlignedRead>::const_iterator last) override;
     
-    std::vector<Variant> get_candidates(const GenomicRegion& region) override;
+    std::vector<Variant> generate_candidates(const GenomicRegion& region) override;
     
     void reserve(size_t n) override;
     void clear() override;
