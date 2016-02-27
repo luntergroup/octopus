@@ -25,7 +25,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         
         "--working-directory", "~/",
         
-        "--target-read-buffer-size", "0.5",
+        "--target-read-buffer-size", "1.0",
         //"--threaded",
         
         //"--contig-output-order", "as-in-reference-reversed",
@@ -65,7 +65,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         
         // for population
         
-        "--regions", "16:46391700-46392000", // BUG: Bad tree removal region at 16:46391683-46391693
+        //"--regions", "22",
         
         //"--regions", "22:20656122-20656146", // NA12878_high_coverage causing memory spike
         

@@ -85,7 +85,7 @@ HaplotypeTree& HaplotypeTree::extend(const Allele& allele)
     return extend(demote(allele));
 }
 
-GenomicRegion HaplotypeTree::get_region() const
+GenomicRegion HaplotypeTree::encompassing_region() const
 {
     if (empty()) {
         throw std::runtime_error {"HaplotypeTree::get_region called on empty tree"};
@@ -100,13 +100,13 @@ GenomicRegion HaplotypeTree::get_region() const
     const auto rightmost = *std::max_element(std::cbegin(haplotype_leafs_), std::cend(haplotype_leafs_),
                                              VertexLess);
     
-    return GenomicRegion {contig_, encompassing_region(tree_[leftmost], tree_[rightmost])};
+    return GenomicRegion {contig_, ::encompassing_region(tree_[leftmost], tree_[rightmost])};
 }
 
 std::vector<Haplotype> HaplotypeTree::extract_haplotypes() const
 {
     if (empty()) return std::vector<Haplotype> {};
-    return extract_haplotypes(get_region());
+    return extract_haplotypes(encompassing_region());
 }
 
 std::vector<Haplotype> HaplotypeTree::extract_haplotypes(const GenomicRegion& region) const
@@ -116,7 +116,7 @@ std::vector<Haplotype> HaplotypeTree::extract_haplotypes(const GenomicRegion& re
     
     std::vector<Haplotype> result {};
     
-    if (empty() || !overlaps(region, get_region())) return result;
+    if (empty() || !overlaps(region, encompassing_region())) return result;
     
     result.reserve(haplotype_leafs_.size());
     
@@ -193,19 +193,6 @@ void HaplotypeTree::prune_unique(const Haplotype& haplotype)
     if (haplotype_leaf_cache_.count(haplotype) > 0) {
         const auto possible_leafs = haplotype_leaf_cache_.equal_range(haplotype);
         
-//        // DEBUG
-//        if ( find_if(possible_leafs.first, possible_leafs.second,
-//                     [this, &haplotype] (const auto& leaf_pair) {
-//                         return is_branch_exact_haplotype(leaf_pair.second, haplotype);
-//                     }) == possible_leafs.second)
-//        {
-//            auto i = is_branch_exact_haplotype(possible_leafs.first->second, haplotype);
-//             print_alleles(haplotype); std::cout << std::endl;
-//            print_alleles(extract_haplotype(possible_leafs.first->second, haplotype.get_region())); std::cout << std::endl;
-//             exit(0);
-//        }
-//        // END DEBUG
-        
         const auto leaf_to_keep_itr = find_if(possible_leafs.first, possible_leafs.second,
                                               [this, &haplotype] (const auto& leaf_pair) {
                                                   return is_branch_exact_haplotype(leaf_pair.second, haplotype);
@@ -256,13 +243,11 @@ void HaplotypeTree::prune_unique(const Haplotype& haplotype)
     }
 }
 
-void HaplotypeTree::remove(const GenomicRegion& region)
+void HaplotypeTree::remove_overlapped(const GenomicRegion& region)
 {
     if (empty()) return;
     
-    std::cout << "removing " << region << std::endl;
-    
-    const auto tree_region = get_region();
+    const auto tree_region = encompassing_region();
     
     if (::contains(region, tree_region)) {
         clear();

@@ -174,6 +174,22 @@ namespace Octopus
         }
     }
     
+    template <typename Range>
+    bool requires_staged_removal(const Range& alleles)
+    {
+        if (!is_empty_region(alleles.back())) return false;
+        
+        const auto rbegin = std::make_reverse_iterator(std::prev(std::cend(alleles)));
+        const auto rend   = std::make_reverse_iterator(std::cbegin(alleles));
+        
+        const auto it = std::find_if_not(rbegin, rend,
+                                         [&alleles] (const auto& allele) {
+                                             return overlaps(allele, alleles.back());
+                                         });
+        
+        return it == rend || is_position(*it);
+    }
+    
     void HaplotypeGenerator::force_forward(GenomicRegion to)
     {
         assert(to > current_active_region_);
@@ -188,37 +204,33 @@ namespace Octopus
             
             assert(!overlapped.empty());
             
-            if (is_empty_region(overlapped.back())) {
-                // Moving the rhs boundry one to the right avoids erasing insertions, which
-                // are always considered at the start of active regions. Note this may leave
-                // already considered single base alleles in the active allele set and tree.
-                passed_region = expand_rhs(passed_region, -1);
+            if (!requires_staged_removal(overlapped)) {
+                alleles_.erase_overlapped(passed_region);
+                tree_.remove_overlapped(passed_region);
+            } else {
+                // We need to be careful here as insertions adjacent to passed_region are
+                // considered overlapped and would be wrongly erased if we erased the whole
+                // region. But, we also want to clear all single base alleles left adjacent with
+                // next_active_region_, as they have truly been passed.
+                
+                // This will erase everthing to the left of the adjacent insertion, other than
+                // the single base alleles adjacent with next_active_region_.
+                const auto first_removal_region = expand_rhs(passed_region, -1);
+                
+                alleles_.erase_overlapped(first_removal_region);
+                tree_.remove_overlapped(first_removal_region);
+                
+                // This will erase the remaining single base alleles in passed_region, but not the
+                // insertions in next_active_region_.
+                const auto second_removal_region = tail_region(first_removal_region);
+                
+                alleles_.erase_overlapped(second_removal_region);
+                tree_.remove_overlapped(second_removal_region);
             }
-            
-            alleles_.erase_overlapped(passed_region);
-            tree_.remove(passed_region);
         }
     }
     
     // private methods
-    
-    template <typename Range>
-    bool is_solo_active_insertion(const GenomicRegion& active_region,
-                                  const Range& overlapped)
-    {
-        return is_empty_region(encompassing_region(overlapped));
-    }
-    
-    template <typename Range>
-    const GenomicRegion& resolve_active_region(const GenomicRegion& active_region,
-                                               const Range& alleles)
-    {
-        if (is_solo_active_insertion(active_region, alleles)) {
-            return mapped_region(alleles.front());
-        }
-        
-        return active_region;
-    }
     
     template <typename Range>
     auto sum_indel_sizes(const Range& alleles)
@@ -244,10 +256,8 @@ namespace Octopus
         // as the candidate generator may not propopse all variation in the original reads.
         const auto additional_padding = 2 * sum_indel_sizes(overlapped) + 30;
         
-        const auto& lookup_region = resolve_active_region(current_active_region_, overlapped);
-        
-        const auto lhs_read = *leftmost_overlapped(reads_.get(), lookup_region);
-        const auto rhs_read = *rightmost_overlapped(reads_.get(), lookup_region);
+        const auto lhs_read = *leftmost_overlapped(reads_.get(), current_active_region_);
+        const auto rhs_read = *rightmost_overlapped(reads_.get(), current_active_region_);
         
         const auto unpadded_region = encompassing_region(lhs_read, rhs_read);
         

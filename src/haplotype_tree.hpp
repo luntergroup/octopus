@@ -35,7 +35,9 @@ public:
     using ContigNameType = GenomicRegion::ContigNameType;
     
     HaplotypeTree() = delete;
+    
     explicit HaplotypeTree(const ContigNameType& contig, const ReferenceGenome& reference);
+    
     ~HaplotypeTree() = default;
     
     HaplotypeTree(const HaplotypeTree&)            = default;
@@ -50,14 +52,16 @@ public:
     HaplotypeTree& extend(const ContigAllele& allele);
     HaplotypeTree& extend(const Allele& allele);
     
-    GenomicRegion get_region() const;
+    GenomicRegion encompassing_region() const;
     
     std::vector<Haplotype> extract_haplotypes() const;
     std::vector<Haplotype> extract_haplotypes(const GenomicRegion& region) const;
     
     void prune_all(const Haplotype& haplotype);
     void prune_unique(const Haplotype& haplotype);
-    void remove(const GenomicRegion& region);
+    
+    void remove_overlapped(const GenomicRegion& region);
+    
     void clear();
     
 private:

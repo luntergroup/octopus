@@ -1026,8 +1026,6 @@
 			children = (
 				CAFA19631ABF75D400F953D9 /* haplotype.hpp */,
 				CAFA19621ABF75D400F953D9 /* haplotype.cpp */,
-				CAFA195A1ABF3DF400F953D9 /* haplotype_tree.hpp */,
-				CAFA19591ABF3DF400F953D9 /* haplotype_tree.cpp */,
 				CAFA196D1AC1B4AF00F953D9 /* genotype.hpp */,
 				CAB0DFD91BBF035D001D2F99 /* genotype.cpp */,
 			);
@@ -1049,6 +1047,8 @@
 		D42F72F61C5BAB6D00995F54 /* common-calling-components */ = {
 			isa = PBXGroup;
 			children = (
+				CAFA195A1ABF3DF400F953D9 /* haplotype_tree.hpp */,
+				CAFA19591ABF3DF400F953D9 /* haplotype_tree.cpp */,
 				CA0D83E71BD2B0210020366B /* genome_walker.hpp */,
 				CA0D83E61BD2B0210020366B /* genome_walker.cpp */,
 				CAB89DF51C78D95F002D6F8E /* haplotype_generator.hpp */,
@@ -1423,7 +1423,7 @@
 				CLANG_CXX_LANGUAGE_STANDARD = "c++14";
 				FRAMEWORK_SEARCH_PATHS = "$(inherited)";
 				GCC_INPUT_FILETYPE = sourcecode.cpp.cpp;
-				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_OPTIMIZATION_LEVEL = 3;
 				HEADER_SEARCH_PATHS = (
 					"$(inherited)",
 					/usr/local/Cellar/boost/1.60.0_1/include,
@@ -1454,7 +1454,7 @@
 				CLANG_CXX_LANGUAGE_STANDARD = "c++14";
 				FRAMEWORK_SEARCH_PATHS = "$(inherited)";
 				GCC_INPUT_FILETYPE = sourcecode.cpp.cpp;
-				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_OPTIMIZATION_LEVEL = 3;
 				HEADER_SEARCH_PATHS = (
 					"$(inherited)",
 					/usr/local/Cellar/boost/1.60.0_1/include,

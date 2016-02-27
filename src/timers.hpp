@@ -9,7 +9,7 @@
 #ifndef timers_h
 #define timers_h
 
-//#define BENCHMARK
+#define BENCHMARK
 
 #include <iostream>
 
