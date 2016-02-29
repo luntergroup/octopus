@@ -36,9 +36,8 @@ namespace Octopus
     
     std::vector<std::size_t> KmerMapper::map(const AlignedRead& read, const Haplotype& haplotype) const
     {
-        return extract_maximum_hash_hit_indicies(read_cache_.at(read.get_sequence()),
-                                                 haplotype_cache_.at(haplotype.get_sequence()),
-                                                 sequence_size(haplotype) - KMER_SIZE);
+        return map_query_to_target(read_cache_.at(read.get_sequence()),
+                                   haplotype_cache_.at(haplotype.get_sequence()));
     }
     
     void KmerMapper::clear() noexcept

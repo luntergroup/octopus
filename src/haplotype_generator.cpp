@@ -72,7 +72,7 @@ namespace Octopus
             next_active_region_ = walker_.walk(current_active_region_, reads_, alleles_);
         }
         
-        assert(current_active_region_ < *next_active_region_);
+        assert(current_active_region_ <= *next_active_region_);
         
         return *next_active_region_;
     }
@@ -94,17 +94,18 @@ namespace Octopus
             next_active_region_ = walker_.walk(current_active_region_, reads_, alleles_);
         }
         
-        force_forward(*next_active_region_);
-        
-        if (is_empty_region(*next_active_region_)) {
-            return std::make_pair(std::vector<Haplotype> {}, *next_active_region_);
+        if (*next_active_region_ == current_active_region_) {
+            return std::make_pair(std::vector<Haplotype> {}, current_active_region_);
         }
         
-        extend_tree(alleles_.overlap_range(*next_active_region_), tree_);
+        force_forward(*next_active_region_);
         
         current_active_region_ = std::move(*next_active_region_);
+        next_active_region_    = boost::none;
         
-        next_active_region_ = boost::none;
+        const auto active_alleles = alleles_.overlap_range(current_active_region_);
+        
+        extend_tree(active_alleles, tree_);
         
         auto haplotype_region = calculate_haplotype_region();
         
@@ -114,7 +115,7 @@ namespace Octopus
         
         active_allele_counts_.clear();
         
-        for (const auto& allele : alleles_.overlap_range(current_active_region_)) {
+        for (const auto& allele : active_alleles) {
             active_allele_counts_.emplace(allele, count_contained(allele, haplotypes));
         }
         
@@ -131,6 +132,8 @@ namespace Octopus
     
     void HaplotypeGenerator::keep_haplotypes(const std::vector<Haplotype>& haplotypes)
     {
+        if (tree_.num_haplotypes() == haplotypes.size()) return;
+        
         for (const auto& haplotype : haplotypes) {
             tree_.prune_unique(haplotype);
         }
@@ -175,16 +178,14 @@ namespace Octopus
     }
     
     template <typename Range>
-    bool requires_staged_removal(const Range& alleles)
+    bool requires_staged_removal(const Range& passed_alleles)
     {
-        if (!is_empty_region(alleles.back())) return false;
-        
-        const auto rbegin = std::make_reverse_iterator(std::prev(std::cend(alleles)));
-        const auto rend   = std::make_reverse_iterator(std::cbegin(alleles));
+        const auto rbegin = std::make_reverse_iterator(std::prev(std::cend(passed_alleles)));
+        const auto rend   = std::make_reverse_iterator(std::cbegin(passed_alleles));
         
         const auto it = std::find_if_not(rbegin, rend,
-                                         [&alleles] (const auto& allele) {
-                                             return overlaps(allele, alleles.back());
+                                         [&passed_alleles] (const auto& allele) {
+                                             return overlaps(allele, passed_alleles.back());
                                          });
         
         return it == rend || is_position(*it);
@@ -196,18 +197,17 @@ namespace Octopus
         
         next_active_region_ = std::move(to);
         
-        if (!is_empty_region(current_active_region_)
-            && begins_before(current_active_region_, *next_active_region_)) {
+        if (begins_before(current_active_region_, *next_active_region_)) {
             auto passed_region = left_overhang_region(current_active_region_, *next_active_region_);
             
-            const auto overlapped = alleles_.overlap_range(passed_region);
+            const auto passed_alleles = alleles_.overlap_range(passed_region);
             
-            assert(!overlapped.empty());
+            if (passed_alleles.empty()) return;
             
-            if (!requires_staged_removal(overlapped)) {
+            if (!is_empty_region(passed_alleles.back())) {
                 alleles_.erase_overlapped(passed_region);
                 tree_.remove_overlapped(passed_region);
-            } else {
+            } else if (requires_staged_removal(passed_alleles)) {
                 // We need to be careful here as insertions adjacent to passed_region are
                 // considered overlapped and would be wrongly erased if we erased the whole
                 // region. But, we also want to clear all single base alleles left adjacent with
@@ -226,6 +226,11 @@ namespace Octopus
                 
                 alleles_.erase_overlapped(second_removal_region);
                 tree_.remove_overlapped(second_removal_region);
+            } else {
+                const auto removal_region = expand_rhs(passed_region, -1);
+                
+                alleles_.erase_overlapped(removal_region);
+                tree_.remove_overlapped(removal_region);
             }
         }
     }

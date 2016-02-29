@@ -481,7 +481,7 @@ namespace Octopus
     
     void write_calls(VcfWriter& out, std::deque<VcfRecord>&& calls)
     {
-        //std::cout << "Octopus: writing " << calls.size() << " calls to VCF" << std::endl;
+        std::cout << "Octopus: writing " << calls.size() << " calls to VCF" << std::endl;
         for (auto&& call : calls) out.write(std::move(call));
     }
     

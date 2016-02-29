@@ -25,7 +25,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         
         "--working-directory", "~/",
         
-        "--target-read-buffer-size", "1.0",
+        "--target-read-buffer-size", "0.5",
         //"--threaded",
         
         //"--contig-output-order", "as-in-reference-reversed",
@@ -65,7 +65,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         
         // for population
         
-        //"--regions", "22",
+        "--regions", "16:46,392,879-46,393,098", // NA12878_low_coverage huge memory spike
         
         //"--regions", "22:20656122-20656146", // NA12878_high_coverage causing memory spike
         

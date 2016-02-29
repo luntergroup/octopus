@@ -9,15 +9,14 @@
 #include "kmer_mapping.hpp"
 
 std::vector<std::size_t>
-extract_maximum_hash_hit_indicies(const KmerPerfectHashes& query, const KmerHashTable& target,
-                                  const std::size_t target_size)
+map_query_to_target(const KmerPerfectHashes& query, const KmerHashTable& target)
 {
-    std::vector<unsigned> hit_counts(target_size, 0);
+    std::vector<unsigned> hit_counts(target.second, 0);
     
     unsigned max_hit_count {0};
     
     for (std::size_t query_index {0}; query_index < query.size(); ++query_index) {
-        for (const auto target_index : target[query[query_index]]) {
+        for (const auto target_index : target.first[query[query_index]]) {
             if (target_index >= query_index) {
                 const auto mapping_begin = target_index - query_index;
                 
@@ -31,9 +30,9 @@ extract_maximum_hash_hit_indicies(const KmerPerfectHashes& query, const KmerHash
     std::vector<std::size_t> result {};
     
     if (max_hit_count > 0) {
-        result.reserve(1);
+        result.reserve(4);
         
-        for (std::size_t i {0}; i < target_size; ++i) {
+        for (std::size_t i {0}; i < target.second; ++i) {
             if (hit_counts[i] == max_hit_count) {
                 result.push_back(i);
             }

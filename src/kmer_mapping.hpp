@@ -56,51 +56,44 @@ using KmerPerfectHashes = std::vector<std::size_t>;
 template <unsigned char K>
 auto compute_kmer_hashes(const std::string& sequence)
 {
-    KmerPerfectHashes result(sequence.size() - K);
+    KmerPerfectHashes result(sequence.size() - K + 1);
     
     auto result_it = std::begin(result);
     
-    auto it = std::cbegin(sequence);
-    
-    const auto last = std::prev(std::cend(sequence), K);
-    
-    for (; it != last; ++it, ++result_it) {
+    for (auto it = std::cbegin(sequence); it != std::prev(std::cend(sequence), K - 1); ++it, ++result_it) {
         *result_it = perfect_kmer_hash<K>(it);
     }
     
     return result;
 }
 
-using KmerHashTable = std::vector<std::vector<std::size_t>>;
+using KmerHashTable = std::pair<std::vector<std::vector<std::size_t>>, std::size_t>;
 
 template <unsigned char K>
-auto make_kmer_hash_table(const std::string& sequence)
+KmerHashTable make_kmer_hash_table(const std::string& sequence)
 {
-    KmerHashTable result {num_kmers(K), KmerHashTable::value_type {}};
+    std::vector<std::vector<std::size_t>> table {num_kmers(K), std::vector<std::size_t> {}};
     
     const auto last_index = sequence.size() - K;
     
     auto it = std::cbegin(sequence);
     
-    for (std::size_t index {0}; index < last_index; ++index, ++it) {
-        result[perfect_kmer_hash<K>(it)].push_back(index);
+    for (std::size_t index {0}; index <= last_index; ++index, ++it) {
+        table[perfect_kmer_hash<K>(it)].push_back(index);
     }
     
-    for (auto& bin : result) bin.shrink_to_fit();
+    for (auto& bin : table) bin.shrink_to_fit();
     
-    return result;
+    return std::make_pair(std::move(table), sequence.size() - K + 1);
 }
 
 std::vector<std::size_t>
-extract_maximum_hash_hit_indicies(const KmerPerfectHashes& query, const KmerHashTable& target,
-                                  std::size_t target_size);
+map_query_to_target(const KmerPerfectHashes& query, const KmerHashTable& target);
 
 template <unsigned char K>
 std::vector<std::size_t> map_query_to_target(const std::string& query, const std::string& target)
 {
-    const auto query_hashes      = compute_kmer_hashes<K>(query);
-    const auto target_hash_table = make_kmer_hash_table<K>(target);    
-    return extract_maximum_hash_hit_indicies(query_hashes, target_hash_table, target.size() - K);
+    return map_query_to_target(compute_kmer_hashes<K>(query), make_kmer_hash_table<K>(target));
 }
 
 #endif /* kmer_mapping_hpp */
