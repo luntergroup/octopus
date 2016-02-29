@@ -539,7 +539,7 @@ namespace Octopus
         std::cout << "Octopus: total number of calls = " << num_calls << std::endl;
         
         #ifdef BENCHMARK
-        print_caller_timers();
+        print_all_timers();
         #endif
     }
     

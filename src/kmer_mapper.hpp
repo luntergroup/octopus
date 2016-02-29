@@ -15,7 +15,6 @@
 #include <functional>
 
 #include "kmer_mapping.hpp"
-#include "common.hpp"
 #include "haplotype.hpp"
 #include "aligned_read.hpp"
 
@@ -24,8 +23,10 @@ namespace Octopus
     class KmerMapper
     {
     public:
+        using ReadSet = std::vector<std::reference_wrapper<const AlignedRead>>;
+        
         KmerMapper() = delete;
-        explicit KmerMapper(const ReadMap& reads, const std::vector<Haplotype>& haplotypes);
+        explicit KmerMapper(const ReadSet& reads, const std::vector<Haplotype>& haplotypes);
         ~KmerMapper() = default;
         
         std::vector<std::size_t> map(const AlignedRead& read, const Haplotype& haplotype) const;

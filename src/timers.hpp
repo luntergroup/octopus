@@ -38,6 +38,9 @@ extern boost::timer::cpu_timer marginal_update_timer;
 extern boost::timer::cpu_timer posterior_update_timer;
 extern boost::timer::cpu_timer em_timer;
 
+// misc timers
+extern boost::timer::cpu_timer likelihood_cache_timer;
+
 inline void resume_timer(boost::timer::cpu_timer& timer)
 {
     #ifdef BENCHMARK
@@ -74,6 +77,8 @@ inline void init_timers()
     marginal_update_timer.stop();
     posterior_update_timer.stop();
     em_timer.stop();
+    
+    likelihood_cache_timer.stop();
 }
 
 inline void print_all_timers()
@@ -134,6 +139,9 @@ inline void print_all_timers()
     
     std::cout << "em timer" << '\n';
     std::cout << em_timer.format() << std::endl;
+    
+    std::cout << "likelihood cache timer" << '\n';
+    std::cout << likelihood_cache_timer.format() << std::endl;
 }
 
 inline void print_caller_timers()

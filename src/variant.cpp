@@ -297,9 +297,7 @@ Variant left_align(const Variant& variant, const ReferenceGenome& reference,
     using std::move; using std::cbegin; using std::cend; using std::crbegin; using std::crend;
     using std::tie; using std::next; using std::mismatch;
     
-    if (!is_left_alignable(variant)) {
-        return variant;
-    }
+    if (!is_left_alignable(variant)) return variant;
     
     static_assert(sizeof(Variant::SizeType) == sizeof(GenomicRegion::SizeType),
                   "Variant and GenomicRegion have different SizeType");
@@ -429,13 +427,36 @@ std::vector<Variant> unique_left_align(const std::vector<Variant>& variants,
     result.reserve(variants.size());
     
     boost::transform(variants, std::back_inserter(result),
-                     [&reference] (const auto& variant) {
+                     [&reference] (const Variant& variant) {
                          return left_align(variant, reference);
                      });
     
     result.erase(boost::unique<boost::return_found>(boost::sort(result)), std::end(result));
     
     return result;
+}
+
+std::vector<Variant> unique_left_align(std::vector<Variant>&& variants,
+                                       const ReferenceGenome& reference)
+{
+    using std::begin; using std::end; using std::make_move_iterator; using std::unique;
+    
+    const auto it = std::partition(begin(variants), end(variants), is_left_alignable);
+    
+    std::transform(make_move_iterator(it), make_move_iterator(end(variants)), it,
+                   [&reference] (Variant&& variant) {
+                       return left_align(std::move(variant), reference);
+                   });
+    
+    std::sort(it, end(variants));
+    
+    const auto it2 = variants.erase(unique(it, end(variants)), end(variants));
+    
+    std::inplace_merge(begin(variants), it2, end(variants));
+    
+    variants.erase(unique(begin(variants), end(variants)), end(variants));
+    
+    return variants;
 }
 
 std::vector<Variant> parsimonise_each(const std::vector<Variant>& variants,
@@ -448,6 +469,25 @@ std::vector<Variant> parsimonise_each(const std::vector<Variant>& variants,
                      [&reference] (const auto& variant) {
                          return make_parsimonious(variant, reference);
                      });
+    
+    return result;
+}
+
+std::vector<Variant> parsimonise_each(std::vector<Variant>&& variants,
+                                      const ReferenceGenome& reference)
+{
+    std::vector<Variant> result {};
+    result.reserve(variants.size());
+    
+    std::transform(std::make_move_iterator(std::begin(variants)),
+                   std::make_move_iterator(std::end(variants)),
+                   std::back_inserter(result),
+                   [&reference] (Variant&& variant) {
+                       if (!is_parsimonious(variant)) {
+                           return make_parsimonious(std::move(variant), reference);
+                       }
+                       return variant;
+                   });
     
     return result;
 }

@@ -136,9 +136,15 @@ Variant pad_right(const Variant& variant, const ReferenceGenome& reference, Vari
 /*
  Left aligns all input Variants and removes any resulting duplicates. The returned variants are sorted.
  */
-std::vector<Variant> unique_left_align(const std::vector<Variant>& variants, const ReferenceGenome& reference);
+std::vector<Variant> unique_left_align(const std::vector<Variant>& variants,
+                                       const ReferenceGenome& reference);
+std::vector<Variant> unique_left_align(std::vector<Variant>&& variants,
+                                       const ReferenceGenome& reference);
 
-std::vector<Variant> parsimonise_each(const std::vector<Variant>& variants, const ReferenceGenome& reference);
+std::vector<Variant> parsimonise_each(const std::vector<Variant>& variants,
+                                      const ReferenceGenome& reference);
+std::vector<Variant> parsimonise_each(std::vector<Variant>&& variants,
+                                      const ReferenceGenome& reference);
 
 std::vector<Variant> parsimonise_together(const std::vector<Variant>& variants, const ReferenceGenome& reference);
 

@@ -387,6 +387,8 @@ namespace Octopus
         auto genotypes = generate_all_genotypes(haplotypes, ploidy_);
         pause_timer(genotype_generation_timer);
         
+        //std::cout << "there are " << genotypes.size() << " genotypes" << std::endl;
+        
         assert(!genotypes.empty());
         
         if (genotypes.size() == 1) {

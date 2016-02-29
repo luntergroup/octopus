@@ -13,14 +13,15 @@
 #include <iostream>
 #include <utility>
 
-#include "maths.hpp"
 #include "kmer_mapper.hpp"
+
+#include "timers.hpp"
 
 namespace Octopus
 {
 // public methods
 
-HaplotypeLikelihoodCache::HaplotypeLikelihoodCache(const ReadMap& reads,
+HaplotypeLikelihoodCache::HaplotypeLikelihoodCache(const ReadSet& reads,
                                                    const std::vector<Haplotype>& haplotypes,
                                                    HaplotypeLikelihoodModel::InactiveRegionState flank_state)
 :
@@ -28,34 +29,20 @@ HaplotypeLikelihoodCache {HaplotypeLikelihoodModel {KmerMapper(reads, haplotypes
 {}
 
 HaplotypeLikelihoodCache::HaplotypeLikelihoodCache(HaplotypeLikelihoodModel error_model,
-                                                   const ReadMap& reads,
+                                                   const ReadSet& reads,
                                                    const std::vector<Haplotype>& haplotypes,
                                                    HaplotypeLikelihoodModel::InactiveRegionState flank_state)
 :
 error_model_ {std::move(error_model)}
-{
-    std::vector<ReadReference> read_references {};
-    read_references.reserve(Maths::sum_sizes(reads));
-    
-    auto it = std::begin(read_references);
-    for (const auto& s : reads) {
-        it = read_references.insert(it, std::cbegin(s.second), std::cend(s.second));
-    }
-    
-    std::sort(std::begin(read_references), std::end(read_references));
-    
-    read_references.erase(std::unique(std::begin(read_references), std::end(read_references)),
-                          std::end(read_references));
-    
-    cache_.assign_keys(std::cbegin(read_references), std::cend(read_references));
+{    
+    cache_.assign_keys(std::cbegin(reads), std::cend(reads));
     
     cache_.reserve1(haplotypes.size());
     
-    std::vector<double> probabilities(read_references.size());
+    std::vector<double> probabilities(reads.size());
     
     for (const auto& haplotype : haplotypes) {
-        std::transform(std::cbegin(read_references), std::cend(read_references),
-                       std::begin(probabilities),
+        std::transform(std::cbegin(reads), std::cend(reads), std::begin(probabilities),
                        [this, &haplotype, flank_state] (const auto& read) {
                            return error_model_.log_probability(read, haplotype, flank_state);
                        });
@@ -66,7 +53,10 @@ error_model_ {std::move(error_model)}
 
 double HaplotypeLikelihoodCache::log_probability(const AlignedRead& read, const Haplotype& haplotype) const
 {
-    return cache_(haplotype, read);
+    resume_timer(likelihood_cache_timer);
+    const auto result = cache_(haplotype, read);
+    pause_timer(likelihood_cache_timer);
+    return result;
 }
 
 void HaplotypeLikelihoodCache::clear()

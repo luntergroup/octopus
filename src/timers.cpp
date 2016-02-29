@@ -29,3 +29,5 @@ boost::timer::cpu_timer frequency_update_timer {};
 boost::timer::cpu_timer marginal_update_timer {};
 boost::timer::cpu_timer posterior_update_timer {};
 boost::timer::cpu_timer em_timer {};
+
+boost::timer::cpu_timer likelihood_cache_timer {};

@@ -137,6 +137,7 @@ size_t ReadManager::count_reads(const SampleIdType& sample, const GenomicRegion&
                  [this, &sample, &region, &result] (const auto& reader_path) {
                      result += open_readers_.at(reader_path).count_reads(sample, region);
                  });
+        
         reader_paths.erase(it, end(reader_paths));
         it = open_readers(begin(reader_paths), end(reader_paths));
     }
@@ -163,6 +164,7 @@ size_t ReadManager::count_reads(const std::vector<SampleIdType>& samples, const 
                          result += open_readers_.at(reader_path).count_reads(sample, region);
                      }
                  });
+        
         reader_paths.erase(it, end(reader_paths));
         it = open_readers(begin(reader_paths), end(reader_paths));
     }
@@ -282,6 +284,7 @@ ReadManager::Reads ReadManager::fetch_reads(const SampleIdType& sample, const Ge
                      auto reads = open_readers_.at(reader_path).fetch_reads(sample, region);
                      result.insert(make_move_iterator(begin(reads)), make_move_iterator(end(reads)));
                  });
+        
         reader_paths.erase(it, end(reader_paths));
         it = open_readers(begin(reader_paths), end(reader_paths));
     }
@@ -300,27 +303,26 @@ ReadManager::SampleReadMap ReadManager::fetch_reads(const std::vector<SampleIdTy
     
     auto it = partition_open(reader_paths);
     
-    SampleReadMap result {};
-    result.reserve(samples.size());
+    SampleReadMap result {samples.size()};
+    
+    for (const auto& sample : samples) {
+        result.emplace(std::piecewise_construct, std::forward_as_tuple(sample), std::forward_as_tuple());
+    }
     
     while (!reader_paths.empty()) {
         for_each(it, end(reader_paths),
                  [&] (const auto& reader_path) {
                      auto reads = open_readers_.at(reader_path).fetch_reads(samples, region);
                      for (auto& sample_reads : reads) {
-                         result[sample_reads.first].insert(make_move_iterator(begin(sample_reads.second)),
-                                                           make_move_iterator(end(sample_reads.second)));
+                         result.at(sample_reads.first).insert(make_move_iterator(begin(sample_reads.second)),
+                                                              make_move_iterator(end(sample_reads.second)));
                          sample_reads.second.clear();
+                         sample_reads.second.shrink_to_fit();
                      }
                  });
+        
         reader_paths.erase(it, end(reader_paths));
         it = open_readers(begin(reader_paths), end(reader_paths));
-    }
-    
-    for (const auto& sample : samples) {
-        if (result.count(sample) == 0) {
-            result.emplace(sample, SampleReadMap::mapped_type {});
-        }
     }
     
     return result;

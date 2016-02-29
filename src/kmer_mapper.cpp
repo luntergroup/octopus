@@ -8,21 +8,17 @@
 
 #include "kmer_mapper.hpp"
 
-#include "maths.hpp"
-
 namespace Octopus
 {
-    KmerMapper::KmerMapper(const ReadMap& reads, const std::vector<Haplotype>& haplotypes)
+    KmerMapper::KmerMapper(const ReadSet& reads, const std::vector<Haplotype>& haplotypes)
     :
-    read_cache_ {Maths::sum_sizes(reads)},
+    read_cache_ {reads.size()},
     haplotype_cache_ {haplotypes.size()}
     {
-        for (const auto& s : reads) {
-            for (const auto& read : s.second) {
-                if (read_cache_.count(read.get_sequence()) == 0) {
-                    read_cache_.emplace(read.get_sequence(),
-                                        compute_kmer_hashes<KMER_SIZE>(read.get_sequence()));
-                }
+        for (const auto& read : reads) {
+            if (read_cache_.count(read.get().get_sequence()) == 0) {
+                read_cache_.emplace(read.get().get_sequence(),
+                                    compute_kmer_hashes<KMER_SIZE>(read.get().get_sequence()));
             }
         }
         

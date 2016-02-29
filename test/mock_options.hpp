@@ -33,8 +33,8 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         "--reference", human_reference_fasta.c_str(),
         //"--reference", ecoli_reference_fasta.c_str(),
         
-        "--reads", NA12878_low_coverage.c_str(),
-        //"--reads", NA12878_high_coverage.c_str(),
+        //"--reads", NA12878_low_coverage.c_str(),
+        "--reads", NA12878_high_coverage.c_str(),
         
         //"--reads", NA12891_high_coverage.c_str(),
         
@@ -65,7 +65,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         
         // for population
         
-        "--regions", "GL000241.1",
+        "--regions", "22:30174759-34674492",
         
         //"--regions", "16:46,392,879-46,393,098", // NA12878_low_coverage huge memory spike
         //"--regions", "22:20656122-20656146", // NA12878_high_coverage causing memory spike

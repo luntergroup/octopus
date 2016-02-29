@@ -9,7 +9,6 @@
 #ifndef haplotype_likelihood_cache_hpp
 #define haplotype_likelihood_cache_hpp
 
-#include "common.hpp"
 #include "haplotype.hpp"
 #include "aligned_read.hpp"
 #include "haplotype_liklihood_model.hpp"
@@ -22,12 +21,14 @@ namespace Octopus
     public:
         HaplotypeLikelihoodCache()  = default;
         
-        explicit HaplotypeLikelihoodCache(const ReadMap& reads,
+        using ReadSet = std::vector<std::reference_wrapper<const AlignedRead>>;
+        
+        explicit HaplotypeLikelihoodCache(const ReadSet& reads,
                                           const std::vector<Haplotype>& haplotypes,
                                           HaplotypeLikelihoodModel::InactiveRegionState flank_state);
         
         explicit HaplotypeLikelihoodCache(HaplotypeLikelihoodModel error_model,
-                                          const ReadMap& reads,
+                                          const ReadSet& reads,
                                           const std::vector<Haplotype>& haplotypes,
                                           HaplotypeLikelihoodModel::InactiveRegionState flank_state);
         
@@ -40,6 +41,11 @@ namespace Octopus
         
         // ln p(read | haplotype)
         double log_probability(const AlignedRead& read, const Haplotype& haplotype) const;
+        
+        template <typename ForwardIt>
+        std::vector<double>
+        log_probability_each(ForwardIt first_read, ForwardIt last_read,
+                             const Haplotype& haplotype) const;
         
         template <typename Container>
         void erase(const Container& haplotypes);
@@ -56,6 +62,18 @@ namespace Octopus
         
         mutable Cache cache_;
     };
+    
+    template <typename ForwardIt>
+    std::vector<double>
+    HaplotypeLikelihoodCache::log_probability_each(ForwardIt first_read, ForwardIt last_read,
+                                                   const Haplotype& haplotype) const
+    {
+        std::vector<double> result(std::distance(first_read, last_read));
+        
+        
+        
+        return result;
+    }
     
     template <typename Container>
     void HaplotypeLikelihoodCache::erase(const Container& haplotypes)

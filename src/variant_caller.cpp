@@ -101,24 +101,39 @@ namespace debug
     void print_haplotype_posteriors(const Map& haplotype_posteriors, std::size_t n = 20);
 }
 
-double max_read_likelihood(const ReadMap& reads, const Haplotype& haplotype,
+using ReadSet = std::vector<std::reference_wrapper<const AlignedRead>>;
+
+ReadSet flatten(const ReadMap& reads)
+{
+    ReadSet result {};
+    result.reserve(count_reads(reads));
+    
+    for (const auto& p : reads) {
+        const auto it = result.insert(std::end(result), std::cbegin(p.second), std::cend(p.second));
+        std::inplace_merge(std::begin(result), it, std::end(result));
+    }
+    
+    result.erase(std::unique(std::begin(result), std::end(result)), std::end(result));
+    
+    return result;
+}
+
+double max_read_likelihood(const ReadSet& reads, const Haplotype& haplotype,
                            const HaplotypeLikelihoodCache& haplotype_likelihoods)
 {
     auto result = std::numeric_limits<double>::lowest();
     
-    for (const auto& sample_reads : reads) {
-        for (const auto& read : sample_reads.second) {
-            const auto cur_read_liklihood = haplotype_likelihoods.log_probability(read, haplotype);
-            if (cur_read_liklihood > result) result = cur_read_liklihood;
-            if (Maths::almost_zero(cur_read_liklihood)) break;
-        }
+    for (const auto& read : reads) {
+        const auto cur_read_liklihood = haplotype_likelihoods.log_probability(read, haplotype);
+        if (cur_read_liklihood > result) result = cur_read_liklihood;
+        if (Maths::almost_zero(cur_read_liklihood)) break;
     }
     
     return result;
 }
 
 std::vector<Haplotype>
-filter_haplotypes(std::vector<Haplotype>& haplotypes, const ReadMap& reads,
+filter_haplotypes(std::vector<Haplotype>& haplotypes, const ReadSet& reads,
                   const HaplotypeLikelihoodCache& haplotype_likelihoods, const size_t n)
 {
     std::vector<Haplotype> result {};
@@ -185,7 +200,7 @@ auto flank_state(const std::vector<Haplotype>& haplotypes,
     return HaplotypeLikelihoodModel::InactiveRegionState::Clear;
 }
 
-auto build_likelihood_cache(const std::vector<Haplotype>& haplotypes, const ReadMap& reads,
+auto build_likelihood_cache(const std::vector<Haplotype>& haplotypes, const ReadSet& reads,
                             const GenomicRegion& active_region, const std::vector<Variant>& candidates)
 {
     return HaplotypeLikelihoodCache {reads, haplotypes, flank_state(haplotypes, active_region, candidates)};
@@ -277,19 +292,23 @@ std::deque<VcfRecord> VariantCaller::call_variants(const GenomicRegion& call_reg
         
         //std::cout << "haplotype region is " << haplotypes.front().get_region() << '\n';
         
-        const auto active_region_reads = copy_overlapped(reads, active_region);
+        const auto active_reads = copy_overlapped(reads, active_region);
+        
+        auto read_references = flatten(active_reads);
         
         //std::cout << "there are " << haplotypes.size() << " haplotypes" << std::endl;
         
         resume_timer(likelihood_timer);
-        auto haplotype_likelihoods = build_likelihood_cache(haplotypes, active_region_reads,
+        auto haplotype_likelihoods = build_likelihood_cache(haplotypes, read_references,
                                                             active_region, candidates);
         pause_timer(likelihood_timer);
         
         resume_timer(haplotype_fitler_timer);
-        auto removed_haplotypes = filter_haplotypes(haplotypes, active_region_reads,
+        auto removed_haplotypes = filter_haplotypes(haplotypes, read_references,
                                                     haplotype_likelihoods, max_haplotypes_);
         pause_timer(haplotype_fitler_timer);
+        
+        read_references.clear();
         
         if (haplotypes.empty()) {
             // This can only happen if all haplotypes have equal likelihood.
@@ -312,11 +331,11 @@ std::deque<VcfRecord> VariantCaller::call_variants(const GenomicRegion& call_reg
         pause_timer(haplotype_generation_timer);
         
         //std::cout << "there are " << haplotypes.size() << " final haplotypes" << '\n';
-        //debug::print_read_haplotype_liklihoods(haplotypes, active_region_reads, haplotype_likelihoods);
+        //debug::print_read_haplotype_liklihoods(haplotypes, active_reads, haplotype_likelihoods);
         
         resume_timer(latent_timer);
         const auto caller_latents = infer_latents(haplotypes, haplotype_priors,
-                                                  haplotype_likelihoods, active_region_reads);
+                                                  haplotype_likelihoods, active_reads);
         pause_timer(latent_timer);
         
         haplotype_priors.clear();
@@ -344,10 +363,10 @@ std::deque<VcfRecord> VariantCaller::call_variants(const GenomicRegion& call_reg
             
             resume_timer(calling_timer);
             auto curr_results = call_variants(active_candidates, alleles, caller_latents.get(),
-                                              *phase_set, active_region_reads);
+                                              *phase_set, active_reads);
             pause_timer(calling_timer);
             
-            append_annotated_calls(result, curr_results, active_region_reads, call_region);
+            append_annotated_calls(result, curr_results, active_reads, call_region);
             
             auto remaining_active_region = right_overhang_region(active_region, phase_set->region);
             
@@ -390,10 +409,10 @@ std::deque<VcfRecord> VariantCaller::call_variants(const GenomicRegion& call_reg
             
             resume_timer(calling_timer);
             auto curr_results = call_variants(active_candidates, alleles, caller_latents.get(),
-                                              forced_phasing, active_region_reads);
+                                              forced_phasing, active_reads);
             pause_timer(calling_timer);
             
-            append_annotated_calls(result, curr_results, active_region_reads, call_region);
+            append_annotated_calls(result, curr_results, active_reads, call_region);
             
             completed_region = encompassing_region(completed_region, passed_region);
         }
