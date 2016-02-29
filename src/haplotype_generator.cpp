@@ -50,6 +50,12 @@ namespace Octopus
         }
     }
     
+    namespace debug
+    {
+        template <typename Range>
+        void print_active_alleles(const Range& alleles, const GenomicRegion& active_region);
+    } // namespace debug
+    
     // public members
     
     HaplotypeGenerator::HaplotypeGenerator(const GenomicRegion& window, const ReferenceGenome& reference,
@@ -88,8 +94,16 @@ namespace Octopus
         }
     } // namespace
     
+    template <typename Range>
+    auto estimate_num_haplotypes(const Range& alleles)
+    {
+        return std::exp2(size(alleles) / 2);
+    }
+    
     std::pair<std::vector<Haplotype>, GenomicRegion> HaplotypeGenerator::progress()
     {
+        // TODO: reintroduce holdout alleles
+        
         if (!next_active_region_) {
             next_active_region_ = walker_.walk(current_active_region_, reads_, alleles_);
         }
@@ -103,7 +117,25 @@ namespace Octopus
         current_active_region_ = std::move(*next_active_region_);
         next_active_region_    = boost::none;
         
-        const auto active_alleles = alleles_.overlap_range(current_active_region_);
+        auto active_alleles = alleles_.overlap_range(current_active_region_);
+        
+        if (estimate_num_haplotypes(active_alleles) > hard_max_haplotypes_) {
+            assert(holdout_set_.empty());
+            
+            holdout_set_ = compute_holdout_set(current_active_region_);
+            
+            for (const auto& allele : holdout_set_) {
+                alleles_.erase(allele);
+            }
+            
+            std::cout << "Warning: holding out " << holdout_set_.size() << " alleles from region "
+                        << current_active_region_ << '\n';
+            
+            current_active_region_ = walker_.walk(head_region(current_active_region_), reads_, alleles_);
+            active_alleles = alleles_.overlap_range(current_active_region_);
+        }
+        
+        //debug::print_active_alleles(active_alleles, current_active_region_);
         
         extend_tree(active_alleles, tree_);
         
@@ -237,6 +269,33 @@ namespace Octopus
     
     // private methods
     
+    MappableSet<Allele>
+    HaplotypeGenerator::compute_holdout_set(const GenomicRegion& active_region) const
+    {
+        auto active_alleles = copy_overlapped(alleles_, active_region);
+        
+        std::vector<Allele> tmp {std::cbegin(active_alleles), std::cend(active_alleles)};
+        
+        auto it = std::end(tmp);
+        
+        while (true) {
+            const auto r = largest_region(std::begin(tmp), it);
+            
+            it = std::partition(std::begin(tmp), it,
+                                [&r] (const Allele& allele) {
+                                    return !is_same_region(allele, r);
+                                });
+            
+            MappableSet<Allele> cur {std::begin(tmp), it};
+            
+            auto re = walker_.walk(head_region(cur.leftmost()), reads_, cur);
+            
+            if (std::exp2(cur.count_overlapped(re)) < hard_max_haplotypes_) break;
+        }
+        
+        return MappableSet<Allele> {it, std::end(tmp)};
+    }
+    
     template <typename Range>
     auto sum_indel_sizes(const Range& alleles)
     {
@@ -261,23 +320,29 @@ namespace Octopus
         // as the candidate generator may not propopse all variation in the original reads.
         const auto additional_padding = 2 * sum_indel_sizes(overlapped) + 30;
         
-        const auto lhs_read = *leftmost_overlapped(reads_.get(), current_active_region_);
-        const auto rhs_read = *rightmost_overlapped(reads_.get(), current_active_region_);
+        const auto& lhs_read = *leftmost_overlapped(reads_.get(), current_active_region_);
+        const auto& rhs_read = *rightmost_overlapped(reads_.get(), current_active_region_);
         
         const auto unpadded_region = encompassing_region(lhs_read, rhs_read);
         
         if (region_begin(lhs_read) < additional_padding / 2) {
-            if (region_begin(lhs_read) == 0) {
-                return expand_rhs(unpadded_region, additional_padding);
-            }
-            
-            const auto lhs_padding = (additional_padding / 2) - region_begin(lhs_read);
+            const auto lhs_padding = region_begin(lhs_read);
             const auto rhs_padding = additional_padding - lhs_padding;
-            
             return expand_lhs(expand_rhs(unpadded_region, rhs_padding), lhs_padding);
         }
         
         return expand(unpadded_region, additional_padding / 2);
     }
     
+    namespace debug
+    {
+        template <typename Range>
+        void print_active_alleles(const Range& alleles, const GenomicRegion& active_region)
+        {
+            std::cout << "printing " << std::distance(std::cbegin(alleles), std::cend(alleles))
+                        << " alleles in active region " << active_region << '\n';
+            std::copy(std::cbegin(alleles), std::cend(alleles),
+                      std::ostream_iterator<Allele>(std::cout, "\n"));
+        }
+    } // namespace debug
 } // namespace Octopus

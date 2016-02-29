@@ -84,6 +84,8 @@ public:
     iterator emplace(Args...);
     iterator insert(const MappableType&);
     iterator insert(MappableType&&);
+    iterator insert(const_iterator, const MappableType& mappable);
+    iterator insert(const_iterator, MappableType&& mappable);
     template <typename InputIterator>
     void insert(InputIterator, InputIterator);
     iterator insert(std::initializer_list<MappableType>);
@@ -377,7 +379,7 @@ MappableSet<MappableType, Allocator>::emplace(Args... args)
     const auto it = elements_.emplace(std::forward<Args>(args)...);
     if (is_bidirectionally_sorted_) {
         const auto overlapped = overlap_range(*it);
-        is_bidirectionally_sorted_ = is_bidirectionally_sorted(std::cbegin(overlapped), std::cend(overlapped));
+        is_bidirectionally_sorted_ = is_bidirectionally_sorted(overlapped);
     }
     max_element_size_ = std::max(max_element_size_, region_size(*it));
     return it;
@@ -390,7 +392,7 @@ MappableSet<MappableType, Allocator>::insert(const MappableType& m)
     const auto it = elements_.insert(m);
     if (is_bidirectionally_sorted_) {
         const auto overlapped = overlap_range(*it);
-        is_bidirectionally_sorted_ = is_bidirectionally_sorted(std::cbegin(overlapped), std::cend(overlapped));
+        is_bidirectionally_sorted_ = is_bidirectionally_sorted(overlapped);
     }
     max_element_size_ = std::max(max_element_size_, region_size(*it));
     return it;
@@ -403,10 +405,36 @@ MappableSet<MappableType, Allocator>::insert(MappableType&& m)
     const auto it = elements_.insert(std::move(m));
     if (is_bidirectionally_sorted_) {
         const auto overlapped = overlap_range(*it);
-        is_bidirectionally_sorted_ = is_bidirectionally_sorted(std::cbegin(overlapped), std::cend(overlapped));
+        is_bidirectionally_sorted_ = is_bidirectionally_sorted(overlapped);
     }
     max_element_size_ = std::max(max_element_size_, region_size(*it));
     return it;
+}
+
+template <typename MappableType, typename Allocator>
+typename MappableSet<MappableType, Allocator>::iterator
+MappableSet<MappableType, Allocator>::insert(const_iterator it, const MappableType& m)
+{
+    const auto it2 = elements_.insert(it, m);
+    if (is_bidirectionally_sorted_) {
+        const auto overlapped = overlap_range(*it2);
+        is_bidirectionally_sorted_ = is_bidirectionally_sorted(overlapped);
+    }
+    max_element_size_ = std::max(max_element_size_, region_size(*it));
+    return it2;
+}
+
+template <typename MappableType, typename Allocator>
+typename MappableSet<MappableType, Allocator>::iterator
+MappableSet<MappableType, Allocator>::insert(const_iterator it, MappableType&& m)
+{
+    const auto it2 = elements_.insert(it, std::move(m));
+    if (is_bidirectionally_sorted_) {
+        const auto overlapped = overlap_range(*it2);
+        is_bidirectionally_sorted_ = is_bidirectionally_sorted(overlapped);
+    }
+    max_element_size_ = std::max(max_element_size_, region_size(*it));
+    return it2;
 }
 
 template <typename MappableType, typename Allocator>
@@ -419,7 +447,7 @@ MappableSet<MappableType, Allocator>::insert(InputIterator first, InputIterator 
     }
     elements_.insert(first, last);
     if (is_bidirectionally_sorted_) {
-        is_bidirectionally_sorted_ = is_bidirectionally_sorted(std::cbegin(elements_), std::cend(elements_));
+        is_bidirectionally_sorted_ = is_bidirectionally_sorted(elements_);
     }
 }
 
@@ -428,11 +456,11 @@ typename MappableSet<MappableType, Allocator>::iterator
 MappableSet<MappableType, Allocator>::insert(std::initializer_list<MappableType> il)
 {
     if (!il.empty()) {
-        max_element_size_ = std::max(max_element_size_, region_size(*largest_element(std::cbegin(il), std::cend(il))));
+        max_element_size_ = std::max(max_element_size_, region_size(*largest_element(il)));
     }
     return elements_.insert(std::move(il));
     if (is_bidirectionally_sorted_) {
-        is_bidirectionally_sorted_ = is_bidirectionally_sorted(std::cbegin(elements_), std::cend(elements_));
+        is_bidirectionally_sorted_ = is_bidirectionally_sorted(elements_);
     }
 }
 
@@ -442,11 +470,11 @@ MappableSet<MappableType, Allocator>::erase(const_iterator p)
 {
     if (max_element_size_ == region_size(*p)) {
         const auto it = elements_.erase(p);
-        max_element_size_ = region_size(*largest_element(std::cbegin(elements_), std::cend(elements_)));
+        max_element_size_ = region_size(*largest_element(elements_));
         return it;
     }
     if (!is_bidirectionally_sorted_) {
-        is_bidirectionally_sorted_ = is_bidirectionally_sorted(std::cbegin(elements_), std::cend(elements_));
+        is_bidirectionally_sorted_ = is_bidirectionally_sorted(elements_);
     }
     return elements_.erase(p);
 }
@@ -457,11 +485,11 @@ MappableSet<MappableType, Allocator>::erase(const MappableType& m)
 {
     if (max_element_size_ == region_size(m)) {
         const auto result = elements_.erase(m);
-        max_element_size_ = region_size(*largest_mappable(std::cbegin(elements_), std::cend(elements_)));
+        max_element_size_ = region_size(*largest_mappable(elements_));
         return result;
     }
     if (!is_bidirectionally_sorted_) {
-        is_bidirectionally_sorted_ = is_bidirectionally_sorted(std::cbegin(elements_), std::cend(elements_));
+        is_bidirectionally_sorted_ = is_bidirectionally_sorted(elements_);
     }
     return elements_.erase(m);
 }
@@ -472,11 +500,11 @@ MappableSet<MappableType, Allocator>::erase(const_iterator first, const_iterator
 {
     if (max_element_size_ == region_size(*largest_mappable(first, last))) {
         const auto it = elements_.erase(first, last);
-        max_element_size_ = region_size(*largest_mappable(std::cbegin(elements_), std::cend(elements_)));
+        max_element_size_ = region_size(*largest_mappable(elements_));
         return it;
     }
     if (!is_bidirectionally_sorted_) {
-        is_bidirectionally_sorted_ = is_bidirectionally_sorted(std::cbegin(elements_), std::cend(elements_));
+        is_bidirectionally_sorted_ = is_bidirectionally_sorted(elements_);
     }
     return elements_.erase(first, last);
 }
@@ -592,7 +620,8 @@ bool
 MappableSet<MappableType, Allocator>::has_overlapped(const MappableType_& mappable) const
 {
     return (is_bidirectionally_sorted_) ?
-    ::has_overlapped(std::begin(elements_), std::end(elements_), mappable, MappableRangeOrder::BidirectionallySorted)
+    ::has_overlapped(std::begin(elements_), std::end(elements_), mappable,
+                     MappableRangeOrder::BidirectionallySorted)
     :
     ::has_overlapped(std::begin(elements_), std::end(elements_), mappable);
 }

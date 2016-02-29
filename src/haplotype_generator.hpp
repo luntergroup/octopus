@@ -63,9 +63,13 @@ namespace Octopus
         GenomicRegion current_active_region_;
         boost::optional<GenomicRegion> next_active_region_;
         
-        unsigned max_haplotypes_;
+        unsigned max_haplotypes_, hard_max_haplotypes_ = 500000;
+        
+        MappableSet<Allele> holdout_set_;
         
         mutable std::unordered_map<Allele, unsigned> active_allele_counts_;
+        
+        MappableSet<Allele> compute_holdout_set(const GenomicRegion& active_region) const;
         
         GenomicRegion calculate_haplotype_region() const;
     };

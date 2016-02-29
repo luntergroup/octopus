@@ -65,8 +65,9 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         
         // for population
         
-        "--regions", "16:46,392,879-46,393,098", // NA12878_low_coverage huge memory spike
+        "--regions", "GL000241.1",
         
+        //"--regions", "16:46,392,879-46,393,098", // NA12878_low_coverage huge memory spike
         //"--regions", "22:20656122-20656146", // NA12878_high_coverage causing memory spike
         
         //"--regions", "1:224,024,837-224,024,877", // NA12878_low_coverage edge case insertions

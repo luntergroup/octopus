@@ -269,7 +269,7 @@ std::deque<VcfRecord> VariantCaller::call_variants(const GenomicRegion& call_reg
         std::tie(haplotypes, active_region) = generator.progress();
         pause_timer(haplotype_generation_timer);
         
-        std::cout << "active region is " << active_region << '\n';
+        //std::cout << "active region is " << active_region << '\n';
         
         if (is_after(active_region, call_region) || haplotypes.empty()) {
             break;
@@ -312,7 +312,6 @@ std::deque<VcfRecord> VariantCaller::call_variants(const GenomicRegion& call_reg
         pause_timer(haplotype_generation_timer);
         
         //std::cout << "there are " << haplotypes.size() << " final haplotypes" << '\n';
-        
         //debug::print_read_haplotype_liklihoods(haplotypes, active_region_reads, haplotype_likelihoods);
         
         resume_timer(latent_timer);

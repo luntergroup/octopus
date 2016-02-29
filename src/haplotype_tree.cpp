@@ -112,13 +112,13 @@ std::vector<Haplotype> HaplotypeTree::extract_haplotypes() const
 std::vector<Haplotype> HaplotypeTree::extract_haplotypes(const GenomicRegion& region) const
 {
     haplotype_leaf_cache_.clear();
-    haplotype_leaf_cache_.reserve(haplotype_leafs_.size());
+    haplotype_leaf_cache_.reserve(num_haplotypes());
     
     std::vector<Haplotype> result {};
     
     if (empty() || !overlaps(region, encompassing_region())) return result;
     
-    result.reserve(haplotype_leafs_.size());
+    result.reserve(num_haplotypes());
     
     for (const auto leaf : haplotype_leafs_) {
         auto haplotype = extract_haplotype(leaf, region);
@@ -130,8 +130,6 @@ std::vector<Haplotype> HaplotypeTree::extract_haplotypes(const GenomicRegion& re
         result.emplace_back(std::move(haplotype));
     }
     
-    haplotype_leaf_cache_.rehash(haplotype_leaf_cache_.size());
-    
     result.shrink_to_fit();
     
     return result;
@@ -141,8 +139,7 @@ void HaplotypeTree::prune_all(const Haplotype& haplotype)
 {
     using std::cbegin; using std::cend; using std::for_each; using std::find;
     
-    if (empty() || contig_name(haplotype) != contig_)
-        return;
+    if (empty() || contig_name(haplotype) != contig_) return;
     
     // if any of the haplotypes in cache match the query haplotype then the cache must contain
     // all possible leaves corrosponding to that haplotype. So we don't need to look through
