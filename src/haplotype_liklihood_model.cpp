@@ -10,13 +10,11 @@
 
 #include <utility>
 #include <cmath>
-#include <algorithm>
 #include <cassert>
 #include <limits>
 
 #include "mappable.hpp"
 #include "aligned_read.hpp"
-#include "pair_hmm.hpp"
 
 #include <iostream> // TEST
 #include <chrono>   // TEST
@@ -25,15 +23,19 @@ namespace Octopus
 {
     // public methods
     
-    HaplotypeLikelihoodModel::HaplotypeLikelihoodModel(KmerMapper mapper)
+    HaplotypeLikelihoodModel::HaplotypeLikelihoodModel(const Haplotype& haplotype,
+                                                       InactiveRegionState flank_state)
     :
-    mapper_ {std::move(mapper)}
+    indel_error_model_ {},
+    haplotype_ {haplotype},
+    haplotype_gap_open_penalities_ {indel_error_model_.calculate_gap_open_penalties(haplotype)},
+    model_ {2, 3, flank_state != InactiveRegionState::Clear}
     {}
     
     namespace
     {
-        std::size_t count_out_of_range_bases(const std::size_t mapping_position,
-                                             const AlignedRead& read, const Haplotype& haplotype)
+        std::size_t num_out_of_range_bases(const std::size_t mapping_position,
+                                           const AlignedRead& read, const Haplotype& haplotype)
         {
             const auto alignment_size = sequence_size(read) + mapping_position + 15;
             
@@ -44,69 +46,69 @@ namespace Octopus
             return 0;
         }
         
-        bool is_out_of_range(const std::size_t mapping_position,
+        bool is_in_range(const std::size_t mapping_position,
                              const AlignedRead& read, const Haplotype& haplotype)
         {
-            return count_out_of_range_bases(mapping_position, read, haplotype) > 0;
-        }
-        
-        void remove_out_of_range_mapping_positions(std::vector<std::size_t>& mapping_positions,
-                                                   const AlignedRead& read, const Haplotype& haplotype)
-        {
-            const auto it = std::remove_if(std::begin(mapping_positions), std::end(mapping_positions),
-                                           [&] (const auto position) {
-                                               return is_out_of_range(position, read, haplotype);
-                                           });
-            mapping_positions.erase(it, std::end(mapping_positions));
-        }
-        
-        bool contains(const std::vector<std::size_t>& mapped_positions,
-                      const std::size_t original_mapping_position)
-        {
-            return std::binary_search(std::cbegin(mapped_positions), std::cend(mapped_positions),
-                                      original_mapping_position);
+            return num_out_of_range_bases(mapping_position, read, haplotype) == 0;
         }
     } // namespace
     
-    double HaplotypeLikelihoodModel::log_probability(const AlignedRead& read, const Haplotype& haplotype,
-                                                     const InactiveRegionState flank_state) const
+    double HaplotypeLikelihoodModel::log_probability(const AlignedRead& read,
+                                                     MapPositionItr first_mapping_position,
+                                                     MapPositionItr last_mapping_position) const
     {
-        Model model {2, 3}; // TODO: make part of an error model
-        
-        if (flank_state == InactiveRegionState::Unclear) model.flank_clear = false;
-        
-        const auto gap_open_penalities = indel_error_model_.calculate_gap_open_penalties(haplotype);
-        
-        auto mapping_positions = mapper_.map(read, haplotype);
-        
-        remove_out_of_range_mapping_positions(mapping_positions, read, haplotype);
-        
+        return log_probability(read, haplotype_, first_mapping_position, last_mapping_position,
+                               haplotype_gap_open_penalities_);
+    }
+    
+    // private methods
+    
+    double HaplotypeLikelihoodModel::log_probability(const AlignedRead& read, const Haplotype& haplotype,
+                                                     MapPositionItr first_mapping_position,
+                                                     MapPositionItr last_mapping_position,
+                                                     const std::vector<char>& gap_open_penalities) const
+    {
         const auto original_mapping_position = begin_distance(read, haplotype);
-        
-        if (mapping_positions.empty() && is_out_of_range(original_mapping_position, read, haplotype)) {
-            const auto min_shift = count_out_of_range_bases(original_mapping_position, read, haplotype);
-            assert(original_mapping_position >= min_shift);
-            return compute_log_conditional_probability(haplotype.get_sequence(), read.get_sequence(),
-                                                       read.get_qualities(), gap_open_penalities,
-                                                       original_mapping_position - min_shift, model);
-        }
         
         auto max_log_probability = std::numeric_limits<double>::lowest();
         
-        for (const auto position : mapping_positions) {
-            auto cur = compute_log_conditional_probability(haplotype.get_sequence(), read.get_sequence(),
-                                                           read.get_qualities(), gap_open_penalities,
-                                                           position, model);
-            if (cur > max_log_probability) max_log_probability = cur;
-        }
+        bool is_original_position_mapped {false};
+        bool has_in_range_mapping_position {false};
+        
+        std::for_each(first_mapping_position, last_mapping_position,
+                      [&] (const auto position) {
+                          if (is_in_range(position, read, haplotype)) {
+                              has_in_range_mapping_position = true;
+                              
+                              auto cur = PairHMM::align_around_offset(haplotype.get_sequence(), read.get_sequence(),
+                                                                      read.get_qualities(), gap_open_penalities,
+                                                                      position, model_);
+                              
+                              if (cur > max_log_probability) {
+                                  max_log_probability = cur;
+                              }
+                          }
+                          
+                          if (position == original_mapping_position) {
+                              is_original_position_mapped = true;
+                          }
+                      });
         
         assert(contains(haplotype, read));
         
-        if (!contains(mapping_positions, original_mapping_position) && max_log_probability < 0) {
-            auto cur = compute_log_conditional_probability(haplotype.get_sequence(), read.get_sequence(),
-                                                           read.get_qualities(), gap_open_penalities,
-                                                           original_mapping_position, model);
-            if (cur > max_log_probability) max_log_probability = cur;
+        if (!has_in_range_mapping_position) {
+            auto final_mapping_position = original_mapping_position;
+            
+            if (is_original_position_mapped
+                || !is_in_range(original_mapping_position, read, haplotype)) {
+                const auto min_shift = num_out_of_range_bases(original_mapping_position, read, haplotype);
+                assert(original_mapping_position >= min_shift);
+                final_mapping_position -= min_shift;
+            }
+            
+            max_log_probability = PairHMM::align_around_offset(haplotype.get_sequence(), read.get_sequence(),
+                                                               read.get_qualities(), gap_open_penalities,
+                                                               final_mapping_position, model_);
         }
         
         assert(max_log_probability > std::numeric_limits<double>::lowest());

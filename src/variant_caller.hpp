@@ -70,8 +70,6 @@ protected:
     
     const RefCallType refcall_type_ = RefCallType::Positional;
     
-    unsigned max_haplotypes_ = 64;
-    
     bool refcalls_requested() const noexcept;
     
     struct CallerLatents
@@ -91,19 +89,23 @@ protected:
 private:
     mutable CandidateVariantGenerator candidate_generator_;
     
+    unsigned max_haplotypes_ = 64;
+    
     std::unique_ptr<HaplotypePriorModel> haplotype_prior_model_;
     
     bool done_calling(const GenomicRegion& region) const noexcept;
     
     virtual std::unique_ptr<CallerLatents>
-    infer_latents(const std::vector<Haplotype>& haplotypes,
+    infer_latents(const std::vector<SampleIdType>& samples,
+                  const std::vector<Haplotype>& haplotypes,
                   const HaplotypePriorMap& haplotype_priors,
-                  HaplotypeLikelihoodCache& haplotype_likelihoods,
-                  const ReadMap& reads) const = 0;
+                  const HaplotypeLikelihoodCache& haplotype_likelihoods) const = 0;
     
     virtual std::vector<VcfRecord::Builder>
-    call_variants(const std::vector<Variant>& candidates, const std::vector<Allele>& callable_alleles,
-                  CallerLatents* latents, const Phaser::PhaseSet& phase_set,
+    call_variants(const std::vector<Variant>& candidates,
+                  const std::vector<Allele>& callable_alleles,
+                  CallerLatents* latents,
+                  const Phaser::PhaseSet& phase_set,
                   const ReadMap& reads) const = 0;
     
     std::vector<Haplotype>

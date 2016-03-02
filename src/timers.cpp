@@ -30,4 +30,8 @@ boost::timer::cpu_timer marginal_update_timer {};
 boost::timer::cpu_timer posterior_update_timer {};
 boost::timer::cpu_timer em_timer {};
 
+boost::timer::cpu_timer kmer_mapping_timer {};
 boost::timer::cpu_timer likelihood_cache_timer {};
+
+boost::timer::cpu_timer misc_timer1 {};
+boost::timer::cpu_timer misc_timer2 {};

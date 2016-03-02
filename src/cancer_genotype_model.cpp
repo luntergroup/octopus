@@ -108,12 +108,13 @@ namespace Octopus
         
         const auto log_mixtures = log(genotype_mixtures);
         
-        return accumulate(cbegin(reads), cend(reads), 0.0,
-                          [&log_mixtures, &genotype, &rm] (double curr, const auto& read) {
-                              return curr + Maths::log_sum_exp(log_mixtures[0] + rm.log_probability(read, genotype[0]),
-                                                               log_mixtures[1] + rm.log_probability(read, genotype[1]),
-                                                               log_mixtures[2] + rm.log_probability(read, genotype[2]));
-                          });
+//        return accumulate(cbegin(reads), cend(reads), 0.0,
+//                          [&log_mixtures, &genotype, &rm] (double curr, const auto& read) {
+//                              return curr + Maths::log_sum_exp(log_mixtures[0] + rm.log_probability(read, genotype[0]),
+//                                                               log_mixtures[1] + rm.log_probability(read, genotype[1]),
+//                                                               log_mixtures[2] + rm.log_probability(read, genotype[2]));
+//                          });
+        return 0;
     }
     
     GenotypeLogPosteriors
@@ -230,34 +231,34 @@ namespace Octopus
         GenotypeMixtureResponsibilityMap result {};
         result.reserve(reads.size());
         
-        for (const auto& sample_reads : reads) {
-            std::vector<std::array<double, 3>> v {};
-            v.reserve(sample_reads.second.size());
-            
-            auto log_mixtures = log(genotype_mixtures.at(sample_reads.first));
-            
-            for (const auto& read : sample_reads.second) {
-                std::array<double, 3> p {0.0, 0.0, 0.0};
-                
-                for (unsigned k {}; k < 3; ++k) {
-                    std::vector<double> lg(genotypes.size());
-                    
-                    transform(cbegin(genotypes), cend(genotypes), cbegin(genotype_posteriors),
-                              begin(lg), [&read, &log_mixtures, &rm, k]
-                              (const auto& genotype, double log_posterior) {
-                                  return log_posterior + log_mixtures[k] + rm.log_probability(read, genotype[k]);
-                              });
-                    
-                    p[k] = Maths::log_sum_exp<double>(lg);
-                }
-                
-                normalise_exp(p);
-                
-                v.push_back(p);
-            }
-            
-            result.emplace(sample_reads.first, std::move(v));
-        }
+//        for (const auto& sample_reads : reads) {
+//            std::vector<std::array<double, 3>> v {};
+//            v.reserve(sample_reads.second.size());
+//            
+//            auto log_mixtures = log(genotype_mixtures.at(sample_reads.first));
+//            
+//            for (const auto& read : sample_reads.second) {
+//                std::array<double, 3> p {0.0, 0.0, 0.0};
+//                
+//                for (unsigned k {}; k < 3; ++k) {
+//                    std::vector<double> lg(genotypes.size());
+//                    
+//                    transform(cbegin(genotypes), cend(genotypes), cbegin(genotype_posteriors),
+//                              begin(lg), [&read, &log_mixtures, &rm, k]
+//                              (const auto& genotype, double log_posterior) {
+//                                  return log_posterior + log_mixtures[k] + rm.log_probability(read, genotype[k]);
+//                              });
+//                    
+//                    p[k] = Maths::log_sum_exp<double>(lg);
+//                }
+//                
+//                normalise_exp(p);
+//                
+//                v.push_back(p);
+//            }
+//            
+//            result.emplace(sample_reads.first, std::move(v));
+//        }
         
         return result;
     }
@@ -271,34 +272,34 @@ namespace Octopus
     {
         using std::cbegin; using std::cend; using std::begin; using std::transform;
         
-        for (auto& sample_p : current) {
-            const auto& sample = sample_p.first;
-            
-            auto log_mixtures = log(genotype_mixtures.at(sample));
-            
-            auto itr = std::begin(sample_p.second);
-            
-            for (const auto& read : reads.at(sample)) {
-                std::array<double, 3> p {0.0, 0.0, 0.0};
-                
-                for (unsigned k {}; k < 3; ++k) {
-                    std::vector<double> lg(genotypes.size());
-                    
-                    transform(cbegin(genotypes), cend(genotypes), cbegin(genotype_log_posteriors),
-                              begin(lg), [&read, &log_mixtures, &rm, k]
-                              (const auto& genotype, double log_posterior) {
-                                  return log_posterior + log_mixtures[k] + rm.log_probability(read, genotype[k]);
-                              });
-                    
-                    p[k] = Maths::log_sum_exp<double>(lg);
-                }
-                
-                normalise_exp(p);
-                
-                *itr = p;
-                ++itr;
-            }
-        }
+//        for (auto& sample_p : current) {
+//            const auto& sample = sample_p.first;
+//            
+//            auto log_mixtures = log(genotype_mixtures.at(sample));
+//            
+//            auto itr = std::begin(sample_p.second);
+//            
+//            for (const auto& read : reads.at(sample)) {
+//                std::array<double, 3> p {0.0, 0.0, 0.0};
+//                
+//                for (unsigned k {}; k < 3; ++k) {
+//                    std::vector<double> lg(genotypes.size());
+//                    
+//                    transform(cbegin(genotypes), cend(genotypes), cbegin(genotype_log_posteriors),
+//                              begin(lg), [&read, &log_mixtures, &rm, k]
+//                              (const auto& genotype, double log_posterior) {
+//                                  return log_posterior + log_mixtures[k] + rm.log_probability(read, genotype[k]);
+//                              });
+//                    
+//                    p[k] = Maths::log_sum_exp<double>(lg);
+//                }
+//                
+//                normalise_exp(p);
+//                
+//                *itr = p;
+//                ++itr;
+//            }
+//        }
     }
     
     double update_haplotype_frequencies(HaplotypeFrequencyMap& current,

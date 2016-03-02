@@ -9,10 +9,18 @@
 #ifndef haplotype_liklihood_model_hpp
 #define haplotype_liklihood_model_hpp
 
+#include <vector>
+#include <iterator>
+#include <cstddef>
+#include <algorithm>
+#include <functional>
+
 #include "common.hpp"
 #include "haplotype.hpp"
 #include "read_indel_error_model.hpp"
-#include "kmer_mapper.hpp"
+#include "pair_hmm.hpp"
+
+#include "timers.hpp"
 
 class AlignedRead;
 
@@ -23,8 +31,12 @@ namespace Octopus
     public:
         enum class InactiveRegionState { Clear, Unclear };
         
-        HaplotypeLikelihoodModel()  = delete;
-        HaplotypeLikelihoodModel(KmerMapper mapper);
+        using MapPositionItr = std::vector<std::size_t>::const_iterator;
+        
+        HaplotypeLikelihoodModel() = delete;
+        
+        HaplotypeLikelihoodModel(const Haplotype& haplotype, InactiveRegionState flank_state);
+        
         ~HaplotypeLikelihoodModel() = default;
         
         HaplotypeLikelihoodModel(const HaplotypeLikelihoodModel&)            = default;
@@ -32,13 +44,24 @@ namespace Octopus
         HaplotypeLikelihoodModel(HaplotypeLikelihoodModel&&)                 = default;
         HaplotypeLikelihoodModel& operator=(HaplotypeLikelihoodModel&&)      = default;
         
-        // ln p(read | haplotype)
-        double log_probability(const AlignedRead& read, const Haplotype& haplotype,
-                               InactiveRegionState flank_state = InactiveRegionState::Clear) const;
+        // ln p(read | haplotype, model)
+        double log_probability(const AlignedRead& read,
+                               MapPositionItr first_mapping_position,
+                               MapPositionItr last_mapping_position) const;
         
     private:
         ReadIndelErrorModel indel_error_model_;
-        KmerMapper mapper_;
+        
+        std::reference_wrapper<const Haplotype> haplotype_;
+        
+        std::vector<char> haplotype_gap_open_penalities_;
+        
+        PairHMM::Model model_;
+        
+        double log_probability(const AlignedRead& read, const Haplotype& haplotype,
+                               MapPositionItr first_mapping_position,
+                               MapPositionItr last_mapping_position,
+                               const std::vector<char>& gap_open_penalities) const;
     };
 } // namespace Octopus
 

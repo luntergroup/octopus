@@ -13,7 +13,12 @@
 #include <cstddef>
 #include <functional>
 #include <type_traits>
+#include <utility>
+#include <numeric>
 #include <ostream>
+
+#include <boost/optional.hpp>
+#include <boost/functional/hash.hpp>
 
 #include "contig_region.hpp"
 #include "mappable.hpp"
@@ -38,23 +43,23 @@ public:
     using SequenceType = Allele::SequenceType;
     using SizeType     = Allele::SizeType;
     
+    class Builder;
+    
     Haplotype() = default;
-    explicit Haplotype(const GenomicRegion& region, const ReferenceGenome& reference);
+    
+    template <typename R>
+    explicit Haplotype(R&& region, const ReferenceGenome& reference);
+    
+    template <typename R, typename ForwardIt>
+    explicit Haplotype(R&& region, ForwardIt first_allele, ForwardIt last_allele,
+                       const ReferenceGenome& reference);
+    
     ~Haplotype() = default;
     
     Haplotype(const Haplotype&)            = default;
     Haplotype& operator=(const Haplotype&) = default;
     Haplotype(Haplotype&&)                 = default;
     Haplotype& operator=(Haplotype&&)      = default;
-    
-    void push_back(const ContigAllele& allele);
-    void push_front(const ContigAllele& allele);
-    void push_back(ContigAllele&& allele);
-    void push_front(ContigAllele&& allele);
-    void push_back(const Allele& allele);
-    void push_front(const Allele& allele);
-    void push_back(Allele&& allele);
-    void push_front(Allele&& allele);
     
     const GenomicRegion& get_region() const;
     
@@ -65,11 +70,11 @@ public:
     
     SequenceType get_sequence(const ContigRegion& region) const;
     SequenceType get_sequence(const GenomicRegion& region) const;
-    SequenceType get_sequence() const;
+    const SequenceType& get_sequence() const noexcept;
     
     std::vector<Variant> difference(const Haplotype& other) const;
     
-    size_t get_hash() const;
+    size_t get_hash() const noexcept;
     
     friend struct HaveSameAlleles;
     
@@ -83,27 +88,117 @@ public:
 private:
     GenomicRegion region_;
     
-    std::deque<ContigAllele> explicit_alleles_;
-    
-    mutable SequenceType cached_sequence_;
-    mutable size_t cached_hash_ = 0;
-    
     std::reference_wrapper<const ReferenceGenome> reference_;
+    
+    std::vector<ContigAllele> explicit_alleles_;
+    
+    boost::optional<ContigRegion> explicit_allele_region_;
+    
+    SequenceType cached_sequence_;
+    size_t cached_hash_;
     
     using AlleleIterator = decltype(explicit_alleles_)::const_iterator;
     
     SequenceType get_reference_sequence(const GenomicRegion& region) const;
     SequenceType get_reference_sequence(const ContigRegion& region) const;
-    ContigAllele get_intervening_reference_allele(const ContigAllele& lhs, const ContigAllele& rhs) const;
     ContigRegion get_region_bounded_by_explicit_alleles() const;
     SequenceType get_sequence_bounded_by_explicit_alleles(AlleleIterator first, AlleleIterator last) const;
     SequenceType get_sequence_bounded_by_explicit_alleles() const;
+};
+
+template <typename R>
+Haplotype::Haplotype(R&& region, const ReferenceGenome& reference)
+:
+region_ {std::forward<R>(region)},
+reference_ {reference},
+explicit_alleles_ {},
+explicit_allele_region_ {},
+cached_sequence_ {get_reference_sequence(region_)},
+cached_hash_ {std::hash<SequenceType>()(cached_sequence_)}
+{}
+
+template <typename R, typename ForwardIt>
+Haplotype::Haplotype(R&& region, ForwardIt first_allele, ForwardIt last_allele,
+                     const ReferenceGenome& reference)
+:
+region_ {std::forward<R>(region)},
+reference_ {reference},
+explicit_alleles_ {first_allele, last_allele},
+explicit_allele_region_ {},
+cached_sequence_ {},
+cached_hash_ {0}
+{
+    if (!explicit_alleles_.empty()) {
+        explicit_allele_region_ = encompassing_region(explicit_alleles_.front(), explicit_alleles_.back());
+        
+        auto num_bases = std::accumulate(std::cbegin(explicit_alleles_),
+                                         std::cend(explicit_alleles_), 0,
+                                         [] (const auto curr, const auto& allele) {
+                                             return curr + sequence_size(allele);
+                                         });
+        
+        const auto lhs_reference_region = left_overhang_region(region_.get_contig_region(),
+                                                               *explicit_allele_region_);
+        
+        const auto rhs_reference_region = right_overhang_region(region_.get_contig_region(),
+                                                                *explicit_allele_region_);
+        
+        num_bases += region_size(lhs_reference_region) + region_size(rhs_reference_region);
+        
+        cached_sequence_.reserve(num_bases);
+        
+        if (!is_empty_region(lhs_reference_region)) {
+            cached_sequence_ += get_reference_sequence(lhs_reference_region);
+        }
+        
+        cached_sequence_ += get_sequence_bounded_by_explicit_alleles();
+        
+        if (!is_empty_region(rhs_reference_region)) {
+            cached_sequence_ += get_reference_sequence(rhs_reference_region);
+        }
+    } else {
+        cached_sequence_ = get_reference_sequence(region_);
+    }
     
+    cached_hash_ = std::hash<SequenceType>()(cached_sequence_);
+}
+
+class Haplotype::Builder
+{
+public:
+    Builder() = default;
+    explicit Builder(const GenomicRegion& region, const ReferenceGenome& reference);
+    ~Builder() = default;
+    
+    Builder(const Builder&)            = default;
+    Builder& operator=(const Builder&) = default;
+    Builder(Builder&&)                 = default;
+    Builder& operator=(Builder&&)      = default;
+    
+    void push_back(const ContigAllele& allele);
+    void push_front(const ContigAllele& allele);
+    void push_back(ContigAllele&& allele);
+    void push_front(ContigAllele&& allele);
+    void push_back(const Allele& allele);
+    void push_front(const Allele& allele);
+    void push_back(Allele&& allele);
+    void push_front(Allele&& allele);
+    
+    Haplotype build();
+    
+    friend Haplotype detail::do_splice(const Haplotype& haplotype, const GenomicRegion& region,
+                                       std::true_type);
+    
+private:
+    GenomicRegion region_;
+    
+    std::deque<ContigAllele> explicit_alleles_;
+    
+    std::reference_wrapper<const ReferenceGenome> reference_;
+    
+    ContigAllele get_intervening_reference_allele(const ContigAllele& lhs, const ContigAllele& rhs) const;
     void update_region(const ContigAllele& allele) noexcept;
     void update_region(const Allele& allele);
-    
-    bool is_cached_sequence_good() const noexcept;
-    void clear_cached_sequence();
 };
 
 // non-members

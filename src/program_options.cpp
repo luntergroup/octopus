@@ -226,7 +226,7 @@ namespace Octopus
              "base quality threshold used by min-good-bases filter")
             ("min-good-base-fraction", po::value<double>(),
              "base quality threshold used by min-good-bases filter")
-            ("min-good-bases", po::value<AlignedRead::SizeType>()->default_value(0),
+            ("min-good-bases", po::value<AlignedRead::SizeType>()->default_value(20),
              "minimum number of bases with quality min-base-quality before read is considered")
             ("allow-qc-fails", po::bool_switch()->default_value(false), "filter reads marked as QC failed")
             ("min-read-length", po::value<AlignedRead::SizeType>(), "filter reads shorter than this")
@@ -892,14 +892,14 @@ namespace Octopus
             result.register_filter(ReadFilters::is_mapped());
         }
         
-        auto min_mapping_quality = options.at("min-mapping-quality").as<unsigned>();
+        const auto min_mapping_quality = options.at("min-mapping-quality").as<unsigned>();
         
         if (min_mapping_quality > 0) {
             result.register_filter(ReadFilters::is_good_mapping_quality(min_mapping_quality));
         }
         
-        auto min_base_quality = options.at("good-base-quality").as<unsigned>();
-        auto min_good_bases = options.at("min-good-bases").as<unsigned>();
+        const auto min_base_quality = options.at("good-base-quality").as<unsigned>();
+        const auto min_good_bases   = options.at("min-good-bases").as<unsigned>();
         
         if (min_good_bases > 0) {
             result.register_filter(ReadFilters::has_sufficient_good_quality_bases(min_base_quality, min_good_bases));

@@ -39,7 +39,11 @@ extern boost::timer::cpu_timer posterior_update_timer;
 extern boost::timer::cpu_timer em_timer;
 
 // misc timers
+extern boost::timer::cpu_timer kmer_mapping_timer;
 extern boost::timer::cpu_timer likelihood_cache_timer;
+
+extern boost::timer::cpu_timer misc_timer1;
+extern boost::timer::cpu_timer misc_timer2;
 
 inline void resume_timer(boost::timer::cpu_timer& timer)
 {
@@ -57,28 +61,32 @@ inline void pause_timer(boost::timer::cpu_timer& timer)
 
 inline void init_timers()
 {
-    init_timer.stop();
-    haplotype_generation_timer.stop();
-    likelihood_timer.stop();
-    haplotype_fitler_timer.stop();
-    prior_model_timer.stop();
-    latent_timer.stop();
-    phasing_timer.stop();
-    allele_generator_timer.stop();
-    calling_timer.stop();
+    init_timer.start(); init_timer.stop();
+    haplotype_generation_timer.start(); haplotype_generation_timer.stop();
+    likelihood_timer.start(); likelihood_timer.stop();
+    haplotype_fitler_timer.start(); haplotype_fitler_timer.stop();
+    prior_model_timer.start(); prior_model_timer.stop();
+    latent_timer.start(); latent_timer.stop();
+    phasing_timer.start(); phasing_timer.stop();
+    allele_generator_timer.start(); allele_generator_timer.stop();
+    calling_timer.start(); calling_timer.stop();
     
-    genotype_generation_timer.stop();
-    genotype_likelihood_timer.stop();
-    prior_count_timer.stop();
-    frequency_init_timer.stop();
-    marginal_init_timer.stop();
-    posterior_init_timer.stop();
-    frequency_update_timer.stop();
-    marginal_update_timer.stop();
-    posterior_update_timer.stop();
-    em_timer.stop();
+    genotype_generation_timer.start(); genotype_generation_timer.stop();
+    genotype_likelihood_timer.start(); genotype_likelihood_timer.stop();
+    prior_count_timer.start(); prior_count_timer.stop();
+    frequency_init_timer.start(); frequency_init_timer.stop();
+    marginal_init_timer.start(); marginal_init_timer.stop();
+    posterior_init_timer.start(); posterior_init_timer.stop();
+    frequency_update_timer.start(); frequency_update_timer.stop();
+    marginal_update_timer.start(); marginal_update_timer.stop();
+    posterior_update_timer.start(); posterior_update_timer.stop();
+    em_timer.start(); em_timer.stop();
     
-    likelihood_cache_timer.stop();
+    kmer_mapping_timer.start(); kmer_mapping_timer.stop();
+    likelihood_cache_timer.start(); likelihood_cache_timer.stop();
+    
+    misc_timer1.start(); misc_timer1.stop();
+    misc_timer2.start(); misc_timer2.stop();
 }
 
 inline void print_all_timers()
@@ -172,6 +180,18 @@ inline void print_caller_timers()
     
     std::cout << "calling timer" << '\n';
     std::cout << calling_timer.format() << std::endl;
+    
+    std::cout << "kmer mapping timer" << '\n';
+    std::cout << kmer_mapping_timer.format() << std::endl;
+    
+    std::cout << "likelihood cache timer" << '\n';
+    std::cout << likelihood_cache_timer.format() << std::endl;
+    
+    std::cout << "misc timer1" << '\n';
+    std::cout << misc_timer1.format() << std::endl;
+    
+    std::cout << "misc timer2" << '\n';
+    std::cout << misc_timer2.format() << std::endl;
 }
 
 inline void print_model_timers()

@@ -12,6 +12,7 @@
 #include <string>
 #include <memory>
 
+#include "common.hpp"
 #include "variant_caller.hpp"
 #include "cancer_genotype_model.hpp"
 
@@ -87,10 +88,10 @@ namespace Octopus
 //                                             const ReadMap& reads) const override;
         
         std::unique_ptr<CallerLatents>
-        infer_latents(const std::vector<Haplotype>& haplotypes,
+        infer_latents(const std::vector<SampleIdType>& samples,
+                      const std::vector<Haplotype>& haplotypes,
                       const HaplotypePriorMap& haplotype_priors,
-                      HaplotypeLikelihoodCache& haplotype_likelihoods,
-                      const ReadMap& reads) const override;
+                      const HaplotypeLikelihoodCache& haplotype_likelihoods) const override;
         
         std::vector<VcfRecord::Builder>
         call_variants(const std::vector<Variant>& candidates,

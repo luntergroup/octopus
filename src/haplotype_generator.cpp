@@ -20,12 +20,13 @@
 #include "mappable_algorithms.hpp"
 
 #include <iostream> // DEBUG
+#include "timers.hpp"
 
 namespace Octopus
 {
     auto max_indcluded(const unsigned max_haplotypes)
     {
-        return 2 * static_cast<unsigned>(std::max(1.0, std::log2(max_haplotypes)));
+        return 2 * static_cast<unsigned>(std::max(1.0, std::log2(max_haplotypes))) - 1;
     }
     
     namespace

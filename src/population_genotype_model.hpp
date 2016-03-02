@@ -15,6 +15,7 @@
 #include <functional>
 #include <utility>
 
+#include "common.hpp"
 #include "genotype.hpp"
 #include "reference_genome.hpp"
 #include "haplotype_likelihood_cache.hpp"
@@ -52,10 +53,10 @@ namespace Octopus
         
         explicit Population(unsigned ploidy, unsigned max_em_iterations = 100, double em_epsilon = 0.001);
         
-        Latents infer_latents(const std::vector<Haplotype>& haplotypes,
+        Latents infer_latents(const std::vector<SampleIdType>& samples,
+                              const std::vector<Haplotype>& haplotypes,
                               const HaplotypePrioMap& haplotype_priors,
-                              HaplotypeLikelihoodCache& haplotype_likelihoods,
-                              const ReadMap& reads);
+                              const HaplotypeLikelihoodCache& haplotype_likelihoods);
         
     private:
         const unsigned ploidy_;

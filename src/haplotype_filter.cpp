@@ -2,87 +2,81 @@
 //  haplotype_filter.cpp
 //  Octopus
 //
-//  Created by Daniel Cooke on 22/11/2015.
-//  Copyright © 2015 Oxford University. All rights reserved.
+//  Created by Daniel Cooke on 02/03/2016.
+//  Copyright © 2016 Oxford University. All rights reserved.
 //
 
 #include "haplotype_filter.hpp"
 
+#include <unordered_map>
 #include <algorithm>
 #include <iterator>
-#include <utility>
-#include <unordered_map>
+#include <limits>
 
-#include "read_utils.hpp"
+#include "common.hpp"
+#include "haplotype.hpp"
+#include "haplotype_likelihood_cache.hpp"
+#include "maths.hpp"
 
 namespace Octopus
 {
-void filter_haplotypes(std::vector<Haplotype>& haplotypes, const ReadMap& reads, size_t n,
-                       const HaplotypeLikelihoodCache& haplotype_likelihoods)
-{
-    if (haplotypes.size() <= n) return;
-    
-    std::unordered_map<std::reference_wrapper<const Haplotype>, double> max_liklihoods {haplotypes.size()};
-    
-    for (const auto& haplotype : haplotypes) {
-        double max_read_liklihood {0};
+    double max_read_likelihood(const ReadMap& reads, const Haplotype& haplotype,
+                               const HaplotypeLikelihoodCache& haplotype_likelihoods)
+    {
+        auto result = std::numeric_limits<double>::lowest();
         
-        for (const auto& sample_reads : reads) {
-            for (const auto& read : sample_reads.second) {
-                const auto cur_read_liklihood = haplotype_likelihoods.log_probability(read, haplotype);
-                if (cur_read_liklihood > max_read_liklihood) max_read_liklihood = cur_read_liklihood;
+        for (const auto& p : reads) {
+            for (const double likelihood : haplotype_likelihoods.log_likelihoods(p.first, haplotype)) {
+                if (likelihood > result) result = likelihood;
+                if (Maths::almost_zero(likelihood)) break;
             }
         }
         
-        max_liklihoods.emplace(haplotype, max_read_liklihood);
+        return result;
     }
     
-    const auto nth = std::next(std::begin(haplotypes), n);
-    
-    std::nth_element(std::begin(haplotypes), nth, std::end(haplotypes),
-                     [&] (const auto& lhs, const auto& rhs) {
-                         return max_liklihoods.at(lhs) > max_liklihoods.at(rhs);
-                     });
-    
-    haplotypes.erase(nth, std::end(haplotypes));
-}
-
-std::vector<Haplotype>
-filter_haplotypes(const std::vector<Haplotype>& haplotypes, const ReadMap& reads, const size_t n,
-                  const HaplotypeLikelihoodCache& haplotype_likelihoods)
-{
-    if (haplotypes.size() <= n) {
-        return std::vector<Haplotype> {std::cbegin(haplotypes), std::cend(haplotypes)};
-    }
-    
-    std::vector<std::pair<std::reference_wrapper<const Haplotype>, double>> haplotype_scores {};
-    haplotype_scores.reserve(haplotypes.size());
-    
-    for (const auto& haplotype : haplotypes) {
-        double max_read_liklihood {0};
+    std::vector<Haplotype> filter_n_haplotypes(std::vector<Haplotype>& haplotypes,
+                                               const ReadMap& reads,
+                                               const HaplotypeLikelihoodCache& haplotype_likelihoods,
+                                               const std::size_t n)
+    {
+        std::vector<Haplotype> result {};
         
-        for (const auto& sample_reads : reads) {
-            for (const auto& read : sample_reads.second) {
-                const auto cur_read_liklihood = haplotype_likelihoods.log_probability(read, haplotype);
-                if (cur_read_liklihood > max_read_liklihood) max_read_liklihood = cur_read_liklihood;
-            }
+        if (haplotypes.size() <= n) {
+            std::sort(std::begin(haplotypes), std::end(haplotypes));
+            return result;
         }
         
-        haplotype_scores.emplace_back(haplotype, max_read_liklihood);
+        std::unordered_map<Haplotype, double> max_liklihoods {haplotypes.size()};
+        
+        for (const auto& haplotype : haplotypes) {
+            max_liklihoods.emplace(haplotype, max_read_likelihood(reads, haplotype, haplotype_likelihoods));
+        }
+        
+        const auto nth = std::next(std::begin(haplotypes), n);
+        
+        std::nth_element(std::begin(haplotypes), nth, std::end(haplotypes),
+                         [&] (const auto& lhs, const auto& rhs) {
+                             return max_liklihoods.at(lhs) > max_liklihoods.at(rhs);
+                         });
+        
+        std::sort(std::begin(haplotypes), nth);
+        std::sort(nth, std::end(haplotypes));
+        
+        std::vector<Haplotype> duplicates {};
+        
+        std::set_intersection(std::begin(haplotypes), nth, nth, std::end(haplotypes),
+                              std::back_inserter(duplicates));
+        
+        result.assign(std::make_move_iterator(nth), std::make_move_iterator(std::end(haplotypes)));
+        
+        haplotypes.erase(nth, std::end(haplotypes));
+        
+        for (const auto& duplicate : duplicates) {
+            const auto er = std::equal_range(std::begin(haplotypes), std::end(haplotypes), duplicate);
+            haplotypes.erase(er.first, er.second);
+        }
+        
+        return result;
     }
-    
-    const auto nth = std::next(std::begin(haplotype_scores), n);
-    
-    std::nth_element(std::begin(haplotype_scores), nth, std::end(haplotype_scores),
-                     [] (const auto& lhs, const auto& rhs) { return lhs.second > rhs.second; });
-    
-    std::vector<Haplotype> result {};
-    result.reserve(n);
-    
-    std::transform(std::begin(haplotype_scores), nth, std::back_inserter(result),
-                   [] (const auto& p) { return p.first; });
-    
-    return result;
-}
-
 } // namespace Octopus

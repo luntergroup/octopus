@@ -449,18 +449,18 @@ bool has_overlapped(BidirIt first, BidirIt last, const MappableTp& mappable,
     if (order == MappableRangeOrder::BidirectionallySorted) {
         return std::binary_search(first, last, mappable,
                                   [] (const auto& lhs, const auto& rhs) { return is_before(lhs, rhs); });
-    } else {
-        if (first == last) return false;
-        
-        auto it = find_first_after(first, last, mappable);
-        
-        // searches in reverse order on the assumption regions closer to the boundry with
-        // mappable are more likely to overlap with mappable.
-        return std::any_of(std::make_reverse_iterator(it), std::make_reverse_iterator(first),
-                                                         [&mappable] (const auto& m) {
-                                                             return overlaps(mappable, m);
-                                                         });
     }
+    
+    if (first == last) return false;
+    
+    auto it = find_first_after(first, last, mappable);
+    
+    // searches in reverse order on the assumption regions closer to the boundry with
+    // mappable are more likely to overlap with mappable.
+    return std::any_of(std::make_reverse_iterator(it), std::make_reverse_iterator(first),
+                       [&mappable] (const auto& m) {
+                           return overlaps(mappable, m);
+                       });
 }
 
 template <typename Container, typename MappableTp>

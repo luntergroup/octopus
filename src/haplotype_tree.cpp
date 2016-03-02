@@ -359,7 +359,7 @@ HaplotypeTree::LeafIterator HaplotypeTree::extend_haplotype(LeafIterator leaf_it
 
 Haplotype HaplotypeTree::extract_haplotype(Vertex leaf, const GenomicRegion& region) const
 {
-    Haplotype result {region, reference_};
+    Haplotype::Builder result {region, reference_};
     
     const auto& contig_region = region.get_contig_region();
     
@@ -372,7 +372,7 @@ Haplotype HaplotypeTree::extract_haplotype(Vertex leaf, const GenomicRegion& reg
         leaf = get_previous_allele(leaf);
     }
     
-    return result;
+    return result.build();
 }
 
 bool HaplotypeTree::define_same_haplotype(Vertex leaf1, Vertex leaf2) const

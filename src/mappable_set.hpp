@@ -712,12 +712,15 @@ template <typename MappableType, typename Allocator>
 template <typename MappableType_>
 void MappableSet<MappableType, Allocator>::erase_overlapped(const MappableType_& mappable)
 {
+    // TODO: find better implementation
+    
     auto overlapped = this->overlap_range(mappable);
     
-    if (is_bidirectionally_sorted_ || ::size(overlapped) == bases(overlapped).size()) {
+    if (is_bidirectionally_sorted_ || ::size(overlapped) == bases(overlapped).size()
+        || std::all_of(std::cbegin(overlapped).base(), std::cend(overlapped).base(),
+                       [&] (const auto& m) { return overlaps(m, mappable); })) {
         this->erase(std::cbegin(overlapped).base(), std::cend(overlapped).base());
     } else {
-        // TODO: find better implementation
         while (!overlapped.empty()) {
             this->erase(overlapped.front());
             overlapped = this->overlap_range(mappable);

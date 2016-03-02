@@ -12,7 +12,6 @@
 #include <utility>
 #include <tuple>
 #include <iterator>
-#include <limits>
 #include <cassert>
 
 #include "genomic_region.hpp"
@@ -21,12 +20,13 @@
 #include "read_utils.hpp"
 #include "mappable_algorithms.hpp"
 #include "haplotype.hpp"
+#include "haplotype_generator.hpp"
+#include "haplotype_liklihood_model.hpp"
+#include "haplotype_filter.hpp"
 #include "vcf_record.hpp"
 #include "maths.hpp"
 
 #include "basic_haplotype_prior_model.hpp" // TODO: turn into factory
-
-#include "haplotype_generator.hpp"
 
 #include <iostream> // DEBUG
 #include "timers.hpp"
@@ -34,6 +34,18 @@
 namespace Octopus
 {
 // public methods
+
+auto keys(const ReadMap& reads)
+{
+    std::vector<SampleIdType> result {};
+    result.reserve(reads.size());
+    
+    for (const auto& p : reads) {
+        result.push_back(p.first);
+    }
+    
+    return result;
+}
 
 VariantCaller::VariantCaller(const ReferenceGenome& reference,
                              ReadPipe& read_pipe,
@@ -101,109 +113,25 @@ namespace debug
     void print_haplotype_posteriors(const Map& haplotype_posteriors, std::size_t n = 20);
 }
 
-using ReadSet = std::vector<std::reference_wrapper<const AlignedRead>>;
-
-ReadSet flatten(const ReadMap& reads)
+bool haplotype_region_contains_inactive_candidates(const GenomicRegion& haplotype_region,
+                                                   const GenomicRegion& active_region,
+                                                   const std::vector<Variant>& candidates)
 {
-    ReadSet result {};
-    result.reserve(count_reads(reads));
-    
-    for (const auto& p : reads) {
-        const auto it = result.insert(std::end(result), std::cbegin(p.second), std::cend(p.second));
-        std::inplace_merge(std::begin(result), it, std::end(result));
-    }
-    
-    result.erase(std::unique(std::begin(result), std::end(result)), std::end(result));
-    
-    return result;
-}
-
-double max_read_likelihood(const ReadSet& reads, const Haplotype& haplotype,
-                           const HaplotypeLikelihoodCache& haplotype_likelihoods)
-{
-    auto result = std::numeric_limits<double>::lowest();
-    
-    for (const auto& read : reads) {
-        const auto cur_read_liklihood = haplotype_likelihoods.log_probability(read, haplotype);
-        if (cur_read_liklihood > result) result = cur_read_liklihood;
-        if (Maths::almost_zero(cur_read_liklihood)) break;
-    }
-    
-    return result;
-}
-
-std::vector<Haplotype>
-filter_haplotypes(std::vector<Haplotype>& haplotypes, const ReadSet& reads,
-                  const HaplotypeLikelihoodCache& haplotype_likelihoods, const size_t n)
-{
-    std::vector<Haplotype> result {};
-    
-    if (haplotypes.size() <= n) {
-        std::sort(std::begin(haplotypes), std::end(haplotypes));
-        return result;
-    }
-    
-    std::unordered_map<Haplotype, double> max_liklihoods {haplotypes.size()};
-    
-    for (const auto& haplotype : haplotypes) {
-        max_liklihoods.emplace(haplotype, max_read_likelihood(reads, haplotype, haplotype_likelihoods));
-    }
-    
-    const auto nth = std::next(std::begin(haplotypes), n);
-    
-    std::nth_element(std::begin(haplotypes), nth, std::end(haplotypes),
-                     [&] (const auto& lhs, const auto& rhs) {
-                         return max_liklihoods.at(lhs) > max_liklihoods.at(rhs);
-                     });
-    
-    std::sort(std::begin(haplotypes), nth);
-    std::sort(nth, std::end(haplotypes));
-    
-    std::vector<Haplotype> duplicates {};
-    
-    std::set_intersection(std::begin(haplotypes), nth, nth, std::end(haplotypes),
-                          std::back_inserter(duplicates));
-    
-    result.assign(std::make_move_iterator(nth), std::make_move_iterator(std::end(haplotypes)));
-    
-    haplotypes.erase(nth, std::end(haplotypes));
-    
-    for (const auto& duplicate : duplicates) {
-        const auto er = std::equal_range(std::begin(haplotypes), std::end(haplotypes), duplicate);
-        haplotypes.erase(er.first, er.second);
-    }
-    
-    return result;
-}
-
-std::pair<unsigned, unsigned>
-count_overlapped_inactive_candidates(const GenomicRegion& haplotype_region,
-                                     const GenomicRegion& active_region,
-                                     const std::vector<Variant>& candidates)
-{
-    const auto lhs_count = count_overlapped(candidates, left_overhang_region(haplotype_region, active_region));
-    const auto rhs_count = count_overlapped(candidates, right_overhang_region(haplotype_region, active_region));
-    return std::make_pair(lhs_count, rhs_count);
+    return has_overlapped(candidates, left_overhang_region(haplotype_region, active_region))
+        || has_overlapped(candidates, right_overhang_region(haplotype_region, active_region));
 }
 
 auto flank_state(const std::vector<Haplotype>& haplotypes,
                  const GenomicRegion& active_region,
                  const std::vector<Variant>& candidates)
 {
-    const auto p = count_overlapped_inactive_candidates(haplotypes.front().get_region(),
-                                                        active_region, candidates);
+    const auto& haplotype_region = haplotypes.front().get_region();
     
-    if (p.first > 2 || p.second > 2) {
+    if (haplotype_region_contains_inactive_candidates(haplotype_region, active_region, candidates)) {
         return HaplotypeLikelihoodModel::InactiveRegionState::Unclear;
     }
     
     return HaplotypeLikelihoodModel::InactiveRegionState::Clear;
-}
-
-auto build_likelihood_cache(const std::vector<Haplotype>& haplotypes, const ReadSet& reads,
-                            const GenomicRegion& active_region, const std::vector<Variant>& candidates)
-{
-    return HaplotypeLikelihoodCache {reads, haplotypes, flank_state(haplotypes, active_region, candidates)};
 }
 
 bool all_empty(const ReadMap& reads)
@@ -211,7 +139,7 @@ bool all_empty(const ReadMap& reads)
     return std::all_of(std::cbegin(reads), std::cend(reads),
                        [] (const auto& p) { return p.second.empty(); });
 }
-    
+
 auto calculate_candidate_region(const GenomicRegion& call_region, const ReadMap& reads,
                                 const CandidateVariantGenerator& candidate_generator)
 {
@@ -279,6 +207,10 @@ std::deque<VcfRecord> VariantCaller::call_variants(const GenomicRegion& call_reg
     
     pause_timer(init_timer);
     
+    const auto samples = keys(reads);
+    
+    HaplotypeLikelihoodCache haplotype_likelihoods {max_haplotypes_, samples};
+    
     while (true) {
         resume_timer(haplotype_generation_timer);
         std::tie(haplotypes, active_region) = generator.progress();
@@ -294,21 +226,18 @@ std::deque<VcfRecord> VariantCaller::call_variants(const GenomicRegion& call_reg
         
         const auto active_reads = copy_overlapped(reads, active_region);
         
-        auto read_references = flatten(active_reads);
-        
         //std::cout << "there are " << haplotypes.size() << " haplotypes" << std::endl;
+        //std::cout << "there are " << count_reads(active_reads) << " reads" << std::endl;
         
         resume_timer(likelihood_timer);
-        auto haplotype_likelihoods = build_likelihood_cache(haplotypes, read_references,
-                                                            active_region, candidates);
+        haplotype_likelihoods.populate(active_reads, haplotypes,
+                                        flank_state(haplotypes, active_region, candidates));
         pause_timer(likelihood_timer);
         
         resume_timer(haplotype_fitler_timer);
-        auto removed_haplotypes = filter_haplotypes(haplotypes, read_references,
-                                                    haplotype_likelihoods, max_haplotypes_);
+        auto removed_haplotypes = filter_n_haplotypes(haplotypes, active_reads,
+                                                      haplotype_likelihoods, max_haplotypes_);
         pause_timer(haplotype_fitler_timer);
-        
-        read_references.clear();
         
         if (haplotypes.empty()) {
             // This can only happen if all haplotypes have equal likelihood.
@@ -334,8 +263,8 @@ std::deque<VcfRecord> VariantCaller::call_variants(const GenomicRegion& call_reg
         //debug::print_read_haplotype_liklihoods(haplotypes, active_reads, haplotype_likelihoods);
         
         resume_timer(latent_timer);
-        const auto caller_latents = infer_latents(haplotypes, haplotype_priors,
-                                                  haplotype_likelihoods, active_reads);
+        const auto caller_latents = infer_latents(samples, haplotypes, haplotype_priors,
+                                                  haplotype_likelihoods);
         pause_timer(latent_timer);
         
         haplotype_priors.clear();

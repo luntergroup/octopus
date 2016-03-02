@@ -154,29 +154,25 @@ namespace Octopus
     }
     
     GenotypeLogLikelihoodMap
-    compute_genotype_log_likelihoods(const std::vector<Genotype<Haplotype>>& genotypes,
-                                     const ReadMap& reads,
-                                     HaplotypeLikelihoodCache& haplotype_likelihoods)
+    compute_genotype_log_likelihoods(const std::vector<SampleIdType>& samples,
+                                     const std::vector<Genotype<Haplotype>>& genotypes,
+                                     const HaplotypeLikelihoodCache& haplotype_likelihoods)
     {
         assert(!genotypes.empty());
         
         FixedPloidyGenotypeLikelihoodModel likelihood_model {genotypes.front().ploidy(), haplotype_likelihoods};
         
-        GenotypeLogLikelihoodMap result {reads.size()};
+        GenotypeLogLikelihoodMap result {samples.size()};
         
-        for (const auto& p : reads) {
-            const auto& sample_reads = p.second;
-            
-            const auto it = result.emplace(std::piecewise_construct, std::forward_as_tuple(p.first),
+        for (const auto& sample : samples) {
+            const auto it = result.emplace(std::piecewise_construct, std::forward_as_tuple(sample),
                                            std::forward_as_tuple(genotypes.size())).first;
             
             std::transform(std::cbegin(genotypes), std::cend(genotypes), std::begin(it->second),
-                           [&sample_reads, &likelihood_model] (const auto& genotype) {
-                               return log_probability(sample_reads, genotype, likelihood_model);
+                           [&sample, &likelihood_model] (const auto& genotype) {
+                               return likelihood_model.log_likelihood(sample, genotype);
                            });
         }
-        
-        haplotype_likelihoods.clear();
         
         return result;
     }
@@ -345,13 +341,14 @@ namespace Octopus
     }
     
     Population::Latents
-    make_single_genotype_latents(const Genotype<Haplotype>& genotype, const ReadMap& reads)
+    make_single_genotype_latents(const std::vector<SampleIdType>& samples,
+                                 const Genotype<Haplotype>& genotype)
     {
         Population::Latents::GenotypeProbabilityMap result {};
         result.push_back(genotype);
         
-        for (const auto& s : reads) {
-            insert_sample(s.first, std::vector<double> {1}, result);
+        for (const auto& sample : samples) {
+            insert_sample(sample, std::vector<double> {1}, result);
         }
         
         Population::Latents::HaplotypeFrequencyMap haps {{genotype[0], 1}};
@@ -375,13 +372,12 @@ namespace Octopus
     // private methods
     
     Population::Latents
-    Population::infer_latents(const std::vector<Haplotype>& haplotypes,
+    Population::infer_latents(const std::vector<SampleIdType>& samples,
+                              const std::vector<Haplotype>& haplotypes,
                               const HaplotypePrioMap& haplotype_priors,
-                              HaplotypeLikelihoodCache& haplotype_likelihoods,
-                              const ReadMap& reads)
+                              const HaplotypeLikelihoodCache& haplotype_likelihoods)
     {
         assert(!haplotypes.empty());
-        assert(!reads.empty());
         
         resume_timer(genotype_generation_timer);
         auto genotypes = generate_all_genotypes(haplotypes, ploidy_);
@@ -392,11 +388,11 @@ namespace Octopus
         assert(!genotypes.empty());
         
         if (genotypes.size() == 1) {
-            return make_single_genotype_latents(genotypes.front(), reads);
+            return make_single_genotype_latents(samples, genotypes.front());
         }
         
         resume_timer(genotype_likelihood_timer);
-        const auto genotype_log_likilhoods = compute_genotype_log_likelihoods(genotypes, reads,
+        const auto genotype_log_likilhoods = compute_genotype_log_likelihoods(samples, genotypes,
                                                                               haplotype_likelihoods);
         pause_timer(genotype_likelihood_timer);
         

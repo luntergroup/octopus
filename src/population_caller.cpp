@@ -17,7 +17,6 @@
 #include <iostream>
 #include <limits>
 
-#include "common.hpp"
 #include "genomic_region.hpp"
 #include "allele.hpp"
 #include "variant.hpp"
@@ -58,13 +57,13 @@ genotype_posteriors_ {std::make_shared<GenotypePosteriorMap>(std::move(model_lat
 {}
 
 std::unique_ptr<PopulationVariantCaller::CallerLatents>
-PopulationVariantCaller::infer_latents(const std::vector<Haplotype>& haplotypes,
+PopulationVariantCaller::infer_latents(const std::vector<SampleIdType>& samples,
+                                       const std::vector<Haplotype>& haplotypes,
                                        const HaplotypePriorMap& haplotype_priors,
-                                       HaplotypeLikelihoodCache& haplotype_likelihoods,
-                                       const ReadMap& reads) const
+                                       const HaplotypeLikelihoodCache& haplotype_likelihoods) const
 {
-    auto model_latents = genotype_model_.infer_latents(haplotypes, haplotype_priors,
-                                                       haplotype_likelihoods, reads);
+    auto model_latents = genotype_model_.infer_latents(samples, haplotypes, haplotype_priors,
+                                                       haplotype_likelihoods);
     
     return std::make_unique<Latents>(std::move(model_latents));
 }
