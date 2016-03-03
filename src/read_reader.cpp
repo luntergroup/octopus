@@ -100,6 +100,14 @@ ReadReader::find_covered_subregion(const GenomicRegion& region, size_t max_cover
 }
 
 std::pair<GenomicRegion, std::vector<unsigned>>
+ReadReader::find_covered_subregion(const SampleIdType& sample, const GenomicRegion& region,
+                                   size_t max_coverage)
+{
+    std::lock_guard<std::mutex> lock {mutex_};
+    return the_impl_->find_covered_subregion(sample, region, max_coverage);
+}
+
+std::pair<GenomicRegion, std::vector<unsigned>>
 ReadReader::find_covered_subregion(const std::vector<SampleIdType>& samples,
                                    const GenomicRegion& region, size_t max_coverage)
 {

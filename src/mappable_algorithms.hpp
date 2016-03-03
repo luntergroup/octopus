@@ -1196,11 +1196,16 @@ auto calculate_positional_coverage(ForwardIt first, ForwardIt last, const Region
     return result;
 }
 
+template <typename ForwardIt>
+auto calculate_positional_coverage(ForwardIt first, ForwardIt last)
+{
+    return calculate_positional_coverage(first, last, encompassing_region(first, last));
+}
+
 template <typename Container>
 auto calculate_positional_coverage(const Container& mappables)
 {
-    return calculate_positional_coverage(std::cbegin(mappables), std::cend(mappables),
-                                         encompassing_region(mappables));
+    return calculate_positional_coverage(std::cbegin(mappables), std::cend(mappables));
 }
 
 template <typename Container, typename RegionTp>

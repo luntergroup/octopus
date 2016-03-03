@@ -65,6 +65,9 @@ public:
     std::pair<GenomicRegion, std::vector<unsigned>>
     find_covered_subregion(const GenomicRegion& region, size_t max_coverage) override;
     std::pair<GenomicRegion, std::vector<unsigned>>
+    find_covered_subregion(const SampleIdType& sample, const GenomicRegion& region,
+                           size_t max_coverage) override;
+    std::pair<GenomicRegion, std::vector<unsigned>>
     find_covered_subregion(const std::vector<SampleIdType>& samples, const GenomicRegion& region,
                            size_t max_coverage) override;
     
@@ -80,7 +83,7 @@ public:
 private:
     using HtsTidType = int32_t;
     
-    static constexpr std::size_t default_reserve_ {10'000'00};
+    static constexpr std::size_t default_reserve_ {10'000'000};
     
     class HtslibIterator
     {

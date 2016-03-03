@@ -976,20 +976,23 @@ namespace detail
 } // namespace detail
 
 template <typename T>
-std::unordered_map<AlignedRead, unsigned> get_min_coverages_in_read_regions(const T& reads, const GenomicRegion& region)
+std::unordered_map<AlignedRead, unsigned>
+get_min_coverages_in_read_regions(const T& reads, const GenomicRegion& region)
 {
     return detail::coverages_in_read_regions(reads, region, std::min_element);
 }
 
 template <typename T>
-std::unordered_map<AlignedRead, unsigned> get_max_coverages_in_read_regions(const T& reads, const GenomicRegion& region)
+std::unordered_map<AlignedRead, unsigned>
+get_max_coverages_in_read_regions(const T& reads, const GenomicRegion& region)
 {
     return detail::coverages_in_read_regions(reads, region, std::max_element);
 }
 
 template <typename T>
 std::vector<GenomicRegion>
-find_high_coverage_regions(const T& reads, const GenomicRegion& region, const unsigned max_coverage)
+find_high_coverage_regions(const T& reads, const GenomicRegion& region,
+                           const unsigned max_coverage)
 {
     using SizeType = GenomicRegion::SizeType;
     
@@ -1007,7 +1010,7 @@ find_high_coverage_regions(const T& reads, const GenomicRegion& region, const un
     SizeType high_range_begin, high_range_end;
     
     while (current != last) {
-        auto is_high_coverage = [max_coverage] (unsigned coverage) { return coverage > max_coverage; };
+        const auto is_high_coverage = [max_coverage] (const auto coverage) { return coverage > max_coverage; };
         
         high_range_first = std::find_if(current, last, is_high_coverage);
         
@@ -1026,6 +1029,13 @@ find_high_coverage_regions(const T& reads, const GenomicRegion& region, const un
     result.shrink_to_fit();
     
     return result;
+}
+
+template <typename T>
+std::vector<GenomicRegion>
+find_high_coverage_regions(const T& reads, const unsigned max_coverage)
+{
+    return find_high_coverage_regions(reads, encompassing_region(reads), max_coverage);
 }
 
 template <typename ReadMap>

@@ -53,15 +53,13 @@ ReadMap ReadPipe::fetch_reads(const GenomicRegion& region)
     const auto batches = batch_samples(samples_);
     
     for (const auto& batch : batches) {
-        resume_timer(misc_timer1);
         auto batch_reads = read_manager_.get().fetch_reads(batch, region);
-        pause_timer(misc_timer1);
         
         erase_filtered_reads(batch_reads, partition(batch_reads, read_filter_));
         
-//        if (downsampler_) {
-//            batch_reads = downsampler_->sample(std::move(batch_reads));
-//        }
+        if (downsampler_) {
+            downsampler_->downsample(batch_reads);
+        }
         
         transform_reads(batch_reads, read_transform_);
         

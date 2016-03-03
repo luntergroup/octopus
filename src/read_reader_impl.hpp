@@ -46,6 +46,9 @@ public:
     virtual std::pair<GenomicRegion, std::vector<unsigned>>
     find_covered_subregion(const GenomicRegion& region, size_t max_coverage) = 0;
     virtual std::pair<GenomicRegion, std::vector<unsigned>>
+    find_covered_subregion(const SampleIdType& sample, const GenomicRegion& region,
+                           size_t max_coverage) = 0;
+    virtual std::pair<GenomicRegion, std::vector<unsigned>>
     find_covered_subregion(const std::vector<SampleIdType>& samples, const GenomicRegion& region,
                            size_t max_coverage) = 0;
     

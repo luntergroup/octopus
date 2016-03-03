@@ -171,6 +171,30 @@ size_t HtslibSamFacade::count_reads(const SampleIdType& sample, const GenomicReg
     return result;
 }
 
+GenomicRegion expand_subregion(const GenomicRegion& region,
+                               const std::size_t remaining_coverage_quota,
+                               const std::size_t first_read_begin,
+                               const std::size_t last_read_begin,
+                               std::vector<unsigned>& position_counts)
+{
+    const auto result_begin = std::min(first_read_begin, static_cast<std::size_t>(region.get_begin()));
+    const auto result_end   = (remaining_coverage_quota > 0) ? region.get_end() : last_read_begin;
+    
+    position_counts.resize(result_end - result_begin, 0);
+    
+    if (result_begin < first_read_begin) {
+        std::rotate(std::begin(position_counts),
+                    std::next(std::begin(position_counts), last_read_begin - first_read_begin),
+                    std::end(position_counts));
+    }
+    
+    return GenomicRegion {
+        region.get_contig_name(),
+        static_cast<GenomicRegion::SizeType>(result_begin),
+        static_cast<GenomicRegion::SizeType>(result_end)
+    };
+}
+
 std::pair<GenomicRegion, std::vector<unsigned>>
 HtslibSamFacade::find_covered_subregion(const GenomicRegion& region, size_t max_coverage)
 {
@@ -182,7 +206,7 @@ HtslibSamFacade::find_covered_subregion(const GenomicRegion& region, size_t max_
     
     --max_coverage;
     
-    const auto first_begin = it.get_begin();
+    auto first_begin = it.get_begin();
     
     std::vector<unsigned> position_counts(max_coverage, 0);
     
@@ -202,19 +226,79 @@ HtslibSamFacade::find_covered_subregion(const GenomicRegion& region, size_t max_
         }
     }
     
-    position_counts.resize(read_begin - first_begin);
+    auto result_region = expand_subregion(region, max_coverage, first_begin, read_begin, position_counts);
     
-    const auto result_begin = static_cast<GenomicRegion::SizeType>(first_begin);
-    const auto result_end   = static_cast<GenomicRegion::SizeType>(read_begin);
-    
-    return std::make_pair(GenomicRegion {region.get_contig_name(), result_begin, result_end},
-                          position_counts);
+    return std::make_pair(std::move(result_region), std::move(position_counts));
 }
 
 bool contains(const std::vector<HtslibSamFacade::SampleIdType>& samples,
               const HtslibSamFacade::SampleIdType& sample)
 {
     return std::find(std::cbegin(samples), std::cend(samples), sample) != std::cend(samples);
+}
+
+std::pair<GenomicRegion, std::vector<unsigned>>
+HtslibSamFacade::find_covered_subregion(const SampleIdType& sample,
+                                        const GenomicRegion& region,
+                                        size_t max_coverage)
+{
+    if (!contains(samples_, sample)) {
+        return std::make_pair(head_region(region), std::vector<unsigned> {});
+    }
+    
+    HtslibIterator it {*this, region};
+    
+    if (max_coverage == 0 || !++it) {
+        return std::make_pair(head_region(region), std::vector<unsigned> {});
+    }
+    
+    if (samples_.size() > 1) {
+        while (sample != sample_names_.at(it.get_read_group())) {
+            if (!++it) {
+                return std::make_pair(head_region(region), std::vector<unsigned> {});
+            }
+        };
+    }
+    
+    --max_coverage;
+    
+    const auto first_begin = it.get_begin();
+    
+    std::vector<unsigned> position_counts(max_coverage, 0);
+    
+    ++position_counts[0];
+    
+    auto read_begin = first_begin;
+    
+    if (samples_.size() == 1) {
+        while (++it && --max_coverage > 0) {
+            read_begin = it.get_begin();
+            
+            const auto offset = read_begin - first_begin;
+            
+            if (offset >= position_counts.size()) {
+                position_counts.resize(std::max(offset, position_counts.size() + max_coverage));
+            } else {
+                ++position_counts[offset];
+            }
+        }
+    } else {
+        while (++it && sample == sample_names_.at(it.get_read_group()) && --max_coverage > 0) {
+            read_begin = it.get_begin();
+            
+            const auto offset = read_begin - first_begin;
+            
+            if (offset >= position_counts.size()) {
+                position_counts.resize(std::max(offset, position_counts.size() + max_coverage));
+            } else {
+                ++position_counts[offset];
+            }
+        }
+    }
+    
+    auto result_region = expand_subregion(region, max_coverage, first_begin, read_begin, position_counts);
+    
+    return std::make_pair(std::move(result_region), std::move(position_counts));
 }
 
 bool is_subset(std::vector<HtslibSamFacade::SampleIdType> lhs,
@@ -227,8 +311,13 @@ bool is_subset(std::vector<HtslibSamFacade::SampleIdType> lhs,
 
 std::pair<GenomicRegion, std::vector<unsigned>>
 HtslibSamFacade::find_covered_subregion(const std::vector<SampleIdType>& samples,
-                                        const GenomicRegion& region, size_t max_coverage)
+                                        const GenomicRegion& region,
+                                        size_t max_coverage)
 {
+    if (samples.size() == 1) {
+        return find_covered_subregion(samples.front(), region, max_coverage);
+    }
+    
     if (is_subset(samples, samples_)) {
         return find_covered_subregion(region, max_coverage);
     }
@@ -247,7 +336,7 @@ HtslibSamFacade::find_covered_subregion(const std::vector<SampleIdType>& samples
     
     --max_coverage;
     
-    const auto first_begin = it.get_begin();
+    auto first_begin = it.get_begin();
     
     std::vector<unsigned> position_counts(max_coverage, 0);
     
@@ -267,13 +356,9 @@ HtslibSamFacade::find_covered_subregion(const std::vector<SampleIdType>& samples
         }
     }
     
-    position_counts.resize(read_begin - first_begin);
+    auto result_region = expand_subregion(region, max_coverage, first_begin, read_begin, position_counts);
     
-    const auto result_begin = static_cast<GenomicRegion::SizeType>(first_begin);
-    const auto result_end   = static_cast<GenomicRegion::SizeType>(read_begin);
-    
-    return std::make_pair(GenomicRegion {region.get_contig_name(), result_begin, result_end},
-                          position_counts);
+    return std::make_pair(std::move(result_region), std::move(position_counts));
 }
 
 HtslibSamFacade::SampleReadMap HtslibSamFacade::fetch_reads(const GenomicRegion& region)

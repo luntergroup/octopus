@@ -255,12 +255,12 @@ rightmost_overlapped(const MappableMap<KeyType, MappableType1>& mappables, const
 
 template <typename KeyType, typename MappableType>
 std::vector<unsigned>
-positional_coverage(const MappableMap<KeyType, MappableType>& mappables, const GenomicRegion& region)
+calculate_positional_coverage(const MappableMap<KeyType, MappableType>& mappables, const GenomicRegion& region)
 {
     std::vector<unsigned> result(region_size(region), 0);
     
     for (const auto& p : mappables) {
-        const auto pcoverage = positional_coverage(p.second, region);
+        const auto pcoverage = calculate_positional_coverage(p.second, region);
         
         std::transform(std::cbegin(result), std::cend(result), std::cbegin(pcoverage),
                        std::begin(result), std::plus<void> {});
@@ -271,9 +271,9 @@ positional_coverage(const MappableMap<KeyType, MappableType>& mappables, const G
 
 template <typename KeyType, typename MappableType>
 std::vector<unsigned>
-positional_coverage(const MappableMap<KeyType, MappableType>& mappables)
+calculate_positional_coverage(const MappableMap<KeyType, MappableType>& mappables)
 {
-    return positional_coverage(mappables, encompassing_region(mappables));
+    return calculate_positional_coverage(mappables, encompassing_region(mappables));
 }
 
 template <typename KeyType, typename MappableType1, typename MappableType2>

@@ -518,11 +518,6 @@ namespace Octopus
             
             auto subregion = propose_call_subregion(components, region);
             
-            if (is_empty_region(subregion) && region_has_reads(region, components)) {
-                // This can happen if the input region is very small
-                subregion = region;
-            }
-            
             while (!is_empty_region(subregion)) {
                 cout << "Octopus: processing subregion " << subregion << endl;
                 
@@ -629,9 +624,7 @@ namespace Octopus
     
     void run_octopus(po::variables_map& options)
     {
-        resume_timer(misc_timer2);
         auto components = collate_genome_calling_components(options);
-        pause_timer(misc_timer2);
         
         if (!components) return;
         

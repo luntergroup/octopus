@@ -12,6 +12,7 @@
 #include <utility>
 #include <algorithm>
 #include <iterator>
+#include <cassert>
 
 #include <boost/range/algorithm.hpp>
 
@@ -439,25 +440,24 @@ std::vector<Variant> unique_left_align(const std::vector<Variant>& variants,
 std::vector<Variant> unique_left_align(std::vector<Variant>&& variants,
                                        const ReferenceGenome& reference)
 {
-    using std::begin; using std::end; using std::make_move_iterator; using std::unique;
+    assert(std::is_sorted(std::cbegin(variants), std::cend(variants)));
+    assert(std::adjacent_find(std::cbegin(variants), std::cend(variants)) == std::cend(variants));
     
-    const auto it = std::partition(begin(variants), end(variants),
-                                   [] (const Variant& variant) {
-                                       return !is_left_alignable(variant);
-                                   });
+    const auto it = std::stable_partition(std::begin(variants), std::end(variants),
+                                          [] (const Variant& variant) {
+                                              return !is_left_alignable(variant);
+                                          });
     
-    std::transform(make_move_iterator(it), make_move_iterator(end(variants)), it,
+    std::transform(std::make_move_iterator(it), std::make_move_iterator(end(variants)), it,
                    [&reference] (Variant&& variant) {
                        return left_align(std::move(variant), reference);
                    });
     
-    std::sort(it, end(variants));
+    std::sort(it, std::end(variants));
     
-    const auto it2 = variants.erase(unique(it, end(variants)), end(variants));
+    variants.erase(std::unique(it, std::end(variants)), std::end(variants));
     
-    std::inplace_merge(begin(variants), it2, end(variants));
-    
-    variants.erase(unique(begin(variants), end(variants)), end(variants));
+    std::inplace_merge(std::begin(variants), it, std::end(variants));
     
     return variants;
 }

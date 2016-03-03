@@ -199,6 +199,7 @@ GenomicRegion ReadManager::find_covered_subregion(const std::vector<SampleIdType
     auto it = partition_open(reader_paths);
     
     auto result = head_region(region);
+    
     std::deque<unsigned> position_coverage {};
     
     while (!reader_paths.empty()) {
@@ -233,7 +234,7 @@ GenomicRegion ReadManager::find_covered_subregion(const std::vector<SampleIdType
                      
                      std::transform(overlap_begin.first, overlap_end, overlap_begin.second,
                                     overlap_begin.first,
-                                    [] (const unsigned curr, const unsigned x) {
+                                    [] (const auto curr, const auto x) {
                                         return curr + x;
                                     });
                  });
@@ -241,6 +242,8 @@ GenomicRegion ReadManager::find_covered_subregion(const std::vector<SampleIdType
         reader_paths.erase(it, end(reader_paths));
         it = open_readers(begin(reader_paths), end(reader_paths));
     }
+    
+    if (result == region) return region;
     
     const auto result_begin = std::max(result.get_begin(), region.get_begin());
     

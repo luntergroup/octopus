@@ -1167,13 +1167,6 @@ MappableFlatMultiSet<Region> splice_all(const MappableFlatMultiSet<MappableType,
    return result;
 }
 
-template <typename MappableType, typename Allocator>
-auto calculate_positional_coverage(const MappableFlatMultiSet<MappableType, Allocator>& mappables)
-{
-    return calculate_positional_coverage(std::cbegin(mappables), std::cend(mappables),
-                                         encompassing_region(mappables));
-}
-
 template <typename MappableType>
 auto calculate_positional_coverage(const MappableFlatMultiSet<MappableType>& mappables,
                                    const GenomicRegion& region)

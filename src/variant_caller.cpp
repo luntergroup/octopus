@@ -183,7 +183,7 @@ std::deque<VcfRecord> VariantCaller::call_variants(const GenomicRegion& call_reg
     
     candidate_generator_.clear();
     
-    //debug::print_candidates(candidates, true);
+    //debug::print_candidates(candidates);
     
     if (!refcalls_requested() && candidates.empty()) {
         return result;

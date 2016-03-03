@@ -66,10 +66,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         
         // for population
         
-        //"--regions", "GL000220.1:119599-119610",
-        
         "--regions", "22",
-        //"--regions", "22:30000000-32000000",
         
         //"--regions", "16:46,392,879-46,393,098", // NA12878_low_coverage huge memory spike
         //"--regions", "22:20656122-20656146", // NA12878_high_coverage causing memory spike
@@ -124,9 +121,9 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         "--no-unmapped-mates",
         
         "--reference-cache-size", "20000",
-        "--no-downsampling",
-        //"--downsample-above", "500",
-        //"--downsample-target", "100",
+        //"--no-downsampling",
+        "--downsample-above", "300",
+        "--downsample-target", "200",
         
         //"--no-candidates-from-alignments",
         //"--candidates-from-assembler",

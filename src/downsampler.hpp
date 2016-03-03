@@ -9,6 +9,8 @@
 #ifndef downsampler_hpp
 #define downsampler_hpp
 
+#include <cstddef>
+
 #include "common.hpp"
 #include "mappable_flat_multi_set.hpp"
 #include "mappable_map.hpp"
@@ -17,22 +19,8 @@
 namespace Octopus
 {
 
-MappableFlatMultiSet<AlignedRead>
-downsample(const MappableFlatMultiSet<AlignedRead>& reads, unsigned max_coverage, unsigned min_coverage);
-
-template <typename T>
-MappableMap<T, AlignedRead>
-downsample(const MappableMap<T, AlignedRead>& reads, const unsigned max_coverage, const unsigned min_coverage)
-{
-    MappableMap<T, AlignedRead> result {};
-    result.reserve(reads.size());
-    
-    for (const auto& sample_reads : reads) {
-        result.emplace(sample_reads.first, downsample(sample_reads.second, max_coverage, min_coverage));
-    }
-    
-    return result;
-}
+std::size_t downsample(MappableFlatMultiSet<AlignedRead>& reads,
+                       unsigned max_coverage, unsigned min_coverage);
 
 class Downsampler
 {
@@ -46,11 +34,8 @@ public:
     Downsampler(Downsampler&&)                 = default;
     Downsampler& operator=(Downsampler&&)      = default;
     
-    template <typename R>
-    R sample(R&& reads)
-    {
-        return downsample(std::forward<R>(reads), max_coverage_, min_coverage_);
-    }
+    std::size_t downsample(MappableFlatMultiSet<AlignedRead>& reads) const;
+    std::size_t downsample(ReadMap& reads) const;
     
 private:
     unsigned max_coverage_ = 100'000;
