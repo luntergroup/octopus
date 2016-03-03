@@ -55,8 +55,8 @@ BOOST_AUTO_TEST_CASE(read_filter_test)
     good_reads.reserve(reads.size());
     bad_reads.reserve(reads.size());
     
-    read_filter.filter_reads(std::make_move_iterator(reads.begin()), std::make_move_iterator(reads.end()),
-                             context_back_inserter(good_reads), context_back_inserter(bad_reads));
+    read_filter.partition_copy(std::make_move_iterator(reads.begin()), std::make_move_iterator(reads.end()),
+                               context_back_inserter(good_reads), context_back_inserter(bad_reads));
     
     // TODO: check these numbers are actually correct!
     BOOST_CHECK(good_reads.size() == 436);

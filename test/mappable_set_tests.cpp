@@ -17,7 +17,7 @@
 #include "test_common.hpp"
 #include "genomic_region.hpp"
 #include "read_manager.hpp"
-#include "mappable_set.hpp"
+#include "mappable_flat_multi_set.hpp"
 #include "read_utils.hpp"
 #include "mappable_map.hpp"
 

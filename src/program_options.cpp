@@ -506,9 +506,9 @@ namespace Octopus
             auto resolved_path = resolve_path(path, options);
             
             if (resolved_path) {
-                result.good_paths.emplace_back(std::move(*resolved_path));
+                result.good_paths.emplace_back(*std::move(resolved_path));
             } else {
-                result.bad_paths.emplace_back(std::move(*resolved_path));
+                result.bad_paths.emplace_back(*std::move(resolved_path));
             }
         }
         
@@ -545,7 +545,7 @@ namespace Octopus
         if (path) {
             if (fs::exists(*path)) {
                 const auto ref_cache_size = options.at("reference-cache-size").as<size_t>();
-                return ::make_reference(std::move(*path),
+                return ::make_reference(*std::move(path),
                                         static_cast<ReferenceGenome::SizeType>(ref_cache_size),
                                         is_threading_allowed(options));
             } else {
@@ -613,7 +613,7 @@ namespace Octopus
             {
                 auto region_str = convert_bed_line_to_region_str(line);
                 if (region_str) {
-                    return parse_region(std::move(*region_str), reference);
+                    return parse_region(*std::move(region_str), reference);
                 }
                 return boost::none;
             };
@@ -648,7 +648,7 @@ namespace Octopus
         
         for (auto&& region : parsed_lines) {
             if (region) {
-                result.emplace_back(std::move(*region));
+                result.emplace_back(*std::move(region));
             }
         }
         
@@ -714,7 +714,7 @@ namespace Octopus
         for (const auto& unparsed_region : unparsed_regions) {
             auto parsed_region = parse_region(unparsed_region, reference);
             if (parsed_region) {
-                result.emplace_back(std::move(*parsed_region));
+                result.emplace_back(*std::move(parsed_region));
             }
         }
         
@@ -733,9 +733,9 @@ namespace Octopus
         return result;
     }
     
-    auto transform_to_zero_based(MappableSet<GenomicRegion>&& one_based_regions)
+    auto transform_to_zero_based(MappableFlatMultiSet<GenomicRegion>&& one_based_regions)
     {
-        MappableSet<GenomicRegion> result {};
+        MappableFlatMultiSet<GenomicRegion> result {};
         result.reserve(one_based_regions.size());
         
         for (auto&& region : one_based_regions) {
@@ -875,7 +875,7 @@ namespace Octopus
         
         if (read_paths) {
             const auto max_open_files = options.at("max-open-read-files").as<unsigned>();
-            return ReadManager {std::move(*read_paths), max_open_files};
+            return ReadManager {*std::move(read_paths), max_open_files};
         }
         
         return boost::none;
@@ -995,7 +995,7 @@ namespace Octopus
             auto source_path = resolve_path(options.at("candidates-from-source").as<std::string>(), options);
             
             if (source_path) {
-                result.set_variant_source(std::move(*source_path));
+                result.set_variant_source(*std::move(source_path));
             } else {
                 std::cout << "Input warning: could not resolve candidate source file." << std::endl;
             }
@@ -1194,7 +1194,7 @@ namespace Octopus
         auto out_path = get_final_output_path(options);
         
         if (out_path) {
-            return VcfWriter {std::move(*out_path)};
+            return VcfWriter {*std::move(out_path)};
         }
         
         return VcfWriter {};

@@ -183,7 +183,7 @@ std::deque<VcfRecord> VariantCaller::call_variants(const GenomicRegion& call_reg
     
     candidate_generator_.clear();
     
-    //debug::print_candidates(candidates);
+    //debug::print_candidates(candidates, true);
     
     if (!refcalls_requested() && candidates.empty()) {
         return result;
@@ -226,8 +226,8 @@ std::deque<VcfRecord> VariantCaller::call_variants(const GenomicRegion& call_reg
         
         const auto active_reads = copy_overlapped(reads, active_region);
         
-        //std::cout << "there are " << haplotypes.size() << " haplotypes" << std::endl;
-        //std::cout << "there are " << count_reads(active_reads) << " reads" << std::endl;
+        //std::cout << "there are " << haplotypes.size() << " haplotypes" << '\n';
+        //std::cout << "there are " << count_reads(active_reads) << " reads" << '\n';
         
         resume_timer(likelihood_timer);
         haplotype_likelihoods.populate(active_reads, haplotypes,
@@ -235,18 +235,21 @@ std::deque<VcfRecord> VariantCaller::call_variants(const GenomicRegion& call_reg
         pause_timer(likelihood_timer);
         
         resume_timer(haplotype_fitler_timer);
-        auto removed_haplotypes = filter_n_haplotypes(haplotypes, active_reads,
+        auto removed_haplotypes = filter_n_haplotypes(haplotypes, samples,
                                                       haplotype_likelihoods, max_haplotypes_);
         pause_timer(haplotype_fitler_timer);
         
         if (haplotypes.empty()) {
+            //debug::print_read_haplotype_liklihoods(removed_haplotypes, active_reads, haplotype_likelihoods);
             // This can only happen if all haplotypes have equal likelihood.
             // TODO: is there anything else we can do?
             generator.remove_haplotypes(removed_haplotypes);
             continue;
         }
         
+        resume_timer(likelihood_timer);
         haplotype_likelihoods.erase(removed_haplotypes);
+        pause_timer(likelihood_timer);
         
         // Compute haplotype priors after likelihood filtering as prior model may use
         // interdependencies between haplotypes.
@@ -293,9 +296,9 @@ std::deque<VcfRecord> VariantCaller::call_variants(const GenomicRegion& call_reg
             resume_timer(calling_timer);
             auto curr_results = call_variants(active_candidates, alleles, caller_latents.get(),
                                               *phase_set, active_reads);
-            pause_timer(calling_timer);
             
             append_annotated_calls(result, curr_results, active_reads, call_region);
+            pause_timer(calling_timer);
             
             auto remaining_active_region = right_overhang_region(active_region, phase_set->region);
             
@@ -339,9 +342,9 @@ std::deque<VcfRecord> VariantCaller::call_variants(const GenomicRegion& call_reg
             resume_timer(calling_timer);
             auto curr_results = call_variants(active_candidates, alleles, caller_latents.get(),
                                               forced_phasing, active_reads);
-            pause_timer(calling_timer);
             
             append_annotated_calls(result, curr_results, active_reads, call_region);
+            pause_timer(calling_timer);
             
             completed_region = encompassing_region(completed_region, passed_region);
         }

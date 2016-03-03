@@ -1,5 +1,5 @@
 //
-//  mappable_set.hpp
+//  mappable_flat_multi_set.hpp
 //  Octopus
 //
 //  Created by Daniel Cooke on 19/07/2015.
@@ -13,24 +13,25 @@
 #include <functional>
 #include <algorithm>
 #include <iterator>
+#include <initializer_list>
 #include <stdexcept>
+#include <vector>
 
 #include <boost/container/flat_set.hpp>
 
 #include "comparable.hpp"
-#include "genomic_region.hpp"
 #include "mappable.hpp"
 #include "mappable_ranges.hpp"
 #include "mappable_algorithms.hpp"
 
 #include <iostream> // TEST
 
-/**
- MappableSet is a container designed to allow fast retrival of MappableType elements with minimal
+/*
+ MappableFlatMultiSet is a container designed to allow fast retrival of MappableType elements with minimal
  memory overhead.
  */
 template <typename MappableType, typename Allocator = std::allocator<MappableType>>
-class MappableSet : public Comparable<MappableSet<MappableType, Allocator>>
+class MappableFlatMultiSet : public Comparable<MappableFlatMultiSet<MappableType, Allocator>>
 {
 protected:
     using base_t = boost::container::flat_multiset<MappableType, std::less<MappableType>, Allocator>;
@@ -48,15 +49,17 @@ public:
     using reverse_iterator       = typename base_t::reverse_iterator;
     using const_reverse_iterator = typename base_t::const_reverse_iterator;
     
-    MappableSet();
-    template <typename InputIterator>
-    MappableSet(InputIterator first, InputIterator second);
-    ~MappableSet() = default;
+    MappableFlatMultiSet();
     
-    MappableSet(const MappableSet&)            = default;
-    MappableSet& operator=(const MappableSet&) = default;
-    MappableSet(MappableSet&&)                 = default;
-    MappableSet& operator=(MappableSet&&)      = default;
+    template <typename InputIterator>
+    MappableFlatMultiSet(InputIterator first, InputIterator second);
+    
+    ~MappableFlatMultiSet() = default;
+    
+    MappableFlatMultiSet(const MappableFlatMultiSet&)            = default;
+    MappableFlatMultiSet& operator=(const MappableFlatMultiSet&) = default;
+    MappableFlatMultiSet(MappableFlatMultiSet&&)                 = default;
+    MappableFlatMultiSet& operator=(MappableFlatMultiSet&&)      = default;
     
     iterator begin() noexcept;
     const_iterator begin() const noexcept;
@@ -92,11 +95,13 @@ public:
     iterator erase(const_iterator);
     size_type erase(const MappableType&);
     iterator erase(const_iterator, const_iterator);
-    //void erase(OverlapRange<const_iterator>);
-    //void erase(ContainedRange<const_iterator>);
+    template <typename InputIt>
+    size_type erase_all(InputIt first, InputIt last);
+    
     void clear();
     
-    void swap(const MappableSet&);
+    void swap(const MappableFlatMultiSet&);
+    
     size_type size() const noexcept;
     size_type capacity() const noexcept;
     size_type max_size() const noexcept;
@@ -194,20 +199,20 @@ public:
                                              const MappableType2_& mappable2) const;
     
     template <typename M, typename A>
-    friend bool operator==(const MappableSet<M, A>& lhs, const MappableSet<M, A>& rhs);
+    friend bool operator==(const MappableFlatMultiSet<M, A>& lhs, const MappableFlatMultiSet<M, A>& rhs);
     template <typename M, typename A>
-    friend bool operator<(const MappableSet<M, A>& lhs, const MappableSet<M, A>& rhs);
+    friend bool operator<(const MappableFlatMultiSet<M, A>& lhs, const MappableFlatMultiSet<M, A>& rhs);
     template <typename M, typename A>
-    friend void swap(MappableSet<M, A>& lhs, MappableSet<M, A>& rhs);
+    friend void swap(MappableFlatMultiSet<M, A>& lhs, MappableFlatMultiSet<M, A>& rhs);
     
 private:
     base_t elements_;
     bool is_bidirectionally_sorted_;
-    GenomicRegion::SizeType max_element_size_;
+    typename RegionType<MappableType>::SizeType max_element_size_;
 };
 
 template <typename MappableType, typename Allocator>
-MappableSet<MappableType, Allocator>::MappableSet()
+MappableFlatMultiSet<MappableType, Allocator>::MappableFlatMultiSet()
 :
 elements_ {},
 is_bidirectionally_sorted_ {true},
@@ -216,7 +221,7 @@ max_element_size_ {}
 
 template <typename MappableType, typename Allocator>
 template <typename InputIterator>
-MappableSet<MappableType, Allocator>::MappableSet(InputIterator first, InputIterator second)
+MappableFlatMultiSet<MappableType, Allocator>::MappableFlatMultiSet(InputIterator first, InputIterator second)
 :
 elements_ {first, second},
 is_bidirectionally_sorted_ {is_bidirectionally_sorted(elements_)},
@@ -224,157 +229,157 @@ max_element_size_ {(elements_.empty()) ? 0 : region_size(*largest_mappable(eleme
 {}
 
 template <typename MappableType, typename Allocator>
-typename MappableSet<MappableType, Allocator>::iterator
-MappableSet<MappableType, Allocator>::begin() noexcept
+typename MappableFlatMultiSet<MappableType, Allocator>::iterator
+MappableFlatMultiSet<MappableType, Allocator>::begin() noexcept
 {
     return elements_.begin();
 }
 
 template <typename MappableType, typename Allocator>
-typename MappableSet<MappableType, Allocator>::const_iterator
-MappableSet<MappableType, Allocator>::begin() const noexcept
+typename MappableFlatMultiSet<MappableType, Allocator>::const_iterator
+MappableFlatMultiSet<MappableType, Allocator>::begin() const noexcept
 {
     return elements_.begin();
 }
 
 template <typename MappableType, typename Allocator>
-typename MappableSet<MappableType, Allocator>::const_iterator
-MappableSet<MappableType, Allocator>::cbegin() const noexcept
+typename MappableFlatMultiSet<MappableType, Allocator>::const_iterator
+MappableFlatMultiSet<MappableType, Allocator>::cbegin() const noexcept
 {
     return elements_.cbegin();
 }
 
 template <typename MappableType, typename Allocator>
-typename MappableSet<MappableType, Allocator>::iterator
-MappableSet<MappableType, Allocator>::end() noexcept
+typename MappableFlatMultiSet<MappableType, Allocator>::iterator
+MappableFlatMultiSet<MappableType, Allocator>::end() noexcept
 {
     return elements_.end();
 }
 
 template <typename MappableType, typename Allocator>
-typename MappableSet<MappableType, Allocator>::const_iterator
-MappableSet<MappableType, Allocator>::end() const noexcept
+typename MappableFlatMultiSet<MappableType, Allocator>::const_iterator
+MappableFlatMultiSet<MappableType, Allocator>::end() const noexcept
 {
     return elements_.end();
 }
 
 template <typename MappableType, typename Allocator>
-typename MappableSet<MappableType, Allocator>::const_iterator
-MappableSet<MappableType, Allocator>::cend() const noexcept
+typename MappableFlatMultiSet<MappableType, Allocator>::const_iterator
+MappableFlatMultiSet<MappableType, Allocator>::cend() const noexcept
 {
     return elements_.cend();
 }
 
 template <typename MappableType, typename Allocator>
-typename MappableSet<MappableType, Allocator>::reverse_iterator
-MappableSet<MappableType, Allocator>::rbegin() noexcept
+typename MappableFlatMultiSet<MappableType, Allocator>::reverse_iterator
+MappableFlatMultiSet<MappableType, Allocator>::rbegin() noexcept
 {
     return elements_.rbegin();
 }
 
 template <typename MappableType, typename Allocator>
-typename MappableSet<MappableType, Allocator>::const_reverse_iterator
-MappableSet<MappableType, Allocator>::rbegin() const noexcept
+typename MappableFlatMultiSet<MappableType, Allocator>::const_reverse_iterator
+MappableFlatMultiSet<MappableType, Allocator>::rbegin() const noexcept
 {
     return elements_.rbegin();
 }
 
 template <typename MappableType, typename Allocator>
-typename MappableSet<MappableType, Allocator>::const_reverse_iterator
-MappableSet<MappableType, Allocator>::crbegin() const noexcept
+typename MappableFlatMultiSet<MappableType, Allocator>::const_reverse_iterator
+MappableFlatMultiSet<MappableType, Allocator>::crbegin() const noexcept
 {
     return elements_.crbegin();
 }
 
 template <typename MappableType, typename Allocator>
-typename MappableSet<MappableType, Allocator>::reverse_iterator
-MappableSet<MappableType, Allocator>::rend() noexcept
+typename MappableFlatMultiSet<MappableType, Allocator>::reverse_iterator
+MappableFlatMultiSet<MappableType, Allocator>::rend() noexcept
 {
     return elements_.rend();
 }
 
 template <typename MappableType, typename Allocator>
-typename MappableSet<MappableType, Allocator>::const_reverse_iterator
-MappableSet<MappableType, Allocator>::rend() const noexcept
+typename MappableFlatMultiSet<MappableType, Allocator>::const_reverse_iterator
+MappableFlatMultiSet<MappableType, Allocator>::rend() const noexcept
 {
     return elements_.rend();
 }
 
 template <typename MappableType, typename Allocator>
-typename MappableSet<MappableType, Allocator>::const_reverse_iterator
-MappableSet<MappableType, Allocator>::crend() const noexcept
+typename MappableFlatMultiSet<MappableType, Allocator>::const_reverse_iterator
+MappableFlatMultiSet<MappableType, Allocator>::crend() const noexcept
 {
     return elements_.crend();
 }
 
 template <typename MappableType, typename Allocator>
-typename MappableSet<MappableType, Allocator>::reference
-MappableSet<MappableType, Allocator>::at(size_type pos)
+typename MappableFlatMultiSet<MappableType, Allocator>::reference
+MappableFlatMultiSet<MappableType, Allocator>::at(size_type pos)
 {
     if (pos < size()) {
         return *std::next(begin(), pos);
     } else {
-        throw std::out_of_range {"MappableSet"};
+        throw std::out_of_range {"MappableFlatMultiSet"};
     }
 }
 
 template <typename MappableType, typename Allocator>
-typename MappableSet<MappableType, Allocator>::const_reference
-MappableSet<MappableType, Allocator>::at(size_type pos) const
+typename MappableFlatMultiSet<MappableType, Allocator>::const_reference
+MappableFlatMultiSet<MappableType, Allocator>::at(size_type pos) const
 {
     if (pos < size()) {
         return *std::next(cbegin(), pos);
     } else {
-        throw std::out_of_range {"MappableSet"};
+        throw std::out_of_range {"MappableFlatMultiSet"};
     }
 }
 
 template <typename MappableType, typename Allocator>
-typename MappableSet<MappableType, Allocator>::reference
-MappableSet<MappableType, Allocator>::operator[](size_type pos)
+typename MappableFlatMultiSet<MappableType, Allocator>::reference
+MappableFlatMultiSet<MappableType, Allocator>::operator[](size_type pos)
 {
     return *std::next(begin(), pos);
 }
 
 template <typename MappableType, typename Allocator>
-typename MappableSet<MappableType, Allocator>::const_reference
-MappableSet<MappableType, Allocator>::operator[](size_type pos) const
+typename MappableFlatMultiSet<MappableType, Allocator>::const_reference
+MappableFlatMultiSet<MappableType, Allocator>::operator[](size_type pos) const
 {
     return *std::next(cbegin(), pos);
 }
 
 template <typename MappableType, typename Allocator>
-typename MappableSet<MappableType, Allocator>::reference
-MappableSet<MappableType, Allocator>::front()
+typename MappableFlatMultiSet<MappableType, Allocator>::reference
+MappableFlatMultiSet<MappableType, Allocator>::front()
 {
     return *begin();
 }
 
 template <typename MappableType, typename Allocator>
-typename MappableSet<MappableType, Allocator>::const_reference
-MappableSet<MappableType, Allocator>::front() const
+typename MappableFlatMultiSet<MappableType, Allocator>::const_reference
+MappableFlatMultiSet<MappableType, Allocator>::front() const
 {
     return *cbegin();
 }
 
 template <typename MappableType, typename Allocator>
-typename MappableSet<MappableType, Allocator>::reference
-MappableSet<MappableType, Allocator>::back()
+typename MappableFlatMultiSet<MappableType, Allocator>::reference
+MappableFlatMultiSet<MappableType, Allocator>::back()
 {
     return *std::prev(end());
 }
 
 template <typename MappableType, typename Allocator>
-typename MappableSet<MappableType, Allocator>::const_reference
-MappableSet<MappableType, Allocator>::back() const
+typename MappableFlatMultiSet<MappableType, Allocator>::const_reference
+MappableFlatMultiSet<MappableType, Allocator>::back() const
 {
     return *std::prev(cend());
 }
 
 template <typename MappableType, typename Allocator>
 template <typename ...Args>
-typename MappableSet<MappableType, Allocator>::iterator
-MappableSet<MappableType, Allocator>::emplace(Args... args)
+typename MappableFlatMultiSet<MappableType, Allocator>::iterator
+MappableFlatMultiSet<MappableType, Allocator>::emplace(Args... args)
 {
     const auto it = elements_.emplace(std::forward<Args>(args)...);
     if (is_bidirectionally_sorted_) {
@@ -386,8 +391,8 @@ MappableSet<MappableType, Allocator>::emplace(Args... args)
 }
 
 template <typename MappableType, typename Allocator>
-typename MappableSet<MappableType, Allocator>::iterator
-MappableSet<MappableType, Allocator>::insert(const MappableType& m)
+typename MappableFlatMultiSet<MappableType, Allocator>::iterator
+MappableFlatMultiSet<MappableType, Allocator>::insert(const MappableType& m)
 {
     const auto it = elements_.insert(m);
     if (is_bidirectionally_sorted_) {
@@ -399,8 +404,8 @@ MappableSet<MappableType, Allocator>::insert(const MappableType& m)
 }
 
 template <typename MappableType, typename Allocator>
-typename MappableSet<MappableType, Allocator>::iterator
-MappableSet<MappableType, Allocator>::insert(MappableType&& m)
+typename MappableFlatMultiSet<MappableType, Allocator>::iterator
+MappableFlatMultiSet<MappableType, Allocator>::insert(MappableType&& m)
 {
     const auto it = elements_.insert(std::move(m));
     if (is_bidirectionally_sorted_) {
@@ -412,8 +417,8 @@ MappableSet<MappableType, Allocator>::insert(MappableType&& m)
 }
 
 template <typename MappableType, typename Allocator>
-typename MappableSet<MappableType, Allocator>::iterator
-MappableSet<MappableType, Allocator>::insert(const_iterator it, const MappableType& m)
+typename MappableFlatMultiSet<MappableType, Allocator>::iterator
+MappableFlatMultiSet<MappableType, Allocator>::insert(const_iterator it, const MappableType& m)
 {
     const auto it2 = elements_.insert(it, m);
     if (is_bidirectionally_sorted_) {
@@ -425,8 +430,8 @@ MappableSet<MappableType, Allocator>::insert(const_iterator it, const MappableTy
 }
 
 template <typename MappableType, typename Allocator>
-typename MappableSet<MappableType, Allocator>::iterator
-MappableSet<MappableType, Allocator>::insert(const_iterator it, MappableType&& m)
+typename MappableFlatMultiSet<MappableType, Allocator>::iterator
+MappableFlatMultiSet<MappableType, Allocator>::insert(const_iterator it, MappableType&& m)
 {
     const auto it2 = elements_.insert(it, std::move(m));
     if (is_bidirectionally_sorted_) {
@@ -440,7 +445,7 @@ MappableSet<MappableType, Allocator>::insert(const_iterator it, MappableType&& m
 template <typename MappableType, typename Allocator>
 template <typename InputIterator>
 void
-MappableSet<MappableType, Allocator>::insert(InputIterator first, InputIterator last)
+MappableFlatMultiSet<MappableType, Allocator>::insert(InputIterator first, InputIterator last)
 {
     if (first != last) {
         max_element_size_ = std::max(max_element_size_, region_size(*largest_mappable(first, last)));
@@ -452,8 +457,8 @@ MappableSet<MappableType, Allocator>::insert(InputIterator first, InputIterator 
 }
 
 template <typename MappableType, typename Allocator>
-typename MappableSet<MappableType, Allocator>::iterator
-MappableSet<MappableType, Allocator>::insert(std::initializer_list<MappableType> il)
+typename MappableFlatMultiSet<MappableType, Allocator>::iterator
+MappableFlatMultiSet<MappableType, Allocator>::insert(std::initializer_list<MappableType> il)
 {
     if (!il.empty()) {
         max_element_size_ = std::max(max_element_size_, region_size(*largest_element(il)));
@@ -465,73 +470,115 @@ MappableSet<MappableType, Allocator>::insert(std::initializer_list<MappableType>
 }
 
 template <typename MappableType, typename Allocator>
-typename MappableSet<MappableType, Allocator>::iterator
-MappableSet<MappableType, Allocator>::erase(const_iterator p)
+typename MappableFlatMultiSet<MappableType, Allocator>::iterator
+MappableFlatMultiSet<MappableType, Allocator>::erase(const_iterator p)
 {
-    if (max_element_size_ == region_size(*p)) {
-        const auto it = elements_.erase(p);
-        max_element_size_ = region_size(*largest_element(elements_));
-        return it;
-    }
+    if (p == cend()) return elements_.erase(p);
+    
+    const auto erased_size = region_size(*p);
+    
+    const auto result = elements_.erase(p);
+    
     if (!is_bidirectionally_sorted_) {
         is_bidirectionally_sorted_ = is_bidirectionally_sorted(elements_);
     }
-    return elements_.erase(p);
-}
-
-template <typename MappableType, typename Allocator>
-typename MappableSet<MappableType, Allocator>::size_type
-MappableSet<MappableType, Allocator>::erase(const MappableType& m)
-{
-    if (max_element_size_ == region_size(m)) {
-        const auto result = elements_.erase(m);
+    
+    if (max_element_size_ == erased_size) {
         max_element_size_ = region_size(*largest_mappable(elements_));
-        return result;
     }
-    if (!is_bidirectionally_sorted_) {
-        is_bidirectionally_sorted_ = is_bidirectionally_sorted(elements_);
-    }
-    return elements_.erase(m);
+    
+    return result;
 }
 
 template <typename MappableType, typename Allocator>
-typename MappableSet<MappableType, Allocator>::iterator
-MappableSet<MappableType, Allocator>::erase(const_iterator first, const_iterator last)
+typename MappableFlatMultiSet<MappableType, Allocator>::size_type
+MappableFlatMultiSet<MappableType, Allocator>::erase(const MappableType& m)
 {
-    if (max_element_size_ == region_size(*largest_mappable(first, last))) {
-        const auto it = elements_.erase(first, last);
-        max_element_size_ = region_size(*largest_mappable(elements_));
-        return it;
+    const auto contained = contained_range(m);
+    
+    const auto it = std::find(std::cbegin(contained), std::cend(contained), m);
+    
+    if (it != std::cend(contained)) {
+        const auto it2 = std::find_if_not(std::next(it), std::cend(contained),
+                                          [&m] (const auto& mappable) { return m == mappable; });
+        
+        erase(it, it2);
+        
+        return std::distance(it.base(), it2.base());
     }
+    
+    return 0;
+}
+
+template <typename MappableType, typename Allocator>
+typename MappableFlatMultiSet<MappableType, Allocator>::iterator
+MappableFlatMultiSet<MappableType, Allocator>::erase(const_iterator first, const_iterator last)
+{
+    if (first == last) return elements_.erase(first, last);
+    
+    const auto max_erased_size = region_size(*largest_mappable(first, last));
+    
+    const auto result = elements_.erase(first, last);
+    
     if (!is_bidirectionally_sorted_) {
         is_bidirectionally_sorted_ = is_bidirectionally_sorted(elements_);
     }
-    return elements_.erase(first, last);
+    
+    if (max_element_size_ == max_erased_size) {
+        max_element_size_ = region_size(*largest_mappable(elements_));
+    }
+    
+    return result;
 }
 
-//template <typename MappableType, typename Allocator>
-//void
-//MappableSet<MappableType, Allocator>::erase(OverlapRange<const_iterator> overlapped)
-//{
-//    bool update_max_element_size {max_element_size_ == ::size(*largest_element(overlapped.begin(), overlapped.end()))};
-//    
-//    if (is_bidirectionally_sorted_) {
-//        elements_.erase(overlapped.begin().base(), overlapped.end().base());
-//    } else {
-//        // we must be careful not to invalidate iterators
-//        
-//        
-//        
-//        is_bidirectionally_sorted_ = is_bidirectionally_sorted(std::cbegin(elements_), std::cend(elements_));
-//    }
-//    
-//    if (update_max_element_size) {
-//        max_element_size_ = ::size(*largest_element(std::cbegin(elements_), std::cend(elements_)));
-//    }
-//}
+template <typename MappableType, typename Allocator>
+template <typename InputIt>
+typename MappableFlatMultiSet<MappableType, Allocator>::size_type
+MappableFlatMultiSet<MappableType, Allocator>::erase_all(InputIt first, InputIt last)
+{
+    size_type result {0};
+    
+    if (first == last) return result;
+    auto from = std::cbegin(elements_);
+    
+    typename RegionType<MappableType>::SizeType max_erased_size {0};
+    
+    while (first != last) {
+        const auto contained = contained_range(from, std::cend(elements_), *first);
+        
+        const auto it = std::find(std::cbegin(contained), std::cend(contained), *first);
+        
+        if (it != std::cend(contained)) {
+            const auto it2 = std::find_if_not(std::next(it), std::cend(contained),
+                                              [first] (const auto& mappable) { return *first == mappable; });
+            
+            from = erase(it, it2);
+            
+            if (region_size(*first) > max_erased_size) {
+                max_erased_size = region_size(*first);
+            }
+            
+            result += std::distance(it.base(), it2.base());
+        }
+        
+        ++first;
+    }
+    
+    if (result > 0) {
+        if (!is_bidirectionally_sorted_) {
+            is_bidirectionally_sorted_ = is_bidirectionally_sorted(elements_);
+        }
+        
+        if (max_element_size_ == max_erased_size) {
+            max_element_size_ = region_size(*largest_mappable(elements_));
+        }
+    }
+    
+    return 0;
+}
 
 template <typename MappableType, typename Allocator>
-void MappableSet<MappableType, Allocator>::clear()
+void MappableFlatMultiSet<MappableType, Allocator>::clear()
 {
     elements_.clear();
     is_bidirectionally_sorted_ = true;
@@ -539,7 +586,7 @@ void MappableSet<MappableType, Allocator>::clear()
 }
 
 template <typename MappableType, typename Allocator>
-void MappableSet<MappableType, Allocator>::swap(const MappableSet& m)
+void MappableFlatMultiSet<MappableType, Allocator>::swap(const MappableFlatMultiSet& m)
 {
     std::swap(elements_, m.elements_);
     std::swap(is_bidirectionally_sorted_, m.is_bidirectionally_sorted_);
@@ -547,61 +594,61 @@ void MappableSet<MappableType, Allocator>::swap(const MappableSet& m)
 }
 
 template <typename MappableType, typename Allocator>
-typename MappableSet<MappableType, Allocator>::size_type
-MappableSet<MappableType, Allocator>::size() const noexcept
+typename MappableFlatMultiSet<MappableType, Allocator>::size_type
+MappableFlatMultiSet<MappableType, Allocator>::size() const noexcept
 {
     return elements_.size();
 }
 
 template <typename MappableType, typename Allocator>
-typename MappableSet<MappableType, Allocator>::size_type
-MappableSet<MappableType, Allocator>::capacity() const noexcept
+typename MappableFlatMultiSet<MappableType, Allocator>::size_type
+MappableFlatMultiSet<MappableType, Allocator>::capacity() const noexcept
 {
     return elements_.capacity();
 }
 
 template <typename MappableType, typename Allocator>
-typename MappableSet<MappableType, Allocator>::size_type
-MappableSet<MappableType, Allocator>::max_size() const noexcept
+typename MappableFlatMultiSet<MappableType, Allocator>::size_type
+MappableFlatMultiSet<MappableType, Allocator>::max_size() const noexcept
 {
     return elements_.max_size();
 }
 
 template <typename MappableType, typename Allocator>
-bool MappableSet<MappableType, Allocator>::empty() const noexcept
+bool MappableFlatMultiSet<MappableType, Allocator>::empty() const noexcept
 {
     return elements_.empty();
 }
 
 template <typename MappableType, typename Allocator>
 void
-MappableSet<MappableType, Allocator>::reserve(size_type n)
+MappableFlatMultiSet<MappableType, Allocator>::reserve(size_type n)
 {
     elements_.reserve(n);
 }
 
 template <typename MappableType, typename Allocator>
 void
-MappableSet<MappableType, Allocator>::shrink_to_fit()
+MappableFlatMultiSet<MappableType, Allocator>::shrink_to_fit()
 {
     elements_.shrink_to_fit();
 }
 
 template <typename MappableType, typename Allocator>
-typename MappableSet<MappableType, Allocator>::allocator_type
-MappableSet<MappableType, Allocator>::get_allocator() noexcept
+typename MappableFlatMultiSet<MappableType, Allocator>::allocator_type
+MappableFlatMultiSet<MappableType, Allocator>::get_allocator() noexcept
 {
     return elements_.get_allocator();
 }
 
 template <typename MappableType, typename Allocator>
-const MappableType& MappableSet<MappableType, Allocator>::leftmost() const
+const MappableType& MappableFlatMultiSet<MappableType, Allocator>::leftmost() const
 {
     return front();
 }
 
 template <typename MappableType, typename Allocator>
-const MappableType& MappableSet<MappableType, Allocator>::rightmost() const
+const MappableType& MappableFlatMultiSet<MappableType, Allocator>::rightmost() const
 {
     using std::cbegin; using std::cend;
     const auto& last = *std::prev(elements_.cend());
@@ -617,7 +664,7 @@ const MappableType& MappableSet<MappableType, Allocator>::rightmost() const
 template <typename MappableType, typename Allocator>
 template <typename MappableType_>
 bool
-MappableSet<MappableType, Allocator>::has_overlapped(const MappableType_& mappable) const
+MappableFlatMultiSet<MappableType, Allocator>::has_overlapped(const MappableType_& mappable) const
 {
     return (is_bidirectionally_sorted_) ?
     ::has_overlapped(std::begin(elements_), std::end(elements_), mappable,
@@ -629,8 +676,8 @@ MappableSet<MappableType, Allocator>::has_overlapped(const MappableType_& mappab
 template <typename MappableType, typename Allocator>
 template <typename MappableType_>
 bool
-MappableSet<MappableType, Allocator>::has_overlapped(iterator first, iterator last,
-                                                     const MappableType_& mappable) const
+MappableFlatMultiSet<MappableType, Allocator>::has_overlapped(iterator first, iterator last,
+                                                              const MappableType_& mappable) const
 {
     return (is_bidirectionally_sorted_) ?
     ::has_overlapped(first, last, mappable, MappableRangeOrder::BidirectionallySorted)
@@ -641,8 +688,8 @@ MappableSet<MappableType, Allocator>::has_overlapped(iterator first, iterator la
 template <typename MappableType, typename Allocator>
 template <typename MappableType_>
 bool
-MappableSet<MappableType, Allocator>::has_overlapped(const_iterator first, const_iterator last,
-                                                     const MappableType_& mappable) const
+MappableFlatMultiSet<MappableType, Allocator>::has_overlapped(const_iterator first, const_iterator last,
+                                                              const MappableType_& mappable) const
 {
     return (is_bidirectionally_sorted_) ?
     ::has_overlapped(first, last, mappable, MappableRangeOrder::BidirectionallySorted)
@@ -652,8 +699,8 @@ MappableSet<MappableType, Allocator>::has_overlapped(const_iterator first, const
 
 template <typename MappableType, typename Allocator>
 template <typename MappableType_>
-typename MappableSet<MappableType, Allocator>::size_type
-MappableSet<MappableType, Allocator>::count_overlapped(const MappableType_& mappable) const
+typename MappableFlatMultiSet<MappableType, Allocator>::size_type
+MappableFlatMultiSet<MappableType, Allocator>::count_overlapped(const MappableType_& mappable) const
 {
     const auto overlapped = overlap_range(mappable);
     return (is_bidirectionally_sorted_) ? ::size(overlapped, MappableRangeOrder::BidirectionallySorted) : ::size(overlapped);
@@ -661,9 +708,9 @@ MappableSet<MappableType, Allocator>::count_overlapped(const MappableType_& mapp
 
 template <typename MappableType, typename Allocator>
 template <typename MappableType_>
-typename MappableSet<MappableType, Allocator>::size_type
-MappableSet<MappableType, Allocator>::count_overlapped(iterator first, iterator last,
-                                                       const MappableType_& mappable) const
+typename MappableFlatMultiSet<MappableType, Allocator>::size_type
+MappableFlatMultiSet<MappableType, Allocator>::count_overlapped(iterator first, iterator last,
+                                                                const MappableType_& mappable) const
 {
     const auto overlapped = overlap_range(first, last, mappable);
     return (is_bidirectionally_sorted_) ? ::size(overlapped, MappableRangeOrder::BidirectionallySorted) : ::size(overlapped);
@@ -671,9 +718,9 @@ MappableSet<MappableType, Allocator>::count_overlapped(iterator first, iterator 
 
 template <typename MappableType, typename Allocator>
 template <typename MappableType_>
-typename MappableSet<MappableType, Allocator>::size_type
-MappableSet<MappableType, Allocator>::count_overlapped(const_iterator first, const_iterator last,
-                                                       const MappableType_& mappable) const
+typename MappableFlatMultiSet<MappableType, Allocator>::size_type
+MappableFlatMultiSet<MappableType, Allocator>::count_overlapped(const_iterator first, const_iterator last,
+                                                                const MappableType_& mappable) const
 {
     const auto overlapped = overlap_range(first, last, mappable);
     return (is_bidirectionally_sorted_) ? ::size(overlapped, MappableRangeOrder::BidirectionallySorted) : ::size(overlapped);
@@ -681,26 +728,26 @@ MappableSet<MappableType, Allocator>::count_overlapped(const_iterator first, con
 
 template <typename MappableType, typename Allocator>
 template <typename MappableType_>
-OverlapRange<typename MappableSet<MappableType, Allocator>::const_iterator>
-MappableSet<MappableType, Allocator>::overlap_range(const MappableType_& mappable) const
+OverlapRange<typename MappableFlatMultiSet<MappableType, Allocator>::const_iterator>
+MappableFlatMultiSet<MappableType, Allocator>::overlap_range(const MappableType_& mappable) const
 {
     return overlap_range(std::cbegin(elements_), std::cend(elements_), mappable);
 }
 
 template <typename MappableType, typename Allocator>
 template <typename MappableType_>
-OverlapRange<typename MappableSet<MappableType, Allocator>::iterator>
-MappableSet<MappableType, Allocator>::overlap_range(iterator first, iterator last,
-                                                    const MappableType_& mappable) const
+OverlapRange<typename MappableFlatMultiSet<MappableType, Allocator>::iterator>
+MappableFlatMultiSet<MappableType, Allocator>::overlap_range(iterator first, iterator last,
+                                                             const MappableType_& mappable) const
 {
     return overlap_range(const_iterator(first), const_iterator(last), mappable);
 }
 
 template <typename MappableType, typename Allocator>
 template <typename MappableType_>
-OverlapRange<typename MappableSet<MappableType, Allocator>::const_iterator>
-MappableSet<MappableType, Allocator>::overlap_range(const_iterator first, const_iterator last,
-                                                    const MappableType_& mappable) const
+OverlapRange<typename MappableFlatMultiSet<MappableType, Allocator>::const_iterator>
+MappableFlatMultiSet<MappableType, Allocator>::overlap_range(const_iterator first, const_iterator last,
+                                                             const MappableType_& mappable) const
 {
     return (is_bidirectionally_sorted_) ?
         ::overlap_range(first, last, mappable, MappableRangeOrder::BidirectionallySorted)
@@ -710,28 +757,25 @@ MappableSet<MappableType, Allocator>::overlap_range(const_iterator first, const_
 
 template <typename MappableType, typename Allocator>
 template <typename MappableType_>
-void MappableSet<MappableType, Allocator>::erase_overlapped(const MappableType_& mappable)
+void MappableFlatMultiSet<MappableType, Allocator>::erase_overlapped(const MappableType_& mappable)
 {
     // TODO: find better implementation
     
-    auto overlapped = this->overlap_range(mappable);
+    const auto overlapped = overlap_range(mappable);
     
-    if (is_bidirectionally_sorted_ || ::size(overlapped) == bases(overlapped).size()
-        || std::all_of(std::cbegin(overlapped).base(), std::cend(overlapped).base(),
-                       [&] (const auto& m) { return overlaps(m, mappable); })) {
-        this->erase(std::cbegin(overlapped).base(), std::cend(overlapped).base());
+    if (is_bidirectionally_sorted_ || ::size(overlapped) == bases(overlapped).size()) {
+        erase(std::cbegin(overlapped).base(), std::cend(overlapped).base());
     } else {
-        while (!overlapped.empty()) {
-            this->erase(overlapped.front());
-            overlapped = this->overlap_range(mappable);
-        }
+        const std::vector<MappableType> tmp {std::cbegin(overlapped), std::cend(overlapped)};
+        
+        erase_all(std::cbegin(tmp), std::cend(tmp));
     }
 }
 
 template <typename MappableType, typename Allocator>
 template <typename MappableType_>
 bool
-MappableSet<MappableType, Allocator>::has_contained(const MappableType_& mappable) const
+MappableFlatMultiSet<MappableType, Allocator>::has_contained(const MappableType_& mappable) const
 {
     return has_contained(std::cbegin(elements_), std::cend(elements_), mappable);
 }
@@ -739,8 +783,8 @@ MappableSet<MappableType, Allocator>::has_contained(const MappableType_& mappabl
 template <typename MappableType, typename Allocator>
 template <typename MappableType_>
 bool
-MappableSet<MappableType, Allocator>::has_contained(iterator first, iterator last,
-                                                    const MappableType_& mappable) const
+MappableFlatMultiSet<MappableType, Allocator>::has_contained(iterator first, iterator last,
+                                                             const MappableType_& mappable) const
 {
     return has_contained(const_iterator(first), const_iterator(last), mappable);
 }
@@ -748,34 +792,34 @@ MappableSet<MappableType, Allocator>::has_contained(iterator first, iterator las
 template <typename MappableType, typename Allocator>
 template <typename MappableType_>
 bool
-MappableSet<MappableType, Allocator>::has_contained(const_iterator first, const_iterator last,
-                                                    const MappableType_& mappable) const
+MappableFlatMultiSet<MappableType, Allocator>::has_contained(const_iterator first, const_iterator last,
+                                                             const MappableType_& mappable) const
 {
     return ::has_contained(first, last, mappable);
 }
 
 template <typename MappableType, typename Allocator>
 template <typename MappableType_>
-typename MappableSet<MappableType, Allocator>::size_type
-MappableSet<MappableType, Allocator>::count_contained(const MappableType_& mappable) const
+typename MappableFlatMultiSet<MappableType, Allocator>::size_type
+MappableFlatMultiSet<MappableType, Allocator>::count_contained(const MappableType_& mappable) const
 {
     return count_contained(std::cbegin(elements_), std::cend(elements_), mappable);
 }
 
 template <typename MappableType, typename Allocator>
 template <typename MappableType_>
-typename MappableSet<MappableType, Allocator>::size_type
-MappableSet<MappableType, Allocator>::count_contained(iterator first, iterator last,
-                                                      const MappableType_& mappable) const
+typename MappableFlatMultiSet<MappableType, Allocator>::size_type
+MappableFlatMultiSet<MappableType, Allocator>::count_contained(iterator first, iterator last,
+                                                               const MappableType_& mappable) const
 {
     return count_contained(const_iterator(first), const_iterator(last), mappable);
 }
 
 template <typename MappableType, typename Allocator>
 template <typename MappableType_>
-typename MappableSet<MappableType, Allocator>::size_type
-MappableSet<MappableType, Allocator>::count_contained(const_iterator first, const_iterator last,
-                                                      const MappableType_& mappable) const
+typename MappableFlatMultiSet<MappableType, Allocator>::size_type
+MappableFlatMultiSet<MappableType, Allocator>::count_contained(const_iterator first, const_iterator last,
+                                                               const MappableType_& mappable) const
 {
     const auto contained = contained_range(first, last, mappable);
     return (is_bidirectionally_sorted_) ? ::size(contained, MappableRangeOrder::BidirectionallySorted) : ::size(contained);
@@ -783,33 +827,33 @@ MappableSet<MappableType, Allocator>::count_contained(const_iterator first, cons
 
 template <typename MappableType, typename Allocator>
 template <typename MappableType_>
-ContainedRange<typename MappableSet<MappableType, Allocator>::const_iterator>
-MappableSet<MappableType, Allocator>::contained_range(const MappableType_& mappable) const
+ContainedRange<typename MappableFlatMultiSet<MappableType, Allocator>::const_iterator>
+MappableFlatMultiSet<MappableType, Allocator>::contained_range(const MappableType_& mappable) const
 {
     return contained_range(std::cbegin(elements_), std::cend(elements_), mappable);
 }
 
 template <typename MappableType, typename Allocator>
 template <typename MappableType_>
-ContainedRange<typename MappableSet<MappableType, Allocator>::iterator>
-MappableSet<MappableType, Allocator>::contained_range(iterator first, iterator last,
-                                                      const MappableType_& mappable) const
+ContainedRange<typename MappableFlatMultiSet<MappableType, Allocator>::iterator>
+MappableFlatMultiSet<MappableType, Allocator>::contained_range(iterator first, iterator last,
+                                                               const MappableType_& mappable) const
 {
     return contained_range(const_iterator(first), const_iterator(last), mappable);
 }
 
 template <typename MappableType, typename Allocator>
 template <typename MappableType_>
-ContainedRange<typename MappableSet<MappableType, Allocator>::const_iterator>
-MappableSet<MappableType, Allocator>::contained_range(const_iterator first, const_iterator last,
-                                                      const MappableType_& mappable) const
+ContainedRange<typename MappableFlatMultiSet<MappableType, Allocator>::const_iterator>
+MappableFlatMultiSet<MappableType, Allocator>::contained_range(const_iterator first, const_iterator last,
+                                                               const MappableType_& mappable) const
 {
     return ::contained_range(first, last, mappable);
 }
 
 template <typename MappableType, typename Allocator>
 template <typename MappableType_>
-void MappableSet<MappableType, Allocator>::erase_contained(const MappableType_& mappable)
+void MappableFlatMultiSet<MappableType, Allocator>::erase_contained(const MappableType_& mappable)
 {
     auto contained = this->contained_range(mappable);
     
@@ -827,8 +871,8 @@ void MappableSet<MappableType, Allocator>::erase_contained(const MappableType_& 
 template <typename MappableType, typename Allocator>
 template <typename MappableType1_, typename MappableType2_>
 bool
-MappableSet<MappableType, Allocator>::has_shared(const MappableType1_& mappable1,
-                                                 const MappableType2_& mappable2) const
+MappableFlatMultiSet<MappableType, Allocator>::has_shared(const MappableType1_& mappable1,
+                                                          const MappableType2_& mappable2) const
 {
     return has_shared(std::cbegin(elements_), std::cend(elements_), mappable1, mappable2);
 }
@@ -836,9 +880,9 @@ MappableSet<MappableType, Allocator>::has_shared(const MappableType1_& mappable1
 template <typename MappableType, typename Allocator>
 template <typename MappableType1_, typename MappableType2_>
 bool
-MappableSet<MappableType, Allocator>::has_shared(iterator first, iterator last,
-                                                 const MappableType1_& mappable1,
-                                                 const MappableType2_& mappable2) const
+MappableFlatMultiSet<MappableType, Allocator>::has_shared(iterator first, iterator last,
+                                                          const MappableType1_& mappable1,
+                                                          const MappableType2_& mappable2) const
 {
     return has_shared(const_iterator(first), const_iterator(last), mappable1, mappable2);
 }
@@ -846,9 +890,9 @@ MappableSet<MappableType, Allocator>::has_shared(iterator first, iterator last,
 template <typename MappableType, typename Allocator>
 template <typename MappableType1_, typename MappableType2_>
 bool
-MappableSet<MappableType, Allocator>::has_shared(const_iterator first, const_iterator last,
-                                                 const MappableType1_& mappable1,
-                                                 const MappableType2_& mappable2) const
+MappableFlatMultiSet<MappableType, Allocator>::has_shared(const_iterator first, const_iterator last,
+                                                          const MappableType1_& mappable1,
+                                                          const MappableType2_& mappable2) const
 {
     if (inner_distance(mappable1, mappable2) > max_element_size_) return false;
     
@@ -862,29 +906,29 @@ MappableSet<MappableType, Allocator>::has_shared(const_iterator first, const_ite
 
 template <typename MappableType, typename Allocator>
 template <typename MappableType1_, typename MappableType2_>
-typename MappableSet<MappableType, Allocator>::size_type
-MappableSet<MappableType, Allocator>::count_shared(const MappableType1_& mappable1,
-                                                   const MappableType2_& mappable2) const
+typename MappableFlatMultiSet<MappableType, Allocator>::size_type
+MappableFlatMultiSet<MappableType, Allocator>::count_shared(const MappableType1_& mappable1,
+                                                            const MappableType2_& mappable2) const
 {
     return count_shared(std::cbegin(elements_), std::cend(elements_), mappable1, mappable2);
 }
 
 template <typename MappableType, typename Allocator>
 template <typename MappableType1_, typename MappableType2_>
-typename MappableSet<MappableType, Allocator>::size_type
-MappableSet<MappableType, Allocator>::count_shared(iterator first, iterator last,
-                                                   const MappableType1_& mappable1,
-                                                   const MappableType2_& mappable2) const
+typename MappableFlatMultiSet<MappableType, Allocator>::size_type
+MappableFlatMultiSet<MappableType, Allocator>::count_shared(iterator first, iterator last,
+                                                            const MappableType1_& mappable1,
+                                                            const MappableType2_& mappable2) const
 {
     return count_shared(const_iterator(first), const_iterator(last), mappable1, mappable2);
 }
 
 template <typename MappableType, typename Allocator>
 template <typename MappableType1_, typename MappableType2_>
-typename MappableSet<MappableType, Allocator>::size_type
-MappableSet<MappableType, Allocator>::count_shared(const_iterator first, const_iterator last,
-                                                   const MappableType1_& mappable1,
-                                                   const MappableType2_& mappable2) const
+typename MappableFlatMultiSet<MappableType, Allocator>::size_type
+MappableFlatMultiSet<MappableType, Allocator>::count_shared(const_iterator first, const_iterator last,
+                                                            const MappableType1_& mappable1,
+                                                            const MappableType2_& mappable2) const
 {
     if (inner_distance(mappable1, mappable2) > max_element_size_) return 0;
     
@@ -898,29 +942,29 @@ MappableSet<MappableType, Allocator>::count_shared(const_iterator first, const_i
 
 template <typename MappableType, typename Allocator>
 template <typename MappableType1_, typename MappableType2_>
-SharedRange<typename MappableSet<MappableType, Allocator>::const_iterator>
-MappableSet<MappableType, Allocator>::shared_range(const MappableType1_& mappable1,
-                                                   const MappableType2_& mappable2) const
+SharedRange<typename MappableFlatMultiSet<MappableType, Allocator>::const_iterator>
+MappableFlatMultiSet<MappableType, Allocator>::shared_range(const MappableType1_& mappable1,
+                                                            const MappableType2_& mappable2) const
 {
     return shared_range(std::cbegin(elements_), std::cend(elements_), mappable1, mappable2);
 }
 
 template <typename MappableType, typename Allocator>
 template <typename MappableType1_, typename MappableType2_>
-SharedRange<typename MappableSet<MappableType, Allocator>::iterator>
-MappableSet<MappableType, Allocator>::shared_range(iterator first, iterator last,
-                                                   const MappableType1_& mappable1,
-                                                   const MappableType2_& mappable2) const
+SharedRange<typename MappableFlatMultiSet<MappableType, Allocator>::iterator>
+MappableFlatMultiSet<MappableType, Allocator>::shared_range(iterator first, iterator last,
+                                                            const MappableType1_& mappable1,
+                                                            const MappableType2_& mappable2) const
 {
     return shared_range(const_iterator(first), const_iterator(last), mappable1, mappable2);
 }
 
 template <typename MappableType, typename Allocator>
 template <typename MappableType1_, typename MappableType2_>
-SharedRange<typename MappableSet<MappableType, Allocator>::const_iterator>
-MappableSet<MappableType, Allocator>::shared_range(const_iterator first, const_iterator last,
-                                                   const MappableType1_& mappable1,
-                                                   const MappableType2_& mappable2) const
+SharedRange<typename MappableFlatMultiSet<MappableType, Allocator>::const_iterator>
+MappableFlatMultiSet<MappableType, Allocator>::shared_range(const_iterator first, const_iterator last,
+                                                            const MappableType1_& mappable1,
+                                                            const MappableType2_& mappable2) const
 {
     if (inner_distance(mappable1, mappable2) > max_element_size_) {
         return make_shared_range(last, last, mappable1, mappable2);
@@ -943,21 +987,22 @@ MappableSet<MappableType, Allocator>::shared_range(const_iterator first, const_i
 // non-member methods
 
 template <typename MappableType, typename Allocator>
-bool operator==(const MappableSet<MappableType, Allocator>& lhs,
-                const MappableSet<MappableType, Allocator>& rhs)
+bool operator==(const MappableFlatMultiSet<MappableType, Allocator>& lhs,
+                const MappableFlatMultiSet<MappableType, Allocator>& rhs)
 {
     return lhs.elements_ == rhs.elements_;
 }
 
 template <typename MappableType, typename Allocator>
-bool operator<(const MappableSet<MappableType, Allocator>& lhs,
-               const MappableSet<MappableType, Allocator>& rhs)
+bool operator<(const MappableFlatMultiSet<MappableType, Allocator>& lhs,
+               const MappableFlatMultiSet<MappableType, Allocator>& rhs)
 {
     return lhs.elements_ < rhs.elements_;
 }
 
 template <typename MappableType, typename Allocator>
-void swap(MappableSet<MappableType, Allocator>& lhs, MappableSet<MappableType, Allocator>& rhs)
+void swap(MappableFlatMultiSet<MappableType, Allocator>& lhs,
+          MappableFlatMultiSet<MappableType, Allocator>& rhs)
 {
     std::swap(lhs.elements_, rhs.elements_);
     std::swap(lhs.is_bidirectionally_sorted_, rhs.is_bidirectionally_sorted_);
@@ -965,14 +1010,14 @@ void swap(MappableSet<MappableType, Allocator>& lhs, MappableSet<MappableType, A
 }
 
 template <typename MappableType, typename Allocator>
-auto encompassing_region(const MappableSet<MappableType, Allocator>& mappables)
+auto encompassing_region(const MappableFlatMultiSet<MappableType, Allocator>& mappables)
 {
     return encompassing_region(mappables.leftmost(), mappables.rightmost());
 }
 
 template <typename ForwardIterator, typename MappableType1, typename MappableType2, typename Allocator>
 ForwardIterator
-find_first_shared(const MappableSet<MappableType1, Allocator>& mappables,
+find_first_shared(const MappableFlatMultiSet<MappableType1, Allocator>& mappables,
                   ForwardIterator first, ForwardIterator last,
                   const MappableType2& mappable)
 {
@@ -982,7 +1027,7 @@ find_first_shared(const MappableSet<MappableType1, Allocator>& mappables,
 }
 
 template <typename MappableType, typename ForwardIterator, typename Allocator>
-size_t count_if_shared_with_first(const MappableSet<MappableType, Allocator>& mappables,
+size_t count_if_shared_with_first(const MappableFlatMultiSet<MappableType, Allocator>& mappables,
                                   ForwardIterator first, ForwardIterator last)
 {
     if (first == last) return 0;
@@ -995,17 +1040,17 @@ size_t count_if_shared_with_first(const MappableSet<MappableType, Allocator>& ma
 }
 
 template <typename MappableType1, typename MappableType2, typename Allocator>
-MappableSet<MappableType1, Allocator>
-copy_overlapped(const MappableSet<MappableType1, Allocator>& mappables,
+MappableFlatMultiSet<MappableType1, Allocator>
+copy_overlapped(const MappableFlatMultiSet<MappableType1, Allocator>& mappables,
                 const MappableType2& mappable)
 {
     const auto overlapped = mappables.overlap_range(mappable);
-    return MappableSet<MappableType1>(std::begin(overlapped), std::end(overlapped));
+    return MappableFlatMultiSet<MappableType1>(std::begin(overlapped), std::end(overlapped));
 }
 
 template <typename MappableType1, typename MappableType2, typename Allocator>
-MappableSet<MappableType1, Allocator>
-copy_nonoverlapped(const MappableSet<MappableType1, Allocator>& mappables,
+MappableFlatMultiSet<MappableType1, Allocator>
+copy_nonoverlapped(const MappableFlatMultiSet<MappableType1, Allocator>& mappables,
                    const MappableType2& mappable)
 {
     using std::cbegin; using std::cend;
@@ -1014,7 +1059,7 @@ copy_nonoverlapped(const MappableSet<MappableType1, Allocator>& mappables,
     
     if (num_overlapped == 0) return mappables;
     
-    MappableSet<MappableType1> result {};
+    MappableFlatMultiSet<MappableType1> result {};
     result.reserve(mappables.size() - num_overlapped);
     
     auto overlapped = mappables.overlap_range(mappable);
@@ -1040,17 +1085,17 @@ copy_nonoverlapped(const MappableSet<MappableType1, Allocator>& mappables,
 }
 
 template <typename MappableType1, typename MappableType2, typename Allocator>
-MappableSet<MappableType1>
-copy_contained(const MappableSet<MappableType1, Allocator>& mappables,
+MappableFlatMultiSet<MappableType1>
+copy_contained(const MappableFlatMultiSet<MappableType1, Allocator>& mappables,
                const MappableType2& mappable)
 {
     const auto contained = mappables.contained_range(mappable);
-    return MappableSet<MappableType1>(std::begin(contained), std::end(contained));
+    return MappableFlatMultiSet<MappableType1>(std::begin(contained), std::end(contained));
 }
 
 template <typename MappableType1, typename MappableType2, typename Allocator>
-MappableSet<MappableType1>
-copy_noncontained(const MappableSet<MappableType1, Allocator>& mappables,
+MappableFlatMultiSet<MappableType1>
+copy_noncontained(const MappableFlatMultiSet<MappableType1, Allocator>& mappables,
                   const MappableType2& mappable)
 {
     using std::cbegin; using std::cend;
@@ -1059,7 +1104,7 @@ copy_noncontained(const MappableSet<MappableType1, Allocator>& mappables,
     
     if (num_overlapped == 0) return mappables;
     
-    MappableSet<MappableType1> result {};
+    MappableFlatMultiSet<MappableType1> result {};
     result.reserve(mappables.size() - num_overlapped);
     
     auto contained = mappables.contained_range(mappable);
@@ -1085,12 +1130,12 @@ copy_noncontained(const MappableSet<MappableType1, Allocator>& mappables,
 }
 
 template <typename MappableType, typename Region, typename Allocator1, typename Allocator2>
-MappableSet<Region> splice_all(const MappableSet<MappableType, Allocator1>& mappables,
-                               const MappableSet<Region, Allocator2>& regions)
+MappableFlatMultiSet<Region> splice_all(const MappableFlatMultiSet<MappableType, Allocator1>& mappables,
+                                        const MappableFlatMultiSet<Region, Allocator2>& regions)
 {
     if (mappables.empty()) return regions;
     
-    MappableSet<Region> result {};
+    MappableFlatMultiSet<Region> result {};
     result.reserve(regions.size());
     
     for (const auto& region : regions) {
@@ -1123,14 +1168,14 @@ MappableSet<Region> splice_all(const MappableSet<MappableType, Allocator1>& mapp
 }
 
 template <typename MappableType, typename Allocator>
-auto calculate_positional_coverage(const MappableSet<MappableType, Allocator>& mappables)
+auto calculate_positional_coverage(const MappableFlatMultiSet<MappableType, Allocator>& mappables)
 {
     return calculate_positional_coverage(std::cbegin(mappables), std::cend(mappables),
                                          encompassing_region(mappables));
 }
 
 template <typename MappableType>
-auto calculate_positional_coverage(const MappableSet<MappableType>& mappables,
+auto calculate_positional_coverage(const MappableFlatMultiSet<MappableType>& mappables,
                                    const GenomicRegion& region)
 {
     const auto overlapped = mappables.overlap_range(region);

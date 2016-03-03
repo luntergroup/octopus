@@ -47,7 +47,7 @@ namespace Octopus
             const auto it1 = std::make_move_iterator(std::begin(alleles));
             const auto it2 = std::make_move_iterator(it);
             
-            return MappableSet<Allele> {it1, it2};
+            return MappableFlatSet<Allele> {it1, it2};
         }
     }
     
@@ -70,6 +70,8 @@ namespace Octopus
     current_active_region_ {shift(head_region(alleles_.leftmost(), 0), -1)},
     next_active_region_ {},
     max_haplotypes_ {max_haplotypes},
+    is_lagged_ {max_indicators > 0},
+    holdout_set_ {},
     active_allele_counts_ {}
     {}
     
@@ -103,7 +105,7 @@ namespace Octopus
     
     std::pair<std::vector<Haplotype>, GenomicRegion> HaplotypeGenerator::progress()
     {
-        // TODO: reintroduce holdout alleles
+        holdout_set_.clear(); // TODO: reintroduce holdout alleles and backtrack
         
         if (!next_active_region_) {
             next_active_region_ = walker_.walk(current_active_region_, reads_, alleles_);
@@ -125,9 +127,7 @@ namespace Octopus
             
             holdout_set_ = compute_holdout_set(current_active_region_);
             
-            for (const auto& allele : holdout_set_) {
-                alleles_.erase(allele);
-            }
+            alleles_.erase_all(std::cbegin(holdout_set_), std::cend(holdout_set_));
             
             std::cout << "Warning: holding out " << holdout_set_.size() << " alleles from region "
                         << current_active_region_ << '\n';
@@ -140,11 +140,11 @@ namespace Octopus
         
         extend_tree(active_alleles, tree_);
         
-        auto haplotype_region = calculate_haplotype_region();
+        auto haplotypes = tree_.extract_haplotypes(calculate_haplotype_region());
         
-        assert(contains(haplotype_region, current_active_region_));
-        
-        auto haplotypes = tree_.extract_haplotypes(haplotype_region);
+        if (!is_lagged_) {
+            tree_.clear();
+        }
         
         active_allele_counts_.clear();
         
@@ -165,7 +165,7 @@ namespace Octopus
     
     void HaplotypeGenerator::keep_haplotypes(const std::vector<Haplotype>& haplotypes)
     {
-        if (tree_.num_haplotypes() == haplotypes.size()) return;
+        if (!is_lagged_ || tree_.num_haplotypes() == haplotypes.size()) return;
         
         for (const auto& haplotype : haplotypes) {
             tree_.prune_unique(haplotype);
@@ -179,9 +179,7 @@ namespace Octopus
             }
         }
         
-        for (const auto& allele : unused_alleles) {
-            alleles_.erase(allele);
-        }
+        alleles_.erase_all(std::cbegin(unused_alleles), std::cend(unused_alleles));
         
         active_allele_counts_.clear();
         
@@ -192,21 +190,27 @@ namespace Octopus
     
     void HaplotypeGenerator::remove_haplotypes(const std::vector<Haplotype>& haplotypes)
     {
-        for (const auto& haplotype : haplotypes) {
-            tree_.prune_all(haplotype);
-        }
-        
-        std::deque<Allele> removed_alleles {};
-        
-        for (const auto& allele : alleles_.overlap_range(current_active_region_)) {
-            if (active_allele_counts_[allele] == count_contained(allele, haplotypes)) {
-                removed_alleles.push_back(allele);
+        if (!is_lagged_ || haplotypes.size() == tree_.num_haplotypes()) {
+            tree_.clear();
+            alleles_.erase_overlapped(current_active_region_);
+            active_allele_counts_.clear();
+        } else {
+            for (const auto& haplotype : haplotypes) {
+                tree_.prune_all(haplotype);
             }
-        }
-        
-        for (const auto& allele : removed_alleles) {
-            alleles_.erase(allele);
-            active_allele_counts_.erase(allele);
+            
+            std::deque<Allele> removed_alleles {};
+            
+            for (const auto& allele : alleles_.overlap_range(current_active_region_)) {
+                if (active_allele_counts_[allele] == count_contained(allele, haplotypes)) {
+                    removed_alleles.push_back(allele);
+                }
+            }
+            
+            alleles_.erase_all(std::cbegin(removed_alleles), std::cend(removed_alleles));
+            for (const auto& allele : removed_alleles) {
+                active_allele_counts_.erase(allele);
+            }
         }
     }
     
@@ -270,7 +274,7 @@ namespace Octopus
     
     // private methods
     
-    MappableSet<Allele>
+    MappableFlatMultiSet<Allele>
     HaplotypeGenerator::compute_holdout_set(const GenomicRegion& active_region) const
     {
         auto active_alleles = copy_overlapped(alleles_, active_region);
@@ -287,14 +291,14 @@ namespace Octopus
                                     return !is_same_region(allele, r);
                                 });
             
-            MappableSet<Allele> cur {std::begin(tmp), it};
+            MappableFlatSet<Allele> cur {std::begin(tmp), it};
             
             auto re = walker_.walk(head_region(cur.leftmost()), reads_, cur);
             
             if (std::exp2(cur.count_overlapped(re)) < hard_max_haplotypes_) break;
         }
         
-        return MappableSet<Allele> {it, std::end(tmp)};
+        return MappableFlatMultiSet<Allele> {it, std::end(tmp)};
     }
     
     template <typename Range>

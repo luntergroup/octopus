@@ -80,6 +80,8 @@ public:
 private:
     using HtsTidType = int32_t;
     
+    static constexpr std::size_t default_reserve_ {10'000'00};
+    
     class HtslibIterator
     {
     public:

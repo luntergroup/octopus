@@ -42,8 +42,8 @@ void CandidateVariantGenerator::add_reads(std::vector<AlignedRead>::const_iterat
     }
 }
 
-void CandidateVariantGenerator::add_reads(MappableSet<AlignedRead>::const_iterator first,
-                                          MappableSet<AlignedRead>::const_iterator last)
+void CandidateVariantGenerator::add_reads(MappableFlatMultiSet<AlignedRead>::const_iterator first,
+                                          MappableFlatMultiSet<AlignedRead>::const_iterator last)
 {
     for (auto& generator : generators_) {
         generator->add_reads(first, last);

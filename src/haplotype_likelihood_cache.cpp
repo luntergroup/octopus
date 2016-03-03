@@ -121,94 +121,79 @@ void HaplotypeLikelihoodCache::clear()
 {
     cache_.clear();
 }
+
+// private methods
+
+void HaplotypeLikelihoodCache::set_read_iterators_and_sample_indices(const ReadMap& reads)
+{
+    sample_indices_.clear();
     
-    // private methods
+    const auto num_samples = reads.size();
     
-    void HaplotypeLikelihoodCache::set_read_iterators_and_sample_indices(const ReadMap& reads)
-    {
-        sample_indices_.clear();
-        
-        const auto num_samples = reads.size();
-        
-        if (read_iterators_.capacity() < num_samples) {
-            read_iterators_.reserve(num_samples);
-        }
-        
-        if (sample_indices_.bucket_count() < num_samples) {
-            sample_indices_.rehash(num_samples);
-        }
-        
-        std::size_t i {0};
-        
-        for (const auto& p : reads) {
-            read_iterators_.emplace_back(std::cbegin(p.second), std::cend(p.second));
-            sample_indices_.emplace(p.first, i++);
-        }
+    if (read_iterators_.capacity() < num_samples) {
+        read_iterators_.reserve(num_samples);
     }
     
-//    void HaplotypeLikelihoodCache::set_read_hashes()
-//    {
-//        if (read_hashes_.size() < sample_indices_.size()) {
-//            read_hashes_.resize(sample_indices_.size());
-//        }
-//        
-//        std::transform(std::cbegin(read_iterators_), std::cend(read_iterators_),
-//                       std::begin(read_hashes_),
-//                       [] (const auto& t) {
-//                           
-//                       });
-//        
-//        for (const auto& t : read_iterators_) {
-//            std::vector<KmerPerfectHashes> sample_read_hashes {};
-//            sample_read_hashes.reserve(t.num_reads);
-//            
-//            std::transform(t.first, t.last, std::back_inserter(sample_read_hashes),
-//                           [] (const AlignedRead& read) {
-//                               return compute_kmer_hashes<KMER_SIZE>(read.get_sequence());
-//                           });
-//            
-//            read_hashes_.emplace_back(std::move(sample_read_hashes));
-//        }
-//    }
+    if (sample_indices_.bucket_count() < num_samples) {
+        sample_indices_.rehash(num_samples);
+    }
+    
+    std::size_t i {0};
+    
+    for (const auto& p : reads) {
+        read_iterators_.emplace_back(std::cbegin(p.second), std::cend(p.second));
+        sample_indices_.emplace(p.first, i++);
+    }
+}
 
 namespace debug
 {
-//    void print_read_haplotype_liklihoods(const std::vector<Haplotype>& haplotypes,
-//                                         const ReadMap& reads,
-//                                         HaplotypeLikelihoodCache& haplotype_likelihoods,
-//                                         size_t n)
-//    {
-//        auto m = std::min(n, haplotypes.size());
-//        
-//        std::cout << "debug: top " << m << " haplotype likelihoods for each read in each sample" << std::endl;
-//        
-//        using HaplotypeReference = std::reference_wrapper<const Haplotype>;
-//        
-//        for (const auto& sample_reads : reads) {
-//            std::cout << "Sample: " << sample_reads.first << ":" << std::endl;
-//            
-//            for (const auto& read : sample_reads.second) {
-//                std::cout << "\tRead: " << read.get_region() << " " << read.get_cigar_string() << ":" << std::endl;
-//                
-//                std::vector<std::pair<HaplotypeReference, double>> top {};
-//                top.reserve(haplotypes.size());
-//                
-//                for (const auto& haplotype : haplotypes) {
-//                    top.emplace_back(haplotype, haplotype_likelihoods.log_probability(read, haplotype));
-//                }
-//                
-//                std::sort(std::begin(top), std::end(top),
-//                          [] (const auto& lhs, const auto& rhs) {
-//                              return lhs.second > rhs.second;
-//                          });
-//                
-//                for (unsigned i {}; i < m; ++i) {
-//                    std::cout << "\t\t ";
-//                    print_variant_alleles(top[i].first);
-//                    std::cout << " " << std::setprecision(10) << top[i].second << std::endl;
-//                }
-//            }
-//        }
-//    }
+    void print_read_haplotype_liklihoods(const std::vector<Haplotype>& haplotypes,
+                                         const ReadMap& reads,
+                                         const HaplotypeLikelihoodCache& haplotype_likelihoods,
+                                         size_t n)
+    {
+        auto m = std::min(n, haplotypes.size());
+        
+        std::cout << "debug: printing top " << m << " haplotype likelihoods for each read in each sample" << '\n';
+        
+        using ReadReference = std::reference_wrapper<const AlignedRead>;
+        
+        for (const auto& sample_reads : reads) {
+            const auto& sample = sample_reads.first;
+            
+            std::cout << "Sample: " << sample << ":" << '\n';
+            
+            for (const Haplotype& haplotype : haplotypes) {
+                std::cout << "\tHaplotype: ";
+                print_alleles(haplotype);
+                std::cout << '\n';
+                
+                std::vector<std::pair<ReadReference, double>> likelihoods {};
+                likelihoods.reserve(sample_reads.second.size());
+                
+                std::transform(std::cbegin(sample_reads.second), std::cend(sample_reads.second),
+                               std::cbegin(haplotype_likelihoods.log_likelihoods(sample, haplotype)),
+                               std::back_inserter(likelihoods),
+                               [] (const AlignedRead& read, const double likelihood) {
+                                   return std::make_pair(std::ref(read), likelihood);
+                               });
+                
+                const auto mth = std::next(std::begin(likelihoods), m);
+                
+                std::partial_sort(std::begin(likelihoods), mth, std::end(likelihoods),
+                          [] (const auto& lhs, const auto& rhs) {
+                              return lhs.second > rhs.second;
+                          });
+                
+                std::for_each(std::begin(likelihoods), mth,
+                              [] (const auto& p) {
+                                  std::cout << "\t\t" << p.first.get().get_region()
+                                            << " " << p.first.get().get_cigar_string() << ": ";
+                                  std::cout << std::setprecision(10) << p.second << '\n';
+                              });
+            }
+        }
+    }
 } // namespace debug
 } // namespace Octopus

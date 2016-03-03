@@ -23,7 +23,7 @@
 //#include "genotype.hpp"
 //#include "reference_genome.hpp"
 //#include "haplotype_tree.hpp"
-//#include "mappable_set.hpp"
+//#include "mappable_flat_multi_set.hpp"
 //#include "genome_walker.hpp"
 //#include "probability_matrix.hpp"
 //
@@ -94,7 +94,7 @@
 //    HaplotypeTree tree_;
 //    GenomeWalker walker_;
 //    
-//    MappableSet<Variant> buffered_candidates_;
+//    MappableFlatMultiSet<Variant> buffered_candidates_;
 //    const ReadMap* reads_;
 //    
 //    GenomicRegion current_region_, next_region_;
@@ -109,7 +109,7 @@
 //    unsigned calculate_num_haplotypes_to_remove() const;
 //    
 //    PhaseSet find_optimal_phase_set(const GenomicRegion& region,
-//                                    MappableSet<Variant> variants,
+//                                    MappableFlatMultiSet<Variant> variants,
 //                                    const GenotypePosteriors& genotype_posteriors);
 //};
 //

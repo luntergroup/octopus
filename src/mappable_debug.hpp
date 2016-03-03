@@ -11,14 +11,14 @@
 #include <iterator>
 
 #include "mappable_algorithms.hpp"
-#include "mappable_set.hpp"
+#include "mappable_flat_multi_set.hpp"
 #include "mappable_map.hpp"
 
 #ifndef mappable_debug_hpp
 #define mappable_debug_hpp
 
 template <typename T, typename MappableType>
-void print_overlapped(const MappableSet<T>& mappables, const MappableType& mappable,
+void print_overlapped(const MappableFlatMultiSet<T>& mappables, const MappableType& mappable,
                       const std::string& delim = "\n")
 {
     const auto overlapped = mappables.overlap_range(mappable);
@@ -47,7 +47,7 @@ void print_overlapped(const MappableMap<K, T>& mappables, const MappableType& ma
 }
 
 template <typename T, typename MappableType>
-void print_contained(const MappableSet<T>& mappables, const MappableType& mappable,
+void print_contained(const MappableFlatMultiSet<T>& mappables, const MappableType& mappable,
                      const std::string& delim = "\n")
 {
     const auto contained = mappables.contained_range(mappable);

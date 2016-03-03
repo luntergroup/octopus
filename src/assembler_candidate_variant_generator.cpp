@@ -41,8 +41,8 @@ void AssemblerCandidateVariantGenerator::add_reads(std::vector<AlignedRead>::con
     std::for_each(first, last, [this] (const auto& read ) { add_read(read); });
 }
 
-void AssemblerCandidateVariantGenerator::add_reads(MappableSet<AlignedRead>::const_iterator first,
-                                                   MappableSet<AlignedRead>::const_iterator last)
+void AssemblerCandidateVariantGenerator::add_reads(MappableFlatMultiSet<AlignedRead>::const_iterator first,
+                                                   MappableFlatMultiSet<AlignedRead>::const_iterator last)
 {
     std::for_each(first, last, [this] (const auto& read ) { add_read(read); });
 }

@@ -14,6 +14,7 @@
 #include "mappable_algorithms.hpp"
 
 #include <iostream> // DEBUG
+#include "timers.hpp"
 
 namespace Octopus
 {
@@ -52,18 +53,20 @@ ReadMap ReadPipe::fetch_reads(const GenomicRegion& region)
     const auto batches = batch_samples(samples_);
     
     for (const auto& batch : batches) {
+        resume_timer(misc_timer1);
         auto batch_reads = read_manager_.get().fetch_reads(batch, region);
+        pause_timer(misc_timer1);
         
-        auto filtered_batch = filter_reads(std::move(batch_reads), read_filter_).first;
+        erase_filtered_reads(batch_reads, partition(batch_reads, read_filter_));
         
-        if (downsampler_) {
-            filtered_batch = downsampler_->sample(std::move(filtered_batch));
-        }
+//        if (downsampler_) {
+//            batch_reads = downsampler_->sample(std::move(batch_reads));
+//        }
         
-        transform_reads(filtered_batch, read_transform_);
+        transform_reads(batch_reads, read_transform_);
         
-        for (auto&& sample_batch : filtered_batch) {
-            result.emplace(std::move(sample_batch.first), std::move(sample_batch.second));
+        for (auto&& sample_batch : batch_reads) {
+            result.emplace(sample_batch.first, std::move(sample_batch.second));
         }
     }
     

@@ -25,9 +25,9 @@ AlignedRead find_next_segment(const AlignedRead& read,
 }
 
 // TODO
-MappableSet<AlignedRead> find_chimeras(const AlignedRead& read, const MappableSet<AlignedRead>& reads)
+MappableFlatMultiSet<AlignedRead> find_chimeras(const AlignedRead& read, const MappableFlatMultiSet<AlignedRead>& reads)
 {
-    return MappableSet<AlignedRead> {};
+    return MappableFlatMultiSet<AlignedRead> {};
 }
 
 } // namespace Octopus

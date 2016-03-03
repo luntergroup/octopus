@@ -278,20 +278,26 @@ HtslibSamFacade::find_covered_subregion(const std::vector<SampleIdType>& samples
 
 HtslibSamFacade::SampleReadMap HtslibSamFacade::fetch_reads(const GenomicRegion& region)
 {
-    HtslibIterator it {*this, region};
-    
     SampleReadMap result {samples_.size()};
+    
+    if (samples_.size() == 1) {
+        auto reads = fetch_reads(samples_.front(), region);
+        result.emplace(samples_.front(), std::move(reads));
+        return result;
+    }
+    
+    HtslibIterator it {*this, region};
     
     for (const auto& sample : samples_) {
         auto p = result.emplace(std::piecewise_construct, std::forward_as_tuple(sample),
                                 std::forward_as_tuple());
-        p.first->second.reserve(10'000);
+        p.first->second.reserve(default_reserve_);
     }
     
     while (++it) {
         auto read = *it;
         if (read) {
-             result[sample_names_.at(it.get_read_group())].emplace(std::move(*read));
+             result[sample_names_.at(it.get_read_group())].emplace(*std::move(read));
         }
     }
     
@@ -310,13 +316,22 @@ HtslibSamFacade::Reads HtslibSamFacade::fetch_reads(const SampleIdType& sample, 
         return result;
     }
     
-    result.reserve(10'000);
+    result.reserve(default_reserve_);
     
-    while (++it) {
-        if (sample_names_.at(it.get_read_group()) == sample) {
+    if (samples_.size() == 1) {
+        while (++it) {
             auto read = *it;
             if (read) {
-                result.emplace(std::move(*read));
+                result.emplace(*std::move(read));
+            }
+        }
+    } else {
+        while (++it) {
+            if (sample_names_.at(it.get_read_group()) == sample) {
+                auto read = *it;
+                if (read) {
+                    result.emplace(*std::move(read));
+                }
             }
         }
     }
@@ -329,6 +344,8 @@ HtslibSamFacade::Reads HtslibSamFacade::fetch_reads(const SampleIdType& sample, 
 HtslibSamFacade::SampleReadMap HtslibSamFacade::fetch_reads(const std::vector<SampleIdType>& samples,
                                                             const GenomicRegion& region)
 {
+    if (is_subset(samples_, samples)) return fetch_reads(region);
+    
     HtslibIterator it {*this, region};
     
     SampleReadMap result {samples.size()};
@@ -337,7 +354,7 @@ HtslibSamFacade::SampleReadMap HtslibSamFacade::fetch_reads(const std::vector<Sa
         if (std::find(std::cbegin(samples_), std::cend(samples_), sample) != std::cend(samples_)) {
             auto p = result.emplace(std::piecewise_construct, std::forward_as_tuple(sample),
                                     std::forward_as_tuple());
-            p.first->second.reserve(10'000);
+            p.first->second.reserve(default_reserve_);
         }
     }
     
@@ -348,7 +365,7 @@ HtslibSamFacade::SampleReadMap HtslibSamFacade::fetch_reads(const std::vector<Sa
         if (result.count(sample) == 1) {
             auto read = *it;
             if (read) {
-                result[sample].emplace(std::move(*read));
+                result[sample].emplace(*std::move(read));
             }
         }
     }

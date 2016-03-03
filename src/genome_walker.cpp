@@ -122,11 +122,13 @@ GenomicRegion GenomeWalker::walk(const GenomicRegion& previous_region, const Rea
                ++included_itr;
            }
     
-    auto num_remaining  = static_cast<size_t>(distance(next(included_itr), last_candidate_itr));
+    first_excluded_itr = next(included_itr);
     
-    const auto& rightmost = *rightmost_mappable(first_included_itr, next(included_itr));
+    const auto& rightmost = *rightmost_mappable(first_included_itr, first_excluded_itr);
     
-    auto num_overlapped = candidates.count_overlapped(next(included_itr), last_candidate_itr, rightmost);
+    auto num_remaining = static_cast<size_t>(distance(first_excluded_itr, last_candidate_itr));
+    
+    auto num_overlapped = candidates.count_overlapped(first_excluded_itr, last_candidate_itr, rightmost);
     
     advance(included_itr, min(num_remaining, num_overlapped));
     

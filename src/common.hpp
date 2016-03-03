@@ -14,7 +14,7 @@
 #include <unordered_map>
 
 #include "genomic_region.hpp"
-#include "mappable_set.hpp"
+#include "mappable_flat_multi_set.hpp"
 #include "mappable_map.hpp"
 #include "aligned_read.hpp"
 #include "read_filter.hpp"
@@ -28,7 +28,7 @@ namespace Octopus
     
     using SearchRegions = MappableMap<GenomicRegion::ContigNameType, GenomicRegion>;
     
-    using ReadContainer = MappableSet<AlignedRead>;
+    using ReadContainer = MappableFlatMultiSet<AlignedRead>;
     using ReadMap       = MappableMap<SampleIdType, AlignedRead>;
     
     using ReadFilterer = ReadFilter<ReadContainer::iterator>;

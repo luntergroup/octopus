@@ -144,8 +144,8 @@ void AlignmentCandidateVariantGenerator::add_reads(std::vector<AlignedRead>::con
     candidates_.shrink_to_fit();
 }
 
-void AlignmentCandidateVariantGenerator::add_reads(MappableSet<AlignedRead>::const_iterator first,
-                                                   MappableSet<AlignedRead>::const_iterator last)
+void AlignmentCandidateVariantGenerator::add_reads(MappableFlatMultiSet<AlignedRead>::const_iterator first,
+                                                   MappableFlatMultiSet<AlignedRead>::const_iterator last)
 {
     std::for_each(first, last, [this] (const auto& read ) { add_read(read); });
     candidates_.shrink_to_fit();

@@ -25,7 +25,7 @@
 #include "common.hpp"
 #include "program_options.hpp"
 #include "genomic_region.hpp"
-#include "mappable_set.hpp"
+#include "mappable_flat_multi_set.hpp"
 #include "mappable_map.hpp"
 #include "reference_genome.hpp"
 #include "read_manager.hpp"
@@ -411,7 +411,7 @@ namespace Octopus
     {
         std::reference_wrapper<const ReferenceGenome> reference;
         std::reference_wrapper<ReadManager> read_manager;
-        const MappableSet<GenomicRegion> regions;
+        const MappableFlatMultiSet<GenomicRegion> regions;
         std::reference_wrapper<const std::vector<SampleIdType>> samples;
         std::unique_ptr<const VariantCaller> caller;
         std::size_t read_buffer_size;
@@ -629,7 +629,9 @@ namespace Octopus
     
     void run_octopus(po::variables_map& options)
     {
+        resume_timer(misc_timer2);
         auto components = collate_genome_calling_components(options);
+        pause_timer(misc_timer2);
         
         if (!components) return;
         

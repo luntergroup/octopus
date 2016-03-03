@@ -10,15 +10,15 @@
 #define downsampler_hpp
 
 #include "common.hpp"
-#include "mappable_set.hpp"
+#include "mappable_flat_multi_set.hpp"
 #include "mappable_map.hpp"
 #include "aligned_read.hpp"
 
 namespace Octopus
 {
 
-MappableSet<AlignedRead>
-downsample(const MappableSet<AlignedRead>& reads, unsigned max_coverage, unsigned min_coverage);
+MappableFlatMultiSet<AlignedRead>
+downsample(const MappableFlatMultiSet<AlignedRead>& reads, unsigned max_coverage, unsigned min_coverage);
 
 template <typename T>
 MappableMap<T, AlignedRead>

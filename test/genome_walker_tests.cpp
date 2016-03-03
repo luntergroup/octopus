@@ -18,7 +18,7 @@
 #include "reference_genome.hpp"
 #include "read_manager.hpp"
 #include "candidate_generators.hpp"
-#include "mappable_set.hpp"
+#include "mappable_flat_multi_set.hpp"
 #include "genome_walker.hpp"
 
 using std::cout;
@@ -29,9 +29,9 @@ using Octopus::GenomeWalker;
 
 BOOST_AUTO_TEST_SUITE(Components)
 
-static MappableSet<Variant> make_mappable_set(const std::vector<Variant>& variants)
+static MappableFlatMultiSet<Variant> make_mappable_set(const std::vector<Variant>& variants)
 {
-    return MappableSet<Variant> {std::cbegin(variants), std::cend(variants)};
+    return MappableFlatMultiSet<Variant> {std::cbegin(variants), std::cend(variants)};
 }
 
 BOOST_AUTO_TEST_CASE(walkers_return_empty_regions_when_done)

@@ -15,7 +15,7 @@
 
 #include "common.hpp"
 #include "variant.hpp"
-#include "mappable_set.hpp"
+#include "mappable_flat_multi_set.hpp"
 
 class AlignedRead;
 class GenomicRegion;
@@ -41,13 +41,13 @@ namespace Octopus
         // for common container iterators, more can easily be added if needed.
         virtual void add_reads(std::vector<AlignedRead>::const_iterator first,
                                std::vector<AlignedRead>::const_iterator last) {};
-        virtual void add_reads(MappableSet<AlignedRead>::const_iterator first,
-                               MappableSet<AlignedRead>::const_iterator last) {};
+        virtual void add_reads(MappableFlatMultiSet<AlignedRead>::const_iterator first,
+                               MappableFlatMultiSet<AlignedRead>::const_iterator last) {};
         
         virtual void reserve(size_t n) {};
         virtual void clear() {};
     };
-
+    
     namespace detail
     {
         template <typename Container, typename G>

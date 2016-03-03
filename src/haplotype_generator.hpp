@@ -19,9 +19,11 @@
 #include "common.hpp"
 #include "genome_walker.hpp"
 #include "haplotype_tree.hpp"
-#include "mappable_set.hpp"
+#include "mappable_flat_multi_set.hpp"
 #include "genomic_region.hpp"
 #include "allele.hpp"
+
+#include "mappable_flat_set.hpp"
 
 class Variant;
 class Haplotype;
@@ -57,7 +59,7 @@ namespace Octopus
         HaplotypeTree tree_;
         GenomeWalker walker_;
         
-        MappableSet<Allele> alleles_;
+        MappableFlatSet<Allele> alleles_;
         std::reference_wrapper<const ReadMap> reads_;
         
         GenomicRegion current_active_region_;
@@ -65,12 +67,13 @@ namespace Octopus
         
         unsigned max_haplotypes_, hard_max_haplotypes_ = 150'000;
         
-        MappableSet<Allele> holdout_set_;
+        bool is_lagged_;
+        
+        MappableFlatMultiSet<Allele> holdout_set_;
         
         mutable std::unordered_map<Allele, unsigned> active_allele_counts_;
         
-        MappableSet<Allele> compute_holdout_set(const GenomicRegion& active_region) const;
-        
+        MappableFlatMultiSet<Allele> compute_holdout_set(const GenomicRegion& active_region) const;
         GenomicRegion calculate_haplotype_region() const;
     };
 } // namespace Octopus

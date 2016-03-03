@@ -102,7 +102,7 @@ namespace Octopus
     
     double genotype_log_likelihood(const CancerGenotype<Haplotype>& genotype,
                                    const Cancer::SampleGenotypeMixtures& genotype_mixtures,
-                                   const MappableSet<AlignedRead>& reads, HaplotypeLikelihoodCache& rm)
+                                   const MappableFlatMultiSet<AlignedRead>& reads, HaplotypeLikelihoodCache& rm)
     {
         using std::cbegin; using std::cend; using std::accumulate;
         

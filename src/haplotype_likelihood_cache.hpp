@@ -74,7 +74,6 @@ namespace Octopus
         std::unordered_map<SampleIdType, std::size_t> sample_indices_;
         
         void set_read_iterators_and_sample_indices(const ReadMap& reads);
-        void set_read_hashes();
     };
     
     template <typename Container>
@@ -83,14 +82,15 @@ namespace Octopus
         for (const auto& haplotype : haplotypes) {
             cache_.erase(haplotype);
         }
+        cache_.rehash(cache_.size());
     }
     
     namespace debug
     {
-//        void print_read_haplotype_liklihoods(const std::vector<Haplotype>& haplotypes,
-//                                             const ReadMap& reads,
-//                                             HaplotypeLikelihoodCache& haplotype_likelihoods,
-//                                             size_t n = 5);
+        void print_read_haplotype_liklihoods(const std::vector<Haplotype>& haplotypes,
+                                             const ReadMap& reads,
+                                             const HaplotypeLikelihoodCache& haplotype_likelihoods,
+                                             size_t n = 5);
     } // namespace debug
 } // namespace Octopus
 

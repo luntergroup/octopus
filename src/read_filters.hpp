@@ -21,8 +21,6 @@ namespace Octopus { namespace ReadFilters {
 
 struct is_not_secondary_alignment
 {
-    is_not_secondary_alignment() = default;
-    
     bool operator()(const AlignedRead& read) const
     {
         return !read.is_marked_secondary_alignment();
@@ -31,8 +29,6 @@ struct is_not_secondary_alignment
     
 struct is_not_supplementary_alignment
 {
-    is_not_supplementary_alignment() = default;
-    
     bool operator()(const AlignedRead& read) const
     {
         return !read.is_marked_supplementary_alignment();
@@ -44,7 +40,8 @@ struct is_good_mapping_quality
     using QualityType = AlignedRead::QualityType;
     
     is_good_mapping_quality() = default;
-    explicit is_good_mapping_quality(QualityType good_mapping_quality) : good_mapping_quality_ {good_mapping_quality} {}
+    explicit is_good_mapping_quality(QualityType good_mapping_quality)
+    : good_mapping_quality_ {good_mapping_quality} {}
     
     bool operator()(const AlignedRead& read) const
     {
@@ -99,8 +96,6 @@ private:
 
 struct is_mapped
 {
-    is_mapped() = default;
-    
     bool operator()(const AlignedRead& read) const
     {
         return !read.is_marked_unmapped();
@@ -109,8 +104,6 @@ struct is_mapped
 
 struct is_not_chimeric
 {
-    is_not_chimeric() = default;
-    
     bool operator()(const AlignedRead& read) const
     {
         return !read.is_chimeric();
@@ -129,8 +122,6 @@ struct is_not_chimeric
 
 struct is_not_marked_duplicate
 {
-    is_not_marked_duplicate() = default;
-    
     bool operator()(const AlignedRead& read) const
     {
         return !read.is_marked_duplicate();
@@ -142,6 +133,7 @@ struct is_short
     using SizeType = AlignedRead::SizeType;
     
     is_short() = default;
+    
     explicit is_short(SizeType max_length) : max_length_ {max_length} {}
     
     bool operator()(const AlignedRead& read) const
@@ -158,6 +150,7 @@ struct is_long
     using SizeType = AlignedRead::SizeType;
     
     is_long() = default;
+    
     explicit is_long(SizeType min_length) : min_length_ {min_length} {}
     
     bool operator()(const AlignedRead& read) const
@@ -171,8 +164,6 @@ private:
 
 struct is_not_contaminated
 {
-    is_not_contaminated() = default;
-    
     bool operator()(const AlignedRead& read) const
     {
         return !read.is_chimeric() || sequence_size(read) >= read.get_next_segment().get_inferred_template_length();
@@ -181,8 +172,6 @@ struct is_not_contaminated
 
 struct is_not_marked_qc_fail
 {
-    is_not_marked_qc_fail() = default;
-    
     bool operator()(const AlignedRead& read) const
     {
         return !read.is_marked_qc_fail();
@@ -191,8 +180,6 @@ struct is_not_marked_qc_fail
 
 struct mate_is_mapped
 {
-    mate_is_mapped() = default;
-    
     bool operator()(const AlignedRead& read) const
     {
         return !read.has_mate() || !read.get_next_segment().is_marked_unmapped();
@@ -203,8 +190,6 @@ struct mate_is_mapped
 
 struct is_not_duplicate
 {
-    is_not_duplicate() = default;
-    
     template <typename Iterator>
     bool operator()(const AlignedRead& read, Iterator first_good_read, Iterator last_good_read) const
     {

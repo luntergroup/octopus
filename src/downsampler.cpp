@@ -30,7 +30,7 @@ bool has_minimum_coverage(const std::vector<unsigned>& required_coverage)
 }
 
 std::vector<AlignedRead>
-sample(const MappableSet<AlignedRead>& reads, const GenomicRegion& region,
+sample(const MappableFlatMultiSet<AlignedRead>& reads, const GenomicRegion& region,
        const unsigned max_coverage, const unsigned min_coverage)
 {
     using std::begin; using std::end; using std::cbegin; using std::cend; using std::distance;
@@ -121,8 +121,9 @@ find_target_regions(const T& reads, const GenomicRegion& region, const unsigned 
     return result;
 }
 
-MappableSet<AlignedRead>
-downsample(const MappableSet<AlignedRead>& reads, const unsigned max_coverage, const unsigned min_coverage)
+MappableFlatMultiSet<AlignedRead>
+downsample(const MappableFlatMultiSet<AlignedRead>& reads,
+           const unsigned max_coverage, const unsigned min_coverage)
 {
     using std::begin; using std::end; using std::cbegin; using std::cend; using std::make_move_iterator;
     
@@ -133,7 +134,7 @@ downsample(const MappableSet<AlignedRead>& reads, const unsigned max_coverage, c
     
     if (regions_to_sample.empty()) return reads;
     
-    MappableSet<AlignedRead> result {};
+    MappableFlatMultiSet<AlignedRead> result {};
     result.reserve(reads.size());
     
     auto last_sampled_itr = cbegin(reads);

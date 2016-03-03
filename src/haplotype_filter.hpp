@@ -12,14 +12,15 @@
 #include <vector>
 #include <cstddef>
 
+#include "common.hpp"
+
 class Haplotype;
 class HaplotypeLikelihoodCache;
-class ReadMap;
 
 namespace Octopus
 {
     std::vector<Haplotype> filter_n_haplotypes(std::vector<Haplotype>& haplotypes,
-                                               const ReadMap& reads,
+                                               const std::vector<SampleIdType>& samples,
                                                const HaplotypeLikelihoodCache& haplotype_likelihoods,
                                                const std::size_t n);
 } // namespace Octopus

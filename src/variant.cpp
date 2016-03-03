@@ -441,7 +441,10 @@ std::vector<Variant> unique_left_align(std::vector<Variant>&& variants,
 {
     using std::begin; using std::end; using std::make_move_iterator; using std::unique;
     
-    const auto it = std::partition(begin(variants), end(variants), is_left_alignable);
+    const auto it = std::partition(begin(variants), end(variants),
+                                   [] (const Variant& variant) {
+                                       return !is_left_alignable(variant);
+                                   });
     
     std::transform(make_move_iterator(it), make_move_iterator(end(variants)), it,
                    [&reference] (Variant&& variant) {

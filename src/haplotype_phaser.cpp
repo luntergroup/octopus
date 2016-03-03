@@ -208,7 +208,7 @@
 //
 //PhaseComplementSets
 //partition_phase_complements(const std::vector<Genotype<Haplotype>>& genotypes,
-//                            const MappableSet<Variant>& variants)
+//                            const MappableFlatMultiSet<Variant>& variants)
 //{
 //    if (genotypes.empty()) return {};
 //    
@@ -299,7 +299,7 @@
 //// TODO: this algorithm is very naive/slow right now.. needs much improvement
 //HaplotypePhaser::PhaseSet::SamplePhaseRegions
 //find_optimal_phase_regions(const GenomicRegion& region,
-//                           MappableSet<Variant> variants,
+//                           MappableFlatMultiSet<Variant> variants,
 //                           const HaplotypePhaser::SampleGenotypePosteriors& genotype_posteriors,
 //                           const double min_phase_score = 0.95)
 //{
@@ -321,7 +321,7 @@
 //    double previous_phase_score {0};
 //    
 //    while (phase_begin_itr != std::cend(variants)) {
-//        MappableSet<Variant> curr_variants {phase_begin_itr, phase_end_itr};
+//        MappableFlatMultiSet<Variant> curr_variants {phase_begin_itr, phase_end_itr};
 //        
 //        auto curr_region = encompassing_region(curr_variants);
 //        
@@ -354,7 +354,7 @@
 //
 //HaplotypePhaser::PhaseSet
 //HaplotypePhaser::find_optimal_phase_set(const GenomicRegion& region,
-//                                        MappableSet<Variant> variants,
+//                                        MappableFlatMultiSet<Variant> variants,
 //                                        const HaplotypePhaser::GenotypePosteriors& genotype_posteriors)
 //{
 //    HaplotypePhaser::PhaseSet result {region};
@@ -379,7 +379,7 @@
 //    
 //HaplotypePhaser::PhaseSet
 //phase(const GenomicRegion& region,
-//      const MappableSet<Variant>& variants,
+//      const MappableFlatMultiSet<Variant>& variants,
 //      const ProbabilityMatrix<Genotype<Haplotype>>& genotype_posteriors)
 //{
 //    HaplotypePhaser::PhaseSet result {region};

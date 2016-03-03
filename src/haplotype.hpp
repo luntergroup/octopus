@@ -17,7 +17,6 @@
 #include <numeric>
 #include <ostream>
 
-#include <boost/optional.hpp>
 #include <boost/functional/hash.hpp>
 
 #include "contig_region.hpp"
@@ -92,7 +91,7 @@ private:
     
     std::vector<ContigAllele> explicit_alleles_;
     
-    boost::optional<ContigRegion> explicit_allele_region_;
+    ContigRegion explicit_allele_region_;
     
     SequenceType cached_sequence_;
     size_t cached_hash_;
@@ -101,7 +100,6 @@ private:
     
     SequenceType get_reference_sequence(const GenomicRegion& region) const;
     SequenceType get_reference_sequence(const ContigRegion& region) const;
-    ContigRegion get_region_bounded_by_explicit_alleles() const;
     SequenceType get_sequence_bounded_by_explicit_alleles(AlleleIterator first, AlleleIterator last) const;
     SequenceType get_sequence_bounded_by_explicit_alleles() const;
 };
@@ -138,10 +136,10 @@ cached_hash_ {0}
                                          });
         
         const auto lhs_reference_region = left_overhang_region(region_.get_contig_region(),
-                                                               *explicit_allele_region_);
+                                                               explicit_allele_region_);
         
         const auto rhs_reference_region = right_overhang_region(region_.get_contig_region(),
-                                                                *explicit_allele_region_);
+                                                                explicit_allele_region_);
         
         num_bases += region_size(lhs_reference_region) + region_size(rhs_reference_region);
         

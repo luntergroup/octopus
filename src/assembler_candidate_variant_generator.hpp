@@ -42,7 +42,7 @@ public:
     bool requires_reads() const noexcept override;
     void add_read(const AlignedRead& read) override;
     void add_reads(std::vector<AlignedRead>::const_iterator first, std::vector<AlignedRead>::const_iterator last) override;
-    void add_reads(MappableSet<AlignedRead>::const_iterator first, MappableSet<AlignedRead>::const_iterator last) override;
+    void add_reads(MappableFlatMultiSet<AlignedRead>::const_iterator first, MappableFlatMultiSet<AlignedRead>::const_iterator last) override;
     std::vector<Variant> generate_candidates(const GenomicRegion& region) override;
     void clear() override;
     

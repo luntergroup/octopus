@@ -21,7 +21,7 @@
 
 #include "aligned_read.hpp"
 #include "mappable_algorithms.hpp"
-#include "mappable_set.hpp"
+#include "mappable_flat_multi_set.hpp"
 #include "mappable_map.hpp"
 #include "maths.hpp"
 #include "type_tricks.hpp"
@@ -72,7 +72,7 @@ namespace detail
                            [] (const auto& read) { return !is_empty_region(read); });
     }
     
-    inline bool has_coverage(const MappableSet<AlignedRead>& reads, NonMapTag)
+    inline bool has_coverage(const MappableFlatMultiSet<AlignedRead>& reads, NonMapTag)
     {
         return std::any_of(std::cbegin(reads), std::cend(reads),
                            [] (const auto& read) { return !is_empty_region(read); });
@@ -86,7 +86,7 @@ namespace detail
         return *std::min_element(std::cbegin(positional_coverage), std::cend(positional_coverage));
     }
     
-    inline unsigned min_coverage(const MappableSet<AlignedRead>& reads, NonMapTag)
+    inline unsigned min_coverage(const MappableFlatMultiSet<AlignedRead>& reads, NonMapTag)
     {
         if (reads.empty()) return 0;
         const auto positional_coverage = calculate_positional_coverage(reads);
@@ -101,7 +101,7 @@ namespace detail
         return *std::max_element(std::cbegin(positional_coverage), std::cend(positional_coverage));
     }
     
-    inline unsigned max_coverage(const MappableSet<AlignedRead>& reads, NonMapTag)
+    inline unsigned max_coverage(const MappableFlatMultiSet<AlignedRead>& reads, NonMapTag)
     {
         if (reads.empty()) return 0;
         const auto positional_coverage = calculate_positional_coverage(reads);
@@ -115,7 +115,7 @@ namespace detail
         return Maths::mean(positional_coverage(reads, region));
     }
     
-    inline double mean_coverage(const MappableSet<AlignedRead>& reads, NonMapTag)
+    inline double mean_coverage(const MappableFlatMultiSet<AlignedRead>& reads, NonMapTag)
     {
         if (reads.empty()) return 0;
         return Maths::mean(calculate_positional_coverage(reads));
@@ -128,7 +128,7 @@ namespace detail
         return Maths::stdev(positional_coverage(reads, region));
     }
     
-    inline double stdev_coverage(const MappableSet<AlignedRead>& reads, NonMapTag)
+    inline double stdev_coverage(const MappableFlatMultiSet<AlignedRead>& reads, NonMapTag)
     {
         if (reads.empty()) return 0;
         return Maths::stdev(calculate_positional_coverage(reads));
@@ -146,7 +146,7 @@ namespace detail
         return count_overlapped(reads, region);
     }
     
-    inline size_t count_reads(const MappableSet<AlignedRead>& reads, const GenomicRegion& region, NonMapTag)
+    inline size_t count_reads(const MappableFlatMultiSet<AlignedRead>& reads, const GenomicRegion& region, NonMapTag)
     {
         return reads.count_overlapped(region);
     }
@@ -166,7 +166,7 @@ namespace detail
         return std::count_if(std::cbegin(overlapped), std::cend(overlapped), IsForward {});
     }
     
-    inline size_t count_forward(const MappableSet<AlignedRead>& reads, const GenomicRegion& region, NonMapTag)
+    inline size_t count_forward(const MappableFlatMultiSet<AlignedRead>& reads, const GenomicRegion& region, NonMapTag)
     {
         const auto overlapped = reads.overlap_range(region);
         return std::count_if(std::cbegin(overlapped), std::cend(overlapped), IsForward {});
@@ -187,7 +187,7 @@ namespace detail
         return std::count_if(std::cbegin(overlapped), std::cend(overlapped), IsReverse {});
     }
     
-    inline size_t count_reverse(const MappableSet<AlignedRead>& reads, const GenomicRegion& region, NonMapTag)
+    inline size_t count_reverse(const MappableFlatMultiSet<AlignedRead>& reads, const GenomicRegion& region, NonMapTag)
     {
         const auto overlapped = reads.overlap_range(region);
         return std::count_if(std::cbegin(overlapped), std::cend(overlapped), IsReverse {});
@@ -271,7 +271,7 @@ namespace detail
         return std::count_if(std::cbegin(overlapped), std::cend(overlapped), IsMappingQualityZero {});
     }
     
-    inline size_t count_mapq_zero(const MappableSet<AlignedRead>& reads, const GenomicRegion& region, NonMapTag)
+    inline size_t count_mapq_zero(const MappableFlatMultiSet<AlignedRead>& reads, const GenomicRegion& region, NonMapTag)
     {
         const auto overlapped = reads.overlap_range(region);
         return std::count_if(std::cbegin(overlapped), std::cend(overlapped), IsMappingQualityZero {});
@@ -305,7 +305,7 @@ namespace detail
         return Maths::rmq<double>(qualities);
     }
     
-    inline double rmq_mapping_quality(const MappableSet<AlignedRead>& reads, const GenomicRegion& region, NonMapTag)
+    inline double rmq_mapping_quality(const MappableFlatMultiSet<AlignedRead>& reads, const GenomicRegion& region, NonMapTag)
     {
         const auto overlapped = reads.overlap_range(region);
         
@@ -353,7 +353,7 @@ namespace detail
         return Maths::rmq<double>(qualities);
     }
     
-    inline double rmq_base_quality(const MappableSet<AlignedRead>& reads, const GenomicRegion& region, NonMapTag)
+    inline double rmq_base_quality(const MappableFlatMultiSet<AlignedRead>& reads, const GenomicRegion& region, NonMapTag)
     {
         const auto overlapped = reads.overlap_range(region);
         
@@ -1082,9 +1082,9 @@ std::vector<GenomicRegion> find_uniform_coverage_regions(const T& reads)
 }
     
 namespace detail {
-    inline MappableSet<AlignedRead> splice_all(const MappableSet<AlignedRead>& reads, const GenomicRegion& region, NonMapTag)
+    inline MappableFlatMultiSet<AlignedRead> splice_all(const MappableFlatMultiSet<AlignedRead>& reads, const GenomicRegion& region, NonMapTag)
     {
-        MappableSet<AlignedRead> result {};
+        MappableFlatMultiSet<AlignedRead> result {};
         result.reserve(reads.size());
         
         for (const auto& read : reads) {
@@ -1146,7 +1146,7 @@ void decompress_reads(Reads& reads)
 AlignedRead find_next_segment(const AlignedRead& read, const MappableMap<GenomicRegion::ContigNameType, AlignedRead>& reads);
 
 // TODO
-MappableSet<AlignedRead> find_chimeras(const AlignedRead& read, const MappableSet<AlignedRead>& reads);
+MappableFlatMultiSet<AlignedRead> find_chimeras(const AlignedRead& read, const MappableFlatMultiSet<AlignedRead>& reads);
 
 } // namespace Octopus
 

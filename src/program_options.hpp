@@ -32,8 +32,8 @@ namespace fs = boost::filesystem;
 
 namespace Octopus
 {
-    namespace Options
-    {
+namespace Options
+{
     enum class ContigOutputOrder
     {
         LexicographicalAscending, LexicographicalDescending,
@@ -80,7 +80,7 @@ namespace Octopus
     
     boost::optional<fs::path> create_temp_file_directory(const po::variables_map& options);
         
-    } // namespace Options
+} // namespace Options
 } // namespace Octopus
 
 #endif /* defined(__Octopus__program_options__) */

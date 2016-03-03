@@ -18,10 +18,10 @@
 #include <functional>
 #include <utility>
 
-#include "mappable_set.hpp"
+#include "mappable_flat_multi_set.hpp"
 
 template <typename KeyType, typename MappableType, typename Allocator = std::allocator<MappableType>>
-using MappableMap = std::unordered_map<KeyType, MappableSet<MappableType, Allocator>>;
+using MappableMap = std::unordered_map<KeyType, MappableFlatMultiSet<MappableType, Allocator>>;
 
 template <typename Map>
 MappableMap<typename Map::key_type, typename Map::mapped_type::value_type>
@@ -79,10 +79,10 @@ has_overlapped(const MappableMap<KeyType, MappableType1>& mappables, const Mappa
 }
 
 template <typename KeyType, typename MappableType1, typename MappableType2>
-typename MappableSet<MappableType1>::size_type
+typename MappableFlatMultiSet<MappableType1>::size_type
 count_overlapped(const MappableMap<KeyType, MappableType1>& mappables, const MappableType2& mappable)
 {
-    using SizeType = typename MappableSet<MappableType1>::size_type;
+    using SizeType = typename MappableFlatMultiSet<MappableType1>::size_type;
     
     return std::accumulate(std::cbegin(mappables), std::cend(mappables), SizeType {0},
                            [&mappable] (const auto curr, const auto& p) {
@@ -101,10 +101,10 @@ has_contained(const MappableMap<KeyType, MappableType1>& mappables, const Mappab
 }
 
 template <typename KeyType, typename MappableType1, typename MappableType2>
-typename MappableSet<MappableType1>::size_type
+typename MappableFlatMultiSet<MappableType1>::size_type
 count_contained(const MappableMap<KeyType, MappableType1>& mappables, const MappableType2& mappable)
 {
-    using SizeType = typename MappableSet<MappableType1>::size_type;
+    using SizeType = typename MappableFlatMultiSet<MappableType1>::size_type;
     
     return std::accumulate(std::cbegin(mappables), std::cend(mappables), SizeType {0},
                            [&mappable] (const auto curr, const auto& p) {
@@ -123,11 +123,11 @@ bool has_shared(const MappableMap<KeyType, MappableType1>& mappables,
 }
 
 template <typename KeyType, typename MappableType1, typename MappableType2, typename MappableType3>
-typename MappableSet<MappableType1>::size_type
+typename MappableFlatMultiSet<MappableType1>::size_type
 count_shared(const MappableMap<KeyType, MappableType1>& mappables, const MappableType2& mappable1,
              const MappableType3& mappable2)
 {
-    using SizeType = typename MappableSet<MappableType1>::size_type;
+    using SizeType = typename MappableFlatMultiSet<MappableType1>::size_type;
     
     return std::accumulate(std::cbegin(mappables), std::cend(mappables), SizeType {0},
                            [&mappable1, &mappable2] (const auto curr, const auto& p) {
@@ -184,7 +184,7 @@ max_count_if_shared_with_first(const MappableMap<KeyType, MappableType>& mappabl
 }
 
 template <typename KeyType, typename MappableType1, typename MappableType2>
-typename MappableSet<MappableType1>::const_iterator
+typename MappableFlatMultiSet<MappableType1>::const_iterator
 leftmost_overlapped(const MappableMap<KeyType, MappableType1>& mappables, const MappableType2& mappable)
 {
     if (mappables.empty()) {
@@ -219,7 +219,7 @@ leftmost_overlapped(const MappableMap<KeyType, MappableType1>& mappables, const 
 }
 
 template <typename KeyType, typename MappableType1, typename MappableType2>
-typename MappableSet<MappableType1>::const_iterator
+typename MappableFlatMultiSet<MappableType1>::const_iterator
 rightmost_overlapped(const MappableMap<KeyType, MappableType1>& mappables, const MappableType2& mappable)
 {
     if (mappables.empty()) {

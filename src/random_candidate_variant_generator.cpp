@@ -31,8 +31,8 @@ namespace Octopus {
         max_read_size_ = region_size(*largest_mappable(first, last));
     }
     
-    void RandomCandidateVariantGenerator::add_reads(MappableSet<AlignedRead>::const_iterator first,
-                                                    MappableSet<AlignedRead>::const_iterator last)
+    void RandomCandidateVariantGenerator::add_reads(MappableFlatMultiSet<AlignedRead>::const_iterator first,
+                                                    MappableFlatMultiSet<AlignedRead>::const_iterator last)
     {
         max_read_size_ = region_size(*largest_mappable(first, last));
     }
