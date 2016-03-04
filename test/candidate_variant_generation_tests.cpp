@@ -59,7 +59,7 @@ BOOST_AUTO_TEST_CASE(generate_candidates_returns_sorted_and_unique_candidates)
     
     const auto sample = read_manager.get_samples().front();
     
-    const auto region = *parse_region("1:0-2000000", human);
+    const auto region = parse_region("1:0-2000000", human);
     
     CandidateGeneratorBuilder builder;
     builder.set_reference(human);
@@ -85,7 +85,7 @@ BOOST_AUTO_TEST_CASE(AlignmentCandidateVariantGenerator_ignores_snps_with_low_ba
     
     const auto human = make_reference(human_reference_fasta);
     
-    const auto region = *parse_region("1:22,298,915-22,299,027", human);
+    const auto region = parse_region("1:22,298,915-22,299,027", human);
     
     ReadManager read_manager {NA12878_low_coverage};
     
@@ -126,7 +126,7 @@ BOOST_AUTO_TEST_CASE(can_specify_the_maximum_size_of_candidates)
     
     ReadManager read_manager {NA12878_low_coverage};
     
-    const auto region = *parse_region("16:9290000-9300000", human);
+    const auto region = parse_region("16:9290000-9300000", human);
     
     const auto sample = read_manager.get_samples().front();
     
@@ -152,7 +152,7 @@ BOOST_AUTO_TEST_CASE(only_insertions_are_included_when_the_max_variant_size_is_z
     
     ReadManager read_manager {NA12878_low_coverage};
     
-    const auto region = *parse_region("16:9299940-9300055", human);
+    const auto region = parse_region("16:9299940-9300055", human);
     
     const auto sample = read_manager.get_samples().front();
     
@@ -173,7 +173,7 @@ BOOST_AUTO_TEST_CASE(AlignmentCandidateVariantGenerator_includes_all_alleles_in_
     
     const auto human = make_reference(human_reference_fasta);
     
-    const auto region = *parse_region("7:122579662-122579817", human);
+    const auto region = parse_region("7:122579662-122579817", human);
     
     ReadManager read_manager {NA12878_low_coverage};
     
@@ -194,7 +194,7 @@ BOOST_AUTO_TEST_CASE(OnlineCandidateVariantGenerator_can_fetch_variants_from_onl
     
     const auto human = make_reference(human_reference_fasta);
     
-    const auto region = *parse_region("X:10000-10500", human);
+    const auto region = parse_region("X:10000-10500", human);
     
     Octopus::OnlineCandidateVariantGenerator candidate_generator {human};
     
@@ -216,7 +216,7 @@ BOOST_AUTO_TEST_CASE(ExternalCandidateVariantGenerator_gets_candidates_from_vcf)
     
     Octopus::ExternalCandidateVariantGenerator generator {sample_vcf};
     
-    const auto region = *parse_region("X:10,095,000-10,100,000", human);
+    const auto region = parse_region("X:10,095,000-10,100,000", human);
     
     auto candidates = generator.generate_candidates(region);
     

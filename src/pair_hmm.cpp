@@ -55,7 +55,7 @@ auto count_mismatches(InputIt1 first1, InputIt1 last1, InputIt2 first2)
 
 auto align(const std::string& truth, const std::string& target,
            const std::vector<std::uint8_t>& target_qualities,
-           const std::vector<char>& truth_gap_open_penalties,
+           const std::vector<std::int8_t>& truth_gap_open_penalties,
            const std::size_t target_offset, const Model& model)
 {
     const auto truth_alignment_size = static_cast<int>(target.size() + 15);
@@ -68,12 +68,11 @@ auto align(const std::string& truth, const std::string& target,
         const auto score = fastAlignmentRoutine(truth.data() + target_offset,
                                                 target.data(),
                                                 reinterpret_cast<const char*>(target_qualities.data()),
-                                                //truncated_target_qualities.data(),
                                                 truth_alignment_size,
                                                 static_cast<int>(target.size()),
                                                 static_cast<int>(model.gapextend),
                                                 static_cast<int>(model.nucprior),
-                                                truth_gap_open_penalties.data() + target_offset);
+                                                reinterpret_cast<const char*>(truth_gap_open_penalties.data() + target_offset));
         
         return -ln_10_div_10 * static_cast<double>(score);
     }
@@ -88,13 +87,13 @@ auto align(const std::string& truth, const std::string& target,
                                             static_cast<int>(target.size()),
                                             static_cast<int>(model.gapextend),
                                             static_cast<int>(model.nucprior),
-                                            truth_gap_open_penalties.data() + target_offset,
+                                            reinterpret_cast<const char*>(truth_gap_open_penalties.data() + target_offset),
                                             align1.data(), align2.data(), &first_pos);
     
     const auto flank_score = calculateFlankScore(truth_alignment_size,
                                                  0,
                                                  reinterpret_cast<const char*>(target_qualities.data()),
-                                                 truth_gap_open_penalties.data(),
+                                                 reinterpret_cast<const char*>(truth_gap_open_penalties.data()),
                                                  static_cast<int>(model.gapextend),
                                                  static_cast<int>(model.nucprior),
                                                  static_cast<int>(first_pos + target_offset),
@@ -105,7 +104,7 @@ auto align(const std::string& truth, const std::string& target,
 
 double align_around_offset(const std::string& truth, const std::string& target,
                            const std::vector<std::uint8_t>& target_qualities,
-                           const std::vector<char>& truth_gap_open_penalties,
+                           const std::vector<std::int8_t>& truth_gap_open_penalties,
                            const std::size_t target_offset, const Model& model)
 {
     using std::cbegin; using std::cend; using std::next;
@@ -124,20 +123,22 @@ double align_around_offset(const std::string& truth, const std::string& target,
     
     const auto offsetted_truth_begin_itr = next(cbegin(truth), target_offset);
     
-    const auto p = std::mismatch(cbegin(target), cend(target), offsetted_truth_begin_itr);
+    const auto m1 = std::mismatch(cbegin(target), cend(target), offsetted_truth_begin_itr);
     
-    if (p.first == cend(target)) return 0;
+    if (m1.first == cend(target)) {
+        return 0;
+    }
     
-    const auto num_mismatches = count_mismatches(next(p.first), cend(target), next(p.second)) + 1;
+    const auto m2 = std::mismatch(next(m1.first), cend(target), next(m1.second));
     
-    if (num_mismatches == 1) {
-        const auto mismatch_index = std::distance(offsetted_truth_begin_itr, p.second);
+    if (m2.first == cend(target)) {
+        const auto mismatch_index = std::distance(offsetted_truth_begin_itr, m1.second);
         
         if (target_qualities[mismatch_index] <= truth_gap_open_penalties[mismatch_index]) {
             return phred_to_ln_probability[target_qualities[mismatch_index]];
         }
         
-        if (std::equal(next(p.first), cend(target), p.second)) {
+        if (std::equal(next(m1.first), cend(target), m1.second)) {
             return phred_to_ln_probability[truth_gap_open_penalties[mismatch_index]];
         }
         
@@ -146,8 +147,6 @@ double align_around_offset(const std::string& truth, const std::string& target,
     
     return align(truth, target, target_qualities, truth_gap_open_penalties,
                  target_offset, model);
-    
-    return 0;
 }
     
 } // namespace PairHMM

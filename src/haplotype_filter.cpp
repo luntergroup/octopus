@@ -36,10 +36,11 @@ namespace Octopus
         return result;
     }
     
-    std::vector<Haplotype> filter_n_haplotypes(std::vector<Haplotype>& haplotypes,
-                                               const std::vector<SampleIdType>& samples,
-                                               const HaplotypeLikelihoodCache& haplotype_likelihoods,
-                                               const std::size_t n)
+    std::vector<Haplotype>
+    filter_by_maximum_likelihood(std::vector<Haplotype>& haplotypes,
+                                 const std::vector<SampleIdType>& samples,
+                                 const HaplotypeLikelihoodCache& haplotype_likelihoods,
+                                 const std::size_t n)
     {
         std::vector<Haplotype> result {};
         
@@ -77,6 +78,17 @@ namespace Octopus
             const auto er = std::equal_range(std::begin(haplotypes), std::end(haplotypes), duplicate);
             haplotypes.erase(er.first, er.second);
         }
+        
+        return result;
+    }
+    
+    std::vector<Haplotype>
+    filter_n_haplotypes(std::vector<Haplotype>& haplotypes, const std::vector<SampleIdType>& samples,
+                        const HaplotypeLikelihoodCache& haplotype_likelihoods, const std::size_t n)
+    {
+        auto result = filter_by_maximum_likelihood(haplotypes, samples, haplotype_likelihoods, n);
+        
+        // TODO: try some other filters if this one fails
         
         return result;
     }

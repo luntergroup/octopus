@@ -19,7 +19,7 @@ namespace Octopus
     class ReadIndelErrorModel
     {
     public:
-        std::vector<char> calculate_gap_open_penalties(const Haplotype& haplotype) const;
+        std::vector<std::int8_t> calculate_gap_open_penalties(const Haplotype& haplotype) const;
         
     private:
         

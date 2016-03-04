@@ -164,7 +164,7 @@ namespace Octopus
         try {
             po::positional_options_description p;
             
-            p.add("command", -1);
+            p.add("model", -1);
             
             po::options_description general("General options");
             general.add_options()
@@ -176,8 +176,9 @@ namespace Octopus
             
             po::options_description backend("Backend options");
             backend.add_options()
-            ("threaded,t", po::bool_switch()->default_value(false),
-             "turns on multi-threading, the number of threads is determined by the application")
+            ("threads,t", po::value<unsigned>()->default_value(1),
+             "sets the number of threads used by the application, set to 0 to let the"
+             " application decide the number of threads")
             ("reference-cache-size", po::value<size_t>()->default_value(0),
              "the maximum number of bytes that can be used to cache reference sequence")
             ("target-read-buffer-size", po::value<float>()->default_value(1.0),
@@ -505,7 +506,7 @@ namespace Octopus
         for (const auto& path : paths) {
             auto resolved_path = resolve_path(path, options);
             
-            if (resolved_path) {
+            if (resolved_path && fs::exists(*resolved_path)) {
                 result.good_paths.emplace_back(*std::move(resolved_path));
             } else {
                 result.bad_paths.emplace_back(*std::move(resolved_path));
@@ -527,7 +528,17 @@ namespace Octopus
     
     bool is_threading_allowed(const po::variables_map& options)
     {
-        return options.at("threaded").as<bool>();
+        const auto num_threads = options.at("threads").as<unsigned>();
+        return num_threads != 1;
+    }
+        
+    boost::optional<unsigned> get_num_threads(const po::variables_map& options)
+    {
+        const auto num_threads = options.at("threads").as<unsigned>();
+        
+        if (num_threads > 0) return num_threads;
+        
+        return boost::none;
     }
     
     std::size_t get_target_read_buffer_size(const po::variables_map& options)
@@ -712,10 +723,7 @@ namespace Octopus
         result.reserve(unparsed_regions.size());
         
         for (const auto& unparsed_region : unparsed_regions) {
-            auto parsed_region = parse_region(unparsed_region, reference);
-            if (parsed_region) {
-                result.emplace_back(*std::move(parsed_region));
-            }
+            result.emplace_back(parse_region(unparsed_region, reference));
         }
         
         return result;
@@ -817,15 +825,16 @@ namespace Octopus
         return result;
     }
     
-    namespace {
-    void print_bad_paths(const std::vector<fs::path>& bad_paths)
+    namespace
     {
-        std::cout << "Octopus: the following paths could not be resolved:" << std::endl;
-        for (const auto& path : bad_paths) {
-            std::cout << "\t" << path.string() << std::endl;
+        void print_bad_paths(const std::vector<fs::path>& bad_paths)
+        {
+            std::cout << "Octopus: the following paths could not be resolved:" << std::endl;
+            for (const auto& path : bad_paths) {
+                std::cout << "\t" << path.string() << '\n';
+            }
+            std::cout << std::endl;
         }
-        std::cout << std::endl;
-    }
     } // namespace
     
     boost::optional<std::vector<fs::path>> get_read_paths(const po::variables_map& options)

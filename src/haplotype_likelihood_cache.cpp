@@ -151,9 +151,9 @@ namespace debug
     void print_read_haplotype_liklihoods(const std::vector<Haplotype>& haplotypes,
                                          const ReadMap& reads,
                                          const HaplotypeLikelihoodCache& haplotype_likelihoods,
-                                         size_t n)
+                                         const std::size_t n)
     {
-        auto m = std::min(n, haplotypes.size());
+        const auto m = std::min(n, haplotypes.size());
         
         std::cout << "debug: printing top " << m << " haplotype likelihoods for each read in each sample" << '\n';
         
@@ -165,8 +165,8 @@ namespace debug
             std::cout << "Sample: " << sample << ":" << '\n';
             
             for (const Haplotype& haplotype : haplotypes) {
-                std::cout << "\tHaplotype: ";
-                print_alleles(haplotype);
+                std::cout << "\t";
+                print_variant_alleles(haplotype);
                 std::cout << '\n';
                 
                 std::vector<std::pair<ReadReference, double>> likelihoods {};

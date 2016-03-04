@@ -11,6 +11,7 @@
 #include <cctype>
 #include <algorithm>
 #include <array>
+#include <stdexcept>
 
 #include <boost/lexical_cast.hpp>
 
@@ -40,7 +41,7 @@ bool CigarOperation::advances_sequence() const noexcept
     return !(flag_ == DELETION || flag_ == HARD_CLIPPED);
 }
 
-boost::optional<CigarString> parse_cigar_string(const std::string& cigar_string)
+CigarString parse_cigar_string(const std::string& cigar_string)
 {
     CigarString result {};
     result.reserve(cigar_string.size() / 2); // max possible CigarOperation
@@ -56,13 +57,14 @@ boost::optional<CigarString> parse_cigar_string(const std::string& cigar_string)
                 result.emplace_back(boost::lexical_cast<CigarOperation::SizeType>(digits), c);
                 digits.clear();
             } catch (const boost::bad_lexical_cast&) {
-                return boost::none;
+                throw;
             }
         }
     }
     
     if (!digits.empty()) {
-        return boost::none; // there are unparsed tokens
+        throw std::invalid_argument {"parse_cigar_string: could not parse all characters of "
+            + cigar_string};
     }
     
     result.shrink_to_fit();

@@ -30,7 +30,7 @@ BOOST_AUTO_TEST_SUITE(Components)
 BOOST_AUTO_TEST_CASE(aligned_read_copies_and_moves_correctly)
 {
     AlignedRead read {get_mock_region(), "ACGT", AlignedRead::Qualities {1, 2, 3, 4},
-        *parse_cigar_string("4M"), 10, AlignedRead::Flags {}, "1", 10, 30,
+        parse_cigar_string("4M"), 10, AlignedRead::Flags {}, "1", 10, 30,
         AlignedRead::NextSegment::Flags {}};
     
     BOOST_CHECK(read.is_chimeric());
@@ -110,16 +110,16 @@ BOOST_AUTO_TEST_CASE(aligned_read_works_with_mappable_algorithms)
 
 BOOST_AUTO_TEST_CASE(can_splice_CigarString)
 {
-    const auto cigar = *parse_cigar_string("5M1D10M3I4M");
+    const auto cigar = parse_cigar_string("5M1D10M3I4M");
     
-    BOOST_CHECK(splice(cigar, 3, 10)  == *parse_cigar_string("2M1D7M"));
-    BOOST_CHECK(splice(cigar, 3, 15)  == *parse_cigar_string("2M1D10M2I"));
-    BOOST_CHECK(splice(cigar, 0, 10)  == *parse_cigar_string("5M1D4M"));
+    BOOST_CHECK(splice(cigar, 3, 10)  == parse_cigar_string("2M1D7M"));
+    BOOST_CHECK(splice(cigar, 3, 15)  == parse_cigar_string("2M1D10M2I"));
+    BOOST_CHECK(splice(cigar, 0, 10)  == parse_cigar_string("5M1D4M"));
     BOOST_CHECK(splice(cigar, 0, 50)  == cigar);
-    BOOST_CHECK(splice(cigar, 20, 10) == *parse_cigar_string("3M"));
-    BOOST_CHECK(splice(cigar, 20, 3)  == *parse_cigar_string("3M"));
-    BOOST_CHECK(splice(cigar, 24, 10) == *parse_cigar_string(""));
-    BOOST_CHECK(splice(cigar, 16, 7)  == *parse_cigar_string("3I4M"));
+    BOOST_CHECK(splice(cigar, 20, 10) == parse_cigar_string("3M"));
+    BOOST_CHECK(splice(cigar, 20, 3)  == parse_cigar_string("3M"));
+    BOOST_CHECK(splice(cigar, 24, 10) == parse_cigar_string(""));
+    BOOST_CHECK(splice(cigar, 16, 7)  == parse_cigar_string("3I4M"));
 }
 
 BOOST_AUTO_TEST_CASE(can_splice_reads)
@@ -128,7 +128,7 @@ BOOST_AUTO_TEST_CASE(can_splice_reads)
         GenomicRegion {"1", 100, 120},
         "AAAAACCCCCCCCCCGGGTTTT",
         AlignedRead::Qualities(23, 0),
-        *parse_cigar_string("5M1D10M3I4M"),
+        parse_cigar_string("5M1D10M3I4M"),
         0,
         AlignedRead::Flags {}
     };

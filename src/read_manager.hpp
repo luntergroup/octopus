@@ -99,7 +99,6 @@ private:
     
     mutable std::mutex mutex_;
     
-    std::vector<Path> get_bad_paths() const;
     void setup_reader_samples_and_regions();
     void open_initial_files();
     

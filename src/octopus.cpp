@@ -182,7 +182,7 @@ namespace Octopus
         
     template <typename InputIt, typename RandomGenerator>
     InputIt random_select(InputIt first, InputIt last, RandomGenerator& g) {
-        std::uniform_int_distribution<> dis(0, std::distance(first, last) - 1);
+        std::uniform_int_distribution<std::size_t> dis(0, std::distance(first, last) - 1);
         std::advance(first, dis(g));
         return first;
     }
@@ -259,7 +259,7 @@ namespace Octopus
         CandidateGeneratorBuilder candidate_generator_builder;
         VariantCallerFactory variant_caller_factory;
         VcfWriter output;
-        bool is_threaded;
+        boost::optional<unsigned> num_threads;
         std::size_t read_buffer_size;
         boost::optional<fs::path> temp_directory;
         
@@ -284,10 +284,10 @@ namespace Octopus
                                                                      this->regions,
                                                                      options)},
         output {std::move(output)},
-        is_threaded {Options::is_threading_allowed(options)},
+        num_threads {Options::get_num_threads(options)},
         read_buffer_size {calculate_max_num_reads(Options::get_target_read_buffer_size(options),
                                                   this->samples, this->regions, this->read_manager)},
-        temp_directory {is_threaded ? Options::create_temp_file_directory(options) : boost::none}
+        temp_directory {(!num_threads || *num_threads > 1) ? Options::create_temp_file_directory(options) : boost::none}
         {}
         
         ~GenomeCallingComponents() = default;
@@ -306,7 +306,7 @@ namespace Octopus
         candidate_generator_builder {std::move(other.candidate_generator_builder)},
         variant_caller_factory      {std::move(other.variant_caller_factory)},
         output                      {std::move(other.output)},
-        is_threaded                 {std::move(other.is_threaded)},
+        num_threads                 {std::move(other.num_threads)},
         read_buffer_size            {std::move(other.read_buffer_size)},
         temp_directory              {std::move(other.temp_directory)}
         {
@@ -325,7 +325,7 @@ namespace Octopus
             swap(candidate_generator_builder, other.candidate_generator_builder);
             swap(variant_caller_factory,      other.variant_caller_factory);
             swap(output,                      other.output);
-            swap(is_threaded,                 other.is_threaded);
+            swap(num_threads,                 other.num_threads);
             swap(read_buffer_size,            other.read_buffer_size);
             swap(temp_directory,              other.temp_directory);
             update_dependents();
@@ -365,7 +365,8 @@ namespace Octopus
         return true;
     }
     
-    boost::optional<GenomeCallingComponents> collate_genome_calling_components(const po::variables_map& options)
+    boost::optional<GenomeCallingComponents>
+    collate_genome_calling_components(const po::variables_map& options)
     {
         using std::cout; using std::endl;
         
@@ -401,8 +402,8 @@ namespace Octopus
             if (!are_components_valid(result)) return boost::none;
             
             return boost::optional<GenomeCallingComponents> {std::move(result)};
-        } catch (...) {
-            std::cout << "Octopus: could not collate options" << std::endl;
+        } catch (std::exception& e) {
+            std::cout << "Octopus: could not collate options due to error " << e.what() << std::endl;
             return boost::none;
         }
     }
@@ -622,6 +623,11 @@ namespace Octopus
     }
     } // namespace
     
+    bool is_multithreaded(const GenomeCallingComponents& components)
+    {
+        return !components.num_threads || *components.num_threads > 1;
+    }
+    
     void run_octopus(po::variables_map& options)
     {
         auto components = collate_genome_calling_components(options);
@@ -630,31 +636,21 @@ namespace Octopus
         
         options.clear();
         
-        print_startup_info(*components);
-        
-        write_final_output_header(*components);
-        
-        if (components->is_threaded) {
-            run_octopus_multi_threaded(*components);
-        } else {
-            run_octopus_single_threaded(*components);
+        try {
+            print_startup_info(*components);
+            
+            write_final_output_header(*components);
+            
+            if (is_multithreaded(*components)) {
+                run_octopus_multi_threaded(*components);
+            } else {
+                run_octopus_single_threaded(*components);
+            }
+        } catch (std::exception& e) {
+            std::cout << "Octopus: encountered fatal error " << e.what() << ". Attempting to cleanup..." << std::endl;
+            cleanup(*components);
+            throw;
         }
-        
-//        try {
-//            print_startup_info(*components);
-//            
-//            write_final_output_header(*components);
-//            
-//            if (components->is_threaded) {
-//                run_octopus_multi_threaded(*components);
-//            } else {
-//                run_octopus_single_threaded(*components);
-//            }
-//        } catch (...) {
-//            std::cout << "Octopus: encountered fatal error. Attempting to cleanup..." << std::endl;
-//            cleanup(*components);
-//            throw;
-//        }
         
         print_final_info(*components);
         cleanup(*components);

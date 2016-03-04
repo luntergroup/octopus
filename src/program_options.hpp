@@ -45,8 +45,8 @@ namespace Options
     boost::optional<po::variables_map> parse_options(int argc, const char** argv);
     
     bool is_run_command(const po::variables_map& options);
-        
-    bool is_threading_allowed(const po::variables_map& options);
+    
+    boost::optional<unsigned> get_num_threads(const po::variables_map& options);
     
     std::size_t get_target_read_buffer_size(const po::variables_map& options);
     

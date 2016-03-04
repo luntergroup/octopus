@@ -47,7 +47,7 @@
 //    
 //    const auto human = make_reference(human_reference_fasta);
 //    
-//    const auto region = *parse_region("1:1000000-1000001", human);
+//    const auto region = parse_region("1:1000000-1000001", human);
 //    
 //    Allele allele1 {region, "A"}, allele2 {region, "T"};
 //    

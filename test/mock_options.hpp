@@ -19,7 +19,9 @@ namespace po = boost::program_options;
 
 inline boost::optional<po::variables_map> get_basic_mock_options()
 {
-    const char *argv[] = {"octopus",
+    const char *argv[] = {
+        "octopus",
+        
         //"--help",
         //"--version",
         
@@ -68,9 +70,12 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         
         "--regions", "22",
         
+        //"--regions", "4:40,436,510-40,436,694", // NA12878_low_coverage odd genotype call (should be 1/1)
+        
+        //"--regions", "22:16232073",
+        
         //"--regions", "16:46,392,879-46,393,098", // NA12878_low_coverage huge memory spike
         //"--regions", "22:20656122-20656146", // NA12878_high_coverage causing memory spike
-        
         //"--regions", "1:224,024,837-224,024,877", // NA12878_low_coverage edge case insertions
         //"--regions", "1:874950-874951", // NA12878_low_coverage edge case insertions
         //"--regions", "22:16,232,038-16,232,117", // NA12878_high_coverage VERY ineresting deletions!!
@@ -95,7 +100,6 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--regions", "6:89,236,310-89,237,082", // NA12878_high_coverage very nice phasing test
         //"--regions", "21:11,063,185-11,063,327", // weird haplotpes
         //"--regions", "3:47,251,793-47,251,839", // NA12878_high_coverage interesting indels
-        //"--regions", "4:40,436,510-40,436,694", // NA12878_low_coverage odd genotype call (should be 1/1)
         //"--regions", "Y:13447283-13447483", // NA12878_low_coverage too many haplotypes
         
         // for cancer

@@ -44,7 +44,7 @@
 //    
 //    const auto human = make_reference(human_reference_fasta);
 //    
-//    const auto region = *parse_region("1:1000000-1000001", human);
+//    const auto region = parse_region("1:1000000-1000001", human);
 //    
 //    const auto hap1 = make_haplotype(Allele {region, "A"}, human);
 //    const auto hap2 = make_haplotype(Allele {region, "C"}, human);
@@ -67,7 +67,7 @@
 //    
 //    const auto human = make_reference(human_reference_fasta);
 //    
-//    const auto region = *parse_region("1:1000000-1000001", human);
+//    const auto region = parse_region("1:1000000-1000001", human);
 //    
 //    const auto hap1 = make_haplotype(Allele {region, "A"}, human);
 //    const auto hap2 = make_haplotype(Allele {region, "C"}, human);
@@ -129,7 +129,7 @@
 //    
 //    const auto human = make_reference(human_reference_fasta);
 //    
-//    const auto region = *parse_region("1:1000000-1000001", human);
+//    const auto region = parse_region("1:1000000-1000001", human);
 //    
 //    const auto hap1 = make_haplotype(Allele {region, "A"}, human);
 //    const auto hap2 = make_haplotype(Allele {region, "C"}, human);
@@ -187,7 +187,7 @@
 //    
 //    const auto human = make_reference(human_reference_fasta);
 //    
-//    const auto region = *parse_region("1:1000000-1000001", human);
+//    const auto region = parse_region("1:1000000-1000001", human);
 //    
 //    const auto hap1 = make_haplotype(Allele {region, "A"}, human);
 //    const auto hap2 = make_haplotype(Allele {region, "T"}, human);
@@ -215,7 +215,7 @@
 //    
 //    const auto human = make_reference(human_reference_fasta);
 //    
-//    const auto region = *parse_region("1:1000000-1000001", human);
+//    const auto region = parse_region("1:1000000-1000001", human);
 //    
 //    const auto hap1 = make_haplotype(Allele {region, "A"}, human);
 //    const auto hap2 = make_haplotype(Allele {region, "T"}, human);
@@ -255,7 +255,7 @@
 //    
 //    const auto human = make_reference(human_reference_fasta);
 //    
-//    const auto region = *parse_region("1:1000000-1000001", human);
+//    const auto region = parse_region("1:1000000-1000001", human);
 //    
 //    const auto hap1 = make_haplotype(Allele {region, "A"}, human);
 //    const auto hap2 = make_haplotype(Allele {region, "C"}, human);
@@ -305,7 +305,7 @@
 //    
 //    const auto human = make_reference(human_reference_fasta);
 //    
-//    const auto region = *parse_region("1:1000000-1000001", human);
+//    const auto region = parse_region("1:1000000-1000001", human);
 //    
 //    const auto hap1 = make_haplotype(Allele {region, "A"}, human);
 //    const auto hap2 = make_haplotype(Allele {region, "C"}, human);
@@ -351,10 +351,10 @@
 //    
 //    const auto human = make_reference(human_reference_fasta);
 //    
-//    const auto region = *parse_region("3:1000000-1000011", human);
+//    const auto region = parse_region("3:1000000-1000011", human);
 //    
-//    const auto region1 = *parse_region("3:1000000-1000001", human);
-//    const auto region2 = *parse_region("3:1000010-1000011", human);
+//    const auto region1 = parse_region("3:1000000-1000001", human);
+//    const auto region2 = parse_region("3:1000010-1000011", human);
 //    
 //    Haplotype hap1 {region, human};
 //    hap1.push_back(Allele{region1, "A"});

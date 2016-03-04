@@ -20,7 +20,7 @@ namespace
     }
 } // namespace
 
-std::vector<char> ReadIndelErrorModel::calculate_gap_open_penalties(const Haplotype& haplotype) const
+std::vector<std::int8_t> ReadIndelErrorModel::calculate_gap_open_penalties(const Haplotype& haplotype) const
 {
 //    const auto repeats = extract_repeats(haplotype);
 //    
@@ -28,7 +28,7 @@ std::vector<char> ReadIndelErrorModel::calculate_gap_open_penalties(const Haplot
 //        
 //    }
     
-    std::vector<char> result(sequence_size(haplotype), 53);
+    std::vector<std::int8_t> result(sequence_size(haplotype), 20);
     
     return result;
 }

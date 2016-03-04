@@ -84,9 +84,9 @@ BOOST_AUTO_TEST_CASE(parse_search_region_option_parses_manually_entered_regions)
     
     auto regions = Octopus::Options::get_search_regions(*options, reference);
     
-    BOOST_CHECK(*regions["1"].cbegin() == *parse_region("1:32000092-33000000", reference));
-    BOOST_CHECK(*regions["5"].cbegin() == *parse_region("5:1104209-2104209", reference));
-    BOOST_CHECK(*regions["X"].cbegin() == *parse_region("X:80000-900000", reference));
+    BOOST_CHECK(*regions["1"].cbegin() == parse_region("1:32000092-33000000", reference));
+    BOOST_CHECK(*regions["5"].cbegin() == parse_region("5:1104209-2104209", reference));
+    BOOST_CHECK(*regions["X"].cbegin() == parse_region("X:80000-900000", reference));
 }
 
 BOOST_AUTO_TEST_CASE(parse_search_region_option_extracts_regions_from_text_files)

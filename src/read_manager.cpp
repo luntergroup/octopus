@@ -31,21 +31,8 @@ reader_paths_containing_sample_ {},
 possible_regions_in_readers_ {},
 samples_ {}
 {
-    auto bad_paths = get_bad_paths();
-    
-    if (!bad_paths.empty()) {
-        std::string error {"bad read files: \n"};
-        
-        for (const auto& path : bad_paths) {
-            error += "\t* " + path.string() + ": does not exist\n";
-        }
-        
-        error.erase(--error.end()); // removes last \n
-        
-        throw std::runtime_error {error};
-    }
-    
     setup_reader_samples_and_regions();
+    
     open_initial_files();
     
     samples_.reserve(reader_paths_containing_sample_.size());
@@ -341,19 +328,6 @@ ReadManager::SampleReadMap ReadManager::fetch_reads(const GenomicRegion& region)
 bool ReadManager::FileSizeCompare::operator()(const Path& lhs, const Path& rhs) const
 {
     return boost::filesystem::file_size(lhs) < boost::filesystem::file_size(rhs);
-}
-
-std::vector<ReadManager::Path> ReadManager::get_bad_paths() const
-{
-    std::vector<Path> result {};
-    result.reserve(num_files_);
-    
-    std::copy_if(std::cbegin(closed_readers_), std::cend(closed_readers_), std::back_inserter(result),
-                 [] (const auto& path) {
-                     return !boost::filesystem::exists(path);
-                 });
-    
-    return result;
 }
 
 void ReadManager::setup_reader_samples_and_regions()

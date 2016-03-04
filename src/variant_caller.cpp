@@ -216,11 +216,11 @@ std::deque<VcfRecord> VariantCaller::call_variants(const GenomicRegion& call_reg
         std::tie(haplotypes, active_region) = generator.progress();
         pause_timer(haplotype_generation_timer);
         
-        //std::cout << "active region is " << active_region << '\n';
-        
         if (is_after(active_region, call_region) || haplotypes.empty()) {
             break;
         }
+        
+        //std::cout << "active region is " << active_region << '\n';
         
         //std::cout << "haplotype region is " << haplotypes.front().get_region() << '\n';
         
@@ -260,6 +260,7 @@ std::deque<VcfRecord> VariantCaller::call_variants(const GenomicRegion& call_reg
         resume_timer(haplotype_generation_timer);
         generator.keep_haplotypes(haplotypes);
         generator.remove_haplotypes(removed_haplotypes);
+        removed_haplotypes.clear();
         pause_timer(haplotype_generation_timer);
         
         //std::cout << "there are " << haplotypes.size() << " final haplotypes" << '\n';
@@ -331,6 +332,9 @@ std::deque<VcfRecord> VariantCaller::call_variants(const GenomicRegion& call_reg
             resume_timer(phasing_timer);
             const auto forced_phasing = phaser.force_phase(haplotypes, *caller_latents->get_genotype_posteriors());
             pause_timer(phasing_timer);
+            
+            haplotypes.clear();
+            haplotypes.shrink_to_fit();
             
             auto active_candidates = copy_overlapped(candidates, uncalled_region);
             

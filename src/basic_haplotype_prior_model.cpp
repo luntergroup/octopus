@@ -103,7 +103,6 @@ BasicHaplotypePriorModel::do_compute_maximum_entropy_haplotype_set(std::vector<H
     using std::adjacent_find; using std::for_each; using std::nth_element;
     
     assert(!haplotypes.empty());
-    //assert(std::is_sorted(std::cbegin(haplotypes), std::cend(haplotypes)));
     
     const Haplotype reference {haplotypes.front().get_region(), reference_.get()};
     

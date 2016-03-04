@@ -12,6 +12,7 @@
 #include <vector>
 #include <iterator>
 #include <cstddef>
+#include <cstdint>
 #include <algorithm>
 #include <functional>
 
@@ -54,14 +55,9 @@ namespace Octopus
         
         std::reference_wrapper<const Haplotype> haplotype_;
         
-        std::vector<char> haplotype_gap_open_penalities_;
+        std::vector<std::int8_t> haplotype_gap_open_penalities_;
         
         PairHMM::Model model_;
-        
-        double log_probability(const AlignedRead& read, const Haplotype& haplotype,
-                               MapPositionItr first_mapping_position,
-                               MapPositionItr last_mapping_position,
-                               const std::vector<char>& gap_open_penalities) const;
     };
 } // namespace Octopus
 

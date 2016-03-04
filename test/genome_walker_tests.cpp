@@ -53,7 +53,7 @@ BOOST_AUTO_TEST_CASE(advance_region_always_gives_a_region_more_advanced_than_the
     
     ReadManager read_manager {NA12878_low_coverage};
     
-    const auto region = *parse_region("6:29,723,537-29,725,747", human);
+    const auto region = parse_region("6:29,723,537-29,725,747", human);
     
     const auto reads = read_manager.fetch_reads(region);
     
@@ -82,7 +82,7 @@ BOOST_AUTO_TEST_CASE(a_walker_with_no_indicators_never_give_regions_with_shared_
     
     ReadManager read_manager {NA12878_low_coverage};
     
-    const auto region = *parse_region("6:29,723,537-29,725,747", human);
+    const auto region = parse_region("6:29,723,537-29,725,747", human);
     
     const auto reads = read_manager.fetch_reads(region);
     

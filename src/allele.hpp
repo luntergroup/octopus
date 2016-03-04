@@ -261,7 +261,7 @@ bool is_reference(const Allele& allele, const ReferenceGenome& reference);
 template <typename T>
 Allele make_allele(const std::string& region, T&& sequence, const ReferenceGenome& reference)
 {
-    return Allele {*parse_region(region, reference), std::forward<T>(sequence)};
+    return Allele {parse_region(region, reference), std::forward<T>(sequence)};
 }
 
 Allele make_reference_allele(const GenomicRegion& region, const ReferenceGenome& reference);

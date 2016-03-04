@@ -142,7 +142,7 @@ GenomicRegion::SizeType calculate_genome_size(const ReferenceGenome& reference)
                            });
 }
 
-boost::optional<GenomicRegion> parse_region(std::string region, const ReferenceGenome& reference)
+GenomicRegion parse_region(std::string region, const ReferenceGenome& reference)
 {
     using SizeType = GenomicRegion::SizeType;
     
@@ -154,8 +154,6 @@ boost::optional<GenomicRegion> parse_region(std::string region, const ReferenceG
     
     if (std::regex_match(region, match, re) && match.size() == 5) {
         GenomicRegion::ContigNameType contig {match.str(1)};
-        
-        if (!reference.has_contig(contig)) return boost::none;
         
         const auto contig_size = reference.get_contig_size(contig);
         
@@ -174,7 +172,14 @@ boost::optional<GenomicRegion> parse_region(std::string region, const ReferenceG
                 end = static_cast<SizeType>(std::stoul(match.str(4)));
             }
             
-            if (begin > end || begin > contig_size) return boost::none;
+            if (begin > end) {
+                throw std::invalid_argument {"parse_region: given region ("
+                        + region + ") with invalid format"};
+            }
+            
+            if (begin > contig_size) {
+                begin = contig_size;
+            }
             
             if (end > contig_size) end = contig_size;
         }
@@ -182,5 +187,5 @@ boost::optional<GenomicRegion> parse_region(std::string region, const ReferenceG
         return GenomicRegion {std::move(contig), begin, end};
     }
     
-    return boost::none;
+    throw std::invalid_argument {"parse_region: given region (" + region + ") with invalid format"};
 }

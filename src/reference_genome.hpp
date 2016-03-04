@@ -16,7 +16,6 @@
 #include <memory>
 
 #include <boost/filesystem/path.hpp>
-#include <boost/optional.hpp>
 
 #include "genomic_region.hpp"
 #include "reference_genome_impl.hpp"
@@ -70,6 +69,6 @@ std::vector<GenomicRegion> get_all_contig_regions(const ReferenceGenome& referen
 GenomicRegion::SizeType calculate_genome_size(const ReferenceGenome& reference);
 
 // Requires reference access to get contig sizes for partially specified regions (e.g. "4")
-boost::optional<GenomicRegion> parse_region(std::string region, const ReferenceGenome& reference);
+GenomicRegion parse_region(std::string region, const ReferenceGenome& reference);
 
 #endif /* defined(__Octopus__reference_genome__) */

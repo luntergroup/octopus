@@ -46,11 +46,11 @@
 //    
 //    const auto human = make_reference(human_reference_fasta);
 //    
-//    const Allele allele1 {*parse_region("4:1000000-1000001", human), "A"};
-//    const Allele allele2 {*parse_region("4:1000000-1000001", human), "C"};
-//    const Allele allele3 {*parse_region("4:1000000-1000001", human), "G"};
-//    const Allele allele4 {*parse_region("4:1000001-1000002", human), "G"};
-//    const Allele allele5 {*parse_region("4:1000001-1000002", human), "C"};
+//    const Allele allele1 {parse_region("4:1000000-1000001", human), "A"};
+//    const Allele allele2 {parse_region("4:1000000-1000001", human), "C"};
+//    const Allele allele3 {parse_region("4:1000000-1000001", human), "G"};
+//    const Allele allele4 {parse_region("4:1000001-1000002", human), "G"};
+//    const Allele allele5 {parse_region("4:1000001-1000002", human), "C"};
 //    
 //    HaplotypeTree haplotype_tree {"4", human};
 //    
@@ -81,11 +81,11 @@
 //    
 //    const auto human = make_reference(human_reference_fasta);
 //    
-//    const Allele allele1 {*parse_region("4:1000000-1000001", human), "A"};
-//    const Allele allele2 {*parse_region("4:1000000-1000001", human), "C"};
-//    const Allele allele3 {*parse_region("4:1000000-1000001", human), "G"};
-//    const Allele allele4 {*parse_region("4:1000001-1000002", human), "G"};
-//    const Allele allele5 {*parse_region("4:1000001-1000002", human), "C"};
+//    const Allele allele1 {parse_region("4:1000000-1000001", human), "A"};
+//    const Allele allele2 {parse_region("4:1000000-1000001", human), "C"};
+//    const Allele allele3 {parse_region("4:1000000-1000001", human), "G"};
+//    const Allele allele4 {parse_region("4:1000001-1000002", human), "G"};
+//    const Allele allele5 {parse_region("4:1000001-1000002", human), "C"};
 //    
 //    HaplotypeTree haplotype_tree {"4", human};
 //    haplotype_tree.extend(allele1).extend(allele2).extend(allele3).extend(allele4).extend(allele5);
@@ -104,18 +104,18 @@
 //    
 //    const auto human = make_reference(human_reference_fasta);
 //    
-//    const Allele allele1 {*parse_region("4:1000000-1000001", human), "A"};
-//    const Allele allele2 {*parse_region("4:1000000-1000001", human), "C"};
-//    const Allele allele3 {*parse_region("4:1000000-1000001", human), "A"};
+//    const Allele allele1 {parse_region("4:1000000-1000001", human), "A"};
+//    const Allele allele2 {parse_region("4:1000000-1000001", human), "C"};
+//    const Allele allele3 {parse_region("4:1000000-1000001", human), "A"};
 //    
 //    HaplotypeTree haplotype_tree {"4", human};
 //    haplotype_tree.extend(allele1).extend(allele2).extend(allele3);
 //    
 //    BOOST_CHECK(haplotype_tree.num_haplotypes() == 2);
 //    
-//    const Allele allele4 {*parse_region("4:1000001-1000001", human), "A"};
-//    const Allele allele5 {*parse_region("4:1000001-1000001", human), "C"};
-//    const Allele allele6 {*parse_region("4:1000001-1000001", human), "C"};
+//    const Allele allele4 {parse_region("4:1000001-1000001", human), "A"};
+//    const Allele allele5 {parse_region("4:1000001-1000001", human), "C"};
+//    const Allele allele6 {parse_region("4:1000001-1000001", human), "C"};
 //    
 //    haplotype_tree.extend(allele4).extend(allele5).extend(allele6);
 //    
@@ -128,15 +128,15 @@
 //    
 //    const auto human = make_reference(human_reference_fasta);
 //    
-//    const Allele allele1 {*parse_region("16:9300037-9300037", human), "TG"};
-//    const Allele allele2 {*parse_region("16:9300037-9300051", human), ""};
+//    const Allele allele1 {parse_region("16:9300037-9300037", human), "TG"};
+//    const Allele allele2 {parse_region("16:9300037-9300051", human), ""};
 //    
 //    HaplotypeTree haplotype_tree {"16", human};
 //    haplotype_tree.extend(allele1).extend(allele2);
 //    
 //    BOOST_CHECK(haplotype_tree.num_haplotypes() == 1);
 //    
-//    const auto region = *parse_region("16:9300037-9300037", human);
+//    const auto region = parse_region("16:9300037-9300037", human);
 //    
 //    const auto haplotypes = haplotype_tree.extract_haplotypes(region);
 //    
@@ -150,11 +150,11 @@
 //    
 //    const auto human = make_reference(human_reference_fasta);
 //    
-//    const Allele allele1 {*parse_region("4:1000000-1000001", human), "A"};
-//    const Allele allele2 {*parse_region("4:1000001-1000002", human), "C"};
-//    const Allele allele3 {*parse_region("4:1000002-1000002", human), "GC"};
-//    const Allele allele4 {*parse_region("4:1000005-1000007", human), ""};
-//    const Allele allele5 {*parse_region("4:1000007-1000008", human), "G"};
+//    const Allele allele1 {parse_region("4:1000000-1000001", human), "A"};
+//    const Allele allele2 {parse_region("4:1000001-1000002", human), "C"};
+//    const Allele allele3 {parse_region("4:1000002-1000002", human), "GC"};
+//    const Allele allele4 {parse_region("4:1000005-1000007", human), ""};
+//    const Allele allele5 {parse_region("4:1000007-1000008", human), "G"};
 //    
 //    HaplotypeTree haplotype_tree {"4", human};
 //    haplotype_tree.extend(allele1).extend(allele2).extend(allele3).extend(allele4).extend(allele5);
@@ -168,15 +168,15 @@
 //    
 //    const auto human = make_reference(human_reference_fasta);
 //    
-//    const Allele allele1 {*parse_region("4:1000000-1000001", human), "A"};
-//    const Allele allele2 {*parse_region("4:1000002-1000003", human), "C"};
-//    const Allele allele3 {*parse_region("4:1000002-1000003", human), "G"};
-//    const Allele allele4 {*parse_region("4:1000004-1000005", human), "T"};
+//    const Allele allele1 {parse_region("4:1000000-1000001", human), "A"};
+//    const Allele allele2 {parse_region("4:1000002-1000003", human), "C"};
+//    const Allele allele3 {parse_region("4:1000002-1000003", human), "G"};
+//    const Allele allele4 {parse_region("4:1000004-1000005", human), "T"};
 //    
 //    HaplotypeTree haplotype_tree {"4", human};
 //    haplotype_tree.extend(allele1).extend(allele2).extend(allele3).extend(allele4);
 //    
-//    auto region = *parse_region("4:1000000-1000005", human);
+//    auto region = parse_region("4:1000000-1000005", human);
 //    
 //    auto haplotypes = haplotype_tree.extract_haplotypes(region);
 //    
@@ -194,9 +194,9 @@
 //    
 //    const auto human = make_reference(human_reference_fasta);
 //    
-//    const Allele allele1 {*parse_region("4:1000000-1000001", human), "A"};
-//    const Allele allele2 {*parse_region("4:1000002-1000006", human), ""};
-//    const Allele allele3 {*parse_region("4:1000002-1000003", human), "G"};
+//    const Allele allele1 {parse_region("4:1000000-1000001", human), "A"};
+//    const Allele allele2 {parse_region("4:1000002-1000006", human), ""};
+//    const Allele allele3 {parse_region("4:1000002-1000003", human), "G"};
 //    
 //    HaplotypeTree haplotype_tree {"4", human};
 //    
@@ -204,13 +204,13 @@
 //    
 //    BOOST_CHECK(haplotype_tree.num_haplotypes() == 2);
 //    
-//    const auto region1 = *parse_region("4:1000000-1000006", human);
+//    const auto region1 = parse_region("4:1000000-1000006", human);
 //    
 //    auto haplotypes = haplotype_tree.extract_haplotypes(region1);
 //    
 //    BOOST_CHECK(haplotypes.size() == 2);
 //    
-//    const auto region2 = *parse_region("4:1000000-1000003", human);
+//    const auto region2 = parse_region("4:1000000-1000003", human);
 //    
 //    haplotypes = haplotype_tree.extract_haplotypes(region2);
 //    
@@ -228,11 +228,11 @@
 //    
 //    const auto human = make_reference(human_reference_fasta);
 //    
-//    const Allele allele1 {*parse_region("4:1000000-1000001", human), "A"};
-//    const Allele allele2 {*parse_region("4:1000002-1000003", human), "C"};
-//    const Allele allele3 {*parse_region("4:1000002-1000003", human), "G"};
-//    const Allele allele4 {*parse_region("4:1000004-1000005", human), "T"};
-//    const Allele allele5 {*parse_region("4:1000004-1000005", human), "C"};
+//    const Allele allele1 {parse_region("4:1000000-1000001", human), "A"};
+//    const Allele allele2 {parse_region("4:1000002-1000003", human), "C"};
+//    const Allele allele3 {parse_region("4:1000002-1000003", human), "G"};
+//    const Allele allele4 {parse_region("4:1000004-1000005", human), "T"};
+//    const Allele allele5 {parse_region("4:1000004-1000005", human), "C"};
 //    
 //    HaplotypeTree haplotype_tree {"4", human};
 //    
@@ -268,10 +268,10 @@
 //    
 //    const auto human = make_reference(human_reference_fasta);
 //    
-//    const Allele allele1 {*parse_region("4:1000000-1000001", human), "C"};
-//    const Allele allele2 {*parse_region("4:1000001-1000002", human), "T"};
-//    const Allele allele3 {*parse_region("4:1000001-1000002", human), "G"};
-//    const Allele allele4 {*parse_region("4:1000002-1000003", human), "C"};
+//    const Allele allele1 {parse_region("4:1000000-1000001", human), "C"};
+//    const Allele allele2 {parse_region("4:1000001-1000002", human), "T"};
+//    const Allele allele3 {parse_region("4:1000001-1000002", human), "G"};
+//    const Allele allele4 {parse_region("4:1000002-1000003", human), "C"};
 //    
 //    HaplotypeTree haplotype_tree {"4", human};
 //    haplotype_tree.extend(allele1).extend(allele2).extend(allele3).extend(allele4);
@@ -294,7 +294,7 @@
 //    BOOST_REQUIRE(hap2.get_sequence() == "CGC");
 //    BOOST_CHECK(haplotype_tree.contains(hap2));
 //    
-//    const Allele allele5 {*parse_region("4:1000000-1000001", human), "G"};
+//    const Allele allele5 {parse_region("4:1000000-1000001", human), "G"};
 //    
 //    Haplotype hap3 {region, human};
 //    hap3.push_back(allele5);
@@ -312,7 +312,7 @@
 //    BOOST_REQUIRE(hap4.get_sequence() == "GGC");
 //    BOOST_CHECK(!haplotype_tree.contains(hap4));
 //    
-//    const Allele allele6 {*parse_region("4:1000001-1000002", human), "C"};
+//    const Allele allele6 {parse_region("4:1000001-1000002", human), "C"};
 //    
 //    Haplotype hap5 {region, human};
 //    hap5.push_back(allele1);
@@ -329,10 +329,10 @@
 //    
 //    const auto human = make_reference(human_reference_fasta);
 //    
-//    const Allele allele1 {*parse_region("4:1000000-1000001", human), "C"};
-//    const Allele allele2 {*parse_region("4:1000001-1000002", human), "T"};
-//    const Allele allele3 {*parse_region("4:1000001-1000002", human), "G"};
-//    const Allele allele4 {*parse_region("4:1000002-1000003", human), "C"};
+//    const Allele allele1 {parse_region("4:1000000-1000001", human), "C"};
+//    const Allele allele2 {parse_region("4:1000001-1000002", human), "T"};
+//    const Allele allele3 {parse_region("4:1000001-1000002", human), "G"};
+//    const Allele allele4 {parse_region("4:1000002-1000003", human), "C"};
 //    
 //    HaplotypeTree haplotype_tree {"4", human};
 //    haplotype_tree.extend(allele1).extend(allele2).extend(allele3).extend(allele4);
@@ -356,7 +356,7 @@
 //    BOOST_REQUIRE(hap3.get_sequence() == "CGC");
 //    BOOST_CHECK(haplotype_tree.contains(hap3));
 //    
-//    const Allele allele5 {*parse_region("4:1000000-1000001", human), "G"};
+//    const Allele allele5 {parse_region("4:1000000-1000001", human), "G"};
 //    
 //    Haplotype hap4 {region, human};
 //    hap4.push_back(allele5);
@@ -364,7 +364,7 @@
 //    BOOST_REQUIRE(hap4.get_sequence() == "GTC");
 //    BOOST_CHECK(!haplotype_tree.contains(hap4));
 //    
-//    const Allele allele6 {*parse_region("4:1000001-1000002", human), "C"};
+//    const Allele allele6 {parse_region("4:1000001-1000002", human), "C"};
 //    
 //    Haplotype hap5 {region, human};
 //    hap5.push_back(allele6);
@@ -379,10 +379,10 @@
 //    
 //    const auto human = make_reference(human_reference_fasta);
 //    
-//    const Allele allele1 {*parse_region("4:1000000-1000001", human), "C"};
-//    const Allele allele2 {*parse_region("4:1000001-1000002", human), "T"};
-//    const Allele allele3 {*parse_region("4:1000001-1000002", human), "G"};
-//    const Allele allele4 {*parse_region("4:1000002-1000003", human), "C"};
+//    const Allele allele1 {parse_region("4:1000000-1000001", human), "C"};
+//    const Allele allele2 {parse_region("4:1000001-1000002", human), "T"};
+//    const Allele allele3 {parse_region("4:1000001-1000002", human), "G"};
+//    const Allele allele4 {parse_region("4:1000002-1000003", human), "C"};
 //    
 //    const auto region = encompassing_region(allele1, allele4);
 //    
@@ -407,10 +407,10 @@
 //    
 //    const auto human = make_reference(human_reference_fasta);
 //    
-//    const Allele allele1 {*parse_region("4:1000000-1000001", human), "C"};
-//    const Allele allele2 {*parse_region("4:1000001-1000002", human), "T"};
-//    const Allele allele3 {*parse_region("4:1000001-1000002", human), "G"};
-//    const Allele allele4 {*parse_region("4:1000002-1000003", human), "C"};
+//    const Allele allele1 {parse_region("4:1000000-1000001", human), "C"};
+//    const Allele allele2 {parse_region("4:1000001-1000002", human), "T"};
+//    const Allele allele3 {parse_region("4:1000001-1000002", human), "G"};
+//    const Allele allele4 {parse_region("4:1000002-1000003", human), "C"};
 //    
 //    HaplotypeTree haplotype_tree {"4", human};
 //    haplotype_tree.extend(allele1).extend(allele2).extend(allele3).extend(allele4);
@@ -424,7 +424,7 @@
 //    
 //    BOOST_REQUIRE(haplotype_tree.num_haplotypes() == 1);
 //    
-//    const Allele allele5 {*parse_region("4:1000002-1000003", human), "T"};
+//    const Allele allele5 {parse_region("4:1000002-1000003", human), "T"};
 //    
 //    haplotype_tree.extend(allele5);
 //    
@@ -437,13 +437,13 @@
 //    
 //    const auto human = make_reference(human_reference_fasta);
 //    
-//    const Allele allele1 {*parse_region("16:9300039-9300051", human), "TGTGTGTGCGTT"};
-//    const Allele allele2 {*parse_region("16:9300039-9300051", human), ""};
+//    const Allele allele1 {parse_region("16:9300039-9300051", human), "TGTGTGTGCGTT"};
+//    const Allele allele2 {parse_region("16:9300039-9300051", human), ""};
 //    
-//    const Allele allele3 {*parse_region("16:9300047-9300048", human), "C"};
-//    const Allele allele4 {*parse_region("16:9300047-9300048", human), "T"};
-//    const Allele allele5 {*parse_region("16:9300050-9300051", human), "T"};
-//    const Allele allele6 {*parse_region("16:9300050-9300051", human), "G"};
+//    const Allele allele3 {parse_region("16:9300047-9300048", human), "C"};
+//    const Allele allele4 {parse_region("16:9300047-9300048", human), "T"};
+//    const Allele allele5 {parse_region("16:9300050-9300051", human), "T"};
+//    const Allele allele6 {parse_region("16:9300050-9300051", human), "G"};
 //    
 //    HaplotypeTree haplotype_tree {"16", human};
 //    
@@ -467,7 +467,7 @@
 //    
 //    BOOST_CHECK(haplotype_tree.num_haplotypes() == 8);
 //    
-//    auto a_region = *parse_region("16:9300039-9300051", human);
+//    auto a_region = parse_region("16:9300039-9300051", human);
 //    
 //    auto haplotypes = haplotype_tree.extract_haplotypes(a_region);
 //    
@@ -490,8 +490,8 @@
 //    
 //    HaplotypeTree haplotype_tree {"4", human};
 //    
-//    const Allele allele1 {*parse_region("4:1000000-1000001", human), "A"};
-//    const Allele allele2 {*parse_region("4:1000000-1000003", human), ""};
+//    const Allele allele1 {parse_region("4:1000000-1000001", human), "A"};
+//    const Allele allele2 {parse_region("4:1000000-1000003", human), ""};
 //    
 //    haplotype_tree.extend(allele1).extend(allele2);
 //    
@@ -501,8 +501,8 @@
 //    
 //    BOOST_CHECK(haplotype_tree.num_haplotypes() == 2);
 //    
-//    const Allele allele3 {*parse_region("4:1000001-1000002", human), "C"};
-//    const Allele allele4 {*parse_region("4:1000002-1000003", human), "G"};
+//    const Allele allele3 {parse_region("4:1000001-1000002", human), "C"};
+//    const Allele allele4 {parse_region("4:1000002-1000003", human), "G"};
 //    
 //    haplotype_tree.extend(allele3);
 //    
@@ -512,13 +512,13 @@
 //    
 //    BOOST_CHECK(haplotype_tree.num_haplotypes() == 4);
 //    
-//    const Allele allele5 {*parse_region("4:1000003-1000004", human), "T"};
+//    const Allele allele5 {parse_region("4:1000003-1000004", human), "T"};
 //    
 //    haplotype_tree.extend(allele5);
 //    
 //    BOOST_CHECK(haplotype_tree.num_haplotypes() == 4);
 //    
-//    const Allele allele6 {*parse_region("4:1000003-1000004", human), "A"};
+//    const Allele allele6 {parse_region("4:1000003-1000004", human), "A"};
 //    
 //    haplotype_tree.extend(allele6);
 //    
@@ -534,7 +534,7 @@
 //    
 //    ReadManager read_manager {NA12878_low_coverage};
 //    
-//    const auto region = *parse_region("16:9200000-9202500", human);
+//    const auto region = parse_region("16:9200000-9202500", human);
 //    
 //    const auto sample = read_manager.get_samples().front();
 //    
@@ -594,7 +594,7 @@
 //    
 //    const auto sample = read_manager.get_samples().front();
 //    
-//    const auto region = *parse_region("16:9300000-9302500", human);
+//    const auto region = parse_region("16:9300000-9302500", human);
 //    
 //    auto reads = read_manager.fetch_reads(sample, region);
 //    add_reads(reads, candidate_generator);
@@ -652,11 +652,11 @@
 //    
 //    const auto human = make_reference(human_reference_fasta);
 //    
-//    const Allele allele1 {*parse_region("4:1000000-1000001", human), "A"};
-//    const Allele allele2 {*parse_region("4:1000000-1000001", human), "C"};
-//    const Allele allele3 {*parse_region("4:1000000-1000001", human), "G"};
-//    const Allele allele4 {*parse_region("4:1000001-1000002", human), "G"};
-//    const Allele allele5 {*parse_region("4:1000001-1000002", human), "C"};
+//    const Allele allele1 {parse_region("4:1000000-1000001", human), "A"};
+//    const Allele allele2 {parse_region("4:1000000-1000001", human), "C"};
+//    const Allele allele3 {parse_region("4:1000000-1000001", human), "G"};
+//    const Allele allele4 {parse_region("4:1000001-1000002", human), "G"};
+//    const Allele allele5 {parse_region("4:1000001-1000002", human), "C"};
 //    
 //    const auto region = encompassing_region(allele1, allele5);
 //    
@@ -676,7 +676,7 @@
 //    
 //    Haplotype haplotype2 {region, human};
 //    haplotype2.push_back(allele1);
-//    haplotype2.push_back(Allele {*parse_region("4:1000001-1000002", human), "A"});
+//    haplotype2.push_back(Allele {parse_region("4:1000001-1000002", human), "A"});
 //    
 //    BOOST_CHECK(!haplotype_tree.contains(haplotype2));
 //}

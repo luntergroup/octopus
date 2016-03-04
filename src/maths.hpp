@@ -121,7 +121,7 @@ inline RealType log_sum_exp(std::initializer_list<RealType> il)
 {
     auto max = std::max(il);
     return max + std::log(std::accumulate(std::cbegin(il), std::cend(il), RealType {0},
-                                          [max] (const auto curr, auto x) {
+                                          [max] (const auto curr, const auto x) {
                                               return curr + std::exp(x - max);
                                           }));
 }
@@ -131,7 +131,7 @@ inline RealType log_sum_exp(Iterator first, Iterator last)
 {
     auto max = *std::max_element(first, last);
     return max + std::log(std::accumulate(first, last, RealType {0},
-                                          [max] (const auto curr, auto x) {
+                                          [max] (const auto curr, const auto x) {
                                               return curr + std::exp(x - max);
                                           }));
 }
@@ -182,7 +182,7 @@ template <typename RealType, typename InputIterator1, typename InputIterator2>
 inline RealType log_dirichlet(InputIterator1 firstalpha, InputIterator1 lastalpha, InputIterator2 firstpi)
 {
     return std::inner_product(firstalpha, lastalpha, firstpi, RealType {0}, std::plus<RealType>(),
-                              [] (auto a, auto p) { return (a - 1) * std::log(p); })
+                              [] (const auto a, const auto p) { return (a - 1) * std::log(p); })
             - log_beta<RealType>(firstalpha, lastalpha);
 }
 
@@ -323,8 +323,9 @@ template <typename RealType>
 bool is_mldp_converged(std::vector<RealType>& lhs, const std::vector<RealType>& rhs, const RealType epsilon = 0.0001)
 {
     using std::cbegin; using std::cend; using std::begin;
-    std::transform(cbegin(lhs), cend(lhs), cbegin(rhs), begin(lhs), [] (auto a, auto b) { return std::abs(a - b); });
-    return std::all_of(cbegin(lhs), cend(lhs), [epsilon] (auto x) { return x < epsilon; });
+    std::transform(cbegin(lhs), cend(lhs), cbegin(rhs), begin(lhs),
+                   [] (const auto a, const auto b) { return std::abs(a - b); });
+    return std::all_of(cbegin(lhs), cend(lhs), [epsilon] (const auto x) { return x < epsilon; });
 }
 } // namespace detail
 
@@ -335,7 +336,7 @@ std::vector<RealType> dirichlet_mle(std::vector<RealType> pi, const RealType pre
 {
     using std::cbegin; using std::cend; using std::begin;
     
-    std::transform(cbegin(pi), cend(pi), begin(pi), [] (auto p) { return std::log(p); });
+    std::transform(cbegin(pi), cend(pi), begin(pi), [] (const auto p) { return std::log(p); });
     
     const auto l = pi.size();
     std::vector<RealType> result(l, 1.0 / l), curr_result(l, 1.0 / l), means(l, 1.0 / l);
@@ -362,13 +363,13 @@ std::vector<RealType> dirichlet_mle(std::vector<RealType> pi, const RealType pre
 }
 
 template <typename NumericType = float, typename RealType>
-NumericType probability_to_phred(RealType p)
+NumericType probability_to_phred(const RealType p)
 {
     return static_cast<NumericType>(-10.0 * std::log10(std::max(1.0 - p, std::numeric_limits<RealType>::epsilon())));
 }
 
 template <typename RealType = double, typename NumericType>
-RealType phred_to_probability(NumericType phred)
+RealType phred_to_probability(const NumericType phred)
 {
     return 1.0 - std::pow(10.0, -1.0 * static_cast<RealType>(phred) / 10.0);
 }

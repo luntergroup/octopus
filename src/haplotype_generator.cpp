@@ -208,6 +208,7 @@ namespace Octopus
             }
             
             alleles_.erase_all(std::cbegin(removed_alleles), std::cend(removed_alleles));
+            
             for (const auto& allele : removed_alleles) {
                 active_allele_counts_.erase(allele);
             }

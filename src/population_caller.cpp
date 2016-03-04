@@ -55,7 +55,7 @@ PopulationVariantCaller::Latents::Latents(GenotypeModel::Population::Latents&& m
 haplotype_frequencies_ {std::make_shared<HaplotypePosteiorMap>(std::move(model_latents.haplotype_frequencies))},
 genotype_posteriors_ {std::make_shared<GenotypePosteriorMap>(std::move(model_latents.genotype_posteriors))}
 {}
-
+    
 std::unique_ptr<PopulationVariantCaller::CallerLatents>
 PopulationVariantCaller::infer_latents(const std::vector<SampleIdType>& samples,
                                        const std::vector<Haplotype>& haplotypes,
