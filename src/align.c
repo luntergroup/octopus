@@ -421,8 +421,8 @@ int fastAlignmentRoutine(const char* seq1, const char* seq2, const char* qual2, 
 //_________________________________________________________________________________________________
 
 
-int calculateFlankScore(int hapLen, int hapFlank, const char* quals, const char* localgapopen, int gapextend, int nucprior,
-			int firstpos, const char* aln1, const char* aln2) {
+int calculateFlankScore(int hapLen, int leftHapFlank, int rightHapFlank, const char* quals, const char* localgapopen,
+                        int gapextend, int nucprior, int firstpos, const char* aln1, const char* aln2) {
 
   char prevstate = 'M';
   int x = firstpos;     // index into haplotype
@@ -434,39 +434,38 @@ int calculateFlankScore(int hapLen, int hapFlank, const char* quals, const char*
     if (aln1[i] == '-') newstate = 'I';
     if (aln2[i] == '-') newstate = 'D';  // can't be both '-'
     switch (newstate) {
-    case 'M':
-      if ( (aln1[i] != aln2[i]) &&
-	   (x < hapFlank || x >= hapLen - hapFlank) ) {
-	if (aln1[i] == 'N') {
-	  score += n_score / 4;
-	} else {
-	  score += quals[y];
-	}
-      }
-      ++x;
-      ++y;
-      break;
-    case 'I':
-      if (x < hapFlank || x >= hapLen - hapFlank) {
-	if (prevstate == 'I') {
-	  score += gapextend + nucprior;
-	} else {
-	  // gap open score is charged for insertions just after the corresponding base, hence the -1
-	  score += localgapopen[x-1] + nucprior;
-	}
-      }
-      ++y;
-      break;
-    case 'D':
-      if (x < hapFlank || x >= hapLen - hapFlank) {
-	if (prevstate == 'D') {
-	  score += gapextend;
-	} else {
-	  score += localgapopen[x];
-	}
-      }
-      ++x;
-      break;
+      case 'M':
+        if ( (aln1[i] != aln2[i]) && (x < leftHapFlank || x >= hapLen - rightHapFlank) ) {
+            if (aln1[i] == 'N') {
+                score += n_score / 4;
+            } else {
+                score += quals[y];
+            }
+        }
+        ++x;
+        ++y;
+        break;
+      case 'I':
+        if (x < leftHapFlank || x >= hapLen - rightHapFlank) {
+            if (prevstate == 'I') {
+                score += gapextend + nucprior;
+            } else {
+                // gap open score is charged for insertions just after the corresponding base, hence the -1
+                score += localgapopen[x-1] + nucprior;
+            }
+        }
+        ++y;
+        break;
+      case 'D':
+        if (x < leftHapFlank || x >= hapLen - rightHapFlank) {
+            if (prevstate == 'D') {
+                score += gapextend;
+            } else {
+                score += localgapopen[x];
+            }
+        }
+        ++x;
+        break;
     }
     ++i;
     prevstate = newstate;

@@ -13,7 +13,7 @@ int fastAlignmentRoutine(const char* seq1, const char* seq2, const char* qual2, 
                          int gapextend, int nucprior, const char* localgapopen,
                          char* aln1, char* aln2, int* firstpos);
 
-int calculateFlankScore(int hapLen, int hapFlank, const char* quals, const char* localGapOpen,
+int calculateFlankScore(int hapLen, int leftHapFlank, int rightHapFlank, const char* quals, const char* localGapOpen,
                         int gapExtend, int nucprior, int firstpos, const char* aln1, const char* aln2);
 
 #endif

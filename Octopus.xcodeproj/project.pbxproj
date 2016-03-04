@@ -1419,7 +1419,7 @@
 				CLANG_CXX_LANGUAGE_STANDARD = "c++14";
 				FRAMEWORK_SEARCH_PATHS = "$(inherited)";
 				GCC_INPUT_FILETYPE = sourcecode.cpp.cpp;
-				GCC_OPTIMIZATION_LEVEL = 3;
+				GCC_OPTIMIZATION_LEVEL = 0;
 				HEADER_SEARCH_PATHS = (
 					"$(inherited)",
 					/usr/local/Cellar/boost/1.60.0_1/include,
@@ -1450,7 +1450,7 @@
 				CLANG_CXX_LANGUAGE_STANDARD = "c++14";
 				FRAMEWORK_SEARCH_PATHS = "$(inherited)";
 				GCC_INPUT_FILETYPE = sourcecode.cpp.cpp;
-				GCC_OPTIMIZATION_LEVEL = 3;
+				GCC_OPTIMIZATION_LEVEL = 0;
 				HEADER_SEARCH_PATHS = (
 					"$(inherited)",
 					/usr/local/Cellar/boost/1.60.0_1/include,

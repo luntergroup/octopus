@@ -386,7 +386,9 @@ bool operator<(const AlignedRead& lhs, const AlignedRead& rhs)
 
 bool IsDuplicate::operator()(const AlignedRead &lhs, const AlignedRead &rhs) const
 {
-    return lhs.get_region() == rhs.get_region() && lhs.get_cigar_string() == rhs.get_cigar_string();
+    return lhs.get_region() == rhs.get_region()
+        && lhs.get_cigar_string() == rhs.get_cigar_string()
+        && lhs.get_flags().is_marked_reverse_mapped == rhs.get_flags().is_marked_reverse_mapped;
 }
 
 bool operator==(const AlignedRead::NextSegment& lhs, const AlignedRead::NextSegment& rhs)

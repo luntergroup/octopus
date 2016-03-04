@@ -148,14 +148,37 @@ void HaplotypeLikelihoodCache::set_read_iterators_and_sample_indices(const ReadM
 
 namespace debug
 {
+    auto rank_haplotypes(const std::vector<Haplotype>& haplotypes, const SampleIdType& sample,
+                         const HaplotypeLikelihoodCache& haplotype_likelihoods)
+    {
+        std::vector<std::pair<std::reference_wrapper<const Haplotype>, double>> ranks {};
+        ranks.reserve(haplotypes.size());
+        
+        for (const auto& haplotype : haplotypes) {
+            const auto& likelihoods = haplotype_likelihoods.log_likelihoods(sample, haplotype);
+            ranks.emplace_back(haplotype, std::accumulate(std::cbegin(likelihoods), std::cend(likelihoods), 0.0));
+        }
+        
+        std::sort(std::begin(ranks), std::end(ranks),
+                  [] (const auto& lhs, const auto& rhs) {
+                      return lhs.second > rhs.second;
+                  });
+        
+        std::vector<std::reference_wrapper<const Haplotype>> result {};
+        result.reserve(haplotypes.size());
+        
+        std::transform(std::cbegin(ranks), std::cend(ranks), std::back_inserter(result),
+                       [] (const auto& p) { return p.first; });
+        
+        return result;
+    }
+    
     void print_read_haplotype_liklihoods(const std::vector<Haplotype>& haplotypes,
                                          const ReadMap& reads,
                                          const HaplotypeLikelihoodCache& haplotype_likelihoods,
                                          const std::size_t n)
     {
-        const auto m = std::min(n, haplotypes.size());
-        
-        std::cout << "debug: printing top " << m << " haplotype likelihoods for each read in each sample" << '\n';
+        std::cout << "debug: printing top " << n << " read likelihoods for each haplotype in each sample" << '\n';
         
         using ReadReference = std::reference_wrapper<const AlignedRead>;
         
@@ -164,7 +187,11 @@ namespace debug
             
             std::cout << "Sample: " << sample << ":" << '\n';
             
-            for (const Haplotype& haplotype : haplotypes) {
+            const auto ranked_haplotypes = rank_haplotypes(haplotypes, sample, haplotype_likelihoods);
+            
+            const auto m = std::min(n, sample_reads.second.size());
+            
+            for (const auto& haplotype : ranked_haplotypes) {
                 std::cout << "\t";
                 print_variant_alleles(haplotype);
                 std::cout << '\n';

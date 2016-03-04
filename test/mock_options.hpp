@@ -68,11 +68,9 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         
         // for population
         
-        "--regions", "22",
+        "--regions", "22:20764594",
         
         //"--regions", "4:40,436,510-40,436,694", // NA12878_low_coverage odd genotype call (should be 1/1)
-        
-        //"--regions", "22:16232073",
         
         //"--regions", "16:46,392,879-46,393,098", // NA12878_low_coverage huge memory spike
         //"--regions", "22:20656122-20656146", // NA12878_high_coverage causing memory spike
@@ -135,7 +133,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--candidates-from-source", sample_vcf.c_str(),
         //"--regenotype",
         
-        "--min-variant-posterior", "5",
+        "--min-variant-posterior", "10",
         "--min-refcall-posterior", "1",
         "--min-somatic-posterior", "2",
         

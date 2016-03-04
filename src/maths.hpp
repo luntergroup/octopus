@@ -105,21 +105,21 @@ RealType rmq(const Container& values)
 template <typename RealType>
 inline RealType log_sum_exp(const RealType a, const RealType b)
 {
-    auto r = std::minmax(a, b);
-    return r.second + std::log(1 + std::exp(r.first - r.second));
+    const auto r = std::minmax(a, b);
+    return r.second + std::log(1.0 + std::exp(r.first - r.second));
 }
 
 template <typename RealType>
 inline RealType log_sum_exp(const RealType a, const RealType b, const RealType c)
 {
-    auto max = std::max({a, b, c});
+    const auto max = std::max({a, b, c});
     return max + std::log(std::exp(a - max) + std::exp(b - max) + std::exp(c - max));
 }
 
 template <typename RealType>
 inline RealType log_sum_exp(std::initializer_list<RealType> il)
 {
-    auto max = std::max(il);
+    const auto max = std::max(il);
     return max + std::log(std::accumulate(std::cbegin(il), std::cend(il), RealType {0},
                                           [max] (const auto curr, const auto x) {
                                               return curr + std::exp(x - max);
@@ -129,7 +129,7 @@ inline RealType log_sum_exp(std::initializer_list<RealType> il)
 template <typename RealType, typename Iterator>
 inline RealType log_sum_exp(Iterator first, Iterator last)
 {
-    auto max = *std::max_element(first, last);
+    const auto max = *std::max_element(first, last);
     return max + std::log(std::accumulate(first, last, RealType {0},
                                           [max] (const auto curr, const auto x) {
                                               return curr + std::exp(x - max);
@@ -169,7 +169,7 @@ inline RealType log_beta(InputIterator first, InputIterator last)
 {
     return std::accumulate(first, last, RealType {0},
                            [] (const auto v, const auto x) { return v + boost::math::lgamma(x); })
-            - boost::math::lgamma(std::accumulate(first, last, RealType {0}));
+                - boost::math::lgamma(std::accumulate(first, last, RealType {0}));
 }
 
 template <typename RealType, typename Container>

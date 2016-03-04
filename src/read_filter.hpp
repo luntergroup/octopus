@@ -144,7 +144,7 @@ BidirIt ReadFilter<BidirIt>::partition(BidirIt first, BidirIt last) const
     
     auto prev = first;
     
-    if (!noncontext_filters_.empty()) {
+    if (!context_filters_.empty()) {
         it = std::unique(first, it, IsDuplicate {}); // TODO
     }
     
