@@ -1,22 +1,22 @@
-#include "align.h"
-
 /*****************************************************************************************************************
  This code is copyright (c) Gerton Lunter, Dec 2009
  It may not be distributed, made public, or used in other software without the permission of the copyright holder
-******************************************************************************************************************/
+ ******************************************************************************************************************/
+
+#include "align.hpp"
 
 #include <emmintrin.h>
-#include <assert.h>
+#include <cassert>
 
 // defined here because it is used in fastAlignmentRoutine and calculateFlankScore
 constexpr short n_score {0 * 4};
+constexpr int BAND_SIZE {8};
+constexpr short pos_inf {0x7800};
 
 int fastAlignmentRoutine(const char* seq1, const char* seq2, const char* qual2,
                          const int len1, const int len2,
-                         const int gapextend, const int nucprior, const char* localgapopen)
+                         const int gapextend, const int nucprior, const std::int8_t* localgapopen)
 {
-    constexpr int BAND_SIZE {8};
-    
     // seq2 is the read; the shorter of the sequences
     // no checks for overflow are done
     
@@ -33,8 +33,6 @@ int fastAlignmentRoutine(const char* seq1, const char* seq2, const char* qual2,
     
     const short gap_extend = gapextend * 4;
     const short nuc_prior = nucprior * 4;
-    
-    constexpr short pos_inf {0x7800};
     
     __m128i _m1;
     __m128i _i1;
@@ -174,7 +172,7 @@ int fastAlignmentRoutine(const char* seq1, const char* seq2, const char* qual2,
 
 int fastAlignmentRoutine(const char* seq1, const char* seq2, const char* qual2, int len1, int len2,
                          int gapextend, int nucprior,
-                         const char* localgapopen, char* aln1, char* aln2, int* firstpos)
+                         const std::int8_t* localgapopen, char* aln1, char* aln2, int* firstpos)
 {
   // seq2 is the read; the shorter of the sequences
   // no checks for overflow are done
@@ -194,7 +192,6 @@ int fastAlignmentRoutine(const char* seq1, const char* seq2, const char* qual2, 
 
   const short gap_extend = gapextend*4;
   const short nuc_prior = nucprior*4;
-  const short pos_inf = 0x7800;
   const int match_label = 0;
   const int insert_label = 1;
   const int delete_label = 3;
@@ -421,8 +418,9 @@ int fastAlignmentRoutine(const char* seq1, const char* seq2, const char* qual2, 
 //_________________________________________________________________________________________________
 
 
-int calculateFlankScore(int hapLen, int leftHapFlank, int rightHapFlank, const char* quals, const char* localgapopen,
-                        int gapextend, int nucprior, int firstpos, const char* aln1, const char* aln2) {
+int calculateFlankScore(int hapLen, int leftHapFlank, int rightHapFlank, const char* quals,
+                        const std::int8_t* localgapopen, int gapextend, int nucprior,
+                        int firstpos, const char* aln1, const char* aln2) {
 
   char prevstate = 'M';
   int x = firstpos;     // index into haplotype

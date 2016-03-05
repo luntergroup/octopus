@@ -19,7 +19,7 @@
 #include <array>
 #include <cassert>
 
-#include "align.h"
+#include "align.hpp"
 #include "banded_simd_viterbi.hpp"
 
 #include <iostream> // DEBUG
@@ -125,7 +125,7 @@ auto align(const std::string& truth, const std::string& target,
                                                 static_cast<int>(target.size()),
                                                 static_cast<int>(model.gapextend),
                                                 static_cast<int>(model.nucprior),
-                                                reinterpret_cast<const char*>(truth_gap_open_penalties.data() + target_offset));
+                                                truth_gap_open_penalties.data() + target_offset);
         
         return -ln_10_div_10 * static_cast<double>(score);
     }
@@ -140,7 +140,7 @@ auto align(const std::string& truth, const std::string& target,
                                             static_cast<int>(target.size()),
                                             static_cast<int>(model.gapextend),
                                             static_cast<int>(model.nucprior),
-                                            reinterpret_cast<const char*>(truth_gap_open_penalties.data() + target_offset),
+                                            truth_gap_open_penalties.data() + target_offset,
                                             align1.data(), align2.data(), &first_pos);
     
     const auto truth_size     = static_cast<int>(truth.size());
@@ -149,7 +149,7 @@ auto align(const std::string& truth, const std::string& target,
     
     const auto flank_score = calculateFlankScore(truth_size, lhs_flank_size, rhs_flank_size,
                                                  reinterpret_cast<const char*>(target_qualities.data()),
-                                                 reinterpret_cast<const char*>(truth_gap_open_penalties.data()),
+                                                 truth_gap_open_penalties.data(),
                                                  static_cast<int>(model.gapextend),
                                                  static_cast<int>(model.nucprior),
                                                  static_cast<int>(first_pos + target_offset),

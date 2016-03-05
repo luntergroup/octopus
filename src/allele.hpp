@@ -23,8 +23,6 @@
 #include "mappable.hpp"
 #include "reference_genome.hpp"
 
-#include "string_utils.hpp"
-
 template <typename RegionTp>
 class BaseAllele : public Comparable<BaseAllele<RegionTp>>, public Mappable<BaseAllele<RegionTp>>
 {
@@ -56,8 +54,8 @@ private:
 
 // concrete types
 
-using Allele       = BaseAllele<GenomicRegion>;
 using ContigAllele = BaseAllele<ContigRegion>;
+using Allele       = BaseAllele<GenomicRegion>;
 
 // template base member methods
 
@@ -107,8 +105,15 @@ auto is_empty_sequence(const BaseAllele<RegionTp>& allele) noexcept
 
 namespace detail
 {
+    template <typename SequenceType>
+    bool is_subsequence(const SequenceType& lhs, const SequenceType& rhs)
+    {
+        using std::cbegin; using std::cend;
+        return std::search(cbegin(lhs), cend(lhs), cbegin(rhs), cend(rhs)) != cend(lhs);
+    }
+    
     template <typename RegionTp>
-    auto get_subsequence(const BaseAllele<RegionTp>& allele, const RegionTp& region)
+    auto subsequence(const BaseAllele<RegionTp>& allele, const RegionTp& region)
     {
         using ResultType = typename BaseAllele<RegionTp>::SequenceType;
         
@@ -139,14 +144,16 @@ bool contains(const BaseAllele<RegionTp>& lhs, const BaseAllele<RegionTp>& rhs)
 {
     if (!contains(mapped_region(lhs), mapped_region(rhs))) {
         return false;
-    } else if (is_empty_region(lhs)) {
+    }
+    
+    if (is_empty_region(lhs)) {
         // If the alleles are both insertions then both regions will be the same so we can only test
         // if the inserted rhs sequence is a subsequence of the lhs sequence. The rhs sequence
         // is required to be non-empty otherwise it would be a subsequence of everything.
-        return !rhs.get_sequence().empty() && Octopus::contains(lhs.get_sequence(), rhs.get_sequence());
-    } else {
-        return detail::get_subsequence(lhs, rhs.get_region()) == rhs.get_sequence();
+        return !rhs.get_sequence().empty() && detail::is_subsequence(lhs.get_sequence(), rhs.get_sequence());
     }
+    
+    return detail::subsequence(lhs, rhs.get_region()) == rhs.get_sequence();
 }
 
 template <typename RegionTp>
@@ -155,7 +162,8 @@ BaseAllele<RegionTp> splice(const BaseAllele<RegionTp>& allele, const RegionTp& 
     if (!contains(allele, region)) {
         throw std::logic_error {"Allele: trying to splice an uncontained region"};
     }
-    return BaseAllele<RegionTp> {region, detail::get_subsequence(allele, region)};
+    
+    return BaseAllele<RegionTp> {region, detail::subsequence(allele, region)};
 }
 
 template <typename RegionTp>
@@ -218,8 +226,10 @@ bool operator==(const BaseAllele<RegionTp>& lhs, const BaseAllele<RegionTp>& rhs
 template <typename RegionTp>
 bool operator<(const BaseAllele<RegionTp>& lhs, const BaseAllele<RegionTp>& rhs)
 {
-    return (lhs.get_region() == rhs.get_region()) ? lhs.get_sequence() < rhs.get_sequence() :
-    lhs.get_region() < rhs.get_region();
+    if (lhs.get_region() == rhs.get_region()) {
+        return lhs.get_sequence() < rhs.get_sequence();
+    }
+    return lhs.get_region() < rhs.get_region();
 }
 
 namespace std {
@@ -228,7 +238,7 @@ namespace std {
         size_t operator()(const BaseAllele<RegionTp>& allele) const
         {
             using boost::hash_combine;
-            size_t result {};
+            size_t result {0};
             hash_combine(result, hash<RegionTp>()(allele.get_region()));
             hash_combine(result, hash<typename BaseAllele<RegionTp>::SequenceType>()(allele.get_sequence()));
             return result;

@@ -10,12 +10,12 @@
 
 #include <unordered_map>
 #include <unordered_set>
-#include <utility>
-#include <algorithm>
-#include <iterator>
 #include <deque>
-#include <iostream>
-#include <limits>
+#include <algorithm>
+#include <numeric>
+#include <iterator>
+#include <functional>
+#include <utility>
 
 #include "genomic_region.hpp"
 #include "allele.hpp"
@@ -31,6 +31,8 @@
 #include "haplotype_prior_model.hpp"
 #include "probability_matrix.hpp"
 #include "merge_transform.hpp"
+
+#include <iostream> // DEBUG
 
 namespace Octopus
 {
@@ -150,8 +152,8 @@ using RefCalls = std::vector<RefCall>;
 } // namespace
 
 namespace debug {
-    void print_genotype_posteriors(const GenotypePosteriorMap& genotype_posteriors, size_t n = 5);
-    void print_allele_posteriors(const AllelePosteriorMap& allele_posteriors, size_t n = 10);
+    void print_genotype_posteriors(const GenotypePosteriorMap& genotype_posteriors, std::size_t n = 5);
+    void print_allele_posteriors(const AllelePosteriorMap& allele_posteriors, std::size_t n = 10);
     void print_variant_calls(const VariantCallBlocks& calls);
     void print_genotype_calls(const GenotypeCallMap& calls);
     void print_genotype_calls(const std::vector<GenotypeCallMap>& calls);
@@ -162,22 +164,25 @@ namespace
 
 // allele posterior calculations
 
+using AlleleBools          = std::deque<bool>; // using std::deque because std::vector<bool> is evil
+using GenotypeContainments = std::vector<AlleleBools>;
+
 auto marginalise(const SampleGenotypePosteriorMap& genotype_posteriors,
-                 const std::deque<bool>& contained_alleles)
+                 const AlleleBools& contained_alleles)
 {
-    auto result = std::numeric_limits<double>::min();
+    auto result = std::inner_product(std::cbegin(genotype_posteriors), std::cend(genotype_posteriors),
+                                     std::cbegin(contained_alleles), 0.0, std::plus<void> {},
+                                     [] (const auto& p, const auto is_contained) {
+                                         return (is_contained) ? p.second : 0.0;
+                                     });
     
-    auto it = std::cbegin(contained_alleles);
-    
-    for (const auto& genotype_posterior : genotype_posteriors) {
-        if (*it++) result += genotype_posterior.second;
-    }
+    if (result > 1.0) result = 1.0; // just to account for floating point error
     
     return result;
 }
 
 auto compute_sample_allele_posteriors(const SampleGenotypePosteriorMap& genotype_posteriors,
-                                      const std::vector<std::deque<bool>>& contained_alleles)
+                                      const GenotypeContainments& contained_alleles)
 {
     std::vector<double> result {};
     result.reserve(contained_alleles.size());
@@ -194,9 +199,11 @@ auto find_contained_alleles(const GenotypePosteriorMap& genotype_posteriors,
 {
     const auto num_genotypes = genotype_posteriors.size2();
     
-    std::vector<std::deque<bool>> result {};
+    GenotypeContainments result {};
     
-    if (num_genotypes == 0 || genotype_posteriors.empty1() || alleles.empty()) return result;
+    if (num_genotypes == 0 || genotype_posteriors.empty1() || alleles.empty()) {
+        return result;
+    }
     
     result.reserve(alleles.size());
     
@@ -205,14 +212,12 @@ auto find_contained_alleles(const GenotypePosteriorMap& genotype_posteriors,
     const auto genotype_end   = genotype_posteriors.end(test_sample);
     
     for (const auto& allele : alleles) {
-        std::deque<bool> allele_result(num_genotypes);
+        result.emplace_back(num_genotypes);
         
-        std::transform(genotype_begin, genotype_end, std::begin(allele_result),
+        std::transform(genotype_begin, genotype_end, std::begin(result.back()),
                        [&] (const auto& p) {
                            return contains(p.first, allele);
                        });
-        
-        result.emplace_back(std::move(allele_result));
     }
     
     return result;
@@ -239,7 +244,7 @@ AllelePosteriorMap compute_allele_posteriors(const GenotypePosteriorMap& genotyp
 
 double max_posterior(const Allele& allele, const AllelePosteriorMap& allele_posteriors)
 {
-    auto result = std::numeric_limits<double>::min();
+    double result {0};
     
     for (const auto& sample_allele_posteriors : allele_posteriors) {
         const auto curr = sample_allele_posteriors.second.at(allele);
@@ -362,7 +367,7 @@ GenotypeCalls call_genotypes(const GenotypePosteriorMap& genotype_posteriors,
     for (const auto& sample_genotype_posteriors : genotype_posteriors) {
         const auto& sample_genotype_call = call_genotype(sample_genotype_posteriors.second);
         
-        for (size_t i {0}; i < variant_regions.size(); ++i) {
+        for (std::size_t i {0}; i < variant_regions.size(); ++i) {
             auto spliced_genotype = splice<Allele>(sample_genotype_call.first, variant_regions[i]);
             
             const auto posterior = marginalise(spliced_genotype, sample_genotype_posteriors.second);
@@ -381,7 +386,7 @@ GenotypeCalls call_genotypes(const GenotypePosteriorMap& genotype_posteriors,
 double marginalise_reference_genotype(const Allele& reference_allele,
                                       const SampleGenotypePosteriorMap& sample_genotype_posteriors)
 {
-    auto result = std::numeric_limits<double>::min();
+    double result {0};
     
     for (const auto& genotype_posterior : sample_genotype_posteriors) {
         if (is_homozygous(genotype_posterior.first, reference_allele)) {
@@ -646,9 +651,11 @@ PopulationVariantCaller::call_variants(const std::vector<Variant>& candidates,
     
     const auto allele_posteriors = compute_allele_posteriors(genotype_posteriors, callable_alleles);
     
-    //debug::print_allele_posteriors(allele_posteriors);
+    debug::print_allele_posteriors(allele_posteriors);
     
     auto variant_calls = call_blocked_variants(candidates, allele_posteriors, min_variant_posterior_);
+    
+    //debug::print_variant_calls(variant_calls);
     
     parsimonise_variant_calls(variant_calls, reference_);
     
@@ -674,7 +681,7 @@ PopulationVariantCaller::call_variants(const std::vector<Variant>& candidates,
 
 namespace debug
 {
-void print_genotype_posteriors(const GenotypePosteriorMap& genotype_posteriors, const size_t n)
+void print_genotype_posteriors(const GenotypePosteriorMap& genotype_posteriors, const std::size_t n)
 {
     for (const auto& sample_posteriors : genotype_posteriors) {
         auto m = std::min(n, sample_posteriors.second.size());
@@ -690,7 +697,7 @@ void print_genotype_posteriors(const GenotypePosteriorMap& genotype_posteriors, 
             return lhs.second > rhs.second;
         });
         
-        for (size_t i {}; i < m; ++i) {
+        for (std::size_t i {}; i < m; ++i) {
             std::cout << "\t* ";
             print_variant_alleles(v[i].first);
             std::cout << " " << std::setprecision(20) << v[i].second << std::endl;
@@ -698,26 +705,30 @@ void print_genotype_posteriors(const GenotypePosteriorMap& genotype_posteriors, 
     }
 }
 
-void print_allele_posteriors(const AllelePosteriorMap& allele_posteriors, const size_t n)
+void print_allele_posteriors(const AllelePosteriorMap& allele_posteriors, const std::size_t n)
 {
     for (const auto& sample_posteriors : allele_posteriors) {
-        auto m = std::min(n, sample_posteriors.second.size());
+        const auto m = std::min(n, sample_posteriors.second.size());
         std::cout << "printing top " << m << " allele posteriors for sample " << sample_posteriors.first << std::endl;
         
-        std::vector<std::pair<Allele, double>> v {};
+        std::vector<std::pair<std::reference_wrapper<const Allele>, double>> v {};
         v.reserve(sample_posteriors.second.size());
         
         std::copy(std::cbegin(sample_posteriors.second), std::cend(sample_posteriors.second),
                   std::back_inserter(v));
         
-        std::sort(std::begin(v), std::end(v), [] (const auto& lhs, const auto& rhs) {
-            return lhs.second > rhs.second;
-        });
+        const auto mth = std::next(std::begin(v), m);
         
-        for (size_t i {}; i < m; ++i) {
-            std::cout << "\t* ";
-            std::cout << v[i].first << " " << std::setprecision(20) << v[i].second << std::endl;
-        }
+        std::partial_sort(std::begin(v), mth, std::end(v),
+                          [] (const auto& lhs, const auto& rhs) {
+                              return lhs.second > rhs.second;
+                          });
+        
+        std::for_each(std::begin(v), mth,
+                      [] (const auto& p) {
+                          std::cout << "\t* ";
+                          std::cout << p.first.get() << " " << std::setprecision(20) << p.second << '\n';
+                      });
     }
 }
 

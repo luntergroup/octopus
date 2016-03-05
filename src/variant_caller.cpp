@@ -220,9 +220,8 @@ std::deque<VcfRecord> VariantCaller::call_variants(const GenomicRegion& call_reg
             break;
         }
         
-        //std::cout << "active region is " << active_region << '\n';
-        
-        //std::cout << "haplotype region is " << haplotypes.front().get_region() << '\n';
+        std::cout << "active region is " << active_region << '\n';
+        std::cout << "haplotype region is " << haplotypes.front().get_region() << '\n';
         
         const auto active_reads = copy_overlapped(reads, active_region);
         

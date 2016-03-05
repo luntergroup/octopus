@@ -146,7 +146,8 @@ std::vector<Variant> parsimonise_each(const std::vector<Variant>& variants,
 std::vector<Variant> parsimonise_each(std::vector<Variant>&& variants,
                                       const ReferenceGenome& reference);
 
-std::vector<Variant> parsimonise_together(const std::vector<Variant>& variants, const ReferenceGenome& reference);
+std::vector<Variant> parsimonise_together(const std::vector<Variant>& variants,
+                                          const ReferenceGenome& reference);
 
 bool is_snp(const Variant& variant) noexcept;
 

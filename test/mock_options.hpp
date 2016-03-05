@@ -68,9 +68,11 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         
         // for population
         
-        "--regions", "22:20764594",
+        //"--regions", "22",
         
-        //"--regions", "4:40,436,510-40,436,694", // NA12878_low_coverage odd genotype call (should be 1/1)
+        // Bad VCF representation
+        //"--regions", "22:41,836,102-41,836,142", // NA12878_low_coverage deletion 2|0
+        "--regions", "22:43,035,829-43,035,869", // NA12878_low_coverage deletion 2|0
         
         //"--regions", "16:46,392,879-46,393,098", // NA12878_low_coverage huge memory spike
         //"--regions", "22:20656122-20656146", // NA12878_high_coverage causing memory spike

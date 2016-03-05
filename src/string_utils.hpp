@@ -55,7 +55,7 @@ inline size_t stringlen(const std::string& str)
     return str.size();
 }
 
-inline bool contains(const std::string& lhs, const std::string& rhs)
+inline bool find(const std::string& lhs, const std::string& rhs)
 {
     return lhs.find(rhs) != std::string::npos;
 }

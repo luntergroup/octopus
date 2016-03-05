@@ -73,7 +73,7 @@ public:
     
     std::vector<Variant> difference(const Haplotype& other) const;
     
-    size_t get_hash() const noexcept;
+    std::size_t get_hash() const noexcept;
     
     friend struct HaveSameAlleles;
     
@@ -87,44 +87,54 @@ public:
 private:
     GenomicRegion region_;
     
-    std::reference_wrapper<const ReferenceGenome> reference_;
-    
     std::vector<ContigAllele> explicit_alleles_;
     
     ContigRegion explicit_allele_region_;
     
     SequenceType cached_sequence_;
-    size_t cached_hash_;
+    std::size_t cached_hash_;
+    
+    std::reference_wrapper<const ReferenceGenome> reference_;
     
     using AlleleIterator = decltype(explicit_alleles_)::const_iterator;
     
-    SequenceType get_reference_sequence(const GenomicRegion& region) const;
+    void append(SequenceType& result, const ContigAllele& allele) const;
+    void append(SequenceType& result, AlleleIterator first, AlleleIterator last) const;
+    void append_reference(SequenceType& result, const ContigRegion& region) const;
     SequenceType get_reference_sequence(const ContigRegion& region) const;
-    SequenceType get_sequence_bounded_by_explicit_alleles(AlleleIterator first, AlleleIterator last) const;
-    SequenceType get_sequence_bounded_by_explicit_alleles() const;
 };
 
 template <typename R>
 Haplotype::Haplotype(R&& region, const ReferenceGenome& reference)
 :
 region_ {std::forward<R>(region)},
-reference_ {reference},
 explicit_alleles_ {},
 explicit_allele_region_ {},
-cached_sequence_ {get_reference_sequence(region_)},
-cached_hash_ {std::hash<SequenceType>()(cached_sequence_)}
+cached_sequence_ {reference.get_sequence(region_)},
+cached_hash_ {std::hash<SequenceType>()(cached_sequence_)},
+reference_ {reference}
 {}
+
+namespace detail
+{
+    template <typename T>
+    void append(T& result, const ReferenceGenome& reference,
+                const GenomicRegion::ContigNameType& contig, const ContigRegion& region)
+    {
+        result.append(reference.get_sequence(GenomicRegion {contig, region}));
+    }
+}
 
 template <typename R, typename ForwardIt>
 Haplotype::Haplotype(R&& region, ForwardIt first_allele, ForwardIt last_allele,
                      const ReferenceGenome& reference)
 :
 region_ {std::forward<R>(region)},
-reference_ {reference},
 explicit_alleles_ {first_allele, last_allele},
 explicit_allele_region_ {},
 cached_sequence_ {},
-cached_hash_ {0}
+cached_hash_ {0},
+reference_ {reference}
 {
     if (!explicit_alleles_.empty()) {
         explicit_allele_region_ = encompassing_region(explicit_alleles_.front(), explicit_alleles_.back());
@@ -145,17 +155,19 @@ cached_hash_ {0}
         
         cached_sequence_.reserve(num_bases);
         
+        const auto& contig = region_.get_contig_name();
+        
         if (!is_empty_region(lhs_reference_region)) {
-            cached_sequence_ += get_reference_sequence(lhs_reference_region);
+            detail::append(cached_sequence_, reference, contig, lhs_reference_region);
         }
         
-        cached_sequence_ += get_sequence_bounded_by_explicit_alleles();
+        append(cached_sequence_, std::cbegin(explicit_alleles_), std::cend(explicit_alleles_));
         
         if (!is_empty_region(rhs_reference_region)) {
-            cached_sequence_ += get_reference_sequence(rhs_reference_region);
+            detail::append(cached_sequence_, reference, contig, rhs_reference_region);
         }
     } else {
-        cached_sequence_ = get_reference_sequence(region_);
+        cached_sequence_ = reference.get_sequence(region_);
     }
     
     cached_hash_ = std::hash<SequenceType>()(cached_sequence_);
@@ -267,9 +279,9 @@ namespace std
 
 namespace boost
 {
-    template <> struct hash<Haplotype> : std::unary_function<Haplotype, size_t>
+    template <> struct hash<Haplotype> : std::unary_function<Haplotype, std::size_t>
     {
-        size_t operator()(const Haplotype& h) const
+        std::size_t operator()(const Haplotype& h) const
         {
             return std::hash<Haplotype>()(h);
         }
