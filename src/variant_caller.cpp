@@ -183,7 +183,7 @@ std::deque<VcfRecord> VariantCaller::call_variants(const GenomicRegion& call_reg
     
     candidate_generator_.clear();
     
-    debug::print_candidates(candidates);
+    //debug::print_candidates(candidates);
     
     if (!refcalls_requested() && candidates.empty()) {
         return result;
@@ -220,8 +220,8 @@ std::deque<VcfRecord> VariantCaller::call_variants(const GenomicRegion& call_reg
             break;
         }
         
-        std::cout << "active region is " << active_region << '\n';
-        std::cout << "haplotype region is " << haplotypes.front().get_region() << '\n';
+        //std::cout << "active region is " << active_region << '\n';
+        //std::cout << "haplotype region is " << haplotypes.front().get_region() << '\n';
         
         const auto active_reads = copy_overlapped(reads, active_region);
         

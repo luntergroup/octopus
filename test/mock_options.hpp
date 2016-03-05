@@ -70,9 +70,11 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         
         //"--regions", "22",
         
+        //"--regions", "22:16,909,216-16,909,255", // NA12878_low_coverage insertion followed by 2 SNPs
+        
         // Bad VCF representation
         //"--regions", "22:41,836,102-41,836,142", // NA12878_low_coverage deletion 2|0
-        "--regions", "22:43,035,829-43,035,869", // NA12878_low_coverage deletion 2|0
+        //"--regions", "22:43,035,829-43,035,869", // NA12878_low_coverage deletion 2|0
         
         //"--regions", "16:46,392,879-46,393,098", // NA12878_low_coverage huge memory spike
         //"--regions", "22:20656122-20656146", // NA12878_high_coverage causing memory spike
@@ -94,7 +96,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         
         //"--regions", "6:93,705,800-93,706,166", // NA12878_low_coverage no phase
         //"--regions", "6:58,605,652-58,606,061",   // NA12878_low_coverage partial phase
-        //"--regions", "6:58,605,687-58,605,779",   // NA12878_low_coverage phase strong
+        "--regions", "6:58,605,687-58,605,779",   // NA12878_low_coverage phase strong
         //"--regions", "3:108,803,741-108,803,854", // NA12878_low_coverage phase weak
         //"--regions", "6:22,877,929-22,878,012", // NA12878_low_coverage HMM error
         //"--regions", "6:89,236,310-89,237,082", // NA12878_high_coverage very nice phasing test

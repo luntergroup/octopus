@@ -83,7 +83,10 @@ struct GenotypeCall
     GenotypeCall() = default;
     
     template <typename T> GenotypeCall(T&& genotype, double posterior)
-    : genotype {std::forward<T>(genotype)}, posterior {posterior} {}
+    :
+    genotype {std::forward<T>(genotype)},
+    posterior {posterior}
+    {}
     
     GenomicRegion get_region() const { return phase_region; }
     
@@ -104,7 +107,10 @@ struct VariantCall : public Mappable<VariantCall>
     VariantCall() = default;
     template <typename T>
     VariantCall(T&& variant, double posterior)
-    : variant {std::forward<T>(variant)}, posterior {posterior} {}
+    :
+    variant {std::forward<T>(variant)},
+    posterior {posterior}
+    {}
     
     GenomicRegion get_region() const { return variant.get_region(); }
     
@@ -119,7 +125,10 @@ struct VariantCallBlock : public Mappable<VariantCallBlock>
     VariantCallBlock() = default;
     template <typename T>
     VariantCallBlock(T&& variants, double posterior)
-    : variants {std::forward<T>(variants)}, posterior {posterior} {}
+    :
+    variants {std::forward<T>(variants)},
+    posterior {posterior}
+    {}
     
     GenomicRegion get_region() const { return variants.front().get_region(); }
     
@@ -151,7 +160,8 @@ using RefCalls = std::vector<RefCall>;
 
 } // namespace
 
-namespace debug {
+namespace debug
+{
     void print_genotype_posteriors(const GenotypePosteriorMap& genotype_posteriors, std::size_t n = 5);
     void print_allele_posteriors(const AllelePosteriorMap& allele_posteriors, std::size_t n = 10);
     void print_variant_calls(const VariantCallBlocks& calls);
@@ -359,6 +369,8 @@ double marginalise(const Genotype<Allele>& genotype, const SampleGenotypePosteri
                            });
 }
 
+// Call cleanup
+
 GenotypeCalls call_genotypes(const GenotypePosteriorMap& genotype_posteriors,
                              const std::vector<GenomicRegion>& variant_regions)
 {
@@ -376,6 +388,58 @@ GenotypeCalls call_genotypes(const GenotypePosteriorMap& genotype_posteriors,
                               std::forward_as_tuple(sample_genotype_posteriors.first),
                               std::forward_as_tuple(std::move(spliced_genotype), posterior));
         }
+    }
+    
+    return result;
+}
+
+bool is_genotyped(const Variant& variant, const GenotypeCallMap& genotype_calls)
+{
+    return std::any_of(std::cbegin(genotype_calls), std::cend(genotype_calls),
+                       [&variant] (const auto& p) {
+                           return p.second.genotype.contains(variant.get_alt_allele());
+                       });
+}
+
+std::size_t remove_non_genotyped_calls(VariantCallBlock& variant_calls,
+                                    const GenotypeCallMap& genotype_calls)
+{
+    assert(!variant_calls.variants.empty());
+    
+    if (variant_calls.variants.size() == 1) {
+        return 0;
+    }
+    
+    auto& variants = variant_calls.variants;
+    
+    // TODO: to stop missing some edge cases, shouldn't need this when we figure a better way
+    // to represent overlapping variants in VCF
+    if (std::all_of(std::begin(variants), std::end(variants),
+                    [&genotype_calls] (const Variant& call) {
+                        return !is_genotyped(call, genotype_calls);
+                    })) return 0;
+    
+    const auto it = std::remove_if(std::begin(variants), std::end(variants),
+                                   [&genotype_calls] (const Variant& call) {
+                                       return !is_genotyped(call, genotype_calls);
+                                   });
+    
+    const auto result = std::distance(it, std::end(variants));
+    
+    variants.erase(it, std::end(variants));
+    
+    return result;
+}
+
+std::size_t remove_non_genotyped_calls(VariantCallBlocks& variant_calls,
+                                    const GenotypeCalls& genotype_calls)
+{
+    std::size_t result {0};
+    
+    auto it = std::cbegin(genotype_calls);
+    
+    for (auto& block : variant_calls) {
+        result += remove_non_genotyped_calls(block, *it++);
     }
     
     return result;
@@ -494,6 +558,8 @@ VcfRecord::Builder output_variant_call(VariantCallBlock&& block,
                                        const ReferenceGenome& reference,
                                        const ReadMap& reads)
 {
+    assert(!block.variants.empty());
+    
     using std::to_string;
     
     auto result = VcfRecord::Builder {};
@@ -651,7 +717,7 @@ PopulationVariantCaller::call_variants(const std::vector<Variant>& candidates,
     
     const auto allele_posteriors = compute_allele_posteriors(genotype_posteriors, callable_alleles);
     
-    debug::print_allele_posteriors(allele_posteriors);
+    //debug::print_allele_posteriors(allele_posteriors);
     
     auto variant_calls = call_blocked_variants(candidates, allele_posteriors, min_variant_posterior_);
     
@@ -664,6 +730,8 @@ PopulationVariantCaller::call_variants(const std::vector<Variant>& candidates,
     const auto called_regions = extract_regions(variant_calls);
     
     auto variant_genotype_calls = call_genotypes(genotype_posteriors, called_regions);
+    
+    remove_non_genotyped_calls(variant_calls, variant_genotype_calls);
     
     set_phasings(variant_genotype_calls, phase_set, called_regions); // TODO
     
