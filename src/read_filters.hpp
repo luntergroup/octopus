@@ -188,12 +188,12 @@ struct mate_is_mapped
 
 // Context-based filters
 
-struct is_not_duplicate
+struct filter_duplicates
 {
-    template <typename Iterator>
-    bool operator()(const AlignedRead& read, Iterator first_good_read, Iterator last_good_read) const
+    template <typename ForwardIt>
+    ForwardIt operator()(ForwardIt first_read, ForwardIt last_read) const
     {
-        return first_good_read == last_good_read || !IsDuplicate()(read, *last_good_read);
+        return std::unique(first_read, last_read, IsDuplicate {});
     }
 };
 

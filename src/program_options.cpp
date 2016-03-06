@@ -932,7 +932,7 @@ namespace Octopus
         }
         
         if (!options.at("allow-octopus-duplicates").as<bool>()) {
-            result.register_filter(ReadFilters::is_not_duplicate());
+            result.register_filter(ReadFilters::filter_duplicates());
         }
         
         if (!options.at("allow-qc-fails").as<bool>()) {

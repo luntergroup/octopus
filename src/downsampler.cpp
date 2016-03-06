@@ -141,7 +141,7 @@ namespace
         return result;
     }
 } // namespace
-    
+
 std::size_t downsample(MappableFlatMultiSet<AlignedRead>& reads,
                        const unsigned max_coverage, const unsigned min_coverage)
 {
