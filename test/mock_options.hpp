@@ -68,6 +68,8 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         
         // for population
         
+        "--regions", "6:33,036,187-33,036,470", // NA12878_low_coverage phase test
+        
         //"--regions", "22",
         
         //"--regions", "22:16,909,216-16,909,255", // NA12878_low_coverage insertion followed by 2 SNPs
@@ -96,7 +98,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         
         //"--regions", "6:93,705,800-93,706,166", // NA12878_low_coverage no phase
         //"--regions", "6:58,605,652-58,606,061",   // NA12878_low_coverage partial phase
-        "--regions", "6:58,605,687-58,605,779",   // NA12878_low_coverage phase strong
+        //"--regions", "6:58,605,687-58,605,779",   // NA12878_low_coverage phase strong
         //"--regions", "3:108,803,741-108,803,854", // NA12878_low_coverage phase weak
         //"--regions", "6:22,877,929-22,878,012", // NA12878_low_coverage HMM error
         //"--regions", "6:89,236,310-89,237,082", // NA12878_high_coverage very nice phasing test

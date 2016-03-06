@@ -20,6 +20,7 @@
 #include "probability_matrix.hpp"
 #include "haplotype.hpp"
 #include "genotype.hpp"
+#include "variant.hpp"
 
 namespace Octopus
 {
@@ -75,10 +76,12 @@ namespace Octopus
         };
         
         boost::optional<PhaseSet> try_phase(const std::vector<Haplotype>& haplotypes,
-                                            const GenotypePosteriorMap& genotype_posteriors);
+                                            const GenotypePosteriorMap& genotype_posteriors,
+                                            const std::vector<Variant>& candidates);
         
         PhaseSet force_phase(const std::vector<Haplotype>& haplotypes,
-                             const GenotypePosteriorMap& genotype_posteriors);
+                             const GenotypePosteriorMap& genotype_posteriors,
+                             const std::vector<Variant>& candidates);
         
     private:
         double min_phase_score_;
@@ -86,15 +89,24 @@ namespace Octopus
     
     template <typename Region>
     Phaser::PhaseSet::PhaseRegion::PhaseRegion(Region&& region, const double score)
-    : region {std::forward<Region>(region)}, score {score} {}
+    :
+    region {std::forward<Region>(region)},
+    score {score}
+    {}
     
     template <typename R>
     Phaser::PhaseSet::PhaseSet(R&& region)
-    : region {std::forward<R>(region)}, phase_regions {} {}
+    :
+    region {std::forward<R>(region)},
+    phase_regions {}
+    {}
     
     template <typename R, typename T>
     Phaser::PhaseSet::PhaseSet(R&& region, T&& phase_regions)
-    : region {std::forward<R>(region)}, phase_regions {std::forward<T>(phase_regions)} {}
+    :
+    region {std::forward<R>(region)},
+    phase_regions {std::forward<T>(phase_regions)}
+    {}
 } // namespace Octopus
 
 #endif /* phaser_hpp */

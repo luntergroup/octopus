@@ -183,7 +183,7 @@ std::deque<VcfRecord> VariantCaller::call_variants(const GenomicRegion& call_reg
     
     candidate_generator_.clear();
     
-    //debug::print_candidates(candidates);
+    debug::print_candidates(candidates);
     
     if (!refcalls_requested() && candidates.empty()) {
         return result;
@@ -276,7 +276,8 @@ std::deque<VcfRecord> VariantCaller::call_variants(const GenomicRegion& call_reg
         //debug::print_haplotype_posteriors(*caller_latents->get_haplotype_posteriors());
         
         resume_timer(phasing_timer);
-        const auto phase_set = phaser.try_phase(haplotypes, *caller_latents->get_genotype_posteriors());
+        const auto phase_set = phaser.try_phase(haplotypes, *caller_latents->get_genotype_posteriors(),
+                                                candidates);
         pause_timer(phasing_timer);
         
         auto unphased_active_region = active_region;
@@ -328,14 +329,15 @@ std::deque<VcfRecord> VariantCaller::call_variants(const GenomicRegion& call_reg
                 uncalled_region = right_overhang_region(passed_region, phase_set->region);
             }
             
+            const auto active_candidates = copy_overlapped(candidates, uncalled_region);
+            
             resume_timer(phasing_timer);
-            const auto forced_phasing = phaser.force_phase(haplotypes, *caller_latents->get_genotype_posteriors());
+            const auto forced_phasing = phaser.force_phase(haplotypes, *caller_latents->get_genotype_posteriors(),
+                                                           active_candidates);
             pause_timer(phasing_timer);
             
             haplotypes.clear();
             haplotypes.shrink_to_fit();
-            
-            auto active_candidates = copy_overlapped(candidates, uncalled_region);
             
             resume_timer(allele_generator_timer);
             auto alleles = generate_callable_alleles(uncalled_region, active_candidates,

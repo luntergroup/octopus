@@ -12,6 +12,7 @@
 #include <iterator>
 #include <utility>
 #include <vector>
+#include <functional>
 
 #include "common.hpp"
 #include "matrix_map.hpp"
@@ -34,6 +35,24 @@ namespace Octopus
     auto extract_keys(const ProbabilityMatrix<T>& matrix)
     {
         std::vector<T> result {};
+        
+        if (matrix.empty1()) return result;
+        
+        result.reserve(matrix.size2());
+        
+        const auto& test_sample = matrix.begin()->first;
+        
+        for (const auto& p : matrix[test_sample]) {
+            result.emplace_back(p.first);
+        }
+        
+        return result;
+    }
+    
+    template <typename T>
+    auto extract_key_refs(const ProbabilityMatrix<T>& matrix)
+    {
+        std::vector<std::reference_wrapper<const T>> result {};
         
         if (matrix.empty1()) return result;
         

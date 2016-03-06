@@ -317,6 +317,19 @@ Genotype<MappableType2> splice(const Genotype<MappableType1>& genotype, const Ge
     return result;
 }
 
+template <typename MappableType2, typename MappableType1>
+Genotype<MappableType2> splice(const std::reference_wrapper<const Genotype<MappableType1>> genotype,
+                               const GenomicRegion& region)
+{
+    Genotype<MappableType2> result {genotype.get().ploidy()};
+    
+    for (const auto& mappable : genotype.get()) {
+        result.emplace(splice<MappableType2>(mappable, region));
+    }
+    
+    return result;
+}
+
 bool contains(const Genotype<Haplotype>& genotype, const Allele& allele);
 bool contains_exact(const Genotype<Haplotype>& genotype, const Allele& allele);
 
@@ -660,8 +673,8 @@ auto make_element_ref_count_map(const Genotype<MappableType>& genotype)
     return result;
 }
 
-template <typename MappableType2, typename MappableType1>
-auto splice_all(const std::vector<Genotype<MappableType1>>& genotypes, const GenomicRegion& region)
+template <typename MappableType2, typename Container>
+auto splice_all(const Container& genotypes, const GenomicRegion& region)
 {
     std::vector<Genotype<MappableType2>> result {};
     result.reserve(genotypes.size());
