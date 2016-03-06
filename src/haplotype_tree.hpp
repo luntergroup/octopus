@@ -157,6 +157,22 @@ void extend_tree(const Container& elements, HaplotypeTree& tree)
     extend_tree(std::cbegin(elements), std::cend(elements), tree);
 }
 
+template <typename Container>
+void prune_all(const Container& elements, HaplotypeTree& tree)
+{
+    for (const auto& haplotype : elements) {
+        tree.prune_all(haplotype);
+    }
+}
+
+template <typename Container>
+void prune_unique(const Container& elements, HaplotypeTree& tree)
+{
+    for (const auto& haplotype : elements) {
+        tree.prune_unique(haplotype);
+    }
+}
+
 template <typename InputIt>
 std::vector<Haplotype>
 generate_all_haplotypes(InputIt first, InputIt last, const ReferenceGenome& reference)

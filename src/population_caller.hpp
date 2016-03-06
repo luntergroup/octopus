@@ -56,14 +56,15 @@ private:
         using CallerLatents::HaplotypePosteiorMap;
         using CallerLatents::GenotypePosteriorMap;
         
-        Latents(ModelLatents &&);
+        Latents(ModelLatents&&);
+        Latents(HaplotypePosteiorMap&&, GenotypePosteriorMap&&);
         
-        std::shared_ptr<HaplotypePosteiorMap> get_haplotype_posteriors() const override
+        std::shared_ptr<HaplotypePosteiorMap> get_haplotype_posteriors() const noexcept override
         {
             return haplotype_frequencies_;
         }
         
-        std::shared_ptr<GenotypePosteriorMap> get_genotype_posteriors() const override
+        std::shared_ptr<GenotypePosteriorMap> get_genotype_posteriors() const noexcept override
         {
             return genotype_posteriors_;
         }

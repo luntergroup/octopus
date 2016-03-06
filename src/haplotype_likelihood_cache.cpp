@@ -28,7 +28,7 @@ sample_indices_ {samples.size()}
 
 void HaplotypeLikelihoodCache::populate(const ReadMap& reads,
                                         const std::vector<Haplotype>& haplotypes,
-                                        HaplotypeLikelihoodModel::InactiveRegionState flank_state)
+                                        HaplotypeLikelihoodModel::FlankState flank_state)
 {
     if (!cache_.empty()) {
         cache_.clear();

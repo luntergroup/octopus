@@ -140,7 +140,7 @@ auto marginalise_haplotypes(const std::vector<Haplotype>& haplotypes,
     for (const auto& s : genotype_posteriors) {
         for (const auto& p : s.second) {
             for (const auto& haplotype : p.first) {
-                result[haplotype] += p.second;
+                result.at(haplotype) += p.second;
             }
         }
     }

@@ -117,7 +117,7 @@ auto align(const std::string& truth, const std::string& target,
         return std::numeric_limits<double>::lowest();
     }
     
-    if (!model.do_backtrace) {
+    if (!(model.do_lhs_backtrace || model.do_rhs_backtrace)) {
         const auto score = fastAlignmentRoutine(truth.data() + target_offset,
                                                 target.data(),
                                                 reinterpret_cast<const char*>(target_qualities.data()),
@@ -144,8 +144,8 @@ auto align(const std::string& truth, const std::string& target,
                                             align1.data(), align2.data(), &first_pos);
     
     const auto truth_size     = static_cast<int>(truth.size());
-    const auto lhs_flank_size = static_cast<int>(target_offset);
-    const auto rhs_flank_size = static_cast<int>(truth_size - (target_offset + target.size()));
+    const auto lhs_flank_size = (model.do_lhs_backtrace) ? static_cast<int>(target_offset) : 0;
+    const auto rhs_flank_size = (model.do_rhs_backtrace) ? static_cast<int>(truth_size - (target_offset + target.size())) : 0;
     
     const auto flank_score = calculateFlankScore(truth_size, lhs_flank_size, rhs_flank_size,
                                                  reinterpret_cast<const char*>(target_qualities.data()),

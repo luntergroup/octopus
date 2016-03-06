@@ -97,12 +97,15 @@ namespace Octopus
     // public methods
     
     HaplotypeLikelihoodModel::HaplotypeLikelihoodModel(const Haplotype& haplotype,
-                                                       InactiveRegionState flank_state)
+                                                       FlankState flank_state)
     :
     indel_error_model_ {},
     haplotype_ {haplotype},
     haplotype_gap_open_penalities_ {indel_error_model_.calculate_gap_open_penalties(haplotype)},
-    model_ {2, 3, flank_state != InactiveRegionState::Clear}
+    model_ {2, 3,
+        flank_state == FlankState::LeftUnclear  || flank_state == FlankState::Unclear,
+        flank_state == FlankState::RightUnclear || flank_state == FlankState::Unclear
+        }
     {}
     
     double HaplotypeLikelihoodModel::log_probability(const AlignedRead& read,

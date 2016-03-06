@@ -75,7 +75,7 @@ namespace Octopus
     active_allele_counts_ {}
     {}
     
-    GenomicRegion HaplotypeGenerator::tell_next_active_region()
+    GenomicRegion HaplotypeGenerator::tell_next_active_region() const
     {
         if (!next_active_region_) {
             next_active_region_ = walker_.walk(current_active_region_, reads_, alleles_);
@@ -92,7 +92,7 @@ namespace Octopus
         {
             return std::count_if(std::cbegin(haplotypes), std::cend(haplotypes),
                                  [&allele] (const auto& haplotype) {
-                                     return haplotype.contains_exact(allele);
+                                     return haplotype.contains(allele);
                                  });
         }
     } // namespace
@@ -165,11 +165,11 @@ namespace Octopus
     
     void HaplotypeGenerator::keep_haplotypes(const std::vector<Haplotype>& haplotypes)
     {
+        next_active_region_ = boost::none;
+        
         if (!is_lagged_ || tree_.num_haplotypes() == haplotypes.size()) return;
         
-        for (const auto& haplotype : haplotypes) {
-            tree_.prune_unique(haplotype);
-        }
+        prune_unique(haplotypes, tree_);
         
         std::deque<Allele> unused_alleles {};
         
@@ -190,22 +190,32 @@ namespace Octopus
     
     void HaplotypeGenerator::remove_haplotypes(const std::vector<Haplotype>& haplotypes)
     {
+        if (haplotypes.empty()) return;
+        
+        next_active_region_ = boost::none;
+        
         if (!is_lagged_ || haplotypes.size() == tree_.num_haplotypes()) {
             tree_.clear();
             alleles_.erase_overlapped(current_active_region_);
             active_allele_counts_.clear();
         } else {
-            for (const auto& haplotype : haplotypes) {
-                tree_.prune_all(haplotype);
-            }
+            prune_all(haplotypes, tree_);
             
             std::deque<Allele> removed_alleles {};
             
+//            std::cout << "removing haplotypes" << '\n';
+//            for (const auto& haplotype : haplotypes) {
+//                print_variant_alleles(haplotype); std::cout << '\n';
+//            }
+            
             for (const auto& allele : alleles_.overlap_range(current_active_region_)) {
+                //std::cout << allele << " " << active_allele_counts_[allele] << " " << count_contained(allele, haplotypes) << '\n';
                 if (active_allele_counts_[allele] == count_contained(allele, haplotypes)) {
                     removed_alleles.push_back(allele);
                 }
             }
+            
+            //std::cout << "removed " << removed_alleles.size() << " alleles" << std::endl;
             
             alleles_.erase_all(std::cbegin(removed_alleles), std::cend(removed_alleles));
             

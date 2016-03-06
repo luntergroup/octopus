@@ -17,7 +17,10 @@ namespace PairHMM
 {
     struct Model
     {
-        int nucprior, gapextend; bool do_backtrace = false;
+        int nucprior;
+        int gapextend;
+        bool do_lhs_backtrace = false;
+        bool do_rhs_backtrace = false;
     };
     
     // p(target | truth, target_qualities, target_gap_open_penalties, model)

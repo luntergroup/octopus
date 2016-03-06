@@ -46,7 +46,7 @@ namespace Octopus
         HaplotypeGenerator(HaplotypeGenerator&&)                 = default;
         HaplotypeGenerator& operator=(HaplotypeGenerator&&)      = default;
         
-        GenomicRegion tell_next_active_region();
+        GenomicRegion tell_next_active_region() const;
         
         std::pair<std::vector<Haplotype>, GenomicRegion> progress();
         
@@ -63,7 +63,7 @@ namespace Octopus
         std::reference_wrapper<const ReadMap> reads_;
         
         GenomicRegion current_active_region_;
-        boost::optional<GenomicRegion> next_active_region_;
+        mutable boost::optional<GenomicRegion> next_active_region_;
         
         unsigned max_haplotypes_, hard_max_haplotypes_ = 150'000;
         

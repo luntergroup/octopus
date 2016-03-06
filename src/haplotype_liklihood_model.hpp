@@ -30,13 +30,13 @@ namespace Octopus
     class HaplotypeLikelihoodModel
     {
     public:
-        enum class InactiveRegionState { Clear, Unclear };
+        enum class FlankState { Clear, Unclear, LeftUnclear, RightUnclear };
         
         using MapPositionItr = std::vector<std::size_t>::const_iterator;
         
         HaplotypeLikelihoodModel() = delete;
         
-        HaplotypeLikelihoodModel(const Haplotype& haplotype, InactiveRegionState flank_state);
+        HaplotypeLikelihoodModel(const Haplotype& haplotype, FlankState flank_state);
         
         ~HaplotypeLikelihoodModel() = default;
         

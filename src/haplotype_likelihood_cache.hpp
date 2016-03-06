@@ -38,7 +38,7 @@ namespace Octopus
         
         void populate(const ReadMap& reads,
                       const std::vector<Haplotype>& haplotypes,
-                      HaplotypeLikelihoodModel::InactiveRegionState flank_state);
+                      HaplotypeLikelihoodModel::FlankState flank_state);
         
         const ReadProbabilities& log_likelihoods(const SampleIdType& sample,
                                                  const Haplotype& haplotype) const;

@@ -28,7 +28,6 @@
 		CA386DA81B5BBCB90057A5A8 /* mappable_set_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA386DA71B5BBCB90057A5A8 /* mappable_set_tests.cpp */; };
 		CA386DAD1B603C380057A5A8 /* caching_fasta.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA386DAB1B603C380057A5A8 /* caching_fasta.cpp */; };
 		CA4551761AEC1C8600FDAAE8 /* haplotype_prior_model_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA4551751AEC1C8600FDAAE8 /* haplotype_prior_model_tests.cpp */; };
-		CA4551881AF27A4100FDAAE8 /* haplotype_phaser.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA4551861AF27A4100FDAAE8 /* haplotype_phaser.cpp */; };
 		CA487B251C42833000488577 /* read_transform.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA487B241C42833000488577 /* read_transform.cpp */; };
 		CA487B2A1C44390A00488577 /* libboost_unit_test_framework.a in Frameworks */ = {isa = PBXBuildFile; fileRef = CA487B291C44390A00488577 /* libboost_unit_test_framework.a */; };
 		CA53D3011C03AF46009A216D /* pedigree_genotype_model.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA53D2FF1C03AF46009A216D /* pedigree_genotype_model.cpp */; };
@@ -266,8 +265,6 @@
 		CA386DAB1B603C380057A5A8 /* caching_fasta.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = caching_fasta.cpp; sourceTree = "<group>"; };
 		CA386DAC1B603C380057A5A8 /* caching_fasta.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = caching_fasta.hpp; sourceTree = "<group>"; };
 		CA4551751AEC1C8600FDAAE8 /* haplotype_prior_model_tests.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = haplotype_prior_model_tests.cpp; sourceTree = "<group>"; };
-		CA4551861AF27A4100FDAAE8 /* haplotype_phaser.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = haplotype_phaser.cpp; sourceTree = "<group>"; };
-		CA4551871AF27A4100FDAAE8 /* haplotype_phaser.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = haplotype_phaser.hpp; sourceTree = "<group>"; };
 		CA487AF11C1F06D600488577 /* mappable_debug.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = mappable_debug.hpp; sourceTree = "<group>"; };
 		CA487B241C42833000488577 /* read_transform.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = read_transform.cpp; sourceTree = "<group>"; };
 		CA487B261C4318C100488577 /* type_tricks.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = type_tricks.hpp; sourceTree = "<group>"; };
@@ -1054,8 +1051,6 @@
 				CAB89DF41C78D95F002D6F8E /* haplotype_generator.cpp */,
 				CAB89DF81C78F5AF002D6F8E /* phaser.hpp */,
 				CAB89DF71C78F5AF002D6F8E /* phaser.cpp */,
-				CA4551871AF27A4100FDAAE8 /* haplotype_phaser.hpp */,
-				CA4551861AF27A4100FDAAE8 /* haplotype_phaser.cpp */,
 			);
 			name = "common-calling-components";
 			sourceTree = "<group>";
@@ -1232,7 +1227,6 @@
 				CABA37821A8FA49800BBE598 /* read_manager.cpp in Sources */,
 				D413B03F1B590C2B007EFDE0 /* genome_walker_benchmarks.cpp in Sources */,
 				CA386DAD1B603C380057A5A8 /* caching_fasta.cpp in Sources */,
-				CA4551881AF27A4100FDAAE8 /* haplotype_phaser.cpp in Sources */,
 				CA91C2CB1B8DE02300609FFA /* cancer_genotype_model.cpp in Sources */,
 				D463C1911AF38DCF00739A66 /* haplotype_phaser_tests.cpp in Sources */,
 				CAE3E29D1AA139A000C01B2C /* program_options.cpp in Sources */,
@@ -1417,7 +1411,7 @@
 				CLANG_CXX_LANGUAGE_STANDARD = "c++14";
 				FRAMEWORK_SEARCH_PATHS = "$(inherited)";
 				GCC_INPUT_FILETYPE = sourcecode.cpp.cpp;
-				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_OPTIMIZATION_LEVEL = 3;
 				HEADER_SEARCH_PATHS = (
 					"$(inherited)",
 					/usr/local/Cellar/boost/1.60.0_1/include,
@@ -1448,7 +1442,7 @@
 				CLANG_CXX_LANGUAGE_STANDARD = "c++14";
 				FRAMEWORK_SEARCH_PATHS = "$(inherited)";
 				GCC_INPUT_FILETYPE = sourcecode.cpp.cpp;
-				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_OPTIMIZATION_LEVEL = 3;
 				HEADER_SEARCH_PATHS = (
 					"$(inherited)",
 					/usr/local/Cellar/boost/1.60.0_1/include,

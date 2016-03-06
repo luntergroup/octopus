@@ -21,8 +21,8 @@
 
 #include <iostream> // DEBUG
 
-namespace Octopus {
-    
+namespace Octopus
+{
 GenomeWalker::GenomeWalker(unsigned max_indicators, unsigned max_included,
                            IndicatorLimit indicator_limit, ExtensionLimit extension_limit)
 :
@@ -37,7 +37,7 @@ GenomicRegion GenomeWalker::walk(const ContigNameType& contig, const ReadMap& re
 {
     return walk(GenomicRegion {contig, 0, 0}, reads, candidates);
 }
-    
+
 template <typename BidirIt>
 bool is_close(const BidirIt proposed_included, const BidirIt first_excluded)
 {

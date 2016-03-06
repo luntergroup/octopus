@@ -58,6 +58,13 @@ haplotype_frequencies_ {std::make_shared<HaplotypePosteiorMap>(std::move(model_l
 genotype_posteriors_ {std::make_shared<GenotypePosteriorMap>(std::move(model_latents.genotype_posteriors))}
 {}
     
+PopulationVariantCaller::Latents::Latents(HaplotypePosteiorMap&& haplotype_posteriors,
+                                          GenotypePosteriorMap&& genotype_posteriors)
+:
+haplotype_frequencies_ {std::make_shared<HaplotypePosteiorMap>(std::move(haplotype_posteriors))},
+genotype_posteriors_ {std::make_shared<GenotypePosteriorMap>(std::move(genotype_posteriors))}
+{}
+
 std::unique_ptr<PopulationVariantCaller::CallerLatents>
 PopulationVariantCaller::infer_latents(const std::vector<SampleIdType>& samples,
                                        const std::vector<Haplotype>& haplotypes,
@@ -67,7 +74,10 @@ PopulationVariantCaller::infer_latents(const std::vector<SampleIdType>& samples,
     auto model_latents = genotype_model_.infer_latents(samples, haplotypes, haplotype_priors,
                                                        haplotype_likelihoods);
     
-    return std::make_unique<Latents>(std::move(model_latents));
+    auto haplotype_posteriors = marginalise_haplotypes(haplotypes, model_latents.genotype_posteriors);
+    
+    return std::make_unique<Latents>(std::move(haplotype_posteriors),
+                                     std::move(model_latents.genotype_posteriors));
 }
 
 // non member methods

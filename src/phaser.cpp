@@ -293,22 +293,27 @@ namespace Octopus
         
         const auto genotypes = extract_genotypes(genotype_posteriors);
         
-        if (genotypes.front().get().ploidy() == 1 || candidates.size() == 1) {
-            for (const auto& p : genotype_posteriors) {
-                result.phase_regions[p.first].emplace_back(haplotype_region, 1);
-            }
-            return result;
-        }
-        
-        const auto partitions = extract_regions(candidates);
-        
         for (const auto& p : genotype_posteriors) {
-            result.phase_regions.emplace(p.first, force_phase_sample(haplotype_region, partitions,
-                                                                     genotypes, p.second,
-                                                                     min_phase_score_));
+            result.phase_regions[p.first].emplace_back(haplotype_region, 1);
         }
-        
         return result;
+        
+//        if (genotypes.front().get().ploidy() == 1 || candidates.size() == 1) {
+//            for (const auto& p : genotype_posteriors) {
+//                result.phase_regions[p.first].emplace_back(haplotype_region, 1);
+//            }
+//            return result;
+//        }
+//        
+//        const auto partitions = extract_covered_regions(candidates);
+//        
+//        for (const auto& p : genotype_posteriors) {
+//            result.phase_regions.emplace(p.first, force_phase_sample(haplotype_region, partitions,
+//                                                                     genotypes, p.second,
+//                                                                     min_phase_score_));
+//        }
+//        
+//        return result;
     }
     
 } // namespace Ocotpus

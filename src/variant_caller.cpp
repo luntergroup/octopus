@@ -127,11 +127,21 @@ auto flank_state(const std::vector<Haplotype>& haplotypes,
 {
     const auto& haplotype_region = haplotypes.front().get_region();
     
-    if (haplotype_region_contains_inactive_candidates(haplotype_region, active_region, candidates)) {
-        return HaplotypeLikelihoodModel::InactiveRegionState::Unclear;
+    const bool left_unclear {has_overlapped(candidates, left_overhang_region(haplotype_region, active_region))};
+    const bool right_unclear {has_overlapped(candidates, left_overhang_region(haplotype_region, active_region))};
+    
+    if (left_unclear) {
+        if (right_unclear) {
+            return HaplotypeLikelihoodModel::FlankState::Unclear;
+        }
+        return HaplotypeLikelihoodModel::FlankState::LeftUnclear;
     }
     
-    return HaplotypeLikelihoodModel::InactiveRegionState::Clear;
+    if (right_unclear) {
+        return HaplotypeLikelihoodModel::FlankState::RightUnclear;
+    }
+    
+    return HaplotypeLikelihoodModel::FlankState::Clear;
 }
 
 bool all_empty(const ReadMap& reads)
@@ -152,7 +162,12 @@ auto calculate_candidate_region(const GenomicRegion& call_region, const ReadMap&
     return encompassing_region(reads);
 }
 
-bool have_passed(const GenomicRegion& active_region, const GenomicRegion& next_active_region)
+bool have_passed(const GenomicRegion& next_active_region, const GenomicRegion& active_region)
+{
+    return is_after(next_active_region, active_region) && active_region != next_active_region;
+}
+
+bool has_moved_forward(const GenomicRegion& next_active_region, const GenomicRegion& active_region)
 {
     return begins_before(active_region, next_active_region) || active_region == next_active_region;
 }
@@ -183,7 +198,7 @@ std::deque<VcfRecord> VariantCaller::call_variants(const GenomicRegion& call_reg
     
     candidate_generator_.clear();
     
-    debug::print_candidates(candidates);
+    //debug::print_candidates(candidates);
     
     if (!refcalls_requested() && candidates.empty()) {
         return result;
@@ -310,20 +325,27 @@ std::deque<VcfRecord> VariantCaller::call_variants(const GenomicRegion& call_reg
             unphased_active_region = right_overhang_region(active_region, phase_set->region);
         }
         
-        auto removable_haplotypes = get_removable_haplotypes(haplotypes,
-                                                             *caller_latents->get_haplotype_posteriors(),
-                                                             unphased_active_region);
-        
         resume_timer(haplotype_generation_timer);
-        generator.remove_haplotypes(removable_haplotypes);
-        
         auto next_active_region = generator.tell_next_active_region();
         pause_timer(haplotype_generation_timer);
         
-        if (overlaps(active_region, call_region) && have_passed(active_region, next_active_region)) {
+        if (!have_passed(next_active_region, active_region)) {
+            auto removable_haplotypes = get_removable_haplotypes(haplotypes,
+                                                                 *caller_latents->get_haplotype_posteriors(),
+                                                                 unphased_active_region);
+            
+            //std::cout << "removing " << removable_haplotypes.size() << " haplotypes" << '\n';
+            
+            resume_timer(haplotype_generation_timer);
+            generator.remove_haplotypes(removable_haplotypes);
+            next_active_region = generator.tell_next_active_region();
+            pause_timer(haplotype_generation_timer);
+        }
+        
+        if (overlaps(active_region, call_region) && has_moved_forward(next_active_region, active_region)) {
             auto passed_region = left_overhang_region(active_region, next_active_region);
             
-            auto uncalled_region = passed_region;
+            auto uncalled_region = overlapped_region(active_region, passed_region);
             
             if (phase_set && ends_before(phase_set->region, passed_region)) {
                 uncalled_region = right_overhang_region(passed_region, phase_set->region);
@@ -332,7 +354,9 @@ std::deque<VcfRecord> VariantCaller::call_variants(const GenomicRegion& call_reg
             const auto active_candidates = copy_overlapped(candidates, uncalled_region);
             
             resume_timer(phasing_timer);
-            const auto forced_phasing = phaser.force_phase(haplotypes, *caller_latents->get_genotype_posteriors(),
+            //std::cout << "force phasing " << uncalled_region << '\n';
+            const auto forced_phasing = phaser.force_phase(haplotypes,
+                                                           *caller_latents->get_genotype_posteriors(),
                                                            active_candidates);
             pause_timer(phasing_timer);
             
@@ -383,7 +407,7 @@ VariantCaller::get_removable_haplotypes(const std::vector<Haplotype>& haplotypes
     
     // TODO
     for (const auto& p : haplotype_posteriors) {
-        if (p.second < 1e-5) {
+        if (p.second < 0.01) {
             result.push_back(p.first);
         }
     }
