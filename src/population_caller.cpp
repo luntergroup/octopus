@@ -660,7 +660,7 @@ VcfRecord::Builder output_reference_call(RefCall call, const ReferenceGenome& re
     return result;
 }
 
-void set_phasings(std::vector<GenotypeCallMap>& variant_genotype_calls,
+void set_phasings(GenotypeCalls& variant_genotype_calls,
                   const Phaser::PhaseSet& phase_set,
                   const std::vector<GenomicRegion>& called_regions)
 {

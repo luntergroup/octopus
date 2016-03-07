@@ -21,6 +21,7 @@
 #include "haplotype.hpp"
 #include "genotype.hpp"
 #include "variant.hpp"
+#include "mappable.hpp"
 
 namespace Octopus
 {
@@ -43,7 +44,7 @@ namespace Octopus
         
         struct PhaseSet
         {
-            struct PhaseRegion
+            struct PhaseRegion : public Mappable<PhaseRegion>
             {
                 PhaseRegion() = default;
                 template <typename Region> PhaseRegion(Region&& region, double score);
@@ -56,6 +57,8 @@ namespace Octopus
                 
                 GenomicRegion region;
                 double score;
+                
+                const GenomicRegion& get_region() const noexcept { return region; }
             };
             
             using SamplePhaseRegions = std::vector<PhaseRegion>;
@@ -107,6 +110,13 @@ namespace Octopus
     region {std::forward<R>(region)},
     phase_regions {std::forward<T>(phase_regions)}
     {}
+    
+    // non-member methods
+    
+    namespace debug
+    {
+        void print_phase_sets(const Phaser::PhaseSet& phasings);
+    }
 } // namespace Octopus
 
 #endif /* phaser_hpp */

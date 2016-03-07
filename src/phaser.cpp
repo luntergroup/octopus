@@ -19,7 +19,6 @@
 
 #include <boost/functional/hash.hpp>
 
-#include "mappable.hpp"
 #include "mappable_algorithms.hpp"
 
 #include <iostream> // DEBUG
@@ -242,9 +241,7 @@ namespace Octopus
         
         Phaser::PhaseSet::SamplePhaseRegions result {};
         
-        last_partition = std::next(first_partition);
-        
-        double previous_phase_score {0};
+        --last_partition;
         
         while (first_partition != std::cend(partitions)) {
             auto curr_region = encompassing_region(first_partition, last_partition);
@@ -256,19 +253,12 @@ namespace Octopus
             
             phase_score = calculate_phase_score(phase_set, splice_posteriors.second);
             
-            if (phase_score + 0.1 < previous_phase_score) {
-                auto phase_region = encompassing_region(first_partition, std::prev(last_partition));
-                result.emplace_back(std::move(phase_region), previous_phase_score);
-                first_partition = std::prev(last_partition);
-                previous_phase_score = 0.0;
+            if (phase_score >= min_phase_score || std::distance(first_partition, last_partition) == 1) {
+                result.emplace_back(encompassing_region(first_partition, last_partition), phase_score);
+                first_partition = last_partition;
+                last_partition  = std::cend(partitions);
             } else {
-                if (last_partition == std::cend(partitions)) {
-                    result.emplace_back(curr_region, phase_score);
-                    first_partition = last_partition;
-                } else {
-                    previous_phase_score = phase_score;
-                    ++last_partition;
-                }
+                --last_partition;
             }
         }
         
@@ -298,14 +288,14 @@ namespace Octopus
 //        }
 //        return result;
         
-        if (genotypes.front().get().ploidy() == 1 || candidates.size() == 1) {
+        const auto partitions = extract_covered_regions(candidates);
+        
+        if (genotypes.front().get().ploidy() == 1 || partitions.size() == 1) {
             for (const auto& p : genotype_posteriors) {
                 result.phase_regions[p.first].emplace_back(haplotype_region, 1);
             }
             return result;
         }
-        
-        const auto partitions = extract_covered_regions(candidates);
         
         for (const auto& p : genotype_posteriors) {
             result.phase_regions.emplace(p.first, force_phase_sample(haplotype_region, partitions,
@@ -316,4 +306,18 @@ namespace Octopus
         return result;
     }
     
+    namespace debug
+    {
+        void print_phase_sets(const Phaser::PhaseSet& phasings)
+        {
+            std::cout << "phased region is " << phasings.region << '\n';
+            
+            for (const auto& p : phasings.phase_regions) {
+                std::cout << "\tphase regions for sample " << p.first << '\n';
+                for (const auto& r : p.second) {
+                    std::cout << "\t\t" << r.region << " " << r.score << '\n';
+                }
+            }
+        }
+    } // namespace debug
 } // namespace Ocotpus

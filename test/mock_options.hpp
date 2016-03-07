@@ -36,8 +36,8 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--reference", ecoli_reference_fasta.c_str(),
         
         //"--reads", NA12878_low_coverage.c_str(),
-        //"--reads", NA12878_high_coverage.c_str(),
-        "--reads", "~/Genomics/Illumina/NA12878.mapped.ILLUMINA.bwa.CEU.high_coverage_pcr_free.20130906.chr22.bam",
+        "--reads", NA12878_high_coverage.c_str(),
+        //"--reads", "~/Genomics/Illumina/NA12878.mapped.ILLUMINA.bwa.CEU.high_coverage_pcr_free.20130906.chr22.bam",
         
         //"--reads", NA12891_high_coverage.c_str(),
         
@@ -68,9 +68,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         
         // for population
         
-        //"--regions", "6:33,036,187-33,036,470", // NA12878_low_coverage phase test
-        
-        "--regions", "22:20,013,903-20,013,942",
+        "--regions", "22:16,060,500-16,060,830",
         
         //"--regions", "22:16,909,216-16,909,255", // NA12878_low_coverage insertion followed by 2 SNPs
         
