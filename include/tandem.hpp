@@ -1,10 +1,26 @@
-//
-//  tandem.hpp
-//  tandem
-//
-//  Created by Daniel Cooke on 17/08/2015.
-//  Copyright (c) 2015 Oxford University. All rights reserved.
-//
+/*  tandem.hpp -- Finding tadem repeats in sequences
+ 
+ Copyright (C) 2015 University of Oxford.
+ 
+ Author: Daniel Cooke <dcooke@well.ox.ac.uk>
+ 
+ Permission is hereby granted, free of charge, to any person obtaining a copy
+ of this software and associated documentation files (the "Software"), to deal
+ in the Software without restriction, including without limitation the rights
+ to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ copies of the Software, and to permit persons to whom the Software is
+ furnished to do so, subject to the following conditions:
+ 
+ The above copyright notice and this permission notice shall be included in
+ all copies or substantial portions of the Software.
+ 
+ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+ THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+ DEALINGS IN THE SOFTWARE.  */
 
 #ifndef __tandem__tandem__
 #define __tandem__tandem__
@@ -12,13 +28,13 @@
 #include <vector>
 #include <deque>
 #include <map>
-#include <cstdint>   // uint32_t
-#include <cstddef>   // size_t
-#include <algorithm> // std::mismatch, std::max, std::min, std::find, std::transform, std::lower_bound
-#include <iterator>  // std::distance, std::cbegin, std::cend, std::begin, std::end, std::crend
-#include <tuple>     // std::pair, std::tie
-#include <utility>   // std::move
-#include <numeric>   // std::accumulate
+#include <cstdint>
+#include <cstddef>
+#include <algorithm>
+#include <iterator>
+#include <tuple>
+#include <utility>
+#include <numeric>
 
 #include "divsufsort.h"
 
@@ -43,7 +59,8 @@ namespace Tandem
     struct StringRun
     {
         StringRun() = default;
-        explicit StringRun(uint32_t pos, uint32_t length, uint32_t period) : pos {pos}, length {length}, period {period} {}
+        explicit StringRun(uint32_t pos, uint32_t length, uint32_t period)
+        : pos {pos}, length {length}, period {period} {}
         
         uint32_t pos, length, period;
     };
@@ -52,7 +69,10 @@ namespace Tandem
     {
         return lhs.pos == rhs.pos && lhs.length == rhs.length;
     }
-    inline bool operator!=(const StringRun& lhs, const StringRun& rhs) { return !operator==(lhs, rhs); }
+    inline bool operator!=(const StringRun& lhs, const StringRun& rhs)
+    {
+        return !operator==(lhs, rhs);
+    }
     
     // Wrapper for divsufsort
     template <typename T>
@@ -60,22 +80,13 @@ namespace Tandem
     {
         std::vector<saidx_t> sa(str.size()); // divsufsort requires signed integers so need to copy
         
-        divsufsort(str.data(), &sa[0], static_cast<int>(str.size()));
+        divsufsort(str.data(), sa.data(), static_cast<int>(str.size()));
         
         return std::vector<uint32_t> {std::cbegin(sa), std::cend(sa)};
     }
     
     // rank array is inverse suffix array
-    inline std::vector<uint32_t> make_rank_array(const std::vector<uint32_t>& suffix_array)
-    {
-        std::vector<uint32_t> result(suffix_array.size());
-        
-        for (uint32_t i {}; i < suffix_array.size(); ++i) {
-            result[suffix_array[i]] = i;
-        }
-        
-        return result;
-    }
+    std::vector<uint32_t> make_rank_array(const std::vector<uint32_t>& suffix_array);
     
     namespace detail
     {
@@ -87,7 +98,8 @@ namespace Tandem
         {
             using std::cbegin;
             return static_cast<uint32_t>(std::distance(cbegin(str) + i, std::mismatch(cbegin(str) + i,
-                                                                                      cbegin(str) + n, cbegin(str) + j).first));
+                                                                                      cbegin(str) + n,
+                                                                                      cbegin(str) + j).first));
         }
         
         template <typename T>
@@ -101,7 +113,8 @@ namespace Tandem
         {
             using std::crend;
             return static_cast<uint32_t>(std::distance(crend(str) - i - 1, std::mismatch(crend(str) - i - 1,
-                                                                                         crend(str) - n, crend(str) - j - 1).first));
+                                                                                         crend(str) - n,
+                                                                                         crend(str) - j - 1).first));
         }
         
         template <typename T>
@@ -109,13 +122,13 @@ namespace Tandem
         {
             return backward_lce(str, i, j, uint32_t {});
         }
-    } // end namespace detail
+    } // namespace detail
     
     // LCP = Longest Common Prefix. O(n) implementation given in Kasai et al (2001).
     template <typename T>
     std::vector<uint32_t> make_lcp_array(const T& str, const std::vector<uint32_t>& suffix_array)
     {
-        auto rank = make_rank_array(suffix_array);
+        const auto rank = make_rank_array(suffix_array);
         
         std::vector<uint32_t> result(suffix_array.size());
         
@@ -131,8 +144,26 @@ namespace Tandem
     }
     
     // LPF = Longest Previous Factor
-    std::vector<uint32_t> make_lpf_array(std::vector<uint32_t> sa, std::vector<uint32_t> lcp);
-    std::pair<std::vector<uint32_t>, std::vector<uint32_t>> make_lpf_and_prev_occ_arrays(std::vector<uint32_t> sa, std::vector<uint32_t> lcp);
+    std::vector<uint32_t>
+    make_lpf_array(std::vector<uint32_t> sa, std::vector<uint32_t> lcp);
+    std::pair<std::vector<uint32_t>, std::vector<uint32_t>>
+    make_lpf_and_prev_occ_arrays(std::vector<uint32_t> sa, std::vector<uint32_t> lcp);
+    
+    template <typename T>
+    auto make_lpf_array(const T& str)
+    {
+        auto sa  = make_suffix_array(str);
+        auto lcp = make_lcp_array(str, sa);
+        return make_lpf_array(std::move(sa), std::move(lcp));
+    }
+    
+    template <typename T>
+    auto make_lpf_and_prev_occ_arrays(const T& str)
+    {
+        auto sa  = make_suffix_array(str);
+        auto lcp = make_lcp_array(str, sa);
+        return make_lpf_and_prev_occ_arrays(std::move(sa), std::move(lcp));
+    }
     
     struct LZBlock
     {
@@ -147,9 +178,7 @@ namespace Tandem
     {
         if (str.empty()) return {};
         
-        auto sa  = make_suffix_array(str);
-        auto lcp = make_lcp_array(str, sa);
-        auto lpf = make_lpf_array(std::move(sa), std::move(lcp));
+        const auto lpf = make_lpf_array(str);
         
         std::vector<LZBlock> result {};
         result.reserve(str.size()); // max possible blocks
@@ -158,7 +187,7 @@ namespace Tandem
         result.emplace_back(0, end);
         
         while (end < str.size()) {
-            auto m = std::max(uint32_t {1}, lpf[end]);
+            const auto m = std::max(uint32_t {1}, lpf[end]);
             result.emplace_back(end, m);
             end += m;
         }
@@ -170,18 +199,17 @@ namespace Tandem
     
     // Implementation of algorithm found in Crochemore et al. (2008)
     template <typename T>
-    std::pair<std::vector<LZBlock>, std::vector<uint32_t>> lempel_ziv_factorisation_with_prev_block_occurences(const T& str)
+    std::pair<std::vector<LZBlock>, std::vector<uint32_t>>
+    lempel_ziv_factorisation_with_prev_block_occurences(const T& str)
     {
         if (str.empty()) return {{}, {}};
         
-        auto sa  = make_suffix_array(str);
-        auto lcp = make_lcp_array(str, sa);
-        
         std::vector<uint32_t> lpf, prev_occ;
-        std::tie(lpf, prev_occ) = make_lpf_and_prev_occ_arrays(std::move(sa), std::move(lcp));
+        std::tie(lpf, prev_occ) = make_lpf_and_prev_occ_arrays(str);
         
         std::vector<LZBlock> lz_blocks {};
         lz_blocks.reserve(str.size()); // max possible blocks
+        
         std::vector<uint32_t> prev_lz_block_occurrence {};
         prev_lz_block_occurrence.reserve(str.size());
         
@@ -191,7 +219,7 @@ namespace Tandem
         prev_lz_block_occurrence.emplace_back(-1);
         
         while (end < str.size()) {
-            auto m = std::max(uint32_t {1}, lpf[end]);
+            const auto m = std::max(uint32_t {1}, lpf[end]);
             lz_blocks.emplace_back(end, m);
             prev_lz_block_occurrence.emplace_back(prev_occ[end]);
             end += m;
@@ -200,17 +228,18 @@ namespace Tandem
         lz_blocks.shrink_to_fit();
         prev_lz_block_occurrence.shrink_to_fit();
         
-        return {lz_blocks, prev_lz_block_occurrence};
+        return std::make_pair(std::move(lz_blocks), std::move(prev_lz_block_occurrence));
     }
     
     namespace detail
     {
-        // Implements Mains algorithm found in Main (1989).
+        // Implements Mains algorithm found in Main (1989). Obscure notation as in paper.
         template <typename T>
-        std::deque<StringRun> find_leftmost_maximal_repetitions(const T& str, const std::vector<LZBlock>& lz_blocks,
-                                                                const uint32_t min_period = 1, const uint32_t max_period = -1)
+        std::deque<StringRun>
+        find_leftmost_maximal_repetitions(const T& str, const std::vector<LZBlock>& lz_blocks,
+                                          const uint32_t min_period = 1, const uint32_t max_period = -1)
         {
-            std::deque<StringRun> result {}; // using std::deque rather than std::vector for nice growth properties
+            std::deque<StringRun> result {};
             
             for (uint32_t h {1}; h < lz_blocks.size(); ++h) {
                 const auto u   = lz_blocks[h].pos;
@@ -221,8 +250,8 @@ namespace Tandem
                 
                 // rightmax periodicities
                 for (uint32_t j {min_period}; j <= std::min(n, max_period); ++j) {
-                    auto ls = detail::backward_lce(str, u - 1, u + j - 1, t);
-                    auto lp = detail::forward_lce(str, u + j, u, end);
+                    const auto ls = detail::backward_lce(str, u - 1, u + j - 1, t);
+                    const auto lp = detail::forward_lce(str, u + j, u, end);
                     
                     if (ls > 0 && ls + lp >= j && j + lp < n) {
                         result.emplace_back(u - ls, j + lp + ls, j);
@@ -231,8 +260,8 @@ namespace Tandem
                 
                 // leftmax periodicities
                 for (uint32_t j {min_period}; j < std::min(m, max_period); ++j) {
-                    auto ls = detail::backward_lce(str, u - j - 1, u - 1, t);
-                    auto lp = detail::forward_lce(str, u, u - j, end);
+                    const auto ls = detail::backward_lce(str, u - j - 1, u - 1, t);
+                    const auto lp = detail::forward_lce(str, u, u - j, end);
                     
                     if (ls + lp >= j) {
                         result.emplace_back(u - (ls + j), j + lp + ls, j);
@@ -244,13 +273,14 @@ namespace Tandem
         }
         
         // just reserves enough space to avoid reallocations
-        std::vector<std::vector<StringRun>> get_init_buckets(const size_t n, const std::deque<StringRun>& lmrs);
+        std::vector<std::vector<StringRun>> get_init_buckets(size_t n, const std::deque<StringRun>& lmrs);
         
         template <typename T>
         std::vector<std::vector<StringRun>>
-        get_end_buckets(const T& str, const std::vector<LZBlock>& lz_blocks, const uint32_t min_period, const uint32_t max_period)
+        get_end_buckets(const T& str, const std::vector<LZBlock>& lz_blocks,
+                        const uint32_t min_period, const uint32_t max_period)
         {
-            auto lmrs = find_leftmost_maximal_repetitions(str, lz_blocks, min_period, max_period);
+            const auto lmrs = find_leftmost_maximal_repetitions(str, lz_blocks, min_period, max_period);
             
             auto result = get_init_buckets(str.size(), lmrs);
             
@@ -265,11 +295,13 @@ namespace Tandem
         }
         
         // just reserves enough space to avoid reallocations
-        std::vector<std::vector<StringRun>> get_init_buckets(const size_t n, const std::vector<std::vector<StringRun>>& end_buckets);
+        std::vector<std::vector<StringRun>>
+        get_init_buckets(size_t n, const std::vector<std::vector<StringRun>>& end_buckets);
         
         template <typename T>
         std::vector<std::vector<StringRun>>
-        get_sorted_buckets(const T& str, const std::vector<LZBlock>& lz_blocks, const uint32_t min_period, const uint32_t max_period)
+        get_sorted_buckets(const T& str, const std::vector<LZBlock>& lz_blocks,
+                           const uint32_t min_period, const uint32_t max_period)
         {
             auto end_buckets = get_end_buckets(str, lz_blocks, min_period, max_period);
             
@@ -300,24 +332,24 @@ namespace Tandem
             for (uint32_t k {}; k < lz_blocks.size(); ++k) {
                 const auto& block = lz_blocks[k];
                 
-                auto block_end = block.pos + block.length;
-                auto delta     = block.pos - ((prev_lz_block_occurrence[k] == -1) ? 0 : prev_lz_block_occurrence[k]);
-                auto v         = block_end - delta;
+                const auto block_end = block.pos + block.length;
+                const auto delta     = block.pos - ((prev_lz_block_occurrence[k] == -1) ? 0 : prev_lz_block_occurrence[k]);
+                const auto v         = block_end - delta;
                 
                 for (auto j = block.pos; j < block_end; ++j) {
                     const auto& target = sorted_buckets[j - delta];
                     
-                    auto last_target = std::lower_bound(std::cbegin(target), std::cend(target), v,
-                                                        [] (const auto& run, auto val) {
-                                                            return run.pos + run.length < val;
-                                                        });
+                    const auto last_target_itr = std::lower_bound(std::cbegin(target), std::cend(target), v,
+                                                                  [] (const auto& run, const auto val) {
+                                                                      return run.pos + run.length < val;
+                                                                  });
                     
-                    auto num_targets = std::distance(std::cbegin(target), last_target);
+                    const auto num_targets = std::distance(std::cbegin(target), last_target_itr);
                     
                     if (num_targets > 0) {
                         std::vector<StringRun> shifted_targets(num_targets);
                         
-                        std::transform(std::cbegin(target), last_target, std::begin(shifted_targets),
+                        std::transform(std::cbegin(target), last_target_itr, std::begin(shifted_targets),
                                        [delta] (const auto& run) {
                                            return StringRun {run.pos + delta, run.length, run.period};
                                        });
@@ -332,14 +364,17 @@ namespace Tandem
         }
         
         template <typename T>
-        size_t get_num_runs(const std::vector<T>& buckets)
+        size_t count_runs(const std::vector<T>& buckets)
         {
             return std::accumulate(std::cbegin(buckets), std::cend(buckets), size_t {},
-                                   [] (auto lhs, const auto& rhs) { return lhs + rhs.size(); });
+                                   [] (const auto curr, const auto& bucket) { return curr + bucket.size(); });
         }
         
-    } // end namespace detail
+    } // namespace detail
     
+    /**
+     This is the main function for finding exact repeats in a sequence.
+     */
     template <typename T>
     std::vector<StringRun>
     find_maximal_repetitions(const T& str, const uint32_t min_period = 1, const uint32_t max_period = -1)
@@ -347,7 +382,7 @@ namespace Tandem
         auto sorted_buckets = detail::find_maximal_repetitions(str, min_period, max_period);
         
         std::vector<StringRun> result {};
-        result.reserve(detail::get_num_runs(sorted_buckets));
+        result.reserve(detail::count_runs(sorted_buckets));
         
         for (auto& bucket : sorted_buckets) {
             result.insert(std::end(result), std::cbegin(bucket), std::cend(bucket));
@@ -372,19 +407,23 @@ namespace Tandem
      auto n_shift_map = colapse(str, 'N'); // str is now "NACGTNTGCNAN", n_shift_map contains (0, 2), (4, 3), (9, 6)
      */
     template <typename SequenceType>
-    std::map<size_t, size_t> collapse(SequenceType& sequence, char c)
+    std::map<size_t, size_t> collapse(SequenceType& sequence, const char c)
     {
         std::map<size_t, size_t> result {};
         
-        auto last = std::end(sequence);
+        const auto last = std::end(sequence);
+        
         size_t position {}, num_removed {};
         
         for (auto first = std::begin(sequence); first != last;) {
-            auto it1 = std::adjacent_find(first, last, [c] (char lhs, char rhs) { return lhs == c && lhs == rhs; });
+            const auto it1 = std::adjacent_find(first, last,
+                                                [c] (const char lhs, const char rhs) {
+                                                    return lhs == c && lhs == rhs;
+                                                });
             
             if (it1 == last) break;
             
-            auto it2 = std::find_if_not(it1, last, [c] (char b) { return b == c; });
+            const auto it2 = std::find_if_not(it1, last, [c] (const char b) { return b == c; });
             
             position    += std::distance(first, it1);
             num_removed += std::distance(it1, it2) - 1;
@@ -396,7 +435,10 @@ namespace Tandem
         
         if (!result.empty()) {
             sequence.erase(std::unique(std::next(std::begin(sequence), std::cbegin(result)->first), last,
-                                       [c] (char lhs, char rhs) { return lhs == c && lhs == rhs; }), last);
+                                       [c] (const char lhs, const char rhs) {
+                                           return lhs == c && lhs == rhs;
+                                       }),
+                           last);
         }
         
         return result;
@@ -404,6 +446,6 @@ namespace Tandem
     
     void rebase(std::vector<Tandem::StringRun>& runs, const std::map<size_t, size_t>& shift_map);
     
-} // end namespace Tandem
+} // namespace Tandem
 
 #endif /* defined(__tandem__tandem__) */
