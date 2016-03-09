@@ -214,7 +214,8 @@ namespace Octopus
              "list of sample names to consider, one per line")
             ("use-one-based-indexing", po::bool_switch()->default_value(false),
              "uses one based indexing for input regions rather than zero based")
-            //("log-file", po::value<std::string>(), "path of the output log file")
+            ("debug", po::bool_switch()->default_value(false),
+             "outputs very verbose debug information to a log file")
             ;
             
             po::options_description filters("Read filter options");
@@ -531,7 +532,7 @@ namespace Octopus
         const auto num_threads = options.at("threads").as<unsigned>();
         return num_threads != 1;
     }
-        
+    
     boost::optional<unsigned> get_num_threads(const po::variables_map& options)
     {
         const auto num_threads = options.at("threads").as<unsigned>();
@@ -545,6 +546,21 @@ namespace Octopus
     {
         constexpr std::size_t scale {1'000'000'000};
         return static_cast<std::size_t>(scale * options.at("target-read-buffer-size").as<float>());
+    }
+    
+    boost::optional<fs::path> get_log_file_name(const po::variables_map& options)
+    {
+        if (options.at("debug").as<bool>()) {
+            const auto result = resolve_path("octopus_debug.log", options);
+            
+            if (!result) {
+                throw std::runtime_error {"Could not resolve debug log file"};
+            }
+            
+            return *result;
+        }
+        
+        return boost::none;
     }
     
     boost::optional<ReferenceGenome> make_reference(const po::variables_map& options)

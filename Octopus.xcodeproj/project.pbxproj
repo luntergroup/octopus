@@ -92,6 +92,13 @@
 		D45D2E661B2AD93500F6A89D /* libboost_filesystem.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D45D2E631B2AD93500F6A89D /* libboost_filesystem.a */; };
 		D45D2E671B2AD93500F6A89D /* libboost_program_options.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D45D2E641B2AD93500F6A89D /* libboost_program_options.a */; };
 		D45D2E681B2AD93500F6A89D /* libboost_system.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D45D2E651B2AD93500F6A89D /* libboost_system.a */; };
+		D45D30641C907491007634E3 /* logging.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D45D30621C907491007634E3 /* logging.cpp */; };
+		D45D30831C907F81007634E3 /* libboost_date_time-mt.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = D45D307D1C907F81007634E3 /* libboost_date_time-mt.dylib */; };
+		D45D30841C907F81007634E3 /* libboost_filesystem-mt.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = D45D307E1C907F81007634E3 /* libboost_filesystem-mt.dylib */; };
+		D45D30851C907F81007634E3 /* libboost_log_setup-mt.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = D45D307F1C907F81007634E3 /* libboost_log_setup-mt.dylib */; };
+		D45D30861C907F81007634E3 /* libboost_log-mt.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = D45D30801C907F81007634E3 /* libboost_log-mt.dylib */; };
+		D45D30871C907F81007634E3 /* libboost_system-mt.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = D45D30811C907F81007634E3 /* libboost_system-mt.dylib */; };
+		D45D30881C907F81007634E3 /* libboost_thread-mt.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = D45D30821C907F81007634E3 /* libboost_thread-mt.dylib */; };
 		D46094F21B550A2400AE72A1 /* mappable_algorithm_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D46094F11B550A2400AE72A1 /* mappable_algorithm_tests.cpp */; };
 		D4636C611B6788AC00FEA7D2 /* vcf_reader.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D4636C5F1B6788AC00FEA7D2 /* vcf_reader.cpp */; };
 		D4636C641B6788C500FEA7D2 /* vcf_record.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D4636C621B6788C500FEA7D2 /* vcf_record.cpp */; };
@@ -399,6 +406,14 @@
 		D45D2E631B2AD93500F6A89D /* libboost_filesystem.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libboost_filesystem.a; path = /usr/local/Cellar/boost/1.58.0/lib/libboost_filesystem.a; sourceTree = "<absolute>"; };
 		D45D2E641B2AD93500F6A89D /* libboost_program_options.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libboost_program_options.a; path = /usr/local/Cellar/boost/1.58.0/lib/libboost_program_options.a; sourceTree = "<absolute>"; };
 		D45D2E651B2AD93500F6A89D /* libboost_system.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libboost_system.a; path = /usr/local/Cellar/boost/1.58.0/lib/libboost_system.a; sourceTree = "<absolute>"; };
+		D45D30621C907491007634E3 /* logging.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = logging.cpp; sourceTree = "<group>"; };
+		D45D30631C907491007634E3 /* logging.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = logging.hpp; sourceTree = "<group>"; };
+		D45D307D1C907F81007634E3 /* libboost_date_time-mt.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = "libboost_date_time-mt.dylib"; path = "/usr/local/Cellar/boost/1.60.0_1/lib/libboost_date_time-mt.dylib"; sourceTree = "<absolute>"; };
+		D45D307E1C907F81007634E3 /* libboost_filesystem-mt.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = "libboost_filesystem-mt.dylib"; path = "/usr/local/Cellar/boost/1.60.0_1/lib/libboost_filesystem-mt.dylib"; sourceTree = "<absolute>"; };
+		D45D307F1C907F81007634E3 /* libboost_log_setup-mt.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = "libboost_log_setup-mt.dylib"; path = "/usr/local/Cellar/boost/1.60.0_1/lib/libboost_log_setup-mt.dylib"; sourceTree = "<absolute>"; };
+		D45D30801C907F81007634E3 /* libboost_log-mt.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = "libboost_log-mt.dylib"; path = "/usr/local/Cellar/boost/1.60.0_1/lib/libboost_log-mt.dylib"; sourceTree = "<absolute>"; };
+		D45D30811C907F81007634E3 /* libboost_system-mt.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = "libboost_system-mt.dylib"; path = "/usr/local/Cellar/boost/1.60.0_1/lib/libboost_system-mt.dylib"; sourceTree = "<absolute>"; };
+		D45D30821C907F81007634E3 /* libboost_thread-mt.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = "libboost_thread-mt.dylib"; path = "/usr/local/Cellar/boost/1.60.0_1/lib/libboost_thread-mt.dylib"; sourceTree = "<absolute>"; };
 		D46094F11B550A2400AE72A1 /* mappable_algorithm_tests.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = mappable_algorithm_tests.cpp; sourceTree = "<group>"; };
 		D4636C5E1B5FEEC700FEA7D2 /* test_files.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = test_files.txt; sourceTree = "<group>"; };
 		D4636C5F1B6788AC00FEA7D2 /* vcf_reader.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = vcf_reader.cpp; sourceTree = "<group>"; };
@@ -482,6 +497,12 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D45D30831C907F81007634E3 /* libboost_date_time-mt.dylib in Frameworks */,
+				D45D30841C907F81007634E3 /* libboost_filesystem-mt.dylib in Frameworks */,
+				D45D30851C907F81007634E3 /* libboost_log_setup-mt.dylib in Frameworks */,
+				D45D30861C907F81007634E3 /* libboost_log-mt.dylib in Frameworks */,
+				D45D30871C907F81007634E3 /* libboost_system-mt.dylib in Frameworks */,
+				D45D30881C907F81007634E3 /* libboost_thread-mt.dylib in Frameworks */,
 				D4CC78951C7E1EF700F9CCB3 /* libboost_timer.a in Frameworks */,
 				CA487B2A1C44390A00488577 /* libboost_unit_test_framework.a in Frameworks */,
 				D413B0451B5E54F7007EFDE0 /* libboost_iostreams.a in Frameworks */,
@@ -611,6 +632,8 @@
 			children = (
 				CAA4DC241A81981400DD3E9A /* main.cpp */,
 				D463C1951B0229A000739A66 /* common.hpp */,
+				D45D30631C907491007634E3 /* logging.hpp */,
+				D45D30621C907491007634E3 /* logging.cpp */,
 				CAE3E29C1AA139A000C01B2C /* program_options.hpp */,
 				CAE3E29B1AA139A000C01B2C /* program_options.cpp */,
 				CA1472791AACECF1005FDCD1 /* octopus.hpp */,
@@ -780,6 +803,12 @@
 		CAA4DC2B1A8219C700DD3E9A /* lib */ = {
 			isa = PBXGroup;
 			children = (
+				D45D307D1C907F81007634E3 /* libboost_date_time-mt.dylib */,
+				D45D307E1C907F81007634E3 /* libboost_filesystem-mt.dylib */,
+				D45D307F1C907F81007634E3 /* libboost_log_setup-mt.dylib */,
+				D45D30801C907F81007634E3 /* libboost_log-mt.dylib */,
+				D45D30811C907F81007634E3 /* libboost_system-mt.dylib */,
+				D45D30821C907F81007634E3 /* libboost_thread-mt.dylib */,
 				D4CC78941C7E1EF700F9CCB3 /* libboost_timer.a */,
 				CA487B291C44390A00488577 /* libboost_unit_test_framework.a */,
 				D413B0441B5E54F7007EFDE0 /* libboost_iostreams.a */,
@@ -1235,6 +1264,7 @@
 				CA91C2CB1B8DE02300609FFA /* cancer_genotype_model.cpp in Sources */,
 				D463C1911AF38DCF00739A66 /* haplotype_phaser_tests.cpp in Sources */,
 				CAE3E29D1AA139A000C01B2C /* program_options.cpp in Sources */,
+				D45D30641C907491007634E3 /* logging.cpp in Sources */,
 				D42F72EF1C5B8A4D00995F54 /* trio.cpp in Sources */,
 				CA14727C1AACED6E005FDCD1 /* octopus_tests.cpp in Sources */,
 				CAE3E2CB1AAB42C900C01B2C /* read_filter_tests.cpp in Sources */,
@@ -1398,6 +1428,7 @@
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_OPTIMIZATION_LEVEL = 3;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
 				GCC_WARN_UNDECLARED_SELECTOR = YES;
@@ -1436,6 +1467,7 @@
 				OTHER_CPLUSPLUSFLAGS = (
 					"$(OTHER_CFLAGS)",
 					"-mavx2",
+					"-lpthread",
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
@@ -1467,6 +1499,7 @@
 				OTHER_CPLUSPLUSFLAGS = (
 					"$(OTHER_CFLAGS)",
 					"-mavx2",
+					"-lpthread",
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};

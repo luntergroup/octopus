@@ -19,42 +19,32 @@
 #include <iostream>
 #include <cstdlib>
 #include <stdexcept>
-#include <chrono>
 
 #include "program_options.hpp"
 #include "octopus.hpp"
-#include "timing.hpp"
+
+#include "logging.hpp"
 
 #include "mock_options.hpp"
 
 int main(int argc, const char **argv)
 {
-    using std::cout; using std::cerr; using std::endl;
-    
     auto options = get_basic_mock_options();
     
-     try {
+    try {
         if (options) {
             if (Octopus::Options::is_run_command(*options)) {
-                const auto start = std::chrono::system_clock::now();
-                
-                cout << "Started run at " << start << endl;
-                
+                Octopus::Logging::init(Octopus::Options::get_log_file_name(*options));
                 Octopus::run_octopus(*options);
-                
-                const auto end = std::chrono::system_clock::now();
-                
-                cout << "Finished run at " << end << ". "
-                    << "Took " << TimeInterval {start, end} << endl;
             }
         } else {
-            cout << "Could not parse input options. Did not start run." << endl;
+            std::cout << "Could not parse input options. Did not start run." << std::endl;
         }
     } catch (const std::exception& e) {
-        cerr << "Error: " << e.what() << endl;
+        std::cerr << "Error: " << e.what() << std::endl;
         return EXIT_FAILURE;
     } catch (...) {
-        cerr << "Error: encountered unknown error. Quiting now" << endl;
+        std::cerr << "Error: encountered unknown error. Quiting now" << std::endl;
         return EXIT_FAILURE;
     }
     

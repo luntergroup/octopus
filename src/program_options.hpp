@@ -50,6 +50,8 @@ namespace Options
     
     std::size_t get_target_read_buffer_size(const po::variables_map& options);
     
+    boost::optional<fs::path> get_log_file_name(const po::variables_map& options);
+    
     boost::optional<ReferenceGenome> make_reference(const po::variables_map& options);
     
     SearchRegions get_search_regions(const po::variables_map& options,
