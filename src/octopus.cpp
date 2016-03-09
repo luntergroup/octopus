@@ -126,7 +126,7 @@ namespace Octopus
             }
             
             if (!bad_samples.empty()) {
-                std::cout << "Octopus: input samples not present in read files: ";
+                std::cout << "Input samples not present in read files: ";
                 std::copy(std::cbegin(bad_samples), std::cend(bad_samples),
                           std::ostream_iterator<SampleIdType>(std::cout, " "));
                 std::cout << std::endl;
@@ -348,17 +348,17 @@ namespace Octopus
         using std::cout; using std::endl;
         
         if (components.samples.empty()) {
-            cout << "Octopus: quiting as no samples were found" << endl;
+            cout << "Quiting as no samples were found" << endl;
             return false;
         }
         
         if (components.regions.empty()) {
-            cout << "Octopus: quiting as got no input regions" << endl;
+            cout << "Quiting as got no input regions" << endl;
             return false;
         }
         
         if (components.candidate_generator_builder.num_generators() == 0) {
-            cout << "Octopus: quiting as there are no candidate generators" << endl;
+            cout << "Quiting as there are no candidate generators" << endl;
             return false;
         }
         
@@ -373,21 +373,21 @@ namespace Octopus
         auto reference = Options::make_reference(options);
         
         if (!reference) {
-            cout << "Octopus: quiting as could not make reference genome" << endl;
+            cout << "Quiting as could not make reference genome" << endl;
             return boost::none;
         }
         
         auto read_manager = Options::make_read_manager(options);
         
         if (!read_manager) {
-            cout << "Octopus: quiting as could not load read files" << endl;
+            cout << "Quiting as could not load read files" << endl;
             return boost::none;
         }
         
         auto output = Options::make_output_vcf_writer(options);
         
         if (!output.is_open()) {
-            cout << "Octopus: quiting as could not open output file" << endl;
+            cout << "Quiting as could not open output file" << endl;
             return boost::none;
         }
         
@@ -469,20 +469,20 @@ namespace Octopus
         using std::cout; using std::endl;
         
         if (components.samples.size() == 1) {
-            cout << "Octopus: sample is: ";
+            cout << "Sample is: ";
         } else {
-            cout << "Octopus: samples are: ";
+            cout << "Samples are: ";
         }
         std::copy(std::cbegin(components.samples), std::cend(components.samples),
                   std::ostream_iterator<std::string> {cout, " "});
         cout << endl;
-        cout << "Octopus: calling variants in " << components.samples.size() << " samples" << endl;
-        cout << "Octopus: writing calls to " << components.output.path() << endl;
+        cout << "Calling variants in " << components.samples.size() << " samples" << endl;
+        cout << "Writing calls to " << components.output.path() << endl;
     }
     
     void write_calls(VcfWriter& out, std::deque<VcfRecord>&& calls)
     {
-        std::cout << "Octopus: writing " << calls.size() << " calls to VCF" << std::endl;
+        std::cout << "Writing " << calls.size() << " calls to VCF" << std::endl;
         for (auto&& call : calls) out.write(std::move(call));
     }
     
@@ -508,31 +508,25 @@ namespace Octopus
     {
         using std::cout; using std::endl;
         
-        std::size_t num_calls {0};
-        
         #ifdef BENCHMARK
         init_timers();
         #endif
         
         for (const auto& region : components.regions) {
-            cout << "Octopus: processing input region " << region << endl;
+            cout << "Processing input region " << region << endl;
             
             auto subregion = propose_call_subregion(components, region);
             
             while (!is_empty_region(subregion)) {
-                cout << "Octopus: processing subregion " << subregion << endl;
+                cout << "Processing subregion " << subregion << endl;
                 
                 auto calls = components.caller->call_variants(subregion);
-                
-                num_calls += calls.size();
                 
                 write_calls(components.output, std::move(calls));
                 
                 subregion = propose_call_subregion(components, right_overhang_region(region, subregion));
             }
         }
-        
-        std::cout << "Octopus: total number of calls = " << num_calls << std::endl;
         
         #ifdef BENCHMARK
         print_caller_timers();
@@ -541,7 +535,7 @@ namespace Octopus
     
     void print_final_info(const GenomeCallingComponents& components)
     {
-        std::cout << "Octopus: processed " << calculate_total_search_size(components.regions) << "bp" << std::endl;
+        std::cout << "Processed " << calculate_total_search_size(components.regions) << "bp" << std::endl;
     }
     
     void cleanup(GenomeCallingComponents& components) noexcept
@@ -550,9 +544,9 @@ namespace Octopus
         if (components.temp_directory) {
             try {
                 const auto num_files_removed = fs::remove_all(*components.temp_directory);
-                cout << "Octopus: removed " << num_files_removed << " temporary files" << endl;
+                cout << "Removed " << num_files_removed << " temporary files" << endl;
             } catch (std::exception& e) {
-                cout << "Octopus: cleanup failed with error " << e.what() << endl;
+                cout << "Cleanup failed with error " << e.what() << endl;
             }
         }
     }
@@ -646,8 +640,9 @@ namespace Octopus
             } else {
                 run_octopus_single_threaded(*components);
             }
-        } catch (std::exception& e) {
-            std::cout << "Octopus: encountered fatal error " << e.what() << ". Attempting to cleanup..." << std::endl;
+        } catch (const std::exception& e) {
+            std::cout << "Encountered fatal error " << e.what()
+                        << ". Attempting to cleanup..." << std::endl;
             cleanup(*components);
             throw;
         }

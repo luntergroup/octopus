@@ -184,7 +184,7 @@ bool AlignedRead::is_marked_supplementary_alignment() const
     return flags_[7];
 }
 
-size_t AlignedRead::get_hash() const
+std::size_t AlignedRead::get_hash() const
 {
     if (hash_ == 0) { // 0 is reserved
         hash_ = make_hash(); // lazy evaluation
@@ -194,16 +194,16 @@ size_t AlignedRead::get_hash() const
 
 void AlignedRead::zero_front_qualities(const SizeType num_bases) noexcept
 {
-    std::for_each(std::begin(qualities_),
-                  std::next(std::begin(qualities_), std::min(num_bases, static_cast<SizeType>(sequence_.size()))),
-                  [] (auto& quality) { quality = 0; });
+    std::fill_n(std::begin(qualities_),
+                std::min(num_bases, static_cast<SizeType>(sequence_.size())),
+                0);
 }
 
 void AlignedRead::zero_back_qualities(const SizeType num_bases) noexcept
 {
-    std::for_each(std::rbegin(qualities_),
-                  std::next(std::rbegin(qualities_), std::min(num_bases, static_cast<SizeType>(sequence_.size()))),
-                  [] (auto& quality) { quality = 0; });
+    std::fill_n(std::rbegin(qualities_),
+                std::min(num_bases, static_cast<SizeType>(sequence_.size())),
+                0);
 }
 
 void AlignedRead::compress()
@@ -264,11 +264,11 @@ AlignedRead::NextSegment::FlagBits AlignedRead::NextSegment::compress_flags(cons
     return result;
 }
 
-size_t AlignedRead::make_hash() const
+std::size_t AlignedRead::make_hash() const
 {
     using boost::hash_combine;
     
-    size_t result {};
+    std::size_t result {};
     
     hash_combine(result, std::hash<GenomicRegion>()(region_));
     hash_combine(result, std::hash<CigarString>()(cigar_string_));

@@ -462,19 +462,19 @@ namespace Octopus
         std::vector<fs::path> result {};
         
         if (!resolved_path) {
-            std::cout << "Octopus: could not resolve file path " << file_path << std::endl;
+            std::cout << "Could not resolve file path " << file_path << std::endl;
             return boost::none;
         }
         
         if (!fs::exists(*resolved_path)) {
-            std::cout << "Octopus: could not find file " << *resolved_path << std::endl;
+            std::cout << "Could not find file " << *resolved_path << std::endl;
             return boost::none;
         }
         
         std::ifstream file {file_path.string()};
         
         if (!file.good()) {
-            std::cout << "Octopus: could not open file " << *resolved_path << std::endl;
+            std::cout << "Could not open file " << *resolved_path << std::endl;
             return boost::none;
         }
         
@@ -560,10 +560,10 @@ namespace Octopus
                                         static_cast<ReferenceGenome::SizeType>(ref_cache_size),
                                         is_threading_allowed(options));
             } else {
-                std::cout << "Octopus: could not find reference path " << *path << std::endl;
+                std::cout << "Could not find reference path " << *path << std::endl;
             }
         } else {
-            std::cout << "Octopus: could not resolve reference path " << path_str << std::endl;
+            std::cout << "Could not resolve reference path " << path_str << std::endl;
         }
         
         return boost::none;
@@ -829,7 +829,7 @@ namespace Octopus
     {
         void print_bad_paths(const std::vector<fs::path>& bad_paths)
         {
-            std::cout << "Octopus: the following paths could not be resolved:" << std::endl;
+            std::cout << "Paths could not be resolved:" << std::endl;
             for (const auto& path : bad_paths) {
                 std::cout << "\t" << path.string() << '\n';
             }
@@ -1101,7 +1101,7 @@ namespace Octopus
             const auto path = resolve_path(options.at("contig-ploidies-file").as<std::string>(), options);
             
             if (!path || !fs::exists(*path)) {
-                std::cout << "Octopus: could not resolve contig-ploidy-file path" << std::endl;
+                std::cout << "Could not resolve contig-ploidy-file path" << std::endl;
                 return boost::none;
             }
             
@@ -1232,12 +1232,12 @@ namespace Octopus
             }
             
             if (temp_dir_counter > temp_dir_name_count_limit) {
-                std::cout << "Octopus: too many temprary directories in working directory" << std::endl;
+                std::cout << "Too many temprary directories in working directory" << std::endl;
                 return boost::none;
             }
             
             if (!fs::create_directory(result)) {
-                std::cout << "Octopus: could not create temporary directory" << std::endl;
+                std::cout << "Could not create temporary directory" << std::endl;
                 return boost::none;
             }
             

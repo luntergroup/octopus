@@ -442,7 +442,7 @@ std::size_t remove_non_genotyped_calls(VariantCallBlock& variant_calls,
 }
 
 std::size_t remove_non_genotyped_calls(VariantCallBlocks& variant_calls,
-                                    const GenotypeCalls& genotype_calls)
+                                       const GenotypeCalls& genotype_calls)
 {
     std::size_t result {0};
     
@@ -490,8 +490,10 @@ RefCalls call_reference(const GenotypePosteriorMap& genotype_posteriors,
         for (const auto& sample_genotype_posteriors : genotype_posteriors) {
             double sample_posterior {};
             
-            if (min_coverage(reads.at(sample_genotype_posteriors.first), mapped_region(reference_allele)) > 0) {
-                sample_posterior = marginalise_reference_genotype(reference_allele, sample_genotype_posteriors.second);
+            if (min_coverage(reads.at(sample_genotype_posteriors.first),
+                             mapped_region(reference_allele)) > 0) {
+                sample_posterior = marginalise_reference_genotype(reference_allele,
+                                                                  sample_genotype_posteriors.second);
                 
                 if (sample_posterior < min_posterior) {
                     min_sample_posteior = sample_posterior;
@@ -664,25 +666,29 @@ void set_phasings(GenotypeCalls& variant_genotype_calls,
                   const Phaser::PhaseSet& phase_set,
                   const std::vector<GenomicRegion>& called_regions)
 {
-    // TODO
+    auto region_itr = std::cbegin(called_regions);
+    
     for (auto& g : variant_genotype_calls) {
+        const auto& call_region = *region_itr;
+        
         for (auto& p : g) {
-            const auto& phase_regions = phase_set.phase_regions.at(p.first);
-            const auto& call_region = p.second.genotype[0].get_region();
+            const auto& phase = find_phase_region(phase_set.phase_regions.at(p.first), call_region);
             
-            auto it = std::find_if(std::cbegin(phase_regions), std::cend(phase_regions),
-                                   [&call_region] (const auto& phase_region) {
-                                       return contains(phase_region.region, call_region);
-                                   });
-            
-            auto it2 = std::find_if(std::cbegin(called_regions), std::cend(called_regions),
-                                    [it] (const auto& region) {
-                                        return contains(it->region, region);
-                                    });
-            
-            p.second.phase_region = *it2;
-            p.second.phase_score  = it->score;
+            if (phase) {
+                const auto overlapped = overlap_range(called_regions, phase->get().get_region(),
+                                                      MappableRangeOrder::BidirectionallySorted);
+                
+                assert(!overlapped.empty());
+                
+                p.second.phase_region = overlapped.front();
+                p.second.phase_score  = phase->get().score;
+            } else {
+                p.second.phase_region = call_region;
+                p.second.phase_score  = 0;
+            }
         }
+        
+        ++region_itr;
     }
 }
 } // namespace

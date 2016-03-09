@@ -164,18 +164,24 @@ inline RealType log_factorial(IntegerType x)
     }
 }
 
-template <typename RealType, typename InputIterator>
-inline RealType log_beta(InputIterator first, InputIterator last)
+template <typename ForwardIt>
+auto log_beta(ForwardIt first, ForwardIt last)
 {
-    return std::accumulate(first, last, RealType {0},
-                           [] (const auto v, const auto x) { return v + boost::math::lgamma(x); })
-                - boost::math::lgamma(std::accumulate(first, last, RealType {0}));
+    using T = std::decay_t<typename std::iterator_traits<ForwardIt>::value_type>;
+    
+    static_assert(std::is_floating_point<T>::value,
+                  "log_beta is only defined for floating point types.");
+    
+    return std::accumulate(first, last, T {0},
+                           [] (const auto v, const auto x) {
+                               return v + boost::math::lgamma(x);
+                           }) - boost::math::lgamma(std::accumulate(first, last, T {0}));
 }
 
-template <typename RealType, typename Container>
-inline RealType log_beta(const Container& values)
+template <typename Container>
+auto log_beta(const Container& values)
 {
-    return log_beta<RealType>(std::cbegin(values), std::cend(values));
+    return log_beta(std::cbegin(values), std::cend(values));
 }
 
 template <typename RealType, typename InputIterator1, typename InputIterator2>

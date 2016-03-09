@@ -136,7 +136,7 @@ public:
     bool is_marked_duplicate() const;
     bool is_marked_supplementary_alignment() const;
     
-    size_t get_hash() const;
+    std::size_t get_hash() const;
     
     void zero_front_qualities(SizeType num_bases) noexcept;
     void zero_back_qualities(SizeType num_bases) noexcept;
@@ -147,7 +147,7 @@ public:
 private:
     using FlagBits = std::bitset<9>;
     
-    static constexpr size_t compression_flag_ {8};
+    static constexpr std::size_t compression_flag_ {8};
     
     // should be ordered by sizeof
     GenomicRegion region_;
@@ -156,7 +156,7 @@ private:
     CigarString cigar_string_;
     ReadGroupType read_group_;
     std::unique_ptr<NextSegment> next_segment_;
-    mutable size_t hash_ = 0; // 0 is reserved so can be lazy evaluated
+    mutable std::size_t hash_ = 0; // 0 is reserved so can be lazy evaluated
     FlagBits flags_;
     QualityType mapping_quality_;
     
@@ -166,7 +166,7 @@ private:
     void set_compressed() noexcept;
     void set_uncompressed() noexcept;
     
-    size_t make_hash() const;
+    std::size_t make_hash() const;
 };
 
 template <typename GenomicRegion_, typename String1_, typename Qualities_, typename CigarString_>
@@ -260,9 +260,9 @@ namespace std {
 
 namespace boost
 {
-    template <> struct hash<AlignedRead> : std::unary_function<AlignedRead, size_t>
+    template <> struct hash<AlignedRead> : std::unary_function<AlignedRead, std::size_t>
     {
-        size_t operator()(const AlignedRead& read) const
+        std::size_t operator()(const AlignedRead& read) const
         {
             return std::hash<AlignedRead>()(read);
         }

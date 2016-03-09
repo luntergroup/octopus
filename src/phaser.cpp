@@ -13,9 +13,7 @@
 #include <numeric>
 #include <cstddef>
 #include <cmath>
-#include <functional>
 #include <utility>
-#include <cassert>
 
 #include <boost/functional/hash.hpp>
 
@@ -92,8 +90,7 @@ namespace Octopus
             return result;
         }
         
-        void add_to_phase_complement_set(const Genotype<Haplotype>& genotype,
-                                         PhaseComplementSetMap& curr_result)
+        void insert(const Genotype<Haplotype>& genotype, PhaseComplementSetMap& curr_result)
         {
             const auto it = curr_result.find(genotype);
             if (it == std::end(curr_result)) {
@@ -117,9 +114,7 @@ namespace Octopus
                                     std::forward_as_tuple(1, genotypes.front()));
             
             std::for_each(std::next(std::cbegin(genotypes)), std::cend(genotypes),
-                          [&] (const auto& genotype) {
-                              add_to_phase_complement_set(genotype, complement_sets);
-                          });
+                          [&] (const auto& genotype) { insert(genotype, complement_sets); });
             
             PhaseComplementSets result {};
             result.reserve(complement_sets.size());
@@ -282,11 +277,6 @@ namespace Octopus
         result.phase_regions.reserve(genotype_posteriors.size1());
         
         const auto genotypes = extract_genotypes(genotype_posteriors);
-        
-//        for (const auto& p : genotype_posteriors) {
-//            result.phase_regions[p.first].emplace_back(haplotype_region, 1);
-//        }
-//        return result;
         
         const auto partitions = extract_covered_regions(candidates);
         

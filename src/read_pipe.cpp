@@ -46,6 +46,11 @@ void ReadPipe::set_read_manager(ReadManager& read_manager) noexcept
     read_manager_ = read_manager;
 }
 
+const std::vector<SampleIdType>& ReadPipe::get_samples() const noexcept
+{
+    return samples_;
+}
+
 ReadMap ReadPipe::fetch_reads(const GenomicRegion& region)
 {
     ReadMap result {samples_.size()};

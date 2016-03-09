@@ -35,18 +35,6 @@ namespace Octopus
 {
 // public methods
 
-auto keys(const ReadMap& reads)
-{
-    std::vector<SampleIdType> result {};
-    result.reserve(reads.size());
-    
-    for (const auto& p : reads) {
-        result.push_back(p.first);
-    }
-    
-    return result;
-}
-
 VariantCaller::VariantCaller(const ReferenceGenome& reference,
                              ReadPipe& read_pipe,
                              CandidateVariantGenerator&& candidate_generator,
@@ -106,8 +94,9 @@ namespace debug
     enum class Resolution {Sequence, Alleles, VariantAlleles, SequenceAndAlleles, SequenceAndVariantAlleles};
     void print_haplotypes(const std::vector<Haplotype>& haplotypes,
                           Resolution resolution = Resolution::SequenceAndAlleles);
-//    void print_active_region(const GenomicRegion& completed_region,
-//                             GenomicRegion::SizeType step_size);
+    void print_progress(const GenomicRegion& last_active_region,
+                        const GenomicRegion& call_region,
+                        GenomicRegion::SizeType step_size);
     
     template <typename Map>
     void print_haplotype_posteriors(const Map& haplotype_posteriors, std::size_t n = 20);
@@ -222,7 +211,7 @@ std::deque<VcfRecord> VariantCaller::call_variants(const GenomicRegion& call_reg
     
     pause_timer(init_timer);
     
-    const auto samples = keys(reads);
+    const auto& samples = read_pipe_.get().get_samples();
     
     HaplotypeLikelihoodCache haplotype_likelihoods {max_haplotypes_, samples};
     
@@ -235,7 +224,7 @@ std::deque<VcfRecord> VariantCaller::call_variants(const GenomicRegion& call_reg
             break;
         }
         
-        std::cout << "active region is " << active_region << '\n';
+        //std::cout << "active region is " << active_region << '\n';
         //std::cout << "haplotype region is " << haplotypes.front().get_region() << '\n';
         
         const auto active_reads = copy_overlapped(reads, active_region);
@@ -355,12 +344,10 @@ std::deque<VcfRecord> VariantCaller::call_variants(const GenomicRegion& call_reg
             
             resume_timer(phasing_timer);
             //std::cout << "force phasing " << uncalled_region << '\n';
-            const auto forced_phasing = phaser.force_phase(haplotypes,
-                                                           *caller_latents->get_genotype_posteriors(),
-                                                           active_candidates);
+            const auto phasings = phaser.force_phase(haplotypes,
+                                                     *caller_latents->get_genotype_posteriors(),
+                                                     active_candidates);
             pause_timer(phasing_timer);
-            
-            debug::print_phase_sets(forced_phasing);
             
             haplotypes.clear();
             haplotypes.shrink_to_fit();
@@ -372,13 +359,15 @@ std::deque<VcfRecord> VariantCaller::call_variants(const GenomicRegion& call_reg
             
             resume_timer(calling_timer);
             auto curr_results = call_variants(active_candidates, alleles, caller_latents.get(),
-                                              forced_phasing, active_reads);
+                                              phasings, active_reads);
             
             append_annotated_calls(result, curr_results, active_reads, call_region);
             pause_timer(calling_timer);
             
             completed_region = encompassing_region(completed_region, passed_region);
         }
+        
+        debug::print_progress(active_region, call_region, 10000);
     }
     
     return result;
@@ -606,12 +595,21 @@ namespace debug
         }
     }
     
-//    void print_active_region(const GenomicRegion& completed_region, GenomicRegion::SizeType step_size)
-//    {
-//        const auto bps_processed = region_size(completed_region);
-//        
-//        if (bps_processed % step_size)
-//    }
+    double percent_completed(const GenomicRegion& active_region,
+                             const GenomicRegion& call_region)
+    {
+        const auto num_bases_processed = active_region.get_end() - call_region.get_begin();
+        const auto total_bases = region_size(call_region);
+        return 100 * static_cast<double>(num_bases_processed) / total_bases;
+    }
+    
+    void print_progress(const GenomicRegion& last_active_region,
+                        const GenomicRegion& call_region,
+                        GenomicRegion::SizeType step_size)
+    {
+        std::cout << "completed: " << std::setprecision(3)
+                << percent_completed(last_active_region, call_region) << "%" << std::endl;
+    }
     
     template <typename Map>
     void print_haplotype_posteriors(const Map& haplotype_posteriors, std::size_t n)

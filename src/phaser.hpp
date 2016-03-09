@@ -12,6 +12,8 @@
 #include <vector>
 #include <unordered_map>
 #include <utility>
+#include <functional>
+#include <cassert>
 
 #include <boost/optional.hpp>
 
@@ -22,6 +24,7 @@
 #include "genotype.hpp"
 #include "variant.hpp"
 #include "mappable.hpp"
+#include "mappable_algorithms.hpp"
 
 namespace Octopus
 {
@@ -112,6 +115,21 @@ namespace Octopus
     {}
     
     // non-member methods
+    
+    template <typename T>
+    boost::optional<std::reference_wrapper<const Phaser::PhaseSet::PhaseRegion>>
+    find_phase_region(const Phaser::PhaseSet::SamplePhaseRegions& phasings, const T& mappable)
+    {
+        const auto overlapped = overlap_range(std::cbegin(phasings), std::cend(phasings), mappable,
+                                              MappableRangeOrder::BidirectionallySorted);
+        
+        if (!overlapped.empty()) {
+            assert(size(overlapped, MappableRangeOrder::BidirectionallySorted) == 1);
+            return std::ref(overlapped.front());
+        }
+        
+        return boost::none;
+    }
     
     namespace debug
     {

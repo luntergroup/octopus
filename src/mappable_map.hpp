@@ -62,9 +62,9 @@ auto encompassing_region(const MappableMap<KeyType, MappableType>& mappables)
 }
 
 template <typename KeyType, typename MappableType>
-size_t count_mappables(const MappableMap<KeyType, MappableType>& mappables)
+std::size_t count_mappables(const MappableMap<KeyType, MappableType>& mappables)
 {
-    return std::accumulate(std::cbegin(mappables), std::cend(mappables), size_t {},
+    return std::accumulate(std::cbegin(mappables), std::cend(mappables), std::size_t {0},
                            [] (const auto prev, const auto& v) { return prev + v.second.size(); });
 }
 
@@ -166,12 +166,12 @@ find_first_shared(const MappableMap<KeyType, MappableType1>& mappables, ForwardI
 }
 
 template <typename KeyType, typename MappableType, typename ForwardIterator>
-size_t
+std::size_t
 max_count_if_shared_with_first(const MappableMap<KeyType, MappableType>& mappables,
                                ForwardIterator first, ForwardIterator last)
 {
-    size_t maximum {0};
-    size_t count {0};
+    std::size_t maximum {0};
+    std::size_t count {0};
     
     for (const auto& map_pair : mappables) {
         count = count_if_shared_with_first(map_pair.second, first, last);

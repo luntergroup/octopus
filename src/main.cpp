@@ -33,31 +33,30 @@ int main(int argc, const char **argv)
     
     auto options = get_basic_mock_options();
     
-    // try {
-    
-    if (options) {
-        if (Octopus::Options::is_run_command(*options)) {
-            const auto start = std::chrono::system_clock::now();
-            
-            cout << "Octopus: started run at " << start << endl;
-            
-            Octopus::run_octopus(*options);
-            
-            const auto end = std::chrono::system_clock::now();
-            
-            cout << "Octopus: finished run at " << end << ". "
-            << "Took " << TimeInterval {start, end} << endl;
+     try {
+        if (options) {
+            if (Octopus::Options::is_run_command(*options)) {
+                const auto start = std::chrono::system_clock::now();
+                
+                cout << "Started run at " << start << endl;
+                
+                Octopus::run_octopus(*options);
+                
+                const auto end = std::chrono::system_clock::now();
+                
+                cout << "Finished run at " << end << ". "
+                    << "Took " << TimeInterval {start, end} << endl;
+            }
+        } else {
+            cout << "Could not parse input options. Did not start run." << endl;
         }
-    } else {
-        cout << "Octopus: could not parse input options. Did not start run." << endl;
+    } catch (const std::exception& e) {
+        cerr << "Error: " << e.what() << endl;
+        return EXIT_FAILURE;
+    } catch (...) {
+        cerr << "Error: encountered unknown error. Quiting now" << endl;
+        return EXIT_FAILURE;
     }
-//    } catch (std::exception& e) {
-//        cerr << "Error: " << e.what() << endl;
-//        return EXIT_FAILURE;
-//    } catch (...) {
-//        cerr << "Error: encountered unknown error. Quiting now" << endl;
-//        return EXIT_FAILURE;
-//    }
     
     return EXIT_SUCCESS;
 }

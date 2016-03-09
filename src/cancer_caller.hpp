@@ -83,10 +83,6 @@ namespace Octopus
         
         bool call_somatics_only_;
         
-//        std::vector<VcfRecord> call_variants(const GenomicRegion& region,
-//                                             const std::vector<Variant>& candidates,
-//                                             const ReadMap& reads) const override;
-        
         std::unique_ptr<CallerLatents>
         infer_latents(const std::vector<SampleIdType>& samples,
                       const std::vector<Haplotype>& haplotypes,
