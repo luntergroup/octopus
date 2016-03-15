@@ -785,7 +785,7 @@ void print_genotype_posteriors(const GenotypePosteriorMap& genotype_posteriors, 
         
         for (std::size_t i {}; i < m; ++i) {
             std::cout << "\t* ";
-            print_variant_alleles(v[i].first);
+            ::debug::print_variant_alleles(v[i].first);
             std::cout << " " << std::setprecision(20) << v[i].second << std::endl;
         }
     }

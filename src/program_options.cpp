@@ -388,6 +388,11 @@ namespace Octopus
         return options.count("help") == 0 && options.count("version") == 0;
     }
     
+    bool is_debug_mode(const po::variables_map& options)
+    {
+        return options.count("debug") == 1;
+    }
+    
     struct Line
     {
         std::string line_data;
@@ -581,29 +586,26 @@ namespace Octopus
     
     boost::optional<ReferenceGenome> make_reference(const po::variables_map& options)
     {
-        auto& log = Logging::logger::get();
+        Logging::ErrorLogger log {};
         
         const auto& input_path = options.at("reference").as<std::string>();
         
         auto resolved_path = resolve_path(input_path, options);
         
         if (!resolved_path) {
-            BOOST_LOG_SEV(log, Logging::logging::trivial::error)
-                << "Could not resolve the path " << input_path
+            stream(log) << "Could not resolve the path " << input_path
                 << " given in the input option (--reference)";
             return boost::none;
         }
         
         if (!fs::exists(*resolved_path)) {
-            BOOST_LOG_SEV(log, Logging::logging::trivial::error)
-                << "The path " << input_path
+            stream(log) << "The path " << input_path
                 << " given in the input option (--reference) does not exist";
             return boost::none;
         }
         
         if (!is_file_readable(*resolved_path)) {
-            BOOST_LOG_SEV(log, Logging::logging::trivial::error)
-                << "The path " << input_path
+            stream(log) << "The path " << input_path
                 << " given in the input option (--reference) is not readable";
             return boost::none;
         }
@@ -891,28 +893,28 @@ namespace Octopus
         
         void log_unresolved_paths(const std::vector<fs::path>& paths)
         {
-            auto& log = Logging::logger::get();
+            Logging::ErrorLogger log {};
             
-            BOOST_LOG_SEV(log, Logging::logging::trivial::error) << "Paths could not be resolved:";
+            log << "Paths could not be resolved:";
             for (const auto& path : paths) {
-                BOOST_LOG_SEV(log, Logging::logging::trivial::error) << "\t" << path.string();
+                log << "\t" << path.string();
             }
         }
         
         void log_nonexistent_paths(const std::vector<fs::path>& paths)
         {
-            auto& log = Logging::logger::get();
+            Logging::ErrorLogger log {};
             
-            BOOST_LOG_SEV(log, Logging::logging::trivial::error) << "Paths could not be resolved:";
+            log << "Paths could not be resolved:";
             for (const auto& path : paths) {
-                BOOST_LOG_SEV(log, Logging::logging::trivial::error) << "\t" << path.string();
+                stream(log) << "\t" << path.string();
             }
         }
     } // namespace
     
     boost::optional<std::vector<fs::path>> get_read_paths(const po::variables_map& options)
     {
-        auto& log = Logging::logger::get();
+        Logging::ErrorLogger log {};
         
         std::vector<fs::path> result {};
         
@@ -923,8 +925,7 @@ namespace Octopus
             
             if (!resolved_paths.bad_paths.empty()) {
                 if (resolved_paths.good_paths.size() == 1) {
-                    BOOST_LOG_SEV(log, Logging::logging::trivial::error)
-                        << "Could not resolve the path " << resolved_paths.bad_paths.front()
+                    stream(log) << "Could not resolve the path " << resolved_paths.bad_paths.front()
                         << " given in the input option (--reads)";
                 } else {
                     
@@ -934,8 +935,7 @@ namespace Octopus
             
             if (!all_paths_exist(resolved_paths.good_paths)) {
                 if (resolved_paths.good_paths.size() == 1) {
-                    BOOST_LOG_SEV(log, Logging::logging::trivial::error)
-                        << "The path " << resolved_paths.good_paths.front()
+                    stream(log) << "The path " << resolved_paths.good_paths.front()
                         << " given in the input option (--reads) does not exist";
                 } else {
                     
@@ -945,8 +945,7 @@ namespace Octopus
             
             if (!all_paths_readable(resolved_paths.good_paths)) {
                 if (resolved_paths.good_paths.size() == 1) {
-                    BOOST_LOG_SEV(log, Logging::logging::trivial::error)
-                        << "The path " << resolved_paths.good_paths.front()
+                    stream(log) << "The path " << resolved_paths.good_paths.front()
                         << " given in the input option (--reads) is not readable";
                 } else {
                     
@@ -963,22 +962,19 @@ namespace Octopus
             const auto& resolved_path = resolve_path(input_path, options);
             
             if (!resolved_path) {
-                BOOST_LOG_SEV(log, Logging::logging::trivial::error)
-                    << "Could not resolve the path " << input_path
+                stream(log) << "Could not resolve the path " << input_path
                     << " given in the input option (--reads-file)";
                 return boost::none;
             }
             
             if (!fs::exists(*resolved_path)) {
-                BOOST_LOG_SEV(log, Logging::logging::trivial::error)
-                    << "The path " << input_path
+                stream(log) << "The path " << input_path
                     << " given in the input option (--reads-file) does not exist";
                 return boost::none;
             }
             
             if (!is_file_readable(*resolved_path)) {
-                BOOST_LOG_SEV(log, Logging::logging::trivial::error)
-                    << "The path " << input_path
+                stream(log) << "The path " << input_path
                     << " given in the input option (--reads-file) is not readable";
                 return boost::none;
             }
@@ -1327,7 +1323,7 @@ namespace Octopus
     
     boost::optional<fs::path> get_final_output_path(const po::variables_map& options)
     {
-        auto& log = Logging::logger::get();
+        Logging::ErrorLogger log {};
         
         const auto input_path = options.at("output").as<std::string>();
         
@@ -1338,15 +1334,13 @@ namespace Octopus
         const auto resolved_path = resolve_path(input_path, options);
         
         if (!resolved_path) {
-            BOOST_LOG_SEV(log, Logging::logging::trivial::error)
-                << "Could not resolve the path " << input_path
+            stream(log) << "Could not resolve the path " << input_path
                 << " given in the input option output";
             return boost::none;
         }
         
         if (!is_file_writable(*resolved_path)) {
-            BOOST_LOG_SEV(log, Logging::logging::trivial::error)
-                << "The path " << input_path
+            stream(log) << "The path " << input_path
                 << " given in the input option output is not readable";
             return boost::none;
         }

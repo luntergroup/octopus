@@ -9,14 +9,45 @@
 #ifndef progress_meter_hpp
 #define progress_meter_hpp
 
-#include "genomic_region.hpp"
+#include <cstddef>
+#include <chrono>
 
-class ProgressMeter
+#include "common.hpp"
+#include "genomic_region.hpp"
+#include "logging.hpp"
+
+namespace Octopus
 {
-public:
-    
-private:
-    
-};
+    class ProgressMeter
+    {
+    public:
+        ProgressMeter() = delete;
+        
+        ProgressMeter(const SearchRegions& input_regions);
+        ProgressMeter(const GenomicRegion& input_region);
+        
+        ~ProgressMeter() = default;
+        
+        ProgressMeter(const ProgressMeter&)            = delete;
+        ProgressMeter& operator=(const ProgressMeter&) = delete;
+        ProgressMeter(ProgressMeter&&)                 = delete;
+        ProgressMeter& operator=(ProgressMeter&&)      = delete;
+        
+        void log_completed(const GenomicRegion& completed_region);
+        
+    private:
+        SearchRegions regions_;
+        
+        std::size_t num_bp_to_search_, num_bp_completed_;
+        
+        GenomicRegion completed_region_;
+        
+        int num_bp_until_log_;
+        
+        std::chrono::time_point<std::chrono::system_clock> start_, last_log_;
+        
+        Logging::InfoLogger log_;
+    };
+} // namespace Octopus
 
 #endif /* progress_meter_hpp */

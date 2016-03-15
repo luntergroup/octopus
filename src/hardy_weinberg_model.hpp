@@ -29,7 +29,12 @@ namespace Octopus
         double log_hardy_weinberg_diploid(const Genotype& genotype,
                                           const Map& haplotype_frequencies)
         {
+            if (genotype.is_homozygous()) {
+                return 2 * std::log(haplotype_frequencies.at(genotype[0]));
+            }
+            
             static const double ln_2 {std::log(2.0)};
+            
             return std::log(haplotype_frequencies.at(genotype[0]))
                         + std::log(haplotype_frequencies.at(genotype[1])) + ln_2;
         }

@@ -389,9 +389,12 @@ namespace Octopus
         const auto genotype_log_likilhoods = compute_genotype_log_likelihoods(samples, genotypes,
                                                                               haplotype_likelihoods);
         
-        //debug::print_genotype_log_likelihoods(genotypes, genotype_log_likilhoods, 30);
+        //debug::print_genotype_log_likelihoods(genotypes, genotype_log_likilhoods, 10);
         
         auto haplotype_prior_count_map = compute_haplotype_prior_counts(haplotype_priors);
+        
+        //debug::print_haplotype_priors(haplotype_prior_count_map, -1);
+        
         auto haplotype_prior_counts    = flatten_haplotype_prior_counts(haplotypes, haplotype_prior_count_map);
         const auto prior_count_sum     = std::accumulate(std::cbegin(haplotype_prior_counts),
                                                          std::cend(haplotype_prior_counts), 0.0);
@@ -400,12 +403,14 @@ namespace Octopus
         
         auto haplotype_frequencies = init_haplotype_frequencies(haplotype_prior_count_map, prior_count_sum);
         
-        //debug::print_haplotype_frequencies(haplotype_frequencies);
+        //debug::print_haplotype_frequencies(haplotype_frequencies, -1);
         
         haplotype_prior_count_map.clear();
         
         auto genotype_log_marginals = init_genotype_log_marginals(genotypes, haplotype_frequencies);
         auto genotype_posteriors    = init_genotype_posteriors(genotype_log_marginals, genotype_log_likilhoods);
+        
+        //debug::print_genotype_log_marginals(genotypes, genotype_log_marginals, 10);
         
         for (unsigned n {0}; n < max_em_iterations_; ++n) {
             if (do_em_iteration(haplotypes, genotype_posteriors, haplotype_frequencies,
@@ -422,7 +427,7 @@ namespace Octopus
         void print_genotypes(const std::vector<Genotype<Haplotype>>& genotypes)
         {
             for (const auto& genotype : genotypes) {
-                print_variant_alleles(genotype);
+                ::debug::print_variant_alleles(genotype);
             }
         }
             
@@ -448,7 +453,7 @@ namespace Octopus
             std::sort(std::begin(v), std::end(v), IsBigger<Haplotype, double>());
             
             for (unsigned i {0}; i < m; ++i) {
-                print_variant_alleles(v[i].first);
+                ::debug::print_variant_alleles(v[i].first);
                 std::cout << " " << std::setprecision(10) << v[i].second << std::endl;
             }
         }
@@ -468,7 +473,7 @@ namespace Octopus
             std::sort(std::begin(v), std::end(v), IsBigger<Haplotype, double>());
             
             for (unsigned i {0}; i < m; ++i) {
-                print_variant_alleles(v[i].first);
+                ::debug::print_variant_alleles(v[i].first);
                 std::cout << " " << std::setprecision(10) << v[i].second << std::endl;
             }
         }
@@ -494,7 +499,7 @@ namespace Octopus
             std::sort(std::begin(v), std::end(v), IsBigger<Genotype<Haplotype>, double>());
             
             for (unsigned i {0}; i < std::min(n, v.size()); ++i) {
-                print_variant_alleles(v[i].first);
+                ::debug::print_variant_alleles(v[i].first);
                 std::cout << " " << std::setprecision(10) << v[i].second << std::endl;
             }
         }
@@ -529,7 +534,7 @@ namespace Octopus
                 
                 std::for_each(std::begin(likelihoods), mth,
                               [] (const auto& p) {
-                                  print_variant_alleles(p.first);
+                                  ::debug::print_variant_alleles(p.first);
                                   std::cout << " " << std::setprecision(10) << p.second << '\n';
                               });
             }
@@ -565,7 +570,7 @@ namespace Octopus
                 
                 std::for_each(std::begin(posteriors), mth,
                               [] (const auto& p) {
-                                  print_variant_alleles(p.first);
+                                  ::debug::print_variant_alleles(p.first);
                                   std::cout << " " << std::setprecision(10) << p.second << '\n';
                               });
             }

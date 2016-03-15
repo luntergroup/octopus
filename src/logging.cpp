@@ -18,6 +18,18 @@ namespace Logging
     namespace keywords = boost::log::keywords;
     namespace expr     = boost::log::expressions;
     
+    std::ostream& operator<<(std::ostream& os, severity_level level)
+    {
+        switch (level) {
+            case severity_level::debug: os <<  "DEBG"; break;
+            case severity_level::info: os <<  "INFO"; break;
+            case severity_level::warning: os <<  "WARN"; break;
+            case severity_level::error: os <<  "ERRR"; break;
+            case severity_level::fatal: os <<  "FATL"; break;
+        }
+        return os;
+    }
+    
     void init(boost::optional<boost::filesystem::path> log)
     {
         logging::add_console_log
@@ -25,13 +37,13 @@ namespace Logging
             std::clog,
             keywords::filter =
             (
-                logging::trivial::severity >= logging::trivial::info
+                severity != severity_level::debug
             ),
             keywords::format =
             (
              expr::stream
                 << expr::format_date_time< boost::posix_time::ptime >("TimeStamp", "[%Y-%m-%d %H:%M:%S]")
-                << " <" << logging::trivial::severity
+                << " <" << severity
                 << "> " << expr::smessage
             )
         );
@@ -46,7 +58,7 @@ namespace Logging
              (
                 expr::stream
                     << expr::format_date_time< boost::posix_time::ptime >("TimeStamp", "[%Y-%m-%d %H:%M:%S]")
-                    << " <" << logging::trivial::severity
+                    << " <" << severity
                     << "> " << expr::smessage
               )
              );

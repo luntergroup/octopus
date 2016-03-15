@@ -14,6 +14,7 @@
 #include <functional>
 #include <iterator>
 #include <cstddef>
+#include <algorithm>
 #include <cassert>
 
 #include "haplotype.hpp"
@@ -42,6 +43,35 @@ private:
 
 namespace debug
 {
+    template <typename S>
+    void print_haplotype_priors(S&& stream,
+                                const HaplotypePriorModel::HaplotypePriorMap& haplotype_priors,
+                                const std::size_t n = 5)
+    {
+        const auto m = std::min(haplotype_priors.size(), n);
+        
+        stream << "Printing top " << m << " haplotype priors" << '\n';
+        
+        using HaplotypeReference = std::reference_wrapper<const Haplotype>;
+        
+        std::vector<std::pair<HaplotypeReference, double>> v {};
+        v.reserve(haplotype_priors.size());
+        
+        std::copy(std::cbegin(haplotype_priors), std::cend(haplotype_priors), std::back_inserter(v));
+        
+        const auto mth = std::next(std::begin(v), m);
+        
+        std::partial_sort(std::begin(v), mth, std::end(v),
+                          [] (const auto& lhs, const auto& rhs) {
+                              return lhs.second > rhs.second;
+                          });
+        
+        std::for_each(std::begin(v), mth,
+                      [&] (const auto& p) {
+                          ::debug::print_variant_alleles(stream, p.first);
+                          stream << " " << p.second << '\n';
+                      });
+    }
     void print_haplotype_priors(const HaplotypePriorModel::HaplotypePriorMap& haplotype_priors,
                                 std::size_t n = 5);
 } // namespace debug

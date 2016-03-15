@@ -498,7 +498,8 @@ namespace Octopus
         return Latents {std::move(genotype_posteriors), std::move(genotype_mixtures)};
     }
     
-    namespace debug {
+    namespace debug
+        {
         template <typename T, typename N>
         struct IsBigger
         {
@@ -542,7 +543,7 @@ namespace Octopus
             std::cout << "DEBUG: print top " << m << " log genotype posteriors" << std::endl;
             
             for (unsigned i {}; i < m; ++i) {
-                print_variant_alleles(*v[i].first);
+                ::debug::print_variant_alleles(*v[i].first);
                 std::cout << " " << v[i].second << std::endl;
             }
         }

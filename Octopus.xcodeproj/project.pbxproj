@@ -100,6 +100,7 @@
 		D45D30861C907F81007634E3 /* libboost_log-mt.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = D45D30801C907F81007634E3 /* libboost_log-mt.dylib */; };
 		D45D30871C907F81007634E3 /* libboost_system-mt.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = D45D30811C907F81007634E3 /* libboost_system-mt.dylib */; };
 		D45D30881C907F81007634E3 /* libboost_thread-mt.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = D45D30821C907F81007634E3 /* libboost_thread-mt.dylib */; };
+		D45D308A1C983D84007634E3 /* common.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D45D30891C983D84007634E3 /* common.cpp */; };
 		D46094F21B550A2400AE72A1 /* mappable_algorithm_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D46094F11B550A2400AE72A1 /* mappable_algorithm_tests.cpp */; };
 		D4636C611B6788AC00FEA7D2 /* vcf_reader.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D4636C5F1B6788AC00FEA7D2 /* vcf_reader.cpp */; };
 		D4636C641B6788C500FEA7D2 /* vcf_record.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D4636C621B6788C500FEA7D2 /* vcf_record.cpp */; };
@@ -417,6 +418,7 @@
 		D45D30801C907F81007634E3 /* libboost_log-mt.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = "libboost_log-mt.dylib"; path = "/usr/local/Cellar/boost/1.60.0_1/lib/libboost_log-mt.dylib"; sourceTree = "<absolute>"; };
 		D45D30811C907F81007634E3 /* libboost_system-mt.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = "libboost_system-mt.dylib"; path = "/usr/local/Cellar/boost/1.60.0_1/lib/libboost_system-mt.dylib"; sourceTree = "<absolute>"; };
 		D45D30821C907F81007634E3 /* libboost_thread-mt.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = "libboost_thread-mt.dylib"; path = "/usr/local/Cellar/boost/1.60.0_1/lib/libboost_thread-mt.dylib"; sourceTree = "<absolute>"; };
+		D45D30891C983D84007634E3 /* common.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = common.cpp; sourceTree = "<group>"; };
 		D46094F11B550A2400AE72A1 /* mappable_algorithm_tests.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = mappable_algorithm_tests.cpp; sourceTree = "<group>"; };
 		D4636C5E1B5FEEC700FEA7D2 /* test_files.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = test_files.txt; sourceTree = "<group>"; };
 		D4636C5F1B6788AC00FEA7D2 /* vcf_reader.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = vcf_reader.cpp; sourceTree = "<group>"; };
@@ -635,6 +637,7 @@
 			children = (
 				CAA4DC241A81981400DD3E9A /* main.cpp */,
 				D463C1951B0229A000739A66 /* common.hpp */,
+				D45D30891C983D84007634E3 /* common.cpp */,
 				D45D30631C907491007634E3 /* logging.hpp */,
 				D45D30621C907491007634E3 /* logging.cpp */,
 				CAE3E29C1AA139A000C01B2C /* program_options.hpp */,
@@ -1334,6 +1337,7 @@
 				D42F73001C621C4C00995F54 /* trio_caller.cpp in Sources */,
 				CAF23F701BA2C308006B673F /* vcf_utils.cpp in Sources */,
 				D4807FB51BA9716700657D4F /* cancer_caller.cpp in Sources */,
+				D45D308A1C983D84007634E3 /* common.cpp in Sources */,
 				CAFA19641ABF75D400F953D9 /* haplotype.cpp in Sources */,
 				D490E4301C750B1000883184 /* variant_caller_tests.cpp in Sources */,
 				D490E4231C74CE1200883184 /* align.cpp in Sources */,
@@ -1454,7 +1458,7 @@
 				CLANG_CXX_LANGUAGE_STANDARD = "c++14";
 				FRAMEWORK_SEARCH_PATHS = "$(inherited)";
 				GCC_INPUT_FILETYPE = sourcecode.cpp.cpp;
-				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_OPTIMIZATION_LEVEL = 3;
 				HEADER_SEARCH_PATHS = (
 					"$(inherited)",
 					/usr/local/Cellar/boost/1.60.0_1/include,
@@ -1486,7 +1490,7 @@
 				CLANG_CXX_LANGUAGE_STANDARD = "c++14";
 				FRAMEWORK_SEARCH_PATHS = "$(inherited)";
 				GCC_INPUT_FILETYPE = sourcecode.cpp.cpp;
-				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_OPTIMIZATION_LEVEL = 3;
 				HEADER_SEARCH_PATHS = (
 					"$(inherited)",
 					/usr/local/Cellar/boost/1.60.0_1/include,

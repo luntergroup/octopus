@@ -248,18 +248,21 @@ std::ostream& operator<<(std::ostream& os, const CancerGenotype<MappableType>& g
     return os;
 }
 
-inline void print_alleles(const CancerGenotype<Haplotype>& genotype)
+namespace debug
 {
-    print_alleles(genotype.get_germline_genotype());
-    std::cout << " + ";
-    print_alleles(genotype.get_cancer_element());
-}
-
-inline void print_variant_alleles(const CancerGenotype<Haplotype>& genotype)
-{
-    print_variant_alleles(genotype.get_germline_genotype());
-    std::cout << " + ";
-    print_variant_alleles(genotype.get_cancer_element());
-}
+    inline void print_alleles(const CancerGenotype<Haplotype>& genotype)
+    {
+        print_alleles(genotype.get_germline_genotype());
+        std::cout << " + ";
+        print_alleles(genotype.get_cancer_element());
+    }
+    
+    inline void print_variant_alleles(const CancerGenotype<Haplotype>& genotype)
+    {
+        print_variant_alleles(genotype.get_germline_genotype());
+        std::cout << " + ";
+        print_variant_alleles(genotype.get_cancer_element());
+    }
+} // namespace debug
 
 #endif /* cancer_genotype_h */

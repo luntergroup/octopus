@@ -32,6 +32,7 @@
 
 #include <iostream> // DEBUG
 #include "timers.hpp"
+#include "progress_meter.hpp"
 
 namespace Octopus
 {
@@ -82,13 +83,33 @@ void append_annotated_calls(std::deque<VcfRecord>& curr_calls,
 
 namespace debug
 {
+    template <typename S>
+    void print_candidates(S&& stream, const std::vector<Variant>& candidates, bool number_only = false);
     void print_candidates(const std::vector<Variant>& candidates, bool number_only = false);
+    
+    template <typename S>
+    void print_active_candidates(S&& stream, const std::vector<Variant>& candidates,
+                                 const GenomicRegion& active_region, bool number_only = false);
+    void print_active_candidates(const std::vector<Variant>& candidates,
+                                 const GenomicRegion& active_region, bool number_only = false);
+    
+    template <typename S>
+    void print_inactive_flanking_candidates(S&& stream, const std::vector<Variant>& candidates,
+                                            const GenomicRegion& active_region,
+                                            const GenomicRegion& haplotype_region,
+                                            bool number_only = false);
+    void print_inactive_flanking_candidates(const std::vector<Variant>& candidates,
+                                            const GenomicRegion& active_region,
+                                            const GenomicRegion& haplotype_region,
+                                            bool number_only = false);
+    
     enum class Resolution {Sequence, Alleles, VariantAlleles, SequenceAndAlleles, SequenceAndVariantAlleles};
+    
+    template <typename S>
+    void print_haplotypes(S&& stream, const std::vector<Haplotype>& haplotypes,
+                          Resolution resolution = Resolution::SequenceAndAlleles);
     void print_haplotypes(const std::vector<Haplotype>& haplotypes,
                           Resolution resolution = Resolution::SequenceAndAlleles);
-    void print_progress(const GenomicRegion& last_active_region,
-                        const GenomicRegion& call_region,
-                        GenomicRegion::SizeType step_size);
     
     template <typename Map>
     void print_haplotype_posteriors(const Map& haplotype_posteriors, std::size_t n = 20);
@@ -137,6 +158,8 @@ bool has_moved_forward(const GenomicRegion& next_active_region, const GenomicReg
 
 std::deque<VcfRecord> VariantCaller::call_variants(const GenomicRegion& call_region) const
 {
+    Logging::DebugLogger debug_log {};
+    
     resume_timer(init_timer);
     
     ReadMap reads;
@@ -161,7 +184,9 @@ std::deque<VcfRecord> VariantCaller::call_variants(const GenomicRegion& call_reg
     
     candidate_generator_.clear();
     
-    //debug::print_candidates(candidates);
+    if (DEBUG_MODE) {
+        debug::print_candidates(stream(debug_log), candidates);
+    }
     
     if (!refcalls_requested() && candidates.empty()) {
         return result;
@@ -189,6 +214,8 @@ std::deque<VcfRecord> VariantCaller::call_variants(const GenomicRegion& call_reg
     
     HaplotypeLikelihoodCache haplotype_likelihoods {max_haplotypes_, samples};
     
+    ProgressMeter progress {call_region};
+    
     while (true) {
         resume_timer(haplotype_generation_timer);
         std::tie(haplotypes, active_region) = generator.progress();
@@ -198,13 +225,21 @@ std::deque<VcfRecord> VariantCaller::call_variants(const GenomicRegion& call_reg
             break;
         }
         
-        std::cout << "active region is " << active_region << '\n';
-        //std::cout << "haplotype region is " << haplotypes.front().get_region() << '\n';
+        if (DEBUG_MODE) {
+            stream(debug_log) << "Active region is " << active_region;
+            debug::print_active_candidates(stream(debug_log), candidates, active_region);
+            const auto& haplotype_region = haplotypes.front().get_region();
+            stream(debug_log) << "Haplotype region is " << haplotype_region;
+            debug::print_inactive_flanking_candidates(stream(debug_log), candidates, active_region,
+                                                      haplotype_region);
+        }
         
         const auto active_reads = copy_overlapped(reads, active_region);
         
-        std::cout << "there are " << haplotypes.size() << " haplotypes" << '\n';
-        //std::cout << "there are " << count_reads(active_reads) << " reads" << '\n';
+        if (DEBUG_MODE) {
+            stream(debug_log) << "There are " << haplotypes.size() << " initial haplotypes";
+            stream(debug_log) << "There are " << count_reads(active_reads) << " active reads";
+        }
         
         resume_timer(likelihood_timer);
         haplotype_likelihoods.populate(active_reads, haplotypes,
@@ -234,14 +269,21 @@ std::deque<VcfRecord> VariantCaller::call_variants(const GenomicRegion& call_reg
         auto haplotype_priors = haplotype_prior_model_->compute_maximum_entropy_haplotype_set(haplotypes);
         pause_timer(prior_model_timer);
         
+        if (DEBUG_MODE) {
+            debug::print_haplotype_priors(stream(debug_log), haplotype_priors, -1);
+        }
+        
         resume_timer(haplotype_generation_timer);
         generator.keep_haplotypes(haplotypes);
         generator.remove_haplotypes(removed_haplotypes);
         removed_haplotypes.clear();
         pause_timer(haplotype_generation_timer);
         
-        //std::cout << "there are " << haplotypes.size() << " final haplotypes" << '\n';
-        debug::print_read_haplotype_liklihoods(haplotypes, active_reads, haplotype_likelihoods, -1);
+        if (DEBUG_MODE) {
+            stream(debug_log) << "There are " << haplotypes.size() << " final haplotypes";
+            debug::print_read_haplotype_liklihoods(stream(debug_log), haplotypes, active_reads,
+                                                   haplotype_likelihoods, -1);
+        }
         
         resume_timer(latent_timer);
         const auto caller_latents = infer_latents(samples, haplotypes, haplotype_priors,
@@ -341,7 +383,7 @@ std::deque<VcfRecord> VariantCaller::call_variants(const GenomicRegion& call_reg
             completed_region = encompassing_region(completed_region, passed_region);
         }
         
-        debug::print_progress(active_region, call_region, 10000);
+        progress.log_completed(active_region);
     }
     
     return result;
@@ -541,52 +583,115 @@ generate_candidate_reference_alleles(const std::vector<Allele>& callable_alleles
 
 namespace debug
 {
-    void print_candidates(const std::vector<Variant>& candidates, bool number_only)
+    template <typename S>
+    void print_candidates(S&& stream, const std::vector<Variant>& candidates, bool number_only)
     {
         if (candidates.empty()) {
-            std::cout << "there are no candidates" << '\n';
+            stream << "There are no candidates" << '\n';
         } else {
-            std::cout << "found " << candidates.size() << " candidates: " << '\n';
+            stream << "There are " << candidates.size() << " candidates: " << '\n';
             if (!number_only) {
-                for (const auto& c : candidates) std::cout << c << '\n';
+                for (const auto& c : candidates) stream << c << '\n';
+            }
+        }
+    }
+    
+    void print_candidates(const std::vector<Variant>& candidates, bool number_only)
+    {
+        print_candidates(std::cout, candidates, number_only);
+    }
+    
+    template <typename S>
+    void print_active_candidates(S&& stream, const std::vector<Variant>& candidates,
+                                 const GenomicRegion& active_region, bool number_only)
+    {
+        const auto active_candidates = overlap_range(candidates, active_region);
+        
+        if (active_candidates.empty()) {
+            stream << "There are no active candidates" << '\n';
+        } else {
+            stream << "There are " << size(active_candidates) << " active candidates: " << '\n';
+            if (!number_only) {
+                for (const auto& c : active_candidates) stream << c << '\n';
+            }
+        }
+    }
+    
+    void print_active_candidates(const std::vector<Variant>& candidates,
+                                 const GenomicRegion& active_region, bool number_only)
+    {
+        print_active_candidates(std::cout, candidates, active_region, number_only);
+    }
+    
+    template <typename S>
+    void print_inactive_flanking_candidates(S&& stream, const std::vector<Variant>& candidates,
+                                            const GenomicRegion& active_region,
+                                            const GenomicRegion& haplotype_region,
+                                            bool number_only)
+    {
+        const auto lhs_inactive_candidates = overlap_range(candidates, left_overhang_region(haplotype_region, active_region));
+        const auto rhs_inactive_candidates = overlap_range(candidates, right_overhang_region(haplotype_region, active_region));
+        
+        if (lhs_inactive_candidates.empty()) {
+            if (rhs_inactive_candidates.empty()) {
+                stream << "There are no inactive flanking candidates" << '\n';
+                return;
+            }
+            
+            stream << "There are no lhs inactive flanking candidates" << '\n';
+            
+            stream << "There are " << size(rhs_inactive_candidates) << " rhs inactive flanking candidates: " << '\n';
+            if (!number_only) {
+                for (const auto& c : rhs_inactive_candidates) stream << c << '\n';
+            }
+            
+            return;
+        }
+        
+        stream << "There are " << size(lhs_inactive_candidates) << " lhs inactive flanking candidates: " << '\n';
+        if (!number_only) {
+            for (const auto& c : lhs_inactive_candidates) stream << c << '\n';
+        }
+        
+        if (rhs_inactive_candidates.empty()) {
+            stream << "There are no rhs inactive flanking candidates" << '\n';
+        } else {
+            stream << "There are " << size(rhs_inactive_candidates) << " rhs inactive flanking candidates: " << '\n';
+            if (!number_only) {
+                for (const auto& c : rhs_inactive_candidates) stream << c << '\n';
+            }
+        }
+    }
+    
+    void print_inactive_flanking_candidates(const std::vector<Variant>& candidates,
+                                            const GenomicRegion& active_region,
+                                            const GenomicRegion& haplotype_region,
+                                            bool number_only)
+    {
+        print_inactive_flanking_candidates(std::cout, candidates, active_region, haplotype_region, number_only);
+    }
+    
+    template <typename S>
+    void print_haplotypes(S&& stream, const std::vector<Haplotype>& haplotypes,
+                          Resolution resolution)
+    {
+        stream << "Printing " << haplotypes.size() << " haplotypes" << '\n';
+        for (const auto& haplotype : haplotypes) {
+            if (resolution == Resolution::Sequence || resolution == Resolution::SequenceAndAlleles
+                || resolution == Resolution::SequenceAndVariantAlleles) {
+                stream << haplotype << '\n';
+            }
+            if (resolution == Resolution::Alleles || resolution == Resolution::SequenceAndAlleles) {
+                ::debug::print_alleles(haplotype); stream << '\n';
+            } else if (resolution != Resolution::Sequence) {
+                ::debug::print_variant_alleles(haplotype); stream << '\n';
             }
         }
     }
     
     void print_haplotypes(const std::vector<Haplotype>& haplotypes, const Resolution resolution)
     {
-        std::cout << "printing " << haplotypes.size() << " haplotypes" << '\n';
-        for (const auto& haplotype : haplotypes) {
-            if (resolution == Resolution::Sequence || resolution == Resolution::SequenceAndAlleles
-                || resolution == Resolution::SequenceAndVariantAlleles) {
-                std::cout << haplotype << '\n';
-            }
-            if (resolution == Resolution::Alleles || resolution == Resolution::SequenceAndAlleles) {
-                print_alleles(haplotype); std::cout << '\n';
-            } else if (resolution != Resolution::Sequence) {
-                print_variant_alleles(haplotype); std::cout << '\n';
-            }
-        }
-    }
-    
-    double percent_completed(const GenomicRegion& active_region,
-                             const GenomicRegion& call_region)
-    {
-        const auto num_bases_processed = active_region.get_end() - call_region.get_begin();
-        const auto total_bases = region_size(call_region);
-        return 100 * static_cast<double>(num_bases_processed) / total_bases;
-    }
-    
-    void print_progress(const GenomicRegion& last_active_region,
-                        const GenomicRegion& call_region,
-                        GenomicRegion::SizeType step_size)
-    {
-        auto& log = Logging::logger::get();
-        
-        BOOST_LOG_SEV(log, Logging::logging::trivial::info)
-            << last_active_region.get_contig_name() << ':' << last_active_region.get_begin()
-            << "\t"
-            << percent_completed(last_active_region, call_region) << "%";
+        print_haplotypes(std::cout, haplotypes, resolution);
     }
     
     template <typename Map>
@@ -594,7 +699,7 @@ namespace debug
     {
         auto m = std::min(haplotype_posteriors.size(), n);
         
-        std::cout << "printing top " << m << " haplotype posteriors" << std::endl;
+        std::cout << "Printing top " << m << " haplotype posteriors" << std::endl;
         
         std::vector<std::pair<Haplotype, double>> v {};
         v.reserve(haplotype_posteriors.size());
@@ -608,7 +713,7 @@ namespace debug
                   });
         
         for (unsigned i {}; i < m; ++i) {
-            print_variant_alleles(v[i].first);
+            ::debug::print_variant_alleles(v[i].first);
             std::cout << " " << std::setprecision(10) << v[i].second << std::endl;
         }
     }

@@ -21,6 +21,8 @@
 
 namespace Octopus
 {
+    extern bool DEBUG_MODE;
+    
     const static std::string Octopus_version {"1.0"};
     
     using ProbabilityType = double;

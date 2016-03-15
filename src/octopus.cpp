@@ -52,11 +52,11 @@ namespace Octopus
 {
     void log_startup()
     {
-        auto& log = Logging::logger::get();
-        BOOST_LOG_SEV(log, Logging::logging::trivial::info) << "--------------------------------------------------------------------------------";
-        BOOST_LOG_SEV(log, Logging::logging::trivial::info) << "Octopus v" << Octopus_version;
-        BOOST_LOG_SEV(log, Logging::logging::trivial::info) << "Copyright (c) 2016 University of Oxford";
-        BOOST_LOG_SEV(log, Logging::logging::trivial::info) << "--------------------------------------------------------------------------------";
+        Logging::InfoLogger log {};
+        log << "--------------------------------------------------------------------------------";
+        stream(log) << "Octopus v" << Octopus_version;
+        log << "Copyright (c) 2016 University of Oxford";
+        log << "--------------------------------------------------------------------------------";
     }
     
     namespace
@@ -360,20 +360,20 @@ namespace Octopus
     
     bool are_components_valid(const GenomeCallingComponents& components)
     {
-        using std::cout; using std::endl;
+        Logging::ErrorLogger log {};
         
         if (components.samples.empty()) {
-            cout << "Quiting as no samples were found" << endl;
+            log << "Quiting as no samples were found";
             return false;
         }
         
         if (components.regions.empty()) {
-            cout << "Quiting as got no input regions" << endl;
+            log << "Quiting as got no input regions";
             return false;
         }
         
         if (components.candidate_generator_builder.num_generators() == 0) {
-            cout << "Quiting as there are no candidate generators" << endl;
+            log << "Quiting as there are no candidate generators";
             return false;
         }
         
@@ -383,26 +383,26 @@ namespace Octopus
     boost::optional<GenomeCallingComponents>
     collate_genome_calling_components(const po::variables_map& options)
     {
-        auto& log = Logging::logger::get();
+        Logging::FatalLogger log {};
         
         auto reference = Options::make_reference(options);
         
         if (!reference) {
-            BOOST_LOG_SEV(log, Logging::logging::trivial::fatal) << "Quiting as could not make reference genome";
+            log << "Quiting as could not make reference genome";
             return boost::none;
         }
         
         auto read_manager = Options::make_read_manager(options);
         
         if (!read_manager) {
-            BOOST_LOG_SEV(log, Logging::logging::trivial::fatal) << "Quiting as could not load read files";
+            log << "Quiting as could not load read files";
             return boost::none;
         }
         
         auto output = Options::make_output_vcf_writer(options);
         
         if (!output.is_open()) {
-            BOOST_LOG_SEV(log, Logging::logging::trivial::fatal) << "Quiting as could not open output file";
+            log << "Quiting as could not open output file";
             return boost::none;
         }
         
@@ -418,8 +418,7 @@ namespace Octopus
             
             return boost::optional<GenomeCallingComponents> {std::move(result)};
         } catch (const std::exception& e) {
-            BOOST_LOG_SEV(log, Logging::logging::trivial::fatal)
-                << "Could not collate options due to error " << e.what();
+            stream(log) << "Could not collate options due to error " << e.what();
             return boost::none;
         }
     }
@@ -482,8 +481,6 @@ namespace Octopus
     
     void log_startup_info(const GenomeCallingComponents& components)
     {
-        auto& log = Logging::logger::get();
-        
         std::ostringstream ss {};
         
         if (components.samples.size() == 1) {
@@ -494,14 +491,17 @@ namespace Octopus
         std::copy(std::cbegin(components.samples), std::cend(components.samples),
                   std::ostream_iterator<std::string> {ss, " "});
         
-        BOOST_LOG_SEV(log, Logging::logging::trivial::info) << ss.str();
-        BOOST_LOG_SEV(log, Logging::logging::trivial::info) << "Writing calls to " << components.output.path();
+        Logging::InfoLogger log {};
+        
+        log << ss.str();
+        
+        stream(log) << "Writing calls to " << components.output.path();
     }
     
     void write_calls(VcfWriter& out, std::deque<VcfRecord>&& calls)
     {
-        auto& log = Logging::logger::get();
-        BOOST_LOG_SEV(log, Logging::logging::trivial::info) << "Writing " << calls.size() << " calls to VCF";
+        Logging::InfoLogger log {};
+        stream(log) << "Writing " << calls.size() << " calls to VCF";
         for (auto&& call : calls) out.write(std::move(call));
     }
     
@@ -525,23 +525,27 @@ namespace Octopus
     
     void run_octopus_on_contig(ContigCallingComponents&& components)
     {
-        auto& log = Logging::logger::get();
-        
         #ifdef BENCHMARK
         init_timers();
         #endif
         
+        Logging::InfoLogger log {};
+        
         for (const auto& region : components.regions) {
-            BOOST_LOG_SEV(log, Logging::logging::trivial::info) << "Processing input region " << region;
+            stream(log) << "Processing input region " << region;
             
             auto subregion = propose_call_subregion(components, region);
             
             if (is_empty_region(subregion) && !region_has_reads(region, components)) {
-                BOOST_LOG_SEV(log, Logging::logging::trivial::warning) << "No reads found in input region " << region;
+                Logging::WarningLogger lg {};
+                stream(lg) << "No reads found in input region " << region;
             }
             
             while (!is_empty_region(subregion)) {
-                BOOST_LOG_SEV(log, Logging::logging::trivial::debug) << "Processing subregion " << subregion;
+                if (DEBUG_MODE) {
+                    Logging::DebugLogger lg {};
+                    stream(lg) << "Processing subregion " << subregion;
+                }
                 
                 auto calls = components.caller->call_variants(subregion);
                 
@@ -558,20 +562,19 @@ namespace Octopus
     
     void log_final_info(const GenomeCallingComponents& components)
     {
-        auto& log = Logging::logger::get();
-        BOOST_LOG_SEV(log, Logging::logging::trivial::info) << "Processed "
-            << calculate_total_search_size(components.regions) << " bp";
+        Logging::InfoLogger log {};
+        stream(log) << "Processed " << calculate_total_search_size(components.regions) << " bp";
     }
     
     void cleanup(GenomeCallingComponents& components) noexcept
     {
-        using std::cout; using std::endl;
+        Logging::InfoLogger log {};
         if (components.temp_directory) {
             try {
                 const auto num_files_removed = fs::remove_all(*components.temp_directory);
-                cout << "Removed " << num_files_removed << " temporary files" << endl;
+                stream(log) << "Removed " << num_files_removed << " temporary files";
             } catch (const std::exception& e) {
-                cout << "Cleanup failed with error " << e.what() << endl;
+                stream(log) << "Cleanup failed with error " << e.what();
             }
         }
     }
@@ -649,7 +652,7 @@ namespace Octopus
     
     void run_octopus(po::variables_map& options)
     {
-        auto& log = Logging::logger::get();
+        DEBUG_MODE = Options::is_debug_mode(options);
         
         log_startup();
         
@@ -663,8 +666,9 @@ namespace Octopus
         
         auto end = std::chrono::system_clock::now();
         
-        BOOST_LOG_SEV(log, Logging::logging::trivial::info)
-            << "Done initialising calling components. Took " << TimeInterval {start, end};
+        Logging::InfoLogger log {};
+        
+        stream(log) << "Done initialising calling components. Took " << TimeInterval {start, end};
         
         try {
             log_startup_info(*components);
@@ -677,8 +681,8 @@ namespace Octopus
                 run_octopus_single_threaded(*components);
             }
         } catch (const std::exception& e) {
-            BOOST_LOG_SEV(log, Logging::logging::trivial::fatal) << "Encountered fatal error "
-                    << e.what() << ". Attempting to cleanup...";
+            Logging::FatalLogger lg {};
+            stream(lg) << "Encountered fatal error " << e.what() << ". Attempting to cleanup...";
             cleanup(*components);
             throw;
         }
@@ -688,8 +692,7 @@ namespace Octopus
         
         end = std::chrono::system_clock::now();
         
-        BOOST_LOG_SEV(log, Logging::logging::trivial::info) << "Finished run. Total execution time: "
-                        << TimeInterval {start, end};
+        stream(log) << "Finished run. Total execution time: " << TimeInterval {start, end};
     }
     
 } // namespace Octopus

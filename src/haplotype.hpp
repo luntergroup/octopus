@@ -30,11 +30,17 @@ class Variant;
 
 class Haplotype;
 
+namespace debug
+{
+    template <typename S> void print_alleles(S& stream, const Haplotype& haplotype);
+    template <typename S> void print_variant_alleles(S& stream, const Haplotype& haplotype);
+} // namespace debug
+
 namespace detail
 {
     Haplotype do_splice(const Haplotype& haplotype, const GenomicRegion& region, std::true_type);
     Allele do_splice(const Haplotype& haplotype, const GenomicRegion& region, std::false_type);
-}
+} // namespace detail
 
 class Haplotype : public Comparable<Haplotype>, public Mappable<Haplotype>
 {
@@ -81,8 +87,8 @@ public:
     friend Haplotype detail::do_splice(const Haplotype& haplotype, const GenomicRegion& region, std::true_type);
     friend bool is_reference(const Haplotype& haplotype);
     
-    friend void print_alleles(const Haplotype& haplotype);
-    friend void print_variant_alleles(const Haplotype& haplotype);
+    template <typename S> friend void debug::print_alleles(S&, const Haplotype&);
+    template <typename S> friend void debug::print_variant_alleles(S&, const Haplotype&);
     
 private:
     GenomicRegion region_;
@@ -290,7 +296,36 @@ namespace boost
 
 std::ostream& operator<<(std::ostream& os, const Haplotype& haplotype);
 
-void print_alleles(const Haplotype& haplotype);
-void print_variant_alleles(const Haplotype& haplotype);
+namespace debug
+{
+    template <typename S>
+    void print_alleles(S& stream, const Haplotype& haplotype)
+    {
+        stream << "< ";
+        for (const auto& allele : haplotype.explicit_alleles_) {
+            stream << "{" << allele << "} ";
+        }
+        stream << ">";
+    }
+    
+    template <typename S>
+    void print_variant_alleles(S& stream, const Haplotype& haplotype)
+    {
+        if (is_reference(haplotype)) {
+            stream << "< >";
+        } else {
+            const auto& contig = contig_name(haplotype);
+            stream << "< ";
+            for (const auto& contig_allele : haplotype.explicit_alleles_) {
+                Allele allele {GenomicRegion {contig, contig_allele.get_region()}, contig_allele.get_sequence()};
+                if (!is_reference(allele, haplotype.reference_)) stream << "{" << allele << "} ";
+            }
+            stream << ">";
+        }
+    }
+    
+    void print_alleles(const Haplotype& haplotype);
+    void print_variant_alleles(const Haplotype& haplotype);
+} // namespace debug
 
 #endif /* defined(__Octopus__haplotype__) */

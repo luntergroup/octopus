@@ -213,8 +213,8 @@ namespace Octopus
     model_ {2, 3}
     {
         if (haplotype_flank_state_.has_lhs_flank_inactive_candidates) {
-            model_.lhs_flank_size = begin_distance(contig_region(haplotype_.get()),
-                                                   haplotype_flank_state_.active_region);
+            model_.lhs_flank_size = begin_distance(haplotype_flank_state_.active_region,
+                                                   contig_region(haplotype_.get()));
         }
         
         if (haplotype_flank_state_.has_rhs_flank_inactive_candidates) {

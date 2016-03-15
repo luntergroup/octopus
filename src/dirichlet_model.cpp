@@ -43,8 +43,8 @@ namespace GenotypeModel
     HaplotypePriorCountMap
     compute_haplotype_prior_counts(const HaplotypeFrequencyMap& haplotype_priors)
     {
-        static constexpr double   PRECISION      {40.0};
-        static constexpr unsigned MAX_ITERATIONS {10};
+        static constexpr double   PRECISION      {14000.0};
+        static constexpr unsigned MAX_ITERATIONS {1};
         
         HaplotypePriorCountMap result {haplotype_priors.size()};
         

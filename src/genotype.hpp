@@ -699,14 +699,17 @@ std::ostream& operator<<(std::ostream& os, const Genotype<MappableType>& genotyp
     }
     const auto element_counts = make_element_count_map(genotype);
     std::vector<std::pair<MappableType, unsigned>> p {element_counts.begin(), element_counts.end()};
-    for (unsigned i {}; i < p.size() - 1; ++i) {
+    for (unsigned i {0}; i < p.size() - 1; ++i) {
         os << p[i].first << "(" << p[i].second << "),";
     }
     os << p.back().first << "(" << p.back().second << ")";
     return os;
 }
 
-void print_alleles(const Genotype<Haplotype>& genotype);
-void print_variant_alleles(const Genotype<Haplotype>& genotype);
+namespace debug
+{
+    void print_alleles(const Genotype<Haplotype>& genotype);
+    void print_variant_alleles(const Genotype<Haplotype>& genotype);
+} // namespace debug
 
 #endif /* defined(__Octopus__genotype__) */

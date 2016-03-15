@@ -210,6 +210,8 @@ generate_all_genotypes(const std::vector<std::shared_ptr<Haplotype>>& haplotypes
     return detail::generate_all_genotypes(haplotypes, ploidy, std::false_type {});
 }
 
+namespace debug
+{
 void print_alleles(const Genotype<Haplotype>& genotype)
 {
     if (genotype.ploidy() == 0) {
@@ -218,7 +220,7 @@ void print_alleles(const Genotype<Haplotype>& genotype)
     const auto haplotype_counts = make_element_count_map(genotype);
     std::vector<std::pair<Haplotype, unsigned>> p {haplotype_counts.begin(), haplotype_counts.end()};
     std::cout << "[";
-    for (unsigned i {}; i < p.size() - 1; ++i) {
+    for (unsigned i {0}; i < p.size() - 1; ++i) {
         print_alleles(p[i].first);
         std::cout << "(" << p[i].second << "),";
     }
@@ -235,7 +237,7 @@ void print_variant_alleles(const Genotype<Haplotype>& genotype)
     const auto unique_haplotypes = genotype.copy_unique();
     
     std::cout << "[";
-    for (unsigned i {}; i < unique_haplotypes.size() - 1; ++i) {
+    for (unsigned i {0}; i < unique_haplotypes.size() - 1; ++i) {
         print_variant_alleles(unique_haplotypes[i]);
         std::cout << "(" << genotype.count(unique_haplotypes[i]) << "),";
     }
@@ -243,3 +245,4 @@ void print_variant_alleles(const Genotype<Haplotype>& genotype)
     print_variant_alleles(unique_haplotypes.back());
     std::cout << "(" << genotype.count(unique_haplotypes.back()) << ")]";
 }
+} // namespace debug

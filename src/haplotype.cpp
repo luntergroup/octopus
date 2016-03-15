@@ -546,28 +546,15 @@ std::ostream& operator<<(std::ostream& os, const Haplotype& haplotype)
     return os;
 }
 
-// debug
-
-void print_alleles(const Haplotype& haplotype)
+namespace debug
 {
-    std::cout << "< ";
-    for (const auto& allele : haplotype.explicit_alleles_) {
-        std::cout << "{" << allele << "} ";
+    void print_alleles(const Haplotype& haplotype)
+    {
+        print_alleles(std::cout, haplotype);
     }
-    std::cout << ">";
-}
-
-void print_variant_alleles(const Haplotype& haplotype)
-{
-    if (is_reference(haplotype)) {
-        std::cout << "< >";
-    } else {
-        const auto& contig = contig_name(haplotype);
-        std::cout << "< ";
-        for (const auto& contig_allele : haplotype.explicit_alleles_) {
-            Allele allele {GenomicRegion {contig, contig_allele.get_region()}, contig_allele.get_sequence()};
-            if (!is_reference(allele, haplotype.reference_)) std::cout << "{" << allele << "} ";
-        }
-        std::cout << ">";
+    
+    void print_variant_alleles(const Haplotype& haplotype)
+    {
+        print_variant_alleles(std::cout, haplotype);
     }
-}
+} // namespace debug

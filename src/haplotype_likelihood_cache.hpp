@@ -10,6 +10,9 @@
 #define haplotype_likelihood_cache_hpp
 
 #include <unordered_map>
+#include <vector>
+#include <algorithm>
+#include <functional>
 
 #include "common.hpp"
 #include "haplotype.hpp"
@@ -87,10 +90,70 @@ namespace Octopus
     
     namespace debug
     {
+        std::vector<std::reference_wrapper<const Haplotype>>
+        rank_haplotypes(const std::vector<Haplotype>& haplotypes, const SampleIdType& sample,
+                        const HaplotypeLikelihoodCache& haplotype_likelihoods);
+        
+        template <typename S>
+        void print_read_haplotype_liklihoods(S&& stream,
+                                             const std::vector<Haplotype>& haplotypes,
+                                             const ReadMap& reads,
+                                             const HaplotypeLikelihoodCache& haplotype_likelihoods,
+                                             std::size_t n = 5)
+        {
+            if (n == -1) {
+                stream << "Printing all read likelihoods for each haplotype in each sample" << '\n';
+            } else {
+                stream << "Printing top " << n << " read likelihoods for each haplotype in each sample" << '\n';
+            }
+            
+            using ReadReference = std::reference_wrapper<const AlignedRead>;
+            
+            for (const auto& sample_reads : reads) {
+                const auto& sample = sample_reads.first;
+                
+                stream << "Sample: " << sample << ":" << '\n';
+                
+                const auto ranked_haplotypes = rank_haplotypes(haplotypes, sample, haplotype_likelihoods);
+                
+                const auto m = std::min(n, sample_reads.second.size());
+                
+                for (const auto& haplotype : ranked_haplotypes) {
+                    stream << "\t";
+                    ::debug::print_variant_alleles(stream, haplotype);
+                    stream << '\n';
+                    
+                    std::vector<std::pair<ReadReference, double>> likelihoods {};
+                    likelihoods.reserve(sample_reads.second.size());
+                    
+                    std::transform(std::cbegin(sample_reads.second), std::cend(sample_reads.second),
+                                   std::cbegin(haplotype_likelihoods.log_likelihoods(sample, haplotype)),
+                                   std::back_inserter(likelihoods),
+                                   [] (const AlignedRead& read, const double likelihood) {
+                                       return std::make_pair(std::ref(read), likelihood);
+                                   });
+                    
+                    const auto mth = std::next(std::begin(likelihoods), m);
+                    
+                    std::partial_sort(std::begin(likelihoods), mth, std::end(likelihoods),
+                                      [] (const auto& lhs, const auto& rhs) {
+                                          return lhs.second > rhs.second;
+                                      });
+                    
+                    std::for_each(std::begin(likelihoods), mth,
+                                  [&] (const auto& p) {
+                                      stream << "\t\t" << p.first.get().get_region()
+                                      << " " << p.first.get().get_cigar_string() << ": ";
+                                      stream << p.second << '\n';
+                                  });
+                }
+            }
+        }
+        
         void print_read_haplotype_liklihoods(const std::vector<Haplotype>& haplotypes,
                                              const ReadMap& reads,
                                              const HaplotypeLikelihoodCache& haplotype_likelihoods,
-                                             size_t n = 5);
+                                             std::size_t n = 5);
     } // namespace debug
 } // namespace Octopus
 

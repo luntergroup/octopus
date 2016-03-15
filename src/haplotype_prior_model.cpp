@@ -8,7 +8,6 @@
 
 #include "haplotype_prior_model.hpp"
 
-#include <algorithm>
 #include <iostream>
 
 #include "maths.hpp"
@@ -43,26 +42,7 @@ namespace debug
     void print_haplotype_priors(const HaplotypePriorModel::HaplotypePriorMap& haplotype_priors,
                                 const std::size_t n)
     {
-        auto m = std::min(haplotype_priors.size(), n);
-        
-        std::cout << "printing top " << m << " haplotype priors" << std::endl;
-        
-        using HaplotypeReference = std::reference_wrapper<const Haplotype>;
-        
-        std::vector<std::pair<HaplotypeReference, double>> v {};
-        v.reserve(haplotype_priors.size());
-        
-        std::copy(std::cbegin(haplotype_priors), std::cend(haplotype_priors), std::back_inserter(v));
-        
-        std::sort(std::begin(v), std::end(v),
-                  [] (const auto& lhs, const auto& rhs) {
-                      return lhs.second > rhs.second;
-                  });
-        
-        for (unsigned i {0}; i < m; ++i) {
-            print_variant_alleles(v[i].first);
-            std::cout << " " << std::setprecision(10) << v[i].second << std::endl;
-        }
+        print_haplotype_priors(std::cout, haplotype_priors, n);
     }
 } // namespace debug
 } // namespace Octopus

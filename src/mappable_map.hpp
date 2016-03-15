@@ -45,6 +45,15 @@ make_mappable_map(Map map)
 }
 
 template <typename KeyType, typename MappableType>
+std::size_t sum_region_sizes(const MappableMap<KeyType, MappableType>& mappables)
+{
+    return std::accumulate(std::cbegin(mappables), std::cend(mappables), std::size_t {0},
+                           [] (const auto curr, const auto& p) {
+                               return curr + sum_region_sizes(p.second);
+                           });
+}
+
+template <typename KeyType, typename MappableType>
 auto encompassing_region(const MappableMap<KeyType, MappableType>& mappables)
 {
     if (mappables.empty()) {
