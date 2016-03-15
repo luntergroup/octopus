@@ -389,7 +389,7 @@ namespace Octopus
         const auto genotype_log_likilhoods = compute_genotype_log_likelihoods(samples, genotypes,
                                                                               haplotype_likelihoods);
         
-        //debug::print_genotype_log_likelihoods(genotypes, genotype_log_likilhoods, 20);
+        //debug::print_genotype_log_likelihoods(genotypes, genotype_log_likilhoods, 30);
         
         auto haplotype_prior_count_map = compute_haplotype_prior_counts(haplotype_priors);
         auto haplotype_prior_counts    = flatten_haplotype_prior_counts(haplotypes, haplotype_prior_count_map);
@@ -398,7 +398,9 @@ namespace Octopus
         
         const auto frequency_update_constants = make_haplotype_frequency_update_constants(haplotypes, genotypes, prior_count_sum);
         
-        auto haplotype_frequencies  = init_haplotype_frequencies(haplotype_prior_count_map, prior_count_sum);
+        auto haplotype_frequencies = init_haplotype_frequencies(haplotype_prior_count_map, prior_count_sum);
+        
+        //debug::print_haplotype_frequencies(haplotype_frequencies);
         
         haplotype_prior_count_map.clear();
         

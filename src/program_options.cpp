@@ -46,6 +46,8 @@
 
 #include "maths.hpp"
 
+#include "logging.hpp"
+
 namespace Octopus
 {
     namespace Options
@@ -168,163 +170,178 @@ namespace Octopus
             
             po::options_description general("General options");
             general.add_options()
-            ("help,h", "produce help message")
-            ("version", "output the version number")
-//            ("verbosity", po::value<unsigned>()->default_value(0),
-//             "level of logging. Verbosity 0 switches off logging")
+            ("help,h", "Produce help message")
+            ("version", "Output the version number")
+            ("debug", po::bool_switch()->default_value(false),
+             "Writes very verbose debug information to debug.log in the working directory")
             ;
             
             po::options_description backend("Backend options");
             backend.add_options()
             ("threads,t", po::value<unsigned>()->default_value(1),
-             "sets the number of threads used by the application, set to 0 to let the"
+             "Sets the number of threads used by the application, set to 0 to let the"
              " application decide the number of threads")
-            ("reference-cache-size", po::value<size_t>()->default_value(0),
-             "the maximum number of bytes that can be used to cache reference sequence")
+            ("reference-cache-size", po::value<size_t>()->default_value(50000),
+             "The maximum number of bytes that can be used to cache reference sequence")
             ("target-read-buffer-size", po::value<float>()->default_value(1.0),
-             "will try to limit the amount of memory (in gigabytes) occupied by reads to this amount")
+             "Will try to limit the amount of memory (in gigabytes) occupied by reads to this amount")
             ("compress-reads", po::bool_switch()->default_value(false),
-             "compress the reads (slower)")
+             "Compresses all read data (slower)")
             ("max-open-read-files", po::value<unsigned>()->default_value(200),
-             "the maximum number of read files that can be open at one time")
-            ("working-directory,w", po::value<std::string>(), "sets the working directory")
+             "Limits the number of read files that can be open simultaneously")
+            ("working-directory,w", po::value<std::string>(),
+             "Sets the working directory")
             ;
             
             po::options_description input("Input/output options");
             input.add_options()
-            ("reference,R", po::value<std::string>()->required(), "the reference genome file")
+            ("reference,R", po::value<std::string>()->required(),
+             "The reference genome file")
             ("reads,I", po::value<std::vector<std::string>>()->multitoken(),
-             "space-seperated list of read file paths")
-            ("reads-file", po::value<std::string>(), "list of read file paths, one per line")
-            ("regions,L", po::value<std::vector<std::string>>()->multitoken(),
-             "space-seperated list of one-indexed variant search regions (chrom:begin-end)")
-            ("regions-file", po::value<std::string>(),
-             "list of one-indexed variant search regions (chrom:begin-end), one per line")
-            ("skip-regions", po::value<std::vector<std::string>>()->multitoken(),
-             "space-seperated list of one-indexed regions (chrom:begin-end) to skip")
-            ("skip-regions-file", po::value<std::string>(),
-             "list of one-indexed regions (chrom:begin-end) to skip, one per line")
-            ("samples,S", po::value<std::vector<std::string>>()->multitoken(),
-             "space-seperated list of sample names to consider")
-            ("samples-file", po::value<std::string>(),
-             "list of sample names to consider, one per line")
-            ("output,o", po::value<std::string>()->default_value("octopus_calls.vcf"),
-             "write output to file")
-            ("contig-output-order", po::value<ContigOutputOrder>()->default_value(ContigOutputOrder::AsInReferenceIndex),
-             "list of sample names to consider, one per line")
+             "Space-seperated list of BAM/CRAM paths")
+            ("reads-file", po::value<std::string>(),
+             "File of BAM/CRAM paths, one per line")
             ("use-one-based-indexing", po::bool_switch()->default_value(false),
-             "uses one based indexing for input regions rather than zero based")
-            ("debug", po::bool_switch()->default_value(false),
-             "outputs very verbose debug information to a log file")
+             "Uses one based indexing for input regions rather than zero based")
+            ("regions,L", po::value<std::vector<std::string>>()->multitoken(),
+             "Space-seperated list of regions (chrom:begin-end) that will be analysed")
+            ("regions-file", po::value<std::string>(),
+             "File of regions (chrom:begin-end), one per line")
+            ("skip-regions", po::value<std::vector<std::string>>()->multitoken(),
+             "Space-seperated list of regions (chrom:begin-end) to skip")
+            ("skip-regions-file", po::value<std::string>(),
+             "File of regions (chrom:begin-end) to skip, one per line")
+            ("samples,S", po::value<std::vector<std::string>>()->multitoken(),
+             "Space-seperated list of sample names to analyse")
+            ("samples-file", po::value<std::string>(),
+             "File of sample names to analyse, one per line")
+            ("output,o", po::value<std::string>()->default_value("octopus_calls.vcf"),
+             "File to where output is written")
+            ("contig-output-order", po::value<ContigOutputOrder>()->default_value(ContigOutputOrder::AsInReferenceIndex),
+             "The order contigs should be written to the output")
             ;
             
             po::options_description filters("Read filter options");
             filters.add_options()
             ("allow-unmapped", po::bool_switch()->default_value(false),
-             "turns off marked unmapped read filter")
+             "Allows reads marked as unmapped to be used for calling")
             ("min-mapping-quality", po::value<unsigned>()->default_value(20),
-             "reads with smaller mapping quality are ignored")
+             "Minimum read mapping quality required to consider a read for calling")
             ("good-base-quality", po::value<unsigned>()->default_value(20),
-             "base quality threshold used by min-good-bases filter")
+             "Base quality threshold used by min-good-bases filter")
             ("min-good-base-fraction", po::value<double>(),
-             "base quality threshold used by min-good-bases filter")
+             "Base quality threshold used by min-good-bases filter")
             ("min-good-bases", po::value<AlignedRead::SizeType>()->default_value(20),
-             "minimum number of bases with quality min-base-quality before read is considered")
-            ("allow-qc-fails", po::bool_switch()->default_value(false), "filter reads marked as QC failed")
-            ("min-read-length", po::value<AlignedRead::SizeType>(), "filter reads shorter than this")
-            ("max-read-length", po::value<AlignedRead::SizeType>(), "filter reads longer than this")
+             "Minimum number of bases with quality min-base-quality before read is considered")
+            ("allow-qc-fails", po::bool_switch()->default_value(false),
+             "Filters reads marked as QC failed")
+            ("min-read-length", po::value<AlignedRead::SizeType>(),
+             "Filters reads shorter than this")
+            ("max-read-length", po::value<AlignedRead::SizeType>(),
+             "Filter reads longer than this")
             ("allow-marked-duplicates", po::bool_switch()->default_value(false),
-             "allows reads marked as duplicate in alignment record")
+             "Allows reads marked as duplicate in alignment record")
             ("allow-octopus-duplicates", po::bool_switch()->default_value(false),
-             "allows reads considered duplicates by Octopus")
+             "Allows reads considered duplicates by Octopus")
             ("no-secondary-alignmenets", po::bool_switch()->default_value(false),
-             "filters reads marked as secondary alignments")
+             "Filters reads marked as secondary alignments")
             ("no-supplementary-alignmenets", po::bool_switch()->default_value(false),
-             "filters reads marked as supplementary alignments")
+             "Filters reads marked as supplementary alignments")
             ("no-unmapped-mates", po::bool_switch()->default_value(false),
-             "filters reads with unmapped mates")
+             "Filters reads with unmapped mates")
             ("no-downsampling", po::bool_switch()->default_value(false),
-             "turns off any downsampling")
-            ("downsample-above", po::value<unsigned>()->default_value(10000),
-             "downsample reads in regions where coverage is over this")
-            ("downsample-target", po::value<unsigned>()->default_value(10000),
-             "the target coverage for the downsampler")
+             "Diables all downsampling")
+            ("downsample-above", po::value<unsigned>()->default_value(500),
+             "Downsample reads in regions where coverage is over this")
+            ("downsample-target", po::value<unsigned>()->default_value(400),
+             "The target coverage for the downsampler")
             ;
             
             po::options_description transforms("Read transform options");
             transforms.add_options()
             ("trim-soft-clipped", po::bool_switch()->default_value(false),
-             "trims soft clipped parts of the read")
+             "Sets the quality of all soft clipped bases to zero")
             ("tail-trim-size", po::value<AlignedRead::SizeType>()->default_value(0),
-             "trims this number of bases off the tail of all reads")
+             "Trims this number of bases off the tail of all reads")
             ("trim-adapters", po::bool_switch()->default_value(false),
-             "trims any overlapping regions that pass the fragment size")
+             "Trims any overlapping regions that pass the fragment size")
             ;
             
             po::options_description candidates("Candidate generation options");
             candidates.add_options()
             ("no-candidates-from-alignments", po::bool_switch()->default_value(false),
-             "disables candidate variants from aligned reads")
+             "Disables candidate variants from aligned reads")
             ("candidates-from-assembler", po::bool_switch()->default_value(false),
-             "generate candidate variants with the assembler")
+             "Generate candidate variants with the assembler")
             ("candidates-from-source", po::value<std::string>(),
-             "variant file path containing known variants. These variants will automatically become candidates")
+             "Variant file path containing known variants. These variants will automatically become candidates")
             ("regenotype", po::bool_switch()->default_value(false),
-             "disables all generators other than source which must be present")
+             "Disables all generators other than source which must be present")
             ("min-snp-base-quality", po::value<unsigned>()->default_value(20),
-             "only base changes with quality above this value are considered for snp generation")
-            ("min-supporting-reads", po::value<unsigned>()->default_value(1),
-             "minimum number of reads that must support a variant if it is to be considered a candidate")
+             "Only base changes with quality above this value are considered for snp generation")
+            ("min-supporting-reads", po::value<unsigned>()->default_value(2),
+             "Minimum number of reads that must support a variant if it is to be considered a candidate")
             ("max-variant-size", po::value<AlignedRead::SizeType>()->default_value(100),
-             "maximum candidate varaint size from alignmenet CIGAR")
+             "Maximum candidate varaint size from alignmenet CIGAR")
             ("kmer-size", po::value<unsigned>()->default_value(15),
-             "k-mer size to use for assembly")
-            ("no-cycles", po::bool_switch()->default_value(false), "dissalow cycles in assembly graph")
+             "K-mer size to use for assembly")
+            ("no-cycles", po::bool_switch()->default_value(false),
+             "Dissalow cycles in assembly graph")
             ;
             
-            po::options_description model("Model options");
-            model.add_options()
-            ("model", po::value<std::string>()->default_value("population"), "calling model used")
+            po::options_description caller("Caller options");
+            caller.add_options()
+            ("model", po::value<std::string>()->default_value("population"),
+             "Calling model used")
             ("organism-ploidy", po::value<unsigned>()->default_value(2),
-             "organism ploidy, all contigs with unspecified ploidy are assumed this ploidy")
+             "Organism ploidy, all contigs with unspecified ploidy are assumed this ploidy")
             ("contig-ploidies", po::value<std::vector<ContigPloidy>>()->multitoken(),
-             "space-seperated list of contig=ploidy pairs")
-            ("contig-ploidies-file", po::value<std::string>(), "list of contig=ploidy pairs, one per line")
-            ("normal-sample", po::value<std::string>(), "normal sample used in cancer model")
-            ("maternal-sample", po::value<std::string>(), "maternal sample for trio model")
-            ("paternal-sample", po::value<std::string>(), "paternal sample for trio model")
+             "Space-seperated list of contig=ploidy pairs")
+            ("contig-ploidies-file", po::value<std::string>(),
+             "List of contig=ploidy pairs, one per line")
             ("transition-prior", po::value<double>()->default_value(0.003),
-             "prior probability of a transition snp from the reference")
+             "Prior probability of a transition snp from the reference")
             ("transversion-prior", po::value<double>()->default_value(0.003),
-             "prior probability of a transversion snp from the reference")
+             "Prior probability of a transversion snp from the reference")
             ("insertion-prior", po::value<double>()->default_value(0.003),
-             "prior probability of an insertion into the reference")
+             "Prior probability of an insertion into the reference")
             ("deletion-prior", po::value<double>()->default_value(0.003),
-             "prior probability of a deletion from the reference")
+             "Prior probability of a deletion from the reference")
             ("prior-precision", po::value<double>()->default_value(0.003),
-             "precision (inverse variance) of the given variant priors")
+             "Precision (inverse variance) of the given variant priors")
             ("max-haplotypes", po::value<unsigned>()->default_value(128),
-             "the maximum number of haplotypes the model may consider")
+             "Maximum number of haplotypes the model may consider")
+            ("min-variant-posterior", po::value<float>()->default_value(20.0),
+             "Minimum variant call posterior probability (phred scale)")
+            ("min-refcall-posterior", po::value<float>()->default_value(10.0),
+             "Minimum homozygous reference call posterior probability (phred scale)")
+            ("make-positional-refcalls", po::bool_switch()->default_value(false),
+             "Caller will output positional REFCALLs")
+            ("make-blocked-refcalls", po::bool_switch()->default_value(false),
+             "Caller will output blocked REFCALLs")
             ;
             
-            po::options_description calling("Caller options");
-            calling.add_options()
-            ("min-variant-posterior", po::value<float>()->default_value(20.0),
-             "minimum variant call posterior probability (phred scale)")
-            ("min-refcall-posterior", po::value<float>()->default_value(10.0),
-             "minimum homozygous reference call posterior probability (phred scale)")
+            po::options_description cancer("Cancer model specific options");
+            cancer.add_options()
+            ("normal-sample", po::value<std::string>(),
+             "Normal sample used in cancer model")
             ("min-somatic-posterior", po::value<float>()->default_value(10.0),
-             "minimum somaitc mutation call posterior probability (phred scale)")
-            ("make-positional-refcalls", po::bool_switch()->default_value(false),
-             "caller will output positional REFCALLs")
-            ("make-blocked-refcalls", po::bool_switch()->default_value(false),
-             "caller will output blocked REFCALLs")
+             "Minimum somaitc mutation call posterior probability (phred scale)")
             ("somatics-only", po::bool_switch()->default_value(false),
-             "only output somatic calls (for somatic calling models only)")
+             "Only output somatic calls (for somatic calling models only)")
+            ;
+            
+            po::options_description trio("Trio model specific options");
+            trio.add_options()
+            ("maternal-sample", po::value<std::string>(),
+             "Maternal sample for trio model")
+            ("paternal-sample", po::value<std::string>(),
+             "Paternal sample for trio model")
             ;
             
             po::options_description all("Allowed options");
-            all.add(general).add(backend).add(input).add(filters).add(transforms).add(candidates).add(model).add(calling);
+            all.add(general).add(backend).add(input).add(filters).add(transforms)
+            .add(candidates).add(caller).add(cancer);
             
             po::variables_map vm;
             po::store(po::command_line_parser(argc, argv).options(all).positional(p).run(), vm);
@@ -448,35 +465,23 @@ namespace Octopus
         
         if (result) {
             *result /= path;
-            
             return *result;
         }
         
         return result;
     }
     
-    boost::optional<std::vector<fs::path>> extract_paths_from_file(const fs::path& file_path,
-                                                                   const po::variables_map& options)
+    std::vector<fs::path>
+    extract_paths_from_file(const fs::path& file_path, const po::variables_map& options)
     {
         const auto resolved_path = resolve_path(file_path, options);
         
         std::vector<fs::path> result {};
         
-        if (!resolved_path) {
-            std::cout << "Could not resolve file path " << file_path << std::endl;
-            return boost::none;
-        }
-        
-        if (!fs::exists(*resolved_path)) {
-            std::cout << "Could not find file " << *resolved_path << std::endl;
-            return boost::none;
-        }
-        
         std::ifstream file {file_path.string()};
         
         if (!file.good()) {
-            std::cout << "Could not open file " << *resolved_path << std::endl;
-            return boost::none;
+            throw std::runtime_error {"Could not read from file " + file_path.string()};
         }
         
         std::transform(std::istream_iterator<Line>(file), std::istream_iterator<Line>(),
@@ -507,7 +512,7 @@ namespace Octopus
         for (const auto& path : paths) {
             auto resolved_path = resolve_path(path, options);
             
-            if (resolved_path && fs::exists(*resolved_path)) {
+            if (resolved_path) {
                 result.good_paths.emplace_back(*std::move(resolved_path));
             } else {
                 result.bad_paths.emplace_back(*std::move(resolved_path));
@@ -525,6 +530,17 @@ namespace Octopus
     {
         std::vector<fs::path> paths {std::cbegin(path_strings), std::cend(path_strings)};
         return resolve_paths(paths, options);
+    }
+        
+    bool is_file_readable(const fs::path& path)
+    {
+        std::ifstream tmp {path.string()};
+        return tmp.good();
+    }
+    
+    bool is_file_writable(const fs::path& path)
+    {
+        return true; // TODO
     }
     
     bool is_threading_allowed(const po::variables_map& options)
@@ -565,24 +581,38 @@ namespace Octopus
     
     boost::optional<ReferenceGenome> make_reference(const po::variables_map& options)
     {
-        const auto& path_str = options.at("reference").as<std::string>();
+        auto& log = Logging::logger::get();
         
-        auto path = resolve_path(path_str, options);
+        const auto& input_path = options.at("reference").as<std::string>();
         
-        if (path) {
-            if (fs::exists(*path)) {
-                const auto ref_cache_size = options.at("reference-cache-size").as<size_t>();
-                return ::make_reference(*std::move(path),
-                                        static_cast<ReferenceGenome::SizeType>(ref_cache_size),
-                                        is_threading_allowed(options));
-            } else {
-                std::cout << "Could not find reference path " << *path << std::endl;
-            }
-        } else {
-            std::cout << "Could not resolve reference path " << path_str << std::endl;
+        auto resolved_path = resolve_path(input_path, options);
+        
+        if (!resolved_path) {
+            BOOST_LOG_SEV(log, Logging::logging::trivial::error)
+                << "Could not resolve the path " << input_path
+                << " given in the input option (--reference)";
+            return boost::none;
         }
         
-        return boost::none;
+        if (!fs::exists(*resolved_path)) {
+            BOOST_LOG_SEV(log, Logging::logging::trivial::error)
+                << "The path " << input_path
+                << " given in the input option (--reference) does not exist";
+            return boost::none;
+        }
+        
+        if (!is_file_readable(*resolved_path)) {
+            BOOST_LOG_SEV(log, Logging::logging::trivial::error)
+                << "The path " << input_path
+                << " given in the input option (--reference) is not readable";
+            return boost::none;
+        }
+        
+        const auto ref_cache_size = options.at("reference-cache-size").as<std::size_t>();
+        
+        return ::make_reference(*std::move(resolved_path),
+                                static_cast<ReferenceGenome::SizeType>(ref_cache_size),
+                                is_threading_allowed(options));
     }
     
     template <typename T, typename S>
@@ -843,18 +873,47 @@ namespace Octopus
     
     namespace
     {
-        void print_bad_paths(const std::vector<fs::path>& bad_paths)
+        bool all_paths_exist(const std::vector<fs::path>& paths)
         {
-            std::cout << "Paths could not be resolved:" << std::endl;
-            for (const auto& path : bad_paths) {
-                std::cout << "\t" << path.string() << '\n';
+            return std::all_of(std::cbegin(paths), std::cend(paths),
+                               [] (const auto& path) {
+                                   return fs::exists(path);
+                               });
+        }
+        
+        bool all_paths_readable(const std::vector<fs::path>& paths)
+        {
+            return std::all_of(std::cbegin(paths), std::cend(paths),
+                               [] (const auto& path) {
+                                   return is_file_readable(path);
+                               });
+        }
+        
+        void log_unresolved_paths(const std::vector<fs::path>& paths)
+        {
+            auto& log = Logging::logger::get();
+            
+            BOOST_LOG_SEV(log, Logging::logging::trivial::error) << "Paths could not be resolved:";
+            for (const auto& path : paths) {
+                BOOST_LOG_SEV(log, Logging::logging::trivial::error) << "\t" << path.string();
             }
-            std::cout << std::endl;
+        }
+        
+        void log_nonexistent_paths(const std::vector<fs::path>& paths)
+        {
+            auto& log = Logging::logger::get();
+            
+            BOOST_LOG_SEV(log, Logging::logging::trivial::error) << "Paths could not be resolved:";
+            for (const auto& path : paths) {
+                BOOST_LOG_SEV(log, Logging::logging::trivial::error) << "\t" << path.string();
+            }
         }
     } // namespace
     
     boost::optional<std::vector<fs::path>> get_read_paths(const po::variables_map& options)
     {
+        auto& log = Logging::logger::get();
+        
         std::vector<fs::path> result {};
         
         if (options.count("reads") == 1) {
@@ -863,7 +922,35 @@ namespace Octopus
             auto resolved_paths = resolve_paths(read_paths, options);
             
             if (!resolved_paths.bad_paths.empty()) {
-                print_bad_paths(resolved_paths.bad_paths);
+                if (resolved_paths.good_paths.size() == 1) {
+                    BOOST_LOG_SEV(log, Logging::logging::trivial::error)
+                        << "Could not resolve the path " << resolved_paths.bad_paths.front()
+                        << " given in the input option (--reads)";
+                } else {
+                    
+                }
+                return boost::none;
+            }
+            
+            if (!all_paths_exist(resolved_paths.good_paths)) {
+                if (resolved_paths.good_paths.size() == 1) {
+                    BOOST_LOG_SEV(log, Logging::logging::trivial::error)
+                        << "The path " << resolved_paths.good_paths.front()
+                        << " given in the input option (--reads) does not exist";
+                } else {
+                    
+                }
+                return boost::none;
+            }
+            
+            if (!all_paths_readable(resolved_paths.good_paths)) {
+                if (resolved_paths.good_paths.size() == 1) {
+                    BOOST_LOG_SEV(log, Logging::logging::trivial::error)
+                        << "The path " << resolved_paths.good_paths.front()
+                        << " given in the input option (--reads) is not readable";
+                } else {
+                    
+                }
                 return boost::none;
             }
             
@@ -871,17 +958,46 @@ namespace Octopus
         }
         
         if (options.count("reads-file") == 1) {
-            const auto& read_file_path = options.at("reads-file").as<std::string>();
+            const auto input_path = options.at("reads-file").as<std::string>();
             
-            auto paths = extract_paths_from_file(read_file_path, options);
+            const auto& resolved_path = resolve_path(input_path, options);
             
-            if (!paths) return boost::none;
+            if (!resolved_path) {
+                BOOST_LOG_SEV(log, Logging::logging::trivial::error)
+                    << "Could not resolve the path " << input_path
+                    << " given in the input option (--reads-file)";
+                return boost::none;
+            }
             
-            auto resolved_paths = resolve_paths(*paths, options);
+            if (!fs::exists(*resolved_path)) {
+                BOOST_LOG_SEV(log, Logging::logging::trivial::error)
+                    << "The path " << input_path
+                    << " given in the input option (--reads-file) does not exist";
+                return boost::none;
+            }
+            
+            if (!is_file_readable(*resolved_path)) {
+                BOOST_LOG_SEV(log, Logging::logging::trivial::error)
+                    << "The path " << input_path
+                    << " given in the input option (--reads-file) is not readable";
+                return boost::none;
+            }
+            
+            auto paths = extract_paths_from_file(*resolved_path, options);
+            
+            auto resolved_paths = resolve_paths(paths, options);
             
             if (!resolved_paths.bad_paths.empty()) {
-                print_bad_paths(resolved_paths.bad_paths);
+                log_unresolved_paths(resolved_paths.bad_paths);
                 return boost::none;
+            }
+            
+            if (!all_paths_exist(resolved_paths.good_paths)) {
+                
+            }
+            
+            if (!all_paths_readable(resolved_paths.good_paths)) {
+                
             }
             
             append(result, std::move(resolved_paths.good_paths));
@@ -1211,7 +1327,31 @@ namespace Octopus
     
     boost::optional<fs::path> get_final_output_path(const po::variables_map& options)
     {
-        return resolve_path(options.at("output").as<std::string>(), options);
+        auto& log = Logging::logger::get();
+        
+        const auto input_path = options.at("output").as<std::string>();
+        
+        if (input_path == "-") {
+            return fs::path {input_path}; // Output goes to stdout
+        }
+        
+        const auto resolved_path = resolve_path(input_path, options);
+        
+        if (!resolved_path) {
+            BOOST_LOG_SEV(log, Logging::logging::trivial::error)
+                << "Could not resolve the path " << input_path
+                << " given in the input option output";
+            return boost::none;
+        }
+        
+        if (!is_file_writable(*resolved_path)) {
+            BOOST_LOG_SEV(log, Logging::logging::trivial::error)
+                << "The path " << input_path
+                << " given in the input option output is not readable";
+            return boost::none;
+        }
+        
+        return resolved_path;
     }
     
     VcfWriter make_output_vcf_writer(const po::variables_map& options)

@@ -19,8 +19,8 @@ namespace PairHMM
     {
         int nucprior;
         int gapextend;
-        bool do_lhs_backtrace = false;
-        bool do_rhs_backtrace = false;
+        std::size_t lhs_flank_size = 0;
+        std::size_t rhs_flank_size = 0;
     };
     
     // p(target | truth, target_qualities, target_gap_open_penalties, model)

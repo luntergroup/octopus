@@ -106,6 +106,13 @@ auto count_mismatches(InputIt1 first1, InputIt1 last1, InputIt2 first2)
 //    return -ln_10_div_10 * static_cast<double>(score - flank_score);
 //}
 
+bool is_target_in_truth_flank(const std::string& truth, const std::string& target,
+                              const std::size_t target_offset, const Model& model)
+{
+    return target_offset < model.lhs_flank_size
+            || (target_offset + target.size()) > (truth.size() - model.rhs_flank_size);
+}
+
 auto align(const std::string& truth, const std::string& target,
            const std::vector<std::uint8_t>& target_qualities,
            const std::vector<std::int8_t>& truth_gap_open_penalties,
@@ -117,7 +124,7 @@ auto align(const std::string& truth, const std::string& target,
         return std::numeric_limits<double>::lowest();
     }
     
-    if (!(model.do_lhs_backtrace || model.do_rhs_backtrace)) {
+    if (!is_target_in_truth_flank(truth, target, target_offset, model)) {
         const auto score = fastAlignmentRoutine(truth.data() + target_offset,
                                                 target.data(),
                                                 reinterpret_cast<const std::int8_t*>(target_qualities.data()),
@@ -144,10 +151,12 @@ auto align(const std::string& truth, const std::string& target,
                                             align1.data(), align2.data(), &first_pos);
     
     const auto truth_size     = static_cast<int>(truth.size());
-    const auto lhs_flank_size = (model.do_lhs_backtrace) ? static_cast<int>(target_offset) : 0;
-    const auto rhs_flank_size = (model.do_rhs_backtrace) ? static_cast<int>(truth_size - (target_offset + target.size())) : 0;
+    const auto lhs_flank_size = static_cast<int>(model.lhs_flank_size);
+    const auto rhs_flank_size = static_cast<int>(model.rhs_flank_size);
     
-    const auto flank_score = calculateFlankScore(truth_size, lhs_flank_size, rhs_flank_size,
+    const auto flank_score = calculateFlankScore(truth_size,
+                                                 lhs_flank_size,
+                                                 rhs_flank_size,
                                                  reinterpret_cast<const std::int8_t*>(target_qualities.data()),
                                                  truth_gap_open_penalties.data(),
                                                  static_cast<int>(model.gapextend),

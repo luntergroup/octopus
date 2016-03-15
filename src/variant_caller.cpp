@@ -28,6 +28,8 @@
 
 #include "basic_haplotype_prior_model.hpp" // TODO: turn into factory
 
+#include "logging.hpp"
+
 #include <iostream> // DEBUG
 #include "timers.hpp"
 
@@ -38,24 +40,14 @@ namespace Octopus
 VariantCaller::VariantCaller(const ReferenceGenome& reference,
                              ReadPipe& read_pipe,
                              CandidateVariantGenerator&& candidate_generator,
-                             RefCallType refcall_type)
-:
-reference_ {reference},
-read_pipe_ {read_pipe},
-refcall_type_ {refcall_type},
-haplotype_prior_model_ {std::make_unique<BasicHaplotypePriorModel>(reference_)},
-candidate_generator_ {std::move(candidate_generator)}
-{}
-
-VariantCaller::VariantCaller(const ReferenceGenome& reference,
-                             ReadPipe& read_pipe,
-                             CandidateVariantGenerator&& candidate_generator,
+                             const unsigned max_haplotypes,
                              std::unique_ptr<HaplotypePriorModel> haplotype_prior_model,
                              RefCallType refcall_type)
 :
 reference_ {reference},
 read_pipe_ {read_pipe},
 refcall_type_ {refcall_type},
+max_haplotypes_ {max_haplotypes},
 haplotype_prior_model_ {std::move(haplotype_prior_model)},
 candidate_generator_ {std::move(candidate_generator)}
 {}
@@ -102,35 +94,17 @@ namespace debug
     void print_haplotype_posteriors(const Map& haplotype_posteriors, std::size_t n = 20);
 }
 
-bool haplotype_region_contains_inactive_candidates(const GenomicRegion& haplotype_region,
-                                                   const GenomicRegion& active_region,
-                                                   const std::vector<Variant>& candidates)
-{
-    return has_overlapped(candidates, left_overhang_region(haplotype_region, active_region))
-        || has_overlapped(candidates, right_overhang_region(haplotype_region, active_region));
-}
-
 auto flank_state(const std::vector<Haplotype>& haplotypes,
                  const GenomicRegion& active_region,
                  const std::vector<Variant>& candidates)
 {
     const auto& haplotype_region = haplotypes.front().get_region();
     
-    const bool left_unclear {has_overlapped(candidates, left_overhang_region(haplotype_region, active_region))};
-    const bool right_unclear {has_overlapped(candidates, left_overhang_region(haplotype_region, active_region))};
-    
-    if (left_unclear) {
-        if (right_unclear) {
-            return HaplotypeLikelihoodModel::FlankState::Unclear;
-        }
-        return HaplotypeLikelihoodModel::FlankState::LeftUnclear;
-    }
-    
-    if (right_unclear) {
-        return HaplotypeLikelihoodModel::FlankState::RightUnclear;
-    }
-    
-    return HaplotypeLikelihoodModel::FlankState::Clear;
+    return HaplotypeLikelihoodModel::FlankState {
+        active_region.get_contig_region(),
+        has_overlapped(candidates, left_overhang_region(haplotype_region, active_region)),
+        has_overlapped(candidates, right_overhang_region(haplotype_region, active_region))
+    };
 }
 
 bool all_empty(const ReadMap& reads)
@@ -224,12 +198,12 @@ std::deque<VcfRecord> VariantCaller::call_variants(const GenomicRegion& call_reg
             break;
         }
         
-        //std::cout << "active region is " << active_region << '\n';
+        std::cout << "active region is " << active_region << '\n';
         //std::cout << "haplotype region is " << haplotypes.front().get_region() << '\n';
         
         const auto active_reads = copy_overlapped(reads, active_region);
         
-        //std::cout << "there are " << haplotypes.size() << " haplotypes" << '\n';
+        std::cout << "there are " << haplotypes.size() << " haplotypes" << '\n';
         //std::cout << "there are " << count_reads(active_reads) << " reads" << '\n';
         
         resume_timer(likelihood_timer);
@@ -267,7 +241,7 @@ std::deque<VcfRecord> VariantCaller::call_variants(const GenomicRegion& call_reg
         pause_timer(haplotype_generation_timer);
         
         //std::cout << "there are " << haplotypes.size() << " final haplotypes" << '\n';
-        //debug::print_read_haplotype_liklihoods(haplotypes, active_reads, haplotype_likelihoods);
+        debug::print_read_haplotype_liklihoods(haplotypes, active_reads, haplotype_likelihoods, -1);
         
         resume_timer(latent_timer);
         const auto caller_latents = infer_latents(samples, haplotypes, haplotype_priors,
@@ -398,7 +372,7 @@ VariantCaller::get_removable_haplotypes(const std::vector<Haplotype>& haplotypes
     
     // TODO
     for (const auto& p : haplotype_posteriors) {
-        if (p.second < 0.01) {
+        if (p.second < 1e-06) {
             result.push_back(p.first);
         }
     }
@@ -564,7 +538,7 @@ generate_candidate_reference_alleles(const std::vector<Allele>& callable_alleles
     
     return result;
 }
-    
+
 namespace debug
 {
     void print_candidates(const std::vector<Variant>& candidates, bool number_only)
@@ -607,8 +581,12 @@ namespace debug
                         const GenomicRegion& call_region,
                         GenomicRegion::SizeType step_size)
     {
-        std::cout << "completed: " << std::setprecision(3)
-                << percent_completed(last_active_region, call_region) << "%" << std::endl;
+        auto& log = Logging::logger::get();
+        
+        BOOST_LOG_SEV(log, Logging::logging::trivial::info)
+            << last_active_region.get_contig_name() << ':' << last_active_region.get_begin()
+            << "\t"
+            << percent_completed(last_active_region, call_region) << "%";
     }
     
     template <typename Map>

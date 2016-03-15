@@ -20,6 +20,9 @@
 #include "variant_caller.hpp"
 #include "read_pipe.hpp"
 #include "candidate_generator_builder.hpp"
+
+#include "haplotype_prior_model.hpp"
+#include "basic_haplotype_prior_model.hpp"
 #include "pedigree.hpp"
 
 namespace Octopus {
@@ -77,19 +80,19 @@ namespace Octopus {
         std::reference_wrapper<const ReferenceGenome> reference_;
         std::reference_wrapper<ReadPipe> read_pipe_;
         
-        unsigned ploidy_ = 2;
-        std::string model_ = "population";
+        unsigned ploidy_;
+        std::string model_;
         std::reference_wrapper<const CandidateGeneratorBuilder> candidate_generator_builder_;
         VariantCaller::RefCallType refcall_type_ = VariantCaller::RefCallType::None;
-        double min_variant_posterior_ = 0.99;
-        double min_refcall_posterior_ = 0.99;
-        unsigned max_haplotypes_ = 128;
+        double min_variant_posterior_;
+        double min_refcall_posterior_;
+        unsigned max_haplotypes_;
         
         // cancer
         
         boost::optional<SampleIdType> normal_sample_;
-        double min_somatic_posterior_ = 0.99;
-        bool call_somatics_only_ = true;
+        double min_somatic_posterior_;
+        bool call_somatics_only_;
         
         // trio
         

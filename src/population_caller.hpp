@@ -15,7 +15,7 @@
 
 #include "common.hpp"
 #include "variant_caller.hpp"
-
+#include "haplotype_prior_model.hpp"
 #include "population_genotype_model.hpp"
 
 class GenomicRegion;
@@ -34,6 +34,8 @@ public:
     explicit PopulationVariantCaller(const ReferenceGenome& reference,
                                      ReadPipe& read_pipe,
                                      CandidateVariantGenerator&& candidate_generator,
+                                     unsigned max_haplotypes,
+                                     std::unique_ptr<HaplotypePriorModel> haplotype_prior_model,
                                      RefCallType refcalls,
                                      double min_variant_posterior,
                                      double min_refcall_posterior,

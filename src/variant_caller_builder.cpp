@@ -38,6 +38,7 @@ namespace Octopus
     refcall_type_                {other.refcall_type_},
     min_variant_posterior_       {other.min_variant_posterior_},
     min_refcall_posterior_       {other.min_refcall_posterior_},
+    max_haplotypes_              {other.max_haplotypes_},
     normal_sample_               {other.normal_sample_},
     min_somatic_posterior_       {other.min_somatic_posterior_},
     call_somatics_only_          {other.call_somatics_only_},
@@ -57,6 +58,7 @@ namespace Octopus
         refcall_type_                = other.refcall_type_;
         min_variant_posterior_       = other.min_variant_posterior_;
         min_refcall_posterior_       = other.min_refcall_posterior_;
+        max_haplotypes_              = other.max_haplotypes_;
         normal_sample_               = other.normal_sample_;
         min_somatic_posterior_       = other.min_somatic_posterior_;
         call_somatics_only_          = other.call_somatics_only_;
@@ -77,6 +79,7 @@ namespace Octopus
     refcall_type_                {std::move(other.refcall_type_)},
     min_variant_posterior_       {std::move(other.min_variant_posterior_)},
     min_refcall_posterior_       {std::move(other.min_refcall_posterior_)},
+    max_haplotypes_              {std::move(other.max_haplotypes_)},
     normal_sample_               {std::move(other.normal_sample_)},
     min_somatic_posterior_       {std::move(other.min_somatic_posterior_)},
     call_somatics_only_          {std::move(other.call_somatics_only_)},
@@ -97,6 +100,7 @@ namespace Octopus
         swap(refcall_type_               , other.refcall_type_);
         swap(min_variant_posterior_      , other.min_variant_posterior_);
         swap(min_refcall_posterior_      , other.min_refcall_posterior_);
+        swap(max_haplotypes_             , other.max_haplotypes_);
         swap(normal_sample_              , other.normal_sample_);
         swap(min_somatic_posterior_      , other.min_somatic_posterior_);
         swap(call_somatics_only_         , other.call_somatics_only_);
@@ -232,6 +236,8 @@ namespace Octopus
                 return std::make_unique<PopulationVariantCaller>(reference_,
                                                                  read_pipe_,
                                                                  candidate_generator_builder_.get().build(),
+                                                                 max_haplotypes_,
+                                                                 std::make_unique<BasicHaplotypePriorModel>(reference_),
                                                                  refcall_type_,
                                                                  min_variant_posterior_,
                                                                  min_refcall_posterior_,
@@ -241,6 +247,8 @@ namespace Octopus
                 return std::make_unique<CancerVariantCaller>(reference_,
                                                              read_pipe_,
                                                              candidate_generator_builder_.get().build(),
+                                                             max_haplotypes_,
+                                                             std::make_unique<BasicHaplotypePriorModel>(reference_),
                                                              refcall_type_,
                                                              min_variant_posterior_,
                                                              min_somatic_posterior_,

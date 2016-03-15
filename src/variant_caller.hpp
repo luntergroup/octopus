@@ -44,11 +44,7 @@ public:
     explicit VariantCaller(const ReferenceGenome& reference,
                            ReadPipe& read_pipe,
                            CandidateVariantGenerator&& candidate_generator,
-                           RefCallType refcall_type = RefCallType::None);
-    
-    explicit VariantCaller(const ReferenceGenome& reference,
-                           ReadPipe& read_pipe,
-                           CandidateVariantGenerator&& candidate_generator,
+                           unsigned max_haplotypes,
                            std::unique_ptr<HaplotypePriorModel> haplotype_prior_model,
                            RefCallType refcall_type = RefCallType::None);
     
@@ -89,7 +85,7 @@ protected:
 private:
     mutable CandidateVariantGenerator candidate_generator_;
     
-    unsigned max_haplotypes_ = 64;
+    unsigned max_haplotypes_;
     
     std::unique_ptr<HaplotypePriorModel> haplotype_prior_model_;
     

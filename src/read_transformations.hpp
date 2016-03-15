@@ -34,9 +34,6 @@ namespace Octopus { namespace ReadTransforms {
         }
     };
     
-    // TODO: perhaps it would be better to just set these bases to reference rather
-    // than zeroing... this could avoid a lot of spurious candidates. Would need to add
-    // sequence setting api to AlignedRead
     struct trim_tail
     {
         using SizeType = AlignedRead::SizeType;
@@ -59,7 +56,7 @@ namespace Octopus { namespace ReadTransforms {
     
     struct trim_soft_clipped
     {
-        void operator()(AlignedRead& read) const
+        void operator()(AlignedRead& read) const noexcept
         {
             if (is_soft_clipped(read.get_cigar_string())) {
                 const auto soft_clipped_sizes = get_soft_clipped_sizes(read.get_cigar_string());

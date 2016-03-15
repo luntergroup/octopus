@@ -38,8 +38,8 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--reference", ecoli_reference_fasta.c_str(),
         
         //"--reads", NA12878_low_coverage.c_str(),
-        "--reads", NA12878_high_coverage.c_str(),
-        //"--reads", "~/Genomics/Illumina/NA12878.mapped.ILLUMINA.bwa.CEU.high_coverage_pcr_free.20130906.chr22.bam",
+        //"--reads", NA12878_high_coverage.c_str(),
+        "--reads", "~/Genomics/Illumina/NA12878.mapped.ILLUMINA.bwa.CEU.high_coverage_pcr_free.20130906.chr22.bam",
         
         //"--reads", NA12891_high_coverage.c_str(),
         
@@ -71,22 +71,20 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         // for population
         
         // NA12878_high_coverage possible errors
-        "--regions", "22:37,557,217-37,557,521", // false positive deletion
 //        "--regions", "22:37,616,864-37,617,015", // false negative insertion?
 //        "--regions", "22:37,622,869-37,622,909", // SNPs or indels?
 //        "--regions", "22:37,622,803-37,623,840", // very repetitive region
 //        "--regions", "22:37,777,920-37,778,151", // is the deletion homozygous?
 //        "--regions", "22:37,980,155-37,980,306", // false positive deletion
-//        "--regions", "22:38,082,212-38,082,363", // false positive SNPs
+        "--regions", "22:38,082,212-38,082,363", // false positive SNPs
 //        "--regions", "22:38,092,378-38,092,418", // not left aligning the insertion at 38092390
 //        "--regions", "22:39,517,648-39,517,952", // is the deletion & insetion homozygous?
 //        "--regions", "22:40,946,793-40,946,944", // where is the deletion?
-//        "--regions", "22:40,952,705-40,953,009", // another false positive deletion
 //        "--regions", "22:41,434,235-41,434,310", // false positives
 //        "--regions", "22:41,509,085-41,509,236", // false negative insertion (GATK calls, Platypus doesn't)?
 //        "--regions", "22:41,988,173-41,988,324", // GATK is calling a deletion at 41988249...
         
-        //"--regions", "22",
+        //"--regions", "22:40000000-",
         
         //"--regions", "22:16,909,216-16,909,255", // NA12878_low_coverage insertion followed by 2 SNPs
         
@@ -132,11 +130,11 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--skip-regions-file", human_skip_regions.c_str(),
         
         // candidate parameters
-        "--min-supporting-reads", "2",
-        "--min-snp-base-quality", "20",
+        //"--min-supporting-reads", "2",
+        //"--min-snp-base-quality", "20",
         
         // read filters
-        "--min-mapping-quality", "20",
+        //"--min-mapping-quality", "20",
         //"--allow-marked-duplicates",
         //"--allow-octopus-duplicates",
         "--trim-soft-clipped",
@@ -144,16 +142,17 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         "--trim-adapters",
         "--no-unmapped-mates",
         
-        "--reference-cache-size", "20000",
         //"--no-downsampling",
-        "--downsample-above", "300",
-        "--downsample-target", "200",
+        //"--downsample-above", "300",
+        //"--downsample-target", "200",
         
         //"--no-candidates-from-alignments",
         //"--candidates-from-assembler",
         //"--kmer-size", "5",
         //"--candidates-from-source", sample_vcf.c_str(),
         //"--regenotype",
+        
+        //"--max-haplotypes", "1024",
         
         "--min-variant-posterior", "10",
         "--min-refcall-posterior", "1",
@@ -167,7 +166,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--max-open-read-files", "1",
         
         //"--output", test_out_vcf.c_str(),
-        "--output", "octopus_variants.vcf",
+        //"--output", "octopus_variants.vcf",
         
         nullptr};
     

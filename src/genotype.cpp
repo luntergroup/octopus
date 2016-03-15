@@ -234,6 +234,7 @@ void print_variant_alleles(const Genotype<Haplotype>& genotype)
     
     const auto unique_haplotypes = genotype.copy_unique();
     
+    std::cout << "[";
     for (unsigned i {}; i < unique_haplotypes.size() - 1; ++i) {
         print_variant_alleles(unique_haplotypes[i]);
         std::cout << "(" << genotype.count(unique_haplotypes[i]) << "),";

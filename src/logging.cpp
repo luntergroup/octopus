@@ -22,7 +22,7 @@ namespace Logging
     {
         logging::add_console_log
         (
-            std::cout,
+            std::clog,
             keywords::filter =
             (
                 logging::trivial::severity >= logging::trivial::info

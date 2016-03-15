@@ -120,10 +120,10 @@ int fastAlignmentRoutine(const char* seq1, const char* seq2, const std::int8_t* 
         // S odd
         
         // seq1 needs updating; seq2 is current
-        const char c = (8 + s/2 < len1) ? seq1[BAND_SIZE + (s/2)] : 'N';
+        const char c = (BAND_SIZE + s/2 < len1) ? seq1[BAND_SIZE + (s/2)] : 'N';
         
         _seq1win   = _mm_insert_epi16(_mm_srli_si128(_seq1win,   2 ), c, BAND_SIZE - 1);
-        _seq1nqual = _mm_insert_epi16(_mm_srli_si128(_seq1nqual, 2 ), (c=='N')
+        _seq1nqual = _mm_insert_epi16(_mm_srli_si128(_seq1nqual, 2 ), (c == 'N')
                                       ? N_SCORE : POS_INF, BAND_SIZE - 1);
         _gap_open  = _mm_insert_epi16(_mm_srli_si128(_gap_open,  2 ),
                                       4 * localgapopen[BAND_SIZE + s/2 < len1

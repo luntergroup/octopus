@@ -38,11 +38,13 @@ namespace Octopus
 CancerVariantCaller::CancerVariantCaller(const ReferenceGenome& reference,
                                          ReadPipe& read_pipe,
                                          CandidateVariantGenerator&& candidate_generator,
+                                         unsigned max_haplotypes,
+                                         std::unique_ptr<HaplotypePriorModel> haplotype_prior_model,
                                          RefCallType refcall_type, double min_variant_posterior,
                                          double min_somatic_posterior, double min_refcall_posterior,
                                          const SampleIdType& normal_sample, bool call_somatics_only)
 :
-VariantCaller {reference, read_pipe, std::move(candidate_generator), refcall_type},
+VariantCaller {reference, read_pipe, std::move(candidate_generator), max_haplotypes, std::move(haplotype_prior_model), refcall_type},
 genotype_model_ {normal_sample},
 normal_sample_ {normal_sample},
 min_variant_posterior_ {min_variant_posterior},

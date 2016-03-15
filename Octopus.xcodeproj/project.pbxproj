@@ -40,6 +40,7 @@
 		CA91C2CB1B8DE02300609FFA /* cancer_genotype_model.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA91C2C91B8DE02300609FFA /* cancer_genotype_model.cpp */; };
 		CA91C2D31B9339E900609FFA /* misc_benchmarks.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA91C2D21B9339E900609FFA /* misc_benchmarks.cpp */; };
 		CA98BBA71C8EEA20000CE9C4 /* assembler.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA98BBA51C8EEA20000CE9C4 /* assembler.cpp */; };
+		CA98BBAA1C918B07000CE9C4 /* progress_meter.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA98BBA81C918B07000CE9C4 /* progress_meter.cpp */; };
 		CAA4DC251A81981400DD3E9A /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CAA4DC241A81981400DD3E9A /* main.cpp */; };
 		CAA4DC321A82B36300DD3E9A /* README.md in Sources */ = {isa = PBXBuildFile; fileRef = CAA4DC311A82B36300DD3E9A /* README.md */; };
 		CAA4DC351A83A39D00DD3E9A /* Octopus in CopyFiles */ = {isa = PBXBuildFile; fileRef = CAA4DC211A81981400DD3E9A /* Octopus */; };
@@ -300,6 +301,8 @@
 		CA91C2D21B9339E900609FFA /* misc_benchmarks.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = misc_benchmarks.cpp; sourceTree = "<group>"; };
 		CA98BBA51C8EEA20000CE9C4 /* assembler.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = assembler.cpp; sourceTree = "<group>"; };
 		CA98BBA61C8EEA20000CE9C4 /* assembler.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = assembler.hpp; sourceTree = "<group>"; };
+		CA98BBA81C918B07000CE9C4 /* progress_meter.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = progress_meter.cpp; sourceTree = "<group>"; };
+		CA98BBA91C918B07000CE9C4 /* progress_meter.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = progress_meter.hpp; sourceTree = "<group>"; };
 		CAA4DC211A81981400DD3E9A /* Octopus */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = Octopus; sourceTree = BUILT_PRODUCTS_DIR; };
 		CAA4DC241A81981400DD3E9A /* main.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
 		CAA4DC301A82B28800DD3E9A /* .gitignore */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = .gitignore; sourceTree = "<group>"; };
@@ -638,6 +641,8 @@
 				CAE3E29B1AA139A000C01B2C /* program_options.cpp */,
 				CA1472791AACECF1005FDCD1 /* octopus.hpp */,
 				CA1472781AACECF1005FDCD1 /* octopus.cpp */,
+				CA98BBA91C918B07000CE9C4 /* progress_meter.hpp */,
+				CA98BBA81C918B07000CE9C4 /* progress_meter.cpp */,
 				D4CC78961C7E323200F9CCB3 /* timers.hpp */,
 				D4CC78971C7E370400F9CCB3 /* timers.cpp */,
 			);
@@ -1299,6 +1304,7 @@
 				CAFA19661ABF84AC00F953D9 /* haplotype_tree_tests.cpp in Sources */,
 				D44ADE731C43C22700A854C6 /* variant_caller_builder.cpp in Sources */,
 				D4636C6D1B7A24F400FEA7D2 /* vcf_parser.cpp in Sources */,
+				CA98BBAA1C918B07000CE9C4 /* progress_meter.cpp in Sources */,
 				CAB89DF61C78D95F002D6F8E /* haplotype_generator.cpp in Sources */,
 				CA386DA31B5AC2870057A5A8 /* cigar_string.cpp in Sources */,
 				CA0B467B1AE8E8F700158BBA /* genotype_benchmarks.cpp in Sources */,

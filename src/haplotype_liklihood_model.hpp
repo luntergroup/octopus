@@ -17,6 +17,7 @@
 #include <functional>
 
 #include "common.hpp"
+#include "contig_region.hpp"
 #include "haplotype.hpp"
 #include "read_indel_error_model.hpp"
 #include "pair_hmm.hpp"
@@ -30,7 +31,11 @@ namespace Octopus
     class HaplotypeLikelihoodModel
     {
     public:
-        enum class FlankState { Clear, Unclear, LeftUnclear, RightUnclear };
+        struct FlankState
+        {
+            ContigRegion active_region;
+            bool has_lhs_flank_inactive_candidates, has_rhs_flank_inactive_candidates;
+        };
         
         using MapPositionItr = std::vector<std::size_t>::const_iterator;
         
@@ -56,6 +61,8 @@ namespace Octopus
         std::reference_wrapper<const Haplotype> haplotype_;
         
         std::vector<std::int8_t> haplotype_gap_open_penalities_;
+        
+        FlankState haplotype_flank_state_;
         
         PairHMM::Model model_;
     };
