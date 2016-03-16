@@ -111,6 +111,8 @@ namespace debug
     void print_haplotypes(const std::vector<Haplotype>& haplotypes,
                           Resolution resolution = Resolution::SequenceAndAlleles);
     
+    template <typename S, typename Map>
+    void print_haplotype_posteriors(S&& stream, const Map& haplotype_posteriors, std::size_t n = 20);
     template <typename Map>
     void print_haplotype_posteriors(const Map& haplotype_posteriors, std::size_t n = 20);
 }
@@ -175,7 +177,9 @@ std::deque<VcfRecord> VariantCaller::call_variants(const GenomicRegion& call_reg
             return result;
         }
         
-        //std::cout << "there are " << count_reads(reads) << " reads" << '\n';
+        if (DEBUG_MODE) {
+            stream(debug_log) << "There are " << count_reads(reads) << " reads";
+        }
     }
     
     const auto candidate_region = calculate_candidate_region(call_region, reads, candidate_generator_);
@@ -252,7 +256,7 @@ std::deque<VcfRecord> VariantCaller::call_variants(const GenomicRegion& call_reg
         pause_timer(haplotype_fitler_timer);
         
         if (haplotypes.empty()) {
-            //debug::print_read_haplotype_liklihoods(removed_haplotypes, active_reads, haplotype_likelihoods);
+            if (DEBUG_MODE) debug_log << "Filtered all haplotypes";
             // This can only happen if all haplotypes have equal likelihood.
             // TODO: is there anything else we can do?
             generator.remove_haplotypes(removed_haplotypes);
@@ -293,7 +297,9 @@ std::deque<VcfRecord> VariantCaller::call_variants(const GenomicRegion& call_reg
         haplotype_priors.clear();
         haplotype_likelihoods.clear();
         
-        //debug::print_haplotype_posteriors(*caller_latents->get_haplotype_posteriors());
+        if (DEBUG_MODE) {
+            debug::print_haplotype_posteriors(stream(debug_log), *caller_latents->get_haplotype_posteriors(), -1);
+        }
         
         resume_timer(phasing_timer);
         const auto phase_set = phaser.try_phase(haplotypes, *caller_latents->get_genotype_posteriors(),
@@ -305,7 +311,7 @@ std::deque<VcfRecord> VariantCaller::call_variants(const GenomicRegion& call_reg
         if (overlaps(active_region, call_region) && phase_set) {
             assert(!is_empty_region(phase_set->region));
             
-            //std::cout << "phased region is " << phase_set->region << '\n';
+            if (DEBUG_MODE) stream(debug_log) << "Phased region is " << phase_set->region;
             
             auto active_candidates = copy_overlapped(candidates, phase_set->region);
             
@@ -339,7 +345,9 @@ std::deque<VcfRecord> VariantCaller::call_variants(const GenomicRegion& call_reg
                                                                  *caller_latents->get_haplotype_posteriors(),
                                                                  unphased_active_region);
             
-            //std::cout << "removing " << removable_haplotypes.size() << " haplotypes" << '\n';
+            if (DEBUG_MODE) {
+                stream(debug_log) << "Removing " << removable_haplotypes.size() << " haplotypes";
+            }
             
             resume_timer(haplotype_generation_timer);
             generator.remove_haplotypes(removable_haplotypes);
@@ -359,7 +367,11 @@ std::deque<VcfRecord> VariantCaller::call_variants(const GenomicRegion& call_reg
             const auto active_candidates = copy_overlapped(candidates, uncalled_region);
             
             resume_timer(phasing_timer);
-            //std::cout << "force phasing " << uncalled_region << '\n';
+            
+            if (DEBUG_MODE) {
+                stream(debug_log) << "Force phasing " << uncalled_region;
+            }
+            
             const auto phasings = phaser.force_phase(haplotypes,
                                                      *caller_latents->get_genotype_posteriors(),
                                                      active_candidates);
@@ -676,6 +688,7 @@ namespace debug
                           Resolution resolution)
     {
         stream << "Printing " << haplotypes.size() << " haplotypes" << '\n';
+        
         for (const auto& haplotype : haplotypes) {
             if (resolution == Resolution::Sequence || resolution == Resolution::SequenceAndAlleles
                 || resolution == Resolution::SequenceAndVariantAlleles) {
@@ -694,28 +707,41 @@ namespace debug
         print_haplotypes(std::cout, haplotypes, resolution);
     }
     
-    template <typename Map>
-    void print_haplotype_posteriors(const Map& haplotype_posteriors, std::size_t n)
+    template <typename S, typename Map>
+    void print_haplotype_posteriors(S&& stream, const Map& haplotype_posteriors, std::size_t n)
     {
-        auto m = std::min(haplotype_posteriors.size(), n);
+        const auto m = std::min(haplotype_posteriors.size(), n);
         
-        std::cout << "Printing top " << m << " haplotype posteriors" << std::endl;
+        if (m == haplotype_posteriors.size()) {
+            stream << "Printing top " << m << " haplotype posteriors" << '\n';
+        } else {
+            stream << "Printing all haplotype posteriors" << '\n';
+        }
         
-        std::vector<std::pair<Haplotype, double>> v {};
+        std::vector<std::pair<std::reference_wrapper<const Haplotype>, double>> v {};
         v.reserve(haplotype_posteriors.size());
         
         std::copy(std::cbegin(haplotype_posteriors), std::cend(haplotype_posteriors),
                   std::back_inserter(v));
         
-        std::sort(std::begin(v), std::end(v),
-                  [] (const auto& lhs, const auto& rhs) {
-                      return lhs.second > rhs.second;
-                  });
+        const auto mth = std::next(std::begin(v), m);
         
-        for (unsigned i {}; i < m; ++i) {
-            ::debug::print_variant_alleles(v[i].first);
-            std::cout << " " << std::setprecision(10) << v[i].second << std::endl;
-        }
+        std::partial_sort(std::begin(v), mth, std::end(v),
+                          [] (const auto& lhs, const auto& rhs) {
+                              return lhs.second > rhs.second;
+                          });
+        
+        std::for_each(std::begin(v), mth,
+                      [&] (const auto& p) {
+                          ::debug::print_variant_alleles(stream, p.first);
+                          stream << " " << p.second << '\n';
+                      });
+    }
+    
+    template <typename Map>
+    void print_haplotype_posteriors(const Map& haplotype_posteriors, std::size_t n)
+    {
+        print_haplotype_posteriors(haplotype_posteriors, n);
     }
 }
 } // namespace Octopus

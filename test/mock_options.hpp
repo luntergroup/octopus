@@ -25,7 +25,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--help",
         //"--version",
         
-        //"--debug",
+        "--debug",
         
         "--working-directory", "~/Genomics/octopus_test",
         
@@ -38,8 +38,8 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--reference", ecoli_reference_fasta.c_str(),
         
         //"--reads", NA12878_low_coverage.c_str(),
-        "--reads", NA12878_high_coverage.c_str(),
-        //"--reads", "~/Genomics/Illumina/NA12878.mapped.ILLUMINA.bwa.CEU.high_coverage_pcr_free.20130906.chr22.bam",
+        //"--reads", NA12878_high_coverage.c_str(),
+        "--reads", "~/Genomics/Illumina/NA12878.mapped.ILLUMINA.bwa.CEU.high_coverage_pcr_free.20130906.chr22.bam",
         
         //"--reads", NA12891_high_coverage.c_str(),
         
@@ -70,7 +70,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         
         // for population
         
-        "--regions", "22:40,000,000-41,000,000",
+        "--regions", "22:44,255,899-44,256,508",
         
         // NA12878_high_coverage possible errors
 //        "--regions", "22:37,616,864-37,617,015", // false negative insertion?
