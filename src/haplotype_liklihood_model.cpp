@@ -50,103 +50,13 @@ namespace Octopus
         
         const auto original_mapping_position = begin_distance(read, haplotype);
         
-//                if (read.get_cigar_string() == parse_cigar_string("10S240M")
-//                    && is_reference(haplotype)) {
-//                    const auto it  = std::next(haplotype.get_sequence().cbegin(), original_mapping_position);
-//                    const auto it2 = std::next(it, sequence_size(read));
-//        
-//                    std::cout << read.get_sequence() << std::endl;
-//                    std::copy(it, it2, std::ostreambuf_iterator<char>(std::cout));
-//        
-//                    auto qitr = std::cbegin(read.get_qualities());
-//        
-//                    const auto d = std::inner_product(it, it2, std::cbegin(read.get_sequence()), 0,
-//                                                      std::plus<void>(),
-//                                                      std::not_equal_to<void>());
-//        
-//                    const auto c = std::inner_product(it, it2, std::cbegin(read.get_sequence()), 0,
-//                                                      std::plus<void>(),
-//                                                      [&] (const auto lhs, const auto rhs) -> int {
-//                                                          if (lhs == rhs) {
-//                                                              ++qitr;
-//                                                              return 0;
-//                                                          }
-//                                                          //std::cout << (unsigned) *qitr << std::endl;
-//                                                          return *qitr++;
-//                                                      });
-//        
-//                    std::cout << d << " " << c << std::endl;
-//        
-//                    //exit(0);
-//                }
-        
-        //        if (read.get_cigar_string() == parse_cigar_string("10S240M")
-        //            && haplotype.contains(ContigAllele(ContigRegion(38082235, 38082236), "A"))
-        //            && haplotype.contains(ContigAllele(ContigRegion(38082237, 38082238), "A"))
-        //            && haplotype.contains(ContigAllele(ContigRegion(38082255, 38082256), "A"))
-        //            && haplotype.contains(ContigAllele(ContigRegion(38082270, 38082271), "A"))) {
-        //            const auto it  = std::next(haplotype.get_sequence().cbegin(), original_mapping_position);
-        //            const auto it2 = std::next(it, sequence_size(read));
-        //
-        //            //std::copy(it, it2, std::ostreambuf_iterator<char>(std::cout));
-        //
-        //            auto qitr = std::cbegin(read.get_qualities());
-        //
-        //            const auto d = std::inner_product(it, it2, std::cbegin(read.get_sequence()), 0,
-        //                                              std::plus<void>(),
-        //                                              std::not_equal_to<void>());
-        //
-        //            const auto c = std::inner_product(it, it2, std::cbegin(read.get_sequence()), 0,
-        //                                              std::plus<void>(),
-        //                                              [&] (const auto lhs, const auto rhs) -> int {
-        //                                                  if (lhs == rhs) {
-        //                                                      ++qitr;
-        //                                                      return 0;
-        //                                                  }
-        //                                                  return *qitr++;
-        //                                              });
-        //
-        //            std::cout << d << " " << c << std::endl;
-        //
-        //            exit(0);
-        //        }
-        
-        //                if (read.get_cigar_string() == parse_cigar_string("250M")
-        //                    && contig_region(read) == ContigRegion(38082110, 38082360)
-        //                    && haplotype.contains(ContigAllele(ContigRegion(38082235, 38082236), "A"))
-        //                    && haplotype.contains(ContigAllele(ContigRegion(38082237, 38082238), "A"))
-        //                    && haplotype.contains(ContigAllele(ContigRegion(38082255, 38082256), "A"))
-        //                    && haplotype.contains(ContigAllele(ContigRegion(38082270, 38082271), "A"))) {
-        //                    std::transform(read.get_qualities().cbegin(), read.get_qualities().cend(),
-        //                                   std::ostream_iterator<char>(std::cout),
-        //                                   [] (const auto q) { return q + 40; });
-        //                    std::cout << std::endl;
-        //
-        //                    const auto it  = std::next(haplotype.get_sequence().cbegin(), original_mapping_position);
-        //                    const auto it2 = std::next(it, sequence_size(read));
-        //
-        //                    //std::copy(it, it2, std::ostreambuf_iterator<char>(std::cout));
-        //
-        //                    auto qitr = std::cbegin(read.get_qualities());
-        //
-        //                    const auto d = std::inner_product(it, it2, std::cbegin(read.get_sequence()), 0,
-        //                                                      std::plus<void>(),
-        //                                                      std::not_equal_to<void>());
-        //
-        //                    const auto c = std::inner_product(it, it2, std::cbegin(read.get_sequence()), 0,
-        //                                                      std::plus<void>(),
-        //                                                      [&] (const auto lhs, const auto rhs) -> int {
-        //                                                          if (lhs == rhs) {
-        //                                                              ++qitr;
-        //                                                              return 0;
-        //                                                          }
-        //                                                          return *qitr++;
-        //                                                      });
-        //                    
-        //                    std::cout << d << " " << c << std::endl;
-        //                    
-        //                    exit(0);
-        //                }
+//        // debug
+//        if (region_begin(read) == 17907341
+//            && haplotype.contains(ContigAllele(ContigRegion(17907349, 17907350), "C"))
+//            && haplotype.contains(ContigAllele(ContigRegion(17907410, 17907411), "G"))
+//            && !haplotype.contains(ContigAllele(ContigRegion(17907548, 17907548), "ATC"))) {
+//            ::debug::print_variant_alleles(haplotype); std::cout << std::endl;
+//        }
         
         auto max_log_probability = std::numeric_limits<double>::lowest();
         
@@ -214,11 +124,11 @@ namespace Octopus
     {
         if (haplotype_flank_state_.has_lhs_flank_inactive_candidates) {
             model_.lhs_flank_size = begin_distance(haplotype_flank_state_.active_region,
-                                                   contig_region(haplotype_.get()));
+                                                   contig_region(haplotype));
         }
         
         if (haplotype_flank_state_.has_rhs_flank_inactive_candidates) {
-            model_.rhs_flank_size = end_distance(contig_region(haplotype_.get()),
+            model_.rhs_flank_size = end_distance(contig_region(haplotype),
                                                  haplotype_flank_state_.active_region);
         }
     }

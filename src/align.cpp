@@ -8,6 +8,8 @@
 #include <emmintrin.h>
 #include <cassert>
 
+#include <iostream> // DEBUG
+
 // defined here because it is used in fastAlignmentRoutine and calculateFlankScore
 constexpr short N_SCORE {0 * 4};
 constexpr int BAND_SIZE {8};
@@ -411,13 +413,14 @@ int fastAlignmentRoutine(const char* seq1, const char* seq2, const std::int8_t* 
   return (minscore + 0x8000) >> 2;
 }
 
-int calculateFlankScore(int hapLen, int leftHapFlank, int rightHapFlank, const std::int8_t* quals,
-                        const std::int8_t* localgapopen, int gapextend, int nucprior,
-                        int firstpos, const char* aln1, const char* aln2)
+int calculateFlankScore(const int hapLen, const int leftHapFlank, const int rightHapFlank,
+                        const std::int8_t* quals, const std::int8_t* localgapopen,
+                        const int gapextend, const int nucprior,
+                        const int firstpos, const char* aln1, const char* aln2)
 {
     static constexpr char MATCH {'M'}, INSERTION {'I'}, DELETION {'D'};
     
-    char prevstate = MATCH;
+    auto prevstate = MATCH;
     
     int x = firstpos; // index into haplotype
     int y = 0;        // index into read
@@ -426,7 +429,7 @@ int calculateFlankScore(int hapLen, int leftHapFlank, int rightHapFlank, const s
     int score = 0; // alignment score (within flank)
     
     while (aln1[i]) {
-        char newstate = MATCH;
+        auto newstate = MATCH;
         
         if (aln1[i] == '-') newstate = INSERTION;
         if (aln2[i] == '-') newstate = DELETION;  // can't be both '-'
@@ -434,7 +437,7 @@ int calculateFlankScore(int hapLen, int leftHapFlank, int rightHapFlank, const s
         switch (newstate) {
             case MATCH:
             {
-                if ( (aln1[i] != aln2[i]) && (x < leftHapFlank || x >= hapLen - rightHapFlank) ) {
+                if ((aln1[i] != aln2[i]) && (x < leftHapFlank || x >= (hapLen - rightHapFlank))) {
                     if (aln1[i] == 'N') {
                         score += N_SCORE / 4;
                     } else {
@@ -447,7 +450,7 @@ int calculateFlankScore(int hapLen, int leftHapFlank, int rightHapFlank, const s
             }
             case INSERTION:
             {
-                if (x < leftHapFlank || x >= hapLen - rightHapFlank) {
+                if (x < leftHapFlank || x >= (hapLen - rightHapFlank)) {
                     if (prevstate == INSERTION) {
                         score += gapextend + nucprior;
                     } else {
@@ -461,7 +464,7 @@ int calculateFlankScore(int hapLen, int leftHapFlank, int rightHapFlank, const s
             }
             case DELETION:
             {
-                if (x < leftHapFlank || x >= hapLen - rightHapFlank) {
+                if (x < leftHapFlank || x >= (hapLen - rightHapFlank)) {
                     if (prevstate == DELETION) {
                         score += gapextend;
                     } else {

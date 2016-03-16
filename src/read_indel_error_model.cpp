@@ -22,7 +22,7 @@ namespace
 {
     auto extract_repeats(const Haplotype& haplotype)
     {
-        return Tandem::find_maximal_repetitions(haplotype.get_sequence(), 1, 3);
+        return Tandem::find_maximal_repetitions(haplotype.get_sequence(), 1, 1);
     }
 }
 

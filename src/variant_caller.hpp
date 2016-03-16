@@ -22,9 +22,9 @@
 #include "haplotype_prior_model.hpp"
 #include "haplotype_likelihood_cache.hpp"
 #include "probability_matrix.hpp"
-#include "vcf_record.hpp"
-
 #include "phaser.hpp"
+#include "vcf_record.hpp"
+#include "progress_meter.hpp"
 
 class GenomicRegion;
 class Variant;
@@ -55,7 +55,8 @@ public:
     VariantCaller(VariantCaller&&)                 = delete;
     VariantCaller& operator=(VariantCaller&&)      = delete;
     
-    std::deque<VcfRecord> call_variants(const GenomicRegion& call_region) const;
+    std::deque<VcfRecord> call_variants(const GenomicRegion& call_region,
+                                        ProgressMeter& progress_meter) const;
     
 protected:
     using HaplotypeReference = std::reference_wrapper<const Haplotype>;

@@ -204,7 +204,7 @@ namespace Octopus
     
     void normalise_exp(SampleGenotypePosteriors& unnormalised_log_probabilities)
     {
-        const auto norm = Maths::log_sum_exp<double>(unnormalised_log_probabilities);
+        const auto norm = Maths::log_sum_exp(unnormalised_log_probabilities);
         
         std::transform(std::cbegin(unnormalised_log_probabilities),
                        std::cend(unnormalised_log_probabilities),

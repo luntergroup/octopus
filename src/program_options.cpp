@@ -588,7 +588,7 @@ namespace Octopus
     {
         Logging::ErrorLogger log {};
         
-        const auto& input_path = options.at("reference").as<std::string>();
+        const fs::path input_path {options.at("reference").as<std::string>()};
         
         auto resolved_path = resolve_path(input_path, options);
         
@@ -685,7 +685,8 @@ namespace Octopus
                                                          const ReferenceGenome& reference)
     {
         if (!fs::exists(file_path)) {
-            std::cout << "Input error: file does not exist " << file_path.string() << std::endl;
+            Logging::ErrorLogger log {};
+            stream(log) << "File does not exist " << file_path;
             return {};
         }
         
@@ -957,7 +958,7 @@ namespace Octopus
         }
         
         if (options.count("reads-file") == 1) {
-            const auto input_path = options.at("reads-file").as<std::string>();
+            const fs::path input_path {options.at("reads-file").as<std::string>()};
             
             const auto& resolved_path = resolve_path(input_path, options);
             
@@ -1129,18 +1130,31 @@ namespace Octopus
         if (options.count("candidates-from-source") == 1) {
             result.add_generator(CandidateGeneratorBuilder::Generator::External);
             
-            auto source_path = resolve_path(options.at("candidates-from-source").as<std::string>(), options);
+            const fs::path input_path {options.at("candidates-from-source").as<std::string>()};
             
-            if (source_path) {
-                result.set_variant_source(*std::move(source_path));
-            } else {
-                std::cout << "Input warning: could not resolve candidate source file." << std::endl;
+            auto resolved_path = resolve_path(input_path, options);
+            
+            Logging::ErrorLogger log {};
+            
+            if (!resolved_path) {
+                stream(log) << "Could not resolve the path " << input_path
+                            << " given in the input option (--candidates-from-source)";
+                //return boost::none;
             }
+            
+            if (!fs::exists(*resolved_path)) {
+                stream(log) << "The path " << input_path
+                            << " given in the input option (--candidates-from-source) does not exist";
+                //return boost::none;
+            }
+            
+            result.set_variant_source(*std::move(resolved_path));
         }
         
         if (options.at("regenotype").as<bool>()) {
             if (options.count("candidates-from-source") == 0) {
-                std::cout << "Input warning: source variant file(s) must be present in regenotype mode" << std::endl;
+                Logging::WarningLogger log {};
+                log << "Source variant file(s) must be present in regenotype mode";
             }
             return result;
         }
@@ -1171,7 +1185,10 @@ namespace Octopus
     void print_ambiguous_contig_ploidies(const std::vector<ContigPloidy>& contig_ploidies,
                                          const po::variables_map& options)
     {
-        std::cout << "Option eror: ambiguous ploidies found";
+        Logging::WarningLogger log {};
+        
+        log << "Ambiguous ploidies found";
+        
         for (auto it = std::cbegin(contig_ploidies), end = std::cend(contig_ploidies); it != end;) {
             it = std::adjacent_find(it, std::cend(contig_ploidies),
                                     [] (const auto& lhs, const auto& rhs) {
@@ -1182,12 +1199,16 @@ namespace Octopus
                                               [=] (const auto& cp) {
                                                   return it->contig != cp.contig;
                                               });
-                std::cout << "\n";
-                std::copy(it, it2, std::ostream_iterator<ContigPloidy>(std::cout, " "));
+                
+                std::ostringstream ss {};
+                
+                std::copy(it, it2, std::ostream_iterator<ContigPloidy>(ss, " "));
+                
+                log << ss.str();
+                
                 it = it2;
             }
         }
-        std::cout << std::endl;
     }
     
     void remove_duplicate_ploidies(std::vector<ContigPloidy>& contig_ploidies)
@@ -1214,26 +1235,30 @@ namespace Octopus
         return it2 != std::cend(contig_ploidies);
     }
     
-    void print_parsed_contig_ploidies(const std::vector<ContigPloidy>& contig_ploidies)
-    {
-        std::copy(std::cbegin(contig_ploidies), std::cend(contig_ploidies),
-                  std::ostream_iterator<ContigPloidy>(std::cout, " "));
-        std::cout << std::endl;
-    }
-    
     boost::optional<std::vector<ContigPloidy>> extract_contig_ploidies(const po::variables_map& options)
     {
         std::vector<ContigPloidy> result {};
         
         if (options.count("contig-ploidies-file") == 1) {
-            const auto path = resolve_path(options.at("contig-ploidies-file").as<std::string>(), options);
+            const fs::path input_path {options.at("contig-ploidies-file").as<std::string>()};
             
-            if (!path || !fs::exists(*path)) {
-                std::cout << "Could not resolve contig-ploidy-file path" << std::endl;
+            const auto resolved_path = resolve_path(input_path, options);
+            
+            Logging::ErrorLogger log {};
+            
+            if (!resolved_path) {
+                stream(log) << "Could not resolve the path " << input_path
+                            << " given in the input option (--contig-ploidies-file)";
                 return boost::none;
             }
             
-            std::ifstream file {path->string()};
+            if (!fs::exists(*resolved_path)) {
+                stream(log) << "The path " << input_path
+                            << " given in the input option (--contig-ploidies-file) does not exist";
+                return boost::none;
+            }
+            
+            std::ifstream file {resolved_path->string()};
             
             std::transform(std::istream_iterator<Line>(file), std::istream_iterator<Line>(),
                            std::back_inserter(result), [] (const Line& line) {

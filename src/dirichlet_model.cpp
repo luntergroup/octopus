@@ -59,7 +59,7 @@ namespace GenotypeModel
                            return std::make_pair(std::ref(p.first), alpha);
                        });
         
-        for (auto& h : result) h.second = 1; // DEBUG - uniform priors
+        //for (auto& h : result) h.second = 1; // DEBUG - uniform priors
         
         return result;
     }

@@ -141,7 +141,7 @@ namespace Octopus
                       return p;
                   });
         
-        const auto norm = Maths::log_sum_exp<double>(result);
+        const auto norm = Maths::log_sum_exp(result);
         
         for (auto& p : result) p -= norm;
         
@@ -205,7 +205,7 @@ namespace Octopus
                       return p;
                   });
         
-        const auto norm = Maths::log_sum_exp<double>(current);
+        const auto norm = Maths::log_sum_exp(current);
         
         for (auto& p : current) p -= norm;
     }

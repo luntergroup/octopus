@@ -34,13 +34,13 @@ transition_rate_ {transition_rate},
 transversion_rate_ {transversion_rate}
 {}
 
-namespace
-{
-    std::vector<TandemRepeat> extract_exact_tandem_repeats(const Haplotype& haplotype)
-    {
-        return find_exact_tandem_repeats(haplotype.get_sequence(), haplotype.get_region(), 1);
-    }
-} // namespace
+//namespace
+//{
+//    std::vector<TandemRepeat> extract_exact_tandem_repeats(const Haplotype& haplotype)
+//    {
+//        return find_exact_tandem_repeats(haplotype.get_sequence(), haplotype.get_region(), 1);
+//    }
+//} // namespace
 
 double BasicHaplotypePriorModel::do_evaluate(const Haplotype& to, const Haplotype& from) const
 {
@@ -51,24 +51,26 @@ double BasicHaplotypePriorModel::do_evaluate(const Haplotype& to, const Haplotyp
     auto has_indels = std::any_of(std::cbegin(mutations), std::cend(mutations),
                                   [] (const auto& variant) { return is_indel(variant); });
     
-    const auto repeats = (has_indels) ? extract_exact_tandem_repeats(from) : std::vector<TandemRepeat> {};
+    //const auto repeats = (has_indels) ? extract_exact_tandem_repeats(from) : std::vector<TandemRepeat> {};
     
     for (const auto& variant : mutations) {
         if (is_snp(variant)) {
             result *= (is_transition(variant)) ? transition_rate_ : transversion_rate_;
         } else if (is_indel(variant)) {
             if (is_insertion(variant)) {
-                if (repeats.empty()) {
-                    result *= transversion_rate_ * alt_sequence_size(variant);
-                } else {
-                    result *= transition_rate_ * alt_sequence_size(variant);
-                }
+                result *= transversion_rate_ * alt_sequence_size(variant);
+//                if (repeats.empty()) {
+//                    result *= transversion_rate_ * alt_sequence_size(variant);
+//                } else {
+//                    result *= transition_rate_ * alt_sequence_size(variant);
+//                }
             } else {
-                if (repeats.empty()) {
-                    result *= transversion_rate_ * region_size(variant);
-                } else {
-                    result *= transition_rate_ * region_size(variant);
-                }
+                result *= transversion_rate_ * region_size(variant);
+//                if (repeats.empty()) {
+//                    result *= transversion_rate_ * region_size(variant);
+//                } else {
+//                    result *= transition_rate_ * region_size(variant);
+//                }
             }
         } else {
             auto itr1 = std::cbegin(ref_sequence(variant));

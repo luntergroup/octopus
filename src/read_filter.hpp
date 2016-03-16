@@ -17,10 +17,11 @@
 #include <utility>
 #include <unordered_map>
 
+#include <boost/optional.hpp>
+
 #include "mappable_flat_multi_set.hpp"
 #include "mappable_map.hpp"
-
-#include <iostream> // DEBUG
+#include "logging.hpp"
 
 namespace Octopus
 {
@@ -41,6 +42,7 @@ public:
     using ContextBasedFilter = std::function<Iterator(Iterator, Iterator)>;
     
     ReadFilter()  = default;
+    ReadFilter(Logging::InfoLogger log) : log_ {log} {};
     ~ReadFilter() = default;
     
     ReadFilter(const ReadFilter&)            = default;
@@ -53,19 +55,18 @@ public:
     
     unsigned num_filters() const noexcept;
     
-    // removes all failing reads, which may not be preserved
-    Iterator partition(Iterator first, Iterator last) const;
-    
-    // copy partitions
-//    template <typename InputIt, typename OutputIt1, typename OutputIt2>
-//    std::pair<OutputIt1, OutputIt2>
-//    partition_copy(InputIt first, InputIt last, OutputIt1 good_reads, OutputIt2 bad_reads) const;
+    Iterator filter(Iterator first, Iterator last) const;
     
 private:
     std::vector<ContextFreeFilter> noncontext_filters_;
     std::vector<ContextBasedFilter> context_filters_;
     
+    boost::optional<Logging::InfoLogger> log_;
+    
     bool passes_all_noncontext_filters(const AlignedRead& read) const;
+    
+    Iterator remove(Iterator first, Iterator last) const;
+    Iterator partition(Iterator first, Iterator last) const;
 };
 
 template <typename BidirIt>
@@ -87,7 +88,26 @@ unsigned ReadFilter<BidirIt>::num_filters() const noexcept
 }
 
 template <typename BidirIt>
-BidirIt ReadFilter<BidirIt>::partition(BidirIt first, BidirIt last) const
+BidirIt ReadFilter<BidirIt>::filter(BidirIt first, BidirIt last) const
+{
+    if (log_) {
+        return partition(first, last);
+    }
+    
+    return remove(first, last);
+}
+
+// private member methods
+
+template <typename Iterator>
+bool ReadFilter<Iterator>::passes_all_noncontext_filters(const AlignedRead& read) const
+{
+    return std::all_of(std::cbegin(noncontext_filters_), std::cend(noncontext_filters_),
+                       [&read] (const auto& filter) { return filter(read); });
+}
+
+template <typename BidirIt>
+BidirIt ReadFilter<BidirIt>::remove(BidirIt first, BidirIt last) const
 {
     using std::all_of; using std::cbegin; using std::cend;
     
@@ -102,123 +122,60 @@ BidirIt ReadFilter<BidirIt>::partition(BidirIt first, BidirIt last) const
     return it;
 }
 
-//template <typename BidirIt>
-//template <typename InputIt, typename OutputIt1, typename OutputIt2>
-//std::pair<OutputIt1, OutputIt2>
-//ReadFilter<BidirIt>::partition_copy(InputIt first, InputIt last,
-//                                    OutputIt1 good_reads, OutputIt2 bad_reads) const
-//{
-//    auto good_reads_last = good_reads;
-//    
-//    return std::partition_copy(first, last, good_reads, bad_reads,
-//        [this, good_reads, &good_reads_last] (const AlignedRead& read) {
-//            if (filter_read(read, detail::get_first(good_reads, good_reads_last),
-//                            detail::get_last(good_reads, good_reads_last))) {
-//            ++good_reads_last;
-//            return true;
-//        }
-//        return false;
-//    });
-//}
-
-// private member methods
-
-template <typename Iterator>
-bool ReadFilter<Iterator>::passes_all_noncontext_filters(const AlignedRead& read) const
+template <typename BidirIt>
+BidirIt ReadFilter<BidirIt>::partition(BidirIt first, BidirIt last) const
 {
-    return std::all_of(std::cbegin(noncontext_filters_), std::cend(noncontext_filters_),
-                       [&read] (const auto& filter) { return filter(read); });
+    using std::all_of; using std::cbegin; using std::cend;
+    
+    auto it = std::stable_partition(first, last,
+                                    [this] (const auto& read) {
+                                        return !passes_all_noncontext_filters(read);
+                                    });
+    
+    std::unordered_map<std::string, std::size_t> failed_filter_counts {noncontext_filters_.size()};
+    
+//    for (const auto& filter : noncontext_filters_) {
+//        failed_filter_counts.emplace(filter.name(), 0);
+//    }
+//    
+//    std::for_each(it, last,
+//                  [this] (const auto& read) {
+//                      for (const auto& filter : noncontext_filters_) {
+//                          if (filter(read)) ++failed_filter_counts.at(filter.name());
+//                      }
+//                  });
+//    
+//    for (const auto& p : failed_filter_counts) {
+//        if (p.second > 0) {
+//            stream(*log_) << p.second << " reads failed the " << p.first << " filter";
+//        }
+//    }
+    
+    std::for_each(cbegin(context_filters_), cend(context_filters_),
+                  [first, &it] (const auto& filter) { it = filter(first, it); });
+    
+    return it;
 }
 
 // non-member methods
 
-//template <typename ReadFilter>
-//std::pair<MappableFlatMultiSet<AlignedRead>, MappableFlatMultiSet<AlignedRead>>
-//partition_copy(const MappableFlatMultiSet<AlignedRead>& reads, const ReadFilter& filter)
-//{
-//    MappableFlatMultiSet<AlignedRead> good_reads {}, bad_reads {};
-//    
-//    good_reads.reserve(reads.size());
-//    bad_reads.reserve(reads.size() / 10);
-//    
-//    filter.partition_copy(std::cbegin(reads), std::cend(reads),
-//                          context_inserter(good_reads), context_inserter(bad_reads));
-//    
-//    good_reads.shrink_to_fit();
-//    bad_reads.shrink_to_fit();
-//    
-//    return std::make_pair(std::move(good_reads), std::move(bad_reads));
-//}
-//
-//template <typename ReadFilter>
-//std::pair<MappableFlatMultiSet<AlignedRead>, MappableFlatMultiSet<AlignedRead>>
-//partition_copy(MappableFlatMultiSet<AlignedRead>&& reads, const ReadFilter& filter)
-//{
-//    MappableFlatMultiSet<AlignedRead> good_reads {}, bad_reads {};
-//    
-//    good_reads.reserve(reads.size());
-//    bad_reads.reserve(reads.size() / 10);
-//    
-//    filter.partition_copy(std::make_move_iterator(std::begin(reads)),
-//                          std::make_move_iterator(std::end(reads)),
-//                          context_inserter(good_reads),
-//                          context_inserter(bad_reads));
-//    
-//    reads.clear();
-//    
-//    good_reads.shrink_to_fit();
-//    bad_reads.shrink_to_fit();
-//    
-//    return std::make_pair(std::move(good_reads), std::move(bad_reads));
-//}
-
 template <typename ReadFilter>
-auto partition(MappableFlatMultiSet<AlignedRead>& reads, const ReadFilter& filter)
+auto filter(MappableFlatMultiSet<AlignedRead>& reads, const ReadFilter& filter)
 {
-    return filter.partition(std::begin(reads), std::end(reads));
+    return filter.filter(std::begin(reads), std::end(reads));
 }
-
-//template <typename KeyType, typename ReadFilter>
-//std::pair<MappableMap<KeyType, AlignedRead>, MappableMap<KeyType, AlignedRead>>
-//partition_copy(const MappableMap<KeyType, AlignedRead>& reads, const ReadFilter& filter)
-//{
-//    MappableMap<KeyType, AlignedRead> good_reads {reads.size()}, bad_reads {reads.size()};
-//    
-//    for (const auto& sample_reads : reads) {
-//        auto sample_filtered_reads = filter_reads(sample_reads.second, filter);
-//        good_reads.emplace(sample_reads.first, std::move(sample_filtered_reads.first));
-//        bad_reads.emplace(sample_reads.first, std::move(sample_filtered_reads.second));
-//    }
-//    
-//    return std::make_pair(std::move(good_reads), std::move(bad_reads));
-//}
-//
-//template <typename KeyType, typename ReadFilter>
-//std::pair<MappableMap<KeyType, AlignedRead>, MappableMap<KeyType, AlignedRead>>
-//partition_copy(MappableMap<KeyType, AlignedRead>&& reads, const ReadFilter& filter)
-//{
-//    MappableMap<KeyType, AlignedRead> good_reads {reads.size()}, bad_reads {reads.size()};
-//    
-//    for (auto&& sample_reads : reads) {
-//        auto sample_filtered_reads = filter_reads(std::move(sample_reads.second), filter);
-//        good_reads.emplace(sample_reads.first, std::move(sample_filtered_reads.first));
-//        bad_reads.emplace(sample_reads.first, std::move(sample_filtered_reads.second));
-//    }
-//    
-//    return std::make_pair(std::move(good_reads), std::move(bad_reads));
-//}
 
 template <typename KeyType>
 using PartitionPointMap = std::unordered_map<KeyType, typename MappableMap<KeyType, AlignedRead>::mapped_type::iterator>;
 
 template <typename KeyType, typename ReadFilter>
 PartitionPointMap<KeyType>
-partition(MappableMap<KeyType, AlignedRead>& reads, const ReadFilter& filter)
+filter(MappableMap<KeyType, AlignedRead>& reads, const ReadFilter& f)
 {
     PartitionPointMap<KeyType> result {reads.size()};
     
     for (auto& p : reads) {
-        result.emplace(p.first, partition(p.second, filter));
+        result.emplace(p.first, filter(p.second, f));
     }
     
     return result;

@@ -52,45 +52,78 @@ bool almost_one(const T x, const int ulp = 1)
 }
 
 template <typename RealType>
-inline constexpr RealType exp_maclaurin(const RealType x) {
+constexpr RealType exp_maclaurin(const RealType x) {
     return (6 + x * (6 + x * (3 + x))) * 0.16666666;
 }
 
 template <typename RealType>
-inline constexpr RealType mercator(const RealType x) {
+constexpr RealType mercator(const RealType x) {
     return x - x * x / 2 + x * x * x / 3;
 }
 
-template <typename InputIterator>
-double mean(InputIterator first, InputIterator last)
+struct IdFunction
 {
-    return std::accumulate(first, last, 0.0) / std::distance(first, last);
+    template <typename T>
+    const T& operator()(const T& x) const noexcept { return x; }
+};
+    
+template <typename InputIt, typename UnaryOperation>
+auto mean(InputIt first, InputIt last, UnaryOperation unary_op)
+{
+    return std::accumulate(first, last, 0.0,
+                           [&] (const auto curr, const auto& x) {
+                               return curr + unary_op(x);
+                           }) / std::distance(first, last);
+}
+
+template <typename InputIt>
+auto mean(InputIt first, InputIt last)
+{
+    return mean(first, last, IdFunction {});
 }
 
 template <typename Container>
-double mean(const Container& values)
+auto mean(const Container& values)
 {
     return mean(std::cbegin(values), std::cend(values));
 }
 
-template <typename InputIterator>
-double stdev(InputIterator first, InputIterator last)
+template <typename Container, typename UnaryOperation>
+auto mean(const Container& values, UnaryOperation unary_op)
 {
-    const auto m = mean(first, last);
+    return mean(std::cbegin(values), std::cend(values), unary_op);
+}
+
+template <typename InputIt, typename UnaryOperation>
+double stdev(InputIt first, InputIt last, UnaryOperation unary_op)
+{
+    const auto m = mean(first, last, unary_op);
     const auto n = std::distance(first, last);
     std::vector<double> diff(n);
-    std::transform(first, last, std::begin(diff), std::bind2nd(std::minus<double>(), m));
+    std::transform(first, last, std::begin(diff), [&] (const auto& x) { return unary_op(x) - m; });
     return std::sqrt(std::inner_product(std::begin(diff), std::end(diff), std::begin(diff), 0.0) / n);
 }
 
+template <typename InputIt>
+auto stdev(InputIt first, InputIt last)
+{
+    return stdev(first, last, IdFunction {});
+}
+
 template <typename Container>
-double stdev(const Container& values)
+auto stdev(const Container& values)
 {
     return stdev(std::cbegin(values), std::cend(values));
 }
 
-template <typename RealType, typename InputIterator>
-RealType rmq(InputIterator first, InputIterator last)
+template <typename Container, typename UnaryOperation>
+auto stdev(const Container& values, UnaryOperation unary_op)
+{
+    return stdev(std::cbegin(values), std::cend(values), unary_op);
+}
+
+template <typename RealType, typename InputIt>
+RealType rmq(InputIt first, InputIt last)
 {
     return std::sqrt((std::inner_product(first, last, first, RealType {0}))
                      / static_cast<RealType>(std::distance(first, last)));
@@ -102,22 +135,25 @@ RealType rmq(const Container& values)
     return rmq<RealType>(std::cbegin(values), std::cend(values));
 }
 
-template <typename RealType>
-inline RealType log_sum_exp(const RealType a, const RealType b)
+template <typename RealType,
+          typename = std::enable_if_t<std::is_floating_point<RealType>::value>>
+RealType log_sum_exp(const RealType a, const RealType b)
 {
     const auto r = std::minmax(a, b);
     return r.second + std::log(1.0 + std::exp(r.first - r.second));
 }
 
-template <typename RealType>
-inline RealType log_sum_exp(const RealType a, const RealType b, const RealType c)
+template <typename RealType,
+          typename = std::enable_if_t<std::is_floating_point<RealType>::value>>
+RealType log_sum_exp(const RealType a, const RealType b, const RealType c)
 {
     const auto max = std::max({a, b, c});
     return max + std::log(std::exp(a - max) + std::exp(b - max) + std::exp(c - max));
 }
 
-template <typename RealType>
-inline RealType log_sum_exp(std::initializer_list<RealType> il)
+template <typename RealType,
+          typename = std::enable_if_t<std::is_floating_point<RealType>::value>>
+RealType log_sum_exp(std::initializer_list<RealType> il)
 {
     const auto max = std::max(il);
     return max + std::log(std::accumulate(std::cbegin(il), std::cend(il), RealType {0},
@@ -126,9 +162,11 @@ inline RealType log_sum_exp(std::initializer_list<RealType> il)
                                           }));
 }
 
-template <typename RealType, typename Iterator>
-inline RealType log_sum_exp(Iterator first, Iterator last)
+template <typename ForwardIt,
+          typename = std::enable_if_t<!std::is_floating_point<ForwardIt>::value>>
+auto log_sum_exp(ForwardIt first, ForwardIt last)
 {
+    using RealType = typename std::iterator_traits<ForwardIt>::value_type;
     const auto max = *std::max_element(first, last);
     return max + std::log(std::accumulate(first, last, RealType {0},
                                           [max] (const auto curr, const auto x) {
@@ -136,16 +174,16 @@ inline RealType log_sum_exp(Iterator first, Iterator last)
                                           }));
 }
 
-template <typename RealType, typename Container>
-RealType log_sum_exp(const Container& values)
+template <typename Container>
+auto log_sum_exp(const Container& values)
 {
-    return log_sum_exp<RealType>(std::cbegin(values), std::cend(values));
+    return log_sum_exp(std::cbegin(values), std::cend(values));
 }
 
 template <typename RealType, typename IntegerType,
           typename = std::enable_if_t<std::is_floating_point<RealType>::value>,
           typename = std::enable_if_t<std::is_integral<IntegerType>::value>>
-inline RealType log_factorial(IntegerType x)
+RealType log_factorial(IntegerType x)
 {
     if (x == 0 || x == 1) return 0;
     if (x == 2) return std::log(2);

@@ -66,7 +66,7 @@ namespace GenotypeModel
         const auto& log_likelihoods2 = haplotype_likelihoods_.get().log_likelihoods(sample, genotype[1]);
         
         return std::inner_product(std::cbegin(log_likelihoods1), std::cend(log_likelihoods1),
-                                  std::cbegin(log_likelihoods2), 0.0, std::plus<double> {},
+                                  std::cbegin(log_likelihoods2), 0.0, std::plus<void> {},
                                   [this] (const double a, const double b) -> double {
                                       return Maths::log_sum_exp(a, b) - ln_ploidy_;
                                   });
@@ -84,7 +84,7 @@ namespace GenotypeModel
         const auto& log_likelihoods2 = haplotype_likelihoods_.get().log_likelihoods(sample, genotype[1]);
         
         if (genotype.zygosity() == 3) {
-            const auto& log_likelihoods3 = haplotype_likelihoods_.get().log_likelihoods(sample, genotype[1]);
+            const auto& log_likelihoods3 = haplotype_likelihoods_.get().log_likelihoods(sample, genotype[2]);
             
             double result {0};
             
@@ -98,14 +98,14 @@ namespace GenotypeModel
         
         if (genotype.count(genotype[0]) == 1) {
             return std::inner_product(std::cbegin(log_likelihoods1), std::cend(log_likelihoods1),
-                                      std::cbegin(log_likelihoods2), 0.0, std::plus<double> {},
+                                      std::cbegin(log_likelihoods2), 0.0, std::plus<void> {},
                                       [this] (const double a, const double b) -> double {
                                           return Maths::log_sum_exp(a, 2 * b) - ln_ploidy_;
                                       });
         }
         
         return std::inner_product(std::cbegin(log_likelihoods1), std::cend(log_likelihoods1),
-                                  std::cbegin(log_likelihoods2), 0.0, std::plus<double> {},
+                                  std::cbegin(log_likelihoods2), 0.0, std::plus<void> {},
                                   [this] (const double a, const double b) -> double {
                                       return Maths::log_sum_exp(2 * a, b) - ln_ploidy_;
                                   });
@@ -141,7 +141,7 @@ namespace GenotypeModel
                                return haplotype_likelihoods.get()[i];
                            });
             
-            result += Maths::log_sum_exp<double>(tmp) - ln_ploidy_;
+            result += Maths::log_sum_exp(tmp) - ln_ploidy_;
         }
         
         return result;

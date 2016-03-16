@@ -13,6 +13,7 @@
 #include <tuple>
 #include <iterator>
 #include <cassert>
+#include <iostream>
 
 #include "genomic_region.hpp"
 #include "mappable.hpp"
@@ -25,14 +26,11 @@
 #include "haplotype_filter.hpp"
 #include "vcf_record.hpp"
 #include "maths.hpp"
+#include "logging.hpp"
 
 #include "basic_haplotype_prior_model.hpp" // TODO: turn into factory
 
-#include "logging.hpp"
-
-#include <iostream> // DEBUG
 #include "timers.hpp"
-#include "progress_meter.hpp"
 
 namespace Octopus
 {
@@ -117,16 +115,40 @@ namespace debug
     void print_haplotype_posteriors(const Map& haplotype_posteriors, std::size_t n = 20);
 }
 
-auto flank_state(const std::vector<Haplotype>& haplotypes,
-                 const GenomicRegion& active_region,
-                 const std::vector<Variant>& candidates)
+const auto& haplotype_region(const std::vector<Haplotype>& haplotypes)
 {
-    const auto& haplotype_region = haplotypes.front().get_region();
+    return mapped_region(haplotypes.front());
+}
+
+auto calculate_flank_regions(const GenomicRegion& haplotype_region,
+                             const GenomicRegion& active_region,
+                             const std::vector<Variant>& candidates)
+{
+    auto lhs_flank = left_overhang_region(haplotype_region, active_region);
+    auto rhs_flank = right_overhang_region(haplotype_region, active_region);
     
+    const auto active_candidates = overlap_range(candidates, active_region);
+    
+    if (is_empty_region(active_candidates.front()) && !is_empty_region(lhs_flank)) {
+        lhs_flank = expand_rhs(lhs_flank, -1);
+    }
+    
+    if (is_empty_region(active_candidates.back()) && !is_empty_region(lhs_flank)) {
+        rhs_flank = expand_lhs(rhs_flank, -1);
+    }
+    
+    return std::make_pair(std::move(lhs_flank), std::move(rhs_flank));
+}
+
+auto calculate_flank_state(const std::vector<Haplotype>& haplotypes,
+                           const GenomicRegion& active_region,
+                           const std::vector<Variant>& candidates)
+{
+    const auto flanks = calculate_flank_regions(haplotype_region(haplotypes), active_region,
+                                                candidates);
     return HaplotypeLikelihoodModel::FlankState {
         active_region.get_contig_region(),
-        has_overlapped(candidates, left_overhang_region(haplotype_region, active_region)),
-        has_overlapped(candidates, right_overhang_region(haplotype_region, active_region))
+        has_overlapped(candidates, flanks.first), has_overlapped(candidates, flanks.second)
     };
 }
 
@@ -158,7 +180,8 @@ bool has_moved_forward(const GenomicRegion& next_active_region, const GenomicReg
     return begins_before(active_region, next_active_region) || active_region == next_active_region;
 }
 
-std::deque<VcfRecord> VariantCaller::call_variants(const GenomicRegion& call_region) const
+std::deque<VcfRecord> VariantCaller::call_variants(const GenomicRegion& call_region,
+                                                   ProgressMeter& progress_meter) const
 {
     Logging::DebugLogger debug_log {};
     
@@ -218,24 +241,22 @@ std::deque<VcfRecord> VariantCaller::call_variants(const GenomicRegion& call_reg
     
     HaplotypeLikelihoodCache haplotype_likelihoods {max_haplotypes_, samples};
     
-    ProgressMeter progress {call_region};
-    
     while (true) {
         resume_timer(haplotype_generation_timer);
         std::tie(haplotypes, active_region) = generator.progress();
         pause_timer(haplotype_generation_timer);
         
         if (is_after(active_region, call_region) || haplotypes.empty()) {
+            progress_meter.log_completed(active_region);
             break;
         }
         
         if (DEBUG_MODE) {
             stream(debug_log) << "Active region is " << active_region;
             debug::print_active_candidates(stream(debug_log), candidates, active_region);
-            const auto& haplotype_region = haplotypes.front().get_region();
-            stream(debug_log) << "Haplotype region is " << haplotype_region;
+            stream(debug_log) << "Haplotype region is " << haplotype_region(haplotypes);
             debug::print_inactive_flanking_candidates(stream(debug_log), candidates, active_region,
-                                                      haplotype_region);
+                                                      haplotype_region(haplotypes));
         }
         
         const auto active_reads = copy_overlapped(reads, active_region);
@@ -247,7 +268,7 @@ std::deque<VcfRecord> VariantCaller::call_variants(const GenomicRegion& call_reg
         
         resume_timer(likelihood_timer);
         haplotype_likelihoods.populate(active_reads, haplotypes,
-                                        flank_state(haplotypes, active_region, candidates));
+                                        calculate_flank_state(haplotypes, active_region, candidates));
         pause_timer(likelihood_timer);
         
         resume_timer(haplotype_fitler_timer);
@@ -395,7 +416,7 @@ std::deque<VcfRecord> VariantCaller::call_variants(const GenomicRegion& call_reg
             completed_region = encompassing_region(completed_region, passed_region);
         }
         
-        progress.log_completed(active_region);
+        progress_meter.log_completed(active_region);
     }
     
     return result;
@@ -601,7 +622,12 @@ namespace debug
         if (candidates.empty()) {
             stream << "There are no candidates" << '\n';
         } else {
-            stream << "There are " << candidates.size() << " candidates: " << '\n';
+            if (candidates.size() == 1) {
+                stream << "There is 1 candidate" << '\n';
+            } else {
+                stream << "There are " << candidates.size() << " candidates: " << '\n';
+            }
+            
             if (!number_only) {
                 for (const auto& c : candidates) stream << c << '\n';
             }
@@ -622,7 +648,14 @@ namespace debug
         if (active_candidates.empty()) {
             stream << "There are no active candidates" << '\n';
         } else {
-            stream << "There are " << size(active_candidates) << " active candidates: " << '\n';
+            const auto num_active = size(active_candidates);
+            
+            if (num_active == 1) {
+                stream << "There is 1 active candidate" << '\n';
+            } else {
+                stream << "There are " << num_active << " active candidates: " << '\n';
+            }
+            
             if (!number_only) {
                 for (const auto& c : active_candidates) stream << c << '\n';
             }
@@ -641,8 +674,15 @@ namespace debug
                                             const GenomicRegion& haplotype_region,
                                             bool number_only)
     {
-        const auto lhs_inactive_candidates = overlap_range(candidates, left_overhang_region(haplotype_region, active_region));
-        const auto rhs_inactive_candidates = overlap_range(candidates, right_overhang_region(haplotype_region, active_region));
+        const auto flanks = calculate_flank_regions(haplotype_region, active_region, candidates);
+        
+        stream << "Haplotype flank regions are " << flanks.first << " " << flanks.second << '\n';
+        
+        const auto lhs_inactive_candidates = overlap_range(candidates, flanks.first);
+        const auto rhs_inactive_candidates = overlap_range(candidates, flanks.second);
+        
+        const auto num_lhs_inactives = size(lhs_inactive_candidates);
+        const auto num_rhs_inactives = size(rhs_inactive_candidates);
         
         if (lhs_inactive_candidates.empty()) {
             if (rhs_inactive_candidates.empty()) {
@@ -652,7 +692,12 @@ namespace debug
             
             stream << "There are no lhs inactive flanking candidates" << '\n';
             
-            stream << "There are " << size(rhs_inactive_candidates) << " rhs inactive flanking candidates: " << '\n';
+            if (num_rhs_inactives == 1) {
+                stream << "There is 1 rhs inactive flanking candidates: " << '\n';
+            } else {
+                stream << "There are " << num_rhs_inactives << " rhs inactive flanking candidates: " << '\n';
+            }
+            
             if (!number_only) {
                 for (const auto& c : rhs_inactive_candidates) stream << c << '\n';
             }
@@ -660,7 +705,12 @@ namespace debug
             return;
         }
         
-        stream << "There are " << size(lhs_inactive_candidates) << " lhs inactive flanking candidates: " << '\n';
+        if (num_lhs_inactives == 1) {
+            stream << "There is 1 lhs inactive flanking candidates: " << '\n';
+        } else {
+            stream << "There are " << num_lhs_inactives << " lhs inactive flanking candidates: " << '\n';
+        }
+        
         if (!number_only) {
             for (const auto& c : lhs_inactive_candidates) stream << c << '\n';
         }
@@ -668,7 +718,12 @@ namespace debug
         if (rhs_inactive_candidates.empty()) {
             stream << "There are no rhs inactive flanking candidates" << '\n';
         } else {
-            stream << "There are " << size(rhs_inactive_candidates) << " rhs inactive flanking candidates: " << '\n';
+            if (num_rhs_inactives == 1) {
+                stream << "There is 1 rhs inactive flanking candidates: " << '\n';
+            } else {
+                stream << "There are " << num_rhs_inactives << " rhs inactive flanking candidates: " << '\n';
+            }
+            
             if (!number_only) {
                 for (const auto& c : rhs_inactive_candidates) stream << c << '\n';
             }

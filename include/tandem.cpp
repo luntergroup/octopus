@@ -32,7 +32,19 @@ namespace Tandem
     {
         std::vector<uint32_t> result(suffix_array.size());
         
-        for (uint32_t i {}; i < suffix_array.size(); ++i) {
+        for (uint32_t i {0}; i < suffix_array.size(); ++i) {
+            result[suffix_array[i]] = i;
+        }
+        
+        return result;
+    }
+    
+    std::vector<uint32_t> make_rank_array(const std::vector<uint32_t>& suffix_array,
+                                          const std::size_t extra_capacity)
+    {
+        std::vector<uint32_t> result(suffix_array.size() - extra_capacity);
+        
+        for (uint32_t i {0}; i < (suffix_array.size() - extra_capacity); ++i) {
             result[suffix_array[i]] = i;
         }
         
@@ -54,15 +66,17 @@ namespace Tandem
         stack.push(0);
         
         for (uint32_t i {1}; i <= n; ++i) {
-            while (!stack.empty() && (sa[i] == -1 || sa[i] < sa[stack.top()]
-                                      || (sa[i] > sa[stack.top()] && lcp[i] <= lcp[stack.top()]))) {
-                if (sa[i] < sa[stack.top()]) {
-                    std::tie(lcp[i], result[sa[stack.top()]]) = std::minmax(lcp[stack.top()], uint32_t {lcp[i]});
-                } else {
-                    result[sa[stack.top()]] = lcp[stack.top()];
-                }
-                stack.pop();
-            }
+            while (!stack.empty()
+                   && (sa[i] == -1 || sa[i] < sa[stack.top()]
+                       || (sa[i] > sa[stack.top()] && lcp[i] <= lcp[stack.top()]))) {
+                       if (sa[i] < sa[stack.top()]) {
+                           std::tie(lcp[i], result[sa[stack.top()]]) = std::minmax(lcp[stack.top()], uint32_t {lcp[i]});
+                       } else {
+                           result[sa[stack.top()]] = lcp[stack.top()];
+                       }
+                       
+                       stack.pop();
+                   }
             
             if (i < n) {
                 stack.push(i);
@@ -126,7 +140,7 @@ namespace Tandem
             
             std::vector<std::vector<StringRun>> result(n, std::vector<StringRun> {});
             
-            for (std::size_t i {}; i < n; ++i) {
+            for (std::size_t i {0}; i < n; ++i) {
                 result[i].reserve(counts[i]);
             }
             
@@ -146,7 +160,7 @@ namespace Tandem
             
             std::vector<std::vector<StringRun>> result(n, std::vector<StringRun> {});
             
-            for (std::size_t i {}; i < n; ++i) {
+            for (std::size_t i {0}; i < n; ++i) {
                 result[i].reserve(counts[i]);
             }
             

@@ -11,6 +11,7 @@
 
 #include <algorithm>
 #include <iterator>
+#include <string>
 
 #include "aligned_read.hpp"
 #include "cigar_string.hpp"
@@ -25,14 +26,24 @@ struct is_not_secondary_alignment
     {
         return !read.is_marked_secondary_alignment();
     }
-};
     
+    const std::string& name() const noexcept { return name_; }
+    
+private:
+    std::string name_ = "is_not_secondary_alignment";
+};
+
 struct is_not_supplementary_alignment
 {
     bool operator()(const AlignedRead& read) const
     {
         return !read.is_marked_supplementary_alignment();
     }
+    
+    const std::string& name() const noexcept { return name_; }
+    
+private:
+    std::string name_ = "is_not_supplementary_alignment";
 };
 
 struct is_good_mapping_quality
@@ -48,8 +59,12 @@ struct is_good_mapping_quality
         return read.get_mapping_quality() >= good_mapping_quality_;
     }
     
+    const std::string& name() const noexcept { return name_; }
+    
 private:
     const QualityType good_mapping_quality_;
+    
+    std::string name_ = "is_good_mapping_quality";
 };
 
 struct has_good_base_fraction
@@ -69,9 +84,13 @@ struct has_good_base_fraction
         return good_base_fraction >= min_good_base_fraction_;
     }
     
+    const std::string& name() const noexcept { return name_; }
+    
 private:
     const QualityType good_base_quality_;
     double min_good_base_fraction_;
+    
+    std::string name_ = "has_good_base_fraction";
 };
 
 struct has_sufficient_good_quality_bases
@@ -89,9 +108,13 @@ struct has_sufficient_good_quality_bases
                              (auto quality) { return quality >= good_base_quality_; }) >= min_good_bases_;
     }
     
+    const std::string& name() const noexcept { return name_; }
+
 private:
     const QualityType good_base_quality_;
     const unsigned min_good_bases_;
+    
+    std::string name_ = "has_sufficient_good_quality_bases";
 };
 
 struct is_mapped
@@ -100,6 +123,11 @@ struct is_mapped
     {
         return !read.is_marked_unmapped();
     }
+    
+    const std::string& name() const noexcept { return name_; }
+    
+private:
+    std::string name_ = "is_mapped";
 };
 
 struct is_not_chimeric
@@ -108,6 +136,11 @@ struct is_not_chimeric
     {
         return !read.is_chimeric();
     }
+    
+    const std::string& name() const noexcept { return name_; }
+    
+private:
+    std::string name_ = "is_not_chimeric";
 };
 
 //struct is_next_segment_mapped
@@ -126,6 +159,11 @@ struct is_not_marked_duplicate
     {
         return !read.is_marked_duplicate();
     }
+    
+    const std::string& name() const noexcept { return name_; }
+    
+private:
+    std::string name_ = "is_not_marked_duplicate";
 };
 
 struct is_short
@@ -141,8 +179,12 @@ struct is_short
         return sequence_size(read) <= max_length_;
     }
     
+    const std::string& name() const noexcept { return name_; }
+    
 private:
     const SizeType max_length_;
+    
+    std::string name_ = "is_short";
 };
 
 struct is_long
@@ -151,15 +193,19 @@ struct is_long
     
     is_long() = default;
     
-    explicit is_long(SizeType min_length) : min_length_ {min_length} {}
+    explicit is_long(SizeType max_length) : max_length_ {max_length} {}
     
     bool operator()(const AlignedRead& read) const
     {
-        return read.get_mapping_quality() >= min_length_;
+        return sequence_size(read) >= max_length_;
     }
     
+    const std::string& name() const noexcept { return name_; }
+    
 private:
-    const SizeType min_length_;
+    const SizeType max_length_;
+    
+     std::string name_ = "is_long";
 };
 
 struct is_not_contaminated
@@ -168,6 +214,11 @@ struct is_not_contaminated
     {
         return !read.is_chimeric() || sequence_size(read) >= read.get_next_segment().get_inferred_template_length();
     }
+    
+    const std::string& name() const noexcept { return name_; }
+    
+private:
+    std::string name_ = "is_not_contaminated";
 };
 
 struct is_not_marked_qc_fail
@@ -176,6 +227,11 @@ struct is_not_marked_qc_fail
     {
         return !read.is_marked_qc_fail();
     }
+    
+    const std::string& name() const noexcept { return name_; }
+    
+private:
+    std::string name_ = "is_not_marked_qc_fail";
 };
 
 struct mate_is_mapped
@@ -184,6 +240,11 @@ struct mate_is_mapped
     {
         return !read.has_mate() || !read.get_next_segment().is_marked_unmapped();
     }
+    
+    const std::string& name() const noexcept { return name_; }
+    
+private:
+    std::string name_ = "mate_is_mapped";
 };
 
 // Context-based filters

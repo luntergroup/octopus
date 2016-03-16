@@ -60,7 +60,7 @@ ReadMap ReadPipe::fetch_reads(const GenomicRegion& region)
     for (const auto& batch : batches) {
         auto batch_reads = read_manager_.get().fetch_reads(batch, region);
         
-        erase_filtered_reads(batch_reads, partition(batch_reads, read_filter_));
+        erase_filtered_reads(batch_reads, filter(batch_reads, read_filter_));
         
         if (downsampler_) {
             downsampler_->downsample(batch_reads);

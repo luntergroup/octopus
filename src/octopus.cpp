@@ -41,6 +41,7 @@
 #include "variant_caller.hpp"
 #include "vcf.hpp"
 #include "maths.hpp"
+#include "progress_meter.hpp"
 
 #include <cassert>
 #include "timers.hpp" // BENCHMARK
@@ -500,8 +501,10 @@ namespace Octopus
     
     void write_calls(VcfWriter& out, std::deque<VcfRecord>&& calls)
     {
-        Logging::InfoLogger log {};
-        stream(log) << "Writing " << calls.size() << " calls to VCF";
+        if (DEBUG_MODE) {
+            Logging::DebugLogger log {};
+            stream(log) << "Writing " << calls.size() << " calls to VCF";
+        }
         for (auto&& call : calls) out.write(std::move(call));
     }
     
@@ -534,6 +537,8 @@ namespace Octopus
         for (const auto& region : components.regions) {
             stream(log) << "Processing input region " << region;
             
+            ProgressMeter progress_meter {region};
+            
             auto subregion = propose_call_subregion(components, region);
             
             if (is_empty_region(subregion) && !region_has_reads(region, components)) {
@@ -547,7 +552,7 @@ namespace Octopus
                     stream(lg) << "Processing subregion " << subregion;
                 }
                 
-                auto calls = components.caller->call_variants(subregion);
+                auto calls = components.caller->call_variants(subregion, progress_meter);
                 
                 write_calls(components.output, std::move(calls));
                 

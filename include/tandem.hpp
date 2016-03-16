@@ -36,6 +36,8 @@
 #include <utility>
 #include <numeric>
 
+#include <cassert>
+
 #include "divsufsort.h"
 
 /**
@@ -55,7 +57,6 @@
 
 namespace Tandem
 {
-    
     struct StringRun
     {
         StringRun() = default;
@@ -85,8 +86,26 @@ namespace Tandem
         return std::vector<uint32_t> {std::cbegin(sa), std::cend(sa)};
     }
     
+    template <typename T>
+    std::vector<uint32_t> make_suffix_array(const T& str, const size_t extra_capacity)
+    {
+        std::vector<saidx_t> sa(str.size());
+        
+        divsufsort(str.data(), sa.data(), static_cast<int>(str.size()));
+        
+        std::vector<uint32_t> result(str.size() + extra_capacity);
+        
+        const auto it = std::copy(std::cbegin(sa), std::cend(sa), std::begin(result));
+        
+        std::fill_n(it, extra_capacity, 0);
+        
+        return result;
+    }
+    
     // rank array is inverse suffix array
     std::vector<uint32_t> make_rank_array(const std::vector<uint32_t>& suffix_array);
+    std::vector<uint32_t> make_rank_array(const std::vector<uint32_t>& suffix_array,
+                                          const std::size_t extra_capacity);
     
     namespace detail
     {
@@ -126,13 +145,15 @@ namespace Tandem
     
     // LCP = Longest Common Prefix. O(n) implementation given in Kasai et al (2001).
     template <typename T>
-    std::vector<uint32_t> make_lcp_array(const T& str, const std::vector<uint32_t>& suffix_array)
+    std::vector<uint32_t>
+    make_lcp_array(const T& str, const std::vector<uint32_t>& suffix_array,
+                   const size_t extra_capacity = 0)
     {
-        const auto rank = make_rank_array(suffix_array);
+        const auto rank = make_rank_array(suffix_array, extra_capacity);
         
-        std::vector<uint32_t> result(suffix_array.size());
+        std::vector<uint32_t> result(suffix_array.size() + extra_capacity);
         
-        for (uint32_t i {}, h {}; i < suffix_array.size(); ++i) {
+        for (uint32_t i {0}, h {0}; i < (suffix_array.size() - extra_capacity); ++i) {
             if (rank[i] > 0) {
                 h += detail::forward_lce(str, i + h, suffix_array[rank[i] - 1] + h);
                 result[rank[i]] = h;
@@ -152,16 +173,16 @@ namespace Tandem
     template <typename T>
     auto make_lpf_array(const T& str)
     {
-        auto sa  = make_suffix_array(str);
-        auto lcp = make_lcp_array(str, sa);
+        auto sa  = make_suffix_array(str, 1);
+        auto lcp = make_lcp_array(str, sa, 1);
         return make_lpf_array(std::move(sa), std::move(lcp));
     }
     
     template <typename T>
     auto make_lpf_and_prev_occ_arrays(const T& str)
     {
-        auto sa  = make_suffix_array(str);
-        auto lcp = make_lcp_array(str, sa);
+        auto sa  = make_suffix_array(str, 1);
+        auto lcp = make_lcp_array(str, sa, 1);
         return make_lpf_and_prev_occ_arrays(std::move(sa), std::move(lcp));
     }
     
@@ -183,7 +204,8 @@ namespace Tandem
         std::vector<LZBlock> result {};
         result.reserve(str.size()); // max possible blocks
         
-        uint32_t end {1};
+        uint32_t end {1};  // start at 1 because the first element of lpf is sentinel
+        
         result.emplace_back(0, end);
         
         while (end < str.size()) {
@@ -213,7 +235,7 @@ namespace Tandem
         std::vector<uint32_t> prev_lz_block_occurrence {};
         prev_lz_block_occurrence.reserve(str.size());
         
-        uint32_t end {1};
+        uint32_t end {1}; // start at 1 because the first element of lpf is sentinel
         
         lz_blocks.emplace_back(0, end);
         prev_lz_block_occurrence.emplace_back(-1);
@@ -329,7 +351,7 @@ namespace Tandem
             
             auto sorted_buckets = get_sorted_buckets(str, lz_blocks, min_period, max_period);
             
-            for (uint32_t k {}; k < lz_blocks.size(); ++k) {
+            for (uint32_t k {0}; k < lz_blocks.size(); ++k) {
                 const auto& block = lz_blocks[k];
                 
                 const auto block_end = block.pos + block.length;
@@ -370,6 +392,37 @@ namespace Tandem
                                    [] (const auto curr, const auto& bucket) { return curr + bucket.size(); });
         }
         
+        template <typename T>
+        std::vector<StringRun>
+        find_homopolymers(const T& sequence)
+        {
+            std::vector<StringRun> result {};
+            
+            const auto first = std::cbegin(sequence);
+            const auto last  = std::cend(sequence);
+            
+            auto curr = first;
+            
+            while (true) {
+                const auto it = std::adjacent_find(curr, last);
+                
+                if (it == last) break;
+                
+                const auto base = *it;
+                
+                const auto it2 = std::find_if_not(std::next(it), last, [base] (const auto b) { return b == base; });
+                
+                result.emplace_back(static_cast<std::uint32_t>(std::distance(first, it)),
+                                    static_cast<std::uint32_t>(std::distance(it, it2)),
+                                    std::uint32_t {1});
+                
+                curr = it2;
+            }
+            
+            result.shrink_to_fit();
+            
+            return result;
+        }
     } // namespace detail
     
     /**
@@ -379,6 +432,10 @@ namespace Tandem
     std::vector<StringRun>
     find_maximal_repetitions(const T& str, const uint32_t min_period = 1, const uint32_t max_period = -1)
     {
+        if (max_period == 1) {
+            return detail::find_homopolymers(str); // optimise this case
+        }
+        
         auto sorted_buckets = detail::find_maximal_repetitions(str, min_period, max_period);
         
         std::vector<StringRun> result {};
