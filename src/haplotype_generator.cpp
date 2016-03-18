@@ -18,6 +18,7 @@
 #include "haplotype.hpp"
 #include "mappable.hpp"
 #include "mappable_algorithms.hpp"
+#include "logging.hpp"
 
 #include <iostream> // DEBUG
 #include "timers.hpp"
@@ -31,7 +32,7 @@ namespace Octopus
     
     namespace
     {
-        auto variants_to_alleles(const std::vector<Variant>& variants)
+        auto variants_to_alleles(const MappableFlatSet<Variant>& variants)
         {
             std::deque<Allele> alleles {};
             
@@ -60,7 +61,7 @@ namespace Octopus
     // public members
     
     HaplotypeGenerator::HaplotypeGenerator(const GenomicRegion& window, const ReferenceGenome& reference,
-                                           const std::vector<Variant>& candidates, const ReadMap& reads,
+                                           const MappableFlatSet<Variant>& candidates, const ReadMap& reads,
                                            unsigned max_haplotypes, unsigned max_indicators)
     :
     tree_ {window.get_contig_name(), reference},
@@ -129,14 +130,14 @@ namespace Octopus
             
             alleles_.erase_all(std::cbegin(holdout_set_), std::cend(holdout_set_));
             
-            std::cout << "Warning: holding out " << holdout_set_.size() << " alleles from region "
-                        << current_active_region_ << '\n';
+            Logging::WarningLogger wlog {};
+            
+            stream(wlog) << "Holding out " << holdout_set_.size() << " alleles from region "
+                         << current_active_region_;
             
             current_active_region_ = walker_.walk(head_region(current_active_region_), reads_, alleles_);
             active_alleles = alleles_.overlap_range(current_active_region_);
         }
-        
-        //debug::print_active_alleles(active_alleles, current_active_region_);
         
         extend_tree(active_alleles, tree_);
         

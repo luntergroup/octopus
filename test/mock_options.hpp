@@ -31,7 +31,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         
         "--working-directory", "~/Genomics/octopus_test",
         
-        "--target-read-buffer-size", "0.5",
+        //"--target-read-buffer-size", "0.5",
         //"--threaded",
         
         //"--contig-output-order", "as-in-reference-reversed",
@@ -40,8 +40,8 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--reference", ecoli_reference_fasta.c_str(),
         
         //"--reads", NA12878_low_coverage.c_str(),
-        //"--reads", NA12878_high_coverage.c_str(),
-        "--reads", "~/Genomics/Illumina/NA12878.mapped.ILLUMINA.bwa.CEU.high_coverage_pcr_free.20130906.chr22.bam",
+        "--reads", NA12878_high_coverage.c_str(),
+        //"--reads", "~/Genomics/Illumina/NA12878.mapped.ILLUMINA.bwa.CEU.high_coverage_pcr_free.20130906.chr22.bam",
         
         //"--reads", NA12891_high_coverage.c_str(),
         
@@ -59,7 +59,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--model", "cancer", // default "population"
         "--normal-sample", "NA12878", // for cancer model
         
-        //"--organism-ploidy", "5",
+        //"--organism-ploidy", "3",
         "--contig-ploidies", "MT=1", "Y=1",// "MT=2",
         //"--contig-ploidies-file", contig_ploidies_txt_file.c_str(),
         
@@ -72,7 +72,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         
         // for population
         
-        "--regions", "22:16,143,786-16,144,090",
+        "--regions", "22:39,258,465-39,258,629",
         
         //"--regions", "22:16,103,653-16,103,957", // 5 haplotypes??
         
@@ -136,7 +136,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--skip-regions-file", human_skip_regions.c_str(),
         
         // candidate parameters
-        //"--min-supporting-reads", "2",
+        //"--min-supporting-reads", "1",
         //"--min-snp-base-quality", "20",
         
         // read filters
@@ -166,7 +166,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         
         "--somatics-only",
         
-        //"--candidates-from-source", "~/test.bcf",
+        //"--candidates-from-source", "GATK_NA12878HC_22.bcf",
         //"--regenotype",
         
         //"--max-open-read-files", "1",

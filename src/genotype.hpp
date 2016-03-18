@@ -116,6 +116,7 @@ public:
     unsigned zygosity() const;
     
     std::vector<Haplotype> copy_unique() const;
+    std::vector<std::reference_wrapper<const Haplotype>> copy_unique_ref() const;
     
 private:
     using HaplotypePtr  = std::shared_ptr<Haplotype>;

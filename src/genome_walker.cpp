@@ -26,7 +26,8 @@ namespace Octopus
 GenomeWalker::GenomeWalker(unsigned max_indicators, unsigned max_included,
                            IndicatorLimit indicator_limit, ExtensionLimit extension_limit)
 :
-max_indicators_ {(max_included > 0 && max_included <= max_indicators) ? max_included - 1 : max_indicators},
+//max_indicators_ {(max_included > 0 && max_included <= max_indicators) ? max_included - 1 : max_indicators},
+max_indicators_ {max_indicators},
 max_included_ {max_included},
 indicator_limit_ {indicator_limit},
 extension_limit_ {extension_limit}
@@ -94,7 +95,7 @@ GenomicRegion GenomeWalker::walk(const GenomicRegion& previous_region, const Rea
         num_indicators = min(max_possible_indicators, num_indicators);
     }
     
-    auto num_included = max_included_ - num_indicators;
+    auto num_included = max_included_;//; - num_indicators;
     
     auto first_included_itr = prev(included_itr, num_indicators);
     

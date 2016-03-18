@@ -59,7 +59,7 @@ namespace Octopus
     using GenotypePosteriorMap     = std::unordered_map<SampleIdType, SampleGenotypePosteriors>;
     
     using HaplotypePriorCounts = std::vector<double>;
-        
+    
     struct EMConstants
     {
         using InverseGenotypeTable = std::vector<std::vector<std::size_t>>;

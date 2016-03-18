@@ -183,7 +183,7 @@ namespace Octopus
              " application decide the number of threads")
             ("reference-cache-size", po::value<size_t>()->default_value(50000),
              "The maximum number of bytes that can be used to cache reference sequence")
-            ("target-read-buffer-size", po::value<float>()->default_value(1.0),
+            ("target-read-buffer-size", po::value<float>()->default_value(0.5),
              "Will try to limit the amount of memory (in gigabytes) occupied by reads to this amount")
             ("compress-reads", po::bool_switch()->default_value(false),
              "Compresses all read data (slower)")

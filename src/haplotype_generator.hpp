@@ -19,11 +19,10 @@
 #include "common.hpp"
 #include "genome_walker.hpp"
 #include "haplotype_tree.hpp"
+#include "mappable_flat_set.hpp"
 #include "mappable_flat_multi_set.hpp"
 #include "genomic_region.hpp"
 #include "allele.hpp"
-
-#include "mappable_flat_set.hpp"
 
 class Variant;
 class Haplotype;
@@ -36,7 +35,7 @@ namespace Octopus
         HaplotypeGenerator() = delete;
         
         explicit HaplotypeGenerator(const GenomicRegion& window, const ReferenceGenome& reference,
-                                    const std::vector<Variant>& candidates, const ReadMap& reads,
+                                    const MappableFlatSet<Variant>& candidates, const ReadMap& reads,
                                     unsigned max_haplotypes, unsigned max_indicators);
         
         ~HaplotypeGenerator() = default;

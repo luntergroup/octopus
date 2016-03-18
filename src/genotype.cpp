@@ -116,6 +116,19 @@ std::vector<Haplotype> Genotype<Haplotype>::copy_unique() const
     return result;
 }
 
+std::vector<std::reference_wrapper<const Haplotype>> Genotype<Haplotype>::copy_unique_ref() const
+{
+    std::vector<std::reference_wrapper<const Haplotype>> result {};
+    result.reserve(ploidy());
+    
+    std::transform(std::cbegin(haplotypes_), std::cend(haplotypes_), std::back_inserter(result),
+                   [] (const HaplotypePtr& haplotype) { return std::cref(*haplotype); });
+    
+    result.erase(std::unique(std::begin(result), std::end(result)), std::end(result));
+    
+    return result;
+}
+
 bool Genotype<Haplotype>::HaplotypePtrLess::operator()(const HaplotypePtr& lhs,
                                                        const HaplotypePtr& rhs) const
 {

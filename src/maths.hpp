@@ -462,6 +462,38 @@ size_t sum_sizes(const Map& map)
                            [] (const auto& p, const auto& v) { return p + v.second.size(); });
 }
 
+template <typename InputIt1, typename InputIt2, typename InputIt3, typename T,
+          typename BinaryOperation1, typename BinaryOperation2>
+T inner_product(InputIt1 first1, InputIt1 last1,
+                InputIt2 first2, InputIt3 first3, T value,
+                BinaryOperation1 op1, BinaryOperation2 op2)
+{
+    while (first1 != last1) {
+        value = op1(value, op2(*first1, *first2, *first3));
+        ++first1;
+        ++first2;
+        ++first3;
+    }
+    return value;
+}
+
+template <typename InputIt1, typename InputIt2, typename InputIt3, typename InputIt4,
+          typename T, typename BinaryOperation1, typename BinaryOperation2>
+T inner_product(InputIt1 first1, InputIt1 last1,
+                InputIt2 first2, InputIt3 first3,
+                InputIt4 first4, T value,
+                BinaryOperation1 op1, BinaryOperation2 op2)
+{
+    while (first1 != last1) {
+        value = op1(value, op2(*first1, *first2, *first3, *first4));
+        ++first1;
+        ++first2;
+        ++first3;
+        ++first4;
+    }
+    return value;
+    }
+
 } // namespace Maths
 } // namespace Octopus
 

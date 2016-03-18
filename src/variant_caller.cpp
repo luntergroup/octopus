@@ -18,8 +18,8 @@
 #include "genomic_region.hpp"
 #include "mappable.hpp"
 #include "mappable_algorithms.hpp"
+#include "mappable_flat_set.hpp"
 #include "read_utils.hpp"
-#include "mappable_algorithms.hpp"
 #include "haplotype.hpp"
 #include "haplotype_generator.hpp"
 #include "haplotype_liklihood_model.hpp"
@@ -50,6 +50,17 @@ max_haplotypes_ {max_haplotypes},
 haplotype_prior_model_ {std::move(haplotype_prior_model)},
 candidate_generator_ {std::move(candidate_generator)}
 {}
+
+auto generate_candidates(CandidateVariantGenerator& generator, const GenomicRegion& region,
+                         const ReferenceGenome& reference)
+{
+    auto candidates = unique_left_align(generator.generate_candidates(region), reference);
+    
+    return MappableFlatSet<Variant> {
+        std::make_move_iterator(std::begin(candidates)),
+        std::make_move_iterator(std::end(candidates))
+    };
+}
 
 VcfRecord annotate_record(VcfRecord::Builder& record, const ReadMap& reads)
 {
@@ -82,21 +93,21 @@ void append_annotated_calls(std::deque<VcfRecord>& curr_calls,
 namespace debug
 {
     template <typename S>
-    void print_candidates(S&& stream, const std::vector<Variant>& candidates, bool number_only = false);
-    void print_candidates(const std::vector<Variant>& candidates, bool number_only = false);
+    void print_candidates(S&& stream, const MappableFlatSet<Variant>& candidates, bool number_only = false);
+    void print_candidates(const MappableFlatSet<Variant>& candidates, bool number_only = false);
     
     template <typename S>
-    void print_active_candidates(S&& stream, const std::vector<Variant>& candidates,
+    void print_active_candidates(S&& stream, const MappableFlatSet<Variant>& candidates,
                                  const GenomicRegion& active_region, bool number_only = false);
-    void print_active_candidates(const std::vector<Variant>& candidates,
+    void print_active_candidates(const MappableFlatSet<Variant>& candidates,
                                  const GenomicRegion& active_region, bool number_only = false);
     
     template <typename S>
-    void print_inactive_flanking_candidates(S&& stream, const std::vector<Variant>& candidates,
+    void print_inactive_flanking_candidates(S&& stream, const MappableFlatSet<Variant>& candidates,
                                             const GenomicRegion& active_region,
                                             const GenomicRegion& haplotype_region,
                                             bool number_only = false);
-    void print_inactive_flanking_candidates(const std::vector<Variant>& candidates,
+    void print_inactive_flanking_candidates(const MappableFlatSet<Variant>& candidates,
                                             const GenomicRegion& active_region,
                                             const GenomicRegion& haplotype_region,
                                             bool number_only = false);
@@ -115,66 +126,98 @@ namespace debug
     void print_haplotype_posteriors(const Map& haplotype_posteriors, std::size_t n = 20);
 }
 
+std::vector<Variant> copy_overlapped(const MappableFlatSet<Variant>& candidates, const GenomicRegion& region)
+{
+    const auto overlapped = candidates.overlap_range(region);
+    return {std::cbegin(overlapped), std::cend(overlapped)};
+}
+
 const auto& haplotype_region(const std::vector<Haplotype>& haplotypes)
 {
     return mapped_region(haplotypes.front());
 }
 
+void remove_passed_candidates(MappableFlatSet<Variant>& candidates,
+                              const GenomicRegion& candidate_region,
+                              const GenomicRegion& haplotype_region)
+{
+    if (begins_before(candidate_region, haplotype_region)) {
+        const auto passed_region = left_overhang_region(candidate_region, haplotype_region);
+        
+        if (DEBUG_MODE) {
+            Logging::DebugLogger log {};
+            stream(log) << "Removing " << candidates.count_overlapped(passed_region)
+                        << " passed candidates in region " << passed_region;
+        }
+        
+        candidates.erase_overlapped(passed_region);
+    }
+}
+
+//auto max_sequence_size(const std::vector<Haplotype>& haplotypes, const GenomicRegion& region)
+//{
+//    assert(!haplotypes.empty());
+//    
+//    std::vector<Haplotype::SizeType> region_sequence_sizes(haplotypes.size());
+//    
+//    std::transform(std::cbegin(haplotypes), std::cend(haplotypes),
+//                   std::begin(region_sequence_sizes),
+//                   [&region] (const auto& haplotype) {
+//                       return haplotype.sequence_size(region);
+//                   });
+//    
+//    return *std::max_element(std::cbegin(region_sequence_sizes), std::cend(region_sequence_sizes));
+//}
+
 auto calculate_flank_regions(const GenomicRegion& haplotype_region,
                              const GenomicRegion& active_region,
-                             const std::vector<Variant>& candidates)
+                             const MappableFlatSet<Variant>& candidates)
 {
     auto lhs_flank = left_overhang_region(haplotype_region, active_region);
     auto rhs_flank = right_overhang_region(haplotype_region, active_region);
     
-    const auto active_candidates = overlap_range(candidates, active_region);
+    const auto active_candidates = candidates.overlap_range(active_region);
     
-    if (is_empty_region(active_candidates.front()) && !is_empty_region(lhs_flank)) {
-        lhs_flank = expand_rhs(lhs_flank, -1);
+    assert(!active_candidates.empty());
+    
+    if (is_empty_region(*leftmost_mappable(active_candidates)) && !is_empty_region(lhs_flank)) {
+        lhs_flank = expand_rhs(lhs_flank, -1); // stops boundry insertions being considerd inactive
     }
     
-    if (is_empty_region(active_candidates.back()) && !is_empty_region(lhs_flank)) {
-        rhs_flank = expand_lhs(rhs_flank, -1);
+    const auto lhs_inactive_candidates = candidates.overlap_range(lhs_flank);
+    
+    if (lhs_inactive_candidates.empty()) {
+        lhs_flank = head_region(lhs_flank);
+    } else {
+        lhs_flank = closed_region(lhs_flank, rightmost_region(lhs_inactive_candidates));
+    }
+    
+    if (is_empty_region(*rightmost_mappable(active_candidates)) && !is_empty_region(rhs_flank)) {
+        rhs_flank = expand_lhs(rhs_flank, -1); // stops boundry insertions being considerd inactive
+    }
+    
+    const auto rhs_inactive_candidates = candidates.overlap_range(rhs_flank);
+    
+    if (rhs_inactive_candidates.empty()) {
+        rhs_flank = tail_region(rhs_flank);
+    } else {
+        rhs_flank = closed_region(leftmost_region(rhs_inactive_candidates), rhs_flank);
     }
     
     return std::make_pair(std::move(lhs_flank), std::move(rhs_flank));
 }
 
-auto max_active_region_sequence_size(const std::vector<Haplotype>& haplotypes,
-                                     const GenomicRegion& active_region)
-{
-    assert(!haplotypes.empty());
-    
-    std::vector<Haplotype::SizeType> active_sequence_sizes(haplotypes.size());
-    
-    std::transform(std::cbegin(haplotypes), std::cend(haplotypes),
-                   std::begin(active_sequence_sizes),
-                   [&active_region] (const auto& haplotype) {
-                       return haplotype.sequence_size(active_region);
-                   });
-    
-    return *std::max_element(std::cbegin(active_sequence_sizes), std::cend(active_sequence_sizes));
-}
-
 auto calculate_flank_state(const std::vector<Haplotype>& haplotypes,
                            const GenomicRegion& active_region,
-                           const std::vector<Variant>& candidates)
+                           const MappableFlatSet<Variant>& candidates)
 {
     const auto flanks = calculate_flank_regions(haplotype_region(haplotypes), active_region,
                                                 candidates);
     
-    const auto lhs_state = has_overlapped(candidates, flanks.first);
-    const auto rhs_state = has_overlapped(candidates, flanks.second);
-    
-    if (lhs_state || rhs_state) {
-        return HaplotypeLikelihoodModel::FlankState {
-            active_region.get_contig_region(), lhs_state, rhs_state,
-            max_active_region_sequence_size(haplotypes, active_region)
-        };
-    }
-    
     return HaplotypeLikelihoodModel::FlankState {
-        active_region.get_contig_region(), false, false, 0
+        active_region.get_contig_region(),
+        flanks.first.get_contig_region(),
+        flanks.second.get_contig_region()
     };
 }
 
@@ -237,7 +280,7 @@ std::deque<VcfRecord> VariantCaller::call_variants(const GenomicRegion& call_reg
         stream(debug_log) << "Generating candidates in region " << candidate_region;
     }
     
-    const auto candidates = unique_left_align(candidate_generator_.generate_candidates(candidate_region), reference_);
+    auto candidates = generate_candidates(candidate_generator_, candidate_region, reference_);
     
     candidate_generator_.clear();
     
@@ -280,6 +323,8 @@ std::deque<VcfRecord> VariantCaller::call_variants(const GenomicRegion& call_reg
             progress_meter.log_completed(active_region);
             break;
         }
+        
+        remove_passed_candidates(candidates, candidate_region, haplotype_region(haplotypes));
         
         if (DEBUG_MODE) {
             stream(debug_log) << "Active region is " << active_region;
@@ -354,7 +399,7 @@ std::deque<VcfRecord> VariantCaller::call_variants(const GenomicRegion& call_reg
         
         resume_timer(phasing_timer);
         const auto phase_set = phaser.try_phase(haplotypes, *caller_latents->get_genotype_posteriors(),
-                                                candidates);
+                                                copy_overlapped(candidates, haplotype_region(haplotypes)));
         pause_timer(phasing_timer);
         
         auto unphased_active_region = active_region;
@@ -477,7 +522,7 @@ VariantCaller::get_removable_haplotypes(const std::vector<Haplotype>& haplotypes
     
     // TODO
     for (const auto& p : haplotype_posteriors) {
-        if (p.second < 1e-06) {
+        if (p.second < 1e-12) {
             result.push_back(p.first);
         }
     }
@@ -647,7 +692,7 @@ generate_candidate_reference_alleles(const std::vector<Allele>& callable_alleles
 namespace debug
 {
     template <typename S>
-    void print_candidates(S&& stream, const std::vector<Variant>& candidates, bool number_only)
+    void print_candidates(S&& stream, const MappableFlatSet<Variant>& candidates, bool number_only)
     {
         if (candidates.empty()) {
             stream << "There are no candidates" << '\n';
@@ -664,16 +709,16 @@ namespace debug
         }
     }
     
-    void print_candidates(const std::vector<Variant>& candidates, bool number_only)
+    void print_candidates(const MappableFlatSet<Variant>& candidates, bool number_only)
     {
         print_candidates(std::cout, candidates, number_only);
     }
     
     template <typename S>
-    void print_active_candidates(S&& stream, const std::vector<Variant>& candidates,
+    void print_active_candidates(S&& stream, const MappableFlatSet<Variant>& candidates,
                                  const GenomicRegion& active_region, bool number_only)
     {
-        const auto active_candidates = overlap_range(candidates, active_region);
+        const auto active_candidates = candidates.overlap_range(active_region);
         
         if (active_candidates.empty()) {
             stream << "There are no active candidates" << '\n';
@@ -692,14 +737,14 @@ namespace debug
         }
     }
     
-    void print_active_candidates(const std::vector<Variant>& candidates,
+    void print_active_candidates(const MappableFlatSet<Variant>& candidates,
                                  const GenomicRegion& active_region, bool number_only)
     {
         print_active_candidates(std::cout, candidates, active_region, number_only);
     }
     
     template <typename S>
-    void print_inactive_flanking_candidates(S&& stream, const std::vector<Variant>& candidates,
+    void print_inactive_flanking_candidates(S&& stream, const MappableFlatSet<Variant>& candidates,
                                             const GenomicRegion& active_region,
                                             const GenomicRegion& haplotype_region,
                                             bool number_only)
@@ -708,8 +753,8 @@ namespace debug
         
         stream << "Haplotype flank regions are " << flanks.first << " " << flanks.second << '\n';
         
-        const auto lhs_inactive_candidates = overlap_range(candidates, flanks.first);
-        const auto rhs_inactive_candidates = overlap_range(candidates, flanks.second);
+        const auto lhs_inactive_candidates = candidates.overlap_range(flanks.first);
+        const auto rhs_inactive_candidates = candidates.overlap_range(flanks.second);
         
         const auto num_lhs_inactives = size(lhs_inactive_candidates);
         const auto num_rhs_inactives = size(rhs_inactive_candidates);
@@ -760,7 +805,7 @@ namespace debug
         }
     }
     
-    void print_inactive_flanking_candidates(const std::vector<Variant>& candidates,
+    void print_inactive_flanking_candidates(const MappableFlatSet<Variant>& candidates,
                                             const GenomicRegion& active_region,
                                             const GenomicRegion& haplotype_region,
                                             bool number_only)

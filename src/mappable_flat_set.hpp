@@ -845,4 +845,13 @@ void swap(MappableFlatSet<MappableType, Allocator>& lhs,
     std::swap(lhs.max_element_size_, rhs.max_element_size_);
 }
 
+template <typename MappableType1, typename MappableType2, typename Allocator>
+MappableFlatSet<MappableType1, Allocator>
+copy_overlapped(const MappableFlatSet<MappableType1, Allocator>& mappables,
+                const MappableType2& mappable)
+{
+    const auto overlapped = mappables.overlap_range(mappable);
+    return MappableFlatSet<MappableType1>(std::begin(overlapped), std::end(overlapped));
+}
+
 #endif /* mappable_flat_set_hpp */

@@ -34,8 +34,7 @@ namespace Octopus
         struct FlankState
         {
             ContigRegion active_region;
-            bool has_lhs_flank_inactive_candidates, has_rhs_flank_inactive_candidates;
-            Haplotype::SizeType max_active_region_sequence_size_;
+            ContigRegion lhs_flank, rhs_flank;
         };
         
         using MapPositionItr = std::vector<std::size_t>::const_iterator;

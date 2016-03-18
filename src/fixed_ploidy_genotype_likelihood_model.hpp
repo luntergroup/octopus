@@ -48,6 +48,7 @@ namespace GenotypeModel
         double log_likelihood_haploid(const SampleIdType& sample, const Genotype<Haplotype>& genotype) const;
         double log_likelihood_diploid(const SampleIdType& sample, const Genotype<Haplotype>& genotype) const;
         double log_likelihood_triploid(const SampleIdType& sample, const Genotype<Haplotype>& genotype) const;
+        double log_likelihood_tetraploid(const SampleIdType& sample, const Genotype<Haplotype>& genotype) const;
         double log_likelihood_polyploid(const SampleIdType& sample, const Genotype<Haplotype>& genotype) const;
     };
     
