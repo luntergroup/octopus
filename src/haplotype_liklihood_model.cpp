@@ -113,6 +113,15 @@ namespace Octopus
     
     // public methods
     
+    int calculate_flank_padding(const HaplotypeLikelihoodModel::FlankState& flank_state)
+    {
+        if (region_size(flank_state.active_region) == flank_state.max_active_region_sequence_size_) {
+            return 0;
+        }
+        return static_cast<int>(flank_state.max_active_region_sequence_size_)
+                - region_size(flank_state.active_region);
+    }
+    
     HaplotypeLikelihoodModel::HaplotypeLikelihoodModel(const Haplotype& haplotype,
                                                        FlankState flank_state)
     :
@@ -125,11 +134,15 @@ namespace Octopus
         if (haplotype_flank_state_.has_lhs_flank_inactive_candidates) {
             model_.lhs_flank_size = begin_distance(haplotype_flank_state_.active_region,
                                                    contig_region(haplotype));
+            
+            model_.lhs_flank_size -= calculate_flank_padding(haplotype_flank_state_);
         }
         
         if (haplotype_flank_state_.has_rhs_flank_inactive_candidates) {
             model_.rhs_flank_size = end_distance(contig_region(haplotype),
                                                  haplotype_flank_state_.active_region);
+            
+            model_.rhs_flank_size -= calculate_flank_padding(haplotype_flank_state_);
         }
     }
     

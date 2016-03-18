@@ -140,15 +140,41 @@ auto calculate_flank_regions(const GenomicRegion& haplotype_region,
     return std::make_pair(std::move(lhs_flank), std::move(rhs_flank));
 }
 
+auto max_active_region_sequence_size(const std::vector<Haplotype>& haplotypes,
+                                     const GenomicRegion& active_region)
+{
+    assert(!haplotypes.empty());
+    
+    std::vector<Haplotype::SizeType> active_sequence_sizes(haplotypes.size());
+    
+    std::transform(std::cbegin(haplotypes), std::cend(haplotypes),
+                   std::begin(active_sequence_sizes),
+                   [&active_region] (const auto& haplotype) {
+                       return haplotype.sequence_size(active_region);
+                   });
+    
+    return *std::max_element(std::cbegin(active_sequence_sizes), std::cend(active_sequence_sizes));
+}
+
 auto calculate_flank_state(const std::vector<Haplotype>& haplotypes,
                            const GenomicRegion& active_region,
                            const std::vector<Variant>& candidates)
 {
     const auto flanks = calculate_flank_regions(haplotype_region(haplotypes), active_region,
                                                 candidates);
+    
+    const auto lhs_state = has_overlapped(candidates, flanks.first);
+    const auto rhs_state = has_overlapped(candidates, flanks.second);
+    
+    if (lhs_state || rhs_state) {
+        return HaplotypeLikelihoodModel::FlankState {
+            active_region.get_contig_region(), lhs_state, rhs_state,
+            max_active_region_sequence_size(haplotypes, active_region)
+        };
+    }
+    
     return HaplotypeLikelihoodModel::FlankState {
-        active_region.get_contig_region(),
-        has_overlapped(candidates, flanks.first), has_overlapped(candidates, flanks.second)
+        active_region.get_contig_region(), false, false, 0
     };
 }
 
@@ -206,6 +232,10 @@ std::deque<VcfRecord> VariantCaller::call_variants(const GenomicRegion& call_reg
     }
     
     const auto candidate_region = calculate_candidate_region(call_region, reads, candidate_generator_);
+    
+    if (DEBUG_MODE) {
+        stream(debug_log) << "Generating candidates in region " << candidate_region;
+    }
     
     const auto candidates = unique_left_align(candidate_generator_.generate_candidates(candidate_region), reference_);
     

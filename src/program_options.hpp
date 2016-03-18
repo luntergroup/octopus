@@ -61,7 +61,7 @@ namespace Options
     
     ContigOutputOrder get_contig_output_order(const po::variables_map& options);
     
-    std::vector<SampleIdType> get_samples(const po::variables_map& options);
+    boost::optional<std::vector<SampleIdType>> get_user_samples(const po::variables_map& options);
     
     boost::optional<ReadManager> make_read_manager(const po::variables_map& options);
     

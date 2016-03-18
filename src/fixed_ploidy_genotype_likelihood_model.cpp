@@ -124,8 +124,10 @@ namespace GenotypeModel
         std::vector<std::reference_wrapper<const HaplotypeLikelihoodCache::ReadProbabilities>> log_likelihoods {};
         log_likelihoods.reserve(ploidy_);
         
-        std::transform(std::cbegin(genotype), std::cend(genotype), std::back_inserter(log_likelihoods),
-                       [this, &sample] (const auto& haplotype) -> const HaplotypeLikelihoodCache::ReadProbabilities& {
+        std::transform(std::cbegin(genotype), std::cend(genotype),
+                       std::back_inserter(log_likelihoods),
+                       [this, &sample] (const auto& haplotype)
+                            -> const HaplotypeLikelihoodCache::ReadProbabilities& {
                            return haplotype_likelihoods_.get().log_likelihoods(sample, haplotype);
                        });
         

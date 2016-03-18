@@ -390,7 +390,7 @@ namespace Octopus
     
     bool is_debug_mode(const po::variables_map& options)
     {
-        return options.count("debug") == 1;
+        return options.at("debug").as<bool>();
     }
     
     struct Line
@@ -565,7 +565,7 @@ namespace Octopus
     
     std::size_t get_target_read_buffer_size(const po::variables_map& options)
     {
-        constexpr std::size_t scale {1'000'000'000};
+        static constexpr std::size_t scale {1'000'000'000};
         return static_cast<std::size_t>(scale * options.at("target-read-buffer-size").as<float>());
     }
     
@@ -863,15 +863,12 @@ namespace Octopus
         return options.at("contig-output-order").as<ContigOutputOrder>();
     }
     
-    std::vector<SampleIdType> get_samples(const po::variables_map& options)
+    boost::optional<std::vector<SampleIdType>> get_user_samples(const po::variables_map& options)
     {
-        std::vector<SampleIdType> result {};
-        
         if (options.count("samples") == 1) {
-            append(result, options.at("samples").as<std::vector<std::string>>());
+            return options.at("samples").as<std::vector<SampleIdType>>();
         }
-        
-        return result;
+        return boost::none;
     }
     
     namespace

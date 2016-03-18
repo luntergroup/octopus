@@ -77,6 +77,9 @@ public:
     SequenceType get_sequence(const GenomicRegion& region) const;
     const SequenceType& get_sequence() const noexcept;
     
+    SizeType sequence_size(const ContigRegion& region) const;
+    SizeType sequence_size(const GenomicRegion& region) const;
+    
     std::vector<Variant> difference(const Haplotype& other) const;
     
     std::size_t get_hash() const noexcept;
@@ -148,7 +151,7 @@ reference_ {reference}
         auto num_bases = std::accumulate(std::cbegin(explicit_alleles_),
                                          std::cend(explicit_alleles_), 0,
                                          [] (const auto curr, const auto& allele) {
-                                             return curr + sequence_size(allele);
+                                             return curr + ::sequence_size(allele);
                                          });
         
         const auto lhs_reference_region = left_overhang_region(region_.get_contig_region(),

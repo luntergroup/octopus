@@ -394,7 +394,8 @@ namespace std
     };
 } // namespace std
 
-size_t num_genotypes(unsigned num_elements, unsigned ploidy);
+std::size_t num_genotypes(unsigned num_elements, unsigned ploidy);
+std::size_t element_cardinality_in_genotypes(unsigned num_elements, unsigned ploidy);
 
 namespace detail
 {
@@ -589,7 +590,7 @@ generate_all_genotypes(const std::vector<std::shared_ptr<Haplotype>>& haplotypes
 
 namespace detail
 {
-    inline size_t estimate_num_elements(const size_t num_genotypes)
+    inline std::size_t estimate_num_elements(const size_t num_genotypes)
     {
         return num_genotypes;
     }
@@ -708,6 +709,42 @@ std::ostream& operator<<(std::ostream& os, const Genotype<MappableType>& genotyp
 
 namespace debug
 {
+    template <typename S>
+    void print_alleles(S&& stream, const Genotype<Haplotype>& genotype)
+    {
+        if (genotype.ploidy() == 0) {
+            stream << "[]";
+        }
+        const auto haplotype_counts = make_element_count_map(genotype);
+        std::vector<std::pair<Haplotype, unsigned>> p {haplotype_counts.begin(), haplotype_counts.end()};
+        stream << "[";
+        for (unsigned i {0}; i < p.size() - 1; ++i) {
+            print_alleles(stream, p[i].first);
+            stream << "(" << p[i].second << "),";
+        }
+        print_alleles(stream, p.back().first);
+        stream << "(" << p.back().second << ")]";
+    }
+    
+    template <typename S>
+    void print_variant_alleles(S&& stream, const Genotype<Haplotype>& genotype)
+    {
+        if (genotype.ploidy() == 0) {
+            stream << "[]";
+        }
+        
+        const auto unique_haplotypes = genotype.copy_unique();
+        
+        stream << "[";
+        for (unsigned i {0}; i < unique_haplotypes.size() - 1; ++i) {
+            print_variant_alleles(stream, unique_haplotypes[i]);
+            stream << "(" << genotype.count(unique_haplotypes[i]) << "),";
+        }
+        
+        print_variant_alleles(stream, unique_haplotypes.back());
+        stream << "(" << genotype.count(unique_haplotypes.back()) << ")]";
+    }
+    
     void print_alleles(const Genotype<Haplotype>& genotype);
     void print_variant_alleles(const Genotype<Haplotype>& genotype);
 } // namespace debug

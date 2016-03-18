@@ -27,7 +27,7 @@ namespace Octopus
         ProgressMeter(const SearchRegions& input_regions);
         ProgressMeter(const GenomicRegion& input_region);
         
-        ~ProgressMeter() = default;
+        ~ProgressMeter();
         
         ProgressMeter(const ProgressMeter&)            = delete;
         ProgressMeter& operator=(const ProgressMeter&) = delete;
@@ -48,6 +48,8 @@ namespace Octopus
         double percent_at_last_log_;
         
         std::chrono::time_point<std::chrono::system_clock> start_, last_log_;
+        
+        bool done_;
         
         Logging::InfoLogger log_;
         

@@ -27,6 +27,8 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         
         "--debug",
         
+        //"--samples", "NOT-A-SAMPLE",
+        
         "--working-directory", "~/Genomics/octopus_test",
         
         "--target-read-buffer-size", "0.5",
@@ -38,8 +40,8 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--reference", ecoli_reference_fasta.c_str(),
         
         //"--reads", NA12878_low_coverage.c_str(),
-        "--reads", NA12878_high_coverage.c_str(),
-        //"--reads", "~/Genomics/Illumina/NA12878.mapped.ILLUMINA.bwa.CEU.high_coverage_pcr_free.20130906.chr22.bam",
+        //"--reads", NA12878_high_coverage.c_str(),
+        "--reads", "~/Genomics/Illumina/NA12878.mapped.ILLUMINA.bwa.CEU.high_coverage_pcr_free.20130906.chr22.bam",
         
         //"--reads", NA12891_high_coverage.c_str(),
         
@@ -57,7 +59,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--model", "cancer", // default "population"
         "--normal-sample", "NA12878", // for cancer model
         
-        //"--organism-ploidy", "3",
+        //"--organism-ploidy", "5",
         "--contig-ploidies", "MT=1", "Y=1",// "MT=2",
         //"--contig-ploidies-file", contig_ploidies_txt_file.c_str(),
         
@@ -70,7 +72,9 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         
         // for population
         
-        "--regions", "22:17,907,383-17,907,713",
+        "--regions", "22:16,143,786-16,144,090",
+        
+        //"--regions", "22:16,103,653-16,103,957", // 5 haplotypes??
         
         // NA12878_high_coverage possible errors
 //        "--regions", "22:37,616,864-37,617,015", // false negative insertion?
@@ -168,7 +172,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--max-open-read-files", "1",
         
         //"--output", test_out_vcf.c_str(),
-        //"--output", "octopus_variants.vcf",
+        //"--output", "octopus_NA12878HC_22_uniprior.vcf",
         
         nullptr};
     

@@ -51,11 +51,15 @@
 
 namespace Octopus
 {
-    void log_startup()
+    void log_startup(const bool debug_mode)
     {
         Logging::InfoLogger log {};
         log << "--------------------------------------------------------------------------------";
-        stream(log) << "Octopus v" << Octopus_version;
+        if (debug_mode) {
+            stream(log) << "Octopus v" << Octopus_version << " (debug mode)";
+        } else {
+            stream(log) << "Octopus v" << Octopus_version;
+        }
         log << "Copyright (c) 2016 University of Oxford";
         log << "--------------------------------------------------------------------------------";
     }
@@ -125,31 +129,35 @@ namespace Octopus
         return result;
     }
     
-    std::vector<SampleIdType> get_samples(const po::variables_map& options,
-                                          const ReadManager& read_manager)
+    template <typename Container>
+    bool is_in_file_samples(const SampleIdType& sample, const Container& file_samples)
     {
-        auto user_samples = Options::get_samples(options);
+        return std::find(std::cbegin(file_samples), std::cend(file_samples), sample)
+                    != std::cend(file_samples);
+    }
+    
+    std::vector<SampleIdType> extract_samples(const po::variables_map& options,
+                                              const ReadManager& read_manager)
+    {
+        auto user_samples = Options::get_user_samples(options);
         auto file_samples = read_manager.get_samples();
         
-        if (!user_samples.empty()) {
-            std::vector<SampleIdType> bad_samples {};
+        if (user_samples) {
+            const auto it = std::partition(std::begin(*user_samples), std::end(*user_samples),
+                                           [&file_samples] (const auto& sample) {
+                                               return is_in_file_samples(sample, file_samples);
+                                           });
             
-            for (const auto& user_sample : user_samples) {
-                if (std::find(std::cbegin(file_samples), std::cend(file_samples),
-                              user_sample) == std::cend(file_samples)) {
-                    bad_samples.push_back(user_sample);
-                }
+            if (it != std::end(*user_samples)) {
+                std::ostringstream ss {};
+                ss << "User samples not found in read files: ";
+                std::copy(it, std::end(*user_samples), std::ostream_iterator<SampleIdType>(ss, " "));
+                Logging::WarningLogger log {};
+                log << ss.str();
+                user_samples->erase(it, std::end(*user_samples));
             }
             
-            if (!bad_samples.empty()) {
-                std::cout << "Input samples not present in read files: ";
-                std::copy(std::cbegin(bad_samples), std::cend(bad_samples),
-                          std::ostream_iterator<SampleIdType>(std::cout, " "));
-                std::cout << std::endl;
-                return {};
-            }
-            
-            return user_samples;
+            return *user_samples;
         } else {
             return file_samples;
         }
@@ -260,6 +268,7 @@ namespace Octopus
                                         const SearchRegions& input_regions,
                                         ReadManager& read_manager)
     {
+        if (samples.empty()) return 0;
         return max_buffer_size_in_bytes / estimate_mean_read_size(samples, input_regions, read_manager);
     }
     
@@ -288,7 +297,7 @@ namespace Octopus
         :
         reference {std::move(reference)},
         read_manager {std::move(read_manager)},
-        samples {get_samples(options, this->read_manager)},
+        samples {extract_samples(options, this->read_manager)},
         regions {Options::get_search_regions(options, this->reference)},
         contigs_in_output_order {get_contigs(this->regions, this->reference,
                                              Options::get_contig_output_order(options))},
@@ -361,7 +370,7 @@ namespace Octopus
     
     bool are_components_valid(const GenomeCallingComponents& components)
     {
-        Logging::ErrorLogger log {};
+        Logging::FatalLogger log {};
         
         if (components.samples.empty()) {
             log << "Quiting as no samples were found";
@@ -415,11 +424,13 @@ namespace Octopus
                 options
             };
             
-            if (!are_components_valid(result)) return boost::none;
+            if (!are_components_valid(result)) {
+                return boost::none;
+            }
             
             return boost::optional<GenomeCallingComponents> {std::move(result)};
         } catch (const std::exception& e) {
-            stream(log) << "Could not collate options due to error " << e.what();
+            stream(log) << "Could not collate options due to error '" << e.what() << "'";
             return boost::none;
         }
     }
@@ -565,12 +576,6 @@ namespace Octopus
         #endif
     }
     
-    void log_final_info(const GenomeCallingComponents& components)
-    {
-        Logging::InfoLogger log {};
-        stream(log) << "Processed " << calculate_total_search_size(components.regions) << " bp";
-    }
-    
     void cleanup(GenomeCallingComponents& components) noexcept
     {
         Logging::InfoLogger log {};
@@ -579,7 +584,7 @@ namespace Octopus
                 const auto num_files_removed = fs::remove_all(*components.temp_directory);
                 stream(log) << "Removed " << num_files_removed << " temporary files";
             } catch (const std::exception& e) {
-                stream(log) << "Cleanup failed with error " << e.what();
+                stream(log) << "Cleanup failed with error '" << e.what() << "'";
             }
         }
     }
@@ -655,11 +660,19 @@ namespace Octopus
         return !components.num_threads || *components.num_threads > 1;
     }
     
+    void log_final_info(const GenomeCallingComponents& components,
+                        const TimeInterval& runtime)
+    {
+        Logging::InfoLogger log {};
+        stream(log) << "Finished processing " << calculate_total_search_size(components.regions)
+                    << "bp, total runtime " << runtime;
+    }
+    
     void run_octopus(po::variables_map& options)
     {
         DEBUG_MODE = Options::is_debug_mode(options);
         
-        log_startup();
+        log_startup(DEBUG_MODE);
         
         const auto start = std::chrono::system_clock::now();
         
@@ -673,7 +686,7 @@ namespace Octopus
         
         Logging::InfoLogger log {};
         
-        stream(log) << "Done initialising calling components. Took " << TimeInterval {start, end};
+        stream(log) << "Done initialising calling components in " << TimeInterval {start, end};
         
         try {
             log_startup_info(*components);
@@ -687,17 +700,18 @@ namespace Octopus
             }
         } catch (const std::exception& e) {
             Logging::FatalLogger lg {};
-            stream(lg) << "Encountered fatal error " << e.what() << ". Attempting to cleanup...";
+            stream(lg) << "Encountered exception '" << e.what() << "'. Attempting to cleanup...";
             cleanup(*components);
-            throw;
+            stream(lg) << "Cleanup successful. Please re-run in debug mode (option --debug) and send"
+                          " log file to dcooke@well.ox.ac.uk";
+            return;
         }
         
-        log_final_info(*components);
         cleanup(*components);
         
         end = std::chrono::system_clock::now();
         
-        stream(log) << "Finished run. Total execution time: " << TimeInterval {start, end};
+        log_final_info(*components, TimeInterval {start, end});
     }
     
 } // namespace Octopus

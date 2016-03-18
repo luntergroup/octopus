@@ -198,10 +198,15 @@ bool is_homozygous(const Genotype<Haplotype>& genotype, const Allele& allele)
     return splice<Allele>(genotype, mapped_region(allele)).count(allele) == genotype.ploidy();
 }
 
-size_t num_genotypes(const unsigned num_haplotypes, const unsigned ploidy)
+std::size_t num_genotypes(const unsigned num_elements, const unsigned ploidy)
 {
-    return static_cast<size_t>(boost::math::binomial_coefficient<double>(num_haplotypes + ploidy - 1,
-                                                                         num_haplotypes - 1));
+    return static_cast<std::size_t>(boost::math::binomial_coefficient<double>(num_elements + ploidy - 1,
+                                                                              num_elements - 1));
+}
+
+std::size_t element_cardinality_in_genotypes(const unsigned num_elements, const unsigned ploidy)
+{
+    return ploidy * (num_genotypes(num_elements, ploidy) / num_elements);
 }
 
 std::vector<Genotype<Haplotype>>
@@ -214,35 +219,11 @@ namespace debug
 {
 void print_alleles(const Genotype<Haplotype>& genotype)
 {
-    if (genotype.ploidy() == 0) {
-        std::cout << "[]";
-    }
-    const auto haplotype_counts = make_element_count_map(genotype);
-    std::vector<std::pair<Haplotype, unsigned>> p {haplotype_counts.begin(), haplotype_counts.end()};
-    std::cout << "[";
-    for (unsigned i {0}; i < p.size() - 1; ++i) {
-        print_alleles(p[i].first);
-        std::cout << "(" << p[i].second << "),";
-    }
-    print_alleles(p.back().first);
-    std::cout << "(" << p.back().second << ")]";
+    print_alleles(std::cout, genotype);
 }
 
 void print_variant_alleles(const Genotype<Haplotype>& genotype)
 {
-    if (genotype.ploidy() == 0) {
-        std::cout << "[]";
-    }
-    
-    const auto unique_haplotypes = genotype.copy_unique();
-    
-    std::cout << "[";
-    for (unsigned i {0}; i < unique_haplotypes.size() - 1; ++i) {
-        print_variant_alleles(unique_haplotypes[i]);
-        std::cout << "(" << genotype.count(unique_haplotypes[i]) << "),";
-    }
-    
-    print_variant_alleles(unique_haplotypes.back());
-    std::cout << "(" << genotype.count(unique_haplotypes.back()) << ")]";
+    print_variant_alleles(std::cout, genotype);
 }
 } // namespace debug

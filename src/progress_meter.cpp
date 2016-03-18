@@ -46,7 +46,8 @@ namespace Octopus
     percent_unitl_log_ {percent_block_size_},
     percent_at_last_log_ {0},
     start_ {std::chrono::system_clock::now()},
-    last_log_ {std::chrono::system_clock::now()}
+    last_log_ {std::chrono::system_clock::now()},
+    done_ {false}
     {
         regions_[input_region.get_contig_name()].emplace(input_region);
         
@@ -174,6 +175,28 @@ namespace Octopus
         return std::string(16 - ttc.size(), ' ');
     }
     
+    template <typename L>
+    void print_done(L& log, const TimeInterval& duration)
+    {
+        const auto time_taken = to_string(duration);
+        stream(log) << std::string(15, ' ')
+                    << "-"
+                    << completed_pad("100%")
+                    << "100%"
+                    << time_taken_pad(time_taken)
+                    << time_taken
+                    << ttc_pad("-")
+                    << "-";
+    }
+    
+    ProgressMeter::~ProgressMeter()
+    {
+        if (!done_) {
+            const auto now = std::chrono::system_clock::now();
+            print_done(log_, TimeInterval {start_, now});
+        }
+    }
+    
     void ProgressMeter::log_completed(const GenomicRegion& completed_region)
     {
         const auto new_bp_processed = right_overhang_size(completed_region, completed_region_);
@@ -191,17 +214,14 @@ namespace Octopus
         if (percent_unitl_log_ <= 0) {
             const auto percent_done = percent_completed(num_bp_completed_, num_bp_to_search_);
             
-            const auto time_taken = to_string(TimeInterval {start_, now});
+            const TimeInterval duration {start_, now};
+            const auto time_taken = to_string(duration);
             
             if (percent_done >= 100) {
-                stream(log_) << std::string(12, ' ')
-                    << "done"
-                    << completed_pad("100%")
-                    << "100%"
-                    << time_taken_pad(time_taken)
-                    << time_taken
-                    << ttc_pad("-")
-                    << "-";
+                if (!done_) {
+                    print_done(log_, duration);
+                    done_ = true;
+                }
                 return;
             }
             

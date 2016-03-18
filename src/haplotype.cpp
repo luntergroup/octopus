@@ -91,7 +91,7 @@ bool Haplotype::contains_exact(const ContigAllele& allele) const
     
     const auto it = std::next(std::cbegin(cached_sequence_), offset);
     
-    if (std::distance(it, std::cend(cached_sequence_)) < sequence_size(allele)) return false;
+    if (std::distance(it, std::cend(cached_sequence_)) < ::sequence_size(allele)) return false;
     
     return std::equal(std::cbegin(allele.get_sequence()), std::cend(allele.get_sequence()), it);
 }
@@ -211,6 +211,17 @@ Haplotype::SequenceType Haplotype::get_sequence(const GenomicRegion& region) con
 const Haplotype::SequenceType& Haplotype::get_sequence() const noexcept
 {
     return cached_sequence_;
+}
+
+Haplotype::SizeType Haplotype::sequence_size(const ContigRegion& region) const
+{
+    return static_cast<SizeType>(get_sequence(region).size()); // TODO: can be improved
+}
+
+Haplotype::SizeType Haplotype::sequence_size(const GenomicRegion& region) const
+{
+    if (!is_same_contig(region, region_)) return 0;
+    return sequence_size(region.get_contig_region());
 }
 
 std::vector<Variant> Haplotype::difference(const Haplotype& other) const
