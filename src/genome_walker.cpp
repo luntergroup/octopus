@@ -72,7 +72,7 @@ GenomicRegion GenomeWalker::walk(const GenomicRegion& previous_region, const Rea
     
     auto last_candidate_itr = cend(candidates);
     
-    auto previous_candidates = bases(candidates.overlap_range(previous_region));
+    auto previous_candidates = bases(overlap_range(candidates, previous_region));
     
     auto first_previous_itr = cbegin(previous_candidates);
     auto included_itr       = cend(previous_candidates);

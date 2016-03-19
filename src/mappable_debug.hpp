@@ -17,15 +17,6 @@
 #ifndef mappable_debug_hpp
 #define mappable_debug_hpp
 
-template <typename T, typename MappableType>
-void print_overlapped(const MappableFlatMultiSet<T>& mappables, const MappableType& mappable,
-                      const std::string& delim = "\n")
-{
-    const auto overlapped = mappables.overlap_range(mappable);
-    std::copy(std::cbegin(overlapped), std::cend(overlapped),
-              std::ostream_iterator<T>(std::cout, delim.c_str()));
-}
-
 template <typename Container, typename MappableType>
 void print_overlapped(const Container& mappables, const MappableType& mappable,
                       const std::string& delim = "\n")
@@ -44,15 +35,6 @@ void print_overlapped(const MappableMap<K, T>& mappables, const MappableType& ma
         std::cout << p.first << std::endl;
         print_overlapped(p.second, mappable, delim);
     }
-}
-
-template <typename T, typename MappableType>
-void print_contained(const MappableFlatMultiSet<T>& mappables, const MappableType& mappable,
-                     const std::string& delim = "\n")
-{
-    const auto contained = mappables.contained_range(mappable);
-    std::copy(std::cbegin(contained), std::cend(contained),
-              std::ostream_iterator<T>(std::cout, delim.c_str()));
 }
 
 template <typename Container, typename MappableType>

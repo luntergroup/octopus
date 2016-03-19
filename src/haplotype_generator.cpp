@@ -121,7 +121,7 @@ namespace Octopus
         current_active_region_ = std::move(*next_active_region_);
         next_active_region_    = boost::none;
         
-        auto active_alleles = alleles_.overlap_range(current_active_region_);
+        auto active_alleles = overlap_range(alleles_, current_active_region_);
         
         if (estimate_num_haplotypes(active_alleles) > hard_max_haplotypes_) {
             assert(holdout_set_.empty());
@@ -136,7 +136,7 @@ namespace Octopus
                          << current_active_region_;
             
             current_active_region_ = walker_.walk(head_region(current_active_region_), reads_, alleles_);
-            active_alleles = alleles_.overlap_range(current_active_region_);
+            active_alleles = overlap_range(alleles_, current_active_region_);
         }
         
         extend_tree(active_alleles, tree_);
@@ -174,7 +174,7 @@ namespace Octopus
         
         std::deque<Allele> unused_alleles {};
         
-        for (const auto& candidate : alleles_.overlap_range(current_active_region_)) {
+        for (const auto& candidate : overlap_range(alleles_, current_active_region_)) {
             if (is_not_in_haplotypes(candidate, haplotypes)) {
                 unused_alleles.push_back(candidate);
             }
@@ -184,7 +184,7 @@ namespace Octopus
         
         active_allele_counts_.clear();
         
-        for (const auto& allele : alleles_.overlap_range(current_active_region_)) {
+        for (const auto& allele : overlap_range(alleles_, current_active_region_)) {
             active_allele_counts_.emplace(allele, count_contained(allele, haplotypes));
         }
     }
@@ -209,7 +209,7 @@ namespace Octopus
 //                print_variant_alleles(haplotype); std::cout << '\n';
 //            }
             
-            for (const auto& allele : alleles_.overlap_range(current_active_region_)) {
+            for (const auto& allele : overlap_range(alleles_, current_active_region_)) {
                 //std::cout << allele << " " << active_allele_counts_[allele] << " " << count_contained(allele, haplotypes) << '\n';
                 if (active_allele_counts_[allele] == count_contained(allele, haplotypes)) {
                     removed_alleles.push_back(allele);
@@ -249,7 +249,7 @@ namespace Octopus
         if (begins_before(current_active_region_, *next_active_region_)) {
             auto passed_region = left_overhang_region(current_active_region_, *next_active_region_);
             
-            const auto passed_alleles = alleles_.overlap_range(passed_region);
+            const auto passed_alleles = overlap_range(alleles_, passed_region);
             
             if (passed_alleles.empty()) return;
             
@@ -307,7 +307,7 @@ namespace Octopus
             
             auto re = walker_.walk(head_region(cur.leftmost()), reads_, cur);
             
-            if (std::exp2(cur.count_overlapped(re)) < hard_max_haplotypes_) break;
+            if (std::exp2(count_overlapped(cur, re)) < hard_max_haplotypes_) break;
         }
         
         return MappableFlatMultiSet<Allele> {it, std::end(tmp)};
@@ -329,7 +329,7 @@ namespace Octopus
     
     GenomicRegion HaplotypeGenerator::calculate_haplotype_region() const
     {
-        const auto overlapped = alleles_.overlap_range(current_active_region_);
+        const auto overlapped = overlap_range(alleles_, current_active_region_);
         
         // We want to keep haplotypes as small as possible, while allowing sufficient flanking
         // reference sequence for full read re-mapping and alignment (i.e. the read must be

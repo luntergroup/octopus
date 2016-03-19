@@ -72,24 +72,11 @@ namespace detail
                            [] (const auto& read) { return !is_empty_region(read); });
     }
     
-    inline bool has_coverage(const MappableFlatMultiSet<AlignedRead>& reads, NonMapTag)
-    {
-        return std::any_of(std::cbegin(reads), std::cend(reads),
-                           [] (const auto& read) { return !is_empty_region(read); });
-    }
-    
     template <typename T>
     unsigned min_coverage(const T& reads, const GenomicRegion& region, NonMapTag)
     {
         if (reads.empty() || is_empty_region(region)) return 0;
         const auto positional_coverage = calculate_positional_coverage(reads, region);
-        return *std::min_element(std::cbegin(positional_coverage), std::cend(positional_coverage));
-    }
-    
-    inline unsigned min_coverage(const MappableFlatMultiSet<AlignedRead>& reads, NonMapTag)
-    {
-        if (reads.empty()) return 0;
-        const auto positional_coverage = calculate_positional_coverage(reads);
         return *std::min_element(std::cbegin(positional_coverage), std::cend(positional_coverage));
     }
     
@@ -101,13 +88,6 @@ namespace detail
         return *std::max_element(std::cbegin(positional_coverage), std::cend(positional_coverage));
     }
     
-    inline unsigned max_coverage(const MappableFlatMultiSet<AlignedRead>& reads, NonMapTag)
-    {
-        if (reads.empty()) return 0;
-        const auto positional_coverage = calculate_positional_coverage(reads);
-        return *std::max_element(std::cbegin(positional_coverage), std::cend(positional_coverage));
-    }
-    
     template <typename T>
     double mean_coverage(const T& reads, const GenomicRegion& region, NonMapTag)
     {
@@ -115,23 +95,11 @@ namespace detail
         return Maths::mean(positional_coverage(reads, region));
     }
     
-    inline double mean_coverage(const MappableFlatMultiSet<AlignedRead>& reads, NonMapTag)
-    {
-        if (reads.empty()) return 0;
-        return Maths::mean(calculate_positional_coverage(reads));
-    }
-    
     template <typename T>
     double stdev_coverage(const T& reads, const GenomicRegion& region, NonMapTag)
     {
         if (reads.empty() || is_empty_region(region)) return 0;
         return Maths::stdev(positional_coverage(reads, region));
-    }
-    
-    inline double stdev_coverage(const MappableFlatMultiSet<AlignedRead>& reads, NonMapTag)
-    {
-        if (reads.empty()) return 0;
-        return Maths::stdev(calculate_positional_coverage(reads));
     }
     
     template <typename T>
@@ -144,11 +112,6 @@ namespace detail
     size_t count_reads(const T& reads, const GenomicRegion& region, NonMapTag)
     {
         return count_overlapped(reads, region);
-    }
-    
-    inline size_t count_reads(const MappableFlatMultiSet<AlignedRead>& reads, const GenomicRegion& region, NonMapTag)
-    {
-        return reads.count_overlapped(region);
     }
     
     template <typename T>
@@ -166,12 +129,6 @@ namespace detail
         return std::count_if(std::cbegin(overlapped), std::cend(overlapped), IsForward {});
     }
     
-    inline size_t count_forward(const MappableFlatMultiSet<AlignedRead>& reads, const GenomicRegion& region, NonMapTag)
-    {
-        const auto overlapped = reads.overlap_range(region);
-        return std::count_if(std::cbegin(overlapped), std::cend(overlapped), IsForward {});
-    }
-    
     template <typename T>
     size_t count_reverse(const T& reads, NonMapTag)
     {
@@ -184,12 +141,6 @@ namespace detail
     {
         static_assert(is_aligned_read_container<T>, "T must be a container of AlignedReads");
         const auto overlapped = overlap_range(reads, region);
-        return std::count_if(std::cbegin(overlapped), std::cend(overlapped), IsReverse {});
-    }
-    
-    inline size_t count_reverse(const MappableFlatMultiSet<AlignedRead>& reads, const GenomicRegion& region, NonMapTag)
-    {
-        const auto overlapped = reads.overlap_range(region);
         return std::count_if(std::cbegin(overlapped), std::cend(overlapped), IsReverse {});
     }
     
@@ -271,12 +222,6 @@ namespace detail
         return std::count_if(std::cbegin(overlapped), std::cend(overlapped), IsMappingQualityZero {});
     }
     
-    inline size_t count_mapq_zero(const MappableFlatMultiSet<AlignedRead>& reads, const GenomicRegion& region, NonMapTag)
-    {
-        const auto overlapped = reads.overlap_range(region);
-        return std::count_if(std::cbegin(overlapped), std::cend(overlapped), IsMappingQualityZero {});
-    }
-    
     template <typename T>
     double rmq_mapping_quality(const T& reads, NonMapTag)
     {
@@ -296,18 +241,6 @@ namespace detail
         static_assert(is_aligned_read_container<T>, "T must be a container of AlignedReads");
         
         const auto overlapped = overlap_range(reads, region);
-        
-        std::vector<double> qualities(size(overlapped));
-        
-        std::transform(std::cbegin(overlapped), std::cend(overlapped), std::begin(qualities),
-                       [] (const auto& read) { return static_cast<double>(read.get_mapping_quality()); });
-        
-        return Maths::rmq<double>(qualities);
-    }
-    
-    inline double rmq_mapping_quality(const MappableFlatMultiSet<AlignedRead>& reads, const GenomicRegion& region, NonMapTag)
-    {
-        const auto overlapped = reads.overlap_range(region);
         
         std::vector<double> qualities(size(overlapped));
         
@@ -340,22 +273,6 @@ namespace detail
         static_assert(is_aligned_read_container<T>, "T must be a container of AlignedReads");
         
         const auto overlapped = overlap_range(reads, region);
-        
-        std::vector<double> qualities {};
-        qualities.reserve(count_base_pairs(reads, region, NonMapTag {}));
-        
-        std::for_each(std::cbegin(overlapped), std::cend(overlapped), [&qualities] (const auto& read) {
-            for (const auto quality : read.get_qualities()) {
-                qualities.push_back(static_cast<double>(quality));
-            }
-        });
-        
-        return Maths::rmq<double>(qualities);
-    }
-    
-    inline double rmq_base_quality(const MappableFlatMultiSet<AlignedRead>& reads, const GenomicRegion& region, NonMapTag)
-    {
-        const auto overlapped = reads.overlap_range(region);
         
         std::vector<double> qualities {};
         qualities.reserve(count_base_pairs(reads, region, NonMapTag {}));
@@ -1092,7 +1009,9 @@ std::vector<GenomicRegion> find_uniform_coverage_regions(const T& reads)
 }
     
 namespace detail {
-    inline MappableFlatMultiSet<AlignedRead> splice_all(const MappableFlatMultiSet<AlignedRead>& reads, const GenomicRegion& region, NonMapTag)
+    inline MappableFlatMultiSet<AlignedRead>
+    splice_all(const MappableFlatMultiSet<AlignedRead>& reads,
+               const GenomicRegion& region, NonMapTag)
     {
         MappableFlatMultiSet<AlignedRead> result {};
         result.reserve(reads.size());

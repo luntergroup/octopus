@@ -126,10 +126,12 @@ namespace debug
     void print_haplotype_posteriors(const Map& haplotype_posteriors, std::size_t n = 20);
 }
 
-std::vector<Variant> copy_overlapped(const MappableFlatSet<Variant>& candidates, const GenomicRegion& region)
+auto copy_overlapped_to_vector(const MappableFlatSet<Variant>& candidates,
+                               const GenomicRegion& region)
 {
-    const auto overlapped = candidates.overlap_range(region);
-    return {std::cbegin(overlapped), std::cend(overlapped)};
+    const auto overlapped = overlap_range(candidates, region);
+    return std::vector<Variant> {std::cbegin(overlapped), std::cend(overlapped)};
+    //return copy_overlapped<std::vector<Variant>>(candidates, region);
 }
 
 const auto& haplotype_region(const std::vector<Haplotype>& haplotypes)
@@ -146,7 +148,7 @@ void remove_passed_candidates(MappableFlatSet<Variant>& candidates,
         
         if (DEBUG_MODE) {
             Logging::DebugLogger log {};
-            stream(log) << "Removing " << candidates.count_overlapped(passed_region)
+            stream(log) << "Removing " << count_overlapped(candidates, passed_region)
                         << " passed candidates in region " << passed_region;
         }
         
@@ -176,7 +178,7 @@ auto calculate_flank_regions(const GenomicRegion& haplotype_region,
     auto lhs_flank = left_overhang_region(haplotype_region, active_region);
     auto rhs_flank = right_overhang_region(haplotype_region, active_region);
     
-    const auto active_candidates = candidates.overlap_range(active_region);
+    const auto active_candidates = overlap_range(candidates, active_region);
     
     assert(!active_candidates.empty());
     
@@ -184,7 +186,7 @@ auto calculate_flank_regions(const GenomicRegion& haplotype_region,
         lhs_flank = expand_rhs(lhs_flank, -1); // stops boundry insertions being considerd inactive
     }
     
-    const auto lhs_inactive_candidates = candidates.overlap_range(lhs_flank);
+    const auto lhs_inactive_candidates = overlap_range(candidates, lhs_flank);
     
     if (lhs_inactive_candidates.empty()) {
         lhs_flank = head_region(lhs_flank);
@@ -196,7 +198,7 @@ auto calculate_flank_regions(const GenomicRegion& haplotype_region,
         rhs_flank = expand_lhs(rhs_flank, -1); // stops boundry insertions being considerd inactive
     }
     
-    const auto rhs_inactive_candidates = candidates.overlap_range(rhs_flank);
+    const auto rhs_inactive_candidates = overlap_range(candidates, rhs_flank);
     
     if (rhs_inactive_candidates.empty()) {
         rhs_flank = tail_region(rhs_flank);
@@ -399,7 +401,7 @@ std::deque<VcfRecord> VariantCaller::call_variants(const GenomicRegion& call_reg
         
         resume_timer(phasing_timer);
         const auto phase_set = phaser.try_phase(haplotypes, *caller_latents->get_genotype_posteriors(),
-                                                copy_overlapped(candidates, haplotype_region(haplotypes)));
+                                                copy_overlapped_to_vector(candidates, haplotype_region(haplotypes)));
         pause_timer(phasing_timer);
         
         auto unphased_active_region = active_region;
@@ -409,7 +411,7 @@ std::deque<VcfRecord> VariantCaller::call_variants(const GenomicRegion& call_reg
             
             if (DEBUG_MODE) stream(debug_log) << "Phased region is " << phase_set->region;
             
-            auto active_candidates = copy_overlapped(candidates, phase_set->region);
+            auto active_candidates = copy_overlapped_to_vector(candidates, phase_set->region);
             
             resume_timer(allele_generator_timer);
             auto alleles = generate_callable_alleles(phase_set->region, active_candidates,
@@ -460,7 +462,7 @@ std::deque<VcfRecord> VariantCaller::call_variants(const GenomicRegion& call_reg
                 uncalled_region = right_overhang_region(passed_region, phase_set->region);
             }
             
-            const auto active_candidates = copy_overlapped(candidates, uncalled_region);
+            const auto active_candidates = copy_overlapped_to_vector(candidates, uncalled_region);
             
             resume_timer(phasing_timer);
             
@@ -718,7 +720,7 @@ namespace debug
     void print_active_candidates(S&& stream, const MappableFlatSet<Variant>& candidates,
                                  const GenomicRegion& active_region, bool number_only)
     {
-        const auto active_candidates = candidates.overlap_range(active_region);
+        const auto active_candidates = overlap_range(candidates, active_region);
         
         if (active_candidates.empty()) {
             stream << "There are no active candidates" << '\n';
@@ -753,8 +755,8 @@ namespace debug
         
         stream << "Haplotype flank regions are " << flanks.first << " " << flanks.second << '\n';
         
-        const auto lhs_inactive_candidates = candidates.overlap_range(flanks.first);
-        const auto rhs_inactive_candidates = candidates.overlap_range(flanks.second);
+        const auto lhs_inactive_candidates = overlap_range(candidates, flanks.first);
+        const auto rhs_inactive_candidates = overlap_range(candidates, flanks.second);
         
         const auto num_lhs_inactives = size(lhs_inactive_candidates);
         const auto num_rhs_inactives = size(rhs_inactive_candidates);

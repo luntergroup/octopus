@@ -24,6 +24,7 @@
 #include "genotype.hpp"
 #include "variant.hpp"
 #include "mappable.hpp"
+#include "mappable_ranges.hpp"
 #include "mappable_algorithms.hpp"
 
 namespace Octopus
@@ -121,10 +122,10 @@ namespace Octopus
     find_phase_region(const Phaser::PhaseSet::SamplePhaseRegions& phasings, const T& mappable)
     {
         const auto overlapped = overlap_range(std::cbegin(phasings), std::cend(phasings), mappable,
-                                              MappableRangeOrder::BidirectionallySorted);
+                                              BidirectionallySortedTag {});
         
         if (!overlapped.empty()) {
-            assert(size(overlapped, MappableRangeOrder::BidirectionallySorted) == 1);
+            assert(size(overlapped, BidirectionallySortedTag {}) == 1);
             return std::ref(overlapped.front());
         }
         

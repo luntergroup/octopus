@@ -618,11 +618,12 @@ template <typename MappableType_>
 bool
 MappableFlatSet<MappableType, Allocator>::has_overlapped(const MappableType_& mappable) const
 {
-    return (is_bidirectionally_sorted_) ?
-    ::has_overlapped(std::begin(elements_), std::end(elements_), mappable,
-                     MappableRangeOrder::BidirectionallySorted)
-    :
-    ::has_overlapped(std::begin(elements_), std::end(elements_), mappable);
+    if (is_bidirectionally_sorted_) {
+        ::has_overlapped(std::begin(elements_), std::end(elements_), mappable,
+                         BidirectionallySortedTag {});
+    }
+    
+    return ::has_overlapped(std::begin(elements_), std::end(elements_), mappable);
 }
 
 template <typename MappableType, typename Allocator>
@@ -631,10 +632,10 @@ bool
 MappableFlatSet<MappableType, Allocator>::has_overlapped(iterator first, iterator last,
                                                               const MappableType_& mappable) const
 {
-    return (is_bidirectionally_sorted_) ?
-    ::has_overlapped(first, last, mappable, MappableRangeOrder::BidirectionallySorted)
-    :
-    ::has_overlapped(first, last, mappable, max_element_size_);
+    if (is_bidirectionally_sorted_) {
+        ::has_overlapped(first, last, mappable, BidirectionallySortedTag {});
+    }
+    return ::has_overlapped(first, last, mappable, max_element_size_);
 }
 
 template <typename MappableType, typename Allocator>
@@ -643,10 +644,10 @@ bool
 MappableFlatSet<MappableType, Allocator>::has_overlapped(const_iterator first, const_iterator last,
                                                               const MappableType_& mappable) const
 {
-    return (is_bidirectionally_sorted_) ?
-    ::has_overlapped(first, last, mappable, MappableRangeOrder::BidirectionallySorted)
-    :
-    ::has_overlapped(first, last, mappable, max_element_size_);
+    if (is_bidirectionally_sorted_) {
+        ::has_overlapped(first, last, mappable, BidirectionallySortedTag {});
+    }
+    return ::has_overlapped(first, last, mappable, max_element_size_);
 }
 
 template <typename MappableType, typename Allocator>
@@ -655,7 +656,12 @@ typename MappableFlatSet<MappableType, Allocator>::size_type
 MappableFlatSet<MappableType, Allocator>::count_overlapped(const MappableType_& mappable) const
 {
     const auto overlapped = overlap_range(mappable);
-    return (is_bidirectionally_sorted_) ? ::size(overlapped, MappableRangeOrder::BidirectionallySorted) : ::size(overlapped);
+    
+    if (is_bidirectionally_sorted_) {
+        return ::size(overlapped, BidirectionallySortedTag {});
+    }
+    
+    return ::size(overlapped);
 }
 
 template <typename MappableType, typename Allocator>
@@ -665,7 +671,12 @@ MappableFlatSet<MappableType, Allocator>::count_overlapped(iterator first, itera
                                                                 const MappableType_& mappable) const
 {
     const auto overlapped = overlap_range(first, last, mappable);
-    return (is_bidirectionally_sorted_) ? ::size(overlapped, MappableRangeOrder::BidirectionallySorted) : ::size(overlapped);
+    
+    if (is_bidirectionally_sorted_) {
+        return ::size(overlapped, BidirectionallySortedTag {});
+    }
+    
+    return ::size(overlapped);
 }
 
 template <typename MappableType, typename Allocator>
@@ -675,7 +686,12 @@ MappableFlatSet<MappableType, Allocator>::count_overlapped(const_iterator first,
                                                                 const MappableType_& mappable) const
 {
     const auto overlapped = overlap_range(first, last, mappable);
-    return (is_bidirectionally_sorted_) ? ::size(overlapped, MappableRangeOrder::BidirectionallySorted) : ::size(overlapped);
+    
+    if (is_bidirectionally_sorted_) {
+        return ::size(overlapped, BidirectionallySortedTag {});
+    }
+    
+    return ::size(overlapped);
 }
 
 template <typename MappableType, typename Allocator>
@@ -701,10 +717,10 @@ OverlapRange<typename MappableFlatSet<MappableType, Allocator>::const_iterator>
 MappableFlatSet<MappableType, Allocator>::overlap_range(const_iterator first, const_iterator last,
                                                              const MappableType_& mappable) const
 {
-    return (is_bidirectionally_sorted_) ?
-    ::overlap_range(first, last, mappable, MappableRangeOrder::BidirectionallySorted)
-    :
-    ::overlap_range(first, last, mappable, max_element_size_);
+    if (is_bidirectionally_sorted_) {
+        ::overlap_range(first, last, mappable, BidirectionallySortedTag {});
+    }
+    return ::overlap_range(first, last, mappable, max_element_size_);
 }
 
 template <typename MappableType, typename Allocator>
@@ -774,7 +790,12 @@ MappableFlatSet<MappableType, Allocator>::count_contained(const_iterator first, 
                                                                const MappableType_& mappable) const
 {
     const auto contained = contained_range(first, last, mappable);
-    return (is_bidirectionally_sorted_) ? ::size(contained, MappableRangeOrder::BidirectionallySorted) : ::size(contained);
+    
+    if (is_bidirectionally_sorted_) {
+        return ::size(contained, BidirectionallySortedTag {});
+    }
+    
+    return ::size(contained);
 }
 
 template <typename MappableType, typename Allocator>
@@ -843,15 +864,6 @@ void swap(MappableFlatSet<MappableType, Allocator>& lhs,
     std::swap(lhs.elements_, rhs.elements_);
     std::swap(lhs.is_bidirectionally_sorted_, rhs.is_bidirectionally_sorted_);
     std::swap(lhs.max_element_size_, rhs.max_element_size_);
-}
-
-template <typename MappableType1, typename MappableType2, typename Allocator>
-MappableFlatSet<MappableType1, Allocator>
-copy_overlapped(const MappableFlatSet<MappableType1, Allocator>& mappables,
-                const MappableType2& mappable)
-{
-    const auto overlapped = mappables.overlap_range(mappable);
-    return MappableFlatSet<MappableType1>(std::begin(overlapped), std::end(overlapped));
 }
 
 #endif /* mappable_flat_set_hpp */

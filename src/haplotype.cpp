@@ -15,6 +15,7 @@
 
 #include "reference_genome.hpp"
 #include "genomic_region.hpp"
+#include "mappable_ranges.hpp"
 #include "mappable_algorithms.hpp"
 #include "mappable_ranges.hpp"
 #include "variant.hpp"
@@ -26,14 +27,13 @@
 template <typename T, typename M>
 auto haplotype_overlap_range(const T& alleles, const M& mappable)
 {
-    return bases(overlap_range(std::cbegin(alleles), std::cend(alleles),
-                               mappable, MappableRangeOrder::BidirectionallySorted));
+    return bases(overlap_range(alleles, mappable, BidirectionallySortedTag {}));
 }
 
 template <typename T, typename M>
 auto haplotype_contained_range(const T& alleles, const M& mappable)
 {
-    return bases(contained_range(std::cbegin(alleles), std::cend(alleles), mappable));
+    return bases(contained_range(alleles, mappable));
 }
 
 // public methods
@@ -84,7 +84,7 @@ bool Haplotype::contains_exact(const ContigAllele& allele) const
     if (!::contains(region_.get_contig_region(), allele)) return false;
     
     if (::contains(explicit_allele_region_, allele)) {
-        return has_exact_overlap(explicit_alleles_, allele, MappableRangeOrder::BidirectionallySorted);
+        return has_exact_overlap(explicit_alleles_, allele, BidirectionallySortedTag {});
     }
     
     const auto offset = begin_distance(allele, region_.get_contig_region());

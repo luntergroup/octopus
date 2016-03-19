@@ -27,6 +27,8 @@
 
 #include <iostream> // DEBUG
 
+// sum_region_sizes
+
 template <typename InputIt>
 auto sum_region_sizes(InputIt first, InputIt last)
 {
@@ -47,6 +49,8 @@ auto sum_region_sizes(const Container& mappables)
     return sum_region_sizes(std::cbegin(mappables), std::cend(mappables));
 }
 
+// leftmost_mappable
+
 /**
  Returns the leftmost mappable element in the range [first, last).
  
@@ -63,11 +67,37 @@ ForwardIt leftmost_mappable(ForwardIt first, ForwardIt last)
     return std::min_element(first, last);
 }
 
+namespace detail
+{
+    template <typename C, typename = void>
+    struct HasMemberLeftmostMappable : std::false_type {};
+    
+    template <typename C>
+    struct HasMemberLeftmostMappable<C, std::enable_if_t<
+        std::is_same<decltype(std::declval<C>().leftmost_mappable()),
+        typename C::const_iterator>::value>>
+    : std::true_type {};
+    
+    template <typename Container>
+    auto leftmost_mappable(const Container& mappables, std::true_type)
+    {
+        return mappables.leftmost_mappable();
+    }
+    
+    template <typename Container>
+    auto leftmost_mappable(const Container& mappables, std::false_type)
+    {
+        return ::leftmost_mappable(std::cbegin(mappables), std::cend(mappables));
+    }
+} // namespace detail
+
 template <typename Container>
 auto leftmost_mappable(const Container& mappables)
 {
-    return leftmost_mappable(std::cbegin(mappables), std::cend(mappables));
+    return detail::leftmost_mappable(mappables, detail::HasMemberLeftmostMappable<Container> {});
 }
+
+// rightmost_mappable
 
 /**
  Returns the rightmost mappable element in the range [first, last).
@@ -87,10 +117,34 @@ ForwardIt rightmost_mappable(ForwardIt first, ForwardIt last)
     });
 }
 
+namespace detail
+{
+    template <typename C, typename = void>
+    struct HasMemberRightmostMappable : std::false_type {};
+    
+    template <typename C>
+    struct HasMemberRightmostMappable<C, std::enable_if_t<
+        std::is_same<decltype(std::declval<C>().rightmost_mappable()),
+        typename C::const_iterator>::value>>
+    : std::true_type {};
+    
+    template <typename Container>
+    auto rightmost_mappable(const Container& mappables, std::true_type)
+    {
+        return mappables.rightmost_mappable();
+    }
+    
+    template <typename Container>
+    auto rightmost_mappable(const Container& mappables, std::false_type)
+    {
+        return ::rightmost_mappable(std::cbegin(mappables), std::cend(mappables));
+    }
+} // namespace detail
+
 template <typename Container>
 auto rightmost_mappable(const Container& mappables)
 {
-    return rightmost_mappable(std::cbegin(mappables), std::cend(mappables));
+    return detail::rightmost_mappable(mappables, detail::HasMemberRightmostMappable<Container> {});
 }
 
 template <typename ForwardIt>
@@ -102,7 +156,7 @@ decltype(auto) leftmost_region(ForwardIt first, ForwardIt last)
 template <typename Container>
 decltype(auto) leftmost_region(const Container& mappables)
 {
-    return leftmost_region(std::cbegin(mappables), std::cend(mappables));
+    return mapped_region(*leftmost_mappable(mappables));
 }
 
 template <typename ForwardIt>
@@ -114,8 +168,10 @@ decltype(auto) rightmost_region(ForwardIt first, ForwardIt last)
 template <typename Container>
 decltype(auto) rightmost_region(const Container& mappables)
 {
-    return rightmost_region(std::cbegin(mappables), std::cend(mappables));
+    return mapped_region(*rightmost_mappable(mappables));
 }
+
+// largest_mappable
 
 /**
  Returns the mappable element in the range [first, last) with the largest size.
@@ -136,11 +192,37 @@ ForwardIt largest_mappable(ForwardIt first, ForwardIt last)
                             });
 }
 
+namespace detail
+{
+    template <typename C, typename = void>
+    struct HasMemberLargestMappable : std::false_type {};
+    
+    template <typename C>
+    struct HasMemberLargestMappable<C, std::enable_if_t<
+        std::is_same<decltype(std::declval<C>().largest_mappable()),
+        typename C::const_iterator>::value>>
+    : std::true_type {};
+    
+    template <typename Container>
+    auto largest_mappable(const Container& mappables, std::true_type)
+    {
+        return mappables.largest_mappable();
+    }
+    
+    template <typename Container>
+    auto largest_mappable(const Container& mappables, std::false_type)
+    {
+        return ::largest_mappable(std::cbegin(mappables), std::cend(mappables));
+    }
+} // namespace detail
+
 template <typename Container>
 auto largest_mappable(const Container& mappables)
 {
-    return largest_mappable(std::cbegin(mappables), std::cend(mappables));
+    return detail::largest_mappable(mappables, detail::HasMemberLargestMappable<Container> {});
 }
+
+// smallest_mappable
 
 /**
  Returns the mappable element in the range [first, last) with the smallest size.
@@ -161,10 +243,34 @@ ForwardIt smallest_mappable(ForwardIt first, ForwardIt last)
                             });
 }
 
+namespace detail
+{
+    template <typename C, typename = void>
+    struct HasMemberSmallestMappable : std::false_type {};
+    
+    template <typename C>
+    struct HasMemberSmallestMappable<C, std::enable_if_t<
+    std::is_same<decltype(std::declval<C>().smallest_mappable()),
+        typename C::const_iterator>::value>>
+    : std::true_type {};
+    
+    template <typename Container>
+    auto smallest_mappable(const Container& mappables, std::true_type)
+    {
+        return mappables.smallest_mappable();
+    }
+    
+    template <typename Container>
+    auto smallest_mappable(const Container& mappables, std::false_type)
+    {
+        return ::smallest_mappable(std::cbegin(mappables), std::cend(mappables));
+    }
+} // namespace detail
+
 template <typename Container>
 auto smallest_mappable(const Container& mappables)
 {
-    return smallest_mappable(std::cbegin(mappables), std::cend(mappables));
+    return detail::smallest_mappable(mappables, detail::HasMemberSmallestMappable<Container> {});
 }
 
 template <typename ForwardIt>
@@ -176,20 +282,22 @@ decltype(auto) largest_region(ForwardIt first, ForwardIt last)
 template <typename Container>
 decltype(auto) largest_region(const Container& mappables)
 {
-    return largest_region(std::cbegin(mappables), std::cend(mappables));
+    return mapped_region(*largest_mappable(mappables));
 }
 
 template <typename ForwardIt>
 decltype(auto) smallest_region(ForwardIt first, ForwardIt last)
 {
-    return smallest_region(*smallest_mappable(first, last));
+    return mapped_region(*smallest_mappable(first, last));
 }
 
 template <typename Container>
 decltype(auto) smallest_region(const Container& mappables)
 {
-    return smallest_region(std::cbegin(mappables), std::cend(mappables));
+    return mapped_region(*smallest_mappable(mappables));
 }
+
+// find_first_after
 
 /**
  Returns the first Mappable element in the range [first, last) that is_after mappable
@@ -213,6 +321,8 @@ auto find_first_after(const Container& mappables, const MappableTp& mappable)
 {
     return find_first_after(std::cbegin(mappables), std::cend(mappables), mappable);
 }
+
+// is_bidirectionally_sorted
 
 /**
  Returns true if the range of Mappable elements in the range [first, last) is sorted
@@ -238,6 +348,8 @@ bool is_bidirectionally_sorted(const Container& mappables)
     return is_bidirectionally_sorted(std::cbegin(mappables), std::cend(mappables));
 }
 
+// is_bidirectionally_sorted_until
+
 /**
  Returns the an iterator to the first element in the range [first, last) that is not sorted
  according w.r.t GenomicRegion::operator< and 'if lhs < rhs then end(lhs) < end(rhs)
@@ -261,6 +373,8 @@ typename Container::const_iterator is_bidirectionally_sorted_until(const Contain
 {
     return is_bidirectionally_sorted_until(std::cbegin(mappables), std::cend(mappables));
 }
+
+// extract_bidirectionally_sorted_ranges
 
 /**
  Returns the minimum number of sub-ranges in each within the range [first, last) such that each
@@ -295,6 +409,8 @@ auto extract_bidirectionally_sorted_ranges(const Container& mappables)
     return extract_bidirectionally_sorted_ranges(std::cbegin(mappables), std::cend(mappables));
 }
 
+// has_exact
+
 template <typename ForwardIt>
 bool has_exact(ForwardIt first, ForwardIt last, const typename ForwardIt::value_type& mappable)
 {
@@ -304,6 +420,7 @@ bool has_exact(ForwardIt first, ForwardIt last, const typename ForwardIt::value_
                   "mappable algorithms only work for regions and mappable types");
     
     const auto contained = contained_range(first, last, mappable);
+    
     return std::find(std::cbegin(contained), std::cend(contained), mappable) == std::cend(contained);
 }
 
@@ -312,6 +429,8 @@ bool has_exact(const Container& mappables, const MappableTp& mappable)
 {
     return has_exact(std::cbegin(mappables), std::cend(mappables), mappable);
 }
+
+// overlap_range
 
 /**
  Returns the sub-range(s) of Mappable elements in the range [first, last) such that each element
@@ -326,48 +445,58 @@ bool has_exact(const Container& mappables, const MappableTp& mappable)
 template <typename BidirIt, typename MappableTp>
 OverlapRange<BidirIt>
 overlap_range(BidirIt first, BidirIt last, const MappableTp& mappable,
-              MappableRangeOrder order = MappableRangeOrder::ForwardSorted)
+              ForwardSortedTag)
 {
     using MappableTp2 = typename std::iterator_traits<BidirIt>::value_type;
     
     static_assert(is_region_or_mappable<MappableTp> && is_region_or_mappable<MappableTp2>,
                   "mappable algorithms only work for regions and mappable types");
     
-    if (order == MappableRangeOrder::BidirectionallySorted) {
-        auto overlapped = std::equal_range(first, last, mappable,
-                                           [] (const auto& lhs, const auto& rhs) {
-                                               return is_before(lhs, rhs);
-                                           });
-        
-        // we need to try and push these boundries out as the range does not fully capture
-        // insertions
-        
-        overlapped.first = std::find_if_not(std::make_reverse_iterator(overlapped.first),
-                                            std::make_reverse_iterator(first),
-                                            [&mappable] (const auto& m) {
-                                                return overlaps(m, mappable);
-                                            }).base();
-        
-        overlapped.second = std::find_if_not(overlapped.second, last,
-                                             [&mappable] (const auto& m) {
-                                                 return overlaps(m, mappable);
-                                             });
-        
-        return make_overlap_range(overlapped.first, overlapped.second, mappable);
-    }
-    
     const auto it = find_first_after(first, last, mappable);
     
-    return make_overlap_range(std::find_if(first, it, [&mappable] (const auto& m) {
-                                            return overlaps(m, mappable); }), it, mappable);
+    return make_overlap_range(std::find_if(first, it,
+                                           [&mappable] (const auto& m) {
+                                               return overlaps(m, mappable);
+                                           }), it, mappable);
 }
 
-template <typename Container, typename MappableTp>
-OverlapRange<typename Container::const_iterator>
-overlap_range(const Container& mappables, const MappableTp& mappable,
-              MappableRangeOrder order = MappableRangeOrder::ForwardSorted)
+template <typename BidirIt, typename MappableTp>
+OverlapRange<BidirIt>
+overlap_range(BidirIt first, BidirIt last, const MappableTp& mappable,
+              BidirectionallySortedTag)
 {
-    return overlap_range(std::cbegin(mappables), std::cend(mappables), mappable, order);
+    using MappableTp2 = typename std::iterator_traits<BidirIt>::value_type;
+    
+    static_assert(is_region_or_mappable<MappableTp> && is_region_or_mappable<MappableTp2>,
+                  "mappable algorithms only work for regions and mappable types");
+    
+    auto overlapped = std::equal_range(first, last, mappable,
+                                       [] (const auto& lhs, const auto& rhs) {
+                                           return is_before(lhs, rhs);
+                                       });
+    
+    // we need to try and push these boundries out as the range does not fully capture
+    // insertions
+    
+    overlapped.first = std::find_if_not(std::make_reverse_iterator(overlapped.first),
+                                        std::make_reverse_iterator(first),
+                                        [&mappable] (const auto& m) {
+                                            return overlaps(m, mappable);
+                                        }).base();
+    
+    overlapped.second = std::find_if_not(overlapped.second, last,
+                                         [&mappable] (const auto& m) {
+                                             return overlaps(m, mappable);
+                                         });
+    
+    return make_overlap_range(overlapped.first, overlapped.second, mappable);
+}
+
+template <typename BidirIt, typename MappableTp>
+OverlapRange<BidirIt>
+overlap_range(BidirIt first, BidirIt last, const MappableTp& mappable)
+{
+    return overlap_range(first, last, mappable, ForwardSortedTag {});
 }
 
 /**
@@ -381,7 +510,7 @@ overlap_range(const Container& mappables, const MappableTp& mappable,
 template <typename ForwardIt, typename MappableTp>
 OverlapRange<ForwardIt>
 overlap_range(ForwardIt first, ForwardIt last, const MappableTp& mappable,
-              const GenomicRegion::SizeType max_mappable_size)
+              const typename RegionType<MappableTp>::SizeType max_mappable_size)
 {
     using MappableTp2 = typename std::iterator_traits<ForwardIt>::value_type;
     
@@ -406,31 +535,146 @@ overlap_range(ForwardIt first, ForwardIt last, const MappableTp& mappable,
     return make_overlap_range(it2, it, mappable);
 }
 
-template <typename Container, typename MappableTp>
-OverlapRange<typename Container::const_iterator>
-overlap_range(const Container& mappables, const MappableTp& mappable,
-              const GenomicRegion::SizeType max_mappable_size)
+namespace detail
 {
-    return overlap_range(std::cbegin(mappables), std::cend(mappables), mappable, max_mappable_size);
+    template <typename C, typename T, typename = void>
+    struct HasMemberOverlapRange : std::false_type {};
+    
+    template <typename C, typename T>
+    struct HasMemberOverlapRange<C, T, std::enable_if_t<
+    std::is_same<decltype(std::declval<C>().overlap_range(std::declval<T>())),
+        OverlapRange<typename C::const_iterator>>::value>>
+    : std::true_type {};
+    
+    template <typename Container, typename MappableTp>
+    auto overlap_range(const Container& mappables, const MappableTp& mappable, std::true_type)
+    {
+        return mappables.overlap_range(mappable);
+    }
+    
+    template <typename Container, typename MappableTp>
+    auto overlap_range(const Container& mappables, const MappableTp& mappable, std::false_type)
+    {
+        return ::overlap_range(std::cbegin(mappables), std::cend(mappables), mappable);
+    }
+    
+    template <typename Container, typename MappableTp>
+    auto overlap_range(const Container& mappables, const MappableTp& mappable,
+                       const typename RegionType<MappableTp>::SizeType max_mappable_size,
+                       std::true_type)
+    {
+        return mappables.overlap_range(mappable);
+    }
+    
+    template <typename Container, typename MappableTp>
+    auto overlap_range(const Container& mappables, const MappableTp& mappable,
+                       const typename RegionType<MappableTp>::SizeType max_mappable_size,
+                       std::false_type)
+    {
+        return ::overlap_range(std::cbegin(mappables), std::cend(mappables), mappable,
+                               max_mappable_size);
+    }
+} // namespace detail
+
+template <typename Container, typename MappableTp>
+auto overlap_range(const Container& mappables, const MappableTp& mappable)
+{
+    return detail::overlap_range(mappables, mappable,
+                                 detail::HasMemberOverlapRange<Container, MappableTp> {});
 }
 
 template <typename Container, typename MappableTp>
-Container
-copy_overlapped(const Container& mappables, const MappableTp& mappable,
-                MappableRangeOrder order = MappableRangeOrder::ForwardSorted)
+OverlapRange<typename Container::const_iterator>
+overlap_range(const Container& mappables, const MappableTp& mappable,
+              const typename RegionType<MappableTp>::SizeType max_mappable_size)
 {
-    const auto overlapped = overlap_range(mappables, mappable, order);
+    return detail::overlap_range(mappables, mappable, max_mappable_size,
+                                 detail::HasMemberOverlapRange<Container, MappableTp> {});
+}
+
+template <typename Container, typename MappableTp>
+OverlapRange<typename Container::const_iterator>
+overlap_range(const Container& mappables, const MappableTp& mappable,
+              BidirectionallySortedTag)
+{
+    return overlap_range(std::cbegin(mappables), std::cend(mappables), mappable,
+                         BidirectionallySortedTag {});
+}
+
+// copy_overlapped
+
+//template <typename OutputContainer, typename Container, typename MappableTp>
+//OutputContainer
+//copy_overlapped(const Container& mappables, const MappableTp& mappable)
+//{
+//    const auto overlapped = overlap_range(mappables, mappable);
+//    return OutputContainer {std::cbegin(overlapped), std::cend(overlapped)};
+//}
+
+template <typename Container, typename MappableTp>
+Container
+copy_overlapped(const Container& mappables, const MappableTp& mappable)
+{
+    const auto overlapped = overlap_range(mappables, mappable);
     return Container {std::cbegin(overlapped), std::cend(overlapped)};
 }
 
 template <typename Container, typename MappableTp>
 Container
 copy_overlapped(const Container& mappables, const MappableTp& mappable,
-                GenomicRegion::SizeType max_mappable_size)
+                BidirectionallySortedTag)
+{
+    const auto overlapped = overlap_range(mappables, mappable, BidirectionallySortedTag {});
+    return Container {std::cbegin(overlapped), std::cend(overlapped)};
+}
+
+template <typename Container, typename MappableTp>
+Container
+copy_overlapped(const Container& mappables, const MappableTp& mappable,
+                const typename RegionType<MappableTp>::SizeType max_mappable_size)
 {
     const auto overlapped = overlap_range(mappables, mappable, max_mappable_size);
     return Container {std::cbegin(overlapped), std::cend(overlapped)};
 }
+
+// copy_nonoverlapped
+
+template <typename Container, typename MappableType>
+Container
+copy_nonoverlapped(const Container& mappables, const MappableType& mappable)
+{
+    using std::cbegin; using std::cend;
+    
+    const auto num_overlapped = count_overlapped(mappables, mappable);
+    
+    if (num_overlapped == 0) return mappables;
+    
+    Container result {};
+    result.reserve(mappables.size() - num_overlapped);
+    
+    auto overlapped = overlap_range(mappables, mappable);
+    
+    auto base_begin = cbegin(overlapped).base();
+    auto base_end   = cend(overlapped).base();
+    
+    result.insert(cbegin(mappables), base_begin);
+    
+    while (!overlapped.empty()) {
+        overlapped.advance_begin(1);
+        ++base_begin;
+        
+        if (overlapped.begin() != base_begin) {
+            result.insert(base_begin, cbegin(overlapped).base());
+            base_begin = cbegin(overlapped).base();
+        }
+    }
+    
+    result.insert(base_end, cend(mappables));
+    
+    return result;
+}
+
+// has_overlapped
 
 /**
  Returns true if any of the mappable elements in the range [first, last) overlap with mappable.
@@ -439,21 +683,16 @@ copy_overlapped(const Container& mappables, const MappableTp& mappable,
  */
 template <typename BidirIt, typename MappableTp>
 bool has_overlapped(BidirIt first, BidirIt last, const MappableTp& mappable,
-                    MappableRangeOrder order = MappableRangeOrder::ForwardSorted)
+                    ForwardSortedTag)
 {
     using MappableTp2 = typename std::iterator_traits<BidirIt>::value_type;
     
     static_assert(is_region_or_mappable<MappableTp> && is_region_or_mappable<MappableTp2>,
                   "mappable algorithms only work for regions and mappable types");
     
-    if (order == MappableRangeOrder::BidirectionallySorted) {
-        return std::binary_search(first, last, mappable,
-                                  [] (const auto& lhs, const auto& rhs) { return is_before(lhs, rhs); });
-    }
-    
     if (first == last) return false;
     
-    auto it = find_first_after(first, last, mappable);
+    const auto it = find_first_after(first, last, mappable);
     
     // searches in reverse order on the assumption regions closer to the boundry with
     // mappable are more likely to overlap with mappable.
@@ -463,12 +702,90 @@ bool has_overlapped(BidirIt first, BidirIt last, const MappableTp& mappable,
                        });
 }
 
-template <typename Container, typename MappableTp>
-bool has_overlapped(const Container& container, const MappableTp& mappable,
-                    MappableRangeOrder order = MappableRangeOrder::ForwardSorted)
+template <typename BidirIt, typename MappableTp>
+bool has_overlapped(BidirIt first, BidirIt last, const MappableTp& mappable,
+                    BidirectionallySortedTag)
 {
-    return has_overlapped(std::cbegin(container), std::cend(container), mappable, order);
+    using MappableTp2 = typename std::iterator_traits<BidirIt>::value_type;
+    
+    static_assert(is_region_or_mappable<MappableTp> && is_region_or_mappable<MappableTp2>,
+                  "mappable algorithms only work for regions and mappable types");
+    
+    return std::binary_search(first, last, mappable,
+                              [] (const auto& lhs, const auto& rhs) { return is_before(lhs, rhs); });
 }
+
+template <typename BidirIt, typename MappableTp>
+bool has_overlapped(BidirIt first, BidirIt last, const MappableTp& mappable,
+                    const typename RegionType<MappableTp>::SizeType max_mappable_size)
+{
+    const auto overlapped = overlap_range(first, last, mappable, max_mappable_size);
+    return !overlapped.empty();
+}
+
+template <typename BidirIt, typename MappableTp>
+bool has_overlapped(BidirIt first, BidirIt last, const MappableTp& mappable)
+{
+    return has_overlapped(first, last, mappable, ForwardSortedTag {});
+}
+
+namespace detail
+{
+    template <typename C, typename T, typename = void>
+    struct HasMemberHasOverlapped : std::false_type {};
+    
+    template <typename C, typename T>
+    struct HasMemberHasOverlapped<C, T, std::enable_if_t<
+    std::is_same<decltype(std::declval<C>().has_overlapped(std::declval<T>())), bool>::value>>
+    : std::true_type {};
+    
+    template <typename Container, typename MappableTp>
+    auto has_overlapped(const Container& mappables, const MappableTp& mappable, std::true_type)
+    {
+        return mappables.has_overlapped(mappable);
+    }
+    
+    template <typename Container, typename MappableTp>
+    auto has_overlapped(const Container& mappables, const MappableTp& mappable, std::false_type)
+    {
+        return ::has_overlapped(std::cbegin(mappables), std::cend(mappables), mappable);
+    }
+    
+    template <typename Container, typename MappableTp>
+    auto has_overlapped(const Container& mappables, const MappableTp& mappable,
+                       const typename RegionType<MappableTp>::SizeType max_mappable_size,
+                       std::true_type)
+    {
+        return mappables.has_overlapped(mappable);
+    }
+    
+    template <typename Container, typename MappableTp>
+    auto has_overlapped(const Container& mappables, const MappableTp& mappable,
+                        const typename RegionType<MappableTp>::SizeType max_mappable_size,
+                        std::false_type)
+    {
+        return ::has_overlapped(std::cbegin(mappables), std::cend(mappables), mappable,
+                                max_mappable_size);
+    }
+} // namespace detail
+
+template <typename Container, typename MappableTp>
+auto has_overlapped(const Container& mappables, const MappableTp& mappable)
+{
+    return detail::has_overlapped(mappables, mappable,
+                                 detail::HasMemberHasOverlapped<Container, MappableTp> {});
+}
+
+template <typename Container, typename MappableTp>
+auto
+has_overlapped(const Container& mappables, const MappableTp& mappable,
+               const typename RegionType<MappableTp>::SizeType max_mappable_size)
+{
+    return detail::has_overlapped(mappables, mappable, max_mappable_size,
+                                  detail::HasMemberHasOverlapped<Container, MappableTp> {});
+}
+
+// count_overlapped
 
 /**
  Returns the number of mappable elements in the range [first, last) that overlap with mappable.
@@ -476,23 +793,31 @@ bool has_overlapped(const Container& container, const MappableTp& mappable,
  Requires [first, last) is sorted w.r.t GenomicRegion::operator<
  */
 template <typename ForwardIt, typename MappableTp>
-size_t count_overlapped(ForwardIt first, ForwardIt last, const MappableTp& mappable,
-                        MappableRangeOrder order = MappableRangeOrder::ForwardSorted)
+std::size_t count_overlapped(ForwardIt first, ForwardIt last, const MappableTp& mappable,
+                             ForwardSortedTag)
 {
     using MappableTp2 = typename std::iterator_traits<ForwardIt>::value_type;
     
     static_assert(is_region_or_mappable<MappableTp> && is_region_or_mappable<MappableTp2>,
                   "mappable algorithms only work for regions and mappable types");
     
-    const auto overlapped = overlap_range(first, last, mappable, order);
-    return std::distance(std::cbegin(overlapped), std::cend(overlapped));
+    const auto overlapped = overlap_range(first, last, mappable);
+    
+    return size(overlapped, ForwardSortedTag {});
 }
 
-template <typename Container, typename MappableTp>
-size_t count_overlapped(const Container& container, const MappableTp& mappable,
-                        MappableRangeOrder order = MappableRangeOrder::ForwardSorted)
+template <typename ForwardIt, typename MappableTp>
+std::size_t count_overlapped(ForwardIt first, ForwardIt last, const MappableTp& mappable,
+                             BidirectionallySortedTag)
 {
-    return count_overlapped(std::cbegin(container), std::cend(container), mappable, order);
+    using MappableTp2 = typename std::iterator_traits<ForwardIt>::value_type;
+    
+    static_assert(is_region_or_mappable<MappableTp> && is_region_or_mappable<MappableTp2>,
+                  "mappable algorithms only work for regions and mappable types");
+    
+    const auto overlapped = overlap_range(first, last, mappable, BidirectionallySortedTag {});
+    
+    return size(overlapped, BidirectionallySortedTag {});
 }
 
 /**
@@ -513,12 +838,69 @@ size_t count_overlapped(ForwardIt first, ForwardIt last, const MappableTp& mappa
     return std::distance(std::cbegin(overlapped), std::cend(overlapped));
 }
 
-template <typename Container, typename MappableTp>
-size_t count_overlapped(const Container& container, const MappableTp& mappable,
-                        GenomicRegion::SizeType max_mappable_size)
+template <typename ForwardIt, typename MappableTp>
+std::size_t count_overlapped(ForwardIt first, ForwardIt last, const MappableTp& mappable)
 {
-    return count_overlapped(std::cbegin(container), std::cend(container), mappable, max_mappable_size);
+    return count_overlapped(first, last, mappable, ForwardSortedTag {});
 }
+
+namespace detail
+{
+    template <typename C, typename T, typename = void>
+    struct HasMemberCountOverlapped : std::false_type {};
+    
+    template <typename C, typename T>
+    struct HasMemberCountOverlapped<C, T, std::enable_if_t<
+    std::is_same<decltype(std::declval<C>().count_overlapped(std::declval<T>())), std::size_t>::value>>
+    : std::true_type {};
+    
+    template <typename Container, typename MappableTp>
+    auto count_overlapped(const Container& mappables, const MappableTp& mappable, std::true_type)
+    {
+        return mappables.count_overlapped(mappable);
+    }
+    
+    template <typename Container, typename MappableTp>
+    auto count_overlapped(const Container& mappables, const MappableTp& mappable, std::false_type)
+    {
+        return ::count_overlapped(std::cbegin(mappables), std::cend(mappables), mappable);
+    }
+    
+    template <typename Container, typename MappableTp>
+    auto count_overlapped(const Container& mappables, const MappableTp& mappable,
+                        const typename RegionType<MappableTp>::SizeType max_mappable_size,
+                        std::true_type)
+    {
+        return mappables.count_overlapped(mappable);
+    }
+    
+    template <typename Container, typename MappableTp>
+    auto count_overlapped(const Container& mappables, const MappableTp& mappable,
+                        const typename RegionType<MappableTp>::SizeType max_mappable_size,
+                        std::false_type)
+    {
+        return ::count_overlapped(std::cbegin(mappables), std::cend(mappables), mappable,
+                                  max_mappable_size);
+    }
+} // namespace detail
+
+template <typename Container, typename MappableTp>
+auto count_overlapped(const Container& mappables, const MappableTp& mappable)
+{
+    return detail::count_overlapped(mappables, mappable,
+                                  detail::HasMemberCountOverlapped<Container, MappableTp> {});
+}
+
+template <typename Container, typename MappableTp>
+auto
+count_overlapped(const Container& mappables, const MappableTp& mappable,
+               const typename RegionType<MappableTp>::SizeType max_mappable_size)
+{
+    return detail::count_overlapped(mappables, mappable, max_mappable_size,
+                                  detail::HasMemberCountOverlapped<Container, MappableTp> {});
+}
+
+// has_exact_overlap
 
 /**
  Returns true if the range [first, last) contains the exact region given my mappable
@@ -527,16 +909,12 @@ size_t count_overlapped(const Container& container, const MappableTp& mappable,
  */
 template <typename ForwardIt, typename MappableTp>
 bool has_exact_overlap(ForwardIt first, ForwardIt last, const MappableTp& mappable,
-                       MappableRangeOrder order = MappableRangeOrder::ForwardSorted)
+                       ForwardSortedTag)
 {
     using MappableTp2 = typename std::iterator_traits<ForwardIt>::value_type;
     
     static_assert(is_region_or_mappable<MappableTp> && is_region_or_mappable<MappableTp2>,
                   "mappable algorithms only work for regions and mappable types");
-    
-    if (order == MappableRangeOrder::BidirectionallySorted) {
-        return std::binary_search(first, last, mappable);
-    }
     
     const auto overlapped = overlap_range(first, last, mappable);
     
@@ -546,12 +924,47 @@ bool has_exact_overlap(ForwardIt first, ForwardIt last, const MappableTp& mappab
                         }) != std::cend(overlapped);
 }
 
+template <typename ForwardIt, typename MappableTp>
+bool has_exact_overlap(ForwardIt first, ForwardIt last, const MappableTp& mappable,
+                       BidirectionallySortedTag)
+{
+    using MappableTp2 = typename std::iterator_traits<ForwardIt>::value_type;
+    
+    static_assert(is_region_or_mappable<MappableTp> && is_region_or_mappable<MappableTp2>,
+                  "mappable algorithms only work for regions and mappable types");
+    
+    return std::binary_search(first, last, mappable);
+}
+
+template <typename ForwardIt, typename MappableTp>
+bool has_exact_overlap(ForwardIt first, ForwardIt last, const MappableTp& mappable)
+{
+    return has_exact_overlap(first, last, mappable, ForwardSortedTag {});
+}
+
 template <typename Container, typename MappableTp>
 bool has_exact_overlap(const Container& container, const MappableTp& mappable,
-                       MappableRangeOrder order = MappableRangeOrder::ForwardSorted)
+                       ForwardSortedTag)
 {
-    return has_exact_overlap(std::cbegin(container), std::cend(container), mappable, order);
+    return has_exact_overlap(std::cbegin(container), std::cend(container), mappable,
+                             ForwardSortedTag {});
 }
+
+template <typename Container, typename MappableTp>
+bool has_exact_overlap(const Container& container, const MappableTp& mappable,
+                       BidirectionallySortedTag)
+{
+    return has_exact_overlap(std::cbegin(container), std::cend(container), mappable,
+                             BidirectionallySortedTag {});
+}
+
+template <typename Container, typename MappableTp>
+bool has_exact_overlap(const Container& container, const MappableTp& mappable)
+{
+    return has_exact_overlap(container, mappable, ForwardSortedTag {});
+}
+
+// contained_range
 
 /**
  Returns the sub-range of Mappable elements in the range [first, last) such that each element
@@ -581,12 +994,38 @@ contained_range(BidirIt first, BidirIt last, const MappableTp& mappable)
     return make_contained_range(it, rit.base(), mappable);
 }
 
-template <typename Container, typename MappableTp>
-ContainedRange<typename Container::const_iterator>
-contained_range(const Container& mappables, const MappableTp& mappable)
+namespace detail
 {
-    return contained_range(std::cbegin(mappables), std::cend(mappables), mappable);
+    template <typename C, typename T, typename = void>
+    struct HasMemberContainedRange : std::false_type {};
+    
+    template <typename C, typename T>
+    struct HasMemberContainedRange<C, T, std::enable_if_t<
+        std::is_same<decltype(std::declval<C>().contained_range(std::declval<T>())),
+            ContainedRange<typename C::const_iterator>>::value>>
+    : std::true_type {};
+    
+    template <typename Container, typename MappableTp>
+    auto contained_range(const Container& mappables, const MappableTp& mappable, std::true_type)
+    {
+        return mappables.contained_range(mappable);
+    }
+    
+    template <typename Container, typename MappableTp>
+    auto contained_range(const Container& mappables, const MappableTp& mappable, std::false_type)
+    {
+        return ::contained_range(std::cbegin(mappables), std::cend(mappables), mappable);
+    }
+} // namespace detail
+
+template <typename Container, typename MappableTp>
+auto contained_range(const Container& mappables, const MappableTp& mappable)
+{
+    return detail::contained_range(mappables, mappable,
+                                    detail::HasMemberContainedRange<Container, MappableTp> {});
 }
+
+// has_contained
 
 /**
  Returns true if any of the mappable elements in the range [first, last) are contained within mappable.
@@ -609,11 +1048,37 @@ bool has_contained(ForwardIt first, ForwardIt last, const MappableTp& mappable)
     return (it != last) && region_end(*it) <= region_end(mappable);
 }
 
-template <typename Container, typename MappableTp>
-bool has_contained(const Container& container, const MappableTp& mappable)
+namespace detail
 {
-    return has_contained(std::cbegin(container), std::cend(container), mappable);
+    template <typename C, typename T, typename = void>
+    struct HasMemberHasContained : std::false_type {};
+    
+    template <typename C, typename T>
+    struct HasMemberHasContained<C, T, std::enable_if_t<
+        std::is_same<decltype(std::declval<C>().has_contained(std::declval<T>())), bool>::value>>
+    : std::true_type {};
+    
+    template <typename Container, typename MappableTp>
+    auto has_contained(const Container& mappables, const MappableTp& mappable, std::true_type)
+    {
+        return mappables.has_contained(mappable);
+    }
+    
+    template <typename Container, typename MappableTp>
+    auto has_contained(const Container& mappables, const MappableTp& mappable, std::false_type)
+    {
+        return ::has_contained(std::cbegin(mappables), std::cend(mappables), mappable);
+    }
+} // namespace detail
+
+template <typename Container, typename MappableTp>
+auto has_contained(const Container& mappables, const MappableTp& mappable)
+{
+    return detail::has_contained(mappables, mappable,
+                                   detail::HasMemberHasContained<Container, MappableTp> {});
 }
+
+// count_contained
 
 /**
  Returns the number of mappable elements in the range [first, last) that are contained within mappable.
@@ -621,7 +1086,7 @@ bool has_contained(const Container& container, const MappableTp& mappable)
  Requires [first, last) is sorted w.r.t GenomicRegion::operator<
  */
 template <typename BidirIt, typename MappableTp>
-size_t count_contained(BidirIt first, BidirIt last, const MappableTp& mappable)
+std::size_t count_contained(BidirIt first, BidirIt last, const MappableTp& mappable)
 {
     using MappableTp2 = typename std::iterator_traits<BidirIt>::value_type;
     
@@ -629,24 +1094,96 @@ size_t count_contained(BidirIt first, BidirIt last, const MappableTp& mappable)
                   "mappable algorithms only work for regions and mappable types");
     
     const auto contained = contained_range(first, last, mappable);
+    
     return std::distance(contained.begin(), contained.end());
 }
 
-template <typename Container, typename MappableTp>
-size_t count_contained(const Container& container, const MappableTp& mappable)
+namespace detail
 {
-    return count_contained(std::cbegin(container), std::cend(container), mappable);
+    template <typename C, typename T, typename = void>
+    struct HasMemberCountContained : std::false_type {};
+    
+    template <typename C, typename T>
+    struct HasMemberCountContained<C, T, std::enable_if_t<
+    std::is_same<decltype(std::declval<C>().count_contained(std::declval<T>())), std::size_t>::value>>
+    : std::true_type {};
+    
+    template <typename Container, typename MappableTp>
+    auto count_contained(const Container& mappables, const MappableTp& mappable, std::true_type)
+    {
+        return mappables.count_contained(mappable);
+    }
+    
+    template <typename Container, typename MappableTp>
+    auto count_contained(const Container& mappables, const MappableTp& mappable, std::false_type)
+    {
+        return ::count_contained(std::cbegin(mappables), std::cend(mappables), mappable);
+    }
+} // namespace detail
+
+template <typename Container, typename MappableTp>
+auto count_contained(const Container& mappables, const MappableTp& mappable)
+{
+    return detail::count_contained(mappables, mappable,
+                                 detail::HasMemberCountContained<Container, MappableTp> {});
 }
+
+// copy_contained
+
+template <typename Container, typename MappableType>
+Container copy_contained(const Container& mappables, const MappableType& mappable)
+{
+    const auto contained = contained_range(mappables, mappable);
+    return Container {std::begin(contained), std::end(contained)};
+}
+
+// copy_contained
+
+template <typename Container, typename MappableType>
+Container copy_noncontained(const Container& mappables, const MappableType& mappable)
+{
+    using std::cbegin; using std::cend;
+    
+    const auto num_overlapped = count_overlapped(mappables, mappable);
+    
+    if (num_overlapped == 0) return mappables;
+    
+    Container result {};
+    result.reserve(mappables.size() - num_overlapped);
+    
+    auto contained = contained_range(mappables, mappable);
+    
+    auto base_begin = cbegin(contained).base();
+    auto base_end   = cend(contained).base();
+    
+    result.insert(cbegin(mappables), base_begin);
+    
+    while (!contained.empty()) {
+        contained.advance_begin(1);
+        std::advance(base_begin);
+        
+        if (contained.begin() != base_begin) {
+            result.insert(base_begin, cbegin(contained).base());
+            base_begin = cbegin(contained).base();
+        }
+    }
+    
+    result.insert(base_end, cend(mappables));
+    
+    return result;
+}
+
+// count_shared
 
 /**
  Returns the number of Mappable elements in the range [first, last) that both lhs and rhs overlap.
  
  Requires [first, last) is sorted w.r.t GenomicRegion::operator<
  */
-template <typename BidirIt, typename MappableTp1, typename MappableTp2>
-size_t count_shared(BidirIt first, BidirIt last,
-                    const MappableTp1& lhs, const MappableTp2& rhs,
-                    MappableRangeOrder order = MappableRangeOrder::ForwardSorted)
+template <typename BidirIt, typename MappableTp1, typename MappableTp2, typename OrderTag>
+std::size_t count_shared(BidirIt first, BidirIt last,
+                         const MappableTp1& lhs, const MappableTp2& rhs,
+                         OrderTag)
 {
     using MappableTp3 = typename std::iterator_traits<BidirIt>::value_type;
     
@@ -654,8 +1191,8 @@ size_t count_shared(BidirIt first, BidirIt last,
                   && is_region_or_mappable<MappableTp3>,
                   "mappable algorithms only work for regions and mappable types");
     
-    const auto lhs_overlapped = overlap_range(first, last, lhs, order);
-    const auto rhs_overlapped = overlap_range(first, last, rhs, order);
+    const auto lhs_overlapped = overlap_range(first, last, lhs, OrderTag {});
+    const auto rhs_overlapped = overlap_range(first, last, rhs, OrderTag {});
     
     return (size(lhs_overlapped) <= size(rhs_overlapped)) ?
             std::count_if(lhs_overlapped.begin(), lhs_overlapped.end(),
@@ -664,12 +1201,11 @@ size_t count_shared(BidirIt first, BidirIt last,
                           [&lhs] (const auto& region) { return overlaps(region, lhs); });
 }
 
-template <typename Container, typename MappableTp1, typename MappableTp2>
-size_t count_shared(const Container& container,
-                       const MappableTp1& lhs, const MappableTp2& rhs,
-                       MappableRangeOrder order = MappableRangeOrder::ForwardSorted)
+template <typename Container, typename MappableTp1, typename MappableTp2, typename OrderTag>
+auto count_shared(const Container& container, const MappableTp1& lhs, const MappableTp2& rhs,
+                  OrderTag)
 {
-    return count_shared(std::cbegin(container), std::cend(container), lhs, rhs, order);
+    return count_shared(std::cbegin(container), std::cend(container), lhs, rhs, OrderTag {});
 }
 
 /**
@@ -677,10 +1213,10 @@ size_t count_shared(const Container& container,
  
  Requires [first, last) is sorted w.r.t GenomicRegion::operator<
  */
-template <typename BidirIt, typename MappableTp1, typename MappableTp2>
+template <typename BidirIt, typename MappableTp1, typename MappableTp2, typename OrderTag>
 bool has_shared(BidirIt first, BidirIt last,
                 const MappableTp1& lhs, const MappableTp2& rhs,
-                MappableRangeOrder order = MappableRangeOrder::ForwardSorted)
+                OrderTag)
 {
     using MappableTp3 = typename std::iterator_traits<BidirIt>::value_type;
     
@@ -688,8 +1224,8 @@ bool has_shared(BidirIt first, BidirIt last,
                   && is_region_or_mappable<MappableTp3>,
                   "mappable algorithms only work for regions and mappable types");
     
-    const auto lhs_overlapped = overlap_range(first, last, lhs, order);
-    const auto rhs_overlapped = overlap_range(first, last, rhs, order);
+    const auto lhs_overlapped = overlap_range(first, last, lhs, OrderTag {});
+    const auto rhs_overlapped = overlap_range(first, last, rhs, OrderTag {});
     
     return (size(lhs_overlapped) <= size(rhs_overlapped)) ?
             std::any_of(lhs_overlapped.begin(), lhs_overlapped.end(),
@@ -698,11 +1234,11 @@ bool has_shared(BidirIt first, BidirIt last,
                         [&lhs] (const auto& region) { return overlaps(region, lhs); });
 }
 
-template <typename Container, typename MappableTp1, typename MappableTp2>
+template <typename Container, typename MappableTp1, typename MappableTp2, typename OrderTag>
 bool has_shared(const Container& container, const MappableTp1& lhs, const MappableTp2& rhs,
-                MappableRangeOrder order = MappableRangeOrder::ForwardSorted)
+                OrderTag)
 {
-    return has_shared(std::cbegin(container), std::cend(container), lhs, rhs, order);
+    return has_shared(std::cbegin(container), std::cend(container), lhs, rhs, OrderTag {});
 }
 
 /**
@@ -711,11 +1247,11 @@ bool has_shared(const Container& container, const MappableTp1& lhs, const Mappab
  
  Requires [first1, last1) and [first2, last2) are sorted w.r.t GenomicRegion::operator<
  */
-template <typename BidirIt1, typename BidirIt2, typename MappableTp>
+template <typename BidirIt1, typename BidirIt2, typename MappableTp, typename OrderTag>
 BidirIt2 find_first_shared(BidirIt1 first1, BidirIt1 last1,
                            BidirIt2 first2, BidirIt2 last2,
                            const MappableTp& mappable,
-                           MappableRangeOrder order = MappableRangeOrder::ForwardSorted)
+                           OrderTag)
 {
     using MappableTp2 = typename std::iterator_traits<BidirIt1>::value_type;
     using MappableTp3 = typename std::iterator_traits<BidirIt2>::value_type;
@@ -725,10 +1261,21 @@ BidirIt2 find_first_shared(BidirIt1 first1, BidirIt1 last1,
                   "mappable algorithms only work for regions and mappable types");
     
     return std::find_if(first2, last2,
-                        [first1, last1, &mappable, order] (const auto& m) {
-                            return has_shared(first1, last1, m, mappable, order);
+                        [first1, last1, &mappable] (const auto& m) {
+                            return has_shared(first1, last1, m, mappable, OrderTag {});
                         });
 }
+
+//template <typename Container, typename ForwardIterator, typename MappableType>
+//ForwardIterator
+//find_first_shared(const Container& mappables,
+//                  ForwardIterator first, ForwardIterator last,
+//                  const MappableType& mappable)
+//{
+//    return std::find_if(first, last, [&mappables, &mappable] (const auto& m) {
+//        return mappables.has_shared(m, mappable);
+//    });
+//}
 
 /**
  Counts the number of Mappable elements in the range [first2 + 1, last2) that have shared
@@ -736,10 +1283,10 @@ BidirIt2 find_first_shared(BidirIt1 first1, BidirIt1 last1,
  
  Requires [first1, last1) and [first2, last2) to be sorted w.r.t GenomicRegion::operator<
  */
-template <typename BidirIt1, typename BidirIt2>
-size_t count_if_shared_with_first(BidirIt1 first1, BidirIt1 last1,
-                                  BidirIt2 first2, BidirIt2 last2,
-                                  MappableRangeOrder order = MappableRangeOrder::ForwardSorted)
+template <typename BidirIt1, typename BidirIt2, typename OrderTag>
+std::size_t count_if_shared_with_first(BidirIt1 first1, BidirIt1 last1,
+                                       BidirIt2 first2, BidirIt2 last2,
+                                       OrderTag)
 {
     using MappableTp1 = typename std::iterator_traits<BidirIt1>::value_type;
     using MappableTp2 = typename std::iterator_traits<BidirIt2>::value_type;
@@ -749,11 +1296,24 @@ size_t count_if_shared_with_first(BidirIt1 first1, BidirIt1 last1,
     
     if (first2 == last2) return 0;
     
-    const auto overlapped = overlap_range(first1, last1, *first2, order);
+    const auto overlapped = overlap_range(first1, last1, *first2, OrderTag {});
     
     if (empty(overlapped)) return 0;
     
-    return size(overlap_range(std::next(first2), last2, *std::prev(overlapped.end()), order));
+    return size(overlap_range(std::next(first2), last2, *std::prev(overlapped.end()), OrderTag {}));
+}
+
+template <typename Container, typename ForwardIt>
+std::size_t count_if_shared_with_first(const Container& mappables,
+                                       ForwardIt first, ForwardIt last)
+{
+    if (first == last) return 0;
+    
+    const auto overlapped = overlap_range(mappables, *first);
+    
+    if (empty(overlapped)) return 0;
+    
+    return count_overlapped(std::next(first), last, overlapped.back());
 }
 
 template <typename InputIt>
@@ -886,7 +1446,7 @@ auto encompassing_region(ForwardIt first, ForwardIt last)
 template <typename Container>
 auto encompassing_region(const Container& mappables)
 {
-    return encompassing_region(std::cbegin(mappables), std::cend(mappables));
+    return encompassing_region(leftmost_region(mappables), rightmost_region(mappables));
 }
 
 /**

@@ -447,7 +447,8 @@ bool ReadManager::could_reader_contain_region(const Path& reader_path, const Gen
     if (possible_regions_in_readers_.count(reader_path) == 0) return false;
     if (possible_regions_in_readers_.at(reader_path).count(region.get_contig_name()) == 0) return false;
     
-    return possible_regions_in_readers_.at(reader_path).at(region.get_contig_name()).has_overlapped(region.get_contig_region());
+    return has_overlapped(possible_regions_in_readers_.at(reader_path).at(region.get_contig_name()),
+                          region.get_contig_region());
 }
 
 std::vector<ReadManager::Path>

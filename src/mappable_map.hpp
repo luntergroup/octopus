@@ -83,7 +83,7 @@ has_overlapped(const MappableMap<KeyType, MappableType1>& mappables, const Mappa
 {
     return std::any_of(std::cbegin(mappables), std::cend(mappables),
                        [&mappable] (const auto& p) {
-                           return p.second.has_overlapped(mappable);
+                           return has_overlapped(p.second, mappable);
                        });
 }
 
@@ -95,7 +95,7 @@ count_overlapped(const MappableMap<KeyType, MappableType1>& mappables, const Map
     
     return std::accumulate(std::cbegin(mappables), std::cend(mappables), SizeType {0},
                            [&mappable] (const auto curr, const auto& p) {
-                               return curr + p.second.count_overlapped(mappable);
+                               return curr + count_overlapped(p.second, mappable);
                            });
 }
 
@@ -105,7 +105,7 @@ has_contained(const MappableMap<KeyType, MappableType1>& mappables, const Mappab
 {
     return std::any_of(std::cbegin(mappables), std::cend(mappables),
                        [&mappable] (const auto& p) {
-                           return p.second.has_contained(mappable);
+                           return has_contained(p.second, mappable);
                        });
 }
 
@@ -117,7 +117,7 @@ count_contained(const MappableMap<KeyType, MappableType1>& mappables, const Mapp
     
     return std::accumulate(std::cbegin(mappables), std::cend(mappables), SizeType {0},
                            [&mappable] (const auto curr, const auto& p) {
-                               return curr + p.second.count_contained(mappable);
+                               return curr + count_contained(p.second, mappable);
                            });
 }
 
@@ -207,7 +207,7 @@ leftmost_overlapped(const MappableMap<KeyType, MappableType1>& mappables, const 
     
     while (first != last) {
         if (!first->second.empty()) {
-            const auto overlapped = first->second.overlap_range(mappable);
+            const auto overlapped = overlap_range(first->second, mappable);
             if (!overlapped.empty()) {
                 result = std::cbegin(overlapped).base();
                 ++first;
@@ -218,7 +218,7 @@ leftmost_overlapped(const MappableMap<KeyType, MappableType1>& mappables, const 
     }
     
     std::for_each(first, last, [&mappable, &result] (const auto& p) {
-        const auto overlapped = p.second.overlap_range(mappable);
+        const auto overlapped = overlap_range(p.second, mappable);
         if (!overlapped.empty() && begins_before(overlapped.front(), *result)) {
             result = std::cbegin(overlapped).base();
         }
@@ -242,7 +242,7 @@ rightmost_overlapped(const MappableMap<KeyType, MappableType1>& mappables, const
     
     while (first != last) {
         if (!first->second.empty()) {
-            const auto overlapped = first->second.overlap_range(mappable);
+            const auto overlapped = overlap_range(first->second, mappable);
             if (!overlapped.empty()) {
                 result = rightmost_mappable(overlapped).base();
                 ++first;
@@ -253,7 +253,7 @@ rightmost_overlapped(const MappableMap<KeyType, MappableType1>& mappables, const
     }
     
     std::for_each(first, last, [&mappable, &result] (const auto& p) {
-        const auto overlapped = p.second.overlap_range(mappable);
+        const auto overlapped = overlap_range(p.second, mappable);
         if (!overlapped.empty()) {
             result = rightmost_mappable(overlapped).base();
         }

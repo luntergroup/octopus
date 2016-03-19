@@ -678,7 +678,7 @@ void set_phasings(GenotypeCalls& variant_genotype_calls,
             
             if (phase) {
                 const auto overlapped = overlap_range(called_regions, phase->get().get_region(),
-                                                      MappableRangeOrder::BidirectionallySorted);
+                                                      BidirectionallySortedTag {});
                 
                 assert(!overlapped.empty());
                 

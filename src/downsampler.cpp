@@ -161,7 +161,7 @@ std::size_t downsample(MappableFlatMultiSet<AlignedRead>& reads,
                   std::make_reverse_iterator(std::cbegin(regions_to_sample)),
                   [&] (const auto& region) {
                       //std::cout << "downsampling " << region << std::endl;
-                      const auto contained = bases(reads.contained_range(region));
+                      const auto contained = bases(contained_range(reads, region));
                       
                       auto coverage_requirements = calculate_minimum_coverages(contained, region,
                                                                                min_coverage);
