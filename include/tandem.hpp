@@ -153,7 +153,7 @@ namespace Tandem
         
         std::vector<uint32_t> result(suffix_array.size() + extra_capacity);
         
-        for (uint32_t i {0}, h {0}; i < (suffix_array.size() - extra_capacity); ++i) {
+        for (uint32_t i {0}, h {0}; i <(suffix_array.size() - extra_capacity); ++i) {
             if (rank[i] > 0) {
                 h += detail::forward_lce(str, i + h, suffix_array[rank[i] - 1] + h);
                 result[rank[i]] = h;
@@ -392,14 +392,11 @@ namespace Tandem
                                    [] (const auto curr, const auto& bucket) { return curr + bucket.size(); });
         }
         
-        template <typename T>
+        template <typename ForwardIt>
         std::vector<StringRun>
-        find_homopolymers(const T& sequence)
+        find_homopolymers(const ForwardIt first, const ForwardIt last)
         {
             std::vector<StringRun> result {};
-            
-            const auto first = std::cbegin(sequence);
-            const auto last  = std::cend(sequence);
             
             auto curr = first;
             
@@ -410,7 +407,8 @@ namespace Tandem
                 
                 const auto base = *it;
                 
-                const auto it2 = std::find_if_not(std::next(it), last, [base] (const auto b) { return b == base; });
+                const auto it2 = std::find_if_not(std::next(it), last,
+                                                  [base] (const auto b) { return b == base; });
                 
                 result.emplace_back(static_cast<std::uint32_t>(std::distance(first, it)),
                                     static_cast<std::uint32_t>(std::distance(it, it2)),
@@ -423,6 +421,111 @@ namespace Tandem
             
             return result;
         }
+        
+        template <typename T>
+        auto find_homopolymers(const T& str)
+        {
+            return find_homopolymers(std::cbegin(str), std::cend(str));
+        }
+        
+        template <typename ForwardIt>
+        std::vector<StringRun>
+        find_exact_dinucleotide_tandem_repeats(const ForwardIt first, const ForwardIt last)
+        {
+            std::vector<StringRun> result {};
+            
+            if (std::distance(first, last) < 4) return result;
+            
+            auto it1 = std::adjacent_find(first, last, std::not_equal_to<void> {});
+            auto it2 = std::next(it1, 2);
+            
+            while (it2 != last) {
+                const auto p = std::mismatch(it2, last, it1);
+                
+                if (p.second >= it2) {
+                    result.emplace_back(static_cast<uint32_t>(std::distance(first, it1)),
+                                        static_cast<uint32_t>(std::distance(it1, p.first)),
+                                        2);
+                    it1 = p.second;
+                } else {
+                    ++it1;
+                }
+                
+                it1 = std::adjacent_find(it1, last, std::not_equal_to<void> {});
+                
+                if (it1 == last) break;
+                
+                it2 = std::next(it1, 2);
+            }
+            
+            result.shrink_to_fit();
+            
+            return result;
+        }
+        
+        template <typename T>
+        auto find_exact_dinucleotide_tandem_repeats(const T& str)
+        {
+            return find_exact_dinucleotide_tandem_repeats(std::cbegin(str), std::cend(str));
+        }
+        
+        template <typename ForwardIt>
+        std::vector<StringRun>
+        find_exact_trinucleotide_tandem_repeats(const ForwardIt first, const ForwardIt last)
+        {
+            std::vector<StringRun> result {};
+            
+            const auto length = std::distance(first, last);
+            
+            if (length < 6) return result;
+            
+            result.reserve(length / 3);
+            
+            auto it1 = std::adjacent_find(first, last, std::not_equal_to<void> {});
+            auto it2 = std::next(it1, 3);
+            
+            while (it2 != last) {
+                const auto p = std::mismatch(it2, last, it1);
+                
+                if (p.second >= it2) {
+                    result.emplace_back(static_cast<uint32_t>(std::distance(first, it1)),
+                                        static_cast<uint32_t>(std::distance(it1, p.first)),
+                                        3);
+                    it1 = p.second;
+                } else {
+                    ++it1;
+                }
+                
+                it1 = std::adjacent_find(it1, last, std::not_equal_to<void> {});
+                
+                if (it1 == last) break;
+                
+                it2 = std::next(it1, 3);
+            }
+            
+            result.shrink_to_fit();
+            
+            return result;
+        }
+        
+        template <typename T>
+        auto find_exact_trinucleotide_tandem_repeats(const T& str)
+        {
+            return find_exact_trinucleotide_tandem_repeats(std::cbegin(str), std::cend(str));
+        }
+        
+        template <typename Container1, typename Container2>
+        void append(Container1& result, Container2&& new_result)
+        {
+            const auto it = result.insert(std::end(result),
+                                          std::make_move_iterator(std::begin(new_result)),
+                                          std::make_move_iterator(std::end(new_result)));
+            
+            std::inplace_merge(std::begin(result), it, std::end(result),
+                               [] (const StringRun& lhs, const StringRun& rhs) {
+                                   return lhs.pos < rhs.pos;
+                               });
+        }
     } // namespace detail
     
     /**
@@ -432,8 +535,18 @@ namespace Tandem
     std::vector<StringRun>
     find_maximal_repetitions(const T& str, const uint32_t min_period = 1, const uint32_t max_period = -1)
     {
-        if (max_period == 1) {
-            return detail::find_homopolymers(str); // optimise this case
+        if (max_period <= 3) {
+            auto result = detail::find_homopolymers(str);
+            
+            if (max_period > 1) {
+                detail::append(result, detail::find_exact_dinucleotide_tandem_repeats(str));
+            }
+            
+            if (max_period == 3) {
+                detail::append(result, detail::find_exact_trinucleotide_tandem_repeats(str));
+            }
+            
+            return result;
         }
         
         auto sorted_buckets = detail::find_maximal_repetitions(str, min_period, max_period);
