@@ -41,7 +41,7 @@ namespace Logging
     namespace logging  = boost::log;
     namespace src      = boost::log::sources;
     
-    enum class severity_level { debug, info, warning, error, fatal };
+    enum class severity_level { trace, debug, info, warning, error, fatal };
     
     std::ostream& operator<<(std::ostream& os, severity_level level);
     
@@ -49,7 +49,8 @@ namespace Logging
     
     BOOST_LOG_ATTRIBUTE_KEYWORD(severity, "Severity", severity_level)
     
-    void init(boost::optional<boost::filesystem::path> log);
+    void init(boost::optional<boost::filesystem::path> debug_log = boost::none,
+              boost::optional<boost::filesystem::path> trace_log = boost::none);
     
     template <severity_level L>
     class Logger
@@ -71,6 +72,7 @@ namespace Logging
         return lg;
     }
     
+    class TraceLogger : public Logger<severity_level::trace> {};
     class DebugLogger : public Logger<severity_level::debug> {};
     class InfoLogger : public Logger<severity_level::info> {};
     class WarningLogger : public Logger<severity_level::warning> {};

@@ -51,17 +51,19 @@
 
 namespace Octopus
 {
-    void log_startup(const bool debug_mode)
+    void log_startup()
     {
         Logging::InfoLogger log {};
-        log << "--------------------------------------------------------------------------------";
-        if (debug_mode) {
+        log << "------------------------------------------------------------------------";
+        if (TRACE_MODE) {
+            stream(log) << "Octopus v" << Octopus_version << " (trace mode)";
+        } else if (DEBUG_MODE) {
             stream(log) << "Octopus v" << Octopus_version << " (debug mode)";
         } else {
             stream(log) << "Octopus v" << Octopus_version;
         }
         log << "Copyright (c) 2016 University of Oxford";
-        log << "--------------------------------------------------------------------------------";
+        log << "------------------------------------------------------------------------";
     }
     
     namespace
@@ -671,8 +673,9 @@ namespace Octopus
     void run_octopus(po::variables_map& options)
     {
         DEBUG_MODE = Options::is_debug_mode(options);
+        TRACE_MODE = Options::is_trace_mode(options);
         
-        log_startup(DEBUG_MODE);
+        log_startup();
         
         const auto start = std::chrono::system_clock::now();
         

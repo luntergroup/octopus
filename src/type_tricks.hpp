@@ -110,4 +110,7 @@ using NonMapTag = MapTagImpl<false>;
 template <typename T>
 using MapTagType = MapTagImpl<is_map<T>>;
 
+template <typename T, typename V = void>
+using enable_if_map = std::enable_if_t<is_map<T>, V>;
+
 #endif /* type_tricks_hpp */

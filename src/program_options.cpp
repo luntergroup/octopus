@@ -173,7 +173,9 @@ namespace Octopus
             ("help,h", "Produce help message")
             ("version", "Output the version number")
             ("debug", po::bool_switch()->default_value(false),
-             "Writes very verbose debug information to debug.log in the working directory")
+             "Writes verbose debug information to debug.log in the working directory")
+            ("trace", po::bool_switch()->default_value(false),
+             "Writes very verbose debug information to trace.log in the working directory. For developer use only")
             ;
             
             po::options_description backend("Backend options");
@@ -393,6 +395,11 @@ namespace Octopus
         return options.at("debug").as<bool>();
     }
     
+    bool is_trace_mode(const po::variables_map& options)
+    {
+        return options.at("trace").as<bool>();
+    }
+    
     struct Line
     {
         std::string line_data;
@@ -569,13 +576,28 @@ namespace Octopus
         return static_cast<std::size_t>(scale * options.at("target-read-buffer-size").as<float>());
     }
     
-    boost::optional<fs::path> get_log_file_name(const po::variables_map& options)
+    boost::optional<fs::path> get_debug_log_file_name(const po::variables_map& options)
     {
         if (options.at("debug").as<bool>()) {
             const auto result = resolve_path("octopus_debug.log", options);
             
             if (!result) {
                 throw std::runtime_error {"Could not resolve debug log file"};
+            }
+            
+            return *result;
+        }
+        
+        return boost::none;
+    }
+    
+    boost::optional<fs::path> get_trace_log_file_name(const po::variables_map& options)
+    {
+        if (options.at("trace").as<bool>()) {
+            const auto result = resolve_path("octopus_trace.log", options);
+            
+            if (!result) {
+                throw std::runtime_error {"Could not resolve trace log file"};
             }
             
             return *result;

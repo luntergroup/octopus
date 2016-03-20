@@ -22,6 +22,7 @@
 namespace Octopus
 {
     extern bool DEBUG_MODE;
+    extern bool TRACE_MODE;
     
     const static std::string Octopus_version {"1.0"};
     

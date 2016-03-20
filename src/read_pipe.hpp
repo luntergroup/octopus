@@ -30,22 +30,24 @@
  
  Rather than just fetching all reads for all samples in one go and processing, we can be a bit more 
  clever and fetch reads in batches (e.g. each sample, or regions in samples). This could potentially 
- decrease avergae memory consumption (and also increase runtime performance) by only minimising the
+ decrease avergae memory consumption (and also increase runtime performance) by minimising the
  number of 'bad' reads in memory. If we are really short on memory we could even compress filtered 
  read batches while we process other batches.
  */
 
-namespace Octopus {
-
+namespace Octopus
+{
 class ReadPipe
 {
 public:
     ReadPipe() = delete;
+    
     explicit ReadPipe(ReadManager& read_manager,
                       ReadFilterer read_filter,
                       boost::optional<Downsampler> downsampler,
                       ReadTransform read_transform,
                       std::vector<SampleIdType> samples);
+    
     ~ReadPipe() = default;
     
     ReadPipe(const ReadPipe&)            = delete;
@@ -88,7 +90,6 @@ private:
     double average_coverage(const SampleIdType& sample) const noexcept;
     double average_coverage(const SampleIdType& sample, const ContigIdType& contig) const noexcept;
 };
-    
 } // namespace Octopus
 
 #endif /* read_pipe_hpp */

@@ -134,6 +134,19 @@ namespace Octopus
     
     namespace debug
     {
+        template <typename S>
+        void print_phase_sets(S&& stream, const Phaser::PhaseSet& phasings)
+        {
+            stream << "Phased region is " << phasings.region << '\n';
+            
+            for (const auto& p : phasings.phase_regions) {
+                stream << "\tPhase regions for sample " << p.first << '\n';
+                for (const auto& r : p.second) {
+                    stream << "\t\t* " << r.region << " " << r.score << '\n';
+                }
+            }
+        }
+        
         void print_phase_sets(const Phaser::PhaseSet& phasings);
     }
 } // namespace Octopus

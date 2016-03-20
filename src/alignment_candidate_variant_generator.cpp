@@ -22,13 +22,8 @@
 
 #include <iostream> // DEBUG
 
-namespace Octopus {
-
-template <typename SequenceType>
-bool is_good_sequence(const SequenceType& sequence) noexcept
+namespace Octopus
 {
-    return std::none_of(std::cbegin(sequence), std::cend(sequence), [] (auto base) { return base == 'N'; });
-}
 
 // public methods
 
@@ -49,6 +44,19 @@ max_seen_candidate_size_ {}
 bool AlignmentCandidateVariantGenerator::requires_reads() const noexcept
 {
     return true;
+}
+
+template <typename SequenceType>
+bool is_good_sequence(const SequenceType& sequence) noexcept
+{
+    return std::none_of(std::cbegin(sequence), std::cend(sequence), [] (auto base) { return base == 'N'; });
+}
+
+template <typename SequenceType, typename T>
+SequenceType splice(const SequenceType& sequence, const T pos, const T size)
+{
+    const auto it = std::next(std::cbegin(sequence), pos);
+    return SequenceType {it, std::next(it, size)};
 }
 
 void AlignmentCandidateVariantGenerator::add_read(const AlignedRead& read)
@@ -86,10 +94,11 @@ void AlignmentCandidateVariantGenerator::add_read(const AlignedRead& read)
                 region = GenomicRegion {read_contig, ref_index, ref_index + op_size};
                 
                 auto removed_sequence = reference_.get().get_sequence(region);
-                auto added_sequence   = read_sequence.substr(read_index, op_size);
+                auto added_sequence   = splice(read_sequence, read_index, op_size);
                 
                 if (is_good_sequence(removed_sequence) && is_good_sequence(added_sequence)) {
-                    add_candidate(region, std::move(removed_sequence), std::move(added_sequence));
+                    add_candidate(std::move(region), std::move(removed_sequence),
+                                  std::move(added_sequence));
                 }
                 
                 read_index += op_size;
@@ -99,7 +108,7 @@ void AlignmentCandidateVariantGenerator::add_read(const AlignedRead& read)
             }
             case CigarOperation::INSERTION:
             {
-                auto added_sequence = read_sequence.substr(read_index, op_size);
+                auto added_sequence = splice(read_sequence, read_index, op_size);
                 
                 if (is_good_sequence(added_sequence)) {
                     add_candidate(GenomicRegion {read_contig, ref_index, ref_index},
@@ -116,9 +125,8 @@ void AlignmentCandidateVariantGenerator::add_read(const AlignedRead& read)
                 
                 auto removed_sequence = reference_.get().get_sequence(region);
                 
-                if (is_good_sequence(removed_sequence)) {
-                    add_candidate(region, std::move(removed_sequence), "");
-                }
+                // Don't check deletions for good s
+                add_candidate(std::move(region), std::move(removed_sequence), "");
                 
                 ref_index += op_size;
                 

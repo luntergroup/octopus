@@ -12,6 +12,7 @@
 
 #include "read_utils.hpp"
 #include "mappable_algorithms.hpp"
+#include "logging.hpp"
 
 #include <iostream> // DEBUG
 #include "timers.hpp"
@@ -63,7 +64,12 @@ ReadMap ReadPipe::fetch_reads(const GenomicRegion& region)
         erase_filtered_reads(batch_reads, filter(batch_reads, read_filter_));
         
         if (downsampler_) {
-            downsampler_->downsample(batch_reads);
+            const auto n = downsampler_->downsample(batch_reads);
+            
+            if (DEBUG_MODE) {
+                Logging::DebugLogger log {};
+                stream(log) << "Downsampling removed " << n << " reads from region " << region;
+            }
         }
         
         transform_reads(batch_reads, read_transform_);

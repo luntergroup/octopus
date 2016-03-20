@@ -25,7 +25,8 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--help",
         //"--version",
         
-        "--debug",
+        //"--debug",
+        //"--trace",
         
         //"--samples", "NOT-A-SAMPLE",
         
@@ -72,7 +73,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         
         // for population
         
-        "--regions", "22:39,258,465-39,258,629",
+        //"--regions", "22:39,258,465-39,258,629",
         
         //"--regions", "22:16,103,653-16,103,957", // 5 haplotypes??
         
@@ -106,7 +107,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--regions", "Y:13451184-13451197", // crazy Y haplotypes NA12878
         //"--regions", "22:37,276,961-37,277,045", // interesting dual deletions NA12878
         //"--regions", "22:23,474,658-23,475,205", // complex insertion/SNP NA12878
-        //"--regions", "22:16,231,876-16,232,206", // Complex phasing region
+        "--regions", "22:16,231,876-16,232,206", // Complex phasing region
         //"--regions", "22:16,139,705-16,140,266", // NA12878_high_coverage complex region
         //"-L", "6:31,235,688-31,235,883", // TEST phaser
         //"-L", "5:2,726,554-2,726,594", // snp just before deletion
@@ -161,7 +162,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--max-haplotypes", "1024",
         
         "--min-variant-posterior", "10",
-        "--min-refcall-posterior", "1",
+        "--min-refcall-posterior", "0",
         "--min-somatic-posterior", "2",
         
         "--somatics-only",

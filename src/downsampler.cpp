@@ -55,12 +55,11 @@ sample(const InputIt first_read, const InputIt last_read, const GenomicRegion& r
         
         const auto sample_position = covers(generator);
         
-        const auto overlapped = overlap_range(cbegin(unsampled_reads), cend(unsampled_reads),
-                                              positions[sample_position]);
+        const auto overlapped = overlap_range(unsampled_reads, positions[sample_position]);
         
         assert(!overlapped.empty());
         
-        const auto num_overlapped = std::distance(begin(overlapped), end(overlapped));
+        const auto num_overlapped = size(overlapped);
         
         std::uniform_int_distribution<std::size_t> read_sampler(0, num_overlapped - 1);
         

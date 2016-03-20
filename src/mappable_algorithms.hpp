@@ -1316,6 +1316,8 @@ std::size_t count_if_shared_with_first(const Container& mappables,
     return count_overlapped(std::next(first), last, overlapped.back());
 }
 
+// extract_regions
+
 template <typename InputIt>
 auto extract_regions(InputIt first, InputIt last)
 {
@@ -1338,6 +1340,8 @@ auto extract_regions(const Container& mappables)
 {
     return extract_regions(std::cbegin(mappables), std::cend(mappables));
 }
+
+// decompose
 
 namespace detail
 {
@@ -1424,6 +1428,8 @@ auto decompose(const MappableTp& mappable, GenomicRegion::SizeType n)
     return result;
 }
 
+// encompassing_region
+
 /**
  Returns the GenomicRegion encompassed by the elements in the range [first, last).
  
@@ -1448,6 +1454,8 @@ auto encompassing_region(const Container& mappables)
 {
     return encompassing_region(leftmost_region(mappables), rightmost_region(mappables));
 }
+
+// extract_covered_regions
 
 /**
  Returns the minimal range of non-overlapping GenomicRegion's such that each element in the range [first, last)
@@ -1497,6 +1505,8 @@ auto extract_covered_regions(const Container& mappables)
 {
     return extract_covered_regions(std::cbegin(mappables), std::cend(mappables));
 }
+
+// extract_intervening_regions
 
 /**
  Returns all intervening GenomicRegion's between non-overlapping mappables in the range 
@@ -1576,6 +1586,8 @@ auto extract_intervening_regions(const Container& mappables, const Mappable& map
 {
     return extract_intervening_regions(std::cbegin(mappables), std::cend(mappables), mappable);
 }
+
+// segment_*
 
 template <typename ForwardIt>
 auto segment_overlapped(ForwardIt first, ForwardIt last)
@@ -1700,39 +1712,13 @@ auto all_segment_regions(const std::vector<std::vector<MappableTp>>& segments)
     return result;
 }
 
-//template <typename InputIt>
-//bool has_coverage(InputIt first, InputIt last, const GenomicRegion& region)
-//{
-//    const auto overlapped = overlap_range(first, last);
-//    return std::any_of(std::cbegin(overlapped), std::cend(overlapped),
-//                       [] (const auto& mappable) { return !empty(mappable); });
-//}
-//
-//template <typename InputIt>
-//bool has_coverage(InputIt first, InputIt last)
-//{
-//    return std::any_of(first, last, [] (const auto& mappable) { return !empty(mappable); });
-//}
-//
-//template <typename Container>
-//bool has_coverage(const Container& mappables)
-//{
-//    return has_coverage(std::cbegin(mappables), std::cend(mappables));
-//}
-//
-//template <typename Container>
-//bool has_coverage(const Container& mappables, const GenomicRegion& region)
-//{
-//    return has_coverage(std::cbegin(mappables), std::cend(mappables), region);
-//}
+// calculate_positional_coverage
 
-template <typename ForwardIt, typename RegionTp>
+template <typename ForwardIt, typename RegionTp,
+          typename = EnableIfRegionOrMappable<typename std::iterator_traits<ForwardIt>::value_type>>
 auto calculate_positional_coverage(ForwardIt first, ForwardIt last, const RegionTp& region)
 {
     using MappableTp = typename std::iterator_traits<ForwardIt>::value_type;
-    
-    static_assert(is_region_or_mappable<MappableTp>,
-                  "mappable algorithms only work for regions and mappable types");
     
     static_assert(std::is_same<RegionType<MappableTp>, RegionTp>::value,
                   "RegionType of input range must match RegionTp");
@@ -1756,23 +1742,115 @@ auto calculate_positional_coverage(ForwardIt first, ForwardIt last, const Region
     return result;
 }
 
-template <typename ForwardIt>
+template <typename ForwardIt,
+          typename = EnableIfRegionOrMappable<typename std::iterator_traits<ForwardIt>::value_type>>
 auto calculate_positional_coverage(ForwardIt first, ForwardIt last)
 {
     return calculate_positional_coverage(first, last, encompassing_region(first, last));
 }
 
-template <typename Container>
+template <typename Container,
+          typename = EnableIfMappable<typename Container::value_type>>
 auto calculate_positional_coverage(const Container& mappables)
 {
     return calculate_positional_coverage(std::cbegin(mappables), std::cend(mappables));
 }
 
-template <typename Container, typename RegionTp>
+template <typename Container, typename RegionTp,
+          typename = EnableIfRegionOrMappable<typename Container::value_type>>
 auto calculate_positional_coverage(const Container& mappables, const RegionTp& region)
 {
+    using MappableTp = typename Container::value_type;
+    
+    static_assert(std::is_same<RegionType<MappableTp>, RegionTp>::value,
+                  "RegionType of input range must match RegionTp");
+    
     const auto overlapped = overlap_range(mappables, region);
+    
     return calculate_positional_coverage(std::cbegin(overlapped), std::cend(overlapped), region);
+}
+
+template <typename Container, typename RegionTp,
+          typename = EnableIfRegionOrMappable<typename Container::value_type>>
+bool has_coverage(const Container& mappables, const RegionTp& region)
+{
+    using MappableTp = typename Container::value_type;
+    
+    static_assert(std::is_same<RegionType<MappableTp>, RegionTp>::value,
+                  "RegionType of input range must match RegionTp");
+    
+    if (mappables.empty() || is_empty_region(region)) return false;
+    
+    const auto overlapped = overlap_range(mappables, region);
+    
+    return std::any_of(std::cbegin(overlapped), std::cend(overlapped),
+                       [] (const auto& mappable) {
+                           return !is_empty_region(mappable);
+                       });
+}
+
+template <typename Container,
+          typename = EnableIfRegionOrMappable<typename Container::value_type>>
+bool has_coverage(const Container& mappables)
+{
+    return std::any_of(std::cbegin(mappables), std::cend(mappables),
+                       [] (const auto& mappable) {
+                           return !is_empty_region(mappable);
+                       });
+}
+
+template <typename Container, typename RegionTp,
+          typename = EnableIfRegionOrMappable<typename Container::value_type>>
+unsigned min_coverage(const Container& mappables, const RegionTp& region)
+{
+    using MappableTp = typename Container::value_type;
+    
+    static_assert(std::is_same<RegionType<MappableTp>, RegionTp>::value,
+                  "RegionType of input range must match RegionTp");
+    
+    if (mappables.empty() || is_empty_region(region)) return 0;
+    
+    const auto positional_coverage = calculate_positional_coverage(mappables, region);
+    
+    return *std::min_element(std::cbegin(positional_coverage), std::cend(positional_coverage));
+}
+
+template <typename Container,
+          typename = EnableIfRegionOrMappable<typename Container::value_type>>
+unsigned min_coverage(const Container& mappables)
+{
+    if (mappables.empty()) return 0;
+    
+    const auto positional_coverage = calculate_positional_coverage(mappables);
+    
+    return *std::min_element(std::cbegin(positional_coverage), std::cend(positional_coverage));
+}
+
+template <typename Container, typename RegionTp,
+          typename = EnableIfRegionOrMappable<typename Container::value_type>>
+unsigned max_coverage(const Container& mappables, const RegionTp& region)
+{
+    using MappableTp = typename Container::value_type;
+    
+    static_assert(std::is_same<RegionType<MappableTp>, RegionTp>::value,
+                  "RegionType of input range must match RegionTp");
+    
+    if (mappables.empty() || is_empty_region(region)) return 0;
+    
+    const auto positional_coverage = calculate_positional_coverage(mappables, region);
+    
+    return *std::max_element(std::cbegin(positional_coverage), std::cend(positional_coverage));
+}
+
+template <typename Container,
+          typename = EnableIfRegionOrMappable<typename Container::value_type>>
+unsigned max_coverage(const Container& mappables)
+{
+    if (mappables.empty()) return 0;
+    
+    const auto positional_coverage = calculate_positional_coverage(mappables);
+    
+    return *std::max_element(std::cbegin(positional_coverage), std::cend(positional_coverage));
 }
 
 #endif

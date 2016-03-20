@@ -180,6 +180,12 @@ namespace Octopus
             }
         }
         
+        if (DEBUG_MODE && !unused_alleles.empty()) {
+            Logging::DebugLogger log {};
+            stream(log) << "Removing " << unused_alleles.size() << " unused alleles from generator:";
+            for (const auto& allele : unused_alleles) stream(log) << allele;
+        }
+        
         alleles_.erase_all(std::cbegin(unused_alleles), std::cend(unused_alleles));
         
         active_allele_counts_.clear();
@@ -204,19 +210,17 @@ namespace Octopus
             
             std::deque<Allele> removed_alleles {};
             
-//            std::cout << "removing haplotypes" << '\n';
-//            for (const auto& haplotype : haplotypes) {
-//                print_variant_alleles(haplotype); std::cout << '\n';
-//            }
-            
             for (const auto& allele : overlap_range(alleles_, current_active_region_)) {
-                //std::cout << allele << " " << active_allele_counts_[allele] << " " << count_contained(allele, haplotypes) << '\n';
                 if (active_allele_counts_[allele] == count_contained(allele, haplotypes)) {
                     removed_alleles.push_back(allele);
                 }
             }
             
-            //std::cout << "removed " << removed_alleles.size() << " alleles" << std::endl;
+            if (DEBUG_MODE && !removed_alleles.empty()) {
+                Logging::DebugLogger log {};
+                stream(log) << "Removing " << removed_alleles.size() << " from generator:";
+                for (const auto& allele : removed_alleles) stream(log) << allele;
+            }
             
             alleles_.erase_all(std::cbegin(removed_alleles), std::cend(removed_alleles));
             
@@ -316,7 +320,8 @@ namespace Octopus
     template <typename Range>
     auto sum_indel_sizes(const Range& alleles)
     {
-        return std::accumulate(std::cbegin(alleles), std::cend(alleles), GenomicRegion::SizeType {0},
+        return std::accumulate(std::cbegin(alleles), std::cend(alleles),
+                               GenomicRegion::SizeType {0},
                                [] (const auto curr, const Allele& allele) {
                                    if (is_insertion(allele)) {
                                        return curr + sequence_size(allele);

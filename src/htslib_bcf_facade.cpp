@@ -431,7 +431,7 @@ auto get_qual(const bcf1_t* record)
 
 void set_qual(bcf1_t* record, const VcfRecord::QualityType qual)
 {
-    record->qual = static_cast<float>(qual);
+    record->qual = (qual == -0) ? 0 : static_cast<float>(qual);
 }
 
 auto get_filter(const bcf_hdr_t* header, const bcf1_t* record)

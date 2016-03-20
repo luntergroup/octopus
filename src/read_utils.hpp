@@ -65,27 +65,39 @@ namespace detail
     } // namespace
     
     template <typename T>
+    bool has_coverage(const T& reads, NonMapTag)
+    {
+        return ::has_coverage(reads);
+    }
+    
+    template <typename T>
     bool has_coverage(const T& reads, const GenomicRegion& region, NonMapTag)
     {
-        const auto overlapped = overlap_range(reads, region);
-        return std::any_of(std::cbegin(overlapped), std::cend(overlapped),
-                           [] (const auto& read) { return !is_empty_region(read); });
+        return ::has_coverage(reads, region);
+    }
+    
+    template <typename T>
+    unsigned min_coverage(const T& reads, NonMapTag)
+    {
+        return ::min_coverage(reads);
     }
     
     template <typename T>
     unsigned min_coverage(const T& reads, const GenomicRegion& region, NonMapTag)
     {
-        if (reads.empty() || is_empty_region(region)) return 0;
-        const auto positional_coverage = calculate_positional_coverage(reads, region);
-        return *std::min_element(std::cbegin(positional_coverage), std::cend(positional_coverage));
+        return ::min_coverage(reads, region);
+    }
+    
+    template <typename T>
+    unsigned max_coverage(const T& reads, NonMapTag)
+    {
+        return ::max_coverage(reads);
     }
     
     template <typename T>
     unsigned max_coverage(const T& reads, const GenomicRegion& region, NonMapTag)
     {
-        if (reads.empty() || is_empty_region(region)) return 0;
-        const auto positional_coverage = calculate_positional_coverage(reads, region);
-        return *std::max_element(std::cbegin(positional_coverage), std::cend(positional_coverage));
+        return ::max_coverage(reads, region);
     }
     
     template <typename T>
@@ -619,40 +631,40 @@ namespace detail
     }
 } // namespace detail
 
-template <typename T>
+template <typename T, typename = enable_if_map<T>>
 bool has_coverage(const T& reads)
 {
-    return detail::has_coverage(reads, MapTagType<T> {});
+    return detail::has_coverage(reads, MapTag {});
 }
 
-template <typename T>
+template <typename T, typename = enable_if_map<T>>
 bool has_coverage(const T& reads, const GenomicRegion& region)
 {
-    return detail::has_coverage(reads, region, MapTagType<T> {});
+    return detail::has_coverage(reads, region, MapTag {});
 }
 
-template <typename T>
+template <typename T, typename = enable_if_map<T>>
 unsigned min_coverage(const T& reads)
 {
-    return detail::min_coverage(reads, MapTagType<T> {});
+    return detail::min_coverage(reads, MapTag {});
 }
 
-template <typename T>
+template <typename T, typename = enable_if_map<T>>
 unsigned min_coverage(const T& reads, const GenomicRegion& region)
 {
-    return detail::min_coverage(reads, region, MapTagType<T> {});
+    return detail::min_coverage(reads, region, MapTag {});
 }
 
-template <typename T>
+template <typename T, typename = enable_if_map<T>>
 unsigned max_coverage(const T& reads)
 {
-    return detail::max_coverage(reads, MapTagType<T> {});
+    return detail::max_coverage(reads, MapTag {});
 }
 
-template <typename T>
+template <typename T, typename = enable_if_map<T>>
 unsigned max_coverage(const T& reads, const GenomicRegion& region)
 {
-    return detail::max_coverage(reads, region, MapTagType<T> {});
+    return detail::max_coverage(reads, region, MapTag {});
 }
 
 template <typename T>

@@ -229,19 +229,17 @@ namespace Octopus
     init_genotype_posteriors(const GenotypeLogMarginals& genotype_log_marginals,
                              const GenotypeLogLikelihoodMap& genotype_log_likilhoods)
     {
-        using std::cbegin; using std::cend; using std::begin; using std::transform;
-        
         GenotypePosteriorMap result {genotype_log_likilhoods.size()};
         
         for (const auto& sample_genotype_log_likilhoods : genotype_log_likilhoods) {
             SampleGenotypePosteriors sample_result(genotype_log_marginals.size());
             
-            transform(cbegin(genotype_log_marginals), cend(genotype_log_marginals),
-                      cbegin(sample_genotype_log_likilhoods.second),
-                      begin(sample_result),
-                      [] (const auto& genotype_log_marginal, const auto genotype_log_likilhood) {
-                          return genotype_log_marginal.log_probability + genotype_log_likilhood;
-                      });
+            std::transform(std::cbegin(genotype_log_marginals), std::cend(genotype_log_marginals),
+                           std::cbegin(sample_genotype_log_likilhoods.second),
+                           std::begin(sample_result),
+                           [] (const auto& genotype_log_marginal, const auto genotype_log_likilhood) {
+                               return genotype_log_marginal.log_probability + genotype_log_likilhood;
+                           });
             
             normalise_exp(sample_result);
             
@@ -255,15 +253,13 @@ namespace Octopus
                                     const GenotypeLogMarginals& genotype_log_marginals,
                                     const GenotypeLogLikelihoodMap& genotype_log_likilhoods)
     {
-        using std::cbegin; using std::cend; using std::begin; using std::transform;
-        
         for (auto& sample_genotype_posteriors : current_genotype_posteriors) {
-            transform(cbegin(genotype_log_marginals), cend(genotype_log_marginals),
-                      cbegin(genotype_log_likilhoods.at(sample_genotype_posteriors.first)),
-                      begin(sample_genotype_posteriors.second),
-                      [] (const auto& genotype_log_marginal, const auto& genotype_log_likilhood) {
-                          return genotype_log_marginal.log_probability + genotype_log_likilhood;
-                      });
+            std::transform(std::cbegin(genotype_log_marginals), std::cend(genotype_log_marginals),
+                           std::cbegin(genotype_log_likilhoods.at(sample_genotype_posteriors.first)),
+                           std::begin(sample_genotype_posteriors.second),
+                           [] (const auto& log_marginal, const auto& log_likilhood) {
+                               return log_marginal.log_probability + log_likilhood;
+                           });
             normalise_exp(sample_genotype_posteriors.second);
         }
     }
@@ -400,8 +396,13 @@ namespace Octopus
         const auto genotype_log_likilhoods = compute_genotype_log_likelihoods(samples, genotypes,
                                                                               haplotype_likelihoods);
         
-        if (DEBUG_MODE) {
-            debug::print_genotype_log_likelihoods(stream(log), genotypes, genotype_log_likilhoods, -1);
+        if (TRACE_MODE) {
+            Logging::TraceLogger trace_log {};
+            debug::print_genotype_log_likelihoods(stream(trace_log), genotypes,
+                                                  genotype_log_likilhoods, -1);
+        } else if (DEBUG_MODE) {
+            debug::print_genotype_log_likelihoods(stream(log), genotypes,
+                                                  genotype_log_likilhoods);
         }
         
         auto haplotype_prior_count_map = compute_haplotype_prior_counts(haplotype_priors);
@@ -451,7 +452,7 @@ namespace Octopus
         {
             auto m = std::min(prior_counts.size(), n);
             
-            std::cout << "printing top " << m << " haplotype prior counts" << std::endl;
+            std::cout << "Printing top " << m << " haplotype prior counts" << std::endl;
             
             std::vector<std::pair<Haplotype, double>> v {};
             v.reserve(prior_counts.size());
@@ -471,7 +472,7 @@ namespace Octopus
         {
             auto m = std::min(haplotype_frequencies.size(), n);
             
-            std::cout << "printing top " << m << " haplotype frequencies" << std::endl;
+            std::cout << "Printing top " << m << " haplotype frequencies" << std::endl;
             
             std::vector<std::pair<Haplotype, double>> v {};
             v.reserve(haplotype_frequencies.size());
@@ -492,7 +493,7 @@ namespace Octopus
         {
             auto m = std::min(genotypes.size(), n);
             
-            std::cout << "printing top " << m << " genotype log marginals" << std::endl;
+            std::cout << "Printing top " << m << " genotype log marginals" << std::endl;
             
             std::vector<std::pair<Genotype<Haplotype>, double>> v {};
             v.reserve(genotypes.size());
@@ -521,9 +522,9 @@ namespace Octopus
             const auto m = std::min(genotypes.size(), n);
             
             if (m == genotypes.size()) {
-                stream << "printing all genotype likelihoods for each sample" << '\n';
+                stream << "Printing all genotype likelihoods for each sample" << '\n';
             } else {
-                stream << "printing top " << m << " genotype likelihoods for each sample" << '\n';
+                stream << "Printing top " << m << " genotype likelihoods for each sample" << '\n';
             }
             
             for (const auto& sample_likelihoods : log_likelihoods) {
@@ -567,7 +568,7 @@ namespace Octopus
         {
             const auto m = std::min(genotypes.size(), n);
             
-            std::cout << "printing top " << m << " genotype posterior for each sample" << std::endl;
+            std::cout << "Printing top " << m << " genotype posterior for each sample" << std::endl;
             
             for (const auto& sample_posteriors : genotype_posteriors) {
                 std::cout << sample_posteriors.first << ":" << std::endl;

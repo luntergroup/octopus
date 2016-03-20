@@ -14,12 +14,11 @@
 #include <cstddef>
 #include <cmath>
 #include <utility>
+#include <iostream>
 
 #include <boost/functional/hash.hpp>
 
 #include "mappable_algorithms.hpp"
-
-#include <iostream> // DEBUG
 
 namespace Octopus
 {
@@ -214,6 +213,7 @@ namespace Octopus
                       const GenotypePosteriorMap& genotype_posteriors,
                       const std::vector<Variant>& candidates)
     {
+        // TODO
         return boost::none;
     }
     
@@ -300,14 +300,7 @@ namespace Octopus
     {
         void print_phase_sets(const Phaser::PhaseSet& phasings)
         {
-            std::cout << "phased region is " << phasings.region << '\n';
-            
-            for (const auto& p : phasings.phase_regions) {
-                std::cout << "\tphase regions for sample " << p.first << '\n';
-                for (const auto& r : p.second) {
-                    std::cout << "\t\t" << r.region << " " << r.score << '\n';
-                }
-            }
+            print_phase_sets(std::cout, phasings);
         }
     } // namespace debug
 } // namespace Ocotpus

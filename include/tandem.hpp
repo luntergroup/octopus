@@ -153,7 +153,7 @@ namespace Tandem
         
         std::vector<uint32_t> result(suffix_array.size() + extra_capacity);
         
-        for (uint32_t i {0}, h {0}; i <(suffix_array.size() - extra_capacity); ++i) {
+        for (uint32_t i {0}, h {0}; i < (suffix_array.size() - extra_capacity); ++i) {
             if (rank[i] > 0) {
                 h += detail::forward_lce(str, i + h, suffix_array[rank[i] - 1] + h);
                 result[rank[i]] = h;

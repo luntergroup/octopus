@@ -34,7 +34,8 @@ int main(int argc, const char **argv)
     try {
         if (options) {
             if (Octopus::Options::is_run_command(*options)) {
-                Octopus::Logging::init(Octopus::Options::get_log_file_name(*options));
+                Octopus::Logging::init(Octopus::Options::get_debug_log_file_name(*options),
+                                       Octopus::Options::get_trace_log_file_name(*options));
                 Octopus::run_octopus(*options);
             }
         } else {

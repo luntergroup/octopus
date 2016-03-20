@@ -46,10 +46,10 @@ double BasicHaplotypePriorModel::do_evaluate(const Haplotype& to, const Haplotyp
 {
     const auto mutations = to.difference(from);
     
-    double result {1.0};
+    double result {1};
     
-    auto has_indels = std::any_of(std::cbegin(mutations), std::cend(mutations),
-                                  [] (const auto& variant) { return is_indel(variant); });
+//    auto has_indels = std::any_of(std::cbegin(mutations), std::cend(mutations),
+//                                  [] (const auto& variant) { return is_indel(variant); });
     
     //const auto repeats = (has_indels) ? extract_exact_tandem_repeats(from) : std::vector<TandemRepeat> {};
     

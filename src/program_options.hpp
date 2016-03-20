@@ -47,12 +47,14 @@ namespace Options
     bool is_run_command(const po::variables_map& options);
     
     bool is_debug_mode(const po::variables_map& options);
+    bool is_trace_mode(const po::variables_map& options);
+    
+    boost::optional<fs::path> get_debug_log_file_name(const po::variables_map& options);
+    boost::optional<fs::path> get_trace_log_file_name(const po::variables_map& options);
     
     boost::optional<unsigned> get_num_threads(const po::variables_map& options);
     
     std::size_t get_target_read_buffer_size(const po::variables_map& options);
-    
-    boost::optional<fs::path> get_log_file_name(const po::variables_map& options);
     
     boost::optional<ReferenceGenome> make_reference(const po::variables_map& options);
     
