@@ -35,7 +35,19 @@ namespace Octopus
 class VariantCaller
 {
 public:
-    enum class RefCallType { Positional, Blocked, None };
+    enum class RefCallType { None, Blocked, Positional };
+    
+    struct CallerParameters
+    {
+        CallerParameters() = default;
+        explicit CallerParameters(unsigned max_haplotypes, RefCallType refcall_type,
+                                  bool call_sites_only);
+        ~CallerParameters() = default;
+        
+        unsigned max_haplotypes;
+        RefCallType refcall_type;
+        bool call_sites_only;
+    };
     
     using ReadMap = Octopus::ReadMap;
     
@@ -44,10 +56,8 @@ public:
     explicit VariantCaller(const ReferenceGenome& reference,
                            ReadPipe& read_pipe,
                            CandidateVariantGenerator&& candidate_generator,
-                           unsigned max_haplotypes,
                            std::unique_ptr<HaplotypePriorModel> haplotype_prior_model,
-                           RefCallType refcall_type = RefCallType::None,
-                           bool call_sites_only = false);
+                           CallerParameters parameters);
     
     virtual ~VariantCaller() = default;
     

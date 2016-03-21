@@ -39,23 +39,28 @@ namespace Octopus
 
 // public methods
 
+PopulationVariantCaller::CallerParameters::CallerParameters(double min_variant_posterior,
+                                                            double min_refcall_posterior,
+                                                            unsigned ploidy)
+:
+min_variant_posterior {min_variant_posterior},
+min_refcall_posterior {min_refcall_posterior},
+ploidy {ploidy}
+{}
+
 PopulationVariantCaller::PopulationVariantCaller(const ReferenceGenome& reference,
                                                  ReadPipe& read_pipe,
                                                  CandidateVariantGenerator&& candidate_generator,
-                                                 unsigned max_haplotypes,
                                                  std::unique_ptr<HaplotypePriorModel> haplotype_prior_model,
-                                                 RefCallType refcall_type,
-                                                 bool call_sites_only,
-                                                 double min_variant_posterior,
-                                                 double min_refcall_posterior,
-                                                 unsigned ploidy)
+                                                 VariantCaller::CallerParameters general_parameters,
+                                                 CallerParameters specific_parameters)
 :
-VariantCaller {reference, read_pipe, std::move(candidate_generator), max_haplotypes,
-            std::move(haplotype_prior_model), refcall_type, call_sites_only},
-genotype_model_ {ploidy},
-ploidy_ {ploidy},
-min_variant_posterior_ {min_variant_posterior},
-min_refcall_posterior_ {min_refcall_posterior}
+VariantCaller {reference, read_pipe, std::move(candidate_generator),
+        std::move(haplotype_prior_model), std::move(general_parameters)},
+genotype_model_ {specific_parameters.ploidy},
+ploidy_ {specific_parameters.ploidy},
+min_variant_posterior_ {specific_parameters.min_variant_posterior},
+min_refcall_posterior_ {specific_parameters.min_refcall_posterior}
 {}
 
 PopulationVariantCaller::Latents::Latents(GenotypeModel::Population::Latents&& model_latents)

@@ -35,27 +35,36 @@ namespace Octopus
 {
 // public methods
 
+CancerVariantCaller::CallerParameters::CallerParameters(double min_variant_posterior,
+                                                        double min_somatic_posterior,
+                                                        double min_refcall_posterior,
+                                                        unsigned ploidy,
+                                                        SampleIdType normal_sample,
+                                                        bool call_somatics_only)
+:
+min_variant_posterior {min_variant_posterior},
+min_somatic_posterior {min_somatic_posterior},
+min_refcall_posterior {min_refcall_posterior},
+ploidy {ploidy},
+normal_sample {normal_sample},
+call_somatics_only {call_somatics_only}
+{}
+
 CancerVariantCaller::CancerVariantCaller(const ReferenceGenome& reference,
                                          ReadPipe& read_pipe,
                                          CandidateVariantGenerator&& candidate_generator,
-                                         unsigned max_haplotypes,
                                          std::unique_ptr<HaplotypePriorModel> haplotype_prior_model,
-                                         RefCallType refcall_type,
-                                         bool call_sites_only,
-                                         double min_variant_posterior,
-                                         double min_somatic_posterior,
-                                         double min_refcall_posterior,
-                                         const SampleIdType& normal_sample,
-                                         bool call_somatics_only)
+                                         VariantCaller::CallerParameters general_parameters,
+                                         CallerParameters specific_parameters)
 :
-VariantCaller {reference, read_pipe, std::move(candidate_generator), max_haplotypes,
-            std::move(haplotype_prior_model), refcall_type, call_sites_only},
-genotype_model_ {normal_sample},
-normal_sample_ {normal_sample},
-min_variant_posterior_ {min_variant_posterior},
-min_somatic_mutation_posterior_ {min_somatic_posterior},
-min_refcall_posterior_ {min_refcall_posterior},
-call_somatics_only_ {call_somatics_only}
+VariantCaller {reference, read_pipe, std::move(candidate_generator),
+                std::move(haplotype_prior_model), std::move(general_parameters)},
+normal_sample_ {std::move(specific_parameters.normal_sample)},
+genotype_model_ {normal_sample_},
+min_variant_posterior_ {specific_parameters.min_variant_posterior},
+min_somatic_mutation_posterior_ {specific_parameters.min_somatic_posterior},
+min_refcall_posterior_ {specific_parameters.min_refcall_posterior},
+call_somatics_only_ {specific_parameters.call_somatics_only}
 {}
 
 namespace

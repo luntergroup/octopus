@@ -35,20 +35,27 @@
 namespace Octopus
 {
 // public methods
+    
+VariantCaller::CallerParameters::CallerParameters(unsigned max_haplotypes,
+                                                  RefCallType refcall_type,
+                                                  bool call_sites_only)
+:
+max_haplotypes {max_haplotypes},
+refcall_type {refcall_type},
+call_sites_only {call_sites_only}
+{}
 
 VariantCaller::VariantCaller(const ReferenceGenome& reference,
                              ReadPipe& read_pipe,
                              CandidateVariantGenerator&& candidate_generator,
-                             const unsigned max_haplotypes,
                              std::unique_ptr<HaplotypePriorModel> haplotype_prior_model,
-                             RefCallType refcall_type,
-                             bool call_sites_only)
+                             CallerParameters parameters)
 :
 reference_ {reference},
 read_pipe_ {read_pipe},
-refcall_type_ {refcall_type},
-call_sites_only_ {call_sites_only},
-max_haplotypes_ {max_haplotypes},
+refcall_type_ {parameters.refcall_type},
+call_sites_only_ {parameters.call_sites_only},
+max_haplotypes_ {parameters.max_haplotypes},
 haplotype_prior_model_ {std::move(haplotype_prior_model)},
 candidate_generator_ {std::move(candidate_generator)}
 {}

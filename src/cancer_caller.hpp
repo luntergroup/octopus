@@ -27,20 +27,30 @@ namespace Octopus
     class CancerVariantCaller : public VariantCaller
     {
     public:
+        struct CallerParameters
+        {
+            CallerParameters() = default;
+            explicit CallerParameters(double min_variant_posterior, double min_somatic_posterior,
+                                      double min_refcall_posterior, unsigned ploidy,
+                                      SampleIdType normal_sample, bool call_somatics_only);
+            ~CallerParameters() = default;
+            
+            double min_variant_posterior;
+            double min_somatic_posterior;
+            double min_refcall_posterior;
+            unsigned ploidy;
+            SampleIdType normal_sample;
+            bool call_somatics_only;
+        };
+        
         CancerVariantCaller() = delete;
         
         explicit CancerVariantCaller(const ReferenceGenome& reference,
                                      ReadPipe& read_pipe,
                                      CandidateVariantGenerator&& candidate_generator,
-                                     unsigned max_haplotypes,
                                      std::unique_ptr<HaplotypePriorModel> haplotype_prior_model,
-                                     RefCallType refcalls,
-                                     bool call_sites_only,
-                                     double min_variant_posterior,
-                                     double min_somatic_posterior,
-                                     double min_refcall_posterior,
-                                     const SampleIdType& normal_sample,
-                                     bool call_somatics_only);
+                                     VariantCaller::CallerParameters general_parameters,
+                                     CallerParameters specific_parameters);
         
         ~CancerVariantCaller() = default;
         
@@ -78,9 +88,10 @@ namespace Octopus
             GenotypeModel::Cancer::GenotypeMixtures genotype_mixtures;
         };
         
+        const SampleIdType normal_sample_;
+        
         mutable GenotypeModel::Cancer genotype_model_;
         
-        const SampleIdType normal_sample_;
         const double min_variant_posterior_          = 0.95;
         const double min_somatic_mutation_posterior_ = 0.9;
         const double min_refcall_posterior_          = 0.5;

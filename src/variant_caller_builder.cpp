@@ -237,32 +237,39 @@ namespace Octopus
     
     VariantCallerBuilder::ModelFactoryMap VariantCallerBuilder::generate_factory() const
     {
+        VariantCaller::CallerParameters general_parameters {
+            max_haplotypes_,
+            refcall_type_,
+            call_sites_only_
+        };
+        
         return ModelFactoryMap {
-            {"population", [this] () {
+            {"population", [this, general_parameters = std::move(general_parameters)] () {
                 return std::make_unique<PopulationVariantCaller>(reference_,
                                                                  read_pipe_,
                                                                  candidate_generator_builder_.get().build(),
-                                                                 max_haplotypes_,
                                                                  std::make_unique<BasicHaplotypePriorModel>(reference_),
-                                                                 refcall_type_,
-                                                                 call_sites_only_,
-                                                                 min_variant_posterior_,
-                                                                 min_refcall_posterior_,
-                                                                 ploidy_);
+                                                                 std::move(general_parameters),
+                                                                 PopulationVariantCaller::CallerParameters {
+                                                                     min_variant_posterior_,
+                                                                     min_refcall_posterior_,
+                                                                     ploidy_
+                                                                 });
             }},
-            {"cancer", [this] () {
+            {"cancer", [this, general_parameters = std::move(general_parameters)] () {
                 return std::make_unique<CancerVariantCaller>(reference_,
                                                              read_pipe_,
                                                              candidate_generator_builder_.get().build(),
-                                                             max_haplotypes_,
                                                              std::make_unique<BasicHaplotypePriorModel>(reference_),
-                                                             refcall_type_,
-                                                             call_sites_only_,
-                                                             min_variant_posterior_,
-                                                             min_somatic_posterior_,
-                                                             min_refcall_posterior_,
-                                                             normal_sample_.get(),
-                                                             call_somatics_only_);
+                                                             std::move(general_parameters),
+                                                             CancerVariantCaller::CallerParameters {
+                                                                 min_variant_posterior_,
+                                                                 min_somatic_posterior_,
+                                                                 min_refcall_posterior_,
+                                                                 ploidy_,
+                                                                 normal_sample_.get(),
+                                                                 call_somatics_only_
+                                                             });
             }}//,
 //            {"trio", [this] () {
 //                return std::make_unique<PedigreeVariantCaller>(reference_,

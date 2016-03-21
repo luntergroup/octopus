@@ -77,7 +77,7 @@ namespace Logging
     class InfoLogger : public Logger<severity_level::info> {};
     class WarningLogger : public Logger<severity_level::warning> {};
     class ErrorLogger : public Logger<severity_level::error> {};
-    class FatalLogger : public Logger<severity_level::error> {};
+    class FatalLogger : public Logger<severity_level::fatal> {};
     
     template <typename T>
     class LogStream

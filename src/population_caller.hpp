@@ -29,18 +29,26 @@ namespace Octopus
 class PopulationVariantCaller : public VariantCaller
 {
 public:
+    struct CallerParameters
+    {
+        CallerParameters() = default;
+        explicit CallerParameters(double min_variant_posterior, double min_refcall_posterior,
+                                  unsigned ploidy);
+        ~CallerParameters() = default;
+        
+        double min_variant_posterior;
+        double min_refcall_posterior;
+        unsigned ploidy;
+    };
+    
     PopulationVariantCaller() = delete;
     
     explicit PopulationVariantCaller(const ReferenceGenome& reference,
                                      ReadPipe& read_pipe,
                                      CandidateVariantGenerator&& candidate_generator,
-                                     unsigned max_haplotypes,
                                      std::unique_ptr<HaplotypePriorModel> haplotype_prior_model,
-                                     RefCallType refcalls,
-                                     bool call_sites_only,
-                                     double min_variant_posterior,
-                                     double min_refcall_posterior,
-                                     unsigned ploidy);
+                                     VariantCaller::CallerParameters general_parameters,
+                                     CallerParameters specific_parameters);
     
     ~PopulationVariantCaller() = default;
     
