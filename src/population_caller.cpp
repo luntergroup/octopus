@@ -44,10 +44,14 @@ PopulationVariantCaller::PopulationVariantCaller(const ReferenceGenome& referenc
                                                  CandidateVariantGenerator&& candidate_generator,
                                                  unsigned max_haplotypes,
                                                  std::unique_ptr<HaplotypePriorModel> haplotype_prior_model,
-                                                 RefCallType refcall_type, double min_variant_posterior,
-                                                 double min_refcall_posterior, unsigned ploidy)
+                                                 RefCallType refcall_type,
+                                                 bool call_sites_only,
+                                                 double min_variant_posterior,
+                                                 double min_refcall_posterior,
+                                                 unsigned ploidy)
 :
-VariantCaller {reference, read_pipe, std::move(candidate_generator), max_haplotypes, std::move(haplotype_prior_model), refcall_type},
+VariantCaller {reference, read_pipe, std::move(candidate_generator), max_haplotypes,
+            std::move(haplotype_prior_model), refcall_type, call_sites_only},
 genotype_model_ {ploidy},
 ploidy_ {ploidy},
 min_variant_posterior_ {min_variant_posterior},
@@ -204,7 +208,7 @@ auto marginalise(const SampleGenotypePosteriorMap& genotype_posteriors,
 {
     auto result = std::inner_product(std::cbegin(genotype_posteriors), std::cend(genotype_posteriors),
                                      std::cbegin(contained_alleles), 0.0, std::plus<void> {},
-                                     [] (const auto& p, const auto is_contained) {
+                                     [] (const auto& p, const bool is_contained) {
                                          return (is_contained) ? p.second : 0.0;
                                      });
     
@@ -579,7 +583,8 @@ void set_vcf_genotype(const SampleIdType& sample, const GenotypeCall& genotype_c
 VcfRecord::Builder output_variant_call(VariantCallBlock&& block,
                                        GenotypeCallMap&& genotype_calls,
                                        const ReferenceGenome& reference,
-                                       const ReadMap& reads)
+                                       const ReadMap& reads,
+                                       const bool sites_only)
 {
     assert(!block.variants.empty());
     
@@ -587,7 +592,7 @@ VcfRecord::Builder output_variant_call(VariantCallBlock&& block,
     
     auto result = VcfRecord::Builder {};
     
-    const auto phred_quality = Maths::probability_to_phred<float>(block.posterior);
+    const auto phred_quality = Maths::probability_to_phred<float>(block.posterior, 2);
     
     const auto& reference_allele = block.variants.front().get_ref_allele();
     
@@ -610,33 +615,36 @@ VcfRecord::Builder output_variant_call(VariantCallBlock&& block,
     result.add_info("MQ",  to_string(static_cast<unsigned>(rmq_mapping_quality(reads, region))));
     result.add_info("MQ0", to_string(count_mapq_zero(reads, region)));
     
-    result.set_format({"GT", "FT", "GQ", "PS", "PQ", "DP", "BQ", "MQ"});
-    
-    for (const auto& sample_call : genotype_calls) {
-        const auto& sample = sample_call.first;
+    if (!sites_only) {
+        result.set_format({"GT", "FT", "GQ", "PS", "PQ", "DP", "BQ", "MQ"});
         
-        set_vcf_genotype(sample, sample_call.second, block, result);
-        
-        result.add_genotype_field(sample, "FT", "."); // TODO
-        result.add_genotype_field(sample, "GQ", Octopus::to_string(Maths::probability_to_phred<float>(sample_call.second.posterior), 2));
-        result.add_genotype_field(sample, "PS", to_string(region_begin(sample_call.second.phase_region) + 1));
-        result.add_genotype_field(sample, "PQ", Octopus::to_string(Maths::probability_to_phred<float>(sample_call.second.phase_score), 2)); // TODO
-        result.add_genotype_field(sample, "DP", to_string(max_coverage(reads.at(sample), region)));
-        result.add_genotype_field(sample, "BQ", to_string(static_cast<unsigned>(rmq_base_quality(reads.at(sample), region))));
-        result.add_genotype_field(sample, "MQ", to_string(static_cast<unsigned>(rmq_mapping_quality(reads.at(sample), region))));
+        for (const auto& sample_call : genotype_calls) {
+            const auto& sample = sample_call.first;
+            
+            set_vcf_genotype(sample, sample_call.second, block, result);
+            
+            result.add_genotype_field(sample, "FT", "."); // TODO
+            result.add_genotype_field(sample, "GQ", Octopus::to_string(Maths::probability_to_phred<float>(sample_call.second.posterior), 2));
+            result.add_genotype_field(sample, "PS", to_string(region_begin(sample_call.second.phase_region) + 1));
+            result.add_genotype_field(sample, "PQ", Octopus::to_string(Maths::probability_to_phred<float>(sample_call.second.phase_score), 2)); // TODO
+            result.add_genotype_field(sample, "DP", to_string(max_coverage(reads.at(sample), region)));
+            result.add_genotype_field(sample, "BQ", to_string(static_cast<unsigned>(rmq_base_quality(reads.at(sample), region))));
+            result.add_genotype_field(sample, "MQ", to_string(static_cast<unsigned>(rmq_mapping_quality(reads.at(sample), region))));
+        }
     }
     
     return result;
 }
 
 VcfRecord::Builder output_reference_call(RefCall call, const ReferenceGenome& reference,
-                                         const ReadMap& reads, unsigned ploidy)
+                                         const ReadMap& reads, unsigned ploidy,
+                                         const bool sites_only)
 {
     using std::to_string;
     
     auto result = VcfRecord::Builder {};
     
-    const auto phred_quality = Maths::probability_to_phred<float>(call.posterior);
+    const auto phred_quality = Maths::probability_to_phred<float>(call.posterior, 2);
     
     const auto& region = mapped_region(call.reference_allele);
     
@@ -659,15 +667,17 @@ VcfRecord::Builder output_reference_call(RefCall call, const ReferenceGenome& re
     result.add_info("MQ",  to_string(static_cast<unsigned>(rmq_mapping_quality(reads, region))));
     result.add_info("MQ0", to_string(count_mapq_zero(reads, region)));
     
-    result.set_format({"GT", "GQ", "DP", "BQ", "MQ"});
-    
-    for (const auto& sample_posteior : call.sample_posteriors) {
-        const auto& sample = sample_posteior.first;
-        result.add_homozygous_ref_genotype(sample, ploidy);
-        result.add_genotype_field(sample, "GQ", to_string(Maths::probability_to_phred(sample_posteior.second)));
-        result.add_genotype_field(sample, "DP", to_string(max_coverage(reads.at(sample), region)));
-        result.add_genotype_field(sample, "BQ", to_string(static_cast<unsigned>(rmq_base_quality(reads.at(sample), region))));
-        result.add_genotype_field(sample, "MQ", to_string(static_cast<unsigned>(rmq_mapping_quality(reads.at(sample), region))));
+    if (!sites_only) {
+        result.set_format({"GT", "GQ", "DP", "BQ", "MQ"});
+        
+        for (const auto& sample_posteior : call.sample_posteriors) {
+            const auto& sample = sample_posteior.first;
+            result.add_homozygous_ref_genotype(sample, ploidy);
+            result.add_genotype_field(sample, "GQ", Octopus::to_string(Maths::probability_to_phred(sample_posteior.second), 2));
+            result.add_genotype_field(sample, "DP", to_string(max_coverage(reads.at(sample), region)));
+            result.add_genotype_field(sample, "BQ", to_string(static_cast<unsigned>(rmq_base_quality(reads.at(sample), region))));
+            result.add_genotype_field(sample, "MQ", to_string(static_cast<unsigned>(rmq_mapping_quality(reads.at(sample), region))));
+        }
     }
     
     return result;
@@ -707,7 +717,7 @@ void set_phasings(GenotypeCalls& variant_genotype_calls,
 std::vector<VcfRecord::Builder>
 merge_calls(VariantCallBlocks&& variant_calls, GenotypeCalls&& variant_genotype_calls,
             RefCalls&& refcalls, const ReferenceGenome& reference, const ReadMap& reads,
-            const unsigned ploidy)
+            const unsigned ploidy, const bool sites_only)
 {
     using std::begin; using std::end; using std::make_move_iterator; using std::move;
     
@@ -720,10 +730,11 @@ merge_calls(VariantCallBlocks&& variant_calls, GenotypeCalls&& variant_genotype_
                     std::back_inserter(result),
                     [&] (VariantCallBlock&& variant_call, GenotypeCallMap&& genotype_call) {
                         return output_variant_call(move(variant_call), move(genotype_call),
-                                                   reference, reads);
+                                                   reference, reads, sites_only);
                     },
                     [&] (RefCall&& refcall) {
-                        return output_reference_call(move(refcall), reference, reads, ploidy);
+                        return output_reference_call(move(refcall), reference, reads, ploidy,
+                                                     sites_only);
                     });
     
     return result;
@@ -781,7 +792,7 @@ PopulationVariantCaller::call_variants(const std::vector<Variant>& candidates,
                                    min_refcall_posterior_);
     
     return merge_calls(std::move(variant_calls), std::move(variant_genotype_calls),
-                       std::move(refcalls), reference_, reads, ploidy_);
+                       std::move(refcalls), reference_, reads, ploidy_, call_sites_only_);
 }
 
 namespace debug

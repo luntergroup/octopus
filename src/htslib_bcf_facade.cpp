@@ -664,14 +664,16 @@ auto genotype_number(const T& allele, const Container& alleles, const bool is_ph
 void set_samples(const bcf_hdr_t* header, bcf1_t* dest, const VcfRecord& source,
                  const std::vector<std::string>& samples)
 {
+    if (samples.empty()) return;
+    
+    const auto num_samples = static_cast<int>(source.num_samples());
+    
     const auto& alt_alleles = source.get_alt_alleles();
     
     std::vector<VcfRecord::SequenceType> alleles {};
     alleles.reserve(alt_alleles.size() + 1);
     alleles.push_back(source.get_ref_allele());
     alleles.insert(std::end(alleles), std::cbegin(alt_alleles), std::cend(alt_alleles));
-    
-    const auto num_samples = static_cast<int>(source.num_samples());
     
     if (source.has_genotypes()) {
         const auto ngt = num_samples * static_cast<int>(source.sample_ploidy());

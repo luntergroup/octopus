@@ -35,6 +35,7 @@ namespace Octopus
                                      unsigned max_haplotypes,
                                      std::unique_ptr<HaplotypePriorModel> haplotype_prior_model,
                                      RefCallType refcalls,
+                                     bool call_sites_only,
                                      double min_variant_posterior,
                                      double min_somatic_posterior,
                                      double min_refcall_posterior,

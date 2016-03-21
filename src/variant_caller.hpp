@@ -46,7 +46,8 @@ public:
                            CandidateVariantGenerator&& candidate_generator,
                            unsigned max_haplotypes,
                            std::unique_ptr<HaplotypePriorModel> haplotype_prior_model,
-                           RefCallType refcall_type = RefCallType::None);
+                           RefCallType refcall_type = RefCallType::None,
+                           bool call_sites_only = false);
     
     virtual ~VariantCaller() = default;
     
@@ -66,6 +67,7 @@ protected:
     std::reference_wrapper<ReadPipe> read_pipe_;
     
     const RefCallType refcall_type_ = RefCallType::Positional;
+    const bool call_sites_only_ = false;
     
     bool refcalls_requested() const noexcept;
     
@@ -136,7 +138,7 @@ auto marginalise_haplotypes(const std::vector<Haplotype>& haplotypes,
     
     for (const auto& s : genotype_posteriors) {
         for (const auto& p : s.second) {
-            for (const auto& haplotype : p.first) {
+            for (const auto& haplotype : p.first.copy_unique_ref()) {
                 result.at(haplotype) += p.second;
             }
         }

@@ -359,7 +359,7 @@ VcfHeader::Builder get_default_header_builder()
     result.add_info("MQ", "1", "Integer", "RMS mapping quality");
     result.add_info("MQ0", "1", "Integer", "Number of MAPQ == 0 reads covering this record");
     result.add_info("NS", "1", "Integer", "Number of samples with data");
-    result.add_info("SB", "1", "Integer", "Strand bias at this position");
+    result.add_info("SB", "1", "Float", "Strand bias at this position");
     result.add_info("SOMATIC", "0", "Flag", "Indicates that the record is a somatic mutation, for cancer genomics");
     result.add_info("VALIDATED", "0", "Flag", "Validated by follow-up experiment");
     result.add_info("1000G", "0", "Flag", "Membership in 1000 Genomes");

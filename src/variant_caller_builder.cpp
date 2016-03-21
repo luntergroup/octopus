@@ -148,6 +148,12 @@ namespace Octopus
         return *this;
     }
     
+    VariantCallerBuilder& VariantCallerBuilder::set_sites_only() noexcept
+    {
+        call_sites_only_ = true;
+        return *this;
+    }
+    
     VariantCallerBuilder& VariantCallerBuilder::set_min_variant_posterior(const double min_posterior) noexcept
     {
         min_variant_posterior_ = min_posterior;
@@ -239,6 +245,7 @@ namespace Octopus
                                                                  max_haplotypes_,
                                                                  std::make_unique<BasicHaplotypePriorModel>(reference_),
                                                                  refcall_type_,
+                                                                 call_sites_only_,
                                                                  min_variant_posterior_,
                                                                  min_refcall_posterior_,
                                                                  ploidy_);
@@ -250,6 +257,7 @@ namespace Octopus
                                                              max_haplotypes_,
                                                              std::make_unique<BasicHaplotypePriorModel>(reference_),
                                                              refcall_type_,
+                                                             call_sites_only_,
                                                              min_variant_posterior_,
                                                              min_somatic_posterior_,
                                                              min_refcall_posterior_,

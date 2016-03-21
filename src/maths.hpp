@@ -26,7 +26,8 @@
 
 namespace Octopus { namespace Maths {
 
-template <typename RealType, typename = std::enable_if_t<std::is_floating_point<RealType>::value, bool>>
+template <typename RealType,
+          typename = std::enable_if_t<std::is_floating_point<RealType>::value>>
 RealType round(const RealType val, const unsigned precision = 2)
 {
     const auto factor = std::pow(RealType {10.0}, precision);
@@ -50,6 +51,7 @@ bool almost_one(const T x, const int ulp = 1)
 {
     return almost_equal(x, T {1}, ulp);
 }
+
 
 template <typename RealType>
 constexpr RealType exp_maclaurin(const RealType x) {
@@ -406,10 +408,18 @@ std::vector<RealType> dirichlet_mle(std::vector<RealType> pi, const RealType pre
     return result;
 }
 
-template <typename NumericType = float, typename RealType>
+template <typename NumericType = float, typename RealType,
+          typename = std::enable_if_t<std::is_floating_point<RealType>::value>>
 NumericType probability_to_phred(const RealType p)
 {
     return static_cast<NumericType>(-10.0 * std::log10(std::max(1.0 - p, std::numeric_limits<RealType>::epsilon())));
+}
+
+template <typename NumericType = float, typename RealType,
+          typename = std::enable_if_t<std::is_floating_point<RealType>::value>>
+NumericType probability_to_phred(const RealType p, const unsigned precision)
+{
+    return round(static_cast<NumericType>(-10.0 * std::log10(std::max(1.0 - p, std::numeric_limits<RealType>::epsilon()))), precision);
 }
 
 template <typename RealType = double, typename NumericType>

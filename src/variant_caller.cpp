@@ -41,11 +41,13 @@ VariantCaller::VariantCaller(const ReferenceGenome& reference,
                              CandidateVariantGenerator&& candidate_generator,
                              const unsigned max_haplotypes,
                              std::unique_ptr<HaplotypePriorModel> haplotype_prior_model,
-                             RefCallType refcall_type)
+                             RefCallType refcall_type,
+                             bool call_sites_only)
 :
 reference_ {reference},
 read_pipe_ {read_pipe},
 refcall_type_ {refcall_type},
+call_sites_only_ {call_sites_only},
 max_haplotypes_ {max_haplotypes},
 haplotype_prior_model_ {std::move(haplotype_prior_model)},
 candidate_generator_ {std::move(candidate_generator)}
@@ -121,9 +123,9 @@ namespace debug
                           Resolution resolution = Resolution::SequenceAndAlleles);
     
     template <typename S, typename Map>
-    void print_haplotype_posteriors(S&& stream, const Map& haplotype_posteriors, std::size_t n = 20);
+    void print_haplotype_posteriors(S&& stream, const Map& haplotype_posteriors, std::size_t n = 5);
     template <typename Map>
-    void print_haplotype_posteriors(const Map& haplotype_posteriors, std::size_t n = 20);
+    void print_haplotype_posteriors(const Map& haplotype_posteriors, std::size_t n = 5);
 }
 
 auto copy_overlapped_to_vector(const MappableFlatSet<Variant>& candidates,
@@ -379,8 +381,11 @@ std::deque<VcfRecord> VariantCaller::call_variants(const GenomicRegion& call_reg
         auto haplotype_priors = haplotype_prior_model_->compute_maximum_entropy_haplotype_set(haplotypes);
         pause_timer(prior_model_timer);
         
-        if (DEBUG_MODE) {
-            debug::print_haplotype_priors(stream(debug_log), haplotype_priors, -1);
+        if (TRACE_MODE) {
+            Logging::TraceLogger trace_log {};
+            debug::print_haplotype_priors(stream(trace_log), haplotype_priors, -1);
+        } else if (DEBUG_MODE) {
+            debug::print_haplotype_priors(stream(debug_log), haplotype_priors);
         }
         
         resume_timer(haplotype_generation_timer);
@@ -394,10 +399,6 @@ std::deque<VcfRecord> VariantCaller::call_variants(const GenomicRegion& call_reg
             stream(trace_log) << "There are " << haplotypes.size() << " final haplotypes";
             debug::print_read_haplotype_liklihoods(stream(trace_log), haplotypes, active_reads,
                                                    haplotype_likelihoods, -1);
-        } else if (DEBUG_MODE) {
-            stream(debug_log) << "There are " << haplotypes.size() << " final haplotypes";
-            debug::print_read_haplotype_liklihoods(stream(debug_log), haplotypes, active_reads,
-                                                   haplotype_likelihoods);
         }
         
         resume_timer(latent_timer);

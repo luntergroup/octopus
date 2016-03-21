@@ -295,7 +295,7 @@ namespace Octopus
             caller.add_options()
             ("model", po::value<std::string>()->default_value("population"),
              "Calling model used")
-            ("organism-ploidy", po::value<unsigned>()->default_value(2),
+            ("organism-ploidy,ploidy", po::value<unsigned>()->default_value(2),
              "Organism ploidy, all contigs with unspecified ploidy are assumed this ploidy")
             ("contig-ploidies", po::value<std::vector<ContigPloidy>>()->multitoken(),
              "Space-seperated list of contig=ploidy pairs")
@@ -321,6 +321,8 @@ namespace Octopus
              "Caller will output positional REFCALLs")
             ("make-blocked-refcalls", po::bool_switch()->default_value(false),
              "Caller will output blocked REFCALLs")
+            ("sites-only", po::bool_switch()->default_value(false),
+             "Only outout variant call sites (i.e. without sample genotype information)")
             ;
             
             po::options_description cancer("Cancer model specific options");
@@ -1302,6 +1304,11 @@ namespace Octopus
         return result;
     }
     
+    bool call_sites_only(const po::variables_map& options)
+    {
+        return options.at("sites-only").as<bool>();
+    }
+    
     VariantCallerFactory make_variant_caller_factory(const ReferenceGenome& reference,
                                                      ReadPipe& read_pipe,
                                                      const CandidateGeneratorBuilder& candidate_generator_builder,
@@ -1350,6 +1357,10 @@ namespace Octopus
         
         if (!contig_ploidies) {
             // TODO
+        }
+        
+        if (call_sites_only(options)) {
+            vc_builder.set_sites_only();
         }
         
         VariantCallerFactory result {std::move(vc_builder), options.at("organism-ploidy").as<unsigned>()};

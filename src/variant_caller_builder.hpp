@@ -51,6 +51,7 @@ namespace Octopus {
         VariantCallerBuilder& set_ploidy(unsigned ploidy) noexcept;
         VariantCallerBuilder& set_model(std::string model);
         VariantCallerBuilder& set_refcall_type(VariantCaller::RefCallType refcall_type) noexcept;
+        VariantCallerBuilder& set_sites_only() noexcept;
         VariantCallerBuilder& set_min_variant_posterior(double min_posterior) noexcept;
         VariantCallerBuilder& set_min_refcall_posterior(double min_posterior) noexcept;
         VariantCallerBuilder& set_max_haplotypes(unsigned max_haplotypes) noexcept;
@@ -84,6 +85,7 @@ namespace Octopus {
         std::string model_;
         std::reference_wrapper<const CandidateGeneratorBuilder> candidate_generator_builder_;
         VariantCaller::RefCallType refcall_type_ = VariantCaller::RefCallType::None;
+        bool call_sites_only_ = false;
         double min_variant_posterior_;
         double min_refcall_posterior_;
         unsigned max_haplotypes_;

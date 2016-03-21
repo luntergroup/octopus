@@ -487,10 +487,15 @@ namespace Octopus
         return components.read_manager.get().count_reads(components.samples.get(), region) > 0;
     }
     
-    void write_final_output_header(GenomeCallingComponents& components)
+    void write_final_output_header(GenomeCallingComponents& components, const bool sites_only = false)
     {
-        components.output.write(make_header(components.samples, components.contigs_in_output_order,
-                                            components.reference));
+        if (sites_only) {
+            components.output.write(make_header({}, components.contigs_in_output_order,
+                                                components.reference));
+        } else {
+            components.output.write(make_header(components.samples, components.contigs_in_output_order,
+                                                components.reference));
+        }
     }
     
     void log_startup_info(const GenomeCallingComponents& components)
@@ -683,8 +688,6 @@ namespace Octopus
         
         if (!components) return;
         
-        options.clear();
-        
         auto end = std::chrono::system_clock::now();
         
         Logging::InfoLogger log {};
@@ -694,7 +697,9 @@ namespace Octopus
         try {
             log_startup_info(*components);
             
-            write_final_output_header(*components);
+            write_final_output_header(*components, Options::call_sites_only(options));
+            
+            options.clear();
             
             if (is_multithreaded(*components)) {
                 run_octopus_multi_threaded(*components);

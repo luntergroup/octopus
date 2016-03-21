@@ -76,6 +76,8 @@ namespace Options
     CandidateGeneratorBuilder make_candidate_generator_builder(const po::variables_map& options,
                                                                const ReferenceGenome& reference);
     
+    bool call_sites_only(const po::variables_map& options);
+    
     VariantCallerFactory make_variant_caller_factory(const ReferenceGenome& reference,
                                                      ReadPipe& read_pipe,
                                                      const CandidateGeneratorBuilder& candidate_generator_builder,
