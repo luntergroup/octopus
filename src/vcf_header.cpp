@@ -379,8 +379,7 @@ VcfHeader::Builder get_default_header_builder()
     result.add_format("MQ", "1", "Integer", "RMS mapping quality");
     result.add_format("BQ", "1", "Integer", "RMS base quality at this position");
     
-    result.add_filter("PASS", "All filters passed");
-    result.add_filter("REFCALL", "All samples are called homozygous reference at the site/block");
+    //result.add_filter("PASS", "All filters passed");
     
     return result;
 }

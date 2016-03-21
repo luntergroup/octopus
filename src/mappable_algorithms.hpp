@@ -779,6 +779,15 @@ auto has_overlapped(const Container& mappables, const MappableTp& mappable)
 template <typename Container, typename MappableTp>
 auto
 has_overlapped(const Container& mappables, const MappableTp& mappable,
+               BidirectionallySortedTag)
+{
+    return has_overlapped(std::cbegin(mappables), std::cend(mappables), mappable,
+                          BidirectionallySortedTag {});
+}
+
+template <typename Container, typename MappableTp>
+auto
+has_overlapped(const Container& mappables, const MappableTp& mappable,
                const typename RegionType<MappableTp>::SizeType max_mappable_size)
 {
     return detail::has_overlapped(mappables, mappable, max_mappable_size,
@@ -1171,6 +1180,24 @@ Container copy_noncontained(const Container& mappables, const MappableType& mapp
     result.insert(base_end, cend(mappables));
     
     return result;
+}
+
+// count_spanning
+
+template <typename Container, typename MappableTp>
+std::size_t count_spanning(const Container& mappables, const MappableTp& mappable)
+{
+    using MappableTp2 = typename Container::value_type;
+    
+    static_assert(is_region_or_mappable<MappableTp> && is_region_or_mappable<MappableTp2>,
+                  "mappable algorithms only work for regions and mappable types");
+    
+    const auto overlapped = overlap_range(mappables, mappable);
+    
+    return std::count_if(std::cbegin(overlapped), std::cend(overlapped),
+                         [&mappable] (const auto& m) {
+                             return contains(mapped_region(m), mappable);
+                         });
 }
 
 // count_shared
@@ -1678,9 +1705,9 @@ auto segment_by_region(ForwardIt first, ForwardIt last)
     result.reserve(std::distance(first, last));
     
     while (first != last) {
-        const auto& curr_region = get_region(*first);
+        const auto& curr_region = mapped_region(*first);
         auto it = std::find_if_not(std::next(first), last, [&curr_region]
-                                   (const auto& mappable) { return curr_region == get_region(mappable); });
+                                   (const auto& mappable) { return curr_region == mapped_region(mappable); });
         result.emplace_back(first, it);
         first = it;
     }

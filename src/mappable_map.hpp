@@ -327,4 +327,14 @@ void erase_contained(MappableMap<KeyType, MappableType1>& mappables, const Mappa
     }
 }
 
+template <typename KeyType, typename MappableType1, typename MappableType2>
+std::size_t count_spanning(const MappableMap<KeyType, MappableType1>& mappables,
+                           const MappableType2& mappable)
+{
+    return std::accumulate(std::cbegin(mappables), std::cend(mappables), std::size_t {0},
+                           [&mappable] (const auto curr, const auto& p) {
+                               return curr + count_spanning(p.second, mappable);
+                           });
+}
+
 #endif

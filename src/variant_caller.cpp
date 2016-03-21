@@ -35,7 +35,7 @@
 namespace Octopus
 {
 // public methods
-    
+
 VariantCaller::CallerParameters::CallerParameters(unsigned max_haplotypes,
                                                   RefCallType refcall_type,
                                                   bool call_sites_only)

@@ -43,8 +43,8 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--reference", ecoli_reference_fasta.c_str(),
         
         //"--reads", NA12878_low_coverage.c_str(),
-        //"--reads", NA12878_high_coverage.c_str(),
-        "--reads", "~/Genomics/Illumina/NA12878.mapped.ILLUMINA.bwa.CEU.high_coverage_pcr_free.20130906.chr22.bam",
+        "--reads", NA12878_high_coverage.c_str(),
+        //"--reads", "~/Genomics/Illumina/NA12878.mapped.ILLUMINA.bwa.CEU.high_coverage_pcr_free.20130906.chr22.bam",
         
         //"--reads", NA12891_high_coverage.c_str(),
         
@@ -75,16 +75,17 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         
         // for population
         
-        "--regions", "22:16,271,817-16,272,121",
+        "--regions", "22:35,199,371-35,199,701", // Suspicious high quality insertion and SNP
         
         //"--regions", "22:16,103,653-16,103,957", // 5 haplotypes??
         
         // NA12878_high_coverage possible errors
-//        "--regions", "22:37,616,864-37,617,015", // false negative insertion?
+        //"--regions", "22:37,616,864-37,617,015", // false negative insertion?
 //        "--regions", "22:37,622,869-37,622,909", // SNPs or indels?
-//"--regions", "22:37,622,803-37,623,840", // very repetitive region
+        //"--regions", "22:37,622,803-37,623,840", // very repetitive region
+        //"--regions", "22:34,974,205-34,975,215", // Another very repetitive region
+        //"--regions", "22:35,834,230-35,835,616", // Another very repetitive region
 //        "--regions", "22:37,777,920-37,778,151", // is the deletion homozygous?
-//        "--regions", "22:37,980,155-37,980,306", // false positive deletion
         //"--regions", "22:38,082,212-38,082,363", // false positive SNPs
 //        "--regions", "22:38,092,378-38,092,418", // not left aligning the insertion at 38092390
 //        "--regions", "22:39,517,648-39,517,952", // is the deletion & insetion homozygous?
@@ -175,7 +176,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--max-open-read-files", "1",
         
         //"--output", test_out_vcf.c_str(),
-        //"--output", "octopus_NA12878HC_22_uniprior.vcf",
+        //"--output", "octopus_NA12878HC_22_uniprior_filter_low_complex.vcf",
         //"--output", "octopus_calls2.vcf",
         
         nullptr};

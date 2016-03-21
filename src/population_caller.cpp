@@ -34,6 +34,8 @@
 #include "merge_transform.hpp"
 #include "logging.hpp"
 
+#include "sequence_complexity.hpp"
+
 namespace Octopus
 {
 
@@ -745,6 +747,122 @@ merge_calls(VariantCallBlocks&& variant_calls, GenotypeCalls&& variant_genotype_
     return result;
 }
 
+std::vector<GenomicRegion> find_low_complexity_subregions(const ReferenceGenome& reference,
+                                                          const GenomicRegion& region)
+{
+    const auto sequence = reference.get_sequence(region);
+    
+    const auto complex_blocks = find_high_complexity_subsequences(sequence);
+    
+    std::vector<GenomicRegion> result {};
+    result.reserve(complex_blocks.size());
+    
+    for (const auto& block : complex_blocks) {
+        result.emplace_back(region.get_contig_name(),
+                            region.get_begin() + block.pos,
+                            region.get_begin() + block.pos + block.length);
+    }
+    
+    return result;
+}
+
+void remove_well_spanned_low_complexity_regions(std::vector<GenomicRegion>& low_complexity_regions,
+                                                const ReadMap& reads,
+                                                const double min_spanning_fraction = 0.1)
+{
+    const auto it = std::remove_if(std::begin(low_complexity_regions), std::end(low_complexity_regions),
+                                   [&reads, min_spanning_fraction] (const auto& region) {
+                                       const auto num_overlapped = count_overlapped(reads, region);
+                                       const auto num_spanning   = count_spanning(reads, region);
+                                       const auto spanning_fraction = static_cast<double>(num_spanning)
+                                                                        / num_overlapped;
+                                       //std::cout << "spanning_fraction = " << spanning_fraction << std::endl;
+                                       return spanning_fraction > min_spanning_fraction;
+                                   });
+    low_complexity_regions.erase(it, std::end(low_complexity_regions));
+}
+
+auto find_low_complexity_subregions(const ReferenceGenome& reference, const GenomicRegion& region,
+                                    const ReadMap& reads)
+{
+    auto result = find_low_complexity_subregions(reference, region);
+    remove_well_spanned_low_complexity_regions(result, reads);
+    return result;
+}
+
+bool is_likely_low_complexity_artifact(const VariantCallBlock& block,
+                                       const std::vector<GenomicRegion>& low_complexity_regions,
+                                       const ReadMap& reads,
+                                       const double max_shared_fraction = 0.75)
+{
+    const auto variant_region = encompassing_region(block.variants);
+    
+    if (has_overlapped(low_complexity_regions, variant_region, BidirectionallySortedTag {})) {
+        return true;
+    }
+    
+    const auto it = find_first_shared(reads,
+                                      std::cbegin(low_complexity_regions),
+                                      std::cend(low_complexity_regions),
+                                      variant_region);
+    
+    if (it == std::cend(low_complexity_regions)) {
+        return false;
+    }
+    
+    const auto num_shared     = count_shared(reads, *it, variant_region);
+    const auto num_overlapped = count_overlapped(reads, variant_region);
+    
+    const auto fraction_shared = static_cast<double>(num_shared) / num_overlapped;
+    
+    return fraction_shared > max_shared_fraction;
+}
+
+void filter_calls_in_low_complexity_regions(VariantCallBlocks& variant_calls,
+                                            const ReferenceGenome& reference,
+                                            const ReadMap& reads)
+{
+    if (!variant_calls.empty()) {
+        const auto low_complexity_regions = find_low_complexity_subregions(reference,
+                                                                           encompassing_region(reads),
+                                                                           reads);
+        
+        if (DEBUG_MODE && !low_complexity_regions.empty()) {
+            Logging::DebugLogger log {};
+            stream(log) << "Detected " << low_complexity_regions.size() << " low complexity regions:";
+            for (const auto& region : low_complexity_regions) {
+                stream(log) << "*\t" << region;
+            }
+        }
+        
+        const auto it = std::stable_partition(std::begin(variant_calls), std::end(variant_calls),
+                                              [&low_complexity_regions, &reads] (const VariantCallBlock& block) {
+                                                  return !is_likely_low_complexity_artifact(block, low_complexity_regions, reads);
+                                              });
+        
+        if (DEBUG_MODE) {
+            const auto n = std::accumulate(it, std::end(variant_calls), 0,
+                                           [] (const auto curr, const VariantCallBlock& block) {
+                                               return curr + block.variants.size();
+                                           });
+            
+            Logging::DebugLogger log {};
+            
+            if (n > 0) {
+                stream(log) << "Filtering " << n << " variants in low complexity region:";
+                std::for_each(it, std::end(variant_calls),
+                              [&log] (const VariantCallBlock& block) {
+                                  for (const Variant& call : block.variants) {
+                                      stream(log) << "*\t" << call;
+                                  }
+                              });
+            }
+        }
+        
+        variant_calls.erase(it, std::end(variant_calls));
+    }
+}
+
 std::vector<VcfRecord::Builder>
 PopulationVariantCaller::call_variants(const std::vector<Variant>& candidates,
                                        const std::vector<Allele>& callable_alleles,
@@ -775,6 +893,8 @@ PopulationVariantCaller::call_variants(const std::vector<Variant>& candidates,
     }
     
     auto variant_calls = call_blocked_variants(candidates, allele_posteriors, min_variant_posterior_);
+    
+    filter_calls_in_low_complexity_regions(variant_calls, reference_, reads);
     
     //debug::print_variant_calls(variant_calls);
     

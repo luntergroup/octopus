@@ -481,6 +481,7 @@
 		D490E42D1C750AE900883184 /* population_caller_tests.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = population_caller_tests.cpp; sourceTree = "<group>"; };
 		D490E42F1C750B1000883184 /* variant_caller_tests.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = variant_caller_tests.cpp; sourceTree = "<group>"; };
 		D4B69CC41C4FEF2700F3135B /* timing.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = timing.hpp; sourceTree = "<group>"; };
+		D4BB95001CA0590B00886B57 /* sequence_complexity.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = sequence_complexity.hpp; sourceTree = "<group>"; };
 		D4BEA9F71B861BE200E53CFD /* divsufsort.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = divsufsort.c; sourceTree = "<group>"; };
 		D4BEA9F81B861BE200E53CFD /* sssort.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = sssort.c; sourceTree = "<group>"; };
 		D4BEA9F91B861BE200E53CFD /* trsort.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = trsort.c; sourceTree = "<group>"; };
@@ -968,6 +969,7 @@
 				D44ADE771C452B9B00A854C6 /* compression.cpp */,
 				CA14727D1AAE63A8005FDCD1 /* hash_functions.hpp */,
 				D4907F5E1A8A3ADD00639203 /* string_utils.hpp */,
+				D4BB95001CA0590B00886B57 /* sequence_complexity.hpp */,
 				CA8A66451B7E5E0C008CE1D8 /* sequence_utils.hpp */,
 				CA53D3051C0A7881009A216D /* merge_transform.hpp */,
 				CA487AF11C1F06D600488577 /* mappable_debug.hpp */,
