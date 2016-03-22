@@ -26,7 +26,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--version",
         
         "--debug",
-        //"--trace",
+        "--trace",
         
         //"--sites-only",
         

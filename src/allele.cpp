@@ -15,6 +15,11 @@ ContigAllele demote(const Allele& allele)
     return ContigAllele {contig_region(allele), allele.get_sequence()};
 }
 
+ContigAllele demote(Allele&& allele)
+{
+    return ContigAllele {contig_region(allele), std::move(allele.sequence_)};
+}
+
 bool is_reference(const Allele& allele, const ReferenceGenome& reference)
 {
     if (is_empty_region(allele) && is_empty_sequence(allele)) return true;

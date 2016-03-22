@@ -69,9 +69,9 @@ public:
     const GenomicRegion& get_region() const;
     
     bool contains(const ContigAllele& allele) const;
-    bool contains_exact(const ContigAllele& allele) const;
     bool contains(const Allele& allele) const;
     bool contains_exact(const Allele& allele) const;
+    bool contains_exact(const ContigAllele& allele) const;
     
     SequenceType get_sequence(const ContigRegion& region) const;
     SequenceType get_sequence(const GenomicRegion& region) const;

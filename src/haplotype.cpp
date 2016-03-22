@@ -79,6 +79,12 @@ bool Haplotype::contains(const ContigAllele& allele) const
     return false;
 }
 
+bool Haplotype::contains(const Allele& allele) const
+{
+    if (!is_same_contig(allele, region_)) return false;
+    return contains(demote(allele));
+}
+
 bool Haplotype::contains_exact(const ContigAllele& allele) const
 {
     if (!::contains(region_.get_contig_region(), allele)) return false;
@@ -94,12 +100,6 @@ bool Haplotype::contains_exact(const ContigAllele& allele) const
     if (std::distance(it, std::cend(cached_sequence_)) < ::sequence_size(allele)) return false;
     
     return std::equal(std::cbegin(allele.get_sequence()), std::cend(allele.get_sequence()), it);
-}
-
-bool Haplotype::contains(const Allele& allele) const
-{
-    if (!is_same_contig(allele, region_)) return false;
-    return contains(demote(allele));
 }
 
 bool Haplotype::contains_exact(const Allele& allele) const

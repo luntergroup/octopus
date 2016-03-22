@@ -60,35 +60,34 @@ public:
 private:
     using VariantCaller::HaplotypePriorMap;
     
-    struct Latents : public CallerLatents
+    class Latents : public CallerLatents
     {
+    public:
         using ModelLatents = GenotypeModel::Population::Latents;
         
-        using CallerLatents::HaplotypePosteiorMap;
+        using CallerLatents::HaplotypePosteriorMap;
         using CallerLatents::GenotypePosteriorMap;
         
+        friend PopulationVariantCaller;
+        
         Latents(ModelLatents&&);
-        Latents(HaplotypePosteiorMap&&, GenotypePosteriorMap&&);
+        Latents(HaplotypePosteriorMap&&, GenotypePosteriorMap&&);
         
-        std::shared_ptr<HaplotypePosteiorMap> get_haplotype_posteriors() const noexcept override
-        {
-            return haplotype_frequencies_;
-        }
+        std::shared_ptr<HaplotypePosteriorMap> get_haplotype_posteriors() const noexcept override;
+        std::shared_ptr<GenotypePosteriorMap> get_genotype_posteriors() const noexcept override;
         
-        std::shared_ptr<GenotypePosteriorMap> get_genotype_posteriors() const noexcept override
-        {
-            return genotype_posteriors_;
-        }
-        
-        std::shared_ptr<ModelLatents::HaplotypeFrequencyMap> haplotype_frequencies_;
+    private:
+        std::shared_ptr<ModelLatents::HaplotypeProbabilityMap> haplotype_posteriors_;
         std::shared_ptr<ModelLatents::GenotypeProbabilityMap> genotype_posteriors_;
+        
+        ModelLatents::HaplotypeFrequencyMap haplotype_frequencies_;
     };
     
-    mutable GenotypeModel::Population genotype_model_;
+    GenotypeModel::Population genotype_model_;
     
     const unsigned ploidy_;
-    const double min_variant_posterior_ = 0.95;
-    const double min_refcall_posterior_ = 0.5;
+    const double min_variant_posterior_;
+    const double min_refcall_posterior_;
     
     std::unique_ptr<CallerLatents>
     infer_latents(const std::vector<SampleIdType>& samples,

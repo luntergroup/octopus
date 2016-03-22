@@ -83,13 +83,13 @@ protected:
     
     struct CallerLatents
     {
-        using HaplotypePosteiorMap = std::unordered_map<HaplotypeReference, double>;
-        using GenotypePosteriorMap = ProbabilityMatrix<Genotype<Haplotype>>;
+        using HaplotypePosteriorMap = std::unordered_map<HaplotypeReference, double>;
+        using GenotypePosteriorMap  = ProbabilityMatrix<Genotype<Haplotype>>;
         
         // Return shared_ptr as the caller may not actually need to use these latents itself,
         // they just need to be constructable on demand. But if the caller DOES use them, then
         // we avoid copying.
-        virtual std::shared_ptr<HaplotypePosteiorMap> get_haplotype_posteriors() const = 0;
+        virtual std::shared_ptr<HaplotypePosteriorMap> get_haplotype_posteriors() const = 0;
         virtual std::shared_ptr<GenotypePosteriorMap> get_genotype_posteriors() const = 0;
         
         virtual ~CallerLatents() = default;
@@ -119,7 +119,7 @@ private:
     
     std::vector<Haplotype>
     get_removable_haplotypes(const std::vector<Haplotype>& haplotypes,
-                             const CallerLatents::HaplotypePosteiorMap& haplotype_posteriors,
+                             const CallerLatents::HaplotypePosteriorMap& haplotype_posteriors,
                              const GenomicRegion& region) const;
 };
 
@@ -132,30 +132,6 @@ generate_candidate_reference_alleles(const std::vector<Allele>& callable_alleles
                                      const std::vector<GenomicRegion>& called_regions,
                                      const std::vector<Variant>& candidates,
                                      VariantCaller::RefCallType refcall_type);
-
-template <typename Map>
-auto marginalise_haplotypes(const std::vector<Haplotype>& haplotypes,
-                            const Map& genotype_posteriors)
-{
-    using HaplotypeReference   = std::reference_wrapper<const Haplotype>;
-    using HaplotypePosteiorMap = std::unordered_map<HaplotypeReference, double>;
-    
-    HaplotypePosteiorMap result {haplotypes.size()};
-    
-    for (const auto& haplotype : haplotypes) {
-        result.emplace(haplotype, 0);
-    }
-    
-    for (const auto& s : genotype_posteriors) {
-        for (const auto& p : s.second) {
-            for (const auto& haplotype : p.first.copy_unique_ref()) {
-                result.at(haplotype) += p.second;
-            }
-        }
-    }
-    
-    return result;
-}
 } // namespace Octopus
 
 #endif

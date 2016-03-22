@@ -557,7 +557,7 @@ bool VariantCaller::done_calling(const GenomicRegion& region) const noexcept
 
 std::vector<Haplotype>
 VariantCaller::get_removable_haplotypes(const std::vector<Haplotype>& haplotypes,
-                                        const CallerLatents::HaplotypePosteiorMap& haplotype_posteriors,
+                                        const CallerLatents::HaplotypePosteriorMap& haplotype_posteriors,
                                         const GenomicRegion& region) const
 {
     assert(!haplotypes.empty() && contains(haplotypes.front().get_region(), region));
@@ -901,9 +901,9 @@ namespace debug
         const auto m = std::min(haplotype_posteriors.size(), n);
         
         if (m == haplotype_posteriors.size()) {
-            stream << "Printing top " << m << " haplotype posteriors" << '\n';
-        } else {
             stream << "Printing all haplotype posteriors" << '\n';
+        } else {
+            stream << "Printing top " << m << " haplotype posteriors" << '\n';
         }
         
         std::vector<std::pair<std::reference_wrapper<const Haplotype>, double>> v {};

@@ -64,15 +64,15 @@ namespace Octopus
         
         struct Latents : public CallerLatents
         {
-            using CallerLatents::HaplotypePosteiorMap;
+            using CallerLatents::HaplotypePosteriorMap;
             using CallerLatents::GenotypePosteriorMap;
             
             template <typename T1, typename T2, typename T3>
             Latents(T1 g, T2 c, T3 m) : germline_genotype_posteriors {g}, cancer_haplotype_posteriors {c}, genotype_mixtures {m} {}
             
-            std::shared_ptr<HaplotypePosteiorMap> get_haplotype_posteriors() const override
+            std::shared_ptr<HaplotypePosteriorMap> get_haplotype_posteriors() const override
             {
-                return std::make_shared<HaplotypePosteiorMap>();
+                return std::make_shared<HaplotypePosteriorMap>();
             }
             
             std::shared_ptr<GenotypePosteriorMap> get_genotype_posteriors() const override

@@ -14,7 +14,6 @@
 
 #include "variant_caller.hpp"
 #include "pedigree_genotype_model.hpp"
-#include "population_genotype_model.hpp"
 
 class GenomicRegion;
 class ReadPipe;

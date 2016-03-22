@@ -33,14 +33,6 @@ extern "C" {
 
 #include <inttypes.h>
 
-#ifndef DIVSUFSORT_API
-# ifdef DIVSUFSORT_BUILD_DLL
-#  define DIVSUFSORT_API __declspec(dllexport)
-# else
-#  define DIVSUFSORT_API __declspec(dllimport)
-# endif
-#endif
-
 /*- Datatypes -*/
 #ifndef SAUCHAR_T
 #define SAUCHAR_T
@@ -71,7 +63,6 @@ typedef int32_t saidx_t;
  * @param n The length of the given string.
  * @return 0 if no error occurred, -1 or -2 otherwise.
  */
-DIVSUFSORT_API
 saint_t
 divsufsort(const sauchar_t *T, saidx_t *SA, saidx_t n);
 
@@ -83,7 +74,6 @@ divsufsort(const sauchar_t *T, saidx_t *SA, saidx_t n);
  * @param n The length of the given string.
  * @return The primary index if no error occurred, -1 or -2 otherwise.
  */
-DIVSUFSORT_API
 saidx_t
 divbwt(const sauchar_t *T, sauchar_t *U, saidx_t *A, saidx_t n);
 
@@ -91,7 +81,6 @@ divbwt(const sauchar_t *T, sauchar_t *U, saidx_t *A, saidx_t n);
  * Returns the version of the divsufsort library.
  * @return The version number string.
  */
-DIVSUFSORT_API
 const char *
 divsufsort_version(void);
 
@@ -105,7 +94,6 @@ divsufsort_version(void);
  * @param idx The output primary index.
  * @return 0 if no error occurred, -1 or -2 otherwise.
  */
-DIVSUFSORT_API
 saint_t
 bw_transform(const sauchar_t *T, sauchar_t *U,
              saidx_t *SA /* can NULL */,
@@ -120,7 +108,6 @@ bw_transform(const sauchar_t *T, sauchar_t *U,
  * @param idx The primary index.
  * @return 0 if no error occurred, -1 or -2 otherwise.
  */
-DIVSUFSORT_API
 saint_t
 inverse_bw_transform(const sauchar_t *T, sauchar_t *U,
                      saidx_t *A /* can NULL */,
@@ -134,7 +121,6 @@ inverse_bw_transform(const sauchar_t *T, sauchar_t *U,
  * @param verbose The verbose mode.
  * @return 0 if no error occurred.
  */
-DIVSUFSORT_API
 saint_t
 sufcheck(const sauchar_t *T, const saidx_t *SA, saidx_t n, saint_t verbose);
 
@@ -149,7 +135,6 @@ sufcheck(const sauchar_t *T, const saidx_t *SA, saidx_t n, saint_t verbose);
  * @param idx The output index.
  * @return The count of matches if no error occurred, -1 otherwise.
  */
-DIVSUFSORT_API
 saidx_t
 sa_search(const sauchar_t *T, saidx_t Tsize,
           const sauchar_t *P, saidx_t Psize,
@@ -166,7 +151,6 @@ sa_search(const sauchar_t *T, saidx_t Tsize,
  * @param idx The output index.
  * @return The count of matches if no error occurred, -1 otherwise.
  */
-DIVSUFSORT_API
 saidx_t
 sa_simplesearch(const sauchar_t *T, saidx_t Tsize,
                 const saidx_t *SA, saidx_t SAsize,

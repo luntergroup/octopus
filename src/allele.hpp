@@ -46,7 +46,9 @@ public:
     
     const RegionTp& get_region() const noexcept;
     const SequenceType& get_sequence() const noexcept;
-
+    
+    friend BaseAllele<ContigRegion> demote(BaseAllele<GenomicRegion>&&);
+    
 private:
     SequenceType sequence_;
     RegionTp region_;
@@ -90,6 +92,7 @@ const typename BaseAllele<RegionTp>::SequenceType& BaseAllele<RegionTp>::get_seq
 // template base non-member methods
 
 ContigAllele demote(const Allele& allele);
+ContigAllele demote(Allele&& allele);
 
 template <typename RegionTp>
 auto sequence_size(const BaseAllele<RegionTp>& allele) noexcept
