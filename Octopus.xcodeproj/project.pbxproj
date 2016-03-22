@@ -86,6 +86,7 @@
 		D42F72FD1C61098600995F54 /* mappable_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D42F72FC1C61098600995F54 /* mappable_tests.cpp */; };
 		D42F73001C621C4C00995F54 /* trio_caller.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D42F72FE1C621C4C00995F54 /* trio_caller.cpp */; };
 		D435E9F91B2B345700945EC7 /* Makefile in Sources */ = {isa = PBXBuildFile; fileRef = D435E9F81B2B345700945EC7 /* Makefile */; };
+		D44215C41CA1BA3E002BF4C6 /* haplotype_prior_model_factory.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D44215C21CA1BA3E002BF4C6 /* haplotype_prior_model_factory.cpp */; };
 		D44ADE731C43C22700A854C6 /* variant_caller_builder.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D44ADE711C43C22700A854C6 /* variant_caller_builder.cpp */; };
 		D44ADE761C43D89B00A854C6 /* candidate_generator_builder.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D44ADE741C43D89B00A854C6 /* candidate_generator_builder.cpp */; };
 		D44ADE781C452B9B00A854C6 /* compression.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D44ADE771C452B9B00A854C6 /* compression.cpp */; };
@@ -401,6 +402,8 @@
 		D42F72FF1C621C4C00995F54 /* trio_caller.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = trio_caller.hpp; sourceTree = "<group>"; };
 		D42F90131AE7A8000003F791 /* testing.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = testing.txt; sourceTree = "<group>"; };
 		D435E9F81B2B345700945EC7 /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
+		D44215C21CA1BA3E002BF4C6 /* haplotype_prior_model_factory.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = haplotype_prior_model_factory.cpp; sourceTree = "<group>"; };
+		D44215C31CA1BA3E002BF4C6 /* haplotype_prior_model_factory.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = haplotype_prior_model_factory.hpp; sourceTree = "<group>"; };
 		D44ADE711C43C22700A854C6 /* variant_caller_builder.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = variant_caller_builder.cpp; sourceTree = "<group>"; };
 		D44ADE721C43C22700A854C6 /* variant_caller_builder.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = variant_caller_builder.hpp; sourceTree = "<group>"; };
 		D44ADE741C43D89B00A854C6 /* candidate_generator_builder.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = candidate_generator_builder.cpp; sourceTree = "<group>"; };
@@ -1178,6 +1181,8 @@
 				CAB0DFD71BBDB9E5001D2F99 /* haplotype_prior_model.cpp */,
 				CAB89DEF1C751ACA002D6F8E /* basic_haplotype_prior_model.hpp */,
 				CAB89DEE1C751ACA002D6F8E /* basic_haplotype_prior_model.cpp */,
+				D44215C31CA1BA3E002BF4C6 /* haplotype_prior_model_factory.hpp */,
+				D44215C21CA1BA3E002BF4C6 /* haplotype_prior_model_factory.cpp */,
 			);
 			name = "haplotype-prior-models";
 			sourceTree = "<group>";
@@ -1312,6 +1317,7 @@
 				CA98BBAA1C918B07000CE9C4 /* progress_meter.cpp in Sources */,
 				CAB89DF61C78D95F002D6F8E /* haplotype_generator.cpp in Sources */,
 				CA386DA31B5AC2870057A5A8 /* cigar_string.cpp in Sources */,
+				D44215C41CA1BA3E002BF4C6 /* haplotype_prior_model_factory.cpp in Sources */,
 				CA0B467B1AE8E8F700158BBA /* genotype_benchmarks.cpp in Sources */,
 				D4636C611B6788AC00FEA7D2 /* vcf_reader.cpp in Sources */,
 				CA03C1511A8C0D3D000D3494 /* htslib_sam_facade.cpp in Sources */,

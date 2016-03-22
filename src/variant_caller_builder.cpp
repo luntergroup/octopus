@@ -30,83 +30,87 @@ namespace Octopus
     
     VariantCallerBuilder::VariantCallerBuilder(const VariantCallerBuilder& other)
     :
-    reference_                   {other.reference_},
-    read_pipe_                   {other.read_pipe_},
-    ploidy_                      {other.ploidy_},
-    model_                       {other.model_},
-    candidate_generator_builder_ {other.candidate_generator_builder_},
-    refcall_type_                {other.refcall_type_},
-    min_variant_posterior_       {other.min_variant_posterior_},
-    min_refcall_posterior_       {other.min_refcall_posterior_},
-    max_haplotypes_              {other.max_haplotypes_},
-    normal_sample_               {other.normal_sample_},
-    min_somatic_posterior_       {other.min_somatic_posterior_},
-    call_somatics_only_          {other.call_somatics_only_},
-    maternal_sample_             {other.maternal_sample_},
-    paternal_sample_             {other.paternal_sample_},
-    pedigree_                    {other.pedigree_},
-    factory_                     {generate_factory()}
+    reference_                     {other.reference_},
+    read_pipe_                     {other.read_pipe_},
+    haplotype_prior_model_factory_ {other.haplotype_prior_model_factory_},
+    ploidy_                        {other.ploidy_},
+    model_                         {other.model_},
+    candidate_generator_builder_   {other.candidate_generator_builder_},
+    refcall_type_                  {other.refcall_type_},
+    min_variant_posterior_         {other.min_variant_posterior_},
+    min_refcall_posterior_         {other.min_refcall_posterior_},
+    max_haplotypes_                {other.max_haplotypes_},
+    normal_sample_                 {other.normal_sample_},
+    min_somatic_posterior_         {other.min_somatic_posterior_},
+    call_somatics_only_            {other.call_somatics_only_},
+    maternal_sample_               {other.maternal_sample_},
+    paternal_sample_               {other.paternal_sample_},
+    pedigree_                      {other.pedigree_},
+    factory_                       {generate_factory()}
     {}
     
     VariantCallerBuilder& VariantCallerBuilder::operator=(const VariantCallerBuilder& other)
     {
-        reference_                   = other.reference_;
-        read_pipe_                   = other.read_pipe_;
-        ploidy_                      = other.ploidy_;
-        model_                       = other.model_;
-        candidate_generator_builder_ = other.candidate_generator_builder_;
-        refcall_type_                = other.refcall_type_;
-        min_variant_posterior_       = other.min_variant_posterior_;
-        min_refcall_posterior_       = other.min_refcall_posterior_;
-        max_haplotypes_              = other.max_haplotypes_;
-        normal_sample_               = other.normal_sample_;
-        min_somatic_posterior_       = other.min_somatic_posterior_;
-        call_somatics_only_          = other.call_somatics_only_;
-        maternal_sample_             = other.maternal_sample_;
-        paternal_sample_             = other.paternal_sample_;
-        pedigree_                    = other.pedigree_;
-        factory_                   = generate_factory();
+        reference_                     = other.reference_;
+        read_pipe_                     = other.read_pipe_;
+        haplotype_prior_model_factory_ = other.haplotype_prior_model_factory_;
+        ploidy_                        = other.ploidy_;
+        model_                         = other.model_;
+        candidate_generator_builder_   = other.candidate_generator_builder_;
+        refcall_type_                  = other.refcall_type_;
+        min_variant_posterior_         = other.min_variant_posterior_;
+        min_refcall_posterior_         = other.min_refcall_posterior_;
+        max_haplotypes_                = other.max_haplotypes_;
+        normal_sample_                 = other.normal_sample_;
+        min_somatic_posterior_         = other.min_somatic_posterior_;
+        call_somatics_only_            = other.call_somatics_only_;
+        maternal_sample_               = other.maternal_sample_;
+        paternal_sample_               = other.paternal_sample_;
+        pedigree_                      = other.pedigree_;
+        factory_                       = generate_factory();
         return *this;
     }
     
     VariantCallerBuilder::VariantCallerBuilder(VariantCallerBuilder&& other)
     :
-    reference_                   {std::move(other.reference_)},
-    read_pipe_                   {std::move(other.read_pipe_)},
-    ploidy_                      {std::move(other.ploidy_)},
-    model_                       {std::move(other.model_)},
-    candidate_generator_builder_ {std::move(other.candidate_generator_builder_)},
-    refcall_type_                {std::move(other.refcall_type_)},
-    min_variant_posterior_       {std::move(other.min_variant_posterior_)},
-    min_refcall_posterior_       {std::move(other.min_refcall_posterior_)},
-    max_haplotypes_              {std::move(other.max_haplotypes_)},
-    normal_sample_               {std::move(other.normal_sample_)},
-    min_somatic_posterior_       {std::move(other.min_somatic_posterior_)},
-    call_somatics_only_          {std::move(other.call_somatics_only_)},
-    maternal_sample_             {std::move(other.maternal_sample_)},
-    paternal_sample_             {std::move(other.paternal_sample_)},
-    pedigree_                    {std::move(other.pedigree_)},
-    factory_                     {generate_factory()}
+    reference_                     {std::move(other.reference_)},
+    read_pipe_                     {std::move(other.read_pipe_)},
+    haplotype_prior_model_factory_ {std::move(other.haplotype_prior_model_factory_)},
+    ploidy_                        {std::move(other.ploidy_)},
+    model_                         {std::move(other.model_)},
+    candidate_generator_builder_   {std::move(other.candidate_generator_builder_)},
+    refcall_type_                  {std::move(other.refcall_type_)},
+    min_variant_posterior_         {std::move(other.min_variant_posterior_)},
+    min_refcall_posterior_         {std::move(other.min_refcall_posterior_)},
+    max_haplotypes_                {std::move(other.max_haplotypes_)},
+    normal_sample_                 {std::move(other.normal_sample_)},
+    min_somatic_posterior_         {std::move(other.min_somatic_posterior_)},
+    call_somatics_only_            {std::move(other.call_somatics_only_)},
+    maternal_sample_               {std::move(other.maternal_sample_)},
+    paternal_sample_               {std::move(other.paternal_sample_)},
+    pedigree_                      {std::move(other.pedigree_)},
+    factory_                       {generate_factory()}
     {}
     
     VariantCallerBuilder& VariantCallerBuilder::operator=(VariantCallerBuilder&& other)
     {
         using std::swap;
-        swap(reference_                  , other.reference_);
-        swap(read_pipe_                  , other.read_pipe_);
-        swap(ploidy_                     , other.ploidy_);
-        swap(model_                      , other.model_);
-        swap(candidate_generator_builder_, other.candidate_generator_builder_);
-        swap(refcall_type_               , other.refcall_type_);
-        swap(min_variant_posterior_      , other.min_variant_posterior_);
-        swap(min_refcall_posterior_      , other.min_refcall_posterior_);
-        swap(max_haplotypes_             , other.max_haplotypes_);
-        swap(normal_sample_              , other.normal_sample_);
-        swap(min_somatic_posterior_      , other.min_somatic_posterior_);
-        swap(call_somatics_only_         , other.call_somatics_only_);
-        swap(maternal_sample_            , other.maternal_sample_);
-        swap(paternal_sample_            , other.paternal_sample_);
-        swap(pedigree_                   , other.pedigree_);
+        swap(reference_                     , other.reference_);
+        swap(read_pipe_                     , other.read_pipe_);
+        swap(haplotype_prior_model_factory_ , other.haplotype_prior_model_factory_);
+        swap(ploidy_                        , other.ploidy_);
+        swap(model_                         , other.model_);
+        swap(candidate_generator_builder_   , other.candidate_generator_builder_);
+        swap(refcall_type_                  , other.refcall_type_);
+        swap(min_variant_posterior_         , other.min_variant_posterior_);
+        swap(min_refcall_posterior_         , other.min_refcall_posterior_);
+        swap(max_haplotypes_                , other.max_haplotypes_);
+        swap(normal_sample_                 , other.normal_sample_);
+        swap(min_somatic_posterior_         , other.min_somatic_posterior_);
+        swap(call_somatics_only_            , other.call_somatics_only_);
+        swap(maternal_sample_               , other.maternal_sample_);
+        swap(paternal_sample_               , other.paternal_sample_);
+        swap(pedigree_                      , other.pedigree_);
         factory_ = generate_factory();
         return *this;
     }
@@ -248,7 +252,7 @@ namespace Octopus
                 return std::make_unique<PopulationVariantCaller>(reference_,
                                                                  read_pipe_,
                                                                  candidate_generator_builder_.get().build(),
-                                                                 std::make_unique<BasicHaplotypePriorModel>(reference_),
+                                                                 haplotype_prior_model_factory_.make(reference_),
                                                                  std::move(general_parameters),
                                                                  PopulationVariantCaller::CallerParameters {
                                                                      min_variant_posterior_,
@@ -260,7 +264,7 @@ namespace Octopus
                 return std::make_unique<CancerVariantCaller>(reference_,
                                                              read_pipe_,
                                                              candidate_generator_builder_.get().build(),
-                                                             std::make_unique<BasicHaplotypePriorModel>(reference_),
+                                                             haplotype_prior_model_factory_.make(reference_),
                                                              std::move(general_parameters),
                                                              CancerVariantCaller::CallerParameters {
                                                                  min_variant_posterior_,

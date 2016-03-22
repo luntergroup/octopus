@@ -70,8 +70,7 @@ private:
         
         friend PopulationVariantCaller;
         
-        Latents(ModelLatents&&);
-        Latents(HaplotypePosteriorMap&&, GenotypePosteriorMap&&);
+        explicit Latents(ModelLatents&&);
         
         std::shared_ptr<HaplotypePosteriorMap> get_haplotype_posteriors() const noexcept override;
         std::shared_ptr<GenotypePosteriorMap> get_genotype_posteriors() const noexcept override;

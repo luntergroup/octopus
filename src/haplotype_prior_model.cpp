@@ -9,6 +9,7 @@
 #include "haplotype_prior_model.hpp"
 
 #include <iostream>
+#include <cassert>
 
 #include "maths.hpp"
 

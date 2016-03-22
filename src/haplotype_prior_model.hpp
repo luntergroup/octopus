@@ -15,7 +15,6 @@
 #include <iterator>
 #include <cstddef>
 #include <algorithm>
-#include <cassert>
 
 #include "haplotype.hpp"
 
@@ -24,7 +23,7 @@ namespace Octopus
 class HaplotypePriorModel
 {
 public:
-    using HaplotypePriorMap  = std::unordered_map<std::reference_wrapper<const Haplotype>, double>;
+    using HaplotypePriorMap = std::unordered_map<std::reference_wrapper<const Haplotype>, double>;
     
     virtual ~HaplotypePriorModel() = default;
     
@@ -72,6 +71,7 @@ namespace debug
                           stream << " " << p.second << '\n';
                       });
     }
+    
     void print_haplotype_priors(const HaplotypePriorModel::HaplotypePriorMap& haplotype_priors,
                                 std::size_t n = 5);
 } // namespace debug

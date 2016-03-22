@@ -20,9 +20,8 @@
 #include "variant_caller.hpp"
 #include "read_pipe.hpp"
 #include "candidate_generator_builder.hpp"
+#include "haplotype_prior_model_factory.hpp"
 
-#include "haplotype_prior_model.hpp"
-#include "basic_haplotype_prior_model.hpp"
 #include "pedigree.hpp"
 
 namespace Octopus {
@@ -47,6 +46,8 @@ namespace Octopus {
         VariantCallerBuilder& set_reference(const ReferenceGenome& reference) noexcept;
         VariantCallerBuilder& set_read_pipe(ReadPipe& read_pipe) noexcept;
         VariantCallerBuilder& set_candidate_generator_builder(const CandidateGeneratorBuilder& candidate_generator_builder) noexcept;
+        
+        //VariantCallerBuilder& set_haplotype_prior_model_factory(HaplotypePriorModelFactory);
         
         VariantCallerBuilder& set_ploidy(unsigned ploidy) noexcept;
         VariantCallerBuilder& set_model(std::string model);
@@ -80,6 +81,8 @@ namespace Octopus {
         // common parameters
         std::reference_wrapper<const ReferenceGenome> reference_;
         std::reference_wrapper<ReadPipe> read_pipe_;
+        
+        HaplotypePriorModelFactory haplotype_prior_model_factory_;
         
         unsigned ploidy_;
         std::string model_;
