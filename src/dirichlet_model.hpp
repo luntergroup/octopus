@@ -17,11 +17,13 @@
 
 #include "haplotype.hpp"
 #include "maths.hpp"
+#include "haplotype_prior_model.hpp"
 
 namespace Octopus
 {
 namespace GenotypeModel
 {
+    using HaplotypePriorMap      = HaplotypePriorModel::HaplotypePriorMap;
     using HaplotypePriorCountMap = std::unordered_map<std::reference_wrapper<const Haplotype>, double>;
     using HaplotypeFrequencyMap  = std::unordered_map<std::reference_wrapper<const Haplotype>, double>;
     
@@ -29,7 +31,7 @@ namespace GenotypeModel
     
     HaplotypeFrequencyMap init_haplotype_frequencies(const HaplotypePriorCountMap& haplotype_counts);
     
-    HaplotypePriorCountMap compute_haplotype_prior_counts(const HaplotypeFrequencyMap& haplotype_priors);
+    HaplotypePriorCountMap compute_haplotype_prior_counts(const HaplotypePriorMap& haplotype_priors);
 } // namespace GenotypeModel
 } // namespace Octopus
 

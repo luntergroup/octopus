@@ -60,22 +60,103 @@ using GenotypePosteriorMap     = std::unordered_map<SampleIdType, SampleGenotype
 
 using HaplotypePriorCounts = std::vector<double>;
 
+HaplotypePriorCounts flatten_haplotype_prior_counts(const std::vector<Haplotype>& haplotypes,
+                                                    const HaplotypePriorCountMap& prior_counts)
+{
+    HaplotypePriorCounts result(haplotypes.size());
+    
+    std::transform(std::cbegin(haplotypes), std::cend(haplotypes), std::begin(result),
+                   [&prior_counts] (const auto& haplotype) {
+                       return prior_counts.at(haplotype);
+                   });
+    
+    return result;
+}
+
+auto make_inverse_genotype_table(const std::vector<Haplotype>& haplotypes,
+                                 const std::vector<Genotype<Haplotype>>& genotypes)
+{
+    assert(!haplotypes.empty() && !genotypes.empty());
+    
+    using HaplotypeReference = std::reference_wrapper<const Haplotype>;
+    
+    std::unordered_map<HaplotypeReference, std::vector<std::size_t>> result_map {haplotypes.size()};
+    
+    const auto r = element_cardinality_in_genotypes(static_cast<unsigned>(haplotypes.size()),
+                                                    genotypes.front().ploidy());
+    
+    for (const auto& haplotype : haplotypes) {
+        auto it = result_map.emplace(std::piecewise_construct,
+                                     std::forward_as_tuple(std::ref(haplotype)),
+                                     std::forward_as_tuple());
+        it.first->second.reserve(r);
+    }
+    
+    for (std::size_t i {0}; i < genotypes.size(); ++i) {
+        for (const auto& haplotype : genotypes[i]) {
+            result_map.at(haplotype).emplace_back(i);
+        }
+    }
+    
+    std::vector<std::vector<std::size_t>> result {};
+    
+    for (const auto& haplotype : haplotypes) {
+        result.emplace_back(std::move(result_map.at(haplotype)));
+    }
+    
+    return result;
+}
+
+double calculate_frequency_update_norm(const std::size_t num_samples, const unsigned ploidy,
+                                       const std::size_t num_haplotypes, const double& prior_count_sum)
+{
+    return static_cast<double>(num_samples) * ploidy + prior_count_sum;
+               // - static_cast<double>(num_haplotypes);
+}
+    
 struct ModelConstants
 {
     using InverseGenotypeTable = std::vector<std::vector<std::size_t>>;
     
-    unsigned ploidy;
-    double frequency_update_norm;
+    const std::vector<Haplotype>& haplotypes;
+    const std::vector<Genotype<Haplotype>>& genotypes;
     
-    InverseGenotypeTable genotypes_containing_haplotypes;
+    const GenotypeLogLikelihoodMap& genotype_log_likilhoods;
+    const HaplotypePriorCounts haplotype_prior_counts;
     
-    ModelConstants(const unsigned ploidy, const double frequency_update_norm,
-                   InverseGenotypeTable&& table)
+    const unsigned ploidy;
+    
+    const double prior_count_sum;
+    const double frequency_update_norm;
+    
+    const InverseGenotypeTable genotypes_containing_haplotypes;
+    
+    ModelConstants() = delete;
+    
+    explicit ModelConstants(const std::vector<Haplotype>& haplotypes,
+                            const std::vector<Genotype<Haplotype>>& genotypes,
+                            const GenotypeLogLikelihoodMap& genotype_log_likilhoods,
+                            const HaplotypePriorCountMap& haplotype_prior_counts)
     :
-    ploidy {ploidy},
-    frequency_update_norm {frequency_update_norm},
-    genotypes_containing_haplotypes {std::move(table)}
-    {}
+    haplotypes {haplotypes},
+    genotypes {genotypes},
+    genotype_log_likilhoods {genotype_log_likilhoods},
+    haplotype_prior_counts {flatten_haplotype_prior_counts(haplotypes, haplotype_prior_counts)},
+    ploidy {genotypes.front().ploidy()},
+    prior_count_sum {std::accumulate(std::cbegin(this->haplotype_prior_counts),
+                                     std::cend(this->haplotype_prior_counts), 0.0)},
+    frequency_update_norm {calculate_frequency_update_norm(genotype_log_likilhoods.size(), ploidy,
+                                                           haplotypes.size(), prior_count_sum)},
+    genotypes_containing_haplotypes {make_inverse_genotype_table(haplotypes, genotypes)}
+    {
+        if (TRACE_MODE) {
+            Logging::TraceLogger log {};
+            stream(log) << "Prior count sum = " << prior_count_sum;
+            stream(log) << "Frequency update norm = " << frequency_update_norm;
+        }
+    }
+    
+    ~ModelConstants() = default;
 };
 } // namespace
 
@@ -122,74 +203,15 @@ namespace
 {
 HaplotypeFrequencyMap
 init_haplotype_frequencies(const HaplotypePriorCountMap& haplotype_prior_counts,
-                           const double prior_count_sum)
+                           const ModelConstants& constants)
 {
     HaplotypeFrequencyMap result {haplotype_prior_counts.size()};
     
     for (const auto& haplotype_count : haplotype_prior_counts) {
-        result.emplace(haplotype_count.first, haplotype_count.second / prior_count_sum);
+        result.emplace(haplotype_count.first, haplotype_count.second / constants.prior_count_sum);
     }
     
     return result;
-}
-
-auto flatten_haplotype_prior_counts(const std::vector<Haplotype>& haplotypes,
-                                    const HaplotypePriorCountMap& prior_counts)
-{
-    std::vector<double> result(haplotypes.size());
-    std::transform(std::cbegin(haplotypes), std::cend(haplotypes), std::begin(result),
-                   [&prior_counts] (const auto& haplotype) {
-                       return prior_counts.at(haplotype);
-                   });
-    return result;
-}
-
-auto make_inverse_genotype_table(const std::vector<Haplotype>& haplotypes,
-                                 const std::vector<Genotype<Haplotype>>& genotypes)
-{
-    assert(!haplotypes.empty() && !genotypes.empty());
-    
-    using HaplotypeReference = std::reference_wrapper<const Haplotype>;
-    
-    std::unordered_map<HaplotypeReference, std::vector<std::size_t>> result_map {haplotypes.size()};
-    
-    const auto r = element_cardinality_in_genotypes(static_cast<unsigned>(haplotypes.size()),
-                                                    genotypes.front().ploidy());
-    
-    for (const auto& haplotype : haplotypes) {
-        auto it = result_map.emplace(std::piecewise_construct,
-                                     std::forward_as_tuple(std::ref(haplotype)),
-                                     std::forward_as_tuple());
-        it.first->second.reserve(r);
-    }
-    
-    for (std::size_t i {0}; i < genotypes.size(); ++i) {
-        for (const auto& haplotype : genotypes[i]) {
-            result_map.at(haplotype).emplace_back(i);
-        }
-    }
-    
-    ModelConstants::InverseGenotypeTable result {};
-    
-    for (const auto& haplotype : haplotypes) {
-        result.emplace_back(std::move(result_map.at(haplotype)));
-    }
-    
-    return result;
-}
-
-ModelConstants
-compute_model_constants(const std::vector<Haplotype>& haplotypes,
-                            const std::vector<Genotype<Haplotype>>& genotypes,
-                            const double& prior_count_sum)
-{
-    const auto norm = genotypes.size() * genotypes.front().ploidy() + prior_count_sum;
-    
-    return ModelConstants {
-        genotypes.front().ploidy(),
-        norm,
-        make_inverse_genotype_table(haplotypes, genotypes)
-    };
 }
 
 GenotypeLogLikelihoodMap
@@ -302,7 +324,8 @@ auto collapse_genotype_posteriors(const GenotypePosteriorMap& genotype_posterior
     
     for (const auto& sample_posteriors : genotype_posteriors) {
         std::transform(std::cbegin(result), std::cend(result),
-                       std::cbegin(sample_posteriors.second), std::begin(result),
+                       std::cbegin(sample_posteriors.second),
+                       std::begin(result),
                        [] (const auto curr, const auto p) {
                            return curr + p;
                        });
@@ -315,7 +338,8 @@ double update_haplotype_frequencies(const std::vector<Haplotype>& haplotypes,
                                     HaplotypeFrequencyMap& current_haplotype_frequencies,
                                     const HaplotypePriorCounts& haplotype_prior_counts,
                                     const GenotypePosteriorMap& genotype_posteriors,
-                                    const ModelConstants& constants)
+                                    const ModelConstants::InverseGenotypeTable& genotypes_containing_haplotypes,
+                                    const double frequency_update_norm)
 {
     const auto collaped_posteriors = collapse_genotype_posteriors(genotype_posteriors);
     
@@ -326,11 +350,11 @@ double update_haplotype_frequencies(const std::vector<Haplotype>& haplotypes,
         
         double new_frequency {haplotype_prior_counts[i]};
         
-        for (const auto& genotype_index : constants.genotypes_containing_haplotypes[i]) {
+        for (const auto& genotype_index : genotypes_containing_haplotypes[i]) {
             new_frequency += collaped_posteriors[genotype_index];
         }
         
-        new_frequency /= constants.frequency_update_norm;
+        new_frequency /= frequency_update_norm;
         
         const auto frequency_change = std::abs(current_frequency - new_frequency);
         
@@ -344,34 +368,29 @@ double update_haplotype_frequencies(const std::vector<Haplotype>& haplotypes,
     return max_frequency_change;
 }
 
-double do_em_iteration(const std::vector<Haplotype>& haplotypes,
-                       GenotypePosteriorMap& genotype_posteriors,
+double do_em_iteration(GenotypePosteriorMap& genotype_posteriors,
                        HaplotypeFrequencyMap& haplotype_frequencies,
                        GenotypeLogMarginals& genotype_log_marginals,
-                       const GenotypeLogLikelihoodMap& genotype_log_likilhoods,
-                       const HaplotypePriorCounts& haplotype_prior_counts,
                        const ModelConstants& constants)
 {
-    const auto max_change = update_haplotype_frequencies(haplotypes,
+    const auto max_change = update_haplotype_frequencies(constants.haplotypes,
                                                          haplotype_frequencies,
-                                                         haplotype_prior_counts,
+                                                         constants.haplotype_prior_counts,
                                                          genotype_posteriors,
-                                                         constants);
+                                                         constants.genotypes_containing_haplotypes,
+                                                         constants.frequency_update_norm);
     
     update_genotype_log_marginals(genotype_log_marginals, haplotype_frequencies);
     
-    update_genotype_posteriors(genotype_posteriors, genotype_log_marginals, genotype_log_likilhoods);
+    update_genotype_posteriors(genotype_posteriors, genotype_log_marginals,
+                               constants.genotype_log_likilhoods);
     
     return max_change;
 }
 
-void run_em(const std::vector<Haplotype>& haplotypes,
-            const std::vector<Genotype<Haplotype>>& genotypes,
-            GenotypePosteriorMap& genotype_posteriors,
+void run_em(GenotypePosteriorMap& genotype_posteriors,
             HaplotypeFrequencyMap& haplotype_frequencies,
             GenotypeLogMarginals& genotype_log_marginals,
-            const GenotypeLogLikelihoodMap& genotype_log_likilhoods,
-            const HaplotypePriorCounts& haplotype_prior_counts,
             const ModelConstants& constants,
             const unsigned max_iterations, const double epsilon)
 {
@@ -379,21 +398,20 @@ void run_em(const std::vector<Haplotype>& haplotypes,
         Logging::TraceLogger log {};
         stream(log) << "Running EM";
         debug::print_haplotype_frequencies(stream(log), haplotype_frequencies, -1);
-//        debug::print_genotype_log_marginals(stream(log), genotypes, genotype_log_marginals, -1);
-//        debug::print_genotype_posteriors(stream(log), genotypes, genotype_posteriors, -1);
+        debug::print_genotype_log_marginals(stream(log), constants.genotypes, genotype_log_marginals, -1);
+//        debug::print_genotype_posteriors(stream(log), constants.genotypes, genotype_posteriors, -1);
     }
     
     for (unsigned n {1}; n <= max_iterations; ++n) {
-        const auto max_change = do_em_iteration(haplotypes, genotype_posteriors, haplotype_frequencies,
-                                                genotype_log_marginals, genotype_log_likilhoods,
-                                                haplotype_prior_counts, constants);
+        const auto max_change = do_em_iteration(genotype_posteriors, haplotype_frequencies,
+                                                genotype_log_marginals,constants);
         
         if (TRACE_MODE) {
             Logging::TraceLogger log {};
             stream(log) << "EM iteration " << n << " : max change = " << max_change;
             debug::print_haplotype_frequencies(stream(log), haplotype_frequencies, -1);
-//            debug::print_genotype_log_marginals(stream(log), genotypes, genotype_log_marginals, -1);
-//            debug::print_genotype_posteriors(stream(log), genotypes, genotype_posteriors, -1);
+//            debug::print_genotype_log_marginals(stream(log), constants.genotypes, genotype_log_marginals, -1);
+//            debug::print_genotype_posteriors(stream(log), constants.genotypes, genotype_posteriors, -1);
         }
         
         if (max_change <= epsilon) break;
@@ -434,7 +452,7 @@ auto calculate_haplotype_posteriors(const std::vector<Haplotype>& haplotypes,
     auto it = std::cbegin(genotype_posteriors);
     
     for (const auto& genotype : genotypes) {
-        for (const auto& haplotype : genotype) {
+        for (const auto& haplotype : genotype.copy_unique_ref()) {
             result.at(haplotype) += *it;
         }
         ++it;
@@ -553,26 +571,20 @@ Population::infer_latents(const std::vector<SampleIdType>& samples,
                                               genotype_log_likilhoods);
     }
     
-    auto haplotype_prior_count_map = compute_haplotype_prior_counts(haplotype_priors);
-    auto haplotype_prior_counts    = flatten_haplotype_prior_counts(haplotypes,
-                                                                    haplotype_prior_count_map);
+    auto haplotype_prior_counts = compute_haplotype_prior_counts(haplotype_priors);
     
-    const auto prior_count_sum = std::accumulate(std::cbegin(haplotype_prior_counts),
-                                                 std::cend(haplotype_prior_counts), 0.0);
+    const ModelConstants constants {haplotypes, genotypes, genotype_log_likilhoods, haplotype_prior_counts};
     
-    const auto constants = compute_model_constants(haplotypes, genotypes, prior_count_sum);
+    auto haplotype_frequencies = init_haplotype_frequencies(haplotype_prior_counts, constants);
     
-    auto haplotype_frequencies = init_haplotype_frequencies(haplotype_prior_count_map, prior_count_sum);
-    
-    haplotype_prior_count_map.clear();
+    haplotype_prior_counts.clear();
     
     auto genotype_log_marginals = init_genotype_log_marginals(genotypes, haplotype_frequencies);
     auto genotype_posteriors    = init_genotype_posteriors(genotype_log_marginals,
                                                            genotype_log_likilhoods);
     
-    run_em(haplotypes, genotypes, genotype_posteriors, haplotype_frequencies, genotype_log_marginals,
-           genotype_log_likilhoods, haplotype_prior_counts, constants,
-           max_em_iterations_, em_epsilon_);
+    run_em(genotype_posteriors, haplotype_frequencies, genotype_log_marginals,
+           constants, max_em_iterations_, em_epsilon_);
     
     return make_latents(haplotypes, std::move(genotypes), std::move(genotype_posteriors),
                         std::move(haplotype_frequencies), constants);

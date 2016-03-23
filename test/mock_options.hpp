@@ -75,7 +75,20 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         
         // for population
         
-        "--regions", "22:35,199,371-35,199,701", // Suspicious high quality insertion and SNP
+        // False positives under uniprior
+        //"--regions", "22:37,042,664-37,042,703",
+        //"--regions", "22:36,589,610-36,589,649",
+        //"--regions", "22:38082212-38082363",
+        //"--regions", "22:41,434,235-41,434,310", // false positives
+        //"--regions", "22:36,642,122-36,642,286",
+        //"--regions", "22:37,042,600-37,042,764",
+        //"--regions", "22:37,313,831-37,313,995",
+        
+        //"--regions", "22:32,705,705-32,706,035",
+        
+        "--regions", "22:37,268,614-37,268,778", // filtering true haplotype
+        
+        //"--regions", "22:35,199,371-35,199,701", // Suspicious high quality insertion and SNP
         
         //"--regions", "22:16,103,653-16,103,957", // 5 haplotypes??
         
@@ -86,11 +99,9 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--regions", "22:34,974,205-34,975,215", // Another very repetitive region
         //"--regions", "22:35,834,230-35,835,616", // Another very repetitive region
 //        "--regions", "22:37,777,920-37,778,151", // is the deletion homozygous?
-        //"--regions", "22:38,082,212-38,082,363", // false positive SNPs
 //        "--regions", "22:38,092,378-38,092,418", // not left aligning the insertion at 38092390
 //        "--regions", "22:39,517,648-39,517,952", // is the deletion & insetion homozygous?
 //        "--regions", "22:40,946,793-40,946,944", // where is the deletion?
-//        "--regions", "22:41,434,235-41,434,310", // false positives
 //        "--regions", "22:41,509,085-41,509,236", // false negative insertion (GATK calls, Platypus doesn't)?
 //        "--regions", "22:41,988,173-41,988,324", // GATK is calling a deletion at 41988249...
         
@@ -162,7 +173,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--candidates-from-source", sample_vcf.c_str(),
         //"--regenotype",
         
-        //"--max-haplotypes", "1024",
+        //"--max-haplotypes", "256",
         
         "--min-variant-posterior", "10",
         "--min-refcall-posterior", "0",

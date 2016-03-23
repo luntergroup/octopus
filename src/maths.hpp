@@ -364,28 +364,32 @@ RealType beta_binomial(const RealType k, const RealType n, const RealType alpha,
     return dirichlet_multinomial<RealType>(k, n - k, alpha, beta);
 }
 
-namespace detail {
-template <typename RealType>
-bool is_mldp_converged(std::vector<RealType>& lhs, const std::vector<RealType>& rhs, const RealType epsilon = 0.0001)
+namespace detail
 {
-    using std::cbegin; using std::cend; using std::begin;
-    std::transform(cbegin(lhs), cend(lhs), cbegin(rhs), begin(lhs),
-                   [] (const auto a, const auto b) { return std::abs(a - b); });
-    return std::all_of(cbegin(lhs), cend(lhs), [epsilon] (const auto x) { return x < epsilon; });
-}
+    template <typename RealType>
+    bool is_mldp_converged(std::vector<RealType>& lhs, const std::vector<RealType>& rhs,
+                           const RealType epsilon)
+    {
+        std::transform(std::cbegin(lhs), std::cend(lhs), std::cbegin(rhs), std::begin(lhs),
+                       [] (const auto a, const auto b) { return std::abs(a - b); });
+        return std::all_of(std::cbegin(lhs), std::cend(lhs),
+                           [epsilon] (const auto x) { return x < epsilon; });
+    }
 } // namespace detail
 
-
 template <typename RealType>
-std::vector<RealType> dirichlet_mle(std::vector<RealType> pi, const RealType precision,
-                                    const unsigned max_iterations = 100, const RealType epsilon = 0.0001)
+std::vector<RealType>
+dirichlet_mle(std::vector<RealType> pi, const RealType precision,
+              const unsigned max_iterations = 100, const RealType epsilon = 0.0001)
 {
-    using std::cbegin; using std::cend; using std::begin;
-    
-    std::transform(cbegin(pi), cend(pi), begin(pi), [] (const auto p) { return std::log(p); });
+    std::transform(std::cbegin(pi), std::cend(pi), std::begin(pi),
+                   [] (const auto p) { return std::log(p); });
     
     const auto l = pi.size();
-    std::vector<RealType> result(l, 1.0 / l), curr_result(l, 1.0 / l), means(l, 1.0 / l);
+    
+    const RealType u {RealType {1} / l};
+    
+    std::vector<RealType> result(l, u), curr_result(l, u), means(l, u);
     
     for (unsigned n {0}; n < max_iterations; ++n) {
         RealType v {0};
@@ -396,8 +400,9 @@ std::vector<RealType> dirichlet_mle(std::vector<RealType> pi, const RealType pre
         
         for (std::size_t k {0}; k < l; ++k) {
             curr_result[k] = digamma_inv<RealType>(pi[k] - v);
-            means[k]       = curr_result[k] / std::accumulate(cbegin(curr_result),
-                                                              cend(curr_result), RealType {0});
+            means[k]       = curr_result[k] / std::accumulate(std::cbegin(curr_result),
+                                                              std::cend(curr_result),
+                                                              RealType {0});
         }
         
         if (detail::is_mldp_converged(result, curr_result, epsilon)) return curr_result;

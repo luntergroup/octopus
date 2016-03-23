@@ -36,6 +36,17 @@ namespace Octopus
         return result;
     }
     
+    void
+    filter_by_likelihood_sum(const std::vector<SampleIdType>& samples,
+                             std::vector<Haplotype>& haplotypes,
+                             const std::vector<Haplotype>::iterator first_removable,
+                             const HaplotypeLikelihoodCache& haplotype_likelihoods,
+                             const std::size_t n,
+                             std::vector<Haplotype>& removed)
+    {
+        std::cout << "here = n" << std::endl;
+    }
+    
     std::vector<Haplotype>
     filter_by_maximum_likelihood(std::vector<Haplotype>& haplotypes,
                                  const std::vector<SampleIdType>& samples,
@@ -61,6 +72,39 @@ namespace Octopus
                          [&] (const auto& lhs, const auto& rhs) {
                              return max_liklihoods.at(lhs) > max_liklihoods.at(rhs);
                          });
+        
+//        const auto nth_max_liklihood = max_liklihoods.at(*nth);
+//        
+//        const auto it = std::find_if(std::make_reverse_iterator(std::prev(nth)),
+//                                     std::make_reverse_iterator(std::begin(haplotypes)),
+//                                     [nth_max_liklihood, &max_liklihoods] (const Haplotype& haplotype) {
+//                                         return max_liklihoods.at(haplotype) == nth_max_liklihood;
+//                                     });
+//        
+//        if (it != std::make_reverse_iterator(std::begin(haplotypes))) {
+//            std::sort(std::begin(haplotypes), std::end(haplotypes),
+//                             [&] (const auto& lhs, const auto& rhs) {
+//                                 return max_liklihoods.at(lhs) > max_liklihoods.at(rhs);
+//                             });
+//            
+//            const auto er = std::equal_range(std::begin(haplotypes), std::end(haplotypes),
+//                                             nth_max_liklihood,
+//                                             [&] (const auto& lhs, const auto& rhs) {
+//                                                 return max_liklihoods.at(lhs) > max_liklihoods.at(rhs);
+//                                             });
+//            
+//            const auto num_removable = std::distance(er.second, std::end(haplotypes));
+//            result.reserve(num_removable);
+//            std::move(er.second, std::end(haplotypes), std::begin(result));
+//            haplotypes.erase(er.second, std::end(haplotypes));
+//            
+//            // now deal with haplotypes in er
+//            
+//            filter_by_likelihood_sum(samples, haplotypes, er.first, haplotype_likelihoods,
+//                                     n - num_removable, result);
+//            
+//            return result;
+//        }
         
         std::sort(std::begin(haplotypes), nth);
         std::sort(nth, std::end(haplotypes));

@@ -33,7 +33,7 @@ namespace GenotypeModel
     {
         HaplotypeFrequencyMap result {haplotype_counts.size()};
         
-        auto n = Maths::sum_values(haplotype_counts);
+        const auto n = Maths::sum_values(haplotype_counts);
         
         for (const auto& haplotype_count : haplotype_counts) {
             result.emplace(haplotype_count.first, haplotype_count.second / n);
@@ -43,10 +43,10 @@ namespace GenotypeModel
     }
     
     HaplotypePriorCountMap
-    compute_haplotype_prior_counts(const HaplotypeFrequencyMap& haplotype_priors)
+    compute_haplotype_prior_counts(const HaplotypePriorMap& haplotype_priors)
     {
-        static constexpr double   PRECISION      {14000.0};
-        static constexpr unsigned MAX_ITERATIONS {1};
+        static constexpr double   PRECISION      {1000000.0};
+        static constexpr unsigned MAX_ITERATIONS {1000};
         
         HaplotypePriorCountMap result {haplotype_priors.size()};
         
@@ -58,10 +58,14 @@ namespace GenotypeModel
         std::transform(std::cbegin(haplotype_priors), std::cend(haplotype_priors),
                        std::cbegin(alphas), std::inserter(result, begin(result)),
                        [] (const auto& p, const double alpha) {
-                           return std::make_pair(std::ref(p.first), alpha);
+                           return std::make_pair(std::cref(p.first), alpha);
                        });
         
-        for (auto& h : result) h.second = 1; // DEBUG - uniform priors
+        //for (auto& h : result) h.second = 1; // DEBUG - uniform priors
+        
+        for (auto& h : result) {
+            h.second = haplotype_priors.at(h.first);
+        }
         
         return result;
     }

@@ -370,12 +370,14 @@ std::deque<VcfRecord> VariantCaller::call_variants(const GenomicRegion& call_reg
             continue;
         }
         
+        if (DEBUG_MODE) {
+            stream(debug_log) << "Filtered " << removed_haplotypes.size() << " haplotypes";
+        }
         if (TRACE_MODE) {
             Logging::TraceLogger trace_log {};
             stream(trace_log) << "Filtered " << removed_haplotypes.size() << " haplotypes:";
-            debug::print_haplotypes(stream(trace_log), removed_haplotypes);
-        } else if (DEBUG_MODE) {
-            stream(debug_log) << "Filtered " << removed_haplotypes.size() << " haplotypes";
+            debug::print_haplotypes(stream(trace_log), removed_haplotypes,
+                                    debug::Resolution::VariantAlleles);
         }
         
         resume_timer(likelihood_timer);
@@ -401,6 +403,9 @@ std::deque<VcfRecord> VariantCaller::call_variants(const GenomicRegion& call_reg
         removed_haplotypes.clear();
         pause_timer(haplotype_generation_timer);
         
+        if (DEBUG_MODE) {
+            stream(debug_log) << "There are " << haplotypes.size() << " final haplotypes";
+        }
         if (TRACE_MODE) {
             Logging::TraceLogger trace_log {};
             stream(trace_log) << "There are " << haplotypes.size() << " final haplotypes";
@@ -885,7 +890,8 @@ namespace debug
             if (resolution == Resolution::Alleles || resolution == Resolution::SequenceAndAlleles) {
                 ::debug::print_alleles(haplotype); stream << '\n';
             } else if (resolution != Resolution::Sequence) {
-                ::debug::print_variant_alleles(haplotype); stream << '\n';
+                ::debug::print_variant_alleles(stream, haplotype);
+                stream << '\n';
             }
         }
     }
