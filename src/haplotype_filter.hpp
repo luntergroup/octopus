@@ -20,8 +20,8 @@ class HaplotypeLikelihoodCache;
 namespace Octopus
 {
     std::vector<Haplotype>
-    filter_n_haplotypes(std::vector<Haplotype>& haplotypes, const std::vector<SampleIdType>& samples,
-                        const HaplotypeLikelihoodCache& haplotype_likelihoods, const std::size_t n);
+    filter_to_n_haplotypes(std::vector<Haplotype>& haplotypes, const std::vector<SampleIdType>& samples,
+                           const HaplotypeLikelihoodCache& haplotype_likelihoods, const std::size_t n);
 } // namespace Octopus
 
 #endif /* haplotype_filter_hpp */

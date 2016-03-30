@@ -751,6 +751,21 @@
 			path = images;
 			sourceTree = "<group>";
 		};
+		CA2D59F71CABD865005EA347 /* mappable */ = {
+			isa = PBXGroup;
+			children = (
+				D4907F4D1A89095400639203 /* contig_region.hpp */,
+				D4907F471A88D71800639203 /* genomic_region.hpp */,
+				D4E41DA11AD801EF0010D25D /* mappable.hpp */,
+				D413B0411B5D17CA007EFDE0 /* mappable_ranges.hpp */,
+				D4E41DA21AD80C1B0010D25D /* mappable_algorithms.hpp */,
+				CACF81391C876EE900E9E6BD /* mappable_flat_set.hpp */,
+				CA386DA61B5BBBDE0057A5A8 /* mappable_flat_multi_set.hpp */,
+				D413B0401B5D0431007EFDE0 /* mappable_map.hpp */,
+			);
+			name = mappable;
+			sourceTree = "<group>";
+		};
 		CA91C2CC1B8DE63A00609FFA /* callers */ = {
 			isa = PBXGroup;
 			children = (
@@ -957,14 +972,6 @@
 			children = (
 				D4907F731A8E255200639203 /* equitable.hpp */,
 				D4907F711A8E04B900639203 /* comparable.hpp */,
-				D4907F4D1A89095400639203 /* contig_region.hpp */,
-				D4907F471A88D71800639203 /* genomic_region.hpp */,
-				D4E41DA11AD801EF0010D25D /* mappable.hpp */,
-				D413B0411B5D17CA007EFDE0 /* mappable_ranges.hpp */,
-				D4E41DA21AD80C1B0010D25D /* mappable_algorithms.hpp */,
-				CACF81391C876EE900E9E6BD /* mappable_flat_set.hpp */,
-				CA386DA61B5BBBDE0057A5A8 /* mappable_flat_multi_set.hpp */,
-				D413B0401B5D0431007EFDE0 /* mappable_map.hpp */,
 				D463C18B1AEF7D2200739A66 /* map_utils.hpp */,
 				CAFA196A1AC0D0D500F953D9 /* maths.hpp */,
 				CAE3E2941A9CF97700C01B2C /* storage_policies.hpp */,
@@ -1024,6 +1031,7 @@
 		CAFA19771AC62BEB00F953D9 /* core */ = {
 			isa = PBXGroup;
 			children = (
+				CA2D59F71CABD865005EA347 /* mappable */,
 				D48C00B81AAA0F5300E76FC8 /* read */,
 				CAA4DC3B1A83B64A00DD3E9A /* allele-variant */,
 				D42F72F41C5BAADE00995F54 /* haplotype-genotype */,

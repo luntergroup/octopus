@@ -87,7 +87,7 @@ auto make_inverse_genotype_table(const std::vector<Haplotype>& haplotypes,
     
     for (const auto& haplotype : haplotypes) {
         auto it = result_map.emplace(std::piecewise_construct,
-                                     std::forward_as_tuple(std::ref(haplotype)),
+                                     std::forward_as_tuple(std::cref(haplotype)),
                                      std::forward_as_tuple());
         it.first->second.reserve(r);
     }
@@ -572,6 +572,8 @@ Population::infer_latents(const std::vector<SampleIdType>& samples,
     }
     
     auto haplotype_prior_counts = compute_haplotype_prior_counts(haplotype_priors);
+    
+    debug::print_haplotype_priors(haplotype_prior_counts, -1);
     
     const ModelConstants constants {haplotypes, genotypes, genotype_log_likilhoods, haplotype_prior_counts};
     

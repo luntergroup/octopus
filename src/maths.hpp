@@ -18,11 +18,14 @@
 #include <iterator>
 #include <functional>
 #include <limits>
+#include <utility>
+#include <stdexcept>
 
 #include <boost/math/special_functions/gamma.hpp>
 #include <boost/math/special_functions/factorials.hpp>
 #include <boost/math/special_functions/sign.hpp>
 #include <boost/math/special_functions/digamma.hpp>
+#include <boost/math/special_functions/beta.hpp>
 
 namespace Octopus { namespace Maths {
 
@@ -507,8 +510,94 @@ T inner_product(InputIt1 first1, InputIt1 last1,
         ++first4;
     }
     return value;
-    }
+}
 
+namespace detail
+{
+    template <typename RealType>
+    std::pair<RealType, RealType>
+    uniform_hdi(const RealType mass)
+    {
+        const auto x = RealType {0.5} - mass / 2;
+        return std::make_pair(x, x + mass);
+    }
+    
+    template <typename RealType>
+    std::pair<RealType, RealType>
+    beta_hdi_symmetric(const RealType a, const RealType mass)
+    {
+        const auto x = boost::math::ibeta_inv(a, a, (RealType {1} - mass) / 2);
+        return std::make_pair(x, RealType {1} - x);
+    }
+    
+    template <typename RealType>
+    std::pair<RealType, RealType>
+    beta_hdi_unbounded_rhs(const RealType a, const RealType mass)
+    {
+        // Reverse J shaped
+        return std::make_pair(boost::math::ibeta_inv(a, RealType {1}, RealType {1} - mass), RealType {1});
+    }
+    
+    template <typename RealType>
+    std::pair<RealType, RealType>
+    beta_hdi_unbounded_lhs(const RealType b, const RealType mass)
+    {
+        // J shaped
+        return std::make_pair(RealType {0}, boost::math::ibeta_inv(RealType {1}, b, mass));
+    }
+    
+    template <typename RealType>
+    std::pair<RealType, RealType>
+    beta_hdi_skewed(const RealType a, const RealType b, const RealType mass)
+    {
+        const auto c = (RealType {1} - mass) / 2;
+        return std::make_pair(boost::math::ibeta_inv(a, b, c),
+                              boost::math::ibeta_inv(a, b, c + mass));
+    }
+} // namespace detail
+
+template <typename RealType>
+std::pair<RealType, RealType>
+beta_hdi(RealType a, RealType b, const RealType mass = 0.99)
+{
+    static_assert(std::is_floating_point<RealType>::value,
+                  "beta_hdi only works for floating point types");
+    
+    if (mass < RealType {0} || mass > RealType {1}) {
+        throw std::domain_error {"beta_hdi: given mass not in range [0, 1]"};
+    }
+    
+    if (a <= RealType {0} || b <= RealType {0}) {
+        throw std::domain_error {"beta_hdi: given non-positive parameter"};
+    }
+    
+    if (mass == RealType {0}) {
+        const auto mean = a / (a + b);
+        return std::make_pair(mean, mean);
+    }
+    
+    if (mass == RealType {1}) {
+        return std::make_pair(RealType {0}, RealType {1});
+    }
+    
+    if (a == b) {
+        if (a == RealType {1}) {
+            return detail::uniform_hdi(mass);
+        } else {
+            return detail::beta_hdi_symmetric(a, mass);
+        }
+    }
+    
+    if (a == RealType {1}) {
+        return detail::beta_hdi_unbounded_lhs(b, mass);
+    }
+    
+    if (b == RealType {1}) {
+        return detail::beta_hdi_unbounded_rhs(a, mass);
+    }
+    
+    return detail::beta_hdi_skewed(a, b, mass);
+}
 } // namespace Maths
 } // namespace Octopus
 

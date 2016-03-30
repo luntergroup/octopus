@@ -130,7 +130,7 @@ namespace Octopus
                                    std::cbegin(haplotype_likelihoods.log_likelihoods(sample, haplotype)),
                                    std::back_inserter(likelihoods),
                                    [] (const AlignedRead& read, const double likelihood) {
-                                       return std::make_pair(std::ref(read), likelihood);
+                                       return std::make_pair(std::cref(read), likelihood);
                                    });
                     
                     const auto mth = std::next(std::begin(likelihoods), m);

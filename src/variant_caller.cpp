@@ -358,8 +358,8 @@ std::deque<VcfRecord> VariantCaller::call_variants(const GenomicRegion& call_reg
         pause_timer(likelihood_timer);
         
         resume_timer(haplotype_fitler_timer);
-        auto removed_haplotypes = filter_n_haplotypes(haplotypes, samples,
-                                                      haplotype_likelihoods, max_haplotypes_);
+        auto removed_haplotypes = filter_to_n_haplotypes(haplotypes, samples,
+                                                         haplotype_likelihoods, max_haplotypes_);
         pause_timer(haplotype_fitler_timer);
         
         if (haplotypes.empty()) {
@@ -873,7 +873,8 @@ namespace debug
                                             const GenomicRegion& haplotype_region,
                                             bool number_only)
     {
-        print_inactive_flanking_candidates(std::cout, candidates, active_region, haplotype_region, number_only);
+        print_inactive_flanking_candidates(std::cout, candidates, active_region, haplotype_region,
+                                           number_only);
     }
     
     template <typename S>
@@ -888,7 +889,7 @@ namespace debug
                 stream << haplotype << '\n';
             }
             if (resolution == Resolution::Alleles || resolution == Resolution::SequenceAndAlleles) {
-                ::debug::print_alleles(haplotype); stream << '\n';
+                ::debug::print_alleles(stream, haplotype); stream << '\n';
             } else if (resolution != Resolution::Sequence) {
                 ::debug::print_variant_alleles(stream, haplotype);
                 stream << '\n';
@@ -935,7 +936,7 @@ namespace debug
     template <typename Map>
     void print_haplotype_posteriors(const Map& haplotype_posteriors, std::size_t n)
     {
-        print_haplotype_posteriors(haplotype_posteriors, n);
+        print_haplotype_posteriors(std::cout, haplotype_posteriors, n);
     }
 }
 } // namespace Octopus

@@ -32,8 +32,8 @@ class Haplotype;
 
 namespace debug
 {
-    template <typename S> void print_alleles(S& stream, const Haplotype& haplotype);
-    template <typename S> void print_variant_alleles(S& stream, const Haplotype& haplotype);
+    template <typename S> void print_alleles(S&& stream, const Haplotype& haplotype);
+    template <typename S> void print_variant_alleles(S&& stream, const Haplotype& haplotype);
 } // namespace debug
 
 namespace detail
@@ -90,8 +90,8 @@ public:
     friend Haplotype detail::do_splice(const Haplotype& haplotype, const GenomicRegion& region, std::true_type);
     friend bool is_reference(const Haplotype& haplotype);
     
-    template <typename S> friend void debug::print_alleles(S&, const Haplotype&);
-    template <typename S> friend void debug::print_variant_alleles(S&, const Haplotype&);
+    template <typename S> friend void debug::print_alleles(S&&, const Haplotype&);
+    template <typename S> friend void debug::print_variant_alleles(S&&, const Haplotype&);
     
 private:
     GenomicRegion region_;
@@ -302,7 +302,7 @@ std::ostream& operator<<(std::ostream& os, const Haplotype& haplotype);
 namespace debug
 {
     template <typename S>
-    void print_alleles(S& stream, const Haplotype& haplotype)
+    void print_alleles(S&& stream, const Haplotype& haplotype)
     {
         stream << "< ";
         for (const auto& allele : haplotype.explicit_alleles_) {
@@ -312,7 +312,7 @@ namespace debug
     }
     
     template <typename S>
-    void print_variant_alleles(S& stream, const Haplotype& haplotype)
+    void print_variant_alleles(S&& stream, const Haplotype& haplotype)
     {
         if (is_reference(haplotype)) {
             stream << "< >";

@@ -126,7 +126,7 @@ namespace Octopus
         
         if (!overlapped.empty()) {
             assert(size(overlapped, BidirectionallySortedTag {}) == 1);
-            return std::ref(overlapped.front());
+            return std::cref(overlapped.front());
         }
         
         return boost::none;

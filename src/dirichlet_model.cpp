@@ -45,7 +45,7 @@ namespace GenotypeModel
     HaplotypePriorCountMap
     compute_haplotype_prior_counts(const HaplotypePriorMap& haplotype_priors)
     {
-        static constexpr double   PRECISION      {1000000.0};
+        static constexpr double   PRECISION      {100'000};
         static constexpr unsigned MAX_ITERATIONS {1000};
         
         HaplotypePriorCountMap result {haplotype_priors.size()};
@@ -63,9 +63,9 @@ namespace GenotypeModel
         
         //for (auto& h : result) h.second = 1; // DEBUG - uniform priors
         
-        for (auto& h : result) {
-            h.second = haplotype_priors.at(h.first);
-        }
+//        for (auto& h : result) {
+//            h.second = haplotype_priors.at(h.first);
+//        }
         
         return result;
     }
