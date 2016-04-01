@@ -329,6 +329,11 @@ namespace debug
     
     void print_alleles(const Haplotype& haplotype);
     void print_variant_alleles(const Haplotype& haplotype);
+    
+    Haplotype make_haplotype(const std::string& str, const GenomicRegion& region,
+                             const ReferenceGenome& reference);
+    Haplotype make_haplotype(const std::string& str, const std::string& region,
+                             const ReferenceGenome& reference);
 } // namespace debug
 
 #endif /* defined(__Octopus__haplotype__) */

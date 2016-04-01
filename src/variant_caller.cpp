@@ -387,15 +387,17 @@ std::deque<VcfRecord> VariantCaller::call_variants(const GenomicRegion& call_reg
         // Compute haplotype priors after likelihood filtering as prior model may use
         // interdependencies between haplotypes.
         resume_timer(prior_model_timer);
-        auto haplotype_priors = haplotype_prior_model_->compute_maximum_entropy_haplotype_set(haplotypes);
+        HaplotypePriorMap haplotype_priors {};
+        haplotypes.erase(std::unique(std::begin(haplotypes), std::end(haplotypes)), std::end(haplotypes));
+        //auto haplotype_priors = haplotype_prior_model_->compute_maximum_entropy_haplotype_set(haplotypes);
         pause_timer(prior_model_timer);
         
-        if (TRACE_MODE) {
-            Logging::TraceLogger trace_log {};
-            debug::print_haplotype_priors(stream(trace_log), haplotype_priors, -1);
-        } else if (DEBUG_MODE) {
-            debug::print_haplotype_priors(stream(debug_log), haplotype_priors);
-        }
+//        if (TRACE_MODE) {
+//            Logging::TraceLogger trace_log {};
+//            debug::print_haplotype_priors(stream(trace_log), haplotype_priors, -1);
+//        } else if (DEBUG_MODE) {
+//            debug::print_haplotype_priors(stream(debug_log), haplotype_priors);
+//        }
         
         resume_timer(haplotype_generation_timer);
         generator.keep_haplotypes(haplotypes);

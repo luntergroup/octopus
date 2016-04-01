@@ -573,7 +573,7 @@ Population::infer_latents(const std::vector<SampleIdType>& samples,
     
     auto haplotype_prior_counts = compute_haplotype_prior_counts(haplotype_priors);
     
-    debug::print_haplotype_priors(haplotype_prior_counts, -1);
+    //debug::print_haplotype_priors(haplotype_prior_counts, -1);
     
     const ModelConstants constants {haplotypes, genotypes, genotype_log_likilhoods, haplotype_prior_counts};
     

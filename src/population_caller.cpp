@@ -95,8 +95,6 @@ PopulationVariantCaller::infer_latents(const std::vector<SampleIdType>& samples,
     return std::make_unique<Latents>(std::move(model_latents));
 }
 
-// non member methods
-
 namespace
 {
 using GM = GenotypeModel::Population;

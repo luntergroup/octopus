@@ -230,13 +230,33 @@ generate_all_genotypes(const std::vector<std::shared_ptr<Haplotype>>& haplotypes
 
 namespace debug
 {
-void print_alleles(const Genotype<Haplotype>& genotype)
-{
-    print_alleles(std::cout, genotype);
-}
+    void print_alleles(const Genotype<Haplotype>& genotype)
+    {
+        print_alleles(std::cout, genotype);
+    }
 
-void print_variant_alleles(const Genotype<Haplotype>& genotype)
-{
-    print_variant_alleles(std::cout, genotype);
-}
+    void print_variant_alleles(const Genotype<Haplotype>& genotype)
+    {
+        print_variant_alleles(std::cout, genotype);
+    }
+    
+    Genotype<Haplotype> make_genotype(const std::string& str, const GenomicRegion& region,
+                                      const ReferenceGenome& reference)
+    {
+        Genotype<Haplotype> result {};
+        
+        std::size_t pos {0};
+        
+//        while (pos != str.size()) {
+//            
+//        }
+        
+        return result;
+    }
+    
+    Genotype<Haplotype> make_genotype(const std::string& str, const std::string& region,
+                                      const ReferenceGenome& reference)
+    {
+        return make_genotype(str, parse_region(region, reference), reference);
+    }
 } // namespace debug

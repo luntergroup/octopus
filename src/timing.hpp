@@ -55,10 +55,10 @@ inline std::ostream& operator<<(std::ostream& os, TimeInterval interval)
     const auto duration_m = duration<std::chrono::minutes>(interval);
     
     if (duration_m.count() < 60) {
-        os << duration_m.count() << "." << ((duration_s.count() % 60) / 60) << "m";
+        os << duration_m.count() << "." << ((100 * (duration_s.count() % 60)) / 60) << "m";
     } else {
         const auto duration_h = duration<std::chrono::hours>(interval);
-        os << duration_h.count() << "." << ((duration_m.count() % 60) / 60) << "h";
+        os << duration_h.count() << "." << ((100 * (duration_m.count() % 60)) / 60) << "h";
     }
     
     return os;

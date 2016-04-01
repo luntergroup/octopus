@@ -748,6 +748,13 @@ namespace debug
     
     void print_alleles(const Genotype<Haplotype>& genotype);
     void print_variant_alleles(const Genotype<Haplotype>& genotype);
+    
+    
+    
+    Genotype<Haplotype> make_genotype(const std::string& str, const GenomicRegion& region,
+                                      const ReferenceGenome& reference);
+    Genotype<Haplotype> make_genotype(const std::string& str, const std::string& region,
+                                      const ReferenceGenome& reference);
 } // namespace debug
 
 #endif /* defined(__Octopus__genotype__) */

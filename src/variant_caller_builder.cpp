@@ -8,6 +8,7 @@
 
 #include "variant_caller_builder.hpp"
 
+#include "individual_caller.hpp"
 #include "population_caller.hpp"
 #include "cancer_caller.hpp"
 #include "pedigree_caller.hpp"
@@ -248,6 +249,17 @@ namespace Octopus
         };
         
         return ModelFactoryMap {
+            {"individual", [this, general_parameters = std::move(general_parameters)] () {
+                return std::make_unique<IndividualVariantCaller>(reference_,
+                                                                 read_pipe_,
+                                                                 candidate_generator_builder_.get().build(),
+                                                                 std::move(general_parameters),
+                                                                 IndividualVariantCaller::CallerParameters {
+                                                                     min_variant_posterior_,
+                                                                     min_refcall_posterior_,
+                                                                     ploidy_
+                                                                 });
+            }},
             {"population", [this, general_parameters = std::move(general_parameters)] () {
                 return std::make_unique<PopulationVariantCaller>(reference_,
                                                                  read_pipe_,

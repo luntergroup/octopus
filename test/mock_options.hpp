@@ -25,7 +25,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--help",
         //"--version",
         
-        "--debug",
+        //"--debug",
         //"--trace",
         
         //"--sites-only",
@@ -43,8 +43,8 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--reference", ecoli_reference_fasta.c_str(),
         
         //"--reads", NA12878_low_coverage.c_str(),
-        //"--reads", NA12878_high_coverage.c_str(),
-        "--reads", "~/Genomics/Illumina/NA12878.mapped.ILLUMINA.bwa.CEU.high_coverage_pcr_free.20130906.chr22.bam",
+        "--reads", NA12878_high_coverage.c_str(),
+        //"--reads", "~/Genomics/Illumina/NA12878.mapped.ILLUMINA.bwa.CEU.high_coverage_pcr_free.20130906.chr22.bam",
         
         //"--reads", NA12891_high_coverage.c_str(),
         
@@ -75,10 +75,12 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         
         // for population
         
+        "--regions", "22",
+        
         // False positives under uniprior
         //"--regions", "22:37,042,664-37,042,703",
         //"--regions", "22:36,589,610-36,589,649",
-        "--regions", "22:38082212-38082363",
+        //"--regions", "22:38082212-38082363",
         //"--regions", "22:41,434,235-41,434,310", // false positives
         //"--regions", "22:36,642,122-36,642,286",
         //"--regions", "22:37,042,600-37,042,764",
@@ -187,7 +189,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--max-open-read-files", "1",
         
         //"--output", test_out_vcf.c_str(),
-        //"--output", "octopus_NA12878HC_22_uniprior_filter_low_complex.vcf",
+        "--output", "octopus_NA12878HC_22_coalescent_filter_low_complex.vcf",
         //"--output", "octopus_calls2.vcf",
         
         nullptr};

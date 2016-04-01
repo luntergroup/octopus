@@ -47,6 +47,11 @@ void ReadPipe::set_read_manager(ReadManager& read_manager) noexcept
     read_manager_ = read_manager;
 }
 
+unsigned ReadPipe::num_samples() const noexcept
+{
+    return static_cast<unsigned>(samples_.size());
+}
+    
 const std::vector<SampleIdType>& ReadPipe::get_samples() const noexcept
 {
     return samples_;

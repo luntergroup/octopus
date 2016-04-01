@@ -1319,7 +1319,11 @@ namespace Octopus
         
         VariantCallerBuilder vc_builder {reference, read_pipe, candidate_generator_builder};
         
-        const auto& model = options.at("model").as<std::string>();
+        auto model = options.at("model").as<std::string>();
+        
+        if (model == "population" && read_pipe.num_samples() == 1) {
+            model = "individual";
+        }
         
         vc_builder.set_model(model);
         
