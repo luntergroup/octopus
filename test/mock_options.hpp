@@ -25,7 +25,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--help",
         //"--version",
         
-        //"--debug",
+        "--debug",
         //"--trace",
         
         //"--sites-only",
@@ -75,7 +75,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         
         // for population
         
-        "--regions", "22",
+        //"--regions", "22",
         
         // False positives under uniprior
         //"--regions", "22:37,042,664-37,042,703",
@@ -85,6 +85,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--regions", "22:36,642,122-36,642,286",
         //"--regions", "22:37,042,600-37,042,764",
         //"--regions", "22:37,313,831-37,313,995",
+        "--regions", "22:42,950,038-42,950,077",
         
         //"--regions", "22:32,705,705-32,706,035",
         
@@ -189,7 +190,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--max-open-read-files", "1",
         
         //"--output", test_out_vcf.c_str(),
-        "--output", "octopus_NA12878HC_22_coalescent_filter_low_complex.vcf",
+        //"--output", "octopus_NA12878HC_22_coalescent_filter_low_complex.vcf",
         //"--output", "octopus_calls2.vcf",
         
         nullptr};
