@@ -250,14 +250,15 @@ namespace Octopus
         
         next_active_region_ = std::move(to);
         
-        if (begins_before(current_active_region_, *next_active_region_)) {
+        if (overlaps(current_active_region_, *next_active_region_)) {
             auto passed_region = left_overhang_region(current_active_region_, *next_active_region_);
             
             const auto passed_alleles = overlap_range(alleles_, passed_region);
             
             if (passed_alleles.empty()) return;
             
-            if (!is_empty_region(passed_alleles.back())) {
+            if (is_after(*next_active_region_, current_active_region_)
+                || !is_empty_region(passed_alleles.back())) {
                 alleles_.erase_overlapped(passed_region);
                 tree_.remove_overlapped(passed_region);
             } else if (requires_staged_removal(passed_alleles)) {

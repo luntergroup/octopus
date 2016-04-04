@@ -70,8 +70,7 @@ namespace Octopus
             
             std::transform(std::cbegin(genotypes), std::cend(genotypes), std::begin(genotype_log_posteriors),
                            [&] (const auto& genotype) {
-                               std::vector<Haplotype> haps {std::cbegin(genotype), std::cend(genotype)};
-                               return std::log(haplotype_model.evaluate(haps))
+                               return std::log(haplotype_model.evaluate(genotype))
                                             + likelihood_model.log_likelihood(sample, genotype);
                            });
             

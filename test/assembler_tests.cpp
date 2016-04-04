@@ -19,7 +19,6 @@
 #include "reference_genome.hpp"
 #include "mock_objects.hpp"
 //#include "assembler.hpp"
-#include "kmer_graph.hpp"
 #include "storage_policies.hpp"
 
 BOOST_AUTO_TEST_SUITE(Components)
@@ -73,33 +72,33 @@ BOOST_AUTO_TEST_SUITE(Components)
 //    BOOST_CHECK(assembler.get_num_edges() == 51);
 //}
 
-BOOST_AUTO_TEST_CASE(assembler_path_test)
-{
-    BOOST_REQUIRE(test_file_exists(lambda_reference_fasta));
-    
-    auto lambda = make_reference(lambda_reference_fasta);
-    
-    auto contig_name = lambda.get_contig_names()[0];
-    auto contig_size = lambda.get_contig_size(contig_name);
-    auto contig = lambda.get_sequence(GenomicRegion {contig_name, 0, contig_size});
-    
-    //Assembler assembler {15};
-    
-    KmerGraph<int, policies::StoreStringReference> kmer_assembler {10};
-    kmer_assembler.add_sequence("AAAAAAAAAACCCCCCCCCC", 0, 1);
-    kmer_assembler.add_sequence("CCCCCCCCCCGGGGGGGGGG", 10, 2);
-    kmer_assembler.add_sequence("GGGGGGGGGGAAAAAAAAAA", 20, 2);
-    //kmer_assembler.print_kmers();
-    //kmer_assembler.add_sequence("GGGGGGGGGGTTTTTTTTTT", 1);
-//    kmer_assembler.add_sequence(contig, 1);
-    auto paths = kmer_assembler.get_contigs(1);
-    //std::cout << paths[0] << std::endl;
-    //std::cout << kmer_assembler.is_acyclic() << std::endl;
-    
-    //assembler.add_reference_contig(contig);
-    
-    //std::cout << assembler.get_contigs().at(0) << std::endl;
-}
+//BOOST_AUTO_TEST_CASE(assembler_path_test)
+//{
+//    BOOST_REQUIRE(test_file_exists(lambda_reference_fasta));
+//    
+//    auto lambda = make_reference(lambda_reference_fasta);
+//    
+//    auto contig_name = lambda.get_contig_names()[0];
+//    auto contig_size = lambda.get_contig_size(contig_name);
+//    auto contig = lambda.get_sequence(GenomicRegion {contig_name, 0, contig_size});
+//    
+//    //Assembler assembler {15};
+//    
+//    KmerGraph<int, policies::StoreStringReference> kmer_assembler {10};
+//    kmer_assembler.add_sequence("AAAAAAAAAACCCCCCCCCC", 0, 1);
+//    kmer_assembler.add_sequence("CCCCCCCCCCGGGGGGGGGG", 10, 2);
+//    kmer_assembler.add_sequence("GGGGGGGGGGAAAAAAAAAA", 20, 2);
+//    //kmer_assembler.print_kmers();
+//    //kmer_assembler.add_sequence("GGGGGGGGGGTTTTTTTTTT", 1);
+////    kmer_assembler.add_sequence(contig, 1);
+//    auto paths = kmer_assembler.get_contigs(1);
+//    //std::cout << paths[0] << std::endl;
+//    //std::cout << kmer_assembler.is_acyclic() << std::endl;
+//    
+//    //assembler.add_reference_contig(contig);
+//    
+//    //std::cout << assembler.get_contigs().at(0) << std::endl;
+//}
 
 //BOOST_AUTO_TEST_CASE(assembler_cycle_test)
 //{

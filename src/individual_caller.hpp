@@ -76,6 +76,8 @@ private:
         std::shared_ptr<ModelLatents::GenotypeProbabilityMap> genotype_posteriors_;
     };
     
+    SampleIdType sample_;
+    
     double min_variant_posterior_;
     double min_refcall_posterior_;
     unsigned ploidy_;

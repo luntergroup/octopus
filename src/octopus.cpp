@@ -710,8 +710,12 @@ namespace Octopus
             Logging::FatalLogger lg {};
             stream(lg) << "Encountered exception '" << e.what() << "'. Attempting to cleanup...";
             cleanup(*components);
-            stream(lg) << "Cleanup successful. Please re-run in debug mode (option --debug) and send"
-                          " log file to dcooke@well.ox.ac.uk";
+            if (DEBUG_MODE) {
+                stream(lg) << "Cleanup successful. Please send log file to dcooke@well.ox.ac.uk";
+            } else {
+                stream(lg) << "Cleanup successful. Please re-run in debug mode (option --debug) and send"
+                                " log file to dcooke@well.ox.ac.uk";
+            }
             return;
         }
         

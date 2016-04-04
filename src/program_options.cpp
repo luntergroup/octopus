@@ -1138,6 +1138,8 @@ namespace Octopus
             result.register_transform(ReadTransforms::trim_adapters());
         }
         
+        result.register_transform(ReadTransforms::trim_overlapping());
+        
         return result;
     }
     

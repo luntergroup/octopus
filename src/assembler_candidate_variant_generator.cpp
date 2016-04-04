@@ -10,18 +10,20 @@
 
 #include <algorithm>
 
+#include "common.hpp"
 #include "reference_genome.hpp"
 #include "aligned_read.hpp"
 #include "variant.hpp"
+#include "logging.hpp"
 
-namespace Octopus {
-    
+namespace Octopus
+{
 AssemblerCandidateVariantGenerator::AssemblerCandidateVariantGenerator(const ReferenceGenome& reference,
                                                                        unsigned kmer_size,
                                                                        SizeType max_variant_size)
 :
 reference_ {reference},
-assembler_ {kmer_size},
+assembler_ {31},
 max_variant_size_ {max_variant_size}
 {}
 
@@ -32,7 +34,7 @@ bool AssemblerCandidateVariantGenerator::requires_reads() const noexcept
 
 void AssemblerCandidateVariantGenerator::add_read(const AlignedRead& read)
 {
-    assembler_.add_read(read);
+    assembler_.insert_read(read.get_sequence());
 }
 
 void AssemblerCandidateVariantGenerator::add_reads(std::vector<AlignedRead>::const_iterator first,
@@ -49,9 +51,32 @@ void AssemblerCandidateVariantGenerator::add_reads(MappableFlatMultiSet<AlignedR
 
 std::vector<Variant> AssemblerCandidateVariantGenerator::generate_candidates(const GenomicRegion& region)
 {
-    auto reference_sequence = reference_.get().get_sequence(region);
-    assembler_.add_reference_sequence(region, reference_sequence);
-    return assembler_.get_variants(region);
+    const auto ref_sequence = reference_.get().get_sequence(region);
+    
+    assembler_.insert_reference(ref_sequence);
+    
+    std::vector<Variant> result {};
+    
+    if (assembler_.is_all_reference()) {
+        return result;
+    }
+    
+    assembler_.prune(2);
+    
+    std::cout << "Final graph:" << std::endl;
+    debug::print_edges(assembler_);
+    
+    if (!assembler_.is_acyclic()) {
+        Logging::WarningLogger log {};
+        log << "Assembler could not generate candidates due to cyclic graph";
+        return result;
+    }
+    
+    std::cout << "no cycles. Extracting variants..." << std::endl;
+    
+    auto variants = assembler_.extract_variants();
+    
+    return result;
 }
 
 void AssemblerCandidateVariantGenerator::clear()
