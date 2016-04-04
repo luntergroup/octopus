@@ -23,7 +23,9 @@ AssemblerCandidateVariantGenerator::AssemblerCandidateVariantGenerator(const Ref
                                                                        SizeType max_variant_size)
 :
 reference_ {reference},
-assembler_ {31},
+kmer_size_ {31},
+assembler_ {kmer_size_},
+region_assembled_ {},
 max_variant_size_ {max_variant_size}
 {}
 
@@ -35,6 +37,11 @@ bool AssemblerCandidateVariantGenerator::requires_reads() const noexcept
 void AssemblerCandidateVariantGenerator::add_read(const AlignedRead& read)
 {
     assembler_.insert_read(read.get_sequence());
+    if (region_assembled_) {
+        region_assembled_ = encompassing_region(read, *region_assembled_);
+    } else {
+        region_assembled_ = mapped_region(read);
+    }
 }
 
 void AssemblerCandidateVariantGenerator::add_reads(std::vector<AlignedRead>::const_iterator first,
@@ -51,16 +58,25 @@ void AssemblerCandidateVariantGenerator::add_reads(MappableFlatMultiSet<AlignedR
 
 std::vector<Variant> AssemblerCandidateVariantGenerator::generate_candidates(const GenomicRegion& region)
 {
+    std::vector<Variant> result {};
+    
+    if (!region_assembled_) {
+        return result;
+    }
+    
+    const auto reference_region = expand(*region_assembled_, kmer_size_);
+    
     const auto ref_sequence = reference_.get().get_sequence(region);
     
-    assembler_.insert_reference(ref_sequence);
+    std::cout << "Reference = " << ref_sequence << std::endl;
     
-    std::vector<Variant> result {};
+    assembler_.insert_reference(ref_sequence);
     
     if (assembler_.is_all_reference()) {
         return result;
     }
     
+    assembler_.remove_trivial_nonreference_cycles();
     assembler_.prune(2);
     
     std::cout << "Final graph:" << std::endl;
@@ -75,6 +91,10 @@ std::vector<Variant> AssemblerCandidateVariantGenerator::generate_candidates(con
     std::cout << "no cycles. Extracting variants..." << std::endl;
     
     auto variants = assembler_.extract_variants();
+    
+    for (auto v : variants) {
+        std::cout << v.begin_pos << " " << v.ref << " " << v.alt << std::endl;
+    }
     
     return result;
 }

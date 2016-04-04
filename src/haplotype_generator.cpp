@@ -233,8 +233,8 @@ namespace Octopus
     template <typename Range>
     bool requires_staged_removal(const Range& passed_alleles)
     {
-        const auto rbegin = std::make_reverse_iterator(std::prev(std::cend(passed_alleles)));
-        const auto rend   = std::make_reverse_iterator(std::cbegin(passed_alleles));
+        const auto rbegin = std::next(std::crbegin(passed_alleles));
+        const auto rend   = std::crend(passed_alleles);
         
         const auto it = std::find_if_not(rbegin, rend,
                                          [&passed_alleles] (const auto& allele) {

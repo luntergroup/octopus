@@ -126,13 +126,12 @@ namespace Octopus
         
         const auto nth_max_liklihood = max_liklihoods.at(*nth);
         
-        const auto it = std::find_if(std::make_reverse_iterator(std::prev(nth)),
-                                     std::make_reverse_iterator(std::begin(haplotypes)),
+        const auto it = std::find_if(std::make_reverse_iterator(std::prev(nth)), std::rend(haplotypes),
                                      [nth_max_liklihood, &max_liklihoods] (const Haplotype& haplotype) {
                                          return max_liklihoods.at(haplotype) == nth_max_liklihood;
                                      });
         
-        if (it != std::make_reverse_iterator(std::begin(haplotypes))) {
+        if (it != std::rend(haplotypes)) {
             std::sort(std::begin(haplotypes), nth, LikelihoodGreater {max_liklihoods});
             std::sort(nth, std::end(haplotypes), LikelihoodGreater {max_liklihoods});
             

@@ -87,8 +87,7 @@ void append_annotated_calls(std::deque<VcfRecord>& curr_calls,
                                      return region_begin(call_region) <= call.get_position() + 1;
                                  });
     
-    const auto it2 = std::find_if(std::make_reverse_iterator(std::end(new_calls)),
-                                  std::make_reverse_iterator(std::begin(new_calls)),
+    const auto it2 = std::find_if(std::rbegin(new_calls), std::rend(new_calls),
                                   [&call_region] (const auto& call) {
                                       return call.get_position() < region_end(call_region);
                                   }).base();

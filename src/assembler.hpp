@@ -16,6 +16,7 @@
 #include <unordered_set>
 #include <cstddef>
 #include <utility>
+#include <tuple>
 
 #include <boost/graph/adjacency_list.hpp>
 #include <boost/optional.hpp>
@@ -69,6 +70,7 @@ public:
     bool is_acyclic() const;
     bool is_all_reference() const;
     
+    void remove_trivial_nonreference_cycles();
     void prune(unsigned min_weight);
     void clear();
     
@@ -83,10 +85,11 @@ private:
     struct GraphEdge
     {
         GraphEdge() = default;
-        GraphEdge(unsigned weight);
+        GraphEdge(unsigned weight, bool is_reference = false);
         
         unsigned weight;
         double neg_log_probability;
+        bool is_reference;
     };
     
     struct GraphNode
@@ -114,9 +117,13 @@ private:
     using VertexIterator = boost::graph_traits<KmerGraph>::vertex_iterator;
     using EdgeIterator   = boost::graph_traits<KmerGraph>::edge_iterator;
     
+    using Path = std::deque<Vertex>;
+    using PredecessorMap = std::unordered_map<Vertex, Vertex>;
+    
     unsigned k_;
     
     std::deque<Kmer> reference_kmers_;
+    std::size_t reference_head_position_;
     
     KmerGraph graph_;
     
@@ -124,54 +131,69 @@ private:
     
     bool contains_kmer(const Kmer& kmer) const noexcept;
     std::size_t count_kmer(const Kmer& kmer) const noexcept;
+    std::size_t reference_size() const noexcept;
     
-    void set_vertex_reference(const Kmer& kmer);
     void regenerate_vertex_indices();
     
     boost::optional<Vertex> add_vertex(const Kmer& kmer, bool is_reference = false);
     void remove_vertex(Vertex v);
     void clear_and_remove_vertex(Vertex v);
-    void add_edge(Vertex u, Vertex v, unsigned weight);
+    void add_edge(Vertex u, Vertex v, unsigned weight, bool is_reference = false);
     void remove_edge(Vertex u, Vertex v);
     void remove_edge(Edge e);
     void increment_weight(Edge e);
-    
+    void set_vertex_reference(Vertex v);
+    void set_vertex_reference(const Kmer& kmer);
+    void set_edge_reference(Edge e);
+    const Kmer& kmer_of(Vertex v) const;
+    char front_base_of(Vertex v) const;
+    char back_base_of(Vertex v) const;
     bool is_reference(Vertex v) const;
     bool is_source_reference(Edge e) const;
     bool is_target_reference(Edge e) const;
     bool is_reference(Edge e) const;
+    bool is_reference_empty() const noexcept;
     Vertex reference_head() const;
     Vertex reference_tail() const;
-    
     Vertex next_reference(Vertex u) const;
     Vertex prev_reference(Vertex v) const;
     SequenceType make_reference(Vertex from, Vertex to) const;
     
+    bool is_trivial_cycle(Edge e) const;
+    bool graph_has_trivial_cycle() const;
+    bool is_bridge(Vertex v) const;
+    
     void remove_low_weight_edges(unsigned min_weight);
     void remove_disconnected_vertices();
-    void cleanup_reference();
-    void prune_reference_head();
-    void prune_reference_tail();
-    std::unordered_set<Vertex> find_reachable_kmers(Vertex src) const;
-    void prune_disconnected_subgraphs();
-    std::deque<Vertex> find_dangling_tails() const;
-    void prune_backwards_until_bifurcation(Vertex v);
-    void prune_dangling_paths();
+    std::unordered_set<Vertex> find_reachable_kmers(Vertex from) const;
+    void remove_vertices_that_cant_be_reached_from(Vertex v);
+    void remove_vertices_that_cant_reach(Vertex v);
+    void remove_vertices_past_reference_tail();
+    void prune_reference_flanks();
     
     std::pair<Vertex, unsigned> find_bifurcation(Vertex from, Vertex to) const;
     
     std::unordered_map<Vertex, Vertex> build_dominator_tree(Vertex from) const;
-    std::deque<Vertex> find_nondominants(Vertex from) const;
+    std::unordered_set<Vertex> extract_nondominants(Vertex from) const;
+    std::unordered_set<Vertex> extract_nondominants_on_path(const Path& path) const;
     std::deque<Vertex> find_nondominant_reference(Vertex from) const;
+    void clear_and_remove_all(const std::unordered_set<Vertex>& vertices);
     
     void set_out_edge_log_probabilities(Vertex v);
     void set_all_edge_log_probabilities_from(Vertex src);
-    
     void set_nondominant_reference_paths_impossible(Vertex from);
+    SequenceType make_sequence(const Path& path) const;
+    bool is_bridge(const Path& path) const;
+    void remove_path(const Path& path);
+    PredecessorMap find_shortest_paths(Vertex from) const;
+    std::tuple<Assembler::Vertex, Assembler::Vertex, unsigned>
+    backtrack_until_nonreference(const PredecessorMap& predecessors, Vertex from) const;
+    Path extract_nonreference_path(const PredecessorMap& predecessors, Vertex from) const;
     
     void extract_highest_probability_bubbles(std::deque<Variant>& result);
     
     void print(Edge e) const;
+    void print(const Path& path) const;
     
     friend struct boost::property_map<KmerGraph, boost::vertex_index_t>;
     template <typename G>

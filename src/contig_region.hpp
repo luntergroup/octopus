@@ -221,9 +221,11 @@ inline ContigRegion expand_rhs(const ContigRegion& region, const ContigRegion::D
 
 inline ContigRegion expand(const ContigRegion& region, const ContigRegion::DifferenceType n)
 {
+    using S = ContigRegion::SizeType;
+    using D = ContigRegion::DifferenceType;
     return ContigRegion {
-        static_cast<ContigRegion::SizeType>(region.get_begin() - n),
-        static_cast<ContigRegion::SizeType>(region.get_end() + n)
+        static_cast<S>(std::max(D {0}, static_cast<D>(region.get_begin()) - n)),
+        static_cast<S>(region.get_end() + n)
     };
 }
 

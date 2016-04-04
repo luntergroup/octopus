@@ -156,8 +156,7 @@ std::size_t downsample(MappableFlatMultiSet<AlignedRead>& reads,
     
     // downsample in reverse order because erasing near back of MappableFlatMultiSet is much
     // cheaper than erasing near front.
-    std::for_each(std::make_reverse_iterator(std::cend(regions_to_sample)),
-                  std::make_reverse_iterator(std::cbegin(regions_to_sample)),
+    std::for_each(std::crbegin(regions_to_sample), std::crend(regions_to_sample),
                   [&] (const auto& region) {
                       //std::cout << "downsampling " << region << std::endl;
                       const auto contained = bases(contained_range(reads, region));

@@ -14,7 +14,10 @@
 #include <functional>
 
 #include "i_candidate_variant_generator.hpp"
+#include "genomic_region.hpp"
 #include "assembler.hpp"
+
+#include <boost/optional.hpp>
 
 class ReferenceGenome;
 class AlignedRead;
@@ -51,7 +54,9 @@ public:
 private:
     std::reference_wrapper<const ReferenceGenome> reference_;
     
+    unsigned kmer_size_;
     Assembler assembler_;
+    boost::optional<GenomicRegion> region_assembled_;
     
     SizeType max_variant_size_;
 };
