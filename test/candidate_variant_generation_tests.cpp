@@ -37,7 +37,7 @@ BOOST_AUTO_TEST_CASE(CandidateGeneratorBuilder_can_construct_candidate_generator
     
     CandidateGeneratorBuilder builder {};
     builder.set_reference(human);
-    builder.set_min_snp_base_quality(0);
+    builder.set_min_base_quality(0);
     builder.add_generator(CandidateGeneratorBuilder::Generator::Alignment);
     //builder.add_generator(CandidateGeneratorBuilder::Generator::Assembler);
     
@@ -63,7 +63,7 @@ BOOST_AUTO_TEST_CASE(generate_candidates_returns_sorted_and_unique_candidates)
     
     CandidateGeneratorBuilder builder;
     builder.set_reference(human);
-    builder.set_min_snp_base_quality(0);
+    builder.set_min_base_quality(0);
     builder.add_generator(CandidateGeneratorBuilder::Generator::Alignment);
     
     auto candidate_generator = builder.build();

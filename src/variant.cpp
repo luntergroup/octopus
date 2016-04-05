@@ -575,6 +575,6 @@ std::vector<Allele::SequenceType> extract_alt_allele_sequences(const std::vector
 
 std::ostream& operator<<(std::ostream& os, const Variant& variant)
 {
-    os << mapped_region(variant) << " " << ref_sequence(variant) << " " << alt_sequence(variant);
+    os << mapped_region(variant) << " " << ref_sequence(variant) << " -> " << alt_sequence(variant);
     return os;
 }

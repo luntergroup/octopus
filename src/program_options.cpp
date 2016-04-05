@@ -271,24 +271,22 @@ namespace Octopus
             
             po::options_description candidates("Candidate generation options");
             candidates.add_options()
-            ("no-candidates-from-alignments", po::bool_switch()->default_value(false),
-             "Disables candidate variants from aligned reads")
-            ("candidates-from-assembler", po::bool_switch()->default_value(false),
-             "Generate candidate variants with the assembler")
+            ("no-raw-cigar-candidates", po::bool_switch()->default_value(false),
+             "Disables candidate generation from raw read alignmenets (CIGAR strings)")
+            ("no-assembly-candidates", po::bool_switch()->default_value(false),
+             "Disables candidate generation using local re-assembly")
             ("candidates-from-source", po::value<std::string>(),
              "Variant file path containing known variants. These variants will automatically become candidates")
             ("regenotype", po::bool_switch()->default_value(false),
              "Disables all generators other than source which must be present")
-            ("min-snp-base-quality", po::value<unsigned>()->default_value(20),
-             "Only base changes with quality above this value are considered for snp generation")
+            ("min-base-quality", po::value<unsigned>()->default_value(20),
+             "Only bases with quality above this value are considered for candidate generation")
             ("min-supporting-reads", po::value<unsigned>()->default_value(2),
              "Minimum number of reads that must support a variant if it is to be considered a candidate")
             ("max-variant-size", po::value<AlignedRead::SizeType>()->default_value(100),
              "Maximum candidate varaint size from alignmenet CIGAR")
             ("kmer-size", po::value<unsigned>()->default_value(15),
              "K-mer size to use for assembly")
-            ("no-cycles", po::bool_switch()->default_value(false),
-             "Dissalow cycles in assembly graph")
             ;
             
             po::options_description caller("Caller options");
@@ -1182,25 +1180,27 @@ namespace Octopus
             return result;
         }
         
-        if (!options.at("no-candidates-from-alignments").as<bool>()) {
-            result.add_generator(CandidateGeneratorBuilder::Generator::Alignment);
-            
-            result.set_min_snp_base_quality(options.at("min-snp-base-quality").as<unsigned>());
-            
-            auto min_supporting_reads = options.at("min-supporting-reads").as<unsigned>();
-            
-            if (min_supporting_reads == 0) ++min_supporting_reads; // probably input error; 0 is meaningless
-            
-            result.set_min_supporting_reads(min_supporting_reads);
+        result.set_min_base_quality(options.at("min-base-quality").as<unsigned>());
+        result.set_max_variant_size(options.at("max-variant-size").as<CandidateGeneratorBuilder::SizeType>());
+        
+        auto min_supporting_reads = options.at("min-supporting-reads").as<unsigned>();
+        
+        if (min_supporting_reads == 0) {
+            Logging::WarningLogger log {};
+            log << "Given option --min_supporting_reads 0, assuming this is a type and setting to 1";
+            ++min_supporting_reads;
         }
         
-        if (options.at("candidates-from-assembler").as<bool>()) {
+        result.set_min_supporting_reads(min_supporting_reads);
+        
+        if (!options.at("no-raw-cigar-candidates").as<bool>()) {
+            result.add_generator(CandidateGeneratorBuilder::Generator::Alignment);
+        }
+        
+        if (!options.at("no-assembly-candidates").as<bool>()) {
             result.add_generator(CandidateGeneratorBuilder::Generator::Assembler);
             result.set_kmer_size(options.at("kmer-size").as<unsigned>());
-            //auto allow_cycles = !options.at("no-cycles").as<bool>();
         }
-        
-        result.set_max_variant_size(options.at("max-variant-size").as<CandidateGeneratorBuilder::SizeType>());
         
         return result;
     }

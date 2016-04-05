@@ -29,12 +29,15 @@ namespace Octopus
 class AssemblerCandidateVariantGenerator : public ICandidateVariantGenerator
 {
 public:
-    using SizeType = GenomicRegion::SizeType;
+    using QualityType = AlignedRead::QualityType;
+    using SizeType    = GenomicRegion::SizeType;
     
     AssemblerCandidateVariantGenerator() = delete;
     explicit AssemblerCandidateVariantGenerator(const ReferenceGenome& reference,
                                                 unsigned kmer_size,
-                                                SizeType max_variant_size = 100);
+                                                QualityType min_base_quality = 10,
+                                                unsigned min_supporting_reads = 2,
+                                                SizeType max_variant_size = 500);
     ~AssemblerCandidateVariantGenerator() override = default;
     
     AssemblerCandidateVariantGenerator(const AssemblerCandidateVariantGenerator&)            = default;
@@ -58,6 +61,8 @@ private:
     Assembler assembler_;
     boost::optional<GenomicRegion> region_assembled_;
     
+    QualityType min_base_quality_;
+    unsigned min_supporting_reads_;
     SizeType max_variant_size_;
 };
 

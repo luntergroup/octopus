@@ -24,8 +24,8 @@
 #include "contig_region.hpp"
 #include "tandem.hpp"
 
-namespace Octopus {
-
+namespace Octopus
+{
 namespace detail
 {
     static constexpr std::array<char, 4> DnaBases {'A', 'C', 'G', 'T'};
@@ -59,7 +59,7 @@ namespace detail
 template <typename SequenceType>
 bool has_ns(const SequenceType& sequence)
 {
-    return std::any_of(std::cbegin(sequence), std::cend(sequence), 'N');
+    return std::find(std::cbegin(sequence), std::cend(sequence), 'N') != std::cend(sequence);
 }
 
 template <typename SequenceType>

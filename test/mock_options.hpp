@@ -43,8 +43,8 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--reference", ecoli_reference_fasta.c_str(),
         
         //"--reads", NA12878_low_coverage.c_str(),
-        "--reads", NA12878_high_coverage.c_str(),
-        //"--reads", "~/Genomics/Illumina/NA12878.mapped.ILLUMINA.bwa.CEU.high_coverage_pcr_free.20130906.chr22.bam",
+        //"--reads", NA12878_high_coverage.c_str(),
+        "--reads", "~/Genomics/Illumina/NA12878.mapped.ILLUMINA.bwa.CEU.high_coverage_pcr_free.20130906.chr22.bam",
         
         //"--reads", NA12891_high_coverage.c_str(),
         
@@ -76,7 +76,8 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         // for population
         
         //"--regions", "22:38,094,341-38,094,381",
-        "--regions", "22:39,653,953-39,654,385",
+        //"--regions", "22:38,094,186-38,094,272",
+        "--regions", "22:38,093,914-38,094,053",
         
         // False positives under uniprior
         //"--regions", "22:37,042,664-37,042,703",
@@ -156,9 +157,9 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         
         // candidate parameters
         //"--min-supporting-reads", "1",
-        //"--min-snp-base-quality", "20",
+        //"--min-base-quality", "15",
         
-        "--candidates-from-assembler",
+        //"--no-assembly-candidates",
         
         // read filters
         //"--min-mapping-quality", "20",

@@ -44,7 +44,7 @@ namespace Octopus
         
         CandidateGeneratorBuilder& add_generator(Generator type);
         CandidateGeneratorBuilder& set_reference(const ReferenceGenome& reference);
-        CandidateGeneratorBuilder& set_min_snp_base_quality(QualityType quality);
+        CandidateGeneratorBuilder& set_min_base_quality(QualityType quality);
         CandidateGeneratorBuilder& set_min_supporting_reads(unsigned num_reads);
         CandidateGeneratorBuilder& set_max_variant_size(SizeType size);
         CandidateGeneratorBuilder& set_kmer_size(unsigned kmer_size);
@@ -59,9 +59,7 @@ namespace Octopus
         // common
         boost::optional<std::reference_wrapper<const ReferenceGenome>> reference_;
         
-        // alignment
-        
-        QualityType min_snp_base_quality_ = 10;
+        QualityType min_base_quality_ = 10;
         unsigned min_supporting_reads_ = 1;
         SizeType max_variant_size_ = 500;
         
@@ -81,7 +79,7 @@ namespace Octopus
         
         struct GeneratorTypeHash
         {
-            size_t operator()(Generator type) const { return static_cast<std::size_t>(type); }
+            std::size_t operator()(Generator type) const { return static_cast<std::size_t>(type); }
         };
         
         using GeneratorFactoryMap = std::unordered_map<Generator,

@@ -34,7 +34,7 @@ public:
     
     explicit AlignmentCandidateVariantGenerator(const ReferenceGenome& reference,
                                                 QualityType min_base_quality = 0,
-                                                unsigned min_supporting_reads = 1,
+                                                unsigned min_supporting_reads = 2,
                                                 SizeType max_variant_size = 100);
     
     ~AlignmentCandidateVariantGenerator() override = default;

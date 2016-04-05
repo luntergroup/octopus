@@ -71,7 +71,7 @@ public:
     bool is_all_reference() const;
     
     void remove_trivial_nonreference_cycles();
-    void prune(unsigned min_weight);
+    bool prune(unsigned min_weight);
     void clear();
     
     std::deque<Variant> extract_variants(unsigned max = 100);
@@ -135,6 +135,7 @@ private:
     
     void regenerate_vertex_indices();
     
+    Vertex null_vertex() const;
     boost::optional<Vertex> add_vertex(const Kmer& kmer, bool is_reference = false);
     void remove_vertex(Vertex v);
     void clear_and_remove_vertex(Vertex v);
@@ -148,6 +149,8 @@ private:
     const Kmer& kmer_of(Vertex v) const;
     char front_base_of(Vertex v) const;
     char back_base_of(Vertex v) const;
+    const Kmer& source_kmer_of(Edge e) const;
+    const Kmer& target_kmer_of(Edge e) const;
     bool is_reference(Vertex v) const;
     bool is_source_reference(Edge e) const;
     bool is_target_reference(Edge e) const;

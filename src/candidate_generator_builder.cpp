@@ -29,7 +29,7 @@ namespace Octopus
     :
     generators_           {other.generators_},
     reference_            {other.reference_},
-    min_snp_base_quality_ {other.min_snp_base_quality_},
+    min_base_quality_     {other.min_base_quality_},
     min_supporting_reads_ {other.min_supporting_reads_},
     max_variant_size_     {other.max_variant_size_},
     kmer_size_            {other.kmer_size_},
@@ -41,7 +41,7 @@ namespace Octopus
     {
         generators_           = other.generators_;
         reference_            = other.reference_;
-        min_snp_base_quality_ = other.min_snp_base_quality_;
+        min_base_quality_     = other.min_base_quality_;
         min_supporting_reads_ = other.min_supporting_reads_;
         max_variant_size_     = other.max_variant_size_;
         kmer_size_            = other.kmer_size_;
@@ -54,7 +54,7 @@ namespace Octopus
     :
     generators_           {std::move(other.generators_)},
     reference_            {std::move(other.reference_)},
-    min_snp_base_quality_ {std::move(other.min_snp_base_quality_)},
+    min_base_quality_     {std::move(other.min_base_quality_)},
     min_supporting_reads_ {std::move(other.min_supporting_reads_)},
     max_variant_size_     {std::move(other.max_variant_size_)},
     kmer_size_            {std::move(other.kmer_size_)},
@@ -67,7 +67,7 @@ namespace Octopus
         using std::swap;
         swap(generators_,           other.generators_);
         swap(reference_,            other.reference_);
-        swap(min_snp_base_quality_, other.min_snp_base_quality_);
+        swap(min_base_quality_,     other.min_base_quality_);
         swap(min_supporting_reads_, other.min_supporting_reads_);
         swap(max_variant_size_,     other.max_variant_size_);
         swap(kmer_size_,            other.kmer_size_);
@@ -97,9 +97,9 @@ namespace Octopus
         return *this;
     }
     
-    CandidateGeneratorBuilder& CandidateGeneratorBuilder::set_min_snp_base_quality(const QualityType quality)
+    CandidateGeneratorBuilder& CandidateGeneratorBuilder::set_min_base_quality(const QualityType quality)
     {
-        min_snp_base_quality_ = quality;
+        min_base_quality_ = quality;
         return *this;
     }
     
@@ -151,13 +151,15 @@ namespace Octopus
         return GeneratorFactoryMap {
             {Generator::Alignment, [this] () {
                 return std::make_unique<AlignmentCandidateVariantGenerator>(*reference_,
-                                                                            min_snp_base_quality_,
+                                                                            min_base_quality_,
                                                                             min_supporting_reads_,
                                                                             max_variant_size_);
             }},
             {Generator::Assembler, [this] () {
                 return std::make_unique<AssemblerCandidateVariantGenerator>(*reference_,
                                                                             *kmer_size_,
+                                                                            min_base_quality_,
+                                                                            min_supporting_reads_,
                                                                             max_variant_size_);
             }},
             {Generator::External, [this] () {
