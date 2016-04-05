@@ -14,11 +14,14 @@
 #include <boost/iterator/zip_iterator.hpp>
 #include <boost/tuple/tuple.hpp>
 
+#include "common.hpp"
 #include "reference_genome.hpp"
 #include "aligned_read.hpp"
 #include "variant.hpp"
 #include "cigar_string.hpp"
+#include "mappable_ranges.hpp"
 #include "mappable_algorithms.hpp"
+#include "logging.hpp"
 
 #include <iostream> // DEBUG
 
@@ -29,15 +32,14 @@ namespace Octopus
 
 AlignmentCandidateVariantGenerator::AlignmentCandidateVariantGenerator(const ReferenceGenome& reference,
                                                                        QualityType min_base_quality,
-                                                                       unsigned min_supporting_reads,
+                                                                       unsigned min_support,
                                                                        SizeType max_variant_size)
 :
 reference_ {reference},
 min_base_quality_ {min_base_quality},
-min_supporting_reads_ {min_supporting_reads},
+min_support_ {min_support},
 max_variant_size_ {max_variant_size},
 candidates_ {},
-are_candidates_sorted_ {true},
 max_seen_candidate_size_ {}
 {}
 
@@ -46,18 +48,22 @@ bool AlignmentCandidateVariantGenerator::requires_reads() const noexcept
     return true;
 }
 
-template <typename SequenceType>
-bool is_good_sequence(const SequenceType& sequence) noexcept
+namespace
 {
-    return std::none_of(std::cbegin(sequence), std::cend(sequence), [] (auto base) { return base == 'N'; });
-}
-
-template <typename SequenceType, typename T>
-SequenceType splice(const SequenceType& sequence, const T pos, const T size)
-{
-    const auto it = std::next(std::cbegin(sequence), pos);
-    return SequenceType {it, std::next(it, size)};
-}
+    template <typename SequenceType>
+    bool is_good_sequence(const SequenceType& sequence) noexcept
+    {
+        return std::none_of(std::cbegin(sequence), std::cend(sequence),
+                            [] (auto base) { return base == 'N'; });
+    }
+    
+    template <typename SequenceType, typename T>
+    SequenceType splice(const SequenceType& sequence, const T pos, const T size)
+    {
+        const auto it = std::next(std::cbegin(sequence), pos);
+        return SequenceType {it, std::next(it, size)};
+    }
+} // namespace
 
 void AlignmentCandidateVariantGenerator::add_read(const AlignedRead& read)
 {
@@ -161,39 +167,50 @@ void AlignmentCandidateVariantGenerator::add_reads(MappableFlatMultiSet<AlignedR
 
 std::vector<Variant> AlignmentCandidateVariantGenerator::generate_candidates(const GenomicRegion& region)
 {
-    using std::begin; using std::end; using std::cbegin; using std::cend;
+    using std::begin; using std::end; using std::distance;
     
-    sort_candiates_if_needed();
+    std::sort(begin(candidates_), end(candidates_));
     
     auto overlapped = overlap_range(candidates_, region, max_seen_candidate_size_);
     
-    if (min_supporting_reads_ == 1) {
-        return std::vector<Variant> {begin(overlapped), end(overlapped)};
-    }
-    
     std::vector<Variant> result {};
-    result.reserve(bases(overlapped).size()); // the maximum
     
-    while (!overlapped.empty()) {
-        const auto it = std::adjacent_find(begin(overlapped), end(overlapped));
+    if (min_support_ < 2) {
+        result.insert(end(result), begin(overlapped), end(overlapped));
+        result.erase(std::unique(begin(result), end(result)), end(result));
+    } else {
+        result.reserve(size(overlapped, BidirectionallySortedTag {})); // the maximum
         
-        if (it == end(overlapped)) break;
-        
-        const Variant& duplicate {*it};
-        
-        const auto it2 = std::find_if_not(std::next(it), end(overlapped),
-                                          [&] (const auto& variant) { return variant == duplicate; });
-        
-        const auto duplicate_count = std::distance(it, it2);
-        
-        if (duplicate_count >= min_supporting_reads_) {
-            result.emplace_back(duplicate);
+        while (true) {
+            const auto it = std::adjacent_find(begin(overlapped), end(overlapped));
+            
+            if (it == end(overlapped)) break;
+            
+            const Variant& duplicate {*it};
+            
+            const auto it2 = std::find_if_not(std::next(it), end(overlapped),
+                                              [&] (const auto& variant) {
+                                                  return variant == duplicate;
+                                              });
+            
+            const auto duplicate_count = distance(it, it2);
+            
+            if (duplicate_count >= min_support_) {
+                result.emplace_back(duplicate);
+            }
+            
+            if (it2 == end(overlapped)) break;
+            
+            overlapped.advance_begin(distance(begin(overlapped), it) + duplicate_count);
         }
         
-        overlapped.advance_begin(duplicate_count);
+        result.shrink_to_fit();
     }
     
-    result.shrink_to_fit();
+    if (DEBUG_MODE) {
+        Logging::DebugLogger log {};
+        debug::print_generated_candidates(stream(log), result, "raw CIGAR strings");
+    }
     
     return result;
 }
@@ -233,19 +250,5 @@ add_snvs_in_match_range(const GenomicRegion& region, const SequenceIterator firs
                  
                  ++ref_index;
              });
-}
-
-void AlignmentCandidateVariantGenerator::sort_candiates_if_needed()
-{
-    if (!are_candidates_sorted_) {
-        std::sort(begin(candidates_), end(candidates_));
-        
-        if (min_supporting_reads_ == 1) {
-            // just an optimisation
-            candidates_.erase(std::unique(begin(candidates_), end(candidates_)), end(candidates_));
-        }
-        
-        are_candidates_sorted_ = true;
-    }
 }
 } // namespace Octopus

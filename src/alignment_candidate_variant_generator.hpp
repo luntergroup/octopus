@@ -34,7 +34,7 @@ public:
     
     explicit AlignmentCandidateVariantGenerator(const ReferenceGenome& reference,
                                                 QualityType min_base_quality = 0,
-                                                unsigned min_supporting_reads = 2,
+                                                unsigned min_support = 2,
                                                 SizeType max_variant_size = 100);
     
     ~AlignmentCandidateVariantGenerator() override = default;
@@ -46,8 +46,10 @@ public:
     
     bool requires_reads() const noexcept override;
     void add_read(const AlignedRead& read) override;
-    void add_reads(std::vector<AlignedRead>::const_iterator first, std::vector<AlignedRead>::const_iterator last) override;
-    void add_reads(MappableFlatMultiSet<AlignedRead>::const_iterator first, MappableFlatMultiSet<AlignedRead>::const_iterator last) override;
+    void add_reads(std::vector<AlignedRead>::const_iterator first,
+                   std::vector<AlignedRead>::const_iterator last) override;
+    void add_reads(MappableFlatMultiSet<AlignedRead>::const_iterator first,
+                   MappableFlatMultiSet<AlignedRead>::const_iterator last) override;
     std::vector<Variant> generate_candidates(const GenomicRegion& region) override;
     void clear() override;
     
@@ -58,18 +60,16 @@ private:
     
     std::reference_wrapper<const ReferenceGenome> reference_;
     QualityType min_base_quality_;
-    unsigned min_supporting_reads_;
+    unsigned min_support_;
     SizeType max_variant_size_;
     
     std::deque<Variant> candidates_;
-    bool are_candidates_sorted_;
     SizeType max_seen_candidate_size_;
     
     template <typename T1, typename T2, typename T3>
     void add_candidate(T1&& region, T2&& sequence_removed, T3&& sequence_added);
     void add_snvs_in_match_range(const GenomicRegion& region, SequenceIterator first_base,
                                  SequenceIterator last_base, QualitiesIterator first_quality);
-    void sort_candiates_if_needed();
 };
 
 template <typename T1, typename T2, typename T3>
@@ -83,11 +83,6 @@ void AlignmentCandidateVariantGenerator::add_candidate(T1&& region, T2&& sequenc
                                  std::forward<T3>(sequence_added));
         
         max_seen_candidate_size_ = std::max(max_seen_candidate_size_, candidate_size);
-        
-        if (are_candidates_sorted_ && candidates_.size() > 1
-            && candidates_.back() > *std::prev(std::cend(candidates_), 2)) {
-            are_candidates_sorted_ = false;
-        }
     }
 }
 

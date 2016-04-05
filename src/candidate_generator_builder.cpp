@@ -96,6 +96,12 @@ namespace Octopus
         return *this;
     }
     
+    CandidateGeneratorBuilder& CandidateGeneratorBuilder::set_assembler_min_base_quality(const QualityType quality)
+    {
+        parameters_.min_assembler_base_quality = quality;
+        return *this;
+    }
+    
     CandidateGeneratorBuilder& CandidateGeneratorBuilder::set_variant_source(boost::filesystem::path variant_source)
     {
         parameters_.variant_source = std::make_shared<VcfReader>(std::move(variant_source));
@@ -131,9 +137,11 @@ namespace Octopus
                                                                             parameters_.max_variant_size);
             }},
             {Generator::Assembler, [this] () {
+                const auto quality = (parameters_.min_assembler_base_quality)
+                        ? *parameters_.min_assembler_base_quality : parameters_.min_base_quality;
                 return std::make_unique<AssemblerCandidateVariantGenerator>(*parameters_.reference,
                                                                             *parameters_.kmer_size,
-                                                                            parameters_.min_base_quality,
+                                                                            quality,
                                                                             parameters_.min_supporting_reads,
                                                                             parameters_.max_variant_size);
             }},

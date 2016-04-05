@@ -12,7 +12,6 @@
 #include <vector>
 #include <memory>
 #include <cstddef>
-#include <iterator>
 
 #include "i_candidate_variant_generator.hpp"
 
@@ -51,7 +50,6 @@ public:
 private:
     std::vector<std::unique_ptr<ICandidateVariantGenerator>> generators_;
 };
-
 } // namespace Octopus
 
 #endif /* defined(__Octopus__variant_candidate_generator__) */

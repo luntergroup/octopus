@@ -28,8 +28,6 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         "--debug",
         //"--trace",
         
-        "--no-assembly-candidates",
-        
         //"--sites-only",
         
         //"--samples", "NOT-A-SAMPLE",
@@ -62,7 +60,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--reads", NA12878_low_coverage_cram.c_str(),
         
         //"--model", "cancer", // default "population"
-        "--normal-sample", "NA12878", // for cancer model
+        //"--normal-sample", "NA12878", // for cancer model
         
         //"--organism-ploidy", "3",
         "--contig-ploidies", "MT=1", "Y=1",// "MT=2",
@@ -77,9 +75,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         
         // for population
         
-        //"--regions", "22:38,094,341-38,094,381",
-        //"--regions", "22:38,094,186-38,094,272",
-        "--regions", "22:38,093,914-38,094,053",
+        "--regions", "22:30,366,511-30,369,162",
         
         // False positives under uniprior
         //"--regions", "22:37,042,664-37,042,703",
@@ -169,7 +165,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--disable-soft-clip-masking",
         //"--tail-trim-size", "3",
         //"--disable-adapter-masking",
-        "--no-unmapped-mates",
+        //"--consider-reads-with-unmapped-segments",
         
         //"--no-downsampling",
         //"--downsample-above", "300",
@@ -181,14 +177,16 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--kmer-size", "5",
         //"--candidates-from-source", sample_vcf.c_str(),
         //"--regenotype",
+        //"--no-assembly-candidates",
+        "--kmer-size", "31",
         
         //"--max-haplotypes", "256",
         
         "--min-variant-posterior", "10",
         "--min-refcall-posterior", "0",
-        "--min-somatic-posterior", "2",
+        //"--min-somatic-posterior", "2",
         
-        "--somatics-only",
+        //"--somatics-only",
         
         //"--candidates-from-source", "GATK_NA12878HC_22.bcf",
         //"--regenotype",

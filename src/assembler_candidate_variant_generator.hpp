@@ -57,7 +57,8 @@ public:
 private:
     std::reference_wrapper<const ReferenceGenome> reference_;
     
-    unsigned kmer_size_;
+    std::vector<unsigned> initial_kmer_sizes_;
+    std::vector<unsigned> fallback_kmer_sizes_;
     Assembler assembler_;
     boost::optional<GenomicRegion> region_assembled_;
     

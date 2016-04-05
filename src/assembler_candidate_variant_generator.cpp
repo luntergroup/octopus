@@ -28,10 +28,11 @@ AssemblerCandidateVariantGenerator::AssemblerCandidateVariantGenerator(const Ref
                                                                        SizeType max_variant_size)
 :
 reference_ {reference},
-kmer_size_ {25},
-assembler_ {kmer_size_},
+initial_kmer_sizes_ {kmer_size},
+fallback_kmer_sizes_ {},
+assembler_ {initial_kmer_sizes_.front()},
 region_assembled_ {},
-min_base_quality_ {1},
+min_base_quality_ {min_base_quality},
 min_supporting_reads_ {min_supporting_reads},
 max_variant_size_ {max_variant_size}
 {}
@@ -135,6 +136,8 @@ void add_to_mapped_variants(C1& result, C2&& variants, const GenomicRegion& regi
     }
     
     std::sort(it, std::end(result));
+    
+    result.erase(std::unique(std::begin(result), std::end(result)), std::end(result));
 }
 
 template <typename C, typename S>
@@ -149,6 +152,16 @@ void assert_all_reference_consistent(const C& variants, const S& ref_sequence)
                        }));
 }
 
+template <typename Container>
+void remove_nonoverlapping(Container& candidates, const GenomicRegion& region)
+{
+    const auto it = std::remove_if(std::begin(candidates), std::end(candidates),
+                                   [&region] (const Variant& candidate) {
+                                       return !overlaps(candidate, region);
+                                   });
+    candidates.erase(it, std::end(candidates));
+}
+
 std::vector<Variant> AssemblerCandidateVariantGenerator::generate_candidates(const GenomicRegion& region)
 {
     std::vector<Variant> result {};
@@ -157,7 +170,9 @@ std::vector<Variant> AssemblerCandidateVariantGenerator::generate_candidates(con
         return result;
     }
     
-    const auto reference_region = expand(*region_assembled_, kmer_size_);
+    const auto kmer_size = initial_kmer_sizes_.front();
+    
+    const auto reference_region = expand(*region_assembled_, kmer_size);
     
     const auto ref_sequence = reference_.get().get_sequence(reference_region);
     
@@ -165,8 +180,8 @@ std::vector<Variant> AssemblerCandidateVariantGenerator::generate_candidates(con
         return result;
     }
     
-    std::cout << "Reference region = " << reference_region << std::endl;
-    std::cout << "Reference = " << ref_sequence << std::endl;
+    //std::cout << "Reference region = " << reference_region << std::endl;
+    //std::cout << "Reference = " << ref_sequence << std::endl;
     
     assembler_.insert_reference(ref_sequence);
     
@@ -176,9 +191,6 @@ std::vector<Variant> AssemblerCandidateVariantGenerator::generate_candidates(con
     
     assembler_.remove_trivial_nonreference_cycles();
     
-//    std::cout << "Pre-pruned graph:" << std::endl;
-//    debug::print_edges(assembler_);
-    
     if (!assembler_.prune(min_supporting_reads_)) {
         Logging::WarningLogger log {};
         log << "Assembler could not generate candidates due to cyclic graph";
@@ -186,25 +198,28 @@ std::vector<Variant> AssemblerCandidateVariantGenerator::generate_candidates(con
     }
     
 //    std::cout << "Final graph:" << std::endl;
-//    debug::print_edges(assembler_);
-    
-    std::cout << "Extracting variants from assembler..." << std::endl;
+//    debug::print(assembler_);
     
     auto variants = assembler_.extract_variants();
     
+    assembler_.clear();
+    
     trim_variants(variants);
+    
+//    add_to_mapped_variants(result, std::move(variants), reference_region);
+//    debug::print_generated_candidates(result, "local re-assembly");
+//    exit(0);
     
     assert_all_reference_consistent(variants, ref_sequence);
     
     add_to_mapped_variants(result, std::move(variants), reference_region);
     
-    for (auto v : result) {
-        std::cout << v << std::endl;
+    remove_nonoverlapping(result, region); // as we expanded original region
+    
+    if (DEBUG_MODE) {
+        Logging::DebugLogger log {};
+        debug::print_generated_candidates(stream(log), result, "local re-assembly");
     }
-    
-    exit(0);
-    
-    assembler_.clear();
     
     return result;
 }

@@ -45,10 +45,7 @@ namespace Octopus {
         // common
         VariantCallerBuilder& set_reference(const ReferenceGenome& reference) noexcept;
         VariantCallerBuilder& set_read_pipe(ReadPipe& read_pipe) noexcept;
-        VariantCallerBuilder& set_candidate_generator_builder(const CandidateGeneratorBuilder& candidate_generator_builder) noexcept;
-        
-        //VariantCallerBuilder& set_haplotype_prior_model_factory(HaplotypePriorModelFactory);
-        
+        VariantCallerBuilder& set_candidate_generator_builder(const CandidateGeneratorBuilder& candidate_generator_builder) noexcept;        
         VariantCallerBuilder& set_ploidy(unsigned ploidy) noexcept;
         VariantCallerBuilder& set_model(std::string model);
         VariantCallerBuilder& set_refcall_type(VariantCaller::RefCallType refcall_type) noexcept;

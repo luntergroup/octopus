@@ -12,6 +12,8 @@
 #include <vector>
 #include <cstddef>
 #include <type_traits>
+#include <iostream>
+#include <string>
 
 #include "common.hpp"
 #include "variant.hpp"
@@ -72,6 +74,34 @@ namespace Octopus
         using ValueType = typename std::decay_t<typename Container::value_type>;
         detail::add_reads(reads, generator, std::is_same<ValueType, AlignedRead> {});
     }
+    
+    namespace debug
+    {
+        template <typename S, typename Container>
+        void print_generated_candidates(S&& stream, const Container& candidates,
+                                        const std::string& generator_name)
+        {
+            if (candidates.empty()) {
+                stream << "No candidates generated from " << generator_name << '\n';
+            } else {
+                stream << "Generated " << candidates.size();
+                stream << " candidate";
+                if (candidates.size() > 1) {
+                    stream << "s";
+                }
+                stream << " from " << generator_name << ":\n";
+                for (const auto& c : candidates) stream << c << '\n';
+            }
+        }
+        
+        template <typename Container>
+        void print_generated_candidates(const Container& candidates,
+                                        const std::string& generator_name)
+        {
+            print_generated_candidates(std::cout, candidates, generator_name);
+        }
+        
+    } // namespace debug
 } // namespace Octopus
 
 #endif

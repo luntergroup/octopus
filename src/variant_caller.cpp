@@ -60,49 +60,19 @@ haplotype_prior_model_ {std::move(haplotype_prior_model)},
 candidate_generator_ {std::move(candidate_generator)}
 {}
 
-auto generate_candidates(CandidateVariantGenerator& generator, const GenomicRegion& region,
-                         const ReferenceGenome& reference)
-{
-    auto candidates = unique_left_align(generator.generate_candidates(region), reference);
-    
-    return MappableFlatSet<Variant> {
-        std::make_move_iterator(std::begin(candidates)),
-        std::make_move_iterator(std::end(candidates))
-    };
-}
-
-VcfRecord annotate_record(VcfRecord::Builder& record, const ReadMap& reads)
-{
-    return record.build_once();
-}
-
-void append_annotated_calls(std::deque<VcfRecord>& curr_calls,
-                            std::vector<VcfRecord::Builder>& new_calls,
-                            const ReadMap& reads, const GenomicRegion& call_region)
-{
-    // Need to check calls are within call region as we may consider candidates
-    // outside of this region when building haplotypes
-    const auto it = std::find_if(std::begin(new_calls), std::end(new_calls),
-                                 [&call_region] (const auto& call) {
-                                     return region_begin(call_region) <= call.get_position() + 1;
-                                 });
-    
-    const auto it2 = std::find_if(std::rbegin(new_calls), std::rend(new_calls),
-                                  [&call_region] (const auto& call) {
-                                      return call.get_position() < region_end(call_region);
-                                  }).base();
-    
-    //std::cout << "calling " << std::distance(it, it2) << " variants" << std::endl;
-    
-    std::transform(it, it2, std::back_inserter(curr_calls),
-                   [&] (auto& record) { return annotate_record(record, reads); });
-}
-
 namespace debug
 {
     template <typename S>
-    void print_candidates(S&& stream, const MappableFlatSet<Variant>& candidates, bool number_only = false);
-    void print_candidates(const MappableFlatSet<Variant>& candidates, bool number_only = false);
+    void print_left_aligned_candidates(S&& stream, const std::vector<Variant>& raw_candidates,
+                                       const ReferenceGenome& reference);
+    void print_left_aligned_candidates(const std::vector<Variant>& raw_candidates,
+                                       const ReferenceGenome& reference);
+    
+    template <typename S>
+    void print_final_candidates(S&& stream, const MappableFlatSet<Variant>& candidates,
+                                bool number_only = false);
+    void print_final_candidates(const MappableFlatSet<Variant>& candidates,
+                                bool number_only = false);
     
     template <typename S>
     void print_active_candidates(S&& stream, const MappableFlatSet<Variant>& candidates,
@@ -132,6 +102,51 @@ namespace debug
     void print_haplotype_posteriors(S&& stream, const Map& haplotype_posteriors, std::size_t n = 5);
     template <typename Map>
     void print_haplotype_posteriors(const Map& haplotype_posteriors, std::size_t n = 5);
+}
+
+auto generate_candidates(CandidateVariantGenerator& generator, const GenomicRegion& region,
+                         const ReferenceGenome& reference)
+{
+    auto raw_candidates = generator.generate_candidates(region);
+    
+    if (DEBUG_MODE) {
+        Logging::DebugLogger log {};
+        debug::print_left_aligned_candidates(stream(log), raw_candidates, reference);
+    }
+    
+    auto final_candidates = unique_left_align(std::move(raw_candidates), reference);
+    
+    return MappableFlatSet<Variant> {
+        std::make_move_iterator(std::begin(final_candidates)),
+        std::make_move_iterator(std::end(final_candidates))
+    };
+}
+
+VcfRecord annotate_record(VcfRecord::Builder& record, const ReadMap& reads)
+{
+    return record.build_once();
+}
+
+void append_annotated_calls(std::deque<VcfRecord>& curr_calls,
+                            std::vector<VcfRecord::Builder>& new_calls,
+                            const ReadMap& reads, const GenomicRegion& call_region)
+{
+    // Need to check calls are within call region as we may consider candidates
+    // outside of this region when building haplotypes
+    const auto it = std::find_if(std::begin(new_calls), std::end(new_calls),
+                                 [&call_region] (const auto& call) {
+                                     return region_begin(call_region) <= call.get_position() + 1;
+                                 });
+    
+    const auto it2 = std::find_if(std::rbegin(new_calls), std::rend(new_calls),
+                                  [&call_region] (const auto& call) {
+                                      return call.get_position() < region_end(call_region);
+                                  }).base();
+    
+    //std::cout << "calling " << std::distance(it, it2) << " variants" << std::endl;
+    
+    std::transform(it, it2, std::back_inserter(curr_calls),
+                   [&] (auto& record) { return annotate_record(record, reads); });
 }
 
 auto copy_overlapped_to_vector(const MappableFlatSet<Variant>& candidates,
@@ -295,7 +310,7 @@ std::deque<VcfRecord> VariantCaller::call_variants(const GenomicRegion& call_reg
     candidate_generator_.clear();
     
     if (DEBUG_MODE) {
-        debug::print_candidates(stream(debug_log), candidates);
+        debug::print_final_candidates(stream(debug_log), candidates);
     }
     
     if (!refcalls_requested() && candidates.empty()) {
@@ -756,15 +771,49 @@ generate_candidate_reference_alleles(const std::vector<Allele>& callable_alleles
 namespace debug
 {
     template <typename S>
-    void print_candidates(S&& stream, const MappableFlatSet<Variant>& candidates, bool number_only)
+    void print_left_aligned_candidates(S&& stream, const std::vector<Variant>& raw_candidates,
+                                       const ReferenceGenome& reference)
+    {
+        std::deque<std::pair<Variant, Variant>> left_aligned {};
+        
+        for (const auto& raw_candidate : raw_candidates) {
+            auto left_aligned_candidate = left_align(raw_candidate, reference);
+            
+            if (left_aligned_candidate != raw_candidate) {
+                left_aligned.emplace_back(raw_candidate, std::move(left_aligned_candidate));
+            }
+        }
+        
+        if (left_aligned.empty()) {
+            stream << "No candidates were left aligned" << '\n';
+        } else {
+            if (left_aligned.size() == 1) {
+                stream << "1 candidate was left aligned:" << '\n';
+            } else {
+                stream << left_aligned.size() << " candidates were left aligned:" << '\n';
+            }
+            for (const auto& p : left_aligned) {
+                stream << p.first << " to " << p.second << '\n';
+            }
+        }
+    }
+    
+    void print_left_aligned_candidates(const std::vector<Variant>& raw_candidates,
+                                       const ReferenceGenome& reference)
+    {
+        print_left_aligned_candidates(std::cout, raw_candidates, reference);
+    }
+    
+    template <typename S>
+    void print_final_candidates(S&& stream, const MappableFlatSet<Variant>& candidates, bool number_only)
     {
         if (candidates.empty()) {
-            stream << "There are no candidates" << '\n';
+            stream << "There are no final candidates" << '\n';
         } else {
             if (candidates.size() == 1) {
-                stream << "There is 1 candidate" << '\n';
+                stream << "There is 1 final candidate:" << '\n';
             } else {
-                stream << "There are " << candidates.size() << " candidates: " << '\n';
+                stream << "There are " << candidates.size() << " final candidates:" << '\n';
             }
             
             if (!number_only) {
@@ -773,9 +822,9 @@ namespace debug
         }
     }
     
-    void print_candidates(const MappableFlatSet<Variant>& candidates, bool number_only)
+    void print_final_candidates(const MappableFlatSet<Variant>& candidates, bool number_only)
     {
-        print_candidates(std::cout, candidates, number_only);
+        print_final_candidates(std::cout, candidates, number_only);
     }
     
     template <typename S>
@@ -790,9 +839,9 @@ namespace debug
             const auto num_active = size(active_candidates);
             
             if (num_active == 1) {
-                stream << "There is 1 active candidate" << '\n';
+                stream << "There is 1 active candidate:" << '\n';
             } else {
-                stream << "There are " << num_active << " active candidates: " << '\n';
+                stream << "There are " << num_active << " active candidates:" << '\n';
             }
             
             if (!number_only) {
@@ -815,7 +864,7 @@ namespace debug
     {
         const auto flanks = calculate_flank_regions(haplotype_region, active_region, candidates);
         
-        stream << "Haplotype flank regions are " << flanks.first << " " << flanks.second << '\n';
+        stream << "Haplotype flank regions are " << flanks.first << " and " << flanks.second << '\n';
         
         const auto lhs_inactive_candidates = overlap_range(candidates, flanks.first);
         const auto rhs_inactive_candidates = overlap_range(candidates, flanks.second);

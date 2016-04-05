@@ -9,6 +9,7 @@
 #include "candidate_variant_generator.hpp"
 
 #include <algorithm>
+#include <iterator>
 
 #include "genomic_region.hpp"
 #include "aligned_read.hpp"

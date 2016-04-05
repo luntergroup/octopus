@@ -143,15 +143,18 @@ private:
     std::string name_ = "is_not_chimeric";
 };
 
-//struct is_next_segment_mapped
-//{
-//    is_next_segment_mapped() = default;
-//    
-//    bool operator()(const AlignedRead& read) const
-//    {
-//        return !read.has_mate_pair() || read.is_marked_proper_pair();
-//    }
-//};
+struct is_next_segment_mapped
+{
+    bool operator()(const AlignedRead& read) const
+    {
+        return !read.has_mate() || !read.get_next_segment().is_marked_unmapped();
+    }
+    
+    const std::string& name() const noexcept { return name_; }
+    
+private:
+    std::string name_ = "is_next_segment_mapped";
+};
 
 struct is_not_marked_duplicate
 {
@@ -232,19 +235,6 @@ struct is_not_marked_qc_fail
     
 private:
     std::string name_ = "is_not_marked_qc_fail";
-};
-
-struct mate_is_mapped
-{
-    bool operator()(const AlignedRead& read) const
-    {
-        return !read.has_mate() || !read.get_next_segment().is_marked_unmapped();
-    }
-    
-    const std::string& name() const noexcept { return name_; }
-    
-private:
-    std::string name_ = "mate_is_mapped";
 };
 
 // Context-based filters

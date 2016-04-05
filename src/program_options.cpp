@@ -249,8 +249,8 @@ namespace Octopus
              "Filters reads marked as secondary alignments")
             ("no-supplementary-alignmenets", po::bool_switch()->default_value(false),
              "Filters reads marked as supplementary alignments")
-            ("no-unmapped-mates", po::bool_switch()->default_value(false),
-             "Filters reads with unmapped mates")
+            ("consider-reads-with-unmapped-segments", po::bool_switch()->default_value(false),
+             "Allows reads with unmapped template segmenets to be used for calling")
             ("no-downsampling", po::bool_switch()->default_value(false),
              "Diables all downsampling")
             ("downsample-above", po::value<unsigned>()->default_value(500),
@@ -285,8 +285,10 @@ namespace Octopus
              "Minimum number of reads that must support a variant if it is to be considered a candidate")
             ("max-variant-size", po::value<AlignedRead::SizeType>()->default_value(100),
              "Maximum candidate varaint size from alignmenet CIGAR")
-            ("kmer-size", po::value<unsigned>()->default_value(15),
+            ("kmer-size", po::value<unsigned>()->default_value(25),
              "K-mer size to use for assembly")
+            ("min-assembler-base-quality", po::value<unsigned>()->default_value(15),
+             "Only bases with quality above this value are considered for candidate generation by the assembler")
             ;
             
             po::options_description caller("Caller options");
@@ -1095,8 +1097,8 @@ namespace Octopus
             result.register_filter(ReadFilters::is_not_supplementary_alignment());
         }
         
-        if (options.at("no-unmapped-mates").as<bool>()) {
-            result.register_filter(ReadFilters::mate_is_mapped());
+        if (!options.at("consider-reads-with-unmapped-segments").as<bool>()) {
+            result.register_filter(ReadFilters::is_next_segment_mapped());
         }
         
         return result;
@@ -1200,6 +1202,7 @@ namespace Octopus
         if (!options.at("no-assembly-candidates").as<bool>()) {
             result.add_generator(CandidateGeneratorBuilder::Generator::Assembler);
             result.set_kmer_size(options.at("kmer-size").as<unsigned>());
+            result.set_assembler_min_base_quality(options.at("min-assembler-base-quality").as<unsigned>());
         }
         
         return result;

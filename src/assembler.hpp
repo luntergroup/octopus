@@ -33,8 +33,7 @@ namespace boost
 
 namespace debug
 {
-    void print_edges(const Assembler& assembler);
-    void print_vertices(const Assembler& assembler);
+    void print(const Assembler& assembler);
 }
 
 class Assembler
@@ -76,19 +75,21 @@ public:
     
     std::deque<Variant> extract_variants(unsigned max = 100);
     
-    friend void debug::print_edges(const Assembler& assembler);
-    friend void debug::print_vertices(const Assembler& assembler);
+    friend void debug::print(const Assembler& assembler);
     
 private:
     using Kmer = SequenceType;
     
     struct GraphEdge
     {
-        GraphEdge() = default;
-        GraphEdge(unsigned weight, bool is_reference = false);
+        using WeightType = unsigned;
+        using ScoreType  = double;
         
-        unsigned weight;
-        double neg_log_probability;
+        GraphEdge() = default;
+        explicit GraphEdge(WeightType weight, bool is_reference = false);
+        
+        WeightType weight;
+        ScoreType transition_score;
         bool is_reference;
     };
     
@@ -117,8 +118,12 @@ private:
     using VertexIterator = boost::graph_traits<KmerGraph>::vertex_iterator;
     using EdgeIterator   = boost::graph_traits<KmerGraph>::edge_iterator;
     
+    using DominatorMap = std::unordered_map<Vertex, Vertex>;
+    
     using Path = std::deque<Vertex>;
     using PredecessorMap = std::unordered_map<Vertex, Vertex>;
+    
+    static constexpr GraphEdge::ScoreType BlockedScore = 1000;
     
     unsigned k_;
     
@@ -139,7 +144,8 @@ private:
     boost::optional<Vertex> add_vertex(const Kmer& kmer, bool is_reference = false);
     void remove_vertex(Vertex v);
     void clear_and_remove_vertex(Vertex v);
-    void add_edge(Vertex u, Vertex v, unsigned weight, bool is_reference = false);
+    void clear_and_remove_all(const std::unordered_set<Vertex>& vertices);
+    void add_edge(Vertex u, Vertex v, GraphEdge::WeightType weight, bool is_reference = false);
     void remove_edge(Vertex u, Vertex v);
     void remove_edge(Edge e);
     void increment_weight(Edge e);
@@ -160,11 +166,16 @@ private:
     Vertex reference_tail() const;
     Vertex next_reference(Vertex u) const;
     Vertex prev_reference(Vertex v) const;
+    std::size_t num_reference_kmers() const;
+    SequenceType make_sequence(const Path& path) const;
     SequenceType make_reference(Vertex from, Vertex to) const;
-    
+    void remove_path(const Path& path);
+    bool is_bridge(Vertex v) const;
+    Path::const_iterator is_bridge_until(const Path& path) const;
+    bool is_bridge(const Path& path) const;
     bool is_trivial_cycle(Edge e) const;
     bool graph_has_trivial_cycle() const;
-    bool is_bridge(Vertex v) const;
+    bool is_deletion(Edge e) const;
     
     void remove_low_weight_edges(unsigned min_weight);
     void remove_disconnected_vertices();
@@ -172,31 +183,36 @@ private:
     void remove_vertices_that_cant_be_reached_from(Vertex v);
     void remove_vertices_that_cant_reach(Vertex v);
     void remove_vertices_past_reference_tail();
+    bool can_prune_reference_flanks() const;
     void prune_reference_flanks();
     
     std::pair<Vertex, unsigned> find_bifurcation(Vertex from, Vertex to) const;
     
-    std::unordered_map<Vertex, Vertex> build_dominator_tree(Vertex from) const;
+    DominatorMap build_dominator_tree(Vertex from) const;
     std::unordered_set<Vertex> extract_nondominants(Vertex from) const;
     std::unordered_set<Vertex> extract_nondominants_on_path(const Path& path) const;
-    std::deque<Vertex> find_nondominant_reference(Vertex from) const;
-    void clear_and_remove_all(const std::unordered_set<Vertex>& vertices);
+    std::deque<Vertex> extract_nondominant_reference(const DominatorMap&) const;
     
-    void set_out_edge_log_probabilities(Vertex v);
-    void set_all_edge_log_probabilities_from(Vertex src);
-    void set_nondominant_reference_paths_impossible(Vertex from);
-    SequenceType make_sequence(const Path& path) const;
-    bool is_bridge(const Path& path) const;
-    void remove_path(const Path& path);
-    PredecessorMap find_shortest_paths(Vertex from) const;
+    void set_out_edge_transition_scores(Vertex v);
+    void set_all_edge_transition_scores_from(Vertex src);
+    void set_all_in_edge_transition_scores(Vertex v, GraphEdge::ScoreType score);
+    void block_all_in_edges(Vertex v);
+    bool all_in_edges_are_blocked(Vertex v) const;
+    void block_all_vertices(const std::deque<Vertex>& vertices);
+    bool all_vertices_are_blocked(const std::deque<Vertex>& vertices) const;
+    
+    PredecessorMap find_shortest_scoring_paths(Vertex from) const;
+    
+    Path extract_full_path(const PredecessorMap& predecessors, Vertex from) const;
     std::tuple<Assembler::Vertex, Assembler::Vertex, unsigned>
     backtrack_until_nonreference(const PredecessorMap& predecessors, Vertex from) const;
     Path extract_nonreference_path(const PredecessorMap& predecessors, Vertex from) const;
     
-    void extract_highest_probability_bubbles(std::deque<Variant>& result);
+    std::deque<Variant> extract_k_highest_scoring_bubble_paths(unsigned k);
     
     void print(Edge e) const;
     void print(const Path& path) const;
+    void print_dominator_tree() const;
     
     friend struct boost::property_map<KmerGraph, boost::vertex_index_t>;
     template <typename G>
