@@ -225,7 +225,7 @@ namespace Octopus
             
             po::options_description filters("Read filter options");
             filters.add_options()
-            ("allow-unmapped", po::bool_switch()->default_value(false),
+            ("consider-unmapped-reads", po::bool_switch()->default_value(false),
              "Allows reads marked as unmapped to be used for calling")
             ("min-mapping-quality", po::value<unsigned>()->default_value(20),
              "Minimum read mapping quality required to consider a read for calling")
@@ -261,12 +261,12 @@ namespace Octopus
             
             po::options_description transforms("Read transform options");
             transforms.add_options()
-            ("trim-soft-clipped", po::bool_switch()->default_value(false),
-             "Sets the quality of all soft clipped bases to zero")
+            ("disable-soft-clip-masking", po::bool_switch()->default_value(false),
+             "Disables soft clipped masking, thus allowing all soft clipped bases to be used for candidate generation")
             ("tail-trim-size", po::value<AlignedRead::SizeType>()->default_value(0),
              "Trims this number of bases off the tail of all reads")
-            ("trim-adapters", po::bool_switch()->default_value(false),
-             "Trims any overlapping regions that pass the fragment size")
+            ("disable-adapter-masking", po::bool_switch()->default_value(false),
+             "Disables adapter detection and masking")
             ;
             
             po::options_description candidates("Candidate generation options");
@@ -1045,7 +1045,7 @@ namespace Octopus
         
         ReadFilterer result {};
         
-        if (!options.at("allow-unmapped").as<bool>()) {
+        if (!options.at("consider-unmapped-reads").as<bool>()) {
             result.register_filter(ReadFilters::is_mapped());
         }
         
@@ -1120,7 +1120,7 @@ namespace Octopus
         
         ReadTransform result {};
         
-        bool trim_soft_clipped = options.at("trim-soft-clipped").as<bool>();
+        bool trim_soft_clipped = !options.at("disable-soft-clip-masking").as<bool>();
         
         auto tail_trim_size = options.at("tail-trim-size").as<SizeType>();
         
@@ -1132,7 +1132,7 @@ namespace Octopus
             result.register_transform(ReadTransforms::trim_soft_clipped());
         }
         
-        if (options.at("trim-adapters").as<bool>()) {
+        if (!options.at("disable-adapter-masking").as<bool>()) {
             result.register_transform(ReadTransforms::trim_adapters());
         }
         

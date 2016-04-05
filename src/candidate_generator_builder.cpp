@@ -18,63 +18,38 @@ namespace Octopus
 {
     CandidateGeneratorBuilder::CandidateGeneratorBuilder()
     :
-    generators_           {},
-    reference_            {},
-    kmer_size_            {},
-    variant_source_       {},
-    generator_factory_    {generate_factory()}
+    generators_        {},
+    parameters_        {},
+    generator_factory_ {generate_factory()}
     {}
     
     CandidateGeneratorBuilder::CandidateGeneratorBuilder(const CandidateGeneratorBuilder& other)
     :
-    generators_           {other.generators_},
-    reference_            {other.reference_},
-    min_base_quality_     {other.min_base_quality_},
-    min_supporting_reads_ {other.min_supporting_reads_},
-    max_variant_size_     {other.max_variant_size_},
-    kmer_size_            {other.kmer_size_},
-    variant_source_       {other.variant_source_},
-    generator_factory_    {generate_factory()}
+    generators_        {other.generators_},
+    parameters_        {other.parameters_},
+    generator_factory_ {generate_factory()}
     {}
     
     CandidateGeneratorBuilder& CandidateGeneratorBuilder::operator=(const CandidateGeneratorBuilder& other)
     {
-        generators_           = other.generators_;
-        reference_            = other.reference_;
-        min_base_quality_     = other.min_base_quality_;
-        min_supporting_reads_ = other.min_supporting_reads_;
-        max_variant_size_     = other.max_variant_size_;
-        kmer_size_            = other.kmer_size_;
-        variant_source_       = other.variant_source_;
-        generator_factory_    = generate_factory();
+        generators_        = other.generators_;
+        parameters_        = other.parameters_;
+        generator_factory_ = generate_factory();
         return *this;
     }
     
     CandidateGeneratorBuilder::CandidateGeneratorBuilder(CandidateGeneratorBuilder&& other)
     :
-    generators_           {std::move(other.generators_)},
-    reference_            {std::move(other.reference_)},
-    min_base_quality_     {std::move(other.min_base_quality_)},
-    min_supporting_reads_ {std::move(other.min_supporting_reads_)},
-    max_variant_size_     {std::move(other.max_variant_size_)},
-    kmer_size_            {std::move(other.kmer_size_)},
-    variant_source_       {std::move(other.variant_source_)},
-    generator_factory_    {generate_factory()}
+    generators_        {std::move(other.generators_)},
+    parameters_        {std::move(other.parameters_)},
+    generator_factory_ {generate_factory()}
     {}
     
     CandidateGeneratorBuilder& CandidateGeneratorBuilder::operator=(CandidateGeneratorBuilder&& other)
     {
-        using std::swap;
-        swap(generators_,           other.generators_);
-        swap(reference_,            other.reference_);
-        swap(min_base_quality_,     other.min_base_quality_);
-        swap(min_supporting_reads_, other.min_supporting_reads_);
-        swap(max_variant_size_,     other.max_variant_size_);
-        swap(kmer_size_,            other.kmer_size_);
-        swap(variant_source_,       other.variant_source_);
-        
+        std::swap(generators_, other.generators_);
+        std::swap(parameters_, other.parameters_);
         generator_factory_ = generate_factory();
-
         return *this;
     }
     
@@ -93,43 +68,43 @@ namespace Octopus
     
     CandidateGeneratorBuilder& CandidateGeneratorBuilder::set_reference(const ReferenceGenome& reference)
     {
-        reference_ = reference;
+        parameters_.reference = reference;
         return *this;
     }
     
     CandidateGeneratorBuilder& CandidateGeneratorBuilder::set_min_base_quality(const QualityType quality)
     {
-        min_base_quality_ = quality;
+        parameters_.min_base_quality = quality;
         return *this;
     }
     
     CandidateGeneratorBuilder& CandidateGeneratorBuilder::set_min_supporting_reads(const unsigned num_reads)
     {
-        min_supporting_reads_ = num_reads;
+        parameters_.min_supporting_reads = num_reads;
         return *this;
     }
     
     CandidateGeneratorBuilder& CandidateGeneratorBuilder::set_max_variant_size(const SizeType size)
     {
-        max_variant_size_ = size;
+        parameters_.max_variant_size = size;
         return *this;
     }
     
     CandidateGeneratorBuilder& CandidateGeneratorBuilder::set_kmer_size(const unsigned kmer_size)
     {
-        kmer_size_ = kmer_size;
+        parameters_.kmer_size = kmer_size;
         return *this;
     }
     
     CandidateGeneratorBuilder& CandidateGeneratorBuilder::set_variant_source(boost::filesystem::path variant_source)
     {
-        variant_source_ = std::make_shared<VcfReader>(std::move(variant_source));
+        parameters_.variant_source = std::make_shared<VcfReader>(std::move(variant_source));
         return *this;
     }
     
     CandidateGeneratorBuilder& CandidateGeneratorBuilder::set_variant_source(const std::shared_ptr<VcfReader>& variant_source)
     {
-        variant_source_ = variant_source;
+        parameters_.variant_source = variant_source;
         return *this;
     }
     
@@ -150,27 +125,27 @@ namespace Octopus
     {
         return GeneratorFactoryMap {
             {Generator::Alignment, [this] () {
-                return std::make_unique<AlignmentCandidateVariantGenerator>(*reference_,
-                                                                            min_base_quality_,
-                                                                            min_supporting_reads_,
-                                                                            max_variant_size_);
+                return std::make_unique<AlignmentCandidateVariantGenerator>(*parameters_.reference,
+                                                                            parameters_.min_base_quality,
+                                                                            parameters_.min_supporting_reads,
+                                                                            parameters_.max_variant_size);
             }},
             {Generator::Assembler, [this] () {
-                return std::make_unique<AssemblerCandidateVariantGenerator>(*reference_,
-                                                                            *kmer_size_,
-                                                                            min_base_quality_,
-                                                                            min_supporting_reads_,
-                                                                            max_variant_size_);
+                return std::make_unique<AssemblerCandidateVariantGenerator>(*parameters_.reference,
+                                                                            *parameters_.kmer_size,
+                                                                            parameters_.min_base_quality,
+                                                                            parameters_.min_supporting_reads,
+                                                                            parameters_.max_variant_size);
             }},
             {Generator::External, [this] () {
-                return std::make_unique<ExternalCandidateVariantGenerator>(variant_source_);
+                return std::make_unique<ExternalCandidateVariantGenerator>(parameters_.variant_source);
             }},
             {Generator::Online, [this] () {
-                return std::make_unique<OnlineCandidateVariantGenerator>(*reference_,
-                                                                         max_variant_size_);
+                return std::make_unique<OnlineCandidateVariantGenerator>(*parameters_.reference,
+                                                                         parameters_.max_variant_size);
             }},
             {Generator::Random, [this] () {
-                return std::make_unique<RandomCandidateVariantGenerator>(*reference_);
+                return std::make_unique<RandomCandidateVariantGenerator>(*parameters_.reference);
             }}
         };
     }

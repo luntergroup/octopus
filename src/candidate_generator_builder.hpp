@@ -54,28 +54,35 @@ namespace Octopus
         CandidateVariantGenerator build() const;
         
     private:
-        std::deque<Generator> generators_;
-        
-        // common
-        boost::optional<std::reference_wrapper<const ReferenceGenome>> reference_;
-        
-        QualityType min_base_quality_ = 10;
-        unsigned min_supporting_reads_ = 1;
-        SizeType max_variant_size_ = 500;
-        
-        // assembler
-        
-        boost::optional<unsigned> kmer_size_;
-        
-        // external
-        
-        std::shared_ptr<VcfReader> variant_source_;
-        
-        // online
-        
-        // random
-        
-        // factory
+        struct Parameters
+        {
+            Parameters()  = default;
+            ~Parameters() = default;
+            
+            Parameters(const Parameters&)            = default;
+            Parameters& operator=(const Parameters&) = default;
+            Parameters(Parameters&&)                 = default;
+            Parameters& operator=(Parameters&&)      = default;
+            
+            // common
+            boost::optional<std::reference_wrapper<const ReferenceGenome>> reference;
+            
+            QualityType min_base_quality = 10;
+            unsigned min_supporting_reads = 1;
+            SizeType max_variant_size = 500;
+            
+            // assembler
+            
+            boost::optional<unsigned> kmer_size;
+            
+            // external
+            
+            std::shared_ptr<VcfReader> variant_source;
+            
+            // online
+            
+            // random
+        };
         
         struct GeneratorTypeHash
         {
@@ -85,6 +92,8 @@ namespace Octopus
         using GeneratorFactoryMap = std::unordered_map<Generator,
                 std::function<std::unique_ptr<ICandidateVariantGenerator>()>, GeneratorTypeHash>;
         
+        std::deque<Generator> generators_;
+        Parameters parameters_;
         GeneratorFactoryMap generator_factory_;
         
         GeneratorFactoryMap generate_factory() const;

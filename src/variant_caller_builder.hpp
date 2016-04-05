@@ -78,39 +78,52 @@ namespace Octopus {
         std::unique_ptr<VariantCaller> build() const;
         
     private:
-        // common parameters
-        std::reference_wrapper<const ReferenceGenome> reference_;
-        std::reference_wrapper<ReadPipe> read_pipe_;
-        
-        HaplotypePriorModelFactory haplotype_prior_model_factory_;
-        
-        unsigned ploidy_;
-        std::string model_;
-        std::reference_wrapper<const CandidateGeneratorBuilder> candidate_generator_builder_;
-        VariantCaller::RefCallType refcall_type_ = VariantCaller::RefCallType::None;
-        bool call_sites_only_ = false;
-        double min_variant_posterior_;
-        double min_refcall_posterior_;
-        unsigned max_haplotypes_;
-        
-        // cancer
-        
-        boost::optional<SampleIdType> normal_sample_;
-        double min_somatic_posterior_;
-        bool call_somatics_only_;
-        
-        // trio
-        
-        boost::optional<SampleIdType> maternal_sample_, paternal_sample_;
-        
-        // pedigree
-        
-        boost::optional<Pedigree> pedigree_;
-        
-        // factory
+        struct Parameters
+        {
+            Parameters()  = delete;
+            explicit Parameters(const ReferenceGenome& reference,
+                                ReadPipe& read_pipe,
+                                const CandidateGeneratorBuilder& candidate_generator_builder);
+            ~Parameters() = default;
+            
+            Parameters(const Parameters&)            = default;
+            Parameters& operator=(const Parameters&) = default;
+            Parameters(Parameters&&)                 = default;
+            Parameters& operator=(Parameters&&)      = default;
+            
+            // common
+            std::reference_wrapper<const ReferenceGenome> reference;
+            std::reference_wrapper<ReadPipe> read_pipe;
+            
+            HaplotypePriorModelFactory haplotype_prior_model_factory;
+            
+            unsigned ploidy;
+            std::string model;
+            std::reference_wrapper<const CandidateGeneratorBuilder> candidate_generator_builder;
+            VariantCaller::RefCallType refcall_type = VariantCaller::RefCallType::None;
+            bool call_sites_only = false;
+            double min_variant_posterior;
+            double min_refcall_posterior;
+            unsigned max_haplotypes;
+            
+            // cancer
+            
+            boost::optional<SampleIdType> normal_sample;
+            double min_somatic_posterior;
+            bool call_somatics_only;
+            
+            // trio
+            
+            boost::optional<SampleIdType> maternal_sample, paternal_sample;
+            
+            // pedigree
+            
+            boost::optional<Pedigree> pedigree;
+        };
         
         using ModelFactoryMap = std::unordered_map<std::string, std::function<std::unique_ptr<VariantCaller>()>>;
         
+        Parameters parameters_;
         ModelFactoryMap factory_;
         
         ModelFactoryMap generate_factory() const;
