@@ -50,13 +50,6 @@ namespace
 
 // public methods
 
-Assembler::Variant::Variant(std::size_t pos, SequenceType ref, SequenceType alt)
-:
-begin_pos {pos},
-ref {std::move(ref)},
-alt {std::move(alt)}
-{}
-
 Assembler::Assembler(const unsigned kmer_size)
 :
 k_ {kmer_size},
@@ -110,6 +103,11 @@ reference_head_position_ {0}
     }
     
     reference_kmers_.shrink_to_fit();
+}
+
+unsigned Assembler::kmer_size() const noexcept
+{
+    return k_;
 }
 
 void Assembler::insert_reference(const SequenceType& sequence)
@@ -294,7 +292,13 @@ void Assembler::remove_trivial_nonreference_cycles()
 
 bool Assembler::prune(const unsigned min_weight)
 {
+    debug::print(*this);
+    
     auto old_size = boost::num_vertices(graph_);
+    
+    if (old_size < 2) {
+        return true;
+    }
     
     remove_low_weight_edges(min_weight);
     
@@ -303,6 +307,9 @@ bool Assembler::prune(const unsigned min_weight)
     auto new_size = boost::num_vertices(graph_);
     
     if (new_size != old_size) {
+        if (new_size < 2) {
+            return true;
+        }
         regenerate_vertex_indices();
         old_size = new_size;
     }
@@ -312,6 +319,9 @@ bool Assembler::prune(const unsigned min_weight)
     new_size = boost::num_vertices(graph_);
     
     if (new_size != old_size) {
+        if (new_size < 2) {
+            return true;
+        }
         regenerate_vertex_indices();
         old_size = new_size;
     }
@@ -320,6 +330,9 @@ bool Assembler::prune(const unsigned min_weight)
     
     new_size = boost::num_vertices(graph_);
     if (new_size != old_size) {
+        if (new_size < 2) {
+            return true;
+        }
         regenerate_vertex_indices();
         old_size = new_size;
     }
@@ -328,6 +341,9 @@ bool Assembler::prune(const unsigned min_weight)
     
     new_size = boost::num_vertices(graph_);
     if (new_size != old_size) {
+        if (new_size < 2) {
+            return true;
+        }
         regenerate_vertex_indices();
         old_size = new_size;
     }
@@ -370,13 +386,13 @@ void Assembler::clear()
 
 std::deque<Assembler::Variant> Assembler::extract_variants(unsigned max)
 {
-    std::deque<Variant> result {};
-    
     if (empty() || is_all_reference()) {
-        return result;
+        return std::deque<Variant> {};
     }
     
     set_all_edge_transition_scores_from(reference_head());
+    
+    //debug::print(*this);
     
     return extract_k_highest_scoring_bubble_paths(max);
 }
@@ -1315,6 +1331,16 @@ void Assembler::print_dominator_tree() const
 }
 
 // non-member methods
+
+bool operator==(const Assembler::Variant& lhs, const Assembler::Variant& rhs)
+{
+    return lhs.begin_pos == rhs.begin_pos && lhs.alt == rhs.alt;
+}
+
+bool operator!=(const Assembler::Variant& lhs, const Assembler::Variant& rhs)
+{
+    return !operator==(lhs, rhs);
+}
 
 namespace debug
 {

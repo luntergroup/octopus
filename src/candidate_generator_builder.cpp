@@ -90,9 +90,9 @@ namespace Octopus
         return *this;
     }
     
-    CandidateGeneratorBuilder& CandidateGeneratorBuilder::set_kmer_size(const unsigned kmer_size)
+    CandidateGeneratorBuilder& CandidateGeneratorBuilder::add_kmer_size(const unsigned kmer_size)
     {
-        parameters_.kmer_size = kmer_size;
+        parameters_.kmer_sizes.push_back(kmer_size);
         return *this;
     }
     
@@ -140,7 +140,7 @@ namespace Octopus
                 const auto quality = (parameters_.min_assembler_base_quality)
                         ? *parameters_.min_assembler_base_quality : parameters_.min_base_quality;
                 return std::make_unique<AssemblerCandidateVariantGenerator>(*parameters_.reference,
-                                                                            *parameters_.kmer_size,
+                                                                            parameters_.kmer_sizes,
                                                                             quality,
                                                                             parameters_.min_supporting_reads,
                                                                             parameters_.max_variant_size);

@@ -285,8 +285,9 @@ namespace Octopus
              "Minimum number of reads that must support a variant if it is to be considered a candidate")
             ("max-variant-size", po::value<AlignedRead::SizeType>()->default_value(100),
              "Maximum candidate varaint size from alignmenet CIGAR")
-            ("kmer-size", po::value<unsigned>()->default_value(25),
-             "K-mer size to use for assembly")
+            ("kmer-size", po::value<std::vector<unsigned>>()->multitoken()
+                ->default_value(std::vector<unsigned> {10, 25}, "10 25")->composing(),
+             "K-mer sizes to use for local re-assembly")
             ("min-assembler-base-quality", po::value<unsigned>()->default_value(15),
              "Only bases with quality above this value are considered for candidate generation by the assembler")
             ;
@@ -1201,7 +1202,10 @@ namespace Octopus
         
         if (!options.at("no-assembly-candidates").as<bool>()) {
             result.add_generator(CandidateGeneratorBuilder::Generator::Assembler);
-            result.set_kmer_size(options.at("kmer-size").as<unsigned>());
+            const auto kmer_sizes = options.at("kmer-size").as<std::vector<unsigned>>();
+            for (const auto k : kmer_sizes) {
+                result.add_kmer_size(k);
+            }
             result.set_assembler_min_base_quality(options.at("min-assembler-base-quality").as<unsigned>());
         }
         

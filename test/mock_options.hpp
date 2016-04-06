@@ -43,8 +43,8 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--reference", ecoli_reference_fasta.c_str(),
         
         //"--reads", NA12878_low_coverage.c_str(),
-        "--reads", NA12878_high_coverage.c_str(),
-        //"--reads", "~/Genomics/Illumina/NA12878.mapped.ILLUMINA.bwa.CEU.high_coverage_pcr_free.20130906.chr22.bam",
+        //"--reads", NA12878_high_coverage.c_str(),
+        "--reads", "~/Genomics/Illumina/NA12878.mapped.ILLUMINA.bwa.CEU.high_coverage_pcr_free.20130906.chr22.bam",
         
         //"--reads", NA12891_high_coverage.c_str(),
         
@@ -75,7 +75,8 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         
         // for population
         
-        "--regions", "22:30,366,511-30,369,162",
+        "--regions", "22:37,622,813-37,622,964",
+        //"--regions", "22:39,091,431-39,091,471", // assembler not proposing (obvious?) deletion
         
         // False positives under uniprior
         //"--regions", "22:37,042,664-37,042,703",
@@ -97,7 +98,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         
         // NA12878_high_coverage possible errors
         //"--regions", "22:37,616,864-37,617,015", // false negative insertion?
-//        "--regions", "22:37,622,869-37,622,909", // SNPs or indels?
+        //"--regions", "22:37,622,869-37,622,909", // SNPs or indels?
         //"--regions", "22:37,622,803-37,623,840", // very repetitive region
         //"--regions", "22:34,974,205-34,975,215", // Another very repetitive region
         //"--regions", "22:35,834,230-35,835,616", // Another very repetitive region
@@ -178,7 +179,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--candidates-from-source", sample_vcf.c_str(),
         //"--regenotype",
         //"--no-assembly-candidates",
-        "--kmer-size", "31",
+        //"--kmer-size", "50",
         
         //"--max-haplotypes", "256",
         

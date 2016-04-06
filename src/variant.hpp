@@ -92,6 +92,8 @@ bool operator<(const Variant& lhs, const Variant& rhs);
 
 void remove_duplicates(std::vector<Variant>& variants);
 
+std::vector<Variant> split_mnv(const Variant& variant);
+
 /*
  Decomposes a list of variants into unique alleles in the same order as the given variants.
  The reference allele for each unique GenomicRegion will appear first in the sub-list.
@@ -150,17 +152,12 @@ std::vector<Variant> parsimonise_together(const std::vector<Variant>& variants,
                                           const ReferenceGenome& reference);
 
 bool is_snp(const Variant& variant) noexcept;
-
 bool is_insertion(const Variant& variant) noexcept;
-
 bool is_deletion(const Variant& variant) noexcept;
-
 bool is_indel(const Variant& variant) noexcept;
-
 bool is_mnv(const Variant& variant) noexcept;
 
 bool is_transition(const Variant& variant) noexcept;
-
 bool is_transversion(const Variant& variant) noexcept;
 
 std::vector<Allele::SequenceType> extract_alt_allele_sequences(const std::vector<Variant>& variants);

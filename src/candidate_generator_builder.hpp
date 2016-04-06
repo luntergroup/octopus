@@ -48,7 +48,7 @@ namespace Octopus
         CandidateGeneratorBuilder& set_min_supporting_reads(unsigned num_reads);
         CandidateGeneratorBuilder& set_max_variant_size(SizeType size);
         
-        CandidateGeneratorBuilder& set_kmer_size(unsigned kmer_size);
+        CandidateGeneratorBuilder& add_kmer_size(unsigned kmer_size);
         CandidateGeneratorBuilder& set_assembler_min_base_quality(QualityType quality);
         
         CandidateGeneratorBuilder& set_variant_source(boost::filesystem::path variant_source);
@@ -76,7 +76,7 @@ namespace Octopus
             
             // assembler
             
-            boost::optional<unsigned> kmer_size;
+            std::vector<unsigned> kmer_sizes;
             boost::optional<QualityType> min_assembler_base_quality;
             
             // external

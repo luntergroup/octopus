@@ -34,7 +34,7 @@ public:
     
     AssemblerCandidateVariantGenerator() = delete;
     explicit AssemblerCandidateVariantGenerator(const ReferenceGenome& reference,
-                                                unsigned kmer_size,
+                                                std::vector<unsigned> kmer_sizes,
                                                 QualityType min_base_quality = 10,
                                                 unsigned min_supporting_reads = 2,
                                                 SizeType max_variant_size = 500);
@@ -55,16 +55,26 @@ public:
     void clear() override;
     
 private:
+    using SequenceType = AlignedRead::SequenceType;
+    
     std::reference_wrapper<const ReferenceGenome> reference_;
     
-    std::vector<unsigned> initial_kmer_sizes_;
+    std::vector<unsigned> default_kmer_sizes_;
     std::vector<unsigned> fallback_kmer_sizes_;
-    Assembler assembler_;
+    
+    std::vector<Assembler> assemblers_;
+    
     boost::optional<GenomicRegion> region_assembled_;
+    std::deque<SequenceType> sequence_buffer_;
     
     QualityType min_base_quality_;
     unsigned min_supporting_reads_;
     SizeType max_variant_size_;
+    
+    bool try_assemble_region(Assembler& assembler,
+                             const SequenceType& reference_sequence,
+                             const GenomicRegion& reference_region,
+                             std::vector<Variant>& result);
 };
 
 } // namespace Octopus

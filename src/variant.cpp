@@ -98,6 +98,37 @@ void remove_duplicates(std::vector<Variant>& variants)
     variants.erase(std::unique(std::begin(variants), std::end(variants)), std::end(variants));
 }
 
+std::vector<Variant> split_mnv(const Variant& variant)
+{
+    using std::begin; using std::end; using std::next; using std::prev; using std::distance;
+    
+    std::vector<Variant> result {};
+    result.reserve(ref_sequence_size(variant));
+    
+    const auto& contig   = contig_name(variant);
+    const auto begin_pos = region_begin(variant);
+    const auto& ref      = ref_sequence(variant);
+    const auto& alt      = alt_sequence(variant);
+    
+    result.emplace_back(contig, begin_pos, ref.front(), alt.front());
+    
+    const auto last = prev(end(ref));
+    
+    auto p = std::mismatch(next(begin(ref)), last, next(begin(alt)));
+    
+    while (p.first != prev(end(ref))) {
+        result.emplace_back(contig, begin_pos + distance(begin(ref) - 1, p.first),
+                            *p.first, *p.second);
+        p = std::mismatch(next(p.first), last, next(p.second));
+    }
+    
+    result.emplace_back(contig, region_end(variant) - 1, ref.back(), alt.back());
+    
+    result.shrink_to_fit();
+    
+    return result;
+}
+
 std::vector<Allele> decompose(const std::vector<Variant>& variants)
 {
     std::vector<Allele> result {};
@@ -545,7 +576,7 @@ bool is_indel(const Variant& variant) noexcept
 
 bool is_mnv(const Variant& variant) noexcept
 {
-    return ref_sequence_size(variant) > 1 && alt_sequence_size(variant) > 1;
+    return ref_sequence_size(variant) == alt_sequence_size(variant) && ref_sequence_size(variant) > 1;
 }
 
 bool is_transition(const Variant& variant) noexcept

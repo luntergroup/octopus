@@ -44,7 +44,8 @@ public:
     struct Variant
     {
         Variant() = default;
-        explicit Variant(std::size_t pos, SequenceType ref, SequenceType alt);
+        template <typename S1, typename S2>
+        explicit Variant(std::size_t pos, S1&& ref, S2&& alt);
         std::size_t begin_pos;
         SequenceType ref, alt;
     };
@@ -60,6 +61,8 @@ public:
     Assembler& operator=(const Assembler&) = default;
     Assembler(Assembler&&)                 = default;
     Assembler& operator=(Assembler&&)      = default;
+    
+    unsigned kmer_size() const noexcept;
     
     void insert_reference(const SequenceType& sequence);
     void insert_read(const SequenceType& sequence);
@@ -220,6 +223,17 @@ private:
     template <typename G>
     friend decltype(auto) boost::get(boost::vertex_index_t, const G&);
 };
+
+template <typename S1, typename S2>
+Assembler::Variant::Variant(std::size_t pos, S1&& ref, S2&& alt)
+:
+begin_pos {pos},
+ref {std::forward<S1>(ref)},
+alt {std::forward<S2>(alt)}
+{}
+
+bool operator==(const Assembler::Variant& lhs, const Assembler::Variant& rhs);
+bool operator!=(const Assembler::Variant& lhs, const Assembler::Variant& rhs);
 
 // Hack to make some older boost algorithms work with bundled properties
 namespace boost
