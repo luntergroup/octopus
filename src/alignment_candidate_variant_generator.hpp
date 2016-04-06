@@ -60,6 +60,7 @@ private:
     
     std::reference_wrapper<const ReferenceGenome> reference_;
     QualityType min_base_quality_;
+    unsigned max_poor_quality_insertion_bases_;
     unsigned min_support_;
     SizeType max_variant_size_;
     

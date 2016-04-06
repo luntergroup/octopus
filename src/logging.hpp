@@ -17,6 +17,7 @@
 
 #include <boost/optional.hpp>
 #include <boost/filesystem.hpp>
+#include <boost/algorithm/string/replace.hpp>
 
 #include <boost/date_time/posix_time/posix_time_types.hpp>
 #include <boost/log/core.hpp>
@@ -85,7 +86,12 @@ namespace Logging
     public:
         LogStream() = delete;
         
-        LogStream(T& log) : log_ {log}, msg_ {} {}
+        LogStream(T& log, const unsigned indent_size = 0) : log_ {log}, msg_ {}, indent_ {}
+        {
+            if (indent_size > 0) {
+                indent_ = '\n' +  std::string(indent_size, ' ');
+            }
+        }
         
         ~LogStream()
         {
@@ -93,6 +99,10 @@ namespace Logging
             
             if (!str.empty() && str.back() == '\n') {
                 str.pop_back();
+            }
+            
+            if (!indent_.empty()) {
+                boost::replace_all(str, "\n", indent_);
             }
             
             log_.get() << str;
@@ -109,12 +119,14 @@ namespace Logging
     private:
         std::reference_wrapper<T> log_;
         std::ostringstream msg_;
+        
+        std::string indent_;
     };
     
     template <typename T>
-    auto stream(T& log)
+    auto stream(T& log, const unsigned indent_size = 4)
     {
-        return LogStream<T> {log};
+        return LogStream<T> {log, indent_size};
     }
     
     inline decltype(auto) stream(std::ostream& os) { return os; }

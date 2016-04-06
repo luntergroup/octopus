@@ -12,12 +12,12 @@
 #include <vector>
 #include <cstddef>
 #include <functional>
+#include <utility>
 
 #include "i_candidate_variant_generator.hpp"
 #include "genomic_region.hpp"
+#include "mappable.hpp"
 #include "assembler.hpp"
-
-#include <boost/optional.hpp>
 
 class ReferenceGenome;
 class AlignedRead;
@@ -57,26 +57,44 @@ public:
 private:
     using SequenceType = AlignedRead::SequenceType;
     
+    struct Bin : public Mappable<Bin>
+    {
+        explicit Bin(GenomicRegion region);
+        const GenomicRegion& get_region() const noexcept;
+        void insert(const AlignedRead& read);
+        template <typename T>
+        void insert(T&& sequence);
+        GenomicRegion region;
+        std::deque<SequenceType> read_sequences;
+    };
+    
     std::reference_wrapper<const ReferenceGenome> reference_;
     
     std::vector<unsigned> default_kmer_sizes_;
     std::vector<unsigned> fallback_kmer_sizes_;
     
-    std::vector<Assembler> assemblers_;
-    
-    boost::optional<GenomicRegion> region_assembled_;
-    std::deque<SequenceType> sequence_buffer_;
+    SizeType bin_size_;
+    std::deque<Bin> bins_;
     
     QualityType min_base_quality_;
     unsigned min_supporting_reads_;
     SizeType max_variant_size_;
     
+    void prepare_bins_to_insert(const AlignedRead& read);
+    
+    GenomicRegion propose_assembler_region(const GenomicRegion& input_region, unsigned kmer_size) const;
+    bool assemble_bin(unsigned kmer_size, const Bin& bin, std::vector<Variant>& result) const;
     bool try_assemble_region(Assembler& assembler,
                              const SequenceType& reference_sequence,
                              const GenomicRegion& reference_region,
-                             std::vector<Variant>& result);
+                             std::vector<Variant>& result) const;
 };
 
+template <typename T>
+void AssemblerCandidateVariantGenerator::Bin::insert(T&& sequence)
+{
+    read_sequences.emplace_back(std::forward<T>(sequence));
+}
 } // namespace Octopus
 
 #endif /* defined(__Octopus__assembler_candidate_variant_generator__) */

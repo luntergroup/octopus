@@ -31,7 +31,7 @@ public:
     
     const char* what() const noexcept
     {
-        return (std::string{runtime_error::what()} + ": in " + file_path_ + " - " + message_).c_str();
+        return (std::string {runtime_error::what()} + ": in " + file_path_ + " - " + message_).c_str();
     }
 private:
     std::string message_, file_path_;

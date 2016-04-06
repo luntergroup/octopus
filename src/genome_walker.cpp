@@ -135,7 +135,7 @@ GenomicRegion GenomeWalker::walk(const GenomicRegion& previous_region, const Rea
     
     first_excluded_itr = next(included_itr);
     
-    return encompassing_region(*first_included_itr, *included_itr);
+    return encompassing_region(first_included_itr, included_itr);
 }
 
 } // namespace Octopus

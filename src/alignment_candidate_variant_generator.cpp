@@ -37,6 +37,7 @@ AlignmentCandidateVariantGenerator::AlignmentCandidateVariantGenerator(const Ref
 :
 reference_ {reference},
 min_base_quality_ {min_base_quality},
+max_poor_quality_insertion_bases_ {1},
 min_support_ {min_support},
 max_variant_size_ {max_variant_size},
 candidates_ {},
@@ -62,6 +63,28 @@ namespace
     {
         const auto it = std::next(std::cbegin(sequence), pos);
         return SequenceType {it, std::next(it, size)};
+    }
+    
+    template <typename Q, typename T>
+    bool is_all_good_quality(const Q& qualities, const T pos, const T size,
+                             const typename Q::value_type min_quality)
+    {
+        const auto it = std::next(std::cbegin(qualities), pos);
+        return std::all_of(it, std::next(it, size),
+                           [min_quality] (const auto quality) {
+                               return quality >= min_quality;
+                           });
+    }
+    
+    template <typename Q, typename T>
+    auto count_bad_qualities(const Q& qualities, const T pos, const T size,
+                             const typename Q::value_type min_quality)
+    {
+        const auto it = std::next(std::cbegin(qualities), pos);
+        return std::count_if(it, std::next(it, size),
+                             [min_quality] (const auto quality) {
+                                 return quality < min_quality;
+                           });
     }
 } // namespace
 
@@ -102,7 +125,8 @@ void AlignmentCandidateVariantGenerator::add_read(const AlignedRead& read)
                 auto removed_sequence = reference_.get().get_sequence(region);
                 auto added_sequence   = splice(read_sequence, read_index, op_size);
                 
-                if (is_good_sequence(removed_sequence) && is_good_sequence(added_sequence)) {
+                if (std::max(removed_sequence.size(), added_sequence.size()) <= max_variant_size_
+                    && is_good_sequence(removed_sequence) && is_good_sequence(added_sequence)) {
                     add_candidate(std::move(region), std::move(removed_sequence),
                                   std::move(added_sequence));
                 }
@@ -116,7 +140,9 @@ void AlignmentCandidateVariantGenerator::add_read(const AlignedRead& read)
             {
                 auto added_sequence = splice(read_sequence, read_index, op_size);
                 
-                if (is_good_sequence(added_sequence)) {
+                if (is_good_sequence(added_sequence)
+                    && count_bad_qualities(read.get_qualities(), read_index, op_size,
+                                           min_base_quality_) <= max_poor_quality_insertion_bases_) {
                     add_candidate(GenomicRegion {read_contig, ref_index, ref_index},
                                   "", std::move(added_sequence));
                 }

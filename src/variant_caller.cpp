@@ -116,6 +116,8 @@ auto generate_candidates(CandidateVariantGenerator& generator, const GenomicRegi
     
     auto final_candidates = unique_left_align(std::move(raw_candidates), reference);
     
+    generator.clear();
+    
     return MappableFlatSet<Variant> {
         std::make_move_iterator(std::begin(final_candidates)),
         std::make_move_iterator(std::end(final_candidates))
@@ -307,8 +309,6 @@ std::deque<VcfRecord> VariantCaller::call_variants(const GenomicRegion& call_reg
     
     auto candidates = generate_candidates(candidate_generator_, candidate_region, reference_);
     
-    candidate_generator_.clear();
-    
     if (DEBUG_MODE) {
         debug::print_final_candidates(stream(debug_log), candidates);
     }
@@ -344,7 +344,19 @@ std::deque<VcfRecord> VariantCaller::call_variants(const GenomicRegion& call_reg
         std::tie(haplotypes, active_region) = generator.progress();
         pause_timer(haplotype_generation_timer);
         
+        if (DEBUG_MODE) {
+            stream(debug_log) << "Active region is " << active_region;
+        }
+        
         if (is_after(active_region, call_region) || haplotypes.empty()) {
+            if (DEBUG_MODE) {
+                if (haplotypes.empty()) {
+                    stream(debug_log) << "No haplotypes were generated in the active region";
+                } else {
+                    stream(debug_log) << "Generated " << haplotypes.size()
+                                << " haplotypes but active region is after call region";
+                }
+            }
             progress_meter.log_completed(active_region);
             break;
         }
@@ -352,7 +364,6 @@ std::deque<VcfRecord> VariantCaller::call_variants(const GenomicRegion& call_reg
         remove_passed_candidates(candidates, candidate_region, haplotype_region(haplotypes));
         
         if (DEBUG_MODE) {
-            stream(debug_log) << "Active region is " << active_region;
             debug::print_active_candidates(stream(debug_log), candidates, active_region);
             stream(debug_log) << "Haplotype region is " << haplotype_region(haplotypes);
             debug::print_inactive_flanking_candidates(stream(debug_log), candidates, active_region,

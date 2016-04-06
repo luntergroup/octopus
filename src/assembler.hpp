@@ -17,6 +17,7 @@
 #include <cstddef>
 #include <utility>
 #include <tuple>
+#include <stdexcept>
 
 #include <boost/graph/adjacency_list.hpp>
 #include <boost/optional.hpp>
@@ -48,6 +49,15 @@ public:
         explicit Variant(std::size_t pos, S1&& ref, S2&& alt);
         std::size_t begin_pos;
         SequenceType ref, alt;
+    };
+    
+    class BadReferenceSequence : public std::invalid_argument
+    {
+    public:
+        BadReferenceSequence(SequenceType reference_sequence);
+        const char* what() const noexcept override;
+    private:
+        SequenceType reference_sequence_;
     };
     
     Assembler() = delete;
@@ -137,11 +147,17 @@ private:
     
     std::unordered_map<Kmer, Vertex> vertex_cache_;
     
+    // methods
+    
+    void insert_reference_into_empty_graph(const SequenceType& reference);
+    void insert_reference_into_populated_graph(const SequenceType& reference);
+    
     bool contains_kmer(const Kmer& kmer) const noexcept;
     std::size_t count_kmer(const Kmer& kmer) const noexcept;
     std::size_t reference_size() const noexcept;
     
     void regenerate_vertex_indices();
+    bool is_reference_unique_path() const;
     
     Vertex null_vertex() const;
     boost::optional<Vertex> add_vertex(const Kmer& kmer, bool is_reference = false);
@@ -149,6 +165,7 @@ private:
     void clear_and_remove_vertex(Vertex v);
     void clear_and_remove_all(const std::unordered_set<Vertex>& vertices);
     void add_edge(Vertex u, Vertex v, GraphEdge::WeightType weight, bool is_reference = false);
+    void add_reference_edge(Vertex u, Vertex v);
     void remove_edge(Vertex u, Vertex v);
     void remove_edge(Edge e);
     void increment_weight(Edge e);
@@ -174,8 +191,11 @@ private:
     SequenceType make_reference(Vertex from, Vertex to) const;
     void remove_path(const Path& path);
     bool is_bridge(Vertex v) const;
+    Path::const_iterator is_bridge_until(Path::const_iterator first, Path::const_iterator last) const;
     Path::const_iterator is_bridge_until(const Path& path) const;
+    bool is_bridge(Path::const_iterator first, Path::const_iterator last) const;
     bool is_bridge(const Path& path) const;
+    bool joins_reference_only(Vertex v) const;
     bool is_trivial_cycle(Edge e) const;
     bool graph_has_trivial_cycle() const;
     bool is_deletion(Edge e) const;
@@ -185,7 +205,7 @@ private:
     std::unordered_set<Vertex> find_reachable_kmers(Vertex from) const;
     void remove_vertices_that_cant_be_reached_from(Vertex v);
     void remove_vertices_that_cant_reach(Vertex v);
-    void remove_vertices_past_reference_tail();
+    void remove_vertices_past(Vertex v);
     bool can_prune_reference_flanks() const;
     void prune_reference_flanks();
     
@@ -193,7 +213,6 @@ private:
     
     DominatorMap build_dominator_tree(Vertex from) const;
     std::unordered_set<Vertex> extract_nondominants(Vertex from) const;
-    std::unordered_set<Vertex> extract_nondominants_on_path(const Path& path) const;
     std::deque<Vertex> extract_nondominant_reference(const DominatorMap&) const;
     
     void set_out_edge_transition_scores(Vertex v);
@@ -213,6 +232,9 @@ private:
     
     std::deque<Variant> extract_k_highest_scoring_bubble_paths(unsigned k);
     
+    // for debug
+    void print_reference_head() const;
+    void print_reference_tail() const;
     void print(Edge e) const;
     void print(const Path& path) const;
     void print_dominator_tree() const;

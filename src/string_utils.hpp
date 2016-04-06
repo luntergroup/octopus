@@ -45,12 +45,12 @@ bool is_suffix(const T& lhs, const T& rhs)
     return std::equal(std::cbegin(lhs), std::cend(lhs), std::next(std::cbegin(rhs)));
 }
 
-inline size_t stringlen(const char* str)
+inline std::size_t stringlen(const char* str)
 {
     return std::strlen(str);
 }
 
-inline size_t stringlen(const std::string& str)
+inline std::size_t stringlen(const std::string& str)
 {
     return str.size();
 }

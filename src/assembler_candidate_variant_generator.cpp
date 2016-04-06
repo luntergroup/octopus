@@ -17,6 +17,8 @@
 #include "reference_genome.hpp"
 #include "aligned_read.hpp"
 #include "variant.hpp"
+#include "mappable_ranges.hpp"
+#include "mappable_algorithms.hpp"
 #include "sequence_utils.hpp"
 #include "logging.hpp"
 
@@ -31,9 +33,8 @@ AssemblerCandidateVariantGenerator::AssemblerCandidateVariantGenerator(const Ref
 reference_ {reference},
 default_kmer_sizes_ {kmer_sizes},
 fallback_kmer_sizes_ {},
-assemblers_ {},
-region_assembled_ {},
-sequence_buffer_ {},
+bin_size_ {1000},
+bins_ {},
 min_base_quality_ {min_base_quality},
 min_supporting_reads_ {min_supporting_reads},
 max_variant_size_ {max_variant_size}
@@ -49,12 +50,6 @@ max_variant_size_ {max_variant_size}
     default_kmer_sizes_.erase(std::unique(begin(default_kmer_sizes_), end(default_kmer_sizes_)),
                               end(default_kmer_sizes_));
     
-    assemblers_.reserve(kmer_sizes.size());
-    
-    for (const auto k : default_kmer_sizes_) {
-        assemblers_.emplace_back(k);
-    }
-    
     constexpr unsigned num_fallbacks {6};
     constexpr unsigned fallback_interval_size {10};
     
@@ -66,6 +61,21 @@ max_variant_size_ {max_variant_size}
                         k += fallback_interval_size;
                         return k;
                     });
+}
+
+AssemblerCandidateVariantGenerator::Bin::Bin(GenomicRegion region)
+:
+region {std::move(region)}
+{}
+
+const GenomicRegion& AssemblerCandidateVariantGenerator::Bin::get_region() const noexcept
+{
+    return region;
+}
+    
+void AssemblerCandidateVariantGenerator::Bin::insert(const AlignedRead& read)
+{
+    read_sequences.push_back(read.get_sequence());
 }
 
 bool AssemblerCandidateVariantGenerator::requires_reads() const noexcept
@@ -98,25 +108,32 @@ transform_low_base_qualities_to_n(const AlignedRead& read, const AlignedRead::Qu
     return result;
 }
 
+template <typename C, typename R>
+auto overlapped_bins(C& bins, const R& read)
+{
+    return bases(overlap_range(std::begin(bins), std::end(bins), read,
+                               BidirectionallySortedTag {}));
+}
+
 void AssemblerCandidateVariantGenerator::add_read(const AlignedRead& read)
 {
+    prepare_bins_to_insert(read);
+    
+    auto active_bins = overlapped_bins(bins_, read);
+    
+    assert(!active_bins.empty());
+    
     if (are_all_bases_good_quality(read, min_base_quality_)) {
-        for (auto& assembler : assemblers_) {
-            assembler.insert_read(read.get_sequence());
+        for (auto& bin : active_bins) {
+            bin.insert(read);
         }
-        sequence_buffer_.push_back(read.get_sequence());
     } else {
         auto masked_sequence = transform_low_base_qualities_to_n(read, min_base_quality_);
-        for (auto& assembler : assemblers_) {
-            assembler.insert_read(masked_sequence);
-        }
-        sequence_buffer_.push_back(std::move(masked_sequence));
-    }
-    
-    if (region_assembled_) {
-        region_assembled_ = encompassing_region(read, *region_assembled_);
-    } else {
-        region_assembled_ = mapped_region(read);
+        std::for_each(std::begin(active_bins), std::prev(std::end(active_bins)),
+                      [&masked_sequence] (auto& bin) {
+                          bin.insert(masked_sequence);
+                      });
+        bins_.back().insert(std::move(masked_sequence));
     }
 }
 
@@ -142,83 +159,83 @@ void remove_nonoverlapping(Container& candidates, const GenomicRegion& region)
     candidates.erase(it, std::end(candidates));
 }
 
+void log_success(const std::string& type, const unsigned k)
+{
+    if (DEBUG_MODE) {
+        Logging::DebugLogger log {};
+        stream(log) << "    " << type << " assembler with kmer size " << k << " completed";
+    }
+}
+
+void log_failure(const std::string& type, const unsigned k)
+{
+    if (DEBUG_MODE) {
+        Logging::DebugLogger log {};
+        stream(log) << "    " << type << " assembler with kmer size " << k << " failed";
+    }
+}
+
 std::vector<Variant> AssemblerCandidateVariantGenerator::generate_candidates(const GenomicRegion& region)
 {
     std::vector<Variant> result {};
     
-    if (!region_assembled_) {
+    if (bins_.empty()) {
         return result;
     }
     
-    unsigned num_defaults_unsuccessful {0};
+    auto active_bins = overlapped_bins(bins_, region);
     
-    for (Assembler& assembler : assemblers_) {
-        const auto reference_region = expand(*region_assembled_, assembler.kmer_size());
-        
-        const auto reference_sequence = reference_.get().get_sequence(reference_region);
-        
-        if (has_ns(reference_sequence)) {
-            if (!result.empty()) {
-                remove_nonoverlapping(result, region);
-            }
-            return result;
-        }
-        
-        assembler.insert_reference(reference_sequence);
-        
-        const auto success = try_assemble_region(assembler, reference_sequence,
-                                                 reference_region, result);
-        
-        if (success) {
-            result.reserve((assemblers_.size() - num_defaults_unsuccessful) * result.size());
-            if (DEBUG_MODE) {
-                Logging::DebugLogger log {};
-                stream(log) << "Default assembler with kmer size " << assembler.kmer_size()
-                            << " completed";
-            }
-        } else if (DEBUG_MODE) {
+    for (const auto& bin : active_bins) {
+        if (DEBUG_MODE) {
             Logging::DebugLogger log {};
-            stream(log) << "Default assembler with kmer size " << assembler.kmer_size() << " failed";
-            ++num_defaults_unsuccessful;
+            stream(log) << "Assembling reads in bin " << mapped_region(bin)
+                        << " with " << bin.read_sequences.size() << " reads";
+        }
+        
+        unsigned num_defaults_unsuccessful {0};
+        
+        for (const auto k : default_kmer_sizes_) {
+            try {
+                const auto success = assemble_bin(k, bin, result);
+                
+                if (success) {
+                    result.reserve((default_kmer_sizes_.size() - num_defaults_unsuccessful) * result.size());
+                    log_success("Default", k);
+                } else {
+                    log_failure("Default", k);
+                    ++num_defaults_unsuccessful;
+                }
+            } catch (std::exception& e) {
+                break;
+            }
+        }
+        
+        if (num_defaults_unsuccessful == default_kmer_sizes_.size()) {
+            for (const auto k : fallback_kmer_sizes_) {
+                try {
+                    const auto success = assemble_bin(k, bin, result);
+                    
+                    if (success) {
+                        log_success("Fallback", k);
+                        break;
+                    } else {
+                        log_failure("Fallback", k);
+                    }
+                } catch (std::exception& e) {
+                    break;
+                }
+            }
         }
     }
     
-    if (num_defaults_unsuccessful == assemblers_.size()) {
-        for (const auto k : fallback_kmer_sizes_) {
-            const auto reference_region = expand(*region_assembled_, k);
-            
-            const auto reference_sequence = reference_.get().get_sequence(reference_region);
-            
-            if (has_ns(reference_sequence)) {
-                if (!result.empty()) {
-                    remove_nonoverlapping(result, region);
-                }
-                return result;
-            }
-            
-            Assembler assembler {k, reference_sequence};
-            
-            for (const auto& read_sequence : sequence_buffer_) {
-                assembler.insert_read(read_sequence);
-            }
-            
-            const auto success = try_assemble_region(assembler, reference_sequence,
-                                                     reference_region, result);
-            
-            if (success) {
-                if (DEBUG_MODE) {
-                    Logging::DebugLogger log {};
-                    stream(log) << "Fallback assembler with kmer size " << k << " completed";
-                }
-                break;
-            } else {
-                if (DEBUG_MODE) {
-                    Logging::DebugLogger log {};
-                    stream(log) << "Fallback assembler with kmer size " << k << " failed";
-                }
-            }
-        }
-    }
+    result.erase(std::remove_if(std::begin(result), std::end(result),
+                                [this] (const auto& variant) {
+                                    return region_size(variant) > max_variant_size_;
+                                }), std::end(result));
+    
+    std::sort(std::begin(result), std::end(result));
+    
+    result.erase(std::unique(std::begin(result), std::end(result)), std::end(result));
     
     remove_nonoverlapping(result, region); // as we expanded original region
     
@@ -232,14 +249,52 @@ std::vector<Variant> AssemblerCandidateVariantGenerator::generate_candidates(con
 
 void AssemblerCandidateVariantGenerator::clear()
 {
-    for (auto& assembler : assemblers_) {
-        assembler.clear();
-    }
-    region_assembled_ = boost::none;
-    sequence_buffer_.clear();
+    bins_.clear();
 }
 
 // private methods
+
+void AssemblerCandidateVariantGenerator::prepare_bins_to_insert(const AlignedRead& read)
+{
+    const auto& read_region = mapped_region(read);
+    
+    if (bins_.empty()) {
+        if (region_size(read_region) > bin_size_) {
+            for (auto subregion : decompose(read_region, bin_size_)) {
+                bins_.emplace_back(std::move(subregion));
+            }
+            bins_.emplace_back(shift(mapped_region(bins_.back()), bin_size_));
+        } else if (region_size(read_region) == bin_size_) {
+            bins_.emplace_back(read_region);
+        } else {
+            bins_.emplace_back(expand_rhs(head_region(read_region), bin_size_));
+        }
+    } else if (!contains(encompassing_region(bins_.front(), bins_.back()), read_region)) {
+        if (begins_before(read_region, bins_.front())) {
+            auto next_region = shift(mapped_region(bins_.front()), -bin_size_);
+            bins_.emplace_front(next_region);
+            while (begins_before(read_region, next_region)) {
+                bins_.emplace_front(next_region);
+                next_region = shift(next_region, -bin_size_);
+            }
+        }
+        if (ends_before(bins_.back(), read_region)) {
+            auto next_region = shift(mapped_region(bins_.back()), bin_size_);
+            bins_.emplace_back(next_region);
+            while (ends_before(next_region, read_region)) {
+                bins_.emplace_back(next_region);
+                next_region = shift(next_region, bin_size_);
+            }
+        }
+    }
+}
+    
+GenomicRegion
+AssemblerCandidateVariantGenerator::propose_assembler_region(const GenomicRegion& input_region,
+                                                             unsigned kmer_size) const
+{
+    return expand(input_region, kmer_size);
+}
 
 void trim_reference(Assembler::Variant& v)
 {
@@ -365,10 +420,34 @@ void add_to_mapped_variants(C1& result, C2&& variants, const GenomicRegion& regi
     result.erase(std::unique(std::begin(result), std::end(result)), std::end(result));
 }
 
+bool AssemblerCandidateVariantGenerator::assemble_bin(const unsigned kmer_size,
+                                                      const Bin& bin,
+                                                      std::vector<Variant>& result) const
+{
+    const auto assembler_region = propose_assembler_region(bin.region, kmer_size);
+    
+    const auto reference_sequence = reference_.get().get_sequence(assembler_region);
+    
+    if (has_ns(reference_sequence)) {
+        throw std::runtime_error {"Bad reference"};
+    }
+    
+    Assembler assembler {kmer_size, reference_sequence};
+    
+    for (const auto& sequence : bin.read_sequences) {
+        assembler.insert_read(sequence);
+    }
+    
+    const auto success = try_assemble_region(assembler, reference_sequence,
+                                             assembler_region, result);
+    
+    return success;
+}
+    
 bool AssemblerCandidateVariantGenerator::try_assemble_region(Assembler& assembler,
                                                              const SequenceType& reference_sequence,
                                                              const GenomicRegion& reference_region,
-                                                             std::vector<Variant>& result)
+                                                             std::vector<Variant>& result) const
 {
     assembler.remove_trivial_nonreference_cycles();
     

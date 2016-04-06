@@ -43,8 +43,8 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--reference", ecoli_reference_fasta.c_str(),
         
         //"--reads", NA12878_low_coverage.c_str(),
-        //"--reads", NA12878_high_coverage.c_str(),
-        "--reads", "~/Genomics/Illumina/NA12878.mapped.ILLUMINA.bwa.CEU.high_coverage_pcr_free.20130906.chr22.bam",
+        "--reads", NA12878_high_coverage.c_str(),
+        //"--reads", "~/Genomics/Illumina/NA12878.mapped.ILLUMINA.bwa.CEU.high_coverage_pcr_free.20130906.chr22.bam",
         
         //"--reads", NA12891_high_coverage.c_str(),
         
@@ -75,24 +75,9 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         
         // for population
         
-        "--regions", "22:37,622,813-37,622,964",
-        //"--regions", "22:39,091,431-39,091,471", // assembler not proposing (obvious?) deletion
+        "--regions", "22:31,846,671-31,847,001",
         
-        // False positives under uniprior
-        //"--regions", "22:37,042,664-37,042,703",
-        //"--regions", "22:36,589,610-36,589,649",
-        //"--regions", "22:38082212-38082363",
-        //"--regions", "22:41434235-41434310", // false positives
-        //"--regions", "22:36,642,122-36,642,286",
-        //"--regions", "22:37,042,600-37,042,764",
-        //"--regions", "22:37,313,831-37,313,995",
-        //"--regions", "22:42,950,038-42,950,077",
-        
-        //"--regions", "22:32,705,705-32,706,035",
-        
-        //"--regions", "22:37,268,614-37,268,778", // filtering true haplotype
-        
-        //"--regions", "22:35,199,371-35,199,701", // Suspicious high quality insertion and SNP
+        //"--regions", "22:37,268,614-37,268,778", // sc filter removing true haplotype
         
         //"--regions", "22:16,103,653-16,103,957", // 5 haplotypes??
         
@@ -102,12 +87,12 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--regions", "22:37,622,803-37,623,840", // very repetitive region
         //"--regions", "22:34,974,205-34,975,215", // Another very repetitive region
         //"--regions", "22:35,834,230-35,835,616", // Another very repetitive region
-//        "--regions", "22:37,777,920-37,778,151", // is the deletion homozygous?
-//        "--regions", "22:38,092,378-38,092,418", // not left aligning the insertion at 38092390
-//        "--regions", "22:39,517,648-39,517,952", // is the deletion & insetion homozygous?
-//        "--regions", "22:40,946,793-40,946,944", // where is the deletion?
-//        "--regions", "22:41,509,085-41,509,236", // false negative insertion (GATK calls, Platypus doesn't)?
-//        "--regions", "22:41,988,173-41,988,324", // GATK is calling a deletion at 41988249...
+        //"--regions", "22:37,777,920-37,778,151", // is the deletion homozygous?
+        //"--regions", "22:38,092,378-38,092,418", // not left aligning the insertion at 38092390
+        //"--regions", "22:39,517,648-39,517,952", // is the deletion & insetion homozygous?
+        //"--regions", "22:40,946,793-40,946,944", // where is the deletion?
+        //"--regions", "22:41,509,085-41,509,236", // false negative insertion (GATK calls, Platypus doesn't)?
+        //"--regions", "22:41,988,173-41,988,324", // GATK is calling a deletion at 41988249...
         
         //"--regions", "22:40000000-",
         
@@ -179,9 +164,11 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--candidates-from-source", sample_vcf.c_str(),
         //"--regenotype",
         //"--no-assembly-candidates",
-        //"--kmer-size", "50",
+        //"--kmer-size", "45",
+        //"--min-assembler-base-quality", "10",
+        "--max-variant-size", "20",
         
-        //"--max-haplotypes", "256",
+        //"--max-haplotypes", "1024",
         
         "--min-variant-posterior", "10",
         "--min-refcall-posterior", "0",

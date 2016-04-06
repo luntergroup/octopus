@@ -1437,14 +1437,14 @@ auto decompose(const MappableTp& mappable, GenomicRegion::SizeType n)
     
     if (n == 0) return result;
     
-    const auto num_elements = size(mappable) / n;
+    const auto num_elements = region_size(mappable) / n;
     
     if (num_elements == 0) return result;
     
     result.reserve(num_elements);
     
-    const auto& contig = get_contig_name(mappable);
-    auto curr = get_begin(mappable);
+    const auto& contig = contig_name(mappable);
+    auto curr = region_begin(mappable);
     
     std::generate_n(std::back_inserter(result), num_elements, [&contig, &curr, n] () {
         auto tmp = curr;
