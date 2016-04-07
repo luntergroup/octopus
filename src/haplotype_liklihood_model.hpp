@@ -40,9 +40,7 @@ namespace Octopus
         using MapPositionItr = std::vector<std::size_t>::const_iterator;
         
         HaplotypeLikelihoodModel() = delete;
-        
         HaplotypeLikelihoodModel(const Haplotype& haplotype, FlankState flank_state);
-        
         ~HaplotypeLikelihoodModel() = default;
         
         HaplotypeLikelihoodModel(const HaplotypeLikelihoodModel&)            = default;

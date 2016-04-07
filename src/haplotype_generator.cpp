@@ -25,7 +25,7 @@
 
 namespace Octopus
 {
-    auto max_indcluded(const unsigned max_haplotypes)
+    auto max_included(const unsigned max_haplotypes)
     {
         return 2 * static_cast<unsigned>(std::max(1.0, std::log2(max_haplotypes))) - 1;
     }
@@ -65,25 +65,21 @@ namespace Octopus
                                            unsigned max_haplotypes, unsigned max_indicators)
     :
     tree_ {window.get_contig_name(), reference},
-    walker_ {2 * max_indicators, max_indcluded(max_haplotypes)},
+    walker_ {2 * max_indicators, max_included(max_haplotypes)},
     alleles_ {variants_to_alleles(candidates)},
     reads_ {reads},
     current_active_region_ {shift(head_region(alleles_.leftmost(), 0), -1)},
     next_active_region_ {},
     max_haplotypes_ {max_haplotypes},
-    is_lagged_ {max_indicators > 0},
+    max_indicators_ {max_indicators},
     holdout_set_ {},
     active_allele_counts_ {}
     {}
     
-    GenomicRegion HaplotypeGenerator::tell_next_active_region() const
+    const GenomicRegion& HaplotypeGenerator::tell_next_active_region() const
     {
-        if (!next_active_region_) {
-            next_active_region_ = walker_.walk(current_active_region_, reads_, alleles_);
-        }
-        
+        update_next_active_region();
         assert(current_active_region_ <= *next_active_region_);
-        
         return *next_active_region_;
     }
     
@@ -108,9 +104,7 @@ namespace Octopus
     {
         holdout_set_.clear(); // TODO: reintroduce holdout alleles and backtrack
         
-        if (!next_active_region_) {
-            next_active_region_ = walker_.walk(current_active_region_, reads_, alleles_);
-        }
+        update_next_active_region();
         
         if (*next_active_region_ == current_active_region_) {
             return std::make_pair(std::vector<Haplotype> {}, current_active_region_);
@@ -143,7 +137,7 @@ namespace Octopus
         
         auto haplotypes = tree_.extract_haplotypes(calculate_haplotype_region());
         
-        if (!is_lagged_) {
+        if (!is_lagged()) {
             tree_.clear();
         }
         
@@ -168,7 +162,7 @@ namespace Octopus
     {
         next_active_region_ = boost::none;
         
-        if (!is_lagged_ || tree_.num_haplotypes() == haplotypes.size()) return;
+        if (!is_lagged() || tree_.num_haplotypes() == haplotypes.size()) return;
         
         prune_unique(haplotypes, tree_);
         
@@ -182,7 +176,7 @@ namespace Octopus
         
         if (DEBUG_MODE && !unused_alleles.empty()) {
             Logging::DebugLogger log {};
-            stream(log) << "Removing " << unused_alleles.size() << " unused alleles from generator:";
+            stream(log) << "Removing " << unused_alleles.size() << " alleles from generator:";
             for (const auto& allele : unused_alleles) stream(log) << allele;
         }
         
@@ -201,7 +195,7 @@ namespace Octopus
         
         next_active_region_ = boost::none;
         
-        if (!is_lagged_ || haplotypes.size() == tree_.num_haplotypes()) {
+        if (!is_lagged() || haplotypes.size() == tree_.num_haplotypes()) {
             tree_.clear();
             alleles_.erase_overlapped(current_active_region_);
             active_allele_counts_.clear();
@@ -218,7 +212,7 @@ namespace Octopus
             
             if (DEBUG_MODE && !removed_alleles.empty()) {
                 Logging::DebugLogger log {};
-                stream(log) << "Removing " << removed_alleles.size() << " from generator:";
+                stream(log) << "Removing " << removed_alleles.size() << " alleles from generator:";
                 for (const auto& allele : removed_alleles) stream(log) << allele;
             }
             
@@ -290,6 +284,24 @@ namespace Octopus
     }
     
     // private methods
+    
+    bool HaplotypeGenerator::is_lagged() const noexcept
+    {
+        return max_indicators_ > 0;
+    }
+    
+    void HaplotypeGenerator::update_next_active_region() const
+    {
+        if (!next_active_region_) {
+            if (is_lagged()) {
+//                const auto curr_num_haplotypes = tree_.num_haplotypes();
+//                const auto curr_num_alleles    = active_allele_counts_.size();
+                next_active_region_ = walker_.walk(current_active_region_, reads_, alleles_);
+            } else {
+                next_active_region_ = walker_.walk(current_active_region_, reads_, alleles_);
+            }
+        }
+    }
     
     MappableFlatMultiSet<Allele>
     HaplotypeGenerator::compute_holdout_set(const GenomicRegion& active_region) const

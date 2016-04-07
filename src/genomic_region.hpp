@@ -128,17 +128,17 @@ inline GenomicRegion::SizeType region_end(const GenomicRegion& region) noexcept
 inline std::string to_string(const GenomicRegion& region)
 {
     return region.get_contig_name() + ':' + std::to_string(region.get_begin()) + '-'
-    + std::to_string(region.get_end());
+                + std::to_string(region.get_end());
 }
 
-inline bool is_empty_region(const GenomicRegion& region) noexcept
+inline bool is_empty(const GenomicRegion& region) noexcept
 {
-    return is_empty_region(region.get_contig_region());
+    return is_empty(region.get_contig_region());
 }
 
-inline GenomicRegion::SizeType region_size(const GenomicRegion& region) noexcept
+inline GenomicRegion::SizeType size(const GenomicRegion& region) noexcept
 {
-    return region_size(region.get_contig_region());
+    return size(region.get_contig_region());
 }
 
 inline bool is_position(const GenomicRegion& region) noexcept

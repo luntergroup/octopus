@@ -75,7 +75,12 @@ const GenomicRegion& AssemblerCandidateVariantGenerator::Bin::get_region() const
     
 void AssemblerCandidateVariantGenerator::Bin::insert(const AlignedRead& read)
 {
-    read_sequences.push_back(read.get_sequence());
+    read_sequences.emplace_back(std::cref(read.get_sequence()));
+}
+
+void AssemblerCandidateVariantGenerator::Bin::insert(const SequenceType& sequence)
+{
+    read_sequences.emplace_back(std::cref(sequence));
 }
 
 bool AssemblerCandidateVariantGenerator::requires_reads() const noexcept
@@ -129,11 +134,12 @@ void AssemblerCandidateVariantGenerator::add_read(const AlignedRead& read)
         }
     } else {
         auto masked_sequence = transform_low_base_qualities_to_n(read, min_base_quality_);
-        std::for_each(std::begin(active_bins), std::prev(std::end(active_bins)),
-                      [&masked_sequence] (auto& bin) {
-                          bin.insert(masked_sequence);
-                      });
-        bins_.back().insert(std::move(masked_sequence));
+        
+        masked_sequence_buffer_.emplace_back(std::move(masked_sequence));
+        
+        for (auto& bin : active_bins) {
+            bin.insert(std::cref(masked_sequence_buffer_.back()));
+        }
     }
 }
 
@@ -175,7 +181,8 @@ void log_failure(const std::string& type, const unsigned k)
     }
 }
 
-std::vector<Variant> AssemblerCandidateVariantGenerator::generate_candidates(const GenomicRegion& region)
+std::vector<Variant>
+AssemblerCandidateVariantGenerator::generate_candidates(const GenomicRegion& region)
 {
     std::vector<Variant> result {};
     
@@ -250,6 +257,7 @@ std::vector<Variant> AssemblerCandidateVariantGenerator::generate_candidates(con
 void AssemblerCandidateVariantGenerator::clear()
 {
     bins_.clear();
+    masked_sequence_buffer_.clear();
 }
 
 // private methods
@@ -270,25 +278,17 @@ void AssemblerCandidateVariantGenerator::prepare_bins_to_insert(const AlignedRea
             bins_.emplace_back(expand_rhs(head_region(read_region), bin_size_));
         }
     } else if (!contains(encompassing_region(bins_.front(), bins_.back()), read_region)) {
-        if (begins_before(read_region, bins_.front())) {
-            auto next_region = shift(mapped_region(bins_.front()), -bin_size_);
-            bins_.emplace_front(next_region);
-            while (begins_before(read_region, next_region)) {
-                bins_.emplace_front(next_region);
-                next_region = shift(next_region, -bin_size_);
-            }
+        while (begins_before(read_region, bins_.front())) {
+            bins_.emplace_front(shift(mapped_region(bins_.front()), -bin_size_));
         }
-        if (ends_before(bins_.back(), read_region)) {
-            auto next_region = shift(mapped_region(bins_.back()), bin_size_);
-            bins_.emplace_back(next_region);
-            while (ends_before(next_region, read_region)) {
-                bins_.emplace_back(next_region);
-                next_region = shift(next_region, bin_size_);
-            }
+        while (ends_before(bins_.back(), read_region)) {
+            bins_.emplace_back(shift(mapped_region(bins_.back()), bin_size_));
         }
     }
-}
     
+    assert(contains(encompassing_region(bins_.front(), bins_.back()), read_region));
+}
+
 GenomicRegion
 AssemblerCandidateVariantGenerator::propose_assembler_region(const GenomicRegion& input_region,
                                                              unsigned kmer_size) const
@@ -335,13 +335,11 @@ std::vector<Assembler::Variant> split_mnv(Assembler::Variant&& v)
     
     result.emplace_back(v.begin_pos, v.ref.front(), v.alt.front());
     
-    const auto last = prev(end(v.ref));
-    
-    auto p = std::mismatch(next(begin(v.ref)), last, next(begin(v.alt)));
+    auto p = std::mismatch(next(begin(v.ref)), prev(end(v.ref)), next(begin(v.alt)));
     
     while (p.first != prev(end(v.ref))) {
-        result.emplace_back(v.begin_pos + distance(begin(v.ref) - 1, p.first), *p.first, *p.second);
-        p = std::mismatch(next(p.first), last, next(p.second));
+        result.emplace_back(v.begin_pos + distance(begin(v.ref), p.first), *p.first, *p.second);
+        p = std::mismatch(next(p.first), prev(end(v.ref)), next(p.second));
     }
     
     const auto pos = v.begin_pos + v.ref.size() - 1;
@@ -443,7 +441,7 @@ bool AssemblerCandidateVariantGenerator::assemble_bin(const unsigned kmer_size,
     
     return success;
 }
-    
+
 bool AssemblerCandidateVariantGenerator::try_assemble_region(Assembler& assembler,
                                                              const SequenceType& reference_sequence,
                                                              const GenomicRegion& reference_region,

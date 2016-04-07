@@ -42,8 +42,8 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         "--reference", human_reference_fasta.c_str(),
         //"--reference", ecoli_reference_fasta.c_str(),
         
-        //"--reads", NA12878_low_coverage.c_str(),
-        "--reads", NA12878_high_coverage.c_str(),
+        "--reads", NA12878_low_coverage.c_str(),
+        //"--reads", NA12878_high_coverage.c_str(),
         //"--reads", "~/Genomics/Illumina/NA12878.mapped.ILLUMINA.bwa.CEU.high_coverage_pcr_free.20130906.chr22.bam",
         
         //"--reads", NA12891_high_coverage.c_str(),
@@ -75,13 +75,9 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         
         // for population
         
-        "--regions", "22:31,846,671-31,847,001",
+        "--regions", "22:16,077,179-16,077,449",
         
-        //"--regions", "22:37,268,614-37,268,778", // sc filter removing true haplotype
-        
-        //"--regions", "22:16,103,653-16,103,957", // 5 haplotypes??
-        
-        // NA12878_high_coverage possible errors
+        // NA12878_high_coverage interestint regions / possible errors
         //"--regions", "22:37,616,864-37,617,015", // false negative insertion?
         //"--regions", "22:37,622,869-37,622,909", // SNPs or indels?
         //"--regions", "22:37,622,803-37,623,840", // very repetitive region
@@ -93,10 +89,10 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--regions", "22:40,946,793-40,946,944", // where is the deletion?
         //"--regions", "22:41,509,085-41,509,236", // false negative insertion (GATK calls, Platypus doesn't)?
         //"--regions", "22:41,988,173-41,988,324", // GATK is calling a deletion at 41988249...
-        
-        //"--regions", "22:40000000-",
-        
-        //"--regions", "22:16,909,216-16,909,255", // NA12878_low_coverage insertion followed by 2 SNPs
+        //"--regions", "22:31,846,671-31,847,001", // interesting deletions
+        //"--regions", "22:37,268,614-37,268,778", // sc filter removing true haplotype
+        //"--regions", "22:16,103,653-16,103,957", // 5 haplotypes??
+        //"--regions", "22:16,909,216-16,909,255", // insertion followed by 2 SNPs
         
         // Bad VCF representation
         //"--regions", "22:41,836,102-41,836,142", // NA12878_low_coverage deletion 2|0

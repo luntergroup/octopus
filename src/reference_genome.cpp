@@ -128,7 +128,7 @@ std::vector<GenomicRegion> get_all_contig_regions(const ReferenceGenome& referen
     }
     
     std::sort(std::begin(result), std::end(result),
-              [] (const auto& lhs, const auto& rhs) { return region_size(lhs) < region_size(rhs); });
+              [] (const auto& lhs, const auto& rhs) { return size(lhs) < size(rhs); });
     
     return result;
 }

@@ -45,7 +45,7 @@ namespace Octopus
         HaplotypeGenerator(HaplotypeGenerator&&)                 = default;
         HaplotypeGenerator& operator=(HaplotypeGenerator&&)      = default;
         
-        GenomicRegion tell_next_active_region() const;
+        const GenomicRegion& tell_next_active_region() const;
         
         std::pair<std::vector<Haplotype>, GenomicRegion> progress();
         
@@ -66,12 +66,15 @@ namespace Octopus
         
         unsigned max_haplotypes_, hard_max_haplotypes_ = 150'000;
         
-        bool is_lagged_;
+        unsigned max_indicators_;
         
         MappableFlatMultiSet<Allele> holdout_set_;
         
         mutable std::unordered_map<Allele, unsigned> active_allele_counts_;
         
+        bool is_lagged() const noexcept;
+        
+        void update_next_active_region() const;
         MappableFlatMultiSet<Allele> compute_holdout_set(const GenomicRegion& active_region) const;
         GenomicRegion calculate_haplotype_region() const;
     };

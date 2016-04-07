@@ -50,14 +50,6 @@ namespace Octopus
         
         const auto original_mapping_position = begin_distance(read, haplotype);
         
-//        // debug
-//        if (region_begin(read) == 17907341
-//            && haplotype.contains(ContigAllele(ContigRegion(17907349, 17907350), "C"))
-//            && haplotype.contains(ContigAllele(ContigRegion(17907410, 17907411), "G"))
-//            && !haplotype.contains(ContigAllele(ContigRegion(17907548, 17907548), "ATC"))) {
-//            ::debug::print_variant_alleles(haplotype); std::cout << std::endl;
-//        }
-        
         auto max_log_probability = std::numeric_limits<double>::lowest();
         
         bool is_original_position_mapped {false};
@@ -68,9 +60,12 @@ namespace Octopus
                           if (is_in_range(position, read, haplotype)) {
                               has_in_range_mapping_position = true;
                               
-                              auto cur = PairHMM::align_around_offset(haplotype.get_sequence(), read.get_sequence(),
-                                                                      read.get_qualities(), gap_open_penalities,
-                                                                      position, model);
+                              auto cur = PairHMM::align_around_offset(haplotype.get_sequence(),
+                                                                      read.get_sequence(),
+                                                                      read.get_qualities(),
+                                                                      gap_open_penalities,
+                                                                      position,
+                                                                      model);
                               
                               if (cur > max_log_probability) {
                                   max_log_probability = cur;
@@ -82,7 +77,8 @@ namespace Octopus
                           }
                       });
         
-        if (!is_original_position_mapped && is_in_range(original_mapping_position, read, haplotype)) {
+        if (!is_original_position_mapped
+            && is_in_range(original_mapping_position, read, haplotype)) {
             has_in_range_mapping_position = true;
             
             auto cur = PairHMM::align_around_offset(haplotype.get_sequence(), read.get_sequence(),
@@ -101,9 +97,12 @@ namespace Octopus
             
             auto final_mapping_position = original_mapping_position - min_shift;
             
-            max_log_probability = PairHMM::align_around_offset(haplotype.get_sequence(), read.get_sequence(),
-                                                               read.get_qualities(), gap_open_penalities,
-                                                               final_mapping_position, model);
+            max_log_probability = PairHMM::align_around_offset(haplotype.get_sequence(),
+                                                               read.get_sequence(),
+                                                               read.get_qualities(),
+                                                               gap_open_penalities,
+                                                               final_mapping_position,
+                                                               model);
         }
         
         assert(max_log_probability > std::numeric_limits<double>::lowest());

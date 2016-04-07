@@ -76,19 +76,19 @@ inline ContigRegion::SizeType region_end(const ContigRegion& region) noexcept
     return region.get_end();
 }
 
-inline bool is_empty_region(const ContigRegion& region) noexcept
+inline bool is_empty(const ContigRegion& region) noexcept
 {
     return region.get_begin() == region.get_end();
 }
 
-inline ContigRegion::SizeType region_size(const ContigRegion& region) noexcept
+inline ContigRegion::SizeType size(const ContigRegion& region) noexcept
 {
     return region.get_end() - region.get_begin();
 }
 
 inline bool is_position(const ContigRegion& region) noexcept
 {
-    return region_size(region) == 1;
+    return size(region) == 1;
 }
 
 inline bool begins_equal(const ContigRegion& lhs, const ContigRegion& rhs) noexcept
@@ -146,7 +146,7 @@ inline ContigRegion::DifferenceType overlap_size(const ContigRegion& lhs, const 
 inline bool overlaps(const ContigRegion& lhs, const ContigRegion& rhs) noexcept
 {
     const auto overlapped = overlap_size(lhs, rhs);
-    return overlapped > 0 || (overlapped == 0 && (is_empty_region(lhs) || is_empty_region(rhs)));
+    return overlapped > 0 || (overlapped == 0 && (is_empty(lhs) || is_empty(rhs)));
 }
 
 inline bool contains(const ContigRegion& lhs, const ContigRegion& rhs) noexcept

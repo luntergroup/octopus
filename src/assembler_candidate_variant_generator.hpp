@@ -12,7 +12,6 @@
 #include <vector>
 #include <cstddef>
 #include <functional>
-#include <utility>
 
 #include "i_candidate_variant_generator.hpp"
 #include "genomic_region.hpp"
@@ -60,12 +59,13 @@ private:
     struct Bin : public Mappable<Bin>
     {
         explicit Bin(GenomicRegion region);
+        
         const GenomicRegion& get_region() const noexcept;
         void insert(const AlignedRead& read);
-        template <typename T>
-        void insert(T&& sequence);
+        void insert(const SequenceType& sequence);
+        
         GenomicRegion region;
-        std::deque<SequenceType> read_sequences;
+        std::deque<std::reference_wrapper<const SequenceType>> read_sequences;
     };
     
     std::reference_wrapper<const ReferenceGenome> reference_;
@@ -75,6 +75,7 @@ private:
     
     SizeType bin_size_;
     std::deque<Bin> bins_;
+    std::deque<SequenceType> masked_sequence_buffer_;
     
     QualityType min_base_quality_;
     unsigned min_supporting_reads_;
@@ -90,11 +91,6 @@ private:
                              std::vector<Variant>& result) const;
 };
 
-template <typename T>
-void AssemblerCandidateVariantGenerator::Bin::insert(T&& sequence)
-{
-    read_sequences.emplace_back(std::forward<T>(sequence));
-}
 } // namespace Octopus
 
 #endif /* defined(__Octopus__assembler_candidate_variant_generator__) */

@@ -117,8 +117,7 @@ std::vector<Variant> split_mnv(const Variant& variant)
     auto p = std::mismatch(next(begin(ref)), last, next(begin(alt)));
     
     while (p.first != prev(end(ref))) {
-        result.emplace_back(contig, begin_pos + distance(begin(ref) - 1, p.first),
-                            *p.first, *p.second);
+        result.emplace_back(contig, begin_pos + distance(begin(ref), p.first), *p.first, *p.second);
         p = std::mismatch(next(p.first), last, next(p.second));
     }
     

@@ -122,16 +122,36 @@ auto is_same_region(const Mappable<T1>& lhs, const Mappable<T2>& rhs)
                           static_cast<const T2&>(rhs).get_region());
 }
 
+inline bool is_empty_region(const ContigRegion& region) noexcept
+{
+    return is_empty(region);
+}
+
+inline bool is_empty_region(const GenomicRegion& region) noexcept
+{
+    return is_empty(region);
+}
+
 template <typename T>
 auto is_empty_region(const Mappable<T>& mappable)
 {
-    return is_empty_region(static_cast<const T&>(mappable).get_region());
+    return is_empty(static_cast<const T&>(mappable).get_region());
+}
+
+inline ContigRegion::SizeType region_size(const ContigRegion& region) noexcept
+{
+    return size(region);
+}
+
+inline GenomicRegion::SizeType region_size(const GenomicRegion& region) noexcept
+{
+    return size(region);
 }
 
 template <typename T>
 auto region_size(const Mappable<T>& mappable)
 {
-    return region_size(static_cast<const T&>(mappable).get_region());
+    return size(static_cast<const T&>(mappable).get_region());
 }
 
 template <typename T>
