@@ -36,7 +36,7 @@ auto duration(const TimeInterval& interval)
     return std::chrono::duration_cast<T>(interval.end - interval.start);
 }
 
-inline std::ostream& operator<<(std::ostream& os, TimeInterval interval)
+inline std::ostream& operator<<(std::ostream& os, const TimeInterval& interval)
 {
     const auto duration_ms = duration<std::chrono::milliseconds>(interval);
     

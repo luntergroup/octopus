@@ -66,7 +66,6 @@ namespace Octopus
         };
         
         std::vector<ReadPacket> read_iterators_;
-        //std::vector<std::vector<KmerPerfectHashes>> read_hashes_;
         
         std::vector<std::size_t> mapping_positions_;
         
@@ -99,27 +98,40 @@ namespace Octopus
                                              const std::vector<Haplotype>& haplotypes,
                                              const ReadMap& reads,
                                              const HaplotypeLikelihoodCache& haplotype_likelihoods,
-                                             std::size_t n = 5)
+                                             const std::size_t n = 5)
         {
             if (n == -1) {
-                stream << "Printing all read likelihoods for each haplotype in each sample" << '\n';
+                stream << "Printing all read likelihoods for each haplotype in ";
             } else {
-                stream << "Printing top " << n << " read likelihoods for each haplotype in each sample" << '\n';
+                stream << "Printing top " << n << " read likelihoods for each haplotype in ";
             }
+            
+            const bool is_single_sample {reads.size() == 1};
+            
+            if (is_single_sample) {
+                stream << "sample " << std::cbegin(reads)->first;
+            } else {
+                stream << "each sample";
+            }
+            stream << '\n';
             
             using ReadReference = std::reference_wrapper<const AlignedRead>;
             
             for (const auto& sample_reads : reads) {
                 const auto& sample = sample_reads.first;
                 
-                stream << "Sample: " << sample << ":" << '\n';
+                if (!is_single_sample) {
+                    stream << "Sample: " << sample << ":" << '\n';
+                }
                 
                 const auto ranked_haplotypes = rank_haplotypes(haplotypes, sample, haplotype_likelihoods);
                 
                 const auto m = std::min(n, sample_reads.second.size());
                 
                 for (const auto& haplotype : ranked_haplotypes) {
-                    stream << "\t";
+                    if (!is_single_sample) {
+                        stream << "\t";
+                    }
                     ::debug::print_variant_alleles(stream, haplotype);
                     stream << '\n';
                     
@@ -142,7 +154,12 @@ namespace Octopus
                     
                     std::for_each(std::begin(likelihoods), mth,
                                   [&] (const auto& p) {
-                                      stream << "\t\t" << p.first.get().get_region()
+                                      if (is_single_sample) {
+                                          stream << "\t";
+                                      } else {
+                                          stream << "\t\t";
+                                      }
+                                      stream << p.first.get().get_region()
                                       << " " << p.first.get().get_cigar_string() << ": ";
                                       stream << p.second << '\n';
                                   });

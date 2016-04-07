@@ -39,11 +39,11 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         
         //"--contig-output-order", "as-in-reference-reversed",
         
-        "--reference", human_reference_fasta.c_str(),
-        //"--reference", ecoli_reference_fasta.c_str(),
+        //"--reference", human_reference_fasta.c_str(),
+        "--reference", ecoli_reference_fasta.c_str(),
         
         //"--reads", NA12878_low_coverage.c_str(),
-        "--reads", NA12878_high_coverage.c_str(),
+        //"--reads", NA12878_high_coverage.c_str(),
         //"--reads", "~/Genomics/Illumina/NA12878.mapped.ILLUMINA.bwa.CEU.high_coverage_pcr_free.20130906.chr22.bam",
         
         //"--reads", NA12891_high_coverage.c_str(),
@@ -53,16 +53,15 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--reads", NA12878_high_coverage.c_str(), NA12878_simulated_cancer_basic.c_str(), //cancer test
         //"--reads", NA12891_high_coverage.c_str(), NA12878_simulated_cancer_basic.c_str(), //cancer test
         //"--reads", NA12878_high_coverage.c_str(), NA12891_high_coverage.c_str(),
-        //"--reads", ecoli_bam.string().c_str(),
         
-        //"--reads", "/Users/dcooke/Genomics/cancer/TCGA/benchmark/HCC1143.NORMAL.7x.compare.bam", "/Users/dcooke/Genomics/cancer/TCGA/benchmark/HCC1143.7x.n25t65s10.bam",
+        "--reads", ecoli_bam.c_str(),
         
         //"--reads", NA12878_low_coverage_cram.c_str(),
         
         //"--model", "cancer", // default "population"
         //"--normal-sample", "NA12878", // for cancer model
         
-        //"--organism-ploidy", "3",
+        "--organism-ploidy", "1",
         "--contig-ploidies", "MT=1", "Y=1",// "MT=2",
         //"--contig-ploidies-file", contig_ploidies_txt_file.c_str(),
         
@@ -75,9 +74,10 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         
         // for population
         
-        "--regions", "22:45,420,792-45,421,241",
+        //"--regions", "22:37,894,819-37,895,021",
         
         // NA12878_high_coverage interestint regions / possible errors
+        //"--regions", "22:37,894,887-37,895,035", // is the insertion there (both GATK & Platypus call - I'm not so sure)?
         //"--regions", "22:37,616,864-37,617,015", // false negative insertion?
         //"--regions", "22:37,622,869-37,622,909", // SNPs or indels?
         //"--regions", "22:37,622,803-37,623,840", // very repetitive region
@@ -133,6 +133,12 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--regions", "5:76,781,703-76,781,743", // not a reversion
         //"--regions", "5:76,785,333-76,785,478", // HMM error
         
+        // For ecoli
+        
+        "--regions", "R00000042:2,486,985-2,487,047",
+        //"--regions", "R00000042:2,483,592-2,489,766",
+        //"--regions", "R00000042:2,489,714-2,495,795",
+        
         //"--skip-regions", "1:1,000,000-2,000,000", "1:1,500,000-10,000,000",
         //"--skip-regions-file", human_skip_regions.c_str(),
         
@@ -148,7 +154,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--disable-soft-clip-masking",
         //"--tail-trim-size", "3",
         //"--disable-adapter-masking",
-        //"--consider-reads-with-unmapped-segments",
+        "--consider-reads-with-unmapped-segments",
         
         //"--no-downsampling",
         //"--downsample-above", "300",
@@ -161,7 +167,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--candidates-from-source", sample_vcf.c_str(),
         //"--regenotype",
         //"--no-assembly-candidates",
-        //"--kmer-size", "20",
+        //"--kmer-size", "45",
         //"--min-assembler-base-quality", "10",
         "--max-variant-size", "25",
         

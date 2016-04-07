@@ -14,7 +14,7 @@
 #include "mappable_algorithms.hpp"
 #include "logging.hpp"
 
-#include <iostream> // DEBUG
+#include <iostream>
 #include "timers.hpp"
 
 namespace Octopus
@@ -51,7 +51,7 @@ unsigned ReadPipe::num_samples() const noexcept
 {
     return static_cast<unsigned>(samples_.size());
 }
-    
+
 const std::vector<SampleIdType>& ReadPipe::get_samples() const noexcept
 {
     return samples_;
@@ -66,7 +66,17 @@ ReadMap ReadPipe::fetch_reads(const GenomicRegion& region)
     for (const auto& batch : batches) {
         auto batch_reads = read_manager_.get().fetch_reads(batch, region);
         
+        if (DEBUG_MODE) {
+            Logging::DebugLogger log {};
+            stream(log) << "Fetched " << count_reads(batch_reads) << " unfiltered reads from region " << region;
+        }
+        
         erase_filtered_reads(batch_reads, filter(batch_reads, read_filter_));
+        
+        if (DEBUG_MODE) {
+            Logging::DebugLogger log {};
+            stream(log) << "There are " << count_reads(batch_reads) << " filtered reads in region " << region;
+        }
         
         if (downsampler_) {
             const auto n = downsampler_->downsample(batch_reads);

@@ -130,19 +130,25 @@ void append_annotated_calls(std::deque<VcfRecord>& curr_calls,
                             std::vector<VcfRecord::Builder>& new_calls,
                             const ReadMap& reads, const GenomicRegion& call_region)
 {
+    if (curr_calls.empty()) return;
+    
     // Need to check calls are within call region as we may consider candidates
     // outside of this region when building haplotypes
     const auto it = std::find_if(std::begin(new_calls), std::end(new_calls),
                                  [&call_region] (const auto& call) {
-                                     return region_begin(call_region) <= call.get_position() + 1;
+                                     return region_begin(call_region) < call.get_position();
                                  });
+    if (it == std::end(new_calls)) return;
     
-    const auto it2 = std::find_if(std::rbegin(new_calls), std::rend(new_calls),
+    const auto it2 = std::find_if(std::rbegin(new_calls), std::make_reverse_iterator(it),
                                   [&call_region] (const auto& call) {
                                       return call.get_position() < region_end(call_region);
                                   }).base();
     
-    //std::cout << "calling " << std::distance(it, it2) << " variants" << std::endl;
+    if (DEBUG_MODE) {
+        Logging::DebugLogger log {};
+        stream(log) << "Called " << std::distance(it, it2) << " new variants in region " << call_region;
+    }
     
     std::transform(it, it2, std::back_inserter(curr_calls),
                    [&] (auto& record) { return annotate_record(record, reads); });
@@ -283,6 +289,67 @@ bool has_moved_forward(const GenomicRegion& next_active_region, const GenomicReg
     return begins_before(active_region, next_active_region) || active_region == next_active_region;
 }
 
+namespace debug
+{
+    auto find_read(const std::string& region, const std::string& cigar_str,
+                   const ReadContainer& reads)
+    {
+        const auto cigar = parse_cigar_string(cigar_str);
+        return std::find_if(std::cbegin(reads), std::cend(reads),
+                            [&] (const AlignedRead& read) {
+                                return read.get_cigar_string() == cigar
+                                && to_string(mapped_region(read)) == region;
+                            });
+    }
+    
+    auto find_read(const SampleIdType& sample, const std::string& region,
+                   const std::string& cigar_str, const ReadMap& reads)
+    {
+        return find_read(region, cigar_str, reads.at(sample));
+    }
+    
+    auto find_first_read(const std::string& region, const std::string& cigar_str,
+                         const ReadMap& reads)
+    {
+        for (const auto& p : reads) {
+            const auto it = find_read(region, cigar_str, p.second);
+            if (it != std::cend(p.second)) return it;
+        }
+        return std::cend(std::cbegin(reads)->second);
+    }
+    
+    double calculate_likelihood(const Haplotype& haplotype, const AlignedRead& read,
+                                const HaplotypeLikelihoodModel::FlankState flank_state)
+    {
+        SampleIdType test_sample {"*test-sample*"};
+        HaplotypeLikelihoodCache cache {1, {test_sample}};
+        ReadContainer sample_reads {};
+        sample_reads.emplace(read);
+        ReadMap reads {};
+        reads.emplace(test_sample, sample_reads);
+        cache.populate(reads, {haplotype}, flank_state);
+        return cache.log_likelihoods(test_sample, haplotype).front();
+    }
+    
+    void run_likelihood_calculation(const std::string& haplotype_str,
+                                    const std::string& haplotype_region,
+                                    const std::string& active_region,
+                                    const std::string& read_region,
+                                    const std::string& cigar_str,
+                                    const ReadMap& reads,
+                                    const MappableFlatSet<Variant>& candidates,
+                                    const ReferenceGenome& reference)
+    {
+        auto haplotype = ::debug::make_haplotype(haplotype_str, haplotype_region, reference);
+        auto flank_state = calculate_flank_state({haplotype},
+                                                 parse_region(haplotype_region, reference),
+                                                 candidates);
+        auto read = *find_first_read(read_region, cigar_str, reads);
+        auto likelihood = calculate_likelihood(haplotype, read, flank_state);
+        std::cout << likelihood << std::endl;
+    }
+}
+
 std::deque<VcfRecord> VariantCaller::call_variants(const GenomicRegion& call_region,
                                                    ProgressMeter& progress_meter) const
 {
@@ -300,6 +367,7 @@ std::deque<VcfRecord> VariantCaller::call_variants(const GenomicRegion& call_reg
         add_reads(reads, candidate_generator_);
         
         if (!refcalls_requested() && all_empty(reads)) {
+            if (DEBUG_MODE) stream(debug_log) << "No reads found in call region";
             return result;
         }
         

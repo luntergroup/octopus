@@ -245,7 +245,7 @@ namespace Octopus
              "Allows reads marked as duplicate in alignment record")
             ("allow-octopus-duplicates", po::bool_switch()->default_value(false),
              "Allows reads considered duplicates by Octopus")
-            ("no-secondary-alignmenets", po::bool_switch()->default_value(false),
+            ("no-secondary-alignments", po::bool_switch()->default_value(false),
              "Filters reads marked as secondary alignments")
             ("no-supplementary-alignmenets", po::bool_switch()->default_value(false),
              "Filters reads marked as supplementary alignments")
@@ -796,8 +796,22 @@ namespace Octopus
         std::vector<GenomicRegion> result {};
         result.reserve(unparsed_regions.size());
         
+        bool all_region_parsed {true};
+        
         for (const auto& unparsed_region : unparsed_regions) {
-            result.emplace_back(parse_region(unparsed_region, reference));
+            Logging::WarningLogger log {};
+            try {
+                result.emplace_back(parse_region(unparsed_region, reference));
+            } catch (std::exception& e) {
+                all_region_parsed = false;
+                stream(log) << "Could not parse input region \"" << unparsed_region
+                            << "\". Check the format is correct, the contig is in the reference genome \""
+                            << reference.get_name() << "\", and is in bounds.";
+            }
+        }
+        
+        if (!all_region_parsed) {
+            result.clear();
         }
         
         return result;
@@ -842,10 +856,16 @@ namespace Octopus
     {
         std::vector<GenomicRegion> skip_regions {};
         
+        bool all_parsed {true};
+        
         if (options.count("skip-regions") == 1) {
-            const auto& regions_strings = options.at("skip-regions").as<std::vector<std::string>>();
-            auto parsed_regions = parse_regions(regions_strings, reference);
-            append(skip_regions, std::move(parsed_regions));
+            const auto& region_strings = options.at("skip-regions").as<std::vector<std::string>>();
+            auto parsed_regions = parse_regions(region_strings, reference);
+            if (region_strings.size() == parsed_regions.size()) {
+                append(skip_regions, std::move(parsed_regions));
+            } else {
+                all_parsed = false;
+            }
         }
         
         if (options.count("skip-regions-file") == 1) {
@@ -866,12 +886,23 @@ namespace Octopus
         if (options.count("regions") == 1) {
             const auto& region_strings = options.at("regions").as<std::vector<std::string>>();
             auto parsed_regions = parse_regions(region_strings, reference);
-            append(input_regions, std::move(parsed_regions));
+            if (region_strings.size() == parsed_regions.size()) {
+                append(input_regions, std::move(parsed_regions));
+            } else {
+                all_parsed = false;
+            }
         }
         
         if (options.count("regions-file") == 1) {
             const auto& regions_path = options.at("regions-file").as<std::string>();
             append(input_regions, extract_regions_from_file(regions_path, reference));
+        }
+        
+        if (!all_parsed) {
+            Logging::WarningLogger log {};
+            stream(log) << "Detected unparsed input regions so dumping all regions";
+            input_regions.clear();
+            skip_regions.clear();
         }
         
         auto result = extract_search_regions(input_regions, skip_regions);
@@ -1090,7 +1121,7 @@ namespace Octopus
             result.register_filter(ReadFilters::is_not_marked_qc_fail());
         }
         
-        if (options.at("no-secondary-alignmenets").as<bool>()) {
+        if (options.at("no-secondary-alignments").as<bool>()) {
             result.register_filter(ReadFilters::is_not_secondary_alignment());
         }
         

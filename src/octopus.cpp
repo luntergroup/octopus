@@ -394,10 +394,15 @@ namespace Octopus
                                                                          options)},
             output {std::move(output)},
             num_threads {Options::get_num_threads(options)},
-            read_buffer_size {calculate_max_num_reads(Options::get_target_read_buffer_size(options),
-                                                      this->samples, this->regions, this->read_manager)},
+            read_buffer_size {},
             temp_directory {((!num_threads || *num_threads > 1) ? Options::create_temp_file_directory(options) : boost::none)}
-            {}
+            {
+                if (!(samples.empty() || regions.empty() || !read_manager.good())) {
+                    read_buffer_size = calculate_max_num_reads(Options::get_target_read_buffer_size(options),
+                                                               this->samples, this->regions,
+                                                               this->read_manager);
+                }
+            }
             
             ~Components() = default;
             
@@ -437,12 +442,12 @@ namespace Octopus
         Logging::FatalLogger log {};
         
         if (components.get_samples().empty()) {
-            log << "Quiting as no samples were found";
+            log << "Quiting as no samples were detected";
             return false;
         }
         
         if (components.get_search_regions().empty()) {
-            log << "Quiting as got no input regions";
+            log << "Quiting as there are no input regions";
             return false;
         }
         

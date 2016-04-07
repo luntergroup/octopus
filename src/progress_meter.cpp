@@ -13,6 +13,7 @@
 #include <algorithm>
 #include <functional>
 #include <cmath>
+#include <cassert>
 
 #include "mappable_algorithms.hpp"
 #include "mappable_map.hpp"
@@ -66,7 +67,13 @@ namespace Octopus
     
     std::string curr_position_pad(const GenomicRegion& completed_region)
     {
-        return std::string(15 - (completed_region.get_contig_name().size() + num_digits(completed_region.get_begin())), ' ');
+        const auto num_contig_name_letters = completed_region.get_contig_name().size();
+        const auto num_region_begin_digits = num_digits(completed_region.get_begin());
+        if (num_contig_name_letters + num_region_begin_digits <= 15) {
+            return std::string(15 - (num_contig_name_letters + num_region_begin_digits), ' ');
+        } else {
+            return "";
+        }
     }
     
     double percent_completed(const std::size_t num_bp_completed,
@@ -86,7 +93,7 @@ namespace Octopus
         return std::string(std::size_t {17} - percent_completed.size(), ' ');
     }
     
-    std::string to_string(TimeInterval duration)
+    std::string to_string(const TimeInterval& duration)
     {
         std::ostringstream ss {};
         ss << duration;
@@ -241,10 +248,13 @@ namespace Octopus
             
             remove_outliers(block_compute_times_);
             
-            auto ttc = to_string(estimate_ttc(now, block_compute_times_, num_remaining_blocks));
+            const auto ttc = estimate_ttc(now, block_compute_times_, num_remaining_blocks);
+            auto ttc_str   = to_string(ttc);
             
-            if (ttc.front() == '0') {
-                ttc = "-";
+            assert(!ttc_str.empty());
+            
+            if (ttc_str.front() == '0') {
+                ttc_str = "-";
             }
             
             const auto percent_completed = percent_completed_str(num_bp_completed_, num_bp_to_search_);
@@ -255,8 +265,8 @@ namespace Octopus
                          << percent_completed
                          << time_taken_pad(time_taken)
                          << time_taken
-                         << ttc_pad(ttc)
-                         << ttc;
+                         << ttc_pad(ttc_str)
+                         << ttc_str;
             
             last_log_            = now;
             percent_unitl_log_   = percent_block_size_;

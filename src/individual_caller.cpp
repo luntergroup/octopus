@@ -182,17 +182,15 @@ namespace Octopus
     namespace debug
     {
         template <typename S>
-        void print_genotype_posteriors(S&& stream,
-                                       const GenotypePosteriorMap& genotype_posteriors,
+        void print_genotype_posteriors(S&& stream, const GenotypePosteriorMap& genotype_posteriors,
                                        std::size_t n = 5);
         void print_genotype_posteriors(const GenotypePosteriorMap& genotype_posteriors,
                                        std::size_t n = 5);
-//        template <typename S>
-//        void print_allele_posteriors(S&& stream,
-//                                     const AllelePosteriorMap& allele_posteriors,
-//                                     std::size_t n = 10);
-//        void print_allele_posteriors(const AllelePosteriorMap& allele_posteriors,
-//                                     std::size_t n = 10);
+        template <typename S>
+        void print_allele_posteriors(S&& stream, const AllelePosteriorMap& allele_posteriors,
+                                     std::size_t n = 10);
+        void print_allele_posteriors(const AllelePosteriorMap& allele_posteriors,
+                                     std::size_t n = 10);
 //        void print_variant_calls(const VariantCallBlocks& calls);
     } // namespace debug
 
@@ -617,13 +615,13 @@ namespace Octopus
         
         const auto allele_posteriors = compute_allele_posteriors(genotype_posteriors, callable_alleles);
         
-//        if (TRACE_MODE) {
-//            Logging::TraceLogger log {};
-//            debug::print_allele_posteriors(stream(log), allele_posteriors, -1);
-//        } else if (DEBUG_MODE) {
-//            Logging::DebugLogger log {};
-//            debug::print_allele_posteriors(stream(log), allele_posteriors);
-//        }
+        if (TRACE_MODE) {
+            Logging::TraceLogger log {};
+            debug::print_allele_posteriors(stream(log), allele_posteriors, -1);
+        } else if (DEBUG_MODE) {
+            Logging::DebugLogger log {};
+            debug::print_allele_posteriors(stream(log), allele_posteriors);
+        }
         
         auto variant_calls = call_blocked_variants(candidates, allele_posteriors, min_variant_posterior_);
         
@@ -686,10 +684,49 @@ namespace Octopus
                           });
         }
         
-        void print_genotype_posteriors(const GenotypePosteriorMap& genotype_posteriors, const std::size_t n)
+        void print_genotype_posteriors(const GenotypePosteriorMap& genotype_posteriors,
+                                       const std::size_t n)
         {
             print_genotype_posteriors(std::cout, genotype_posteriors, n);
         }
         
+        template <typename S>
+        void print_allele_posteriors(S&& stream, const AllelePosteriorMap& allele_posteriors,
+                                     const std::size_t n)
+        {
+            const auto m = std::min(n, allele_posteriors.size());
+            
+            if (m == allele_posteriors.size()) {
+                stream << "Printing all allele posteriors " << '\n';
+            } else {
+                stream << "Printing top " << m << " allele posteriors " << '\n';
+            }
+            
+            using AlleleReference = std::reference_wrapper<const Allele>;
+            
+            std::vector<std::pair<AlleleReference, double>> v {};
+            v.reserve(allele_posteriors.size());
+            
+            std::copy(std::cbegin(allele_posteriors), std::cend(allele_posteriors),
+                      std::back_inserter(v));
+            
+            const auto mth = std::next(std::begin(v), m);
+            
+            std::partial_sort(std::begin(v), mth, std::end(v),
+                              [] (const auto& lhs, const auto& rhs) {
+                                  return lhs.second > rhs.second;
+                              });
+            
+            std::for_each(std::begin(v), mth,
+                          [&] (const auto& p) {
+                              stream << p.first.get() << " " << p.second << '\n';
+                          });
+        }
+        
+        void print_allele_posteriors(const AllelePosteriorMap& allele_posteriors,
+                                     const std::size_t n)
+        {
+            print_allele_posteriors(std::cout, allele_posteriors, n);
+        }
     } // namespace debug
 } // namespace Octopus
