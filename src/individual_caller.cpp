@@ -36,8 +36,6 @@
 #include "coalescent_model.hpp"
 #include "individual_genotype_model.hpp"
 
-#include "basic_haplotype_prior_model.hpp"
-
 namespace Octopus
 {
     IndividualVariantCaller::CallerParameters::CallerParameters(double min_variant_posterior,
@@ -55,8 +53,7 @@ namespace Octopus
                                                      VariantCaller::CallerParameters general_parameters,
                                                      CallerParameters specific_parameters)
     :
-    VariantCaller {reference, read_pipe, std::move(candidate_generator),
-        std::make_unique<BasicHaplotypePriorModel>(reference), std::move(general_parameters)},
+    VariantCaller {reference, read_pipe, std::move(candidate_generator), std::move(general_parameters)},
     genotype_model_ {specific_parameters.ploidy},
     sample_ {read_pipe.get_samples().front()},
     ploidy_ {specific_parameters.ploidy},
@@ -83,9 +80,7 @@ namespace Octopus
     }
     
     std::unique_ptr<IndividualVariantCaller::CallerLatents>
-    IndividualVariantCaller::infer_latents(const std::vector<SampleIdType>& samples,
-                                           const std::vector<Haplotype>& haplotypes,
-                                           const HaplotypePriorMap& haplotype_priors,
+    IndividualVariantCaller::infer_latents(const std::vector<Haplotype>& haplotypes,
                                            const HaplotypeLikelihoodCache& haplotype_likelihoods) const
     {
         GenotypeModel::Individual model {ploidy_};
@@ -94,7 +89,7 @@ namespace Octopus
         
         CoalescentModel coalescent {reference_haplotype};
         
-        auto latents = model.infer_latents(samples.front(), haplotypes, coalescent, haplotype_likelihoods);
+        auto latents = model.infer_latents(samples_.front(), haplotypes, coalescent, haplotype_likelihoods);
         
         return std::make_unique<Latents>(std::move(latents));
     }

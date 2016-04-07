@@ -49,8 +49,9 @@ namespace Octopus
         
         std::pair<std::vector<Haplotype>, GenomicRegion> progress();
         
-        void keep_haplotypes(const std::vector<Haplotype>& haplotypes);
-        void remove_haplotypes(const std::vector<Haplotype>& haplotypes);
+        void clear_progress() noexcept;
+        void uniquely_keep(const std::vector<Haplotype>& haplotypes);
+        void remove(const std::vector<Haplotype>& haplotypes);
         
         void force_forward(GenomicRegion to);
         

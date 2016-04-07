@@ -540,7 +540,7 @@ make_latents(const std::vector<Haplotype>& haplotypes,
 Population::Latents
 Population::infer_latents(const std::vector<SampleIdType>& samples,
                           const std::vector<Haplotype>& haplotypes,
-                          const HaplotypePrioMap& haplotype_priors,
+                          const HaplotypePriorMap& haplotype_priors,
                           const HaplotypeLikelihoodCache& haplotype_likelihoods) const
 {
     assert(!haplotypes.empty());

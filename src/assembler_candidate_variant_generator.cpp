@@ -11,6 +11,7 @@
 #include <algorithm>
 #include <iterator>
 #include <deque>
+#include <stdexcept>
 #include <cassert>
 
 #include "common.hpp"

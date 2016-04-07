@@ -42,8 +42,8 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         "--reference", human_reference_fasta.c_str(),
         //"--reference", ecoli_reference_fasta.c_str(),
         
-        "--reads", NA12878_low_coverage.c_str(),
-        //"--reads", NA12878_high_coverage.c_str(),
+        //"--reads", NA12878_low_coverage.c_str(),
+        "--reads", NA12878_high_coverage.c_str(),
         //"--reads", "~/Genomics/Illumina/NA12878.mapped.ILLUMINA.bwa.CEU.high_coverage_pcr_free.20130906.chr22.bam",
         
         //"--reads", NA12891_high_coverage.c_str(),
@@ -75,7 +75,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         
         // for population
         
-        "--regions", "22:16,077,179-16,077,449",
+        "--regions", "22:45,420,792-45,421,241",
         
         // NA12878_high_coverage interestint regions / possible errors
         //"--regions", "22:37,616,864-37,617,015", // false negative insertion?
@@ -93,6 +93,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--regions", "22:37,268,614-37,268,778", // sc filter removing true haplotype
         //"--regions", "22:16,103,653-16,103,957", // 5 haplotypes??
         //"--regions", "22:16,909,216-16,909,255", // insertion followed by 2 SNPs
+        //"--regions", "22:32,033,026-32,033,280", // interesting deletions
         
         // Bad VCF representation
         //"--regions", "22:41,836,102-41,836,142", // NA12878_low_coverage deletion 2|0
@@ -160,9 +161,9 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--candidates-from-source", sample_vcf.c_str(),
         //"--regenotype",
         //"--no-assembly-candidates",
-        //"--kmer-size", "45",
+        //"--kmer-size", "20",
         //"--min-assembler-base-quality", "10",
-        "--max-variant-size", "20",
+        "--max-variant-size", "25",
         
         //"--max-haplotypes", "1024",
         

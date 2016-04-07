@@ -32,7 +32,7 @@ namespace Octopus
     {
     public:
         using HaplotypeReference = std::reference_wrapper<const Haplotype>;
-        using HaplotypePrioMap   = std::unordered_map<HaplotypeReference, double>;
+        using HaplotypePriorMap  = std::unordered_map<HaplotypeReference, double>;
         
         struct Latents
         {
@@ -54,7 +54,7 @@ namespace Octopus
         
         Latents infer_latents(const std::vector<SampleIdType>& samples,
                               const std::vector<Haplotype>& haplotypes,
-                              const HaplotypePrioMap& haplotype_priors,
+                              const HaplotypePriorMap& haplotype_priors,
                               const HaplotypeLikelihoodCache& haplotype_likelihoods) const;
         
     private:

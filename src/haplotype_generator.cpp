@@ -158,7 +158,15 @@ namespace Octopus
                             });
     }
     
-    void HaplotypeGenerator::keep_haplotypes(const std::vector<Haplotype>& haplotypes)
+    void HaplotypeGenerator::clear_progress() noexcept
+    {
+        tree_.clear();
+        active_allele_counts_.clear();
+        holdout_set_.clear();
+        next_active_region_ = boost::none;
+    }
+    
+    void HaplotypeGenerator::uniquely_keep(const std::vector<Haplotype>& haplotypes)
     {
         next_active_region_ = boost::none;
         
@@ -189,7 +197,7 @@ namespace Octopus
         }
     }
     
-    void HaplotypeGenerator::remove_haplotypes(const std::vector<Haplotype>& haplotypes)
+    void HaplotypeGenerator::remove(const std::vector<Haplotype>& haplotypes)
     {
         if (haplotypes.empty()) return;
         

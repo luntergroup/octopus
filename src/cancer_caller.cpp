@@ -28,7 +28,6 @@
 #include "cancer_genotype.hpp"
 #include "read_utils.hpp"
 #include "string_utils.hpp"
-#include "haplotype_prior_model.hpp"
 #include "probability_matrix.hpp"
 
 namespace Octopus
@@ -53,12 +52,10 @@ call_somatics_only {call_somatics_only}
 CancerVariantCaller::CancerVariantCaller(const ReferenceGenome& reference,
                                          ReadPipe& read_pipe,
                                          CandidateVariantGenerator&& candidate_generator,
-                                         std::unique_ptr<HaplotypePriorModel> haplotype_prior_model,
                                          VariantCaller::CallerParameters general_parameters,
                                          CallerParameters specific_parameters)
 :
-VariantCaller {reference, read_pipe, std::move(candidate_generator),
-                std::move(haplotype_prior_model), std::move(general_parameters)},
+VariantCaller {reference, read_pipe, std::move(candidate_generator), std::move(general_parameters)},
 normal_sample_ {std::move(specific_parameters.normal_sample)},
 genotype_model_ {normal_sample_},
 min_variant_posterior_ {specific_parameters.min_variant_posterior},
@@ -785,9 +782,7 @@ VcfRecord::Builder output_reference_call(RefCall call, ReferenceGenome& referenc
 //}
 
 std::unique_ptr<CancerVariantCaller::CallerLatents>
-CancerVariantCaller::infer_latents(const std::vector<SampleIdType>& samples,
-                                   const std::vector<Haplotype>& haplotypes,
-                                   const HaplotypePriorMap& haplotype_priors,
+CancerVariantCaller::infer_latents(const std::vector<Haplotype>& haplotypes,
                                    const HaplotypeLikelihoodCache& haplotype_likelihoods) const
 {
     return nullptr;

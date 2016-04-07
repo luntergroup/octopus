@@ -286,7 +286,7 @@ namespace Octopus
             ("max-variant-size", po::value<AlignedRead::SizeType>()->default_value(100),
              "Maximum candidate varaint size from alignmenet CIGAR")
             ("kmer-size", po::value<std::vector<unsigned>>()->multitoken()
-                ->default_value(std::vector<unsigned> {10, 25}, "10 25")->composing(),
+                ->default_value(std::vector<unsigned> {15, 25}, "15 25")->composing(),
              "K-mer sizes to use for local re-assembly")
             ("min-assembler-base-quality", po::value<unsigned>()->default_value(15),
              "Only bases with quality above this value are considered for candidate generation by the assembler")

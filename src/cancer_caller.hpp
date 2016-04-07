@@ -14,7 +14,6 @@
 
 #include "common.hpp"
 #include "variant_caller.hpp"
-#include "haplotype_prior_model.hpp"
 #include "cancer_genotype_model.hpp"
 
 class GenomicRegion;
@@ -48,7 +47,6 @@ namespace Octopus
         explicit CancerVariantCaller(const ReferenceGenome& reference,
                                      ReadPipe& read_pipe,
                                      CandidateVariantGenerator&& candidate_generator,
-                                     std::unique_ptr<HaplotypePriorModel> haplotype_prior_model,
                                      VariantCaller::CallerParameters general_parameters,
                                      CallerParameters specific_parameters);
         
@@ -60,8 +58,6 @@ namespace Octopus
         CancerVariantCaller& operator=(CancerVariantCaller&&)      = delete;
         
     private:
-        using VariantCaller::HaplotypePriorMap;
-        
         struct Latents : public CallerLatents
         {
             using CallerLatents::HaplotypePosteriorMap;
@@ -99,9 +95,7 @@ namespace Octopus
         bool call_somatics_only_;
         
         std::unique_ptr<CallerLatents>
-        infer_latents(const std::vector<SampleIdType>& samples,
-                      const std::vector<Haplotype>& haplotypes,
-                      const HaplotypePriorMap& haplotype_priors,
+        infer_latents(const std::vector<Haplotype>& haplotypes,
                       const HaplotypeLikelihoodCache& haplotype_likelihoods) const override;
         
         std::vector<VcfRecord::Builder>

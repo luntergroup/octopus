@@ -198,7 +198,8 @@ private:
     bool joins_reference_only(Vertex v) const;
     bool is_trivial_cycle(Edge e) const;
     bool graph_has_trivial_cycle() const;
-    bool is_deletion(Edge e) const;
+    bool is_simple_deletion(Edge e) const;
+    bool is_on_path(Edge e, const Path& path) const;
     
     void remove_low_weight_edges(unsigned min_weight);
     void remove_disconnected_vertices();
@@ -218,6 +219,8 @@ private:
     void set_out_edge_transition_scores(Vertex v);
     void set_all_edge_transition_scores_from(Vertex src);
     void set_all_in_edge_transition_scores(Vertex v, GraphEdge::ScoreType score);
+    bool is_blocked(Edge e) const;
+    void block_edge(Edge e);
     void block_all_in_edges(Vertex v);
     bool all_in_edges_are_blocked(Vertex v) const;
     void block_all_vertices(const std::deque<Vertex>& vertices);
@@ -225,6 +228,8 @@ private:
     
     PredecessorMap find_shortest_scoring_paths(Vertex from) const;
     
+    bool is_on_path(Vertex v, const PredecessorMap& predecessors, Vertex from) const;
+    bool is_on_path(Edge e, const PredecessorMap& predecessors, Vertex from) const;
     Path extract_full_path(const PredecessorMap& predecessors, Vertex from) const;
     std::tuple<Assembler::Vertex, Assembler::Vertex, unsigned>
     backtrack_until_nonreference(const PredecessorMap& predecessors, Vertex from) const;

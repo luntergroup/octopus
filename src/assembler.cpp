@@ -778,9 +778,34 @@ bool Assembler::graph_has_trivial_cycle() const
                        });
 }
 
-bool Assembler::is_deletion(Edge e) const
+bool Assembler::is_simple_deletion(Edge e) const
 {
     return !is_reference(e) && is_source_reference(e) && is_target_reference(e);
+}
+
+bool Assembler::is_on_path(const Edge e, const Path& path) const
+{
+    if (path.size() < 2) {
+        return false;
+    }
+    
+    auto it1 = std::cbegin(path);
+    auto it2 = std::next(it1);
+    
+    const auto last = std::cend(path);
+    
+    Edge path_edge;
+    bool good;
+    
+    for (; it2 != last; ++it1, ++it2) {
+        std::tie(path_edge, good) = boost::edge(*it1, *it2, graph_);
+        assert(good);
+        if (path_edge == e) {
+            return true;
+        }
+    }
+    
+    return false;
 }
 
 void Assembler::remove_low_weight_edges(const unsigned min_weight)
@@ -1092,6 +1117,16 @@ void Assembler::set_all_in_edge_transition_scores(const Vertex v, const GraphEdg
     });
 }
 
+bool Assembler::is_blocked(Edge e) const
+{
+    return graph_[e].transition_score >= BlockedScore;
+}
+
+void Assembler::block_edge(const Edge e)
+{
+    graph_[e].transition_score = BlockedScore;
+}
+
 void Assembler::block_all_in_edges(const Vertex v)
 {
     set_all_in_edge_transition_scores(v, BlockedScore);
@@ -1131,6 +1166,47 @@ Assembler::PredecessorMap Assembler::find_shortest_scoring_paths(const Vertex fr
                               .vertex_index_map(boost::get(&GraphNode::index, graph_)));
     
     return preds;
+}
+
+bool Assembler::is_on_path(const Vertex v, const PredecessorMap& predecessors, const Vertex from) const
+{
+    if (v == from) return true;
+    
+    assert(predecessors.count(from) == 1);
+    
+    auto it = predecessors.find(from);
+    
+    while (it != std::end(predecessors) && it->first != it->second) {
+        if (it->second == v) return true;
+        it = predecessors.find(it->second);
+    }
+    
+    return false;
+}
+
+bool Assembler::is_on_path(const Edge e, const PredecessorMap& predecessors, const Vertex from) const
+{
+    assert(predecessors.count(from) == 1);
+    
+    auto it1 = predecessors.find(from);
+    auto it2 = predecessors.find(it1->second);
+    
+    const auto last = std::cend(predecessors);
+    
+    Edge path_edge;
+    bool good;
+    
+    while (it2 != last && it1 != it2) {
+        std::tie(path_edge, good) = boost::edge(it2->second, it1->second, graph_);
+        assert(good);
+        if (path_edge == e) {
+            return true;
+        }
+        it1 = it2;
+        it2 = predecessors.find(it1->second);
+    }
+    
+    return false;
 }
 
 Assembler::Path Assembler::extract_full_path(const PredecessorMap& predecessors, const Vertex from) const
@@ -1232,10 +1308,26 @@ std::deque<Assembler::Variant> Assembler::extract_k_highest_scoring_bubble_paths
     Vertex ref, alt;
     unsigned rhs_kmer_count;
     
+    boost::optional<Edge> blocked_edge {};
+    
     std::deque<Variant> result {};
     
     while (k > 0 && num_remaining_alt_kmers > 0) {
         auto predecessors = find_shortest_scoring_paths(reference_head());
+        
+        if (blocked_edge) {
+            // TODO: This is almost certainly not optimal and is it even guaranteed to terminate?
+            if (!is_on_path(boost::target(*blocked_edge, graph_), predecessors, reference_tail())) {
+                set_out_edge_transition_scores(boost::source(*blocked_edge, graph_));
+                blocked_edge = boost::none;
+            } else {
+                const auto p = boost::out_edges(boost::target(*blocked_edge, graph_), graph_);
+                if (std::all_of(p.first, p.second, [this] (const Edge e) { return is_blocked(e); })) {
+                    //std::cout << "here" << std::endl;
+                    return result; // Othersie might not terminate?
+                }
+            }
+        }
         
         assert(count_unreachables(predecessors) == 1);
         
@@ -1280,7 +1372,7 @@ std::deque<Assembler::Variant> Assembler::extract_k_highest_scoring_bubble_paths
             
             assert(good);
             
-            if (alt_path.size() == 1 && is_deletion(edge_to_alt)) {
+            if (alt_path.size() == 1 && is_simple_deletion(edge_to_alt)) {
                 remove_edge(alt_path.front(), ref);
                 set_out_edge_transition_scores(alt_path.front());
             } else {
@@ -1308,11 +1400,15 @@ std::deque<Assembler::Variant> Assembler::extract_k_highest_scoring_bubble_paths
                         vertex_before_bridge = *it;
                         alt_path.erase(std::begin(alt_path), std::next(it));
                     } else {
-                        // TODO!
-                        // This is the hardest case... there may be better paths that go through
-                        // *it
-                        //std::cout << "err" << std::endl;
-                        return result;
+                        // TODO: This is almost certainly not optimal... fortunatly it seems to
+                        // be a rare case.
+                        Edge e;
+                        bool good;
+                        std::tie(e, good) = boost::edge(*std::prev(it), *it, graph_);
+                        assert(good);
+                        block_edge(e);
+                        blocked_edge = e;
+                        break;
                     }
                 }
             }
@@ -1324,6 +1420,7 @@ std::deque<Assembler::Variant> Assembler::extract_k_highest_scoring_bubble_paths
             
             --k;
         }
+        
         assert(boost::out_degree(reference_head(), graph_) > 0);
         assert(boost::in_degree(reference_tail(), graph_) > 0);
         

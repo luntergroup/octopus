@@ -85,9 +85,7 @@ private:
     GenotypeModel::Individual genotype_model_;
     
     std::unique_ptr<CallerLatents>
-    infer_latents(const std::vector<SampleIdType>& samples,
-                  const std::vector<Haplotype>& haplotypes,
-                  const HaplotypePriorMap& haplotype_priors,
+    infer_latents(const std::vector<Haplotype>& haplotypes,
                   const HaplotypeLikelihoodCache& haplotype_likelihoods) const override;
     
     std::vector<VcfRecord::Builder>

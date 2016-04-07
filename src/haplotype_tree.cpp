@@ -263,7 +263,7 @@ void HaplotypeTree::remove_overlapped(const GenomicRegion& region)
     }
 }
 
-void HaplotypeTree::clear()
+void HaplotypeTree::clear() noexcept
 {
     haplotype_leaf_cache_.clear();
     haplotype_leafs_.clear();

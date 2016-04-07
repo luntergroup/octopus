@@ -546,6 +546,46 @@ bool have_same_alleles(const Haplotype& lhs, const Haplotype& rhs)
     return HaveSameAlleles()(lhs, rhs);
 }
 
+bool IsLessComplex::operator()(const Haplotype& lhs, const Haplotype& rhs) noexcept
+{
+    return lhs.explicit_alleles_.size() < rhs.explicit_alleles_.size();
+}
+
+unsigned unique_least_complex(std::vector<Haplotype>& haplotypes)
+{
+    using std::begin; using std::end;
+    
+    std::sort(begin(haplotypes), end(haplotypes));
+    
+    auto first_equal = begin(haplotypes);
+    auto last_equal  = begin(haplotypes);
+    auto last        = end(haplotypes);
+    
+    while (true) {
+        first_equal = std::adjacent_find(first_equal, last);
+        
+        if (first_equal == last) break;
+        
+        // skips 2 as std::next(first_equal, 1) is a duplicate
+        last_equal = std::find_if_not(std::next(first_equal, 2), last,
+                                      [first_equal] (const auto& haplotype) {
+                                          return haplotype == *first_equal;
+                                      });
+        
+        std::nth_element(first_equal, first_equal, last_equal, IsLessComplex());
+        
+        first_equal = last_equal;
+    }
+    
+    const auto it = std::unique(begin(haplotypes), end(haplotypes));
+    
+    const auto result = std::distance(it, end(haplotypes));
+    
+    haplotypes.erase(it, last);
+    
+    return static_cast<unsigned>(result);
+}
+
 bool are_equal_in_region(const Haplotype& lhs, const Haplotype& rhs, const GenomicRegion& region)
 {
     return splice<Haplotype>(lhs, region) == splice<Haplotype>(rhs, region);

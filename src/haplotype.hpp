@@ -85,6 +85,7 @@ public:
     std::size_t get_hash() const noexcept;
     
     friend struct HaveSameAlleles;
+    friend struct IsLessComplex;
     
     friend bool contains(const Haplotype& lhs, const Haplotype& rhs);
     friend Haplotype detail::do_splice(const Haplotype& haplotype, const GenomicRegion& region, std::true_type);
@@ -244,6 +245,13 @@ struct HaveSameAlleles
 {
     bool operator()(const Haplotype& lhs, const Haplotype& rhs) const;
 };
+
+struct IsLessComplex
+{
+    bool operator()(const Haplotype& lhs, const Haplotype& rhs) noexcept;
+};
+
+unsigned unique_least_complex(std::vector<Haplotype>& haplotypes);
 
 bool have_same_alleles(const Haplotype& lhs, const Haplotype& rhs);
 

@@ -36,6 +36,9 @@
 
 #include "sequence_complexity.hpp"
 
+#include "haplotype_prior_model.hpp"
+#include "basic_haplotype_prior_model.hpp"
+
 namespace Octopus
 {
 
@@ -53,12 +56,10 @@ ploidy {ploidy}
 PopulationVariantCaller::PopulationVariantCaller(const ReferenceGenome& reference,
                                                  ReadPipe& read_pipe,
                                                  CandidateVariantGenerator&& candidate_generator,
-                                                 std::unique_ptr<HaplotypePriorModel> haplotype_prior_model,
                                                  VariantCaller::CallerParameters general_parameters,
                                                  CallerParameters specific_parameters)
 :
-VariantCaller {reference, read_pipe, std::move(candidate_generator),
-        std::move(haplotype_prior_model), std::move(general_parameters)},
+VariantCaller {reference, read_pipe, std::move(candidate_generator), std::move(general_parameters)},
 genotype_model_ {specific_parameters.ploidy},
 ploidy_ {specific_parameters.ploidy},
 min_variant_posterior_ {specific_parameters.min_variant_posterior},
@@ -85,12 +86,11 @@ PopulationVariantCaller::Latents::get_genotype_posteriors() const noexcept
 }
 
 std::unique_ptr<PopulationVariantCaller::CallerLatents>
-PopulationVariantCaller::infer_latents(const std::vector<SampleIdType>& samples,
-                                       const std::vector<Haplotype>& haplotypes,
-                                       const HaplotypePriorMap& haplotype_priors,
+PopulationVariantCaller::infer_latents(const std::vector<Haplotype>& haplotypes,
                                        const HaplotypeLikelihoodCache& haplotype_likelihoods) const
 {
-    auto model_latents = genotype_model_.infer_latents(samples, haplotypes, haplotype_priors,
+    GenotypeModel::Population::HaplotypePriorMap haplotype_priors {};
+    auto model_latents = genotype_model_.infer_latents(samples_, haplotypes, haplotype_priors,
                                                        haplotype_likelihoods);
     return std::make_unique<Latents>(std::move(model_latents));
 }

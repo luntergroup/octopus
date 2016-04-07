@@ -15,7 +15,6 @@
 
 #include "common.hpp"
 #include "variant_caller.hpp"
-#include "haplotype_prior_model.hpp"
 #include "population_genotype_model.hpp"
 
 class GenomicRegion;
@@ -46,7 +45,6 @@ public:
     explicit PopulationVariantCaller(const ReferenceGenome& reference,
                                      ReadPipe& read_pipe,
                                      CandidateVariantGenerator&& candidate_generator,
-                                     std::unique_ptr<HaplotypePriorModel> haplotype_prior_model,
                                      VariantCaller::CallerParameters general_parameters,
                                      CallerParameters specific_parameters);
     
@@ -58,8 +56,6 @@ public:
     PopulationVariantCaller& operator=(PopulationVariantCaller&&)      = delete;
     
 private:
-    using VariantCaller::HaplotypePriorMap;
-    
     class Latents : public CallerLatents
     {
     public:
@@ -89,9 +85,7 @@ private:
     const double min_refcall_posterior_;
     
     std::unique_ptr<CallerLatents>
-    infer_latents(const std::vector<SampleIdType>& samples,
-                  const std::vector<Haplotype>& haplotypes,
-                  const HaplotypePriorMap& haplotype_priors,
+    infer_latents(const std::vector<Haplotype>& haplotypes,
                   const HaplotypeLikelihoodCache& haplotype_likelihoods) const override;
     
     std::vector<VcfRecord::Builder>

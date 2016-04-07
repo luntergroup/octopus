@@ -210,7 +210,6 @@ namespace Octopus
                 return std::make_unique<PopulationVariantCaller>(parameters_.reference,
                                                                  parameters_.read_pipe,
                                                                  parameters_.candidate_generator_builder.get().build(),
-                                                                 parameters_.haplotype_prior_model_factory.make(parameters_.reference),
                                                                  std::move(general_parameters),
                                                                  PopulationVariantCaller::CallerParameters {
                                                                      parameters_.min_variant_posterior,
@@ -222,7 +221,6 @@ namespace Octopus
                 return std::make_unique<CancerVariantCaller>(parameters_.reference,
                                                              parameters_.read_pipe,
                                                              parameters_.candidate_generator_builder.get().build(),
-                                                             parameters_.haplotype_prior_model_factory.make(parameters_.reference),
                                                              std::move(general_parameters),
                                                              CancerVariantCaller::CallerParameters {
                                                                  parameters_.min_variant_posterior,

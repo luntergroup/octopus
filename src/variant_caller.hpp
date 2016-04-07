@@ -19,7 +19,6 @@
 #include "reference_genome.hpp"
 #include "read_pipe.hpp"
 #include "candidate_variant_generator.hpp"
-#include "haplotype_prior_model.hpp"
 #include "haplotype_likelihood_cache.hpp"
 #include "probability_matrix.hpp"
 #include "phaser.hpp"
@@ -56,7 +55,6 @@ public:
     explicit VariantCaller(const ReferenceGenome& reference,
                            ReadPipe& read_pipe,
                            CandidateVariantGenerator&& candidate_generator,
-                           std::unique_ptr<HaplotypePriorModel> haplotype_prior_model,
                            CallerParameters parameters);
     
     virtual ~VariantCaller() = default;
@@ -71,10 +69,11 @@ public:
     
 protected:
     using HaplotypeReference = std::reference_wrapper<const Haplotype>;
-    using HaplotypePriorMap  = std::unordered_map<HaplotypeReference, double>;
     
     std::reference_wrapper<const ReferenceGenome> reference_;
     std::reference_wrapper<ReadPipe> read_pipe_;
+    
+    std::vector<SampleIdType> samples_;
     
     const RefCallType refcall_type_ = RefCallType::Positional;
     const bool call_sites_only_ = false;
@@ -100,14 +99,10 @@ private:
     
     unsigned max_haplotypes_;
     
-    std::unique_ptr<HaplotypePriorModel> haplotype_prior_model_;
-    
     bool done_calling(const GenomicRegion& region) const noexcept;
     
     virtual std::unique_ptr<CallerLatents>
-    infer_latents(const std::vector<SampleIdType>& samples,
-                  const std::vector<Haplotype>& haplotypes,
-                  const HaplotypePriorMap& haplotype_priors,
+    infer_latents(const std::vector<Haplotype>& haplotypes,
                   const HaplotypeLikelihoodCache& haplotype_likelihoods) const = 0;
     
     virtual std::vector<VcfRecord::Builder>

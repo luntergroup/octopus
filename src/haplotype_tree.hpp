@@ -62,7 +62,7 @@ public:
     
     void remove_overlapped(const GenomicRegion& region);
     
-    void clear();
+    void clear() noexcept;
     
 private:
     using Tree = boost::adjacency_list<

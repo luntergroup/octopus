@@ -28,8 +28,6 @@
 #include "maths.hpp"
 #include "logging.hpp"
 
-#include "basic_haplotype_prior_model.hpp" // TODO: turn into factory
-
 #include "timers.hpp"
 
 namespace Octopus
@@ -48,15 +46,14 @@ call_sites_only {call_sites_only}
 VariantCaller::VariantCaller(const ReferenceGenome& reference,
                              ReadPipe& read_pipe,
                              CandidateVariantGenerator&& candidate_generator,
-                             std::unique_ptr<HaplotypePriorModel> haplotype_prior_model,
                              CallerParameters parameters)
 :
 reference_ {reference},
 read_pipe_ {read_pipe},
+samples_ {read_pipe.get_samples()},
 refcall_type_ {parameters.refcall_type},
 call_sites_only_ {parameters.call_sites_only},
 max_haplotypes_ {parameters.max_haplotypes},
-haplotype_prior_model_ {std::move(haplotype_prior_model)},
 candidate_generator_ {std::move(candidate_generator)}
 {}
 
@@ -178,6 +175,16 @@ void remove_passed_candidates(MappableFlatSet<Variant>& candidates,
         }
         
         candidates.erase_overlapped(passed_region);
+    }
+}
+
+template <typename Container>
+void remove_duplicate_haplotypes(Container& haplotypes)
+{
+    const auto n = unique_least_complex(haplotypes);
+    if (DEBUG_MODE) {
+        Logging::DebugLogger log {};
+        stream(log) << n << " duplicate haplotypes were removed";
     }
 }
 
@@ -335,9 +342,7 @@ std::deque<VcfRecord> VariantCaller::call_variants(const GenomicRegion& call_reg
     
     pause_timer(init_timer);
     
-    const auto& samples = read_pipe_.get().get_samples();
-    
-    HaplotypeLikelihoodCache haplotype_likelihoods {max_haplotypes_, samples};
+    HaplotypeLikelihoodCache haplotype_likelihoods {max_haplotypes_, samples_};
     
     while (true) {
         resume_timer(haplotype_generation_timer);
@@ -377,21 +382,23 @@ std::deque<VcfRecord> VariantCaller::call_variants(const GenomicRegion& call_reg
             stream(debug_log) << "There are " << count_reads(active_reads) << " active reads";
         }
         
+        remove_duplicate_haplotypes(haplotypes);
+        
         resume_timer(likelihood_timer);
         haplotype_likelihoods.populate(active_reads, haplotypes,
                                         calculate_flank_state(haplotypes, active_region, candidates));
         pause_timer(likelihood_timer);
         
         resume_timer(haplotype_fitler_timer);
-        auto removed_haplotypes = filter_to_n_haplotypes(haplotypes, samples,
-                                                         haplotype_likelihoods, max_haplotypes_);
+        auto removed_haplotypes = filter_to_n_haplotypes(haplotypes, samples_,
+                                                         haplotype_likelihoods,
+                                                         max_haplotypes_);
         pause_timer(haplotype_fitler_timer);
         
         if (haplotypes.empty()) {
             if (DEBUG_MODE) debug_log << "Filtered all haplotypes";
-            // This can only happen if all haplotypes have equal likelihood.
-            // TODO: is there anything else we can do?
-            generator.remove_haplotypes(removed_haplotypes);
+            // This can only happen if all haplotypes have equal likelihood
+            generator.clear_progress();
             continue;
         }
         
@@ -409,24 +416,9 @@ std::deque<VcfRecord> VariantCaller::call_variants(const GenomicRegion& call_reg
         haplotype_likelihoods.erase(removed_haplotypes);
         pause_timer(likelihood_timer);
         
-        // Compute haplotype priors after likelihood filtering as prior model may use
-        // interdependencies between haplotypes.
-        resume_timer(prior_model_timer);
-        HaplotypePriorMap haplotype_priors {};
-        haplotypes.erase(std::unique(std::begin(haplotypes), std::end(haplotypes)), std::end(haplotypes));
-        //auto haplotype_priors = haplotype_prior_model_->compute_maximum_entropy_haplotype_set(haplotypes);
-        pause_timer(prior_model_timer);
-        
-//        if (TRACE_MODE) {
-//            Logging::TraceLogger trace_log {};
-//            debug::print_haplotype_priors(stream(trace_log), haplotype_priors, -1);
-//        } else if (DEBUG_MODE) {
-//            debug::print_haplotype_priors(stream(debug_log), haplotype_priors);
-//        }
-        
         resume_timer(haplotype_generation_timer);
-        generator.keep_haplotypes(haplotypes);
-        generator.remove_haplotypes(removed_haplotypes);
+        generator.remove(removed_haplotypes);
+        generator.uniquely_keep(haplotypes);
         removed_haplotypes.clear();
         pause_timer(haplotype_generation_timer);
         
@@ -441,11 +433,9 @@ std::deque<VcfRecord> VariantCaller::call_variants(const GenomicRegion& call_reg
         }
         
         resume_timer(latent_timer);
-        const auto caller_latents = infer_latents(samples, haplotypes, haplotype_priors,
-                                                  haplotype_likelihoods);
+        const auto caller_latents = infer_latents(haplotypes, haplotype_likelihoods);
         pause_timer(latent_timer);
         
-        haplotype_priors.clear();
         haplotype_likelihoods.clear();
         
         if (TRACE_MODE) {
@@ -518,7 +508,7 @@ std::deque<VcfRecord> VariantCaller::call_variants(const GenomicRegion& call_reg
             }
             
             resume_timer(haplotype_generation_timer);
-            generator.remove_haplotypes(removable_haplotypes);
+            generator.remove(removable_haplotypes);
             next_active_region = generator.tell_next_active_region();
             pause_timer(haplotype_generation_timer);
         }
