@@ -84,6 +84,12 @@ void AssemblerCandidateVariantGenerator::Bin::insert(const SequenceType& sequenc
     read_sequences.emplace_back(std::cref(sequence));
 }
 
+void AssemblerCandidateVariantGenerator::Bin::clear() noexcept
+{
+    read_sequences.clear();
+    read_sequences.shrink_to_fit();
+}
+
 bool AssemblerCandidateVariantGenerator::requires_reads() const noexcept
 {
     return true;
@@ -193,7 +199,9 @@ AssemblerCandidateVariantGenerator::generate_candidates(const GenomicRegion& reg
     
     auto active_bins = overlapped_bins(bins_, region);
     
-    for (const auto& bin : active_bins) {
+    for (auto& bin : active_bins) {
+        if (bin.read_sequences.empty()) continue;
+        
         if (DEBUG_MODE) {
             Logging::DebugLogger log {};
             stream(log) << "Assembling reads in bin " << mapped_region(bin)
@@ -234,6 +242,8 @@ AssemblerCandidateVariantGenerator::generate_candidates(const GenomicRegion& reg
                 }
             }
         }
+        
+        bin.clear();
     }
     
     result.erase(std::remove_if(std::begin(result), std::end(result),
@@ -258,7 +268,9 @@ AssemblerCandidateVariantGenerator::generate_candidates(const GenomicRegion& reg
 void AssemblerCandidateVariantGenerator::clear()
 {
     bins_.clear();
+    bins_.shrink_to_fit();
     masked_sequence_buffer_.clear();
+    masked_sequence_buffer_.shrink_to_fit();
 }
 
 // private methods

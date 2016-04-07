@@ -130,7 +130,7 @@ void append_annotated_calls(std::deque<VcfRecord>& curr_calls,
                             std::vector<VcfRecord::Builder>& new_calls,
                             const ReadMap& reads, const GenomicRegion& call_region)
 {
-    if (curr_calls.empty()) return;
+    if (new_calls.empty()) return;
     
     // Need to check calls are within call region as we may consider candidates
     // outside of this region when building haplotypes

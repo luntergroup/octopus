@@ -98,7 +98,7 @@ void AlignmentCandidateVariantGenerator::add_read(const AlignedRead& read)
     
     auto ref_index = region_begin(read);
     AlignedRead::SizeType read_index {0};
-    GenomicRegion region {};
+    GenomicRegion region;
     
     for (const auto& cigar_operation : read.get_cigar_string()) {
         const auto op_size = cigar_operation.get_size();

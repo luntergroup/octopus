@@ -474,7 +474,7 @@ namespace Octopus
         auto read_manager = Options::make_read_manager(options);
         
         if (!read_manager) {
-            log << "Quiting as could not load read files";
+            log << "Quiting as there are no read files";
             return boost::none;
         }
         

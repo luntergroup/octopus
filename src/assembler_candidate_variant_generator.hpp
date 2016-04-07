@@ -61,8 +61,11 @@ private:
         explicit Bin(GenomicRegion region);
         
         const GenomicRegion& get_region() const noexcept;
+        
         void insert(const AlignedRead& read);
         void insert(const SequenceType& sequence);
+        
+        void clear() noexcept;
         
         GenomicRegion region;
         std::deque<std::reference_wrapper<const SequenceType>> read_sequences;
