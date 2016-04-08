@@ -59,7 +59,10 @@ namespace Octopus
             using Iterator = ReadMap::mapped_type::const_iterator;
             
             ReadPacket(Iterator first, Iterator last)
-            : first {first}, last {last}, num_reads {static_cast<std::size_t>(std::distance(first, last))} {}
+            : first {first},
+            last {last},
+            num_reads {static_cast<std::size_t>(std::distance(first, last))}
+            {}
             
             Iterator first, last;
             std::size_t num_reads;

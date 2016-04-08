@@ -89,9 +89,10 @@ namespace Octopus
         
         CoalescentModel coalescent {reference_haplotype};
         
-        auto latents = model.infer_latents(samples_.front(), haplotypes, coalescent, haplotype_likelihoods);
+        auto inferred_latents = model.infer_latents(samples_.front(), haplotypes, coalescent,
+                                                    haplotype_likelihoods);
         
-        return std::make_unique<Latents>(std::move(latents));
+        return std::make_unique<Latents>(std::move(inferred_latents));
     }
     
     namespace

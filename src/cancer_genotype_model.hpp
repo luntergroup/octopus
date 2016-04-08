@@ -9,18 +9,16 @@
 #ifndef __Octopus__cancer_genotype_model__
 #define __Octopus__cancer_genotype_model__
 
-#include <string>
 #include <vector>
 #include <unordered_map>
+#include <array>
+#include <utility>
 
 #include "common.hpp"
-#include "cancer_genotype.hpp"
-#include "reference_genome.hpp"
-#include "map_utils.hpp"
+#include "haplotype.hpp"
 #include "haplotype_likelihood_cache.hpp"
-
-class AlignedRead;
-class Haplotype;
+#include "cancer_genotype.hpp"
+#include "probability_matrix.hpp"
 
 namespace Octopus
 {
@@ -29,43 +27,57 @@ namespace Octopus
     class Cancer
     {
     public:
-        using HaplotypeReference = std::reference_wrapper<const Haplotype>;
-        using HaplotypePrioMap   = std::unordered_map<HaplotypeReference, double>;
+        static constexpr unsigned K {3};
         
-        using GenotypeProbabilityMap       = std::unordered_map<CancerGenotype<Haplotype>, double>;
-        using SampleGenotypeMixturesPriors = std::array<double, 3>;
-        using SampleGenotypeMixtures       = std::array<double, 3>;
-        using GenotypeMixturesPriors       = std::unordered_map<SampleIdType, SampleGenotypeMixturesPriors>;
-        using GenotypeMixtures             = std::unordered_map<SampleIdType, SampleGenotypeMixtures>;
+        using GenotypeMixturesDirichletAlphas   = std::array<double, K>;
+        using GenotypeMixturesDirichletAlphaMap = std::unordered_map<SampleIdType, GenotypeMixturesDirichletAlphas>;
+        using GenotypePosteriorMap              = ProbabilityMatrix<Genotype<Haplotype>>;
+        
+        struct Priors
+        {
+            GenotypeMixturesDirichletAlphaMap alphas;
+        };
+        
+        struct AlgorithmParameters
+        {
+            unsigned max_parameter_seeds = 3;
+            unsigned max_iterations = 100;
+            double epsilon = 0.001;
+        };
         
         struct Latents
         {
             Latents() = default;
-            template <typename G, typename W>
-            Latents(G&& genotype_posteriors, W&& genotype_mixtures)
-            :
-            genotype_posteriors {std::forward<G>(genotype_posteriors)},
-            genotype_mixtures {std::forward<W>(genotype_mixtures)}
-            {}
+            template <typename G, typename M>
+            Latents(G&& genotype_posteriors, M&& alphas);
             
-            GenotypeProbabilityMap genotype_posteriors;
-            GenotypeMixtures genotype_mixtures;
+            GenotypePosteriorMap genotype_posteriors;
+            GenotypeMixturesDirichletAlphaMap alphas;
         };
         
-        explicit Cancer(SampleIdType normal_sample, unsigned max_em_iterations = 100,
-                        double em_epsilon = 0.001);
+        explicit Cancer(std::vector<SampleIdType> samples, const SampleIdType& normal_sample,
+                        Priors priors);
+        explicit Cancer(std::vector<SampleIdType> samples, const SampleIdType& normal_sample,
+                        Priors priors, AlgorithmParameters parameters);
         
         Latents infer_latents(const std::vector<Haplotype>& haplotypes,
-                              const HaplotypePrioMap& haplotype_priors,
-                              HaplotypeLikelihoodCache& haplotype_likelihoods,
-                              const ReadMap& reads);
+                              const HaplotypeLikelihoodCache& haplotype_likelihoods) const;
         
     private:
-        unsigned max_em_iterations_;
-        double em_epsilon_;
-        
+        std::vector<SampleIdType> samples_;
         SampleIdType normal_sample_;
+        
+        Priors priors_;
+        
+        AlgorithmParameters parameters_;
     };
+    
+    template <typename G, typename M>
+    Cancer::Latents::Latents(G&& genotype_posteriors, M&& alphas)
+    :
+    genotype_posteriors {std::forward<G>(genotype_posteriors)},
+    alphas {std::forward<M>(alphas)}
+    {}
     
     } // namespace GenotypeModel
 } // namespace Octopus

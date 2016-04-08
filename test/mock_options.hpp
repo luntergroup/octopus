@@ -43,8 +43,8 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--reference", ecoli_reference_fasta.c_str(),
         
         //"--reads", NA12878_low_coverage.c_str(),
-        "--reads", NA12878_high_coverage.c_str(),
-        //"--reads", "~/Genomics/Illumina/NA12878.mapped.ILLUMINA.bwa.CEU.high_coverage_pcr_free.20130906.chr22.bam",
+        //"--reads", NA12878_high_coverage.c_str(),
+        "--reads", "~/Genomics/Illumina/NA12878.mapped.ILLUMINA.bwa.CEU.high_coverage_pcr_free.20130906.chr22.bam",
         
         //"--reads", NA12891_high_coverage.c_str(),
         
@@ -56,10 +56,8 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         
         //"--reads", ecoli_bam.c_str(),
         
-        //"--reads", NA12878_low_coverage_cram.c_str(),
-        
-        //"--model", "cancer", // default "population"
-        //"--normal-sample", "NA12878", // for cancer model
+        "--model", "cancer", // default "population"
+        "--normal-sample", "NA12878", // for cancer model
         
         //"--organism-ploidy", "2",
         "--contig-ploidies", "MT=1", "Y=1",// "MT=2",
@@ -74,7 +72,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         
         // for population
         
-        "--regions", "22:37,894,819-37,895,021",
+        "--regions", "22:26,213,254-26,213,640",
         
         // NA12878_high_coverage interestint regions / possible errors
         //"--regions", "22:37,894,887-37,895,035", // is the insertion there (both GATK & Platypus call - I'm not so sure)?

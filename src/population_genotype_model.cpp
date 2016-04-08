@@ -545,11 +545,10 @@ Population::infer_latents(const std::vector<SampleIdType>& samples,
 {
     assert(!haplotypes.empty());
     
-    Logging::DebugLogger log {};
-    
     auto genotypes = generate_all_genotypes(haplotypes, ploidy_);
     
     if (DEBUG_MODE) {
+        Logging::DebugLogger log {};
         stream(log) << "There are " << genotypes.size() << " genotypes";
     }
     
@@ -567,6 +566,7 @@ Population::infer_latents(const std::vector<SampleIdType>& samples,
         debug::print_genotype_log_likelihoods(stream(trace_log), genotypes,
                                               genotype_log_likilhoods, -1);
     } else if (DEBUG_MODE) {
+        Logging::DebugLogger log {};
         debug::print_genotype_log_likelihoods(stream(log), genotypes,
                                               genotype_log_likilhoods);
     }
