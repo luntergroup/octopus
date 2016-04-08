@@ -45,8 +45,6 @@ namespace Octopus
         CoalescentModel(CoalescentModel&&)                 = default;
         CoalescentModel& operator=(CoalescentModel&&)      = default;
         
-        //double evaluate(const std::vector<Haplotype>& haplotypes) const;
-        
         template <typename H>
         double evaluate(const H& haplotypes) const;
         

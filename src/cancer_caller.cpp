@@ -48,13 +48,6 @@ call_somatics_only {call_somatics_only}
 namespace
 {
     using GM = GenotypeModel::Cancer;
-    
-    GM::Priors calculate_priors()
-    {
-        GM::Priors result {};
-        
-        return result;
-    }
 }
 
 CancerVariantCaller::CancerVariantCaller(const ReferenceGenome& reference,
@@ -64,12 +57,7 @@ CancerVariantCaller::CancerVariantCaller(const ReferenceGenome& reference,
                                          CallerParameters specific_parameters)
 :
 VariantCaller {reference, read_pipe, std::move(candidate_generator), std::move(general_parameters)},
-normal_sample_ {std::move(specific_parameters.normal_sample)},
-genotype_model_ {samples_, normal_sample_, calculate_priors()},
-min_variant_posterior_ {specific_parameters.min_variant_posterior},
-min_somatic_mutation_posterior_ {specific_parameters.min_somatic_posterior},
-min_refcall_posterior_ {specific_parameters.min_refcall_posterior},
-call_somatics_only_ {specific_parameters.call_somatics_only}
+parameters_ {std::move(specific_parameters)}
 {}
 
 CancerVariantCaller::Latents::Latents(ModelLatents&& model_latents)
@@ -294,8 +282,49 @@ std::unique_ptr<CancerVariantCaller::CallerLatents>
 CancerVariantCaller::infer_latents(const std::vector<Haplotype>& haplotypes,
                                    const HaplotypeLikelihoodCache& haplotype_likelihoods) const
 {
-    auto inferred_latents = genotype_model_.infer_latents(haplotypes, haplotype_likelihoods);
-    return nullptr;
+    Haplotype reference_haplotype {mapped_region(haplotypes.front()), reference_};
+    
+    CoalescentModel coalescent {reference_haplotype};
+    
+    GM::Priors::GenotypeMixturesDirichletAlphaMap alphas {};
+    alphas.reserve(samples_.size());
+    
+    for (const auto& sample : samples_) {
+        if (sample == parameters_.normal_sample) {
+            GM::Priors::GenotypeMixturesDirichletAlphas sample_alphas {10.0, 10.0, 0.05};
+            alphas.emplace(sample, std::move(sample_alphas));
+        } else {
+            GM::Priors::GenotypeMixturesDirichletAlphas sample_alphas {1.0, 1.0, 0.5};
+            alphas.emplace(sample, std::move(sample_alphas));
+        }
+    }
+    
+    GM::Priors priors {std::move(coalescent), std::move(alphas)};
+    
+    GM::Cancer genotype_model {samples_, parameters_.normal_sample, parameters_.ploidy, std::move(priors)};
+    
+    auto inferred_latents = genotype_model.infer_latents(haplotypes, haplotype_likelihoods);
+    
+//    auto it = std::max_element(std::cbegin(inferred_latents.genotype_posteriors),
+//                               std::cend(inferred_latents.genotype_posteriors),
+//                               [] (const auto& lhs, const auto& rhs) {
+//                                   return lhs.second < rhs.second;
+//                               });
+    
+    for (const auto& p : inferred_latents.genotype_posteriors) {
+        if (p.second > 0.1) {
+            ::debug::print_variant_alleles(p.first);
+            std::cout << ' ' << p.second << std::endl;
+        }
+    }
+    
+    const auto posterior_alphas = inferred_latents.alphas.at(parameters_.normal_sample);
+    
+    std::cout << posterior_alphas[0] << " " << posterior_alphas[1] << " " << posterior_alphas[2] << std::endl;
+    
+    exit(0);
+    
+    return std::make_unique<Latents>(std::move(inferred_latents));
 }
 
 std::vector<VcfRecord::Builder>

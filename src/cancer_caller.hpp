@@ -62,7 +62,7 @@ private:
     class Latents : public CallerLatents
     {
     public:
-        using ModelLatents = GenotypeModel::Cancer::Latents;
+        using ModelLatents = GenotypeModel::Cancer::InferredLatents;
         
         using CallerLatents::HaplotypePosteriorMap;
         using CallerLatents::GenotypePosteriorMap;
@@ -76,15 +76,7 @@ private:
         ModelLatents model_latents_;
     };
     
-    const SampleIdType normal_sample_;
-    
-    GenotypeModel::Cancer genotype_model_;
-    
-    double min_variant_posterior_          = 0.95;
-    double min_somatic_mutation_posterior_ = 0.9;
-    double min_refcall_posterior_          = 0.5;
-    
-    bool call_somatics_only_;
+    CallerParameters parameters_;
     
     std::unique_ptr<CallerLatents>
     infer_latents(const std::vector<Haplotype>& haplotypes,

@@ -68,7 +68,8 @@ namespace Octopus
             
             std::vector<double> genotype_log_posteriors(genotypes.size());
             
-            std::transform(std::cbegin(genotypes), std::cend(genotypes), std::begin(genotype_log_posteriors),
+            std::transform(std::cbegin(genotypes), std::cend(genotypes),
+                           std::begin(genotype_log_posteriors),
                            [&] (const auto& genotype) {
                                return std::log(haplotype_model.evaluate(genotype))
                                             + likelihood_model.log_likelihood(sample, genotype);
