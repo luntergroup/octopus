@@ -50,10 +50,13 @@ public:
     
     class Builder;
     
-    Haplotype() = default;
+    Haplotype() = delete;
     
     template <typename R>
     explicit Haplotype(R&& region, const ReferenceGenome& reference);
+    
+    template <typename R, typename S>
+    explicit Haplotype(R&& region, S&& sequence, const ReferenceGenome& reference);
     
     template <typename R, typename ForwardIt>
     explicit Haplotype(R&& region, ForwardIt first_allele, ForwardIt last_allele,
@@ -124,6 +127,20 @@ cached_sequence_ {reference.get_sequence(region_)},
 cached_hash_ {std::hash<SequenceType>()(cached_sequence_)},
 reference_ {reference}
 {}
+
+template <typename R, typename S>
+Haplotype::Haplotype(R&& region, S&& sequence, const ReferenceGenome& reference)
+:
+region_ {std::forward<R>(region)},
+explicit_alleles_ {},
+explicit_allele_region_ {region_.get_contig_region()},
+cached_sequence_ {std::forward<S>(sequence)},
+cached_hash_ {std::hash<SequenceType>()(cached_sequence_)},
+reference_ {reference}
+{
+    explicit_alleles_.reserve(1);
+    explicit_alleles_.emplace_back(explicit_allele_region_, cached_sequence_);
+}
 
 namespace detail
 {

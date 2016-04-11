@@ -33,7 +33,7 @@ namespace Octopus
             
             template <typename C, typename D> Priors(C&&, D&&);
             
-            CoalescentModel genotype_prior_model;
+            CoalescentModel germline_genotype_prior_model;
             GenotypeMixturesDirichletAlphaMap alphas;
         };
         
@@ -44,16 +44,18 @@ namespace Octopus
             double epsilon = 0.01;
         };
         
-        struct InferredLatents
+        struct Latents
         {
             using GenotypeMixturesDirichletAlphas   = std::vector<double>;
             using GenotypeMixturesDirichletAlphaMap = std::unordered_map<SampleIdType, GenotypeMixturesDirichletAlphas>;
-            using GenotypePosteriorMap = std::unordered_map<CancerGenotype<Haplotype>, double>;
             
-            InferredLatents() = default;
-            template <typename G, typename M> InferredLatents(G&& genotype_posteriors, M&& alphas);
+            using GenotypeProbabilityMap = std::unordered_map<CancerGenotype<Haplotype>, double>;
             
-            GenotypePosteriorMap genotype_posteriors;
+            Latents() = default;
+            template <typename G, typename M> Latents(G&& genotype_posteriors, M&& alphas);
+            ~Latents() = default;
+            
+            GenotypeProbabilityMap genotype_posteriors;
             GenotypeMixturesDirichletAlphaMap alphas;
         };
         
@@ -62,11 +64,14 @@ namespace Octopus
         explicit Cancer(std::vector<SampleIdType> samples, const SampleIdType& normal_sample,
                         unsigned ploidy, Priors priors, AlgorithmParameters parameters);
         
-        InferredLatents infer_latents(std::vector<CancerGenotype<Haplotype>> genotypes,
-                                      const HaplotypeLikelihoodCache& haplotype_likelihoods) const;
+        Latents infer_latents(std::vector<CancerGenotype<Haplotype>> genotypes,
+                              const HaplotypeLikelihoodCache& haplotype_likelihoods) const;
         
-        InferredLatents infer_latents(const std::vector<Haplotype>& haplotypes,
-                                      const HaplotypeLikelihoodCache& haplotype_likelihoods) const;
+        Latents infer_latents(const std::vector<Haplotype>& haplotypes,
+                              const HaplotypeLikelihoodCache& haplotype_likelihoods) const;
+        
+        double approx_log_evidence(const HaplotypeLikelihoodCache& haplotype_likelihoods,
+                                   const Latents& latents) const;
         
     private:
         std::vector<SampleIdType> samples_;
@@ -82,12 +87,12 @@ namespace Octopus
     template <typename C, typename D>
     Cancer::Priors::Priors(C&& genotype_prior_model, D&& alphas)
     :
-    genotype_prior_model {std::forward<C>(genotype_prior_model)},
+    germline_genotype_prior_model {std::forward<C>(genotype_prior_model)},
     alphas {std::forward<D>(alphas)}
     {}
     
     template <typename G, typename M>
-    Cancer::InferredLatents::InferredLatents(G&& genotype_posteriors, M&& alphas)
+    Cancer::Latents::Latents(G&& genotype_posteriors, M&& alphas)
     :
     genotype_posteriors {std::forward<G>(genotype_posteriors)},
     alphas {std::forward<M>(alphas)}

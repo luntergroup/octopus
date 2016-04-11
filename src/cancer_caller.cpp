@@ -28,6 +28,7 @@
 #include "string_utils.hpp"
 #include "probability_matrix.hpp"
 #include "sequence_utils.hpp"
+#include "individual_genotype_model.hpp"
 
 namespace Octopus
 {
@@ -280,7 +281,7 @@ VcfRecord::Builder output_reference_call(RefCall call, ReferenceGenome& referenc
     return result;
 }
 } // namespace
-
+    
 std::unique_ptr<CancerVariantCaller::CallerLatents>
 CancerVariantCaller::infer_latents(const std::vector<Haplotype>& haplotypes,
                                    const HaplotypeLikelihoodCache& haplotype_likelihoods) const
@@ -294,7 +295,7 @@ CancerVariantCaller::infer_latents(const std::vector<Haplotype>& haplotypes,
     
     for (const auto& sample : samples_) {
         if (sample == parameters_.normal_sample) {
-            GM::Priors::GenotypeMixturesDirichletAlphas sample_alphas {1.0, 1.0, 0.05};
+            GM::Priors::GenotypeMixturesDirichletAlphas sample_alphas {1.0, 1.0, 0.01};
             alphas.emplace(sample, std::move(sample_alphas));
         } else {
             GM::Priors::GenotypeMixturesDirichletAlphas sample_alphas {1.0, 1.0, 0.1};
@@ -302,20 +303,48 @@ CancerVariantCaller::infer_latents(const std::vector<Haplotype>& haplotypes,
         }
     }
     
-    GM::Priors priors {std::move(coalescent), std::move(alphas)};
+    GM::Priors priors {coalescent, std::move(alphas)};
     
     GM::Cancer genotype_model {samples_, parameters_.normal_sample, parameters_.ploidy, std::move(priors)};
     
-    auto inferred_latents = genotype_model.infer_latents(haplotypes, haplotype_likelihoods);
+    std::vector<CancerGenotype<Haplotype>> cancer_genotypes;
+    std::vector<Genotype<Haplotype>> germline_genotypes;
     
-//    auto it = std::max_element(std::cbegin(inferred_latents.genotype_posteriors),
-//                               std::cend(inferred_latents.genotype_posteriors),
-//                               [] (const auto& lhs, const auto& rhs) {
-//                                   return lhs.second < rhs.second;
-//                               });
+    std::tie(cancer_genotypes, germline_genotypes) = generate_all_cancer_genotypes(haplotypes, parameters_.ploidy);
     
+    auto inferred_latents = genotype_model.infer_latents(cancer_genotypes, haplotype_likelihoods);
+    
+    auto it = std::max_element(std::cbegin(inferred_latents.genotype_posteriors),
+                               std::cend(inferred_latents.genotype_posteriors),
+                               [] (const auto& lhs, const auto& rhs) {
+                                   return lhs.second < rhs.second;
+                               });
+    
+    std::cout << "MAP cancer genotype is ";
+    debug::print_variant_alleles(it->first);
+    std::cout << ' ' << it->second << std::endl;
+    
+    if (haplotypes.size() <= parameters_.ploidy) {
+        GenotypeModel::Individual individual_model {parameters_.ploidy};
+        
+        auto individual_latents = individual_model.infer_latents(parameters_.normal_sample,
+                                                                 germline_genotypes, coalescent,
+                                                                 haplotype_likelihoods);
+        
+        const auto& map_cancer_genotype = it->first;
+        
+        std::cout << "Posterior of map cancer genotype germline for individual model = "
+                    << individual_latents.genotype_posteriors(parameters_.normal_sample,
+                                                              map_cancer_genotype.get_germline_genotype())
+                    << std::endl;
+        
+        std::cout << "Germline model log evidence = " << individual_model.log_evidence(parameters_.normal_sample, haplotype_likelihoods, individual_latents) << std::endl;
+    }
+    
+    const double cutoff {0.001};
+    std::cout << "Cancer genotypes with posterior > " << cutoff << ":" << std::endl;
     for (const auto& p : inferred_latents.genotype_posteriors) {
-        if (p.second > 0.001) {
+        if (p.second > cutoff) {
             debug::print_variant_alleles(p.first);
             std::cout << ' ' << p.second << std::endl;
         }

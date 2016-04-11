@@ -162,7 +162,7 @@ CancerGenotype<MappableType2> splice(const CancerGenotype<MappableType1>& genoty
     };
 }
 
-std::vector<CancerGenotype<Haplotype>>
+std::pair<std::vector<CancerGenotype<Haplotype>>, std::vector<Genotype<Haplotype>>>
 generate_all_cancer_genotypes(const std::vector<Haplotype>& haplotypes, const unsigned ploidy);
 
 template <typename MappableType>

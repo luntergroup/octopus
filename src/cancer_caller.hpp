@@ -62,7 +62,7 @@ private:
     class Latents : public CallerLatents
     {
     public:
-        using ModelLatents = GenotypeModel::Cancer::InferredLatents;
+        using ModelLatents = GenotypeModel::Cancer::Latents;
         
         using CallerLatents::HaplotypeProbabilityMap;
         using CallerLatents::GenotypeProbabilityMap;

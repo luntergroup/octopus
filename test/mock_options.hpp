@@ -128,8 +128,8 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         // NA12878HC (normal) vs HG00101LC
         //"--regions", "22:33,310,391-33,310,686",
         //"--regions", "22:29,786,267-29,786,698",
-        "--regions", "22:31,196,345-31,196,590",
-        //"--regions", "22:31,195,690-31,196,075",
+        //"--regions", "22:31,196,345-31,196,590",
+        "--regions", "22:31,195,690-31,196,075",
         
         //  NA12878HC (normal) vs NA12891HC
         //"--regions", "16:75,879,931-75,880,269",

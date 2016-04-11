@@ -130,7 +130,7 @@ namespace Octopus
     {
     using GM = GenotypeModel::Individual;
     
-    using GenotypeProbabilityMap = GM::InferredLatents::GenotypeProbabilityMap::InnerMap;
+    using GenotypeProbabilityMap = GM::Latents::GenotypeProbabilityMap::InnerMap;
     
     struct GenotypeCall
     {

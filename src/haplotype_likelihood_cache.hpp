@@ -39,8 +39,7 @@ namespace Octopus
         HaplotypeLikelihoodCache(HaplotypeLikelihoodCache&&)                 = default;
         HaplotypeLikelihoodCache& operator=(HaplotypeLikelihoodCache&&)      = default;
         
-        void populate(const ReadMap& reads,
-                      const std::vector<Haplotype>& haplotypes,
+        void populate(const ReadMap& reads, const std::vector<Haplotype>& haplotypes,
                       HaplotypeLikelihoodModel::FlankState flank_state);
         
         const ReadProbabilities& log_likelihoods(const SampleIdType& sample,
