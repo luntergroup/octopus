@@ -61,19 +61,19 @@ private:
     public:
         using ModelLatents = GenotypeModel::Population::Latents;
         
-        using CallerLatents::HaplotypePosteriorMap;
-        using CallerLatents::GenotypePosteriorMap;
+        using CallerLatents::HaplotypeProbabilityMap;
+        using CallerLatents::GenotypeProbabilityMap;
         
         friend PopulationVariantCaller;
         
         explicit Latents(ModelLatents&&);
         
-        std::shared_ptr<HaplotypePosteriorMap> get_haplotype_posteriors() const noexcept override;
-        std::shared_ptr<GenotypePosteriorMap> get_genotype_posteriors() const noexcept override;
+        std::shared_ptr<HaplotypeProbabilityMap> get_haplotype_posteriors() const noexcept override;
+        std::shared_ptr<GenotypeProbabilityMap> get_genotype_posteriors() const noexcept override;
         
     private:
-        std::shared_ptr<ModelLatents::HaplotypeProbabilityMap> haplotype_posteriors_;
-        std::shared_ptr<ModelLatents::GenotypeProbabilityMap> genotype_posteriors_;
+        std::shared_ptr<HaplotypeProbabilityMap> haplotype_posteriors_;
+        std::shared_ptr<GenotypeProbabilityMap> genotype_posteriors_;
         
         ModelLatents::HaplotypeFrequencyMap haplotype_frequencies_;
     };

@@ -499,6 +499,11 @@ Allele do_splice(const Haplotype& haplotype, const GenomicRegion& region, std::f
 }
 } // namespace detail
 
+ContigAllele splice(const Haplotype& haplotype, const ContigRegion& region)
+{
+    return ContigAllele {region, haplotype.get_sequence(region)};
+}
+
 bool is_reference(const Haplotype& haplotype)
 {
     if (haplotype.explicit_alleles_.empty()) return true;

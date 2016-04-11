@@ -27,21 +27,15 @@ namespace Octopus
         class Individual
         {
         public:
-            struct Latents
+            struct InferredLatents
             {
-                using HaplotypeReference      = std::reference_wrapper<const Haplotype>;
-                using GenotypeProbabilityMap  = ProbabilityMatrix<Genotype<Haplotype>>;
-                using HaplotypeProbabilityMap = std::unordered_map<HaplotypeReference, double>;
+                using GenotypeProbabilityMap = ProbabilityMatrix<Genotype<Haplotype>>;
                 
-                Latents() = default;
-                
-                template <typename G, typename P>
-                Latents(G&& genotype_posteriors, P&& haplotype_posteriors);
-                
-                ~Latents() = default;
+                InferredLatents() = default;
+                InferredLatents(GenotypeProbabilityMap&& genotype_posteriors);
+                ~InferredLatents() = default;
                 
                 GenotypeProbabilityMap genotype_posteriors;
-                HaplotypeProbabilityMap haplotype_posteriors;
             };
             
             Individual()  = delete;
@@ -53,20 +47,21 @@ namespace Octopus
             Individual(Individual&&)                 = delete;
             Individual& operator=(Individual&&)      = delete;
             
-            Latents infer_latents(const SampleIdType& sample,
-                                  const std::vector<Haplotype>& candidate_haplotypes,
-                                  const CoalescentModel& haplotype_model,
-                                  const HaplotypeLikelihoodCache& haplotype_likelihoods) const;
+            InferredLatents
+            infer_latents(const SampleIdType& sample,
+                          std::vector<Genotype<Haplotype>> candidate_genotypes,
+                          const CoalescentModel& genotype_prior_model,
+                          const HaplotypeLikelihoodCache& haplotype_likelihoods) const;
+            
+            InferredLatents
+            infer_latents(const SampleIdType& sample,
+                          const std::vector<Haplotype>& candidate_haplotypes,
+                          const CoalescentModel& genotype_prior_model,
+                          const HaplotypeLikelihoodCache& haplotype_likelihoods) const;
+        
         private:
             unsigned ploidy_;
         };
-        
-        template <typename G, typename P>
-        Individual::Latents::Latents(G&& genotype_posteriors, P&& haplotype_posteriors)
-        :
-        genotype_posteriors {std::forward<G>(genotype_posteriors)},
-        haplotype_posteriors {std::forward<P>(haplotype_posteriors)}
-        {}
     } // namesapce GenotypeModel
 } // namespace Octopus
 

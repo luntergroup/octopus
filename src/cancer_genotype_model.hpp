@@ -40,8 +40,8 @@ namespace Octopus
         struct AlgorithmParameters
         {
             unsigned max_parameter_seeds = 3;
-            unsigned max_iterations = 100;
-            double epsilon = 0.001;
+            unsigned max_iterations = 200;
+            double epsilon = 0.01;
         };
         
         struct InferredLatents
@@ -61,6 +61,9 @@ namespace Octopus
                         unsigned ploidy, Priors priors);
         explicit Cancer(std::vector<SampleIdType> samples, const SampleIdType& normal_sample,
                         unsigned ploidy, Priors priors, AlgorithmParameters parameters);
+        
+        InferredLatents infer_latents(std::vector<CancerGenotype<Haplotype>> genotypes,
+                                      const HaplotypeLikelihoodCache& haplotype_likelihoods) const;
         
         InferredLatents infer_latents(const std::vector<Haplotype>& haplotypes,
                                       const HaplotypeLikelihoodCache& haplotype_likelihoods) const;

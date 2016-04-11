@@ -61,22 +61,53 @@ namespace Octopus
     min_refcall_posterior_ {specific_parameters.min_refcall_posterior}
     {}
     
-    IndividualVariantCaller::Latents::Latents(GenotypeModel::Individual::Latents&& model_latents)
+    // IndividualVariantCaller::Latents public methods
+    
+    IndividualVariantCaller::Latents::Latents(const std::vector<Haplotype>& haplotypes,
+                                              ModelLatents&& latents)
     :
-    haplotype_posteriors_ {std::make_shared<HaplotypePosteriorMap>(std::move(model_latents.haplotype_posteriors))},
-    genotype_posteriors_ {std::make_shared<GenotypePosteriorMap>(std::move(model_latents.genotype_posteriors))}
+    haplotype_posteriors_
+    {
+        std::make_shared<HaplotypeProbabilityMap>(calculate_haplotype_posteriors(haplotypes,
+                                                                                 latents))
+    },
+    genotype_posteriors_
+    {
+        std::make_shared<GenotypeProbabilityMap>(std::move(latents.genotype_posteriors))
+    }
     {}
     
-    std::shared_ptr<IndividualVariantCaller::Latents::HaplotypePosteriorMap>
+    std::shared_ptr<IndividualVariantCaller::Latents::HaplotypeProbabilityMap>
     IndividualVariantCaller::Latents::get_haplotype_posteriors() const noexcept
     {
         return haplotype_posteriors_;
     }
     
-    std::shared_ptr<IndividualVariantCaller::Latents::GenotypePosteriorMap>
+    std::shared_ptr<IndividualVariantCaller::Latents::GenotypeProbabilityMap>
     IndividualVariantCaller::Latents::get_genotype_posteriors() const noexcept
     {
         return genotype_posteriors_;
+    }
+    
+    // IndividualVariantCaller::Latents private methods
+    
+    IndividualVariantCaller::Latents::HaplotypeProbabilityMap
+    IndividualVariantCaller::Latents::calculate_haplotype_posteriors(const std::vector<Haplotype>& haplotypes,
+                                                                     const ModelLatents& latents)
+    {
+        HaplotypeProbabilityMap result {haplotypes.size()};
+        
+        for (const auto& haplotype : haplotypes) {
+            result.emplace(std::cref(haplotype), 0.0);
+        }
+        
+        for (const auto& p : std::cbegin(latents.genotype_posteriors)->second) {
+            for (const auto& haplotype : p.first.copy_unique_ref()) {
+                result.at(haplotype) += p.second;
+            }
+        }
+        
+        return result;
     }
     
     std::unique_ptr<IndividualVariantCaller::CallerLatents>
@@ -92,14 +123,14 @@ namespace Octopus
         auto inferred_latents = model.infer_latents(samples_.front(), haplotypes, coalescent,
                                                     haplotype_likelihoods);
         
-        return std::make_unique<Latents>(std::move(inferred_latents));
+        return std::make_unique<Latents>(haplotypes, std::move(inferred_latents));
     }
     
     namespace
     {
     using GM = GenotypeModel::Individual;
     
-    using GenotypePosteriorMap = GM::Latents::GenotypeProbabilityMap::InnerMap;
+    using GenotypeProbabilityMap = GM::InferredLatents::GenotypeProbabilityMap::InnerMap;
     
     struct GenotypeCall
     {
@@ -183,9 +214,9 @@ namespace Octopus
     namespace debug
     {
         template <typename S>
-        void print_genotype_posteriors(S&& stream, const GenotypePosteriorMap& genotype_posteriors,
+        void print_genotype_posteriors(S&& stream, const GenotypeProbabilityMap& genotype_posteriors,
                                        std::size_t n = 5);
-        void print_genotype_posteriors(const GenotypePosteriorMap& genotype_posteriors,
+        void print_genotype_posteriors(const GenotypeProbabilityMap& genotype_posteriors,
                                        std::size_t n = 5);
         template <typename S>
         void print_allele_posteriors(S&& stream, const AllelePosteriorMap& allele_posteriors,
@@ -202,7 +233,7 @@ namespace Octopus
     using AlleleBools          = std::deque<bool>; // using std::deque because std::vector<bool> is evil
     using GenotypeContainments = std::vector<AlleleBools>;
     
-    auto marginalise(const Allele& allele, const GenotypePosteriorMap& genotype_posteriors)
+    auto marginalise(const Allele& allele, const GenotypeProbabilityMap& genotype_posteriors)
     {
         auto result = std::accumulate(std::cbegin(genotype_posteriors),
                                       std::cend(genotype_posteriors),
@@ -215,7 +246,7 @@ namespace Octopus
         return result;
     }
     
-    AllelePosteriorMap compute_allele_posteriors(const GenotypePosteriorMap& genotype_posteriors,
+    AllelePosteriorMap compute_allele_posteriors(const GenotypeProbabilityMap& genotype_posteriors,
                                                  const std::vector<Allele>& alleles)
     {
         AllelePosteriorMap result {};
@@ -317,7 +348,7 @@ namespace Octopus
     
     // variant genotype calling
     
-    auto call_genotype(const GenotypePosteriorMap& genotype_posteriors)
+    auto call_genotype(const GenotypeProbabilityMap& genotype_posteriors)
     {
         return *std::max_element(std::cbegin(genotype_posteriors), std::cend(genotype_posteriors),
                                  [] (const auto& lhs, const auto& rhs) {
@@ -325,7 +356,7 @@ namespace Octopus
                                  });
     }
     
-    double marginalise(const Genotype<Allele>& genotype, const GenotypePosteriorMap& genotype_posteriors)
+    double marginalise(const Genotype<Allele>& genotype, const GenotypeProbabilityMap& genotype_posteriors)
     {
         return std::accumulate(std::cbegin(genotype_posteriors), std::cend(genotype_posteriors), 0.0,
                                [&genotype] (const double curr, const auto& p) {
@@ -335,7 +366,7 @@ namespace Octopus
     
     // Call cleanup
     
-    GenotypeCalls call_genotypes(const GenotypePosteriorMap& genotype_posteriors,
+    GenotypeCalls call_genotypes(const GenotypeProbabilityMap& genotype_posteriors,
                                  const std::vector<GenomicRegion>& variant_regions)
     {
         const auto& genotype_call = call_genotype(genotype_posteriors);
@@ -357,7 +388,7 @@ namespace Octopus
     // reference genotype calling
     
     double marginalise_reference_genotype(const Allele& reference_allele,
-                                          const GenotypePosteriorMap& sample_genotype_posteriors)
+                                          const GenotypeProbabilityMap& sample_genotype_posteriors)
     {
         double result {0};
         
@@ -370,7 +401,7 @@ namespace Octopus
         return result;
     }
     
-    RefCalls call_reference(const GenotypePosteriorMap& genotype_posteriors,
+    RefCalls call_reference(const GenotypeProbabilityMap& genotype_posteriors,
                             const std::vector<Allele>& reference_alleles,
                             const ReadMap::mapped_type& reads, const double min_call_posterior)
     {
@@ -652,7 +683,7 @@ namespace Octopus
     {
         template <typename S>
         void print_genotype_posteriors(S&& stream,
-                                       const GenotypePosteriorMap& genotype_posteriors,
+                                       const GenotypeProbabilityMap& genotype_posteriors,
                                        const std::size_t n)
         {
             const auto m = std::min(n, genotype_posteriors.size());
@@ -685,7 +716,7 @@ namespace Octopus
                           });
         }
         
-        void print_genotype_posteriors(const GenotypePosteriorMap& genotype_posteriors,
+        void print_genotype_posteriors(const GenotypeProbabilityMap& genotype_posteriors,
                                        const std::size_t n)
         {
             print_genotype_posteriors(std::cout, genotype_posteriors, n);

@@ -11,7 +11,6 @@
 
 #include <initializer_list>
 #include <utility>
-#include <ostream>
 #include <memory>
 
 #include <boost/functional/hash.hpp>
@@ -19,6 +18,8 @@
 #include "equitable.hpp"
 #include "genotype.hpp"
 
+namespace Octopus
+{
 template <typename MappableType>
 class CancerGenotype : public Equitable<CancerGenotype<MappableType>>
 {
@@ -152,7 +153,8 @@ std::vector<MappableType> CancerGenotype<MappableType>::copy_unique() const
 // non-member methods
 
 template <typename MappableType2, typename MappableType1>
-CancerGenotype<MappableType2> splice(const CancerGenotype<MappableType1>& genotype, const GenomicRegion& region)
+CancerGenotype<MappableType2> splice(const CancerGenotype<MappableType1>& genotype,
+                                     const GenomicRegion& region)
 {
     return CancerGenotype<MappableType2> {
         splice<MappableType2>(genotype.get_germline_genotype(), region),
@@ -160,77 +162,22 @@ CancerGenotype<MappableType2> splice(const CancerGenotype<MappableType1>& genoty
     };
 }
 
-inline size_t num_cancer_genotypes(const unsigned num_elements, const unsigned ploidy)
-{
-    return (num_genotypes(num_elements, ploidy) - 1) * num_elements;
-}
-
-namespace
-{
-    template <typename MappableType>
-    auto make_all_shared(const std::vector<MappableType>& elements)
-    {
-        std::vector<std::shared_ptr<MappableType>> result(elements.size());
-        std::transform(std::cbegin(elements), std::cend(elements), std::begin(result),
-                       [] (const auto& element) { return std::make_shared<MappableType>(element); });
-        return result;
-    }
-} // namespace
-
-inline
 std::vector<CancerGenotype<Haplotype>>
-generate_all_cancer_genotypes(const std::vector<Haplotype>& haplotypes, const unsigned ploidy)
-{
-    auto haplotypes_ptrs = make_all_shared(haplotypes);
-    
-    auto germline_genotypes = generate_all_genotypes(haplotypes_ptrs, ploidy);
-    
-    std::vector<CancerGenotype<Haplotype>> result {};
-    result.reserve(num_cancer_genotypes(static_cast<unsigned>(haplotypes.size()), ploidy));
-    
-    for (const auto& germline_genotype : germline_genotypes) {
-        for (const auto& ptr : haplotypes_ptrs) {
-            if (!is_homozygous(germline_genotype, *ptr)) {
-                result.emplace_back(germline_genotype, ptr);
-            }
-        }
-    }
-    
-    return result;
-}
-
-template <typename MappableType>
-std::vector<CancerGenotype<MappableType>>
-generate_all_cancer_genotypes(const std::vector<MappableType>& elements, const unsigned ploidy)
-{
-    auto germline_genotypes = generate_all_genotypes(elements, ploidy);
-    
-    std::vector<CancerGenotype<MappableType>> result {};
-    result.reserve(num_cancer_genotypes(static_cast<unsigned>(elements.size()), ploidy));
-    
-    for (const auto& germline_genotype : germline_genotypes) {
-        for (const auto& element : elements) {
-            if (!is_homozygous(germline_genotype, element)) {
-                result.emplace_back(germline_genotype, element);
-            }
-        }
-    }
-    
-    return result;
-}
+generate_all_cancer_genotypes(const std::vector<Haplotype>& haplotypes, const unsigned ploidy);
 
 template <typename MappableType>
 bool operator==(const CancerGenotype<MappableType>& lhs, const CancerGenotype<MappableType>& rhs)
 {
     return lhs.get_cancer_element() == rhs.get_cancer_element()
-            && lhs.get_germline_genotype() == rhs.get_germline_genotype();
+                && lhs.get_germline_genotype() == rhs.get_germline_genotype();
 }
+} // namespace Octopus
 
 namespace std
 {
-    template <typename MappableType> struct hash<CancerGenotype<MappableType>>
+    template <typename MappableType> struct hash<Octopus::CancerGenotype<MappableType>>
     {
-        size_t operator()(const CancerGenotype<MappableType>& genotype) const
+        size_t operator()(const Octopus::CancerGenotype<MappableType>& genotype) const
         {
             using boost::hash_combine;
             size_t result {0};
@@ -241,6 +188,8 @@ namespace std
     };
 } // namespace std
 
+namespace Octopus
+{
 template <typename MappableType>
 std::ostream& operator<<(std::ostream& os, const CancerGenotype<MappableType>& genotype)
 {
@@ -250,19 +199,26 @@ std::ostream& operator<<(std::ostream& os, const CancerGenotype<MappableType>& g
 
 namespace debug
 {
-    inline void print_alleles(const CancerGenotype<Haplotype>& genotype)
+    template <typename S>
+    void print_alleles(S&& stream, const CancerGenotype<Haplotype>& genotype)
     {
-        print_alleles(genotype.get_germline_genotype());
-        std::cout << " + ";
-        print_alleles(genotype.get_cancer_element());
+        ::debug::print_alleles(stream, genotype.get_germline_genotype());
+        stream << " + ";
+        ::debug::print_alleles(stream, genotype.get_cancer_element());
     }
     
-    inline void print_variant_alleles(const CancerGenotype<Haplotype>& genotype)
+    void print_alleles(const CancerGenotype<Haplotype>& genotype);
+    
+    template <typename S>
+    void print_variant_alleles(S&& stream, const CancerGenotype<Haplotype>& genotype)
     {
-        print_variant_alleles(genotype.get_germline_genotype());
-        std::cout << " + ";
-        print_variant_alleles(genotype.get_cancer_element());
+        ::debug::print_variant_alleles(stream, genotype.get_germline_genotype());
+        stream << " + ";
+        ::debug::print_variant_alleles(stream, genotype.get_cancer_element());
     }
+    
+    void print_variant_alleles(const CancerGenotype<Haplotype>& genotype);
 } // namespace debug
+} // namespace Octopus
 
 #endif /* cancer_genotype_h */

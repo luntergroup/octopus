@@ -26,7 +26,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--version",
         
         "--debug",
-        //"--trace",
+        "--trace",
         
         //"--sites-only",
         
@@ -43,8 +43,8 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--reference", ecoli_reference_fasta.c_str(),
         
         //"--reads", NA12878_low_coverage.c_str(),
-        "--reads", NA12878_high_coverage.c_str(),
-        //"--reads", "~/Genomics/Illumina/NA12878.mapped.ILLUMINA.bwa.CEU.high_coverage_pcr_free.20130906.chr22.bam",
+        //"--reads", NA12878_high_coverage.c_str(),
+        "--reads", "~/Genomics/Illumina/NA12878.mapped.ILLUMINA.bwa.CEU.high_coverage_pcr_free.20130906.chr22.bam",
         
         //"--reads", NA12891_high_coverage.c_str(),
         
@@ -56,7 +56,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         
         //"--reads", ecoli_bam.c_str(),
         
-        "--model", "cancer", // default "population"
+        //"--model", "cancer", // default "population"
         "--normal-sample", "NA12878", // for cancer model
         
         //"--organism-ploidy", "2",
@@ -71,8 +71,6 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--use-one-based-indexing",
         
         // for population
-        
-        "--regions", "22:30,040,685-30,041,129",
         
         // NA12878_high_coverage interestint regions / possible errors
         //"--regions", "22:37,894,887-37,895,035", // is the insertion there (both GATK & Platypus call - I'm not so sure)?
@@ -126,10 +124,12 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--regions", "Y:13447283-13447483", // NA12878_low_coverage too many haplotypes
         
         // for cancer
-        //"--regions", "6:52,873,970-52,882,816",
-        //"--regions", "5:76,747,066-76,747,106", // not a reversion
-        //"--regions", "5:76,781,703-76,781,743", // not a reversion
-        //"--regions", "5:76,785,333-76,785,478", // HMM error
+        
+        // NA12878HC (normal) vs HG00101LC
+        "--regions", "22:33,310,391-33,310,686",
+        //"--regions", "22:29,786,267-29,786,698",
+        //"--regions", "22:31,196,345-31,196,590",
+        //"--regions", "22:31,195,690-31,196,075",
         
         // For ecoli
         //"--regions", "R00000042:3008660-3020000",
@@ -156,6 +156,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--downsample-target", "200",
         
         // candidate generation
+        //"--min-supporting-reads", "1",
         //"--no-candidates-from-alignments",
         //"--candidates-from-assembler",
         //"--kmer-size", "5",

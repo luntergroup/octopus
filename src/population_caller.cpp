@@ -68,18 +68,18 @@ min_refcall_posterior_ {specific_parameters.min_refcall_posterior}
 
 PopulationVariantCaller::Latents::Latents(GenotypeModel::Population::Latents&& model_latents)
 :
-haplotype_posteriors_ {std::make_shared<HaplotypePosteriorMap>(std::move(model_latents.haplotype_posteriors))},
-genotype_posteriors_ {std::make_shared<GenotypePosteriorMap>(std::move(model_latents.genotype_posteriors))},
+haplotype_posteriors_ {std::make_shared<HaplotypeProbabilityMap>(std::move(model_latents.haplotype_posteriors))},
+genotype_posteriors_ {std::make_shared<GenotypeProbabilityMap>(std::move(model_latents.genotype_posteriors))},
 haplotype_frequencies_ {std::move(model_latents.haplotype_frequencies)}
 {}
 
-std::shared_ptr<PopulationVariantCaller::Latents::HaplotypePosteriorMap>
+std::shared_ptr<PopulationVariantCaller::Latents::HaplotypeProbabilityMap>
 PopulationVariantCaller::Latents::get_haplotype_posteriors() const noexcept
 {
     return haplotype_posteriors_;
 }
 
-std::shared_ptr<PopulationVariantCaller::Latents::GenotypePosteriorMap>
+std::shared_ptr<PopulationVariantCaller::Latents::GenotypeProbabilityMap>
 PopulationVariantCaller::Latents::get_genotype_posteriors() const noexcept
 {
     return genotype_posteriors_;
@@ -98,8 +98,8 @@ PopulationVariantCaller::infer_latents(const std::vector<Haplotype>& haplotypes,
 namespace
 {
 using GM = GenotypeModel::Population;
-using GenotypePosteriorMap       = GM::Latents::GenotypeProbabilityMap;
-using SampleGenotypePosteriorMap = GenotypePosteriorMap::InnerMap;
+using GenotypeProbabilityMap       = GM::Latents::GenotypeProbabilityMap;
+using SampleGenotypeProbabilityMap = GenotypeProbabilityMap::InnerMap;
 
 struct GenotypeCall
 {
@@ -187,9 +187,9 @@ namespace debug
 {
     template <typename S>
     void print_genotype_posteriors(S&& stream,
-                                   const GenotypePosteriorMap& genotype_posteriors,
+                                   const GenotypeProbabilityMap& genotype_posteriors,
                                    std::size_t n = 5);
-    void print_genotype_posteriors(const GenotypePosteriorMap& genotype_posteriors,
+    void print_genotype_posteriors(const GenotypeProbabilityMap& genotype_posteriors,
                                    std::size_t n = 5);
     template <typename S>
     void print_allele_posteriors(S&& stream,
@@ -210,7 +210,7 @@ namespace
 using AlleleBools          = std::deque<bool>; // using std::deque because std::vector<bool> is evil
 using GenotypeContainments = std::vector<AlleleBools>;
 
-auto marginalise(const SampleGenotypePosteriorMap& genotype_posteriors,
+auto marginalise(const SampleGenotypeProbabilityMap& genotype_posteriors,
                  const AlleleBools& contained_alleles)
 {
     auto result = std::inner_product(std::cbegin(genotype_posteriors), std::cend(genotype_posteriors),
@@ -224,7 +224,7 @@ auto marginalise(const SampleGenotypePosteriorMap& genotype_posteriors,
     return result;
 }
 
-auto compute_sample_allele_posteriors(const SampleGenotypePosteriorMap& genotype_posteriors,
+auto compute_sample_allele_posteriors(const SampleGenotypeProbabilityMap& genotype_posteriors,
                                       const GenotypeContainments& contained_alleles)
 {
     std::vector<double> result {};
@@ -237,7 +237,7 @@ auto compute_sample_allele_posteriors(const SampleGenotypePosteriorMap& genotype
     return result;
 }
 
-auto find_contained_alleles(const GenotypePosteriorMap& genotype_posteriors,
+auto find_contained_alleles(const GenotypeProbabilityMap& genotype_posteriors,
                             const std::vector<Allele>& alleles)
 {
     const auto num_genotypes = genotype_posteriors.size2();
@@ -266,7 +266,7 @@ auto find_contained_alleles(const GenotypePosteriorMap& genotype_posteriors,
     return result;
 }
 
-AllelePosteriorMap compute_allele_posteriors(const GenotypePosteriorMap& genotype_posteriors,
+AllelePosteriorMap compute_allele_posteriors(const GenotypeProbabilityMap& genotype_posteriors,
                                              const std::vector<Allele>& alleles)
 {
     AllelePosteriorMap result {std::cbegin(alleles), std::cend(alleles)};
@@ -385,7 +385,7 @@ void parsimonise_variant_calls(VariantCallBlocks& variant_calls, const Reference
 
 // variant genotype calling
 
-auto call_genotype(const SampleGenotypePosteriorMap& genotype_posteriors)
+auto call_genotype(const SampleGenotypeProbabilityMap& genotype_posteriors)
 {
     return *std::max_element(std::cbegin(genotype_posteriors), std::cend(genotype_posteriors),
                              [] (const auto& lhs, const auto& rhs) {
@@ -393,7 +393,7 @@ auto call_genotype(const SampleGenotypePosteriorMap& genotype_posteriors)
                              });
 }
 
-double marginalise(const Genotype<Allele>& genotype, const SampleGenotypePosteriorMap& genotype_posteriors)
+double marginalise(const Genotype<Allele>& genotype, const SampleGenotypeProbabilityMap& genotype_posteriors)
 {
     return std::accumulate(std::cbegin(genotype_posteriors), std::cend(genotype_posteriors), 0.0,
                            [&genotype] (const double curr, const auto& p) {
@@ -403,7 +403,7 @@ double marginalise(const Genotype<Allele>& genotype, const SampleGenotypePosteri
 
 // Call cleanup
 
-GenotypeCalls call_genotypes(const GenotypePosteriorMap& genotype_posteriors,
+GenotypeCalls call_genotypes(const GenotypeProbabilityMap& genotype_posteriors,
                              const std::vector<GenomicRegion>& variant_regions)
 {
     GenotypeCalls result(variant_regions.size());
@@ -480,7 +480,7 @@ std::size_t remove_non_genotyped_calls(VariantCallBlocks& variant_calls,
 // reference genotype calling
 
 double marginalise_reference_genotype(const Allele& reference_allele,
-                                      const SampleGenotypePosteriorMap& sample_genotype_posteriors)
+                                      const SampleGenotypeProbabilityMap& sample_genotype_posteriors)
 {
     double result {0};
     
@@ -493,7 +493,7 @@ double marginalise_reference_genotype(const Allele& reference_allele,
     return result;
 }
 
-RefCalls call_reference(const GenotypePosteriorMap& genotype_posteriors,
+RefCalls call_reference(const GenotypeProbabilityMap& genotype_posteriors,
                         const std::vector<Allele>& reference_alleles,
                         const ReadMap& reads, const double min_call_posterior)
 {
@@ -924,7 +924,7 @@ namespace debug
 {
 template <typename S>
 void print_genotype_posteriors(S&& stream,
-                               const GenotypePosteriorMap& genotype_posteriors,
+                               const GenotypeProbabilityMap& genotype_posteriors,
                                const std::size_t n)
 {
     for (const auto& sample_posteriors : genotype_posteriors) {
@@ -959,7 +959,7 @@ void print_genotype_posteriors(S&& stream,
     }
 }
 
-void print_genotype_posteriors(const GenotypePosteriorMap& genotype_posteriors, const std::size_t n)
+void print_genotype_posteriors(const GenotypeProbabilityMap& genotype_posteriors, const std::size_t n)
 {
     print_genotype_posteriors(std::cout, genotype_posteriors, n);
 }

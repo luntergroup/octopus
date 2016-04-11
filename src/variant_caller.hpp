@@ -82,14 +82,14 @@ protected:
     
     struct CallerLatents
     {
-        using HaplotypePosteriorMap = std::unordered_map<HaplotypeReference, double>;
-        using GenotypePosteriorMap  = ProbabilityMatrix<Genotype<Haplotype>>;
+        using HaplotypeProbabilityMap = std::unordered_map<HaplotypeReference, double>;
+        using GenotypeProbabilityMap  = ProbabilityMatrix<Genotype<Haplotype>>;
         
         // Return shared_ptr as the caller may not actually need to use these latents itself,
         // they just need to be constructable on demand. But if the caller DOES use them, then
         // we avoid copying.
-        virtual std::shared_ptr<HaplotypePosteriorMap> get_haplotype_posteriors() const = 0;
-        virtual std::shared_ptr<GenotypePosteriorMap> get_genotype_posteriors() const = 0;
+        virtual std::shared_ptr<HaplotypeProbabilityMap> get_haplotype_posteriors() const = 0;
+        virtual std::shared_ptr<GenotypeProbabilityMap> get_genotype_posteriors() const = 0;
         
         virtual ~CallerLatents() = default;
     };
@@ -114,7 +114,7 @@ private:
     
     std::vector<Haplotype>
     get_removable_haplotypes(const std::vector<Haplotype>& haplotypes,
-                             const CallerLatents::HaplotypePosteriorMap& haplotype_posteriors,
+                             const CallerLatents::HaplotypeProbabilityMap& haplotype_posteriors,
                              const GenomicRegion& region) const;
 };
 

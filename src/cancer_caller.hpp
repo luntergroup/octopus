@@ -64,13 +64,13 @@ private:
     public:
         using ModelLatents = GenotypeModel::Cancer::InferredLatents;
         
-        using CallerLatents::HaplotypePosteriorMap;
-        using CallerLatents::GenotypePosteriorMap;
+        using CallerLatents::HaplotypeProbabilityMap;
+        using CallerLatents::GenotypeProbabilityMap;
         
         explicit Latents(ModelLatents&&);
         
-        std::shared_ptr<HaplotypePosteriorMap> get_haplotype_posteriors() const override;
-        std::shared_ptr<GenotypePosteriorMap> get_genotype_posteriors() const override;
+        std::shared_ptr<HaplotypeProbabilityMap> get_haplotype_posteriors() const override;
+        std::shared_ptr<GenotypeProbabilityMap> get_genotype_posteriors() const override;
         
     private:
         ModelLatents model_latents_;

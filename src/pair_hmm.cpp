@@ -124,18 +124,35 @@ auto align(const std::string& truth, const std::string& target,
         return std::numeric_limits<double>::lowest();
     }
     
-    if (!is_target_in_truth_flank(truth, target, target_offset, model)) {
-        const auto score = fastAlignmentRoutine(truth.data() + target_offset,
-                                                target.data(),
-                                                reinterpret_cast<const std::int8_t*>(target_qualities.data()),
-                                                truth_alignment_size,
-                                                static_cast<int>(target.size()),
-                                                static_cast<int>(model.gapextend),
-                                                static_cast<int>(model.nucprior),
-                                                truth_gap_open_penalties.data() + target_offset);
-        
-        return -ln_10_div_10 * static_cast<double>(score);
-    }
+    std::copy(std::cbegin(target), std::cend(target), std::ostreambuf_iterator<char>(std::cout));
+    std::cout << std::endl;
+    
+    std::copy(std::cbegin(target_qualities), std::cend(target_qualities),
+              std::ostream_iterator<unsigned>(std::cout, " "));
+    std::cout << std::endl;
+    
+    std::copy(std::next(std::cbegin(truth), target_offset),
+              std::next(std::cbegin(truth), target_offset + truth_alignment_size),
+              std::ostreambuf_iterator<char>(std::cout));
+    std::cout << std::endl;
+    
+    std::copy(std::next(std::cbegin(truth_gap_open_penalties), target_offset),
+              std::next(std::cbegin(truth_gap_open_penalties), target_offset + truth_alignment_size),
+              std::ostream_iterator<unsigned>(std::cout, " "));
+    std::cout << std::endl;
+    
+//    if (!is_target_in_truth_flank(truth, target, target_offset, model)) {
+//        const auto score = fastAlignmentRoutine(truth.data() + target_offset,
+//                                                target.data(),
+//                                                reinterpret_cast<const std::int8_t*>(target_qualities.data()),
+//                                                truth_alignment_size,
+//                                                static_cast<int>(target.size()),
+//                                                static_cast<int>(model.gapextend),
+//                                                static_cast<int>(model.nucprior),
+//                                                truth_gap_open_penalties.data() + target_offset);
+//        
+//        return -ln_10_div_10 * static_cast<double>(score);
+//    }
     
     int first_pos;
     std::vector<char> align1(2 * target.size() + 16), align2(2 * target.size() + 16);

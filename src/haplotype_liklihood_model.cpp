@@ -57,6 +57,10 @@ namespace Octopus
         
         std::for_each(first_mapping_position, last_mapping_position,
                       [&] (const auto position) {
+                          if (position == original_mapping_position) {
+                              is_original_position_mapped = true;
+                          }
+                          
                           if (is_in_range(position, read, haplotype)) {
                               has_in_range_mapping_position = true;
                               
@@ -70,10 +74,6 @@ namespace Octopus
                               if (cur > max_log_probability) {
                                   max_log_probability = cur;
                               }
-                          }
-                          
-                          if (position == original_mapping_position) {
-                              is_original_position_mapped = true;
                           }
                       });
         

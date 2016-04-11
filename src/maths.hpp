@@ -227,18 +227,23 @@ auto log_beta(const Container& values)
     return log_beta(std::cbegin(values), std::cend(values));
 }
 
-template <typename RealType, typename InputIterator1, typename InputIterator2>
-inline RealType log_dirichlet(InputIterator1 firstalpha, InputIterator1 lastalpha, InputIterator2 firstpi)
+template <typename ForwardIt1, typename ForwardIt2>
+auto log_dirichlet(ForwardIt1 firstalpha, ForwardIt1 lastalpha, ForwardIt2 firstpi)
 {
-    return std::inner_product(firstalpha, lastalpha, firstpi, RealType {0}, std::plus<RealType>(),
+    using T = std::decay_t<typename std::iterator_traits<ForwardIt1>::value_type>;
+    
+    static_assert(std::is_floating_point<T>::value,
+                  "log_dirichlet is only defined for floating point types.");
+    
+    return std::inner_product(firstalpha, lastalpha, firstpi, T {0}, std::plus<void> {},
                               [] (const auto a, const auto p) { return (a - 1) * std::log(p); })
-            - log_beta<RealType>(firstalpha, lastalpha);
+            - log_beta(firstalpha, lastalpha);
 }
 
-template <typename RealType, typename Container1, typename Container2>
-inline RealType log_dirichlet(const Container1& alpha, const Container2& pi)
+template <typename Container1, typename Container2>
+auto log_dirichlet(const Container1& alpha, const Container2& pi)
 {
-    return log_dirichlet<RealType>(std::cbegin(alpha), std::cend(alpha), std::cbegin(pi));
+    return log_dirichlet(std::cbegin(alpha), std::cend(alpha), std::cbegin(pi));
 }
 
 template <typename RealType, typename IntegerType>

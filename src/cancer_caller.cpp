@@ -9,6 +9,8 @@
 #include "cancer_caller.hpp"
 
 #include <utility>
+#include <algorithm>
+#include <numeric>
 #include <iostream>
 
 #include "genomic_region.hpp"
@@ -25,6 +27,7 @@
 #include "read_utils.hpp"
 #include "string_utils.hpp"
 #include "probability_matrix.hpp"
+#include "sequence_utils.hpp"
 
 namespace Octopus
 {
@@ -65,13 +68,13 @@ CancerVariantCaller::Latents::Latents(ModelLatents&& model_latents)
 model_latents_ {std::move(model_latents)}
 {}
 
-std::shared_ptr<CancerVariantCaller::Latents::HaplotypePosteriorMap>
+std::shared_ptr<CancerVariantCaller::Latents::HaplotypeProbabilityMap>
 CancerVariantCaller::Latents::get_haplotype_posteriors() const
 {
     return nullptr;
 }
 
-std::shared_ptr<CancerVariantCaller::Latents::GenotypePosteriorMap>
+std::shared_ptr<CancerVariantCaller::Latents::GenotypeProbabilityMap>
 CancerVariantCaller::Latents::get_genotype_posteriors() const
 {
     return nullptr;
@@ -291,10 +294,10 @@ CancerVariantCaller::infer_latents(const std::vector<Haplotype>& haplotypes,
     
     for (const auto& sample : samples_) {
         if (sample == parameters_.normal_sample) {
-            GM::Priors::GenotypeMixturesDirichletAlphas sample_alphas {10.0, 10.0, 0.05};
+            GM::Priors::GenotypeMixturesDirichletAlphas sample_alphas {1.0, 1.0, 0.1};
             alphas.emplace(sample, std::move(sample_alphas));
         } else {
-            GM::Priors::GenotypeMixturesDirichletAlphas sample_alphas {1.0, 1.0, 0.5};
+            GM::Priors::GenotypeMixturesDirichletAlphas sample_alphas {1.0, 1.0, 0.15};
             alphas.emplace(sample, std::move(sample_alphas));
         }
     }
@@ -312,17 +315,27 @@ CancerVariantCaller::infer_latents(const std::vector<Haplotype>& haplotypes,
 //                               });
     
     for (const auto& p : inferred_latents.genotype_posteriors) {
-        if (p.second > 0.1) {
-            ::debug::print_variant_alleles(p.first);
+        if (p.second > 0.001) {
+            debug::print_variant_alleles(p.first);
             std::cout << ' ' << p.second << std::endl;
         }
     }
     
-    const auto posterior_alphas = inferred_latents.alphas.at(parameters_.normal_sample);
-    
+    auto posterior_alphas = inferred_latents.alphas.at(parameters_.normal_sample);
     std::cout << posterior_alphas[0] << " " << posterior_alphas[1] << " " << posterior_alphas[2] << std::endl;
     
-    exit(0);
+    auto a0 = std::accumulate(std::cbegin(posterior_alphas), std::cend(posterior_alphas), 0.0);
+    auto p = Maths::beta_hdi(posterior_alphas[2], a0 - posterior_alphas[2]);
+    std::cout << p.first << " " << p.second << std::endl;
+    
+    posterior_alphas = inferred_latents.alphas.at("HG00101");
+    std::cout << posterior_alphas[0] << " " << posterior_alphas[1] << " " << posterior_alphas[2] << std::endl;
+    
+    a0 = std::accumulate(std::cbegin(posterior_alphas), std::cend(posterior_alphas), 0.0);
+    p = Maths::beta_hdi(posterior_alphas[2], a0 - posterior_alphas[2]);
+    std::cout << p.first << " " << p.second << std::endl;
+    
+    throw std::runtime_error {"whoops"};
     
     return std::make_unique<Latents>(std::move(inferred_latents));
 }

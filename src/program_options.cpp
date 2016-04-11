@@ -267,6 +267,8 @@ namespace Octopus
              "Trims this number of bases off the tail of all reads")
             ("disable-adapter-masking", po::bool_switch()->default_value(false),
              "Disables adapter detection and masking")
+            ("disable-overlap-masking", po::bool_switch()->default_value(false),
+             "Disables read segment overlap masking")
             ;
             
             po::options_description candidates("Candidate generation options");
@@ -992,7 +994,7 @@ namespace Octopus
                     stream(log) << "The path " << resolved_paths.good_paths.front()
                         << " given in the input option (--reads) does not exist";
                 } else {
-                    
+                    // TODO
                 }
                 return boost::none;
             }
@@ -1002,7 +1004,7 @@ namespace Octopus
                     stream(log) << "The path " << resolved_paths.good_paths.front()
                         << " given in the input option (--reads) is not readable";
                 } else {
-                    
+                    // TODO
                 }
                 return boost::none;
             }
@@ -1043,11 +1045,11 @@ namespace Octopus
             }
             
             if (!all_paths_exist(resolved_paths.good_paths)) {
-                
+                // TODO
             }
             
             if (!all_paths_readable(resolved_paths.good_paths)) {
-                
+                // TODO
             }
             
             append(result, std::move(resolved_paths.good_paths));
@@ -1170,7 +1172,9 @@ namespace Octopus
             result.register_transform(ReadTransforms::trim_adapters());
         }
         
-        result.register_transform(ReadTransforms::trim_overlapping());
+        if (!options.at("disable-overlap-masking").as<bool>()) {
+            result.register_transform(ReadTransforms::trim_overlapping());
+        }
         
         return result;
     }

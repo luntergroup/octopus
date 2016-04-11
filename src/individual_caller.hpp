@@ -59,21 +59,25 @@ private:
     class Latents : public CallerLatents
     {
     public:
-        using ModelLatents = GenotypeModel::Individual::Latents;
+        using ModelLatents = GenotypeModel::Individual::InferredLatents;
         
-        using CallerLatents::HaplotypePosteriorMap;
-        using CallerLatents::GenotypePosteriorMap;
+        using CallerLatents::HaplotypeProbabilityMap;
+        using CallerLatents::GenotypeProbabilityMap;
         
         friend IndividualVariantCaller;
         
-        explicit Latents(ModelLatents&&);
+        explicit Latents(const std::vector<Haplotype>&, ModelLatents&&);
         
-        std::shared_ptr<HaplotypePosteriorMap> get_haplotype_posteriors() const noexcept override;
-        std::shared_ptr<GenotypePosteriorMap> get_genotype_posteriors() const noexcept override;
+        std::shared_ptr<HaplotypeProbabilityMap> get_haplotype_posteriors() const noexcept override;
+        std::shared_ptr<GenotypeProbabilityMap> get_genotype_posteriors() const noexcept override;
         
     private:
-        std::shared_ptr<ModelLatents::HaplotypeProbabilityMap> haplotype_posteriors_;
-        std::shared_ptr<ModelLatents::GenotypeProbabilityMap> genotype_posteriors_;
+        std::shared_ptr<HaplotypeProbabilityMap> haplotype_posteriors_;
+        std::shared_ptr<GenotypeProbabilityMap> genotype_posteriors_;
+        
+        HaplotypeProbabilityMap
+        calculate_haplotype_posteriors(const std::vector<Haplotype>& haplotypes,
+                                       const ModelLatents& latents);
     };
     
     SampleIdType sample_;

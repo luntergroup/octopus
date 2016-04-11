@@ -18,78 +18,71 @@
 
 namespace Octopus
 {
-    namespace GenotypeModel
+namespace GenotypeModel
+{
+    Individual::Individual(unsigned ploidy) : ploidy_ {ploidy} {}
+    
+    Individual::InferredLatents::InferredLatents(GenotypeProbabilityMap&& genotype_posteriors)
+    : genotype_posteriors {std::move(genotype_posteriors)} {}
+    
+    auto make_latents(const SampleIdType& sample,
+                      std::vector<Genotype<Haplotype>>&& genotypes,
+                      std::vector<double>&& flat_genotype_posteriors)
     {
-        Individual::Individual(unsigned ploidy)
-        :
-        ploidy_ {ploidy}
-        {}
+        Individual::InferredLatents::GenotypeProbabilityMap genotype_posteriors {
+            std::make_move_iterator(std::begin(genotypes)),
+            std::make_move_iterator(std::end(genotypes))
+        };
         
-        auto calculate_haplotype_posteriors(const std::vector<Haplotype>& haplotypes,
-                                            const std::vector<Genotype<Haplotype>>& genotypes,
-                                            const std::vector<double>& genotype_log_posteriors)
-        {
-            std::unordered_map<std::reference_wrapper<const Haplotype>, double> result {haplotypes.size()};
-            
-            for (const auto& haplotype : haplotypes) {
-                result.emplace(std::cref(haplotype), 0.0);
-            }
-            
-            auto it = std::cbegin(genotype_log_posteriors);
-            
-            for (const auto& genotype : genotypes) {
-                for (const auto& haplotype : genotype.copy_unique_ref()) {
-                    result.at(haplotype) += *it;
-                }
-                ++it;
-            }
-            
-            return result;
+        insert_sample(sample, flat_genotype_posteriors, genotype_posteriors);
+        
+        return Individual::InferredLatents {std::move(genotype_posteriors)};
+    }
+    
+    Individual::InferredLatents
+    Individual::infer_latents(const SampleIdType& sample,
+                              std::vector<Genotype<Haplotype>> candidate_genotypes,
+                              const CoalescentModel& genotype_prior_model,
+                              const HaplotypeLikelihoodCache& haplotype_likelihoods) const
+    {
+        assert(!candidate_genotypes.empty());
+        
+        FixedPloidyGenotypeLikelihoodModel likelihood_model {ploidy_, haplotype_likelihoods};
+        
+        std::vector<double> genotype_log_posteriors(candidate_genotypes.size());
+        
+        std::transform(std::cbegin(candidate_genotypes), std::cend(candidate_genotypes),
+                       std::begin(genotype_log_posteriors),
+                       [&] (const auto& genotype) {
+                           return std::log(genotype_prior_model.evaluate(genotype))
+                                        + likelihood_model.log_likelihood(sample, genotype);
+                       });
+        
+        const auto norm = Maths::log_sum_exp(genotype_log_posteriors);
+        
+        for (auto& p : genotype_log_posteriors) p = std::exp(p -= norm);
+        
+        return make_latents(sample, std::move(candidate_genotypes),
+                            std::move(genotype_log_posteriors));
+    }
+    
+    Individual::InferredLatents
+    Individual::infer_latents(const SampleIdType& sample,
+                              const std::vector<Haplotype>& haplotypes,
+                              const CoalescentModel& genotype_prior_model,
+                              const HaplotypeLikelihoodCache& haplotype_likelihoods) const
+    {
+        assert(!haplotypes.empty());
+        
+        auto genotypes = generate_all_genotypes(haplotypes, ploidy_);
+        
+        Logging::DebugLogger log {};
+        if (DEBUG_MODE) {
+            stream(log) << "Generated all possible " << genotypes.size() << " genotypes";
         }
         
-        Individual::Latents
-        Individual::infer_latents(const SampleIdType& sample,
-                                  const std::vector<Haplotype>& haplotypes,
-                                  const CoalescentModel& haplotype_model,
-                                  const HaplotypeLikelihoodCache& haplotype_likelihoods) const
-        {
-            assert(!haplotypes.empty());
-            
-            auto genotypes = generate_all_genotypes(haplotypes, ploidy_);
-            
-            Logging::DebugLogger log {};
-            if (DEBUG_MODE) {
-                stream(log) << "There are " << genotypes.size() << " genotypes";
-            }
-            
-            assert(!genotypes.empty());
-            
-            FixedPloidyGenotypeLikelihoodModel likelihood_model {ploidy_, haplotype_likelihoods};
-            
-            std::vector<double> genotype_log_posteriors(genotypes.size());
-            
-            std::transform(std::cbegin(genotypes), std::cend(genotypes),
-                           std::begin(genotype_log_posteriors),
-                           [&] (const auto& genotype) {
-                               return std::log(haplotype_model.evaluate(genotype))
-                                            + likelihood_model.log_likelihood(sample, genotype);
-                           });
-            
-            const auto norm = Maths::log_sum_exp(genotype_log_posteriors);
-            
-            for (auto& p : genotype_log_posteriors) p = std::exp(p -= norm);
-            
-            auto haplotype_posteriors = calculate_haplotype_posteriors(haplotypes, genotypes,
-                                                                       genotype_log_posteriors);
-            
-            ProbabilityMatrix<Genotype<Haplotype>> gps {
-                std::make_move_iterator(std::begin(genotypes)),
-                std::make_move_iterator(std::end(genotypes))
-            };
-            
-            insert_sample(sample, genotype_log_posteriors, gps);
-            
-            return Latents {std::move(gps), std::move(haplotype_posteriors)};
-        }
-    } // namesapce GenotypeModel
+        return infer_latents(sample, std::move(genotypes), genotype_prior_model,
+                             haplotype_likelihoods);
+    }
+} // namesapce GenotypeModel
 } // namespace Octopus

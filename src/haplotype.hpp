@@ -236,6 +236,43 @@ MappableType splice(const Haplotype& haplotype, const GenomicRegion& region)
     return detail::do_splice(haplotype, region, std::is_same<Haplotype, std::decay_t<MappableType>> {});
 }
 
+ContigAllele splice(const Haplotype& haplotype, const ContigRegion& region);
+
+template <typename MappableType, typename Container,
+    typename = std::enable_if_t<std::is_same<typename Container::value_type, Haplotype>::value>>
+std::vector<MappableType> splice_all(const Container& haplotypes, const GenomicRegion& region)
+{
+    std::vector<MappableType> result {};
+    result.reserve(haplotypes.size());
+    
+    for (const auto& haplotype : haplotypes) {
+        result.emplace_back(splice<MappableType>(haplotype, region));
+    }
+    
+    std::sort(std::begin(result), std::end(result));
+    
+    result.erase(std::unique(std::begin(result), std::end(result)), std::end(result));
+    
+    return result;
+}
+
+template <typename Container>
+std::vector<ContigAllele> splice_all(const Container& haplotypes, const ContigRegion& region)
+{
+    std::vector<ContigAllele> result {};
+    result.reserve(haplotypes.size());
+    
+    for (const auto& haplotype : haplotypes) {
+        result.emplace_back(splice(haplotype, region));
+    }
+    
+    std::sort(std::begin(result), std::end(result));
+    
+    result.erase(std::unique(std::begin(result), std::end(result)), std::end(result));
+    
+    return result;
+}
+
 bool is_reference(const Haplotype& haplotype);
 
 bool operator==(const Haplotype& lhs, const Haplotype& rhs);
