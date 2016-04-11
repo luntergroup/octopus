@@ -9,6 +9,7 @@
 #include "haplotype_likelihood_cache.hpp"
 
 #include <utility>
+#include <cassert>
 
 #include <iostream> // DEBUG
 #include <iomanip>  // DEBUG
@@ -28,6 +29,9 @@ void HaplotypeLikelihoodCache::populate(const ReadMap& reads,
                                         const std::vector<Haplotype>& haplotypes,
                                         HaplotypeLikelihoodModel::FlankState flank_state)
 {
+    // This code is not very pretty because it is a real bottleneck for the entire application.
+    // We want to try a minimise memory allocations for the mapping.
+    
     if (!cache_.empty()) {
         cache_.clear();
     }
@@ -39,6 +43,8 @@ void HaplotypeLikelihoodCache::populate(const ReadMap& reads,
     sample_indices_.clear();
     
     set_read_iterators_and_sample_indices(reads);
+    
+    assert(reads.size() == read_iterators_.size());
     
     const auto num_samples = reads.size();
     
@@ -80,7 +86,7 @@ void HaplotypeLikelihoodCache::populate(const ReadMap& reads,
                                             std::forward_as_tuple(haplotype),
                                             std::forward_as_tuple(num_samples)).first->second);
         
-        const auto read_hash_itr = std::cbegin(read_hashes);
+        auto read_hash_itr = std::cbegin(read_hashes);
         
         HaplotypeLikelihoodModel likelihood_model {haplotype, flank_state};
         
@@ -99,6 +105,7 @@ void HaplotypeLikelihoodCache::populate(const ReadMap& reads,
                                                                        last_mapping_position);
                            });
             
+            ++read_hash_itr;
             ++it;
         }
         

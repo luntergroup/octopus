@@ -60,6 +60,10 @@ using KmerPerfectHashes = std::vector<KmerHashType>;
 template <unsigned char K>
 auto compute_kmer_hashes(const std::string& sequence)
 {
+    if (sequence.size() < K) {
+        return KmerPerfectHashes {};
+    }
+    
     KmerPerfectHashes result(sequence.size() - K + 1);
     
     auto result_it = std::begin(result);
@@ -88,6 +92,10 @@ inline void clear_kmer_hash_table(KmerHashTable& table)
 template <unsigned char K>
 void populate_kmer_hash_table(const std::string& sequence, KmerHashTable& result)
 {
+    if (sequence.size() < K) {
+        return;
+    }
+    
     const auto last_index = sequence.size() - K;
     
     auto it = std::cbegin(sequence);
@@ -126,7 +134,7 @@ OutputIt map_query_to_target(const KmerPerfectHashes& query, const KmerHashTable
                              MappedIndexCounts& mapping_counts, OutputIt result)
 {
     unsigned max_hit_count {0};
-    std::size_t first_max_hit_index {};
+    std::size_t first_max_hit_index {0};
     unsigned num_max_hits {0};
     
     for (std::size_t query_index {0}; query_index < query.size(); ++query_index) {

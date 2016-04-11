@@ -236,7 +236,8 @@ rightmost_overlapped(const MappableMap<KeyType, MappableType1>& mappables, const
     }
     
     auto first = std::cbegin(mappables);
-    auto last  = std::cend(mappables);
+    
+    const auto last = std::cend(mappables);
     
     auto result = std::cend(first->second);
     
@@ -255,7 +256,10 @@ rightmost_overlapped(const MappableMap<KeyType, MappableType1>& mappables, const
     std::for_each(first, last, [&mappable, &result] (const auto& p) {
         const auto overlapped = overlap_range(p.second, mappable);
         if (!overlapped.empty()) {
-            result = rightmost_mappable(overlapped).base();
+            const auto it = rightmost_mappable(overlapped).base();
+            if (ends_before(*result, *it)) {
+                result = it;
+            }
         }
     });
     

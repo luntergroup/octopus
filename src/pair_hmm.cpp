@@ -26,7 +26,7 @@
 
 namespace PairHMM
 {
-static constexpr double ln_10_div_10 {0.23025850929940458};
+static constexpr double ln_10_div_10 {0.230258509299404568401799145468436420760110148862877297603};
 
 template <typename T, typename = std::enable_if_t<std::is_integral<T>::value>>
 constexpr auto num_values() noexcept
@@ -52,7 +52,7 @@ auto count_mismatches(InputIt1 first1, InputIt1 last1, InputIt2 first2)
     return std::inner_product(first1, last1, first2, std::size_t {0},
                               std::plus<void>(), std::not_equal_to<void>());
 }
-    
+
 //auto align(const std::string& truth, const std::string& target,
 //           const std::vector<std::uint8_t>& target_qualities,
 //           const std::vector<std::int8_t>& truth_gap_open_penalties,
@@ -124,47 +124,32 @@ auto align(const std::string& truth, const std::string& target,
         return std::numeric_limits<double>::lowest();
     }
     
-    std::copy(std::cbegin(target), std::cend(target), std::ostreambuf_iterator<char>(std::cout));
-    std::cout << std::endl;
+    const auto alignement_offset = static_cast<std::size_t>(std::max(0, static_cast<int>(target_offset) - 8));
     
-    std::copy(std::cbegin(target_qualities), std::cend(target_qualities),
-              std::ostream_iterator<unsigned>(std::cout, " "));
-    std::cout << std::endl;
-    
-    std::copy(std::next(std::cbegin(truth), target_offset),
-              std::next(std::cbegin(truth), target_offset + truth_alignment_size),
-              std::ostreambuf_iterator<char>(std::cout));
-    std::cout << std::endl;
-    
-    std::copy(std::next(std::cbegin(truth_gap_open_penalties), target_offset),
-              std::next(std::cbegin(truth_gap_open_penalties), target_offset + truth_alignment_size),
-              std::ostream_iterator<unsigned>(std::cout, " "));
-    std::cout << std::endl;
-    
-//    if (!is_target_in_truth_flank(truth, target, target_offset, model)) {
-//        const auto score = fastAlignmentRoutine(truth.data() + target_offset,
-//                                                target.data(),
-//                                                reinterpret_cast<const std::int8_t*>(target_qualities.data()),
-//                                                truth_alignment_size,
-//                                                static_cast<int>(target.size()),
-//                                                static_cast<int>(model.gapextend),
-//                                                static_cast<int>(model.nucprior),
-//                                                truth_gap_open_penalties.data() + target_offset);
-//        
-//        return -ln_10_div_10 * static_cast<double>(score);
-//    }
+    if (!is_target_in_truth_flank(truth, target, alignement_offset, model)) {
+        const auto score = fastAlignmentRoutine(truth.data() + alignement_offset,
+                                                target.data(),
+                                                reinterpret_cast<const std::int8_t*>(target_qualities.data()),
+                                                truth_alignment_size,
+                                                static_cast<int>(target.size()),
+                                                static_cast<int>(model.gapextend),
+                                                static_cast<int>(model.nucprior),
+                                                truth_gap_open_penalties.data() + alignement_offset);
+        
+        return -ln_10_div_10 * static_cast<double>(score);
+    }
     
     int first_pos;
     std::vector<char> align1(2 * target.size() + 16), align2(2 * target.size() + 16);
     
-    const auto score = fastAlignmentRoutine(truth.data() + target_offset,
+    const auto score = fastAlignmentRoutine(truth.data() + alignement_offset,
                                             target.data(),
                                             reinterpret_cast<const std::int8_t*>(target_qualities.data()),
                                             truth_alignment_size,
                                             static_cast<int>(target.size()),
                                             static_cast<int>(model.gapextend),
                                             static_cast<int>(model.nucprior),
-                                            truth_gap_open_penalties.data() + target_offset,
+                                            truth_gap_open_penalties.data() + alignement_offset,
                                             align1.data(), align2.data(), &first_pos);
     
     const auto truth_size     = static_cast<int>(truth.size());
@@ -178,7 +163,7 @@ auto align(const std::string& truth, const std::string& target,
                                                  truth_gap_open_penalties.data(),
                                                  static_cast<int>(model.gapextend),
                                                  static_cast<int>(model.nucprior),
-                                                 static_cast<int>(first_pos + target_offset),
+                                                 static_cast<int>(first_pos + alignement_offset),
                                                  align1.data(), align2.data());
     
     return -ln_10_div_10 * static_cast<double>(score - flank_score);

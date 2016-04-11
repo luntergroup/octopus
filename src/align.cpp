@@ -44,13 +44,13 @@ int fastAlignmentRoutine(const char* seq1, const char* seq2, const std::int8_t* 
     __m128i _qual2win;
     __m128i _seq1nqual;   // 1 if N, POS_INF if not
     
-    __m128i _gap_extend = _mm_set1_epi16( gap_extend );
-    __m128i _nuc_prior = _mm_set1_epi16( nuc_prior );
-    __m128i _initmask = _mm_set_epi16( 0,0,0,0,0,0,0,-1 );
-    __m128i _initmask2 = _mm_set_epi16( 0,0,0,0,0,0,0,-0x8000 );
-    
+    __m128i _gap_extend {_mm_set1_epi16(gap_extend)};
+    __m128i _nuc_prior  {_mm_set1_epi16(nuc_prior)};
+    __m128i _initmask   {_mm_set_epi16(0,0,0,0,0,0,0,-1)};
+    __m128i _initmask2  {_mm_set_epi16(0,0,0,0,0,0,0,-0x8000)};
+
     // initialization
-    _m1 = _mm_set1_epi16( POS_INF );
+    _m1 = _mm_set1_epi16(POS_INF);
     _i1 = _m1;
     _d1 = _m1;
     _m2 = _m1;
@@ -59,29 +59,27 @@ int fastAlignmentRoutine(const char* seq1, const char* seq2, const std::int8_t* 
     
     // sequence 1 is initialized with the n-long prefix, in forward direction
     // sequence 2 is initialized as empty; reverse direction
-    _seq1win = _mm_set_epi16( seq1[7], seq1[6], seq1[5], seq1[4], seq1[3], seq1[2], seq1[1], seq1[0] );
+    _seq1win = _mm_set_epi16(seq1[7], seq1[6], seq1[5], seq1[4], seq1[3], seq1[2], seq1[1], seq1[0]);
     _seq2win = _m1;
     _qual2win = _mm_set1_epi16(64 * 4);
     
     // if N, make N_SCORE; if != N, make POS_INF
-    _seq1nqual = _mm_add_epi16( _mm_and_si128( _mm_cmpeq_epi16( _seq1win,
-                                                               _mm_set1_epi16( 'N' ) ),
-                                              _mm_set1_epi16( N_SCORE - POS_INF ) ),
-                               _mm_set1_epi16( POS_INF ) );
+    _seq1nqual = _mm_add_epi16(_mm_and_si128(_mm_cmpeq_epi16(_seq1win, _mm_set1_epi16('N')),
+                                             _mm_set1_epi16(N_SCORE - POS_INF)),
+                               _mm_set1_epi16(POS_INF));
     
-    __m128i _gap_open = _mm_set_epi16(4*localgapopen[7],4*localgapopen[6],4*localgapopen[5],4*localgapopen[4],
-                                      4*localgapopen[3],4*localgapopen[2],4*localgapopen[1],4*localgapopen[0]);
+    __m128i _gap_open {_mm_set_epi16(4*localgapopen[7],4*localgapopen[6],4*localgapopen[5],4*localgapopen[4],
+                                     4*localgapopen[3],4*localgapopen[2],4*localgapopen[1],4*localgapopen[0])};
     
     short cur_score {0};
     short minscore  {POS_INF};
     
     for (int s {0}; s <= 2 * (len2 + BAND_SIZE); s += 2) {
-        
         // seq1 is current; seq2 needs updating
         _seq2win  = _mm_slli_si128(_seq2win, 2);
         _qual2win = _mm_slli_si128(_qual2win, 2);
         
-        if (s/2 < len2) {
+        if (s / 2 < len2) {
             _seq2win  = _mm_insert_epi16(_seq2win, seq2[s / 2], 0);
             _qual2win = _mm_insert_epi16(_qual2win, 4 * qual2[s / 2], 0);
         } else {
@@ -92,15 +90,15 @@ int fastAlignmentRoutine(const char* seq1, const char* seq2, const std::int8_t* 
         // S even
         
         // initialize to -0x8000
-        _m1 = _mm_or_si128( _initmask2, _mm_andnot_si128( _initmask, _m1 ) );
-        _m2 = _mm_or_si128( _initmask2, _mm_andnot_si128( _initmask, _m2 ) );
-        _m1 = _mm_min_epi16( _m1, _mm_min_epi16( _i1, _d1 ) );
+        _m1 = _mm_or_si128(_initmask2, _mm_andnot_si128(_initmask, _m1));
+        _m2 = _mm_or_si128(_initmask2, _mm_andnot_si128(_initmask, _m2));
+        _m1 = _mm_min_epi16(_m1, _mm_min_epi16(_i1, _d1));
         
         // at this point, extract minimum score.  Referred-to position must
         // be y==len2-1, so that current position has y==len2; i==0 so d=0 and y=s/2
         
-        if (s/2 >= len2) {
-            cur_score = _mm_extract_epi16(_m1, s/2 - len2);
+        if (s / 2 >= len2) {
+            cur_score = _mm_extract_epi16(_m1, (s / 2) - len2);
             
             if (cur_score < minscore) {
                 minscore = cur_score;
@@ -122,48 +120,41 @@ int fastAlignmentRoutine(const char* seq1, const char* seq2, const std::int8_t* 
         // S odd
         
         // seq1 needs updating; seq2 is current
-        const char c = (BAND_SIZE + s/2 < len1) ? seq1[BAND_SIZE + (s/2)] : 'N';
+        const char c = (BAND_SIZE + s / 2 < len1) ? seq1[BAND_SIZE + (s / 2)] : 'N';
         
-        _seq1win   = _mm_insert_epi16(_mm_srli_si128(_seq1win,   2 ), c, BAND_SIZE - 1);
-        _seq1nqual = _mm_insert_epi16(_mm_srli_si128(_seq1nqual, 2 ), (c == 'N')
+        _seq1win   = _mm_insert_epi16(_mm_srli_si128(_seq1win,   2), c, BAND_SIZE - 1);
+        _seq1nqual = _mm_insert_epi16(_mm_srli_si128(_seq1nqual, 2), (c == 'N')
                                       ? N_SCORE : POS_INF, BAND_SIZE - 1);
-        _gap_open  = _mm_insert_epi16(_mm_srli_si128(_gap_open,  2 ),
-                                      4 * localgapopen[BAND_SIZE + s/2 < len1
-                                                       ? BAND_SIZE + s/2 : len1 - 1], BAND_SIZE - 1);
+        _gap_open  = _mm_insert_epi16(_mm_srli_si128(_gap_open,  2),
+                                      4 * localgapopen[BAND_SIZE + s / 2 < len1
+                                                       ? BAND_SIZE + s / 2 : len1 - 1], BAND_SIZE - 1);
         
-        _initmask = _mm_slli_si128(_initmask, 2);
+        _initmask  = _mm_slli_si128(_initmask, 2);
         _initmask2 = _mm_slli_si128(_initmask2, 2);
-        _m2 = _mm_min_epi16(_m2, _mm_min_epi16(_i2, _d2));
+        _m2        = _mm_min_epi16(_m2, _mm_min_epi16(_i2, _d2));
         
         // at this point, extract minimum score.  Referred-to position must
         // be y==len2-1, so that current position has y==len2; i==0 so d=0 and y=s/2
-        if (s/2 >= len2) {
-            cur_score = _mm_extract_epi16(_m2, s/2 - len2);
+        if (s / 2 >= len2) {
+            cur_score = _mm_extract_epi16(_m2, (s / 2) - len2);
             
             if (cur_score < minscore) {
                 minscore = cur_score;
             }
         }
         
-        _m2 = _mm_add_epi16( _m2,
-                            _mm_min_epi16( _mm_andnot_si128( _mm_cmpeq_epi16( _seq2win,
-                                                                             _seq1win ),
-                                                            _qual2win ),
-                                          _seq1nqual ) );
+        _m2 = _mm_add_epi16( _m2, _mm_min_epi16(_mm_andnot_si128(_mm_cmpeq_epi16(_seq2win, _seq1win),
+                                                                 _qual2win), _seq1nqual));
         
-        _d2 = _mm_min_epi16( _mm_add_epi16( _d1,
-                                           _gap_extend ),
-                            _mm_add_epi16( _mm_min_epi16( _m1,
-                                                         _i1 ),  // allow I->D
-                                          _gap_open ) );
+        _d2 = _mm_min_epi16(_mm_add_epi16(_d1, _gap_extend),
+                            _mm_add_epi16(_mm_min_epi16(_m1, _i1), _gap_open)); // allow I->D
+                                          
         
-        _i2 = _mm_insert_epi16( _mm_add_epi16( _mm_min_epi16( _mm_add_epi16( _mm_srli_si128( _i1, 2 ),
-                                                                            _gap_extend ),
-                                                             _mm_add_epi16( _mm_srli_si128( _m1, 2 ),
-                                                                           _gap_open ) ),
-                                              _nuc_prior ),
-                               POS_INF,
-                               BAND_SIZE - 1 );
+        _i2 = _mm_insert_epi16(_mm_add_epi16(_mm_min_epi16(_mm_add_epi16(_mm_srli_si128(_i1, 2),
+                                                                         _gap_extend),
+                                                           _mm_add_epi16(_mm_srli_si128(_m1, 2),
+                                                                         _gap_open)),
+                                             _nuc_prior), POS_INF, BAND_SIZE - 1);
         
     }
     

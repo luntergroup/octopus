@@ -25,7 +25,7 @@ namespace Octopus
         std::size_t num_out_of_range_bases(const std::size_t mapping_position,
                                            const AlignedRead& read, const Haplotype& haplotype)
         {
-            const auto alignment_size = sequence_size(read) + mapping_position + 15;
+            const auto alignment_size = sequence_size(read) + mapping_position + PairHMM::AlignmenetPad;
             
             if (alignment_size > sequence_size(haplotype)) {
                 return alignment_size - sequence_size(haplotype);

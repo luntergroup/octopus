@@ -15,6 +15,8 @@
 
 namespace PairHMM
 {
+    static constexpr unsigned AlignmenetPad {15};
+    
     struct Model
     {
         int nucprior;

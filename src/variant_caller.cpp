@@ -412,22 +412,22 @@ std::deque<VcfRecord> VariantCaller::call_variants(const GenomicRegion& call_reg
     
     HaplotypeLikelihoodCache haplotype_likelihoods {max_haplotypes_, samples_};
     
-    // DEBUG
-    
-    // Log likelihood = -207.923 (why so low)?
-    debug::run_likelihood_calculation("< {22:33310423-33310424 } {22:33310583-33310584 A} >",
-                                      "22:33310158-33310848", "22:33310423-33310584",
-                                      "22:33310299-33310549", "248M2S",
-                                      reads, candidates, reference_);
-    
-//    // Log likelihood = -87.9588 (why so low)?
+//    // DEBUG
+//    
+//    // Log likelihood = -207.923 (why so low)?
 //    debug::run_likelihood_calculation("< {22:33310423-33310424 } {22:33310583-33310584 A} >",
 //                                      "22:33310158-33310848", "22:33310423-33310584",
-//                                      "22:33310256-33310506", "250M",
+//                                      "22:33310299-33310549", "248M2S",
 //                                      reads, candidates, reference_);
-    exit(0);
-    
-    // END DEBUG
+//    
+////    // Log likelihood = -87.9588 (why so low)?
+////    debug::run_likelihood_calculation("< {22:33310423-33310424 } {22:33310583-33310584 A} >",
+////                                      "22:33310158-33310848", "22:33310423-33310584",
+////                                      "22:33310256-33310506", "250M",
+////                                      reads, candidates, reference_);
+//    exit(0);
+//    
+//    // END DEBUG
     
     while (true) {
         resume_timer(haplotype_generation_timer);

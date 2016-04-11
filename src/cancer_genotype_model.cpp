@@ -24,6 +24,8 @@
 #include "maths.hpp"
 #include "logging.hpp"
 
+#include "individual_genotype_model.hpp"
+
 namespace Octopus
 {
     namespace GenotypeModel
@@ -195,28 +197,22 @@ namespace Octopus
         return std::array<std::reference_wrapper<const Haplotype>, 2> {std::cref(a), std::cref(b)};
     }
     
-    double probability_of_somatic(const Haplotype& somatic_haplotype,
-                                  const Haplotype& germline_haplotype)
+    double probability_of_somatic(const Haplotype& somatic, const Haplotype& germline,
+                                  double somatic_mutation_probability = 0.00001)
     {
-        CoalescentModel model {germline_haplotype};
-        return model.evaluate(bundle(germline_haplotype, somatic_haplotype));
+        const auto variants = difference(somatic, germline);
+        return std::pow(somatic_mutation_probability, variants.size());
     }
     
     // p(somatic | germline) = 1 / M sum k = 1 -> M p(somatic | germline_k) (M = germline ploidy)
-    double probability_of_somatic(const Haplotype& somatic_haplotype,
-                                  const Genotype<Haplotype>& germline_genotype)
+    double probability_of_somatic(const Haplotype& somatic, const Genotype<Haplotype>& germline_genotype)
     {
-        const auto norm = 1.0 / germline_genotype.ploidy();
-        
-        return std::accumulate(std::cbegin(germline_genotype), std::cend(germline_genotype),
-                               0.0,
-                               [&somatic_haplotype] (const auto curr,
-                                                     const Haplotype& germline_haplotype) {
-                                   return curr + probability_of_somatic(somatic_haplotype,
-                                                                        germline_haplotype);
-                               }) / norm;
+        return std::accumulate(std::cbegin(germline_genotype), std::cend(germline_genotype), 0.0,
+                               [&somatic] (const auto curr, const Haplotype& germline) {
+                                   return curr + probability_of_somatic(somatic, germline);
+                               }) / germline_genotype.ploidy();
     }
-
+    
     double calculate_log_prior(const CancerGenotype<Haplotype>& genotype,
                                const CoalescentModel& germline_prior_model)
     {
@@ -359,7 +355,7 @@ namespace Octopus
     template <std::size_t K>
     ResponsabilityVectors<K>
     init_responsabilities(const CompressedAlphas<K>& prior_alphas,
-                          const ProbabilityVector& genotype_priors,
+                          const ProbabilityVector& genotype_pobabilities,
                           const CompressedReadLikelihoods<K>& read_likelihoods)
     {
         assert(!read_likelihoods.empty());
@@ -388,7 +384,7 @@ namespace Octopus
             
             for (std::size_t n {0}; n < N; ++n) {
                 for (unsigned k {0}; k < K; ++k) {
-                    ln_rho[k] = al[k] + expectation(genotype_priors, read_likelihoods[s], k, n);
+                    ln_rho[k] = al[k] + expectation(genotype_pobabilities, read_likelihoods[s], k, n);
                 }
                 
                 const auto ln_rho_norm = Maths::log_sum_exp(ln_rho);
@@ -408,7 +404,7 @@ namespace Octopus
     template <std::size_t K>
     void update_responsabilities(ResponsabilityVectors<K>& result,
                                  const CompressedAlphas<K>& posterior_alphas,
-                                 const ProbabilityVector& genotype_posteriors,
+                                 const ProbabilityVector& genotype_pobabilities,
                                  const CompressedReadLikelihoods<K>& read_likelihoods)
     {
         const auto S = read_likelihoods.size();
@@ -428,7 +424,7 @@ namespace Octopus
             
             for (std::size_t n {0}; n < N; ++n) {
                 for (unsigned k {0}; k < K; ++k) {
-                    ln_rho[k] = al[k] + expectation(genotype_posteriors, read_likelihoods[s], k, n);
+                    ln_rho[k] = al[k] + expectation(genotype_pobabilities, read_likelihoods[s], k, n);
                 }
                 
                 const auto ln_rho_norm = Maths::log_sum_exp(ln_rho);
@@ -493,7 +489,7 @@ namespace Octopus
                 for (std::size_t n {0}; n < N; ++n) {
                     if (TRACE_MODE) {
                         Logging::TraceLogger log {};
-                        if (g == 125 || g == 210) {
+                        if (g == 125 || g == 213) {
                             stream(log) << "n: " << n << " k: " << k << " : "
                                     << responsabilities[s][n][k] << " * " << read_likelihoods[s][g][k][n]
                                     << " = "<< responsabilities[s][n][k] * read_likelihoods[s][g][k][n];
@@ -505,7 +501,7 @@ namespace Octopus
                 
                 if (TRACE_MODE) {
                     Logging::TraceLogger log {};
-                    if (g == 125 || g == 210) {
+                    if (g == 125 || g == 213) {
                         stream(log) << k << " total = " << curr;
                     }
                 }
@@ -524,7 +520,7 @@ namespace Octopus
         for (std::size_t g {0}; g < result.size(); ++g) {
             if (TRACE_MODE) {
                 Logging::TraceLogger log {};
-                if (g == 125 || g == 210) {
+                if (g == 125 || g == 213) {
                     stream(log) << "g = " << g;
                 }
             }
@@ -533,7 +529,7 @@ namespace Octopus
             
             if (TRACE_MODE) {
                 Logging::TraceLogger log {};
-                if (g == 125 || g == 210) {
+                if (g == 125 || g == 213) {
                     stream(log) << "result " << result[g];
                 }
             }
@@ -697,7 +693,7 @@ namespace Octopus
                                              log_uniform_dist(genotype_log_priors.size()),
                                              params);
         
-        return result1;
+        return result2;
     }
     
     Cancer::InferredLatents::GenotypePosteriorMap

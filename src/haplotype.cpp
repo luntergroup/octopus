@@ -510,6 +510,22 @@ bool is_reference(const Haplotype& haplotype)
     return haplotype.get_sequence() == haplotype.reference_.get().get_sequence(haplotype.get_region());
 }
 
+std::vector<Variant> difference(const Haplotype& lhs, const Haplotype& rhs)
+{
+    auto result = lhs.difference(rhs);
+    auto diffs2 = rhs.difference(lhs);
+    
+    const auto it = result.insert(std::end(result),
+                                  std::make_move_iterator(std::begin(diffs2)),
+                                  std::make_move_iterator(std::end(diffs2)));
+    
+    std::inplace_merge(std::begin(result), it, std::end(result));
+    
+    return result;
+}
+
+// Haplotype::Builder
+
 void add_ref_to_back(const Variant& variant, Haplotype::Builder& haplotype)
 {
     haplotype.push_back(variant.get_ref_allele());

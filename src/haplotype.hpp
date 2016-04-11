@@ -275,6 +275,8 @@ std::vector<ContigAllele> splice_all(const Container& haplotypes, const ContigRe
 
 bool is_reference(const Haplotype& haplotype);
 
+std::vector<Variant> difference(const Haplotype& lhs, const Haplotype& rhs);
+
 bool operator==(const Haplotype& lhs, const Haplotype& rhs);
 bool operator<(const Haplotype& lhs, const Haplotype& rhs);
 
