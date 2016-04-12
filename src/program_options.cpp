@@ -972,7 +972,7 @@ namespace Octopus
         
         std::vector<fs::path> result {};
         
-        bool all_good {true};
+        bool all_paths_good {true};
         
         std::vector<fs::path> resolved_paths {}, unresolved_paths {};
         
@@ -981,18 +981,16 @@ namespace Octopus
             
             std::tie(resolved_paths, unresolved_paths) = resolve_paths(read_paths, options);
             
-            if (!resolved_paths.empty()) {
+            if (!unresolved_paths.empty()) {
                 log_unresolved_read_paths(unresolved_paths, "reads");
-                all_good = false;
-            } else {
-                
+                all_paths_good = false;
             }
             
             auto it = parition_existent_paths(resolved_paths);
             
             if (it != std::end(resolved_paths)) {
                 log_nonexistent_read_paths(it, std::end(resolved_paths), "reads");
-                all_good = false;
+                all_paths_good = false;
                 resolved_paths.erase(it, std::end(resolved_paths));
             }
             
@@ -1000,62 +998,57 @@ namespace Octopus
             
             if (it != std::end(resolved_paths)) {
                 log_unreadable_read_paths(it, std::end(resolved_paths), "reads");
-                all_good = false;
+                all_paths_good = false;
             }
             
             append(result, std::move(resolved_paths));
         }
         
         if (options.count("reads-file") == 1) {
+            // first we need to make sure the path to the paths is okay
             const fs::path input_path {options.at("reads-file").as<std::string>()};
             
-            const auto& resolved_path = resolve_path(input_path, options);
+            auto resolved_path = resolve_path(input_path, options);
             
             if (!resolved_path) {
                 stream(log) << "Could not resolve the path " << input_path
                     << " given in the input option (--reads-file)";
-                return boost::none;
-            }
-            
-            if (!fs::exists(*resolved_path)) {
+                all_paths_good = false;
+            } else if (!fs::exists(*resolved_path)) {
                 stream(log) << "The path " << input_path
                     << " given in the input option (--reads-file) does not exist";
-                return boost::none;
-            }
-            
-            if (!is_file_readable(*resolved_path)) {
+                all_paths_good = false;
+            } else if (!is_file_readable(*resolved_path)) {
                 stream(log) << "The path " << input_path
                     << " given in the input option (--reads-file) is not readable";
-                return boost::none;
-            }
-            
-            auto paths = extract_paths_from_file(*resolved_path, options);
-            
-            std::tie(resolved_paths, unresolved_paths) = resolve_paths(paths, options);
-            
-            if (!resolved_paths.empty()) {
-                log_unresolved_read_paths(unresolved_paths, "reads-file");
-                all_good = false;
+                all_paths_good = false;
             } else {
+                auto paths = extract_paths_from_file(*resolved_path, options);
                 
+                std::tie(resolved_paths, unresolved_paths) = resolve_paths(paths, options);
+                
+                if (!unresolved_paths.empty()) {
+                    log_unresolved_read_paths(unresolved_paths, "reads-file");
+                    all_paths_good = false;
+                }
+                
+                auto it = parition_existent_paths(resolved_paths);
+                
+                if (it != std::end(resolved_paths)) {
+                    log_nonexistent_read_paths(it, std::end(resolved_paths), "reads-file");
+                    all_paths_good = false;
+                    resolved_paths.erase(it, std::end(resolved_paths));
+                }
+                
+                it = parition_readable_paths(resolved_paths);
+                
+                if (it != std::end(resolved_paths)) {
+                    log_unreadable_read_paths(it, std::end(resolved_paths), "reads-file");
+                    all_paths_good = false;
+                }
+                
+                append(result, std::move(resolved_paths));
             }
-            
-            auto it = parition_existent_paths(resolved_paths);
-            
-            if (it != std::end(resolved_paths)) {
-                log_nonexistent_read_paths(it, std::end(resolved_paths), "reads-file");
-                all_good = false;
-                resolved_paths.erase(it, std::end(resolved_paths));
-            }
-            
-            it = parition_readable_paths(resolved_paths);
-            
-            if (it != std::end(resolved_paths)) {
-                log_unreadable_read_paths(it, std::end(resolved_paths), "reads-file");
-                all_good = false;
-            }
-            
-            append(result, std::move(resolved_paths));
         }
         
         std::sort(std::begin(result), std::end(result));
@@ -1072,7 +1065,7 @@ namespace Octopus
         
         result.erase(it, std::end(result));
         
-        if (!all_good && result.size() > 0) {
+        if (!all_paths_good && result.size() > 0) {
             Logging::WarningLogger log {};
             auto slog = stream(log);
             slog << "There are bad read paths so dumping " << result.size() << " good path";
