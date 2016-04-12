@@ -67,9 +67,6 @@ namespace Octopus
         Latents infer_latents(std::vector<CancerGenotype<Haplotype>> genotypes,
                               const HaplotypeLikelihoodCache& haplotype_likelihoods) const;
         
-        Latents infer_latents(const std::vector<Haplotype>& haplotypes,
-                              const HaplotypeLikelihoodCache& haplotype_likelihoods) const;
-        
         double approx_log_evidence(const HaplotypeLikelihoodCache& haplotype_likelihoods,
                                    const Latents& latents) const;
         

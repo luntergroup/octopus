@@ -51,7 +51,7 @@ namespace GenotypeModel
     }
     
     double FixedPloidyGenotypeLikelihoodModel::log_likelihood_haploid(const SampleIdType& sample,
-                                                                       const Genotype<Haplotype>& genotype) const
+                                                                      const Genotype<Haplotype>& genotype) const
     {
         const auto& log_likelihoods = haplotype_likelihoods_.get().log_likelihoods(sample, genotype[0]);
         return std::accumulate(std::cbegin(log_likelihoods), std::cend(log_likelihoods), 0.0);
@@ -178,13 +178,13 @@ namespace GenotypeModel
                                       });
         }
         
-        std::vector<std::reference_wrapper<const HaplotypeLikelihoodCache::ReadProbabilities>> log_likelihoods {};
+        std::vector<std::reference_wrapper<const HaplotypeLikelihoodCache::Likelihoods>> log_likelihoods {};
         log_likelihoods.reserve(ploidy_);
         
         std::transform(std::cbegin(genotype), std::cend(genotype),
                        std::back_inserter(log_likelihoods),
                        [this, &sample] (const auto& haplotype)
-                            -> const HaplotypeLikelihoodCache::ReadProbabilities& {
+                            -> const HaplotypeLikelihoodCache::Likelihoods& {
                            return haplotype_likelihoods_.get().log_likelihoods(sample, haplotype);
                        });
         

@@ -295,10 +295,10 @@ CancerVariantCaller::infer_latents(const std::vector<Haplotype>& haplotypes,
     
     for (const auto& sample : samples_) {
         if (sample == parameters_.normal_sample) {
-            GM::Priors::GenotypeMixturesDirichletAlphas sample_alphas {1.0, 1.0, 0.01};
+            GM::Priors::GenotypeMixturesDirichletAlphas sample_alphas {1.0, 1.0, 0.05};
             alphas.emplace(sample, std::move(sample_alphas));
         } else {
-            GM::Priors::GenotypeMixturesDirichletAlphas sample_alphas {1.0, 1.0, 0.1};
+            GM::Priors::GenotypeMixturesDirichletAlphas sample_alphas {1.0, 1.0, 0.5};
             alphas.emplace(sample, std::move(sample_alphas));
         }
     }
@@ -325,18 +325,21 @@ CancerVariantCaller::infer_latents(const std::vector<Haplotype>& haplotypes,
     std::cout << ' ' << it->second << std::endl;
     
     if (haplotypes.size() <= parameters_.ploidy) {
-        GenotypeModel::Individual individual_model {parameters_.ploidy};
-        
-        auto individual_latents = individual_model.infer_latents(parameters_.normal_sample,
-                                                                 germline_genotypes, coalescent,
-                                                                 haplotype_likelihoods);
-        
         const auto& map_cancer_genotype = it->first;
         
+        GenotypeModel::Individual individual_model {parameters_.ploidy, coalescent};
+        
+        auto individual_latents = individual_model.infer_latents(parameters_.normal_sample,
+                                                                 germline_genotypes,
+                                                                 haplotype_likelihoods);
+        
+        auto it2 = std::find(std::cbegin(germline_genotypes), std::cend(germline_genotypes),
+                             map_cancer_genotype.get_germline_genotype());
+        
+        auto p = individual_latents.genotype_posteriors[std::distance(std::cbegin(germline_genotypes), it2)];
+        
         std::cout << "Posterior of map cancer genotype germline for individual model = "
-                    << individual_latents.genotype_posteriors(parameters_.normal_sample,
-                                                              map_cancer_genotype.get_germline_genotype())
-                    << std::endl;
+                    << p << std::endl;
         
         std::cout << "Germline model log evidence = " << individual_model.log_evidence(parameters_.normal_sample, haplotype_likelihoods, individual_latents) << std::endl;
     }

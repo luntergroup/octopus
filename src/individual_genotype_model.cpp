@@ -8,6 +8,7 @@
 
 #include "individual_genotype_model.hpp"
 
+#include <utility>
 #include <algorithm>
 #include <cmath>
 #include <iostream>
@@ -20,69 +21,47 @@ namespace Octopus
 {
 namespace GenotypeModel
 {
-    Individual::Individual(unsigned ploidy) : ploidy_ {ploidy} {}
+    Individual::Individual(unsigned ploidy, CoalescentModel genotype_prior_model)
+    :
+    ploidy_ {ploidy},
+    genotype_prior_model_ {std::move(genotype_prior_model)}
+    {}
     
-    Individual::Latents::Latents(GenotypeProbabilityMap&& genotype_posteriors)
-    : genotype_posteriors {std::move(genotype_posteriors)} {}
+    Individual::Latents::Latents(const GenotypeVector& genotypes,
+                                 GenotypeProbabilityVector&& genotype_posteriors)
+    : genotypes {std::cref(genotypes)}, genotype_posteriors {std::move(genotype_posteriors)} {}
     
-    auto make_latents(const SampleIdType& sample,
-                      std::vector<Genotype<Haplotype>>&& genotypes,
-                      std::vector<double>&& flat_genotype_posteriors)
+    namespace
     {
-        Individual::Latents::GenotypeProbabilityMap genotype_posteriors {
-            std::make_move_iterator(std::begin(genotypes)),
-            std::make_move_iterator(std::end(genotypes))
-        };
-        
-        insert_sample(sample, flat_genotype_posteriors, genotype_posteriors);
-        
-        return Individual::Latents {std::move(genotype_posteriors)};
-    }
+        template <typename Container>
+        void normalise_exp(Container& log_probabilities)
+        {
+            const auto norm = Maths::log_sum_exp(log_probabilities);
+            
+            for (auto& p : log_probabilities) p = std::exp(p -= norm);
+        }
+    } // namespace
     
     Individual::Latents
     Individual::infer_latents(const SampleIdType& sample,
-                              std::vector<Genotype<Haplotype>> candidate_genotypes,
-                              const CoalescentModel& genotype_prior_model,
+                              const std::vector<Genotype<Haplotype>>& genotypes,
                               const HaplotypeLikelihoodCache& haplotype_likelihoods) const
     {
-        assert(!candidate_genotypes.empty());
+        assert(!genotypes.empty());
         
         FixedPloidyGenotypeLikelihoodModel likelihood_model {ploidy_, haplotype_likelihoods};
         
-        std::vector<double> genotype_log_posteriors(candidate_genotypes.size());
+        std::vector<double> result(genotypes.size());
         
-        std::transform(std::cbegin(candidate_genotypes), std::cend(candidate_genotypes),
-                       std::begin(genotype_log_posteriors),
-                       [&] (const auto& genotype) {
-                           return std::log(genotype_prior_model.evaluate(genotype))
+        std::transform(std::cbegin(genotypes), std::cend(genotypes), std::begin(result),
+                       [this, &sample, &likelihood_model] (const auto& genotype) {
+                           return std::log(genotype_prior_model_.evaluate(genotype))
                                         + likelihood_model.log_likelihood(sample, genotype);
                        });
         
-        const auto norm = Maths::log_sum_exp(genotype_log_posteriors);
+        normalise_exp(result);
         
-        for (auto& p : genotype_log_posteriors) p = std::exp(p -= norm);
-        
-        return make_latents(sample, std::move(candidate_genotypes),
-                            std::move(genotype_log_posteriors));
-    }
-    
-    Individual::Latents
-    Individual::infer_latents(const SampleIdType& sample,
-                              const std::vector<Haplotype>& haplotypes,
-                              const CoalescentModel& genotype_prior_model,
-                              const HaplotypeLikelihoodCache& haplotype_likelihoods) const
-    {
-        assert(!haplotypes.empty());
-        
-        auto genotypes = generate_all_genotypes(haplotypes, ploidy_);
-        
-        Logging::DebugLogger log {};
-        if (DEBUG_MODE) {
-            stream(log) << "Generated all possible " << genotypes.size() << " genotypes";
-        }
-        
-        return infer_latents(sample, std::move(genotypes), genotype_prior_model,
-                             haplotype_likelihoods);
+        return Latents {genotypes, std::move(result)};
     }
     
     double Individual::log_evidence(const SampleIdType& sample,
@@ -91,14 +70,13 @@ namespace GenotypeModel
     {
         FixedPloidyGenotypeLikelihoodModel likelihood_model {ploidy_, haplotype_likelihoods};
         
-        const auto& genotypes_posteriors = latents.genotype_posteriors[sample];
+        std::vector<double> log_jps(latents.genotype_posteriors.size());
         
-        std::vector<double> log_jps(genotypes_posteriors.size());
-        
-        std::transform(std::cbegin(genotypes_posteriors), std::cend(genotypes_posteriors),
+        std::transform(std::cbegin(latents.genotypes.get()), std::cend(latents.genotypes.get()),
+                       std::cbegin(latents.genotype_posteriors),
                        std::begin(log_jps),
-                       [&sample, &likelihood_model] (const auto& p) {
-                           return std::log(p.second) + likelihood_model.log_likelihood(sample, p.first);
+                       [&sample, &likelihood_model] (const auto& g, const auto& p) {
+                           return std::log(p) + likelihood_model.log_likelihood(sample, g);
                        });
         
         return Maths::log_sum_exp(log_jps);

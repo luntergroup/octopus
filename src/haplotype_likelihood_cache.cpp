@@ -25,6 +25,13 @@ cache_ {max_haplotypes},
 sample_indices_ {samples.size()}
 {}
 
+HaplotypeLikelihoodCache::ReadPacket::ReadPacket(Iterator first, Iterator last)
+:
+first {first},
+last {last},
+num_reads {static_cast<std::size_t>(std::distance(first, last))}
+{}
+
 void HaplotypeLikelihoodCache::populate(const ReadMap& reads,
                                         const std::vector<Haplotype>& haplotypes,
                                         HaplotypeLikelihoodModel::FlankState flank_state)
@@ -57,13 +64,13 @@ void HaplotypeLikelihoodCache::populate(const ReadMap& reads,
         
         std::transform(t.first, t.last, std::back_inserter(sample_read_hashes),
                        [] (const AlignedRead& read) {
-                           return compute_kmer_hashes<KMER_SIZE>(read.get_sequence());
+                           return compute_kmer_hashes<MAPPER_KMER_SIZE>(read.get_sequence());
                        });
         
         read_hashes.emplace_back(std::move(sample_read_hashes));
     }
     
-    auto haplotype_hashes = init_kmer_hash_table<KMER_SIZE>();
+    auto haplotype_hashes = init_kmer_hash_table<MAPPER_KMER_SIZE>();
     
     const auto max_mapping_positions = sequence_size(*std::max_element(std::cbegin(haplotypes),
                                                                        std::cend(haplotypes),
@@ -78,7 +85,7 @@ void HaplotypeLikelihoodCache::populate(const ReadMap& reads,
     const auto first_mapping_position = std::begin(mapping_positions_);
     
     for (const auto& haplotype : haplotypes) {
-        populate_kmer_hash_table<KMER_SIZE>(haplotype.get_sequence(), haplotype_hashes);
+        populate_kmer_hash_table<MAPPER_KMER_SIZE>(haplotype.get_sequence(), haplotype_hashes);
         
         auto haplotype_mapping_counts = init_mapping_counts(haplotype_hashes);
         
@@ -115,11 +122,25 @@ void HaplotypeLikelihoodCache::populate(const ReadMap& reads,
     read_iterators_.clear();
 }
 
-const HaplotypeLikelihoodCache::ReadProbabilities&
+const HaplotypeLikelihoodCache::Likelihoods&
 HaplotypeLikelihoodCache::log_likelihoods(const SampleIdType& sample,
                                           const Haplotype& haplotype) const
 {
     return cache_.at(haplotype)[sample_indices_.at(sample)];
+}
+
+HaplotypeLikelihoodCache::SampleLikelihoodMap
+HaplotypeLikelihoodCache::extract_sample(const SampleIdType& sample) const
+{
+    const auto sample_index = sample_indices_.at(sample);
+    
+    SampleLikelihoodMap result {cache_.size()};
+    
+    for (const auto& p : cache_) {
+        result.emplace(std::cref(p.first), std::cref(p.second[sample_index]));
+    }
+    
+    return result;
 }
 
 void HaplotypeLikelihoodCache::clear()

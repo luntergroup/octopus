@@ -956,20 +956,12 @@ namespace Octopus
                 log << "\t" << path.string();
             }
         }
-        
-        void log_nonexistent_paths(const std::vector<fs::path>& paths)
-        {
-            Logging::ErrorLogger log {};
-            
-            log << "Paths could not be resolved:";
-            for (const auto& path : paths) {
-                stream(log) << "\t" << path.string();
-            }
-        }
     } // namespace
     
     boost::optional<std::vector<fs::path>> get_read_paths(const po::variables_map& options)
     {
+        // TODO: Improve logging
+        
         Logging::ErrorLogger log {};
         
         std::vector<fs::path> result {};

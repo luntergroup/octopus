@@ -54,7 +54,6 @@ namespace Octopus
                                                      CallerParameters specific_parameters)
     :
     VariantCaller {reference, read_pipe, std::move(candidate_generator), std::move(general_parameters)},
-    genotype_model_ {specific_parameters.ploidy},
     sample_ {read_pipe.get_samples().front()},
     ploidy_ {specific_parameters.ploidy},
     min_variant_posterior_ {specific_parameters.min_variant_posterior},
@@ -63,19 +62,24 @@ namespace Octopus
     
     // IndividualVariantCaller::Latents public methods
     
-    IndividualVariantCaller::Latents::Latents(const std::vector<Haplotype>& haplotypes,
+    IndividualVariantCaller::Latents::Latents(const SampleIdType& sample,
+                                              const std::vector<Haplotype>& haplotypes,
+                                              std::vector<Genotype<Haplotype>>&& genotypes,
                                               ModelLatents&& latents)
     :
-    haplotype_posteriors_
+    haplotype_posteriors_ {},
+    genotype_posteriors_ {}
     {
-        std::make_shared<HaplotypeProbabilityMap>(calculate_haplotype_posteriors(haplotypes,
-                                                                                 latents))
-    },
-    genotype_posteriors_
-    {
-        std::make_shared<GenotypeProbabilityMap>(std::move(latents.genotype_posteriors))
+        GenotypeProbabilityMap genotype_posteriors {
+            std::make_move_iterator(std::begin(genotypes)),
+            std::make_move_iterator(std::end(genotypes))
+        };
+        
+        insert_sample(sample, latents.genotype_posteriors, genotype_posteriors);
+        
+        genotype_posteriors_  = std::make_shared<GenotypeProbabilityMap>(std::move(genotype_posteriors));
+        haplotype_posteriors_ = std::make_shared<HaplotypeProbabilityMap>(calculate_haplotype_posteriors(haplotypes));
     }
-    {}
     
     std::shared_ptr<IndividualVariantCaller::Latents::HaplotypeProbabilityMap>
     IndividualVariantCaller::Latents::get_haplotype_posteriors() const noexcept
@@ -92,8 +96,7 @@ namespace Octopus
     // IndividualVariantCaller::Latents private methods
     
     IndividualVariantCaller::Latents::HaplotypeProbabilityMap
-    IndividualVariantCaller::Latents::calculate_haplotype_posteriors(const std::vector<Haplotype>& haplotypes,
-                                                                     const ModelLatents& latents)
+    IndividualVariantCaller::Latents::calculate_haplotype_posteriors(const std::vector<Haplotype>& haplotypes)
     {
         HaplotypeProbabilityMap result {haplotypes.size()};
         
@@ -101,7 +104,7 @@ namespace Octopus
             result.emplace(std::cref(haplotype), 0.0);
         }
         
-        for (const auto& p : std::cbegin(latents.genotype_posteriors)->second) {
+        for (const auto& p : std::cbegin(*genotype_posteriors_)->second) {
             for (const auto& haplotype : p.first.copy_unique_ref()) {
                 result.at(haplotype) += p.second;
             }
@@ -114,23 +117,25 @@ namespace Octopus
     IndividualVariantCaller::infer_latents(const std::vector<Haplotype>& haplotypes,
                                            const HaplotypeLikelihoodCache& haplotype_likelihoods) const
     {
-        GenotypeModel::Individual model {ploidy_};
-        
         Haplotype reference_haplotype {mapped_region(haplotypes.front()), reference_};
         
-        CoalescentModel coalescent {reference_haplotype};
+        GenotypeModel::Individual model {ploidy_, CoalescentModel {std::move(reference_haplotype)}};
         
-        auto inferred_latents = model.infer_latents(samples_.front(), haplotypes, coalescent,
-                                                    haplotype_likelihoods);
+        auto genotypes = generate_all_genotypes(haplotypes, ploidy_);
         
-        return std::make_unique<Latents>(haplotypes, std::move(inferred_latents));
+        const auto& sample = samples_.front();
+        
+        auto inferred_latents = model.infer_latents(sample, genotypes, haplotype_likelihoods);
+        
+        return std::make_unique<Latents>(sample, haplotypes, std::move(genotypes),
+                                         std::move(inferred_latents));
     }
     
     namespace
     {
     using GM = GenotypeModel::Individual;
     
-    using GenotypeProbabilityMap = GM::Latents::GenotypeProbabilityMap::InnerMap;
+    using GenotypeProbabilityMap = ProbabilityMatrix<Genotype<Haplotype>>::InnerMap;
     
     struct GenotypeCall
     {

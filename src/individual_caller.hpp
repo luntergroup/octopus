@@ -66,7 +66,10 @@ private:
         
         friend IndividualVariantCaller;
         
-        explicit Latents(const std::vector<Haplotype>&, ModelLatents&&);
+        explicit Latents(const SampleIdType& sample,
+                         const std::vector<Haplotype>&,
+                         std::vector<Genotype<Haplotype>>&& genotypes,
+                         ModelLatents&&);
         
         std::shared_ptr<HaplotypeProbabilityMap> get_haplotype_posteriors() const noexcept override;
         std::shared_ptr<GenotypeProbabilityMap> get_genotype_posteriors() const noexcept override;
@@ -76,8 +79,7 @@ private:
         std::shared_ptr<GenotypeProbabilityMap> genotype_posteriors_;
         
         HaplotypeProbabilityMap
-        calculate_haplotype_posteriors(const std::vector<Haplotype>& haplotypes,
-                                       const ModelLatents& latents);
+        calculate_haplotype_posteriors(const std::vector<Haplotype>& haplotypes);
     };
     
     SampleIdType sample_;
@@ -85,8 +87,6 @@ private:
     double min_variant_posterior_;
     double min_refcall_posterior_;
     unsigned ploidy_;
-    
-    GenotypeModel::Individual genotype_model_;
     
     std::unique_ptr<CallerLatents>
     infer_latents(const std::vector<Haplotype>& haplotypes,

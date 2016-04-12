@@ -25,9 +25,12 @@ namespace Octopus
     class HaplotypeLikelihoodCache
     {
     public:
-        using ReadProbabilities = std::vector<double>;
+        using Likelihoods          = std::vector<double>;
+        using LikelihoodsReference = std::reference_wrapper<const Likelihoods>;
+        using HaplotypeReference   = std::reference_wrapper<const Haplotype>;
+        using SampleLikelihoodMap  = std::unordered_map<HaplotypeReference, LikelihoodsReference>;
         
-        HaplotypeLikelihoodCache()  = default;
+        HaplotypeLikelihoodCache() = default;
         
         explicit HaplotypeLikelihoodCache(unsigned max_haplotypes,
                                           const std::vector<SampleIdType>& samples);
@@ -42,40 +45,32 @@ namespace Octopus
         void populate(const ReadMap& reads, const std::vector<Haplotype>& haplotypes,
                       HaplotypeLikelihoodModel::FlankState flank_state);
         
-        const ReadProbabilities& log_likelihoods(const SampleIdType& sample,
-                                                 const Haplotype& haplotype) const;
+        const Likelihoods& log_likelihoods(const SampleIdType& sample,
+                                           const Haplotype& haplotype) const;
         
-        template <typename Container>
-        void erase(const Container& haplotypes);
+        SampleLikelihoodMap extract_sample(const SampleIdType& sample) const;
+        
+        template <typename Container> void erase(const Container& haplotypes);
         
         void clear();
         
     private:
-        static constexpr unsigned char KMER_SIZE {5};
+        static constexpr unsigned char MAPPER_KMER_SIZE {5};
         
         struct ReadPacket
         {
             using Iterator = ReadMap::mapped_type::const_iterator;
-            
-            ReadPacket(Iterator first, Iterator last)
-            : first {first},
-            last {last},
-            num_reads {static_cast<std::size_t>(std::distance(first, last))}
-            {}
-            
+            explicit ReadPacket(Iterator first, Iterator last);
             Iterator first, last;
             std::size_t num_reads;
         };
         
-        std::vector<ReadPacket> read_iterators_;
-        
-        std::vector<std::size_t> mapping_positions_;
-        
-        using Cache = std::unordered_map<Haplotype, std::vector<std::vector<double>>>;
-        
-        Cache cache_;
-        
+        std::unordered_map<Haplotype, std::vector<std::vector<double>>> cache_;
         std::unordered_map<SampleIdType, std::size_t> sample_indices_;
+        
+        // Just to optimise population
+        std::vector<ReadPacket> read_iterators_;
+        std::vector<std::size_t> mapping_positions_;
         
         void set_read_iterators_and_sample_indices(const ReadMap& reads);
     };

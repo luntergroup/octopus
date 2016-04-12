@@ -102,15 +102,6 @@ namespace Octopus
                                         haplotype_likelihoods, vb_params);
     }
     
-    Cancer::Latents
-    Cancer::infer_latents(const std::vector<Haplotype>& haplotypes,
-                          const HaplotypeLikelihoodCache& haplotype_likelihoods) const
-    {
-        auto genotypes = generate_all_cancer_genotypes(haplotypes, ploidy_).first;
-        
-        return infer_latents(std::move(genotypes), haplotype_likelihoods);
-    }
-    
     template <typename Container>
     std::vector<double> dirichlet_mean(const Container& alphas)
     {
@@ -125,7 +116,7 @@ namespace Octopus
                                   const CancerGenotype<Haplotype>& genotype,
                                   const HaplotypeLikelihoodCache& haplotype_likelihoods)
     {
-        std::vector<std::reference_wrapper<const HaplotypeLikelihoodCache::ReadProbabilities>> result {};
+        std::vector<std::reference_wrapper<const HaplotypeLikelihoodCache::Likelihoods>> result {};
         result.reserve(genotype.ploidy() + 1);
         
         for (const auto& haplotype : genotype.get_germline_genotype()) {
@@ -199,7 +190,7 @@ namespace Octopus
     class ReadLikelihoods
     {
     public:
-        using BaseType = HaplotypeLikelihoodCache::ReadProbabilities;
+        using BaseType = HaplotypeLikelihoodCache::Likelihoods;
         
         ReadLikelihoods() = default;
         explicit ReadLikelihoods(const BaseType&);
@@ -430,36 +421,6 @@ namespace Octopus
     }
     
     template <std::size_t K>
-    std::vector<std::size_t>
-    count_reads_per_sample(const CompressedReadLikelihoods<K>& read_likelihoods)
-    {
-        std::vector<std::size_t> result(read_likelihoods.size());
-        
-        std::transform(std::cbegin(read_likelihoods), std::cend(read_likelihoods),
-                       std::begin(result), [] (const auto& s) { return s[0][0].size(); });
-        
-        return result;
-    }
-    
-    template <std::size_t K>
-    ResponsabilityVectors<K>
-    init_responsabilities(const std::size_t num_samples, const std::vector<std::size_t>& num_reads_per_sample)
-    {
-        ResponsabilityVectors<K> result {};
-        result.reserve(num_samples);
-        
-        Tau<K> uniform_tau {};
-        std::fill_n(std::begin(uniform_tau), K, 1.0 / K);
-        
-        std::transform(std::cbegin(num_reads_per_sample), std::cend(num_reads_per_sample),
-                       std::back_inserter(result), [&uniform_tau] (const auto n) {
-                           return ResponsabilityVector<K>(n, uniform_tau);
-                       });
-        
-        return result;
-    }
-    
-    template <std::size_t K>
     ResponsabilityVectors<K>
     init_responsabilities(const CompressedAlphas<K>& prior_alphas,
                           const ProbabilityVector& genotype_pobabilities,
@@ -591,27 +552,27 @@ namespace Octopus
             assert(read_likelihoods[s][g].size() == K);
             
             for (unsigned k {0}; k < K; ++k) {
-                double curr {0};
+                //double curr {0}; // DEBUG
                 
                 for (std::size_t n {0}; n < N; ++n) {
-                    if (TRACE_MODE) {
-                        Logging::TraceLogger log {};
-                        if (g == 4 || g == 11) {
-                            stream(log) << "s: " << s << " n: " << n << " k: " << k << " : "
-                                    << responsabilities[s][n][k] << " * " << read_likelihoods[s][g][k][n]
-                                    << " = "<< responsabilities[s][n][k] * read_likelihoods[s][g][k][n];
-                        }
-                    }
-                    curr += responsabilities[s][n][k] * read_likelihoods[s][g][k][n];
+//                    if (TRACE_MODE) {
+//                        Logging::TraceLogger log {};
+//                        if (g == 4 || g == 11) {
+//                            stream(log) << "s: " << s << " n: " << n << " k: " << k << " : "
+//                                    << responsabilities[s][n][k] << " * " << read_likelihoods[s][g][k][n]
+//                                    << " = "<< responsabilities[s][n][k] * read_likelihoods[s][g][k][n];
+//                        }
+//                    }
+//                    curr += responsabilities[s][n][k] * read_likelihoods[s][g][k][n];
                     result += responsabilities[s][n][k] * read_likelihoods[s][g][k][n];
                 }
                 
-                if (TRACE_MODE) {
-                    Logging::TraceLogger log {};
-                    if (g == 4 || g == 11) {
-                        stream(log) << k << " total = " << curr;
-                    }
-                }
+//                if (TRACE_MODE) {
+//                    Logging::TraceLogger log {};
+//                    if (g == 4 || g == 11) {
+//                        stream(log) << k << " total = " << curr;
+//                    }
+//                }
             }
         }
         
@@ -625,21 +586,21 @@ namespace Octopus
                                         const CompressedReadLikelihoods<K>& read_likelihoods)
     {
         for (std::size_t g {0}; g < result.size(); ++g) {
-            if (TRACE_MODE) {
-                Logging::TraceLogger log {};
-                if (g == 4 || g == 11) {
-                    stream(log) << "g = " << g;
-                }
-            }
+//            if (TRACE_MODE) {
+//                Logging::TraceLogger log {};
+//                if (g == 4 || g == 11) {
+//                    stream(log) << "g = " << g;
+//                }
+//            }
             
             result[g] = genotype_log_priors[g] + marginalise(responsabilities, read_likelihoods, g);
             
-            if (TRACE_MODE) {
-                Logging::TraceLogger log {};
-                if (g == 4 || g == 11) {
-                    stream(log) << "result " << result[g];
-                }
-            }
+//            if (TRACE_MODE) {
+//                Logging::TraceLogger log {};
+//                if (g == 4 || g == 11) {
+//                    stream(log) << "result " << result[g];
+//                }
+//            }
         }
         normalise_logs(result);
     }
@@ -692,8 +653,10 @@ namespace Octopus
         const auto new_max_change = max_change(prior_alphas, posterior_alphas);
         return std::make_pair(std::abs(new_max_change - prev_max_change) < epsilon, new_max_change);
     }
+        
+    // Main algorithm - single seed
     
-    // The main algorithms
+    // Starting iteration with given genotype_log_posteriors
     template <std::size_t K>
     CompressedLatents<K>
     run_variational_bayes(const CompressedAlphas<K>& prior_alphas,
@@ -712,9 +675,6 @@ namespace Octopus
         auto genotype_posteriors = exp(genotype_log_posteriors);
         
         auto posterior_alphas = prior_alphas;
-        
-//        auto responsabilities = init_responsabilities<K>(log_likelihoods.size(),
-//                                                         count_reads_per_sample(log_likelihoods));
         
         auto responsabilities = init_responsabilities<K>(posterior_alphas, genotype_posteriors,
                                                          log_likelihoods);
@@ -755,91 +715,99 @@ namespace Octopus
         return {std::move(genotype_posteriors), std::move(posterior_alphas)};
     }
     
-        template <std::size_t K>
-        CompressedLatents<K>
-        run_variational_bayes(const CompressedAlphas<K>& prior_alphas,
-                              const LogProbabilityVector& genotype_log_priors,
-                              const CompressedReadLikelihoods<K>& log_likelihoods,
-                              ResponsabilityVectors<K> responsabilities,
-                              const VariationalBayesParameters params)
-        {
-            assert(!prior_alphas.empty());
-            assert(!genotype_log_priors.empty());
-            assert(!log_likelihoods.empty());
-            assert(prior_alphas.size() == log_likelihoods.size()); // num samples
-            assert(log_likelihoods.front().size() == genotype_log_priors.size()); // num genotypes
-            assert(params.max_iterations > 0);
-            
-            auto genotype_log_posteriors = genotype_log_priors;
-            auto genotype_posteriors     = exp(genotype_log_posteriors);
-            
-            auto posterior_alphas = prior_alphas;
-            
-            assert(responsabilities.size() == log_likelihoods.size()); // num samples
-            assert(!responsabilities.front().empty());
-            
-            bool is_converged {false};
-            double max_change {0};
-            
-            // main loop
-            for (unsigned i {0}; i < params.max_iterations; ++i) {
-                if (TRACE_MODE) {
-                    Logging::TraceLogger log {};
-                    stream(log) << "VB Iteration " << i;
-                }
-                //std::cout << "VB Iteration " << i << '\n';
-                
-                update_genotype_log_posteriors(genotype_log_posteriors, genotype_log_priors,
-                                               responsabilities, log_likelihoods);
-                
-                exp(genotype_posteriors, genotype_log_posteriors);
-                
-                update_alphas(posterior_alphas, prior_alphas, responsabilities);
-                
-                update_responsabilities(responsabilities, posterior_alphas, genotype_posteriors,
-                                        log_likelihoods);
-                
-                std::tie(is_converged, max_change) = check_convergence(prior_alphas, posterior_alphas,
-                                                                       max_change, params.epsilon);
-                
-                //std::cout << "max change = " << max_change << std::endl;
-                if (is_converged) {
-                    break;
-                }
-            }
-            
-            return {std::move(genotype_posteriors), std::move(posterior_alphas)};
-        }
-        
+    // Initilisation helpers
+    
     LogProbabilityVector log_uniform_dist(const std::size_t n)
     {
         return LogProbabilityVector(n, -std::log(static_cast<double>(n)));
     }
     
+    // Evidence calculation
+    
     template <std::size_t K>
-    auto log_likelihood(const std::size_t g,
-                        const std::vector<std::array<double, K>>& pis,
-                        const CompressedAlphas<K>& alphas,
-                        const LogProbabilityVector& genotype_log_probabilities,
-                        const CompressedReadLikelihoods<K>& log_likelihoods)
+    auto expectation(const CompressedAlpha<K>& alpha)
     {
-        auto result = genotype_log_probabilities[g];
+        const auto a0 = sum(alpha);
+        std::array<double, K> result;
+        std::transform(std::cbegin(alpha), std::cend(alpha), std::begin(result),
+                       [a0] (const auto a) { return a / a0; });
+        return result;
+    }
+    
+    template <std::size_t K>
+    auto log_marginal(const CompressedGenotype<K>& log_likelihoods,
+                      const CompressedAlpha<K>& alpha,
+                      std::array<double, K> pi,
+                      const std::size_t n)
+    {
+        for (auto& p : pi) p = std::log(p);
         
-        for (std::size_t s {0}; s < log_likelihoods.size(); ++s) {
-            result += Maths::log_dirichlet(alphas[s], pis[s]);
-            
-            const auto N = log_likelihoods[s][0][0].size();
-            for (std::size_t n {0}; n < N; ++n) {
-                double tmp {0};
-                for (unsigned k {0}; k < K; ++k) {
-                    tmp += pis[s][k] * std::exp(log_likelihoods[s][g][k][n]);
-                }
-                result += std::log(tmp);
-            }
+        for (unsigned k {0}; k < K; ++k) {
+            pi[k] += log_likelihoods[k][n];
+        }
+        
+        return Maths::log_sum_exp(pi);
+    }
+    
+    template <std::size_t K>
+    auto log_marginal(const CompressedGenotype<K>& log_likelihoods,
+                      const CompressedAlpha<K>& alpha,
+                      std::array<double, K> pi)
+    {
+        auto result = Maths::log_dirichlet(std::cbegin(alpha), std::cend(alpha), std::cbegin(pi));
+        
+        const auto N = log_likelihoods[0].size();
+        
+        for (std::size_t n {0}; n < N; ++n) {
+            result += log_marginal(log_likelihoods, alpha, pi, n);
         }
         
         return result;
     }
+    
+    template <std::size_t K>
+    double approx_log_marginal(const CompressedGenotype<K>& log_likelihoods,
+                               const CompressedAlpha<K>& alpha)
+    {
+        const auto pi = expectation(alpha);
+        return log_marginal(log_likelihoods, alpha, pi);
+    }
+    
+    template <std::size_t K>
+    double log_marginal(const CompressedReadLikelihoods<K>& log_likelihoods,
+                        const CompressedAlphas<K>& alphas,
+                        const std::size_t g)
+    {
+        double result {0};
+        
+        const auto S = alphas.size();
+        
+        for (std::size_t s {0}; s < S; ++s) {
+            result += approx_log_marginal(log_likelihoods[s][g], alphas[s]);
+        }
+        
+        return result;
+    }
+    
+    template <std::size_t K>
+    auto approx_log_evidence(const CompressedReadLikelihoods<K>& log_likelihoods,
+                             const CompressedLatents<K>& latents)
+    {
+        const auto& genotype_posteriors = latents.genotype_posteriors;
+        const auto& alphas = latents.alphas;
+        
+        const auto G = genotype_posteriors.size();
+        
+        std::vector<double> log_jcs(G);
+        
+        for (std::size_t g {0}; g < G; ++g) {
+            log_jcs[g] = std::log(genotype_posteriors[g]) + log_marginal(log_likelihoods, alphas, g);
+        }
+        
+        return Maths::log_sum_exp(log_jcs);
+    }
+    
+    // Main algorithm - multiple seeds
     
     template <std::size_t K>
     CompressedLatents<K>
@@ -850,25 +818,37 @@ namespace Octopus
     {
         // Try the main algorithm from different seeds to check local optimum
         
+        std::array<CompressedLatents<K>, 2> results;
+        
         // seeds from genotype distribution
-        auto result1 = run_variational_bayes(prior_alphas, genotype_log_priors,
-                                            log_likelihoods, genotype_log_priors,
-                                            params);
+        results[0] = run_variational_bayes(prior_alphas, genotype_log_priors,
+                                           log_likelihoods,
+                                           genotype_log_priors,
+                                           params);
         
-        auto result2 = run_variational_bayes(prior_alphas, genotype_log_priors,
-                                             log_likelihoods,
-                                             log_uniform_dist(genotype_log_priors.size()),
-                                             params);
+        results[1] = run_variational_bayes(prior_alphas, genotype_log_priors,
+                                           log_likelihoods,
+                                           log_uniform_dist(genotype_log_priors.size()),
+                                           params);
         
-        // seeds from responsabilities
-        auto result3 = run_variational_bayes(prior_alphas, genotype_log_priors,
-                                             log_likelihoods,
-                                             init_responsabilities<K>(log_likelihoods.size(),
-                                                                      count_reads_per_sample(log_likelihoods)),
-                                             params);
+        std::array<double, results.size()> result_evidences;
         
-        return result1;
+        std::transform(std::cbegin(results), std::cend(results), std::begin(result_evidences),
+                       [&log_likelihoods] (const auto& latents) {
+                           return approx_log_evidence(log_likelihoods, latents);
+                       });
+        
+        std::cout << result_evidences[0] << std::endl;
+        std::cout << result_evidences[1] << std::endl;
+        
+        const auto it = std::max_element(std::cbegin(result_evidences), std::cend(result_evidences));
+        
+        const auto idx = std::distance(std::cbegin(result_evidences), it);
+        
+        return results[idx];
     }
+    
+    // Helpers
     
     Cancer::Latents::GenotypeProbabilityMap
     expand(std::vector<CancerGenotype<Haplotype>>&& genotypes,
@@ -919,6 +899,8 @@ namespace Octopus
             expand(samples, std::move(inferred_latents.alphas))
         };
     }
+        
+    // Main entry point
     
     template <std::size_t K>
     Cancer::Latents
@@ -952,6 +934,8 @@ namespace Octopus
         
         return expand(samples, std::move(genotypes), std::move(inferred_latents));
     }
+    
+    // Previously declared helpers
     
     VariationalBayesParameters::VariationalBayesParameters(const double epsilon,
                                                            const unsigned max_iterations)
