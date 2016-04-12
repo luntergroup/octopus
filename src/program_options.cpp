@@ -512,38 +512,30 @@ namespace Octopus
         return result;
     }
     
-    struct ResolvedPaths
+    auto resolve_paths(const std::vector<fs::path>& paths, const po::variables_map& options)
     {
-        ResolvedPaths() = default;
-        std::vector<fs::path> good_paths, bad_paths;
-        bool has_good() const noexcept { return !good_paths.empty(); }
-        bool has_bad() const noexcept { return !bad_paths.empty(); }
-    };
-    
-    ResolvedPaths resolve_paths(const std::vector<fs::path>& paths, const po::variables_map& options)
-    {
-        ResolvedPaths result {};
+        std::vector<fs::path> good_paths {}, bad_paths {};
         
-        result.good_paths.reserve(paths.size());
+        good_paths.reserve(paths.size());
         
         for (const auto& path : paths) {
             auto resolved_path = resolve_path(path, options);
             
             if (resolved_path) {
-                result.good_paths.emplace_back(*std::move(resolved_path));
+                good_paths.emplace_back(*std::move(resolved_path));
             } else {
-                result.bad_paths.emplace_back(*std::move(resolved_path));
+                bad_paths.emplace_back(*std::move(resolved_path));
             }
         }
         
-        result.good_paths.shrink_to_fit();
-        result.bad_paths.shrink_to_fit();
+        good_paths.shrink_to_fit();
+        bad_paths.shrink_to_fit();
         
-        return result;
+        return std::make_pair(std::move(good_paths), std::move(bad_paths));
     }
     
-    ResolvedPaths resolve_paths(const std::vector<std::string>& path_strings,
-                                const po::variables_map& options)
+    auto resolve_paths(const std::vector<std::string>& path_strings,
+                           const po::variables_map& options)
     {
         std::vector<fs::path> paths {std::cbegin(path_strings), std::cend(path_strings)};
         return resolve_paths(paths, options);
@@ -931,77 +923,87 @@ namespace Octopus
     
     namespace
     {
-        bool all_paths_exist(const std::vector<fs::path>& paths)
+        void log_unresolved_read_paths(const std::vector<fs::path>& paths,
+                                       const std::string& option)
         {
-            return std::all_of(std::cbegin(paths), std::cend(paths),
-                               [] (const auto& path) {
-                                   return fs::exists(path);
-                               });
-        }
-        
-        bool all_paths_readable(const std::vector<fs::path>& paths)
-        {
-            return std::all_of(std::cbegin(paths), std::cend(paths),
-                               [] (const auto& path) {
-                                   return is_file_readable(path);
-                               });
-        }
-        
-        void log_unresolved_paths(const std::vector<fs::path>& paths)
-        {
-            Logging::ErrorLogger log {};
-            
-            log << "Paths could not be resolved:";
+            Logging::WarningLogger log {};
             for (const auto& path : paths) {
-                log << "\t" << path.string();
+                stream(log) << "Could not resolve the path " << path
+                << " given in the input option (--" + option +")";
             }
+        }
+        
+        auto parition_existent_paths(std::vector<fs::path>& paths)
+        {
+            return std::partition(std::begin(paths), std::end(paths),
+                                  [] (const auto& path) { return fs::exists(path); });
+        }
+        
+        template <typename InputIt>
+        void log_nonexistent_read_paths(InputIt first, InputIt last, const std::string& option)
+        {
+            Logging::WarningLogger log {};
+            std::for_each(first, last, [&option, &log] (const auto& path) {
+                stream(log) << "The path " << path
+                << " given in the input option (--" + option + ") does not exist";
+            });
+        }
+        
+        auto parition_readable_paths(std::vector<fs::path>& paths)
+        {
+            return std::partition(std::begin(paths), std::end(paths),
+                                  [] (const auto& path) { return is_file_readable(path); });
+        }
+        
+        template <typename InputIt>
+        void log_unreadable_read_paths(InputIt first, InputIt last, const std::string& option)
+        {
+            Logging::WarningLogger log {};
+            std::for_each(first, last, [&option, &log] (const auto& path) {
+                stream(log) << "The path " << path
+                            << " given in the input option (--" + option + ") is not readable";
+            });
         }
     } // namespace
     
     boost::optional<std::vector<fs::path>> get_read_paths(const po::variables_map& options)
     {
-        // TODO: Improve logging
-        
         Logging::ErrorLogger log {};
         
         std::vector<fs::path> result {};
         
+        bool all_good {true};
+        
+        std::vector<fs::path> resolved_paths {}, unresolved_paths {};
+        
         if (options.count("reads") == 1) {
             const auto& read_paths = options.at("reads").as<std::vector<std::string>>();
             
-            auto resolved_paths = resolve_paths(read_paths, options);
+            std::tie(resolved_paths, unresolved_paths) = resolve_paths(read_paths, options);
             
-            if (!resolved_paths.bad_paths.empty()) {
-                if (resolved_paths.good_paths.size() == 1) {
-                    stream(log) << "Could not resolve the path " << resolved_paths.bad_paths.front()
-                        << " given in the input option (--reads)";
-                } else {
-                    
-                }
-                return boost::none;
+            if (!resolved_paths.empty()) {
+                log_unresolved_read_paths(unresolved_paths, "reads");
+                all_good = false;
+            } else {
+                
             }
             
-            if (!all_paths_exist(resolved_paths.good_paths)) {
-                if (resolved_paths.good_paths.size() == 1) {
-                    stream(log) << "The path " << resolved_paths.good_paths.front()
-                        << " given in the input option (--reads) does not exist";
-                } else {
-                    // TODO
-                }
-                return boost::none;
+            auto it = parition_existent_paths(resolved_paths);
+            
+            if (it != std::end(resolved_paths)) {
+                log_nonexistent_read_paths(it, std::end(resolved_paths), "reads");
+                all_good = false;
+                resolved_paths.erase(it, std::end(resolved_paths));
             }
             
-            if (!all_paths_readable(resolved_paths.good_paths)) {
-                if (resolved_paths.good_paths.size() == 1) {
-                    stream(log) << "The path " << resolved_paths.good_paths.front()
-                        << " given in the input option (--reads) is not readable";
-                } else {
-                    // TODO
-                }
-                return boost::none;
+            it = parition_readable_paths(resolved_paths);
+            
+            if (it != std::end(resolved_paths)) {
+                log_unreadable_read_paths(it, std::end(resolved_paths), "reads");
+                all_good = false;
             }
             
-            append(result, std::move(resolved_paths.good_paths));
+            append(result, std::move(resolved_paths));
         }
         
         if (options.count("reads-file") == 1) {
@@ -1029,27 +1031,54 @@ namespace Octopus
             
             auto paths = extract_paths_from_file(*resolved_path, options);
             
-            auto resolved_paths = resolve_paths(paths, options);
+            std::tie(resolved_paths, unresolved_paths) = resolve_paths(paths, options);
             
-            if (!resolved_paths.bad_paths.empty()) {
-                log_unresolved_paths(resolved_paths.bad_paths);
-                return boost::none;
+            if (!resolved_paths.empty()) {
+                log_unresolved_read_paths(unresolved_paths, "reads-file");
+                all_good = false;
+            } else {
+                
             }
             
-            if (!all_paths_exist(resolved_paths.good_paths)) {
-                // TODO
+            auto it = parition_existent_paths(resolved_paths);
+            
+            if (it != std::end(resolved_paths)) {
+                log_nonexistent_read_paths(it, std::end(resolved_paths), "reads-file");
+                all_good = false;
+                resolved_paths.erase(it, std::end(resolved_paths));
             }
             
-            if (!all_paths_readable(resolved_paths.good_paths)) {
-                // TODO
+            it = parition_readable_paths(resolved_paths);
+            
+            if (it != std::end(resolved_paths)) {
+                log_unreadable_read_paths(it, std::end(resolved_paths), "reads-file");
+                all_good = false;
             }
             
-            append(result, std::move(resolved_paths.good_paths));
+            append(result, std::move(resolved_paths));
         }
         
         std::sort(std::begin(result), std::end(result));
         
-        result.erase(std::unique(std::begin(result), std::end(result)), std::end(result));
+        const auto it = std::unique(std::begin(result), std::end(result));
+                         
+        const auto num_duplicates = std::distance(it, std::end(result));
+        
+        if (num_duplicates > 0) {
+            Logging::WarningLogger log {};
+            stream(log) << "There are " << num_duplicates
+                        << " duplicate read paths, only unique paths will be considered";
+        }
+        
+        result.erase(it, std::end(result));
+        
+        if (!all_good && result.size() > 0) {
+            Logging::WarningLogger log {};
+            auto slog = stream(log);
+            slog << "There are bad read paths so dumping " << result.size() << " good path";
+            if (result.size() > 1) slog << "s";
+            result.clear();
+        }
         
         return result;
     }

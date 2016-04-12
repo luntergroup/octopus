@@ -293,6 +293,11 @@ CancerVariantCaller::infer_latents(const std::vector<Haplotype>& haplotypes,
     GM::Priors::GenotypeMixturesDirichletAlphaMap alphas {};
     alphas.reserve(samples_.size());
     
+    auto a = Maths::dirichlet_mle(std::vector<double> {0.4999, 0.4999, 0.0002}, 10.0);
+    
+    std::cout << a[0] << " " << a[1] << " " << a[2] << std::endl;
+    exit(0);
+    
     for (const auto& sample : samples_) {
         if (sample == parameters_.normal_sample) {
             GM::Priors::GenotypeMixturesDirichletAlphas sample_alphas {1.0, 1.0, 0.05};
