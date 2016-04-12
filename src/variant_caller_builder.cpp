@@ -130,6 +130,12 @@ namespace Octopus
         return *this;
     }
     
+    VariantCallerBuilder& VariantCallerBuilder::set_somatic_mutation_rate(double somatic_mutation_rate)
+    {
+        parameters_.somatic_mutation_rate = somatic_mutation_rate;
+        return *this;
+    }
+    
     VariantCallerBuilder& VariantCallerBuilder::set_min_somatic_posterior(const double min_posterior) noexcept
     {
         parameters_.min_somatic_posterior = min_posterior;
@@ -227,7 +233,8 @@ namespace Octopus
                                                                  parameters_.min_somatic_posterior,
                                                                  parameters_.min_refcall_posterior,
                                                                  parameters_.ploidy,
-                                                                 parameters_.normal_sample.get(),
+                                                                 parameters_.normal_sample,
+                                                                 parameters_.somatic_mutation_rate,
                                                                  parameters_.call_somatics_only
                                                              });
             }}

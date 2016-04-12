@@ -51,18 +51,6 @@ namespace GenotypeModel
         double log_likelihood_tetraploid(const SampleIdType& sample, const Genotype<Haplotype>& genotype) const;
         double log_likelihood_polyploid(const SampleIdType& sample, const Genotype<Haplotype>& genotype) const;
     };
-    
-    namespace debug
-    {
-//        void print_genotype_log_likelihoods(const std::vector<Genotype<Haplotype>>& genotypes,
-//                                            const FixedPloidyGenotypeLikelihoodModel& read_model,
-//                                            size_t n = 5);
-//        
-//        void print_read_genotype_liklihoods(const std::vector<Genotype<Haplotype>>& genotypes,
-//                                            const ReadMap& reads,
-//                                            const FixedPloidyGenotypeLikelihoodModel& read_model,
-//                                            size_t n = 3);
-    } // namespace debug
 } // namespace GenotypeModel
 } // namespace Octopus
 

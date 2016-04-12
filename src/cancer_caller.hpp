@@ -13,6 +13,8 @@
 #include <unordered_map>
 #include <memory>
 
+#include <boost/optional.hpp>
+
 #include "common.hpp"
 #include "variant_caller.hpp"
 #include "cancer_genotype_model.hpp"
@@ -32,14 +34,16 @@ public:
         CallerParameters() = default;
         explicit CallerParameters(double min_variant_posterior, double min_somatic_posterior,
                                   double min_refcall_posterior, unsigned ploidy,
-                                  SampleIdType normal_sample, bool call_somatics_only);
+                                  boost::optional<SampleIdType> normal_sample,
+                                  double somatic_mutation_rate, bool call_somatics_only);
         ~CallerParameters() = default;
         
         double min_variant_posterior;
         double min_somatic_posterior;
         double min_refcall_posterior;
         unsigned ploidy;
-        SampleIdType normal_sample;
+        boost::optional<SampleIdType> normal_sample;
+        double somatic_mutation_rate;
         bool call_somatics_only;
     };
     

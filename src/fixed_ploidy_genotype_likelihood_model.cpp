@@ -205,45 +205,5 @@ namespace GenotypeModel
         
         return result;
     }
-    
-    // non-member methods
-    
-    namespace debug
-    {
-//        void print_read_genotype_liklihoods(const std::vector<Genotype<Haplotype>>& genotypes,
-//                                            const ReadMap& reads,
-//                                            const FixedPloidyGenotypeLikelihoodModel& read_model,
-//                                            const size_t n)
-//        {
-//            auto m = std::min(n, genotypes.size());
-//            
-//            std::cout << "top " << n << " genotype likelihoods for each read in each sample" << std::endl;
-//            
-//            for (const auto& sample_reads : reads) {
-//                std::cout << "Sample: " << sample_reads.first << ":" << std::endl;
-//                for (const auto& read : sample_reads.second) {
-//                    std::cout << "\tRead: " << read.get_region() << " " << read.get_cigar_string() << ":" << std::endl;
-//                    
-//                    std::vector<std::pair<Genotype<Haplotype>, double>> top {};
-//                    top.reserve(genotypes.size());
-//                    
-//                    for (const auto& genotype : genotypes) {
-//                        top.emplace_back(genotype, read_model.log_likelihood(read, genotype));
-//                    }
-//                    
-//                    std::sort(std::begin(top), std::end(top),
-//                              [] (const auto& lhs, const auto& rhs) {
-//                                  return lhs.second > rhs.second;
-//                              });
-//                    
-//                    for (unsigned i {}; i < m; ++i) {
-//                        std::cout << "\t\t* ";
-//                        print_variant_alleles(top[i].first);
-//                        std::cout << " " << std::setprecision(10) << top[i].second << std::endl;
-//                    }
-//                }
-//            }
-//        }
-    } // namespace debug
 }
 } // namespace Octopus

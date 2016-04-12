@@ -332,6 +332,8 @@ namespace Octopus
             cancer.add_options()
             ("normal-sample", po::value<std::string>(),
              "Normal sample used in cancer model")
+            ("somatic-mutation-rate", po::value<float>()->default_value(0.00001),
+             "Expected somatic mutation rate for this sample")
             ("min-somatic-posterior", po::value<float>()->default_value(10.0),
              "Minimum somaitc mutation call posterior probability (phred scale)")
             ("somatics-only", po::bool_switch()->default_value(false),
@@ -368,10 +370,6 @@ namespace Octopus
             
             if (vm.count("reads") == 0 && vm.count("reads-file") == 0) {
                 throw po::required_option {"--reads | --reads-file"};
-            }
-            
-            if (vm.at("model").as<std::string>() == "cancer" && vm.count("normal-sample") == 0) {
-                throw std::logic_error {"option normal-sample is required when model=cancer"};
             }
             
             if (vm.at("model").as<std::string>() == "trio"
@@ -1400,7 +1398,11 @@ namespace Octopus
         vc_builder.set_max_haplotypes(options.at("max-haplotypes").as<unsigned>());
         
         if (model == "cancer") {
-            vc_builder.set_normal_sample(options.at("normal-sample").as<std::string>());
+            if (options.count("normal-sample") == 1) {
+                vc_builder.set_normal_sample(options.at("normal-sample").as<std::string>());
+            }
+            
+            vc_builder.set_somatic_mutation_rate(options.at("somatic-mutation-rate").as<float>());
             
             const auto min_somatic_posterior_phred = options.at("min-somatic-posterior").as<float>();
             vc_builder.set_min_somatic_posterior(phred_to_probability(min_somatic_posterior_phred));

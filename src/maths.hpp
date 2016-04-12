@@ -603,6 +603,32 @@ beta_hdi(RealType a, RealType b, const RealType mass = 0.99)
     
     return detail::beta_hdi_skewed(a, b, mass);
 }
+
+template <typename Container>
+void log_each(Container& values)
+{
+    for (auto& v : values) v = std::log(v);
+}
+
+template <typename Container>
+void exp_each(Container& values)
+{
+    for (auto& v : values) v = std::exp(v);
+}
+
+template <typename Container>
+void normalise_logs(Container& logs)
+{
+    const auto norm = log_sum_exp(logs);
+    for (auto& p : logs) p -= norm;
+}
+
+template <typename Container>
+void normalise_exp(Container& logs)
+{
+    const auto norm = log_sum_exp(logs);
+    for (auto& p : logs) p = std::exp(p -= norm);
+}
 } // namespace Maths
 } // namespace Octopus
 

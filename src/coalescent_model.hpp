@@ -24,6 +24,7 @@
 
 #include "haplotype.hpp"
 #include "variant.hpp"
+#include "maths.hpp"
 
 namespace Octopus
 {
@@ -111,6 +112,23 @@ namespace Octopus
             result += std::pow(-1, i) * boost::math::binomial_coefficient<double>(n - 1, i - 1)
                         * ((i - 1) / (theta + i - 1)) * std::pow(theta / (theta + i - 1), k);
         }
+        
+        return result;
+    }
+    
+    // non-member methods
+    
+    template <typename Container>
+    std::vector<double> calculate_log_priors(const Container& genotypes, const CoalescentModel& model)
+    {
+        std::vector<double> result(genotypes.size());
+        
+        std::transform(std::cbegin(genotypes), std::cend(genotypes), std::begin(result),
+                       [&model] (const auto& genotype) {
+                           return model.evaluate(genotype);
+                       });
+        
+        Maths::normalise_logs(result);
         
         return result;
     }

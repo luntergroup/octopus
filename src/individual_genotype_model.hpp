@@ -43,7 +43,7 @@ namespace Octopus
             
             Individual() = delete;
             
-            explicit Individual(unsigned ploidy, CoalescentModel genotype_prior_model);
+            explicit Individual(unsigned ploidy, const CoalescentModel& genotype_prior_model);
             
             ~Individual() = default;
             
@@ -62,7 +62,7 @@ namespace Octopus
             
         private:
             unsigned ploidy_;
-            CoalescentModel genotype_prior_model_;
+            std::reference_wrapper<const CoalescentModel> genotype_prior_model_;
         };
     } // namesapce GenotypeModel
 } // namespace Octopus

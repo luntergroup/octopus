@@ -56,6 +56,7 @@ namespace Octopus {
         
         // cancer
         VariantCallerBuilder& set_normal_sample(SampleIdType normal_sample);
+        VariantCallerBuilder& set_somatic_mutation_rate(double somatic_mutation_rate);
         VariantCallerBuilder& set_min_somatic_posterior(double min_posterior) noexcept;
         VariantCallerBuilder& set_somatic_only_calls() noexcept;
         VariantCallerBuilder& set_somatic_and_variant_calls() noexcept;
@@ -106,6 +107,7 @@ namespace Octopus {
             // cancer
             
             boost::optional<SampleIdType> normal_sample;
+            double somatic_mutation_rate;
             double min_somatic_posterior;
             bool call_somatics_only;
             

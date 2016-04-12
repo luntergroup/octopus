@@ -21,26 +21,18 @@ namespace Octopus
 {
 namespace GenotypeModel
 {
-    Individual::Individual(unsigned ploidy, CoalescentModel genotype_prior_model)
+    Individual::Individual(unsigned ploidy, const CoalescentModel& genotype_prior_model)
     :
     ploidy_ {ploidy},
-    genotype_prior_model_ {std::move(genotype_prior_model)}
+    genotype_prior_model_ {genotype_prior_model}
     {}
     
     Individual::Latents::Latents(const GenotypeVector& genotypes,
                                  GenotypeProbabilityVector&& genotype_posteriors)
-    : genotypes {std::cref(genotypes)}, genotype_posteriors {std::move(genotype_posteriors)} {}
-    
-    namespace
-    {
-        template <typename Container>
-        void normalise_exp(Container& log_probabilities)
-        {
-            const auto norm = Maths::log_sum_exp(log_probabilities);
-            
-            for (auto& p : log_probabilities) p = std::exp(p -= norm);
-        }
-    } // namespace
+    :
+    genotypes {std::cref(genotypes)},
+    genotype_posteriors {std::move(genotype_posteriors)}
+    {}
     
     Individual::Latents
     Individual::infer_latents(const SampleIdType& sample,
@@ -55,11 +47,11 @@ namespace GenotypeModel
         
         std::transform(std::cbegin(genotypes), std::cend(genotypes), std::begin(result),
                        [this, &sample, &likelihood_model] (const auto& genotype) {
-                           return std::log(genotype_prior_model_.evaluate(genotype))
+                           return std::log(genotype_prior_model_.get().evaluate(genotype))
                                         + likelihood_model.log_likelihood(sample, genotype);
                        });
         
-        normalise_exp(result);
+        Maths::normalise_exp(result);
         
         return Latents {genotypes, std::move(result)};
     }

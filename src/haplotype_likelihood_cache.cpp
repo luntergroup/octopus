@@ -143,6 +143,12 @@ HaplotypeLikelihoodCache::extract_sample(const SampleIdType& sample) const
     return result;
 }
 
+void HaplotypeLikelihoodCache::reserve(std::size_t num_samples, std::size_t num_haplotypes)
+{
+    sample_indices_.reserve(num_samples);
+    cache_.reserve(num_haplotypes);
+}
+
 void HaplotypeLikelihoodCache::clear()
 {
     cache_.clear();
@@ -170,6 +176,29 @@ void HaplotypeLikelihoodCache::set_read_iterators_and_sample_indices(const ReadM
         read_iterators_.emplace_back(std::cbegin(p.second), std::cend(p.second));
         sample_indices_.emplace(p.first, i++);
     }
+}
+
+// non-member methods
+
+HaplotypeLikelihoodCache merge_samples(const std::vector<SampleIdType>& samples,
+                                       const SampleIdType& new_sample,
+                                       const std::vector<Haplotype>& haplotypes,
+                                       const HaplotypeLikelihoodCache& haplotype_likelihoods)
+{
+    HaplotypeLikelihoodCache result {};
+    result.reserve(1, haplotypes.size());
+    
+    for (const auto& haplotype : haplotypes) {
+        HaplotypeLikelihoodCache::Likelihoods likelihoods {};
+        for (const auto& sample : samples) {
+            const auto& m = haplotype_likelihoods.log_likelihoods(sample, haplotype);
+            likelihoods.insert(std::end(likelihoods), std::cbegin(m), std::cend(m));
+        }
+        likelihoods.shrink_to_fit();
+        result.insert(new_sample, haplotype, std::move(likelihoods));
+    }
+    
+    return result;
 }
 
 namespace debug

@@ -50,6 +50,11 @@ namespace Octopus
         
         SampleLikelihoodMap extract_sample(const SampleIdType& sample) const;
         
+        void reserve(std::size_t num_samples, std::size_t num_haplotypes);
+        
+        template <typename S, typename Container>
+        void insert(S&& sample, const Haplotype& haplotype, Container&& likelihoods);
+        
         template <typename Container> void erase(const Container& haplotypes);
         
         void clear();
@@ -75,6 +80,14 @@ namespace Octopus
         void set_read_iterators_and_sample_indices(const ReadMap& reads);
     };
     
+    template <typename S, typename Container>
+    void HaplotypeLikelihoodCache::insert(S&& sample, const Haplotype& haplotype,
+                                          Container&& likelihoods)
+    {
+        sample_indices_.emplace(std::forward<S>(sample), sample_indices_.size());
+        cache_[haplotype].emplace_back(std::forward<Container>(likelihoods));
+    }
+    
     template <typename Container>
     void HaplotypeLikelihoodCache::erase(const Container& haplotypes)
     {
@@ -83,6 +96,13 @@ namespace Octopus
         }
         cache_.rehash(cache_.size());
     }
+    
+    // non-member methods
+    
+    HaplotypeLikelihoodCache merge_samples(const std::vector<SampleIdType>& samples,
+                                           const SampleIdType& new_sample,
+                                           const std::vector<Haplotype>& haplotypes,
+                                           const HaplotypeLikelihoodCache& haplotype_likelihoods);
     
     namespace debug
     {
