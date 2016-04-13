@@ -678,30 +678,30 @@ namespace Octopus
     run_variational_bayes(const CompressedAlphas<K>& prior_alphas,
                           const LogProbabilityVector& genotype_log_priors,
                           const CompressedReadLikelihoods<K>& log_likelihoods,
-                          const VariationalBayesParameters params)
+                          const VariationalBayesParameters params,
+                          std::vector<LogProbabilityVector> seeds)
     {
         // Try the main algorithm from different seeds to check local optimum
         
-        std::array<CompressedLatents<K>, 2> results;
+        std::vector<CompressedLatents<K>> results;
+        results.reserve(seeds.size());
         
-        results[0] = run_variational_bayes(prior_alphas, genotype_log_priors,
-                                           log_likelihoods,
-                                           genotype_log_priors,
-                                           params);
+        for (auto& seed : seeds) {
+            results.emplace_back(run_variational_bayes(prior_alphas, genotype_log_priors,
+                                                       log_likelihoods,
+                                                       std::move(seed),
+                                                       params));
+        }
         
-        results[1] = run_variational_bayes(prior_alphas, genotype_log_priors,
-                                           log_likelihoods,
-                                           log_uniform_dist(genotype_log_priors.size()),
-                                           params);
-        
-        std::array<double, results.size()> result_evidences;
+        std::vector<double> result_evidences(results.size());
         
         std::transform(std::cbegin(results), std::cend(results), std::begin(result_evidences),
                        [&log_likelihoods] (const auto& latents) {
                            return approx_log_evidence(log_likelihoods, latents);
                        });
         
-        const auto it = std::max_element(std::cbegin(result_evidences), std::cend(result_evidences));
+        const auto it = std::max_element(std::cbegin(result_evidences),
+                                         std::cend(result_evidences));
         
         const auto idx = std::distance(std::cbegin(result_evidences), it);
         
@@ -760,31 +760,51 @@ namespace Octopus
         
         return Cancer::InferredLatents {std::move(posterior_latents), evidence};
     }
+        
+    auto infer_with_germline_model(const SampleIdType& sample,
+                                   const std::vector<CancerGenotype<Haplotype>>& genotypes,
+                                   const HaplotypeLikelihoodCache& haplotype_log_likelihoods,
+                                   const SomaticModel& genotype_prior_model)
+    {
+        assert(!genotypes.empty());
+        
+        const auto ploidy = genotypes.front().ploidy();
+        
+        FixedPloidyGenotypeLikelihoodModel likelihood_model {ploidy, haplotype_log_likelihoods};
+        
+        std::vector<double> result(genotypes.size());
+        
+        std::transform(std::cbegin(genotypes), std::cend(genotypes), std::begin(result),
+                       [&] (const auto& genotype) {
+                           return std::log(genotype_prior_model.evaluate(genotype))
+                                + likelihood_model.log_likelihood(sample, genotype.get_germline_genotype());
+                       });
+        
+        Maths::normalise_logs(result);
+        
+        return result;
+    }
     
-//    auto generate_seeds(const std::vector<SampleIdType>& samples,
-//                        const std::vector<CancerGenotype<Haplotype>>& genotypes,
-//                        const LogProbabilityVector& genotype_log_priors,
-//                        const Cancer::Priors& priors,
-//                        const HaplotypeLikelihoodCache& haplotype_log_likelihoods)
-//    {
-//        std::vector<LogProbabilityVector> result {};
-//        
-//        result.emplace_back(genotype_log_priors);
-//        result.emplace_back(log_uniform_dist(genotypes.size()));
-//        
-//        const auto& germline_prior_model =  priors.genotype_prior_model.get_germline_model();
-//        
-//        GenotypeModel::Individual germline_model {genotypes.front().ploidy(), germline_prior_model};
-//        
-//        for (const auto& sample : samples) {
-//            const auto latents = germline_model.infer_latents(sample, genotypes,
-//                                                              haplotype_log_likelihoods);
-//            result.emplace_back(latents.genotype_posteriors);
-//            Maths::log_each(result.back());
-//        }
-//        
-//        return result;
-//    }
+    auto generate_seeds(const std::vector<SampleIdType>& samples,
+                        const std::vector<CancerGenotype<Haplotype>>& genotypes,
+                        const LogProbabilityVector& genotype_log_priors,
+                        const Cancer::Priors& priors,
+                        const HaplotypeLikelihoodCache& haplotype_log_likelihoods)
+    {
+        std::vector<LogProbabilityVector> result {};
+        result.reserve(2 + samples.size());
+        
+        result.emplace_back(genotype_log_priors);
+        result.emplace_back(log_uniform_dist(genotypes.size()));
+        
+        for (const auto& sample : samples) {
+            result.emplace_back(infer_with_germline_model(sample, genotypes,
+                                                          haplotype_log_likelihoods,
+                                                          priors.genotype_prior_model));
+        }
+        
+        return result;
+    }
     
     // Main entry point
     
@@ -813,8 +833,11 @@ namespace Octopus
         
         const auto log_likelihoods = compress<K>(genotypes, samples, haplotype_log_likelihoods);
         
+        auto seeds = generate_seeds(samples, genotypes, genotype_log_priors,
+                                    priors, haplotype_log_likelihoods);
+        
         auto p = run_variational_bayes(prior_alphas, genotype_log_priors,
-                                       log_likelihoods, params);
+                                       log_likelihoods, params, seeds);
         
         return expand(samples, std::move(genotypes), std::move(p.first), p.second);
     }

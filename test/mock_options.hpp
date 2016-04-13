@@ -58,7 +58,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         
         //"--samples", "NA12878",
         "--model", "cancer", // default "population"
-        //"--normal-sample", "NA12878", // for cancer model
+        "--normal-sample", "NA12878", // for cancer model
         
         //"--organism-ploidy", "2",
         "--contig-ploidies", "MT=1", "Y=1",// "MT=2",
@@ -69,9 +69,9 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         
         /* input regions */
         
-        //"--use-one-based-indexing",
+        "--regions", "16:59,157,039-59,157,231",
         
-        //"--regions", "22:37,210,223-37,210,376",
+        //"--use-one-based-indexing",
         
         // for population
         
@@ -138,11 +138,12 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--regions", "22:38,045,681-38,045,746",
         
         //  NA12878HC (normal) vs NA12891HC
-        "--regions", "16:75,879,931-75,880,269", // somatic
+        //"--regions", "16:75,879,931-75,880,269", // somatic
         //"--regions", "16:75,879,179-75,879,472", // LOH
         //"--regions", "16:75,881,839-75,882,246", // LOH
         //"--regions", "16:60,034,277-60,034,375", // LOH and somatic (too many cancer genotypes)
-    
+        //"--regions", "16:58,433,081-58,433,354", // potentially false positive somatic
+        
         // For ecoli
         //"--regions", "R00000042:3008660-3020000",
         

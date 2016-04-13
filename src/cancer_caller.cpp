@@ -312,7 +312,7 @@ CancerVariantCaller::infer_latents(const std::vector<Haplotype>& haplotypes,
     
     GM::Priors priors {cancer_prior_model, std::move(alphas)};
     
-    GM::Cancer genotype_model {samples_, parameters_.ploidy, std::move(priors)};
+    GM::Cancer somatic_model {samples_, parameters_.ploidy, std::move(priors)};
     
     std::vector<CancerGenotype<Haplotype>> cancer_genotypes;
     std::vector<Genotype<Haplotype>> germline_genotypes;
@@ -335,7 +335,7 @@ CancerVariantCaller::infer_latents(const std::vector<Haplotype>& haplotypes,
     
     std::cout << "Log evidence for germline model (all data) " << germline_model_log_evidence << std::endl;
     
-    auto inferences = genotype_model.infer_latents(cancer_genotypes, haplotype_likelihoods);
+    auto inferences = somatic_model.infer_latents(cancer_genotypes, haplotype_likelihoods);
     
     std::cout << "Log evidence for cancer model " << inferences.approx_log_evidence << std::endl;
     
@@ -435,9 +435,9 @@ CancerVariantCaller::infer_latents(const std::vector<Haplotype>& haplotypes,
         std::cout << "a[1] " <<  100 * m << "% credible region = (" << p1.first << ", " << p1.second << ")" << std::endl;
     }
     
-    double germline_model_prior {0.9};
-    double cnv_model_prior {0.5};
-    double somatic_model_prior {0.1};
+    double germline_model_prior {0.89999};
+    double cnv_model_prior {0.1};
+    double somatic_model_prior {0.01 * 0.001};
     
     auto germline_model_jlp = std::log(germline_model_prior) + germline_model_log_evidence;
     auto cnv_model_jlp = std::log(cnv_model_prior) + cnv_latents.approx_log_evidence;

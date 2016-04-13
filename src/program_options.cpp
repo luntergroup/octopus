@@ -1400,6 +1400,9 @@ namespace Octopus
         if (model == "cancer") {
             if (options.count("normal-sample") == 1) {
                 vc_builder.set_normal_sample(options.at("normal-sample").as<std::string>());
+            } else {
+                Logging::WarningLogger log {};
+                stream(log) << "No normal model was given so assuming all samples are tumour";
             }
             
             vc_builder.set_somatic_mutation_rate(options.at("somatic-mutation-rate").as<float>());
