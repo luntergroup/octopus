@@ -286,7 +286,7 @@ VcfRecord::Builder output_reference_call(RefCall call, ReferenceGenome& referenc
     return result;
 }
 } // namespace
-    
+
 std::unique_ptr<CancerVariantCaller::CallerLatents>
 CancerVariantCaller::infer_latents(const std::vector<Haplotype>& haplotypes,
                                    const HaplotypeLikelihoodCache& haplotype_likelihoods) const
@@ -295,17 +295,33 @@ CancerVariantCaller::infer_latents(const std::vector<Haplotype>& haplotypes,
     
     CoalescentModel germline_prior_model {reference_haplotype};
     
+    GenotypeModel::Individual germline_model {parameters_.ploidy, germline_prior_model};
+    
     SomaticModel cancer_prior_model {germline_prior_model, parameters_.somatic_mutation_rate};
+    
+    GenotypeModel::CNV::Priors::GenotypeMixturesDirichletAlphaMap cnv_alphas {};
+    cnv_alphas.reserve(samples_.size());
+    for (const auto& sample : samples_) {
+        if (parameters_.normal_sample && sample == *parameters_.normal_sample) {
+            GenotypeModel::CNV::Priors::GenotypeMixturesDirichletAlphas sample_alphas {10.0, 10.0};
+            cnv_alphas.emplace(sample, std::move(sample_alphas));
+        } else {
+            GenotypeModel::CNV::Priors::GenotypeMixturesDirichletAlphas sample_alphas {0.5, 0.5};
+            cnv_alphas.emplace(sample, std::move(sample_alphas));
+        }
+    }
+    GenotypeModel::CNV::Priors cnv_priors {germline_prior_model, std::move(cnv_alphas)};
+    GenotypeModel::CNV cnv_model {samples_, parameters_.ploidy, std::move(cnv_priors)};
     
     GM::Priors::GenotypeMixturesDirichletAlphaMap alphas {};
     alphas.reserve(samples_.size());
     
     for (const auto& sample : samples_) {
         if (parameters_.normal_sample && sample == *parameters_.normal_sample) {
-            GM::Priors::GenotypeMixturesDirichletAlphas sample_alphas {1.0, 1.0, 0.01};
+            GM::Priors::GenotypeMixturesDirichletAlphas sample_alphas {5.0, 5.0, 0.01};
             alphas.emplace(sample, std::move(sample_alphas));
         } else {
-            GM::Priors::GenotypeMixturesDirichletAlphas sample_alphas {1.0, 1.0, 0.5};
+            GM::Priors::GenotypeMixturesDirichletAlphas sample_alphas {1.0, 1.0, 0.75};
             alphas.emplace(sample, std::move(sample_alphas));
         }
     }
@@ -323,24 +339,60 @@ CancerVariantCaller::infer_latents(const std::vector<Haplotype>& haplotypes,
     std::cout << "there are " << germline_genotypes.size() << " germline genotypes" << std::endl;
     std::cout << "there are " << cancer_genotypes.size() << " cancer genotypes" << std::endl;
     
-    auto merged_likelihoods = merge_samples(samples_, "merged", haplotypes, haplotype_likelihoods);
+    auto merged_likelihoods = merge_samples(samples_, "union", haplotypes, haplotype_likelihoods);
     
-    GenotypeModel::Individual merged_model {parameters_.ploidy, germline_prior_model};
+    auto germline_inferences = germline_model.infer_latents("union", germline_genotypes,
+                                                            merged_likelihoods);
     
-    auto merged_latents = merged_model.infer_latents("merged", germline_genotypes,
-                                                     merged_likelihoods);
     
-    auto germline_model_log_evidence = merged_model.log_evidence("merged", merged_likelihoods,
-                                                                 merged_latents);
+    auto cnv_inferences = cnv_model.infer_latents(germline_genotypes, haplotype_likelihoods);
+    auto somatic_inferences = somatic_model.infer_latents(cancer_genotypes, haplotype_likelihoods);
     
-    std::cout << "Log evidence for germline model (all data) " << germline_model_log_evidence << std::endl;
+    std::cout << "Log evidence for germline model " << germline_inferences.log_evidence << std::endl;
+    std::cout << "Log evidence for CNV model " << cnv_inferences.approx_log_evidence << std::endl;
+    std::cout << "Log evidence for cancer model " << somatic_inferences.approx_log_evidence << std::endl;
     
-    auto inferences = somatic_model.infer_latents(cancer_genotypes, haplotype_likelihoods);
+    double germline_model_prior {0.89999};
+    double cnv_model_prior {0.1};
+    double somatic_model_prior {0.01 * 0.001};
     
-    std::cout << "Log evidence for cancer model " << inferences.approx_log_evidence << std::endl;
+    auto germline_model_jlp = std::log(germline_model_prior) + germline_inferences.log_evidence;
+    auto cnv_model_jlp = std::log(cnv_model_prior) + cnv_inferences.approx_log_evidence;
+    auto somatic_model_jlp = std::log(somatic_model_prior) + somatic_inferences.approx_log_evidence;
     
-    auto it = std::max_element(std::cbegin(inferences.posterior_latents.genotype_posteriors),
-                               std::cend(inferences.posterior_latents.genotype_posteriors),
+    auto norm = Maths::log_sum_exp(germline_model_jlp, cnv_model_jlp, somatic_model_jlp);
+    
+    auto germline_model_posterior = std::exp(germline_model_jlp - norm);
+    auto cnv_model_posterior = std::exp(cnv_model_jlp - norm);
+    auto somatic_model_posterior = std::exp(somatic_model_jlp - norm);
+    
+    std::cout << "germline model posterior = " << germline_model_posterior << std::endl;
+    std::cout << "CNV model posterior = " << cnv_model_posterior << std::endl;
+    std::cout << "somatic model posterior = " << somatic_model_posterior << std::endl;
+    
+    const double cutoff {0.001};
+    
+    std::cout << "CNV genotypes with posterior > " << cutoff << ":" << std::endl;
+    for (const auto& p : cnv_inferences.posteriors.genotype_probabilities) {
+        if (p.second > cutoff) {
+            ::debug::print_variant_alleles(p.first);
+            std::cout << ' ' << p.second << std::endl;
+        }
+    }
+    
+    for (const auto& sample : samples_) {
+        auto a = cnv_inferences.posteriors.alphas.at(sample);
+        std::cout << sample << " " << a[0] << " " << a[1] << std::endl;
+        auto a0 = std::accumulate(std::cbegin(a), std::cend(a), 0.0);
+        const double m {0.99};
+        auto p0 = Maths::beta_hdi(a[0], a0 - a[0], m);
+        std::cout << "a[0] " <<  100 * m << "% credible region = (" << p0.first << ", " << p0.second << ")" << std::endl;
+        auto p1 = Maths::beta_hdi(a[1], a0 - a[1], m);
+        std::cout << "a[1] " <<  100 * m << "% credible region = (" << p1.first << ", " << p1.second << ")" << std::endl;
+    }
+    
+    auto it = std::max_element(std::cbegin(somatic_inferences.posteriors.genotype_probabilities),
+                               std::cend(somatic_inferences.posteriors.genotype_probabilities),
                                [] (const auto& lhs, const auto& rhs) {
                                    return lhs.second < rhs.second;
                                });
@@ -354,28 +406,23 @@ CancerVariantCaller::infer_latents(const std::vector<Haplotype>& haplotypes,
         
         GenotypeModel::Individual individual_model {parameters_.ploidy, germline_prior_model};
         
-        auto individual_latents = individual_model.infer_latents(*parameters_.normal_sample,
-                                                                 germline_genotypes,
-                                                                 haplotype_likelihoods);
+        auto map_germline_inferences = individual_model.infer_latents(*parameters_.normal_sample,
+                                                                      germline_genotypes,
+                                                                      haplotype_likelihoods);
         
         auto it2 = std::find(std::cbegin(germline_genotypes), std::cend(germline_genotypes),
                              map_cancer_genotype.get_germline_genotype());
         
-        auto p = individual_latents.genotype_posteriors[std::distance(std::cbegin(germline_genotypes), it2)];
+        auto p = map_germline_inferences.posteriors.genotype_probabilities[std::distance(std::cbegin(germline_genotypes), it2)];
         
         std::cout << "Posterior of map cancer genotype germline for individual model = "
-                    << p << std::endl;
+        << p << std::endl;
         
-        auto e = individual_model.log_evidence(*parameters_.normal_sample, haplotype_likelihoods,
-                                               individual_latents);
-        
-        std::cout << "Germline model log evidence for normal sample = " << e << std::endl;
+        std::cout << "Germline model log evidence for normal sample = " << map_germline_inferences.log_evidence << std::endl;
     }
     
-    const double cutoff {0.001};
-    
     std::cout << "Cancer genotypes with posterior > " << cutoff << ":" << std::endl;
-    for (const auto& p : inferences.posterior_latents.genotype_posteriors) {
+    for (const auto& p : somatic_inferences.posteriors.genotype_probabilities) {
         if (p.second > cutoff) {
             debug::print_variant_alleles(p.first);
             std::cout << ' ' << p.second << std::endl;
@@ -388,70 +435,15 @@ CancerVariantCaller::infer_latents(const std::vector<Haplotype>& haplotypes,
             std::cout << " (normal)";
         }
         std::cout << std::endl;
-        auto posterior_alphas = inferences.posterior_latents.alphas.at(sample);
+        auto posterior_alphas = somatic_inferences.posteriors.alphas.at(sample);
         std::cout << std::setprecision(3);
         std::cout << "\talphas: " << posterior_alphas[0] << " " << posterior_alphas[1] << " " << posterior_alphas[2] << std::endl;
         auto a0 = std::accumulate(std::cbegin(posterior_alphas), std::cend(posterior_alphas), 0.0);
         const double m {0.99};
         auto p = Maths::beta_hdi(posterior_alphas[2], a0 - posterior_alphas[2], m);
         std::cout << "\tsomatic probability " << 100 * m << "% credible region = ("
-                    << p.first << ", " << p.second << ")" << std::endl;
+        << p.first << ", " << p.second << ")" << std::endl;
     }
-    
-    GenotypeModel::CNV::Priors::GenotypeMixturesDirichletAlphaMap cnv_alphas {};
-    cnv_alphas.reserve(samples_.size());
-    for (const auto& sample : samples_) {
-        if (parameters_.normal_sample && sample == *parameters_.normal_sample) {
-            GenotypeModel::CNV::Priors::GenotypeMixturesDirichletAlphas sample_alphas {10.0, 10.0};
-            cnv_alphas.emplace(sample, std::move(sample_alphas));
-        } else {
-            GenotypeModel::CNV::Priors::GenotypeMixturesDirichletAlphas sample_alphas {0.5, 0.5};
-            cnv_alphas.emplace(sample, std::move(sample_alphas));
-        }
-    }
-    GenotypeModel::CNV::Priors cnv_priors {germline_prior_model, std::move(cnv_alphas)};
-    GenotypeModel::CNV cnv_model {samples_, parameters_.ploidy, std::move(cnv_priors)};
-    
-    auto cnv_latents = cnv_model.infer_latents(germline_genotypes, haplotype_likelihoods);
-    
-    std::cout << "Log evidence for CNV model " << cnv_latents.approx_log_evidence << std::endl;
-    
-    std::cout << "CNV genotypes with posterior > " << cutoff << ":" << std::endl;
-    for (const auto& p : cnv_latents.posterior_latents.genotype_posteriors) {
-        if (p.second > cutoff) {
-            ::debug::print_variant_alleles(p.first);
-            std::cout << ' ' << p.second << std::endl;
-        }
-    }
-    
-    for (const auto& sample : samples_) {
-        auto a = cnv_latents.posterior_latents.alphas.at(sample);
-        std::cout << sample << " " << a[0] << " " << a[1] << std::endl;
-        auto a0 = std::accumulate(std::cbegin(a), std::cend(a), 0.0);
-        const double m {0.99};
-        auto p0 = Maths::beta_hdi(a[0], a0 - a[0], m);
-        std::cout << "a[0] " <<  100 * m << "% credible region = (" << p0.first << ", " << p0.second << ")" << std::endl;
-        auto p1 = Maths::beta_hdi(a[1], a0 - a[1], m);
-        std::cout << "a[1] " <<  100 * m << "% credible region = (" << p1.first << ", " << p1.second << ")" << std::endl;
-    }
-    
-    double germline_model_prior {0.89999};
-    double cnv_model_prior {0.1};
-    double somatic_model_prior {0.01 * 0.001};
-    
-    auto germline_model_jlp = std::log(germline_model_prior) + germline_model_log_evidence;
-    auto cnv_model_jlp = std::log(cnv_model_prior) + cnv_latents.approx_log_evidence;
-    auto somatic_model_jlp = std::log(somatic_model_prior) + inferences.approx_log_evidence;
-    
-    auto norm = Maths::log_sum_exp(germline_model_jlp, cnv_model_jlp, somatic_model_jlp);
-    
-    auto germline_model_posterior = std::exp(germline_model_jlp - norm);
-    auto cnv_model_posterior = std::exp(cnv_model_jlp - norm);
-    auto somatic_model_posterior = std::exp(somatic_model_jlp - norm);
-    
-    std::cout << "germline model posterior = " << germline_model_posterior << std::endl;
-    std::cout << "CNV model posterior = " << cnv_model_posterior << std::endl;
-    std::cout << "somatic model posterior = " << somatic_model_posterior << std::endl;
     
     throw std::runtime_error {"whoops"};
     

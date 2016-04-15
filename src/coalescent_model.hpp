@@ -113,7 +113,7 @@ namespace Octopus
                         * ((i - 1) / (theta + i - 1)) * std::pow(theta / (theta + i - 1), k);
         }
         
-        return result;
+        return std::log(result);
     }
     
     // non-member methods

@@ -276,6 +276,7 @@
 		CA28EBFA1AAC99D4009F8622 /* read_filter.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = read_filter.hpp; sourceTree = "<group>"; };
 		CA2D59F81CAEFB4B005EA347 /* read_transformations.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = read_transformations.cpp; sourceTree = "<group>"; };
 		CA2D59FD1CB972FE005EA347 /* cancer_genotype.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = cancer_genotype.cpp; sourceTree = "<group>"; };
+		CA2D59FF1CC01589005EA347 /* octopus.tex */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = octopus.tex; sourceTree = "<group>"; };
 		CA386D9C1B5AA3C80057A5A8 /* reference_genome.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = reference_genome.cpp; sourceTree = "<group>"; };
 		CA386DA21B5AC2870057A5A8 /* cigar_string.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = cigar_string.cpp; sourceTree = "<group>"; };
 		CA386DA41B5AC3850057A5A8 /* aligned_read.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = aligned_read.cpp; sourceTree = "<group>"; };
@@ -300,7 +301,6 @@
 		CA8A66481B81CA7E008CE1D8 /* threadsafe_fasta.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = threadsafe_fasta.cpp; sourceTree = "<group>"; };
 		CA8A66491B81CA7E008CE1D8 /* threadsafe_fasta.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = threadsafe_fasta.hpp; sourceTree = "<group>"; };
 		CA8FACC31A96515A002760F2 /* assembler_tests.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = assembler_tests.cpp; sourceTree = "<group>"; };
-		CA90C5581ACD2B4E00CBEE34 /* variational_bayes_variant_callings.tex */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = variational_bayes_variant_callings.tex; sourceTree = "<group>"; };
 		CA90C5591ACDB95D00CBEE34 /* haplotype_tests.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = haplotype_tests.cpp; sourceTree = "<group>"; };
 		CA91C2C61B8DE00E00609FFA /* population_genotype_model.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = population_genotype_model.cpp; sourceTree = "<group>"; };
 		CA91C2C71B8DE00E00609FFA /* population_genotype_model.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = population_genotype_model.hpp; sourceTree = "<group>"; };
@@ -400,7 +400,6 @@
 		D42061141ACC3DA500D11553 /* fixed_ploidy_genotype_likelihood_model.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = fixed_ploidy_genotype_likelihood_model.cpp; sourceTree = "<group>"; };
 		D42061151ACC3DA500D11553 /* fixed_ploidy_genotype_likelihood_model.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = fixed_ploidy_genotype_likelihood_model.hpp; sourceTree = "<group>"; };
 		D42061171ACC418500D11553 /* error_model_tests.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = error_model_tests.cpp; sourceTree = "<group>"; };
-		D42061191ACD518400D11553 /* variational_bayes_variant_callings.pdf */ = {isa = PBXFileReference; lastKnownFileType = image.pdf; path = variational_bayes_variant_callings.pdf; sourceTree = "<group>"; };
 		D42F72EC1C563D2E00995F54 /* contig_ploidies.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = contig_ploidies.txt; sourceTree = "<group>"; };
 		D42F72ED1C5B8A4D00995F54 /* trio.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = trio.cpp; sourceTree = "<group>"; };
 		D42F72EE1C5B8A4D00995F54 /* trio.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = trio.hpp; sourceTree = "<group>"; };
@@ -903,9 +902,8 @@
 		CAA4DC2E1A8219DD00DD3E9A /* doc */ = {
 			isa = PBXGroup;
 			children = (
+				CA2D59FF1CC01589005EA347 /* octopus.tex */,
 				CA1ADDFA1BDE856C00A0F394 /* presentation */,
-				D42061191ACD518400D11553 /* variational_bayes_variant_callings.pdf */,
-				CA90C5581ACD2B4E00CBEE34 /* variational_bayes_variant_callings.tex */,
 				CAE3E2C81AA9129000C01B2C /* notes.txt */,
 			);
 			path = doc;

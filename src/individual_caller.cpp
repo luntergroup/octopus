@@ -75,7 +75,7 @@ namespace Octopus
             std::make_move_iterator(std::end(genotypes))
         };
         
-        insert_sample(sample, latents.genotype_posteriors, genotype_posteriors);
+        insert_sample(sample, latents.genotype_probabilities, genotype_posteriors);
         
         genotype_posteriors_  = std::make_shared<GenotypeProbabilityMap>(std::move(genotype_posteriors));
         haplotype_posteriors_ = std::make_shared<HaplotypeProbabilityMap>(calculate_haplotype_posteriors(haplotypes));
@@ -128,7 +128,7 @@ namespace Octopus
         auto inferred_latents = model.infer_latents(sample, genotypes, haplotype_likelihoods);
         
         return std::make_unique<Latents>(sample, haplotypes, std::move(genotypes),
-                                         std::move(inferred_latents));
+                                         std::move(inferred_latents.posteriors));
     }
     
     namespace

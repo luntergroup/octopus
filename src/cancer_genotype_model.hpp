@@ -54,17 +54,17 @@ namespace Octopus
             using GenotypeProbabilityMap = std::unordered_map<CancerGenotype<Haplotype>, double>;
             
             Latents() = default;
-            template <typename G, typename M> Latents(G&& genotype_posteriors, M&& alphas);
+            template <typename G, typename M> Latents(G&& genotype_probabilities, M&& alphas);
             ~Latents() = default;
             
-            GenotypeProbabilityMap genotype_posteriors;
+            GenotypeProbabilityMap genotype_probabilities;
             GenotypeMixturesDirichletAlphaMap alphas;
         };
         
         struct InferredLatents
         {
-            InferredLatents(Latents&& posterior_latents, double approx_log_evidence);
-            Latents posterior_latents;
+            InferredLatents(Latents&& posteriors, double approx_log_evidence);
+            Latents posteriors;
             double approx_log_evidence;
         };
         
@@ -102,9 +102,9 @@ namespace Octopus
     {}
     
     template <typename G, typename M>
-    Cancer::Latents::Latents(G&& genotype_posteriors, M&& alphas)
+    Cancer::Latents::Latents(G&& genotype_probabilities, M&& alphas)
     :
-    genotype_posteriors {std::forward<G>(genotype_posteriors)},
+    genotype_probabilities {std::forward<G>(genotype_probabilities)},
     alphas {std::forward<M>(alphas)}
     {}
     

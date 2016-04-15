@@ -48,11 +48,11 @@ namespace Octopus
         const auto& germline = genotype.get_germline_genotype();
         const auto& somatic  = genotype.get_cancer_element();
         
-        const auto germline_prior = germline_model_.get().evaluate(germline);
+        const auto germline_log_prior = germline_model_.get().evaluate(germline);
         
         const auto somatic_probability_given_germline = probability_of_somatic(somatic, germline,
                                                                                germline_model_);
         
-        return std::log(germline_prior) + std::log(somatic_probability_given_germline);
+        return germline_log_prior + std::log(somatic_probability_given_germline);
     }
 } // namespace Octopus

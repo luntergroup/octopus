@@ -34,11 +34,18 @@ namespace Octopus
                 
                 Latents() = default;
                 Latents(const GenotypeVector& genotypes,
-                        GenotypeProbabilityVector&& genotype_posteriors);
+                        GenotypeProbabilityVector&& genotype_probabilities);
                 ~Latents() = default;
                 
-                GenotypeProbabilityVector genotype_posteriors;
+                GenotypeProbabilityVector genotype_probabilities;
                 std::reference_wrapper<const GenotypeVector> genotypes;
+            };
+            
+            struct InferredLatents
+            {
+                InferredLatents(Latents&& posteriors, double log_evidence);
+                Latents posteriors;
+                double log_evidence;
             };
             
             Individual() = delete;
@@ -52,13 +59,9 @@ namespace Octopus
             Individual(Individual&&)                 = delete;
             Individual& operator=(Individual&&)      = delete;
             
-            Latents infer_latents(const SampleIdType& sample,
-                                  const std::vector<Genotype<Haplotype>>& genotypes,
-                                  const HaplotypeLikelihoodCache& haplotype_likelihoods) const;
-            
-            double log_evidence(const SampleIdType& sample,
-                                const HaplotypeLikelihoodCache& haplotype_likelihoods,
-                                const Latents& latents) const;
+            InferredLatents infer_latents(const SampleIdType& sample,
+                                          const std::vector<Genotype<Haplotype>>& genotypes,
+                                          const HaplotypeLikelihoodCache& haplotype_likelihoods) const;
             
         private:
             unsigned ploidy_;

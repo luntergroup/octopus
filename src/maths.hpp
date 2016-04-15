@@ -208,7 +208,7 @@ RealType log_factorial(IntegerType x)
 }
 
 template <typename ForwardIt>
-auto log_beta(ForwardIt first, ForwardIt last)
+auto log_beta(const ForwardIt first, const ForwardIt last)
 {
     using T = std::decay_t<typename std::iterator_traits<ForwardIt>::value_type>;
     
@@ -216,8 +216,8 @@ auto log_beta(ForwardIt first, ForwardIt last)
                   "log_beta is only defined for floating point types.");
     
     return std::accumulate(first, last, T {0},
-                           [] (const auto v, const auto x) {
-                               return v + boost::math::lgamma(x);
+                           [] (const auto curr, const auto x) {
+                               return curr + boost::math::lgamma(x);
                            }) - boost::math::lgamma(std::accumulate(first, last, T {0}));
 }
 

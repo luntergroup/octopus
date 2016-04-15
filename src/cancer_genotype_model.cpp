@@ -37,9 +37,9 @@ namespace Octopus
     Cancer {std::move(samples), ploidy, std::move(priors), AlgorithmParameters {}}
     {}
         
-    Cancer::InferredLatents::InferredLatents(Latents&& posterior_latents, double approx_log_evidence)
+    Cancer::InferredLatents::InferredLatents(Latents&& posteriors, double approx_log_evidence)
     :
-    posterior_latents {std::move(posterior_latents)},
+    posteriors {std::move(posteriors)},
     approx_log_evidence {approx_log_evidence}
     {}
     
@@ -142,13 +142,6 @@ namespace Octopus
     using CompressedReadLikelihoods = std::vector<CompressedGenotypes<K>>;
     
     template <std::size_t K>
-    struct CompressedLatents
-    {
-        ProbabilityVector genotype_posteriors;
-        CompressedAlphas<K> alphas;
-    };
-    
-    template <std::size_t K>
     using Tau = std::array<double, K>;
     
     template <std::size_t K>
@@ -156,6 +149,15 @@ namespace Octopus
     
     template <std::size_t K>
     using ResponsabilityVectors = std::vector<ResponsabilityVector<K>>;
+    
+    template <std::size_t K>
+    struct CompressedLatents
+    {
+        ProbabilityVector genotype_posteriors;
+        LogProbabilityVector genotype_log_posteriors;
+        CompressedAlphas<K> alphas;
+        ResponsabilityVectors<K> responsabilities;
+    };
     
     // non-member methods
     
@@ -519,6 +521,178 @@ namespace Octopus
         return std::make_pair(std::abs(new_max_change - prev_max_change) < epsilon, new_max_change);
     }
     
+    // lower-bound calculation
+    
+    double expectation(const ProbabilityVector& genotype_posteriors,
+                       const LogProbabilityVector& genotype_log_priors)
+    {
+        return std::inner_product(std::cbegin(genotype_posteriors), std::cend(genotype_posteriors),
+                                  std::cbegin(genotype_log_priors), 0.0);
+    }
+    
+    template <std::size_t K>
+    double dirichlet_expectation(const CompressedAlpha<K>& priors, const CompressedAlpha<K>& posteriors)
+    {
+        using boost::math::digamma;
+        const auto da0 = digamma(sum(posteriors));
+        return std::inner_product(std::cbegin(priors), std::cend(priors), std::cbegin(posteriors),
+                                  0.0, std::plus<void> {},
+                                  [da0] (const auto& prior, const auto& post) {
+                                      return (prior - 1) * (digamma(post) - da0);
+                                  }) - Maths::log_beta(priors);
+    }
+    
+    template <std::size_t K>
+    double expectation(const CompressedAlphas<K>& priors, const CompressedAlphas<K>& posteriors)
+    {
+        return std::inner_product(std::cbegin(priors), std::cend(priors), std::cbegin(posteriors),
+                                  0.0, std::plus<void> {},
+                                  [] (const auto& prior, const auto& post) {
+                                      return dirichlet_expectation(prior, post);
+                                  });
+    }
+    
+    // E[ln p(Z_s | pi_s)]
+    template <std::size_t K>
+    double expectation(const ResponsabilityVector<K>& taus, const CompressedAlpha<K>& alpha)
+    {
+        using boost::math::digamma;
+        
+        const auto das = digamma(sum(alpha));
+        
+        double result {0};
+        
+        for (unsigned k {0}; k < K; ++k) {
+            result += (digamma(alpha[k]) - das) * sum(taus, k);
+        }
+        
+        return result;
+    }
+    
+    // sum s E[ln p(Z_s | pi_s)]
+    template <std::size_t K>
+    double expectation(const ResponsabilityVectors<K>& taus, const CompressedAlphas<K>& alphas)
+    {
+        return std::inner_product(std::cbegin(taus), std::cend(taus), std::cbegin(alphas),
+                                  0.0, std::plus<void> {},
+                                  [] (const auto& tau, const auto& alpha) {
+                                      return expectation(tau, alpha);
+                                  });
+    }
+    
+    template <std::size_t K>
+    double expectation(const ResponsabilityVectors<K>& taus,
+                       const CompressedReadLikelihoods<K>& log_likelihoods,
+                       const std::size_t g)
+    {
+        double result {0};
+        
+        for (std::size_t s {0}; s < taus.size(); ++s) {
+            for (std::size_t n {0}; n < taus[s].size(); ++n) {
+                for (unsigned k {0}; k < K; ++k) {
+                    result += taus[s][n][k] * log_likelihoods[s][g][k][n];
+                }
+            }
+        }
+        
+        return result;
+    }
+    
+    // E[ln p(R | Z, g)]
+    template <std::size_t K>
+    double expectation(const ProbabilityVector& genotype_posteriors,
+                       const ResponsabilityVectors<K>& taus,
+                       const CompressedReadLikelihoods<K>& log_likelihoods)
+    {
+        double result {0};
+        
+        for (std::size_t g {0}; g < genotype_posteriors.size(); ++g) {
+            result += genotype_posteriors[g] * expectation(taus, log_likelihoods, g);
+        }
+        
+        return result;
+    }
+    
+    template <std::size_t K>
+    double dirichlet_expectation(const CompressedAlpha<K>& posterior)
+    {
+        using boost::math::digamma;
+        const auto da0 = digamma(sum(posterior));
+        return std::accumulate(std::cbegin(posterior), std::cend(posterior), 0.0,
+                               [da0] (const auto curr, const auto a) {
+                                   return curr + ((a - 1) * (digamma(a) - da0));
+                               }) - Maths::log_beta(posterior);
+    }
+    
+    template <std::size_t K>
+    double expectation(const CompressedAlphas<K>& posteriors)
+    {
+        return std::accumulate(std::cbegin(posteriors), std::cend(posteriors), 0.0,
+                               [] (const auto curr, const auto& posterior) {
+                                   return curr + dirichlet_expectation(posterior);
+                               });
+    }
+    
+    template <std::size_t K>
+    double q_expectation(const Tau<K>& tau)
+    {
+        return std::accumulate(std::cbegin(tau), std::cend(tau), 0.0,
+                               [] (const auto curr, const auto t) {
+                                   return curr + (t * std::log(t));
+                               });
+    }
+    
+    template <>
+    double q_expectation<2>(const Tau<2>& tau)
+    {
+        return tau[0] * std::log(tau[0]) + tau[1] * std::log(tau[1]);
+    }
+    
+    // E [ln q(Z_s)]
+    template <std::size_t K>
+    double q_expectation(const ResponsabilityVector<K>& taus)
+    {
+        return std::accumulate(std::cbegin(taus), std::cend(taus), 0.0,
+                               [] (const auto curr, const auto& tau) {
+                                   return curr + q_expectation(tau);
+                               });
+    }
+    
+    // sum s E [ln q(Z_s)]
+    template <std::size_t K>
+    double q_expectation(const ResponsabilityVectors<K>& taus)
+    {
+        return std::accumulate(std::cbegin(taus), std::cend(taus), 0.0,
+                               [] (const auto curr, const auto& t) {
+                                   return curr + q_expectation(t);
+                               });
+    }
+    
+    template <std::size_t K>
+    double calculate_lower_bound(const CompressedAlphas<K>& prior_alphas,
+                                 const LogProbabilityVector& genotype_log_priors,
+                                 const CompressedReadLikelihoods<K>& log_likelihoods,
+                                 const CompressedLatents<K>& latents)
+    {
+        const auto& genotype_posteriors = latents.genotype_posteriors;
+        const auto& genotype_log_posteriors = latents.genotype_log_posteriors;
+        const auto& posterior_alphas = latents.alphas;
+        const auto& taus = latents.responsabilities;
+        
+        double result {0};
+        
+        result += expectation(genotype_posteriors, genotype_log_priors);
+        result += expectation(prior_alphas, posterior_alphas);
+        result += expectation(taus, posterior_alphas);
+        result += expectation(genotype_posteriors, taus, log_likelihoods);
+        
+        result -= expectation(genotype_posteriors, genotype_log_posteriors);
+        result -= expectation(posterior_alphas);
+        result -= q_expectation(taus);
+        
+        return result;
+    }
+    
     // Main algorithm - single seed
     
     // Starting iteration with given genotype_log_posteriors
@@ -577,98 +751,8 @@ namespace Octopus
             }
         }
         
-        return {std::move(genotype_posteriors), std::move(posterior_alphas)};
-    }
-    
-    // Helpers
-    
-    LogProbabilityVector log_uniform_dist(const std::size_t n)
-    {
-        return LogProbabilityVector(n, -std::log(static_cast<double>(n)));
-    }
-    
-    // Evidence calculation
-    
-    template <std::size_t K>
-    auto expectation(const CompressedAlpha<K>& alpha)
-    {
-        const auto a0 = sum(alpha);
-        std::array<double, K> result;
-        std::transform(std::cbegin(alpha), std::cend(alpha), std::begin(result),
-                       [a0] (const auto a) { return a / a0; });
-        return result;
-    }
-    
-    template <std::size_t K>
-    auto log_marginal(const CompressedGenotype<K>& log_likelihoods,
-                      const CompressedAlpha<K>& alpha,
-                      std::array<double, K> pi,
-                      const std::size_t n)
-    {
-        Maths::log_each(pi);
-        
-        for (unsigned k {0}; k < K; ++k) {
-            pi[k] += log_likelihoods[k][n];
-        }
-        
-        return Maths::log_sum_exp(pi);
-    }
-    
-    template <std::size_t K>
-    auto log_marginal(const CompressedGenotype<K>& log_likelihoods,
-                      const CompressedAlpha<K>& alpha, std::array<double, K> pi)
-    {
-        auto result = Maths::log_dirichlet(alpha, pi);
-        
-        const auto N = log_likelihoods[0].size();
-        
-        for (std::size_t n {0}; n < N; ++n) {
-            result += log_marginal(log_likelihoods, alpha, pi, n);
-        }
-        
-        return result;
-    }
-    
-    template <std::size_t K>
-    double approx_log_marginal(const CompressedGenotype<K>& log_likelihoods,
-                               const CompressedAlpha<K>& alpha)
-    {
-        const auto pi = expectation(alpha);
-        return log_marginal(log_likelihoods, alpha, pi);
-    }
-    
-    template <std::size_t K>
-    double log_marginal(const CompressedReadLikelihoods<K>& log_likelihoods,
-                        const CompressedAlphas<K>& alphas,
-                        const std::size_t g)
-    {
-        double result {0};
-        
-        const auto S = alphas.size();
-        
-        for (std::size_t s {0}; s < S; ++s) {
-            result += approx_log_marginal(log_likelihoods[s][g], alphas[s]);
-        }
-        
-        return result;
-    }
-    
-    template <std::size_t K>
-    auto approx_log_evidence(const CompressedReadLikelihoods<K>& log_likelihoods,
-                             const CompressedLatents<K>& latents)
-    {
-        const auto& genotype_posteriors = latents.genotype_posteriors;
-        const auto& alphas = latents.alphas;
-        
-        const auto G = genotype_posteriors.size();
-        
-        std::vector<double> log_jcs(G);
-        
-        for (std::size_t g {0}; g < G; ++g) {
-            log_jcs[g] = std::log(genotype_posteriors[g]) + log_marginal(log_likelihoods, alphas, g);
-        }
-        
-        return Maths::log_sum_exp(log_jcs);
+        return {std::move(genotype_posteriors), std::move(genotype_log_posteriors),
+                std::move(posterior_alphas), std::move(responsabilities)};
     }
     
     // Main algorithm - multiple seeds
@@ -696,8 +780,9 @@ namespace Octopus
         std::vector<double> result_evidences(results.size());
         
         std::transform(std::cbegin(results), std::cend(results), std::begin(result_evidences),
-                       [&log_likelihoods] (const auto& latents) {
-                           return approx_log_evidence(log_likelihoods, latents);
+                       [&] (const auto& latents) {
+                           return calculate_lower_bound(prior_alphas, genotype_log_priors,
+                                                        log_likelihoods, latents);
                        });
         
         const auto it = std::max_element(std::cbegin(result_evidences),
@@ -761,10 +846,10 @@ namespace Octopus
         return Cancer::InferredLatents {std::move(posterior_latents), evidence};
     }
         
-    auto infer_with_germline_model(const SampleIdType& sample,
-                                   const std::vector<CancerGenotype<Haplotype>>& genotypes,
-                                   const HaplotypeLikelihoodCache& haplotype_log_likelihoods,
-                                   const SomaticModel& genotype_prior_model)
+    auto calculate_log_posteirors_with_germline_model(const SampleIdType& sample,
+                                                      const std::vector<CancerGenotype<Haplotype>>& genotypes,
+                                                      const HaplotypeLikelihoodCache& haplotype_log_likelihoods,
+                                                      const SomaticModel& genotype_prior_model)
     {
         assert(!genotypes.empty());
         
@@ -776,13 +861,18 @@ namespace Octopus
         
         std::transform(std::cbegin(genotypes), std::cend(genotypes), std::begin(result),
                        [&] (const auto& genotype) {
-                           return std::log(genotype_prior_model.evaluate(genotype))
+                           return genotype_prior_model.evaluate(genotype)
                                 + likelihood_model.log_likelihood(sample, genotype.get_germline_genotype());
                        });
         
         Maths::normalise_logs(result);
         
         return result;
+    }
+    
+    LogProbabilityVector log_uniform_dist(const std::size_t n)
+    {
+        return LogProbabilityVector(n, -std::log(static_cast<double>(n)));
     }
     
     auto generate_seeds(const std::vector<SampleIdType>& samples,
@@ -798,9 +888,9 @@ namespace Octopus
         result.emplace_back(log_uniform_dist(genotypes.size()));
         
         for (const auto& sample : samples) {
-            result.emplace_back(infer_with_germline_model(sample, genotypes,
-                                                          haplotype_log_likelihoods,
-                                                          priors.genotype_prior_model));
+            result.emplace_back(calculate_log_posteirors_with_germline_model(sample, genotypes,
+                                                                             haplotype_log_likelihoods,
+                                                                             priors.genotype_prior_model));
         }
         
         return result;
