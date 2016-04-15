@@ -178,11 +178,6 @@ namespace
         return result;
     }
     
-    auto bundle(const Haplotype& a, const Haplotype& b)
-    {
-        return std::array<std::reference_wrapper<const Haplotype>, 2> {std::cref(a), std::cref(b)};
-    }
-    
     template <std::size_t K>
     CompressedAlpha<K> compress(const CNV::Priors::GenotypeMixturesDirichletAlphas& alpha)
     {
@@ -252,16 +247,6 @@ namespace
                        });
         
         return result;
-    }
-    
-    auto sum(const CompressedAlpha<2>& alpha)
-    {
-        return alpha.front() + alpha.back();
-    }
-    
-    auto sum(const CompressedAlpha<3>& alpha)
-    {
-        return alpha[0] + alpha[1] + alpha[2];
     }
     
     template <std::size_t K>
@@ -420,24 +405,8 @@ namespace
             assert(read_likelihoods[s][g].size() == K);
             
             for (unsigned k {0}; k < K; ++k) {
-                double curr {0}; // DEBUG
                 for (std::size_t n {0}; n < N; ++n) {
-                    if (TRACE_MODE) {
-                        Logging::TraceLogger log {};
-                        if (g == 1) {
-                            stream(log) << "s: " << s << " n: " << n << " k: " << k << " : "
-                            << responsabilities[s][n][k] << " * " << read_likelihoods[s][g][k][n]
-                            << " = "<< responsabilities[s][n][k] * read_likelihoods[s][g][k][n];
-                        }
-                    }
-                    curr += responsabilities[s][n][k] * read_likelihoods[s][g][k][n]; // DEBUG
                     result += responsabilities[s][n][k] * read_likelihoods[s][g][k][n];
-                }
-                if (TRACE_MODE) {
-                    Logging::TraceLogger log {};
-                    if (g == 1) {
-                        stream(log) << k << " total = " << curr;
-                    }
                 }
             }
         }
@@ -452,19 +421,7 @@ namespace
                                         const CompressedReadLikelihoods<K>& read_likelihoods)
     {
         for (std::size_t g {0}; g < result.size(); ++g) {
-            if (TRACE_MODE) {
-                Logging::TraceLogger log {};
-                if (g == 1) {
-                    stream(log) << "g = " << g;
-                }
-            }
             result[g] = genotype_log_priors[g] + marginalise(responsabilities, read_likelihoods, g);
-            if (TRACE_MODE) {
-                Logging::TraceLogger log {};
-                if (g == 1) {
-                    stream(log) << "result " << result[g];
-                }
-            }
         }
         
         Maths::normalise_logs(result);
@@ -640,12 +597,6 @@ namespace
                                });
     }
     
-    template <>
-    double q_expectation<2>(const Tau<2>& tau)
-    {
-        return tau[0] * std::log(tau[0]) + tau[1] * std::log(tau[1]);
-    }
-    
     // E [ln q(Z_s)]
     template <std::size_t K>
     double q_expectation(const ResponsabilityVector<K>& taus)
@@ -728,7 +679,6 @@ namespace
                 Logging::TraceLogger log {};
                 stream(log) << "VB Iteration " << i;
             }
-            //std::cout << "VB Iteration " << i << '\n';
             
             update_genotype_log_posteriors(genotype_log_posteriors, genotype_log_priors,
                                            responsabilities, log_likelihoods);
@@ -743,7 +693,6 @@ namespace
             std::tie(is_converged, max_change) = check_convergence(prior_alphas, posterior_alphas,
                                                                    max_change, params.epsilon);
             
-            //std::cout << "max change = " << max_change << std::endl;
             if (is_converged) {
                 break;
             }
@@ -884,17 +833,6 @@ namespace
         const auto prior_alphas = flatten_priors<K>(priors, samples);
         
         const auto genotype_log_priors = calculate_log_priors(genotypes, priors.genotype_prior_model);
-        
-//        if (TRACE_MODE) {
-//            Logging::TraceLogger log {};
-//            auto slog = stream(log);
-//            slog << "All candidate genotypes: " << '\n';
-//            for (std::size_t g {0}; g < genotypes.size(); ++g) {
-//                slog << g << " ";
-//                ::debug::print_variant_alleles(slog, genotypes[g]);
-//                slog << " " << genotype_log_priors[g] << '\n';
-//            }
-//        }
         
         const auto log_likelihoods = compress<K>(genotypes, samples, haplotype_log_likelihoods);
         

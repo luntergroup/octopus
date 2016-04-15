@@ -31,12 +31,13 @@ namespace Octopus
     class CoalescentModel
     {
     public:
-        CoalescentModel() = default;
+        CoalescentModel() = delete;
         
-        explicit CoalescentModel(Haplotype reference_haplotype,
+        explicit CoalescentModel(Haplotype reference,
                                  double snp_heterozygosity = 0.001,
                                  double indel_heterozygosity = 0.001);
-        explicit CoalescentModel(std::vector<Haplotype> reference_haplotypes,
+        
+        explicit CoalescentModel(std::vector<Haplotype> reference,
                                  double snp_heterozygosity = 0.001,
                                  double indel_heterozygosity = 0.001);
         
@@ -46,6 +47,8 @@ namespace Octopus
         CoalescentModel& operator=(const CoalescentModel&) = default;
         CoalescentModel(CoalescentModel&&)                 = default;
         CoalescentModel& operator=(CoalescentModel&&)      = default;
+        
+        void set_reference(Haplotype reference);
         
         template <typename H>
         double evaluate(const H& haplotypes) const;

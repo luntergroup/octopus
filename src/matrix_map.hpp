@@ -230,7 +230,7 @@ public:
         }
         
         return values_.emplace(std::piecewise_construct,
-                               std::forward_as_tuple<K>(key),
+                               std::forward_as_tuple<K>(std::forward<K>(key)),
                                std::make_tuple(first, last)).second;
     }
     

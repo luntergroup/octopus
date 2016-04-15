@@ -1,13 +1,13 @@
 //
-//  cancer_genotype_model.hpp
+//  somatic_genotype_model.hpp
 //  Octopus
 //
 //  Created by Daniel Cooke on 26/08/2015.
 //  Copyright (c) 2015 Oxford University. All rights reserved.
 //
 
-#ifndef __Octopus__cancer_genotype_model__
-#define __Octopus__cancer_genotype_model__
+#ifndef __Octopus__somatic_genotype_model__
+#define __Octopus__somatic_genotype_model__
 
 #include <vector>
 #include <unordered_map>
@@ -15,7 +15,7 @@
 
 #include "common.hpp"
 #include "haplotype.hpp"
-#include "somatic_model.hpp"
+#include "somatic_mutation_model.hpp"
 #include "haplotype_likelihood_cache.hpp"
 #include "cancer_genotype.hpp"
 
@@ -23,7 +23,7 @@ namespace Octopus
 {
     namespace GenotypeModel
     {
-    class Cancer
+    class Somatic
     {
     public:
         struct Priors
@@ -35,7 +35,7 @@ namespace Octopus
             template <typename C, typename D> Priors(C&&, D&&);
             ~Priors() = default;
             
-            SomaticModel genotype_prior_model;
+            SomaticMutationModel genotype_prior_model;
             GenotypeMixturesDirichletAlphaMap alphas;
         };
         
@@ -68,18 +68,18 @@ namespace Octopus
             double approx_log_evidence;
         };
         
-        Cancer() = delete;
+        Somatic() = delete;
         
-        explicit Cancer(std::vector<SampleIdType> samples, unsigned ploidy, Priors priors);
-        explicit Cancer(std::vector<SampleIdType> samples, unsigned ploidy, Priors priors,
-                        AlgorithmParameters parameters);
+        explicit Somatic(std::vector<SampleIdType> samples, unsigned ploidy, Priors priors);
+        explicit Somatic(std::vector<SampleIdType> samples, unsigned ploidy, Priors priors,
+                         AlgorithmParameters parameters);
         
-        ~Cancer() = default;
+        ~Somatic() = default;
         
-        Cancer(const Cancer&)            = default;
-        Cancer& operator=(const Cancer&) = default;
-        Cancer(Cancer&&)                 = default;
-        Cancer& operator=(Cancer&&)      = default;
+        Somatic(const Somatic&)            = default;
+        Somatic& operator=(const Somatic&) = default;
+        Somatic(Somatic&&)                 = default;
+        Somatic& operator=(Somatic&&)      = default;
         
         InferredLatents infer_latents(std::vector<CancerGenotype<Haplotype>> genotypes,
                                       const HaplotypeLikelihoodCache& haplotype_likelihoods) const;
@@ -95,14 +95,14 @@ namespace Octopus
     };
     
     template <typename C, typename D>
-    Cancer::Priors::Priors(C&& genotype_prior_model, D&& alphas)
+    Somatic::Priors::Priors(C&& genotype_prior_model, D&& alphas)
     :
     genotype_prior_model {std::forward<C>(genotype_prior_model)},
     alphas {std::forward<D>(alphas)}
     {}
     
     template <typename G, typename M>
-    Cancer::Latents::Latents(G&& genotype_probabilities, M&& alphas)
+    Somatic::Latents::Latents(G&& genotype_probabilities, M&& alphas)
     :
     genotype_probabilities {std::forward<G>(genotype_probabilities)},
     alphas {std::forward<M>(alphas)}
@@ -111,4 +111,4 @@ namespace Octopus
     } // namespace GenotypeModel
 } // namespace Octopus
 
-#endif /* defined(__Octopus__cancer_genotype_model__) */
+#endif /* defined(__Octopus__somatic_genotype_model__) */

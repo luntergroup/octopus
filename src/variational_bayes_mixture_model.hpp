@@ -13,6 +13,7 @@
 #include <vector>
 
 #include "common.hpp"
+#include "haplotype.hpp"
 #include "haplotype_likelihood_cache.hpp"
 
 namespace Octopus
@@ -42,8 +43,9 @@ namespace Octopus
         
         struct InferredLatents
         {
-            Latents posterior_latents;
-            double approx_evidence;
+            InferredLatents(Latents&& posteriors, double approx_log_evidence);
+            Latents posteriors;
+            double approx_log_evidence;
         }
         
         VariationalBayesMixtureModel() = default;
@@ -104,13 +106,6 @@ namespace Octopus
         using CompressedReadLikelihoods = std::vector<CompressedGenotypes<K>>;
         
         template <std::size_t K>
-        struct CompressedLatents
-        {
-            ProbabilityVector genotype_posteriors;
-            CompressedAlphas<K> alphas;
-        };
-        
-        template <std::size_t K>
         using Tau = std::array<double, K>;
         
         template <std::size_t K>
@@ -118,6 +113,15 @@ namespace Octopus
         
         template <std::size_t K>
         using ResponsabilityVectors = std::vector<ResponsabilityVector<K>>;
+        
+        template <std::size_t K>
+        struct CompressedLatents
+        {
+            ProbabilityVector genotype_posteriors;
+            LogProbabilityVector genotype_log_posteriors;
+            CompressedAlphas<K> alphas;
+            ResponsabilityVectors<K> responsabilities;
+        };
         
         AlgorithmOptions options_;
     };

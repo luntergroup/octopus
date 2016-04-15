@@ -26,7 +26,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--version",
         
         "--debug",
-        "--trace",
+        //"--trace",
         
         //"--sites-only",
         
@@ -43,8 +43,8 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--reference", ecoli_reference_fasta.c_str(),
         
         //"--reads", NA12878_low_coverage.c_str(),
-        //"--reads", NA12878_high_coverage.c_str(),
-        "--reads", "~/Genomics/Illumina/NA12878.mapped.ILLUMINA.bwa.CEU.high_coverage_pcr_free.20130906.chr22.bam",
+        "--reads", NA12878_high_coverage.c_str(),
+        //"--reads", "~/Genomics/Illumina/NA12878.mapped.ILLUMINA.bwa.CEU.high_coverage_pcr_free.20130906.chr22.bam",
         
         //"--reads", NA12891_high_coverage.c_str(),
         "--reads", HG00101.c_str(),
@@ -60,7 +60,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         "--model", "cancer", // default "population"
         "--normal-sample", "NA12878", // for cancer model
         
-        //"--organism-ploidy", "2",
+        //"--organism-ploidy", "3",
         "--contig-ploidies", "MT=1", "Y=1",// "MT=2",
         //"--contig-ploidies-file", contig_ploidies_txt_file.c_str(),
         
@@ -69,13 +69,11 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         
         /* input regions */
         
-        "--regions", "22:27,390,423-27,390,564",
-        
         //"--use-one-based-indexing",
         
         // for population
         
-        // NA12878_high_coverage interestint regions / possible errors
+        // NA12878_high_coverage interesting regions / possible errors
         //"--regions", "22:37,894,887-37,895,035", // is the insertion there (both GATK & Platypus call - I'm not so sure)?
         //"--regions", "22:37,616,864-37,617,015", // false negative insertion?
         //"--regions", "22:37,622,869-37,622,909", // SNPs or indels?
@@ -93,6 +91,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--regions", "22:16,103,653-16,103,957", // 5 haplotypes??
         //"--regions", "22:16,909,216-16,909,255", // insertion followed by 2 SNPs
         //"--regions", "22:32,033,026-32,033,280", // interesting deletions
+        //"--regions", "16:62,432,702-62,432,933", // interesting insertions
         
         // Bad VCF representation
         //"--regions", "22:41,836,102-41,836,142", // NA12878_low_coverage deletion 2|0
@@ -131,7 +130,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         // NA12878HC (normal) vs HG00101LC
         //"--regions", "22:33,310,391-33,310,686",
         //"--regions", "22:29,786,267-29,786,698",
-        //"--regions", "22:31,196,345-31,196,590", // Somatic
+        "--regions", "22:31,196,345-31,196,590", // Somatic
         //"--regions", "22:31,195,690-31,196,075",
         //"--regions", "22:33,216,196-33,216,399",
         //"--regions", "22:34,606,760-34,606,969",

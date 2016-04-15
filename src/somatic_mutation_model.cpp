@@ -1,12 +1,12 @@
 //
-//  somatic_model.cpp
+//  somatic_mutation_model.cpp
 //  Octopus
 //
 //  Created by Daniel Cooke on 12/04/2016.
 //  Copyright © 2016 Oxford University. All rights reserved.
 //
 
-#include "somatic_model.hpp"
+#include "somatic_mutation_model.hpp"
 
 #include <utility>
 #include <cmath>
@@ -14,16 +14,12 @@
 
 namespace Octopus
 {
-    SomaticModel::SomaticModel(const CoalescentModel& germline_model, double somatic_mutation_rate)
+    SomaticMutationModel::SomaticMutationModel(const CoalescentModel& germline_model,
+                                               double somatic_mutation_rate)
     :
     germline_model_ {germline_model},
     somatic_mutation_rate_ {somatic_mutation_rate}
     {}
-    
-    const CoalescentModel& SomaticModel::get_germline_model() const noexcept
-    {
-        return germline_model_;
-    }
     
     double probability_of_somatic(const Haplotype& somatic, const Haplotype& germline,
                                   double somatic_mutation_probability = 0.00001)
@@ -43,7 +39,7 @@ namespace Octopus
                                }) / germline_genotype.ploidy();
     }
     
-    double SomaticModel::evaluate(const CancerGenotype<Haplotype>& genotype) const
+    double SomaticMutationModel::evaluate(const CancerGenotype<Haplotype>& genotype) const
     {
         const auto& germline = genotype.get_germline_genotype();
         const auto& somatic  = genotype.get_cancer_element();

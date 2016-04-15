@@ -17,7 +17,11 @@
 
 #include "common.hpp"
 #include "variant_caller.hpp"
-#include "cancer_genotype_model.hpp"
+#include "coalescent_model.hpp"
+#include "somatic_mutation_model.hpp"
+#include "individual_genotype_model.hpp"
+#include "cnv_genotype_model.hpp"
+#include "somatic_genotype_model.hpp"
 
 class GenomicRegion;
 class ReadPipe;
@@ -63,21 +67,40 @@ public:
     CancerVariantCaller& operator=(CancerVariantCaller&&)      = delete;
     
 private:
+    using GermlineModel = GenotypeModel::Individual;
+    using CNVModel      = GenotypeModel::CNV;
+    using SomaticModel  = GenotypeModel::Somatic;
+    
     class Latents : public CallerLatents
     {
     public:
-        using ModelLatents = GenotypeModel::Cancer::Latents;
-        
         using CallerLatents::HaplotypeProbabilityMap;
         using CallerLatents::GenotypeProbabilityMap;
         
-        explicit Latents(ModelLatents&&);
+        explicit Latents(std::vector<Genotype<Haplotype>>&& germline_genotypes,
+                         std::vector<CancerGenotype<Haplotype>>&& somatic_genotypes,
+                         GermlineModel::InferredLatents&&,
+                         CNVModel::InferredLatents&&,
+                         SomaticModel::InferredLatents&&);
         
         std::shared_ptr<HaplotypeProbabilityMap> get_haplotype_posteriors() const override;
         std::shared_ptr<GenotypeProbabilityMap> get_genotype_posteriors() const override;
         
     private:
-        ModelLatents model_latents_;
+        std::vector<Genotype<Haplotype>> germline_genotypes_;
+        std::vector<CancerGenotype<Haplotype>> somatic_genotypes_;
+        
+        GermlineModel::InferredLatents germline_model_inferences_;
+        CNVModel::InferredLatents cnv_model_inferences_;
+        SomaticModel::InferredLatents somatic_model_inferences_;
+        
+        friend CancerVariantCaller;
+    };
+    
+    struct ModelPosteriors
+    {
+        explicit ModelPosteriors(double germline, double cnv, double somatic);
+        double germline, cnv, somatic;
     };
     
     CallerParameters parameters_;
@@ -86,12 +109,36 @@ private:
     infer_latents(const std::vector<Haplotype>& haplotypes,
                   const HaplotypeLikelihoodCache& haplotype_likelihoods) const override;
     
+    CNVModel::Priors calculate_cnv_model_priors(const CoalescentModel& prior_model) const;
+    SomaticModel::Priors calculate_somatic_model_priors(const SomaticMutationModel& prior_model) const;
+    
     std::vector<VcfRecord::Builder>
     call_variants(const std::vector<Variant>& candidates,
                   const std::vector<Allele>& callable_alleles,
                   CallerLatents* latents,
                   const Phaser::PhaseSet& phase_set,
                   const ReadMap& reads) const override;
+    
+    ModelPosteriors calculate_model_posteriors(const Latents& inferences) const;
+    
+    std::vector<VcfRecord::Builder>
+    call_germline_variants(const std::vector<Variant>& candidates,
+                           const std::vector<Allele>& callable_alleles,
+                           const GermlineModel::Latents& posteriors,
+                           const Phaser::PhaseSet& phase_set,
+                           const ReadMap& reads) const;
+    std::vector<VcfRecord::Builder>
+    call_cnv_variants(const std::vector<Variant>& candidates,
+                      const std::vector<Allele>& callable_alleles,
+                      const CNVModel::Latents& posteriors,
+                      const Phaser::PhaseSet& phase_set,
+                      const ReadMap& reads) const;
+    std::vector<VcfRecord::Builder>
+    call_somatic_variants(const std::vector<Variant>& candidates,
+                          const std::vector<Allele>& callable_alleles,
+                          const SomaticModel::Latents& posteriors,
+                          const Phaser::PhaseSet& phase_set,
+                          const ReadMap& reads) const;
 };
 
 } // namespace Octopus

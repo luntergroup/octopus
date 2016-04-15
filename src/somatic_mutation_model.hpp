@@ -1,13 +1,13 @@
 //
-//  somatic_model.hpp
+//  somatic_mutation_model.hpp
 //  Octopus
 //
 //  Created by Daniel Cooke on 12/04/2016.
 //  Copyright © 2016 Oxford University. All rights reserved.
 //
 
-#ifndef somatic_model_hpp
-#define somatic_model_hpp
+#ifndef somatic_mutation_model_hpp
+#define somatic_mutation_model_hpp
 
 #include <type_traits>
 #include <functional>
@@ -19,28 +19,31 @@
 
 namespace Octopus
 {
-    class SomaticModel
+    class SomaticMutationModel
     {
     public:
-        SomaticModel() = default;
-        explicit SomaticModel(const CoalescentModel& germline_model, double somatic_mutation_rate = 0.00001);
-        ~SomaticModel() = default;
+        SomaticMutationModel() = delete;
         
-        SomaticModel(const SomaticModel&)            = default;
-        SomaticModel& operator=(const SomaticModel&) = default;
-        SomaticModel(SomaticModel&&)                 = default;
-        SomaticModel& operator=(SomaticModel&&)      = default;
+        explicit SomaticMutationModel(const CoalescentModel& germline_model,
+                                      double somatic_mutation_rate = 0.00001);
         
-        const CoalescentModel& get_germline_model() const noexcept;
+        ~SomaticMutationModel() = default;
+        
+        SomaticMutationModel(const SomaticMutationModel&)            = default;
+        SomaticMutationModel& operator=(const SomaticMutationModel&) = default;
+        SomaticMutationModel(SomaticMutationModel&&)                 = default;
+        SomaticMutationModel& operator=(SomaticMutationModel&&)      = default;
         
         double evaluate(const CancerGenotype<Haplotype>& genotype) const;
+        
     private:
         std::reference_wrapper<const CoalescentModel> germline_model_;
         double somatic_mutation_rate_;
     };
     
     template <typename Container>
-    std::vector<double> calculate_log_priors(const Container& genotypes, const SomaticModel& model)
+    std::vector<double> calculate_log_priors(const Container& genotypes,
+                                             const SomaticMutationModel& model)
     {
         static_assert(std::is_same<typename Container::value_type, CancerGenotype<Haplotype>>::value,
                       "genotypes must contain CancerGenotype<Haplotype>'s");
@@ -58,4 +61,4 @@ namespace Octopus
     }
 } // namespace Octopus
 
-#endif /* somatic_model_hpp */
+#endif /* somatic_mutation_model_hpp */

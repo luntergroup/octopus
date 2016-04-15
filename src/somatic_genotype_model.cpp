@@ -1,12 +1,12 @@
 //
-//  cancer_genotype_model.cpp
+//  somatic_genotype_model.cpp
 //  Octopus
 //
 //  Created by Daniel Cooke on 26/08/2015.
 //  Copyright (c) 2015 Oxford University. All rights reserved.
 //
 
-#include "cancer_genotype_model.hpp"
+#include "somatic_genotype_model.hpp"
 
 #include <array>
 #include <algorithm>
@@ -32,19 +32,19 @@ namespace Octopus
     {
     // public methods
     
-    Cancer::Cancer(std::vector<SampleIdType> samples, const unsigned ploidy, Priors priors)
+    Somatic::Somatic(std::vector<SampleIdType> samples, const unsigned ploidy, Priors priors)
     :
-    Cancer {std::move(samples), ploidy, std::move(priors), AlgorithmParameters {}}
+    Somatic {std::move(samples), ploidy, std::move(priors), AlgorithmParameters {}}
     {}
         
-    Cancer::InferredLatents::InferredLatents(Latents&& posteriors, double approx_log_evidence)
+    Somatic::InferredLatents::InferredLatents(Latents&& posteriors, double approx_log_evidence)
     :
     posteriors {std::move(posteriors)},
     approx_log_evidence {approx_log_evidence}
     {}
     
-    Cancer::Cancer(std::vector<SampleIdType> samples, const unsigned ploidy, Priors priors,
-                   AlgorithmParameters parameters)
+    Somatic::Somatic(std::vector<SampleIdType> samples, const unsigned ploidy, Priors priors,
+                     AlgorithmParameters parameters)
     :
     samples_ {std::move(samples)},
     ploidy_ {ploidy},
@@ -65,18 +65,18 @@ namespace Octopus
     };
     
     template <std::size_t K>
-    Cancer::InferredLatents
+    Somatic::InferredLatents
     run_variational_bayes(const std::vector<SampleIdType>& samples,
                           std::vector<CancerGenotype<Haplotype>>&& genotypes,
-                          const Cancer::Priors& priors,
+                          const Somatic::Priors& priors,
                           const HaplotypeLikelihoodCache& haplotype_likelihoods,
                           const VariationalBayesParameters& params);
     
     // Cancer public
     
-    Cancer::InferredLatents
-    Cancer::infer_latents(std::vector<CancerGenotype<Haplotype>> genotypes,
-                          const HaplotypeLikelihoodCache& haplotype_likelihoods) const
+    Somatic::InferredLatents
+    Somatic::infer_latents(std::vector<CancerGenotype<Haplotype>> genotypes,
+                           const HaplotypeLikelihoodCache& haplotype_likelihoods) const
     {
         assert(!genotypes.empty());
         
@@ -180,7 +180,7 @@ namespace Octopus
     }
     
     template <std::size_t K>
-    CompressedAlpha<K> compress(const Cancer::Priors::GenotypeMixturesDirichletAlphas& alpha)
+    CompressedAlpha<K> compress(const Somatic::Priors::GenotypeMixturesDirichletAlphas& alpha)
     {
         CompressedAlpha<K> result;
         std::copy_n(std::cbegin(alpha), K, std::begin(result));
@@ -188,7 +188,7 @@ namespace Octopus
     }
     
     template <std::size_t K>
-    CompressedAlphas<K> flatten_priors(const Cancer::Priors& priors, const std::vector<SampleIdType>& samples)
+    CompressedAlphas<K> flatten_priors(const Somatic::Priors& priors, const std::vector<SampleIdType>& samples)
     {
         CompressedAlphas<K> result(samples.size());
         
@@ -422,25 +422,9 @@ namespace Octopus
             assert(read_likelihoods[s][g].size() == K);
             
             for (unsigned k {0}; k < K; ++k) {
-                double curr {0}; // DEBUG
                 for (std::size_t n {0}; n < N; ++n) {
-//                    if (TRACE_MODE) {
-//                        Logging::TraceLogger log {};
-//                        if (g == 82 || g == 90) {
-//                            stream(log) << "s: " << s << " n: " << n << " k: " << k << " : "
-//                                    << responsabilities[s][n][k] << " * " << read_likelihoods[s][g][k][n]
-//                                    << " = "<< responsabilities[s][n][k] * read_likelihoods[s][g][k][n];
-//                        }
-//                    }
-                    curr += responsabilities[s][n][k] * read_likelihoods[s][g][k][n]; // DEBUG
                     result += responsabilities[s][n][k] * read_likelihoods[s][g][k][n];
                 }
-//                if (TRACE_MODE) {
-//                    Logging::TraceLogger log {};
-//                    if (g == 82 || g == 90) {
-//                        stream(log) << k << " total = " << curr;
-//                    }
-//                }
             }
         }
         
@@ -454,19 +438,7 @@ namespace Octopus
                                         const CompressedReadLikelihoods<K>& read_likelihoods)
     {
         for (std::size_t g {0}; g < result.size(); ++g) {
-//            if (TRACE_MODE) {
-//                Logging::TraceLogger log {};
-//                if (g == 82 || g == 90) {
-//                    stream(log) << "g = " << g;
-//                }
-//            }
             result[g] = genotype_log_priors[g] + marginalise(responsabilities, read_likelihoods, g);
-//            if (TRACE_MODE) {
-//                Logging::TraceLogger log {};
-//                if (g == 82 || g == 90) {
-//                    stream(log) << "result " << result[g];
-//                }
-//            }
         }
         
         Maths::normalise_logs(result);
@@ -730,7 +702,6 @@ namespace Octopus
                 Logging::TraceLogger log {};
                 stream(log) << "VB Iteration " << i;
             }
-            //std::cout << "VB Iteration " << i << '\n';
             
             update_genotype_log_posteriors(genotype_log_posteriors, genotype_log_priors,
                                            responsabilities, log_likelihoods);
@@ -745,7 +716,6 @@ namespace Octopus
             std::tie(is_converged, max_change) = check_convergence(prior_alphas, posterior_alphas,
                                                                    max_change, params.epsilon);
             
-            //std::cout << "max change = " << max_change << std::endl;
             if (is_converged) {
                 break;
             }
@@ -795,11 +765,11 @@ namespace Octopus
     
     // Helpers
     
-    Cancer::Latents::GenotypeProbabilityMap
+    Somatic::Latents::GenotypeProbabilityMap
     expand(std::vector<CancerGenotype<Haplotype>>&& genotypes,
            LogProbabilityVector&& genotype_log_posteriors)
     {
-        Cancer::Latents::GenotypeProbabilityMap result {};
+        Somatic::Latents::GenotypeProbabilityMap result {};
         
         std::transform(std::make_move_iterator(std::begin(genotypes)),
                        std::make_move_iterator(std::end(genotypes)),
@@ -813,16 +783,16 @@ namespace Octopus
     }
     
     template <std::size_t K>
-    Cancer::Latents::GenotypeMixturesDirichletAlphas expand(CompressedAlpha<K>& alpha)
+    Somatic::Latents::GenotypeMixturesDirichletAlphas expand(CompressedAlpha<K>& alpha)
     {
-        return Cancer::Latents::GenotypeMixturesDirichletAlphas(std::begin(alpha), std::end(alpha));
+        return Somatic::Latents::GenotypeMixturesDirichletAlphas(std::begin(alpha), std::end(alpha));
     }
     
     template <std::size_t K>
-    Cancer::Latents::GenotypeMixturesDirichletAlphaMap
+    Somatic::Latents::GenotypeMixturesDirichletAlphaMap
     expand(const std::vector<SampleIdType>& samples, CompressedAlphas<K>&& alphas)
     {
-        Cancer::Latents::GenotypeMixturesDirichletAlphaMap result {};
+        Somatic::Latents::GenotypeMixturesDirichletAlphaMap result {};
         
         std::transform(std::cbegin(samples), std::cend(samples), std::begin(alphas),
                        std::inserter(result, std::begin(result)),
@@ -834,22 +804,22 @@ namespace Octopus
     }
     
     template <std::size_t K>
-    Cancer::InferredLatents
+    Somatic::InferredLatents
     expand(const std::vector<SampleIdType>& samples, std::vector<CancerGenotype<Haplotype>>&& genotypes,
            CompressedLatents<K>&& inferred_latents, const double evidence)
     {
-        Cancer::Latents posterior_latents {
+        Somatic::Latents posterior_latents {
             expand(std::move(genotypes), std::move(inferred_latents.genotype_posteriors)),
             expand(samples, std::move(inferred_latents.alphas))
         };
         
-        return Cancer::InferredLatents {std::move(posterior_latents), evidence};
+        return Somatic::InferredLatents {std::move(posterior_latents), evidence};
     }
         
     auto calculate_log_posteirors_with_germline_model(const SampleIdType& sample,
                                                       const std::vector<CancerGenotype<Haplotype>>& genotypes,
                                                       const HaplotypeLikelihoodCache& haplotype_log_likelihoods,
-                                                      const SomaticModel& genotype_prior_model)
+                                                      const SomaticMutationModel& genotype_prior_model)
     {
         assert(!genotypes.empty());
         
@@ -878,7 +848,7 @@ namespace Octopus
     auto generate_seeds(const std::vector<SampleIdType>& samples,
                         const std::vector<CancerGenotype<Haplotype>>& genotypes,
                         const LogProbabilityVector& genotype_log_priors,
-                        const Cancer::Priors& priors,
+                        const Somatic::Priors& priors,
                         const HaplotypeLikelihoodCache& haplotype_log_likelihoods)
     {
         std::vector<LogProbabilityVector> result {};
@@ -899,27 +869,16 @@ namespace Octopus
     // Main entry point
     
     template <std::size_t K>
-    Cancer::InferredLatents
+    Somatic::InferredLatents
     run_variational_bayes(const std::vector<SampleIdType>& samples,
                           std::vector<CancerGenotype<Haplotype>>&& genotypes,
-                          const Cancer::Priors& priors,
+                          const Somatic::Priors& priors,
                           const HaplotypeLikelihoodCache& haplotype_log_likelihoods,
                           const VariationalBayesParameters& params)
     {
         const auto prior_alphas = flatten_priors<K>(priors, samples);
         
         const auto genotype_log_priors = calculate_log_priors(genotypes, priors.genotype_prior_model);
-        
-//        if (TRACE_MODE) {
-//            Logging::TraceLogger log {};
-//            auto slog = stream(log);
-//            slog << "All candidate cancer genotypes: " << '\n';
-//            for (std::size_t g {0}; g < genotypes.size(); ++g) {
-//                slog << g << " ";
-//                debug::print_variant_alleles(slog, genotypes[g]);
-//                slog << " " << genotype_log_priors[g] << '\n';
-//            }
-//        }
         
         const auto log_likelihoods = compress<K>(genotypes, samples, haplotype_log_likelihoods);
         

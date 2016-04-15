@@ -11,6 +11,7 @@
 #include <utility>
 #include <algorithm>
 #include <cmath>
+#include <cassert>
 #include <iostream>
 
 #include "fixed_ploidy_genotype_likelihood_model.hpp"
@@ -46,6 +47,7 @@ namespace GenotypeModel
                               const HaplotypeLikelihoodCache& haplotype_likelihoods) const
     {
         assert(!genotypes.empty());
+        assert(genotypes.front().ploidy() == ploidy_);
         
         FixedPloidyGenotypeLikelihoodModel likelihood_model {ploidy_, haplotype_likelihoods};
         
