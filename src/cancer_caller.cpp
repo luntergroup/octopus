@@ -47,7 +47,8 @@ min_refcall_posterior {min_refcall_posterior},
 ploidy {ploidy},
 normal_sample {normal_sample},
 somatic_mutation_rate {somatic_mutation_rate},
-call_somatics_only {call_somatics_only}
+call_somatics_only {call_somatics_only},
+max_genotypes {500'000}
 {}
 
 CancerVariantCaller::CancerVariantCaller(const ReferenceGenome& reference,
@@ -144,6 +145,8 @@ CancerVariantCaller::infer_latents(const std::vector<Haplotype>& haplotypes,
         stream(log) << "There are " << cancer_genotypes.size() << " candidate cancer genotypes";
     }
     
+    filter(cancer_genotypes);
+    
     CoalescentModel germline_prior_model {Haplotype {mapped_region(haplotypes.front()), reference_}};
     SomaticMutationModel somatic_prior_model {germline_prior_model, parameters_.somatic_mutation_rate};
     
@@ -164,6 +167,11 @@ CancerVariantCaller::infer_latents(const std::vector<Haplotype>& haplotypes,
     return std::make_unique<Latents>(std::move(germline_genotypes), std::move(cancer_genotypes),
                                      std::move(germline_inferences), std::move(cnv_inferences),
                                      std::move(somatic_inferences));
+}
+
+void CancerVariantCaller::filter(std::vector<CancerGenotype<Haplotype>>& genotypes) const
+{
+    
 }
 
 CancerVariantCaller::CNVModel::Priors
@@ -414,7 +422,7 @@ CancerVariantCaller::call_variants(const std::vector<Variant>& candidates,
                                    const ReadMap& reads) const
 {
     const auto dlatents = dynamic_cast<Latents*>(latents);
-
+    
     const auto model_posteriors = calculate_model_posteriors(*dlatents);
     
     if (DEBUG_MODE) {
@@ -438,12 +446,10 @@ CancerVariantCaller::call_variants(const std::vector<Variant>& candidates,
         return call_cnv_variants(candidates, callable_alleles,
                                  dlatents->cnv_model_inferences_.posteriors,
                                  phase_set, reads);
-    } else if (!parameters_.call_somatics_only) {
+    } else {
         return call_germline_variants(candidates, callable_alleles,
                                       dlatents->germline_model_inferences_.posteriors,
                                       phase_set, reads);
-    } else {
-        return {};
     }
 }
 
@@ -483,6 +489,48 @@ CancerVariantCaller::call_germline_variants(const std::vector<Variant>& candidat
 {
     std::vector<VcfRecord::Builder> result {};
     
+    if (parameters_.call_somatics_only) {
+        return result;
+    }
+    
+    return result;
+}
+
+template <typename L>
+auto find_map_genotype(const L& posteriors)
+{
+    return *std::max_element(std::cbegin(posteriors.genotype_probabilities),
+                             std::cend(posteriors.genotype_probabilities),
+                             [] (const auto& lhs, const auto& rhs) {
+                                 return lhs.second < rhs.second;
+                             });
+}
+
+template <typename T>
+auto compute_marginal_credible_interval(const T& alphas, const double mass)
+{
+    const auto a0 = std::accumulate(std::cbegin(alphas), std::cend(alphas), 0.0);
+    
+    std::vector<std::pair<double, double>> result {};
+    result.reserve(alphas.size());
+    
+    for (const auto& alpha : alphas) {
+        result.push_back(Maths::beta_hdi(alpha, a0 - alpha, mass));
+    }
+    
+    return result;
+}
+
+template <typename M>
+auto compute_marginal_credible_intervals(const M& alphas, const double mass)
+{
+    std::unordered_map<SampleIdType, std::vector<std::pair<double, double>>> result {};
+    result.reserve(alphas.size());
+    
+    for (const auto& p : alphas) {
+        result.emplace(p.first, compute_marginal_credible_interval(p.second, mass));
+    }
+    
     return result;
 }
 
@@ -493,39 +541,18 @@ CancerVariantCaller::call_cnv_variants(const std::vector<Variant>& candidates,
                                        const Phaser::PhaseSet& phase_set,
                                        const ReadMap& reads) const
 {
-    const double cutoff {0.001};
+    const auto credible_regions = compute_marginal_credible_intervals(posteriors.alphas, 0.99);
     
-    std::cout << "CNV genotypes with posterior > " << cutoff << ":" << std::endl;
-    for (const auto& p : posteriors.genotype_probabilities) {
-        if (p.second > cutoff) {
-            ::debug::print_variant_alleles(p.first);
-            std::cout << ' ' << p.second << std::endl;
+    for (const auto& p : credible_regions) {
+        std::cout << p.first << std::endl;
+        for (const auto& r : p.second) {
+            std::cout << "\t" << r.first << " " << r.second << '\n';
         }
-    }
-    
-    for (const auto& sample : samples_) {
-        auto a = posteriors.alphas.at(sample);
-        std::cout << sample << " " << a[0] << " " << a[1] << std::endl;
-        auto a0 = std::accumulate(std::cbegin(a), std::cend(a), 0.0);
-        const double m {0.99};
-        auto p0 = Maths::beta_hdi(a[0], a0 - a[0], m);
-        std::cout << "a[0] " <<  100 * m << "% credible region = (" << p0.first << ", " << p0.second << ")" << std::endl;
-        auto p1 = Maths::beta_hdi(a[1], a0 - a[1], m);
-        std::cout << "a[1] " <<  100 * m << "% credible region = (" << p1.first << ", " << p1.second << ")" << std::endl;
     }
     
     std::vector<VcfRecord::Builder> result {};
     
     return result;
-}
-
-auto find_map_genotype(const GenotypeModel::Somatic::Latents& posteriors)
-{
-    return *std::max_element(std::cbegin(posteriors.genotype_probabilities),
-                             std::cend(posteriors.genotype_probabilities),
-                             [] (const auto& lhs, const auto& rhs) {
-                                 return lhs.second < rhs.second;
-                             });
 }
 
 namespace debug
@@ -547,34 +574,6 @@ namespace debug
 
 using SomaticModelLatents = GenotypeModel::Somatic::Latents;
 
-auto compute_marginal_credible_interval(const SomaticModelLatents::GenotypeMixturesDirichletAlphas& posteriors,
-                                        const double mass)
-{
-    auto a0 = std::accumulate(std::cbegin(posteriors), std::cend(posteriors), 0.0);
-    
-    std::vector<std::pair<double, double>> result {};
-    result.reserve(posteriors.size());
-    
-    for (const auto& alpha : posteriors) {
-        result.push_back(Maths::beta_hdi(alpha, a0 - alpha, mass));
-    }
-    
-    return result;
-}
-
-auto compute_marginal_credible_intervals(const SomaticModelLatents::GenotypeMixturesDirichletAlphaMap& posteriors,
-                                         const double mass)
-{
-    std::unordered_map<SampleIdType, std::vector<std::pair<double, double>>> result {};
-    result.reserve(posteriors.size());
-    
-    for (const auto& p : posteriors) {
-        result.emplace(p.first, compute_marginal_credible_interval(p.second, mass));
-    }
-    
-    return result;
-}
-
 std::vector<VcfRecord::Builder>
 CancerVariantCaller::call_somatic_variants(const std::vector<Variant>& candidates,
                                            const std::vector<Allele>& callable_alleles,
@@ -582,8 +581,6 @@ CancerVariantCaller::call_somatic_variants(const std::vector<Variant>& candidate
                                            const Phaser::PhaseSet& phase_set,
                                            const ReadMap& reads) const
 {
-    const double cutoff {0.001};
-    
     if (DEBUG_MODE) {
         Logging::DebugLogger log {};
         debug::print_map_genotype(stream(log), posteriors);

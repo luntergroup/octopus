@@ -191,15 +191,15 @@ void log_failure(const std::string& type, const unsigned k)
 std::vector<Variant>
 AssemblerCandidateVariantGenerator::generate_candidates(const GenomicRegion& region)
 {
-    std::vector<Variant> result {};
-    
     if (bins_.empty()) {
-        return result;
+        return {};
     }
     
     auto active_bins = overlapped_bins(bins_, region);
     
-    for (auto& bin : active_bins) {
+    std::deque<Variant> candidates {};
+    
+    for (Bin& bin : active_bins) {
         if (bin.read_sequences.empty()) continue;
         
         if (DEBUG_MODE) {
@@ -212,10 +212,9 @@ AssemblerCandidateVariantGenerator::generate_candidates(const GenomicRegion& reg
         
         for (const auto k : default_kmer_sizes_) {
             try {
-                const auto success = assemble_bin(k, bin, result);
+                const auto success = assemble_bin(k, bin, candidates);
                 
                 if (success) {
-                    result.reserve((default_kmer_sizes_.size() - num_defaults_unsuccessful) * result.size());
                     log_success("Default", k);
                 } else {
                     log_failure("Default", k);
@@ -229,7 +228,7 @@ AssemblerCandidateVariantGenerator::generate_candidates(const GenomicRegion& reg
         if (num_defaults_unsuccessful == default_kmer_sizes_.size()) {
             for (const auto k : fallback_kmer_sizes_) {
                 try {
-                    const auto success = assemble_bin(k, bin, result);
+                    const auto success = assemble_bin(k, bin, candidates);
                     
                     if (success) {
                         log_success("Fallback", k);
@@ -246,14 +245,17 @@ AssemblerCandidateVariantGenerator::generate_candidates(const GenomicRegion& reg
         bin.clear();
     }
     
-    result.erase(std::remove_if(std::begin(result), std::end(result),
-                                [this] (const auto& variant) {
-                                    return region_size(variant) > max_variant_size_;
-                                }), std::end(result));
+    std::vector<Variant> result {std::make_move_iterator(std::begin(candidates)),
+                                 std::make_move_iterator(std::end(candidates))};
     
     std::sort(std::begin(result), std::end(result));
     
     result.erase(std::unique(std::begin(result), std::end(result)), std::end(result));
+    
+    result.erase(std::remove_if(std::begin(result), std::end(result),
+                                [this] (const auto& variant) {
+                                    return region_size(variant) > max_variant_size_;
+                                }), std::end(result));
     
     remove_nonoverlapping(result, region); // as we expanded original region
     
@@ -414,10 +416,6 @@ void split_mnvs(Container& candidates)
 template <typename C1, typename C2>
 void add_to_mapped_variants(C1& result, C2&& variants, const GenomicRegion& region)
 {
-    result.reserve(result.size() + variants.size());
-    
-    const auto it = std::end(result);
-    
     for (auto& variant : variants) {
         result.emplace_back(contig_name(region),
                             region.get_begin() + static_cast<GenomicRegion::SizeType>(variant.begin_pos),
@@ -425,15 +423,11 @@ void add_to_mapped_variants(C1& result, C2&& variants, const GenomicRegion& regi
                             std::move(variant.alt)
                             );
     }
-    
-    std::sort(it, std::end(result));
-    
-    result.erase(std::unique(std::begin(result), std::end(result)), std::end(result));
 }
 
 bool AssemblerCandidateVariantGenerator::assemble_bin(const unsigned kmer_size,
                                                       const Bin& bin,
-                                                      std::vector<Variant>& result) const
+                                                      std::deque<Variant>& result) const
 {
     const auto assembler_region = propose_assembler_region(bin.region, kmer_size);
     
@@ -458,7 +452,7 @@ bool AssemblerCandidateVariantGenerator::assemble_bin(const unsigned kmer_size,
 bool AssemblerCandidateVariantGenerator::try_assemble_region(Assembler& assembler,
                                                              const SequenceType& reference_sequence,
                                                              const GenomicRegion& reference_region,
-                                                             std::vector<Variant>& result) const
+                                                             std::deque<Variant>& result) const
 {
     assembler.remove_trivial_nonreference_cycles();
     

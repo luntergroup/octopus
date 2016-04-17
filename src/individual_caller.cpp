@@ -67,8 +67,8 @@ IndividualVariantCaller::Latents::Latents(const SampleIdType& sample,
                                           std::vector<Genotype<Haplotype>>&& genotypes,
                                           ModelLatents&& latents)
 :
-haplotype_posteriors_ {},
-genotype_posteriors_ {}
+genotype_posteriors_ {},
+haplotype_posteriors_ {}
 {
     GenotypeProbabilityMap genotype_posteriors {
         std::make_move_iterator(std::begin(genotypes)),
@@ -98,13 +98,17 @@ IndividualVariantCaller::Latents::get_genotype_posteriors() const noexcept
 IndividualVariantCaller::Latents::HaplotypeProbabilityMap
 IndividualVariantCaller::Latents::calculate_haplotype_posteriors(const std::vector<Haplotype>& haplotypes)
 {
+    assert(genotype_posteriors_ != nullptr);
+    
     HaplotypeProbabilityMap result {haplotypes.size()};
     
     for (const auto& haplotype : haplotypes) {
-        result.emplace(std::cref(haplotype), 0.0);
+        result.emplace(haplotype, 0.0);
     }
     
-    for (const auto& p : std::cbegin(*genotype_posteriors_)->second) {
+    const auto& sample = std::cbegin(*genotype_posteriors_)->first;
+    
+    for (const auto& p : (*genotype_posteriors_)[sample]) {
         for (const auto& haplotype : p.first.copy_unique_ref()) {
             result.at(haplotype) += p.second;
         }
@@ -131,6 +135,25 @@ IndividualVariantCaller::infer_latents(const std::vector<Haplotype>& haplotypes,
     const auto& sample = samples_.front();
     
     auto inferences = model.infer_latents(sample, genotypes, haplotype_likelihoods);
+    
+//    // TEST
+//    GenotypeModel::Individual dummy_model {ploidy_ + 1, prior_model};
+//    auto dummy_genotypes = generate_all_genotypes(haplotypes, ploidy_ + 1);
+//    auto dummy_inferences = dummy_model.infer_latents(sample, dummy_genotypes, haplotype_likelihoods);
+//    auto lp1 = std::log(0.999) + inferences.log_evidence;
+//    auto lp2 = std::log(1.0 - 0.999) + dummy_inferences.log_evidence;
+//    auto norm = Maths::log_sum_exp(lp1, lp2);
+//    lp1 -= norm; lp2 -= norm;
+//    if (lp1 < lp2) {
+//        std::cout << inferences.log_evidence << " " << dummy_inferences.log_evidence << '\n';
+//        auto it = std::max_element(std::cbegin(dummy_inferences.posteriors.genotype_probabilities),
+//                                   std::cend(dummy_inferences.posteriors.genotype_probabilities));
+//        auto itd = std::distance(std::cbegin(dummy_inferences.posteriors.genotype_probabilities), it);
+//        ::debug::print_variant_alleles(dummy_genotypes[itd]);
+//        std::cout << " " << *it << '\n';
+//        std::cout << haplotypes.front().get_region() << std::endl;
+//    }
+//    // END TEST
     
     return std::make_unique<Latents>(sample, haplotypes, std::move(genotypes),
                                      std::move(inferences.posteriors));

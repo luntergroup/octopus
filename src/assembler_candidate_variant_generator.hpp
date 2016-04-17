@@ -87,11 +87,11 @@ private:
     void prepare_bins_to_insert(const AlignedRead& read);
     
     GenomicRegion propose_assembler_region(const GenomicRegion& input_region, unsigned kmer_size) const;
-    bool assemble_bin(unsigned kmer_size, const Bin& bin, std::vector<Variant>& result) const;
+    bool assemble_bin(unsigned kmer_size, const Bin& bin, std::deque<Variant>& result) const;
     bool try_assemble_region(Assembler& assembler,
                              const SequenceType& reference_sequence,
                              const GenomicRegion& reference_region,
-                             std::vector<Variant>& result) const;
+                             std::deque<Variant>& result) const;
 };
 
 } // namespace Octopus

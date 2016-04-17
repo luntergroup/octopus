@@ -43,11 +43,11 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--reference", ecoli_reference_fasta.c_str(),
         
         //"--reads", NA12878_low_coverage.c_str(),
-        "--reads", NA12878_high_coverage.c_str(),
-        //"--reads", "~/Genomics/Illumina/NA12878.mapped.ILLUMINA.bwa.CEU.high_coverage_pcr_free.20130906.chr22.bam",
+        //"--reads", NA12878_high_coverage.c_str(),
+        "--reads", "~/Genomics/Illumina/NA12878.mapped.ILLUMINA.bwa.CEU.high_coverage_pcr_free.20130906.chr22.bam",
         
         //"--reads", NA12891_high_coverage.c_str(),
-        "--reads", HG00101.c_str(),
+        //"--reads", HG00101.c_str(),
         
         //"--reads", NA12878_low_coverage.c_str(), HG00101.c_str(), HG00102.c_str(), HG00103.c_str(),
         //"--reads", NA12878_high_coverage.c_str(), NA12878_simulated_cancer_basic.c_str(), //cancer test
@@ -57,7 +57,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--reads", ecoli_bam.c_str(),
         
         //"--samples", "NA12878",
-        "--model", "cancer", // default "population"
+        //"--model", "cancer", // default "population"
         "--normal-sample", "NA12878", // for cancer model
         
         //"--organism-ploidy", "3",
@@ -68,6 +68,8 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--make-positional-refcalls",
         
         /* input regions */
+        
+        "--regions", "22:30,301,978-30,302,586",
         
         //"--use-one-based-indexing",
         
@@ -130,7 +132,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         // NA12878HC (normal) vs HG00101LC
         //"--regions", "22:33,310,391-33,310,686",
         //"--regions", "22:29,786,267-29,786,698",
-        "--regions", "22:31,196,345-31,196,590", // Somatic
+        //"--regions", "22:31,196,345-31,196,590", // Somatic
         //"--regions", "22:31,195,690-31,196,075",
         //"--regions", "22:33,216,196-33,216,399",
         //"--regions", "22:34,606,760-34,606,969",
@@ -175,7 +177,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--kmer-size", "5",
         //"--candidates-from-source", sample_vcf.c_str(),
         //"--regenotype",
-        //"--no-assembly-candidates",
+        "--no-assembly-candidates",
         //"--kmer-size", "45",
         //"--min-assembler-base-quality", "10",
         "--max-variant-size", "25",
@@ -194,7 +196,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--max-open-read-files", "1",
         
         //"--output", test_out_vcf.c_str(),
-        //"--output", "octopus_NA12878HC_22_coalescent_filter_low_complex.vcf",
+        "--output", "octopus_NA12878HC_22_assemble.vcf",
         //"--output", "octopus_calls2.vcf",
         
         nullptr};

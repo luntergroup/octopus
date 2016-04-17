@@ -1312,10 +1312,18 @@ std::deque<Assembler::Variant> Assembler::extract_k_highest_scoring_bubble_paths
     
     std::deque<Variant> result {};
     
+    unsigned max_blockings {50}; // HACK
+    
     while (k > 0 && num_remaining_alt_kmers > 0) {
         auto predecessors = find_shortest_scoring_paths(reference_head());
         
         if (blocked_edge) {
+            if (max_blockings == 0) { // HACK
+                return result; // HACK
+            } // HACK
+            
+            --max_blockings; // HACK
+            
             // TODO: This is almost certainly not optimal and is it even guaranteed to terminate?
             if (!is_on_path(boost::target(*blocked_edge, graph_), predecessors, reference_tail())) {
                 set_out_edge_transition_scores(boost::source(*blocked_edge, graph_));
@@ -1323,7 +1331,6 @@ std::deque<Assembler::Variant> Assembler::extract_k_highest_scoring_bubble_paths
             } else {
                 const auto p = boost::out_edges(boost::target(*blocked_edge, graph_), graph_);
                 if (std::all_of(p.first, p.second, [this] (const Edge e) { return is_blocked(e); })) {
-                    //std::cout << "here" << std::endl;
                     return result; // Othersie might not terminate?
                 }
             }

@@ -75,8 +75,8 @@ private:
         std::shared_ptr<GenotypeProbabilityMap> get_genotype_posteriors() const noexcept override;
         
     private:
-        std::shared_ptr<HaplotypeProbabilityMap> haplotype_posteriors_;
         std::shared_ptr<GenotypeProbabilityMap> genotype_posteriors_;
+        std::shared_ptr<HaplotypeProbabilityMap> haplotype_posteriors_;
         
         HaplotypeProbabilityMap
         calculate_haplotype_posteriors(const std::vector<Haplotype>& haplotypes);
