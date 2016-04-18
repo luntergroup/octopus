@@ -287,20 +287,16 @@ bool HaplotypeTree::is_bifurcating(const Vertex v) const
 HaplotypeTree::Vertex HaplotypeTree::remove_forward(Vertex u)
 {
     const auto v = *boost::adjacent_vertices(u, tree_).first;
-    
     boost::remove_edge(u, v, tree_);
     boost::remove_vertex(u, tree_);
-    
     return v;
 }
 
 HaplotypeTree::Vertex HaplotypeTree::remove_backward(const Vertex v)
 {
     const auto u = get_previous_allele(v);
-    
     boost::remove_edge(u, v, tree_);
     boost::remove_vertex(v, tree_);
-    
     return u;
 }
 
@@ -442,6 +438,8 @@ HaplotypeTree::remove(Vertex leaf, const ContigRegion& region)
 std::pair<HaplotypeTree::Vertex, bool>
 HaplotypeTree::remove_external(Vertex leaf, const ContigRegion& region)
 {
+    assert(boost::out_degree(leaf, tree_) == 0);
+    
     while (leaf != root_) {
         if (boost::out_degree(leaf, tree_) > 0) {
             return std::make_pair(leaf, false);

@@ -397,10 +397,10 @@ std::deque<VcfRecord> VariantCaller::call_variants(const GenomicRegion& call_reg
         reads = read_pipe_.get().fetch_reads(extract_regions(candidates));
     }
     
-    constexpr unsigned max_indicators {0};
+    constexpr bool allow_lagging {false};
     constexpr double min_phase_score {0.99};
     
-    HaplotypeGenerator generator {candidate_region, reference_, candidates, reads, max_haplotypes_, max_indicators};
+    HaplotypeGenerator generator {candidate_region, reference_, candidates, reads, max_haplotypes_, allow_lagging};
     Phaser phaser {min_phase_score};
     
     std::vector<Haplotype> haplotypes;

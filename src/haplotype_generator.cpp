@@ -62,19 +62,24 @@ namespace Octopus
     
     HaplotypeGenerator::HaplotypeGenerator(const GenomicRegion& window, const ReferenceGenome& reference,
                                            const MappableFlatSet<Variant>& candidates, const ReadMap& reads,
-                                           unsigned max_haplotypes, unsigned max_indicators)
+                                           unsigned max_haplotypes, bool allow_lagging)
     :
     tree_ {window.get_contig_name(), reference},
-    walker_ {2 * max_indicators, max_included(max_haplotypes)},
+    walker_ {max_included(max_haplotypes)},
+    lagged_walker_ {},
     alleles_ {variants_to_alleles(candidates)},
     reads_ {reads},
     current_active_region_ {shift(head_region(alleles_.leftmost(), 0), -1)},
     next_active_region_ {},
     max_haplotypes_ {max_haplotypes},
-    max_indicators_ {max_indicators},
     holdout_set_ {},
     active_allele_counts_ {}
-    {}
+    {
+        if (allow_lagging) {
+            lagged_walker_ = GenomeWalker {max_included(max_haplotypes),
+                                GenomeWalker::IndicatorLimit::SharedWithPreviousRegion};
+        }
+    }
     
     const GenomicRegion& HaplotypeGenerator::tell_next_active_region() const
     {
@@ -105,6 +110,8 @@ namespace Octopus
         holdout_set_.clear(); // TODO: reintroduce holdout alleles and backtrack
         
         update_next_active_region();
+        
+        assert(next_active_region_ != boost::none);
         
         if (*next_active_region_ == current_active_region_) {
             return std::make_pair(std::vector<Haplotype> {}, current_active_region_);
@@ -170,7 +177,9 @@ namespace Octopus
     {
         next_active_region_ = boost::none;
         
-        if (!is_lagged() || tree_.num_haplotypes() == haplotypes.size()) return;
+        if (!is_active_region_lagged() || tree_.num_haplotypes() == haplotypes.size()) {
+            return;
+        }
         
         prune_unique(haplotypes, tree_);
         
@@ -203,7 +212,7 @@ namespace Octopus
         
         next_active_region_ = boost::none;
         
-        if (!is_lagged() || haplotypes.size() == tree_.num_haplotypes()) {
+        if (!is_active_region_lagged() || haplotypes.size() == tree_.num_haplotypes()) {
             tree_.clear();
             alleles_.erase_overlapped(current_active_region_);
             active_allele_counts_.clear();
@@ -235,15 +244,15 @@ namespace Octopus
     template <typename Range>
     bool requires_staged_removal(const Range& passed_alleles)
     {
-        const auto rbegin = std::next(std::crbegin(passed_alleles));
-        const auto rend   = std::crend(passed_alleles);
+        if (passed_alleles.empty()) return false;
         
-        const auto it = std::find_if_not(rbegin, rend,
+        const auto it = std::find_if_not(std::next(std::crbegin(passed_alleles)),
+                                         std::crend(passed_alleles),
                                          [&passed_alleles] (const auto& allele) {
                                              return overlaps(allele, passed_alleles.back());
                                          });
         
-        return it == rend || is_position(*it);
+        return it == std::crend(passed_alleles) || is_position(*it);
     }
     
     void HaplotypeGenerator::force_forward(GenomicRegion to)
@@ -252,7 +261,7 @@ namespace Octopus
         
         next_active_region_ = std::move(to);
         
-        if (overlaps(current_active_region_, *next_active_region_)) {
+        if (begins_before(current_active_region_, *next_active_region_)) {
             auto passed_region = left_overhang_region(current_active_region_, *next_active_region_);
             
             const auto passed_alleles = overlap_range(alleles_, passed_region);
@@ -288,6 +297,8 @@ namespace Octopus
                 alleles_.erase_overlapped(removal_region);
                 tree_.remove_overlapped(removal_region);
             }
+        } else {
+            tree_.clear();
         }
     }
     
@@ -295,16 +306,67 @@ namespace Octopus
     
     bool HaplotypeGenerator::is_lagged() const noexcept
     {
-        return max_indicators_ > 0;
+        return lagged_walker_ != boost::none;
+    }
+    
+    bool HaplotypeGenerator::is_active_region_lagged() const
+    {
+        if (!is_lagged()) return false;
+        
+        const auto next_lagged_region = lagged_walker_->walk(current_active_region_, reads_, alleles_);
+        
+        return overlaps(current_active_region_, next_lagged_region);
     }
     
     void HaplotypeGenerator::update_next_active_region() const
     {
         if (!next_active_region_) {
             if (is_lagged()) {
-//                const auto curr_num_haplotypes = tree_.num_haplotypes();
-//                const auto curr_num_alleles    = active_allele_counts_.size();
-                next_active_region_ = walker_.walk(current_active_region_, reads_, alleles_);
+                auto max_lagged_region = lagged_walker_->walk(current_active_region_, reads_,
+                                                              alleles_);
+                
+                if (!overlaps(current_active_region_, max_lagged_region)) {
+                    next_active_region_ = std::move(max_lagged_region);
+                } else {
+                    auto tmp_tree = tree_;
+                    
+                    if (begins_before(current_active_region_, max_lagged_region)) {
+                        const auto passed_region  = left_overhang_region(current_active_region_,
+                                                                         max_lagged_region);
+                        const auto passed_alleles = overlap_range(alleles_, passed_region);
+                        
+                        if (requires_staged_removal(passed_alleles)) {
+                            const auto first_removal_region = expand_rhs(passed_region, -1);
+                            tmp_tree.remove_overlapped(first_removal_region);
+                            tmp_tree.remove_overlapped(tail_region(first_removal_region));
+                        } else {
+                            tmp_tree.remove_overlapped(expand_rhs(passed_region, -1));
+                        }
+                    }
+                    
+                    if (tmp_tree.num_haplotypes() >= max_haplotypes_) {
+                        const auto indicator_region = overlapped_region(current_active_region_,
+                                                                        max_lagged_region);
+                        const auto indicator_alleles = overlap_range(alleles_, indicator_region);
+                        
+                        const auto mutually_exclusive_indicator_regions = extract_covered_regions(indicator_alleles);
+                        
+                        tmp_tree.remove_overlapped(mutually_exclusive_indicator_regions.front());
+                    }
+                    
+                    const auto new_region  = right_overhang_region(max_lagged_region,
+                                                                   current_active_region_);
+                    const auto new_alleles = overlap_range(alleles_, new_region);
+                    
+                    const auto mutually_exclusive_regions = extract_covered_regions(new_alleles);
+                    
+                    for (const auto& region : mutually_exclusive_regions) {
+                        extend_tree(overlap_range(new_alleles, region), tmp_tree);
+                        if (tmp_tree.num_haplotypes() >= max_haplotypes_) break;
+                    }
+                    
+                    next_active_region_ = tmp_tree.encompassing_region();
+                }
             } else {
                 next_active_region_ = walker_.walk(current_active_region_, reads_, alleles_);
             }
