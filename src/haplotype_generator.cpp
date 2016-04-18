@@ -212,6 +212,16 @@ namespace Octopus
     }
     
     template <typename Range>
+    bool can_remove_entire_passed_region(const GenomicRegion& current_active_region,
+                                         const GenomicRegion& next_active_region,
+                                         const Range& passed_alleles)
+    {
+        return passed_alleles.empty()
+                || (is_after(next_active_region, current_active_region)
+                    && !overlaps(rightmost_region(passed_alleles), next_active_region));
+    }
+    
+    template <typename Range>
     bool requires_staged_removal(const Range& passed_alleles)
     {
         if (passed_alleles.empty()) return false;
@@ -238,8 +248,8 @@ namespace Octopus
             
             if (passed_alleles.empty()) return;
             
-            if (is_after(*next_active_region_, current_active_region_)
-                || !is_empty_region(passed_alleles.back())) {
+            if (can_remove_entire_passed_region(current_active_region_, *next_active_region_,
+                                                passed_alleles)) {
                 alleles_.erase_overlapped(passed_region);
                 tree_.remove_overlapped(passed_region);
             } else if (requires_staged_removal(passed_alleles)) {

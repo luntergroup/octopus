@@ -46,7 +46,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         "--reads", NA12878_high_coverage.c_str(),
         //"--reads", "~/Genomics/Illumina/NA12878.mapped.ILLUMINA.bwa.CEU.high_coverage_pcr_free.20130906.chr22.bam",
         
-        //"--reads", NA12891_high_coverage.c_str(),
+        "--reads", NA12891_high_coverage.c_str(),
         //"--reads", HG00101.c_str(),
         
         //"--reads", NA12878_low_coverage.c_str(), HG00101.c_str(), HG00102.c_str(), HG00103.c_str(),
@@ -57,7 +57,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--reads", ecoli_bam.c_str(),
         
         //"--samples", "NA12878",
-        //"--model", "cancer", // default "population"
+        "--model", "cancer", // default "population"
         "--normal-sample", "NA12878", // for cancer model
         
         //"--organism-ploidy", "3",
@@ -70,7 +70,6 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         /* input regions */
         
         //"--regions", "22:30,301,978-30,302,586",
-        "--regions", "22:23,474,269-23,475,594",
         
         //"--use-one-based-indexing",
         
@@ -144,7 +143,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--regions", "16:75,879,931-75,880,269", // somatic
         //"--regions", "16:75,879,179-75,879,472", // LOH
         //"--regions", "16:75,881,839-75,882,246", // LOH
-        //"--regions", "16:60,034,277-60,034,375", // LOH and somatic (too many cancer genotypes)
+        "--regions", "16:60,034,277-60,034,375", // LOH and somatic (too many cancer genotypes)
         //"--regions", "16:58,433,081-58,433,354", // potentially false positive somatic
         
         // For ecoli
@@ -178,7 +177,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--kmer-size", "5",
         //"--candidates-from-source", sample_vcf.c_str(),
         //"--regenotype",
-        //"--no-assembly-candidates",
+        "--no-assembly-candidates",
         //"--kmer-size", "45",
         //"--min-assembler-base-quality", "10",
         "--max-variant-size", "25",

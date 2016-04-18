@@ -106,11 +106,16 @@ private:
     
     CallerParameters parameters_;
     
+    bool has_normal_sample() const noexcept;
+    
     std::unique_ptr<CallerLatents>
     infer_latents(const std::vector<Haplotype>& haplotypes,
                   const HaplotypeLikelihoodCache& haplotype_likelihoods) const override;
     
-    void filter(std::vector<CancerGenotype<Haplotype>>& genotypes) const;
+    void filter(std::vector<CancerGenotype<Haplotype>>& genotypes,
+                const GermlineModel::InferredLatents& germline_inferences,
+                const CNVModel::InferredLatents& cnv_inferences) const;
+    
     CNVModel::Priors calculate_cnv_model_priors(const CoalescentModel& prior_model) const;
     SomaticModel::Priors calculate_somatic_model_priors(const SomaticMutationModel& prior_model) const;
     

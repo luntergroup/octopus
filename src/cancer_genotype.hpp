@@ -186,6 +186,15 @@ namespace std
             return result;
         }
     };
+    
+    template <typename MappableType>
+    struct hash<reference_wrapper<const Octopus::CancerGenotype<MappableType>>>
+    {
+        size_t operator()(const reference_wrapper<const Octopus::CancerGenotype<MappableType>> genotype) const
+        {
+            return hash<Octopus::CancerGenotype<MappableType>>()(genotype);
+        }
+    };
 } // namespace std
 
 namespace Octopus
