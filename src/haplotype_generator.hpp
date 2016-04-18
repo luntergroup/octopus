@@ -53,6 +53,7 @@ namespace Octopus
         
         void uniquely_keep(const std::vector<Haplotype>& haplotypes);
         void remove(const std::vector<Haplotype>& haplotypes);
+        void remove(const std::vector<std::reference_wrapper<const Haplotype>>& haplotypes);
         
         void force_forward(GenomicRegion to);
         
@@ -71,7 +72,7 @@ namespace Octopus
         
         MappableFlatMultiSet<Allele> holdout_set_;
         
-        mutable std::unordered_map<Allele, unsigned> active_allele_counts_;
+        boost::optional<Allele> rightmost_allele_;
         
         bool is_lagged() const noexcept;
         bool is_active_region_lagged() const;

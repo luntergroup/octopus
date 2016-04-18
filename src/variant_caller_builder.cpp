@@ -123,6 +123,18 @@ namespace Octopus
         return *this;
     }
     
+    VariantCallerBuilder& VariantCallerBuilder::set_lagging(const bool allow_lagging) noexcept
+    {
+        parameters_.allow_lagging = allow_lagging;
+        return *this;
+    }
+    
+    VariantCallerBuilder& VariantCallerBuilder::set_min_phase_score(const double min_phase_score) noexcept
+    {
+        parameters_.min_phase_score = min_phase_score;
+        return *this;
+    }
+    
     // cancer
     VariantCallerBuilder& VariantCallerBuilder::set_normal_sample(SampleIdType normal_sample)
     {
@@ -197,7 +209,9 @@ namespace Octopus
         VariantCaller::CallerParameters general_parameters {
             parameters_.max_haplotypes,
             parameters_.refcall_type,
-            parameters_.call_sites_only
+            parameters_.call_sites_only,
+            parameters_.allow_lagging,
+            parameters_.min_phase_score
         };
         
         return ModelFactoryMap {

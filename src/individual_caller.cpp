@@ -140,8 +140,8 @@ IndividualVariantCaller::infer_latents(const std::vector<Haplotype>& haplotypes,
 //    GenotypeModel::Individual dummy_model {ploidy_ + 1, prior_model};
 //    auto dummy_genotypes = generate_all_genotypes(haplotypes, ploidy_ + 1);
 //    auto dummy_inferences = dummy_model.infer_latents(sample, dummy_genotypes, haplotype_likelihoods);
-//    auto lp1 = std::log(0.999) + inferences.log_evidence;
-//    auto lp2 = std::log(1.0 - 0.999) + dummy_inferences.log_evidence;
+//    auto lp1 = std::log(0.99) + inferences.log_evidence;
+//    auto lp2 = std::log(1.0 - 0.99) + dummy_inferences.log_evidence;
 //    auto norm = Maths::log_sum_exp(lp1, lp2);
 //    lp1 -= norm; lp2 -= norm;
 //    if (lp1 < lp2) {

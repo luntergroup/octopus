@@ -40,8 +40,8 @@ public:
     
     ~HaplotypeTree() = default;
     
-    HaplotypeTree(const HaplotypeTree&)            = default;
-    HaplotypeTree& operator=(const HaplotypeTree&) = default;
+    HaplotypeTree(const HaplotypeTree&);
+    HaplotypeTree& operator=(HaplotypeTree);
     HaplotypeTree(HaplotypeTree&&)                 = default;
     HaplotypeTree& operator=(HaplotypeTree&&)      = default;
     
@@ -90,6 +90,7 @@ private:
     Vertex remove_forward(Vertex u);
     Vertex remove_backward(Vertex v);
     Vertex get_previous_allele(Vertex allele) const;
+    Vertex find_allele_before(Vertex v, const ContigAllele& allele) const;
     bool allele_exists(Vertex leaf, const ContigAllele& allele) const;
     LeafIterator extend_haplotype(LeafIterator leaf, const ContigAllele& new_allele);
     Haplotype extract_haplotype(Vertex leaf, const GenomicRegion& region) const;

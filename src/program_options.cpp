@@ -326,6 +326,11 @@ namespace Octopus
              "Caller will output blocked REFCALLs")
             ("sites-only", po::bool_switch()->default_value(false),
              "Only outout variant call sites (i.e. without sample genotype information)")
+            ("disable-haplotype-lagging", po::bool_switch()->default_value(false),
+             "Disables lagging in the haplotype generator, so each candidate variant will be considered"
+             " exactly once.")
+            ("min-phase-score", po::value<float>()->default_value(20),
+             "Minimum phase score required to output a phased call (phred scale)")
             ;
             
             po::options_description cancer("Cancer model specific options");
@@ -1396,6 +1401,11 @@ namespace Octopus
         vc_builder.set_min_refcall_posterior(phred_to_probability(min_refcall_posterior_phred));
         
         vc_builder.set_max_haplotypes(options.at("max-haplotypes").as<unsigned>());
+        
+        const auto min_phase_score_phred = options.at("min-phase-score").as<float>();
+        vc_builder.set_min_phase_score(phred_to_probability(min_phase_score_phred));
+        
+        vc_builder.set_lagging(!options.at("disable-haplotype-lagging").as<bool>());
         
         if (model == "cancer") {
             if (options.count("normal-sample") == 1) {

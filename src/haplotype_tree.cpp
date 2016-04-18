@@ -10,6 +10,12 @@
 
 #include <deque>
 #include <stdexcept>
+#include <cassert>
+
+#include <boost/property_map/property_map.hpp>
+#include <boost/graph/breadth_first_search.hpp>
+#include <boost/graph/visitors.hpp>
+#include <boost/graph/copy.hpp>
 
 #include "mappable_algorithms.hpp"
 
@@ -26,6 +32,102 @@ contig_ {contig},
 haplotype_leaf_cache_ {}
 {}
 
+namespace debug
+{
+template <typename G, typename V, typename Container>
+bool is_tree(const G& graph, const V& root, const Container& leafs) {
+    std::unordered_set<V> visited_vertices {};
+    visited_vertices.reserve(boost::num_vertices(graph));
+    
+    auto vis = boost::make_bfs_visitor(boost::write_property(boost::typed_identity_property_map<V>(),
+                                                             std::inserter(visited_vertices,
+                                                                           std::begin(visited_vertices)),
+                                                             boost::on_discover_vertex()));
+    
+    std::unordered_map<V, std::size_t> index_map {};
+    index_map.reserve(boost::num_vertices(graph));
+    
+    const auto p = boost::vertices(graph);
+    
+    std::size_t i {0};
+    std::for_each(p.first, p.second, [&i, &index_map] (const auto& v) { index_map.emplace(v, i++); } );
+    
+    boost::breadth_first_search(graph, root,
+                                boost::visitor(vis)
+                                .vertex_index_map(boost::make_assoc_property_map(index_map)));
+    
+    if (visited_vertices.size() != boost::num_vertices(graph)) {
+        return false;
+    }
+    
+    assert(visited_vertices.count(root) == 1);
+    assert(std::all_of(std::cbegin(leafs), std::cend(leafs),
+                       [&visited_vertices] (const auto& v) {
+                           return visited_vertices.count(v) == 1;
+                       }));
+    
+    const auto leafs_terminate_tree = std::none_of(std::cbegin(leafs), std::cend(leafs),
+                                                   [&graph] (const auto& v) {
+                                                       return boost::out_degree(v, graph) > 0;
+                                                   });
+    
+    return std::all_of(std::cbegin(leafs), std::cend(leafs),
+                       [&graph, &root] (const auto& v) {
+                           return v == root || boost::in_degree(v, graph) == 1;
+                       });
+}
+} // namespace debug
+
+HaplotypeTree::HaplotypeTree(const HaplotypeTree& other)
+:
+reference_ {other.reference_},
+tree_ {},
+root_ {},
+haplotype_leafs_ {},
+contig_ {other.contig_},
+haplotype_leaf_cache_ {}
+{
+    std::unordered_map<Vertex, std::size_t> index_map {};
+    index_map.reserve(boost::num_vertices(other.tree_));
+    
+    const auto p = boost::vertices(other.tree_);
+    
+    std::size_t i {0};
+    std::for_each(p.first, p.second, [&i, &index_map] (const auto& v) { index_map.emplace(v, i++); } );
+    
+    std::unordered_map<Vertex, Vertex> vertex_copy_map {};
+    vertex_copy_map.reserve(boost::num_vertices(other.tree_));
+    
+    boost::copy_graph(other.tree_, tree_,
+                      boost::vertex_index_map(boost::make_assoc_property_map(index_map))
+                      .orig_to_copy(boost::make_assoc_property_map(vertex_copy_map)));
+    
+    assert(vertex_copy_map.size() == boost::num_vertices(other.tree_));
+    
+    root_ = vertex_copy_map.at(other.root_);
+    
+    std::transform(std::cbegin(other.haplotype_leafs_), std::cend(other.haplotype_leafs_),
+                   std::back_inserter(haplotype_leafs_),
+                   [&vertex_copy_map] (const Vertex& v) {
+                       return vertex_copy_map.at(v);
+                   });
+    
+    //assert(debug::is_tree(tree_, root_, haplotype_leafs_));
+    
+    // TODO: copy the haplotype_leaf_cache_
+}
+
+HaplotypeTree& HaplotypeTree::operator=(HaplotypeTree other)
+{
+    std::swap(reference_, other.reference_);
+    std::swap(tree_, other.tree_);
+    std::swap(root_, other.root_);
+    std::swap(haplotype_leafs_, other.haplotype_leafs_);
+    std::swap(contig_, other.contig_);
+    std::swap(haplotype_leaf_cache_, other.haplotype_leaf_cache_);
+    return *this;
+}
+    
 bool HaplotypeTree::empty() const noexcept
 {
     return haplotype_leafs_.front() == root_;
@@ -74,6 +176,7 @@ HaplotypeTree& HaplotypeTree::extend(const ContigAllele& allele)
         leaf_it = extend_haplotype(leaf_it, allele);
     }
     haplotype_leaf_cache_.clear();
+    //assert(debug::is_tree(tree_, root_, haplotype_leafs_));
     return *this;
 }
 
@@ -309,6 +412,18 @@ bool HaplotypeTree::allele_exists(Vertex leaf, const ContigAllele& allele) const
                        });
 }
 
+HaplotypeTree::Vertex HaplotypeTree::find_allele_before(Vertex v, const ContigAllele& allele) const
+{
+    while (v != root_ && overlaps(allele, tree_[v])) {
+        if (is_same_region(allele, tree_[v])) { // for insertions
+            v = get_previous_allele(v);
+            break;
+        }
+        v = get_previous_allele(v);
+    }
+    return v;
+}
+
 bool can_add_to_branch(const ContigAllele& new_allele, const ContigAllele& leaf)
 {
     return !are_adjacent(leaf, new_allele) ||
@@ -318,34 +433,28 @@ bool can_add_to_branch(const ContigAllele& new_allele, const ContigAllele& leaf)
 HaplotypeTree::LeafIterator HaplotypeTree::extend_haplotype(LeafIterator leaf_itr,
                                                             const ContigAllele& new_allele)
 {
+    if (*leaf_itr == root_) {
+        const auto new_leaf = boost::add_vertex(new_allele, tree_);
+        boost::add_edge(*leaf_itr, new_leaf, tree_);
+        leaf_itr = haplotype_leafs_.erase(leaf_itr);
+        return haplotype_leafs_.insert(leaf_itr, new_leaf);
+    }
+    
     const auto& leaf_allele = tree_[*leaf_itr];
     
     if (!can_add_to_branch(new_allele, leaf_allele)) return leaf_itr;
     
-    if (*leaf_itr == root_ || is_after(new_allele, leaf_allele)) {
+    if (is_after(new_allele, leaf_allele)) {
         const auto new_leaf = boost::add_vertex(new_allele, tree_);
-        
         boost::add_edge(*leaf_itr, new_leaf, tree_);
-        
         leaf_itr = haplotype_leafs_.erase(leaf_itr);
         leaf_itr = haplotype_leafs_.insert(leaf_itr, new_leaf);
     } else if (overlaps(new_allele, tree_[*leaf_itr])) {
-        auto curr_allele = *leaf_itr;
-        
-        while (curr_allele != root_ && overlaps(new_allele, tree_[curr_allele])) {
-            if (is_same_region(new_allele, tree_[curr_allele])) { // for insertions
-                curr_allele = get_previous_allele(curr_allele);
-                break;
-            }
-            curr_allele = get_previous_allele(curr_allele);
-        }
-        
-        if (can_add_to_branch(new_allele, tree_[curr_allele])
-            && !allele_exists(curr_allele, new_allele)) {
+        const auto branch_point = find_allele_before(*leaf_itr, new_allele);
+        if ((branch_point == root_ || can_add_to_branch(new_allele, tree_[branch_point]))
+            && !allele_exists(branch_point, new_allele)) {
             const auto new_leaf = boost::add_vertex(new_allele, tree_);
-            
-            boost::add_edge(curr_allele, new_leaf, tree_);
-            
+            boost::add_edge(branch_point, new_leaf, tree_);
             haplotype_leafs_.insert(leaf_itr, new_leaf);
         }
     }

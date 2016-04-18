@@ -36,11 +36,15 @@ namespace Octopus
 
 VariantCaller::CallerParameters::CallerParameters(unsigned max_haplotypes,
                                                   RefCallType refcall_type,
-                                                  bool call_sites_only)
+                                                  bool call_sites_only,
+                                                  bool allow_lagging,
+                                                  double min_phase_score)
 :
 max_haplotypes {max_haplotypes},
 refcall_type {refcall_type},
-call_sites_only {call_sites_only}
+call_sites_only {call_sites_only},
+lag_haplotype_generation {allow_lagging},
+min_phase_score {min_phase_score}
 {}
 
 VariantCaller::VariantCaller(const ReferenceGenome& reference,
@@ -54,6 +58,9 @@ samples_ {read_pipe.get_samples()},
 refcall_type_ {parameters.refcall_type},
 call_sites_only_ {parameters.call_sites_only},
 max_haplotypes_ {parameters.max_haplotypes},
+min_haplotype_posterior_ {1e-15},
+lag_haplotype_generation_ {parameters.lag_haplotype_generation},
+min_phase_score_ {parameters.min_phase_score},
 candidate_generator_ {std::move(candidate_generator)}
 {}
 
@@ -397,11 +404,9 @@ std::deque<VcfRecord> VariantCaller::call_variants(const GenomicRegion& call_reg
         reads = read_pipe_.get().fetch_reads(extract_regions(candidates));
     }
     
-    constexpr bool allow_lagging {false};
-    constexpr double min_phase_score {0.99};
-    
-    HaplotypeGenerator generator {candidate_region, reference_, candidates, reads, max_haplotypes_, allow_lagging};
-    Phaser phaser {min_phase_score};
+    HaplotypeGenerator generator {candidate_region, reference_, candidates, reads, max_haplotypes_,
+                                    lag_haplotype_generation_};
+    Phaser phaser {min_phase_score_};
     
     std::vector<Haplotype> haplotypes;
     GenomicRegion active_region;
@@ -567,14 +572,6 @@ std::deque<VcfRecord> VariantCaller::call_variants(const GenomicRegion& call_reg
                                                                  *caller_latents->get_haplotype_posteriors(),
                                                                  unphased_active_region);
             
-            if (TRACE_MODE) {
-                Logging::TraceLogger trace_log {};
-                stream(trace_log) << "Removing " << removable_haplotypes.size() << " haplotypes:";
-                debug::print_haplotypes(stream(trace_log), removable_haplotypes);
-            } else if (DEBUG_MODE) {
-                stream(debug_log) << "Removing " << removable_haplotypes.size() << " haplotypes";
-            }
-            
             resume_timer(haplotype_generation_timer);
             generator.remove(removable_haplotypes);
             next_active_region = generator.tell_next_active_region();
@@ -645,21 +642,23 @@ bool VariantCaller::done_calling(const GenomicRegion& region) const noexcept
     return is_empty_region(region);
 }
 
-std::vector<Haplotype>
+std::vector<std::reference_wrapper<const Haplotype>>
 VariantCaller::get_removable_haplotypes(const std::vector<Haplotype>& haplotypes,
                                         const CallerLatents::HaplotypeProbabilityMap& haplotype_posteriors,
                                         const GenomicRegion& region) const
 {
     assert(!haplotypes.empty() && contains(haplotypes.front().get_region(), region));
     
-    std::vector<Haplotype> result {};
+    std::vector<std::reference_wrapper<const Haplotype>> result {};
+    result.reserve(haplotypes.size());
     
-    // TODO
     for (const auto& p : haplotype_posteriors) {
-        if (p.second < 1e-12) {
-            result.push_back(p.first);
+        if (p.second < min_haplotype_posterior_) {
+            result.emplace_back(p.first);
         }
     }
+    
+    result.shrink_to_fit();
     
     return result;
 }

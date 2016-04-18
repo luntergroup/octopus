@@ -43,8 +43,8 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--reference", ecoli_reference_fasta.c_str(),
         
         //"--reads", NA12878_low_coverage.c_str(),
-        //"--reads", NA12878_high_coverage.c_str(),
-        "--reads", "~/Genomics/Illumina/NA12878.mapped.ILLUMINA.bwa.CEU.high_coverage_pcr_free.20130906.chr22.bam",
+        "--reads", NA12878_high_coverage.c_str(),
+        //"--reads", "~/Genomics/Illumina/NA12878.mapped.ILLUMINA.bwa.CEU.high_coverage_pcr_free.20130906.chr22.bam",
         
         //"--reads", NA12891_high_coverage.c_str(),
         //"--reads", HG00101.c_str(),
@@ -69,7 +69,8 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         
         /* input regions */
         
-        "--regions", "22:30,301,978-30,302,586",
+        //"--regions", "22:30,301,978-30,302,586",
+        "--regions", "22:23,474,269-23,475,594",
         
         //"--use-one-based-indexing",
         
@@ -177,11 +178,12 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--kmer-size", "5",
         //"--candidates-from-source", sample_vcf.c_str(),
         //"--regenotype",
-        "--no-assembly-candidates",
+        //"--no-assembly-candidates",
         //"--kmer-size", "45",
         //"--min-assembler-base-quality", "10",
         "--max-variant-size", "25",
         
+        //"--disable-haplotype-lagging",
         //"--max-haplotypes", "1024",
         
         "--min-variant-posterior", "10",
@@ -196,7 +198,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--max-open-read-files", "1",
         
         //"--output", test_out_vcf.c_str(),
-        "--output", "octopus_NA12878HC_22_assemble.vcf",
+        //"--output", "octopus_NA12878HC_22_assemble.vcf",
         //"--output", "octopus_calls2.vcf",
         
         nullptr};

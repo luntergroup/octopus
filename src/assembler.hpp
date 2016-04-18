@@ -67,8 +67,8 @@ public:
     
     ~Assembler() = default;
     
-    Assembler(const Assembler&)            = default;
-    Assembler& operator=(const Assembler&) = default;
+    Assembler(const Assembler&)            = delete;
+    Assembler& operator=(const Assembler&) = delete;
     Assembler(Assembler&&)                 = default;
     Assembler& operator=(Assembler&&)      = default;
     

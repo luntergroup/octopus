@@ -171,6 +171,8 @@ CancerVariantCaller::infer_latents(const std::vector<Haplotype>& haplotypes,
 
 void CancerVariantCaller::filter(std::vector<CancerGenotype<Haplotype>>& genotypes) const
 {
+    if (genotypes.size() <= parameters_.max_genotypes) return;
+    
     
 }
 

@@ -40,12 +40,14 @@ public:
     {
         CallerParameters() = default;
         explicit CallerParameters(unsigned max_haplotypes, RefCallType refcall_type,
-                                  bool call_sites_only);
+                                  bool call_sites_only, bool allow_lagging, double min_phase_score);
         ~CallerParameters() = default;
         
         unsigned max_haplotypes;
         RefCallType refcall_type;
         bool call_sites_only;
+        bool lag_haplotype_generation;
+        double min_phase_score;
     };
     
     using ReadMap = Octopus::ReadMap;
@@ -98,6 +100,9 @@ private:
     mutable CandidateVariantGenerator candidate_generator_;
     
     unsigned max_haplotypes_;
+    double min_haplotype_posterior_;
+    bool lag_haplotype_generation_;
+    double min_phase_score_;
     
     bool done_calling(const GenomicRegion& region) const noexcept;
     
@@ -112,7 +117,7 @@ private:
                   const Phaser::PhaseSet& phase_set,
                   const ReadMap& reads) const = 0;
     
-    std::vector<Haplotype>
+    std::vector<std::reference_wrapper<const Haplotype>>
     get_removable_haplotypes(const std::vector<Haplotype>& haplotypes,
                              const CallerLatents::HaplotypeProbabilityMap& haplotype_posteriors,
                              const GenomicRegion& region) const;
