@@ -135,6 +135,37 @@ namespace detail
         });
     }
     
+    template <typename InputIt>
+    InputIt extend_tree_until(InputIt first, InputIt last, HaplotypeTree& tree,
+                           const unsigned max_haplotypes, ContigAllele)
+    {
+        return std::find_if(first, last, [&] (const auto& allele) {
+            tree.extend(allele);
+            return tree.num_haplotypes() >= max_haplotypes;
+        });
+    }
+    
+    template <typename InputIt>
+    InputIt extend_tree_until(InputIt first, InputIt last, HaplotypeTree& tree,
+                           const unsigned max_haplotypes, Allele)
+    {
+        return std::find_if(first, last, [&] (const auto& allele) {
+            tree.extend(allele);
+            return tree.num_haplotypes() >= max_haplotypes;
+        });
+    }
+    
+    template <typename InputIt>
+    InputIt extend_tree_until(InputIt first, InputIt last, HaplotypeTree& tree,
+                           const unsigned max_haplotypes, Variant)
+    {
+        return std::find_if(first, last, [&] (const auto& variant) {
+            tree.extend(variant.get_ref_allele());
+            tree.extend(variant.get_alt_allele());
+            return tree.num_haplotypes() >= max_haplotypes;
+        });
+    }
+    
     template <typename T>
     constexpr bool is_variant_or_allele = std::is_same<T, ContigAllele>::value
                                             || std::is_same<T, Allele>::value
@@ -156,6 +187,24 @@ template <typename Container>
 void extend_tree(const Container& elements, HaplotypeTree& tree)
 {
     extend_tree(std::cbegin(elements), std::cend(elements), tree);
+}
+
+template <typename InputIt>
+InputIt extend_tree_until(InputIt first, InputIt last, HaplotypeTree& tree,
+                          const unsigned max_haplotypes)
+{
+    using MappableType = std::decay_t<typename std::iterator_traits<InputIt>::value_type>;
+    
+    static_assert(detail::is_variant_or_allele<MappableType>,
+                  "extend_tree_until only works for containers of Alleles or Variants");
+    
+    return detail::extend_tree_until(first, last, tree, max_haplotypes, MappableType {});
+}
+
+template <typename Container>
+auto extend_tree_until(const Container& elements, HaplotypeTree& tree, const unsigned max_haplotypes)
+{
+    return extend_tree_until(std::cbegin(elements), std::cend(elements), tree, max_haplotypes);
 }
 
 template <typename Container>

@@ -42,11 +42,11 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         "--reference", human_reference_fasta.c_str(),
         //"--reference", ecoli_reference_fasta.c_str(),
         
-        //"--reads", NA12878_low_coverage.c_str(),
-        "--reads", NA12878_high_coverage.c_str(),
+        "--reads", NA12878_low_coverage.c_str(),
+        //"--reads", NA12878_high_coverage.c_str(),
         //"--reads", "~/Genomics/Illumina/NA12878.mapped.ILLUMINA.bwa.CEU.high_coverage_pcr_free.20130906.chr22.bam",
         
-        "--reads", NA12891_high_coverage.c_str(),
+        //"--reads", NA12891_high_coverage.c_str(),
         //"--reads", HG00101.c_str(),
         
         //"--reads", NA12878_low_coverage.c_str(), HG00101.c_str(), HG00102.c_str(), HG00103.c_str(),
@@ -57,7 +57,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--reads", ecoli_bam.c_str(),
         
         //"--samples", "NA12878",
-        "--model", "cancer", // default "population"
+        //"--model", "cancer", // default "population"
         "--normal-sample", "NA12878", // for cancer model
         
         //"--organism-ploidy", "3",
@@ -96,7 +96,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--regions", "16:62,432,702-62,432,933", // interesting insertions
         
         // Bad VCF representation
-        //"--regions", "22:41,836,102-41,836,142", // NA12878_low_coverage deletion 2|0
+        "--regions", "22:41,836,102-41,836,142", // NA12878_low_coverage deletion 2|0
         //"--regions", "22:43,035,829-43,035,869", // NA12878_low_coverage deletion 2|0
         
         //"--regions", "16:46,392,879-46,393,098", // NA12878_low_coverage huge memory spike
@@ -143,7 +143,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--regions", "16:75,879,931-75,880,269", // somatic
         //"--regions", "16:75,879,179-75,879,472", // LOH
         //"--regions", "16:75,881,839-75,882,246", // LOH
-        "--regions", "16:60,034,277-60,034,375", // LOH and somatic (too many cancer genotypes)
+        //"--regions", "16:60,034,277-60,034,375", // LOH and somatic (too many cancer genotypes)
         //"--regions", "16:58,433,081-58,433,354", // potentially false positive somatic
         
         // For ecoli

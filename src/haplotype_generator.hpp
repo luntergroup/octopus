@@ -68,7 +68,7 @@ namespace Octopus
         GenomicRegion current_active_region_;
         mutable boost::optional<GenomicRegion> next_active_region_;
         
-        unsigned max_haplotypes_, hard_max_haplotypes_ = 150'000;
+        unsigned soft_max_haplotypes_, hard_max_haplotypes_ = 150'000;
         
         MappableFlatMultiSet<Allele> holdout_set_;
         

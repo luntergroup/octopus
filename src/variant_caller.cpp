@@ -607,7 +607,6 @@ std::deque<VcfRecord> VariantCaller::call_variants(const GenomicRegion& call_reg
             haplotypes.shrink_to_fit();
             
             resume_timer(allele_generator_timer);
-            //uncalled_region = call_region; // DEBUG
             auto alleles = generate_callable_alleles(uncalled_region, active_candidates,
                                                      refcall_type_, reference_);
             pause_timer(allele_generator_timer);
