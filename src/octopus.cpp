@@ -597,7 +597,7 @@ namespace Octopus
     auto propose_call_subregion(const ContigCallingComponents& components,
                                 const GenomicRegion& remaining_call_region)
     {
-        if (is_empty_region(remaining_call_region)) {
+        if (is_empty(remaining_call_region)) {
             return remaining_call_region;
         }
         
@@ -612,6 +612,14 @@ namespace Octopus
         return max_window;
     }
     
+    auto propose_call_subregion(const ContigCallingComponents& components,
+                                const GenomicRegion& current_subregion,
+                                const GenomicRegion& input_region)
+    {
+        assert(contains(input_region, current_subregion));
+        return propose_call_subregion(components, right_overhang_region(input_region, current_subregion));
+    }
+    
     void run_octopus_on_contig(ContigCallingComponents&& components)
     {
         #ifdef BENCHMARK
@@ -620,19 +628,19 @@ namespace Octopus
         
         Logging::InfoLogger log {};
         
-        for (const auto& region : components.regions) {
-            stream(log) << "Processing input region " << region;
+        for (const auto& input_region : components.regions) {
+            stream(log) << "Processing input region " << input_region;
             
-            ProgressMeter progress_meter {region};
+            ProgressMeter progress_meter {input_region};
             
-            auto subregion = propose_call_subregion(components, region);
+            auto subregion = propose_call_subregion(components, input_region);
             
-            if (is_empty_region(subregion) && !region_has_reads(region, components)) {
+            if (is_empty(subregion) && !region_has_reads(input_region, components)) {
                 Logging::WarningLogger lg {};
-                stream(lg) << "No reads found in input region " << region;
+                stream(lg) << "No reads found in input region " << input_region;
             }
             
-            while (!is_empty_region(subregion)) {
+            while (!is_empty(subregion)) {
                 if (DEBUG_MODE) {
                     Logging::DebugLogger lg {};
                     stream(lg) << "Processing subregion " << subregion;
@@ -642,7 +650,7 @@ namespace Octopus
                 
                 write_calls(components.output, std::move(calls));
                 
-                subregion = propose_call_subregion(components, right_overhang_region(region, subregion));
+                subregion = propose_call_subregion(components, subregion, input_region);
             }
         }
         
@@ -782,7 +790,7 @@ namespace Octopus
                 stream(lg) << "Cleanup successful. Please send log file to dcooke@well.ox.ac.uk";
             } else {
                 stream(lg) << "Cleanup successful. Please re-run in debug mode (option --debug) and send"
-                                " log file to dcooke@well.ox.ac.uk";
+                                " log file to " << Octopus_bug_email;
             }
             return;
         }

@@ -509,8 +509,8 @@
 		D4BEAA011B861BF700E53CFD /* divsufsort.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = divsufsort.h; sourceTree = "<group>"; };
 		D4BEAA021B861BF700E53CFD /* lfs.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = lfs.h; sourceTree = "<group>"; };
 		D4CC78941C7E1EF700F9CCB3 /* libboost_timer.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libboost_timer.a; path = /usr/local/Cellar/boost/1.60.0_1/lib/libboost_timer.a; sourceTree = "<absolute>"; };
-		D4CC78961C7E323200F9CCB3 /* timers.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = timers.hpp; sourceTree = "<group>"; };
-		D4CC78971C7E370400F9CCB3 /* timers.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = timers.cpp; sourceTree = "<group>"; };
+		D4CC78961C7E323200F9CCB3 /* timers.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; name = timers.hpp; path = ../src/timers.hpp; sourceTree = "<group>"; };
+		D4CC78971C7E370400F9CCB3 /* timers.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = timers.cpp; path = ../src/timers.cpp; sourceTree = "<group>"; };
 		D4E41DA11AD801EF0010D25D /* mappable.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = mappable.hpp; sourceTree = "<group>"; };
 		D4E41DA21AD80C1B0010D25D /* mappable_algorithms.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = mappable_algorithms.hpp; sourceTree = "<group>"; };
 		D4E41DA31AD81C390010D25D /* allele.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = allele.hpp; sourceTree = "<group>"; };
@@ -543,6 +543,8 @@
 		CA03C2281A8C1C2D000D3494 /* benchmarks */ = {
 			isa = PBXGroup;
 			children = (
+				D4CC78961C7E323200F9CCB3 /* timers.hpp */,
+				D4CC78971C7E370400F9CCB3 /* timers.cpp */,
 				CA03C2291A8C1C8C000D3494 /* benchmark_utils.hpp */,
 				CA0C55BE1C5FC6CB009F3704 /* io */,
 				D413B03C1B554CD0007EFDE0 /* region_algorithm_benchmarks.cpp */,
@@ -665,8 +667,6 @@
 				CA1472781AACECF1005FDCD1 /* octopus.cpp */,
 				CA98BBA91C918B07000CE9C4 /* progress_meter.hpp */,
 				CA98BBA81C918B07000CE9C4 /* progress_meter.cpp */,
-				D4CC78961C7E323200F9CCB3 /* timers.hpp */,
-				D4CC78971C7E370400F9CCB3 /* timers.cpp */,
 			);
 			name = octopus;
 			sourceTree = "<group>";
@@ -1016,7 +1016,7 @@
 			name = assembler;
 			sourceTree = "<group>";
 		};
-		CAE3E2A51AA24D6000C01B2C /* vcf */ = {
+		CAE3E2A51AA24D6000C01B2C /* variant */ = {
 			isa = PBXGroup;
 			children = (
 				CAF23F6C1BA16E94006B673F /* vcf.hpp */,
@@ -1038,7 +1038,7 @@
 				D4636C6C1B7A24F400FEA7D2 /* vcf_parser.hpp */,
 				D4636C6B1B7A24F400FEA7D2 /* vcf_parser.cpp */,
 			);
-			name = vcf;
+			name = variant;
 			sourceTree = "<group>";
 		};
 		CAFA19771AC62BEB00F953D9 /* core */ = {
@@ -1197,7 +1197,7 @@
 			children = (
 				CABA37791A8F668E00BBE598 /* reference */,
 				CABA377A1A8F66A300BBE598 /* reads */,
-				CAE3E2A51AA24D6000C01B2C /* vcf */,
+				CAE3E2A51AA24D6000C01B2C /* variant */,
 			);
 			name = io;
 			sourceTree = "<group>";

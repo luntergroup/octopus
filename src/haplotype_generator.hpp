@@ -72,7 +72,7 @@ namespace Octopus
         
         MappableFlatMultiSet<Allele> holdout_set_;
         
-        boost::optional<Allele> rightmost_allele_;
+        MappableFlatSet<Allele>::const_iterator rightmost_allele_;
         
         bool is_lagged() const noexcept;
         bool is_active_region_lagged() const;

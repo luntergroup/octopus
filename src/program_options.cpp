@@ -285,7 +285,7 @@ namespace Octopus
              "Only bases with quality above this value are considered for candidate generation")
             ("min-supporting-reads", po::value<unsigned>()->default_value(2),
              "Minimum number of reads that must support a variant if it is to be considered a candidate")
-            ("max-variant-size", po::value<AlignedRead::SizeType>()->default_value(100),
+            ("max-variant-size", po::value<AlignedRead::SizeType>()->default_value(500),
              "Maximum candidate varaint size from alignmenet CIGAR")
             ("kmer-size", po::value<std::vector<unsigned>>()->multitoken()
                 ->default_value(std::vector<unsigned> {15, 25}, "15 25")->composing(),

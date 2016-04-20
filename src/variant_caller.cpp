@@ -227,7 +227,7 @@ auto calculate_flank_regions(const GenomicRegion& haplotype_region,
     
     assert(!active_candidates.empty());
     
-    if (is_empty_region(*leftmost_mappable(active_candidates)) && !is_empty_region(lhs_flank)) {
+    if (is_empty_region(*leftmost_mappable(active_candidates)) && !is_empty(lhs_flank)) {
         lhs_flank = expand_rhs(lhs_flank, -1); // stops boundry insertions being considerd inactive
     }
     
@@ -239,7 +239,7 @@ auto calculate_flank_regions(const GenomicRegion& haplotype_region,
         lhs_flank = closed_region(lhs_flank, rightmost_region(lhs_inactive_candidates));
     }
     
-    if (is_empty_region(*rightmost_mappable(active_candidates)) && !is_empty_region(rhs_flank)) {
+    if (is_empty_region(*rightmost_mappable(active_candidates)) && !is_empty(rhs_flank)) {
         rhs_flank = expand_lhs(rhs_flank, -1); // stops boundry insertions being considerd inactive
     }
     
@@ -289,11 +289,6 @@ auto calculate_candidate_region(const GenomicRegion& call_region, const ReadMap&
 bool have_passed(const GenomicRegion& next_active_region, const GenomicRegion& active_region)
 {
     return is_after(next_active_region, active_region) && active_region != next_active_region;
-}
-
-bool has_moved_forward(const GenomicRegion& next_active_region, const GenomicRegion& active_region)
-{
-    return begins_before(active_region, next_active_region) || active_region == next_active_region;
 }
 
 namespace debug
@@ -536,7 +531,7 @@ std::deque<VcfRecord> VariantCaller::call_variants(const GenomicRegion& call_reg
         auto unphased_active_region = active_region;
         
         if (overlaps(active_region, call_region) && phase_set) {
-            assert(!is_empty_region(phase_set->region));
+            assert(!is_empty(phase_set->region));
             
             if (DEBUG_MODE) stream(debug_log) << "Phased region is " << phase_set->region;
             
@@ -578,7 +573,7 @@ std::deque<VcfRecord> VariantCaller::call_variants(const GenomicRegion& call_reg
             pause_timer(haplotype_generation_timer);
         }
         
-        if (overlaps(active_region, call_region) && has_moved_forward(next_active_region, active_region)) {
+        if (begins_before(active_region, next_active_region) && overlaps(active_region, call_region)) {
             auto passed_region   = left_overhang_region(active_region, next_active_region);
             auto uncalled_region = overlapped_region(active_region, passed_region);
             
@@ -638,7 +633,7 @@ bool VariantCaller::refcalls_requested() const noexcept
 
 bool VariantCaller::done_calling(const GenomicRegion& region) const noexcept
 {
-    return is_empty_region(region);
+    return is_empty(region);
 }
 
 std::vector<std::reference_wrapper<const Haplotype>>
@@ -674,7 +669,7 @@ generate_callable_alleles(const GenomicRegion& region,
     
     auto overlapped_variants = copy_overlapped(variants, region);
     
-    if (is_empty_region(region) && overlapped_variants.empty()) return std::vector<Allele> {};
+    if (is_empty(region) && overlapped_variants.empty()) return std::vector<Allele> {};
     
     if (overlapped_variants.empty()) {
         switch (refcall_type) {

@@ -18,6 +18,9 @@
 #include <utility>
 #include <iostream>
 
+#include <boost/iterator/zip_iterator.hpp>
+#include <boost/tuple/tuple.hpp>
+
 #include "genomic_region.hpp"
 #include "allele.hpp"
 #include "variant.hpp"
@@ -215,7 +218,7 @@ struct VariantCallBlock : public Mappable<VariantCallBlock>
     posterior {posterior}
     {}
     
-    GenomicRegion get_region() const { return variants.front().get_region(); }
+    const GenomicRegion& get_region() const noexcept { return variants.front().get_region(); }
     
     std::vector<Variant> variants;
     double posterior;
@@ -234,7 +237,7 @@ struct RefCall : public Mappable<RefCall>
     posterior {posterior}
     {}
     
-    const GenomicRegion& get_region() const { return reference_allele.get_region(); }
+    const GenomicRegion& get_region() const noexcept { return reference_allele.get_region(); }
     
     Allele reference_allele;
     double posterior;
@@ -268,8 +271,7 @@ using GenotypeContainments = std::vector<AlleleBools>;
 
 auto marginalise(const Allele& allele, const GenotypeProbabilityMap& genotype_posteriors)
 {
-    auto result = std::accumulate(std::cbegin(genotype_posteriors),
-                                  std::cend(genotype_posteriors),
+    auto result = std::accumulate(std::cbegin(genotype_posteriors), std::cend(genotype_posteriors),
                                   0.0, [&allele] (const auto curr, const auto& p) {
                                       return curr + (contains(p.first, allele) ? p.second : 0);
                                   });
@@ -298,6 +300,8 @@ VariantCalls call_variants(const std::vector<Variant>& candidates,
                            const AllelePosteriorMap& allele_posteriors,
                            const double min_posterior)
 {
+    assert(!allele_posteriors.empty());
+    
     VariantCalls result {};
     result.reserve(candidates.size());
     
@@ -354,9 +358,17 @@ auto segment_calls(VariantCalls&& calls)
 
 auto call_blocked_variants(const std::vector<Variant>& candidates,
                            const AllelePosteriorMap& allele_posteriors,
+                           const Genotype<Haplotype>& genotype_call,
                            const double min_posterior)
 {
     auto calls = call_variants(candidates, allele_posteriors, min_posterior);
+    
+    auto it = std::remove_if(std::begin(calls), std::end(calls),
+                             [&genotype_call] (const VariantCall& call) {
+                                 return !contains_exact(genotype_call, call.variant.get_alt_allele());
+                             });
+    calls.erase(it, std::end(calls));
+    
     return block_variant_calls(segment_calls(std::move(calls)));
 }
 
@@ -372,21 +384,14 @@ auto extract_regions(const VariantCallBlocks& variant_calls)
     return result;
 }
 
-void parsimonise_variant_calls(VariantCallBlocks& variant_calls, const ReferenceGenome& reference)
-{
-    for (auto& segment_calls : variant_calls) {
-        segment_calls.variants = parsimonise_together(segment_calls.variants, reference);
-    }
-}
-
 // variant genotype calling
 
 auto call_genotype(const GenotypeProbabilityMap& genotype_posteriors)
 {
-    return *std::max_element(std::cbegin(genotype_posteriors), std::cend(genotype_posteriors),
-                             [] (const auto& lhs, const auto& rhs) {
-                                 return lhs.second < rhs.second;
-                             });
+    return std::max_element(std::cbegin(genotype_posteriors), std::cend(genotype_posteriors),
+                            [] (const auto& lhs, const auto& rhs) {
+                                return lhs.second < rhs.second;
+                            })->first;
 }
 
 double marginalise(const Genotype<Allele>& genotype, const GenotypeProbabilityMap& genotype_posteriors)
@@ -397,18 +402,15 @@ double marginalise(const Genotype<Allele>& genotype, const GenotypeProbabilityMa
                            });
 }
 
-// Call cleanup
-
-GenotypeCalls call_genotypes(const GenotypeProbabilityMap& genotype_posteriors,
+GenotypeCalls call_genotypes(const Genotype<Haplotype>& genotype_call,
+                             const GenotypeProbabilityMap& genotype_posteriors,
                              const std::vector<GenomicRegion>& variant_regions)
 {
-    const auto& genotype_call = call_genotype(genotype_posteriors);
-    
     GenotypeCalls result {};
     result.reserve(variant_regions.size());
     
     for (const auto& region : variant_regions) {
-        auto spliced_genotype = splice<Allele>(genotype_call.first, region);
+        auto spliced_genotype = splice<Allele>(genotype_call, region);
         
         const auto posterior = marginalise(spliced_genotype, genotype_posteriors);
         
@@ -417,6 +419,43 @@ GenotypeCalls call_genotypes(const GenotypeProbabilityMap& genotype_posteriors,
     
     return result;
 }
+
+// Call cleanup
+
+void remove_nongenotyped_calls(VariantCallBlock& block,
+                               const GenotypeCall& genotype_call)
+{
+    const auto& genotype = genotype_call.genotype;
+    auto it = std::remove_if(std::begin(block.variants), std::end(block.variants),
+                             [&genotype] (const Variant& call) {
+                                 return !genotype.contains(call.get_alt_allele());
+                             });
+    block.variants.erase(it, std::end(block.variants));
+}
+
+void remove_nongenotyped_calls(VariantCallBlocks& variant_calls,
+                               const GenotypeCalls& genotype_calls)
+{
+    auto it = std::cbegin(genotype_calls);
+    for (auto& block : variant_calls) {
+        if (block.variants.size() > 1) {
+            remove_nongenotyped_calls(block, *it++);
+        }
+    }
+}
+
+void parsimonise_variant_calls(VariantCallBlocks& variant_calls, const ReferenceGenome& reference)
+{
+    for (auto& segment_calls : variant_calls) {
+        segment_calls.variants = parsimonise_together(segment_calls.variants, reference);
+    }
+}
+
+    void parsimonise(VariantCallBlocks& variant_calls, GenotypeCalls& genotype_calls,
+                     const ReferenceGenome& reference)
+    {
+        
+    }
 
 // reference genotype calling
 
@@ -530,8 +569,6 @@ VcfRecord::Builder output_variant_call(const SampleIdType& sample,
     result.set_alt_alleles(extract_alt_allele_sequences(block.variants));
     result.set_quality(phred_quality);
     
-    //result.set_filters({"PASS"}); // TODO
-    
     result.add_info("AC",  to_strings(count_alleles(block.variants, genotype_call)));
     result.add_info("AN",  to_string(count_alleles(genotype_call)));
     result.add_info("NS",  to_string(count_samples_with_coverage(reads, region)));
@@ -575,7 +612,7 @@ VcfRecord::Builder output_reference_call(const SampleIdType& sample,
     result.set_position(region_begin(region));
     result.set_ref_allele(call.reference_allele.get_sequence().front());
     
-    result.set_alt_allele("<NON_REF>");
+    result.set_refcall();
     
     result.set_quality(phred_quality);
     
@@ -666,6 +703,8 @@ IndividualVariantCaller::call_variants(const std::vector<Variant>& candidates,
                                        const Phaser::PhaseSet& phase_set,
                                        const ReadMap& reads) const
 {
+    assert(!callable_alleles.empty());
+    
     const auto dlatents = dynamic_cast<Latents*>(latents);
     
     const auto& genotype_posteriors = (*dlatents->genotype_posteriors_)[sample_];
@@ -688,15 +727,18 @@ IndividualVariantCaller::call_variants(const std::vector<Variant>& candidates,
         debug::print_allele_posteriors(stream(log), allele_posteriors);
     }
     
-    auto variant_calls = call_blocked_variants(candidates, allele_posteriors, min_variant_posterior_);
+    const auto genotype_call = call_genotype(genotype_posteriors);
+    
+    auto variant_calls = call_blocked_variants(candidates, allele_posteriors,
+                                               genotype_call, min_variant_posterior_);
     
     //debug::print_variant_calls(variant_calls);
     
     parsimonise_variant_calls(variant_calls, reference_);
     
-    const auto called_regions = extract_regions(variant_calls);
+    auto called_regions = extract_regions(variant_calls);
     
-    auto variant_genotype_calls = call_genotypes(genotype_posteriors, called_regions);
+    auto variant_genotype_calls = call_genotypes(genotype_call, genotype_posteriors, called_regions);
     
     set_phasings(variant_genotype_calls, phase_set.phase_regions.at(sample_), called_regions); // TODO
     

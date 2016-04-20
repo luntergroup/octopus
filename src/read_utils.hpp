@@ -103,14 +103,14 @@ namespace detail
     template <typename T>
     double mean_coverage(const T& reads, const GenomicRegion& region, NonMapTag)
     {
-        if (reads.empty() || is_empty_region(region)) return 0;
+        if (reads.empty() || is_empty(region)) return 0;
         return Maths::mean(positional_coverage(reads, region));
     }
     
     template <typename T>
     double stdev_coverage(const T& reads, const GenomicRegion& region, NonMapTag)
     {
-        if (reads.empty() || is_empty_region(region)) return 0;
+        if (reads.empty() || is_empty(region)) return 0;
         return Maths::stdev(positional_coverage(reads, region));
     }
     

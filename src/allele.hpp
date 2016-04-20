@@ -130,7 +130,7 @@ namespace detail
             return sequence;
         }
         
-        if (begins_equal(region, allele) && is_empty_region(region) && is_insertion(allele)) {
+        if (begins_equal(region, allele) && is_empty(region) && is_insertion(allele)) {
             auto first = std::cbegin(sequence);
             return ResultType {first, first + sequence.size() - region_size(allele)};
         }

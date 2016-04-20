@@ -75,7 +75,9 @@ GenomicRegion GenomeWalker::walk(const GenomicRegion& previous_region, const Rea
     auto first_previous_itr = cbegin(previous_candidates);
     auto included_itr       = cend(previous_candidates);
     
-    if (included_itr == last_candidate_itr) return tail_region(previous_region);
+    if (included_itr == last_candidate_itr) {
+        return shift(tail_region(previous_region), 2);
+    }
     
     if (max_included_ == 0) {
         if (included_itr != last_candidate_itr) {
@@ -134,8 +136,6 @@ GenomicRegion GenomeWalker::walk(const GenomicRegion& previous_region, const Rea
     auto num_overlapped = candidates.count_overlapped(first_excluded_itr, last_candidate_itr, rightmost);
     
     advance(included_itr, min(num_remaining, num_overlapped));
-    
-    first_excluded_itr = next(included_itr);
     
     return encompassing_region(first_included_itr, included_itr);
 }

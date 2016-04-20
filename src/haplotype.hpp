@@ -184,13 +184,13 @@ reference_ {reference}
         
         const auto& contig = region_.get_contig_name();
         
-        if (!is_empty_region(lhs_reference_region)) {
+        if (!is_empty(lhs_reference_region)) {
             detail::append(cached_sequence_, reference, contig, lhs_reference_region);
         }
         
         append(cached_sequence_, std::cbegin(explicit_alleles_), std::cend(explicit_alleles_));
         
-        if (!is_empty_region(rhs_reference_region)) {
+        if (!is_empty(rhs_reference_region)) {
             detail::append(cached_sequence_, reference, contig, rhs_reference_region);
         }
     } else {

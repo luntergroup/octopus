@@ -402,13 +402,13 @@ VcfRecord::Builder& VcfRecord::Builder::set_ref_allele(SequenceType ref_allele)
 
 VcfRecord::Builder& VcfRecord::Builder::set_alt_allele(const char alt_allele)
 {
-    alt_alleles_[0] = alt_allele;
+    alt_alleles_.front() = alt_allele;
     return *this;
 }
 
 VcfRecord::Builder& VcfRecord::Builder::set_alt_allele(SequenceType alt_allele)
 {
-    alt_alleles_[0] = std::move(alt_allele);
+    alt_alleles_.front() = std::move(alt_allele);
     return *this;
 }
 
@@ -416,6 +416,11 @@ VcfRecord::Builder& VcfRecord::Builder::set_alt_alleles(std::vector<SequenceType
 {
     alt_alleles_ = std::move(alt_alleles);
     return *this;
+}
+
+VcfRecord::Builder& VcfRecord::Builder::set_refcall()
+{
+    return set_alt_allele("<NON_REF>");
 }
 
 VcfRecord::Builder& VcfRecord::Builder::set_quality(QualityType quality)

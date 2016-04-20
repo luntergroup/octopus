@@ -55,7 +55,7 @@ private:
     ContigRegion contig_region_;
 };
 
-class RegionError : std::runtime_error
+class RegionError : public std::runtime_error
 {
 public:
     RegionError(GenomicRegion::ContigNameType first, GenomicRegion::ContigNameType second)

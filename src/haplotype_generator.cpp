@@ -72,13 +72,17 @@ reads_ {reads},
 current_active_region_ {shift(head_region(alleles_.leftmost(), 0), -1)},
 next_active_region_ {},
 soft_max_haplotypes_ {max_haplotypes},
-rightmost_allele_ {},
+rightmost_allele_ {rightmost_mappable(alleles_)},
 holdout_set_ {}
 {
     if (allow_lagging) {
         lagged_walker_ = GenomeWalker {max_included(max_haplotypes),
                             GenomeWalker::IndicatorLimit::SharedWithPreviousRegion};
-        rightmost_allele_ = *rightmost_mappable(alleles_);
+    }
+    
+    if (alleles_.empty()) {
+        current_active_region_ = window;
+        next_active_region_    = window;
     }
 }
 
@@ -91,14 +95,18 @@ const GenomicRegion& HaplotypeGenerator::tell_next_active_region() const
 
 std::pair<std::vector<Haplotype>, GenomicRegion> HaplotypeGenerator::progress()
 {
+    if (alleles_.empty()) {
+        return std::make_pair(std::vector<Haplotype> {}, current_active_region_);
+    }
+    
     holdout_set_.clear(); // TODO: reintroduce holdout alleles and backtrack
     
     update_next_active_region();
     
     assert(next_active_region_ != boost::none);
     
-    if (*next_active_region_ == current_active_region_) {
-        return std::make_pair(std::vector<Haplotype> {}, current_active_region_);
+    if (is_after(*next_active_region_, *rightmost_allele_)) {
+        return std::make_pair(std::vector<Haplotype> {}, *next_active_region_);
     }
     
     force_forward(*next_active_region_);
@@ -115,7 +123,7 @@ std::pair<std::vector<Haplotype>, GenomicRegion> HaplotypeGenerator::progress()
     const auto novel_active_alleles = overlap_range(alleles_, novel_active_region);
     
     if (novel_active_alleles.empty()) {
-        return std::make_pair(std::vector<Haplotype> {}, current_active_region_);
+        return std::make_pair(std::vector<Haplotype> {}, *next_active_region_);
     }
     
     const auto it = extend_tree_until(novel_active_alleles, tree_, hard_max_haplotypes_);
@@ -303,7 +311,7 @@ void HaplotypeGenerator::update_next_active_region() const
     if (!next_active_region_) {
         if (is_lagged()) {
             if (contains(current_active_region_, *rightmost_allele_)) {
-                next_active_region_ = shift(tail_region(*rightmost_allele_), 1);
+                next_active_region_ = shift(tail_region(*rightmost_allele_), 2);
                 return;
             }
             
@@ -333,6 +341,8 @@ void HaplotypeGenerator::update_next_active_region() const
                                                                 max_lagged_region);
                 const auto indicator_alleles = overlap_range(alleles_, indicator_region);
                 
+                assert(!indicator_alleles.empty());
+                
                 const auto mutually_exclusive_indicator_regions = extract_covered_regions(indicator_alleles);
                 
                 for (const auto& region : mutually_exclusive_indicator_regions) {
@@ -346,8 +356,11 @@ void HaplotypeGenerator::update_next_active_region() const
                                                                current_active_region_);
                 const auto novel_alleles = overlap_range(alleles_, novel_region);
                 
+                assert(!novel_alleles.empty());
+                
                 const auto mutually_exclusive_novel_regions = extract_covered_regions(novel_alleles);
                 
+                unsigned num_regions_added {0};
                 for (const auto& region : mutually_exclusive_novel_regions) {
                     const auto interacting_alleles = overlap_range(novel_alleles, region);
                     
@@ -359,12 +372,29 @@ void HaplotypeGenerator::update_next_active_region() const
                         return;
                     }
                     
+                    ++num_regions_added;
+                    
                     if (tmp_tree.num_haplotypes() >= soft_max_haplotypes_) {
                         break;
                     }
                 }
                 
                 next_active_region_ = tmp_tree.encompassing_region();
+                
+                if (num_regions_added > 0
+                    && is_empty(mutually_exclusive_novel_regions[num_regions_added - 1])) {
+                    // To ensure we progress on a single novel insertion
+                    next_active_region_ = expand_rhs(*next_active_region_, 1);
+                }
+                
+                if (*next_active_region_ == current_active_region_) {
+                    assert(num_regions_added == 0);
+                    next_active_region_ = walker_.walk(current_active_region_, reads_, alleles_);
+                } else if (begins_before(current_active_region_, *next_active_region_)
+                        && is_empty_region(indicator_alleles.front())) {
+                    // To be clearer about insertion containment
+                    next_active_region_ = expand_lhs(*next_active_region_, 1);
+                }
             }
         } else {
             next_active_region_ = walker_.walk(current_active_region_, reads_, alleles_);

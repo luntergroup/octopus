@@ -1806,7 +1806,7 @@ bool has_coverage(const Container& mappables, const RegionTp& region)
     static_assert(std::is_same<RegionType<MappableTp>, RegionTp>::value,
                   "RegionType of input range must match RegionTp");
     
-    if (mappables.empty() || is_empty_region(region)) return false;
+    if (mappables.empty() || is_empty(region)) return false;
     
     const auto overlapped = overlap_range(mappables, region);
     
@@ -1835,7 +1835,7 @@ unsigned min_coverage(const Container& mappables, const RegionTp& region)
     static_assert(std::is_same<RegionType<MappableTp>, RegionTp>::value,
                   "RegionType of input range must match RegionTp");
     
-    if (mappables.empty() || is_empty_region(region)) return 0;
+    if (mappables.empty() || is_empty(region)) return 0;
     
     const auto positional_coverage = calculate_positional_coverage(mappables, region);
     
@@ -1862,7 +1862,7 @@ unsigned max_coverage(const Container& mappables, const RegionTp& region)
     static_assert(std::is_same<RegionType<MappableTp>, RegionTp>::value,
                   "RegionType of input range must match RegionTp");
     
-    if (mappables.empty() || is_empty_region(region)) return 0;
+    if (mappables.empty() || is_empty(region)) return 0;
     
     const auto positional_coverage = calculate_positional_coverage(mappables, region);
     

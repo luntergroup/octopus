@@ -202,6 +202,7 @@ public:
     Builder& set_alt_allele(const char alt_allele); // if just one
     Builder& set_alt_allele(SequenceType alt_allele); // if just one
     Builder& set_alt_alleles(std::vector<SequenceType> alt_alleles);
+    Builder& set_refcall();
     Builder& set_quality(QualityType quality);
     Builder& set_filters(const std::vector<KeyType>& filters);
     Builder& set_filters(const std::initializer_list<KeyType>& filters);

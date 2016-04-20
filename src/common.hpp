@@ -26,6 +26,8 @@ namespace Octopus
     
     const static std::string Octopus_version {"1.0"};
     
+    const static std::string Octopus_bug_email {"dcooke@well.ox.ac.uk"};
+    
     using ProbabilityType = double;
     using SampleIdType    = std::string;
     

@@ -194,7 +194,7 @@ GenomicRegion ReadManager::find_covered_subregion(const std::vector<SampleIdType
                  [this, &samples, &region, &result, &position_coverage, max_reads] (const auto& reader_path) {
                      auto p = open_readers_.at(reader_path).find_covered_subregion(samples, region, max_reads);
                      
-                     if (is_empty_region(result) || is_before(p.first, result)) {
+                     if (is_empty(result) || is_before(p.first, result)) {
                          position_coverage.assign(begin(p.second), end(p.second));
                          result = std::move(p.first);
                          return;
