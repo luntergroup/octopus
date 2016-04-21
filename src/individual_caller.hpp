@@ -75,22 +75,17 @@ private:
         std::shared_ptr<GenotypeProbabilityMap> get_genotype_posteriors() const noexcept override;
         
     private:
-        std::vector<Genotype<Haplotype>> genotypes_;
-        std::vector<double> genotype_log_posteriors_;
-        
         std::shared_ptr<GenotypeProbabilityMap> genotype_posteriors_;
         std::shared_ptr<HaplotypeProbabilityMap> haplotype_posteriors_;
         
         HaplotypeProbabilityMap
         calculate_haplotype_posteriors(const std::vector<Haplotype>& haplotypes);
-        
-        friend IndividualVariantCaller;
     };
     
     SampleIdType sample_;
     
-    double min_variant_log_posterior_;
-    double min_refcall_log_posterior_;
+    double min_variant_posterior_;
+    double min_refcall_posterior_;
     unsigned ploidy_;
     
     std::unique_ptr<CallerLatents>

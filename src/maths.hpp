@@ -29,8 +29,6 @@
 
 namespace Octopus { namespace Maths {
 
-static constexpr double ln_10_div_10 {0.230258509299404568401799145468436420760110148862877297603};
-
 template <typename RealType,
           typename = std::enable_if_t<std::is_floating_point<RealType>::value>>
 RealType round(const RealType val, const unsigned precision = 2)
@@ -613,41 +611,23 @@ void log_each(Container& values)
 }
 
 template <typename Container>
-Container log_copy(const Container& values)
-{
-    auto result = values;
-    log_each(result);
-    return result;
-}
-
-template <typename Container>
 void exp_each(Container& values)
 {
     for (auto& v : values) v = std::exp(v);
 }
 
 template <typename Container>
-Container exp_copy(const Container& values)
-{
-    auto result = values;
-    exp_each(result);
-    return result;
-}
-
-template <typename Container>
-auto normalise_logs(Container& logs)
+void normalise_logs(Container& logs)
 {
     const auto norm = log_sum_exp(logs);
     for (auto& p : logs) p -= norm;
-    return norm;
 }
 
 template <typename Container>
-auto normalise_exp(Container& logs)
+void normalise_exp(Container& logs)
 {
     const auto norm = log_sum_exp(logs);
     for (auto& p : logs) p = std::exp(p -= norm);
-    return norm;
 }
 } // namespace Maths
 } // namespace Octopus
