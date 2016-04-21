@@ -53,59 +53,6 @@ auto count_mismatches(InputIt1 first1, InputIt1 last1, InputIt2 first2)
                               std::plus<void>(), std::not_equal_to<void>());
 }
 
-//auto align(const std::string& truth, const std::string& target,
-//           const std::vector<std::uint8_t>& target_qualities,
-//           const std::vector<std::int8_t>& truth_gap_open_penalties,
-//           const std::size_t target_offset, const std::size_t truth_offset,
-//           const Model& model)
-//{
-//    const auto truth_alignment_size = static_cast<int>(target.size() - truth_offset + 15);
-//    
-//    if (target_offset + truth_alignment_size > truth.size()) {
-//        return std::numeric_limits<double>::lowest();
-//    }
-//    
-//    if (!model.do_backtrace) {
-//        const auto score = fastAlignmentRoutine(truth.data() + target_offset + truth_offset,
-//                                                target.data() + truth_offset,
-//                                                reinterpret_cast<const char*>(target_qualities.data() + truth_offset),
-//                                                truth_alignment_size,
-//                                                static_cast<int>(target.size() - truth_offset),
-//                                                static_cast<int>(model.gapextend),
-//                                                static_cast<int>(model.nucprior),
-//                                                reinterpret_cast<const char*>(truth_gap_open_penalties.data() + target_offset + truth_offset));
-//        
-//        return -ln_10_div_10 * static_cast<double>(score);
-//    }
-//    
-//    int first_pos;
-//    std::vector<char> align1(2 * truth_alignment_size + 1), align2(2 * truth_alignment_size + 1);
-//    
-//    const auto score = fastAlignmentRoutine(truth.data() + target_offset + truth_offset,
-//                                            target.data() + truth_offset,
-//                                            reinterpret_cast<const char*>(target_qualities.data() + truth_offset),
-//                                            truth_alignment_size,
-//                                            static_cast<int>(target.size() - truth_offset),
-//                                            static_cast<int>(model.gapextend),
-//                                            static_cast<int>(model.nucprior),
-//                                            reinterpret_cast<const char*>(truth_gap_open_penalties.data() + target_offset + truth_offset),
-//                                            align1.data(), align2.data(), &first_pos);
-//    
-//    const auto truth_size     = static_cast<int>(truth.size());
-//    const auto lhs_flank_size = static_cast<int>(target_offset + truth_offset);
-//    const auto rhs_flank_size = static_cast<int>(truth_size - (target_offset + target.size()));
-//    
-//    const auto flank_score = calculateFlankScore(truth_size, lhs_flank_size, rhs_flank_size,
-//                                                 reinterpret_cast<const char*>(target_qualities.data() + truth_offset),
-//                                                 reinterpret_cast<const char*>(truth_gap_open_penalties.data()),
-//                                                 static_cast<int>(model.gapextend),
-//                                                 static_cast<int>(model.nucprior),
-//                                                 static_cast<int>(first_pos + target_offset + truth_offset),
-//                                                 align1.data(), align2.data());
-//    
-//    return -ln_10_div_10 * static_cast<double>(score - flank_score);
-//}
-
 bool is_target_in_truth_flank(const std::string& truth, const std::string& target,
                               const std::size_t target_offset, const Model& model)
 {

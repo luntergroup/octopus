@@ -813,8 +813,7 @@ namespace
         for (const auto& sample : samples) {
             const auto latents = germline_model.infer_latents(sample, genotypes,
                                                               haplotype_log_likelihoods);
-            result.emplace_back(latents.posteriors.genotype_probabilities);
-            Maths::log_each(result.back());
+            result.emplace_back(latents.posteriors.genotype_log_probabilities);
         }
         
         return result;

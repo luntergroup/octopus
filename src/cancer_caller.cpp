@@ -124,7 +124,8 @@ CancerVariantCaller::Latents::get_genotype_posteriors() const
     // Just to extract sample names
     for (const auto& p : cnv_model_inferences_.posteriors.alphas) {
         std::tie(sample, std::ignore) = p;
-        insert_sample(std::move(sample), germline_model_inferences_.posteriors.genotype_probabilities,
+        insert_sample(std::move(sample),
+                      Maths::exp_copy(germline_model_inferences_.posteriors.genotype_log_probabilities),
                       genotype_posteriors);
     }
     
@@ -190,7 +191,7 @@ auto zip(const T&... containers)
 }
 
 auto extract_low_posterior_genotypes(const GenotypeModel::Individual::Latents& latents,
-                                     const double min_posterior = 1e-30)
+                                     const double min_log_posterior = -70)
 {
     using GenotypeReference = std::reference_wrapper<const Genotype<Haplotype>>;
     
@@ -204,8 +205,8 @@ auto extract_low_posterior_genotypes(const GenotypeModel::Individual::Latents& l
         latents.genotypes.get().size(), hash, cmp
     };
     
-    for (const auto& p : zip(latents.genotypes.get(), latents.genotype_probabilities)) {
-        if (p.get<1>() < min_posterior) {
+    for (const auto& p : zip(latents.genotypes.get(), latents.genotype_log_probabilities)) {
+        if (p.get<1>() < min_log_posterior) {
             result.emplace(p.get<0>());
         }
     }

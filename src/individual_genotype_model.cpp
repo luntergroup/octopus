@@ -29,10 +29,10 @@ namespace GenotypeModel
     {}
     
     Individual::Latents::Latents(const GenotypeVector& genotypes,
-                                 GenotypeProbabilityVector&& genotype_probabilities)
+                                 LogProbabilityVector&& genotype_log_probabilities)
     :
-    genotypes {std::cref(genotypes)},
-    genotype_probabilities {std::move(genotype_probabilities)}
+    genotype_log_probabilities {std::move(genotype_log_probabilities)},
+    genotypes {std::cref(genotypes)}
     {}
     
     Individual::InferredLatents::InferredLatents(Latents&& posteriors, double log_evidence)
@@ -59,9 +59,7 @@ namespace GenotypeModel
                                         + likelihood_model.log_likelihood(sample, genotype);
                        });
         
-        const auto log_evidence = Maths::log_sum_exp(result);
-        
-        Maths::normalise_exp(result);
+        auto log_evidence = Maths::normalise_logs(result);
         
         return InferredLatents {Latents {genotypes, std::move(result)}, log_evidence};
     }
