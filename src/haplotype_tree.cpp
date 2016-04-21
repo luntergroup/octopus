@@ -196,12 +196,14 @@ GenomicRegion HaplotypeTree::encompassing_region() const
     
     const auto vertex_range = boost::adjacent_vertices(root_, tree_);
     
-    const auto VertexLess = [this] (const auto& lhs, const auto& rhs) { return tree_[lhs] < tree_[rhs]; };
+    const auto vertex_less = [this] (const auto& lhs, const auto& rhs) {
+        return ends_before(tree_[lhs], tree_[rhs]);
+    };
     
-    const auto leftmost = *std::min_element(vertex_range.first, vertex_range.second, VertexLess);
+    const auto leftmost = *std::min_element(vertex_range.first, vertex_range.second, vertex_less);
     
     const auto rightmost = *std::max_element(std::cbegin(haplotype_leafs_), std::cend(haplotype_leafs_),
-                                             VertexLess);
+                                             vertex_less);
     
     return GenomicRegion {contig_, ::encompassing_region(tree_[leftmost], tree_[rightmost])};
 }

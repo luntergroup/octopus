@@ -15,6 +15,8 @@
 #include <memory>
 #include <deque>
 
+#include <boost/optional.hpp>
+
 #include "common.hpp"
 #include "reference_genome.hpp"
 #include "read_pipe.hpp"
@@ -24,6 +26,7 @@
 #include "phaser.hpp"
 #include "vcf_record.hpp"
 #include "progress_meter.hpp"
+#include "logging.hpp"
 
 class GenomicRegion;
 class Variant;
@@ -103,6 +106,8 @@ private:
     double min_haplotype_posterior_;
     bool lag_haplotype_generation_;
     double min_phase_score_;
+    
+    mutable boost::optional<Logging::DebugLogger> debug_log_;
     
     bool done_calling(const GenomicRegion& region) const noexcept;
     

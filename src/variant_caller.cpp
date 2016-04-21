@@ -26,7 +26,6 @@
 #include "haplotype_filter.hpp"
 #include "vcf_record.hpp"
 #include "maths.hpp"
-#include "logging.hpp"
 
 #include "timers.hpp"
 
@@ -61,8 +60,13 @@ max_haplotypes_ {parameters.max_haplotypes},
 min_haplotype_posterior_ {1e-15},
 lag_haplotype_generation_ {parameters.lag_haplotype_generation},
 min_phase_score_ {parameters.min_phase_score},
-candidate_generator_ {std::move(candidate_generator)}
-{}
+candidate_generator_ {std::move(candidate_generator)},
+debug_log_ {}
+{
+    if (DEBUG_MODE) {
+        debug_log_ = Logging::DebugLogger {};
+    }
+}
 
 namespace debug
 {
@@ -352,15 +356,13 @@ namespace debug
     }
 } // namespace debug
 
-std::deque<VcfRecord> VariantCaller::call_variants(const GenomicRegion& call_region,
-                                                   ProgressMeter& progress_meter) const
+std::deque<VcfRecord>
+VariantCaller::call_variants(const GenomicRegion& call_region,
+                             ProgressMeter& progress_meter) const
 {
-    Logging::DebugLogger debug_log {};
-    
     resume_timer(init_timer);
     
     ReadMap reads;
-    
     std::deque<VcfRecord> result {};
     
     if (candidate_generator_.requires_reads()) {
@@ -369,25 +371,25 @@ std::deque<VcfRecord> VariantCaller::call_variants(const GenomicRegion& call_reg
         add_reads(reads, candidate_generator_);
         
         if (!refcalls_requested() && all_empty(reads)) {
-            if (DEBUG_MODE) stream(debug_log) << "No reads found in call region";
+            if (debug_log_) stream(*debug_log_) << "No reads found in call region";
             return result;
         }
         
-        if (DEBUG_MODE) {
-            stream(debug_log) << "There are " << count_reads(reads) << " reads";
+        if (debug_log_) {
+            stream(*debug_log_) << "There are " << count_reads(reads) << " reads";
         }
     }
     
     const auto candidate_region = calculate_candidate_region(call_region, reads, candidate_generator_);
     
-    if (DEBUG_MODE) {
-        stream(debug_log) << "Generating candidates in region " << candidate_region;
+    if (debug_log_) {
+        stream(*debug_log_) << "Generating candidates in region " << candidate_region;
     }
     
     auto candidates = generate_candidates(candidate_generator_, candidate_region, reference_);
     
-    if (DEBUG_MODE) {
-        debug::print_final_candidates(stream(debug_log), candidates);
+    if (debug_log_) {
+        debug::print_final_candidates(stream(*debug_log_), candidates);
     }
     
     if (!refcalls_requested() && candidates.empty()) {
@@ -417,16 +419,16 @@ std::deque<VcfRecord> VariantCaller::call_variants(const GenomicRegion& call_reg
         std::tie(haplotypes, active_region) = generator.progress();
         pause_timer(haplotype_generation_timer);
         
-        if (DEBUG_MODE) {
-            stream(debug_log) << "Active region is " << active_region;
+        if (debug_log_) {
+            stream(*debug_log_) << "Active region is " << active_region;
         }
         
         if (is_after(active_region, call_region) || haplotypes.empty()) {
-            if (DEBUG_MODE) {
+            if (debug_log_) {
                 if (haplotypes.empty()) {
-                    stream(debug_log) << "No haplotypes were generated in the active region";
+                    stream(*debug_log_) << "No haplotypes were generated in the active region";
                 } else {
-                    stream(debug_log) << "Generated " << haplotypes.size()
+                    stream(*debug_log_) << "Generated " << haplotypes.size()
                                 << " haplotypes but active region is after call region";
                 }
             }
@@ -436,18 +438,18 @@ std::deque<VcfRecord> VariantCaller::call_variants(const GenomicRegion& call_reg
         
         remove_passed_candidates(candidates, candidate_region, haplotype_region(haplotypes));
         
-        if (DEBUG_MODE) {
-            debug::print_active_candidates(stream(debug_log), candidates, active_region);
-            stream(debug_log) << "Haplotype region is " << haplotype_region(haplotypes);
-            debug::print_inactive_flanking_candidates(stream(debug_log), candidates, active_region,
+        if (debug_log_) {
+            debug::print_active_candidates(stream(*debug_log_), candidates, active_region);
+            stream(*debug_log_) << "Haplotype region is " << haplotype_region(haplotypes);
+            debug::print_inactive_flanking_candidates(stream(*debug_log_), candidates, active_region,
                                                       haplotype_region(haplotypes));
         }
         
         const auto active_reads = copy_overlapped(reads, active_region);
         
-        if (DEBUG_MODE) {
-            stream(debug_log) << "There are " << haplotypes.size() << " initial haplotypes";
-            stream(debug_log) << "There are " << count_reads(active_reads) << " active reads";
+        if (debug_log_) {
+            stream(*debug_log_) << "There are " << haplotypes.size() << " initial haplotypes";
+            stream(*debug_log_) << "There are " << count_reads(active_reads) << " active reads";
         }
         
         remove_duplicate_haplotypes(haplotypes);
@@ -464,14 +466,14 @@ std::deque<VcfRecord> VariantCaller::call_variants(const GenomicRegion& call_reg
         pause_timer(haplotype_fitler_timer);
         
         if (haplotypes.empty()) {
-            if (DEBUG_MODE) debug_log << "Filtered all haplotypes";
+            if (debug_log_) *debug_log_ << "Filtered all haplotypes";
             // This can only happen if all haplotypes have equal likelihood
             generator.clear_progress();
             continue;
         }
         
-        if (DEBUG_MODE) {
-            stream(debug_log) << "Filtered " << removed_haplotypes.size() << " haplotypes";
+        if (debug_log_) {
+            stream(*debug_log_) << "Filtered " << removed_haplotypes.size() << " haplotypes";
         }
         if (TRACE_MODE) {
             Logging::TraceLogger trace_log {};
@@ -490,8 +492,8 @@ std::deque<VcfRecord> VariantCaller::call_variants(const GenomicRegion& call_reg
         removed_haplotypes.clear();
         pause_timer(haplotype_generation_timer);
         
-        if (DEBUG_MODE) {
-            stream(debug_log) << "There are " << haplotypes.size() << " final haplotypes";
+        if (debug_log_) {
+            stream(*debug_log_) << "There are " << haplotypes.size() << " final haplotypes";
         }
         if (TRACE_MODE) {
             Logging::TraceLogger trace_log {};
@@ -510,8 +512,8 @@ std::deque<VcfRecord> VariantCaller::call_variants(const GenomicRegion& call_reg
             Logging::TraceLogger trace_log {};
             debug::print_haplotype_posteriors(stream(trace_log),
                                               *caller_latents->get_haplotype_posteriors(), -1);
-        } else if (DEBUG_MODE) {
-            debug::print_haplotype_posteriors(stream(debug_log),
+        } else if (debug_log_) {
+            debug::print_haplotype_posteriors(stream(*debug_log_),
                                               *caller_latents->get_haplotype_posteriors());
         }
         
@@ -520,11 +522,11 @@ std::deque<VcfRecord> VariantCaller::call_variants(const GenomicRegion& call_reg
                                                 copy_overlapped_to_vector(candidates, haplotype_region(haplotypes)));
         pause_timer(phasing_timer);
         
-        if (DEBUG_MODE) {
+        if (debug_log_) {
             if (phase_set) {
-                debug::print_phase_sets(stream(debug_log), *phase_set);
+                debug::print_phase_sets(stream(*debug_log_), *phase_set);
             } else {
-                debug_log << "No partial phasings found";
+                *debug_log_ << "No partial phasings found";
             }
         }
         
@@ -533,7 +535,7 @@ std::deque<VcfRecord> VariantCaller::call_variants(const GenomicRegion& call_reg
         if (overlaps(active_region, call_region) && phase_set) {
             assert(!is_empty(phase_set->region));
             
-            if (DEBUG_MODE) stream(debug_log) << "Phased region is " << phase_set->region;
+            if (debug_log_) stream(*debug_log_) << "Phased region is " << phase_set->region;
             
             auto active_candidates = copy_overlapped_to_vector(candidates, phase_set->region);
             
@@ -585,8 +587,8 @@ std::deque<VcfRecord> VariantCaller::call_variants(const GenomicRegion& call_reg
             
             resume_timer(phasing_timer);
             
-            if (DEBUG_MODE) {
-                stream(debug_log) << "Force phasing " << uncalled_region;
+            if (debug_log_) {
+                stream(*debug_log_) << "Force phasing " << uncalled_region;
             }
             
             const auto phasings = phaser.force_phase(haplotypes,
@@ -594,8 +596,8 @@ std::deque<VcfRecord> VariantCaller::call_variants(const GenomicRegion& call_reg
                                                      active_candidates);
             pause_timer(phasing_timer);
             
-            if (DEBUG_MODE) {
-                debug::print_phase_sets(stream(debug_log), phasings);
+            if (debug_log_) {
+                debug::print_phase_sets(stream(*debug_log_), phasings);
             }
             
             haplotypes.clear();
@@ -607,10 +609,11 @@ std::deque<VcfRecord> VariantCaller::call_variants(const GenomicRegion& call_reg
             pause_timer(allele_generator_timer);
             
             resume_timer(calling_timer);
-            auto curr_results = call_variants(active_candidates, alleles, caller_latents.get(),
-                                              phasings, active_reads);
-            
-            append_annotated_calls(result, curr_results, active_reads, call_region);
+            if (!alleles.empty()) {
+                auto curr_results = call_variants(active_candidates, alleles, caller_latents.get(),
+                                                  phasings, active_reads);
+                append_annotated_calls(result, curr_results, active_reads, call_region);
+            }
             pause_timer(calling_timer);
             
             completed_region = encompassing_region(completed_region, passed_region);

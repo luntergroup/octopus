@@ -364,6 +364,8 @@ void HaplotypeGenerator::update_next_active_region() const
                 for (const auto& region : mutually_exclusive_novel_regions) {
                     const auto interacting_alleles = overlap_range(novel_alleles, region);
                     
+                    assert(!interacting_alleles.empty());
+                    
                     const auto it = extend_tree_until(interacting_alleles, tmp_tree,
                                                       hard_max_haplotypes_);
                     
@@ -391,7 +393,7 @@ void HaplotypeGenerator::update_next_active_region() const
                     assert(num_regions_added == 0);
                     next_active_region_ = walker_.walk(current_active_region_, reads_, alleles_);
                 } else if (begins_before(current_active_region_, *next_active_region_)
-                        && is_empty_region(indicator_alleles.front())) {
+                           && is_empty_region(indicator_alleles.front())) {
                     // To be clearer about insertion containment
                     next_active_region_ = expand_lhs(*next_active_region_, 1);
                 }
