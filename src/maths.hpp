@@ -617,17 +617,19 @@ void exp_each(Container& values)
 }
 
 template <typename Container>
-void normalise_logs(Container& logs)
+auto normalise_logs(Container& logs)
 {
     const auto norm = log_sum_exp(logs);
     for (auto& p : logs) p -= norm;
+    return norm;
 }
 
 template <typename Container>
-void normalise_exp(Container& logs)
+auto normalise_exp(Container& logs)
 {
     const auto norm = log_sum_exp(logs);
     for (auto& p : logs) p = std::exp(p -= norm);
+    return norm;
 }
 } // namespace Maths
 } // namespace Octopus

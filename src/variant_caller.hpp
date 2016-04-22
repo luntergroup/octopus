@@ -28,6 +28,9 @@
 #include "progress_meter.hpp"
 #include "logging.hpp"
 
+#include "call.hpp"
+#include "variant_call.hpp"
+
 class GenomicRegion;
 class Variant;
 class Haplotype;
@@ -69,8 +72,7 @@ public:
     VariantCaller(VariantCaller&&)                 = delete;
     VariantCaller& operator=(VariantCaller&&)      = delete;
     
-    std::deque<VcfRecord> call_variants(const GenomicRegion& call_region,
-                                        ProgressMeter& progress_meter) const;
+    std::deque<VcfRecord> call(const GenomicRegion& call_region, ProgressMeter& progress_meter) const;
     
 protected:
     using HaplotypeReference = std::reference_wrapper<const Haplotype>;
@@ -79,11 +81,6 @@ protected:
     std::reference_wrapper<ReadPipe> read_pipe_;
     
     std::vector<SampleIdType> samples_;
-    
-    const RefCallType refcall_type_ = RefCallType::Positional;
-    const bool call_sites_only_ = false;
-    
-    bool refcalls_requested() const noexcept;
     
     struct CallerLatents
     {
@@ -107,20 +104,28 @@ private:
     bool lag_haplotype_generation_;
     double min_phase_score_;
     
+    const RefCallType refcall_type_;
+    const bool call_sites_only_;
+    
     mutable boost::optional<Logging::DebugLogger> debug_log_;
     
     bool done_calling(const GenomicRegion& region) const noexcept;
+    
+    bool refcalls_requested() const noexcept;
     
     virtual std::unique_ptr<CallerLatents>
     infer_latents(const std::vector<Haplotype>& haplotypes,
                   const HaplotypeLikelihoodCache& haplotype_likelihoods) const = 0;
     
-    virtual std::vector<VcfRecord::Builder>
+    virtual std::vector<std::unique_ptr<VariantCall>>
     call_variants(const std::vector<Variant>& candidates,
                   const std::vector<Allele>& callable_alleles,
-                  CallerLatents* latents,
-                  const Phaser::PhaseSet& phase_set,
-                  const ReadMap& reads) const = 0;
+                  CallerLatents* latents) const = 0;
+    
+    virtual std::vector<std::unique_ptr<Call>>
+    call_reference(const std::vector<Allele>& alleles,
+                   CallerLatents* latents,
+                   const ReadMap& reads) const = 0;
     
     std::vector<std::reference_wrapper<const Haplotype>>
     get_removable_haplotypes(const std::vector<Haplotype>& haplotypes,

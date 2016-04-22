@@ -25,14 +25,16 @@
 #include "haplotype.hpp"
 #include "genotype.hpp"
 #include "merge_transform.hpp"
-#include "vcf_record.hpp"
 #include "mappable_algorithms.hpp"
 #include "maths.hpp"
 #include "cancer_genotype.hpp"
 #include "read_utils.hpp"
-#include "string_utils.hpp"
 #include "probability_matrix.hpp"
 #include "sequence_utils.hpp"
+#include "germline_variant_call.hpp"
+#include "reference_call.hpp"
+#include "somatic_call.hpp"
+#include "logging.hpp"
 
 namespace Octopus
 {
@@ -274,211 +276,11 @@ CancerVariantCaller::calculate_somatic_model_priors(const SomaticMutationModel& 
     
     return Priors {prior_model, std::move(alphas)};
 }
-
-namespace
-{
-using GM = GenotypeModel::Somatic;
-
-struct VariantCall
-{
-    VariantCall() = default;
-    template <typename T>
-    VariantCall(T&& variants, double posterior)
-    : variants {std::forward<T>(variants)}, posterior {posterior} {}
     
-    std::vector<Variant> variants;
-    double posterior;
-};
-
-using VariantCalls = std::vector<VariantCall>;
-
-struct GermlineGenotypeCall
-{
-    GermlineGenotypeCall() = default;
-    template <typename T>
-    GermlineGenotypeCall(T&& genotype, double posterior) : genotype {std::forward<T>(genotype)}, posterior {posterior} {}
-    
-    Genotype<Allele> genotype;
-    double posterior;
-};
-
-using GermlineGenotypeCalls = std::vector<GermlineGenotypeCall>;
-
-struct SomaticCall
-{
-    SomaticCall() = default;
-    template <typename T>
-    SomaticCall(T&& allele, double posterior) : allele {std::forward<T>(allele)}, posterior {posterior} {}
-    
-    Allele allele;
-    double posterior;
-};
-
-using SomaticCalls = std::vector<SomaticCall>;
-
-struct RefCall
-{
-    RefCall() = default;
-    template <typename A, typename T>
-    RefCall(A&& reference_allele, double posterior, T&& sample_posteriors)
-    :
-    reference_allele {std::forward<A>(reference_allele)},
-    posterior {posterior},
-    sample_posteriors {std::forward<T>(sample_posteriors)}
-    {}
-    
-    Allele reference_allele;
-    double posterior;
-    std::vector<std::pair<SampleIdType, double>> sample_posteriors;
-};
-
-using RefCalls = std::vector<RefCall>;
-
-static std::vector<VcfRecord::SequenceType> to_vcf_genotype(const Genotype<Allele>& genotype)
-{
-    std::vector<VcfRecord::SequenceType> result {};
-    result.reserve(genotype.ploidy());
-    for (const auto& allele : genotype) result.push_back(allele.get_sequence());
-    return result;
-}
-
-VcfRecord::Builder output_germline_variant_call(const Allele& reference_allele,
-                                       const std::vector<Variant>& variants,
-                                       const GermlineGenotypeCall& genotype_call,
-                                       double posterior,
-                                       const ReferenceGenome& reference,
-                                       const ReadMap& reads,
-                                       const GenomicRegion& phase_region)
-{
-    using std::to_string;
-    
-    auto result = VcfRecord::Builder();
-    
-    auto phred_quality = Maths::probability_to_phred(posterior);
-    
-    const auto& region = mapped_region(reference_allele);
-    
-    result.set_chromosome(contig_name(region));
-    result.set_position(region_begin(region));
-    result.set_ref_allele(reference_allele.get_sequence());
-    result.set_alt_alleles(extract_alt_allele_sequences(variants));
-    result.set_quality(phred_quality);
-    
-    result.add_info("NS",  to_string(count_samples_with_coverage(reads, region)));
-    result.add_info("DP",  to_string(sum_max_coverages(reads, region)));
-    result.add_info("SB",  Octopus::to_string(strand_bias(reads, region), 2));
-    result.add_info("BQ",  to_string(static_cast<unsigned>(rmq_base_quality(reads, region))));
-    result.add_info("MQ",  to_string(static_cast<unsigned>(rmq_mapping_quality(reads, region))));
-    result.add_info("MQ0", to_string(count_mapq_zero(reads, region)));
-    
-    result.set_format({"GT", "FT", "GP", "PS", "PQ", "DP", "BQ", "MQ"});
-    
-    auto vcf_genotype = to_vcf_genotype(genotype_call.genotype);
-    
-    for (const auto& sample_reads : reads) {
-        const auto& sample = sample_reads.first;
-        result.add_genotype(sample, vcf_genotype, VcfRecord::Builder::Phasing::Phased);
-        
-        result.add_genotype_field(sample, "FT", "."); // TODO
-        result.add_genotype_field(sample, "GP", to_string(Maths::probability_to_phred(genotype_call.posterior)));
-        result.add_genotype_field(sample, "PS", to_string(region_begin(phase_region) + 1));
-        result.add_genotype_field(sample, "PQ", "60"); // TODO
-        result.add_genotype_field(sample, "DP", to_string(max_coverage(reads.at(sample), region)));
-        result.add_genotype_field(sample, "BQ", to_string(static_cast<unsigned>(rmq_base_quality(reads.at(sample), region))));
-        result.add_genotype_field(sample, "MQ", to_string(static_cast<unsigned>(rmq_mapping_quality(reads.at(sample), region))));
-    }
-    
-    return result;
-}
-
-VcfRecord::Builder output_somatic_variant_call(const Allele& somatic_mutation,
-                                               double posterior,
-                                               const ReferenceGenome& reference,
-                                               const ReadMap& reads)
-{
-    using std::to_string;
-    
-    auto result = VcfRecord::Builder();
-    
-    auto phred_quality = Maths::probability_to_phred(posterior);
-    
-    const auto& region = mapped_region(somatic_mutation);
-    
-    result.set_chromosome(contig_name(region));
-    result.set_position(region_begin(region));
-    result.set_ref_allele(reference.get_sequence(region));
-    result.set_alt_allele(somatic_mutation.get_sequence());
-    result.set_quality(phred_quality);
-    
-    result.add_info("SOMATIC", {});
-    result.add_info("NS",  to_string(count_samples_with_coverage(reads, region)));
-    result.add_info("DP",  to_string(sum_max_coverages(reads, region)));
-    result.add_info("SB",  Octopus::to_string(strand_bias(reads, region), 2));
-    result.add_info("BQ",  to_string(static_cast<unsigned>(rmq_base_quality(reads, region))));
-    result.add_info("MQ",  to_string(static_cast<unsigned>(rmq_mapping_quality(reads, region))));
-    result.add_info("MQ0", to_string(count_mapq_zero(reads, region)));
-    
-    result.set_format({"DP", "BQ", "MQ"});
-    
-    for (const auto& sample_reads : reads) {
-        const auto& sample = sample_reads.first;
-        result.add_genotype_field(sample, "DP", to_string(max_coverage(sample_reads.second, region)));
-        result.add_genotype_field(sample, "BQ", to_string(static_cast<unsigned>(rmq_base_quality(sample_reads.second, region))));
-        result.add_genotype_field(sample, "MQ", to_string(static_cast<unsigned>(rmq_mapping_quality(sample_reads.second, region))));
-    }
-    
-    return result;
-}
-
-VcfRecord::Builder output_reference_call(RefCall call, ReferenceGenome& reference, const ReadMap& reads)
-{
-    using std::to_string;
-    
-    auto result = VcfRecord::Builder();
-    
-    auto phred_quality = Maths::probability_to_phred(call.posterior);
-    
-    const auto& region = mapped_region(call.reference_allele);
-    
-    result.set_chromosome(contig_name(region));
-    result.set_position(region_begin(region));
-    result.set_ref_allele(call.reference_allele.get_sequence().front());
-    
-    result.set_quality(phred_quality);
-    
-    result.set_filters({"REFCALL"});
-    if (region_size(region) > 1) {
-        result.add_info("END", to_string(region_end(region))); // - 1 as VCF uses closed intervals
-    }
-    
-    result.add_info("NS",  to_string(count_samples_with_coverage(reads, region)));
-    result.add_info("DP",  to_string(sum_max_coverages(reads, region)));
-    result.add_info("SB",  Octopus::to_string(strand_bias(reads, region), 2));
-    result.add_info("BQ",  to_string(static_cast<unsigned>(rmq_base_quality(reads, region))));
-    result.add_info("MQ",  to_string(static_cast<unsigned>(rmq_mapping_quality(reads, region))));
-    result.add_info("MQ0", to_string(count_mapq_zero(reads, region)));
-    
-    result.set_format({"GT", "GP", "DP", "BQ", "MQ"});
-    
-    for (const auto& sample_posteior : call.sample_posteriors) {
-        const auto& sample = sample_posteior.first;
-        result.add_homozygous_ref_genotype(sample, 2);
-        result.add_genotype_field(sample, "GP", to_string(Maths::probability_to_phred(sample_posteior.second)));
-        result.add_genotype_field(sample, "DP", to_string(max_coverage(reads.at(sample), region)));
-        result.add_genotype_field(sample, "BQ", to_string(static_cast<unsigned>(rmq_base_quality(reads.at(sample), region))));
-        result.add_genotype_field(sample, "MQ", to_string(static_cast<unsigned>(rmq_mapping_quality(reads.at(sample), region))));
-    }
-    
-    return result;
-}
-} // namespace
-    
-std::vector<VcfRecord::Builder>
+std::vector<std::unique_ptr<VariantCall>>
 CancerVariantCaller::call_variants(const std::vector<Variant>& candidates,
                                    const std::vector<Allele>& callable_alleles,
-                                   CallerLatents* latents,
-                                   const Phaser::PhaseSet& phase_set,
-                                   const ReadMap& reads) const
+                                   CallerLatents* latents) const
 {
     const auto dlatents = dynamic_cast<Latents*>(latents);
     
@@ -494,21 +296,17 @@ CancerVariantCaller::call_variants(const std::vector<Variant>& candidates,
     if (model_posteriors.somatic > model_posteriors.germline) {
         if (model_posteriors.somatic > model_posteriors.cnv) {
             return call_somatic_variants(candidates, callable_alleles,
-                                         dlatents->somatic_model_inferences_.posteriors,
-                                         phase_set, reads);
+                                         dlatents->somatic_model_inferences_.posteriors);
         } else {
             return call_cnv_variants(candidates, callable_alleles,
-                                     dlatents->cnv_model_inferences_.posteriors,
-                                     phase_set, reads);
+                                     dlatents->cnv_model_inferences_.posteriors);
         }
     } else if (model_posteriors.cnv > model_posteriors.germline) {
         return call_cnv_variants(candidates, callable_alleles,
-                                 dlatents->cnv_model_inferences_.posteriors,
-                                 phase_set, reads);
+                                 dlatents->cnv_model_inferences_.posteriors);
     } else {
         return call_germline_variants(candidates, callable_alleles,
-                                      dlatents->germline_model_inferences_.posteriors,
-                                      phase_set, reads);
+                                      dlatents->germline_model_inferences_.posteriors);
     }
 }
 
@@ -539,20 +337,12 @@ CancerVariantCaller::calculate_model_posteriors(const Latents& inferences) const
     return ModelPosteriors {germline_model_posterior, cnv_model_posterior, somatic_model_posterior};
 }
 
-std::vector<VcfRecord::Builder>
+std::vector<std::unique_ptr<VariantCall>>
 CancerVariantCaller::call_germline_variants(const std::vector<Variant>& candidates,
                                             const std::vector<Allele>& callable_alleles,
-                                            const GenotypeModel::Individual::Latents& posteriors,
-                                            const Phaser::PhaseSet& phase_set,
-                                            const ReadMap& reads) const
+                                            const GenotypeModel::Individual::Latents& posteriors) const
 {
-    std::vector<VcfRecord::Builder> result {};
-    
-    if (parameters_.call_somatics_only) {
-        return result;
-    }
-    
-    return result;
+    return {};
 }
 
 template <typename L>
@@ -593,12 +383,10 @@ auto compute_marginal_credible_intervals(const M& alphas, const double mass)
     return result;
 }
 
-std::vector<VcfRecord::Builder>
+std::vector<std::unique_ptr<VariantCall>>
 CancerVariantCaller::call_cnv_variants(const std::vector<Variant>& candidates,
                                        const std::vector<Allele>& callable_alleles,
-                                       const GenotypeModel::CNV::Latents& posteriors,
-                                       const Phaser::PhaseSet& phase_set,
-                                       const ReadMap& reads) const
+                                       const GenotypeModel::CNV::Latents& posteriors) const
 {
     const auto credible_regions = compute_marginal_credible_intervals(posteriors.alphas, 0.99);
     
@@ -609,9 +397,7 @@ CancerVariantCaller::call_cnv_variants(const std::vector<Variant>& candidates,
         }
     }
     
-    std::vector<VcfRecord::Builder> result {};
-    
-    return result;
+    return {};
 }
 
 namespace debug
@@ -633,12 +419,10 @@ namespace debug
 
 using SomaticModelLatents = GenotypeModel::Somatic::Latents;
 
-std::vector<VcfRecord::Builder>
+std::vector<std::unique_ptr<VariantCall>>
 CancerVariantCaller::call_somatic_variants(const std::vector<Variant>& candidates,
                                            const std::vector<Allele>& callable_alleles,
-                                           const GenotypeModel::Somatic::Latents& posteriors,
-                                           const Phaser::PhaseSet& phase_set,
-                                           const ReadMap& reads) const
+                                           const GenotypeModel::Somatic::Latents& posteriors) const
 {
     if (DEBUG_MODE) {
         Logging::DebugLogger log {};
@@ -654,8 +438,15 @@ CancerVariantCaller::call_somatic_variants(const std::vector<Variant>& candidate
         }
     }
     
-    std::vector<VcfRecord::Builder> result {};
-    
-    return result;
+    return {};
 }
+
+std::vector<std::unique_ptr<Call>>
+CancerVariantCaller::call_reference(const std::vector<Allele>& alleles,
+                                    CallerLatents* latents,
+                                    const ReadMap& reads) const
+{
+    return {};
+}
+
 } // namespace Octopus

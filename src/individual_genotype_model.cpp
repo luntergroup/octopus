@@ -59,9 +59,7 @@ namespace GenotypeModel
                                         + likelihood_model.log_likelihood(sample, genotype);
                        });
         
-        const auto log_evidence = Maths::log_sum_exp(result);
-        
-        Maths::normalise_exp(result);
+        auto log_evidence = Maths::normalise_exp(result);
         
         return InferredLatents {Latents {genotypes, std::move(result)}, log_evidence};
     }

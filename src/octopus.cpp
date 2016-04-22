@@ -646,7 +646,7 @@ namespace Octopus
                     stream(lg) << "Processing subregion " << subregion;
                 }
                 
-                auto calls = components.caller->call_variants(subregion, progress_meter);
+                auto calls = components.caller->call(subregion, progress_meter);
                 
                 write_calls(components.output, std::move(calls));
                 

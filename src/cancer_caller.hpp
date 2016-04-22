@@ -22,11 +22,11 @@
 #include "individual_genotype_model.hpp"
 #include "cnv_genotype_model.hpp"
 #include "somatic_genotype_model.hpp"
+#include "variant_call.hpp"
 
 class GenomicRegion;
 class ReadPipe;
 class Variant;
-class VcfRecord;
 
 namespace Octopus
 {
@@ -119,33 +119,30 @@ private:
     CNVModel::Priors calculate_cnv_model_priors(const CoalescentModel& prior_model) const;
     SomaticModel::Priors calculate_somatic_model_priors(const SomaticMutationModel& prior_model) const;
     
-    std::vector<VcfRecord::Builder>
+    std::vector<std::unique_ptr<VariantCall>>
     call_variants(const std::vector<Variant>& candidates,
                   const std::vector<Allele>& callable_alleles,
-                  CallerLatents* latents,
-                  const Phaser::PhaseSet& phase_set,
-                  const ReadMap& reads) const override;
+                  CallerLatents* latents) const override;
+    
+    std::vector<std::unique_ptr<Call>>
+    call_reference(const std::vector<Allele>& alleles,
+                   CallerLatents* latents,
+                   const ReadMap& reads) const override;
     
     ModelPosteriors calculate_model_posteriors(const Latents& inferences) const;
     
-    std::vector<VcfRecord::Builder>
+    std::vector<std::unique_ptr<VariantCall>>
     call_germline_variants(const std::vector<Variant>& candidates,
                            const std::vector<Allele>& callable_alleles,
-                           const GermlineModel::Latents& posteriors,
-                           const Phaser::PhaseSet& phase_set,
-                           const ReadMap& reads) const;
-    std::vector<VcfRecord::Builder>
+                           const GermlineModel::Latents& posteriors) const;
+    std::vector<std::unique_ptr<VariantCall>>
     call_cnv_variants(const std::vector<Variant>& candidates,
                       const std::vector<Allele>& callable_alleles,
-                      const CNVModel::Latents& posteriors,
-                      const Phaser::PhaseSet& phase_set,
-                      const ReadMap& reads) const;
-    std::vector<VcfRecord::Builder>
+                      const CNVModel::Latents& posteriors) const;
+    std::vector<std::unique_ptr<VariantCall>>
     call_somatic_variants(const std::vector<Variant>& candidates,
                           const std::vector<Allele>& callable_alleles,
-                          const SomaticModel::Latents& posteriors,
-                          const Phaser::PhaseSet& phase_set,
-                          const ReadMap& reads) const;
+                          const SomaticModel::Latents& posteriors) const;
 };
 
 } // namespace Octopus

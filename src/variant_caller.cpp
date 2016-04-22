@@ -26,6 +26,7 @@
 #include "haplotype_filter.hpp"
 #include "vcf_record.hpp"
 #include "maths.hpp"
+#include "vcf_record_factory.hpp"
 
 #include "timers.hpp"
 
@@ -132,37 +133,67 @@ auto generate_candidates(CandidateVariantGenerator& generator, const GenomicRegi
     };
 }
 
-VcfRecord annotate_record(VcfRecord::Builder& record, const ReadMap& reads)
+// Wrap the pointer so can use mappable algorithms
+struct CallWrapper : public Mappable<CallWrapper>
 {
-    return record.build_once();
+    CallWrapper(std::unique_ptr<Call>&& call) : call {std::move(call) } {}
+    operator const std::unique_ptr<Call>&() const noexcept { return call; }
+    operator std::unique_ptr<Call>&() noexcept { return call; }
+    std::unique_ptr<Call>::pointer operator->() const noexcept { return call.get(); };
+    std::unique_ptr<Call> call;
+    const GenomicRegion& get_region() const noexcept { return call->get_region(); }
+};
+
+template <typename T>
+auto wrap(std::vector<std::unique_ptr<T>>&& calls)
+{
+    return std::vector<CallWrapper> {
+        std::make_move_iterator(std::begin(calls)),
+        std::make_move_iterator(std::end(calls))
+    };
 }
 
-void append_annotated_calls(std::deque<VcfRecord>& curr_calls,
-                            std::vector<VcfRecord::Builder>& new_calls,
-                            const ReadMap& reads, const GenomicRegion& call_region)
+void add_phase(const SampleIdType& sample, const Phaser::PhaseSet::PhaseRegion& phase,
+               const std::vector<GenomicRegion>& call_regions, CallWrapper& call)
+{
+    const auto overlapped = overlap_range(call_regions, phase.get_region(),
+                                          BidirectionallySortedTag {});
+    
+    assert(!overlapped.empty());
+    
+    call->add_phase(sample, Call::PhaseCall {overlapped.front(), phase.score});
+}
+
+void add_phasing(std::vector<CallWrapper>& calls, const Phaser::PhaseSet& phase_set)
+{
+    const auto call_regions = extract_regions(calls);
+    
+    for (auto& call : calls) {
+        const auto& call_region = call.get_region();
+        
+        for (const auto& p : phase_set.phase_regions) {
+            const auto& phase = find_phase_region(p.second, call_region);
+            if (phase) {
+                add_phase(p.first, *phase, call_regions, call);
+            }
+        }
+    }
+}
+
+void append_calls(std::deque<VcfRecord>& curr_calls,
+                  std::vector<CallWrapper>&& new_calls,
+                  const VcfRecordFactory& factory,
+                  const Phaser::PhaseSet& phasings,
+                  const GenomicRegion& call_region)
 {
     if (new_calls.empty()) return;
     
-    // Need to check calls are within call region as we may consider candidates
-    // outside of this region when building haplotypes
-    const auto it = std::find_if(std::begin(new_calls), std::end(new_calls),
-                                 [&call_region] (const auto& call) {
-                                     return region_begin(call_region) < call.get_position();
-                                 });
-    if (it == std::end(new_calls)) return;
+    add_phasing(new_calls, phasings);
     
-    const auto it2 = std::find_if(std::rbegin(new_calls), std::make_reverse_iterator(it),
-                                  [&call_region] (const auto& call) {
-                                      return call.get_position() < region_end(call_region);
-                                  }).base();
+    auto overlapped = overlap_range(new_calls, call_region);
     
-    if (DEBUG_MODE) {
-        Logging::DebugLogger log {};
-        stream(log) << "Called " << std::distance(it, it2) << " new variants in region " << call_region;
-    }
-    
-    std::transform(it, it2, std::back_inserter(curr_calls),
-                   [&] (auto& record) { return annotate_record(record, reads); });
+    std::transform(std::begin(overlapped), std::end(overlapped), std::back_inserter(curr_calls),
+                   [&factory] (const auto& call) { return factory.make(call); });
 }
 
 auto copy_overlapped_to_vector(const MappableFlatSet<Variant>& candidates,
@@ -170,7 +201,6 @@ auto copy_overlapped_to_vector(const MappableFlatSet<Variant>& candidates,
 {
     const auto overlapped = overlap_range(candidates, region);
     return std::vector<Variant> {std::cbegin(overlapped), std::cend(overlapped)};
-    //return copy_overlapped<std::vector<Variant>>(candidates, region);
 }
 
 const auto& haplotype_region(const std::vector<Haplotype>& haplotypes)
@@ -204,21 +234,6 @@ void remove_duplicate_haplotypes(Container& haplotypes)
         stream(log) << n << " duplicate haplotypes were removed";
     }
 }
-
-//auto max_sequence_size(const std::vector<Haplotype>& haplotypes, const GenomicRegion& region)
-//{
-//    assert(!haplotypes.empty());
-//    
-//    std::vector<Haplotype::SizeType> region_sequence_sizes(haplotypes.size());
-//    
-//    std::transform(std::cbegin(haplotypes), std::cend(haplotypes),
-//                   std::begin(region_sequence_sizes),
-//                   [&region] (const auto& haplotype) {
-//                       return haplotype.sequence_size(region);
-//                   });
-//    
-//    return *std::max_element(std::cbegin(region_sequence_sizes), std::cend(region_sequence_sizes));
-//}
 
 auto calculate_flank_regions(const GenomicRegion& haplotype_region,
                              const GenomicRegion& active_region,
@@ -357,8 +372,7 @@ namespace debug
 } // namespace debug
 
 std::deque<VcfRecord>
-VariantCaller::call_variants(const GenomicRegion& call_region,
-                             ProgressMeter& progress_meter) const
+VariantCaller::call(const GenomicRegion& call_region, ProgressMeter& progress_meter) const
 {
     resume_timer(init_timer);
     
@@ -413,6 +427,8 @@ VariantCaller::call_variants(const GenomicRegion& call_region,
     pause_timer(init_timer);
     
     HaplotypeLikelihoodCache haplotype_likelihoods {max_haplotypes_, samples_};
+    
+    const VcfRecordFactory factory {reference_, reads, samples_, call_sites_only_};
     
     while (true) {
         resume_timer(haplotype_generation_timer);
@@ -545,10 +561,9 @@ VariantCaller::call_variants(const GenomicRegion& call_region,
             pause_timer(allele_generator_timer);
             
             resume_timer(calling_timer);
-            auto curr_results = call_variants(active_candidates, alleles, caller_latents.get(),
-                                              *phase_set, active_reads);
+            auto variant_calls = wrap(call_variants(active_candidates, alleles, caller_latents.get()));
             
-            append_annotated_calls(result, curr_results, active_reads, call_region);
+            append_calls(result, std::move(variant_calls), factory, *phase_set, call_region);
             pause_timer(calling_timer);
             
             auto remaining_active_region = right_overhang_region(active_region, phase_set->region);
@@ -585,36 +600,31 @@ VariantCaller::call_variants(const GenomicRegion& call_region,
             
             const auto active_candidates = copy_overlapped_to_vector(candidates, uncalled_region);
             
-            resume_timer(phasing_timer);
-            
-            if (debug_log_) {
-                stream(*debug_log_) << "Force phasing " << uncalled_region;
-            }
-            
-            const auto phasings = phaser.force_phase(haplotypes,
-                                                     *caller_latents->get_genotype_posteriors(),
-                                                     active_candidates);
-            pause_timer(phasing_timer);
-            
-            if (debug_log_) {
-                debug::print_phase_sets(stream(*debug_log_), phasings);
-            }
-            
-            haplotypes.clear();
-            haplotypes.shrink_to_fit();
-            
             resume_timer(allele_generator_timer);
             auto alleles = generate_callable_alleles(uncalled_region, active_candidates,
                                                      refcall_type_, reference_);
             pause_timer(allele_generator_timer);
             
-            resume_timer(calling_timer);
             if (!alleles.empty()) {
-                auto curr_results = call_variants(active_candidates, alleles, caller_latents.get(),
-                                                  phasings, active_reads);
-                append_annotated_calls(result, curr_results, active_reads, call_region);
+                resume_timer(calling_timer);
+                auto variant_calls = wrap(call_variants(active_candidates, alleles, caller_latents.get()));
+                pause_timer(calling_timer);
+                
+                resume_timer(phasing_timer);
+                
+                const auto phasings = phaser.force_phase(haplotypes,
+                                                         *caller_latents->get_genotype_posteriors(),
+                                                         active_candidates);
+                pause_timer(phasing_timer);
+                
+                if (debug_log_) {
+                    debug::print_phase_sets(stream(*debug_log_), phasings);
+                }
+                
+                resume_timer(calling_timer);
+                append_calls(result, std::move(variant_calls), factory, phasings, call_region);
+                pause_timer(calling_timer);
             }
-            pause_timer(calling_timer);
             
             completed_region = encompassing_region(completed_region, passed_region);
         }

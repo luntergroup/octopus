@@ -9,7 +9,6 @@
 #include "individual_caller.hpp"
 
 #include <unordered_map>
-#include <unordered_set>
 #include <deque>
 #include <algorithm>
 #include <numeric>
@@ -26,18 +25,15 @@
 #include "variant.hpp"
 #include "haplotype.hpp"
 #include "genotype.hpp"
-#include "vcf_record.hpp"
 #include "maths.hpp"
 #include "mappable_algorithms.hpp"
 #include "read_utils.hpp"
-#include "string_utils.hpp"
-#include "sequence_utils.hpp"
 #include "probability_matrix.hpp"
-#include "merge_transform.hpp"
-#include "logging.hpp"
-
 #include "coalescent_model.hpp"
 #include "individual_genotype_model.hpp"
+#include "germline_variant_call.hpp"
+#include "reference_call.hpp"
+#include "logging.hpp"
 
 namespace Octopus
 {
@@ -168,26 +164,6 @@ using GM = GenotypeModel::Individual;
 
 using GenotypeProbabilityMap = ProbabilityMatrix<Genotype<Haplotype>>::InnerMap;
 
-struct GenotypeCall
-{
-    GenotypeCall() = default;
-    
-    template <typename T> GenotypeCall(T&& genotype, double posterior)
-    :
-    genotype {std::forward<T>(genotype)},
-    posterior {posterior}
-    {}
-    
-    GenomicRegion get_region() const { return phase_region; }
-    
-    Genotype<Allele> genotype;
-    double posterior;
-    GenomicRegion phase_region;
-    double phase_score;
-};
-
-using GenotypeCalls = std::vector<GenotypeCall>;
-
 using AllelePosteriorMap = std::unordered_map<Allele, double>;
 
 struct VariantCall : public Mappable<VariantCall>
@@ -208,43 +184,20 @@ struct VariantCall : public Mappable<VariantCall>
 
 using VariantCalls = std::vector<VariantCall>;
 
-struct VariantCallBlock : public Mappable<VariantCallBlock>
+struct GenotypeCall
 {
-    VariantCallBlock() = default;
-    template <typename T>
-    VariantCallBlock(T&& variants, double posterior)
+    GenotypeCall() = default;
+    template <typename T> GenotypeCall(T&& genotype, double posterior)
     :
-    variants {std::forward<T>(variants)},
+    genotype {std::forward<T>(genotype)},
     posterior {posterior}
     {}
     
-    const GenomicRegion& get_region() const noexcept { return variants.front().get_region(); }
-    
-    std::vector<Variant> variants;
+    Genotype<Allele> genotype;
     double posterior;
 };
 
-using VariantCallBlocks = std::vector<VariantCallBlock>;
-
-struct RefCall : public Mappable<RefCall>
-{
-    RefCall() = default;
-    
-    template <typename A>
-    RefCall(A&& reference_allele, double posterior)
-    :
-    reference_allele {std::forward<A>(reference_allele)},
-    posterior {posterior}
-    {}
-    
-    const GenomicRegion& get_region() const noexcept { return reference_allele.get_region(); }
-    
-    Allele reference_allele;
-    double posterior;
-};
-
-using RefCalls = std::vector<RefCall>;
-
+using GenotypeCalls = std::vector<GenotypeCall>;
 } // namespace
 
 namespace debug
@@ -298,6 +251,7 @@ AllelePosteriorMap compute_allele_posteriors(const GenotypeProbabilityMap& genot
 
 VariantCalls call_variants(const std::vector<Variant>& candidates,
                            const AllelePosteriorMap& allele_posteriors,
+                           const Genotype<Haplotype>& genotype_call,
                            const double min_posterior)
 {
     assert(!allele_posteriors.empty());
@@ -308,78 +262,12 @@ VariantCalls call_variants(const std::vector<Variant>& candidates,
     for (const Variant& candidate : candidates) {
         const auto posterior = allele_posteriors.at(candidate.get_alt_allele());
         
-        if (posterior >= min_posterior) {
+        if (posterior >= min_posterior && contains_exact(genotype_call, candidate.get_alt_allele())) {
             result.emplace_back(candidate, posterior);
         }
     }
     
     result.shrink_to_fit();
-    
-    return result;
-}
-
-double max_posterior(const VariantCalls& calls)
-{
-    return std::max_element(std::cbegin(calls), std::cend(calls),
-                            [] (const VariantCall& lhs, const VariantCall& rhs) {
-                                return lhs.posterior < rhs.posterior;
-                            })->posterior;
-}
-
-VariantCallBlocks block_variant_calls(std::vector<VariantCalls>&& segmented_calls)
-{
-    VariantCallBlocks result {};
-    result.reserve(segmented_calls.size());
-    
-    std::for_each(std::make_move_iterator(std::begin(segmented_calls)),
-                  std::make_move_iterator(std::end(segmented_calls)),
-                  [&result] (VariantCalls&& calls) {
-                      std::vector<Variant> variants {};
-                      variants.reserve(calls.size());
-                      
-                      std::transform(std::make_move_iterator(std::begin(calls)),
-                                     std::make_move_iterator(std::end(calls)),
-                                     std::back_inserter(variants),
-                                     [] (VariantCall&& call) {
-                                         return std::move(call.variant);
-                                     });
-                      
-                      result.emplace_back(std::move(variants), max_posterior(calls));
-                  });
-    
-    return result;
-}
-
-auto segment_calls(VariantCalls&& calls)
-{
-    return segment_overlapped(std::make_move_iterator(std::begin(calls)),
-                              std::make_move_iterator(std::end(calls)));
-}
-
-auto call_blocked_variants(const std::vector<Variant>& candidates,
-                           const AllelePosteriorMap& allele_posteriors,
-                           const Genotype<Haplotype>& genotype_call,
-                           const double min_posterior)
-{
-    auto calls = call_variants(candidates, allele_posteriors, min_posterior);
-    
-    auto it = std::remove_if(std::begin(calls), std::end(calls),
-                             [&genotype_call] (const VariantCall& call) {
-                                 return !contains_exact(genotype_call, call.variant.get_alt_allele());
-                             });
-    calls.erase(it, std::end(calls));
-    
-    return block_variant_calls(segment_calls(std::move(calls)));
-}
-
-auto extract_regions(const VariantCallBlocks& variant_calls)
-{
-    std::vector<GenomicRegion> result {};
-    result.reserve(variant_calls.size());
-    
-    for (const auto& segment_calls : variant_calls) {
-        result.emplace_back(encompassing_region(segment_calls.variants));
-    }
     
     return result;
 }
@@ -420,288 +308,45 @@ GenotypeCalls call_genotypes(const Genotype<Haplotype>& genotype_call,
     return result;
 }
 
-// Call cleanup
+// output
 
-void remove_nongenotyped_calls(VariantCallBlock& block,
-                               const GenotypeCall& genotype_call)
+Octopus::VariantCall::GenotypeCall convert(GenotypeCall&& call)
 {
-    const auto& genotype = genotype_call.genotype;
-    auto it = std::remove_if(std::begin(block.variants), std::end(block.variants),
-                             [&genotype] (const Variant& call) {
-                                 return !genotype.contains(call.get_alt_allele());
-                             });
-    block.variants.erase(it, std::end(block.variants));
+    return Octopus::VariantCall::GenotypeCall {std::move(call.genotype), call.posterior};
 }
 
-void remove_nongenotyped_calls(VariantCallBlocks& variant_calls,
-                               const GenotypeCalls& genotype_calls)
+std::unique_ptr<Octopus::VariantCall>
+make_call(const SampleIdType& sample, VariantCall&& variant_call, GenotypeCall&& genotype_call)
 {
-    auto it = std::cbegin(genotype_calls);
-    for (auto& block : variant_calls) {
-        if (block.variants.size() > 1) {
-            remove_nongenotyped_calls(block, *it++);
-        }
-    }
+    std::vector<std::pair<SampleIdType, Call::GenotypeCall>> tmp {
+        std::make_pair(sample, convert(std::move(genotype_call)))
+    };
+    return std::make_unique<GermlineVariantCall>(std::move(variant_call.variant),
+                                                 std::move(tmp), variant_call.posterior);
 }
 
-void parsimonise_variant_calls(VariantCallBlocks& variant_calls, const ReferenceGenome& reference)
+auto make_calls(const SampleIdType& sample, VariantCalls&& variant_calls,
+                GenotypeCalls&& genotype_calls)
 {
-    for (auto& segment_calls : variant_calls) {
-        segment_calls.variants = parsimonise_together(segment_calls.variants, reference);
-    }
-}
-
-    void parsimonise(VariantCallBlocks& variant_calls, GenotypeCalls& genotype_calls,
-                     const ReferenceGenome& reference)
-    {
-        
-    }
-
-// reference genotype calling
-
-double marginalise_reference_genotype(const Allele& reference_allele,
-                                      const GenotypeProbabilityMap& sample_genotype_posteriors)
-{
-    double result {0};
+    std::vector<std::unique_ptr<Octopus::VariantCall>> result {};
+    result.reserve(variant_calls.size());
     
-    for (const auto& genotype_posterior : sample_genotype_posteriors) {
-        if (is_homozygous(genotype_posterior.first, reference_allele)) {
-            result += genotype_posterior.second;
-        }
-    }
-    
-    return result;
-}
-
-RefCalls call_reference(const GenotypeProbabilityMap& genotype_posteriors,
-                        const std::vector<Allele>& reference_alleles,
-                        const ReadMap::mapped_type& reads, const double min_call_posterior)
-{
-    RefCalls result {};
-    
-    if (reference_alleles.empty()) return result;
-    
-    result.reserve(reference_alleles.size());
-    
-    for (const auto& reference_allele : reference_alleles) {
-        double posterior {0};
-        
-        if (has_coverage(reads, mapped_region(reference_allele))) {
-            posterior = marginalise_reference_genotype(reference_allele,
-                                                       genotype_posteriors);
-        }
-        
-        if (posterior >= min_call_posterior) {
-            result.emplace_back(reference_allele, posterior);
-        }
-    }
-    
-    result.shrink_to_fit();
-    
-    return result;
-}
-
-unsigned count_alleles(const GenotypeCall& genotype_call)
-{
-    std::unordered_set<Allele> unique_alleles {};
-    
-    for (const auto& allele : genotype_call.genotype) {
-        unique_alleles.emplace(allele);
-    }
-    
-    return static_cast<unsigned>(unique_alleles.size());
-}
-
-auto count_alleles(const std::vector<Variant>& variants, const GenotypeCall& genotype_call)
-{
-    std::unordered_map<Allele, unsigned> allele_counts {};
-    allele_counts.reserve(variants.size());
-    
-    for (const auto& allele : genotype_call.genotype) {
-        ++allele_counts[allele];
-    }
-    
-    std::vector<unsigned> result {};
-    result.reserve(variants.size());
-    
-    for (const auto& variant : variants) {
-        result.push_back(allele_counts[variant.get_alt_allele()]);
-    }
-    
-    return result;
-}
-
-void set_vcf_genotype(const SampleIdType& sample, const GenotypeCall& genotype_call,
-                      const VariantCallBlock& variant_call, VcfRecord::Builder& record)
-{
-    std::vector<VcfRecord::SequenceType> result {};
-    result.reserve(genotype_call.genotype.ploidy());
-    
-    for (const auto& allele : genotype_call.genotype) {
-        result.push_back(allele.get_sequence());
-    }
-    
-    record.add_genotype(sample, result, VcfRecord::Builder::Phasing::Phased);
-}
-
-VcfRecord::Builder output_variant_call(const SampleIdType& sample,
-                                       VariantCallBlock&& block,
-                                       GenotypeCall&& genotype_call,
-                                       const ReferenceGenome& reference,
-                                       const ReadMap& reads,
-                                       const bool sites_only)
-{
-    assert(!block.variants.empty());
-    
-    using std::to_string;
-    
-    auto result = VcfRecord::Builder {};
-    
-    const auto phred_quality = Maths::probability_to_phred<float>(block.posterior, 2);
-    
-    const auto& reference_allele = block.variants.front().get_ref_allele();
-    
-    const auto& region = mapped_region(reference_allele);
-    
-    result.set_chromosome(contig_name(region));
-    result.set_position(region_begin(region));
-    result.set_ref_allele(reference_allele.get_sequence());
-    result.set_alt_alleles(extract_alt_allele_sequences(block.variants));
-    result.set_quality(phred_quality);
-    
-    result.add_info("AC",  to_strings(count_alleles(block.variants, genotype_call)));
-    result.add_info("AN",  to_string(count_alleles(genotype_call)));
-    result.add_info("NS",  to_string(count_samples_with_coverage(reads, region)));
-    result.add_info("DP",  to_string(sum_max_coverages(reads, region)));
-    result.add_info("SB",  Octopus::to_string(strand_bias(reads, region), 2));
-    result.add_info("BQ",  to_string(static_cast<unsigned>(rmq_base_quality(reads, region))));
-    result.add_info("MQ",  to_string(static_cast<unsigned>(rmq_mapping_quality(reads, region))));
-    result.add_info("MQ0", to_string(count_mapq_zero(reads, region)));
-    
-    if (!sites_only) {
-        result.set_format({"GT", "FT", "GQ", "PS", "PQ", "DP", "BQ", "MQ"});
-        
-        set_vcf_genotype(sample, genotype_call, block, result);
-        
-        result.add_genotype_field(sample, "FT", "."); // TODO
-        result.add_genotype_field(sample, "GQ", Octopus::to_string(Maths::probability_to_phred<float>(genotype_call.posterior), 2));
-        result.add_genotype_field(sample, "PS", to_string(region_begin(genotype_call.phase_region) + 1));
-        result.add_genotype_field(sample, "PQ", Octopus::to_string(Maths::probability_to_phred<float>(genotype_call.phase_score), 2)); // TODO
-        result.add_genotype_field(sample, "DP", to_string(max_coverage(reads.at(sample), region)));
-        result.add_genotype_field(sample, "BQ", to_string(static_cast<unsigned>(rmq_base_quality(reads.at(sample), region))));
-        result.add_genotype_field(sample, "MQ", to_string(static_cast<unsigned>(rmq_mapping_quality(reads.at(sample), region))));
-    }
-    
-    return result;
-}
-
-VcfRecord::Builder output_reference_call(const SampleIdType& sample,
-                                         RefCall call, const ReferenceGenome& reference,
-                                         const ReadMap& reads, unsigned ploidy,
-                                         const bool sites_only)
-{
-    using std::to_string;
-    
-    auto result = VcfRecord::Builder {};
-    
-    const auto phred_quality = Maths::probability_to_phred<float>(call.posterior, 2);
-    
-    const auto& region = mapped_region(call.reference_allele);
-    
-    result.set_chromosome(contig_name(region));
-    result.set_position(region_begin(region));
-    result.set_ref_allele(call.reference_allele.get_sequence().front());
-    
-    result.set_refcall();
-    
-    result.set_quality(phred_quality);
-    
-    if (region_size(region) > 1) {
-        result.add_info("END", to_string(region_end(region)));
-    }
-    
-    result.add_info("NS",  to_string(count_samples_with_coverage(reads, region)));
-    result.add_info("DP",  to_string(sum_max_coverages(reads, region)));
-    result.add_info("SB",  Octopus::to_string(strand_bias(reads, region), 2));
-    result.add_info("BQ",  to_string(static_cast<unsigned>(rmq_base_quality(reads, region))));
-    result.add_info("MQ",  to_string(static_cast<unsigned>(rmq_mapping_quality(reads, region))));
-    result.add_info("MQ0", to_string(count_mapq_zero(reads, region)));
-    
-    if (!sites_only) {
-        result.set_format({"GT", "GQ", "DP", "BQ", "MQ"});
-        
-        result.add_homozygous_ref_genotype(sample, ploidy);
-        result.add_genotype_field(sample, "GQ", Octopus::to_string(Maths::probability_to_phred(call.posterior), 2));
-        result.add_genotype_field(sample, "DP", to_string(max_coverage(reads.at(sample), region)));
-        result.add_genotype_field(sample, "BQ", to_string(static_cast<unsigned>(rmq_base_quality(reads.at(sample), region))));
-        result.add_genotype_field(sample, "MQ", to_string(static_cast<unsigned>(rmq_mapping_quality(reads.at(sample), region))));
-    }
-    
-    return result;
-}
-
-void set_phasings(GenotypeCalls& variant_genotype_calls,
-                  const Phaser::PhaseSet::SamplePhaseRegions& phase_set,
-                  const std::vector<GenomicRegion>& called_regions)
-{
-    auto region_itr = std::cbegin(called_regions);
-    
-    for (auto& g : variant_genotype_calls) {
-        const auto& call_region = *region_itr;
-        
-        const auto& phase = find_phase_region(phase_set, call_region);
-        
-        if (phase) {
-            const auto overlapped = overlap_range(called_regions, phase->get().get_region(),
-                                                  BidirectionallySortedTag {});
-            
-            assert(!overlapped.empty());
-            
-            g.phase_region = overlapped.front();
-            g.phase_score  = phase->get().score;
-        } else {
-            g.phase_region = call_region;
-            g.phase_score  = 0;
-        }
-        
-        ++region_itr;
-    }
-}
-
-std::vector<VcfRecord::Builder>
-merge_calls(const SampleIdType& sample,
-            VariantCallBlocks&& variant_calls, GenotypeCalls&& variant_genotype_calls,
-            RefCalls&& refcalls, const ReferenceGenome& reference, const ReadMap& reads,
-            const unsigned ploidy, const bool sites_only)
-{
-    using std::begin; using std::end; using std::make_move_iterator; using std::move;
-    
-    std::vector<VcfRecord::Builder> result {};
-    result.reserve(variant_calls.size() + refcalls.size());
-    
-    merge_transform(make_move_iterator(begin(variant_calls)), make_move_iterator(end(variant_calls)),
-                    make_move_iterator(begin(variant_genotype_calls)),
-                    make_move_iterator(begin(refcalls)), make_move_iterator(end(refcalls)),
-                    std::back_inserter(result),
-                    [&] (VariantCallBlock&& variant_call, GenotypeCall&& genotype_call) {
-                        return output_variant_call(sample, move(variant_call), move(genotype_call),
-                                                   reference, reads, sites_only);
-                    },
-                    [&] (RefCall&& refcall) {
-                        return output_reference_call(sample, move(refcall), reference, reads,
-                                                     ploidy, sites_only);
-                    });
+    std::transform(std::make_move_iterator(std::begin(variant_calls)),
+                   std::make_move_iterator(std::end(variant_calls)),
+                   std::make_move_iterator(std::begin(genotype_calls)),
+                   std::back_inserter(result),
+                   [&sample] (VariantCall&& variant_call, GenotypeCall&& genotype_call) {
+                       return make_call(sample, std::move(variant_call), std::move(genotype_call));
+                   });
     
     return result;
 }
 } // namespace
 
-std::vector<VcfRecord::Builder>
+std::vector<std::unique_ptr<Octopus::VariantCall>>
 IndividualVariantCaller::call_variants(const std::vector<Variant>& candidates,
                                        const std::vector<Allele>& callable_alleles,
-                                       CallerLatents* latents,
-                                       const Phaser::PhaseSet& phase_set,
-                                       const ReadMap& reads) const
+                                       CallerLatents* latents) const
 {
     assert(!callable_alleles.empty());
     
@@ -729,29 +374,88 @@ IndividualVariantCaller::call_variants(const std::vector<Variant>& candidates,
     
     const auto genotype_call = call_genotype(genotype_posteriors);
     
-    auto variant_calls = call_blocked_variants(candidates, allele_posteriors,
-                                               genotype_call, min_variant_posterior_);
+    auto variant_calls = Octopus::call_variants(candidates, allele_posteriors, genotype_call,
+                                                min_variant_posterior_);
     
-    //debug::print_variant_calls(variant_calls);
+    const auto called_regions = extract_regions(variant_calls);
     
-    parsimonise_variant_calls(variant_calls, reference_);
+    auto genotype_calls = call_genotypes(genotype_call, genotype_posteriors, called_regions);
     
-    auto called_regions = extract_regions(variant_calls);
+    return make_calls(sample_, std::move(variant_calls), std::move(genotype_calls));
+}
+
+namespace
+{
+    // reference genotype calling
     
-    auto variant_genotype_calls = call_genotypes(genotype_call, genotype_posteriors, called_regions);
+    struct RefCall : public Mappable<RefCall>
+    {
+        RefCall() = default;
+        
+        template <typename A>
+        RefCall(A&& reference_allele, double posterior)
+        :
+        reference_allele {std::forward<A>(reference_allele)},
+        posterior {posterior}
+        {}
+        
+        const GenomicRegion& get_region() const noexcept { return reference_allele.get_region(); }
+        
+        Allele reference_allele;
+        double posterior;
+    };
     
-    set_phasings(variant_genotype_calls, phase_set.phase_regions.at(sample_), called_regions); // TODO
+    using RefCalls = std::vector<RefCall>;
     
-    //debug::print_genotype_calls(variant_genotype_calls);
+    double marginalise_reference_genotype(const Allele& reference_allele,
+                                          const GenotypeProbabilityMap& sample_genotype_posteriors)
+    {
+        double result {0};
+        
+        for (const auto& genotype_posterior : sample_genotype_posteriors) {
+            if (is_homozygous(genotype_posterior.first, reference_allele)) {
+                result += genotype_posterior.second;
+            }
+        }
+        
+        return result;
+    }
     
-    auto candidate_ref_alleles = generate_candidate_reference_alleles(callable_alleles, called_regions,
-                                                                      candidates, refcall_type_);
-    
-    auto refcalls = call_reference(genotype_posteriors, candidate_ref_alleles, reads.at(sample_),
-                                   min_refcall_posterior_);
-    
-    return merge_calls(sample_, std::move(variant_calls), std::move(variant_genotype_calls),
-                       std::move(refcalls), reference_, reads, ploidy_, call_sites_only_);
+    RefCalls call_reference(const GenotypeProbabilityMap& genotype_posteriors,
+                            const std::vector<Allele>& reference_alleles,
+                            const ReadMap::mapped_type& reads, const double min_call_posterior)
+    {
+        RefCalls result {};
+        
+        if (reference_alleles.empty()) return result;
+        
+        result.reserve(reference_alleles.size());
+        
+        for (const auto& reference_allele : reference_alleles) {
+            double posterior {0};
+            
+            if (has_coverage(reads, mapped_region(reference_allele))) {
+                posterior = marginalise_reference_genotype(reference_allele,
+                                                           genotype_posteriors);
+            }
+            
+            if (posterior >= min_call_posterior) {
+                result.emplace_back(reference_allele, posterior);
+            }
+        }
+        
+        result.shrink_to_fit();
+        
+        return result;
+    }
+} // namespace
+
+std::vector<std::unique_ptr<Call>>
+IndividualVariantCaller::call_reference(const std::vector<Allele>& alleles,
+                                        CallerLatents* latents,
+                                        const ReadMap& reads) const
+{
+    return {};
 }
 
 namespace debug

@@ -16,11 +16,11 @@
 #include "common.hpp"
 #include "variant_caller.hpp"
 #include "individual_genotype_model.hpp"
+#include "variant_call.hpp"
 
 class GenomicRegion;
 class ReadPipe;
 class Variant;
-class VcfRecord;
 class HaplotypeLikelihoodCache;
 
 namespace Octopus
@@ -92,12 +92,15 @@ private:
     infer_latents(const std::vector<Haplotype>& haplotypes,
                   const HaplotypeLikelihoodCache& haplotype_likelihoods) const override;
     
-    std::vector<VcfRecord::Builder>
+    std::vector<std::unique_ptr<VariantCall>>
     call_variants(const std::vector<Variant>& candidates,
                   const std::vector<Allele>& callable_alleles,
-                  CallerLatents* latents,
-                  const Phaser::PhaseSet& phase_set,
-                  const ReadMap& reads) const override;
+                  CallerLatents* latents) const override;
+    
+    std::vector<std::unique_ptr<Call>>
+    call_reference(const std::vector<Allele>& alleles,
+                   CallerLatents* latents,
+                   const ReadMap& reads) const override;
 };
 } // namespace Octopus
 

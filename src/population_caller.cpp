@@ -1,5 +1,5 @@
 //
-//  basic_caller.cpp
+//  population_caller.cpp
 //  Octopus
 //
 //  Created by Daniel Cooke on 15/09/2015.
@@ -863,12 +863,10 @@ void filter_calls_in_low_complexity_regions(VariantCallBlocks& variant_calls,
     }
 }
 
-std::vector<VcfRecord::Builder>
+std::vector<std::unique_ptr<Octopus::VariantCall>>
 PopulationVariantCaller::call_variants(const std::vector<Variant>& candidates,
                                        const std::vector<Allele>& callable_alleles,
-                                       CallerLatents* latents,
-                                       const Phaser::PhaseSet& phase_set,
-                                       const ReadMap& reads) const
+                                       CallerLatents* latents) const
 {
     const auto dlatents = dynamic_cast<Latents*>(latents);
     
@@ -894,7 +892,7 @@ PopulationVariantCaller::call_variants(const std::vector<Variant>& candidates,
     
     auto variant_calls = call_blocked_variants(candidates, allele_posteriors, min_variant_posterior_);
     
-    filter_calls_in_low_complexity_regions(variant_calls, reference_, reads);
+    //filter_calls_in_low_complexity_regions(variant_calls, reference_, reads);
     
     //debug::print_variant_calls(variant_calls);
     
@@ -906,18 +904,19 @@ PopulationVariantCaller::call_variants(const std::vector<Variant>& candidates,
     
     remove_non_genotyped_calls(variant_calls, variant_genotype_calls);
     
-    set_phasings(variant_genotype_calls, phase_set, called_regions); // TODO
-    
     //debug::print_genotype_calls(variant_genotype_calls);
     
-    auto candidate_ref_alleles = generate_candidate_reference_alleles(callable_alleles, called_regions,
-                                                                      candidates, refcall_type_);
-    
-    auto refcalls = call_reference(genotype_posteriors, candidate_ref_alleles, reads,
-                                   min_refcall_posterior_);
-    
-    return merge_calls(std::move(variant_calls), std::move(variant_genotype_calls),
-                       std::move(refcalls), reference_, reads, ploidy_, call_sites_only_);
+    return {};
+//    return merge_calls(std::move(variant_calls), std::move(variant_genotype_calls),
+//                       std::move(refcalls), reference_, reads, ploidy_, call_sites_only_);
+}
+
+std::vector<std::unique_ptr<Call>>
+PopulationVariantCaller::call_reference(const std::vector<Allele>& alleles,
+                                        CallerLatents* latents,
+                                        const ReadMap& reads) const
+{
+    return {};
 }
 
 namespace debug
