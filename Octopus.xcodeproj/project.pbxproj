@@ -17,6 +17,7 @@
 		CA0D83E81BD2B0210020366B /* genome_walker.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA0D83E61BD2B0210020366B /* genome_walker.cpp */; };
 		CA0D83EB1BD466F40020366B /* read_pipe.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA0D83E91BD466F40020366B /* read_pipe.cpp */; };
 		CA0D83EE1BD467BE0020366B /* downsampler.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA0D83EC1BD467BE0020366B /* downsampler.cpp */; };
+		CA0DF5891CCADA36000193CF /* call.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA0DF5881CCADA36000193CF /* call.cpp */; };
 		CA14727A1AACECF1005FDCD1 /* octopus.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA1472781AACECF1005FDCD1 /* octopus.cpp */; };
 		CA14727C1AACED6E005FDCD1 /* octopus_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA14727B1AACED6E005FDCD1 /* octopus_tests.cpp */; };
 		CA2827C11B2A4CD0007712D4 /* online_candidate_variant_generator.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA2827BF1B2A4CD0007712D4 /* online_candidate_variant_generator.cpp */; };
@@ -76,7 +77,6 @@
 		CAFA195B1ABF3DF400F953D9 /* haplotype_tree.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CAFA19591ABF3DF400F953D9 /* haplotype_tree.cpp */; };
 		CAFA19641ABF75D400F953D9 /* haplotype.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CAFA19621ABF75D400F953D9 /* haplotype.cpp */; };
 		CAFA19661ABF84AC00F953D9 /* haplotype_tree_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CAFA19651ABF84AC00F953D9 /* haplotype_tree_tests.cpp */; };
-		D402C53D1CC9264E00C8B8A7 /* call.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D402C53B1CC9264E00C8B8A7 /* call.cpp */; };
 		D402C5401CC9308800C8B8A7 /* vcf_record_factory.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D402C53E1CC9308800C8B8A7 /* vcf_record_factory.cpp */; };
 		D402C5441CC934CF00C8B8A7 /* germline_variant_call.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D402C5421CC934CF00C8B8A7 /* germline_variant_call.cpp */; };
 		D402C5471CC9359300C8B8A7 /* somatic_call.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D402C5451CC9359300C8B8A7 /* somatic_call.cpp */; };
@@ -189,6 +189,7 @@
 		CA0D83EA1BD466F40020366B /* read_pipe.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = read_pipe.hpp; sourceTree = "<group>"; };
 		CA0D83EC1BD467BE0020366B /* downsampler.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = downsampler.cpp; sourceTree = "<group>"; };
 		CA0D83ED1BD467BE0020366B /* downsampler.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = downsampler.hpp; sourceTree = "<group>"; };
+		CA0DF5881CCADA36000193CF /* call.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = call.cpp; sourceTree = "<group>"; };
 		CA1472781AACECF1005FDCD1 /* octopus.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = octopus.cpp; sourceTree = "<group>"; };
 		CA1472791AACECF1005FDCD1 /* octopus.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = octopus.hpp; sourceTree = "<group>"; };
 		CA14727B1AACED6E005FDCD1 /* octopus_tests.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = octopus_tests.cpp; sourceTree = "<group>"; };
@@ -392,7 +393,6 @@
 		CAFA19651ABF84AC00F953D9 /* haplotype_tree_tests.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = haplotype_tree_tests.cpp; sourceTree = "<group>"; };
 		CAFA196A1AC0D0D500F953D9 /* maths.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = maths.hpp; sourceTree = "<group>"; };
 		CAFA196D1AC1B4AF00F953D9 /* genotype.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = genotype.hpp; sourceTree = "<group>"; };
-		D402C53B1CC9264E00C8B8A7 /* call.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = call.cpp; sourceTree = "<group>"; };
 		D402C53C1CC9264E00C8B8A7 /* call.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = call.hpp; sourceTree = "<group>"; };
 		D402C53E1CC9308800C8B8A7 /* vcf_record_factory.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = vcf_record_factory.cpp; sourceTree = "<group>"; };
 		D402C53F1CC9308800C8B8A7 /* vcf_record_factory.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = vcf_record_factory.hpp; sourceTree = "<group>"; };
@@ -1078,7 +1078,7 @@
 			isa = PBXGroup;
 			children = (
 				D402C53C1CC9264E00C8B8A7 /* call.hpp */,
-				D402C53B1CC9264E00C8B8A7 /* call.cpp */,
+				CA0DF5881CCADA36000193CF /* call.cpp */,
 				D402C54C1CCA588600C8B8A7 /* variant_call.hpp */,
 				D402C54B1CCA588600C8B8A7 /* variant_call.cpp */,
 				D402C5431CC934CF00C8B8A7 /* germline_variant_call.hpp */,
@@ -1331,7 +1331,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				D46094F21B550A2400AE72A1 /* mappable_algorithm_tests.cpp in Sources */,
-				D402C53D1CC9264E00C8B8A7 /* call.cpp in Sources */,
 				CA14727A1AACECF1005FDCD1 /* octopus.cpp in Sources */,
 				CA53D3041C03B746009A216D /* pedigree.cpp in Sources */,
 				CA03C2251A8C1702000D3494 /* read_tests.cpp in Sources */,
@@ -1387,6 +1386,7 @@
 				D4BEA9FE1B861BE200E53CFD /* utils.c in Sources */,
 				CA0D83EB1BD466F40020366B /* read_pipe.cpp in Sources */,
 				D463C19D1B062F7F00739A66 /* vcf_tests.cpp in Sources */,
+				CA0DF5891CCADA36000193CF /* call.cpp in Sources */,
 				D42F72FD1C61098600995F54 /* mappable_tests.cpp in Sources */,
 				CAFA19661ABF84AC00F953D9 /* haplotype_tree_tests.cpp in Sources */,
 				D44ADE731C43C22700A854C6 /* variant_caller_builder.cpp in Sources */,

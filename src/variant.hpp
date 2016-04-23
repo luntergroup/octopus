@@ -10,6 +10,7 @@
 #define Octopus_variant_hpp
 
 #include <string>
+#include <functional>
 #include <ostream>
 
 #include <boost/functional/hash.hpp>
@@ -99,6 +100,7 @@ std::vector<Variant> split_mnv(const Variant& variant);
  The reference allele for each unique GenomicRegion will appear first in the sub-list.
  */
 std::vector<Allele> decompose(const std::vector<Variant>& variants);
+std::vector<std::reference_wrapper<const Allele>> decompose_ref(const std::vector<Variant>& variants);
 
 std::vector<Allele> extract_intervening_reference_alleles(const std::vector<Variant>& variants,
                                                           const ReferenceGenome& reference);

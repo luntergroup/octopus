@@ -147,6 +147,26 @@ std::vector<Allele> decompose(const std::vector<Variant>& variants)
     return result;
 }
 
+std::vector<std::reference_wrapper<const Allele>>
+decompose_ref(const std::vector<Variant>& variants)
+{
+    std::vector<std::reference_wrapper<const Allele>> result {};
+    result.reserve(2 * variants.size());
+    
+    if (variants.empty()) return result;
+    
+    for (const auto& variant : variants) {
+        if (result.empty() || !is_same_region(result.back().get(), variant)) {
+            result.emplace_back(variant.get_ref_allele());
+        }
+        result.emplace_back(variant.get_alt_allele());
+    }
+    
+    result.shrink_to_fit();
+    
+    return result;
+}
+
 std::vector<Allele> extract_intervening_reference_alleles(const std::vector<Variant>& variants,
                                                           const ReferenceGenome& reference)
 {

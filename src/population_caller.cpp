@@ -865,44 +865,43 @@ void filter_calls_in_low_complexity_regions(VariantCallBlocks& variant_calls,
 
 std::vector<std::unique_ptr<Octopus::VariantCall>>
 PopulationVariantCaller::call_variants(const std::vector<Variant>& candidates,
-                                       const std::vector<Allele>& callable_alleles,
-                                       CallerLatents* latents) const
+                                       CallerLatents& latents) const
 {
-    const auto dlatents = dynamic_cast<Latents*>(latents);
+    const auto& dlatents = dynamic_cast<Latents&>(latents);
     
-    const auto& genotype_posteriors = *dlatents->genotype_posteriors_;
-    
-    if (TRACE_MODE) {
-        Logging::TraceLogger log {};
-        debug::print_genotype_posteriors(stream(log), genotype_posteriors, -1);
-    } else if (DEBUG_MODE) {
-        Logging::DebugLogger log {};
-        debug::print_genotype_posteriors(stream(log), genotype_posteriors);
-    }
-    
-    const auto allele_posteriors = compute_allele_posteriors(genotype_posteriors, callable_alleles);
-    
-    if (TRACE_MODE) {
-        Logging::TraceLogger log {};
-        debug::print_allele_posteriors(stream(log), allele_posteriors, -1);
-    } else if (DEBUG_MODE) {
-        Logging::DebugLogger log {};
-        debug::print_allele_posteriors(stream(log), allele_posteriors);
-    }
-    
-    auto variant_calls = call_blocked_variants(candidates, allele_posteriors, min_variant_posterior_);
-    
-    //filter_calls_in_low_complexity_regions(variant_calls, reference_, reads);
-    
-    //debug::print_variant_calls(variant_calls);
-    
-    parsimonise_variant_calls(variant_calls, reference_);
-    
-    const auto called_regions = extract_regions(variant_calls);
-    
-    auto variant_genotype_calls = call_genotypes(genotype_posteriors, called_regions);
-    
-    remove_non_genotyped_calls(variant_calls, variant_genotype_calls);
+//    const auto& genotype_posteriors = *dlatents->genotype_posteriors_;
+//    
+//    if (TRACE_MODE) {
+//        Logging::TraceLogger log {};
+//        debug::print_genotype_posteriors(stream(log), genotype_posteriors, -1);
+//    } else if (DEBUG_MODE) {
+//        Logging::DebugLogger log {};
+//        debug::print_genotype_posteriors(stream(log), genotype_posteriors);
+//    }
+//    
+//    const auto allele_posteriors = compute_allele_posteriors(genotype_posteriors, callable_alleles);
+//    
+//    if (TRACE_MODE) {
+//        Logging::TraceLogger log {};
+//        debug::print_allele_posteriors(stream(log), allele_posteriors, -1);
+//    } else if (DEBUG_MODE) {
+//        Logging::DebugLogger log {};
+//        debug::print_allele_posteriors(stream(log), allele_posteriors);
+//    }
+//    
+//    auto variant_calls = call_blocked_variants(candidates, allele_posteriors, min_variant_posterior_);
+//    
+//    //filter_calls_in_low_complexity_regions(variant_calls, reference_, reads);
+//    
+//    //debug::print_variant_calls(variant_calls);
+//    
+//    parsimonise_variant_calls(variant_calls, reference_);
+//    
+//    const auto called_regions = extract_regions(variant_calls);
+//    
+//    auto variant_genotype_calls = call_genotypes(genotype_posteriors, called_regions);
+//    
+//    remove_non_genotyped_calls(variant_calls, variant_genotype_calls);
     
     //debug::print_genotype_calls(variant_genotype_calls);
     
@@ -913,7 +912,7 @@ PopulationVariantCaller::call_variants(const std::vector<Variant>& candidates,
 
 std::vector<std::unique_ptr<Call>>
 PopulationVariantCaller::call_reference(const std::vector<Allele>& alleles,
-                                        CallerLatents* latents,
+                                        CallerLatents& latents,
                                         const ReadMap& reads) const
 {
     return {};

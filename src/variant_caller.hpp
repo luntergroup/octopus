@@ -82,6 +82,8 @@ protected:
     
     std::vector<SampleIdType> samples_;
     
+    mutable boost::optional<Logging::DebugLogger> debug_log_;
+    
     struct CallerLatents
     {
         using HaplotypeProbabilityMap = std::unordered_map<HaplotypeReference, double>;
@@ -107,8 +109,6 @@ private:
     const RefCallType refcall_type_;
     const bool call_sites_only_;
     
-    mutable boost::optional<Logging::DebugLogger> debug_log_;
-    
     bool done_calling(const GenomicRegion& region) const noexcept;
     
     bool refcalls_requested() const noexcept;
@@ -118,30 +118,27 @@ private:
                   const HaplotypeLikelihoodCache& haplotype_likelihoods) const = 0;
     
     virtual std::vector<std::unique_ptr<VariantCall>>
-    call_variants(const std::vector<Variant>& candidates,
-                  const std::vector<Allele>& callable_alleles,
-                  CallerLatents* latents) const = 0;
+    call_variants(const std::vector<Variant>& candidates, CallerLatents& latents) const = 0;
     
     virtual std::vector<std::unique_ptr<Call>>
     call_reference(const std::vector<Allele>& alleles,
-                   CallerLatents* latents,
+                   CallerLatents& latents,
                    const ReadMap& reads) const = 0;
     
     std::vector<std::reference_wrapper<const Haplotype>>
     get_removable_haplotypes(const std::vector<Haplotype>& haplotypes,
                              const CallerLatents::HaplotypeProbabilityMap& haplotype_posteriors,
                              const GenomicRegion& region) const;
+    
+    std::vector<Allele>
+    generate_callable_alleles(const GenomicRegion& region, const std::vector<Variant>& candidates) const;
+    
+    std::vector<Allele>
+    generate_callable_reference_alleles(const std::vector<Variant>& candidates,
+                                        const std::vector<Allele>& callable_alleles,
+                                        const std::vector<GenomicRegion>& called_regions) const;
 };
 
-std::vector<Allele>
-generate_callable_alleles(const GenomicRegion& region, const std::vector<Variant>& variants,
-                          VariantCaller::RefCallType refcall_type, const ReferenceGenome& reference);
-
-std::vector<Allele>
-generate_candidate_reference_alleles(const std::vector<Allele>& callable_alleles,
-                                     const std::vector<GenomicRegion>& called_regions,
-                                     const std::vector<Variant>& candidates,
-                                     VariantCaller::RefCallType refcall_type);
 } // namespace Octopus
 
 #endif

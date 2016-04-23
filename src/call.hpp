@@ -31,8 +31,7 @@ namespace Octopus
         Call() = delete;
         
         explicit Call(double quality);
-        template <typename T>
-        explicit Call(T&& genotype_calls, double quality);
+        template <typename T> explicit Call(T&& genotype_calls, double quality);
         
         virtual ~Call() = default;
         
@@ -44,8 +43,7 @@ namespace Octopus
         struct PhaseCall
         {
             PhaseCall() = delete;
-            template <typename R>
-            PhaseCall(R&& region, double score);
+            template <typename R> PhaseCall(R&& region, double score);
             
             GenomicRegion region;
             double score;
@@ -54,30 +52,26 @@ namespace Octopus
         struct GenotypeCall
         {
             GenotypeCall() = delete;
-            template <typename G>
-            GenotypeCall(G&& genotype, double posterior);
-            template <typename G, typename P>
-            GenotypeCall(G&& genotype, double posterior, P&& phase);
+            template <typename G> GenotypeCall(G&& genotype, double posterior);
+            template <typename G, typename P> GenotypeCall(G&& genotype, double posterior, P&& phase);
             
             Genotype<Allele> genotype;
             double posterior;
             boost::optional<PhaseCall> phase;
         };
         
-        virtual const GenomicRegion& get_region() const noexcept = 0;
-        virtual const Allele& get_reference() const noexcept = 0;
-        
         double get_quality() const noexcept;
-        
-        bool is_site_only() const noexcept;
         
         const GenotypeCall& get_genotype_call(const SampleIdType& sample) const;
         
         bool is_phased(const SampleIdType& sample) const;
         bool all_phased() const noexcept;
-        void add_phase(const SampleIdType& sample, PhaseCall phase);
+        void set_phase(const SampleIdType& sample, PhaseCall phase);
         
-        virtual void decorate(VcfRecord::Builder& record) const;
+        virtual const GenomicRegion& get_region() const noexcept = 0;
+        virtual const Allele& get_reference() const noexcept = 0;
+        
+        virtual void decorate(VcfRecord::Builder& record) const = 0;
         
     protected:
         std::unordered_map<SampleIdType, GenotypeCall> genotype_calls_;

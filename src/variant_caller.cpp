@@ -55,14 +55,14 @@ VariantCaller::VariantCaller(const ReferenceGenome& reference,
 reference_ {reference},
 read_pipe_ {read_pipe},
 samples_ {read_pipe.get_samples()},
+debug_log_ {},
 refcall_type_ {parameters.refcall_type},
 call_sites_only_ {parameters.call_sites_only},
 max_haplotypes_ {parameters.max_haplotypes},
 min_haplotype_posterior_ {1e-15},
 lag_haplotype_generation_ {parameters.lag_haplotype_generation},
 min_phase_score_ {parameters.min_phase_score},
-candidate_generator_ {std::move(candidate_generator)},
-debug_log_ {}
+candidate_generator_ {std::move(candidate_generator)}
 {
     if (DEBUG_MODE) {
         debug_log_ = Logging::DebugLogger {};
@@ -111,6 +111,27 @@ namespace debug
     void print_haplotype_posteriors(S&& stream, const Map& haplotype_posteriors, std::size_t n = 5);
     template <typename Map>
     void print_haplotype_posteriors(const Map& haplotype_posteriors, std::size_t n = 5);
+    
+    auto find_read(const std::string& region, const std::string& cigar_str,
+                   const ReadContainer& reads);
+    
+    auto find_read(const SampleIdType& sample, const std::string& region,
+                   const std::string& cigar_str, const ReadMap& reads);
+    
+    auto find_first_read(const std::string& region, const std::string& cigar_str,
+                         const ReadMap& reads);
+    
+    double calculate_likelihood(const Haplotype& haplotype, const AlignedRead& read,
+                                const HaplotypeLikelihoodModel::FlankState flank_state);
+    
+    void run_likelihood_calculation(const std::string& haplotype_str,
+                                    const std::string& haplotype_region,
+                                    const std::string& active_region,
+                                    const std::string& read_region,
+                                    const std::string& cigar_str,
+                                    const ReadMap& reads,
+                                    const MappableFlatSet<Variant>& candidates,
+                                    const ReferenceGenome& reference);
 }
 
 auto generate_candidates(CandidateVariantGenerator& generator, const GenomicRegion& region,
@@ -153,7 +174,7 @@ auto wrap(std::vector<std::unique_ptr<T>>&& calls)
     };
 }
 
-void add_phase(const SampleIdType& sample, const Phaser::PhaseSet::PhaseRegion& phase,
+void set_phase(const SampleIdType& sample, const Phaser::PhaseSet::PhaseRegion& phase,
                const std::vector<GenomicRegion>& call_regions, CallWrapper& call)
 {
     const auto overlapped = overlap_range(call_regions, phase.get_region(),
@@ -161,10 +182,10 @@ void add_phase(const SampleIdType& sample, const Phaser::PhaseSet::PhaseRegion& 
     
     assert(!overlapped.empty());
     
-    call->add_phase(sample, Call::PhaseCall {overlapped.front(), phase.score});
+    call->set_phase(sample, Call::PhaseCall {overlapped.front(), phase.score});
 }
 
-void add_phasing(std::vector<CallWrapper>& calls, const Phaser::PhaseSet& phase_set)
+void set_phasing(std::vector<CallWrapper>& calls, const Phaser::PhaseSet& phase_set)
 {
     const auto call_regions = extract_regions(calls);
     
@@ -174,21 +195,16 @@ void add_phasing(std::vector<CallWrapper>& calls, const Phaser::PhaseSet& phase_
         for (const auto& p : phase_set.phase_regions) {
             const auto& phase = find_phase_region(p.second, call_region);
             if (phase) {
-                add_phase(p.first, *phase, call_regions, call);
+                set_phase(p.first, *phase, call_regions, call);
             }
         }
     }
 }
 
-void append_calls(std::deque<VcfRecord>& curr_calls,
-                  std::vector<CallWrapper>&& new_calls,
-                  const VcfRecordFactory& factory,
-                  const Phaser::PhaseSet& phasings,
-                  const GenomicRegion& call_region)
+void append_calls(std::deque<VcfRecord>& curr_calls, std::vector<CallWrapper>&& new_calls,
+                  const VcfRecordFactory& factory, const GenomicRegion& call_region)
 {
     if (new_calls.empty()) return;
-    
-    add_phasing(new_calls, phasings);
     
     auto overlapped = overlap_range(new_calls, call_region);
     
@@ -309,67 +325,6 @@ bool have_passed(const GenomicRegion& next_active_region, const GenomicRegion& a
 {
     return is_after(next_active_region, active_region) && active_region != next_active_region;
 }
-
-namespace debug
-{
-    auto find_read(const std::string& region, const std::string& cigar_str,
-                   const ReadContainer& reads)
-    {
-        const auto cigar = parse_cigar_string(cigar_str);
-        return std::find_if(std::cbegin(reads), std::cend(reads),
-                            [&] (const AlignedRead& read) {
-                                return read.get_cigar_string() == cigar
-                                && to_string(mapped_region(read)) == region;
-                            });
-    }
-    
-    auto find_read(const SampleIdType& sample, const std::string& region,
-                   const std::string& cigar_str, const ReadMap& reads)
-    {
-        return find_read(region, cigar_str, reads.at(sample));
-    }
-    
-    auto find_first_read(const std::string& region, const std::string& cigar_str,
-                         const ReadMap& reads)
-    {
-        for (const auto& p : reads) {
-            const auto it = find_read(region, cigar_str, p.second);
-            if (it != std::cend(p.second)) return it;
-        }
-        return std::cend(std::cbegin(reads)->second);
-    }
-    
-    double calculate_likelihood(const Haplotype& haplotype, const AlignedRead& read,
-                                const HaplotypeLikelihoodModel::FlankState flank_state)
-    {
-        SampleIdType test_sample {"*test-sample*"};
-        HaplotypeLikelihoodCache cache {1, {test_sample}};
-        ReadContainer sample_reads {};
-        sample_reads.emplace(read);
-        ReadMap reads {};
-        reads.emplace(test_sample, sample_reads);
-        cache.populate(reads, {haplotype}, flank_state);
-        return cache.log_likelihoods(test_sample, haplotype).front();
-    }
-    
-    void run_likelihood_calculation(const std::string& haplotype_str,
-                                    const std::string& haplotype_region,
-                                    const std::string& active_region,
-                                    const std::string& read_region,
-                                    const std::string& cigar_str,
-                                    const ReadMap& reads,
-                                    const MappableFlatSet<Variant>& candidates,
-                                    const ReferenceGenome& reference)
-    {
-        auto haplotype = ::debug::make_haplotype(haplotype_str, haplotype_region, reference);
-        auto flank_state = calculate_flank_state({haplotype},
-                                                 parse_region(haplotype_region, reference),
-                                                 candidates);
-        auto read = *find_first_read(read_region, cigar_str, reads);
-        auto likelihood = calculate_likelihood(haplotype, read, flank_state);
-        std::cout << likelihood << std::endl;
-    }
-} // namespace debug
 
 std::deque<VcfRecord>
 VariantCaller::call(const GenomicRegion& call_region, ProgressMeter& progress_meter) const
@@ -556,14 +511,15 @@ VariantCaller::call(const GenomicRegion& call_region, ProgressMeter& progress_me
             auto active_candidates = copy_overlapped_to_vector(candidates, phase_set->region);
             
             resume_timer(allele_generator_timer);
-            auto alleles = generate_callable_alleles(phase_set->region, active_candidates,
-                                                     refcall_type_, reference_);
+            auto alleles = generate_callable_alleles(phase_set->region, active_candidates);
             pause_timer(allele_generator_timer);
             
             resume_timer(calling_timer);
-            auto variant_calls = wrap(call_variants(active_candidates, alleles, caller_latents.get()));
+            auto variant_calls = wrap(call_variants(active_candidates, *caller_latents));
             
-            append_calls(result, std::move(variant_calls), factory, *phase_set, call_region);
+            set_phasing(variant_calls, *phase_set);
+            
+            append_calls(result, std::move(variant_calls), factory, call_region);
             pause_timer(calling_timer);
             
             auto remaining_active_region = right_overhang_region(active_region, phase_set->region);
@@ -601,29 +557,31 @@ VariantCaller::call(const GenomicRegion& call_region, ProgressMeter& progress_me
             const auto active_candidates = copy_overlapped_to_vector(candidates, uncalled_region);
             
             resume_timer(allele_generator_timer);
-            auto alleles = generate_callable_alleles(uncalled_region, active_candidates,
-                                                     refcall_type_, reference_);
+            auto alleles = generate_callable_alleles(uncalled_region, active_candidates);
             pause_timer(allele_generator_timer);
             
             if (!alleles.empty()) {
                 resume_timer(calling_timer);
-                auto variant_calls = wrap(call_variants(active_candidates, alleles, caller_latents.get()));
+                auto variant_calls = wrap(call_variants(active_candidates, *caller_latents));
                 pause_timer(calling_timer);
                 
-                resume_timer(phasing_timer);
-                
-                const auto phasings = phaser.force_phase(haplotypes,
-                                                         *caller_latents->get_genotype_posteriors(),
-                                                         active_candidates);
-                pause_timer(phasing_timer);
-                
-                if (debug_log_) {
-                    debug::print_phase_sets(stream(*debug_log_), phasings);
+                if (!variant_calls.empty()) {
+                    resume_timer(phasing_timer);
+                    const auto phasings = phaser.force_phase(haplotypes,
+                                                             *caller_latents->get_genotype_posteriors(),
+                                                             active_candidates);
+                    pause_timer(phasing_timer);
+                    
+                    if (debug_log_) {
+                        debug::print_phase_sets(stream(*debug_log_), phasings);
+                    }
+                    
+                    set_phasing(variant_calls, phasings);
+                    
+                    resume_timer(calling_timer);
+                    append_calls(result, std::move(variant_calls), factory, call_region);
+                    pause_timer(calling_timer);
                 }
-                
-                resume_timer(calling_timer);
-                append_calls(result, std::move(variant_calls), factory, phasings, call_region);
-                pause_timer(calling_timer);
             }
             
             completed_region = encompassing_region(completed_region, passed_region);
@@ -670,42 +628,38 @@ VariantCaller::get_removable_haplotypes(const std::vector<Haplotype>& haplotypes
     return result;
 }
 
-// non-member methods
-
 std::vector<Allele>
-generate_callable_alleles(const GenomicRegion& region,
-                          const std::vector<Variant>& variants,
-                          const VariantCaller::RefCallType refcall_type,
-                          const ReferenceGenome& reference)
+VariantCaller::generate_callable_alleles(const GenomicRegion& region,
+                                         const std::vector<Variant>& candidates) const
 {
     using std::begin; using std::end; using std::make_move_iterator; using std::back_inserter;
     
-    auto overlapped_variants = copy_overlapped(variants, region);
+    auto overlapped_candidates = copy_overlapped(candidates, region);
     
-    if (is_empty(region) && overlapped_variants.empty()) return std::vector<Allele> {};
+    if (is_empty(region) && overlapped_candidates.empty()) return {};
     
-    if (overlapped_variants.empty()) {
-        switch (refcall_type) {
-            case VariantCaller::RefCallType::Positional:
-                return make_positional_reference_alleles(region, reference);
-            case VariantCaller::RefCallType::Blocked:
-                return std::vector<Allele> {make_reference_allele(region, reference)};
+    if (overlapped_candidates.empty()) {
+        switch (refcall_type_) {
+            case RefCallType::Positional:
+                return make_positional_reference_alleles(region, reference_);
+            case RefCallType::Blocked:
+                return std::vector<Allele> {make_reference_allele(region, reference_)};
             default:
                 return {};
         }
     }
     
-    auto variant_alleles = decompose(overlapped_variants);
+    auto variant_alleles = decompose(overlapped_candidates);
     
-    if (refcall_type == VariantCaller::RefCallType::None) return variant_alleles;
+    if (refcall_type_ == RefCallType::None) return variant_alleles;
     
-    auto covered_regions   = extract_covered_regions(overlapped_variants);
+    auto covered_regions   = extract_covered_regions(overlapped_candidates);
     auto uncovered_regions = extract_intervening_regions(covered_regions, region);
     
     std::vector<Allele> result {};
     
-    if (refcall_type == VariantCaller::RefCallType::Blocked) {
-        auto reference_alleles = make_reference_alleles(uncovered_regions, reference);
+    if (refcall_type_ == VariantCaller::RefCallType::Blocked) {
+        auto reference_alleles = make_reference_alleles(uncovered_regions, reference_);
         result.reserve(reference_alleles.size() + variant_alleles.size());
         std::merge(make_move_iterator(begin(reference_alleles)),
                    make_move_iterator(end(reference_alleles)),
@@ -720,7 +674,7 @@ generate_callable_alleles(const GenomicRegion& region,
         
         for (auto&& variant_allele : variant_alleles) {
             if (uncovered_itr != uncovered_end && begins_before(*uncovered_itr, variant_allele)) {
-                auto alleles = make_positional_reference_alleles(*uncovered_itr, reference);
+                auto alleles = make_positional_reference_alleles(*uncovered_itr, reference_);
                 result.insert(end(result),
                               make_move_iterator(begin(alleles)),
                               make_move_iterator(end(alleles)));
@@ -730,7 +684,7 @@ generate_callable_alleles(const GenomicRegion& region,
         }
         
         if (uncovered_itr != uncovered_end) {
-            auto alleles = make_positional_reference_alleles(*uncovered_itr, reference);
+            auto alleles = make_positional_reference_alleles(*uncovered_itr, reference_);
             result.insert(end(result),
                           make_move_iterator(begin(alleles)),
                           make_move_iterator(end(alleles)));
@@ -755,7 +709,7 @@ void append_allele(std::vector<Allele>& alleles, const Allele& allele,
     if (refcall_type == VariantCaller::RefCallType::Blocked && !alleles.empty()
         && are_adjacent(alleles.back(), allele)) {
         alleles.back() = Allele {encompassing_region(alleles.back(), allele),
-                                    alleles.back().get_sequence() + allele.get_sequence()};
+            alleles.back().get_sequence() + allele.get_sequence()};
     } else {
         alleles.push_back(allele);
     }
@@ -764,14 +718,13 @@ void append_allele(std::vector<Allele>& alleles, const Allele& allele,
 // TODO: we should catch the case where an insertion has been called and push the refcall
 // block up a position, otherwise the returned reference allele (block) will never be called.
 std::vector<Allele>
-generate_candidate_reference_alleles(const std::vector<Allele>& callable_alleles,
-                                     const std::vector<GenomicRegion>& called_regions,
-                                     const std::vector<Variant>& candidates,
-                                     const VariantCaller::RefCallType refcall_type)
+VariantCaller::generate_callable_reference_alleles(const std::vector<Variant>& candidates,
+                                                   const std::vector<Allele>& callable_alleles,
+                                                   const std::vector<GenomicRegion>& called_regions) const
 {
     using std::cbegin; using std::cend;
     
-    if (callable_alleles.empty() || refcall_type == VariantCaller::RefCallType::None) return {};
+    if (callable_alleles.empty() || refcall_type_ == RefCallType::None) return {};
     
     if (candidates.empty()) return callable_alleles;
     
@@ -787,13 +740,13 @@ generate_candidate_reference_alleles(const std::vector<Allele>& callable_alleles
     
     while (allele_itr != allele_end_itr) {
         if (candidate_itr == candidate_end_itr) {
-            append_allele(result, *allele_itr, refcall_type);
+            append_allele(result, *allele_itr, refcall_type_);
             std::copy(std::next(allele_itr), allele_end_itr, std::back_inserter(result));
             break;
         }
         
         if (called_itr == called_end_itr) {
-            append_allele(result, *allele_itr, refcall_type);
+            append_allele(result, *allele_itr, refcall_type_);
             if (begins_before(*allele_itr, *candidate_itr)) {
                 ++allele_itr;
             } else {
@@ -803,7 +756,7 @@ generate_candidate_reference_alleles(const std::vector<Allele>& callable_alleles
         } else {
             if (is_same_region(*called_itr, *candidate_itr)) { // called candidate
                 while (is_before(*allele_itr, *called_itr)) {
-                    append_allele(result, *allele_itr, refcall_type);
+                    append_allele(result, *allele_itr, refcall_type_);
                     ++allele_itr;
                 }
                 allele_itr = find_next(allele_itr, allele_end_itr, *candidate_itr);
@@ -811,12 +764,12 @@ generate_candidate_reference_alleles(const std::vector<Allele>& callable_alleles
                 ++called_itr;
             } else if (begins_before(*called_itr, *candidate_itr)) { // parsimonised called candidate
                 if (!overlaps(*allele_itr, *called_itr)) {
-                    append_allele(result, *allele_itr, refcall_type);
+                    append_allele(result, *allele_itr, refcall_type_);
                     ++allele_itr;
                 } else {
                     if (begins_before(*allele_itr, *called_itr)) { // when variant has been left padded
                         append_allele(result, splice(*allele_itr, left_overhang_region(*allele_itr, *called_itr)),
-                                      refcall_type);
+                                      refcall_type_);
                     }
                     
                     // skip contained alleles and candidates as they include called variants
@@ -826,7 +779,7 @@ generate_candidate_reference_alleles(const std::vector<Allele>& callable_alleles
                     ++called_itr;
                 }
             } else {
-                append_allele(result, *allele_itr, refcall_type);
+                append_allele(result, *allele_itr, refcall_type_);
                 
                 if (begins_before(*allele_itr, *candidate_itr)) {
                     ++allele_itr;
@@ -1063,5 +1016,63 @@ namespace debug
     {
         print_haplotype_posteriors(std::cout, haplotype_posteriors, n);
     }
-}
+    
+    auto find_read(const std::string& region, const std::string& cigar_str,
+                   const ReadContainer& reads)
+    {
+        const auto cigar = parse_cigar_string(cigar_str);
+        return std::find_if(std::cbegin(reads), std::cend(reads),
+                            [&] (const AlignedRead& read) {
+                                return read.get_cigar_string() == cigar
+                                && to_string(mapped_region(read)) == region;
+                            });
+    }
+    
+    auto find_read(const SampleIdType& sample, const std::string& region,
+                   const std::string& cigar_str, const ReadMap& reads)
+    {
+        return find_read(region, cigar_str, reads.at(sample));
+    }
+    
+    auto find_first_read(const std::string& region, const std::string& cigar_str,
+                         const ReadMap& reads)
+    {
+        for (const auto& p : reads) {
+            const auto it = find_read(region, cigar_str, p.second);
+            if (it != std::cend(p.second)) return it;
+        }
+        return std::cend(std::cbegin(reads)->second);
+    }
+    
+    double calculate_likelihood(const Haplotype& haplotype, const AlignedRead& read,
+                                const HaplotypeLikelihoodModel::FlankState flank_state)
+    {
+        SampleIdType test_sample {"*test-sample*"};
+        HaplotypeLikelihoodCache cache {1, {test_sample}};
+        ReadContainer sample_reads {};
+        sample_reads.emplace(read);
+        ReadMap reads {};
+        reads.emplace(test_sample, sample_reads);
+        cache.populate(reads, {haplotype}, flank_state);
+        return cache.log_likelihoods(test_sample, haplotype).front();
+    }
+    
+    void run_likelihood_calculation(const std::string& haplotype_str,
+                                    const std::string& haplotype_region,
+                                    const std::string& active_region,
+                                    const std::string& read_region,
+                                    const std::string& cigar_str,
+                                    const ReadMap& reads,
+                                    const MappableFlatSet<Variant>& candidates,
+                                    const ReferenceGenome& reference)
+    {
+        auto haplotype = ::debug::make_haplotype(haplotype_str, haplotype_region, reference);
+        auto flank_state = calculate_flank_state({haplotype},
+                                                 parse_region(haplotype_region, reference),
+                                                 candidates);
+        auto read = *find_first_read(read_region, cigar_str, reads);
+        auto likelihood = calculate_likelihood(haplotype, read, flank_state);
+        std::cout << likelihood << std::endl;
+    }
+} // namespace debug
 } // namespace Octopus

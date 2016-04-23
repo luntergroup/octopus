@@ -276,15 +276,14 @@ CancerVariantCaller::calculate_somatic_model_priors(const SomaticMutationModel& 
     
     return Priors {prior_model, std::move(alphas)};
 }
-    
+
 std::vector<std::unique_ptr<VariantCall>>
 CancerVariantCaller::call_variants(const std::vector<Variant>& candidates,
-                                   const std::vector<Allele>& callable_alleles,
-                                   CallerLatents* latents) const
+                                   CallerLatents& latents) const
 {
-    const auto dlatents = dynamic_cast<Latents*>(latents);
+    const auto& dlatents = dynamic_cast<Latents&>(latents);
     
-    const auto model_posteriors = calculate_model_posteriors(*dlatents);
+    const auto model_posteriors = calculate_model_posteriors(dlatents);
     
     if (DEBUG_MODE) {
         Logging::DebugLogger log {};
@@ -295,18 +294,14 @@ CancerVariantCaller::call_variants(const std::vector<Variant>& candidates,
     
     if (model_posteriors.somatic > model_posteriors.germline) {
         if (model_posteriors.somatic > model_posteriors.cnv) {
-            return call_somatic_variants(candidates, callable_alleles,
-                                         dlatents->somatic_model_inferences_.posteriors);
+            return call_somatic_variants(candidates, dlatents.somatic_model_inferences_.posteriors);
         } else {
-            return call_cnv_variants(candidates, callable_alleles,
-                                     dlatents->cnv_model_inferences_.posteriors);
+            return call_cnv_variants(candidates, dlatents.cnv_model_inferences_.posteriors);
         }
     } else if (model_posteriors.cnv > model_posteriors.germline) {
-        return call_cnv_variants(candidates, callable_alleles,
-                                 dlatents->cnv_model_inferences_.posteriors);
+        return call_cnv_variants(candidates, dlatents.cnv_model_inferences_.posteriors);
     } else {
-        return call_germline_variants(candidates, callable_alleles,
-                                      dlatents->germline_model_inferences_.posteriors);
+        return call_germline_variants(candidates, dlatents.germline_model_inferences_.posteriors);
     }
 }
 
@@ -339,7 +334,6 @@ CancerVariantCaller::calculate_model_posteriors(const Latents& inferences) const
 
 std::vector<std::unique_ptr<VariantCall>>
 CancerVariantCaller::call_germline_variants(const std::vector<Variant>& candidates,
-                                            const std::vector<Allele>& callable_alleles,
                                             const GenotypeModel::Individual::Latents& posteriors) const
 {
     return {};
@@ -385,7 +379,6 @@ auto compute_marginal_credible_intervals(const M& alphas, const double mass)
 
 std::vector<std::unique_ptr<VariantCall>>
 CancerVariantCaller::call_cnv_variants(const std::vector<Variant>& candidates,
-                                       const std::vector<Allele>& callable_alleles,
                                        const GenotypeModel::CNV::Latents& posteriors) const
 {
     const auto credible_regions = compute_marginal_credible_intervals(posteriors.alphas, 0.99);
@@ -421,7 +414,6 @@ using SomaticModelLatents = GenotypeModel::Somatic::Latents;
 
 std::vector<std::unique_ptr<VariantCall>>
 CancerVariantCaller::call_somatic_variants(const std::vector<Variant>& candidates,
-                                           const std::vector<Allele>& callable_alleles,
                                            const GenotypeModel::Somatic::Latents& posteriors) const
 {
     if (DEBUG_MODE) {
@@ -443,7 +435,7 @@ CancerVariantCaller::call_somatic_variants(const std::vector<Variant>& candidate
 
 std::vector<std::unique_ptr<Call>>
 CancerVariantCaller::call_reference(const std::vector<Allele>& alleles,
-                                    CallerLatents* latents,
+                                    CallerLatents& latents,
                                     const ReadMap& reads) const
 {
     return {};

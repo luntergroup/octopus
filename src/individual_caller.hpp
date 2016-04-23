@@ -93,13 +93,11 @@ private:
                   const HaplotypeLikelihoodCache& haplotype_likelihoods) const override;
     
     std::vector<std::unique_ptr<VariantCall>>
-    call_variants(const std::vector<Variant>& candidates,
-                  const std::vector<Allele>& callable_alleles,
-                  CallerLatents* latents) const override;
+    call_variants(const std::vector<Variant>& candidates, CallerLatents& latents) const override;
     
     std::vector<std::unique_ptr<Call>>
     call_reference(const std::vector<Allele>& alleles,
-                   CallerLatents* latents,
+                   CallerLatents& latents,
                    const ReadMap& reads) const override;
 };
 } // namespace Octopus

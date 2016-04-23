@@ -66,12 +66,9 @@ namespace Octopus
     
     void set_alt_alleles(const Call* call, VcfRecord::Builder& record)
     {
-        try {
-            const auto variant_call = dynamic_cast<const VariantCall*>(call);
-            
-            record.set_alt_allele(variant_call->get_alternative().get_sequence());
-            
-        } catch (const std::bad_cast&) {
+        if (auto p = dynamic_cast<const VariantCall*>(call)) {
+            record.set_alt_allele(p->get_alternative().get_sequence());
+        } else {
             record.set_refcall();
         }
     }
