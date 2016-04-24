@@ -418,11 +418,6 @@ VcfRecord::Builder& VcfRecord::Builder::set_alt_alleles(std::vector<SequenceType
     return *this;
 }
 
-VcfRecord::Builder& VcfRecord::Builder::set_refcall()
-{
-    return set_alt_allele("<NON_REF>");
-}
-
 VcfRecord::Builder& VcfRecord::Builder::set_quality(QualityType quality)
 {
     quality_ = quality;
@@ -457,6 +452,11 @@ VcfRecord::Builder& VcfRecord::Builder::add_info(const KeyType& key, const std::
 {
     info_.emplace(key, values);
     return *this;
+}
+
+VcfRecord::Builder& VcfRecord::Builder::add_info_flag(const KeyType& key)
+{
+    return this->add_info(key, {});
 }
 
 VcfRecord::Builder& VcfRecord::Builder::set_format(const std::vector<KeyType>& format)
@@ -515,6 +515,16 @@ VcfRecord::Builder& VcfRecord::Builder::add_genotype_field(const SampleIdType& s
 {
     samples_[sample].emplace(key, values);
     return *this;
+}
+
+VcfRecord::Builder& VcfRecord::Builder::set_refcall()
+{
+    return set_alt_allele("<NON_REF>");
+}
+
+VcfRecord::Builder& VcfRecord::Builder::set_somatic()
+{
+    return this->add_info_flag("SOMATIC");
 }
 
 VcfRecord::SizeType VcfRecord::Builder::get_position() const noexcept

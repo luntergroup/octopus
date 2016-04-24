@@ -106,25 +106,32 @@ private:
     
     CallerParameters parameters_;
     
-    bool has_normal_sample() const noexcept;
+    // overrides
     
     std::unique_ptr<CallerLatents>
     infer_latents(const std::vector<Haplotype>& haplotypes,
                   const HaplotypeLikelihoodCache& haplotype_likelihoods) const override;
     
+    std::vector<std::unique_ptr<VariantCall>>
+    call_variants(const std::vector<Variant>& candidates, CallerLatents& latents) const override;
+    
+    std::vector<std::unique_ptr<ReferenceCall>>
+    call_reference(const std::vector<Allele>& alleles, CallerLatents& latents,
+                   const ReadMap& reads) const override;
+    
+    // other private methods
+    
+    bool has_normal_sample() const noexcept;
+    
     void filter(std::vector<CancerGenotype<Haplotype>>& genotypes,
                 const GermlineModel::InferredLatents& germline_inferences,
                 const CNVModel::InferredLatents& cnv_inferences) const;
     
+    std::vector<std::unique_ptr<VariantCall>>
+    call_variants(const std::vector<Variant>& candidates, Latents& latents) const;
+    
     CNVModel::Priors calculate_cnv_model_priors(const CoalescentModel& prior_model) const;
     SomaticModel::Priors calculate_somatic_model_priors(const SomaticMutationModel& prior_model) const;
-    
-    std::vector<std::unique_ptr<VariantCall>>
-    call_variants(const std::vector<Variant>& candidates, CallerLatents& latents) const override;
-    
-    std::vector<std::unique_ptr<Call>>
-    call_reference(const std::vector<Allele>& alleles, CallerLatents& latents,
-                   const ReadMap& reads) const override;
     
     ModelPosteriors calculate_model_posteriors(const Latents& inferences) const;
     

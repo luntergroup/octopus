@@ -12,6 +12,6 @@ namespace Octopus
 {
     void SomaticCall::decorate(VcfRecord::Builder& record) const
     {
-        
+        record.set_somatic();
     }
 } // namespace Octopus

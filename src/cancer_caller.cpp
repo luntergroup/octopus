@@ -66,7 +66,15 @@ CancerVariantCaller::CancerVariantCaller(const ReferenceGenome& reference,
 :
 VariantCaller {reference, read_pipe, std::move(candidate_generator), std::move(general_parameters)},
 parameters_ {std::move(specific_parameters)}
-{}
+{
+    if (debug_log_) {
+        if (has_normal_sample()) {
+            stream(*debug_log_) << "Normal sample is \"" << *parameters_.normal_sample << "\"";
+        } else {
+            *debug_log_ << "There is no normal sample";
+        }
+    }
+}
 
 CancerVariantCaller::Latents::Latents(std::vector<Genotype<Haplotype>>&& germline_genotypes,
                                       std::vector<CancerGenotype<Haplotype>>&& somatic_genotypes,
@@ -219,7 +227,12 @@ void CancerVariantCaller::filter(std::vector<CancerGenotype<Haplotype>>& genotyp
                                  const GermlineModel::InferredLatents& germline_inferences,
                                  const CNVModel::InferredLatents& cnv_inferences) const
 {
-    if (genotypes.size() <= parameters_.max_genotypes) return;
+    if (genotypes.size() <= parameters_.max_genotypes) {
+        if (debug_log_) {
+            *debug_log_ << "No cancer genotypes were filtered";
+        }
+        return;
+    }
     
     if (has_normal_sample()) {
         const auto removable_germlines = extract_low_posterior_genotypes(germline_inferences.posteriors);
@@ -278,12 +291,15 @@ CancerVariantCaller::calculate_somatic_model_priors(const SomaticMutationModel& 
 }
 
 std::vector<std::unique_ptr<VariantCall>>
-CancerVariantCaller::call_variants(const std::vector<Variant>& candidates,
-                                   CallerLatents& latents) const
+CancerVariantCaller::call_variants(const std::vector<Variant>& candidates, CallerLatents& latents) const
 {
-    const auto& dlatents = dynamic_cast<Latents&>(latents);
-    
-    const auto model_posteriors = calculate_model_posteriors(dlatents);
+    return call_variants(candidates, dynamic_cast<Latents&>(latents));
+}
+
+std::vector<std::unique_ptr<VariantCall>>
+CancerVariantCaller::call_variants(const std::vector<Variant>& candidates, Latents& latents) const
+{
+    const auto model_posteriors = calculate_model_posteriors(latents);
     
     if (DEBUG_MODE) {
         Logging::DebugLogger log {};
@@ -294,14 +310,14 @@ CancerVariantCaller::call_variants(const std::vector<Variant>& candidates,
     
     if (model_posteriors.somatic > model_posteriors.germline) {
         if (model_posteriors.somatic > model_posteriors.cnv) {
-            return call_somatic_variants(candidates, dlatents.somatic_model_inferences_.posteriors);
+            return call_somatic_variants(candidates, latents.somatic_model_inferences_.posteriors);
         } else {
-            return call_cnv_variants(candidates, dlatents.cnv_model_inferences_.posteriors);
+            return call_cnv_variants(candidates, latents.cnv_model_inferences_.posteriors);
         }
     } else if (model_posteriors.cnv > model_posteriors.germline) {
-        return call_cnv_variants(candidates, dlatents.cnv_model_inferences_.posteriors);
+        return call_cnv_variants(candidates, latents.cnv_model_inferences_.posteriors);
     } else {
-        return call_germline_variants(candidates, dlatents.germline_model_inferences_.posteriors);
+        return call_germline_variants(candidates, latents.germline_model_inferences_.posteriors);
     }
 }
 
@@ -312,22 +328,22 @@ CancerVariantCaller::ModelPosteriors
 CancerVariantCaller::calculate_model_posteriors(const Latents& inferences) const
 {
     const auto& germline_inferences = inferences.germline_model_inferences_;
-    const auto& cnv_inferences = inferences.cnv_model_inferences_;
-    const auto& somatic_inferences = inferences.somatic_model_inferences_;
+    const auto& cnv_inferences      = inferences.cnv_model_inferences_;
+    const auto& somatic_inferences  = inferences.somatic_model_inferences_;
     
-    double germline_model_prior {0.89999};
-    double cnv_model_prior {0.1};
-    double somatic_model_prior {0.01 * 0.001};
+    const double germline_model_prior {0.89999};
+    const double cnv_model_prior      {0.1};
+    const double somatic_model_prior  {0.01 * 0.001};
     
-    auto germline_model_jlp = std::log(germline_model_prior) + germline_inferences.log_evidence;
-    auto cnv_model_jlp = std::log(cnv_model_prior) + cnv_inferences.approx_log_evidence;
-    auto somatic_model_jlp = std::log(somatic_model_prior) + somatic_inferences.approx_log_evidence;
+    const auto germline_model_jlp = std::log(germline_model_prior) + germline_inferences.log_evidence;
+    const auto cnv_model_jlp      = std::log(cnv_model_prior) + cnv_inferences.approx_log_evidence;
+    const auto somatic_model_jlp  = std::log(somatic_model_prior) + somatic_inferences.approx_log_evidence;
     
-    auto norm = Maths::log_sum_exp(germline_model_jlp, cnv_model_jlp, somatic_model_jlp);
+    const auto norm = Maths::log_sum_exp(germline_model_jlp, cnv_model_jlp, somatic_model_jlp);
     
     auto germline_model_posterior = std::exp(germline_model_jlp - norm);
-    auto cnv_model_posterior = std::exp(cnv_model_jlp - norm);
-    auto somatic_model_posterior = std::exp(somatic_model_jlp - norm);
+    auto cnv_model_posterior      = std::exp(cnv_model_jlp - norm);
+    auto somatic_model_posterior  = std::exp(somatic_model_jlp - norm);
     
     return ModelPosteriors {germline_model_posterior, cnv_model_posterior, somatic_model_posterior};
 }
@@ -383,10 +399,13 @@ CancerVariantCaller::call_cnv_variants(const std::vector<Variant>& candidates,
 {
     const auto credible_regions = compute_marginal_credible_intervals(posteriors.alphas, 0.99);
     
-    for (const auto& p : credible_regions) {
-        std::cout << p.first << std::endl;
-        for (const auto& r : p.second) {
-            std::cout << "\t" << r.first << " " << r.second << '\n';
+    if (debug_log_) {
+        auto slog = stream(*debug_log_);
+        for (const auto& p : credible_regions) {
+            slog << p.first << '\n';
+            for (const auto& r : p.second) {
+                slog << "    " << r.first << " " << r.second << '\n';
+            }
         }
     }
     
@@ -423,17 +442,20 @@ CancerVariantCaller::call_somatic_variants(const std::vector<Variant>& candidate
     
     const auto credible_regions = compute_marginal_credible_intervals(posteriors.alphas, 0.99);
     
-    for (const auto& p : credible_regions) {
-        std::cout << p.first << std::endl;
-        for (const auto& r : p.second) {
-            std::cout << "\t" << r.first << " " << r.second << '\n';
+    if (debug_log_) {
+        auto slog = stream(*debug_log_);
+        for (const auto& p : credible_regions) {
+            slog << p.first << '\n';
+            for (const auto& r : p.second) {
+                slog << "    " << r.first << " " << r.second << '\n';
+            }
         }
     }
     
     return {};
 }
 
-std::vector<std::unique_ptr<Call>>
+std::vector<std::unique_ptr<ReferenceCall>>
 CancerVariantCaller::call_reference(const std::vector<Allele>& alleles,
                                     CallerLatents& latents,
                                     const ReadMap& reads) const

@@ -47,7 +47,7 @@ namespace Octopus {
         VariantCallerBuilder& set_read_pipe(ReadPipe& read_pipe) noexcept;
         VariantCallerBuilder& set_candidate_generator_builder(const CandidateGeneratorBuilder& candidate_generator_builder) noexcept;        
         VariantCallerBuilder& set_ploidy(unsigned ploidy) noexcept;
-        VariantCallerBuilder& set_model(std::string model);
+        VariantCallerBuilder& set_caller(std::string caller);
         VariantCallerBuilder& set_refcall_type(VariantCaller::RefCallType refcall_type) noexcept;
         VariantCallerBuilder& set_sites_only() noexcept;
         VariantCallerBuilder& set_min_variant_posterior(double min_posterior) noexcept;
@@ -98,7 +98,7 @@ namespace Octopus {
             HaplotypePriorModelFactory haplotype_prior_model_factory;
             
             unsigned ploidy;
-            std::string model;
+            std::string caller;
             std::reference_wrapper<const CandidateGeneratorBuilder> candidate_generator_builder;
             VariantCaller::RefCallType refcall_type = VariantCaller::RefCallType::None;
             bool call_sites_only = false;
@@ -124,12 +124,12 @@ namespace Octopus {
             boost::optional<Pedigree> pedigree;
         };
         
-        using ModelFactoryMap = std::unordered_map<std::string, std::function<std::unique_ptr<VariantCaller>()>>;
+        using CallerFactoryMap = std::unordered_map<std::string, std::function<std::unique_ptr<VariantCaller>()>>;
         
         Parameters parameters_;
-        ModelFactoryMap factory_;
+        CallerFactoryMap factory_;
         
-        ModelFactoryMap generate_factory() const;
+        CallerFactoryMap generate_factory() const;
     };
 } // namespace Octopus
 

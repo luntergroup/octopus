@@ -337,9 +337,14 @@ std::vector<std::unique_ptr<Octopus::VariantCall>>
 IndividualVariantCaller::call_variants(const std::vector<Variant>& candidates,
                                        CallerLatents& latents) const
 {
-    const auto& dlatents = dynamic_cast<Latents&>(latents);
+    return call_variants(candidates, dynamic_cast<Latents&>(latents));
+}
     
-    const auto& genotype_posteriors = (*dlatents.genotype_posteriors_)[sample_];
+std::vector<std::unique_ptr<Octopus::VariantCall>>
+IndividualVariantCaller::call_variants(const std::vector<Variant>& candidates,
+                                       const Latents& latents) const
+{
+    const auto& genotype_posteriors = (*latents.genotype_posteriors_)[sample_];
     
     if (TRACE_MODE) {
         Logging::TraceLogger log {};
@@ -367,7 +372,7 @@ IndividualVariantCaller::call_variants(const std::vector<Variant>& candidates,
     
     return transform_calls(sample_, std::move(variant_calls), std::move(genotype_calls));
 }
-
+    
 namespace
 {
     // reference genotype calling
@@ -434,7 +439,7 @@ namespace
     }
 } // namespace
 
-std::vector<std::unique_ptr<Call>>
+std::vector<std::unique_ptr<ReferenceCall>>
 IndividualVariantCaller::call_reference(const std::vector<Allele>& alleles,
                                         CallerLatents& latents,
                                         const ReadMap& reads) const

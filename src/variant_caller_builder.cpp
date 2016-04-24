@@ -87,9 +87,9 @@ namespace Octopus
         return *this;
     }
     
-    VariantCallerBuilder& VariantCallerBuilder::set_model(std::string model)
+    VariantCallerBuilder& VariantCallerBuilder::set_caller(std::string caller)
     {
-        parameters_.model = std::move(model);
+        parameters_.caller = std::move(caller);
         return *this;
     }
     
@@ -198,13 +198,13 @@ namespace Octopus
     
     std::unique_ptr<VariantCaller> VariantCallerBuilder::build() const
     {
-        if (factory_.count(parameters_.model) == 0) return nullptr;
-        return factory_.at(parameters_.model)();
+        if (factory_.count(parameters_.caller) == 0) return nullptr;
+        return factory_.at(parameters_.caller)();
     }
     
     // private methods
     
-    VariantCallerBuilder::ModelFactoryMap VariantCallerBuilder::generate_factory() const
+    VariantCallerBuilder::CallerFactoryMap VariantCallerBuilder::generate_factory() const
     {
         VariantCaller::CallerParameters general_parameters {
             parameters_.max_haplotypes,
@@ -214,7 +214,7 @@ namespace Octopus
             parameters_.min_phase_score
         };
         
-        return ModelFactoryMap {
+        return CallerFactoryMap {
             {"individual", [this, general_parameters = std::move(general_parameters)] () {
                 return std::make_unique<IndividualVariantCaller>(parameters_.reference,
                                                                  parameters_.read_pipe,

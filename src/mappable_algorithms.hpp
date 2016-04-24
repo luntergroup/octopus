@@ -1293,17 +1293,6 @@ BidirIt2 find_first_shared(BidirIt1 first1, BidirIt1 last1,
                         });
 }
 
-//template <typename Container, typename ForwardIterator, typename MappableType>
-//ForwardIterator
-//find_first_shared(const Container& mappables,
-//                  ForwardIterator first, ForwardIterator last,
-//                  const MappableType& mappable)
-//{
-//    return std::find_if(first, last, [&mappables, &mappable] (const auto& m) {
-//        return mappables.has_shared(m, mappable);
-//    });
-//}
-
 /**
  Counts the number of Mappable elements in the range [first2 + 1, last2) that have shared
  elements in the range [first1, last1) with first2
@@ -1341,6 +1330,48 @@ std::size_t count_if_shared_with_first(const Container& mappables,
     if (empty(overlapped)) return 0;
     
     return count_overlapped(std::next(first), last, overlapped.back());
+}
+
+// find_first_overlapped
+
+template <typename ForwardIt>
+ForwardIt find_first_overlapped(ForwardIt first, const ForwardIt last)
+{
+    using MappableTp = typename std::iterator_traits<ForwardIt>::value_type;
+    
+    static_assert(is_region_or_mappable<MappableTp>,
+                  "mappable algorithms only work for regions and mappable types");
+    
+    if (first == last) return last;
+    
+    auto prev = first++;
+    
+    while (first != last) {
+        if (overlaps(*prev, *first++)) return prev;
+        ++prev;
+    }
+    
+    return last;
+}
+
+template <typename Container>
+auto find_first_overlapped(const Container& mappables)
+{
+    return find_first_overlapped(std::cbegin(mappables), std::cend(mappables));
+}
+
+// find_first_not_overlapped
+
+template <typename ForwardIt, typename Mappable>
+ForwardIt find_first_not_overlapped(ForwardIt first, ForwardIt last, const Mappable& mappable)
+{
+    return overlap_range(first, last, mappable).end().base();
+}
+
+template <typename Container, typename Mappable>
+auto find_first_not_overlapped(const Container& mappables, const Mappable& mappable)
+{
+    return find_first_not_overlapped(std::cbegin(mappables), std::cend(mappables), mappable);
 }
 
 // extract_regions
@@ -1617,7 +1648,7 @@ auto extract_intervening_regions(const Container& mappables, const Mappable& map
 // segment_*
 
 template <typename ForwardIt>
-auto segment_overlapped(ForwardIt first, ForwardIt last)
+auto segment_overlapped_copy(ForwardIt first, ForwardIt last)
 {
     using MappableTp = typename std::iterator_traits<ForwardIt>::value_type;
     
@@ -1653,13 +1684,13 @@ auto segment_overlapped(ForwardIt first, ForwardIt last)
 }
 
 template <typename Container>
-auto segment_overlapped(const Container& mappables)
+auto segment_overlapped_copy(const Container& mappables)
 {
-    return segment_overlapped(std::cbegin(mappables), std::cend(mappables));
+    return segment_overlapped_copy(std::cbegin(mappables), std::cend(mappables));
 }
 
 template <typename ForwardIt>
-auto segment_by_begin(ForwardIt first, ForwardIt last)
+auto segment_by_begin_copy(ForwardIt first, ForwardIt last)
 {
     using MappableTp = typename std::iterator_traits<ForwardIt>::value_type;
     
@@ -1674,7 +1705,9 @@ auto segment_by_begin(ForwardIt first, ForwardIt last)
     
     while (first != last) {
         auto it = std::find_if_not(std::next(first), last, [first]
-                                   (const auto& mappable) { return begins_equal(*first, mappable); });
+                                   (const auto& mappable) {
+                                       return begins_equal(*first, mappable);
+                                   });
         result.emplace_back(first, it);
         first = it;
     }
@@ -1685,13 +1718,13 @@ auto segment_by_begin(ForwardIt first, ForwardIt last)
 }
 
 template <typename Container>
-auto segment_by_begin(const Container& mappables)
+auto segment_by_begin_copy(const Container& mappables)
 {
-    return segment_by_begin(std::cbegin(mappables), std::cend(mappables));
+    return segment_by_begin_copy(std::cbegin(mappables), std::cend(mappables));
 }
 
 template <typename ForwardIt>
-auto segment_by_region(ForwardIt first, ForwardIt last)
+auto segment_by_region_copy(ForwardIt first, ForwardIt last)
 {
     using MappableTp = typename std::iterator_traits<ForwardIt>::value_type;
     
@@ -1707,7 +1740,9 @@ auto segment_by_region(ForwardIt first, ForwardIt last)
     while (first != last) {
         const auto& curr_region = mapped_region(*first);
         auto it = std::find_if_not(std::next(first), last, [&curr_region]
-                                   (const auto& mappable) { return curr_region == mapped_region(mappable); });
+                                   (const auto& mappable) {
+                                       return curr_region == mapped_region(mappable);
+                                   });
         result.emplace_back(first, it);
         first = it;
     }
@@ -1718,7 +1753,7 @@ auto segment_by_region(ForwardIt first, ForwardIt last)
 }
 
 template <typename Container>
-auto segment_by_region(const Container& mappables)
+auto segment_by_region_copy(const Container& mappables)
 {
     return segment_equal(std::cbegin(mappables), std::cend(mappables));
 }

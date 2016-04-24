@@ -166,7 +166,7 @@ namespace Octopus
         try {
             po::positional_options_description p;
             
-            p.add("model", -1);
+            p.add("caller", -1);
             
             po::options_description general("General options");
             general.add_options()
@@ -296,8 +296,8 @@ namespace Octopus
             
             po::options_description caller("Caller options");
             caller.add_options()
-            ("model", po::value<std::string>()->default_value("population"),
-             "Calling model used")
+            ("caller", po::value<std::string>()->default_value("population"),
+             "Which of the Octopus callers to use")
             ("organism-ploidy,ploidy", po::value<unsigned>()->default_value(2),
              "Organism ploidy, all contigs with unspecified ploidy are assumed this ploidy")
             ("contig-ploidies", po::value<std::vector<ContigPloidy>>()->multitoken(),
@@ -333,24 +333,24 @@ namespace Octopus
              "Minimum phase score required to output a phased call (phred scale)")
             ;
             
-            po::options_description cancer("Cancer model specific options");
+            po::options_description cancer("Cancer caller specific options");
             cancer.add_options()
             ("normal-sample", po::value<std::string>(),
              "Normal sample used in cancer model")
             ("somatic-mutation-rate", po::value<float>()->default_value(0.00001),
-             "Expected somatic mutation rate for this sample")
+             "Expected somatic mutation rate, per megabase pair, for this sample")
             ("min-somatic-posterior", po::value<float>()->default_value(10.0),
-             "Minimum somaitc mutation call posterior probability (phred scale)")
+             "The minimum somatic mutation call posterior probability (phred scale)")
             ("somatics-only", po::bool_switch()->default_value(false),
              "Only output somatic calls (for somatic calling models only)")
             ;
             
-            po::options_description trio("Trio model specific options");
+            po::options_description trio("Trio caller specific options");
             trio.add_options()
             ("maternal-sample", po::value<std::string>(),
-             "Maternal sample for trio model")
+             "Maternal sample for trio caller")
             ("paternal-sample", po::value<std::string>(),
-             "Paternal sample for trio model")
+             "Paternal sample for trio caller")
             ;
             
             po::options_description all("Allowed options");
@@ -377,9 +377,9 @@ namespace Octopus
                 throw po::required_option {"--reads | --reads-file"};
             }
             
-            if (vm.at("model").as<std::string>() == "trio"
+            if (vm.at("caller").as<std::string>() == "trio"
                 && (vm.count("maternal-sample") == 0 || vm.count("paternal-sample") == 0)) {
-                throw std::logic_error {"option maternal-sample and paternal-sample are required when model=trio"};
+                throw std::logic_error {"option maternal-sample and paternal-sample are required when caller=trio"};
             }
             
             conflicting_options(vm, "make-positional-refcalls", "make-blocked-refcalls");
@@ -1380,13 +1380,13 @@ namespace Octopus
         
         VariantCallerBuilder vc_builder {reference, read_pipe, candidate_generator_builder};
         
-        auto model = options.at("model").as<std::string>();
+        auto caller = options.at("caller").as<std::string>();
         
-        if (model == "population" && read_pipe.num_samples() == 1) {
-            model = "individual";
+        if (caller == "population" && read_pipe.num_samples() == 1) {
+            caller = "individual";
         }
         
-        vc_builder.set_model(model);
+        vc_builder.set_caller(caller);
         
         if (options.at("make-positional-refcalls").as<bool>()) {
             vc_builder.set_refcall_type(VariantCaller::RefCallType::Positional);
@@ -1407,12 +1407,23 @@ namespace Octopus
         
         vc_builder.set_lagging(!options.at("disable-haplotype-lagging").as<bool>());
         
-        if (model == "cancer") {
+        if (caller == "cancer") {
             if (options.count("normal-sample") == 1) {
-                vc_builder.set_normal_sample(options.at("normal-sample").as<std::string>());
+                auto normal_sample = options.at("normal-sample").as<std::string>();
+                
+                const auto& samples = read_pipe.get_samples();
+                
+                if (std::find(std::cbegin(samples), std::cend(samples),
+                              normal_sample) == std::cend(samples)) {
+                    Logging::WarningLogger log {};
+                    stream(log) << "The given normal sample \"" << normal_sample
+                                << "\" was not found in the read files";
+                } else {
+                    vc_builder.set_normal_sample(std::move(normal_sample));
+                }
             } else {
                 Logging::WarningLogger log {};
-                stream(log) << "No normal model was given so assuming all samples are tumour";
+                stream(log) << "No normal sample was given so assuming all samples are tumour";
             }
             
             vc_builder.set_somatic_mutation_rate(options.at("somatic-mutation-rate").as<float>());
@@ -1425,7 +1436,7 @@ namespace Octopus
             } else {
                 vc_builder.set_somatic_and_variant_calls();
             }
-        } else if (model == "trio") {
+        } else if (caller == "trio") {
             vc_builder.set_maternal_sample(options.at("maternal-sample").as<std::string>());
             vc_builder.set_paternal_sample(options.at("paternal-sample").as<std::string>());
         }

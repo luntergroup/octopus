@@ -23,13 +23,68 @@
 
 namespace Octopus
 {
-    template <typename L>
-    void write_header(L& log)
+    void write_header(Logging::InfoLogger& log, const unsigned position_tab_length)
     {
-        log << "------------------------------------------------------------------------";
-        log << "     current      |                   |     time      |     estimated   ";
-        log << "     position     |     completed     |     taken     |     ttc         ";
-        log << "------------------------------------------------------------------------";
+        const std::string pos_tab_bar(position_tab_length, '-');
+        
+        const auto num_position_tab_whitespaces = position_tab_length - 8;
+        
+        const std::string pos_tab_lhs_pad((position_tab_length - 8) / 2, ' ');
+        
+        auto pos_tab_rhs_pad = pos_tab_lhs_pad;
+        
+        if (num_position_tab_whitespaces % 2) {
+            pos_tab_rhs_pad += ' ';
+        }
+        
+        stream(log) << pos_tab_bar << "------------------------------------------------------";
+        stream(log) << pos_tab_lhs_pad << "current " << pos_tab_rhs_pad
+                                    << "|                   |     time      |     estimated   ";
+        stream(log) << pos_tab_lhs_pad << "position" << pos_tab_rhs_pad
+                                    << "|     completed     |     taken     |     ttc         ";
+        stream(log) << pos_tab_bar << "------------------------------------------------------";
+    }
+    
+    namespace
+    {
+        template <typename T>
+        unsigned num_digits(T x)
+        {
+            return static_cast<unsigned>(std::to_string(x).size());
+        }
+    } // namespace
+    
+    template <typename T>
+    unsigned max_str_length(const T& p)
+    {
+        auto result = static_cast<unsigned>(p.first.size());
+        if (p.second.empty()) return result;
+        return result + num_digits(p.second.rightmost().get_end());
+    }
+    
+    unsigned max_position_str_length(const SearchRegions& input_regions)
+    {
+        assert(!input_regions.empty());
+        
+        unsigned result {0};
+        
+        for (const auto& p : input_regions) {
+            const auto curr = max_str_length(p);
+            if (result < curr) result = curr;
+        }
+        
+        return result;
+    }
+    
+    unsigned max_position_str_length(const GenomicRegion& region)
+    {
+        return static_cast<unsigned>(region.get_contig_name().size()) + num_digits(region.get_end());
+    }
+    
+    template <typename T>
+    unsigned calculate_position_tab_length(const T& region)
+    {
+        return std::max(18u, max_position_str_length(region));
     }
     
     ProgressMeter::ProgressMeter(const SearchRegions& input_regions)
@@ -38,7 +93,7 @@ namespace Octopus
     start_ {std::chrono::system_clock::now()},
     last_log_ {std::chrono::system_clock::now()}
     {
-        write_header(log_);
+        write_header(log_, calculate_position_tab_length(input_regions));
     }
     
     ProgressMeter::ProgressMeter(const GenomicRegion& input_region)
@@ -56,13 +111,7 @@ namespace Octopus
         
         num_bp_to_search_ = sum_region_sizes(regions_);
         
-        write_header(log_);
-    }
-    
-    template <typename T>
-    auto num_digits(T x)
-    {
-        return std::to_string(x).size();
+        write_header(log_, calculate_position_tab_length(input_region));
     }
     
     std::string curr_position_pad(const GenomicRegion& completed_region)

@@ -56,9 +56,14 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         
         //"--reads", ecoli_bam.c_str(),
         
+        // TCGA
+        //"--reads", "~/Genomics/cancer/TCGA/G15511.HCC1143_BL.1.chr22.bam",
+        //"--reads", "~/Genomics/cancer/TCGA/G15511.HCC1143.1.chr22.bam",
+        
         //"--samples", "NA12878",
-        //"--model", "cancer", // default "population"
-        "--normal-sample", "NA12878", // for cancer model
+        //"--caller", "cancer", // default "population"
+        //"--normal-sample", "NA12878",
+        "--normal-sample", "HCC1143 BL",
         
         //"--organism-ploidy", "3",
         "--contig-ploidies", "MT=1", "Y=1",// "MT=2",
@@ -68,8 +73,6 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--make-positional-refcalls",
         
         /* input regions */
-        
-        //"--regions", "22:37,609,595-37,614,478", // lagged filtering true haplotype
         
         //"--use-one-based-indexing",
         
@@ -95,7 +98,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--regions", "16:62,432,702-62,432,933", // interesting insertions
         
         // Bad VCF representation
-        "--regions", "22:51004206-51004246", // overlapping deletions
+        //"--regions", "22:51004206-51004246", // overlapping deletions
         //"--regions", "22:49929368-49929408", // deletion overlapping SNP
         //"--regions", "22:50957441-50957481", // insertion & SNP, and SNP!
         //"--regions", "22:33,920,251-33,920,291", // insertion followed by SNP
@@ -134,6 +137,13 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--regions", "Y:13447283-13447483", // NA12878_low_coverage too many haplotypes
         
         // for cancer
+        
+        // TCGA HCC1143
+        //"--regions", "22:24,899,276-24,902,854", // Somatic SNV!
+        //"--regions", "22:27,707,987-27,708,223", // low frequency deletion?
+        //"--regions", "22:36,265,289-36,265,519", // CNV SNP?
+        //"--regions", "22:36,272,719-36,272,785", // Somatic insertion?
+        //"--regions", "22:36,260,492-36,280,030",
         
         // NA12878HC (normal) vs HG00101LC
         //"--regions", "22:33,310,391-33,310,686",

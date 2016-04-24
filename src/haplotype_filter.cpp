@@ -14,22 +14,140 @@
 #include <algorithm>
 #include <numeric>
 #include <limits>
+#include <type_traits>
 #include <cassert>
 
+#include "common.hpp"
 #include "haplotype.hpp"
 #include "haplotype_likelihood_cache.hpp"
 #include "maths.hpp"
+#include "logging.hpp"
 
 namespace Octopus
 {
-    double max_read_likelihood(const Haplotype& haplotype,
-                               const std::vector<SampleIdType>& samples,
-                               const HaplotypeLikelihoodCache& haplotype_likelihoods)
+template <typename T>
+struct FilterGreater
+{
+    explicit FilterGreater(const std::unordered_map<Haplotype, T>& values) : values_ {values} {}
+    
+    bool operator()(const Haplotype& lhs, const T rhs) const
+    {
+        return values_.at(lhs) > rhs;
+    }
+    
+    bool operator()(const T& lhs, const Haplotype& rhs) const
+    {
+        return lhs > values_.at(rhs);
+    }
+    
+    bool operator()(const Haplotype& lhs, const Haplotype& rhs) const
+    {
+        return values_.at(lhs) > values_.at(rhs);
+    }
+    
+private:
+    const std::unordered_map<Haplotype, T>& values_;
+};
+
+template <typename F>
+std::size_t try_filter(std::vector<Haplotype>& haplotypes,
+                       const std::vector<SampleIdType>& samples,
+                       const HaplotypeLikelihoodCache& haplotype_likelihoods,
+                       const std::size_t n,
+                       std::vector<Haplotype>& result,
+                       F filter)
+{
+    using T = std::result_of_t<F(const Haplotype&, decltype(samples), decltype(haplotype_likelihoods))>;
+    
+    std::unordered_map<Haplotype, T> filter_likelihoods {haplotypes.size()};
+    
+    for (const auto& haplotype : haplotypes) {
+        filter_likelihoods.emplace(haplotype, filter(haplotype, samples, haplotype_likelihoods));
+    }
+    
+    const auto first = std::begin(haplotypes);
+    const auto last  = std::end(haplotypes);
+    
+    const auto nth = std::next(first, n);
+    
+    const FilterGreater<T> cmp {filter_likelihoods};
+    
+    std::nth_element(first, nth, last, cmp);
+    
+    const auto nth_max_liklihood = filter_likelihoods.at(*nth);
+    
+    const auto rlast = std::make_reverse_iterator(first);
+    
+    const auto it = std::find_if(std::make_reverse_iterator(std::prev(nth)), rlast,
+                                 [nth_max_liklihood, &filter_likelihoods] (const Haplotype& haplotype) {
+                                     return filter_likelihoods.at(haplotype) == nth_max_liklihood;
+                                 });
+    
+    if (it != rlast) {
+        std::sort(first, nth, cmp);
+        std::sort(nth, last, cmp);
+        
+        const auto er = std::equal_range(first, last, nth_max_liklihood, cmp);
+        
+        result.insert(std::end(result), std::make_move_iterator(er.second), std::make_move_iterator(last));
+        
+        const auto num_removed = std::distance(er.second, last);
+        
+        haplotypes.erase(er.second, last);
+        
+        return num_removed;
+    }
+    
+    result.insert(std::end(result), std::make_move_iterator(nth), std::make_move_iterator(last));
+    
+    const auto num_removed = std::distance(nth, last);
+    
+    haplotypes.erase(nth, last);
+    
+    return num_removed;
+}
+
+template <typename F>
+void force_filter(std::vector<Haplotype>& haplotypes,
+                  const std::vector<SampleIdType>& samples,
+                  const HaplotypeLikelihoodCache& haplotype_likelihoods,
+                  const std::size_t n,
+                  std::vector<Haplotype>& result,
+                  F filter)
+{
+    using T = std::result_of_t<F(const Haplotype&, decltype(samples), decltype(haplotype_likelihoods))>;
+    
+    std::unordered_map<Haplotype, T> filter_likelihoods {haplotypes.size()};
+    
+    for (const auto& haplotype : haplotypes) {
+        filter_likelihoods.emplace(haplotype, filter(haplotype, samples, haplotype_likelihoods));
+    }
+    
+    const auto first = std::begin(haplotypes);
+    const auto last  = std::end(haplotypes);
+    
+    const auto nth = std::next(first, n);
+    
+    const FilterGreater<T> cmp {filter_likelihoods};
+    
+    std::nth_element(first, nth, last, cmp);
+    
+    result.insert(std::end(result), std::make_move_iterator(nth), std::make_move_iterator(last));
+    
+    haplotypes.erase(nth, last);
+}
+
+// filters
+
+struct MaxLikelihood
+{
+    auto operator()(const Haplotype& haplotype, const std::vector<SampleIdType>& samples,
+                    const HaplotypeLikelihoodCache& haplotype_likelihoods) const
     {
         auto result = std::numeric_limits<double>::lowest();
         
         for (const auto& sample : samples) {
-            for (const double likelihood : haplotype_likelihoods.log_likelihoods(sample, haplotype)) {
+            for (const auto likelihood : haplotype_likelihoods.log_likelihoods(sample, haplotype)) {
                 if (likelihood > result) result = likelihood;
                 if (Maths::almost_zero(likelihood)) break;
             }
@@ -37,10 +155,29 @@ namespace Octopus
         
         return result;
     }
-    
-    double sum_likelihoods(const Haplotype& haplotype,
-                           const std::vector<SampleIdType>& samples,
-                           const HaplotypeLikelihoodCache& haplotype_likelihoods)
+};
+
+struct LikelihoodZeroCount
+{
+    auto operator()(const Haplotype& haplotype, const std::vector<SampleIdType>& samples,
+                    const HaplotypeLikelihoodCache& haplotype_likelihoods) const
+    {
+        std::size_t result {0};
+        
+        for (const auto& sample : samples) {
+            const auto& sample_likelihoods = haplotype_likelihoods.log_likelihoods(sample, haplotype);
+            result += std::count_if(std::cbegin(sample_likelihoods), std::cend(sample_likelihoods),
+                                    [] (const auto& likelihood) { return likelihood == 0; });
+        }
+        
+        return result;
+    }
+};
+
+struct LikelihoodSum
+{
+    auto operator()(const Haplotype& haplotype, const std::vector<SampleIdType>& samples,
+                    const HaplotypeLikelihoodCache& haplotype_likelihoods) const
     {
         double result {0};
         
@@ -51,131 +188,70 @@ namespace Octopus
         
         return result;
     }
+};
+
+// main method
+
+std::vector<Haplotype>
+filter_to_n_haplotypes(std::vector<Haplotype>& haplotypes,
+                       const std::vector<SampleIdType>& samples,
+                       const HaplotypeLikelihoodCache& haplotype_likelihoods,
+                       std::size_t n)
+{
+    std::vector<Haplotype> result {};
     
-    struct LikelihoodGreater
-    {
-        explicit LikelihoodGreater(const std::unordered_map<Haplotype, double>& liklihoods)
-        : liklihoods_ {liklihoods} {}
-        
-        bool operator()(const Haplotype& lhs, const double rhs) const
-        {
-            return liklihoods_.at(lhs) > rhs;
-        }
-        
-        bool operator()(const double& lhs, const Haplotype& rhs) const
-        {
-            return lhs > liklihoods_.at(rhs);
-        }
-        
-        bool operator()(const Haplotype& lhs, const Haplotype& rhs) const
-        {
-            return liklihoods_.at(lhs) > liklihoods_.at(rhs);
-        }
-        
-    private:
-        const std::unordered_map<Haplotype, double>& liklihoods_;
-    };
-    
-    template <typename RandomAccessIt>
-    auto
-    filter_by_likelihood_sum(const std::vector<SampleIdType>& samples,
-                             const RandomAccessIt first, const RandomAccessIt last,
-                             const HaplotypeLikelihoodCache& haplotype_likelihoods,
-                             const std::size_t n,
-                             std::vector<Haplotype>& result)
-    {
-        const auto num_haplotypes = static_cast<std::size_t>(std::distance(first, last));
-        
-        std::unordered_map<Haplotype, double> liklihood_sums {num_haplotypes};
-        
-        std::for_each(first, last, [&] (const auto& haplotype) {
-            liklihood_sums.emplace(haplotype, sum_likelihoods(haplotype, samples,
-                                                              haplotype_likelihoods));
-        });
-        
-        const auto nth = std::next(first, n);
-        
-        std::nth_element(first, nth, last, LikelihoodGreater {liklihood_sums});
-        
-        return nth;
-    }
-    
-    std::vector<Haplotype>
-    filter_by_maximum_likelihood(std::vector<Haplotype>& haplotypes,
-                                 const std::vector<SampleIdType>& samples,
-                                 const HaplotypeLikelihoodCache& haplotype_likelihoods,
-                                 const std::size_t n)
-    {
-        std::vector<Haplotype> result {};
-        
-        if (haplotypes.size() <= n) {
-            std::sort(std::begin(haplotypes), std::end(haplotypes));
-            return result;
-        }
-        
-        std::unordered_map<Haplotype, double> max_liklihoods {haplotypes.size()};
-        
-        for (const auto& haplotype : haplotypes) {
-            max_liklihoods.emplace(haplotype, max_read_likelihood(haplotype, samples, haplotype_likelihoods));
-        }
-        
-        auto nth = std::next(std::begin(haplotypes), n);
-        
-        std::nth_element(std::begin(haplotypes), nth, std::end(haplotypes),
-                         LikelihoodGreater {max_liklihoods});
-        
-        const auto nth_max_liklihood = max_liklihoods.at(*nth);
-        
-        const auto it = std::find_if(std::make_reverse_iterator(std::prev(nth)), std::rend(haplotypes),
-                                     [nth_max_liklihood, &max_liklihoods] (const Haplotype& haplotype) {
-                                         return max_liklihoods.at(haplotype) == nth_max_liklihood;
-                                     });
-        
-        if (it != std::rend(haplotypes)) {
-            std::sort(std::begin(haplotypes), nth, LikelihoodGreater {max_liklihoods});
-            std::sort(nth, std::end(haplotypes), LikelihoodGreater {max_liklihoods});
-            
-            const auto er = std::equal_range(std::begin(haplotypes), std::end(haplotypes),
-                                             nth_max_liklihood,
-                                             LikelihoodGreater {max_liklihoods});
-            
-            result.assign(std::make_move_iterator(er.second),
-                          std::make_move_iterator(std::end(haplotypes)));
-            
-            haplotypes.erase(er.second, std::end(haplotypes));
-            
-            // now deal with haplotypes in er
-            nth = filter_by_likelihood_sum(samples, er.first, er.second, haplotype_likelihoods,
-                                           n - std::distance(std::begin(haplotypes), er.first),
-                                           result);
-        }
-        
-        std::sort(std::begin(haplotypes), nth);
-        std::sort(nth, std::end(haplotypes));
-        
-        std::deque<Haplotype> duplicates {};
-        
-        std::set_intersection(std::begin(haplotypes), nth, nth, std::end(haplotypes),
-                              std::back_inserter(duplicates));
-        
-        result.insert(std::end(result),
-                      std::make_move_iterator(nth),
-                      std::make_move_iterator(std::end(haplotypes)));
-        
-        haplotypes.erase(nth, std::end(haplotypes));
-        
-        for (const auto& duplicate : duplicates) {
-            const auto er = std::equal_range(std::begin(haplotypes), std::end(haplotypes), duplicate);
-            haplotypes.erase(er.first, er.second);
-        }
-        
+    if (haplotypes.size() <= n) {
         return result;
     }
     
-    std::vector<Haplotype>
-    filter_to_n_haplotypes(std::vector<Haplotype>& haplotypes, const std::vector<SampleIdType>& samples,
-                           const HaplotypeLikelihoodCache& haplotype_likelihoods, const std::size_t n)
-    {
-        return filter_by_maximum_likelihood(haplotypes, samples, haplotype_likelihoods, n);
+    auto num_to_filter = haplotypes.size() - n;
+    
+    result.reserve(haplotypes.size() - n);
+    
+    num_to_filter -= try_filter(haplotypes, samples, haplotype_likelihoods, n, result,
+                                MaxLikelihood {});
+    
+    Logging::DebugLogger log {};
+    
+    if (DEBUG_MODE) {
+        stream(log) << "There are " << haplotypes.size()
+                    << " remaining haplotypes after maximum likelihood filtering";
     }
+    
+    if (num_to_filter == 0) {
+        return result;
+    }
+    
+    num_to_filter -= try_filter(haplotypes, samples, haplotype_likelihoods, n, result,
+                                LikelihoodZeroCount {});
+    
+    if (DEBUG_MODE) {
+        stream(log) << "There are " << haplotypes.size()
+                    << " remaining haplotypes after likelihood zero count filtering";
+    }
+    
+    if (num_to_filter == 0) {
+        return result;
+    }
+    
+    num_to_filter -= try_filter(haplotypes, samples, haplotype_likelihoods, n, result,
+                                LikelihoodSum {});
+    
+    if (DEBUG_MODE) {
+        stream(log) << "There are " << haplotypes.size()
+                    << " remaining haplotypes after likelihood sum filtering";
+    }
+    
+    if (num_to_filter == 0) {
+        return result;
+    }
+    
+    if (DEBUG_MODE) {
+        stream(log) << "Force filtering " << haplotypes.size() << " haplotypes with likelihood sum filter";
+    }
+    
+    force_filter(haplotypes, samples, haplotype_likelihoods, n, result, LikelihoodSum {});
+    
+    return result;
+}
 } // namespace Octopus

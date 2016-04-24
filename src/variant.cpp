@@ -190,22 +190,22 @@ auto allele_minmax(const Variant::SequenceType& lhs, const Variant::SequenceType
 }
 
 template <typename InputIterator>
-size_t get_num_redundant_bases(InputIterator first1, InputIterator last1, InputIterator first2)
+std::size_t get_num_redundant_bases(InputIterator first1, InputIterator last1, InputIterator first2)
 {
     return std::distance(first1, std::mismatch(first1, last1, first2).first);
 }
 
 template <typename SequenceType>
-size_t get_num_redundant_front_bases(const SequenceType& smaller_sequence,
-                                     const SequenceType& larger_sequence)
+std::size_t get_num_redundant_front_bases(const SequenceType& smaller_sequence,
+                                          const SequenceType& larger_sequence)
 {
     return get_num_redundant_bases(std::cbegin(smaller_sequence), std::cend(smaller_sequence),
                                    std::cbegin(larger_sequence));
 }
 
 template <typename SequenceType>
-size_t get_num_redundant_back_bases(const SequenceType& smaller_sequence,
-                                    const SequenceType& larger_sequence)
+std::size_t get_num_redundant_back_bases(const SequenceType& smaller_sequence,
+                                         const SequenceType& larger_sequence)
 {
     return get_num_redundant_bases(std::crbegin(smaller_sequence), std::crend(smaller_sequence),
                                    std::crbegin(larger_sequence));
@@ -239,30 +239,26 @@ Variant make_parsimonious(const Variant& variant, const ReferenceGenome& referen
 {
     using std::move; using std::cbegin; using std::cend; using std::crbegin; using std::crend;
     
-    if (is_parsimonious(variant)) return variant;
-    
     const auto& old_ref_sequence = ref_sequence(variant);
     const auto& old_alt_sequence = alt_sequence(variant);
     
     const auto& alleles = allele_minmax(old_ref_sequence, old_alt_sequence);
-    const auto& the_small_allele = alleles.first;
-    const auto& the_big_allele   = alleles.second;
+    const auto& small_allele = alleles.first;
+    const auto& big_allele   = alleles.second;
     
     const auto& old_ref_region = mapped_region(variant);
     
-    if (the_small_allele.size() == 0) {
+    if (small_allele.size() == 0) {
         if (old_ref_region.get_begin() > 0) {
-            GenomicRegion new_ref_region {old_ref_region.get_contig_name(),
-                old_ref_region.get_begin() - 1, old_ref_region.get_end()};
+            auto new_ref_region = expand_lhs(old_ref_region, 1);
             
             auto new_ref_allele = reference.get_sequence(new_ref_region);
             auto new_alt_allele = new_ref_allele.front() + old_alt_sequence;
             
             return Variant {move(new_ref_region), move(new_ref_allele), move(new_alt_allele)};
         } else {
-            // In this very rare care the only option is to pad to the right.
-            GenomicRegion new_ref_region {old_ref_region.get_contig_name(),
-                old_ref_region.get_begin(), old_ref_region.get_end() + 1};
+            // In this rare case the only option is to pad to the right.
+            auto new_ref_region = expand_rhs(old_ref_region, 1);
             
             auto new_ref_allele = reference.get_sequence(new_ref_region);
             auto new_alt_allele = old_alt_sequence + new_ref_allele.back();
@@ -271,33 +267,30 @@ Variant make_parsimonious(const Variant& variant, const ReferenceGenome& referen
         }
     }
     
-    auto num_redundant_front_bases = get_num_redundant_front_bases(the_small_allele, the_big_allele);
-    auto num_redundant_back_bases  = get_num_redundant_back_bases(the_small_allele, the_big_allele);
+    auto pf = std::mismatch(cbegin(small_allele), cend(small_allele), cbegin(big_allele));
     
-    // We could avoid this check by removing redundant back bases first, but this way is cheaper.
-    bool are_same_redundant_bases = num_redundant_front_bases == num_redundant_back_bases &&
-    num_redundant_back_bases == the_small_allele.size();
-    if (are_same_redundant_bases) num_redundant_back_bases = 0;
-    // Don't forget: a parsimonious variant can't have any empty alleles
-    if (num_redundant_front_bases == the_small_allele.size()) --num_redundant_front_bases;
+    if (pf.first == cbegin(small_allele) || small_allele.size() == 1) {
+        return variant;
+    }
     
-    auto new_big_allele_size   = the_big_allele.size() - num_redundant_front_bases -
-    num_redundant_back_bases;
-    auto new_small_allele_size = the_small_allele.size() - num_redundant_front_bases -
-    num_redundant_back_bases;
+    const auto pb = std::mismatch(crbegin(small_allele), std::make_reverse_iterator(pf.first),
+                                  crbegin(big_allele));
     
-    auto new_big_allele   = the_big_allele.substr(num_redundant_front_bases, new_big_allele_size);
-    auto new_small_allele = the_small_allele.substr(num_redundant_front_bases, new_small_allele_size);
+    if (pf.first == std::cend(small_allele)) {
+        --pf.first;
+        --pf.second;
+    }
     
-    using SizeType = GenomicRegion::SizeType;
+    using SequenceType = Variant::SequenceType;
+    SequenceType new_big_allele   {pf.second, pb.second.base()};
+    SequenceType new_small_allele {pf.first, pb.first.base()};
     
-    auto new_ref_region_begin = static_cast<SizeType>(old_ref_region.get_begin() +
-                                                      num_redundant_front_bases);
-    auto new_ref_region_end   = static_cast<SizeType>(old_ref_region.get_end() -
-                                                      num_redundant_back_bases);
-    
-    GenomicRegion new_ref_region {old_ref_region.get_contig_name(), new_ref_region_begin,
-        new_ref_region_end};
+    using S = GenomicRegion::SizeType;
+    GenomicRegion new_ref_region {
+        old_ref_region.get_contig_name(),
+        old_ref_region.get_begin() + static_cast<S>(std::distance(cbegin(small_allele), pf.first)),
+        old_ref_region.get_end()   - static_cast<S>(std::distance(crbegin(small_allele), pb.first))
+    };
     
     if (old_ref_sequence.size() > old_alt_sequence.size()) {
         return Variant {move(new_ref_region), move(new_big_allele), move(new_small_allele)};

@@ -14,9 +14,12 @@
 #include <utility>
 #include <stdexcept>
 #include <algorithm>
+#include <functional>
+#include <iostream>
 
 #include "genomic_region.hpp"
 #include "mappable.hpp"
+#include "mappable_algorithms.hpp"
 #include "allele.hpp"
 #include "variant_call.hpp"
 #include "read_utils.hpp"
@@ -142,5 +145,60 @@ namespace Octopus
         }
         
         return result.build_once();
+    }
+    
+    namespace
+    {
+        struct CallWrapper : public Mappable<CallWrapper>
+        {
+            CallWrapper(const std::unique_ptr<Call>& call) : call {std::cref(call) } {}
+            operator const std::unique_ptr<Call>&() const noexcept { return call.get(); }
+            std::unique_ptr<Call>::pointer operator->() const noexcept { return call.get().get(); };
+            std::reference_wrapper<const std::unique_ptr<Call>> call;
+            const GenomicRegion& get_region() const noexcept { return call.get()->get_region(); }
+        };
+        
+        auto wrap(const std::vector<std::unique_ptr<Call>>& calls)
+        {
+            return std::vector<CallWrapper> {std::begin(calls), std::end(calls)};
+        }
+    } // namespace
+    
+    template <typename ForwardIt>
+    void parsimonise_mutually_exclusive_calls(ForwardIt first, ForwardIt last,
+                                              std::vector<VcfRecord>& result)
+    {
+//        std::transform(first, last, std::ostream_iterator<std::string>(std::cout, "\n"),
+//                       [] (const CallWrapper& call) {
+//                           return to_string(call->get_region());
+//                       });
+    }
+    
+    std::vector<VcfRecord>
+    VcfRecordFactory::make(const std::vector<std::unique_ptr<Call>>& calls) const
+    {
+        const auto wrapped_calls = wrap(calls);
+        
+        std::vector<VcfRecord> result {};
+        result.reserve(calls.size());
+        
+        auto it = std::cbegin(wrapped_calls);
+        
+        while (it != std::cend(wrapped_calls)) {
+            const auto it2 = find_first_overlapped(it, std::cend(wrapped_calls));
+            
+            std::transform(it, it2, std::back_inserter(result),
+                           [this] (const auto& call) { return this->make(call); });
+            
+            if (it2 == std::cend(wrapped_calls)) break;
+            
+            it = find_first_not_overlapped(std::next(it2), std::cend(wrapped_calls), *it2);
+            
+            parsimonise_mutually_exclusive_calls(it2, it, result);
+        }
+        
+        result.shrink_to_fit();
+        
+        return result;
     }
 } // namespace Octopus

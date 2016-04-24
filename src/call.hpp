@@ -71,6 +71,7 @@ namespace Octopus
         virtual const GenomicRegion& get_region() const noexcept = 0;
         virtual const Allele& get_reference() const noexcept = 0;
         
+        //virtual void parsimonise(const ReferenceGenome& reference) = 0;
         virtual void decorate(VcfRecord::Builder& record) const = 0;
         
     protected:
@@ -81,32 +82,22 @@ namespace Octopus
     
     template <typename T>
     Call::Call(T&& genotype_calls, double quality)
-    :
-    genotype_calls_ {std::begin(genotype_calls), std::end(genotype_calls)},
-    quality_ {quality}
+    : genotype_calls_ {std::begin(genotype_calls), std::end(genotype_calls)}, quality_ {quality}
     {}
     
     template <typename R>
     Call::PhaseCall::PhaseCall(R&& region, double score)
-    :
-    region {std::forward<R>(region)},
-    score {score}
+    : region {std::forward<R>(region)}, score {score}
     {}
     
     template <typename G>
     Call::GenotypeCall::GenotypeCall(G&& genotype, double posterior)
-    :
-    genotype {std::forward<G>(genotype)},
-    posterior {posterior},
-    phase {}
+    : genotype {std::forward<G>(genotype)}, posterior {posterior}, phase {}
     {}
     
     template <typename G, typename P>
     Call::GenotypeCall::GenotypeCall(G&& genotype, double posterior, P&& phase)
-    :
-    genotype {std::forward<G>(genotype)},
-    posterior {posterior},
-    phase {std::forward<P>(phase)}
+    : genotype {std::forward<G>(genotype)}, posterior {posterior}, phase {std::forward<P>(phase)}
     {}
 } // namespace Octopus
 

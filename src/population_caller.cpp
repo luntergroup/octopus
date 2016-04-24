@@ -352,8 +352,8 @@ VariantCallBlocks block_variant_calls(std::vector<VariantCalls>&& segmented_call
 
 auto segment_calls(VariantCalls&& calls)
 {
-    return segment_overlapped(std::make_move_iterator(std::begin(calls)),
-                              std::make_move_iterator(std::end(calls)));
+    return segment_overlapped_copy(std::make_move_iterator(std::begin(calls)),
+                                   std::make_move_iterator(std::end(calls)));
 }
 
 auto call_blocked_variants(const std::vector<Variant>& candidates,
@@ -910,7 +910,7 @@ PopulationVariantCaller::call_variants(const std::vector<Variant>& candidates,
 //                       std::move(refcalls), reference_, reads, ploidy_, call_sites_only_);
 }
 
-std::vector<std::unique_ptr<Call>>
+std::vector<std::unique_ptr<ReferenceCall>>
 PopulationVariantCaller::call_reference(const std::vector<Allele>& alleles,
                                         CallerLatents& latents,
                                         const ReadMap& reads) const

@@ -41,9 +41,7 @@ namespace Octopus
     
     template <typename A>
     ReferenceCall::ReferenceCall(A&& reference, double quality)
-    :
-    Call {quality},
-    reference_ {std::forward<A>(reference)}
+    : Call {quality}, reference_ {std::forward<A>(reference)}
     {}
 } // namespace Octopus
 

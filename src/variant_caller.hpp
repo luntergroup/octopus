@@ -25,11 +25,11 @@
 #include "probability_matrix.hpp"
 #include "phaser.hpp"
 #include "vcf_record.hpp"
-#include "progress_meter.hpp"
-#include "logging.hpp"
-
 #include "call.hpp"
 #include "variant_call.hpp"
+#include "reference_call.hpp"
+#include "progress_meter.hpp"
+#include "logging.hpp"
 
 class GenomicRegion;
 class Variant;
@@ -109,9 +109,7 @@ private:
     const RefCallType refcall_type_;
     const bool call_sites_only_;
     
-    bool done_calling(const GenomicRegion& region) const noexcept;
-    
-    bool refcalls_requested() const noexcept;
+    // virtual methods
     
     virtual std::unique_ptr<CallerLatents>
     infer_latents(const std::vector<Haplotype>& haplotypes,
@@ -120,10 +118,14 @@ private:
     virtual std::vector<std::unique_ptr<VariantCall>>
     call_variants(const std::vector<Variant>& candidates, CallerLatents& latents) const = 0;
     
-    virtual std::vector<std::unique_ptr<Call>>
-    call_reference(const std::vector<Allele>& alleles,
-                   CallerLatents& latents,
+    virtual std::vector<std::unique_ptr<ReferenceCall>>
+    call_reference(const std::vector<Allele>& alleles, CallerLatents& latents,
                    const ReadMap& reads) const = 0;
+    
+    // other private methods
+    
+    bool done_calling(const GenomicRegion& region) const noexcept;
+    bool refcalls_requested() const noexcept;
     
     std::vector<std::reference_wrapper<const Haplotype>>
     get_removable_haplotypes(const std::vector<Haplotype>& haplotypes,
@@ -134,9 +136,9 @@ private:
     generate_callable_alleles(const GenomicRegion& region, const std::vector<Variant>& candidates) const;
     
     std::vector<Allele>
-    generate_callable_reference_alleles(const std::vector<Variant>& candidates,
-                                        const std::vector<Allele>& callable_alleles,
-                                        const std::vector<GenomicRegion>& called_regions) const;
+    generate_candidate_reference_alleles(const GenomicRegion& region,
+                                         const std::vector<Variant>& candidates,
+                                         const std::vector<GenomicRegion>& called_regions) const;
 };
 
 } // namespace Octopus

@@ -44,9 +44,7 @@ namespace Octopus
     
     template <typename V, typename T>
     VariantCall::VariantCall(V&& variant, T&& genotype_calls, double quality)
-    :
-    Call {std::forward<T>(genotype_calls), quality},
-    variant_ {std::forward<V>(variant)}
+    : Call {std::forward<T>(genotype_calls), quality}, variant_ {std::forward<V>(variant)}
     {}
 } // namespace Octopus
 

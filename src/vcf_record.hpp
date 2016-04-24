@@ -202,13 +202,13 @@ public:
     Builder& set_alt_allele(const char alt_allele); // if just one
     Builder& set_alt_allele(SequenceType alt_allele); // if just one
     Builder& set_alt_alleles(std::vector<SequenceType> alt_alleles);
-    Builder& set_refcall();
     Builder& set_quality(QualityType quality);
     Builder& set_filters(const std::vector<KeyType>& filters);
     Builder& set_filters(const std::initializer_list<KeyType>& filters);
     Builder& add_info(const KeyType& key, const ValueType& value);
     Builder& add_info(const KeyType& key, const std::vector<ValueType>& values);
     Builder& add_info(const KeyType& key, const std::initializer_list<ValueType>& values);
+    Builder& add_info_flag(const KeyType& key);
     Builder& set_format(const std::vector<KeyType>& format);
     Builder& set_format(const std::initializer_list<KeyType>& format);
     Builder& add_homozygous_ref_genotype(const SampleIdType& sample, unsigned ploidy);
@@ -217,6 +217,9 @@ public:
     Builder& add_genotype_field(const SampleIdType& sample, const KeyType& key, const ValueType& value);
     Builder& add_genotype_field(const SampleIdType& sample, const KeyType& key, const std::vector<ValueType>& values);
     Builder& add_genotype_field(const SampleIdType& sample, const KeyType& key, const std::initializer_list<ValueType>& values);
+    
+    Builder& set_refcall();
+    Builder& set_somatic();
     
     SizeType get_position() const noexcept;
     

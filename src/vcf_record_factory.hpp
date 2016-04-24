@@ -35,6 +35,7 @@ namespace Octopus
         VcfRecordFactory& operator=(VcfRecordFactory&&)      = default;
         
         VcfRecord make(const std::unique_ptr<Call>& call) const;
+        std::vector<VcfRecord> make(const std::vector<std::unique_ptr<Call>>& calls) const;
         
     private:
         const ReferenceGenome& reference_;

@@ -575,12 +575,18 @@ namespace Octopus
         } else {
             ss << "Samples are: ";
         }
-        std::copy(std::cbegin(components.get_samples()), std::cend(components.get_samples()),
-                  std::ostream_iterator<std::string> {ss, " "});
+        
+        std::transform(std::cbegin(components.get_samples()), std::cend(components.get_samples()),
+                       std::ostream_iterator<std::string> {ss, " "},
+                       [] (const auto& sample) -> std::string {
+                           return "\"" + sample + "\"";
+                       });
+        
+        auto str = ss.str();
+        str.pop_back(); // the extra whitespace
         
         Logging::InfoLogger log {};
-        
-        log << ss.str();
+        log << str;
         
         stream(log) << "Writing calls to " << components.get_output().path();
     }

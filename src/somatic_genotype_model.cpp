@@ -80,11 +80,6 @@ namespace Octopus
     {
         assert(!genotypes.empty());
         
-        if (DEBUG_MODE) {
-            Logging::DebugLogger log {};
-            stream(log) << "There are " << genotypes.size() << " initial cancer genotypes";
-        }
-        
         const VariationalBayesParameters vb_params {parameters_.epsilon, parameters_.max_iterations};
         
         assert(ploidy_ < 3);

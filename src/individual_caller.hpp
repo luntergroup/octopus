@@ -95,7 +95,10 @@ private:
     std::vector<std::unique_ptr<VariantCall>>
     call_variants(const std::vector<Variant>& candidates, CallerLatents& latents) const override;
     
-    std::vector<std::unique_ptr<Call>>
+    std::vector<std::unique_ptr<VariantCall>>
+    call_variants(const std::vector<Variant>& candidates, const Latents& latents) const;
+    
+    std::vector<std::unique_ptr<ReferenceCall>>
     call_reference(const std::vector<Allele>& alleles,
                    CallerLatents& latents,
                    const ReadMap& reads) const override;
