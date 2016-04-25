@@ -279,7 +279,7 @@ CancerVariantCaller::calculate_somatic_model_priors(const SomaticMutationModel& 
     
     for (const auto& sample : samples_) {
         if (has_normal_sample() && sample == *parameters_.normal_sample) {
-            Priors::GenotypeMixturesDirichletAlphas sample_alphas {5.0, 5.0, 0.01};
+            Priors::GenotypeMixturesDirichletAlphas sample_alphas {5.0, 5.0, 0.1};
             alphas.emplace(sample, std::move(sample_alphas));
         } else {
             Priors::GenotypeMixturesDirichletAlphas sample_alphas {1.0, 1.0, 0.75};

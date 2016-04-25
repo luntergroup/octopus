@@ -239,7 +239,7 @@ VariantPosteriors compute_candidate_posteriors(const std::vector<Variant>& candi
 
 // variant calling
 
-bool contains_alt(const Genotype<Haplotype>& genotype_call, VariantReference candidate)
+bool contains_alt(const Genotype<Haplotype>& genotype_call, const VariantReference& candidate)
 {
     return contains_exact(genotype_call, candidate.get().get_alt_allele());
 }
@@ -372,7 +372,7 @@ IndividualVariantCaller::call_variants(const std::vector<Variant>& candidates,
     
     return transform_calls(sample_, std::move(variant_calls), std::move(genotype_calls));
 }
-    
+
 namespace
 {
     // reference genotype calling

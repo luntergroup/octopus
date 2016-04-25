@@ -34,8 +34,7 @@ namespace Octopus
         VcfRecordFactory(VcfRecordFactory&&)                 = default;
         VcfRecordFactory& operator=(VcfRecordFactory&&)      = default;
         
-        VcfRecord make(const std::unique_ptr<Call>& call) const;
-        std::vector<VcfRecord> make(const std::vector<std::unique_ptr<Call>>& calls) const;
+        std::vector<VcfRecord> make(std::vector<std::unique_ptr<Call>>&& calls) const;
         
     private:
         const ReferenceGenome& reference_;
@@ -44,6 +43,9 @@ namespace Octopus
         std::vector<SampleIdType> samples_;
         
         bool sites_only_;
+        
+        VcfRecord make(std::unique_ptr<Call> call) const;
+        //VcfRecord make_single(const std::vector<std::unique_ptr<Call>>& calls) const;
     };
 } // namespace Octopus
 

@@ -22,6 +22,7 @@
 #include "allele.hpp"
 #include "genotype.hpp"
 #include "vcf_record.hpp"
+#include "reference_genome.hpp"
 
 namespace Octopus
 {
@@ -71,7 +72,7 @@ namespace Octopus
         virtual const GenomicRegion& get_region() const noexcept = 0;
         virtual const Allele& get_reference() const noexcept = 0;
         
-        //virtual void parsimonise(const ReferenceGenome& reference) = 0;
+        virtual void parsimonise(const ReferenceGenome& reference) {};
         virtual void decorate(VcfRecord::Builder& record) const = 0;
         
     protected:

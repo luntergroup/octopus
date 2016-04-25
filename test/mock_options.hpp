@@ -44,7 +44,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         
         //"--reads", NA12878_low_coverage.c_str(),
         //"--reads", NA12878_high_coverage.c_str(),
-        "--reads", "~/Genomics/Illumina/NA12878.mapped.ILLUMINA.bwa.CEU.high_coverage_pcr_free.20130906.chr22.bam",
+        //"--reads", "~/Genomics/Illumina/NA12878.mapped.ILLUMINA.bwa.CEU.high_coverage_pcr_free.20130906.chr22.bam",
         
         //"--reads", NA12891_high_coverage.c_str(),
         //"--reads", HG00101.c_str(),
@@ -57,7 +57,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--reads", ecoli_bam.c_str(),
         
         // TCGA
-        //"--reads", "~/Genomics/cancer/TCGA/G15511.HCC1143_BL.1.chr22.bam",
+        "--reads", "~/Genomics/cancer/TCGA/G15511.HCC1143_BL.1.chr22.bam",
         //"--reads", "~/Genomics/cancer/TCGA/G15511.HCC1143.1.chr22.bam",
         
         //"--samples", "NA12878",
@@ -75,6 +75,8 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         /* input regions */
         
         //"--use-one-based-indexing",
+        
+        //"--regions", "22:33,169,174-33,169,461",
         
         // for population
         
@@ -96,17 +98,18 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--regions", "22:16,103,653-16,103,957", // 5 haplotypes??
         //"--regions", "22:32,033,026-32,033,280", // interesting deletions
         //"--regions", "16:62,432,702-62,432,933", // interesting insertions
+        //"--regions", "22:47,397,181-47,397,224", // interesting deletions
         
         // Bad VCF representation
         //"--regions", "22:51004206-51004246", // overlapping deletions
+        //"--regions", "22:47,857,586-47,857,737", // snps overlapping deletion
+        //"--regions", "22:47,134,127-47,134,167", // SNP followed by insertion
         //"--regions", "22:49929368-49929408", // deletion overlapping SNP
         //"--regions", "22:50957441-50957481", // insertion & SNP, and SNP!
         //"--regions", "22:33,920,251-33,920,291", // insertion followed by SNP
         //"--regions", "22:16,909,216-16,909,255", // insertion followed by 2 SNPs
         //"--regions", "22:25,808,709-25,808,749", // insertions followed by SNP
         //"--regions", "22:37,980,669-37,980,708", // overlapping deletion & insertion
-        //"--regions", "22:41,836,102-41,836,142", // NA12878_low_coverage deletion 2|0
-        //"--regions", "22:43,035,829-43,035,869", // NA12878_low_coverage deletion 2|0
         
         //"--regions", "16:46,392,879-46,393,098", // NA12878_low_coverage huge memory spike
         //"--regions", "22:20656122-20656146", // NA12878_high_coverage causing memory spike
@@ -143,7 +146,10 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--regions", "22:27,707,987-27,708,223", // low frequency deletion?
         //"--regions", "22:36,265,289-36,265,519", // CNV SNP?
         //"--regions", "22:36,272,719-36,272,785", // Somatic insertion?
-        //"--regions", "22:36,260,492-36,280,030",
+        //"--regions", "22:30817025-30817307", // not a somatic deletion
+        //"--regions", "22:37,166,974-37,167,210", // somatic deletion?
+        //"--regions", "22:37,166,864-37,245,022",
+        "--regions", "22:37,190,046-37,190,281",
         
         // NA12878HC (normal) vs HG00101LC
         //"--regions", "22:33,310,391-33,310,686",
@@ -198,7 +204,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--min-assembler-base-quality", "10",
         //"--max-variant-size", "25",
         
-        //"--disable-haplotype-lagging",
+        "--disable-haplotype-lagging",
         //"--max-haplotypes", "1024",
         
         "--min-variant-posterior", "10",

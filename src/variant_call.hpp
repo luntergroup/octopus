@@ -13,6 +13,8 @@
 #include "allele.hpp"
 #include "variant.hpp"
 
+class ReferenceGenome;
+
 namespace Octopus
 {
     class VariantCall : public Call
@@ -38,8 +40,12 @@ namespace Octopus
         
         const Allele& get_alternative() const noexcept;
         
+        virtual void parsimonise(const ReferenceGenome& reference) override;
+        
     protected:
         Variant variant_;
+        
+        bool all_genotypes_are_self_contained() const;
     };
     
     template <typename V, typename T>

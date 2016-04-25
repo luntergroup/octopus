@@ -271,7 +271,7 @@ bool has_passed(const GenomicRegion& next_active_region, const GenomicRegion& ac
 // Wrap the pointer so can use mappable algorithms
 struct CallWrapper : public Mappable<CallWrapper>
 {
-    CallWrapper(std::unique_ptr<Call>&& call) : call {std::move(call) } {}
+    CallWrapper(std::unique_ptr<Call> call) : call {std::move(call) } {}
     operator const std::unique_ptr<Call>&() const noexcept { return call; }
     operator std::unique_ptr<Call>&() noexcept { return call; }
     std::unique_ptr<Call>::pointer operator->() const noexcept { return call.get(); };
@@ -296,7 +296,7 @@ auto unwrap(std::vector<CallWrapper>&& calls)
     std::transform(std::make_move_iterator(std::begin(calls)),
                    std::make_move_iterator(std::end(calls)),
                    std::back_inserter(result),
-                   [] (CallWrapper&& wrapped_call) -> std::unique_ptr<Call>&& {
+                   [] (CallWrapper&& wrapped_call) -> std::unique_ptr<Call> {
                        return std::move(wrapped_call.call);
                    });
     

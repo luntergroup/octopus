@@ -93,11 +93,10 @@ bool Haplotype::contains_exact(const ContigAllele& allele) const
         return has_exact_overlap(explicit_alleles_, allele, BidirectionallySortedTag {});
     }
     
-    const auto offset = begin_distance(allele, region_.get_contig_region());
+    if (overlaps(explicit_allele_region_, allele) || is_indel(allele)) return false;
     
-    const auto it = std::next(std::cbegin(cached_sequence_), offset);
-    
-    if (std::distance(it, std::cend(cached_sequence_)) < ::sequence_size(allele)) return false;
+    const auto it = std::next(std::cbegin(cached_sequence_),
+                              begin_distance(allele, contig_region(region_)));
     
     return std::equal(std::cbegin(allele.get_sequence()), std::cend(allele.get_sequence()), it);
 }

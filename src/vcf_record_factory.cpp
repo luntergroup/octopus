@@ -89,7 +89,7 @@ namespace Octopus
         record.add_genotype(sample, result, VcfRecord::Builder::Phasing::Phased);
     }
     
-    VcfRecord VcfRecordFactory::make(const std::unique_ptr<Call>& call) const
+    VcfRecord VcfRecordFactory::make(std::unique_ptr<Call> call) const
     {
         using std::to_string;
         
@@ -151,54 +151,67 @@ namespace Octopus
     {
         struct CallWrapper : public Mappable<CallWrapper>
         {
-            CallWrapper(const std::unique_ptr<Call>& call) : call {std::cref(call) } {}
-            operator const std::unique_ptr<Call>&() const noexcept { return call.get(); }
-            std::unique_ptr<Call>::pointer operator->() const noexcept { return call.get().get(); };
-            std::reference_wrapper<const std::unique_ptr<Call>> call;
-            const GenomicRegion& get_region() const noexcept { return call.get()->get_region(); }
+            CallWrapper(std::unique_ptr<Call> call) : call {std::move(call) } {}
+            operator const std::unique_ptr<Call>&() const noexcept { return call; }
+            operator std::unique_ptr<Call>&() noexcept { return call; }
+            std::unique_ptr<Call>::pointer operator->() const noexcept { return call.get(); };
+            std::unique_ptr<Call> call;
+            const GenomicRegion& get_region() const noexcept { return call->get_region(); }
         };
         
-        auto wrap(const std::vector<std::unique_ptr<Call>>& calls)
+        template <typename T>
+        auto wrap(std::vector<std::unique_ptr<T>>&& calls)
         {
-            return std::vector<CallWrapper> {std::begin(calls), std::end(calls)};
+            return std::vector<CallWrapper> {
+                std::make_move_iterator(std::begin(calls)),
+                std::make_move_iterator(std::end(calls))
+            };
         }
     } // namespace
     
-    template <typename ForwardIt>
-    void parsimonise_mutually_exclusive_calls(ForwardIt first, ForwardIt last,
-                                              std::vector<VcfRecord>& result)
-    {
-//        std::transform(first, last, std::ostream_iterator<std::string>(std::cout, "\n"),
-//                       [] (const CallWrapper& call) {
-//                           return to_string(call->get_region());
-//                       });
-    }
-    
     std::vector<VcfRecord>
-    VcfRecordFactory::make(const std::vector<std::unique_ptr<Call>>& calls) const
+    VcfRecordFactory::make(std::vector<std::unique_ptr<Call>>&& calls) const
     {
-        const auto wrapped_calls = wrap(calls);
+        auto wrapped_calls = wrap(std::move(calls));
+        
+        for (auto& call : wrapped_calls) {
+            call->parsimonise(reference_);
+        }
         
         std::vector<VcfRecord> result {};
         result.reserve(calls.size());
         
-        auto it = std::cbegin(wrapped_calls);
+        auto it = std::begin(wrapped_calls);
         
-        while (it != std::cend(wrapped_calls)) {
-            const auto it2 = find_first_overlapped(it, std::cend(wrapped_calls));
+        while (it != std::end(wrapped_calls)) {
+            const auto it2 = find_first_overlapped(it, std::end(wrapped_calls));
             
-            std::transform(it, it2, std::back_inserter(result),
-                           [this] (const auto& call) { return this->make(call); });
+            std::transform(std::make_move_iterator(it), std::make_move_iterator(it2),
+                           std::back_inserter(result),
+                           [this] (CallWrapper&& call) {
+                               return this->make(std::move(call.call));
+                           });
             
-            if (it2 == std::cend(wrapped_calls)) break;
+            if (it2 == std::end(wrapped_calls)) break;
             
-            it = find_first_not_overlapped(std::next(it2), std::cend(wrapped_calls), *it2);
+            it = find_first_not_overlapped(std::next(it2), std::end(wrapped_calls), *it2);
             
-            parsimonise_mutually_exclusive_calls(it2, it, result);
+            std::transform(std::make_move_iterator(it2), std::make_move_iterator(it),
+                           std::back_inserter(result),
+                           [this] (CallWrapper&& call) {
+                               return this->make(std::move(call.call));
+                           });
         }
         
         result.shrink_to_fit();
         
         return result;
     }
+    
+    // private methods
+    
+//    VcfRecord VcfRecordFactory::make_single(const std::vector<std::unique_ptr<Call>>& calls) const
+//    {
+//        return VcfRecord {};
+//    }
 } // namespace Octopus
