@@ -584,6 +584,9 @@ VariantCaller::call(const GenomicRegion& call_region, ProgressMeter& progress_me
             
             if (!active_candidates.empty()) {
                 resume_timer(calling_timer);
+                
+                if (debug_log_) stream(*debug_log_) << "Calling variants in region " << uncalled_region;
+                
                 auto variant_calls = wrap(call_variants(active_candidates, *caller_latents));
                 pause_timer(calling_timer);
                 

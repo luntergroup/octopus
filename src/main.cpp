@@ -39,7 +39,7 @@ int main(int argc, const char **argv)
                 Octopus::run_octopus(*options);
             }
         } else {
-            std::clog << "Could not parse input options. Did not start run." << std::endl;
+            std::clog << "Could not parse input options. Did not run Octopus." << std::endl;
         }
     } catch (const std::exception& e) {
         std::cerr << "Error: '" << e.what() << "'" << std::endl;

@@ -78,11 +78,24 @@ private:
         using CallerLatents::HaplotypeProbabilityMap;
         using CallerLatents::GenotypeProbabilityMap;
         
+        struct NormalInferences
+        {
+            NormalInferences() = default;
+            GermlineModel::InferredLatents germline, dummy;
+        };
+        
         explicit Latents(std::vector<Genotype<Haplotype>>&& germline_genotypes,
                          std::vector<CancerGenotype<Haplotype>>&& somatic_genotypes,
                          GermlineModel::InferredLatents&&,
                          CNVModel::InferredLatents&&,
                          SomaticModel::InferredLatents&&);
+        
+        explicit Latents(std::vector<Genotype<Haplotype>>&& germline_genotypes,
+                         std::vector<CancerGenotype<Haplotype>>&& somatic_genotypes,
+                         GermlineModel::InferredLatents&&,
+                         CNVModel::InferredLatents&&,
+                         SomaticModel::InferredLatents&&,
+                         NormalInferences&&);
         
         std::shared_ptr<HaplotypeProbabilityMap> get_haplotype_posteriors() const override;
         std::shared_ptr<GenotypeProbabilityMap> get_genotype_posteriors() const override;
@@ -94,6 +107,8 @@ private:
         GermlineModel::InferredLatents germline_model_inferences_;
         CNVModel::InferredLatents cnv_model_inferences_;
         SomaticModel::InferredLatents somatic_model_inferences_;
+        
+        boost::optional<NormalInferences> normal_validation_inferences_;
         
         friend CancerVariantCaller;
     };
@@ -122,8 +137,10 @@ private:
     // other private methods
     
     bool has_normal_sample() const noexcept;
+    const SampleIdType& normal_sample() const;
     
-    void filter(std::vector<CancerGenotype<Haplotype>>& genotypes,
+    void filter(std::vector<CancerGenotype<Haplotype>>& cancer_genotypes,
+                const std::vector<Genotype<Haplotype>>& germline_genotypes,
                 const GermlineModel::InferredLatents& germline_inferences,
                 const CNVModel::InferredLatents& cnv_inferences) const;
     

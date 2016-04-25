@@ -13,6 +13,7 @@
 #include <algorithm>
 #include <iterator>
 #include <stdexcept>
+#include <sstream>
 
 #include "cigar_string.hpp"
 #include "genomic_region.hpp"
@@ -20,40 +21,49 @@
 
 #include <iostream> // TEST
 
-class InvalidBamHeader : std::runtime_error {
+class InvalidBamHeader : public std::runtime_error {
 public:
     InvalidBamHeader(boost::filesystem::path file_path, std::string message)
     :
-    runtime_error {"invalid BAM header"},
-    file_path_ {file_path.string()},
-    message_ {std::move(message)}
+    runtime_error {"Invalid BAM header"},
+    file_path_ {std::move(file_path)},
+    message_ {std::move(message)},
+    str_ {}
     {}
     
-    const char* what() const noexcept
+    const char* what() const noexcept override
     {
-        return (std::string {runtime_error::what()} + ": in " + file_path_ + " - " + message_).c_str();
+        str_ << runtime_error::what() << ": in file " << file_path_ << ": " << message_;
+        return str_.str().c_str();
     }
 private:
-    std::string message_, file_path_;
+    boost::filesystem::path file_path_;
+    std::string message_;
+    
+    mutable std::ostringstream str_;
 };
 
-class InvalidBamRecord : std::runtime_error {
+class InvalidBamRecord : public std::runtime_error {
 public:
     InvalidBamRecord(boost::filesystem::path file_path, std::string read_name, std::string message)
     :
-    runtime_error {"invalid BAM record"},
-    file_path_ {file_path.string()},
+    runtime_error {"Invalid BAM record"},
+    file_path_ {std::move(file_path)},
     read_name_ {std::move(read_name)},
     message_ {std::move(message)}
     {}
     
-    const char* what() const noexcept
+    const char* what() const noexcept override
     {
-        return (std::string {runtime_error::what()} + ": in " + file_path_ + ", read " + read_name_ +
-                    " - " + message_).c_str();
+        str_ << runtime_error::what() << ": in file " << file_path_ << ", in read " << read_name_
+                << ": " << message_;
+        return str_.str().c_str();
     }
 private:
-    std::string message_, read_name_, file_path_;
+    boost::filesystem::path file_path_;
+    std::string message_, read_name_;
+    
+    mutable std::ostringstream str_;
 };
 
 // public methods
@@ -70,7 +80,12 @@ sample_names_ {},
 samples_ {}
 {
     if (is_open()) {
-        init_maps();
+        try {
+            init_maps();
+        } catch(...) {
+            close();
+            throw;
+        }
         
         for (const auto& pair : sample_names_) {
             if (std::find(std::cbegin(samples_), std::cend(samples_), pair.second) == std::cend(samples_)) {
@@ -520,7 +535,7 @@ bool has_tag(const std::string& header_line, const char* tag)
     return header_line.find(tag) != std::string::npos;
 }
 
-std::string get_tag_value(const std::string& line, const char* tag)
+std::string extract_tag_value(const std::string& line, const char* tag)
 {
     // format TAG:VALUE\t
     auto tag_position = line.find(tag);
@@ -539,35 +554,40 @@ void HtslibSamFacade::init_maps()
     hts_tids_.reserve(count_reference_contigs());
     contig_names_.reserve(count_reference_contigs());
     
-    for (HtsTidType hts_tid {}; hts_tid < count_reference_contigs(); ++hts_tid) {
+    for (HtsTidType hts_tid {0}; hts_tid < count_reference_contigs(); ++hts_tid) {
         hts_tids_.emplace(hts_header_->target_name[hts_tid], hts_tid);
         contig_names_.emplace(hts_tid, hts_header_->target_name[hts_tid]);
     }
     
     std::string the_header_text (hts_header_->text, hts_header_->l_text);
     std::stringstream ss {the_header_text};
-    std::string line {};
-    unsigned num_read_groups {};
+    std::string line;
+    
+    unsigned num_read_groups {0};
     
     while (std::getline(ss, line, '\n')) {
         if (is_tag_type(line, Read_group_tag)) {
             if (!has_tag(line, Read_group_id_tag)) {
-                throw InvalidBamHeader {file_path_, "no read group identifier tag (ID) in @RG line"};
+                throw InvalidBamHeader {file_path_, "The read group identifier tag (ID) in @RG line "
+                        + extract_tag_value(line, Read_group_tag) + " is required but was not found"};
             }
             
             if (!has_tag(line, Sample_id_tag)) {
                 // The SAM specification does not specify the sample tag 'SM' as a required,
                 // however we can't do much without it.
-                throw InvalidBamHeader {file_path_, "no sample tag (SM) in @RG line"};
+                throw InvalidBamHeader {file_path_, "The sample tag (SM) in @RG line "
+                        + extract_tag_value(line, Read_group_tag) + " is required but was not found"};
             }
             
-            sample_names_.emplace(get_tag_value(line, Read_group_id_tag), get_tag_value(line, Sample_id_tag));
+            sample_names_.emplace(extract_tag_value(line, Read_group_id_tag),
+                                  extract_tag_value(line, Sample_id_tag));
+            
             ++num_read_groups;
         }
     }
     
     if (num_read_groups == 0) {
-        throw InvalidBamHeader {file_path_, "no read group (@RG) lines found"};
+        throw InvalidBamHeader {file_path_, "At least one read group (@RG) line is required but none were found"};
     }
 }
 

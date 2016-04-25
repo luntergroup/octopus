@@ -26,6 +26,7 @@
 #include <boost/math/special_functions/sign.hpp>
 #include <boost/math/special_functions/digamma.hpp>
 #include <boost/math/special_functions/beta.hpp>
+#include <boost/math/distributions/beta.hpp>
 
 namespace Octopus { namespace Maths {
 
@@ -515,6 +516,20 @@ T inner_product(InputIt1 first1, InputIt1 last1,
         ++first4;
     }
     return value;
+}
+
+template <typename RealType>
+RealType beta_cdf(const RealType a, const RealType b, const RealType x)
+{
+    const boost::math::beta_distribution<> beta_dist {a, b};
+    return boost::math::cdf(beta_dist, x);
+}
+
+template <typename RealType>
+RealType beta_cdf_complement(const RealType a, const RealType b, const RealType x)
+{
+    const boost::math::beta_distribution<> beta_dist {a, b};
+    return boost::math::cdf(boost::math::complement(beta_dist, x));
 }
 
 namespace detail

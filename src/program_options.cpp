@@ -387,7 +387,7 @@ namespace Octopus
             po::notify(vm);
             
             return vm;
-        } catch (std::exception& e) {
+        } catch (const std::exception& e) {
             std::cout << "Option error: " << e.what() << std::endl;
             return boost::none;
         }
@@ -1085,7 +1085,15 @@ namespace Octopus
         
         if (read_paths) {
             const auto max_open_files = options.at("max-open-read-files").as<unsigned>();
-            return ReadManager {*std::move(read_paths), max_open_files};
+            
+            try {
+                return ReadManager {*std::move(read_paths), max_open_files};
+            } catch (const std::runtime_error& e) {
+                Logging::ErrorLogger log {};
+                log << e.what();
+                return boost::none;
+            }
+            
         }
         
         return boost::none;

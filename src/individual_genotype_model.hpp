@@ -29,21 +29,20 @@ namespace Octopus
         public:
             struct Latents
             {
-                using GenotypeVector = std::vector<Genotype<Haplotype>>;
                 using GenotypeProbabilityVector = std::vector<double>;
                 
                 Latents() = default;
-                Latents(const GenotypeVector& genotypes,
-                        GenotypeProbabilityVector&& genotype_probabilities);
+                Latents(GenotypeProbabilityVector&& genotype_probabilities);
                 ~Latents() = default;
                 
                 GenotypeProbabilityVector genotype_probabilities;
-                std::reference_wrapper<const GenotypeVector> genotypes;
             };
             
             struct InferredLatents
             {
+                InferredLatents() = default;
                 InferredLatents(Latents&& posteriors, double log_evidence);
+                
                 Latents posteriors;
                 double log_evidence;
             };

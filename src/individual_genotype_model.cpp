@@ -28,10 +28,8 @@ namespace GenotypeModel
     genotype_prior_model_ {genotype_prior_model}
     {}
     
-    Individual::Latents::Latents(const GenotypeVector& genotypes,
-                                 GenotypeProbabilityVector&& genotype_probabilities)
+    Individual::Latents::Latents(GenotypeProbabilityVector&& genotype_probabilities)
     :
-    genotypes {std::cref(genotypes)},
     genotype_probabilities {std::move(genotype_probabilities)}
     {}
     
@@ -61,7 +59,7 @@ namespace GenotypeModel
         
         auto log_evidence = Maths::normalise_exp(result);
         
-        return InferredLatents {Latents {genotypes, std::move(result)}, log_evidence};
+        return InferredLatents {Latents {std::move(result)}, log_evidence};
     }
 } // namesapce GenotypeModel
 } // namespace Octopus

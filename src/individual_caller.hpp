@@ -13,6 +13,8 @@
 #include <string>
 #include <memory>
 
+#include <boost/optional.hpp>
+
 #include "common.hpp"
 #include "variant_caller.hpp"
 #include "individual_genotype_model.hpp"
@@ -59,7 +61,7 @@ private:
     class Latents : public CallerLatents
     {
     public:
-        using ModelLatents = GenotypeModel::Individual::Latents;
+        using ModelInferences = GenotypeModel::Individual::InferredLatents;
         
         using CallerLatents::HaplotypeProbabilityMap;
         using CallerLatents::GenotypeProbabilityMap;
@@ -69,7 +71,11 @@ private:
         explicit Latents(const SampleIdType& sample,
                          const std::vector<Haplotype>&,
                          std::vector<Genotype<Haplotype>>&& genotypes,
-                         ModelLatents&&);
+                         ModelInferences&&);
+        explicit Latents(const SampleIdType& sample,
+                         const std::vector<Haplotype>&,
+                         std::vector<Genotype<Haplotype>>&& genotypes,
+                         ModelInferences&&, ModelInferences&&);
         
         std::shared_ptr<HaplotypeProbabilityMap> get_haplotype_posteriors() const noexcept override;
         std::shared_ptr<GenotypeProbabilityMap> get_genotype_posteriors() const noexcept override;
@@ -77,6 +83,10 @@ private:
     private:
         std::shared_ptr<GenotypeProbabilityMap> genotype_posteriors_;
         std::shared_ptr<HaplotypeProbabilityMap> haplotype_posteriors_;
+        
+        boost::optional<ModelInferences> dummy_latents_;
+        
+        double model_log_evidence_;
         
         HaplotypeProbabilityMap
         calculate_haplotype_posteriors(const std::vector<Haplotype>& haplotypes);

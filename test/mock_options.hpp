@@ -57,8 +57,11 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--reads", ecoli_bam.c_str(),
         
         // TCGA
-        "--reads", "~/Genomics/cancer/TCGA/G15511.HCC1143_BL.1.chr22.bam",
-        //"--reads", "~/Genomics/cancer/TCGA/G15511.HCC1143.1.chr22.bam",
+        //"--reads", "~/Genomics/cancer/TCGA/benchmark/G15511.HCC1143_BL.1.chr22.bam",
+        //"--reads", "~/Genomics/cancer/TCGA/benchmark/G15511.HCC1143.1.chr22.bam",
+        
+        // MSG
+        //"--reads", "~/Genomics/MSG/10120_chr2_47641558_GTA_G.RG.bam",
         
         //"--samples", "NA12878",
         //"--caller", "cancer", // default "population"
@@ -76,7 +79,10 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         
         //"--use-one-based-indexing",
         
-        //"--regions", "22:33,169,174-33,169,461",
+        // MSG
+        //"--regions", "2:47,640,494-47,644,304", // whole region
+        //"--regions", "2:47,643,156-47,643,222", // true snp
+        //"--regions", "2:47,643,405-47,643,568", // false deletions?
         
         // for population
         
@@ -148,8 +154,47 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--regions", "22:36,272,719-36,272,785", // Somatic insertion?
         //"--regions", "22:30817025-30817307", // not a somatic deletion
         //"--regions", "22:37,166,974-37,167,210", // somatic deletion?
-        //"--regions", "22:37,166,864-37,245,022",
-        "--regions", "22:37,190,046-37,190,281",
+        //"--regions", "22:28,681,165-28,681,395", // Low frequency somatic SNV
+        //"--regions", "22:35,199,681-35,199,845", // Not a somatic deletion?
+        //"--regions", "22:28,836,899-28,837,063", // Nice! Phasable somatic SNV
+        //"--regions", "22:29,606,605-29,606,972", // somatic but not phaseable
+        
+        // problems/regions to check
+        //"--regions", "22:28,030,924-28,031,088", // not a somatic insertion
+        //"--regions", "22:28,036,498-28,036,538", // not a somatic insertion
+        //"--regions", "22:28,063,906-28,064,070", // don't think this is a real somatic SNV
+        //"--regions", "22:28121410-28121648", // clearly bullshit
+        //"--regions", "22:28,180,963-28,181,127", // multiple deletions
+//        "--regions", "22:28,201,361-28,201,570", // clearly bullshit
+//        "--regions", "22:28,210,778-28,210,942",
+//        "--regions", "22:28,434,530-28,434,694",
+//        "--regions", "22:28,530,424-28,530,588",
+//        "--regions", "22:28,553,936-28,554,100",
+//        "--regions", "22:28,645,596-28,645,926", // posterior quite low
+//        "--regions", "22:28,812,452-28,812,616",
+//        "--regions", "22:28,841,685-28,842,015",
+//        "--regions", "22:28,856,561-28,856,725",
+//        "--regions", "22:28,868,520-28,868,560",
+//        "--regions", "22:28,943,184-28,943,224",
+//        "--regions", "22:28,970,260-28,970,424",
+//        "--regions", "22:29079379-29079422", // nope
+//        "--regions", "22:29104952-29104967", // no!
+//        "--regions", "22:29,172,353-29,172,517",
+//        "--regions", "22:29,240,416-29,240,456", // no!
+//        "--regions", "22:29,455,729-29,455,769",
+//        "--regions", "22:29,474,547-29,474,587", // low posterior
+//        "--regions", "22:29,516,051-29,516,091",
+//        "--regions", "22:29,537,194-29,537,234",
+//        "--regions", "22:29,591,785-29,591,825",
+//        "--regions", "22:29,592,429-29,592,593",
+        //"--regions", "22:29,636,450-29,636,490", // NOPE!
+        //"--regions", "22:29,761,141-29,761,305", // low posterior
+        //"--regions", "22:29,952,305-29,952,469",
+        //"--regions", "22:30,094,383-30,094,422",
+        //"--regions", "22:30,132,779-30,132,943",
+        //"--regions", "22:30,140,292-30,140,456", // no...
+        //"--regions", "22:30,180,823-30,180,863",
+        //"--regions", "22:30,213,959-30,214,123",
         
         // NA12878HC (normal) vs HG00101LC
         //"--regions", "22:33,310,391-33,310,686",
@@ -219,7 +264,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--max-open-read-files", "1",
         
         //"--output", test_out_vcf.c_str(),
-        //"--output", "octopus_NA12878HC_22_lagged.vcf",
+        //"--output", "octopus_NA12878HC_22_unlagged_dummy.vcf",
         //"--output", "octopus_calls2.vcf",
         
         nullptr};

@@ -208,10 +208,14 @@ filter_to_n_haplotypes(std::vector<Haplotype>& haplotypes,
     
     result.reserve(haplotypes.size() - n);
     
+    Logging::DebugLogger log {};
+    
+    if (DEBUG_MODE) {
+        stream(log) << "Filtering " << num_to_filter << " of " << haplotypes.size() << " haplotypes";
+    }
+    
     num_to_filter -= try_filter(haplotypes, samples, haplotype_likelihoods, n, result,
                                 MaxLikelihood {});
-    
-    Logging::DebugLogger log {};
     
     if (DEBUG_MODE) {
         stream(log) << "There are " << haplotypes.size()

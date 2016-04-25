@@ -85,8 +85,8 @@ private:
     using ContigMap               = MappableMap<GenomicRegion::ContigNameType, ContigRegion>;
     using ReaderRegionsMap        = std::unordered_map<Path, ContigMap>;
     
-    const unsigned max_open_files_ = 200;
-    const unsigned num_files_;
+    unsigned max_open_files_ = 200;
+    unsigned num_files_;
     
     OpenReaderMap open_readers_;
     ClosedReaders closed_readers_;

@@ -663,7 +663,7 @@ namespace
                                                          log_likelihoods);
         
         assert(responsabilities.size() == log_likelihoods.size()); // num samples
-        assert(!responsabilities.front().empty());
+        //assert(!responsabilities.front().empty());
         
         bool is_converged {false};
         double max_change {0};

@@ -61,17 +61,41 @@ min_refcall_posterior_ {specific_parameters.min_refcall_posterior}
 IndividualVariantCaller::Latents::Latents(const SampleIdType& sample,
                                           const std::vector<Haplotype>& haplotypes,
                                           std::vector<Genotype<Haplotype>>&& genotypes,
-                                          ModelLatents&& latents)
+                                          ModelInferences&& inferences)
 :
 genotype_posteriors_ {},
-haplotype_posteriors_ {}
+haplotype_posteriors_ {},
+model_log_evidence_ {inferences.log_evidence},
+dummy_latents_ {}
 {
     GenotypeProbabilityMap genotype_posteriors {
         std::make_move_iterator(std::begin(genotypes)),
         std::make_move_iterator(std::end(genotypes))
     };
     
-    insert_sample(sample, latents.genotype_probabilities, genotype_posteriors);
+    insert_sample(sample, inferences.posteriors.genotype_probabilities, genotype_posteriors);
+    
+    genotype_posteriors_  = std::make_shared<GenotypeProbabilityMap>(std::move(genotype_posteriors));
+    haplotype_posteriors_ = std::make_shared<HaplotypeProbabilityMap>(calculate_haplotype_posteriors(haplotypes));
+}
+
+IndividualVariantCaller::Latents::Latents(const SampleIdType& sample,
+                                          const std::vector<Haplotype>& haplotypes,
+                                          std::vector<Genotype<Haplotype>>&& genotypes,
+                                          ModelInferences&& inferences,
+                                          ModelInferences&& dummy_inferences)
+:
+genotype_posteriors_ {},
+haplotype_posteriors_ {},
+model_log_evidence_ {inferences.log_evidence},
+dummy_latents_ {std::move(dummy_inferences)}
+{
+    GenotypeProbabilityMap genotype_posteriors {
+        std::make_move_iterator(std::begin(genotypes)),
+        std::make_move_iterator(std::end(genotypes))
+    };
+    
+    insert_sample(sample, inferences.posteriors.genotype_probabilities, genotype_posteriors);
     
     genotype_posteriors_  = std::make_shared<GenotypeProbabilityMap>(std::move(genotype_posteriors));
     haplotype_posteriors_ = std::make_shared<HaplotypeProbabilityMap>(calculate_haplotype_posteriors(haplotypes));
@@ -132,27 +156,14 @@ IndividualVariantCaller::infer_latents(const std::vector<Haplotype>& haplotypes,
     
     auto inferences = model.infer_latents(sample, genotypes, haplotype_likelihoods);
     
-//    // TEST
-//    GenotypeModel::Individual dummy_model {ploidy_ + 1, prior_model};
-//    auto dummy_genotypes = generate_all_genotypes(haplotypes, ploidy_ + 1);
-//    auto dummy_inferences = dummy_model.infer_latents(sample, dummy_genotypes, haplotype_likelihoods);
-//    auto lp1 = std::log(0.99) + inferences.log_evidence;
-//    auto lp2 = std::log(1.0 - 0.99) + dummy_inferences.log_evidence;
-//    auto norm = Maths::log_sum_exp(lp1, lp2);
-//    lp1 -= norm; lp2 -= norm;
-//    if (lp1 < lp2) {
-//        std::cout << inferences.log_evidence << " " << dummy_inferences.log_evidence << '\n';
-//        auto it = std::max_element(std::cbegin(dummy_inferences.posteriors.genotype_probabilities),
-//                                   std::cend(dummy_inferences.posteriors.genotype_probabilities));
-//        auto itd = std::distance(std::cbegin(dummy_inferences.posteriors.genotype_probabilities), it);
-//        ::debug::print_variant_alleles(dummy_genotypes[itd]);
-//        std::cout << " " << *it << '\n';
-//        std::cout << haplotypes.front().get_region() << std::endl;
-//    }
-//    // END TEST
+    // TEST
+    GenotypeModel::Individual dummy_model {ploidy_ + 1, prior_model};
+    auto dummy_genotypes = generate_all_genotypes(haplotypes, ploidy_ + 1);
+    auto dummy_inferences = dummy_model.infer_latents(sample, dummy_genotypes, haplotype_likelihoods);
+    // END TEST
     
-    return std::make_unique<Latents>(sample, haplotypes, std::move(genotypes),
-                                     std::move(inferences.posteriors));
+    return std::make_unique<Latents>(sample, haplotypes, std::move(genotypes), std::move(inferences),
+                                     std::move(dummy_inferences));
 }
 
 namespace
@@ -339,12 +350,36 @@ IndividualVariantCaller::call_variants(const std::vector<Variant>& candidates,
 {
     return call_variants(candidates, dynamic_cast<Latents&>(latents));
 }
+
+auto calculate_dummy_model_posterior(const double normal_model_log_evidence,
+                                     const double dummy_model_log_evidence)
+{
+    constexpr double normal_model_prior {0.9999999};
+    constexpr double dummy_model_prior {1.0 - normal_model_prior};
     
+    const auto normal_model_ljp = std::log(normal_model_prior) + normal_model_log_evidence;
+    const auto dummy_model_ljp  = std::log(dummy_model_prior) + dummy_model_log_evidence;
+    
+    const auto norm = Maths::log_sum_exp(normal_model_ljp, dummy_model_ljp);
+    
+    return std::exp(dummy_model_ljp - norm);
+}
+
 std::vector<std::unique_ptr<Octopus::VariantCall>>
 IndividualVariantCaller::call_variants(const std::vector<Variant>& candidates,
                                        const Latents& latents) const
 {
     const auto& genotype_posteriors = (*latents.genotype_posteriors_)[sample_];
+    
+    if (latents.dummy_latents_) {
+        const auto dummy_model_posterior = calculate_dummy_model_posterior(latents.model_log_evidence_,
+                                                                           latents.dummy_latents_->log_evidence);
+        
+        if (dummy_model_posterior > 0.5) {
+            //std::cout << latents.haplotype_posteriors_->begin()->first.get().get_region() << std::endl;
+            return {};
+        }
+    }
     
     if (TRACE_MODE) {
         Logging::TraceLogger log {};
