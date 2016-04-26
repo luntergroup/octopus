@@ -25,6 +25,8 @@ namespace Octopus
     class HaplotypeLikelihoodCache
     {
     public:
+        using FlankState = HaplotypeLikelihoodModel::FlankState;
+        
         using Likelihoods          = std::vector<double>;
         using LikelihoodsReference = std::reference_wrapper<const Likelihoods>;
         using HaplotypeReference   = std::reference_wrapper<const Haplotype>;
@@ -33,6 +35,9 @@ namespace Octopus
         HaplotypeLikelihoodCache() = default;
         
         explicit HaplotypeLikelihoodCache(unsigned max_haplotypes,
+                                          const std::vector<SampleIdType>& samples);
+        explicit HaplotypeLikelihoodCache(HaplotypeLikelihoodModel likelihood_model,
+                                          unsigned max_haplotypes,
                                           const std::vector<SampleIdType>& samples);
         
         ~HaplotypeLikelihoodCache() = default;
@@ -43,7 +48,7 @@ namespace Octopus
         HaplotypeLikelihoodCache& operator=(HaplotypeLikelihoodCache&&)      = default;
         
         void populate(const ReadMap& reads, const std::vector<Haplotype>& haplotypes,
-                      HaplotypeLikelihoodModel::FlankState flank_state);
+                      boost::optional<FlankState> flank_state);
         
         const Likelihoods& log_likelihoods(const SampleIdType& sample,
                                            const Haplotype& haplotype) const;
@@ -61,6 +66,8 @@ namespace Octopus
         
     private:
         static constexpr unsigned char MAPPER_KMER_SIZE {5};
+        
+        HaplotypeLikelihoodModel likelihood_model_;
         
         struct ReadPacket
         {

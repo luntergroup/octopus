@@ -241,15 +241,16 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         
         // candidate generation
         //"--min-supporting-reads", "1",
-        "--no-raw-cigar-candidates",
+        //"--no-raw-cigar-candidates",
         //"--kmer-size", "5",
         //"--candidates-from-source", sample_vcf.c_str(),
         //"--regenotype",
-        //"--no-assembly-candidates",
+        "--no-assembly-candidates",
         //"--kmer-size", "45",
         //"--min-assembler-base-quality", "10",
         //"--max-variant-size", "25",
         
+        //"--disable-inactive-flank-scoring",
         "--disable-haplotype-lagging",
         //"--max-haplotypes", "50",
         

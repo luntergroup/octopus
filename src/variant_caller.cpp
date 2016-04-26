@@ -40,7 +40,7 @@ refcall_type {refcall_type},
 call_sites_only {call_sites_only},
 lag_haplotype_generation {allow_lagging},
 min_haplotype_posterior {1e-15},
-compute_inactive_flank_score {allow_flank_scoring},
+allow_inactive_flank_scoring {allow_flank_scoring},
 min_phase_score {min_phase_score}
 {}
 
@@ -222,7 +222,11 @@ void populate(HaplotypeLikelihoodCache& haplotype_likelihoods,
               const std::vector<Haplotype>& haplotypes, const MappableFlatSet<Variant>& candidates,
               const ReadMap& active_reads, bool allow_flank_scoring = true)
 {
-    auto flank_state = calculate_flank_state(haplotypes, active_region, candidates);
+    boost::optional<HaplotypeLikelihoodCache::FlankState> flank_state {};
+    
+    if (allow_flank_scoring) {
+        flank_state = calculate_flank_state(haplotypes, active_region, candidates);
+    }
     
     resume_timer(likelihood_timer);
     haplotype_likelihoods.populate(active_reads, haplotypes, std::move(flank_state));
@@ -442,7 +446,8 @@ VariantCaller::call(const GenomicRegion& call_region, ProgressMeter& progress_me
         
         remove_duplicate_haplotypes(haplotypes);
         
-        populate(haplotype_likelihoods, active_region, haplotypes, candidates, active_reads);
+        populate(haplotype_likelihoods, active_region, haplotypes, candidates, active_reads,
+                 parameters_.allow_inactive_flank_scoring);
         
         auto removed_haplotypes = filter(haplotypes, haplotype_likelihoods);
         

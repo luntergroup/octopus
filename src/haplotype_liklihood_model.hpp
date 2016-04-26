@@ -16,6 +16,8 @@
 #include <algorithm>
 #include <functional>
 
+#include <boost/optional.hpp>
+
 #include "common.hpp"
 #include "contig_region.hpp"
 #include "haplotype.hpp"
@@ -28,42 +30,47 @@ class AlignedRead;
 
 namespace Octopus
 {
-    class HaplotypeLikelihoodModel
+class HaplotypeLikelihoodModel
+{
+public:
+    using PenaltyType = ReadIndelErrorModel::PenaltyType;
+    
+    struct FlankState
     {
-    public:
-        struct FlankState
-        {
-            ContigRegion active_region;
-            ContigRegion lhs_flank, rhs_flank;
-        };
-        
-        using MapPositionItr = std::vector<std::size_t>::const_iterator;
-        
-        HaplotypeLikelihoodModel() = delete;
-        HaplotypeLikelihoodModel(const Haplotype& haplotype, FlankState flank_state);
-        ~HaplotypeLikelihoodModel() = default;
-        
-        HaplotypeLikelihoodModel(const HaplotypeLikelihoodModel&)            = default;
-        HaplotypeLikelihoodModel& operator=(const HaplotypeLikelihoodModel&) = default;
-        HaplotypeLikelihoodModel(HaplotypeLikelihoodModel&&)                 = default;
-        HaplotypeLikelihoodModel& operator=(HaplotypeLikelihoodModel&&)      = default;
-        
-        // ln p(read | haplotype, model)
-        double log_probability(const AlignedRead& read,
-                               MapPositionItr first_mapping_position,
-                               MapPositionItr last_mapping_position) const;
-        
-    private:
-        ReadIndelErrorModel indel_error_model_;
-        
-        std::reference_wrapper<const Haplotype> haplotype_;
-        
-        std::vector<std::int8_t> haplotype_gap_open_penalities_;
-        
-        FlankState haplotype_flank_state_;
-        
-        PairHMM::Model model_;
+        ContigRegion active_region;
+        ContigRegion lhs_flank, rhs_flank;
     };
+    
+    using MapPositionItr = std::vector<std::size_t>::const_iterator;
+    
+    HaplotypeLikelihoodModel();
+    HaplotypeLikelihoodModel(PenaltyType base_change_penalty, ReadIndelErrorModel indel_model);
+    HaplotypeLikelihoodModel(PenaltyType base_change_penalty, ReadIndelErrorModel indel_model,
+                             const Haplotype& haplotype, boost::optional<FlankState> flank_state);
+    ~HaplotypeLikelihoodModel() = default;
+    
+    HaplotypeLikelihoodModel(const HaplotypeLikelihoodModel&)            = default;
+    HaplotypeLikelihoodModel& operator=(const HaplotypeLikelihoodModel&) = default;
+    HaplotypeLikelihoodModel(HaplotypeLikelihoodModel&&)                 = default;
+    HaplotypeLikelihoodModel& operator=(HaplotypeLikelihoodModel&&)      = default;
+    
+    void buffer(const Haplotype& haplotype, boost::optional<FlankState> flank_state);
+    void clear() noexcept;
+    
+    // ln p(read | haplotype, model)
+    double log_probability(const AlignedRead& read,
+                           MapPositionItr first_mapping_position,
+                           MapPositionItr last_mapping_position) const;
+    
+private:
+    PenaltyType base_change_penalty_;
+    ReadIndelErrorModel indel_error_model_;
+    
+    const Haplotype* buffered_haplotype_;
+    boost::optional<FlankState> buffered_haplotype_flank_state_;
+    std::vector<std::int8_t> buffered_haplotype_gap_open_penalities_;
+    PenaltyType buffered_haplotype_gap_extension_penalty_;
+};
 } // namespace Octopus
 
 #endif /* haplotype_liklihood_model_hpp */

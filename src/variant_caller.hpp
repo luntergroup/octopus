@@ -57,7 +57,7 @@ public:
         bool call_sites_only;
         bool lag_haplotype_generation;
         double min_haplotype_posterior;
-        bool compute_inactive_flank_score;
+        bool allow_inactive_flank_scoring;
         double min_phase_score;
     };
     

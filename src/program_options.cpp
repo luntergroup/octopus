@@ -368,7 +368,7 @@ namespace Octopus
             ("disable-haplotype-lagging", po::bool_switch()->default_value(false),
              "Disables lagging in the haplotype generator, so each candidate variant will be considered"
              " exactly once")
-            ("disable-inactive-flank-adjustment", po::bool_switch()->default_value(false),
+            ("disable-inactive-flank-scoring", po::bool_switch()->default_value(false),
              "Disables additional calculation to adjust alignment score when there are inactive candidates"
              " in haplotype flanking regions");
             
@@ -1491,6 +1491,9 @@ namespace Octopus
         if (call_sites_only(options)) {
             vc_builder.set_sites_only();
         }
+        
+        
+        vc_builder.set_flank_scoring(!options.at("disable-inactive-flank-scoring").as<bool>());
         
         VariantCallerFactory result {std::move(vc_builder), options.at("organism-ploidy").as<unsigned>()};
         

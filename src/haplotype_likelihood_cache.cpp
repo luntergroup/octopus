@@ -25,6 +25,15 @@ cache_ {max_haplotypes},
 sample_indices_ {samples.size()}
 {}
 
+HaplotypeLikelihoodCache::HaplotypeLikelihoodCache(HaplotypeLikelihoodModel likelihood_model,
+                                                   unsigned max_haplotypes,
+                                                   const std::vector<SampleIdType>& samples)
+:
+likelihood_model_ {std::move(likelihood_model)},
+cache_ {max_haplotypes},
+sample_indices_ {samples.size()}
+{}
+
 HaplotypeLikelihoodCache::ReadPacket::ReadPacket(Iterator first, Iterator last)
 :
 first {first},
@@ -34,7 +43,7 @@ num_reads {static_cast<std::size_t>(std::distance(first, last))}
 
 void HaplotypeLikelihoodCache::populate(const ReadMap& reads,
                                         const std::vector<Haplotype>& haplotypes,
-                                        HaplotypeLikelihoodModel::FlankState flank_state)
+                                        boost::optional<FlankState> flank_state)
 {
     // This code is not very pretty because it is a real bottleneck for the entire application.
     // We want to try a minimise memory allocations for the mapping.
@@ -95,7 +104,7 @@ void HaplotypeLikelihoodCache::populate(const ReadMap& reads,
         
         auto read_hash_itr = std::cbegin(read_hashes);
         
-        HaplotypeLikelihoodModel likelihood_model {haplotype, flank_state};
+        likelihood_model_.buffer(haplotype, flank_state);
         
         for (const auto& t : read_iterators_) {
             *it = std::vector<double>(t.num_reads);
@@ -108,8 +117,8 @@ void HaplotypeLikelihoodCache::populate(const ReadMap& reads,
                                
                                reset_mapping_counts(haplotype_mapping_counts);
                                
-                               return likelihood_model.log_probability(read, first_mapping_position,
-                                                                       last_mapping_position);
+                               return likelihood_model_.log_probability(read, first_mapping_position,
+                                                                        last_mapping_position);
                            });
             
             ++read_hash_itr;
@@ -119,6 +128,7 @@ void HaplotypeLikelihoodCache::populate(const ReadMap& reads,
         clear_kmer_hash_table(haplotype_hashes);
     }
     
+    likelihood_model_.clear();
     read_iterators_.clear();
 }
 
