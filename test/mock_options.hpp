@@ -57,15 +57,13 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--reads", ecoli_bam.c_str(),
         
         // TCGA
-        //"--reads", "~/Genomics/cancer/TCGA/benchmark/G15511.HCC1143_BL.1.chr22.bam",
+        "--reads", "~/Genomics/cancer/TCGA/benchmark/G15511.HCC1143_BL.1.chr22.bam",
         //"--reads", "~/Genomics/cancer/TCGA/benchmark/G15511.HCC1143.1.chr22.bam",
         
         // MSG
-        "--reads", "~/Genomics/MSG/10120_chr2_47641558_GTA_G.RG.bam",
+        //"--reads", "~/Genomics/MSG/10120_chr2_47641558_GTA_G.RG.bam",
         
-        //"--samples", "NA12878",
         //"--caller", "cancer", // default "population"
-        //"--normal-sample", "NA12878",
         "--normal-sample", "HCC1143 BL",
         
         //"--organism-ploidy", "3",
@@ -80,7 +78,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--use-one-based-indexing",
         
         // MSG
-        "--regions", "2:47,640,494-47,644,304", // whole region
+        //"--regions", "2:47,640,494-47,644,304", // whole region
         //"--regions", "2:47,643,156-47,643,222", // true snp
         //"--regions", "2:47,640,572-47,642,302", // first block (no variants)
         //"--regions", "2:47,641,997-47,644,890", // second block (one SNP)
@@ -166,12 +164,12 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--regions", "22:28,063,906-28,064,070", // don't think this is a real somatic SNV
         //"--regions", "22:28121410-28121648", // clearly bullshit
         //"--regions", "22:28,180,963-28,181,127", // multiple deletions
-//        "--regions", "22:28,201,361-28,201,570", // clearly bullshit
+        "--regions", "22:28,201,361-28,201,570", // clearly bullshit
 //        "--regions", "22:28,210,778-28,210,942",
 //        "--regions", "22:28,434,530-28,434,694",
 //        "--regions", "22:28,530,424-28,530,588",
 //        "--regions", "22:28,553,936-28,554,100",
-//        "--regions", "22:28,645,596-28,645,926", // posterior quite low
+        //"--regions", "22:28,645,596-28,645,926", // posterior quite low
 //        "--regions", "22:28,812,452-28,812,616",
 //        "--regions", "22:28,841,685-28,842,015",
 //        "--regions", "22:28,856,561-28,856,725",
@@ -183,13 +181,13 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
 //        "--regions", "22:29,172,353-29,172,517",
 //        "--regions", "22:29,240,416-29,240,456", // no!
 //        "--regions", "22:29,455,729-29,455,769",
-//        "--regions", "22:29,474,547-29,474,587", // low posterior
+        //"--regions", "22:29,474,547-29,474,587", // false negative?
 //        "--regions", "22:29,516,051-29,516,091",
 //        "--regions", "22:29,537,194-29,537,234",
 //        "--regions", "22:29,591,785-29,591,825",
 //        "--regions", "22:29,592,429-29,592,593",
-        //"--regions", "22:29,636,450-29,636,490", // NOPE!
-        //"--regions", "22:29,761,141-29,761,305", // low posterior
+        //"--regions", "22:29,636,450-29,636,490", // NOPE! (fixed with another CNV seed)
+        //"--regions", "22:29,761,141-29,761,305", // low posterior (could not be real..)
         //"--regions", "22:29,952,305-29,952,469",
         //"--regions", "22:30,094,383-30,094,422",
         //"--regions", "22:30,132,779-30,132,943",
@@ -250,7 +248,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--max-variant-size", "25",
         
         //"--disable-inactive-flank-scoring",
-        "--disable-haplotype-lagging",
+        //"--disable-haplotype-lagging",
         //"--max-haplotypes", "50",
         
         "--min-variant-posterior", "10",

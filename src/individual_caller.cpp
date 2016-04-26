@@ -376,7 +376,10 @@ IndividualVariantCaller::call_variants(const std::vector<Variant>& candidates,
                                                                            latents.dummy_latents_->log_evidence);
         
         if (dummy_model_posterior > 0.5) {
-            //std::cout << latents.haplotype_posteriors_->begin()->first.get().get_region() << std::endl;
+            if (debug_log_) {
+                stream(*debug_log_) << "Skipping region due to model filter. Dummy modelposterior = "
+                                << dummy_model_posterior;
+            }
             return {};
         }
     }

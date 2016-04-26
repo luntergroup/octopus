@@ -568,7 +568,32 @@ bool have_same_alleles(const Haplotype& lhs, const Haplotype& rhs)
 
 bool IsLessComplex::operator()(const Haplotype& lhs, const Haplotype& rhs) noexcept
 {
-    return lhs.explicit_alleles_.size() < rhs.explicit_alleles_.size();
+    if (lhs.explicit_alleles_.size() != rhs.explicit_alleles_.size()) {
+        return lhs.explicit_alleles_.size() < rhs.explicit_alleles_.size();
+    }
+    
+    // otherwise prefer the sequence with the least amount of indels
+    auto score = std::inner_product(std::cbegin(lhs.explicit_alleles_), std::cend(lhs.explicit_alleles_),
+                                    std::cbegin(rhs.explicit_alleles_), 0, 
+                                    std::plus<void> {},
+                                    [] (const auto& lhs, const auto& rhs) {
+                                        if (lhs == rhs) {
+                                            return 0;
+                                        }
+                                        if (is_indel(lhs)) {
+                                            if (is_indel(rhs)) {
+                                                return 0;
+                                            } else {
+                                                return -1;
+                                            }
+                                        } else if (is_indel(rhs)) {
+                                            return 1;
+                                        } else {
+                                            return 0;
+                                        }
+                                    });
+    
+    return score >= 0;
 }
 
 unsigned unique_least_complex(std::vector<Haplotype>& haplotypes)

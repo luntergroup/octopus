@@ -810,8 +810,8 @@ namespace Octopus
         
         return Somatic::InferredLatents {std::move(posterior_latents), evidence};
     }
-        
-    auto calculate_log_posteirors_with_germline_model(const SampleIdType& sample,
+    
+    auto calculate_log_posteriors_with_germline_model(const SampleIdType& sample,
                                                       const std::vector<CancerGenotype<Haplotype>>& genotypes,
                                                       const HaplotypeLikelihoodCache& haplotype_log_likelihoods,
                                                       const SomaticMutationModel& genotype_prior_model)
@@ -853,10 +853,15 @@ namespace Octopus
         result.emplace_back(log_uniform_dist(genotypes.size()));
         
         for (const auto& sample : samples) {
-            result.emplace_back(calculate_log_posteirors_with_germline_model(sample, genotypes,
+            result.emplace_back(calculate_log_posteriors_with_germline_model(sample, genotypes,
                                                                              haplotype_log_likelihoods,
                                                                              priors.genotype_prior_model));
         }
+        
+//        LogProbabilityVector dummy(genotypes.size(), (0.1) / (genotypes.size() - 1));
+//        dummy[142] = 0.9;
+//        Maths::log_each(dummy);
+//        result.emplace_back(dummy);
         
         return result;
     }
