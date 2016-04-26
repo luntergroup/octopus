@@ -37,8 +37,7 @@ public:
     
     struct FlankState
     {
-        ContigRegion active_region;
-        ContigRegion lhs_flank, rhs_flank;
+        ContigRegion::SizeType lhs_flank, rhs_flank;
     };
     
     using MapPositionItr = std::vector<std::size_t>::const_iterator;

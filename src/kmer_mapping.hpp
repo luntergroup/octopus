@@ -131,7 +131,8 @@ inline void reset_mapping_counts(MappedIndexCounts& mapping_counts)
 
 template <typename OutputIt>
 OutputIt map_query_to_target(const KmerPerfectHashes& query, const KmerHashTable& target,
-                             MappedIndexCounts& mapping_counts, OutputIt result)
+                             MappedIndexCounts& mapping_counts, OutputIt result,
+                             std::size_t max_mapping_positions = -1)
 {
     unsigned max_hit_count {0};
     std::size_t first_max_hit_index {0};
@@ -161,11 +162,13 @@ OutputIt map_query_to_target(const KmerPerfectHashes& query, const KmerHashTable
         *result++ = first_max_hit_index++;
         
         --num_max_hits;
+        --max_mapping_positions;
         
-        while (num_max_hits > 0) {
+        while (max_mapping_positions > 0 && num_max_hits > 0) {
             if (mapping_counts[first_max_hit_index] == max_hit_count) {
                 *result++ = first_max_hit_index;
                 --num_max_hits;
+                --max_mapping_positions;
             }
             ++first_max_hit_index;
         }

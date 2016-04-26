@@ -137,12 +137,17 @@ private:
     std::vector<Haplotype> filter(std::vector<Haplotype>& haplotypes,
                                   const HaplotypeLikelihoodCache& haplotype_likelihoods) const;
     
-    bool done_calling(const GenomicRegion& region) const noexcept;
+    void populate(HaplotypeLikelihoodCache& haplotype_likelihoods,
+                  const GenomicRegion& active_region,
+                  const std::vector<Haplotype>& haplotypes, const MappableFlatSet<Variant>& candidates,
+                  const ReadMap& active_reads) const;
     
     std::vector<std::reference_wrapper<const Haplotype>>
     get_removable_haplotypes(const std::vector<Haplotype>& haplotypes,
                              const CallerLatents::HaplotypeProbabilityMap& haplotype_posteriors,
                              const GenomicRegion& region) const;
+    
+    bool done_calling(const GenomicRegion& region) const noexcept;
     
     std::vector<Allele>
     generate_callable_alleles(const GenomicRegion& region, const std::vector<Variant>& candidates) const;

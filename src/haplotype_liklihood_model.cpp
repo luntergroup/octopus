@@ -164,8 +164,11 @@ double HaplotypeLikelihoodModel::log_probability(const AlignedRead& read,
     hmm_model.gapextend = buffered_haplotype_gap_extension_penalty_;
     
     if (buffered_haplotype_flank_state_) {
-        hmm_model.lhs_flank_size = region_size(buffered_haplotype_flank_state_->lhs_flank);
-        hmm_model.rhs_flank_size = region_size(buffered_haplotype_flank_state_->rhs_flank);
+        hmm_model.lhs_flank_size = buffered_haplotype_flank_state_->lhs_flank;
+        hmm_model.rhs_flank_size = buffered_haplotype_flank_state_->rhs_flank;
+    } else {
+        hmm_model.lhs_flank_size = 0;
+        hmm_model.rhs_flank_size = 0;
     }
     
     return Octopus::log_probability(read, *buffered_haplotype_,

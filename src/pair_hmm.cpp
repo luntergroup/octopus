@@ -61,6 +61,20 @@ bool is_target_in_truth_flank(const std::string& truth, const std::string& targe
     return target_offset < model.lhs_flank_size
             || (target_offset + target.size()) > (truth.size() - model.rhs_flank_size);
 }
+    
+namespace debug
+{
+    void print_alignment(const std::vector<char>& align1, const std::vector<char>& align2)
+    {
+        const auto isnt_null = [] (const char c) { return c != '\0'; };
+        std::copy_if(std::cbegin(align1), std::cend(align1), std::ostreambuf_iterator<char>(std::cout),
+                     isnt_null);
+        std::cout << '\n';
+        std::copy_if(std::cbegin(align2), std::cend(align2), std::ostreambuf_iterator<char>(std::cout),
+                     isnt_null);
+        std::cout << '\n';
+    }
+} // namespace debug
 
 auto align(const std::string& truth, const std::string& target,
            const std::vector<std::uint8_t>& target_qualities,
@@ -75,7 +89,7 @@ auto align(const std::string& truth, const std::string& target,
         return std::numeric_limits<double>::lowest();
     }
     
-    if (!is_target_in_truth_flank(truth, target, alignement_offset, model)) {
+    if (!is_target_in_truth_flank(truth, target, target_offset, model)) {
         const auto score = fastAlignmentRoutine(truth.data() + alignement_offset, target.data(),
                                                 reinterpret_cast<const std::int8_t*>(target_qualities.data()),
                                                 truth_alignment_size,
@@ -96,9 +110,13 @@ auto align(const std::string& truth, const std::string& target,
     }
     
     const auto max_alignment_size = 2 * (target.size() + 8);
+    
     if (align1->size() < max_alignment_size) {
-        align1->resize(max_alignment_size);
-        align2->resize(max_alignment_size);
+        align1->resize(max_alignment_size, '\0');
+        align2->resize(max_alignment_size, '\0');
+    } else {
+        std::fill_n(std::begin(*align1), max_alignment_size, '\0');
+        std::fill_n(std::begin(*align2), max_alignment_size, '\0');
     }
     
     int first_pos;
@@ -112,9 +130,29 @@ auto align(const std::string& truth, const std::string& target,
                                             truth_gap_open_penalties.data() + alignement_offset,
                                             align1->data(), align2->data(), &first_pos);
     
-    const auto truth_size     = static_cast<int>(truth.size());
-    const auto lhs_flank_size = static_cast<int>(model.lhs_flank_size);
-    const auto rhs_flank_size = static_cast<int>(model.rhs_flank_size);
+    //debug::print_alignment(*align1, *align2);
+    
+    const auto truth_size = static_cast<int>(truth.size());
+    
+    auto lhs_flank_size = static_cast<int>(model.lhs_flank_size);
+    
+    if (lhs_flank_size < alignement_offset) {
+        lhs_flank_size = 0;
+    } else {
+        lhs_flank_size -= alignement_offset;
+    }
+    
+    auto rhs_flank_size = static_cast<int>(model.rhs_flank_size);
+    
+    if (alignement_offset + truth_alignment_size < (truth.size() - model.rhs_flank_size)) {
+        rhs_flank_size = 0;
+    } else {
+        rhs_flank_size += alignement_offset + truth_alignment_size;
+        rhs_flank_size -= truth_size;
+    }
+    
+    assert(lhs_flank_size >= 0);
+    assert(rhs_flank_size >= 0);
     
     const auto flank_score = calculateFlankScore(truth_size, lhs_flank_size, rhs_flank_size,
                                                  reinterpret_cast<const std::int8_t*>(target_qualities.data()),

@@ -23,7 +23,9 @@ HaplotypeLikelihoodCache::HaplotypeLikelihoodCache(const unsigned max_haplotypes
 :
 cache_ {max_haplotypes},
 sample_indices_ {samples.size()}
-{}
+{
+    mapping_positions_.resize(MAX_MAPPING_POSITIONS);
+}
 
 HaplotypeLikelihoodCache::HaplotypeLikelihoodCache(HaplotypeLikelihoodModel likelihood_model,
                                                    unsigned max_haplotypes,
@@ -32,7 +34,9 @@ HaplotypeLikelihoodCache::HaplotypeLikelihoodCache(HaplotypeLikelihoodModel like
 likelihood_model_ {std::move(likelihood_model)},
 cache_ {max_haplotypes},
 sample_indices_ {samples.size()}
-{}
+{
+    mapping_positions_.resize(MAX_MAPPING_POSITIONS);
+}
 
 HaplotypeLikelihoodCache::ReadPacket::ReadPacket(Iterator first, Iterator last)
 :
@@ -81,16 +85,6 @@ void HaplotypeLikelihoodCache::populate(const ReadMap& reads,
     
     auto haplotype_hashes = init_kmer_hash_table<MAPPER_KMER_SIZE>();
     
-    const auto max_mapping_positions = sequence_size(*std::max_element(std::cbegin(haplotypes),
-                                                                       std::cend(haplotypes),
-                                                                       [] (const auto& lhs, const auto& rhs) {
-                                                                           return sequence_size(lhs) < sequence_size(rhs);
-                                                                       }));
-    
-    if (max_mapping_positions > mapping_positions_.size()) {
-        mapping_positions_.resize(max_mapping_positions);
-    }
-    
     const auto first_mapping_position = std::begin(mapping_positions_);
     
     for (const auto& haplotype : haplotypes) {
@@ -104,7 +98,7 @@ void HaplotypeLikelihoodCache::populate(const ReadMap& reads,
         
         auto read_hash_itr = std::cbegin(read_hashes);
         
-        likelihood_model_.buffer(haplotype, flank_state);
+        likelihood_model_.buffer(haplotype, std::move(flank_state));
         
         for (const auto& t : read_iterators_) {
             *it = std::vector<double>(t.num_reads);
@@ -113,7 +107,8 @@ void HaplotypeLikelihoodCache::populate(const ReadMap& reads,
                            [&] (const AlignedRead& read, const auto& read_hashes) {
                                const auto last_mapping_position = map_query_to_target(read_hashes, haplotype_hashes,
                                                                                       haplotype_mapping_counts,
-                                                                                      first_mapping_position);
+                                                                                      first_mapping_position,
+                                                                                      MAX_MAPPING_POSITIONS);
                                
                                reset_mapping_counts(haplotype_mapping_counts);
                                

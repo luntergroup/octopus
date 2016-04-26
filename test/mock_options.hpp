@@ -82,7 +82,6 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         // MSG
         "--regions", "2:47,640,494-47,644,304", // whole region
         //"--regions", "2:47,643,156-47,643,222", // true snp
-        //"--regions", "2:47,643,405-47,643,568", // false deletion with flank score
         //"--regions", "2:47,640,572-47,642,302", // first block (no variants)
         //"--regions", "2:47,641,997-47,644,890", // second block (one SNP)
         

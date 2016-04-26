@@ -502,8 +502,8 @@
 		D490E41C1C74CE1200883184 /* align.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = align.cpp; sourceTree = "<group>"; };
 		D490E41D1C74CE1200883184 /* banded_simd_viterbi.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = banded_simd_viterbi.hpp; sourceTree = "<group>"; };
 		D490E41E1C74CE1200883184 /* align.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = align.hpp; sourceTree = "<group>"; };
-		D490E41F1C74CE1200883184 /* kmer_mapping.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = kmer_mapping.hpp; path = ../src/kmer_mapping.hpp; sourceTree = "<group>"; };
-		D490E4201C74CE1200883184 /* kmer_mapping.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = kmer_mapping.cpp; path = ../src/kmer_mapping.cpp; sourceTree = "<group>"; };
+		D490E41F1C74CE1200883184 /* kmer_mapping.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = kmer_mapping.hpp; sourceTree = "<group>"; };
+		D490E4201C74CE1200883184 /* kmer_mapping.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = kmer_mapping.cpp; sourceTree = "<group>"; };
 		D490E4251C74CE2300883184 /* pair_hmm.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = pair_hmm.hpp; sourceTree = "<group>"; };
 		D490E4271C75069500883184 /* hardy_weinberg_model.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = hardy_weinberg_model.hpp; sourceTree = "<group>"; };
 		D490E4281C75074D00883184 /* dirichlet_model.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = dirichlet_model.cpp; sourceTree = "<group>"; };
@@ -888,8 +888,6 @@
 			children = (
 				CAA4DC671A8ACE9B00DD3E9A /* bioio.hpp */,
 				CA0A329E1B863B6E001BE30F /* threaded_transform.hpp */,
-				D490E41F1C74CE1200883184 /* kmer_mapping.hpp */,
-				D490E4201C74CE1200883184 /* kmer_mapping.cpp */,
 				D4BEA9F61B861BAF00E53CFD /* tandem */,
 			);
 			path = include;
@@ -1170,6 +1168,8 @@
 		D42F72F71C5BAC3100995F54 /* read-error-models */ = {
 			isa = PBXGroup;
 			children = (
+				D490E41F1C74CE1200883184 /* kmer_mapping.hpp */,
+				D490E4201C74CE1200883184 /* kmer_mapping.cpp */,
 				D490E41D1C74CE1200883184 /* banded_simd_viterbi.hpp */,
 				D490E41B1C74CE1200883184 /* banded_simd_viterbi.cpp */,
 				D490E41E1C74CE1200883184 /* align.hpp */,
@@ -1548,7 +1548,7 @@
 				CLANG_CXX_LANGUAGE_STANDARD = "c++14";
 				FRAMEWORK_SEARCH_PATHS = "$(inherited)";
 				GCC_INPUT_FILETYPE = sourcecode.cpp.cpp;
-				GCC_OPTIMIZATION_LEVEL = 3;
+				GCC_OPTIMIZATION_LEVEL = 0;
 				HEADER_SEARCH_PATHS = (
 					"$(inherited)",
 					/usr/local/Cellar/boost/1.60.0_1/include,
@@ -1580,7 +1580,7 @@
 				CLANG_CXX_LANGUAGE_STANDARD = "c++14";
 				FRAMEWORK_SEARCH_PATHS = "$(inherited)";
 				GCC_INPUT_FILETYPE = sourcecode.cpp.cpp;
-				GCC_OPTIMIZATION_LEVEL = 3;
+				GCC_OPTIMIZATION_LEVEL = 0;
 				HEADER_SEARCH_PATHS = (
 					"$(inherited)",
 					/usr/local/Cellar/boost/1.60.0_1/include,

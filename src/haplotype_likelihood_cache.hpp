@@ -48,7 +48,7 @@ namespace Octopus
         HaplotypeLikelihoodCache& operator=(HaplotypeLikelihoodCache&&)      = default;
         
         void populate(const ReadMap& reads, const std::vector<Haplotype>& haplotypes,
-                      boost::optional<FlankState> flank_state);
+                      boost::optional<FlankState> flank_state = boost::none);
         
         const Likelihoods& log_likelihoods(const SampleIdType& sample,
                                            const Haplotype& haplotype) const;
@@ -66,6 +66,7 @@ namespace Octopus
         
     private:
         static constexpr unsigned char MAPPER_KMER_SIZE {5};
+        static constexpr std::size_t MAX_MAPPING_POSITIONS {10};
         
         HaplotypeLikelihoodModel likelihood_model_;
         
