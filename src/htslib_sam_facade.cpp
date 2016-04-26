@@ -21,6 +21,48 @@
 
 #include <iostream> // TEST
 
+class MissingBamIndex : public std::runtime_error
+{
+public:
+    MissingBamIndex(boost::filesystem::path file_path)
+    :
+    runtime_error {"Missing BAM index"},
+    file_path_ {std::move(file_path)}
+    {}
+    
+    const char* what() const noexcept override
+    {
+        str_ << runtime_error::what() << ": a BAM index file (.bai) is required for the BAM file "
+                << file_path_ << " but is missing";
+        return str_.str().c_str();
+    }
+private:
+    boost::filesystem::path file_path_;
+    
+    mutable std::ostringstream str_;
+};
+
+class MissingCramIndex : public std::runtime_error
+{
+public:
+    MissingCramIndex(boost::filesystem::path file_path)
+    :
+    runtime_error {"Missing CRAM index"},
+    file_path_ {std::move(file_path)}
+    {}
+    
+    const char* what() const noexcept override
+    {
+        str_ << runtime_error::what() << ": a CRAM index file (.crai) is required for the CRAM file "
+            << file_path_ << " but is missing";
+        return str_.str().c_str();
+    }
+private:
+    boost::filesystem::path file_path_;
+    
+    mutable std::ostringstream str_;
+};
+
 class InvalidBamHeader : public std::runtime_error {
 public:
     InvalidBamHeader(boost::filesystem::path file_path, std::string message)
@@ -79,6 +121,14 @@ contig_names_ {},
 sample_names_ {},
 samples_ {}
 {
+    if (!hts_index_) {
+        if (hts_file_->is_cram) {
+            throw MissingCramIndex {file_path};
+        } else {
+            throw MissingBamIndex {file_path_};
+        }
+    }
+    
     if (is_open()) {
         try {
             init_maps();

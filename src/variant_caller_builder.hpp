@@ -29,6 +29,8 @@ namespace Octopus {
     class VariantCallerBuilder
     {
     public:
+        using RefCallType = VariantCaller::RefCallType;
+        
         VariantCallerBuilder()  = delete;
         
         explicit VariantCallerBuilder(const ReferenceGenome& reference,
@@ -54,6 +56,7 @@ namespace Octopus {
         VariantCallerBuilder& set_min_refcall_posterior(double min_posterior) noexcept;
         VariantCallerBuilder& set_max_haplotypes(unsigned max_haplotypes) noexcept;
         VariantCallerBuilder& set_lagging(bool allow_lagging) noexcept;
+        VariantCallerBuilder& set_flank_scoring(bool allow_flank_scoring) noexcept;
         VariantCallerBuilder& set_min_phase_score(double min_phase_score) noexcept;
         
         // cancer
@@ -106,6 +109,7 @@ namespace Octopus {
             double min_refcall_posterior;
             unsigned max_haplotypes;
             bool allow_lagging;
+            bool allow_flank_scoring;
             double min_phase_score;
             
             // cancer

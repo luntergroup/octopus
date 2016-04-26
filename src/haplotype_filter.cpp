@@ -208,18 +208,20 @@ filter_to_n_haplotypes(std::vector<Haplotype>& haplotypes,
     
     result.reserve(haplotypes.size() - n);
     
-    Logging::DebugLogger log {};
+    Logging::DebugLogger debug_log {};
+    Logging::TraceLogger trace_log {};
     
     if (DEBUG_MODE) {
-        stream(log) << "Filtering " << num_to_filter << " of " << haplotypes.size() << " haplotypes";
+        stream(debug_log) << "Filtering " << num_to_filter << " of "
+                            << haplotypes.size() << " haplotypes";
     }
     
     num_to_filter -= try_filter(haplotypes, samples, haplotype_likelihoods, n, result,
                                 MaxLikelihood {});
     
     if (DEBUG_MODE) {
-        stream(log) << "There are " << haplotypes.size()
-                    << " remaining haplotypes after maximum likelihood filtering";
+        stream(debug_log) << "There are " << haplotypes.size()
+                            << " remaining haplotypes after maximum likelihood filtering";
     }
     
     if (num_to_filter == 0) {
@@ -230,8 +232,8 @@ filter_to_n_haplotypes(std::vector<Haplotype>& haplotypes,
                                 LikelihoodZeroCount {});
     
     if (DEBUG_MODE) {
-        stream(log) << "There are " << haplotypes.size()
-                    << " remaining haplotypes after likelihood zero count filtering";
+        stream(debug_log) << "There are " << haplotypes.size()
+                            << " remaining haplotypes after likelihood zero count filtering";
     }
     
     if (num_to_filter == 0) {
@@ -242,8 +244,8 @@ filter_to_n_haplotypes(std::vector<Haplotype>& haplotypes,
                                 LikelihoodSum {});
     
     if (DEBUG_MODE) {
-        stream(log) << "There are " << haplotypes.size()
-                    << " remaining haplotypes after likelihood sum filtering";
+        stream(debug_log) << "There are " << haplotypes.size()
+                            << " remaining haplotypes after likelihood sum filtering";
     }
     
     if (num_to_filter == 0) {
@@ -251,7 +253,7 @@ filter_to_n_haplotypes(std::vector<Haplotype>& haplotypes,
     }
     
     if (DEBUG_MODE) {
-        stream(log) << "Force filtering " << haplotypes.size() << " haplotypes with likelihood sum filter";
+        stream(debug_log) << "Force filtering " << haplotypes.size() << " haplotypes with likelihood sum filter";
     }
     
     force_filter(haplotypes, samples, haplotype_likelihoods, n, result, LikelihoodSum {});

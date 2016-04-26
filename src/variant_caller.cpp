@@ -15,18 +15,12 @@
 #include <cassert>
 #include <iostream>
 
-#include "genomic_region.hpp"
 #include "mappable.hpp"
 #include "mappable_algorithms.hpp"
-#include "mappable_flat_set.hpp"
 #include "read_utils.hpp"
-#include "haplotype.hpp"
-#include "haplotype_generator.hpp"
 #include "haplotype_liklihood_model.hpp"
 #include "haplotype_filter.hpp"
 #include "maths.hpp"
-#include "vcf_record.hpp"
-#include "vcf_record_factory.hpp"
 
 #include "timers.hpp"
 
@@ -38,12 +32,15 @@ VariantCaller::CallerParameters::CallerParameters(unsigned max_haplotypes,
                                                   RefCallType refcall_type,
                                                   bool call_sites_only,
                                                   bool allow_lagging,
+                                                  bool allow_flank_scoring,
                                                   double min_phase_score)
 :
 max_haplotypes {max_haplotypes},
 refcall_type {refcall_type},
 call_sites_only {call_sites_only},
 lag_haplotype_generation {allow_lagging},
+min_haplotype_posterior {1e-15},
+compute_inactive_flank_score {allow_flank_scoring},
 min_phase_score {min_phase_score}
 {}
 
@@ -56,12 +53,7 @@ reference_ {reference},
 read_pipe_ {read_pipe},
 samples_ {read_pipe.get_samples()},
 debug_log_ {},
-refcall_type_ {parameters.refcall_type},
-call_sites_only_ {parameters.call_sites_only},
-max_haplotypes_ {parameters.max_haplotypes},
-min_haplotype_posterior_ {1e-15},
-lag_haplotype_generation_ {parameters.lag_haplotype_generation},
-min_phase_score_ {parameters.min_phase_score},
+parameters_ {std::move(parameters)},
 candidate_generator_ {std::move(candidate_generator)}
 {
     if (DEBUG_MODE) {
@@ -132,26 +124,6 @@ namespace debug
                                     const ReadMap& reads,
                                     const MappableFlatSet<Variant>& candidates,
                                     const ReferenceGenome& reference);
-}
-
-auto generate_candidates(CandidateVariantGenerator& generator, const GenomicRegion& region,
-                         const ReferenceGenome& reference)
-{
-    auto raw_candidates = generator.generate_candidates(region);
-    
-    if (DEBUG_MODE) {
-        Logging::DebugLogger log {};
-        debug::print_left_aligned_candidates(stream(log), raw_candidates, reference);
-    }
-    
-    auto final_candidates = unique_left_align(std::move(raw_candidates), reference);
-    
-    generator.clear();
-    
-    return MappableFlatSet<Variant> {
-        std::make_move_iterator(std::begin(final_candidates)),
-        std::make_move_iterator(std::end(final_candidates))
-    };
 }
 
 auto copy_overlapped_to_vector(const MappableFlatSet<Variant>& candidates,
@@ -243,6 +215,24 @@ auto calculate_flank_state(const std::vector<Haplotype>& haplotypes,
         flanks.first.get_contig_region(),
         flanks.second.get_contig_region()
     };
+}
+
+void populate(HaplotypeLikelihoodCache& haplotype_likelihoods,
+              const GenomicRegion& active_region,
+              const std::vector<Haplotype>& haplotypes, const MappableFlatSet<Variant>& candidates,
+              const ReadMap& active_reads, bool allow_flank_scoring = true)
+{
+    auto flank_state = calculate_flank_state(haplotypes, active_region, candidates);
+    
+    resume_timer(likelihood_timer);
+    haplotype_likelihoods.populate(active_reads, haplotypes, std::move(flank_state));
+    pause_timer(likelihood_timer);
+    
+    if (TRACE_MODE) {
+        Logging::TraceLogger trace_log {};
+        debug::print_read_haplotype_liklihoods(stream(trace_log), haplotypes, active_reads,
+                                               haplotype_likelihoods, -1);
+    }
 }
 
 bool all_empty(const ReadMap& reads)
@@ -382,7 +372,7 @@ VariantCaller::call(const GenomicRegion& call_region, ProgressMeter& progress_me
         stream(*debug_log_) << "Generating candidates in region " << candidate_region;
     }
     
-    auto candidates = generate_candidates(candidate_generator_, candidate_region, reference_);
+    auto candidates = generate_candidates(candidate_region);
     
     if (debug_log_) {
         debug::print_final_candidates(stream(*debug_log_), candidates);
@@ -397,9 +387,9 @@ VariantCaller::call(const GenomicRegion& call_region, ProgressMeter& progress_me
         reads = read_pipe_.get().fetch_reads(extract_regions(candidates));
     }
     
-    HaplotypeGenerator generator {candidate_region, reference_, candidates, reads, max_haplotypes_,
-                                    lag_haplotype_generation_};
-    Phaser phaser {min_phase_score_};
+    auto generator = make_haplotype_generator(candidate_region, candidates, reads);
+    
+    auto phaser = make_phaser();
     
     std::vector<Haplotype> haplotypes;
     GenomicRegion active_region;
@@ -408,9 +398,9 @@ VariantCaller::call(const GenomicRegion& call_region, ProgressMeter& progress_me
     
     pause_timer(init_timer);
     
-    HaplotypeLikelihoodCache haplotype_likelihoods {max_haplotypes_, samples_};
+    auto haplotype_likelihoods = make_haplotype_likelihood_cache();
     
-    const VcfRecordFactory factory {reference_, reads, samples_, call_sites_only_};
+    const auto record_factory = make_record_factory(reads);
     
     while (true) {
         resume_timer(haplotype_generation_timer);
@@ -452,38 +442,14 @@ VariantCaller::call(const GenomicRegion& call_region, ProgressMeter& progress_me
         
         remove_duplicate_haplotypes(haplotypes);
         
-        resume_timer(likelihood_timer);
-        haplotype_likelihoods.populate(active_reads, haplotypes,
-                                       calculate_flank_state(haplotypes, active_region, candidates));
-        pause_timer(likelihood_timer);
+        populate(haplotype_likelihoods, active_region, haplotypes, candidates, active_reads);
         
-        if (TRACE_MODE) {
-            Logging::TraceLogger trace_log {};
-            debug::print_read_haplotype_liklihoods(stream(trace_log), haplotypes, active_reads,
-                                                   haplotype_likelihoods, -1);
-        }
-        
-        resume_timer(haplotype_fitler_timer);
-        auto removed_haplotypes = filter_to_n_haplotypes(haplotypes, samples_,
-                                                         haplotype_likelihoods,
-                                                         max_haplotypes_);
-        pause_timer(haplotype_fitler_timer);
+        auto removed_haplotypes = filter(haplotypes, haplotype_likelihoods);
         
         if (haplotypes.empty()) {
-            if (debug_log_) *debug_log_ << "Filtered all haplotypes";
             // This can only happen if all haplotypes have equal likelihood
             generator.clear_progress();
             continue;
-        }
-        
-        if (debug_log_) {
-            stream(*debug_log_) << "Filtered " << removed_haplotypes.size() << " haplotypes";
-        }
-        if (TRACE_MODE) {
-            Logging::TraceLogger trace_log {};
-            stream(trace_log) << "Filtered " << removed_haplotypes.size() << " haplotypes:";
-            debug::print_haplotypes(stream(trace_log), removed_haplotypes,
-                                    debug::Resolution::VariantAlleles);
         }
         
         resume_timer(likelihood_timer);
@@ -501,7 +467,7 @@ VariantCaller::call(const GenomicRegion& call_region, ProgressMeter& progress_me
         }
         
         resume_timer(latent_timer);
-        const auto caller_latents = infer_latents(haplotypes, haplotype_likelihoods);
+        const auto caller_latents = this->infer_latents(haplotypes, haplotype_likelihoods);
         pause_timer(latent_timer);
         
         haplotype_likelihoods.clear();
@@ -538,12 +504,12 @@ VariantCaller::call(const GenomicRegion& call_region, ProgressMeter& progress_me
             auto active_candidates = copy_overlapped_to_vector(candidates, phase_set->region);
             
             resume_timer(calling_timer);
-            auto variant_calls = wrap(call_variants(active_candidates, *caller_latents));
+            auto variant_calls = wrap(this->call_variants(active_candidates, *caller_latents));
             
             set_phasing(variant_calls, *phase_set);
             
             remove_calls_outside_call_region(variant_calls, call_region);
-            append_calls(result, std::move(variant_calls), factory);
+            append_calls(result, std::move(variant_calls), record_factory);
             pause_timer(calling_timer);
             
             auto remaining_active_region = right_overhang_region(active_region, phase_set->region);
@@ -587,7 +553,7 @@ VariantCaller::call(const GenomicRegion& call_region, ProgressMeter& progress_me
                 
                 if (debug_log_) stream(*debug_log_) << "Calling variants in region " << uncalled_region;
                 
-                auto variant_calls = wrap(call_variants(active_candidates, *caller_latents));
+                auto variant_calls = wrap(this->call_variants(active_candidates, *caller_latents));
                 pause_timer(calling_timer);
                 
                 if (!variant_calls.empty()) {
@@ -605,7 +571,7 @@ VariantCaller::call(const GenomicRegion& call_region, ProgressMeter& progress_me
                     
                     resume_timer(calling_timer);
                     remove_calls_outside_call_region(variant_calls, call_region);
-                    append_calls(result, std::move(variant_calls), factory);
+                    append_calls(result, std::move(variant_calls), record_factory);
                     pause_timer(calling_timer);
                 }
             }
@@ -614,9 +580,9 @@ VariantCaller::call(const GenomicRegion& call_region, ProgressMeter& progress_me
                 auto alleles = generate_candidate_reference_alleles(uncalled_region, active_candidates,
                                                                     called_regions);
                 
-                auto reference_calls = wrap(call_reference(alleles, *caller_latents, reads));
+                auto reference_calls = wrap(this->call_reference(alleles, *caller_latents, reads));
                 
-                append_calls(result, std::move(reference_calls), factory);
+                append_calls(result, std::move(reference_calls), record_factory);
             }
             
             completed_region = encompassing_region(completed_region, passed_region);
@@ -632,12 +598,79 @@ VariantCaller::call(const GenomicRegion& call_region, ProgressMeter& progress_me
 
 bool VariantCaller::refcalls_requested() const noexcept
 {
-    return refcall_type_ != RefCallType::None;
+    return parameters_.refcall_type != RefCallType::None;
+}
+
+MappableFlatSet<Variant> VariantCaller::generate_candidates(const GenomicRegion& region) const
+{
+    auto raw_candidates = candidate_generator_.generate_candidates(region);
+    
+    if (debug_log_) {
+        debug::print_left_aligned_candidates(stream(*debug_log_), raw_candidates, reference_);
+    }
+    
+    auto final_candidates = unique_left_align(std::move(raw_candidates), reference_);
+    
+    candidate_generator_.clear();
+    
+    return MappableFlatSet<Variant> {
+        std::make_move_iterator(std::begin(final_candidates)),
+        std::make_move_iterator(std::end(final_candidates))
+    };
+}
+
+HaplotypeGenerator VariantCaller::make_haplotype_generator(const GenomicRegion& region,
+                                                           const MappableFlatSet<Variant>& candidates,
+                                                           const ReadMap& reads) const
+{
+    return HaplotypeGenerator {region, reference_, candidates, reads,
+                parameters_.max_haplotypes, parameters_.lag_haplotype_generation};
+}
+    
+HaplotypeLikelihoodCache VariantCaller::make_haplotype_likelihood_cache() const
+{
+    return HaplotypeLikelihoodCache {parameters_.max_haplotypes, samples_};
+}
+
+Phaser VariantCaller::make_phaser() const
+{
+    return Phaser {parameters_.min_phase_score};
+}
+    
+VcfRecordFactory VariantCaller::make_record_factory(const ReadMap& reads) const
+{
+    return VcfRecordFactory {reference_, reads, samples_, parameters_.call_sites_only};
 }
 
 bool VariantCaller::done_calling(const GenomicRegion& region) const noexcept
 {
     return is_empty(region);
+}
+    
+std::vector<Haplotype> VariantCaller::filter(std::vector<Haplotype>& haplotypes,
+                                             const HaplotypeLikelihoodCache& haplotype_likelihoods) const
+{
+    resume_timer(haplotype_fitler_timer);
+    auto removed_haplotypes = filter_to_n_haplotypes(haplotypes, samples_, haplotype_likelihoods,
+                                                     parameters_.max_haplotypes);
+    pause_timer(haplotype_fitler_timer);
+    
+    if (debug_log_) {
+        if (haplotypes.empty()) {
+            *debug_log_ << "Filtered all haplotypes";
+        } else {
+            stream(*debug_log_) << "Filtered " << removed_haplotypes.size() << " haplotypes";
+        }
+    }
+    if (TRACE_MODE) {
+        Logging::TraceLogger trace_log {};
+        stream(trace_log) << "Filtered " << removed_haplotypes.size() << " haplotypes:";
+        debug::print_haplotypes(stream(trace_log), removed_haplotypes,
+                                debug::Resolution::VariantAlleles);
+    }
+    
+    
+    return removed_haplotypes;
 }
 
 std::vector<std::reference_wrapper<const Haplotype>>
@@ -651,7 +684,7 @@ VariantCaller::get_removable_haplotypes(const std::vector<Haplotype>& haplotypes
     result.reserve(haplotypes.size());
     
     for (const auto& p : haplotype_posteriors) {
-        if (p.second < min_haplotype_posterior_) {
+        if (p.second < parameters_.min_haplotype_posterior) {
             result.emplace_back(p.first);
         }
     }
@@ -672,7 +705,7 @@ VariantCaller::generate_callable_alleles(const GenomicRegion& region,
     if (is_empty(region) && overlapped_candidates.empty()) return {};
     
     if (overlapped_candidates.empty()) {
-        switch (refcall_type_) {
+        switch (parameters_.refcall_type) {
             case RefCallType::Positional:
                 return make_positional_reference_alleles(region, reference_);
             case RefCallType::Blocked:
@@ -684,14 +717,14 @@ VariantCaller::generate_callable_alleles(const GenomicRegion& region,
     
     auto variant_alleles = decompose(overlapped_candidates);
     
-    if (refcall_type_ == RefCallType::None) return variant_alleles;
+    if (parameters_.refcall_type == RefCallType::None) return variant_alleles;
     
     auto covered_regions   = extract_covered_regions(overlapped_candidates);
     auto uncovered_regions = extract_intervening_regions(covered_regions, region);
     
     std::vector<Allele> result {};
     
-    if (refcall_type_ == VariantCaller::RefCallType::Blocked) {
+    if (parameters_.refcall_type == VariantCaller::RefCallType::Blocked) {
         auto reference_alleles = make_reference_alleles(uncovered_regions, reference_);
         result.reserve(reference_alleles.size() + variant_alleles.size());
         std::merge(make_move_iterator(begin(reference_alleles)),
@@ -759,7 +792,7 @@ VariantCaller::generate_candidate_reference_alleles(const GenomicRegion& region,
     
     auto callable_alleles = generate_callable_alleles(region, candidates);
     
-    if (callable_alleles.empty() || refcall_type_ == RefCallType::None) return {};
+    if (callable_alleles.empty() || parameters_.refcall_type == RefCallType::None) return {};
     
     if (candidates.empty()) return callable_alleles;
     
@@ -775,13 +808,13 @@ VariantCaller::generate_candidate_reference_alleles(const GenomicRegion& region,
     
     while (allele_itr != allele_end_itr) {
         if (candidate_itr == candidate_end_itr) {
-            append_allele(result, *allele_itr, refcall_type_);
+            append_allele(result, *allele_itr, parameters_.refcall_type);
             std::copy(std::next(allele_itr), allele_end_itr, std::back_inserter(result));
             break;
         }
         
         if (called_itr == called_end_itr) {
-            append_allele(result, *allele_itr, refcall_type_);
+            append_allele(result, *allele_itr, parameters_.refcall_type);
             if (begins_before(*allele_itr, *candidate_itr)) {
                 ++allele_itr;
             } else {
@@ -791,7 +824,7 @@ VariantCaller::generate_candidate_reference_alleles(const GenomicRegion& region,
         } else {
             if (is_same_region(*called_itr, *candidate_itr)) { // called candidate
                 while (is_before(*allele_itr, *called_itr)) {
-                    append_allele(result, *allele_itr, refcall_type_);
+                    append_allele(result, *allele_itr, parameters_.refcall_type);
                     ++allele_itr;
                 }
                 allele_itr = find_next(allele_itr, allele_end_itr, *candidate_itr);
@@ -799,12 +832,12 @@ VariantCaller::generate_candidate_reference_alleles(const GenomicRegion& region,
                 ++called_itr;
             } else if (begins_before(*called_itr, *candidate_itr)) { // parsimonised called candidate
                 if (!overlaps(*allele_itr, *called_itr)) {
-                    append_allele(result, *allele_itr, refcall_type_);
+                    append_allele(result, *allele_itr, parameters_.refcall_type);
                     ++allele_itr;
                 } else {
                     if (begins_before(*allele_itr, *called_itr)) { // when variant has been left padded
                         append_allele(result, splice(*allele_itr, left_overhang_region(*allele_itr, *called_itr)),
-                                      refcall_type_);
+                                      parameters_.refcall_type);
                     }
                     
                     // skip contained alleles and candidates as they include called variants
@@ -814,7 +847,7 @@ VariantCaller::generate_candidate_reference_alleles(const GenomicRegion& region,
                     ++called_itr;
                 }
             } else {
-                append_allele(result, *allele_itr, refcall_type_);
+                append_allele(result, *allele_itr, parameters_.refcall_type);
                 
                 if (begins_before(*allele_itr, *candidate_itr)) {
                     ++allele_itr;
@@ -831,6 +864,9 @@ VariantCaller::generate_candidate_reference_alleles(const GenomicRegion& region,
     return result;
 }
 
+//
+// debug
+//
 namespace debug
 {
     template <typename S>

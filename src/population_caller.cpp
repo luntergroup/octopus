@@ -689,36 +689,6 @@ VcfRecord::Builder output_reference_call(RefCall call, const ReferenceGenome& re
     
     return result;
 }
-
-void set_phasings(GenotypeCalls& variant_genotype_calls,
-                  const Phaser::PhaseSet& phase_set,
-                  const std::vector<GenomicRegion>& called_regions)
-{
-    auto region_itr = std::cbegin(called_regions);
-    
-    for (auto& g : variant_genotype_calls) {
-        const auto& call_region = *region_itr;
-        
-        for (auto& p : g) {
-            const auto& phase = find_phase_region(phase_set.phase_regions.at(p.first), call_region);
-            
-            if (phase) {
-                const auto overlapped = overlap_range(called_regions, phase->get().get_region(),
-                                                      BidirectionallySortedTag {});
-                
-                assert(!overlapped.empty());
-                
-                p.second.phase_region = overlapped.front();
-                p.second.phase_score  = phase->get().score;
-            } else {
-                p.second.phase_region = call_region;
-                p.second.phase_score  = 0;
-            }
-        }
-        
-        ++region_itr;
-    }
-}
 } // namespace
 
 std::vector<VcfRecord::Builder>

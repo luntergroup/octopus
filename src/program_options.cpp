@@ -110,23 +110,56 @@ namespace Octopus
         return out;
     }
     
+    std::istream& operator>>(std::istream& in, VariantCallerBuilder::RefCallType& result)
+    {
+        using RefCallType = VariantCallerBuilder::RefCallType;
+        std::string token;
+        in >> token;
+        if (token == "None")
+            result = RefCallType::None;
+        else if (token == "Positional")
+            result = RefCallType::Positional;
+        else if (token == "Blocked")
+            result = RefCallType::Blocked;
+        else throw po::validation_error {po::validation_error::kind_t::invalid_option_value, token,
+            "refcalls"};
+        return in;
+    }
+    
+    std::ostream& operator<<(std::ostream& out, const VariantCallerBuilder::RefCallType type)
+    {
+        using RefCallType = VariantCallerBuilder::RefCallType;
+        switch (type) {
+            case RefCallType::None:
+                out << "None";
+                break;
+            case RefCallType::Positional:
+                out << "Positional";
+                break;
+            case RefCallType::Blocked:
+                out << "Blocked";
+                break;
+        }
+        return out;
+    }
+    
     std::istream& operator>>(std::istream& in, ContigOutputOrder& result)
     {
         std::string token;
         in >> token;
-        if (token == "lexicographical-ascending")
+        if (token == "LexicographicalAscending")
             result = ContigOutputOrder::LexicographicalAscending;
-        else if (token == "lexicographical-descending")
+        else if (token == "LexicographicalDescending")
             result = ContigOutputOrder::LexicographicalDescending;
-        else if (token == "contig-size-ascending")
+        else if (token == "ContigSizeAscending")
             result = ContigOutputOrder::ContigSizeAscending;
-        else if (token == "contig-size-descending")
+        else if (token == "ContigSize-descending")
             result = ContigOutputOrder::ContigSizeDescending;
-        else if (token == "as-in-reference")
+        else if (token == "AsInReference")
             result = ContigOutputOrder::AsInReferenceIndex;
-        else if (token == "as-in-reference-reversed")
+        else if (token == "AsInReferenceReversed")
             result = ContigOutputOrder::AsInReferenceIndexReversed;
-        else if (token == "unspecified")
+        else if (token == "Unspecified")
             result = ContigOutputOrder::Unspecified;
         else throw po::validation_error {po::validation_error::kind_t::invalid_option_value, token,
             "contig-output-order"};
@@ -137,25 +170,25 @@ namespace Octopus
     {
         switch (order) {
             case ContigOutputOrder::LexicographicalAscending:
-                out << "lexicographical-ascending";
+                out << "LexicographicalAscending";
                 break;
             case ContigOutputOrder::LexicographicalDescending:
-                out << "lexicographical-descending";
+                out << "LexicographicalDescending";
                 break;
             case ContigOutputOrder::ContigSizeAscending:
-                out << "contig-size-ascending";
+                out << "ContigSizeAscending";
                 break;
             case ContigOutputOrder::ContigSizeDescending:
-                out << "contig-size-descending";
+                out << "ContigSizeDescending";
                 break;
             case ContigOutputOrder::AsInReferenceIndex:
-                out << "as-in-reference";
+                out << "AsInReferenceIndex";
                 break;
             case ContigOutputOrder::AsInReferenceIndexReversed:
-                out << "as-in-reference-reversed";
+                out << "AsInReferenceIndexReversed";
                 break;
             case ContigOutputOrder::Unspecified:
-                out << "unspecified";
+                out << "Unspecified";
                 break;
         }
         return out;
@@ -294,6 +327,8 @@ namespace Octopus
              "Only bases with quality above this value are considered for candidate generation by the assembler")
             ;
             
+            using RefCallType = VariantCallerBuilder::RefCallType;
+            
             po::options_description caller("Caller options");
             caller.add_options()
             ("caller", po::value<std::string>()->default_value("population"),
@@ -320,18 +355,22 @@ namespace Octopus
              "Minimum variant call posterior probability (phred scale)")
             ("min-refcall-posterior", po::value<float>()->default_value(10.0),
              "Minimum homozygous reference call posterior probability (phred scale)")
-            ("make-positional-refcalls", po::bool_switch()->default_value(false),
-             "Caller will output positional REFCALLs")
-            ("make-blocked-refcalls", po::bool_switch()->default_value(false),
-             "Caller will output blocked REFCALLs")
+//            ("refcalls", po::value<RefCallType>()->default_value(RefCallType::None),
+//             "Caller will output reference confidence calls")
             ("sites-only", po::bool_switch()->default_value(false),
              "Only outout variant call sites (i.e. without sample genotype information)")
-            ("disable-haplotype-lagging", po::bool_switch()->default_value(false),
-             "Disables lagging in the haplotype generator, so each candidate variant will be considered"
-             " exactly once.")
             ("min-phase-score", po::value<float>()->default_value(20),
              "Minimum phase score required to output a phased call (phred scale)")
             ;
+            
+            po::options_description advanced("Advanced options");
+            advanced.add_options()
+            ("disable-haplotype-lagging", po::bool_switch()->default_value(false),
+             "Disables lagging in the haplotype generator, so each candidate variant will be considered"
+             " exactly once")
+            ("disable-inactive-flank-adjustment", po::bool_switch()->default_value(false),
+             "Disables additional calculation to adjust alignment score when there are inactive candidates"
+             " in haplotype flanking regions");
             
             po::options_description cancer("Cancer caller specific options");
             cancer.add_options()
@@ -355,7 +394,7 @@ namespace Octopus
             
             po::options_description all("Allowed options");
             all.add(general).add(backend).add(input).add(filters).add(transforms)
-            .add(candidates).add(caller).add(cancer);
+            .add(candidates).add(caller).add(advanced).add(cancer);
             
             po::variables_map vm;
             po::store(po::command_line_parser(argc, argv).options(all).positional(p).run(), vm);
@@ -381,8 +420,6 @@ namespace Octopus
                 && (vm.count("maternal-sample") == 0 || vm.count("paternal-sample") == 0)) {
                 throw std::logic_error {"option maternal-sample and paternal-sample are required when caller=trio"};
             }
-            
-            conflicting_options(vm, "make-positional-refcalls", "make-blocked-refcalls");
             
             po::notify(vm);
             
@@ -1396,11 +1433,7 @@ namespace Octopus
         
         vc_builder.set_caller(caller);
         
-        if (options.at("make-positional-refcalls").as<bool>()) {
-            vc_builder.set_refcall_type(VariantCaller::RefCallType::Positional);
-        } else if (options.at("make-blocked-refcalls").as<bool>()) {
-            vc_builder.set_refcall_type(VariantCaller::RefCallType::Blocked);
-        }
+        //vc_builder.set_refcall_type(options.at("refcalls").as<VariantCaller::RefCallType>());
         
         const auto min_variant_posterior_phred = options.at("min-variant-posterior").as<float>();
         vc_builder.set_min_variant_posterior(phred_to_probability(min_variant_posterior_phred));

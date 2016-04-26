@@ -121,8 +121,8 @@ namespace Octopus
     haplotype_flank_state_ {flank_state},
     model_ {2, 3}
     {
-        model_.lhs_flank_size = region_size(flank_state.lhs_flank);
-        model_.rhs_flank_size = region_size(flank_state.rhs_flank);
+        //model_.lhs_flank_size = region_size(flank_state.lhs_flank);
+        //model_.rhs_flank_size = region_size(flank_state.rhs_flank);
     }
     
     double HaplotypeLikelihoodModel::log_probability(const AlignedRead& read,

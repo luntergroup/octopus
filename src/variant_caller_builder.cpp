@@ -129,6 +129,12 @@ namespace Octopus
         return *this;
     }
     
+    VariantCallerBuilder& VariantCallerBuilder::set_flank_scoring(const bool allow_flank_scoring) noexcept
+    {
+        parameters_.allow_flank_scoring = allow_flank_scoring;
+        return *this;
+    }
+    
     VariantCallerBuilder& VariantCallerBuilder::set_min_phase_score(const double min_phase_score) noexcept
     {
         parameters_.min_phase_score = min_phase_score;
@@ -211,6 +217,7 @@ namespace Octopus
             parameters_.refcall_type,
             parameters_.call_sites_only,
             parameters_.allow_lagging,
+            parameters_.allow_flank_scoring,
             parameters_.min_phase_score
         };
         

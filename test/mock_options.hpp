@@ -61,7 +61,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--reads", "~/Genomics/cancer/TCGA/benchmark/G15511.HCC1143.1.chr22.bam",
         
         // MSG
-        //"--reads", "~/Genomics/MSG/10120_chr2_47641558_GTA_G.RG.bam",
+        "--reads", "~/Genomics/MSG/10120_chr2_47641558_GTA_G.RG.bam",
         
         //"--samples", "NA12878",
         //"--caller", "cancer", // default "population"
@@ -80,9 +80,11 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--use-one-based-indexing",
         
         // MSG
-        //"--regions", "2:47,640,494-47,644,304", // whole region
+        "--regions", "2:47,640,494-47,644,304", // whole region
         //"--regions", "2:47,643,156-47,643,222", // true snp
-        //"--regions", "2:47,643,405-47,643,568", // false deletions?
+        //"--regions", "2:47,643,405-47,643,568", // false deletion with flank score
+        //"--regions", "2:47,640,572-47,642,302", // first block (no variants)
+        //"--regions", "2:47,641,997-47,644,890", // second block (one SNP)
         
         // for population
         
@@ -239,18 +241,17 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         
         // candidate generation
         //"--min-supporting-reads", "1",
-        //"--no-candidates-from-alignments",
-        //"--candidates-from-assembler",
+        "--no-raw-cigar-candidates",
         //"--kmer-size", "5",
         //"--candidates-from-source", sample_vcf.c_str(),
         //"--regenotype",
-        "--no-assembly-candidates",
+        //"--no-assembly-candidates",
         //"--kmer-size", "45",
         //"--min-assembler-base-quality", "10",
         //"--max-variant-size", "25",
         
         "--disable-haplotype-lagging",
-        //"--max-haplotypes", "1024",
+        //"--max-haplotypes", "50",
         
         "--min-variant-posterior", "10",
         "--min-refcall-posterior", "0",

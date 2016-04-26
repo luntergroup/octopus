@@ -20,20 +20,22 @@
 #include "common.hpp"
 #include "reference_genome.hpp"
 #include "read_pipe.hpp"
+#include "genomic_region.hpp"
+#include "variant.hpp"
+#include "haplotype.hpp"
+#include "haplotype_generator.hpp"
+#include "phaser.hpp"
 #include "candidate_variant_generator.hpp"
 #include "haplotype_likelihood_cache.hpp"
+#include "mappable_flat_set.hpp"
 #include "probability_matrix.hpp"
-#include "phaser.hpp"
 #include "vcf_record.hpp"
+#include "vcf_record_factory.hpp"
 #include "call.hpp"
 #include "variant_call.hpp"
 #include "reference_call.hpp"
 #include "progress_meter.hpp"
 #include "logging.hpp"
-
-class GenomicRegion;
-class Variant;
-class Haplotype;
 
 namespace Octopus
 {
@@ -46,13 +48,16 @@ public:
     {
         CallerParameters() = default;
         explicit CallerParameters(unsigned max_haplotypes, RefCallType refcall_type,
-                                  bool call_sites_only, bool allow_lagging, double min_phase_score);
+                                  bool call_sites_only, bool allow_lagging, bool allow_flank_scoring,
+                                  double min_phase_score);
         ~CallerParameters() = default;
         
         unsigned max_haplotypes;
         RefCallType refcall_type;
         bool call_sites_only;
         bool lag_haplotype_generation;
+        double min_haplotype_posterior;
+        bool compute_inactive_flank_score;
         double min_phase_score;
     };
     
@@ -101,13 +106,7 @@ protected:
 private:
     mutable CandidateVariantGenerator candidate_generator_;
     
-    unsigned max_haplotypes_;
-    double min_haplotype_posterior_;
-    bool lag_haplotype_generation_;
-    double min_phase_score_;
-    
-    const RefCallType refcall_type_;
-    const bool call_sites_only_;
+    CallerParameters parameters_;
     
     // virtual methods
     
@@ -124,8 +123,21 @@ private:
     
     // other private methods
     
-    bool done_calling(const GenomicRegion& region) const noexcept;
     bool refcalls_requested() const noexcept;
+    
+    MappableFlatSet<Variant> generate_candidates(const GenomicRegion& region) const;
+    
+    HaplotypeGenerator make_haplotype_generator(const GenomicRegion& region,
+                                                const MappableFlatSet<Variant>& candidates,
+                                                const ReadMap& reads) const;
+    HaplotypeLikelihoodCache make_haplotype_likelihood_cache() const;
+    Phaser make_phaser() const;
+    VcfRecordFactory make_record_factory(const ReadMap& reads) const;
+    
+    std::vector<Haplotype> filter(std::vector<Haplotype>& haplotypes,
+                                  const HaplotypeLikelihoodCache& haplotype_likelihoods) const;
+    
+    bool done_calling(const GenomicRegion& region) const noexcept;
     
     std::vector<std::reference_wrapper<const Haplotype>>
     get_removable_haplotypes(const std::vector<Haplotype>& haplotypes,
