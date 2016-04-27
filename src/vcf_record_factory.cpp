@@ -17,6 +17,8 @@
 #include <functional>
 #include <iostream>
 
+#include <boost/optional.hpp>
+
 #include "genomic_region.hpp"
 #include "mappable.hpp"
 #include "mappable_algorithms.hpp"
@@ -67,23 +69,28 @@ namespace Octopus
 //        return static_cast<unsigned>(unique_alleles.size());
 //    }
     
-    void set_alt_alleles(const Call* call, VcfRecord::Builder& record)
+    void set_alt_allele(const Call* call, VcfRecord::Builder& record,
+                        boost::optional<char> first_reference_base)
     {
         if (auto p = dynamic_cast<const VariantCall*>(call)) {
-            record.set_alt_allele(p->get_alternative().get_sequence());
+            auto sequence = p->get_alternative().get_sequence();
+            if (first_reference_base) sequence.front() = *first_reference_base;
+            record.set_alt_allele(std::move(sequence));
         } else {
             record.set_refcall();
         }
     }
     
     void set_vcf_genotype(const SampleIdType& sample, const Call::GenotypeCall& genotype_call,
-                          VcfRecord::Builder& record)
+                          VcfRecord::Builder& record, boost::optional<char> first_reference_base)
     {
         std::vector<VcfRecord::SequenceType> result {};
         result.reserve(genotype_call.genotype.ploidy());
         
         for (const auto& allele : genotype_call.genotype) {
-            result.push_back(allele.get_sequence());
+            auto sequence = allele.get_sequence();
+            if (first_reference_base) sequence.front() = *first_reference_base;
+            result.push_back(std::move(sequence));
         }
         
         record.add_genotype(sample, result, VcfRecord::Builder::Phasing::Phased);
@@ -97,16 +104,23 @@ namespace Octopus
         
         const auto phred_quality = Maths::probability_to_phred<float>(call->get_quality(), 2);
         
-        const auto& reference_allele = call->get_reference();
-        
         const auto& region = call->get_region();
+        
+        auto reference_allele = call->get_reference().get_sequence();
+        
+        boost::optional<char> first_reference_base {};
+        
+        if (reference_allele.front() == '#') {
+            first_reference_base = reference_.get_sequence(head_position(region)).front();
+            reference_allele.front() = *first_reference_base;
+        }
         
         result.set_chromosome(contig_name(region));
         result.set_position(region_begin(region));
-        result.set_ref_allele(reference_allele.get_sequence());
+        result.set_ref_allele(std::move(reference_allele));
         result.set_quality(phred_quality);
         
-        set_alt_alleles(call.get(), result);
+        set_alt_allele(call.get(), result, first_reference_base);
         
         //result.add_info("AC",  to_strings(count_alt_alleles(*call)));
         //result.add_info("AN",  to_string(count_alleles(*call)));
@@ -128,7 +142,7 @@ namespace Octopus
             for (const auto& sample : samples_) {
                 const auto& genotype_call = call->get_genotype_call(sample);
                 
-                set_vcf_genotype(sample, genotype_call, result);
+                set_vcf_genotype(sample, genotype_call, result, first_reference_base);
                 
                 result.add_genotype_field(sample, "FT", "."); // TODO
                 result.add_genotype_field(sample, "GQ", Octopus::to_string(Maths::probability_to_phred<float>(genotype_call.posterior), 2));
@@ -152,11 +166,20 @@ namespace Octopus
         struct CallWrapper : public Mappable<CallWrapper>
         {
             CallWrapper(std::unique_ptr<Call> call) : call {std::move(call) } {}
+            
+            CallWrapper(const CallWrapper&)            = delete;
+            CallWrapper& operator=(const CallWrapper&) = delete;
+            CallWrapper(CallWrapper&&)                 = default;
+            CallWrapper& operator=(CallWrapper&&)      = default;
+            
             operator const std::unique_ptr<Call>&() const noexcept { return call; }
             operator std::unique_ptr<Call>&() noexcept { return call; }
+            
             std::unique_ptr<Call>::pointer operator->() const noexcept { return call.get(); };
-            std::unique_ptr<Call> call;
+            
             const GenomicRegion& get_region() const noexcept { return call->get_region(); }
+            
+            std::unique_ptr<Call> call;
         };
         
         template <typename T>
@@ -169,13 +192,18 @@ namespace Octopus
         }
     } // namespace
     
+    bool are_in_phase(const Call::GenotypeCall& lhs, const Call::GenotypeCall& rhs)
+    {
+        return overlaps(lhs.phase->region, rhs.genotype);
+    }
+    
     std::vector<VcfRecord>
     VcfRecordFactory::make(std::vector<std::unique_ptr<Call>>&& calls) const
     {
         auto wrapped_calls = wrap(std::move(calls));
         
         for (auto& call : wrapped_calls) {
-            call->parsimonise(reference_);
+            call->parsimonise('#');
         }
         
         std::vector<VcfRecord> result {};
@@ -196,11 +224,130 @@ namespace Octopus
             
             it = find_first_not_overlapped(std::next(it2), std::end(wrapped_calls), *it2);
             
-            std::transform(std::make_move_iterator(it2), std::make_move_iterator(it),
-                           std::back_inserter(result),
-                           [this] (CallWrapper&& call) {
-                               return this->make(std::move(call.call));
-                           });
+            if ((*it2)->get_reference().get_sequence().front() == '#') {
+                for (const auto& sample : samples_) {
+                    const auto& genotype_call = (*it2)->get_genotype_call(sample);
+                    
+                    const auto& old_genotype = genotype_call.genotype;
+                    
+                    const auto ploidy = old_genotype.ploidy();
+                    
+                    const auto actual_reference_base = reference_.get_sequence(head_position(*it2)).front();
+                    
+                    Genotype<Allele> new_genotype {ploidy};
+                    
+                    for (unsigned i {0}; i < ploidy; ++i) {
+                        if (old_genotype[i].get_sequence().front() == '#') {
+                            auto new_sequence = old_genotype[i].get_sequence();
+                            new_sequence.front() = actual_reference_base;
+                            Allele new_allele {(*it2).get_region(), std::move(new_sequence)};
+                            new_genotype.emplace(std::move(new_allele));
+                        } else {
+                            new_genotype.emplace(old_genotype[i]);
+                        }
+                    }
+                    
+                    std::cout << old_genotype << " has been replaced with " << new_genotype << std::endl;
+                }
+            }
+            
+            auto rit1 = std::make_reverse_iterator(it);
+            const auto rit2 = std::prev(std::make_reverse_iterator(it2));
+            
+            for (; rit1 != rit2; ++rit1) {
+                const auto& curr_call = *rit1;
+                
+                bool has_missing_allele {false};
+                
+                if (curr_call->get_reference().get_sequence().front() == '#') {
+                    const auto actual_reference_base = reference_.get_sequence(head_position(curr_call)).front();
+                    
+                    const auto& prev_call = *std::next(rit1);
+                    
+                    if (overlaps(curr_call, prev_call)) {
+                        for (const auto& sample : samples_) {
+                            const auto& genotype_call = curr_call->get_genotype_call(sample);
+                            
+                            const auto& old_genotype = genotype_call.genotype;
+                            
+                            const auto& prev_genotype_call = prev_call->get_genotype_call(sample);
+                            const auto& prev_genotype = prev_genotype_call.genotype;
+                            
+                            const auto ploidy = old_genotype.ploidy();
+                            
+                            Genotype<Allele> new_genotype {ploidy};
+                            
+                            if (are_in_phase(prev_genotype_call, genotype_call)) {
+                                for (unsigned i {0}; i < ploidy; ++i) {
+                                    if (old_genotype[i].get_sequence().front() == '#') {
+                                        if (splice(prev_genotype[i], head_position(curr_call)).get_sequence().front() == actual_reference_base) {
+                                            new_genotype.emplace(old_genotype[i]);
+                                        } else {
+                                            auto new_sequence = old_genotype[i].get_sequence();
+                                            new_sequence.front() = '*';
+                                            Allele new_allele {curr_call.get_region(), std::move(new_sequence)};
+                                            new_genotype.emplace(std::move(new_allele));
+                                            has_missing_allele = true;
+                                        }
+                                    } else {
+                                        new_genotype.emplace(old_genotype[i]);
+                                    }
+                                }
+                            } else {
+                                has_missing_allele = true;
+                                for (unsigned i {0}; i < ploidy; ++i) {
+                                    if (old_genotype[i].get_sequence().front() == '#') {
+                                        auto new_sequence = old_genotype[i].get_sequence();
+                                        new_sequence.front() = '*';
+                                        Allele new_allele {curr_call.get_region(), std::move(new_sequence)};
+                                        new_genotype.emplace(std::move(new_allele));
+                                    } else {
+                                        new_genotype.emplace(old_genotype[i]);
+                                    }
+                                }
+                            }
+                            
+                            std::cout << old_genotype << " has been replaced with " << new_genotype << std::endl;
+                        }
+                    } else {
+                        for (const auto& sample : samples_) {
+                            const auto& genotype_call = curr_call->get_genotype_call(sample);
+                            
+                            const auto& old_genotype = genotype_call.genotype;
+                            
+                            const auto ploidy = old_genotype.ploidy();
+                            
+                            Genotype<Allele> new_genotype {ploidy};
+                            
+                             for (unsigned i {0}; i < ploidy; ++i) {
+                                 if (old_genotype[i].get_sequence().front() == '#') {
+                                     auto new_sequence = old_genotype[i].get_sequence();
+                                     new_sequence.front() = actual_reference_base;
+                                     Allele new_allele {curr_call.get_region(), std::move(new_sequence)};
+                                     new_genotype.emplace(std::move(new_allele));
+                                 } else {
+                                     new_genotype.emplace(old_genotype[i]);
+                                 }
+                             }
+                            
+                            std::cout << old_genotype << " has been replaced with " << new_genotype << std::endl;
+                        }
+                    }
+                    
+                    
+                }
+            }
+            
+            auto segements = segment_by_begin_copy(std::make_move_iterator(it2),
+                                                   std::make_move_iterator(it));
+            
+            
+            
+//            std::transform(std::make_move_iterator(it2), std::make_move_iterator(it),
+//                           std::back_inserter(result),
+//                           [this] (CallWrapper&& call) {
+//                               return this->make(std::move(call.call));
+//                           });
         }
         
         result.shrink_to_fit();

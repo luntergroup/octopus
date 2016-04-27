@@ -72,6 +72,7 @@ namespace Octopus
         virtual const GenomicRegion& get_region() const noexcept = 0;
         virtual const Allele& get_reference() const noexcept = 0;
         
+        virtual void parsimonise(char dummy_base) {};
         virtual void parsimonise(const ReferenceGenome& reference) {};
         virtual void decorate(VcfRecord::Builder& record) const = 0;
         

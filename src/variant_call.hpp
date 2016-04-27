@@ -40,9 +40,11 @@ namespace Octopus
         
         const Allele& get_alternative() const noexcept;
         
+        virtual void parsimonise(char dummy_base) override;
         virtual void parsimonise(const ReferenceGenome& reference) override;
         
     protected:
+        
         Variant variant_;
         
         bool all_genotypes_are_self_contained() const;

@@ -11,6 +11,9 @@
 
 #include <string>
 #include <functional>
+#include <algorithm>
+#include <iterator>
+#include <utility>
 #include <ostream>
 
 #include <boost/functional/hash.hpp>
@@ -110,6 +113,93 @@ std::vector<Allele> extract_intervening_reference_alleles(const std::vector<Vari
  without an allele of length 0.
  */
 bool is_parsimonious(const Variant& variant) noexcept;
+
+/*
+ See http://genome.sph.umich.edu/wiki/Variant_Normalization for details on variant parsimony.
+ The requirement of the template type R is a SequenceType get_sequence(const GenomicRegion&)
+ method.
+ 
+ G is a functor which must return a char of the given GenomicRegion position.
+ */
+template <typename G>
+Variant make_parsimonious(const Variant& variant, G generator)
+{
+    using std::move; using std::cbegin; using std::cend; using std::crbegin; using std::crend;
+    
+    using SequenceType = Variant::SequenceType;
+    
+    const auto& old_ref_region   = mapped_region(variant);
+    const auto& old_ref_sequence = ref_sequence(variant);
+    const auto& old_alt_sequence = alt_sequence(variant);
+    
+    if (old_ref_sequence.empty() || old_alt_sequence.empty()) {
+        if (old_ref_region.get_begin() > 0) {
+            auto new_ref_region = expand_lhs(old_ref_region, 1);
+            
+            const char new_base = generator(head_position(new_ref_region));
+            
+            SequenceType new_ref_allele(old_ref_sequence.size() + 1, new_base);
+            std::copy(cbegin(old_ref_sequence), cend(old_ref_sequence),
+                      std::next(begin(new_ref_allele)));
+            
+            SequenceType new_alt_allele(old_alt_sequence.size() + 1, new_base);
+            std::copy(cbegin(old_alt_sequence), cend(old_alt_sequence),
+                      std::next(begin(new_alt_allele)));
+            
+            return Variant {move(new_ref_region), move(new_ref_allele), move(new_alt_allele)};
+        } else {
+            // In this rare case the only option is to pad to the right.
+            auto new_ref_region = expand_rhs(old_ref_region, 1);
+            
+            const char new_base = generator(tail_position(new_ref_region));
+            
+            SequenceType new_ref_allele(old_ref_sequence.size() + 1, new_base);
+            std::copy(cbegin(old_ref_sequence), cend(old_ref_sequence), begin(new_ref_allele));
+            
+            SequenceType new_alt_allele(old_alt_sequence.size() + 1, new_base);
+            std::copy(cbegin(old_alt_sequence), cend(old_alt_sequence), begin(new_alt_allele));
+            
+            return Variant {move(new_ref_region), move(new_ref_allele), move(new_alt_allele)};
+        }
+    }
+    
+    const auto& alleles = std::minmax(old_ref_sequence, old_alt_sequence,
+                                      [] (const auto& lhs, const auto& rhs) {
+                                          return lhs.size() < rhs.size();
+                                      });
+    const auto& small_allele = alleles.first;
+    const auto& big_allele   = alleles.second;
+    
+    auto pf = std::mismatch(cbegin(small_allele), cend(small_allele), cbegin(big_allele));
+    
+    if (pf.first == cbegin(small_allele) || small_allele.size() == 1) {
+        return variant;
+    }
+    
+    const auto pb = std::mismatch(crbegin(small_allele), std::make_reverse_iterator(pf.first),
+                                  crbegin(big_allele));
+    
+    if (pf.first == std::cend(small_allele)) {
+        --pf.first;
+        --pf.second;
+    }
+    
+    SequenceType new_big_allele   {pf.second, pb.second.base()};
+    SequenceType new_small_allele {pf.first, pb.first.base()};
+    
+    using S = GenomicRegion::SizeType;
+    GenomicRegion new_ref_region {
+        old_ref_region.get_contig_name(),
+        old_ref_region.get_begin() + static_cast<S>(std::distance(cbegin(small_allele), pf.first)),
+        old_ref_region.get_end()   - static_cast<S>(std::distance(crbegin(small_allele), pb.first))
+    };
+    
+    if (old_ref_sequence.size() > old_alt_sequence.size()) {
+        return Variant {move(new_ref_region), move(new_big_allele), move(new_small_allele)};
+    } else {
+        return Variant {move(new_ref_region), move(new_small_allele), move(new_big_allele)};
+    }
+}
 
 Variant make_parsimonious(const Variant& variant, const ReferenceGenome& reference);
 

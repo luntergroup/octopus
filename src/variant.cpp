@@ -9,9 +9,6 @@
 #include "variant.hpp"
 
 #include <list>
-#include <utility>
-#include <algorithm>
-#include <iterator>
 #include <cassert>
 
 #include <boost/range/algorithm.hpp>
@@ -237,66 +234,9 @@ bool is_parsimonious(const Variant& variant) noexcept
 
 Variant make_parsimonious(const Variant& variant, const ReferenceGenome& reference)
 {
-    using std::move; using std::cbegin; using std::cend; using std::crbegin; using std::crend;
-    
-    const auto& old_ref_sequence = ref_sequence(variant);
-    const auto& old_alt_sequence = alt_sequence(variant);
-    
-    const auto& alleles = allele_minmax(old_ref_sequence, old_alt_sequence);
-    const auto& small_allele = alleles.first;
-    const auto& big_allele   = alleles.second;
-    
-    const auto& old_ref_region = mapped_region(variant);
-    
-    if (small_allele.size() == 0) {
-        if (old_ref_region.get_begin() > 0) {
-            auto new_ref_region = expand_lhs(old_ref_region, 1);
-            
-            auto new_ref_allele = reference.get_sequence(new_ref_region);
-            auto new_alt_allele = new_ref_allele.front() + old_alt_sequence;
-            
-            return Variant {move(new_ref_region), move(new_ref_allele), move(new_alt_allele)};
-        } else {
-            // In this rare case the only option is to pad to the right.
-            auto new_ref_region = expand_rhs(old_ref_region, 1);
-            
-            auto new_ref_allele = reference.get_sequence(new_ref_region);
-            auto new_alt_allele = old_alt_sequence + new_ref_allele.back();
-            
-            return Variant {move(new_ref_region), move(new_ref_allele), move(new_alt_allele)};
-        }
-    }
-    
-    auto pf = std::mismatch(cbegin(small_allele), cend(small_allele), cbegin(big_allele));
-    
-    if (pf.first == cbegin(small_allele) || small_allele.size() == 1) {
-        return variant;
-    }
-    
-    const auto pb = std::mismatch(crbegin(small_allele), std::make_reverse_iterator(pf.first),
-                                  crbegin(big_allele));
-    
-    if (pf.first == std::cend(small_allele)) {
-        --pf.first;
-        --pf.second;
-    }
-    
-    using SequenceType = Variant::SequenceType;
-    SequenceType new_big_allele   {pf.second, pb.second.base()};
-    SequenceType new_small_allele {pf.first, pb.first.base()};
-    
-    using S = GenomicRegion::SizeType;
-    GenomicRegion new_ref_region {
-        old_ref_region.get_contig_name(),
-        old_ref_region.get_begin() + static_cast<S>(std::distance(cbegin(small_allele), pf.first)),
-        old_ref_region.get_end()   - static_cast<S>(std::distance(crbegin(small_allele), pb.first))
-    };
-    
-    if (old_ref_sequence.size() > old_alt_sequence.size()) {
-        return Variant {move(new_ref_region), move(new_big_allele), move(new_small_allele)};
-    } else {
-        return Variant {move(new_ref_region), move(new_small_allele), move(new_big_allele)};
-    }
+    return make_parsimonious(variant, [&reference] (const auto& region) -> char {
+        return reference.get_sequence(region).front();
+    });
 }
 
 bool is_left_alignable(const Variant& variant) noexcept

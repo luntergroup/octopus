@@ -34,33 +34,99 @@ namespace Octopus
         return variant_.get_alt_allele();
     }
     
+    struct DummyGenerator
+    {
+        DummyGenerator() = delete;
+        DummyGenerator(const char dummy) : dummy_ {dummy} {}
+        
+        char operator()(const GenomicRegion& region) const
+        {
+            return dummy_;
+        }
+    private:
+        char dummy_;
+    };
+    
+    void VariantCall::parsimonise(const char dummy_base)
+    {
+        if (is_parsimonious(variant_)) return;
+        
+        auto parsimonised_variant = make_parsimonious(variant_, DummyGenerator {dummy_base});
+        
+        const std::unordered_map<Allele, Allele> parsimonised_alleles {
+            {variant_.get_ref_allele(), parsimonised_variant.get_ref_allele()},
+            {variant_.get_alt_allele(), parsimonised_variant.get_alt_allele()}
+        };
+        
+        const auto has_variant_shifted = begins_before(parsimonised_variant, variant_);
+        
+        variant_ = std::move(parsimonised_variant);
+        
+        for (auto& p : genotype_calls_) {
+            Genotype<Allele>& genotype {p.second.genotype};
+            
+            Genotype<Allele> parsimonised_genotype {genotype.ploidy()};
+            
+            for (const Allele& allele : genotype) {
+                if (parsimonised_alleles.count(allele) == 1) {
+                    parsimonised_genotype.emplace(parsimonised_alleles.at(allele));
+                } else {
+                    if (has_variant_shifted) {
+                        auto old_sequence = allele.get_sequence();
+                        old_sequence.insert(std::begin(old_sequence), dummy_base);
+                        Allele new_allele {mapped_region(variant_), std::move(old_sequence)};
+                        parsimonised_genotype.emplace(std::move(new_allele));
+                    } else {
+                        parsimonised_genotype.emplace(allele);
+                    }
+                }
+            }
+            
+            genotype = std::move(parsimonised_genotype);
+        }
+    }
+    
     void VariantCall::parsimonise(const ReferenceGenome& reference)
     {
         if (is_parsimonious(variant_)) return;
         
-        if (all_genotypes_are_self_contained()) {
-            auto parsimonised_variant = make_parsimonious(variant_, reference);
+        auto parsimonised_variant = make_parsimonious(variant_, reference);
+        
+        const std::unordered_map<Allele, Allele> parsimonised_alleles {
+            {variant_.get_ref_allele(), parsimonised_variant.get_ref_allele()},
+            {variant_.get_alt_allele(), parsimonised_variant.get_alt_allele()}
+        };
+        
+        const auto has_variant_shifted = begins_before(parsimonised_variant, variant_);
+        
+        char reference_base;
+        if (has_variant_shifted) {
+            reference_base = reference.get_sequence(head_position(parsimonised_variant)).front();
+        }
+        
+        variant_ = std::move(parsimonised_variant);
+        
+        for (auto& p : genotype_calls_) {
+            Genotype<Allele>& genotype {p.second.genotype};
             
-            const std::unordered_map<Allele, Allele> parsimonised_alleles {
-                {variant_.get_ref_allele(), parsimonised_variant.get_ref_allele()},
-                {variant_.get_alt_allele(), parsimonised_variant.get_alt_allele()}
-            };
+            Genotype<Allele> parsimonised_genotype {genotype.ploidy()};
             
-            variant_ = std::move(parsimonised_variant);
-            
-            for (auto& p : genotype_calls_) {
-                Genotype<Allele>& genotype {p.second.genotype};
-                
-                Genotype<Allele> parsimonised_genotype {genotype.ploidy()};
-                
-                for (const Allele& allele : genotype) {
+            for (const Allele& allele : genotype) {
+                if (parsimonised_alleles.count(allele) == 1) {
                     parsimonised_genotype.emplace(parsimonised_alleles.at(allele));
+                } else {
+                    if (has_variant_shifted) {
+                        auto old_sequence = allele.get_sequence();
+                        old_sequence.insert(std::begin(old_sequence), reference_base);
+                        Allele new_allele {mapped_region(variant_), std::move(old_sequence)};
+                        parsimonised_genotype.emplace(std::move(new_allele));
+                    } else {
+                        parsimonised_genotype.emplace(allele);
+                    }
                 }
-                
-                genotype = std::move(parsimonised_genotype);
             }
-        } else {
             
+            genotype = std::move(parsimonised_genotype);
         }
     }
     
