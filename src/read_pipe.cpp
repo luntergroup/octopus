@@ -68,14 +68,15 @@ ReadMap ReadPipe::fetch_reads(const GenomicRegion& region)
         
         if (DEBUG_MODE) {
             Logging::DebugLogger log {};
-            stream(log) << "Fetched " << count_reads(batch_reads) << " unfiltered reads from region " << region;
+            stream(log) << "Fetched " << count_reads(batch_reads) << " unfiltered reads from " << region;
         }
         
         erase_filtered_reads(batch_reads, filter(batch_reads, read_filter_));
         
         if (DEBUG_MODE) {
             Logging::DebugLogger log {};
-            stream(log) << "There are " << count_reads(batch_reads) << " filtered reads in region " << region;
+            stream(log) << "There are " << count_reads(batch_reads) << " reads in " << region
+                << " after filtering";
         }
         
         if (downsampler_) {
@@ -83,7 +84,7 @@ ReadMap ReadPipe::fetch_reads(const GenomicRegion& region)
             
             if (DEBUG_MODE) {
                 Logging::DebugLogger log {};
-                stream(log) << "Downsampling removed " << n << " reads from region " << region;
+                stream(log) << "Downsampling removed " << n << " reads from " << region;
             }
         }
         

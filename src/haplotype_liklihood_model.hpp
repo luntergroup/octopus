@@ -53,7 +53,7 @@ public:
     HaplotypeLikelihoodModel(HaplotypeLikelihoodModel&&)                 = default;
     HaplotypeLikelihoodModel& operator=(HaplotypeLikelihoodModel&&)      = default;
     
-    void buffer(const Haplotype& haplotype, boost::optional<FlankState> flank_state);
+    void set(const Haplotype& haplotype, boost::optional<FlankState> flank_state);
     void clear() noexcept;
     
     // ln p(read | haplotype, model)
@@ -65,10 +65,10 @@ private:
     PenaltyType base_change_penalty_;
     ReadIndelErrorModel indel_error_model_;
     
-    const Haplotype* buffered_haplotype_;
-    boost::optional<FlankState> buffered_haplotype_flank_state_;
-    std::vector<std::int8_t> buffered_haplotype_gap_open_penalities_;
-    PenaltyType buffered_haplotype_gap_extension_penalty_;
+    const Haplotype* haplotype_;
+    boost::optional<FlankState> haplotype_flank_state_;
+    std::vector<std::int8_t> haplotype_gap_open_penalities_;
+    PenaltyType haplotype_gap_extension_penalty_;
 };
 } // namespace Octopus
 

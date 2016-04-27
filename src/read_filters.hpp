@@ -19,7 +19,25 @@
 
 namespace Octopus { namespace ReadFilters {
 
-class BasicReadFilter
+// All filters are nameable
+
+class Nameable
+{
+    std::string name_;
+    
+public:
+    Nameable() = delete;
+    Nameable(std::string name) : name_ {std::move(name)} {}
+    
+    const std::string& name() const noexcept
+    {
+        return name_;
+    }
+};
+
+// Basic filters
+
+class BasicReadFilter : public Nameable
 {
 public:
     BasicReadFilter() = delete;
@@ -31,15 +49,8 @@ public:
         return passes(read);
     }
     
-    const std::string& name() const noexcept
-    {
-        return name_;
-    }
-    
 protected:
-    BasicReadFilter(std::string name) : name_ {std::move(name)} {};
-    
-    std::string name_;
+    BasicReadFilter(std::string name) : Nameable {std::move(name)} {};
     
 private:
     virtual bool passes(const AlignedRead&) const noexcept = 0;
@@ -47,14 +58,17 @@ private:
 
 struct IsNotSecondaryAlignment : BasicReadFilter
 {
-    IsNotSecondaryAlignment() : BasicReadFilter {"IsNotSecondaryAlignment"} {}
+    IsNotSecondaryAlignment();
+    explicit IsNotSecondaryAlignment(std::string name);
     
     bool passes(const AlignedRead& read) const noexcept override;
 };
 
 struct IsNotSupplementaryAlignment : BasicReadFilter
 {
-    IsNotSupplementaryAlignment() : BasicReadFilter {"IsNotSupplementaryAlignment"} {}
+    IsNotSupplementaryAlignment();
+    IsNotSupplementaryAlignment(std::string name);
+    
     bool passes(const AlignedRead& read) const noexcept override;
 };
 
@@ -65,6 +79,7 @@ struct IsGoodMappingQuality : BasicReadFilter
     IsGoodMappingQuality() = delete;
     
     explicit IsGoodMappingQuality(QualityType good_mapping_quality);
+    explicit IsGoodMappingQuality(std::string name, QualityType good_mapping_quality);
     
     bool passes(const AlignedRead& read) const noexcept override;
     
@@ -77,8 +92,10 @@ struct HasSufficientGoodBaseFraction : BasicReadFilter
     using QualityType = AlignedRead::QualityType;
     
     HasSufficientGoodBaseFraction() = delete;
-    
     explicit HasSufficientGoodBaseFraction(QualityType good_base_quality,
+                                           double min_good_base_fraction);
+    explicit HasSufficientGoodBaseFraction(std::string name,
+                                           QualityType good_base_quality,
                                            double min_good_base_fraction);
     
     bool passes(const AlignedRead& read) const noexcept override;
@@ -93,8 +110,10 @@ struct HasSufficientGoodQualityBases : BasicReadFilter
     using QualityType = AlignedRead::QualityType;
     
     HasSufficientGoodQualityBases() = delete;
-    
     explicit HasSufficientGoodQualityBases(QualityType good_base_quality,
+                                           unsigned min_good_bases);
+    explicit HasSufficientGoodQualityBases(std::string name,
+                                           QualityType good_base_quality,
                                            unsigned min_good_bases);
     
     bool passes(const AlignedRead& read) const noexcept override;
@@ -106,25 +125,33 @@ private:
 
 struct IsMapped : BasicReadFilter
 {
-    IsMapped() : BasicReadFilter {"IsMapped"} {};
+    IsMapped();
+    explicit IsMapped(std::string name);
+    
     bool passes(const AlignedRead& read) const noexcept override;
 };
 
 struct IsNotChimeric : BasicReadFilter
 {
-    IsNotChimeric() : BasicReadFilter {"IsNotChimeric"} {}
+    IsNotChimeric();
+    explicit IsNotChimeric(std::string name);
+    
     bool passes(const AlignedRead& read) const noexcept override;
 };
 
 struct IsNextSegmentMapped : BasicReadFilter
 {
-    IsNextSegmentMapped() : BasicReadFilter {"IsNextSegmentMapped"} {}
+    IsNextSegmentMapped();
+    explicit IsNextSegmentMapped(std::string name);
+    
     bool passes(const AlignedRead& read) const noexcept override;
 };
 
 struct IsNotMarkedDuplicate : BasicReadFilter
 {
-    IsNotMarkedDuplicate() : BasicReadFilter {"IsNotMarkedDuplicate"} {}
+    IsNotMarkedDuplicate();
+    explicit IsNotMarkedDuplicate(std::string name);
+    
     bool passes(const AlignedRead& read) const noexcept override;
 };
 
@@ -133,8 +160,8 @@ struct IsShort : BasicReadFilter
     using SizeType = AlignedRead::SizeType;
     
     IsShort() = delete;
-    
     explicit IsShort(SizeType max_length);
+    explicit IsShort(std::string name, SizeType max_length);
     
     bool passes(const AlignedRead& read) const noexcept override;
 
@@ -147,35 +174,77 @@ struct IsLong : BasicReadFilter
     using SizeType = AlignedRead::SizeType;
     
     IsLong() = delete;
-    
-    explicit IsLong(SizeType max_length);
+    explicit IsLong(SizeType min_length);
+    explicit IsLong(std::string name, SizeType min_length);
     
     bool passes(const AlignedRead& read) const noexcept override;
     
 private:
-    SizeType max_length_;
+    SizeType min_length_;
 };
 
 struct IsNotContaminated : BasicReadFilter
 {
-    IsNotContaminated() : BasicReadFilter {"IsNotContaminated"} {}
+    IsNotContaminated();
+    explicit IsNotContaminated(std::string name);
+    
     bool passes(const AlignedRead& read) const noexcept override;
 };
 
 struct IsNotMarkedQcFail : BasicReadFilter
 {
-    IsNotMarkedQcFail() : BasicReadFilter {"IsNotMarkedQcFail"} {}
+    IsNotMarkedQcFail();
+    explicit IsNotMarkedQcFail(std::string name);
+    
     bool passes(const AlignedRead& read) const noexcept override;
 };
 
-// Context-based filters
+// Context filters
 
-struct FilterDuplicates
+template <typename BidirIt>
+class ContextReadFilter : public Nameable
 {
-    template <typename ForwardIt>
-    ForwardIt operator()(ForwardIt first_read, ForwardIt last_read) const
+public:
+    ContextReadFilter() = delete;
+    
+    virtual ~ContextReadFilter() = default;
+    
+    BidirIt remove(BidirIt first, BidirIt last) const
     {
-        return std::unique(first_read, last_read, IsDuplicate {});
+        return do_remove(first, last);
+    }
+    
+    BidirIt partition(BidirIt first, BidirIt last) const
+    {
+        return do_partition(first, last);
+    }
+    
+protected:
+    ContextReadFilter(std::string name) : Nameable {std::move(name)} {};
+    
+private:
+    virtual BidirIt do_remove(BidirIt first, BidirIt last) const = 0;
+    virtual BidirIt do_partition(BidirIt first, BidirIt last) const = 0;
+};
+
+template <typename ForwardIt>
+struct IsNotDuplicate : ContextReadFilter<ForwardIt>
+{
+    IsNotDuplicate() : ContextReadFilter<ForwardIt> {"IsNotOctopusDuplicate"} {}
+    explicit IsNotDuplicate(std::string name)
+    : ContextReadFilter<ForwardIt> {std::move(name)} {}
+    
+    ForwardIt do_remove(ForwardIt first, ForwardIt last) const override
+    {
+        return std::unique(first, last, IsDuplicate {});
+    }
+    
+    ForwardIt do_partition(ForwardIt first, ForwardIt last) const override
+    {
+        // TODO: we need a clever stable_partition_unique implementation.
+        // See my question:
+        // http://stackoverflow.com/questions/36888033/implementing-partition-unique-and-stable-partition-unique-algorithms
+        return last;
     }
 };
 

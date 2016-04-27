@@ -22,20 +22,19 @@
 
 namespace Octopus
 {
-void HaplotypeLikelihoodModel::buffer(const Haplotype& haplotype,
-                                      boost::optional<FlankState> flank_state)
+void HaplotypeLikelihoodModel::set(const Haplotype& haplotype, boost::optional<FlankState> flank_state)
 {
-    buffered_haplotype_ = std::addressof(haplotype);
-    buffered_haplotype_flank_state_ = std::move(flank_state);
+    haplotype_ = std::addressof(haplotype);
+    haplotype_flank_state_ = std::move(flank_state);
     
-    indel_error_model_.fill_gap_open_penalties(haplotype, buffered_haplotype_gap_open_penalities_);
-    buffered_haplotype_gap_extension_penalty_ = indel_error_model_.calculate_gap_extension_penalty(haplotype);
+    indel_error_model_.fill_gap_open_penalties(haplotype, haplotype_gap_open_penalities_);
+    haplotype_gap_extension_penalty_ = indel_error_model_.calculate_gap_extension_penalty(haplotype);
 }
 
 void HaplotypeLikelihoodModel::clear() noexcept
 {
-    buffered_haplotype_ = nullptr;
-    buffered_haplotype_flank_state_ = boost::none;
+    haplotype_ = nullptr;
+    haplotype_flank_state_ = boost::none;
 }
 
 namespace
@@ -136,10 +135,10 @@ HaplotypeLikelihoodModel::HaplotypeLikelihoodModel(PenaltyType base_change_penal
 :
 base_change_penalty_ {base_change_penalty},
 indel_error_model_ {std::move(indel_model)},
-buffered_haplotype_ {nullptr},
-buffered_haplotype_flank_state_ {},
-buffered_haplotype_gap_open_penalities_ {},
-buffered_haplotype_gap_extension_penalty_ {}
+haplotype_ {nullptr},
+haplotype_flank_state_ {},
+haplotype_gap_open_penalities_ {},
+haplotype_gap_extension_penalty_ {}
 {}
 
 HaplotypeLikelihoodModel::HaplotypeLikelihoodModel(PenaltyType base_change_penalty,
@@ -148,31 +147,31 @@ HaplotypeLikelihoodModel::HaplotypeLikelihoodModel(PenaltyType base_change_penal
                                                    boost::optional<FlankState> flank_state)
 : HaplotypeLikelihoodModel {base_change_penalty, std::move(indel_model)}
 {
-    this->buffer(haplotype, std::move(flank_state));
+    this->set(haplotype, std::move(flank_state));
 }
 
 double HaplotypeLikelihoodModel::log_probability(const AlignedRead& read,
                                                  MapPositionItr first_mapping_position,
                                                  MapPositionItr last_mapping_position) const
 {
-    if (buffered_haplotype_ == nullptr) {
+    if (haplotype_ == nullptr) {
         throw std::runtime_error {"HaplotypeLikelihoodModel: no buffered Haplotype"};
     }
     
     PairHMM::Model hmm_model;
     hmm_model.nucprior  = base_change_penalty_;
-    hmm_model.gapextend = buffered_haplotype_gap_extension_penalty_;
+    hmm_model.gapextend = haplotype_gap_extension_penalty_;
     
-    if (buffered_haplotype_flank_state_) {
-        hmm_model.lhs_flank_size = buffered_haplotype_flank_state_->lhs_flank;
-        hmm_model.rhs_flank_size = buffered_haplotype_flank_state_->rhs_flank;
+    if (haplotype_flank_state_) {
+        hmm_model.lhs_flank_size = haplotype_flank_state_->lhs_flank;
+        hmm_model.rhs_flank_size = haplotype_flank_state_->rhs_flank;
     } else {
         hmm_model.lhs_flank_size = 0;
         hmm_model.rhs_flank_size = 0;
     }
     
-    return Octopus::log_probability(read, *buffered_haplotype_,
+    return Octopus::log_probability(read, *haplotype_,
                                     first_mapping_position, last_mapping_position,
-                                    buffered_haplotype_gap_open_penalities_, hmm_model);
+                                    haplotype_gap_open_penalities_, hmm_model);
 }
 } // namespace Octopus

@@ -11,7 +11,6 @@
 
 #include <vector>
 #include <memory>
-#include <functional>
 #include <algorithm>
 #include <iterator>
 #include <type_traits>
@@ -35,11 +34,14 @@ namespace Octopus
  This is a template class as the type of iterator used for context-based filteration needs to be 
  known at compile time. The class needs to know what container it is going to be operating on.
  */
-template <typename BidirIt>
+template <typename BidirIt_>
 class ReadFilter
 {
 public:
-    using ContextBasedFilter = std::function<BidirIt(BidirIt, BidirIt)>;
+    using BidirIt = BidirIt_;
+    
+    using BasicFilterPtr   = std::unique_ptr<ReadFilters::BasicReadFilter>;
+    using ContextFilterPtr = std::unique_ptr<ReadFilters::ContextReadFilter<BidirIt>>;
     
     using FilterCountMap = std::unordered_map<std::string, std::size_t>;
     
@@ -51,8 +53,8 @@ public:
     ReadFilter(ReadFilter&&)                 = default;
     ReadFilter& operator=(ReadFilter&&)      = default;
     
-    void register_filter(std::unique_ptr<ReadFilters::BasicReadFilter> filter);
-    void register_filter(ContextBasedFilter filter);
+    void register_filter(BasicFilterPtr filter);
+    void register_filter(ContextFilterPtr filter);
     
     unsigned num_filters() const noexcept;
     
@@ -65,21 +67,21 @@ public:
     BidirIt partition(BidirIt first, BidirIt last, FilterCountMap& filter_counts) const;
     
 private:
-    std::vector<std::unique_ptr<ReadFilters::BasicReadFilter>> basic_filters_;
-    std::vector<ContextBasedFilter> context_filters_;
+    std::vector<BasicFilterPtr> basic_filters_;
+    std::vector<ContextFilterPtr> context_filters_;
     
-    bool passes_all_basic_filters(const AlignedRead& read) const;
-    auto find_failing_basic_filter(const AlignedRead& read) const;
+    bool passes_all_basic_filters(const AlignedRead& read) const noexcept;
+    auto find_failing_basic_filter(const AlignedRead& read) const noexcept;
 };
 
 template <typename BidirIt>
-void ReadFilter<BidirIt>::register_filter(std::unique_ptr<ReadFilters::BasicReadFilter> filter)
+void ReadFilter<BidirIt>::register_filter(BasicFilterPtr filter)
 {
     basic_filters_.emplace_back(std::move(filter));
 }
 
 template <typename BidirIt>
-void ReadFilter<BidirIt>::register_filter(ContextBasedFilter filter)
+void ReadFilter<BidirIt>::register_filter(ContextFilterPtr filter)
 {
     context_filters_.emplace_back(std::move(filter));
 }
@@ -93,13 +95,19 @@ unsigned ReadFilter<BidirIt>::num_filters() const noexcept
 template <typename BidirIt>
 BidirIt ReadFilter<BidirIt>::remove(BidirIt first, BidirIt last) const
 {
-    last = std::remove_if(first, last,
-                         [this] (const auto& read) {
-                             return !passes_all_basic_filters(read);
-                         });
+    if (first == last || num_filters() == 0) return last;
+    
+    if (!basic_filters_.empty()) {
+        last = std::remove_if(first, last,
+                              [this] (const auto& read) {
+                                  return !passes_all_basic_filters(read);
+                              });
+    }
     
     std::for_each(cbegin(context_filters_), cend(context_filters_),
-                  [first, &last] (const auto& filter) { last = filter(first, last); });
+                  [first, &last] (const auto& filter) {
+                      last = filter->remove(first, last);
+                  });
     
     return last;
 }
@@ -107,18 +115,24 @@ BidirIt ReadFilter<BidirIt>::remove(BidirIt first, BidirIt last) const
 template <typename BidirIt>
 BidirIt ReadFilter<BidirIt>::partition(BidirIt first, BidirIt last) const
 {
+    if (first == last || num_filters() == 0) return last;
+    
     const auto passes_basic_filters = [this] (const auto& read) {
         return !passes_all_basic_filters(read);
     };
     
-    if (context_filters_.empty()) {
-        last = std::partition(first, last, passes_basic_filters);
-    } else {
-        last = std::stable_partition(first, last, passes_basic_filters);
+    if (!basic_filters_.empty()) {
+        if (context_filters_.empty()) {
+            last = std::partition(first, last, passes_basic_filters);
+        } else {
+            last = std::stable_partition(first, last, passes_basic_filters);
+        }
     }
     
     std::for_each(cbegin(context_filters_), cend(context_filters_),
-                  [first, &last] (const auto& filter) { last = filter(first, last); });
+                  [first, &last] (const auto& filter) {
+                      last = filter->partition(first, last);
+                  });
     
     return last;
 }
@@ -127,22 +141,51 @@ template <typename BidirIt>
 BidirIt ReadFilter<BidirIt>::remove(BidirIt first, BidirIt last,
                                     FilterCountMap& filter_counts) const
 {
-    filter_counts.reserve(num_filters());
+    if (num_filters() == 0) return last;
     
-    last = std::remove_if(first, last,
-                          [this, &filter_counts] (const auto& read) {
-                              const auto it = find_failing_basic_filter(read);
-                              
-                              if (it != std::cend(basic_filters_)) {
-                                  ++filter_counts[(*it)->name()];
-                                  return true;
-                              }
-                              
-                              return false;
-                          });
+    if (first == last) {
+        filter_counts.reserve(num_filters());
+        for (const auto& filter : basic_filters_) {
+            filter_counts.emplace(filter->name(), 0);
+        }
+        for (const auto& filter : context_filters_) {
+            filter_counts.emplace(filter->name(), 0);
+        }
+        return last;
+    }
+    
+    if (!basic_filters_.empty()) {
+        std::vector<std::size_t> flat_counts(basic_filters_.size(), 0);
+        
+        last = std::remove_if(first, last,
+                              [this, &flat_counts] (const auto& read) {
+                                  const auto it = find_failing_basic_filter(read);
+                                  
+                                  if (it != std::cend(basic_filters_)) {
+                                      ++flat_counts[std::distance(std::cbegin(basic_filters_), it)];
+                                      return true;
+                                  }
+                                  
+                                  return false;
+                              });
+        
+        filter_counts.reserve(num_filters());
+        
+        std::transform(std::cbegin(basic_filters_), std::cend(basic_filters_), std::cbegin(flat_counts),
+                       std::inserter(filter_counts, std::begin(filter_counts)),
+                       [] (const auto& filter, const auto count) {
+                           return std::make_pair(filter->name(), count);
+                       });
+    }
     
     std::for_each(cbegin(context_filters_), cend(context_filters_),
-                  [first, &last] (const auto& filter) { last = filter(first, last); });
+                  [first, &last, &filter_counts] (const auto& filter) {
+                      const auto it = filter->remove(first, last);
+                      
+                      filter_counts.emplace(filter->name(), std::distance(it, last));
+                      
+                      last = it;
+                  });
     
     return last;
 }
@@ -151,20 +194,51 @@ template <typename BidirIt>
 BidirIt ReadFilter<BidirIt>::partition(BidirIt first, BidirIt last,
                                        FilterCountMap& filter_counts) const
 {
-    const auto passes_basic_filters = [this] (const auto& read) {
-        return !passes_all_basic_filters(read);
-    };
+    if (num_filters() == 0) return last;
     
-    filter_counts.reserve(num_filters());
+    if (first == last) {
+        filter_counts.reserve(num_filters());
+        for (const auto& filter : basic_filters_) {
+            filter_counts.emplace(filter->name(), 0);
+        }
+        for (const auto& filter : context_filters_) {
+            filter_counts.emplace(filter->name(), 0);
+        }
+        return last;
+    }
     
-    if (context_filters_.empty()) {
-        last = std::partition(first, last, passes_basic_filters);
-    } else {
-        last = std::stable_partition(first, last, passes_basic_filters);
+    if (!basic_filters_.empty()) {
+        std::vector<std::size_t> flat_counts(basic_filters_.size(), 0);
+        
+        last = std::stable_partition(first, last,
+                      [this, &flat_counts] (const auto& read) {
+                          const auto it = find_failing_basic_filter(read);
+                          
+                          if (it != std::cend(basic_filters_)) {
+                              ++flat_counts[std::distance(std::cbegin(basic_filters_), it)];
+                              return true;
+                          }
+                          
+                          return false;
+                      });
+        
+        filter_counts.reserve(num_filters());
+        
+        std::transform(std::cbegin(basic_filters_), std::cend(basic_filters_), std::cbegin(flat_counts),
+                       std::inserter(filter_counts, std::begin(filter_counts)),
+                       [] (const auto& filter, const auto count) {
+                           return std::make_pair(filter->name(), count);
+                       });
     }
     
     std::for_each(cbegin(context_filters_), cend(context_filters_),
-                  [first, &last] (const auto& filter) { last = filter(first, last); });
+                  [first, &last, &filter_counts] (const auto& filter) {
+                      const auto it = filter->partition(first, last);
+                      
+                      filter_counts.emplace(filter->name(), std::distance(it, last));
+                      
+                      last = it;
+                  });
     
     return last;
 }
@@ -172,14 +246,14 @@ BidirIt ReadFilter<BidirIt>::partition(BidirIt first, BidirIt last,
 // private member methods
 
 template <typename BidirIt>
-bool ReadFilter<BidirIt>::passes_all_basic_filters(const AlignedRead& read) const
+bool ReadFilter<BidirIt>::passes_all_basic_filters(const AlignedRead& read) const noexcept
 {
     return std::all_of(std::cbegin(basic_filters_), std::cend(basic_filters_),
                        [&read] (const auto& filter) { return (*filter)(read); });
 }
 
 template <typename BidirIt>
-auto ReadFilter<BidirIt>::find_failing_basic_filter(const AlignedRead& read) const
+auto ReadFilter<BidirIt>::find_failing_basic_filter(const AlignedRead& read) const noexcept
 {
     return std::find_if_not(std::cbegin(basic_filters_), std::cend(basic_filters_),
                             [&read] (const auto& filter) { return (*filter)(read); });

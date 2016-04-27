@@ -1182,7 +1182,7 @@ namespace Octopus
         }
         
         if (!options.at("allow-octopus-duplicates").as<bool>()) {
-            result.register_filter(FilterDuplicates());
+            result.register_filter(std::make_unique<IsNotDuplicate<ReadFilterer::BidirIt>>());
         }
         
         if (!options.at("allow-qc-fails").as<bool>()) {

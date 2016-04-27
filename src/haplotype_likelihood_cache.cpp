@@ -98,7 +98,7 @@ void HaplotypeLikelihoodCache::populate(const ReadMap& reads,
         
         auto read_hash_itr = std::cbegin(read_hashes);
         
-        likelihood_model_.buffer(haplotype, std::move(flank_state));
+        likelihood_model_.set(haplotype, std::move(flank_state));
         
         for (const auto& t : read_iterators_) {
             *it = std::vector<double>(t.num_reads);

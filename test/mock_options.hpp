@@ -43,7 +43,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--reference", ecoli_reference_fasta.c_str(),
         
         //"--reads", NA12878_low_coverage.c_str(),
-        //"--reads", NA12878_high_coverage.c_str(),
+        "--reads", NA12878_high_coverage.c_str(),
         //"--reads", "~/Genomics/Illumina/NA12878.mapped.ILLUMINA.bwa.CEU.high_coverage_pcr_free.20130906.chr22.bam",
         
         //"--reads", NA12891_high_coverage.c_str(),
@@ -57,7 +57,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--reads", ecoli_bam.c_str(),
         
         // TCGA
-        "--reads", "~/Genomics/cancer/TCGA/benchmark/G15511.HCC1143_BL.1.chr22.bam",
+        //"--reads", "~/Genomics/cancer/TCGA/benchmark/G15511.HCC1143_BL.1.chr22.bam",
         //"--reads", "~/Genomics/cancer/TCGA/benchmark/G15511.HCC1143.1.chr22.bam",
         
         // MSG
@@ -107,7 +107,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         
         // Bad VCF representation
         //"--regions", "22:51004206-51004246", // overlapping deletions
-        //"--regions", "22:47,857,586-47,857,737", // snps overlapping deletion
+        "--regions", "22:47,857,586-47,857,737", // snps overlapping deletion
         //"--regions", "22:47,134,127-47,134,167", // SNP followed by insertion
         //"--regions", "22:49929368-49929408", // deletion overlapping SNP
         //"--regions", "22:50957441-50957481", // insertion & SNP, and SNP!
@@ -164,7 +164,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--regions", "22:28,063,906-28,064,070", // don't think this is a real somatic SNV
         //"--regions", "22:28121410-28121648", // clearly bullshit
         //"--regions", "22:28,180,963-28,181,127", // multiple deletions
-        "--regions", "22:28,201,361-28,201,570", // clearly bullshit
+        //"--regions", "22:28,201,361-28,201,570", // clearly bullshit
 //        "--regions", "22:28,210,778-28,210,942",
 //        "--regions", "22:28,434,530-28,434,694",
 //        "--regions", "22:28,530,424-28,530,588",
