@@ -1141,60 +1141,64 @@ namespace Octopus
         using QualityType = AlignedRead::QualityType;
         using SizeType    = AlignedRead::SizeType;
         
+        using namespace ReadFilters;
+        
         ReadFilterer result {};
         
         if (!options.at("consider-unmapped-reads").as<bool>()) {
-            result.register_filter(ReadFilters::is_mapped());
+            result.register_filter(std::make_unique<IsMapped>());
         }
         
         const auto min_mapping_quality = options.at("min-mapping-quality").as<unsigned>();
         
         if (min_mapping_quality > 0) {
-            result.register_filter(ReadFilters::is_good_mapping_quality(min_mapping_quality));
+            result.register_filter(std::make_unique<IsGoodMappingQuality>(min_mapping_quality));
         }
         
         const auto min_base_quality = options.at("good-base-quality").as<unsigned>();
         const auto min_good_bases   = options.at("min-good-bases").as<unsigned>();
         
         if (min_good_bases > 0) {
-            result.register_filter(ReadFilters::has_sufficient_good_quality_bases(min_base_quality, min_good_bases));
+            result.register_filter(std::make_unique<HasSufficientGoodQualityBases>(min_base_quality,
+                                                                              min_good_bases));
         }
         
         if (options.count("min-good-base-fraction") == 1) {
             auto min_good_base_fraction =  options.at("min-good-base-fraction").as<double>();
-            result.register_filter(ReadFilters::has_good_base_fraction(min_base_quality, min_good_base_fraction));
+            result.register_filter(std::make_unique<HasSufficientGoodBaseFraction>(min_base_quality,
+                                                                              min_good_base_fraction));
         }
         
         if (options.count("min-read-length") == 1) {
-            result.register_filter(ReadFilters::is_short(options.at("min-read-length").as<SizeType>()));
+            result.register_filter(std::make_unique<IsShort>(options.at("min-read-length").as<SizeType>()));
         }
         
         if (options.count("max-read-length") == 1) {
-            result.register_filter(ReadFilters::is_long(options.at("max-read-length").as<SizeType>()));
+            result.register_filter(std::make_unique<IsLong>(options.at("max-read-length").as<SizeType>()));
         }
         
         if (!options.at("allow-marked-duplicates").as<bool>()) {
-            result.register_filter(ReadFilters::is_not_marked_duplicate());
+            result.register_filter(std::make_unique<IsNotMarkedDuplicate>());
         }
         
         if (!options.at("allow-octopus-duplicates").as<bool>()) {
-            result.register_filter(ReadFilters::filter_duplicates());
+            result.register_filter(FilterDuplicates());
         }
         
         if (!options.at("allow-qc-fails").as<bool>()) {
-            result.register_filter(ReadFilters::is_not_marked_qc_fail());
+            result.register_filter(std::make_unique<IsNotMarkedQcFail>());
         }
         
         if (options.at("no-secondary-alignments").as<bool>()) {
-            result.register_filter(ReadFilters::is_not_secondary_alignment());
+            result.register_filter(std::make_unique<IsNotSecondaryAlignment>());
         }
         
         if (options.at("no-supplementary-alignmenets").as<bool>()) {
-            result.register_filter(ReadFilters::is_not_supplementary_alignment());
+            result.register_filter(std::make_unique<IsNotSupplementaryAlignment>());
         }
         
         if (!options.at("consider-reads-with-unmapped-segments").as<bool>()) {
-            result.register_filter(ReadFilters::is_next_segment_mapped());
+            result.register_filter(std::make_unique<IsNextSegmentMapped>());
         }
         
         return result;
@@ -1223,19 +1227,19 @@ namespace Octopus
         auto tail_trim_size = options.at("tail-trim-size").as<SizeType>();
         
         if (trim_soft_clipped && tail_trim_size > 0) {
-            result.register_transform(ReadTransforms::trim_soft_clipped_tails(tail_trim_size));
+            result.register_transform(ReadTransforms::TrimSoftClippedTails(tail_trim_size));
         } else if (tail_trim_size > 0) {
-            result.register_transform(ReadTransforms::trim_tail(tail_trim_size));
+            result.register_transform(ReadTransforms::TrimTail(tail_trim_size));
         } else if (trim_soft_clipped) {
-            result.register_transform(ReadTransforms::trim_soft_clipped());
+            result.register_transform(ReadTransforms::TrimSoftClipped());
         }
         
         if (!options.at("disable-adapter-masking").as<bool>()) {
-            result.register_transform(ReadTransforms::trim_adapters());
+            result.register_transform(ReadTransforms::TrimAdapters());
         }
         
         if (!options.at("disable-overlap-masking").as<bool>()) {
-            result.register_transform(ReadTransforms::trim_overlapping());
+            result.register_transform(ReadTransforms::TrimOverlapping());
         }
         
         return result;

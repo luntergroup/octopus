@@ -14,7 +14,7 @@ namespace Octopus
 {
 namespace ReadTransforms
 {
-    void trim_overlapping::operator()(AlignedRead& read) const
+    void TrimOverlapping::operator()(AlignedRead& read) const
     {
         if (read.is_chimeric() && !read.is_marked_reverse_mapped()
             && read.get_next_segment().get_begin() < region_end(read)) {
@@ -23,7 +23,7 @@ namespace ReadTransforms
         }
     }
     
-    void trim_adapters::operator()(AlignedRead& read) const
+    void TrimAdapters::operator()(AlignedRead& read) const
     {
         if (read.is_chimeric()) {
             const auto insert_size = read.get_next_segment().get_inferred_template_length();
@@ -41,9 +41,9 @@ namespace ReadTransforms
         }
     }
     
-    trim_tail::trim_tail(SizeType num_bases) : num_bases_ {num_bases} {};
+    TrimTail::TrimTail(SizeType num_bases) : num_bases_ {num_bases} {};
     
-    void trim_tail::operator()(AlignedRead& read) const
+    void TrimTail::operator()(AlignedRead& read) const
     {
         if (read.is_marked_reverse_mapped()) {
             read.zero_front_qualities(num_bases_);
@@ -52,7 +52,7 @@ namespace ReadTransforms
         }
     }
     
-    void trim_soft_clipped::operator()(AlignedRead& read) const noexcept
+    void TrimSoftClipped::operator()(AlignedRead& read) const noexcept
     {
         if (is_soft_clipped(read.get_cigar_string())) {
             const auto soft_clipped_sizes = get_soft_clipped_sizes(read.get_cigar_string());
@@ -61,16 +61,16 @@ namespace ReadTransforms
         }
     }
     
-    trim_soft_clipped_tails::trim_soft_clipped_tails(SizeType num_bases) : num_bases_ {num_bases} {};
+    TrimSoftClippedTails::TrimSoftClippedTails(SizeType num_bases) : num_bases_ {num_bases} {};
     
-    void trim_soft_clipped_tails::operator()(AlignedRead& read) const
+    void TrimSoftClippedTails::operator()(AlignedRead& read) const
     {
         if (is_soft_clipped(read)) {
             const auto soft_clipped_sizes = get_soft_clipped_sizes(read);
             read.zero_front_qualities(soft_clipped_sizes.first + num_bases_);
             read.zero_back_qualities(soft_clipped_sizes.second + num_bases_);
         } else {
-            trim_tail{num_bases_}(read);
+            TrimTail {num_bases_}(read);
         }
     }
 } // namespace ReadTransforms

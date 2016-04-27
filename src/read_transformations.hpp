@@ -13,22 +13,22 @@
 
 namespace Octopus { namespace ReadTransforms
 {
-    struct trim_overlapping
+    struct TrimOverlapping
     {
         void operator()(AlignedRead& read) const;
     };
     
-    struct trim_adapters
+    struct TrimAdapters
     {
         void operator()(AlignedRead& read) const;
     };
     
-    struct trim_tail
+    struct TrimTail
     {
         using SizeType = AlignedRead::SizeType;
         
-        trim_tail() = default;
-        explicit trim_tail(SizeType num_bases);
+        TrimTail() = default;
+        explicit TrimTail(SizeType num_bases);
         
         void operator()(AlignedRead& read) const;
         
@@ -36,17 +36,17 @@ namespace Octopus { namespace ReadTransforms
         const SizeType num_bases_;
     };
     
-    struct trim_soft_clipped
+    struct TrimSoftClipped
     {
         void operator()(AlignedRead& read) const noexcept;
     };
     
-    struct trim_soft_clipped_tails
+    struct TrimSoftClippedTails
     {
         using SizeType = AlignedRead::SizeType;
         
-        trim_soft_clipped_tails() = default;
-        explicit trim_soft_clipped_tails(SizeType num_bases);
+        TrimSoftClippedTails() = default;
+        explicit TrimSoftClippedTails(SizeType num_bases);
         
         void operator()(AlignedRead& read) const;
         

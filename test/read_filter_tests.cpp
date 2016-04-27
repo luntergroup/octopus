@@ -43,10 +43,10 @@ BOOST_AUTO_TEST_CASE(read_filter_test)
     
     Octopus::ReadFilter<std::vector<AlignedRead>::iterator> read_filter {};
     
-    read_filter.register_filter(Octopus::ReadFilters::is_not_secondary_alignment());
-    read_filter.register_filter(Octopus::ReadFilters::is_good_mapping_quality(20));
-    read_filter.register_filter(Octopus::ReadFilters::has_sufficient_good_quality_bases(20, 10));
-    read_filter.register_filter(Octopus::ReadFilters::filter_duplicates());
+//    read_filter.register_filter(Octopus::ReadFilters::IsNotSecondaryAlignment());
+//    read_filter.register_filter(Octopus::ReadFilters::IsGoodMappingQuality(20));
+//    read_filter.register_filter(Octopus::ReadFilters::HasSufficientGoodQualityBases(20, 10));
+//    read_filter.register_filter(Octopus::ReadFilters::FilterDuplicates());
     
 //    std::vector<AlignedRead> good_reads {}, bad_reads {};
 //    good_reads.reserve(reads.size());

@@ -9,237 +9,168 @@
 #ifndef __Octopus__read_filters__
 #define __Octopus__read_filters__
 
+#include <string>
+#include <utility>
 #include <algorithm>
 #include <iterator>
-#include <string>
 
 #include "aligned_read.hpp"
 #include "cigar_string.hpp"
 
 namespace Octopus { namespace ReadFilters {
 
-// Context-free filters
-
-struct is_not_secondary_alignment
+class BasicReadFilter
 {
-    bool operator()(const AlignedRead& read) const
+public:
+    BasicReadFilter() = delete;
+    
+    virtual ~BasicReadFilter() = default;
+    
+    bool operator()(const AlignedRead& read) const noexcept
     {
-        return !read.is_marked_secondary_alignment();
+        return passes(read);
     }
     
-    const std::string& name() const noexcept { return name_; }
-    
-private:
-    std::string name_ = "is_not_secondary_alignment";
-};
-
-struct is_not_supplementary_alignment
-{
-    bool operator()(const AlignedRead& read) const
+    const std::string& name() const noexcept
     {
-        return !read.is_marked_supplementary_alignment();
+        return name_;
     }
     
-    const std::string& name() const noexcept { return name_; }
+protected:
+    BasicReadFilter(std::string name) : name_ {std::move(name)} {};
+    
+    std::string name_;
     
 private:
-    std::string name_ = "is_not_supplementary_alignment";
+    virtual bool passes(const AlignedRead&) const noexcept = 0;
 };
 
-struct is_good_mapping_quality
+struct IsNotSecondaryAlignment : BasicReadFilter
+{
+    IsNotSecondaryAlignment() : BasicReadFilter {"IsNotSecondaryAlignment"} {}
+    
+    bool passes(const AlignedRead& read) const noexcept override;
+};
+
+struct IsNotSupplementaryAlignment : BasicReadFilter
+{
+    IsNotSupplementaryAlignment() : BasicReadFilter {"IsNotSupplementaryAlignment"} {}
+    bool passes(const AlignedRead& read) const noexcept override;
+};
+
+struct IsGoodMappingQuality : BasicReadFilter
 {
     using QualityType = AlignedRead::QualityType;
     
-    is_good_mapping_quality() = default;
-    explicit is_good_mapping_quality(QualityType good_mapping_quality)
-    : good_mapping_quality_ {good_mapping_quality} {}
+    IsGoodMappingQuality() = delete;
     
-    bool operator()(const AlignedRead& read) const
-    {
-        return read.get_mapping_quality() >= good_mapping_quality_;
-    }
+    explicit IsGoodMappingQuality(QualityType good_mapping_quality);
     
-    const std::string& name() const noexcept { return name_; }
+    bool passes(const AlignedRead& read) const noexcept override;
     
 private:
-    const QualityType good_mapping_quality_;
-    
-    std::string name_ = "is_good_mapping_quality";
+    QualityType good_mapping_quality_;
 };
 
-struct has_good_base_fraction
+struct HasSufficientGoodBaseFraction : BasicReadFilter
 {
     using QualityType = AlignedRead::QualityType;
     
-    has_good_base_fraction() = default;
-    explicit has_good_base_fraction(QualityType good_base_quality, double min_good_base_fraction)
-    : good_base_quality_ {good_base_quality}, min_good_base_fraction_ {min_good_base_fraction} {}
+    HasSufficientGoodBaseFraction() = delete;
     
-    bool operator()(const AlignedRead& read) const
-    {
-        const auto& qualities = read.get_qualities();
-        auto num_good_bases = std::count_if(std::cbegin(qualities), std::cend(qualities), [this]
-                                            (auto quality) { return quality >= good_base_quality_; });
-        auto good_base_fraction = static_cast<double>(num_good_bases) / static_cast<double>(sequence_size(read));
-        return good_base_fraction >= min_good_base_fraction_;
-    }
+    explicit HasSufficientGoodBaseFraction(QualityType good_base_quality,
+                                           double min_good_base_fraction);
     
-    const std::string& name() const noexcept { return name_; }
+    bool passes(const AlignedRead& read) const noexcept override;
     
 private:
-    const QualityType good_base_quality_;
+    QualityType good_base_quality_;
     double min_good_base_fraction_;
-    
-    std::string name_ = "has_good_base_fraction";
 };
 
-struct has_sufficient_good_quality_bases
+struct HasSufficientGoodQualityBases : BasicReadFilter
 {
     using QualityType = AlignedRead::QualityType;
     
-    has_sufficient_good_quality_bases() = default;
-    explicit has_sufficient_good_quality_bases(QualityType good_base_quality, unsigned min_good_bases)
-    : good_base_quality_ {good_base_quality}, min_good_bases_ {min_good_bases} {}
+    HasSufficientGoodQualityBases() = delete;
     
-    bool operator()(const AlignedRead& read) const
-    {
-        const auto& qualities = read.get_qualities();
-        return std::count_if(std::cbegin(qualities), std::cend(qualities), [this]
-                             (auto quality) { return quality >= good_base_quality_; }) >= min_good_bases_;
-    }
+    explicit HasSufficientGoodQualityBases(QualityType good_base_quality,
+                                           unsigned min_good_bases);
     
-    const std::string& name() const noexcept { return name_; }
-
+    bool passes(const AlignedRead& read) const noexcept override;
+    
 private:
-    const QualityType good_base_quality_;
-    const unsigned min_good_bases_;
-    
-    std::string name_ = "has_sufficient_good_quality_bases";
+    QualityType good_base_quality_;
+    unsigned min_good_bases_;
 };
 
-struct is_mapped
+struct IsMapped : BasicReadFilter
 {
-    bool operator()(const AlignedRead& read) const
-    {
-        return !read.is_marked_unmapped();
-    }
-    
-    const std::string& name() const noexcept { return name_; }
-    
-private:
-    std::string name_ = "is_mapped";
+    IsMapped() : BasicReadFilter {"IsMapped"} {};
+    bool passes(const AlignedRead& read) const noexcept override;
 };
 
-struct is_not_chimeric
+struct IsNotChimeric : BasicReadFilter
 {
-    bool operator()(const AlignedRead& read) const
-    {
-        return !read.is_chimeric();
-    }
-    
-    const std::string& name() const noexcept { return name_; }
-    
-private:
-    std::string name_ = "is_not_chimeric";
+    IsNotChimeric() : BasicReadFilter {"IsNotChimeric"} {}
+    bool passes(const AlignedRead& read) const noexcept override;
 };
 
-struct is_next_segment_mapped
+struct IsNextSegmentMapped : BasicReadFilter
 {
-    bool operator()(const AlignedRead& read) const
-    {
-        return !read.has_mate() || !read.get_next_segment().is_marked_unmapped();
-    }
-    
-    const std::string& name() const noexcept { return name_; }
-    
-private:
-    std::string name_ = "is_next_segment_mapped";
+    IsNextSegmentMapped() : BasicReadFilter {"IsNextSegmentMapped"} {}
+    bool passes(const AlignedRead& read) const noexcept override;
 };
 
-struct is_not_marked_duplicate
+struct IsNotMarkedDuplicate : BasicReadFilter
 {
-    bool operator()(const AlignedRead& read) const
-    {
-        return !read.is_marked_duplicate();
-    }
-    
-    const std::string& name() const noexcept { return name_; }
-    
-private:
-    std::string name_ = "is_not_marked_duplicate";
+    IsNotMarkedDuplicate() : BasicReadFilter {"IsNotMarkedDuplicate"} {}
+    bool passes(const AlignedRead& read) const noexcept override;
 };
 
-struct is_short
+struct IsShort : BasicReadFilter
 {
     using SizeType = AlignedRead::SizeType;
     
-    is_short() = default;
+    IsShort() = delete;
     
-    explicit is_short(SizeType max_length) : max_length_ {max_length} {}
+    explicit IsShort(SizeType max_length);
     
-    bool operator()(const AlignedRead& read) const
-    {
-        return sequence_size(read) <= max_length_;
-    }
-    
-    const std::string& name() const noexcept { return name_; }
-    
+    bool passes(const AlignedRead& read) const noexcept override;
+
 private:
-    const SizeType max_length_;
-    
-    std::string name_ = "is_short";
+    SizeType max_length_;
 };
 
-struct is_long
+struct IsLong : BasicReadFilter
 {
     using SizeType = AlignedRead::SizeType;
     
-    is_long() = default;
+    IsLong() = delete;
     
-    explicit is_long(SizeType max_length) : max_length_ {max_length} {}
+    explicit IsLong(SizeType max_length);
     
-    bool operator()(const AlignedRead& read) const
-    {
-        return sequence_size(read) >= max_length_;
-    }
-    
-    const std::string& name() const noexcept { return name_; }
+    bool passes(const AlignedRead& read) const noexcept override;
     
 private:
-    const SizeType max_length_;
-    
-     std::string name_ = "is_long";
+    SizeType max_length_;
 };
 
-struct is_not_contaminated
+struct IsNotContaminated : BasicReadFilter
 {
-    bool operator()(const AlignedRead& read) const
-    {
-        return !read.is_chimeric() || sequence_size(read) >= read.get_next_segment().get_inferred_template_length();
-    }
-    
-    const std::string& name() const noexcept { return name_; }
-    
-private:
-    std::string name_ = "is_not_contaminated";
+    IsNotContaminated() : BasicReadFilter {"IsNotContaminated"} {}
+    bool passes(const AlignedRead& read) const noexcept override;
 };
 
-struct is_not_marked_qc_fail
+struct IsNotMarkedQcFail : BasicReadFilter
 {
-    bool operator()(const AlignedRead& read) const
-    {
-        return !read.is_marked_qc_fail();
-    }
-    
-    const std::string& name() const noexcept { return name_; }
-    
-private:
-    std::string name_ = "is_not_marked_qc_fail";
+    IsNotMarkedQcFail() : BasicReadFilter {"IsNotMarkedQcFail"} {}
+    bool passes(const AlignedRead& read) const noexcept override;
 };
 
 // Context-based filters
 
-struct filter_duplicates
+struct FilterDuplicates
 {
     template <typename ForwardIt>
     ForwardIt operator()(ForwardIt first_read, ForwardIt last_read) const
