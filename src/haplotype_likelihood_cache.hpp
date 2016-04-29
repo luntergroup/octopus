@@ -57,6 +57,8 @@ namespace Octopus
         
         void reserve(std::size_t num_samples, std::size_t num_haplotypes);
         
+        bool contains(const Haplotype& haplotype) const noexcept;
+        
         template <typename S, typename Container>
         void insert(S&& sample, const Haplotype& haplotype, Container&& likelihoods);
         

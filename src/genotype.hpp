@@ -547,8 +547,12 @@ namespace detail
                                 std::true_type)
     {
         std::vector<std::shared_ptr<MappableType>> temp_pointers(elements.size());
+        
         std::transform(std::cbegin(elements), std::cend(elements), std::begin(temp_pointers),
-                       [] (const auto& element) { return std::make_shared<MappableType>(element); });
+                       [] (const auto& element) {
+                           return std::make_shared<MappableType>(element);
+                       });
+        
         return do_generate_all_genotypes(temp_pointers, ploidy);
     }
     
@@ -558,8 +562,12 @@ namespace detail
                                 std::true_type)
     {
         std::vector<std::shared_ptr<MappableType>> temp_pointers(elements.size());
+        
         std::transform(std::cbegin(elements), std::cend(elements), std::begin(temp_pointers),
-                       [] (const auto& element) { return std::make_shared<MappableType>(element.get()); });
+                       [] (const auto& element) {
+                           return std::make_shared<MappableType>(element.get());
+                       });
+        
         return do_generate_all_genotypes(temp_pointers, ploidy);
     }
     

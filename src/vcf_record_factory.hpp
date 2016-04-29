@@ -45,7 +45,7 @@ namespace Octopus
         bool sites_only_;
         
         VcfRecord make(std::unique_ptr<Call> call) const;
-        //VcfRecord make_single(const std::vector<std::unique_ptr<Call>>& calls) const;
+        VcfRecord make_segment(std::vector<std::unique_ptr<Call>>&& calls) const;
     };
 } // namespace Octopus
 

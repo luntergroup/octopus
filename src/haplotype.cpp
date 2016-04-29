@@ -566,14 +566,15 @@ bool have_same_alleles(const Haplotype& lhs, const Haplotype& rhs)
     return HaveSameAlleles()(lhs, rhs);
 }
 
-bool IsLessComplex::operator()(const Haplotype& lhs, const Haplotype& rhs) noexcept
+bool IsLessComplex::operator()(const Haplotype& lhs, const Haplotype& rhs) const noexcept
 {
     if (lhs.explicit_alleles_.size() != rhs.explicit_alleles_.size()) {
         return lhs.explicit_alleles_.size() < rhs.explicit_alleles_.size();
     }
     
     // otherwise prefer the sequence with the least amount of indels
-    auto score = std::inner_product(std::cbegin(lhs.explicit_alleles_), std::cend(lhs.explicit_alleles_),
+    auto score = std::inner_product(std::cbegin(lhs.explicit_alleles_),
+                                    std::cend(lhs.explicit_alleles_),
                                     std::cbegin(rhs.explicit_alleles_), 0, 
                                     std::plus<void> {},
                                     [] (const auto& lhs, const auto& rhs) {
@@ -602,24 +603,34 @@ unsigned unique_least_complex(std::vector<Haplotype>& haplotypes)
     
     std::sort(begin(haplotypes), end(haplotypes));
     
-    auto first_equal = begin(haplotypes);
-    auto last_equal  = begin(haplotypes);
-    auto last        = end(haplotypes);
+    auto first_dup  = begin(haplotypes);
+    const auto last = end(haplotypes);
+    
+    assert(std::is_sorted(std::begin(haplotypes), last));
+    
+    const IsLessComplex cmp {};
     
     while (true) {
-        first_equal = std::adjacent_find(first_equal, last);
+        first_dup = std::adjacent_find(first_dup, last);
         
-        if (first_equal == last) break;
+        if (first_dup == last) break;
         
-        // skips 2 as std::next(first_equal, 1) is a duplicate
-        last_equal = std::find_if_not(std::next(first_equal, 2), last,
-                                      [first_equal] (const auto& haplotype) {
-                                          return haplotype == *first_equal;
-                                      });
+        auto least_complex = (cmp(*first_dup, *std::next(first_dup))) ? first_dup : std::next(first_dup);
         
-        std::nth_element(first_equal, first_equal, last_equal, IsLessComplex());
+        auto last_dup = std::next(first_dup, 2);
         
-        first_equal = last_equal;
+        for (; last_dup != last; ++last_dup) {
+            if (*last_dup != *first_dup) {
+                break;
+            }
+            if (cmp(*last_dup, *least_complex)) {
+                least_complex = last_dup;
+            }
+        }
+        
+        std::iter_swap(first_dup, least_complex);
+        
+        first_dup = last_dup;
     }
     
     const auto it = std::unique(begin(haplotypes), end(haplotypes));

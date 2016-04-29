@@ -1689,6 +1689,13 @@ auto segment_overlapped_copy(const Container& mappables)
     return segment_overlapped_copy(std::cbegin(mappables), std::cend(mappables));
 }
 
+template <typename Container>
+auto segment_by_overlapped_move(Container& mappables)
+{
+    return segment_overlapped_copy(std::make_move_iterator(std::begin(mappables)),
+                                   std::make_move_iterator(std::end(mappables)));
+}
+
 template <typename ForwardIt>
 auto segment_by_begin_copy(ForwardIt first, ForwardIt last)
 {
@@ -1721,6 +1728,54 @@ template <typename Container>
 auto segment_by_begin_copy(const Container& mappables)
 {
     return segment_by_begin_copy(std::cbegin(mappables), std::cend(mappables));
+}
+
+template <typename Container>
+auto segment_by_begin_move(Container& mappables)
+{
+    return segment_by_begin_move(std::make_move_iterator(std::begin(mappables)),
+                                 std::make_move_iterator(std::end(mappables)));
+}
+
+template <typename ForwardIt>
+auto segment_by_end_copy(ForwardIt first, ForwardIt last)
+{
+    using MappableTp = typename std::iterator_traits<ForwardIt>::value_type;
+    
+    static_assert(is_region_or_mappable<MappableTp>,
+                  "mappable algorithms only work for regions and mappable types");
+    
+    std::vector<std::vector<MappableTp>> result {};
+    
+    if (first == last) return result;
+    
+    result.reserve(std::distance(first, last));
+    
+    while (first != last) {
+        auto it = std::find_if_not(std::next(first), last, [first]
+                                   (const auto& mappable) {
+                                       return ends_equal(*first, mappable);
+                                   });
+        result.emplace_back(first, it);
+        first = it;
+    }
+    
+    result.shrink_to_fit();
+    
+    return result;
+}
+
+template <typename Container>
+auto segment_by_end_copy(const Container& mappables)
+{
+    return segment_by_end_copy(std::cbegin(mappables), std::cend(mappables));
+}
+
+template <typename Container>
+auto segment_by_end_move(Container& mappables)
+{
+    return segment_by_end_copy(std::make_move_iterator(std::begin(mappables)),
+                               std::make_move_iterator(std::end(mappables)));
 }
 
 template <typename ForwardIt>

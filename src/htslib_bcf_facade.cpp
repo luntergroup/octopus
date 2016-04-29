@@ -322,7 +322,7 @@ void HtslibBcfFacade::write_record(const VcfRecord& record)
     const auto& contig = record.get_chromosome_name();
     
     if (bcf_hdr_get_hrec(header_.get(), BCF_HL_CTG, "ID", contig.c_str(), nullptr) == nullptr) {
-        throw std::runtime_error {"required contig header line missing for contig " + contig};
+        throw std::runtime_error {"required contig header line missing for contig \"" + contig + "\""};
     }
     
     auto hts_record = bcf_init();

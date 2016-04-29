@@ -63,6 +63,7 @@ namespace Octopus
         
         double get_quality() const noexcept;
         
+        GenotypeCall& get_genotype_call(const SampleIdType& sample);
         const GenotypeCall& get_genotype_call(const SampleIdType& sample) const;
         
         bool is_phased(const SampleIdType& sample) const;
@@ -72,14 +73,22 @@ namespace Octopus
         virtual const GenomicRegion& get_region() const noexcept = 0;
         virtual const Allele& get_reference() const noexcept = 0;
         
-        virtual void parsimonise(char dummy_base) {};
-        virtual void parsimonise(const ReferenceGenome& reference) {};
+        void replace(char old_base, char replacement_base);
+        
+        virtual void replace(const Allele& old, Allele replacement) = 0;
+        virtual void replace_uncalled_genotype_alleles(const Allele& replacement, char ignore) = 0;
+        
+        virtual bool parsimonise(char dummy_base) { return false; };
+        virtual bool parsimonise(const ReferenceGenome& reference) { return false; };
         virtual void decorate(VcfRecord::Builder& record) const = 0;
         
     protected:
         std::unordered_map<SampleIdType, GenotypeCall> genotype_calls_;
         
         double quality_;
+        
+    private:
+        virtual void replace_called_alleles(const char old_base, const char replacement_base) = 0;
     };
     
     template <typename T>

@@ -50,8 +50,8 @@ haplotypes_ {haplotypes}
 void Genotype<Haplotype>::emplace(const std::shared_ptr<Haplotype>& haplotype)
 {
     haplotypes_.emplace_back(haplotype);
-    std::inplace_merge(std::begin(haplotypes_), std::prev(std::end(haplotypes_)), std::end(haplotypes_),
-                       HaplotypePtrLess {});
+    std::inplace_merge(std::begin(haplotypes_), std::prev(std::end(haplotypes_)),
+                       std::end(haplotypes_), HaplotypePtrLess {});
 }
 
 const Haplotype& Genotype<Haplotype>::operator[](const unsigned n) const

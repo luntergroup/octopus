@@ -33,10 +33,15 @@ namespace Octopus
         const GenomicRegion& get_region() const noexcept override;
         const Allele& get_reference() const noexcept override;
         
+        void replace(const Allele& old, Allele replacement) override;
+        void replace_uncalled_genotype_alleles(const Allele& replacement, char ignore) override;
+        
         void decorate(VcfRecord::Builder& record) const override;
         
     private:
         Allele reference_;
+        
+        void replace_called_alleles(char old_base, char replacement_base) override;
     };
     
     template <typename A>

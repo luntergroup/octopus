@@ -17,6 +17,11 @@ namespace Octopus
         return quality_;
     }
     
+    Call::GenotypeCall& Call::get_genotype_call(const SampleIdType& sample)
+    {
+        return genotype_calls_.at(sample);
+    }
+    
     const Call::GenotypeCall& Call::get_genotype_call(const SampleIdType& sample) const
     {
         return genotype_calls_.at(sample);
@@ -38,5 +43,47 @@ namespace Octopus
     void Call::set_phase(const SampleIdType& sample, PhaseCall phase)
     {
         genotype_calls_.at(sample).phase = std::move(phase);
+    }
+    
+    void Call::replace(const char old_base, const char replacement_base)
+    {
+        this->replace_called_alleles(old_base, replacement_base);
+        
+        for (auto& p : genotype_calls_) {
+            auto& called_genotype = p.second.genotype;
+            
+            auto it = std::find_if_not(std::cbegin(called_genotype), std::cend(called_genotype),
+                                       [old_base] (const Allele& allele) {
+                                           const auto& seq = allele.get_sequence();
+                                           return std::find(std::cbegin(seq), std::cend(seq),
+                                                            old_base) == std::cend(seq);
+                                       });
+            
+            if (it != std::cend(called_genotype)) {
+                Genotype<Allele> new_genotype {called_genotype.ploidy()};
+                
+                std::for_each(std::cbegin(called_genotype), it,
+                              [&new_genotype] (const Allele& allele) {
+                                  new_genotype.emplace(allele);
+                              });
+                
+                std::for_each(it, std::cend(called_genotype),
+                              [&new_genotype, old_base, replacement_base] (const Allele& allele) {
+                                  Allele::SequenceType new_sequence {};
+                                  
+                                  const auto& old_sequence = allele.get_sequence();
+                                  
+                                  new_sequence.reserve(old_sequence.size());
+                                  
+                                  std::replace_copy(std::cbegin(old_sequence), std::cend(old_sequence),
+                                                    std::back_inserter(new_sequence),
+                                                    old_base, replacement_base);
+                                  
+                                  new_genotype.emplace(Allele {allele.get_region(), std::move(new_sequence)});
+                              });
+                
+                called_genotype = std::move(new_genotype);
+            }
+        }
     }
 } // namespace Octopus

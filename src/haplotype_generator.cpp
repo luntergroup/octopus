@@ -224,9 +224,7 @@ bool can_remove_entire_passed_region(const GenomicRegion& current_active_region,
                                      const GenomicRegion& next_active_region,
                                      const Range& passed_alleles)
 {
-    return passed_alleles.empty()
-            || (is_after(next_active_region, current_active_region)
-                && !overlaps(rightmost_region(passed_alleles), next_active_region));
+    return passed_alleles.empty() || !overlaps(rightmost_region(passed_alleles), next_active_region);
 }
 
 template <typename Range>
@@ -328,7 +326,10 @@ void HaplotypeGenerator::update_next_active_region() const
                                                                      max_lagged_region);
                     const auto passed_alleles = overlap_range(alleles_, passed_region);
                     
-                    if (requires_staged_removal(passed_alleles)) {
+                    if (can_remove_entire_passed_region(current_active_region_,
+                                                        max_lagged_region, passed_alleles)) {
+                        tmp_tree.remove_overlapped(passed_region);
+                    }else if (requires_staged_removal(passed_alleles)) {
                         const auto first_removal_region = expand_rhs(passed_region, -1);
                         tmp_tree.remove_overlapped(first_removal_region);
                         tmp_tree.remove_overlapped(tail_region(first_removal_region));

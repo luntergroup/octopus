@@ -304,7 +304,7 @@ struct HaveSameAlleles
 
 struct IsLessComplex
 {
-    bool operator()(const Haplotype& lhs, const Haplotype& rhs) noexcept;
+    bool operator()(const Haplotype& lhs, const Haplotype& rhs) const noexcept;
 };
 
 unsigned unique_least_complex(std::vector<Haplotype>& haplotypes);

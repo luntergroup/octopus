@@ -43,8 +43,8 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--reference", ecoli_reference_fasta.c_str(),
         
         //"--reads", NA12878_low_coverage.c_str(),
-        "--reads", NA12878_high_coverage.c_str(),
-        //"--reads", "~/Genomics/Illumina/NA12878.mapped.ILLUMINA.bwa.CEU.high_coverage_pcr_free.20130906.chr22.bam",
+        //"--reads", NA12878_high_coverage.c_str(),
+        "--reads", "~/Genomics/Illumina/NA12878.mapped.ILLUMINA.bwa.CEU.high_coverage_pcr_free.20130906.chr22.bam",
         
         //"--reads", NA12891_high_coverage.c_str(),
         //"--reads", HG00101.c_str(),
@@ -74,6 +74,8 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--make-positional-refcalls",
         
         /* input regions */
+        
+        "--regions", "22:16139425-16140281",
         
         //"--use-one-based-indexing",
         
@@ -105,15 +107,16 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--regions", "16:62,432,702-62,432,933", // interesting insertions
         //"--regions", "22:47,397,181-47,397,224", // interesting deletions
         
-        // Bad VCF representation
+        // Tricky VCF representation
+        //"--regions", "22:16,190,278-16,190,318",  // overlapping deletions
         //"--regions", "22:51004206-51004246", // overlapping deletions
-        "--regions", "22:47,857,586-47,857,737", // snps overlapping deletion
+        //"--regions", "22:47,857,586-47,857,737", // snps overlapping deletion
         //"--regions", "22:47,134,127-47,134,167", // SNP followed by insertion
         //"--regions", "22:49929368-49929408", // deletion overlapping SNP
         //"--regions", "22:50957441-50957481", // insertion & SNP, and SNP!
         //"--regions", "22:33,920,251-33,920,291", // insertion followed by SNP
         //"--regions", "22:16,909,216-16,909,255", // insertion followed by 2 SNPs
-        //"--regions", "22:25,808,709-25,808,749", // insertions followed by SNP
+        //"--regions", "22:25,808,709-25,808,749", // insertions followed by hom SNP
         //"--regions", "22:37,980,669-37,980,708", // overlapping deletion & insertion
         
         //"--regions", "16:46,392,879-46,393,098", // NA12878_low_coverage huge memory spike
@@ -247,8 +250,8 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--min-assembler-base-quality", "10",
         //"--max-variant-size", "25",
         
-        //"--disable-inactive-flank-scoring",
         //"--disable-haplotype-lagging",
+        //"--disable-inactive-flank-scoring",
         //"--max-haplotypes", "50",
         
         "--min-variant-posterior", "10",
@@ -263,7 +266,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--max-open-read-files", "1",
         
         //"--output", test_out_vcf.c_str(),
-        //"--output", "octopus_NA12878HC_22_unlagged_dummy.vcf",
+        "--output", "octopus_NA12878HC_22_lagged_dummy.vcf",
         //"--output", "octopus_calls2.vcf",
         
         nullptr};

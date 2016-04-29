@@ -40,14 +40,20 @@ namespace Octopus
         
         const Allele& get_alternative() const noexcept;
         
-        virtual void parsimonise(char dummy_base) override;
-        virtual void parsimonise(const ReferenceGenome& reference) override;
+        void replace(const Allele& old, Allele replacement) override;
+        void replace_uncalled_genotype_alleles(const Allele& replacement, char ignore) override;
+        
+        virtual bool parsimonise(char dummy_base) override;
+        virtual bool parsimonise(const ReferenceGenome& reference) override;
         
     protected:
         
         Variant variant_;
         
         bool all_genotypes_are_self_contained() const;
+        
+    private:
+        void replace_called_alleles(char old_base, char replacement_base) override;
     };
     
     template <typename V, typename T>

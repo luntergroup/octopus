@@ -234,7 +234,7 @@ void set_phase(const SampleIdType& sample, const Phaser::PhaseSet::PhaseRegion& 
     
     assert(!overlapped.empty());
     
-    call->set_phase(sample, Call::PhaseCall {overlapped.front(), phase.score});
+    call->set_phase(sample, Call::PhaseCall {encompassing_region(overlapped.front(), call), phase.score});
 }
 
 void set_phasing(std::vector<CallWrapper>& calls, const Phaser::PhaseSet& phase_set)
@@ -369,6 +369,7 @@ VariantCaller::call(const GenomicRegion& call_region, ProgressMeter& progress_me
         if (haplotypes.empty()) {
             // This can only happen if all haplotypes have equal likelihood
             haplotype_generator.clear_progress();
+            haplotype_likelihoods.clear();
             continue;
         }
         
@@ -380,6 +381,7 @@ VariantCaller::call(const GenomicRegion& call_region, ProgressMeter& progress_me
         haplotype_generator.remove(removed_haplotypes);
         haplotype_generator.uniquely_keep(haplotypes);
         removed_haplotypes.clear();
+        removed_haplotypes.shrink_to_fit();
         pause_timer(haplotype_generation_timer);
         
         if (debug_log_) {
@@ -666,7 +668,6 @@ std::vector<Haplotype> VariantCaller::filter(std::vector<Haplotype>& haplotypes,
         debug::print_haplotypes(stream(trace_log), removed_haplotypes,
                                 debug::Resolution::VariantAlleles);
     }
-    
     
     return removed_haplotypes;
 }

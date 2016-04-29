@@ -776,30 +776,42 @@ namespace Octopus
         
         stream(log) << "Done initialising calling components in " << TimeInterval {start, end};
         
-        try {
-            log_startup_info(*components);
-            
-            write_final_output_header(*components, Options::call_sites_only(options));
-            
-            options.clear();
-            
-            if (is_multithreaded(*components)) {
-                run_octopus_multi_threaded(*components);
-            } else {
-                run_octopus_single_threaded(*components);
-            }
-        } catch (const std::exception& e) {
-            Logging::FatalLogger lg {};
-            stream(lg) << "Encountered exception '" << e.what() << "'. Attempting to cleanup...";
-            cleanup(*components);
-            if (DEBUG_MODE) {
-                stream(lg) << "Cleanup successful. Please send log file to dcooke@well.ox.ac.uk";
-            } else {
-                stream(lg) << "Cleanup successful. Please re-run in debug mode (option --debug) and send"
-                                " log file to " << Octopus_bug_email;
-            }
-            return;
+        log_startup_info(*components);
+        
+        write_final_output_header(*components, Options::call_sites_only(options));
+        
+        options.clear();
+        
+        if (is_multithreaded(*components)) {
+            run_octopus_multi_threaded(*components);
+        } else {
+            run_octopus_single_threaded(*components);
         }
+        
+//        try {
+//            log_startup_info(*components);
+//            
+//            write_final_output_header(*components, Options::call_sites_only(options));
+//            
+//            options.clear();
+//            
+//            if (is_multithreaded(*components)) {
+//                run_octopus_multi_threaded(*components);
+//            } else {
+//                run_octopus_single_threaded(*components);
+//            }
+//        } catch (const std::exception& e) {
+//            Logging::FatalLogger lg {};
+//            stream(lg) << "Encountered exception '" << e.what() << "'. Attempting to cleanup...";
+//            cleanup(*components);
+//            if (DEBUG_MODE) {
+//                stream(lg) << "Cleanup successful. Please send log file to dcooke@well.ox.ac.uk";
+//            } else {
+//                stream(lg) << "Cleanup successful. Please re-run in debug mode (option --debug) and send"
+//                                " log file to " << Octopus_bug_email;
+//            }
+//            return;
+//        }
         
         cleanup(*components);
         

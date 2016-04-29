@@ -52,15 +52,11 @@ void HaplotypeLikelihoodCache::populate(const ReadMap& reads,
     // This code is not very pretty because it is a real bottleneck for the entire application.
     // We want to try a minimise memory allocations for the mapping.
     
-    if (!cache_.empty()) {
-        cache_.clear();
-    }
+    cache_.clear();
     
     if (cache_.bucket_count() < haplotypes.size()) {
         cache_.rehash(haplotypes.size());
     }
-    
-    sample_indices_.clear();
     
     set_read_iterators_and_sample_indices(reads);
     
@@ -154,9 +150,15 @@ void HaplotypeLikelihoodCache::reserve(std::size_t num_samples, std::size_t num_
     cache_.reserve(num_haplotypes);
 }
 
+bool HaplotypeLikelihoodCache::contains(const Haplotype& haplotype) const noexcept
+{
+    return cache_.count(haplotype) == 1;
+}
+
 void HaplotypeLikelihoodCache::clear()
 {
     cache_.clear();
+    sample_indices_.clear();
 }
 
 // private methods
