@@ -56,24 +56,27 @@ std::vector<Variant> fetch_variants(const GenomicRegion& region, VcfReader& read
     auto batches = get_batch_regions(region, reader, max_batch_size);
     
     for (const auto& batch : batches) {
-        auto vcf_records = reader.fetch_records(batch, VcfReader::Unpack::AllButSamples);
-        for (const auto& record : vcf_records) {
+        auto records = reader.fetch_records(batch, VcfReader::Unpack::AllButSamples);
+        
+        for (const auto& record : records) {
             for (const auto& alt_allele : record.get_alt_alleles()) {
                 const auto& ref_allele = record.get_ref_allele();
+                
                 if (ref_allele.size() != alt_allele.size()) {
+                    auto position = record.get_position();
+                    
                     const auto p = std::mismatch(std::cbegin(ref_allele), std::cend(ref_allele),
                                                  std::cbegin(alt_allele), std::cend(alt_allele));
                     
                     Variant::SequenceType new_ref_allele {p.first, std::cend(ref_allele)};
                     Variant::SequenceType new_alt_allele {p.second, std::cend(alt_allele)};
                     
-                    const auto new_position = record.get_position()
-                        + static_cast<Variant::SizeType>(std::distance(std::cbegin(ref_allele), p.first));
+                    position += std::distance(std::cbegin(ref_allele), p.first);
                     
-                    result.emplace_back(record.get_chromosome_name(), new_position,
+                    result.emplace_back(record.get_chromosome_name(), position,
                                         std::move(new_ref_allele), std::move(new_alt_allele));
                 } else {
-                    result.emplace_back(record.get_chromosome_name(), record.get_position(),
+                    result.emplace_back(record.get_chromosome_name(), record.get_position() - 1,
                                         record.get_ref_allele(), alt_allele);
                 }
             }

@@ -9,6 +9,9 @@
 #include "read_pipe.hpp"
 
 #include <utility>
+#include <iterator>
+#include <algorithm>
+#include <cassert>
 
 #include "read_utils.hpp"
 #include "mappable_algorithms.hpp"
@@ -97,11 +100,63 @@ ReadMap ReadPipe::fetch_reads(const GenomicRegion& region)
     
     return result;
 }
+    
+std::vector<GenomicRegion> join_close_regions(const std::vector<GenomicRegion>& regions,
+                                              const GenomicRegion::SizeType max_distance)
+{
+    std::vector<GenomicRegion> result {};
+    
+    if (regions.empty()) return result;
+    
+    result.reserve(regions.size());
+    
+    auto tmp = regions.front();
+    
+    std::for_each(std::next(std::cbegin(regions)), std::cend(regions),
+                  [&tmp, &result, max_distance] (const auto& region) {
+                      if (inner_distance(tmp, region) <= max_distance) {
+                          tmp = encompassing_region(tmp, region);
+                      } else {
+                          result.emplace_back(tmp);
+                          tmp = region;
+                      }
+                  });
+    
+    if (result.empty() || ends_equal(tmp, result.back())) {
+        result.emplace_back(std::move(tmp));
+    }
+    
+    return result;
+}
 
 ReadMap ReadPipe::fetch_reads(const std::vector<GenomicRegion>& regions)
 {
-    // TODO: improve this
-    return fetch_reads(encompassing_region(regions));
+    assert(std::is_sorted(std::cbegin(regions), std::cend(regions)));
+    
+    const auto fetch_regions = join_close_regions(extract_covered_regions(regions), 500);
+    
+    ReadMap result {samples_.size()};
+    
+    for (const auto& sample : samples_) {
+        result[sample].reserve(100000);
+    }
+    
+    for (const auto& region : fetch_regions) {
+        auto tmp = fetch_reads(region);
+        
+        for (const auto& sample : samples_) {
+            result.at(sample).insert(std::make_move_iterator(std::begin(tmp.at(sample))),
+                                     std::make_move_iterator(std::end(tmp.at(sample))));
+            tmp.at(sample).clear();
+            tmp.at(sample).shrink_to_fit();
+        }
+    }
+    
+    for (const auto& sample : samples_) {
+        result[sample].shrink_to_fit();
+    }
+    
+    return result;
 }
 
 } // namespace Octopus

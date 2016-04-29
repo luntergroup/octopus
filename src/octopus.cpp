@@ -498,6 +498,8 @@ namespace Octopus
             }
             
             return boost::optional<GenomeCallingComponents> {std::move(result)};
+        } catch (const fs::filesystem_error& e) {
+            return boost::none; // should already have logged this
         } catch (const std::exception& e) {
             stream(log) << "Could not collate options due to error '" << e.what() << "'";
             return boost::none;

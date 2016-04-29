@@ -20,6 +20,7 @@
 #include <algorithm>
 #include <type_traits>
 #include <ostream>
+#include <cassert>
 
 #include <boost/functional/hash.hpp>
 
@@ -438,9 +439,9 @@ namespace detail
         using GenotypeTp = GenotypeType<Container>;
         using ResultType = std::vector<GenotypeTp>;
         return ResultType {
-            GenotypeTp {elements.front(), elements.front()},
-            GenotypeTp {elements.front(), elements.back()},
-            GenotypeTp {elements.back(), elements.back()}
+            GenotypeTp {elements[0], elements[0]},
+            GenotypeTp {elements[0], elements[1]},
+            GenotypeTp {elements[1], elements[1]}
         };
     }
     
@@ -479,8 +480,20 @@ namespace detail
     }
     
     template <typename Container>
-    auto generate_genotype(const Container& elements,
-                           const std::vector<unsigned>& element_indicies)
+    auto generate_all_triploid_biallelic_genotypes(const Container& elements)
+    {
+        using GenotypeTp = GenotypeType<Container>;
+        using ResultType = std::vector<GenotypeTp>;
+        return ResultType {
+            GenotypeTp {elements[0], elements[0], elements[0]},
+            GenotypeTp {elements[0], elements[1], elements[1]},
+            GenotypeTp {elements[0], elements[1], elements[1]},
+            GenotypeTp {elements[1], elements[1], elements[1]}
+        };
+    }
+    
+    template <typename Container>
+    auto generate_genotype(const Container& elements, const std::vector<unsigned>& element_indicies)
     {
         GenotypeType<Container> result {static_cast<unsigned>(element_indicies.size())};
         
@@ -504,17 +517,23 @@ namespace detail
         if (num_elements == 1) return ResultType {GenotypeTp {ploidy, elements.front()}};
         
         if (ploidy == 2) {
-            if (num_elements == 2) return detail::generate_all_diploid_biallelic_genotypes(elements);
-            if (num_elements == 3) return detail::generate_all_diploid_triallelic_genotypes(elements);
-            if (num_elements == 4) return detail::generate_all_diploid_tetraallelic_genotypes(elements);
+            switch(num_elements) {
+                case 2: return detail::generate_all_diploid_biallelic_genotypes(elements);
+                case 3: return detail::generate_all_diploid_triallelic_genotypes(elements);
+                case 4: return detail::generate_all_diploid_tetraallelic_genotypes(elements);
+            }
         }
         
         if (ploidy == 1) return detail::generate_all_haploid_genotypes(elements);
         
+        if (ploidy == 3 && num_elements == 2) {
+            return detail::generate_all_triploid_biallelic_genotypes(elements);
+        }
+        
         ResultType result {};
         result.reserve(num_genotypes(num_elements, ploidy));
         
-        std::vector<unsigned> element_indicies(ploidy, 0);
+        std::vector<unsigned> element_indicies(ploidy, 0); // TODO: make thread_local
         
         unsigned i {0};
         

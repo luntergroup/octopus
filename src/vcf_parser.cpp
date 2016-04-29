@@ -381,7 +381,18 @@ VcfRecord parse_record(const std::string& line, const std::vector<VcfRecord::Sam
     std::advance(it, 1);
     rb.set_alt_alleles(split(it->data, ','));
     std::advance(it, 1);
-    rb.set_quality(static_cast<VcfRecord::QualityType>(std::stoi(it->data)));
+    
+    if (it->data == ".") {
+        rb.set_quality(0);
+    } else {
+        try {
+            rb.set_quality(static_cast<VcfRecord::QualityType>(std::stoi(it->data)));
+        } catch (const std::invalid_argument& e) {
+            rb.set_quality(0); // or should throw?
+        }
+    }
+    
+    
     std::advance(it, 1);
     rb.set_filters(split(it->data, ':'));
     std::advance(it, 1);

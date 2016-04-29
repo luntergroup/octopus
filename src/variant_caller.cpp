@@ -357,6 +357,14 @@ VariantCaller::call(const GenomicRegion& call_region, ProgressMeter& progress_me
         
         if (debug_log_) {
             stream(*debug_log_) << "There are " << haplotypes.size() << " initial haplotypes";
+        }
+        
+        if (!refcalls_requested() && !has_coverage(active_reads)) {
+            if (debug_log_) {
+                stream(*debug_log_) << "Skipping active region as there are no active reads";
+            }
+            continue;
+        } else if (debug_log_) {
             stream(*debug_log_) << "There are " << count_reads(active_reads) << " active reads";
         }
         

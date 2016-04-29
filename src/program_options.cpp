@@ -254,6 +254,8 @@ namespace Octopus
              "File to where output is written")
             ("contig-output-order", po::value<ContigOutputOrder>()->default_value(ContigOutputOrder::AsInReferenceIndex),
              "The order contigs should be written to the output")
+            ("regenotype", po::value<std::string>(),
+             "A file VCF format file. Calls will be restricted to exactly the sites in this file")
             ;
             
             po::options_description filters("Read filter options");
@@ -312,8 +314,6 @@ namespace Octopus
              "Disables candidate generation using local re-assembly")
             ("candidates-from-source", po::value<std::string>(),
              "Variant file path containing known variants. These variants will automatically become candidates")
-            ("regenotype", po::bool_switch()->default_value(false),
-             "Disables all generators other than source which must be present")
             ("min-base-quality", po::value<unsigned>()->default_value(20),
              "Only bases with quality above this value are considered for candidate generation")
             ("min-supporting-reads", po::value<unsigned>()->default_value(2),
@@ -1251,6 +1251,9 @@ namespace Octopus
     CandidateGeneratorBuilder make_candidate_generator_builder(const po::variables_map& options,
                                                                const ReferenceGenome& reference)
     {
+        Logging::WarningLogger warning_log {};
+        Logging::ErrorLogger log {};
+        
         CandidateGeneratorBuilder result {};
         
         result.set_reference(reference);
@@ -1262,29 +1265,47 @@ namespace Octopus
             
             auto resolved_path = resolve_path(input_path, options);
             
-            Logging::ErrorLogger log {};
-            
             if (!resolved_path) {
                 stream(log) << "Could not resolve the path " << input_path
                             << " given in the input option (--candidates-from-source)";
-                //return boost::none;
             }
             
             if (!fs::exists(*resolved_path)) {
                 stream(log) << "The path " << input_path
                             << " given in the input option (--candidates-from-source) does not exist";
-                //return boost::none;
             }
             
             result.set_variant_source(*std::move(resolved_path));
         }
         
-        if (options.at("regenotype").as<bool>()) {
-            if (options.count("candidates-from-source") == 0) {
-                Logging::WarningLogger log {};
-                log << "Source variant file(s) must be present in regenotype mode";
+        if (options.count("regenotype") == 1) {
+            fs::path regenotype_path {options.at("regenotype").as<std::string>()};
+            
+            if (options.count("candidates-from-source") == 1) {
+                fs::path input_path {options.at("candidates-from-source").as<std::string>()};
+                
+                if (regenotype_path != input_path) {
+                    warning_log << "Running in regenotype mode but given a different source variant file";
+                } else {
+                    return result;
+                }
+            } else {
+                result.add_generator(CandidateGeneratorBuilder::Generator::External);
             }
-            return result;
+            
+            auto resolved_path = resolve_path(regenotype_path, options);
+            
+            if (!resolved_path) {
+                stream(log) << "Could not resolve the path " << regenotype_path
+                    << " given in the input option (--candidates-from-source)";
+            }
+            
+            if (!fs::exists(*resolved_path)) {
+                stream(log) << "The path " << regenotype_path
+                    << " given in the input option (--candidates-from-source) does not exist";
+            }
+            
+            result.set_variant_source(*std::move(resolved_path));
         }
         
         result.set_min_base_quality(options.at("min-base-quality").as<unsigned>());
@@ -1293,8 +1314,7 @@ namespace Octopus
         auto min_supporting_reads = options.at("min-supporting-reads").as<unsigned>();
         
         if (min_supporting_reads == 0) {
-            Logging::WarningLogger log {};
-            log << "Given option --min_supporting_reads 0, assuming this is a type and setting to 1";
+            warning_log << "Given option --min_supporting_reads 0, assuming this is a type and setting to 1";
             ++min_supporting_reads;
         }
         
@@ -1443,7 +1463,12 @@ namespace Octopus
         //vc_builder.set_refcall_type(options.at("refcalls").as<VariantCaller::RefCallType>());
         
         const auto min_variant_posterior_phred = options.at("min-variant-posterior").as<float>();
-        vc_builder.set_min_variant_posterior(phred_to_probability(min_variant_posterior_phred));
+        
+        if (options.count("regenotype") == 1) {
+            vc_builder.set_min_variant_posterior(0);
+        } else {
+            vc_builder.set_min_variant_posterior(phred_to_probability(min_variant_posterior_phred));
+        }
         
         const auto min_refcall_posterior_phred = options.at("min-refcall-posterior").as<float>();
         vc_builder.set_min_refcall_posterior(phred_to_probability(min_refcall_posterior_phred));

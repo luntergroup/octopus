@@ -43,7 +43,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--reference", ecoli_reference_fasta.c_str(),
         
         //"--reads", NA12878_low_coverage.c_str(),
-        "--reads", NA12878_high_coverage.c_str(),
+        //"--reads", NA12878_high_coverage.c_str(),
         //"--reads", "~/Genomics/Illumina/NA12878.mapped.ILLUMINA.bwa.CEU.high_coverage_pcr_free.20130906.chr22.bam",
         
         //"--reads", NA12891_high_coverage.c_str(),
@@ -57,13 +57,13 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--reads", ecoli_bam.c_str(),
         
         // TCGA
-        //"--reads", "~/Genomics/cancer/TCGA/benchmark/G15511.HCC1143_BL.1.chr22.bam",
-        //"--reads", "~/Genomics/cancer/TCGA/benchmark/G15511.HCC1143.1.chr22.bam",
+        "--reads", "~/Genomics/cancer/TCGA/benchmark/G15511.HCC1143_BL.1.chr22.bam",
+        "--reads", "~/Genomics/cancer/TCGA/benchmark/G15511.HCC1143.1.chr22.bam",
         
         // MSG
         //"--reads", "~/Genomics/MSG/10120_chr2_47641558_GTA_G.RG.bam",
         
-        //"--caller", "cancer", // default "population"
+        "--caller", "cancer", // default "population"
         "--normal-sample", "HCC1143 BL",
         
         //"--organism-ploidy", "3",
@@ -74,6 +74,8 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--make-positional-refcalls",
         
         /* input regions */
+        
+        "--regions", "22",
         
         //"--regions", "22:42,522,971-42,523,546", // bad model filter?
         
@@ -165,7 +167,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         // problems/regions to check
         //"--regions", "22:28,030,924-28,031,088", // not a somatic insertion
         //"--regions", "22:28,036,498-28,036,538", // not a somatic insertion
-        //"--regions", "22:28,063,906-28,064,070", // don't think this is a real somatic SNV
+        //"--regions", "22:28,063,906-28,064,070", // don't think this is a real somatic SNV - difficult
         //"--regions", "22:28121410-28121648", // clearly bullshit
         //"--regions", "22:28,180,963-28,181,127", // multiple deletions
         //"--regions", "22:28,201,361-28,201,570", // MORE bullshit
@@ -242,8 +244,9 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         
         // candidate generation
         //"--min-supporting-reads", "1",
-        //"--no-raw-cigar-candidates",
+        "--no-raw-cigar-candidates",
         //"--kmer-size", "5",
+        "--regenotype", "~/Genomics/cancer/TCGA/benchmark/somatic_sniper_chr22_Q40.vcf",
         //"--candidates-from-source", sample_vcf.c_str(),
         //"--regenotype",
         "--no-assembly-candidates",
@@ -251,7 +254,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--min-assembler-base-quality", "10",
         //"--max-variant-size", "25",
         
-        //"--disable-haplotype-lagging",
+        "--disable-haplotype-lagging",
         //"--disable-inactive-flank-scoring",
         //"--max-haplotypes", "50",
         
@@ -260,9 +263,6 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--min-somatic-posterior", "2",
         
         //"--somatics-only",
-        
-        //"--candidates-from-source", "GATK_NA12878HC_22.bcf",
-        //"--regenotype",
         
         //"--max-open-read-files", "1",
         

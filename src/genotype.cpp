@@ -249,7 +249,7 @@ namespace debug
     {
         Genotype<Haplotype> result {};
         
-        std::size_t pos {0};
+        //std::size_t pos {0};
         
 //        while (pos != str.size()) {
 //            

@@ -35,6 +35,7 @@
 #include <tuple>
 #include <utility>
 #include <numeric>
+#include <stdexcept>
 
 #include <cassert>
 
@@ -533,20 +534,42 @@ namespace Tandem
      */
     template <typename T>
     std::vector<StringRun>
-    find_maximal_repetitions(const T& str, const uint32_t min_period = 1, const uint32_t max_period = -1)
+    find_maximal_repetitions(const T& str, uint32_t min_period = 1, const uint32_t max_period = -1)
     {
-        if (max_period <= 3) {
-            auto result = detail::find_homopolymers(str);
+        if (min_period == 0) ++min_period;
+        
+        if (str.empty() || str.size() < min_period) return {};
+        
+        if (min_period > max_period) {
+            throw std::domain_error {"find_maximal_repetitions: given unsatisfiable condition min_period > max_period"};
+        }
+        
+        if (max_period <= 3) { // The naive algorithm is faster in these cases
+            if (min_period == max_period) {
+                switch(min_period) {
+                    case 1: return detail::find_homopolymers(str);
+                    case 2: return detail::find_exact_dinucleotide_tandem_repeats(str);
+                    case 3: return detail::find_exact_trinucleotide_tandem_repeats(str);
+                }
+            }
             
-            if (max_period > 1) {
+            if (min_period == 1) { // known max_period >= 2
+                auto result = detail::find_homopolymers(str);
+                
                 detail::append(result, detail::find_exact_dinucleotide_tandem_repeats(str));
-            }
-            
-            if (max_period == 3) {
+                
+                if (max_period == 3) {
+                    detail::append(result, detail::find_exact_trinucleotide_tandem_repeats(str));
+                }
+                
+                return result;
+            } else { // min_period == 2 && max_period == 3
+                auto result = detail::find_exact_dinucleotide_tandem_repeats(str);
+                
                 detail::append(result, detail::find_exact_trinucleotide_tandem_repeats(str));
+                
+                return result;
             }
-            
-            return result;
         }
         
         auto sorted_buckets = detail::find_maximal_repetitions(str, min_period, max_period);

@@ -12,7 +12,8 @@
 #include <iterator>
 #include <utility>
 
-#include <iostream> // DEBUG
+#include "common.hpp"
+#include "logging.hpp"
 
 namespace Octopus
 {

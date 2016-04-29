@@ -457,18 +457,22 @@ GenomicRegion HaplotypeGenerator::calculate_haplotype_region() const
     // as the candidate generator may not propopse all variation in the original reads.
     const auto additional_padding = 2 * sum_indel_sizes(overlapped) + 30;
     
-    const auto& lhs_read = *leftmost_overlapped(reads_.get(), current_active_region_);
-    const auto& rhs_read = *rightmost_overlapped(reads_.get(), current_active_region_);
-    
-    const auto unpadded_region = encompassing_region(lhs_read, rhs_read);
-    
-    if (region_begin(lhs_read) < additional_padding / 2) {
-        const auto lhs_padding = region_begin(lhs_read);
-        const auto rhs_padding = additional_padding - lhs_padding;
-        return expand_lhs(expand_rhs(unpadded_region, rhs_padding), lhs_padding);
+    if (has_overlapped(reads_.get(), current_active_region_)) {
+        const auto& lhs_read = *leftmost_overlapped(reads_.get(), current_active_region_);
+        const auto& rhs_read = *rightmost_overlapped(reads_.get(), current_active_region_);
+        
+        const auto unpadded_region = encompassing_region(lhs_read, rhs_read);
+        
+        if (region_begin(lhs_read) < additional_padding / 2) {
+            const auto lhs_padding = region_begin(lhs_read);
+            const auto rhs_padding = additional_padding - lhs_padding;
+            return expand_lhs(expand_rhs(unpadded_region, rhs_padding), lhs_padding);
+        }
+        
+        return expand(unpadded_region, additional_padding / 2);
     }
     
-    return expand(unpadded_region, additional_padding / 2);
+    return expand(current_active_region_, additional_padding / 2);
 }
 
 namespace debug
