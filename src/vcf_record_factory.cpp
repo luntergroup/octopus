@@ -80,6 +80,8 @@ namespace Octopus
     {
         auto wrapped_calls = wrap(std::move(calls));
         
+        assert(std::is_sorted(std::cbegin(wrapped_calls), std::cend(wrapped_calls)));
+        
         for (auto it = std::begin(wrapped_calls); it != std::end(wrapped_calls);) {
             if (is_empty(it->get_region())) {
                 auto it2 = std::find_if_not(std::next(it), std::end(wrapped_calls),
@@ -143,6 +145,8 @@ namespace Octopus
             call->parsimonise('#');
         }
         
+        std::sort(std::begin(wrapped_calls), std::end(wrapped_calls));
+        
         // TODO: we need to adjust the phase regions of all calls where the modified parsimonise
         // call was the the leftmost call within the phase region, otherwise the phase sets
         // won't line up properly.
@@ -162,49 +166,61 @@ namespace Octopus
             
             if (it2 == std::end(wrapped_calls)) break;
             
-            it = find_first_not_overlapped(std::next(it2), std::end(wrapped_calls), *it2);
+            auto it3 = std::find_if_not(std::next(it2), std::end(wrapped_calls),
+                                        [it2] (const auto& call) {
+                                            return begins_equal(call, *it2);
+                                        });
             
-            if ((*it2)->get_reference().get_sequence().front() == '#') {
-                const auto actual_reference_base = reference_.get_sequence(head_position(*it2)).front();
-                
-                auto new_sequence = (*it2)->get_reference().get_sequence();
-                new_sequence.front() = actual_reference_base;
-                Allele new_allele {(*it2).get_region(), std::move(new_sequence)};
-                
-                (*it2)->replace((*it2)->get_reference(), std::move(new_allele));
-                
-                std::unordered_map<Allele, Allele> replacements {};
-                
-                for (const auto& sample : samples_) {
-                    auto& genotype_call = (*it2)->get_genotype_call(sample);
+            std::for_each(it2, it3, [this] (auto& call) {
+                if (call->get_reference().get_sequence().front() == '#') {
+                    const auto actual_reference_base = reference_.get_sequence(head_position(call)).front();
                     
-                    auto& old_genotype = genotype_call.genotype;
+                    auto new_sequence = call->get_reference().get_sequence();
+                    new_sequence.front() = actual_reference_base;
+                    Allele new_allele {call.get_region(), std::move(new_sequence)};
                     
-                    const auto ploidy = old_genotype.ploidy();
+                    call->replace(call->get_reference(), std::move(new_allele));
                     
-                    Genotype<Allele> new_genotype {ploidy};
+                    std::unordered_map<Allele, Allele> replacements {};
                     
-                    for (unsigned i {0}; i < ploidy; ++i) {
-                        if (old_genotype[i].get_sequence().front() == '#') {
-                            auto new_sequence = old_genotype[i].get_sequence();
-                            new_sequence.front() = actual_reference_base;
-                            Allele new_allele {(*it2).get_region(), std::move(new_sequence)};
-                            replacements.emplace(old_genotype[i], new_allele);
-                            new_genotype.emplace(std::move(new_allele));
-                        } else {
-                            new_genotype.emplace(old_genotype[i]);
+                    for (const auto& sample : samples_) {
+                        auto& genotype_call = call->get_genotype_call(sample);
+                        
+                        auto& old_genotype = genotype_call.genotype;
+                        
+                        const auto ploidy = old_genotype.ploidy();
+                        
+                        Genotype<Allele> new_genotype {ploidy};
+                        
+                        for (unsigned i {0}; i < ploidy; ++i) {
+                            if (old_genotype[i].get_sequence().front() == '#') {
+                                auto new_sequence = old_genotype[i].get_sequence();
+                                new_sequence.front() = actual_reference_base;
+                                Allele new_allele {call.get_region(), std::move(new_sequence)};
+                                replacements.emplace(old_genotype[i], new_allele);
+                                new_genotype.emplace(std::move(new_allele));
+                            } else {
+                                new_genotype.emplace(old_genotype[i]);
+                            }
                         }
+                        
+                        old_genotype = std::move(new_genotype);
                     }
                     
-                    old_genotype = std::move(new_genotype);
+                    for (auto& p : replacements) {
+                        call->replace(p.first, p.second);
+                    }
                 }
-                
-                for (auto& p : replacements) {
-                    (*it2)->replace(p.first, p.second);
-                }
+            });
+
+            
+            if (it3 != std::end(wrapped_calls)) {
+                it = find_first_not_overlapped(std::next(it3), std::end(wrapped_calls), *std::prev(it3));
+            } else {
+                it = it3;
             }
             
-            for (auto it3 = std::next(it2); it3 != it; ++it3) {
+            for (; it3 != it; ++it3) {
                 auto& curr_call = *it3;
                 
                 bool has_missing_allele {false};

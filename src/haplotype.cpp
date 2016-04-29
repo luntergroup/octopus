@@ -580,8 +580,7 @@ bool IsLessComplex::operator()(const Haplotype& lhs, const Haplotype& rhs) const
                                     [] (const auto& lhs, const auto& rhs) {
                                         if (lhs == rhs) {
                                             return 0;
-                                        }
-                                        if (is_indel(lhs)) {
+                                        } else if (is_indel(lhs)) {
                                             if (is_indel(rhs)) {
                                                 return 0;
                                             } else {
@@ -605,8 +604,6 @@ unsigned unique_least_complex(std::vector<Haplotype>& haplotypes)
     
     auto first_dup  = begin(haplotypes);
     const auto last = end(haplotypes);
-    
-    assert(std::is_sorted(std::begin(haplotypes), last));
     
     const IsLessComplex cmp {};
     

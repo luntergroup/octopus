@@ -43,8 +43,8 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--reference", ecoli_reference_fasta.c_str(),
         
         //"--reads", NA12878_low_coverage.c_str(),
-        //"--reads", NA12878_high_coverage.c_str(),
-        "--reads", "~/Genomics/Illumina/NA12878.mapped.ILLUMINA.bwa.CEU.high_coverage_pcr_free.20130906.chr22.bam",
+        "--reads", NA12878_high_coverage.c_str(),
+        //"--reads", "~/Genomics/Illumina/NA12878.mapped.ILLUMINA.bwa.CEU.high_coverage_pcr_free.20130906.chr22.bam",
         
         //"--reads", NA12891_high_coverage.c_str(),
         //"--reads", HG00101.c_str(),
@@ -75,7 +75,8 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         
         /* input regions */
         
-        "--regions", "22:16139425-16140281",
+        //"--regions", "22:16,849,945-16,850,275", // deletion?
+        "--regions", "18465445", // VCF, why on same line?
         
         //"--use-one-based-indexing",
         
@@ -108,6 +109,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--regions", "22:47,397,181-47,397,224", // interesting deletions
         
         // Tricky VCF representation
+        //"--regions", "22:19,091,876-19,091,927", // whoa
         //"--regions", "22:16,190,278-16,190,318",  // overlapping deletions
         //"--regions", "22:51004206-51004246", // overlapping deletions
         //"--regions", "22:47,857,586-47,857,737", // snps overlapping deletion
@@ -167,7 +169,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--regions", "22:28,063,906-28,064,070", // don't think this is a real somatic SNV
         //"--regions", "22:28121410-28121648", // clearly bullshit
         //"--regions", "22:28,180,963-28,181,127", // multiple deletions
-        //"--regions", "22:28,201,361-28,201,570", // clearly bullshit
+        //"--regions", "22:28,201,361-28,201,570", // MORE bullshit
 //        "--regions", "22:28,210,778-28,210,942",
 //        "--regions", "22:28,434,530-28,434,694",
 //        "--regions", "22:28,530,424-28,530,588",
@@ -266,7 +268,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--max-open-read-files", "1",
         
         //"--output", test_out_vcf.c_str(),
-        "--output", "octopus_NA12878HC_22_lagged_dummy.vcf",
+        //"--output", "octopus_NA12878HC_22_lagged_dummy.vcf",
         //"--output", "octopus_calls2.vcf",
         
         nullptr};
