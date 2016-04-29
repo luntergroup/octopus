@@ -942,12 +942,12 @@
 				D463C1A11B0A160000739A66 /* allele.cpp */,
 				CAA4DC621A88238C00DD3E9A /* variant.hpp */,
 				D463C1A31B0A174B00739A66 /* variant.cpp */,
-				CAB0DFDB1BBFF6D1001D2F99 /* generators */,
+				CAB0DFDB1BBFF6D1001D2F99 /* candidate-generators */,
 			);
 			name = "allele-variant";
 			sourceTree = "<group>";
 		};
-		CAB0DFDB1BBFF6D1001D2F99 /* generators */ = {
+		CAB0DFDB1BBFF6D1001D2F99 /* candidate-generators */ = {
 			isa = PBXGroup;
 			children = (
 				CAF23F6D1BA17B47006B673F /* candidate_generators.hpp */,
@@ -967,7 +967,7 @@
 				D44ADE751C43D89B00A854C6 /* candidate_generator_builder.hpp */,
 				D44ADE741C43D89B00A854C6 /* candidate_generator_builder.cpp */,
 			);
-			name = generators;
+			name = "candidate-generators";
 			sourceTree = "<group>";
 		};
 		CABA37791A8F668E00BBE598 /* reference */ = {

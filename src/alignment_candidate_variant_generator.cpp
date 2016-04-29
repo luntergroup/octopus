@@ -122,13 +122,14 @@ void AlignmentCandidateVariantGenerator::add_read(const AlignedRead& read)
             {
                 region = GenomicRegion {read_contig, ref_index, ref_index + op_size};
                 
-                auto removed_sequence = reference_.get().get_sequence(region);
-                auto added_sequence   = splice(read_sequence, read_index, op_size);
-                
-                if (std::max(removed_sequence.size(), added_sequence.size()) <= max_variant_size_
-                    && is_good_sequence(removed_sequence) && is_good_sequence(added_sequence)) {
-                    add_candidate(std::move(region), std::move(removed_sequence),
-                                  std::move(added_sequence));
+                if (op_size <= max_variant_size_) {
+                    auto removed_sequence = reference_.get().get_sequence(region);
+                    auto added_sequence   = splice(read_sequence, read_index, op_size);
+                    
+                    if (is_good_sequence(removed_sequence) && is_good_sequence(added_sequence)) {
+                        add_candidate(std::move(region), std::move(removed_sequence),
+                                      std::move(added_sequence));
+                    }
                 }
                 
                 read_index += op_size;
@@ -138,13 +139,14 @@ void AlignmentCandidateVariantGenerator::add_read(const AlignedRead& read)
             }
             case CigarOperation::INSERTION:
             {
-                auto added_sequence = splice(read_sequence, read_index, op_size);
-                
-                if (is_good_sequence(added_sequence)
-                    && count_bad_qualities(read.get_qualities(), read_index, op_size,
-                                           min_base_quality_) <= max_poor_quality_insertion_bases_) {
-                    add_candidate(GenomicRegion {read_contig, ref_index, ref_index},
-                                  "", std::move(added_sequence));
+                if (count_bad_qualities(read.get_qualities(), read_index, op_size, min_base_quality_)
+                        <= max_poor_quality_insertion_bases_) {
+                    auto added_sequence = splice(read_sequence, read_index, op_size);
+                    
+                    if (is_good_sequence(added_sequence)) {
+                        add_candidate(GenomicRegion {read_contig, ref_index, ref_index},
+                                      "", std::move(added_sequence));
+                    }
                 }
                 
                 read_index += op_size;
@@ -155,10 +157,11 @@ void AlignmentCandidateVariantGenerator::add_read(const AlignedRead& read)
             {
                 region = GenomicRegion {read_contig, ref_index, ref_index + op_size};
                 
-                auto removed_sequence = reference_.get().get_sequence(region);
-                
-                // Don't check deletions for good s
-                add_candidate(std::move(region), std::move(removed_sequence), "");
+                if (count_bad_qualities(read.get_qualities(), read_index, op_size,
+                                        min_base_quality_) < op_size) {
+                    auto removed_sequence = reference_.get().get_sequence(region);
+                    add_candidate(std::move(region), std::move(removed_sequence), "");
+                }
                 
                 ref_index += op_size;
                 

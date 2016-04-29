@@ -840,7 +840,7 @@ namespace Octopus
                 all_region_parsed = false;
                 stream(log) << "Could not parse input region \"" << unparsed_region
                             << "\". Check the format is correct, the contig is in the reference genome \""
-                            << reference.get_name() << "\", and is in bounds.";
+                            << reference.get_name() << "\", and the coordinate range is in bounds.";
             }
         }
         
@@ -934,8 +934,11 @@ namespace Octopus
         
         if (!all_parsed) {
             Logging::WarningLogger log {};
-            stream(log) << "Detected unparsed input regions so dumping all regions";
-            input_regions.clear();
+            if (!input_regions.empty()) {
+                stream(log) << "Detected unparsed input regions so dumping "
+                            << input_regions.size() << " parsed regions";
+                input_regions.clear();
+            }
             skip_regions.clear();
         }
         

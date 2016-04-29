@@ -75,8 +75,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         
         /* input regions */
         
-        //"--regions", "22:16,849,945-16,850,275", // deletion?
-        "--regions", "18465445", // VCF, why on same line?
+        //"--regions", "22:42,522,971-42,523,546", // bad model filter?
         
         //"--use-one-based-indexing",
         
