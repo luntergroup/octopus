@@ -384,16 +384,27 @@ bool operator<(const AlignedRead& lhs, const AlignedRead& rhs)
     }
 }
 
+bool are_other_segments_duplicates(const AlignedRead &lhs, const AlignedRead &rhs)
+{
+    if (lhs.is_chimeric() && rhs.is_chimeric()) {
+        return lhs.get_next_segment() == rhs.get_next_segment();
+    }
+    return false;
+}
+
 bool IsDuplicate::operator()(const AlignedRead &lhs, const AlignedRead &rhs) const
 {
     return lhs.get_region() == rhs.get_region()
         && lhs.get_cigar_string() == rhs.get_cigar_string()
-        && lhs.get_flags().is_marked_reverse_mapped == rhs.get_flags().is_marked_reverse_mapped;
+        && lhs.get_flags().is_marked_reverse_mapped == rhs.get_flags().is_marked_reverse_mapped
+        && are_other_segments_duplicates(lhs, rhs);
 }
 
 bool operator==(const AlignedRead::NextSegment& lhs, const AlignedRead::NextSegment& rhs)
 {
-    return lhs.get_contig_name() == rhs.get_contig_name() && lhs.get_begin() == rhs.get_begin();
+    return lhs.get_contig_name() == rhs.get_contig_name()
+        && lhs.get_begin() == rhs.get_begin()
+        && lhs.get_inferred_template_length() == rhs.get_inferred_template_length();
 }
 
 std::ostream& operator<<(std::ostream& os, const AlignedRead::Qualities& qualities)

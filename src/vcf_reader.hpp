@@ -51,9 +51,9 @@ public:
     
     VcfHeader fetch_header() const;
     
-    size_t count_records();
-    size_t count_records(const std::string& contig);
-    size_t count_records(const GenomicRegion& region);
+    std::size_t count_records();
+    std::size_t count_records(const std::string& contig);
+    std::size_t count_records(const GenomicRegion& region);
     
     std::vector<VcfRecord> fetch_records(Unpack level = Unpack::All); // fetches all records
     std::vector<VcfRecord> fetch_records(const std::string& contig, Unpack level = Unpack::All);

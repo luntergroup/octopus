@@ -50,8 +50,7 @@ namespace Octopus
         
         void set_reference(Haplotype reference);
         
-        template <typename H>
-        double evaluate(const H& haplotypes) const;
+        template <typename Container> double evaluate(const Container& haplotypes) const;
         
     private:
         std::vector<Haplotype> reference_haplotypes_;
@@ -66,7 +65,7 @@ namespace Octopus
     namespace detail
     {
         template <typename Container>
-        auto num_haplotype(const Container& haplotypes)
+        auto size(const Container& haplotypes)
         {
             // Use this because Genotype template does not have a size member method (uses
             // ploidy instead).
@@ -74,9 +73,10 @@ namespace Octopus
         }
         
         template <typename Container1, typename Container2, typename M>
-        unsigned calculate_num_segregating_sites(const Container1& reference_haplotypes,
-                                                 const Container2& candidate_haplotypes,
-                                                 M& difference_cache)
+        std::pair<unsigned, unsigned>
+        calculate_num_segregating_sites(const Container1& reference_haplotypes,
+                                        const Container2& candidate_haplotypes,
+                                        M& difference_cache)
         {
             std::set<Variant> differences {};
             
@@ -94,18 +94,22 @@ namespace Octopus
                 }
             }
             
-            return static_cast<unsigned>(differences.size());
+            return std::make_pair(static_cast<unsigned>(differences.size()), 0);
         }
     } // namespace detail
     
     template <typename Container>
     double CoalescentModel::evaluate(const Container& haplotypes) const
     {
-        const auto k = detail::calculate_num_segregating_sites(reference_haplotypes_,
-                                                               haplotypes,
-                                                               difference_cache_);
+        // TODO: complete the calculation for indels
         
-        const auto n = reference_haplotypes_.size() + detail::num_haplotype(haplotypes);
+        unsigned k_snp, k_indel;
+        
+        std::tie(k_snp, k_indel) = detail::calculate_num_segregating_sites(reference_haplotypes_,
+                                                                           haplotypes,
+                                                                           difference_cache_);
+        
+        const auto n = reference_haplotypes_.size() + detail::size(haplotypes);
         
         double result {0};
         
@@ -113,7 +117,7 @@ namespace Octopus
         
         for (std::size_t i {2}; i <= n; ++i) {
             result += std::pow(-1, i) * boost::math::binomial_coefficient<double>(n - 1, i - 1)
-                        * ((i - 1) / (theta + i - 1)) * std::pow(theta / (theta + i - 1), k);
+                        * ((i - 1) / (theta + i - 1)) * std::pow(theta / (theta + i - 1), k_snp);
         }
         
         return std::log(result);

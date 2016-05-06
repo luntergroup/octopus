@@ -21,7 +21,8 @@
 namespace Octopus
 {
 template <typename MappableType>
-class CancerGenotype : public Equitable<CancerGenotype<MappableType>>
+class CancerGenotype : public Equitable<CancerGenotype<MappableType>>,
+        public Mappable<CancerGenotype<MappableType>>
 {
 public:
     CancerGenotype() = default;
@@ -43,6 +44,8 @@ public:
     CancerGenotype& operator=(const CancerGenotype&) = default;
     CancerGenotype(CancerGenotype&&)                 = default;
     CancerGenotype& operator=(CancerGenotype&&)      = default;
+    
+    const GenomicRegion& get_region() const noexcept;
     
     const MappableType& operator[](unsigned n) const;
     
@@ -93,6 +96,12 @@ CancerGenotype<MappableType>::CancerGenotype(G&& germline_genotype, C&& cancer_e
 germline_genotype_ {std::forward<G>(germline_genotype)},
 cancer_element_ {std::make_shared<MappableType>(std::forward<C>(cancer_element))}
 {}
+
+template <typename MappableType>
+const GenomicRegion& CancerGenotype<MappableType>::get_region() const noexcept
+{
+    return mapped_region(*cancer_element_);
+}
 
 template <typename MappableType>
 const MappableType& CancerGenotype<MappableType>::operator[](unsigned n) const
@@ -152,6 +161,9 @@ std::vector<MappableType> CancerGenotype<MappableType>::copy_unique() const
 
 // non-member methods
 
+bool contains(const CancerGenotype<Haplotype>& genotype, const Allele& allele);
+bool contains_exact(const CancerGenotype<Haplotype>& genotype, const Allele& allele);
+
 template <typename MappableType2, typename MappableType1>
 CancerGenotype<MappableType2> splice(const CancerGenotype<MappableType1>& genotype,
                                      const GenomicRegion& region)
@@ -160,6 +172,12 @@ CancerGenotype<MappableType2> splice(const CancerGenotype<MappableType1>& genoty
         splice<MappableType2>(genotype.get_germline_genotype(), region),
         splice<MappableType2>(genotype.get_cancer_element(), region)
     };
+}
+
+template <typename MappableType1, typename MappableType2>
+bool contains(const CancerGenotype<MappableType1>& lhs, const CancerGenotype<MappableType2>& rhs)
+{
+    return splice<MappableType2>(lhs, rhs.get_region()) == rhs;
 }
 
 std::pair<std::vector<CancerGenotype<Haplotype>>, std::vector<Genotype<Haplotype>>>

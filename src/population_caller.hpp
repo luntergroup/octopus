@@ -59,30 +59,40 @@ private:
     class Latents : public CallerLatents
     {
     public:
-        using ModelLatents = GenotypeModel::Population::Latents;
+        using ModelInferences = GenotypeModel::Population::InferredLatents;
         
         using CallerLatents::HaplotypeProbabilityMap;
         using CallerLatents::GenotypeProbabilityMap;
         
         friend PopulationVariantCaller;
         
-        explicit Latents(ModelLatents&&);
+        explicit Latents(const std::vector<SampleIdType>& samples,
+                         const std::vector<Haplotype>&,
+                         std::vector<Genotype<Haplotype>>&& genotypes,
+                         ModelInferences&&);
+        explicit Latents(const std::vector<SampleIdType>& samples,
+                         const std::vector<Haplotype>&,
+                         std::vector<Genotype<Haplotype>>&& genotypes,
+                         ModelInferences&&, ModelInferences&&);
         
         std::shared_ptr<HaplotypeProbabilityMap> get_haplotype_posteriors() const noexcept override;
         std::shared_ptr<GenotypeProbabilityMap> get_genotype_posteriors() const noexcept override;
         
     private:
-        std::shared_ptr<HaplotypeProbabilityMap> haplotype_posteriors_;
         std::shared_ptr<GenotypeProbabilityMap> genotype_posteriors_;
+        std::shared_ptr<HaplotypeProbabilityMap> haplotype_posteriors_;
         
-        ModelLatents::HaplotypeFrequencyMap haplotype_frequencies_;
+        boost::optional<ModelInferences> dummy_latents_;
+        
+        double model_log_evidence_;
+        
+        HaplotypeProbabilityMap
+        calculate_haplotype_posteriors(const std::vector<Haplotype>& haplotypes);
     };
     
-    GenotypeModel::Population genotype_model_;
-    
-    const unsigned ploidy_;
-    const double min_variant_posterior_;
-    const double min_refcall_posterior_;
+    unsigned ploidy_;
+    double min_variant_posterior_;
+    double min_refcall_posterior_;
     
     std::unique_ptr<CallerLatents>
     infer_latents(const std::vector<Haplotype>& haplotypes,
@@ -91,9 +101,11 @@ private:
     std::vector<std::unique_ptr<VariantCall>>
     call_variants(const std::vector<Variant>& candidates, CallerLatents& latents) const override;
     
+    std::vector<std::unique_ptr<VariantCall>>
+    call_variants(const std::vector<Variant>& candidates, const Latents& latents) const;
+    
     std::vector<std::unique_ptr<ReferenceCall>>
-    call_reference(const std::vector<Allele>& alleles,
-                   CallerLatents& latents,
+    call_reference(const std::vector<Allele>& alleles, CallerLatents& latents,
                    const ReadMap& reads) const override;
 };
 } // namespace Octopus

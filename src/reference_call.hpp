@@ -23,7 +23,7 @@ namespace Octopus
         template <typename A>
         ReferenceCall(A&& reference, double quality);
         
-        ~ReferenceCall() = default;
+        virtual ~ReferenceCall() = default;
         
         ReferenceCall(const ReferenceCall&)            = default;
         ReferenceCall& operator=(const ReferenceCall&) = default;

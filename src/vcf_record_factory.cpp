@@ -525,6 +525,8 @@ namespace Octopus
             }
         }
         
+        call->decorate(result);
+        
         return result.build_once();
     }
     
@@ -644,6 +646,8 @@ namespace Octopus
                 }
             }
         }
+        
+        calls.front()->decorate(result);
         
         return result.build_once();
     }

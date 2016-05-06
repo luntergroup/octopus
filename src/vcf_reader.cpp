@@ -94,19 +94,19 @@ VcfHeader VcfReader::fetch_header() const
     return reader_->fetch_header();
 }
 
-size_t VcfReader::count_records()
+std::size_t VcfReader::count_records()
 {
     std::lock_guard<std::mutex> lock {mutex_};
     return reader_->count_records();
 }
 
-size_t VcfReader::count_records(const std::string& contig)
+std::size_t VcfReader::count_records(const std::string& contig)
 {
     std::lock_guard<std::mutex> lock {mutex_};
     return reader_->count_records(contig);
 }
 
-size_t VcfReader::count_records(const GenomicRegion& region)
+std::size_t VcfReader::count_records(const GenomicRegion& region)
 {
     std::lock_guard<std::mutex> lock {mutex_};
     return reader_->count_records(region);

@@ -139,7 +139,6 @@
 		D490E4221C74CE1200883184 /* banded_simd_viterbi.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D490E41B1C74CE1200883184 /* banded_simd_viterbi.cpp */; };
 		D490E4231C74CE1200883184 /* align.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D490E41C1C74CE1200883184 /* align.cpp */; };
 		D490E4241C74CE1200883184 /* kmer_mapping.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D490E4201C74CE1200883184 /* kmer_mapping.cpp */; };
-		D490E42A1C75074D00883184 /* dirichlet_model.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D490E4281C75074D00883184 /* dirichlet_model.cpp */; };
 		D490E42C1C750AC500883184 /* population_genotype_model_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D490E42B1C750AC500883184 /* population_genotype_model_tests.cpp */; };
 		D490E42E1C750AE900883184 /* population_caller_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D490E42D1C750AE900883184 /* population_caller_tests.cpp */; };
 		D490E4301C750B1000883184 /* variant_caller_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D490E42F1C750B1000883184 /* variant_caller_tests.cpp */; };
@@ -507,9 +506,6 @@
 		D490E41F1C74CE1200883184 /* kmer_mapping.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = kmer_mapping.hpp; sourceTree = "<group>"; };
 		D490E4201C74CE1200883184 /* kmer_mapping.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = kmer_mapping.cpp; sourceTree = "<group>"; };
 		D490E4251C74CE2300883184 /* pair_hmm.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = pair_hmm.hpp; sourceTree = "<group>"; };
-		D490E4271C75069500883184 /* hardy_weinberg_model.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = hardy_weinberg_model.hpp; sourceTree = "<group>"; };
-		D490E4281C75074D00883184 /* dirichlet_model.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = dirichlet_model.cpp; sourceTree = "<group>"; };
-		D490E4291C75074D00883184 /* dirichlet_model.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = dirichlet_model.hpp; sourceTree = "<group>"; };
 		D490E42B1C750AC500883184 /* population_genotype_model_tests.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = population_genotype_model_tests.cpp; sourceTree = "<group>"; };
 		D490E42D1C750AE900883184 /* population_caller_tests.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = population_caller_tests.cpp; sourceTree = "<group>"; };
 		D490E42F1C750B1000883184 /* variant_caller_tests.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = variant_caller_tests.cpp; sourceTree = "<group>"; };
@@ -1106,9 +1102,6 @@
 		D42F72F31C5BA3C000995F54 /* genotype-models */ = {
 			isa = PBXGroup;
 			children = (
-				D490E4271C75069500883184 /* hardy_weinberg_model.hpp */,
-				D490E4291C75074D00883184 /* dirichlet_model.hpp */,
-				D490E4281C75074D00883184 /* dirichlet_model.cpp */,
 				D42061151ACC3DA500D11553 /* fixed_ploidy_genotype_likelihood_model.hpp */,
 				D42061141ACC3DA500D11553 /* fixed_ploidy_genotype_likelihood_model.cpp */,
 				D40B119C1CAEA2EF0050145D /* individual_genotype_model.hpp */,
@@ -1451,7 +1444,6 @@
 				CAE7DC2D1C510905009411B6 /* variant_caller_factory.cpp in Sources */,
 				D490E42C1C750AC500883184 /* population_genotype_model_tests.cpp in Sources */,
 				D4807FB21BA843B900657D4F /* variant_caller.cpp in Sources */,
-				D490E42A1C75074D00883184 /* dirichlet_model.cpp in Sources */,
 				CA487B251C42833000488577 /* read_transform.cpp in Sources */,
 				CA90C55A1ACDB95D00CBEE34 /* haplotype_tests.cpp in Sources */,
 				CAE3E2CD1AAB46BC00C01B2C /* read_filters.hpp in Sources */,

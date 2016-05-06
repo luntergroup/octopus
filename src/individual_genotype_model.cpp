@@ -22,9 +22,8 @@ namespace Octopus
 {
 namespace GenotypeModel
 {
-    Individual::Individual(unsigned ploidy, const CoalescentModel& genotype_prior_model)
+    Individual::Individual(const CoalescentModel& genotype_prior_model)
     :
-    ploidy_ {ploidy},
     genotype_prior_model_ {genotype_prior_model}
     {}
     
@@ -39,27 +38,94 @@ namespace GenotypeModel
     log_evidence {log_evidence}
     {}
     
+    namespace debug
+    {
+        template <typename S>
+        void print_genotype_likelihoods(S&& stream, const std::vector<Genotype<Haplotype>>& genotypes,
+                                        const std::vector<double>& likelihoods, std::size_t n = 5);
+        void print_genotype_likelihoods(const std::vector<Genotype<Haplotype>>& genotypes,
+                                        const std::vector<double>& likelihoods, std::size_t n = 5);
+    }
+    
     Individual::InferredLatents
     Individual::infer_latents(const SampleIdType& sample,
                               const std::vector<Genotype<Haplotype>>& genotypes,
                               const HaplotypeLikelihoodCache& haplotype_likelihoods) const
     {
         assert(!genotypes.empty());
-        assert(genotypes.front().ploidy() == ploidy_);
         
-        FixedPloidyGenotypeLikelihoodModel likelihood_model {ploidy_, haplotype_likelihoods};
+        const auto ploidy = genotypes.front().ploidy();
+        
+        FixedPloidyGenotypeLikelihoodModel likelihood_model {ploidy, haplotype_likelihoods};
         
         std::vector<double> result(genotypes.size());
         
         std::transform(std::cbegin(genotypes), std::cend(genotypes), std::begin(result),
-                       [this, &sample, &likelihood_model] (const auto& genotype) {
-                           return genotype_prior_model_.get().evaluate(genotype)
-                                        + likelihood_model.log_likelihood(sample, genotype);
+                       [&sample, &likelihood_model] (const auto& genotype) {
+                           return likelihood_model.log_likelihood(sample, genotype);
+                       });
+        
+        if (DEBUG_MODE) {
+            Logging::DebugLogger log {};
+            debug::print_genotype_likelihoods(stream(log), genotypes, result);
+        }
+        
+        std::transform(std::cbegin(genotypes), std::cend(genotypes), std::cbegin(result),
+                       std::begin(result),
+                       [this] (const auto& genotype, const auto likelihood) {
+                           return genotype_prior_model_.get().evaluate(genotype) + likelihood;
                        });
         
         auto log_evidence = Maths::normalise_exp(result);
         
         return InferredLatents {Latents {std::move(result)}, log_evidence};
     }
+    
+    namespace debug
+    {
+        template <typename S>
+        void print_genotype_likelihoods(S&& stream, const std::vector<Genotype<Haplotype>>& genotypes,
+                                        const std::vector<double>& likelihoods, std::size_t n)
+        {
+            assert(genotypes.size() == likelihoods.size());
+            
+            const auto m = std::min(n, genotypes.size());
+            
+            if (m == genotypes.size()) {
+                stream << "Printing all genotype likelihoods " << '\n';
+            } else {
+                stream << "Printing top " << m << " genotype likelihoods " << '\n';
+            }
+            
+            using GenotypeReference = std::reference_wrapper<const Genotype<Haplotype>>;
+            
+            std::vector<std::pair<GenotypeReference, double>> v {};
+            v.reserve(genotypes.size());
+            
+            std::transform(std::cbegin(genotypes), std::cend(genotypes), std::cbegin(likelihoods),
+                           std::back_inserter(v), [] (const auto& g, const auto& p) {
+                               return std::make_pair(std::cref(g), p);
+                           });
+            
+            const auto mth = std::next(std::begin(v), m);
+            
+            std::partial_sort(std::begin(v), mth, std::end(v),
+                              [] (const auto& lhs, const auto& rhs) {
+                                  return lhs.second > rhs.second;
+                              });
+            
+            std::for_each(std::begin(v), mth,
+                          [&] (const auto& p) {
+                              ::debug::print_variant_alleles(stream, p.first);
+                              stream << " " << p.second << '\n';
+                          });
+        }
+        
+        void print_genotype_likelihoods(const std::vector<Genotype<Haplotype>>& genotypes,
+                                        const std::vector<double>& likelihoods, std::size_t n)
+        {
+            print_genotype_likelihoods(std::cout, genotypes, likelihoods, n);
+        }
+    } // namespace debug
 } // namesapce GenotypeModel
 } // namespace Octopus

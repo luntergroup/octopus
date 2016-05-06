@@ -152,6 +152,10 @@ private:
     
     ModelPosteriors calculate_model_posteriors(const Latents& inferences) const;
     
+//    std::unordered_map<Genotype<Haplotype>, double>
+//    calculate_germline_genotype_posteriors(const Latents& latents,
+//                                           const ModelPosteriors& model_posteriors) const;
+    
     std::vector<std::unique_ptr<VariantCall>>
     call_germline_variants(const std::vector<Variant>& candidates,
                            const GermlineModel::Latents& posteriors) const;

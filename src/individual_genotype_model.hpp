@@ -10,7 +10,6 @@
 #define individual_genotype_model_hpp
 
 #include <vector>
-#include <unordered_map>
 #include <functional>
 
 #include "common.hpp"
@@ -49,7 +48,7 @@ namespace Octopus
             
             Individual() = delete;
             
-            explicit Individual(unsigned ploidy, const CoalescentModel& genotype_prior_model);
+            explicit Individual(const CoalescentModel& genotype_prior_model);
             
             ~Individual() = default;
             
@@ -63,7 +62,6 @@ namespace Octopus
                                           const HaplotypeLikelihoodCache& haplotype_likelihoods) const;
             
         private:
-            unsigned ploidy_;
             std::reference_wrapper<const CoalescentModel> genotype_prior_model_;
         };
     } // namesapce GenotypeModel

@@ -143,7 +143,7 @@ IndividualVariantCaller::infer_latents(const std::vector<Haplotype>& haplotypes,
 {
     CoalescentModel prior_model {Haplotype {mapped_region(haplotypes.front()), reference_}};
     
-    GenotypeModel::Individual model {ploidy_, prior_model};
+    GenotypeModel::Individual model {prior_model};
     
     auto genotypes = generate_all_genotypes(haplotypes, ploidy_);
     
@@ -152,18 +152,19 @@ IndividualVariantCaller::infer_latents(const std::vector<Haplotype>& haplotypes,
         stream(log) << "There are " << genotypes.size() << " candidate genotypes";
     }
     
-    const auto& sample = samples_.front();
-    
-    auto inferences = model.infer_latents(sample, genotypes, haplotype_likelihoods);
+    auto inferences = model.infer_latents(sample_, genotypes, haplotype_likelihoods);
     
     // TEST
-    GenotypeModel::Individual dummy_model {ploidy_ + 1, prior_model};
     auto dummy_genotypes = generate_all_genotypes(haplotypes, ploidy_ + 1);
-    auto dummy_inferences = dummy_model.infer_latents(sample, dummy_genotypes, haplotype_likelihoods);
+    if (debug_log_) {
+        stream(*debug_log_) << "Evaluating dummy model with " << dummy_genotypes.size() << " genotypes";
+    }
+    auto dummy_inferences = model.infer_latents(sample_, dummy_genotypes, haplotype_likelihoods);
+    return std::make_unique<Latents>(sample_, haplotypes, std::move(genotypes), std::move(inferences),
+                                     std::move(dummy_inferences));
     // END TEST
     
-    return std::make_unique<Latents>(sample, haplotypes, std::move(genotypes), std::move(inferences),
-                                     std::move(dummy_inferences));
+    //return std::make_unique<Latents>(sample_, haplotypes, std::move(genotypes), std::move(inferences));
 }
 
 namespace
@@ -351,8 +352,8 @@ IndividualVariantCaller::call_variants(const std::vector<Variant>& candidates,
     return call_variants(candidates, dynamic_cast<Latents&>(latents));
 }
 
-auto calculate_dummy_model_posterior(const double normal_model_log_evidence,
-                                     const double dummy_model_log_evidence)
+static auto calculate_dummy_model_posterior(const double normal_model_log_evidence,
+                                            const double dummy_model_log_evidence)
 {
     constexpr double normal_model_prior {0.9999999};
     constexpr double dummy_model_prior {1.0 - normal_model_prior};
@@ -375,10 +376,13 @@ IndividualVariantCaller::call_variants(const std::vector<Variant>& candidates,
         const auto dummy_model_posterior = calculate_dummy_model_posterior(latents.model_log_evidence_,
                                                                            latents.dummy_latents_->log_evidence);
         
+        if (debug_log_) {
+            stream(*debug_log_) << "Dummy model posterior = " << dummy_model_posterior;
+        }
+        
         if (dummy_model_posterior > 0.5) {
             if (debug_log_) {
-                stream(*debug_log_) << "Skipping region due to model filter. Dummy modelposterior = "
-                                << dummy_model_posterior;
+                *debug_log_ << "Skipping region due to model filter";
             }
             return {};
         }

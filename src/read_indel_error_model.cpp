@@ -20,7 +20,7 @@ namespace Octopus
 
 constexpr decltype(ReadIndelErrorModel::Homopolymer_errors_) ReadIndelErrorModel::Homopolymer_errors_;
 constexpr decltype(ReadIndelErrorModel::gap_extension_) ReadIndelErrorModel::gap_extension_;
-    
+
 namespace
 {
     auto extract_repeats(const Haplotype& haplotype)
@@ -39,7 +39,6 @@ void ReadIndelErrorModel::fill_gap_open_penalties(const Haplotype& haplotype,
                                                   std::vector<PenaltyType>& result) const
 {
     using std::begin; using std::end; using std::cbegin; using std::cend; using std::next;
-    using std::fill_n; using std::equal;
     
     const auto repeats = extract_repeats(haplotype);
     
@@ -49,7 +48,7 @@ void ReadIndelErrorModel::fill_gap_open_penalties(const Haplotype& haplotype,
         if (repeat.period == 1) {
             const auto e = (repeat.length < Homopolymer_errors_.size())
                 ? Homopolymer_errors_[repeat.length - 1] : Homopolymer_errors_.back();
-            fill_n(next(begin(result), repeat.pos), repeat.length, e);
+            std::fill_n(next(begin(result), repeat.pos), repeat.length, e);
         } else if (repeat.period == 2) {
             static constexpr std::array<char, 2> AC {'A', 'C'};
             
@@ -57,11 +56,11 @@ void ReadIndelErrorModel::fill_gap_open_penalties(const Haplotype& haplotype,
             
             std::int8_t e {30};
             
-            if (equal(cbegin(AC), cend(AC), it)) {
+            if (std::equal(cbegin(AC), cend(AC), it)) {
                 e = 20;
             }
             
-            fill_n(next(begin(result), repeat.pos), repeat.length, e);
+            std::fill_n(next(begin(result), repeat.pos), repeat.length, e);
         }else if (repeat.period == 3) {
             static constexpr std::array<char, 3> GGC {'G', 'G', 'C'};
             static constexpr std::array<char, 3> GCC {'G', 'C', 'C'};
@@ -70,13 +69,13 @@ void ReadIndelErrorModel::fill_gap_open_penalties(const Haplotype& haplotype,
             
             std::int8_t e {38};
             
-            if (equal(cbegin(GGC), cend(GGC), it)) {
+            if (std::equal(cbegin(GGC), cend(GGC), it)) {
                 e = 15;
-            } else if (equal(cbegin(GCC), cend(GCC), it)) {
+            } else if (std::equal(cbegin(GCC), cend(GCC), it)) {
                 e = 20;
             }
             
-            fill_n(next(begin(result), repeat.pos), repeat.length, e);
+            std::fill_n(next(begin(result), repeat.pos), repeat.length, e);
         }
     }
 }

@@ -42,12 +42,12 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         "--reference", human_reference_fasta.c_str(),
         //"--reference", ecoli_reference_fasta.c_str(),
         
-        //"--reads", NA12878_low_coverage.c_str(),
+        "--reads", NA12878_low_coverage.c_str(),
         //"--reads", NA12878_high_coverage.c_str(),
         //"--reads", "~/Genomics/Illumina/NA12878.mapped.ILLUMINA.bwa.CEU.high_coverage_pcr_free.20130906.chr22.bam",
         
         //"--reads", NA12891_high_coverage.c_str(),
-        //"--reads", HG00101.c_str(),
+        "--reads", HG00101.c_str(),
         
         //"--reads", NA12878_low_coverage.c_str(), HG00101.c_str(), HG00102.c_str(), HG00103.c_str(),
         //"--reads", NA12878_high_coverage.c_str(), NA12878_simulated_cancer_basic.c_str(), //cancer test
@@ -57,13 +57,13 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--reads", ecoli_bam.c_str(),
         
         // TCGA
-        "--reads", "~/Genomics/cancer/TCGA/benchmark/G15511.HCC1143_BL.1.chr22.bam",
-        "--reads", "~/Genomics/cancer/TCGA/benchmark/G15511.HCC1143.1.chr22.bam",
+        //"--reads", "~/Genomics/cancer/TCGA/benchmark/G15511.HCC1143_BL.1.chr22.bam",
+        //"--reads", "~/Genomics/cancer/TCGA/benchmark/G15511.HCC1143.1.chr22.bam",
         
         // MSG
         //"--reads", "~/Genomics/MSG/10120_chr2_47641558_GTA_G.RG.bam",
         
-        "--caller", "cancer", // default "population"
+        //"--caller", "cancer", // default "population"
         "--normal-sample", "HCC1143 BL",
         
         //"--organism-ploidy", "3",
@@ -75,7 +75,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         
         /* input regions */
         
-        "--regions", "22",
+        "--regions", "22:41,015,232-41,015,314",
         
         //"--regions", "22:42,522,971-42,523,546", // bad model filter?
         
@@ -163,60 +163,24 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--regions", "22:35,199,681-35,199,845", // Not a somatic deletion?
         //"--regions", "22:28,836,899-28,837,063", // Nice! Phasable somatic SNV
         //"--regions", "22:29,606,605-29,606,972", // somatic but not phaseable
+        //"--regions", "22:28,530,424-28,530,588", // somatic
         
         // problems/regions to check
-        //"--regions", "22:28,030,924-28,031,088", // not a somatic insertion
-        //"--regions", "22:28,036,498-28,036,538", // not a somatic insertion
         //"--regions", "22:28,063,906-28,064,070", // don't think this is a real somatic SNV - difficult
-        //"--regions", "22:28121410-28121648", // clearly bullshit
-        //"--regions", "22:28,180,963-28,181,127", // multiple deletions
-        //"--regions", "22:28,201,361-28,201,570", // MORE bullshit
-//        "--regions", "22:28,210,778-28,210,942",
-//        "--regions", "22:28,434,530-28,434,694",
-//        "--regions", "22:28,530,424-28,530,588",
-//        "--regions", "22:28,553,936-28,554,100",
+        //"--regions", "22:28,201,361-28,201,570", // not a somatic deletion
+        //"--regions", "22:28,434,530-28,434,694", somatic ?
+        //"--regions", "22:28,553,936-28,554,100", // somatic insertion?
         //"--regions", "22:28,645,596-28,645,926", // posterior quite low
-//        "--regions", "22:28,812,452-28,812,616",
-//        "--regions", "22:28,841,685-28,842,015",
-//        "--regions", "22:28,856,561-28,856,725",
-//        "--regions", "22:28,868,520-28,868,560",
-//        "--regions", "22:28,943,184-28,943,224",
-//        "--regions", "22:28,970,260-28,970,424",
-//        "--regions", "22:29079379-29079422", // nope
-//        "--regions", "22:29104952-29104967", // no!
-//        "--regions", "22:29,172,353-29,172,517",
-//        "--regions", "22:29,240,416-29,240,456", // no!
-//        "--regions", "22:29,455,729-29,455,769",
+        //"--regions", "22:28,812,452-28,812,616", // not a somatic deletion
+        //"--regions", "22:28,970,260-28,970,424", // real somatic deletion?
+        //"--regions", "22:29079379-29079422", // mapping quality issue
+        //"--regions", "22:29,455,729-29,455,769", // Not a somatic deletion
         //"--regions", "22:29,474,547-29,474,587", // false negative?
-//        "--regions", "22:29,516,051-29,516,091",
-//        "--regions", "22:29,537,194-29,537,234",
-//        "--regions", "22:29,591,785-29,591,825",
-//        "--regions", "22:29,592,429-29,592,593",
+        //"--regions", "22:29,591,785-29,591,825", // NOPE.. really need to sort this type of FP
         //"--regions", "22:29,636,450-29,636,490", // NOPE! (fixed with another CNV seed)
         //"--regions", "22:29,761,141-29,761,305", // low posterior (could not be real..)
-        //"--regions", "22:29,952,305-29,952,469",
-        //"--regions", "22:30,094,383-30,094,422",
-        //"--regions", "22:30,132,779-30,132,943",
-        //"--regions", "22:30,140,292-30,140,456", // no...
-        //"--regions", "22:30,180,823-30,180,863",
-        //"--regions", "22:30,213,959-30,214,123",
-        
-        // NA12878HC (normal) vs HG00101LC
-        //"--regions", "22:33,310,391-33,310,686",
-        //"--regions", "22:29,786,267-29,786,698",
-        //"--regions", "22:31,196,345-31,196,590", // Somatic
-        //"--regions", "22:31,195,690-31,196,075",
-        //"--regions", "22:33,216,196-33,216,399",
-        //"--regions", "22:34,606,760-34,606,969",
-        //"--regions", "22:38,045,681-38,045,746", // nothing
-        //"--regions", "22:33,357,460-33,357,515", // LOH
-        
-        //  NA12878HC (normal) vs NA12891HC
-        //"--regions", "16:75,879,931-75,880,269", // somatic
-        //"--regions", "16:75,879,179-75,879,472", // LOH
-        //"--regions", "16:75,881,839-75,882,246", // LOH
-        //"--regions", "16:60,034,277-60,034,375", // LOH and somatic (too many cancer genotypes)
-        //"--regions", "16:58,433,081-58,433,354", // potentially false positive somatic
+        //"--regions", "22:30,094,383-30,094,422", // Not a somatic insertion
+        //"--regions", "22:30,213,959-30,214,123", // FP somatic SNV
         
         // For ecoli
         //"--regions", "R00000042:3008660-3020000",
@@ -230,7 +194,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         
         // read filters/transforms
         //"--consider-unmapped-reads",
-        //"--min-mapping-quality", "20",
+        //"--min-mapping-quality", "5",
         //"--allow-marked-duplicates",
         //"--allow-octopus-duplicates",
         //"--disable-soft-clip-masking",
@@ -244,30 +208,31 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         
         // candidate generation
         //"--min-supporting-reads", "1",
-        "--no-raw-cigar-candidates",
+        //"--min-base-quality", "25",
+        //"--no-raw-cigar-candidates",
         //"--kmer-size", "5",
-        "--regenotype", "~/Genomics/cancer/TCGA/benchmark/somatic_sniper_chr22_Q40.vcf",
+        //"--regenotype", "~/Genomics/octopus_test/AllVariants.vcf",
+        //"--regenotype", "~/Genomics/cancer/TCGA/benchmark/somatic_sniper_chr22_Q40.vcf",
         //"--candidates-from-source", sample_vcf.c_str(),
-        //"--regenotype",
         "--no-assembly-candidates",
         //"--kmer-size", "45",
         //"--min-assembler-base-quality", "10",
         //"--max-variant-size", "25",
         
-        "--disable-haplotype-lagging",
+        //"--disable-haplotype-lagging",
         //"--disable-inactive-flank-scoring",
         //"--max-haplotypes", "50",
         
-        "--min-variant-posterior", "10",
-        "--min-refcall-posterior", "0",
-        //"--min-somatic-posterior", "2",
+        "--min-variant-posterior", "2",
+        //"--min-refcall-posterior", "0",
+        "--min-somatic-posterior", "1",
         
         //"--somatics-only",
         
         //"--max-open-read-files", "1",
         
         //"--output", test_out_vcf.c_str(),
-        //"--output", "octopus_NA12878HC_22_lagged_dummy.vcf",
+        //"--output", "octopus_NA12878HC_22_unlagged_dummy.vcf",
         //"--output", "octopus_calls2.vcf",
         
         nullptr};

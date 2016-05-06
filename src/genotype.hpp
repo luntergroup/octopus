@@ -486,7 +486,7 @@ namespace detail
         using ResultType = std::vector<GenotypeTp>;
         return ResultType {
             GenotypeTp {elements[0], elements[0], elements[0]},
-            GenotypeTp {elements[0], elements[1], elements[1]},
+            GenotypeTp {elements[0], elements[0], elements[1]},
             GenotypeTp {elements[0], elements[1], elements[1]},
             GenotypeTp {elements[1], elements[1], elements[1]}
         };

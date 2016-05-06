@@ -803,7 +803,7 @@ namespace
         result.emplace_back(genotype_log_priors);
         result.emplace_back(log_uniform_dist(genotypes.size()));
         
-        GenotypeModel::Individual germline_model {genotypes.front().ploidy(), priors.genotype_prior_model};
+        GenotypeModel::Individual germline_model {priors.genotype_prior_model};
         
         for (const auto& sample : samples) {
             const auto latents = germline_model.infer_latents(sample, genotypes,

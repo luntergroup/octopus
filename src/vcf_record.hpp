@@ -208,9 +208,10 @@ public:
     Builder& add_info(const KeyType& key, const ValueType& value);
     Builder& add_info(const KeyType& key, const std::vector<ValueType>& values);
     Builder& add_info(const KeyType& key, const std::initializer_list<ValueType>& values);
-    Builder& add_info_flag(const KeyType& key);
-    Builder& set_format(const std::vector<KeyType>& format);
-    Builder& set_format(const std::initializer_list<KeyType>& format);
+    Builder& add_info_flag(KeyType key);
+    Builder& set_format(std::vector<KeyType> format);
+    Builder& set_format(std::initializer_list<KeyType> format);
+    Builder& add_format(KeyType key);
     Builder& add_homozygous_ref_genotype(const SampleIdType& sample, unsigned ploidy);
     Builder& add_genotype(const SampleIdType& sample, const std::vector<SequenceType>& alleles, Phasing phasing);
     Builder& add_genotype(const SampleIdType& sample, const std::vector<unsigned>& alleles, Phasing is_phased);

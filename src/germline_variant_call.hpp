@@ -29,7 +29,7 @@ namespace Octopus
         template <typename V, typename T>
         explicit GermlineVariantCall(V&& variant, T&& genotype_calls, double quality);
         
-        ~GermlineVariantCall() = default;
+        virtual ~GermlineVariantCall() = default;
         
         GermlineVariantCall(const GermlineVariantCall&)            = default;
         GermlineVariantCall& operator=(const GermlineVariantCall&) = default;

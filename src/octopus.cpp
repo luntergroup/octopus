@@ -176,6 +176,8 @@ namespace Octopus
         vcf_header_builder.add_basic_field("reference", reference.get_name());
         vcf_header_builder.add_structured_field("Octopus", {{"some", "option"}});
         
+        vcf_header_builder.add_format("SCR", "2", "Float", "99% credible region of the somatic allele frequency");
+        
         return vcf_header_builder.build_once();
     }
     

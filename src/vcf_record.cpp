@@ -402,12 +402,14 @@ VcfRecord::Builder& VcfRecord::Builder::set_ref_allele(SequenceType ref_allele)
 
 VcfRecord::Builder& VcfRecord::Builder::set_alt_allele(const char alt_allele)
 {
+    alt_alleles_.resize(1);
     alt_alleles_.front() = alt_allele;
     return *this;
 }
 
 VcfRecord::Builder& VcfRecord::Builder::set_alt_allele(SequenceType alt_allele)
 {
+    alt_alleles_.resize(1);
     alt_alleles_.front() = std::move(alt_allele);
     return *this;
 }
@@ -454,20 +456,26 @@ VcfRecord::Builder& VcfRecord::Builder::add_info(const KeyType& key, const std::
     return *this;
 }
 
-VcfRecord::Builder& VcfRecord::Builder::add_info_flag(const KeyType& key)
+VcfRecord::Builder& VcfRecord::Builder::add_info_flag(KeyType key)
 {
-    return this->add_info(key, {});
+    return this->add_info(std::move(key), {});
 }
 
-VcfRecord::Builder& VcfRecord::Builder::set_format(const std::vector<KeyType>& format)
+VcfRecord::Builder& VcfRecord::Builder::set_format(std::vector<KeyType> format)
 {
-    format_ = format;
+    format_ = std::move(format);
     return *this;
 }
 
-VcfRecord::Builder& VcfRecord::Builder::set_format(const std::initializer_list<KeyType>& format)
+VcfRecord::Builder& VcfRecord::Builder::set_format(std::initializer_list<KeyType> format)
 {
-    format_ = format;
+    format_ = std::move(format);
+    return *this;
+}
+
+VcfRecord::Builder& VcfRecord::Builder::add_format(KeyType key)
+{
+    format_.push_back(std::move(key));
     return *this;
 }
 

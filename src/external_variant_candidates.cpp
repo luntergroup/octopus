@@ -51,7 +51,9 @@ std::vector<Variant> fetch_variants(const GenomicRegion& region, VcfReader& read
     std::vector<Variant> result {};
     result.reserve(reader.count_records(region));
     
-    std::size_t max_batch_size {10000};
+    std::size_t max_batch_size {1000000000};
+    
+    // TODO: we really need iterators in VcfReader
     
     auto batches = get_batch_regions(region, reader, max_batch_size);
     
@@ -73,7 +75,7 @@ std::vector<Variant> fetch_variants(const GenomicRegion& region, VcfReader& read
                     
                     position += std::distance(std::cbegin(ref_allele), p.first);
                     
-                    result.emplace_back(record.get_chromosome_name(), position,
+                    result.emplace_back(record.get_chromosome_name(), position - 1,
                                         std::move(new_ref_allele), std::move(new_alt_allele));
                 } else {
                     result.emplace_back(record.get_chromosome_name(), record.get_position() - 1,
@@ -82,6 +84,12 @@ std::vector<Variant> fetch_variants(const GenomicRegion& region, VcfReader& read
             }
         }
     }
+    
+    result.shrink_to_fit();
+    
+    std::sort(std::begin(result), std::end(result));
+    
+    result.erase(std::unique(std::begin(result), std::end(result)), std::end(result));
     
     return result;
 }

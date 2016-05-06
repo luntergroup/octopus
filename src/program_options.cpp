@@ -329,7 +329,7 @@ namespace Octopus
             
             using RefCallType = VariantCallerBuilder::RefCallType;
             
-            po::options_description caller("Caller options");
+            po::options_description caller("General caller options");
             caller.add_options()
             ("caller", po::value<std::string>()->default_value("population"),
              "Which of the Octopus callers to use")
@@ -339,18 +339,6 @@ namespace Octopus
              "Space-seperated list of contig=ploidy pairs")
             ("contig-ploidies-file", po::value<std::string>(),
              "List of contig=ploidy pairs, one per line")
-            ("transition-prior", po::value<double>()->default_value(0.003),
-             "Prior probability of a transition snp from the reference")
-            ("transversion-prior", po::value<double>()->default_value(0.003),
-             "Prior probability of a transversion snp from the reference")
-            ("insertion-prior", po::value<double>()->default_value(0.003),
-             "Prior probability of an insertion into the reference")
-            ("deletion-prior", po::value<double>()->default_value(0.003),
-             "Prior probability of a deletion from the reference")
-            ("prior-precision", po::value<double>()->default_value(0.003),
-             "Precision (inverse variance) of the given variant priors")
-            ("max-haplotypes", po::value<unsigned>()->default_value(128),
-             "Maximum number of haplotypes the model may consider")
             ("min-variant-posterior", po::value<float>()->default_value(20.0),
              "Minimum variant call posterior probability (phred scale)")
             ("min-refcall-posterior", po::value<float>()->default_value(10.0),
@@ -363,28 +351,27 @@ namespace Octopus
              "Minimum phase score required to output a phased call (phred scale)")
             ;
             
-            po::options_description advanced("Advanced options");
-            advanced.add_options()
-            ("disable-haplotype-lagging", po::bool_switch()->default_value(false),
-             "Disables lagging in the haplotype generator, so each candidate variant will be considered"
-             " exactly once")
-            ("disable-inactive-flank-scoring", po::bool_switch()->default_value(false),
-             "Disables additional calculation to adjust alignment score when there are inactive candidates"
-             " in haplotype flanking regions");
+            po::options_description model("Common model options");
+            model.add_options()
+            ("snp-heterozygosity", po::value<double>()->default_value(0.001),
+             "The germline SNP heterozygosity used to calculate genotype priors")
+            ("indel-heterozygosity", po::value<double>()->default_value(0.001),
+             "The germline indel heterozygosity used to calculate genotype priors")
+            ;
             
-            po::options_description cancer("Cancer caller specific options");
+            po::options_description cancer("Cancer caller/model options");
             cancer.add_options()
             ("normal-sample", po::value<std::string>(),
              "Normal sample used in cancer model")
             ("somatic-mutation-rate", po::value<float>()->default_value(0.00001),
              "Expected somatic mutation rate, per megabase pair, for this sample")
-            ("min-somatic-posterior", po::value<float>()->default_value(10.0),
+            ("min-somatic-posterior", po::value<float>()->default_value(15.0),
              "The minimum somatic mutation call posterior probability (phred scale)")
             ("somatics-only", po::bool_switch()->default_value(false),
              "Only output somatic calls (for somatic calling models only)")
             ;
             
-            po::options_description trio("Trio caller specific options");
+            po::options_description trio("Trio caller/model options");
             trio.add_options()
             ("maternal-sample", po::value<std::string>(),
              "Maternal sample for trio caller")
@@ -392,9 +379,20 @@ namespace Octopus
              "Paternal sample for trio caller")
             ;
             
+            po::options_description advanced("Advanced options");
+            advanced.add_options()
+            ("max-haplotypes", po::value<unsigned>()->default_value(128),
+             "Maximum number of haplotypes the caller may consider")
+            ("disable-haplotype-lagging", po::bool_switch()->default_value(false),
+             "Disables lagging in the haplotype generator, so each candidate variant will be considered"
+             " exactly once")
+            ("disable-inactive-flank-scoring", po::bool_switch()->default_value(false),
+             "Disables additional calculation to adjust alignment score when there are inactive candidates"
+             " in haplotype flanking regions");
+            
             po::options_description all("Allowed options");
             all.add(general).add(backend).add(input).add(filters).add(transforms)
-            .add(candidates).add(caller).add(advanced).add(cancer);
+            .add(candidates).add(caller).add(model).add(advanced).add(cancer);
             
             po::variables_map vm;
             po::store(po::command_line_parser(argc, argv).options(all).positional(p).run(), vm);
@@ -1465,7 +1463,12 @@ namespace Octopus
         const auto min_variant_posterior_phred = options.at("min-variant-posterior").as<float>();
         
         if (options.count("regenotype") == 1) {
-            vc_builder.set_min_variant_posterior(0);
+            if (caller == "cancer") {
+                vc_builder.set_min_variant_posterior(phred_to_probability(min_variant_posterior_phred));
+            } else {
+                vc_builder.set_min_variant_posterior(0);
+            }
+            
         } else {
             vc_builder.set_min_variant_posterior(phred_to_probability(min_variant_posterior_phred));
         }

@@ -9,70 +9,70 @@
 #ifndef __Octopus__population_genotype_model__
 #define __Octopus__population_genotype_model__
 
-#include <string>
 #include <vector>
 #include <unordered_map>
 #include <functional>
-#include <utility>
 
 #include "common.hpp"
-#include "genotype.hpp"
-#include "reference_genome.hpp"
+#include "haplotype.hpp"
+#include "coalescent_model.hpp"
 #include "haplotype_likelihood_cache.hpp"
+#include "genotype.hpp"
 #include "probability_matrix.hpp"
-
-class AlignedRead;
-class Haplotype;
 
 namespace Octopus
 {
     namespace GenotypeModel
     {
-    class Population
-    {
-    public:
-        using HaplotypeReference = std::reference_wrapper<const Haplotype>;
-        using HaplotypePriorMap  = std::unordered_map<HaplotypeReference, double>;
-        
-        struct Latents
+        class Population
         {
-            using HaplotypeFrequencyMap   = std::unordered_map<HaplotypeReference, double>;
-            using GenotypeProbabilityMap  = ProbabilityMatrix<Genotype<Haplotype>>;
-            using HaplotypeProbabilityMap = std::unordered_map<HaplotypeReference, double>;
+        public:
+            struct Latents
+            {
+                using GenotypeProbabilityVector = std::vector<double>;
+                using SampleGenotypeProbabilityVector = std::vector<GenotypeProbabilityVector>;
+                
+                Latents() = default;
+                Latents(SampleGenotypeProbabilityVector&& genotype_probabilities);
+                ~Latents() = default;
+                
+                SampleGenotypeProbabilityVector genotype_probabilities;
+            };
             
-            Latents() = default;
-            template <typename F, typename G, typename P>
-            Latents(F&& haplotype_frequencies, G&& genotype_posteriors, P&& haplotype_posteriors);
-            ~Latents() = default;
+            struct InferredLatents
+            {
+                InferredLatents() = default;
+                InferredLatents(Latents&& posteriors, double log_evidence);
+                
+                Latents posteriors;
+                double log_evidence;
+            };
             
-            HaplotypeFrequencyMap haplotype_frequencies;
-            GenotypeProbabilityMap genotype_posteriors;
-            HaplotypeProbabilityMap haplotype_posteriors;
+            using GenotypeVector = std::vector<Genotype<Haplotype>>;
+            
+            Population() = delete;
+            
+            explicit Population(const CoalescentModel& genotype_prior_model);
+            
+            ~Population() = default;
+            
+            Population(const Population&)            = delete;
+            Population& operator=(const Population&) = delete;
+            Population(Population&&)                 = delete;
+            Population& operator=(Population&&)      = delete;
+            
+            InferredLatents
+            infer_latents(const std::vector<SampleIdType>& samples, const GenotypeVector& genotypes,
+                          const HaplotypeLikelihoodCache& haplotype_likelihoods) const;
+            
+//            InferredLatents
+//            infer_latents(const std::unordered_map<SampleIdType, GenotypeVector>& genotypes,
+//                          const HaplotypeLikelihoodCache& haplotype_likelihoods) const;
+            
+        private:
+            std::reference_wrapper<const CoalescentModel> genotype_prior_model_;
         };
-        
-        explicit Population(unsigned ploidy, unsigned max_em_iterations = 100, double em_epsilon = 0.001);
-        
-        Latents infer_latents(const std::vector<SampleIdType>& samples,
-                              const std::vector<Haplotype>& haplotypes,
-                              const HaplotypePriorMap& haplotype_priors,
-                              const HaplotypeLikelihoodCache& haplotype_likelihoods) const;
-        
-    private:
-        const unsigned ploidy_;
-        const unsigned max_em_iterations_;
-        const double em_epsilon_;
-    };
-    
-    template <typename F, typename G, typename P>
-    Population::Latents::Latents(F&& haplotype_frequencies, G&& genotype_posteriors,
-                                 P&& haplotype_posteriors)
-    :
-    haplotype_frequencies {std::forward<F>(haplotype_frequencies)},
-    genotype_posteriors {std::forward<G>(genotype_posteriors)},
-    haplotype_posteriors {std::forward<P>(haplotype_posteriors)}
-    {}
-        
-    } // namespace GenotypeModel
+    } // namesapce GenotypeModel
 } // namespace Octopus
 
 #endif /* defined(__Octopus__population_genotype_model__) */

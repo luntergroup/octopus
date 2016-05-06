@@ -399,9 +399,7 @@ namespace Tandem
         {
             std::vector<StringRun> result {};
             
-            auto curr = first;
-            
-            while (true) {
+            for (auto curr = first; curr != last; ) {
                 const auto it = std::adjacent_find(curr, last);
                 
                 if (it == last) break;
@@ -423,96 +421,60 @@ namespace Tandem
             return result;
         }
         
+        template <std::size_t N, typename ForwardIt>
+        std::vector<StringRun>
+        find_exact_tandem_repeats(const ForwardIt first, const ForwardIt last)
+        {
+            std::vector<StringRun> result {};
+            
+            if (std::distance(first, last) < 2 * N) return result;
+            
+            auto it1 = std::adjacent_find(first, last, std::not_equal_to<void> {});
+            
+            if (it1 == last) return result;
+            
+            result.reserve(std::min(std::distance(first, last) / N, std::size_t {1024}));
+            
+            for (auto it2 = std::next(it1, N); it2 < last; ) {
+                const auto p = std::mismatch(it2, last, it1);
+                
+                if (p.second >= it2) {
+                    result.emplace_back(static_cast<uint32_t>(std::distance(first, it1)),
+                                        static_cast<uint32_t>(std::distance(it1, p.first)),
+                                        N);
+                    it1 = p.second;
+                } else {
+                    ++it1;
+                }
+                
+                it1 = std::adjacent_find(it1, last, std::not_equal_to<void> {});
+                
+                if (it1 == last) break;
+                
+                it2 = std::next(it1, N);
+            }
+            
+            result.shrink_to_fit();
+            
+            return result;
+        }
+        
         template <typename T>
         auto find_homopolymers(const T& str)
         {
             return find_homopolymers(std::cbegin(str), std::cend(str));
         }
         
-        template <typename ForwardIt>
-        std::vector<StringRun>
-        find_exact_dinucleotide_tandem_repeats(const ForwardIt first, const ForwardIt last)
-        {
-            std::vector<StringRun> result {};
-            
-            if (std::distance(first, last) < 4) return result;
-            
-            auto it1 = std::adjacent_find(first, last, std::not_equal_to<void> {});
-            auto it2 = std::next(it1, 2);
-            
-            while (it2 != last) {
-                const auto p = std::mismatch(it2, last, it1);
-                
-                if (p.second >= it2) {
-                    result.emplace_back(static_cast<uint32_t>(std::distance(first, it1)),
-                                        static_cast<uint32_t>(std::distance(it1, p.first)),
-                                        2);
-                    it1 = p.second;
-                } else {
-                    ++it1;
-                }
-                
-                it1 = std::adjacent_find(it1, last, std::not_equal_to<void> {});
-                
-                if (it1 == last) break;
-                
-                it2 = std::next(it1, 2);
-            }
-            
-            result.shrink_to_fit();
-            
-            return result;
-        }
-        
         template <typename T>
         auto find_exact_dinucleotide_tandem_repeats(const T& str)
         {
-            return find_exact_dinucleotide_tandem_repeats(std::cbegin(str), std::cend(str));
-        }
-        
-        template <typename ForwardIt>
-        std::vector<StringRun>
-        find_exact_trinucleotide_tandem_repeats(const ForwardIt first, const ForwardIt last)
-        {
-            std::vector<StringRun> result {};
-            
-            const auto length = std::distance(first, last);
-            
-            if (length < 6) return result;
-            
-            result.reserve(length / 3);
-            
-            auto it1 = std::adjacent_find(first, last, std::not_equal_to<void> {});
-            auto it2 = std::next(it1, 3);
-            
-            while (it2 != last) {
-                const auto p = std::mismatch(it2, last, it1);
-                
-                if (p.second >= it2) {
-                    result.emplace_back(static_cast<uint32_t>(std::distance(first, it1)),
-                                        static_cast<uint32_t>(std::distance(it1, p.first)),
-                                        3);
-                    it1 = p.second;
-                } else {
-                    ++it1;
-                }
-                
-                it1 = std::adjacent_find(it1, last, std::not_equal_to<void> {});
-                
-                if (it1 == last) break;
-                
-                it2 = std::next(it1, 3);
-            }
-            
-            result.shrink_to_fit();
-            
-            return result;
+            return find_exact_tandem_repeats<2>(std::cbegin(str), std::cend(str));
         }
         
         template <typename T>
         auto find_exact_trinucleotide_tandem_repeats(const T& str)
         {
-            return find_exact_trinucleotide_tandem_repeats(std::cbegin(str), std::cend(str));
+            return find_exact_tandem_repeats<3>(std::cbegin(str), std::cend(str));
         }
         
         template <typename Container1, typename Container2>
