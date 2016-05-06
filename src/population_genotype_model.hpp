@@ -19,6 +19,7 @@
 #include "haplotype_likelihood_cache.hpp"
 #include "genotype.hpp"
 #include "probability_matrix.hpp"
+#include "logging.hpp"
 
 namespace Octopus
 {
@@ -29,7 +30,7 @@ namespace Octopus
         public:
             struct Latents
             {
-                using GenotypeProbabilityVector = std::vector<double>;
+                using GenotypeProbabilityVector       = std::vector<double>;
                 using SampleGenotypeProbabilityVector = std::vector<GenotypeProbabilityVector>;
                 
                 Latents() = default;
@@ -41,10 +42,15 @@ namespace Octopus
             
             struct InferredLatents
             {
+                using HaplotypeReference    = std::reference_wrapper<const Haplotype>;
+                using HaplotypePosteriorMap = std::unordered_map<HaplotypeReference, double>;
+                
                 InferredLatents() = default;
-                InferredLatents(Latents&& posteriors, double log_evidence);
+                InferredLatents(Latents&& posteriors, HaplotypePosteriorMap&& haplotype_posteriors,
+                                double log_evidence);
                 
                 Latents posteriors;
+                HaplotypePosteriorMap haplotype_posteriors;
                 double log_evidence;
             };
             
@@ -63,6 +69,7 @@ namespace Octopus
             
             InferredLatents
             infer_latents(const std::vector<SampleIdType>& samples, const GenotypeVector& genotypes,
+                          const std::vector<Haplotype>& haplotypes,
                           const HaplotypeLikelihoodCache& haplotype_likelihoods) const;
             
 //            InferredLatents

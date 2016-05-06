@@ -12,12 +12,14 @@
 #include <vector>
 #include <functional>
 
+#include <boost/optional.hpp>
+
 #include "common.hpp"
 #include "haplotype.hpp"
 #include "coalescent_model.hpp"
 #include "haplotype_likelihood_cache.hpp"
 #include "genotype.hpp"
-#include "probability_matrix.hpp"
+#include "logging.hpp"
 
 namespace Octopus
 {
@@ -48,7 +50,8 @@ namespace Octopus
             
             Individual() = delete;
             
-            explicit Individual(const CoalescentModel& genotype_prior_model);
+            explicit Individual(const CoalescentModel& genotype_prior_model,
+                                boost::optional<Logging::DebugLogger> debug_log = boost::none);
             
             ~Individual() = default;
             
@@ -63,6 +66,8 @@ namespace Octopus
             
         private:
             std::reference_wrapper<const CoalescentModel> genotype_prior_model_;
+            
+            mutable boost::optional<Logging::DebugLogger> debug_log_;
         };
     } // namesapce GenotypeModel
 } // namespace Octopus

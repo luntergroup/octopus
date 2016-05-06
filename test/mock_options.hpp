@@ -42,12 +42,12 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         "--reference", human_reference_fasta.c_str(),
         //"--reference", ecoli_reference_fasta.c_str(),
         
-        "--reads", NA12878_low_coverage.c_str(),
+        //"--reads", NA12878_low_coverage.c_str(),
         //"--reads", NA12878_high_coverage.c_str(),
         //"--reads", "~/Genomics/Illumina/NA12878.mapped.ILLUMINA.bwa.CEU.high_coverage_pcr_free.20130906.chr22.bam",
         
         //"--reads", NA12891_high_coverage.c_str(),
-        "--reads", HG00101.c_str(),
+        //"--reads", HG00101.c_str(),
         
         //"--reads", NA12878_low_coverage.c_str(), HG00101.c_str(), HG00102.c_str(), HG00103.c_str(),
         //"--reads", NA12878_high_coverage.c_str(), NA12878_simulated_cancer_basic.c_str(), //cancer test
@@ -57,13 +57,13 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--reads", ecoli_bam.c_str(),
         
         // TCGA
-        //"--reads", "~/Genomics/cancer/TCGA/benchmark/G15511.HCC1143_BL.1.chr22.bam",
-        //"--reads", "~/Genomics/cancer/TCGA/benchmark/G15511.HCC1143.1.chr22.bam",
+        "--reads", "~/Genomics/cancer/TCGA/benchmark/G15511.HCC1143_BL.1.chr22.bam",
+        "--reads", "~/Genomics/cancer/TCGA/benchmark/G15511.HCC1143.1.chr22.bam",
         
         // MSG
         //"--reads", "~/Genomics/MSG/10120_chr2_47641558_GTA_G.RG.bam",
         
-        //"--caller", "cancer", // default "population"
+        "--caller", "cancer", // default "population"
         "--normal-sample", "HCC1143 BL",
         
         //"--organism-ploidy", "3",
@@ -75,7 +75,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         
         /* input regions */
         
-        "--regions", "22:41,015,232-41,015,314",
+        //"--regions", "22:41,015,232-41,015,314",
         
         //"--regions", "22:42,522,971-42,523,546", // bad model filter?
         
@@ -152,12 +152,12 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         
         // for cancer
         
+        "--regions", "22:24,899,276-25,902,854",
+        
         // TCGA HCC1143
         //"--regions", "22:24,899,276-24,902,854", // Somatic SNV!
         //"--regions", "22:27,707,987-27,708,223", // low frequency deletion?
         //"--regions", "22:36,265,289-36,265,519", // CNV SNP?
-        //"--regions", "22:36,272,719-36,272,785", // Somatic insertion?
-        //"--regions", "22:30817025-30817307", // not a somatic deletion
         //"--regions", "22:37,166,974-37,167,210", // somatic deletion?
         //"--regions", "22:28,681,165-28,681,395", // Low frequency somatic SNV
         //"--regions", "22:35,199,681-35,199,845", // Not a somatic deletion?
@@ -188,13 +188,9 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--skip-regions", "1:1,000,000-2,000,000", "1:1,500,000-10,000,000",
         //"--skip-regions-file", human_skip_regions.c_str(),
         
-        // candidate parameters
-        //"--min-supporting-reads", "1",
-        //"--min-base-quality", "15",
-        
         // read filters/transforms
         //"--consider-unmapped-reads",
-        //"--min-mapping-quality", "5",
+        //"--min-mapping-quality", "1",
         //"--allow-marked-duplicates",
         //"--allow-octopus-duplicates",
         //"--disable-soft-clip-masking",
@@ -219,7 +215,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--min-assembler-base-quality", "10",
         //"--max-variant-size", "25",
         
-        //"--disable-haplotype-lagging",
+        "--disable-haplotype-lagging",
         //"--disable-inactive-flank-scoring",
         //"--max-haplotypes", "50",
         

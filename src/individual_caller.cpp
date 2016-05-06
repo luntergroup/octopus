@@ -143,7 +143,7 @@ IndividualVariantCaller::infer_latents(const std::vector<Haplotype>& haplotypes,
 {
     CoalescentModel prior_model {Haplotype {mapped_region(haplotypes.front()), reference_}};
     
-    GenotypeModel::Individual model {prior_model};
+    GenotypeModel::Individual model {prior_model, debug_log_};
     
     auto genotypes = generate_all_genotypes(haplotypes, ploidy_);
     

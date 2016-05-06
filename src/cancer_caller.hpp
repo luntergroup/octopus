@@ -136,6 +136,10 @@ private:
     
     // other private methods
     
+    using GermlineGenotypeReference      = Genotype<Haplotype>;
+    using GermlineGenotypeProbabilityMap = std::unordered_map<GermlineGenotypeReference, double>;
+    using ProbabilityVector = std::vector<double>;
+    
     bool has_normal_sample() const noexcept;
     const SampleIdType& normal_sample() const;
     
@@ -149,22 +153,18 @@ private:
     
     CNVModel::Priors calculate_cnv_model_priors(const CoalescentModel& prior_model) const;
     SomaticModel::Priors calculate_somatic_model_priors(const SomaticMutationModel& prior_model) const;
-    
+
     ModelPosteriors calculate_model_posteriors(const Latents& inferences) const;
     
-//    std::unordered_map<Genotype<Haplotype>, double>
-//    calculate_germline_genotype_posteriors(const Latents& latents,
-//                                           const ModelPosteriors& model_posteriors) const;
+    GermlineGenotypeProbabilityMap
+    calculate_germline_genotype_posteriors(const Latents& inferences,
+                                           const ModelPosteriors& model_posteriors) const;
     
-    std::vector<std::unique_ptr<VariantCall>>
-    call_germline_variants(const std::vector<Variant>& candidates,
-                           const GermlineModel::Latents& posteriors) const;
-    std::vector<std::unique_ptr<VariantCall>>
-    call_cnv_variants(const std::vector<Variant>& candidates,
-                      const CNVModel::Latents& posteriors) const;
-    std::vector<std::unique_ptr<VariantCall>>
-    call_somatic_variants(const std::vector<Variant>& candidates,
-                          const SomaticModel::Latents& posteriors) const;
+    ProbabilityVector
+    calculate_probability_samples_not_somatic(const Latents& inferences) const;
+    
+    double calculate_somatic_probability(const ProbabilityVector& sample_somatic_posteriors,
+                                         const ModelPosteriors& model_posteriors) const;
 };
 
 } // namespace Octopus

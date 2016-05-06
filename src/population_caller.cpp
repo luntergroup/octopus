@@ -151,7 +151,7 @@ PopulationVariantCaller::infer_latents(const std::vector<Haplotype>& haplotypes,
         stream(log) << "There are " << genotypes.size() << " candidate genotypes";
     }
     
-    auto inferences = model.infer_latents(samples_, genotypes, haplotype_likelihoods);
+    auto inferences = model.infer_latents(samples_, genotypes, haplotypes, haplotype_likelihoods);
     
 //    // TEST
 //    GenotypeModel::Population dummy_model {ploidy_ + 1, prior_model};

@@ -16,15 +16,16 @@
 
 #include "fixed_ploidy_genotype_likelihood_model.hpp"
 #include "maths.hpp"
-#include "logging.hpp"
 
 namespace Octopus
 {
 namespace GenotypeModel
 {
-    Individual::Individual(const CoalescentModel& genotype_prior_model)
+    Individual::Individual(const CoalescentModel& genotype_prior_model,
+                           boost::optional<Logging::DebugLogger> debug_log)
     :
-    genotype_prior_model_ {genotype_prior_model}
+    genotype_prior_model_ {genotype_prior_model},
+    debug_log_ {debug_log}
     {}
     
     Individual::Latents::Latents(GenotypeProbabilityVector&& genotype_probabilities)
@@ -65,9 +66,8 @@ namespace GenotypeModel
                            return likelihood_model.log_likelihood(sample, genotype);
                        });
         
-        if (DEBUG_MODE) {
-            Logging::DebugLogger log {};
-            debug::print_genotype_likelihoods(stream(log), genotypes, result);
+        if (debug_log_) {
+            debug::print_genotype_likelihoods(stream(*debug_log_), genotypes, result);
         }
         
         std::transform(std::cbegin(genotypes), std::cend(genotypes), std::cbegin(result),
