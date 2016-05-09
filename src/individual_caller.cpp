@@ -376,14 +376,10 @@ IndividualVariantCaller::call_variants(const std::vector<Variant>& candidates,
         const auto dummy_model_posterior = calculate_dummy_model_posterior(latents.model_log_evidence_,
                                                                            latents.dummy_latents_->log_evidence);
         
-        if (debug_log_) {
-            stream(*debug_log_) << "Dummy model posterior = " << dummy_model_posterior;
-        }
+        if (debug_log_) stream(*debug_log_) << "Dummy model posterior = " << dummy_model_posterior;
         
         if (dummy_model_posterior > 0.5) {
-            if (debug_log_) {
-                *debug_log_ << "Skipping region due to model filter";
-            }
+            if (debug_log_) *debug_log_ << "Skipping region due to model filter";
             return {};
         }
     }

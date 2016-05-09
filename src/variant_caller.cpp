@@ -291,26 +291,18 @@ VariantCaller::call(const GenomicRegion& call_region, ProgressMeter& progress_me
             return result;
         }
         
-        if (debug_log_) {
-            stream(*debug_log_) << "There are " << count_reads(reads) << " reads";
-        }
+        if (debug_log_) stream(*debug_log_) << "There are " << count_reads(reads) << " reads";
     }
     
     const auto candidate_region = calculate_candidate_region(call_region, reads, candidate_generator_);
     
-    if (debug_log_) {
-        stream(*debug_log_) << "Generating candidates in region " << candidate_region;
-    }
+    if (debug_log_) stream(*debug_log_) << "Generating candidates in region " << candidate_region;
     
     auto candidates = generate_candidates(candidate_region);
     
-    if (debug_log_) {
-        debug::print_final_candidates(stream(*debug_log_), candidates);
-    }
+    if (debug_log_) debug::print_final_candidates(stream(*debug_log_), candidates);
     
-    if (!refcalls_requested() && candidates.empty()) {
-        return result;
-    }
+    if (!refcalls_requested() && candidates.empty()) return result;
     
     if (!candidate_generator_.requires_reads()) {
         // as we didn't fetch them earlier
@@ -334,9 +326,7 @@ VariantCaller::call(const GenomicRegion& call_region, ProgressMeter& progress_me
         std::tie(haplotypes, active_region) = haplotype_generator.progress();
         pause_timer(haplotype_generation_timer);
         
-        if (debug_log_) {
-            stream(*debug_log_) << "Active region is " << active_region;
-        }
+        if (debug_log_) stream(*debug_log_) << "Active region is " << active_region;
         
         if (is_after(active_region, call_region) || haplotypes.empty()) {
             if (debug_log_) {
@@ -360,9 +350,7 @@ VariantCaller::call(const GenomicRegion& call_region, ProgressMeter& progress_me
         }
         
         if (!refcalls_requested() && !has_coverage(active_reads)) {
-            if (debug_log_) {
-                stream(*debug_log_) << "Skipping active region as there are no active reads";
-            }
+            if (debug_log_) stream(*debug_log_) << "Skipping active region as there are no active reads";
             continue;
         } else if (debug_log_) {
             stream(*debug_log_) << "There are " << count_reads(active_reads) << " active reads";
@@ -392,9 +380,7 @@ VariantCaller::call(const GenomicRegion& call_region, ProgressMeter& progress_me
         removed_haplotypes.shrink_to_fit();
         pause_timer(haplotype_generation_timer);
         
-        if (debug_log_) {
-            stream(*debug_log_) << "There are " << haplotypes.size() << " final haplotypes";
-        }
+        if (debug_log_) stream(*debug_log_) << "There are " << haplotypes.size() << " final haplotypes";
         
         resume_timer(latent_timer);
         const auto caller_latents = this->infer_latents(haplotypes, haplotype_likelihoods);

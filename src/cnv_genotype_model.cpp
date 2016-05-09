@@ -639,7 +639,6 @@ namespace
     
     // Main algorithm - single seed
     
-    // Starting iteration with given genotype_log_posteriors
     template <std::size_t K>
     CompressedLatents<K>
     run_variational_bayes(const CompressedAlphas<K>& prior_alphas,

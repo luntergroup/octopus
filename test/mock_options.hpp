@@ -152,7 +152,16 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         
         // for cancer
         
-        "--regions", "22:24,899,276-25,902,854",
+        //"--regions", "22:24,899,276-25,902,854",
+        "--regions", "22:25,656,651-25,656,728", // FP SNP
+        //"--regions", "22:25,055,799-25,055,839", // FP DEL
+        
+        //"--regions", "22:25,731,146-25,731,476", // FP SNP
+        //"--regions", "22:25,656,657-25,656,697", // FP SNP
+        //"--regions", "22:25,330,405-25,330,569", // FP DEL
+        //"--regions", "22:25,119,931-25,119,971", // FP SNP
+        //"--regions", "22:24,953,459-24,953,499", // FP INS?
+        //"--regions", "22:25,070,597-25,070,854", // FP SNP
         
         // TCGA HCC1143
         //"--regions", "22:24,899,276-24,902,854", // Somatic SNV!

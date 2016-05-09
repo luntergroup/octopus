@@ -459,6 +459,52 @@ p(\mathcal{M} | \mathcal{D}) = \frac{p(\mathcal{M})p(\mathcal{D} | \mathcal{M})}
 
 In particular the term $p(\mathcal{D} | \mathcal{M})$  is the evidence the model $\mathcal{M}$, and $p(\mathcal{M})$ is the prior probability.
 
+\subsubsection{Germline genotype calling}
+
+The probability of each germline genotype is then:
+
+\begin{equation}
+\label{eq:som_germline_genotype}
+p(\boldsymbol{g} | \mathcal{R}) = p(\mathcal{M}_g | \mathcal{R}) p(\boldsymbol{g} | \mathcal{M}_g) + p(\mathcal{M}_c | \mathcal{R}) p(\boldsymbol{g} | \mathcal{M}_c) + p(\mathcal{M}_s | \mathcal{R}) p(\boldsymbol{g} | \mathcal{M}_s)
+\end{equation}
+
+\noindent where $p(\boldsymbol{g} | \mathcal{M}_s) = \sum_{\tilde{\boldsymbol{g}} s.t. \boldsymbol{g} \in \tilde{\boldsymbol{g}}} p(\tilde{\boldsymbol{g}} | \mathcal{M}_s)$.
+
+The called genotype is then the MAP genotype according to this posterior distribution.
+
+\subsubsection{Germline variant calling}
+
+The posterior probability of each candidate variant allele $a$ is then:
+
+\begin{equation}
+\label{eq:som_germline_candidate}
+p(a | \mathcal{R}) = \sum_{\boldsymbol{g} s.t. a \in \boldsymbol{g}} p(\boldsymbol{g} | \mathcal{R})
+\end{equation}
+
+Germline candidates are called if the posterior is above a user defined threshold, and if the candidate is present in the called germline genotype. If the candidate is not above the user-defined threshold, it is added to a list of candidate somatic candidates.
+
+\subsubsection{Somatic allele calling}
+
+Noting that $\mathcal{M}_s$ defines a probability distribution of probabilities over each component of each samples 'cancer genotype', we define the probability that a particular sample contains a somatic haplotype, $\tilde{h}$, as:
+
+\begin{equation}
+\label{eq:somatic_probability_sample}
+p(\tilde{h}_s | \mathcal{M}_s) = p(\tilde{h}_s > c_s | \mathcal{M}_s) = \int_c^1 \text{Beta}(\alpha_{P + 1}, \sum_{i = 0}^{P} \alpha_i)
+\end{equation}
+
+\noindent where $c_s$ is some user-defined threshold. The idea being somatic haplotypes with most probability mass less than $c_s$ are considered noise.
+
+We can then calculate the probability that a somatic haplotype is present in any of the samples as:
+
+\begin{equation}
+\label{eq:somatic_probability}
+p(\tilde{h} | \mathcal{M}_s) = 1 - \prod_s 1 - p(\tilde{h}_s | \mathcal{M}_s)
+\end{equation}
+
+\noindent If this probability is greater than some user-defined threshold, we proceed to call somatic mutations.
+
+
+
 \section{Phasing}
 
 \section{Variant call filtering}

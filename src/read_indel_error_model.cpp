@@ -35,6 +35,12 @@ ReadIndelErrorModel::calculate_gap_extension_penalty(const Haplotype& haplotype)
     return gap_extension_;
 }
 
+template <typename C, typename T>
+static auto get_penalty(const C& penalties, const T length)
+{
+    return (length < penalties.size()) ? penalties[length - 1] : penalties.back();
+}
+
 void ReadIndelErrorModel::fill_gap_open_penalties(const Haplotype& haplotype,
                                                   std::vector<PenaltyType>& result) const
 {
@@ -46,9 +52,8 @@ void ReadIndelErrorModel::fill_gap_open_penalties(const Haplotype& haplotype,
     
     for (const auto& repeat : repeats) {
         if (repeat.period == 1) {
-            const auto e = (repeat.length < Homopolymer_errors_.size())
-                ? Homopolymer_errors_[repeat.length - 1] : Homopolymer_errors_.back();
-            std::fill_n(next(begin(result), repeat.pos), repeat.length, e);
+            std::fill_n(next(begin(result), repeat.pos), repeat.length,
+                        get_penalty(Homopolymer_errors_, repeat.length));
         } else if (repeat.period == 2) {
             static constexpr std::array<char, 2> AC {'A', 'C'};
             

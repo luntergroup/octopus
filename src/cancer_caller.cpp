@@ -8,6 +8,7 @@
 
 #include "cancer_caller.hpp"
 
+#include <string>
 #include <utility>
 #include <algorithm>
 #include <numeric>
@@ -201,29 +202,23 @@ CancerVariantCaller::infer_latents(const std::vector<Haplotype>& haplotypes,
     CNVModel cnv_model {samples_, ploidy, std::move(cnv_model_priors)};
     SomaticModel somatic_model {samples_, ploidy, std::move(somatic_model_priors)};
     
-    const auto merged_likelihoods = merge_samples(samples_, "union", haplotypes, haplotype_likelihoods);
+    static const std::string merged_sample {"merged_sample"};
     
-    auto germline_inferences = germline_model.infer_latents("union", germline_genotypes,
+    const auto merged_likelihoods = merge_samples(samples_, merged_sample, haplotypes,
+                                                  haplotype_likelihoods);
+    
+    auto germline_inferences = germline_model.infer_latents(merged_sample, germline_genotypes,
                                                             merged_likelihoods);
     auto cnv_inferences = cnv_model.infer_latents(germline_genotypes, haplotype_likelihoods);
     
     filter(cancer_genotypes, germline_genotypes, germline_inferences, cnv_inferences);
-    
-//    Logging::DebugLogger log {};
-//    log << "All cancer genotypes";
-//    int i {0};
-//    for (const auto& g : cancer_genotypes) {
-//        auto s = stream(log); s << i++ << ": ";
-//        debug::print_variant_alleles(s, g);
-//    }
     
     auto somatic_inferences = somatic_model.infer_latents(cancer_genotypes, haplotype_likelihoods);
     
     if (has_normal_sample()) {
         Latents::NormalInferences normal_inferences;
         
-        normal_inferences.germline = germline_model.infer_latents(normal_sample(),
-                                                                  germline_genotypes,
+        normal_inferences.germline = germline_model.infer_latents(normal_sample(),  germline_genotypes,
                                                                   haplotype_likelihoods);
         
         auto dummy_genotypes = generate_all_genotypes(haplotypes, ploidy + 1);
@@ -691,14 +686,10 @@ CancerVariantCaller::call_variants(const std::vector<Variant>& candidates, Laten
         
         auto dummy_model_posterior = calculate_dummy_model_posterior(germline_evidence, dummy_evidence);
         
-        if (debug_log_) {
-            stream(*debug_log_) << "Dummy model posterior = " << dummy_model_posterior;
-        }
+        if (debug_log_) stream(*debug_log_) << "Dummy model posterior = " << dummy_model_posterior;
         
-        if (dummy_model_posterior > 0.5) {
-            if (debug_log_) {
-                *debug_log_ << "Skipping region due to model filter";
-            }
+        if (dummy_model_posterior > 0.01) {
+            if (debug_log_) *debug_log_ << "Skipping region due to model filter";
             return {};
         }
     }
@@ -859,7 +850,7 @@ CancerVariantCaller::calculate_probability_samples_not_somatic(const Latents& in
                    std::begin(result), [ploidy] (const auto& p) {
                        const auto a0 = std::accumulate(std::cbegin(p.second),
                                                        std::prev(std::cend(p.second)), 0.0);
-                       return Maths::beta_cdf(p.second.back(), a0, 0.01);
+                       return Maths::beta_cdf(p.second.back(), a0, 0.05);
                    });
     
     return result;
