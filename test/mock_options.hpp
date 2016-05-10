@@ -25,7 +25,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--help",
         //"--version",
         
-        "--debug",
+        //"--debug",
         //"--trace",
         
         //"--sites-only",
@@ -44,7 +44,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         
         //"--reads", NA12878_low_coverage.c_str(),
         //"--reads", NA12878_high_coverage.c_str(),
-        //"--reads", "~/Genomics/Illumina/NA12878.mapped.ILLUMINA.bwa.CEU.high_coverage_pcr_free.20130906.chr22.bam",
+        "--reads", "~/Genomics/Illumina/NA12878.mapped.ILLUMINA.bwa.CEU.high_coverage_pcr_free.20130906.chr22.bam",
         
         //"--reads", NA12891_high_coverage.c_str(),
         //"--reads", HG00101.c_str(),
@@ -57,13 +57,13 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--reads", ecoli_bam.c_str(),
         
         // TCGA
-        "--reads", "~/Genomics/cancer/TCGA/benchmark/G15511.HCC1143_BL.1.chr22.bam",
-        "--reads", "~/Genomics/cancer/TCGA/benchmark/G15511.HCC1143.1.chr22.bam",
+        //"--reads", "~/Genomics/cancer/TCGA/benchmark/G15511.HCC1143_BL.1.chr22.bam",
+        //"--reads", "~/Genomics/cancer/TCGA/benchmark/G15511.HCC1143.1.chr22.bam",
         
         // MSG
         //"--reads", "~/Genomics/MSG/10120_chr2_47641558_GTA_G.RG.bam",
         
-        "--caller", "cancer", // default "population"
+        //"--caller", "cancer", // default "population"
         "--normal-sample", "HCC1143 BL",
         
         //"--organism-ploidy", "3",
@@ -74,6 +74,8 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--make-positional-refcalls",
         
         /* input regions */
+        
+        "--regions", "22",
         
         //"--regions", "22:41,015,232-41,015,314",
         
@@ -153,7 +155,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         // for cancer
         
         //"--regions", "22:24,899,276-25,902,854",
-        "--regions", "22:25,656,651-25,656,728", // FP SNP
+        //"--regions", "22:25,656,651-25,656,728", // FP SNP
         //"--regions", "22:25,055,799-25,055,839", // FP DEL
         
         //"--regions", "22:25,731,146-25,731,476", // FP SNP
@@ -238,7 +240,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         
         //"--output", test_out_vcf.c_str(),
         //"--output", "octopus_NA12878HC_22_unlagged_dummy.vcf",
-        //"--output", "octopus_calls2.vcf",
+        "--output", "octopus_calls2.vcf",
         
         nullptr};
     

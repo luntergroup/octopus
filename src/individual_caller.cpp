@@ -188,6 +188,7 @@ struct VariantCall : Mappable<VariantCall>
     
     VariantReference variant;
     double posterior;
+    bool is_dummy_filtered = false;
 };
 
 using VariantCalls = std::vector<VariantCall>;
@@ -323,8 +324,15 @@ transform_call(const SampleIdType& sample, VariantCall&& variant_call, GenotypeC
     std::vector<std::pair<SampleIdType, Call::GenotypeCall>> tmp {
         std::make_pair(sample, convert(std::move(genotype_call)))
     };
-    return std::make_unique<GermlineVariantCall>(variant_call.variant.get(),
-                                                 std::move(tmp), variant_call.posterior);
+    
+    std::unique_ptr<Octopus::VariantCall> result {
+        std::make_unique<GermlineVariantCall>(variant_call.variant.get(), std::move(tmp),
+                                              variant_call.posterior)
+    };
+    
+    if (variant_call.is_dummy_filtered) result->filter();
+    
+    return result;
 }
 
 auto transform_calls(const SampleIdType& sample, VariantCalls&& variant_calls,
@@ -372,18 +380,6 @@ IndividualVariantCaller::call_variants(const std::vector<Variant>& candidates,
 {
     const auto& genotype_posteriors = (*latents.genotype_posteriors_)[sample_];
     
-    if (latents.dummy_latents_) {
-        const auto dummy_model_posterior = calculate_dummy_model_posterior(latents.model_log_evidence_,
-                                                                           latents.dummy_latents_->log_evidence);
-        
-        if (debug_log_) stream(*debug_log_) << "Dummy model posterior = " << dummy_model_posterior;
-        
-        if (dummy_model_posterior > 0.5) {
-            if (debug_log_) *debug_log_ << "Skipping region due to model filter";
-            return {};
-        }
-    }
-    
     if (TRACE_MODE) {
         Logging::TraceLogger log {};
         debug::print_genotype_posteriors(stream(log), genotype_posteriors, -1);
@@ -407,6 +403,17 @@ IndividualVariantCaller::call_variants(const std::vector<Variant>& candidates,
     const auto called_regions = extract_regions(variant_calls);
     
     auto genotype_calls = call_genotypes(genotype_call, genotype_posteriors, called_regions);
+    
+    if (latents.dummy_latents_) {
+        auto dummy_model_posterior = calculate_dummy_model_posterior(latents.model_log_evidence_,
+                                                                     latents.dummy_latents_->log_evidence);
+        
+        if (debug_log_) stream(*debug_log_) << "Dummy model posterior = " << dummy_model_posterior;
+        
+        if (dummy_model_posterior > 0.01) {
+            for (auto& call : variant_calls) call.is_dummy_filtered = true;
+        }
+    }
     
     return transform_calls(sample_, std::move(variant_calls), std::move(genotype_calls));
 }

@@ -176,6 +176,8 @@ namespace Octopus
         vcf_header_builder.add_basic_field("reference", reference.get_name());
         vcf_header_builder.add_structured_field("Octopus", {{"some", "option"}});
         
+        // TODO: find a better place to do this
+        vcf_header_builder.add_filter("MODEL", "The caller specific model filter failed");
         vcf_header_builder.add_format("SCR", "2", "Float", "99% credible region of the somatic allele frequency");
         
         return vcf_header_builder.build_once();
@@ -284,10 +286,8 @@ namespace Octopus
         
         GenomeCallingComponents() = delete;
         
-        explicit GenomeCallingComponents(ReferenceGenome&& reference,
-                                         ReadManager&& read_manager,
-                                         VcfWriter&& output,
-                                         const po::variables_map& options)
+        explicit GenomeCallingComponents(ReferenceGenome&& reference, ReadManager&& read_manager,
+                                         VcfWriter&& output, const po::variables_map& options)
         :
         components_ {std::move(reference), std::move(read_manager), std::move(output), options}
         {}
@@ -316,7 +316,17 @@ namespace Octopus
             return components_.read_manager;
         }
         
+        const ReadManager& get_read_manager() const noexcept
+        {
+            return components_.read_manager;
+        }
+        
         ReadPipe& get_read_pipe() noexcept
+        {
+            return components_.read_pipe;
+        }
+        
+        const ReadPipe& get_read_pipe() const noexcept
         {
             return components_.read_pipe;
         }
@@ -376,10 +386,8 @@ namespace Octopus
         {
             Components() = delete;
             
-            explicit Components(ReferenceGenome&& reference,
-                                ReadManager&& read_manager,
-                                VcfWriter&& output,
-                                const po::variables_map& options)
+            explicit Components(ReferenceGenome&& reference, ReadManager&& read_manager,
+                                VcfWriter&& output, const po::variables_map& options)
             :
             reference {std::move(reference)},
             read_manager {std::move(read_manager)},
@@ -638,6 +646,8 @@ namespace Octopus
         
         Logging::InfoLogger log {};
         
+        std::deque<VcfRecord> calls;
+        
         for (const auto& input_region : components.regions) {
             stream(log) << "Processing input region " << input_region;
             
@@ -656,9 +666,19 @@ namespace Octopus
                     stream(lg) << "Processing subregion " << subregion;
                 }
                 
-                auto calls = components.caller->call(subregion, progress_meter);
+                try {
+                    calls = components.caller->call(subregion, progress_meter);
+                } catch(...) {
+                    // TODO: which exceptions can we recover from?
+                    throw;
+                }
                 
-                write_calls(components.output, std::move(calls));
+                try {
+                    write_calls(components.output, std::move(calls));
+                } catch(...) {
+                    // TODO: which exceptions can we recover from?
+                    throw;
+                }
                 
                 subregion = propose_call_subregion(components, subregion, input_region);
             }
@@ -677,7 +697,7 @@ namespace Octopus
                 const auto num_files_removed = fs::remove_all(*components.get_temp_directory());
                 stream(log) << "Removed " << num_files_removed << " temporary files";
             } catch (const std::exception& e) {
-                stream(log) << "Cleanup failed with error '" << e.what() << "'";
+                stream(log) << "Cleanup failed with exception: " << e.what();
             }
         }
     }
@@ -702,13 +722,16 @@ namespace Octopus
         
         path /= file_name;
         
-        return VcfWriter {path, make_header(components.get_samples(), contig, components.get_reference())};
+        return VcfWriter {
+            path, make_header(components.get_samples(), contig, components.get_reference())
+        };
     }
     
     VcfWriter create_unique_temp_output_file(const GenomicRegion::ContigNameType& contig,
                                              const GenomeCallingComponents& components)
     {
-        return create_unique_temp_output_file(components.get_reference().get_contig_region(contig), components);
+        return create_unique_temp_output_file(components.get_reference().get_contig_region(contig),
+                                              components);
     }
     
     std::vector<VcfWriter> create_temp_writers(const GenomeCallingComponents& components)
@@ -723,13 +746,45 @@ namespace Octopus
         return result;
     }
     
+    struct Task
+    {
+        enum class TaskPolicy { Threaded, VectorThreaded, None };
+        
+        std::deque<GenomicRegion> regions;
+        TaskPolicy policy = TaskPolicy::None;
+    };
+    
+//    std::deque<Task> calculate_tasks(const GenomeCallingComponents& components)
+//    {
+//        if (components.get_num_threads()) {
+//            return std::deque<Task>(*components.get_num_threads(), Task {});
+//        }
+//        
+//        const auto num_files = components.get_read_manager().num_files();
+//        const auto num_samples = components.get_read_manager().num_samples();
+//        
+//        const auto num_hardware_threads = std::thread::hardware_concurrency();
+//        
+//        if (num_hardware_threads == 0) {
+//            
+//        }
+//        
+//        return 2;
+//    }
+    
     void run_octopus_multi_threaded(GenomeCallingComponents& components)
     {
         auto temp_writers = create_temp_writers(components);
         
+        const auto& contigs = components.get_contigs_in_output_order();
+        
+        
+        
         std::vector<std::future<void>> tasks {};
         
-        const auto& contigs = components.get_contigs_in_output_order();
+        
+        
+        tasks.reserve(contigs.size());
         
         std::transform(std::cbegin(contigs), std::cend(contigs), std::begin(temp_writers),
                        std::back_inserter(tasks),
@@ -738,7 +793,13 @@ namespace Octopus
                                              ContigCallingComponents {contig, writer, components});
                        });
         
-        for (auto& task : tasks) task.get();
+        for (auto& task : tasks) {
+            try {
+                task.get();
+            } catch (...) {
+                // TODO: something, at-least log
+            }
+        }
         
         auto results = writers_to_readers(temp_writers);
         
@@ -753,8 +814,7 @@ namespace Octopus
         return !components.get_num_threads() || *components.get_num_threads() > 1;
     }
     
-    void log_final_info(const GenomeCallingComponents& components,
-                        const TimeInterval& runtime)
+    void log_final_info(const GenomeCallingComponents& components, const TimeInterval& runtime)
     {
         Logging::InfoLogger log {};
         stream(log) << "Finished processing " << calculate_total_search_size(components.get_search_regions())

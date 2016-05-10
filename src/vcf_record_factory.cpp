@@ -489,6 +489,10 @@ namespace Octopus
         
         set_alt_alleles(call.get(), result, samples_);
         
+        if (call->is_model_filtered()) {
+            result.add_filter("MODEL");
+        }
+        
         //result.add_info("AC",  to_strings(count_alt_alleles(*call)));
         //result.add_info("AN",  to_string(count_alleles(*call)));
         

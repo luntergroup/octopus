@@ -82,10 +82,15 @@ namespace Octopus
         virtual bool parsimonise(const ReferenceGenome& reference) { return false; };
         virtual void decorate(VcfRecord::Builder& record) const = 0;
         
+        bool is_model_filtered() const noexcept;
+        void filter() noexcept;
+        
     protected:
         std::unordered_map<SampleIdType, GenotypeCall> genotype_calls_;
         
         double quality_;
+        
+        bool is_model_filtered_;
         
     private:
         virtual void replace_called_alleles(const char old_base, const char replacement_base) = 0;
@@ -93,7 +98,11 @@ namespace Octopus
     
     template <typename T>
     Call::Call(T&& genotype_calls, double quality)
-    : genotype_calls_ {std::begin(genotype_calls), std::end(genotype_calls)}, quality_ {quality}
+    :
+    genotype_calls_ {std::begin(genotype_calls),
+    std::end(genotype_calls)},
+    quality_ {quality},
+    is_model_filtered_ {}
     {}
     
     template <typename R>

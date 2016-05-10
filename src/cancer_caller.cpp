@@ -391,6 +391,7 @@ struct SomaticVariantCall : Mappable<SomaticVariantCall>
     
     VariantReference variant;
     double posterior;
+    bool is_dummy_model_filtered = false;
 };
 
 using SomaticVariantCalls = std::vector<SomaticVariantCall>;
@@ -666,11 +667,17 @@ auto transform_somatic_calls(SomaticVariantCalls&& somatic_calls, CancerGenotype
                            credible_regions.emplace(p.first, std::move(sample_credible_regions));
                        }
                        
-                       return std::make_unique<SomaticCall>(variant_call.variant.get(),
-                                                            std::move(genotype_call.genotype),
-                                                            genotype_call.posterior,
-                                                            std::move(credible_regions),
-                                                            variant_call.posterior);
+                       std::unique_ptr<Octopus::VariantCall> result {
+                           std::make_unique<SomaticCall>(variant_call.variant.get(),
+                                                         std::move(genotype_call.genotype),
+                                                         genotype_call.posterior,
+                                                         std::move(credible_regions),
+                                                         variant_call.posterior)
+                       };
+                       
+                       if (variant_call.is_dummy_model_filtered) result->filter();
+                       
+                       return result;
                    });
     
     return result;
@@ -680,20 +687,6 @@ auto transform_somatic_calls(SomaticVariantCalls&& somatic_calls, CancerGenotype
 std::vector<std::unique_ptr<VariantCall>>
 CancerVariantCaller::call_variants(const std::vector<Variant>& candidates, Latents& latents) const
 {
-    if (latents.normal_validation_inferences_) {
-        auto germline_evidence = latents.normal_validation_inferences_->germline.log_evidence;
-        auto dummy_evidence    = latents.normal_validation_inferences_->dummy.log_evidence;
-        
-        auto dummy_model_posterior = calculate_dummy_model_posterior(germline_evidence, dummy_evidence);
-        
-        if (debug_log_) stream(*debug_log_) << "Dummy model posterior = " << dummy_model_posterior;
-        
-        if (dummy_model_posterior > 0.01) {
-            if (debug_log_) *debug_log_ << "Skipping region due to model filter";
-            return {};
-        }
-    }
-    
     const auto model_posteriors = calculate_model_posteriors(latents);
     
     if (DEBUG_MODE) {
@@ -761,6 +754,19 @@ CancerVariantCaller::call_variants(const std::vector<Variant>& candidates, Laten
                                                             called_somatic_regions,
                                                             reduced_cancer_genotype_posteriors,
                                                             credible_regions);
+        
+        if (latents.normal_validation_inferences_) {
+            auto germline_evidence = latents.normal_validation_inferences_->germline.log_evidence;
+            auto dummy_evidence    = latents.normal_validation_inferences_->dummy.log_evidence;
+            
+            auto dummy_model_posterior = calculate_dummy_model_posterior(germline_evidence, dummy_evidence);
+            
+            if (debug_log_) stream(*debug_log_) << "Dummy model posterior = " << dummy_model_posterior;
+            
+            if (dummy_model_posterior > 0.01) {
+                for (auto& call : somatic_variant_calls) call.is_dummy_model_filtered = true;
+            }
+        }
         
         result = transform_somatic_calls(std::move(somatic_variant_calls),
                                          std::move(cancer_genotype_calls));

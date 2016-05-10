@@ -438,6 +438,12 @@ VcfRecord::Builder& VcfRecord::Builder::set_filters(const std::initializer_list<
     return *this;
 }
 
+VcfRecord::Builder& VcfRecord::Builder::add_filter(KeyType filter)
+{
+    filters_.push_back(std::move(filter));
+    return *this;
+}
+
 VcfRecord::Builder& VcfRecord::Builder::add_info(const KeyType& key, const ValueType& value)
 {
     info_.emplace(key, std::vector<ValueType> {value});

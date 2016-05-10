@@ -87,6 +87,11 @@ bool ReadManager::good() const noexcept
                        [] (const auto& p) { return p.second.is_open(); });
 }
 
+unsigned ReadManager::num_files() const noexcept
+{
+    return static_cast<unsigned>(closed_readers_.size() + open_readers_.size());
+}
+
 unsigned ReadManager::num_samples() const noexcept
 {
     return static_cast<unsigned>(samples_.size());

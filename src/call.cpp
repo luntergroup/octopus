@@ -86,4 +86,14 @@ namespace Octopus
             }
         }
     }
+    
+    bool Call::is_model_filtered() const noexcept
+    {
+        return is_model_filtered_;
+    }
+    
+    void Call::filter() noexcept
+    {
+        is_model_filtered_ = true;
+    }
 } // namespace Octopus

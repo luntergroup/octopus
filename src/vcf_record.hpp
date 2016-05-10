@@ -205,6 +205,7 @@ public:
     Builder& set_quality(QualityType quality);
     Builder& set_filters(const std::vector<KeyType>& filters);
     Builder& set_filters(const std::initializer_list<KeyType>& filters);
+    Builder& add_filter(KeyType filter);
     Builder& add_info(const KeyType& key, const ValueType& value);
     Builder& add_info(const KeyType& key, const std::vector<ValueType>& values);
     Builder& add_info(const KeyType& key, const std::initializer_list<ValueType>& values);

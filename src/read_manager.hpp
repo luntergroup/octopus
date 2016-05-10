@@ -50,6 +50,7 @@ public:
     friend void swap(ReadManager& lhs, ReadManager& rhs) noexcept;
     
     bool good() const noexcept;
+    unsigned num_files() const noexcept;
     
     unsigned num_samples() const noexcept;
     const std::vector<SampleIdType>& get_samples() const;
