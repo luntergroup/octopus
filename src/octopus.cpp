@@ -10,6 +10,8 @@
 
 #include <vector>
 #include <deque>
+#include <queue>
+#include <map>
 #include <iostream>
 #include <memory>
 #include <algorithm>
@@ -612,6 +614,14 @@ namespace Octopus
         for (auto&& call : calls) out.write(std::move(call));
     }
     
+    auto find_max_window(const ContigCallingComponents& components,
+                        const GenomicRegion& remaining_call_region)
+    {
+        return components.read_manager.get().find_covered_subregion(components.samples,
+                                                                    remaining_call_region,
+                                                                    components.read_buffer_size);
+    }
+    
     auto propose_call_subregion(const ContigCallingComponents& components,
                                 const GenomicRegion& remaining_call_region)
     {
@@ -619,9 +629,7 @@ namespace Octopus
             return remaining_call_region;
         }
         
-        auto max_window = components.read_manager.get().find_covered_subregion(components.samples,
-                                                                               remaining_call_region,
-                                                                               components.read_buffer_size);
+        const auto max_window = find_max_window(components, remaining_call_region);
         
         if (ends_before(remaining_call_region, max_window)) {
             return remaining_call_region;
@@ -734,13 +742,13 @@ namespace Octopus
                                               components);
     }
     
-    std::vector<VcfWriter> create_temp_writers(const GenomeCallingComponents& components)
+    auto make_temp_writers(const GenomeCallingComponents& components)
     {
-        std::vector<VcfWriter> result {};
+        std::unordered_map<GenomicRegion::ContigNameType, VcfWriter> result {};
         result.reserve(components.get_contigs_in_output_order().size());
         
         for (const auto& contig : components.get_contigs_in_output_order()) {
-            result.emplace_back(create_unique_temp_output_file(contig, components));
+            result.emplace(contig, create_unique_temp_output_file(contig, components));
         }
         
         return result;
@@ -748,64 +756,219 @@ namespace Octopus
     
     struct Task
     {
-        enum class TaskPolicy { Threaded, VectorThreaded, None };
+        enum class ExecutionPolicy { Threaded, VectorThreaded, None };
         
-        std::deque<GenomicRegion> regions;
-        TaskPolicy policy = TaskPolicy::None;
+        Task() = delete;
+        
+        Task(GenomicRegion region, ExecutionPolicy policy = ExecutionPolicy::None)
+        : region {std::move(region)}, policy {policy} {};
+        
+        GenomicRegion region;
+        ExecutionPolicy policy;
     };
     
-//    std::deque<Task> calculate_tasks(const GenomeCallingComponents& components)
-//    {
-//        if (components.get_num_threads()) {
-//            return std::deque<Task>(*components.get_num_threads(), Task {});
-//        }
-//        
-//        const auto num_files = components.get_read_manager().num_files();
-//        const auto num_samples = components.get_read_manager().num_samples();
-//        
-//        const auto num_hardware_threads = std::thread::hardware_concurrency();
-//        
-//        if (num_hardware_threads == 0) {
-//            
-//        }
-//        
-//        return 2;
-//    }
-    
-    void run_octopus_multi_threaded(GenomeCallingComponents& components)
+    struct ContigOrder
     {
-        auto temp_writers = create_temp_writers(components);
+        using ContigNameType = GenomicRegion::ContigNameType;
         
-        const auto& contigs = components.get_contigs_in_output_order();
+        template <typename Container>
+        ContigOrder(const Container& contigs)
+        : contigs_ {std::cbegin(contigs), std::cend(contigs)} {}
         
+        bool operator()(const ContigNameType& lhs, const ContigNameType& rhs) const
+        {
+            const auto it1 = std::find(std::cbegin(contigs_), std::cend(contigs_), lhs);
+            const auto it2 = std::find(std::cbegin(contigs_), std::cend(contigs_), rhs);
+            return it1 < it2;
+        }
         
+    private:
+        std::vector<ContigNameType> contigs_;
+    };
+    
+    using TaskQueue = std::queue<Task>;
+    using ContigTaskMap = std::map<GenomicRegion::ContigNameType, TaskQueue, ContigOrder>;
+    
+    TaskQueue divide_work_into_tasks(const ContigCallingComponents& components,
+                                     const Task::ExecutionPolicy policy)
+    {
+        TaskQueue result {};
         
-        std::vector<std::future<void>> tasks {};
+        if (components.regions.empty()) return result;
         
-        
-        
-        tasks.reserve(contigs.size());
-        
-        std::transform(std::cbegin(contigs), std::cend(contigs), std::begin(temp_writers),
-                       std::back_inserter(tasks),
-                       [&] (const auto& contig, auto& writer) {
-                           return std::async(run_octopus_on_contig,
-                                             ContigCallingComponents {contig, writer, components});
-                       });
-        
-        for (auto& task : tasks) {
-            try {
-                task.get();
-            } catch (...) {
-                // TODO: something, at-least log
+        for (const auto& region : components.regions) {
+            auto subregion = propose_call_subregion(components, region);
+            
+            result.emplace(subregion, policy);
+            
+            while (!is_empty(subregion)) {
+                subregion = propose_call_subregion(components, subregion, region);
+                result.emplace(subregion, policy);
             }
         }
         
-        auto results = writers_to_readers(temp_writers);
+        return result;
+    }
+    
+    Task::ExecutionPolicy make_execution_policy(const GenomeCallingComponents& components)
+    {
+        if (components.get_num_threads()) {
+            return Task::ExecutionPolicy::None;
+        }
+        return Task::ExecutionPolicy::Threaded;
+    }
+    
+    ContigTaskMap make_tasks(GenomeCallingComponents& components, const unsigned num_threads)
+    {
+        const auto policy = make_execution_policy(components);
+        
+        ContigTaskMap result {ContigOrder {components.get_contigs_in_output_order()}};
+        
+        for (const auto& contig : components.get_contigs_in_output_order()) {
+            ContigCallingComponents contig_components {contig, components};
+            contig_components.read_buffer_size /= num_threads;
+            result.emplace(contig, divide_work_into_tasks(contig_components, policy));
+        }
+        
+        return result;
+    }
+    
+    unsigned calculate_num_task_threads(const GenomeCallingComponents& components)
+    {
+        if (components.get_num_threads()) {
+            return *components.get_num_threads();
+        }
+        
+        const auto num_hardware_threads = std::thread::hardware_concurrency();
+        
+        if (num_hardware_threads > 0) return num_hardware_threads;
+        
+        const auto num_files = components.get_read_manager().num_files();
+        
+        return std::min(num_files, 8u);
+    }
+    
+    Task pop(ContigTaskMap& tasks)
+    {
+        assert(!tasks.empty());
+        auto it = std::begin(tasks);
+        auto result = it->second.front();
+        it->second.pop();
+        if (it->second.empty()) {
+            tasks.erase(it->first);
+        }
+        return result;
+    }
+    
+    template<typename R>
+    bool is_ready(const std::future<R>& f)
+    {
+        assert(f.valid());
+        return f.wait_for(std::chrono::seconds(0)) == std::future_status::ready;
+    }
+    
+    struct CompletedTask
+    {
+        CompletedTask(Task task, std::deque<VcfRecord>&& calls)
+        : task {std::move(task)}, calls {std::move(calls)} {}
+        Task task;
+        std::deque<VcfRecord> calls;
+    };
+    
+    auto run(const Task& task, const ContigCallingComponents& components,
+             ProgressMeter& progress_meter)
+    {
+        return std::async(std::launch::async,
+                          [&] () -> CompletedTask {
+                              return CompletedTask {
+                                  task,
+                                  components.caller->call(task.region, progress_meter)
+                              };
+                          });
+    }
+    
+    auto make_component_map(GenomeCallingComponents& components)
+    {
+        std::unordered_map<GenomicRegion::ContigNameType, ContigCallingComponents> result {};
+        result.reserve(components.get_contigs_in_output_order().size());
+        
+        for (const auto& contig : components.get_contigs_in_output_order()) {
+            result.emplace(contig, ContigCallingComponents {contig, components});
+        }
+        
+        return result;
+    }
+    
+    template <typename K>
+    auto extract(std::unordered_map<K, VcfWriter>& writers)
+    {
+        std::vector<VcfWriter> result {};
+        result.reserve(writers.size());
+        
+        for (auto& p : writers) result.emplace_back(std::move(p.second));
+        
+        writers.clear();
+        
+        return result;
+    }
+    
+    template <typename K>
+    auto convert_temp_writers(std::unordered_map<K, VcfWriter>& writers)
+    {
+        auto tmp = extract(writers);
+        return writers_to_readers(tmp);
+    }
+    
+    void run_octopus_multi_threaded(GenomeCallingComponents& components)
+    {
+        auto contig_components = make_component_map(components);
+        
+        const auto num_task_threads = calculate_num_task_threads(components);
+        
+        auto tasks = make_tasks(components, num_task_threads);
+        
+        auto temp_writers = make_temp_writers(components);
+        
+        std::vector<std::future<CompletedTask>> futures(num_task_threads);
+        
+        ProgressMeter meter {components.get_search_regions()};
+        
+        while (!tasks.empty()) {
+            for (auto& fut : futures) {
+                if (fut.valid()) {
+                    if (is_ready(fut)) {
+                        try {
+                            auto result = fut.get();
+                            write_calls(temp_writers.at(result.task.region.get_contig_name()),
+                                        std::move(result.calls));
+                        } catch (...) {
+                            throw;
+                        }
+                    }
+                } else if (!tasks.empty()) {
+                    auto task = pop(tasks);
+                    fut = run(task, contig_components.at(task.region.get_contig_name()), meter);
+                }
+            }
+        }
+        
+        for (auto& fut : futures) {
+            if (fut.valid()) {
+                try {
+                    auto result = fut.get();
+                    write_calls(temp_writers.at(result.task.region.get_contig_name()),
+                                std::move(result.calls));
+                } catch (...) {
+                    throw;
+                }
+            }
+        }
+        
+        auto results = convert_temp_writers(temp_writers);
         
         index_vcfs(results);
         
-        merge(results, contigs, components.get_output());
+        merge(results, components.get_contigs_in_output_order(), components.get_output());
     }
     } // namespace
     

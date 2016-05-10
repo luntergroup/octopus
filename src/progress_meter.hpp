@@ -56,6 +56,8 @@ namespace Octopus
         using DurationUnits = std::chrono::milliseconds;
         
         std::deque<DurationUnits> block_compute_times_;
+        
+        mutable std::mutex mutex_;
     };
 } // namespace Octopus
 

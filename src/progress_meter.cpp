@@ -13,6 +13,7 @@
 #include <algorithm>
 #include <functional>
 #include <cmath>
+#include <mutex>
 #include <cassert>
 
 #include "mappable_algorithms.hpp"
@@ -255,6 +256,8 @@ namespace Octopus
     
     void ProgressMeter::log_completed(const GenomicRegion& completed_region)
     {
+        std::lock_guard<std::mutex> lock {mutex_};
+        
         const auto new_bp_processed = right_overhang_size(completed_region, completed_region_);
         
         completed_region_ = encompassing_region(completed_region_, completed_region);
