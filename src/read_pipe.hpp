@@ -30,7 +30,7 @@
  
  Rather than just fetching all reads for all samples in one go and processing, we can be a bit more 
  clever and fetch reads in batches (e.g. each sample, or regions in samples). This could potentially 
- decrease avergae memory consumption (and also increase runtime performance) by minimising the
+ decrease average memory consumption (and also increase runtime performance) by minimising the
  number of 'bad' reads in memory. If we are really short on memory we could even compress filtered 
  read batches while we process other batches.
  */

@@ -29,6 +29,7 @@
 #include "common.hpp"
 #include "program_options.hpp"
 #include "genomic_region.hpp"
+#include "mappable.hpp"
 #include "mappable_flat_multi_set.hpp"
 #include "mappable_map.hpp"
 #include "reference_genome.hpp"
@@ -271,13 +272,15 @@ namespace Octopus
         return static_cast<std::size_t>(Maths::mean(read_sizes) + Maths::stdev(read_sizes));
     }
     
-    std::size_t calculate_max_num_reads(const std::size_t max_buffer_size_in_bytes,
+    std::size_t calculate_max_num_reads(const std::size_t max_buffer_bytes,
                                         const std::vector<SampleIdType>& samples,
                                         const InputRegionMap& input_regions,
                                         ReadManager& read_manager)
     {
         if (samples.empty()) return 0;
-        return max_buffer_size_in_bytes / estimate_mean_read_size(samples, input_regions, read_manager);
+        static constexpr std::size_t Min_buffer_bytes {1'000'000};
+        return std::max(max_buffer_bytes, Min_buffer_bytes)
+            / estimate_mean_read_size(samples, input_regions, read_manager);
     }
     
     class GenomeCallingComponents
@@ -454,17 +457,17 @@ namespace Octopus
         Logging::FatalLogger log {};
         
         if (components.get_samples().empty()) {
-            log << "Quiting as no samples were detected";
+            log << "No samples detected";
             return false;
         }
         
         if (components.get_search_regions().empty()) {
-            log << "Quiting as there are no input regions";
+            log << "There are no input regions";
             return false;
         }
         
         if (components.get_candidate_generator_builder().num_generators() == 0) {
-            log << "Quiting as there are no candidate generators";
+            log << "There are no candidate generators";
             return false;
         }
         
@@ -479,21 +482,21 @@ namespace Octopus
         auto reference = Options::make_reference(options);
         
         if (!reference) {
-            log << "Quiting as could not make reference genome";
+            log << "Could not make reference genome";
             return boost::none;
         }
         
         auto read_manager = Options::make_read_manager(options);
         
         if (!read_manager) {
-            log << "Quiting as there are no read files";
+            log << "There are no read files";
             return boost::none;
         }
         
         auto output = Options::make_output_vcf_writer(options);
         
         if (!output.is_open()) {
-            log << "Quiting as could not open output file";
+            log << "Could not make output file";
             return boost::none;
         }
         
@@ -742,9 +745,15 @@ namespace Octopus
                                               components);
     }
     
-    auto make_temp_writers(const GenomeCallingComponents& components)
+    using TempVcfWriterMap = std::unordered_map<ContigNameType, VcfWriter>;
+    
+    TempVcfWriterMap make_temp_writers(const GenomeCallingComponents& components)
     {
-        std::unordered_map<GenomicRegion::ContigNameType, VcfWriter> result {};
+        if (!components.get_temp_directory()) {
+            throw std::runtime_error {"Could not make temp writers"};
+        }
+        
+        TempVcfWriterMap result {};
         result.reserve(components.get_contigs_in_output_order().size());
         
         for (const auto& contig : components.get_contigs_in_output_order()) {
@@ -754,7 +763,7 @@ namespace Octopus
         return result;
     }
     
-    struct Task
+    struct Task : public Mappable<Task>
     {
         enum class ExecutionPolicy { Threaded, VectorThreaded, None };
         
@@ -765,6 +774,8 @@ namespace Octopus
         
         GenomicRegion region;
         ExecutionPolicy policy;
+        
+        const GenomicRegion& get_region() const noexcept { return region; }
     };
     
     struct ContigOrder
@@ -787,7 +798,7 @@ namespace Octopus
     };
     
     using TaskQueue = std::queue<Task>;
-    using ContigTaskMap = std::map<GenomicRegion::ContigNameType, TaskQueue, ContigOrder>;
+    using ContigTaskMap = std::map<ContigNameType, TaskQueue, ContigOrder>;
     
     TaskQueue divide_work_into_tasks(const ContigCallingComponents& components,
                                      const Task::ExecutionPolicy policy)
@@ -867,25 +878,25 @@ namespace Octopus
         return f.wait_for(std::chrono::seconds(0)) == std::future_status::ready;
     }
     
-    struct CompletedTask
+    struct CompletedTask : public Task, public Mappable<CompletedTask>
     {
         CompletedTask(Task task, std::deque<VcfRecord>&& calls)
-        : task {std::move(task)}, calls {std::move(calls)} {}
-        Task task;
+        : Task {std::move(task)}, calls {std::move(calls)} {}
+        
         std::deque<VcfRecord> calls;
     };
     
-    auto run(const Task& task, GenomeCallingComponents& components, ProgressMeter& progress_meter)
+    auto run(Task task, GenomeCallingComponents& components, ProgressMeter& progress_meter)
     {
         if (DEBUG_MODE) {
             Logging::DebugLogger log {};
             stream(log) << "Spawning task with region " << task.region;
         }
         
-        ContigCallingComponents contig_components {task.region.get_contig_name(), components};
+        ContigCallingComponents contig_components {contig_name(task), components};
         
         return std::async(std::launch::async,
-                          [&task, &progress_meter, components = std::move(contig_components)]
+                          [task = std::move(task), &progress_meter, components = std::move(contig_components)]
                             () -> CompletedTask {
                               return CompletedTask {
                                   task,
@@ -920,11 +931,22 @@ namespace Octopus
         
         auto tasks = make_tasks(components, num_task_threads);
         
-        auto temp_writers = make_temp_writers(components);
+        TempVcfWriterMap temp_writers;
+        try {
+            temp_writers = make_temp_writers(components);
+        } catch (...) {
+            Logging::ErrorLogger log {};
+            log << "Could not make required temporary files";
+            return;
+        }
         
         std::vector<std::future<CompletedTask>> futures(num_task_threads);
         
         ProgressMeter meter {components.get_search_regions()};
+        
+        ContigTaskMap pending_tasks {ContigOrder {components.get_contigs_in_output_order()}};
+        
+        MappableSetMap<ContigNameType, CompletedTask> buffered_tasks {};
         
         while (!tasks.empty()) {
             for (auto& fut : futures) {
@@ -932,31 +954,115 @@ namespace Octopus
                     if (is_ready(fut)) {
                         try {
                             auto result = fut.get();
-                            write_calls(temp_writers.at(result.task.region.get_contig_name()),
-                                        std::move(result.calls));
+                            
+                            const auto& contig = contig_name(result);
+                            
+                            assert(pending_tasks.count(contig) == 1);
+                            
+                            auto& contig_pending_tasks = pending_tasks.at(contig);
+                            
+                            if (is_same_region(result, contig_pending_tasks.front())) {
+                                if (DEBUG_MODE) {
+                                    Logging::DebugLogger log {};
+                                    stream(log) << "Writing completed task " << result.region;
+                                }
+                                
+                                write_calls(temp_writers.at(contig_name(result)), std::move(result.calls));
+                                
+                                contig_pending_tasks.pop();
+                                
+                                if (buffered_tasks.count(contig) == 1) {
+                                    auto& contig_buffered_tasks = buffered_tasks.at(contig);
+                                    
+                                    while (!contig_pending_tasks.empty()) {
+                                        if (contig_buffered_tasks.has_contained(contig_pending_tasks.front())) {
+                                            if (DEBUG_MODE) {
+                                                Logging::DebugLogger log {};
+                                                stream(log) << "Writing completed buffered task " << contig_pending_tasks.front().region;
+                                            }
+                                            
+                                            auto buffered_task = contig_buffered_tasks.contained_range(contig_pending_tasks.front()).front();
+                                            
+                                            contig_buffered_tasks.erase(buffered_task);
+                                            
+                                            write_calls(temp_writers.at(contig_name(result)), std::move(buffered_task.calls));
+                                            
+                                            contig_pending_tasks.pop();
+                                        } else {
+                                            break;
+                                        }
+                                    }
+                                }
+                            } else {
+                                if (DEBUG_MODE) {
+                                    Logging::DebugLogger log {};
+                                    stream(log) << "Buffering completed task " << result.region;
+                                }
+                                
+                                buffered_tasks[contig].insert(std::move(result));
+                            }
                         } catch (...) {
                             // TODO: which exceptions can we recover from?
                             throw;
                         }
                     }
                 } else if (!tasks.empty()) {
-                    fut = run(pop(tasks), components, meter);
+                    auto task = pop(tasks);
+                    fut = run(task, components, meter);
+                    pending_tasks[task.region.get_contig_name()].push(std::move(task));
                 }
             }
         }
         
-        for (auto& fut : futures) {
-            if (fut.valid()) {
-                try {
-                    auto result = fut.get();
-                    write_calls(temp_writers.at(result.task.region.get_contig_name()),
-                                std::move(result.calls));
-                } catch (...) {
-                    // TODO: which exceptions can we recover from?
-                    throw;
-                }
-            }
+        pending_tasks.clear();
+        
+        futures.erase(std::remove_if(std::begin(futures), std::end(futures),
+                                     [] (const auto& f) { return !f.valid(); }), std::end(futures));
+        
+        std::deque<CompletedTask> remaining_tasks {};
+        
+        std::transform(std::begin(futures), std::end(futures), std::back_inserter(remaining_tasks),
+                       [] (auto& fut) {
+                           try {
+                               return fut.get();
+                           } catch (...) {
+                               // TODO: which exceptions can we recover from?
+                               throw;
+                           }
+                       });
+        
+        futures.clear();
+        futures.shrink_to_fit();
+        
+        for (auto& p : buffered_tasks) {
+            remaining_tasks.insert(std::end(remaining_tasks),
+                                   std::make_move_iterator(std::begin(p.second)),
+                                   std::make_move_iterator(std::end(p.second)));
+            p.second.clear();
+            p.second.shrink_to_fit();
         }
+        
+        buffered_tasks.clear();
+        
+        std::sort(std::begin(remaining_tasks), std::end(remaining_tasks),
+                  [] (const auto& lhs, const auto& rhs) {
+                      if (contig_name(lhs) == contig_name(rhs)) {
+                          return lhs < rhs;
+                      }
+                      return contig_name(lhs) < contig_name(rhs);
+                  });
+        
+        for (auto& task : remaining_tasks) {
+            if (DEBUG_MODE) {
+                Logging::DebugLogger log {};
+                stream(log) << "Writing remaining completed task " << task.region;
+            }
+            
+            write_calls(temp_writers.at(contig_name(task)), std::move(task.calls));
+        }
+        
+        remaining_tasks.clear();
+        remaining_tasks.shrink_to_fit();
         
         auto results = convert_temp_writers(temp_writers);
         
@@ -1003,36 +1109,24 @@ namespace Octopus
         
         options.clear();
         
-        if (is_multithreaded(*components)) {
-            run_octopus_multi_threaded(*components);
-        } else {
-            run_octopus_single_threaded(*components);
+        try {
+            if (is_multithreaded(*components)) {
+                run_octopus_multi_threaded(*components);
+            } else {
+                run_octopus_single_threaded(*components);
+            }
+        } catch (const std::exception& e) {
+            Logging::FatalLogger lg {};
+            stream(lg) << "Encountered exception '" << e.what() << "'. Attempting to cleanup...";
+            cleanup(*components);
+            if (DEBUG_MODE) {
+                stream(lg) << "Cleanup successful. Please send log file to dcooke@well.ox.ac.uk";
+            } else {
+                stream(lg) << "Cleanup successful. Please re-run in debug mode (option --debug) and send"
+                                " log file to " << Octopus_bug_email;
+            }
+            return;
         }
-        
-//        try {
-//            log_startup_info(*components);
-//            
-//            write_final_output_header(*components, Options::call_sites_only(options));
-//            
-//            options.clear();
-//            
-//            if (is_multithreaded(*components)) {
-//                run_octopus_multi_threaded(*components);
-//            } else {
-//                run_octopus_single_threaded(*components);
-//            }
-//        } catch (const std::exception& e) {
-//            Logging::FatalLogger lg {};
-//            stream(lg) << "Encountered exception '" << e.what() << "'. Attempting to cleanup...";
-//            cleanup(*components);
-//            if (DEBUG_MODE) {
-//                stream(lg) << "Cleanup successful. Please send log file to dcooke@well.ox.ac.uk";
-//            } else {
-//                stream(lg) << "Cleanup successful. Please re-run in debug mode (option --debug) and send"
-//                                " log file to " << Octopus_bug_email;
-//            }
-//            return;
-//        }
         
         cleanup(*components);
         
