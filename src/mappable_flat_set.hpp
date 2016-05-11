@@ -53,6 +53,8 @@ public:
     template <typename InputIterator>
     MappableFlatSet(InputIterator first, InputIterator second);
     
+    MappableFlatSet(std::initializer_list<MappableType> mappables);
+    
     ~MappableFlatSet() = default;
     
     MappableFlatSet(const MappableFlatSet&)            = default;
@@ -82,10 +84,10 @@ public:
     reference back();
     const_reference back() const;
     
-//    template <typename ...Args>
-//    iterator emplace(Args...);
-//    iterator insert(const MappableType&);
-//    iterator insert(MappableType&&);
+    template <typename ...Args>
+    iterator emplace(Args...);
+    iterator insert(const MappableType&);
+    iterator insert(MappableType&&);
 //    iterator insert(const_iterator, const MappableType& mappable);
 //    iterator insert(const_iterator, MappableType&& mappable);
 //    template <typename InputIterator>
@@ -192,6 +194,18 @@ MappableFlatSet<MappableType, Allocator>::MappableFlatSet(InputIterator first, I
 elements_ {first, second},
 is_bidirectionally_sorted_ {true},
 max_element_size_ {(elements_.empty()) ? 0 : region_size(*largest_mappable(elements_))}
+{
+    std::sort(std::begin(elements_), std::end(elements_));
+    
+    elements_.erase(std::unique(std::begin(elements_), std::end(elements_)), std::end(elements_));
+    
+    is_bidirectionally_sorted_ = is_bidirectionally_sorted(elements_);
+}
+
+template <typename MappableType, typename Allocator>
+MappableFlatSet<MappableType, Allocator>::MappableFlatSet(std::initializer_list<MappableType> mappables)
+:
+elements_ {mappables}
 {
     std::sort(std::begin(elements_), std::end(elements_));
     
@@ -348,46 +362,52 @@ MappableFlatSet<MappableType, Allocator>::back() const
     return *std::prev(cend());
 }
 
-//template <typename MappableType, typename Allocator>
-//template <typename ...Args>
-//typename MappableFlatSet<MappableType, Allocator>::iterator
-//MappableFlatSet<MappableType, Allocator>::emplace(Args... args)
-//{
-//    const auto it = elements_.emplace(std::forward<Args>(args)...);
-//    if (is_bidirectionally_sorted_) {
-//        const auto overlapped = overlap_range(*it);
-//        is_bidirectionally_sorted_ = is_bidirectionally_sorted(overlapped);
-//    }
-//    max_element_size_ = std::max(max_element_size_, region_size(*it));
-//    return it;
-//}
-//
-//template <typename MappableType, typename Allocator>
-//typename MappableFlatSet<MappableType, Allocator>::iterator
-//MappableFlatSet<MappableType, Allocator>::insert(const MappableType& m)
-//{
-//    const auto it = elements_.insert(m);
-//    if (is_bidirectionally_sorted_) {
-//        const auto overlapped = overlap_range(*it);
-//        is_bidirectionally_sorted_ = is_bidirectionally_sorted(overlapped);
-//    }
-//    max_element_size_ = std::max(max_element_size_, region_size(*it));
-//    return it;
-//}
-//
-//template <typename MappableType, typename Allocator>
-//typename MappableFlatSet<MappableType, Allocator>::iterator
-//MappableFlatSet<MappableType, Allocator>::insert(MappableType&& m)
-//{
-//    const auto it = elements_.insert(std::move(m));
-//    if (is_bidirectionally_sorted_) {
-//        const auto overlapped = overlap_range(*it);
-//        is_bidirectionally_sorted_ = is_bidirectionally_sorted(overlapped);
-//    }
-//    max_element_size_ = std::max(max_element_size_, region_size(*it));
-//    return it;
-//}
-//
+template <typename MappableType, typename Allocator>
+template <typename ...Args>
+typename MappableFlatSet<MappableType, Allocator>::iterator
+MappableFlatSet<MappableType, Allocator>::emplace(Args... args)
+{
+    elements_.emplace_back(std::forward<Args>(args)...);
+    const auto it = std::upper_bound(std::begin(elements_), std::prev(std::end(elements_)),
+                                     elements_.back());
+    const auto rit = std::make_reverse_iterator(it);
+    std::rotate(rit, std::next(rit), std::rend(elements_));
+    if (is_bidirectionally_sorted_) {
+        const auto overlapped = overlap_range(*it);
+        is_bidirectionally_sorted_ = is_bidirectionally_sorted(overlapped);
+    }
+    max_element_size_ = std::max(max_element_size_, region_size(*it));
+    return it;
+}
+
+template <typename MappableType, typename Allocator>
+typename MappableFlatSet<MappableType, Allocator>::iterator
+MappableFlatSet<MappableType, Allocator>::insert(const MappableType& m)
+{
+    const auto it = elements_.insert(std::upper_bound(std::begin(elements_), std::end(elements_), m),
+                                     m);
+    if (is_bidirectionally_sorted_) {
+        const auto overlapped = overlap_range(*it);
+        is_bidirectionally_sorted_ = is_bidirectionally_sorted(overlapped);
+    }
+    max_element_size_ = std::max(max_element_size_, region_size(*it));
+    return it;
+}
+
+template <typename MappableType, typename Allocator>
+typename MappableFlatSet<MappableType, Allocator>::iterator
+MappableFlatSet<MappableType, Allocator>::insert(MappableType&& m)
+{
+    const auto it = elements_.insert(std::upper_bound(std::begin(elements_), std::end(elements_), m),
+                                     std::move(m));
+    if (is_bidirectionally_sorted_) {
+        const auto overlapped = overlap_range(*it);
+        is_bidirectionally_sorted_ = is_bidirectionally_sorted(overlapped);
+    }
+    max_element_size_ = std::max(max_element_size_, region_size(*it));
+    return it;
+}
+
 //template <typename MappableType, typename Allocator>
 //typename MappableFlatSet<MappableType, Allocator>::iterator
 //MappableFlatSet<MappableType, Allocator>::insert(const_iterator it, const MappableType& m)

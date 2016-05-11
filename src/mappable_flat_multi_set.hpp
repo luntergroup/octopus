@@ -54,6 +54,8 @@ public:
     template <typename InputIterator>
     MappableFlatMultiSet(InputIterator first, InputIterator second);
     
+    MappableFlatMultiSet(std::initializer_list<MappableType> mappables);
+    
     ~MappableFlatMultiSet() = default;
     
     MappableFlatMultiSet(const MappableFlatMultiSet&)            = default;
@@ -224,6 +226,14 @@ template <typename InputIterator>
 MappableFlatMultiSet<MappableType, Allocator>::MappableFlatMultiSet(InputIterator first, InputIterator second)
 :
 elements_ {first, second},
+is_bidirectionally_sorted_ {is_bidirectionally_sorted(elements_)},
+max_element_size_ {(elements_.empty()) ? 0 : region_size(*largest_mappable(elements_))}
+{}
+
+template <typename MappableType, typename Allocator>
+MappableFlatMultiSet<MappableType, Allocator>::MappableFlatMultiSet(std::initializer_list<MappableType> mappables)
+:
+elements_ {mappables},
 is_bidirectionally_sorted_ {is_bidirectionally_sorted(elements_)},
 max_element_size_ {(elements_.empty()) ? 0 : region_size(*largest_mappable(elements_))}
 {}
@@ -1038,44 +1048,6 @@ find_first_shared(const MappableFlatMultiSet<MappableType1, Allocator>& mappable
     return std::find_if(first, last, [&mappables, &mappable] (const auto& m) {
                             return mappables.has_shared(m, mappable);
                         });
-}
-
-template <typename MappableType, typename Region, typename Allocator1, typename Allocator2>
-MappableFlatMultiSet<Region> splice_all(const MappableFlatMultiSet<MappableType, Allocator1>& mappables,
-                                        const MappableFlatMultiSet<Region, Allocator2>& regions)
-{
-    if (mappables.empty()) return regions;
-    
-    MappableFlatMultiSet<Region> result {};
-    result.reserve(regions.size());
-    
-    for (const auto& region : regions) {
-        auto overlapped = mappables.overlap_range(region);
-        
-        if (empty(overlapped)) {
-            result.emplace(region);
-        } else if (!is_same_region(region, overlapped.front())) {
-            auto spliced = region;
-            
-            if (begins_before(overlapped.front(), spliced)) {
-                spliced = right_overhang_region(spliced, overlapped.front());
-                overlapped.advance_begin(1);
-            }
-            
-            std::for_each(std::cbegin(overlapped), std::cend(overlapped), [&] (const auto& region) {
-                result.emplace(left_overhang_region(spliced, region));
-                spliced = expand_lhs(spliced, -begin_distance(region, spliced));
-            });
-            
-            if (ends_before(overlapped.back(), spliced)) {
-                result.emplace(right_overhang_region(spliced, overlapped.back()));
-            }
-        }
-   }
-   
-   result.shrink_to_fit();
-   
-   return result;
 }
 
 template <typename MappableType>

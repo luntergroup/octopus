@@ -58,7 +58,7 @@ namespace Options
     
     boost::optional<ReferenceGenome> make_reference(const po::variables_map& options);
     
-    SearchRegions get_search_regions(const po::variables_map& options,
+    InputRegionMap get_search_regions(const po::variables_map& options,
                                      const ReferenceGenome& reference);
     
     ContigOutputOrder get_contig_output_order(const po::variables_map& options);
@@ -81,7 +81,7 @@ namespace Options
     VariantCallerFactory make_variant_caller_factory(const ReferenceGenome& reference,
                                                      ReadPipe& read_pipe,
                                                      const CandidateGeneratorBuilder& candidate_generator_builder,
-                                                     const SearchRegions& regions,
+                                                     const InputRegionMap& regions,
                                                      const po::variables_map& options);
     
     VcfWriter make_output_vcf_writer(const po::variables_map& options);

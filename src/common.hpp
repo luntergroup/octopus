@@ -11,9 +11,9 @@
 
 #include <string>
 #include <cstdint>
-#include <unordered_map>
 
 #include "genomic_region.hpp"
+#include "mappable_flat_set.hpp"
 #include "mappable_flat_multi_set.hpp"
 #include "mappable_map.hpp"
 #include "aligned_read.hpp"
@@ -28,10 +28,11 @@ namespace Octopus
     
     const static std::string Octopus_bug_email {"dcooke@well.ox.ac.uk"};
     
-    using ProbabilityType = double;
-    using SampleIdType    = std::string;
+    using SampleIdType = std::string;
     
-    using SearchRegions = MappableMap<GenomicRegion::ContigNameType, GenomicRegion>;
+    using ContigNameType = GenomicRegion::ContigNameType;
+    
+    using InputRegionMap = MappableSetMap<ContigNameType, GenomicRegion>;
     
     using ReadContainer = MappableFlatMultiSet<AlignedRead>;
     using ReadMap       = MappableMap<SampleIdType, AlignedRead>;

@@ -9,12 +9,15 @@
 #ifndef progress_meter_hpp
 #define progress_meter_hpp
 
+#include <string>
 #include <cstddef>
 #include <chrono>
 #include <deque>
 
 #include "common.hpp"
+#include "contig_region.hpp"
 #include "genomic_region.hpp"
+#include "mappable_flat_set.hpp"
 #include "logging.hpp"
 
 namespace Octopus
@@ -24,8 +27,8 @@ namespace Octopus
     public:
         ProgressMeter() = delete;
         
-        ProgressMeter(const SearchRegions& input_regions);
-        ProgressMeter(const GenomicRegion& input_region);
+        ProgressMeter(InputRegionMap regions);
+        ProgressMeter(GenomicRegion region);
         
         ~ProgressMeter();
         
@@ -34,14 +37,18 @@ namespace Octopus
         ProgressMeter(ProgressMeter&&)                 = delete;
         ProgressMeter& operator=(ProgressMeter&&)      = delete;
         
-        void log_completed(const GenomicRegion& completed_region);
+        void log_completed(const GenomicRegion& region);
         
     private:
-        SearchRegions regions_;
+        using RegionSizeType = ContigRegion::SizeType;
         
-        std::size_t num_bp_to_search_, num_bp_completed_;
+        using ContigRegionMap = MappableSetMap<ContigNameType, ContigRegion>;
         
-        GenomicRegion completed_region_;
+        InputRegionMap regions_;
+        
+        ContigRegionMap completed_regions_;
+        
+        RegionSizeType num_bp_to_search_, num_bp_completed_;
         
         double percent_block_size_ = 1.0;
         double percent_unitl_log_;
@@ -58,6 +65,18 @@ namespace Octopus
         std::deque<DurationUnits> block_compute_times_;
         
         mutable std::mutex mutex_;
+        
+        std::size_t position_tab_length_;
+        
+        RegionSizeType merge(const GenomicRegion& region);
+        
+        void write_header();
+        void output_log(const GenomicRegion& region);
+        
+        std::string curr_position_pad(const GenomicRegion& completed_region) const;
+        std::string completed_pad(const std::string& percent_completed) const;
+        std::string time_taken_pad(const std::string& time_taken) const;
+        std::string ttc_pad(const std::string& ttc) const;
     };
 } // namespace Octopus
 

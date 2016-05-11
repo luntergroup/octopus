@@ -37,7 +37,9 @@ auto sum_region_sizes(InputIt first, InputIt last)
     static_assert(is_region_or_mappable<MappableTp>,
                   "mappable algorithms only work for regions and mappable types");
     
-    return std::accumulate(first, last, GenomicRegion::SizeType {0},
+    using SizeType = typename RegionType<MappableTp>::SizeType;
+    
+    return std::accumulate(first, last, SizeType {0},
                            [] (const auto curr, const auto& mappable) {
                                return curr + region_size(mappable);
                            });

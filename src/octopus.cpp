@@ -76,7 +76,7 @@ namespace Octopus
         return std::distance(std::cbegin(elements), std::find(std::cbegin(elements), std::cend(elements), value));
     }
     
-    auto get_contigs(const SearchRegions& regions, const ReferenceGenome& reference,
+    auto get_contigs(const InputRegionMap& regions, const ReferenceGenome& reference,
                      const Options::ContigOutputOrder order)
     {
         using Options::ContigOutputOrder;
@@ -192,7 +192,7 @@ namespace Octopus
         return make_header(samples, std::vector<GenomicRegion::ContigNameType> {contig}, reference);
     }
     
-    GenomicRegion::SizeType calculate_total_search_size(const SearchRegions& regions)
+    GenomicRegion::SizeType calculate_total_search_size(const InputRegionMap& regions)
     {
         return std::accumulate(std::cbegin(regions), std::cend(regions), GenomicRegion::SizeType {},
                                [] (const auto curr, const auto& p) {
@@ -238,7 +238,7 @@ namespace Octopus
     }
     
     auto estimate_mean_read_size(const std::vector<SampleIdType>& samples,
-                                 const SearchRegions& input_regions,
+                                 const InputRegionMap& input_regions,
                                  ReadManager& read_manager,
                                  unsigned max_sample_size = 1000)
     {
@@ -273,7 +273,7 @@ namespace Octopus
     
     std::size_t calculate_max_num_reads(const std::size_t max_buffer_size_in_bytes,
                                         const std::vector<SampleIdType>& samples,
-                                        const SearchRegions& input_regions,
+                                        const InputRegionMap& input_regions,
                                         ReadManager& read_manager)
     {
         if (samples.empty()) return 0;
@@ -338,7 +338,7 @@ namespace Octopus
             return components_.samples;
         }
         
-        const SearchRegions& get_search_regions() const noexcept
+        const InputRegionMap& get_search_regions() const noexcept
         {
             return components_.regions;
         }
@@ -426,7 +426,7 @@ namespace Octopus
             ReferenceGenome reference;
             ReadManager read_manager;
             Samples samples;
-            SearchRegions regions;
+            InputRegionMap regions;
             Contigs contigs_in_output_order;
             ReadPipe read_pipe;
             CandidateGeneratorBuilder candidate_generator_builder;
@@ -522,7 +522,7 @@ namespace Octopus
     {
         std::reference_wrapper<const ReferenceGenome> reference;
         std::reference_wrapper<ReadManager> read_manager;
-        const MappableFlatMultiSet<GenomicRegion> regions;
+        const InputRegionMap::mapped_type regions;
         std::reference_wrapper<const std::vector<SampleIdType>> samples;
         std::unique_ptr<const VariantCaller> caller;
         std::size_t read_buffer_size;
@@ -875,28 +875,23 @@ namespace Octopus
         std::deque<VcfRecord> calls;
     };
     
-    auto run(const Task& task, const ContigCallingComponents& components,
-             ProgressMeter& progress_meter)
+    auto run(const Task& task, GenomeCallingComponents& components, ProgressMeter& progress_meter)
     {
+        if (DEBUG_MODE) {
+            Logging::DebugLogger log {};
+            stream(log) << "Spawning task with region " << task.region;
+        }
+        
+        ContigCallingComponents contig_components {task.region.get_contig_name(), components};
+        
         return std::async(std::launch::async,
-                          [&] () -> CompletedTask {
+                          [&task, &progress_meter, components = std::move(contig_components)]
+                            () -> CompletedTask {
                               return CompletedTask {
                                   task,
                                   components.caller->call(task.region, progress_meter)
                               };
                           });
-    }
-    
-    auto make_component_map(GenomeCallingComponents& components)
-    {
-        std::unordered_map<GenomicRegion::ContigNameType, ContigCallingComponents> result {};
-        result.reserve(components.get_contigs_in_output_order().size());
-        
-        for (const auto& contig : components.get_contigs_in_output_order()) {
-            result.emplace(contig, ContigCallingComponents {contig, components});
-        }
-        
-        return result;
     }
     
     template <typename K>
@@ -921,8 +916,6 @@ namespace Octopus
     
     void run_octopus_multi_threaded(GenomeCallingComponents& components)
     {
-        auto contig_components = make_component_map(components);
-        
         const auto num_task_threads = calculate_num_task_threads(components);
         
         auto tasks = make_tasks(components, num_task_threads);
@@ -942,12 +935,12 @@ namespace Octopus
                             write_calls(temp_writers.at(result.task.region.get_contig_name()),
                                         std::move(result.calls));
                         } catch (...) {
+                            // TODO: which exceptions can we recover from?
                             throw;
                         }
                     }
                 } else if (!tasks.empty()) {
-                    auto task = pop(tasks);
-                    fut = run(task, contig_components.at(task.region.get_contig_name()), meter);
+                    fut = run(pop(tasks), components, meter);
                 }
             }
         }
@@ -959,6 +952,7 @@ namespace Octopus
                     write_calls(temp_writers.at(result.task.region.get_contig_name()),
                                 std::move(result.calls));
                 } catch (...) {
+                    // TODO: which exceptions can we recover from?
                     throw;
                 }
             }

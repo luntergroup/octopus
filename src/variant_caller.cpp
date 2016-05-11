@@ -504,7 +504,7 @@ VariantCaller::call(const GenomicRegion& call_region, ProgressMeter& progress_me
             completed_region = encompassing_region(completed_region, passed_region);
         }
         
-        progress_meter.log_completed(active_region);
+        progress_meter.log_completed(completed_region);
     }
     
     return result;

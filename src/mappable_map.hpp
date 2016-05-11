@@ -18,10 +18,16 @@
 #include <functional>
 #include <utility>
 
+#include "mappable_flat_set.hpp"
 #include "mappable_flat_multi_set.hpp"
 
-template <typename KeyType, typename MappableType, typename Allocator = std::allocator<MappableType>>
-using MappableMap = std::unordered_map<KeyType, MappableFlatMultiSet<MappableType, Allocator>>;
+template <typename KeyType,
+          typename MappableType,
+          typename Container = MappableFlatMultiSet<MappableType>>
+using MappableMap = std::unordered_map<KeyType, Container>;
+
+template <typename KeyType, typename MappableType>
+using MappableSetMap = MappableMap<KeyType, MappableType, MappableFlatSet<MappableType>>;
 
 template <typename Map>
 MappableMap<typename Map::key_type, typename Map::mapped_type::value_type>
@@ -44,17 +50,18 @@ make_mappable_map(Map map)
     return result;
 }
 
-template <typename KeyType, typename MappableType>
-std::size_t sum_region_sizes(const MappableMap<KeyType, MappableType>& mappables)
+template <typename KeyType, typename Container>
+auto sum_region_sizes(const MappableMap<KeyType, typename Container::value_type, Container>& mappables)
 {
-    return std::accumulate(std::cbegin(mappables), std::cend(mappables), std::size_t {0},
+    using SizeType = typename RegionType<typename Container::value_type>::SizeType;
+    return std::accumulate(std::cbegin(mappables), std::cend(mappables), SizeType {0},
                            [] (const auto curr, const auto& p) {
                                return curr + sum_region_sizes(p.second);
                            });
 }
 
-template <typename KeyType, typename MappableType>
-auto encompassing_region(const MappableMap<KeyType, MappableType>& mappables)
+template <typename KeyType, typename Container>
+auto encompassing_region(const MappableMap<KeyType, typename Container::value_type, Container>& mappables)
 {
     if (mappables.empty()) {
         throw std::runtime_error {"get_encompassing_region called with empty MappableMap"};
@@ -70,16 +77,17 @@ auto encompassing_region(const MappableMap<KeyType, MappableType>& mappables)
     return result;
 }
 
-template <typename KeyType, typename MappableType>
-std::size_t count_mappables(const MappableMap<KeyType, MappableType>& mappables)
+template <typename KeyType, typename Container>
+std::size_t count_mappables(const MappableMap<KeyType, typename Container::value_type, Container>& mappables)
 {
     return std::accumulate(std::cbegin(mappables), std::cend(mappables), std::size_t {0},
                            [] (const auto prev, const auto& v) { return prev + v.second.size(); });
 }
 
-template <typename KeyType, typename MappableType1, typename MappableType2>
+template <typename KeyType, typename Container, typename MappableType2>
 bool
-has_overlapped(const MappableMap<KeyType, MappableType1>& mappables, const MappableType2& mappable)
+has_overlapped(const MappableMap<KeyType, typename Container::value_type, Container>& mappables,
+               const MappableType2& mappable)
 {
     return std::any_of(std::cbegin(mappables), std::cend(mappables),
                        [&mappable] (const auto& p) {
@@ -87,21 +95,22 @@ has_overlapped(const MappableMap<KeyType, MappableType1>& mappables, const Mappa
                        });
 }
 
-template <typename KeyType, typename MappableType1, typename MappableType2>
-typename MappableFlatMultiSet<MappableType1>::size_type
-count_overlapped(const MappableMap<KeyType, MappableType1>& mappables, const MappableType2& mappable)
+template <typename KeyType, typename Container, typename MappableType2>
+typename Container::size_type
+count_overlapped(const MappableMap<KeyType, typename Container::value_type, Container>& mappables,
+                 const MappableType2& mappable)
 {
-    using SizeType = typename MappableFlatMultiSet<MappableType1>::size_type;
-    
+    using SizeType = typename Container::size_type;
     return std::accumulate(std::cbegin(mappables), std::cend(mappables), SizeType {0},
                            [&mappable] (const auto curr, const auto& p) {
                                return curr + count_overlapped(p.second, mappable);
                            });
 }
 
-template <typename KeyType, typename MappableType1, typename MappableType2>
+template <typename KeyType, typename Container, typename MappableType2>
 bool
-has_contained(const MappableMap<KeyType, MappableType1>& mappables, const MappableType2& mappable)
+has_contained(const MappableMap<KeyType, typename Container::value_type, Container>& mappables,
+              const MappableType2& mappable)
 {
     return std::any_of(std::cbegin(mappables), std::cend(mappables),
                        [&mappable] (const auto& p) {
@@ -109,20 +118,20 @@ has_contained(const MappableMap<KeyType, MappableType1>& mappables, const Mappab
                        });
 }
 
-template <typename KeyType, typename MappableType1, typename MappableType2>
-typename MappableFlatMultiSet<MappableType1>::size_type
-count_contained(const MappableMap<KeyType, MappableType1>& mappables, const MappableType2& mappable)
+template <typename KeyType, typename Container, typename MappableType2>
+typename Container::size_type
+count_contained(const MappableMap<KeyType, typename Container::value_type, Container>& mappables,
+                const MappableType2& mappable)
 {
-    using SizeType = typename MappableFlatMultiSet<MappableType1>::size_type;
-    
+    using SizeType = typename Container::size_type;
     return std::accumulate(std::cbegin(mappables), std::cend(mappables), SizeType {0},
                            [&mappable] (const auto curr, const auto& p) {
                                return curr + count_contained(p.second, mappable);
                            });
 }
 
-template <typename KeyType, typename MappableType1, typename MappableType2, typename MappableType3>
-bool has_shared(const MappableMap<KeyType, MappableType1>& mappables,
+template <typename KeyType, typename Container, typename MappableType2, typename MappableType3>
+bool has_shared(const MappableMap<KeyType, typename Container::value_type, Container>& mappables,
                 const MappableType2& mappable1, const MappableType3& mappable2)
 {
     return std::any_of(std::cbegin(mappables), std::cend(mappables),
@@ -131,23 +140,23 @@ bool has_shared(const MappableMap<KeyType, MappableType1>& mappables,
                        });
 }
 
-template <typename KeyType, typename MappableType1, typename MappableType2, typename MappableType3>
-typename MappableFlatMultiSet<MappableType1>::size_type
-count_shared(const MappableMap<KeyType, MappableType1>& mappables, const MappableType2& mappable1,
-             const MappableType3& mappable2)
+template <typename KeyType, typename Container, typename MappableType2, typename MappableType3>
+typename Container::size_type
+count_shared(const MappableMap<KeyType, typename Container::value_type, Container>& mappables,
+             const MappableType2& mappable1, const MappableType3& mappable2)
 {
-    using SizeType = typename MappableFlatMultiSet<MappableType1>::size_type;
-    
+    using SizeType = typename Container::size_type;
     return std::accumulate(std::cbegin(mappables), std::cend(mappables), SizeType {0},
                            [&mappable1, &mappable2] (const auto curr, const auto& p) {
                                return curr + p.second.count_shared(mappable1, mappable2);
                            });
 }
 
-template <typename ForwardIterator, typename KeyType, typename MappableType1, typename MappableType2>
+template <typename ForwardIterator, typename KeyType, typename Container, typename MappableType2>
 ForwardIterator
-find_first_shared(const MappableMap<KeyType, MappableType1>& mappables, ForwardIterator first,
-                  ForwardIterator last, const MappableType2& mappable)
+find_first_shared(const MappableMap<KeyType, typename Container::value_type, Container>& mappables,
+                  ForwardIterator first, ForwardIterator last,
+                  const MappableType2& mappable)
 {
     using std::cbegin; using std::cend; using std::begin; using std::end;
     
@@ -174,9 +183,9 @@ find_first_shared(const MappableMap<KeyType, MappableType1>& mappables, ForwardI
                              (auto lhs, auto rhs) { return *lhs < *rhs; });
 }
 
-template <typename KeyType, typename MappableType, typename ForwardIterator>
+template <typename KeyType, typename Container, typename ForwardIterator>
 std::size_t
-max_count_if_shared_with_first(const MappableMap<KeyType, MappableType>& mappables,
+max_count_if_shared_with_first(const MappableMap<KeyType, typename Container::value_type, Container>& mappables,
                                ForwardIterator first, ForwardIterator last)
 {
     std::size_t maximum {0};
@@ -192,9 +201,10 @@ max_count_if_shared_with_first(const MappableMap<KeyType, MappableType>& mappabl
     return maximum;
 }
 
-template <typename KeyType, typename MappableType1, typename MappableType2>
-typename MappableFlatMultiSet<MappableType1>::const_iterator
-leftmost_overlapped(const MappableMap<KeyType, MappableType1>& mappables, const MappableType2& mappable)
+template <typename KeyType, typename Container, typename MappableType2>
+typename Container::const_iterator
+leftmost_overlapped(const MappableMap<KeyType, typename Container::value_type, Container>& mappables,
+                    const MappableType2& mappable)
 {
     if (mappables.empty()) {
         throw std::logic_error {"leftmost_overlapped called with empty MappableMap"};
@@ -227,9 +237,10 @@ leftmost_overlapped(const MappableMap<KeyType, MappableType1>& mappables, const 
     return result;
 }
 
-template <typename KeyType, typename MappableType1, typename MappableType2>
-typename MappableFlatMultiSet<MappableType1>::const_iterator
-rightmost_overlapped(const MappableMap<KeyType, MappableType1>& mappables, const MappableType2& mappable)
+template <typename KeyType, typename Container, typename MappableType2>
+typename Container::const_iterator
+rightmost_overlapped(const MappableMap<KeyType, typename Container::value_type, Container>& mappables,
+                     const MappableType2& mappable)
 {
     if (mappables.empty()) {
         throw std::logic_error {"rightmost_overlapped called with empty MappableMap"};
@@ -266,9 +277,10 @@ rightmost_overlapped(const MappableMap<KeyType, MappableType1>& mappables, const
     return result;
 }
 
-template <typename KeyType, typename MappableType>
+template <typename KeyType, typename Container>
 std::vector<unsigned>
-calculate_positional_coverage(const MappableMap<KeyType, MappableType>& mappables, const GenomicRegion& region)
+calculate_positional_coverage(const MappableMap<KeyType, typename Container::value_type, Container>& mappables,
+                              const GenomicRegion& region)
 {
     std::vector<unsigned> result(region_size(region), 0);
     
@@ -282,18 +294,19 @@ calculate_positional_coverage(const MappableMap<KeyType, MappableType>& mappable
     return result;
 }
 
-template <typename KeyType, typename MappableType>
+template <typename KeyType, typename Container>
 std::vector<unsigned>
-calculate_positional_coverage(const MappableMap<KeyType, MappableType>& mappables)
+calculate_positional_coverage(const MappableMap<KeyType, typename Container::value_type, Container>& mappables)
 {
     return calculate_positional_coverage(mappables, encompassing_region(mappables));
 }
 
-template <typename KeyType, typename MappableType1, typename MappableType2>
-MappableMap<KeyType, MappableType1>
-copy_overlapped(const MappableMap<KeyType, MappableType1>& mappables, const MappableType2& mappable)
+template <typename KeyType, typename Container, typename MappableType2>
+auto
+copy_overlapped(const MappableMap<KeyType, typename Container::value_type, Container>& mappables,
+                const MappableType2& mappable)
 {
-    MappableMap<KeyType, MappableType1> result {mappables.size()};
+    MappableMap<KeyType, typename Container::value_type, Container> result {mappables.size()};
     
     for (const auto& p : mappables) {
         result.emplace(p.first, copy_overlapped(p.second, mappable));
@@ -302,11 +315,12 @@ copy_overlapped(const MappableMap<KeyType, MappableType1>& mappables, const Mapp
     return result;
 }
 
-template <typename KeyType, typename MappableType1, typename MappableType2>
-MappableMap<KeyType, MappableType1>
-copy_contained(const MappableMap<KeyType, MappableType1>& mappables, const MappableType2& mappable)
+template <typename KeyType, typename Container, typename MappableType2>
+auto
+copy_contained(const MappableMap<KeyType, typename Container::value_type, Container>& mappables,
+               const MappableType2& mappable)
 {
-    MappableMap<KeyType, MappableType1> result {mappables.size()};
+    MappableMap<KeyType, typename Container::value_type, Container> result {mappables.size()};
     
     for (const auto& p : mappables) {
         result.emplace(p.first, copy_contained(p.second, mappable));
@@ -315,24 +329,26 @@ copy_contained(const MappableMap<KeyType, MappableType1>& mappables, const Mappa
     return result;
 }
 
-template <typename KeyType, typename MappableType1, typename MappableType2>
-void erase_overlapped(MappableMap<KeyType, MappableType1>& mappables, const MappableType2& mappable)
+template <typename KeyType, typename Container, typename MappableType2>
+void erase_overlapped(MappableMap<KeyType, typename Container::value_type, Container>& mappables,
+                      const MappableType2& mappable)
 {
     for (auto& p : mappables) {
         p.second.erase_overlapped(mappable);
     }
 }
 
-template <typename KeyType, typename MappableType1, typename MappableType2>
-void erase_contained(MappableMap<KeyType, MappableType1>& mappables, const MappableType2& mappable)
+template <typename KeyType, typename MappableType1, typename MappableType2, typename Container>
+void erase_contained(MappableMap<KeyType, typename Container::value_type, Container>& mappables,
+                     const MappableType2& mappable)
 {
     for (auto& p : mappables) {
         p.second.erase_contained(mappable);
     }
 }
 
-template <typename KeyType, typename MappableType1, typename MappableType2>
-std::size_t count_spanning(const MappableMap<KeyType, MappableType1>& mappables,
+template <typename KeyType, typename Container, typename MappableType2>
+std::size_t count_spanning(const MappableMap<KeyType, typename Container::value_type, Container>& mappables,
                            const MappableType2& mappable)
 {
     return std::accumulate(std::cbegin(mappables), std::cend(mappables), std::size_t {0},

@@ -774,49 +774,90 @@ namespace Octopus
         return result;
     }
     
-    SearchRegions make_search_regions(const std::vector<GenomicRegion>& regions)
+    InputRegionMap make_search_regions(const std::vector<GenomicRegion>& regions)
     {
-        SearchRegions contig_mapped_regions {};
+        InputRegionMap contig_mapped_regions {};
         
         for (const auto& region : regions) {
             contig_mapped_regions[region.get_contig_name()].insert(region);
         }
         
-        SearchRegions result {};
+        InputRegionMap result {};
+        result.reserve(contig_mapped_regions.size());
         
-        for (const auto& contig_regions : contig_mapped_regions) {
-            auto covered_contig_regions = extract_covered_regions(contig_regions.second);
-            result[contig_regions.first].insert(std::make_move_iterator(std::begin(covered_contig_regions)),
-                                                std::make_move_iterator(std::end(covered_contig_regions)));
+        for (const auto& p : contig_mapped_regions) {
+            auto covered_contig_regions = extract_covered_regions(p.second);
+            result.emplace(std::piecewise_construct,
+                           std::forward_as_tuple(p.first),
+                           std::forward_as_tuple(std::make_move_iterator(std::begin(covered_contig_regions)),
+                                                 std::make_move_iterator(std::end(covered_contig_regions))));
         }
-        
-        result.rehash(result.size());
         
         return result;
     }
     
-    SearchRegions extract_search_regions(const ReferenceGenome& reference)
+    InputRegionMap extract_search_regions(const ReferenceGenome& reference)
     {
         return make_search_regions(get_all_contig_regions(reference));
     }
     
-    SearchRegions extract_search_regions(const std::vector<GenomicRegion>& regions,
+    MappableFlatSet<GenomicRegion>
+    cut(const MappableFlatSet<GenomicRegion>& mappables, const MappableFlatSet<GenomicRegion>& regions)
+    {
+        if (mappables.empty()) return regions;
+        
+        MappableFlatSet<GenomicRegion> result {};
+        
+        for (const auto& region : regions) {
+            auto overlapped = mappables.overlap_range(region);
+            
+            if (empty(overlapped)) {
+                result.emplace(region);
+            } else if (!is_same_region(region, overlapped.front())) {
+                auto spliced = region;
+                
+                if (begins_before(overlapped.front(), spliced)) {
+                    spliced = right_overhang_region(spliced, overlapped.front());
+                    overlapped.advance_begin(1);
+                }
+                
+                std::for_each(std::cbegin(overlapped), std::cend(overlapped), [&] (const auto& region) {
+                    result.emplace(left_overhang_region(spliced, region));
+                    spliced = expand_lhs(spliced, -begin_distance(region, spliced));
+                });
+                
+                if (ends_before(overlapped.back(), spliced)) {
+                    result.emplace(right_overhang_region(spliced, overlapped.back()));
+                }
+            }
+        }
+        
+        result.shrink_to_fit();
+        
+        return result;
+    }
+    
+    InputRegionMap extract_search_regions(const std::vector<GenomicRegion>& regions,
                                          std::vector<GenomicRegion>& skip_regions)
     {
         auto input_regions = make_search_regions(regions);
-        auto skipped = make_search_regions(skip_regions);
         
-        SearchRegions result {input_regions.size()};
+        const auto skipped = make_search_regions(skip_regions);
         
-        for (const auto& contig_regions : input_regions) {
-            result.emplace(contig_regions.first,
-                           splice_all(skipped[contig_regions.first], contig_regions.second));
+        InputRegionMap result {input_regions.size()};
+        
+        for (auto& p : input_regions) {
+            if (skipped.count(p.first) == 1) {
+                result.emplace(p.first, cut(skipped.at(p.first), std::move(p.second)));
+            } else {
+                result.emplace(p.first, std::move(p.second));
+            }
         }
         
         return result;
     }
     
-    SearchRegions extract_search_regions(const ReferenceGenome& reference,
+    InputRegionMap extract_search_regions(const ReferenceGenome& reference,
                                          std::vector<GenomicRegion>& skip_regions)
     {
         return extract_search_regions(get_all_contig_regions(reference), skip_regions);
@@ -861,30 +902,33 @@ namespace Octopus
         return result;
     }
     
-    auto transform_to_zero_based(MappableFlatMultiSet<GenomicRegion>&& one_based_regions)
+    auto transform_to_zero_based(InputRegionMap::mapped_type&& one_based_regions)
     {
-        MappableFlatMultiSet<GenomicRegion> result {};
-        result.reserve(one_based_regions.size());
+        MappableFlatSet<GenomicRegion> result {};
         
         for (auto&& region : one_based_regions) {
             result.emplace(shift(std::move(region), -1));
         }
         
+        one_based_regions.clear();
+        
         return result;
     }
     
-    auto transform_to_zero_based(SearchRegions&& one_based_search_regions)
+    auto transform_to_zero_based(InputRegionMap&& one_based_search_regions)
     {
-        SearchRegions result {one_based_search_regions.size()};
+        InputRegionMap result {one_based_search_regions.size()};
         
-        for (auto&& contig_regions : one_based_search_regions) {
-            result.emplace(contig_regions.first, transform_to_zero_based(std::move(contig_regions.second)));
+        for (auto& p : one_based_search_regions) {
+            result.emplace(p.first, transform_to_zero_based(std::move(p.second)));
         }
         
+        one_based_search_regions.clear();
+        
         return result;
     }
     
-    SearchRegions get_search_regions(const po::variables_map& options, const ReferenceGenome& reference)
+    InputRegionMap get_search_regions(const po::variables_map& options, const ReferenceGenome& reference)
     {
         std::vector<GenomicRegion> skip_regions {};
         
@@ -1443,7 +1487,7 @@ namespace Octopus
     VariantCallerFactory make_variant_caller_factory(const ReferenceGenome& reference,
                                                      ReadPipe& read_pipe,
                                                      const CandidateGeneratorBuilder& candidate_generator_builder,
-                                                     const SearchRegions& regions,
+                                                     const InputRegionMap& regions,
                                                      const po::variables_map& options)
     {
         using Maths::phred_to_probability;
@@ -1603,13 +1647,15 @@ namespace Octopus
                 ++temp_dir_counter;
             }
             
+            Logging::WarningLogger log {};
+            
             if (temp_dir_counter > temp_dir_name_count_limit) {
-                std::cout << "Too many temprary directories in working directory" << std::endl;
+                log << "Too many temporary directories in working directory";
                 return boost::none;
             }
             
             if (!fs::create_directory(result)) {
-                std::cout << "Could not create temporary directory" << std::endl;
+                stream(log) << "Failed to create temporary directory " << result;
                 return boost::none;
             }
             

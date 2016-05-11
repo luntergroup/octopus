@@ -154,17 +154,17 @@ IndividualVariantCaller::infer_latents(const std::vector<Haplotype>& haplotypes,
     
     auto inferences = model.infer_latents(sample_, genotypes, haplotype_likelihoods);
     
-    // TEST
-    auto dummy_genotypes = generate_all_genotypes(haplotypes, ploidy_ + 1);
-    if (debug_log_) {
-        stream(*debug_log_) << "Evaluating dummy model with " << dummy_genotypes.size() << " genotypes";
-    }
-    auto dummy_inferences = model.infer_latents(sample_, dummy_genotypes, haplotype_likelihoods);
-    return std::make_unique<Latents>(sample_, haplotypes, std::move(genotypes), std::move(inferences),
-                                     std::move(dummy_inferences));
-    // END TEST
+//    // TEST
+//    auto dummy_genotypes = generate_all_genotypes(haplotypes, ploidy_ + 1);
+//    if (debug_log_) {
+//        stream(*debug_log_) << "Evaluating dummy model with " << dummy_genotypes.size() << " genotypes";
+//    }
+//    auto dummy_inferences = model.infer_latents(sample_, dummy_genotypes, haplotype_likelihoods);
+//    return std::make_unique<Latents>(sample_, haplotypes, std::move(genotypes), std::move(inferences),
+//                                     std::move(dummy_inferences));
+//    // END TEST
     
-    //return std::make_unique<Latents>(sample_, haplotypes, std::move(genotypes), std::move(inferences));
+    return std::make_unique<Latents>(sample_, haplotypes, std::move(genotypes), std::move(inferences));
 }
 
 namespace

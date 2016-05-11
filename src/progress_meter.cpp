@@ -8,7 +8,6 @@
 
 #include "progress_meter.hpp"
 
-#include <string>
 #include <sstream>
 #include <algorithm>
 #include <functional>
@@ -24,28 +23,6 @@
 
 namespace Octopus
 {
-    void write_header(Logging::InfoLogger& log, const unsigned position_tab_length)
-    {
-        const std::string pos_tab_bar(position_tab_length, '-');
-        
-        const auto num_position_tab_whitespaces = position_tab_length - 8;
-        
-        const std::string pos_tab_lhs_pad((position_tab_length - 8) / 2, ' ');
-        
-        auto pos_tab_rhs_pad = pos_tab_lhs_pad;
-        
-        if (num_position_tab_whitespaces % 2) {
-            pos_tab_rhs_pad += ' ';
-        }
-        
-        stream(log) << pos_tab_bar << "------------------------------------------------------";
-        stream(log) << pos_tab_lhs_pad << "current " << pos_tab_rhs_pad
-                                    << "|                   |     time      |     estimated   ";
-        stream(log) << pos_tab_lhs_pad << "position" << pos_tab_rhs_pad
-                                    << "|     completed     |     taken     |     ttc         ";
-        stream(log) << pos_tab_bar << "------------------------------------------------------";
-    }
-    
     namespace
     {
         template <typename T>
@@ -63,7 +40,7 @@ namespace Octopus
         return result + num_digits(p.second.rightmost().get_end());
     }
     
-    unsigned max_position_str_length(const SearchRegions& input_regions)
+    unsigned max_position_str_length(const InputRegionMap& input_regions)
     {
         assert(!input_regions.empty());
         
@@ -88,43 +65,27 @@ namespace Octopus
         return std::max(18u, max_position_str_length(region));
     }
     
-    ProgressMeter::ProgressMeter(const SearchRegions& input_regions)
+    ProgressMeter::ProgressMeter(InputRegionMap regions)
     :
-    num_bp_completed_ {0},
-    start_ {std::chrono::system_clock::now()},
-    last_log_ {std::chrono::system_clock::now()}
-    {
-        write_header(log_, calculate_position_tab_length(input_regions));
-    }
-    
-    ProgressMeter::ProgressMeter(const GenomicRegion& input_region)
-    :
+    regions_ {std::move(regions)},
+    completed_regions_ {},
+    num_bp_to_search_ {sum_region_sizes(regions_)},
     num_bp_completed_ {0},
     percent_unitl_log_ {percent_block_size_},
     percent_at_last_log_ {0},
     start_ {std::chrono::system_clock::now()},
-    last_log_ {std::chrono::system_clock::now()},
-    done_ {false}
+    last_log_ {start_},
+    done_ {false},
+    position_tab_length_ {calculate_position_tab_length(regions_)}
     {
-        regions_[input_region.get_contig_name()].emplace(input_region);
-        
-        completed_region_ = head_region(input_region);
-        
-        num_bp_to_search_ = sum_region_sizes(regions_);
-        
-        write_header(log_, calculate_position_tab_length(input_region));
+        write_header();
     }
     
-    std::string curr_position_pad(const GenomicRegion& completed_region)
-    {
-        const auto num_contig_name_letters = completed_region.get_contig_name().size();
-        const auto num_region_begin_digits = num_digits(completed_region.get_begin());
-        if (num_contig_name_letters + num_region_begin_digits <= 15) {
-            return std::string(15 - (num_contig_name_letters + num_region_begin_digits), ' ');
-        } else {
-            return "";
-        }
-    }
+    ProgressMeter::ProgressMeter(GenomicRegion region)
+    :
+    ProgressMeter {
+        InputRegionMap {std::make_pair(region.get_contig_name(), InputRegionMap::mapped_type {region})}}
+    {}
     
     double percent_completed(const std::size_t num_bp_completed,
                              const std::size_t num_bp_to_search)
@@ -138,21 +99,11 @@ namespace Octopus
         return Octopus::to_string(percent_completed(num_bp_completed, num_bp_to_search), 1) + '%';
     }
     
-    std::string completed_pad(const std::string& percent_completed)
-    {
-        return std::string(std::size_t {17} - percent_completed.size(), ' ');
-    }
-    
     std::string to_string(const TimeInterval& duration)
     {
         std::ostringstream ss {};
         ss << duration;
         return ss.str();
-    }
-    
-    std::string time_taken_pad(const std::string& time_taken)
-    {
-        return std::string(16 - time_taken.size(), ' ');
     }
     
     template <typename ForwardIt>
@@ -227,102 +178,217 @@ namespace Octopus
         return TimeInterval {now, now + estimated_remaining_duration};
     }
     
-    std::string ttc_pad(const std::string& ttc)
-    {
-        return std::string(16 - ttc.size(), ' ');
-    }
-    
-    template <typename L>
-    void print_done(L& log, const TimeInterval& duration)
-    {
-        const auto time_taken = to_string(duration);
-        stream(log) << std::string(15, ' ')
-                    << "-"
-                    << completed_pad("100%")
-                    << "100%"
-                    << time_taken_pad(time_taken)
-                    << time_taken
-                    << ttc_pad("-")
-                    << "-";
-    }
-    
     ProgressMeter::~ProgressMeter()
     {
         if (!done_) {
-            const auto now = std::chrono::system_clock::now();
-            print_done(log_, TimeInterval {start_, now});
+            const TimeInterval duration {start_, std::chrono::system_clock::now()};
+            
+            const auto time_taken = to_string(duration);
+            
+            stream(log_) << std::string(position_tab_length_, ' ')
+                         << "-"
+                         << completed_pad("100%")
+                         << "100%"
+                         << time_taken_pad(time_taken)
+                         << time_taken
+                         << ttc_pad("-")
+                         << "-";
         }
     }
     
-    void ProgressMeter::log_completed(const GenomicRegion& completed_region)
+    void ProgressMeter::log_completed(const GenomicRegion& region)
     {
         std::lock_guard<std::mutex> lock {mutex_};
         
-        const auto new_bp_processed = right_overhang_size(completed_region, completed_region_);
-        
-        completed_region_ = encompassing_region(completed_region_, completed_region);
+        const auto new_bp_processed = merge(region);
         
         const auto new_percent_done = percent_completed(new_bp_processed, num_bp_to_search_);
         
+        num_bp_completed_ += new_bp_processed;
+        
         percent_unitl_log_ -= new_percent_done;
         
-        num_bp_completed_ = region_size(completed_region_);
+        if (percent_unitl_log_ <= 0) {
+            output_log(region);
+        }
+    }
+    
+    // private methods
+    
+    ProgressMeter::RegionSizeType ProgressMeter::merge(const GenomicRegion& region)
+    {
+        const auto& contig_region = region.get_contig_region();
+        
+        if (completed_regions_.count(region.get_contig_name()) == 0) {
+            completed_regions_[region.get_contig_name()].insert(contig_region);
+            return size(region);
+        }
+        
+        auto& completed_regions = completed_regions_.at(region.get_contig_name());
+        
+        if (completed_regions.has_overlapped(contig_region)) {
+            auto overlapped = completed_regions.overlap_range(contig_region);
+            
+            if (size(overlapped) == 1) {
+                RegionSizeType result {0};
+                
+                if (contains(overlapped.front(), contig_region)) return result;
+                
+                auto new_region = contig_region;
+                
+                if (begins_before(new_region, overlapped.front())) {
+                    result += left_overhang_size(new_region, overlapped.front());
+                } else if (begins_before(overlapped.front(), new_region)) {
+                    new_region = encompassing_region(overlapped.front(), new_region);
+                }
+                
+                if (ends_before(overlapped.front(), new_region)) {
+                    result += right_overhang_size(new_region, overlapped.front());
+                } else if (ends_before(new_region, overlapped.front())) {
+                    new_region = encompassing_region(overlapped.front(), new_region);
+                }
+                
+                completed_regions.erase(overlapped.front());
+                completed_regions.insert(std::move(new_region));
+                
+                return result;
+            }
+            
+            auto new_region = contig_region;
+            auto result     = size(new_region);
+            
+            result -= overlap_size(overlapped.front(), contig_region);
+            
+            if (begins_before(overlapped.front(), new_region)) {
+                new_region = encompassing_region(overlapped.front(), new_region);
+            }
+            
+            overlapped.advance_begin(1);
+            
+            result -= overlap_size(overlapped.back(), new_region);
+            
+            if (ends_before(new_region, overlapped.back())) {
+                new_region = encompassing_region(new_region, overlapped.back());
+            }
+            
+            overlapped.advance_end(-1);
+            
+            for (const auto& r : overlapped) result -= size(r);
+            
+            completed_regions.erase_overlapped(contig_region);
+            completed_regions.insert(std::move(new_region));
+            
+            return result;
+        }
+        
+        completed_regions.insert(contig_region);
+        
+        return size(contig_region);
+    }
+    
+    void ProgressMeter::write_header()
+    {
+        const std::string pos_tab_bar(position_tab_length_, '-');
+        
+        const auto num_position_tab_whitespaces = position_tab_length_ - 8;
+        
+        const std::string pos_tab_lhs_pad((position_tab_length_ - 8) / 2, ' ');
+        
+        auto pos_tab_rhs_pad = pos_tab_lhs_pad;
+        
+        if (num_position_tab_whitespaces % 2) {
+            pos_tab_rhs_pad += ' ';
+        }
+        
+        stream(log_) << pos_tab_bar << "------------------------------------------------------";
+        stream(log_) << pos_tab_lhs_pad << "current " << pos_tab_rhs_pad
+        << "|                   |     time      |     estimated   ";
+        stream(log_) << pos_tab_lhs_pad << "position" << pos_tab_rhs_pad
+        << "|     completed     |     taken     |     ttc         ";
+        stream(log_) << pos_tab_bar << "------------------------------------------------------";
+    }
+    
+    void ProgressMeter::output_log(const GenomicRegion& region)
+    {
+        const auto percent_done = percent_completed(num_bp_completed_, num_bp_to_search_);
         
         const auto now = std::chrono::system_clock::now();
         
-        if (percent_unitl_log_ <= 0) {
-            const auto percent_done = percent_completed(num_bp_completed_, num_bp_to_search_);
-            
-            const TimeInterval duration {start_, now};
-            const auto time_taken = to_string(duration);
-            
-            if (percent_done >= 100) {
-                if (!done_) {
-                    print_done(log_, duration);
-                    done_ = true;
-                }
-                return;
-            }
-            
-            const auto percent_since_last_log = percent_done - percent_at_last_log_;
-            
-            const auto num_blocks_completed = static_cast<std::size_t>(std::floor(percent_since_last_log / percent_block_size_));
-            
-            const auto duration_since_last_log = std::chrono::duration_cast<DurationUnits>(now - last_log_);
-            
-            const DurationUnits duration_per_block {static_cast<std::size_t>(duration_since_last_log.count() / num_blocks_completed)};
-            
-            std::fill_n(std::back_inserter(block_compute_times_),
-                        static_cast<std::size_t>(num_blocks_completed),
-                        duration_per_block);
-            
-            const auto num_remaining_blocks = static_cast<std::size_t>((100.0 - percent_done) / percent_block_size_);
-            
-            remove_outliers(block_compute_times_);
-            
-            const auto ttc = estimate_ttc(now, block_compute_times_, num_remaining_blocks);
-            auto ttc_str   = to_string(ttc);
-            
-            assert(!ttc_str.empty());
-            
-            if (ttc_str.front() == '0') {
-                ttc_str = "-";
-            }
-            
-            const auto percent_completed = percent_completed_str(num_bp_completed_, num_bp_to_search_);
-            
-            stream(log_) << curr_position_pad(completed_region)
-                         << completed_region.get_contig_name() << ':' << completed_region.get_begin()
-                         << completed_pad(percent_completed)
-                         << percent_completed
-                         << time_taken_pad(time_taken)
-                         << time_taken
-                         << ttc_pad(ttc_str)
-                         << ttc_str;
-            
-            last_log_            = now;
-            percent_unitl_log_   = percent_block_size_;
-            percent_at_last_log_ = percent_done;
+        const TimeInterval duration {start_, now};
+        
+        const auto time_taken = to_string(duration);
+        
+        if (percent_done >= 100) return;
+        
+        const auto percent_since_last_log = percent_done - percent_at_last_log_;
+        
+        const auto num_blocks_completed = static_cast<std::size_t>(std::floor(percent_since_last_log / percent_block_size_));
+        
+        const auto duration_since_last_log = std::chrono::duration_cast<DurationUnits>(now - last_log_);
+        
+        const DurationUnits duration_per_block {static_cast<std::size_t>(duration_since_last_log.count() / num_blocks_completed)};
+        
+        std::fill_n(std::back_inserter(block_compute_times_),
+                    static_cast<std::size_t>(num_blocks_completed),
+                    duration_per_block);
+        
+        const auto num_remaining_blocks = static_cast<std::size_t>((100.0 - percent_done) / percent_block_size_);
+        
+        remove_outliers(block_compute_times_);
+        
+        const auto ttc = estimate_ttc(now, block_compute_times_, num_remaining_blocks);
+        auto ttc_str   = to_string(ttc);
+        
+        assert(!ttc_str.empty());
+        
+        if (ttc_str.front() == '0') {
+            ttc_str = "-";
         }
+        
+        const auto percent_completed = percent_completed_str(num_bp_completed_, num_bp_to_search_);
+        
+        stream(log_) << curr_position_pad(region)
+                     << region.get_contig_name() << ':' << region.get_end()
+                     << completed_pad(percent_completed)
+                     << percent_completed
+                     << time_taken_pad(time_taken)
+                     << time_taken
+                     << ttc_pad(ttc_str)
+                     << ttc_str;
+        
+        last_log_            = now;
+        percent_unitl_log_   = percent_block_size_;
+        percent_at_last_log_ = percent_done;
+    }
+    
+    std::string ProgressMeter::curr_position_pad(const GenomicRegion& completed_region) const
+    {
+        assert(position_tab_length_ > 3);
+        
+        const auto num_contig_name_letters = completed_region.get_contig_name().size();
+        const auto num_region_end_digits = num_digits(completed_region.get_end());
+        
+        const auto l = num_contig_name_letters + num_region_end_digits + 1; // +1 for ':'
+        
+        if (l < position_tab_length_ - 3) {
+            return std::string(position_tab_length_ - l - 3, ' ');
+        }
+        
+        return "";
+    }
+    
+    std::string ProgressMeter::completed_pad(const std::string& percent_completed) const
+    {
+        return std::string(std::size_t {17} - percent_completed.size(), ' ');
+    }
+    
+    std::string ProgressMeter::time_taken_pad(const std::string& time_taken) const
+    {
+        return std::string(16 - time_taken.size(), ' ');
+    }
+    
+    std::string ProgressMeter::ttc_pad(const std::string& ttc) const
+    {
+        return std::string(16 - ttc.size(), ' ');
     }
 } // namespace Octopus
