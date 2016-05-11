@@ -36,13 +36,16 @@ public:
     VcfParser& operator=(VcfParser&&)      = default;
     
     bool is_header_written() const noexcept override;
+    
     VcfHeader fetch_header() const override;
+    
     size_t count_records() override;
     size_t count_records(const std::string& contig) override;
     size_t count_records(const GenomicRegion& region) override;
-    std::vector<VcfRecord> fetch_records(Unpack level) override;
-    std::vector<VcfRecord> fetch_records(const std::string& contig, Unpack level) override;
-    std::vector<VcfRecord> fetch_records(const GenomicRegion& region, Unpack level) override;
+    
+    std::vector<VcfRecord> fetch_records(UnpackPolicy level) override;
+    std::vector<VcfRecord> fetch_records(const std::string& contig, UnpackPolicy level) override;
+    std::vector<VcfRecord> fetch_records(const GenomicRegion& region, UnpackPolicy level) override;
     
 private:
     fs::path file_path_;

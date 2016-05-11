@@ -1109,24 +1109,30 @@ namespace Octopus
         
         options.clear();
         
-        try {
-            if (is_multithreaded(*components)) {
-                run_octopus_multi_threaded(*components);
-            } else {
-                run_octopus_single_threaded(*components);
-            }
-        } catch (const std::exception& e) {
-            Logging::FatalLogger lg {};
-            stream(lg) << "Encountered exception '" << e.what() << "'. Attempting to cleanup...";
-            cleanup(*components);
-            if (DEBUG_MODE) {
-                stream(lg) << "Cleanup successful. Please send log file to dcooke@well.ox.ac.uk";
-            } else {
-                stream(lg) << "Cleanup successful. Please re-run in debug mode (option --debug) and send"
-                                " log file to " << Octopus_bug_email;
-            }
-            return;
+        if (is_multithreaded(*components)) {
+            run_octopus_multi_threaded(*components);
+        } else {
+            run_octopus_single_threaded(*components);
         }
+        
+//        try {
+//            if (is_multithreaded(*components)) {
+//                run_octopus_multi_threaded(*components);
+//            } else {
+//                run_octopus_single_threaded(*components);
+//            }
+//        } catch (const std::exception& e) {
+//            Logging::FatalLogger lg {};
+//            stream(lg) << "Encountered exception '" << e.what() << "'. Attempting to cleanup...";
+//            cleanup(*components);
+//            if (DEBUG_MODE) {
+//                stream(lg) << "Cleanup successful. Please send log file to dcooke@well.ox.ac.uk";
+//            } else {
+//                stream(lg) << "Cleanup successful. Please re-run in debug mode (option --debug) and send"
+//                                " log file to " << Octopus_bug_email;
+//            }
+//            return;
+//        }
         
         cleanup(*components);
         

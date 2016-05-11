@@ -112,22 +112,22 @@ std::size_t VcfReader::count_records(const GenomicRegion& region)
     return reader_->count_records(region);
 }
 
-std::vector<VcfRecord> VcfReader::fetch_records(Unpack level)
+std::vector<VcfRecord> VcfReader::fetch_records(const UnpackPolicy level)
 {
     std::lock_guard<std::mutex> lock {mutex_};
-    return reader_->fetch_records((level == Unpack::All) ? HtslibBcfFacade::Unpack::All : HtslibBcfFacade::Unpack::AllButSamples);
+    return reader_->fetch_records(level);
 }
 
-std::vector<VcfRecord> VcfReader::fetch_records(const std::string& contig, Unpack level)
+std::vector<VcfRecord> VcfReader::fetch_records(const std::string& contig, const UnpackPolicy level)
 {
     std::lock_guard<std::mutex> lock {mutex_};
-    return reader_->fetch_records(contig, (level == Unpack::All) ? HtslibBcfFacade::Unpack::All : HtslibBcfFacade::Unpack::AllButSamples);
+    return reader_->fetch_records(contig, level);
 }
 
-std::vector<VcfRecord> VcfReader::fetch_records(const GenomicRegion& region, Unpack level)
+std::vector<VcfRecord> VcfReader::fetch_records(const GenomicRegion& region, const UnpackPolicy level)
 {
     std::lock_guard<std::mutex> lock {mutex_};
-    return reader_->fetch_records(region, (level == Unpack::All) ? HtslibBcfFacade::Unpack::All : HtslibBcfFacade::Unpack::AllButSamples);
+    return reader_->fetch_records(region, level);
 }
 
 // non member methods

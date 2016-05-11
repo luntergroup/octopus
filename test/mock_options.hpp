@@ -35,7 +35,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         "--working-directory", "~/Genomics/octopus_test",
         
         //"--target-read-buffer-size", "0.1",
-        "--threads", "0",
+        //"--threads", "0",
         
         //"--contig-output-order", "as-in-reference-reversed",
         

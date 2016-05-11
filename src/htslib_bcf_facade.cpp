@@ -18,6 +18,7 @@
 #include <cstdint>
 
 #include <boost/filesystem/operations.hpp>
+#include <boost/optional.hpp>
 
 #include "genomic_region.hpp"
 #include "vcf_header.hpp"
@@ -92,6 +93,8 @@ samples_ {}
             }
             
             samples_ = get_samples(header_.get());
+        } else {
+            throw std::runtime_error {"HtslibBcfFacade: " + file_path_.string() + " does not exist"};
         }
     } else {
         file_.reset(bcf_open(file_path_.c_str(), hts_mode.c_str()));
@@ -128,7 +131,7 @@ VcfHeader HtslibBcfFacade::fetch_header() const
     return result.build_once();
 }
 
-size_t HtslibBcfFacade::count_records()
+std::size_t HtslibBcfFacade::count_records()
 {
     HtsBcfSrPtr sr {bcf_sr_init(), HtsSrsDeleter {}};
     
@@ -140,7 +143,7 @@ size_t HtslibBcfFacade::count_records()
     return count_records(sr);
 }
 
-size_t HtslibBcfFacade::count_records(const std::string& contig)
+std::size_t HtslibBcfFacade::count_records(const std::string& contig)
 {
     HtsBcfSrPtr sr {bcf_sr_init(), HtsSrsDeleter {}};
     
@@ -156,7 +159,7 @@ size_t HtslibBcfFacade::count_records(const std::string& contig)
     return count_records(sr);
 }
 
-size_t HtslibBcfFacade::count_records(const GenomicRegion& region)
+std::size_t HtslibBcfFacade::count_records(const GenomicRegion& region)
 {
     HtsBcfSrPtr sr {bcf_sr_init(), HtsSrsDeleter {}};
     
@@ -172,7 +175,58 @@ size_t HtslibBcfFacade::count_records(const GenomicRegion& region)
     return count_records(sr);
 }
 
-std::vector<VcfRecord> HtslibBcfFacade::fetch_records(const Unpack level)
+HtslibBcfFacade::RecordIteratorRange HtslibBcfFacade::records(const UnpackPolicy level) const
+{
+    HtsBcfSrPtr sr {bcf_sr_init(), HtsSrsDeleter {}};
+    
+    if (bcf_sr_add_reader(sr.get(), file_path_.c_str()) != 1) {
+        sr.release();
+        throw std::runtime_error {"failed to open file " + file_path_.string()};
+    }
+    
+    return std::make_pair(RecordIterator {*this, std::move(sr), level},
+                          RecordIterator {*this});
+}
+
+HtslibBcfFacade::RecordIteratorRange
+HtslibBcfFacade::records(const std::string& contig, const UnpackPolicy level) const
+{
+    HtsBcfSrPtr sr {bcf_sr_init(), HtsSrsDeleter {}};
+    
+    if (bcf_sr_set_regions(sr.get(), contig.c_str(), 0) != 0) {
+        throw std::runtime_error {"failed load contig " + contig};
+    }
+    
+    if (bcf_sr_add_reader(sr.get(), file_path_.c_str()) != 1) {
+        sr.release();
+        throw std::runtime_error {"failed to open file " + file_path_.string()};
+    }
+    
+    return std::make_pair(RecordIterator {*this, std::move(sr), level},
+                          RecordIterator {*this});
+}
+
+HtslibBcfFacade::RecordIteratorRange
+HtslibBcfFacade::records(const GenomicRegion& region, const UnpackPolicy level) const
+{
+    HtsBcfSrPtr sr {bcf_sr_init(), HtsSrsDeleter {}};
+    
+    const auto region_str = to_string(region);
+    
+    if (bcf_sr_set_regions(sr.get(), region_str.c_str(), 0) != 0) {
+        throw std::runtime_error {"failed load region " + region_str};
+    }
+    
+    if (bcf_sr_add_reader(sr.get(), file_path_.c_str()) != 1) {
+        sr.release();
+        throw std::runtime_error {"failed to open file " + file_path_.string()};
+    }
+    
+    return std::make_pair(RecordIterator {*this, std::move(sr), level},
+                          RecordIterator {*this});
+}
+
+std::vector<VcfRecord> HtslibBcfFacade::fetch_records(const UnpackPolicy level)
 {
     const auto n_records = count_records();
     
@@ -183,10 +237,10 @@ std::vector<VcfRecord> HtslibBcfFacade::fetch_records(const Unpack level)
         throw std::runtime_error {"failed to open file " + file_path_.string()};
     }
     
-    return fetch_records(sr, level, n_records);
+    return fetch_records(sr.get(), level, n_records);
 }
 
-std::vector<VcfRecord> HtslibBcfFacade::fetch_records(const std::string& contig, const Unpack level)
+std::vector<VcfRecord> HtslibBcfFacade::fetch_records(const std::string& contig, const UnpackPolicy level)
 {
     const auto n_records = count_records(contig);
     
@@ -201,10 +255,10 @@ std::vector<VcfRecord> HtslibBcfFacade::fetch_records(const std::string& contig,
         throw std::runtime_error {"failed to open file " + file_path_.string()};
     }
     
-    return fetch_records(sr, level, n_records);
+    return fetch_records(sr.get(), level, n_records);
 }
 
-std::vector<VcfRecord> HtslibBcfFacade::fetch_records(const GenomicRegion& region, const Unpack level)
+std::vector<VcfRecord> HtslibBcfFacade::fetch_records(const GenomicRegion& region, const UnpackPolicy level)
 {
     const auto n_records = count_records(region);
     
@@ -221,7 +275,7 @@ std::vector<VcfRecord> HtslibBcfFacade::fetch_records(const GenomicRegion& regio
         throw std::runtime_error {"failed to open file " + file_path_.string()};
     }
     
-    return fetch_records(sr, level, n_records);
+    return fetch_records(sr.get(), level, n_records);
 }
 
 auto hts_tag_type(const std::string& tag)
@@ -331,7 +385,9 @@ void HtslibBcfFacade::write_record(const VcfRecord& record)
     set_pos(hts_record, record.get_position());
     set_id(hts_record, record.get_id());
     set_alleles(header_.get(), hts_record, record.get_ref_allele(), record.get_alt_alleles());
-    set_qual(hts_record, record.get_quality());
+    if (record.get_quality()) {
+        set_qual(hts_record, *record.get_quality());
+    }
     set_filters(header_.get(), hts_record, record.get_filters());
     set_info(header_.get(), hts_record, record);
     
@@ -342,6 +398,59 @@ void HtslibBcfFacade::write_record(const VcfRecord& record)
     bcf_write(file_.get(), header_.get(), hts_record);
     
     bcf_destroy(hts_record);
+}
+
+// HtslibBcfFacade::RecordIterator
+
+HtslibBcfFacade::RecordIterator::RecordIterator(const HtslibBcfFacade& facade)
+:
+facade_ {facade},
+hts_iterator_ {nullptr},
+record_ {nullptr}
+{}
+
+HtslibBcfFacade::RecordIterator::RecordIterator(const HtslibBcfFacade& facade, HtsBcfSrPtr hts_iterator,
+                                                UnpackPolicy level)
+:
+facade_ {facade},
+hts_iterator_ {std::move(hts_iterator), },
+record_ {}
+{
+    if (bcf_sr_next_line(hts_iterator_.get())) {
+        record_ = std::make_shared<VcfRecord>(facade_.get().fetch_record(hts_iterator_.get(), level_));
+    } else {
+        hts_iterator_ = nullptr;
+    }
+}
+
+HtslibBcfFacade::RecordIterator::reference HtslibBcfFacade::RecordIterator::operator*() const
+{
+    return *record_;
+}
+
+HtslibBcfFacade::RecordIterator::pointer HtslibBcfFacade::RecordIterator::operator->() const
+{
+    return record_.get();
+}
+
+HtslibBcfFacade::RecordIterator& HtslibBcfFacade::RecordIterator::operator++()
+{
+    if (bcf_sr_next_line(hts_iterator_.get())) {
+        *record_ = facade_.get().fetch_record(hts_iterator_.get(), level_);
+    } else {
+        hts_iterator_ = nullptr;
+    }
+    return *this;
+}
+
+bool operator==(const HtslibBcfFacade::RecordIterator& lhs, const HtslibBcfFacade::RecordIterator& rhs)
+{
+    return lhs.hts_iterator_ == rhs.hts_iterator_;
+}
+
+bool operator!=(const HtslibBcfFacade::RecordIterator& lhs, const HtslibBcfFacade::RecordIterator& rhs)
+{
+    return !operator==(lhs, rhs);
 }
 
 // private and non-member methods
@@ -372,7 +481,7 @@ void set_chrom(const bcf_hdr_t* header, bcf1_t* record, const std::string& chrom
 
 auto get_pos(const bcf1_t* record)
 {
-    return record->pos;
+    return static_cast<GenomicRegion::SizeType>(record->pos);
 }
 
 void set_pos(bcf1_t* record, const VcfRecord::SizeType pos)
@@ -424,8 +533,11 @@ auto get_alt(const bcf1_t* record)
     return result;
 }
 
-auto get_qual(const bcf1_t* record)
+boost::optional<VcfRecord::QualityType> get_qual(const bcf1_t* record)
 {
+    if (std::isnan(record->qual)) {
+        return boost::none;
+    }
     return record->qual;
 }
 
@@ -455,19 +567,20 @@ void set_filters(const bcf_hdr_t* header, bcf1_t* record, const std::vector<std:
 
 auto get_info(const bcf_hdr_t* header, bcf1_t* record)
 {
-    int nintinfo {};
-    int* intinfo      {nullptr};
-    int nfloatinfo {};
-    float* floatinfo  {nullptr};
-    int nstringinfo {};
-    char** stringinfo {nullptr};
-    int nflaginfo {};
-    int* flaginfo     {nullptr}; // not actually populated
-    
     std::unordered_map<VcfRecord::KeyType, std::vector<std::string>> result {};
     result.reserve(record->n_info);
     
+    int* intinfo {nullptr};
+    float* floatinfo {nullptr};
+    char** stringinfo {nullptr};
+    int* flaginfo {nullptr}; // not actually populated
+    
     for (unsigned i {0}; i < record->n_info; ++i) {
+        int nintinfo {0};
+        int nfloatinfo {0};
+        int nstringinfo {0};
+        int nflaginfo {0};
+        
         const char* key {header->id[BCF_DT_ID][record->d.info[i].key].key};
         
         std::vector<std::string> values {};
@@ -488,12 +601,20 @@ auto get_info(const bcf_hdr_t* header, bcf1_t* record)
                 }
                 break;
             case BCF_HT_STR:
-                if (bcf_get_info_string(header, record, key, &stringinfo, &nstringinfo) > 0) {
-                    values.reserve(nstringinfo);
-                    std::for_each(stringinfo, stringinfo + nstringinfo,
-                                  [&values] (const char* str) { values.emplace_back(str); });
+            {
+                const auto nchars = bcf_get_info_string(header, record, key, &stringinfo, &nstringinfo);
+                if (nchars > 0) {
+                    if (nchars == 1 && nstringinfo > 1) {
+                        values.reserve(1);
+                        values.emplace_back(".");
+                    } else {
+                        values.reserve(nstringinfo);
+                        std::for_each(stringinfo, stringinfo + nstringinfo,
+                                      [&values] (const char* str) { values.emplace_back(str); });
+                    }
                 }
                 break;
+            }
             case BCF_HT_FLAG:
                 values.reserve(1);
                 values.emplace_back((bcf_get_info_flag(header, record, key, &flaginfo, &nflaginfo) == 1) ? "1" : "0");
@@ -744,34 +865,66 @@ void set_samples(const bcf_hdr_t* header, bcf1_t* dest, const VcfRecord& source,
     }
 }
 
-size_t HtslibBcfFacade::count_records(HtsBcfSrPtr& sr) const
+std::size_t HtslibBcfFacade::count_records(HtsBcfSrPtr& sr) const
 {
     size_t result {0};
     while (bcf_sr_next_line(sr.get())) ++result;
     return result;
 }
 
-std::vector<VcfRecord> HtslibBcfFacade::fetch_records(HtsBcfSrPtr& sr, Unpack level,
-                                                      const size_t num_records)
+VcfRecord HtslibBcfFacade::fetch_record(const bcf_srs_t* sr, UnpackPolicy level) const
+{
+    auto result = bcf_sr_get_line(sr, 0);
+    
+    bcf_unpack(result, (level == UnpackPolicy::All) ? BCF_UN_ALL : BCF_UN_SHR);
+    
+    auto chrom  = get_chrom(header_.get(), result);
+    auto pos    = get_pos(result);
+    auto id     = get_id(result);
+    auto ref    = get_ref(result);
+    auto alt    = get_alt(result);
+    auto qual   = get_qual(result);
+    auto filter = get_filter(header_.get(), result);
+    auto info   = get_info(header_.get(), result);
+    
+    if (level == UnpackPolicy::All && has_samples(header_.get())) {
+        auto format  = get_format(header_.get(), result);
+        auto samples = get_samples(header_.get(), result, format);
+        
+        return VcfRecord {
+            chrom, pos, std::move(id), std::move(ref), std::move(alt), qual,
+            std::move(filter), std::move(info), std::move(format),
+            std::move(samples.first), std::move(samples.second)
+        };
+    } else {
+        return VcfRecord {
+            chrom, pos, std::move(id), std::move(ref), std::move(alt), qual,
+            std::move(filter), std::move(info)
+        };
+    }
+}
+
+std::vector<VcfRecord>
+HtslibBcfFacade::fetch_records(bcf_srs_t* sr, UnpackPolicy level,  const size_t num_records) const
 {
     std::vector<VcfRecord> result {};
     result.reserve(num_records);
     
-    while (bcf_sr_next_line(sr.get())) {
-        auto record = bcf_sr_get_line(sr.get(), 0);
+    while (bcf_sr_next_line(sr)) {
+        auto record = bcf_sr_get_line(sr, 0);
         
-        bcf_unpack(record, (level == Unpack::All) ? BCF_UN_ALL : BCF_UN_SHR);
+        bcf_unpack(record, (level == UnpackPolicy::All) ? BCF_UN_ALL : BCF_UN_SHR);
         
         auto chrom  = get_chrom(header_.get(), record);
-        auto pos    = static_cast<GenomicRegion::SizeType>(get_pos(record));
+        auto pos    = get_pos(record);
         auto id     = get_id(record);
         auto ref    = get_ref(record);
         auto alt    = get_alt(record);
-        auto qual   = static_cast<VcfRecord::QualityType>(get_qual(record));
+        auto qual   = get_qual(record);
         auto filter = get_filter(header_.get(), record);
         auto info   = get_info(header_.get(), record);
         
-        if (level == Unpack::All && has_samples(header_.get())) {
+        if (level == UnpackPolicy::All && has_samples(header_.get())) {
             auto format  = get_format(header_.get(), record);
             auto samples = get_samples(header_.get(), record, format);
             result.emplace_back(chrom, pos, std::move(id), std::move(ref), std::move(alt), qual,

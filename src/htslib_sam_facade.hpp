@@ -80,7 +80,7 @@ public:
     std::vector<GenomicRegion> extract_possible_regions_in_file() override;
     
 private:
-    using HtsTidType = int32_t;
+    using HtsTidType = std::int32_t;
     
     static constexpr std::size_t default_reserve_ {10'000'000};
     
@@ -130,10 +130,6 @@ private:
     {
         void operator()(hts_idx_t* index) const { hts_idx_destroy(index); }
     };
-    
-    static constexpr const char* Read_group_tag    {"RG"};
-    static constexpr const char* Read_group_id_tag {"ID"};
-    static constexpr const char* Sample_id_tag     {"SM"};
     
     Path file_path_;
     

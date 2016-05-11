@@ -18,6 +18,8 @@
 #include <utility>
 #include <initializer_list>
 
+#include <boost/optional.hpp>
+
 #include "comparable.hpp"
 
 // TODO: consider using #include <boost/container/small_vector.hpp> for INFO and genotype fields
@@ -40,14 +42,18 @@ public:
     // constructor without genotype fields
     template <typename StringType1_, typename StringType2_, typename SequenceType1_, typename SequenceType2_,
               typename Filters_, typename Info_>
-    VcfRecord(StringType1_&& chrom, SizeType pos, StringType2_&& id, SequenceType1_&& ref, SequenceType2_&& alt,
-              QualityType qual, Filters_&& filters, Info_&& info);
+    VcfRecord(StringType1_&& chrom, SizeType pos, StringType2_&& id,
+              SequenceType1_&& ref, SequenceType2_&& alt,
+              boost::optional<QualityType> qual, Filters_&& filters, Info_&& info);
     
     // constructor with genotype fields
     template <typename StringType1_, typename StringType2_, typename SequenceType1_, typename SequenceType2_,
     typename Filters_, typename Info_, typename Format_, typename Genotypes_, typename Samples_>
-    VcfRecord(StringType1_&& chrom, SizeType pos, StringType2_&& id, SequenceType1_&& ref, SequenceType2_&& alt,
-              QualityType qual, Filters_&& filters, Info_&& info, Format_&& format, Genotypes_&& genotypes, Samples_&& samples);
+    VcfRecord(StringType1_&& chrom, SizeType pos, StringType2_&& id,
+              SequenceType1_&& ref, SequenceType2_&& alt,
+              boost::optional<QualityType> qual, Filters_&& filters, Info_&& info,
+              Format_&& format, Genotypes_&& genotypes, Samples_&& samples);
+    
     ~VcfRecord() = default;
     
     VcfRecord(const VcfRecord&)            = default;
@@ -61,7 +67,7 @@ public:
     const SequenceType& get_ref_allele() const noexcept;
     unsigned num_alt_alleles() const noexcept;
     const std::vector<SequenceType>& get_alt_alleles() const noexcept;
-    QualityType get_quality() const noexcept;
+    boost::optional<QualityType> get_quality() const noexcept;
     bool has_filter(const KeyType& filter) const noexcept;
     const std::vector<KeyType> get_filters() const noexcept;
     bool has_info(const KeyType& key) const noexcept;
@@ -97,7 +103,7 @@ private:
     IdType id_;
     SequenceType ref_allele_;
     std::vector<SequenceType> alt_alleles_;
-    QualityType quality_;
+    boost::optional<QualityType> quality_;
     std::vector<KeyType> filters_;
     ValueMap info_;
     
@@ -117,8 +123,9 @@ private:
 
 template <typename StringType1_, typename StringType2_, typename SequenceType1_, typename SequenceType2_,
           typename Filters_, typename Info_>
-VcfRecord::VcfRecord(StringType1_&& chrom, SizeType pos, StringType2_&& id, SequenceType1_&& ref,
-                     SequenceType2_&& alt, QualityType qual, Filters_&& filters, Info_&& info)
+VcfRecord::VcfRecord(StringType1_&& chrom, SizeType pos, StringType2_&& id,
+                     SequenceType1_&& ref, SequenceType2_&& alt, boost::optional<QualityType> qual,
+                     Filters_&& filters, Info_&& info)
 :
 chromosome_ {std::forward<StringType1_>(chrom)},
 position_ {pos},
@@ -135,8 +142,10 @@ samples_ {}
 
 template <typename StringType1_, typename StringType2_, typename SequenceType1_, typename SequenceType2_,
           typename Filters_, typename Info_, typename Format_, typename Genotypes_, typename Samples_>
-VcfRecord::VcfRecord(StringType1_&& chrom, SizeType pos, StringType2_&& id, SequenceType1_&& ref, SequenceType2_&& alt,
-                     QualityType qual, Filters_&& filters, Info_&& info, Format_&& format, Genotypes_&& genotypes,
+VcfRecord::VcfRecord(StringType1_&& chrom, SizeType pos, StringType2_&& id,
+                     SequenceType1_&& ref, SequenceType2_&& alt,
+                     boost::optional<QualityType> qual, Filters_&& filters,
+                     Info_&& info, Format_&& format, Genotypes_&& genotypes,
                      Samples_&& samples)
 :
 chromosome_ {std::forward<StringType1_>(chrom)},
@@ -234,7 +243,7 @@ private:
     IdType id_ = ".";
     SequenceType ref_allele_ = ".";
     std::vector<SequenceType> alt_alleles_ = {"."};
-    QualityType quality_ = 0;
+    boost::optional<QualityType> quality_ = boost::none;
     std::vector<KeyType> filters_ = {};
     std::unordered_map<KeyType, std::vector<ValueType>> info_ = {};
     std::vector<KeyType> format_ = {};

@@ -533,7 +533,7 @@ namespace detail
         ResultType result {};
         result.reserve(num_genotypes(num_elements, ploidy));
         
-        std::vector<unsigned> element_indicies(ploidy, 0); // TODO: make thread_local
+        std::vector<unsigned> element_indicies(ploidy, 0);
         
         unsigned i {0};
         
@@ -559,7 +559,7 @@ namespace detail
     }
     
     template <typename MappableType>
-    struct ShouldShareMemory : public std::is_same<MappableType, Haplotype> {};
+    struct RequiresSharedMemory : public std::is_same<MappableType, Haplotype> {};
     
     template <typename MappableType>
     auto generate_all_genotypes(const std::vector<MappableType>& elements, const unsigned ploidy,
@@ -602,7 +602,8 @@ template <typename MappableType>
 std::vector<Genotype<MappableType>>
 generate_all_genotypes(const std::vector<MappableType>& elements, const unsigned ploidy)
 {
-    return detail::generate_all_genotypes(elements, ploidy, detail::ShouldShareMemory<MappableType> {});
+    return detail::generate_all_genotypes(elements, ploidy,
+                                          detail::RequiresSharedMemory<MappableType> {});
 }
 
 template <typename MappableType>
@@ -610,7 +611,8 @@ std::vector<Genotype<MappableType>>
 generate_all_genotypes(const std::vector<std::reference_wrapper<const MappableType>>& elements,
                        const unsigned ploidy)
 {
-    return detail::generate_all_genotypes(elements, ploidy, detail::ShouldShareMemory<MappableType> {});
+    return detail::generate_all_genotypes(elements, ploidy,
+                                          detail::RequiresSharedMemory<MappableType> {});
 }
 
 std::vector<Genotype<Haplotype>>
@@ -618,7 +620,7 @@ generate_all_genotypes(const std::vector<std::shared_ptr<Haplotype>>& haplotypes
 
 namespace detail
 {
-    inline std::size_t estimate_num_elements(const size_t num_genotypes)
+    inline std::size_t estimate_num_elements(const std::size_t num_genotypes)
     {
         return num_genotypes;
     }
@@ -645,16 +647,16 @@ auto extract_all_elements(const std::vector<Genotype<MappableType>>& genotypes)
     return result;
 }
 
-template <typename MappableType>
-auto extract_all_elements(const std::vector<Genotype<MappableType>>& genotypes,
-                          const GenomicRegion& region)
-{
-    std::vector<MappableType> result {};
-    
-    // TODO
-    
-    return result;
-}
+//template <typename MappableType>
+//auto extract_all_elements(const std::vector<Genotype<MappableType>>& genotypes,
+//                          const GenomicRegion& region)
+//{
+//    std::vector<MappableType> result {};
+//    
+//    // TODO
+//    
+//    return result;
+//}
 
 template <typename MappableType>
 auto extract_all_element_refs(const std::vector<Genotype<MappableType>>& genotypes)

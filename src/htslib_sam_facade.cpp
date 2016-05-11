@@ -21,6 +21,10 @@
 
 #include <iostream> // TEST
 
+static const std::string Read_group_tag    {"RG"};
+static const std::string Read_group_id_tag {"ID"};
+static const std::string Sample_id_tag     {"SM"};
+
 class MissingBamIndex : public std::runtime_error
 {
 public:
@@ -237,14 +241,16 @@ size_t HtslibSamFacade::count_reads(const SampleIdType& sample, const GenomicReg
     return result;
 }
 
-GenomicRegion expand_subregion(const GenomicRegion& region,
-                               const std::size_t remaining_coverage_quota,
-                               const std::size_t first_read_begin,
-                               const std::size_t last_read_begin,
+GenomicRegion expand_subregion(const GenomicRegion& region,const std::size_t remaining_coverage_quota,
+                               const std::size_t first_read_begin, const std::size_t last_read_begin,
                                std::vector<unsigned>& position_counts)
 {
+    assert(first_read_begin <= last_read_begin);
+    
     const auto result_begin = std::min(first_read_begin, static_cast<std::size_t>(region.get_begin()));
     const auto result_end   = (remaining_coverage_quota > 0) ? region.get_end() : last_read_begin;
+    
+    assert(result_end >= result_begin);
     
     position_counts.resize(result_end - result_begin, 0);
     
@@ -543,9 +549,9 @@ HtslibSamFacade::SampleReadMap HtslibSamFacade::fetch_reads(const std::vector<Sa
 std::vector<std::string> HtslibSamFacade::extract_reference_contig_names()
 {
     std::vector<std::string> result {};
-    result.reserve(count_reference_contigs());
+    result.reserve(hts_header_->n_targets);
     
-    for (HtsTidType hts_tid {}; hts_tid < count_reference_contigs(); ++hts_tid) {
+    for (HtsTidType hts_tid {}; hts_tid < hts_header_->n_targets; ++hts_tid) {
         result.emplace_back(get_contig_name(hts_tid));
     }
     
@@ -555,9 +561,9 @@ std::vector<std::string> HtslibSamFacade::extract_reference_contig_names()
 std::vector<GenomicRegion> HtslibSamFacade::extract_possible_regions_in_file()
 {
     std::vector<GenomicRegion> result {};
-    result.reserve(count_reference_contigs());
+    result.reserve(hts_header_->n_targets);
     
-    for (HtsTidType hts_tid {0}; hts_tid < count_reference_contigs(); ++hts_tid) {
+    for (HtsTidType hts_tid {0}; hts_tid < hts_header_->n_targets; ++hts_tid) {
         const auto& contig_name = get_contig_name(hts_tid);
         // CRAM files don't seem to have the same index stats as BAM files so
         // we don't know which contigs have been mapped to
@@ -575,58 +581,57 @@ std::vector<GenomicRegion> HtslibSamFacade::extract_possible_regions_in_file()
 
 // private methods
 
-bool is_tag_type(const std::string& header_line, const char* tag)
+bool is_tag_type(const std::string& header_line, const std::string& tag)
 {
     return header_line.compare(1, 2, tag) == 0;
 }
 
-bool has_tag(const std::string& header_line, const char* tag)
+bool has_tag(const std::string& header_line, const std::string& tag)
 {
     return header_line.find(tag) != std::string::npos;
 }
 
-std::string extract_tag_value(const std::string& line, const char* tag)
+std::string extract_tag_value(const std::string& line, const std::string& tag)
 {
-    // format TAG:VALUE\t
-    auto tag_position = line.find(tag);
+    const auto tag_position = line.find(tag); // format is TAG:VALUE\t
     
-    if (tag_position != std::string::npos) {
-        auto value_position = line.find(':', tag_position) + 1;
-        auto tag_value_size = line.find('\t', value_position) - value_position;
-        return line.substr(value_position, tag_value_size);
-    } else {
-        throw std::runtime_error {"no " + std::string {tag} + " tag"};
+    if (tag_position == std::string::npos) {
+        throw std::runtime_error {"no " + tag + " tag"};
     }
+    
+    const auto value_position = line.find(':', tag_position) + 1;
+    const auto tag_value_size = line.find('\t', value_position) - value_position;
+    
+    return line.substr(value_position, tag_value_size);
 }
 
 void HtslibSamFacade::init_maps()
 {
-    hts_tids_.reserve(count_reference_contigs());
-    contig_names_.reserve(count_reference_contigs());
+    hts_tids_.reserve(hts_header_->n_targets);
+    contig_names_.reserve(hts_header_->n_targets);
     
-    for (HtsTidType hts_tid {0}; hts_tid < count_reference_contigs(); ++hts_tid) {
+    for (HtsTidType hts_tid {0}; hts_tid < hts_header_->n_targets; ++hts_tid) {
         hts_tids_.emplace(hts_header_->target_name[hts_tid], hts_tid);
         contig_names_.emplace(hts_tid, hts_header_->target_name[hts_tid]);
     }
     
-    std::string the_header_text (hts_header_->text, hts_header_->l_text);
-    std::stringstream ss {the_header_text};
-    std::string line;
+    const std::string header_text(hts_header_->text, hts_header_->l_text);
     
+    std::istringstream header_ss {header_text};
+    
+    std::string line;
     unsigned num_read_groups {0};
     
-    while (std::getline(ss, line, '\n')) {
+    while (std::getline(header_ss, line, '\n')) {
         if (is_tag_type(line, Read_group_tag)) {
             if (!has_tag(line, Read_group_id_tag)) {
-                throw InvalidBamHeader {file_path_, "The read group identifier tag (ID) in @RG line "
-                        + extract_tag_value(line, Read_group_tag) + " is required but was not found"};
+                throw InvalidBamHeader {file_path_, "The read group identifier tag (ID) in @RG lines is required but was not found"};
             }
             
             if (!has_tag(line, Sample_id_tag)) {
                 // The SAM specification does not specify the sample tag 'SM' as a required,
                 // however we can't do much without it.
-                throw InvalidBamHeader {file_path_, "The sample tag (SM) in @RG line "
-                        + extract_tag_value(line, Read_group_tag) + " is required but was not found"};
+                throw InvalidBamHeader {file_path_, "The sample tag (SM) in @RG lines is required but was not found"};
             }
             
             sample_names_.emplace(extract_tag_value(line, Read_group_id_tag),
@@ -652,12 +657,19 @@ const std::string& HtslibSamFacade::get_contig_name(HtsTidType hts_tid) const
 }
 
 // HtslibIterator
+    
+auto make_hts_iterator(const hts_idx_t *idx, bam_hdr_t *hdr, const GenomicRegion& region)
+{
+    const auto region_str = to_string(region);
+    return sam_itr_querys(idx, hdr, region_str.c_str());
+}
 
 HtslibSamFacade::HtslibIterator::HtslibIterator(HtslibSamFacade& hts_facade, const GenomicRegion& region)
 :
 hts_facade_ {hts_facade},
-hts_iterator_ {hts_facade.is_open() ? sam_itr_querys(hts_facade_.hts_index_.get(), hts_facade_.hts_header_.get(),
-                                                     to_string(region).c_str()) : nullptr, HtsIteratorDeleter {}},
+hts_iterator_ {hts_facade.is_open()
+        ? make_hts_iterator(hts_facade_.hts_index_.get(), hts_facade_.hts_header_.get(), region)
+    : nullptr, HtsIteratorDeleter {}},
 hts_bam1_ {bam_init1(), HtsBam1Deleter {}}
 {
     if (hts_iterator_ == nullptr) {
@@ -860,7 +872,7 @@ AlignedRead HtslibSamFacade::HtslibIterator::operator*() const
 
 HtslibSamFacade::ReadGroupIdType HtslibSamFacade::HtslibIterator::get_read_group() const
 {
-    const auto ptr = bam_aux_get(hts_bam1_.get(), Read_group_tag);
+    const auto ptr = bam_aux_get(hts_bam1_.get(), Read_group_tag.c_str());
     
     if (ptr == nullptr) {
         throw InvalidBamRecord {hts_facade_.file_path_, get_read_name(hts_bam1_.get()), "no read group"};

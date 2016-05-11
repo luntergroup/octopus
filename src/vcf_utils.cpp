@@ -215,7 +215,7 @@ void merge(std::vector<VcfReader>& readers, const std::vector<std::string>& cont
         for (const auto& contig : contigs) {
             for (auto& reader : readers) {
                 if (reader_contig_counts[reader].count(contig) == 1) {
-                    auto records = reader.fetch_records(contig, VcfReader::Unpack::All);
+                    auto records = reader.fetch_records(contig, VcfReader::UnpackPolicy::All);
                     for (auto&& record : records) {
                         record_queue.emplace(std::move(record));
                     }
@@ -241,7 +241,7 @@ void merge(std::vector<VcfReader>& readers, const std::vector<std::string>& cont
             
             for (auto& reader : readers) {
                 if (reader_contig_counts[reader].count(contig) == 1) {
-                    auto records = reader.fetch_records(region, VcfReader::Unpack::All);
+                    auto records = reader.fetch_records(region, VcfReader::UnpackPolicy::All);
                     
                     reader_contig_counts[reader][contig] -= records.size();
                     

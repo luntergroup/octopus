@@ -185,7 +185,7 @@ namespace Octopus
             
             const auto time_taken = to_string(duration);
             
-            stream(log_) << std::string(position_tab_length_, ' ')
+            stream(log_) << std::string(position_tab_length_ - 3, ' ')
                          << "-"
                          << completed_pad("100%")
                          << "100%"

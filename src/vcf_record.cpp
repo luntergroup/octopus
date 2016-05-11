@@ -43,7 +43,7 @@ const std::vector<VcfRecord::SequenceType>& VcfRecord::get_alt_alleles() const n
     return alt_alleles_;
 }
 
-VcfRecord::QualityType VcfRecord::get_quality() const noexcept
+boost::optional<VcfRecord::QualityType> VcfRecord::get_quality() const noexcept
 {
     return quality_;
 }
@@ -359,7 +359,11 @@ std::ostream& operator<<(std::ostream& os, const VcfRecord& record)
     os << record.id_ << "\t";
     os << record.ref_allele_ << "\t";
     os << record.alt_alleles_ << "\t";
-    os << static_cast<unsigned>(record.quality_) << "\t";
+    if (record.quality_) {
+        os << static_cast<unsigned>(*record.quality_) << "\t";
+    } else {
+        os << '.' << "\t";
+    }
     os << record.filters_ << "\t";
     record.print_info(os);
     os << "\t";

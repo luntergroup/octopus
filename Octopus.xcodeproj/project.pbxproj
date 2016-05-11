@@ -176,7 +176,6 @@
 		CA03C22B1A8D2C5D000D3494 /* cigar_string.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = cigar_string.hpp; sourceTree = "<group>"; };
 		CA0A329B1B863B5A001BE30F /* tandem.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = tandem.cpp; sourceTree = "<group>"; };
 		CA0A329C1B863B5A001BE30F /* tandem.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = tandem.hpp; sourceTree = "<group>"; };
-		CA0A329E1B863B6E001BE30F /* threaded_transform.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = threaded_transform.hpp; sourceTree = "<group>"; };
 		CA0B466C1AE8615900158BBA /* test_utils.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = test_utils.hpp; sourceTree = "<group>"; };
 		CA0B467A1AE8E8F700158BBA /* genotype_benchmarks.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = genotype_benchmarks.cpp; sourceTree = "<group>"; };
 		CA0B467E1AE9309A00158BBA /* model_prototype.py */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.script.python; path = model_prototype.py; sourceTree = "<group>"; };
@@ -885,7 +884,6 @@
 			isa = PBXGroup;
 			children = (
 				CAA4DC671A8ACE9B00DD3E9A /* bioio.hpp */,
-				CA0A329E1B863B6E001BE30F /* threaded_transform.hpp */,
 				D4BEA9F61B861BAF00E53CFD /* tandem */,
 			);
 			path = include;
@@ -1544,7 +1542,7 @@
 				CLANG_CXX_LANGUAGE_STANDARD = "c++14";
 				FRAMEWORK_SEARCH_PATHS = "$(inherited)";
 				GCC_INPUT_FILETYPE = sourcecode.cpp.cpp;
-				GCC_OPTIMIZATION_LEVEL = 3;
+				GCC_OPTIMIZATION_LEVEL = 0;
 				HEADER_SEARCH_PATHS = (
 					"$(inherited)",
 					/usr/local/Cellar/boost/1.60.0_1/include,
@@ -1564,6 +1562,7 @@
 					"$(OTHER_CFLAGS)",
 					"-mavx2",
 					"-lpthread",
+					"-g",
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
@@ -1576,7 +1575,7 @@
 				CLANG_CXX_LANGUAGE_STANDARD = "c++14";
 				FRAMEWORK_SEARCH_PATHS = "$(inherited)";
 				GCC_INPUT_FILETYPE = sourcecode.cpp.cpp;
-				GCC_OPTIMIZATION_LEVEL = 3;
+				GCC_OPTIMIZATION_LEVEL = 0;
 				HEADER_SEARCH_PATHS = (
 					"$(inherited)",
 					/usr/local/Cellar/boost/1.60.0_1/include,
@@ -1596,6 +1595,7 @@
 					"$(OTHER_CFLAGS)",
 					"-mavx2",
 					"-lpthread",
+					"-g",
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};

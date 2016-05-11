@@ -93,13 +93,13 @@ size_t VcfParser::count_records(const GenomicRegion& region)
                          });
 }
 
-std::vector<VcfRecord> VcfParser::fetch_records(Unpack level)
+std::vector<VcfRecord> VcfParser::fetch_records(const UnpackPolicy level)
 {
     reset_vcf();
     
     std::vector<VcfRecord> result {};
     
-    bool unpack_all {level == Unpack::All};
+    bool unpack_all {level == UnpackPolicy::All};
     
     std::transform(std::istream_iterator<Line>(file_), std::istream_iterator<Line>(),
                    std::back_inserter(result), [this, unpack_all] (const auto& line) {
@@ -109,13 +109,13 @@ std::vector<VcfRecord> VcfParser::fetch_records(Unpack level)
     return result;
 }
 
-std::vector<VcfRecord> VcfParser::fetch_records(const std::string& contig, Unpack level)
+std::vector<VcfRecord> VcfParser::fetch_records(const std::string& contig, const UnpackPolicy level)
 {
     reset_vcf();
     
     std::vector<VcfRecord> result {};
     
-    bool unpack_all {level == Unpack::All};
+    bool unpack_all {level == UnpackPolicy::All};
     
     std::for_each(std::istream_iterator<Line>(file_), std::istream_iterator<Line>(),
                   [this, &result, &contig, unpack_all] (const auto& line) {
@@ -127,13 +127,13 @@ std::vector<VcfRecord> VcfParser::fetch_records(const std::string& contig, Unpac
     return result;
 }
 
-std::vector<VcfRecord> VcfParser::fetch_records(const GenomicRegion& region, Unpack level)
+std::vector<VcfRecord> VcfParser::fetch_records(const GenomicRegion& region, const UnpackPolicy level)
 {
     reset_vcf();
     
     std::vector<VcfRecord> result {};
     
-    bool unpack_all {level == Unpack::All};
+    bool unpack_all {level == UnpackPolicy::All};
     
     std::for_each(std::istream_iterator<Line>(file_), std::istream_iterator<Line>(),
                   [this, &result, &region, unpack_all] (const std::string& line) {

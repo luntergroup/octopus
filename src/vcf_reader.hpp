@@ -28,9 +28,7 @@ class VcfReader
 public:
     using Path = boost::filesystem::path;
     
-    // Extracting the sample data from a VCF/BCF file can be very expensive. If this data is not
-    // required, performance can be vastly improved by simply not extracting it from file.
-    enum class Unpack { All, AllButSamples };
+    using UnpackPolicy = IVcfReaderImpl::UnpackPolicy;
     
     VcfReader()  = default;
     explicit VcfReader(Path file_path);
@@ -55,9 +53,9 @@ public:
     std::size_t count_records(const std::string& contig);
     std::size_t count_records(const GenomicRegion& region);
     
-    std::vector<VcfRecord> fetch_records(Unpack level = Unpack::All); // fetches all records
-    std::vector<VcfRecord> fetch_records(const std::string& contig, Unpack level = Unpack::All);
-    std::vector<VcfRecord> fetch_records(const GenomicRegion& region, Unpack level = Unpack::All);
+    std::vector<VcfRecord> fetch_records(UnpackPolicy level = UnpackPolicy::All); // fetches all records
+    std::vector<VcfRecord> fetch_records(const std::string& contig, UnpackPolicy level = UnpackPolicy::All);
+    std::vector<VcfRecord> fetch_records(const GenomicRegion& region, UnpackPolicy level = UnpackPolicy::All);
     
 private:
     Path file_path_;
