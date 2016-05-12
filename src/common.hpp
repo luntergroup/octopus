@@ -13,6 +13,7 @@
 #include <cstdint>
 
 #include "genomic_region.hpp"
+#include "read_manager.hpp"
 #include "mappable_flat_set.hpp"
 #include "mappable_flat_multi_set.hpp"
 #include "mappable_map.hpp"
@@ -37,7 +38,7 @@ namespace Octopus
     using ReadContainer = MappableFlatMultiSet<AlignedRead>;
     using ReadMap       = MappableMap<SampleIdType, AlignedRead>;
     
-    using ReadFilterer = ReadFilter<ReadContainer::iterator>;
+    using ReadFilterer = ReadFilter<ReadManager::ReadContainer::iterator>;
 }
 
 #endif

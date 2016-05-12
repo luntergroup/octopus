@@ -28,7 +28,9 @@ public:
     using SequenceType   = ReferenceGenomeImpl::SequenceType;
     
     ReferenceGenome() = delete;
+    
     explicit ReferenceGenome(std::unique_ptr<ReferenceGenomeImpl> impl);
+    
     ~ReferenceGenome() = default;
     
     ReferenceGenome(const ReferenceGenome&)            = delete;
@@ -61,7 +63,7 @@ private:
 // non-member functions
 
 ReferenceGenome make_reference(boost::filesystem::path reference_path,
-                               std::size_t max_base_pair_cache = 0,
+                               std::size_t max_cached_bases = 0,
                                bool is_threaded = false);
 
 std::vector<GenomicRegion> get_all_contig_regions(const ReferenceGenome& reference);

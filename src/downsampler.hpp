@@ -41,7 +41,6 @@ private:
     unsigned max_coverage_ = 100'000;
     unsigned min_coverage_ = 100'000;
 };
-
 } // namespace Octopus
 
 #endif /* downsampler_hpp */

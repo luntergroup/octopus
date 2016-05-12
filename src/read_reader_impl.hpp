@@ -16,18 +16,17 @@
 #include <utility>
 
 #include "genomic_region.hpp"
-
-#include "common.hpp"
-
-class AlignedRead;
+#include "aligned_read.hpp"
 
 class IReadReaderImpl
 {
 public:
     using SampleIdType  = std::string;
     using SizeType      = GenomicRegion::SizeType;
-    using Reads         = Octopus::ReadContainer;
-    using SampleReadMap = Octopus::ReadMap;
+    using ReadContainer = std::vector<AlignedRead>;
+    using SampleReadMap = std::unordered_map<SampleIdType, ReadContainer>;
+    
+    using CoveragePair = std::pair<GenomicRegion, std::vector<unsigned>>;
     
     virtual ~IReadReaderImpl() noexcept = default;
     
@@ -40,20 +39,17 @@ public:
     
     virtual bool has_contig_reads(const GenomicRegion::ContigNameType& contig) = 0;
     
-    virtual size_t count_reads(const GenomicRegion& region) = 0;
-    virtual size_t count_reads(const SampleIdType& sample, const GenomicRegion& region) = 0;
+    virtual std::size_t count_reads(const GenomicRegion& region) = 0;
+    virtual std::size_t count_reads(const SampleIdType& sample, const GenomicRegion& region) = 0;
     
-    virtual std::pair<GenomicRegion, std::vector<unsigned>>
-    find_covered_subregion(const GenomicRegion& region, size_t max_coverage) = 0;
-    virtual std::pair<GenomicRegion, std::vector<unsigned>>
-    find_covered_subregion(const SampleIdType& sample, const GenomicRegion& region,
-                           size_t max_coverage) = 0;
-    virtual std::pair<GenomicRegion, std::vector<unsigned>>
-    find_covered_subregion(const std::vector<SampleIdType>& samples, const GenomicRegion& region,
-                           size_t max_coverage) = 0;
+    virtual CoveragePair find_covered_subregion(const GenomicRegion& region, std::size_t max_coverage) = 0;
+    virtual CoveragePair find_covered_subregion(const SampleIdType& sample, const GenomicRegion& region,
+                                                std::size_t max_coverage) = 0;
+    virtual CoveragePair find_covered_subregion(const std::vector<SampleIdType>& samples, const GenomicRegion& region,
+                                                std::size_t max_coverage) = 0;
     
     virtual SampleReadMap fetch_reads(const GenomicRegion& region) = 0;
-    virtual Reads fetch_reads(const SampleIdType& sample, const GenomicRegion& region) = 0;
+    virtual ReadContainer fetch_reads(const SampleIdType& sample, const GenomicRegion& region) = 0;
     virtual SampleReadMap fetch_reads(const std::vector<SampleIdType>& samples, const GenomicRegion& region) = 0;
     
     virtual unsigned count_reference_contigs() = 0;

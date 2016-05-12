@@ -34,12 +34,14 @@ public:
     using Path = boost::filesystem::path;
     
     using SampleIdType  = IReadReaderImpl::SampleIdType;
-    using Reads         = IReadReaderImpl::Reads;
+    using ReadContainer = IReadReaderImpl::ReadContainer;
     using SampleReadMap = IReadReaderImpl::SampleReadMap;
     
     ReadManager() = default;
+    
     explicit ReadManager(std::vector<Path> read_file_paths, unsigned max_open_files);
     explicit ReadManager(std::initializer_list<Path> read_file_paths);
+    
     ~ReadManager() = default;
     
     ReadManager(const ReadManager&)            = delete;
@@ -60,17 +62,17 @@ public:
                           const GenomicRegion::ContigNameType& contig);
     bool has_contig_reads(const GenomicRegion::ContigNameType& contig);
     
-    size_t count_reads(const SampleIdType& sample, const GenomicRegion& region);
-    size_t count_reads(const std::vector<SampleIdType>& samples, const GenomicRegion& region);
-    size_t count_reads(const GenomicRegion& region);
+    std::size_t count_reads(const SampleIdType& sample, const GenomicRegion& region);
+    std::size_t count_reads(const std::vector<SampleIdType>& samples, const GenomicRegion& region);
+    std::size_t count_reads(const GenomicRegion& region);
     
     GenomicRegion find_covered_subregion(const SampleIdType& sample, const GenomicRegion& region,
-                                         size_t max_reads);
+                                         std::size_t max_reads);
     GenomicRegion find_covered_subregion(const std::vector<SampleIdType>& samples,
-                                         const GenomicRegion& region, size_t max_reads);
-    GenomicRegion find_covered_subregion(const GenomicRegion& region, size_t max_reads);
+                                         const GenomicRegion& region, std::size_t max_reads);
+    GenomicRegion find_covered_subregion(const GenomicRegion& region, std::size_t max_reads);
     
-    Reads fetch_reads(const SampleIdType& sample, const GenomicRegion& region);
+    ReadContainer fetch_reads(const SampleIdType& sample, const GenomicRegion& region);
     SampleReadMap fetch_reads(const std::vector<SampleIdType>& samples, const GenomicRegion& region);
     SampleReadMap fetch_reads(const GenomicRegion& region);
     

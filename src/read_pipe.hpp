@@ -70,26 +70,6 @@ private:
     ReadTransform read_transform_;
     
     std::vector<SampleIdType> samples_;
-    
-    using ContigIdType = GenomicRegion::ContigNameType;
-    
-    struct ContigStats
-    {
-        size_t min_coverage_;
-        size_t max_coverage_;
-        size_t average_coverage_;
-        size_t max_filtered_reads_;
-        size_t min_filtered_reads_;
-        size_t average_filtered_reads_;
-    };
-    
-    using ContigStatsMap = std::unordered_map<ContigIdType, ContigStats>;
-    using SampleStatsMap = std::unordered_map<SampleIdType, ContigStatsMap>;
-    
-    SampleStatsMap sample_stats_;
-    
-    double average_coverage(const SampleIdType& sample) const noexcept;
-    double average_coverage(const SampleIdType& sample, const ContigIdType& contig) const noexcept;
 };
 } // namespace Octopus
 

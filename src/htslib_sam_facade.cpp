@@ -188,7 +188,7 @@ HtslibSamFacade::SizeType HtslibSamFacade::get_reference_contig_size(const std::
     return hts_header_->target_len[get_htslib_tid(contig_name)];
 }
 
-uint64_t HtslibSamFacade::get_num_mapped_reads(const std::string& contig_name) const
+std::uint64_t HtslibSamFacade::get_num_mapped_reads(const std::string& contig_name) const
 {
     uint64_t num_mapped {}, num_unmapped {};
     hts_idx_get_stat(hts_index_.get(), get_htslib_tid(contig_name), &num_mapped, &num_unmapped);
@@ -219,22 +219,22 @@ bool HtslibSamFacade::has_contig_reads(const GenomicRegion::ContigNameType& cont
     return ++it;
 }
 
-size_t HtslibSamFacade::count_reads(const GenomicRegion& region)
+std::size_t HtslibSamFacade::count_reads(const GenomicRegion& region)
 {
     HtslibIterator it {*this, region};
     
-    size_t result {0};
+    std::size_t result {0};
     
     while (++it) ++result;
     
     return result;
 }
 
-size_t HtslibSamFacade::count_reads(const SampleIdType& sample, const GenomicRegion& region)
+std::size_t HtslibSamFacade::count_reads(const SampleIdType& sample, const GenomicRegion& region)
 {
     HtslibIterator it {*this, region};
     
-    size_t result {0};
+    std::size_t result {0};
     
     while (++it && sample_names_.at(it.get_read_group()) == sample) ++result;
     
@@ -267,8 +267,8 @@ GenomicRegion expand_subregion(const GenomicRegion& region,const std::size_t rem
     };
 }
 
-std::pair<GenomicRegion, std::vector<unsigned>>
-HtslibSamFacade::find_covered_subregion(const GenomicRegion& region, size_t max_coverage)
+HtslibSamFacade::CoveragePair
+HtslibSamFacade::find_covered_subregion(const GenomicRegion& region, std::size_t max_coverage)
 {
     HtslibIterator it {*this, region};
     
@@ -309,10 +309,10 @@ bool contains(const std::vector<HtslibSamFacade::SampleIdType>& samples,
     return std::find(std::cbegin(samples), std::cend(samples), sample) != std::cend(samples);
 }
 
-std::pair<GenomicRegion, std::vector<unsigned>>
+HtslibSamFacade::CoveragePair
 HtslibSamFacade::find_covered_subregion(const SampleIdType& sample,
                                         const GenomicRegion& region,
-                                        size_t max_coverage)
+                                        std::size_t max_coverage)
 {
     if (!contains(samples_, sample)) {
         return std::make_pair(head_region(region), std::vector<unsigned> {});
@@ -381,10 +381,9 @@ bool is_subset(std::vector<HtslibSamFacade::SampleIdType> lhs,
     return std::includes(std::cbegin(lhs), std::cend(lhs), std::cbegin(rhs), std::cend(rhs));
 }
 
-std::pair<GenomicRegion, std::vector<unsigned>>
+HtslibSamFacade::CoveragePair
 HtslibSamFacade::find_covered_subregion(const std::vector<SampleIdType>& samples,
-                                        const GenomicRegion& region,
-                                        size_t max_coverage)
+                                        const GenomicRegion& region, std::size_t max_coverage)
 {
     if (samples.size() == 1) {
         return find_covered_subregion(samples.front(), region, max_coverage);
@@ -453,7 +452,7 @@ HtslibSamFacade::SampleReadMap HtslibSamFacade::fetch_reads(const GenomicRegion&
     
     while (++it) {
         try {
-            result.at(sample_names_.at(it.get_read_group())).emplace(*it);
+            result.at(sample_names_.at(it.get_read_group())).emplace_back(*it);
         } catch (InvalidBamRecord& e) {
             // TODO: Just ignore? Could log or something.
             //std::clog << "Warning: " << e.what() << std::endl;
@@ -467,11 +466,11 @@ HtslibSamFacade::SampleReadMap HtslibSamFacade::fetch_reads(const GenomicRegion&
     return result;
 }
 
-HtslibSamFacade::Reads HtslibSamFacade::fetch_reads(const SampleIdType& sample, const GenomicRegion& region)
+HtslibSamFacade::ReadContainer HtslibSamFacade::fetch_reads(const SampleIdType& sample, const GenomicRegion& region)
 {
     HtslibIterator it {*this, region};
     
-    Reads result {};
+    ReadContainer result {};
     
     if (std::find(std::cbegin(samples_), std::cend(samples_), sample) == std::cend(samples_)) {
         return result;
@@ -482,7 +481,7 @@ HtslibSamFacade::Reads HtslibSamFacade::fetch_reads(const SampleIdType& sample, 
     if (samples_.size() == 1) {
         while (++it) {
             try {
-                result.emplace(*it);
+                result.emplace_back(*it);
             } catch (InvalidBamRecord& e) {
                 // TODO
             } catch (...) {
@@ -493,7 +492,7 @@ HtslibSamFacade::Reads HtslibSamFacade::fetch_reads(const SampleIdType& sample, 
         while (++it) {
             if (sample_names_.at(it.get_read_group()) == sample) {
                 try {
-                    result.emplace(*it);
+                    result.emplace_back(*it);
                 } catch (InvalidBamRecord& e) {
                     // TODO
                 } catch (...) {
@@ -532,7 +531,7 @@ HtslibSamFacade::SampleReadMap HtslibSamFacade::fetch_reads(const std::vector<Sa
         
         if (result.count(sample) == 1) {
             try {
-                result.at(sample_names_.at(it.get_read_group())).emplace(*it);
+                result.at(sample_names_.at(it.get_read_group())).emplace_back(*it);
             } catch (InvalidBamRecord& e) {
                 // TODO
             } catch (...) {

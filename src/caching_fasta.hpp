@@ -13,6 +13,7 @@
 #include <map>
 #include <list>
 #include <cstddef>
+#include <mutex>
 
 #include <boost/filesystem/path.hpp>
 #include <boost/range/iterator_range_core.hpp>
@@ -50,12 +51,9 @@ public:
     
     CachingFasta() = delete;
     
-    explicit CachingFasta(Path fasta_path);
-    explicit CachingFasta(Path fasta_path, SizeType max_cache_size);
-    explicit CachingFasta(Path fasta_path, Path fasta_index_path);
-    explicit CachingFasta(Path fasta_path, Path fasta_index_path,
-                          SizeType max_cache_size);
-    explicit CachingFasta(Path fasta_path, SizeType max_cache_size,
+    explicit CachingFasta(std::unique_ptr<ReferenceGenomeImpl> fasta);
+    explicit CachingFasta(std::unique_ptr<ReferenceGenomeImpl> fasta, SizeType max_cache_size);
+    explicit CachingFasta(std::unique_ptr<ReferenceGenomeImpl> fasta,  SizeType max_cache_size,
                           double locality_bias, double forward_bias);
     
     ~CachingFasta() noexcept override = default;
@@ -66,7 +64,7 @@ public:
     CachingFasta& operator=(CachingFasta&&)      = default;
     
 private:
-    Fasta fasta_;
+    std::unique_ptr<ReferenceGenomeImpl> fasta_;
     
     using ContigSequenceCache = std::map<ContigRegion, SequenceType>;
     using SequenceCache       = std::unordered_map<std::string, ContigSequenceCache>;
@@ -86,11 +84,13 @@ private:
     
     SizeType genome_size_;
     
-    SizeType max_cache_size_             = 10'000'000;
-    mutable SizeType current_cache_size_ = 0;
+    SizeType max_cache_size_;
+    mutable SizeType current_cache_size_;
     
-    double locality_bias_ = 0.5;
-    double forward_bias_  = 0.8;
+    double locality_bias_;
+    double forward_bias_;
+    
+    mutable std::mutex mutex_;
     
     void setup_cache();
     SizeType get_remaining_cache_size() const;
@@ -100,8 +100,8 @@ private:
     GenomicRegion get_new_contig_chunk(const GenomicRegion& requested_region) const;
     GenomicRegion get_hit_contig_chunk(const GenomicRegion& requested_region) const;
     bool is_contig_cached(const GenomicRegion& region) const;
-    CacheIterator get_cache_iterator(const GenomicRegion& requested_region) const;
-    void add_sequence_to_cache(SequenceType&& sequence, const GenomicRegion& region) const;
+    CacheIterator find_cache_iterator(const GenomicRegion& requested_region) const;
+    void add_sequence_to_cache(SequenceType&& sequence, GenomicRegion&& region) const;
     void update_cache_position(const GenomicRegion& region) const;
     OverlapRange overlap_range(const GenomicRegion& region) const;
     void remove_from_sequence_cache(const GenomicRegion& region) const;

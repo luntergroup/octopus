@@ -55,7 +55,7 @@ private:
     SizeType do_get_contig_size(const ContigNameType& contig) const override;
     SequenceType do_fetch_sequence(const GenomicRegion& region) const override;
     
-    bool is_valid_fasta() const noexcept;
+    bool is_valid() const noexcept;
 };
 
 #endif /* defined(__Octopus__fasta__) */

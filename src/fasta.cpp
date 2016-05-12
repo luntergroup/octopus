@@ -28,18 +28,19 @@ fasta_index_path_ {std::move(fasta_index_path)}
     using boost::filesystem::exists;
     
     if (!exists(fasta_path_)) {
-        std::clog << "Fasta: given fasta path " << fasta_path.string() << " does not exist." << std::endl;
+        throw std::runtime_error {"Fasta: given fasta path " + fasta_path_.string() + " does not exist"};
     }
     
     if (!exists(fasta_index_path_)) {
         fasta_index_path_ = fasta_path_.replace_extension("fai");
         
         if (!exists(fasta_index_path_)) {
-            std::clog << "Fasta: given fasta index path " << fasta_index_path_.string() << " does not exist." << std::endl;
+            throw std::runtime_error { "Fasta: given fasta index path " + fasta_index_path_.string()
+                + " does not exist"};
         }
     }
     
-    if (is_valid_fasta()) {
+    if (is_valid()) {
         fasta_ = std::ifstream(fasta_path_.string());
         fasta_index_ = bioio::read_fasta_index(fasta_index_path_.string());
     }
@@ -82,7 +83,7 @@ Fasta::SequenceType Fasta::do_fetch_sequence(const GenomicRegion& region) const
                                     region_begin(region), size(region));
 }
 
-bool Fasta::is_valid_fasta() const noexcept
+bool Fasta::is_valid() const noexcept
 {
     const auto extension = fasta_path_.extension().string();
     

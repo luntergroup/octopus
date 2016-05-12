@@ -60,6 +60,18 @@ const std::vector<SampleIdType>& ReadPipe::get_samples() const noexcept
     return samples_;
 }
 
+template <typename T>
+void move_reads(T& src, ReadMap& dest)
+{
+    for (auto& p : src) {
+        dest[p.first].insert(std::make_move_iterator(std::begin(p.second)),
+                             std::make_move_iterator(std::end(p.second)));
+        p.second.clear();
+        p.second.shrink_to_fit();
+    }
+    src.clear();
+}
+
 ReadMap ReadPipe::fetch_reads(const GenomicRegion& region)
 {
     ReadMap result {samples_.size()};
@@ -77,32 +89,34 @@ ReadMap ReadPipe::fetch_reads(const GenomicRegion& region)
         }
         
         resume_timer(misc_timer2);
+        transform_reads(batch_reads, read_transform_);
+        pause_timer(misc_timer2);
+        
+        resume_timer(misc_timer2);
         erase_filtered_reads(batch_reads, filter(batch_reads, read_filter_));
         pause_timer(misc_timer2);
         
         if (DEBUG_MODE) {
             Logging::DebugLogger log {};
             stream(log) << "There are " << count_reads(batch_reads) << " reads in " << region
-                << " after filtering";
+            << " after filtering";
         }
         
         if (downsampler_) {
+            auto reads = make_mappable_map(std::move(batch_reads));
+            
             resume_timer(misc_timer2);
-            const auto n = downsampler_->downsample(batch_reads);
+            const auto n = downsampler_->downsample(reads);
             pause_timer(misc_timer2);
             
             if (DEBUG_MODE) {
                 Logging::DebugLogger log {};
                 stream(log) << "Downsampling removed " << n << " reads from " << region;
             }
-        }
-        
-        resume_timer(misc_timer2);
-        transform_reads(batch_reads, read_transform_);
-        pause_timer(misc_timer2);
-        
-        for (auto&& sample_batch : batch_reads) {
-            result.emplace(sample_batch.first, std::move(sample_batch.second));
+            
+             move_reads(reads, result);
+        } else {
+             move_reads(batch_reads, result);
         }
     }
     

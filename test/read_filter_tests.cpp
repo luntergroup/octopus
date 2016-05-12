@@ -15,33 +15,33 @@
 #include <algorithm> // std::sort
 #include <iterator>  // std::back_inserter
 
-#include "test_common.hpp"
-#include "genomic_region.hpp"
-#include "read_manager.hpp"
-#include "read_filter.hpp"
-#include "read_filters.hpp"
+//#include "test_common.hpp"
+//#include "genomic_region.hpp"
+//#include "read_manager.hpp"
+//#include "read_filter.hpp"
+//#include "read_filters.hpp"
 
 BOOST_AUTO_TEST_SUITE(Components)
 
 BOOST_AUTO_TEST_CASE(read_filter_test)
 {
-    BOOST_REQUIRE(test_file_exists(NA12878_low_coverage));
-    
-    ReadManager read_manager {NA12878_low_coverage};
-    
-    auto sample_ids = read_manager.get_samples();
-    
-    auto sample = sample_ids.front();
-    
-    GenomicRegion region {"X", 1000000, 1010000};
-    
-    auto reads = read_manager.fetch_reads(sample, region);
-    
-    BOOST_REQUIRE(std::is_sorted(std::cbegin(reads), std::cend(reads)));
-    
-    BOOST_CHECK(reads.size() == 485);
-    
-    Octopus::ReadFilter<std::vector<AlignedRead>::iterator> read_filter {};
+//    BOOST_REQUIRE(test_file_exists(NA12878_low_coverage));
+//    
+//    ReadManager read_manager {NA12878_low_coverage};
+//    
+//    auto sample_ids = read_manager.get_samples();
+//    
+//    auto sample = sample_ids.front();
+//    
+//    GenomicRegion region {"X", 1000000, 1010000};
+//    
+//    auto reads = read_manager.fetch_reads(sample, region);
+//    
+//    BOOST_REQUIRE(std::is_sorted(std::cbegin(reads), std::cend(reads)));
+//    
+//    BOOST_CHECK(reads.size() == 485);
+//    
+//    Octopus::ReadFilter<std::vector<AlignedRead>::iterator> read_filter {};
     
 //    read_filter.register_filter(Octopus::ReadFilters::IsNotSecondaryAlignment());
 //    read_filter.register_filter(Octopus::ReadFilters::IsGoodMappingQuality(20));

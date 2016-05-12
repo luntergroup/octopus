@@ -16,9 +16,8 @@
 #include <stdexcept>
 
 #include "fasta.hpp"
-#include "caching_fasta.hpp"
 #include "threadsafe_fasta.hpp"
-#include "threadsafe_caching_fasta.hpp"
+#include "caching_fasta.hpp"
 
 ReferenceGenome::ReferenceGenome(std::unique_ptr<ReferenceGenomeImpl> impl)
 :
@@ -98,23 +97,28 @@ ReferenceGenome::SequenceType ReferenceGenome::get_sequence(const GenomicRegion&
 // non-member functions
 
 ReferenceGenome make_reference(boost::filesystem::path reference_path,
-                               const std::size_t max_base_pair_cache,
+                               const std::size_t max_cached_bases,
                                const bool is_threaded)
 {
+    std::unique_ptr<ReferenceGenomeImpl> impl_ {};
+    
     if (is_threaded) {
-        if (max_base_pair_cache > 0) {
-            return ReferenceGenome {std::make_unique<ThreadsafeCachingFasta>(std::move(reference_path),
-                                                                             max_base_pair_cache)};
-        } else {
-            return ReferenceGenome {std::make_unique<ThreadsafeFasta>(std::move(reference_path))};
-        }
+        impl_ = std::make_unique<ThreadsafeFasta>(std::make_unique<Fasta>(reference_path));
     } else {
-        if (max_base_pair_cache > 0) {
-            return ReferenceGenome {std::make_unique<CachingFasta>(std::move(reference_path),
-                                                                   max_base_pair_cache)};
-        } else {
-            return ReferenceGenome {std::make_unique<Fasta>(std::move(reference_path))};
+        impl_ = std::make_unique<Fasta>(std::move(reference_path));
+    }
+    
+    if (max_cached_bases > 0) {
+        double locality_bias {0.99}, forward_bias {0.99};
+        
+        if (is_threaded) {
+            locality_bias = 0.25;
         }
+        
+        return ReferenceGenome {std::make_unique<CachingFasta>(std::move(impl_), max_cached_bases,
+                                                               locality_bias, forward_bias)};
+    } else {
+        return ReferenceGenome {std::move(impl_)};
     }
 }
 

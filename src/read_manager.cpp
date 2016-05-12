@@ -118,7 +118,7 @@ bool ReadManager::has_contig_reads(const GenomicRegion::ContigNameType& contig)
     return has_contig_reads(get_samples(), contig);
 }
 
-size_t ReadManager::count_reads(const SampleIdType& sample, const GenomicRegion& region)
+std::size_t ReadManager::count_reads(const SampleIdType& sample, const GenomicRegion& region)
 {
     using std::begin; using std::end; using std::for_each;
     
@@ -128,7 +128,7 @@ size_t ReadManager::count_reads(const SampleIdType& sample, const GenomicRegion&
     
     auto it = partition_open(reader_paths);
     
-    size_t result {};
+    std::size_t result {0};
     
     while (!reader_paths.empty()) {
         for_each(it, end(reader_paths),
@@ -143,7 +143,7 @@ size_t ReadManager::count_reads(const SampleIdType& sample, const GenomicRegion&
     return result;
 }
 
-size_t ReadManager::count_reads(const std::vector<SampleIdType>& samples, const GenomicRegion& region)
+std::size_t ReadManager::count_reads(const std::vector<SampleIdType>& samples, const GenomicRegion& region)
 {
     using std::begin; using std::end; using std::for_each;
     
@@ -153,7 +153,7 @@ size_t ReadManager::count_reads(const std::vector<SampleIdType>& samples, const 
     
     auto it = partition_open(reader_paths);
     
-    size_t result {};
+    std::size_t result {0};
     
     while (!reader_paths.empty()) {
         for_each(it, end(reader_paths),
@@ -170,21 +170,21 @@ size_t ReadManager::count_reads(const std::vector<SampleIdType>& samples, const 
     return result;
 }
 
-size_t ReadManager::count_reads(const GenomicRegion& region)
+std::size_t ReadManager::count_reads(const GenomicRegion& region)
 {
     return count_reads(get_samples(), region);
 }
 
 GenomicRegion ReadManager::find_covered_subregion(const SampleIdType& sample,
                                                   const GenomicRegion& region,
-                                                  size_t max_reads)
+                                                  std::size_t max_reads)
 {
     return find_covered_subregion(std::vector<SampleIdType> {sample}, region, max_reads);
 }
 
 GenomicRegion ReadManager::find_covered_subregion(const std::vector<SampleIdType>& samples,
                                                   const GenomicRegion& region,
-                                                  size_t max_reads)
+                                                  std::size_t max_reads)
 {
     using std::begin; using std::end; using std::next; using std::for_each;
     
@@ -262,12 +262,12 @@ GenomicRegion ReadManager::find_covered_subregion(const std::vector<SampleIdType
     return GenomicRegion {region.get_contig_name(), result_begin, result_end};
 }
 
-GenomicRegion ReadManager::find_covered_subregion(const GenomicRegion& region, size_t max_reads)
+GenomicRegion ReadManager::find_covered_subregion(const GenomicRegion& region, std::size_t max_reads)
 {
     return find_covered_subregion(get_samples(), region, max_reads);
 }
 
-ReadManager::Reads ReadManager::fetch_reads(const SampleIdType& sample, const GenomicRegion& region)
+ReadManager::ReadContainer ReadManager::fetch_reads(const SampleIdType& sample, const GenomicRegion& region)
 {
     using std::begin; using std::end; using std::make_move_iterator; using std::for_each;
     
@@ -277,13 +277,13 @@ ReadManager::Reads ReadManager::fetch_reads(const SampleIdType& sample, const Ge
     
     auto it = partition_open(reader_paths);
     
-    Reads result {};
+    ReadContainer result {};
     
     while (!reader_paths.empty()) {
         for_each(it, end(reader_paths),
                  [&] (const auto& reader_path) {
                      auto reads = open_readers_.at(reader_path).fetch_reads(sample, region);
-                     result.insert(make_move_iterator(begin(reads)), make_move_iterator(end(reads)));
+                     result.insert(std::end(result), make_move_iterator(begin(reads)), make_move_iterator(end(reads)));
                  });
         
         reader_paths.erase(it, end(reader_paths));
@@ -315,7 +315,8 @@ ReadManager::SampleReadMap ReadManager::fetch_reads(const std::vector<SampleIdTy
                  [&] (const auto& reader_path) {
                      auto reads = open_readers_.at(reader_path).fetch_reads(samples, region);
                      for (auto& sample_reads : reads) {
-                         result.at(sample_reads.first).insert(make_move_iterator(begin(sample_reads.second)),
+                         result.at(sample_reads.first).insert(std::end(result.at(sample_reads.first)),
+                                                              make_move_iterator(begin(sample_reads.second)),
                                                               make_move_iterator(end(sample_reads.second)));
                          sample_reads.second.clear();
                          sample_reads.second.shrink_to_fit();

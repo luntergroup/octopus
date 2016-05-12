@@ -35,15 +35,16 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         "--working-directory", "~/Genomics/octopus_test",
         
         //"--target-read-buffer-size", "0.1",
-        //"--threads", "0",
+        //"--reference-cache-size", "100",
+        "--threads", "0",
         
         //"--contig-output-order", "as-in-reference-reversed",
         
         "--reference", human_reference_fasta.c_str(),
         //"--reference", ecoli_reference_fasta.c_str(),
         
-        "--reads", NA12878_low_coverage.c_str(),
-        //"--reads", NA12878_high_coverage.c_str(),
+        //"--reads", NA12878_low_coverage.c_str(),
+        "--reads", NA12878_high_coverage.c_str(),
         //"--reads", "~/Genomics/Illumina/NA12878.mapped.ILLUMINA.bwa.CEU.high_coverage_pcr_free.20130906.chr22.bam",
         
         //"--reads", NA12891_high_coverage.c_str(),
@@ -227,8 +228,8 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--max-variant-size", "25",
         
         "--disable-haplotype-lagging",
-        "--disable-inactive-flank-scoring",
-        "--max-haplotypes", "50",
+        //"--disable-inactive-flank-scoring",
+        //"--max-haplotypes", "50",
         
         "--min-variant-posterior", "2",
         //"--min-refcall-posterior", "0",

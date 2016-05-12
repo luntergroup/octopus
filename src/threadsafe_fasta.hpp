@@ -31,8 +31,7 @@ public:
     
     ThreadsafeFasta() = delete;
     
-    explicit ThreadsafeFasta(Path fasta_path);
-    explicit ThreadsafeFasta(Path fasta_path, Path fasta_index_path);
+    explicit ThreadsafeFasta(std::unique_ptr<Fasta> fasta);
     
     ~ThreadsafeFasta() noexcept override = default;
     
@@ -42,7 +41,7 @@ public:
     ThreadsafeFasta& operator=(ThreadsafeFasta&&)      = default;
     
 private:
-    Fasta fasta_;
+    std::unique_ptr<Fasta> fasta_;
     mutable std::mutex mutex_;
     
     bool do_is_open() const noexcept override;

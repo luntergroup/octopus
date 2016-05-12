@@ -10,19 +10,17 @@
 #define __Octopus__read_filter__
 
 #include <vector>
+#include <unordered_map>
 #include <memory>
 #include <algorithm>
 #include <iterator>
 #include <type_traits>
 #include <utility>
-#include <unordered_map>
 
 #include <boost/optional.hpp>
 
 #include "common.hpp"
 #include "read_filters.hpp"
-#include "mappable_flat_multi_set.hpp"
-#include "mappable_map.hpp"
 #include "logging.hpp"
 
 namespace Octopus
@@ -261,27 +259,26 @@ auto ReadFilter<BidirIt>::find_failing_basic_filter(const AlignedRead& read) con
 
 // non-member methods
 
-template <typename ReadFilter>
-auto remove(MappableFlatMultiSet<AlignedRead>& reads, const ReadFilter& filter)
+template <typename Container, typename ReadFilter>
+auto remove(Container& reads, const ReadFilter& filter)
 {
     return filter.remove(std::begin(reads), std::end(reads));
 }
 
-template <typename ReadFilter>
-auto remove(MappableFlatMultiSet<AlignedRead>& reads, const ReadFilter& filter,
+template <typename Container, typename ReadFilter>
+auto remove(Container& reads, const ReadFilter& filter,
             typename ReadFilter::FilterCountMap& filter_counts)
 {
     return filter.remove(std::begin(reads), std::end(reads), filter_counts);
 }
 
-template <typename KeyType>
-using FilterPointMap = std::unordered_map<KeyType, typename MappableMap<KeyType, AlignedRead>::mapped_type::iterator>;
+template <typename Map>
+using FilterPointMap = std::unordered_map<typename Map::key_type, typename Map::mapped_type::iterator>;
 
-template <typename KeyType, typename ReadFilter>
-FilterPointMap<KeyType>
-filter(MappableMap<KeyType, AlignedRead>& reads, const ReadFilter& f)
+template <typename Map, typename ReadFilter>
+FilterPointMap<Map> filter(Map& reads, const ReadFilter& f)
 {
-    FilterPointMap<KeyType> result {reads.size()};
+    FilterPointMap<Map> result {reads.size()};
     
     if (true) {
         typename ReadFilter::FilterCountMap filter_counts {};
@@ -304,9 +301,8 @@ filter(MappableMap<KeyType, AlignedRead>& reads, const ReadFilter& f)
     return result;
 }
 
-template <typename KeyType>
-std::size_t erase_filtered_reads(MappableMap<KeyType, AlignedRead>& reads,
-                                 const FilterPointMap<KeyType>& filter_points)
+template <typename Map>
+std::size_t erase_filtered_reads(Map& reads, const FilterPointMap<Map>& filter_points)
 {
     std::size_t result {0};
     

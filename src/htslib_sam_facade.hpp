@@ -33,11 +33,14 @@ class HtslibSamFacade : public IReadReaderImpl
 public:
     using Path = boost::filesystem::path;
     
-    using SequenceType    = AlignedRead::SequenceType;
-    using SampleIdType    = IReadReaderImpl::SampleIdType;
-    using Reads           = IReadReaderImpl::Reads;
-    using SampleReadMap   = IReadReaderImpl::SampleReadMap;
-    using SizeType        = IReadReaderImpl::SizeType;
+    using IReadReaderImpl::SampleIdType;
+    using IReadReaderImpl::ReadContainer;
+    using IReadReaderImpl::SampleReadMap;
+    using IReadReaderImpl::SizeType;
+    using IReadReaderImpl::CoveragePair;
+    
+    using SequenceType = AlignedRead::SequenceType;
+    
     using ReadGroupIdType = std::string;
     
     HtslibSamFacade() = delete;
@@ -58,20 +61,17 @@ public:
     
     bool has_contig_reads(const GenomicRegion::ContigNameType& contig) override;
     
-    size_t count_reads(const GenomicRegion& region) override;
-    size_t count_reads(const SampleIdType& sample, const GenomicRegion& region) override;
+    std::size_t count_reads(const GenomicRegion& region) override;
+    std::size_t count_reads(const SampleIdType& sample, const GenomicRegion& region) override;
     
-    std::pair<GenomicRegion, std::vector<unsigned>>
-    find_covered_subregion(const GenomicRegion& region, size_t max_coverage) override;
-    std::pair<GenomicRegion, std::vector<unsigned>>
-    find_covered_subregion(const SampleIdType& sample, const GenomicRegion& region,
-                           size_t max_coverage) override;
-    std::pair<GenomicRegion, std::vector<unsigned>>
-    find_covered_subregion(const std::vector<SampleIdType>& samples, const GenomicRegion& region,
-                           size_t max_coverage) override;
+    CoveragePair find_covered_subregion(const GenomicRegion& region, std::size_t max_coverage) override;
+    CoveragePair find_covered_subregion(const SampleIdType& sample, const GenomicRegion& region,
+                                        std::size_t max_coverage) override;
+    CoveragePair find_covered_subregion(const std::vector<SampleIdType>& samples, const GenomicRegion& region,
+                                        std::size_t max_coverage) override;
     
     SampleReadMap fetch_reads(const GenomicRegion& region) override;
-    Reads fetch_reads(const SampleIdType& sample, const GenomicRegion& region) override;
+    ReadContainer fetch_reads(const SampleIdType& sample, const GenomicRegion& region) override;
     SampleReadMap fetch_reads(const std::vector<SampleIdType>& samples, const GenomicRegion& region) override;
     
     unsigned count_reference_contigs() override;

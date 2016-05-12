@@ -23,6 +23,8 @@
 #include <random>
 #include <sstream>
 #include <chrono>
+#include <condition_variable>
+#include <mutex>
 
 #include <boost/optional.hpp>
 
@@ -850,9 +852,15 @@ namespace Octopus
             return *components.get_num_threads();
         }
         
+        // TODO: come up with a better calculation
+        
         const auto num_hardware_threads = std::thread::hardware_concurrency();
         
         if (num_hardware_threads > 0) return num_hardware_threads;
+        
+        Logging::WarningLogger log {};
+        log << "Unable to detect the number of system threads,"
+            " it may be better to run with a user number if the number of cores is known";
         
         const auto num_files = components.get_read_manager().num_files();
         
@@ -886,7 +894,8 @@ namespace Octopus
         std::deque<VcfRecord> calls;
     };
     
-    auto run(Task task, GenomeCallingComponents& components, ProgressMeter& progress_meter)
+    auto run(Task task, GenomeCallingComponents& components, ProgressMeter& progress_meter,
+             std::condition_variable& cv)
     {
         if (DEBUG_MODE) {
             Logging::DebugLogger log {};
@@ -896,12 +905,17 @@ namespace Octopus
         ContigCallingComponents contig_components {contig_name(task), components};
         
         return std::async(std::launch::async,
-                          [task = std::move(task), &progress_meter, components = std::move(contig_components)]
+                          [task = std::move(task), &progress_meter, components = std::move(contig_components),
+                           &cv]
                             () -> CompletedTask {
-                              return CompletedTask {
-                                  task,
-                                  components.caller->call(task.region, progress_meter)
-                              };
+                                CompletedTask result {
+                                    task,
+                                    components.caller->call(task.region, progress_meter)
+                                };
+                                
+                                cv.notify_all();
+                                
+                                return result;
                           });
     }
     
@@ -947,6 +961,9 @@ namespace Octopus
         ContigTaskMap pending_tasks {ContigOrder {components.get_contigs_in_output_order()}};
         
         MappableSetMap<ContigNameType, CompletedTask> buffered_tasks {};
+        
+        std::condition_variable cv {};
+        std::mutex mutex {};
         
         while (!tasks.empty()) {
             for (auto& fut : futures) {
@@ -1008,10 +1025,13 @@ namespace Octopus
                     }
                 } else if (!tasks.empty()) {
                     auto task = pop(tasks);
-                    fut = run(task, components, meter);
+                    fut = run(task, components, meter, cv);
                     pending_tasks[task.region.get_contig_name()].push(std::move(task));
                 }
             }
+            
+            std::unique_lock<std::mutex> lk {mutex};
+            cv.wait(lk);
         }
         
         pending_tasks.clear();

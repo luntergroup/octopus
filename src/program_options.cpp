@@ -216,8 +216,8 @@ namespace Octopus
             ("threads,t", po::value<unsigned>()->default_value(1),
              "Sets the number of threads used by the application, set to 0 to let the"
              " application decide the number of threads")
-            ("reference-cache-size", po::value<size_t>()->default_value(50000),
-             "The maximum number of bytes that can be used to cache reference sequence")
+            ("reference-cache-size", po::value<float>()->default_value(50),
+             "The maximum memory (in megabytes) that can be used to cache reference sequence")
             ("target-read-buffer-size", po::value<float>()->default_value(0.5),
              "Will try to limit the amount of memory (in gigabytes) occupied by reads to this amount")
             ("compress-reads", po::bool_switch()->default_value(false),
@@ -667,10 +667,12 @@ namespace Octopus
             return boost::none;
         }
         
-        const auto ref_cache_size = options.at("reference-cache-size").as<std::size_t>();
+        const auto ref_cache_size = options.at("reference-cache-size").as<float>();
+        
+        static constexpr unsigned Scale {1'000'000};
         
         return ::make_reference(*std::move(resolved_path),
-                                static_cast<ReferenceGenome::SizeType>(ref_cache_size),
+                                static_cast<ReferenceGenome::SizeType>(Scale * ref_cache_size),
                                 is_threading_allowed(options));
     }
     

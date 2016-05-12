@@ -146,9 +146,9 @@ std::size_t downsample(MappableFlatMultiSet<AlignedRead>& reads,
 {
     using std::begin; using std::end; using std::make_move_iterator;
     
-    const auto sum_reads_before_downsampling = reads.size();
+    const auto num_reads_before_downsampling = reads.size();
     
-    if (sum_reads_before_downsampling == 0) return 0;
+    if (num_reads_before_downsampling == 0) return 0;
     
     const auto regions_to_sample = find_target_coverage_regions(reads, max_coverage, min_coverage);
     
@@ -172,7 +172,7 @@ std::size_t downsample(MappableFlatMultiSet<AlignedRead>& reads,
     
     reads.insert(make_move_iterator(begin(samples)), make_move_iterator(end(samples)));
     
-    return sum_reads_before_downsampling - reads.size();
+    return num_reads_before_downsampling - reads.size();
 }
 
 // Downsampler
