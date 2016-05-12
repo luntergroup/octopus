@@ -63,8 +63,7 @@ CigarString parse_cigar_string(const std::string& cigar_string)
     }
     
     if (!digits.empty()) {
-        throw std::invalid_argument {"parse_cigar_string: could not parse all characters of "
-            + cigar_string};
+        throw std::invalid_argument {"parse_cigar_string: could not parse all characters of " + cigar_string};
     }
     
     result.shrink_to_fit();

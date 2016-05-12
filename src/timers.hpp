@@ -9,38 +9,19 @@
 #ifndef timers_h
 #define timers_h
 
-//#define BENCHMARK
+#define BENCHMARK
 
-#include <iostream>
-
-#include <boost/timer/timer.hpp> // BENCHMARK
+#include <boost/timer/timer.hpp>
 
 // variant caller timers
 extern boost::timer::cpu_timer init_timer;
 extern boost::timer::cpu_timer haplotype_generation_timer;
-extern boost::timer::cpu_timer likelihood_timer;
+extern boost::timer::cpu_timer haplotype_likelihood_timer;
 extern boost::timer::cpu_timer haplotype_fitler_timer;
-extern boost::timer::cpu_timer prior_model_timer;
 extern boost::timer::cpu_timer latent_timer;
-extern boost::timer::cpu_timer phasing_timer;
-extern boost::timer::cpu_timer allele_generator_timer;
 extern boost::timer::cpu_timer calling_timer;
-
-// population model timers
-extern boost::timer::cpu_timer genotype_generation_timer;
-extern boost::timer::cpu_timer genotype_likelihood_timer;
-extern boost::timer::cpu_timer prior_count_timer;
-extern boost::timer::cpu_timer frequency_init_timer;
-extern boost::timer::cpu_timer marginal_init_timer;
-extern boost::timer::cpu_timer posterior_init_timer;
-extern boost::timer::cpu_timer frequency_update_timer;
-extern boost::timer::cpu_timer marginal_update_timer;
-extern boost::timer::cpu_timer posterior_update_timer;
-extern boost::timer::cpu_timer em_timer;
-
-// misc timers
-extern boost::timer::cpu_timer kmer_mapping_timer;
-extern boost::timer::cpu_timer likelihood_cache_timer;
+extern boost::timer::cpu_timer phasing_timer;
+extern boost::timer::cpu_timer output_timer;
 
 extern boost::timer::cpu_timer misc_timer1;
 extern boost::timer::cpu_timer misc_timer2;
@@ -59,172 +40,8 @@ inline void pause_timer(boost::timer::cpu_timer& timer)
     #endif
 }
 
-inline void init_timers()
-{
-    init_timer.start(); init_timer.stop();
-    haplotype_generation_timer.start(); haplotype_generation_timer.stop();
-    likelihood_timer.start(); likelihood_timer.stop();
-    haplotype_fitler_timer.start(); haplotype_fitler_timer.stop();
-    prior_model_timer.start(); prior_model_timer.stop();
-    latent_timer.start(); latent_timer.stop();
-    phasing_timer.start(); phasing_timer.stop();
-    allele_generator_timer.start(); allele_generator_timer.stop();
-    calling_timer.start(); calling_timer.stop();
-    
-    genotype_generation_timer.start(); genotype_generation_timer.stop();
-    genotype_likelihood_timer.start(); genotype_likelihood_timer.stop();
-    prior_count_timer.start(); prior_count_timer.stop();
-    frequency_init_timer.start(); frequency_init_timer.stop();
-    marginal_init_timer.start(); marginal_init_timer.stop();
-    posterior_init_timer.start(); posterior_init_timer.stop();
-    frequency_update_timer.start(); frequency_update_timer.stop();
-    marginal_update_timer.start(); marginal_update_timer.stop();
-    posterior_update_timer.start(); posterior_update_timer.stop();
-    em_timer.start(); em_timer.stop();
-    
-    kmer_mapping_timer.start(); kmer_mapping_timer.stop();
-    likelihood_cache_timer.start(); likelihood_cache_timer.stop();
-    
-    misc_timer1.start(); misc_timer1.stop();
-    misc_timer2.start(); misc_timer2.stop();
-}
+void init_timers();
 
-inline void print_all_timers()
-{
-    std::cout << "init timer" << '\n';
-    std::cout << init_timer.format() << std::endl;
-    
-    std::cout << "haplotype generation timer" << '\n';
-    std::cout << haplotype_generation_timer.format() << std::endl;
-    
-    std::cout << "likelihood timer" << '\n';
-    std::cout << likelihood_timer.format() << std::endl;
-    
-    std::cout << "haplotype fitler timer" << '\n';
-    std::cout << haplotype_fitler_timer.format() << std::endl;
-    
-    std::cout << "prior model timer timer" << '\n';
-    std::cout << prior_model_timer.format() << std::endl;
-    
-    std::cout << "latent timer" << '\n';
-    std::cout << latent_timer.format() << std::endl;
-    
-    std::cout << "phasing timer" << '\n';
-    std::cout << phasing_timer.format() << std::endl;
-    
-    std::cout << "allele generator timer" << '\n';
-    std::cout << allele_generator_timer.format() << std::endl;
-    
-    std::cout << "calling timer" << '\n';
-    std::cout << calling_timer.format() << std::endl;
-    
-    std::cout << "genotype generation timer" << '\n';
-    std::cout << calling_timer.format() << std::endl;
-    
-    std::cout << "genotype likelihood timer" << '\n';
-    std::cout << genotype_likelihood_timer.format() << std::endl;
-    
-    std::cout << "prior count timer" << '\n';
-    std::cout << prior_count_timer.format() << std::endl;
-    
-    std::cout << "freqency init timer" << '\n';
-    std::cout << frequency_init_timer.format() << std::endl;
-    
-    std::cout << "marginal init timer" << '\n';
-    std::cout << marginal_init_timer.format() << std::endl;
-    
-    std::cout << "posterior init timer" << '\n';
-    std::cout << posterior_init_timer.format() << std::endl;
-    
-    std::cout << "frequency update timer" << '\n';
-    std::cout << frequency_update_timer.format() << std::endl;
-    
-    std::cout << "marginal update timer" << '\n';
-    std::cout << marginal_update_timer.format() << std::endl;
-    
-    std::cout << "posterior update timer" << '\n';
-    std::cout << posterior_update_timer.format() << std::endl;
-    
-    std::cout << "em timer" << '\n';
-    std::cout << em_timer.format() << std::endl;
-    
-    std::cout << "likelihood cache timer" << '\n';
-    std::cout << likelihood_cache_timer.format() << std::endl;
-}
-
-inline void print_caller_timers()
-{
-    std::cout << "init timer" << '\n';
-    std::cout << init_timer.format() << std::endl;
-    
-    std::cout << "haplotype generation timer" << '\n';
-    std::cout << haplotype_generation_timer.format() << std::endl;
-    
-    std::cout << "likelihood timer" << '\n';
-    std::cout << likelihood_timer.format() << std::endl;
-    
-    std::cout << "haplotype fitler timer" << '\n';
-    std::cout << haplotype_fitler_timer.format() << std::endl;
-    
-    std::cout << "prior model timer timer" << '\n';
-    std::cout << prior_model_timer.format() << std::endl;
-    
-    std::cout << "latent timer" << '\n';
-    std::cout << latent_timer.format() << std::endl;
-    
-    std::cout << "phasing timer" << '\n';
-    std::cout << phasing_timer.format() << std::endl;
-    
-    std::cout << "allele generator timer" << '\n';
-    std::cout << allele_generator_timer.format() << std::endl;
-    
-    std::cout << "calling timer" << '\n';
-    std::cout << calling_timer.format() << std::endl;
-    
-    std::cout << "kmer mapping timer" << '\n';
-    std::cout << kmer_mapping_timer.format() << std::endl;
-    
-    std::cout << "likelihood cache timer" << '\n';
-    std::cout << likelihood_cache_timer.format() << std::endl;
-    
-    std::cout << "misc timer1" << '\n';
-    std::cout << misc_timer1.format() << std::endl;
-    
-    std::cout << "misc timer2" << '\n';
-    std::cout << misc_timer2.format() << std::endl;
-}
-
-inline void print_model_timers()
-{
-    std::cout << "genotype generation timer" << '\n';
-    std::cout << calling_timer.format() << std::endl;
-    
-    std::cout << "genotype likelihood timer" << '\n';
-    std::cout << genotype_likelihood_timer.format() << std::endl;
-    
-    std::cout << "prior count timer" << '\n';
-    std::cout << prior_count_timer.format() << std::endl;
-    
-    std::cout << "freqency init timer" << '\n';
-    std::cout << frequency_init_timer.format() << std::endl;
-    
-    std::cout << "marginal init timer" << '\n';
-    std::cout << marginal_init_timer.format() << std::endl;
-    
-    std::cout << "posterior init timer" << '\n';
-    std::cout << posterior_init_timer.format() << std::endl;
-    
-    std::cout << "frequency update timer" << '\n';
-    std::cout << frequency_update_timer.format() << std::endl;
-    
-    std::cout << "marginal update timer" << '\n';
-    std::cout << marginal_update_timer.format() << std::endl;
-    
-    std::cout << "posterior update timer" << '\n';
-    std::cout << posterior_update_timer.format() << std::endl;
-    
-    std::cout << "em timer" << '\n';
-    std::cout << em_timer.format() << std::endl;
-}
+void print_all_timers();
 
 #endif /* timers_h */

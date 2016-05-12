@@ -31,7 +31,9 @@ public:
     using UnpackPolicy = IVcfReaderImpl::UnpackPolicy;
     
     VcfReader()  = default;
+    
     explicit VcfReader(Path file_path);
+    
     ~VcfReader() = default;
     
     VcfReader(const VcfReader&)            = delete;

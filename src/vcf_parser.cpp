@@ -63,34 +63,28 @@ VcfHeader VcfParser::fetch_header() const
     return header_;
 }
 
-size_t VcfParser::count_records()
+std::size_t VcfParser::count_records()
 {
     reset_vcf();
     
     return std::count_if(std::istreambuf_iterator<char>(file_), std::istreambuf_iterator<char>(),
-                         [] (char c) {
-                             return c == '\n';
-                         });
+                         [] (char c) { return c == '\n'; });
 }
 
-size_t VcfParser::count_records(const std::string& contig)
+std::size_t VcfParser::count_records(const std::string& contig)
 {
     reset_vcf();
     
     return std::count_if(std::istream_iterator<Line>(file_), std::istream_iterator<Line>(),
-                         [&contig] (const auto& line) {
-                             return is_same_contig(line, contig);
-                         });
+                         [&contig] (const auto& line) { return is_same_contig(line, contig); });
 }
 
-size_t VcfParser::count_records(const GenomicRegion& region)
+std::size_t VcfParser::count_records(const GenomicRegion& region)
 {
     reset_vcf();
     
     return std::count_if(std::istream_iterator<Line>(file_), std::istream_iterator<Line>(),
-                         [&region] (const auto& line) {
-                             return overlaps(line, region);
-                         });
+                         [&region] (const auto& line) { return overlaps(line, region); });
 }
 
 std::vector<VcfRecord> VcfParser::fetch_records(const UnpackPolicy level)
@@ -184,8 +178,9 @@ bool is_header_meta_line(const std::string& line)
 
 bool is_structured_header_line(const std::string& line)
 {
-    auto it = std::find(line.cbegin(), line.cend(), '=');
-    return it != line.cend() && std::next(it) != line.cend() && *std::next(it) == '<' && line.back() == '>';
+    auto it = std::find(std::cbegin(line), std::cend(line), '=');
+    return it != std::cend(line) && std::next(it) != std::cend(line)
+            && *std::next(it) == '<' && line.back() == '>';
 }
 
 // ##key=value
@@ -212,7 +207,8 @@ std::unordered_map<std::string, std::string> parse_fields(const std::string& fie
 {
     std::istringstream ss {fields};
     std::unordered_map<std::string, std::string> result {};
-    std::transform(std::istream_iterator<Field>(ss), std::istream_iterator<Field>(), std::inserter(result, result.begin()),
+    std::transform(std::istream_iterator<Field>(ss), std::istream_iterator<Field>(),
+                   std::inserter(result, result.begin()),
                    [] (const auto& field) { return parse_field(field); });
     return result;
 }
@@ -221,7 +217,7 @@ std::unordered_map<std::string, std::string> parse_fields(const std::string& fie
 void parse_structured_header_line(const std::string& line, VcfHeader::Builder& hb)
 {
     try {
-        auto pos = line.find_first_of('=');
+        const auto pos = line.find_first_of('=');
         auto tag = line.substr(2, pos - 2);
         hb.add_structured_field(std::move(tag), parse_fields(line.substr(pos + 2, line.length() - pos - 3)));
     } catch (...) {
@@ -243,13 +239,12 @@ void parse_header_sample_names(const std::string& line, VcfHeader::Builder& hb)
 {
     std::istringstream ss {line};
     
-    std::istream_iterator<Column> eos;
-    std::istream_iterator<Column> it {ss};
+    std::istream_iterator<Column> it {ss}, eos {};
     
     std::advance(it, 8);
     
     if (it != eos) {
-        std::advance(it, 1); // will be on FORMAT
+        std::advance(it, 1); // now on FORMAT
         
         std::vector<std::string> samples {};
         std::copy(it, eos, std::back_inserter(samples));
@@ -265,8 +260,7 @@ VcfHeader parse_header(std::ifstream& vcf_file)
     
     VcfHeader::Builder hb {};
     
-    std::string line {};
-    
+    std::string line;
     std::getline(vcf_file, line);
     
     if (!is_header_meta_line(line)) {
@@ -303,11 +297,11 @@ bool overlaps(const std::string& line, const GenomicRegion& region)
     
     std::advance(it, 1); // POS
     
-    auto begin = std::stol(it->data);
+    const auto begin = std::stol(it->data);
     
     std::advance(it, 2); // REF
     
-    auto end = begin + static_cast<long>(it->data.length());
+    const auto end = begin + static_cast<long>(it->data.length());
     
     return (std::min(static_cast<long>(region.get_end()), end) -
                 std::max(static_cast<long>(region.get_begin()), begin)) > 0;
@@ -330,7 +324,7 @@ std::vector<std::string> split(const std::string& str, char delim = ',')
 void parse_info(const std::string& column, VcfRecord::Builder& rb)
 {
     for (auto& f : split(column, ';')) {
-        auto pos = f.find_first_of('=');
+        const auto pos = f.find_first_of('=');
         rb.add_info(f.substr(0, pos), split(f.substr(pos + 1), ','));
     }
 }
@@ -342,12 +336,13 @@ void parse_sample(const std::string& column, const VcfRecord::SampleIdType& samp
     
     if (format.front() == "GT") {
         const std::string& genotype = values.front();
-        bool is_phased {(genotype.find_first_of('|') != std::string::npos)};
+        const bool is_phased {(genotype.find_first_of('|') != std::string::npos)};
+        
         auto alleles = split(genotype, (is_phased) ? '|' : '/');
         
         std::vector<unsigned> allele_numbers {};
         allele_numbers.reserve(alleles.size());
-        std::transform(alleles.cbegin(), alleles.cend(), std::back_inserter(allele_numbers),
+        std::transform(std::cbegin(alleles), std::cend(alleles), std::back_inserter(allele_numbers),
                        [] (const std::string& a) { return static_cast<unsigned>(std::stoul(a)); });
         
         rb.add_genotype(sample, allele_numbers,
@@ -364,23 +359,22 @@ void parse_sample(const std::string& column, const VcfRecord::SampleIdType& samp
 
 VcfRecord parse_record(const std::string& line, const std::vector<VcfRecord::SampleIdType>& samples)
 {
-    VcfRecord::Builder rb {};
-    
     std::istringstream ss {line};
     
-    std::istream_iterator<Column> eos;
-    std::istream_iterator<Column> it {ss};
+    std::istream_iterator<Column> it {ss}, eos {};
+    
+    VcfRecord::Builder rb {};
     
     rb.set_chromosome(it->data);
-    std::advance(it, 1);
+    ++it;
     rb.set_position(static_cast<VcfRecord::SizeType>(std::stol(it->data)));
-    std::advance(it, 1);
+    ++it;
     rb.set_id(it->data);
-    std::advance(it, 1);
+    ++it;
     rb.set_ref_allele(it->data);
-    std::advance(it, 1);
+    ++it;
     rb.set_alt_alleles(split(it->data, ','));
-    std::advance(it, 1);
+    ++it;
     
     if (it->data == ".") {
         rb.set_quality(0);
@@ -392,19 +386,18 @@ VcfRecord parse_record(const std::string& line, const std::vector<VcfRecord::Sam
         }
     }
     
-    
-    std::advance(it, 1);
+    ++it;
     rb.set_filters(split(it->data, ':'));
-    std::advance(it, 1);
+    ++it;
     parse_info(it->data, rb);
+    ++it;
     
-    std::advance(it, 1);
     if (!samples.empty() && it != eos) {
         auto format = split(it->data, ':');
-        std::advance(it, 1);
+        ++it;
         for (const auto& sample : samples) {
             parse_sample(it->data, sample, format, rb); // set after so can move
-            std::advance(it, 1);
+            ++it;
         }
         rb.set_format(std::move(format));
     }

@@ -356,11 +356,15 @@ VariantCaller::call(const GenomicRegion& call_region, ProgressMeter& progress_me
             stream(*debug_log_) << "There are " << count_reads(active_reads) << " active reads";
         }
         
+        resume_timer(haplotype_fitler_timer);
         remove_duplicate_haplotypes(haplotypes);
+        pause_timer(haplotype_fitler_timer);
         
         populate(haplotype_likelihoods, active_region, haplotypes, candidates, active_reads);
         
+        resume_timer(haplotype_fitler_timer);
         auto removed_haplotypes = filter(haplotypes, haplotype_likelihoods);
+        pause_timer(haplotype_fitler_timer);
         
         if (haplotypes.empty()) {
             // This can only happen if all haplotypes have equal likelihood
@@ -369,9 +373,9 @@ VariantCaller::call(const GenomicRegion& call_region, ProgressMeter& progress_me
             continue;
         }
         
-        resume_timer(likelihood_timer);
+        resume_timer(haplotype_likelihood_timer);
         haplotype_likelihoods.erase(removed_haplotypes);
-        pause_timer(likelihood_timer);
+        pause_timer(haplotype_likelihood_timer);
         
         resume_timer(haplotype_generation_timer);
         haplotype_generator.remove(removed_haplotypes);
@@ -421,12 +425,13 @@ VariantCaller::call(const GenomicRegion& call_region, ProgressMeter& progress_me
             
             resume_timer(calling_timer);
             auto variant_calls = wrap(this->call_variants(active_candidates, *caller_latents));
+            pause_timer(calling_timer);
             
+            resume_timer(output_timer);
             set_phasing(variant_calls, *phase_set);
-            
             remove_calls_outside_call_region(variant_calls, call_region);
             append_calls(result, std::move(variant_calls), record_factory);
-            pause_timer(calling_timer);
+            pause_timer(output_timer);
             
             auto remaining_active_region = right_overhang_region(active_region, phase_set->region);
             
@@ -465,10 +470,9 @@ VariantCaller::call(const GenomicRegion& call_region, ProgressMeter& progress_me
             std::vector<GenomicRegion> called_regions;
             
             if (!active_candidates.empty()) {
-                resume_timer(calling_timer);
-                
                 if (debug_log_) stream(*debug_log_) << "Calling variants in region " << uncalled_region;
                 
+                resume_timer(calling_timer);
                 auto variant_calls = wrap(this->call_variants(active_candidates, *caller_latents));
                 pause_timer(calling_timer);
                 
@@ -483,12 +487,11 @@ VariantCaller::call(const GenomicRegion& call_region, ProgressMeter& progress_me
                     
                     if (debug_log_) debug::print_phase_sets(stream(*debug_log_), phasings);
                     
+                    resume_timer(output_timer);
                     set_phasing(variant_calls, phasings);
-                    
-                    resume_timer(calling_timer);
                     remove_calls_outside_call_region(variant_calls, call_region);
                     append_calls(result, std::move(variant_calls), record_factory);
-                    pause_timer(calling_timer);
+                    pause_timer(output_timer);
                 }
             }
             
@@ -630,9 +633,9 @@ void VariantCaller::populate(HaplotypeLikelihoodCache& haplotype_likelihoods,
         }
     }
     
-    resume_timer(likelihood_timer);
+    resume_timer(haplotype_likelihood_timer);
     haplotype_likelihoods.populate(active_reads, haplotypes, std::move(flank_state));
-    pause_timer(likelihood_timer);
+    pause_timer(haplotype_likelihood_timer);
     
     if (TRACE_MODE) {
         Logging::TraceLogger trace_log {};

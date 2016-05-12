@@ -36,7 +36,9 @@ public:
     static constexpr char SKIPPED         {'N'};
     
     CigarOperation() = default;
+    
     explicit CigarOperation(SizeType size, char type) noexcept;
+    
     ~CigarOperation() = default;
     
     CigarOperation(const CigarOperation&)            = default;

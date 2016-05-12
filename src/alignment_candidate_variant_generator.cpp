@@ -157,11 +157,9 @@ void AlignmentCandidateVariantGenerator::add_read(const AlignedRead& read)
             {
                 region = GenomicRegion {read_contig, ref_index, ref_index + op_size};
                 
-                if (count_bad_qualities(read.get_qualities(), read_index, op_size,
-                                        min_base_quality_) < op_size) {
-                    auto removed_sequence = reference_.get().get_sequence(region);
-                    add_candidate(std::move(region), std::move(removed_sequence), "");
-                }
+                auto removed_sequence = reference_.get().get_sequence(region);
+                
+                add_candidate(std::move(region), std::move(removed_sequence), "");
                 
                 ref_index += op_size;
                 

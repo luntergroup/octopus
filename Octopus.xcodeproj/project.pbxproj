@@ -1540,9 +1540,11 @@
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = YES;
 				CLANG_CXX_LANGUAGE_STANDARD = "c++14";
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				FRAMEWORK_SEARCH_PATHS = "$(inherited)";
 				GCC_INPUT_FILETYPE = sourcecode.cpp.cpp;
 				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_UNROLL_LOOPS = NO;
 				HEADER_SEARCH_PATHS = (
 					"$(inherited)",
 					/usr/local/Cellar/boost/1.60.0_1/include,
@@ -1557,12 +1559,11 @@
 					"/usr/local/Cellar/cpp-netlib/0.11.1_1/lib",
 					/usr/local/Cellar/boost/1.60.0_1/lib,
 				);
-				LLVM_LTO = YES;
+				LLVM_LTO = NO;
 				OTHER_CPLUSPLUSFLAGS = (
 					"$(OTHER_CFLAGS)",
 					"-mavx2",
 					"-lpthread",
-					"-g",
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
@@ -1575,7 +1576,8 @@
 				CLANG_CXX_LANGUAGE_STANDARD = "c++14";
 				FRAMEWORK_SEARCH_PATHS = "$(inherited)";
 				GCC_INPUT_FILETYPE = sourcecode.cpp.cpp;
-				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_OPTIMIZATION_LEVEL = 3;
+				GCC_UNROLL_LOOPS = YES;
 				HEADER_SEARCH_PATHS = (
 					"$(inherited)",
 					/usr/local/Cellar/boost/1.60.0_1/include,
@@ -1595,7 +1597,6 @@
 					"$(OTHER_CFLAGS)",
 					"-mavx2",
 					"-lpthread",
-					"-g",
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};

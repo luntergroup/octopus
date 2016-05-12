@@ -696,7 +696,7 @@ namespace Octopus
         }
         
         #ifdef BENCHMARK
-        print_caller_timers();
+        print_all_timers();
         #endif
     }
     

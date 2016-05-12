@@ -28,6 +28,7 @@ class VcfParser : public IVcfReaderImpl
 {
 public:
     VcfParser() = delete;
+    
     explicit VcfParser(const fs::path& file_path);
     
     VcfParser(const VcfParser&)            = delete;
@@ -39,9 +40,9 @@ public:
     
     VcfHeader fetch_header() const override;
     
-    size_t count_records() override;
-    size_t count_records(const std::string& contig) override;
-    size_t count_records(const GenomicRegion& region) override;
+    std::size_t count_records() override;
+    std::size_t count_records(const std::string& contig) override;
+    std::size_t count_records(const GenomicRegion& region) override;
     
     std::vector<VcfRecord> fetch_records(UnpackPolicy level) override;
     std::vector<VcfRecord> fetch_records(const std::string& contig, UnpackPolicy level) override;
