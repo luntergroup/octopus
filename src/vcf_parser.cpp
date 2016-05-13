@@ -293,7 +293,7 @@ bool overlaps(const std::string& line, const GenomicRegion& region)
     
     std::istream_iterator<Column> it {ss};
     
-    if (it->data != region.get_contig_name()) return false; // CHROM
+    if (it->data != region.contig_name()) return false; // CHROM
     
     std::advance(it, 1); // POS
     
@@ -303,8 +303,8 @@ bool overlaps(const std::string& line, const GenomicRegion& region)
     
     const auto end = begin + static_cast<long>(it->data.length());
     
-    return (std::min(static_cast<long>(region.get_end()), end) -
-                std::max(static_cast<long>(region.get_begin()), begin)) > 0;
+    return (std::min(static_cast<long>(region.end()), end) -
+                std::max(static_cast<long>(region.begin()), begin)) > 0;
 }
 
 std::vector<std::string> split(const std::string& str, char delim = ',')

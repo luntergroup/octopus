@@ -130,8 +130,8 @@ namespace detail
     void extend_tree(InputIt first, InputIt last, HaplotypeTree& tree, Variant)
     {
         std::for_each(first, last, [&] (const auto& variant) {
-            tree.extend(variant.get_ref_allele());
-            tree.extend(variant.get_alt_allele());
+            tree.extend(variant.ref_allele());
+            tree.extend(variant.alt_allele());
         });
     }
     
@@ -160,8 +160,8 @@ namespace detail
                            const unsigned max_haplotypes, Variant)
     {
         return std::find_if(first, last, [&] (const auto& variant) {
-            tree.extend(variant.get_ref_allele());
-            tree.extend(variant.get_alt_allele());
+            tree.extend(variant.ref_allele());
+            tree.extend(variant.alt_allele());
             return tree.num_haplotypes() >= max_haplotypes;
         });
     }

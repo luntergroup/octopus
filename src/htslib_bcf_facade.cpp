@@ -34,7 +34,7 @@ char* convert(const std::string& source)
     return result;
 }
 
-std::vector<std::string> get_samples(const bcf_hdr_t* header)
+std::vector<std::string> extract_samples(const bcf_hdr_t* header)
 {
     std::vector<std::string> result {};
     
@@ -92,7 +92,7 @@ samples_ {}
                 throw std::runtime_error {"HtslibBcfFacade: could not make header for file " + file_path_.string()};
             }
             
-            samples_ = get_samples(header_.get());
+            samples_ = extract_samples(header_.get());
         } else {
             throw std::runtime_error {"HtslibBcfFacade: " + file_path_.string() + " does not exist"};
         }
@@ -102,7 +102,7 @@ samples_ {}
     }
 }
 
-std::unordered_map<std::string, std::string> get_format(const bcf_hrec_t* line);
+std::unordered_map<std::string, std::string> extract_format(const bcf_hrec_t* line);
 
 bool HtslibBcfFacade::is_header_written() const noexcept
 {
@@ -123,7 +123,7 @@ VcfHeader HtslibBcfFacade::fetch_header() const
                               result.add_basic_field(record->key, record->value);
                               break;
                           default: // TAG=<A=..,B=..>
-                              result.add_structured_field(record->key, get_format(record));
+                              result.add_structured_field(record->key, extract_format(record));
                               break;
                       }
                   });
@@ -357,7 +357,7 @@ void HtslibBcfFacade::write_header(const VcfHeader& header)
     
     header_.reset(hdr);
     
-    samples_ = get_samples(header_.get());
+    samples_ = extract_samples(header_.get());
 }
 
 void set_chrom(const bcf_hdr_t* header, bcf1_t* record, const std::string& chrom);
@@ -373,7 +373,7 @@ void set_samples(const bcf_hdr_t* header, bcf1_t* dest, const VcfRecord& source,
 
 void HtslibBcfFacade::write_record(const VcfRecord& record)
 {
-    const auto& contig = record.get_chromosome_name();
+    const auto& contig = record.chromosome_name();
     
     if (bcf_hdr_get_hrec(header_.get(), BCF_HL_CTG, "ID", contig.c_str(), nullptr) == nullptr) {
         throw std::runtime_error {"required contig header line missing for contig \"" + contig + "\""};
@@ -382,13 +382,13 @@ void HtslibBcfFacade::write_record(const VcfRecord& record)
     auto hts_record = bcf_init();
     
     set_chrom(header_.get(), hts_record, contig);
-    set_pos(hts_record, record.get_position());
-    set_id(hts_record, record.get_id());
-    set_alleles(header_.get(), hts_record, record.get_ref_allele(), record.get_alt_alleles());
-    if (record.get_quality()) {
-        set_qual(hts_record, *record.get_quality());
+    set_pos(hts_record, record.position());
+    set_id(hts_record, record.id());
+    set_alleles(header_.get(), hts_record, record.ref_allele(), record.alt_alleles());
+    if (record.quality()) {
+        set_qual(hts_record, *record.quality());
     }
-    set_filters(header_.get(), hts_record, record.get_filters());
+    set_filters(header_.get(), hts_record, record.filters());
     set_info(header_.get(), hts_record, record);
     
     if (record.num_samples() > 0) {
@@ -455,7 +455,7 @@ bool operator!=(const HtslibBcfFacade::RecordIterator& lhs, const HtslibBcfFacad
 
 // private and non-member methods
 
-std::unordered_map<std::string, std::string> get_format(const bcf_hrec_t* line)
+std::unordered_map<std::string, std::string> extract_format(const bcf_hrec_t* line)
 {
     std::unordered_map<std::string, std::string> result {};
     result.reserve(line->nkeys);
@@ -469,7 +469,7 @@ std::unordered_map<std::string, std::string> get_format(const bcf_hrec_t* line)
     return result;
 }
 
-auto get_chrom(const bcf_hdr_t* header, const bcf1_t* record)
+auto extract_chrom(const bcf_hdr_t* header, const bcf1_t* record)
 {
     return bcf_hdr_id2name(header, record->rid);
 }
@@ -479,7 +479,7 @@ void set_chrom(const bcf_hdr_t* header, bcf1_t* record, const std::string& chrom
     record->rid = bcf_hdr_name2id(header, chrom.c_str());
 }
 
-auto get_pos(const bcf1_t* record)
+auto extract_pos(const bcf1_t* record)
 {
     return static_cast<GenomicRegion::SizeType>(record->pos);
 }
@@ -489,7 +489,7 @@ void set_pos(bcf1_t* record, const VcfRecord::SizeType pos)
     record->pos = static_cast<std::uint32_t>(pos);
 }
 
-auto get_id(const bcf1_t* record)
+auto extract_id(const bcf1_t* record)
 {
     return record->d.id;
 }
@@ -499,7 +499,7 @@ void set_id(bcf1_t* record, const std::string& id)
     record->d.id = convert(id);
 }
 
-auto get_ref(const bcf1_t* record)
+auto extract_ref(const bcf1_t* record)
 {
     return record->d.allele[0];
 }
@@ -519,7 +519,7 @@ void set_alleles(const bcf_hdr_t* header, bcf1_t* record, const VcfRecord::Seque
     bcf_update_alleles(header, record, alleles.data(), static_cast<int>(num_alleles));
 }
 
-auto get_alt(const bcf1_t* record)
+auto extract_alt(const bcf1_t* record)
 {
     const auto num_alleles = record->n_allele;
     
@@ -533,7 +533,7 @@ auto get_alt(const bcf1_t* record)
     return result;
 }
 
-boost::optional<VcfRecord::QualityType> get_qual(const bcf1_t* record)
+boost::optional<VcfRecord::QualityType> extract_qual(const bcf1_t* record)
 {
     if (std::isnan(record->qual)) {
         return boost::none;
@@ -546,7 +546,7 @@ void set_qual(bcf1_t* record, const VcfRecord::QualityType qual)
     record->qual = (qual == -0) ? 0 : static_cast<float>(qual);
 }
 
-auto get_filter(const bcf_hdr_t* header, const bcf1_t* record)
+auto extract_filter(const bcf_hdr_t* header, const bcf1_t* record)
 {
     std::vector<VcfRecord::KeyType> result {};
     result.reserve(record->d.n_flt);
@@ -565,7 +565,7 @@ void set_filters(const bcf_hdr_t* header, bcf1_t* record, const std::vector<std:
     }
 }
 
-auto get_info(const bcf_hdr_t* header, bcf1_t* record)
+auto extract_info(const bcf_hdr_t* header, bcf1_t* record)
 {
     std::unordered_map<VcfRecord::KeyType, std::vector<std::string>> result {};
     result.reserve(record->n_info);
@@ -634,8 +634,8 @@ auto get_info(const bcf_hdr_t* header, bcf1_t* record)
 
 void set_info(const bcf_hdr_t* header, bcf1_t* dest, const VcfRecord& source)
 {
-    for (const auto& key : source.get_info_keys()) {
-        const auto& values    = source.get_info_value(key);
+    for (const auto& key : source.info_keys()) {
+        const auto& values    = source.info_value(key);
         const auto num_values = static_cast<int>(values.size());
         
         switch (bcf_hdr_id2type(header, BCF_HL_INFO, bcf_hdr_id2int(header, BCF_DT_ID, key.c_str()))) {
@@ -677,7 +677,7 @@ bool has_samples(const bcf_hdr_t* header)
     return bcf_hdr_nsamples(header) > 0;
 }
 
-auto get_format(const bcf_hdr_t* header, const bcf1_t* record)
+auto extract_format(const bcf_hdr_t* header, const bcf1_t* record)
 {
     std::vector<VcfRecord::KeyType> result {};
     result.reserve(record->n_fmt);
@@ -689,7 +689,7 @@ auto get_format(const bcf_hdr_t* header, const bcf1_t* record)
     return result;
 }
 
-auto get_samples(const bcf_hdr_t* header, bcf1_t* record, const std::vector<VcfRecord::KeyType>& format)
+auto extract_samples(const bcf_hdr_t* header, bcf1_t* record, const std::vector<VcfRecord::KeyType>& format)
 {
     const auto num_samples = record->n_sample;
     
@@ -789,11 +789,11 @@ void set_samples(const bcf_hdr_t* header, bcf1_t* dest, const VcfRecord& source,
     
     const auto num_samples = static_cast<int>(source.num_samples());
     
-    const auto& alt_alleles = source.get_alt_alleles();
+    const auto& alt_alleles = source.alt_alleles();
     
     std::vector<VcfRecord::SequenceType> alleles {};
     alleles.reserve(alt_alleles.size() + 1);
-    alleles.push_back(source.get_ref_allele());
+    alleles.push_back(source.ref_allele());
     alleles.insert(std::end(alleles), std::cbegin(alt_alleles), std::cend(alt_alleles));
     
     if (source.has_genotypes()) {
@@ -817,7 +817,7 @@ void set_samples(const bcf_hdr_t* header, bcf1_t* dest, const VcfRecord& source,
         bcf_update_genotypes(header, dest, genotype.data(), ngt);
     }
     
-    const auto& format = source.get_format();
+    const auto& format = source.format();
     
     for (const auto& key : format) {
         if (key == "GT") continue;
@@ -878,18 +878,18 @@ VcfRecord HtslibBcfFacade::fetch_record(const bcf_srs_t* sr, UnpackPolicy level)
     
     bcf_unpack(result, (level == UnpackPolicy::All) ? BCF_UN_ALL : BCF_UN_SHR);
     
-    auto chrom  = get_chrom(header_.get(), result);
-    auto pos    = get_pos(result);
-    auto id     = get_id(result);
-    auto ref    = get_ref(result);
-    auto alt    = get_alt(result);
-    auto qual   = get_qual(result);
-    auto filter = get_filter(header_.get(), result);
-    auto info   = get_info(header_.get(), result);
+    auto chrom  = extract_chrom(header_.get(), result);
+    auto pos    = extract_pos(result);
+    auto id     = extract_id(result);
+    auto ref    = extract_ref(result);
+    auto alt    = extract_alt(result);
+    auto qual   = extract_qual(result);
+    auto filter = extract_filter(header_.get(), result);
+    auto info   = extract_info(header_.get(), result);
     
     if (level == UnpackPolicy::All && has_samples(header_.get())) {
-        auto format  = get_format(header_.get(), result);
-        auto samples = get_samples(header_.get(), result, format);
+        auto format  = extract_format(header_.get(), result);
+        auto samples = extract_samples(header_.get(), result, format);
         
         return VcfRecord {
             chrom, pos, std::move(id), std::move(ref), std::move(alt), qual,
@@ -915,18 +915,18 @@ HtslibBcfFacade::fetch_records(bcf_srs_t* sr, UnpackPolicy level,  const size_t 
         
         bcf_unpack(record, (level == UnpackPolicy::All) ? BCF_UN_ALL : BCF_UN_SHR);
         
-        auto chrom  = get_chrom(header_.get(), record);
-        auto pos    = get_pos(record);
-        auto id     = get_id(record);
-        auto ref    = get_ref(record);
-        auto alt    = get_alt(record);
-        auto qual   = get_qual(record);
-        auto filter = get_filter(header_.get(), record);
-        auto info   = get_info(header_.get(), record);
+        auto chrom  = extract_chrom(header_.get(), record);
+        auto pos    = extract_pos(record);
+        auto id     = extract_id(record);
+        auto ref    = extract_ref(record);
+        auto alt    = extract_alt(record);
+        auto qual   = extract_qual(record);
+        auto filter = extract_filter(header_.get(), record);
+        auto info   = extract_info(header_.get(), record);
         
         if (level == UnpackPolicy::All && has_samples(header_.get())) {
-            auto format  = get_format(header_.get(), record);
-            auto samples = get_samples(header_.get(), record, format);
+            auto format  = extract_format(header_.get(), record);
+            auto samples = extract_samples(header_.get(), record, format);
             result.emplace_back(chrom, pos, std::move(id), std::move(ref), std::move(alt), qual,
                                 std::move(filter), std::move(info), std::move(format),
                                 std::move(samples.first), std::move(samples.second));

@@ -59,7 +59,7 @@ namespace detail
         {
             bool operator()(const AlignedRead& read) const noexcept
             {
-                return read.get_mapping_quality() == 0;
+                return read.mapping_quality() == 0;
             }
         };
     } // namespace
@@ -242,7 +242,7 @@ namespace detail
         std::vector<double> qualities(reads.size());
         
         std::transform(std::cbegin(reads), std::cend(reads), std::begin(qualities),
-                       [] (const auto& read) { return static_cast<double>(read.get_mapping_quality()); });
+                       [] (const auto& read) { return static_cast<double>(read.mapping_quality()); });
         
         return Maths::rmq<double>(qualities);
     }
@@ -257,7 +257,7 @@ namespace detail
         std::vector<double> qualities(size(overlapped));
         
         std::transform(std::cbegin(overlapped), std::cend(overlapped), std::begin(qualities),
-                       [] (const auto& read) { return static_cast<double>(read.get_mapping_quality()); });
+                       [] (const auto& read) { return static_cast<double>(read.mapping_quality()); });
         
         return Maths::rmq<double>(qualities);
     }
@@ -271,7 +271,7 @@ namespace detail
         qualities.reserve(count_base_pairs(reads, NonMapTag {}));
         
         for (const auto& read : reads) {
-            for (const auto quality : read.get_qualities()) {
+            for (const auto quality : read.qualities()) {
                 qualities.push_back(static_cast<double>(quality));
             }
         }
@@ -290,7 +290,7 @@ namespace detail
         qualities.reserve(count_base_pairs(reads, region, NonMapTag {}));
         
         std::for_each(std::cbegin(overlapped), std::cend(overlapped), [&qualities] (const auto& read) {
-            for (const auto quality : read.get_qualities()) {
+            for (const auto quality : read.qualities()) {
                 qualities.push_back(static_cast<double>(quality));
             }
         });
@@ -568,7 +568,7 @@ namespace detail
         for (const auto& sample_reads : reads) {
             std::transform(std::cbegin(sample_reads.second), std::cend(sample_reads.second),
                            std::back_inserter(qualities), [] (const auto& read) {
-                               return static_cast<double>(read.get_mapping_quality());
+                               return static_cast<double>(read.mapping_quality());
                            });
         }
         
@@ -586,7 +586,7 @@ namespace detail
             
             std::transform(std::cbegin(overlapped), std::cend(overlapped),
                            std::back_inserter(qualities), [] (const auto& read) {
-                               return static_cast<double>(read.get_mapping_quality());
+                               return static_cast<double>(read.mapping_quality());
                            });
         }
         
@@ -601,7 +601,7 @@ namespace detail
         
         for (const auto& sample_reads : reads) {
             for (const auto& read : sample_reads.second) {
-                for (const auto quality : read.get_qualities()) {
+                for (const auto quality : read.qualities()) {
                     qualities.push_back(static_cast<double>(quality));
                 }
             }
@@ -621,7 +621,7 @@ namespace detail
             
             std::for_each(std::cbegin(overlapped), std::cend(overlapped),
                           [&qualities] (const auto& read) {
-                              for (const auto quality : read.get_qualities()) {
+                              for (const auto quality : read.qualities()) {
                                   qualities.push_back(static_cast<double>(quality));
                               }
                           });
@@ -891,12 +891,12 @@ namespace detail
         
         const auto position_coverages = positional_coverage(reads, region);
         
-        const auto first_position = region_begin(region);
+        const auto first_position = mapped_begin(region);
         const auto num_positions  = region_size(region);
         
         for (const auto& read : reads) {
-            auto first = std::next(std::cbegin(position_coverages), (region_begin(read) <= first_position) ? 0 : region_begin(read) - first_position);
-            auto last  = std::next(std::cbegin(position_coverages), std::min(get_end(read) - first_position, num_positions));
+            auto first = std::next(std::cbegin(position_coverages), (mapped_begin(read) <= first_position) ? 0 : mapped_begin(read) - first_position);
+            auto last  = std::next(std::cbegin(position_coverages), std::min(end(read) - first_position, num_positions));
             result.emplace(read, *f(first, last));
         }
         
@@ -947,7 +947,7 @@ find_high_coverage_regions(const T& reads, const GenomicRegion& region,
         
         high_range_last = std::find_if_not(high_range_first, last, is_high_coverage);
         
-        high_range_begin = region_begin(region) + static_cast<SizeType>(std::distance(first, high_range_first));
+        high_range_begin = mapped_begin(region) + static_cast<SizeType>(std::distance(first, high_range_first));
         high_range_end   = high_range_begin + static_cast<SizeType>(std::distance(high_range_first, high_range_last));
         
         result.emplace_back(contig_name(region), high_range_begin, high_range_end);
@@ -993,7 +993,7 @@ std::vector<GenomicRegion> find_uniform_coverage_regions(const T& reads, const G
     
     const auto contig = contig_name(region);
     
-    auto begin = region_begin(region);
+    auto begin = mapped_begin(region);
     auto end   = begin;
     
     auto previous_coverage = coverages.front();

@@ -28,7 +28,7 @@
 //    
 //    auto a_region = parse_region("4:3076657-3076660", human);
 //    
-//    auto the_sequence = human.get_sequence(a_region);
+//    auto the_sequence = human.fetch_sequence(a_region);
 //    
 //    BOOST_CHECK(the_sequence == "CAG");
 //    

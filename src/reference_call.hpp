@@ -30,7 +30,7 @@ namespace Octopus
         ReferenceCall(ReferenceCall&&)                 = default;
         ReferenceCall& operator=(ReferenceCall&&)      = default;
         
-        const GenomicRegion& get_region() const noexcept override;
+        const GenomicRegion& mapped_region() const noexcept override;
         const Allele& get_reference() const noexcept override;
         
         void replace(const Allele& old, Allele replacement) override;

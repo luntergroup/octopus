@@ -36,7 +36,7 @@
 //    ReferenceGenome reference(a_factory.make(human_reference_fasta));
 //    
 //    auto f_ref = [&reference] () {
-//        reference.get_sequence(GenomicRegion("5", 100000, 100100));
+//        reference.fetch_sequence(GenomicRegion("5", 100000, 100100));
 //    };
 //    
 //    auto with_vptr = benchmark<std::chrono::nanoseconds>(f_ref, 10).count();
@@ -63,22 +63,22 @@
 //    
 //    std::vector<GenomicRegion> regions {region1, region2, region3, region4, region5, region6};
 //    
-//    human_cached.get_sequence(region1);
-//    human_cached.get_sequence(region2);
-//    human_cached.get_sequence(region3);
-//    human_cached.get_sequence(region4);
-//    human_cached.get_sequence(region5);
-//    human_cached.get_sequence(region6);
+//    human_cached.sequence(region1);
+//    human_cached.sequence(region2);
+//    human_cached.sequence(region3);
+//    human_cached.sequence(region4);
+//    human_cached.sequence(region5);
+//    human_cached.sequence(region6);
 //    
 //    auto f_normal = [&human_normal, &regions] () {
 //        for (const auto& region : regions) {
-//            human_normal.get_sequence(region);
+//            human_normal.sequence(region);
 //        }
 //    };
 //    
 //    auto f_cached = [&human_cached, &regions] () {
 //        for (const auto& region : regions) {
-//            human_cached.get_sequence(region);
+//            human_cached.sequence(region);
 //        }
 //    };
 //    

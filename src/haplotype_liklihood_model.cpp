@@ -80,9 +80,9 @@ double log_probability(const AlignedRead& read, const Haplotype& haplotype,
                       if (is_in_range(position, read, haplotype)) {
                           has_in_range_mapping_position = true;
                           
-                          auto cur = PairHMM::align_around_offset(haplotype.get_sequence(),
-                                                                  read.get_sequence(),
-                                                                  read.get_qualities(),
+                          auto cur = PairHMM::align_around_offset(haplotype.sequence(),
+                                                                  read.sequence(),
+                                                                  read.qualities(),
                                                                   gap_open_penalities,
                                                                   position,
                                                                   model);
@@ -96,8 +96,8 @@ double log_probability(const AlignedRead& read, const Haplotype& haplotype,
     if (!is_original_position_mapped && is_in_range(original_mapping_position, read, haplotype)) {
         has_in_range_mapping_position = true;
         
-        auto cur = PairHMM::align_around_offset(haplotype.get_sequence(), read.get_sequence(),
-                                                read.get_qualities(), gap_open_penalities,
+        auto cur = PairHMM::align_around_offset(haplotype.sequence(), read.sequence(),
+                                                read.qualities(), gap_open_penalities,
                                                 original_mapping_position, model);
         
         if (cur > max_log_probability) {
@@ -112,9 +112,9 @@ double log_probability(const AlignedRead& read, const Haplotype& haplotype,
         
         const auto final_mapping_position = original_mapping_position - min_shift;
         
-        max_log_probability = PairHMM::align_around_offset(haplotype.get_sequence(),
-                                                           read.get_sequence(),
-                                                           read.get_qualities(),
+        max_log_probability = PairHMM::align_around_offset(haplotype.sequence(),
+                                                           read.sequence(),
+                                                           read.qualities(),
                                                            gap_open_penalities,
                                                            final_mapping_position,
                                                            model);

@@ -57,7 +57,7 @@ namespace Octopus {
             
             auto reference_allele = make_reference_allele(position, reference_);
             
-            Allele mutation {position, reverse_complement_copy(reference_allele.get_sequence())};
+            Allele mutation {position, reverse_complement_copy(reference_allele.sequence())};
             
             result.emplace_back(reference_allele, mutation);
         }

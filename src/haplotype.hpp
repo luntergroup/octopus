@@ -69,16 +69,16 @@ public:
     Haplotype(Haplotype&&)                 = default;
     Haplotype& operator=(Haplotype&&)      = default;
     
-    const GenomicRegion& get_region() const;
+    const GenomicRegion& mapped_region() const;
     
     bool contains(const ContigAllele& allele) const;
     bool contains(const Allele& allele) const;
     bool contains_exact(const Allele& allele) const;
     bool contains_exact(const ContigAllele& allele) const;
     
-    SequenceType get_sequence(const ContigRegion& region) const;
-    SequenceType get_sequence(const GenomicRegion& region) const;
-    const SequenceType& get_sequence() const noexcept;
+    SequenceType sequence(const ContigRegion& region) const;
+    SequenceType sequence(const GenomicRegion& region) const;
+    const SequenceType& sequence() const noexcept;
     
     SizeType sequence_size(const ContigRegion& region) const;
     SizeType sequence_size(const GenomicRegion& region) const;
@@ -123,7 +123,7 @@ Haplotype::Haplotype(R&& region, const ReferenceGenome& reference)
 region_ {std::forward<R>(region)},
 explicit_alleles_ {},
 explicit_allele_region_ {},
-cached_sequence_ {reference.get_sequence(region_)},
+cached_sequence_ {reference.fetch_sequence(region_)},
 cached_hash_ {std::hash<SequenceType>()(cached_sequence_)},
 reference_ {reference}
 {}
@@ -133,7 +133,7 @@ Haplotype::Haplotype(R&& region, S&& sequence, const ReferenceGenome& reference)
 :
 region_ {std::forward<R>(region)},
 explicit_alleles_ {},
-explicit_allele_region_ {region_.get_contig_region()},
+explicit_allele_region_ {region_.contig_region()},
 cached_sequence_ {std::forward<S>(sequence)},
 cached_hash_ {std::hash<SequenceType>()(cached_sequence_)},
 reference_ {reference}
@@ -148,7 +148,7 @@ namespace detail
     void append(T& result, const ReferenceGenome& reference,
                 const GenomicRegion::ContigNameType& contig, const ContigRegion& region)
     {
-        result.append(reference.get_sequence(GenomicRegion {contig, region}));
+        result.append(reference.fetch_sequence(GenomicRegion {contig, region}));
     }
 }
 
@@ -172,17 +172,17 @@ reference_ {reference}
                                              return curr + ::sequence_size(allele);
                                          });
         
-        const auto lhs_reference_region = left_overhang_region(region_.get_contig_region(),
+        const auto lhs_reference_region = left_overhang_region(region_.contig_region(),
                                                                explicit_allele_region_);
         
-        const auto rhs_reference_region = right_overhang_region(region_.get_contig_region(),
+        const auto rhs_reference_region = right_overhang_region(region_.contig_region(),
                                                                 explicit_allele_region_);
         
         num_bases += region_size(lhs_reference_region) + region_size(rhs_reference_region);
         
         cached_sequence_.reserve(num_bases);
         
-        const auto& contig = region_.get_contig_name();
+        const auto& contig = region_.contig_name();
         
         if (!is_empty(lhs_reference_region)) {
             detail::append(cached_sequence_, reference, contig, lhs_reference_region);
@@ -194,7 +194,7 @@ reference_ {reference}
             detail::append(cached_sequence_, reference, contig, rhs_reference_region);
         }
     } else {
-        cached_sequence_ = reference.get_sequence(region_);
+        cached_sequence_ = reference.fetch_sequence(region_);
     }
     
     cached_hash_ = std::hash<SequenceType>()(cached_sequence_);
@@ -384,7 +384,7 @@ namespace debug
             const auto& contig = contig_name(haplotype);
             stream << "< ";
             for (const auto& contig_allele : haplotype.explicit_alleles_) {
-                Allele allele {GenomicRegion {contig, contig_allele.get_region()}, contig_allele.get_sequence()};
+                Allele allele {GenomicRegion {contig, contig_allele.mapped_region()}, contig_allele.sequence()};
                 if (!is_reference(allele, haplotype.reference_)) stream << "{" << allele << "} ";
             }
             stream << ">";

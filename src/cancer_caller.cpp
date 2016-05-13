@@ -192,7 +192,7 @@ CancerVariantCaller::infer_latents(const std::vector<Haplotype>& haplotypes,
         stream(log) << "There are " << cancer_genotypes.size() << " candidate cancer genotypes";
     }
     
-    CoalescentModel germline_prior_model {Haplotype {mapped_region(haplotypes.front()), reference_}};
+    CoalescentModel germline_prior_model {Haplotype {::mapped_region(haplotypes.front()), reference_}};
     SomaticMutationModel somatic_prior_model {germline_prior_model, parameters_.somatic_mutation_rate};
     
     auto cnv_model_priors     = calculate_cnv_model_priors(germline_prior_model);
@@ -371,7 +371,7 @@ struct GermlineVariantCall : Mappable<GermlineVariantCall>
     GermlineVariantCall(const Variant& variant, double posterior)
     : variant {variant}, posterior {posterior} {}
     
-    const GenomicRegion& get_region() const noexcept { return mapped_region(variant.get()); }
+    const GenomicRegion& mapped_region() const noexcept { return ::mapped_region(variant.get()); }
     
     VariantReference variant;
     double posterior;
@@ -387,7 +387,7 @@ struct SomaticVariantCall : Mappable<SomaticVariantCall>
     SomaticVariantCall(const Variant& variant, double posterior)
     : variant {variant}, posterior {posterior} {}
     
-    const GenomicRegion& get_region() const noexcept { return mapped_region(variant.get()); }
+    const GenomicRegion& mapped_region() const noexcept { return ::mapped_region(variant.get()); }
     
     VariantReference variant;
     double posterior;
@@ -454,7 +454,7 @@ VariantPosteriors compute_candidate_posteriors(const std::vector<Variant>& candi
     result.reserve(candidates.size());
     
     for (const auto& candidate : candidates) {
-        result.emplace_back(candidate, marginalise(candidate.get_alt_allele(), genotype_posteriors));
+        result.emplace_back(candidate, marginalise(candidate.alt_allele(), genotype_posteriors));
     }
     
     return result;
@@ -464,7 +464,7 @@ VariantPosteriors compute_candidate_posteriors(const std::vector<Variant>& candi
 
 bool contains_alt(const Genotype<Haplotype>& genotype_call, const VariantReference& candidate)
 {
-    return contains_exact(genotype_call, candidate.get().get_alt_allele());
+    return contains_exact(genotype_call, candidate.get().alt_allele());
 }
 
 auto call_candidates(const VariantPosteriors& candidate_posteriors,
@@ -513,7 +513,7 @@ auto compute_somatic_variant_posteriors(const std::vector<VariantReference>& can
     result.reserve(candidates.size());
     
     for (const auto& candidate : candidates) {
-        const auto& allele = candidate.get().get_alt_allele();
+        const auto& allele = candidate.get().alt_allele();
         
         const auto p = std::accumulate(std::cbegin(cancer_genotype_posteriors),
                                        std::cend(cancer_genotype_posteriors),
@@ -552,7 +552,7 @@ auto call_somatic_variants(const VariantPosteriors& somatic_variant_posteriors,
                  std::back_inserter(result),
                  [min_posterior, &called_genotype] (const auto& p) {
                      return p.second >= min_posterior
-                     && contains_exact(called_genotype, p.first.get().get_alt_allele());
+                     && contains_exact(called_genotype, p.first.get().alt_allele());
                  });
     
     return result;

@@ -61,7 +61,7 @@ namespace Octopus
             boost::optional<PhaseCall> phase;
         };
         
-        double get_quality() const noexcept;
+        double quality() const noexcept;
         
         GenotypeCall& get_genotype_call(const SampleIdType& sample);
         const GenotypeCall& get_genotype_call(const SampleIdType& sample) const;
@@ -70,7 +70,7 @@ namespace Octopus
         bool all_phased() const noexcept;
         void set_phase(const SampleIdType& sample, PhaseCall phase);
         
-        virtual const GenomicRegion& get_region() const noexcept = 0;
+        virtual const GenomicRegion& mapped_region() const noexcept = 0;
         virtual const Allele& get_reference() const noexcept = 0;
         
         void replace(char old_base, char replacement_base);

@@ -33,7 +33,7 @@
 //
 //static Haplotype make_haplotype(Allele&& allele, const ReferenceGenome& reference)
 //{
-//    Haplotype result {allele.get_region(), reference};
+//    Haplotype result {allele.mapped_region(), reference};
 //    result.push_back(allele);
 //    return result;
 //}
@@ -476,32 +476,32 @@
 //    const auto allele_splice_snp1 = splice<Allele>(genotype, mapped_region(variant1));
 //    
 //    BOOST_CHECK(!allele_splice_snp1.is_homozygous());
-//    BOOST_CHECK(allele_splice_snp1.contains(variant1.get_ref_allele()));
-//    BOOST_CHECK(allele_splice_snp1.contains(variant1.get_alt_allele()));
+//    BOOST_CHECK(allele_splice_snp1.contains(variant1.ref_allele()));
+//    BOOST_CHECK(allele_splice_snp1.contains(variant1.alt_allele()));
 //    
 //    const auto allele_splice_snp2 = splice<Allele>(genotype, mapped_region(variant2));
 //    
 //    BOOST_CHECK(!allele_splice_snp2.is_homozygous());
-//    BOOST_CHECK(allele_splice_snp2.contains(variant2.get_ref_allele()));
-//    BOOST_CHECK(allele_splice_snp2.contains(variant2.get_alt_allele()));
+//    BOOST_CHECK(allele_splice_snp2.contains(variant2.ref_allele()));
+//    BOOST_CHECK(allele_splice_snp2.contains(variant2.alt_allele()));
 //    
 //    const auto allele_splice_snp3 = splice<Allele>(genotype, mapped_region(variant3));
 //    
 //    BOOST_CHECK(!allele_splice_snp3.is_homozygous());
-//    BOOST_CHECK(allele_splice_snp3.contains(variant3.get_ref_allele()));
-//    BOOST_CHECK(allele_splice_snp3.contains(variant3.get_alt_allele()));
+//    BOOST_CHECK(allele_splice_snp3.contains(variant3.ref_allele()));
+//    BOOST_CHECK(allele_splice_snp3.contains(variant3.alt_allele()));
 //    
 //    const auto allele_splice_snp4 = splice<Allele>(genotype, mapped_region(variant5));
 //    
 //    BOOST_CHECK(!allele_splice_snp4.is_homozygous());
-//    BOOST_CHECK(allele_splice_snp4.contains(variant5.get_ref_allele()));
-//    BOOST_CHECK(allele_splice_snp4.contains(variant5.get_alt_allele()));
+//    BOOST_CHECK(allele_splice_snp4.contains(variant5.ref_allele()));
+//    BOOST_CHECK(allele_splice_snp4.contains(variant5.alt_allele()));
 //    
 //    const auto allele_splice_insertion = splice<Allele>(genotype, mapped_region(variant4));
 //    
 //    BOOST_CHECK(!allele_splice_insertion.is_homozygous());
-//    BOOST_CHECK(allele_splice_insertion.contains(variant4.get_ref_allele()));
-//    BOOST_CHECK(allele_splice_insertion.contains(variant4.get_alt_allele()));
+//    BOOST_CHECK(allele_splice_insertion.contains(variant4.ref_allele()));
+//    BOOST_CHECK(allele_splice_insertion.contains(variant4.alt_allele()));
 //}
 //
 //BOOST_AUTO_TEST_CASE(splice_all_works_correctly)
@@ -562,11 +562,11 @@
 //    
 //    Genotype<Haplotype> genotype {ref_haplotype, alt_haplotype};
 //    
-//    BOOST_CHECK(contains_exact(genotype, variant1.get_alt_allele()));
-//    BOOST_CHECK(contains_exact(genotype, variant2.get_alt_allele()));
-//    BOOST_CHECK(contains_exact(genotype, variant3.get_alt_allele()));
-//    BOOST_CHECK(contains_exact(genotype, variant4.get_alt_allele()));
-//    BOOST_CHECK(contains_exact(genotype, variant5.get_alt_allele()));
+//    BOOST_CHECK(contains_exact(genotype, variant1.alt_allele()));
+//    BOOST_CHECK(contains_exact(genotype, variant2.alt_allele()));
+//    BOOST_CHECK(contains_exact(genotype, variant3.alt_allele()));
+//    BOOST_CHECK(contains_exact(genotype, variant4.alt_allele()));
+//    BOOST_CHECK(contains_exact(genotype, variant5.alt_allele()));
 //}
 //
 //BOOST_AUTO_TEST_CASE(are_equal_in_region_works_correctly)
@@ -614,31 +614,31 @@
 ////    std::cout << "\n\n";
 ////    print_alleles(genotype2);
 ////    std::cout << "\n\n";
-////    print_alleles(splice<Haplotype>(genotype1, get_region(variant3)));
+////    print_alleles(splice<Haplotype>(genotype1, mapped_region(variant3)));
 ////    std::cout << "\n\n";
-////    print_alleles(splice<Haplotype>(genotype2, get_region(variant3)));
+////    print_alleles(splice<Haplotype>(genotype2, mapped_region(variant3)));
 ////    std::cout << "\n\n";
-////    print_alleles(splice<Haplotype>(genotype1, get_region(variant4)));
+////    print_alleles(splice<Haplotype>(genotype1, mapped_region(variant4)));
 ////    std::cout << "\n\n";
-////    print_alleles(splice<Haplotype>(genotype2, get_region(variant4)));
+////    print_alleles(splice<Haplotype>(genotype2, mapped_region(variant4)));
 ////    std::cout << "\n\n";
-////    print_alleles(splice<Haplotype>(genotype1, get_region(variant5)));
+////    print_alleles(splice<Haplotype>(genotype1, mapped_region(variant5)));
 ////    std::cout << "\n\n";
-////    print_alleles(splice<Haplotype>(genotype2, get_region(variant5)));
+////    print_alleles(splice<Haplotype>(genotype2, mapped_region(variant5)));
 ////    std::cout << "\n\n";
 ////    
-////    BOOST_CHECK(are_equal_in_region<Haplotype>(genotype1, genotype2, get_region(variant1)));
-////    BOOST_CHECK(are_equal_in_region<Haplotype>(genotype2, genotype1, get_region(variant1)));
-////    BOOST_CHECK(are_equal_in_region<Haplotype>(genotype1, genotype2, get_region(variant2)));
-////    BOOST_CHECK(are_equal_in_region<Haplotype>(genotype2, genotype1, get_region(variant2)));
-////    BOOST_CHECK(are_equal_in_region<Haplotype>(genotype1, genotype2, get_region(variant3)));
-////    BOOST_CHECK(are_equal_in_region<Haplotype>(genotype2, genotype1, get_region(variant3)));
-////    BOOST_CHECK(are_equal_in_region<Haplotype>(genotype1, genotype2, get_region(variant4)));
-////    BOOST_CHECK(are_equal_in_region<Haplotype>(genotype2, genotype1, get_region(variant4)));
-////    BOOST_CHECK(are_equal_in_region<Haplotype>(genotype1, genotype2, get_region(variant5)));
-////    BOOST_CHECK(are_equal_in_region<Haplotype>(genotype2, genotype1, get_region(variant5)));
-////    BOOST_CHECK(are_equal_in_region<Haplotype>(genotype1, genotype2, get_region(variant6)));
-////    BOOST_CHECK(are_equal_in_region<Haplotype>(genotype2, genotype1, get_region(variant6)));
+////    BOOST_CHECK(are_equal_in_region<Haplotype>(genotype1, genotype2, mapped_region(variant1)));
+////    BOOST_CHECK(are_equal_in_region<Haplotype>(genotype2, genotype1, mapped_region(variant1)));
+////    BOOST_CHECK(are_equal_in_region<Haplotype>(genotype1, genotype2, mapped_region(variant2)));
+////    BOOST_CHECK(are_equal_in_region<Haplotype>(genotype2, genotype1, mapped_region(variant2)));
+////    BOOST_CHECK(are_equal_in_region<Haplotype>(genotype1, genotype2, mapped_region(variant3)));
+////    BOOST_CHECK(are_equal_in_region<Haplotype>(genotype2, genotype1, mapped_region(variant3)));
+////    BOOST_CHECK(are_equal_in_region<Haplotype>(genotype1, genotype2, mapped_region(variant4)));
+////    BOOST_CHECK(are_equal_in_region<Haplotype>(genotype2, genotype1, mapped_region(variant4)));
+////    BOOST_CHECK(are_equal_in_region<Haplotype>(genotype1, genotype2, mapped_region(variant5)));
+////    BOOST_CHECK(are_equal_in_region<Haplotype>(genotype2, genotype1, mapped_region(variant5)));
+////    BOOST_CHECK(are_equal_in_region<Haplotype>(genotype1, genotype2, mapped_region(variant6)));
+////    BOOST_CHECK(are_equal_in_region<Haplotype>(genotype2, genotype1, mapped_region(variant6)));
 //}
 //
 //BOOST_AUTO_TEST_SUITE_END()

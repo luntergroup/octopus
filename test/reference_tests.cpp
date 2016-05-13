@@ -34,27 +34,27 @@ BOOST_AUTO_TEST_CASE(ReferemceGenome_handles_basic_queries)
     
     const auto ecoli = make_reference(ecoli_reference_fasta);
     
-    BOOST_CHECK(ecoli.get_name() == "R00000042");
+    BOOST_CHECK(ecoli.name() == "R00000042");
     BOOST_CHECK(ecoli.contains_region(GenomicRegion("R00000042", 10000, 2000000)));
-    BOOST_CHECK(ecoli.get_contig_size("R00000042") == 5231428);
+    BOOST_CHECK(ecoli.contig_size("R00000042") == 5231428);
     BOOST_CHECK(!ecoli.has_contig("X"));
-    BOOST_CHECK(ecoli.get_contig_region("R00000042") == GenomicRegion("R00000042", 0, 5231428));
-    BOOST_CHECK(ecoli.get_sequence(GenomicRegion("R00000042", 0, 10)) == "AGCTTTTCAT"); // first line
-    BOOST_CHECK(ecoli.get_sequence(GenomicRegion("R00000042", 69, 80)) == "CTTCTGAACTG"); // accross lines
+    BOOST_CHECK(ecoli.contig_region("R00000042") == GenomicRegion("R00000042", 0, 5231428));
+    BOOST_CHECK(ecoli.fetch_sequence(GenomicRegion("R00000042", 0, 10)) == "AGCTTTTCAT"); // first line
+    BOOST_CHECK(ecoli.fetch_sequence(GenomicRegion("R00000042", 69, 80)) == "CTTCTGAACTG"); // accross lines
     
     BOOST_REQUIRE(test_file_exists(human_reference_fasta));
     
     const auto human = make_reference(human_reference_fasta);
     
-    BOOST_CHECK(human.get_name() == "human_g1k_v37");
+    BOOST_CHECK(human.name() == "human_g1k_v37");
     BOOST_CHECK(human.contains_region(GenomicRegion("1", 100, 10000)));
     BOOST_CHECK(!human.contains_region(GenomicRegion("1", 100, 3e8))); // too big
-    BOOST_CHECK(human.get_contig_size("20") == 63025520);
+    BOOST_CHECK(human.contig_size("20") == 63025520);
     BOOST_CHECK(human.has_contig("X"));
     BOOST_CHECK(!human.has_contig("y"));
-    BOOST_CHECK(human.get_contig_region("X") == GenomicRegion("X", 0, 155270560));
-    BOOST_CHECK(human.get_sequence(GenomicRegion("15", 51265690, 51265700)) == "ACAATGTTGT");
-    BOOST_CHECK(human.get_sequence(GenomicRegion("5", 100000, 100010)) == "AGGAAGTTTC");
+    BOOST_CHECK(human.contig_region("X") == GenomicRegion("X", 0, 155270560));
+    BOOST_CHECK(human.fetch_sequence(GenomicRegion("15", 51265690, 51265700)) == "ACAATGTTGT");
+    BOOST_CHECK(human.fetch_sequence(GenomicRegion("5", 100000, 100010)) == "AGGAAGTTTC");
 }
 
 BOOST_AUTO_TEST_CASE(ReferemceGenome_handles_edge_cases)
@@ -63,7 +63,7 @@ BOOST_AUTO_TEST_CASE(ReferemceGenome_handles_edge_cases)
     
     const auto human = make_reference(human_reference_fasta);
     
-    BOOST_CHECK(human.get_sequence(GenomicRegion {"1", 100, 100}) == "");
+    BOOST_CHECK(human.fetch_sequence(GenomicRegion {"1", 100, 100}) == "");
 }
 
 BOOST_AUTO_TEST_CASE(parse_region_works_with_correctly_formatted_region_input)
@@ -74,33 +74,33 @@ BOOST_AUTO_TEST_CASE(parse_region_works_with_correctly_formatted_region_input)
     
     const auto r1 = parse_region("3", human);
     
-    BOOST_CHECK(r1.get_contig_name() == "3");
-    BOOST_CHECK(r1.get_begin() == 0);
-    BOOST_CHECK(r1.get_end() == human.get_contig_size("3"));
+    BOOST_CHECK(r1.contig_name() == "3");
+    BOOST_CHECK(r1.begin() == 0);
+    BOOST_CHECK(r1.end() == human.contig_size("3"));
     
     const auto r2 = parse_region("10:100-200", human);
     
-    BOOST_CHECK(r2.get_contig_name() == "10");
-    BOOST_CHECK(r2.get_begin() == 100);
-    BOOST_CHECK(r2.get_end() == 200);
+    BOOST_CHECK(r2.contig_name() == "10");
+    BOOST_CHECK(r2.begin() == 100);
+    BOOST_CHECK(r2.end() == 200);
     
     const auto r3 = parse_region("18:102,029-102,029", human);
     
-    BOOST_CHECK(r3.get_contig_name() == "18");
-    BOOST_CHECK(r3.get_begin() == 102'029);
-    BOOST_CHECK(r3.get_end() == 102'029);
+    BOOST_CHECK(r3.contig_name() == "18");
+    BOOST_CHECK(r3.begin() == 102'029);
+    BOOST_CHECK(r3.end() == 102'029);
     
     const auto r4 = parse_region("MT:100-", human);
     
-    BOOST_CHECK(r4.get_contig_name() == "MT");
-    BOOST_CHECK(r4.get_begin() == 100);
-    BOOST_CHECK(r4.get_end() == human.get_contig_size("MT"));
+    BOOST_CHECK(r4.contig_name() == "MT");
+    BOOST_CHECK(r4.begin() == 100);
+    BOOST_CHECK(r4.end() == human.contig_size("MT"));
     
     const auto r5 = parse_region("7:1,000,000", human);
     
-    BOOST_CHECK(r5.get_contig_name() == "7");
-    BOOST_CHECK(r5.get_begin() == 1'000'000);
-    BOOST_CHECK(r5.get_end() == 1'000'001);
+    BOOST_CHECK(r5.contig_name() == "7");
+    BOOST_CHECK(r5.begin() == 1'000'000);
+    BOOST_CHECK(r5.end() == 1'000'001);
 }
 
 BOOST_AUTO_TEST_CASE(parse_region_throws_when_given_bad_region)
@@ -175,8 +175,8 @@ BOOST_AUTO_TEST_CASE(parse_region_throws_when_given_bad_region)
 //    CachingFasta cached_reference {human_reference_fasta, 10'000'000, 1.0, 1.0};
 //    
 //    std::string uncached_sequence {}, cached_sequence {};
-//    uncached_sequence.reserve(uncached_reference.get_contig_size(contig));
-//    cached_sequence.reserve(cached_reference.get_contig_size(contig));
+//    uncached_sequence.reserve(uncached_reference.contig_size(contig));
+//    cached_sequence.reserve(cached_reference.contig_size(contig));
 //    
 //    auto regions = decompose(parse_region(contig, human), 100);
 //    
@@ -192,7 +192,7 @@ BOOST_AUTO_TEST_CASE(parse_region_throws_when_given_bad_region)
 ////    regions.clear();
 ////    
 ////    for (const auto& c : std::vector<std::string> {"1", "2", "3"}) {
-////        auto more_regions = decompose(uncached_reference.get_contig_region(c), dis(g));
+////        auto more_regions = decompose(uncached_reference.contig_region(c), dis(g));
 ////        regions.insert(regions.end(), more_regions.begin(), more_regions.end());
 ////    }
 ////    
@@ -247,27 +247,27 @@ BOOST_AUTO_TEST_CASE(CachingFasta_works_the_same_as_Fasta)
     
     const auto ecoli = make_reference(ecoli_reference_fasta, max_cache_size);
     
-    BOOST_CHECK(ecoli.get_name() == "R00000042");
+    BOOST_CHECK(ecoli.name() == "R00000042");
     BOOST_CHECK(ecoli.contains_region(GenomicRegion("R00000042", 10000, 2000000)));
-    BOOST_CHECK(ecoli.get_contig_size("R00000042") == 5231428);
+    BOOST_CHECK(ecoli.contig_size("R00000042") == 5231428);
     BOOST_CHECK(!ecoli.has_contig("X"));
-    BOOST_CHECK(ecoli.get_contig_region("R00000042") == GenomicRegion("R00000042", 0, 5231428));
-    BOOST_CHECK(ecoli.get_sequence(GenomicRegion("R00000042", 0, 10)) == "AGCTTTTCAT"); // first line
-    BOOST_CHECK(ecoli.get_sequence(GenomicRegion("R00000042", 69, 80)) == "CTTCTGAACTG"); // accross lines
+    BOOST_CHECK(ecoli.contig_region("R00000042") == GenomicRegion("R00000042", 0, 5231428));
+    BOOST_CHECK(ecoli.fetch_sequence(GenomicRegion("R00000042", 0, 10)) == "AGCTTTTCAT"); // first line
+    BOOST_CHECK(ecoli.fetch_sequence(GenomicRegion("R00000042", 69, 80)) == "CTTCTGAACTG"); // accross lines
     
     BOOST_REQUIRE(test_file_exists(human_reference_fasta));
     
     const auto human = make_reference(human_reference_fasta, max_cache_size);
     
-    BOOST_CHECK(human.get_name() == "human_g1k_v37");
+    BOOST_CHECK(human.name() == "human_g1k_v37");
     BOOST_CHECK(human.contains_region(GenomicRegion("1", 100, 10000)));
     BOOST_CHECK(!human.contains_region(GenomicRegion("1", 100, 3e8))); // too big
-    BOOST_CHECK(human.get_contig_size("20") == 63025520);
+    BOOST_CHECK(human.contig_size("20") == 63025520);
     BOOST_CHECK(human.has_contig("X"));
     BOOST_CHECK(!human.has_contig("y"));
-    BOOST_CHECK(human.get_contig_region("X") == GenomicRegion("X", 0, 155270560));
-    BOOST_CHECK(human.get_sequence(GenomicRegion("15", 51265690, 51265700)) == "ACAATGTTGT");
-    BOOST_CHECK(human.get_sequence(GenomicRegion("5", 100000, 100010)) == "AGGAAGTTTC");
+    BOOST_CHECK(human.contig_region("X") == GenomicRegion("X", 0, 155270560));
+    BOOST_CHECK(human.fetch_sequence(GenomicRegion("15", 51265690, 51265700)) == "ACAATGTTGT");
+    BOOST_CHECK(human.fetch_sequence(GenomicRegion("5", 100000, 100010)) == "AGGAAGTTTC");
 }
 
 BOOST_AUTO_TEST_CASE(ReferenceGenome_can_be_made_threadsafe)
@@ -277,19 +277,19 @@ BOOST_AUTO_TEST_CASE(ReferenceGenome_can_be_made_threadsafe)
     const auto human = make_reference(human_reference_fasta, 0, true);
     
     auto fut1 = std::async(std::launch::async, [&] () {
-        return human.get_sequence(parse_region("1:1,000,000-1,000,005", human));
+        return human.fetch_sequence(parse_region("1:1,000,000-1,000,005", human));
     });
     auto fut2 = std::async(std::launch::async, [&] () {
-        return human.get_sequence(parse_region("2:1,000,000-1,000,005", human));
+        return human.fetch_sequence(parse_region("2:1,000,000-1,000,005", human));
     });
     auto fut3 = std::async(std::launch::async, [&] () {
-        return human.get_sequence(parse_region("3:1,000,000-1,000,005", human));
+        return human.fetch_sequence(parse_region("3:1,000,000-1,000,005", human));
     });
     auto fut4 = std::async(std::launch::async, [&] () {
-        return human.get_sequence(parse_region("4:1,000,000-1,000,005", human));
+        return human.fetch_sequence(parse_region("4:1,000,000-1,000,005", human));
     });
     auto fut5 = std::async(std::launch::async, [&] () {
-        return human.get_sequence(parse_region("5:1,000,000-1,000,005", human));
+        return human.fetch_sequence(parse_region("5:1,000,000-1,000,005", human));
     });
     
     bool throwed {false};

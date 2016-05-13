@@ -45,9 +45,9 @@ private:
     mutable std::mutex mutex_;
     
     bool do_is_open() const noexcept override;
-    std::string do_get_reference_name() const override;
-    std::vector<ContigNameType> do_get_contig_names() const override;
-    SizeType do_get_contig_size(const ContigNameType& contig) const override;
+    std::string do_fetch_reference_name() const override;
+    std::vector<ContigNameType> do_fetch_contig_names() const override;
+    SizeType do_fetch_contig_size(const ContigNameType& contig) const override;
     SequenceType do_fetch_sequence(const GenomicRegion& region) const override;
 };
 

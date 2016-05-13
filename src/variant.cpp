@@ -31,17 +31,17 @@ reference_ {std::move(reference)},
 alternative_ {std::move(alternative)}
 {}
 
-const GenomicRegion& Variant::get_region() const noexcept
+const GenomicRegion& Variant::mapped_region() const noexcept
 {
-    return reference_.get_region();
+    return reference_.mapped_region();
 }
 
-const Allele& Variant::get_ref_allele() const noexcept
+const Allele& Variant::ref_allele() const noexcept
 {
     return reference_;
 }
 
-const Allele& Variant::get_alt_allele() const noexcept
+const Allele& Variant::alt_allele() const noexcept
 {
     return alternative_;
 }
@@ -61,33 +61,33 @@ Variant make_variant(const std::string& region_str, Variant::SequenceType alt_se
 
 const Variant::SequenceType& ref_sequence(const Variant& variant)
 {
-    return variant.get_ref_allele().get_sequence();
+    return variant.ref_allele().sequence();
 }
 
 const Variant::SequenceType& alt_sequence(const Variant& variant)
 {
-    return variant.get_alt_allele().get_sequence();
+    return variant.alt_allele().sequence();
 }
 
 Variant::SizeType ref_sequence_size(const Variant& variant)
 {
-    return sequence_size(variant.get_ref_allele());
+    return sequence_size(variant.ref_allele());
 }
 
 Variant::SizeType alt_sequence_size(const Variant& variant)
 {
-    return sequence_size(variant.get_alt_allele());
+    return sequence_size(variant.alt_allele());
 }
 
 bool operator==(const Variant& lhs, const Variant& rhs)
 {
-    return lhs.get_ref_allele() == rhs.get_ref_allele() && alt_sequence(lhs) == alt_sequence(rhs);
+    return lhs.ref_allele() == rhs.ref_allele() && alt_sequence(lhs) == alt_sequence(rhs);
 }
 
 bool operator<(const Variant& lhs, const Variant& rhs)
 {
-    return (lhs.get_ref_allele() < rhs.get_ref_allele() ||
-            (lhs.get_ref_allele() == rhs.get_ref_allele() && lhs.get_alt_allele() < rhs.get_alt_allele()));
+    return (lhs.ref_allele() < rhs.ref_allele() ||
+            (lhs.ref_allele() == rhs.ref_allele() && lhs.alt_allele() < rhs.alt_allele()));
 }
 
 void remove_duplicates(std::vector<Variant>& variants)
@@ -103,7 +103,7 @@ std::vector<Variant> split_mnv(const Variant& variant)
     result.reserve(ref_sequence_size(variant));
     
     const auto& contig   = contig_name(variant);
-    const auto begin_pos = region_begin(variant);
+    const auto begin_pos = mapped_begin(variant);
     const auto& ref      = ref_sequence(variant);
     const auto& alt      = alt_sequence(variant);
     
@@ -118,7 +118,7 @@ std::vector<Variant> split_mnv(const Variant& variant)
         p = std::mismatch(next(p.first), last, next(p.second));
     }
     
-    result.emplace_back(contig, region_end(variant) - 1, ref.back(), alt.back());
+    result.emplace_back(contig, mapped_end(variant) - 1, ref.back(), alt.back());
     
     result.shrink_to_fit();
     
@@ -134,9 +134,9 @@ std::vector<Allele> decompose(const std::vector<Variant>& variants)
     
     for (const auto& variant : variants) {
         if (result.empty() || !is_same_region(result.back(), variant)) {
-            result.emplace_back(variant.get_ref_allele());
+            result.emplace_back(variant.ref_allele());
         }
-        result.emplace_back(variant.get_alt_allele());
+        result.emplace_back(variant.alt_allele());
     }
     
     result.shrink_to_fit();
@@ -154,9 +154,9 @@ decompose_ref(const std::vector<Variant>& variants)
     
     for (const auto& variant : variants) {
         if (result.empty() || !is_same_region(result.back().get(), variant)) {
-            result.emplace_back(variant.get_ref_allele());
+            result.emplace_back(variant.ref_allele());
         }
-        result.emplace_back(variant.get_alt_allele());
+        result.emplace_back(variant.alt_allele());
     }
     
     result.shrink_to_fit();
@@ -235,7 +235,7 @@ bool is_parsimonious(const Variant& variant) noexcept
 Variant make_parsimonious(const Variant& variant, const ReferenceGenome& reference)
 {
     return make_parsimonious(variant, [&reference] (const auto& region) -> char {
-        return reference.get_sequence(region).front();
+        return reference.fetch_sequence(region).front();
     });
 }
 
@@ -264,10 +264,10 @@ GenomicRegion extend_allele_lists(LeftAlignmentList& big_allele, LeftAlignmentLi
     
     const auto new_region = shift(current_region, -extension_size);
     
-    GenomicRegion extension_region {new_region.get_contig_name(), new_region.get_begin(),
-        new_region.get_begin() + extension_size};
+    GenomicRegion extension_region {new_region.contig_name(), new_region.begin(),
+        new_region.begin() + extension_size};
     
-    const auto extension_sequence = reference.get_sequence(extension_region);
+    const auto extension_sequence = reference.fetch_sequence(extension_region);
     
     big_allele.insert(begin(big_allele), cbegin(extension_sequence), cend(extension_sequence));
     small_allele.insert(begin(small_allele), cbegin(extension_sequence), cend(extension_sequence));
@@ -301,15 +301,15 @@ Variant left_align(const Variant& variant, const ReferenceGenome& reference,
     const auto big_allele_size   = static_cast<SizeType>(big_allele.size());
     const auto small_allele_size = static_cast<SizeType>(small_allele.size());
     
-    GenomicRegion current_region {variant.get_region()};
+    GenomicRegion current_region {variant.mapped_region()};
     
     do {
-        if (current_region.get_begin() >= extension_size) {
+        if (current_region.begin() >= extension_size) {
             current_region = extend_allele_lists(big_allele, small_allele, reference,
                                                  current_region, extension_size);
-        } else if (current_region.get_begin() > 0) {
+        } else if (current_region.begin() > 0) {
             current_region = extend_allele_lists(big_allele, small_allele, reference,
-                                                 current_region, current_region.get_begin());
+                                                 current_region, current_region.begin());
         } else {
             break;
         }
@@ -327,7 +327,7 @@ Variant left_align(const Variant& variant, const ReferenceGenome& reference,
     } else {
         auto required_left_padding = static_cast<SizeType>(small_allele_size - removable_extension);
         // Note this will automatically pad to the right if we've reached the start of the contig
-        if (current_region.get_begin() >= required_left_padding) {
+        if (current_region.begin() >= required_left_padding) {
             current_region = extend_allele_lists(big_allele, small_allele, reference,
                                                  current_region, required_left_padding);
             removable_extension = 0;
@@ -340,10 +340,10 @@ Variant left_align(const Variant& variant, const ReferenceGenome& reference,
     Variant::SequenceType new_big_allele {new_big_allele_begin, next(new_big_allele_begin, big_allele_size)};
     Variant::SequenceType new_small_allele {new_small_allele_begin, next(new_small_allele_begin, small_allele_size)};
     
-    const auto new_ref_region_begin = current_region.get_begin() + static_cast<SizeType>(removable_extension);
+    const auto new_ref_region_begin = current_region.begin() + static_cast<SizeType>(removable_extension);
     const auto new_ref_region_end   = new_ref_region_begin + static_cast<SizeType>(ref_allele_sequence.size());
     
-    GenomicRegion new_ref_region {current_region.get_contig_name(), new_ref_region_begin, new_ref_region_end};
+    GenomicRegion new_ref_region {current_region.contig_name(), new_ref_region_begin, new_ref_region_end};
     
     if (ref_allele_sequence.size() > alt_allele_sequence.size()) {
         return Variant {move(new_ref_region), move(new_big_allele), move(new_small_allele)};
@@ -381,7 +381,7 @@ Variant pad_left(const Variant& variant, const ReferenceGenome& reference,
 {
     const auto pad_region = expand_lhs(head_region(variant), static_cast<GenomicRegion::DifferenceType>(n));
     
-    const auto pad_sequence = reference.get_sequence(pad_region);
+    const auto pad_sequence = reference.fetch_sequence(pad_region);
     
     return Variant {
         encompassing_region(pad_region, variant),
@@ -395,7 +395,7 @@ Variant pad_right(const Variant& variant, const ReferenceGenome& reference,
 {
     const auto pad_region = expand_rhs(tail_region(variant), static_cast<GenomicRegion::DifferenceType>(n));
     
-    const auto pad_sequence = reference.get_sequence(pad_region);
+    const auto pad_sequence = reference.fetch_sequence(pad_region);
     
     return Variant {
         encompassing_region(variant, pad_region),

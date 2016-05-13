@@ -184,8 +184,8 @@
 //    
 //    sort(haplotypes);
 //    
-//    BOOST_CHECK(haplotypes[0].get_sequence() == "ATCCT");
-//    BOOST_CHECK(haplotypes[1].get_sequence() == "ATGCT");
+//    BOOST_CHECK(haplotypes[0].sequence() == "ATCCT");
+//    BOOST_CHECK(haplotypes[1].sequence() == "ATGCT");
 //}
 //
 //BOOST_AUTO_TEST_CASE(haplotype_tree_can_generate_haplotypes_ending_in_different_regions)
@@ -218,8 +218,8 @@
 //    
 //    sort(haplotypes);
 //    
-//    BOOST_CHECK(haplotypes[0].get_sequence() == "ATG");
-//    BOOST_CHECK(haplotypes[1].get_sequence() == "AT");
+//    BOOST_CHECK(haplotypes[0].sequence() == "ATG");
+//    BOOST_CHECK(haplotypes[1].sequence() == "AT");
 //}
 //
 //BOOST_AUTO_TEST_CASE(leading_haplotypes_can_be_removed_from_the_tree)
@@ -258,8 +258,8 @@
 //    
 //    sort(haplotypes);
 //    
-//    BOOST_CHECK(haplotypes[0].get_sequence() == "ATGCC");
-//    BOOST_CHECK(haplotypes[1].get_sequence() == "ATGCT");
+//    BOOST_CHECK(haplotypes[0].sequence() == "ATGCC");
+//    BOOST_CHECK(haplotypes[1].sequence() == "ATGCT");
 //}
 //
 //BOOST_AUTO_TEST_CASE(haplotype_tree_only_contains_haplotypes_with_added_alleles)
@@ -283,7 +283,7 @@
 //    hap1.push_back(allele2);
 //    hap1.push_back(allele4);
 //    
-//    BOOST_REQUIRE(hap1.get_sequence() == "CTC");
+//    BOOST_REQUIRE(hap1.sequence() == "CTC");
 //    BOOST_CHECK(haplotype_tree.contains(hap1));
 //    
 //    Haplotype hap2 {region, human};
@@ -291,7 +291,7 @@
 //    hap2.push_back(allele3);
 //    hap2.push_back(allele4);
 //    
-//    BOOST_REQUIRE(hap2.get_sequence() == "CGC");
+//    BOOST_REQUIRE(hap2.sequence() == "CGC");
 //    BOOST_CHECK(haplotype_tree.contains(hap2));
 //    
 //    const Allele allele5 {parse_region("4:1000000-1000001", human), "G"};
@@ -301,7 +301,7 @@
 //    hap3.push_back(allele2);
 //    hap3.push_back(allele4);
 //    
-//    BOOST_REQUIRE(hap3.get_sequence() == "GTC");
+//    BOOST_REQUIRE(hap3.sequence() == "GTC");
 //    BOOST_CHECK(!haplotype_tree.contains(hap3));
 //    
 //    Haplotype hap4 {region, human};
@@ -309,7 +309,7 @@
 //    hap4.push_back(allele3);
 //    hap4.push_back(allele4);
 //    
-//    BOOST_REQUIRE(hap4.get_sequence() == "GGC");
+//    BOOST_REQUIRE(hap4.sequence() == "GGC");
 //    BOOST_CHECK(!haplotype_tree.contains(hap4));
 //    
 //    const Allele allele6 {parse_region("4:1000001-1000002", human), "C"};
@@ -319,7 +319,7 @@
 //    hap5.push_back(allele6);
 //    hap5.push_back(allele4);
 //    
-//    BOOST_REQUIRE(hap5.get_sequence() == "CCC");
+//    BOOST_REQUIRE(hap5.sequence() == "CCC");
 //    BOOST_CHECK(!haplotype_tree.contains(hap5));
 //}
 //
@@ -341,19 +341,19 @@
 //    
 //    Haplotype hap1 {region, human};
 //    
-//    BOOST_REQUIRE(hap1.get_sequence() == "CTC");
+//    BOOST_REQUIRE(hap1.sequence() == "CTC");
 //    BOOST_CHECK(haplotype_tree.contains(hap1));
 //    
 //    Haplotype hap2 {region, human};
 //    hap2.push_back(allele2);
 //    
-//    BOOST_REQUIRE(hap2.get_sequence() == "CTC");
+//    BOOST_REQUIRE(hap2.sequence() == "CTC");
 //    BOOST_CHECK(haplotype_tree.contains(hap2));
 //    
 //    Haplotype hap3 {region, human};
 //    hap3.push_back(allele3);
 //    
-//    BOOST_REQUIRE(hap3.get_sequence() == "CGC");
+//    BOOST_REQUIRE(hap3.sequence() == "CGC");
 //    BOOST_CHECK(haplotype_tree.contains(hap3));
 //    
 //    const Allele allele5 {parse_region("4:1000000-1000001", human), "G"};
@@ -361,7 +361,7 @@
 //    Haplotype hap4 {region, human};
 //    hap4.push_back(allele5);
 //    
-//    BOOST_REQUIRE(hap4.get_sequence() == "GTC");
+//    BOOST_REQUIRE(hap4.sequence() == "GTC");
 //    BOOST_CHECK(!haplotype_tree.contains(hap4));
 //    
 //    const Allele allele6 {parse_region("4:1000001-1000002", human), "C"};
@@ -369,7 +369,7 @@
 //    Haplotype hap5 {region, human};
 //    hap5.push_back(allele6);
 //    
-//    BOOST_REQUIRE(hap5.get_sequence() == "CCC");
+//    BOOST_REQUIRE(hap5.sequence() == "CCC");
 //    BOOST_CHECK(!haplotype_tree.contains(hap5));
 //}
 //
@@ -389,7 +389,7 @@
 //    Haplotype hap {region, human};
 //    hap.push_back(allele2);
 //    
-//    BOOST_REQUIRE(hap.get_sequence() == "CTC");
+//    BOOST_REQUIRE(hap.sequence() == "CTC");
 //    
 //    HaplotypeTree haplotype_tree {"4", human};
 //    
@@ -398,7 +398,7 @@
 //    haplotype_tree.prune_all(hap);
 //    
 //    BOOST_REQUIRE(haplotype_tree.num_haplotypes() == 1);
-//    BOOST_CHECK(haplotype_tree.extract_haplotypes().front().get_sequence() == "CGC");
+//    BOOST_CHECK(haplotype_tree.extract_haplotypes().front().sequence() == "CGC");
 //}
 //
 //BOOST_AUTO_TEST_CASE(pruned_branches_can_still_be_extended)

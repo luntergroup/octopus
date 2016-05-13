@@ -91,19 +91,19 @@ namespace
 void AlignmentCandidateVariantGenerator::add_read(const AlignedRead& read)
 {
     const auto& read_contig   = contig_name(read);
-    const auto& read_sequence = read.get_sequence();
+    const auto& read_sequence = read.sequence();
     
     auto sequence_itr  = std::cbegin(read_sequence);
-    auto qualities_itr = std::cbegin(read.get_qualities());
+    auto qualities_itr = std::cbegin(read.qualities());
     
-    auto ref_index = region_begin(read);
+    auto ref_index = mapped_begin(read);
     AlignedRead::SizeType read_index {0};
     GenomicRegion region;
     
-    for (const auto& cigar_operation : read.get_cigar_string()) {
-        const auto op_size = cigar_operation.get_size();
+    for (const auto& cigar_operation : read.cigar_string()) {
+        const auto op_size = cigar_operation.size();
         
-        switch (cigar_operation.get_flag()) {
+        switch (cigar_operation.flag()) {
             case CigarOperation::ALIGNMENT_MATCH:
                 add_snvs_in_match_range(GenomicRegion {read_contig, ref_index, ref_index + op_size},
                                         sequence_itr + read_index, sequence_itr + read_index + op_size,
@@ -123,7 +123,7 @@ void AlignmentCandidateVariantGenerator::add_read(const AlignedRead& read)
                 region = GenomicRegion {read_contig, ref_index, ref_index + op_size};
                 
                 if (op_size <= max_variant_size_) {
-                    auto removed_sequence = reference_.get().get_sequence(region);
+                    auto removed_sequence = reference_.get().fetch_sequence(region);
                     auto added_sequence   = splice(read_sequence, read_index, op_size);
                     
                     if (is_good_sequence(removed_sequence) && is_good_sequence(added_sequence)) {
@@ -139,7 +139,7 @@ void AlignmentCandidateVariantGenerator::add_read(const AlignedRead& read)
             }
             case CigarOperation::INSERTION:
             {
-                if (count_bad_qualities(read.get_qualities(), read_index, op_size, min_base_quality_)
+                if (count_bad_qualities(read.qualities(), read_index, op_size, min_base_quality_)
                         <= max_poor_quality_insertion_bases_) {
                     auto added_sequence = splice(read_sequence, read_index, op_size);
                     
@@ -157,7 +157,7 @@ void AlignmentCandidateVariantGenerator::add_read(const AlignedRead& read)
             {
                 region = GenomicRegion {read_contig, ref_index, ref_index + op_size};
                 
-                auto removed_sequence = reference_.get().get_sequence(region);
+                auto removed_sequence = reference_.get().fetch_sequence(region);
                 
                 add_candidate(std::move(region), std::move(removed_sequence), "");
                 
@@ -257,13 +257,13 @@ add_snvs_in_match_range(const GenomicRegion& region, const SequenceIterator firs
     
     using Tuple = boost::tuple<char, char, QualityType>;
     
-    const SequenceType ref_segment {reference_.get().get_sequence(region)};
+    const SequenceType ref_segment {reference_.get().fetch_sequence(region)};
     
-    const auto& contig = region.get_contig_name();
+    const auto& contig = region.contig_name();
     
     const auto last_quality = std::next(first_quality, std::distance(first_base, last_base));
     
-    auto ref_index = region_begin(region);
+    auto ref_index = mapped_begin(region);
     
     for_each(make_zip_iterator(boost::make_tuple(cbegin(ref_segment), first_base, first_quality)),
              make_zip_iterator(boost::make_tuple(cend(ref_segment), last_base, last_quality)),

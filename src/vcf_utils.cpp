@@ -48,7 +48,7 @@ unsigned get_field_cardinality(const VcfHeader::KeyType& key, const VcfRecord& r
 std::vector<VcfType> get_typed_info_values(const VcfHeader& header, const VcfRecord& record,
                               const VcfHeader::KeyType& key)
 {
-    return get_typed_info_values(header, key, record.get_info_value(key));
+    return get_typed_info_values(header, key, record.info_value(key));
 }
 
 std::vector<VcfType> get_typed_format_values(const VcfHeader& header, const VcfRecord& record,

@@ -339,10 +339,10 @@ find_exact_tandem_repeats(SequenceType sequence, const GenomicRegion& region,
     std::vector<TandemRepeat> result {};
     result.reserve(maximal_repetitions.size());
     
-    auto offset = region.get_begin();
+    auto offset = region.begin();
     
     for (const auto& run : maximal_repetitions) {
-        result.emplace_back(GenomicRegion {region.get_contig_name(),
+        result.emplace_back(GenomicRegion {region.contig_name(),
             static_cast<GenomicRegion::SizeType>(run.pos + offset),
             static_cast<GenomicRegion::SizeType>(run.pos + run.length + offset)
         }, run.period);

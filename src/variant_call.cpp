@@ -20,19 +20,19 @@
 
 namespace Octopus
 {
-    const GenomicRegion& VariantCall::get_region() const noexcept
+    const GenomicRegion& VariantCall::mapped_region() const noexcept
     {
-        return mapped_region(variant_);
+        return ::mapped_region(variant_);
     }
     
     const Allele& VariantCall::get_reference() const noexcept
     {
-        return variant_.get_ref_allele();
+        return variant_.ref_allele();
     }
     
     const Allele& VariantCall::get_alternative() const noexcept
     {
-        return variant_.get_alt_allele();
+        return variant_.alt_allele();
     }
     
     void VariantCall::replace_called_alleles(const char old_base, const char replacement_base)
@@ -58,9 +58,9 @@ namespace Octopus
             std::replace_copy(it1, std::cend(ref_seq), std::back_inserter(new_sequence),
                               old_base, replacement_base);
             
-            new_ref = Allele {variant_.get_region(), std::move(new_sequence)};
+            new_ref = Allele {variant_.mapped_region(), std::move(new_sequence)};
         } else {
-            new_ref = variant_.get_ref_allele();
+            new_ref = variant_.ref_allele();
         }
         
         if (it2 != std::cend(alt_seq)) {
@@ -72,9 +72,9 @@ namespace Octopus
             std::replace_copy(it2, std::cend(alt_seq), std::back_inserter(new_sequence),
                               old_base, replacement_base);
             
-            new_alt = Allele {variant_.get_region(), std::move(new_sequence)};
+            new_alt = Allele {variant_.mapped_region(), std::move(new_sequence)};
         } else {
-            new_alt = variant_.get_alt_allele();
+            new_alt = variant_.alt_allele();
         }
         
         variant_ = Variant {std::move(new_ref), std::move(new_alt)};
@@ -82,10 +82,10 @@ namespace Octopus
     
     void VariantCall::replace(const Allele& old, Allele replacement)
     {
-        if (variant_.get_ref_allele() == old) {
-            variant_ = Variant {std::move(replacement), variant_.get_alt_allele()};
-        } else if (variant_.get_alt_allele() == old) {
-            variant_ = Variant {variant_.get_ref_allele(), std::move(replacement)};
+        if (variant_.ref_allele() == old) {
+            variant_ = Variant {std::move(replacement), variant_.alt_allele()};
+        } else if (variant_.alt_allele() == old) {
+            variant_ = Variant {variant_.ref_allele(), std::move(replacement)};
         }
     }
     
@@ -102,15 +102,15 @@ namespace Octopus
     
     bool matches(const Allele& allele, const Variant& variant, const char ignoring)
     {
-        if (allele == variant.get_ref_allele()
-            || allele == variant.get_alt_allele()) return true;
+        if (allele == variant.ref_allele()
+            || allele == variant.alt_allele()) return true;
         
-        if (allele.get_sequence().size() == ref_sequence_size(variant)) {
-            return matches(ref_sequence(variant), allele.get_sequence(), ignoring);
+        if (allele.sequence().size() == ref_sequence_size(variant)) {
+            return matches(ref_sequence(variant), allele.sequence(), ignoring);
         }
         
-        if (allele.get_sequence().size() == alt_sequence_size(variant)) {
-            return matches(alt_sequence(variant), allele.get_sequence(), ignoring);
+        if (allele.sequence().size() == alt_sequence_size(variant)) {
+            return matches(alt_sequence(variant), allele.sequence(), ignoring);
         }
         
         return false;
@@ -167,8 +167,8 @@ namespace Octopus
         auto parsimonised_variant = make_parsimonious(variant_, DummyGenerator {dummy_base});
         
         const std::unordered_map<Allele, Allele> parsimonised_alleles {
-            {variant_.get_ref_allele(), parsimonised_variant.get_ref_allele()},
-            {variant_.get_alt_allele(), parsimonised_variant.get_alt_allele()}
+            {variant_.ref_allele(), parsimonised_variant.ref_allele()},
+            {variant_.alt_allele(), parsimonised_variant.alt_allele()}
         };
         
         const auto has_variant_shifted = begins_before(parsimonised_variant, variant_);
@@ -185,9 +185,9 @@ namespace Octopus
                     parsimonised_genotype.emplace(parsimonised_alleles.at(allele));
                 } else {
                     if (has_variant_shifted) {
-                        auto old_sequence = allele.get_sequence();
+                        auto old_sequence = allele.sequence();
                         old_sequence.insert(std::begin(old_sequence), dummy_base);
-                        Allele new_allele {mapped_region(variant_), std::move(old_sequence)};
+                        Allele new_allele {::mapped_region(variant_), std::move(old_sequence)};
                         parsimonised_genotype.emplace(std::move(new_allele));
                     } else {
                         parsimonised_genotype.emplace(allele);
@@ -208,15 +208,15 @@ namespace Octopus
         auto parsimonised_variant = make_parsimonious(variant_, reference);
         
         const std::unordered_map<Allele, Allele> parsimonised_alleles {
-            {variant_.get_ref_allele(), parsimonised_variant.get_ref_allele()},
-            {variant_.get_alt_allele(), parsimonised_variant.get_alt_allele()}
+            {variant_.ref_allele(), parsimonised_variant.ref_allele()},
+            {variant_.alt_allele(), parsimonised_variant.alt_allele()}
         };
         
         const auto has_variant_shifted = begins_before(parsimonised_variant, variant_);
         
         char reference_base {};
         if (has_variant_shifted) {
-            reference_base = reference.get_sequence(head_position(parsimonised_variant)).front();
+            reference_base = reference.fetch_sequence(head_position(parsimonised_variant)).front();
         }
         
         variant_ = std::move(parsimonised_variant);
@@ -231,9 +231,9 @@ namespace Octopus
                     parsimonised_genotype.emplace(parsimonised_alleles.at(allele));
                 } else {
                     if (has_variant_shifted) {
-                        auto old_sequence = allele.get_sequence();
+                        auto old_sequence = allele.sequence();
                         old_sequence.insert(std::begin(old_sequence), reference_base);
-                        Allele new_allele {mapped_region(variant_), std::move(old_sequence)};
+                        Allele new_allele {::mapped_region(variant_), std::move(old_sequence)};
                         parsimonised_genotype.emplace(std::move(new_allele));
                     } else {
                         parsimonised_genotype.emplace(allele);
@@ -249,7 +249,7 @@ namespace Octopus
     
     bool is_in(const Allele& allele, const Variant& variant)
     {
-        return allele == variant.get_ref_allele() || allele == variant.get_alt_allele();
+        return allele == variant.ref_allele() || allele == variant.alt_allele();
     }
     
     bool contains(const Genotype<Allele>& genotype, const Variant& variant)

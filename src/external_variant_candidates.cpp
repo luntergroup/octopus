@@ -61,11 +61,11 @@ std::vector<Variant> fetch_variants(const GenomicRegion& region, VcfReader& read
         auto records = reader.fetch_records(batch, VcfReader::UnpackPolicy::Sites);
         
         for (const auto& record : records) {
-            for (const auto& alt_allele : record.get_alt_alleles()) {
-                const auto& ref_allele = record.get_ref_allele();
+            for (const auto& alt_allele : record.alt_alleles()) {
+                const auto& ref_allele = record.ref_allele();
                 
                 if (ref_allele.size() != alt_allele.size()) {
-                    auto position = record.get_position();
+                    auto position = record.position();
                     
                     const auto p = std::mismatch(std::cbegin(ref_allele), std::cend(ref_allele),
                                                  std::cbegin(alt_allele), std::cend(alt_allele));
@@ -75,11 +75,11 @@ std::vector<Variant> fetch_variants(const GenomicRegion& region, VcfReader& read
                     
                     position += std::distance(std::cbegin(ref_allele), p.first);
                     
-                    result.emplace_back(record.get_chromosome_name(), position - 1,
+                    result.emplace_back(record.chromosome_name(), position - 1,
                                         std::move(new_ref_allele), std::move(new_alt_allele));
                 } else {
-                    result.emplace_back(record.get_chromosome_name(), record.get_position() - 1,
-                                        record.get_ref_allele(), alt_allele);
+                    result.emplace_back(record.chromosome_name(), record.position() - 1,
+                                        record.ref_allele(), alt_allele);
                 }
             }
         }

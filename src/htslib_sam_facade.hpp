@@ -98,10 +98,10 @@ private:
         bool operator++();
         AlignedRead operator*() const;
         
-        HtslibSamFacade::ReadGroupIdType get_read_group() const;
+        HtslibSamFacade::ReadGroupIdType read_group() const;
         
         bool is_good() const noexcept;
-        std::size_t get_begin() const noexcept;
+        std::size_t begin() const noexcept;
         
     private:
         struct HtsIteratorDeleter
@@ -145,7 +145,7 @@ private:
     
     void init_maps();
     HtsTidType get_htslib_tid(const std::string& contig_name) const;
-    const std::string& get_contig_name(HtsTidType hts_tid) const;
+    const std::string& contig_name(HtsTidType hts_tid) const;
     uint64_t get_num_mapped_reads(const std::string& contig_name) const;
 };
 

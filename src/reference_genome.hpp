@@ -40,17 +40,17 @@ public:
     
     bool is_good() const noexcept;
     
-    const std::string& get_name() const;
+    const std::string& name() const;
     
     bool has_contig(const ContigNameType& contig) const noexcept;
     bool contains_region(const GenomicRegion& region) const noexcept;
     std::size_t num_contigs() const noexcept;
-    const std::vector<ContigNameType>& get_contig_names() const noexcept;
-    SizeType get_contig_size(const ContigNameType& contig) const;
-    SizeType get_contig_size(const GenomicRegion& region) const;
-    GenomicRegion get_contig_region(const ContigNameType& contig) const;
+    const std::vector<ContigNameType>& contig_names() const noexcept;
+    SizeType contig_size(const ContigNameType& contig) const;
+    SizeType contig_size(const GenomicRegion& region) const;
+    GenomicRegion contig_region(const ContigNameType& contig) const;
     
-    SequenceType get_sequence(const GenomicRegion& region) const;
+    SequenceType fetch_sequence(const GenomicRegion& region) const;
     
 private:
     std::unique_ptr<ReferenceGenomeImpl> impl_;

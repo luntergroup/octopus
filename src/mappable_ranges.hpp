@@ -18,8 +18,8 @@
 
 /*
  An ordered collection of MappableType elements, X, is:
- - ForwardSorted         iff i <= j -> get_region(X[i]) <= get_region(X[j])
- - BidirectionallySorted iff X is ForwardSorted AND i <= j -> get_end(X[i]) <= get_end(X[j])
+ - ForwardSorted         iff i <= j -> mapped_region(X[i]) <= mapped_region(X[j])
+ - BidirectionallySorted iff X is ForwardSorted AND i <= j -> end(X[i]) <= end(X[j])
  - Unsorted              iff X is not ForwardSorted
  */
 
@@ -219,7 +219,7 @@ namespace detail
         IsShared() = delete;
         template <typename MappableType1_, typename MappableType2_>
         IsShared(const MappableType1_& lhs, MappableType2_ rhs)
-        : lhs_ {get_region(lhs)}, rhs_ {get_region(rhs)} {}
+        : lhs_ {mapped_region(lhs)}, rhs_ {mapped_region(rhs)} {}
         
         bool operator()(const MappableType& mappable)
         {

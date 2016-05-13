@@ -54,10 +54,10 @@ public:
     Variant(Variant&&)                 = default;
     Variant& operator=(Variant&&)      = default;
     
-    const GenomicRegion& get_region() const noexcept;
+    const GenomicRegion& mapped_region() const noexcept;
     
-    const Allele& get_ref_allele() const noexcept;
-    const Allele& get_alt_allele() const noexcept;
+    const Allele& ref_allele() const noexcept;
+    const Allele& alt_allele() const noexcept;
     
 private:
     Allele reference_, alternative_;
@@ -76,7 +76,7 @@ Variant::Variant(SequenceType1&& ref_contig_name, SizeType ref_begin,
                  SequenceType2&& ref_sequence, SequenceType3&& alt_sequence)
 :
 reference_ {std::forward<SequenceType1>(ref_contig_name), ref_begin, std::forward<SequenceType2>(ref_sequence)},
-alternative_ {reference_.get_region(), std::forward<SequenceType3>(alt_sequence)}
+alternative_ {reference_.mapped_region(), std::forward<SequenceType3>(alt_sequence)}
 {}
 
 // non-member methods
@@ -116,7 +116,7 @@ bool is_parsimonious(const Variant& variant) noexcept;
 
 /*
  See http://genome.sph.umich.edu/wiki/Variant_Normalization for details on variant parsimony.
- The requirement of the template type R is a SequenceType get_sequence(const GenomicRegion&)
+ The requirement of the template type R is a SequenceType sequence(const GenomicRegion&)
  method.
  
  G is a functor which must return a char of the given GenomicRegion position.
@@ -133,7 +133,7 @@ Variant make_parsimonious(const Variant& variant, G generator)
     const auto& old_alt_sequence = alt_sequence(variant);
     
     if (old_ref_sequence.empty() || old_alt_sequence.empty()) {
-        if (old_ref_region.get_begin() > 0) {
+        if (old_ref_region.begin() > 0) {
             auto new_ref_region = expand_lhs(old_ref_region, 1);
             
             const char new_base = generator(head_position(new_ref_region));
@@ -189,9 +189,9 @@ Variant make_parsimonious(const Variant& variant, G generator)
     
     using S = GenomicRegion::SizeType;
     GenomicRegion new_ref_region {
-        old_ref_region.get_contig_name(),
-        old_ref_region.get_begin() + static_cast<S>(std::distance(cbegin(small_allele), pf.first)),
-        old_ref_region.get_end()   - static_cast<S>(std::distance(crbegin(small_allele), pb.first))
+        old_ref_region.contig_name(),
+        old_ref_region.begin() + static_cast<S>(std::distance(cbegin(small_allele), pf.first)),
+        old_ref_region.end()   - static_cast<S>(std::distance(crbegin(small_allele), pb.first))
     };
     
     if (old_ref_sequence.size() > old_alt_sequence.size()) {
@@ -261,7 +261,7 @@ namespace std {
         {
             using boost::hash_combine;
             size_t result {};
-            hash_combine(result, hash<GenomicRegion>()(variant.get_region()));
+            hash_combine(result, hash<GenomicRegion>()(variant.mapped_region()));
             hash_combine(result, hash<Allele::SequenceType>()(ref_sequence(variant)));
             hash_combine(result, hash<Allele::SequenceType>()(alt_sequence(variant)));
             return result;

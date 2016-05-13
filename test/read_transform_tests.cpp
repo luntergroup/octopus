@@ -43,7 +43,7 @@ BOOST_AUTO_TEST_SUITE(Components)
 //    
 //    const auto& a_read = reads[0];
 //    
-//    BOOST_CHECK(is_back_soft_clipped(a_read.get_cigar_string()));
+//    BOOST_CHECK(is_back_soft_clipped(a_read.cigar_string()));
 //    
 //    Octopus::ReadTransform transformer {};
 //    transformer.register_transform(Octopus::ReadTransforms::trim_adapters());
@@ -51,7 +51,7 @@ BOOST_AUTO_TEST_SUITE(Components)
 //    
 //    transform_reads(reads, transformer);
 //    
-//    BOOST_CHECK(std::all_of(a_read.get_qualities().rbegin(), a_read.get_qualities().rbegin() + 13,
+//    BOOST_CHECK(std::all_of(a_read.qualities().rbegin(), a_read.qualities().rbegin() + 13,
 //                            [] (const auto q) { return q == 0; }));
 //    
 //    GenomicRegion region2 {"3", 100'000, 100'100};

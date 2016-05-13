@@ -50,22 +50,22 @@ void swap(AlignedRead& lhs, AlignedRead& rhs) noexcept
 // NextSegment public methods
 //
 
-const std::string& AlignedRead::NextSegment::get_contig_name() const
+const std::string& AlignedRead::NextSegment::contig_name() const
 {
     return contig_name_;
 }
 
-AlignedRead::SizeType AlignedRead::NextSegment::get_begin() const noexcept
+AlignedRead::SizeType AlignedRead::NextSegment::begin() const noexcept
 {
     return begin_;
 }
 
-AlignedRead::SizeType AlignedRead::NextSegment::get_inferred_template_length() const noexcept
+AlignedRead::SizeType AlignedRead::NextSegment::inferred_template_length() const noexcept
 {
     return inferred_template_length_;
 }
 
-GenomicRegion AlignedRead::NextSegment::get_inferred_region() const
+GenomicRegion AlignedRead::NextSegment::inferred_region() const
 {
     return GenomicRegion {contig_name_, begin_, inferred_template_length_};
 }
@@ -84,27 +84,27 @@ bool AlignedRead::NextSegment::is_marked_reverse_mapped() const
 // AlignedRead public methods
 //
 
-const GenomicRegion& AlignedRead::get_region() const noexcept
+const GenomicRegion& AlignedRead::mapped_region() const noexcept
 {
     return region_;
 }
 
-const AlignedRead::SequenceType& AlignedRead::get_sequence() const noexcept
+const AlignedRead::SequenceType& AlignedRead::sequence() const noexcept
 {
     return sequence_;
 }
 
-const AlignedRead::Qualities& AlignedRead::get_qualities() const noexcept
+const AlignedRead::Qualities& AlignedRead::qualities() const noexcept
 {
     return qualities_;
 }
 
-AlignedRead::QualityType AlignedRead::get_mapping_quality() const noexcept
+AlignedRead::QualityType AlignedRead::mapping_quality() const noexcept
 {
     return mapping_quality_;
 }
 
-const CigarString& AlignedRead::get_cigar_string() const noexcept
+const CigarString& AlignedRead::cigar_string() const noexcept
 {
     return cigar_string_;
 }
@@ -114,7 +114,7 @@ bool AlignedRead::has_mate() const noexcept
     return next_segment_ != nullptr;
 }
 
-const AlignedRead::NextSegment& AlignedRead::get_next_segment() const
+const AlignedRead::NextSegment& AlignedRead::next_segment() const
 {
     if (is_chimeric()) {
         return *next_segment_;
@@ -123,7 +123,7 @@ const AlignedRead::NextSegment& AlignedRead::get_next_segment() const
     }
 }
 
-AlignedRead::Flags AlignedRead::get_flags() const
+AlignedRead::Flags AlignedRead::flags() const
 {
     Flags flags {};
     
@@ -286,21 +286,21 @@ std::size_t AlignedRead::make_hash() const
 
 AlignedRead::SizeType sequence_size(const AlignedRead& read) noexcept
 {
-    return static_cast<AlignedRead::SizeType>(read.get_sequence().size());
+    return static_cast<AlignedRead::SizeType>(read.sequence().size());
 }
 
 bool is_empty_sequence(const AlignedRead& read) noexcept
 {
-    return read.get_sequence().empty();
+    return read.sequence().empty();
 }
 
 CigarString splice_cigar(const AlignedRead& read, const GenomicRegion& region)
 {
-    if (contains(region, read)) return read.get_cigar_string();
+    if (contains(region, read)) return read.cigar_string();
     
     const auto splice_region = overlapped_region(read, region);
     
-    return splice(read.get_cigar_string(), static_cast<CigarOperation::SizeType>(begin_distance(splice_region, read)));
+    return splice(read.cigar_string(), static_cast<CigarOperation::SizeType>(begin_distance(splice_region, read)));
 }
 
 AlignedRead::SizeType count_overlapped_bases(const AlignedRead& read, const GenomicRegion& region)
@@ -313,12 +313,12 @@ AlignedRead::SizeType count_overlapped_bases(const AlignedRead& read, const Geno
 
 bool is_soft_clipped(const AlignedRead& read)
 {
-    return is_soft_clipped(read.get_cigar_string());
+    return is_soft_clipped(read.cigar_string());
 }
 
 std::pair<AlignedRead::SizeType, AlignedRead::SizeType> get_soft_clipped_sizes(const AlignedRead& read)
 {
-    return get_soft_clipped_sizes(read.get_cigar_string());
+    return get_soft_clipped_sizes(read.cigar_string());
 }
 
 AlignedRead splice(const AlignedRead& read, const GenomicRegion& region)
@@ -335,76 +335,76 @@ AlignedRead splice(const AlignedRead& read, const GenomicRegion& region)
     
     const auto reference_offset = static_cast<CigarOperation::SizeType>(begin_distance(splice_region, read));
     
-    const auto uncontained_cigar_splice = splice_reference(read.get_cigar_string(), reference_offset);
+    const auto uncontained_cigar_splice = splice_reference(read.cigar_string(), reference_offset);
     
-    auto contained_cigar_splice   = splice_reference(read.get_cigar_string(), reference_offset,
+    auto contained_cigar_splice   = splice_reference(read.cigar_string(), reference_offset,
                                                      region_size(splice_region));
     
     const auto sequence_offset = sequence_size(uncontained_cigar_splice);
     const auto sequence_length = sequence_size(contained_cigar_splice);
     
-    AlignedRead::SequenceType sequence_splice(cbegin(read.get_sequence()) + sequence_offset,
-                                              cbegin(read.get_sequence()) + sequence_offset + sequence_length);
+    AlignedRead::SequenceType sequence_splice(cbegin(read.sequence()) + sequence_offset,
+                                              cbegin(read.sequence()) + sequence_offset + sequence_length);
     
-    AlignedRead::Qualities qualities_splice(cbegin(read.get_qualities()) + sequence_offset,
-                                            cbegin(read.get_qualities()) + sequence_offset + sequence_length);
+    AlignedRead::Qualities qualities_splice(cbegin(read.qualities()) + sequence_offset,
+                                            cbegin(read.qualities()) + sequence_offset + sequence_length);
     
     return AlignedRead {
         splice_region,
         std::move(sequence_splice),
         std::move(qualities_splice),
         std::move(contained_cigar_splice),
-        read.get_mapping_quality(),
-        read.get_flags()
+        read.mapping_quality(),
+        read.flags()
     };
 }
 
 bool operator==(const AlignedRead& lhs, const AlignedRead& rhs)
 {
-    return lhs.get_mapping_quality() == rhs.get_mapping_quality() &&
-           lhs.get_region()          == rhs.get_region() &&
-           lhs.get_cigar_string()    == rhs.get_cigar_string() &&
-           lhs.get_qualities()       == rhs.get_qualities();
+    return lhs.mapping_quality() == rhs.mapping_quality() &&
+           lhs.mapped_region()          == rhs.mapped_region() &&
+           lhs.cigar_string()    == rhs.cigar_string() &&
+           lhs.qualities()       == rhs.qualities();
 }
 
 bool operator<(const AlignedRead& lhs, const AlignedRead& rhs)
 {
-    if (lhs.get_region() == rhs.get_region()) {
-        if (lhs.get_mapping_quality() == rhs.get_mapping_quality()) {
-            if (lhs.get_cigar_string() == rhs.get_cigar_string()) {
-                return lhs.get_qualities() < rhs.get_qualities();
+    if (lhs.mapped_region() == rhs.mapped_region()) {
+        if (lhs.mapping_quality() == rhs.mapping_quality()) {
+            if (lhs.cigar_string() == rhs.cigar_string()) {
+                return lhs.qualities() < rhs.qualities();
             } else {
-                return lhs.get_cigar_string() < rhs.get_cigar_string();
+                return lhs.cigar_string() < rhs.cigar_string();
             }
         } else {
-            return lhs.get_mapping_quality() < rhs.get_mapping_quality();
+            return lhs.mapping_quality() < rhs.mapping_quality();
         }
     } else {
-        return lhs.get_region() < rhs.get_region();
+        return lhs.mapped_region() < rhs.mapped_region();
     }
 }
 
 bool are_other_segments_duplicates(const AlignedRead &lhs, const AlignedRead &rhs)
 {
     if (lhs.is_chimeric() && rhs.is_chimeric()) {
-        return lhs.get_next_segment() == rhs.get_next_segment();
+        return lhs.next_segment() == rhs.next_segment();
     }
     return false;
 }
 
 bool IsDuplicate::operator()(const AlignedRead &lhs, const AlignedRead &rhs) const
 {
-    return lhs.get_region() == rhs.get_region()
-        && lhs.get_cigar_string() == rhs.get_cigar_string()
-        && lhs.get_flags().is_marked_reverse_mapped == rhs.get_flags().is_marked_reverse_mapped
+    return lhs.mapped_region() == rhs.mapped_region()
+        && lhs.cigar_string() == rhs.cigar_string()
+        && lhs.flags().is_marked_reverse_mapped == rhs.flags().is_marked_reverse_mapped
         && are_other_segments_duplicates(lhs, rhs);
 }
 
 bool operator==(const AlignedRead::NextSegment& lhs, const AlignedRead::NextSegment& rhs)
 {
-    return lhs.get_contig_name() == rhs.get_contig_name()
-        && lhs.get_begin() == rhs.get_begin()
-        && lhs.get_inferred_template_length() == rhs.get_inferred_template_length();
+    return lhs.contig_name() == rhs.contig_name()
+        && lhs.begin() == rhs.begin()
+        && lhs.inferred_template_length() == rhs.inferred_template_length();
 }
 
 std::ostream& operator<<(std::ostream& os, const AlignedRead::Qualities& qualities)
@@ -418,15 +418,15 @@ std::ostream& operator<<(std::ostream& os, const AlignedRead::Qualities& qualiti
 
 std::ostream& operator<<(std::ostream& os, const AlignedRead& read)
 {
-    os << read.get_region() << '\n';
-    os << read.get_sequence() << '\n';
-    os << read.get_qualities() << '\n';
-    os << read.get_cigar_string() << '\n';
-    os << static_cast<unsigned>(read.get_mapping_quality()) << '\n';
+    os << read.mapped_region() << '\n';
+    os << read.sequence() << '\n';
+    os << read.qualities() << '\n';
+    os << read.cigar_string() << '\n';
+    os << static_cast<unsigned>(read.mapping_quality()) << '\n';
     if (read.is_chimeric()) {
-        os << read.get_next_segment().get_contig_name() << '\n';
-        os << read.get_next_segment().get_begin() << '\n';
-        os << read.get_next_segment().get_inferred_template_length();
+        os << read.next_segment().contig_name() << '\n';
+        os << read.next_segment().begin() << '\n';
+        os << read.next_segment().inferred_template_length();
     } else {
         os << "no other segments";
     }

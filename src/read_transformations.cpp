@@ -17,8 +17,8 @@ namespace ReadTransforms
     void TrimOverlapping::operator()(AlignedRead& read) const
     {
         if (read.is_chimeric() && !read.is_marked_reverse_mapped()
-            && read.get_next_segment().get_begin() < region_end(read)) {
-            const auto overlapped_size = region_end(read) - read.get_next_segment().get_begin();
+            && read.next_segment().begin() < mapped_end(read)) {
+            const auto overlapped_size = mapped_end(read) - read.next_segment().begin();
             read.zero_back_qualities(overlapped_size);
         }
     }
@@ -26,7 +26,7 @@ namespace ReadTransforms
     void TrimAdapters::operator()(AlignedRead& read) const
     {
         if (read.is_chimeric()) {
-            const auto insert_size = read.get_next_segment().get_inferred_template_length();
+            const auto insert_size = read.next_segment().inferred_template_length();
             const auto read_size   = sequence_size(read);
             
             if (insert_size <= read_size) {
@@ -54,8 +54,8 @@ namespace ReadTransforms
     
     void TrimSoftClipped::operator()(AlignedRead& read) const noexcept
     {
-        if (is_soft_clipped(read.get_cigar_string())) {
-            const auto soft_clipped_sizes = get_soft_clipped_sizes(read.get_cigar_string());
+        if (is_soft_clipped(read.cigar_string())) {
+            const auto soft_clipped_sizes = get_soft_clipped_sizes(read.cigar_string());
             read.zero_front_qualities(soft_clipped_sizes.first);
             read.zero_back_qualities(soft_clipped_sizes.second);
         }

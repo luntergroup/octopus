@@ -269,7 +269,7 @@ Phaser::force_phase(const std::vector<Haplotype>& haplotypes,
     assert(!genotype_posteriors.empty1());
     assert(!genotype_posteriors.empty2());
     
-    const auto& haplotype_region = haplotypes.front().get_region();
+    const auto& haplotype_region = haplotypes.front().mapped_region();
     const auto genotypes         = extract_genotypes(genotype_posteriors);
     const auto partitions        = extract_covered_regions(candidates);
     

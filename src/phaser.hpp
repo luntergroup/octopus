@@ -62,7 +62,7 @@ namespace Octopus
                 GenomicRegion region;
                 double score;
                 
-                const GenomicRegion& get_region() const noexcept { return region; }
+                const GenomicRegion& mapped_region() const noexcept { return region; }
             };
             
             using SamplePhaseRegions = std::vector<PhaseRegion>;

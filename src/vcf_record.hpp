@@ -61,23 +61,23 @@ public:
     VcfRecord(VcfRecord&&)                 = default;
     VcfRecord& operator=(VcfRecord&&)      = default;
     
-    const std::string& get_chromosome_name() const noexcept;
-    SizeType get_position() const noexcept;
-    const IdType& get_id() const noexcept;
-    const SequenceType& get_ref_allele() const noexcept;
+    const std::string& chromosome_name() const noexcept;
+    SizeType position() const noexcept;
+    const IdType& id() const noexcept;
+    const SequenceType& ref_allele() const noexcept;
     unsigned num_alt_alleles() const noexcept;
-    const std::vector<SequenceType>& get_alt_alleles() const noexcept;
-    boost::optional<QualityType> get_quality() const noexcept;
+    const std::vector<SequenceType>& alt_alleles() const noexcept;
+    boost::optional<QualityType> quality() const noexcept;
     bool has_filter(const KeyType& filter) const noexcept;
-    const std::vector<KeyType> get_filters() const noexcept;
+    const std::vector<KeyType> filters() const noexcept;
     bool has_info(const KeyType& key) const noexcept;
-    std::vector<KeyType> get_info_keys() const;
-    const std::vector<ValueType>& get_info_value(const KeyType& key) const;
+    std::vector<KeyType> info_keys() const;
+    const std::vector<ValueType>& info_value(const KeyType& key) const;
     
     // sample related functions
     bool has_format(const KeyType& key) const noexcept;
     unsigned format_cardinality(const KeyType& key) const noexcept;
-    const std::vector<KeyType>& get_format() const noexcept;
+    const std::vector<KeyType>& format() const noexcept;
     unsigned num_samples() const noexcept;
     bool has_genotypes() const noexcept;
     unsigned sample_ploidy() const noexcept;
@@ -181,7 +181,7 @@ namespace std {
     {
         size_t operator()(const VcfRecord& record) const
         {
-            return hash<string>()(record.get_id());
+            return hash<string>()(record.id());
         }
     };
 } // namespace std
@@ -232,7 +232,7 @@ public:
     Builder& set_refcall();
     Builder& set_somatic();
     
-    SizeType get_position() const noexcept;
+    SizeType position() const noexcept;
     
     VcfRecord build() const;
     VcfRecord build_once() noexcept;

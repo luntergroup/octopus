@@ -58,17 +58,17 @@ bool Fasta::do_is_open() const noexcept
     }
 }
 
-std::string Fasta::do_get_reference_name() const
+std::string Fasta::do_fetch_reference_name() const
 {
     return fasta_path_.stem().string();
 }
 
-std::vector<Fasta::ContigNameType> Fasta::do_get_contig_names() const
+std::vector<Fasta::ContigNameType> Fasta::do_fetch_contig_names() const
 {
     return bioio::read_fasta_index_contig_names(fasta_index_path_.string());
 }
 
-Fasta::SizeType Fasta::do_get_contig_size(const ContigNameType& contig) const
+Fasta::SizeType Fasta::do_fetch_contig_size(const ContigNameType& contig) const
 {
     if (fasta_index_.count(contig) == 0) {
         throw std::runtime_error {"contig \"" + contig +
@@ -80,7 +80,7 @@ Fasta::SizeType Fasta::do_get_contig_size(const ContigNameType& contig) const
 Fasta::SequenceType Fasta::do_fetch_sequence(const GenomicRegion& region) const
 {
     return bioio::read_fasta_contig(fasta_, fasta_index_.at(contig_name(region)),
-                                    region_begin(region), size(region));
+                                    mapped_begin(region), size(region));
 }
 
 bool Fasta::is_valid() const noexcept

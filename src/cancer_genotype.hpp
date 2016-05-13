@@ -45,7 +45,7 @@ public:
     CancerGenotype(CancerGenotype&&)                 = default;
     CancerGenotype& operator=(CancerGenotype&&)      = default;
     
-    const GenomicRegion& get_region() const noexcept;
+    const GenomicRegion& mapped_region() const noexcept;
     
     const MappableType& operator[](unsigned n) const;
     
@@ -98,9 +98,9 @@ cancer_element_ {std::make_shared<MappableType>(std::forward<C>(cancer_element))
 {}
 
 template <typename MappableType>
-const GenomicRegion& CancerGenotype<MappableType>::get_region() const noexcept
+const GenomicRegion& CancerGenotype<MappableType>::mapped_region() const noexcept
 {
-    return mapped_region(*cancer_element_);
+    return ::mapped_region(*cancer_element_);
 }
 
 template <typename MappableType>
@@ -177,7 +177,7 @@ CancerGenotype<MappableType2> splice(const CancerGenotype<MappableType1>& genoty
 template <typename MappableType1, typename MappableType2>
 bool contains(const CancerGenotype<MappableType1>& lhs, const CancerGenotype<MappableType2>& rhs)
 {
-    return splice<MappableType2>(lhs, rhs.get_region()) == rhs;
+    return splice<MappableType2>(lhs, rhs.mapped_region()) == rhs;
 }
 
 std::pair<std::vector<CancerGenotype<Haplotype>>, std::vector<Genotype<Haplotype>>>

@@ -44,8 +44,8 @@ public:
     BaseAllele(BaseAllele&&)                 = default;
     BaseAllele& operator=(BaseAllele&&)      = default;
     
-    const RegionTp& get_region() const noexcept;
-    const SequenceType& get_sequence() const noexcept;
+    const RegionTp& mapped_region() const noexcept;
+    const SequenceType& sequence() const noexcept;
     
     friend BaseAllele<ContigRegion> demote(BaseAllele<GenomicRegion>&&);
     
@@ -78,13 +78,13 @@ region_ {std::forward<T>(contig_name), begin_pos, static_cast<SizeType>(begin_po
 {}
 
 template <typename RegionTp>
-const RegionTp& BaseAllele<RegionTp>::get_region() const noexcept
+const RegionTp& BaseAllele<RegionTp>::mapped_region() const noexcept
 {
     return region_;
 }
 
 template <typename RegionTp>
-const typename BaseAllele<RegionTp>::SequenceType& BaseAllele<RegionTp>::get_sequence() const noexcept
+const typename BaseAllele<RegionTp>::SequenceType& BaseAllele<RegionTp>::sequence() const noexcept
 {
     return sequence_;
 }
@@ -97,13 +97,13 @@ ContigAllele demote(Allele&& allele);
 template <typename RegionTp>
 auto sequence_size(const BaseAllele<RegionTp>& allele) noexcept
 {
-    return static_cast<typename BaseAllele<RegionTp>::SizeType>(allele.get_sequence().size());
+    return static_cast<typename BaseAllele<RegionTp>::SizeType>(allele.sequence().size());
 }
 
 template <typename RegionTp>
 auto is_empty_sequence(const BaseAllele<RegionTp>& allele) noexcept
 {
-    return allele.get_sequence().empty();
+    return allele.sequence().empty();
 }
 
 namespace detail
@@ -124,7 +124,7 @@ namespace detail
             return ResultType {};
         }
         
-        const auto& sequence = allele.get_sequence();
+        const auto& sequence = allele.sequence();
         
         if (mapped_region(allele) == region) {
             return sequence;
@@ -135,7 +135,7 @@ namespace detail
             return ResultType {first, first + sequence.size() - region_size(allele)};
         }
         
-        auto first = std::cbegin(allele.get_sequence()) + begin_distance(region, allele);
+        auto first = std::cbegin(allele.sequence()) + begin_distance(region, allele);
         // The minimum of the allele sequence size and region size is used as deletions will
         // result in a sequence size smaller than the region size
         return ResultType {first, first + std::min(sequence.size(), static_cast<size_t>(region_size(region)))};
@@ -153,10 +153,10 @@ bool contains(const BaseAllele<RegionTp>& lhs, const BaseAllele<RegionTp>& rhs)
         // If the alleles are both insertions then both regions will be the same so we can only test
         // if the inserted rhs sequence is a subsequence of the lhs sequence. The rhs sequence
         // is required to be non-empty otherwise it would be a subsequence of everything.
-        return !rhs.get_sequence().empty() && detail::is_subsequence(lhs.get_sequence(), rhs.get_sequence());
+        return !rhs.sequence().empty() && detail::is_subsequence(lhs.sequence(), rhs.sequence());
     }
     
-    return detail::subsequence(lhs, rhs.get_region()) == rhs.get_sequence();
+    return detail::subsequence(lhs, rhs.mapped_region()) == rhs.sequence();
 }
 
 template <typename RegionTp>
@@ -172,13 +172,13 @@ BaseAllele<RegionTp> splice(const BaseAllele<RegionTp>& allele, const RegionTp& 
 template <typename RegionTp>
 bool is_insertion(const BaseAllele<RegionTp>& allele)
 {
-    return allele.get_sequence().size() > region_size(allele);
+    return allele.sequence().size() > region_size(allele);
 }
 
 template <typename RegionTp>
 bool is_deletion(const BaseAllele<RegionTp>& allele)
 {
-    return allele.get_sequence().size() < region_size(allele);
+    return allele.sequence().size() < region_size(allele);
 }
 
 template <typename RegionTp>
@@ -193,25 +193,25 @@ auto decompose(const BaseAllele<RegionTp>& allele)
     std::vector<BaseAllele<RegionTp>> result {};
     
     if (is_insertion(allele)) {
-        const auto& sequence = allele.get_sequence();
+        const auto& sequence = allele.sequence();
         auto insertion_size = sequence.size();
         result.reserve(insertion_size);
         
         for (unsigned i {0}; i < insertion_size; ++i) {
-            result.emplace_back(get_region(allele), sequence.substr(i, 1));
+            result.emplace_back(mapped_region(allele), sequence.substr(i, 1));
         }
     } else if (is_deletion(allele)) {
         result.reserve(region_size(allele));
-        auto decomposed_regions = decompose(get_region(allele));
+        auto decomposed_regions = decompose(mapped_region(allele));
         
         std::transform(std::begin(decomposed_regions), std::end(decomposed_regions), std::back_inserter(result),
                        [] (const auto& region) { return BaseAllele<RegionTp> {region, ""}; } );
     } else {
         result.reserve(region_size(allele));
-        const auto& sequence = allele.get_sequence();
+        const auto& sequence = allele.sequence();
         unsigned i {};
         
-        for (const auto& region : decompose(get_region(allele))) {
+        for (const auto& region : decompose(mapped_region(allele))) {
             result.emplace_back(region, sequence.substr(i, 1));
             ++i;
         }
@@ -223,16 +223,16 @@ auto decompose(const BaseAllele<RegionTp>& allele)
 template <typename RegionTp>
 bool operator==(const BaseAllele<RegionTp>& lhs, const BaseAllele<RegionTp>& rhs)
 {
-    return lhs.get_region() == rhs.get_region() && lhs.get_sequence() == rhs.get_sequence();
+    return lhs.mapped_region() == rhs.mapped_region() && lhs.sequence() == rhs.sequence();
 }
 
 template <typename RegionTp>
 bool operator<(const BaseAllele<RegionTp>& lhs, const BaseAllele<RegionTp>& rhs)
 {
-    if (lhs.get_region() == rhs.get_region()) {
-        return lhs.get_sequence() < rhs.get_sequence();
+    if (lhs.mapped_region() == rhs.mapped_region()) {
+        return lhs.sequence() < rhs.sequence();
     }
-    return lhs.get_region() < rhs.get_region();
+    return lhs.mapped_region() < rhs.mapped_region();
 }
 
 namespace std {
@@ -242,8 +242,8 @@ namespace std {
         {
             using boost::hash_combine;
             size_t result {0};
-            hash_combine(result, hash<RegionTp>()(allele.get_region()));
-            hash_combine(result, hash<typename BaseAllele<RegionTp>::SequenceType>()(allele.get_sequence()));
+            hash_combine(result, hash<RegionTp>()(allele.mapped_region()));
+            hash_combine(result, hash<typename BaseAllele<RegionTp>::SequenceType>()(allele.sequence()));
             return result;
         }
     };
@@ -263,7 +263,7 @@ namespace boost
 template <typename RegionTp>
 std::ostream& operator<<(std::ostream& os, const BaseAllele<RegionTp>& allele)
 {
-    os << allele.get_region() << " " << allele.get_sequence();
+    os << allele.mapped_region() << " " << allele.sequence();
     return os;
 }
 

@@ -17,3 +17,7 @@
 - [] SSE log_exp_calculation.
 - [] Improve assembler implementation.
 - [] ReadReader and VcfReader/Writer should use iterators.
+
+## Misc
+
+- [] Make Genotype::operator[] version non const so can modify in place

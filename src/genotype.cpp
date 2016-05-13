@@ -59,9 +59,9 @@ const Haplotype& Genotype<Haplotype>::operator[](const unsigned n) const
     return *haplotypes_[n];
 }
 
-const GenomicRegion& Genotype<Haplotype>::get_region() const noexcept
+const GenomicRegion& Genotype<Haplotype>::mapped_region() const noexcept
 {
-    return haplotypes_.front()->get_region();
+    return haplotypes_.front()->mapped_region();
 }
 
 unsigned Genotype<Haplotype>::ploidy() const noexcept

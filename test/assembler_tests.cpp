@@ -78,9 +78,9 @@ BOOST_AUTO_TEST_SUITE(Components)
 //    
 //    auto lambda = make_reference(lambda_reference_fasta);
 //    
-//    auto contig_name = lambda.get_contig_names()[0];
-//    auto contig_size = lambda.get_contig_size(contig_name);
-//    auto contig = lambda.get_sequence(GenomicRegion {contig_name, 0, contig_size});
+//    auto contig_name = lambda.fetch_contig_names()[0];
+//    auto contig_size = lambda.fetch_contig_size(contig_name);
+//    auto contig = lambda.fetch_sequence(GenomicRegion {contig_name, 0, contig_size});
 //    
 //    //Assembler assembler {15};
 //    

@@ -55,7 +55,7 @@ namespace Octopus
             
             std::unique_ptr<Call>::pointer operator->() const noexcept { return call.get(); };
             
-            const GenomicRegion& get_region() const noexcept { return call->get_region(); }
+            const GenomicRegion& mapped_region() const noexcept { return call->mapped_region(); }
             
             std::unique_ptr<Call> call;
         };
@@ -83,10 +83,10 @@ namespace Octopus
         assert(std::is_sorted(std::cbegin(wrapped_calls), std::cend(wrapped_calls)));
         
         for (auto it = std::begin(wrapped_calls); it != std::end(wrapped_calls);) {
-            if (is_empty(it->get_region())) {
+            if (is_empty(it->mapped_region())) {
                 auto it2 = std::find_if_not(std::next(it), std::end(wrapped_calls),
                                             [it] (const auto& call) {
-                                                return call->get_region() == it->get_region();
+                                                return call->mapped_region() == it->mapped_region();
                                             });
                 
                 if (it2 == std::end(wrapped_calls)) break;
@@ -116,13 +116,13 @@ namespace Octopus
                                        std::cbegin(insertion_genotype), std::back_inserter(resolved_alleles),
                                        [] (const Allele& allele1, const Allele& allele2) {
                                            if (is_insertion(allele2)) {
-                                               const auto& old_sequence = allele1.get_sequence();
+                                               const auto& old_sequence = allele1.sequence();
                                                return Allele::SequenceType {
                                                    std::next(std::cbegin(old_sequence), sequence_size(allele2)),
                                                    std::cend(old_sequence)
                                                };
                                            }
-                                           return allele1.get_sequence();
+                                           return allele1.sequence();
                                        });
                         
                         Genotype<Allele> new_genotype {sample_genotype.ploidy()};
@@ -160,7 +160,7 @@ namespace Octopus
             std::transform(std::make_move_iterator(it), std::make_move_iterator(it2),
                            std::back_inserter(result),
                            [this] (CallWrapper&& call) {
-                               call->replace('#', reference_.get_sequence(head_position(call->get_region())).front());
+                               call->replace('#', reference_.fetch_sequence(head_position(call->mapped_region())).front());
                                return this->make(std::move(call.call));
                            });
             
@@ -172,12 +172,12 @@ namespace Octopus
                                         });
             
             std::for_each(it2, it3, [this] (auto& call) {
-                if (call->get_reference().get_sequence().front() == '#') {
-                    const auto actual_reference_base = reference_.get_sequence(head_position(call)).front();
+                if (call->get_reference().sequence().front() == '#') {
+                    const auto actual_reference_base = reference_.fetch_sequence(head_position(call)).front();
                     
-                    auto new_sequence = call->get_reference().get_sequence();
+                    auto new_sequence = call->get_reference().sequence();
                     new_sequence.front() = actual_reference_base;
-                    Allele new_allele {call.get_region(), std::move(new_sequence)};
+                    Allele new_allele {call.mapped_region(), std::move(new_sequence)};
                     
                     call->replace(call->get_reference(), std::move(new_allele));
                     
@@ -193,10 +193,10 @@ namespace Octopus
                         Genotype<Allele> new_genotype {ploidy};
                         
                         for (unsigned i {0}; i < ploidy; ++i) {
-                            if (old_genotype[i].get_sequence().front() == '#') {
-                                auto new_sequence = old_genotype[i].get_sequence();
+                            if (old_genotype[i].sequence().front() == '#') {
+                                auto new_sequence = old_genotype[i].sequence();
                                 new_sequence.front() = actual_reference_base;
-                                Allele new_allele {call.get_region(), std::move(new_sequence)};
+                                Allele new_allele {call.mapped_region(), std::move(new_sequence)};
                                 replacements.emplace(old_genotype[i], new_allele);
                                 new_genotype.emplace(std::move(new_allele));
                             } else {
@@ -227,12 +227,12 @@ namespace Octopus
                 
                 std::unordered_map<Allele, Allele> replacements {};
                 
-                if (curr_call->get_reference().get_sequence().front() == '#') {
-                    const auto actual_reference_base = reference_.get_sequence(head_position(curr_call)).front();
+                if (curr_call->get_reference().sequence().front() == '#') {
+                    const auto actual_reference_base = reference_.fetch_sequence(head_position(curr_call)).front();
                     
-                    auto new_sequence = curr_call->get_reference().get_sequence();
+                    auto new_sequence = curr_call->get_reference().sequence();
                     new_sequence.front() = actual_reference_base;
-                    Allele new_allele {curr_call.get_region(), std::move(new_sequence)};
+                    Allele new_allele {curr_call.mapped_region(), std::move(new_sequence)};
                     
                     curr_call->replace(curr_call->get_reference(), std::move(new_allele));
                     
@@ -253,21 +253,21 @@ namespace Octopus
                             
                             if (are_in_phase(prev_genotype_call, genotype_call)) {
                                 for (unsigned i {0}; i < ploidy; ++i) {
-                                    if (old_genotype[i].get_sequence().empty()) {
-                                        Allele::SequenceType new_sequence(size(curr_call.get_region()), '*');
-                                        Allele new_allele {curr_call.get_region(), std::move(new_sequence)};
+                                    if (old_genotype[i].sequence().empty()) {
+                                        Allele::SequenceType new_sequence(size(curr_call.mapped_region()), '*');
+                                        Allele new_allele {curr_call.mapped_region(), std::move(new_sequence)};
                                         new_genotype.emplace(std::move(new_allele));
-                                    } else if (old_genotype[i].get_sequence().front() == '#') {
-                                        if (splice(prev_genotype[i], head_position(curr_call)).get_sequence().front() == actual_reference_base) {
-                                            auto new_sequence = old_genotype[i].get_sequence();
+                                    } else if (old_genotype[i].sequence().front() == '#') {
+                                        if (splice(prev_genotype[i], head_position(curr_call)).sequence().front() == actual_reference_base) {
+                                            auto new_sequence = old_genotype[i].sequence();
                                             new_sequence.front() = actual_reference_base;
-                                            Allele new_allele {(*it2).get_region(), std::move(new_sequence)};
+                                            Allele new_allele {(*it2).mapped_region(), std::move(new_sequence)};
                                             replacements.emplace(old_genotype[i], new_allele);
                                             new_genotype.emplace(std::move(new_allele));
                                         } else {
-                                            auto new_sequence = old_genotype[i].get_sequence();
+                                            auto new_sequence = old_genotype[i].sequence();
                                             new_sequence.front() = '*';
-                                            Allele new_allele {curr_call.get_region(), std::move(new_sequence)};
+                                            Allele new_allele {curr_call.mapped_region(), std::move(new_sequence)};
                                             new_genotype.emplace(std::move(new_allele));
                                             has_missing_allele = true;
                                         }
@@ -278,14 +278,14 @@ namespace Octopus
                             } else {
                                 has_missing_allele = true;
                                 for (unsigned i {0}; i < ploidy; ++i) {
-                                    if (old_genotype[i].get_sequence().empty()) {
-                                        Allele::SequenceType new_sequence(size(curr_call.get_region()), '*');
-                                        Allele new_allele {curr_call.get_region(), std::move(new_sequence)};
+                                    if (old_genotype[i].sequence().empty()) {
+                                        Allele::SequenceType new_sequence(size(curr_call.mapped_region()), '*');
+                                        Allele new_allele {curr_call.mapped_region(), std::move(new_sequence)};
                                         new_genotype.emplace(std::move(new_allele));
-                                    } else if (old_genotype[i].get_sequence().front() == '#') {
-                                        auto new_sequence = old_genotype[i].get_sequence();
+                                    } else if (old_genotype[i].sequence().front() == '#') {
+                                        auto new_sequence = old_genotype[i].sequence();
                                         new_sequence.front() = '.';
-                                        Allele new_allele {curr_call.get_region(), std::move(new_sequence)};
+                                        Allele new_allele {curr_call.mapped_region(), std::move(new_sequence)};
                                         new_genotype.emplace(std::move(new_allele));
                                     } else {
                                         new_genotype.emplace(old_genotype[i]);
@@ -306,10 +306,10 @@ namespace Octopus
                             Genotype<Allele> new_genotype {ploidy};
                             
                             for (unsigned i {0}; i < ploidy; ++i) {
-                                if (old_genotype[i].get_sequence().front() == '#') {
-                                    auto new_sequence = old_genotype[i].get_sequence();
+                                if (old_genotype[i].sequence().front() == '#') {
+                                    auto new_sequence = old_genotype[i].sequence();
                                     new_sequence.front() = actual_reference_base;
-                                    Allele new_allele {curr_call.get_region(), std::move(new_sequence)};
+                                    Allele new_allele {curr_call.mapped_region(), std::move(new_sequence)};
                                     replacements.emplace(old_genotype[i], new_allele);
                                     new_genotype.emplace(std::move(new_allele));
                                 } else {
@@ -331,9 +331,9 @@ namespace Octopus
                         Genotype<Allele> new_genotype {ploidy};
                         
                         for (unsigned i {0}; i < ploidy; ++i) {
-                            if (old_genotype[i].get_sequence().empty()) {
-                                Allele::SequenceType new_sequence(size(curr_call.get_region()), '*');
-                                Allele new_allele {curr_call.get_region(), std::move(new_sequence)};
+                            if (old_genotype[i].sequence().empty()) {
+                                Allele::SequenceType new_sequence(size(curr_call.mapped_region()), '*');
+                                Allele new_allele {curr_call.mapped_region(), std::move(new_sequence)};
                                 new_genotype.emplace(std::move(new_allele));
                             } else {
                                 new_genotype.emplace(old_genotype[i]);
@@ -350,7 +350,7 @@ namespace Octopus
             }
             
             std::for_each(it2, it, [] (auto& call) {
-                call->replace_uncalled_genotype_alleles(Allele {call->get_region(), "."}, '*');
+                call->replace_uncalled_genotype_alleles(Allele {call->mapped_region(), "."}, '*');
             });
             
             // At this point, all genotypes field contain normal bases, or '.' or '*', but not
@@ -393,7 +393,7 @@ namespace Octopus
     //        result.reserve(variants.size());
     //
     //        for (const auto& variant : variants) {
-    //            result.push_back(allele_counts[variant.get_alt_allele()]);
+    //            result.push_back(allele_counts[variant.alt_allele()]);
     //        }
     //
     //        return result;
@@ -420,7 +420,7 @@ namespace Octopus
             
             std::transform(std::cbegin(called_genotype), std::cend(called_genotype),
                            std::back_inserter(result), [] (const Allele& allele) {
-                               auto result = allele.get_sequence();
+                               auto result = allele.sequence();
                                std::replace(std::begin(result), std::end(result), '*', '~');
                                return result;
                            });
@@ -450,7 +450,7 @@ namespace Octopus
     {
         auto alts = extract_all_genotyped_alleles(call, samples);
         
-        auto it = std::find(std::begin(alts), std::end(alts), call->get_reference().get_sequence());
+        auto it = std::find(std::begin(alts), std::end(alts), call->get_reference().sequence());
         
         if (it != std::end(alts)) {
             alts.erase(it);
@@ -466,7 +466,7 @@ namespace Octopus
         result.reserve(genotype_call.genotype.ploidy());
         
         for (const auto& allele : genotype_call.genotype) {
-            result.push_back(allele.get_sequence());
+            result.push_back(allele.sequence());
         }
         
         record.add_genotype(sample, result, VcfRecord::Builder::Phasing::Phased);
@@ -478,13 +478,13 @@ namespace Octopus
         
         auto result = VcfRecord::Builder {};
         
-        const auto phred_quality = Maths::probability_to_phred<float>(call->get_quality(), 2);
+        const auto phred_quality = Maths::probability_to_phred<float>(call->quality(), 2);
         
-        const auto& region = call->get_region();
+        const auto& region = call->mapped_region();
         
         result.set_chromosome(contig_name(region));
-        result.set_position(region_begin(region));
-        result.set_ref_allele(call->get_reference().get_sequence());
+        result.set_position(mapped_begin(region));
+        result.set_ref_allele(call->get_reference().sequence());
         result.set_quality(phred_quality);
         
         set_alt_alleles(call.get(), result, samples_);
@@ -523,7 +523,7 @@ namespace Octopus
                 
                 if (call->is_phased(sample)) {
                     const auto& phase = *genotype_call.phase;
-                    result.add_genotype_field(sample, "PS", to_string(region_begin(phase.region) + 1));
+                    result.add_genotype_field(sample, "PS", to_string(mapped_begin(phase.region) + 1));
                     result.add_genotype_field(sample, "PQ", Octopus::to_string(Maths::probability_to_phred<float>(phase.score), 2)); // TODO
                 }
             }
@@ -546,13 +546,13 @@ namespace Octopus
         
         auto result = VcfRecord::Builder {};
         
-        const auto phred_quality = Maths::probability_to_phred<float>(calls.front()->get_quality(), 2);
+        const auto phred_quality = Maths::probability_to_phred<float>(calls.front()->quality(), 2);
         
-        const auto& region = calls.front()->get_region();
+        const auto& region = calls.front()->mapped_region();
         
         result.set_chromosome(contig_name(region));
-        result.set_position(region_begin(region));
-        result.set_ref_allele(calls.front()->get_reference().get_sequence());
+        result.set_position(mapped_begin(region));
+        result.set_ref_allele(calls.front()->get_reference().sequence());
         result.set_quality(phred_quality);
         
         std::vector<std::vector<VcfRecord::SequenceType>> resolved_genotypes {};
@@ -568,7 +568,7 @@ namespace Octopus
             std::transform(std::cbegin(first_called_genotype), std::cend(first_called_genotype),
                            std::begin(resolved_sample_genotype),
                            [] (const Allele& allele) {
-                               return allele.get_sequence();
+                               return allele.sequence();
                            });
             
             std::for_each(std::next(std::cbegin(calls)), std::cend(calls), [&] (const auto& call) {
@@ -578,7 +578,7 @@ namespace Octopus
                                std::cbegin(resolved_sample_genotype),
                                std::begin(resolved_sample_genotype),
                                [] (const Allele& allele, const auto& curr) {
-                                   const auto& seq = allele.get_sequence();
+                                   const auto& seq = allele.sequence();
                                    
                                    if (seq.front() == '.' || seq.front() == '*') {
                                        return curr;
@@ -601,7 +601,7 @@ namespace Octopus
         
         auto it = std::remove(std::begin(alt_alleles), std::end(alt_alleles), missing_allele);
         
-        it = std::remove(std::begin(alt_alleles), it, calls.front()->get_reference().get_sequence());
+        it = std::remove(std::begin(alt_alleles), it, calls.front()->get_reference().sequence());
         
         alt_alleles.erase(it, std::end(alt_alleles));
         
@@ -645,7 +645,7 @@ namespace Octopus
                 
                 if (calls.front()->is_phased(sample)) {
                     const auto phase = *calls.front()->get_genotype_call(sample).phase;
-                    result.add_genotype_field(sample, "PS", to_string(region_begin(phase.region) + 1));
+                    result.add_genotype_field(sample, "PS", to_string(mapped_begin(phase.region) + 1));
                     result.add_genotype_field(sample, "PQ", Octopus::to_string(Maths::probability_to_phred<float>(phase.score), 2)); // TODO
                 }
             }

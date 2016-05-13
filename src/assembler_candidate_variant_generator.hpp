@@ -60,7 +60,7 @@ private:
     {
         explicit Bin(GenomicRegion region);
         
-        const GenomicRegion& get_region() const noexcept;
+        const GenomicRegion& mapped_region() const noexcept;
         
         void insert(const AlignedRead& read);
         void insert(const SequenceType& sequence);

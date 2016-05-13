@@ -37,8 +37,8 @@ public:
     ContigRegion(ContigRegion&&)                 = default;
     ContigRegion& operator=(ContigRegion&&)      = default;
     
-    SizeType get_begin() const noexcept;
-    SizeType get_end() const noexcept;
+    SizeType begin() const noexcept;
+    SizeType end() const noexcept;
     
 private:
     SizeType begin_, end_;
@@ -54,36 +54,36 @@ end_ {end}
     if (end < begin) throw std::runtime_error {"ContigRegion constructed with end < begin"};
 }
 
-inline ContigRegion::SizeType ContigRegion::get_begin() const noexcept
+inline ContigRegion::SizeType ContigRegion::begin() const noexcept
 {
     return begin_;
 }
 
-inline ContigRegion::SizeType ContigRegion::get_end() const noexcept
+inline ContigRegion::SizeType ContigRegion::end() const noexcept
 {
     return end_;
 }
 
 // non-member methods
 
-inline ContigRegion::SizeType region_begin(const ContigRegion& region) noexcept
+inline ContigRegion::SizeType mapped_begin(const ContigRegion& region) noexcept
 {
-    return region.get_begin();
+    return region.begin();
 }
 
-inline ContigRegion::SizeType region_end(const ContigRegion& region) noexcept
+inline ContigRegion::SizeType mapped_end(const ContigRegion& region) noexcept
 {
-    return region.get_end();
+    return region.end();
 }
 
 inline bool is_empty(const ContigRegion& region) noexcept
 {
-    return region.get_begin() == region.get_end();
+    return region.begin() == region.end();
 }
 
 inline ContigRegion::SizeType size(const ContigRegion& region) noexcept
 {
-    return region.get_end() - region.get_begin();
+    return region.end() - region.begin();
 }
 
 inline bool is_position(const ContigRegion& region) noexcept
@@ -93,22 +93,22 @@ inline bool is_position(const ContigRegion& region) noexcept
 
 inline bool begins_equal(const ContigRegion& lhs, const ContigRegion& rhs) noexcept
 {
-    return lhs.get_begin() == rhs.get_begin();
+    return lhs.begin() == rhs.begin();
 }
 
 inline bool ends_equal(const ContigRegion& lhs, const ContigRegion& rhs) noexcept
 {
-    return lhs.get_end() == rhs.get_end();
+    return lhs.end() == rhs.end();
 }
 
 inline bool begins_before(const ContigRegion& lhs, const ContigRegion& rhs) noexcept
 {
-    return lhs.get_begin() < rhs.get_begin();
+    return lhs.begin() < rhs.begin();
 }
 
 inline bool ends_before(const ContigRegion& lhs, const ContigRegion& rhs) noexcept
 {
-    return lhs.get_end() < rhs.get_end();
+    return lhs.end() < rhs.end();
 }
 
 inline bool operator==(const ContigRegion& lhs, const ContigRegion& rhs) noexcept
@@ -123,24 +123,24 @@ inline bool operator<(const ContigRegion& lhs, const ContigRegion& rhs) noexcept
 
 inline bool is_before(const ContigRegion& lhs, const ContigRegion& rhs) noexcept
 {
-    return lhs.get_end() <= rhs.get_begin() && lhs != rhs;
+    return lhs.end() <= rhs.begin() && lhs != rhs;
 }
 
 inline bool is_after(const ContigRegion& lhs, const ContigRegion& rhs) noexcept
 {
-    return rhs.get_end() <= lhs.get_begin() && lhs != rhs;
+    return rhs.end() <= lhs.begin() && lhs != rhs;
 }
 
 inline bool are_adjacent(const ContigRegion& lhs, const ContigRegion& rhs) noexcept
 {
-    return lhs.get_begin() == rhs.get_end() || lhs.get_end() == rhs.get_begin();
+    return lhs.begin() == rhs.end() || lhs.end() == rhs.begin();
 }
 
 inline ContigRegion::DifferenceType overlap_size(const ContigRegion& lhs, const ContigRegion& rhs) noexcept
 {
     using DifferenceType = ContigRegion::DifferenceType;
-    return static_cast<DifferenceType>(std::min(lhs.get_end(), rhs.get_end())) -
-                    static_cast<DifferenceType>(std::max(lhs.get_begin(), rhs.get_begin()));
+    return static_cast<DifferenceType>(std::min(lhs.end(), rhs.end())) -
+                    static_cast<DifferenceType>(std::max(lhs.begin(), rhs.begin()));
 }
 
 inline bool overlaps(const ContigRegion& lhs, const ContigRegion& rhs) noexcept
@@ -151,7 +151,7 @@ inline bool overlaps(const ContigRegion& lhs, const ContigRegion& rhs) noexcept
 
 inline bool contains(const ContigRegion& lhs, const ContigRegion& rhs) noexcept
 {
-    return lhs.get_begin() <= rhs.get_begin() && rhs.get_end() <= lhs.get_end();
+    return lhs.begin() <= rhs.begin() && rhs.end() <= lhs.end();
 }
 
 inline ContigRegion::DifferenceType inner_distance(const ContigRegion& lhs,
@@ -159,7 +159,7 @@ inline ContigRegion::DifferenceType inner_distance(const ContigRegion& lhs,
 {
     if (overlaps(lhs, rhs)) return 0;
     
-    return (is_before(lhs, rhs)) ? static_cast<ContigRegion::DifferenceType>(rhs.get_begin() - lhs.get_end())
+    return (is_before(lhs, rhs)) ? static_cast<ContigRegion::DifferenceType>(rhs.begin() - lhs.end())
                                 : -inner_distance(rhs, lhs);
 }
 
@@ -170,52 +170,52 @@ inline ContigRegion::DifferenceType outer_distance(const ContigRegion& lhs,
     
     if (contains(lhs, rhs) || contains(rhs, lhs)) return 0;
     
-    return static_cast<DifferenceType>(rhs.get_end()) - static_cast<DifferenceType>(lhs.get_begin());
+    return static_cast<DifferenceType>(rhs.end()) - static_cast<DifferenceType>(lhs.begin());
 }
 
 inline ContigRegion shift(const ContigRegion& region, ContigRegion::DifferenceType n)
 {
     using SizeType = ContigRegion::SizeType;
     
-    if (n < 0 && region.get_begin() + n > region.get_begin()) {
+    if (n < 0 && region.begin() + n > region.begin()) {
         throw std::out_of_range {"shifted past contig start"};
     }
     
     return ContigRegion {
-            static_cast<SizeType>(region.get_begin() + n), static_cast<SizeType>(region.get_end() + n)
+            static_cast<SizeType>(region.begin() + n), static_cast<SizeType>(region.end() + n)
     };
 }
 
 inline ContigRegion next_position(const ContigRegion& region)
 {
-    return ContigRegion {region.get_end(), region.get_end() + 1};
+    return ContigRegion {region.end(), region.end() + 1};
 }
 
 inline ContigRegion expand_lhs(const ContigRegion& region, const ContigRegion::DifferenceType n)
 {
-    if (n < 0 && region.get_begin() + n > region.get_begin()) {
+    if (n < 0 && region.begin() + n > region.begin()) {
         throw std::out_of_range {"compressed past contig start"};
     }
     
-    if (region.get_begin() - n > region.get_end()) {
+    if (region.begin() - n > region.end()) {
         throw std::out_of_range {"compressed past region end"};
     }
     
     return ContigRegion {
-        static_cast<ContigRegion::SizeType>(region.get_begin() - n),
-        region.get_end()
+        static_cast<ContigRegion::SizeType>(region.begin() - n),
+        region.end()
     };
 }
 
 inline ContigRegion expand_rhs(const ContigRegion& region, const ContigRegion::DifferenceType n)
 {
-    if (region.get_end() + n < region.get_begin()) {
+    if (region.end() + n < region.begin()) {
         throw std::out_of_range {"compressed past region begin"};
     }
     
     return ContigRegion {
-        region.get_begin(),
-        static_cast<ContigRegion::SizeType>(region.get_end() + n)
+        region.begin(),
+        static_cast<ContigRegion::SizeType>(region.end() + n)
     };
 }
 
@@ -224,8 +224,8 @@ inline ContigRegion expand(const ContigRegion& region, const ContigRegion::Diffe
     using S = ContigRegion::SizeType;
     using D = ContigRegion::DifferenceType;
     return ContigRegion {
-        static_cast<S>(std::max(D {0}, static_cast<D>(region.get_begin()) - n)),
-        static_cast<S>(region.get_end() + n)
+        static_cast<S>(std::max(D {0}, static_cast<D>(region.begin()) - n)),
+        static_cast<S>(region.end() + n)
     };
 }
 
@@ -235,12 +235,12 @@ inline ContigRegion overlapped_region(const ContigRegion& lhs, const ContigRegio
         throw std::runtime_error {"cannot calculate overlapped region between non overlapping regions"};
     }
     
-    return ContigRegion {std::max(lhs.get_begin(), rhs.get_begin()), std::min(lhs.get_end(), rhs.get_end())};
+    return ContigRegion {std::max(lhs.begin(), rhs.begin()), std::min(lhs.end(), rhs.end())};
 }
 
 inline ContigRegion encompassing_region(const ContigRegion& lhs, const ContigRegion& rhs) noexcept
 {
-    return ContigRegion {std::min(lhs.get_begin(), rhs.get_begin()), std::max(lhs.get_end(), rhs.get_end())};
+    return ContigRegion {std::min(lhs.begin(), rhs.begin()), std::max(lhs.end(), rhs.end())};
 }
 
 inline ContigRegion intervening_region(const ContigRegion& lhs, const ContigRegion& rhs)
@@ -249,42 +249,42 @@ inline ContigRegion intervening_region(const ContigRegion& lhs, const ContigRegi
         throw std::runtime_error {"cannot calculate intervening region between overlapping regions"};
     }
     
-    return ContigRegion {lhs.get_end(), rhs.get_begin()};
+    return ContigRegion {lhs.end(), rhs.begin()};
 }
 
 inline ContigRegion::SizeType left_overhang_size(const ContigRegion& lhs, const ContigRegion& rhs) noexcept
 {
-    return (begins_before(lhs, rhs)) ? (rhs.get_begin() - lhs.get_begin()) : 0;
+    return (begins_before(lhs, rhs)) ? (rhs.begin() - lhs.begin()) : 0;
 }
 
 inline ContigRegion::SizeType right_overhang_size(const ContigRegion& lhs, const ContigRegion& rhs) noexcept
 {
-    return (ends_before(lhs, rhs)) ? 0 : (lhs.get_end() - rhs.get_end());
+    return (ends_before(lhs, rhs)) ? 0 : (lhs.end() - rhs.end());
 }
 
 inline ContigRegion left_overhang_region(const ContigRegion& lhs, const ContigRegion& rhs) noexcept
 {
-    if (begins_before(rhs, lhs)) return ContigRegion {lhs.get_begin(), lhs.get_begin()};
+    if (begins_before(rhs, lhs)) return ContigRegion {lhs.begin(), lhs.begin()};
     
-    return ContigRegion {lhs.get_begin(), rhs.get_begin()};
+    return ContigRegion {lhs.begin(), rhs.begin()};
 }
 
 inline ContigRegion right_overhang_region(const ContigRegion& lhs, const ContigRegion& rhs) noexcept
 {
-    if (ends_before(lhs, rhs)) return ContigRegion {lhs.get_end(), lhs.get_end()};
+    if (ends_before(lhs, rhs)) return ContigRegion {lhs.end(), lhs.end()};
     
-    return ContigRegion {rhs.get_end(), lhs.get_end()};
+    return ContigRegion {rhs.end(), lhs.end()};
 }
 
 inline ContigRegion closed_region(const ContigRegion& lhs, const ContigRegion& rhs) noexcept
 {
-    return ContigRegion {lhs.get_begin(), rhs.get_end()};
+    return ContigRegion {lhs.begin(), rhs.end()};
 }
 
 inline ContigRegion head_region(const ContigRegion& region, ContigRegion::SizeType n = 0) noexcept
 {
-    const auto begin = region.get_begin();
-    return ContigRegion {begin, std::min(begin + n, region.get_end())};
+    const auto begin = region.begin();
+    return ContigRegion {begin, std::min(begin + n, region.end())};
 }
 
 inline ContigRegion head_position(const ContigRegion& region) noexcept
@@ -294,7 +294,7 @@ inline ContigRegion head_position(const ContigRegion& region) noexcept
 
 inline ContigRegion tail_region(const ContigRegion& region, const ContigRegion::SizeType n = 0) noexcept
 {
-    const auto end = region.get_end();
+    const auto end = region.end();
     return ContigRegion {(end >= n) ? end - n : 0, end};
 }
 
@@ -305,12 +305,12 @@ inline ContigRegion tail_position(const ContigRegion& region) noexcept
 
 inline ContigRegion::DifferenceType begin_distance(const ContigRegion& lhs, const ContigRegion& rhs) noexcept
 {
-    return static_cast<ContigRegion::DifferenceType>(lhs.get_begin()) - rhs.get_begin();
+    return static_cast<ContigRegion::DifferenceType>(lhs.begin()) - rhs.begin();
 }
 
 inline ContigRegion::DifferenceType end_distance(const ContigRegion& lhs, const ContigRegion& rhs) noexcept
 {
-    return static_cast<ContigRegion::DifferenceType>(lhs.get_end()) - rhs.get_end();
+    return static_cast<ContigRegion::DifferenceType>(lhs.end()) - rhs.end();
 }
 
 namespace std {
@@ -319,8 +319,8 @@ namespace std {
         size_t operator()(const ContigRegion& r) const
         {
             size_t seed {};
-            boost::hash_combine(seed, r.get_begin());
-            boost::hash_combine(seed, r.get_end());
+            boost::hash_combine(seed, r.begin());
+            boost::hash_combine(seed, r.end());
             return seed;
         }
     };
@@ -328,7 +328,7 @@ namespace std {
 
 inline std::string to_string(const ContigRegion& region)
 {
-    return std::to_string(region.get_begin()) + '-' + std::to_string(region.get_end());
+    return std::to_string(region.begin()) + '-' + std::to_string(region.end());
 }
 
 inline std::ostream& operator<<(std::ostream& os, const ContigRegion& region)

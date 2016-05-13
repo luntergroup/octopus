@@ -37,7 +37,7 @@ namespace Octopus
     {
         auto result = static_cast<unsigned>(p.first.size());
         if (p.second.empty()) return result;
-        return result + num_digits(p.second.rightmost().get_end());
+        return result + num_digits(p.second.rightmost().end());
     }
     
     unsigned max_position_str_length(const InputRegionMap& input_regions)
@@ -56,7 +56,7 @@ namespace Octopus
     
     unsigned max_position_str_length(const GenomicRegion& region)
     {
-        return static_cast<unsigned>(region.get_contig_name().size()) + num_digits(region.get_end());
+        return static_cast<unsigned>(region.contig_name().size()) + num_digits(region.end());
     }
     
     template <typename T>
@@ -84,7 +84,7 @@ namespace Octopus
     ProgressMeter::ProgressMeter(GenomicRegion region)
     :
     ProgressMeter {
-        InputRegionMap {std::make_pair(region.get_contig_name(), InputRegionMap::mapped_type {region})}}
+        InputRegionMap {std::make_pair(region.contig_name(), InputRegionMap::mapped_type {region})}}
     {}
     
     double percent_completed(const std::size_t num_bp_completed,
@@ -217,14 +217,14 @@ namespace Octopus
     
     ProgressMeter::RegionSizeType ProgressMeter::merge(const GenomicRegion& region)
     {
-        const auto& contig_region = region.get_contig_region();
+        const auto& contig_region = region.contig_region();
         
-        if (completed_regions_.count(region.get_contig_name()) == 0) {
-            completed_regions_[region.get_contig_name()].insert(contig_region);
+        if (completed_regions_.count(region.contig_name()) == 0) {
+            completed_regions_[region.contig_name()].insert(contig_region);
             return size(region);
         }
         
-        auto& completed_regions = completed_regions_.at(region.get_contig_name());
+        auto& completed_regions = completed_regions_.at(region.contig_name());
         
         if (completed_regions.has_overlapped(contig_region)) {
             auto overlapped = completed_regions.overlap_range(contig_region);
@@ -348,7 +348,7 @@ namespace Octopus
         const auto percent_completed = percent_completed_str(num_bp_completed_, num_bp_to_search_);
         
         stream(log_) << curr_position_pad(region)
-                     << region.get_contig_name() << ':' << region.get_end()
+                     << region.contig_name() << ':' << region.end()
                      << completed_pad(percent_completed)
                      << percent_completed
                      << time_taken_pad(time_taken)
@@ -365,8 +365,8 @@ namespace Octopus
     {
         assert(position_tab_length_ > 3);
         
-        const auto num_contig_name_letters = completed_region.get_contig_name().size();
-        const auto num_region_end_digits = num_digits(completed_region.get_end());
+        const auto num_contig_name_letters = completed_region.contig_name().size();
+        const auto num_region_end_digits = num_digits(completed_region.end());
         
         const auto l = num_contig_name_letters + num_region_end_digits + 1; // +1 for ':'
         

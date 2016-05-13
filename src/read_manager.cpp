@@ -243,7 +243,7 @@ GenomicRegion ReadManager::find_covered_subregion(const std::vector<SampleIdType
     
     if (result == region) return region;
     
-    const auto result_begin = std::max(result.get_begin(), region.get_begin());
+    const auto result_begin = std::max(result.begin(), region.begin());
     
     std::partial_sum(begin(position_coverage), end(position_coverage), begin(position_coverage));
     
@@ -257,9 +257,9 @@ GenomicRegion ReadManager::find_covered_subregion(const std::vector<SampleIdType
         result_size -= std::min(result_size, static_cast<SizeType>(begin_distance(region, result)));
     }
     
-    const auto result_end = std::min(result_begin + result_size, region.get_end());
+    const auto result_end = std::min(result_begin + result_size, region.end());
     
-    return GenomicRegion {region.get_contig_name(), result_begin, result_end};
+    return GenomicRegion {region.contig_name(), result_begin, result_end};
 }
 
 GenomicRegion ReadManager::find_covered_subregion(const GenomicRegion& region, std::size_t max_reads)
@@ -450,17 +450,17 @@ void ReadManager::add_possible_regions_to_reader_map(const Path& reader_path,
                                                      const std::vector<GenomicRegion>& regions)
 {
     for (const auto& region : regions) {
-        possible_regions_in_readers_[reader_path][region.get_contig_name()].emplace(region.get_contig_region());
+        possible_regions_in_readers_[reader_path][region.contig_name()].emplace(region.contig_region());
     }
 }
 
 bool ReadManager::could_reader_contain_region(const Path& reader_path, const GenomicRegion& region) const
 {
     if (possible_regions_in_readers_.count(reader_path) == 0) return false;
-    if (possible_regions_in_readers_.at(reader_path).count(region.get_contig_name()) == 0) return false;
+    if (possible_regions_in_readers_.at(reader_path).count(region.contig_name()) == 0) return false;
     
-    return has_overlapped(possible_regions_in_readers_.at(reader_path).at(region.get_contig_name()),
-                          region.get_contig_region());
+    return has_overlapped(possible_regions_in_readers_.at(reader_path).at(region.contig_name()),
+                          region.contig_region());
 }
 
 std::vector<ReadManager::Path>

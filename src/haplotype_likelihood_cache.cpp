@@ -73,7 +73,7 @@ void HaplotypeLikelihoodCache::populate(const ReadMap& reads,
         
         std::transform(t.first, t.last, std::back_inserter(sample_read_hashes),
                        [] (const AlignedRead& read) {
-                           return compute_kmer_hashes<MAPPER_KMER_SIZE>(read.get_sequence());
+                           return compute_kmer_hashes<MAPPER_KMER_SIZE>(read.sequence());
                        });
         
         read_hashes.emplace_back(std::move(sample_read_hashes));
@@ -84,7 +84,7 @@ void HaplotypeLikelihoodCache::populate(const ReadMap& reads,
     const auto first_mapping_position = std::begin(mapping_positions_);
     
     for (const auto& haplotype : haplotypes) {
-        populate_kmer_hash_table<MAPPER_KMER_SIZE>(haplotype.get_sequence(), haplotype_hashes);
+        populate_kmer_hash_table<MAPPER_KMER_SIZE>(haplotype.sequence(), haplotype_hashes);
         
         auto haplotype_mapping_counts = init_mapping_counts(haplotype_hashes);
         

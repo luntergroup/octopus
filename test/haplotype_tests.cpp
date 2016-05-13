@@ -34,13 +34,13 @@
 //    
 //    const auto region = parse_region("3:1000000-1000010", human);
 //    
-//    const auto ref_sequence = human.get_sequence(region); // CCAACAAGCA
+//    const auto ref_sequence = human.fetch_sequence(region); // CCAACAAGCA
 //    
 //    const Haplotype ref_haplotype {region, human};
 //    
-//    BOOST_REQUIRE(ref_haplotype.get_sequence() == ref_sequence);
-//    BOOST_REQUIRE(ref_haplotype.get_sequence(region) == ref_sequence);
-//    BOOST_REQUIRE(ref_haplotype.get_sequence(region.get_contig_region()) == ref_sequence);
+//    BOOST_REQUIRE(ref_haplotype.sequence() == ref_sequence);
+//    BOOST_REQUIRE(ref_haplotype.sequence(region) == ref_sequence);
+//    BOOST_REQUIRE(ref_haplotype.sequence(region.contig_region()) == ref_sequence);
 //}
 //
 //BOOST_AUTO_TEST_CASE(alleles_can_be_added_to_front_and_back_of_haplotypes)
@@ -51,19 +51,19 @@
 //    
 //    const Allele allele1 {"3", 1000004, "A"};
 //    
-//    const auto region1 = allele1.get_region();
+//    const auto region1 = allele1.mapped_region();
 //    
 //    Haplotype haplotype1 {region1, human};
 //    haplotype1.push_back(allele1);
 //    
-//    BOOST_CHECK(haplotype1.get_sequence(region1) == allele1.get_sequence());
-//    BOOST_CHECK(haplotype1.get_sequence() == allele1.get_sequence());
+//    BOOST_CHECK(haplotype1.sequence(region1) == allele1.sequence());
+//    BOOST_CHECK(haplotype1.sequence() == allele1.sequence());
 //    
 //    Haplotype haplotype2 {region1, human};
 //    haplotype2.push_front(allele1);
 //    
-//    BOOST_CHECK(haplotype2.get_sequence(region1) == haplotype1.get_sequence());
-//    BOOST_CHECK(haplotype2.get_sequence() == haplotype1.get_sequence());
+//    BOOST_CHECK(haplotype2.sequence(region1) == haplotype1.sequence());
+//    BOOST_CHECK(haplotype2.sequence() == haplotype1.sequence());
 //    
 //    const Allele allele2 {"3", 1000005, "C"};
 //    const Allele allele3 {"3", 1000006, "G"};
@@ -80,8 +80,8 @@
 //    haplotype4.push_front(allele2);
 //    haplotype4.push_front(allele1);
 //    
-//    BOOST_CHECK(haplotype3.get_sequence() == "ACG");
-//    BOOST_CHECK(haplotype3.get_sequence(region2) == "ACG");
+//    BOOST_CHECK(haplotype3.sequence() == "ACG");
+//    BOOST_CHECK(haplotype3.sequence(region2) == "ACG");
 //    
 //    BOOST_CHECK(haplotype3 == haplotype4);
 //}
@@ -99,8 +99,8 @@
 //    Haplotype haplotype1 {region, human};
 //    haplotype1.push_front(allele1);
 //    
-//    BOOST_CHECK(haplotype1.get_sequence() == "CCAAAAAGCA");
-//    BOOST_CHECK(haplotype1.get_sequence(region) == "CCAAAAAGCA");
+//    BOOST_CHECK(haplotype1.sequence() == "CCAAAAAGCA");
+//    BOOST_CHECK(haplotype1.sequence(region) == "CCAAAAAGCA");
 //    
 //    const Allele allele2 {"3", 1000003, "C"};
 //    const Allele allele3 {"3", 1000005, "G"};
@@ -109,8 +109,8 @@
 //    haplotype2.push_front(allele2);
 //    haplotype2.push_back(allele3);
 //    
-//    BOOST_CHECK(haplotype2.get_sequence() == "CCACAGAGCA");
-//    BOOST_CHECK(haplotype2.get_sequence(region) == "CCACAGAGCA");
+//    BOOST_CHECK(haplotype2.sequence() == "CCACAGAGCA");
+//    BOOST_CHECK(haplotype2.sequence(region) == "CCACAGAGCA");
 //    
 //    const Allele allele4 {parse_region("3:1000002-1000004", human), ""};
 //    const Allele allele5 {parse_region("3:1000005-1000008", human), ""};
@@ -119,8 +119,8 @@
 //    haplotype3.push_front(allele4);
 //    haplotype3.push_back(allele5);
 //    
-//    BOOST_CHECK(haplotype3.get_sequence() == "CCACA");
-//    BOOST_CHECK(haplotype3.get_sequence(region) == "CCACA");
+//    BOOST_CHECK(haplotype3.sequence() == "CCACA");
+//    BOOST_CHECK(haplotype3.sequence(region) == "CCACA");
 //}
 //
 //BOOST_AUTO_TEST_CASE(alleles_not_explicitly_added_to_haplotypes_are_assumed_reference)
@@ -177,7 +177,7 @@
 //    
 //    Haplotype haplotype {region, human};
 //    
-//    BOOST_CHECK(haplotype.get_sequence() == human.get_sequence(region));
+//    BOOST_CHECK(haplotype.sequence() == human.fetch_sequence(region));
 //    
 //    add_alt_to_back(variant1, haplotype);
 //    add_alt_to_back(variant2, haplotype);
@@ -186,7 +186,7 @@
 //    add_alt_to_back(variant5, haplotype);
 //    add_alt_to_back(variant6, haplotype);
 //    
-//    BOOST_CHECK(haplotype.get_sequence() == "CCTAAGCCAGGGGCGTGAC");
+//    BOOST_CHECK(haplotype.sequence() == "CCTAAGCCAGGGGCGTGAC");
 //    
 //    // The variant regions should be contained
 //    BOOST_CHECK(contains(haplotype, variant1));
@@ -197,17 +197,17 @@
 //    BOOST_CHECK(contains(haplotype, variant6));
 //    
 //    // But not the reference alleles (alts were added)
-//    BOOST_CHECK(!haplotype.contains(variant1.get_ref_allele()));
-//    BOOST_CHECK(!haplotype.contains(variant2.get_ref_allele()));
-//    BOOST_CHECK(!haplotype.contains(variant3.get_ref_allele()));
-//    BOOST_CHECK(!haplotype.contains(variant4.get_ref_allele()));
-//    BOOST_CHECK(!haplotype.contains(variant5.get_ref_allele()));
-//    BOOST_CHECK(!haplotype.contains(variant6.get_ref_allele()));
+//    BOOST_CHECK(!haplotype.contains(variant1.ref_allele()));
+//    BOOST_CHECK(!haplotype.contains(variant2.ref_allele()));
+//    BOOST_CHECK(!haplotype.contains(variant3.ref_allele()));
+//    BOOST_CHECK(!haplotype.contains(variant4.ref_allele()));
+//    BOOST_CHECK(!haplotype.contains(variant5.ref_allele()));
+//    BOOST_CHECK(!haplotype.contains(variant6.ref_allele()));
 //    
-//    BOOST_CHECK(!haplotype.contains(false_variant1.get_alt_allele()));
-//    BOOST_CHECK(!haplotype.contains(false_variant2.get_alt_allele()));
-//    BOOST_CHECK(!haplotype.contains(false_variant3.get_alt_allele()));
-//    BOOST_CHECK(!haplotype.contains(false_variant4.get_alt_allele()));
+//    BOOST_CHECK(!haplotype.contains(false_variant1.alt_allele()));
+//    BOOST_CHECK(!haplotype.contains(false_variant2.alt_allele()));
+//    BOOST_CHECK(!haplotype.contains(false_variant3.alt_allele()));
+//    BOOST_CHECK(!haplotype.contains(false_variant4.alt_allele()));
 //    
 //    const GenomicRegion ref_begin_bit {"3", 1000000, 1000002};
 //    const GenomicRegion ref_end_bit {"3", 1000019, 1000020};
@@ -331,7 +331,7 @@
 //    hap2.push_back(allele1);
 //    hap2.push_back(allele2);
 //    
-//    BOOST_CHECK(hap1.get_sequence() == hap2.get_sequence());
+//    BOOST_CHECK(hap1.sequence() == hap2.sequence());
 //    BOOST_CHECK(hap1 == hap2);
 //    
 //    const Allele allele4 {parse_region("16:9300037-9300038", human), "T"};
@@ -345,7 +345,7 @@
 //    Haplotype hap4 {region, human};
 //    hap4.push_back(allele6);
 //    
-//    BOOST_CHECK(hap3.get_sequence() == hap4.get_sequence());
+//    BOOST_CHECK(hap3.sequence() == hap4.sequence());
 //    BOOST_CHECK(hap3 == hap4);
 //}
 //
@@ -433,7 +433,7 @@
 //    
 //    const GenomicRegion splice_region {"22", 16232073, 16232077};
 //    
-//    const auto splice_haplotype = haplotype.get_sequence(splice_region);
+//    const auto splice_haplotype = haplotype.sequence(splice_region);
 //    
 //    exit(0);
 //}
@@ -504,7 +504,7 @@
 //    const auto insertion_region_haplotype_splice = splice<Haplotype>(haplotype, insertion_region);
 //    
 //    BOOST_CHECK(is_same_region(insertion_region_haplotype_splice, insertion_region));
-//    BOOST_CHECK(insertion_region_haplotype_splice.get_sequence() == "");
+//    BOOST_CHECK(insertion_region_haplotype_splice.sequence() == "");
 //    BOOST_CHECK(insertion_region_haplotype_splice.contains_exact(allele5));
 //    
 //    const auto insertion_region_allele_splice = splice<Allele>(haplotype, insertion_region);
@@ -516,7 +516,7 @@
 //    const auto insertion_before_snp_haplotype_splice = splice<Haplotype>(haplotype, insertion_before_snp_region);
 //    
 //    BOOST_CHECK(is_same_region(insertion_before_snp_haplotype_splice, insertion_before_snp_region));
-//    BOOST_CHECK(insertion_before_snp_haplotype_splice.get_sequence() == "");
+//    BOOST_CHECK(insertion_before_snp_haplotype_splice.sequence() == "");
 //    BOOST_CHECK(is_reference(insertion_before_snp_haplotype_splice));
 //    
 //    const auto insertion_before_snp_allele_splice = splice<Allele>(haplotype, insertion_before_snp_region);
@@ -561,9 +561,9 @@
 //    auto splice_hap_alt0 = splice<Haplotype>(alt_haplotype, mapped_region(variant0));
 //    
 //    BOOST_CHECK(is_same_region(splice_hap_ref0, variant0));
-//    BOOST_CHECK(splice_hap_ref0.get_sequence() == "");
+//    BOOST_CHECK(splice_hap_ref0.sequence() == "");
 //    BOOST_CHECK(is_same_region(splice_hap_alt0, variant0));
-//    BOOST_CHECK(splice_hap_alt0.get_sequence() == "A");
+//    BOOST_CHECK(splice_hap_alt0.sequence() == "A");
 //    BOOST_CHECK(splice_hap_ref0.difference(splice_hap_alt0).size() == 1);
 //    
 //    // TODO: after insertion
@@ -578,9 +578,9 @@
 //    auto splice_hap_alt4 = splice<Haplotype>(alt_haplotype, mapped_region(variant4));
 //    
 //    BOOST_CHECK(is_same_region(splice_hap_ref4, variant4));
-//    BOOST_CHECK(splice_hap_ref4.get_sequence() == "");
+//    BOOST_CHECK(splice_hap_ref4.sequence() == "");
 //    BOOST_CHECK(is_same_region(splice_hap_alt4, variant4));
-//    BOOST_CHECK(splice_hap_alt4.get_sequence() == "A");
+//    BOOST_CHECK(splice_hap_alt4.sequence() == "A");
 //    BOOST_CHECK(splice_hap_ref4.difference(splice_hap_alt4).size() == 1);
 //    
 //    // TODO: after insertion
@@ -595,9 +595,9 @@
 //    auto splice_hap_alt6 = splice<Haplotype>(alt_haplotype, mapped_region(variant6));
 //    
 //    BOOST_CHECK(is_same_region(splice_hap_ref6, variant6));
-//    BOOST_CHECK(splice_hap_ref6.get_sequence() == "");
+//    BOOST_CHECK(splice_hap_ref6.sequence() == "");
 //    BOOST_CHECK(is_same_region(splice_hap_alt6, variant6));
-//    BOOST_CHECK(splice_hap_alt6.get_sequence() == "A");
+//    BOOST_CHECK(splice_hap_alt6.sequence() == "A");
 //    BOOST_CHECK(splice_hap_ref6.difference(splice_hap_alt6).size() == 1);
 //    
 //    // TODO: after insertion

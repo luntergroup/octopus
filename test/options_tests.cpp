@@ -39,7 +39,7 @@ BOOST_AUTO_TEST_CASE(make_reference_maybe_returns_a_ReferenceGenome)
     
     auto reference = Octopus::Options::make_reference(*options);
     
-    BOOST_CHECK(reference->get_name() == "human_g1k_v37");
+    BOOST_CHECK(reference->name() == "human_g1k_v37");
 }
 
 BOOST_AUTO_TEST_CASE(get_search_regions_returns_all_chromosome_regions_when_no_region_option_is_given)
@@ -55,12 +55,12 @@ BOOST_AUTO_TEST_CASE(get_search_regions_returns_all_chromosome_regions_when_no_r
     
     auto regions = Octopus::Options::get_search_regions(*options, *reference);
     
-    auto all_contig_names = reference->get_contig_names();
+    auto all_contig_names = reference->contig_names();
     
     bool all_good = std::all_of(std::cbegin(all_contig_names), std::cend(all_contig_names),
                                 [&reference, &regions] (const auto& contig_name) {
                                     return regions.count(contig_name) == 1 &&
-                                        reference->get_contig_region(contig_name) == *regions.at(contig_name).cbegin();
+                                        reference->contig_region(contig_name) == *regions.at(contig_name).cbegin();
                                 });
     
     BOOST_CHECK(all_good);

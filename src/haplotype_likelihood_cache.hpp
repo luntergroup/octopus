@@ -186,8 +186,8 @@ namespace Octopus
                                       } else {
                                           stream << "\t\t";
                                       }
-                                      stream << p.first.get().get_region()
-                                      << " " << p.first.get().get_cigar_string() << ": ";
+                                      stream << p.first.get().mapped_region()
+                                      << " " << p.first.get().cigar_string() << ": ";
                                       stream << p.second << '\n';
                                   });
                 }

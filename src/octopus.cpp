@@ -102,18 +102,18 @@ namespace Octopus
             case ContigOutputOrder::ContigSizeAscending:
                 std::sort(std::begin(result), std::end(result),
                           [&] (const auto& lhs, const auto& rhs) {
-                              return reference.get_contig_size(lhs) < reference.get_contig_size(rhs);
+                              return reference.contig_size(lhs) < reference.contig_size(rhs);
                           });
                 break;
             case ContigOutputOrder::ContigSizeDescending:
                 std::sort(std::begin(result), std::end(result),
                           [&] (const auto& lhs, const auto& rhs) {
-                              return reference.get_contig_size(lhs) > reference.get_contig_size(rhs);
+                              return reference.contig_size(lhs) > reference.contig_size(rhs);
                           });
                 break;
             case ContigOutputOrder::AsInReferenceIndex:
             {
-                const auto reference_contigs = reference.get_contig_names();
+                const auto reference_contigs = reference.contig_names();
                 std::sort(std::begin(result), std::end(result),
                           [&] (const auto& lhs, const auto& rhs) {
                               return index_of(reference_contigs, lhs) < index_of(reference_contigs, rhs);
@@ -122,7 +122,7 @@ namespace Octopus
             }
             case ContigOutputOrder::AsInReferenceIndexReversed:
             {
-                const auto reference_contigs = reference.get_contig_names();
+                const auto reference_contigs = reference.contig_names();
                 std::sort(std::begin(result), std::end(result),
                           [&] (const auto& lhs, const auto& rhs) {
                               return index_of(reference_contigs, lhs) > index_of(reference_contigs, rhs);
@@ -176,9 +176,9 @@ namespace Octopus
     {
         auto vcf_header_builder = get_default_header_builder().set_samples(samples);
         for (const auto& contig : contigs) {
-            vcf_header_builder.add_contig(contig, {{"length", std::to_string(reference.get_contig_size(contig))}});
+            vcf_header_builder.add_contig(contig, {{"length", std::to_string(reference.contig_size(contig))}});
         }
-        vcf_header_builder.add_basic_field("reference", reference.get_name());
+        vcf_header_builder.add_basic_field("reference", reference.name());
         vcf_header_builder.add_structured_field("Octopus", {{"some", "option"}});
         
         // TODO: find a better place to do this
@@ -235,7 +235,7 @@ namespace Octopus
             // Now the dynamically allocated bits
             + sequence_size(read) * sizeof(char)
             + sequence_size(read) * sizeof(AlignedRead::QualityType)
-            + read.get_cigar_string().size() * sizeof(CigarOperation)
+            + read.cigar_string().size() * sizeof(CigarOperation)
             + contig_name(read).size()
             + (read.is_chimeric() ? sizeof(AlignedRead::NextSegment) : 0);
     }
@@ -727,9 +727,9 @@ namespace Octopus
     {
         auto path = *components.get_temp_directory();
         
-        const auto& contig = region.get_contig_name();
-        const auto begin   = std::to_string(region.get_begin());
-        const auto end     = std::to_string(region.get_end());
+        const auto& contig = region.contig_name();
+        const auto begin   = std::to_string(region.begin());
+        const auto end     = std::to_string(region.end());
         
         auto file_name = fs::path {contig + "_" + begin + "-" + end + "_temp.bcf"};
         
@@ -743,7 +743,7 @@ namespace Octopus
     VcfWriter create_unique_temp_output_file(const GenomicRegion::ContigNameType& contig,
                                              const GenomeCallingComponents& components)
     {
-        return create_unique_temp_output_file(components.get_reference().get_contig_region(contig),
+        return create_unique_temp_output_file(components.get_reference().contig_region(contig),
                                               components);
     }
     
@@ -777,7 +777,7 @@ namespace Octopus
         GenomicRegion region;
         ExecutionPolicy policy;
         
-        const GenomicRegion& get_region() const noexcept { return region; }
+        const GenomicRegion& mapped_region() const noexcept { return region; }
     };
     
     struct ContigOrder
@@ -1026,7 +1026,7 @@ namespace Octopus
                 } else if (!tasks.empty()) {
                     auto task = pop(tasks);
                     fut = run(task, components, meter, cv);
-                    pending_tasks[task.region.get_contig_name()].push(std::move(task));
+                    pending_tasks[task.region.contig_name()].push(std::move(task));
                 }
             }
             

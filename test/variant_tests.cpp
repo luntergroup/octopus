@@ -312,7 +312,7 @@ BOOST_AUTO_TEST_CASE(indels_can_be_left_aligned)
     // Huntingtin region CCAGCAGCAGCAGCAG...
     auto region = parse_region("4:3076657-3076660", human);
     
-    auto the_sequence = human.get_sequence(region);
+    auto the_sequence = human.fetch_sequence(region);
     
     BOOST_CHECK(the_sequence == "CAG");
     
@@ -320,7 +320,7 @@ BOOST_AUTO_TEST_CASE(indels_can_be_left_aligned)
     
     Variant left_aligned_deletion = left_align(a_deletion, human);
     
-    BOOST_CHECK(left_aligned_deletion.get_region() ==
+    BOOST_CHECK(left_aligned_deletion.mapped_region() ==
             parse_region("4:3076603-3076606", human));
     BOOST_CHECK(ref_sequence(left_aligned_deletion) == "CAG");
     BOOST_CHECK(alt_sequence(left_aligned_deletion) == "");
@@ -329,14 +329,14 @@ BOOST_AUTO_TEST_CASE(indels_can_be_left_aligned)
     
     auto left_aligned_insertion = left_align(an_insertion, human);
     
-    BOOST_CHECK(left_aligned_insertion.get_region() == parse_region("4:3076603-3076603", human));
+    BOOST_CHECK(left_aligned_insertion.mapped_region() == parse_region("4:3076603-3076603", human));
     BOOST_CHECK(ref_sequence(left_aligned_insertion) == "");
     BOOST_CHECK(alt_sequence(left_aligned_insertion) == "CAG");
     
     // Region is CCAACAACAACAACAC (94594947-94594962)
     region = parse_region("5:94594956-94594959", human);
     
-    the_sequence = human.get_sequence(region);
+    the_sequence = human.fetch_sequence(region);
     
     BOOST_CHECK(the_sequence == "CAA");
     
@@ -344,7 +344,7 @@ BOOST_AUTO_TEST_CASE(indels_can_be_left_aligned)
     
     left_aligned_deletion = left_align(a_deletion, human);
     
-    BOOST_CHECK(left_aligned_deletion.get_region() == parse_region("5:94594949-94594952", human));
+    BOOST_CHECK(left_aligned_deletion.mapped_region() == parse_region("5:94594949-94594952", human));
     BOOST_CHECK(ref_sequence(left_aligned_deletion) == "ACA");
     BOOST_CHECK(alt_sequence(left_aligned_deletion) == "");
     
@@ -352,7 +352,7 @@ BOOST_AUTO_TEST_CASE(indels_can_be_left_aligned)
     
     left_aligned_insertion = left_align(an_insertion, human);
     
-    BOOST_CHECK(left_aligned_insertion.get_region() ==
+    BOOST_CHECK(left_aligned_insertion.mapped_region() ==
             parse_region("5:94594949-94594949", human));
     BOOST_CHECK(ref_sequence(left_aligned_insertion) == "");
     BOOST_CHECK(alt_sequence(left_aligned_insertion) == "ACA");
@@ -389,7 +389,7 @@ BOOST_AUTO_TEST_CASE(can_make_variants_parsimonious)
     
     auto a_region = parse_region("12:10001330-10001335", human);
     
-    auto the_sequence = human.get_sequence(a_region);
+    auto the_sequence = human.fetch_sequence(a_region);
     
     BOOST_CHECK(the_sequence == "GTGGA");
     
@@ -397,7 +397,7 @@ BOOST_AUTO_TEST_CASE(can_make_variants_parsimonious)
     
     auto parsimonious_deletion = make_parsimonious(a_deletion, human);
     
-    BOOST_CHECK(parsimonious_deletion.get_region() ==
+    BOOST_CHECK(parsimonious_deletion.mapped_region() ==
             parse_region("12:10001329-10001335", human));
     BOOST_CHECK(ref_sequence(parsimonious_deletion) == "CGTGGA");
     BOOST_CHECK(alt_sequence(parsimonious_deletion) == "C");
@@ -406,7 +406,7 @@ BOOST_AUTO_TEST_CASE(can_make_variants_parsimonious)
     
     auto parsimonious_insertion = make_parsimonious(an_insertion, human);
     
-    BOOST_CHECK(parsimonious_insertion.get_region() == parse_region("12:10001329-10001330", human));
+    BOOST_CHECK(parsimonious_insertion.mapped_region() == parse_region("12:10001329-10001330", human));
     BOOST_CHECK(ref_sequence(parsimonious_insertion) == "C");
     BOOST_CHECK(alt_sequence(parsimonious_insertion) == "CGTGGA");
     
@@ -445,7 +445,7 @@ BOOST_AUTO_TEST_CASE(can_normalise_variants)
     
     auto a_region = parse_region("4:3076657-3076660", human);
     
-    auto the_sequence = human.get_sequence(a_region);
+    auto the_sequence = human.fetch_sequence(a_region);
     
     BOOST_CHECK(the_sequence == "CAG");
     
@@ -468,7 +468,7 @@ BOOST_AUTO_TEST_CASE(can_normalise_variants)
     auto normilised_deletion = normalise(a_deletion, human);
     
     BOOST_CHECK(is_parsimonious(normilised_deletion));
-    BOOST_CHECK(normilised_deletion.get_region() == parse_region("4:3076602-3076606", human));
+    BOOST_CHECK(normilised_deletion.mapped_region() == parse_region("4:3076602-3076606", human));
     BOOST_CHECK(ref_sequence(normilised_deletion) == "CCAG");
     BOOST_CHECK(alt_sequence(normilised_deletion) == "C");
     
@@ -483,7 +483,7 @@ BOOST_AUTO_TEST_CASE(can_normalise_variants)
     auto normilised_insertion = normalise(an_insertion, human);
     
     BOOST_CHECK(is_parsimonious(normilised_insertion));
-    BOOST_CHECK(normilised_insertion.get_region() == parse_region("4:3076602-3076603", human));
+    BOOST_CHECK(normilised_insertion.mapped_region() == parse_region("4:3076602-3076603", human));
     BOOST_CHECK(ref_sequence(normilised_insertion) == "C");
     BOOST_CHECK(alt_sequence(normilised_insertion) == "CCAG");
     
@@ -496,7 +496,7 @@ BOOST_AUTO_TEST_CASE(can_normalise_variants)
     a_normalised_snp = normalise(an_unormilised_snp, human);
     
     BOOST_CHECK(is_parsimonious(a_normalised_mnp));
-    BOOST_CHECK(a_normalised_snp.get_region() == parse_region("4:3076657-3076658", human));
+    BOOST_CHECK(a_normalised_snp.mapped_region() == parse_region("4:3076657-3076658", human));
     BOOST_CHECK(ref_sequence(a_normalised_snp) == "G");
     BOOST_CHECK(alt_sequence(a_normalised_snp) == "C");
     
@@ -507,7 +507,7 @@ BOOST_AUTO_TEST_CASE(can_normalise_variants)
     a_normalised_mnp = normalise(an_unormilised_mnp, human);
     
     BOOST_CHECK(is_parsimonious(a_normalised_mnp));
-    BOOST_CHECK(a_normalised_mnp.get_region() == parse_region("4:3076657-3076660", human));
+    BOOST_CHECK(a_normalised_mnp.mapped_region() == parse_region("4:3076657-3076660", human));
     BOOST_CHECK(ref_sequence(a_normalised_mnp) == "CAG");
     BOOST_CHECK(alt_sequence(a_normalised_mnp) == "GAC");
     
@@ -518,7 +518,7 @@ BOOST_AUTO_TEST_CASE(can_normalise_variants)
     auto a_normalised_deletion = normalise(an_unnormilised_deletion, human);
     
     BOOST_CHECK(is_parsimonious(a_normalised_deletion));
-    BOOST_CHECK(a_normalised_deletion.get_region() == parse_region("4:3076602-3076606", human));
+    BOOST_CHECK(a_normalised_deletion.mapped_region() == parse_region("4:3076602-3076606", human));
     BOOST_CHECK(ref_sequence(a_normalised_deletion) == "CCAG");
     BOOST_CHECK(alt_sequence(a_normalised_deletion) == "C");
     
@@ -530,7 +530,7 @@ BOOST_AUTO_TEST_CASE(can_normalise_variants)
     auto a_normalised_insertion = normalise(an_unnormilised_insertion, human);
     
     BOOST_CHECK(is_parsimonious(a_normalised_insertion));
-    BOOST_CHECK(a_normalised_insertion.get_region() == parse_region("4:3076602-3076603", human));
+    BOOST_CHECK(a_normalised_insertion.mapped_region() == parse_region("4:3076602-3076603", human));
     BOOST_CHECK(ref_sequence(a_normalised_insertion) == "C");
     BOOST_CHECK(alt_sequence(a_normalised_insertion) == "CCAG");
 }

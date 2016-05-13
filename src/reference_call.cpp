@@ -12,9 +12,9 @@
 
 namespace Octopus
 {
-    const GenomicRegion& ReferenceCall::get_region() const noexcept
+    const GenomicRegion& ReferenceCall::mapped_region() const noexcept
     {
-        return mapped_region(reference_);
+        return ::mapped_region(reference_);
     }
     
     const Allele& ReferenceCall::get_reference() const noexcept
@@ -24,7 +24,7 @@ namespace Octopus
     
     void ReferenceCall::replace_called_alleles(const char old_base, const char replacement_base)
     {
-        const auto& ref_sequence = reference_.get_sequence();
+        const auto& ref_sequence = reference_.sequence();
         
         auto it = std::find(std::cbegin(ref_sequence), std::cend(ref_sequence), old_base);
         
@@ -37,7 +37,7 @@ namespace Octopus
             std::replace_copy(it, std::cend(ref_sequence), std::back_inserter(new_sequence),
                               old_base, replacement_base);
             
-            reference_ = Allele {reference_.get_region(), std::move(new_sequence)};
+            reference_ = Allele {reference_.mapped_region(), std::move(new_sequence)};
         }
     }
     

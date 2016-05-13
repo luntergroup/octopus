@@ -44,7 +44,7 @@ namespace Octopus { namespace ReadFilters
     
     bool IsGoodMappingQuality::passes(const AlignedRead& read) const noexcept
     {
-        return read.get_mapping_quality() >= good_mapping_quality_;
+        return read.mapping_quality() >= good_mapping_quality_;
     }
     
     HasSufficientGoodBaseFraction::HasSufficientGoodBaseFraction(QualityType good_base_quality,
@@ -62,7 +62,7 @@ namespace Octopus { namespace ReadFilters
     
     bool HasSufficientGoodBaseFraction::passes(const AlignedRead& read) const noexcept
     {
-        const auto& qualities = read.get_qualities();
+        const auto& qualities = read.qualities();
         
         auto num_good_bases = std::count_if(std::cbegin(qualities), std::cend(qualities),
                                             [this] (auto quality) {
@@ -90,7 +90,7 @@ namespace Octopus { namespace ReadFilters
     
     bool HasSufficientGoodQualityBases::passes(const AlignedRead& read) const noexcept
     {
-        const auto& qualities = read.get_qualities();
+        const auto& qualities = read.qualities();
         return std::count_if(std::cbegin(qualities), std::cend(qualities), [this]
                              (auto quality) {
                                  return quality >= good_base_quality_;
@@ -118,7 +118,7 @@ namespace Octopus { namespace ReadFilters
     
     bool IsNextSegmentMapped::passes(const AlignedRead& read) const noexcept
     {
-        return !read.has_mate() || !read.get_next_segment().is_marked_unmapped();
+        return !read.has_mate() || !read.next_segment().is_marked_unmapped();
     }
     
     IsNotMarkedDuplicate::IsNotMarkedDuplicate() : BasicReadFilter {"IsNotMarkedDuplicate"} {}
@@ -164,7 +164,7 @@ namespace Octopus { namespace ReadFilters
     
     bool IsNotContaminated::passes(const AlignedRead& read) const noexcept
     {
-        return !read.is_chimeric() || sequence_size(read) >= read.get_next_segment().get_inferred_template_length();
+        return !read.is_chimeric() || sequence_size(read) >= read.next_segment().inferred_template_length();
     }
     
     IsNotMarkedQcFail::IsNotMarkedQcFail() : BasicReadFilter {"IsNotMarkedQcFail"} {}

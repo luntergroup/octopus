@@ -191,7 +191,7 @@ HaplotypeTree& HaplotypeTree::extend(const Allele& allele)
 GenomicRegion HaplotypeTree::encompassing_region() const
 {
     if (empty()) {
-        throw std::runtime_error {"HaplotypeTree::get_region called on empty tree"};
+        throw std::runtime_error {"HaplotypeTree::mapped_region called on empty tree"};
     }
     
     const auto vertex_range = boost::adjacent_vertices(root_, tree_);
@@ -469,7 +469,7 @@ Haplotype HaplotypeTree::extract_haplotype(Vertex leaf, const GenomicRegion& reg
 {
     Haplotype::Builder result {region, reference_};
     
-    const auto& contig_region = region.get_contig_region();
+    const auto& contig_region = region.contig_region();
     
     while (leaf != root_ && !overlaps(tree_[leaf], contig_region)) {
         leaf = get_previous_allele(leaf);
@@ -514,7 +514,7 @@ bool HaplotypeTree::is_branch_exact_haplotype(Vertex leaf, const Haplotype& hapl
 bool HaplotypeTree::is_branch_equal_haplotype(const Vertex leaf, const Haplotype& haplotype) const
 {
     return leaf != root_ && overlaps(contig_region(haplotype), tree_[leaf])
-            && extract_haplotype(leaf, haplotype.get_region()) == haplotype;
+            && extract_haplotype(leaf, haplotype.mapped_region()) == haplotype;
 }
 
 HaplotypeTree::LeafIterator

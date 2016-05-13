@@ -33,7 +33,7 @@
 //
 //static Haplotype make_haplotype(Allele allele, const ReferenceGenome& reference)
 //{
-//    Haplotype result {allele.get_region(), reference};
+//    Haplotype result {allele.mapped_region(), reference};
 //    result.push_back(std::move(allele));
 //    return result;
 //}

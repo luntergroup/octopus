@@ -69,14 +69,14 @@ AssemblerCandidateVariantGenerator::Bin::Bin(GenomicRegion region)
 region {std::move(region)}
 {}
 
-const GenomicRegion& AssemblerCandidateVariantGenerator::Bin::get_region() const noexcept
+const GenomicRegion& AssemblerCandidateVariantGenerator::Bin::mapped_region() const noexcept
 {
     return region;
 }
     
 void AssemblerCandidateVariantGenerator::Bin::insert(const AlignedRead& read)
 {
-    read_sequences.emplace_back(std::cref(read.get_sequence()));
+    read_sequences.emplace_back(std::cref(read.sequence()));
 }
 
 void AssemblerCandidateVariantGenerator::Bin::insert(const SequenceType& sequence)
@@ -98,8 +98,8 @@ bool AssemblerCandidateVariantGenerator::requires_reads() const noexcept
 bool are_all_bases_good_quality(const AlignedRead& read,
                                 const AlignedRead::QualityType min_quality)
 {
-    return std::all_of(std::cbegin(read.get_qualities()),
-                       std::cend(read.get_qualities()),
+    return std::all_of(std::cbegin(read.qualities()),
+                       std::cend(read.qualities()),
                        [min_quality] (const char quality) {
                            return quality >= min_quality;
                        });
@@ -108,10 +108,10 @@ bool are_all_bases_good_quality(const AlignedRead& read,
 AlignedRead::SequenceType
 transform_low_base_qualities_to_n(const AlignedRead& read, const AlignedRead::QualityType min_quality)
 {
-    auto result = read.get_sequence();
+    auto result = read.sequence();
     
     std::transform(std::cbegin(result), std::cend(result),
-                   std::cbegin(read.get_qualities()),
+                   std::cbegin(read.qualities()),
                    std::begin(result),
                    [min_quality] (const char base, const auto quality) {
                        return (quality >= min_quality) ? base : 'N';
@@ -418,7 +418,7 @@ void add_to_mapped_variants(C1& result, C2&& variants, const GenomicRegion& regi
 {
     for (auto& variant : variants) {
         result.emplace_back(contig_name(region),
-                            region.get_begin() + static_cast<GenomicRegion::SizeType>(variant.begin_pos),
+                            region.begin() + static_cast<GenomicRegion::SizeType>(variant.begin_pos),
                             std::move(variant.ref),
                             std::move(variant.alt)
                             );
@@ -431,7 +431,7 @@ bool AssemblerCandidateVariantGenerator::assemble_bin(const unsigned kmer_size,
 {
     const auto assembler_region = propose_assembler_region(bin.region, kmer_size);
     
-    const auto reference_sequence = reference_.get().get_sequence(assembler_region);
+    const auto reference_sequence = reference_.get().fetch_sequence(assembler_region);
     
     if (has_ns(reference_sequence)) {
         throw std::runtime_error {"Bad reference"};

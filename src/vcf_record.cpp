@@ -13,22 +13,22 @@
 
 // public methods
 
-const std::string& VcfRecord::get_chromosome_name() const noexcept
+const std::string& VcfRecord::chromosome_name() const noexcept
 {
     return chromosome_;
 }
 
-VcfRecord::SizeType VcfRecord::get_position() const noexcept
+VcfRecord::SizeType VcfRecord::position() const noexcept
 {
     return position_;
 }
 
-const VcfRecord::IdType& VcfRecord::get_id() const noexcept
+const VcfRecord::IdType& VcfRecord::id() const noexcept
 {
     return id_;
 }
 
-const VcfRecord::SequenceType& VcfRecord::get_ref_allele() const noexcept
+const VcfRecord::SequenceType& VcfRecord::ref_allele() const noexcept
 {
     return ref_allele_;
 }
@@ -38,12 +38,12 @@ unsigned VcfRecord::num_alt_alleles() const noexcept
     return static_cast<unsigned>(alt_alleles_.size());
 }
 
-const std::vector<VcfRecord::SequenceType>& VcfRecord::get_alt_alleles() const noexcept
+const std::vector<VcfRecord::SequenceType>& VcfRecord::alt_alleles() const noexcept
 {
     return alt_alleles_;
 }
 
-boost::optional<VcfRecord::QualityType> VcfRecord::get_quality() const noexcept
+boost::optional<VcfRecord::QualityType> VcfRecord::quality() const noexcept
 {
     return quality_;
 }
@@ -53,7 +53,7 @@ bool VcfRecord::has_filter(const KeyType& filter) const noexcept
     return std::find(std::cbegin(filters_), std::cend(filters_), filter) != std::cend(filters_);
 }
 
-const std::vector<VcfRecord::KeyType> VcfRecord::get_filters() const noexcept
+const std::vector<VcfRecord::KeyType> VcfRecord::filters() const noexcept
 {
     return filters_;
 }
@@ -63,7 +63,7 @@ bool VcfRecord::has_info(const KeyType& key) const noexcept
     return info_.count(key) == 1;
 }
 
-std::vector<VcfRecord::KeyType> VcfRecord::get_info_keys() const
+std::vector<VcfRecord::KeyType> VcfRecord::info_keys() const
 {
     std::vector<KeyType> result {};
     result.reserve(info_.size());
@@ -75,7 +75,7 @@ std::vector<VcfRecord::KeyType> VcfRecord::get_info_keys() const
     return result;
 }
 
-const std::vector<VcfRecord::ValueType>& VcfRecord::get_info_value(const KeyType& key) const
+const std::vector<VcfRecord::ValueType>& VcfRecord::info_value(const KeyType& key) const
 {
     return info_.at(key);
 }
@@ -90,7 +90,7 @@ unsigned VcfRecord::format_cardinality(const KeyType& key) const noexcept
     return (has_format(key)) ? static_cast<unsigned>(std::cbegin(samples_)->second.at(key).size()) : 0;
 }
 
-const std::vector<VcfRecord::KeyType>& VcfRecord::get_format() const noexcept
+const std::vector<VcfRecord::KeyType>& VcfRecord::format() const noexcept
 {
     return format_;
 }
@@ -332,23 +332,23 @@ bool is_validated(const VcfRecord& record) noexcept
 bool operator==(const VcfRecord& lhs, const VcfRecord& rhs)
 {
     // TODO: this should really compare other fields
-    return lhs.get_chromosome_name() == rhs.get_chromosome_name() && lhs.get_position() == rhs.get_position();
+    return lhs.chromosome_name() == rhs.chromosome_name() && lhs.position() == rhs.position();
 }
 
 bool operator<(const VcfRecord& lhs, const VcfRecord& rhs)
 {
-    if (lhs.get_chromosome_name() == rhs.get_chromosome_name()) {
-        if (lhs.get_position() == rhs.get_position()) {
-            if (lhs.get_ref_allele().size() == rhs.get_ref_allele().size()) {
+    if (lhs.chromosome_name() == rhs.chromosome_name()) {
+        if (lhs.position() == rhs.position()) {
+            if (lhs.ref_allele().size() == rhs.ref_allele().size()) {
                 return false; // TODO: also compare alt allele sizes
             } else {
-                return lhs.get_ref_allele().size() < rhs.get_ref_allele().size();
+                return lhs.ref_allele().size() < rhs.ref_allele().size();
             }
         } else {
-            return lhs.get_position() < rhs.get_position();
+            return lhs.position() < rhs.position();
         }
     } else {
-        return lhs.get_chromosome_name() < rhs.get_chromosome_name();
+        return lhs.chromosome_name() < rhs.chromosome_name();
     }
 }
 
@@ -545,7 +545,7 @@ VcfRecord::Builder& VcfRecord::Builder::set_somatic()
     return this->add_info_flag("SOMATIC");
 }
 
-VcfRecord::SizeType VcfRecord::Builder::get_position() const noexcept
+VcfRecord::SizeType VcfRecord::Builder::position() const noexcept
 {
     return position_;
 }

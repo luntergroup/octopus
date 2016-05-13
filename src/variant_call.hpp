@@ -35,7 +35,7 @@ namespace Octopus
         VariantCall(VariantCall&&)                 = default;
         VariantCall& operator=(VariantCall&&)      = default;
         
-        const GenomicRegion& get_region() const noexcept override;
+        const GenomicRegion& mapped_region() const noexcept override;
         const Allele& get_reference() const noexcept override;
         
         const Allele& get_alternative() const noexcept;

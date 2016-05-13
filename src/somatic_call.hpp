@@ -60,11 +60,11 @@ namespace Octopus
     VariantCall {std::forward<V>(variant), decltype(genotype_calls_) {}, quality},
     credible_regions_ {std::forward<C>(credible_regions)}
     {
-        if (variant_.get_ref_allele() == variant_.get_alt_allele()) {
+        if (variant_.ref_allele() == variant_.alt_allele()) {
             Allele::SequenceType missing_sequence(ref_sequence_size(variant_), 'N');
             variant_ = Variant {
-                Allele {mapped_region(variant_), std::move(missing_sequence)},
-                variant_.get_alt_allele()
+                Allele {::mapped_region(variant_), std::move(missing_sequence)},
+                variant_.alt_allele()
             };
         }
         

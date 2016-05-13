@@ -58,7 +58,7 @@ public:
     
     template <typename T> void emplace(T&& element);
     
-    const RegionType& get_region() const noexcept;
+    const RegionType& mapped_region() const noexcept;
     
     const MappableType& operator[](unsigned n) const;
     
@@ -107,7 +107,7 @@ public:
     
     const Haplotype& operator[](unsigned n) const;
     
-    const GenomicRegion& get_region() const noexcept;
+    const GenomicRegion& mapped_region() const noexcept;
     
     unsigned ploidy() const noexcept;
     
@@ -188,9 +188,9 @@ elements_ {elements}
 {}
 
 template <typename MappableType>
-const typename Genotype<MappableType>::RegionType& Genotype<MappableType>::get_region() const noexcept
+const typename Genotype<MappableType>::RegionType& Genotype<MappableType>::mapped_region() const noexcept
 {
-    return elements_.front().get_region();
+    return elements_.front().mapped_region();
 }
 
 template <typename MappableType>
@@ -344,7 +344,7 @@ bool contains(const Genotype<MappableType>& genotype, const MappableType& elemen
 template <typename MappableType1, typename MappableType2>
 bool contains(const Genotype<MappableType1>& lhs, const Genotype<MappableType2>& rhs)
 {
-    return splice<MappableType2>(lhs, rhs.get_region()) == rhs;
+    return splice<MappableType2>(lhs, rhs.mapped_region()) == rhs;
 }
 
 template <typename MappableType2, typename MappableType1>
@@ -535,24 +535,22 @@ namespace detail
         
         std::vector<unsigned> element_indicies(ploidy, 0);
         
-        unsigned i {0};
-        
         while (true) {
-            if (element_indicies[i] == num_elements) {
-                while (i++ < ploidy && element_indicies[i] == num_elements - 1);
+            if (element_indicies[0] == num_elements) {
+                unsigned i {0};
+                
+                while (++i < ploidy && element_indicies[i] == num_elements - 1);
                 
                 if (i == ploidy) break;
                 
                 ++element_indicies[i];
                 
                 std::fill_n(std::begin(element_indicies), i + 1, element_indicies[i]);
-                
-                i = 0;
             }
             
             result.push_back(detail::generate_genotype(elements, element_indicies));
             
-            ++element_indicies[i];
+            ++element_indicies[0];
         }
         
         return result;

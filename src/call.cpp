@@ -12,7 +12,7 @@
 
 namespace Octopus
 {
-    double Call::get_quality() const noexcept
+    double Call::quality() const noexcept
     {
         return quality_;
     }
@@ -54,7 +54,7 @@ namespace Octopus
             
             auto it = std::find_if_not(std::cbegin(called_genotype), std::cend(called_genotype),
                                        [old_base] (const Allele& allele) {
-                                           const auto& seq = allele.get_sequence();
+                                           const auto& seq = allele.sequence();
                                            return std::find(std::cbegin(seq), std::cend(seq),
                                                             old_base) == std::cend(seq);
                                        });
@@ -71,7 +71,7 @@ namespace Octopus
                               [&new_genotype, old_base, replacement_base] (const Allele& allele) {
                                   Allele::SequenceType new_sequence {};
                                   
-                                  const auto& old_sequence = allele.get_sequence();
+                                  const auto& old_sequence = allele.sequence();
                                   
                                   new_sequence.reserve(old_sequence.size());
                                   
@@ -79,7 +79,7 @@ namespace Octopus
                                                     std::back_inserter(new_sequence),
                                                     old_base, replacement_base);
                                   
-                                  new_genotype.emplace(Allele {allele.get_region(), std::move(new_sequence)});
+                                  new_genotype.emplace(Allele {allele.mapped_region(), std::move(new_sequence)});
                               });
                 
                 called_genotype = std::move(new_genotype);

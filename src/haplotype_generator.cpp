@@ -37,8 +37,8 @@ namespace
         std::deque<Allele> alleles {};
         
         for (const auto& variant : variants) {
-            alleles.push_back(variant.get_ref_allele());
-            alleles.push_back(variant.get_alt_allele());
+            alleles.push_back(variant.ref_allele());
+            alleles.push_back(variant.alt_allele());
         }
         
         std::sort(std::begin(alleles), std::end(alleles));
@@ -64,7 +64,7 @@ HaplotypeGenerator::HaplotypeGenerator(const GenomicRegion& window, const Refere
                                        const MappableFlatSet<Variant>& candidates, const ReadMap& reads,
                                        unsigned max_haplotypes, bool allow_lagging)
 :
-tree_ {window.get_contig_name(), reference},
+tree_ {window.contig_name(), reference},
 walker_ {max_included(max_haplotypes)},
 lagged_walker_ {},
 alleles_ {variants_to_alleles(candidates)},
@@ -463,8 +463,8 @@ GenomicRegion HaplotypeGenerator::calculate_haplotype_region() const
         
         const auto unpadded_region = encompassing_region(lhs_read, rhs_read);
         
-        if (region_begin(lhs_read) < additional_padding / 2) {
-            const auto lhs_padding = region_begin(lhs_read);
+        if (mapped_begin(lhs_read) < additional_padding / 2) {
+            const auto lhs_padding = mapped_begin(lhs_read);
             const auto rhs_padding = additional_padding - lhs_padding;
             return expand_lhs(expand_rhs(unpadded_region, rhs_padding), lhs_padding);
         }

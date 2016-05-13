@@ -34,17 +34,17 @@ BOOST_AUTO_TEST_CASE(aligned_read_copies_and_moves_correctly)
         AlignedRead::NextSegment::Flags {}};
     
     BOOST_CHECK(read.is_chimeric());
-    BOOST_CHECK(read.get_next_segment().get_inferred_template_length() == 30);
+    BOOST_CHECK(read.next_segment().inferred_template_length() == 30);
     
     const auto moved_read = std::move(read);
     
     BOOST_CHECK(moved_read.is_chimeric());
-    BOOST_CHECK(moved_read.get_next_segment().get_inferred_template_length() == 30);
+    BOOST_CHECK(moved_read.next_segment().inferred_template_length() == 30);
     
     const auto copied_read = moved_read;
     
     BOOST_CHECK(copied_read.is_chimeric());
-    BOOST_CHECK(copied_read.get_next_segment().get_inferred_template_length() == 30);
+    BOOST_CHECK(copied_read.next_segment().inferred_template_length() == 30);
     BOOST_CHECK(moved_read == copied_read);
 }
 
@@ -133,14 +133,14 @@ BOOST_AUTO_TEST_CASE(can_splice_reads)
         AlignedRead::Flags {}
     };
     
-    BOOST_CHECK(splice(read, GenomicRegion {"1", 100, 105}).get_sequence() == "AAAAA");
-    BOOST_CHECK(splice(read, GenomicRegion {"1", 100, 106}).get_sequence() == "AAAAA");
-    BOOST_CHECK(splice(read, GenomicRegion {"1", 100, 107}).get_sequence() == "AAAAAC");
-    BOOST_CHECK(splice(read, GenomicRegion {"1", 100, 110}).get_sequence() == "AAAAACCCC");
-    BOOST_CHECK(splice(read, GenomicRegion {"1", 100, 116}).get_sequence() == "AAAAACCCCCCCCCC");
-    BOOST_CHECK(splice(read, GenomicRegion {"1", 100, 117}).get_sequence() == "AAAAACCCCCCCCCCGGGT");
-    BOOST_CHECK(splice(read, GenomicRegion {"1", 100, 118}).get_sequence() == "AAAAACCCCCCCCCCGGGTT");
-    BOOST_CHECK(splice(read, GenomicRegion {"1", 100, 119}).get_sequence() == "AAAAACCCCCCCCCCGGGTTT");
+    BOOST_CHECK(splice(read, GenomicRegion {"1", 100, 105}).sequence() == "AAAAA");
+    BOOST_CHECK(splice(read, GenomicRegion {"1", 100, 106}).sequence() == "AAAAA");
+    BOOST_CHECK(splice(read, GenomicRegion {"1", 100, 107}).sequence() == "AAAAAC");
+    BOOST_CHECK(splice(read, GenomicRegion {"1", 100, 110}).sequence() == "AAAAACCCC");
+    BOOST_CHECK(splice(read, GenomicRegion {"1", 100, 116}).sequence() == "AAAAACCCCCCCCCC");
+    BOOST_CHECK(splice(read, GenomicRegion {"1", 100, 117}).sequence() == "AAAAACCCCCCCCCCGGGT");
+    BOOST_CHECK(splice(read, GenomicRegion {"1", 100, 118}).sequence() == "AAAAACCCCCCCCCCGGGTT");
+    BOOST_CHECK(splice(read, GenomicRegion {"1", 100, 119}).sequence() == "AAAAACCCCCCCCCCGGGTTT");
     BOOST_CHECK(splice(read, GenomicRegion {"1", 100, 120}) == read);
 }
 

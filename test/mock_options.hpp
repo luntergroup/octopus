@@ -36,15 +36,15 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         
         //"--target-read-buffer-size", "0.1",
         //"--reference-cache-size", "100",
-        "--threads", "0",
+        //"--threads", "0",
         
         //"--contig-output-order", "as-in-reference-reversed",
         
         "--reference", human_reference_fasta.c_str(),
         //"--reference", ecoli_reference_fasta.c_str(),
         
-        //"--reads", NA12878_low_coverage.c_str(),
-        "--reads", NA12878_high_coverage.c_str(),
+        "--reads", NA12878_low_coverage.c_str(),
+        //"--reads", NA12878_high_coverage.c_str(),
         //"--reads", "~/Genomics/Illumina/NA12878.mapped.ILLUMINA.bwa.CEU.high_coverage_pcr_free.20130906.chr22.bam",
         
         //"--reads", NA12891_high_coverage.c_str(),
@@ -76,7 +76,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         
         /* input regions */
         
-        "--regions", "22",
+        "--regions", "22:20,000,000-21,000,000",
         
         //"--regions", "22:41,015,232-41,015,314",
         

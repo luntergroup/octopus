@@ -25,7 +25,7 @@ namespace
 {
     auto extract_repeats(const Haplotype& haplotype)
     {
-        return Tandem::find_maximal_repetitions(haplotype.get_sequence(), 1, 3);
+        return Tandem::find_maximal_repetitions(haplotype.sequence(), 1, 3);
     }
 }
 
@@ -57,7 +57,7 @@ void ReadIndelErrorModel::fill_gap_open_penalties(const Haplotype& haplotype,
         } else if (repeat.period == 2) {
             static constexpr std::array<char, 2> AC {'A', 'C'};
             
-            const auto it = next(cbegin(haplotype.get_sequence()), repeat.pos);
+            const auto it = next(cbegin(haplotype.sequence()), repeat.pos);
             
             std::int8_t e {30};
             
@@ -70,7 +70,7 @@ void ReadIndelErrorModel::fill_gap_open_penalties(const Haplotype& haplotype,
             static constexpr std::array<char, 3> GGC {'G', 'G', 'C'};
             static constexpr std::array<char, 3> GCC {'G', 'C', 'C'};
             
-            const auto it = next(cbegin(haplotype.get_sequence()), repeat.pos);
+            const auto it = next(cbegin(haplotype.sequence()), repeat.pos);
             
             std::int8_t e {38};
             

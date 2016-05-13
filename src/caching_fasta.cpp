@@ -64,17 +64,17 @@ bool CachingFasta::do_is_open() const noexcept
     return fasta_->is_open();
 }
 
-std::string CachingFasta::do_get_reference_name() const
+std::string CachingFasta::do_fetch_reference_name() const
 {
-    return fasta_->get_reference_name();
+    return fasta_->fetch_reference_name();
 }
 
-std::vector<CachingFasta::ContigNameType> CachingFasta::do_get_contig_names() const
+std::vector<CachingFasta::ContigNameType> CachingFasta::do_fetch_contig_names() const
 {
-    return fasta_->get_contig_names();
+    return fasta_->fetch_contig_names();
 }
 
-CachingFasta::SizeType CachingFasta::do_get_contig_size(const ContigNameType& contig) const
+CachingFasta::SizeType CachingFasta::do_fetch_contig_size(const ContigNameType& contig) const
 {
     return contig_sizes_.at(contig);
 }
@@ -92,14 +92,14 @@ CachingFasta::SequenceType CachingFasta::do_fetch_sequence(const GenomicRegion& 
     if (is_contig_cached(region)) {
         const auto it = find_cache_iterator(region);
         
-        if (it != std::cend(sequence_cache_.at(region.get_contig_name()))) {
+        if (it != std::cend(sequence_cache_.at(region.contig_name()))) {
             //std::cout << "region " << region << " in cache" << std::endl;
             
             update_cache_position(region);
             
             lock.unlock();
             
-            return get_subsequence(region.get_contig_region(), it->first, it->second);
+            return get_subsequence(region.contig_region(), it->first, it->second);
         }
     }
     
@@ -109,7 +109,7 @@ CachingFasta::SequenceType CachingFasta::do_fetch_sequence(const GenomicRegion& 
     
     auto fetched_sequence = fasta_->fetch_sequence(fetch_region);
     
-    auto result = get_subsequence(region.get_contig_region(), fetch_region.get_contig_region(),
+    auto result = get_subsequence(region.contig_region(), fetch_region.contig_region(),
                                   fetched_sequence);
     
     lock.lock();
@@ -125,12 +125,12 @@ CachingFasta::SequenceType CachingFasta::do_fetch_sequence(const GenomicRegion& 
 
 void CachingFasta::setup_cache()
 {
-    auto contig_names = fasta_->get_contig_names();
+    auto contig_names = fasta_->fetch_contig_names();
     
     contig_sizes_.reserve(contig_names.size());
     
     for (auto&& contig_name : contig_names) {
-        auto size = fasta_->get_contig_size(contig_name);
+        auto size = fasta_->fetch_contig_size(contig_name);
         genome_size_ += size;
         contig_sizes_.emplace(std::move(contig_name), size);
     }
@@ -144,18 +144,18 @@ CachingFasta::SizeType CachingFasta::get_remaining_cache_size() const
 
 bool CachingFasta::is_contig_cached(const GenomicRegion& region) const
 {
-    return sequence_cache_.count(region.get_contig_name()) != 0;
+    return sequence_cache_.count(region.contig_name()) != 0;
 }
 
 CachingFasta::CacheIterator CachingFasta::find_cache_iterator(const GenomicRegion& region) const
 {
-    assert(sequence_cache_.count(region.get_contig_name()) == 1);
+    assert(sequence_cache_.count(region.contig_name()) == 1);
     
-    const auto& contig_cache = sequence_cache_.at(region.get_contig_name());
+    const auto& contig_cache = sequence_cache_.at(region.contig_name());
     
     if (contig_cache.empty()) return std::cend(contig_cache);
     
-    const auto& contig_region = region.get_contig_region();
+    const auto& contig_region = region.contig_region();
     
     const auto it = contig_cache.lower_bound(contig_region);
     
@@ -171,7 +171,7 @@ CachingFasta::CacheIterator CachingFasta::find_cache_iterator(const GenomicRegio
 GenomicRegion CachingFasta::get_region_to_fetch(const GenomicRegion& requested_region) const
 {
     // We know the entire region is not in cache, but parts of it may be
-    if (sequence_cache_.count(requested_region.get_contig_name()) == 0) {
+    if (sequence_cache_.count(requested_region.contig_name()) == 0) {
         return get_new_contig_chunk(requested_region);
     } else {
         return get_hit_contig_chunk(requested_region);
@@ -181,14 +181,14 @@ GenomicRegion CachingFasta::get_region_to_fetch(const GenomicRegion& requested_r
 CachingFasta::SizeType CachingFasta::get_lhs_extension_size(const GenomicRegion& requested_region) const
 {
     assert(max_cache_size_ >= size(requested_region));
-    return std::min(requested_region.get_begin(),
+    return std::min(requested_region.begin(),
                     static_cast<SizeType>((max_cache_size_ - size(requested_region)) * locality_bias_ * (1.0 - forward_bias_)));
 }
 
 CachingFasta::SizeType CachingFasta::get_rhs_extension_size(const GenomicRegion& requested_region) const
 {
     assert(max_cache_size_ >= size(requested_region));
-    return std::min(contig_sizes_.at(requested_region.get_contig_name()) - requested_region.get_end(),
+    return std::min(contig_sizes_.at(requested_region.contig_name()) - requested_region.end(),
                     static_cast<SizeType>((max_cache_size_ - size(requested_region)) * locality_bias_ * forward_bias_));
 }
 
@@ -210,7 +210,7 @@ void CachingFasta::add_sequence_to_cache(SequenceType&& sequence, GenomicRegion&
     
     recache_overlapped_regions(sequence, region);
     
-    const auto& contig = region.get_contig_name();
+    const auto& contig = region.contig_name();
     
     if (sequence_cache_.count(contig) == 0 && contig_sizes_.at(contig) >= get_remaining_cache_size()) {
         const auto target_cache_size = static_cast<SizeType>(current_cache_size_ * (1.0 - locality_bias_));
@@ -222,7 +222,7 @@ void CachingFasta::add_sequence_to_cache(SequenceType&& sequence, GenomicRegion&
         }
     }
     
-    sequence_cache_[region.get_contig_name()].emplace(region.get_contig_region(), std::move(sequence));
+    sequence_cache_[region.contig_name()].emplace(region.contig_region(), std::move(sequence));
     current_cache_size_ += size(region);
     recently_used_regions_.push_front(std::move(region));
     
@@ -250,11 +250,11 @@ void CachingFasta::update_cache_position(const GenomicRegion& region) const
 
 CachingFasta::OverlapRange CachingFasta::overlap_range(const GenomicRegion& region) const
 {
-    assert(sequence_cache_.count(region.get_contig_name()) == 1);
+    assert(sequence_cache_.count(region.contig_name()) == 1);
     
-    const auto& contig_cache = sequence_cache_.at(region.get_contig_name());
+    const auto& contig_cache = sequence_cache_.at(region.contig_name());
     
-    const auto& contig_region = region.get_contig_region();
+    const auto& contig_region = region.contig_region();
     
     auto it = contig_cache.lower_bound(contig_region);
     
@@ -268,10 +268,10 @@ CachingFasta::OverlapRange CachingFasta::overlap_range(const GenomicRegion& regi
 
 void CachingFasta::remove_from_sequence_cache(const GenomicRegion& region) const
 {
-    const auto& contig = region.get_contig_name();
+    const auto& contig = region.contig_name();
     
     //std::cout << "removing " << region << " from cache" << std::endl;
-    sequence_cache_.at(contig).erase(region.get_contig_region());
+    sequence_cache_.at(contig).erase(region.contig_region());
     
     if (sequence_cache_.at(contig).empty()) {
         sequence_cache_.erase(contig);
@@ -297,7 +297,7 @@ T get_nonoverlapped(const T& lhs, const T& rhs)
 
 void CachingFasta::recache_overlapped_regions(const SequenceType& sequence, const GenomicRegion& region) const
 {
-    if (sequence_cache_.count(region.get_contig_name()) == 1) {
+    if (sequence_cache_.count(region.contig_name()) == 1) {
         auto cached_overlapped = this->overlap_range(region);
         
         const auto num_overlapped = std::distance(std::cbegin(cached_overlapped), std::cend(cached_overlapped));
@@ -309,15 +309,15 @@ void CachingFasta::recache_overlapped_regions(const SequenceType& sequence, cons
             std::for_each(std::begin(cached_overlapped), std::end(cached_overlapped),
                           [this, &region, &to_recache] (auto& p){
                 const ContigRegion& overlapped_contig_region {p.first};
-                const GenomicRegion overlapped_region {region.get_contig_name(), overlapped_contig_region};
+                const GenomicRegion overlapped_region {region.contig_name(), overlapped_contig_region};
                 
                 current_cache_size_ -= size(overlapped_region);
                 
-                if (contains(region.get_contig_region(), overlapped_contig_region)) {
+                if (contains(region.contig_region(), overlapped_contig_region)) {
                     remove_from_usage_cache(overlapped_region);
                 } else {
                     auto nonoverlapped_region = get_nonoverlapped(overlapped_region, region);
-                    const auto& nonoverlapped_contig_region = nonoverlapped_region.get_contig_region();
+                    const auto& nonoverlapped_contig_region = nonoverlapped_region.contig_region();
                     
                     to_recache.emplace_back(nonoverlapped_contig_region,
                                             get_subsequence(nonoverlapped_contig_region,
@@ -332,9 +332,9 @@ void CachingFasta::recache_overlapped_regions(const SequenceType& sequence, cons
             assert(current_cache_size_ <= max_cache_size_);
             
             // update sequence_cache_ here as std::map iterators are invalidated on erase
-            sequence_cache_.at(region.get_contig_name()).erase(std::begin(cached_overlapped),
+            sequence_cache_.at(region.contig_name()).erase(std::begin(cached_overlapped),
                                                                std::end(cached_overlapped));
-            sequence_cache_.at(region.get_contig_name()).insert(std::make_move_iterator(std::begin(to_recache)),
+            sequence_cache_.at(region.contig_name()).insert(std::make_move_iterator(std::begin(to_recache)),
                                                                 std::make_move_iterator(std::end(to_recache)));
         }
     }

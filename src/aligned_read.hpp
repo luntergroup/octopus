@@ -57,14 +57,14 @@ public:
         NextSegment(NextSegment&&)                 = default;
         NextSegment& operator=(NextSegment&&)      = default;
         
-        const std::string& get_contig_name() const;
-        SizeType get_begin() const noexcept;
-        SizeType get_inferred_template_length() const noexcept;
-        GenomicRegion get_inferred_region() const;
+        const std::string& contig_name() const;
+        SizeType begin() const noexcept;
+        SizeType inferred_template_length() const noexcept;
+        GenomicRegion inferred_region() const;
         bool is_marked_unmapped() const;
         bool is_marked_reverse_mapped() const;
         
-        size_t get_hash() const;
+        std::size_t get_hash() const;
         
     private:
         using FlagBits = std::bitset<2>;
@@ -116,15 +116,15 @@ public:
     
     friend void swap(AlignedRead& lhs, AlignedRead& rhs) noexcept;
     
-    const ReadGroupType& get_read_group() const;
-    const GenomicRegion& get_region() const noexcept;
-    const SequenceType& get_sequence() const noexcept;
-    const Qualities& get_qualities() const noexcept;
-    QualityType get_mapping_quality() const noexcept;
-    const CigarString& get_cigar_string() const noexcept;
+    const ReadGroupType& read_group() const;
+    const GenomicRegion& mapped_region() const noexcept;
+    const SequenceType& sequence() const noexcept;
+    const Qualities& qualities() const noexcept;
+    QualityType mapping_quality() const noexcept;
+    const CigarString& cigar_string() const noexcept;
     bool has_mate() const noexcept;
-    const NextSegment& get_next_segment() const;
-    Flags get_flags() const;
+    const NextSegment& next_segment() const;
+    Flags flags() const;
     
     bool is_chimeric() const noexcept;
     bool is_marked_all_segments_in_read_aligned() const;

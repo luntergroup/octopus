@@ -527,7 +527,7 @@ overlap_range(ForwardIt first, ForwardIt last, const MappableTp& mappable,
                           });
     
     auto it2 = std::lower_bound(first, it, shift(mapped_region(mappable),
-                                                 -std::min(region_begin(mappable), max_mappable_size)),
+                                                 -std::min(mapped_begin(mappable), max_mappable_size)),
                                 [] (const auto& lhs, const auto& rhs) {
                                     return begins_before(lhs, rhs);
                                 });
@@ -1056,7 +1056,7 @@ bool has_contained(ForwardIt first, ForwardIt last, const MappableTp& mappable)
                                    return begins_before(lhs, rhs);
                                });
     
-    return (it != last) && region_end(*it) <= region_end(mappable);
+    return (it != last) && mapped_end(*it) <= mapped_end(mappable);
 }
 
 namespace detail
@@ -1419,7 +1419,7 @@ namespace detail
         ContigRegion::SizeType n {0};
         
         std::generate_n(std::back_inserter(result), num_elements, [&] () {
-            return ContigRegion {get_begin(mappable) + n, get_begin(mappable) + ++n};
+            return ContigRegion {begin(mappable) + n, begin(mappable) + ++n};
         });
         
         return result;
@@ -1441,7 +1441,7 @@ namespace detail
         const auto& contig = contig_name(mappable);
         
         std::generate_n(std::back_inserter(result), num_elements, [&] () {
-            return GenomicRegion {contig, region_begin(mappable) + n, region_begin(mappable) + ++n};
+            return GenomicRegion {contig, mapped_begin(mappable) + n, mapped_begin(mappable) + ++n};
         });
         
         return result;
@@ -1477,7 +1477,7 @@ auto decompose(const MappableTp& mappable, GenomicRegion::SizeType n)
     result.reserve(num_elements);
     
     const auto& contig = contig_name(mappable);
-    auto curr = region_begin(mappable);
+    auto curr = mapped_begin(mappable);
     
     std::generate_n(std::back_inserter(result), num_elements, [&contig, &curr, n] () {
         auto tmp = curr;
@@ -1541,9 +1541,9 @@ auto extract_covered_regions(ForwardIt first, ForwardIt last)
     auto rightmost        = first;
     
     while (first != last) {
-        if (region_begin(*first) > region_end(*rightmost)) {
+        if (mapped_begin(*first) > mapped_end(*rightmost)) {
             result.emplace_back(contig_name(*first_overlapped),
-                                region_begin(*first_overlapped), region_end(*rightmost));
+                                mapped_begin(*first_overlapped), mapped_end(*rightmost));
             rightmost        = first;
             first_overlapped = first;
         } else if (ends_before(*rightmost, *first)) {
@@ -1553,7 +1553,7 @@ auto extract_covered_regions(ForwardIt first, ForwardIt last)
     }
     
     result.emplace_back(contig_name(*first_overlapped),
-                        region_begin(*first_overlapped), region_end(*rightmost));
+                        mapped_begin(*first_overlapped), mapped_end(*rightmost));
     
     result.shrink_to_fit();
     
@@ -1850,11 +1850,11 @@ auto calculate_positional_coverage(ForwardIt first, ForwardIt last, const Region
     
     const auto result_begin_itr = std::begin(result);
     
-    const auto first_position = region_begin(region);
+    const auto first_position = mapped_begin(region);
     
     std::for_each(first, last, [=] (const auto& mappable) {
-        const auto it1 = next(result_begin_itr, (region_begin(mappable) <= first_position) ? 0 : region_begin(mappable) - first_position);
-        const auto it2 = next(result_begin_itr, min(region_end(mappable) - first_position, num_positions));
+        const auto it1 = next(result_begin_itr, (mapped_begin(mappable) <= first_position) ? 0 : mapped_begin(mappable) - first_position);
+        const auto it2 = next(result_begin_itr, min(mapped_end(mappable) - first_position, num_positions));
         std::transform(it1, it2, it1, [] (const auto count) { return count + 1; });
     });
     

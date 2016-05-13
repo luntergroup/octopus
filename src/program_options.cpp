@@ -781,7 +781,7 @@ namespace Octopus
         InputRegionMap contig_mapped_regions {};
         
         for (const auto& region : regions) {
-            contig_mapped_regions[region.get_contig_name()].insert(region);
+            contig_mapped_regions[region.contig_name()].insert(region);
         }
         
         InputRegionMap result {};
@@ -881,7 +881,7 @@ namespace Octopus
                 all_region_parsed = false;
                 stream(log) << "Could not parse input region \"" << unparsed_region
                             << "\". Check the format is correct, the contig is in the reference genome \""
-                            << reference.get_name() << "\", and the coordinate range is in bounds.";
+                            << reference.name() << "\", and the coordinate range is in bounds.";
             }
         }
         

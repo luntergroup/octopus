@@ -21,12 +21,12 @@ size_ {size},
 flag_ {flag}
 {}
 
-CigarOperation::SizeType CigarOperation::get_size() const noexcept
+CigarOperation::SizeType CigarOperation::size() const noexcept
 {
     return size_;
 }
 
-char CigarOperation::get_flag() const noexcept
+char CigarOperation::flag() const noexcept
 {
     return flag_;
 }
@@ -88,14 +88,14 @@ bool is_valid_flag(const CigarOperation& op)
     static const auto first_valid = std::cbegin(valid_flags);
     static const auto last_valid  = std::cend(valid_flags);
     
-    return std::find(first_valid, last_valid, op.get_flag()) != last_valid;
+    return std::find(first_valid, last_valid, op.flag()) != last_valid;
 }
 
 bool is_valid_cigar(const CigarString& cigar) noexcept
 {
     return !cigar.empty() && std::all_of(std::cbegin(cigar), std::cend(cigar),
                                          [] (const auto& op) {
-                                             return op.get_size() > 0 && is_valid_flag(op);
+                                             return op.size() > 0 && is_valid_flag(op);
                                          });
 }
 
@@ -103,18 +103,18 @@ bool is_minimal_cigar(const CigarString& cigar) noexcept
 {
     return std::adjacent_find(std::cbegin(cigar), std::cend(cigar),
                               [] (const auto& lhs, const auto& rhs) {
-                                  return lhs.get_flag() == rhs.get_flag();
+                                  return lhs.flag() == rhs.flag();
                               }) == std::cend(cigar);
 }
 
 bool is_front_soft_clipped(const CigarString& cigar_string) noexcept
 {
-    return cigar_string.empty() || cigar_string.front().get_flag() == CigarOperation::SOFT_CLIPPED;
+    return cigar_string.empty() || cigar_string.front().flag() == CigarOperation::SOFT_CLIPPED;
 }
 
 bool is_back_soft_clipped(const CigarString& cigar_string) noexcept
 {
-    return cigar_string.empty() || cigar_string.back().get_flag() == CigarOperation::SOFT_CLIPPED;
+    return cigar_string.empty() || cigar_string.back().flag() == CigarOperation::SOFT_CLIPPED;
 }
 
 bool is_soft_clipped(const CigarString& cigar_string) noexcept
@@ -125,8 +125,8 @@ bool is_soft_clipped(const CigarString& cigar_string) noexcept
 std::pair<CigarOperation::SizeType, CigarOperation::SizeType>
 get_soft_clipped_sizes(const CigarString& cigar_string) noexcept
 {
-    return std::make_pair((is_front_soft_clipped(cigar_string)) ? cigar_string.front().get_size() : 0,
-                          (is_back_soft_clipped(cigar_string)) ? cigar_string.back().get_size() : 0);
+    return std::make_pair((is_front_soft_clipped(cigar_string)) ? cigar_string.front().size() : 0,
+                          (is_back_soft_clipped(cigar_string)) ? cigar_string.back().size() : 0);
 }
 
 // non-member functions
@@ -142,33 +142,33 @@ CigarString splice(const CigarString& cigar_string, CigarOperation::SizeType off
     
     const auto last = std::cend(cigar_string);
     
-    while (op_it != last && (offset >= op_it->get_size() || !pred(*op_it))) {
-        if (pred(*op_it)) offset -= op_it->get_size();
+    while (op_it != last && (offset >= op_it->size() || !pred(*op_it))) {
+        if (pred(*op_it)) offset -= op_it->size();
         ++op_it;
     }
     
     if (op_it != last) {
-        const auto remainder = op_it->get_size() - offset;
+        const auto remainder = op_it->size() - offset;
         
         if (remainder >= size) {
-            result.emplace_back(size, op_it->get_flag());
+            result.emplace_back(size, op_it->flag());
             result.shrink_to_fit();
             return result;
         }
         
-        result.emplace_back(remainder, op_it->get_flag());
+        result.emplace_back(remainder, op_it->flag());
         size -= remainder;
         ++op_it;
     }
     
-    while (op_it != last && size > 0 && (size >= op_it->get_size() || !pred(*op_it))) {
+    while (op_it != last && size > 0 && (size >= op_it->size() || !pred(*op_it))) {
         result.emplace_back(*op_it);
-        if (pred(*op_it)) size -= op_it->get_size();
+        if (pred(*op_it)) size -= op_it->size();
         ++op_it;
     }
     
     if (op_it != last && size > 0) {
-        result.emplace_back(size, op_it->get_flag());
+        result.emplace_back(size, op_it->flag());
     }
     
     result.shrink_to_fit();
@@ -211,7 +211,7 @@ CigarString splice_sequence(const CigarString& cigar_string, const CigarOperatio
 
 std::ostream& operator<<(std::ostream& os, const CigarOperation& cigar_operation)
 {
-    os << cigar_operation.get_size() << cigar_operation.get_flag();
+    os << cigar_operation.size() << cigar_operation.flag();
     return os;
 }
 

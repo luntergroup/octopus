@@ -196,7 +196,7 @@ struct CallWrapper : public Mappable<CallWrapper>
     operator std::unique_ptr<Call>&() noexcept { return call; }
     std::unique_ptr<Call>::pointer operator->() const noexcept { return call.get(); };
     std::unique_ptr<Call> call;
-    const GenomicRegion& get_region() const noexcept { return call->get_region(); }
+    const GenomicRegion& mapped_region() const noexcept { return call->mapped_region(); }
 };
 
 template <typename T>
@@ -229,7 +229,7 @@ auto unwrap(std::vector<CallWrapper>&& calls)
 void set_phase(const SampleIdType& sample, const Phaser::PhaseSet::PhaseRegion& phase,
                const std::vector<GenomicRegion>& call_regions, CallWrapper& call)
 {
-    const auto overlapped = overlap_range(call_regions, phase.get_region(),
+    const auto overlapped = overlap_range(call_regions, phase.mapped_region(),
                                           BidirectionallySortedTag {});
     
     assert(!overlapped.empty());
@@ -242,7 +242,7 @@ void set_phasing(std::vector<CallWrapper>& calls, const Phaser::PhaseSet& phase_
     const auto call_regions = extract_regions(calls);
     
     for (auto& call : calls) {
-        const auto& call_region = call.get_region();
+        const auto& call_region = call.mapped_region();
         
         for (const auto& p : phase_set.phase_regions) {
             const auto& phase = find_phase_region(p.second, call_region);
@@ -674,7 +674,7 @@ VariantCaller::get_removable_haplotypes(const std::vector<Haplotype>& haplotypes
                                         const CallerLatents::HaplotypeProbabilityMap& haplotype_posteriors,
                                         const GenomicRegion& region) const
 {
-    assert(!haplotypes.empty() && contains(haplotypes.front().get_region(), region));
+    assert(!haplotypes.empty() && contains(haplotypes.front().mapped_region(), region));
     
     std::vector<std::reference_wrapper<const Haplotype>> result {};
     result.reserve(haplotypes.size());
@@ -776,7 +776,7 @@ void append_allele(std::vector<Allele>& alleles, const Allele& allele,
     if (refcall_type == VariantCaller::RefCallType::Blocked && !alleles.empty()
         && are_adjacent(alleles.back(), allele)) {
         alleles.back() = Allele {encompassing_region(alleles.back(), allele),
-            alleles.back().get_sequence() + allele.get_sequence()};
+            alleles.back().sequence() + allele.sequence()};
     } else {
         alleles.push_back(allele);
     }
@@ -1095,7 +1095,7 @@ namespace debug
         const auto cigar = parse_cigar_string(cigar_str);
         return std::find_if(std::cbegin(reads), std::cend(reads),
                             [&] (const AlignedRead& read) {
-                                return read.get_cigar_string() == cigar
+                                return read.cigar_string() == cigar
                                 && to_string(mapped_region(read)) == region;
                             });
     }

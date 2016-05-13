@@ -38,7 +38,7 @@ transversion_rate_ {transversion_rate}
 //{
 //    std::vector<TandemRepeat> extract_exact_tandem_repeats(const Haplotype& haplotype)
 //    {
-//        return find_exact_tandem_repeats(haplotype.get_sequence(), haplotype.get_region(), 1);
+//        return find_exact_tandem_repeats(haplotype.sequence(), haplotype.mapped_region(), 1);
 //    }
 //} // namespace
 
@@ -106,7 +106,7 @@ BasicHaplotypePriorModel::do_compute_maximum_entropy_haplotype_set(std::vector<H
     
     assert(!haplotypes.empty());
     
-    const Haplotype reference {haplotypes.front().get_region(), reference_.get()};
+    const Haplotype reference {haplotypes.front().mapped_region(), reference_.get()};
     
     auto first_duplicate = adjacent_find(begin(haplotypes), end(haplotypes));
     

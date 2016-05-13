@@ -184,7 +184,7 @@ namespace
         VariantCall(const Variant& variant, double posterior)
         : variant {variant}, posterior {posterior} {}
         
-        const GenomicRegion& get_region() const noexcept { return mapped_region(variant.get()); }
+        const GenomicRegion& mapped_region() const noexcept { return ::mapped_region(variant.get()); }
         
         VariantReference variant;
         double posterior;
@@ -243,7 +243,7 @@ namespace
         result.reserve(candidates.size());
         
         for (const auto& candidate : candidates) {
-            result.emplace_back(candidate, marginalise(candidate.get_alt_allele(), genotype_posteriors));
+            result.emplace_back(candidate, marginalise(candidate.alt_allele(), genotype_posteriors));
         }
         
         return result;
@@ -253,7 +253,7 @@ namespace
     
     bool contains_alt(const Genotype<Haplotype>& genotype_call, const VariantReference& candidate)
     {
-        return contains_exact(genotype_call, candidate.get().get_alt_allele());
+        return contains_exact(genotype_call, candidate.get().alt_allele());
     }
     
     VariantCalls call_candidates(const VariantPosteriors& candidate_posteriors,
@@ -431,7 +431,7 @@ namespace
         posterior {posterior}
         {}
         
-        const GenomicRegion& get_region() const noexcept { return reference_allele.get_region(); }
+        const GenomicRegion& mapped_region() const noexcept { return reference_allele.mapped_region(); }
         
         Allele reference_allele;
         double posterior;
