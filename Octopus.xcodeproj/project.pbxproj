@@ -150,6 +150,7 @@
 		D4CC78951C7E1EF700F9CCB3 /* libboost_timer.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D4CC78941C7E1EF700F9CCB3 /* libboost_timer.a */; };
 		D4CC78981C7E370400F9CCB3 /* timers.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D4CC78971C7E370400F9CCB3 /* timers.cpp */; };
 		D4F8864D1CE4A5F1005F9772 /* reference_factory.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D4F8864B1CE4A5F1005F9772 /* reference_factory.cpp */; };
+		D4F886541CE608BA005F9772 /* parallel_transform.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D4F886521CE608BA005F9772 /* parallel_transform.cpp */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -529,6 +530,9 @@
 		D4E41DA31AD81C390010D25D /* allele.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = allele.hpp; sourceTree = "<group>"; };
 		D4F8864B1CE4A5F1005F9772 /* reference_factory.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = reference_factory.cpp; sourceTree = "<group>"; };
 		D4F8864C1CE4A5F1005F9772 /* reference_factory.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = reference_factory.hpp; sourceTree = "<group>"; };
+		D4F886511CE6046A005F9772 /* append.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = append.hpp; sourceTree = "<group>"; };
+		D4F886521CE608BA005F9772 /* parallel_transform.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = parallel_transform.cpp; sourceTree = "<group>"; };
+		D4F886531CE608BA005F9772 /* parallel_transform.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = parallel_transform.hpp; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -883,6 +887,8 @@
 		CAA4DC2C1A8219CD00DD3E9A /* include */ = {
 			isa = PBXGroup;
 			children = (
+				D4F886531CE608BA005F9772 /* parallel_transform.hpp */,
+				D4F886521CE608BA005F9772 /* parallel_transform.cpp */,
 				CAA4DC671A8ACE9B00DD3E9A /* bioio.hpp */,
 				D4BEA9F61B861BAF00E53CFD /* tandem */,
 			);
@@ -999,6 +1005,7 @@
 		CABA377B1A8F66E400BBE598 /* utils */ = {
 			isa = PBXGroup;
 			children = (
+				D4F886511CE6046A005F9772 /* append.hpp */,
 				D4907F731A8E255200639203 /* equitable.hpp */,
 				D4907F711A8E04B900639203 /* comparable.hpp */,
 				D463C18B1AEF7D2200739A66 /* map_utils.hpp */,
@@ -1401,6 +1408,7 @@
 				CAB89DF91C78F5AF002D6F8E /* phaser.cpp in Sources */,
 				D4907F571A8A2A9B00639203 /* reference_tests.cpp in Sources */,
 				D4636C671B678B8000FEA7D2 /* vcf_header.cpp in Sources */,
+				D4F886541CE608BA005F9772 /* parallel_transform.cpp in Sources */,
 				D402C5401CC9308800C8B8A7 /* vcf_record_factory.cpp in Sources */,
 				D4636C6A1B6919B500FEA7D2 /* vcf_writer.cpp in Sources */,
 				CAE3E2B01AA2981E00C01B2C /* candidate_variant_generation_tests.cpp in Sources */,

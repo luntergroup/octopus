@@ -188,7 +188,7 @@ MappableFlatSet<MappableType, Allocator>::MappableFlatSet()
 :
 elements_ {},
 is_bidirectionally_sorted_ {true},
-max_element_size_ {}
+max_element_size_ {0}
 {}
 
 template <typename MappableType, typename Allocator>
@@ -196,26 +196,36 @@ template <typename InputIterator>
 MappableFlatSet<MappableType, Allocator>::MappableFlatSet(InputIterator first, InputIterator second)
 :
 elements_ {first, second},
-is_bidirectionally_sorted_ {false},
-max_element_size_ {(elements_.empty()) ? 0 : region_size(*largest_mappable(elements_))}
+is_bidirectionally_sorted_ {true},
+max_element_size_ {0}
 {
+    if (elements_.empty()) return;
+    
     std::sort(std::begin(elements_), std::end(elements_));
     
     elements_.erase(std::unique(std::begin(elements_), std::end(elements_)), std::end(elements_));
     
     is_bidirectionally_sorted_ = is_bidirectionally_sorted(elements_);
+    
+    max_element_size_ = region_size(*largest_mappable(elements_));
 }
 
 template <typename MappableType, typename Allocator>
 MappableFlatSet<MappableType, Allocator>::MappableFlatSet(std::initializer_list<MappableType> mappables)
 :
-elements_ {mappables}
+elements_ {mappables},
+is_bidirectionally_sorted_ {true},
+max_element_size_ {0}
 {
+    if (elements_.empty()) return;
+    
     std::sort(std::begin(elements_), std::end(elements_));
     
     elements_.erase(std::unique(std::begin(elements_), std::end(elements_)), std::end(elements_));
     
     is_bidirectionally_sorted_ = is_bidirectionally_sorted(elements_);
+    
+    max_element_size_ = region_size(*largest_mappable(elements_));
 }
 
 template <typename MappableType, typename Allocator>
@@ -487,12 +497,13 @@ MappableFlatSet<MappableType, Allocator>::erase(const_iterator p)
     
     const auto result = elements_.erase(p);
     
-//    if (!is_bidirectionally_sorted_) {
-//        is_bidirectionally_sorted_ = is_bidirectionally_sorted(elements_);
-//    }
-    
-    if (max_element_size_ == erased_size) {
-        max_element_size_ = region_size(*largest_mappable(elements_));
+    if (elements_.empty()) {
+        max_element_size_ = 0;
+        is_bidirectionally_sorted_ = true;
+    } else {
+        if (max_element_size_ == erased_size) {
+            max_element_size_ = region_size(*largest_mappable(elements_));
+        }
     }
     
     return result;
@@ -502,12 +513,22 @@ template <typename MappableType, typename Allocator>
 typename MappableFlatSet<MappableType, Allocator>::size_type
 MappableFlatSet<MappableType, Allocator>::erase(const MappableType& m)
 {
-    const auto contained = contained_range(m);
+    const auto it = std::lower_bound(std::cbegin(elements_), std::cend(elements_), m);
     
-    const auto it = std::find(std::cbegin(contained), std::cend(contained), m);
-    
-    if (it != std::cend(contained)) {
-        erase(it.base());
+    if (it != std::cend(elements_) && *it == m) {
+        const auto m_size = region_size(m);
+        
+        elements_.erase(it);
+        
+        if (elements_.empty()) {
+            max_element_size_ = 0;
+            is_bidirectionally_sorted_ = true;
+        } else {
+            if (max_element_size_ == m_size) {
+                max_element_size_ = region_size(*largest_mappable(elements_));
+            }
+        }
+        
         return 1;
     }
     
@@ -524,12 +545,13 @@ MappableFlatSet<MappableType, Allocator>::erase(const_iterator first, const_iter
     
     const auto result = elements_.erase(first, last);
     
-//    if (!is_bidirectionally_sorted_) {
-//        is_bidirectionally_sorted_ = is_bidirectionally_sorted(elements_);
-//    }
-    
-    if (max_element_size_ == max_erased_size) {
-        max_element_size_ = region_size(*largest_mappable(elements_));
+    if (elements_.empty()) {
+        max_element_size_ = 0;
+        is_bidirectionally_sorted_ = true;
+    } else {
+        if (max_element_size_ == max_erased_size) {
+            max_element_size_ = region_size(*largest_mappable(elements_));
+        }
     }
     
     return result;
@@ -665,16 +687,14 @@ const MappableType& MappableFlatSet<MappableType, Allocator>::leftmost() const
 template <typename MappableType, typename Allocator>
 const MappableType& MappableFlatSet<MappableType, Allocator>::rightmost() const
 {
-    using std::cbegin; using std::cend;
-    
-    const auto& last = *std::prev(elements_.cend());
+    const auto& last = *std::prev(std::cend(elements_));
     
     if (is_bidirectionally_sorted_) {
         return last;
     } else {
-        const auto overlapped = ::overlap_range(cbegin(elements_), cend(elements_), last,
+        const auto overlapped = ::overlap_range(std::cbegin(elements_), std::cend(elements_), last,
                                                 max_element_size_);
-        return *rightmost_mappable(cbegin(overlapped), cend(overlapped));
+        return *rightmost_mappable(std::cbegin(overlapped), std::cend(overlapped));
     }
 }
 
@@ -684,18 +704,18 @@ bool
 MappableFlatSet<MappableType, Allocator>::has_overlapped(const MappableType_& mappable) const
 {
     if (is_bidirectionally_sorted_) {
-        ::has_overlapped(std::begin(elements_), std::end(elements_), mappable,
+        ::has_overlapped(std::cbegin(elements_), std::cend(elements_), mappable,
                          BidirectionallySortedTag {});
     }
     
-    return ::has_overlapped(std::begin(elements_), std::end(elements_), mappable);
+    return ::has_overlapped(std::cbegin(elements_), std::cend(elements_), mappable);
 }
 
 template <typename MappableType, typename Allocator>
 template <typename MappableType_>
 bool
 MappableFlatSet<MappableType, Allocator>::has_overlapped(iterator first, iterator last,
-                                                              const MappableType_& mappable) const
+                                                         const MappableType_& mappable) const
 {
     if (is_bidirectionally_sorted_) {
         ::has_overlapped(first, last, mappable, BidirectionallySortedTag {});
@@ -707,7 +727,7 @@ template <typename MappableType, typename Allocator>
 template <typename MappableType_>
 bool
 MappableFlatSet<MappableType, Allocator>::has_overlapped(const_iterator first, const_iterator last,
-                                                              const MappableType_& mappable) const
+                                                         const MappableType_& mappable) const
 {
     if (is_bidirectionally_sorted_) {
         ::has_overlapped(first, last, mappable, BidirectionallySortedTag {});
@@ -733,7 +753,7 @@ template <typename MappableType, typename Allocator>
 template <typename MappableType_>
 typename MappableFlatSet<MappableType, Allocator>::size_type
 MappableFlatSet<MappableType, Allocator>::count_overlapped(iterator first, iterator last,
-                                                                const MappableType_& mappable) const
+                                                           const MappableType_& mappable) const
 {
     const auto overlapped = overlap_range(first, last, mappable);
     
@@ -771,16 +791,16 @@ template <typename MappableType, typename Allocator>
 template <typename MappableType_>
 OverlapRange<typename MappableFlatSet<MappableType, Allocator>::iterator>
 MappableFlatSet<MappableType, Allocator>::overlap_range(iterator first, iterator last,
-                                                             const MappableType_& mappable) const
+                                                        const MappableType_& mappable) const
 {
-    return overlap_range(const_iterator(first), const_iterator(last), mappable);
+    return overlap_range(const_iterator {first}, const_iterator {last}, mappable);
 }
 
 template <typename MappableType, typename Allocator>
 template <typename MappableType_>
 OverlapRange<typename MappableFlatSet<MappableType, Allocator>::const_iterator>
 MappableFlatSet<MappableType, Allocator>::overlap_range(const_iterator first, const_iterator last,
-                                                             const MappableType_& mappable) const
+                                                        const MappableType_& mappable) const
 {
     if (is_bidirectionally_sorted_) {
         ::overlap_range(first, last, mappable, BidirectionallySortedTag {});
@@ -817,9 +837,9 @@ template <typename MappableType, typename Allocator>
 template <typename MappableType_>
 bool
 MappableFlatSet<MappableType, Allocator>::has_contained(iterator first, iterator last,
-                                                             const MappableType_& mappable) const
+                                                        const MappableType_& mappable) const
 {
-    return has_contained(const_iterator(first), const_iterator(last), mappable);
+    return has_contained(const_iterator {first}, const_iterator {last}, mappable);
 }
 
 template <typename MappableType, typename Allocator>

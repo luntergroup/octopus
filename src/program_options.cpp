@@ -43,7 +43,7 @@
 
 #include "mappable_algorithms.hpp"
 #include "string_utils.hpp"
-
+#include "append.hpp"
 #include "maths.hpp"
 
 #include "logging.hpp"
@@ -676,24 +676,6 @@ namespace Octopus
                                 is_threading_allowed(options));
     }
     
-    template <typename T, typename S>
-    std::vector<T>& append(std::vector<T>& target, const std::vector<S>& source)
-    {
-        target.insert(std::end(target), std::begin(source), std::end(source));
-        return target;
-    }
-    
-    template <typename T>
-    std::vector<T>& append(std::vector<T>& target, std::vector<T>&& source)
-    {
-        target.insert(std::end(target),
-                      std::make_move_iterator(std::begin(source)),
-                      std::make_move_iterator(std::end(source)));
-        source.clear();
-        source.shrink_to_fit();
-        return target;
-    }
-    
     bool is_bed_file(const fs::path& path)
     {
         return path.extension().string() == ".bed";
@@ -940,7 +922,7 @@ namespace Octopus
             const auto& region_strings = options.at("skip-regions").as<std::vector<std::string>>();
             auto parsed_regions = parse_regions(region_strings, reference);
             if (region_strings.size() == parsed_regions.size()) {
-                append(skip_regions, std::move(parsed_regions));
+                append(std::move(parsed_regions), skip_regions);
             } else {
                 all_parsed = false;
             }
@@ -948,7 +930,7 @@ namespace Octopus
         
         if (options.count("skip-regions-file") == 1) {
             const auto& skip_path = options.at("skip-regions-file").as<std::string>();
-            append(skip_regions, extract_regions_from_file(skip_path, reference));
+            append(extract_regions_from_file(skip_path, reference), skip_regions);
         }
         
         if (options.at("use-one-based-indexing").as<bool>()) {
@@ -965,7 +947,7 @@ namespace Octopus
             const auto& region_strings = options.at("regions").as<std::vector<std::string>>();
             auto parsed_regions = parse_regions(region_strings, reference);
             if (region_strings.size() == parsed_regions.size()) {
-                append(input_regions, std::move(parsed_regions));
+                append(std::move(parsed_regions), input_regions);
             } else {
                 all_parsed = false;
             }
@@ -973,7 +955,7 @@ namespace Octopus
         
         if (options.count("regions-file") == 1) {
             const auto& regions_path = options.at("regions-file").as<std::string>();
-            append(input_regions, extract_regions_from_file(regions_path, reference));
+            append(extract_regions_from_file(regions_path, reference), input_regions);
         }
         
         if (!all_parsed) {
@@ -1088,7 +1070,7 @@ namespace Octopus
                 all_paths_good = false;
             }
             
-            append(result, std::move(resolved_paths));
+            append(std::move(resolved_paths), result);
         }
         
         if (options.count("reads-file") == 1) {
@@ -1134,7 +1116,7 @@ namespace Octopus
                     all_paths_good = false;
                 }
                 
-                append(result, std::move(resolved_paths));
+                append(std::move(resolved_paths), result);
             }
         }
         
@@ -1468,7 +1450,7 @@ namespace Octopus
         }
         
         if (options.count("contig-ploidies") == 1) {
-            append(result, options.at("contig-ploidies").as<std::vector<ContigPloidy>>());
+            append(options.at("contig-ploidies").as<std::vector<ContigPloidy>>(), result);
         }
         
         remove_duplicate_ploidies(result);

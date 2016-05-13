@@ -36,7 +36,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         
         //"--target-read-buffer-size", "0.1",
         //"--reference-cache-size", "100",
-        //"--threads", "0",
+        "--threads", "0",
         
         //"--contig-output-order", "as-in-reference-reversed",
         
@@ -76,7 +76,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         
         /* input regions */
         
-        "--regions", "22:20,000,000-21,000,000",
+        "--regions", "22",
         
         //"--regions", "22:41,015,232-41,015,314",
         

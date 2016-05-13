@@ -489,12 +489,13 @@ MappableFlatMultiSet<MappableType, Allocator>::erase(const_iterator p)
     
     const auto result = elements_.erase(p);
     
-    if (!is_bidirectionally_sorted_) {
-        is_bidirectionally_sorted_ = is_bidirectionally_sorted(elements_);
-    }
-    
-    if (max_element_size_ == erased_size) {
-        max_element_size_ = region_size(*largest_mappable(elements_));
+    if (elements_.empty()) {
+        max_element_size_ = 0;
+        is_bidirectionally_sorted_ = true;
+    } else {
+        if (max_element_size_ == erased_size) {
+            max_element_size_ = region_size(*largest_mappable(elements_));
+        }
     }
     
     return result;
@@ -504,17 +505,21 @@ template <typename MappableType, typename Allocator>
 typename MappableFlatMultiSet<MappableType, Allocator>::size_type
 MappableFlatMultiSet<MappableType, Allocator>::erase(const MappableType& m)
 {
-    const auto contained = contained_range(m);
+    const auto m_size = region_size(m);
     
-    const auto it = std::find(std::cbegin(contained), std::cend(contained), m);
+    const auto result = elements_.erase(m);
     
-    if (it != std::cend(contained)) {
-        const auto it2 = std::find_if_not(std::next(it), std::cend(contained),
-                                          [&m] (const auto& mappable) { return m == mappable; });
+    if (result > 0) {
+        if (elements_.empty()) {
+            max_element_size_ = 0;
+            is_bidirectionally_sorted_ = true;
+        } else {
+            if (max_element_size_ == m_size) {
+                max_element_size_ = region_size(*largest_mappable(elements_));
+            }
+        }
         
-        erase(it, it2);
-        
-        return std::distance(it.base(), it2.base());
+        return result;
     }
     
     return 0;
@@ -530,12 +535,13 @@ MappableFlatMultiSet<MappableType, Allocator>::erase(const_iterator first, const
     
     const auto result = elements_.erase(first, last);
     
-    if (!is_bidirectionally_sorted_) {
-        is_bidirectionally_sorted_ = is_bidirectionally_sorted(elements_);
-    }
-    
-    if (max_element_size_ == max_erased_size) {
-        max_element_size_ = region_size(*largest_mappable(elements_));
+    if (elements_.empty()) {
+        max_element_size_ = 0;
+        is_bidirectionally_sorted_ = true;
+    } else {
+        if (max_element_size_ == max_erased_size) {
+            max_element_size_ = region_size(*largest_mappable(elements_));
+        }
     }
     
     return result;

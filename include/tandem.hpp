@@ -478,13 +478,13 @@ namespace Tandem
         }
         
         template <typename Container1, typename Container2>
-        void append(Container1& result, Container2&& new_result)
+        void append(Container2&& src, Container1& dst)
         {
-            const auto it = result.insert(std::end(result),
-                                          std::make_move_iterator(std::begin(new_result)),
-                                          std::make_move_iterator(std::end(new_result)));
+            const auto it = dst.insert(std::end(dst),
+                                       std::make_move_iterator(std::begin(src)),
+                                       std::make_move_iterator(std::end(src)));
             
-            std::inplace_merge(std::begin(result), it, std::end(result),
+            std::inplace_merge(std::begin(dst), it, std::end(dst),
                                [] (const StringRun& lhs, const StringRun& rhs) {
                                    return lhs.pos < rhs.pos;
                                });
@@ -518,17 +518,17 @@ namespace Tandem
             if (min_period == 1) { // known max_period >= 2
                 auto result = detail::find_homopolymers(str);
                 
-                detail::append(result, detail::find_exact_dinucleotide_tandem_repeats(str));
+                detail::append(detail::find_exact_dinucleotide_tandem_repeats(str), result);
                 
                 if (max_period == 3) {
-                    detail::append(result, detail::find_exact_trinucleotide_tandem_repeats(str));
+                    detail::append(detail::find_exact_trinucleotide_tandem_repeats(str), result);
                 }
                 
                 return result;
             } else { // min_period == 2 && max_period == 3
                 auto result = detail::find_exact_dinucleotide_tandem_repeats(str);
                 
-                detail::append(result, detail::find_exact_trinucleotide_tandem_repeats(str));
+                detail::append(detail::find_exact_trinucleotide_tandem_repeats(str), result);
                 
                 return result;
             }

@@ -12,6 +12,8 @@
 #include <algorithm>
 #include <functional>
 #include <cmath>
+#include <utility>
+#include <initializer_list>
 #include <mutex>
 #include <cassert>
 
@@ -78,13 +80,15 @@ namespace Octopus
     done_ {false},
     position_tab_length_ {calculate_position_tab_length(regions_)}
     {
+        completed_regions_.reserve(regions_.size());
         write_header();
     }
     
     ProgressMeter::ProgressMeter(GenomicRegion region)
     :
     ProgressMeter {
-        InputRegionMap {std::make_pair(region.contig_name(), InputRegionMap::mapped_type {region})}}
+        InputRegionMap {std::make_pair(region.contig_name(), InputRegionMap::mapped_type {region})}
+    }
     {}
     
     double percent_completed(const std::size_t num_bp_completed,
@@ -220,8 +224,10 @@ namespace Octopus
         const auto& contig_region = region.contig_region();
         
         if (completed_regions_.count(region.contig_name()) == 0) {
-            completed_regions_[region.contig_name()].insert(contig_region);
-            return size(region);
+            completed_regions_.emplace(std::piecewise_construct,
+                                       std::forward_as_tuple(region.contig_name()),
+                                       std::forward_as_tuple(std::initializer_list<ContigRegion>({contig_region})));
+            return size(contig_region);
         }
         
         auto& completed_regions = completed_regions_.at(region.contig_name());
