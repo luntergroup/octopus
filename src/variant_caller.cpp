@@ -253,20 +253,24 @@ void set_phasing(std::vector<CallWrapper>& calls, const Phaser::PhaseSet& phase_
     }
 }
 
-void remove_calls_outside_call_region(std::vector<CallWrapper>& calls,
-                                      const GenomicRegion& call_region)
+void remove_calls_outside_call_region(std::vector<VcfRecord>& calls, const GenomicRegion& call_region)
 {
-    const auto overlapped = overlap_range(calls, call_region);
-    calls.erase(overlapped.end().base(), std::end(calls));
-    calls.erase(std::begin(calls), overlapped.begin().base());
+    const auto it = std::remove_if(std::begin(calls), std::end(calls),
+                                   [&call_region] (const auto& call) {
+                                       return (call.position() - 1) < call_region.begin()
+                                                || (call.position() - 1) >= call_region.end();
+                                   });
+    calls.erase(it, std::end(calls));
 }
 
-void append_calls(std::deque<VcfRecord>& curr_records, std::vector<CallWrapper>&& new_calls,
-                  const VcfRecordFactory& factory)
+void append(std::vector<CallWrapper>&& new_calls, std::deque<VcfRecord>& curr_records,
+            const VcfRecordFactory& factory, const GenomicRegion& call_region)
 {
     if (new_calls.empty()) return;
     
     auto new_records = factory.make(unwrap(std::move(new_calls)));
+    
+    remove_calls_outside_call_region(new_records, call_region);
     
     curr_records.insert(std::end(curr_records),
                         std::make_move_iterator(std::begin(new_records)),
@@ -429,8 +433,7 @@ VariantCaller::call(const GenomicRegion& call_region, ProgressMeter& progress_me
             
             resume_timer(output_timer);
             set_phasing(variant_calls, *phase_set);
-            remove_calls_outside_call_region(variant_calls, call_region);
-            append_calls(result, std::move(variant_calls), record_factory);
+            append(std::move(variant_calls), result, record_factory, call_region);
             pause_timer(output_timer);
             
             auto remaining_active_region = right_overhang_region(active_region, phase_set->region);
@@ -489,8 +492,7 @@ VariantCaller::call(const GenomicRegion& call_region, ProgressMeter& progress_me
                     
                     resume_timer(output_timer);
                     set_phasing(variant_calls, phasings);
-                    remove_calls_outside_call_region(variant_calls, call_region);
-                    append_calls(result, std::move(variant_calls), record_factory);
+                    append(std::move(variant_calls), result, record_factory, call_region);
                     pause_timer(output_timer);
                 }
             }
@@ -501,7 +503,7 @@ VariantCaller::call(const GenomicRegion& call_region, ProgressMeter& progress_me
                 
                 auto reference_calls = wrap(this->call_reference(alleles, *caller_latents, reads));
                 
-                append_calls(result, std::move(reference_calls), record_factory);
+                append(std::move(reference_calls), result, record_factory, call_region);
             }
             
             completed_region = encompassing_region(completed_region, passed_region);

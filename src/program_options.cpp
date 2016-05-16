@@ -404,7 +404,7 @@ namespace Octopus
             }
             
             if (vm.count("version")) {
-                std::cout << "Octopus version " + Octopus_version << std::endl;
+                std::cout << "Octopus version " << Octopus_version << std::endl;
                 return vm;
             }
             

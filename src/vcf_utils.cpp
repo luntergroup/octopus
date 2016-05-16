@@ -185,13 +185,13 @@ ReaderContigRecordCountMap get_contig_count_map(std::vector<VcfReader>& readers,
     return result;
 }
 
-size_t calculate_total_number_of_records(const ReaderContigRecordCountMap& counts)
+std::size_t calculate_total_number_of_records(const ReaderContigRecordCountMap& counts)
 {
-    return std::accumulate(std::cbegin(counts), std::cend(counts), size_t {0},
+    return std::accumulate(std::cbegin(counts), std::cend(counts), std::size_t {0},
                            [] (const auto curr, const auto& reader_counts) {
                                const auto reader_total = std::accumulate(std::cbegin(reader_counts.second),
                                                                          std::cend(reader_counts.second),
-                                                                         size_t {0},
+                                                                         std::size_t {0},
                                                                          [] (const auto r_curr, const auto& p) {
                                                                              return r_curr + p.second;
                                                                          });

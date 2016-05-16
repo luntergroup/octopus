@@ -25,6 +25,7 @@
 #include <chrono>
 #include <condition_variable>
 #include <mutex>
+#include <atomic>
 
 #include <boost/optional.hpp>
 
@@ -812,11 +813,9 @@ namespace Octopus
         for (const auto& region : components.regions) {
             auto subregion = propose_call_subregion(components, region);
             
-            result.emplace(subregion, policy);
-            
             while (!is_empty(subregion)) {
-                subregion = propose_call_subregion(components, subregion, region);
                 result.emplace(subregion, policy);
+                subregion = propose_call_subregion(components, subregion, region);
             }
         }
         
@@ -882,8 +881,7 @@ namespace Octopus
     template<typename R>
     bool is_ready(const std::future<R>& f)
     {
-        assert(f.valid());
-        return f.wait_for(std::chrono::seconds(0)) == std::future_status::ready;
+        return f.valid() && f.wait_for(std::chrono::seconds(0)) == std::future_status::ready;
     }
     
     struct CompletedTask : public Task, public Mappable<CompletedTask>
@@ -894,8 +892,16 @@ namespace Octopus
         std::deque<VcfRecord> calls;
     };
     
+    struct SyncPacket
+    {
+        SyncPacket() = default;
+        std::condition_variable cv;
+        std::mutex mutex;
+        std::atomic<unsigned> count_finished;
+    };
+    
     auto run(Task task, GenomeCallingComponents& components, ProgressMeter& progress_meter,
-             std::condition_variable& cv)
+             SyncPacket& sync)
     {
         if (DEBUG_MODE) {
             Logging::DebugLogger log {};
@@ -906,14 +912,17 @@ namespace Octopus
         
         return std::async(std::launch::async,
                           [task = std::move(task), &progress_meter, components = std::move(contig_components),
-                           &cv]
+                           &sync]
                             () -> CompletedTask {
                                 CompletedTask result {
                                     task,
                                     components.caller->call(task.region, progress_meter)
                                 };
                                 
-                                cv.notify_all();
+                                std::unique_lock<std::mutex> lk {sync.mutex};
+                                ++sync.count_finished;
+                                lk.unlock();
+                                sync.cv.notify_all();
                                 
                                 return result;
                           });
@@ -962,76 +971,85 @@ namespace Octopus
         
         MappableSetMap<ContigNameType, CompletedTask> buffered_tasks {};
         
-        std::condition_variable cv {};
-        std::mutex mutex {};
+        SyncPacket sync {};
         
         while (!tasks.empty()) {
             for (auto& fut : futures) {
-                if (fut.valid()) {
-                    if (is_ready(fut)) {
-                        try {
-                            auto result = fut.get();
+                if (is_ready(fut)) {
+                    try {
+                        std::lock_guard<std::mutex> lk {sync.mutex};
+                        
+                        auto result = fut.get();
+                        
+                        const auto& contig = contig_name(result);
+                        
+                        assert(pending_tasks.count(contig) == 1);
+                        
+                        auto& contig_pending_tasks = pending_tasks.at(contig);
+                        
+                        if (is_same_region(result, contig_pending_tasks.front())) {
+                            if (DEBUG_MODE) {
+                                Logging::DebugLogger log {};
+                                stream(log) << "Writing completed task " << result.region;
+                            }
                             
-                            const auto& contig = contig_name(result);
+                            write_calls(temp_writers.at(contig_name(result)), std::move(result.calls));
                             
-                            assert(pending_tasks.count(contig) == 1);
+                            contig_pending_tasks.pop();
                             
-                            auto& contig_pending_tasks = pending_tasks.at(contig);
-                            
-                            if (is_same_region(result, contig_pending_tasks.front())) {
-                                if (DEBUG_MODE) {
-                                    Logging::DebugLogger log {};
-                                    stream(log) << "Writing completed task " << result.region;
-                                }
+                            if (buffered_tasks.count(contig) == 1) {
+                                auto& contig_buffered_tasks = buffered_tasks.at(contig);
                                 
-                                write_calls(temp_writers.at(contig_name(result)), std::move(result.calls));
-                                
-                                contig_pending_tasks.pop();
-                                
-                                if (buffered_tasks.count(contig) == 1) {
-                                    auto& contig_buffered_tasks = buffered_tasks.at(contig);
-                                    
-                                    while (!contig_pending_tasks.empty()) {
-                                        if (contig_buffered_tasks.has_contained(contig_pending_tasks.front())) {
-                                            if (DEBUG_MODE) {
-                                                Logging::DebugLogger log {};
-                                                stream(log) << "Writing completed buffered task " << contig_pending_tasks.front().region;
-                                            }
-                                            
-                                            auto buffered_task = contig_buffered_tasks.contained_range(contig_pending_tasks.front()).front();
-                                            
-                                            contig_buffered_tasks.erase(buffered_task);
-                                            
-                                            write_calls(temp_writers.at(contig_name(result)), std::move(buffered_task.calls));
-                                            
-                                            contig_pending_tasks.pop();
-                                        } else {
-                                            break;
+                                while (!contig_pending_tasks.empty()) {
+                                    if (contig_buffered_tasks.has_contained(contig_pending_tasks.front())) {
+                                        if (DEBUG_MODE) {
+                                            Logging::DebugLogger log {};
+                                            stream(log) << "Writing completed buffered task " << contig_pending_tasks.front().region;
                                         }
+                                        
+                                        auto buffered_task = contig_buffered_tasks.contained_range(contig_pending_tasks.front()).front();
+                                        
+                                        contig_buffered_tasks.erase(buffered_task);
+                                        
+                                        write_calls(temp_writers.at(contig_name(result)), std::move(buffered_task.calls));
+                                        
+                                        contig_pending_tasks.pop();
+                                    } else {
+                                        break;
                                     }
                                 }
-                            } else {
-                                if (DEBUG_MODE) {
-                                    Logging::DebugLogger log {};
-                                    stream(log) << "Buffering completed task " << result.region;
-                                }
-                                
-                                buffered_tasks[contig].insert(std::move(result));
                             }
-                        } catch (...) {
-                            // TODO: which exceptions can we recover from?
-                            throw;
+                        } else {
+                            if (DEBUG_MODE) {
+                                Logging::DebugLogger log {};
+                                stream(log) << "Buffering completed task " << result.region;
+                            }
+                            
+                            buffered_tasks[contig].insert(std::move(result));
                         }
+                        
+                        --sync.count_finished;
+                    } catch (...) {
+                        // TODO: which exceptions can we recover from?
+                        throw;
                     }
-                } else if (!tasks.empty()) {
+                }
+                
+                if (!tasks.empty() && !fut.valid()) {
+                    std::lock_guard<std::mutex> lk {sync.mutex};
                     auto task = pop(tasks);
-                    fut = run(task, components, meter, cv);
+                    
+                    fut = run(task, components, meter, sync);
                     pending_tasks[task.region.contig_name()].push(std::move(task));
                 }
             }
             
-            std::unique_lock<std::mutex> lk {mutex};
-            cv.wait(lk);
+            if (sync.count_finished == 0) {
+                std::unique_lock<std::mutex> lk {sync.mutex};
+                while (sync.count_finished == 0) { // for spurious wakeup
+                    sync.cv.wait(lk);
+                }
+            }
         }
         
         pending_tasks.clear();
