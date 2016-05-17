@@ -577,12 +577,12 @@ namespace Octopus
     void write_final_output_header(GenomeCallingComponents& components, const bool sites_only = false)
     {
         if (sites_only) {
-            components.get_output().write(make_header({}, components.get_contigs_in_output_order(),
-                                                      components.get_reference()));
+            components.get_output() << make_header({}, components.get_contigs_in_output_order(),
+                                                   components.get_reference());
         } else {
-            components.get_output().write(make_header(components.get_samples(),
-                                                      components.get_contigs_in_output_order(),
-                                                      components.get_reference()));
+            components.get_output() << make_header(components.get_samples(),
+                                                   components.get_contigs_in_output_order(),
+                                                   components.get_reference());
         }
     }
     
@@ -611,13 +611,15 @@ namespace Octopus
         stream(log) << "Writing calls to " << components.get_output().path();
     }
     
-    void write_calls(VcfWriter& out, std::deque<VcfRecord>&& calls)
+    void write_calls(std::deque<VcfRecord>&& calls, VcfWriter& out)
     {
         if (DEBUG_MODE) {
             Logging::DebugLogger log {};
             stream(log) << "Writing " << calls.size() << " calls to VCF";
         }
-        for (auto&& call : calls) out.write(std::move(call));
+        write(calls, out);
+        calls.clear();
+        calls.shrink_to_fit();
     }
     
     auto find_max_window(const ContigCallingComponents& components,
@@ -688,7 +690,7 @@ namespace Octopus
                 }
                 
                 try {
-                    write_calls(components.output, std::move(calls));
+                    write_calls(std::move(calls), components.output);
                 } catch(...) {
                     // TODO: which exceptions can we recover from?
                     throw;
@@ -993,7 +995,7 @@ namespace Octopus
                                 stream(log) << "Writing completed task " << result.region;
                             }
                             
-                            write_calls(temp_writers.at(contig_name(result)), std::move(result.calls));
+                            write_calls(std::move(result.calls), temp_writers.at(contig_name(result)));
                             
                             contig_pending_tasks.pop();
                             
@@ -1011,7 +1013,8 @@ namespace Octopus
                                         
                                         contig_buffered_tasks.erase(buffered_task);
                                         
-                                        write_calls(temp_writers.at(contig_name(result)), std::move(buffered_task.calls));
+                                        write_calls(std::move(buffered_task.calls),
+                                                    temp_writers.at(contig_name(result)));
                                         
                                         contig_pending_tasks.pop();
                                     } else {
@@ -1096,7 +1099,7 @@ namespace Octopus
                 stream(log) << "Writing remaining completed task " << task.region;
             }
             
-            write_calls(temp_writers.at(contig_name(task)), std::move(task.calls));
+            write_calls(std::move(task.calls), temp_writers.at(contig_name(task)));
         }
         
         remaining_tasks.clear();
@@ -1106,7 +1109,7 @@ namespace Octopus
         
         index_vcfs(results);
         
-        merge(results, components.get_contigs_in_output_order(), components.get_output());
+        merge(results, components.get_output(), components.get_contigs_in_output_order());
     }
     } // namespace
     

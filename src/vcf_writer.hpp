@@ -43,7 +43,7 @@ public:
     
     bool is_header_written() const noexcept;
     
-    const Path path() const;
+    const Path& path() const noexcept;
     
     void write(const VcfHeader& header);
     void write(const VcfRecord& record);
@@ -56,6 +56,17 @@ private:
     
     mutable std::mutex mutex_;
 };
+
+VcfWriter& operator<<(VcfWriter& dst, const VcfHeader& header);
+VcfWriter& operator<<(VcfWriter& dst, const VcfRecord& record);
+
+template <typename Container>
+void write(const Container& records, VcfWriter& dst)
+{
+    for (const auto& record : records) {
+        dst << record;
+    }
+}
 
 bool operator==(const VcfWriter& lhs, const VcfWriter& rhs);
 

@@ -423,7 +423,7 @@ namespace Octopus
             
             return vm;
         } catch (const std::exception& e) {
-            std::cout << "Option error: " << e.what() << std::endl;
+            std::clog << "Option error: " << e.what() << std::endl;
             return boost::none;
         }
     }
@@ -1624,14 +1624,18 @@ namespace Octopus
             
             unsigned temp_dir_counter {2};
             
-            while (fs::exists(result) && !fs::is_empty(result)
-                   && temp_dir_counter <= temp_dir_name_count_limit) {
+            Logging::WarningLogger log {};
+            
+            while (fs::exists(result) && temp_dir_counter <= temp_dir_name_count_limit) {
+                if (fs::is_empty(result)) {
+                    stream(log) << "Found empty temporary directory " << result
+                        << ", it may need to be deleted manually";
+                }
+                
                 result = *working_directory;
                 result /= temp_dir_base_name.string() + "-" + std::to_string(temp_dir_counter);
                 ++temp_dir_counter;
             }
-            
-            Logging::WarningLogger log {};
             
             if (temp_dir_counter > temp_dir_name_count_limit) {
                 log << "Too many temporary directories in working directory";

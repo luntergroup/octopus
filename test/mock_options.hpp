@@ -34,7 +34,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         
         "--working-directory", "~/Genomics/octopus_test",
         
-        "--target-read-buffer-size", "1.0",
+        //"--target-read-buffer-size", "1.0",
         //"--reference-cache-size", "100",
         "--threads", "0",
         
@@ -44,7 +44,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--reference", ecoli_reference_fasta.c_str(),
         
         //"--reads", NA12878_low_coverage.c_str(),
-        "--reads", NA12878_high_coverage.c_str(),
+        //"--reads", NA12878_high_coverage.c_str(),
         //"--reads", "~/Genomics/Illumina/NA12878.mapped.ILLUMINA.bwa.CEU.high_coverage_pcr_free.20130906.chr22.bam",
         
         //"--reads", NA12891_high_coverage.c_str(),
@@ -58,13 +58,13 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--reads", ecoli_bam.c_str(),
         
         // TCGA
-        //"--reads", "~/Genomics/cancer/TCGA/benchmark/G15511.HCC1143_BL.1.chr22.bam",
-        //"--reads", "~/Genomics/cancer/TCGA/benchmark/G15511.HCC1143.1.chr22.bam",
+        "--reads", "~/Genomics/cancer/TCGA/benchmark/G15511.HCC1143_BL.1.chr22.bam",
+        "--reads", "~/Genomics/cancer/TCGA/benchmark/G15511.HCC1143.1.chr22.bam",
         
         // MSG
         //"--reads", "~/Genomics/MSG/10120_chr2_47641558_GTA_G.RG.bam",
         
-        //"--caller", "cancer", // default "population"
+        "--caller", "cancer", // default "population"
         "--normal-sample", "HCC1143 BL",
         
         //"--organism-ploidy", "3",

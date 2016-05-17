@@ -33,9 +33,7 @@ std::vector<std::string> get_contigs(const VcfHeader& header)
     result.reserve(contigs_fields.size());
     
     std::transform(std::cbegin(contigs_fields), std::cend(contigs_fields), std::back_inserter(result),
-                   [] (const auto& field) {
-                       return field.at("ID");
-                   });
+                   [] (const auto& field) { return field.at("ID"); });
     
     return result;
 }
@@ -46,41 +44,45 @@ unsigned get_field_cardinality(const VcfHeader::KeyType& key, const VcfRecord& r
 }
 
 std::vector<VcfType> get_typed_info_values(const VcfHeader& header, const VcfRecord& record,
-                              const VcfHeader::KeyType& key)
+                                           const VcfHeader::KeyType& key)
 {
     return get_typed_info_values(header, key, record.info_value(key));
 }
 
 std::vector<VcfType> get_typed_format_values(const VcfHeader& header, const VcfRecord& record,
-                                const VcfRecord::SampleIdType sample, const VcfHeader::KeyType& key)
+                                             const VcfRecord::SampleIdType sample,
+                                             const VcfHeader::KeyType& key)
 {
     return get_typed_format_values(header, key, record.get_sample_value(sample, key));
 }
 
-void index_vcf(const boost::filesystem::path& vcf_path)
+void index_vcf(const boost::filesystem::path& vcf_path, const int lidx_shift)
 {
-    static constexpr int BCF_LIDX_SHIFT {14};
+    auto* const fp = hts_open(vcf_path.c_str(), "r");
     
-    auto fp = hts_open(vcf_path.c_str(), "r");
-    auto type = *hts_get_format(fp);
+    if (fp == nullptr) {
+        throw std::ios::failure {vcf_path.c_str()};
+    }
+    
+    const auto type = *hts_get_format(fp);
+    
     hts_close(fp);
     
     if (type.format == bcf) {
-        bcf_index_build(vcf_path.c_str(), BCF_LIDX_SHIFT);
+        bcf_index_build(vcf_path.c_str(), lidx_shift);
     } else {
-        tbx_index_build(vcf_path.c_str(), BCF_LIDX_SHIFT, &tbx_conf_vcf);
+        tbx_index_build(vcf_path.c_str(), lidx_shift, &tbx_conf_vcf);
     }
 }
 
-void index_vcf(const VcfReader& reader)
+void index_vcf(const VcfReader& reader, const int lidx_shift)
 {
-    index_vcf(reader.path());
+    index_vcf(reader.path(), lidx_shift);
 }
 
-
-void index_vcfs(const std::vector<VcfReader>& readers)
+void index_vcfs(const std::vector<VcfReader>& readers, const int lidx_shift)
 {
-    for (const auto& reader : readers) index_vcf(reader);
+    for (const auto& reader : readers) index_vcf(reader, lidx_shift);
 }
 
 std::vector<VcfReader> writers_to_readers(std::vector<VcfWriter>& writers)
@@ -99,28 +101,37 @@ std::vector<VcfReader> writers_to_readers(std::vector<VcfWriter>& writers)
     return result;
 }
 
+void copy(VcfReader& src, VcfWriter& dst)
+{
+    if (!dst.is_header_written()) {
+        dst.write(src.fetch_header());
+    }
+    
+    const auto records = src.fetch_records();
+    
+    write(records, dst);
+}
+
 bool all_same_format(const std::vector<VcfHeader>& headers)
 {
-    using std::cbegin; using std::cend;
-    return std::adjacent_find(cbegin(headers), cend(headers),
+    return std::adjacent_find(std::cbegin(headers), std::cend(headers),
                               [] (const auto& lhs, const auto& rhs) {
                                   return lhs.get_file_format() != rhs.get_file_format();
-                              }) == cend(headers);
+                              }) == std::cend(headers);
 }
 
 bool contain_same_samples(const std::vector<VcfHeader>& headers)
 {
-    using std::cbegin; using std::cend;
-    return std::adjacent_find(cbegin(headers), cend(headers),
+    return std::adjacent_find(std::cbegin(headers), std::cend(headers),
                               [] (const auto& lhs, const auto& rhs) {
                                   return lhs.get_samples() != rhs.get_samples();
-                              }) == cend(headers);
+                              }) == std::cend(headers);
 }
 
-bool all_the_same(const std::vector<VcfHeader>& headers)
+bool all_equal(const std::vector<VcfHeader>& headers)
 {
-    using std::cbegin; using std::cend;
-    return std::adjacent_find(cbegin(headers), cend(headers), std::not_equal_to<VcfHeader>()) == cend(headers);
+    return std::adjacent_find(std::cbegin(headers), std::cend(headers),
+                              std::not_equal_to<VcfHeader>()) == std::cend(headers);
 }
 
 VcfHeader merge(const std::vector<VcfHeader>& headers)
@@ -135,8 +146,7 @@ VcfHeader merge(const std::vector<VcfHeader>& headers)
         throw std::logic_error {"cannot merge VcfHeader's that do not contain the same samples"};
     }
     
-    if (all_the_same(headers)) return headers.front();
-    
+    if (all_equal(headers)) return headers.front();
     
     return headers.front(); // TODO: implement this
 //    VcfHeader::Builder hb {};
@@ -199,13 +209,20 @@ std::size_t calculate_total_number_of_records(const ReaderContigRecordCountMap& 
                            });
 }
 
-void merge(std::vector<VcfReader>& readers, const std::vector<std::string>& contigs, VcfWriter& result)
+void merge(std::vector<VcfReader>& sources, VcfWriter& dst, const std::vector<std::string>& contigs)
 {
-    if (!result.is_header_written()) {
-        result.write(merge(get_headers(readers)));
+    if (sources.empty()) return;
+    
+    if (sources.size() == 1) {
+        copy(sources.front(), dst);
+        return;
     }
     
-    auto reader_contig_counts = get_contig_count_map(readers, contigs);
+    if (!dst.is_header_written()) {
+        dst << merge(get_headers(sources));
+    }
+    
+    auto reader_contig_counts = get_contig_count_map(sources, contigs);
     
     std::priority_queue<VcfRecord, std::deque<VcfRecord>, std::greater<VcfRecord>> record_queue {};
     
@@ -213,7 +230,7 @@ void merge(std::vector<VcfReader>& readers, const std::vector<std::string>& cont
     
     if (total_record_count <= 100000) {
         for (const auto& contig : contigs) {
-            for (auto& reader : readers) {
+            for (auto& reader : sources) {
                 if (reader_contig_counts[reader].count(contig) == 1) {
                     auto records = reader.fetch_records(contig, VcfReader::UnpackPolicy::All);
                     for (auto&& record : records) {
@@ -222,7 +239,7 @@ void merge(std::vector<VcfReader>& readers, const std::vector<std::string>& cont
                 }
             }
             while (!record_queue.empty()) {
-                result.write(record_queue.top());
+                dst << record_queue.top();
                 record_queue.pop();
             }
         }
@@ -239,7 +256,7 @@ void merge(std::vector<VcfReader>& readers, const std::vector<std::string>& cont
         while (!all_done) {
             all_done = true;
             
-            for (auto& reader : readers) {
+            for (auto& reader : sources) {
                 if (reader_contig_counts[reader].count(contig) == 1) {
                     auto records = reader.fetch_records(region, VcfReader::UnpackPolicy::All);
                     
@@ -254,7 +271,7 @@ void merge(std::vector<VcfReader>& readers, const std::vector<std::string>& cont
             }
             
             while (!record_queue.empty()) {
-                result.write(record_queue.top());
+                dst << record_queue.top();
                 record_queue.pop();
             }
             
@@ -263,12 +280,22 @@ void merge(std::vector<VcfReader>& readers, const std::vector<std::string>& cont
     }
 }
 
-std::vector<VcfRecord> annotate_records(const std::vector<VcfRecord>& records, VcfReader& reader)
+void merge(std::vector<VcfReader>& sources, VcfWriter& dst)
 {
-    std::vector<VcfRecord> result {};
-    result.reserve(records.size());
+    if (sources.empty()) return;
     
+    if (sources.size() == 1) {
+        copy(sources.front(), dst);
+        return;
+    }
     
+    const auto header = merge(get_headers(sources));
     
-    return result;
+    if (!dst.is_header_written()) {
+        dst << header;
+    }
+    
+    const auto contigs = get_contigs(header);
+    
+    return merge(sources, dst, contigs);
 }

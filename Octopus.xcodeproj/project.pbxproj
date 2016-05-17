@@ -1471,7 +1471,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LANGUAGE_STANDARD = "c++14";
 				CLANG_CXX_LIBRARY = "libc++";
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_ENABLE_OBJC_ARC = YES;
@@ -1485,10 +1485,12 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
-				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_C_LANGUAGE_STANDARD = c11;
 				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_INPUT_FILETYPE = sourcecode.cpp.cpp;
 				GCC_OPTIMIZATION_LEVEL = 0;
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"DEBUG=1",
@@ -1512,10 +1514,11 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LANGUAGE_STANDARD = "c++14";
 				CLANG_CXX_LIBRARY = "libc++";
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_USE_OPTIMIZATION_PROFILE = NO;
 				CLANG_WARN_BOOL_CONVERSION = YES;
 				CLANG_WARN_CONSTANT_CONVERSION = YES;
 				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
@@ -1529,14 +1532,17 @@
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
-				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_C_LANGUAGE_STANDARD = c11;
+				GCC_INPUT_FILETYPE = sourcecode.cpp.cpp;
 				GCC_OPTIMIZATION_LEVEL = 3;
+				GCC_UNROLL_LOOPS = YES;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
 				GCC_WARN_UNDECLARED_SELECTOR = YES;
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
+				LLVM_LTO = YES;
 				MACOSX_DEPLOYMENT_TARGET = 10.10;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				SDKROOT = macosx;
@@ -1555,17 +1561,17 @@
 				GCC_UNROLL_LOOPS = NO;
 				HEADER_SEARCH_PATHS = (
 					"$(inherited)",
-					/usr/local/Cellar/boost/1.60.0_1/include,
+					/usr/local/Cellar/boost/1.60.0_2/include,
 					/usr/local/include,
 				);
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
 					"$(PROJECT_DIR)/lib",
 					/usr/local/lib,
-					/usr/local/Cellar/htslib/1.2.1/lib,
+					/usr/local/Cellar/htslib/1.3.1/lib,
 					"/usr/local/Cellar/cpp-netlib/netlib/lib",
 					"/usr/local/Cellar/cpp-netlib/0.11.1_1/lib",
-					/usr/local/Cellar/boost/1.60.0_1/lib,
+					/usr/local/Cellar/boost/1.60.0_2/lib,
 				);
 				LLVM_LTO = NO;
 				OTHER_CPLUSPLUSFLAGS = (
@@ -1588,17 +1594,17 @@
 				GCC_UNROLL_LOOPS = YES;
 				HEADER_SEARCH_PATHS = (
 					"$(inherited)",
-					/usr/local/Cellar/boost/1.60.0_1/include,
+					/usr/local/Cellar/boost/1.60.0_2/include,
 					/usr/local/include,
 				);
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
 					"$(PROJECT_DIR)/lib",
 					/usr/local/lib,
-					/usr/local/Cellar/htslib/1.2.1/lib,
+					/usr/local/Cellar/htslib/1.3.1/lib,
 					"/usr/local/Cellar/cpp-netlib/netlib/lib",
 					"/usr/local/Cellar/cpp-netlib/0.11.1_1/lib",
-					/usr/local/Cellar/boost/1.60.0_1/lib,
+					/usr/local/Cellar/boost/1.60.0_2/lib,
 				);
 				LLVM_LTO = YES;
 				OTHER_CPLUSPLUSFLAGS = (

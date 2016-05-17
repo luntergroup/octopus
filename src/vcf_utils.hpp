@@ -11,7 +11,6 @@
 
 #include <vector>
 #include <string>
-#include <map>
 
 #include <boost/filesystem/path.hpp>
 
@@ -32,16 +31,17 @@ std::vector<VcfType> get_typed_format_values(const VcfHeader& header, const VcfR
                                              const VcfRecord::SampleIdType sample,
                                              const VcfHeader::KeyType& key);
 
-void index_vcf(const boost::filesystem::path& vcf_path);
-void index_vcf(const VcfReader& reader);
-void index_vcfs(const std::vector<VcfReader>& readers);
+void index_vcf(const boost::filesystem::path& vcf_path, int lidx_shift = 14);
+void index_vcf(const VcfReader& reader, int lidx_shift = 14);
+void index_vcfs(const std::vector<VcfReader>& readers, int lidx_shift = 14);
 
 std::vector<VcfReader> writers_to_readers(std::vector<VcfWriter>& writers);
 
+void copy(VcfReader& src, VcfWriter& dst);
+
 VcfHeader merge(const std::vector<VcfHeader>& headers);
 
-void merge(std::vector<VcfReader>& readers, const std::vector<std::string>& contigs, VcfWriter& result);
-
-std::vector<VcfRecord> annotate_records(const std::vector<VcfRecord>& records, VcfReader& reader);
+void merge(std::vector<VcfReader>& sources, VcfWriter& dst, const std::vector<std::string>& contigs);
+void merge(std::vector<VcfReader>& sources, VcfWriter& dst);
 
 #endif /* defined(__Octopus__vcf_utils__) */

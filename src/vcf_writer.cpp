@@ -80,7 +80,7 @@ bool VcfWriter::is_header_written() const noexcept
     return is_header_written_;
 }
 
-const VcfWriter::Path VcfWriter::path() const
+const VcfWriter::Path& VcfWriter::path() const noexcept
 {
     std::lock_guard<std::mutex> lock {mutex_};
     return file_path_;
@@ -104,6 +104,18 @@ void VcfWriter::write(const VcfRecord& record)
 }
 
 // non member methods
+
+VcfWriter& operator<<(VcfWriter& dst, const VcfHeader& header)
+{
+    dst.write(header);
+    return dst;
+}
+
+VcfWriter& operator<<(VcfWriter& dst, const VcfRecord& record)
+{
+    dst.write(record);
+    return dst;
+}
 
 bool operator==(const VcfWriter& lhs, const VcfWriter& rhs)
 {
