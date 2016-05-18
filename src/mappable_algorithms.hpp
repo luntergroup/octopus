@@ -521,10 +521,7 @@ overlap_range(ForwardIt first, ForwardIt last, const MappableTp& mappable,
     
     auto it = find_first_after(first, last, mappable);
     
-    it = std::find_if_not(it, last,
-                          [&mappable] (const auto& m) {
-                              return overlaps(m, mappable);
-                          });
+    it = std::find_if_not(it, last, [&mappable] (const auto& m) { return overlaps(m, mappable); });
     
     auto it2 = std::lower_bound(first, it, shift(mapped_region(mappable),
                                                  -std::min(mapped_begin(mappable), max_mappable_size)),
@@ -695,6 +692,10 @@ bool has_overlapped(BidirIt first, BidirIt last, const MappableTp& mappable,
     if (first == last) return false;
     
     const auto it = find_first_after(first, last, mappable);
+    
+    const auto it2 = std::find_if_not(it, last, [&mappable] (const auto& m) { return overlaps(m, mappable); });
+    
+    if (it != it2) return true;
     
     // searches in reverse order on the assumption regions closer to the boundry with
     // mappable are more likely to overlap with mappable.

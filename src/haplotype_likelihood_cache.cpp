@@ -165,6 +165,7 @@ void HaplotypeLikelihoodCache::clear()
 
 void HaplotypeLikelihoodCache::set_read_iterators_and_sample_indices(const ReadMap& reads)
 {
+    read_iterators_.clear();
     sample_indices_.clear();
     
     const auto num_samples = reads.size();

@@ -15,6 +15,7 @@
 #include <cstdint>
 #include <algorithm>
 #include <functional>
+#include <stdexcept>
 
 #include <boost/optional.hpp>
 
@@ -38,6 +39,25 @@ public:
     struct FlankState
     {
         ContigRegion::SizeType lhs_flank, rhs_flank;
+    };
+    
+    class ShortHaplotypeError : public std::runtime_error
+    {
+    public:
+        using SizeType = Haplotype::SizeType;
+        
+        ShortHaplotypeError() = delete;
+        
+        explicit ShortHaplotypeError(const Haplotype& haplotype, SizeType required_extension);
+        
+        const Haplotype& haplotype() const noexcept;
+        
+        SizeType required_extension() const noexcept;
+        
+    private:
+        const Haplotype& haplotype_;
+        
+        SizeType required_extension_;
     };
     
     using MapPositionItr = std::vector<std::size_t>::const_iterator;

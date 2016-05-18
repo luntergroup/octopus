@@ -364,7 +364,19 @@ VariantCaller::call(const GenomicRegion& call_region, ProgressMeter& progress_me
         remove_duplicate_haplotypes(haplotypes);
         pause_timer(haplotype_fitler_timer);
         
-        populate(haplotype_likelihoods, active_region, haplotypes, candidates, active_reads);
+        try {
+            populate(haplotype_likelihoods, active_region, haplotypes, candidates, active_reads);
+        } catch(const HaplotypeLikelihoodModel::ShortHaplotypeError& e) {
+            if (debug_log_) {
+                stream(*debug_log_) << "Skipping " << active_region << " as a haplotype was too short by "
+                                    << e.required_extension() << "bp";
+            }
+            // TODO: we could force HaplotypeGenerator to extend the current set of haplotypes
+            // and retry
+            haplotype_generator.clear_progress();
+            haplotype_likelihoods.clear();
+            continue;
+        }
         
         resume_timer(haplotype_fitler_timer);
         auto removed_haplotypes = filter(haplotypes, haplotype_likelihoods);

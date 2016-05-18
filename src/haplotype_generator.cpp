@@ -72,7 +72,7 @@ reads_ {reads},
 current_active_region_ {shift(head_region(alleles_.leftmost(), 0), -1)},
 next_active_region_ {},
 soft_max_haplotypes_ {max_haplotypes},
-rightmost_allele_ {rightmost_mappable(alleles_)},
+rightmost_allele_ {},
 holdout_set_ {}
 {
     if (allow_lagging) {
@@ -83,6 +83,8 @@ holdout_set_ {}
     if (alleles_.empty()) {
         current_active_region_ = window;
         next_active_region_    = window;
+    } else {
+        rightmost_allele_ = *rightmost_mappable(alleles_);
     }
 }
 
@@ -148,9 +150,7 @@ std::pair<std::vector<Haplotype>, GenomicRegion> HaplotypeGenerator::progress()
     
     auto haplotypes = tree_.extract_haplotypes(calculate_haplotype_region());
     
-    if (!is_lagged()) {
-        tree_.clear();
-    }
+    if (!is_lagged()) tree_.clear();
     
     return std::make_pair(std::move(haplotypes), current_active_region_);
 }
@@ -435,8 +435,7 @@ HaplotypeGenerator::compute_holdout_set(const GenomicRegion& active_region) cons
 template <typename Range>
 auto sum_indel_sizes(const Range& alleles)
 {
-    return std::accumulate(std::cbegin(alleles), std::cend(alleles),
-                           GenomicRegion::SizeType {0},
+    return std::accumulate(std::cbegin(alleles), std::cend(alleles), GenomicRegion::SizeType {0},
                            [] (const auto curr, const Allele& allele) {
                                if (is_insertion(allele)) {
                                    return curr + sequence_size(allele);

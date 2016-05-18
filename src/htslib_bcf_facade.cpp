@@ -700,16 +700,28 @@ auto extract_samples(const bcf_hdr_t* header, bcf1_t* record, const std::vector<
         int ngt {}, g {};
         int* gt {nullptr};
         
-        bcf_get_genotypes(header, record, &gt, &ngt);
+        bcf_get_genotypes(header, record, &gt, &ngt); // mallocs gt
+        
         const auto ploidy = record->d.fmt->n;
         
-        for (unsigned sample {0}, i {}; sample < num_samples; ++sample, i += ploidy) {
+        for (unsigned sample {0}, i {0}; sample < num_samples; ++sample, i += ploidy) {
             std::vector<VcfRecord::SequenceType> alleles {};
             alleles.reserve(ploidy);
             
             for (unsigned p {0}; p < ploidy; ++p) {
                 g = gt[i + p];
-                alleles.emplace_back(bcf_gt_is_missing(g) ? "." : record->d.allele[bcf_gt_allele(g)]);
+                
+                if (bcf_gt_is_missing(g)) {
+                    alleles.emplace_back(".");
+                } else {
+                    const auto idx = bcf_gt_allele(g);
+                    
+                    if (idx < record->n_allele) {
+                        alleles.emplace_back(record->d.allele[idx]);
+                    } else {
+                        alleles.emplace_back(".");
+                    }
+                }
             }
             
             genotypes.emplace(header->samples[sample], std::make_pair(std::move(alleles), bcf_gt_is_phased(g)));

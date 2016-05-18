@@ -12,7 +12,6 @@
 #include <memory>
 #include <cmath>
 #include <limits>
-#include <stdexcept>
 #include <cassert>
 
 #include "mappable.hpp"
@@ -22,6 +21,25 @@
 
 namespace Octopus
 {
+HaplotypeLikelihoodModel::ShortHaplotypeError::ShortHaplotypeError(const Haplotype& haplotype,
+                                                                   SizeType required_extension)
+:
+std::runtime_error {"Haplotype is too short for alignment"},
+haplotype_ {haplotype},
+required_extension_ {required_extension}
+{}
+    
+const Haplotype& HaplotypeLikelihoodModel::ShortHaplotypeError::haplotype() const noexcept
+{
+    return haplotype_;
+}
+
+HaplotypeLikelihoodModel::ShortHaplotypeError::SizeType
+HaplotypeLikelihoodModel::ShortHaplotypeError::required_extension() const noexcept
+{
+    return required_extension_;
+}
+
 void HaplotypeLikelihoodModel::set(const Haplotype& haplotype, boost::optional<FlankState> flank_state)
 {
     haplotype_ = std::addressof(haplotype);
@@ -39,8 +57,8 @@ void HaplotypeLikelihoodModel::clear() noexcept
 
 namespace
 {
-    std::size_t num_out_of_range_bases(const std::size_t mapping_position,
-                                       const AlignedRead& read, const Haplotype& haplotype)
+    std::size_t num_out_of_range_bases(const std::size_t mapping_position, const AlignedRead& read,
+                                       const Haplotype& haplotype)
     {
         const auto alignment_size = sequence_size(read) + mapping_position + PairHMM::AlignmenetPad;
         
@@ -108,7 +126,10 @@ double log_probability(const AlignedRead& read, const Haplotype& haplotype,
     if (!has_in_range_mapping_position) {
         const auto min_shift = num_out_of_range_bases(original_mapping_position, read, haplotype);
         
-        assert(original_mapping_position >= min_shift);
+        if (original_mapping_position < min_shift) {
+            auto required_extension = static_cast<Haplotype::SizeType>(min_shift - original_mapping_position);
+            throw HaplotypeLikelihoodModel::ShortHaplotypeError {haplotype, required_extension};
+        }
         
         const auto final_mapping_position = original_mapping_position - min_shift;
         
