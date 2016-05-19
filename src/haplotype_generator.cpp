@@ -11,8 +11,9 @@
 #include <algorithm>
 #include <deque>
 #include <iterator>
-#include <cassert>
 #include <numeric>
+#include <stdexcept>
+#include <cassert>
 
 #include "variant.hpp"
 #include "haplotype.hpp"
@@ -73,7 +74,9 @@ current_active_region_ {shift(head_region(alleles_.leftmost(), 0), -1)},
 next_active_region_ {},
 soft_max_haplotypes_ {max_haplotypes},
 rightmost_allele_ {},
-holdout_set_ {}
+holdout_set_ {},
+current_holdout_region_ {},
+previous_holdout_regions_ {}
 {
     if (allow_lagging) {
         lagged_walker_ = GenomeWalker {max_included(max_haplotypes),
@@ -91,7 +94,7 @@ holdout_set_ {}
 const GenomicRegion& HaplotypeGenerator::tell_next_active_region() const
 {
     update_next_active_region();
-    assert(current_active_region_ <= *next_active_region_);
+    assert(!holdout_set_.empty() || current_active_region_ <= *next_active_region_);
     return *next_active_region_;
 }
 
@@ -101,7 +104,7 @@ std::pair<std::vector<Haplotype>, GenomicRegion> HaplotypeGenerator::progress()
         return std::make_pair(std::vector<Haplotype> {}, current_active_region_);
     }
     
-    holdout_set_.clear(); // TODO: reintroduce holdout alleles and backtrack
+    rientroduce_holdout_set();
     
     update_next_active_region();
     
@@ -135,13 +138,7 @@ std::pair<std::vector<Haplotype>, GenomicRegion> HaplotypeGenerator::progress()
         
         tree_.remove_overlapped(novel_active_region); // revert
         
-        holdout_set_ = compute_holdout_set(current_active_region_);
-        
-        alleles_.erase_all(std::cbegin(holdout_set_), std::cend(holdout_set_));
-        
-        Logging::WarningLogger wlog {};
-        stream(wlog) << "Holding out " << holdout_set_.size() << " alleles from region "
-                     << current_active_region_;
+        set_holdout_set(current_active_region_);
         
         current_active_region_ = walker_.walk(head_region(current_active_region_), reads_, alleles_);
         
@@ -405,9 +402,17 @@ void HaplotypeGenerator::update_next_active_region() const
     }
 }
 
-MappableFlatMultiSet<Allele>
-HaplotypeGenerator::compute_holdout_set(const GenomicRegion& active_region) const
+void HaplotypeGenerator::set_holdout_set(const GenomicRegion& active_region)
 {
+    assert(holdout_set_.empty());
+    
+    if (previous_holdout_regions_.count(active_region) == 1) {
+        throw std::runtime_error {"Region too complex"};
+    } else {
+        previous_holdout_regions_.emplace(active_region);
+        current_holdout_region_ = active_region;
+    }
+    
     auto active_alleles = copy_overlapped(alleles_, active_region);
     
     std::vector<Allele> tmp {std::cbegin(active_alleles), std::cend(active_alleles)};
@@ -429,7 +434,34 @@ HaplotypeGenerator::compute_holdout_set(const GenomicRegion& active_region) cons
         if (std::exp2(count_overlapped(cur, re)) < hard_max_haplotypes_) break;
     }
     
-    return MappableFlatMultiSet<Allele> {it, std::end(tmp)};
+    holdout_set_.insert(std::make_move_iterator(it), std::make_move_iterator(std::end(tmp)));
+    
+    if (DEBUG_MODE) {
+        Logging::DebugLogger log {};
+        stream(log) << "Inserting " << holdout_set_.size() << " holdout alleles";
+    }
+    
+    alleles_.erase_all(std::cbegin(holdout_set_), std::cend(holdout_set_));
+}
+
+void HaplotypeGenerator::rientroduce_holdout_set()
+{
+    if (holdout_set_.empty()) return;
+    
+    if (DEBUG_MODE) {
+        Logging::DebugLogger log {};
+        stream(log) << "Rientroducing " << holdout_set_.size() << " holdout alleles";
+    }
+    
+    alleles_.insert(std::make_move_iterator(std::begin(holdout_set_)),
+                    std::make_move_iterator(std::end(holdout_set_)));
+    
+    holdout_set_.clear();
+    holdout_set_.shrink_to_fit();
+    
+    current_active_region_ = head_region(*current_holdout_region_);
+    
+    current_holdout_region_ = boost::none;
 }
 
 template <typename Range>

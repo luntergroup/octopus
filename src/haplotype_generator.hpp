@@ -12,7 +12,7 @@
 #include <vector>
 #include <functional>
 #include <utility>
-#include <unordered_map>
+#include <unordered_set>
 
 #include <boost/optional.hpp>
 
@@ -70,7 +70,9 @@ namespace Octopus
         
         unsigned soft_max_haplotypes_, hard_max_haplotypes_ = 150'000;
         
-        MappableFlatMultiSet<Allele> holdout_set_;
+        mutable MappableFlatMultiSet<Allele> holdout_set_;
+        mutable boost::optional<GenomicRegion> current_holdout_region_;
+        mutable std::unordered_set<GenomicRegion> previous_holdout_regions_;
         
         boost::optional<Allele> rightmost_allele_;
         
@@ -78,7 +80,8 @@ namespace Octopus
         bool is_active_region_lagged() const;
         
         void update_next_active_region() const;
-        MappableFlatMultiSet<Allele> compute_holdout_set(const GenomicRegion& active_region) const;
+        void set_holdout_set(const GenomicRegion& active_region);
+        void rientroduce_holdout_set();
         GenomicRegion calculate_haplotype_region() const;
     };
 } // namespace Octopus

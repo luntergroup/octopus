@@ -514,7 +514,6 @@ void Assembler::remove_vertex(const Vertex v)
 
 void Assembler::clear_and_remove_vertex(const Vertex v)
 {
-    //std::cout << "clearing vertex " << graph_[v].kmer << std::endl;
     const auto c = vertex_cache_.erase(kmer_of(v));
     assert(c == 1);
     boost::clear_vertex(v, graph_);
@@ -1000,8 +999,7 @@ std::unordered_set<Assembler::Vertex> Assembler::extract_nondominants(const Vert
     return result;
 }
 
-std::deque<Assembler::Vertex>
-Assembler::extract_nondominant_reference(const DominatorMap& dominator_tree) const
+std::deque<Assembler::Vertex> Assembler::extract_nondominant_reference(const DominatorMap& dominator_tree) const
 {
     std::unordered_set<Vertex> dominators {};
     dominators.reserve(dominator_tree.size());
@@ -1047,8 +1045,7 @@ auto count_out_weight(const V& v, const G& g)
 }
 
 template <typename R, typename T>
-auto compute_transition_score(const T edge_weight, const T total_out_weight,
-                              const R max_score = 100)
+auto compute_transition_score(const T edge_weight, const T total_out_weight,  const R max_score = 100)
 {
     if (total_out_weight == 0) {
         return R {0};
@@ -1257,9 +1254,7 @@ Assembler::extract_nonreference_path(const PredecessorMap& predecessors, Vertex 
 {
     Path result {from};
     
-    if (is_reference(from)) {
-        return result;
-    }
+    if (is_reference(from)) return result;
     
     from = predecessors.at(from);
     
@@ -1275,17 +1270,13 @@ template <typename Map>
 auto count_unreachables(const Map& predecessors)
 {
     return std::count_if(std::cbegin(predecessors), std::cend(predecessors),
-                         [] (const auto& p) {
-                             return p.first == p.second;
-                         });
+                         [] (const auto& p) { return p.first == p.second; });
 }
 
 template <typename Path, typename Map>
 void erase_all(const Path& path, Map& dominator_tree)
 {
-    for (const auto& v : path) {
-        dominator_tree.erase(v);
-    }
+    for (const auto& v : path) dominator_tree.erase(v);
 }
 
 template <typename V, typename BidirectionalIt, typename Map>

@@ -32,7 +32,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         
         //"--samples", "NOT-A-SAMPLE",
         
-        "--working-directory", "~/Genomics/octopus_test",
+        "--working-directory", "~/Genomics/MSG",
         
         //"--target-read-buffer-size", "1.0",
         //"--reference-cache-size", "100",
@@ -58,14 +58,14 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--reads", ecoli_bam.c_str(),
         
         // TCGA
-        "--reads", "~/Genomics/cancer/TCGA/benchmark/G15511.HCC1143_BL.1.chr22.bam",
-        "--reads", "~/Genomics/cancer/TCGA/benchmark/G15511.HCC1143.1.chr22.bam",
+        //"--reads", "~/Genomics/cancer/TCGA/benchmark/G15511.HCC1143_BL.1.chr22.bam",
+        //"--reads", "~/Genomics/cancer/TCGA/benchmark/G15511.HCC1143.1.chr22.bam",
         
         // MSG
         //"--reads", "~/Genomics/MSG/10120_chr2_47641558_GTA_G.RG.bam",
-        //"--reads", "~/Genomics/MSG/D59597_Cov3.RG.bam",
+        "--reads", "~/Genomics/MSG/D59597_Cov3.RG.bam",
         
-        "--caller", "cancer", // default "population"
+        //"--caller", "cancer", // default "population"
         "--normal-sample", "HCC1143 BL",
         
         //"--organism-ploidy", "3",
@@ -77,7 +77,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         
         /* input regions */
         
-        "--regions", "22:25,771,682-25,771,783",
+        "--regions", "7:137407150-137407214",
         
         //"--regions", "22:42,522,971-42,523,546", // bad model filter?
         
@@ -230,7 +230,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         
         //"--disable-haplotype-lagging",
         //"--disable-inactive-flank-scoring",
-        "--max-haplotypes", "64",
+        //"--max-haplotypes", "64",
         
         //"--min-variant-posterior", "2",
         //"--min-refcall-posterior", "0",
@@ -241,7 +241,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--max-open-read-files", "1",
         
         //"--output", test_out_vcf.c_str(),
-        //"--output", "octopus_msg.vcf",
+        "--output", "octopus_msg.vcf",
         //"--output", "octopus_NA12878HC_22_unlagged_dummy.vcf",
         //"--output", "octopus_calls2.vcf",
         

@@ -90,8 +90,8 @@ public:
     std::pair<iterator, bool> insert(MappableType&&);
 //    iterator insert(const_iterator, const MappableType& mappable);
 //    iterator insert(const_iterator, MappableType&& mappable);
-//    template <typename InputIterator>
-//    void insert(InputIterator, InputIterator);
+    template <typename InputIterator>
+    void insert(InputIterator, InputIterator);
 //    iterator insert(std::initializer_list<MappableType>);
     iterator erase(const_iterator);
     size_type erase(const MappableType&);
@@ -459,21 +459,42 @@ MappableFlatSet<MappableType, Allocator>::insert(MappableType&& m)
 //    max_element_size_ = std::max(max_element_size_, region_size(*it));
 //    return it2;
 //}
-//
-//template <typename MappableType, typename Allocator>
-//template <typename InputIterator>
-//void
-//MappableFlatSet<MappableType, Allocator>::insert(InputIterator first, InputIterator last)
-//{
-//    if (first != last) {
-//        max_element_size_ = std::max(max_element_size_, region_size(*largest_mappable(first, last)));
-//    }
-//    elements_.insert(first, last);
-//    if (is_bidirectionally_sorted_) {
-//        is_bidirectionally_sorted_ = is_bidirectionally_sorted(elements_);
-//    }
-//}
-//
+
+template <typename MappableType, typename Allocator>
+template <typename InputIterator>
+void MappableFlatSet<MappableType, Allocator>::insert(InputIterator first, InputIterator last)
+{
+    if (first == last) return;
+    
+    max_element_size_ = std::max(max_element_size_, region_size(*largest_mappable(first, last)));
+    
+    for (auto it1 = first; it1 != last; ) {
+        const auto it2 = std::is_sorted_until(it1, last);
+        
+        auto ub = std::upper_bound(std::begin(elements_), std::end(elements_), *std::prev(it2));
+        
+        const auto d = std::distance(it1, it2);
+        
+        const auto it3 = elements_.insert(ub, it1, it2);
+        
+        // ub is now invalidated
+        
+        const auto lb = std::lower_bound(std::begin(elements_), it3, *it3);
+        
+        ub = std::next(it3, d);
+        
+        std::inplace_merge(lb, it3, ub);
+        
+        elements_.erase(std::unique(lb, ub), ub);
+        
+        it1 = it2;
+    }
+    
+    if (is_bidirectionally_sorted_) {
+        is_bidirectionally_sorted_ = is_bidirectionally_sorted(elements_);
+    }
+}
+
 //template <typename MappableType, typename Allocator>
 //typename MappableFlatSet<MappableType, Allocator>::iterator
 //MappableFlatSet<MappableType, Allocator>::insert(std::initializer_list<MappableType> il)
