@@ -32,11 +32,11 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         
         //"--samples", "NOT-A-SAMPLE",
         
-        "--working-directory", "~/Genomics/MSG",
+        "--working-directory", "~/Genomics/octopus_test",
         
         //"--target-read-buffer-size", "1.0",
         //"--reference-cache-size", "100",
-        "--threads", "0",
+        //"--threads", "0",
         
         //"--contig-output-order", "as-in-reference-reversed",
         
@@ -58,14 +58,14 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--reads", ecoli_bam.c_str(),
         
         // TCGA
-        //"--reads", "~/Genomics/cancer/TCGA/benchmark/G15511.HCC1143_BL.1.chr22.bam",
-        //"--reads", "~/Genomics/cancer/TCGA/benchmark/G15511.HCC1143.1.chr22.bam",
+        "--reads", "~/Genomics/cancer/TCGA/benchmark/G15511.HCC1143_BL.1.chr22.bam",
+        "--reads", "~/Genomics/cancer/TCGA/benchmark/G15511.HCC1143.1.chr22.bam",
         
         // MSG
         //"--reads", "~/Genomics/MSG/10120_chr2_47641558_GTA_G.RG.bam",
-        "--reads", "~/Genomics/MSG/D59597_Cov3.RG.bam",
+        //"--reads", "~/Genomics/MSG/D59597_Cov3.RG.bam",
         
-        //"--caller", "cancer", // default "population"
+        "--caller", "cancer", // default "population"
         "--normal-sample", "HCC1143 BL",
         
         //"--organism-ploidy", "3",
@@ -77,7 +77,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         
         /* input regions */
         
-        "--regions", "Y",
+        "--regions", "22:25,771,682-25,771,783",
         
         //"--regions", "22:42,522,971-42,523,546", // bad model filter?
         
@@ -166,6 +166,8 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--regions", "22:25,070,597-25,070,854", // FP SNP
         
         // TCGA HCC1143
+        //"--regions", "22:18,444,570-18,444,787", // somatic?
+        //"--regions", "22:25,340,394-25,340,434", // real somatic?
         //"--regions", "22:24,899,276-24,902,854", // Somatic SNV!
         //"--regions", "22:27,707,987-27,708,223", // low frequency deletion?
         //"--regions", "22:36,265,289-36,265,519", // CNV SNP?
@@ -226,20 +228,20 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--min-assembler-base-quality", "10",
         //"--max-variant-size", "25",
         
-        "--disable-haplotype-lagging",
+        //"--disable-haplotype-lagging",
         //"--disable-inactive-flank-scoring",
-        //"--max-haplotypes", "50",
+        "--max-haplotypes", "64",
         
-        "--min-variant-posterior", "2",
+        //"--min-variant-posterior", "2",
         //"--min-refcall-posterior", "0",
-        "--min-somatic-posterior", "1",
+        //"--min-somatic-posterior", "2",
         
         //"--somatics-only",
         
         //"--max-open-read-files", "1",
         
         //"--output", test_out_vcf.c_str(),
-        "--output", "octopus_msg.vcf",
+        //"--output", "octopus_msg.vcf",
         //"--output", "octopus_NA12878HC_22_unlagged_dummy.vcf",
         //"--output", "octopus_calls2.vcf",
         

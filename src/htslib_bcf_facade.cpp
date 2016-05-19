@@ -731,6 +731,7 @@ auto extract_samples(const bcf_hdr_t* header, bcf1_t* record, const std::vector<
     }
     
     std::unordered_map<VcfRecord::SampleIdType, std::unordered_map<VcfRecord::KeyType, std::vector<std::string>>> other_data {};
+    other_data.reserve(num_samples);
     
     int nintformat {};
     int* intformat {nullptr};
@@ -742,40 +743,58 @@ auto extract_samples(const bcf_hdr_t* header, bcf1_t* record, const std::vector<
     for (auto it = std::next(std::cbegin(format)), end = std::cend(format); it != end; ++it) {
         const auto& key = *it;
         
-        std::vector<std::string> values {};
+        std::vector<std::vector<std::string>> values(num_samples, std::vector<std::string> {});
         
         switch (bcf_hdr_id2type(header, BCF_HL_FMT, bcf_hdr_id2int(header, BCF_DT_ID, key.c_str()))) {
             case BCF_HT_INT:
                 if (bcf_get_format_int32(header, record, key.c_str(), &intformat, &nintformat) > 0) {
-                    values.reserve(nintformat);
-                    std::transform(intformat, intformat + num_samples, std::back_inserter(values),
-                                   [] (auto v) { return std::to_string(v); });
+                    const auto num_values_per_sample = nintformat / num_samples;
+                    
+                    auto ptr = intformat;
+                    for (unsigned sample {0}; sample < num_samples; ++sample, ptr += num_values_per_sample) {
+                        values[sample].reserve(num_values_per_sample);
+                        
+                        std::transform(ptr, ptr + num_values_per_sample, std::back_inserter(values[sample]),
+                                       [] (auto v) { return std::to_string(v); });
+                    }
                 }
                 break;
             case BCF_HT_REAL:
                 if (bcf_get_format_float(header, record, key.c_str(), &floatformat, &nfloatformat) > 0) {
-                    values.reserve(nfloatformat);
-                    std::transform(floatformat, floatformat + num_samples, std::back_inserter(values),
-                                   [] (auto v) { return std::to_string(v); });
+                    const auto num_values_per_sample = nfloatformat / num_samples;
+                    
+                    auto ptr = floatformat;
+                    for (unsigned sample {0}; sample < num_samples; ++sample, ptr += num_values_per_sample) {
+                        values[sample].reserve(num_values_per_sample);
+                        
+                        std::transform(ptr, ptr + num_samples, std::back_inserter(values[sample]),
+                                       [] (auto v) { return std::to_string(v); });
+                    }
                 }
                 break;
             case BCF_HT_STR:
+                // TODO: Check this usage is correct. What if more than one value per sample?
                 if (bcf_get_format_string(header, record, key.c_str(), &stringformat, &nstringformat) > 0) {
-                    values.reserve(nstringformat);
+                    unsigned sample {0};
                     std::for_each(stringformat, stringformat + num_samples,
-                                  [&values] (const char* str) { values.emplace_back(str); });
+                                  [&values, &sample] (const char* str) {
+                                      values[sample++].emplace_back(str);
+                                  });
                 }
                 break;
         }
         
         for (unsigned sample {0}; sample < num_samples; ++sample) {
-            other_data[header->samples[sample]][key].push_back(std::move(values[sample]));
+            other_data[header->samples[sample]].emplace(key, std::move(values[sample]));
         }
     }
     
-    std::free(intformat);
-    std::free(floatformat);
-    std::free(stringformat);
+    if (intformat != nullptr) std::free(intformat);
+    if (floatformat != nullptr) std::free(floatformat);
+    if (stringformat != nullptr) {
+        std::free(stringformat[0]);
+        std::free(stringformat);
+    }
     
     return std::make_pair(std::move(genotypes), std::move(other_data));
 }

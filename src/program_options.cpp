@@ -339,9 +339,9 @@ namespace Octopus
              "Space-seperated list of contig=ploidy pairs")
             ("contig-ploidies-file", po::value<std::string>(),
              "List of contig=ploidy pairs, one per line")
-            ("min-variant-posterior", po::value<float>()->default_value(20.0),
+            ("min-variant-posterior", po::value<float>()->default_value(5),
              "Minimum variant call posterior probability (phred scale)")
-            ("min-refcall-posterior", po::value<float>()->default_value(10.0),
+            ("min-refcall-posterior", po::value<float>()->default_value(5),
              "Minimum homozygous reference call posterior probability (phred scale)")
 //            ("refcalls", po::value<RefCallType>()->default_value(RefCallType::None),
 //             "Caller will output reference confidence calls")
@@ -365,7 +365,7 @@ namespace Octopus
              "Normal sample used in cancer model")
             ("somatic-mutation-rate", po::value<float>()->default_value(0.00001),
              "Expected somatic mutation rate, per megabase pair, for this sample")
-            ("min-somatic-posterior", po::value<float>()->default_value(15.0),
+            ("min-somatic-posterior", po::value<float>()->default_value(5.0),
              "The minimum somatic mutation call posterior probability (phred scale)")
             ("somatics-only", po::bool_switch()->default_value(false),
              "Only output somatic calls (for somatic calling models only)")

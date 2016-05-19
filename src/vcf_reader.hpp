@@ -44,10 +44,10 @@ public:
     friend void swap(VcfReader& lhs, VcfReader& rhs) noexcept;
     
     bool is_open() const noexcept;
-    void open(Path file_path) noexcept;
+    void open() noexcept;
     void close() noexcept;
     
-    const Path path() const;
+    const Path& path() const noexcept;
     
     VcfHeader fetch_header() const;
     

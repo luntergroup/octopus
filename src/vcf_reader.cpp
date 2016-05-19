@@ -64,12 +64,11 @@ bool VcfReader::is_open() const noexcept
     return reader_ != nullptr;
 }
 
-void VcfReader::open(Path file_path) noexcept
+void VcfReader::open() noexcept
 {
     std::lock_guard<std::mutex> lock {mutex_};
     try {
-        file_path_ = std::move(file_path);
-        reader_    = std::make_unique<HtslibBcfFacade>(file_path_, "w");
+        reader_ = make_vcf_reader(file_path_);
     } catch (...) {
         this->close();
     }
@@ -79,12 +78,10 @@ void VcfReader::close() noexcept
 {
     std::lock_guard<std::mutex> lock {mutex_};
     reader_.reset(nullptr);
-    file_path_.clear();
 }
 
-const VcfReader::Path VcfReader::path() const
+const VcfReader::Path& VcfReader::path() const noexcept
 {
-    std::lock_guard<std::mutex> lock {mutex_};
     return file_path_;
 }
 

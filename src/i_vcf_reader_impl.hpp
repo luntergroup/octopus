@@ -26,9 +26,9 @@ public:
     
     virtual VcfHeader fetch_header() const = 0;
     
-    virtual size_t count_records() = 0;
-    virtual size_t count_records(const std::string& contig) = 0;
-    virtual size_t count_records(const GenomicRegion& region) = 0;
+    virtual std::size_t count_records() = 0;
+    virtual std::size_t count_records(const std::string& contig) = 0;
+    virtual std::size_t count_records(const GenomicRegion& region) = 0;
     
     virtual std::vector<VcfRecord> fetch_records(UnpackPolicy level = UnpackPolicy::All) = 0; // fetches all records
     virtual std::vector<VcfRecord> fetch_records(const std::string& contig, UnpackPolicy level = UnpackPolicy::All) = 0;
