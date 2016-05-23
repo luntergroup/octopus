@@ -177,18 +177,18 @@ std::size_t ReadManager::count_reads(const GenomicRegion& region)
 
 GenomicRegion ReadManager::find_covered_subregion(const SampleIdType& sample,
                                                   const GenomicRegion& region,
-                                                  std::size_t max_reads)
+                                                  const std::size_t max_reads)
 {
     return find_covered_subregion(std::vector<SampleIdType> {sample}, region, max_reads);
 }
 
 GenomicRegion ReadManager::find_covered_subregion(const std::vector<SampleIdType>& samples,
                                                   const GenomicRegion& region,
-                                                  std::size_t max_reads)
+                                                  const std::size_t max_reads)
 {
     using std::begin; using std::end; using std::next; using std::for_each;
     
-    if (samples.empty()) return region;
+    if (samples.empty() || is_empty(region)) return region;
     
     std::lock_guard<std::mutex> lock {mutex_};
     
@@ -262,7 +262,7 @@ GenomicRegion ReadManager::find_covered_subregion(const std::vector<SampleIdType
     return GenomicRegion {region.contig_name(), result_begin, result_end};
 }
 
-GenomicRegion ReadManager::find_covered_subregion(const GenomicRegion& region, std::size_t max_reads)
+GenomicRegion ReadManager::find_covered_subregion(const GenomicRegion& region, const std::size_t max_reads)
 {
     return find_covered_subregion(get_samples(), region, max_reads);
 }

@@ -216,17 +216,16 @@ namespace Octopus
         };
     }
     
-    template <typename InputIt, typename RandomGenerator>
-    InputIt random_select(InputIt first, InputIt last, RandomGenerator& g) {
+    template <typename ForwardIt, typename RandomGenerator>
+    ForwardIt random_select(ForwardIt first, ForwardIt last, RandomGenerator& g) {
         std::uniform_int_distribution<std::size_t> dis(0, std::distance(first, last) - 1);
         std::advance(first, dis(g));
         return first;
     }
     
-    template <typename InputIt>
-    InputIt random_select(InputIt first, InputIt last) {
-        static std::random_device rd {};
-        static std::mt19937 gen(rd());
+    template <typename ForwardIt>
+    ForwardIt random_select(ForwardIt first, ForwardIt last) {
+        static std::default_random_engine gen {};
         return random_select(first, last, gen);
     }
     
@@ -250,8 +249,7 @@ namespace Octopus
         
         const auto num_samples_per_sample = max_sample_size / samples.size();
         
-        std::vector<std::size_t> read_sizes {};
-        read_sizes.reserve(max_sample_size);
+        std::deque<std::size_t> read_sizes {};
         
         for (const auto& sample : samples) {
             const auto it  = random_select(std::cbegin(input_regions), std::cend(input_regions));
@@ -260,7 +258,11 @@ namespace Octopus
             
             const auto it2 = random_select(std::cbegin(it->second), std::cend(it->second));
             
-            const auto test_region = read_manager.find_covered_subregion(sample, *it2, num_samples_per_sample);
+            auto test_region = read_manager.find_covered_subregion(sample, *it2, num_samples_per_sample);
+            
+            if (is_empty(test_region)) {
+                test_region = expand_rhs(test_region, 1);
+            }
             
             const auto reads = read_manager.fetch_reads(sample, test_region);
             
