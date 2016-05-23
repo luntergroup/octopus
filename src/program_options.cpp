@@ -1523,7 +1523,7 @@ namespace Octopus
             if (options.count("normal-sample") == 1) {
                 auto normal_sample = options.at("normal-sample").as<std::string>();
                 
-                const auto& samples = read_pipe.get_samples();
+                const auto& samples = read_pipe.samples();
                 
                 if (std::find(std::cbegin(samples), std::cend(samples),
                               normal_sample) == std::cend(samples)) {

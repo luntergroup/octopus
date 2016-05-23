@@ -32,7 +32,7 @@ BOOST_AUTO_TEST_SUITE(Components)
 //    
 //    ReadManager read_manager {NA12878_low_coverage};
 //    
-//    const auto sample = read_manager.get_samples().front();
+//    const auto sample = read_manager.samples().front();
 //    
 //    GenomicRegion region1 {"10", 1'000'000, 1'000'100};
 //    

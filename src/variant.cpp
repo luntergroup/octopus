@@ -244,36 +244,41 @@ bool is_left_alignable(const Variant& variant) noexcept
     return is_indel(variant);
 }
 
-using LeftAlignmentList = std::list<Variant::SequenceType::value_type>;
-
-auto get_allele_lists(const Variant::SequenceType& allele_a, const Variant::SequenceType& allele_b)
+namespace
 {
-    const auto& alleles = allele_minmax(allele_a, allele_b);
-    
-    LeftAlignmentList big_allele {std::cbegin(alleles.second), std::cend(alleles.second)};
-    LeftAlignmentList small_allele {std::cbegin(alleles.first), std::cend(alleles.first)};
-    
-    return std::make_pair(std::move(big_allele), std::move(small_allele));
-}
+    using AlleleSequence = std::list<char>;
 
-GenomicRegion extend_allele_lists(LeftAlignmentList& big_allele, LeftAlignmentList& small_allele,
-                                  const ReferenceGenome& reference, const GenomicRegion& current_region,
-                                  const Variant::SizeType extension_size)
-{
-    using std::begin; using std::cbegin; using std::cend;
+    auto get_alleles(const Variant::SequenceType& allele_a, const Variant::SequenceType& allele_b)
+    {
+        const auto& alleles = allele_minmax(allele_a, allele_b);
+        
+        AlleleSequence big_allele {std::cbegin(alleles.second), std::cend(alleles.second)};
+        AlleleSequence small_allele {std::cbegin(alleles.first), std::cend(alleles.first)};
+        
+        return std::make_pair(std::move(big_allele), std::move(small_allele));
+    }
+
+    void prepend(const ReferenceGenome::SequenceType& src, AlleleSequence& dst)
+    {
+        dst.insert(std::begin(dst), std::cbegin(src), std::cend(src));
+    }
     
-    const auto new_region = shift(current_region, -extension_size);
-    
-    GenomicRegion extension_region {new_region.contig_name(), new_region.begin(),
-        new_region.begin() + extension_size};
-    
-    const auto extension_sequence = reference.fetch_sequence(extension_region);
-    
-    big_allele.insert(begin(big_allele), cbegin(extension_sequence), cend(extension_sequence));
-    small_allele.insert(begin(small_allele), cbegin(extension_sequence), cend(extension_sequence));
-    
-    return new_region;
-}
+    GenomicRegion extend_alleles(AlleleSequence& big_allele, AlleleSequence& small_allele,
+                                 const ReferenceGenome& reference, const GenomicRegion& current_region,
+                                 const Variant::SizeType extension_size)
+    {
+        const auto new_region = shift(current_region, -extension_size);
+        
+        const auto extension_region = expand_rhs(head_region(new_region), extension_size);
+        
+        const auto extension_sequence = reference.fetch_sequence(extension_region);
+        
+        prepend(extension_sequence, big_allele);
+        prepend(extension_sequence, small_allele);
+        
+        return new_region;
+    }
+} // namespace
 
 Variant left_align(const Variant& variant, const ReferenceGenome& reference,
                    const Variant::SizeType extension_size)
@@ -291,9 +296,9 @@ Variant left_align(const Variant& variant, const ReferenceGenome& reference,
     const auto& ref_allele_sequence = ref_sequence(variant);
     const auto& alt_allele_sequence = alt_sequence(variant);
     
-    LeftAlignmentList big_allele {}, small_allele {};
+    AlleleSequence big_allele {}, small_allele {};
     
-    tie(big_allele, small_allele) = get_allele_lists(ref_allele_sequence, alt_allele_sequence);
+    tie(big_allele, small_allele) = get_alleles(ref_allele_sequence, alt_allele_sequence);
     
     auto big_allele_ritr   = crbegin(big_allele);
     auto small_allele_ritr = crbegin(small_allele);
@@ -305,16 +310,16 @@ Variant left_align(const Variant& variant, const ReferenceGenome& reference,
     
     do {
         if (current_region.begin() >= extension_size) {
-            current_region = extend_allele_lists(big_allele, small_allele, reference,
-                                                 current_region, extension_size);
+            current_region = extend_alleles(big_allele, small_allele, reference,
+                                            current_region, extension_size);
         } else if (current_region.begin() > 0) {
-            current_region = extend_allele_lists(big_allele, small_allele, reference,
-                                                 current_region, current_region.begin());
+            current_region = extend_alleles(big_allele, small_allele, reference,
+                                            current_region, current_region.begin());
         } else {
             break;
         }
         
-        // We can continue from previous iterators as list iterators remain valid after list modification
+        // We can continue from previous iterators as list iterators remain valid after modification
         tie(small_allele_ritr, big_allele_ritr) = mismatch(small_allele_ritr, crend(small_allele), big_allele_ritr);
     } while (small_allele_ritr == crend(small_allele));
     
@@ -328,8 +333,8 @@ Variant left_align(const Variant& variant, const ReferenceGenome& reference,
         auto required_left_padding = static_cast<SizeType>(small_allele_size - removable_extension);
         // Note this will automatically pad to the right if we've reached the start of the contig
         if (current_region.begin() >= required_left_padding) {
-            current_region = extend_allele_lists(big_allele, small_allele, reference,
-                                                 current_region, required_left_padding);
+            current_region = extend_alleles(big_allele, small_allele, reference,
+                                            current_region, required_left_padding);
             removable_extension = 0;
         }
     }

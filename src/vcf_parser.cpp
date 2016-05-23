@@ -49,7 +49,7 @@ VcfParser::VcfParser(const fs::path& file_path)
 file_path_ {file_path},
 file_ {file_path_.string()},
 header_ {parse_header(file_)},
-samples_ {header_.get_samples()},
+samples_ {header_.samples()},
 first_record_pos_ {file_.tellg()}
 {}
 
@@ -329,6 +329,17 @@ void parse_info(const std::string& column, VcfRecord::Builder& rb)
     }
 }
 
+bool is_phased(const std::string& genotype)
+{
+    const auto pos = genotype.find_first_of("|/");
+    
+    if (pos == std::string::npos) {
+        return true; // must be haploid
+    }
+    
+    return genotype[pos] == '|';
+}
+
 void parse_sample(const std::string& column, const VcfRecord::SampleIdType& sample,
                   const std::vector<std::string>& format, VcfRecord::Builder& rb)
 {
@@ -336,9 +347,9 @@ void parse_sample(const std::string& column, const VcfRecord::SampleIdType& samp
     
     if (format.front() == "GT") {
         const std::string& genotype = values.front();
-        const bool is_phased {(genotype.find_first_of('|') != std::string::npos)};
+        const bool phased = is_phased(genotype);
         
-        auto alleles = split(genotype, (is_phased) ? '|' : '/');
+        auto alleles = split(genotype, (phased) ? '|' : '/');
         
         std::vector<unsigned> allele_numbers {};
         allele_numbers.reserve(alleles.size());
@@ -346,7 +357,7 @@ void parse_sample(const std::string& column, const VcfRecord::SampleIdType& samp
                        [] (const std::string& a) { return static_cast<unsigned>(std::stoul(a)); });
         
         rb.add_genotype(sample, allele_numbers,
-                        (is_phased) ? VcfRecord::Builder::Phasing::Phased : VcfRecord::Builder::Phasing::Unphased);
+                        (phased) ? VcfRecord::Builder::Phasing::Phased : VcfRecord::Builder::Phasing::Unphased);
     }
     
     auto key_it = std::cbegin(format);

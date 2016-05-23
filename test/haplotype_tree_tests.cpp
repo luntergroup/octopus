@@ -536,7 +536,7 @@
 //    
 //    const auto region = parse_region("16:9200000-9202500", human);
 //    
-//    const auto sample = read_manager.get_samples().front();
+//    const auto sample = read_manager.samples().front();
 //    
 //    auto reads = read_manager.fetch_reads(sample, region);
 //    
@@ -592,7 +592,7 @@
 //    builder.add_generator(CandidateGeneratorBuilder::Generator::Alignment);
 //    auto candidate_generator = builder.build();
 //    
-//    const auto sample = read_manager.get_samples().front();
+//    const auto sample = read_manager.samples().front();
 //    
 //    const auto region = parse_region("16:9300000-9302500", human);
 //    

@@ -295,7 +295,7 @@ void HtslibBcfFacade::write_header(const VcfHeader& header)
 {
     auto hdr = bcf_hdr_init("w");
     
-    bcf_hdr_set_version(hdr, header.get_file_format().c_str());
+    bcf_hdr_set_version(hdr, header.file_format().c_str());
     
     for (auto& p : header.get_basic_fields()) {
         auto hrec = (bcf_hrec_t*) std::malloc(sizeof(bcf_hrec_t));
@@ -350,7 +350,7 @@ void HtslibBcfFacade::write_header(const VcfHeader& header)
         }
     }
     
-    for (const auto& sample : header.get_samples()) {
+    for (const auto& sample : header.samples()) {
         bcf_hdr_add_sample(hdr, sample.c_str());
     }
     

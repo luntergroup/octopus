@@ -180,7 +180,7 @@ std::ostream& operator<<(std::ostream& os, const std::vector<std::string>& v)
 
 // private methods
 
-std::vector<VcfRecord::SampleIdType> VcfRecord::get_samples() const
+std::vector<VcfRecord::SampleIdType> VcfRecord::samples() const
 {
     std::vector<SampleIdType> result {};
     
@@ -263,7 +263,7 @@ void VcfRecord::print_sample_data(std::ostream& os) const
         
         bool has_genotype {has_genotypes()};
         
-        auto samples = get_samples();
+        auto samples = this->samples();
         
         auto last = std::next(std::cbegin(samples), samples.size() - 1);
         std::for_each(std::cbegin(samples), last, [this, &os, has_genotype] (const auto& sample) {
@@ -491,27 +491,31 @@ VcfRecord::Builder& VcfRecord::Builder::add_format(KeyType key)
 
 VcfRecord::Builder&VcfRecord::Builder:: add_homozygous_ref_genotype(const SampleIdType& sample, unsigned ploidy)
 {
-    genotypes_.emplace(sample, std::make_pair(std::vector<SequenceType>(ploidy, ref_allele_), true));
-    return *this;
+    std::vector<SequenceType> tmp(ploidy, ref_allele_);
+    return add_genotype(sample, tmp, Phasing::Phased);
 }
 
 VcfRecord::Builder& VcfRecord::Builder::add_genotype(const SampleIdType& sample,
                                                      const std::vector<SequenceType>& alleles, Phasing phasing)
 {
-    genotypes_.emplace(sample, std::make_pair(alleles, phasing == Phasing::Phased));
+    genotypes_.emplace(std::piecewise_construct,
+                       std::forward_as_tuple(sample),
+                       std::forward_as_tuple(alleles, phasing == Phasing::Phased));
     return *this;
 }
 
 VcfRecord::Builder& VcfRecord::Builder::add_genotype(const SampleIdType& sample,
                                                      const std::vector<unsigned>& alleles, Phasing phasing)
 {
-    std::vector<SequenceType> a {};
-    a.reserve(alleles.size());
-    std::transform(std::cbegin(alleles), std::cend(alleles), std::back_inserter(a),
-                   [this] (unsigned allele) { return (allele == 0) ? ref_allele_ : alt_alleles_[allele - 1]; });
+    std::vector<SequenceType> tmp {};
+    tmp.reserve(alleles.size());
     
-    genotypes_.emplace(sample, std::make_pair(a, phasing == Phasing::Phased));
-    return *this;
+    std::transform(std::cbegin(alleles), std::cend(alleles), std::back_inserter(tmp),
+                   [this] (unsigned allele) {
+                       return (allele == 0) ? ref_allele_ : alt_alleles_[allele - 1];
+                   });
+    
+    return add_genotype(sample, tmp, phasing);
 }
 
 VcfRecord::Builder& VcfRecord::Builder::add_genotype_field(const SampleIdType& sample, const KeyType& key,

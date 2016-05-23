@@ -39,7 +39,7 @@ BOOST_AUTO_TEST_CASE(can_extract_reads_from_BAM_files)
     
     BOOST_REQUIRE(read_manager.num_samples() == 1);
     
-    const auto sample = read_manager.get_samples().front();
+    const auto sample = read_manager.samples().front();
     
     const GenomicRegion region1 {"1", 9'990, 10'000};
     const GenomicRegion region2 {"10", 1'000'000, 1'000'100};
@@ -66,7 +66,7 @@ BOOST_AUTO_TEST_CASE(can_extract_reads_from_CRAM_files)
     
     BOOST_REQUIRE(read_manager.num_samples() == 1);
     
-    const auto sample = read_manager.get_samples().front();
+    const auto sample = read_manager.samples().front();
     
     const GenomicRegion region1 {"1", 9'990, 10'000};
     const GenomicRegion region2 {"10", 1'000'000, 1'000'100};
@@ -98,7 +98,7 @@ BOOST_AUTO_TEST_CASE(read_manager_multiple_files_below_max_file_limit_test)
     
     BOOST_REQUIRE(read_manager.num_samples() == 2);
     
-    const auto samples = read_manager.get_samples();
+    const auto samples = read_manager.samples();
     
     BOOST_REQUIRE(samples.size() == 2);
     
@@ -136,7 +136,7 @@ BOOST_AUTO_TEST_CASE(read_manager_multiple_files_above_max_file_limit_test)
     
     BOOST_REQUIRE(read_manager.num_samples() == 3);
     
-    const auto samples = read_manager.get_samples();
+    const auto samples = read_manager.samples();
     
     const GenomicRegion a_big_region {"1", 2000000, 3000000};
     const GenomicRegion a_small_region {"10", 1000000, 1000100};

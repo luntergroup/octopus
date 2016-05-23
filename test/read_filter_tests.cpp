@@ -29,7 +29,7 @@ BOOST_AUTO_TEST_CASE(read_filter_test)
 //    
 //    ReadManager read_manager {NA12878_low_coverage};
 //    
-//    auto sample_ids = read_manager.get_samples();
+//    auto sample_ids = read_manager.samples();
 //    
 //    auto sample = sample_ids.front();
 //    

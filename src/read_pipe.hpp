@@ -58,7 +58,7 @@ public:
     void set_read_manager(ReadManager& read_manager) noexcept;
     
     unsigned num_samples() const noexcept;
-    const std::vector<SampleIdType>& get_samples() const noexcept;
+    const std::vector<SampleIdType>& samples() const noexcept;
     
     ReadMap fetch_reads(const GenomicRegion& region);
     ReadMap fetch_reads(const std::vector<GenomicRegion>& regions);

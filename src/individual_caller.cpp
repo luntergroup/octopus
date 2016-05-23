@@ -50,7 +50,7 @@ IndividualVariantCaller::IndividualVariantCaller(const ReferenceGenome& referenc
                                                  CallerParameters specific_parameters)
 :
 VariantCaller {reference, read_pipe, std::move(candidate_generator), std::move(general_parameters)},
-sample_ {read_pipe.get_samples().front()},
+sample_ {samples_.front()},
 ploidy_ {specific_parameters.ploidy},
 min_variant_posterior_ {specific_parameters.min_variant_posterior},
 min_refcall_posterior_ {specific_parameters.min_refcall_posterior}

@@ -51,10 +51,10 @@ public:
     VcfHeader(VcfHeader&&)                 = default;
     VcfHeader& operator=(VcfHeader&&)      = default;
     
-    const ValueType& get_file_format() const noexcept;
+    const ValueType& file_format() const noexcept;
     
     unsigned num_samples() const noexcept;
-    std::vector<std::string> get_samples() const;
+    std::vector<std::string> samples() const;
     
     bool has_basic_field(const KeyType& key) const noexcept;
     bool has_structured_field(const TagType& tag) const noexcept;
@@ -124,7 +124,7 @@ namespace std {
     {
         size_t operator()(const VcfHeader& header) const
         {
-            return hash<VcfHeader::ValueType>()(header.get_file_format());
+            return hash<VcfHeader::ValueType>()(header.file_format());
         }
     };
 } // namespace std

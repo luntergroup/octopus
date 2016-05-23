@@ -97,7 +97,7 @@ unsigned ReadManager::num_samples() const noexcept
     return static_cast<unsigned>(samples_.size());
 }
 
-const std::vector<ReadManager::SampleIdType>& ReadManager::get_samples() const
+const std::vector<ReadManager::SampleIdType>& ReadManager::samples() const
 {
     return samples_;
 }
@@ -115,7 +115,7 @@ bool ReadManager::has_contig_reads(const std::vector<SampleIdType>& samples,
 
 bool ReadManager::has_contig_reads(const GenomicRegion::ContigNameType& contig)
 {
-    return has_contig_reads(get_samples(), contig);
+    return has_contig_reads(samples(), contig);
 }
 
 std::size_t ReadManager::count_reads(const SampleIdType& sample, const GenomicRegion& region)
@@ -172,7 +172,7 @@ std::size_t ReadManager::count_reads(const std::vector<SampleIdType>& samples, c
 
 std::size_t ReadManager::count_reads(const GenomicRegion& region)
 {
-    return count_reads(get_samples(), region);
+    return count_reads(samples(), region);
 }
 
 GenomicRegion ReadManager::find_covered_subregion(const SampleIdType& sample,
@@ -264,7 +264,7 @@ GenomicRegion ReadManager::find_covered_subregion(const std::vector<SampleIdType
 
 GenomicRegion ReadManager::find_covered_subregion(const GenomicRegion& region, const std::size_t max_reads)
 {
-    return find_covered_subregion(get_samples(), region, max_reads);
+    return find_covered_subregion(samples(), region, max_reads);
 }
 
 ReadManager::ReadContainer ReadManager::fetch_reads(const SampleIdType& sample, const GenomicRegion& region)
@@ -332,7 +332,7 @@ ReadManager::SampleReadMap ReadManager::fetch_reads(const std::vector<SampleIdTy
 
 ReadManager::SampleReadMap ReadManager::fetch_reads(const GenomicRegion& region)
 {
-    return fetch_reads(get_samples(), region);
+    return fetch_reads(samples(), region);
 }
 
 // Private methods

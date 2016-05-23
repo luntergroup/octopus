@@ -55,7 +55,7 @@ public:
     unsigned num_files() const noexcept;
     
     unsigned num_samples() const noexcept;
-    const std::vector<SampleIdType>& get_samples() const;
+    const std::vector<SampleIdType>& samples() const;
     
     bool has_contig_reads(const SampleIdType& sample, const GenomicRegion::ContigNameType& contig);
     bool has_contig_reads(const std::vector<SampleIdType>& samples,

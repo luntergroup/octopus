@@ -57,7 +57,7 @@ BOOST_AUTO_TEST_CASE(generate_candidates_returns_sorted_and_unique_candidates)
     
     ReadManager read_manager {NA12878_low_coverage};
     
-    const auto sample = read_manager.get_samples().front();
+    const auto sample = read_manager.samples().front();
     
     const auto region = parse_region("1:0-2000000", human);
     
@@ -89,7 +89,7 @@ BOOST_AUTO_TEST_CASE(AlignmentCandidateVariantGenerator_ignores_snps_with_low_ba
     
     ReadManager read_manager {NA12878_low_coverage};
     
-    const auto sample = read_manager.get_samples().front();
+    const auto sample = read_manager.samples().front();
     
     auto reads = read_manager.fetch_reads(sample, region);
     
@@ -128,7 +128,7 @@ BOOST_AUTO_TEST_CASE(can_specify_the_maximum_size_of_candidates)
     
     const auto region = parse_region("16:9290000-9300000", human);
     
-    const auto sample = read_manager.get_samples().front();
+    const auto sample = read_manager.samples().front();
     
     auto reads = read_manager.fetch_reads(sample, region);
     
@@ -154,7 +154,7 @@ BOOST_AUTO_TEST_CASE(only_insertions_are_included_when_the_max_variant_size_is_z
     
     const auto region = parse_region("16:9299940-9300055", human);
     
-    const auto sample = read_manager.get_samples().front();
+    const auto sample = read_manager.samples().front();
     
     auto reads = read_manager.fetch_reads(sample, region);
     
@@ -177,7 +177,7 @@ BOOST_AUTO_TEST_CASE(AlignmentCandidateVariantGenerator_includes_all_alleles_in_
     
     ReadManager read_manager {NA12878_low_coverage};
     
-    const auto sample = read_manager.get_samples().front();
+    const auto sample = read_manager.samples().front();
     
     auto reads = read_manager.fetch_reads(sample, region);
     

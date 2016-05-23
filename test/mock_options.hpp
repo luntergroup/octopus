@@ -25,7 +25,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--help",
         //"--version",
         
-        //"--debug",
+        "--debug",
         //"--trace",
         
         //"--sites-only",
@@ -44,8 +44,8 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         "--reference", human_reference_fasta.c_str(),
         //"--reference", ecoli_reference_fasta.c_str(),
         
-        //"--reads", NA12878_low_coverage.c_str(),
-        "--reads", NA12878_high_coverage.c_str(),
+        "--reads", NA12878_low_coverage.c_str(),
+        //"--reads", NA12878_high_coverage.c_str(),
         //"--reads", "~/Genomics/Illumina/NA12878.mapped.ILLUMINA.bwa.CEU.high_coverage_pcr_free.20130906.chr22.bam",
         
         //"--reads", NA12891_high_coverage.c_str(),
@@ -78,7 +78,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         
         /* input regions */
         
-        "--regions", "MT",
+        "--regions", "6:58,604,609-58,606,266",
         
         //"--regions", "22:42,522,971-42,523,546", // bad model filter?
         
@@ -229,9 +229,9 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--min-assembler-base-quality", "10",
         //"--max-variant-size", "25",
         
-        "--disable-haplotype-lagging",
+        //"--disable-haplotype-lagging",
         //"--disable-inactive-flank-scoring",
-        "--max-haplotypes", "64",
+        //"--max-haplotypes", "64",
         
         //"--min-variant-posterior", "2",
         //"--min-refcall-posterior", "0",
@@ -246,7 +246,8 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--output", "octopus_NA12878HC_22_unlagged_dummy.vcf",
         //"--output", "octopus_calls2.vcf",
         
-        nullptr};
+        nullptr
+    };
     
     int argc = sizeof(argv) / sizeof(char*) - 1;
     

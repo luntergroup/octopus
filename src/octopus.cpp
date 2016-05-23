@@ -55,6 +55,8 @@
 #include "logging.hpp"
 #include "timing.hpp"
 
+#include "genotype_reader.hpp"
+
 namespace Octopus
 {
     void log_startup()
@@ -148,7 +150,7 @@ namespace Octopus
                                               const ReadManager& read_manager)
     {
         auto user_samples = Options::get_user_samples(options);
-        auto file_samples = read_manager.get_samples();
+        auto file_samples = read_manager.samples();
         
         if (user_samples) {
             const auto it = std::partition(std::begin(*user_samples), std::end(*user_samples),
@@ -316,77 +318,77 @@ namespace Octopus
         
         GenomeCallingComponents& operator=(GenomeCallingComponents&& other) = delete;
         
-        const ReferenceGenome& get_reference() const noexcept
+        const ReferenceGenome& reference() const noexcept
         {
             return components_.reference;
         }
         
-        ReadManager& get_read_manager() noexcept
+        ReadManager& read_manager() noexcept
         {
             return components_.read_manager;
         }
         
-        const ReadManager& get_read_manager() const noexcept
+        const ReadManager& read_manager() const noexcept
         {
             return components_.read_manager;
         }
         
-        ReadPipe& get_read_pipe() noexcept
+        ReadPipe& read_pipe() noexcept
         {
             return components_.read_pipe;
         }
         
-        const ReadPipe& get_read_pipe() const noexcept
+        const ReadPipe& read_pipe() const noexcept
         {
             return components_.read_pipe;
         }
         
-        const Samples& get_samples() const noexcept
+        const Samples& samples() const noexcept
         {
             return components_.samples;
         }
         
-        const InputRegionMap& get_search_regions() const noexcept
+        const InputRegionMap& search_regions() const noexcept
         {
             return components_.regions;
         }
         
-        const Contigs& get_contigs_in_output_order() const noexcept
+        const Contigs& contigs_in_output_order() const noexcept
         {
             return components_.contigs_in_output_order;
         }
         
-        VcfWriter& get_output() noexcept
+        VcfWriter& output() noexcept
         {
             return components_.output;
         }
         
-        const VcfWriter& get_output() const noexcept
+        const VcfWriter& output() const noexcept
         {
             return components_.output;
         }
         
-        std::size_t get_read_buffer_size() const noexcept
+        std::size_t read_buffer_size() const noexcept
         {
             return components_.read_buffer_size;
         }
         
-        const boost::optional<fs::path>& get_temp_directory() const noexcept
+        const boost::optional<fs::path>& temp_directory() const noexcept
         {
             return components_.temp_directory;
         }
         
-        boost::optional<unsigned> get_num_threads() const noexcept
+        boost::optional<unsigned> num_threads() const noexcept
         {
             return components_.num_threads;
         }
         
-        const CandidateGeneratorBuilder& get_candidate_generator_builder() const noexcept
+        const CandidateGeneratorBuilder& candidate_generator_builder() const noexcept
         {
             return components_.candidate_generator_builder;
         }
         
-        const VariantCallerFactory& get_caller_factory() const noexcept
+        const VariantCallerFactory& caller_factory() const noexcept
         {
             return components_.variant_caller_factory;
         }
@@ -461,17 +463,17 @@ namespace Octopus
     {
         Logging::FatalLogger log {};
         
-        if (components.get_samples().empty()) {
+        if (components.samples().empty()) {
             log << "No samples detected";
             return false;
         }
         
-        if (components.get_search_regions().empty()) {
+        if (components.search_regions().empty()) {
             log << "There are no input regions";
             return false;
         }
         
-        if (components.get_candidate_generator_builder().num_generators() == 0) {
+        if (components.candidate_generator_builder().num_generators() == 0) {
             log << "There are no candidate generators";
             return false;
         }
@@ -541,25 +543,25 @@ namespace Octopus
         explicit ContigCallingComponents(const GenomicRegion::ContigNameType& contig,
                                          GenomeCallingComponents& genome_components)
         :
-        reference {genome_components.get_reference()},
-        read_manager {genome_components.get_read_manager()},
-        regions {genome_components.get_search_regions().at(contig)},
-        samples {genome_components.get_samples()},
-        caller {genome_components.get_caller_factory().make(contig)},
-        read_buffer_size {genome_components.get_read_buffer_size()},
-        output {genome_components.get_output()}
+        reference {genome_components.reference()},
+        read_manager {genome_components.read_manager()},
+        regions {genome_components.search_regions().at(contig)},
+        samples {genome_components.samples()},
+        caller {genome_components.caller_factory().make(contig)},
+        read_buffer_size {genome_components.read_buffer_size()},
+        output {genome_components.output()}
         {}
         
         explicit ContigCallingComponents(const GenomicRegion::ContigNameType& contig,
                                          VcfWriter& output,
                                          GenomeCallingComponents& genome_components)
         :
-        reference {genome_components.get_reference()},
-        read_manager {genome_components.get_read_manager()},
-        regions {genome_components.get_search_regions().at(contig)},
-        samples {genome_components.get_samples()},
-        caller {genome_components.get_caller_factory().make(contig)},
-        read_buffer_size {genome_components.get_read_buffer_size()},
+        reference {genome_components.reference()},
+        read_manager {genome_components.read_manager()},
+        regions {genome_components.search_regions().at(contig)},
+        samples {genome_components.samples()},
+        caller {genome_components.caller_factory().make(contig)},
+        read_buffer_size {genome_components.read_buffer_size()},
         output {output}
         {}
         
@@ -579,12 +581,12 @@ namespace Octopus
     void write_final_output_header(GenomeCallingComponents& components, const bool sites_only = false)
     {
         if (sites_only) {
-            components.get_output() << make_header({}, components.get_contigs_in_output_order(),
-                                                   components.get_reference());
+            components.output() << make_header({}, components.contigs_in_output_order(),
+                                                   components.reference());
         } else {
-            components.get_output() << make_header(components.get_samples(),
-                                                   components.get_contigs_in_output_order(),
-                                                   components.get_reference());
+            components.output() << make_header(components.samples(),
+                                                   components.contigs_in_output_order(),
+                                                   components.reference());
         }
     }
     
@@ -592,13 +594,13 @@ namespace Octopus
     {
         std::ostringstream ss {};
         
-        if (components.get_samples().size() == 1) {
+        if (components.samples().size() == 1) {
             ss << "Sample is: ";
         } else {
             ss << "Samples are: ";
         }
         
-        std::transform(std::cbegin(components.get_samples()), std::cend(components.get_samples()),
+        std::transform(std::cbegin(components.samples()), std::cend(components.samples()),
                        std::ostream_iterator<std::string> {ss, " "},
                        [] (const auto& sample) -> std::string {
                            return "\"" + sample + "\"";
@@ -611,7 +613,7 @@ namespace Octopus
         
         log << str;
         
-        stream(log) << "Writing calls to " << components.get_output().path();
+        stream(log) << "Writing calls to " << components.output().path();
     }
     
     void write_calls(std::deque<VcfRecord>&& calls, VcfWriter& out)
@@ -711,9 +713,9 @@ namespace Octopus
     void cleanup(GenomeCallingComponents& components) noexcept
     {
         Logging::InfoLogger log {};
-        if (components.get_temp_directory()) {
+        if (components.temp_directory()) {
             try {
-                const auto num_files_removed = fs::remove_all(*components.get_temp_directory());
+                const auto num_files_removed = fs::remove_all(*components.temp_directory());
                 stream(log) << "Removed " << num_files_removed << " temporary files";
             } catch (const std::exception& e) {
                 stream(log) << "Cleanup failed with exception: " << e.what();
@@ -723,9 +725,9 @@ namespace Octopus
     
     void run_octopus_single_threaded(GenomeCallingComponents& components)
     {
-        ProgressMeter meter {components.get_search_regions()};
+        ProgressMeter meter {components.search_regions()};
         
-        for (const auto& contig : components.get_contigs_in_output_order()) {
+        for (const auto& contig : components.contigs_in_output_order()) {
             run_octopus_on_contig(ContigCallingComponents {contig, components}, meter);
         }
     }
@@ -733,7 +735,7 @@ namespace Octopus
     VcfWriter create_unique_temp_output_file(const GenomicRegion& region,
                                              const GenomeCallingComponents& components)
     {
-        auto path = *components.get_temp_directory();
+        auto path = *components.temp_directory();
         
         const auto& contig = region.contig_name();
         const auto begin   = std::to_string(region.begin());
@@ -744,14 +746,14 @@ namespace Octopus
         path /= file_name;
         
         return VcfWriter {
-            path, make_header(components.get_samples(), contig, components.get_reference())
+            path, make_header(components.samples(), contig, components.reference())
         };
     }
     
     VcfWriter create_unique_temp_output_file(const GenomicRegion::ContigNameType& contig,
                                              const GenomeCallingComponents& components)
     {
-        return create_unique_temp_output_file(components.get_reference().contig_region(contig),
+        return create_unique_temp_output_file(components.reference().contig_region(contig),
                                               components);
     }
     
@@ -759,14 +761,14 @@ namespace Octopus
     
     TempVcfWriterMap make_temp_writers(const GenomeCallingComponents& components)
     {
-        if (!components.get_temp_directory()) {
+        if (!components.temp_directory()) {
             throw std::runtime_error {"Could not make temp writers"};
         }
         
         TempVcfWriterMap result {};
-        result.reserve(components.get_contigs_in_output_order().size());
+        result.reserve(components.contigs_in_output_order().size());
         
-        for (const auto& contig : components.get_contigs_in_output_order()) {
+        for (const auto& contig : components.contigs_in_output_order()) {
             result.emplace(contig, create_unique_temp_output_file(contig, components));
         }
         
@@ -831,7 +833,7 @@ namespace Octopus
     
     Task::ExecutionPolicy make_execution_policy(const GenomeCallingComponents& components)
     {
-        if (components.get_num_threads()) {
+        if (components.num_threads()) {
             return Task::ExecutionPolicy::None;
         }
         return Task::ExecutionPolicy::Threaded;
@@ -841,9 +843,9 @@ namespace Octopus
     {
         const auto policy = make_execution_policy(components);
         
-        ContigTaskMap result {ContigOrder {components.get_contigs_in_output_order()}};
+        ContigTaskMap result {ContigOrder {components.contigs_in_output_order()}};
         
-        for (const auto& contig : components.get_contigs_in_output_order()) {
+        for (const auto& contig : components.contigs_in_output_order()) {
             ContigCallingComponents contig_components {contig, components};
             contig_components.read_buffer_size /= num_threads;
             result.emplace(contig, divide_work_into_tasks(contig_components, policy));
@@ -854,8 +856,8 @@ namespace Octopus
     
     unsigned calculate_num_task_threads(const GenomeCallingComponents& components)
     {
-        if (components.get_num_threads()) {
-            return *components.get_num_threads();
+        if (components.num_threads()) {
+            return *components.num_threads();
         }
         
         // TODO: come up with a better calculation
@@ -868,7 +870,7 @@ namespace Octopus
         log << "Unable to detect the number of system threads,"
             " it may be better to run with a user number if the number of cores is known";
         
-        const auto num_files = components.get_read_manager().num_files();
+        const auto num_files = components.read_manager().num_files();
         
         return std::min(num_files, 8u);
     }
@@ -973,9 +975,9 @@ namespace Octopus
         
         std::vector<std::future<CompletedTask>> futures(num_task_threads);
         
-        ProgressMeter meter {components.get_search_regions()};
+        ProgressMeter meter {components.search_regions()};
         
-        ContigTaskMap pending_tasks {ContigOrder {components.get_contigs_in_output_order()}};
+        ContigTaskMap pending_tasks {ContigOrder {components.contigs_in_output_order()}};
         
         MappableSetMap<ContigNameType, CompletedTask> buffered_tasks {};
         
@@ -1115,19 +1117,19 @@ namespace Octopus
         
         index_vcfs(results);
         
-        merge(results, components.get_output(), components.get_contigs_in_output_order());
+        merge(results, components.output(), components.contigs_in_output_order());
     }
     } // namespace
     
     bool is_multithreaded(const GenomeCallingComponents& components)
     {
-        return !components.get_num_threads() || *components.get_num_threads() > 1;
+        return !components.num_threads() || *components.num_threads() > 1;
     }
     
     void log_final_info(const GenomeCallingComponents& components, const TimeInterval& runtime)
     {
         Logging::InfoLogger log {};
-        stream(log) << "Finished processing " << calculate_total_search_size(components.get_search_regions())
+        stream(log) << "Finished processing " << calculate_total_search_size(components.search_regions())
                     << "bp, total runtime " << runtime;
     }
     

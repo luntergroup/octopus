@@ -55,7 +55,7 @@ unsigned ReadPipe::num_samples() const noexcept
     return static_cast<unsigned>(samples_.size());
 }
 
-const std::vector<SampleIdType>& ReadPipe::get_samples() const noexcept
+const std::vector<SampleIdType>& ReadPipe::samples() const noexcept
 {
     return samples_;
 }

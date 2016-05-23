@@ -39,7 +39,7 @@ max_haplotypes {max_haplotypes},
 refcall_type {refcall_type},
 call_sites_only {call_sites_only},
 lag_haplotype_generation {allow_lagging},
-min_haplotype_posterior {1e-15},
+min_haplotype_posterior {1e-10},
 allow_inactive_flank_scoring {allow_flank_scoring},
 min_phase_score {min_phase_score}
 {}
@@ -51,7 +51,7 @@ VariantCaller::VariantCaller(const ReferenceGenome& reference,
 :
 reference_ {reference},
 read_pipe_ {read_pipe},
-samples_ {read_pipe.get_samples()},
+samples_ {read_pipe.samples()},
 debug_log_ {},
 parameters_ {std::move(parameters)},
 candidate_generator_ {std::move(candidate_generator)}
@@ -203,8 +203,7 @@ template <typename T>
 auto wrap(std::vector<std::unique_ptr<T>>&& calls)
 {
     return std::vector<CallWrapper> {
-        std::make_move_iterator(std::begin(calls)),
-        std::make_move_iterator(std::end(calls))
+        std::make_move_iterator(std::begin(calls)), std::make_move_iterator(std::end(calls))
     };
 }
 
@@ -239,15 +238,17 @@ void set_phase(const SampleIdType& sample, const Phaser::PhaseSet::PhaseRegion& 
 
 void set_phasing(std::vector<CallWrapper>& calls, const Phaser::PhaseSet& phase_set)
 {
-    const auto call_regions = extract_regions(calls);
-    
-    for (auto& call : calls) {
-        const auto& call_region = call.mapped_region();
+    if (!calls.empty()) {
+        const auto call_regions = extract_regions(calls);
         
-        for (const auto& p : phase_set.phase_regions) {
-            const auto& phase = find_phase_region(p.second, call_region);
-            if (phase) {
-                set_phase(p.first, *phase, call_regions, call);
+        for (auto& call : calls) {
+            const auto& call_region = call.mapped_region();
+            
+            for (const auto& p : phase_set.phase_regions) {
+                const auto& phase = find_phase_region(p.second, call_region);
+                if (phase) {
+                    set_phase(p.first, *phase, call_regions, call);
+                }
             }
         }
     }

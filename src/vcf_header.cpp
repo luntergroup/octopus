@@ -23,7 +23,7 @@ VcfHeader::VcfHeader(std::string file_format)
 : file_format_ {std::move(file_format)}
 {}
 
-const VcfHeader::ValueType& VcfHeader::get_file_format() const noexcept
+const VcfHeader::ValueType& VcfHeader::file_format() const noexcept
 {
     return file_format_;
 }
@@ -33,7 +33,7 @@ unsigned VcfHeader::num_samples() const noexcept
     return static_cast<unsigned>(samples_.size());
 }
 
-std::vector<std::string> VcfHeader::get_samples() const
+std::vector<std::string> VcfHeader::samples() const
 {
     return samples_;
 }
@@ -187,7 +187,7 @@ bool contig_line_exists(const VcfHeader& header, const std::string& contig)
 
 bool operator==(const VcfHeader& lhs, const VcfHeader& rhs)
 {
-    return lhs.get_file_format() == rhs.get_file_format() && lhs.get_samples() == rhs.get_samples()
+    return lhs.file_format() == rhs.file_format() && lhs.samples() == rhs.samples()
             && lhs.get_basic_fields() == rhs.get_basic_fields()
             && lhs.get_structured_fields() == rhs.get_structured_fields();
 }

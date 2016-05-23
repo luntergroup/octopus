@@ -56,7 +56,7 @@ BOOST_AUTO_TEST_CASE(aligned_read_works_with_mappable_algorithms)
     
 //    const GenomicRegion region {"4", 10'000'000, 10'100'000};
 //    
-//    const auto sample = read_manager.get_samples().front();
+//    const auto sample = read_manager.samples().front();
 //    
 //    const auto reads = read_manager.fetch_reads(sample, region);
 //    
@@ -152,7 +152,7 @@ BOOST_AUTO_TEST_CASE(AlignedRead_can_be_compressed_and_decompressed)
     
     const GenomicRegion region {"4", 93235280, 93235585};
     
-    const auto sample = read_manager.get_samples().front();
+    const auto sample = read_manager.samples().front();
     
     auto reads = read_manager.fetch_reads(sample, region);
     

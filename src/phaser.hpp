@@ -121,8 +121,7 @@ namespace Octopus
     boost::optional<std::reference_wrapper<const Phaser::PhaseSet::PhaseRegion>>
     find_phase_region(const Phaser::PhaseSet::SamplePhaseRegions& phasings, const T& mappable)
     {
-        const auto overlapped = overlap_range(std::cbegin(phasings), std::cend(phasings), mappable,
-                                              BidirectionallySortedTag {});
+        const auto overlapped = overlap_range(phasings, mappable, BidirectionallySortedTag {});
         
         if (!overlapped.empty()) {
             assert(size(overlapped, BidirectionallySortedTag {}) == 1);

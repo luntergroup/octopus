@@ -116,7 +116,7 @@ bool all_same_format(const std::vector<VcfHeader>& headers)
 {
     return std::adjacent_find(std::cbegin(headers), std::cend(headers),
                               [] (const auto& lhs, const auto& rhs) {
-                                  return lhs.get_file_format() != rhs.get_file_format();
+                                  return lhs.file_format() != rhs.file_format();
                               }) == std::cend(headers);
 }
 
@@ -124,7 +124,7 @@ bool contain_same_samples(const std::vector<VcfHeader>& headers)
 {
     return std::adjacent_find(std::cbegin(headers), std::cend(headers),
                               [] (const auto& lhs, const auto& rhs) {
-                                  return lhs.get_samples() != rhs.get_samples();
+                                  return lhs.samples() != rhs.samples();
                               }) == std::cend(headers);
 }
 
@@ -151,8 +151,8 @@ VcfHeader merge(const std::vector<VcfHeader>& headers)
     return headers.front(); // TODO: implement this
 //    VcfHeader::Builder hb {};
 //    
-//    hb.set_file_format(headers.front().get_file_format());
-//    hb.set_samples(headers.front().get_samples());
+//    hb.set_file_format(headers.front().file_format());
+//    hb.set_samples(headers.front().samples());
 //    
 ////    for (const auto& header : headers) {
 ////        
