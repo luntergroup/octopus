@@ -27,7 +27,9 @@ namespace Octopus {
         using SizeType = AlignedRead::SizeType;
         
         RandomCandidateVariantGenerator() = delete;
+        
         explicit RandomCandidateVariantGenerator(const ReferenceGenome& reference);
+        
         ~RandomCandidateVariantGenerator() override = default;
         
         RandomCandidateVariantGenerator(const RandomCandidateVariantGenerator&)            = default;

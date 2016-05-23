@@ -32,11 +32,13 @@ public:
     using SizeType    = GenomicRegion::SizeType;
     
     AssemblerCandidateVariantGenerator() = delete;
+    
     explicit AssemblerCandidateVariantGenerator(const ReferenceGenome& reference,
                                                 std::vector<unsigned> kmer_sizes,
                                                 QualityType min_base_quality = 10,
                                                 unsigned min_supporting_reads = 2,
                                                 SizeType max_variant_size = 500);
+    
     ~AssemblerCandidateVariantGenerator() override = default;
     
     AssemblerCandidateVariantGenerator(const AssemblerCandidateVariantGenerator&)            = default;

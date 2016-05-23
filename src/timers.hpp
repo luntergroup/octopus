@@ -11,6 +11,8 @@
 
 //#define BENCHMARK
 
+#include <array>
+
 #include <boost/timer/timer.hpp>
 
 // variant caller timers
@@ -23,8 +25,9 @@ extern boost::timer::cpu_timer calling_timer;
 extern boost::timer::cpu_timer phasing_timer;
 extern boost::timer::cpu_timer output_timer;
 
-extern boost::timer::cpu_timer misc_timer1;
-extern boost::timer::cpu_timer misc_timer2;
+using TimerArray = std::array<boost::timer::cpu_timer, 12>;
+
+extern TimerArray misc_timer;
 
 inline void resume_timer(boost::timer::cpu_timer& timer)
 {

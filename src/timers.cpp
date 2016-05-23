@@ -19,8 +19,7 @@ boost::timer::cpu_timer calling_timer {};
 boost::timer::cpu_timer phasing_timer {};
 boost::timer::cpu_timer output_timer {};
 
-boost::timer::cpu_timer misc_timer1 {};
-boost::timer::cpu_timer misc_timer2 {};
+TimerArray misc_timer {};
 
 void init_timers()
 {
@@ -32,8 +31,9 @@ void init_timers()
     phasing_timer.start(); phasing_timer.stop();
     calling_timer.start(); calling_timer.stop();
     
-    misc_timer1.start(); misc_timer1.stop();
-    misc_timer2.start(); misc_timer2.stop();
+    for (auto& timer : misc_timer) {
+        timer.stop();
+    }
 }
 
 void print_all_timers()
@@ -59,9 +59,8 @@ void print_all_timers()
     std::cout << "phasing timer" << '\n';
     std::cout << phasing_timer.format() << std::endl;
     
-    std::cout << "misc timer 1" << '\n';
-    std::cout << misc_timer1.format() << std::endl;
-    
-    std::cout << "misc timer 2" << '\n';
-    std::cout << misc_timer2.format() << std::endl;
+    for (std::size_t i {0}; i < misc_timer.size(); ++i) {
+        std::cout << "misc timer " << i << '\n';
+        std::cout << misc_timer[i].format() << '\n';
+    }
 }

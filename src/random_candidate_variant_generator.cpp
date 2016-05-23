@@ -46,6 +46,7 @@ namespace Octopus {
         if (num_positions == 0) return result;
         
         static const auto seed = std::chrono::system_clock::now().time_since_epoch().count();
+        
         static std::default_random_engine generator {static_cast<unsigned>(seed)};
         
         std::uniform_int_distribution<SizeType> uniform {0, std::min(num_positions, max_read_size_)};

@@ -27,8 +27,10 @@ public:
     using SizeType = GenomicRegion::SizeType;
     
     OnlineCandidateVariantGenerator() = delete;
+    
     explicit OnlineCandidateVariantGenerator(const ReferenceGenome& reference,
                                              SizeType max_variant_size = 100);
+    
     ~OnlineCandidateVariantGenerator() override = default;
     
     OnlineCandidateVariantGenerator(const OnlineCandidateVariantGenerator&)            = default;

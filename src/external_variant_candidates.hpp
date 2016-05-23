@@ -25,9 +25,11 @@ class ExternalCandidateVariantGenerator : public ICandidateVariantGenerator
 {
 public:
     ExternalCandidateVariantGenerator() = delete;
+    
     explicit ExternalCandidateVariantGenerator(boost::filesystem::path path);
     explicit ExternalCandidateVariantGenerator(std::unique_ptr<VcfReader> reader);
     explicit ExternalCandidateVariantGenerator(const std::shared_ptr<VcfReader>& reader);
+    
     ~ExternalCandidateVariantGenerator() override = default;
     
     ExternalCandidateVariantGenerator(const ExternalCandidateVariantGenerator&)            = default;

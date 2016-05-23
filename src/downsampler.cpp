@@ -10,84 +10,178 @@
 
 #include <vector>
 #include <deque>
+#include <functional>
 #include <iterator>
 #include <algorithm>
 #include <random>
 #include <cassert>
 
+#include "mappable.hpp"
+#include "mappable_ranges.hpp"
 #include "mappable_algorithms.hpp"
 #include "read_utils.hpp"
 
+#include "timers.hpp"
+
 namespace Octopus
 {
-
-bool has_minimum_coverage(const std::vector<unsigned>& required_coverage)
+namespace
 {
-    return std::all_of(std::cbegin(required_coverage), std::cend(required_coverage),
-                       [] (const auto coverage) { return coverage == 0; });
-}
+    struct ReadWrapper : public Mappable<ReadWrapper>
+    {
+        explicit ReadWrapper(const AlignedRead& read) : read {std::cref(read)} {}
+        std::reference_wrapper<const AlignedRead> read;
+        const GenomicRegion& mapped_region() const noexcept { return ::mapped_region(read.get()); };
+    };
+    
+    using PositionCoverages = std::vector<unsigned>;
+    
+    bool has_minimum_coverage(const PositionCoverages& required_coverage)
+    {
+        return std::all_of(std::cbegin(required_coverage), std::cend(required_coverage),
+                           [] (const auto coverage) { return coverage == 0; });
+    }
+    
+    template <typename ForwardIt>
+    auto calculate_minimum_coverages(const ForwardIt first, const ForwardIt last,
+                                     const GenomicRegion& region, const unsigned min_coverage)
+    {
+        auto result = calculate_positional_coverage(first, last, region);
+        
+        std::transform(std::cbegin(result), std::cend(result), std::begin(result),
+                       [min_coverage] (const auto covergae) {
+                           return std::min(covergae, min_coverage);
+                       });
+        
+        return result;
+    }
+    
+    auto sample(const PositionCoverages& required_coverage)
+    {
+        static std::default_random_engine generator {};
+        
+        std::discrete_distribution<std::size_t> dist {std::cbegin(required_coverage), std::cend(required_coverage)};
+        
+        return dist(generator);
+    }
+    
+    template <typename BidirIt>
+    BidirIt sample(const BidirIt first, const BidirIt last)
+    {
+        static std::default_random_engine generator {};
+        
+        std::uniform_int_distribution<std::size_t> dist(0, std::distance(first, last) - 1);
+        
+        return std::next(first, dist(generator));
+    }
+    
+    template <typename T>
+    auto sample(const OverlapRange<T>& range)
+    {
+        return sample(std::begin(range), std::end(range)).base();
+    }
+    
+    void reduce(PositionCoverages& required_coverage, const ReadWrapper& read,
+                const GenomicRegion& region)
+    {
+        assert(!begins_before(read, region));
+        
+        const auto read_offset = begin_distance(read, region);
+        
+        const auto first = std::next(std::begin(required_coverage), read_offset);
+        
+        auto last = std::next(first, region_size(read));
+        
+        if (last > std::end(required_coverage)) last = std::end(required_coverage);
+        
+        std::transform(first, last, first, [] (const auto x) { return (x > 0) ? x - 1 : 0; });
+    }
+    
+    template <typename ForwardIt>
+    ForwardIt shift_left(ForwardIt first, ForwardIt last)
+    {
+        return std::rotate(first, std::next(first), last);
+    }
+    
+    template <typename BidirIt>
+    BidirIt shift_right(BidirIt first, BidirIt last)
+    {
+        const auto rfirst = std::make_reverse_iterator(last);
+        const auto rlast  = std::make_reverse_iterator(first);
+        return std::rotate(rfirst, std::next(rfirst), rlast).base();
+    }
+    
+    template <typename BidirIt>
+    void remove_sample(BidirIt& first, BidirIt sample, BidirIt& last)
+    {
+        if (std::distance(first, sample) < std::distance(sample, first)) {
+            if (sample != first) {
+                shift_right(first, sample);
+            }
+            ++first;
+        } else {
+            if (sample != std::prev(last)) {
+                shift_left(sample, last);
+            }
+            --last;
+        }
+    }
+    
+    auto extract_sampled(std::vector<ReadWrapper>& reads,
+                         std::vector<ReadWrapper>::iterator first_unsampled,
+                         std::vector<ReadWrapper>::iterator last_unsampled)
+    {
+        reads.erase(first_unsampled, last_unsampled);
+        
+        std::sort(std::begin(reads), std::end(reads));
+        
+        std::vector<AlignedRead> result {};
+        result.reserve(reads.size());
+        
+        std::transform(std::begin(reads), std::end(reads), std::back_inserter(result),
+                       [] (const auto& wrapper) -> AlignedRead { return wrapper.read.get(); });
+        
+        return result;
+    }
+} // namespace
 
 template <typename InputIt>
-std::deque<AlignedRead>
+auto
 sample(const InputIt first_read, const InputIt last_read, const GenomicRegion& region,
-       std::vector<unsigned>& required_coverage, const unsigned max_coverage)
+       const unsigned target_coverage)
 {
-    using std::begin; using std::end; using std::cbegin; using std::cend; using std::next;
-    
-    if (first_read == last_read) return {};
+    if (first_read == last_read) return std::vector<AlignedRead> {};
     
     const auto positions = decompose(region);
     
-    const auto num_positions = positions.size();
+    auto required_coverage = calculate_minimum_coverages(first_read, last_read, region,
+                                                         target_coverage);
     
-    assert(num_positions == required_coverage.size());
+    assert(positions.size() == required_coverage.size());
     
-    static std::default_random_engine generator {};
+    std::vector<ReadWrapper> reads {first_read, last_read};
     
-    // first pass ensures minimum coverage requirements are satisfied
+    const auto max_read_size = size(largest_region(reads));
     
-    std::deque<AlignedRead> result {}, unsampled_reads {first_read, last_read};
+    auto first_unsampled_itr = std::begin(reads);
+    auto last_unsampled_itr  = std::end(reads);
     
     while (!has_minimum_coverage(required_coverage)) {
-        assert(!unsampled_reads.empty());
+        assert(first_unsampled_itr < last_unsampled_itr);
         
-        std::discrete_distribution<unsigned> covers {cbegin(required_coverage), cend(required_coverage)};
-        
-        const auto sample_position = covers(generator);
-        
-        const auto overlapped = overlap_range(unsampled_reads, positions[sample_position]);
+        const auto overlapped = overlap_range(first_unsampled_itr, last_unsampled_itr,
+                                              positions[sample(required_coverage)], max_read_size);
         
         assert(!overlapped.empty());
         
-        const auto num_overlapped = size(overlapped);
+        const auto sampled_itr = sample(overlapped);
         
-        std::uniform_int_distribution<std::size_t> read_sampler(0, num_overlapped - 1);
+        reduce(required_coverage, *sampled_itr, region);
         
-        const auto sampled_read_it = std::next(begin(overlapped), read_sampler(generator)).base();
-        
-        const auto sample_offset        = begin_distance(*sampled_read_it, region);
-        const auto num_sample_positions = region_size(*sampled_read_it);
-        
-        result.emplace_back(std::move(*sampled_read_it));
-        unsampled_reads.erase(sampled_read_it);
-        
-        const auto it = next(begin(required_coverage), sample_offset);
-        
-        auto it2 = it;
-        if (sample_offset + num_sample_positions > num_positions) {
-            it2 = end(required_coverage);
-        } else {
-            it2 = next(it, num_sample_positions);
-        }
-        
-        std::transform(it, it2, it, [] (const auto count) { return (count == 0) ? 0 : count - 1; });
+        remove_sample(first_unsampled_itr, sampled_itr, last_unsampled_itr);
     }
     
-    // TODO: second pass increases coverage up to maximum coverage bound
-    
-    result.shrink_to_fit();
-    
-    return result;
+    return extract_sampled(reads, first_unsampled_itr, last_unsampled_itr);
 }
 
 namespace
@@ -111,7 +205,8 @@ namespace
                      std::back_inserter(result),
                      [&above_max_coverage_regions] (const auto& region) {
                          return has_contained(std::cbegin(above_max_coverage_regions),
-                                              std::cend(above_max_coverage_regions), region);
+                                              std::cend(above_max_coverage_regions),
+                                              region);
                      });
         
         result.shrink_to_fit();
@@ -119,25 +214,11 @@ namespace
         return result;
     }
     
-    void add_to_front(std::deque<AlignedRead>& cur_samples, std::deque<AlignedRead>&& new_samples)
+    void prepend(std::deque<AlignedRead>& cur_samples, std::vector<AlignedRead>&& new_samples)
     {
         cur_samples.insert(std::begin(cur_samples),
                            std::make_move_iterator(std::begin(new_samples)),
                            std::make_move_iterator(std::end(new_samples)));
-    }
-    
-    template <typename Range>
-    auto calculate_minimum_coverages(const Range& reads, const GenomicRegion& region,
-                                     const unsigned min_coverage)
-    {
-        auto result = calculate_positional_coverage(std::cbegin(reads), std::cend(reads), region);
-        
-        std::transform(std::cbegin(result), std::cend(result), std::begin(result),
-                       [min_coverage] (const auto covergae) {
-                           return std::min(covergae, min_coverage);
-                       });
-        
-        return result;
     }
 } // namespace
 
@@ -146,33 +227,30 @@ std::size_t downsample(MappableFlatMultiSet<AlignedRead>& reads,
 {
     using std::begin; using std::end; using std::make_move_iterator;
     
-    const auto num_reads_before_downsampling = reads.size();
+    const auto prior_num_reads = reads.size();
     
-    if (num_reads_before_downsampling == 0) return 0;
+    if (prior_num_reads == 0) return 0;
     
     const auto regions_to_sample = find_target_coverage_regions(reads, max_coverage, min_coverage);
     
-    std::deque<AlignedRead> samples {};
+    std::deque<AlignedRead> sampled {};
     
     // downsample in reverse order because erasing near back of MappableFlatMultiSet is much
     // cheaper than erasing near front.
     std::for_each(std::crbegin(regions_to_sample), std::crend(regions_to_sample),
                   [&] (const auto& region) {
-                      //std::cout << "downsampling " << region << std::endl;
-                      const auto contained = bases(contained_range(reads, region));
+                      const auto contained = bases(contained_range(begin(reads), end(reads), region));
                       
-                      auto coverage_requirements = calculate_minimum_coverages(contained, region,
-                                                                               min_coverage);
-                      
-                      add_to_front(samples, sample(begin(contained), end(contained), region,
-                                                   coverage_requirements, max_coverage));
+                      prepend(sampled, sample(begin(contained), end(contained), region, min_coverage));
                       
                       reads.erase(begin(contained), end(contained));
                   });
     
-    reads.insert(make_move_iterator(begin(samples)), make_move_iterator(end(samples)));
+    reads.insert(make_move_iterator(begin(sampled)), make_move_iterator(end(sampled)));
     
-    return num_reads_before_downsampling - reads.size();
+    reads.shrink_to_fit();
+    
+    return prior_num_reads - reads.size();
 }
 
 // Downsampler

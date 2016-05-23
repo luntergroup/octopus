@@ -838,6 +838,14 @@ namespace Octopus
             }
         }
         
+        for (auto it = std::begin(result); it != std::end(result); ) {
+            if (it->second.empty()) {
+                it = result.erase(it);
+            } else {
+                ++it;
+            }
+        }
+        
         return result;
     }
     

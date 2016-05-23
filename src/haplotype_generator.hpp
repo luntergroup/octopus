@@ -13,6 +13,7 @@
 #include <functional>
 #include <utility>
 #include <unordered_set>
+#include <stdexcept>
 
 #include <boost/optional.hpp>
 
@@ -32,6 +33,22 @@ namespace Octopus
     class HaplotypeGenerator
     {
     public:
+        class HaplotypeOverflowError : public std::runtime_error
+        {
+        public:
+            HaplotypeOverflowError(GenomicRegion region);
+            
+            virtual const char* what() const noexcept override;
+            
+            const GenomicRegion& region() const noexcept;
+            
+            unsigned overflow_size() const noexcept;
+            
+        private:
+            GenomicRegion region_;
+            std::string message_;
+        };
+        
         HaplotypeGenerator() = delete;
         
         explicit HaplotypeGenerator(const GenomicRegion& window, const ReferenceGenome& reference,

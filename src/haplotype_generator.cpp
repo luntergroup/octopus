@@ -12,7 +12,6 @@
 #include <deque>
 #include <iterator>
 #include <numeric>
-#include <stdexcept>
 #include <cassert>
 
 #include "variant.hpp"
@@ -26,6 +25,32 @@
 
 namespace Octopus
 {
+// HaplotypeOverflowError
+
+HaplotypeGenerator::HaplotypeOverflowError::HaplotypeOverflowError(GenomicRegion region)
+:
+runtime_error {"HaplotypeOverflowError"},
+region_ {std::move(region)},
+message_ {}
+{}
+
+const char* HaplotypeGenerator::HaplotypeOverflowError::what() const noexcept
+{
+    return runtime_error::what();
+}
+
+const GenomicRegion& HaplotypeGenerator::HaplotypeOverflowError::region() const noexcept
+{
+    return region_;
+}
+
+unsigned HaplotypeGenerator::HaplotypeOverflowError::overflow_size() const noexcept
+{
+    return 0;
+}
+
+// HaplotypeGenerator
+
 auto max_included(const unsigned max_haplotypes)
 {
     return 2 * static_cast<unsigned>(std::max(1.0, std::log2(max_haplotypes))) - 1;
@@ -407,7 +432,7 @@ void HaplotypeGenerator::set_holdout_set(const GenomicRegion& active_region)
     assert(holdout_set_.empty());
     
     if (previous_holdout_regions_.count(active_region) == 1) {
-        throw std::runtime_error {"Region too complex"};
+        throw HaplotypeOverflowError {active_region};
     } else {
         previous_holdout_regions_.emplace(active_region);
         current_holdout_region_ = active_region;

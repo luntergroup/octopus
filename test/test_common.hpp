@@ -63,7 +63,7 @@ namespace detail
 static const fs::path regions_txt_file {detail::home_dir + detail::octopus_test_dir + "test_regions.txt"};
 static const fs::path regions_bed_file {detail::home_dir + detail::octopus_test_dir + "test_regions.bed"};
 static const fs::path reads_file {detail::home_dir + detail::octopus_test_dir + "test_files.txt"};
-static const fs::path human_skip_regions {detail::home_dir + detail::octopus_test_dir + "human_skip_regions.txt"};
+static const fs::path human_skip_regions {detail::home_dir + detail::octopus_test_dir + "human_skip_regions2.txt"};
 
 // references
 

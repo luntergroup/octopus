@@ -17,6 +17,7 @@
 - [] SSE log_exp_calculation.
 - [] Improve assembler implementation.
 - [] ReadReader and VcfReader/Writer should use iterators.
+- [] Downsampling is very slow.
 
 ## Misc
 

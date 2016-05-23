@@ -446,26 +446,25 @@ bool has_exact(const Container& mappables, const MappableTp& mappable)
  */
 template <typename BidirIt, typename MappableTp>
 OverlapRange<BidirIt>
-overlap_range(BidirIt first, BidirIt last, const MappableTp& mappable,
-              ForwardSortedTag)
+overlap_range(BidirIt first, BidirIt last, const MappableTp& mappable, ForwardSortedTag)
 {
     using MappableTp2 = typename std::iterator_traits<BidirIt>::value_type;
     
     static_assert(is_region_or_mappable<MappableTp> && is_region_or_mappable<MappableTp2>,
                   "mappable algorithms only work for regions and mappable types");
     
-    const auto it = find_first_after(first, last, mappable);
+    auto it = find_first_after(first, last, mappable);
     
-    return make_overlap_range(std::find_if(first, it,
-                                           [&mappable] (const auto& m) {
-                                               return overlaps(m, mappable);
-                                           }), it, mappable);
+    const auto it2 = std::find_if(first, it, [&mappable] (const auto& m) {  return overlaps(m, mappable); });
+    
+    it = std::find_if_not(it, last, [&mappable] (const auto& m) { return overlaps(m, mappable); });
+    
+    return make_overlap_range(it2, it, mappable);
 }
 
 template <typename BidirIt, typename MappableTp>
 OverlapRange<BidirIt>
-overlap_range(BidirIt first, BidirIt last, const MappableTp& mappable,
-              BidirectionallySortedTag)
+overlap_range(BidirIt first, BidirIt last, const MappableTp& mappable, BidirectionallySortedTag)
 {
     using MappableTp2 = typename std::iterator_traits<BidirIt>::value_type;
     
@@ -519,19 +518,20 @@ overlap_range(ForwardIt first, ForwardIt last, const MappableTp& mappable,
     static_assert(is_region_or_mappable<MappableTp> && is_region_or_mappable<MappableTp2>,
                   "mappable algorithms only work for regions and mappable types");
     
-    auto it = find_first_after(first, last, mappable);
+    auto it1 = find_first_after(first, last, mappable);
     
-    it = std::find_if_not(it, last, [&mappable] (const auto& m) { return overlaps(m, mappable); });
+    const auto leftmost = shift(mapped_region(mappable), -std::min(mapped_begin(mappable), max_mappable_size));
     
-    auto it2 = std::lower_bound(first, it, shift(mapped_region(mappable),
-                                                 -std::min(mapped_begin(mappable), max_mappable_size)),
+    auto it2 = std::lower_bound(first, it1, leftmost,
                                 [] (const auto& lhs, const auto& rhs) {
                                     return begins_before(lhs, rhs);
                                 });
     
-    it2 = std::find_if(it2, it, [&mappable] (const auto& m) { return overlaps(m, mappable); });
+    it1 = std::find_if_not(it1, last, [&mappable] (const auto& m) { return overlaps(m, mappable); });
     
-    return make_overlap_range(it2, it, mappable);
+    it2 = std::find_if(it2, it1, [&mappable] (const auto& m) { return overlaps(m, mappable); });
+    
+    return make_overlap_range(it2, it1, mappable);
 }
 
 namespace detail

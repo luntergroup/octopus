@@ -327,7 +327,14 @@ VariantCaller::call(const GenomicRegion& call_region, ProgressMeter& progress_me
     
     while (true) {
         resume_timer(haplotype_generation_timer);
-        std::tie(haplotypes, active_region) = haplotype_generator.progress();
+        try {
+            std::tie(haplotypes, active_region) = haplotype_generator.progress();
+        } catch(const HaplotypeGenerator::HaplotypeOverflowError& e) {
+            // TODO: we could try to eliminate some more haplotypes and recall the region
+            haplotype_generator.clear_progress();
+            haplotype_likelihoods.clear();
+            continue;
+        }
         pause_timer(haplotype_generation_timer);
         
         if (debug_log_) stream(*debug_log_) << "Active region is " << active_region;

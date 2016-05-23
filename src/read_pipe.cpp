@@ -79,22 +79,16 @@ ReadMap ReadPipe::fetch_reads(const GenomicRegion& region)
     const auto batches = batch_samples(samples_);
     
     for (const auto& batch : batches) {
-        resume_timer(misc_timer1);
         auto batch_reads = read_manager_.get().fetch_reads(batch, region);
-        pause_timer(misc_timer1);
         
         if (DEBUG_MODE) {
             Logging::DebugLogger log {};
             stream(log) << "Fetched " << count_reads(batch_reads) << " unfiltered reads from " << region;
         }
         
-        resume_timer(misc_timer2);
         transform_reads(batch_reads, read_transform_);
-        pause_timer(misc_timer2);
         
-        resume_timer(misc_timer2);
         erase_filtered_reads(batch_reads, filter(batch_reads, read_filter_));
-        pause_timer(misc_timer2);
         
         if (DEBUG_MODE) {
             Logging::DebugLogger log {};
@@ -105,9 +99,7 @@ ReadMap ReadPipe::fetch_reads(const GenomicRegion& region)
         if (downsampler_) {
             auto reads = make_mappable_map(std::move(batch_reads));
             
-            resume_timer(misc_timer2);
             const auto n = downsampler_->downsample(reads);
-            pause_timer(misc_timer2);
             
             if (DEBUG_MODE) {
                 Logging::DebugLogger log {};

@@ -606,6 +606,7 @@ namespace Octopus
         str.pop_back(); // the extra whitespace
         
         Logging::InfoLogger log {};
+        
         log << str;
         
         stream(log) << "Writing calls to " << components.get_output().path();
@@ -654,7 +655,7 @@ namespace Octopus
         return propose_call_subregion(components, right_overhang_region(input_region, current_subregion));
     }
     
-    void run_octopus_on_contig(ContigCallingComponents&& components)
+    void run_octopus_on_contig(ContigCallingComponents&& components, ProgressMeter& meter)
     {
         #ifdef BENCHMARK
         init_timers();
@@ -666,8 +667,6 @@ namespace Octopus
         
         for (const auto& input_region : components.regions) {
             stream(log) << "Processing input region " << input_region;
-            
-            ProgressMeter progress_meter {input_region};
             
             auto subregion = propose_call_subregion(components, input_region);
             
@@ -682,12 +681,14 @@ namespace Octopus
                     stream(lg) << "Processing subregion " << subregion;
                 }
                 
-                try {
-                    calls = components.caller->call(subregion, progress_meter);
-                } catch(...) {
-                    // TODO: which exceptions can we recover from?
-                    throw;
-                }
+                calls = components.caller->call(subregion, meter);
+                
+//                try {
+//                    calls = components.caller->call(subregion, meter);
+//                } catch(...) {
+//                    // TODO: which exceptions can we recover from?
+//                    throw;
+//                }
                 
                 try {
                     write_calls(std::move(calls), components.output);
@@ -720,8 +721,10 @@ namespace Octopus
     
     void run_octopus_single_threaded(GenomeCallingComponents& components)
     {
+        ProgressMeter meter {components.get_search_regions()};
+        
         for (const auto& contig : components.get_contigs_in_output_order()) {
-            run_octopus_on_contig(ContigCallingComponents {contig, components});
+            run_octopus_on_contig(ContigCallingComponents {contig, components}, meter);
         }
     }
     
@@ -872,10 +875,11 @@ namespace Octopus
     {
         assert(!tasks.empty());
         auto it = std::begin(tasks);
-        auto result = it->second.front();
+        assert(!it->second.empty());
+        const auto result = it->second.front();
         it->second.pop();
         if (it->second.empty()) {
-            tasks.erase(it->first);
+            tasks.erase(it);
         }
         return result;
     }
