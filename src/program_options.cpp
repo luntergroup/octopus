@@ -258,6 +258,20 @@ namespace Octopus
              "A file VCF format file. Calls will be restricted to exactly the sites in this file")
             ;
             
+            po::options_description transforms("Read transform options");
+            transforms.add_options()
+            ("disable-read-transforms", po::bool_switch()->default_value(false),
+             "Disables all read transformations")
+            ("disable-soft-clip-masking", po::bool_switch()->default_value(false),
+             "Disables soft clipped masking, thus allowing all soft clipped bases to be used for candidate generation")
+            ("tail-trim-size", po::value<AlignedRead::SizeType>()->default_value(0),
+             "Trims this number of bases off the tail of all reads")
+            ("disable-adapter-masking", po::bool_switch()->default_value(false),
+             "Disables adapter detection and masking")
+            ("disable-overlap-masking", po::bool_switch()->default_value(false),
+             "Disables read segment overlap masking")
+            ;
+            
             po::options_description filters("Read filter options");
             filters.add_options()
             ("disable-read-filtering", po::bool_switch()->default_value(false),
@@ -294,20 +308,6 @@ namespace Octopus
              "Downsample reads in regions where coverage is over this")
             ("downsample-target", po::value<unsigned>()->default_value(400),
              "The target coverage for the downsampler")
-            ;
-            
-            po::options_description transforms("Read transform options");
-            transforms.add_options()
-            ("disable-read-transforms", po::bool_switch()->default_value(false),
-             "Disables all read transformations")
-            ("disable-soft-clip-masking", po::bool_switch()->default_value(false),
-             "Disables soft clipped masking, thus allowing all soft clipped bases to be used for candidate generation")
-            ("tail-trim-size", po::value<AlignedRead::SizeType>()->default_value(0),
-             "Trims this number of bases off the tail of all reads")
-            ("disable-adapter-masking", po::bool_switch()->default_value(false),
-             "Disables adapter detection and masking")
-            ("disable-overlap-masking", po::bool_switch()->default_value(false),
-             "Disables read segment overlap masking")
             ;
             
             po::options_description candidates("Candidate generation options");

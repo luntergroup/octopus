@@ -32,8 +32,9 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         
         //"--samples", "NOT-A-SAMPLE",
         
-        "--working-directory", "~/Genomics/octopus_test",
+        //"--working-directory", "~/Genomics/octopus_test",
         //"--working-directory", "~/Genomics/MCG",
+        "--working-directory", "~/Genomics/cancer/TCGA/benchmark",
         
         //"--target-read-buffer-size", "1.0",
         //"--reference-cache-size", "100",
@@ -44,7 +45,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         "--reference", human_reference_fasta.c_str(),
         //"--reference", ecoli_reference_fasta.c_str(),
         
-        "--reads", NA12878_low_coverage.c_str(),
+        //"--reads", NA12878_low_coverage.c_str(),
         //"--reads", NA12878_high_coverage.c_str(),
         //"--reads", "~/Genomics/Illumina/NA12878.mapped.ILLUMINA.bwa.CEU.high_coverage_pcr_free.20130906.chr22.bam",
         
@@ -59,15 +60,15 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--reads", ecoli_bam.c_str(),
         
         // TCGA
-        //"--reads", "~/Genomics/cancer/TCGA/benchmark/G15511.HCC1143_BL.1.chr22.bam",
-        //"--reads", "~/Genomics/cancer/TCGA/benchmark/G15511.HCC1143.1.chr22.bam",
+        "--reads", "~/Genomics/cancer/TCGA/benchmark/G15511.HCC1143_BL.1.chr22.bam",
+        "--reads", "~/Genomics/cancer/TCGA/benchmark/G15511.HCC1143.1.chr22.bam",
         
         // MCG
         //"--reads", "~/Genomics/MCG/10120_chr2_47641558_GTA_G.RG.bam",
         //"--reads", "~/Genomics/MCG/D59597_Cov3.RG.bam",
         
-        //"--caller", "cancer", // default "population"
-        //"--normal-sample", "HCC1143 BL",
+        "--caller", "cancer", // default "population"
+        "--normal-sample", "HCC1143 BL",
         
         //"--organism-ploidy", "3",
         "--contig-ploidies", "MT=1", "Y=1",// "MT=2",
@@ -78,8 +79,13 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         
         /* input regions */
         
-        //"--regions", "6:58,604,609-58,606,266",
-        "--regions", "22:19,025,246-19,025,454",
+        //"--regions", "22:27,297,910-27,297,950", // Not a FP, somaticSniper is calling, but what is going on?
+        //"--regions", "22:27,908,800-27,908,898",
+        //"--regions", "22:23,274,865-23,274,905", // FP SNV?
+        "--regions", "22:23,842,194-23,842,524", // FP SNV. Solved: Disable overlap masking. Why?
+        //"--regions", "22:23,869,889-23,870,053", // FP del. Solved: Disable marked dups filter
+        //"--regions", "22:24,160,300-24,160,359", // FP del. Solved: Disable soft clipping
+        //"--regions", "22:25,055,737-25,055,901", // FP del. Solved: MQ Filter
         
         //"--regions", "2:47,640,252-47,644,906", // MCG
         
@@ -205,20 +211,25 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--skip-regions", "1:1,000,000-2,000,000", "1:1,500,000-10,000,000",
         //"--skip-regions-file", human_skip_regions.c_str(),
         
-        // read filters/transforms
-        //"--disable-read-filtering",
+        // read transforms
         //"--disable-read-transforms",
-        //"--consider-unmapped-reads",
-        //"--min-mapping-quality", "1",
-        //"--good-base-quality", "0",
-        //"--min-good-bases", "1",
-        //"--allow-marked-duplicates",
-        //"--allow-octopus-duplicates",
         //"--disable-soft-clip-masking",
         //"--tail-trim-size", "3",
         //"--disable-adapter-masking",
-        //"--consider-reads-with-unmapped-segments",
+        "--disable-overlap-masking",
         
+        // read filters/transforms
+        //"--disable-read-filtering",
+        //"--consider-unmapped-reads",
+        //"--consider-reads-with-unmapped-segments",
+        //"--min-mapping-quality", "1",
+        //"--good-base-quality", "0",
+        //"--min-good-bases", "0",
+        //"--allow-marked-duplicates",
+        //"--allow-octopus-duplicates",
+        //"--allow-qc-fails",
+        
+        // downsampling
         //"--disable-downsampling",
         //"--downsample-above", "300",
         //"--downsample-target", "200",
@@ -236,13 +247,13 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--min-assembler-base-quality", "10",
         //"--max-variant-size", "25",
         
-        //"--disable-haplotype-lagging",
+        "--disable-haplotype-lagging",
         //"--disable-inactive-flank-scoring",
         //"--max-haplotypes", "64",
         
         //"--min-variant-posterior", "2",
         //"--min-refcall-posterior", "0",
-        //"--min-somatic-posterior", "2",
+        "--min-somatic-posterior", "2",
         
         //"--somatics-only",
         
@@ -252,6 +263,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--output", "octopus_mcg.vcf",
         //"--output", "octopus_NA12878HC_22_unlagged_dummy.vcf",
         //"--output", "octopus_calls2.vcf",
+        //"--output", "octopus_cancer_no_lag.vcf",
         
         nullptr
     };

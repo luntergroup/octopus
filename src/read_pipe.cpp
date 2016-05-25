@@ -60,8 +60,8 @@ const std::vector<SampleIdType>& ReadPipe::samples() const noexcept
     return samples_;
 }
 
-template <typename T>
-void move_reads(T& src, ReadMap& dest)
+template <typename Container>
+void append(Container& src, ReadMap& dest)
 {
     for (auto& p : src) {
         dest[p.first].insert(std::make_move_iterator(std::begin(p.second)),
@@ -70,6 +70,13 @@ void move_reads(T& src, ReadMap& dest)
         p.second.shrink_to_fit();
     }
     src.clear();
+}
+
+void shrink_to_fit(ReadMap& reads)
+{
+    for (auto& p : reads) {
+        p.second.shrink_to_fit();
+    }
 }
 
 ReadMap ReadPipe::fetch_reads(const GenomicRegion& region)
@@ -88,7 +95,27 @@ ReadMap ReadPipe::fetch_reads(const GenomicRegion& region)
         
         transform_reads(batch_reads, read_transform_);
         
-        erase_filtered_reads(batch_reads, filter(batch_reads, read_filter_));
+        if (DEBUG_MODE) {
+            SampleFilterCountMap<SampleIdType, decltype(read_filter_)> filter_counts {};
+            filter_counts.reserve(samples_.size());
+            
+            for (const auto& sample : samples_) {
+                filter_counts[sample].reserve(read_filter_.num_filters());
+            }
+            
+            erase_filtered_reads(batch_reads, filter(batch_reads, read_filter_, filter_counts));
+            
+            Logging::DebugLogger log {};
+            
+            for (const auto& p : filter_counts) {
+                stream(log) << "In sample " << p.first;
+                for (const auto& c : p.second) {
+                    stream(log) << c.second << " reads were removed by the " << c.first << " filter";
+                }
+            }
+        } else {
+            erase_filtered_reads(batch_reads, filter(batch_reads, read_filter_));
+        }
         
         if (DEBUG_MODE) {
             Logging::DebugLogger log {};
@@ -106,11 +133,13 @@ ReadMap ReadPipe::fetch_reads(const GenomicRegion& region)
                 stream(log) << "Downsampling removed " << n << " reads from " << region;
             }
             
-             move_reads(reads, result);
+             append(reads, result);
         } else {
-             move_reads(batch_reads, result);
+             append(batch_reads, result);
         }
     }
+    
+    shrink_to_fit(result); // TODO: should we make this conditional on extra capacity?
     
     return result;
 }

@@ -267,6 +267,36 @@ GenomicRegion ReadManager::find_covered_subregion(const GenomicRegion& region, c
     return find_covered_subregion(samples(), region, max_reads);
 }
 
+namespace
+{
+    template <typename Container>
+    auto append(Container&& src, Container& dst)
+    {
+        typename Container::iterator result;
+        
+        if (dst.empty()) {
+            dst = std::move(src);
+            result = std::begin(dst);
+        } else {
+            result = dst.insert(std::end(dst),
+                                std::make_move_iterator(std::begin(src)),
+                                std::make_move_iterator(std::end(src)));
+        }
+        
+        src.clear();
+        src.shrink_to_fit();
+        
+        return result;
+    }
+    
+    template <typename Container>
+    void merge_insert(Container&& src, Container& dst)
+    {
+        const auto it = append(std::move(src), dst);
+        std::inplace_merge(std::begin(dst), it, std::end(dst));
+    }
+} // namespace
+
 ReadManager::ReadContainer ReadManager::fetch_reads(const SampleIdType& sample, const GenomicRegion& region)
 {
     using std::begin; using std::end; using std::make_move_iterator; using std::for_each;
@@ -282,8 +312,7 @@ ReadManager::ReadContainer ReadManager::fetch_reads(const SampleIdType& sample, 
     while (!reader_paths.empty()) {
         for_each(it, end(reader_paths),
                  [&] (const auto& reader_path) {
-                     auto reads = open_readers_.at(reader_path).fetch_reads(sample, region);
-                     result.insert(std::end(result), make_move_iterator(begin(reads)), make_move_iterator(end(reads)));
+                     merge_insert(open_readers_.at(reader_path).fetch_reads(sample, region), result);
                  });
         
         reader_paths.erase(it, end(reader_paths));
@@ -314,12 +343,10 @@ ReadManager::SampleReadMap ReadManager::fetch_reads(const std::vector<SampleIdTy
         for_each(it, end(reader_paths),
                  [&] (const auto& reader_path) {
                      auto reads = open_readers_.at(reader_path).fetch_reads(samples, region);
-                     for (auto& sample_reads : reads) {
-                         result.at(sample_reads.first).insert(std::end(result.at(sample_reads.first)),
-                                                              make_move_iterator(begin(sample_reads.second)),
-                                                              make_move_iterator(end(sample_reads.second)));
-                         sample_reads.second.clear();
-                         sample_reads.second.shrink_to_fit();
+                     for (auto&& p : reads) {
+                         merge_insert(std::move(p.second), result.at(p.first));
+                         p.second.clear();
+                         p.second.shrink_to_fit();
                      }
                  });
         

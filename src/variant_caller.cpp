@@ -462,10 +462,10 @@ VariantCaller::call(const GenomicRegion& call_region, ProgressMeter& progress_me
         const auto caller_latents = this->infer_latents(haplotypes, haplotype_likelihoods);
         pause_timer(latent_timer);
         
-        // TEST
-        std::cout << active_region << std::endl;
-        test(*caller_latents->get_genotype_posteriors(), active_reads, haplotype_likelihoods);
-        // END TEST
+//        // TEST
+//        std::cout << active_region << std::endl;
+//        test(*caller_latents->get_genotype_posteriors(), active_reads, haplotype_likelihoods);
+//        // END TEST
         
         haplotype_likelihoods.clear();
         

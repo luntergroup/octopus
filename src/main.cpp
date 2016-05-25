@@ -31,10 +31,14 @@ int main(int argc, const char **argv)
 {
     auto options = get_basic_mock_options();
     
-    if (Octopus::Options::is_run_command(*options)) {
-        Octopus::Logging::init(Octopus::Options::get_debug_log_file_name(*options),
-                               Octopus::Options::get_trace_log_file_name(*options));
-        Octopus::run_octopus(*options);
+    if (options) {
+        if (Octopus::Options::is_run_command(*options)) {
+            Octopus::Logging::init(Octopus::Options::get_debug_log_file_name(*options),
+                                   Octopus::Options::get_trace_log_file_name(*options));
+            Octopus::run_octopus(*options);
+        }
+    } else {
+        std::clog << "Could not parse input options. Did not run Octopus." << std::endl;
     }
     
 //    try {

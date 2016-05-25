@@ -19,9 +19,7 @@
 
 #include <boost/optional.hpp>
 
-#include "common.hpp"
 #include "read_filters.hpp"
-#include "logging.hpp"
 
 namespace Octopus
 {
@@ -275,25 +273,25 @@ auto remove(Container& reads, const ReadFilter& filter,
 template <typename Map>
 using FilterPointMap = std::unordered_map<typename Map::key_type, typename Map::mapped_type::iterator>;
 
+template <typename ReadFilter>
+using FilterCountMap = typename ReadFilter::FilterCountMap;
+
+template <typename S, typename ReadFilter>
+using SampleFilterCountMap = std::unordered_map<S, FilterCountMap<ReadFilter>>;
+
 template <typename Map, typename ReadFilter>
-FilterPointMap<Map> filter(Map& reads, const ReadFilter& f)
+using OptionalFilterCountMap = boost::optional<SampleFilterCountMap<typename Map::key_type, ReadFilter>&>;
+
+template <typename Map, typename ReadFilter>
+FilterPointMap<Map>
+filter(Map& reads, const ReadFilter& f, OptionalFilterCountMap<Map, ReadFilter> filter_counts = boost::none)
 {
     FilterPointMap<Map> result {reads.size()};
     
-    if (true) {
-        typename ReadFilter::FilterCountMap filter_counts {};
-        
-        for (auto& p : reads) {
-            result.emplace(p.first, remove(p.second, f, filter_counts));
-        }
-        
-        Logging::DebugLogger log {};
-        
-        for (const auto& p : filter_counts) {
-            stream(log) << p.second << " reads were removed by the " << p.first << " filter";
-        }
-    } else {
-        for (auto& p : reads) {
+    for (auto& p : reads) {
+        if (filter_counts && filter_counts->count(p.first) == 1) {
+            result.emplace(p.first, remove(p.second, f, filter_counts->at(p.first)));
+        } else {
             result.emplace(p.first, remove(p.second, f));
         }
     }
