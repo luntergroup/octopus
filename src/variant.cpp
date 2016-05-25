@@ -246,7 +246,7 @@ bool is_left_alignable(const Variant& variant) noexcept
 
 namespace
 {
-    using AlleleSequence = std::list<char>;
+    using AlleleSequence = std::list<Variant::SequenceType::value_type>;
 
     auto get_alleles(const Variant::SequenceType& allele_a, const Variant::SequenceType& allele_b)
     {

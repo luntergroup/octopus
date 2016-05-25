@@ -78,7 +78,10 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         
         /* input regions */
         
-        "--regions", "6:58,604,609-58,606,266",
+        //"--regions", "6:58,604,609-58,606,266",
+        "--regions", "22:19,025,246-19,025,454",
+        
+        //"--regions", "2:47,640,252-47,644,906", // MCG
         
         //"--regions", "22:42,522,971-42,523,546", // bad model filter?
         
@@ -203,8 +206,12 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--skip-regions-file", human_skip_regions.c_str(),
         
         // read filters/transforms
+        //"--disable-read-filtering",
+        //"--disable-read-transforms",
         //"--consider-unmapped-reads",
         //"--min-mapping-quality", "1",
+        //"--good-base-quality", "0",
+        //"--min-good-bases", "1",
         //"--allow-marked-duplicates",
         //"--allow-octopus-duplicates",
         //"--disable-soft-clip-masking",
@@ -212,7 +219,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--disable-adapter-masking",
         //"--consider-reads-with-unmapped-segments",
         
-        //"--no-downsampling",
+        //"--disable-downsampling",
         //"--downsample-above", "300",
         //"--downsample-target", "200",
         

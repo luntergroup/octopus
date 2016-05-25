@@ -260,6 +260,8 @@ namespace Octopus
             
             po::options_description filters("Read filter options");
             filters.add_options()
+            ("disable-read-filtering", po::bool_switch()->default_value(false),
+             "Disables all read filters")
             ("consider-unmapped-reads", po::bool_switch()->default_value(false),
              "Allows reads marked as unmapped to be used for calling")
             ("min-mapping-quality", po::value<unsigned>()->default_value(20),
@@ -286,7 +288,7 @@ namespace Octopus
              "Filters reads marked as supplementary alignments")
             ("consider-reads-with-unmapped-segments", po::bool_switch()->default_value(false),
              "Allows reads with unmapped template segmenets to be used for calling")
-            ("no-downsampling", po::bool_switch()->default_value(false),
+            ("disable-downsampling", po::bool_switch()->default_value(false),
              "Diables all downsampling")
             ("downsample-above", po::value<unsigned>()->default_value(500),
              "Downsample reads in regions where coverage is over this")
@@ -296,6 +298,8 @@ namespace Octopus
             
             po::options_description transforms("Read transform options");
             transforms.add_options()
+            ("disable-read-transforms", po::bool_switch()->default_value(false),
+             "Disables all read transformations")
             ("disable-soft-clip-masking", po::bool_switch()->default_value(false),
              "Disables soft clipped masking, thus allowing all soft clipped bases to be used for candidate generation")
             ("tail-trim-size", po::value<AlignedRead::SizeType>()->default_value(0),
@@ -1182,6 +1186,10 @@ namespace Octopus
         
         ReadFilterer result {};
         
+        if (options.at("disable-read-filtering").as<bool>()) {
+            return result;
+        }
+        
         if (!options.at("consider-unmapped-reads").as<bool>()) {
             result.register_filter(std::make_unique<IsMapped>());
         }
@@ -1195,13 +1203,13 @@ namespace Octopus
         const auto min_base_quality = options.at("good-base-quality").as<unsigned>();
         const auto min_good_bases   = options.at("min-good-bases").as<unsigned>();
         
-        if (min_good_bases > 0) {
+        if (min_base_quality > 0 && min_good_bases > 0) {
             result.register_filter(std::make_unique<HasSufficientGoodQualityBases>(min_base_quality,
                                                                               min_good_bases));
         }
         
-        if (options.count("min-good-base-fraction") == 1) {
-            auto min_good_base_fraction =  options.at("min-good-base-fraction").as<double>();
+        if (min_base_quality > 0 && options.count("min-good-base-fraction") == 1) {
+            auto min_good_base_fraction = options.at("min-good-base-fraction").as<double>();
             result.register_filter(std::make_unique<HasSufficientGoodBaseFraction>(min_base_quality,
                                                                               min_good_base_fraction));
         }
@@ -1243,7 +1251,7 @@ namespace Octopus
     
     boost::optional<Downsampler> make_downsampler(const po::variables_map& options)
     {
-        if (options.at("no-downsampling").as<bool>()) {
+        if (options.at("disable-downsampling").as<bool>()) {
             return boost::none;
         }
         
@@ -1258,6 +1266,10 @@ namespace Octopus
         using SizeType = AlignedRead::SizeType;
         
         ReadTransform result {};
+        
+        if (options.at("disable-read-transforms").as<bool>()) {
+            return result;
+        }
         
         bool trim_soft_clipped = !options.at("disable-soft-clip-masking").as<bool>();
         

@@ -245,6 +245,7 @@ std::vector<Variant> AlignmentCandidateVariantGenerator::generate_candidates(con
 void AlignmentCandidateVariantGenerator::clear()
 {
     candidates_.clear();
+    candidates_.shrink_to_fit();
 }
 
 // private methods

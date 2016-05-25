@@ -258,6 +258,8 @@ filter_to_n_haplotypes(std::vector<Haplotype>& haplotypes,
     
     force_filter(haplotypes, samples, haplotype_likelihoods, n, result, LikelihoodSum {});
     
+    haplotypes.shrink_to_fit();
+    
     return result;
 }
 } // namespace Octopus

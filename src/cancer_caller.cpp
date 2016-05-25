@@ -290,6 +290,8 @@ void CancerVariantCaller::filter(std::vector<CancerGenotype<Haplotype>>& cancer_
                                        });
         
         cancer_genotypes.erase(it, std::end(cancer_genotypes));
+        
+        cancer_genotypes.shrink_to_fit();
     } else {
         
     }

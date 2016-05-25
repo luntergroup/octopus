@@ -92,8 +92,6 @@ private:
         calculate_haplotype_posteriors(const std::vector<Haplotype>& haplotypes);
     };
     
-    SampleIdType sample_;
-    
     double min_variant_posterior_;
     double min_refcall_posterior_;
     unsigned ploidy_;
@@ -111,6 +109,8 @@ private:
     std::vector<std::unique_ptr<ReferenceCall>>
     call_reference(const std::vector<Allele>& alleles, CallerLatents& latents,
                    const ReadMap& reads) const override;
+    
+    const SampleIdType& sample() const noexcept;
 };
 } // namespace Octopus
 

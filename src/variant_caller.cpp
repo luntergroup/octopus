@@ -277,6 +277,54 @@ void append(std::vector<CallWrapper>&& new_calls, std::deque<VcfRecord>& curr_re
                         std::make_move_iterator(std::begin(new_records)),
                         std::make_move_iterator(std::end(new_records)));
 }
+    
+    auto max_posterior_haplotype(const Genotype<Haplotype>& genotype,
+                                             const unsigned read, const SampleIdType& sample,
+                                             const HaplotypeLikelihoodCache& likelihoods)
+    {
+        return std::distance(std::cbegin(genotype),
+                             std::max_element(std::cbegin(genotype), std::cend(genotype),
+                                 [&] (const auto& lhs, const auto& rhs) {
+                                     return likelihoods.log_likelihoods(sample, lhs)[read]
+                                        < likelihoods.log_likelihoods(sample, rhs)[read];
+                                 }));
+    }
+    
+    auto partition_by_strand(const Genotype<Haplotype>& genotype,
+                             const SampleIdType& sample, const ReadContainer& reads,
+                             const HaplotypeLikelihoodCache& likelihoods)
+    {
+        std::vector<std::pair<unsigned, unsigned>> counts(genotype.ploidy(), std::pair<unsigned, unsigned> {});
+        
+        for (unsigned i {0}; i < reads.size(); ++i) {
+            //std::cout << reads[i] << std::endl;
+            
+            const auto j = max_posterior_haplotype(genotype, i, sample, likelihoods);
+            
+            if (reads[i].is_marked_reverse_mapped()) {
+                ++counts[j].second;
+            } else {
+                ++counts[j].first;
+            }
+        }
+        
+        for (const auto& p : counts) {
+            auto b = Maths::beta_hdi((float) p.first + 0.5, (float) p.second + 0.5);
+            std::cout << p.first << " " << p.second << " " << b.first << " " << b.second << std::endl;
+        }
+    }
+    
+    template <typename T>
+    void test(const T& genotype_posteriors, const ReadMap& reads, const HaplotypeLikelihoodCache& likelihoods)
+    {
+        for (const auto& p : genotype_posteriors) {
+            auto it = std::max_element(std::cbegin(p.second), std::cend(p.second),
+                                       [] (const auto& lhs, const auto& rhs) {
+                                           return lhs.second < rhs.second;
+                                       });
+            partition_by_strand(it->first, p.first, reads.at(p.first), likelihoods);
+        }
+    }
 
 std::deque<VcfRecord>
 VariantCaller::call(const GenomicRegion& call_region, ProgressMeter& progress_meter) const
@@ -413,6 +461,11 @@ VariantCaller::call(const GenomicRegion& call_region, ProgressMeter& progress_me
         resume_timer(latent_timer);
         const auto caller_latents = this->infer_latents(haplotypes, haplotype_likelihoods);
         pause_timer(latent_timer);
+        
+        // TEST
+        std::cout << active_region << std::endl;
+        test(*caller_latents->get_genotype_posteriors(), active_reads, haplotype_likelihoods);
+        // END TEST
         
         haplotype_likelihoods.clear();
         
@@ -577,7 +630,7 @@ Phaser VariantCaller::make_phaser() const
 {
     return Phaser {parameters_.min_phase_score};
 }
-    
+
 VcfRecordFactory VariantCaller::make_record_factory(const ReadMap& reads) const
 {
     return VcfRecordFactory {reference_, reads, samples_, parameters_.call_sites_only};

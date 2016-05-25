@@ -50,7 +50,6 @@ IndividualVariantCaller::IndividualVariantCaller(const ReferenceGenome& referenc
                                                  CallerParameters specific_parameters)
 :
 VariantCaller {reference, read_pipe, std::move(candidate_generator), std::move(general_parameters)},
-sample_ {samples_.front()},
 ploidy_ {specific_parameters.ploidy},
 min_variant_posterior_ {specific_parameters.min_variant_posterior},
 min_refcall_posterior_ {specific_parameters.min_refcall_posterior}
@@ -147,24 +146,21 @@ IndividualVariantCaller::infer_latents(const std::vector<Haplotype>& haplotypes,
     
     auto genotypes = generate_all_genotypes(haplotypes, ploidy_);
     
-    if (DEBUG_MODE) {
-        Logging::DebugLogger log {};
-        stream(log) << "There are " << genotypes.size() << " candidate genotypes";
-    }
+    if (debug_log_) stream(*debug_log_) << "There are " << genotypes.size() << " candidate genotypes";
     
-    auto inferences = model.infer_latents(sample_, genotypes, haplotype_likelihoods);
+    auto inferences = model.infer_latents(sample(), genotypes, haplotype_likelihoods);
     
     // TEST
     auto dummy_genotypes = generate_all_genotypes(haplotypes, ploidy_ + 1);
     if (debug_log_) {
         stream(*debug_log_) << "Evaluating dummy model with " << dummy_genotypes.size() << " genotypes";
     }
-    auto dummy_inferences = model.infer_latents(sample_, dummy_genotypes, haplotype_likelihoods);
-    return std::make_unique<Latents>(sample_, haplotypes, std::move(genotypes), std::move(inferences),
+    auto dummy_inferences = model.infer_latents(sample(), dummy_genotypes, haplotype_likelihoods);
+    return std::make_unique<Latents>(sample(), haplotypes, std::move(genotypes), std::move(inferences),
                                      std::move(dummy_inferences));
     // END TEST
     
-    return std::make_unique<Latents>(sample_, haplotypes, std::move(genotypes), std::move(inferences));
+    return std::make_unique<Latents>(sample(), haplotypes, std::move(genotypes), std::move(inferences));
 }
 
 namespace
@@ -378,7 +374,7 @@ std::vector<std::unique_ptr<Octopus::VariantCall>>
 IndividualVariantCaller::call_variants(const std::vector<Variant>& candidates,
                                        const Latents& latents) const
 {
-    const auto& genotype_posteriors = (*latents.genotype_posteriors_)[sample_];
+    const auto& genotype_posteriors = (*latents.genotype_posteriors_)[sample()];
     
     if (TRACE_MODE) {
         Logging::TraceLogger log {};
@@ -415,7 +411,7 @@ IndividualVariantCaller::call_variants(const std::vector<Variant>& candidates,
         }
     }
     
-    return transform_calls(sample_, std::move(variant_calls), std::move(genotype_calls));
+    return transform_calls(sample(), std::move(variant_calls), std::move(genotype_calls));
 }
 
 namespace
@@ -490,6 +486,11 @@ IndividualVariantCaller::call_reference(const std::vector<Allele>& alleles,
                                         const ReadMap& reads) const
 {
     return {};
+}
+    
+const SampleIdType& IndividualVariantCaller::sample() const noexcept
+{
+    return samples_.front();
 }
 
 namespace debug

@@ -418,17 +418,15 @@ std::ostream& operator<<(std::ostream& os, const AlignedRead::Qualities& qualiti
 
 std::ostream& operator<<(std::ostream& os, const AlignedRead& read)
 {
-    os << read.mapped_region() << '\n';
-    os << read.sequence() << '\n';
-    os << read.qualities() << '\n';
-    os << read.cigar_string() << '\n';
-    os << static_cast<unsigned>(read.mapping_quality()) << '\n';
+    os << read.mapped_region() << ' ';
+    os << read.sequence() << ' ';
+    os << read.qualities() << ' ';
+    os << read.cigar_string() << ' ';
+    os << static_cast<unsigned>(read.mapping_quality()) << ' ';
     if (read.is_chimeric()) {
-        os << read.next_segment().contig_name() << '\n';
-        os << read.next_segment().begin() << '\n';
+        os << read.next_segment().contig_name() << ' ';
+        os << read.next_segment().begin() << ' ';
         os << read.next_segment().inferred_template_length();
-    } else {
-        os << "no other segments";
     }
     return os;
 }

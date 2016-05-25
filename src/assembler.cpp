@@ -304,6 +304,7 @@ void Assembler::clear()
     graph_.clear();
     vertex_cache_.clear();
     reference_kmers_.clear();
+    reference_kmers_.shrink_to_fit();
 }
 
 std::deque<Assembler::Variant> Assembler::extract_variants(const unsigned max)

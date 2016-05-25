@@ -55,8 +55,6 @@
 #include "logging.hpp"
 #include "timing.hpp"
 
-#include "genotype_reader.hpp"
-
 namespace Octopus
 {
     void log_startup()

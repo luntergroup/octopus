@@ -65,7 +65,7 @@ namespace Octopus { namespace ReadFilters
         const auto& qualities = read.qualities();
         
         auto num_good_bases = std::count_if(std::cbegin(qualities), std::cend(qualities),
-                                            [this] (auto quality) {
+                                            [this] (const auto quality) {
                                                 return quality >= good_base_quality_;
                                             });
         
@@ -92,7 +92,7 @@ namespace Octopus { namespace ReadFilters
     {
         const auto& qualities = read.qualities();
         return std::count_if(std::cbegin(qualities), std::cend(qualities), [this]
-                             (auto quality) {
+                             (const auto quality) {
                                  return quality >= good_base_quality_;
                              }) >= min_good_bases_;
     }

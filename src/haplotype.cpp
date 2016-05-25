@@ -635,6 +635,7 @@ unsigned unique_least_complex(std::vector<Haplotype>& haplotypes)
     const auto result = std::distance(it, end(haplotypes));
     
     haplotypes.erase(it, last);
+    haplotypes.shrink_to_fit();
     
     return static_cast<unsigned>(result);
 }

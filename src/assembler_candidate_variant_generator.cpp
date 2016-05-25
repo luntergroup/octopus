@@ -382,7 +382,8 @@ void split_mnvs(Container& candidates)
     std::for_each(make_move_iterator(it), make_move_iterator(end(candidates)),
                   [&snps] (auto&& mnp) {
                       auto mnv_snps = split_mnv(std::move(mnp));
-                      snps.insert(end(snps), make_move_iterator(begin(mnv_snps)),
+                      snps.insert(end(snps),
+                                  make_move_iterator(begin(mnv_snps)),
                                   make_move_iterator(end(mnv_snps)));
                   });
     
