@@ -33,7 +33,7 @@ namespace Octopus
                 using GenotypeProbabilityVector = std::vector<double>;
                 
                 Latents() = default;
-                Latents(GenotypeProbabilityVector&& genotype_probabilities);
+                explicit Latents(GenotypeProbabilityVector&& genotype_probabilities);
                 ~Latents() = default;
                 
                 GenotypeProbabilityVector genotype_probabilities;
@@ -42,7 +42,7 @@ namespace Octopus
             struct InferredLatents
             {
                 InferredLatents() = default;
-                InferredLatents(Latents&& posteriors, double log_evidence);
+                explicit InferredLatents(Latents&& posteriors, double log_evidence);
                 
                 Latents posteriors;
                 double log_evidence;
@@ -50,8 +50,8 @@ namespace Octopus
             
             Individual() = delete;
             
-            explicit Individual(const CoalescentModel& genotype_prior_model,
-                                boost::optional<Logging::DebugLogger> debug_log = boost::none);
+            Individual(const CoalescentModel& genotype_prior_model,
+                       boost::optional<Logging::DebugLogger> debug_log = boost::none);
             
             ~Individual() = default;
             

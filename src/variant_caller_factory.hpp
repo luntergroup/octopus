@@ -27,8 +27,10 @@ namespace Octopus
     public:
         using ContigNameType = GenomicRegion::ContigNameType;
         
-        VariantCallerFactory()  = delete;
-        explicit VariantCallerFactory(VariantCallerBuilder template_builder, unsigned default_ploidy);
+        VariantCallerFactory() = delete;
+        
+        VariantCallerFactory(VariantCallerBuilder template_builder, unsigned default_ploidy);
+        
         ~VariantCallerFactory() = default;
         
         VariantCallerFactory(const VariantCallerFactory&)            = default;
@@ -38,7 +40,7 @@ namespace Octopus
         
         VariantCallerFactory& set_reference(const ReferenceGenome& reference) noexcept;
         VariantCallerFactory& set_read_pipe(ReadPipe& read_pipe) noexcept;
-        VariantCallerFactory& set_candidate_generator_builder(const CandidateGeneratorBuilder& candidate_generator_builder) noexcept;
+        VariantCallerFactory& set_candidate_generator_builder(const CandidateGeneratorBuilder& generator) noexcept;
         
         VariantCallerFactory& set_contig_ploidy(const ContigNameType& contig, unsigned ploidy);
         

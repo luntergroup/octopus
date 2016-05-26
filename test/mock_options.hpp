@@ -40,7 +40,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--reference-cache-size", "100",
         //"--threads", "0",
         
-        //"--contig-output-order", "as-in-reference-reversed",
+        //"--contig-output-order", "AsInReferenceReversed",
         
         "--reference", human_reference_fasta.c_str(),
         //"--reference", ecoli_reference_fasta.c_str(),
@@ -80,6 +80,8 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         /* input regions */
         
         //"--use-one-based-indexing",
+        
+        "--regions", "22:37,218,532-37,218,572",
         
         // MSG
         //"--regions", "2:47,640,494-47,644,304", // whole region
@@ -164,7 +166,10 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--regions", "22:28,553,936-28,554,100", // somatic insertion? Low posterior
         //"--regions", "22:28,645,596-28,645,926", // Real somatic SNV? Low posterior
         //"--regions", "22:28,970,260-28,970,424", // real somatic deletion?
+        //"--regions", "22:29,474,547-29,474,587", // real somatic SNV?
+        //"--regions", "22:29,761,141-29,761,305", // real somatic SNV?
         
+        //"--regions", "22:30,213,959-30,214,123", // FP somatic SNV. Very difficult.
         //"--regions", "22:29,455,729-29,455,769", // FP somatic deletion
         //"--regions", "22:28,812,452-28,812,616", // FP somatic deletion
         //"--regions", "22:33,595,824-33,595,864", // FP somatic del
@@ -180,13 +185,6 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--regions", "22:25,656,651-25,656,728", // FP SNP. Solved: Disable MQ filter or allow lagging
         //"--regions", "22:25,330,405-25,330,569", // FP DEL. Solved: model filter
         //"--regions", "22:25,070,597-25,070,854", // FP SNP. Solved: model filter
-        
-        "--regions", "22:29,474,547-29,474,587", // false negative?
-        //"--regions", "22:29,591,785-29,591,825", // NOPE.. really need to sort this type of FP
-        //"--regions", "22:29,636,450-29,636,490", // NOPE! (fixed with another CNV seed)
-        //"--regions", "22:29,761,141-29,761,305", // low posterior (could not be real..)
-        //"--regions", "22:30,094,383-30,094,422", // Not a somatic insertion
-        //"--regions", "22:30,213,959-30,214,123", // FP somatic SNV
         
         // For ecoli
         //"--regions", "R00000042:3008660-3020000",
@@ -230,9 +228,10 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--min-assembler-base-quality", "10",
         //"--max-variant-size", "25",
         
-        "--disable-haplotype-lagging",
+        "--phasing-level", "Aggressive",
         //"--disable-inactive-flank-scoring",
         //"--max-haplotypes", "64",
+        //"--min-haplotype-posterior", "1e-15",
         
         //"--min-variant-posterior", "2",
         //"--min-refcall-posterior", "0",

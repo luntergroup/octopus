@@ -28,7 +28,9 @@ namespace GenotypeModel
     {
     public:
         FixedPloidyGenotypeLikelihoodModel()  = delete;
-        explicit FixedPloidyGenotypeLikelihoodModel(unsigned ploidy, const HaplotypeLikelihoodCache& haplotype_likelihoods);
+        
+        FixedPloidyGenotypeLikelihoodModel(unsigned ploidy, const HaplotypeLikelihoodCache& haplotype_likelihoods);
+        
         ~FixedPloidyGenotypeLikelihoodModel() = default;
         
         FixedPloidyGenotypeLikelihoodModel(const FixedPloidyGenotypeLikelihoodModel&)            = default;

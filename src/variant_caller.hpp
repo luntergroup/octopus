@@ -44,18 +44,39 @@ class VariantCaller
 public:
     enum class RefCallType { None, Blocked, Positional };
     
+    struct CallerComponents
+    {
+        CallerComponents() = delete;
+        
+        CallerComponents(const ReferenceGenome& reference,
+                         ReadPipe& read_pipe,
+                         CandidateVariantGenerator&& candidate_generator,
+                         HaplotypeGenerator::Builder haplotype_generator_builder);
+        
+        CallerComponents(const CallerComponents&)            = delete;
+        CallerComponents& operator=(const CallerComponents&) = delete;
+        CallerComponents(CallerComponents&&)                 = default;
+        CallerComponents& operator=(CallerComponents&&)      = default;
+        
+        std::reference_wrapper<const ReferenceGenome> reference;
+        std::reference_wrapper<ReadPipe> read_pipe;
+        CandidateVariantGenerator candidate_generator;
+        HaplotypeGenerator::Builder haplotype_generator_builder;
+    };
+    
     struct CallerParameters
     {
         CallerParameters() = default;
-        explicit CallerParameters(unsigned max_haplotypes, RefCallType refcall_type,
-                                  bool call_sites_only, bool allow_lagging, bool allow_flank_scoring,
-                                  double min_phase_score);
+        
+        explicit CallerParameters(RefCallType refcall_type, bool call_sites_only,
+                                  unsigned max_haplotypes, double min_haplotype_posterior,
+                                  bool allow_flank_scoring, double min_phase_score);
+        
         ~CallerParameters() = default;
         
-        unsigned max_haplotypes;
         RefCallType refcall_type;
         bool call_sites_only;
-        bool lag_haplotype_generation;
+        unsigned max_haplotypes;
         double min_haplotype_posterior;
         bool allow_inactive_flank_scoring;
         double min_phase_score;
@@ -65,10 +86,7 @@ public:
     
     VariantCaller() = delete;
     
-    explicit VariantCaller(const ReferenceGenome& reference,
-                           ReadPipe& read_pipe,
-                           CandidateVariantGenerator&& candidate_generator,
-                           CallerParameters parameters);
+    VariantCaller(CallerComponents&& components, CallerParameters parameters);
     
     virtual ~VariantCaller() = default;
     
@@ -105,6 +123,8 @@ protected:
     
 private:
     mutable CandidateVariantGenerator candidate_generator_;
+    
+    HaplotypeGenerator::Builder haplotype_generator_builder_;
     
     CallerParameters parameters_;
     

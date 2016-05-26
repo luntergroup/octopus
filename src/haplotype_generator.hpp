@@ -35,27 +35,15 @@ namespace Octopus
     public:
         enum class LaggingPolicy { None, Mild, Aggressive };
         
-        class HaplotypeOverflowError : public std::runtime_error
-        {
-        public:
-            HaplotypeOverflowError(GenomicRegion region);
-            
-            virtual const char* what() const noexcept override;
-            
-            const GenomicRegion& region() const noexcept;
-            
-            unsigned overflow_size() const noexcept;
-            
-        private:
-            GenomicRegion region_;
-            std::string message_;
-        };
+        class HaplotypeOverflowError;
+        
+        class Builder;
         
         HaplotypeGenerator() = delete;
         
         explicit HaplotypeGenerator(const GenomicRegion& window, const ReferenceGenome& reference,
                                     const MappableFlatSet<Variant>& candidates, const ReadMap& reads,
-                                    unsigned max_haplotypes,
+                                    unsigned soft_max_haplotypes, unsigned hard_max_haplotypes,
                                     LaggingPolicy lagging = LaggingPolicy::None);
         
         ~HaplotypeGenerator() = default;
@@ -103,6 +91,49 @@ namespace Octopus
         void set_holdout_set(const GenomicRegion& active_region);
         void rientroduce_holdout_set();
         GenomicRegion calculate_haplotype_region() const;
+    };
+    
+    class HaplotypeGenerator::HaplotypeOverflowError : public std::runtime_error
+    {
+    public:
+        HaplotypeOverflowError(GenomicRegion region);
+        
+        virtual const char* what() const noexcept override;
+        
+        const GenomicRegion& region() const noexcept;
+        
+        unsigned overflow_size() const noexcept;
+        
+    private:
+        GenomicRegion region_;
+        std::string message_;
+    };
+    
+    class HaplotypeGenerator::Builder
+    {
+    public:
+        using LaggingPolicy = HaplotypeGenerator::LaggingPolicy;
+        
+        Builder();
+        
+        ~Builder() = default;
+        
+        Builder(const Builder&)            = default;
+        Builder& operator=(const Builder&) = default;
+        Builder(Builder&&)                 = default;
+        Builder& operator=(Builder&&)      = default;
+        
+        Builder& set_soft_max_haplotypes(unsigned n) noexcept;
+        Builder& set_soft_hard_haplotypes(unsigned n) noexcept;
+        Builder& set_lagging_policy(LaggingPolicy policy) noexcept;
+        
+        HaplotypeGenerator build(const ReferenceGenome& reference, const GenomicRegion& window,
+                                 const MappableFlatSet<Variant>& candidates,
+                                 const ReadMap& reads) const;
+        
+    private:
+        unsigned soft_max_haplotypes_, hard_max_haplotypes_;
+        LaggingPolicy lagging_policy_;
     };
 } // namespace Octopus
 

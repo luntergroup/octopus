@@ -30,11 +30,15 @@ namespace Octopus
 class IndividualVariantCaller : public VariantCaller
 {
 public:
+    using VariantCaller::CallerComponents;
+    
     struct CallerParameters
     {
         CallerParameters() = default;
+        
         explicit CallerParameters(double min_variant_posterior, double min_refcall_posterior,
                                   unsigned ploidy);
+        
         ~CallerParameters() = default;
         
         double min_variant_posterior;
@@ -44,53 +48,18 @@ public:
     
     IndividualVariantCaller() = delete;
     
-    explicit IndividualVariantCaller(const ReferenceGenome& reference,
-                                     ReadPipe& read_pipe,
-                                     CandidateVariantGenerator&& candidate_generator,
-                                     VariantCaller::CallerParameters general_parameters,
-                                     CallerParameters specific_parameters);
+    IndividualVariantCaller(CallerComponents&& components, VariantCaller::CallerParameters general_parameters,
+                            CallerParameters specific_parameters);
     
     ~IndividualVariantCaller() = default;
-    
+
     IndividualVariantCaller(const IndividualVariantCaller&)            = delete;
     IndividualVariantCaller& operator=(const IndividualVariantCaller&) = delete;
     IndividualVariantCaller(IndividualVariantCaller&&)                 = delete;
     IndividualVariantCaller& operator=(IndividualVariantCaller&&)      = delete;
     
 private:
-    class Latents : public CallerLatents
-    {
-    public:
-        using ModelInferences = GenotypeModel::Individual::InferredLatents;
-        
-        using CallerLatents::HaplotypeProbabilityMap;
-        using CallerLatents::GenotypeProbabilityMap;
-        
-        friend IndividualVariantCaller;
-        
-        explicit Latents(const SampleIdType& sample,
-                         const std::vector<Haplotype>&,
-                         std::vector<Genotype<Haplotype>>&& genotypes,
-                         ModelInferences&&);
-        explicit Latents(const SampleIdType& sample,
-                         const std::vector<Haplotype>&,
-                         std::vector<Genotype<Haplotype>>&& genotypes,
-                         ModelInferences&&, ModelInferences&&);
-        
-        std::shared_ptr<HaplotypeProbabilityMap> get_haplotype_posteriors() const noexcept override;
-        std::shared_ptr<GenotypeProbabilityMap> get_genotype_posteriors() const noexcept override;
-        
-    private:
-        std::shared_ptr<GenotypeProbabilityMap> genotype_posteriors_;
-        std::shared_ptr<HaplotypeProbabilityMap> haplotype_posteriors_;
-        
-        boost::optional<ModelInferences> dummy_latents_;
-        
-        double model_log_evidence_;
-        
-        HaplotypeProbabilityMap
-        calculate_haplotype_posteriors(const std::vector<Haplotype>& haplotypes);
-    };
+    class Latents;
     
     double min_variant_posterior_;
     double min_refcall_posterior_;
@@ -111,6 +80,40 @@ private:
                    const ReadMap& reads) const override;
     
     const SampleIdType& sample() const noexcept;
+};
+
+class IndividualVariantCaller::Latents : public CallerLatents
+{
+public:
+    using ModelInferences = GenotypeModel::Individual::InferredLatents;
+    
+    using CallerLatents::HaplotypeProbabilityMap;
+    using CallerLatents::GenotypeProbabilityMap;
+    
+    friend IndividualVariantCaller;
+    
+    explicit Latents(const SampleIdType& sample,
+                     const std::vector<Haplotype>&,
+                     std::vector<Genotype<Haplotype>>&& genotypes,
+                     ModelInferences&&);
+    explicit Latents(const SampleIdType& sample,
+                     const std::vector<Haplotype>&,
+                     std::vector<Genotype<Haplotype>>&& genotypes,
+                     ModelInferences&&, ModelInferences&&);
+    
+    std::shared_ptr<HaplotypeProbabilityMap> get_haplotype_posteriors() const noexcept override;
+    std::shared_ptr<GenotypeProbabilityMap> get_genotype_posteriors() const noexcept override;
+    
+private:
+    std::shared_ptr<GenotypeProbabilityMap> genotype_posteriors_;
+    std::shared_ptr<HaplotypeProbabilityMap> haplotype_posteriors_;
+    
+    boost::optional<ModelInferences> dummy_latents_;
+    
+    double model_log_evidence_;
+    
+    HaplotypeProbabilityMap
+    calculate_haplotype_posteriors(const std::vector<Haplotype>& haplotypes);
 };
 } // namespace Octopus
 

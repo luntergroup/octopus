@@ -36,6 +36,7 @@ namespace Octopus
         
         explicit HaplotypeLikelihoodCache(unsigned max_haplotypes,
                                           const std::vector<SampleIdType>& samples);
+        
         explicit HaplotypeLikelihoodCache(HaplotypeLikelihoodModel likelihood_model,
                                           unsigned max_haplotypes,
                                           const std::vector<SampleIdType>& samples);

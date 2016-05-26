@@ -88,17 +88,18 @@ namespace debug
 
 HaplotypeGenerator::HaplotypeGenerator(const GenomicRegion& window, const ReferenceGenome& reference,
                                        const MappableFlatSet<Variant>& candidates, const ReadMap& reads,
-                                       unsigned max_haplotypes,
+                                       unsigned soft_max_haplotypes, unsigned hard_max_haplotypes,
                                        LaggingPolicy lagging)
 :
 tree_ {window.contig_name(), reference},
-walker_ {max_included(max_haplotypes)},
+walker_ {max_included(soft_max_haplotypes)},
 lagged_walker_ {},
 alleles_ {variants_to_alleles(candidates)},
 reads_ {reads},
 current_active_region_ {shift(head_region(alleles_.leftmost(), 0), -1)},
 next_active_region_ {},
-soft_max_haplotypes_ {max_haplotypes},
+soft_max_haplotypes_ {soft_max_haplotypes},
+hard_max_haplotypes_ {hard_max_haplotypes},
 rightmost_allele_ {},
 holdout_set_ {},
 current_holdout_region_ {},
@@ -113,7 +114,7 @@ previous_holdout_regions_ {}
             policy = GenomeWalker::IndicatorPolicy::NoLimit;
         }
         
-        lagged_walker_ = GenomeWalker {max_included(max_haplotypes), policy};
+        lagged_walker_ = GenomeWalker {max_included(soft_max_haplotypes_), policy};
     }
     
     if (alleles_.empty()) {
@@ -537,6 +538,41 @@ GenomicRegion HaplotypeGenerator::calculate_haplotype_region() const
     }
     
     return expand(current_active_region_, additional_padding / 2);
+}
+    
+// Builder
+
+HaplotypeGenerator::Builder::Builder()
+:
+soft_max_haplotypes_ {128}, hard_max_haplotypes_ {150'000},
+lagging_policy_ {LaggingPolicy::None}
+{}
+
+HaplotypeGenerator::Builder& HaplotypeGenerator::Builder::set_soft_max_haplotypes(unsigned n) noexcept
+{
+    soft_max_haplotypes_ = n;
+    return *this;
+}
+
+HaplotypeGenerator::Builder& HaplotypeGenerator::Builder::set_soft_hard_haplotypes(unsigned n) noexcept
+{
+    hard_max_haplotypes_ = n;
+    return *this;
+}
+
+HaplotypeGenerator::Builder& HaplotypeGenerator::Builder::set_lagging_policy(LaggingPolicy policy) noexcept
+{
+    lagging_policy_ = policy;
+    return *this;
+}
+
+HaplotypeGenerator HaplotypeGenerator::Builder::build(const ReferenceGenome& reference, const GenomicRegion& window,
+                         const MappableFlatSet<Variant>& candidates,
+                         const ReadMap& reads) const
+{
+    return HaplotypeGenerator {
+        window, reference, candidates, reads, soft_max_haplotypes_, hard_max_haplotypes_, lagging_policy_
+    };
 }
 
 namespace debug

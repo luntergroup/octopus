@@ -28,6 +28,8 @@ namespace Octopus
 class PopulationVariantCaller : public VariantCaller
 {
 public:
+    using VariantCaller::CallerComponents;
+    
     struct CallerParameters
     {
         CallerParameters() = default;
@@ -42,11 +44,8 @@ public:
     
     PopulationVariantCaller() = delete;
     
-    explicit PopulationVariantCaller(const ReferenceGenome& reference,
-                                     ReadPipe& read_pipe,
-                                     CandidateVariantGenerator&& candidate_generator,
-                                     VariantCaller::CallerParameters general_parameters,
-                                     CallerParameters specific_parameters);
+    PopulationVariantCaller(CallerComponents&& components, VariantCaller::CallerParameters general_parameters,
+                            CallerParameters specific_parameters);
     
     ~PopulationVariantCaller() = default;
     

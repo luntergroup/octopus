@@ -37,9 +37,9 @@ namespace Octopus
     }
     
     VariantCallerFactory&
-    VariantCallerFactory::set_candidate_generator_builder(const CandidateGeneratorBuilder& candidate_generator_builder) noexcept
+    VariantCallerFactory::set_candidate_generator_builder(const CandidateGeneratorBuilder& generator) noexcept
     {
-        template_builder_.set_candidate_generator_builder(candidate_generator_builder);
+        template_builder_.set_candidate_generator_builder(generator);
         return *this;
     }
     

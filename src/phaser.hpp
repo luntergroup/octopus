@@ -35,6 +35,8 @@ namespace Octopus
         using GenotypePosteriorMap       = ProbabilityMatrix<Genotype<Haplotype>>;
         using SampleGenotypePosteriorMap = GenotypePosteriorMap::InnerMap;
         
+        struct PhaseSet;
+        
         Phaser() = default;
         
         explicit Phaser(double min_phase_score);
@@ -46,41 +48,7 @@ namespace Octopus
         Phaser(Phaser&&)                 = default;
         Phaser& operator=(Phaser&&)      = default;
         
-        struct PhaseSet
-        {
-            struct PhaseRegion : public Mappable<PhaseRegion>
-            {
-                PhaseRegion() = default;
-                template <typename Region> PhaseRegion(Region&& region, double score);
-                ~PhaseRegion() = default;
-                
-                PhaseRegion(const PhaseRegion&)            = default;
-                PhaseRegion& operator=(const PhaseRegion&) = default;
-                PhaseRegion(PhaseRegion&&)                 = default;
-                PhaseRegion& operator=(PhaseRegion&&)      = default;
-                
-                GenomicRegion region;
-                double score;
-                
-                const GenomicRegion& mapped_region() const noexcept { return region; }
-            };
-            
-            using SamplePhaseRegions = std::vector<PhaseRegion>;
-            using PhaseRegions       = std::unordered_map<SampleIdType, SamplePhaseRegions>;
-            
-            PhaseSet() = delete;
-            template <typename R> PhaseSet(R&& region);
-            template <typename R, typename T> PhaseSet(R&& region, T&& phase_regions);
-            ~PhaseSet() = default;
-            
-            PhaseSet(const PhaseSet&)            = default;
-            PhaseSet& operator=(const PhaseSet&) = default;
-            PhaseSet(PhaseSet&&)                 = default;
-            PhaseSet& operator=(PhaseSet&&)      = default;
-            
-            GenomicRegion region;
-            PhaseRegions phase_regions;
-        };
+        struct PhaseSet;
         
         boost::optional<PhaseSet> try_phase(const std::vector<Haplotype>& haplotypes,
                                             const GenotypePosteriorMap& genotype_posteriors,
@@ -92,6 +60,42 @@ namespace Octopus
         
     private:
         double min_phase_score_;
+    };
+    
+    struct Phaser::PhaseSet
+    {
+        struct PhaseRegion : public Mappable<PhaseRegion>
+        {
+            PhaseRegion() = default;
+            template <typename Region> PhaseRegion(Region&& region, double score);
+            ~PhaseRegion() = default;
+            
+            PhaseRegion(const PhaseRegion&)            = default;
+            PhaseRegion& operator=(const PhaseRegion&) = default;
+            PhaseRegion(PhaseRegion&&)                 = default;
+            PhaseRegion& operator=(PhaseRegion&&)      = default;
+            
+            GenomicRegion region;
+            double score;
+            
+            const GenomicRegion& mapped_region() const noexcept { return region; }
+        };
+        
+        using SamplePhaseRegions = std::vector<PhaseRegion>;
+        using PhaseRegions       = std::unordered_map<SampleIdType, SamplePhaseRegions>;
+        
+        PhaseSet() = delete;
+        template <typename R> PhaseSet(R&& region);
+        template <typename R, typename T> PhaseSet(R&& region, T&& phase_regions);
+        ~PhaseSet() = default;
+        
+        PhaseSet(const PhaseSet&)            = default;
+        PhaseSet& operator=(const PhaseSet&) = default;
+        PhaseSet(PhaseSet&&)                 = default;
+        PhaseSet& operator=(PhaseSet&&)      = default;
+        
+        GenomicRegion region;
+        PhaseRegions phase_regions;
     };
     
     template <typename Region>

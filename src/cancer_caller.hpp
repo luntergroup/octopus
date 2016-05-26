@@ -33,13 +33,17 @@ namespace Octopus
 class CancerVariantCaller : public VariantCaller
 {
 public:
+    using VariantCaller::CallerComponents;
+    
     struct CallerParameters
     {
         CallerParameters() = default;
+        
         explicit CallerParameters(double min_variant_posterior, double min_somatic_posterior,
                                   double min_refcall_posterior, unsigned ploidy,
                                   boost::optional<SampleIdType> normal_sample,
                                   double somatic_mutation_rate, bool call_somatics_only);
+        
         ~CallerParameters() = default;
         
         double min_variant_posterior;
@@ -54,11 +58,8 @@ public:
     
     CancerVariantCaller() = delete;
     
-    explicit CancerVariantCaller(const ReferenceGenome& reference,
-                                 ReadPipe& read_pipe,
-                                 CandidateVariantGenerator&& candidate_generator,
-                                 VariantCaller::CallerParameters general_parameters,
-                                 CallerParameters specific_parameters);
+    CancerVariantCaller(CallerComponents&& components, VariantCaller::CallerParameters general_parameters,
+                        CallerParameters specific_parameters);
     
     ~CancerVariantCaller() = default;
     

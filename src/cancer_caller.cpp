@@ -59,13 +59,11 @@ call_somatics_only {call_somatics_only},
 max_genotypes {50'000}
 {}
 
-CancerVariantCaller::CancerVariantCaller(const ReferenceGenome& reference,
-                                         ReadPipe& read_pipe,
-                                         CandidateVariantGenerator&& candidate_generator,
+CancerVariantCaller::CancerVariantCaller(CallerComponents&& components,
                                          VariantCaller::CallerParameters general_parameters,
                                          CallerParameters specific_parameters)
 :
-VariantCaller {reference, read_pipe, std::move(candidate_generator), std::move(general_parameters)},
+VariantCaller {std::move(components), std::move(general_parameters)},
 parameters_ {std::move(specific_parameters)}
 {
     if (parameters_.min_variant_posterior == 0) {
