@@ -139,9 +139,11 @@ namespace Octopus
             stream << "Phased region is " << phasings.region << '\n';
             
             for (const auto& p : phasings.phase_regions) {
-                stream << "\tPhase regions for sample " << p.first << '\n';
-                for (const auto& r : p.second) {
-                    stream << "\t\t* " << r.region << " " << r.score << '\n';
+                if (p.second.size() > 1) {
+                    stream << "Phase regions for sample " << p.first << '\n';
+                    for (const auto& r : p.second) {
+                        stream << "\t* " << r.region << " " << r.score << '\n';
+                    }
                 }
             }
         }

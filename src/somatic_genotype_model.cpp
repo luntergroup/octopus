@@ -686,7 +686,6 @@ namespace Octopus
                                                          log_likelihoods);
         
         assert(responsabilities.size() == log_likelihoods.size()); // num samples
-        //assert(!responsabilities.front().empty());
         
         bool is_converged {false};
         double max_change {0};
@@ -813,6 +812,28 @@ namespace Octopus
     
     auto calculate_log_posteriors_with_germline_model(const SampleIdType& sample,
                                                       const std::vector<CancerGenotype<Haplotype>>& genotypes,
+                                                      const HaplotypeLikelihoodCache& haplotype_log_likelihoods)
+    {
+        assert(!genotypes.empty());
+        
+        const auto ploidy = genotypes.front().ploidy();
+        
+        const FixedPloidyGenotypeLikelihoodModel likelihood_model {ploidy, haplotype_log_likelihoods};
+        
+        std::vector<double> result(genotypes.size());
+        
+        std::transform(std::cbegin(genotypes), std::cend(genotypes), std::begin(result),
+                       [&] (const auto& genotype) {
+                           return likelihood_model.log_likelihood(sample, genotype.get_germline_genotype());
+                       });
+        
+        Maths::normalise_logs(result);
+        
+        return result;
+    }
+    
+    auto calculate_log_posteriors_with_germline_model(const SampleIdType& sample,
+                                                      const std::vector<CancerGenotype<Haplotype>>& genotypes,
                                                       const HaplotypeLikelihoodCache& haplotype_log_likelihoods,
                                                       const SomaticMutationModel& genotype_prior_model)
     {
@@ -820,7 +841,7 @@ namespace Octopus
         
         const auto ploidy = genotypes.front().ploidy();
         
-        FixedPloidyGenotypeLikelihoodModel likelihood_model {ploidy, haplotype_log_likelihoods};
+        const FixedPloidyGenotypeLikelihoodModel likelihood_model {ploidy, haplotype_log_likelihoods};
         
         std::vector<double> result(genotypes.size());
         
@@ -854,14 +875,11 @@ namespace Octopus
         
         for (const auto& sample : samples) {
             result.emplace_back(calculate_log_posteriors_with_germline_model(sample, genotypes,
+                                                                             haplotype_log_likelihoods));
+            result.emplace_back(calculate_log_posteriors_with_germline_model(sample, genotypes,
                                                                              haplotype_log_likelihoods,
                                                                              priors.genotype_prior_model));
         }
-        
-//        LogProbabilityVector dummy(genotypes.size(), (0.1) / (genotypes.size() - 1));
-//        dummy[142] = 0.9;
-//        Maths::log_each(dummy);
-//        result.emplace_back(dummy);
         
         return result;
     }
