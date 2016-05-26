@@ -94,7 +94,6 @@ public:
     };
     
     AlignedRead()  = default;
-    ~AlignedRead() = default;
     
     template <typename GenomicRegion_, typename String1_, typename Qualities_, typename CigarString_>
     explicit AlignedRead(GenomicRegion_&& reference_region, String1_&& sequence,
@@ -109,6 +108,8 @@ public:
                          String2_&& next_segment_contig_name, SizeType next_segment_begin,
                          SizeType inferred_template_length, NextSegment::Flags next_segment_flags);
     
+    ~AlignedRead() = default;
+    
     AlignedRead(const AlignedRead& other);
     AlignedRead& operator=(const AlignedRead& other);
     AlignedRead(AlignedRead&&)            = default;
@@ -122,19 +123,18 @@ public:
     const Qualities& qualities() const noexcept;
     QualityType mapping_quality() const noexcept;
     const CigarString& cigar_string() const noexcept;
-    bool has_mate() const noexcept;
-    const NextSegment& next_segment() const;
-    Flags flags() const;
-    
     bool is_chimeric() const noexcept;
-    bool is_marked_all_segments_in_read_aligned() const;
-    bool is_marked_multiple_read_template() const;
-    bool is_marked_unmapped() const;
-    bool is_marked_reverse_mapped() const;
-    bool is_marked_secondary_alignment() const;
-    bool is_marked_qc_fail() const;
-    bool is_marked_duplicate() const;
-    bool is_marked_supplementary_alignment() const;
+    const NextSegment& next_segment() const;
+    
+    Flags flags() const;
+    bool is_marked_all_segments_in_read_aligned() const noexcept;
+    bool is_marked_multiple_read_template() const noexcept;
+    bool is_marked_unmapped() const noexcept;
+    bool is_marked_reverse_mapped() const noexcept;
+    bool is_marked_secondary_alignment() const noexcept;
+    bool is_marked_qc_fail() const noexcept;
+    bool is_marked_duplicate() const noexcept;
+    bool is_marked_supplementary_alignment() const noexcept;
     
     std::size_t get_hash() const;
     

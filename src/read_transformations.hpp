@@ -15,12 +15,12 @@ namespace Octopus { namespace ReadTransforms
 {
     struct TrimOverlapping
     {
-        void operator()(AlignedRead& read) const;
+        void operator()(AlignedRead& read) const noexcept;
     };
     
     struct TrimAdapters
     {
-        void operator()(AlignedRead& read) const;
+        void operator()(AlignedRead& read) const noexcept;
     };
     
     struct TrimTail
@@ -30,7 +30,7 @@ namespace Octopus { namespace ReadTransforms
         TrimTail() = default;
         explicit TrimTail(SizeType num_bases);
         
-        void operator()(AlignedRead& read) const;
+        void operator()(AlignedRead& read) const noexcept;
         
     private:
         const SizeType num_bases_;
@@ -48,7 +48,7 @@ namespace Octopus { namespace ReadTransforms
         TrimSoftClippedTails() = default;
         explicit TrimSoftClippedTails(SizeType num_bases);
         
-        void operator()(AlignedRead& read) const;
+        void operator()(AlignedRead& read) const noexcept;
         
     private:
         const SizeType num_bases_;

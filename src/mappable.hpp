@@ -149,7 +149,7 @@ inline GenomicRegion::SizeType region_size(const GenomicRegion& region) noexcept
 }
 
 template <typename T>
-auto region_size(const Mappable<T>& mappable)
+auto region_size(const Mappable<T>& mappable) noexcept
 {
     return size(static_cast<const T&>(mappable).mapped_region());
 }
@@ -161,38 +161,38 @@ auto is_position(const Mappable<T>& mappable) noexcept
 }
 
 template <typename T>
-decltype(auto) contig_name(const Mappable<T>& mappable)
+decltype(auto) contig_name(const Mappable<T>& mappable) noexcept
 {
     return contig_name(static_cast<const T&>(mappable).mapped_region());
 }
 
 template <typename T>
-auto is_same_contig(const Mappable<T>& lhs, const ContigRegion& rhs)
+auto is_same_contig(const Mappable<T>& lhs, const ContigRegion& rhs) noexcept
 {
     return is_same_contig(static_cast<const T&>(lhs).mapped_region(), rhs);
 }
 
 template <typename T>
-auto is_same_contig(const Mappable<T>& lhs, const GenomicRegion& rhs)
+auto is_same_contig(const Mappable<T>& lhs, const GenomicRegion& rhs) noexcept
 {
     return is_same_contig(static_cast<const T&>(lhs).mapped_region(), rhs);
 }
 
 template <typename T1, typename T2>
-auto is_same_contig(const Mappable<T1>& lhs, const Mappable<T2>& rhs)
+auto is_same_contig(const Mappable<T1>& lhs, const Mappable<T2>& rhs) noexcept
 {
     return is_same_contig(static_cast<const T1&>(lhs).mapped_region(),
                           static_cast<const T2&>(rhs).mapped_region());
 }
 
 template <typename T>
-auto mapped_begin(const Mappable<T>& mappable)
+auto mapped_begin(const Mappable<T>& mappable) noexcept
 {
     return mapped_begin(static_cast<const T&>(mappable).mapped_region());
 }
 
 template <typename T>
-auto mapped_end(const Mappable<T>& mappable)
+auto mapped_end(const Mappable<T>& mappable) noexcept
 {
     return mapped_end(static_cast<const T&>(mappable).mapped_region());
 }

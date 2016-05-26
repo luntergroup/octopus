@@ -216,7 +216,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--disable-soft-clip-masking",
         //"--tail-trim-size", "3",
         //"--disable-adapter-masking",
-        "--disable-overlap-masking",
+        //"--disable-overlap-masking",
         
         // read filters/transforms
         //"--disable-read-filtering",
