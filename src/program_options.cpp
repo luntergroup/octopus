@@ -35,7 +35,6 @@
 #include "read_transform.hpp"
 #include "read_transformations.hpp"
 
-#include "haplotype_prior_model.hpp"
 #include "variant_caller_builder.hpp"
 
 #include "vcf_reader.hpp"

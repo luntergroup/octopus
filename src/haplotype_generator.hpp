@@ -33,6 +33,8 @@ namespace Octopus
     class HaplotypeGenerator
     {
     public:
+        enum class LaggingPolicy { None, Mild, Aggressive };
+        
         class HaplotypeOverflowError : public std::runtime_error
         {
         public:
@@ -53,7 +55,8 @@ namespace Octopus
         
         explicit HaplotypeGenerator(const GenomicRegion& window, const ReferenceGenome& reference,
                                     const MappableFlatSet<Variant>& candidates, const ReadMap& reads,
-                                    unsigned max_haplotypes, bool allow_lagging);
+                                    unsigned max_haplotypes,
+                                    LaggingPolicy lagging = LaggingPolicy::None);
         
         ~HaplotypeGenerator() = default;
         

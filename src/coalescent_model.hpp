@@ -18,7 +18,7 @@
 #include <cmath>
 #include <algorithm>
 #include <cstddef>
-#include <set>
+#include <tuple>
 
 #include <boost/math/special_functions/binomial.hpp>
 
@@ -37,10 +37,6 @@ namespace Octopus
                                  double snp_heterozygosity = 0.001,
                                  double indel_heterozygosity = 0.001);
         
-        explicit CoalescentModel(std::vector<Haplotype> reference,
-                                 double snp_heterozygosity = 0.001,
-                                 double indel_heterozygosity = 0.001);
-        
         ~CoalescentModel() = default;
         
         CoalescentModel(const CoalescentModel&)            = default;
@@ -53,13 +49,16 @@ namespace Octopus
         template <typename Container> double evaluate(const Container& haplotypes) const;
         
     private:
-        std::vector<Haplotype> reference_haplotypes_;
+        Haplotype reference_;
         
         double snp_heterozygosity_, indel_heterozygosity_;
         
         using HaplotypeReference = std::reference_wrapper<const Haplotype>;
         
         mutable std::unordered_map<HaplotypeReference, std::vector<Variant>> difference_cache_;
+        
+        template <typename Container>
+        std::pair<unsigned, unsigned> count_segregating_sites(const Container& haplotypes) const;
     };
     
     namespace detail
@@ -71,56 +70,71 @@ namespace Octopus
             // ploidy instead).
             return std::distance(std::cbegin(haplotypes), std::cend(haplotypes));
         }
-        
-        template <typename Container1, typename Container2, typename M>
-        std::pair<unsigned, unsigned>
-        calculate_num_segregating_sites(const Container1& reference_haplotypes,
-                                        const Container2& candidate_haplotypes,
-                                        M& difference_cache)
-        {
-            std::set<Variant> differences {};
-            
-            const auto& reference = reference_haplotypes.front();
-            
-            for (const Haplotype& haplotype : candidate_haplotypes) {
-                const auto it = difference_cache.find(haplotype);
-                
-                if (it != std::cend(difference_cache)) {
-                    differences.insert(std::cbegin(it->second), std::cend(it->second));
-                } else {
-                    auto curr = haplotype.difference(reference);
-                    differences.insert(std::cbegin(curr), std::cend(curr));
-                    difference_cache.emplace(std::cref(haplotype), std::move(curr));
-                }
-            }
-            
-            return std::make_pair(static_cast<unsigned>(differences.size()), 0);
-        }
     } // namespace detail
     
     template <typename Container>
     double CoalescentModel::evaluate(const Container& haplotypes) const
     {
-        // TODO: complete the calculation for indels
-        
         unsigned k_snp, k_indel;
         
-        std::tie(k_snp, k_indel) = detail::calculate_num_segregating_sites(reference_haplotypes_,
-                                                                           haplotypes,
-                                                                           difference_cache_);
+        std::tie(k_snp, k_indel) = count_segregating_sites(haplotypes);
         
-        const auto n = reference_haplotypes_.size() + detail::size(haplotypes);
+        const auto n = static_cast<unsigned>(detail::size(haplotypes) + 1); // + 1 for reference
         
         double result {0};
         
         const auto theta = snp_heterozygosity_;
         
-        for (std::size_t i {2}; i <= n; ++i) {
+        const auto k = k_snp + k_indel; // TODO: correct calculation for different indel heterozygosity
+        
+        for (unsigned i {2}; i <= n; ++i) {
             result += std::pow(-1, i) * boost::math::binomial_coefficient<double>(n - 1, i - 1)
-                        * ((i - 1) / (theta + i - 1)) * std::pow(theta / (theta + i - 1), k_snp);
+                        * ((i - 1) / (theta + i - 1)) * std::pow(theta / (theta + i - 1), k);
         }
         
         return std::log(result);
+    }
+    
+    // private methods
+    
+    template <typename Container>
+    std::pair<unsigned, unsigned>
+    CoalescentModel::count_segregating_sites(const Container& haplotypes) const
+    {
+        const auto n = detail::size(haplotypes);
+        
+        std::vector<std::reference_wrapper<const Variant>> sites {};
+        sites.reserve(2 * n);
+        
+        for (const Haplotype& haplotype : haplotypes) {
+            const auto it = difference_cache_.find(haplotype);
+            
+            if (it != std::cend(difference_cache_)) {
+                sites.insert(std::end(sites), std::cbegin(it->second), std::cend(it->second));
+            } else {
+                const auto p = difference_cache_.emplace(std::piecewise_construct,
+                                                         std::forward_as_tuple(haplotype),
+                                                         std::forward_as_tuple(haplotype.difference(reference_)));
+                
+                sites.insert(std::end(sites), std::cbegin(p.first->second), std::cend(p.first->second));
+            }
+        }
+        
+        auto it1 = std::end(sites);
+        
+        if (n > 1) {
+            std::sort(std::begin(sites), std::end(sites));
+            
+            it1 = std::unique(std::begin(sites), std::end(sites));
+        }
+        
+        const auto it2 = std::partition(std::begin(sites), it1,
+                                        [] (const auto& variant) {
+                                            return is_indel(variant);
+                                        });
+        
+        return std::make_pair(static_cast<unsigned>(std::distance(it2, it1)),
+                              static_cast<unsigned>(std::distance(std::begin(sites), it2)));
     }
     
     // non-member methods

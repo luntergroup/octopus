@@ -625,10 +625,10 @@ auto extract_info(const bcf_hdr_t* header, bcf1_t* record)
         result.emplace(key, std::move(values));
     }
     
-    std::free(intinfo);
-    std::free(floatinfo);
-    std::free(stringinfo);
-    std::free(flaginfo);
+    if (intinfo != nullptr) std::free(intinfo);
+    if (floatinfo != nullptr) std::free(floatinfo);
+    if (stringinfo != nullptr) std::free(stringinfo);
+    if (flaginfo != nullptr) std::free(flaginfo);
     
     return result;
 }
@@ -793,6 +793,7 @@ auto extract_samples(const bcf_hdr_t* header, bcf1_t* record, const std::vector<
     if (intformat != nullptr) std::free(intformat);
     if (floatformat != nullptr) std::free(floatformat);
     if (stringformat != nullptr) {
+        // bcf_get_format_string allocates two arrays
         std::free(stringformat[0]);
         std::free(stringformat);
     }

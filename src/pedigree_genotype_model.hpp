@@ -17,7 +17,6 @@
 #include "common.hpp"
 #include "genotype.hpp"
 #include "reference_genome.hpp"
-#include "haplotype_prior_model.hpp"
 
 class AlignedRead;
 class Haplotype;

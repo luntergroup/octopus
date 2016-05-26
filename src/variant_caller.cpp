@@ -617,10 +617,15 @@ HaplotypeGenerator VariantCaller::make_haplotype_generator(const GenomicRegion& 
                                                            const MappableFlatSet<Variant>& candidates,
                                                            const ReadMap& reads) const
 {
-    return HaplotypeGenerator {region, reference_, candidates, reads,
-                parameters_.max_haplotypes, parameters_.lag_haplotype_generation};
-}
+    HaplotypeGenerator::LaggingPolicy policy = HaplotypeGenerator::LaggingPolicy::None;
     
+    if (parameters_.lag_haplotype_generation) {
+        policy = HaplotypeGenerator::LaggingPolicy::Aggressive;
+    }
+    
+    return HaplotypeGenerator {region, reference_, candidates, reads, parameters_.max_haplotypes, policy};
+}
+
 HaplotypeLikelihoodCache VariantCaller::make_haplotype_likelihood_cache() const
 {
     return HaplotypeLikelihoodCache {parameters_.max_haplotypes, samples_};

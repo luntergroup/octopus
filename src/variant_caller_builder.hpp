@@ -20,7 +20,6 @@
 #include "variant_caller.hpp"
 #include "read_pipe.hpp"
 #include "candidate_generator_builder.hpp"
-#include "haplotype_prior_model_factory.hpp"
 
 #include "pedigree.hpp"
 
@@ -97,8 +96,6 @@ namespace Octopus {
             // common
             std::reference_wrapper<const ReferenceGenome> reference;
             std::reference_wrapper<ReadPipe> read_pipe;
-            
-            HaplotypePriorModelFactory haplotype_prior_model_factory;
             
             unsigned ploidy;
             std::string caller;

@@ -98,7 +98,7 @@ private:
     SizeType get_rhs_extension_size(const GenomicRegion& requested_region) const;
     GenomicRegion get_region_to_fetch(const GenomicRegion& requested_region) const;
     GenomicRegion get_new_contig_chunk(const GenomicRegion& requested_region) const;
-    GenomicRegion get_hit_contig_chunk(const GenomicRegion& requested_region) const;
+    GenomicRegion get_partial_contig_chunk(const GenomicRegion& requested_region) const;
     bool is_contig_cached(const GenomicRegion& region) const;
     CacheIterator find_cache_iterator(const GenomicRegion& requested_region) const;
     void add_sequence_to_cache(SequenceType&& sequence, GenomicRegion&& region) const;

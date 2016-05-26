@@ -81,8 +81,6 @@ CachingFasta::SizeType CachingFasta::do_fetch_contig_size(const ContigNameType& 
 
 CachingFasta::SequenceType CachingFasta::do_fetch_sequence(const GenomicRegion& region) const
 {
-    //std::cout << "requesting " << region << std::endl;
-    
     if (size(region) > max_cache_size_) {
         return fasta_->fetch_sequence(region);
     }
@@ -93,8 +91,6 @@ CachingFasta::SequenceType CachingFasta::do_fetch_sequence(const GenomicRegion& 
         const auto it = find_cache_iterator(region);
         
         if (it != std::cend(sequence_cache_.at(region.contig_name()))) {
-            //std::cout << "region " << region << " in cache" << std::endl;
-            
             update_cache_position(region);
             
             lock.unlock();
@@ -113,8 +109,6 @@ CachingFasta::SequenceType CachingFasta::do_fetch_sequence(const GenomicRegion& 
                                   fetched_sequence);
     
     lock.lock();
-    
-    //std::cout << "adding " << fetch_region << " to cache" << std::endl;
     
     add_sequence_to_cache(std::move(fetched_sequence), std::move(fetch_region));
     
@@ -174,7 +168,7 @@ GenomicRegion CachingFasta::get_region_to_fetch(const GenomicRegion& requested_r
     if (sequence_cache_.count(requested_region.contig_name()) == 0) {
         return get_new_contig_chunk(requested_region);
     } else {
-        return get_hit_contig_chunk(requested_region);
+        return get_partial_contig_chunk(requested_region);
     }
 }
 
@@ -198,7 +192,7 @@ GenomicRegion CachingFasta::get_new_contig_chunk(const GenomicRegion& requested_
                       get_lhs_extension_size(requested_region));
 }
 
-GenomicRegion CachingFasta::get_hit_contig_chunk(const GenomicRegion& requested_region) const
+GenomicRegion CachingFasta::get_partial_contig_chunk(const GenomicRegion& requested_region) const
 {
     // TODO: optimise this to avoid requesting sequence we already have in cache
     return get_new_contig_chunk(requested_region);
@@ -270,7 +264,6 @@ void CachingFasta::remove_from_sequence_cache(const GenomicRegion& region) const
 {
     const auto& contig = region.contig_name();
     
-    //std::cout << "removing " << region << " from cache" << std::endl;
     sequence_cache_.at(contig).erase(region.contig_region());
     
     if (sequence_cache_.at(contig).empty()) {

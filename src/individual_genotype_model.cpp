@@ -57,7 +57,7 @@ namespace GenotypeModel
         
         const auto ploidy = genotypes.front().ploidy();
         
-        FixedPloidyGenotypeLikelihoodModel likelihood_model {ploidy, haplotype_likelihoods};
+        const FixedPloidyGenotypeLikelihoodModel likelihood_model {ploidy, haplotype_likelihoods};
         
         std::vector<double> result(genotypes.size());
         
@@ -66,9 +66,7 @@ namespace GenotypeModel
                            return likelihood_model.log_likelihood(sample, genotype);
                        });
         
-        if (debug_log_) {
-            debug::print_genotype_likelihoods(stream(*debug_log_), genotypes, result);
-        }
+        if (debug_log_) debug::print_genotype_likelihoods(stream(*debug_log_), genotypes, result);
         
         std::transform(std::cbegin(genotypes), std::cend(genotypes), std::cbegin(result),
                        std::begin(result),
@@ -76,7 +74,7 @@ namespace GenotypeModel
                            return genotype_prior_model_.get().evaluate(genotype) + likelihood;
                        });
         
-        auto log_evidence = Maths::normalise_exp(result);
+        const auto log_evidence = Maths::normalise_exp(result);
         
         return InferredLatents {Latents {std::move(result)}, log_evidence};
     }
