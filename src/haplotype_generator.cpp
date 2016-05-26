@@ -161,7 +161,7 @@ std::pair<std::vector<Haplotype>, GenomicRegion> HaplotypeGenerator::progress()
     if (it != std::cend(novel_active_alleles)) {
         assert(holdout_set_.empty());
         
-        tree_.remove_overlapped(novel_active_region); // revert
+        tree_.remove_overlapped(novel_active_region); // reverts tree
         
         set_holdout_set(current_active_region_);
         
@@ -393,7 +393,7 @@ void HaplotypeGenerator::update_next_active_region() const
                                                       hard_max_haplotypes_);
                     
                     if (it != std::cend(interacting_alleles)) {
-                        next_active_region_ = novel_region; // Revert to non-lagged behaviour
+                        next_active_region_ = novel_region; // reverts to non-lagged behaviour
                         return;
                     }
                     
@@ -417,7 +417,7 @@ void HaplotypeGenerator::update_next_active_region() const
                     next_active_region_ = walker_.walk(current_active_region_, reads_, alleles_);
                 } else if (begins_before(current_active_region_, *next_active_region_)
                            && is_empty_region(indicator_alleles.front())) {
-                    // To be clearer about insertion containment
+                    // To be explicit about insertion containment
                     next_active_region_ = expand_lhs(*next_active_region_, 1);
                 }
             }
@@ -445,16 +445,16 @@ void HaplotypeGenerator::set_holdout_set(const GenomicRegion& active_region)
     auto it = std::end(tmp);
     
     while (true) {
-        const auto r = largest_region(std::begin(tmp), it);
+        const auto holdout_region = largest_region(std::begin(tmp), it);
         
         it = std::partition(std::begin(tmp), it,
-                            [&r] (const Allele& allele) {
-                                return !is_same_region(allele, r);
+                            [&holdout_region] (const Allele& allele) {
+                                return !is_same_region(allele, holdout_region);
                             });
         
         MappableFlatSet<Allele> cur {std::begin(tmp), it};
         
-        auto re = walker_.walk(head_region(cur.leftmost()), reads_, cur);
+        const auto re = walker_.walk(head_region(cur.leftmost()), reads_, cur);
         
         if (std::exp2(count_overlapped(cur, re)) < hard_max_haplotypes_) break;
     }

@@ -18,7 +18,6 @@
 
 namespace Octopus
 {
-
 std::size_t downsample(MappableFlatMultiSet<AlignedRead>& reads,
                        unsigned max_coverage, unsigned min_coverage);
 
@@ -26,7 +25,9 @@ class Downsampler
 {
 public:
     Downsampler() = default;
-    Downsampler(unsigned max_coverage, unsigned min_coverage);
+    
+    explicit Downsampler(unsigned max_coverage, unsigned min_coverage);
+    
     ~Downsampler() = default;
     
     Downsampler(const Downsampler&)            = default;

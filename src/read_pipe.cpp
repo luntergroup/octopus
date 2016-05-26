@@ -15,10 +15,6 @@
 
 #include "read_utils.hpp"
 #include "mappable_algorithms.hpp"
-#include "logging.hpp"
-
-#include <iostream>
-#include "timers.hpp"
 
 namespace Octopus
 {
@@ -33,8 +29,11 @@ read_manager_ {read_manager},
 read_filter_ {std::move(read_filter)},
 downsampler_ {std::move(downsampler)},
 read_transform_ {std::move(read_transform)},
-samples_ {std::move(samples)}
-{}
+samples_ {std::move(samples)},
+debug_log_ {}
+{
+    if (DEBUG_MODE) debug_log_ = Logging::DebugLogger {};
+}
 
 std::vector<std::vector<SampleIdType>> batch_samples(std::vector<SampleIdType> samples)
 {
@@ -60,42 +59,70 @@ const std::vector<SampleIdType>& ReadPipe::samples() const noexcept
     return samples_;
 }
 
-template <typename Container>
-void append(Container& src, ReadMap& dest)
+namespace
 {
-    for (auto& p : src) {
-        dest[p.first].insert(std::make_move_iterator(std::begin(p.second)),
-                             std::make_move_iterator(std::end(p.second)));
-        p.second.clear();
-        p.second.shrink_to_fit();
+    template <typename Container>
+    void move_construct(Container&& src, ReadMap::mapped_type& dst)
+    {
+        dst.insert(std::make_move_iterator(std::begin(src)),
+                   std::make_move_iterator(std::end(src)));
     }
-    src.clear();
-}
-
-void shrink_to_fit(ReadMap& reads)
-{
-    for (auto& p : reads) {
-        p.second.shrink_to_fit();
+    
+    template <>
+    void move_construct<ReadMap::mapped_type>(ReadMap::mapped_type&& src, ReadMap::mapped_type& dst)
+    {
+        dst = std::move(src);
     }
-}
+    
+    template <typename Container>
+    void insert_each(Container&& src, ReadMap& dst)
+    {
+        for (auto& p : src) {
+            auto& sample_dst = dst.at(p.first);
+            
+            if (sample_dst.empty()) {
+                move_construct(std::move(p.second), sample_dst);
+            } else {
+                sample_dst.insert(std::make_move_iterator(std::begin(p.second)),
+                                  std::make_move_iterator(std::end(p.second)));
+            }
+            
+            p.second.clear();
+            p.second.shrink_to_fit();
+        }
+        
+        src.clear();
+    }
+    
+    void shrink_to_fit(ReadMap& reads)
+    {
+        for (auto& p : reads) {
+            p.second.shrink_to_fit();
+        }
+    }
+} // namespace
 
 ReadMap ReadPipe::fetch_reads(const GenomicRegion& region)
 {
     ReadMap result {samples_.size()};
+    
+    for (const auto& sample : samples_) {
+        result.emplace(std::piecewise_construct, std::forward_as_tuple(sample), std::forward_as_tuple());
+    }
     
     const auto batches = batch_samples(samples_);
     
     for (const auto& batch : batches) {
         auto batch_reads = read_manager_.get().fetch_reads(batch, region);
         
-        if (DEBUG_MODE) {
-            Logging::DebugLogger log {};
-            stream(log) << "Fetched " << count_reads(batch_reads) << " unfiltered reads from " << region;
+        if (debug_log_) {
+            stream(*debug_log_) << "Fetched " << count_reads(batch_reads) << " unfiltered reads from " << region;
         }
         
+        // transforms should be done first as they may affect which reads are filtered
         transform_reads(batch_reads, read_transform_);
         
-        if (DEBUG_MODE) {
+        if (debug_log_) {
             SampleFilterCountMap<SampleIdType, decltype(read_filter_)> filter_counts {};
             filter_counts.reserve(samples_.size());
             
@@ -105,22 +132,19 @@ ReadMap ReadPipe::fetch_reads(const GenomicRegion& region)
             
             erase_filtered_reads(batch_reads, filter(batch_reads, read_filter_, filter_counts));
             
-            Logging::DebugLogger log {};
-            
             for (const auto& p : filter_counts) {
-                stream(log) << "In sample " << p.first;
+                stream(*debug_log_) << "In sample " << p.first;
                 for (const auto& c : p.second) {
-                    stream(log) << c.second << " reads were removed by the " << c.first << " filter";
+                    stream(*debug_log_) << c.second << " reads were removed by the " << c.first << " filter";
                 }
             }
         } else {
             erase_filtered_reads(batch_reads, filter(batch_reads, read_filter_));
         }
         
-        if (DEBUG_MODE) {
-            Logging::DebugLogger log {};
-            stream(log) << "There are " << count_reads(batch_reads) << " reads in " << region
-            << " after filtering";
+        if (debug_log_) {
+            stream(*debug_log_) << "There are " << count_reads(batch_reads) << " reads in " << region
+                            << " after filtering";
         }
         
         if (downsampler_) {
@@ -128,14 +152,11 @@ ReadMap ReadPipe::fetch_reads(const GenomicRegion& region)
             
             const auto n = downsampler_->downsample(reads);
             
-            if (DEBUG_MODE) {
-                Logging::DebugLogger log {};
-                stream(log) << "Downsampling removed " << n << " reads from " << region;
-            }
+            if (debug_log_) stream(*debug_log_) << "Downsampling removed " << n << " reads from " << region;
             
-             append(reads, result);
+            insert_each(std::move(reads), result);
         } else {
-             append(batch_reads, result);
+            insert_each(std::move(batch_reads), result);
         }
     }
     
@@ -181,23 +202,14 @@ ReadMap ReadPipe::fetch_reads(const std::vector<GenomicRegion>& regions)
     ReadMap result {samples_.size()};
     
     for (const auto& sample : samples_) {
-        result[sample].reserve(100000);
+        result.emplace(std::piecewise_construct, std::forward_as_tuple(sample), std::forward_as_tuple());
     }
     
     for (const auto& region : fetch_regions) {
-        auto tmp = fetch_reads(region);
-        
-        for (const auto& sample : samples_) {
-            result.at(sample).insert(std::make_move_iterator(std::begin(tmp.at(sample))),
-                                     std::make_move_iterator(std::end(tmp.at(sample))));
-            tmp.at(sample).clear();
-            tmp.at(sample).shrink_to_fit();
-        }
+        insert_each(fetch_reads(region), result);
     }
     
-    for (const auto& sample : samples_) {
-        result[sample].shrink_to_fit();
-    }
+    shrink_to_fit(result);
     
     return result;
 }

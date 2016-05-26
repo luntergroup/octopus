@@ -35,9 +35,12 @@ public:
     using SizeType       = ContigRegion::SizeType;
     using DifferenceType = ContigRegion::DifferenceType;
     
-    GenomicRegion() = default;
+    GenomicRegion() = default;  // for use with containers
+    
     template <typename T> explicit GenomicRegion(T&& contig_name, SizeType begin, SizeType end);
+    
     template <typename T, typename R> explicit GenomicRegion(T&& contig_name, R&& contig_region);
+    
     ~GenomicRegion() = default;
     
     GenomicRegion(const GenomicRegion&)            = default;
