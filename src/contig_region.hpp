@@ -28,8 +28,10 @@ public:
     using SizeType       = std::uint_fast32_t;
     using DifferenceType = std::int_fast64_t;
     
-    ContigRegion() = default;
+    ContigRegion() = default; // for use with containers
+    
     explicit ContigRegion(SizeType begin, SizeType end);
+    
     ~ContigRegion() = default;
     
     ContigRegion(const ContigRegion&)            = default;

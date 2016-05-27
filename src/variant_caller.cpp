@@ -28,33 +28,38 @@ namespace Octopus
 {
 // public methods
 
-VariantCaller::CallerParameters::CallerParameters(unsigned max_haplotypes,
-                                                  RefCallType refcall_type,
-                                                  bool call_sites_only,
-                                                  bool allow_lagging,
-                                                  bool allow_flank_scoring,
-                                                  double min_phase_score)
+VariantCaller::CallerComponents::CallerComponents(const ReferenceGenome& reference,
+                                                  ReadPipe& read_pipe,
+                                                  CandidateVariantGenerator&& candidate_generator,
+                                                  HaplotypeGenerator::Builder haplotype_generator_builder)
 :
-max_haplotypes {max_haplotypes},
+reference {reference},
+read_pipe {read_pipe},
+candidate_generator {std::move(candidate_generator)},
+haplotype_generator_builder {std::move(haplotype_generator_builder)}
+{}
+
+VariantCaller::CallerParameters::CallerParameters(RefCallType refcall_type, bool call_sites_only,
+                                                  unsigned max_haplotypes, double min_haplotype_posterior,
+                                                  bool allow_flank_scoring, double min_phase_score)
+:
 refcall_type {refcall_type},
 call_sites_only {call_sites_only},
-lag_haplotype_generation {allow_lagging},
-min_haplotype_posterior {1e-10},
+max_haplotypes {max_haplotypes},
+min_haplotype_posterior {min_haplotype_posterior},
 allow_inactive_flank_scoring {allow_flank_scoring},
 min_phase_score {min_phase_score}
 {}
 
-VariantCaller::VariantCaller(const ReferenceGenome& reference,
-                             ReadPipe& read_pipe,
-                             CandidateVariantGenerator&& candidate_generator,
-                             CallerParameters parameters)
+VariantCaller::VariantCaller(CallerComponents&& components, CallerParameters parameters)
 :
-reference_ {reference},
-read_pipe_ {read_pipe},
-samples_ {read_pipe.samples()},
+reference_ {components.reference},
+read_pipe_ {components.read_pipe},
+samples_ {read_pipe_.get().samples()},
 debug_log_ {},
-parameters_ {std::move(parameters)},
-candidate_generator_ {std::move(candidate_generator)}
+candidate_generator_ {std::move(components.candidate_generator)},
+haplotype_generator_builder_ {std::move(components.haplotype_generator_builder)},
+parameters_ {std::move(parameters)}
 {
     if (DEBUG_MODE) {
         debug_log_ = Logging::DebugLogger {};
@@ -617,10 +622,9 @@ HaplotypeGenerator VariantCaller::make_haplotype_generator(const GenomicRegion& 
                                                            const MappableFlatSet<Variant>& candidates,
                                                            const ReadMap& reads) const
 {
-    return HaplotypeGenerator {region, reference_, candidates, reads,
-                parameters_.max_haplotypes, parameters_.lag_haplotype_generation};
+    return haplotype_generator_builder_.build(reference_, region, candidates, reads);
 }
-    
+
 HaplotypeLikelihoodCache VariantCaller::make_haplotype_likelihood_cache() const
 {
     return HaplotypeLikelihoodCache {parameters_.max_haplotypes, samples_};

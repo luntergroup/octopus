@@ -69,9 +69,12 @@ namespace GenotypeModel
         };
         
         CNV() = delete;
-        explicit CNV(std::vector<SampleIdType> samples, unsigned ploidy, Priors priors);
-        explicit CNV(std::vector<SampleIdType> samples, unsigned ploidy, Priors priors,
-                     AlgorithmParameters parameters);
+        
+        CNV(std::vector<SampleIdType> samples, unsigned ploidy, Priors priors);
+        
+        CNV(std::vector<SampleIdType> samples, unsigned ploidy, Priors priors,
+            AlgorithmParameters parameters);
+        
         ~CNV() = default;
         
         CNV(const CNV&)            = default;

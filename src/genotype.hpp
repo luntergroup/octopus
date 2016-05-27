@@ -514,6 +514,8 @@ namespace detail
         
         const auto num_elements = static_cast<unsigned>(elements.size());
         
+        // cheaper to optimise a few simple cases
+        
         if (num_elements == 1) return ResultType {GenotypeTp {ploidy, elements.front()}};
         
         if (ploidy == 2) {

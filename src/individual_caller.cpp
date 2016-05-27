@@ -43,13 +43,11 @@ min_refcall_posterior {min_refcall_posterior},
 ploidy {ploidy}
 {}
 
-IndividualVariantCaller::IndividualVariantCaller(const ReferenceGenome& reference,
-                                                 ReadPipe& read_pipe,
-                                                 CandidateVariantGenerator&& candidate_generator,
+IndividualVariantCaller::IndividualVariantCaller(CallerComponents&& components,
                                                  VariantCaller::CallerParameters general_parameters,
                                                  CallerParameters specific_parameters)
 :
-VariantCaller {reference, read_pipe, std::move(candidate_generator), std::move(general_parameters)},
+VariantCaller {std::move(components), std::move(general_parameters)},
 ploidy_ {specific_parameters.ploidy},
 min_variant_posterior_ {specific_parameters.min_variant_posterior},
 min_refcall_posterior_ {specific_parameters.min_refcall_posterior}

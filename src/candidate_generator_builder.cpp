@@ -48,8 +48,9 @@ namespace Octopus
     
     CandidateGeneratorBuilder& CandidateGeneratorBuilder::operator=(CandidateGeneratorBuilder&& other)
     {
-        std::swap(generators_, other.generators_);
-        std::swap(parameters_, other.parameters_);
+        using std::swap;
+        swap(generators_, other.generators_);
+        swap(parameters_, other.parameters_);
         generator_factory_ = generate_factory();
         return *this;
     }

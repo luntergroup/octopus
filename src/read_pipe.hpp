@@ -22,6 +22,7 @@
 #include "read_filter.hpp"
 #include "read_transform.hpp"
 #include "downsampler.hpp"
+#include "logging.hpp"
 
 /*
  ReadPipe provides a wrapper for the basic manipulation of AlignedRead's. It is responsable for
@@ -70,6 +71,8 @@ private:
     ReadTransform read_transform_;
     
     std::vector<SampleIdType> samples_;
+    
+    boost::optional<Logging::DebugLogger> debug_log_;
 };
 } // namespace Octopus
 

@@ -137,7 +137,7 @@ CigarString splice(const CigarString& cigar_string, CigarOperation::SizeType off
                    CigarOperation::SizeType size, Predicate pred)
 {
     CigarString result {};
-    result.reserve(cigar_string.size()); // ensures no reallocation due to emplace_back
+    result.reserve(cigar_string.size());
     
     auto op_it = std::cbegin(cigar_string);
     

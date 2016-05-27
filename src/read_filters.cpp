@@ -118,7 +118,7 @@ namespace Octopus { namespace ReadFilters
     
     bool IsNextSegmentMapped::passes(const AlignedRead& read) const noexcept
     {
-        return !read.has_mate() || !read.next_segment().is_marked_unmapped();
+        return !read.is_chimeric() || !read.next_segment().is_marked_unmapped();
     }
     
     IsNotMarkedDuplicate::IsNotMarkedDuplicate() : BasicReadFilter {"IsNotMarkedDuplicate"} {}

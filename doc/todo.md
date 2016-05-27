@@ -21,4 +21,5 @@
 
 ## Misc
 
+- [] Remove ReferenceGenome dependency from Haplotype
 - [] Make Genotype::operator[] version non const so can modify in place

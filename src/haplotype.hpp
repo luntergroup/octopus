@@ -114,7 +114,7 @@ private:
     void append(SequenceType& result, const ContigAllele& allele) const;
     void append(SequenceType& result, AlleleIterator first, AlleleIterator last) const;
     void append_reference(SequenceType& result, const ContigRegion& region) const;
-    SequenceType get_reference_sequence(const ContigRegion& region) const;
+    SequenceType fetch_reference_sequence(const ContigRegion& region) const;
 };
 
 template <typename R>

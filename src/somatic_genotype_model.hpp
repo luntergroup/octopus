@@ -70,9 +70,10 @@ namespace Octopus
         
         Somatic() = delete;
         
-        explicit Somatic(std::vector<SampleIdType> samples, unsigned ploidy, Priors priors);
-        explicit Somatic(std::vector<SampleIdType> samples, unsigned ploidy, Priors priors,
-                         AlgorithmParameters parameters);
+        Somatic(std::vector<SampleIdType> samples, unsigned ploidy, Priors priors);
+        
+        Somatic(std::vector<SampleIdType> samples, unsigned ploidy, Priors priors,
+                AlgorithmParameters parameters);
         
         ~Somatic() = default;
         

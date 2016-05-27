@@ -49,8 +49,8 @@ namespace
         auto result = calculate_positional_coverage(first, last, region);
         
         std::transform(std::cbegin(result), std::cend(result), std::begin(result),
-                       [min_coverage] (const auto covergae) {
-                           return std::min(covergae, min_coverage);
+                       [min_coverage] (const auto coverage) {
+                           return std::min(coverage, min_coverage);
                        });
         
         return result;
@@ -60,13 +60,15 @@ namespace
     {
         static std::default_random_engine generator {};
         
-        std::discrete_distribution<std::size_t> dist {std::cbegin(required_coverage), std::cend(required_coverage)};
+        std::discrete_distribution<std::size_t> dist {
+            std::cbegin(required_coverage), std::cend(required_coverage)
+        };
         
         return dist(generator);
     }
     
     template <typename BidirIt>
-    BidirIt sample(const BidirIt first, const BidirIt last)
+    BidirIt random_sample(const BidirIt first, const BidirIt last)
     {
         static std::default_random_engine generator {};
         
@@ -76,9 +78,26 @@ namespace
     }
     
     template <typename T>
-    auto sample(const OverlapRange<T>& range)
+    auto random_sample(const OverlapRange<T>& range)
     {
-        return sample(std::begin(range), std::end(range)).base();
+        return random_sample(std::begin(range), std::end(range)).base();
+    }
+    
+    template <typename BidirIt>
+    auto pick_sample(BidirIt first_unsampled, BidirIt last_unsampled,
+                     const std::vector<GenomicRegion>& positions,
+                     const PositionCoverages& required_coverage,
+                     const AlignedRead::SizeType max_read_size)
+    {
+        assert(first_unsampled < last_unsampled);
+        
+        const auto candidates = overlap_range(first_unsampled, last_unsampled,
+                                              positions[sample(required_coverage)],
+                                              max_read_size);
+        
+        assert(!candidates.empty());
+        
+        return random_sample(candidates);
     }
     
     void reduce(PositionCoverages& required_coverage, const ReadWrapper& read,
@@ -114,9 +133,12 @@ namespace
     template <typename BidirIt>
     void remove_sample(BidirIt& first, BidirIt sample, BidirIt& last)
     {
-        if (std::distance(first, sample) < std::distance(sample, first)) {
+        assert(first <= sample && sample < last);
+        // rotating is linear time so it's cheaper to shift the sample into the closer of the
+        // two sampled groups.
+        if (std::distance(first, sample) < std::distance(sample, last)) {
             if (sample != first) {
-                shift_right(first, sample);
+                shift_right(first, std::next(sample));
             }
             ++first;
         } else {
@@ -146,9 +168,8 @@ namespace
 } // namespace
 
 template <typename InputIt>
-auto
-sample(const InputIt first_read, const InputIt last_read, const GenomicRegion& region,
-       const unsigned target_coverage)
+auto sample(const InputIt first_read, const InputIt last_read, const GenomicRegion& region,
+            const unsigned target_coverage)
 {
     if (first_read == last_read) return std::vector<AlignedRead> {};
     
@@ -161,20 +182,16 @@ sample(const InputIt first_read, const InputIt last_read, const GenomicRegion& r
     
     std::vector<ReadWrapper> reads {first_read, last_read};
     
-    const auto max_read_size = size(largest_region(reads));
+    const auto max_read_size = size(largest_region(reads)); // for efficient overlap detection
     
+    // The reads are partitioned into three groups: sampled | unsampled | sampled
+    // which allows a sampled read to be optimally moved out of the unsampled partition
     auto first_unsampled_itr = std::begin(reads);
     auto last_unsampled_itr  = std::end(reads);
     
     while (!has_minimum_coverage(required_coverage)) {
-        assert(first_unsampled_itr < last_unsampled_itr);
-        
-        const auto overlapped = overlap_range(first_unsampled_itr, last_unsampled_itr,
-                                              positions[sample(required_coverage)], max_read_size);
-        
-        assert(!overlapped.empty());
-        
-        const auto sampled_itr = sample(overlapped);
+        const auto sampled_itr = pick_sample(first_unsampled_itr, last_unsampled_itr,
+                                             positions, required_coverage, max_read_size);
         
         reduce(required_coverage, *sampled_itr, region);
         
@@ -208,8 +225,6 @@ namespace
                                               std::cend(above_max_coverage_regions),
                                               region);
                      });
-        
-        result.shrink_to_fit();
         
         return result;
     }

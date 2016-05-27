@@ -34,8 +34,7 @@
 #include "downsampler.hpp"
 #include "read_transform.hpp"
 #include "read_transformations.hpp"
-
-#include "haplotype_prior_model.hpp"
+#include "haplotype_generator.hpp"
 #include "variant_caller_builder.hpp"
 
 #include "vcf_reader.hpp"
@@ -126,7 +125,7 @@ namespace Octopus
         return in;
     }
     
-    std::ostream& operator<<(std::ostream& out, const VariantCallerBuilder::RefCallType type)
+    std::ostream& operator<<(std::ostream& out, const VariantCallerBuilder::RefCallType& type)
     {
         using RefCallType = VariantCallerBuilder::RefCallType;
         switch (type) {
@@ -153,7 +152,7 @@ namespace Octopus
             result = ContigOutputOrder::LexicographicalDescending;
         else if (token == "ContigSizeAscending")
             result = ContigOutputOrder::ContigSizeAscending;
-        else if (token == "ContigSize-descending")
+        else if (token == "ContigSizeDescending")
             result = ContigOutputOrder::ContigSizeDescending;
         else if (token == "AsInReference")
             result = ContigOutputOrder::AsInReferenceIndex;
@@ -166,7 +165,7 @@ namespace Octopus
         return in;
     }
     
-    std::ostream& operator<<(std::ostream& out, const ContigOutputOrder order)
+    std::ostream& operator<<(std::ostream& out, const ContigOutputOrder& order)
     {
         switch (order) {
             case ContigOutputOrder::LexicographicalAscending:
@@ -194,6 +193,39 @@ namespace Octopus
         return out;
     }
     
+    enum class PhasingLevel { None, Lite, Aggressive };
+    
+    std::istream& operator>>(std::istream& in, PhasingLevel& result)
+    {
+        std::string token;
+        in >> token;
+        if (token == "None")
+            result = PhasingLevel::None;
+        else if (token == "Lite")
+            result = PhasingLevel::Lite;
+        else if (token == "Aggressive")
+            result = PhasingLevel::Aggressive;
+        else throw po::validation_error {po::validation_error::kind_t::invalid_option_value, token,
+            "phasing-level"};
+        return in;
+    }
+    
+    std::ostream& operator<<(std::ostream& out, const PhasingLevel& level)
+    {
+        switch (level) {
+            case PhasingLevel::None:
+                out << "None";
+                break;
+            case PhasingLevel::Lite:
+                out << "Lite";
+                break;
+            case PhasingLevel::Aggressive:
+                out << "Aggressive";
+                break;
+        }
+        return out;
+    }
+        
     boost::optional<po::variables_map> parse_options(int argc, const char** argv)
     {
         try {
@@ -387,14 +419,15 @@ namespace Octopus
             advanced.add_options()
             ("max-haplotypes", po::value<unsigned>()->default_value(128),
              "Maximum number of haplotypes the caller may consider")
-            ("disable-haplotype-lagging", po::bool_switch()->default_value(false),
-             "Disables lagging in the haplotype generator, so each candidate variant will be considered"
-             " exactly once")
+            ("min-haplotype-posterior", po::value<float>()->default_value(1e-10),
+             "Minimum haplotype posterior for filtering")
+            ("phasing-level", po::value<PhasingLevel>()->default_value(PhasingLevel::None),
+             "The level of phasing")
             ("disable-inactive-flank-scoring", po::bool_switch()->default_value(false),
              "Disables additional calculation to adjust alignment score when there are inactive candidates"
              " in haplotype flanking regions");
             
-            po::options_description all("Allowed options");
+            po::options_description all("Octopus options");
             all.add(general).add(backend).add(input).add(filters).add(transforms)
             .add(candidates).add(caller).add(model).add(advanced).add(cancer);
             
@@ -1496,7 +1529,29 @@ namespace Octopus
     {
         using Maths::phred_to_probability;
         
-        VariantCallerBuilder vc_builder {reference, read_pipe, candidate_generator_builder};
+        HaplotypeGenerator::Builder hg_builder;
+        
+        hg_builder.set_soft_max_haplotypes(options.at("max-haplotypes").as<unsigned>());
+        
+        HaplotypeGenerator::Builder::LaggingPolicy lagging_policy;
+        
+        switch (options.at("phasing-level").as<PhasingLevel>()) {
+            case PhasingLevel::None:
+                lagging_policy = HaplotypeGenerator::Builder::LaggingPolicy::None;
+                break;
+            case PhasingLevel::Lite:
+                lagging_policy = HaplotypeGenerator::Builder::LaggingPolicy::Mild;
+                break;
+            case PhasingLevel::Aggressive:
+                lagging_policy = HaplotypeGenerator::Builder::LaggingPolicy::Aggressive;
+                break;
+        }
+        
+        hg_builder.set_lagging_policy(lagging_policy);
+        
+        VariantCallerBuilder vc_builder {
+            reference, read_pipe, candidate_generator_builder, std::move(hg_builder)
+        };
         
         auto caller = options.at("caller").as<std::string>();
         
@@ -1516,7 +1571,6 @@ namespace Octopus
             } else {
                 vc_builder.set_min_variant_posterior(0);
             }
-            
         } else {
             vc_builder.set_min_variant_posterior(phred_to_probability(min_variant_posterior_phred));
         }
@@ -1526,10 +1580,10 @@ namespace Octopus
         
         vc_builder.set_max_haplotypes(options.at("max-haplotypes").as<unsigned>());
         
+        vc_builder.set_min_haplotype_posterior(options.at("min-haplotype-posterior").as<float>());
+        
         const auto min_phase_score_phred = options.at("min-phase-score").as<float>();
         vc_builder.set_min_phase_score(phred_to_probability(min_phase_score_phred));
-        
-        vc_builder.set_lagging(!options.at("disable-haplotype-lagging").as<bool>());
         
         if (caller == "cancer") {
             if (options.count("normal-sample") == 1) {
@@ -1574,7 +1628,6 @@ namespace Octopus
         if (call_sites_only(options)) {
             vc_builder.set_sites_only();
         }
-        
         
         vc_builder.set_flank_scoring(!options.at("disable-inactive-flank-scoring").as<bool>());
         

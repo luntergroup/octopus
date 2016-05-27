@@ -8,22 +8,24 @@
 
 #include "read_transformations.hpp"
 
-#include <iostream>
-
 namespace Octopus
 {
 namespace ReadTransforms
 {
-    void TrimOverlapping::operator()(AlignedRead& read) const
+    void TrimOverlapping::operator()(AlignedRead& read) const noexcept
     {
-        if (read.is_chimeric() && !read.is_marked_reverse_mapped()
-            && read.next_segment().begin() < mapped_end(read)) {
-            const auto overlapped_size = mapped_end(read) - read.next_segment().begin();
-            read.zero_back_qualities(overlapped_size);
+        // Only reads in the forward direction are masked to prevent double masking
+        if (read.is_chimeric() && !read.is_marked_reverse_mapped()) {
+            const auto next_segment_begin = read.next_segment().begin();
+            
+            if (next_segment_begin < mapped_end(read)) {
+                const auto overlapped_size = mapped_end(read) - next_segment_begin;
+                read.zero_back_qualities(overlapped_size);
+            }
         }
     }
     
-    void TrimAdapters::operator()(AlignedRead& read) const
+    void TrimAdapters::operator()(AlignedRead& read) const noexcept
     {
         if (read.is_chimeric()) {
             const auto insert_size = read.next_segment().inferred_template_length();
@@ -43,7 +45,7 @@ namespace ReadTransforms
     
     TrimTail::TrimTail(SizeType num_bases) : num_bases_ {num_bases} {};
     
-    void TrimTail::operator()(AlignedRead& read) const
+    void TrimTail::operator()(AlignedRead& read) const noexcept
     {
         if (read.is_marked_reverse_mapped()) {
             read.zero_front_qualities(num_bases_);
@@ -63,7 +65,7 @@ namespace ReadTransforms
     
     TrimSoftClippedTails::TrimSoftClippedTails(SizeType num_bases) : num_bases_ {num_bases} {};
     
-    void TrimSoftClippedTails::operator()(AlignedRead& read) const
+    void TrimSoftClippedTails::operator()(AlignedRead& read) const noexcept
     {
         if (is_soft_clipped(read)) {
             const auto soft_clipped_sizes = get_soft_clipped_sizes(read);

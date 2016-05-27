@@ -111,7 +111,7 @@ const CigarString& AlignedRead::cigar_string() const noexcept
     return cigar_string_;
 }
 
-bool AlignedRead::has_mate() const noexcept
+bool AlignedRead::is_chimeric() const noexcept
 {
     return next_segment_ != nullptr;
 }
@@ -141,47 +141,42 @@ AlignedRead::Flags AlignedRead::flags() const
     return flags;
 }
 
-bool AlignedRead::is_chimeric() const noexcept
-{
-    return next_segment_ != nullptr;
-}
-
-bool AlignedRead::is_marked_all_segments_in_read_aligned() const
+bool AlignedRead::is_marked_all_segments_in_read_aligned() const noexcept
 {
     return flags_[0];
 }
 
-bool AlignedRead::is_marked_multiple_read_template() const
+bool AlignedRead::is_marked_multiple_read_template() const noexcept
 {
     return flags_[1];
 }
 
-bool AlignedRead::is_marked_unmapped() const
+bool AlignedRead::is_marked_unmapped() const noexcept
 {
     return flags_[2];
 }
 
-bool AlignedRead::is_marked_reverse_mapped() const
+bool AlignedRead::is_marked_reverse_mapped() const noexcept
 {
     return flags_[3];
 }
 
-bool AlignedRead::is_marked_secondary_alignment() const
+bool AlignedRead::is_marked_secondary_alignment() const noexcept
 {
     return flags_[4];
 }
 
-bool AlignedRead::is_marked_qc_fail() const
+bool AlignedRead::is_marked_qc_fail() const noexcept
 {
     return flags_[5];
 }
 
-bool AlignedRead::is_marked_duplicate() const
+bool AlignedRead::is_marked_duplicate() const noexcept
 {
     return flags_[6];
 }
 
-bool AlignedRead::is_marked_supplementary_alignment() const
+bool AlignedRead::is_marked_supplementary_alignment() const noexcept
 {
     return flags_[7];
 }

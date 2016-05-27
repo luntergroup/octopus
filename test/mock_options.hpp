@@ -40,7 +40,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--reference-cache-size", "100",
         //"--threads", "0",
         
-        //"--contig-output-order", "as-in-reference-reversed",
+        //"--contig-output-order", "AsInReferenceReversed",
         
         "--reference", human_reference_fasta.c_str(),
         //"--reference", ecoli_reference_fasta.c_str(),
@@ -79,19 +79,9 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         
         /* input regions */
         
-        //"--regions", "22:27,297,910-27,297,950", // Not a FP, somaticSniper is calling, but what is going on?
-        //"--regions", "22:27,908,800-27,908,898",
-        //"--regions", "22:23,274,865-23,274,905", // FP SNV?
-        "--regions", "22:23,842,194-23,842,524", // FP SNV. Solved: Disable overlap masking. Why?
-        //"--regions", "22:23,869,889-23,870,053", // FP del. Solved: Disable marked dups filter
-        //"--regions", "22:24,160,300-24,160,359", // FP del. Solved: Disable soft clipping
-        //"--regions", "22:25,055,737-25,055,901", // FP del. Solved: MQ Filter
-        
-        //"--regions", "2:47,640,252-47,644,906", // MCG
-        
-        //"--regions", "22:42,522,971-42,523,546", // bad model filter?
-        
         //"--use-one-based-indexing",
+        
+        "--regions", "22:37,218,532-37,218,572",
         
         // MSG
         //"--regions", "2:47,640,494-47,644,304", // whole region
@@ -164,46 +154,37 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         
         // for cancer
         
-        //"--regions", "22:24,899,276-25,902,854",
-        //"--regions", "22:25,656,651-25,656,728", // FP SNP
-        //"--regions", "22:25,055,799-25,055,839", // FP DEL
-        
-        //"--regions", "22:25,731,146-25,731,476", // FP SNP
-        //"--regions", "22:25,656,657-25,656,697", // FP SNP
-        //"--regions", "22:25,330,405-25,330,569", // FP DEL
-        //"--regions", "22:25,119,931-25,119,971", // FP SNP
-        //"--regions", "22:24,953,459-24,953,499", // FP INS?
-        //"--regions", "22:25,070,597-25,070,854", // FP SNP
-        
         // TCGA HCC1143
-        //"--regions", "22:18,444,570-18,444,787", // somatic?
-        //"--regions", "22:25,340,394-25,340,434", // real somatic?
-        //"--regions", "22:24,899,276-24,902,854", // Somatic SNV!
-        //"--regions", "22:27,707,987-27,708,223", // low frequency deletion?
-        //"--regions", "22:36,265,289-36,265,519", // CNV SNP?
-        //"--regions", "22:37,166,974-37,167,210", // somatic deletion?
-        //"--regions", "22:28,681,165-28,681,395", // Low frequency somatic SNV
-        //"--regions", "22:35,199,681-35,199,845", // Not a somatic deletion?
-        //"--regions", "22:28,836,899-28,837,063", // Nice! Phasable somatic SNV
-        //"--regions", "22:29,606,605-29,606,972", // somatic but not phaseable
-        //"--regions", "22:28,530,424-28,530,588", // somatic
         
-        // problems/regions to check
-        //"--regions", "22:28,063,906-28,064,070", // don't think this is a real somatic SNV - difficult
-        //"--regions", "22:28,201,361-28,201,570", // not a somatic deletion
-        //"--regions", "22:28,434,530-28,434,694", somatic ?
-        //"--regions", "22:28,553,936-28,554,100", // somatic insertion?
-        //"--regions", "22:28,645,596-28,645,926", // posterior quite low
-        //"--regions", "22:28,812,452-28,812,616", // not a somatic deletion
+        //"--regions", "22:29,606,605-29,606,972", // Bad model filter!
+        
+        //"--regions", "22:18,444,570-18,444,787", // real somatic SNV?
+        //"--regions", "22:25,340,394-25,340,434", // real somatic SNV?
+        //"--regions", "22:28,681,165-28,681,395", // real somatic SNV?
+        //"--regions", "22:27,707,987-27,708,223", // FN low frequency somatic deletion?
+        //"--regions", "22:37,166,974-37,167,210", // FN real somatic deletion?
+        //"--regions", "22:28,553,936-28,554,100", // somatic insertion? Low posterior
+        //"--regions", "22:28,645,596-28,645,926", // Real somatic SNV? Low posterior
         //"--regions", "22:28,970,260-28,970,424", // real somatic deletion?
-        //"--regions", "22:29079379-29079422", // mapping quality issue
-        //"--regions", "22:29,455,729-29,455,769", // Not a somatic deletion
-        //"--regions", "22:29,474,547-29,474,587", // false negative?
-        //"--regions", "22:29,591,785-29,591,825", // NOPE.. really need to sort this type of FP
-        //"--regions", "22:29,636,450-29,636,490", // NOPE! (fixed with another CNV seed)
-        //"--regions", "22:29,761,141-29,761,305", // low posterior (could not be real..)
-        //"--regions", "22:30,094,383-30,094,422", // Not a somatic insertion
-        //"--regions", "22:30,213,959-30,214,123", // FP somatic SNV
+        //"--regions", "22:29,474,547-29,474,587", // real somatic SNV?
+        //"--regions", "22:29,761,141-29,761,305", // real somatic SNV?
+        
+        //"--regions", "22:30,213,959-30,214,123", // FP somatic SNV. Very difficult.
+        //"--regions", "22:29,455,729-29,455,769", // FP somatic deletion
+        //"--regions", "22:28,812,452-28,812,616", // FP somatic deletion
+        //"--regions", "22:33,595,824-33,595,864", // FP somatic del
+        //"--regions", "22:25,731,146-25,731,476", // FP SNP. What's going on here?
+        //"--regions", "22:25,656,657-25,656,697", // FP SNP. What's going on here?
+        //"--regions", "22:28,063,906-28,064,070", // What's going on here?
+        
+        //"--regions", "22:27,297,910-27,297,950", // Not a FP, somaticSniper is calling, but what is going on?
+        //"--regions", "22:23,842,194-23,842,524", // FP SNV. Solved: Disable overlap masking. Why?
+        //"--regions", "22:23,869,889-23,870,053", // FP del. Solved: Disable marked dups filter
+        //"--regions", "22:24,160,300-24,160,359", // FP del. Solved: Disable soft clipping
+        //"--regions", "22:25,055,737-25,055,901", // FP del. Solved: MQ Filter
+        //"--regions", "22:25,656,651-25,656,728", // FP SNP. Solved: Disable MQ filter or allow lagging
+        //"--regions", "22:25,330,405-25,330,569", // FP DEL. Solved: model filter
+        //"--regions", "22:25,070,597-25,070,854", // FP SNP. Solved: model filter
         
         // For ecoli
         //"--regions", "R00000042:3008660-3020000",
@@ -216,9 +197,9 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--disable-soft-clip-masking",
         //"--tail-trim-size", "3",
         //"--disable-adapter-masking",
-        "--disable-overlap-masking",
+        //"--disable-overlap-masking",
         
-        // read filters/transforms
+        // read filters
         //"--disable-read-filtering",
         //"--consider-unmapped-reads",
         //"--consider-reads-with-unmapped-segments",
@@ -247,9 +228,10 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--min-assembler-base-quality", "10",
         //"--max-variant-size", "25",
         
-        "--disable-haplotype-lagging",
+        "--phasing-level", "Aggressive",
         //"--disable-inactive-flank-scoring",
         //"--max-haplotypes", "64",
+        //"--min-haplotype-posterior", "1e-15",
         
         //"--min-variant-posterior", "2",
         //"--min-refcall-posterior", "0",

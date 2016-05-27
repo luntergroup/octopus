@@ -29,14 +29,14 @@ public:
     using ContigNameType = GenomicRegion::ContigNameType;
     using Candidates     = MappableFlatSet<Allele>;
     
-    enum class IndicatorLimit { None, SharedWithPreviousRegion, NoLimit };
-    enum class ExtensionLimit { WithinReadLengthOfFirstIncluded, SharedWithFrontier, NoLimit };
+    enum class IndicatorPolicy { None, SharedWithPreviousRegion, NoLimit };
+    enum class ExtensionPolicy { WithinReadLengthOfFirstIncluded, SharedWithFrontier, NoLimit };
     
     GenomeWalker() = delete;
     
     explicit GenomeWalker(unsigned max_included,
-                          IndicatorLimit indicator_limit = IndicatorLimit::None,
-                          ExtensionLimit extension_limit = ExtensionLimit::SharedWithFrontier);
+                          IndicatorPolicy indicator_limit = IndicatorPolicy::None,
+                          ExtensionPolicy extension_limit = ExtensionPolicy::SharedWithFrontier);
     
     ~GenomeWalker() = default;
     
@@ -54,8 +54,8 @@ public:
 private:
     unsigned max_included_;
     
-    IndicatorLimit indicator_limit_;
-    ExtensionLimit extension_limit_;
+    IndicatorPolicy indicator_limit_;
+    ExtensionPolicy extension_limit_;
     
     using CandidateIterator = Candidates::const_iterator;
 };

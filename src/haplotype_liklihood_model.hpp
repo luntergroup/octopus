@@ -63,9 +63,12 @@ public:
     using MapPositionItr = std::vector<std::size_t>::const_iterator;
     
     HaplotypeLikelihoodModel();
+    
     HaplotypeLikelihoodModel(PenaltyType base_change_penalty, ReadIndelErrorModel indel_model);
+    
     HaplotypeLikelihoodModel(PenaltyType base_change_penalty, ReadIndelErrorModel indel_model,
                              const Haplotype& haplotype, boost::optional<FlankState> flank_state);
+    
     ~HaplotypeLikelihoodModel() = default;
     
     HaplotypeLikelihoodModel(const HaplotypeLikelihoodModel&)            = default;

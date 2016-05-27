@@ -138,7 +138,7 @@ Haplotype::SequenceType Haplotype::sequence(const ContigRegion& region) const
     }
     
     if (is_in_reference_flank(region, explicit_allele_region_, explicit_alleles_)) {
-        return get_reference_sequence(region);
+        return fetch_reference_sequence(region);
     }
     
     SequenceType result {};
@@ -272,7 +272,7 @@ void Haplotype::append_reference(SequenceType& result, const ContigRegion& regio
     }
 }
 
-Haplotype::SequenceType Haplotype::get_reference_sequence(const ContigRegion& region) const
+Haplotype::SequenceType Haplotype::fetch_reference_sequence(const ContigRegion& region) const
 {
     SequenceType result {};
     result.reserve(region_size(region));

@@ -49,7 +49,7 @@ void HaplotypeLikelihoodCache::populate(const ReadMap& reads,
                                         const std::vector<Haplotype>& haplotypes,
                                         boost::optional<FlankState> flank_state)
 {
-    // This code is not very pretty because it is a real bottleneck for the entire application.
+    // This code is not very pretty because it is a bottleneck for the entire application.
     // We want to try a minimise memory allocations for the mapping.
     
     cache_.clear();
@@ -64,6 +64,7 @@ void HaplotypeLikelihoodCache::populate(const ReadMap& reads,
     
     const auto num_samples = reads.size();
     
+    // Precompute all read hashes so we don't have to recompute for each haplotype
     std::vector<std::vector<KmerPerfectHashes>> read_hashes {};
     read_hashes.reserve(num_samples);
     
@@ -92,11 +93,11 @@ void HaplotypeLikelihoodCache::populate(const ReadMap& reads,
                                             std::forward_as_tuple(haplotype),
                                             std::forward_as_tuple(num_samples)).first->second);
         
+        likelihood_model_.set(haplotype, flank_state);
+        
         auto read_hash_itr = std::cbegin(read_hashes);
         
-        likelihood_model_.set(haplotype, std::move(flank_state));
-        
-        for (const auto& t : read_iterators_) {
+        for (const auto& t : read_iterators_) { // for each sample
             *it = std::vector<double>(t.num_reads);
             
             std::transform(t.first, t.last, std::cbegin(*read_hash_itr), std::begin(*it),

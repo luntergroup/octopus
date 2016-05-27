@@ -111,23 +111,20 @@ haplotype_leaf_cache_ {}
                    [&vertex_copy_map] (const Vertex& v) {
                        return vertex_copy_map.at(v);
                    });
-    
-    //assert(debug::is_tree(tree_, root_, haplotype_leafs_));
-    
-    // TODO: copy the haplotype_leaf_cache_
 }
 
 HaplotypeTree& HaplotypeTree::operator=(HaplotypeTree other)
 {
-    std::swap(reference_, other.reference_);
-    std::swap(tree_, other.tree_);
-    std::swap(root_, other.root_);
-    std::swap(haplotype_leafs_, other.haplotype_leafs_);
-    std::swap(contig_, other.contig_);
-    std::swap(haplotype_leaf_cache_, other.haplotype_leaf_cache_);
+    using std::swap;
+    swap(reference_, other.reference_);
+    swap(tree_, other.tree_);
+    swap(root_, other.root_);
+    swap(haplotype_leafs_, other.haplotype_leafs_);
+    swap(contig_, other.contig_);
+    swap(haplotype_leaf_cache_, other.haplotype_leaf_cache_);
     return *this;
 }
-    
+
 bool HaplotypeTree::empty() const noexcept
 {
     return haplotype_leafs_.front() == root_;
@@ -171,12 +168,10 @@ bool HaplotypeTree::is_unique(const Haplotype& haplotype) const
 
 HaplotypeTree& HaplotypeTree::extend(const ContigAllele& allele)
 {
-    for (auto leaf_it = std::cbegin(haplotype_leafs_),
-         end = std::cend(haplotype_leafs_); leaf_it != end; ++leaf_it) {
-        leaf_it = extend_haplotype(leaf_it, allele);
+    for (auto it = std::cbegin(haplotype_leafs_), end = std::cend(haplotype_leafs_); it != end; ++it) {
+        it = extend_haplotype(it, allele);
     }
     haplotype_leaf_cache_.clear();
-    //assert(debug::is_tree(tree_, root_, haplotype_leafs_));
     return *this;
 }
 
@@ -247,7 +242,7 @@ void HaplotypeTree::prune_all(const Haplotype& haplotype)
     
     if (empty() || contig_name(haplotype) != contig_) return;
     
-    // if any of the haplotypes in cache match the query haplotype then the cache must contain
+    // If any of the haplotypes in cache match the query haplotype then the cache must contain
     // all possible leaves corrosponding to that haplotype. So we don't need to look through
     // the list of all leaves. Win.
     if (haplotype_leaf_cache_.count(haplotype) > 0) {
@@ -611,15 +606,15 @@ HaplotypeTree::remove_internal(const Vertex leaf, const ContigRegion& region)
         current_allele = previous_allele;
     }
     
-    if (!alleles_to_copy.empty()) {
-        std::for_each(std::crbegin(alleles_to_copy), std::crend(alleles_to_copy),
-                      [this, &allele_to_move] (const Vertex allele) {
-                          const auto v = boost::add_vertex(tree_[allele], tree_);
-                          boost::add_edge(v, allele_to_move, tree_);
-                          allele_to_move = v;
-                      });
-        alleles_to_copy.clear();
-    }
+    std::for_each(std::crbegin(alleles_to_copy), std::crend(alleles_to_copy),
+                  [this, &allele_to_move] (const Vertex allele) {
+                      const auto v = boost::add_vertex(tree_[allele], tree_);
+                      boost::add_edge(v, allele_to_move, tree_);
+                      allele_to_move = v;
+                  });
+    
+    alleles_to_copy.clear();
+    alleles_to_copy.shrink_to_fit();
     
     auto allele_to_move_to = current_allele;
     

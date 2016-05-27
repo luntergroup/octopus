@@ -58,7 +58,7 @@ namespace Octopus
             
             Population() = delete;
             
-            explicit Population(const CoalescentModel& genotype_prior_model);
+            Population(const CoalescentModel& genotype_prior_model);
             
             ~Population() = default;
             
