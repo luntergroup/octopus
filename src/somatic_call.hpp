@@ -37,8 +37,8 @@ namespace Octopus
         SomaticCall() = delete;
         
         template <typename V, typename C>
-        explicit SomaticCall(V&& variant, const CancerGenotype<Allele>& genotype_call,
-                             double genotype_posteriors, C&& credible_regions, double quality);
+        SomaticCall(V&& variant, const CancerGenotype<Allele>& genotype_call,
+                    double genotype_posteriors, C&& credible_regions, double quality);
         
         virtual ~SomaticCall() = default;
         

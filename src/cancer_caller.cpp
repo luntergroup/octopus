@@ -41,24 +41,6 @@ namespace Octopus
 {
 // public methods
 
-CancerVariantCaller::CallerParameters::CallerParameters(double min_variant_posterior,
-                                                        double min_somatic_posterior,
-                                                        double min_refcall_posterior,
-                                                        unsigned ploidy,
-                                                        boost::optional<SampleIdType> normal_sample,
-                                                        double somatic_mutation_rate,
-                                                        bool call_somatics_only)
-:
-min_variant_posterior {min_variant_posterior},
-min_somatic_posterior {min_somatic_posterior},
-min_refcall_posterior {min_refcall_posterior},
-ploidy {ploidy},
-normal_sample {normal_sample},
-somatic_mutation_rate {somatic_mutation_rate},
-call_somatics_only {call_somatics_only},
-max_genotypes {50'000}
-{}
-
 CancerVariantCaller::CancerVariantCaller(CallerComponents&& components,
                                          VariantCaller::CallerParameters general_parameters,
                                          CallerParameters specific_parameters)
@@ -791,9 +773,6 @@ CancerVariantCaller::call_variants(const std::vector<Variant>& candidates, Laten
     
     return result;
 }
-
-CancerVariantCaller::ModelPosteriors::ModelPosteriors(double germline, double cnv, double somatic)
-: germline {germline}, cnv {cnv}, somatic {somatic} {}
 
 CancerVariantCaller::ModelPosteriors
 CancerVariantCaller::calculate_model_posteriors(const Latents& inferences) const

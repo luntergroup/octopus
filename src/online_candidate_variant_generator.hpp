@@ -28,8 +28,7 @@ public:
     
     OnlineCandidateVariantGenerator() = delete;
     
-    explicit OnlineCandidateVariantGenerator(const ReferenceGenome& reference,
-                                             SizeType max_variant_size = 100);
+    OnlineCandidateVariantGenerator(const ReferenceGenome& reference, SizeType max_variant_size = 100);
     
     ~OnlineCandidateVariantGenerator() override = default;
     

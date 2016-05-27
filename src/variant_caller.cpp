@@ -31,24 +31,14 @@ namespace Octopus
 VariantCaller::CallerComponents::CallerComponents(const ReferenceGenome& reference,
                                                   ReadPipe& read_pipe,
                                                   CandidateVariantGenerator&& candidate_generator,
-                                                  HaplotypeGenerator::Builder haplotype_generator_builder)
+                                                  HaplotypeGenerator::Builder haplotype_generator_builder,
+                                                  Phaser phaser)
 :
 reference {reference},
 read_pipe {read_pipe},
 candidate_generator {std::move(candidate_generator)},
-haplotype_generator_builder {std::move(haplotype_generator_builder)}
-{}
-
-VariantCaller::CallerParameters::CallerParameters(RefCallType refcall_type, bool call_sites_only,
-                                                  unsigned max_haplotypes, double min_haplotype_posterior,
-                                                  bool allow_flank_scoring, double min_phase_score)
-:
-refcall_type {refcall_type},
-call_sites_only {call_sites_only},
-max_haplotypes {max_haplotypes},
-min_haplotype_posterior {min_haplotype_posterior},
-allow_inactive_flank_scoring {allow_flank_scoring},
-min_phase_score {min_phase_score}
+haplotype_generator_builder {std::move(haplotype_generator_builder)},
+phaser {std::move(phaser)}
 {}
 
 VariantCaller::VariantCaller(CallerComponents&& components, CallerParameters parameters)
@@ -59,6 +49,7 @@ samples_ {read_pipe_.get().samples()},
 debug_log_ {},
 candidate_generator_ {std::move(components.candidate_generator)},
 haplotype_generator_builder_ {std::move(components.haplotype_generator_builder)},
+phaser_ {std::move(components.phaser)},
 parameters_ {std::move(parameters)}
 {
     if (DEBUG_MODE) {
@@ -368,7 +359,6 @@ VariantCaller::call(const GenomicRegion& call_region, ProgressMeter& progress_me
     }
     
     auto haplotype_generator   = make_haplotype_generator(candidate_region, candidates, reads);
-    auto phaser                = make_phaser();
     auto haplotype_likelihoods = make_haplotype_likelihood_cache();
     const auto record_factory  = make_record_factory(reads);
     
@@ -484,8 +474,8 @@ VariantCaller::call(const GenomicRegion& call_region, ProgressMeter& progress_me
         }
         
         resume_timer(phasing_timer);
-        const auto phase_set = phaser.try_phase(haplotypes, *caller_latents->get_genotype_posteriors(),
-                                                copy_overlapped_to_vector(candidates, haplotype_region(haplotypes)));
+        const auto phase_set = phaser_.try_phase(haplotypes, *caller_latents->get_genotype_posteriors(),
+                                                 copy_overlapped_to_vector(candidates, haplotype_region(haplotypes)));
         pause_timer(phasing_timer);
         
         if (debug_log_) {
@@ -561,9 +551,9 @@ VariantCaller::call(const GenomicRegion& call_region, ProgressMeter& progress_me
                     called_regions = extract_covered_regions(variant_calls);
                     
                     resume_timer(phasing_timer);
-                    const auto phasings = phaser.force_phase(haplotypes,
-                                                             *caller_latents->get_genotype_posteriors(),
-                                                             active_candidates);
+                    const auto phasings = phaser_.force_phase(haplotypes,
+                                                              *caller_latents->get_genotype_posteriors(),
+                                                              active_candidates);
                     pause_timer(phasing_timer);
                     
                     if (debug_log_) debug::print_phase_sets(stream(*debug_log_), phasings);
@@ -628,11 +618,6 @@ HaplotypeGenerator VariantCaller::make_haplotype_generator(const GenomicRegion& 
 HaplotypeLikelihoodCache VariantCaller::make_haplotype_likelihood_cache() const
 {
     return HaplotypeLikelihoodCache {parameters_.max_haplotypes, samples_};
-}
-
-Phaser VariantCaller::make_phaser() const
-{
-    return Phaser {parameters_.min_phase_score};
 }
 
 VcfRecordFactory VariantCaller::make_record_factory(const ReadMap& reads) const

@@ -53,14 +53,13 @@ public:
     Haplotype() = delete;
     
     template <typename R>
-    explicit Haplotype(R&& region, const ReferenceGenome& reference);
+    Haplotype(R&& region, const ReferenceGenome& reference);
     
     template <typename R, typename S>
-    explicit Haplotype(R&& region, S&& sequence, const ReferenceGenome& reference);
+    Haplotype(R&& region, S&& sequence, const ReferenceGenome& reference);
     
     template <typename R, typename ForwardIt>
-    explicit Haplotype(R&& region, ForwardIt first_allele, ForwardIt last_allele,
-                       const ReferenceGenome& reference);
+    Haplotype(R&& region, ForwardIt first_allele, ForwardIt last_allele, const ReferenceGenome& reference);
     
     ~Haplotype() = default;
     

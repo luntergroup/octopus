@@ -27,7 +27,7 @@ namespace Octopus
         GermlineVariantCall() = delete;
         
         template <typename V, typename T>
-        explicit GermlineVariantCall(V&& variant, T&& genotype_calls, double quality);
+        GermlineVariantCall(V&& variant, T&& genotype_calls, double quality);
         
         virtual ~GermlineVariantCall() = default;
         

@@ -45,8 +45,8 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         "--reference", human_reference_fasta.c_str(),
         //"--reference", ecoli_reference_fasta.c_str(),
         
-        //"--reads", NA12878_low_coverage.c_str(),
-        "--reads", NA12878_high_coverage.c_str(),
+        "--reads", NA12878_low_coverage.c_str(),
+        //"--reads", NA12878_high_coverage.c_str(),
         //"--reads", "~/Genomics/Illumina/NA12878.mapped.ILLUMINA.bwa.CEU.high_coverage_pcr_free.20130906.chr22.bam",
         
         //"--reads", NA12891_high_coverage.c_str(),
@@ -79,13 +79,15 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         
         /* input regions */
         
+        "--regions", "4:95,568,038-95,586,237",
+        
         //"--use-one-based-indexing",
         
         //"--regions", "22:36,922,640-36,922,687", // FP ins?
         //"--regions", "22:35,834,436-35,834,740", // difficult region
         //"--regions", "22:35,909,479-35,909,519", // FP SNV
         //"--regions", "22:36,120,404-36,120,444", // FP SNV
-        "--regions", "22:36,468,698-36,468,773", // FP SNV
+        //"--regions", "22:36,468,698-36,468,773", // FP SNV
         
         // MSG
         //"--regions", "2:47,640,494-47,644,304", // whole region
@@ -248,7 +250,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--max-open-read-files", "1",
         
         //"--output", test_out_vcf.c_str(),
-        "--output", "octopus_hla.vcf",
+        //"--output", "octopus_hla.vcf",
         //"--output", "octopus_mcg.vcf",
         //"--output", "octopus_NA12878HC_22_unlagged_dummy.vcf",
         //"--output", "octopus_calls2.vcf",

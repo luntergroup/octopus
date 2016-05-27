@@ -24,9 +24,6 @@ struct TimeInterval
 {
     using TimePoint = std::chrono::system_clock::time_point;
     
-    TimeInterval() = default;
-    TimeInterval(TimePoint start, TimePoint end) : start {start}, end {end} {}
-    
     TimePoint start, end;
 };
 

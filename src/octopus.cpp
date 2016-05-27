@@ -49,11 +49,12 @@
 #include "vcf.hpp"
 #include "maths.hpp"
 #include "progress_meter.hpp"
+#include "logging.hpp"
+#include "timing.hpp"
 
 #include "timers.hpp" // BENCHMARK
 
-#include "logging.hpp"
-#include "timing.hpp"
+#include "genotype_reader.hpp"
 
 namespace Octopus
 {
@@ -208,10 +209,8 @@ namespace Octopus
                             const po::variables_map& options)
     {
         return ReadPipe {
-            read_manager,
-            Options::make_read_filter(options),
-            Options::make_downsampler(options),
-            Options::make_read_transform(options),
+            read_manager, Options::make_read_transform(options),
+            Options::make_read_filter(options), Options::make_downsampler(options),
             std::move(samples)
         };
     }
@@ -296,8 +295,8 @@ namespace Octopus
         
         GenomeCallingComponents() = delete;
         
-        explicit GenomeCallingComponents(ReferenceGenome&& reference, ReadManager&& read_manager,
-                                         VcfWriter&& output, const po::variables_map& options)
+        GenomeCallingComponents(ReferenceGenome&& reference, ReadManager&& read_manager,
+                                VcfWriter&& output, const po::variables_map& options)
         :
         components_ {std::move(reference), std::move(read_manager), std::move(output), options}
         {}
@@ -396,8 +395,8 @@ namespace Octopus
         {
             Components() = delete;
             
-            explicit Components(ReferenceGenome&& reference, ReadManager&& read_manager,
-                                VcfWriter&& output, const po::variables_map& options)
+            Components(ReferenceGenome&& reference, ReadManager&& read_manager,
+                       VcfWriter&& output, const po::variables_map& options)
             :
             reference {std::move(reference)},
             read_manager {std::move(read_manager)},
@@ -538,8 +537,8 @@ namespace Octopus
         
         ContigCallingComponents() = delete;
         
-        explicit ContigCallingComponents(const GenomicRegion::ContigNameType& contig,
-                                         GenomeCallingComponents& genome_components)
+        ContigCallingComponents(const GenomicRegion::ContigNameType& contig,
+                                GenomeCallingComponents& genome_components)
         :
         reference {genome_components.reference()},
         read_manager {genome_components.read_manager()},
@@ -550,9 +549,8 @@ namespace Octopus
         output {genome_components.output()}
         {}
         
-        explicit ContigCallingComponents(const GenomicRegion::ContigNameType& contig,
-                                         VcfWriter& output,
-                                         GenomeCallingComponents& genome_components)
+        ContigCallingComponents(const GenomicRegion::ContigNameType& contig, VcfWriter& output,
+                                GenomeCallingComponents& genome_components)
         :
         reference {genome_components.reference()},
         read_manager {genome_components.read_manager()},
@@ -902,7 +900,6 @@ namespace Octopus
     
     struct SyncPacket
     {
-        SyncPacket() = default;
         std::condition_variable cv;
         std::mutex mutex;
         std::atomic<unsigned> count_finished;
@@ -1143,6 +1140,20 @@ namespace Octopus
         auto components = collate_genome_calling_components(options);
         
         if (!components) return;
+        
+//        VcfReader vcf_reader {"/Users/danielcooke/Genomics/octopus_test/octopus_calls2.vcf"};
+//        
+//        GenotypeReader reader {components->reference(), std::move(vcf_reader)};
+//        
+//        auto genotypes = reader.extract_genotype(GenomicRegion {"4", 95568038, 95586237});
+//        
+//        for (const auto& p : genotypes) {
+//            for (const auto s : p.second) {
+//                std::cout << s << std::endl;
+//            }
+//        }
+//        
+//        exit(0);
         
         auto end = std::chrono::system_clock::now();
         

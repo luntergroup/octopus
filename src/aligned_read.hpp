@@ -41,8 +41,6 @@ public:
     public:
         struct Flags
         {
-            Flags() = default;
-            
             bool is_marked_unmapped;
             bool is_marked_reverse_mapped;
         };
@@ -79,8 +77,6 @@ public:
     
     struct Flags
     {
-        Flags() = default;
-        
         bool is_marked_multiple_read_template;
         bool is_marked_all_segments_in_read_aligned;
         bool is_marked_unmapped;
@@ -96,17 +92,17 @@ public:
     AlignedRead()  = default;
     
     template <typename GenomicRegion_, typename String1_, typename Qualities_, typename CigarString_>
-    explicit AlignedRead(GenomicRegion_&& reference_region, String1_&& sequence,
-                         Qualities_&& qualities, CigarString_&& cigar_string,
-                         QualityType mapping_quality, Flags flags);
+    AlignedRead(GenomicRegion_&& reference_region, String1_&& sequence,
+                Qualities_&& qualities, CigarString_&& cigar_string,
+                QualityType mapping_quality, Flags flags);
     
     template <typename GenomicRegion_, typename String1_, typename Qualities_, typename CigarString_,
               typename String2_>
-    explicit AlignedRead(GenomicRegion_&& reference_region, String1_&& sequence,
-                         Qualities_&& qualities, CigarString_&& cigar_string,
-                         QualityType mapping_quality, Flags flags,
-                         String2_&& next_segment_contig_name, SizeType next_segment_begin,
-                         SizeType inferred_template_length, NextSegment::Flags next_segment_flags);
+    AlignedRead(GenomicRegion_&& reference_region, String1_&& sequence,
+                Qualities_&& qualities, CigarString_&& cigar_string,
+                QualityType mapping_quality, Flags flags,
+                String2_&& next_segment_contig_name, SizeType next_segment_begin,
+                SizeType inferred_template_length, NextSegment::Flags next_segment_flags);
     
     ~AlignedRead() = default;
     

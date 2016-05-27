@@ -26,7 +26,7 @@ namespace Octopus
         VariantCall() = delete;
         
         template <typename V, typename T>
-        explicit VariantCall(V&& variant, T&& genotype_calls, double quality);
+        VariantCall(V&& variant, T&& genotype_calls, double quality);
         
         virtual ~VariantCall() = default;
         

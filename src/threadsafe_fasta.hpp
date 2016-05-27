@@ -31,7 +31,7 @@ public:
     
     ThreadsafeFasta() = delete;
     
-    explicit ThreadsafeFasta(std::unique_ptr<Fasta> fasta);
+    ThreadsafeFasta(std::unique_ptr<Fasta> fasta);
     
     ~ThreadsafeFasta() noexcept override = default;
     

@@ -21,9 +21,8 @@ namespace Octopus
 
 // public members
 
-ReadPipe::ReadPipe(ReadManager& read_manager, ReadFilterer read_filter,
-                   boost::optional<Downsampler> downsampler, ReadTransform read_transform,
-                   std::vector<SampleIdType> samples)
+ReadPipe::ReadPipe(ReadManager& read_manager, ReadTransform read_transform, ReadFilterer read_filter,
+                   boost::optional<Downsampler> downsampler, std::vector<SampleIdType> samples)
 :
 read_manager_ {read_manager},
 read_filter_ {std::move(read_filter)},

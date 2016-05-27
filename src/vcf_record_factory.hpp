@@ -24,8 +24,8 @@ namespace Octopus
     public:
         VcfRecordFactory() = delete;
         
-        explicit VcfRecordFactory(const ReferenceGenome& reference, const ReadMap& reads,
-                                  std::vector<SampleIdType> samples, bool sites_only);
+        VcfRecordFactory(const ReferenceGenome& reference, const ReadMap& reads,
+                         std::vector<SampleIdType> samples, bool sites_only);
         
         ~VcfRecordFactory() = default;
         

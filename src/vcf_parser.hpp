@@ -29,7 +29,7 @@ class VcfParser : public IVcfReaderImpl
 public:
     VcfParser() = delete;
     
-    explicit VcfParser(const fs::path& file_path);
+    VcfParser(const fs::path& file_path);
     
     VcfParser(const VcfParser&)            = delete;
     VcfParser& operator=(const VcfParser&) = delete;

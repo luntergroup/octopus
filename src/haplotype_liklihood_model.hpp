@@ -48,7 +48,7 @@ public:
         
         ShortHaplotypeError() = delete;
         
-        explicit ShortHaplotypeError(const Haplotype& haplotype, SizeType required_extension);
+        ShortHaplotypeError(const Haplotype& haplotype, SizeType required_extension);
         
         const Haplotype& haplotype() const noexcept;
         

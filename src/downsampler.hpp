@@ -26,7 +26,7 @@ class Downsampler
 public:
     Downsampler() = default;
     
-    explicit Downsampler(unsigned max_coverage, unsigned min_coverage);
+    Downsampler(unsigned max_coverage, unsigned min_coverage);
     
     ~Downsampler() = default;
     

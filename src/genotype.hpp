@@ -46,9 +46,11 @@ public:
     using RegionType = RegionType<MappableType>;
     
     Genotype() = default;
+    
     explicit Genotype(unsigned ploidy);
     explicit Genotype(unsigned ploidy, const MappableType& init);
     explicit Genotype(std::initializer_list<MappableType> alleles);
+    
     ~Genotype() = default;
     
     Genotype(const Genotype&)            = default;

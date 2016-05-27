@@ -39,7 +39,7 @@ public:
     
     ReadReader() = default;
     
-    explicit ReadReader(const Path& file_path);
+    ReadReader(const Path& file_path);
     
     ~ReadReader() = default;
     

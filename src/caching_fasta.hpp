@@ -51,10 +51,10 @@ public:
     
     CachingFasta() = delete;
     
-    explicit CachingFasta(std::unique_ptr<ReferenceGenomeImpl> fasta);
-    explicit CachingFasta(std::unique_ptr<ReferenceGenomeImpl> fasta, SizeType max_cache_size);
-    explicit CachingFasta(std::unique_ptr<ReferenceGenomeImpl> fasta,  SizeType max_cache_size,
-                          double locality_bias, double forward_bias);
+    CachingFasta(std::unique_ptr<ReferenceGenomeImpl> fasta);
+    CachingFasta(std::unique_ptr<ReferenceGenomeImpl> fasta, SizeType max_cache_size);
+    CachingFasta(std::unique_ptr<ReferenceGenomeImpl> fasta,  SizeType max_cache_size,
+                 double locality_bias, double forward_bias);
     
     ~CachingFasta() noexcept override = default;
     

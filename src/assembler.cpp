@@ -166,7 +166,7 @@ template <typename G>
 struct CycleDetector : public boost::default_dfs_visitor
 {
     using Edge = typename boost::graph_traits<G>::edge_descriptor;
-    explicit CycleDetector(bool& is_acyclic) : is_acyclic_ {is_acyclic} {}
+    CycleDetector(bool& is_acyclic) : is_acyclic_ {is_acyclic} {}
     void back_edge(Edge e, const G& g)
     {
         if (boost::source(e, g) != boost::target(e, g)) {
@@ -1079,7 +1079,7 @@ struct TransitionScorer : public boost::default_dfs_visitor
     
     PropertyMap map;
     
-    explicit TransitionScorer(PropertyMap m) : map {m} {}
+    TransitionScorer(PropertyMap m) : map {m} {}
     
     void discover_vertex(Vertex v, const G& g)
     {

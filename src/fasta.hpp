@@ -32,8 +32,8 @@ public:
     
     Fasta() = delete;
     
-    explicit Fasta(Path fasta_path);
-    explicit Fasta(Path fasta_path, Path fasta_index_path);
+    Fasta(Path fasta_path);
+    Fasta(Path fasta_path, Path fasta_index_path);
     
     ~Fasta() noexcept override = default;
     

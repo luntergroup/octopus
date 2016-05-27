@@ -27,16 +27,16 @@ class CancerGenotype : public Equitable<CancerGenotype<MappableType>>,
 public:
     CancerGenotype() = default;
     
-    explicit CancerGenotype(std::initializer_list<MappableType> normal_elements,
-                            const MappableType& cancer_element);
-    explicit CancerGenotype(std::initializer_list<MappableType> normal_elements,
-                            MappableType&& cancer_element);
+    CancerGenotype(std::initializer_list<MappableType> normal_elements,
+                   const MappableType& cancer_element);
+    CancerGenotype(std::initializer_list<MappableType> normal_elements,
+                   MappableType&& cancer_element);
     
     template <typename G>
-    explicit CancerGenotype(G&& germline_genotype, const std::shared_ptr<MappableType>& cancer_element);
+    CancerGenotype(G&& germline_genotype, const std::shared_ptr<MappableType>& cancer_element);
     
     template <typename G, typename C>
-    explicit CancerGenotype(G&& germline_genotype, C&& cancer_element);
+    CancerGenotype(G&& germline_genotype, C&& cancer_element);
     
     ~CancerGenotype() = default;
     

@@ -36,7 +36,7 @@ public:
     
     HaplotypeTree() = delete;
     
-    explicit HaplotypeTree(const ContigNameType& contig, const ReferenceGenome& reference);
+    HaplotypeTree(const ContigNameType& contig, const ReferenceGenome& reference);
     
     ~HaplotypeTree() = default;
     

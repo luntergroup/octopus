@@ -40,9 +40,10 @@ public:
     
     VcfHeader()  = default;
     
-    explicit VcfHeader(std::string file_format);
+    VcfHeader(std::string file_format);
+    
     template <typename T, typename U, typename B, typename S>
-    explicit VcfHeader(T&& file_format, U&& samples, B&& basic_fields, S&& structured_fields);
+    VcfHeader(T&& file_format, U&& samples, B&& basic_fields, S&& structured_fields);
     
     ~VcfHeader() = default;
     

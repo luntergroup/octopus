@@ -37,7 +37,9 @@ public:
     using RecordIteratorRange = std::pair<RecordIterator, RecordIterator>;
     
     HtslibBcfFacade() = delete;
-    explicit HtslibBcfFacade(Path file_path, const std::string& mode = "r");
+    
+    HtslibBcfFacade(Path file_path, const std::string& mode = "r");
+    
     ~HtslibBcfFacade() noexcept override = default;
     
     HtslibBcfFacade(const HtslibBcfFacade&)            = delete;

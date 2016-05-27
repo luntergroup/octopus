@@ -29,7 +29,7 @@ namespace
 {
     struct ReadWrapper : public Mappable<ReadWrapper>
     {
-        explicit ReadWrapper(const AlignedRead& read) : read {std::cref(read)} {}
+        ReadWrapper(const AlignedRead& read) : read {std::cref(read)} {}
         std::reference_wrapper<const AlignedRead> read;
         const GenomicRegion& mapped_region() const noexcept { return ::mapped_region(read.get()); };
     };

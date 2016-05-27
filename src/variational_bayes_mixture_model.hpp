@@ -24,7 +24,6 @@ namespace Octopus
     public:
         struct AlgorithmOptions
         {
-            explicit AlgorithmOptions(double epsilon, unsigned max_iterations);
             double epsilon;
             unsigned max_iterations;
         };

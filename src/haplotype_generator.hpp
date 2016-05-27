@@ -41,10 +41,10 @@ namespace Octopus
         
         HaplotypeGenerator() = delete;
         
-        explicit HaplotypeGenerator(const GenomicRegion& window, const ReferenceGenome& reference,
-                                    const MappableFlatSet<Variant>& candidates, const ReadMap& reads,
-                                    unsigned soft_max_haplotypes, unsigned hard_max_haplotypes,
-                                    LaggingPolicy lagging = LaggingPolicy::None);
+        HaplotypeGenerator(const GenomicRegion& window, const ReferenceGenome& reference,
+                           const MappableFlatSet<Variant>& candidates, const ReadMap& reads,
+                           unsigned soft_max_haplotypes, unsigned hard_max_haplotypes,
+                           LaggingPolicy lagging = LaggingPolicy::None);
         
         ~HaplotypeGenerator() = default;
         

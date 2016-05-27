@@ -28,7 +28,7 @@ namespace Octopus
 template <typename T>
 struct FilterGreater
 {
-    explicit FilterGreater(const std::unordered_map<Haplotype, T>& values) : values_ {values} {}
+    FilterGreater(const std::unordered_map<Haplotype, T>& values) : values_ {values} {}
     
     bool operator()(const Haplotype& lhs, const T rhs) const
     {

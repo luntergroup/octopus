@@ -24,8 +24,8 @@ namespace Octopus
     public:
         SomaticMutationModel() = delete;
         
-        explicit SomaticMutationModel(const CoalescentModel& germline_model,
-                                      double somatic_mutation_rate = 0.00001);
+        SomaticMutationModel(const CoalescentModel& germline_model,
+                             double somatic_mutation_rate = 0.00001);
         
         ~SomaticMutationModel() = default;
         

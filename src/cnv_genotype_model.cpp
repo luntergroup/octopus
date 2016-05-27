@@ -60,7 +60,6 @@ namespace
     
     struct VariationalBayesParameters
     {
-        explicit VariationalBayesParameters(double epsilon, unsigned max_iterations);
         double epsilon;
         unsigned max_iterations;
     };
@@ -840,13 +839,6 @@ namespace
     }
     
     // Previously declared helpers
-    
-    VariationalBayesParameters::VariationalBayesParameters(const double epsilon,
-                                                           const unsigned max_iterations)
-    :
-    epsilon {epsilon},
-    max_iterations {max_iterations}
-    {}
     
     ReadLikelihoods::ReadLikelihoods(const BaseType& underlying_likelihoods)
     :

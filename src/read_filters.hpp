@@ -59,7 +59,7 @@ private:
 struct IsNotSecondaryAlignment : BasicReadFilter
 {
     IsNotSecondaryAlignment();
-    explicit IsNotSecondaryAlignment(std::string name);
+    IsNotSecondaryAlignment(std::string name);
     
     bool passes(const AlignedRead& read) const noexcept override;
 };
@@ -79,7 +79,8 @@ struct IsGoodMappingQuality : BasicReadFilter
     IsGoodMappingQuality() = delete;
     
     explicit IsGoodMappingQuality(QualityType good_mapping_quality);
-    explicit IsGoodMappingQuality(std::string name, QualityType good_mapping_quality);
+    
+    IsGoodMappingQuality(std::string name, QualityType good_mapping_quality);
     
     bool passes(const AlignedRead& read) const noexcept override;
     
@@ -94,9 +95,8 @@ struct HasSufficientGoodBaseFraction : BasicReadFilter
     HasSufficientGoodBaseFraction() = delete;
     explicit HasSufficientGoodBaseFraction(QualityType good_base_quality,
                                            double min_good_base_fraction);
-    explicit HasSufficientGoodBaseFraction(std::string name,
-                                           QualityType good_base_quality,
-                                           double min_good_base_fraction);
+    HasSufficientGoodBaseFraction(std::string name, QualityType good_base_quality,
+                                  double min_good_base_fraction);
     
     bool passes(const AlignedRead& read) const noexcept override;
     
@@ -112,9 +112,8 @@ struct HasSufficientGoodQualityBases : BasicReadFilter
     HasSufficientGoodQualityBases() = delete;
     explicit HasSufficientGoodQualityBases(QualityType good_base_quality,
                                            unsigned min_good_bases);
-    explicit HasSufficientGoodQualityBases(std::string name,
-                                           QualityType good_base_quality,
-                                           unsigned min_good_bases);
+    HasSufficientGoodQualityBases(std::string name, QualityType good_base_quality,
+                                  unsigned min_good_bases);
     
     bool passes(const AlignedRead& read) const noexcept override;
     
@@ -126,7 +125,7 @@ private:
 struct IsMapped : BasicReadFilter
 {
     IsMapped();
-    explicit IsMapped(std::string name);
+    IsMapped(std::string name);
     
     bool passes(const AlignedRead& read) const noexcept override;
 };
@@ -134,7 +133,7 @@ struct IsMapped : BasicReadFilter
 struct IsNotChimeric : BasicReadFilter
 {
     IsNotChimeric();
-    explicit IsNotChimeric(std::string name);
+    IsNotChimeric(std::string name);
     
     bool passes(const AlignedRead& read) const noexcept override;
 };
@@ -142,7 +141,7 @@ struct IsNotChimeric : BasicReadFilter
 struct IsNextSegmentMapped : BasicReadFilter
 {
     IsNextSegmentMapped();
-    explicit IsNextSegmentMapped(std::string name);
+    IsNextSegmentMapped(std::string name);
     
     bool passes(const AlignedRead& read) const noexcept override;
 };
@@ -150,7 +149,7 @@ struct IsNextSegmentMapped : BasicReadFilter
 struct IsNotMarkedDuplicate : BasicReadFilter
 {
     IsNotMarkedDuplicate();
-    explicit IsNotMarkedDuplicate(std::string name);
+    IsNotMarkedDuplicate(std::string name);
     
     bool passes(const AlignedRead& read) const noexcept override;
 };
@@ -161,7 +160,7 @@ struct IsShort : BasicReadFilter
     
     IsShort() = delete;
     explicit IsShort(SizeType max_length);
-    explicit IsShort(std::string name, SizeType max_length);
+    IsShort(std::string name, SizeType max_length);
     
     bool passes(const AlignedRead& read) const noexcept override;
 
@@ -175,7 +174,7 @@ struct IsLong : BasicReadFilter
     
     IsLong() = delete;
     explicit IsLong(SizeType min_length);
-    explicit IsLong(std::string name, SizeType min_length);
+    IsLong(std::string name, SizeType min_length);
     
     bool passes(const AlignedRead& read) const noexcept override;
     
@@ -186,7 +185,7 @@ private:
 struct IsNotContaminated : BasicReadFilter
 {
     IsNotContaminated();
-    explicit IsNotContaminated(std::string name);
+    IsNotContaminated(std::string name);
     
     bool passes(const AlignedRead& read) const noexcept override;
 };
@@ -194,7 +193,7 @@ struct IsNotContaminated : BasicReadFilter
 struct IsNotMarkedQcFail : BasicReadFilter
 {
     IsNotMarkedQcFail();
-    explicit IsNotMarkedQcFail(std::string name);
+    IsNotMarkedQcFail(std::string name);
     
     bool passes(const AlignedRead& read) const noexcept override;
 };
@@ -231,7 +230,7 @@ template <typename ForwardIt>
 struct IsNotDuplicate : ContextReadFilter<ForwardIt>
 {
     IsNotDuplicate() : ContextReadFilter<ForwardIt> {"IsNotOctopusDuplicate"} {}
-    explicit IsNotDuplicate(std::string name)
+    IsNotDuplicate(std::string name)
     : ContextReadFilter<ForwardIt> {std::move(name)} {}
     
     ForwardIt do_remove(ForwardIt first, ForwardIt last) const override

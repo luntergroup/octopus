@@ -147,9 +147,11 @@ namespace Octopus
         }
     }
     
-    struct DummyGenerator
+    class DummyGenerator
     {
+    public:
         DummyGenerator() = delete;
+        
         DummyGenerator(const char dummy) : dummy_ {dummy} {}
         
         char operator()(const GenomicRegion& region) const

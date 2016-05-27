@@ -37,8 +37,7 @@ namespace
     
     struct PhaseComplementHash
     {
-        explicit PhaseComplementHash(PartitionIterator first, PartitionIterator last)
-        : first_ {first}, last_ {last} {}
+        PhaseComplementHash(PartitionIterator first, PartitionIterator last) : first_ {first}, last_ {last} {}
         
         std::size_t operator()(const GenotypeReference& genotype) const
         {
@@ -59,8 +58,7 @@ namespace
     
     struct PhaseComplementEqual
     {
-        explicit PhaseComplementEqual(PartitionIterator first, PartitionIterator last)
-        : first_ {first}, last_ {last} {}
+        PhaseComplementEqual(PartitionIterator first, PartitionIterator last) : first_ {first}, last_ {last} {}
         
         bool operator()(const GenotypeReference& lhs, const GenotypeReference& rhs) const
         {
@@ -211,7 +209,7 @@ namespace
 boost::optional<Phaser::PhaseSet>
 Phaser::try_phase(const std::vector<Haplotype>& haplotypes,
                   const GenotypePosteriorMap& genotype_posteriors,
-                  const std::vector<Variant>& candidates)
+                  const std::vector<Variant>& candidates) const
 {
     // TODO
     return boost::none;
@@ -263,7 +261,7 @@ force_phase_sample(const GenomicRegion& region, const std::vector<GenomicRegion>
 Phaser::PhaseSet
 Phaser::force_phase(const std::vector<Haplotype>& haplotypes,
                     const GenotypePosteriorMap& genotype_posteriors,
-                    const std::vector<Variant>& candidates)
+                    const std::vector<Variant>& candidates) const
 {
     assert(!haplotypes.empty());
     assert(!genotype_posteriors.empty1());

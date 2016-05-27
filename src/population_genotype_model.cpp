@@ -120,9 +120,9 @@ log_evidence {log_evidence}
             
             ModelConstants() = delete;
             
-            explicit ModelConstants(const std::vector<Haplotype>& haplotypes,
-                                    const std::vector<Genotype<Haplotype>>& genotypes,
-                                    const SampleGenotypeLogLikelihoods& genotype_log_likilhoods)
+            ModelConstants(const std::vector<Haplotype>& haplotypes,
+                           const std::vector<Genotype<Haplotype>>& genotypes,
+                           const SampleGenotypeLogLikelihoods& genotype_log_likilhoods)
             :
             haplotypes {haplotypes},
             genotypes {genotypes},

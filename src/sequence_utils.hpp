@@ -309,7 +309,7 @@ struct TandemRepeat
     using SizeType = GenomicRegion::SizeType;
     TandemRepeat() = delete;
     template <typename T>
-    explicit TandemRepeat(T region, GenomicRegion::SizeType period)
+    TandemRepeat(T region, GenomicRegion::SizeType period)
     : region {std::forward<T>(region)}, period {period} {}
     
     GenomicRegion region;

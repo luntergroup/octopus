@@ -39,8 +39,8 @@ public:
     
     ReadManager() = default;
     
-    explicit ReadManager(std::vector<Path> read_file_paths, unsigned max_open_files);
-    explicit ReadManager(std::initializer_list<Path> read_file_paths);
+    ReadManager(std::vector<Path> read_file_paths, unsigned max_open_files);
+    ReadManager(std::initializer_list<Path> read_file_paths);
     
     ~ReadManager() = default;
     

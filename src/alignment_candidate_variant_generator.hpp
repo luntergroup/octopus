@@ -32,10 +32,10 @@ public:
     
     AlignmentCandidateVariantGenerator() = delete;
     
-    explicit AlignmentCandidateVariantGenerator(const ReferenceGenome& reference,
-                                                QualityType min_base_quality = 0,
-                                                unsigned min_support = 2,
-                                                SizeType max_variant_size = 100);
+    AlignmentCandidateVariantGenerator(const ReferenceGenome& reference,
+                                       QualityType min_base_quality = 0,
+                                       unsigned min_support = 2,
+                                       SizeType max_variant_size = 100);
     
     ~AlignmentCandidateVariantGenerator() override = default;
     

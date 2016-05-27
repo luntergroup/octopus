@@ -43,11 +43,9 @@ class ReadPipe
 public:
     ReadPipe() = delete;
     
-    explicit ReadPipe(ReadManager& read_manager,
-                      ReadFilterer read_filter,
-                      boost::optional<Downsampler> downsampler,
-                      ReadTransform read_transform,
-                      std::vector<SampleIdType> samples);
+    ReadPipe(ReadManager& read_manager, ReadTransform read_transform,
+             ReadFilterer read_filter, boost::optional<Downsampler> downsampler,
+             std::vector<SampleIdType> samples);
     
     ~ReadPipe() = default;
     

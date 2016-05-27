@@ -34,12 +34,10 @@ namespace Octopus
         
         HaplotypeLikelihoodCache() = default;
         
-        explicit HaplotypeLikelihoodCache(unsigned max_haplotypes,
-                                          const std::vector<SampleIdType>& samples);
+        HaplotypeLikelihoodCache(unsigned max_haplotypes, const std::vector<SampleIdType>& samples);
         
-        explicit HaplotypeLikelihoodCache(HaplotypeLikelihoodModel likelihood_model,
-                                          unsigned max_haplotypes,
-                                          const std::vector<SampleIdType>& samples);
+        HaplotypeLikelihoodCache(HaplotypeLikelihoodModel likelihood_model,
+                                 unsigned max_haplotypes, const std::vector<SampleIdType>& samples);
         
         ~HaplotypeLikelihoodCache() = default;
         
@@ -76,7 +74,7 @@ namespace Octopus
         struct ReadPacket
         {
             using Iterator = ReadMap::mapped_type::const_iterator;
-            explicit ReadPacket(Iterator first, Iterator last);
+            ReadPacket(Iterator first, Iterator last);
             Iterator first, last;
             std::size_t num_reads;
         };

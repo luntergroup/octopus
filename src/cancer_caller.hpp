@@ -37,15 +37,6 @@ public:
     
     struct CallerParameters
     {
-        CallerParameters() = default;
-        
-        explicit CallerParameters(double min_variant_posterior, double min_somatic_posterior,
-                                  double min_refcall_posterior, unsigned ploidy,
-                                  boost::optional<SampleIdType> normal_sample,
-                                  double somatic_mutation_rate, bool call_somatics_only);
-        
-        ~CallerParameters() = default;
-        
         double min_variant_posterior;
         double min_somatic_posterior;
         double min_refcall_posterior;
@@ -81,22 +72,21 @@ private:
         
         struct NormalInferences
         {
-            NormalInferences() = default;
             GermlineModel::InferredLatents germline, dummy;
         };
         
-        explicit Latents(std::vector<Genotype<Haplotype>>&& germline_genotypes,
-                         std::vector<CancerGenotype<Haplotype>>&& somatic_genotypes,
-                         GermlineModel::InferredLatents&&,
-                         CNVModel::InferredLatents&&,
-                         SomaticModel::InferredLatents&&);
+        Latents(std::vector<Genotype<Haplotype>>&& germline_genotypes,
+                std::vector<CancerGenotype<Haplotype>>&& somatic_genotypes,
+                GermlineModel::InferredLatents&&,
+                CNVModel::InferredLatents&&,
+                SomaticModel::InferredLatents&&);
         
-        explicit Latents(std::vector<Genotype<Haplotype>>&& germline_genotypes,
-                         std::vector<CancerGenotype<Haplotype>>&& somatic_genotypes,
-                         GermlineModel::InferredLatents&&,
-                         CNVModel::InferredLatents&&,
-                         SomaticModel::InferredLatents&&,
-                         NormalInferences&&);
+        Latents(std::vector<Genotype<Haplotype>>&& germline_genotypes,
+                std::vector<CancerGenotype<Haplotype>>&& somatic_genotypes,
+                GermlineModel::InferredLatents&&,
+                CNVModel::InferredLatents&&,
+                SomaticModel::InferredLatents&&,
+                NormalInferences&&);
         
         std::shared_ptr<HaplotypeProbabilityMap> get_haplotype_posteriors() const override;
         std::shared_ptr<GenotypeProbabilityMap> get_genotype_posteriors() const override;
@@ -116,7 +106,6 @@ private:
     
     struct ModelPosteriors
     {
-        explicit ModelPosteriors(double germline, double cnv, double somatic);
         double germline, cnv, somatic;
     };
     

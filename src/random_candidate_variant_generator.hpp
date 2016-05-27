@@ -28,7 +28,7 @@ namespace Octopus {
         
         RandomCandidateVariantGenerator() = delete;
         
-        explicit RandomCandidateVariantGenerator(const ReferenceGenome& reference);
+        RandomCandidateVariantGenerator(const ReferenceGenome& reference);
         
         ~RandomCandidateVariantGenerator() override = default;
         

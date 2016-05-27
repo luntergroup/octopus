@@ -33,9 +33,9 @@ public:
     BaseAllele() = default;
     
     template <typename R, typename S>
-    explicit BaseAllele(R&& region, S&& sequence);
+    BaseAllele(R&& region, S&& sequence);
     template <typename T, typename S>
-    explicit BaseAllele(T&& contig_name, SizeType begin_pos, S&& sequence);
+    BaseAllele(T&& contig_name, SizeType begin_pos, S&& sequence);
     
     ~BaseAllele() = default;
     

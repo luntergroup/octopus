@@ -23,7 +23,7 @@ public:
     
     Trio() = default;
     
-    explicit Trio(Mother mother, Father father, Child child);
+    Trio(Mother mother, Father father, Child child);
     
     ~Trio() = default;
     

@@ -27,12 +27,12 @@ namespace Octopus
     public:
         PedigreeVariantCaller() = delete;
         
-        explicit PedigreeVariantCaller(const ReferenceGenome& reference,
-                                       ReadPipe& read_pipe,
-                                       CandidateVariantGenerator&& candidate_generator,
-                                       unsigned ploidy,
-                                       SampleIdType mother, SampleIdType father,
-                                       double min_variant_posterior);
+//        explicit PedigreeVariantCaller(const ReferenceGenome& reference,
+//                                       ReadPipe& read_pipe,
+//                                       CandidateVariantGenerator&& candidate_generator,
+//                                       unsigned ploidy,
+//                                       SampleIdType mother, SampleIdType father,
+//                                       double min_variant_posterior);
         
         ~PedigreeVariantCaller() = default;
         

@@ -33,8 +33,7 @@ namespace Octopus
                 using GenotypeProbabilityVector = std::vector<double>;
                 
                 Latents() = default;
-                explicit Latents(GenotypeProbabilityVector&& genotype_probabilities);
-                ~Latents() = default;
+                Latents(GenotypeProbabilityVector&& genotype_probabilities);
                 
                 GenotypeProbabilityVector genotype_probabilities;
             };
@@ -42,6 +41,7 @@ namespace Octopus
             struct InferredLatents
             {
                 InferredLatents() = default;
+                
                 explicit InferredLatents(Latents&& posteriors, double log_evidence);
                 
                 Latents posteriors;

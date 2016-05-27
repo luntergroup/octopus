@@ -26,8 +26,10 @@ public:
     using Path = boost::filesystem::path;
     
     VcfWriter() = default;
-    explicit VcfWriter(Path file_path);
-    explicit VcfWriter(Path file_path, const VcfHeader& header);
+    
+    VcfWriter(Path file_path);
+    VcfWriter(Path file_path, const VcfHeader& header);
+    
     ~VcfWriter() = default;
     
     VcfWriter(const VcfWriter&)            = delete;

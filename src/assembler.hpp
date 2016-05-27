@@ -46,7 +46,7 @@ public:
     {
         Variant() = default;
         template <typename S1, typename S2>
-        explicit Variant(std::size_t pos, S1&& ref, S2&& alt);
+        Variant(std::size_t pos, S1&& ref, S2&& alt);
         std::size_t begin_pos;
         SequenceType ref, alt;
     };
@@ -62,8 +62,8 @@ public:
     
     Assembler() = delete;
     
-    explicit Assembler(unsigned kmer_size);
-    explicit Assembler(unsigned kmer_size, const SequenceType& reference);
+    Assembler(unsigned kmer_size);
+    Assembler(unsigned kmer_size, const SequenceType& reference);
     
     ~Assembler() = default;
     
@@ -99,6 +99,7 @@ private:
         using ScoreType  = double;
         
         GraphEdge() = default;
+        
         explicit GraphEdge(WeightType weight, bool is_reference = false);
         
         WeightType weight;

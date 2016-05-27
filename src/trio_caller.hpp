@@ -27,12 +27,12 @@ namespace Octopus
     public:
         TrioVariantCaller() = delete;
         
-        explicit TrioVariantCaller(const ReferenceGenome& reference,
-                                       ReadPipe& read_pipe,
-                                       CandidateVariantGenerator&& candidate_generator,
-                                       unsigned ploidy,
-                                       SampleIdType mother, SampleIdType father,
-                                       double min_variant_posterior);
+//        explicit TrioVariantCaller(const ReferenceGenome& reference,
+//                                       ReadPipe& read_pipe,
+//                                       CandidateVariantGenerator&& candidate_generator,
+//                                       unsigned ploidy,
+//                                       SampleIdType mother, SampleIdType father,
+//                                       double min_variant_posterior);
         
         ~TrioVariantCaller() = default;
         

@@ -34,15 +34,6 @@
 
 namespace Octopus
 {
-IndividualVariantCaller::CallerParameters::CallerParameters(double min_variant_posterior,
-                                                            double min_refcall_posterior,
-                                                            unsigned ploidy)
-:
-min_variant_posterior {min_variant_posterior},
-min_refcall_posterior {min_refcall_posterior},
-ploidy {ploidy}
-{}
-
 IndividualVariantCaller::IndividualVariantCaller(CallerComponents&& components,
                                                  VariantCaller::CallerParameters general_parameters,
                                                  CallerParameters specific_parameters)

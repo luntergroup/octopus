@@ -59,7 +59,7 @@ namespace
     
     struct CallWrapper : public Mappable<CallWrapper>
     {
-        explicit CallWrapper(const VcfRecord& record, const SampleIdType& sample)
+        CallWrapper(const VcfRecord& record, const SampleIdType& sample)
         :
         call {std::cref(record)}, phase_region {extract_phase_region(record, sample)} {}
         

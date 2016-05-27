@@ -29,7 +29,7 @@ public:
     
     ReferenceGenome() = delete;
     
-    explicit ReferenceGenome(std::unique_ptr<ReferenceGenomeImpl> impl);
+    ReferenceGenome(std::unique_ptr<ReferenceGenomeImpl> impl);
     
     ~ReferenceGenome() = default;
     

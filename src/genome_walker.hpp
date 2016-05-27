@@ -34,9 +34,9 @@ public:
     
     GenomeWalker() = delete;
     
-    explicit GenomeWalker(unsigned max_included,
-                          IndicatorPolicy indicator_limit = IndicatorPolicy::None,
-                          ExtensionPolicy extension_limit = ExtensionPolicy::SharedWithFrontier);
+    GenomeWalker(unsigned max_included,
+                 IndicatorPolicy indicator_limit = IndicatorPolicy::None,
+                 ExtensionPolicy extension_limit = ExtensionPolicy::SharedWithFrontier);
     
     ~GenomeWalker() = default;
     

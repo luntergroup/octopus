@@ -34,13 +34,6 @@ public:
     
     struct CallerParameters
     {
-        CallerParameters() = default;
-        
-        explicit CallerParameters(double min_variant_posterior, double min_refcall_posterior,
-                                  unsigned ploidy);
-        
-        ~CallerParameters() = default;
-        
         double min_variant_posterior;
         double min_refcall_posterior;
         unsigned ploidy;

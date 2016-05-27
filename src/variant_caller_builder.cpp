@@ -12,6 +12,7 @@
 #include "population_caller.hpp"
 #include "cancer_caller.hpp"
 #include "pedigree_caller.hpp"
+#include "phaser.hpp"
 
 namespace Octopus
 {
@@ -218,8 +219,7 @@ VariantCallerBuilder::CallerFactoryMap VariantCallerBuilder::generate_factory() 
         parameters_.call_sites_only,
         parameters_.max_haplotypes,
         parameters_.min_haplotype_posterior,
-        parameters_.allow_flank_scoring,
-        parameters_.min_phase_score
+        parameters_.allow_flank_scoring
     };
     
     return CallerFactoryMap {
@@ -228,7 +228,8 @@ VariantCallerBuilder::CallerFactoryMap VariantCallerBuilder::generate_factory() 
                                                                  parameters_.reference,
                                                                  parameters_.read_pipe,
                                                                  parameters_.candidate_generator_builder.get().build(),
-                                                                 parameters_.haplotype_generator_builder
+                                                                 parameters_.haplotype_generator_builder,
+                                                                 Phaser {parameters_.min_phase_score}
                                                              },
                                                              std::move(general_parameters),
                                                              IndividualVariantCaller::CallerParameters {
@@ -242,7 +243,8 @@ VariantCallerBuilder::CallerFactoryMap VariantCallerBuilder::generate_factory() 
                                                                  parameters_.reference,
                                                                  parameters_.read_pipe,
                                                                  parameters_.candidate_generator_builder.get().build(),
-                                                                 parameters_.haplotype_generator_builder
+                                                                 parameters_.haplotype_generator_builder,
+                                                                 Phaser {parameters_.min_phase_score}
                                                              },
                                                              std::move(general_parameters),
                                                              PopulationVariantCaller::CallerParameters {
@@ -256,7 +258,8 @@ VariantCallerBuilder::CallerFactoryMap VariantCallerBuilder::generate_factory() 
                                                              parameters_.reference,
                                                              parameters_.read_pipe,
                                                              parameters_.candidate_generator_builder.get().build(),
-                                                             parameters_.haplotype_generator_builder
+                                                             parameters_.haplotype_generator_builder,
+                                                             Phaser {parameters_.min_phase_score}
                                                          },
                                                          std::move(general_parameters),
                                                          CancerVariantCaller::CallerParameters {
@@ -266,7 +269,8 @@ VariantCallerBuilder::CallerFactoryMap VariantCallerBuilder::generate_factory() 
                                                              parameters_.ploidy,
                                                              parameters_.normal_sample,
                                                              parameters_.somatic_mutation_rate,
-                                                             parameters_.call_somatics_only
+                                                             parameters_.call_somatics_only,
+                                                             50'000
                                                          });
         }}
     };

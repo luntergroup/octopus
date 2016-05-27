@@ -301,6 +301,7 @@ class VcfType : public detail::VcfTypeBase
 public:
     // need first constructor to avoid const char* converting to bool
     explicit VcfType(const char* str) : detail::VcfTypeBase {std::string {str}} {}
+    
     template <typename T, typename = std::enable_if_t<!std::is_base_of<VcfType, std::decay_t<T>>::value>>
     explicit VcfType(T&& v) : detail::VcfTypeBase {std::forward<T>(v)} {}
     

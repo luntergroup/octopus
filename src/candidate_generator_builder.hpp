@@ -59,14 +59,6 @@ namespace Octopus
     private:
         struct Parameters
         {
-            Parameters()  = default;
-            ~Parameters() = default;
-            
-            Parameters(const Parameters&)            = default;
-            Parameters& operator=(const Parameters&) = default;
-            Parameters(Parameters&&)                 = default;
-            Parameters& operator=(Parameters&&)      = default;
-            
             // common
             boost::optional<std::reference_wrapper<const ReferenceGenome>> reference;
             

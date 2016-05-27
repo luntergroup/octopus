@@ -33,11 +33,11 @@ public:
     
     AssemblerCandidateVariantGenerator() = delete;
     
-    explicit AssemblerCandidateVariantGenerator(const ReferenceGenome& reference,
-                                                std::vector<unsigned> kmer_sizes,
-                                                QualityType min_base_quality = 10,
-                                                unsigned min_supporting_reads = 2,
-                                                SizeType max_variant_size = 500);
+    AssemblerCandidateVariantGenerator(const ReferenceGenome& reference,
+                                       std::vector<unsigned> kmer_sizes,
+                                       QualityType min_base_quality = 10,
+                                       unsigned min_supporting_reads = 2,
+                                       SizeType max_variant_size = 500);
     
     ~AssemblerCandidateVariantGenerator() override = default;
     
@@ -60,7 +60,7 @@ private:
     
     struct Bin : public Mappable<Bin>
     {
-        explicit Bin(GenomicRegion region);
+        Bin(GenomicRegion region);
         
         const GenomicRegion& mapped_region() const noexcept;
         

@@ -32,7 +32,7 @@ public:
     
     VcfReader()  = default;
     
-    explicit VcfReader(Path file_path);
+    VcfReader(Path file_path);
     
     ~VcfReader() = default;
     

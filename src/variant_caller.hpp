@@ -94,7 +94,8 @@ public:
         CallerComponents(const ReferenceGenome& reference,
                          ReadPipe& read_pipe,
                          CandidateVariantGenerator&& candidate_generator,
-                         HaplotypeGenerator::Builder haplotype_generator_builder);
+                         HaplotypeGenerator::Builder haplotype_generator_builder,
+                         Phaser phase);
         
         CallerComponents(const CallerComponents&)            = delete;
         CallerComponents& operator=(const CallerComponents&) = delete;
@@ -105,30 +106,24 @@ public:
         std::reference_wrapper<ReadPipe> read_pipe;
         CandidateVariantGenerator candidate_generator;
         HaplotypeGenerator::Builder haplotype_generator_builder;
+        Phaser phaser;
     };
     
     struct CallerParameters
     {
-        CallerParameters() = default;
-        
-        explicit CallerParameters(RefCallType refcall_type, bool call_sites_only,
-                                  unsigned max_haplotypes, double min_haplotype_posterior,
-                                  bool allow_flank_scoring, double min_phase_score);
-        
-        ~CallerParameters() = default;
-        
         RefCallType refcall_type;
         bool call_sites_only;
         unsigned max_haplotypes;
         double min_haplotype_posterior;
         bool allow_inactive_flank_scoring;
-        double min_phase_score;
     };
     
 private:
     mutable CandidateVariantGenerator candidate_generator_;
     
     HaplotypeGenerator::Builder haplotype_generator_builder_;
+    
+    Phaser phaser_;
     
     CallerParameters parameters_;
     
@@ -155,7 +150,6 @@ private:
                                                 const MappableFlatSet<Variant>& candidates,
                                                 const ReadMap& reads) const;
     HaplotypeLikelihoodCache make_haplotype_likelihood_cache() const;
-    Phaser make_phaser() const;
     VcfRecordFactory make_record_factory(const ReadMap& reads) const;
     
     std::vector<Haplotype> filter(std::vector<Haplotype>& haplotypes,

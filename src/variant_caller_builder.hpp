@@ -33,10 +33,9 @@ namespace Octopus {
         
         VariantCallerBuilder()  = delete;
         
-        explicit VariantCallerBuilder(const ReferenceGenome& reference,
-                                      ReadPipe& read_pipe,
-                                      const CandidateGeneratorBuilder& candidate_generator_builder,
-                                      HaplotypeGenerator::Builder haplotype_generator_builder);
+        VariantCallerBuilder(const ReferenceGenome& reference, ReadPipe& read_pipe,
+                             const CandidateGeneratorBuilder& candidate_generator_builder,
+                             HaplotypeGenerator::Builder haplotype_generator_builder);
         
         ~VariantCallerBuilder() = default;
         
@@ -85,10 +84,11 @@ namespace Octopus {
         struct Parameters
         {
             Parameters()  = delete;
-            explicit Parameters(const ReferenceGenome& reference,
-                                ReadPipe& read_pipe,
-                                const CandidateGeneratorBuilder& candidate_generator_builder,
-                                HaplotypeGenerator::Builder haplotype_generator_builder);
+            
+            Parameters(const ReferenceGenome& reference, ReadPipe& read_pipe,
+                       const CandidateGeneratorBuilder& candidate_generator_builder,
+                       HaplotypeGenerator::Builder haplotype_generator_builder);
+            
             ~Parameters() = default;
             
             Parameters(const Parameters&)            = default;

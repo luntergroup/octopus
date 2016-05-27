@@ -50,11 +50,11 @@ namespace Octopus
         
         boost::optional<PhaseSet> try_phase(const std::vector<Haplotype>& haplotypes,
                                             const GenotypePosteriorMap& genotype_posteriors,
-                                            const std::vector<Variant>& candidates);
+                                            const std::vector<Variant>& candidates) const;
         
         PhaseSet force_phase(const std::vector<Haplotype>& haplotypes,
                              const GenotypePosteriorMap& genotype_posteriors,
-                             const std::vector<Variant>& candidates);
+                             const std::vector<Variant>& candidates) const;
         
     private:
         double min_phase_score_;
@@ -83,8 +83,10 @@ namespace Octopus
         using PhaseRegions       = std::unordered_map<SampleIdType, SamplePhaseRegions>;
         
         PhaseSet() = delete;
+        
         template <typename R> PhaseSet(R&& region);
         template <typename R, typename T> PhaseSet(R&& region, T&& phase_regions);
+        
         ~PhaseSet() = default;
         
         PhaseSet(const PhaseSet&)            = default;

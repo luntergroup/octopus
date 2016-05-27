@@ -36,16 +36,16 @@ public:
     
     Variant() = default;
     
-    explicit Variant(const Allele& reference, const Allele& alternative);
-    explicit Variant(Allele&& reference, Allele&& alternative);
+    Variant(const Allele& reference, const Allele& alternative);
+    Variant(Allele&& reference, Allele&& alternative);
     
     template <typename GenomicRegion_, typename SequenceType1, typename SequenceType2>
-    explicit Variant(GenomicRegion_&& reference_allele_region, SequenceType1&& reference_allele,
-                     SequenceType2&& alternative_allele);
+    Variant(GenomicRegion_&& reference_allele_region, SequenceType1&& reference_allele,
+            SequenceType2&& alternative_allele);
     
     template <typename SequenceType1, typename SequenceType2, typename SequenceType3>
-    explicit Variant(SequenceType1&& reference_contig_name, SizeType reference_begin,
-                     SequenceType2&& reference_allele, SequenceType3&& alternative_allele);
+    Variant(SequenceType1&& reference_contig_name, SizeType reference_begin,
+            SequenceType2&& reference_allele, SequenceType3&& alternative_allele);
     
     ~Variant() = default;
     
