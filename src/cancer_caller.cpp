@@ -613,35 +613,35 @@ auto call_somatic_genotypes(const CancerGenotype<Haplotype>& called_genotype,
 
 // output
 
-Octopus::VariantCall::GenotypeCall convert(GermlineGenotypeCall&& call)
-{
-    return Octopus::VariantCall::GenotypeCall {std::move(call.genotype), call.posterior};
-}
-
-std::unique_ptr<Octopus::VariantCall>
-transform_germline_call(GermlineVariantCall&& variant_call, GermlineGenotypeCall&& genotype_call)
-{
-    std::vector<std::pair<SampleIdType, Call::GenotypeCall>> tmp {};
-    return std::make_unique<Octopus::GermlineVariantCall>(variant_call.variant.get(),
-                                                          std::move(tmp),
-                                                          variant_call.posterior);
-}
-
-auto transform_germline_calls(GermlineVariantCalls&& variant_calls, GermlineGenotypeCalls&& genotype_calls)
-{
-    std::vector<std::unique_ptr<Octopus::VariantCall>> result {};
-    result.reserve(variant_calls.size());
-    
-    std::transform(std::make_move_iterator(std::begin(variant_calls)),
-                   std::make_move_iterator(std::end(variant_calls)),
-                   std::make_move_iterator(std::begin(genotype_calls)),
-                   std::back_inserter(result),
-                   [] (GermlineVariantCall&& variant_call, GermlineGenotypeCall&& genotype_call) {
-                       return transform_germline_call(std::move(variant_call), std::move(genotype_call));
-                   });
-    
-    return result;
-}
+//Octopus::VariantCall::GenotypeCall convert(GermlineGenotypeCall&& call)
+//{
+//    return Octopus::VariantCall::GenotypeCall {std::move(call.genotype), call.posterior};
+//}
+//
+//std::unique_ptr<Octopus::VariantCall>
+//transform_germline_call(GermlineVariantCall&& variant_call, GermlineGenotypeCall&& genotype_call)
+//{
+//    std::vector<std::pair<SampleIdType, Call::GenotypeCall>> tmp {};
+//    return std::make_unique<Octopus::GermlineVariantCall>(variant_call.variant.get(),
+//                                                          std::move(tmp),
+//                                                          variant_call.posterior);
+//}
+//
+//auto transform_germline_calls(GermlineVariantCalls&& variant_calls, GermlineGenotypeCalls&& genotype_calls)
+//{
+//    std::vector<std::unique_ptr<Octopus::VariantCall>> result {};
+//    result.reserve(variant_calls.size());
+//    
+//    std::transform(std::make_move_iterator(std::begin(variant_calls)),
+//                   std::make_move_iterator(std::end(variant_calls)),
+//                   std::make_move_iterator(std::begin(genotype_calls)),
+//                   std::back_inserter(result),
+//                   [] (GermlineVariantCall&& variant_call, GermlineGenotypeCall&& genotype_call) {
+//                       return transform_germline_call(std::move(variant_call), std::move(genotype_call));
+//                   });
+//    
+//    return result;
+//}
 
 auto transform_somatic_calls(SomaticVariantCalls&& somatic_calls, CancerGenotypeCalls&& genotype_calls)
 {

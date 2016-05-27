@@ -11,6 +11,7 @@
 #include <algorithm>
 #include <iterator>
 #include <stdexcept>
+#include <ostream>
 #include <cassert>
 
 #include "reference_genome.hpp"
@@ -19,8 +20,6 @@
 #include "mappable_algorithms.hpp"
 #include "mappable_ranges.hpp"
 #include "variant.hpp"
-
-#include <iostream> // TEST
 
 // helper
 

@@ -435,47 +435,47 @@ namespace
     
     using RefCalls = std::vector<RefCall>;
     
-    double marginalise_reference_genotype(const Allele& reference_allele,
-                                          const GenotypeProbabilityMap& sample_genotype_posteriors)
-    {
-        double result {0};
-        
-        for (const auto& genotype_posterior : sample_genotype_posteriors) {
-            if (is_homozygous(genotype_posterior.first, reference_allele)) {
-                result += genotype_posterior.second;
-            }
-        }
-        
-        return result;
-    }
+//    double marginalise_reference_genotype(const Allele& reference_allele,
+//                                          const GenotypeProbabilityMap& sample_genotype_posteriors)
+//    {
+//        double result {0};
+//        
+//        for (const auto& genotype_posterior : sample_genotype_posteriors) {
+//            if (is_homozygous(genotype_posterior.first, reference_allele)) {
+//                result += genotype_posterior.second;
+//            }
+//        }
+//        
+//        return result;
+//    }
     
-    RefCalls call_reference(const GenotypeProbabilityMap& genotype_posteriors,
-                            const std::vector<Allele>& reference_alleles,
-                            const ReadMap::mapped_type& reads, const double min_call_posterior)
-    {
-        RefCalls result {};
-        
-        if (reference_alleles.empty()) return result;
-        
-        result.reserve(reference_alleles.size());
-        
-        for (const auto& reference_allele : reference_alleles) {
-            double posterior {0};
-            
-            if (has_coverage(reads, mapped_region(reference_allele))) {
-                posterior = marginalise_reference_genotype(reference_allele,
-                                                           genotype_posteriors);
-            }
-            
-            if (posterior >= min_call_posterior) {
-                result.emplace_back(reference_allele, posterior);
-            }
-        }
-        
-        result.shrink_to_fit();
-        
-        return result;
-    }
+//    RefCalls call_reference(const GenotypeProbabilityMap& genotype_posteriors,
+//                            const std::vector<Allele>& reference_alleles,
+//                            const ReadMap::mapped_type& reads, const double min_call_posterior)
+//    {
+//        RefCalls result {};
+//        
+//        if (reference_alleles.empty()) return result;
+//        
+//        result.reserve(reference_alleles.size());
+//        
+//        for (const auto& reference_allele : reference_alleles) {
+//            double posterior {0};
+//            
+//            if (has_coverage(reads, mapped_region(reference_allele))) {
+//                posterior = marginalise_reference_genotype(reference_allele,
+//                                                           genotype_posteriors);
+//            }
+//            
+//            if (posterior >= min_call_posterior) {
+//                result.emplace_back(reference_allele, posterior);
+//            }
+//        }
+//        
+//        result.shrink_to_fit();
+//        
+//        return result;
+//    }
 } // namespace
 
 std::vector<std::unique_ptr<ReferenceCall>>

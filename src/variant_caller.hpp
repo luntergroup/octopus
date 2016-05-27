@@ -44,43 +44,8 @@ class VariantCaller
 public:
     enum class RefCallType { None, Blocked, Positional };
     
-    struct CallerComponents
-    {
-        CallerComponents() = delete;
-        
-        CallerComponents(const ReferenceGenome& reference,
-                         ReadPipe& read_pipe,
-                         CandidateVariantGenerator&& candidate_generator,
-                         HaplotypeGenerator::Builder haplotype_generator_builder);
-        
-        CallerComponents(const CallerComponents&)            = delete;
-        CallerComponents& operator=(const CallerComponents&) = delete;
-        CallerComponents(CallerComponents&&)                 = default;
-        CallerComponents& operator=(CallerComponents&&)      = default;
-        
-        std::reference_wrapper<const ReferenceGenome> reference;
-        std::reference_wrapper<ReadPipe> read_pipe;
-        CandidateVariantGenerator candidate_generator;
-        HaplotypeGenerator::Builder haplotype_generator_builder;
-    };
-    
-    struct CallerParameters
-    {
-        CallerParameters() = default;
-        
-        explicit CallerParameters(RefCallType refcall_type, bool call_sites_only,
-                                  unsigned max_haplotypes, double min_haplotype_posterior,
-                                  bool allow_flank_scoring, double min_phase_score);
-        
-        ~CallerParameters() = default;
-        
-        RefCallType refcall_type;
-        bool call_sites_only;
-        unsigned max_haplotypes;
-        double min_haplotype_posterior;
-        bool allow_inactive_flank_scoring;
-        double min_phase_score;
-    };
+    struct CallerComponents;
+    struct CallerParameters;
     
     using ReadMap = Octopus::ReadMap;
     
@@ -119,6 +84,45 @@ protected:
         virtual std::shared_ptr<GenotypeProbabilityMap> get_genotype_posteriors() const = 0;
         
         virtual ~CallerLatents() = default;
+    };
+    
+public:
+    struct CallerComponents
+    {
+        CallerComponents() = delete;
+        
+        CallerComponents(const ReferenceGenome& reference,
+                         ReadPipe& read_pipe,
+                         CandidateVariantGenerator&& candidate_generator,
+                         HaplotypeGenerator::Builder haplotype_generator_builder);
+        
+        CallerComponents(const CallerComponents&)            = delete;
+        CallerComponents& operator=(const CallerComponents&) = delete;
+        CallerComponents(CallerComponents&&)                 = default;
+        CallerComponents& operator=(CallerComponents&&)      = default;
+        
+        std::reference_wrapper<const ReferenceGenome> reference;
+        std::reference_wrapper<ReadPipe> read_pipe;
+        CandidateVariantGenerator candidate_generator;
+        HaplotypeGenerator::Builder haplotype_generator_builder;
+    };
+    
+    struct CallerParameters
+    {
+        CallerParameters() = default;
+        
+        explicit CallerParameters(RefCallType refcall_type, bool call_sites_only,
+                                  unsigned max_haplotypes, double min_haplotype_posterior,
+                                  bool allow_flank_scoring, double min_phase_score);
+        
+        ~CallerParameters() = default;
+        
+        RefCallType refcall_type;
+        bool call_sites_only;
+        unsigned max_haplotypes;
+        double min_haplotype_posterior;
+        bool allow_inactive_flank_scoring;
+        double min_phase_score;
     };
     
 private:

@@ -17,8 +17,8 @@
 
 #include "aligned_read.hpp"
 
-namespace Octopus {
-
+namespace Octopus
+{
 class ReadTransform
 {
 public:
@@ -36,8 +36,8 @@ public:
     
     unsigned num_transforms() const noexcept;
     
-    template <typename InputIterator>
-    void transform_reads(InputIterator first, InputIterator last) const;
+    template <typename InputIt>
+    void transform_reads(InputIt first, InputIt last) const;
     
 private:
     std::vector<ReadTransformation> transforms_;
@@ -47,8 +47,8 @@ private:
 
 // private methods
 
-template <typename InputIterator>
-void ReadTransform::transform_reads(InputIterator first, InputIterator last) const
+template <typename InputIt>
+void ReadTransform::transform_reads(InputIt first, InputIt last) const
 {
     std::for_each(first, last, [this] (auto& read) { transform_read(read); });
 }

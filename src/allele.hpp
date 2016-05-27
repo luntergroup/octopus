@@ -10,11 +10,11 @@
 #define Octopus_allele_hpp
 
 #include <string>
-#include <ostream>
 #include <utility>
 #include <algorithm>
 #include <iterator>
 #include <cstddef>
+#include <ostream>
 
 #include <boost/functional/hash.hpp>
 

@@ -14,7 +14,7 @@
 #include <algorithm>
 #include <iterator>
 #include <utility>
-#include <ostream>
+#include <iosfwd>
 
 #include <boost/functional/hash.hpp>
 

@@ -25,26 +25,22 @@
 #include <boost/lexical_cast.hpp>
 
 #include "genomic_region.hpp"
-#include "reference_genome.hpp"
 #include "aligned_read.hpp"
-#include "read_manager.hpp"
-
-#include "read_utils.hpp"
 #include "read_filters.hpp"
-#include "downsampler.hpp"
 #include "read_transform.hpp"
 #include "read_transformations.hpp"
+#include "read_utils.hpp"
+#include "read_pipe.hpp"
+#include "candidate_generator_builder.hpp"
 #include "haplotype_generator.hpp"
 #include "variant_caller_builder.hpp"
-
+#include "variant_caller_factory.hpp"
 #include "vcf_reader.hpp"
 #include "vcf_writer.hpp"
-
 #include "mappable_algorithms.hpp"
 #include "string_utils.hpp"
 #include "append.hpp"
 #include "maths.hpp"
-
 #include "logging.hpp"
 
 namespace Octopus

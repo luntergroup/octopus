@@ -15,7 +15,7 @@
 #include <type_traits>
 #include <utility>
 #include <numeric>
-#include <ostream>
+#include <iosfwd>
 
 #include <boost/functional/hash.hpp>
 

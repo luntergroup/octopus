@@ -36,7 +36,7 @@ namespace Octopus
     :
     Somatic {std::move(samples), ploidy, std::move(priors), AlgorithmParameters {}}
     {}
-        
+    
     Somatic::InferredLatents::InferredLatents(Latents&& posteriors, double approx_log_evidence)
     :
     posteriors {std::move(posteriors)},
@@ -51,7 +51,7 @@ namespace Octopus
     priors_ {std::move(priors)},
     parameters_ {parameters}
     {}
-        
+    
     // Key non-member declarations
     
     using ProbabilityVector    = std::vector<double>;
@@ -729,8 +729,6 @@ namespace Octopus
                           const VariationalBayesParameters params,
                           std::vector<LogProbabilityVector> seeds)
     {
-        // Try the main algorithm from different seeds to check local optimum
-        
         std::vector<CompressedLatents<K>> results;
         results.reserve(seeds.size());
         
@@ -749,8 +747,7 @@ namespace Octopus
                                                         log_likelihoods, latents);
                        });
         
-        const auto it = std::max_element(std::cbegin(result_evidences),
-                                         std::cend(result_evidences));
+        const auto it = std::max_element(std::cbegin(result_evidences), std::cend(result_evidences));
         
         const auto idx = std::distance(std::cbegin(result_evidences), it);
         
