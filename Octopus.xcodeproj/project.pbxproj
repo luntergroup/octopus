@@ -1011,9 +1011,10 @@
 		CABA377B1A8F66E400BBE598 /* utils */ = {
 			isa = PBXGroup;
 			children = (
-				D4F886511CE6046A005F9772 /* append.hpp */,
 				D4907F731A8E255200639203 /* equitable.hpp */,
 				D4907F711A8E04B900639203 /* comparable.hpp */,
+				CA487B261C4318C100488577 /* type_tricks.hpp */,
+				D4F886511CE6046A005F9772 /* append.hpp */,
 				D463C18B1AEF7D2200739A66 /* map_utils.hpp */,
 				CAFA196A1AC0D0D500F953D9 /* maths.hpp */,
 				CAE3E2941A9CF97700C01B2C /* storage_policies.hpp */,
@@ -1025,7 +1026,6 @@
 				CA8A66451B7E5E0C008CE1D8 /* sequence_utils.hpp */,
 				CA53D3051C0A7881009A216D /* merge_transform.hpp */,
 				CA487AF11C1F06D600488577 /* mappable_debug.hpp */,
-				CA487B261C4318C100488577 /* type_tricks.hpp */,
 				D4B69CC41C4FEF2700F3135B /* timing.hpp */,
 				CADA44321C6D41A800D432E8 /* matrix_map.hpp */,
 				CAE0A90A1C6384DC00F88871 /* probability_matrix.hpp */,

@@ -13,8 +13,8 @@
 #include <cstdint>
 #include <iterator>
 #include <vector>
-#include <ostream>
 #include <numeric>
+#include <iosfwd>
 
 #include <boost/functional/hash.hpp>
 

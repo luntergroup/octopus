@@ -11,6 +11,7 @@
 #include <cctype>
 #include <algorithm>
 #include <array>
+#include <ostream>
 #include <stdexcept>
 
 #include <boost/lexical_cast.hpp>

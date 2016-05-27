@@ -8,6 +8,8 @@
 
 #include "aligned_read.hpp"
 
+#include <ostream>
+
 #include <boost/functional/hash.hpp>
 
 #include "compression.hpp"

@@ -9,6 +9,7 @@
 #include "variant.hpp"
 
 #include <list>
+#include <ostream>
 #include <cassert>
 
 #include <boost/range/algorithm.hpp>

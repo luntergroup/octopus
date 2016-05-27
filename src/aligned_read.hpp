@@ -12,7 +12,6 @@
 #include <string>
 #include <cstdint>
 #include <cstddef>
-#include <ostream>
 #include <vector>
 #include <bitset>
 #include <algorithm>
@@ -20,6 +19,7 @@
 #include <iterator>
 #include <utility>
 #include <functional>
+#include <iosfwd>
 
 #include "genomic_region.hpp"
 #include "cigar_string.hpp"
