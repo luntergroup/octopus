@@ -48,8 +48,6 @@ namespace Octopus
         Phaser(Phaser&&)                 = default;
         Phaser& operator=(Phaser&&)      = default;
         
-        struct PhaseSet;
-        
         boost::optional<PhaseSet> try_phase(const std::vector<Haplotype>& haplotypes,
                                             const GenotypePosteriorMap& genotype_posteriors,
                                             const std::vector<Variant>& candidates);

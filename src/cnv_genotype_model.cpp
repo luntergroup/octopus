@@ -422,16 +422,6 @@ namespace
         Maths::normalise_logs(result);
     }
     
-    auto max_change(const CompressedAlpha<2>& lhs, const CompressedAlpha<2>& rhs)
-    {
-        return std::max(std::abs(lhs.front() - lhs.front()), std::abs(lhs.back() - lhs.back()));
-    }
-    
-    auto max_change(const CompressedAlpha<3>& lhs, const CompressedAlpha<3>& rhs)
-    {
-        return std::max({std::abs(lhs[0] - rhs[0]), std::abs(lhs[1] - rhs[1]), std::abs(lhs[2] - rhs[2])});
-    }
-    
     template <std::size_t K>
     auto max_change(const CompressedAlpha<K>& lhs, const CompressedAlpha<K>& rhs)
     {
@@ -443,6 +433,11 @@ namespace
         }
         
         return result;
+    }
+    
+    auto max_change(const CompressedAlpha<2>& lhs, const CompressedAlpha<2>& rhs)
+    {
+        return std::max(std::abs(lhs.front() - lhs.front()), std::abs(lhs.back() - lhs.back()));
     }
     
     template <std::size_t K>

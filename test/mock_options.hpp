@@ -32,9 +32,9 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         
         //"--samples", "NOT-A-SAMPLE",
         
-        //"--working-directory", "~/Genomics/octopus_test",
+        "--working-directory", "~/Genomics/octopus_test",
         //"--working-directory", "~/Genomics/MCG",
-        "--working-directory", "~/Genomics/cancer/TCGA/benchmark",
+        //"--working-directory", "~/Genomics/cancer/TCGA/benchmark",
         
         //"--target-read-buffer-size", "1.0",
         //"--reference-cache-size", "100",
@@ -46,7 +46,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--reference", ecoli_reference_fasta.c_str(),
         
         //"--reads", NA12878_low_coverage.c_str(),
-        //"--reads", NA12878_high_coverage.c_str(),
+        "--reads", NA12878_high_coverage.c_str(),
         //"--reads", "~/Genomics/Illumina/NA12878.mapped.ILLUMINA.bwa.CEU.high_coverage_pcr_free.20130906.chr22.bam",
         
         //"--reads", NA12891_high_coverage.c_str(),
@@ -60,15 +60,15 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--reads", ecoli_bam.c_str(),
         
         // TCGA
-        "--reads", "~/Genomics/cancer/TCGA/benchmark/G15511.HCC1143_BL.1.chr22.bam",
-        "--reads", "~/Genomics/cancer/TCGA/benchmark/G15511.HCC1143.1.chr22.bam",
+        //"--reads", "~/Genomics/cancer/TCGA/benchmark/G15511.HCC1143_BL.1.chr22.bam",
+        //"--reads", "~/Genomics/cancer/TCGA/benchmark/G15511.HCC1143.1.chr22.bam",
         
         // MCG
         //"--reads", "~/Genomics/MCG/10120_chr2_47641558_GTA_G.RG.bam",
         //"--reads", "~/Genomics/MCG/D59597_Cov3.RG.bam",
         
-        "--caller", "cancer", // default "population"
-        "--normal-sample", "HCC1143 BL",
+        //"--caller", "cancer", // default "population"
+        //"--normal-sample", "HCC1143 BL",
         
         //"--organism-ploidy", "3",
         "--contig-ploidies", "MT=1", "Y=1",// "MT=2",
@@ -81,7 +81,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         
         //"--use-one-based-indexing",
         
-        "--regions", "22:37,218,532-37,218,572",
+        "--regions", "6:31,236,341-31,240,408",
         
         // MSG
         //"--regions", "2:47,640,494-47,644,304", // whole region
@@ -189,6 +189,8 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         // For ecoli
         //"--regions", "R00000042:3008660-3020000",
         
+        //"--regions-file", hla_regions.c_str(),
+        
         //"--skip-regions", "1:1,000,000-2,000,000", "1:1,500,000-10,000,000",
         //"--skip-regions-file", human_skip_regions.c_str(),
         
@@ -242,6 +244,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--max-open-read-files", "1",
         
         //"--output", test_out_vcf.c_str(),
+        "--output", "octopus_hla.vcf",
         //"--output", "octopus_mcg.vcf",
         //"--output", "octopus_NA12878HC_22_unlagged_dummy.vcf",
         //"--output", "octopus_calls2.vcf",

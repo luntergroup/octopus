@@ -113,8 +113,7 @@ namespace Logging
         LogStream(LogStream&&)                 = default;
         LogStream& operator=(LogStream&&)      = default;
         
-        template <typename M>
-        void write(const M& msg) { msg_<< msg; }
+        template <typename M> void write(const M& msg) { msg_<< msg; }
         
     private:
         std::reference_wrapper<T> log_;

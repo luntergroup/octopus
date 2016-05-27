@@ -138,8 +138,6 @@ namespace GenotypeModel
                                         });
         }
         
-        const auto count1 = genotype.count(genotype[0]);
-        
         // TODO
         
         return 0;

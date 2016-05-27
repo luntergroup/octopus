@@ -17,14 +17,10 @@
 #include <boost/optional.hpp>
 
 #include "common.hpp"
-#include "genomic_region.hpp"
+#include "reference_genome.hpp"
+#include "read_manager.hpp"
 #include "downsampler.hpp"
-#include "candidate_generator_builder.hpp"
-#include "variant_caller_factory.hpp"
 
-class ReferenceGenome;
-class ReadManager;
-class ReadTransform;
 class VcfWriter;
 
 namespace po = boost::program_options;
@@ -32,6 +28,10 @@ namespace fs = boost::filesystem;
 
 namespace Octopus
 {
+class ReadTransform;
+class ReadPipe;
+class CandidateGeneratorBuilder;
+class VariantCallerFactory;
 namespace Options
 {
     enum class ContigOutputOrder

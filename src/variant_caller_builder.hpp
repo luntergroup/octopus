@@ -17,11 +17,11 @@
 #include <boost/optional.hpp>
 
 #include "common.hpp"
-#include "variant_caller.hpp"
 #include "read_pipe.hpp"
 #include "candidate_generator_builder.hpp"
 #include "haplotype_generator.hpp"
-
+#include "variant_caller.hpp"
+#include "trio.hpp"
 #include "pedigree.hpp"
 
 namespace Octopus {

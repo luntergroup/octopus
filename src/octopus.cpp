@@ -26,6 +26,7 @@
 #include <condition_variable>
 #include <mutex>
 #include <atomic>
+#include <cassert>
 
 #include <boost/optional.hpp>
 
@@ -49,7 +50,6 @@
 #include "maths.hpp"
 #include "progress_meter.hpp"
 
-#include <cassert>
 #include "timers.hpp" // BENCHMARK
 
 #include "logging.hpp"
