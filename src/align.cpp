@@ -32,47 +32,35 @@ int fastAlignmentRoutine(const char* seq1, const char* seq2, const std::int8_t* 
     const auto gap_extend = static_cast<short>(gapextend * 4);
     const auto nuc_prior  = static_cast<short>(nucprior * 4);
     
-    __m128i _m1;
-    __m128i _i1;
-    __m128i _d1;
-    __m128i _m2;
-    __m128i _i2;
-    __m128i _d2;
+    using SimdInt = __m128i;
     
-    __m128i _seq1win;
-    __m128i _seq2win;
-    __m128i _qual2win;
-    __m128i _seq1nqual;   // 1 if N, POS_INF if not
+    SimdInt _m1 {_mm_set1_epi16(POS_INF)};
+    auto _i1 = _m1;
+    auto _d1 = _m1;
+    auto _m2 = _m1;
+    auto _i2 = _m1;
+    auto _d2 = _m1;
     
-    __m128i _gap_extend {_mm_set1_epi16(gap_extend)};
-    __m128i _nuc_prior  {_mm_set1_epi16(nuc_prior)};
-    __m128i _initmask   {_mm_set_epi16(0,0,0,0,0,0,0,-1)};
-    __m128i _initmask2  {_mm_set_epi16(0,0,0,0,0,0,0,-0x8000)};
-
-    // initialization
-    _m1 = _mm_set1_epi16(POS_INF);
-    _i1 = _m1;
-    _d1 = _m1;
-    _m2 = _m1;
-    _i2 = _m1;
-    _d2 = _m1;
+    SimdInt _gap_extend {_mm_set1_epi16(gap_extend)};
+    SimdInt _nuc_prior  {_mm_set1_epi16(nuc_prior)};
+    SimdInt _initmask   {_mm_set_epi16(0,0,0,0,0,0,0,-1)};
+    SimdInt _initmask2  {_mm_set_epi16(0,0,0,0,0,0,0,-0x8000)};
     
     // sequence 1 is initialized with the n-long prefix, in forward direction
     // sequence 2 is initialized as empty; reverse direction
-    _seq1win = _mm_set_epi16(seq1[7], seq1[6], seq1[5], seq1[4], seq1[3], seq1[2], seq1[1], seq1[0]);
-    _seq2win = _m1;
-    _qual2win = _mm_set1_epi16(64 * 4);
+    SimdInt _seq1win  {_mm_set_epi16(seq1[7], seq1[6], seq1[5], seq1[4], seq1[3], seq1[2], seq1[1], seq1[0])};
+    SimdInt _seq2win  {_m1};
+    SimdInt _qual2win {_mm_set1_epi16(64 * 4)};
     
     // if N, make N_SCORE; if != N, make POS_INF
-    _seq1nqual = _mm_add_epi16(_mm_and_si128(_mm_cmpeq_epi16(_seq1win, _mm_set1_epi16('N')),
+    SimdInt _seq1nqual {_mm_add_epi16(_mm_and_si128(_mm_cmpeq_epi16(_seq1win, _mm_set1_epi16('N')),
                                              _mm_set1_epi16(N_SCORE - POS_INF)),
-                               _mm_set1_epi16(POS_INF));
+                                      _mm_set1_epi16(POS_INF))};
     
-    __m128i _gap_open {_mm_set_epi16(4*localgapopen[7],4*localgapopen[6],4*localgapopen[5],4*localgapopen[4],
+    SimdInt _gap_open {_mm_set_epi16(4*localgapopen[7],4*localgapopen[6],4*localgapopen[5],4*localgapopen[4],
                                      4*localgapopen[3],4*localgapopen[2],4*localgapopen[1],4*localgapopen[0])};
     
-    short cur_score {0};
-    short minscore  {POS_INF};
+    short cur_score {0}, minscore {POS_INF};
     
     for (int s {0}; s <= 2 * (len2 + BAND_SIZE); s += 2) {
         // seq1 is current; seq2 needs updating
@@ -120,7 +108,7 @@ int fastAlignmentRoutine(const char* seq1, const char* seq2, const std::int8_t* 
         // S odd
         
         // seq1 needs updating; seq2 is current
-        const char c = (BAND_SIZE + s / 2 < len1) ? seq1[BAND_SIZE + (s / 2)] : 'N';
+        const char c {(BAND_SIZE + s / 2 < len1) ? seq1[BAND_SIZE + (s / 2)] : 'N'};
         
         _seq1win   = _mm_insert_epi16(_mm_srli_si128(_seq1win,   2), c, BAND_SIZE - 1);
         _seq1nqual = _mm_insert_epi16(_mm_srli_si128(_seq1nqual, 2), (c == 'N')

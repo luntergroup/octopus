@@ -81,7 +81,11 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         
         //"--use-one-based-indexing",
         
-        "--regions", "22:37,218,532-37,218,572",
+        //"--regions", "22:36,922,640-36,922,687", // FP ins?
+        //"--regions", "22:35,834,436-35,834,740", // difficult region
+        //"--regions", "22:35,909,479-35,909,519", // FP SNV
+        //"--regions", "22:36,120,404-36,120,444", // FP SNV
+        "--regions", "22:36,468,698-36,468,773", // FP SNV
         
         // MSG
         //"--regions", "2:47,640,494-47,644,304", // whole region
@@ -228,7 +232,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--min-assembler-base-quality", "10",
         //"--max-variant-size", "25",
         
-        "--phasing-level", "Aggressive",
+        //"--phasing-level", "Aggressive",
         //"--disable-inactive-flank-scoring",
         //"--max-haplotypes", "64",
         //"--min-haplotype-posterior", "1e-15",
