@@ -255,8 +255,6 @@ VariantCalls call_candidates(const VariantPosteriors& candidate_posteriors,
                      return p.second >= min_posterior && contains_alt(genotype_call, p.first);
                  });
     
-    result.shrink_to_fit();
-    
     return result;
 }
 

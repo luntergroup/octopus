@@ -161,7 +161,6 @@ Haplotype::SequenceType Haplotype::sequence(const ContigRegion& region) const
             append(result, overlapped_explicit_alleles.front());
         }
         
-        result.shrink_to_fit();
         return result;
     } else if (begins_before(overlapped_explicit_alleles.front(), region)) {
         append(result, splice(overlapped_explicit_alleles.front(),
@@ -171,7 +170,6 @@ Haplotype::SequenceType Haplotype::sequence(const ContigRegion& region) const
         
         if (overlapped_explicit_alleles.empty()) {
             append_reference(result, right_overhang_region(region, explicit_allele_region_));
-            result.shrink_to_fit();
             return result;
         }
     }
@@ -192,8 +190,6 @@ Haplotype::SequenceType Haplotype::sequence(const ContigRegion& region) const
     } else if (ends_before(explicit_allele_region_, region)) {
         append_reference(result, right_overhang_region(region, explicit_allele_region_));
     }
-    
-    result.shrink_to_fit();
     
     return result;
 }
@@ -236,8 +232,6 @@ std::vector<Variant> Haplotype::difference(const Haplotype& other) const
                                 allele.sequence());
         }
     }
-    
-    result.shrink_to_fit();
     
     return result;
 }
@@ -634,7 +628,6 @@ unsigned unique_least_complex(std::vector<Haplotype>& haplotypes)
     const auto result = std::distance(it, end(haplotypes));
     
     haplotypes.erase(it, last);
-    haplotypes.shrink_to_fit();
     
     return static_cast<unsigned>(result);
 }

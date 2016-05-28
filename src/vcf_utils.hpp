@@ -22,14 +22,14 @@
 
 std::vector<std::string> get_contigs(const VcfHeader& header);
 
-unsigned get_field_cardinality(const VcfHeader::KeyType& key, const VcfRecord& record);
+unsigned get_field_cardinality(const VcfHeader::StructuredKey& key, const VcfRecord& record);
 
 std::vector<VcfType> get_typed_info_values(const VcfHeader& header, const VcfRecord& record,
-                                           const VcfHeader::KeyType& key);
+                                           const VcfHeader::StructuredKey& key);
 
 std::vector<VcfType> get_typed_format_values(const VcfHeader& header, const VcfRecord& record,
                                              const VcfRecord::SampleIdType sample,
-                                             const VcfHeader::KeyType& key);
+                                             const VcfHeader::StructuredKey& key);
 
 void index_vcf(const boost::filesystem::path& vcf_path, int lidx_shift = 14);
 void index_vcf(const VcfReader& reader, int lidx_shift = 14);

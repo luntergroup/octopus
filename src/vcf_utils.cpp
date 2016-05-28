@@ -28,7 +28,7 @@ std::vector<std::string> get_contigs(const VcfHeader& header)
 {
     std::vector<std::string> result {};
     
-    const auto& contigs_fields = header.get_structured_fields("contig");
+    const auto& contigs_fields = header.structured_fields("contig");
     
     result.reserve(contigs_fields.size());
     
@@ -38,22 +38,22 @@ std::vector<std::string> get_contigs(const VcfHeader& header)
     return result;
 }
 
-unsigned get_field_cardinality(const VcfHeader::KeyType& key, const VcfRecord& record)
+unsigned get_field_cardinality(const VcfHeader::StructuredKey& key, const VcfRecord& record)
 {
     return 0;
 }
 
 std::vector<VcfType> get_typed_info_values(const VcfHeader& header, const VcfRecord& record,
-                                           const VcfHeader::KeyType& key)
+                                           const VcfHeader::StructuredKey& key)
 {
-    return get_typed_info_values(header, key, record.info_value(key));
+    return get_typed_info_values(header, key, record.info_value(key.value));
 }
 
 std::vector<VcfType> get_typed_format_values(const VcfHeader& header, const VcfRecord& record,
                                              const VcfRecord::SampleIdType sample,
-                                             const VcfHeader::KeyType& key)
+                                             const VcfHeader::StructuredKey& key)
 {
-    return get_typed_format_values(header, key, record.get_sample_value(sample, key));
+    return get_typed_format_values(header, key, record.get_sample_value(sample, key.value));
 }
 
 void index_vcf(const boost::filesystem::path& vcf_path, const int lidx_shift)

@@ -13,12 +13,12 @@
 
 // public methods
 
-const std::string& VcfRecord::chromosome_name() const noexcept
+const std::string& VcfRecord::chrom() const noexcept
 {
     return chromosome_;
 }
 
-VcfRecord::SizeType VcfRecord::position() const noexcept
+VcfRecord::SizeType VcfRecord::pos() const noexcept
 {
     return position_;
 }
@@ -28,22 +28,22 @@ const VcfRecord::IdType& VcfRecord::id() const noexcept
     return id_;
 }
 
-const VcfRecord::SequenceType& VcfRecord::ref_allele() const noexcept
+const VcfRecord::SequenceType& VcfRecord::ref() const noexcept
 {
     return ref_allele_;
 }
 
-unsigned VcfRecord::num_alt_alleles() const noexcept
+unsigned VcfRecord::num_alt() const noexcept
 {
     return static_cast<unsigned>(alt_alleles_.size());
 }
 
-const std::vector<VcfRecord::SequenceType>& VcfRecord::alt_alleles() const noexcept
+const std::vector<VcfRecord::SequenceType>& VcfRecord::alt() const noexcept
 {
     return alt_alleles_;
 }
 
-boost::optional<VcfRecord::QualityType> VcfRecord::quality() const noexcept
+boost::optional<VcfRecord::QualityType> VcfRecord::qual() const noexcept
 {
     return quality_;
 }
@@ -332,23 +332,23 @@ bool is_validated(const VcfRecord& record) noexcept
 bool operator==(const VcfRecord& lhs, const VcfRecord& rhs)
 {
     // TODO: this should really compare other fields
-    return lhs.chromosome_name() == rhs.chromosome_name() && lhs.position() == rhs.position();
+    return lhs.chrom() == rhs.chrom() && lhs.pos() == rhs.pos();
 }
 
 bool operator<(const VcfRecord& lhs, const VcfRecord& rhs)
 {
-    if (lhs.chromosome_name() == rhs.chromosome_name()) {
-        if (lhs.position() == rhs.position()) {
-            if (lhs.ref_allele().size() == rhs.ref_allele().size()) {
+    if (lhs.chrom() == rhs.chrom()) {
+        if (lhs.pos() == rhs.pos()) {
+            if (lhs.ref().size() == rhs.ref().size()) {
                 return false; // TODO: also compare alt allele sizes
             } else {
-                return lhs.ref_allele().size() < rhs.ref_allele().size();
+                return lhs.ref().size() < rhs.ref().size();
             }
         } else {
-            return lhs.position() < rhs.position();
+            return lhs.pos() < rhs.pos();
         }
     } else {
-        return lhs.chromosome_name() < rhs.chromosome_name();
+        return lhs.chrom() < rhs.chrom();
     }
 }
 

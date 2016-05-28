@@ -61,13 +61,13 @@ public:
     VcfRecord(VcfRecord&&)                 = default;
     VcfRecord& operator=(VcfRecord&&)      = default;
     
-    const std::string& chromosome_name() const noexcept;
-    SizeType position() const noexcept;
+    const std::string& chrom() const noexcept;
+    SizeType pos() const noexcept;
     const IdType& id() const noexcept;
-    const SequenceType& ref_allele() const noexcept;
-    unsigned num_alt_alleles() const noexcept;
-    const std::vector<SequenceType>& alt_alleles() const noexcept;
-    boost::optional<QualityType> quality() const noexcept;
+    const SequenceType& ref() const noexcept;
+    unsigned num_alt() const noexcept;
+    const std::vector<SequenceType>& alt() const noexcept;
+    boost::optional<QualityType> qual() const noexcept;
     bool has_filter(const KeyType& filter) const noexcept;
     const std::vector<KeyType> filters() const noexcept;
     bool has_info(const KeyType& key) const noexcept;

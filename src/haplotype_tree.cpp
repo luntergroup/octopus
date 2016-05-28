@@ -231,8 +231,6 @@ std::vector<Haplotype> HaplotypeTree::extract_haplotypes(const GenomicRegion& re
         result.emplace_back(std::move(haplotype));
     }
     
-    result.shrink_to_fit();
-    
     return result;
 }
 

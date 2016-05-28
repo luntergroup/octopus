@@ -15,6 +15,7 @@
 #include <ostream>
 
 #include "equitable.hpp"
+#include "comparable.hpp"
 #include "vcf_type.hpp"
 
 /*
@@ -31,14 +32,89 @@ class VcfHeader : public Equitable<VcfHeader>
 public:
     class Builder;
     
-    using KeyType          = std::string; // The same KeyType is used for both basic and structured fields
-    using TagType          = std::string;
-    using ValueType        = std::string;
-    using BasicFieldMap      = std::unordered_map<KeyType, ValueType>;
-    using StructuredField  = std::unordered_map<KeyType, ValueType>;
-    using StructuredFieldMap = std::unordered_multimap<TagType, StructuredField>;
+    struct BasicKey : public Comparable<BasicKey>
+    {
+        template <typename K> BasicKey(K&& k) : value {std::forward<K>(k)} {}
+        std::string value;
+        operator std::string() const { return value; }
+    };
     
-    VcfHeader()  = default;
+    struct Tag : public Comparable<Tag>
+    {
+        template <typename T> Tag(T&& t) : value {std::forward<T>(t)} {}
+        std::string value;
+        operator std::string() const { return value; }
+    };
+    
+    struct StructuredKey : public Comparable<StructuredKey>
+    {
+        template <typename K> StructuredKey(K&& k) : value {std::forward<K>(k)} {}
+        std::string value;
+        operator std::string() const { return value; }
+    };
+    
+    using ValueType = std::string; // basic & structured fields share the same value type
+    
+    friend bool operator==(const BasicKey& lhs, const BasicKey& rhs)
+    {
+        return lhs.value == rhs.value;
+    }
+    
+    friend bool operator<(const BasicKey& lhs, const BasicKey& rhs)
+    {
+        return lhs.value < rhs.value;
+    }
+    
+    struct BasicKeyHash
+    {
+        std::size_t operator()(const BasicKey& k) const
+        {
+            return std::hash<decltype(k.value)>()(k.value);
+        }
+    };
+    
+    friend bool operator==(const StructuredKey& lhs, const StructuredKey& rhs)
+    {
+        return lhs.value == rhs.value;
+    }
+    
+    friend bool operator<(const StructuredKey& lhs, const StructuredKey& rhs)
+    {
+        return lhs.value < rhs.value;
+    }
+    
+    struct StructuredKeyHash
+    {
+        std::size_t operator()(const StructuredKey& k) const
+        {
+            return std::hash<decltype(k.value)>()(k.value);
+        }
+    };
+    
+    friend bool operator==(const Tag& lhs, const Tag& rhs)
+    {
+        return lhs.value == rhs.value;
+    }
+    
+    friend bool operator<(const Tag& lhs, const Tag& rhs)
+    {
+        return lhs.value < rhs.value;
+    }
+    
+    struct TagHash
+    {
+        std::size_t operator()(const Tag& k) const
+        {
+            return std::hash<decltype(k.value)>()(k.value);
+        }
+    };
+    
+    using BasicFieldMap = std::unordered_map<BasicKey, ValueType, BasicKeyHash>;
+    
+    using StructuredField    = std::unordered_map<StructuredKey, ValueType, StructuredKeyHash>;
+    using StructuredFieldMap = std::unordered_multimap<Tag, StructuredField, TagHash>;
+    
+    VcfHeader() = default;
     
     VcfHeader(std::string file_format);
     
@@ -57,19 +133,24 @@ public:
     unsigned num_samples() const noexcept;
     std::vector<std::string> samples() const;
     
-    bool has_basic_field(const KeyType& key) const noexcept;
-    bool has_structured_field(const TagType& tag) const noexcept;
-    bool has_structured_field(const TagType& tag, const KeyType& key) const noexcept;
+    bool has_field(const BasicKey& k) const noexcept;
+    bool has_field(const Tag& t) const noexcept;
+    bool has_field(const Tag& tag, const StructuredKey& k) const noexcept;
     
-    std::vector<KeyType> get_basic_field_keys() const;
-    std::vector<TagType> get_structured_field_tags() const;
-    const ValueType& get_basic_field_value(const KeyType& key) const;
-    const ValueType& get_structured_field_value(const TagType& tag, const KeyType& id_key,
-                                                const ValueType& id_value, const KeyType& lookup_key) const;
+    std::vector<BasicKey> basic_keys() const;
+    std::vector<Tag> tags() const;
+    std::vector<StructuredKey> keys(const Tag& t) const;
     
-    const BasicFieldMap& get_basic_fields() const noexcept;
-    std::vector<StructuredField> get_structured_fields(const TagType& tag) const;
-    const StructuredFieldMap& get_structured_fields() const noexcept;
+    const ValueType& get(const BasicKey& k) const;
+    
+    const ValueType& find(const StructuredKey& k, const Tag& t,
+                          const StructuredKey& search, const StructuredKey& value) const;
+    
+    const BasicFieldMap& basic_fields() const noexcept;
+    
+    std::vector<StructuredField> structured_fields(const Tag& t) const;
+    
+    const StructuredFieldMap& structured_fields() const noexcept;
     
     friend std::ostream& operator<<(std::ostream& os, const VcfHeader& header);
     
@@ -92,28 +173,35 @@ basic_fields_ {std::forward<B>(basic_fields)},
 structured_fields_ {std::forward<S>(structured_fields)}
 {}
 
-const std::string& get_id_field_value(const VcfHeader& header, const VcfHeader::TagType& tag,
-                                      const VcfHeader::ValueType& id_value, const VcfHeader::KeyType& lookup_key);
-const std::string& get_id_field_type(const VcfHeader& header, const VcfHeader::TagType& tag,
+const std::string& get_id_field_value(const VcfHeader& header, const VcfHeader::Tag& t,
+                                      const VcfHeader::StructuredKey& id_value,
+                                      const VcfHeader::StructuredKey& lookup_key);
+
+const std::string& get_id_field_type(const VcfHeader& header, const VcfHeader::Tag& t,
                                      const VcfHeader::ValueType& id_value);
 
-VcfType get_typed_value(const VcfHeader& header, const VcfHeader::TagType& tag,
-                        const VcfHeader::KeyType& key, const VcfHeader::ValueType& value);
+VcfType get_typed_value(const VcfHeader& header, const VcfHeader::Tag& t,
+                        const VcfHeader::StructuredKey& key, const VcfHeader::ValueType& value);
 
-VcfType get_typed_info_value(const VcfHeader& header, const VcfHeader::KeyType& key,
+VcfType get_typed_info_value(const VcfHeader& header,
+                             const VcfHeader::StructuredKey& key,
                              const VcfHeader::ValueType& value);
 
-VcfType get_typed_format_value(const VcfHeader& header, const VcfHeader::KeyType& key,
+VcfType get_typed_format_value(const VcfHeader& header,
+                               const VcfHeader::StructuredKey& key,
                                const VcfHeader::ValueType& value);
 
-std::vector<VcfType> get_typed_values(const VcfHeader& header, const VcfHeader::KeyType& format_key,
-                                      const VcfHeader::KeyType& field_key,
+std::vector<VcfType> get_typed_values(const VcfHeader& header,
+                                      const VcfHeader::StructuredKey& format_key,
+                                      const VcfHeader::StructuredKey& field_key,
                                       const std::vector<VcfHeader::ValueType>& values);
 
-std::vector<VcfType> get_typed_info_values(const VcfHeader& header, const VcfHeader::KeyType& field_key,
+std::vector<VcfType> get_typed_info_values(const VcfHeader& header,
+                                           const VcfHeader::StructuredKey& field_key,
                                            const std::vector<VcfHeader::ValueType>& values);
 
-std::vector<VcfType> get_typed_format_values(const VcfHeader& header, const VcfHeader::KeyType& field_key,
+std::vector<VcfType> get_typed_format_values(const VcfHeader& header,
+                                             const VcfHeader::StructuredKey& field_key,
                                              const std::vector<VcfHeader::ValueType>& values);
 
 bool contig_line_exists(const VcfHeader& header, const std::string& contig);
@@ -136,6 +224,7 @@ class VcfHeader::Builder
 {
 public:
     Builder() = default;
+    
     Builder(const VcfHeader& header);
     
     Builder& set_file_format(std::string file_format);
@@ -158,8 +247,8 @@ public:
 private:
     std::string file_format_ = "VCFv4.2";
     std::vector<std::string> samples_ = {};
-    std::unordered_map<std::string, std::string> basic_fields_ = {};
-    std::unordered_multimap<std::string, std::unordered_map<std::string, std::string>> structured_fields_ = {};
+    VcfHeader::BasicFieldMap basic_fields_ = {};
+    VcfHeader::StructuredFieldMap structured_fields_ = {};
 };
 
 // A VcfHeader::Builder pre-filled with all reserved INFO and FORMAT fields

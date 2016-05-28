@@ -254,8 +254,8 @@ void remove_calls_outside_call_region(std::vector<VcfRecord>& calls, const Genom
 {
     const auto it = std::remove_if(std::begin(calls), std::end(calls),
                                    [&call_region] (const auto& call) {
-                                       return (call.position() - 1) < call_region.begin()
-                                                || (call.position() - 1) >= call_region.end();
+                                       return (call.pos() - 1) < call_region.begin()
+                                                || (call.pos() - 1) >= call_region.end();
                                    });
     calls.erase(it, std::end(calls));
 }
@@ -438,6 +438,10 @@ VariantCaller::call(const GenomicRegion& call_region, ProgressMeter& progress_me
             haplotype_generator.clear_progress();
             haplotype_likelihoods.clear();
             continue;
+        }
+        
+        if (haplotypes.capacity() > 2 * haplotypes.size()) {
+            haplotypes.shrink_to_fit();
         }
         
         resume_timer(haplotype_likelihood_timer);

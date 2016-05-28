@@ -38,9 +38,9 @@ namespace
 {
     auto extract_contig_region(const VcfRecord& call)
     {
-        const auto begin = static_cast<ContigRegion::SizeType>(call.position()) - 1;
+        const auto begin = static_cast<ContigRegion::SizeType>(call.pos()) - 1;
         return ContigRegion {
-            begin, begin + static_cast<ContigRegion::SizeType>(call.ref_allele().size())
+            begin, begin + static_cast<ContigRegion::SizeType>(call.ref().size())
         };
     }
     
@@ -49,12 +49,12 @@ namespace
         if (call.is_sample_phased(sample)) {
             assert(call.has_format("PS"));
             return GenomicRegion {
-                call.chromosome_name(),
+                call.chrom(),
                 boost::lexical_cast<ContigRegion::SizeType>(call.get_sample_value(sample, "PS").front()) - 1,
-                static_cast<ContigRegion::SizeType>(call.position() + call.ref_allele().size()) - 1
+                static_cast<ContigRegion::SizeType>(call.pos() + call.ref().size()) - 1
             };
         }
-        return GenomicRegion {call.chromosome_name(), extract_contig_region(call)};
+        return GenomicRegion {call.chrom(), extract_contig_region(call)};
     }
     
     struct CallWrapper : public Mappable<CallWrapper>

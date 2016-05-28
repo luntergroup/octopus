@@ -297,7 +297,7 @@ void HtslibBcfFacade::write_header(const VcfHeader& header)
     
     bcf_hdr_set_version(hdr, header.file_format().c_str());
     
-    for (auto& p : header.get_basic_fields()) {
+    for (auto& p : header.basic_fields()) {
         auto hrec = (bcf_hrec_t*) std::malloc(sizeof(bcf_hrec_t));
         
         hrec->type  = BCF_HL_GEN;
@@ -311,10 +311,10 @@ void HtslibBcfFacade::write_header(const VcfHeader& header)
         bcf_hdr_add_hrec(hdr, hrec);
     }
     
-    for (auto& tag : header.get_structured_field_tags()) {
+    for (auto& tag : header.tags()) {
         const auto type = hts_tag_type(tag);
         
-        for (auto fields : header.get_structured_fields(tag)) {
+        for (auto fields : header.structured_fields(tag)) {
             auto hrec = (bcf_hrec_t*) std::malloc(sizeof(bcf_hrec_t));
             
             hrec->type  = type;
@@ -374,7 +374,7 @@ void set_samples(const bcf_hdr_t* header, bcf1_t* dest, const VcfRecord& source,
 
 void HtslibBcfFacade::write_record(const VcfRecord& record)
 {
-    const auto& contig = record.chromosome_name();
+    const auto& contig = record.chrom();
     
     if (bcf_hdr_get_hrec(header_.get(), BCF_HL_CTG, "ID", contig.c_str(), nullptr) == nullptr) {
         throw std::runtime_error {"required contig header line missing for contig \"" + contig + "\""};
@@ -383,11 +383,11 @@ void HtslibBcfFacade::write_record(const VcfRecord& record)
     auto hts_record = bcf_init();
     
     set_chrom(header_.get(), hts_record, contig);
-    set_pos(hts_record, record.position());
+    set_pos(hts_record, record.pos());
     set_id(hts_record, record.id());
-    set_alleles(header_.get(), hts_record, record.ref_allele(), record.alt_alleles());
-    if (record.quality()) {
-        set_qual(hts_record, *record.quality());
+    set_alleles(header_.get(), hts_record, record.ref(), record.alt());
+    if (record.qual()) {
+        set_qual(hts_record, *record.qual());
     }
     set_filters(header_.get(), hts_record, record.filters());
     set_info(header_.get(), hts_record, record);
@@ -822,11 +822,11 @@ void set_samples(const bcf_hdr_t* header, bcf1_t* dest, const VcfRecord& source,
     
     const auto num_samples = static_cast<int>(source.num_samples());
     
-    const auto& alt_alleles = source.alt_alleles();
+    const auto& alt_alleles = source.alt();
     
     std::vector<VcfRecord::SequenceType> alleles {};
     alleles.reserve(alt_alleles.size() + 1);
-    alleles.push_back(source.ref_allele());
+    alleles.push_back(source.ref());
     alleles.insert(std::end(alleles), std::cbegin(alt_alleles), std::cend(alt_alleles));
     
     if (source.has_genotypes()) {

@@ -955,8 +955,6 @@ find_high_coverage_regions(const T& reads, const GenomicRegion& region,
         current = high_range_last;
     }
     
-    result.shrink_to_fit();
-    
     return result;
 }
 
@@ -1008,8 +1006,6 @@ std::vector<GenomicRegion> find_uniform_coverage_regions(const T& reads, const G
     }
     
     result.emplace_back(contig, begin, end);
-    
-    result.shrink_to_fit();
     
     return result;
 }

@@ -461,8 +461,6 @@ HtslibSamFacade::SampleReadMap HtslibSamFacade::fetch_reads(const GenomicRegion&
         }
     }
     
-    for (auto& p : result) p.second.shrink_to_fit();
-    
     return result;
 }
 
@@ -502,8 +500,6 @@ HtslibSamFacade::ReadContainer HtslibSamFacade::fetch_reads(const SampleIdType& 
         }
     }
     
-    result.shrink_to_fit();
-    
     return result;
 }
 
@@ -539,8 +535,6 @@ HtslibSamFacade::SampleReadMap HtslibSamFacade::fetch_reads(const std::vector<Sa
             }
         }
     }
-    
-    for (auto& p : result) p.second.shrink_to_fit();
     
     return result;
 }

@@ -38,24 +38,24 @@ std::vector<std::string> VcfHeader::samples() const
     return samples_;
 }
 
-bool VcfHeader::has_basic_field(const KeyType& key) const noexcept
+bool VcfHeader::has_field(const BasicKey& k) const noexcept
 {
-    return basic_fields_.count(key) == 1;
+    return basic_fields_.count(k) == 1;
 }
 
-bool VcfHeader::has_structured_field(const TagType& tag) const noexcept
+bool VcfHeader::has_field(const Tag& t) const noexcept
 {
-    return structured_fields_.count(tag) > 0;
+    return structured_fields_.count(t) > 0;
 }
 
-bool VcfHeader::has_structured_field(const TagType& tag, const KeyType& key) const noexcept
+bool VcfHeader::has_field(const Tag& t, const StructuredKey& k) const noexcept
 {
-    return structured_fields_.count(tag) > 0; // TODO: complete this
+    return structured_fields_.count(t) > 0; // TODO: complete this
 }
 
-std::vector<VcfHeader::KeyType> VcfHeader::get_basic_field_keys() const
+std::vector<VcfHeader::BasicKey> VcfHeader::basic_keys() const
 {
-    std::vector<KeyType> result {};
+    std::vector<BasicKey> result {};
     result.reserve(basic_fields_.size());
     
     std::transform(std::cbegin(basic_fields_), std::cend(basic_fields_),
@@ -64,9 +64,9 @@ std::vector<VcfHeader::KeyType> VcfHeader::get_basic_field_keys() const
     return result;
 }
 
-std::vector<VcfHeader::TagType> VcfHeader::get_structured_field_tags() const
+std::vector<VcfHeader::Tag> VcfHeader::tags() const
 {
-    std::vector<TagType> result {};
+    std::vector<Tag> result {};
     result.reserve(structured_fields_.size());
     
     std::transform(std::cbegin(structured_fields_), std::cend(structured_fields_),
@@ -79,29 +79,36 @@ std::vector<VcfHeader::TagType> VcfHeader::get_structured_field_tags() const
     return result;
 }
 
-const VcfHeader::ValueType& VcfHeader::get_basic_field_value(const KeyType& key) const
+std::vector<VcfHeader::StructuredKey> VcfHeader::keys(const Tag& t) const
 {
-    return basic_fields_.at(key);
+    std::vector<StructuredKey> result {};
+    
+    // TODO
+    
+    return result;
 }
 
-const VcfHeader::ValueType& VcfHeader::get_structured_field_value(const TagType& tag,
-                                                                  const KeyType& id_key,
-                                                                  const ValueType& id_value,
-                                                                  const KeyType& lookup_key) const
+const VcfHeader::ValueType& VcfHeader::get(const BasicKey& k) const
 {
-    const auto er = structured_fields_.equal_range(tag);
+    return basic_fields_.at(k);
+}
+
+const VcfHeader::ValueType& VcfHeader::find(const StructuredKey& k, const Tag& t, const StructuredKey& search,
+                                            const StructuredKey& value) const
+{
+    const auto er = structured_fields_.equal_range(t);
     return std::find_if(er.first, er.second,
-                        [&id_key, &id_value, &lookup_key] (const auto& p) {
-                            return p.second.at(id_key) == id_value;
-                        })->second.at(lookup_key);
+                        [&] (const auto& p) {
+                            return p.second.at(search) == value;
+                        })->second.at(k);
 }
 
-const std::unordered_map<VcfHeader::KeyType, VcfHeader::ValueType>& VcfHeader::get_basic_fields() const noexcept
+const VcfHeader::BasicFieldMap& VcfHeader::basic_fields() const noexcept
 {
     return basic_fields_;
 }
 
-std::vector<VcfHeader::StructuredField> VcfHeader::get_structured_fields(const TagType& tag) const
+std::vector<VcfHeader::StructuredField> VcfHeader::structured_fields(const Tag& tag) const
 {
     std::vector<StructuredField> result {};
     result.reserve(structured_fields_.count(tag));
@@ -114,47 +121,46 @@ std::vector<VcfHeader::StructuredField> VcfHeader::get_structured_fields(const T
     return result;
 }
 
-const std::unordered_multimap<VcfHeader::TagType, VcfHeader::StructuredField>&
-VcfHeader::get_structured_fields() const noexcept
+const VcfHeader::StructuredFieldMap& VcfHeader::structured_fields() const noexcept
 {
     return structured_fields_;
 }
 
 // non-member methods
 
-const VcfHeader::ValueType& get_id_field_value(const VcfHeader& header, const VcfHeader::TagType& tag,
+const VcfHeader::ValueType& get_id_field_value(const VcfHeader& header, const VcfHeader::Tag& tag,
                                                const VcfHeader::ValueType& id_value,
-                                               const VcfHeader::KeyType& lookup_key)
+                                               const VcfHeader::StructuredKey& lookup_key)
 {
-    return header.get_structured_field_value(tag, "ID", id_value, lookup_key);
+    return header.find("ID", tag, id_value, lookup_key);
 }
 
-const VcfHeader::ValueType& get_id_field_type(const VcfHeader& header, const VcfHeader::TagType& tag,
+const VcfHeader::ValueType& get_id_field_type(const VcfHeader& header, const VcfHeader::Tag& tag,
                                               const VcfHeader::ValueType& id_value)
 {
-    return header.get_structured_field_value(tag, "ID", id_value, "Type");
+    return header.find("ID", tag, id_value, "Type");
 }
 
-VcfType get_typed_value(const VcfHeader& header, const VcfHeader::TagType& tag,
-                        const VcfHeader::KeyType& key, const VcfHeader::ValueType& value)
+VcfType get_typed_value(const VcfHeader& header, const VcfHeader::Tag& tag,
+                        const VcfHeader::StructuredKey& key, const VcfHeader::ValueType& value)
 {
     return make_vcf_type(get_id_field_type(header, tag, key), value);
 }
 
-VcfType get_typed_info_value(const VcfHeader& header, const VcfHeader::KeyType& key,
+VcfType get_typed_info_value(const VcfHeader& header, const VcfHeader::StructuredKey& key,
                              const VcfHeader::ValueType& value)
 {
     return get_typed_value(header, "INFO", key, value);
 }
 
-VcfType get_typed_format_value(const VcfHeader& header, const VcfHeader::KeyType& key,
+VcfType get_typed_format_value(const VcfHeader& header, const VcfHeader::StructuredKey& key,
                                const VcfHeader::ValueType& value)
 {
     return get_typed_value(header, "FORMAT", key, value);
 }
 
-std::vector<VcfType> get_typed_values(const VcfHeader& header, const VcfHeader::KeyType& format_key,
-                                      const VcfHeader::KeyType& field_key,
+std::vector<VcfType> get_typed_values(const VcfHeader& header, const VcfHeader::StructuredKey& format_key,
+                                      const VcfHeader::StructuredKey& field_key,
                                       const std::vector<VcfHeader::ValueType>& values)
 {
     std::vector<VcfType> result {};
@@ -168,13 +174,13 @@ std::vector<VcfType> get_typed_values(const VcfHeader& header, const VcfHeader::
     return result;
 }
 
-std::vector<VcfType> get_typed_info_values(const VcfHeader& header, const VcfHeader::KeyType& field_key,
+std::vector<VcfType> get_typed_info_values(const VcfHeader& header, const VcfHeader::StructuredKey& field_key,
                                            const std::vector<VcfHeader::ValueType>& values)
 {
     return get_typed_values(header, "INFO", field_key, values);
 }
 
-std::vector<VcfType> get_typed_format_values(const VcfHeader& header, const VcfHeader::KeyType& field_key,
+std::vector<VcfType> get_typed_format_values(const VcfHeader& header, const VcfHeader::StructuredKey& field_key,
                                              const std::vector<VcfHeader::ValueType>& values)
 {
     return get_typed_values(header, "FORMAT", field_key, values);
@@ -182,14 +188,15 @@ std::vector<VcfType> get_typed_format_values(const VcfHeader& header, const VcfH
 
 bool contig_line_exists(const VcfHeader& header, const std::string& contig)
 {
-    return header.has_structured_field("contig", contig);
+    return header.has_field("contig", contig);
 }
 
 bool operator==(const VcfHeader& lhs, const VcfHeader& rhs)
 {
-    return lhs.file_format() == rhs.file_format() && lhs.samples() == rhs.samples()
-            && lhs.get_basic_fields() == rhs.get_basic_fields()
-            && lhs.get_structured_fields() == rhs.get_structured_fields();
+    return lhs.file_format() == rhs.file_format()
+            && lhs.samples() == rhs.samples()
+            && lhs.basic_fields() == rhs.basic_fields()
+            && lhs.structured_fields() == rhs.structured_fields();
 }
 
 bool operator!=(const VcfHeader& lhs, const VcfHeader& rhs)
@@ -197,11 +204,11 @@ bool operator!=(const VcfHeader& lhs, const VcfHeader& rhs)
     return !operator==(lhs, rhs);
 }
 
-std::ostream& operator<<(std::ostream& os, const std::unordered_map<std::string, std::string>& fields)
+std::ostream& operator<<(std::ostream& os, const VcfHeader::StructuredField& fields)
 {
     os << "<";
     for (const auto& p : fields) {
-        os << p.first << "=" << p.second << ",";
+        os << p.first.value << "=" << p.second << ",";
     }
     os << ">";
     return os;
@@ -212,11 +219,11 @@ std::ostream& operator<<(std::ostream& os, const VcfHeader& header)
     os << "##fileformat=" << header.file_format_ << std::endl;
     
     for (const auto& field : header.basic_fields_) {
-        os << "##" << field.first << "=" << field.second << std::endl;
+        os << "##" << field.first.value << "=" << field.second << std::endl;
     }
     
     for (const auto& format : header.structured_fields_) {
-        os << "##" << format.first << "=" << format.second << std::endl;
+        os << "##" << format.first.value << "=" << format.second << std::endl;
     }
     
     static const std::vector<std::string> columns {"CHROM", "POS", "ID", "REF", "ALT", "QUAL", "FILTER", "INFO"};
@@ -264,7 +271,13 @@ VcfHeader::Builder& VcfHeader::Builder::add_basic_field(std::string key, std::st
 VcfHeader::Builder& VcfHeader::Builder::add_structured_field(std::string tag,
                                                              std::unordered_map<std::string, std::string> values)
 {
-    structured_fields_.emplace(std::move(tag), std::move(values));
+    VcfHeader::StructuredField tmp {};
+    tmp.reserve(values.size());
+    
+    for (auto&& p : values) tmp.emplace(p.first, std::move(p.second));
+    
+    structured_fields_.emplace(std::move(tag), std::move(tmp));
+    
     return *this;
 }
 
@@ -287,7 +300,7 @@ VcfHeader::Builder& VcfHeader::Builder::add_info(std::string id, std::string num
     other_values.emplace("Type", std::move(type));
     other_values.emplace("Description", add_quotes(description));
     
-    structured_fields_.emplace("INFO", std::move(other_values));
+    add_structured_field("INFO", std::move(other_values));
     
     return *this;
 }
@@ -300,7 +313,7 @@ VcfHeader::Builder& VcfHeader::Builder::add_filter(std::string id, std::string d
     other_values.emplace("ID", std::move(id));
     other_values.emplace("Description", add_quotes(description));
     
-    structured_fields_.emplace("FILTER", std::move(other_values));
+    add_structured_field("FILTER", std::move(other_values));
     
     return *this;
 }
@@ -316,7 +329,7 @@ VcfHeader::Builder& VcfHeader::Builder::add_format(std::string id, std::string n
     other_values.emplace("Type", std::move(type));
     other_values.emplace("Description", add_quotes(description));
     
-    structured_fields_.emplace("FORMAT", std::move(other_values));
+    add_structured_field("FORMAT", std::move(other_values));
     
     return *this;
 }
@@ -326,7 +339,7 @@ VcfHeader::Builder& VcfHeader::Builder::add_contig(std::string id,
 {
     other_values.emplace("ID", std::move(id));
     
-    structured_fields_.emplace("contig", std::move(other_values));
+    add_structured_field("contig", std::move(other_values));
     
     return *this;
 }
