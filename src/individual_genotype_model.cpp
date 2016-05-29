@@ -17,6 +17,8 @@
 #include "fixed_ploidy_genotype_likelihood_model.hpp"
 #include "maths.hpp"
 
+#include "timers.hpp"
+
 namespace Octopus
 {
 namespace GenotypeModel
@@ -61,18 +63,22 @@ namespace GenotypeModel
         
         std::vector<double> result(genotypes.size());
         
+        //resume_timer(misc_timer[1]);
         std::transform(std::cbegin(genotypes), std::cend(genotypes), std::begin(result),
                        [&sample, &likelihood_model] (const auto& genotype) {
                            return likelihood_model.log_likelihood(sample, genotype);
                        });
+        //pause_timer(misc_timer[1]);
         
         if (debug_log_) debug::print_genotype_likelihoods(stream(*debug_log_), genotypes, result);
         
+        //resume_timer(misc_timer[2]);
         std::transform(std::cbegin(genotypes), std::cend(genotypes), std::cbegin(result),
                        std::begin(result),
                        [this] (const auto& genotype, const auto likelihood) {
                            return genotype_prior_model_.get().evaluate(genotype) + likelihood;
                        });
+        //pause_timer(misc_timer[2]);
         
         const auto log_evidence = Maths::normalise_exp(result);
         

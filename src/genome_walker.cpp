@@ -24,12 +24,12 @@
 namespace Octopus
 {
 GenomeWalker::GenomeWalker(unsigned max_included,
-                           IndicatorPolicy indicator_limit,
-                           ExtensionPolicy extension_limit)
+                           IndicatorPolicy indicator_policy,
+                           ExtensionPolicy extension_policy)
 :
 max_included_ {max_included},
-indicator_limit_ {indicator_limit},
-extension_limit_ {extension_limit}
+indicator_policy_ {indicator_policy},
+extension_policy_ {extension_policy}
 {}
 
 GenomicRegion GenomeWalker::walk(const ContigNameType& contig, const ReadMap& reads,
@@ -90,14 +90,40 @@ GenomicRegion GenomeWalker::walk(const GenomicRegion& previous_region, const Rea
     
     unsigned num_indicators {0};
     
-    if (indicator_limit_ != IndicatorPolicy::None) {
-        num_indicators = static_cast<unsigned>(distance(first_previous_itr, included_itr));
-    }
-    
-    if (num_indicators > 0 && indicator_limit_ == IndicatorPolicy::SharedWithPreviousRegion) {
-        auto it = find_first_shared(reads, first_previous_itr, included_itr, *included_itr);
-        auto max_possible_indicators = static_cast<unsigned>(distance(it, included_itr));
-        num_indicators = min(max_possible_indicators, num_indicators);
+    switch (indicator_policy_) {
+        case IndicatorPolicy::IncludeNone: break;
+        case IndicatorPolicy::IncludeIfSharedWithNovelRegion:
+        {
+            if (distance(first_previous_itr, included_itr) > 0) {
+                const auto it = find_first_shared(reads, first_previous_itr, included_itr, *included_itr);
+                
+                num_indicators = static_cast<unsigned>(distance(it, included_itr));
+            }
+            break;
+        }
+        case IndicatorPolicy::IncludeIfLinkableToNovelRegion:
+        {
+            if (distance(first_previous_itr, included_itr) > 0) {
+                auto it = included_itr;
+                
+                while (true) {
+                    const auto it2 = find_first_shared(reads, first_previous_itr, it, *it);
+                    
+                    if (it2 == it) {
+                        it = it2;
+                        break;
+                    } else {
+                        it = it2;
+                    }
+                }
+                
+                num_indicators = static_cast<unsigned>(distance(it, included_itr));
+            }
+            break;
+        }
+        case IndicatorPolicy::IncludeAll:
+            num_indicators = static_cast<unsigned>(distance(first_previous_itr, included_itr));
+            break;
     }
     
     auto num_included = max_included_;
@@ -108,7 +134,7 @@ GenomicRegion GenomeWalker::walk(const GenomicRegion& previous_region, const Rea
     
     unsigned num_excluded_candidates {0};
     
-    if (extension_limit_ == ExtensionPolicy::WithinReadLengthOfFirstIncluded) {
+    if (extension_policy_ == ExtensionPolicy::IncludeIfWithinReadLengthOfFirstIncluded) {
         auto max_candidates_within_read_length = static_cast<unsigned>(max_count_if_shared_with_first(reads, first_included_itr, last_candidate_itr));
         num_included = min({num_included, num_remaining_candidates, max_candidates_within_read_length + 1});
         num_excluded_candidates = max_candidates_within_read_length - num_included;
@@ -121,7 +147,7 @@ GenomicRegion GenomeWalker::walk(const GenomicRegion& previous_region, const Rea
     while (--num_included > 0 &&
            is_optimal_to_extend(first_included_itr, next(included_itr), first_excluded_itr,
                                 last_candidate_itr, reads, num_included + num_excluded_candidates)) {
-               if (extension_limit_ == ExtensionPolicy::SharedWithFrontier
+               if (extension_policy_ == ExtensionPolicy::IncludeIfSharedWithFrontier
                    && !has_shared(reads, *included_itr, *next(included_itr))) {
                    break;
                }

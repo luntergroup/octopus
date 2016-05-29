@@ -29,14 +29,26 @@ public:
     using ContigNameType = GenomicRegion::ContigNameType;
     using Candidates     = MappableFlatSet<Allele>;
     
-    enum class IndicatorPolicy { None, SharedWithPreviousRegion, NoLimit };
-    enum class ExtensionPolicy { WithinReadLengthOfFirstIncluded, SharedWithFrontier, NoLimit };
+    enum class IndicatorPolicy
+    {
+        IncludeNone,
+        IncludeIfLinkableToNovelRegion,
+        IncludeIfSharedWithNovelRegion,
+        IncludeAll
+    };
+    
+    enum class ExtensionPolicy
+    {
+        IncludeIfWithinReadLengthOfFirstIncluded,
+        IncludeIfSharedWithFrontier,
+        NoLimit
+    };
     
     GenomeWalker() = delete;
     
     GenomeWalker(unsigned max_included,
-                 IndicatorPolicy indicator_limit = IndicatorPolicy::None,
-                 ExtensionPolicy extension_limit = ExtensionPolicy::SharedWithFrontier);
+                 IndicatorPolicy indicator_policy = IndicatorPolicy::IncludeNone,
+                 ExtensionPolicy extension_policy = ExtensionPolicy::IncludeIfSharedWithFrontier);
     
     ~GenomeWalker() = default;
     
@@ -45,17 +57,17 @@ public:
     GenomeWalker(GenomeWalker&&)                 = default;
     GenomeWalker& operator=(GenomeWalker&&)      = default;
     
-    GenomicRegion
-    walk(const ContigNameType& contig, const ReadMap& reads, const Candidates& candidates) const;
+    GenomicRegion walk(const ContigNameType& contig, const ReadMap& reads,
+                       const Candidates& candidates) const;
     
-    GenomicRegion
-    walk(const GenomicRegion& previous_region, const ReadMap& reads, const Candidates& candidates) const;
+    GenomicRegion walk(const GenomicRegion& previous_region, const ReadMap& reads,
+                       const Candidates& candidates) const;
     
 private:
     unsigned max_included_;
     
-    IndicatorPolicy indicator_limit_;
-    ExtensionPolicy extension_limit_;
+    IndicatorPolicy indicator_policy_;
+    ExtensionPolicy extension_policy_;
     
     using CandidateIterator = Candidates::const_iterator;
 };

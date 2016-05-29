@@ -19,8 +19,10 @@
 #include <algorithm>
 #include <cstddef>
 #include <tuple>
+#include <cassert>
 
 #include <boost/math/special_functions/binomial.hpp>
+#include <boost/functional/hash.hpp>
 
 #include "haplotype.hpp"
 #include "variant.hpp"
@@ -35,7 +37,8 @@ namespace Octopus
         
         explicit CoalescentModel(Haplotype reference,
                                  double snp_heterozygosity = 0.001,
-                                 double indel_heterozygosity = 0.001);
+                                 double indel_heterozygosity = 0.001,
+                                 unsigned max_haplotypes = 1024);
         
         ~CoalescentModel() = default;
         
@@ -49,16 +52,32 @@ namespace Octopus
         template <typename Container> double evaluate(const Container& haplotypes) const;
         
     private:
+        using SiteCountTuple = std::tuple<unsigned, unsigned, unsigned>;
+        
+        struct SiteCountTupleHash
+        {
+            inline auto operator()(const SiteCountTuple& t) const noexcept
+            {
+                return boost::hash_value(t);
+            }
+        };
+        
         Haplotype reference_;
         
         double snp_heterozygosity_, indel_heterozygosity_;
         
         using HaplotypeReference = std::reference_wrapper<const Haplotype>;
         
+        mutable std::vector<std::reference_wrapper<const Variant>> site_buffer1_, site_buffer2_;
+        
+        using VariantReference = std::reference_wrapper<const Variant>;
+        
         mutable std::unordered_map<HaplotypeReference, std::vector<Variant>> difference_cache_;
         
+        mutable std::unordered_map<SiteCountTuple, double, SiteCountTupleHash> result_cache_;
+        
         template <typename Container>
-        std::pair<unsigned, unsigned> count_segregating_sites(const Container& haplotypes) const;
+        SiteCountTuple count_segregating_sites(const Container& haplotypes) const;
     };
     
     namespace detail
@@ -75,11 +94,15 @@ namespace Octopus
     template <typename Container>
     double CoalescentModel::evaluate(const Container& haplotypes) const
     {
-        unsigned k_snp, k_indel;
+        const auto t = count_segregating_sites(haplotypes);
         
-        std::tie(k_snp, k_indel) = count_segregating_sites(haplotypes);
+        const auto it = result_cache_.find(t);
         
-        const auto n = static_cast<unsigned>(detail::size(haplotypes) + 1); // + 1 for reference
+        if (it != std::cend(result_cache_)) return it->second;
+        
+        unsigned k_snp, k_indel, n;
+        
+        std::tie(k_snp, k_indel, n) = t;
         
         double result {0};
         
@@ -92,49 +115,47 @@ namespace Octopus
                         * ((i - 1) / (theta + i - 1)) * std::pow(theta / (theta + i - 1), k);
         }
         
-        return std::log(result);
+        result = std::log(result);
+        
+        result_cache_.emplace(t, result);
+        
+        return result;
     }
     
     // private methods
     
     template <typename Container>
-    std::pair<unsigned, unsigned>
+    CoalescentModel::SiteCountTuple
     CoalescentModel::count_segregating_sites(const Container& haplotypes) const
     {
-        const auto n = detail::size(haplotypes);
+        assert(site_buffer2_.empty());
         
-        std::vector<std::reference_wrapper<const Variant>> sites {};
-        sites.reserve(2 * n);
+        site_buffer1_.clear();
         
         for (const Haplotype& haplotype : haplotypes) {
-            const auto it = difference_cache_.find(haplotype);
+            auto it = difference_cache_.find(haplotype);
             
-            if (it != std::cend(difference_cache_)) {
-                sites.insert(std::end(sites), std::cbegin(it->second), std::cend(it->second));
-            } else {
-                const auto p = difference_cache_.emplace(std::piecewise_construct,
-                                                         std::forward_as_tuple(haplotype),
-                                                         std::forward_as_tuple(haplotype.difference(reference_)));
-                
-                sites.insert(std::end(sites), std::cbegin(p.first->second), std::cend(p.first->second));
+            if (it == cend(difference_cache_)) {
+                it = difference_cache_.emplace(std::piecewise_construct,
+                                               std::forward_as_tuple(haplotype),
+                                               std::forward_as_tuple(haplotype.difference(reference_))).first;
             }
-        }
-        
-        auto it1 = std::end(sites);
-        
-        if (n > 1) {
-            std::sort(std::begin(sites), std::end(sites));
             
-            it1 = std::unique(std::begin(sites), std::end(sites));
+            std::set_union(std::begin(site_buffer1_), std::end(site_buffer1_),
+                           std::cbegin(it->second), std::cend(it->second),
+                           std::back_inserter(site_buffer2_));
+            
+            std::swap(site_buffer1_, site_buffer2_);
+            
+            site_buffer2_.clear();
         }
         
-        const auto it2 = std::partition(std::begin(sites), it1,
-                                        [] (const auto& variant) {
-                                            return is_indel(variant);
-                                        });
+        const auto num_indels = std::count_if(std::cbegin(site_buffer1_), std::cend(site_buffer1_),
+                                              [] (const auto& v) { return is_indel(v); });
         
-        return std::make_pair(static_cast<unsigned>(std::distance(it2, it1)),
-                              static_cast<unsigned>(std::distance(std::begin(sites), it2)));
+        
+        return std::make_tuple(site_buffer1_.size() - num_indels, num_indels,
+                               static_cast<unsigned>(detail::size(haplotypes) + 1));
     }
     
     // non-member methods

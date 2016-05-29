@@ -103,7 +103,6 @@ namespace Octopus
         for (const auto& haplotype : haplotypes) {
             cache_.erase(haplotype);
         }
-        cache_.rehash(cache_.size());
     }
     
     // non-member methods

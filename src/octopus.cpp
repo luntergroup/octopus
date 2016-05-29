@@ -390,6 +390,11 @@ namespace Octopus
             return components_.variant_caller_factory;
         }
         
+        ProgressMeter& progress_meter() noexcept
+        {
+            return components_.progress_meter;
+        }
+        
     private:
         struct Components
         {
@@ -414,7 +419,8 @@ namespace Octopus
             output {std::move(output)},
             num_threads {Options::get_num_threads(options)},
             read_buffer_size {},
-            temp_directory {((!num_threads || *num_threads > 1) ? Options::create_temp_file_directory(options) : boost::none)}
+            temp_directory {((!num_threads || *num_threads > 1) ? Options::create_temp_file_directory(options) : boost::none)},
+            progress_meter {regions}
             {
                 if (!(samples.empty() || regions.empty() || !read_manager.good())) {
                     read_buffer_size = calculate_max_num_reads(Options::get_target_read_buffer_size(options),
@@ -442,6 +448,7 @@ namespace Octopus
             boost::optional<unsigned> num_threads;
             std::size_t read_buffer_size;
             boost::optional<fs::path> temp_directory;
+            ProgressMeter progress_meter;
         };
         
         Components components_;
@@ -534,6 +541,7 @@ namespace Octopus
         std::unique_ptr<const VariantCaller> caller;
         std::size_t read_buffer_size;
         std::reference_wrapper<VcfWriter> output;
+        std::reference_wrapper<ProgressMeter> progress_meter;
         
         ContigCallingComponents() = delete;
         
@@ -546,7 +554,8 @@ namespace Octopus
         samples {genome_components.samples()},
         caller {genome_components.caller_factory().make(contig)},
         read_buffer_size {genome_components.read_buffer_size()},
-        output {genome_components.output()}
+        output {genome_components.output()},
+        progress_meter {genome_components.progress_meter()}
         {}
         
         ContigCallingComponents(const GenomicRegion::ContigNameType& contig, VcfWriter& output,
@@ -558,7 +567,8 @@ namespace Octopus
         samples {genome_components.samples()},
         caller {genome_components.caller_factory().make(contig)},
         read_buffer_size {genome_components.read_buffer_size()},
-        output {output}
+        output {output},
+        progress_meter {genome_components.progress_meter()}
         {}
         
         ~ContigCallingComponents() = default;
@@ -655,7 +665,7 @@ namespace Octopus
         return propose_call_subregion(components, right_overhang_region(input_region, current_subregion));
     }
     
-    void run_octopus_on_contig(ContigCallingComponents&& components, ProgressMeter& meter)
+    void run_octopus_on_contig(ContigCallingComponents&& components)
     {
         #ifdef BENCHMARK
         init_timers();
@@ -681,7 +691,7 @@ namespace Octopus
                     stream(lg) << "Processing subregion " << subregion;
                 }
                 
-                calls = components.caller->call(subregion, meter);
+                calls = components.caller->call(subregion, components.progress_meter);
                 
 //                try {
 //                    calls = components.caller->call(subregion, meter);
@@ -721,10 +731,8 @@ namespace Octopus
     
     void run_octopus_single_threaded(GenomeCallingComponents& components)
     {
-        ProgressMeter meter {components.search_regions()};
-        
         for (const auto& contig : components.contigs_in_output_order()) {
-            run_octopus_on_contig(ContigCallingComponents {contig, components}, meter);
+            run_octopus_on_contig(ContigCallingComponents {contig, components});
         }
     }
     
@@ -905,8 +913,7 @@ namespace Octopus
         std::atomic<unsigned> count_finished;
     };
     
-    auto run(Task task, GenomeCallingComponents& components, ProgressMeter& progress_meter,
-             SyncPacket& sync)
+    auto run(Task task, GenomeCallingComponents& components, SyncPacket& sync)
     {
         if (DEBUG_MODE) {
             Logging::DebugLogger log {};
@@ -916,12 +923,12 @@ namespace Octopus
         ContigCallingComponents contig_components {contig_name(task), components};
         
         return std::async(std::launch::async,
-                          [task = std::move(task), &progress_meter, components = std::move(contig_components),
+                          [task = std::move(task), components = std::move(contig_components),
                            &sync]
                             () -> CompletedTask {
                                 CompletedTask result {
                                     task,
-                                    components.caller->call(task.region, progress_meter)
+                                    components.caller->call(task.region, components.progress_meter)
                                 };
                                 
                                 std::unique_lock<std::mutex> lk {sync.mutex};
@@ -969,8 +976,6 @@ namespace Octopus
         }
         
         std::vector<std::future<CompletedTask>> futures(num_task_threads);
-        
-        ProgressMeter meter {components.search_regions()};
         
         ContigTaskMap pending_tasks {ContigOrder {components.contigs_in_output_order()}};
         
@@ -1045,7 +1050,7 @@ namespace Octopus
                     std::lock_guard<std::mutex> lk {sync.mutex};
                     auto task = pop(tasks);
                     
-                    fut = run(task, components, meter, sync);
+                    fut = run(task, components, sync);
                     pending_tasks[task.region.contig_name()].push(std::move(task));
                 }
             }

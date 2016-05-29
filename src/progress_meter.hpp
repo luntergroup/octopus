@@ -34,8 +34,8 @@ namespace Octopus
         
         ProgressMeter(const ProgressMeter&)            = delete;
         ProgressMeter& operator=(const ProgressMeter&) = delete;
-        ProgressMeter(ProgressMeter&&)                 = delete;
-        ProgressMeter& operator=(ProgressMeter&&)      = delete;
+        ProgressMeter(ProgressMeter&&);
+        ProgressMeter& operator=(ProgressMeter&&)      = default;
         
         void log_completed(const GenomicRegion& region);
         
@@ -43,6 +43,8 @@ namespace Octopus
         using RegionSizeType = ContigRegion::SizeType;
         
         using ContigRegionMap = MappableSetMap<ContigNameType, ContigRegion>;
+        
+        using DurationUnits = std::chrono::milliseconds;
         
         InputRegionMap regions_;
         
@@ -58,15 +60,13 @@ namespace Octopus
         
         bool done_;
         
-        Logging::InfoLogger log_;
+        std::size_t position_tab_length_;
         
-        using DurationUnits = std::chrono::milliseconds;
-        
-        std::deque<DurationUnits> block_compute_times_;
+        mutable std::deque<DurationUnits> block_compute_times_;
         
         mutable std::mutex mutex_;
         
-        std::size_t position_tab_length_;
+        Logging::InfoLogger log_;
         
         RegionSizeType merge(const GenomicRegion& region);
         

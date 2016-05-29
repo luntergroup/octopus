@@ -189,16 +189,16 @@ namespace Octopus
         return out;
     }
     
-    enum class PhasingLevel { None, Lite, Aggressive };
+    enum class PhasingLevel { Minimal, Conservative, Aggressive };
     
     std::istream& operator>>(std::istream& in, PhasingLevel& result)
     {
         std::string token;
         in >> token;
-        if (token == "None")
-            result = PhasingLevel::None;
-        else if (token == "Lite")
-            result = PhasingLevel::Lite;
+        if (token == "Minimal")
+            result = PhasingLevel::Minimal;
+        else if (token == "Conservative")
+            result = PhasingLevel::Conservative;
         else if (token == "Aggressive")
             result = PhasingLevel::Aggressive;
         else throw po::validation_error {po::validation_error::kind_t::invalid_option_value, token,
@@ -209,11 +209,11 @@ namespace Octopus
     std::ostream& operator<<(std::ostream& out, const PhasingLevel& level)
     {
         switch (level) {
-            case PhasingLevel::None:
-                out << "None";
+            case PhasingLevel::Minimal:
+                out << "Minimal";
                 break;
-            case PhasingLevel::Lite:
-                out << "Lite";
+            case PhasingLevel::Conservative:
+                out << "Conservative";
                 break;
             case PhasingLevel::Aggressive:
                 out << "Aggressive";
@@ -414,18 +414,20 @@ namespace Octopus
             po::options_description advanced("Advanced options");
             advanced.add_options()
             ("max-haplotypes", po::value<unsigned>()->default_value(128),
-             "Maximum number of haplotypes the caller may consider")
+             "The maximum number of candidate haplotypes the caller may consider")
             ("min-haplotype-posterior", po::value<float>()->default_value(1e-10),
-             "Minimum haplotype posterior for filtering")
-            ("phasing-level", po::value<PhasingLevel>()->default_value(PhasingLevel::None),
-             "The level of phasing")
+             "Haplotypes with posterior less than this can be filtered, allowing greater"
+             " longer haplotype extesion in complex regions")
+            ("phasing-level", po::value<PhasingLevel>()->default_value(PhasingLevel::Minimal),
+             "The level of data driven phasing"
+             "\tAggressive  : Lags haplotypes as much as the data allows\n")
             ("disable-inactive-flank-scoring", po::bool_switch()->default_value(false),
              "Disables additional calculation to adjust alignment score when there are inactive candidates"
              " in haplotype flanking regions");
             
             po::options_description all("Octopus options");
-            all.add(general).add(backend).add(input).add(filters).add(transforms)
-            .add(candidates).add(caller).add(model).add(advanced).add(cancer);
+            all.add(general).add(backend).add(input).add(transforms).add(filters)
+                .add(candidates).add(caller).add(model).add(advanced).add(cancer);
             
             po::variables_map vm;
             po::store(po::command_line_parser(argc, argv).options(all).positional(p).run(), vm);
@@ -1532,11 +1534,11 @@ namespace Octopus
         HaplotypeGenerator::Builder::LaggingPolicy lagging_policy;
         
         switch (options.at("phasing-level").as<PhasingLevel>()) {
-            case PhasingLevel::None:
+            case PhasingLevel::Minimal:
                 lagging_policy = HaplotypeGenerator::Builder::LaggingPolicy::None;
                 break;
-            case PhasingLevel::Lite:
-                lagging_policy = HaplotypeGenerator::Builder::LaggingPolicy::Mild;
+            case PhasingLevel::Conservative:
+                lagging_policy = HaplotypeGenerator::Builder::LaggingPolicy::Conservative;
                 break;
             case PhasingLevel::Aggressive:
                 lagging_policy = HaplotypeGenerator::Builder::LaggingPolicy::Aggressive;

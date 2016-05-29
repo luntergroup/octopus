@@ -32,6 +32,8 @@
 #include "reference_call.hpp"
 #include "logging.hpp"
 
+#include "timers.hpp"
+
 namespace Octopus
 {
 IndividualVariantCaller::IndividualVariantCaller(CallerComponents&& components,

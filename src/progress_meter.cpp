@@ -78,7 +78,9 @@ namespace Octopus
     start_ {std::chrono::system_clock::now()},
     last_log_ {start_},
     done_ {false},
-    position_tab_length_ {calculate_position_tab_length(regions_)}
+    position_tab_length_ {calculate_position_tab_length(regions_)},
+    block_compute_times_ {},
+    log_ {}
     {
         completed_regions_.reserve(regions_.size());
         write_header();
@@ -90,6 +92,24 @@ namespace Octopus
         InputRegionMap {std::make_pair(region.contig_name(), InputRegionMap::mapped_type {region})}
     }
     {}
+    
+    ProgressMeter::ProgressMeter(ProgressMeter&& other)
+    {
+        using std::move;
+        std::lock_guard<std::mutex> lock {other.mutex_};
+        regions_ = move(other.regions_);
+        completed_regions_ = move(other.completed_regions_);
+        num_bp_to_search_ = move(other.num_bp_to_search_);
+        num_bp_completed_ = move(other.num_bp_completed_);
+        percent_unitl_log_ = move(other.percent_unitl_log_);
+        percent_at_last_log_ = move(other.percent_at_last_log_);
+        start_ = move(other.start_);
+        last_log_ = move(other.last_log_);
+        done_ = move(other.done_);
+        position_tab_length_ = move(other.position_tab_length_);
+        block_compute_times_ = move(other.block_compute_times_);
+        log_ = move(other.log_);
+    }
     
     double percent_completed(const std::size_t num_bp_completed,
                              const std::size_t num_bp_to_search)

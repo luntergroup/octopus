@@ -208,17 +208,17 @@ auto extend_tree_until(const Container& elements, HaplotypeTree& tree, const uns
 }
 
 template <typename Container>
-void prune_all(const Container& elements, HaplotypeTree& tree)
+void prune_all(const Container& haplotypes, HaplotypeTree& tree)
 {
-    for (const auto& haplotype : elements) {
+    for (const auto& haplotype : haplotypes) {
         tree.prune_all(haplotype);
     }
 }
 
 template <typename Container>
-void prune_unique(const Container& elements, HaplotypeTree& tree)
+void prune_unique(const Container& haplotypes, HaplotypeTree& tree)
 {
-    for (const auto& haplotype : elements) {
+    for (const auto& haplotype : haplotypes) {
         tree.prune_unique(haplotype);
     }
 }

@@ -372,10 +372,10 @@ VariantCaller::call(const GenomicRegion& call_region, ProgressMeter& progress_me
     while (true) {
         resume_timer(haplotype_generation_timer);
         try {
-            std::tie(haplotypes, active_region) = haplotype_generator.progress();
+            std::tie(haplotypes, active_region) = haplotype_generator.generate();
         } catch(const HaplotypeGenerator::HaplotypeOverflowError& e) {
             // TODO: we could try to eliminate some more haplotypes and recall the region
-            haplotype_generator.clear_progress();
+            haplotype_generator.stop();
             haplotype_likelihoods.clear();
             continue;
         }
@@ -424,7 +424,7 @@ VariantCaller::call(const GenomicRegion& call_region, ProgressMeter& progress_me
             }
             // TODO: we could force HaplotypeGenerator to extend the current set of haplotypes
             // and retry
-            haplotype_generator.clear_progress();
+            haplotype_generator.stop();
             haplotype_likelihoods.clear();
             continue;
         }
@@ -435,7 +435,7 @@ VariantCaller::call(const GenomicRegion& call_region, ProgressMeter& progress_me
         
         if (haplotypes.empty()) {
             // This can only happen if all haplotypes have equal likelihood
-            haplotype_generator.clear_progress();
+            haplotype_generator.stop();
             haplotype_likelihoods.clear();
             continue;
         }
@@ -448,9 +448,15 @@ VariantCaller::call(const GenomicRegion& call_region, ProgressMeter& progress_me
         haplotype_likelihoods.erase(removed_haplotypes);
         pause_timer(haplotype_likelihood_timer);
         
+        auto has_removal_impact = haplotype_generator.removal_has_impact();
+        
         resume_timer(haplotype_generation_timer);
-        haplotype_generator.remove(removed_haplotypes);
-        haplotype_generator.uniquely_keep(haplotypes);
+        if (has_removal_impact) {
+            haplotype_generator.remove(removed_haplotypes);
+            haplotype_generator.remove_duplicates(haplotypes);
+        } else {
+            haplotype_generator.stop();
+        }
         removed_haplotypes.clear();
         removed_haplotypes.shrink_to_fit();
         pause_timer(haplotype_generation_timer);
@@ -490,9 +496,7 @@ VariantCaller::call(const GenomicRegion& call_region, ProgressMeter& progress_me
             }
         }
         
-        auto unphased_active_region = active_region;
-        
-        if (overlaps(active_region, call_region) && phase_set) {
+        if (phase_set && overlaps(active_region, call_region)) {
             assert(!is_empty(phase_set->region));
             
             if (debug_log_) stream(*debug_log_) << "Phased region is " << phase_set->region;
@@ -508,29 +512,28 @@ VariantCaller::call(const GenomicRegion& call_region, ProgressMeter& progress_me
             append(std::move(variant_calls), result, record_factory, call_region);
             pause_timer(output_timer);
             
-            auto remaining_active_region = right_overhang_region(active_region, phase_set->region);
+            active_region = right_overhang_region(active_region, phase_set->region);
             
             resume_timer(haplotype_generation_timer);
-            haplotype_generator.force_forward(remaining_active_region);
+            haplotype_generator.progress(active_region);
             pause_timer(haplotype_generation_timer);
+        } else {
+            if (has_removal_impact) { // if there was no impact before there can't be now either
+                has_removal_impact = haplotype_generator.removal_has_impact();
+            }
             
-            unphased_active_region = right_overhang_region(active_region, phase_set->region);
+            if (has_removal_impact) {
+                auto removable_haplotypes = get_removable_haplotypes(haplotypes,
+                                                                     *caller_latents->get_haplotype_posteriors());
+                
+                haplotype_generator.remove(removable_haplotypes);
+            }
+            pause_timer(haplotype_generation_timer);
         }
         
         resume_timer(haplotype_generation_timer);
-        auto next_active_region = haplotype_generator.tell_next_active_region();
+        const auto next_active_region = haplotype_generator.tell_next_active_region();
         pause_timer(haplotype_generation_timer);
-        
-        if (!has_passed(next_active_region, active_region)) {
-            auto removable_haplotypes = get_removable_haplotypes(haplotypes,
-                                                                 *caller_latents->get_haplotype_posteriors(),
-                                                                 unphased_active_region);
-            
-            resume_timer(haplotype_generation_timer);
-            haplotype_generator.remove(removable_haplotypes);
-            next_active_region = haplotype_generator.tell_next_active_region();
-            pause_timer(haplotype_generation_timer);
-        }
         
         if (begins_before(active_region, next_active_region) && overlaps(active_region, call_region)) {
             auto passed_region   = left_overhang_region(active_region, next_active_region);
@@ -739,11 +742,8 @@ std::vector<Haplotype> VariantCaller::filter(std::vector<Haplotype>& haplotypes,
 
 std::vector<std::reference_wrapper<const Haplotype>>
 VariantCaller::get_removable_haplotypes(const std::vector<Haplotype>& haplotypes,
-                                        const CallerLatents::HaplotypeProbabilityMap& haplotype_posteriors,
-                                        const GenomicRegion& region) const
+                                        const CallerLatents::HaplotypeProbabilityMap& haplotype_posteriors) const
 {
-    assert(!haplotypes.empty() && contains(haplotypes.front().mapped_region(), region));
-    
     std::vector<std::reference_wrapper<const Haplotype>> result {};
     result.reserve(haplotypes.size());
     

@@ -25,7 +25,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--help",
         //"--version",
         
-        "--debug",
+        //"--debug",
         //"--trace",
         
         //"--sites-only",
@@ -38,14 +38,14 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         
         //"--target-read-buffer-size", "1.0",
         //"--reference-cache-size", "100",
-        //"--threads", "0",
+        "--threads", "0",
         
         //"--contig-output-order", "AsInReferenceReversed",
         
         "--reference", human_reference_fasta.c_str(),
         //"--reference", ecoli_reference_fasta.c_str(),
         
-        "--reads", NA12878_low_coverage.c_str(),
+        //"--reads", NA12878_low_coverage.c_str(),
         //"--reads", NA12878_high_coverage.c_str(),
         //"--reads", "~/Genomics/Illumina/NA12878.mapped.ILLUMINA.bwa.CEU.high_coverage_pcr_free.20130906.chr22.bam",
         
@@ -58,6 +58,8 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--reads", NA12878_high_coverage.c_str(), NA12891_high_coverage.c_str(),
         
         //"--reads", ecoli_bam.c_str(),
+        
+        "--reads", "~/Genomics/Illumina/NA12878HC_HLA_C.bam",
         
         // TCGA
         //"--reads", "~/Genomics/cancer/TCGA/benchmark/G15511.HCC1143_BL.1.chr22.bam",
@@ -79,7 +81,8 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         
         /* input regions */
         
-        "--regions", "4:95,568,038-95,586,237",
+        //"--regions", "22",
+        "--regions", "6:31,236,339-31,240,057", // HLA-C
         
         //"--use-one-based-indexing",
         
@@ -236,9 +239,9 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--min-assembler-base-quality", "10",
         //"--max-variant-size", "25",
         
-        //"--phasing-level", "Aggressive",
+        "--phasing-level", "Aggressive", // Minimal, Conservative, Aggressive
         //"--disable-inactive-flank-scoring",
-        //"--max-haplotypes", "64",
+        "--max-haplotypes", "64",
         //"--min-haplotype-posterior", "1e-15",
         
         //"--min-variant-posterior", "2",
@@ -250,7 +253,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--max-open-read-files", "1",
         
         //"--output", test_out_vcf.c_str(),
-        //"--output", "octopus_hla.vcf",
+        //"--output", "octopus_hla_phase_aggressive.vcf",
         //"--output", "octopus_mcg.vcf",
         //"--output", "octopus_NA12878HC_22_unlagged_dummy.vcf",
         //"--output", "octopus_calls2.vcf",

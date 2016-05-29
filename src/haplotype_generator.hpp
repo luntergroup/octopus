@@ -30,111 +30,143 @@ class Haplotype;
 
 namespace Octopus
 {
-    class HaplotypeGenerator
-    {
-    public:
-        enum class LaggingPolicy { None, Mild, Aggressive };
-        
-        class HaplotypeOverflowError;
-        
-        class Builder;
-        
-        HaplotypeGenerator() = delete;
-        
-        HaplotypeGenerator(const GenomicRegion& window, const ReferenceGenome& reference,
-                           const MappableFlatSet<Variant>& candidates, const ReadMap& reads,
-                           unsigned soft_max_haplotypes, unsigned hard_max_haplotypes,
-                           LaggingPolicy lagging = LaggingPolicy::None);
-        
-        ~HaplotypeGenerator() = default;
-        
-        HaplotypeGenerator(const HaplotypeGenerator&)            = default;
-        HaplotypeGenerator& operator=(const HaplotypeGenerator&) = default;
-        HaplotypeGenerator(HaplotypeGenerator&&)                 = default;
-        HaplotypeGenerator& operator=(HaplotypeGenerator&&)      = default;
-        
-        const GenomicRegion& tell_next_active_region() const;
-        
-        std::pair<std::vector<Haplotype>, GenomicRegion> progress();
-        
-        void clear_progress() noexcept;
-        
-        void uniquely_keep(const std::vector<Haplotype>& haplotypes);
-        void remove(const std::vector<Haplotype>& haplotypes);
-        void remove(const std::vector<std::reference_wrapper<const Haplotype>>& haplotypes);
-        
-        void force_forward(GenomicRegion to);
-        
-    private:
-        HaplotypeTree tree_;
-        GenomeWalker walker_;
-        boost::optional<GenomeWalker> lagged_walker_;
-        
-        MappableFlatSet<Allele> alleles_;
-        std::reference_wrapper<const ReadMap> reads_;
-        
-        GenomicRegion current_active_region_;
-        mutable boost::optional<GenomicRegion> next_active_region_;
-        
-        unsigned soft_max_haplotypes_, hard_max_haplotypes_ = 150'000;
-        
-        mutable MappableFlatMultiSet<Allele> holdout_set_;
-        mutable boost::optional<GenomicRegion> current_holdout_region_;
-        mutable std::unordered_set<GenomicRegion> previous_holdout_regions_;
-        
-        boost::optional<Allele> rightmost_allele_;
-        
-        bool is_lagged() const noexcept;
-        bool is_active_region_lagged() const;
-        
-        void update_next_active_region() const;
-        void set_holdout_set(const GenomicRegion& active_region);
-        void rientroduce_holdout_set();
-        GenomicRegion calculate_haplotype_region() const;
-    };
+class HaplotypeGenerator
+{
+public:
+    enum class LaggingPolicy { None, Conservative, Aggressive };
     
-    class HaplotypeGenerator::HaplotypeOverflowError : public std::runtime_error
-    {
-    public:
-        HaplotypeOverflowError(GenomicRegion region);
-        
-        virtual const char* what() const noexcept override;
-        
-        const GenomicRegion& region() const noexcept;
-        
-        unsigned overflow_size() const noexcept;
-        
-    private:
-        GenomicRegion region_;
-        std::string message_;
-    };
+    class HaplotypeOverflowError;
     
-    class HaplotypeGenerator::Builder
-    {
-    public:
-        using LaggingPolicy = HaplotypeGenerator::LaggingPolicy;
-        
-        Builder();
-        
-        ~Builder() = default;
-        
-        Builder(const Builder&)            = default;
-        Builder& operator=(const Builder&) = default;
-        Builder(Builder&&)                 = default;
-        Builder& operator=(Builder&&)      = default;
-        
-        Builder& set_soft_max_haplotypes(unsigned n) noexcept;
-        Builder& set_soft_hard_haplotypes(unsigned n) noexcept;
-        Builder& set_lagging_policy(LaggingPolicy policy) noexcept;
-        
-        HaplotypeGenerator build(const ReferenceGenome& reference, const GenomicRegion& window,
-                                 const MappableFlatSet<Variant>& candidates,
-                                 const ReadMap& reads) const;
-        
-    private:
-        unsigned soft_max_haplotypes_, hard_max_haplotypes_;
-        LaggingPolicy lagging_policy_;
-    };
+    class Builder;
+    
+    HaplotypeGenerator() = delete;
+    
+    HaplotypeGenerator(const GenomicRegion& window, const ReferenceGenome& reference,
+                       const MappableFlatSet<Variant>& candidates, const ReadMap& reads,
+                       unsigned soft_max_haplotypes, unsigned hard_max_haplotypes,
+                       LaggingPolicy lagging = LaggingPolicy::None);
+    
+    ~HaplotypeGenerator() = default;
+    
+    HaplotypeGenerator(const HaplotypeGenerator&)            = default;
+    HaplotypeGenerator& operator=(const HaplotypeGenerator&) = default;
+    HaplotypeGenerator(HaplotypeGenerator&&)                 = default;
+    HaplotypeGenerator& operator=(HaplotypeGenerator&&)      = default;
+    
+    GenomicRegion tell_next_active_region() const;
+    
+    void progress(GenomicRegion to);
+    
+    void stop() noexcept;
+    
+    std::pair<std::vector<Haplotype>, GenomicRegion> generate();
+    
+    bool removal_has_impact() const;
+    
+    template <typename Container> void remove_duplicates(const Container& haplotypes);
+    template <typename Container> void remove(const Container& haplotypes);
+    
+private:
+    HaplotypeTree tree_;
+    GenomeWalker walker_;
+    boost::optional<GenomeWalker> lagged_walker_;
+    
+    unsigned soft_max_haplotypes_, hard_max_haplotypes_;
+    
+    MappableFlatSet<Allele> alleles_;
+    std::reference_wrapper<const ReadMap> reads_;
+    
+    GenomicRegion current_active_region_;
+    
+    mutable boost::optional<GenomicRegion> next_active_region_;
+    
+    mutable MappableFlatMultiSet<Allele> holdout_set_;
+    mutable boost::optional<GenomicRegion> current_holdout_region_;
+    mutable std::unordered_set<GenomicRegion> previous_holdout_regions_;
+    
+    boost::optional<Allele> rightmost_allele_;
+    
+    bool is_lagged() const noexcept;
+    bool is_active_region_lagged() const;
+    
+    void reset_next_active_region() const noexcept;
+    void update_next_active_region() const;
+    
+    void set_holdout_set(const GenomicRegion& active_region);
+    void rientroduce_holdout_set();
+    
+    GenomicRegion calculate_haplotype_region() const;
+};
+
+class HaplotypeGenerator::HaplotypeOverflowError : public std::runtime_error
+{
+public:
+    HaplotypeOverflowError(GenomicRegion region);
+    
+    virtual const char* what() const noexcept override;
+    
+    const GenomicRegion& region() const noexcept;
+    
+    unsigned overflow_size() const noexcept;
+    
+private:
+    GenomicRegion region_;
+    std::string message_;
+};
+
+template <typename Container>
+void HaplotypeGenerator::remove_duplicates(const Container& haplotypes)
+{
+    reset_next_active_region();
+    
+    if (!is_active_region_lagged() || tree_.num_haplotypes() == haplotypes.size()) {
+        return;
+    }
+    
+    prune_unique(haplotypes, tree_);
+}
+
+template <typename Container>
+void HaplotypeGenerator::remove(const Container& haplotypes)
+{
+    if (haplotypes.empty()) return;
+    
+    reset_next_active_region();
+    
+    if (!is_active_region_lagged() || haplotypes.size() == tree_.num_haplotypes()) {
+        tree_.clear();
+        alleles_.erase_overlapped(current_active_region_);
+    } else {
+        prune_all(haplotypes, tree_);
+    }
+}
+
+class HaplotypeGenerator::Builder
+{
+public:
+    using LaggingPolicy = HaplotypeGenerator::LaggingPolicy;
+    
+    Builder();
+    
+    ~Builder() = default;
+    
+    Builder(const Builder&)            = default;
+    Builder& operator=(const Builder&) = default;
+    Builder(Builder&&)                 = default;
+    Builder& operator=(Builder&&)      = default;
+    
+    Builder& set_soft_max_haplotypes(unsigned n) noexcept;
+    Builder& set_soft_hard_haplotypes(unsigned n) noexcept;
+    Builder& set_lagging_policy(LaggingPolicy policy) noexcept;
+    
+    HaplotypeGenerator build(const ReferenceGenome& reference, const GenomicRegion& window,
+                             const MappableFlatSet<Variant>& candidates,
+                             const ReadMap& reads) const;
+    
+private:
+    unsigned soft_max_haplotypes_, hard_max_haplotypes_;
+    LaggingPolicy lagging_policy_;
+};
 } // namespace Octopus
 
 #endif /* haplotype_generator_hpp */
