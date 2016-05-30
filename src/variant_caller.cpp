@@ -273,54 +273,6 @@ void append(std::vector<CallWrapper>&& new_calls, std::deque<VcfRecord>& curr_re
                         std::make_move_iterator(std::begin(new_records)),
                         std::make_move_iterator(std::end(new_records)));
 }
-    
-    auto max_posterior_haplotype(const Genotype<Haplotype>& genotype,
-                                             const unsigned read, const SampleIdType& sample,
-                                             const HaplotypeLikelihoodCache& likelihoods)
-    {
-        return std::distance(std::cbegin(genotype),
-                             std::max_element(std::cbegin(genotype), std::cend(genotype),
-                                 [&] (const auto& lhs, const auto& rhs) {
-                                     return likelihoods.log_likelihoods(sample, lhs)[read]
-                                        < likelihoods.log_likelihoods(sample, rhs)[read];
-                                 }));
-    }
-    
-    auto partition_by_strand(const Genotype<Haplotype>& genotype,
-                             const SampleIdType& sample, const ReadContainer& reads,
-                             const HaplotypeLikelihoodCache& likelihoods)
-    {
-        std::vector<std::pair<unsigned, unsigned>> counts(genotype.ploidy(), std::pair<unsigned, unsigned> {});
-        
-        for (unsigned i {0}; i < reads.size(); ++i) {
-            //std::cout << reads[i] << std::endl;
-            
-            const auto j = max_posterior_haplotype(genotype, i, sample, likelihoods);
-            
-            if (reads[i].is_marked_reverse_mapped()) {
-                ++counts[j].second;
-            } else {
-                ++counts[j].first;
-            }
-        }
-        
-        for (const auto& p : counts) {
-            auto b = Maths::beta_hdi((float) p.first + 0.5, (float) p.second + 0.5);
-            std::cout << p.first << " " << p.second << " " << b.first << " " << b.second << std::endl;
-        }
-    }
-    
-    template <typename T>
-    void test(const T& genotype_posteriors, const ReadMap& reads, const HaplotypeLikelihoodCache& likelihoods)
-    {
-        for (const auto& p : genotype_posteriors) {
-            auto it = std::max_element(std::cbegin(p.second), std::cend(p.second),
-                                       [] (const auto& lhs, const auto& rhs) {
-                                           return lhs.second < rhs.second;
-                                       });
-            partition_by_strand(it->first, p.first, reads.at(p.first), likelihoods);
-        }
-    }
 
 std::deque<VcfRecord>
 VariantCaller::call(const GenomicRegion& call_region, ProgressMeter& progress_meter) const
@@ -467,24 +419,21 @@ VariantCaller::call(const GenomicRegion& call_region, ProgressMeter& progress_me
         const auto caller_latents = this->infer_latents(haplotypes, haplotype_likelihoods);
         pause_timer(latent_timer);
         
-//        // TEST
-//        std::cout << active_region << std::endl;
-//        test(*caller_latents->get_genotype_posteriors(), active_reads, haplotype_likelihoods);
-//        // END TEST
-        
-        haplotype_likelihoods.clear();
+        if (!parameters_.allow_model_filtering) {
+            haplotype_likelihoods.clear();
+        }
         
         if (TRACE_MODE) {
             Logging::TraceLogger trace_log {};
             debug::print_haplotype_posteriors(stream(trace_log),
-                                              *caller_latents->get_haplotype_posteriors(), -1);
+                                              *caller_latents->haplotype_posteriors(), -1);
         } else if (debug_log_) {
             debug::print_haplotype_posteriors(stream(*debug_log_),
-                                              *caller_latents->get_haplotype_posteriors());
+                                              *caller_latents->haplotype_posteriors());
         }
         
         resume_timer(phasing_timer);
-        const auto phase_set = phaser_.try_phase(haplotypes, *caller_latents->get_genotype_posteriors(),
+        const auto phase_set = phaser_.try_phase(haplotypes, *caller_latents->genotype_posteriors(),
                                                  copy_overlapped_to_vector(candidates, haplotype_region(haplotypes)));
         pause_timer(phasing_timer);
         
@@ -503,14 +452,31 @@ VariantCaller::call(const GenomicRegion& call_region, ProgressMeter& progress_me
             
             auto active_candidates = copy_overlapped_to_vector(candidates, phase_set->region);
             
-            resume_timer(calling_timer);
-            auto variant_calls = wrap(this->call_variants(active_candidates, *caller_latents));
-            pause_timer(calling_timer);
-            
-            resume_timer(output_timer);
-            set_phasing(variant_calls, *phase_set);
-            append(std::move(variant_calls), result, record_factory, call_region);
-            pause_timer(output_timer);
+            if (!active_candidates.empty()) {
+                resume_timer(calling_timer);
+                auto variant_calls = wrap(this->call_variants(active_candidates, *caller_latents));
+                pause_timer(calling_timer);
+                
+                if (!variant_calls.empty()) {
+                    if (parameters_.allow_model_filtering) {
+                        const auto dummy_posterior = this->calculate_dummy_model_posterior(haplotypes,
+                                                                                           haplotype_likelihoods,
+                                                                                           *caller_latents);
+                        
+                        if (dummy_posterior > 0.15) {
+                            for (auto& call : variant_calls) {
+                                call->filter();
+                            }
+                        }
+                    }
+                    
+                    resume_timer(output_timer);
+                    set_phasing(variant_calls, *phase_set);
+                    
+                    append(std::move(variant_calls), result, record_factory, call_region);
+                    pause_timer(output_timer);
+                }
+            }
             
             active_region = right_overhang_region(active_region, phase_set->region);
             
@@ -518,13 +484,14 @@ VariantCaller::call(const GenomicRegion& call_region, ProgressMeter& progress_me
             haplotype_generator.progress(active_region);
             pause_timer(haplotype_generation_timer);
         } else {
+            resume_timer(haplotype_generation_timer);
             if (has_removal_impact) { // if there was no impact before there can't be now either
                 has_removal_impact = haplotype_generator.removal_has_impact();
             }
             
             if (has_removal_impact) {
                 auto removable_haplotypes = get_removable_haplotypes(haplotypes,
-                                                                     *caller_latents->get_haplotype_posteriors());
+                                                                     *caller_latents->haplotype_posteriors());
                 
                 haplotype_generator.remove(removable_haplotypes);
             }
@@ -555,11 +522,23 @@ VariantCaller::call(const GenomicRegion& call_region, ProgressMeter& progress_me
                 pause_timer(calling_timer);
                 
                 if (!variant_calls.empty()) {
+                    if (parameters_.allow_model_filtering) {
+                        const auto dummy_posterior = this->calculate_dummy_model_posterior(haplotypes,
+                                                                                           haplotype_likelihoods,
+                                                                                           *caller_latents);
+                        
+                        if (dummy_posterior > 0.15) {
+                            for (auto& call : variant_calls) {
+                                call->filter();
+                            }
+                        }
+                    }
+                    
                     called_regions = extract_covered_regions(variant_calls);
                     
                     resume_timer(phasing_timer);
                     const auto phasings = phaser_.force_phase(haplotypes,
-                                                              *caller_latents->get_genotype_posteriors(),
+                                                              *caller_latents->genotype_posteriors(),
                                                               active_candidates);
                     pause_timer(phasing_timer);
                     
@@ -567,6 +546,7 @@ VariantCaller::call(const GenomicRegion& call_region, ProgressMeter& progress_me
                     
                     resume_timer(output_timer);
                     set_phasing(variant_calls, phasings);
+                    
                     append(std::move(variant_calls), result, record_factory, call_region);
                     pause_timer(output_timer);
                 }
@@ -583,6 +563,8 @@ VariantCaller::call(const GenomicRegion& call_region, ProgressMeter& progress_me
             
             completed_region = encompassing_region(completed_region, passed_region);
         }
+        
+        haplotype_likelihoods.clear();
         
         progress_meter.log_completed(completed_region);
     }
@@ -688,6 +670,8 @@ void VariantCaller::populate(HaplotypeLikelihoodCache& haplotype_likelihoods,
                              const MappableFlatSet<Variant>& candidates,
                              const ReadMap& active_reads) const
 {
+    assert(haplotype_likelihoods.empty());
+    
     boost::optional<HaplotypeLikelihoodCache::FlankState> flank_state {};
     
     if (debug_log_) {
@@ -752,8 +736,6 @@ VariantCaller::get_removable_haplotypes(const std::vector<Haplotype>& haplotypes
             result.emplace_back(p.first);
         }
     }
-    
-    result.shrink_to_fit();
     
     return result;
 }

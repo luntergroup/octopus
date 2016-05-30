@@ -44,7 +44,6 @@ namespace GenotypeModel
         std::reference_wrapper<const HaplotypeLikelihoodCache> haplotype_likelihoods_;
         
         unsigned ploidy_;
-        double ln_ploidy_;
         
         // These are just for optimisation
         double log_likelihood_haploid(const SampleIdType& sample, const Genotype<Haplotype>& genotype) const;

@@ -328,16 +328,16 @@ inline GenomicRegion tail_position(const GenomicRegion& region)
     return GenomicRegion {region.contig_name(), tail_position(region.contig_region())};
 }
 
-inline GenomicRegion::DifferenceType begin_distance(const GenomicRegion& lhs, const GenomicRegion& rhs)
+inline GenomicRegion::DifferenceType begin_distance(const GenomicRegion& first, const GenomicRegion& second)
 {
-    if (!is_same_contig(lhs, rhs)) throw RegionError {to_string(lhs), to_string(rhs)};
-    return begin_distance(lhs.contig_region(), rhs.contig_region());
+    if (!is_same_contig(first, second)) throw RegionError {to_string(first), to_string(second)};
+    return begin_distance(first.contig_region(), second.contig_region());
 }
 
-inline GenomicRegion::DifferenceType end_distance(const GenomicRegion& lhs, const GenomicRegion& rhs)
+inline GenomicRegion::DifferenceType end_distance(const GenomicRegion& first, const GenomicRegion& second)
 {
-    if (!is_same_contig(lhs, rhs)) throw RegionError {to_string(lhs), to_string(rhs)};
-    return end_distance(lhs.contig_region(), rhs.contig_region());
+    if (!is_same_contig(first, second)) throw RegionError {to_string(first), to_string(second)};
+    return end_distance(first.contig_region(), second.contig_region());
 }
 
 namespace std {

@@ -64,7 +64,7 @@ BOOST_AUTO_TEST_CASE(can_write_vcf_files)
     BOOST_REQUIRE(writer.is_open());
     
     const auto header = VcfHeader::Builder().add_contig("TEST").build_once();
-    const auto record = VcfRecord::Builder().set_chromosome("TEST").set_id("TEST").set_position(0).set_quality(60).set_ref_allele("A").set_alt_allele("C").build_once();
+    const auto record = VcfRecord::Builder().set_chrom("TEST").set_id("TEST").set_pos(0).set_qual(60).set_ref("A").set_alt("C").build_once();
     
     writer.write(header);
     
@@ -87,7 +87,7 @@ BOOST_AUTO_TEST_CASE(can_write_vcfgz_files)
     BOOST_REQUIRE(writer.is_open());
     
     const auto header = VcfHeader::Builder().add_contig("TEST").build_once();
-    const auto record = VcfRecord::Builder().set_chromosome("TEST").set_id("TEST").set_position(0).set_quality(60).set_ref_allele("A").set_alt_allele("C").build_once();
+    const auto record = VcfRecord::Builder().set_chrom("TEST").set_id("TEST").set_pos(0).set_qual(60).set_ref("A").set_alt("C").build_once();
     
     writer.write(header);
     
@@ -110,7 +110,7 @@ BOOST_AUTO_TEST_CASE(can_write_bcf_files)
     BOOST_REQUIRE(writer.is_open());
     
     const auto header = VcfHeader::Builder().add_contig("TEST").build_once();
-    const auto record = VcfRecord::Builder().set_chromosome("TEST").set_id("TEST").set_position(0).set_quality(60).set_ref_allele("A").set_alt_allele("C").build_once();
+    const auto record = VcfRecord::Builder().set_chrom("TEST").set_id("TEST").set_pos(0).set_qual(60).set_ref("A").set_alt("C").build_once();
     
     writer.write(header);
     

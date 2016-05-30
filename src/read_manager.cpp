@@ -216,18 +216,18 @@ GenomicRegion ReadManager::find_covered_subregion(const std::vector<SampleIdType
                      auto overlap_begin = make_pair(begin(position_coverage), begin(p.second));
                      
                      if (begins_before(p.first, result)) {
-                         overlap_begin.second = next(begin(p.second), begin_distance(result, p.first));
+                         overlap_begin.second = next(begin(p.second), begin_distance(p.first, result));
                          overlap_begin.first = position_coverage.insert(begin(position_coverage),
                                                                         begin(p.second), overlap_begin.second);
-                         result = expand_lhs(result, begin_distance(result, p.first));
+                         result = expand_lhs(result, begin_distance(p.first, result));
                      }
                      
                      auto overlap_end = end(position_coverage);
                      
                      if (ends_before(p.first, result)) {
-                         overlap_end = std::prev(end(position_coverage), end_distance(result, p.first));
+                         overlap_end = std::prev(end(position_coverage), end_distance(p.first, result));
                          overlap_end = position_coverage.erase(overlap_end, end(position_coverage));
-                         result = expand_rhs(result, -end_distance(result, p.first));
+                         result = expand_rhs(result, -end_distance(p.first, result));
                      }
                      
                      std::transform(overlap_begin.first, overlap_end, overlap_begin.second,
@@ -254,7 +254,7 @@ GenomicRegion ReadManager::find_covered_subregion(const std::vector<SampleIdType
     auto result_size = static_cast<SizeType>(std::distance(begin(position_coverage), limit));
     
     if (begins_before(result, region)) {
-        result_size -= std::min(result_size, static_cast<SizeType>(begin_distance(region, result)));
+        result_size -= std::min(result_size, static_cast<SizeType>(begin_distance(result, region)));
     }
     
     const auto result_end = std::min(result_begin + result_size, region.end());

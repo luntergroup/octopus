@@ -54,8 +54,6 @@ namespace Octopus
         
         SampleLikelihoodMap extract_sample(const SampleIdType& sample) const;
         
-        void reserve(std::size_t num_samples, std::size_t num_haplotypes);
-        
         bool contains(const Haplotype& haplotype) const noexcept;
         
         template <typename S, typename Container>
@@ -63,7 +61,9 @@ namespace Octopus
         
         template <typename Container> void erase(const Container& haplotypes);
         
-        void clear();
+        bool empty() const noexcept;
+        
+        void clear() noexcept;
         
     private:
         static constexpr unsigned char MAPPER_KMER_SIZE {5};

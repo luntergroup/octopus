@@ -44,6 +44,11 @@ namespace GenotypeModel
     namespace debug
     {
         template <typename S>
+        void print_genotype_priors(S&& stream, const std::vector<Genotype<Haplotype>>& genotypes,
+                                   const std::vector<double>& priors, std::size_t n = 5);
+        void print_genotype_priors(const std::vector<Genotype<Haplotype>>& genotypes,
+                                   const std::vector<double>& priors, std::size_t n = 5);
+        template <typename S>
         void print_genotype_likelihoods(S&& stream, const std::vector<Genotype<Haplotype>>& genotypes,
                                         const std::vector<double>& likelihoods, std::size_t n = 5);
         void print_genotype_likelihoods(const std::vector<Genotype<Haplotype>>& genotypes,
@@ -63,22 +68,18 @@ namespace GenotypeModel
         
         std::vector<double> result(genotypes.size());
         
-        //resume_timer(misc_timer[1]);
         std::transform(std::cbegin(genotypes), std::cend(genotypes), std::begin(result),
                        [&sample, &likelihood_model] (const auto& genotype) {
                            return likelihood_model.log_likelihood(sample, genotype);
                        });
-        //pause_timer(misc_timer[1]);
         
         if (debug_log_) debug::print_genotype_likelihoods(stream(*debug_log_), genotypes, result);
         
-        //resume_timer(misc_timer[2]);
         std::transform(std::cbegin(genotypes), std::cend(genotypes), std::cbegin(result),
                        std::begin(result),
                        [this] (const auto& genotype, const auto likelihood) {
                            return genotype_prior_model_.get().evaluate(genotype) + likelihood;
                        });
-        //pause_timer(misc_timer[2]);
         
         const auto log_evidence = Maths::normalise_exp(result);
         
@@ -87,6 +88,50 @@ namespace GenotypeModel
     
     namespace debug
     {
+        template <typename S>
+        void print_genotype_priors(S&& stream, const std::vector<Genotype<Haplotype>>& genotypes,
+                                   const std::vector<double>& priors, const std::size_t n)
+        {
+            assert(genotypes.size() == priors.size());
+            
+            const auto m = std::min(n, genotypes.size());
+            
+            if (m == genotypes.size()) {
+                stream << "Printing all genotype priors " << '\n';
+            } else {
+                stream << "Printing top " << m << " genotype priors " << '\n';
+            }
+            
+            using GenotypeReference = std::reference_wrapper<const Genotype<Haplotype>>;
+            
+            std::vector<std::pair<GenotypeReference, double>> v {};
+            v.reserve(genotypes.size());
+            
+            std::transform(std::cbegin(genotypes), std::cend(genotypes), std::cbegin(priors),
+                           std::back_inserter(v), [] (const auto& g, const auto& p) {
+                               return std::make_pair(std::cref(g), p);
+                           });
+            
+            const auto mth = std::next(std::begin(v), m);
+            
+            std::partial_sort(std::begin(v), mth, std::end(v),
+                              [] (const auto& lhs, const auto& rhs) {
+                                  return lhs.second > rhs.second;
+                              });
+            
+            std::for_each(std::begin(v), mth,
+                          [&] (const auto& p) {
+                              ::debug::print_variant_alleles(stream, p.first);
+                              stream << " " << p.second << '\n';
+                          });
+        }
+        
+        void print_genotype_priors(const std::vector<Genotype<Haplotype>>& genotypes,
+                                   const std::vector<double>& priors, const std::size_t n)
+        {
+            print_genotype_priors(std::cout, genotypes, priors, n);
+        }
+        
         template <typename S>
         void print_genotype_likelihoods(S&& stream, const std::vector<Genotype<Haplotype>>& genotypes,
                                         const std::vector<double>& likelihoods, std::size_t n)

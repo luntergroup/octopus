@@ -83,7 +83,7 @@ double log_probability(const AlignedRead& read, const Haplotype& haplotype,
 {
     assert(contains(haplotype, read));
     
-    const auto original_mapping_position = begin_distance(read, haplotype);
+    const auto original_mapping_position = begin_distance(haplotype, read);
     
     auto max_log_probability = std::numeric_limits<double>::lowest();
     

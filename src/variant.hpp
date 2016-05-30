@@ -172,12 +172,16 @@ Variant make_parsimonious(const Variant& variant, G generator)
     
     auto pf = std::mismatch(cbegin(small_allele), cend(small_allele), cbegin(big_allele));
     
-    if (pf.first == cbegin(small_allele) || small_allele.size() == 1) {
+    if (pf.first == cbegin(small_allele) && small_allele.size() == 1) {
         return variant;
     }
     
     const auto pb = std::mismatch(crbegin(small_allele), std::make_reverse_iterator(pf.first),
                                   crbegin(big_allele));
+    
+    if (pf.first == cbegin(small_allele) && pb.first == crbegin(small_allele)) {
+        return variant;
+    }
     
     if (pf.first == std::cend(small_allele)) {
         --pf.first;

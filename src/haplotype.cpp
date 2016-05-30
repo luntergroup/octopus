@@ -94,8 +94,8 @@ bool Haplotype::contains_exact(const ContigAllele& allele) const
     
     if (overlaps(explicit_allele_region_, allele) || is_indel(allele)) return false;
     
-    const auto it = std::next(std::cbegin(cached_sequence_),
-                              begin_distance(allele, contig_region(region_)));
+    const auto it = std::next(std::cbegin(sequence_),
+                              begin_distance(contig_region(region_), allele));
     
     return std::equal(std::cbegin(allele.sequence()), std::cend(allele.sequence()), it);
 }
@@ -133,8 +133,8 @@ Haplotype::SequenceType Haplotype::sequence(const ContigRegion& region) const
     }
     
     if (explicit_alleles_.empty()) {
-        return cached_sequence_.substr(begin_distance(region, region_.contig_region()),
-                                       region_size(region));
+        return sequence_.substr(begin_distance(region_.contig_region(), region),
+                                region_size(region));
     }
     
     if (is_in_reference_flank(region, explicit_allele_region_, explicit_alleles_)) {
@@ -204,7 +204,7 @@ Haplotype::SequenceType Haplotype::sequence(const GenomicRegion& region) const
 
 const Haplotype::SequenceType& Haplotype::sequence() const noexcept
 {
-    return cached_sequence_;
+    return sequence_;
 }
 
 Haplotype::SizeType Haplotype::sequence_size(const ContigRegion& region) const
@@ -256,12 +256,12 @@ void Haplotype::append(SequenceType& result, AlleleIterator first, AlleleIterato
 void Haplotype::append_reference(SequenceType& result, const ContigRegion& region) const
 {
     if (is_before(region, explicit_allele_region_)) {
-        const auto offset = begin_distance(region, region_.contig_region());
-        const auto it = std::next(std::cbegin(cached_sequence_), offset);
+        const auto offset = begin_distance(region_.contig_region(), region);
+        const auto it = std::next(std::cbegin(sequence_), offset);
         result.append(it, std::next(it, region_size(region)));
     } else {
-        const auto offset = end_distance(region_.contig_region(), region);
-        const auto it = std::prev(std::cend(cached_sequence_), offset);
+        const auto offset = end_distance(region, region_.contig_region());
+        const auto it = std::prev(std::cend(sequence_), offset);
         result.append(std::prev(it, region_size(region)), it);
     }
 }
@@ -430,6 +430,10 @@ Haplotype do_splice(const Haplotype& haplotype, const GenomicRegion& region, std
         throw std::logic_error {"Haplotype: trying to splice region from different contig"};
     }
     
+    if (!contains(contig_region(haplotype), contig_region(region))) {
+        throw std::logic_error {"Haplotype: trying to splice uncontained region"};
+    }
+    
     if (is_same_region(haplotype, region)) return haplotype;
     
     Haplotype::Builder result {region, haplotype.reference_};
@@ -439,8 +443,7 @@ Haplotype do_splice(const Haplotype& haplotype, const GenomicRegion& region, std
     const auto& contig_region = region.contig_region();
     
     if (contains(contig_region, haplotype.explicit_allele_region_)) {
-        result.explicit_alleles_.insert(end(result.explicit_alleles_),
-                                        std::cbegin(haplotype.explicit_alleles_),
+        result.explicit_alleles_.assign(std::cbegin(haplotype.explicit_alleles_),
                                         std::cend(haplotype.explicit_alleles_));
         return result.build();
     }
@@ -514,28 +517,6 @@ std::vector<Variant> difference(const Haplotype& lhs, const Haplotype& rhs)
     std::inplace_merge(std::begin(result), it, std::end(result));
     
     return result;
-}
-
-// Haplotype::Builder
-
-void add_ref_to_back(const Variant& variant, Haplotype::Builder& haplotype)
-{
-    haplotype.push_back(variant.ref_allele());
-}
-
-void add_ref_to_front(const Variant& variant, Haplotype::Builder& haplotype)
-{
-    haplotype.push_front(variant.ref_allele());
-}
-
-void add_alt_to_back(const Variant& variant, Haplotype::Builder& haplotype)
-{
-    haplotype.push_back(variant.alt_allele());
-}
-
-void add_alt_to_front(const Variant& variant, Haplotype::Builder& haplotype)
-{
-    haplotype.push_front(variant.alt_allele());
 }
 
 bool operator==(const Haplotype& lhs, const Haplotype& rhs)

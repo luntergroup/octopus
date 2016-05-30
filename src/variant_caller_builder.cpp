@@ -137,6 +137,12 @@ VariantCallerBuilder& VariantCallerBuilder::set_flank_scoring(const bool allow_f
     return *this;
 }
 
+VariantCallerBuilder& VariantCallerBuilder::set_model_filtering(bool b) noexcept
+{
+    parameters_.allow_model_filtering = b;
+    return *this;
+}
+
 VariantCallerBuilder& VariantCallerBuilder::set_min_phase_score(const double min_phase_score) noexcept
 {
     parameters_.min_phase_score = min_phase_score;
@@ -219,7 +225,8 @@ VariantCallerBuilder::CallerFactoryMap VariantCallerBuilder::generate_factory() 
         parameters_.call_sites_only,
         parameters_.max_haplotypes,
         parameters_.min_haplotype_posterior,
-        parameters_.allow_flank_scoring
+        parameters_.allow_flank_scoring,
+        parameters_.allow_model_filtering
     };
     
     return CallerFactoryMap {

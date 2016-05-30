@@ -456,7 +456,7 @@ namespace Octopus
             alts.erase(it);
         }
         
-        record.set_alt_alleles(std::move(alts));
+        record.set_alt(std::move(alts));
     }
     
     void set_vcf_genotype(const SampleIdType& sample, const Call::GenotypeCall& genotype_call,
@@ -482,10 +482,10 @@ namespace Octopus
         
         const auto& region = call->mapped_region();
         
-        result.set_chromosome(contig_name(region));
-        result.set_position(mapped_begin(region));
-        result.set_ref_allele(call->get_reference().sequence());
-        result.set_quality(phred_quality);
+        result.set_chrom(contig_name(region));
+        result.set_pos(mapped_begin(region));
+        result.set_ref(call->get_reference().sequence());
+        result.set_qual(phred_quality);
         
         set_alt_alleles(call.get(), result, samples_);
         
@@ -550,10 +550,10 @@ namespace Octopus
         
         const auto& region = calls.front()->mapped_region();
         
-        result.set_chromosome(contig_name(region));
-        result.set_position(mapped_begin(region));
-        result.set_ref_allele(calls.front()->get_reference().sequence());
-        result.set_quality(phred_quality);
+        result.set_chrom(contig_name(region));
+        result.set_pos(mapped_begin(region));
+        result.set_ref(calls.front()->get_reference().sequence());
+        result.set_qual(phred_quality);
         
         std::vector<std::vector<VcfRecord::SequenceType>> resolved_genotypes {};
         resolved_genotypes.reserve(samples_.size());
@@ -611,7 +611,7 @@ namespace Octopus
         
         alt_alleles.erase(it, std::end(alt_alleles));
         
-        result.set_alt_alleles(std::move(alt_alleles));
+        result.set_alt(std::move(alt_alleles));
         
         //result.add_info("AC",  to_strings(count_alt_alleles(*call)));
         //result.add_info("AN",  to_string(count_alleles(*call)));

@@ -70,26 +70,15 @@ private:
         using CallerLatents::HaplotypeProbabilityMap;
         using CallerLatents::GenotypeProbabilityMap;
         
-        struct NormalInferences
-        {
-            GermlineModel::InferredLatents germline, dummy;
-        };
+        Latents() = delete;
         
         Latents(std::vector<Genotype<Haplotype>>&& germline_genotypes,
                 std::vector<CancerGenotype<Haplotype>>&& somatic_genotypes,
-                GermlineModel::InferredLatents&&,
-                CNVModel::InferredLatents&&,
+                GermlineModel::InferredLatents&&, CNVModel::InferredLatents&&,
                 SomaticModel::InferredLatents&&);
         
-        Latents(std::vector<Genotype<Haplotype>>&& germline_genotypes,
-                std::vector<CancerGenotype<Haplotype>>&& somatic_genotypes,
-                GermlineModel::InferredLatents&&,
-                CNVModel::InferredLatents&&,
-                SomaticModel::InferredLatents&&,
-                NormalInferences&&);
-        
-        std::shared_ptr<HaplotypeProbabilityMap> get_haplotype_posteriors() const override;
-        std::shared_ptr<GenotypeProbabilityMap> get_genotype_posteriors() const override;
+        std::shared_ptr<HaplotypeProbabilityMap> haplotype_posteriors() const override;
+        std::shared_ptr<GenotypeProbabilityMap> genotype_posteriors() const override;
         
     private:
         std::vector<Genotype<Haplotype>> germline_genotypes_;
@@ -98,8 +87,6 @@ private:
         GermlineModel::InferredLatents germline_model_inferences_;
         CNVModel::InferredLatents cnv_model_inferences_;
         SomaticModel::InferredLatents somatic_model_inferences_;
-        
-        boost::optional<NormalInferences> normal_validation_inferences_;
         
         friend CancerVariantCaller;
     };
@@ -117,11 +104,21 @@ private:
     infer_latents(const std::vector<Haplotype>& haplotypes,
                   const HaplotypeLikelihoodCache& haplotype_likelihoods) const override;
     
+    double
+    calculate_dummy_model_posterior(const std::vector<Haplotype>& haplotypes,
+                                    const HaplotypeLikelihoodCache& haplotype_likelihoods,
+                                    const CallerLatents& latents) const override;
+    
+    double
+    calculate_dummy_model_posterior(const std::vector<Haplotype>& haplotypes,
+                                    const HaplotypeLikelihoodCache& haplotype_likelihoods,
+                                    const Latents& latents) const;
+    
     std::vector<std::unique_ptr<VariantCall>>
-    call_variants(const std::vector<Variant>& candidates, CallerLatents& latents) const override;
+    call_variants(const std::vector<Variant>& candidates, const CallerLatents& latents) const override;
     
     std::vector<std::unique_ptr<ReferenceCall>>
-    call_reference(const std::vector<Allele>& alleles, CallerLatents& latents,
+    call_reference(const std::vector<Allele>& alleles, const CallerLatents& latents,
                    const ReadMap& reads) const override;
     
     // other private methods
@@ -139,7 +136,7 @@ private:
                 const CNVModel::InferredLatents& cnv_inferences) const;
     
     std::vector<std::unique_ptr<VariantCall>>
-    call_variants(const std::vector<Variant>& candidates, Latents& latents) const;
+    call_variants(const std::vector<Variant>& candidates, const Latents& latents) const;
     
     CNVModel::Priors calculate_cnv_model_priors(const CoalescentModel& prior_model) const;
     SomaticModel::Priors calculate_somatic_model_priors(const SomaticMutationModel& prior_model) const;

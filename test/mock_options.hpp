@@ -38,7 +38,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         
         //"--target-read-buffer-size", "1.0",
         //"--reference-cache-size", "100",
-        "--threads", "0",
+        //"--threads", "0",
         
         //"--contig-output-order", "AsInReferenceReversed",
         
@@ -47,7 +47,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         
         //"--reads", NA12878_low_coverage.c_str(),
         //"--reads", NA12878_high_coverage.c_str(),
-        //"--reads", "~/Genomics/Illumina/NA12878.mapped.ILLUMINA.bwa.CEU.high_coverage_pcr_free.20130906.chr22.bam",
+        "--reads", "~/Genomics/Illumina/NA12878.mapped.ILLUMINA.bwa.CEU.high_coverage_pcr_free.20130906.chr22.bam",
         
         //"--reads", NA12891_high_coverage.c_str(),
         //"--reads", HG00101.c_str(),
@@ -59,7 +59,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         
         //"--reads", ecoli_bam.c_str(),
         
-        "--reads", "~/Genomics/Illumina/NA12878HC_HLA_C.bam",
+        //"--reads", "~/Genomics/Illumina/NA12878HC_HLA_C.bam",
         
         // TCGA
         //"--reads", "~/Genomics/cancer/TCGA/benchmark/G15511.HCC1143_BL.1.chr22.bam",
@@ -81,8 +81,9 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         
         /* input regions */
         
-        //"--regions", "22",
-        "--regions", "6:31,236,339-31,240,057", // HLA-C
+        "--regions", "22:33,516,283-36,017,379",
+        
+        //"--regions", "6:31,236,339-31,240,057", // HLA-C
         
         //"--use-one-based-indexing",
         
@@ -239,10 +240,12 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--min-assembler-base-quality", "10",
         //"--max-variant-size", "25",
         
-        "--phasing-level", "Aggressive", // Minimal, Conservative, Aggressive
+        //"--phasing-level", "Conservative", // Minimal, Conservative, Aggressive
         //"--disable-inactive-flank-scoring",
-        "--max-haplotypes", "64",
+        //"--max-haplotypes", "64",
         //"--min-haplotype-posterior", "1e-15",
+        
+        //"--disable-model-filtering",
         
         //"--min-variant-posterior", "2",
         //"--min-refcall-posterior", "0",

@@ -20,6 +20,8 @@
 
 #include "mappable_algorithms.hpp"
 
+#include "timers.hpp"
+
 namespace Octopus
 {
 Phaser::Phaser(const double min_phase_score)
@@ -39,7 +41,7 @@ namespace
     {
         PhaseComplementHash(PartitionIterator first, PartitionIterator last) : first_ {first}, last_ {last} {}
         
-        std::size_t operator()(const GenotypeReference& genotype) const
+        auto operator()(const GenotypeReference& genotype) const
         {
             using boost::hash_combine;
             
@@ -51,14 +53,14 @@ namespace
             
             return result;
         }
-        
     private:
         PartitionIterator first_, last_;
     };
     
     struct PhaseComplementEqual
     {
-        PhaseComplementEqual(PartitionIterator first, PartitionIterator last) : first_ {first}, last_ {last} {}
+        PhaseComplementEqual(PartitionIterator first, PartitionIterator last)
+        : first_ {first}, last_ {last} {}
         
         bool operator()(const GenotypeReference& lhs, const GenotypeReference& rhs) const
         {
@@ -124,8 +126,7 @@ namespace
     }
     
     template <typename Map>
-    double marginalise(const PhaseComplementSet& phase_set,
-                       const Map& genotype_posteriors)
+    double marginalise(const PhaseComplementSet& phase_set, const Map& genotype_posteriors)
     {
         return std::accumulate(std::cbegin(phase_set), std::cend(phase_set), 0.0,
                                [&] (const auto curr, const auto& genotype) {
@@ -134,8 +135,7 @@ namespace
     }
     
     template <typename Map>
-    double calculate_entropy(const PhaseComplementSet& phase_set,
-                             const Map& genotype_posteriors)
+    double calculate_entropy(const PhaseComplementSet& phase_set, const Map& genotype_posteriors)
     {
         const auto norm = marginalise(phase_set, genotype_posteriors);
         return std::max(0.0, -std::accumulate(std::cbegin(phase_set), std::cend(phase_set), 0.0,
@@ -151,8 +151,7 @@ namespace
     }
     
     template <typename Map>
-    double calculate_relative_entropy(const PhaseComplementSet& phase_set,
-                                      const Map& genotype_posteriors)
+    double calculate_relative_entropy(const PhaseComplementSet& phase_set, const Map& genotype_posteriors)
     {
         if (phase_set.size() < 2) return 1.0;
         return 1.0 - calculate_entropy(phase_set, genotype_posteriors) / maximum_entropy(phase_set.size());
@@ -182,8 +181,6 @@ namespace
     }
     
     using GenotypeSplicePosteriorMap = std::unordered_map<Genotype<Haplotype>, double>;
-    
-    
     
     template <typename Container>
     auto splice_and_marginalise(const Container& genotypes,
@@ -224,9 +221,13 @@ force_phase_sample(const GenomicRegion& region, const std::vector<GenomicRegion>
     auto first_partition = std::cbegin(partitions);
     auto last_partition  = std::cend(partitions);
     
+    resume_timer(misc_timer[0]);
     auto phase_set = generate_phase_complement_sets(genotypes, first_partition, last_partition);
+    pause_timer(misc_timer[0]);
     
+    resume_timer(misc_timer[1]);
     auto phase_score = calculate_phase_score(phase_set, genotype_posteriors);
+    pause_timer(misc_timer[1]);
     
     if (phase_score >= min_phase_score) {
         return {Phaser::PhaseSet::PhaseRegion {region, phase_score}};
@@ -236,15 +237,24 @@ force_phase_sample(const GenomicRegion& region, const std::vector<GenomicRegion>
     
     --last_partition;
     
+    std::vector<Genotype<Haplotype>> splices;
+    GenotypeSplicePosteriorMap splice_posteriors;
+    
     while (first_partition != std::cend(partitions)) {
         auto curr_region = encompassing_region(first_partition, last_partition);
         
-        auto splice_posteriors = splice_and_marginalise(genotypes, genotype_posteriors, curr_region);
+        resume_timer(misc_timer[2]);
+        std::tie(splices, splice_posteriors) = splice_and_marginalise(genotypes, genotype_posteriors,
+                                                                      curr_region);
+        pause_timer(misc_timer[2]);
         
-        phase_set = generate_phase_complement_sets(splice_posteriors.first,
-                                                   first_partition, last_partition);
+        resume_timer(misc_timer[3]);
+        phase_set = generate_phase_complement_sets(splices, first_partition, last_partition);
+        pause_timer(misc_timer[3]);
         
-        phase_score = calculate_phase_score(phase_set, splice_posteriors.second);
+        resume_timer(misc_timer[4]);
+        phase_score = calculate_phase_score(phase_set, splice_posteriors);
+        pause_timer(misc_timer[4]);
         
         if (phase_score >= min_phase_score || std::distance(first_partition, last_partition) == 1) {
             result.emplace_back(encompassing_region(first_partition, last_partition), phase_score);

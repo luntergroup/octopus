@@ -575,7 +575,7 @@
 		CA0B46661AE8609A00158BBA /* unit_tests */ = {
 			isa = PBXGroup;
 			children = (
-				CA0C55BA1C5FC63E009F3704 /* utils */,
+				CA0C55BA1C5FC63E009F3704 /* mappable */,
 				D42F72F81C5F7B1E00995F54 /* io */,
 				CA0C55B91C5FC638009F3704 /* core */,
 				CA0C55BD1C5FC6AA009F3704 /* misc */,
@@ -619,14 +619,14 @@
 			name = core;
 			sourceTree = "<group>";
 		};
-		CA0C55BA1C5FC63E009F3704 /* utils */ = {
+		CA0C55BA1C5FC63E009F3704 /* mappable */ = {
 			isa = PBXGroup;
 			children = (
 				D42F72FC1C61098600995F54 /* mappable_tests.cpp */,
 				D46094F11B550A2400AE72A1 /* mappable_algorithm_tests.cpp */,
 				CA386DA71B5BBCB90057A5A8 /* mappable_set_tests.cpp */,
 			);
-			name = utils;
+			name = mappable;
 			sourceTree = "<group>";
 		};
 		CA0C55BB1C5FC659009F3704 /* models */ = {

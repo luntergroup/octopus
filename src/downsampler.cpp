@@ -105,7 +105,7 @@ namespace
     {
         assert(!begins_before(read, region));
         
-        const auto read_offset = begin_distance(read, region);
+        const auto read_offset = begin_distance(region, read);
         
         const auto first = std::next(std::begin(required_coverage), read_offset);
         

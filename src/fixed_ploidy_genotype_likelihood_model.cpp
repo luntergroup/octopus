@@ -12,6 +12,8 @@
 #include <cmath>
 #include <algorithm>
 #include <numeric>
+#include <array>
+#include <limits>
 
 #include "maths.hpp"
 
@@ -21,12 +23,32 @@ namespace Octopus
 {
 namespace GenotypeModel
 {
+    static constexpr auto ln(const unsigned n)
+    {
+        using T = double;
+        
+        constexpr std::array<T, 11> Ln
+        {
+            std::numeric_limits<T>::infinity(),
+            0.0,
+            0.693147180559945309417232121458176568075500134360255254120,
+            1.098612288668109691395245236922525704647490557822749451734,
+            1.386294361119890618834464242916353136151000268720510508241,
+            1.609437912434100374600759333226187639525601354268517721912,
+            1.791759469228055000812477358380702272722990692183004705855,
+            1.945910149055313305105352743443179729637084729581861188459,
+            2.079441541679835928251696364374529704226500403080765762362,
+            2.197224577336219382790490473845051409294981115645498903469,
+            2.302585092994045684017991454684364207601101488628772976033
+        };
+        return Ln[n];
+    }
+    
     FixedPloidyGenotypeLikelihoodModel::FixedPloidyGenotypeLikelihoodModel(unsigned ploidy,
                                                                            const HaplotypeLikelihoodCache& haplotype_likelihoods)
     :
     haplotype_likelihoods_ {haplotype_likelihoods},
-    ploidy_ {ploidy},
-    ln_ploidy_ {std::log(ploidy)}
+    ploidy_ {ploidy}
     {}
     
     // ln p(read | genotype)  = ln sum {haplotype in genotype} p(read | haplotype) - ln ploidy
@@ -71,27 +93,29 @@ namespace GenotypeModel
         return std::inner_product(std::cbegin(log_likelihoods1), std::cend(log_likelihoods1),
                                   std::cbegin(log_likelihoods2), 0.0, std::plus<void> {},
                                   [this] (const auto a, const auto b) -> double {
-                                      return Maths::log_sum_exp(a, b) - ln_ploidy_;
+                                      return Maths::log_sum_exp(a, b) - ln(2);
                                   });
     }
     
     double FixedPloidyGenotypeLikelihoodModel::log_likelihood_triploid(const SampleIdType& sample,
                                                                        const Genotype<Haplotype>& genotype) const
     {
+        using std::cbegin; using std::cend;
+        
         const auto& log_likelihoods1 = haplotype_likelihoods_.get().log_likelihoods(sample, genotype[0]);
         
         if (genotype.is_homozygous()) {
-            return std::accumulate(std::cbegin(log_likelihoods1), std::cend(log_likelihoods1), 0.0);
+            return std::accumulate(cbegin(log_likelihoods1), cend(log_likelihoods1), 0.0);
         }
         
         if (genotype.zygosity() == 3) {
             const auto& log_likelihoods2 = haplotype_likelihoods_.get().log_likelihoods(sample, genotype[1]);
             const auto& log_likelihoods3 = haplotype_likelihoods_.get().log_likelihoods(sample, genotype[2]);
-            return Maths::inner_product(std::cbegin(log_likelihoods1), std::cend(log_likelihoods1),
-                                        std::cbegin(log_likelihoods2), std::cbegin(log_likelihoods3),
+            return Maths::inner_product(cbegin(log_likelihoods1), cend(log_likelihoods1),
+                                        cbegin(log_likelihoods2), cbegin(log_likelihoods3),
                                         0.0, std::plus<void> {},
                                         [this] (const auto a, const auto b, const auto c) -> double {
-                                            return Maths::log_sum_exp(a, b, c) - ln_ploidy_;
+                                            return Maths::log_sum_exp(a, b, c) - ln(3);
                                         });
         }
         
@@ -99,19 +123,19 @@ namespace GenotypeModel
         
         if (genotype[0] != genotype[1]) {
             const auto& log_likelihoods2 = haplotype_likelihoods_.get().log_likelihoods(sample, genotype[1]);
-            return std::inner_product(std::cbegin(log_likelihoods1), std::cend(log_likelihoods1),
-                                      std::cbegin(log_likelihoods2), 0.0, std::plus<void> {},
+            return std::inner_product(cbegin(log_likelihoods1), cend(log_likelihoods1),
+                                      cbegin(log_likelihoods2), 0.0, std::plus<void> {},
                                       [this] (const auto a, const auto b) -> double {
-                                          return Maths::log_sum_exp(a, ln2 + b) - ln_ploidy_;
+                                          return Maths::log_sum_exp(a, ln2 + b) - ln(3);
                                       });
         }
         
         const auto& log_likelihoods3 = haplotype_likelihoods_.get().log_likelihoods(sample, genotype[2]);
         
-        return std::inner_product(std::cbegin(log_likelihoods1), std::cend(log_likelihoods1),
-                                  std::cbegin(log_likelihoods3), 0.0, std::plus<void> {},
+        return std::inner_product(cbegin(log_likelihoods1), cend(log_likelihoods1),
+                                  cbegin(log_likelihoods3), 0.0, std::plus<void> {},
                                   [this] (const auto a, const auto b) -> double {
-                                      return Maths::log_sum_exp(ln2 + a, b) - ln_ploidy_;
+                                      return Maths::log_sum_exp(ln2 + a, b) - ln(3);
                                   });
     }
     
@@ -134,7 +158,7 @@ namespace GenotypeModel
                                         std::cbegin(log_likelihoods2), std::cbegin(log_likelihoods3),
                                         std::cbegin(log_likelihoods4), 0.0, std::plus<void> {},
                                         [this] (const auto a, const auto b, const auto c, const auto d) -> double {
-                                            return Maths::log_sum_exp({a, b, c, d}) - ln_ploidy_;
+                                            return Maths::log_sum_exp({a, b, c, d}) - ln(4);
                                         });
         }
         
@@ -165,14 +189,14 @@ namespace GenotypeModel
                 return std::inner_product(std::cbegin(log_likelihoods1), std::cend(log_likelihoods1),
                                           std::cbegin(log_likelihoods2), 0.0, std::plus<void> {},
                                           [this] (const auto a, const auto b) -> double {
-                                              return Maths::log_sum_exp(a, lnpm1 + b) - ln_ploidy_;
+                                              return Maths::log_sum_exp(a, lnpm1 + b) - ln(ploidy_);
                                           });
             }
             
             return std::inner_product(std::cbegin(log_likelihoods1), std::cend(log_likelihoods1),
                                       std::cbegin(log_likelihoods2), 0.0, std::plus<void> {},
                                       [this] (const auto a, const auto b) -> double {
-                                          return Maths::log_sum_exp(lnpm1 + a, b) - ln_ploidy_;
+                                          return Maths::log_sum_exp(lnpm1 + a, b) - ln(ploidy_);
                                       });
         }
         
@@ -198,7 +222,7 @@ namespace GenotypeModel
                                return haplotype_likelihoods.get()[i];
                            });
             
-            result += Maths::log_sum_exp(tmp) - ln_ploidy_;
+            result += Maths::log_sum_exp(tmp) - ln(ploidy_);
         }
         
         return result;

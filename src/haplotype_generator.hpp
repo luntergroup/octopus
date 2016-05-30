@@ -160,8 +160,7 @@ public:
     Builder& set_lagging_policy(LaggingPolicy policy) noexcept;
     
     HaplotypeGenerator build(const ReferenceGenome& reference, const GenomicRegion& window,
-                             const MappableFlatSet<Variant>& candidates,
-                             const ReadMap& reads) const;
+                             const MappableFlatSet<Variant>& candidates, const ReadMap& reads) const;
     
 private:
     unsigned soft_max_haplotypes_, hard_max_haplotypes_;

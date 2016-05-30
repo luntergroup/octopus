@@ -78,12 +78,12 @@ protected:
         using GenotypeProbabilityMap  = ProbabilityMatrix<Genotype<Haplotype>>;
         
         // Return shared_ptr as the caller may not actually need to use these latents itself,
-        // they just need to be constructable on demand. But if the caller DOES use them, then
+        // they just need to be constructable on demand. But if the caller does use them, then
         // we avoid copying.
-        virtual std::shared_ptr<HaplotypeProbabilityMap> get_haplotype_posteriors() const = 0;
-        virtual std::shared_ptr<GenotypeProbabilityMap> get_genotype_posteriors() const = 0;
+        virtual std::shared_ptr<HaplotypeProbabilityMap> haplotype_posteriors() const = 0;
+        virtual std::shared_ptr<GenotypeProbabilityMap> genotype_posteriors() const = 0;
         
-        virtual ~CallerLatents() = default;
+        virtual ~CallerLatents() noexcept = default;
     };
     
 public:
@@ -116,6 +116,7 @@ public:
         unsigned max_haplotypes;
         double min_haplotype_posterior;
         bool allow_inactive_flank_scoring;
+        bool allow_model_filtering;
     };
     
 private:
@@ -133,11 +134,16 @@ private:
     infer_latents(const std::vector<Haplotype>& haplotypes,
                   const HaplotypeLikelihoodCache& haplotype_likelihoods) const = 0;
     
+    virtual double
+    calculate_dummy_model_posterior(const std::vector<Haplotype>& haplotypes,
+                                    const HaplotypeLikelihoodCache& haplotype_likelihoods,
+                                    const CallerLatents& latents) const { return 0; }
+    
     virtual std::vector<std::unique_ptr<VariantCall>>
-    call_variants(const std::vector<Variant>& candidates, CallerLatents& latents) const = 0;
+    call_variants(const std::vector<Variant>& candidates, const CallerLatents& latents) const = 0;
     
     virtual std::vector<std::unique_ptr<ReferenceCall>>
-    call_reference(const std::vector<Allele>& alleles, CallerLatents& latents,
+    call_reference(const std::vector<Allele>& alleles, const CallerLatents& latents,
                    const ReadMap& reads) const = 0;
     
     // other private methods

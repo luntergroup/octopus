@@ -82,8 +82,10 @@ namespace Octopus
     block_compute_times_ {},
     log_ {}
     {
-        completed_regions_.reserve(regions_.size());
-        write_header();
+        if (!regions.empty()) {
+            completed_regions_.reserve(regions_.size());
+            write_header();
+        }
     }
     
     ProgressMeter::ProgressMeter(GenomicRegion region)
@@ -204,7 +206,7 @@ namespace Octopus
     
     ProgressMeter::~ProgressMeter()
     {
-        if (!done_) {
+        if (!done_ && !regions_.empty()) {
             const TimeInterval duration {start_, std::chrono::system_clock::now()};
             
             const auto time_taken = to_string(duration);

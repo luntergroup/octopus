@@ -57,6 +57,7 @@ namespace Octopus {
         VariantCallerBuilder& set_max_haplotypes(unsigned max_haplotypes) noexcept;
         VariantCallerBuilder& set_min_haplotype_posterior(double p) noexcept;
         VariantCallerBuilder& set_flank_scoring(bool allow_flank_scoring) noexcept;
+        VariantCallerBuilder& set_model_filtering(bool b) noexcept;
         VariantCallerBuilder& set_min_phase_score(double min_phase_score) noexcept;
         
         // cancer
@@ -111,6 +112,8 @@ namespace Octopus {
             unsigned max_haplotypes;
             double min_haplotype_posterior;
             bool allow_flank_scoring;
+            bool allow_model_filtering;
+            
             double min_phase_score;
             
             // cancer

@@ -90,13 +90,13 @@ dummy_latents_ {std::move(dummy_inferences)}
 }
 
 std::shared_ptr<PopulationVariantCaller::Latents::HaplotypeProbabilityMap>
-PopulationVariantCaller::Latents::get_haplotype_posteriors() const noexcept
+PopulationVariantCaller::Latents::haplotype_posteriors() const noexcept
 {
     return haplotype_posteriors_;
 }
 
 std::shared_ptr<PopulationVariantCaller::Latents::GenotypeProbabilityMap>
-PopulationVariantCaller::Latents::get_genotype_posteriors() const noexcept
+PopulationVariantCaller::Latents::genotype_posteriors() const noexcept
 {
     return genotype_posteriors_;
 }
@@ -336,9 +336,9 @@ namespace
 
 std::vector<std::unique_ptr<Octopus::VariantCall>>
 PopulationVariantCaller::call_variants(const std::vector<Variant>& candidates,
-                                       CallerLatents& latents) const
+                                       const CallerLatents& latents) const
 {
-    return call_variants(candidates, dynamic_cast<Latents&>(latents));
+    return call_variants(candidates, dynamic_cast<const Latents&>(latents));
 }
 
 //auto calculate_dummy_model_posterior(const double normal_model_log_evidence,
@@ -473,7 +473,7 @@ namespace
 
 std::vector<std::unique_ptr<ReferenceCall>>
 PopulationVariantCaller::call_reference(const std::vector<Allele>& alleles,
-                                        CallerLatents& latents,
+                                        const CallerLatents& latents,
                                         const ReadMap& reads) const
 {
     return {};

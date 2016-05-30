@@ -203,21 +203,21 @@ public:
     
     Builder() = default;
     
-    Builder& set_chromosome(std::string chromosome);
-    Builder& set_position(SizeType position);
+    Builder& set_chrom(std::string name);
+    Builder& set_pos(SizeType pos);
     Builder& set_id(IdType id);
-    Builder& set_ref_allele(const char ref_allele);
-    Builder& set_ref_allele(SequenceType ref_allele);
-    Builder& set_alt_allele(const char alt_allele); // if just one
-    Builder& set_alt_allele(SequenceType alt_allele); // if just one
-    Builder& set_alt_alleles(std::vector<SequenceType> alt_alleles);
-    Builder& set_quality(QualityType quality);
-    Builder& set_filters(const std::vector<KeyType>& filters);
-    Builder& set_filters(const std::initializer_list<KeyType>& filters);
+    Builder& set_ref(const char allele);
+    Builder& set_ref(SequenceType allele);
+    Builder& set_alt(const char allele); // if just one
+    Builder& set_alt(SequenceType allele); // if just one
+    Builder& set_alt(std::vector<SequenceType> alleles);
+    Builder& set_qual(QualityType quality);
+    Builder& set_filter(std::vector<KeyType> filter);
+    Builder& set_filter(std::initializer_list<KeyType> filter);
     Builder& add_filter(KeyType filter);
     Builder& add_info(const KeyType& key, const ValueType& value);
     Builder& add_info(const KeyType& key, const std::vector<ValueType>& values);
-    Builder& add_info(const KeyType& key, const std::initializer_list<ValueType>& values);
+    Builder& add_info(const KeyType& key, std::initializer_list<ValueType> values);
     Builder& add_info_flag(KeyType key);
     Builder& set_format(std::vector<KeyType> format);
     Builder& set_format(std::initializer_list<KeyType> format);
@@ -227,24 +227,24 @@ public:
     Builder& add_genotype(const SampleIdType& sample, const std::vector<unsigned>& alleles, Phasing is_phased);
     Builder& add_genotype_field(const SampleIdType& sample, const KeyType& key, const ValueType& value);
     Builder& add_genotype_field(const SampleIdType& sample, const KeyType& key, const std::vector<ValueType>& values);
-    Builder& add_genotype_field(const SampleIdType& sample, const KeyType& key, const std::initializer_list<ValueType>& values);
+    Builder& add_genotype_field(const SampleIdType& sample, const KeyType& key, std::initializer_list<ValueType> values);
     
     Builder& set_refcall();
     Builder& set_somatic();
     
-    SizeType position() const noexcept;
+    SizeType pos() const noexcept;
     
     VcfRecord build() const;
     VcfRecord build_once() noexcept;
     
 private:
-    std::string chromosome_ = ".";
-    SizeType position_ = 0;
+    std::string chrom_ = ".";
+    SizeType pos_ = 0;
     IdType id_ = ".";
-    SequenceType ref_allele_ = ".";
-    std::vector<SequenceType> alt_alleles_ = {"."};
-    boost::optional<QualityType> quality_ = boost::none;
-    std::vector<KeyType> filters_ = {};
+    SequenceType ref_ = ".";
+    std::vector<SequenceType> alt_ = {"."};
+    boost::optional<QualityType> qual_ = boost::none;
+    std::vector<KeyType> filter_ = {};
     std::unordered_map<KeyType, std::vector<ValueType>> info_ = {};
     std::vector<KeyType> format_ = {};
     std::unordered_map<SampleIdType, Genotype> genotypes_ = {};

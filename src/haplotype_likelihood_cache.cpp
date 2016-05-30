@@ -139,16 +139,10 @@ HaplotypeLikelihoodCache::extract_sample(const SampleIdType& sample) const
     SampleLikelihoodMap result {cache_.size()};
     
     for (const auto& p : cache_) {
-        result.emplace(std::cref(p.first), std::cref(p.second[sample_index]));
+        result.emplace(p.first, p.second[sample_index]);
     }
     
     return result;
-}
-
-void HaplotypeLikelihoodCache::reserve(std::size_t num_samples, std::size_t num_haplotypes)
-{
-    sample_indices_.reserve(num_samples);
-    cache_.reserve(num_haplotypes);
 }
 
 bool HaplotypeLikelihoodCache::contains(const Haplotype& haplotype) const noexcept
@@ -156,7 +150,12 @@ bool HaplotypeLikelihoodCache::contains(const Haplotype& haplotype) const noexce
     return cache_.count(haplotype) == 1;
 }
 
-void HaplotypeLikelihoodCache::clear()
+bool HaplotypeLikelihoodCache::empty() const noexcept
+{
+    return cache_.empty();
+}
+
+void HaplotypeLikelihoodCache::clear() noexcept
 {
     cache_.clear();
     sample_indices_.clear();
@@ -194,8 +193,7 @@ HaplotypeLikelihoodCache merge_samples(const std::vector<SampleIdType>& samples,
                                        const std::vector<Haplotype>& haplotypes,
                                        const HaplotypeLikelihoodCache& haplotype_likelihoods)
 {
-    HaplotypeLikelihoodCache result {};
-    result.reserve(1, haplotypes.size());
+    HaplotypeLikelihoodCache result {static_cast<unsigned>(haplotypes.size()), {new_sample}};
     
     for (const auto& haplotype : haplotypes) {
         HaplotypeLikelihoodCache::Likelihoods likelihoods {};

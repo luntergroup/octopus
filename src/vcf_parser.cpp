@@ -376,29 +376,29 @@ VcfRecord parse_record(const std::string& line, const std::vector<VcfRecord::Sam
     
     VcfRecord::Builder rb {};
     
-    rb.set_chromosome(it->data);
+    rb.set_chrom(it->data);
     ++it;
-    rb.set_position(static_cast<VcfRecord::SizeType>(std::stol(it->data)));
+    rb.set_pos(static_cast<VcfRecord::SizeType>(std::stol(it->data)));
     ++it;
     rb.set_id(it->data);
     ++it;
-    rb.set_ref_allele(it->data);
+    rb.set_ref(it->data);
     ++it;
-    rb.set_alt_alleles(split(it->data, ','));
+    rb.set_alt(split(it->data, ','));
     ++it;
     
     if (it->data == ".") {
-        rb.set_quality(0);
+        rb.set_qual(0);
     } else {
         try {
-            rb.set_quality(static_cast<VcfRecord::QualityType>(std::stoi(it->data)));
+            rb.set_qual(static_cast<VcfRecord::QualityType>(std::stoi(it->data)));
         } catch (const std::invalid_argument& e) {
-            rb.set_quality(0); // or should throw?
+            rb.set_qual(0); // or should throw?
         }
     }
     
     ++it;
-    rb.set_filters(split(it->data, ':'));
+    rb.set_filter(split(it->data, ':'));
     ++it;
     parse_info(it->data, rb);
     ++it;

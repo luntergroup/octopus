@@ -16,7 +16,7 @@ namespace Octopus
     {
         record.set_somatic();
         
-        record.set_alt_allele(variant_.alt_allele().sequence());
+        record.set_alt(variant_.alt_allele().sequence());
         
         record.add_format("SCR");
         

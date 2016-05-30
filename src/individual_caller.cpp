@@ -55,30 +55,7 @@ IndividualVariantCaller::Latents::Latents(const SampleIdType& sample,
 :
 genotype_posteriors_ {},
 haplotype_posteriors_ {},
-model_log_evidence_ {inferences.log_evidence},
-dummy_latents_ {}
-{
-    GenotypeProbabilityMap genotype_posteriors {
-        std::make_move_iterator(std::begin(genotypes)),
-        std::make_move_iterator(std::end(genotypes))
-    };
-    
-    insert_sample(sample, inferences.posteriors.genotype_probabilities, genotype_posteriors);
-    
-    genotype_posteriors_  = std::make_shared<GenotypeProbabilityMap>(std::move(genotype_posteriors));
-    haplotype_posteriors_ = std::make_shared<HaplotypeProbabilityMap>(calculate_haplotype_posteriors(haplotypes));
-}
-
-IndividualVariantCaller::Latents::Latents(const SampleIdType& sample,
-                                          const std::vector<Haplotype>& haplotypes,
-                                          std::vector<Genotype<Haplotype>>&& genotypes,
-                                          ModelInferences&& inferences,
-                                          ModelInferences&& dummy_inferences)
-:
-genotype_posteriors_ {},
-haplotype_posteriors_ {},
-model_log_evidence_ {inferences.log_evidence},
-dummy_latents_ {std::move(dummy_inferences)}
+model_log_evidence_ {inferences.log_evidence}
 {
     GenotypeProbabilityMap genotype_posteriors {
         std::make_move_iterator(std::begin(genotypes)),
@@ -92,13 +69,13 @@ dummy_latents_ {std::move(dummy_inferences)}
 }
 
 std::shared_ptr<IndividualVariantCaller::Latents::HaplotypeProbabilityMap>
-IndividualVariantCaller::Latents::get_haplotype_posteriors() const noexcept
+IndividualVariantCaller::Latents::haplotype_posteriors() const noexcept
 {
     return haplotype_posteriors_;
 }
 
 std::shared_ptr<IndividualVariantCaller::Latents::GenotypeProbabilityMap>
-IndividualVariantCaller::Latents::get_genotype_posteriors() const noexcept
+IndividualVariantCaller::Latents::genotype_posteriors() const noexcept
 {
     return genotype_posteriors_;
 }
@@ -131,27 +108,57 @@ std::unique_ptr<IndividualVariantCaller::CallerLatents>
 IndividualVariantCaller::infer_latents(const std::vector<Haplotype>& haplotypes,
                                        const HaplotypeLikelihoodCache& haplotype_likelihoods) const
 {
-    CoalescentModel prior_model {Haplotype {mapped_region(haplotypes.front()), reference_}};
-    
-    GenotypeModel::Individual model {prior_model, debug_log_};
-    
     auto genotypes = generate_all_genotypes(haplotypes, ploidy_);
     
     if (debug_log_) stream(*debug_log_) << "There are " << genotypes.size() << " candidate genotypes";
     
+    const CoalescentModel prior_model {Haplotype {mapped_region(haplotypes.front()), reference_}};
+    
+    const GenotypeModel::Individual model {prior_model, debug_log_};
+    
     auto inferences = model.infer_latents(sample(), genotypes, haplotype_likelihoods);
     
-    // TEST
-    auto dummy_genotypes = generate_all_genotypes(haplotypes, ploidy_ + 1);
-    if (debug_log_) {
-        stream(*debug_log_) << "Evaluating dummy model with " << dummy_genotypes.size() << " genotypes";
-    }
-    auto dummy_inferences = model.infer_latents(sample(), dummy_genotypes, haplotype_likelihoods);
-    return std::make_unique<Latents>(sample(), haplotypes, std::move(genotypes), std::move(inferences),
-                                     std::move(dummy_inferences));
-    // END TEST
-    
     return std::make_unique<Latents>(sample(), haplotypes, std::move(genotypes), std::move(inferences));
+}
+
+double
+IndividualVariantCaller::calculate_dummy_model_posterior(const std::vector<Haplotype>& haplotypes,
+                                                         const HaplotypeLikelihoodCache& haplotype_likelihoods,
+                                                         const CallerLatents& latents) const
+{
+    return calculate_dummy_model_posterior(haplotypes, haplotype_likelihoods,
+                                           dynamic_cast<const Latents&>(latents));
+}
+
+static auto calculate_dummy_model_posterior(const double normal_model_log_evidence,
+                                            const double dummy_model_log_evidence)
+{
+    constexpr double normal_model_prior {0.9999999};
+    constexpr double dummy_model_prior {1.0 - normal_model_prior};
+    
+    const auto normal_model_ljp = std::log(normal_model_prior) + normal_model_log_evidence;
+    const auto dummy_model_ljp  = std::log(dummy_model_prior) + dummy_model_log_evidence;
+    
+    const auto norm = Maths::log_sum_exp(normal_model_ljp, dummy_model_ljp);
+    
+    return std::exp(dummy_model_ljp - norm);
+}
+
+double
+IndividualVariantCaller::calculate_dummy_model_posterior(const std::vector<Haplotype>& haplotypes,
+                                                         const HaplotypeLikelihoodCache& haplotype_likelihoods,
+                                                         const Latents& latents) const
+{
+    const auto genotypes = generate_all_genotypes(haplotypes, ploidy_ + 1);
+    
+    const CoalescentModel prior_model {Haplotype {mapped_region(haplotypes.front()), reference_}};
+    
+    const GenotypeModel::Individual model {prior_model, debug_log_};
+    
+    const auto inferences = model.infer_latents(sample(), genotypes, haplotype_likelihoods);
+    
+    return ::Octopus::calculate_dummy_model_posterior(latents.model_log_evidence_,
+                                                      inferences.log_evidence);
 }
 
 namespace
@@ -315,8 +322,6 @@ transform_call(const SampleIdType& sample, VariantCall&& variant_call, GenotypeC
                                               variant_call.posterior)
     };
     
-    if (variant_call.is_dummy_filtered) result->filter();
-    
     return result;
 }
 
@@ -340,23 +345,9 @@ auto transform_calls(const SampleIdType& sample, VariantCalls&& variant_calls,
 
 std::vector<std::unique_ptr<Octopus::VariantCall>>
 IndividualVariantCaller::call_variants(const std::vector<Variant>& candidates,
-                                       CallerLatents& latents) const
+                                       const CallerLatents& latents) const
 {
-    return call_variants(candidates, dynamic_cast<Latents&>(latents));
-}
-
-static auto calculate_dummy_model_posterior(const double normal_model_log_evidence,
-                                            const double dummy_model_log_evidence)
-{
-    constexpr double normal_model_prior {0.9999999};
-    constexpr double dummy_model_prior {1.0 - normal_model_prior};
-    
-    const auto normal_model_ljp = std::log(normal_model_prior) + normal_model_log_evidence;
-    const auto dummy_model_ljp  = std::log(dummy_model_prior) + dummy_model_log_evidence;
-    
-    const auto norm = Maths::log_sum_exp(normal_model_ljp, dummy_model_ljp);
-    
-    return std::exp(dummy_model_ljp - norm);
+    return call_variants(candidates, dynamic_cast<const Latents&>(latents));
 }
 
 std::vector<std::unique_ptr<Octopus::VariantCall>>
@@ -388,17 +379,6 @@ IndividualVariantCaller::call_variants(const std::vector<Variant>& candidates,
     const auto called_regions = extract_regions(variant_calls);
     
     auto genotype_calls = call_genotypes(genotype_call, genotype_posteriors, called_regions);
-    
-    if (latents.dummy_latents_) {
-        auto dummy_model_posterior = calculate_dummy_model_posterior(latents.model_log_evidence_,
-                                                                     latents.dummy_latents_->log_evidence);
-        
-        if (debug_log_) stream(*debug_log_) << "Dummy model posterior = " << dummy_model_posterior;
-        
-        if (dummy_model_posterior > 0.01) {
-            for (auto& call : variant_calls) call.is_dummy_filtered = true;
-        }
-    }
     
     return transform_calls(sample(), std::move(variant_calls), std::move(genotype_calls));
 }
@@ -471,7 +451,7 @@ namespace
 
 std::vector<std::unique_ptr<ReferenceCall>>
 IndividualVariantCaller::call_reference(const std::vector<Allele>& alleles,
-                                        CallerLatents& latents,
+                                        const CallerLatents& latents,
                                         const ReadMap& reads) const
 {
     return {};

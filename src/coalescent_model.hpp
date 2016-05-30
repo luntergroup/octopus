@@ -17,6 +17,8 @@
 #include <iterator>
 #include <cmath>
 #include <algorithm>
+#include <complex>
+#include <numeric>
 #include <cstddef>
 #include <tuple>
 #include <cassert>
@@ -89,6 +91,70 @@ namespace Octopus
             // ploidy instead).
             return std::distance(std::cbegin(haplotypes), std::cend(haplotypes));
         }
+        
+        inline auto powm1(const unsigned i) // std::pow(-1, i)
+        {
+            return (i % 2 == 0) ? 1 : -1;
+        }
+        
+        inline auto binom(const unsigned n, const unsigned k)
+        {
+            return boost::math::binomial_coefficient<double>(n, k);
+        }
+        
+        inline double coalescent_real_space(const unsigned n, const unsigned k, const double theta)
+        {
+            double result {0};
+            
+            for (unsigned i {2}; i <= n; ++i) {
+                result += powm1(i) * binom(n - 1, i - 1) * ((i - 1) / (theta + i - 1))
+                                * std::pow(theta / (theta + i - 1), k);
+            }
+            
+            return std::log(result);
+        }
+        
+        template <typename ForwardIt>
+        auto complex_log_sum_exp(ForwardIt first, ForwardIt last)
+        {
+            using ComplexType = typename std::iterator_traits<ForwardIt>::value_type;
+            const auto l = [] (const auto& lhs, const auto& rhs) { return lhs.real() < rhs.real(); };
+            const auto max = *std::max_element(first, last, l);
+            return max + std::log(std::accumulate(first, last, ComplexType {},
+                                                  [max] (const auto curr, const auto x) {
+                                                      return curr + std::exp(x - max);
+                                                  }));
+        }
+        
+        template <typename Container>
+        auto complex_log_sum_exp(const Container& logs)
+        {
+            return complex_log_sum_exp(std::cbegin(logs), std::cend(logs));
+        }
+        
+        inline double coalescent_log_space(const unsigned n, const unsigned k, const double theta)
+        {
+            std::vector<std::complex<double>> tmp(n - 1, std::log(std::complex<double> {-1}));
+            
+            for (unsigned i {2}; i <= n; ++i) {
+                auto& cur = tmp[i - 2];
+                cur *= i;
+                cur += std::log(binom(n - 1, i - 1));
+                cur += std::log((i - 1) / (theta + i - 1));
+                cur += k * std::log(theta / (theta + i - 1));
+            }
+            
+            return complex_log_sum_exp(tmp).real();
+        }
+        
+        inline double coalescent(const unsigned n, const unsigned k, const double theta)
+        {
+            if (k <= 80) {
+                return coalescent_real_space(n, k, theta);
+            } else {
+                return coalescent_log_space(n, k, theta);
+            }
+        }
     } // namespace detail
     
     template <typename Container>
@@ -101,21 +167,13 @@ namespace Octopus
         if (it != std::cend(result_cache_)) return it->second;
         
         unsigned k_snp, k_indel, n;
-        
         std::tie(k_snp, k_indel, n) = t;
-        
-        double result {0};
         
         const auto theta = snp_heterozygosity_;
         
         const auto k = k_snp + k_indel; // TODO: correct calculation for different indel heterozygosity
         
-        for (unsigned i {2}; i <= n; ++i) {
-            result += std::pow(-1, i) * boost::math::binomial_coefficient<double>(n - 1, i - 1)
-                        * ((i - 1) / (theta + i - 1)) * std::pow(theta / (theta + i - 1), k);
-        }
-        
-        result = std::log(result);
+        const auto result = detail::coalescent(n, k, theta);
         
         result_cache_.emplace(t, result);
         

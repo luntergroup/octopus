@@ -305,14 +305,14 @@ inline ContigRegion tail_position(const ContigRegion& region) noexcept
     return tail_region(region, 1);
 }
 
-inline ContigRegion::DifferenceType begin_distance(const ContigRegion& lhs, const ContigRegion& rhs) noexcept
+inline ContigRegion::DifferenceType begin_distance(const ContigRegion& first, const ContigRegion& second) noexcept
 {
-    return static_cast<ContigRegion::DifferenceType>(lhs.begin()) - rhs.begin();
+    return static_cast<ContigRegion::DifferenceType>(second.begin()) - first.begin();
 }
 
-inline ContigRegion::DifferenceType end_distance(const ContigRegion& lhs, const ContigRegion& rhs) noexcept
+inline ContigRegion::DifferenceType end_distance(const ContigRegion& first, const ContigRegion& second) noexcept
 {
-    return static_cast<ContigRegion::DifferenceType>(lhs.end()) - rhs.end();
+    return static_cast<ContigRegion::DifferenceType>(second.end()) - first.end();
 }
 
 namespace std {

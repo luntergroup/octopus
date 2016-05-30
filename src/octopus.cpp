@@ -924,8 +924,7 @@ namespace Octopus
         
         return std::async(std::launch::async,
                           [task = std::move(task), components = std::move(contig_components),
-                           &sync]
-                            () -> CompletedTask {
+                           &sync] () -> CompletedTask {
                                 CompletedTask result {
                                     task,
                                     components.caller->call(task.region, components.progress_meter)

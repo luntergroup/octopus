@@ -338,5 +338,5 @@ CachingFasta::SequenceType CachingFasta::get_subsequence(const ContigRegion& req
                                                          const SequenceType& sequence) const
 {
     assert(contains(sequence_region, requested_region));
-    return sequence.substr(begin_distance(requested_region, sequence_region), size(requested_region));
+    return sequence.substr(begin_distance(sequence_region, requested_region), size(requested_region));
 }

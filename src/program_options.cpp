@@ -423,11 +423,19 @@ namespace Octopus
              "\tAggressive  : Lags haplotypes as much as the data allows\n")
             ("disable-inactive-flank-scoring", po::bool_switch()->default_value(false),
              "Disables additional calculation to adjust alignment score when there are inactive candidates"
-             " in haplotype flanking regions");
+             " in haplotype flanking regions")
+            ;
+            
+            po::options_description filtering("Filtering options");
+            filtering.add_options()
+            ("disable-model-filtering", po::bool_switch()->default_value(false),
+             "Disables model based filtering of variant calls")
+            ;
             
             po::options_description all("Octopus options");
             all.add(general).add(backend).add(input).add(transforms).add(filters)
-                .add(candidates).add(caller).add(model).add(advanced).add(cancer);
+                .add(candidates).add(caller).add(model).add(advanced).add(cancer)
+                .add(filtering);
             
             po::variables_map vm;
             po::store(po::command_line_parser(argc, argv).options(all).positional(p).run(), vm);
@@ -842,7 +850,7 @@ namespace Octopus
                 
                 std::for_each(std::cbegin(overlapped), std::cend(overlapped), [&] (const auto& region) {
                     result.emplace(left_overhang_region(spliced, region));
-                    spliced = expand_lhs(spliced, -begin_distance(region, spliced));
+                    spliced = expand_lhs(spliced, -begin_distance(spliced, region));
                 });
                 
                 if (ends_before(overlapped.back(), spliced)) {
@@ -1616,6 +1624,8 @@ namespace Octopus
             vc_builder.set_maternal_sample(options.at("maternal-sample").as<std::string>());
             vc_builder.set_paternal_sample(options.at("paternal-sample").as<std::string>());
         }
+        
+        vc_builder.set_model_filtering(!options.at("disable-model-filtering").as<bool>());
         
         const auto contig_ploidies = extract_contig_ploidies(options);
         

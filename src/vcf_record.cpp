@@ -374,15 +374,15 @@ std::ostream& operator<<(std::ostream& os, const VcfRecord& record)
 
 // VcfRecord::Builder
 
-VcfRecord::Builder& VcfRecord::Builder::set_chromosome(std::string chromosome)
+VcfRecord::Builder& VcfRecord::Builder::set_chrom(std::string name)
 {
-    chromosome_ = std::move(chromosome);
+    chrom_ = std::move(name);
     return *this;
 }
 
-VcfRecord::Builder& VcfRecord::Builder::set_position(SizeType position)
+VcfRecord::Builder& VcfRecord::Builder::set_pos(SizeType pos)
 {
-    position_ = position;
+    pos_ = pos;
     return *this;
 }
 
@@ -392,59 +392,59 @@ VcfRecord::Builder& VcfRecord::Builder::set_id(IdType id)
     return *this;
 }
 
-VcfRecord::Builder& VcfRecord::Builder::set_ref_allele(const char ref_allele)
+VcfRecord::Builder& VcfRecord::Builder::set_ref(const char allele)
 {
-    ref_allele_ = ref_allele;
+    ref_ = allele;
     return *this;
 }
 
-VcfRecord::Builder& VcfRecord::Builder::set_ref_allele(SequenceType ref_allele)
+VcfRecord::Builder& VcfRecord::Builder::set_ref(SequenceType allele)
 {
-    ref_allele_ = std::move(ref_allele);
+    ref_ = std::move(allele);
     return *this;
 }
 
-VcfRecord::Builder& VcfRecord::Builder::set_alt_allele(const char alt_allele)
+VcfRecord::Builder& VcfRecord::Builder::set_alt(const char allele)
 {
-    alt_alleles_.resize(1);
-    alt_alleles_.front() = alt_allele;
+    alt_.resize(1);
+    alt_.front() = allele;
     return *this;
 }
 
-VcfRecord::Builder& VcfRecord::Builder::set_alt_allele(SequenceType alt_allele)
+VcfRecord::Builder& VcfRecord::Builder::set_alt(SequenceType allele)
 {
-    alt_alleles_.resize(1);
-    alt_alleles_.front() = std::move(alt_allele);
+    alt_.resize(1);
+    alt_.front() = std::move(allele);
     return *this;
 }
 
-VcfRecord::Builder& VcfRecord::Builder::set_alt_alleles(std::vector<SequenceType> alt_alleles)
+VcfRecord::Builder& VcfRecord::Builder::set_alt(std::vector<SequenceType> alleles)
 {
-    alt_alleles_ = std::move(alt_alleles);
+    alt_ = std::move(alleles);
     return *this;
 }
 
-VcfRecord::Builder& VcfRecord::Builder::set_quality(QualityType quality)
+VcfRecord::Builder& VcfRecord::Builder::set_qual(QualityType quality)
 {
-    quality_ = quality;
+    qual_ = quality;
     return *this;
 }
 
-VcfRecord::Builder& VcfRecord::Builder::set_filters(const std::vector<KeyType>& filters)
+VcfRecord::Builder& VcfRecord::Builder::set_filter(std::vector<KeyType> filter)
 {
-    filters_ = filters;
+    filter_ = std::move(filter);
     return *this;
 }
 
-VcfRecord::Builder& VcfRecord::Builder::set_filters(const std::initializer_list<KeyType>& filters)
+VcfRecord::Builder& VcfRecord::Builder::set_filter(std::initializer_list<KeyType> filter)
 {
-    filters_ = filters;
+    filter_ = filter;
     return *this;
 }
 
 VcfRecord::Builder& VcfRecord::Builder::add_filter(KeyType filter)
 {
-    filters_.push_back(std::move(filter));
+    filter_.push_back(std::move(filter));
     return *this;
 }
 
@@ -460,7 +460,7 @@ VcfRecord::Builder& VcfRecord::Builder::add_info(const KeyType& key, const std::
     return *this;
 }
 
-VcfRecord::Builder& VcfRecord::Builder::add_info(const KeyType& key, const std::initializer_list<ValueType>& values)
+VcfRecord::Builder& VcfRecord::Builder::add_info(const KeyType& key, std::initializer_list<ValueType> values)
 {
     info_.emplace(key, values);
     return *this;
@@ -491,7 +491,7 @@ VcfRecord::Builder& VcfRecord::Builder::add_format(KeyType key)
 
 VcfRecord::Builder&VcfRecord::Builder:: add_homozygous_ref_genotype(const SampleIdType& sample, unsigned ploidy)
 {
-    std::vector<SequenceType> tmp(ploidy, ref_allele_);
+    std::vector<SequenceType> tmp(ploidy, ref_);
     return add_genotype(sample, tmp, Phasing::Phased);
 }
 
@@ -512,7 +512,7 @@ VcfRecord::Builder& VcfRecord::Builder::add_genotype(const SampleIdType& sample,
     
     std::transform(std::cbegin(alleles), std::cend(alleles), std::back_inserter(tmp),
                    [this] (unsigned allele) {
-                       return (allele == 0) ? ref_allele_ : alt_alleles_[allele - 1];
+                       return (allele == 0) ? ref_ : alt_[allele - 1];
                    });
     
     return add_genotype(sample, tmp, phasing);
@@ -533,7 +533,7 @@ VcfRecord::Builder& VcfRecord::Builder::add_genotype_field(const SampleIdType& s
 }
 
 VcfRecord::Builder& VcfRecord::Builder::add_genotype_field(const SampleIdType& sample, const KeyType& key,
-                                                           const std::initializer_list<ValueType>& values)
+                                                           std::initializer_list<ValueType> values)
 {
     samples_[sample].emplace(key, values);
     return *this;
@@ -541,7 +541,7 @@ VcfRecord::Builder& VcfRecord::Builder::add_genotype_field(const SampleIdType& s
 
 VcfRecord::Builder& VcfRecord::Builder::set_refcall()
 {
-    return set_alt_allele("<NON_REF>");
+    return set_alt("<NON_REF>");
 }
 
 VcfRecord::Builder& VcfRecord::Builder::set_somatic()
@@ -549,28 +549,28 @@ VcfRecord::Builder& VcfRecord::Builder::set_somatic()
     return this->add_info_flag("SOMATIC");
 }
 
-VcfRecord::SizeType VcfRecord::Builder::position() const noexcept
+VcfRecord::SizeType VcfRecord::Builder::pos() const noexcept
 {
-    return position_;
+    return pos_;
 }
 
 VcfRecord VcfRecord::Builder::build() const
 {
     if (genotypes_.empty() && samples_.empty()) {
-        return VcfRecord {chromosome_, position_, id_, ref_allele_, alt_alleles_, quality_, filters_, info_};
+        return VcfRecord {chrom_, pos_, id_, ref_, alt_, qual_, filter_, info_};
     } else {
-        return VcfRecord {chromosome_, position_, id_, ref_allele_, alt_alleles_, quality_, filters_, info_, format_, genotypes_, samples_};
+        return VcfRecord {chrom_, pos_, id_, ref_, alt_, qual_, filter_, info_, format_, genotypes_, samples_};
     }
 }
 
 VcfRecord VcfRecord::Builder::build_once() noexcept
 {
     if (genotypes_.empty() && samples_.empty()) {
-        return VcfRecord {std::move(chromosome_), position_, std::move(id_), std::move(ref_allele_),
-            std::move(alt_alleles_), quality_, std::move(filters_), std::move(info_)};
+        return VcfRecord {std::move(chrom_), pos_, std::move(id_), std::move(ref_),
+            std::move(alt_), qual_, std::move(filter_), std::move(info_)};
     } else {
-        return VcfRecord {std::move(chromosome_), position_, std::move(id_), std::move(ref_allele_),
-            std::move(alt_alleles_), quality_, std::move(filters_), std::move(info_),
+        return VcfRecord {std::move(chrom_), pos_, std::move(id_), std::move(ref_),
+            std::move(alt_), qual_, std::move(filter_), std::move(info_),
             std::move(format_), std::move(genotypes_), std::move(samples_)};
     }
 }

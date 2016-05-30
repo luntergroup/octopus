@@ -908,65 +908,65 @@ auto tail_position(const Mappable<T>& mappable)
 }
 
 template <typename T>
-auto begin_distance(const Mappable<T>& lhs, const ContigRegion& rhs)
+auto begin_distance(const Mappable<T>& first, const ContigRegion& second)
 {
-    return begin_distance(static_cast<const T&>(lhs).mapped_region(), rhs);
+    return begin_distance(static_cast<const T&>(first).mapped_region(), second);
 }
 
 template <typename T>
-auto begin_distance(const Mappable<T>& lhs, const GenomicRegion& rhs)
+auto begin_distance(const Mappable<T>& first, const GenomicRegion& second)
 {
-    return begin_distance(static_cast<const T&>(lhs).mapped_region(), rhs);
+    return begin_distance(static_cast<const T&>(first).mapped_region(), second);
 }
 
 template <typename T>
-auto begin_distance(const ContigRegion& lhs, const Mappable<T>& rhs)
+auto begin_distance(const ContigRegion& first, const Mappable<T>& second)
 {
-    return begin_distance(lhs, static_cast<const T&>(rhs).mapped_region());
+    return begin_distance(first, static_cast<const T&>(second).mapped_region());
 }
 
 template <typename T>
-auto begin_distance(const GenomicRegion& lhs, const Mappable<T>& rhs)
+auto begin_distance(const GenomicRegion& first, const Mappable<T>& second)
 {
-    return begin_distance(lhs, static_cast<const T&>(rhs).mapped_region());
+    return begin_distance(first, static_cast<const T&>(second).mapped_region());
 }
 
 template <typename T1, typename T2>
-auto begin_distance(const Mappable<T1>& lhs, const Mappable<T2>& rhs)
+auto begin_distance(const Mappable<T1>& first, const Mappable<T2>& second)
 {
-    return begin_distance(static_cast<const T1&>(lhs).mapped_region(),
-                          static_cast<const T2&>(rhs).mapped_region());
+    return begin_distance(static_cast<const T1&>(first).mapped_region(),
+                          static_cast<const T2&>(second).mapped_region());
 }
 
 template <typename T>
-auto end_distance(const Mappable<T>& lhs, const ContigRegion& rhs)
+auto end_distance(const Mappable<T>& first, const ContigRegion& second)
 {
-    return end_distance(static_cast<const T&>(lhs).mapped_region(), rhs);
+    return end_distance(static_cast<const T&>(first).mapped_region(), second);
 }
 
 template <typename T>
-auto end_distance(const Mappable<T>& lhs, const GenomicRegion& rhs)
+auto end_distance(const Mappable<T>& first, const GenomicRegion& second)
 {
-    return end_distance(static_cast<const T&>(lhs).mapped_region(), rhs);
+    return end_distance(static_cast<const T&>(first).mapped_region(), second);
 }
 
 template <typename T>
-auto end_distance(const ContigRegion& lhs, const Mappable<T>& rhs)
+auto end_distance(const ContigRegion& first, const Mappable<T>& second)
 {
-    return end_distance(lhs, static_cast<const T&>(rhs).mapped_region());
+    return end_distance(first, static_cast<const T&>(second).mapped_region());
 }
 
 template <typename T>
-auto end_distance(const GenomicRegion& lhs, const Mappable<T>& rhs)
+auto end_distance(const GenomicRegion& first, const Mappable<T>& second)
 {
-    return end_distance(lhs, static_cast<const T&>(rhs).mapped_region());
+    return end_distance(first, static_cast<const T&>(second).mapped_region());
 }
 
 template <typename T1, typename T2>
-auto end_distance(const Mappable<T1>& lhs, const Mappable<T2>& rhs)
+auto end_distance(const Mappable<T1>& first, const Mappable<T2>& second)
 {
-    return end_distance(static_cast<const T1&>(lhs).mapped_region(),
-                        static_cast<const T2&>(rhs).mapped_region());
+    return end_distance(static_cast<const T1&>(first).mapped_region(),
+                        static_cast<const T2&>(second).mapped_region());
 }
 
 #endif

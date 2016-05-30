@@ -103,7 +103,8 @@ private:
     
     ContigRegion explicit_allele_region_;
     
-    SequenceType cached_sequence_;
+    SequenceType sequence_;
+    
     std::size_t cached_hash_;
     
     std::reference_wrapper<const ReferenceGenome> reference_;
@@ -122,8 +123,8 @@ Haplotype::Haplotype(R&& region, const ReferenceGenome& reference)
 region_ {std::forward<R>(region)},
 explicit_alleles_ {},
 explicit_allele_region_ {},
-cached_sequence_ {reference.fetch_sequence(region_)},
-cached_hash_ {std::hash<SequenceType>()(cached_sequence_)},
+sequence_ {reference.fetch_sequence(region_)},
+cached_hash_ {std::hash<SequenceType>()(sequence_)},
 reference_ {reference}
 {}
 
@@ -133,12 +134,12 @@ Haplotype::Haplotype(R&& region, S&& sequence, const ReferenceGenome& reference)
 region_ {std::forward<R>(region)},
 explicit_alleles_ {},
 explicit_allele_region_ {region_.contig_region()},
-cached_sequence_ {std::forward<S>(sequence)},
-cached_hash_ {std::hash<SequenceType>()(cached_sequence_)},
+sequence_ {std::forward<S>(sequence)},
+cached_hash_ {std::hash<SequenceType>()(sequence_)},
 reference_ {reference}
 {
     explicit_alleles_.reserve(1);
-    explicit_alleles_.emplace_back(explicit_allele_region_, cached_sequence_);
+    explicit_alleles_.emplace_back(explicit_allele_region_, sequence_);
 }
 
 namespace detail
@@ -158,7 +159,7 @@ Haplotype::Haplotype(R&& region, ForwardIt first_allele, ForwardIt last_allele,
 region_ {std::forward<R>(region)},
 explicit_alleles_ {first_allele, last_allele},
 explicit_allele_region_ {},
-cached_sequence_ {},
+sequence_ {},
 cached_hash_ {0},
 reference_ {reference}
 {
@@ -179,24 +180,24 @@ reference_ {reference}
         
         num_bases += region_size(lhs_reference_region) + region_size(rhs_reference_region);
         
-        cached_sequence_.reserve(num_bases);
+        sequence_.reserve(num_bases);
         
         const auto& contig = region_.contig_name();
         
         if (!is_empty(lhs_reference_region)) {
-            detail::append(cached_sequence_, reference, contig, lhs_reference_region);
+            detail::append(sequence_, reference, contig, lhs_reference_region);
         }
         
-        append(cached_sequence_, std::cbegin(explicit_alleles_), std::cend(explicit_alleles_));
+        append(sequence_, std::cbegin(explicit_alleles_), std::cend(explicit_alleles_));
         
         if (!is_empty(rhs_reference_region)) {
-            detail::append(cached_sequence_, reference, contig, rhs_reference_region);
+            detail::append(sequence_, reference, contig, rhs_reference_region);
         }
     } else {
-        cached_sequence_ = reference.fetch_sequence(region_);
+        sequence_ = reference.fetch_sequence(region_);
     }
     
-    cached_hash_ = std::hash<SequenceType>()(cached_sequence_);
+    cached_hash_ = std::hash<SequenceType>()(sequence_);
 }
 
 class Haplotype::Builder
@@ -311,11 +312,6 @@ unsigned unique_least_complex(std::vector<Haplotype>& haplotypes);
 bool have_same_alleles(const Haplotype& lhs, const Haplotype& rhs);
 
 bool are_equal_in_region(const Haplotype& lhs, const Haplotype& rhs, const GenomicRegion& region);
-
-void add_ref_to_back(const Variant& variant, Haplotype& haplotype);
-void add_ref_to_front(const Variant& variant, Haplotype& haplotype);
-void add_alt_to_back(const Variant& variant, Haplotype& haplotype);
-void add_alt_to_front(const Variant& variant, Haplotype& haplotype);
 
 template <typename MappableType, typename Container,
           typename = std::enable_if_t<std::is_same<typename Container::value_type, Haplotype>::value>>

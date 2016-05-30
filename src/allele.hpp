@@ -135,7 +135,7 @@ namespace detail
             return ResultType {first, first + sequence.size() - region_size(allele)};
         }
         
-        auto first = std::cbegin(allele.sequence()) + begin_distance(region, allele);
+        auto first = std::cbegin(allele.sequence()) + begin_distance(allele, region);
         // The minimum of the allele sequence size and region size is used as deletions will
         // result in a sequence size smaller than the region size
         return ResultType {first, first + std::min(sequence.size(), static_cast<size_t>(region_size(region)))};
