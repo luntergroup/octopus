@@ -25,16 +25,16 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--help",
         //"--version",
         
-        //"--debug",
-        //"--trace",
+        "--debug",
+        "--trace",
         
         //"--sites-only",
         
         //"--samples", "NOT-A-SAMPLE",
         
-        "--working-directory", "~/Genomics/octopus_test",
+        //"--working-directory", "~/Genomics/octopus_test",
         //"--working-directory", "~/Genomics/MCG",
-        //"--working-directory", "~/Genomics/cancer/TCGA/benchmark",
+        "--working-directory", "~/Genomics/cancer/TCGA/benchmark",
         
         //"--target-read-buffer-size", "1.0",
         //"--reference-cache-size", "100",
@@ -47,7 +47,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         
         //"--reads", NA12878_low_coverage.c_str(),
         //"--reads", NA12878_high_coverage.c_str(),
-        "--reads", "~/Genomics/Illumina/NA12878.mapped.ILLUMINA.bwa.CEU.high_coverage_pcr_free.20130906.chr22.bam",
+        //"--reads", "~/Genomics/Illumina/NA12878.mapped.ILLUMINA.bwa.CEU.high_coverage_pcr_free.20130906.chr22.bam",
         
         //"--reads", NA12891_high_coverage.c_str(),
         //"--reads", HG00101.c_str(),
@@ -62,15 +62,15 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--reads", "~/Genomics/Illumina/NA12878HC_HLA_C.bam",
         
         // TCGA
-        //"--reads", "~/Genomics/cancer/TCGA/benchmark/G15511.HCC1143_BL.1.chr22.bam",
-        //"--reads", "~/Genomics/cancer/TCGA/benchmark/G15511.HCC1143.1.chr22.bam",
+        "--reads", "~/Genomics/cancer/TCGA/benchmark/G15511.HCC1143_BL.1.chr22.bam",
+        "--reads", "~/Genomics/cancer/TCGA/benchmark/G15511.HCC1143.1.chr22.bam",
         
         // MCG
         //"--reads", "~/Genomics/MCG/10120_chr2_47641558_GTA_G.RG.bam",
         //"--reads", "~/Genomics/MCG/D59597_Cov3.RG.bam",
         
-        //"--caller", "cancer", // default "population"
-        //"--normal-sample", "HCC1143 BL",
+        "--caller", "cancer", // default "population"
+        "--normal-sample", "HCC1143 BL",
         
         //"--organism-ploidy", "3",
         "--contig-ploidies", "MT=1", "Y=1",// "MT=2",
@@ -81,7 +81,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         
         /* input regions */
         
-        "--regions", "22:33,516,283-36,017,379",
+        //"--regions", "22:33,516,283-36,017,379",
         
         //"--regions", "6:31,236,339-31,240,057", // HLA-C
         
@@ -181,7 +181,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         
         //"--regions", "22:30,213,959-30,214,123", // FP somatic SNV. Very difficult.
         //"--regions", "22:29,455,729-29,455,769", // FP somatic deletion
-        //"--regions", "22:28,812,452-28,812,616", // FP somatic deletion
+        "--regions", "22:28,812,452-28,812,616", // FP somatic deletion
         //"--regions", "22:33,595,824-33,595,864", // FP somatic del
         //"--regions", "22:25,731,146-25,731,476", // FP SNP. What's going on here?
         //"--regions", "22:25,656,657-25,656,697", // FP SNP. What's going on here?
@@ -203,6 +203,9 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         
         //"--skip-regions", "1:1,000,000-2,000,000", "1:1,500,000-10,000,000",
         //"--skip-regions-file", human_skip_regions.c_str(),
+        
+        //"--regenotype", "~/Genomics/octopus_test/AllVariants.vcf",
+        //"--regenotype", "~/Genomics/cancer/TCGA/benchmark/somatic_sniper_chr22_Q40.vcf",
         
         // read transforms
         //"--disable-read-transforms",
@@ -232,8 +235,6 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--min-base-quality", "25",
         //"--no-raw-cigar-candidates",
         //"--kmer-size", "5",
-        //"--regenotype", "~/Genomics/octopus_test/AllVariants.vcf",
-        //"--regenotype", "~/Genomics/cancer/TCGA/benchmark/somatic_sniper_chr22_Q40.vcf",
         //"--candidates-from-source", sample_vcf.c_str(),
         "--no-assembly-candidates",
         //"--kmer-size", "45",
@@ -256,7 +257,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--max-open-read-files", "1",
         
         //"--output", test_out_vcf.c_str(),
-        //"--output", "octopus_hla_phase_aggressive.vcf",
+        //"--output", "octopus_hla.vcf",
         //"--output", "octopus_mcg.vcf",
         //"--output", "octopus_NA12878HC_22_unlagged_dummy.vcf",
         //"--output", "octopus_calls2.vcf",

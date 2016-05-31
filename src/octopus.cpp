@@ -1145,11 +1145,11 @@ namespace Octopus
         
         if (!components) return;
         
-//        VcfReader vcf_reader {"/Users/danielcooke/Genomics/octopus_test/octopus_calls2.vcf"};
+//        VcfReader vcf_reader {"/Users/danielcooke/Genomics/octopus_test/octopus_hla.vcf"};
 //        
 //        GenotypeReader reader {components->reference(), std::move(vcf_reader)};
 //        
-//        auto genotypes = reader.extract_genotype(GenomicRegion {"4", 95568038, 95586237});
+//        auto genotypes = reader.extract_genotype(GenomicRegion {"6", 31236339, 31240057});
 //        
 //        for (const auto& p : genotypes) {
 //            for (const auto s : p.second) {

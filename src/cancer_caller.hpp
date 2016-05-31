@@ -44,7 +44,7 @@ public:
         boost::optional<SampleIdType> normal_sample;
         double somatic_mutation_rate;
         bool call_somatics_only;
-        std::size_t max_genotypes;
+        unsigned max_genotypes;
     };
     
     CancerVariantCaller() = delete;

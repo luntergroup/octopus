@@ -11,6 +11,7 @@
 #include <utility>
 #include <cmath>
 #include <numeric>
+#include <stdexcept>
 
 namespace Octopus
 {
@@ -19,7 +20,11 @@ namespace Octopus
     :
     germline_model_ {germline_model},
     somatic_mutation_rate_ {somatic_mutation_rate}
-    {}
+    {
+        if (somatic_mutation_rate <= 0) {
+            throw std::domain_error {"SomaticMutationModel: somatic mutation rate must be > 0"};
+        }
+    }
     
     double probability_of_somatic(const Haplotype& somatic, const Haplotype& germline,
                                   double somatic_mutation_probability = 0.00001)
@@ -41,8 +46,8 @@ namespace Octopus
     
     double SomaticMutationModel::evaluate(const CancerGenotype<Haplotype>& genotype) const
     {
-        const auto& germline = genotype.get_germline_genotype();
-        const auto& somatic  = genotype.get_cancer_element();
+        const auto& germline = genotype.germline_genotype();
+        const auto& somatic  = genotype.somatic_element();
         
         const auto germline_log_prior = germline_model_.get().evaluate(germline);
         

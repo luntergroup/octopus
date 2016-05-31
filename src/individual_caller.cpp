@@ -15,6 +15,7 @@
 #include <iterator>
 #include <functional>
 #include <utility>
+#include <stdexcept>
 #include <iostream>
 
 #include "genomic_region.hpp"
@@ -44,7 +45,11 @@ VariantCaller {std::move(components), std::move(general_parameters)},
 ploidy_ {specific_parameters.ploidy},
 min_variant_posterior_ {specific_parameters.min_variant_posterior},
 min_refcall_posterior_ {specific_parameters.min_refcall_posterior}
-{}
+{
+    if (ploidy_ == 0) {
+        throw std::logic_error {"IndividualVariantCaller: ploidy must be > 0"};
+    }
+}
 
 // IndividualVariantCaller::Latents public methods
 

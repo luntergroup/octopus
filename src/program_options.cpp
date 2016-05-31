@@ -283,7 +283,7 @@ namespace Octopus
             ("contig-output-order", po::value<ContigOutputOrder>()->default_value(ContigOutputOrder::AsInReferenceIndex),
              "The order contigs should be written to the output")
             ("regenotype", po::value<std::string>(),
-             "A file VCF format file. Calls will be restricted to exactly the sites in this file")
+             "A VCF file. Calls will be restricted to exactly the sites in this file")
             ;
             
             po::options_description transforms("Read transform options");
@@ -889,6 +889,10 @@ namespace Octopus
             }
         }
         
+        for (auto& p : result) {
+            p.second.shrink_to_fit();
+        }
+        
         return result;
     }
     
@@ -920,6 +924,7 @@ namespace Octopus
         
         if (!all_region_parsed) {
             result.clear();
+            result.shrink_to_fit();
         }
         
         return result;
@@ -945,8 +950,6 @@ namespace Octopus
             result.emplace(shift(std::move(region), -1));
         }
         
-        one_based_regions.clear();
-        
         return result;
     }
     
@@ -957,8 +960,6 @@ namespace Octopus
         for (auto& p : one_based_search_regions) {
             result.emplace(p.first, transform_to_zero_based(std::move(p.second)));
         }
-        
-        one_based_search_regions.clear();
         
         return result;
     }
@@ -989,6 +990,9 @@ namespace Octopus
         }
         
         if (options.count("regions") == 0 && options.count("regions-file") == 0) {
+            if (options.count("regenotype") == 1) {
+                // TODO: only extract regions in the regenotype VCF
+            }
             return extract_search_regions(reference, skip_regions);
         }
         

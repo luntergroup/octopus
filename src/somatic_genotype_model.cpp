@@ -202,7 +202,7 @@ namespace Octopus
     {
         CompressedGenotype<K> result;
         
-        const Genotype<Haplotype>& germline_genotype {genotype.get_germline_genotype()};
+        const Genotype<Haplotype>& germline_genotype {genotype.germline_genotype()};
         
         assert(germline_genotype.ploidy() == (K - 1));
         
@@ -213,7 +213,7 @@ namespace Octopus
                            return std::cref(haplotype_likelihoods.log_likelihoods(sample, haplotype));
                        });
         
-        result.back() = haplotype_likelihoods.log_likelihoods(sample, genotype.get_cancer_element());
+        result.back() = haplotype_likelihoods.log_likelihoods(sample, genotype.somatic_element());
         
         return result;
     }
@@ -821,7 +821,7 @@ namespace Octopus
         
         std::transform(std::cbegin(genotypes), std::cend(genotypes), std::begin(result),
                        [&] (const auto& genotype) {
-                           return likelihood_model.log_likelihood(sample, genotype.get_germline_genotype());
+                           return likelihood_model.log_likelihood(sample, genotype.germline_genotype());
                        });
         
         Maths::normalise_logs(result);
@@ -845,7 +845,7 @@ namespace Octopus
         std::transform(std::cbegin(genotypes), std::cend(genotypes), std::begin(result),
                        [&] (const auto& genotype) {
                            return genotype_prior_model.evaluate(genotype)
-                                + likelihood_model.log_likelihood(sample, genotype.get_germline_genotype());
+                                + likelihood_model.log_likelihood(sample, genotype.germline_genotype());
                        });
         
         Maths::normalise_logs(result);

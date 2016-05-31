@@ -60,7 +60,11 @@ public:
     VariantCaller(VariantCaller&&)                 = delete;
     VariantCaller& operator=(VariantCaller&&)      = delete;
     
-    std::deque<VcfRecord> call(const GenomicRegion& call_region, ProgressMeter& progress_meter) const;
+    std::deque<VcfRecord>
+    call(const GenomicRegion& call_region, ProgressMeter& progress_meter) const;
+    
+//    std::vector<VcfRecord>
+//    regenotype(const std::vector<Variant>& variants, ProgressMeter& progress_meter) const;
     
 protected:
     using HaplotypeReference = std::reference_wrapper<const Haplotype>;

@@ -12,6 +12,7 @@
 #include <utility>
 #include <tuple>
 #include <iterator>
+#include <stdexcept>
 #include <cassert>
 #include <iostream>
 
@@ -52,6 +53,16 @@ haplotype_generator_builder_ {std::move(components.haplotype_generator_builder)}
 phaser_ {std::move(components.phaser)},
 parameters_ {std::move(parameters)}
 {
+    if (parameters_.min_haplotype_posterior < 0) {
+        parameters_.min_haplotype_posterior = 0;
+    } else if (parameters_.min_haplotype_posterior > 1) {
+        parameters_.min_haplotype_posterior = 1;
+    }
+    
+    if (parameters_.max_haplotypes == 0) {
+        throw std::logic_error {"VariantCaller: max haplotypes must be > 0"};
+    }
+    
     if (DEBUG_MODE) {
         debug_log_ = Logging::DebugLogger {};
     }

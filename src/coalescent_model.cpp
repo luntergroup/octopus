@@ -8,6 +8,8 @@
 
 #include "coalescent_model.hpp"
 
+#include <stdexcept>
+
 namespace Octopus
 {
 CoalescentModel::CoalescentModel(Haplotype reference,
@@ -19,6 +21,10 @@ reference_ {reference},
 snp_heterozygosity_ {snp_heterozygosity},
 indel_heterozygosity_ {indel_heterozygosity}
 {
+    if (snp_heterozygosity <= 0 || indel_heterozygosity) {
+        throw std::domain_error {"CoalescentModel: snp and indel heterozygosity must be > 0"};
+    }
+    
     site_buffer1_.reserve(128);
     site_buffer2_.reserve(128);
     difference_cache_.reserve(max_haplotypes);

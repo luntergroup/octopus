@@ -14,6 +14,7 @@
 #include <numeric>
 #include <unordered_set>
 #include <functional>
+#include <stdexcept>
 #include <iostream>
 
 #include <boost/iterator/zip_iterator.hpp>
@@ -48,6 +49,18 @@ CancerVariantCaller::CancerVariantCaller(CallerComponents&& components,
 VariantCaller {std::move(components), std::move(general_parameters)},
 parameters_ {std::move(specific_parameters)}
 {
+    if (parameters_.ploidy == 0) {
+        throw std::logic_error {"CancerVariantCaller: ploidy must be > 0"};
+    }
+    
+    if (parameters_.max_genotypes == 0) {
+        throw std::logic_error {"CancerVariantCaller: max genotypes must be > 0"};
+    }
+    
+    if (std::find(std::cbegin(samples_), std::cend(samples_), parameters_.normal_sample) == std::cend(samples_)) {
+        throw std::invalid_argument {"CancerVariantCaller: normal sample is not a valid sample"};
+    }
+    
     if (parameters_.min_variant_posterior == 0) {
         Logging::WarningLogger wlog {};
         wlog << "Having a minumum germline variant posterior means no somatic variants will be called";
@@ -90,10 +103,10 @@ CancerVariantCaller::Latents::haplotype_posteriors() const
     }
     
     for (const auto& p : somatic_model_inferences_.posteriors.genotype_probabilities) {
-        for (const auto& haplotype : p.first.get_germline_genotype()) {
+        for (const auto& haplotype : p.first.germline_genotype()) {
             result[haplotype] += p.second;
         }
-        result[p.first.get_cancer_element()] += p.second;
+        result[p.first.somatic_element()] += p.second;
     }
     
     const auto norm = Maths::sum_values(result);
@@ -173,6 +186,7 @@ CancerVariantCaller::infer_latents(const std::vector<Haplotype>& haplotypes,
     
     auto germline_inferences = germline_model.infer_latents(merged_sample, germline_genotypes,
                                                             merged_likelihoods);
+    
     auto cnv_inferences = cnv_model.infer_latents(germline_genotypes, haplotype_likelihoods);
     
     filter(cancer_genotypes, germline_genotypes, germline_inferences, cnv_inferences);
@@ -234,14 +248,16 @@ void CancerVariantCaller::filter(std::vector<CancerGenotype<Haplotype>>& cancer_
         
         const auto it = std::remove_if(std::begin(cancer_genotypes), std::end(cancer_genotypes),
                                        [&removable_germlines] (const auto& g) {
-                                           return removable_germlines.count(g.get_germline_genotype()) == 1;
+                                           return removable_germlines.count(g.germline_genotype()) == 1;
                                        });
         
         cancer_genotypes.erase(it, std::end(cancer_genotypes));
         
-        cancer_genotypes.shrink_to_fit();
+        if (cancer_genotypes.capacity() > 2 * cancer_genotypes.size()) {
+            cancer_genotypes.shrink_to_fit();
+        }
     } else {
-        
+        // TODO
     }
 }
 
@@ -291,6 +307,8 @@ CancerVariantCaller::calculate_dummy_model_posterior(const std::vector<Haplotype
         return ::Octopus::calculate_dummy_model_posterior(normal_inferences.log_evidence,
                                                           dummy_inferences.log_evidence);
     }
+    
+    // TODO
     
     return 0;
 }
@@ -505,13 +523,13 @@ auto compute_somatic_variant_posteriors(const std::vector<VariantReference>& can
         const auto p = std::accumulate(std::cbegin(cancer_genotype_posteriors),
                                        std::cend(cancer_genotype_posteriors),
                                        0.0, [&allele] (const auto curr, const auto& p) {
-                                           const auto& somatic_haplotype = p.first.get_cancer_element();
+                                           const auto& somatic_haplotype = p.first.somatic_element();
                                            
                                            if (!somatic_haplotype.contains(allele)) {
                                                return curr + 0;
                                            }
                                            
-                                           const auto& germline_genotype = p.first.get_germline_genotype();
+                                           const auto& germline_genotype = p.first.somatic_element();
                                            
                                            if (contains(germline_genotype, allele)) {
                                                return curr + 0;
@@ -806,7 +824,7 @@ CancerVariantCaller::calculate_germline_genotype_posteriors(const Latents& infer
     }
     
     for (const auto& p : inferences.somatic_model_inferences_.posteriors.genotype_probabilities) {
-        result[p.first.get_germline_genotype()] += model_posteriors.somatic * p.second;
+        result[p.first.germline_genotype()] += model_posteriors.somatic * p.second;
     }
     
     return result;

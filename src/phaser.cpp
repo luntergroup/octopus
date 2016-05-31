@@ -27,7 +27,13 @@ namespace Octopus
 Phaser::Phaser(const double min_phase_score)
 :
 min_phase_score_ {min_phase_score}
-{}
+{
+    if (min_phase_score_ < 0) {
+        min_phase_score_ = 0;
+    } else if (min_phase_score_ > 1) {
+        min_phase_score_ = 1;
+    }
+}
 
 namespace
 {
