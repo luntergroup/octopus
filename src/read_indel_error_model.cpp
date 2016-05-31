@@ -19,7 +19,10 @@ namespace Octopus
 {
 
 constexpr decltype(ReadIndelErrorModel::Homopolymer_errors_) ReadIndelErrorModel::Homopolymer_errors_;
-constexpr decltype(ReadIndelErrorModel::gap_extension_) ReadIndelErrorModel::gap_extension_;
+constexpr decltype(ReadIndelErrorModel::Homopolymer_errors_) ReadIndelErrorModel::Di_nucleotide_tandem_repeat_errors_;
+constexpr decltype(ReadIndelErrorModel::Homopolymer_errors_) ReadIndelErrorModel::Tri_nucleotide_tandem_repeat_errors_;
+constexpr decltype(ReadIndelErrorModel::Homopolymer_errors_) ReadIndelErrorModel::Poly_nucleotide_tandem_repeat_errors_;
+constexpr decltype(ReadIndelErrorModel::default_gap_extension_) ReadIndelErrorModel::default_gap_extension_;
 
 namespace
 {
@@ -29,59 +32,68 @@ namespace
     }
 }
 
-ReadIndelErrorModel::PenaltyType
-ReadIndelErrorModel::calculate_gap_extension_penalty(const Haplotype& haplotype) const noexcept
-{
-    return gap_extension_;
-}
-
 template <typename C, typename T>
 static auto get_penalty(const C& penalties, const T length)
 {
     return (length < penalties.size()) ? penalties[length - 1] : penalties.back();
 }
 
-void ReadIndelErrorModel::fill_gap_open_penalties(const Haplotype& haplotype,
-                                                  std::vector<PenaltyType>& result) const
+ReadIndelErrorModel::PenaltyType
+ReadIndelErrorModel::evaluate(const Haplotype& haplotype, std::vector<PenaltyType>& gap_open_penalities) const
 {
     using std::begin; using std::end; using std::cbegin; using std::cend; using std::next;
     
     const auto repeats = extract_repeats(haplotype);
     
-    result.resize(sequence_size(haplotype), Homopolymer_errors_.front());
+    gap_open_penalities.resize(sequence_size(haplotype), 50);
+    
+    Tandem::StringRun max_repeat {};
     
     for (const auto& repeat : repeats) {
+        std::int8_t e;
+        
         if (repeat.period == 1) {
-            std::fill_n(next(begin(result), repeat.pos), repeat.length,
-                        get_penalty(Homopolymer_errors_, repeat.length));
+            e = get_penalty(Homopolymer_errors_, repeat.length);
         } else if (repeat.period == 2) {
             static constexpr std::array<char, 2> AC {'A', 'C'};
             
             const auto it = next(cbegin(haplotype.sequence()), repeat.pos);
             
-            std::int8_t e {30};
+            e = get_penalty(Di_nucleotide_tandem_repeat_errors_, repeat.length);
             
-            if (std::equal(cbegin(AC), cend(AC), it)) {
-                e = 20;
+            if (e > 10 && std::equal(cbegin(AC), cend(AC), it)) {
+                e -= 2;
             }
-            
-            std::fill_n(next(begin(result), repeat.pos), repeat.length, e);
-        }else if (repeat.period == 3) {
+        } else if (repeat.period == 3) {
             static constexpr std::array<char, 3> GGC {'G', 'G', 'C'};
             static constexpr std::array<char, 3> GCC {'G', 'C', 'C'};
             
             const auto it = next(cbegin(haplotype.sequence()), repeat.pos);
             
-            std::int8_t e {38};
+            e = get_penalty(Tri_nucleotide_tandem_repeat_errors_, repeat.length);
             
-            if (std::equal(cbegin(GGC), cend(GGC), it)) {
-                e = 15;
-            } else if (std::equal(cbegin(GCC), cend(GCC), it)) {
-                e = 20;
+            if (e > 10 && std::equal(cbegin(GGC), cend(GGC), it)) {
+                e -= 3;
+            } else if (e > 12 && std::equal(cbegin(GCC), cend(GCC), it)) {
+                e -= 2;
             }
-            
-            std::fill_n(next(begin(result), repeat.pos), repeat.length, e);
+        } else {
+            e = get_penalty(Poly_nucleotide_tandem_repeat_errors_, repeat.length);
+            ++e;
         }
+        
+        std::fill_n(next(begin(gap_open_penalities), repeat.pos), repeat.length, e);
+        
+        if (repeat.length > max_repeat.length) {
+            max_repeat = repeat;
+        }
+    }
+    
+    switch (max_repeat.period) {
+        case 1: return 3;
+        case 2: return 2;
+        case 3: return 1;
+        default: return default_gap_extension_;
     }
 }
 } // namespace Octopus

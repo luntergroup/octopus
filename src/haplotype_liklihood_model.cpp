@@ -45,8 +45,7 @@ void HaplotypeLikelihoodModel::set(const Haplotype& haplotype, boost::optional<F
     haplotype_ = std::addressof(haplotype);
     haplotype_flank_state_ = std::move(flank_state);
     
-    indel_error_model_.fill_gap_open_penalties(haplotype, haplotype_gap_open_penalities_);
-    haplotype_gap_extension_penalty_ = indel_error_model_.calculate_gap_extension_penalty(haplotype);
+    haplotype_gap_extension_penalty_ = indel_error_model_.evaluate(haplotype, haplotype_gap_open_penalities_);
 }
 
 void HaplotypeLikelihoodModel::clear() noexcept

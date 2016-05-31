@@ -21,7 +21,7 @@ reference_ {reference},
 snp_heterozygosity_ {snp_heterozygosity},
 indel_heterozygosity_ {indel_heterozygosity}
 {
-    if (snp_heterozygosity <= 0 || indel_heterozygosity) {
+    if (snp_heterozygosity <= 0 || indel_heterozygosity <= 0) {
         throw std::domain_error {"CoalescentModel: snp and indel heterozygosity must be > 0"};
     }
     

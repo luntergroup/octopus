@@ -59,7 +59,6 @@ namespace Octopus
     
     struct VariationalBayesParameters
     {
-        explicit VariationalBayesParameters(double epsilon, unsigned max_iterations);
         double epsilon;
         unsigned max_iterations;
     };
@@ -692,11 +691,6 @@ namespace Octopus
         
         // main loop
         for (unsigned i {0}; i < params.max_iterations; ++i) {
-            if (TRACE_MODE) {
-                Logging::TraceLogger log {};
-                stream(log) << "VB Iteration " << i;
-            }
-            
             update_genotype_log_posteriors(genotype_log_posteriors, genotype_log_priors,
                                            responsabilities, log_likelihoods);
             
@@ -710,13 +704,13 @@ namespace Octopus
             std::tie(is_converged, max_change) = check_convergence(prior_alphas, posterior_alphas,
                                                                    max_change, params.epsilon);
             
-            if (is_converged) {
-                break;
-            }
+            if (is_converged) break;
         }
         
-        return {std::move(genotype_posteriors), std::move(genotype_log_posteriors),
-                std::move(posterior_alphas), std::move(responsabilities)};
+        return CompressedLatents<K> {
+            std::move(genotype_posteriors), std::move(genotype_log_posteriors),
+            std::move(posterior_alphas), std::move(responsabilities)
+        };
     }
     
     // Main algorithm - multiple seeds
@@ -907,13 +901,6 @@ namespace Octopus
     }
     
     // Previously declared helpers
-    
-    VariationalBayesParameters::VariationalBayesParameters(const double epsilon,
-                                                           const unsigned max_iterations)
-    :
-    epsilon {epsilon},
-    max_iterations {max_iterations}
-    {}
     
     ReadLikelihoods::ReadLikelihoods(const BaseType& underlying_likelihoods)
     :

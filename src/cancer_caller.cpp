@@ -12,6 +12,7 @@
 #include <utility>
 #include <algorithm>
 #include <numeric>
+#include <deque>
 #include <unordered_set>
 #include <functional>
 #include <stdexcept>
@@ -497,13 +498,14 @@ auto call_candidates(const VariantPosteriors& candidate_posteriors,
 // somatic variant posterior
 
 template <typename M>
-auto find_likely_cancer_genotypes(const M& cancer_genotype_posteriors)
+auto find_likely_cancer_genotypes(const M& cancer_genotype_posteriors,
+                                  const double min_posterior = 0.001)
 {
-    std::vector<std::pair<CancerGenotype<Haplotype>, double>> result {};
+    std::deque<std::pair<CancerGenotype<Haplotype>, double>> result {};
     
     std::copy_if(std::cbegin(cancer_genotype_posteriors), std::cend(cancer_genotype_posteriors),
                  std::back_inserter(result),
-                 [] (const auto& p) { return p.second > 0.001; });
+                 [min_posterior] (const auto& p) { return p.second > min_posterior; });
     
     return result;
 }
@@ -523,25 +525,15 @@ auto compute_somatic_variant_posteriors(const std::vector<VariantReference>& can
         const auto p = std::accumulate(std::cbegin(cancer_genotype_posteriors),
                                        std::cend(cancer_genotype_posteriors),
                                        0.0, [&allele] (const auto curr, const auto& p) {
-                                           const auto& somatic_haplotype = p.first.somatic_element();
-                                           
-                                           if (!somatic_haplotype.contains(allele)) {
-                                               return curr + 0;
+                                           if (p.first.somatic_element().contains(allele)
+                                               && !contains(p.first.germline_genotype(), allele)) {
+                                               return curr + p.second;
                                            }
-                                           
-                                           const auto& germline_genotype = p.first.somatic_element();
-                                           
-                                           if (contains(germline_genotype, allele)) {
-                                               return curr + 0;
-                                           }
-                                           
-                                           return curr + p.second;
+                                           return curr;
                                        });
         
         result.emplace_back(candidate, somatic_model_posterior * p * somatic_posterior);
     }
-    
-    result.shrink_to_fit();
     
     return result;
 }
@@ -556,8 +548,7 @@ auto call_somatic_variants(const VariantPosteriors& somatic_variant_posteriors,
     std::copy_if(std::begin(somatic_variant_posteriors), std::end(somatic_variant_posteriors),
                  std::back_inserter(result),
                  [min_posterior, &called_genotype] (const auto& p) {
-                     return p.second >= min_posterior
-                     && contains_exact(called_genotype, p.first.get().alt_allele());
+                     return p.second >= min_posterior && contains_exact(called_genotype, p.first.get().alt_allele());
                  });
     
     return result;

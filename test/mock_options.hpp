@@ -26,7 +26,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--version",
         
         "--debug",
-        "--trace",
+        //"--trace",
         
         //"--sites-only",
         
@@ -81,8 +81,6 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         
         /* input regions */
         
-        //"--regions", "22:33,516,283-36,017,379",
-        
         //"--regions", "6:31,236,339-31,240,057", // HLA-C
         
         //"--use-one-based-indexing",
@@ -93,7 +91,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--regions", "22:36,120,404-36,120,444", // FP SNV
         //"--regions", "22:36,468,698-36,468,773", // FP SNV
         
-        // MSG
+        // MCG
         //"--regions", "2:47,640,494-47,644,304", // whole region
         //"--regions", "2:47,643,156-47,643,222", // true snp
         //"--regions", "2:47,640,572-47,642,302", // first block (no variants)
@@ -134,34 +132,6 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--regions", "22:25,808,709-25,808,749", // insertions followed by hom SNP
         //"--regions", "22:37,980,669-37,980,708", // overlapping deletion & insertion
         
-        //"--regions", "16:46,392,879-46,393,098", // NA12878_low_coverage huge memory spike
-        //"--regions", "22:20656122-20656146", // NA12878_high_coverage causing memory spike
-        //"--regions", "1:224,024,837-224,024,877", // NA12878_low_coverage edge case insertions
-        //"--regions", "1:874950-874951", // NA12878_low_coverage edge case insertions
-        //"--regions", "22:16,232,038-16,232,117", // NA12878_high_coverage VERY ineresting deletions!!
-        //"--regions", "Y:13451184-13451197", // crazy Y haplotypes NA12878
-        //"--regions", "22:37,276,961-37,277,045", // interesting dual deletions NA12878
-        //"--regions", "22:23,474,658-23,475,205", // complex insertion/SNP NA12878
-        //"--regions", "22:16,231,876-16,232,206", // Complex phasing region
-        //"--regions", "22:16,139,705-16,140,266", // NA12878_high_coverage complex region
-        //"-L", "6:31,235,688-31,235,883", // TEST phaser
-        //"-L", "5:2,726,554-2,726,594", // snp just before deletion
-        //"-L", "5:92,593,056", // SNP next to another SNP
-        //"-L", "5:92,593,057", // SNP next to another SNP
-        //"-L", "5:64,525,420-64,525,459", // two close SNPS
-        
-        //"--regions", "5:64,525,965-64,526,830", // NA12878_high_coverage crazy alignments
-        
-        //"--regions", "6:93,705,800-93,706,166", // NA12878_low_coverage no phase
-        //"--regions", "6:58,605,652-58,606,061",   // NA12878_low_coverage partial phase
-        //"--regions", "6:58,605,687-58,605,779",   // NA12878_low_coverage phase strong
-        //"--regions", "3:108,803,741-108,803,854", // NA12878_low_coverage phase weak
-        //"--regions", "6:22,877,929-22,878,012", // NA12878_low_coverage HMM error
-        //"--regions", "6:89,236,310-89,237,082", // NA12878_high_coverage very nice phasing test
-        //"--regions", "21:11,063,185-11,063,327", // weird haplotpes
-        //"--regions", "3:47,251,793-47,251,839", // NA12878_high_coverage interesting indels
-        //"--regions", "Y:13447283-13447483", // NA12878_low_coverage too many haplotypes
-        
         // for cancer
         
         // TCGA HCC1143
@@ -179,15 +149,19 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--regions", "22:29,474,547-29,474,587", // real somatic SNV?
         //"--regions", "22:29,761,141-29,761,305", // real somatic SNV?
         
+        "--regions", "22:40,604,100-40,604,163", // FP del
+        //"--regions", "22:41,529,126-41,529,213", // FP ins
+        
         //"--regions", "22:30,213,959-30,214,123", // FP somatic SNV. Very difficult.
-        //"--regions", "22:29,455,729-29,455,769", // FP somatic deletion
-        "--regions", "22:28,812,452-28,812,616", // FP somatic deletion
         //"--regions", "22:33,595,824-33,595,864", // FP somatic del
         //"--regions", "22:25,731,146-25,731,476", // FP SNP. What's going on here?
         //"--regions", "22:25,656,657-25,656,697", // FP SNP. What's going on here?
         //"--regions", "22:28,063,906-28,064,070", // What's going on here?
         
         //"--regions", "22:27,297,910-27,297,950", // Not a FP, somaticSniper is calling, but what is going on?
+        
+        //"--regions", "22:28,812,452-28,812,616", // FP del. Solved: indel error model
+        //"--regions", "22:29,455,729-29,455,769", // FP del. Solved: indel error model
         //"--regions", "22:23,842,194-23,842,524", // FP SNV. Solved: Disable overlap masking. Why?
         //"--regions", "22:23,869,889-23,870,053", // FP del. Solved: Disable marked dups filter
         //"--regions", "22:24,160,300-24,160,359", // FP del. Solved: Disable soft clipping

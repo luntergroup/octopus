@@ -626,7 +626,7 @@ namespace Octopus
     {
         if (DEBUG_MODE) {
             Logging::DebugLogger log {};
-            stream(log) << "Writing " << calls.size() << " calls to VCF";
+            stream(log) << "Writing " << calls.size() << " calls to output";
         }
         write(calls, out);
         calls.clear();
@@ -1125,13 +1125,6 @@ namespace Octopus
         return !components.num_threads() || *components.num_threads() > 1;
     }
     
-    void log_final_info(const GenomeCallingComponents& components, const TimeInterval& runtime)
-    {
-        Logging::InfoLogger log {};
-        stream(log) << "Finished processing " << calculate_total_search_size(components.search_regions())
-                    << "bp, total runtime " << runtime;
-    }
-    
     void run_octopus(po::variables_map& options)
     {
         DEBUG_MODE = Options::is_debug_mode(options);
@@ -1139,68 +1132,57 @@ namespace Octopus
         
         log_startup();
         
-        const auto start = std::chrono::system_clock::now();
-        
-        auto components = collate_genome_calling_components(options);
-        
-        if (!components) return;
-        
-//        VcfReader vcf_reader {"/Users/danielcooke/Genomics/octopus_test/octopus_hla.vcf"};
-//        
-//        GenotypeReader reader {components->reference(), std::move(vcf_reader)};
-//        
-//        auto genotypes = reader.extract_genotype(GenomicRegion {"6", 31236339, 31240057});
-//        
-//        for (const auto& p : genotypes) {
-//            for (const auto s : p.second) {
-//                std::cout << s << std::endl;
-//            }
-//        }
-//        
-//        exit(0);
-        
-        auto end = std::chrono::system_clock::now();
-        
         Logging::InfoLogger log {};
         
-        stream(log) << "Done initialising calling components in " << TimeInterval {start, end};
+        const auto start = std::chrono::system_clock::now();
         
-        log_startup_info(*components);
+        auto end = start;
         
-        write_final_output_header(*components, Options::call_sites_only(options));
+        unsigned search_size {0};
         
-        options.clear();
-        
-        if (is_multithreaded(*components)) {
-            run_octopus_multi_threaded(*components);
-        } else {
-            run_octopus_single_threaded(*components);
+        // open scope to ensure calling components are destroyed before final message
+        {
+            auto components = collate_genome_calling_components(options);
+            
+            if (!components) return;
+            
+            end = std::chrono::system_clock::now();
+            
+            stream(log) << "Done initialising calling components in " << TimeInterval {start, end};
+            
+            log_startup_info(*components);
+            
+            write_final_output_header(*components, Options::call_sites_only(options));
+            
+            options.clear();
+            
+            try {
+                if (is_multithreaded(*components)) {
+                    run_octopus_multi_threaded(*components);
+                } else {
+                    run_octopus_single_threaded(*components);
+                }
+            } catch (const std::exception& e) {
+                Logging::FatalLogger lg {};
+                stream(lg) << "Encountered exception '" << e.what() << "'. Attempting to cleanup...";
+                cleanup(*components);
+                if (DEBUG_MODE) {
+                    stream(lg) << "Cleanup successful. Please send log file to dcooke@well.ox.ac.uk";
+                } else {
+                    stream(lg) << "Cleanup successful. Please re-run in debug mode (option --debug) and send"
+                                    " log file to " << Octopus_bug_email;
+                }
+                return;
+            }
+            
+            cleanup(*components);
+            
+            end = std::chrono::system_clock::now();
+            
+            search_size= calculate_total_search_size(components->search_regions());
         }
         
-//        try {
-//            if (is_multithreaded(*components)) {
-//                run_octopus_multi_threaded(*components);
-//            } else {
-//                run_octopus_single_threaded(*components);
-//            }
-//        } catch (const std::exception& e) {
-//            Logging::FatalLogger lg {};
-//            stream(lg) << "Encountered exception '" << e.what() << "'. Attempting to cleanup...";
-//            cleanup(*components);
-//            if (DEBUG_MODE) {
-//                stream(lg) << "Cleanup successful. Please send log file to dcooke@well.ox.ac.uk";
-//            } else {
-//                stream(lg) << "Cleanup successful. Please re-run in debug mode (option --debug) and send"
-//                                " log file to " << Octopus_bug_email;
-//            }
-//            return;
-//        }
-        
-        cleanup(*components);
-        
-        end = std::chrono::system_clock::now();
-        
-        log_final_info(*components, TimeInterval {start, end});
+        stream(log) << "Finished processing " << search_size << "bp, total runtime " << TimeInterval {start, end};
     }
     
 } // namespace Octopus

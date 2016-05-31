@@ -271,8 +271,8 @@ void remove_calls_outside_call_region(std::vector<VcfRecord>& calls, const Genom
     calls.erase(it, std::end(calls));
 }
 
-void append(std::vector<CallWrapper>&& new_calls, std::deque<VcfRecord>& curr_records,
-            const VcfRecordFactory& factory, const GenomicRegion& call_region)
+void merge(std::vector<CallWrapper>&& new_calls, std::deque<VcfRecord>& curr_records,
+           const VcfRecordFactory& factory, const GenomicRegion& call_region)
 {
     if (new_calls.empty()) return;
     
@@ -280,9 +280,14 @@ void append(std::vector<CallWrapper>&& new_calls, std::deque<VcfRecord>& curr_re
     
     remove_calls_outside_call_region(new_records, call_region);
     
-    curr_records.insert(std::end(curr_records),
-                        std::make_move_iterator(std::begin(new_records)),
-                        std::make_move_iterator(std::end(new_records)));
+    const auto it = curr_records.insert(std::end(curr_records),
+                                        std::make_move_iterator(std::begin(new_records)),
+                                        std::make_move_iterator(std::end(new_records)));
+    
+    std::inplace_merge(std::begin(curr_records), it, std::end(curr_records),
+                       [] (const auto& lhs, const auto& rhs) {
+                           return lhs.pos() < rhs.pos();
+                       });
 }
 
 std::deque<VcfRecord>
@@ -484,7 +489,7 @@ VariantCaller::call(const GenomicRegion& call_region, ProgressMeter& progress_me
                     resume_timer(output_timer);
                     set_phasing(variant_calls, *phase_set);
                     
-                    append(std::move(variant_calls), result, record_factory, call_region);
+                    merge(std::move(variant_calls), result, record_factory, call_region);
                     pause_timer(output_timer);
                 }
             }
@@ -558,7 +563,7 @@ VariantCaller::call(const GenomicRegion& call_region, ProgressMeter& progress_me
                     resume_timer(output_timer);
                     set_phasing(variant_calls, phasings);
                     
-                    append(std::move(variant_calls), result, record_factory, call_region);
+                    merge(std::move(variant_calls), result, record_factory, call_region);
                     pause_timer(output_timer);
                 }
             }
@@ -569,7 +574,7 @@ VariantCaller::call(const GenomicRegion& call_region, ProgressMeter& progress_me
                 
                 auto reference_calls = wrap(this->call_reference(alleles, *caller_latents, reads));
                 
-                append(std::move(reference_calls), result, record_factory, call_region);
+                merge(std::move(reference_calls), result, record_factory, call_region);
             }
             
             completed_region = encompassing_region(completed_region, passed_region);

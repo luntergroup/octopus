@@ -82,6 +82,10 @@ private:
     call_reference(const std::vector<Allele>& alleles, const CallerLatents& latents,
                    const ReadMap& reads) const override;
     
+    std::vector<std::unique_ptr<ReferenceCall>>
+    call_reference(const std::vector<Allele>& alleles, const Latents& latents,
+                   const ReadMap& reads) const;
+    
     const SampleIdType& sample() const noexcept;
 };
 

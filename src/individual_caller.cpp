@@ -459,6 +459,13 @@ IndividualVariantCaller::call_reference(const std::vector<Allele>& alleles,
                                         const CallerLatents& latents,
                                         const ReadMap& reads) const
 {
+    return call_reference(alleles, dynamic_cast<const Latents&>(latents), reads);
+}
+
+std::vector<std::unique_ptr<ReferenceCall>>
+IndividualVariantCaller::call_reference(const std::vector<Allele>& alleles, const Latents& latents,
+                                        const ReadMap& reads) const
+{
     return {};
 }
     

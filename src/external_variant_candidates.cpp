@@ -46,6 +46,11 @@ std::vector<GenomicRegion> get_batch_regions(const GenomicRegion& region, VcfRea
     return result;
 }
 
+static bool is_missing(const VcfRecord::SequenceType& allele)
+{
+    return allele == "*";
+}
+
 std::vector<Variant> fetch_variants(const GenomicRegion& region, VcfReader& reader)
 {
     std::vector<Variant> result {};
@@ -62,23 +67,25 @@ std::vector<Variant> fetch_variants(const GenomicRegion& region, VcfReader& read
         
         for (const auto& record : records) {
             for (const auto& alt_allele : record.alt()) {
-                const auto& ref_allele = record.ref();
-                
-                if (ref_allele.size() != alt_allele.size()) {
-                    auto begin = record.pos();
+                if (!is_missing(alt_allele)) {
+                    const auto& ref_allele = record.ref();
                     
-                    const auto p = std::mismatch(std::cbegin(ref_allele), std::cend(ref_allele),
-                                                 std::cbegin(alt_allele), std::cend(alt_allele));
-                    
-                    Variant::SequenceType new_ref_allele {p.first, std::cend(ref_allele)};
-                    Variant::SequenceType new_alt_allele {p.second, std::cend(alt_allele)};
-                    
-                    begin += std::distance(std::cbegin(ref_allele), p.first);
-                    
-                    result.emplace_back(record.chrom(), begin - 1,
-                                        std::move(new_ref_allele), std::move(new_alt_allele));
-                } else {
-                    result.emplace_back(record.chrom(), record.pos() - 1, record.ref(), alt_allele);
+                    if (ref_allele.size() != alt_allele.size()) {
+                        auto begin = record.pos();
+                        
+                        const auto p = std::mismatch(std::cbegin(ref_allele), std::cend(ref_allele),
+                                                     std::cbegin(alt_allele), std::cend(alt_allele));
+                        
+                        Variant::SequenceType new_ref_allele {p.first, std::cend(ref_allele)};
+                        Variant::SequenceType new_alt_allele {p.second, std::cend(alt_allele)};
+                        
+                        begin += std::distance(std::cbegin(ref_allele), p.first);
+                        
+                        result.emplace_back(record.chrom(), begin - 1,
+                                            std::move(new_ref_allele), std::move(new_alt_allele));
+                    } else {
+                        result.emplace_back(record.chrom(), record.pos() - 1, record.ref(), alt_allele);
+                    }
                 }
             }
         }
