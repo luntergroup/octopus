@@ -149,8 +149,8 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--regions", "22:29,474,547-29,474,587", // real somatic SNV?
         //"--regions", "22:29,761,141-29,761,305", // real somatic SNV?
         
-        "--regions", "22:40,604,100-40,604,163", // FP del
-        //"--regions", "22:41,529,126-41,529,213", // FP ins
+        //"--regions", "22:40,604,100-40,604,163", // FP del
+        "--regions", "22:41,528,865-41,529,474", // FP ins
         
         //"--regions", "22:30,213,959-30,214,123", // FP somatic SNV. Very difficult.
         //"--regions", "22:33,595,824-33,595,864", // FP somatic del

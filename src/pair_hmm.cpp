@@ -89,17 +89,17 @@ auto align(const std::string& truth, const std::string& target,
         return std::numeric_limits<double>::lowest();
     }
     
-//    if (!is_target_in_truth_flank(truth, target, target_offset, model)) {
-//        const auto score = fastAlignmentRoutine(truth.data() + alignement_offset, target.data(),
-//                                                reinterpret_cast<const std::int8_t*>(target_qualities.data()),
-//                                                truth_alignment_size,
-//                                                static_cast<int>(target.size()),
-//                                                static_cast<int>(model.gapextend),
-//                                                static_cast<int>(model.nucprior),
-//                                                truth_gap_open_penalties.data() + alignement_offset);
-//        
-//        return -ln_10_div_10 * static_cast<double>(score);
-//    }
+    if (!is_target_in_truth_flank(truth, target, target_offset, model)) {
+        const auto score = fastAlignmentRoutine(truth.data() + alignement_offset, target.data(),
+                                                reinterpret_cast<const std::int8_t*>(target_qualities.data()),
+                                                truth_alignment_size,
+                                                static_cast<int>(target.size()),
+                                                static_cast<int>(model.gapextend),
+                                                static_cast<int>(model.nucprior),
+                                                truth_gap_open_penalties.data() + alignement_offset);
+        
+        return -ln_10_div_10 * static_cast<double>(score);
+    }
     
     // Ideally we'd just use thread_local but doesn't seem to work on Clang yet.
     // Keep an eye on https://forums.developer.apple.com/thread/17437

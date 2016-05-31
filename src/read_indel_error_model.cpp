@@ -37,6 +37,12 @@ static auto get_penalty(const C& penalties, const T length)
 {
     return (length < penalties.size()) ? penalties[length - 1] : penalties.back();
 }
+    
+    static std::ostream& operator<<(std::ostream& os, const Tandem::StringRun& r)
+    {
+        os << r.pos << " " << r.period << " " << r.length;
+        return os;
+    }
 
 ReadIndelErrorModel::PenaltyType
 ReadIndelErrorModel::evaluate(const Haplotype& haplotype, std::vector<PenaltyType>& gap_open_penalities) const
@@ -45,7 +51,7 @@ ReadIndelErrorModel::evaluate(const Haplotype& haplotype, std::vector<PenaltyTyp
     
     const auto repeats = extract_repeats(haplotype);
     
-    gap_open_penalities.resize(sequence_size(haplotype), 50);
+    gap_open_penalities.assign(sequence_size(haplotype), 50);
     
     Tandem::StringRun max_repeat {};
     
