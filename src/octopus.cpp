@@ -983,12 +983,12 @@ namespace Octopus
         SyncPacket sync {};
         
         while (!tasks.empty()) {
-            for (auto& fut : futures) {
-                if (is_ready(fut)) {
+            for (auto& future : futures) {
+                if (is_ready(future)) {
                     try {
                         std::lock_guard<std::mutex> lk {sync.mutex};
                         
-                        auto result = fut.get();
+                        auto result = future.get();
                         
                         const auto& contig = contig_name(result);
                         
@@ -1045,11 +1045,12 @@ namespace Octopus
                     }
                 }
                 
-                if (!tasks.empty() && !fut.valid()) {
+                if (!tasks.empty() && !future.valid()) {
                     std::lock_guard<std::mutex> lk {sync.mutex};
                     auto task = pop(tasks);
                     
-                    fut = run(task, components, sync);
+                    future = run(task, components, sync);
+                    
                     pending_tasks[task.region.contig_name()].push(std::move(task));
                 }
             }
@@ -1124,6 +1125,13 @@ namespace Octopus
     {
         return !components.num_threads() || *components.num_threads() > 1;
     }
+                
+    GenomicRegion mapped_region(const VcfRecord& record)
+    {
+        using SizeType = GenomicRegion::SizeType;
+        const auto begin = record.pos() - 1;
+        return GenomicRegion {record.chrom(), begin, begin + static_cast<SizeType>(record.ref().size())};
+    }
     
     void run_octopus(po::variables_map& options)
     {
@@ -1140,12 +1148,12 @@ namespace Octopus
         
         unsigned search_size {0};
         
-        // open scope to ensure calling components are destroyed before final message
+        // open scope to ensure calling components are destroyed before end message
         {
             auto components = collate_genome_calling_components(options);
             
             if (!components) return;
-            
+                        
             end = std::chrono::system_clock::now();
             
             stream(log) << "Done initialising calling components in " << TimeInterval {start, end};

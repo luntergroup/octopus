@@ -159,17 +159,17 @@ namespace
     
     // non-member methods
     
-    void exp(ProbabilityVector& result, const LogProbabilityVector& log_probabilities)
+    ProbabilityVector& exp(const LogProbabilityVector& log_probabilities, ProbabilityVector& result)
     {
         std::transform(std::cbegin(log_probabilities), std::cend(log_probabilities),
                        std::begin(result), [] (const auto lp) { return std::exp(lp); });
+        return result;
     }
     
     ProbabilityVector exp(const LogProbabilityVector& log_probabilities)
     {
         ProbabilityVector result(log_probabilities.size());
-        exp(result, log_probabilities);
-        return result;
+        return exp(log_probabilities, result);
     }
     
     template <std::size_t K>
@@ -656,22 +656,16 @@ namespace
                                                          log_likelihoods);
         
         assert(responsabilities.size() == log_likelihoods.size()); // num samples
-        //assert(!responsabilities.front().empty());
         
         bool is_converged {false};
         double max_change {0};
         
         // main loop
         for (unsigned i {0}; i < params.max_iterations; ++i) {
-            if (TRACE_MODE) {
-                Logging::TraceLogger log {};
-                stream(log) << "VB Iteration " << i;
-            }
-            
             update_genotype_log_posteriors(genotype_log_posteriors, genotype_log_priors,
                                            responsabilities, log_likelihoods);
             
-            exp(genotype_posteriors, genotype_log_posteriors);
+            exp(genotype_log_posteriors, genotype_posteriors);
             
             update_alphas(posterior_alphas, prior_alphas, responsabilities);
             
@@ -681,9 +675,7 @@ namespace
             std::tie(is_converged, max_change) = check_convergence(prior_alphas, posterior_alphas,
                                                                    max_change, params.epsilon);
             
-            if (is_converged) {
-                break;
-            }
+            if (is_converged) break;
         }
         
         return {std::move(genotype_posteriors), std::move(genotype_log_posteriors),

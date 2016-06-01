@@ -167,7 +167,8 @@ void print_vector(std::ostream& os, const std::vector<std::string>& v,
     if (v.empty()) {
         os << empty_value;
     } else {
-        std::copy(std::cbegin(v), std::prev(std::cend(v)), std::ostream_iterator<std::string>(os, delim.c_str()));
+        std::copy(std::cbegin(v), std::prev(std::cend(v)),
+                  std::ostream_iterator<std::string>(os, delim.c_str()));
         os << v.back();
     }
 }

@@ -149,8 +149,10 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--regions", "22:29,474,547-29,474,587", // real somatic SNV?
         //"--regions", "22:29,761,141-29,761,305", // real somatic SNV?
         
+        "--regions", "22:42,937,177-42,937,252", // FP ins
+        //"--regions", "22:43,358,707-43,358,858", // FP ins
         //"--regions", "22:40,604,100-40,604,163", // FP del
-        "--regions", "22:41,528,865-41,529,474", // FP ins
+        //"--regions", "22:41,528,865-41,529,474", // FP ins
         
         //"--regions", "22:30,213,959-30,214,123", // FP somatic SNV. Very difficult.
         //"--regions", "22:33,595,824-33,595,864", // FP somatic del
@@ -160,6 +162,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         
         //"--regions", "22:27,297,910-27,297,950", // Not a FP, somaticSniper is calling, but what is going on?
         
+        //"--regions", "22:42,508,785-42,508,825", // FP SNP. Solved: Disable MQ filter
         //"--regions", "22:28,812,452-28,812,616", // FP del. Solved: indel error model
         //"--regions", "22:29,455,729-29,455,769", // FP del. Solved: indel error model
         //"--regions", "22:23,842,194-23,842,524", // FP SNV. Solved: Disable overlap masking. Why?

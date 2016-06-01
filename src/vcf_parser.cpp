@@ -345,23 +345,24 @@ void parse_sample(const std::string& column, const VcfRecord::SampleIdType& samp
 {
     auto values = split(column, ':');
     
+    auto first = std::cbegin(values);
+    
     if (format.front() == "GT") {
         const std::string& genotype = values.front();
-        const bool phased = is_phased(genotype);
+        
+        const bool phased {is_phased(genotype)};
         
         auto alleles = split(genotype, (phased) ? '|' : '/');
         
-        std::vector<unsigned> allele_numbers {};
-        allele_numbers.reserve(alleles.size());
-        std::transform(std::cbegin(alleles), std::cend(alleles), std::back_inserter(allele_numbers),
-                       [] (const std::string& a) { return static_cast<unsigned>(std::stoul(a)); });
+        using Phasing = VcfRecord::Builder::Phasing;
         
-        rb.add_genotype(sample, allele_numbers,
-                        (phased) ? VcfRecord::Builder::Phasing::Phased : VcfRecord::Builder::Phasing::Unphased);
+        rb.add_genotype(sample, std::move(alleles), (phased) ? Phasing::Phased : Phasing::Unphased);
+        
+        ++first;
     }
     
     auto key_it = std::cbegin(format);
-    std::for_each((format.front() == "GT") ? std::cbegin(values) : std::next(std::cbegin(values)), std::cend(values),
+    std::for_each(first, std::cend(values),
                   [&rb, &sample, &key_it] (const std::string& value) {
                       rb.add_genotype_field(sample, *key_it, split(value, ','));
                       ++key_it;

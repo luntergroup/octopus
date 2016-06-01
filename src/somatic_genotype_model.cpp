@@ -106,7 +106,9 @@ namespace Octopus
         using BaseType = HaplotypeLikelihoodCache::Likelihoods;
         
         ReadLikelihoods() = default;
+        
         explicit ReadLikelihoods(const BaseType&);
+        
         ~ReadLikelihoods() = default;
         
         ReadLikelihoods(const ReadLikelihoods&)            = default;
@@ -155,22 +157,17 @@ namespace Octopus
     
     // non-member methods
     
-    void exp(ProbabilityVector& result, const LogProbabilityVector& log_probabilities)
+    ProbabilityVector& exp(const LogProbabilityVector& log_probabilities, ProbabilityVector& result)
     {
         std::transform(std::cbegin(log_probabilities), std::cend(log_probabilities),
                        std::begin(result), [] (const auto lp) { return std::exp(lp); });
+        return result;
     }
     
     ProbabilityVector exp(const LogProbabilityVector& log_probabilities)
     {
         ProbabilityVector result(log_probabilities.size());
-        exp(result, log_probabilities);
-        return result;
-    }
-    
-    auto bundle(const Haplotype& a, const Haplotype& b)
-    {
-        return std::array<std::reference_wrapper<const Haplotype>, 2> {std::cref(a), std::cref(b)};
+        return exp(log_probabilities, result);
     }
     
     template <std::size_t K>
@@ -277,8 +274,7 @@ namespace Octopus
                        const unsigned k, const std::size_t n)
     {
         return std::inner_product(std::cbegin(distribution), std::cend(distribution),
-                                  std::cbegin(likelihoods), 0.0,
-                                  std::plus<void> {},
+                                  std::cbegin(likelihoods), 0.0, std::plus<void> {},
                                   [k, n] (const auto p, const auto& haplotype_likelihoods) {
                                       return p * haplotype_likelihoods[k][n];
                                   });
@@ -431,7 +427,8 @@ namespace Octopus
                                         const ResponsabilityVectors<K>& responsabilities,
                                         const CompressedReadLikelihoods<K>& read_likelihoods)
     {
-        for (std::size_t g {0}; g < result.size(); ++g) {
+        const auto G = result.size();
+        for (std::size_t g {0}; g < G; ++g) {
             result[g] = genotype_log_priors[g] + marginalise(responsabilities, read_likelihoods, g);
         }
         
@@ -465,11 +462,13 @@ namespace Octopus
     auto max_change(const CompressedAlphas<K>& prior_alphas,
                     const CompressedAlphas<K>& posterior_alphas)
     {
-        assert(prior_alphas.size() == posterior_alphas.size());
+        const auto S = prior_alphas.size();
+        
+        assert(S == posterior_alphas.size());
         
         double result {0};
         
-        for (std::size_t s {0}; s < prior_alphas.size(); ++s) {
+        for (std::size_t s {0}; s < S; ++s) {
             const auto curr = max_change(prior_alphas[s], posterior_alphas[s]);
             if (curr > result) result = curr;
         }
@@ -694,7 +693,7 @@ namespace Octopus
             update_genotype_log_posteriors(genotype_log_posteriors, genotype_log_priors,
                                            responsabilities, log_likelihoods);
             
-            exp(genotype_posteriors, genotype_log_posteriors);
+            exp(genotype_log_posteriors, genotype_posteriors);
             
             update_alphas(posterior_alphas, prior_alphas, responsabilities);
             

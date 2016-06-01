@@ -37,12 +37,6 @@ static auto get_penalty(const C& penalties, const T length)
 {
     return (length < penalties.size()) ? penalties[length - 1] : penalties.back();
 }
-    
-    static std::ostream& operator<<(std::ostream& os, const Tandem::StringRun& r)
-    {
-        os << r.pos << " " << r.period << " " << r.length;
-        return os;
-    }
 
 ReadIndelErrorModel::PenaltyType
 ReadIndelErrorModel::evaluate(const Haplotype& haplotype, std::vector<PenaltyType>& gap_open_penalities) const
