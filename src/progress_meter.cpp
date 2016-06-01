@@ -81,12 +81,7 @@ namespace Octopus
     position_tab_length_ {calculate_position_tab_length(regions_)},
     block_compute_times_ {},
     log_ {}
-    {
-        if (!regions.empty()) {
-            completed_regions_.reserve(regions_.size());
-            write_header();
-        }
-    }
+    {}
     
     ProgressMeter::ProgressMeter(GenomicRegion region)
     :
@@ -220,6 +215,44 @@ namespace Octopus
                          << ttc_pad("-")
                          << "-";
         }
+    }
+    
+    void ProgressMeter::start()
+    {
+        if (!regions_.empty()) {
+            completed_regions_.reserve(regions_.size());
+            write_header();
+        }
+    }
+    
+    void ProgressMeter::resume()
+    {
+        // TODO
+    }
+    
+    void ProgressMeter::pause()
+    {
+        // TODO
+    }
+    
+    void ProgressMeter::stop()
+    {
+        if (!done_ && !regions_.empty()) {
+            const TimeInterval duration {start_, std::chrono::system_clock::now()};
+            
+            const auto time_taken = to_string(duration);
+            
+            stream(log_) << std::string(position_tab_length_ - 4, ' ')
+            << "-"
+            << completed_pad("100%")
+            << "100%"
+            << time_taken_pad(time_taken)
+            << time_taken
+            << ttc_pad("-")
+            << "-";
+        }
+        
+        done_ = true;
     }
     
     void ProgressMeter::log_completed(const GenomicRegion& region)

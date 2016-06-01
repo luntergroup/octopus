@@ -37,6 +37,11 @@ namespace Octopus
         ProgressMeter(ProgressMeter&&);
         ProgressMeter& operator=(ProgressMeter&&)      = default;
         
+        void start();
+        void resume();
+        void pause();
+        void stop();
+        
         void log_completed(const GenomicRegion& region);
         
     private:

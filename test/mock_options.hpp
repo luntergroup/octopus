@@ -136,6 +136,8 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         
         // TCGA HCC1143
         
+        //"--regions", "22:40,000,000-50,000,000",
+        
         //"--regions", "22:29,606,605-29,606,972", // Bad model filter!
         
         //"--regions", "22:18,444,570-18,444,787", // real somatic SNV?
@@ -149,19 +151,22 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--regions", "22:29,474,547-29,474,587", // real somatic SNV?
         //"--regions", "22:29,761,141-29,761,305", // real somatic SNV?
         
-        "--regions", "22:42,937,177-42,937,252", // FP ins
-        //"--regions", "22:43,358,707-43,358,858", // FP ins
-        //"--regions", "22:40,604,100-40,604,163", // FP del
-        //"--regions", "22:41,528,865-41,529,474", // FP ins
-        
+        //"--regions", "22:49,872,443-49,872,607", // FP SNP.
+        //"--regions", "22:46,729,658-46,729,822", // FP SNP. Looks like strand bias
+        //"--regions", "22:43,445,777-43,445,817", // FP del
+        //"--regions", "22:42,937,177-42,937,252", // FP ins
+        //"--regions", "22:40,603,966-40,604,296", // FP del
         //"--regions", "22:30,213,959-30,214,123", // FP somatic SNV. Very difficult.
         //"--regions", "22:33,595,824-33,595,864", // FP somatic del
         //"--regions", "22:25,731,146-25,731,476", // FP SNP. What's going on here?
-        //"--regions", "22:25,656,657-25,656,697", // FP SNP. What's going on here?
         //"--regions", "22:28,063,906-28,064,070", // What's going on here?
         
         //"--regions", "22:27,297,910-27,297,950", // Not a FP, somaticSniper is calling, but what is going on?
         
+        //"--regions", "22:41,528,865-41,529,474", // FP ins. Solved: Conservative phasing
+        //"--regions", "22:45,748,970-45,749,325", // FP del. Solved: up max-haplotypes (true haplotype getting filtered)
+        //"--regions", "22:25,656,657-25,656,697", // FP SNP. Solved: Conservative phasing
+        //"--regions", "22:43,358,707-43,358,858", // FP ins. Solved: Conservative phasing
         //"--regions", "22:42,508,785-42,508,825", // FP SNP. Solved: Disable MQ filter
         //"--regions", "22:28,812,452-28,812,616", // FP del. Solved: indel error model
         //"--regions", "22:29,455,729-29,455,769", // FP del. Solved: indel error model
@@ -218,9 +223,9 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--min-assembler-base-quality", "10",
         //"--max-variant-size", "25",
         
-        //"--phasing-level", "Conservative", // Minimal, Conservative, Aggressive
+        "--phasing-level", "Conservative", // Minimal, Conservative, Aggressive
         //"--disable-inactive-flank-scoring",
-        //"--max-haplotypes", "64",
+        //"--max-haplotypes", "256",
         //"--min-haplotype-posterior", "1e-15",
         
         //"--disable-model-filtering",
@@ -238,7 +243,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--output", "octopus_mcg.vcf",
         //"--output", "octopus_NA12878HC_22_unlagged_dummy.vcf",
         //"--output", "octopus_calls2.vcf",
-        //"--output", "octopus_cancer_no_lag.vcf",
+        //"--output", "octopus_cancer.vcf",
         
         nullptr
     };

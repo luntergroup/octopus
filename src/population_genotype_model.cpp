@@ -538,7 +538,7 @@ log_evidence {log_evidence}
                                                          });
                 }
                 
-                result.emplace(std::cref(haplotype), 1.0 - prob_not_observed);
+                result.emplace(haplotype, 1.0 - prob_not_observed);
                 
                 ++it;
             }

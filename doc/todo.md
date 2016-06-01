@@ -2,14 +2,15 @@
 
 ## Problems
 
-- [] Haplotype filtering is not great.
+- [] Haplotype filtering is not good.
+- [] Cancer genotype filtering is not good.
 - [] CoalescentModel does not distinguish indel and snp heterozygousity.
+- [] ReadIndelErrorModel needs improving.
 
 ## Features
 
 - [] Add variant filtering.
-- [] ReadIndelErrorModel should be polymorphic.
-- [] Implement cancer model.
+- [] Make ReadIndelErrorModel polymorphic.
 - [] Multithread everything.
 
 ## Performance
@@ -17,7 +18,9 @@
 - [] SSE log_exp_calculation.
 - [] Improve assembler implementation.
 - [] ReadReader and VcfReader/Writer should use iterators.
-- [] Downsampling is very slow.
+- [] VB models are too slow.
+- [] Phasing is too slow.
+- [] Assembler is too slow.
 
 ## Misc
 

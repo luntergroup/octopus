@@ -14,7 +14,6 @@
 #include <numeric>
 #include <deque>
 #include <unordered_set>
-#include <functional>
 #include <stdexcept>
 #include <iostream>
 
@@ -76,17 +75,23 @@ parameters_ {std::move(specific_parameters)}
     }
 }
 
-CancerVariantCaller::Latents::Latents(std::vector<Genotype<Haplotype>>&& germline_genotypes,
+CancerVariantCaller::Latents::Latents(const std::vector<Haplotype>& haplotypes,
+                                      std::vector<Genotype<Haplotype>>&& germline_genotypes,
                                       std::vector<CancerGenotype<Haplotype>>&& somatic_genotypes,
                                       GermlineModel::InferredLatents&& germline,
                                       CNVModel::InferredLatents&& cnv,
-                                      SomaticModel::InferredLatents&& somatic)
+                                      SomaticModel::InferredLatents&& somatic,
+                                      const std::vector<SampleIdType>& samples,
+                                      boost::optional<std::reference_wrapper<const SampleIdType>> normal_sample)
 :
 germline_genotypes_ {std::move(germline_genotypes)},
 somatic_genotypes_ {std::move(somatic_genotypes)},
 germline_model_inferences_ {std::move(germline)},
 cnv_model_inferences_ {std::move(cnv)},
-somatic_model_inferences_ {std::move(somatic)}
+somatic_model_inferences_ {std::move(somatic)},
+haplotypes_ {haplotypes},
+samples_ {samples},
+normal_sample_ {normal_sample}
 {}
 
 std::shared_ptr<CancerVariantCaller::Latents::HaplotypeProbabilityMap>
@@ -94,8 +99,7 @@ CancerVariantCaller::Latents::haplotype_posteriors() const
 {
     // TODO: properly
     
-    Latents::HaplotypeProbabilityMap result {};
-    result.reserve(500);
+    Latents::HaplotypeProbabilityMap result {haplotypes_.get().size()};
     
     for (const auto& p : cnv_model_inferences_.posteriors.genotype_probabilities) {
         for (const auto& haplotype : p.first) {
@@ -125,15 +129,10 @@ CancerVariantCaller::Latents::genotype_posteriors() const
     // TODO: properly
     
     GenotypeProbabilityMap genotype_posteriors {
-        std::begin(germline_genotypes_),
-        std::end(germline_genotypes_)
+        std::begin(germline_genotypes_), std::end(germline_genotypes_)
     };
     
-    SampleIdType sample;
-    
-    // Just to extract sample names
-    for (const auto& p : cnv_model_inferences_.posteriors.alphas) {
-        std::tie(sample, std::ignore) = p;
+    for (const auto& sample : samples_.get()) {
         insert_sample(std::move(sample), germline_model_inferences_.posteriors.genotype_probabilities,
                       genotype_posteriors);
     }
@@ -180,7 +179,7 @@ CancerVariantCaller::infer_latents(const std::vector<Haplotype>& haplotypes,
     const CNVModel cnv_model {samples_, ploidy, std::move(cnv_model_priors)};
     const SomaticModel somatic_model {samples_, ploidy, std::move(somatic_model_priors)};
     
-    static const std::string merged_sample {"merged_sample"};
+    static const std::string merged_sample {"merged"};
     
     const auto merged_likelihoods = merge_samples(samples_, merged_sample, haplotypes,
                                                   haplotype_likelihoods);
@@ -194,9 +193,15 @@ CancerVariantCaller::infer_latents(const std::vector<Haplotype>& haplotypes,
     
     auto somatic_inferences = somatic_model.infer_latents(cancer_genotypes, haplotype_likelihoods);
     
-    return std::make_unique<Latents>(std::move(germline_genotypes), std::move(cancer_genotypes),
+    boost::optional<std::reference_wrapper<const SampleIdType>> normal {};
+    
+    if (has_normal_sample()) normal = std::cref(normal_sample());
+    
+    return std::make_unique<Latents>(haplotypes,
+                                     std::move(germline_genotypes), std::move(cancer_genotypes),
                                      std::move(germline_inferences), std::move(cnv_inferences),
-                                     std::move(somatic_inferences));
+                                     std::move(somatic_inferences), std::cref(samples_),
+                                     normal);
 }
 
 template <typename... T>
@@ -427,7 +432,7 @@ struct CancerGenotypeCall
 };
 
 using CancerGenotypeCalls = std::vector<CancerGenotypeCall>;
-    
+
 template <typename L>
 auto find_map_genotype(const L& posteriors)
 {
@@ -465,7 +470,7 @@ VariantPosteriors compute_candidate_posteriors(const std::vector<Variant>& candi
     
     return result;
 }
-    
+
 // germline variant calling
 
 bool contains_alt(const Genotype<Haplotype>& genotype_call, const VariantReference& candidate)
@@ -498,8 +503,8 @@ auto call_candidates(const VariantPosteriors& candidate_posteriors,
 // somatic variant posterior
 
 template <typename M>
-auto find_likely_cancer_genotypes(const M& cancer_genotype_posteriors,
-                                  const double min_posterior = 0.001)
+auto extract_likely_cancer_genotypes(const M& cancer_genotype_posteriors,
+                                     const double min_posterior = 0.001)
 {
     std::deque<std::pair<CancerGenotype<Haplotype>, double>> result {};
     
@@ -677,7 +682,7 @@ auto transform_somatic_calls(SomaticVariantCalls&& somatic_calls, CancerGenotype
     return result;
 }
 } // namespace
-    
+
 std::vector<std::unique_ptr<VariantCall>>
 CancerVariantCaller::call_variants(const std::vector<Variant>& candidates, const Latents& latents) const
 {
@@ -725,7 +730,7 @@ CancerVariantCaller::call_variants(const std::vector<Variant>& candidates, const
     if (somatic_posterior >= parameters_.min_somatic_posterior) {
         const auto& cancer_genotype_posteriors = latents.somatic_model_inferences_.posteriors.genotype_probabilities;
         
-        auto reduced_cancer_genotype_posteriors = find_likely_cancer_genotypes(cancer_genotype_posteriors);
+        auto reduced_cancer_genotype_posteriors = extract_likely_cancer_genotypes(cancer_genotype_posteriors);
         
         auto somatic_allele_posteriors = compute_somatic_variant_posteriors(uncalled_germline_candidates,
                                                                             reduced_cancer_genotype_posteriors,

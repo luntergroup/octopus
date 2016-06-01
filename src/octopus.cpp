@@ -671,34 +671,28 @@ namespace Octopus
         init_timers();
         #endif
         
-        Logging::InfoLogger log {};
-        
         std::deque<VcfRecord> calls;
         
         for (const auto& input_region : components.regions) {
-            stream(log) << "Processing input region " << input_region;
-            
             auto subregion = propose_call_subregion(components, input_region);
             
             if (is_empty(subregion) && !region_has_reads(input_region, components)) {
-                Logging::WarningLogger lg {};
-                stream(lg) << "No reads found in input region " << input_region;
+                Logging::WarningLogger log {};
+                stream(log) << "No reads found in input region " << input_region;
             }
             
             while (!is_empty(subregion)) {
                 if (DEBUG_MODE) {
-                    Logging::DebugLogger lg {};
-                    stream(lg) << "Processing subregion " << subregion;
+                    Logging::DebugLogger log {};
+                    stream(log) << "Processing subregion " << subregion;
                 }
                 
-                calls = components.caller->call(subregion, components.progress_meter);
-                
-//                try {
-//                    calls = components.caller->call(subregion, meter);
-//                } catch(...) {
-//                    // TODO: which exceptions can we recover from?
-//                    throw;
-//                }
+                try {
+                    calls = components.caller->call(subregion, components.progress_meter);
+                } catch(...) {
+                    // TODO: which exceptions can we recover from?
+                    throw;
+                }
                 
                 try {
                     write_calls(std::move(calls), components.output);
@@ -731,9 +725,13 @@ namespace Octopus
     
     void run_octopus_single_threaded(GenomeCallingComponents& components)
     {
+        components.progress_meter().start();
+        
         for (const auto& contig : components.contigs_in_output_order()) {
             run_octopus_on_contig(ContigCallingComponents {contig, components});
         }
+        
+        components.progress_meter().stop();
     }
     
     VcfWriter create_unique_temp_output_file(const GenomicRegion& region,
@@ -982,6 +980,8 @@ namespace Octopus
         
         SyncPacket sync {};
         
+        components.progress_meter().start();
+        
         while (!tasks.empty()) {
             for (auto& future : futures) {
                 if (is_ready(future)) {
@@ -1112,6 +1112,8 @@ namespace Octopus
         
         remaining_tasks.clear();
         remaining_tasks.shrink_to_fit();
+        
+        components.progress_meter().stop();
         
         auto results = convert_temp_writers(temp_writers);
         
