@@ -26,7 +26,7 @@
 
 namespace Octopus
 {
-    class Call : public Mappable<Allele>
+    class Call : public Mappable<Call>
     {
     public:
         Call() = delete;
