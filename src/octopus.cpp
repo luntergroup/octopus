@@ -1066,7 +1066,8 @@ namespace Octopus
         pending_tasks.clear();
         
         futures.erase(std::remove_if(std::begin(futures), std::end(futures),
-                                     [] (const auto& f) { return !f.valid(); }), std::end(futures));
+                                     [] (const auto& f) { return !f.valid(); }),
+                      std::end(futures));
         
         std::deque<CompletedTask> remaining_tasks {};
         
@@ -1155,7 +1156,7 @@ namespace Octopus
             auto components = collate_genome_calling_components(options);
             
             if (!components) return;
-                        
+            
             end = std::chrono::system_clock::now();
             
             stream(log) << "Done initialising calling components in " << TimeInterval {start, end};

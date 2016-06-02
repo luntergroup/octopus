@@ -718,8 +718,6 @@ CancerVariantCaller::call_variants(const std::vector<Variant>& candidates, const
                                                                                      called_germline_genotype,
                                                                                      parameters_.min_variant_posterior);
     
-    
-    
     const auto sample_somatic_inv_posteriors = calculate_probability_samples_not_somatic(latents);
     
     const auto somatic_posterior = calculate_somatic_probability(sample_somatic_inv_posteriors,
