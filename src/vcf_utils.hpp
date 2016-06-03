@@ -37,11 +37,11 @@ void index_vcfs(const std::vector<VcfReader>& readers, int lidx_shift = 14);
 
 std::vector<VcfReader> writers_to_readers(std::vector<VcfWriter>& writers);
 
-void copy(VcfReader& src, VcfWriter& dst);
+void copy(const VcfReader& src, VcfWriter& dst);
 
 VcfHeader merge(const std::vector<VcfHeader>& headers);
 
-void merge(std::vector<VcfReader>& sources, VcfWriter& dst, const std::vector<std::string>& contigs);
-void merge(std::vector<VcfReader>& sources, VcfWriter& dst);
+void merge(const std::vector<VcfReader>& sources, VcfWriter& dst, const std::vector<std::string>& contigs);
+void merge(const std::vector<VcfReader>& sources, VcfWriter& dst);
 
 #endif /* defined(__Octopus__vcf_utils__) */

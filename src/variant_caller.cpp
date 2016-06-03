@@ -30,7 +30,7 @@ namespace Octopus
 // public methods
 
 VariantCaller::CallerComponents::CallerComponents(const ReferenceGenome& reference,
-                                                  ReadPipe& read_pipe,
+                                                  const ReadPipe& read_pipe,
                                                   CandidateVariantGenerator&& candidate_generator,
                                                   HaplotypeGenerator::Builder haplotype_generator_builder,
                                                   Phaser phaser)
@@ -45,9 +45,9 @@ phaser {std::move(phaser)}
 VariantCaller::VariantCaller(CallerComponents&& components, CallerParameters parameters)
 :
 reference_ {components.reference},
-read_pipe_ {components.read_pipe},
-samples_ {read_pipe_.get().samples()},
+samples_ {components.read_pipe.get().samples()},
 debug_log_ {},
+read_pipe_ {components.read_pipe},
 candidate_generator_ {std::move(components.candidate_generator)},
 haplotype_generator_builder_ {std::move(components.haplotype_generator_builder)},
 phaser_ {std::move(components.phaser)},

@@ -29,21 +29,10 @@ namespace Octopus
     class Call : public Mappable<Call>
     {
     public:
-        Call() = delete;
-        
-        explicit Call(double quality);
-        template <typename T> explicit Call(T&& genotype_calls, double quality);
-        
-        virtual ~Call() = default;
-        
-        Call(const Call&)            = default;
-        Call& operator=(const Call&) = default;
-        Call(Call&&)                 = default;
-        Call& operator=(Call&&)      = default;
-        
         struct PhaseCall
         {
             PhaseCall() = delete;
+            
             template <typename R> PhaseCall(R&& region, double score);
             
             GenomicRegion region;
@@ -53,6 +42,7 @@ namespace Octopus
         struct GenotypeCall
         {
             GenotypeCall() = delete;
+            
             template <typename G> GenotypeCall(G&& genotype, double posterior);
             template <typename G, typename P> GenotypeCall(G&& genotype, double posterior, P&& phase);
             
@@ -60,6 +50,19 @@ namespace Octopus
             double posterior;
             boost::optional<PhaseCall> phase;
         };
+        
+        Call() = delete;
+        
+        explicit Call(double quality);
+        
+        template <typename T> explicit Call(T&& genotype_calls, double quality);
+        
+        virtual ~Call() = default;
+        
+        Call(const Call&)            = default;
+        Call& operator=(const Call&) = default;
+        Call(Call&&)                 = default;
+        Call& operator=(Call&&)      = default;
         
         double quality() const noexcept;
         
@@ -81,6 +84,7 @@ namespace Octopus
         
         virtual bool parsimonise(char dummy_base) { return false; };
         virtual bool parsimonise(const ReferenceGenome& reference) { return false; };
+        
         virtual void decorate(VcfRecord::Builder& record) const = 0;
         
         bool is_model_filtered() const noexcept;

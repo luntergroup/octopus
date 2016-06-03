@@ -102,23 +102,23 @@ const std::vector<ReadManager::SampleIdType>& ReadManager::samples() const
     return samples_;
 }
 
-bool ReadManager::has_contig_reads(const SampleIdType& sample, const GenomicRegion::ContigNameType& contig)
+bool ReadManager::has_contig_reads(const SampleIdType& sample, const GenomicRegion::ContigNameType& contig) const
 {
     return has_contig_reads({sample}, contig);
 }
 
 bool ReadManager::has_contig_reads(const std::vector<SampleIdType>& samples,
-                                   const GenomicRegion::ContigNameType& contig)
+                                   const GenomicRegion::ContigNameType& contig) const
 {
     return true; // TODO
 }
 
-bool ReadManager::has_contig_reads(const GenomicRegion::ContigNameType& contig)
+bool ReadManager::has_contig_reads(const GenomicRegion::ContigNameType& contig) const
 {
     return has_contig_reads(samples(), contig);
 }
 
-std::size_t ReadManager::count_reads(const SampleIdType& sample, const GenomicRegion& region)
+std::size_t ReadManager::count_reads(const SampleIdType& sample, const GenomicRegion& region) const
 {
     using std::begin; using std::end; using std::for_each;
     
@@ -143,7 +143,7 @@ std::size_t ReadManager::count_reads(const SampleIdType& sample, const GenomicRe
     return result;
 }
 
-std::size_t ReadManager::count_reads(const std::vector<SampleIdType>& samples, const GenomicRegion& region)
+std::size_t ReadManager::count_reads(const std::vector<SampleIdType>& samples, const GenomicRegion& region) const
 {
     using std::begin; using std::end; using std::for_each;
     
@@ -170,21 +170,21 @@ std::size_t ReadManager::count_reads(const std::vector<SampleIdType>& samples, c
     return result;
 }
 
-std::size_t ReadManager::count_reads(const GenomicRegion& region)
+std::size_t ReadManager::count_reads(const GenomicRegion& region) const
 {
     return count_reads(samples(), region);
 }
 
 GenomicRegion ReadManager::find_covered_subregion(const SampleIdType& sample,
                                                   const GenomicRegion& region,
-                                                  const std::size_t max_reads)
+                                                  const std::size_t max_reads) const
 {
     return find_covered_subregion(std::vector<SampleIdType> {sample}, region, max_reads);
 }
 
 GenomicRegion ReadManager::find_covered_subregion(const std::vector<SampleIdType>& samples,
                                                   const GenomicRegion& region,
-                                                  const std::size_t max_reads)
+                                                  const std::size_t max_reads) const
 {
     using std::begin; using std::end; using std::next; using std::for_each;
     
@@ -262,7 +262,7 @@ GenomicRegion ReadManager::find_covered_subregion(const std::vector<SampleIdType
     return GenomicRegion {region.contig_name(), result_begin, result_end};
 }
 
-GenomicRegion ReadManager::find_covered_subregion(const GenomicRegion& region, const std::size_t max_reads)
+GenomicRegion ReadManager::find_covered_subregion(const GenomicRegion& region, const std::size_t max_reads) const
 {
     return find_covered_subregion(samples(), region, max_reads);
 }
@@ -297,7 +297,7 @@ namespace
     }
 } // namespace
 
-ReadManager::ReadContainer ReadManager::fetch_reads(const SampleIdType& sample, const GenomicRegion& region)
+ReadManager::ReadContainer ReadManager::fetch_reads(const SampleIdType& sample, const GenomicRegion& region) const
 {
     using std::begin; using std::end; using std::make_move_iterator; using std::for_each;
     
@@ -323,7 +323,7 @@ ReadManager::ReadContainer ReadManager::fetch_reads(const SampleIdType& sample, 
 }
 
 ReadManager::SampleReadMap ReadManager::fetch_reads(const std::vector<SampleIdType>& samples,
-                                                    const GenomicRegion& region)
+                                                    const GenomicRegion& region) const
 {
     using std::begin; using std::end; using std::make_move_iterator; using std::for_each;
     
@@ -357,7 +357,7 @@ ReadManager::SampleReadMap ReadManager::fetch_reads(const std::vector<SampleIdTy
     return result;
 }
 
-ReadManager::SampleReadMap ReadManager::fetch_reads(const GenomicRegion& region)
+ReadManager::SampleReadMap ReadManager::fetch_reads(const GenomicRegion& region) const
 {
     return fetch_reads(samples(), region);
 }
@@ -392,7 +392,7 @@ void ReadManager::open_initial_files()
     open_readers(begin(reader_paths), begin(reader_paths) + num_files_to_open);
 }
 
-ReadReader ReadManager::make_reader(const Path& reader_path)
+ReadReader ReadManager::make_reader(const Path& reader_path) const
 {
     return ReadReader {reader_path};
 }
@@ -418,7 +418,7 @@ unsigned ReadManager::num_reader_spaces() const noexcept
     return max_open_files_ - num_open_readers();
 }
 
-void ReadManager::open_reader(const Path& reader_path)
+void ReadManager::open_reader(const Path& reader_path) const
 {
     if (num_open_readers() == max_open_files_) { // do we need this?
         close_reader(choose_reader_to_close());
@@ -428,7 +428,7 @@ void ReadManager::open_reader(const Path& reader_path)
 }
 
 std::vector<ReadManager::Path>::iterator
-ReadManager::open_readers(std::vector<Path>::iterator first, std::vector<Path>::iterator last)
+ReadManager::open_readers(std::vector<Path>::iterator first, std::vector<Path>::iterator last) const
 {
     if (first == last) return first;
     
@@ -454,7 +454,7 @@ ReadManager::open_readers(std::vector<Path>::iterator first, std::vector<Path>::
     return first_open;
 }
 
-void ReadManager::close_reader(const Path& reader_path)
+void ReadManager::close_reader(const Path& reader_path) const
 {
     // TODO: we can make use of IReadReaderImpl::close to avoid calling deconstructor on the file.
     open_readers_.erase(reader_path);
@@ -466,7 +466,7 @@ ReadManager::Path ReadManager::choose_reader_to_close() const
     return open_readers_.begin()->first; // i.e. smallest file size
 }
 
-void ReadManager::close_readers(unsigned n)
+void ReadManager::close_readers(unsigned n) const
 {
     for (; n > 0; --n) {
         close_reader(choose_reader_to_close());

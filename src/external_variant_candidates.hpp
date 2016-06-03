@@ -27,8 +27,8 @@ public:
     ExternalCandidateVariantGenerator() = delete;
     
     ExternalCandidateVariantGenerator(boost::filesystem::path path);
-    ExternalCandidateVariantGenerator(std::unique_ptr<VcfReader> reader);
-    ExternalCandidateVariantGenerator(const std::shared_ptr<VcfReader>& reader);
+    ExternalCandidateVariantGenerator(std::unique_ptr<const VcfReader> reader);
+    ExternalCandidateVariantGenerator(const std::shared_ptr<const VcfReader>& reader);
     
     ~ExternalCandidateVariantGenerator() override = default;
     
@@ -40,7 +40,7 @@ public:
     std::vector<Variant> generate_candidates(const GenomicRegion& region) override;
     
 private:
-    std::shared_ptr<VcfReader> reader_;
+    std::shared_ptr<const VcfReader> reader_;
 };
 
 } // namespace Octopus

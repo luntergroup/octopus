@@ -19,7 +19,7 @@ namespace Octopus
 // public methods
 
 VariantCallerBuilder::Parameters::Parameters(const ReferenceGenome& reference,
-                                             ReadPipe& read_pipe,
+                                             const ReadPipe& read_pipe,
                                              const CandidateGeneratorBuilder& candidate_generator_builder,
                                              HaplotypeGenerator::Builder haplotype_generator_builder)
 :
@@ -30,7 +30,7 @@ haplotype_generator_builder {std::move(haplotype_generator_builder)}
 {}
 
 VariantCallerBuilder::VariantCallerBuilder(const ReferenceGenome& reference,
-                                           ReadPipe& read_pipe,
+                                           const ReadPipe& read_pipe,
                                            const CandidateGeneratorBuilder& candidate_generator_builder,
                                            HaplotypeGenerator::Builder haplotype_generator_builder)
 :
@@ -70,7 +70,7 @@ VariantCallerBuilder& VariantCallerBuilder::set_reference(const ReferenceGenome&
     return *this;
 }
 
-VariantCallerBuilder& VariantCallerBuilder::set_read_pipe(ReadPipe& read_pipe) noexcept
+VariantCallerBuilder& VariantCallerBuilder::set_read_pipe(const ReadPipe& read_pipe) noexcept
 {
     parameters_.read_pipe = read_pipe;
     return *this;

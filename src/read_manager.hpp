@@ -57,24 +57,24 @@ public:
     unsigned num_samples() const noexcept;
     const std::vector<SampleIdType>& samples() const;
     
-    bool has_contig_reads(const SampleIdType& sample, const GenomicRegion::ContigNameType& contig);
+    bool has_contig_reads(const SampleIdType& sample, const GenomicRegion::ContigNameType& contig) const;
     bool has_contig_reads(const std::vector<SampleIdType>& samples,
-                          const GenomicRegion::ContigNameType& contig);
-    bool has_contig_reads(const GenomicRegion::ContigNameType& contig);
+                          const GenomicRegion::ContigNameType& contig) const;
+    bool has_contig_reads(const GenomicRegion::ContigNameType& contig) const;
     
-    std::size_t count_reads(const SampleIdType& sample, const GenomicRegion& region);
-    std::size_t count_reads(const std::vector<SampleIdType>& samples, const GenomicRegion& region);
-    std::size_t count_reads(const GenomicRegion& region);
+    std::size_t count_reads(const SampleIdType& sample, const GenomicRegion& region) const;
+    std::size_t count_reads(const std::vector<SampleIdType>& samples, const GenomicRegion& region) const;
+    std::size_t count_reads(const GenomicRegion& region) const;
     
     GenomicRegion find_covered_subregion(const SampleIdType& sample, const GenomicRegion& region,
-                                         std::size_t max_reads);
+                                         std::size_t max_reads) const;
     GenomicRegion find_covered_subregion(const std::vector<SampleIdType>& samples,
-                                         const GenomicRegion& region, std::size_t max_reads);
-    GenomicRegion find_covered_subregion(const GenomicRegion& region, std::size_t max_reads);
+                                         const GenomicRegion& region, std::size_t max_reads) const;
+    GenomicRegion find_covered_subregion(const GenomicRegion& region, std::size_t max_reads) const;
     
-    ReadContainer fetch_reads(const SampleIdType& sample, const GenomicRegion& region);
-    SampleReadMap fetch_reads(const std::vector<SampleIdType>& samples, const GenomicRegion& region);
-    SampleReadMap fetch_reads(const GenomicRegion& region);
+    ReadContainer fetch_reads(const SampleIdType& sample, const GenomicRegion& region) const;
+    SampleReadMap fetch_reads(const std::vector<SampleIdType>& samples, const GenomicRegion& region) const;
+    SampleReadMap fetch_reads(const GenomicRegion& region) const;
     
 private:
     struct FileSizeCompare
@@ -91,8 +91,8 @@ private:
     unsigned max_open_files_ = 200;
     unsigned num_files_;
     
-    OpenReaderMap open_readers_;
-    ClosedReaders closed_readers_;
+    mutable OpenReaderMap open_readers_;
+    mutable ClosedReaders closed_readers_;
     
     SampleIdToReaderPathMap reader_paths_containing_sample_;
     
@@ -105,17 +105,17 @@ private:
     void setup_reader_samples_and_regions();
     void open_initial_files();
     
-    ReadReader make_reader(const Path& reader_path);
+    ReadReader make_reader(const Path& reader_path) const;
     bool is_open(const Path& reader_path) const noexcept;
     std::vector<Path>::iterator partition_open(std::vector<Path>& reader_paths) const;
     unsigned num_open_readers() const noexcept;
     unsigned num_reader_spaces() const noexcept;
-    void open_reader(const Path& reader_path);
+    void open_reader(const Path& reader_path) const;
     std::vector<Path>::iterator open_readers(std::vector<Path>::iterator first,
-                                             std::vector<Path>::iterator last);
-    void close_reader(const Path& reader_path);
+                                             std::vector<Path>::iterator last) const;
+    void close_reader(const Path& reader_path) const;
     Path choose_reader_to_close() const;
-    void close_readers(unsigned n);
+    void close_readers(unsigned n) const;
     
     void add_possible_regions_to_reader_map(const Path& reader_path,
                                             const std::vector<GenomicRegion>& regions);

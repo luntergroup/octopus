@@ -215,9 +215,11 @@ public:
     Builder& set_alt(SequenceType allele); // if just one
     Builder& set_alt(std::vector<SequenceType> alleles);
     Builder& set_qual(QualityType quality);
+    Builder& set_passed();
     Builder& set_filter(std::vector<KeyType> filter);
     Builder& set_filter(std::initializer_list<KeyType> filter);
     Builder& add_filter(KeyType filter);
+    Builder& add_info(const KeyType& key); // flags
     Builder& add_info(const KeyType& key, const ValueType& value);
     Builder& add_info(const KeyType& key, const std::vector<ValueType>& values);
     Builder& add_info(const KeyType& key, std::initializer_list<ValueType> values);
@@ -227,7 +229,7 @@ public:
     Builder& add_format(KeyType key);
     Builder& add_homozygous_ref_genotype(const SampleIdType& sample, unsigned ploidy);
     Builder& add_genotype(const SampleIdType& sample, const std::vector<SequenceType>& alleles, Phasing phasing);
-    Builder& add_genotype(const SampleIdType& sample, const std::vector<unsigned>& alleles, Phasing is_phased);
+    Builder& add_genotype(const SampleIdType& sample, const std::vector<boost::optional<unsigned>>& alleles, Phasing is_phased);
     Builder& add_genotype_field(const SampleIdType& sample, const KeyType& key, const ValueType& value);
     Builder& add_genotype_field(const SampleIdType& sample, const KeyType& key, const std::vector<ValueType>& values);
     Builder& add_genotype_field(const SampleIdType& sample, const KeyType& key, std::initializer_list<ValueType> values);

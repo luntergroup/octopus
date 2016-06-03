@@ -27,11 +27,11 @@
 
 namespace Octopus
 {
-GenotypeReader::GenotypeReader(const ReferenceGenome& reference, VcfReader&& variant_reader)
+GenotypeReader::GenotypeReader(const ReferenceGenome& reference, const VcfReader& variant_reader)
 :
 reference_ {reference},
-variant_reader_ {std::move(variant_reader)},
-samples_ {variant_reader_.fetch_header().samples()}
+variant_reader_ {variant_reader},
+samples_ {variant_reader.fetch_header().samples()}
 {}
 
 namespace
@@ -109,7 +109,8 @@ namespace
     }
     
     Genotype<Haplotype> extract_genotype(const std::vector<CallWrapper>& phased_calls,
-                                         const SampleIdType& sample, const ReferenceGenome& reference)
+                                         const SampleIdType& sample,
+                                         const ReferenceGenome& reference)
     {
         assert(!phased_calls.empty());
         
@@ -133,7 +134,7 @@ namespace
 
 GenotypeReader::GenotypeMap GenotypeReader::extract_genotype(const GenomicRegion& region)
 {
-    const auto calls = variant_reader_.fetch_records(region);
+    const auto calls = variant_reader_.get().fetch_records(region);
     
     GenotypeMap result {samples_.size()};
     

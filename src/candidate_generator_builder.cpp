@@ -110,7 +110,7 @@ namespace Octopus
         return *this;
     }
     
-    CandidateGeneratorBuilder& CandidateGeneratorBuilder::set_variant_source(const std::shared_ptr<VcfReader>& variant_source)
+    CandidateGeneratorBuilder& CandidateGeneratorBuilder::set_variant_source(const std::shared_ptr<const VcfReader>& variant_source)
     {
         parameters_.variant_source = variant_source;
         return *this;

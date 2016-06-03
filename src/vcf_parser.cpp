@@ -12,6 +12,9 @@
 #include <iterator>
 #include <stdexcept>
 
+#include <boost/optional.hpp>
+#include <boost/lexical_cast.hpp>
+
 #include "genomic_region.hpp"
 #include "vcf_record.hpp"
 
@@ -63,7 +66,7 @@ VcfHeader VcfParser::fetch_header() const
     return header_;
 }
 
-std::size_t VcfParser::count_records()
+std::size_t VcfParser::count_records() const
 {
     reset_vcf();
     
@@ -71,7 +74,7 @@ std::size_t VcfParser::count_records()
                          [] (char c) { return c == '\n'; });
 }
 
-std::size_t VcfParser::count_records(const std::string& contig)
+std::size_t VcfParser::count_records(const std::string& contig) const
 {
     reset_vcf();
     
@@ -79,7 +82,7 @@ std::size_t VcfParser::count_records(const std::string& contig)
                          [&contig] (const auto& line) { return is_same_contig(line, contig); });
 }
 
-std::size_t VcfParser::count_records(const GenomicRegion& region)
+std::size_t VcfParser::count_records(const GenomicRegion& region) const
 {
     reset_vcf();
     
@@ -87,7 +90,7 @@ std::size_t VcfParser::count_records(const GenomicRegion& region)
                          [&region] (const auto& line) { return overlaps(line, region); });
 }
 
-std::vector<VcfRecord> VcfParser::fetch_records(const UnpackPolicy level)
+std::vector<VcfRecord> VcfParser::fetch_records(const UnpackPolicy level) const
 {
     reset_vcf();
     
@@ -103,7 +106,7 @@ std::vector<VcfRecord> VcfParser::fetch_records(const UnpackPolicy level)
     return result;
 }
 
-std::vector<VcfRecord> VcfParser::fetch_records(const std::string& contig, const UnpackPolicy level)
+std::vector<VcfRecord> VcfParser::fetch_records(const std::string& contig, const UnpackPolicy level) const
 {
     reset_vcf();
     
@@ -121,7 +124,7 @@ std::vector<VcfRecord> VcfParser::fetch_records(const std::string& contig, const
     return result;
 }
 
-std::vector<VcfRecord> VcfParser::fetch_records(const GenomicRegion& region, const UnpackPolicy level)
+std::vector<VcfRecord> VcfParser::fetch_records(const GenomicRegion& region, const UnpackPolicy level) const
 {
     reset_vcf();
     
@@ -141,7 +144,7 @@ std::vector<VcfRecord> VcfParser::fetch_records(const GenomicRegion& region, con
 
 // private methods
 
-void VcfParser::reset_vcf()
+void VcfParser::reset_vcf() const
 {
     file_.clear();
     file_.seekg(first_record_pos_);
@@ -309,10 +312,11 @@ bool overlaps(const std::string& line, const GenomicRegion& region)
 
 std::vector<std::string> split(const std::string& str, char delim = ',')
 {
-    std::vector<std::string> result {};
-    result.reserve(std::count(str.cbegin(), str.cend(), delim));
     std::stringstream ss {str};
     std::string item;
+    
+    std::vector<std::string> result {};
+    result.reserve(std::count(std::cbegin(str), std::cend(str), delim));
     
     while (std::getline(ss, item, delim)) {
         result.emplace_back(item);
@@ -321,11 +325,21 @@ std::vector<std::string> split(const std::string& str, char delim = ',')
     return result;
 }
 
+void parse_info_field(const std::string& field, VcfRecord::Builder& rb)
+{
+    const auto pos = field.find_first_of('=');
+    
+    if (pos == std::string::npos) {
+        rb.add_info(field);
+    } else {
+        rb.add_info(field.substr(0, pos), split(field.substr(pos + 1), ','));
+    }
+}
+
 void parse_info(const std::string& column, VcfRecord::Builder& rb)
 {
-    for (auto& f : split(column, ';')) {
-        const auto pos = f.find_first_of('=');
-        rb.add_info(f.substr(0, pos), split(f.substr(pos + 1), ','));
+    for (auto& field : split(column, ';')) {
+        parse_info_field(field, rb);
     }
 }
 
@@ -340,6 +354,31 @@ bool is_phased(const std::string& genotype)
     return genotype[pos] == '|';
 }
 
+void parse_genotype(const VcfRecord::SampleIdType& sample, const std::string& genotype,
+                    VcfRecord::Builder& rb)
+{
+    const bool phased {is_phased(genotype)};
+    
+    auto allele_numbers = split(genotype, (phased) ? '|' : '/');
+    
+    using Phasing = VcfRecord::Builder::Phasing;
+    
+    std::vector<boost::optional<unsigned>> alleles {};
+    alleles.reserve(allele_numbers.size());
+    
+    std::transform(std::cbegin(allele_numbers), std::cend(allele_numbers),
+                   std::back_inserter(alleles),
+                   [] (const auto& a) -> boost::optional<unsigned> {
+                       try {
+                           return boost::lexical_cast<unsigned>(a);
+                       } catch (const boost::bad_lexical_cast&) {
+                           return boost::none;
+                       }
+                   });
+    
+    rb.add_genotype(sample, std::move(alleles), (phased) ? Phasing::Phased : Phasing::Unphased);
+}
+
 void parse_sample(const std::string& column, const VcfRecord::SampleIdType& sample,
                   const std::vector<std::string>& format, VcfRecord::Builder& rb)
 {
@@ -348,16 +387,8 @@ void parse_sample(const std::string& column, const VcfRecord::SampleIdType& samp
     auto first_key   = std::cbegin(format);
     auto first_value = std::cbegin(values);
     
-    if (format.front() == "GT") {
-        const std::string& genotype = values.front();
-        
-        const bool phased {is_phased(genotype)};
-        
-        auto alleles = split(genotype, (phased) ? '|' : '/');
-        
-        using Phasing = VcfRecord::Builder::Phasing;
-        
-        rb.add_genotype(sample, std::move(alleles), (phased) ? Phasing::Phased : Phasing::Unphased);
+    if (format.front() == "GT") { // GT must always come first, if present
+        parse_genotype(sample, values.front(), rb);
         
         ++first_key;
         ++first_value;
@@ -393,14 +424,16 @@ VcfRecord parse_record(const std::string& line, const std::vector<VcfRecord::Sam
         rb.set_qual(0);
     } else {
         try {
-            rb.set_qual(static_cast<VcfRecord::QualityType>(std::stoi(it->data)));
+            rb.set_qual(static_cast<VcfRecord::QualityType>(std::stod(it->data)));
         } catch (const std::invalid_argument& e) {
             rb.set_qual(0); // or should throw?
         }
     }
     
     ++it;
-    rb.set_filter(split(it->data, ':'));
+    if (it->data != ".") {
+        rb.set_filter(split(it->data, ':'));
+    }
     ++it;
     parse_info(it->data, rb);
     ++it;

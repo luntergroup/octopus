@@ -70,7 +70,6 @@ protected:
     using HaplotypeReference = std::reference_wrapper<const Haplotype>;
     
     std::reference_wrapper<const ReferenceGenome> reference_;
-    std::reference_wrapper<ReadPipe> read_pipe_;
     
     std::vector<SampleIdType> samples_;
     
@@ -96,7 +95,7 @@ public:
         CallerComponents() = delete;
         
         CallerComponents(const ReferenceGenome& reference,
-                         ReadPipe& read_pipe,
+                         const ReadPipe& read_pipe,
                          CandidateVariantGenerator&& candidate_generator,
                          HaplotypeGenerator::Builder haplotype_generator_builder,
                          Phaser phase);
@@ -107,7 +106,7 @@ public:
         CallerComponents& operator=(CallerComponents&&)      = default;
         
         std::reference_wrapper<const ReferenceGenome> reference;
-        std::reference_wrapper<ReadPipe> read_pipe;
+        std::reference_wrapper<const ReadPipe> read_pipe;
         CandidateVariantGenerator candidate_generator;
         HaplotypeGenerator::Builder haplotype_generator_builder;
         Phaser phaser;
@@ -124,6 +123,8 @@ public:
     };
     
 private:
+    std::reference_wrapper<const ReadPipe> read_pipe_;
+    
     mutable CandidateVariantGenerator candidate_generator_;
     
     HaplotypeGenerator::Builder haplotype_generator_builder_;

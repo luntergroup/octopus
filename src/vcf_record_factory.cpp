@@ -485,7 +485,7 @@ namespace Octopus
         const auto& region = call->mapped_region();
         
         result.set_chrom(contig_name(region));
-        result.set_pos(mapped_begin(region));
+        result.set_pos(mapped_begin(region) + 1);
         result.set_ref(call->get_reference().sequence());
         result.set_qual(phred_quality);
         
@@ -553,7 +553,7 @@ namespace Octopus
         const auto& region = calls.front()->mapped_region();
         
         result.set_chrom(contig_name(region));
-        result.set_pos(mapped_begin(region));
+        result.set_pos(mapped_begin(region) + 1);
         result.set_ref(calls.front()->get_reference().sequence());
         result.set_qual(phred_quality);
         

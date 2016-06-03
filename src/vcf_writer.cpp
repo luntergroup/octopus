@@ -87,7 +87,7 @@ const VcfWriter::Path& VcfWriter::path() const noexcept
 void VcfWriter::write(const VcfHeader& header)
 {
     std::lock_guard<std::mutex> lock {mutex_};
-    writer_->write_header(header);
+    writer_->write(header);
     is_header_written_ = true;
 }
 
@@ -95,7 +95,7 @@ void VcfWriter::write(const VcfRecord& record)
 {
     std::lock_guard<std::mutex> lock {mutex_};
     if (is_header_written_) {
-        writer_->write_record(record);
+        writer_->write(record);
     } else {
         throw std::runtime_error {"VcfWriter::write: cannot write record as header has not been written"};
     }

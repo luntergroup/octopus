@@ -91,37 +91,37 @@ VcfHeader VcfReader::fetch_header() const
     return reader_->fetch_header();
 }
 
-std::size_t VcfReader::count_records()
+std::size_t VcfReader::count_records() const
 {
     std::lock_guard<std::mutex> lock {mutex_};
     return reader_->count_records();
 }
 
-std::size_t VcfReader::count_records(const std::string& contig)
+std::size_t VcfReader::count_records(const std::string& contig) const
 {
     std::lock_guard<std::mutex> lock {mutex_};
     return reader_->count_records(contig);
 }
 
-std::size_t VcfReader::count_records(const GenomicRegion& region)
+std::size_t VcfReader::count_records(const GenomicRegion& region) const
 {
     std::lock_guard<std::mutex> lock {mutex_};
     return reader_->count_records(region);
 }
 
-std::vector<VcfRecord> VcfReader::fetch_records(const UnpackPolicy level)
+std::vector<VcfRecord> VcfReader::fetch_records(const UnpackPolicy level) const
 {
     std::lock_guard<std::mutex> lock {mutex_};
     return reader_->fetch_records(level);
 }
 
-std::vector<VcfRecord> VcfReader::fetch_records(const std::string& contig, const UnpackPolicy level)
+std::vector<VcfRecord> VcfReader::fetch_records(const std::string& contig, const UnpackPolicy level) const
 {
     std::lock_guard<std::mutex> lock {mutex_};
     return reader_->fetch_records(contig, level);
 }
 
-std::vector<VcfRecord> VcfReader::fetch_records(const GenomicRegion& region, const UnpackPolicy level)
+std::vector<VcfRecord> VcfReader::fetch_records(const GenomicRegion& region, const UnpackPolicy level) const
 {
     std::lock_guard<std::mutex> lock {mutex_};
     return reader_->fetch_records(region, level);

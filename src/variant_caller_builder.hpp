@@ -33,7 +33,7 @@ namespace Octopus {
         
         VariantCallerBuilder()  = delete;
         
-        VariantCallerBuilder(const ReferenceGenome& reference, ReadPipe& read_pipe,
+        VariantCallerBuilder(const ReferenceGenome& reference, const ReadPipe& read_pipe,
                              const CandidateGeneratorBuilder& candidate_generator_builder,
                              HaplotypeGenerator::Builder haplotype_generator_builder);
         
@@ -46,7 +46,7 @@ namespace Octopus {
         
         // common
         VariantCallerBuilder& set_reference(const ReferenceGenome& reference) noexcept;
-        VariantCallerBuilder& set_read_pipe(ReadPipe& read_pipe) noexcept;
+        VariantCallerBuilder& set_read_pipe(const ReadPipe& read_pipe) noexcept;
         VariantCallerBuilder& set_candidate_generator_builder(const CandidateGeneratorBuilder& generator) noexcept;        
         VariantCallerBuilder& set_ploidy(unsigned ploidy) noexcept;
         VariantCallerBuilder& set_caller(std::string caller);
@@ -86,7 +86,7 @@ namespace Octopus {
         {
             Parameters()  = delete;
             
-            Parameters(const ReferenceGenome& reference, ReadPipe& read_pipe,
+            Parameters(const ReferenceGenome& reference, const ReadPipe& read_pipe,
                        const CandidateGeneratorBuilder& candidate_generator_builder,
                        HaplotypeGenerator::Builder haplotype_generator_builder);
             
@@ -99,7 +99,7 @@ namespace Octopus {
             
             // common
             std::reference_wrapper<const ReferenceGenome> reference;
-            std::reference_wrapper<ReadPipe> read_pipe;
+            std::reference_wrapper<const ReadPipe> read_pipe;
             
             unsigned ploidy;
             std::string caller;

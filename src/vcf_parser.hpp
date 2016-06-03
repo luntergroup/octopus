@@ -40,22 +40,25 @@ public:
     
     VcfHeader fetch_header() const override;
     
-    std::size_t count_records() override;
-    std::size_t count_records(const std::string& contig) override;
-    std::size_t count_records(const GenomicRegion& region) override;
+    std::size_t count_records() const override;
+    std::size_t count_records(const std::string& contig) const override;
+    std::size_t count_records(const GenomicRegion& region) const override;
     
-    std::vector<VcfRecord> fetch_records(UnpackPolicy level) override;
-    std::vector<VcfRecord> fetch_records(const std::string& contig, UnpackPolicy level) override;
-    std::vector<VcfRecord> fetch_records(const GenomicRegion& region, UnpackPolicy level) override;
+    std::vector<VcfRecord> fetch_records(UnpackPolicy level) const override;
+    std::vector<VcfRecord> fetch_records(const std::string& contig, UnpackPolicy level) const override;
+    std::vector<VcfRecord> fetch_records(const GenomicRegion& region, UnpackPolicy level) const override;
     
 private:
     fs::path file_path_;
+    
     mutable std::ifstream file_;
+    
     VcfHeader header_;
+    
     const std::vector<std::string> samples_;
     const std::streampos first_record_pos_; // must go after header_!
     
-    void reset_vcf();
+    void reset_vcf() const; // logically
 };
 
 #endif /* defined(__Octopus__vcf_parser__) */

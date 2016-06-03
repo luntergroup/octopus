@@ -132,7 +132,7 @@ VcfHeader HtslibBcfFacade::fetch_header() const
     return result.build_once();
 }
 
-std::size_t HtslibBcfFacade::count_records()
+std::size_t HtslibBcfFacade::count_records() const
 {
     HtsBcfSrPtr sr {bcf_sr_init(), HtsSrsDeleter {}};
     
@@ -144,7 +144,7 @@ std::size_t HtslibBcfFacade::count_records()
     return count_records(sr);
 }
 
-std::size_t HtslibBcfFacade::count_records(const std::string& contig)
+std::size_t HtslibBcfFacade::count_records(const std::string& contig) const
 {
     HtsBcfSrPtr sr {bcf_sr_init(), HtsSrsDeleter {}};
     
@@ -160,7 +160,7 @@ std::size_t HtslibBcfFacade::count_records(const std::string& contig)
     return count_records(sr);
 }
 
-std::size_t HtslibBcfFacade::count_records(const GenomicRegion& region)
+std::size_t HtslibBcfFacade::count_records(const GenomicRegion& region) const
 {
     HtsBcfSrPtr sr {bcf_sr_init(), HtsSrsDeleter {}};
     
@@ -227,7 +227,7 @@ HtslibBcfFacade::records(const GenomicRegion& region, const UnpackPolicy level) 
                           RecordIterator {*this});
 }
 
-std::vector<VcfRecord> HtslibBcfFacade::fetch_records(const UnpackPolicy level)
+std::vector<VcfRecord> HtslibBcfFacade::fetch_records(const UnpackPolicy level) const
 {
     const auto n_records = count_records();
     
@@ -241,7 +241,7 @@ std::vector<VcfRecord> HtslibBcfFacade::fetch_records(const UnpackPolicy level)
     return fetch_records(sr.get(), level, n_records);
 }
 
-std::vector<VcfRecord> HtslibBcfFacade::fetch_records(const std::string& contig, const UnpackPolicy level)
+std::vector<VcfRecord> HtslibBcfFacade::fetch_records(const std::string& contig, const UnpackPolicy level) const
 {
     const auto n_records = count_records(contig);
     
@@ -259,7 +259,7 @@ std::vector<VcfRecord> HtslibBcfFacade::fetch_records(const std::string& contig,
     return fetch_records(sr.get(), level, n_records);
 }
 
-std::vector<VcfRecord> HtslibBcfFacade::fetch_records(const GenomicRegion& region, const UnpackPolicy level)
+std::vector<VcfRecord> HtslibBcfFacade::fetch_records(const GenomicRegion& region, const UnpackPolicy level) const
 {
     const auto n_records = count_records(region);
     
@@ -291,7 +291,7 @@ auto hts_tag_type(const std::string& tag)
     return (types.count(tag) == 1) ? types.at(tag) : BCF_HL_STR;
 }
 
-void HtslibBcfFacade::write_header(const VcfHeader& header)
+void HtslibBcfFacade::write(const VcfHeader& header)
 {
     auto hdr = bcf_hdr_init("w");
     
@@ -372,7 +372,7 @@ void set_info(const bcf_hdr_t* header, bcf1_t* dest, const VcfRecord& source);
 void set_samples(const bcf_hdr_t* header, bcf1_t* dest, const VcfRecord& source,
                  const std::vector<std::string>& samples);
 
-void HtslibBcfFacade::write_record(const VcfRecord& record)
+void HtslibBcfFacade::write(const VcfRecord& record)
 {
     const auto& contig = record.chrom();
     
@@ -383,7 +383,7 @@ void HtslibBcfFacade::write_record(const VcfRecord& record)
     auto hts_record = bcf_init();
     
     set_chrom(header_.get(), hts_record, contig);
-    set_pos(hts_record, record.pos());
+    set_pos(hts_record, record.pos() - 1);
     set_id(hts_record, record.id());
     set_alleles(header_.get(), hts_record, record.ref(), record.alt());
     if (record.qual()) {
@@ -482,7 +482,7 @@ void set_chrom(const bcf_hdr_t* header, bcf1_t* record, const std::string& chrom
 
 auto extract_pos(const bcf1_t* record)
 {
-    return static_cast<GenomicRegion::SizeType>(record->pos);
+    return static_cast<GenomicRegion::SizeType>(record->pos) + 1;
 }
 
 void set_pos(bcf1_t* record, const VcfRecord::SizeType pos)
@@ -822,14 +822,21 @@ void set_samples(const bcf_hdr_t* header, bcf1_t* dest, const VcfRecord& source,
     
     const auto num_samples = static_cast<int>(source.num_samples());
     
-    const auto& alt_alleles = source.alt();
+    const auto& format = source.format();
     
-    std::vector<VcfRecord::SequenceType> alleles {};
-    alleles.reserve(alt_alleles.size() + 1);
-    alleles.push_back(source.ref());
-    alleles.insert(std::end(alleles), std::cbegin(alt_alleles), std::cend(alt_alleles));
+    if (format.empty()) return;
     
-    if (source.has_genotypes()) {
+    auto first_format = std::cbegin(format);
+    
+    if (*first_format == "GT") {
+        const auto& alt_alleles = source.alt();
+        
+        std::vector<VcfRecord::SequenceType> alleles {};
+        alleles.reserve(alt_alleles.size() + 1);
+        
+        alleles.push_back(source.ref());
+        alleles.insert(std::end(alleles), std::cbegin(alt_alleles), std::cend(alt_alleles));
+        
         const auto ngt = num_samples * static_cast<int>(source.sample_ploidy());
         
         std::vector<int> genotype(ngt);
@@ -848,54 +855,52 @@ void set_samples(const bcf_hdr_t* header, bcf1_t* dest, const VcfRecord& source,
         }
         
         bcf_update_genotypes(header, dest, genotype.data(), ngt);
+        
+        ++first_format;
     }
     
-    const auto& format = source.format();
-    
-    for (const auto& key : format) {
-        if (key == "GT") continue;
-        
+    std::for_each(first_format, std::cend(format), [&] (const auto& key) {
         const auto num_values = num_samples * static_cast<int>(source.format_cardinality(key));
-        
+
         switch (bcf_hdr_id2type(header, BCF_HL_FMT, bcf_hdr_id2int(header, BCF_DT_ID, key.c_str()))) {
-            case BCF_HT_INT:
-            {
-                std::vector<int> typed_values(num_values);
-                auto it = std::begin(typed_values);
-                for (const auto& sample : samples) {
-                    const auto& values = source.get_sample_value(sample, key);
-                    it = std::transform(std::cbegin(values), std::cend(values), it,
-                                        [] (const auto& value) { return std::stoi(value); });
-                }
-                bcf_update_format_int32(header, dest, key.c_str(), typed_values.data(), num_values);
-                break;
-            }
-            case BCF_HT_REAL:
-            {
-                std::vector<float> typed_values(num_values);
-                auto it = std::begin(typed_values);
-                for (const auto& sample : samples) {
-                    const auto& values = source.get_sample_value(sample, key);
-                    it = std::transform(std::cbegin(values), std::cend(values), it,
-                                        [] (const auto& value) { return std::stof(value); });
-                }
-                bcf_update_format_float(header, dest, key.c_str(), typed_values.data(), num_values);
-                break;
-            }
-            case BCF_HT_STR:
-            {
-                std::vector<const char*> typed_values(num_values);
-                auto it = std::begin(typed_values);
-                for (const auto& sample : samples) {
-                    const auto& values = source.get_sample_value(sample, key);
-                    it = std::transform(std::cbegin(values), std::cend(values), it,
-                                        [] (const auto& value) { return value.c_str(); });
-                }
-                bcf_update_format_string(header, dest, key.c_str(), typed_values.data(), num_values);
-                break;
-            }
+          case BCF_HT_INT:
+          {
+              std::vector<int> typed_values(num_values);
+              auto it = std::begin(typed_values);
+              for (const auto& sample : samples) {
+                  const auto& values = source.get_sample_value(sample, key);
+                  it = std::transform(std::cbegin(values), std::cend(values), it,
+                                      [] (const auto& value) { return std::stoi(value); });
+              }
+              bcf_update_format_int32(header, dest, key.c_str(), typed_values.data(), num_values);
+              break;
+          }
+          case BCF_HT_REAL:
+          {
+              std::vector<float> typed_values(num_values);
+              auto it = std::begin(typed_values);
+              for (const auto& sample : samples) {
+                  const auto& values = source.get_sample_value(sample, key);
+                  it = std::transform(std::cbegin(values), std::cend(values), it,
+                                      [] (const auto& value) { return std::stof(value); });
+              }
+              bcf_update_format_float(header, dest, key.c_str(), typed_values.data(), num_values);
+              break;
+          }
+          case BCF_HT_STR:
+          {
+              std::vector<const char*> typed_values(num_values);
+              auto it = std::begin(typed_values);
+              for (const auto& sample : samples) {
+                  const auto& values = source.get_sample_value(sample, key);
+                  it = std::transform(std::cbegin(values), std::cend(values), it,
+                                      [] (const auto& value) { return value.c_str(); });
+              }
+              bcf_update_format_string(header, dest, key.c_str(), typed_values.data(), num_values);
+              break;
+          }
         }
-    }
+    });
 }
 
 std::size_t HtslibBcfFacade::count_records(HtsBcfSrPtr& sr) const

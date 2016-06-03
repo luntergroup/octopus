@@ -43,7 +43,7 @@ class ReadPipe
 public:
     ReadPipe() = delete;
     
-    ReadPipe(ReadManager& read_manager, ReadTransform read_transform,
+    ReadPipe(const ReadManager& read_manager, ReadTransform read_transform,
              ReadFilterer read_filter, boost::optional<Downsampler> downsampler,
              std::vector<SampleIdType> samples);
     
@@ -54,23 +54,23 @@ public:
     ReadPipe(ReadPipe&&)                 = default;
     ReadPipe& operator=(ReadPipe&&)      = default;
     
-    void set_read_manager(ReadManager& read_manager) noexcept;
+    void set_read_manager(const ReadManager& read_manager) noexcept;
     
     unsigned num_samples() const noexcept;
     const std::vector<SampleIdType>& samples() const noexcept;
     
-    ReadMap fetch_reads(const GenomicRegion& region);
-    ReadMap fetch_reads(const std::vector<GenomicRegion>& regions);
+    ReadMap fetch_reads(const GenomicRegion& region) const;
+    ReadMap fetch_reads(const std::vector<GenomicRegion>& regions) const;
     
 private:
-    std::reference_wrapper<ReadManager> read_manager_;
+    std::reference_wrapper<const ReadManager> read_manager_;
     ReadFilterer read_filter_;
     boost::optional<Downsampler> downsampler_;
     ReadTransform read_transform_;
     
     std::vector<SampleIdType> samples_;
     
-    boost::optional<Logging::DebugLogger> debug_log_;
+    mutable boost::optional<Logging::DebugLogger> debug_log_;
 };
 } // namespace Octopus
 

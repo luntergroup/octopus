@@ -56,28 +56,28 @@ public:
     void open() override;
     void close() override;
     
-    std::vector<SampleIdType> extract_samples() override;
-    std::vector<ReadGroupIdType> extract_read_groups_in_sample(const SampleIdType& sample) override;
+    std::vector<SampleIdType> extract_samples() const override;
+    std::vector<ReadGroupIdType> extract_read_groups_in_sample(const SampleIdType& sample) const override;
     
-    bool has_contig_reads(const GenomicRegion::ContigNameType& contig) override;
+    bool has_contig_reads(const GenomicRegion::ContigNameType& contig) const override;
     
-    std::size_t count_reads(const GenomicRegion& region) override;
-    std::size_t count_reads(const SampleIdType& sample, const GenomicRegion& region) override;
+    std::size_t count_reads(const GenomicRegion& region) const override;
+    std::size_t count_reads(const SampleIdType& sample, const GenomicRegion& region) const override;
     
-    CoveragePair find_covered_subregion(const GenomicRegion& region, std::size_t max_coverage) override;
+    CoveragePair find_covered_subregion(const GenomicRegion& region, std::size_t max_coverage) const override;
     CoveragePair find_covered_subregion(const SampleIdType& sample, const GenomicRegion& region,
-                                        std::size_t max_coverage) override;
+                                        std::size_t max_coverage) const override;
     CoveragePair find_covered_subregion(const std::vector<SampleIdType>& samples, const GenomicRegion& region,
-                                        std::size_t max_coverage) override;
+                                        std::size_t max_coverage) const override;
     
-    SampleReadMap fetch_reads(const GenomicRegion& region) override;
-    ReadContainer fetch_reads(const SampleIdType& sample, const GenomicRegion& region) override;
-    SampleReadMap fetch_reads(const std::vector<SampleIdType>& samples, const GenomicRegion& region) override;
+    SampleReadMap fetch_reads(const GenomicRegion& region) const override;
+    ReadContainer fetch_reads(const SampleIdType& sample, const GenomicRegion& region) const override;
+    SampleReadMap fetch_reads(const std::vector<SampleIdType>& samples, const GenomicRegion& region) const override;
     
-    unsigned count_reference_contigs() override;
-    std::vector<std::string> extract_reference_contig_names() override;
-    SizeType get_reference_contig_size(const std::string& contig_name) override;
-    std::vector<GenomicRegion> extract_possible_regions_in_file() override;
+    unsigned count_reference_contigs() const override;
+    std::vector<std::string> extract_reference_contig_names() const override;
+    SizeType get_reference_contig_size(const std::string& contig_name) const override;
+    std::vector<GenomicRegion> extract_possible_regions_in_file() const override;
     
 private:
     using HtsTidType = std::int32_t;
@@ -88,8 +88,10 @@ private:
     {
     public:
         HtslibIterator() = delete;
-        HtslibIterator(HtslibSamFacade& hts_facade, const GenomicRegion& region);
-        HtslibIterator(HtslibSamFacade& hts_facade, const GenomicRegion::ContigNameType& contig);
+        
+        HtslibIterator(const HtslibSamFacade& hts_facade, const GenomicRegion& region);
+        HtslibIterator(const HtslibSamFacade& hts_facade, const GenomicRegion::ContigNameType& contig);
+        
         ~HtslibIterator() noexcept = default;
         
         HtslibIterator(const HtslibIterator&) = delete;
@@ -113,7 +115,8 @@ private:
             void operator()(bam1_t* b) const { bam_destroy1(b); }
         };
         
-        HtslibSamFacade& hts_facade_;
+        const HtslibSamFacade& hts_facade_;
+        
         std::unique_ptr<hts_itr_t, HtsIteratorDeleter> hts_iterator_;
         std::unique_ptr<bam1_t, HtsBam1Deleter> hts_bam1_;
     };

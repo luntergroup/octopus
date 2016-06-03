@@ -151,8 +151,8 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         
         //"--regions", "22:41,120,796-41,120,871", // FP SNP. Strand bias. Run through.
         //"--regions", "22:43,960,301-43,960,376", // FP SNP. Strand bias. Run through.
-        //"--regions", "22:42,508,653-42,508,957", // FP SNP. Strand bias. Low MQ.
-        "--regions", "22:42,726,975-42,727,015", // FP SNP. Strand bias.
+        "--regions", "22:42,508,653-42,508,957", // FP SNP. Strand bias. Low MQ.
+        //"--regions", "22:42,726,975-42,727,015", // FP SNP. Strand bias.
         //"--regions", "22:43,468,078-43,468,229", // FP SNPs. Strand bias. Run through.
         //"--regions", "22:44,202,032-44,202,107", // FP SNPs. Strand bias. Run through.
         //"--regions", "22:44,230,824-44,230,975", // FP SNP. MQ. Strand bias.

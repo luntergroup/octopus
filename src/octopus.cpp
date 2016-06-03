@@ -1130,18 +1130,26 @@ namespace Octopus
     {
         return !components.num_threads() || *components.num_threads() > 1;
     }
-                
+    
     void filter_calls(GenomeCallingComponents& components)
     {
         components.output().close();
         
-        VcfReader calls {components.output().path()};
+        const VcfReader calls {components.output().path()};
         
-        VcfWriter filtered_calls {"/Users/danielcooke/Genomics/filtered.vcf", calls.fetch_header()};
+        VcfWriter filtered_calls {"/Users/dcooke/Genomics/filtered.vcf", calls.fetch_header()};
         
-        VariantCallFilter filter {components.read_manager()};
+        VariantCallFilter filter {components.reference(), components.read_manager()};
         
-        filter.filter(calls, filtered_calls);
+//        VariantCallFilter::RegionMap regions {
+//            std::cbegin(components.search_regions()), std::cend(components.search_regions()),
+//            [contigs = components.contigs_in_output_order()]
+//            (const auto& lhs, const auto& rhs) {
+//                
+//            }
+//        };
+        
+        filter.filter(calls, filtered_calls, regions);
     }
     
     void run_octopus(po::variables_map& options)

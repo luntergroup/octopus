@@ -51,20 +51,20 @@ public:
     
     VcfHeader fetch_header() const override;
     
-    std::size_t count_records() override;
-    std::size_t count_records(const std::string& contig) override;
-    std::size_t count_records(const GenomicRegion& region) override;
+    std::size_t count_records() const override;
+    std::size_t count_records(const std::string& contig) const override;
+    std::size_t count_records(const GenomicRegion& region) const override;
     
     RecordIteratorRange records(UnpackPolicy level) const;
     RecordIteratorRange records(const std::string& contig, UnpackPolicy level) const;
     RecordIteratorRange records(const GenomicRegion& region, UnpackPolicy level) const;
     
-    std::vector<VcfRecord> fetch_records(UnpackPolicy level) override;
-    std::vector<VcfRecord> fetch_records(const std::string& contig, UnpackPolicy level) override;
-    std::vector<VcfRecord> fetch_records(const GenomicRegion& region, UnpackPolicy level) override;
+    std::vector<VcfRecord> fetch_records(UnpackPolicy level) const override;
+    std::vector<VcfRecord> fetch_records(const std::string& contig, UnpackPolicy level) const override;
+    std::vector<VcfRecord> fetch_records(const GenomicRegion& region, UnpackPolicy level) const override;
     
-    void write_header(const VcfHeader& header);
-    void write_record(const VcfRecord& record);
+    void write(const VcfHeader& header);
+    void write(const VcfRecord& record);
     
 private:
     struct HtsFileDeleter

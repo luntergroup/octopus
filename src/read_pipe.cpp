@@ -21,7 +21,7 @@ namespace Octopus
 
 // public members
 
-ReadPipe::ReadPipe(ReadManager& read_manager, ReadTransform read_transform, ReadFilterer read_filter,
+ReadPipe::ReadPipe(const ReadManager& read_manager, ReadTransform read_transform, ReadFilterer read_filter,
                    boost::optional<Downsampler> downsampler, std::vector<SampleIdType> samples)
 :
 read_manager_ {read_manager},
@@ -43,7 +43,7 @@ std::vector<std::vector<SampleIdType>> batch_samples(std::vector<SampleIdType> s
     return result;
 }
 
-void ReadPipe::set_read_manager(ReadManager& read_manager) noexcept
+void ReadPipe::set_read_manager(const ReadManager& read_manager) noexcept
 {
     read_manager_ = read_manager;
 }
@@ -101,7 +101,7 @@ namespace
     }
 } // namespace
 
-ReadMap ReadPipe::fetch_reads(const GenomicRegion& region)
+ReadMap ReadPipe::fetch_reads(const GenomicRegion& region) const
 {
     ReadMap result {samples_.size()};
     
@@ -192,7 +192,7 @@ std::vector<GenomicRegion> join_close_regions(const std::vector<GenomicRegion>& 
     return result;
 }
 
-ReadMap ReadPipe::fetch_reads(const std::vector<GenomicRegion>& regions)
+ReadMap ReadPipe::fetch_reads(const std::vector<GenomicRegion>& regions) const
 {
     assert(std::is_sorted(std::cbegin(regions), std::cend(regions)));
     

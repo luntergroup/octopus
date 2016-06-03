@@ -22,17 +22,17 @@ ExternalCandidateVariantGenerator::ExternalCandidateVariantGenerator(boost::file
 reader_ {std::make_shared<VcfReader>(std::move(path))}
 {}
 
-ExternalCandidateVariantGenerator::ExternalCandidateVariantGenerator(std::unique_ptr<VcfReader> reader)
+ExternalCandidateVariantGenerator::ExternalCandidateVariantGenerator(std::unique_ptr<const VcfReader> reader)
 :
 reader_ {std::move(reader)}
 {}
 
-ExternalCandidateVariantGenerator::ExternalCandidateVariantGenerator(const std::shared_ptr<VcfReader>& reader)
+ExternalCandidateVariantGenerator::ExternalCandidateVariantGenerator(const std::shared_ptr<const VcfReader>& reader)
 :
 reader_ {reader}
 {}
 
-std::vector<GenomicRegion> get_batch_regions(const GenomicRegion& region, VcfReader& reader,
+std::vector<GenomicRegion> get_batch_regions(const GenomicRegion& region, const VcfReader& reader,
                                              std::size_t max_batch_size)
 {
     std::vector<GenomicRegion> result {};
@@ -51,7 +51,7 @@ static bool is_missing(const VcfRecord::SequenceType& allele)
     return allele == "*";
 }
 
-std::vector<Variant> fetch_variants(const GenomicRegion& region, VcfReader& reader)
+std::vector<Variant> fetch_variants(const GenomicRegion& region, const VcfReader& reader)
 {
     std::vector<Variant> result {};
     result.reserve(reader.count_records(region));

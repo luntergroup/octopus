@@ -161,23 +161,28 @@ const std::vector<VcfRecord::ValueType>& VcfRecord::get_sample_value(const Sampl
 
 // helper non-members needed for printing
 
-void print_vector(std::ostream& os, const std::vector<std::string>& v,
-                  const std::string& delim = ",", const std::string& empty_value = ".")
+namespace
 {
-    if (v.empty()) {
-        os << empty_value;
-    } else {
-        std::copy(std::cbegin(v), std::prev(std::cend(v)),
-                  std::ostream_iterator<std::string>(os, delim.c_str()));
-        os << v.back();
+    template <typename T>
+    std::ostream& print(std::ostream& os, const std::vector<T>& v, const std::string& delim = ",",
+                        const std::string& empty_value = ".")
+    {
+        if (v.empty()) {
+            os << empty_value;
+        } else {
+            std::copy(std::cbegin(v), std::prev(std::cend(v)),
+                      std::ostream_iterator<T>(os, delim.c_str()));
+            os << v.back();
+        }
+        return os;
     }
-}
-
-std::ostream& operator<<(std::ostream& os, const std::vector<std::string>& v)
-{
-    print_vector(os, v);
-    return os;
-}
+    
+    template <typename T>
+    std::ostream& operator<<(std::ostream& os, const std::vector<T>& v)
+    {
+        return print(os, v);
+    }
+} // namespace
 
 // private methods
 
@@ -216,14 +221,17 @@ void VcfRecord::print_info(std::ostream& os) const
         os << ".";
     } else {
         auto last = std::next(std::cbegin(info_), info_.size() - 1);
-        std::for_each(std::cbegin(info_), last, [&os] (const auto& p) {
-            os << p.first;
-            if (!p.second.empty()) {
-                os << "=" << p.second;
-            }
-            os << ';';
-        });
+        std::for_each(std::cbegin(info_), last,
+                      [&os] (const auto& p) {
+                          os << p.first;
+                          if (!p.second.empty()) {
+                              os << "=" << p.second;
+                          }
+                          os << ';';
+                      });
+        
         os << last->first;
+        
         if (!last->second.empty()) {
             os << "=" << last->second;
         }
@@ -236,7 +244,7 @@ void VcfRecord::print_genotype_allele_numbers(std::ostream& os, const SampleIdTy
     const auto& genotype = genotypes_.at(sample);
     std::transform(std::cbegin(genotype.first), std::cend(genotype.first), std::begin(allele_numbers),
                    [this] (const auto& allele) { return get_allele_number(allele); });
-    print_vector(os, allele_numbers, (genotype.second) ? "|" : "/");
+    print(os, allele_numbers, (genotype.second) ? "|" : "/");
 }
 
 void VcfRecord::print_other_sample_data(std::ostream& os, const SampleIdType& sample) const
@@ -248,10 +256,10 @@ void VcfRecord::print_other_sample_data(std::ostream& os, const SampleIdType& sa
             const auto& data = samples_.at(sample);
             auto last = std::next(cbegin(data), data.size() - 1);
             std::for_each(std::cbegin(data), last, [&os] (const auto& p) {
-                print_vector(os, p.second, ",");
+                print(os, p.second, ",");
                 os << ":";
             });
-            print_vector(os, last->second, ",");
+            print(os, last->second, ",");
         }
     }
 }
@@ -259,32 +267,41 @@ void VcfRecord::print_other_sample_data(std::ostream& os, const SampleIdType& sa
 void VcfRecord::print_sample_data(std::ostream& os) const
 {
     if (num_samples() > 0) {
-        print_vector(os, format_, ":");
-        os << "\t";
-        
-        bool has_genotype {has_genotypes()};
+        print(os, format_, ":");
+        os << '\t';
         
         auto samples = this->samples();
         
-        auto last = std::next(std::cbegin(samples), samples.size() - 1);
-        std::for_each(std::cbegin(samples), last, [this, &os, has_genotype] (const auto& sample) {
-            if (has_genotype) {
-                print_genotype_allele_numbers(os, sample);
-                if (!samples_.empty()) {
-                    os << ":";
-                }
-            }
-            print_other_sample_data(os, sample);
-            os << "\t";
+        std::for_each(std::cbegin(samples), std::prev(std::cend(samples)),
+                      [this, &os] (const auto& sample) {
+                          auto it = std::cbegin(format_);
+                          
+                          if (*it == "GT") {
+                              print_genotype_allele_numbers(os, sample);
+                              ++it;
+                          }
+                          
+                          std::for_each(it, std::cend(format_),
+                                        [this, &os, &sample] (const auto& key) {
+                                            os << ':';
+                                            print(os, get_sample_value(sample, key), ",");
+                                        });
+                          
+                          os << '\t';
         });
         
-        if (has_genotype) {
+        auto it = std::cbegin(format_);
+        
+        if (*it == "GT") {
             print_genotype_allele_numbers(os, samples.back());
-            if (!samples_.empty()) {
-                os << ":";
-            }
+            ++it;
         }
-        print_other_sample_data(os, samples.back());
+        
+        std::for_each(it, std::cend(format_),
+                      [this, &os, &samples] (const auto& key) {
+                          os << ':';
+                          print(os, get_sample_value(samples.back(), key), ",");
+                      });
     }
 }
 
@@ -361,7 +378,7 @@ std::ostream& operator<<(std::ostream& os, const VcfRecord& record)
     os << record.ref_allele_ << "\t";
     os << record.alt_alleles_ << "\t";
     if (record.quality_) {
-        os << static_cast<unsigned>(*record.quality_) << "\t";
+        os << static_cast<float>(*record.quality_) << "\t";
     } else {
         os << '.' << "\t";
     }
@@ -446,6 +463,12 @@ VcfRecord::Builder& VcfRecord::Builder::set_qual(QualityType quality)
     return *this;
 }
 
+VcfRecord::Builder& VcfRecord::Builder::set_passed()
+{
+    filter_.assign({"PASS"});
+    return *this;
+}
+
 VcfRecord::Builder& VcfRecord::Builder::set_filter(std::vector<KeyType> filter)
 {
     filter_ = std::move(filter);
@@ -461,6 +484,12 @@ VcfRecord::Builder& VcfRecord::Builder::set_filter(std::initializer_list<KeyType
 VcfRecord::Builder& VcfRecord::Builder::add_filter(KeyType filter)
 {
     filter_.push_back(std::move(filter));
+    return *this;
+}
+
+VcfRecord::Builder& VcfRecord::Builder::add_info(const KeyType& key)
+{
+    info_.emplace(key, std::vector<ValueType> {});
     return *this;
 }
 
@@ -521,14 +550,19 @@ VcfRecord::Builder& VcfRecord::Builder::add_genotype(const SampleIdType& sample,
 }
 
 VcfRecord::Builder& VcfRecord::Builder::add_genotype(const SampleIdType& sample,
-                                                     const std::vector<unsigned>& alleles, Phasing phasing)
+                                                     const std::vector<boost::optional<unsigned>>& alleles,
+                                                     Phasing phasing)
 {
     std::vector<SequenceType> tmp {};
     tmp.reserve(alleles.size());
     
     std::transform(std::cbegin(alleles), std::cend(alleles), std::back_inserter(tmp),
-                   [this] (unsigned allele) {
-                       return (allele == 0) ? ref_ : alt_[allele - 1];
+                   [this] (const auto& allele) -> SequenceType {
+                       if (allele) {
+                           return (*allele == 0) ? ref_ : alt_[*allele - 1];
+                       } else {
+                           return ".";
+                       }
                    });
     
     return add_genotype(sample, tmp, phasing);

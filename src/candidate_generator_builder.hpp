@@ -52,7 +52,7 @@ namespace Octopus
         CandidateGeneratorBuilder& set_assembler_min_base_quality(QualityType quality);
         
         CandidateGeneratorBuilder& set_variant_source(boost::filesystem::path variant_source);
-        CandidateGeneratorBuilder& set_variant_source(const std::shared_ptr<VcfReader>& variant_source);
+        CandidateGeneratorBuilder& set_variant_source(const std::shared_ptr<const VcfReader>& variant_source);
         
         CandidateVariantGenerator build() const;
         
@@ -73,7 +73,7 @@ namespace Octopus
             
             // external
             
-            std::shared_ptr<VcfReader> variant_source;
+            std::shared_ptr<const VcfReader> variant_source;
             
             // online
             

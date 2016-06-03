@@ -101,7 +101,7 @@ std::vector<VcfReader> writers_to_readers(std::vector<VcfWriter>& writers)
     return result;
 }
 
-void copy(VcfReader& src, VcfWriter& dst)
+void copy(const VcfReader& src, VcfWriter& dst)
 {
     if (!dst.is_header_written()) {
         dst.write(src.fetch_header());
@@ -175,7 +175,7 @@ std::vector<VcfHeader> get_headers(const std::vector<VcfReader>& readers)
 using ReaderContigRecordCountMap = std::unordered_map<std::reference_wrapper<const VcfReader>,
                                                         std::unordered_map<std::string, size_t>>;
 
-ReaderContigRecordCountMap get_contig_count_map(std::vector<VcfReader>& readers,
+ReaderContigRecordCountMap get_contig_count_map(const std::vector<VcfReader>& readers,
                                                 const std::vector<std::string>& contigs)
 {
     ReaderContigRecordCountMap result {};
@@ -209,7 +209,7 @@ std::size_t calculate_total_number_of_records(const ReaderContigRecordCountMap& 
                            });
 }
 
-void merge(std::vector<VcfReader>& sources, VcfWriter& dst, const std::vector<std::string>& contigs)
+void merge(const std::vector<VcfReader>& sources, VcfWriter& dst, const std::vector<std::string>& contigs)
 {
     if (sources.empty()) return;
     
@@ -280,7 +280,7 @@ void merge(std::vector<VcfReader>& sources, VcfWriter& dst, const std::vector<st
     }
 }
 
-void merge(std::vector<VcfReader>& sources, VcfWriter& dst)
+void merge(const std::vector<VcfReader>& sources, VcfWriter& dst)
 {
     if (sources.empty()) return;
     

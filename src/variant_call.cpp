@@ -102,8 +102,7 @@ namespace Octopus
     
     bool matches(const Allele& allele, const Variant& variant, const char ignoring)
     {
-        if (allele == variant.ref_allele()
-            || allele == variant.alt_allele()) return true;
+        if (allele == variant.ref_allele() || allele == variant.alt_allele()) return true;
         
         if (allele.sequence().size() == ref_sequence_size(variant)) {
             return matches(ref_sequence(variant), allele.sequence(), ignoring);
@@ -132,7 +131,9 @@ namespace Octopus
                               [&new_genotype] (const Allele& allele) {
                                   new_genotype.emplace(allele);
                               });
+                
                 new_genotype.emplace(replacement);
+                
                 std::for_each(std::next(it), std::cend(p.second.genotype),
                               [this, &new_genotype, &replacement, ignoring] (const Allele& allele) {
                                   if (matches(allele, variant_, ignoring)) {

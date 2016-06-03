@@ -56,44 +56,44 @@ const ReadReader::Path& ReadReader::path() const noexcept
     return file_path_;
 }
 
-std::vector<ReadReader::SampleIdType> ReadReader::extract_samples()
+std::vector<ReadReader::SampleIdType> ReadReader::extract_samples() const
 {
     std::lock_guard<std::mutex> lock {mutex_};
     return the_impl_->extract_samples();
 }
 
-std::vector<std::string> ReadReader::extract_read_groups_in_sample(const SampleIdType& sample)
+std::vector<std::string> ReadReader::extract_read_groups_in_sample(const SampleIdType& sample) const
 {
     std::lock_guard<std::mutex> lock {mutex_};
     return the_impl_->extract_read_groups_in_sample(sample);
 }
 
-unsigned ReadReader::count_reference_contigs()
+unsigned ReadReader::count_reference_contigs() const
 {
     std::lock_guard<std::mutex> lock {mutex_};
     return the_impl_->count_reference_contigs();
 }
 
-bool ReadReader::has_contig_reads(const GenomicRegion::ContigNameType& contig)
+bool ReadReader::has_contig_reads(const GenomicRegion::ContigNameType& contig) const
 {
     std::lock_guard<std::mutex> lock {mutex_};
     return the_impl_->has_contig_reads(contig);
 }
 
-std::size_t ReadReader::count_reads(const GenomicRegion& region)
+std::size_t ReadReader::count_reads(const GenomicRegion& region) const
 {
     std::lock_guard<std::mutex> lock {mutex_};
     return the_impl_->count_reads(region);
 }
 
-std::size_t ReadReader::count_reads(const SampleIdType& sample, const GenomicRegion& region)
+std::size_t ReadReader::count_reads(const SampleIdType& sample, const GenomicRegion& region) const
 {
     std::lock_guard<std::mutex> lock {mutex_};
     return the_impl_->count_reads(sample, region);
 }
 
 ReadReader::CoveragePair
-ReadReader::find_covered_subregion(const GenomicRegion& region, std::size_t max_coverage)
+ReadReader::find_covered_subregion(const GenomicRegion& region, std::size_t max_coverage) const
 {
     std::lock_guard<std::mutex> lock {mutex_};
     return the_impl_->find_covered_subregion(region, max_coverage);
@@ -101,7 +101,7 @@ ReadReader::find_covered_subregion(const GenomicRegion& region, std::size_t max_
 
 ReadReader::CoveragePair
 ReadReader::find_covered_subregion(const SampleIdType& sample, const GenomicRegion& region,
-                                   std::size_t max_coverage)
+                                   std::size_t max_coverage) const
 {
     std::lock_guard<std::mutex> lock {mutex_};
     return the_impl_->find_covered_subregion(sample, region, max_coverage);
@@ -109,38 +109,38 @@ ReadReader::find_covered_subregion(const SampleIdType& sample, const GenomicRegi
 
 ReadReader::CoveragePair
 ReadReader::find_covered_subregion(const std::vector<SampleIdType>& samples,
-                                   const GenomicRegion& region, std::size_t max_coverage)
+                                   const GenomicRegion& region, std::size_t max_coverage) const
 {
     std::lock_guard<std::mutex> lock {mutex_};
     return the_impl_->find_covered_subregion(samples, region, max_coverage);
 }
 
-ReadReader::SampleReadMap ReadReader::fetch_reads(const GenomicRegion& region)
+ReadReader::SampleReadMap ReadReader::fetch_reads(const GenomicRegion& region) const
 {
     std::lock_guard<std::mutex> lock {mutex_};
     return the_impl_->fetch_reads(region);
 }
 
-ReadReader::ReadContainer ReadReader::fetch_reads(const SampleIdType& sample, const GenomicRegion& region)
+ReadReader::ReadContainer ReadReader::fetch_reads(const SampleIdType& sample, const GenomicRegion& region) const
 {
     std::lock_guard<std::mutex> lock {mutex_};
     return the_impl_->fetch_reads(sample, region);
 }
 
 ReadReader::SampleReadMap ReadReader::fetch_reads(const std::vector<SampleIdType>& samples,
-                                                  const GenomicRegion& region)
+                                                  const GenomicRegion& region) const
 {
     std::lock_guard<std::mutex> lock {mutex_};
     return the_impl_->fetch_reads(samples, region);
 }
 
-std::vector<std::string> ReadReader::extract_reference_contig_names()
+std::vector<std::string> ReadReader::extract_reference_contig_names() const
 {
     std::lock_guard<std::mutex> lock {mutex_};
     return the_impl_->extract_reference_contig_names();
 }
 
-std::vector<GenomicRegion> ReadReader::extract_possible_regions_in_file()
+std::vector<GenomicRegion> ReadReader::extract_possible_regions_in_file() const
 {
     std::lock_guard<std::mutex> lock {mutex_};
     return the_impl_->extract_possible_regions_in_file();

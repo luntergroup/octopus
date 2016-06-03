@@ -30,7 +30,7 @@ public:
     
     using UnpackPolicy = IVcfReaderImpl::UnpackPolicy;
     
-    VcfReader()  = default;
+    VcfReader() = default;
     
     VcfReader(Path file_path);
     
@@ -51,13 +51,13 @@ public:
     
     VcfHeader fetch_header() const;
     
-    std::size_t count_records();
-    std::size_t count_records(const std::string& contig);
-    std::size_t count_records(const GenomicRegion& region);
+    std::size_t count_records() const;
+    std::size_t count_records(const std::string& contig) const;
+    std::size_t count_records(const GenomicRegion& region) const;
     
-    std::vector<VcfRecord> fetch_records(UnpackPolicy level = UnpackPolicy::All); // fetches all records
-    std::vector<VcfRecord> fetch_records(const std::string& contig, UnpackPolicy level = UnpackPolicy::All);
-    std::vector<VcfRecord> fetch_records(const GenomicRegion& region, UnpackPolicy level = UnpackPolicy::All);
+    std::vector<VcfRecord> fetch_records(UnpackPolicy level = UnpackPolicy::All) const; // fetches all records
+    std::vector<VcfRecord> fetch_records(const std::string& contig, UnpackPolicy level = UnpackPolicy::All) const;
+    std::vector<VcfRecord> fetch_records(const GenomicRegion& region, UnpackPolicy level = UnpackPolicy::All) const;
     
 private:
     Path file_path_;

@@ -28,14 +28,15 @@ namespace Octopus
     public:
         using GenotypeMap = std::unordered_map<SampleIdType, MappableFlatSet<Genotype<Haplotype>>>;
         
-        GenotypeReader(const ReferenceGenome& reference, VcfReader&& variant_reader);
+        GenotypeReader(const ReferenceGenome& reference, const VcfReader& variant_reader);
         
         GenotypeMap extract_genotype(const GenomicRegion& region);
         
     private:
         std::reference_wrapper<const ReferenceGenome> reference_;
         
-        VcfReader variant_reader_;
+        std::reference_wrapper<const VcfReader> variant_reader_;
+        
         std::vector<SampleIdType> samples_;
     };
 } // namespace Octopus
