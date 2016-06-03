@@ -249,6 +249,8 @@ namespace Octopus
                             
                             const auto ploidy = old_genotype.ploidy();
                             
+                            assert(ploidy == prev_genotype.ploidy());
+                            
                             Genotype<Allele> new_genotype {ploidy};
                             
                             if (are_in_phase(prev_genotype_call, genotype_call)) {

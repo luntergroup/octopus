@@ -389,7 +389,7 @@ void HtslibBcfFacade::write_record(const VcfRecord& record)
     if (record.qual()) {
         set_qual(hts_record, *record.qual());
     }
-    set_filters(header_.get(), hts_record, record.filters());
+    set_filters(header_.get(), hts_record, record.filter());
     set_info(header_.get(), hts_record, record);
     
     if (record.num_samples() > 0) {

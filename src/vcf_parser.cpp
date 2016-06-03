@@ -345,7 +345,8 @@ void parse_sample(const std::string& column, const VcfRecord::SampleIdType& samp
 {
     auto values = split(column, ':');
     
-    auto first = std::cbegin(values);
+    auto first_key   = std::cbegin(format);
+    auto first_value = std::cbegin(values);
     
     if (format.front() == "GT") {
         const std::string& genotype = values.front();
@@ -358,14 +359,14 @@ void parse_sample(const std::string& column, const VcfRecord::SampleIdType& samp
         
         rb.add_genotype(sample, std::move(alleles), (phased) ? Phasing::Phased : Phasing::Unphased);
         
-        ++first;
+        ++first_key;
+        ++first_value;
     }
     
-    auto key_it = std::cbegin(format);
-    std::for_each(first, std::cend(values),
-                  [&rb, &sample, &key_it] (const std::string& value) {
-                      rb.add_genotype_field(sample, *key_it, split(value, ','));
-                      ++key_it;
+    std::for_each(first_value, std::cend(values),
+                  [&rb, &sample, &first_key] (const std::string& value) {
+                      rb.add_genotype_field(sample, *first_key, split(value, ','));
+                      ++first_key;
                   });
 }
 

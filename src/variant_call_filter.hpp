@@ -9,9 +9,11 @@
 #ifndef variant_call_filter_hpp
 #define variant_call_filter_hpp
 
-#include <vector>
+#include <functional>
 
-#include "vcf_record.hpp"
+#include "read_manager.hpp"
+#include "vcf_reader.hpp"
+#include "vcf_writer.hpp"
 
 namespace Octopus
 {
@@ -20,6 +22,8 @@ namespace Octopus
     public:
         VariantCallFilter() = delete;
         
+        VariantCallFilter(ReadManager& read_manager);
+        
         virtual ~VariantCallFilter() = default;
         
         VariantCallFilter(const VariantCallFilter&)            = delete;
@@ -27,10 +31,10 @@ namespace Octopus
         VariantCallFilter(VariantCallFilter&&)                 = default;
         VariantCallFilter& operator=(VariantCallFilter&&)      = default;
         
-        virtual void apply_filters(std::vector<VcfRecord>& calls) const;
+        void filter(VcfReader& source, VcfWriter& dest);
         
     private:
-        
+        std::reference_wrapper<ReadManager> read_manager_;
     };
 } // namespace Octopus
 

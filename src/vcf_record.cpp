@@ -53,7 +53,7 @@ bool VcfRecord::has_filter(const KeyType& filter) const noexcept
     return std::find(std::cbegin(filters_), std::cend(filters_), filter) != std::cend(filters_);
 }
 
-const std::vector<VcfRecord::KeyType> VcfRecord::filters() const noexcept
+const std::vector<VcfRecord::KeyType> VcfRecord::filter() const noexcept
 {
     return filters_;
 }
@@ -374,6 +374,21 @@ std::ostream& operator<<(std::ostream& os, const VcfRecord& record)
 }
 
 // VcfRecord::Builder
+
+VcfRecord::Builder::Builder(const VcfRecord& call)
+:
+chrom_ {call.chrom()},
+pos_ {call.pos()},
+id_ {call.id()},
+ref_ {call.ref()},
+alt_ {call.alt()},
+qual_ {call.qual()},
+filter_ {call.filter()},
+info_ {call.info_},
+format_ {call.format()},
+genotypes_ {call.genotypes_},
+samples_ {call.samples_}
+{}
 
 VcfRecord::Builder& VcfRecord::Builder::set_chrom(std::string name)
 {

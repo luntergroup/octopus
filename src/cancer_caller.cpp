@@ -612,22 +612,34 @@ auto call_somatic_genotypes(const CancerGenotype<Haplotype>& called_genotype,
     return result;
 }
 
+//    auto indentify_background(const CancerGenotype<Haplotype>& genotype,
+//                              const SomaticVariantCalls& variants)
+//    {
+//        
+//    }
+
 // output
 
-//Octopus::VariantCall::GenotypeCall convert(GermlineGenotypeCall&& call)
-//{
-//    return Octopus::VariantCall::GenotypeCall {std::move(call.genotype), call.posterior};
-//}
-//
-//std::unique_ptr<Octopus::VariantCall>
-//transform_germline_call(GermlineVariantCall&& variant_call, GermlineGenotypeCall&& genotype_call)
-//{
-//    std::vector<std::pair<SampleIdType, Call::GenotypeCall>> tmp {};
-//    return std::make_unique<Octopus::GermlineVariantCall>(variant_call.variant.get(),
-//                                                          std::move(tmp),
-//                                                          variant_call.posterior);
-//}
-//
+Octopus::VariantCall::GenotypeCall convert(GermlineGenotypeCall call)
+{
+    return Octopus::VariantCall::GenotypeCall {std::move(call.genotype), call.posterior};
+}
+
+std::unique_ptr<Octopus::VariantCall>
+transform_germline_call(GermlineVariantCall&& variant_call, GermlineGenotypeCall&& genotype_call,
+                        const std::vector<SampleIdType>& samples)
+{
+    std::vector<std::pair<SampleIdType, Call::GenotypeCall>> tmp {};
+    
+    for (const auto& sample : samples) {
+        tmp.emplace_back(sample, convert(genotype_call));
+    }
+    
+    return std::make_unique<Octopus::GermlineVariantCall>(variant_call.variant.get(),
+                                                          std::move(tmp),
+                                                          variant_call.posterior);
+}
+
 //auto transform_germline_calls(GermlineVariantCalls&& variant_calls, GermlineGenotypeCalls&& genotype_calls)
 //{
 //    std::vector<std::unique_ptr<Octopus::VariantCall>> result {};
@@ -653,13 +665,14 @@ auto transform_somatic_calls(SomaticVariantCalls&& somatic_calls, CancerGenotype
                    std::make_move_iterator(std::end(somatic_calls)),
                    std::make_move_iterator(std::begin(genotype_calls)),
                    std::back_inserter(result),
-                   [] (auto&& variant_call, auto&& genotype_call) {
+                   [] (auto&& variant_call, auto&& genotype_call) -> std::unique_ptr<Octopus::VariantCall> {
                        std::unordered_map<SampleIdType, SomaticCall::GenotypeCredibleRegions> credible_regions {};
                        
                        for (const auto& p : genotype_call.credible_regions) {
                            SomaticCall::GenotypeCredibleRegions sample_credible_regions {};
                            
                            sample_credible_regions.germline_credible_regions.reserve(p.second.size() - 1);
+                           
                            std::copy(std::cbegin(p.second), std::prev(std::cend(p.second)),
                                      std::back_inserter(sample_credible_regions.germline_credible_regions));
                            
@@ -668,15 +681,11 @@ auto transform_somatic_calls(SomaticVariantCalls&& somatic_calls, CancerGenotype
                            credible_regions.emplace(p.first, std::move(sample_credible_regions));
                        }
                        
-                       std::unique_ptr<Octopus::VariantCall> result {
-                           std::make_unique<SomaticCall>(variant_call.variant.get(),
-                                                         std::move(genotype_call.genotype),
-                                                         genotype_call.posterior,
-                                                         std::move(credible_regions),
-                                                         variant_call.posterior)
-                       };
-                       
-                       return result;
+                       return std::make_unique<SomaticCall>(variant_call.variant.get(),
+                                                            std::move(genotype_call.genotype),
+                                                            genotype_call.posterior,
+                                                            std::move(credible_regions),
+                                                            variant_call.posterior);
                    });
     
     return result;
@@ -756,22 +765,42 @@ CancerVariantCaller::call_variants(const std::vector<Variant>& candidates, const
                                          std::move(cancer_genotype_calls));
     }
     
-//    const auto called_germline_regions = extract_regions(germline_variant_calls);
-//    
-//    GermlineGenotypeCalls germline_genotype_calls {};
-//    germline_genotype_calls.reserve(called_germline_regions.size());
-//    
-//    for (const auto& region : called_germline_regions) {
-//        auto spliced_genotype = splice<Allele>(called_germline_genotype, region);
-//        
-//        const auto posterior = std::accumulate(std::cbegin(germline_genotype_posteriors),
-//                                               std::cend(germline_genotype_posteriors), 0.0,
-//                                               [&called_germline_genotype] (const double curr, const auto& p) {
-//                                                   return curr + ((contains(p.first, called_germline_genotype)) ? p.second : 0.0);
-//                                               });
-//        
-//        germline_genotype_calls.emplace_back(std::move(spliced_genotype), posterior);
-//    }
+    if (parameters_.call_somatics_only) return result;
+    
+    const auto called_germline_regions = extract_regions(germline_variant_calls);
+    
+    GermlineGenotypeCalls germline_genotype_calls {};
+    germline_genotype_calls.reserve(called_germline_regions.size());
+    
+    for (const auto& region : called_germline_regions) {
+        auto spliced_genotype = splice<Allele>(called_germline_genotype, region);
+        
+        const auto posterior = std::accumulate(std::cbegin(germline_genotype_posteriors),
+                                               std::cend(germline_genotype_posteriors), 0.0,
+                                               [&called_germline_genotype] (const double curr, const auto& p) {
+                                                   return curr + ((contains(p.first, called_germline_genotype)) ? p.second : 0.0);
+                                               });
+        
+        germline_genotype_calls.emplace_back(std::move(spliced_genotype), posterior);
+    }
+    
+    result.reserve(result.size() + germline_variant_calls.size());
+    
+    const auto it = std::end(result);
+    
+    std::transform(std::make_move_iterator(std::begin(germline_variant_calls)),
+                   std::make_move_iterator(std::end(germline_variant_calls)),
+                   std::make_move_iterator(std::begin(germline_genotype_calls)),
+                   std::back_inserter(result),
+                   [this] (auto&& variant_call, auto&& genotype_call) {
+                       return transform_germline_call(std::move(variant_call), std::move(genotype_call),
+                                                      samples_);
+                   });
+    
+    std::inplace_merge(std::begin(result), it, std::end(result),
+                       [] (const auto& lhs, const auto& rhs) {
+                           return *lhs < *rhs;
+                       });
     
     return result;
 }

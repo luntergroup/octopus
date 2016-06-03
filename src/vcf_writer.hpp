@@ -11,6 +11,7 @@
 
 #include <memory>
 #include <mutex>
+#include <type_traits>
 
 #include <boost/filesystem/path.hpp>
 
@@ -65,6 +66,7 @@ VcfWriter& operator<<(VcfWriter& dst, const VcfRecord& record);
 template <typename Container>
 void write(const Container& records, VcfWriter& dst)
 {
+    static_assert(std::is_same<typename Container::value_type, VcfRecord>::value, "");
     for (const auto& record : records) {
         dst << record;
     }

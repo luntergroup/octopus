@@ -184,6 +184,20 @@ std::pair<std::vector<CancerGenotype<Haplotype>>, std::vector<Genotype<Haplotype
 generate_all_cancer_genotypes(const std::vector<Haplotype>& haplotypes, const unsigned ploidy);
 
 template <typename MappableType>
+Genotype<MappableType> convert(const CancerGenotype<MappableType>& genotype)
+{
+    Genotype<MappableType> result {genotype.ploidy() + 1};
+    
+    for (const auto& e : genotype.germline_genotype()) {
+        result.emplace(e);
+    }
+    
+    result.emplace(genotype.somatic_element());
+    
+    return result;
+}
+    
+template <typename MappableType>
 bool operator==(const CancerGenotype<MappableType>& lhs, const CancerGenotype<MappableType>& rhs)
 {
     return lhs.somatic_element() == rhs.somatic_element()

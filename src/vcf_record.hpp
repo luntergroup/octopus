@@ -69,7 +69,7 @@ public:
     const std::vector<SequenceType>& alt() const noexcept;
     boost::optional<QualityType> qual() const noexcept;
     bool has_filter(const KeyType& filter) const noexcept;
-    const std::vector<KeyType> filters() const noexcept;
+    const std::vector<KeyType> filter() const noexcept;
     bool has_info(const KeyType& key) const noexcept;
     std::vector<KeyType> info_keys() const;
     const std::vector<ValueType>& info_value(const KeyType& key) const;
@@ -92,6 +92,8 @@ public:
     const std::vector<ValueType>& get_sample_value(const SampleIdType& sample, const KeyType& key) const;
     
     friend std::ostream& operator<<(std::ostream& os, const VcfRecord& record);
+    
+    friend Builder;
     
 private:
     using Genotype = std::pair<std::vector<SequenceType>, bool>;
@@ -145,8 +147,7 @@ template <typename StringType1_, typename StringType2_, typename SequenceType1_,
 VcfRecord::VcfRecord(StringType1_&& chrom, SizeType pos, StringType2_&& id,
                      SequenceType1_&& ref, SequenceType2_&& alt,
                      boost::optional<QualityType> qual, Filters_&& filters,
-                     Info_&& info, Format_&& format, Genotypes_&& genotypes,
-                     Samples_&& samples)
+                     Info_&& info, Format_&& format, Genotypes_&& genotypes, Samples_&& samples)
 :
 chromosome_ {std::forward<StringType1_>(chrom)},
 position_ {pos},
@@ -202,6 +203,8 @@ public:
     enum class Phasing { Phased, Unphased };
     
     Builder() = default;
+    
+    Builder(const VcfRecord& call);
     
     Builder& set_chrom(std::string name);
     Builder& set_pos(SizeType pos);

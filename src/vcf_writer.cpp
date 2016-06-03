@@ -70,8 +70,6 @@ void VcfWriter::close() noexcept
 {
     std::lock_guard<std::mutex> lock {mutex_};
     writer_.reset(nullptr);
-    is_header_written_ = false;
-    file_path_.clear();
 }
 
 bool VcfWriter::is_header_written() const noexcept

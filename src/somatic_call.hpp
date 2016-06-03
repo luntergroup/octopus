@@ -68,10 +68,10 @@ namespace Octopus
             };
         }
         
-        genotype_calls_.reserve(credible_regions_.size());
+        genotype_calls_.reserve(credible_regions_.size()); // num samples
         
         for (const auto& p : credible_regions_) {
-            genotype_calls_.emplace(p.first, GenotypeCall {genotype_call.germline_genotype(), genotype_posteriors});
+            genotype_calls_.emplace(p.first, GenotypeCall {convert(genotype_call), genotype_posteriors});
         }
     }
 } // namespace Octopus

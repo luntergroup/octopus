@@ -52,6 +52,8 @@
 #include "logging.hpp"
 #include "timing.hpp"
 
+#include "variant_call_filter.hpp"
+
 #include "timers.hpp" // BENCHMARK
 
 #include "genotype_reader.hpp"
@@ -1129,11 +1131,17 @@ namespace Octopus
         return !components.num_threads() || *components.num_threads() > 1;
     }
                 
-    GenomicRegion mapped_region(const VcfRecord& record)
+    void filter_calls(GenomeCallingComponents& components)
     {
-        using SizeType = GenomicRegion::SizeType;
-        const auto begin = record.pos() - 1;
-        return GenomicRegion {record.chrom(), begin, begin + static_cast<SizeType>(record.ref().size())};
+        components.output().close();
+        
+        VcfReader calls {components.output().path()};
+        
+        VcfWriter filtered_calls {"/Users/danielcooke/Genomics/filtered.vcf", calls.fetch_header()};
+        
+        VariantCallFilter filter {components.read_manager()};
+        
+        filter.filter(calls, filtered_calls);
     }
     
     void run_octopus(po::variables_map& options)
@@ -1176,15 +1184,20 @@ namespace Octopus
             } catch (const std::exception& e) {
                 Logging::FatalLogger lg {};
                 stream(lg) << "Encountered exception '" << e.what() << "'. Attempting to cleanup...";
+                
                 cleanup(*components);
+                
                 if (DEBUG_MODE) {
                     stream(lg) << "Cleanup successful. Please send log file to dcooke@well.ox.ac.uk";
                 } else {
                     stream(lg) << "Cleanup successful. Please re-run in debug mode (option --debug) and send"
                                     " log file to " << Octopus_bug_email;
                 }
+                
                 return;
             }
+            
+            filter_calls(*components);
             
             cleanup(*components);
             

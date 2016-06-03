@@ -71,6 +71,7 @@ namespace Octopus
         void set_phase(const SampleIdType& sample, PhaseCall phase);
         
         virtual const GenomicRegion& mapped_region() const noexcept = 0;
+        
         virtual const Allele& get_reference() const noexcept = 0;
         
         void replace(char old_base, char replacement_base);

@@ -245,7 +245,7 @@ public:
     VcfHeader build_once() noexcept;
     
 private:
-    std::string file_format_ = "VCFv4.2";
+    std::string file_format_ = "VCFv4.3";
     std::vector<std::string> samples_ = {};
     VcfHeader::BasicFieldMap basic_fields_ = {};
     VcfHeader::StructuredFieldMap structured_fields_ = {};
