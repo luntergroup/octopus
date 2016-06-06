@@ -43,6 +43,8 @@ class ReadPipe
 public:
     ReadPipe() = delete;
     
+    ReadPipe(const ReadManager& read_manager, std::vector<SampleIdType> samples);
+    
     ReadPipe(const ReadManager& read_manager, ReadTransform read_transform,
              ReadFilterer read_filter, boost::optional<Downsampler> downsampler,
              std::vector<SampleIdType> samples);

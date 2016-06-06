@@ -30,6 +30,7 @@ namespace Octopus
 class IndividualVariantCaller : public VariantCaller
 {
 public:
+    using VariantCaller::CallTypeSet;
     using VariantCaller::CallerComponents;
     
     struct CallerParameters
@@ -58,16 +59,18 @@ private:
     double min_refcall_posterior_;
     unsigned ploidy_;
     
+    CallTypeSet do_get_call_types() const override;
+    
     std::unique_ptr<CallerLatents>
     infer_latents(const std::vector<Haplotype>& haplotypes,
                   const HaplotypeLikelihoodCache& haplotype_likelihoods) const override;
     
-    double
+    boost::optional<double>
     calculate_dummy_model_posterior(const std::vector<Haplotype>& haplotypes,
                                     const HaplotypeLikelihoodCache& haplotype_likelihoods,
                                     const CallerLatents& latents) const override;
     
-    double
+    boost::optional<double>
     calculate_dummy_model_posterior(const std::vector<Haplotype>& haplotypes,
                                     const HaplotypeLikelihoodCache& haplotype_likelihoods,
                                     const Latents& latents) const;

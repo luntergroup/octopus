@@ -80,6 +80,9 @@ namespace Octopus
     {
         auto wrapped_calls = wrap(std::move(calls));
         
+        calls.clear();
+        calls.shrink_to_fit();
+        
         assert(std::is_sorted(std::cbegin(wrapped_calls), std::cend(wrapped_calls)));
         
         for (auto it = std::begin(wrapped_calls); it != std::end(wrapped_calls);) {
@@ -375,8 +378,6 @@ namespace Octopus
             }
         }
         
-        result.shrink_to_fit();
-        
         return result;
     }
     
@@ -476,8 +477,6 @@ namespace Octopus
     
     VcfRecord VcfRecordFactory::make(std::unique_ptr<Call> call) const
     {
-        using std::to_string;
-        
         auto result = VcfRecord::Builder {};
         
         const auto phred_quality = Maths::probability_to_phred<float>(call->quality(), 2);
@@ -491,19 +490,19 @@ namespace Octopus
         
         set_alt_alleles(call.get(), result, samples_);
         
-        if (call->is_model_filtered()) {
-            result.add_filter("MODEL");
-        }
-        
         //result.add_info("AC",  to_strings(count_alt_alleles(*call)));
         //result.add_info("AN",  to_string(count_alleles(*call)));
         
-        result.add_info("NS",  to_string(count_samples_with_coverage(reads_, region)));
-        result.add_info("DP",  to_string(sum_max_coverages(reads_, region)));
+        result.add_info("NS",  count_samples_with_coverage(reads_, region));
+        result.add_info("DP",  sum_max_coverages(reads_, region));
         result.add_info("SB",  Octopus::to_string(strand_bias(reads_, region), 2));
-        result.add_info("BQ",  to_string(static_cast<unsigned>(rmq_base_quality(reads_, region))));
-        result.add_info("MQ",  to_string(static_cast<unsigned>(rmq_mapping_quality(reads_, region))));
-        result.add_info("MQ0", to_string(count_mapq_zero(reads_, region)));
+        result.add_info("BQ",  static_cast<unsigned>(rmq_base_quality(reads_, region)));
+        result.add_info("MQ",  static_cast<unsigned>(rmq_mapping_quality(reads_, region)));
+        result.add_info("MQ0", count_mapq_zero(reads_, region));
+        
+        if (call->dummy_model_bayes_factor()) {
+            result.add_info("DMBF", *call->dummy_model_bayes_factor());
+        }
         
         if (!sites_only_) {
             if (call->all_phased()) {
@@ -517,15 +516,15 @@ namespace Octopus
                 
                 set_vcf_genotype(sample, genotype_call, result);
                 
-                result.add_genotype_field(sample, "FT", "."); // TODO
+                result.add_missing_genotype_field(sample, "FT"); // TODO
                 result.add_genotype_field(sample, "GQ", Octopus::to_string(Maths::probability_to_phred<float>(genotype_call.posterior), 2));
-                result.add_genotype_field(sample, "DP", to_string(max_coverage(reads_.at(sample), region)));
-                result.add_genotype_field(sample, "BQ", to_string(static_cast<unsigned>(rmq_base_quality(reads_.at(sample), region))));
-                result.add_genotype_field(sample, "MQ", to_string(static_cast<unsigned>(rmq_mapping_quality(reads_.at(sample), region))));
+                result.add_genotype_field(sample, "DP", max_coverage(reads_.at(sample), region));
+                result.add_genotype_field(sample, "BQ", static_cast<unsigned>(rmq_base_quality(reads_.at(sample), region)));
+                result.add_genotype_field(sample, "MQ", static_cast<unsigned>(rmq_mapping_quality(reads_.at(sample), region)));
                 
                 if (call->is_phased(sample)) {
                     const auto& phase = *genotype_call.phase;
-                    result.add_genotype_field(sample, "PS", to_string(mapped_begin(phase.region) + 1));
+                    result.add_genotype_field(sample, "PS", mapped_begin(phase.region) + 1);
                     result.add_genotype_field(sample, "PQ", Octopus::to_string(Maths::probability_to_phred<float>(phase.score), 2)); // TODO
                 }
             }
@@ -543,8 +542,6 @@ namespace Octopus
         if (calls.size() == 1) {
             return make(std::move(calls.front()));
         }
-        
-        using std::to_string;
         
         auto result = VcfRecord::Builder {};
         
@@ -618,12 +615,16 @@ namespace Octopus
         //result.add_info("AC",  to_strings(count_alt_alleles(*call)));
         //result.add_info("AN",  to_string(count_alleles(*call)));
         
-        result.add_info("NS",  to_string(count_samples_with_coverage(reads_, region)));
-        result.add_info("DP",  to_string(sum_max_coverages(reads_, region)));
+        result.add_info("NS",  count_samples_with_coverage(reads_, region));
+        result.add_info("DP",  sum_max_coverages(reads_, region));
         result.add_info("SB",  Octopus::to_string(strand_bias(reads_, region), 2));
-        result.add_info("BQ",  to_string(static_cast<unsigned>(rmq_base_quality(reads_, region))));
-        result.add_info("MQ",  to_string(static_cast<unsigned>(rmq_mapping_quality(reads_, region))));
-        result.add_info("MQ0", to_string(count_mapq_zero(reads_, region)));
+        result.add_info("BQ",  static_cast<unsigned>(rmq_base_quality(reads_, region)));
+        result.add_info("MQ",  static_cast<unsigned>(rmq_mapping_quality(reads_, region)));
+        result.add_info("MQ0", count_mapq_zero(reads_, region));
+        
+        if (calls.front()->dummy_model_bayes_factor()) {
+            result.add_info("DMBF", *calls.front()->dummy_model_bayes_factor());
+        }
         
         if (!sites_only_) {
             if (calls.front()->all_phased()) {
@@ -639,15 +640,15 @@ namespace Octopus
                 
                 result.add_genotype(sample, *sample_itr++, VcfRecord::Builder::Phasing::Phased);
                 
-                result.add_genotype_field(sample, "FT", "."); // TODO
+                result.add_missing_genotype_field(sample, "FT"); // TODO
                 result.add_genotype_field(sample, "GQ", Octopus::to_string(Maths::probability_to_phred<float>(posterior), 2));
-                result.add_genotype_field(sample, "DP", to_string(max_coverage(reads_.at(sample), region)));
-                result.add_genotype_field(sample, "BQ", to_string(static_cast<unsigned>(rmq_base_quality(reads_.at(sample), region))));
-                result.add_genotype_field(sample, "MQ", to_string(static_cast<unsigned>(rmq_mapping_quality(reads_.at(sample), region))));
+                result.add_genotype_field(sample, "DP", max_coverage(reads_.at(sample), region));
+                result.add_genotype_field(sample, "BQ", static_cast<unsigned>(rmq_base_quality(reads_.at(sample), region)));
+                result.add_genotype_field(sample, "MQ", static_cast<unsigned>(rmq_mapping_quality(reads_.at(sample), region)));
                 
                 if (calls.front()->is_phased(sample)) {
                     const auto phase = *calls.front()->get_genotype_call(sample).phase;
-                    result.add_genotype_field(sample, "PS", to_string(mapped_begin(phase.region) + 1));
+                    result.add_genotype_field(sample, "PS", mapped_begin(phase.region) + 1);
                     result.add_genotype_field(sample, "PQ", Octopus::to_string(Maths::probability_to_phred<float>(phase.score), 2)); // TODO
                 }
             }

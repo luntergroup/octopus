@@ -12,6 +12,7 @@
 #include <vector>
 #include <string>
 #include <memory>
+#include <typeindex>
 
 #include "common.hpp"
 #include "variant_caller.hpp"
@@ -28,6 +29,7 @@ namespace Octopus
 class PopulationVariantCaller : public VariantCaller
 {
 public:
+    using VariantCaller::CallTypeSet;
     using VariantCaller::CallerComponents;
     
     struct CallerParameters
@@ -87,6 +89,8 @@ private:
     unsigned ploidy_;
     double min_variant_posterior_;
     double min_refcall_posterior_;
+    
+    CallTypeSet do_get_call_types() const override;
     
     std::unique_ptr<CallerLatents>
     infer_latents(const std::vector<Haplotype>& haplotypes,

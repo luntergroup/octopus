@@ -231,6 +231,12 @@ inline ContigRegion expand(const ContigRegion& region, const ContigRegion::Diffe
     };
 }
 
+inline ContigRegion expand(const ContigRegion& region, const ContigRegion::DifferenceType lhs,
+                           const ContigRegion::DifferenceType rhs)
+{
+    return expand_lhs(expand_rhs(region, rhs), lhs);
+}
+
 inline ContigRegion overlapped_region(const ContigRegion& lhs, const ContigRegion& rhs) noexcept
 {
     if (!overlaps(lhs, rhs)) {

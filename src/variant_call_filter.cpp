@@ -9,6 +9,10 @@
 #include "variant_call_filter.hpp"
 
 #include <unordered_map>
+#include <map>
+#include <limits>
+#include <numeric>
+#include <cmath>
 
 #include "common.hpp"
 
@@ -16,6 +20,7 @@
 #include "vcf_writer.hpp"
 #include "vcf_header.hpp"
 #include "vcf_record.hpp"
+#include "variant.hpp"
 
 #include "genomic_region.hpp"
 #include "mappable_flat_set.hpp"
@@ -25,13 +30,16 @@
 
 #include "genotype_reader.hpp"
 #include "haplotype_likelihood_cache.hpp"
+#include "maths.hpp"
+
+#include <boost/math/distributions/hypergeometric.hpp>
 
 namespace Octopus
 {
-VariantCallFilter::VariantCallFilter(const ReferenceGenome& reference, const ReadManager& read_manager)
+VariantCallFilter::VariantCallFilter(const ReferenceGenome& reference, const ReadPipe& read_pipe)
 :
 reference_ {reference},
-read_manager_ {read_manager}
+read_pipe_ {read_pipe}
 {}
 
 namespace
@@ -42,60 +50,420 @@ namespace
         const auto begin = call.pos() - 1;
         return GenomicRegion {call.chrom(), begin, begin + static_cast<SizeType>(call.ref().size())};
     }
+    
+    auto mapped_regions(const std::vector<VcfRecord>& calls)
+    {
+        std::vector<GenomicRegion> result {};
+        result.reserve(calls.size());
+        
+        std::transform(std::cbegin(calls), std::cend(calls), std::back_inserter(result),
+                       [] (const auto& call) { return mapped_region(call); });
+        
+        return result;
+    }
+    
+    auto fetch_reads(const std::vector<VcfRecord>& calls, const ReadPipe& read_pipe)
+    {
+        return read_pipe.fetch_reads(mapped_regions(calls));
+    }
+    
+    using HaplotypeSupportMap = std::multimap<Haplotype, AlignedRead>;
+    
+    using HaplotypeLikelihoods = std::vector<std::vector<double>>;
+    
+    auto max_posterior_haplotypes(const Genotype<Haplotype>& genotype, const unsigned read,
+                                  const HaplotypeLikelihoods& likelihoods)
+    {
+        std::vector<unsigned> result {};
+        result.reserve(genotype.ploidy());
+        
+        auto max_likelihood = std::numeric_limits<double>::lowest();
+        
+        for (unsigned k {0}; k < genotype.ploidy(); ++k) {
+            const auto curr = likelihoods[k][read];
+            
+            if (Maths::almost_equal(curr, max_likelihood)) {
+                result.push_back(k);
+            } else if (curr > max_likelihood) {
+                result.assign({k});
+                max_likelihood = curr;
+            }
+        }
+        
+        result.erase(std::unique(std::begin(result), std::end(result)), std::end(result));
+        
+        return result;
+    }
+    
+    auto calculate_support(const Genotype<Haplotype>& genotype, const ReadContainer& reads,
+                           const HaplotypeLikelihoods& likelihoods)
+    {
+        HaplotypeSupportMap result {};
+        
+        for (unsigned i {0}; i < reads.size(); ++i) {
+            const auto top = max_posterior_haplotypes(genotype, i, likelihoods);
+            
+            if (top.size() == 1) {
+                result.emplace(genotype[top.front()], reads[i]);
+            }
+        }
+        
+        return result;
+    }
+    
+    auto expand(const Genotype<Haplotype>& genotype, Haplotype::SizeType n)
+    {
+        Genotype<Haplotype> result {genotype.ploidy()};
+        
+        for (const auto& haplotype : genotype) {
+            result.emplace(expand(haplotype, n));
+        }
+        
+        return result;
+    }
+    
+    auto calculate_likelihoods(const Genotype<Haplotype>& genotype, const ReadContainer& reads)
+    {
+        ReadMap tmp {};
+        
+        tmp["sample"] = reads;
+        
+        const auto& genotype_region = mapped_region(genotype);
+        
+        const auto reads_region = encompassing_region(reads);
+        
+        unsigned min_lhs_expansion {0};
+        
+        if (begins_before(reads_region, genotype_region)) {
+            min_lhs_expansion += begin_distance(reads_region, genotype_region);
+        }
+        
+        unsigned min_rhs_expansion {0};
+        
+        if (ends_before(genotype_region, reads_region)) {
+            min_rhs_expansion += end_distance(genotype_region, reads_region);
+        }
+        
+        const auto min_expansion = std::max({min_lhs_expansion, min_rhs_expansion, 20u});
+        
+        std::map<Haplotype, Haplotype> expanded_haplotypes {};
+        
+        for (const auto& haplotype : genotype) {
+            expanded_haplotypes.emplace(haplotype, expand(haplotype, min_expansion));
+        }
+        
+        const auto expanded_genotype = expand(genotype, min_expansion);
+        
+        const auto haplotypes = expanded_genotype.copy_unique();
+        
+        HaplotypeLikelihoodCache likelihoods {static_cast<unsigned>(haplotypes.size()), {"sample"}};
+        
+        likelihoods.populate(tmp, haplotypes);
+        
+        HaplotypeLikelihoods result(genotype.ploidy());
+        
+        std::transform(std::cbegin(genotype), std::cend(genotype), std::begin(result),
+                       [&likelihoods, &expanded_haplotypes] (const auto& haplotype) {
+                           return likelihoods.log_likelihoods("sample", expanded_haplotypes.at(haplotype));
+                       });
+        
+        return result;
+    }
+    
+    auto calculate_support(const Genotype<Haplotype>& genotype, const ReadContainer& reads)
+    {
+        const auto likelihoods = calculate_likelihoods(genotype, reads);
+        return calculate_support(genotype, reads, likelihoods);
+    }
+    
+    decltype(auto) find_genotype(const GenotypeMap& genotypes, const SampleIdType& sample,
+                                 const GenomicRegion& region)
+    {
+        return genotypes.at(sample).overlap_range(region).front();
+    }
+    
+    auto extract_variants(const VcfRecord& call, const std::vector<SampleIdType>& samples)
+    {
+        std::multimap<SampleIdType, Variant> result {};
+        
+        const auto region = mapped_region(call);
+        
+        const auto& alt_alleles = call.alt();
+        
+        for (const auto& sample : samples) {
+            const auto genotype = call.get_sample_value(sample, "GT");
+            
+            for (const auto& allele : genotype) {
+                const auto it = std::find(std::cbegin(alt_alleles), std::cend(alt_alleles), allele);
+                
+                if (it != std::cend(alt_alleles)) {
+                    result.emplace(std::piecewise_construct,
+                                   std::forward_as_tuple(sample),
+                                   std::forward_as_tuple(region, call.ref(), *it));
+                }
+            }
+        }
+        
+        return result;
+    }
+    
+    using VariantSupportMap = std::multimap<Variant, AlignedRead>;
+    
+    template <typename Range>
+    auto calculate_support(const Genotype<Haplotype>& genotype, const ReadContainer& reads,
+                           Range variants)
+    {
+        const auto haplotype_support = calculate_support(genotype, reads);
+        
+        VariantSupportMap result {};
+        
+        std::for_each(variants.first, variants.second,
+                      [&haplotype_support, &result] (const auto& p) {
+                          for (const auto& hp : haplotype_support) {
+                              if (hp.first.contains(p.second.alt_allele())) {
+                                  result.emplace(p.second, hp.second);
+                              }
+                          }
+                      });
+        
+        return result;
+    }
+    
+    struct ReadDirectionCounts
+    {
+        unsigned forward, reverse;
+    };
+    
+    auto calculate_direction_counts(const VariantSupportMap& support, const Variant& v)
+    {
+        const auto er = support.equal_range(v);
+        
+        const auto c = std::count_if(er.first, er.second,
+                                     [] (const auto& p) {
+                                         return p.second.is_marked_reverse_mapped();
+                                     });
+        
+        return ReadDirectionCounts {
+            static_cast<unsigned>(std::distance(er.first, er.second) - c),
+            static_cast<unsigned>(c)
+        };
+    }
+    
+    auto fisher_test(unsigned a, unsigned b, unsigned c, unsigned d)
+    {
+        const auto N = a + b + c + d;
+        const auto r = a + c;
+        const auto n = c + d;
+        
+        const boost::math::hypergeometric_distribution<> hgd {r, n, N};
+        
+        const auto cutoff = pdf(hgd, c);
+        
+        double result {0};
+        
+        const auto max_for_k = std::min(r, n);
+        const auto min_for_k = static_cast<unsigned>(std::max(0, static_cast<int>(r + n - N)));
+        
+        for (auto k = min_for_k; k < max_for_k + 1; ++k) {
+            const auto p = pdf(hgd, k);
+            if (p <= cutoff) result += p;
+        }
+        
+        return result;
+    }
+    
+    auto calculate_strand_bias(const VariantSupportMap& support, const Variant& v,
+                               const ReadContainer& reads)
+    {
+        const auto alt_counts = calculate_direction_counts(support, v);
+        
+        ReadDirectionCounts other_counts {
+            static_cast<unsigned>(count_forward(reads)) - alt_counts.forward,
+            static_cast<unsigned>(count_reverse(reads)) - alt_counts.reverse
+        };
+        
+        return fisher_test(alt_counts.forward, alt_counts.reverse,
+                           other_counts.forward, other_counts.reverse);
+    }
+    
+    auto convert_to_probabilities(const std::vector<unsigned>& counts)
+    {
+        const auto norm = std::accumulate(std::cbegin(counts), std::cend(counts), 0.0);
+        
+        std::vector<double> result(counts.size());
+        
+        std::transform(std::cbegin(counts), std::cend(counts), std::begin(result),
+                       [norm] (const auto c) { return static_cast<double>(c) / norm; });
+        
+        return result;
+    }
+    
+    auto kl_divergence(const std::vector<double>& p, const std::vector<double>& q)
+    {
+        return std::inner_product(std::cbegin(p), std::cend(p), std::cbegin(q), 0.0,
+                                  std::plus<> {}, [] (const auto a, const auto b) {
+                                      return a * std::log(a / b);
+                                  });
+    }
+    
+    auto symmetric_kl_divergence(const std::vector<double>& p, const std::vector<double>& q)
+    {
+        return kl_divergence(p, q) + kl_divergence(q, p);
+    }
+    
+    auto calculate_mq_bias(const VariantSupportMap& support, const Variant& v,
+                           const ReadContainer& reads)
+    {
+        using Q = AlignedRead::QualityType;
+        
+        static constexpr unsigned Max_qualities {std::numeric_limits<Q>::max() - std::numeric_limits<Q>::min()};
+        
+        std::vector<unsigned> variant_mq_histogram(Max_qualities, 0);
+        
+        const auto er = support.equal_range(v);
+        
+        std::for_each(er.first, er.second,
+                      [&variant_mq_histogram] (const auto& p) {
+                          ++variant_mq_histogram[p.second.mapping_quality()];
+                      });
+        
+        std::vector<unsigned> other_mq_histogram(Max_qualities, 0);
+        
+        for (const auto& read : reads) {
+            ++other_mq_histogram[read.mapping_quality()];
+        }
+        
+        std::transform(std::cbegin(other_mq_histogram), std::cend(other_mq_histogram),
+                       std::cbegin(variant_mq_histogram), std::begin(other_mq_histogram),
+                       [] (const auto a, const auto b) { return a - b; });
+        
+        if (std::accumulate(std::cbegin(variant_mq_histogram), std::cend(variant_mq_histogram), 0) < 5) {
+            return 0.0;
+        }
+        
+        // Prevent 0 counts (hence 0 probability), so KL is well defined
+        for (auto& e : variant_mq_histogram) ++e;
+        for (auto& e : other_mq_histogram) ++e;
+        
+        const auto variant_dist = convert_to_probabilities(variant_mq_histogram);
+        const auto other_dist   = convert_to_probabilities(other_mq_histogram);
+        
+        return symmetric_kl_divergence(variant_dist, other_dist);
+    }
+    
+    auto get_dummy_model_posterior(const VcfRecord& call)
+    {
+        return std::stod(call.info_value("DMBF").front());
+    }
 } // namespace
 
-using PhaseMap = MappableMap<ContigNameType, GenomicRegion, MappableFlatSet<GenomicRegion>>;
-
-using SamplePhaseMap = std::unordered_map<SampleIdType, PhaseMap>;
-
-SamplePhaseMap extract_phase_map(const VcfReader& calls)
+void VariantCallFilter::filter(const VcfReader& source, VcfWriter& dest, const RegionMap& regions) const
 {
-    const auto samples = calls.fetch_header().samples();
+    const auto header = source.fetch_header();
     
-    SamplePhaseMap result {};
-    result.reserve(samples.size());
-    
-    
-    
-    return result;
-}
-
-void VariantCallFilter::filter(const VcfReader& source, VcfWriter& dest, const InputRegionMap& regions)
-{
     if (!dest.is_header_written()) {
-        dest << source.fetch_header();
+        VcfHeader::Builder hb {header};
+        
+        hb.add_filter("MODEL", "The caller specific model filter failed");
+        
+        dest << hb.build_once();
     }
     
-    GenotypeReader gr {reference_, source};
-    
-    auto genotypes = gr.extract_genotype(reference_.get().contig_region("22"));
-    
-    for (const auto& p : genotypes) {
-        for (const auto& g : p.second) {
-            std::cout << g << std::endl;
-        }
-    }
+    const auto samples = header.samples();
     
     for (const auto& p : regions) {
         for (const auto& region : p.second) {
             auto calls = source.fetch_records(region);
             
+            if (calls.empty()) continue;
+            
+            const auto reads = fetch_reads(calls, read_pipe_);
+            
+            const auto reads_region = encompassing_region(reads);
+            
+            const auto genotypes = extract_genotypes(calls, header, reference_, reads_region);
+            
             for (auto& call : calls) {
                 const auto call_region = mapped_region(call);
                 
-                auto reads = read_manager_.get().fetch_reads(call_region);
+                const auto call_reads = copy_overlapped(reads, call_region);
                 
                 VcfRecord::Builder cb {call};
                 
                 bool filtered {false};
+                
+                const auto dummy_model_posterior = get_dummy_model_posterior(call);
+                
+                if (dummy_model_posterior > 0.1) {
+                    cb.add_filter("MODEL");
+                    filtered = true;
+                }
                 
                 if (call.qual() && *call.qual() < 10) {
                     cb.add_filter("q10");
                     filtered = true;
                 }
                 
-                if (rmq_mapping_quality(reads) < 40) {
+                const auto rmq = rmq_mapping_quality(reads, call_region);
+                
+                if (rmq < 40) {
                     cb.add_filter("MQ");
+                    filtered = true;
+                }
+                
+                //std::cout << call << std::endl;
+                
+                const auto variants = extract_variants(call, samples);
+                
+                bool strand_biased {true};
+                
+                bool sample_rmq {false};
+                
+                bool sample_kl {false};
+                
+                for (const auto& sample : samples) {
+                    //std::cout << sample << std::endl;
+                    
+                    const auto& genotype = find_genotype(genotypes, sample, call_region);
+                    
+                    const auto sample_variants = variants.equal_range(sample);
+                    
+                    if (rmq >= 40 && sample_variants.first != sample_variants.second) {
+                        if (rmq_mapping_quality(call_reads.at(sample)) < 40) {
+                            sample_rmq = true;
+                        }
+                    }
+                    
+                    const auto variant_support = calculate_support(genotype, call_reads.at(sample),
+                                                                   sample_variants);
+                    
+                    const auto pval = calculate_strand_bias(variant_support, sample_variants.first->second,
+                                                            call_reads.at(sample));
+                    
+                    if (pval > 0.2) {
+                        strand_biased = false;
+                    }
+                    
+                    const auto mq_bias = calculate_mq_bias(variant_support, sample_variants.first->second,
+                                                           call_reads.at(sample));
+                    
+                    if (mq_bias > 0.4) {
+                        sample_kl = true;
+                    }
+                }
+                
+                if (sample_kl) {
+                    cb.add_filter("KL");
+                    filtered = true;
+                }
+                
+                if (sample_rmq) {
+                    cb.add_filter("MQ");
+                    filtered = true;
+                }
+                
+                if (strand_biased) {
+                    cb.add_filter("SB");
                     filtered = true;
                 }
                 
@@ -105,6 +473,12 @@ void VariantCallFilter::filter(const VcfReader& source, VcfWriter& dest, const I
                 
                 call = cb.build();
             }
+            
+            const auto it = std::remove_if(std::begin(calls), std::end(calls),
+                                           [] (const auto& call) {
+                                               return !is_somatic(call);
+                                           });
+            calls.erase(it, std::end(calls));
             
             write(calls, dest);
         }

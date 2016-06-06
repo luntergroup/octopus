@@ -100,13 +100,13 @@ private:
     using ValueMap = std::unordered_map<KeyType, std::vector<ValueType>>;
     
     // mandatory fields
-    std::string chromosome_;
-    SizeType position_;
+    std::string chrom_;
+    SizeType pos_;
     IdType id_;
-    SequenceType ref_allele_;
-    std::vector<SequenceType> alt_alleles_;
-    boost::optional<QualityType> quality_;
-    std::vector<KeyType> filters_;
+    SequenceType ref_;
+    std::vector<SequenceType> alt_;
+    boost::optional<QualityType> qual_;
+    std::vector<KeyType> filter_;
     ValueMap info_;
     
     // optional fields
@@ -129,13 +129,13 @@ VcfRecord::VcfRecord(StringType1_&& chrom, SizeType pos, StringType2_&& id,
                      SequenceType1_&& ref, SequenceType2_&& alt, boost::optional<QualityType> qual,
                      Filters_&& filters, Info_&& info)
 :
-chromosome_ {std::forward<StringType1_>(chrom)},
-position_ {pos},
+chrom_ {std::forward<StringType1_>(chrom)},
+pos_ {pos},
 id_ {std::forward<StringType2_>(id)},
-ref_allele_ {std::forward<SequenceType1_>(ref)},
-alt_alleles_ {std::forward<SequenceType2_>(alt)},
-quality_ {qual},
-filters_ {std::forward<Filters_>(filters)},
+ref_ {std::forward<SequenceType1_>(ref)},
+alt_ {std::forward<SequenceType2_>(alt)},
+qual_ {qual},
+filter_ {std::forward<Filters_>(filters)},
 info_ {std::forward<Info_>(info)},
 format_ {},
 genotypes_ {},
@@ -149,13 +149,13 @@ VcfRecord::VcfRecord(StringType1_&& chrom, SizeType pos, StringType2_&& id,
                      boost::optional<QualityType> qual, Filters_&& filters,
                      Info_&& info, Format_&& format, Genotypes_&& genotypes, Samples_&& samples)
 :
-chromosome_ {std::forward<StringType1_>(chrom)},
-position_ {pos},
+chrom_ {std::forward<StringType1_>(chrom)},
+pos_ {pos},
 id_ {std::forward<StringType2_>(id)},
-ref_allele_ {std::forward<SequenceType1_>(ref)},
-alt_alleles_ {std::forward<SequenceType2_>(alt)},
-quality_ {qual},
-filters_ {std::forward<Filters_>(filters)},
+ref_ {std::forward<SequenceType1_>(ref)},
+alt_ {std::forward<SequenceType2_>(alt)},
+qual_ {qual},
+filter_ {std::forward<Filters_>(filters)},
 info_ {std::forward<Info_>(info)},
 format_ {std::forward<Format_>(format)},
 genotypes_ {std::forward<Genotypes_>(genotypes)},
@@ -221,6 +221,7 @@ public:
     Builder& add_filter(KeyType filter);
     Builder& add_info(const KeyType& key); // flags
     Builder& add_info(const KeyType& key, const ValueType& value);
+    template <typename T> Builder& add_info(const KeyType& key, const T& value); // calls std::to_string
     Builder& add_info(const KeyType& key, const std::vector<ValueType>& values);
     Builder& add_info(const KeyType& key, std::initializer_list<ValueType> values);
     Builder& add_info_flag(KeyType key);
@@ -231,8 +232,11 @@ public:
     Builder& add_genotype(const SampleIdType& sample, const std::vector<SequenceType>& alleles, Phasing phasing);
     Builder& add_genotype(const SampleIdType& sample, const std::vector<boost::optional<unsigned>>& alleles, Phasing is_phased);
     Builder& add_genotype_field(const SampleIdType& sample, const KeyType& key, const ValueType& value);
+    template <typename T>
+    Builder& add_genotype_field(const SampleIdType& sample, const KeyType& key, const T& value); // calls std::to_string
     Builder& add_genotype_field(const SampleIdType& sample, const KeyType& key, const std::vector<ValueType>& values);
     Builder& add_genotype_field(const SampleIdType& sample, const KeyType& key, std::initializer_list<ValueType> values);
+    Builder& add_missing_genotype_field(const SampleIdType& sample, const KeyType& key);
     
     Builder& set_refcall();
     Builder& set_somatic();
@@ -255,5 +259,18 @@ private:
     std::unordered_map<SampleIdType, Genotype> genotypes_ = {};
     std::unordered_map<SampleIdType, std::unordered_map<KeyType, std::vector<ValueType>>> samples_ = {};
 };
+
+template <typename T>
+VcfRecord::Builder& VcfRecord::Builder::add_info(const KeyType& key, const T& value)
+{
+    return add_info(key, std::to_string(value));
+}
+
+template <typename T>
+VcfRecord::Builder& VcfRecord::Builder::add_genotype_field(const SampleIdType& sample, const KeyType& key,
+                                                           const T& value)
+{
+    return add_genotype_field(sample, key, std::to_string(value));
+}
 
 #endif /* defined(__Octopus__vcf_record__) */

@@ -624,15 +624,28 @@ auto next_position(const Mappable<T>& mappable)
 }
 
 template <typename T>
-auto expand_lhs(const Mappable<T>& mappable, const GenomicRegion::DifferenceType n)
+auto expand_lhs(const Mappable<T>& mappable, const typename RegionType<T>::DifferenceType n)
 {
     return expand_lhs(static_cast<const T&>(mappable).mapped_region(), n);
 }
 
 template <typename T>
-auto expand_rhs(const Mappable<T>& mappable, const GenomicRegion::DifferenceType n)
+auto expand_rhs(const Mappable<T>& mappable, const typename RegionType<T>::DifferenceType n)
 {
     return expand_rhs(static_cast<const T&>(mappable).mapped_region(), n);
+}
+
+template <typename T>
+auto expand(const Mappable<T>& mappable, const typename RegionType<T>::DifferenceType n)
+{
+    return expand(static_cast<const T&>(mappable).mapped_region(), n);
+}
+
+template <typename T>
+auto expand(const Mappable<T>& mappable, const typename RegionType<T>::DifferenceType lhs,
+            const typename RegionType<T>::DifferenceType rhs)
+{
+    return expand(static_cast<const T&>(mappable).mapped_region(), lhs, rhs);
 }
 
 template <typename T>

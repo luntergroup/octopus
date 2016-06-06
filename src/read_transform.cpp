@@ -21,6 +21,11 @@ namespace Octopus {
         return static_cast<unsigned>(transforms_.size());
     }
     
+    void ReadTransform::shrink_to_fit() noexcept
+    {
+        transforms_.shrink_to_fit();
+    }
+    
     void ReadTransform::transform_read(AlignedRead& read) const
     {
         for (const auto& transform : transforms_) {

@@ -21,6 +21,9 @@ namespace Octopus
 
 // public members
 
+ReadPipe::ReadPipe(const ReadManager& read_manager, std::vector<SampleIdType> samples)
+    : ReadPipe {read_manager, {}, {}, boost::none, std::move(samples)} {}
+
 ReadPipe::ReadPipe(const ReadManager& read_manager, ReadTransform read_transform, ReadFilterer read_filter,
                    boost::optional<Downsampler> downsampler, std::vector<SampleIdType> samples)
 :
@@ -180,14 +183,14 @@ std::vector<GenomicRegion> join_close_regions(const std::vector<GenomicRegion>& 
                       if (inner_distance(tmp, region) <= max_distance) {
                           tmp = encompassing_region(tmp, region);
                       } else {
-                          result.emplace_back(tmp);
+                          result.push_back(tmp);
                           tmp = region;
                       }
                   });
     
-    if (result.empty() || ends_equal(tmp, result.back())) {
-        result.emplace_back(std::move(tmp));
-    }
+    result.push_back(std::move(tmp));
+    
+    assert(contains(encompassing_region(result), encompassing_region(regions)));
     
     return result;
 }

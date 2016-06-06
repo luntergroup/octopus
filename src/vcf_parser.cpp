@@ -364,13 +364,21 @@ void parse_genotype(const VcfRecord::SampleIdType& sample, const std::string& ge
     using Phasing = VcfRecord::Builder::Phasing;
     
     std::vector<boost::optional<unsigned>> alleles {};
-    alleles.reserve(allele_numbers.size());
     
-    std::transform(std::cbegin(allele_numbers), std::cend(allele_numbers),
-                   std::back_inserter(alleles),
-                   [] (const auto& a) -> boost::optional<unsigned> {
+    const auto ploidy = allele_numbers.size();
+    
+    alleles.reserve(ploidy);
+    
+    std::transform(std::cbegin(allele_numbers), std::cend(allele_numbers), std::back_inserter(alleles),
+                   [ploidy] (const auto& a) -> boost::optional<unsigned> {
                        try {
-                           return boost::lexical_cast<unsigned>(a);
+                           const auto i = boost::lexical_cast<unsigned>(a);
+                           
+                           if (i < ploidy - 1) {
+                               return i;
+                           } else {
+                               return boost::none;
+                           }
                        } catch (const boost::bad_lexical_cast&) {
                            return boost::none;
                        }

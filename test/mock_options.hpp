@@ -149,23 +149,25 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--regions", "22:29,474,547-29,474,587", // real somatic SNV?
         //"--regions", "22:29,761,141-29,761,305", // real somatic SNV?
         
-        //"--regions", "22:41,120,796-41,120,871", // FP SNP. Strand bias. Run through.
-        //"--regions", "22:43,960,301-43,960,376", // FP SNP. Strand bias. Run through.
-        "--regions", "22:42,508,653-42,508,957", // FP SNP. Strand bias. Low MQ.
-        //"--regions", "22:42,726,975-42,727,015", // FP SNP. Strand bias.
-        //"--regions", "22:43,468,078-43,468,229", // FP SNPs. Strand bias. Run through.
-        //"--regions", "22:44,202,032-44,202,107", // FP SNPs. Strand bias. Run through.
-        //"--regions", "22:44,230,824-44,230,975", // FP SNP. MQ. Strand bias.
-        //"--regions", "22:44,243,370-44,243,573", // FP SNP. Strand bias. Run through.
-        //"--regions", "22:45,332,712-45,332,787", // FP SNP. Strand bias. Run through.
-        //"--regions", "22:45,895,589-45,895,664", // FP SNP. Strand bias. Run through.
-        //"--regions", "22:46,364,941-46,365,092", // FP SNP. Strand bias.
-        //"--regions", "22:46,491,358-46,491,509", // FP SNP. Low MQ.
-        //"--regions", "22:49,872,443-49,872,607", // FP SNP. Strand bias.
-        //"--regions", "22:46,729,658-46,729,822", // FP SNP. Strand bias
-        //"--regions", "22:46,491,424-46,491,728", // FP SNP
-        //"--regions", "22:46,614,813-46,614,853", // FP SNP. Strand bias.
-        //"--regions", "22:46,729,664-46,729,815", // FP SNP. Strand bias.
+        "--regions", "22:40094779-40095174",
+        
+//        "--regions", "22:41,120,796-41,120,871", // FP SNP. Strand bias. Run through.
+//        "--regions", "22:43,960,301-43,960,376", // FP SNP. Strand bias. Run through.
+//        "--regions", "22:42,508,653-42,508,957", // FP SNP. Strand bias. Low MQ.
+//        "--regions", "22:42,726,975-42,727,015", // FP SNP. Strand bias.
+//        "--regions", "22:43,468,078-43,468,229", // FP SNPs. Strand bias. Run through.
+//        "--regions", "22:44,202,032-44,202,107", // FP SNPs. Strand bias. Run through.
+//        "--regions", "22:44,230,824-44,230,975", // FP SNP. MQ. Strand bias.
+//        "--regions", "22:44,243,370-44,243,573", // FP SNP. Strand bias. Run through.
+//        "--regions", "22:45,332,712-45,332,787", // FP SNP. Strand bias. Run through.
+//        "--regions", "22:45,895,589-45,895,664", // FP SNP. Strand bias. Run through.
+//        "--regions", "22:46,364,941-46,365,092", // FP SNP. Strand bias.
+//        "--regions", "22:46,491,358-46,491,509", // FP SNP. Low MQ.
+//        "--regions", "22:49,872,443-49,872,607", // FP SNP. Strand bias.
+//        "--regions", "22:46,729,658-46,729,822", // FP SNP. Strand bias
+//        "--regions", "22:46,491,424-46,491,728", // FP SNP
+//        "--regions", "22:46,614,813-46,614,853", // FP SNP. Strand bias.
+//        "--regions", "22:46,729,664-46,729,815", // FP SNP. Strand bias.
         
         //"--regions", "22:43,445,777-43,445,817", // FP del
         //"--regions", "22:42,937,177-42,937,252", // FP ins

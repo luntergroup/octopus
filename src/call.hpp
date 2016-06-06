@@ -87,15 +87,15 @@ namespace Octopus
         
         virtual void decorate(VcfRecord::Builder& record) const = 0;
         
-        bool is_model_filtered() const noexcept;
-        void filter() noexcept;
+        void set_dummy_model_bayes_factor(double bf) noexcept;
+        boost::optional<double> dummy_model_bayes_factor() const noexcept;
         
     protected:
         std::unordered_map<SampleIdType, GenotypeCall> genotype_calls_;
         
         double quality_;
         
-        bool is_model_filtered_;
+        boost::optional<double> dummy_model_bayes_factor_;
         
     private:
         virtual void replace_called_alleles(const char old_base, const char replacement_base) = 0;
@@ -107,7 +107,7 @@ namespace Octopus
     genotype_calls_ {std::begin(genotype_calls),
     std::end(genotype_calls)},
     quality_ {quality},
-    is_model_filtered_ {}
+    dummy_model_bayes_factor_ {}
     {}
     
     template <typename R>

@@ -36,6 +36,8 @@ public:
     
     unsigned num_transforms() const noexcept;
     
+    void shrink_to_fit() noexcept;
+    
     template <typename InputIt>
     void transform_reads(InputIt first, InputIt last) const;
     

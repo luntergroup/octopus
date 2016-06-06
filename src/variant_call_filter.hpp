@@ -14,7 +14,7 @@
 
 #include "common.hpp"
 #include "reference_genome.hpp"
-#include "read_manager.hpp"
+#include "read_pipe.hpp"
 
 class GenomicRegion;
 class VcfReader;
@@ -25,12 +25,12 @@ namespace Octopus
     class VariantCallFilter
     {
     public:
-        using ContigOrder = std::function<bool(const GenomicRegion&, const GenomicRegion&)>;
+        using ContigOrder = std::function<bool(const ContigNameType&, const ContigNameType&)>;
         using RegionMap   = std::map<ContigNameType, std::vector<GenomicRegion>, ContigOrder>;
         
         VariantCallFilter() = delete;
         
-        VariantCallFilter(const ReferenceGenome& reference, const ReadManager& read_manager);
+        VariantCallFilter(const ReferenceGenome& reference, const ReadPipe& read_pipe);
         
         virtual ~VariantCallFilter() = default;
         
@@ -39,11 +39,11 @@ namespace Octopus
         VariantCallFilter(VariantCallFilter&&)                 = default;
         VariantCallFilter& operator=(VariantCallFilter&&)      = default;
         
-        void filter(const VcfReader& source, VcfWriter& dest, const RegionMap& regions);
+        void filter(const VcfReader& source, VcfWriter& dest, const RegionMap& regions) const;
         
     private:
         std::reference_wrapper<const ReferenceGenome> reference_;
-        std::reference_wrapper<const ReadManager> read_manager_;
+        std::reference_wrapper<const ReadPipe> read_pipe_;
     };
 } // namespace Octopus
 

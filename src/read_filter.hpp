@@ -54,6 +54,8 @@ public:
     
     unsigned num_filters() const noexcept;
     
+    void shrink_to_fit() noexcept;
+    
     // These methods work just like std::remove and std::partition
     
     BidirIt remove(BidirIt first, BidirIt last) const;
@@ -86,6 +88,13 @@ template <typename BidirIt>
 unsigned ReadFilter<BidirIt>::num_filters() const noexcept
 {
     return static_cast<unsigned>(basic_filters_.size() + context_filters_.size());
+}
+
+template <typename BidirIt>
+void ReadFilter<BidirIt>::shrink_to_fit() noexcept
+{
+    basic_filters_.shrink_to_fit();
+    context_filters_.shrink_to_fit();
 }
 
 template <typename BidirIt>

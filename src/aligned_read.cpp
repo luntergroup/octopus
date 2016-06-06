@@ -14,40 +14,6 @@
 
 #include "compression.hpp"
 
-AlignedRead::AlignedRead(const AlignedRead& other)
-:
-region_ {other.region_},
-read_group_ {other.read_group_},
-sequence_ {other.sequence_},
-qualities_ {other.qualities_},
-cigar_string_ {other.cigar_string_},
-next_segment_ {((other.next_segment_ != nullptr) ? std::make_unique<NextSegment>(*other.next_segment_) : nullptr) },
-flags_ {other.flags_},
-hash_ {other.hash_},
-mapping_quality_ {other.mapping_quality_}
-{}
-
-AlignedRead& AlignedRead::operator=(const AlignedRead& other)
-{
-    AlignedRead temp {other};
-    swap(*this, temp);
-    return *this;
-}
-
-void swap(AlignedRead& lhs, AlignedRead& rhs) noexcept
-{
-    using std::swap;
-    swap(lhs.region_, rhs.region_);
-    swap(lhs.read_group_, rhs.read_group_);
-    swap(lhs.sequence_, rhs.sequence_);
-    swap(lhs.cigar_string_, rhs.cigar_string_);
-    swap(lhs.qualities_, rhs.qualities_);
-    swap(lhs.next_segment_, rhs.next_segment_);
-    swap(lhs.flags_, rhs.flags_);
-    swap(lhs.hash_, rhs.hash_);
-    swap(lhs.mapping_quality_, rhs.mapping_quality_);
-}
-
 //
 // NextSegment public methods
 //
@@ -113,7 +79,7 @@ const CigarString& AlignedRead::cigar_string() const noexcept
 
 bool AlignedRead::is_chimeric() const noexcept
 {
-    return next_segment_ != nullptr;
+    return static_cast<bool>(next_segment_);
 }
 
 const AlignedRead::NextSegment& AlignedRead::next_segment() const
@@ -235,7 +201,7 @@ void AlignedRead::set_uncompressed() noexcept
     flags_[compression_flag_] = false;
 }
 
-AlignedRead::FlagBits AlignedRead::compress_flags(const Flags& flags)
+AlignedRead::FlagBits AlignedRead::compress(const Flags& flags)
 {
     FlagBits result {};
     
@@ -253,7 +219,7 @@ AlignedRead::FlagBits AlignedRead::compress_flags(const Flags& flags)
     return result;
 }
 
-AlignedRead::NextSegment::FlagBits AlignedRead::NextSegment::compress_flags(const Flags& flags)
+AlignedRead::NextSegment::FlagBits AlignedRead::NextSegment::compress(const Flags& flags)
 {
     FlagBits result {};
     result[0] = flags.is_marked_unmapped;

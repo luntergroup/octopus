@@ -8,6 +8,7 @@
 
 #include "population_caller.hpp"
 
+#include <typeinfo>
 #include <unordered_map>
 #include <deque>
 #include <algorithm>
@@ -87,6 +88,11 @@ dummy_latents_ {std::move(dummy_inferences)}
 //    
 //    genotype_posteriors_  = std::make_shared<GenotypeProbabilityMap>(std::move(genotype_posteriors));
 //    haplotype_posteriors_ = std::make_shared<HaplotypeProbabilityMap>(calculate_haplotype_posteriors(haplotypes));
+}
+
+PopulationVariantCaller::CallTypeSet PopulationVariantCaller::do_get_call_types() const
+{
+    return {std::type_index(typeid(GermlineVariantCall))};
 }
 
 std::shared_ptr<PopulationVariantCaller::Latents::HaplotypeProbabilityMap>

@@ -187,26 +187,61 @@ auto allele_minmax(const Variant::SequenceType& lhs, const Variant::SequenceType
     return std::minmax(lhs, rhs, [] (const auto& lhs, const auto& rhs) { return lhs.size() < rhs.size(); });
 }
 
-template <typename InputIterator>
-std::size_t get_num_redundant_bases(InputIterator first1, InputIterator last1, InputIterator first2)
+template <typename ForwardIt>
+auto count_redundant_bases(ForwardIt first1, ForwardIt last1, ForwardIt first2)
 {
     return std::distance(first1, std::mismatch(first1, last1, first2).first);
 }
 
 template <typename SequenceType>
-std::size_t get_num_redundant_front_bases(const SequenceType& smaller_sequence,
-                                          const SequenceType& larger_sequence)
+auto count_redundant_front_bases(const SequenceType& smaller_sequence,
+                                 const SequenceType& larger_sequence)
 {
-    return get_num_redundant_bases(std::cbegin(smaller_sequence), std::cend(smaller_sequence),
-                                   std::cbegin(larger_sequence));
+    return count_redundant_bases(std::cbegin(smaller_sequence), std::cend(smaller_sequence),
+                                 std::cbegin(larger_sequence));
 }
 
 template <typename SequenceType>
-std::size_t get_num_redundant_back_bases(const SequenceType& smaller_sequence,
-                                         const SequenceType& larger_sequence)
+auto count_redundant_back_bases(const SequenceType& smaller_sequence,
+                                const SequenceType& larger_sequence)
 {
-    return get_num_redundant_bases(std::crbegin(smaller_sequence), std::crend(smaller_sequence),
-                                   std::crbegin(larger_sequence));
+    return count_redundant_bases(std::crbegin(smaller_sequence), std::crend(smaller_sequence),
+                                 std::crbegin(larger_sequence));
+}
+
+bool can_trim(const Variant& v)
+{
+    if (ref_sequence_size(v) == 0 || alt_sequence_size(v) == 0) return false;
+    
+    const auto& p = allele_minmax(ref_sequence(v), alt_sequence(v));
+    
+    return count_redundant_front_bases(p.first, p.second) > 0
+            || count_redundant_back_bases(p.first, p.second) > 0;
+}
+
+Variant trim(const Variant& v)
+{
+    using std::cbegin; using std::cend; using std::crbegin; using std::make_reverse_iterator;
+    
+    const auto& ref = ref_sequence(v);
+    const auto& alt = alt_sequence(v);
+    
+    const auto m1 = std::mismatch(cbegin(ref), cend(ref), cbegin(alt), cend(alt));
+    
+    const auto m2 = std::mismatch(crbegin(ref), make_reverse_iterator(m1.first),
+                                  crbegin(alt), make_reverse_iterator(m1.second));
+    
+    using SequenceType = Variant::SequenceType;
+    
+    SequenceType new_ref {m1.first, m2.first.base()};
+    SequenceType new_alt {m1.second, m2.second.base()};
+    
+    const auto pad_front = std::distance(m1.first, cbegin(ref));
+    const auto pad_back  = std::distance(m2.first, crbegin(ref));
+    
+    auto new_region = expand(mapped_region(v), pad_front, pad_back);
+    
+    return Variant {std::move(new_region), std::move(new_ref), std::move(new_alt)};
 }
 
 bool is_parsimonious(const Variant& variant) noexcept
@@ -222,11 +257,11 @@ bool is_parsimonious(const Variant& variant) noexcept
     const auto& small_allele = alleles.first;
     const auto& big_allele   = alleles.second;
     
-    if (get_num_redundant_front_bases(small_allele, big_allele) > 1) {
+    if (count_redundant_front_bases(small_allele, big_allele) > 1) {
         return false;
     }
     
-    if (small_allele.size() > 1 && get_num_redundant_back_bases(small_allele, big_allele) > 0) {
+    if (small_allele.size() > 1 && count_redundant_back_bases(small_allele, big_allele) > 0) {
         return false;
     }
     

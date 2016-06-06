@@ -35,6 +35,8 @@
 		CA487B2A1C44390A00488577 /* libboost_unit_test_framework.a in Frameworks */ = {isa = PBXBuildFile; fileRef = CA487B291C44390A00488577 /* libboost_unit_test_framework.a */; };
 		CA53D3011C03AF46009A216D /* pedigree_genotype_model.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA53D2FF1C03AF46009A216D /* pedigree_genotype_model.cpp */; };
 		CA53D3041C03B746009A216D /* pedigree.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA53D3021C03B746009A216D /* pedigree.cpp */; };
+		CA566E331D048304007C5180 /* vcf_header_factory.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA566E311D048304007C5180 /* vcf_header_factory.cpp */; };
+		CA566E371D0488C7007C5180 /* octopus_vcf.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA566E351D0488C7007C5180 /* octopus_vcf.cpp */; };
 		CA5C8E021ADC4CBB000BA230 /* haplotype_benchmarks.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA5C8E011ADC4CBB000BA230 /* haplotype_benchmarks.cpp */; };
 		CA7148B61CD00ABA0017820B /* read_filters.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA7148B51CD00ABA0017820B /* read_filters.cpp */; };
 		CA8A664A1B81CA7E008CE1D8 /* threadsafe_fasta.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA8A66481B81CA7E008CE1D8 /* threadsafe_fasta.cpp */; };
@@ -300,6 +302,11 @@
 		CA53D3021C03B746009A216D /* pedigree.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = pedigree.cpp; sourceTree = "<group>"; };
 		CA53D3031C03B746009A216D /* pedigree.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = pedigree.hpp; sourceTree = "<group>"; };
 		CA53D3051C0A7881009A216D /* merge_transform.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = merge_transform.hpp; sourceTree = "<group>"; };
+		CA566E311D048304007C5180 /* vcf_header_factory.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = vcf_header_factory.cpp; sourceTree = "<group>"; };
+		CA566E321D048304007C5180 /* vcf_header_factory.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = vcf_header_factory.hpp; sourceTree = "<group>"; };
+		CA566E341D0486F8007C5180 /* call_types.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = call_types.hpp; sourceTree = "<group>"; };
+		CA566E351D0488C7007C5180 /* octopus_vcf.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = octopus_vcf.cpp; sourceTree = "<group>"; };
+		CA566E361D0488C7007C5180 /* octopus_vcf.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = octopus_vcf.hpp; sourceTree = "<group>"; };
 		CA5C8E011ADC4CBB000BA230 /* haplotype_benchmarks.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = haplotype_benchmarks.cpp; sourceTree = "<group>"; };
 		CA7148B51CD00ABA0017820B /* read_filters.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = read_filters.cpp; sourceTree = "<group>"; };
 		CA76E6F31BF155A90074E336 /* human_skip_regions.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = human_skip_regions.txt; sourceTree = "<group>"; };
@@ -684,6 +691,8 @@
 				CA1472781AACECF1005FDCD1 /* octopus.cpp */,
 				CA98BBA91C918B07000CE9C4 /* progress_meter.hpp */,
 				CA98BBA81C918B07000CE9C4 /* progress_meter.cpp */,
+				CA566E361D0488C7007C5180 /* octopus_vcf.hpp */,
+				CA566E351D0488C7007C5180 /* octopus_vcf.cpp */,
 			);
 			name = octopus;
 			sourceTree = "<group>";
@@ -798,10 +807,28 @@
 			name = mappable;
 			sourceTree = "<group>";
 		};
+		CA566E301D045BD2007C5180 /* call-types */ = {
+			isa = PBXGroup;
+			children = (
+				D402C53C1CC9264E00C8B8A7 /* call.hpp */,
+				CA0DF5881CCADA36000193CF /* call.cpp */,
+				D402C54C1CCA588600C8B8A7 /* variant_call.hpp */,
+				D402C54B1CCA588600C8B8A7 /* variant_call.cpp */,
+				D402C5431CC934CF00C8B8A7 /* germline_variant_call.hpp */,
+				D402C5421CC934CF00C8B8A7 /* germline_variant_call.cpp */,
+				D402C5491CC935C100C8B8A7 /* reference_call.hpp */,
+				D402C5481CC935C100C8B8A7 /* reference_call.cpp */,
+				D402C5461CC9359300C8B8A7 /* somatic_call.hpp */,
+				D402C5451CC9359300C8B8A7 /* somatic_call.cpp */,
+				CA566E341D0486F8007C5180 /* call_types.hpp */,
+			);
+			name = "call-types";
+			sourceTree = "<group>";
+		};
 		CA91C2CC1B8DE63A00609FFA /* callers */ = {
 			isa = PBXGroup;
 			children = (
-				D402C5411CC9349C00C8B8A7 /* call-types */,
+				D402C5411CC9349C00C8B8A7 /* call-factory */,
 				CACF81361C870E8300E9E6BD /* haplotype_filter.hpp */,
 				CACF81351C870E8300E9E6BD /* haplotype_filter.cpp */,
 				CA91C2D11B8DF76300609FFA /* variant_caller.hpp */,
@@ -1086,23 +1113,16 @@
 			name = filters;
 			sourceTree = "<group>";
 		};
-		D402C5411CC9349C00C8B8A7 /* call-types */ = {
+		D402C5411CC9349C00C8B8A7 /* call-factory */ = {
 			isa = PBXGroup;
 			children = (
-				D402C53C1CC9264E00C8B8A7 /* call.hpp */,
-				CA0DF5881CCADA36000193CF /* call.cpp */,
-				D402C54C1CCA588600C8B8A7 /* variant_call.hpp */,
-				D402C54B1CCA588600C8B8A7 /* variant_call.cpp */,
-				D402C5431CC934CF00C8B8A7 /* germline_variant_call.hpp */,
-				D402C5421CC934CF00C8B8A7 /* germline_variant_call.cpp */,
-				D402C5491CC935C100C8B8A7 /* reference_call.hpp */,
-				D402C5481CC935C100C8B8A7 /* reference_call.cpp */,
-				D402C5461CC9359300C8B8A7 /* somatic_call.hpp */,
-				D402C5451CC9359300C8B8A7 /* somatic_call.cpp */,
+				CA566E301D045BD2007C5180 /* call-types */,
+				CA566E321D048304007C5180 /* vcf_header_factory.hpp */,
+				CA566E311D048304007C5180 /* vcf_header_factory.cpp */,
 				D402C53F1CC9308800C8B8A7 /* vcf_record_factory.hpp */,
 				D402C53E1CC9308800C8B8A7 /* vcf_record_factory.cpp */,
 			);
-			name = "call-types";
+			name = "call-factory";
 			sourceTree = "<group>";
 		};
 		D413B0421B5D4E84007EFDE0 /* models */ = {
@@ -1353,9 +1373,11 @@
 				CABA37821A8FA49800BBE598 /* read_manager.cpp in Sources */,
 				D413B03F1B590C2B007EFDE0 /* genome_walker_benchmarks.cpp in Sources */,
 				CA386DAD1B603C380057A5A8 /* caching_fasta.cpp in Sources */,
+				CA566E331D048304007C5180 /* vcf_header_factory.cpp in Sources */,
 				CA91C2CB1B8DE02300609FFA /* somatic_genotype_model.cpp in Sources */,
 				D463C1911AF38DCF00739A66 /* haplotype_phaser_tests.cpp in Sources */,
 				CAE3E29D1AA139A000C01B2C /* program_options.cpp in Sources */,
+				CA566E371D0488C7007C5180 /* octopus_vcf.cpp in Sources */,
 				D402C5471CC9359300C8B8A7 /* somatic_call.cpp in Sources */,
 				D45D30641C907491007634E3 /* logging.cpp in Sources */,
 				D42F72EF1C5B8A4D00995F54 /* trio.cpp in Sources */,

@@ -14,6 +14,8 @@
 #include <functional>
 #include <memory>
 #include <deque>
+#include <typeindex>
+#include <set>
 
 #include <boost/optional.hpp>
 
@@ -42,6 +44,8 @@ namespace Octopus
 class VariantCaller
 {
 public:
+    using CallTypeSet = std::set<std::type_index>;
+    
     enum class RefCallType { None, Blocked, Positional };
     
     struct CallerComponents;
@@ -59,6 +63,8 @@ public:
     VariantCaller& operator=(const VariantCaller&) = delete;
     VariantCaller(VariantCaller&&)                 = delete;
     VariantCaller& operator=(VariantCaller&&)      = delete;
+    
+    CallTypeSet get_call_types() const;
     
     std::deque<VcfRecord>
     call(const GenomicRegion& call_region, ProgressMeter& progress_meter) const;
@@ -135,14 +141,16 @@ private:
     
     // virtual methods
     
+    virtual CallTypeSet do_get_call_types() const = 0;
+    
     virtual std::unique_ptr<CallerLatents>
     infer_latents(const std::vector<Haplotype>& haplotypes,
                   const HaplotypeLikelihoodCache& haplotype_likelihoods) const = 0;
     
-    virtual double
+    virtual boost::optional<double>
     calculate_dummy_model_posterior(const std::vector<Haplotype>& haplotypes,
                                     const HaplotypeLikelihoodCache& haplotype_likelihoods,
-                                    const CallerLatents& latents) const { return 0; }
+                                    const CallerLatents& latents) const { return boost::none; }
     
     virtual std::vector<std::unique_ptr<VariantCall>>
     call_variants(const std::vector<Variant>& candidates, const CallerLatents& latents) const = 0;

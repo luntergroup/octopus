@@ -290,6 +290,11 @@ void merge(std::vector<CallWrapper>&& new_calls, std::deque<VcfRecord>& curr_rec
                        });
 }
 
+VariantCaller::CallTypeSet VariantCaller::get_call_types() const
+{
+    return this->do_get_call_types();
+}
+
 std::deque<VcfRecord>
 VariantCaller::call(const GenomicRegion& call_region, ProgressMeter& progress_meter) const
 {
@@ -479,9 +484,9 @@ VariantCaller::call(const GenomicRegion& call_region, ProgressMeter& progress_me
                                                                                            haplotype_likelihoods,
                                                                                            *caller_latents);
                         
-                        if (dummy_posterior > 0.15) {
+                        if (dummy_posterior) {
                             for (auto& call : variant_calls) {
-                                call->filter();
+                                call->set_dummy_model_bayes_factor(*dummy_posterior);
                             }
                         }
                     }
@@ -543,9 +548,9 @@ VariantCaller::call(const GenomicRegion& call_region, ProgressMeter& progress_me
                                                                                            haplotype_likelihoods,
                                                                                            *caller_latents);
                         
-                        if (dummy_posterior > 0.15) {
+                        if (dummy_posterior) {
                             for (auto& call : variant_calls) {
-                                call->filter();
+                                call->set_dummy_model_bayes_factor(*dummy_posterior);
                             }
                         }
                     }

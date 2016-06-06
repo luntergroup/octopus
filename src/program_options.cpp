@@ -1289,6 +1289,8 @@ namespace Octopus
             result.register_filter(std::make_unique<IsNextSegmentMapped>());
         }
         
+        result.shrink_to_fit();
+        
         return result;
     }
     
@@ -1333,6 +1335,8 @@ namespace Octopus
         if (!options.at("disable-overlap-masking").as<bool>()) {
             result.register_transform(ReadTransforms::TrimOverlapping());
         }
+        
+        result.shrink_to_fit();
         
         return result;
     }

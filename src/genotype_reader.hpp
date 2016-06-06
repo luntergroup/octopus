@@ -13,32 +13,26 @@
 #include <unordered_map>
 #include <vector>
 
+#include <boost/optional.hpp>
+
 #include "common.hpp"
-#include "reference_genome.hpp"
-#include "vcf_reader.hpp"
-#include "genomic_region.hpp"
+#include "vcf_record.hpp"
 #include "haplotype.hpp"
 #include "genotype.hpp"
 #include "mappable_flat_set.hpp"
+#include "variant.hpp"
+
+class VcfHeader;
+class ReferenceGenome;
+class GenomicRegion;
 
 namespace Octopus
 {
-    class GenotypeReader
-    {
-    public:
-        using GenotypeMap = std::unordered_map<SampleIdType, MappableFlatSet<Genotype<Haplotype>>>;
-        
-        GenotypeReader(const ReferenceGenome& reference, const VcfReader& variant_reader);
-        
-        GenotypeMap extract_genotype(const GenomicRegion& region);
-        
-    private:
-        std::reference_wrapper<const ReferenceGenome> reference_;
-        
-        std::reference_wrapper<const VcfReader> variant_reader_;
-        
-        std::vector<SampleIdType> samples_;
-    };
-} // namespace Octopus
+    using GenotypeMap = std::unordered_map<SampleIdType, MappableFlatSet<Genotype<Haplotype>>>;
+    
+    GenotypeMap extract_genotypes(const std::vector<VcfRecord>& calls, const VcfHeader& header,
+                                  const ReferenceGenome& reference,
+                                  boost::optional<GenomicRegion> call_region = boost::none);
+}
 
 #endif /* genotype_reader_hpp */

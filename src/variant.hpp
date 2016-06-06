@@ -43,9 +43,9 @@ public:
     Variant(GenomicRegion_&& reference_allele_region, SequenceType1&& reference_allele,
             SequenceType2&& alternative_allele);
     
-    template <typename SequenceType1, typename SequenceType2, typename SequenceType3>
-    Variant(SequenceType1&& reference_contig_name, SizeType reference_begin,
-            SequenceType2&& reference_allele, SequenceType3&& alternative_allele);
+    template <typename StringType, typename SequenceType1, typename SequenceType2>
+    Variant(StringType&& reference_contig_name, SizeType reference_begin,
+            SequenceType1&& reference_allele, SequenceType2&& alternative_allele);
     
     ~Variant() = default;
     
@@ -71,12 +71,12 @@ reference_ {ref_region, std::forward<SequenceType1>(ref_sequence)},
 alternative_ {std::forward<GenomicRegion_>(ref_region), std::forward<SequenceType2>(alt_sequence)}
 {}
 
-template <typename SequenceType1, typename SequenceType2, typename SequenceType3>
-Variant::Variant(SequenceType1&& ref_contig_name, SizeType ref_begin,
-                 SequenceType2&& ref_sequence, SequenceType3&& alt_sequence)
+template <typename StringType, typename SequenceType1, typename SequenceType2>
+Variant::Variant(StringType&& ref_contig_name, const SizeType ref_begin,
+                 SequenceType1&& ref_sequence, SequenceType2&& alt_sequence)
 :
-reference_ {std::forward<SequenceType1>(ref_contig_name), ref_begin, std::forward<SequenceType2>(ref_sequence)},
-alternative_ {reference_.mapped_region(), std::forward<SequenceType3>(alt_sequence)}
+reference_ {std::forward<StringType>(ref_contig_name), ref_begin, std::forward<SequenceType1>(ref_sequence)},
+alternative_ {reference_.mapped_region(), std::forward<SequenceType2>(alt_sequence)}
 {}
 
 // non-member methods
@@ -107,6 +107,10 @@ std::vector<std::reference_wrapper<const Allele>> decompose_ref(const std::vecto
 
 std::vector<Allele> extract_intervening_reference_alleles(const std::vector<Variant>& variants,
                                                           const ReferenceGenome& reference);
+
+bool can_trim(const Variant& v);
+
+Variant trim(const Variant& v);
 
 /*
  A variant is parsimonious if and only if it is represented in as few nucleotides as possible

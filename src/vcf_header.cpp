@@ -395,6 +395,8 @@ VcfHeader::Builder get_default_header_builder()
     result.add_filter("PASS", "All filters passed");
     result.add_filter("MQ", "Root-mean-square mapping quality across calling region is low");
     result.add_filter("q10", "Variant quality is below 10");
+    result.add_filter("SB", "One of the alternative alleles has strand bias");
+    result.add_filter("KL", "High Kullback–Leibler divergence between REF and ALT mapping quality distributions");
     
     return result;
 }

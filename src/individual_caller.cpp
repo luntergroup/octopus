@@ -8,6 +8,7 @@
 
 #include "individual_caller.hpp"
 
+#include <typeinfo>
 #include <unordered_map>
 #include <deque>
 #include <algorithm>
@@ -49,6 +50,11 @@ min_refcall_posterior_ {specific_parameters.min_refcall_posterior}
     if (ploidy_ == 0) {
         throw std::logic_error {"IndividualVariantCaller: ploidy must be > 0"};
     }
+}
+
+IndividualVariantCaller::CallTypeSet IndividualVariantCaller::do_get_call_types() const
+{
+    return {std::type_index(typeid(GermlineVariantCall))};
 }
 
 // IndividualVariantCaller::Latents public methods
@@ -126,7 +132,7 @@ IndividualVariantCaller::infer_latents(const std::vector<Haplotype>& haplotypes,
     return std::make_unique<Latents>(sample(), haplotypes, std::move(genotypes), std::move(inferences));
 }
 
-double
+boost::optional<double>
 IndividualVariantCaller::calculate_dummy_model_posterior(const std::vector<Haplotype>& haplotypes,
                                                          const HaplotypeLikelihoodCache& haplotype_likelihoods,
                                                          const CallerLatents& latents) const
@@ -149,7 +155,7 @@ static auto calculate_dummy_model_posterior(const double normal_model_log_eviden
     return std::exp(dummy_model_ljp - norm);
 }
 
-double
+boost::optional<double>
 IndividualVariantCaller::calculate_dummy_model_posterior(const std::vector<Haplotype>& haplotypes,
                                                          const HaplotypeLikelihoodCache& haplotype_likelihoods,
                                                          const Latents& latents) const

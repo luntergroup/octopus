@@ -188,8 +188,8 @@ CachingFasta::SizeType CachingFasta::get_rhs_extension_size(const GenomicRegion&
 
 GenomicRegion CachingFasta::get_new_contig_chunk(const GenomicRegion& requested_region) const
 {
-    return expand_lhs(expand_rhs(requested_region, get_rhs_extension_size(requested_region)),
-                      get_lhs_extension_size(requested_region));
+    return expand(requested_region, get_lhs_extension_size(requested_region),
+                  get_rhs_extension_size(requested_region));
 }
 
 GenomicRegion CachingFasta::get_partial_contig_chunk(const GenomicRegion& requested_region) const

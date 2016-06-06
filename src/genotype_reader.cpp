@@ -12,31 +12,27 @@
 #include <functional>
 #include <iterator>
 #include <algorithm>
+#include <initializer_list>
 #include <cassert>
 
 #include <boost/lexical_cast.hpp>
 
 #include "vcf_header.hpp"
-#include "vcf_record.hpp"
+#include "reference_genome.hpp"
 #include "contig_region.hpp"
+#include "genomic_region.hpp"
 #include "mappable.hpp"
 #include "mappable_algorithms.hpp"
 #include "allele.hpp"
+#include "variant.hpp"
 
 #include <iostream> // DEBUG
 
 namespace Octopus
 {
-GenotypeReader::GenotypeReader(const ReferenceGenome& reference, const VcfReader& variant_reader)
-:
-reference_ {reference},
-variant_reader_ {variant_reader},
-samples_ {variant_reader.fetch_header().samples()}
-{}
-
 namespace
 {
-    auto extract_contig_region(const VcfRecord& call)
+    auto mapped_contig_region(const VcfRecord& call)
     {
         const auto begin = static_cast<ContigRegion::SizeType>(call.pos()) - 1;
         return ContigRegion {
@@ -54,7 +50,7 @@ namespace
                 static_cast<ContigRegion::SizeType>(call.pos() + call.ref().size()) - 1
             };
         }
-        return GenomicRegion {call.chrom(), extract_contig_region(call)};
+        return GenomicRegion {call.chrom(), mapped_contig_region(call)};
     }
     
     struct CallWrapper : public Mappable<CallWrapper>
@@ -103,20 +99,37 @@ namespace
         return result;
     }
     
-    auto extract_contig_region(const CallWrapper& call)
+    auto mapped_contig_region(const CallWrapper& call)
     {
-        return extract_contig_region(call.call.get());
+        return mapped_contig_region(call.call.get());
+    }
+    
+    bool is_missing(const VcfRecord::SequenceType& allele)
+    {
+        return allele == "." || allele == "*";
+    }
+    
+    auto make_allele(const ContigRegion& region, const VcfRecord::SequenceType& ref_allele,
+                     const VcfRecord::SequenceType& alt_allele)
+    {
+        Variant tmp {"$", region.begin(), ref_allele, alt_allele};
+        
+        if (!can_trim(tmp)) {
+            return ContigAllele {region, alt_allele};
+        }
+        
+        return demote(trim(tmp).alt_allele());
     }
     
     Genotype<Haplotype> extract_genotype(const std::vector<CallWrapper>& phased_calls,
+                                         const GenomicRegion& region,
                                          const SampleIdType& sample,
                                          const ReferenceGenome& reference)
     {
         assert(!phased_calls.empty());
+        assert(contains(region, encompassing_region(phased_calls)));
         
         const auto ploidy = extract_ploidy(phased_calls, sample);
-        
-        const auto region = encompassing_region(phased_calls);
         
         std::vector<Haplotype::Builder> haplotypes(ploidy, Haplotype::Builder {region, reference});
         
@@ -124,7 +137,11 @@ namespace
             const auto& genotype = extract_genotype(call, sample);
             
             for (unsigned i {0}; i < ploidy; ++i) {
-                haplotypes[i].push_back(ContigAllele {extract_contig_region(call), genotype[i]});
+                if (!is_missing(genotype[i])) {
+                    haplotypes[i].push_back(make_allele(mapped_contig_region(call),
+                                                        call.call.get().ref(),
+                                                        genotype[i]));
+                }
             }
         }
         
@@ -132,17 +149,62 @@ namespace
     }
 } // namespace
 
-GenotypeReader::GenotypeMap GenotypeReader::extract_genotype(const GenomicRegion& region)
+GenotypeMap extract_genotypes(const std::vector<VcfRecord>& calls, const VcfHeader& header,
+                              const ReferenceGenome& reference,
+                              boost::optional<GenomicRegion> call_region)
 {
-    const auto calls = variant_reader_.get().fetch_records(region);
+    if (calls.empty()) return {};
     
-    GenotypeMap result {samples_.size()};
+    const auto samples = header.samples();
     
-    for (const auto& sample : samples_) {
-        const auto wrapped_calls = wrap_calls(calls, sample);
+    GenotypeMap result {samples.size()};
+    
+    for (const auto& sample : samples) {
+        const auto wrapped_calls = segment_overlapped_copy(wrap_calls(calls, sample));
         
-        for (const auto& phased_calls : segment_overlapped_copy(wrapped_calls)) {
-            result[sample].insert(::Octopus::extract_genotype(phased_calls, sample, reference_.get()));
+        using InitList = std::initializer_list<Genotype<Haplotype>>;
+        
+        if (wrapped_calls.size() == 1) {
+            if (!call_region) {
+                call_region = encompassing_region(wrapped_calls.front());
+            }
+            
+            result.emplace(std::piecewise_construct,
+                           std::forward_as_tuple(sample),
+                           std::forward_as_tuple(InitList {
+                                extract_genotype(wrapped_calls.front(), *call_region, sample, reference)
+                            }));
+        } else { // wrapped_calls.size() > 1
+            auto it = std::cbegin(wrapped_calls);
+            
+            GenomicRegion region;
+            
+            if (call_region) {
+                region = left_overhang_region(*call_region, std::next(it)->front());
+            } else {
+                region = left_overhang_region(it->front(), std::next(it)->front());
+            }
+            
+            result.emplace(std::piecewise_construct,
+                           std::forward_as_tuple(sample),
+                           std::forward_as_tuple(InitList {
+                                extract_genotype(*it, region, sample, reference)
+                            }));
+            
+            ++it;
+            
+            for (auto penultimate = std::prev(std::cend(wrapped_calls)); it != penultimate; ++it) {
+                region = intervening_region(std::prev(it)->back(), std::next(it)->front());
+                result.at(sample).insert(extract_genotype(*it, region, sample, reference));
+            }
+            
+            if (call_region) {
+                region = right_overhang_region(*call_region, std::prev(it)->back());
+            } else {
+                region = right_overhang_region(it->back(), std::prev(it)->back());
+            }
+            
+            result.at(sample).insert(extract_genotype(*it, region, sample, reference));
         }
     }
     

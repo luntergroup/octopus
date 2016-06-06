@@ -26,6 +26,9 @@
 #include <condition_variable>
 #include <mutex>
 #include <atomic>
+#include <array>
+#include <set>
+#include <typeinfo>
 #include <cassert>
 
 #include <boost/optional.hpp>
@@ -44,6 +47,8 @@
 #include "read_pipe.hpp"
 #include "read_utils.hpp"
 #include "candidate_generator_builder.hpp"
+#include "vcf_header_factory.hpp"
+#include "octopus_vcf.hpp"
 #include "variant_caller_factory.hpp"
 #include "variant_caller.hpp"
 #include "vcf.hpp"
@@ -173,30 +178,41 @@ namespace Octopus
             return file_samples;
         }
     }
+        
+    using CallTypeSet = std::set<std::type_index>;
     
     VcfHeader make_header(const std::vector<SampleIdType>& samples,
                           const std::vector<GenomicRegion::ContigNameType>& contigs,
-                          const ReferenceGenome& reference)
+                          const ReferenceGenome& reference,
+                          const CallTypeSet& call_types)
     {
-        auto vcf_header_builder = get_default_header_builder().set_samples(samples);
+        auto builder = Vcf::make_octopus_header_template().set_samples(samples);
+        
         for (const auto& contig : contigs) {
-            vcf_header_builder.add_contig(contig, {{"length", std::to_string(reference.contig_size(contig))}});
+            builder.add_contig(contig, {{"length", std::to_string(reference.contig_size(contig))}});
         }
-        vcf_header_builder.add_basic_field("reference", reference.name());
-        vcf_header_builder.add_structured_field("Octopus", {{"some", "option"}});
         
-        // TODO: find a better place to do this
-        vcf_header_builder.add_filter("MODEL", "The caller specific model filter failed");
-        vcf_header_builder.add_format("SCR", "2", "Float", "99% credible region of the somatic allele frequency");
+        builder.add_basic_field("reference", reference.name());
+        builder.add_structured_field("Octopus", {{"some", "option"}});
         
-        return vcf_header_builder.build_once();
+        VcfHeaderFactory factory {};
+        
+        for (const auto& type : call_types) {
+            factory.register_call_type(type);
+        }
+        
+        factory.annotate(builder);
+        
+        return builder.build_once();
     }
     
     VcfHeader make_header(const std::vector<SampleIdType>& samples,
                           const GenomicRegion::ContigNameType& contig,
-                          const ReferenceGenome& reference)
+                          const ReferenceGenome& reference,
+                          const CallTypeSet& call_types)
     {
-        return make_header(samples, std::vector<GenomicRegion::ContigNameType> {contig}, reference);
+        return make_header(samples, std::vector<GenomicRegion::ContigNameType> {contig},
+                           reference, call_types);
     }
     
     GenomicRegion::SizeType calculate_total_search_size(const InputRegionMap& regions)
@@ -586,15 +602,33 @@ namespace Octopus
         return components.read_manager.get().count_reads(components.samples.get(), region) > 0;
     }
     
+    auto get_call_types(const GenomeCallingComponents& components,
+                        const std::vector<ContigNameType>& contigs)
+    {
+        CallTypeSet result {};
+        
+        for (const auto& contig : components.contigs_in_output_order()) {
+            const auto tmp_caller = components.caller_factory().make(contig);
+            
+            auto caller_call_types = tmp_caller->get_call_types();
+            
+            result.insert(std::begin(caller_call_types), std::end(caller_call_types));
+        }
+        
+        return result;
+    }
+    
     void write_final_output_header(GenomeCallingComponents& components, const bool sites_only = false)
     {
+        const auto call_types = get_call_types(components, components.contigs_in_output_order());
+        
         if (sites_only) {
             components.output() << make_header({}, components.contigs_in_output_order(),
-                                                   components.reference());
+                                                   components.reference(), call_types);
         } else {
             components.output() << make_header(components.samples(),
                                                    components.contigs_in_output_order(),
-                                                   components.reference());
+                                                   components.reference(), call_types);
         }
     }
     
@@ -749,9 +783,11 @@ namespace Octopus
         
         path /= file_name;
         
-        return VcfWriter {
-            path, make_header(components.samples(), contig, components.reference())
-        };
+        const auto call_types = get_call_types(components, {region.contig_name()});
+        
+        auto header = make_header(components.samples(), contig, components.reference(), call_types);
+        
+        return VcfWriter {std::move(path), std::move(header)};
     }
     
     VcfWriter create_unique_temp_output_file(const GenomicRegion::ContigNameType& contig,
@@ -1137,17 +1173,29 @@ namespace Octopus
         
         const VcfReader calls {components.output().path()};
         
-        VcfWriter filtered_calls {"/Users/dcooke/Genomics/filtered.vcf", calls.fetch_header()};
+        VcfWriter filtered_calls {"/Users/danielcooke/Genomics/filtered.vcf"};
         
-        VariantCallFilter filter {components.reference(), components.read_manager()};
+        const ReadPipe read_pipe {components.read_manager(), components.samples()};
         
-//        VariantCallFilter::RegionMap regions {
-//            std::cbegin(components.search_regions()), std::cend(components.search_regions()),
-//            [contigs = components.contigs_in_output_order()]
-//            (const auto& lhs, const auto& rhs) {
-//                
-//            }
-//        };
+        const VariantCallFilter filter {components.reference(), read_pipe};
+        
+        VariantCallFilter::RegionMap regions {
+            [contigs = components.contigs_in_output_order()]
+            (const auto& lhs, const auto& rhs) -> bool {
+                std::array<std::reference_wrapper<const std::decay_t<decltype(lhs)>>, 2> values {lhs, rhs};
+                return *std::find_first_of(std::cbegin(contigs), std::cend(contigs),
+                                           std::cbegin(values), std::cend(values),
+                                           [] (const auto& lhs, const auto& rhs) {
+                                               return lhs == rhs.get();
+                                           }) == lhs;
+            }
+        };
+        
+        for (const auto& p : components.search_regions()) {
+            regions.emplace(std::piecewise_construct,
+                            std::forward_as_tuple(p.first),
+                            std::forward_as_tuple(std::cbegin(p.second), std::cend(p.second)));
+        }
         
         filter.filter(calls, filtered_calls, regions);
     }

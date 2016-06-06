@@ -490,7 +490,7 @@ GenomicRegion HaplotypeGenerator::calculate_haplotype_region() const
         if (mapped_begin(lhs_read) < additional_padding / 2) {
             const auto lhs_padding = mapped_begin(lhs_read);
             const auto rhs_padding = additional_padding - lhs_padding;
-            return expand_lhs(expand_rhs(unpadded_region, rhs_padding), lhs_padding);
+            return expand(unpadded_region, lhs_padding, rhs_padding);
         }
         
         return expand(unpadded_region, additional_padding / 2);

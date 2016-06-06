@@ -8,6 +8,7 @@
 
 #include "cancer_caller.hpp"
 
+#include <typeinfo>
 #include <string>
 #include <utility>
 #include <algorithm>
@@ -73,6 +74,14 @@ parameters_ {std::move(specific_parameters)}
             *debug_log_ << "There is no normal sample";
         }
     }
+}
+
+CancerVariantCaller::CallTypeSet CancerVariantCaller::do_get_call_types() const
+{
+    return {
+        std::type_index(typeid(GermlineVariantCall)),
+        std::type_index(typeid(SomaticCall))
+    };
 }
 
 CancerVariantCaller::Latents::Latents(const std::vector<Haplotype>& haplotypes,
@@ -267,7 +276,7 @@ void CancerVariantCaller::filter(std::vector<CancerGenotype<Haplotype>>& cancer_
     }
 }
 
-double
+boost::optional<double>
 CancerVariantCaller::calculate_dummy_model_posterior(const std::vector<Haplotype>& haplotypes,
                                                          const HaplotypeLikelihoodCache& haplotype_likelihoods,
                                                          const CallerLatents& latents) const
@@ -290,7 +299,7 @@ static double calculate_dummy_model_posterior(const double normal_germline_model
     return std::exp(dummy_model_ljp - norm);
 }
 
-double
+boost::optional<double>
 CancerVariantCaller::calculate_dummy_model_posterior(const std::vector<Haplotype>& haplotypes,
                                                      const HaplotypeLikelihoodCache& haplotype_likelihoods,
                                                      const Latents& latents) const
@@ -316,7 +325,7 @@ CancerVariantCaller::calculate_dummy_model_posterior(const std::vector<Haplotype
     
     // TODO
     
-    return 0;
+    return boost::none;
 }
 
 CancerVariantCaller::CNVModel::Priors
@@ -574,10 +583,12 @@ auto compute_marginal_credible_interval(const T& alphas, const double mass)
     return result;
 }
 
+using CredibleRegionMap = std::unordered_map<SampleIdType, std::vector<std::pair<double, double>>>;
+
 template <typename M>
 auto compute_marginal_credible_intervals(const M& alphas, const double mass)
 {
-    std::unordered_map<SampleIdType, std::vector<std::pair<double, double>>> result {};
+    CredibleRegionMap result {};
     result.reserve(alphas.size());
     
     for (const auto& p : alphas) {
@@ -586,7 +597,7 @@ auto compute_marginal_credible_intervals(const M& alphas, const double mass)
     
     return result;
 }
-    
+
 template <typename M, typename T>
 auto call_somatic_genotypes(const CancerGenotype<Haplotype>& called_genotype,
                             const std::vector<GenomicRegion>& called_somatic_regions,
@@ -734,6 +745,8 @@ CancerVariantCaller::call_variants(const std::vector<Variant>& candidates, const
     
     std::vector<std::unique_ptr<Octopus::VariantCall>> result {};
     
+    boost::optional<Haplotype> called_somatic_haplotype {};
+    
     if (somatic_posterior >= parameters_.min_somatic_posterior) {
         const auto& cancer_genotype_posteriors = latents.somatic_model_inferences_.posteriors.genotype_probabilities;
         
@@ -750,6 +763,10 @@ CancerVariantCaller::call_variants(const std::vector<Variant>& candidates, const
                                                            called_cancer_genotype,
                                                            parameters_.min_somatic_posterior);
         
+        if (!somatic_variant_calls.empty()) {
+            called_somatic_haplotype = called_cancer_genotype.somatic_element();
+        }
+        
         const auto called_somatic_regions = extract_regions(somatic_variant_calls);
         
         const auto& somatic_alphas = latents.somatic_model_inferences_.posteriors.alphas;
@@ -765,7 +782,7 @@ CancerVariantCaller::call_variants(const std::vector<Variant>& candidates, const
                                          std::move(cancer_genotype_calls));
     }
     
-    if (parameters_.call_somatics_only) return result;
+    //if (parameters_.call_somatics_only) return result;
     
     const auto called_germline_regions = extract_regions(germline_variant_calls);
     
@@ -774,6 +791,10 @@ CancerVariantCaller::call_variants(const std::vector<Variant>& candidates, const
     
     for (const auto& region : called_germline_regions) {
         auto spliced_genotype = splice<Allele>(called_germline_genotype, region);
+        
+        if (called_somatic_haplotype) {
+            spliced_genotype.emplace(splice<Allele>(*called_somatic_haplotype, region));
+        }
         
         const auto posterior = std::accumulate(std::cbegin(germline_genotype_posteriors),
                                                std::cend(germline_genotype_posteriors), 0.0,

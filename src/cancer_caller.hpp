@@ -13,6 +13,7 @@
 #include <unordered_map>
 #include <memory>
 #include <functional>
+#include <typeindex>
 
 #include <boost/optional.hpp>
 
@@ -34,6 +35,7 @@ namespace Octopus
 class CancerVariantCaller : public VariantCaller
 {
 public:
+    using VariantCaller::CallTypeSet;
     using VariantCaller::CallerComponents;
     
     struct CallerParameters
@@ -77,16 +79,18 @@ private:
     
     // overrides
     
+    CallTypeSet do_get_call_types() const override;
+    
     std::unique_ptr<CallerLatents>
     infer_latents(const std::vector<Haplotype>& haplotypes,
                   const HaplotypeLikelihoodCache& haplotype_likelihoods) const override;
     
-    double
+    boost::optional<double>
     calculate_dummy_model_posterior(const std::vector<Haplotype>& haplotypes,
                                     const HaplotypeLikelihoodCache& haplotype_likelihoods,
                                     const CallerLatents& latents) const override;
     
-    double
+    boost::optional<double>
     calculate_dummy_model_posterior(const std::vector<Haplotype>& haplotypes,
                                     const HaplotypeLikelihoodCache& haplotype_likelihoods,
                                     const Latents& latents) const;

@@ -258,6 +258,12 @@ inline GenomicRegion expand(const GenomicRegion& region, const GenomicRegion::Di
     return GenomicRegion {region.contig_name(), expand(region.contig_region(), n)};
 }
 
+inline GenomicRegion expand(const GenomicRegion& region, const GenomicRegion::DifferenceType lhs,
+                            const GenomicRegion::DifferenceType rhs)
+{
+    return GenomicRegion {region.contig_name(), expand(region.contig_region(), lhs, rhs)};
+}
+
 inline GenomicRegion encompassing_region(const GenomicRegion& lhs, const GenomicRegion& rhs)
 {
     if (!is_same_contig(lhs, rhs)) throw RegionError {to_string(lhs), to_string(rhs)};
