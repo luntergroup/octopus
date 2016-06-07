@@ -205,7 +205,9 @@ class Haplotype::Builder
 {
 public:
     Builder() = default;
+    
     explicit Builder(const GenomicRegion& region, const ReferenceGenome& reference);
+    
     ~Builder() = default;
     
     Builder(const Builder&)            = default;

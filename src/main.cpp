@@ -42,10 +42,10 @@ int main(int argc, const char **argv)
             std::clog << "Could not parse input options. Did not run Octopus." << std::endl;
         }
     } catch (const std::exception& e) {
-        std::cerr << "Error: '" << e.what() << "'" << std::endl;
+        std::cerr << "Exception: '" << e.what() << "'" << std::endl;
         return EXIT_FAILURE;
     } catch (...) {
-        std::cerr << "Error: encountered unknown error. Quiting now" << std::endl;
+        std::cerr << "Encountered unknown exception. Quiting now" << std::endl;
         return EXIT_FAILURE;
     }
     

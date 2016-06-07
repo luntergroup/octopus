@@ -168,24 +168,6 @@ VariantCallerBuilder& VariantCallerBuilder::set_min_somatic_posterior(const doub
     return *this;
 }
 
-VariantCallerBuilder& VariantCallerBuilder::set_somatic_only_calls() noexcept
-{
-    parameters_.call_somatics_only = true;
-    return *this;
-}
-
-VariantCallerBuilder& VariantCallerBuilder::set_somatic_and_variant_calls() noexcept
-{
-    parameters_.call_somatics_only = false;
-    return *this;
-}
-
-VariantCallerBuilder& VariantCallerBuilder::set_somatic_and_variant_and_refcalls_calls() noexcept
-{
-    parameters_.call_somatics_only = false;
-    return *this;
-}
-
 // trio
 
 VariantCallerBuilder& VariantCallerBuilder::set_maternal_sample(SampleIdType mother)
@@ -276,7 +258,6 @@ VariantCallerBuilder::CallerFactoryMap VariantCallerBuilder::generate_factory() 
                                                              parameters_.ploidy,
                                                              parameters_.normal_sample,
                                                              parameters_.somatic_mutation_rate,
-                                                             parameters_.call_somatics_only,
                                                              50'000
                                                          });
         }}

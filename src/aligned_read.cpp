@@ -324,10 +324,11 @@ AlignedRead splice(const AlignedRead& read, const GenomicRegion& region)
 
 bool operator==(const AlignedRead& lhs, const AlignedRead& rhs)
 {
-    return lhs.mapping_quality() == rhs.mapping_quality() &&
-           lhs.mapped_region()          == rhs.mapped_region() &&
-           lhs.cigar_string()    == rhs.cigar_string() &&
-           lhs.qualities()       == rhs.qualities();
+    return lhs.mapping_quality() == rhs.mapping_quality()
+        && lhs.mapped_region()   == rhs.mapped_region()
+        && lhs.cigar_string()    == rhs.cigar_string()
+        && lhs.sequence()        == rhs.sequence()
+        && lhs.qualities()       == rhs.qualities();
 }
 
 bool operator<(const AlignedRead& lhs, const AlignedRead& rhs)
@@ -335,7 +336,11 @@ bool operator<(const AlignedRead& lhs, const AlignedRead& rhs)
     if (lhs.mapped_region() == rhs.mapped_region()) {
         if (lhs.mapping_quality() == rhs.mapping_quality()) {
             if (lhs.cigar_string() == rhs.cigar_string()) {
-                return lhs.qualities() < rhs.qualities();
+                if (lhs.sequence() == rhs.sequence()) {
+                    return lhs.qualities() < rhs.qualities();
+                } else {
+                    return lhs.sequence() < rhs.sequence();
+                }
             } else {
                 return lhs.cigar_string() < rhs.cigar_string();
             }

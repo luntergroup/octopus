@@ -703,16 +703,19 @@ auto extract_samples(const bcf_hdr_t* header, bcf1_t* record, const std::vector<
         
         bcf_get_genotypes(header, record, &gt, &ngt); // mallocs gt
         
-        const auto ploidy = record->d.fmt->n;
+        const auto max_ploidy = record->d.fmt->n;
         
-        for (unsigned sample {0}, i {0}; sample < num_samples; ++sample, i += ploidy) {
+        for (unsigned sample {0}, i {0}; sample < num_samples; ++sample, i += max_ploidy) {
             std::vector<VcfRecord::SequenceType> alleles {};
-            alleles.reserve(ploidy);
+            alleles.reserve(max_ploidy);
             
-            for (unsigned p {0}; p < ploidy; ++p) {
+            for (unsigned p {0}; p < max_ploidy; ++p) {
                 g = gt[i + p];
                 
-                if (bcf_gt_is_missing(g)) {
+                if (g == bcf_int32_vector_end) {
+                    alleles.shrink_to_fit();
+                    break;
+                } else if (bcf_gt_is_missing(g)) {
                     alleles.emplace_back(".");
                 } else {
                     const auto idx = bcf_gt_allele(g);
@@ -725,7 +728,9 @@ auto extract_samples(const bcf_hdr_t* header, bcf1_t* record, const std::vector<
                 }
             }
             
-            genotypes.emplace(header->samples[sample], std::make_pair(std::move(alleles), bcf_gt_is_phased(g)));
+            genotypes.emplace(std::piecewise_construct,
+                              std::forward_as_tuple(header->samples[sample]),
+                              std::forward_as_tuple(std::move(alleles), bcf_gt_is_phased(g)));
         }
         
         std::free(gt);
@@ -837,7 +842,14 @@ void set_samples(const bcf_hdr_t* header, bcf1_t* dest, const VcfRecord& source,
         alleles.push_back(source.ref());
         alleles.insert(std::end(alleles), std::cbegin(alt_alleles), std::cend(alt_alleles));
         
-        const auto ngt = num_samples * static_cast<int>(source.sample_ploidy());
+        unsigned max_ploidy {};
+        
+        for (const auto& sample : samples) {
+            const auto p = source.ploidy(sample);
+            if (p > max_ploidy) max_ploidy = p;
+        }
+        
+        const auto ngt = num_samples * static_cast<int>(max_ploidy);
         
         std::vector<int> genotype(ngt);
         
@@ -846,12 +858,16 @@ void set_samples(const bcf_hdr_t* header, bcf1_t* dest, const VcfRecord& source,
         for (const auto& sample : samples) {
             const bool is_phased {source.is_sample_phased(sample)};
             
-            const auto& values = source.get_sample_value(sample, "GT");
+            const auto& genotype = source.get_sample_value(sample, "GT");
             
-            it = std::transform(std::cbegin(values), std::cend(values), it,
+            const auto ploidy = static_cast<unsigned>(genotype.size());
+            
+            it = std::transform(std::cbegin(genotype), std::cend(genotype), it,
                                 [is_phased, &alleles] (const auto& allele) {
                                     return genotype_number(allele, alleles, is_phased);
                                 });
+            
+            it = std::fill_n(it, max_ploidy - ploidy, bcf_int32_vector_end);
         }
         
         bcf_update_genotypes(header, dest, genotype.data(), ngt);

@@ -138,9 +138,12 @@ namespace
             
             for (unsigned i {0}; i < ploidy; ++i) {
                 if (!is_missing(genotype[i])) {
-                    haplotypes[i].push_back(make_allele(mapped_contig_region(call),
-                                                        call.call.get().ref(),
-                                                        genotype[i]));
+                    try {
+                        haplotypes[i].push_back(make_allele(mapped_contig_region(call),
+                                                            call.call.get().ref(), genotype[i]));
+                    } catch (const std::logic_error& e) {
+                        // can happen on overlapping reference, or if the VCF format is bad
+                    }
                 }
             }
         }

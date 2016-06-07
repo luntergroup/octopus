@@ -78,6 +78,8 @@ namespace Octopus
     std::vector<VcfRecord>
     VcfRecordFactory::make(std::vector<std::unique_ptr<Call>>&& calls) const
     {
+        // TODO: refactor this!
+        
         auto wrapped_calls = wrap(std::move(calls));
         
         calls.clear();
@@ -215,7 +217,44 @@ namespace Octopus
                     }
                 }
             });
-
+            
+            if (it2 != it3) {
+                auto rit3 = std::next(std::make_reverse_iterator(it3));
+                
+                const auto rit2 = std::make_reverse_iterator(it2);
+                
+                for (; rit3 != rit2; ++rit3) {
+                    auto& curr_call = *rit3;
+                    
+                    for (const auto& sample : samples_) {
+                        auto& genotype_call = curr_call->get_genotype_call(sample);
+                        
+                        auto& old_genotype = genotype_call.genotype;
+                        
+                        const auto& prev_call = *std::prev(it3);
+                        
+                        const auto& prev_genotype_call = prev_call->get_genotype_call(sample);
+                        const auto& prev_genotype = prev_genotype_call.genotype;
+                        
+                        const auto ploidy = old_genotype.ploidy();
+                        
+                        Genotype<Allele> new_genotype {ploidy};
+                        
+                        for (unsigned i {0}; i < ploidy; ++i) {
+                            if (prev_genotype[i].sequence() == old_genotype[i].sequence()
+                                && sequence_size(old_genotype[i]) < region_size(old_genotype)) {
+                                Allele::SequenceType new_sequence(1, '*');
+                                Allele new_allele {curr_call.mapped_region(), std::move(new_sequence)};
+                                new_genotype.emplace(std::move(new_allele));
+                            } else {
+                                new_genotype.emplace(old_genotype[i]);
+                            }
+                        }
+                        
+                        old_genotype = std::move(new_genotype);
+                    }
+                }
+            }
             
             if (it3 != std::end(wrapped_calls)) {
                 it = find_first_not_overlapped(std::next(it3), std::end(wrapped_calls), *std::prev(it3));
@@ -225,8 +264,6 @@ namespace Octopus
             
             for (; it3 != it; ++it3) {
                 auto& curr_call = *it3;
-                
-                bool has_missing_allele {false};
                 
                 std::unordered_map<Allele, Allele> replacements {};
                 
@@ -274,14 +311,12 @@ namespace Octopus
                                             new_sequence.front() = '*';
                                             Allele new_allele {curr_call.mapped_region(), std::move(new_sequence)};
                                             new_genotype.emplace(std::move(new_allele));
-                                            has_missing_allele = true;
                                         }
                                     } else {
                                         new_genotype.emplace(old_genotype[i]);
                                     }
                                 }
                             } else {
-                                has_missing_allele = true;
                                 for (unsigned i {0}; i < ploidy; ++i) {
                                     if (old_genotype[i].sequence().empty()) {
                                         Allele::SequenceType new_sequence(size(curr_call.mapped_region()), '*');
@@ -358,7 +393,7 @@ namespace Octopus
                 call->replace_uncalled_genotype_alleles(Allele {call->mapped_region(), "."}, '*');
             });
             
-            // At this point, all genotypes field contain normal bases, or '.' or '*', but not
+            // At this point, all genotypes fields contain normal bases, or '.' or '*', but not
             // '#'.
             
             auto segements = segment_by_begin_copy(std::make_move_iterator(it2),

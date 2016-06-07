@@ -80,7 +80,7 @@ public:
     const std::vector<KeyType>& format() const noexcept;
     unsigned num_samples() const noexcept;
     bool has_genotypes() const noexcept;
-    unsigned sample_ploidy() const noexcept;
+    unsigned ploidy(const SampleIdType& sample) const;
     bool is_sample_phased(const SampleIdType& sample) const;
     bool is_homozygous(const SampleIdType& sample) const;
     bool is_heterozygous(const SampleIdType& sample) const;

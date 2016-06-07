@@ -105,10 +105,9 @@ bool VcfRecord::has_genotypes() const noexcept
     return !genotypes_.empty();
 }
 
-unsigned VcfRecord::sample_ploidy() const noexcept
+unsigned VcfRecord::ploidy(const SampleIdType& sample) const
 {
-    // all samples must have the same ploidy
-    return (has_genotypes()) ? static_cast<unsigned>(std::cbegin(genotypes_)->second.first.size()) : 0;
+    return static_cast<unsigned>(genotypes_.at(sample).first.size());
 }
 
 bool VcfRecord::is_sample_phased(const SampleIdType& sample) const
@@ -242,7 +241,7 @@ void VcfRecord::print_info(std::ostream& os) const
 
 void VcfRecord::print_genotype_allele_numbers(std::ostream& os, const SampleIdType& sample) const
 {
-    std::vector<std::string> allele_numbers(sample_ploidy());
+    std::vector<std::string> allele_numbers(ploidy(sample));
     const auto& genotype = genotypes_.at(sample);
     std::transform(std::cbegin(genotype.first), std::cend(genotype.first), std::begin(allele_numbers),
                    [this] (const auto& allele) { return get_allele_number(allele); });

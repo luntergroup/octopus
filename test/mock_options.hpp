@@ -25,7 +25,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--help",
         //"--version",
         
-        "--debug",
+        //"--debug",
         //"--trace",
         
         //"--sites-only",
@@ -149,7 +149,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--regions", "22:29,474,547-29,474,587", // real somatic SNV?
         //"--regions", "22:29,761,141-29,761,305", // real somatic SNV?
         
-        "--regions", "22:40094779-40095174",
+        "--regions", "22:41,607,540-41,607,580",
         
 //        "--regions", "22:41,120,796-41,120,871", // FP SNP. Strand bias. Run through.
 //        "--regions", "22:43,960,301-43,960,376", // FP SNP. Strand bias. Run through.
@@ -258,7 +258,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--output", "octopus_hla.vcf",
         //"--output", "octopus_mcg.vcf",
         //"--output", "octopus_NA12878HC_22_unlagged_dummy.vcf",
-        //"--output", "octopus_calls2.vcf",
+        //"--output", "octopus_calls3.vcf",
         //"--output", "octopus_cancer.vcf",
         
         nullptr

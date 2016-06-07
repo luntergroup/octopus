@@ -1622,12 +1622,6 @@ namespace Octopus
             
             const auto min_somatic_posterior_phred = options.at("min-somatic-posterior").as<float>();
             vc_builder.set_min_somatic_posterior(phred_to_probability(min_somatic_posterior_phred));
-            
-            if (options.at("somatics-only").as<bool>()) {
-                vc_builder.set_somatic_only_calls();
-            } else {
-                vc_builder.set_somatic_and_variant_calls();
-            }
         } else if (caller == "trio") {
             vc_builder.set_maternal_sample(options.at("maternal-sample").as<std::string>());
             vc_builder.set_paternal_sample(options.at("paternal-sample").as<std::string>());

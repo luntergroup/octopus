@@ -21,10 +21,14 @@ namespace Octopus
         record.add_format("SCR");
         
         for (const auto& p : credible_regions_) {
-            record.add_genotype_field(p.first, "SCR", {
-                Octopus::to_string(p.second.somatic_credible_region.first, 2),
-                Octopus::to_string(p.second.somatic_credible_region.second, 2)
-            });
+            if (p.second.somatic) {
+                record.add_genotype_field(p.first, "SCR", {
+                    Octopus::to_string(p.second.somatic->first, 2),
+                    Octopus::to_string(p.second.somatic->second, 2)
+                });
+            } else {
+                record.add_genotype_field(p.first, "SCR", {"0", "0"});
+            }
         }
     }
 } // namespace Octopus

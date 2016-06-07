@@ -101,6 +101,8 @@ namespace
         HaplotypeSupportMap result {};
         
         for (unsigned i {0}; i < reads.size(); ++i) {
+            //std::cout << reads[i].mapped_region() << " " << reads[i].cigar_string() << std::endl;
+            
             const auto top = max_posterior_haplotypes(genotype, i, likelihoods);
             
             if (top.size() == 1) {
@@ -182,16 +184,22 @@ namespace
         return genotypes.at(sample).overlap_range(region).front();
     }
     
+    using VariantMap = std::multimap<SampleIdType, Variant>;
+    
     auto extract_variants(const VcfRecord& call, const std::vector<SampleIdType>& samples)
     {
-        std::multimap<SampleIdType, Variant> result {};
+        VariantMap result {};
         
         const auto region = mapped_region(call);
         
         const auto& alt_alleles = call.alt();
         
         for (const auto& sample : samples) {
-            const auto genotype = call.get_sample_value(sample, "GT");
+            auto genotype = call.get_sample_value(sample, "GT");
+            
+            std::sort(std::begin(genotype), std::end(genotype));
+            
+            genotype.erase(std::unique(std::begin(genotype), std::end(genotype)), std::end(genotype));
             
             for (const auto& allele : genotype) {
                 const auto it = std::find(std::cbegin(alt_alleles), std::cend(alt_alleles), allele);
@@ -220,7 +228,8 @@ namespace
         std::for_each(variants.first, variants.second,
                       [&haplotype_support, &result] (const auto& p) {
                           for (const auto& hp : haplotype_support) {
-                              if (hp.first.contains(p.second.alt_allele())) {
+                              if (overlaps(p.second, hp.second)
+                                  && hp.first.contains(p.second.alt_allele())) {
                                   result.emplace(p.second, hp.second);
                               }
                           }
@@ -238,8 +247,10 @@ namespace
     {
         const auto er = support.equal_range(v);
         
+        //std::cout << v << std::endl;
         const auto c = std::count_if(er.first, er.second,
                                      [] (const auto& p) {
+                                         //std::cout << p.second.mapped_region() << " " << p.second.cigar_string() << std::endl;
                                          return p.second.is_marked_reverse_mapped();
                                      });
         
@@ -249,23 +260,28 @@ namespace
         };
     }
     
-    auto fisher_test(unsigned a, unsigned b, unsigned c, unsigned d)
+    double fisher_exact(const unsigned a, const unsigned b,
+                        const unsigned c, const unsigned d)
     {
-        const auto N = a + b + c + d;
+        if (a + b == 0 || c + d == 0) return 1.0;
+        
         const auto r = a + c;
         const auto n = c + d;
         
-        const boost::math::hypergeometric_distribution<> hgd {r, n, N};
+        if (r == 0 || n == 0) return 1.0;
         
-        const auto cutoff = pdf(hgd, c);
+        const auto N = a + b + c + d;
+        
+        const boost::math::hypergeometric_distribution<> dist {r, n, N};
+        
+        const auto cutoff = pdf(dist, c);
+        
+        const auto min_k = static_cast<unsigned>(std::max(0, static_cast<int>(r + n - N)));
         
         double result {0};
         
-        const auto max_for_k = std::min(r, n);
-        const auto min_for_k = static_cast<unsigned>(std::max(0, static_cast<int>(r + n - N)));
-        
-        for (auto k = min_for_k; k < max_for_k + 1; ++k) {
-            const auto p = pdf(hgd, k);
+        for (auto k = min_k, max_k = std::min(r, n); k <= max_k; ++k) {
+            const auto p = pdf(dist, k);
             if (p <= cutoff) result += p;
         }
         
@@ -278,12 +294,12 @@ namespace
         const auto alt_counts = calculate_direction_counts(support, v);
         
         ReadDirectionCounts other_counts {
-            static_cast<unsigned>(count_forward(reads)) - alt_counts.forward,
-            static_cast<unsigned>(count_reverse(reads)) - alt_counts.reverse
+            static_cast<unsigned>(count_forward(reads, mapped_region(v))) - alt_counts.forward,
+            static_cast<unsigned>(count_reverse(reads, mapped_region(v))) - alt_counts.reverse
         };
         
-        return fisher_test(alt_counts.forward, alt_counts.reverse,
-                           other_counts.forward, other_counts.reverse);
+        return fisher_exact(alt_counts.forward, alt_counts.reverse,
+                            other_counts.forward, other_counts.reverse);
     }
     
     auto convert_to_probabilities(const std::vector<unsigned>& counts)
@@ -384,6 +400,8 @@ void VariantCallFilter::filter(const VcfReader& source, VcfWriter& dest, const R
             const auto genotypes = extract_genotypes(calls, header, reference_, reads_region);
             
             for (auto& call : calls) {
+                //std::cout << call << std::endl;
+                
                 const auto call_region = mapped_region(call);
                 
                 const auto call_reads = copy_overlapped(reads, call_region);
@@ -411,8 +429,6 @@ void VariantCallFilter::filter(const VcfReader& source, VcfWriter& dest, const R
                     filtered = true;
                 }
                 
-                //std::cout << call << std::endl;
-                
                 const auto variants = extract_variants(call, samples);
                 
                 bool strand_biased {true};
@@ -428,24 +444,28 @@ void VariantCallFilter::filter(const VcfReader& source, VcfWriter& dest, const R
                     
                     const auto sample_variants = variants.equal_range(sample);
                     
-                    if (rmq >= 40 && sample_variants.first != sample_variants.second) {
-                        if (rmq_mapping_quality(call_reads.at(sample)) < 40) {
+                    if (sample_variants.first == sample_variants.second) continue;
+                    
+                    const auto& sample_call_reads = call_reads.at(sample);
+                    
+                    if (rmq >= 40) {
+                        if (rmq_mapping_quality(sample_call_reads) < 40) {
                             sample_rmq = true;
                         }
                     }
                     
-                    const auto variant_support = calculate_support(genotype, call_reads.at(sample),
+                    const auto variant_support = calculate_support(genotype, sample_call_reads,
                                                                    sample_variants);
                     
                     const auto pval = calculate_strand_bias(variant_support, sample_variants.first->second,
-                                                            call_reads.at(sample));
+                                                            sample_call_reads);
                     
                     if (pval > 0.2) {
                         strand_biased = false;
                     }
                     
                     const auto mq_bias = calculate_mq_bias(variant_support, sample_variants.first->second,
-                                                           call_reads.at(sample));
+                                                           sample_call_reads);
                     
                     if (mq_bias > 0.4) {
                         sample_kl = true;
