@@ -199,16 +199,36 @@ ReadMap ReadPipe::fetch_reads(const std::vector<GenomicRegion>& regions) const
 {
     assert(std::is_sorted(std::cbegin(regions), std::cend(regions)));
     
-    const auto fetch_regions = join_close_regions(extract_covered_regions(regions), 500);
+    const auto covered_regions = extract_covered_regions(regions);
+    
+    const auto fetch_regions = join_close_regions(covered_regions, 10000);
     
     ReadMap result {samples_.size()};
     
+    const auto total_fetch_bp = sum_region_sizes(fetch_regions);
+    
     for (const auto& sample : samples_) {
-        result.emplace(std::piecewise_construct, std::forward_as_tuple(sample), std::forward_as_tuple());
+        const auto p = result.emplace(std::piecewise_construct, std::forward_as_tuple(sample),
+                                      std::forward_as_tuple());
+        
+        p.first->second.reserve(20 * total_fetch_bp); // TODO: use estimated coverage
     }
     
     for (const auto& region : fetch_regions) {
-        insert_each(fetch_reads(region), result);
+        auto reads = fetch_reads(region);
+        
+        const auto request_regions = contained_range(covered_regions, region);
+        
+        const auto removal_regions = extract_intervening_regions(request_regions, region);
+        
+        std::for_each(std::crbegin(removal_regions), std::crend(removal_regions),
+                      [&reads] (const auto& region) {
+                          for (auto& p : reads) {
+                              p.second.erase_contained(region);
+                          }
+                      });
+        
+        insert_each(std::move(reads), result);
     }
     
     shrink_to_fit(result);

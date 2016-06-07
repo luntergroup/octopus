@@ -12,7 +12,7 @@ namespace Octopus
 {
 namespace ReadTransforms
 {
-    void TrimOverlapping::operator()(AlignedRead& read) const noexcept
+    void MaskOverlappedSegment::operator()(AlignedRead& read) const noexcept
     {
         // Only reads in the forward direction are masked to prevent double masking
         if (read.is_chimeric() && !read.is_marked_reverse_mapped()) {
@@ -25,7 +25,7 @@ namespace ReadTransforms
         }
     }
     
-    void TrimAdapters::operator()(AlignedRead& read) const noexcept
+    void MaskAdapters::operator()(AlignedRead& read) const noexcept
     {
         if (read.is_chimeric()) {
             const auto insert_size = read.next_segment().inferred_template_length();
@@ -54,7 +54,7 @@ namespace ReadTransforms
         }
     }
     
-    void TrimSoftClipped::operator()(AlignedRead& read) const noexcept
+    void MaskSoftClipped::operator()(AlignedRead& read) const noexcept
     {
         if (is_soft_clipped(read.cigar_string())) {
             const auto soft_clipped_sizes = get_soft_clipped_sizes(read.cigar_string());

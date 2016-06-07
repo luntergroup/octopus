@@ -307,6 +307,13 @@ void HaplotypeGenerator::update_next_active_region() const
             
             if (!overlaps(current_active_region_, max_lagged_region)) {
                 next_active_region_ = std::move(max_lagged_region);
+                
+                const auto active_alleles = overlap_range(alleles_, *next_active_region_);
+                
+                if (!active_alleles.empty() && is_empty_region(active_alleles.front())) {
+                    // to be explicit about insertion containment
+                    next_active_region_ = expand_lhs(*next_active_region_, 1);
+                }
             } else {
                 auto test_tree = tree_; // use a temporary tree to see how much we can lag
                 

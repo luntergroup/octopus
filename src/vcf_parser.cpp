@@ -68,33 +68,39 @@ VcfHeader VcfParser::fetch_header() const
 
 std::size_t VcfParser::count_records() const
 {
+    const auto result = std::count_if(std::istreambuf_iterator<char>(file_), std::istreambuf_iterator<char>(),
+                                      [] (char c) { return c == '\n'; });
+    
     reset_vcf();
     
-    return std::count_if(std::istreambuf_iterator<char>(file_), std::istreambuf_iterator<char>(),
-                         [] (char c) { return c == '\n'; });
+    return result;
 }
 
 std::size_t VcfParser::count_records(const std::string& contig) const
 {
+    const auto result = std::count_if(std::istream_iterator<Line>(file_), std::istream_iterator<Line>(),
+                                      [&contig] (const auto& line) { return is_same_contig(line, contig); });
+    
     reset_vcf();
     
-    return std::count_if(std::istream_iterator<Line>(file_), std::istream_iterator<Line>(),
-                         [&contig] (const auto& line) { return is_same_contig(line, contig); });
+    return result;
 }
 
 std::size_t VcfParser::count_records(const GenomicRegion& region) const
 {
+    const auto result = std::count_if(std::istream_iterator<Line>(file_), std::istream_iterator<Line>(),
+                                      [&region] (const auto& line) { return overlaps(line, region); });
+    
     reset_vcf();
     
-    return std::count_if(std::istream_iterator<Line>(file_), std::istream_iterator<Line>(),
-                         [&region] (const auto& line) { return overlaps(line, region); });
+    return result;
 }
 
 std::vector<VcfRecord> VcfParser::fetch_records(const UnpackPolicy level) const
 {
-    reset_vcf();
-    
     std::vector<VcfRecord> result {};
+    
+    result.reserve(count_records());
     
     bool unpack_all {level == UnpackPolicy::All};
     
@@ -103,41 +109,47 @@ std::vector<VcfRecord> VcfParser::fetch_records(const UnpackPolicy level) const
                        return (unpack_all) ? parse_record(line, samples_) : parse_record(line);
                    });
     
+    reset_vcf();
+    
     return result;
 }
 
 std::vector<VcfRecord> VcfParser::fetch_records(const std::string& contig, const UnpackPolicy level) const
 {
-    reset_vcf();
-    
     std::vector<VcfRecord> result {};
+    
+    result.reserve(count_records(contig));
     
     bool unpack_all {level == UnpackPolicy::All};
     
     std::for_each(std::istream_iterator<Line>(file_), std::istream_iterator<Line>(),
                   [this, &result, &contig, unpack_all] (const auto& line) {
                       if (is_same_contig(line, contig)) {
-                          result.emplace_back((unpack_all) ? parse_record(line, samples_) : parse_record(line));
+                          result.push_back((unpack_all) ? parse_record(line, samples_) : parse_record(line));
                       }
                   });
+    
+    reset_vcf();
     
     return result;
 }
 
 std::vector<VcfRecord> VcfParser::fetch_records(const GenomicRegion& region, const UnpackPolicy level) const
 {
-    reset_vcf();
-    
     std::vector<VcfRecord> result {};
+    
+    result.reserve(count_records(region));
     
     bool unpack_all {level == UnpackPolicy::All};
     
     std::for_each(std::istream_iterator<Line>(file_), std::istream_iterator<Line>(),
                   [this, &result, &region, unpack_all] (const std::string& line) {
                       if (overlaps(line, region)) {
-                          result.emplace_back((unpack_all) ? parse_record(line, samples_) : parse_record(line));
+                          result.push_back((unpack_all) ? parse_record(line, samples_) : parse_record(line));
                       }
                   });
+    
+    reset_vcf();
     
     return result;
 }
@@ -152,7 +164,7 @@ void VcfParser::reset_vcf() const
 
 // non-member methods
 
-using Field  = Token<','>;
+using Field = Token<','>;
 
 // A field looks like key=value, fields are delimited with ',' e.g. keyA=valueA,...,keyB=valueB.
 // But value may be quoted (i.e. "value"), and anything goes inside the quotes. So we must make
@@ -316,7 +328,7 @@ std::vector<std::string> split(const std::string& str, char delim = ',')
     std::string item;
     
     std::vector<std::string> result {};
-    result.reserve(std::count(std::cbegin(str), std::cend(str), delim));
+    result.reserve(std::count(std::cbegin(str), std::cend(str), delim) + 1);
     
     while (std::getline(ss, item, delim)) {
         result.emplace_back(item);
@@ -336,11 +348,16 @@ void parse_info_field(const std::string& field, VcfRecord::Builder& rb)
     }
 }
 
+using InfoField = Token<';'>;
+
 void parse_info(const std::string& column, VcfRecord::Builder& rb)
 {
-    for (auto& field : split(column, ';')) {
-        parse_info_field(field, rb);
-    }
+    std::istringstream ss {column};
+    
+    std::for_each(std::istream_iterator<InfoField>(ss), std::istream_iterator<InfoField>(),
+                  [&rb] (const auto& field) {
+                      parse_info_field(field, rb);
+                  });
 }
 
 bool is_phased(const std::string& genotype)
@@ -387,22 +404,25 @@ void parse_genotype(const VcfRecord::SampleIdType& sample, const std::string& ge
     rb.add_genotype(sample, std::move(alleles), (phased) ? Phasing::Phased : Phasing::Unphased);
 }
 
+using SampleField = Token<':'>;
+
 void parse_sample(const std::string& column, const VcfRecord::SampleIdType& sample,
                   const std::vector<std::string>& format, VcfRecord::Builder& rb)
 {
-    auto values = split(column, ':');
+    auto first_key = std::cbegin(format);
     
-    auto first_key   = std::cbegin(format);
-    auto first_value = std::cbegin(values);
+    std::istringstream ss {column};
+    
+    std::istream_iterator<SampleField> first_value {ss};
     
     if (format.front() == "GT") { // GT must always come first, if present
-        parse_genotype(sample, values.front(), rb);
+        parse_genotype(sample, *first_value, rb);
         
         ++first_key;
         ++first_value;
     }
     
-    std::for_each(first_value, std::cend(values),
+    std::for_each(first_value, std::istream_iterator<SampleField> {},
                   [&rb, &sample, &first_key] (const std::string& value) {
                       rb.add_genotype_field(sample, *first_key, split(value, ','));
                       ++first_key;

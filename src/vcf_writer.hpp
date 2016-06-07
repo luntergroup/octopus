@@ -53,9 +53,10 @@ public:
     
 private:
     Path file_path_;
-    bool is_header_written_;
     
     std::unique_ptr<HtslibBcfFacade> writer_;
+    
+    bool is_header_written_;
     
     mutable std::mutex mutex_;
 };

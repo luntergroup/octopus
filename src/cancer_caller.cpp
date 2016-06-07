@@ -781,21 +781,28 @@ CancerVariantCaller::call_variants(const std::vector<Variant>& candidates, const
                                                            called_cancer_genotype,
                                                            parameters_.min_somatic_posterior);
         
-        const auto called_somatic_regions = extract_regions(somatic_variant_calls);
-        
         const auto& somatic_alphas = latents.somatic_model_inferences_.posteriors.alphas;
         
         const auto credible_regions = compute_marginal_credible_intervals(somatic_alphas, 0.99);
         
         if (!somatic_variant_calls.empty()) {
-            called_somatic_haplotype = called_cancer_genotype.somatic_element();
+            // Hard filter somatics that have too low credible frequency
             
             for (const auto& p : credible_regions) {
                 if (p.second.back().first >= 0.01) {
                     somatic_samples.push_back(p.first);
                 }
             }
+            
+            if (somatic_samples.empty()) {
+                somatic_variant_calls.clear();
+                somatic_variant_calls.shrink_to_fit();
+            } else {
+                called_somatic_haplotype = called_cancer_genotype.somatic_element();
+            }
         }
+        
+        const auto called_somatic_regions = extract_regions(somatic_variant_calls);
         
         auto cancer_genotype_calls = call_somatic_genotypes(called_cancer_genotype,
                                                             called_somatic_regions,

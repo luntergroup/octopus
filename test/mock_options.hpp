@@ -149,7 +149,11 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--regions", "22:29,474,547-29,474,587", // real somatic SNV?
         //"--regions", "22:29,761,141-29,761,305", // real somatic SNV?
         
-        "--regions", "22:41,607,540-41,607,580",
+        //"--regions", "22:48,852,226-48,853,551", // Bad SB filter
+        //"--regions", "22:46,314,006-46,314,336", // Bad SB filter
+        //"--regions", "22:41,607,540-41,607,580", // tricky FP SNVs
+        
+        //"--regions", "22:40,000,000-50,000,000",
         
 //        "--regions", "22:41,120,796-41,120,871", // FP SNP. Strand bias. Run through.
 //        "--regions", "22:43,960,301-43,960,376", // FP SNP. Strand bias. Run through.
@@ -157,7 +161,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
 //        "--regions", "22:42,726,975-42,727,015", // FP SNP. Strand bias.
 //        "--regions", "22:43,468,078-43,468,229", // FP SNPs. Strand bias. Run through.
 //        "--regions", "22:44,202,032-44,202,107", // FP SNPs. Strand bias. Run through.
-//        "--regions", "22:44,230,824-44,230,975", // FP SNP. MQ. Strand bias.
+        "--regions", "22:44,230,824-44,230,975", // FP SNP. MQ. Strand bias.
 //        "--regions", "22:44,243,370-44,243,573", // FP SNP. Strand bias. Run through.
 //        "--regions", "22:45,332,712-45,332,787", // FP SNP. Strand bias. Run through.
 //        "--regions", "22:45,895,589-45,895,664", // FP SNP. Strand bias. Run through.
@@ -258,7 +262,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--output", "octopus_hla.vcf",
         //"--output", "octopus_mcg.vcf",
         //"--output", "octopus_NA12878HC_22_unlagged_dummy.vcf",
-        //"--output", "octopus_calls3.vcf",
+        "--output", "octopus_calls3.vcf",
         //"--output", "octopus_cancer.vcf",
         
         nullptr

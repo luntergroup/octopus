@@ -158,6 +158,14 @@ namespace
         
         const auto haplotypes = expanded_genotype.copy_unique();
         
+//        for (const auto& haplotype : haplotypes) {
+//            std::cout << haplotype.mapped_region() << std::endl;
+//            ::debug::print_variant_alleles(haplotype);
+//            std::cout << '\n';
+//        }
+//        
+//        std::cout << reads[48].mapped_region() << " " << reads[48].cigar_string() << std::endl;
+        
         HaplotypeLikelihoodCache likelihoods {static_cast<unsigned>(haplotypes.size()), {"sample"}};
         
         likelihoods.populate(tmp, haplotypes);
@@ -250,7 +258,7 @@ namespace
         //std::cout << v << std::endl;
         const auto c = std::count_if(er.first, er.second,
                                      [] (const auto& p) {
-                                         //std::cout << p.second.mapped_region() << " " << p.second.cigar_string() << std::endl;
+                                         //std::cout << p.second.mapped_region() << " " << p.second.cigar_string() << " " << p.second.is_marked_reverse_mapped() << std::endl;
                                          return p.second.is_marked_reverse_mapped();
                                      });
         
@@ -433,12 +441,22 @@ void VariantCallFilter::filter(const VcfReader& source, VcfWriter& dest, const R
                 
                 bool strand_biased {true};
                 
-                bool sample_rmq {false};
+                bool sample_rmq_failed {false};
                 
-                bool sample_kl {false};
+                bool sample_kl_failed {false};
                 
                 for (const auto& sample : samples) {
                     //std::cout << sample << std::endl;
+                    
+                    const auto& sample_call_reads = call_reads.at(sample);
+                    
+                    if (rmq >= 40) {
+                        const auto sample_rmq = rmq_mapping_quality(sample_call_reads);
+                        
+                        if (sample_rmq < 40) {
+                            sample_rmq_failed = true;
+                        }
+                    }
                     
                     const auto& genotype = find_genotype(genotypes, sample, call_region);
                     
@@ -446,21 +464,13 @@ void VariantCallFilter::filter(const VcfReader& source, VcfWriter& dest, const R
                     
                     if (sample_variants.first == sample_variants.second) continue;
                     
-                    const auto& sample_call_reads = call_reads.at(sample);
-                    
-                    if (rmq >= 40) {
-                        if (rmq_mapping_quality(sample_call_reads) < 40) {
-                            sample_rmq = true;
-                        }
-                    }
-                    
                     const auto variant_support = calculate_support(genotype, sample_call_reads,
                                                                    sample_variants);
                     
                     const auto pval = calculate_strand_bias(variant_support, sample_variants.first->second,
                                                             sample_call_reads);
                     
-                    if (pval > 0.2) {
+                    if (pval > 0.1) {
                         strand_biased = false;
                     }
                     
@@ -468,16 +478,16 @@ void VariantCallFilter::filter(const VcfReader& source, VcfWriter& dest, const R
                                                            sample_call_reads);
                     
                     if (mq_bias > 0.4) {
-                        sample_kl = true;
+                        sample_kl_failed = true;
                     }
                 }
                 
-                if (sample_kl) {
+                if (sample_kl_failed) {
                     cb.add_filter("KL");
                     filtered = true;
                 }
                 
-                if (sample_rmq) {
+                if (sample_rmq_failed) {
                     cb.add_filter("MQ");
                     filtered = true;
                 }

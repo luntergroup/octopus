@@ -68,13 +68,9 @@ namespace Octopus
         
         double snp_heterozygosity_, indel_heterozygosity_;
         
-        using HaplotypeReference = std::reference_wrapper<const Haplotype>;
-        
         mutable std::vector<std::reference_wrapper<const Variant>> site_buffer1_, site_buffer2_;
         
-        using VariantReference = std::reference_wrapper<const Variant>;
-        
-        mutable std::unordered_map<HaplotypeReference, std::vector<Variant>> difference_cache_;
+        mutable std::unordered_map<Haplotype, std::vector<Variant>> difference_cache_;
         
         mutable std::unordered_map<SiteCountTuple, double, SiteCountTupleHash> result_cache_;
         

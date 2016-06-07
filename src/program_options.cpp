@@ -1325,15 +1325,15 @@ namespace Octopus
         } else if (tail_trim_size > 0) {
             result.register_transform(ReadTransforms::TrimTail(tail_trim_size));
         } else if (trim_soft_clipped) {
-            result.register_transform(ReadTransforms::TrimSoftClipped());
+            result.register_transform(ReadTransforms::MaskSoftClipped());
         }
         
         if (!options.at("disable-adapter-masking").as<bool>()) {
-            result.register_transform(ReadTransforms::TrimAdapters());
+            result.register_transform(ReadTransforms::MaskAdapters());
         }
         
         if (!options.at("disable-overlap-masking").as<bool>()) {
-            result.register_transform(ReadTransforms::TrimOverlapping());
+            result.register_transform(ReadTransforms::MaskOverlappedSegment());
         }
         
         result.shrink_to_fit();

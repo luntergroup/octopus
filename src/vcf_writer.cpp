@@ -19,7 +19,8 @@
 VcfWriter::VcfWriter(Path file_path)
 :
 file_path_ {std::move(file_path)},
-writer_ {std::make_unique<HtslibBcfFacade>(file_path_, "w")}
+writer_ {std::make_unique<HtslibBcfFacade>(file_path_, "w")},
+is_header_written_ {false}
 {}
 
 VcfWriter::VcfWriter(Path file_path, const VcfHeader& header)

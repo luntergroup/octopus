@@ -367,17 +367,21 @@ void set_id(bcf1_t* record, const std::string& id);
 void set_alleles(const bcf_hdr_t* header, bcf1_t* record, const VcfRecord::SequenceType& ref,
                  const std::vector<VcfRecord::SequenceType>& alts);
 void set_qual(bcf1_t* record, VcfRecord::QualityType qual);
-void set_filters(const bcf_hdr_t* header, bcf1_t* record, const std::vector<std::string>& filters);
+void set_filter(const bcf_hdr_t* header, bcf1_t* record, const std::vector<std::string>& filters);
 void set_info(const bcf_hdr_t* header, bcf1_t* dest, const VcfRecord& source);
 void set_samples(const bcf_hdr_t* header, bcf1_t* dest, const VcfRecord& source,
                  const std::vector<std::string>& samples);
 
 void HtslibBcfFacade::write(const VcfRecord& record)
 {
+    if (header_ == nullptr) {
+        throw std::runtime_error {"HtslibBcfFacade: trying to write record without a header"};
+    }
+    
     const auto& contig = record.chrom();
     
     if (bcf_hdr_get_hrec(header_.get(), BCF_HL_CTG, "ID", contig.c_str(), nullptr) == nullptr) {
-        throw std::runtime_error {"required contig header line missing for contig \"" + contig + "\""};
+        throw std::runtime_error {"HtslibBcfFacade: required contig header line missing for contig \"" + contig + "\""};
     }
     
     auto hts_record = bcf_init();
@@ -389,7 +393,7 @@ void HtslibBcfFacade::write(const VcfRecord& record)
     if (record.qual()) {
         set_qual(hts_record, *record.qual());
     }
-    set_filters(header_.get(), hts_record, record.filter());
+    set_filter(header_.get(), hts_record, record.filter());
     set_info(header_.get(), hts_record, record);
     
     if (record.num_samples() > 0) {
@@ -559,7 +563,7 @@ auto extract_filter(const bcf_hdr_t* header, const bcf1_t* record)
     return result;
 }
 
-void set_filters(const bcf_hdr_t* header, bcf1_t* record, const std::vector<std::string>& filters)
+void set_filter(const bcf_hdr_t* header, bcf1_t* record, const std::vector<std::string>& filters)
 {
     for (const auto& filter : filters) {
         bcf_add_filter(header, record, bcf_hdr_id2int(header, BCF_DT_ID, filter.c_str()));

@@ -13,12 +13,12 @@
 
 namespace Octopus { namespace ReadTransforms
 {
-    struct TrimOverlapping
+    struct MaskOverlappedSegment
     {
         void operator()(AlignedRead& read) const noexcept;
     };
     
-    struct TrimAdapters
+    struct MaskAdapters
     {
         void operator()(AlignedRead& read) const noexcept;
     };
@@ -36,7 +36,7 @@ namespace Octopus { namespace ReadTransforms
         const SizeType num_bases_;
     };
     
-    struct TrimSoftClipped
+    struct MaskSoftClipped
     {
         void operator()(AlignedRead& read) const noexcept;
     };

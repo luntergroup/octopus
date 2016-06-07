@@ -58,6 +58,7 @@
 #include "timing.hpp"
 
 #include "variant_call_filter.hpp"
+#include "read_transformations.hpp"
 
 #include "timers.hpp" // BENCHMARK
 
@@ -1167,15 +1168,31 @@ namespace Octopus
         return !components.num_threads() || *components.num_threads() > 1;
     }
     
-    void filter_calls(GenomeCallingComponents& components)
+    auto make_filter_read_pipe(const GenomeCallingComponents& components)
     {
-        components.output().close();
+        ReadTransform transform {};
+        transform.register_transform(ReadTransforms::MaskSoftClipped {});
         
+        ReadFilterer filter {};
+        //filter.register_filter(std::make_unique<ReadFilters::IsNotMarkedQcFail>());
+        //filter.register_filter(std::make_unique<ReadFilters::IsNotMarkedDuplicate>());
+        
+        return ReadPipe {
+            components.read_manager(), std::move(transform), std::move(filter), boost::none,
+            components.samples()
+        };
+    }
+    
+    void filter_calls(const GenomeCallingComponents& components)
+    {
+        assert(!components.output().is_open());
+        
+        //const VcfReader calls {"/Users/dcooke/Genomics/cancer/TCGA/benchmark/octopus_calls.vcf"};
         const VcfReader calls {components.output().path()};
         
-        VcfWriter filtered_calls {"/Users/danielcooke/Genomics/filtered.vcf"};
+        VcfWriter filtered_calls {"/Users/dcooke/Genomics/cancer/TCGA/benchmark/filtered.vcf"};
         
-        const ReadPipe read_pipe {components.read_manager(), components.samples()};
+        const auto read_pipe = make_filter_read_pipe(components);
         
         const VariantCallFilter filter {components.reference(), read_pipe};
         
@@ -1237,6 +1254,8 @@ namespace Octopus
                 } else {
                     run_octopus_single_threaded(*components);
                 }
+                
+                components->output().close();
             } catch (const std::exception& e) {
                 Logging::FatalLogger lg {};
                 stream(lg) << "Encountered exception '" << e.what() << "'. Attempting to cleanup...";
