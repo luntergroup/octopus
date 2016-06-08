@@ -123,6 +123,11 @@ void HaplotypeLikelihoodCache::populate(const ReadMap& reads,
     likelihood_model_.clear();
     read_iterators_.clear();
 }
+    
+std::size_t HaplotypeLikelihoodCache::num_likelihoods(const SampleIdType& sample) const
+{
+    return std::cbegin(cache_)->second.at(sample_indices_.at(sample)).size();
+}
 
 const HaplotypeLikelihoodCache::Likelihoods&
 HaplotypeLikelihoodCache::log_likelihoods(const SampleIdType& sample,

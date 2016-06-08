@@ -1190,7 +1190,7 @@ namespace Octopus
         //const VcfReader calls {"/Users/dcooke/Genomics/cancer/TCGA/benchmark/octopus_calls.vcf"};
         const VcfReader calls {components.output().path()};
         
-        VcfWriter filtered_calls {"/Users/danielcooke/Genomics/cancer/TCGA/benchmark/filtered.vcf"};
+        VcfWriter filtered_calls {"/Users/dcooke/Genomics/cancer/TCGA/benchmark/filtered.vcf"};
         
         const auto read_pipe = make_filter_read_pipe(components);
         

@@ -15,6 +15,8 @@
 #include <numeric>
 #include <limits>
 #include <type_traits>
+#include <functional>
+#include <limits>
 #include <cassert>
 
 #include "common.hpp"
@@ -24,6 +26,8 @@
 #include "logging.hpp"
 
 namespace Octopus
+{
+namespace
 {
 template <typename T>
 struct FilterGreater
@@ -174,6 +178,60 @@ struct LikelihoodZeroCount
     }
 };
 
+class AssignmentCount
+{
+    std::unordered_map<Haplotype, float> assignments_;
+    
+public:
+    AssignmentCount() = delete;
+    
+    AssignmentCount(const std::vector<Haplotype>& haplotypes,
+                    const std::vector<SampleIdType>& samples,
+                    const HaplotypeLikelihoodCache& haplotype_likelihoods)
+    {
+        assignments_.reserve(haplotypes.size());
+        
+        for (const auto& haplotype : haplotypes) {
+            assignments_.emplace(haplotype, 0.0);
+        }
+        
+        std::vector<std::reference_wrapper<const Haplotype>> top {};
+        
+        for (const auto& sample : samples) {
+            const auto n = haplotype_likelihoods.num_likelihoods(sample);
+            
+            for (std::size_t i {0}; i < n; ++i) {
+                auto cur_max = std::numeric_limits<HaplotypeLikelihoodCache::Likelihoods::value_type>::lowest();
+                
+                for (const auto& haplotype : haplotypes) {
+                    const auto p = haplotype_likelihoods.log_likelihoods(sample, haplotype)[i];
+                    
+                    if (Maths::almost_equal(p, cur_max)) {
+                        top.emplace_back(haplotype);
+                    } else if (p > cur_max) {
+                        top.assign({haplotype});
+                        cur_max = p;
+                    }
+                }
+                
+                const auto top_score = 1.0f / top.size();
+                
+                for (const auto& haplotype : top) {
+                    assignments_.at(haplotype) += top_score;
+                }
+                
+                top.clear();
+            }
+        }
+    }
+    
+    auto operator()(const Haplotype& haplotype, const std::vector<SampleIdType>& samples,
+                    const HaplotypeLikelihoodCache& haplotype_likelihoods) const
+    {
+        return assignments_.at(haplotype);
+    }
+};
+
 struct LikelihoodSum
 {
     auto operator()(const Haplotype& haplotype, const std::vector<SampleIdType>& samples,
@@ -189,6 +247,7 @@ struct LikelihoodSum
         return result;
     }
 };
+} // namespace
 
 // main method
 
@@ -196,7 +255,7 @@ std::vector<Haplotype>
 filter_to_n_haplotypes(std::vector<Haplotype>& haplotypes,
                        const std::vector<SampleIdType>& samples,
                        const HaplotypeLikelihoodCache& haplotype_likelihoods,
-                       std::size_t n)
+                       const std::size_t n)
 {
     std::vector<Haplotype> result {};
     
@@ -241,6 +300,18 @@ filter_to_n_haplotypes(std::vector<Haplotype>& haplotypes,
     }
     
     num_to_filter -= try_filter(haplotypes, samples, haplotype_likelihoods, n, result,
+                                AssignmentCount {haplotypes, samples, haplotype_likelihoods});
+    
+    if (DEBUG_MODE) {
+        stream(debug_log) << "There are " << haplotypes.size()
+                            << " remaining haplotypes after assignment count filtering";
+    }
+    
+    if (num_to_filter == 0) {
+        return result;
+    }
+    
+    num_to_filter -= try_filter(haplotypes, samples, haplotype_likelihoods, n, result,
                                 LikelihoodSum {});
     
     if (DEBUG_MODE) {
@@ -253,10 +324,11 @@ filter_to_n_haplotypes(std::vector<Haplotype>& haplotypes,
     }
     
     if (DEBUG_MODE) {
-        stream(debug_log) << "Force filtering " << haplotypes.size() << " haplotypes with likelihood sum filter";
+        stream(debug_log) << "Force filtering " << haplotypes.size() << " haplotypes with assignment count filtering";
     }
     
-    force_filter(haplotypes, samples, haplotype_likelihoods, n, result, LikelihoodSum {});
+    force_filter(haplotypes, samples, haplotype_likelihoods, n, result,
+                 AssignmentCount {haplotypes, samples, haplotype_likelihoods});
     
     return result;
 }

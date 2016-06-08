@@ -264,13 +264,38 @@ std::pair<std::vector<Haplotype>, GenomicRegion> HaplotypeGenerator::generate()
 
 bool HaplotypeGenerator::removal_has_impact() const
 {
-    if (!is_lagged()) return false;
-    
-    if (contains(current_active_region_, *rightmost_allele_)) return false;
+    if (!is_lagged() || contains(current_active_region_, *rightmost_allele_)) return false;
     
     const auto max_lagged_region = lagged_walker_->walk(current_active_region_, reads_, alleles_);
     
     return overlaps(max_lagged_region, current_active_region_);
+}
+
+unsigned HaplotypeGenerator::max_removal_impact() const
+{
+    if (!is_lagged() || contains(current_active_region_, *rightmost_allele_)) return 0;
+    
+    const auto max_lagged_region = lagged_walker_->walk(current_active_region_, reads_, alleles_);
+    
+    if (!overlaps(max_lagged_region, current_active_region_)) return 0;
+    
+    const auto novel_region = right_overhang_region(max_lagged_region, current_active_region_);
+    
+    const auto num_novel_alleles = count_overlapped(alleles_, novel_region);
+    
+    if (num_novel_alleles == 0) return 0;
+    
+    const auto max_new_haplotypes = static_cast<unsigned>(std::pow(2, num_novel_alleles / 2));
+    
+    const auto num_leftover_haplotypes = soft_max_haplotypes_ / max_new_haplotypes;
+    
+    const auto cur_num_haplotypes = tree_.num_haplotypes();
+    
+    if (cur_num_haplotypes > num_leftover_haplotypes) {
+        return cur_num_haplotypes - num_leftover_haplotypes;
+    }
+    
+    return cur_num_haplotypes;
 }
 
 // private methods

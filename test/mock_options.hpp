@@ -252,7 +252,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         "--phasing-level", "Conservative", // Minimal, Conservative, Aggressive
         //"--disable-inactive-flank-scoring",
         //"--max-haplotypes", "256",
-        //"--min-haplotype-posterior", "1e-15",
+        "--min-haplotype-posterior", "1e-40",
         
         //"--disable-model-filtering",
         

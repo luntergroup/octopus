@@ -181,7 +181,8 @@ private:
     
     std::vector<std::reference_wrapper<const Haplotype>>
     get_removable_haplotypes(const std::vector<Haplotype>& haplotypes,
-                             const CallerLatents::HaplotypeProbabilityMap& haplotype_posteriors) const;
+                             const CallerLatents::HaplotypeProbabilityMap& haplotype_posteriors,
+                             unsigned max_to_remove) const;
     
     bool done_calling(const GenomicRegion& region) const noexcept;
     

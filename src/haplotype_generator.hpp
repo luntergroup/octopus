@@ -62,6 +62,7 @@ public:
     std::pair<std::vector<Haplotype>, GenomicRegion> generate();
     
     bool removal_has_impact() const;
+    unsigned max_removal_impact() const;
     
     template <typename Container> void remove_duplicates(const Container& haplotypes);
     template <typename Container> void remove(const Container& haplotypes);

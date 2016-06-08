@@ -511,8 +511,11 @@ VariantCaller::call(const GenomicRegion& call_region, ProgressMeter& progress_me
             }
             
             if (has_removal_impact) {
+                const auto max_to_remove = haplotype_generator.max_removal_impact();
+                
                 auto removable_haplotypes = get_removable_haplotypes(haplotypes,
-                                                                     *caller_latents->haplotype_posteriors());
+                                                                     *caller_latents->haplotype_posteriors(),
+                                                                     max_to_remove);
                 
                 if (debug_log_) {
                     stream(*debug_log_) << "Discarding " << removable_haplotypes.size() << " haplotypes with low posterior";
@@ -724,8 +727,9 @@ void VariantCaller::populate(HaplotypeLikelihoodCache& haplotype_likelihoods,
     }
 }
 
-std::vector<Haplotype> VariantCaller::filter(std::vector<Haplotype>& haplotypes,
-                                             const HaplotypeLikelihoodCache& haplotype_likelihoods) const
+std::vector<Haplotype>
+VariantCaller::filter(std::vector<Haplotype>& haplotypes,
+                      const HaplotypeLikelihoodCache& haplotype_likelihoods) const
 {
     resume_timer(haplotype_fitler_timer);
     auto removed_haplotypes = filter_to_n_haplotypes(haplotypes, samples_, haplotype_likelihoods,
@@ -751,16 +755,35 @@ std::vector<Haplotype> VariantCaller::filter(std::vector<Haplotype>& haplotypes,
 
 std::vector<std::reference_wrapper<const Haplotype>>
 VariantCaller::get_removable_haplotypes(const std::vector<Haplotype>& haplotypes,
-                                        const CallerLatents::HaplotypeProbabilityMap& haplotype_posteriors) const
+                                        const CallerLatents::HaplotypeProbabilityMap& haplotype_posteriors,
+                                        const unsigned max_to_remove) const
 {
-    std::vector<std::reference_wrapper<const Haplotype>> result {};
-    result.reserve(haplotypes.size());
+    using HaplotypeReference = std::reference_wrapper<const Haplotype>;
     
-    for (const auto& p : haplotype_posteriors) {
-        if (p.second < parameters_.min_haplotype_posterior) {
-            ::debug::print_variant_alleles(p.first);
-            std::cout << " " << p.second << '\n';
-            result.emplace_back(p.first);
+    std::vector<HaplotypeReference> result {};
+    result.reserve(max_to_remove);
+    
+    if (max_to_remove < haplotypes.size()) {
+        std::vector<std::pair<HaplotypeReference, double>> sorted {};
+        sorted.reserve(haplotypes.size());
+        
+        std::copy(std::cbegin(haplotype_posteriors), std::cend(haplotype_posteriors),
+                  std::back_inserter(sorted));
+        
+        const auto mth = std::next(std::begin(sorted), haplotypes.size() - max_to_remove);
+        
+        std::partial_sort(std::begin(sorted), mth, std::end(sorted),
+                          [] (const auto& lhs, const auto& rhs) {
+                              return lhs.second > rhs.second;
+                          });
+        
+        std::transform(mth, std::end(sorted), std::back_inserter(result),
+                       [] (const auto& p) { return p.first; });
+    } else {
+        for (const auto& p : haplotype_posteriors) {
+            if (p.second < parameters_.min_haplotype_posterior) {
+                result.emplace_back(p.first);
+            }
         }
     }
     

@@ -846,6 +846,29 @@ namespace Octopus
         return result;
     }
     
+//    auto calculate_log_posteriors_with_dummy_germline_model(const SampleIdType& sample,
+//                                                      const std::vector<CancerGenotype<Haplotype>>& genotypes,
+//                                                      const HaplotypeLikelihoodCache& haplotype_log_likelihoods,
+//                                                      const SomaticMutationModel& genotype_prior_model)
+//    {
+//        assert(!genotypes.empty());
+//        
+//        const auto ploidy = genotypes.front().ploidy();
+//        
+//        const FixedPloidyGenotypeLikelihoodModel likelihood_model {ploidy + 1, haplotype_log_likelihoods};
+//        
+//        std::vector<double> result(genotypes.size());
+//        
+//        std::transform(std::cbegin(genotypes), std::cend(genotypes), std::begin(result),
+//                       [&] (const auto& genotype) {
+//                           return likelihood_model.log_likelihood(sample, convert(genotype));
+//                       });
+//        
+//        Maths::normalise_logs(result);
+//        
+//        return result;
+//    }
+    
     LogProbabilityVector log_uniform_dist(const std::size_t n)
     {
         return LogProbabilityVector(n, -std::log(static_cast<double>(n)));
@@ -869,6 +892,9 @@ namespace Octopus
             result.emplace_back(calculate_log_posteriors_with_germline_model(sample, genotypes,
                                                                              haplotype_log_likelihoods,
                                                                              priors.genotype_prior_model));
+//            result.emplace_back(calculate_log_posteriors_with_dummy_germline_model(sample, genotypes,
+//                                                                                   haplotype_log_likelihoods,
+//                                                                                   priors.genotype_prior_model));
         }
         
         return result;

@@ -134,10 +134,16 @@ ReadMap ReadPipe::fetch_reads(const GenomicRegion& region) const
             
             erase_filtered_reads(batch_reads, filter(batch_reads, read_filter_, filter_counts));
             
-            for (const auto& p : filter_counts) {
-                stream(*debug_log_) << "In sample " << p.first;
-                for (const auto& c : p.second) {
-                    stream(*debug_log_) << c.second << " reads were removed by the " << c.first << " filter";
+            if (read_filter_.num_filters() > 0) {
+                for (const auto& p : filter_counts) {
+                    stream(*debug_log_) << "In sample " << p.first;
+                    if (!p.second.empty()) {
+                        for (const auto& c : p.second) {
+                            stream(*debug_log_) << c.second << " reads were removed by the " << c.first << " filter";
+                        }
+                    } else {
+                        *debug_log_ << "No reads were filtered";
+                    }
                 }
             }
         } else {

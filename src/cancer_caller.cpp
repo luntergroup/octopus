@@ -102,6 +102,15 @@ haplotypes_ {haplotypes},
 samples_ {samples},
 normal_sample_ {normal_sample}
 {}
+    
+template <typename... T>
+auto zip(const T&... containers)
+        -> boost::iterator_range<boost::zip_iterator<decltype(boost::make_tuple(std::begin(containers)...))>>
+{
+    auto zip_begin = boost::make_zip_iterator(boost::make_tuple(std::begin(containers)...));
+    auto zip_end   = boost::make_zip_iterator(boost::make_tuple(std::end(containers)...));
+    return boost::make_iterator_range(zip_begin, zip_end);
+}
 
 std::shared_ptr<CancerVariantCaller::Latents::HaplotypeProbabilityMap>
 CancerVariantCaller::Latents::haplotype_posteriors() const
@@ -110,24 +119,52 @@ CancerVariantCaller::Latents::haplotype_posteriors() const
     
     Latents::HaplotypeProbabilityMap result {haplotypes_.get().size()};
     
-    for (const auto& p : cnv_model_inferences_.posteriors.genotype_probabilities) {
-        for (const auto& haplotype : p.first) {
-            result[haplotype] += p.second;
+    for (const auto& haplotype : haplotypes_.get()) {
+        result.emplace(haplotype, 0.0);
+    }
+    
+    for (const auto& p :zip(germline_genotypes_, germline_model_inferences_.posteriors.genotype_probabilities)) {
+        for (const auto& haplotype : p.get<0>().copy_unique_ref()) {
+            result.at(haplotype) += p.get<1>();
         }
+    }
+    
+    Latents::HaplotypeProbabilityMap cnv_result {haplotypes_.get().size()};
+    
+    for (const auto& haplotype : haplotypes_.get()) {
+        cnv_result.emplace(haplotype, 0.0);
+    }
+    
+    for (const auto& p : cnv_model_inferences_.posteriors.genotype_probabilities) {
+        for (const auto& haplotype : p.first.copy_unique_ref()) {
+            result.at(haplotype) += p.second;
+        }
+    }
+    
+    Latents::HaplotypeProbabilityMap somatic_result {haplotypes_.get().size()};
+    
+    for (const auto& haplotype : haplotypes_.get()) {
+        somatic_result.emplace(haplotype, 0.0);
     }
     
     for (const auto& p : somatic_model_inferences_.posteriors.genotype_probabilities) {
-        for (const auto& haplotype : p.first.germline_genotype()) {
-            result[haplotype] += p.second;
+        for (const auto& haplotype : p.first.germline_genotype().copy_unique_ref()) {
+            result.at(haplotype) += p.second;
         }
-        result[p.first.somatic_element()] += p.second;
+        result.at(p.first.somatic_element()) += p.second;
     }
-    
-    const auto norm = Maths::sum_values(result);
     
     for (auto& p : result) {
-        p.second /= norm;
+        p.second *= 0.4;
+        p.second += 0.3 * cnv_result.at(p.first);
+        p.second += 0.3 * somatic_result.at(p.first);
     }
+    
+//    const auto norm = Maths::sum_values(result);
+//    
+//    for (auto& p : result) {
+//        p.second /= norm;
+//    }
     
     return std::make_shared<Latents::HaplotypeProbabilityMap>(std::move(result));
 }
@@ -211,15 +248,6 @@ CancerVariantCaller::infer_latents(const std::vector<Haplotype>& haplotypes,
                                      std::move(germline_inferences), std::move(cnv_inferences),
                                      std::move(somatic_inferences), std::cref(samples_),
                                      normal);
-}
-
-template <typename... T>
-auto zip(const T&... containers)
-    -> boost::iterator_range<boost::zip_iterator<decltype(boost::make_tuple(std::begin(containers)...))>>
-{
-    auto zip_begin = boost::make_zip_iterator(boost::make_tuple(std::begin(containers)...));
-    auto zip_end   = boost::make_zip_iterator(boost::make_tuple(std::end(containers)...));
-    return boost::make_iterator_range(zip_begin, zip_end);
 }
 
 auto extract_low_posterior_genotypes(const std::vector<Genotype<Haplotype>>& genotypes,

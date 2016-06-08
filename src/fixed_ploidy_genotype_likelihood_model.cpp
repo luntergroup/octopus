@@ -91,7 +91,7 @@ namespace GenotypeModel
         const auto& log_likelihoods2 = haplotype_likelihoods_.get().log_likelihoods(sample, genotype[1]);
         
         return std::inner_product(std::cbegin(log_likelihoods1), std::cend(log_likelihoods1),
-                                  std::cbegin(log_likelihoods2), 0.0, std::plus<void> {},
+                                  std::cbegin(log_likelihoods2), 0.0, std::plus<> {},
                                   [this] (const auto a, const auto b) -> double {
                                       return Maths::log_sum_exp(a, b) - ln(2);
                                   });
@@ -113,7 +113,7 @@ namespace GenotypeModel
             const auto& log_likelihoods3 = haplotype_likelihoods_.get().log_likelihoods(sample, genotype[2]);
             return Maths::inner_product(cbegin(log_likelihoods1), cend(log_likelihoods1),
                                         cbegin(log_likelihoods2), cbegin(log_likelihoods3),
-                                        0.0, std::plus<void> {},
+                                        0.0, std::plus<> {},
                                         [this] (const auto a, const auto b, const auto c) -> double {
                                             return Maths::log_sum_exp(a, b, c) - ln(3);
                                         });
@@ -124,7 +124,7 @@ namespace GenotypeModel
         if (genotype[0] != genotype[1]) {
             const auto& log_likelihoods2 = haplotype_likelihoods_.get().log_likelihoods(sample, genotype[1]);
             return std::inner_product(cbegin(log_likelihoods1), cend(log_likelihoods1),
-                                      cbegin(log_likelihoods2), 0.0, std::plus<void> {},
+                                      cbegin(log_likelihoods2), 0.0, std::plus<> {},
                                       [this] (const auto a, const auto b) -> double {
                                           return Maths::log_sum_exp(a, ln2 + b) - ln(3);
                                       });
@@ -133,7 +133,7 @@ namespace GenotypeModel
         const auto& log_likelihoods3 = haplotype_likelihoods_.get().log_likelihoods(sample, genotype[2]);
         
         return std::inner_product(cbegin(log_likelihoods1), cend(log_likelihoods1),
-                                  cbegin(log_likelihoods3), 0.0, std::plus<void> {},
+                                  cbegin(log_likelihoods3), 0.0, std::plus<> {},
                                   [this] (const auto a, const auto b) -> double {
                                       return Maths::log_sum_exp(ln2 + a, b) - ln(3);
                                   });
@@ -156,7 +156,7 @@ namespace GenotypeModel
             const auto& log_likelihoods4 = haplotype_likelihoods_.get().log_likelihoods(sample, genotype[3]);
             return Maths::inner_product(std::cbegin(log_likelihoods1), std::cend(log_likelihoods1),
                                         std::cbegin(log_likelihoods2), std::cbegin(log_likelihoods3),
-                                        std::cbegin(log_likelihoods4), 0.0, std::plus<void> {},
+                                        std::cbegin(log_likelihoods4), 0.0, std::plus<> {},
                                         [this] (const auto a, const auto b, const auto c, const auto d) -> double {
                                             return Maths::log_sum_exp({a, b, c, d}) - ln(4);
                                         });
@@ -187,14 +187,14 @@ namespace GenotypeModel
             
             if (genotype.count(unique_haplotypes.front()) == 1) {
                 return std::inner_product(std::cbegin(log_likelihoods1), std::cend(log_likelihoods1),
-                                          std::cbegin(log_likelihoods2), 0.0, std::plus<void> {},
+                                          std::cbegin(log_likelihoods2), 0.0, std::plus<> {},
                                           [this] (const auto a, const auto b) -> double {
                                               return Maths::log_sum_exp(a, lnpm1 + b) - ln(ploidy_);
                                           });
             }
             
             return std::inner_product(std::cbegin(log_likelihoods1), std::cend(log_likelihoods1),
-                                      std::cbegin(log_likelihoods2), 0.0, std::plus<void> {},
+                                      std::cbegin(log_likelihoods2), 0.0, std::plus<> {},
                                       [this] (const auto a, const auto b) -> double {
                                           return Maths::log_sum_exp(lnpm1 + a, b) - ln(ploidy_);
                                       });
