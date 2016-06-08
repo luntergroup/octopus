@@ -100,6 +100,7 @@ namespace
     {
         HaplotypeSupportMap result {};
         
+        //std::cout << mapped_region(genotype) << std::endl;
         for (unsigned i {0}; i < reads.size(); ++i) {
             //std::cout << reads[i].mapped_region() << " " << reads[i].cigar_string() << std::endl;
             
@@ -440,9 +441,7 @@ void VariantCallFilter::filter(const VcfReader& source, VcfWriter& dest, const R
                 const auto variants = extract_variants(call, samples);
                 
                 bool strand_biased {true};
-                
                 bool sample_rmq_failed {false};
-                
                 bool sample_kl_failed {false};
                 
                 for (const auto& sample : samples) {

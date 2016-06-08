@@ -514,6 +514,10 @@ VariantCaller::call(const GenomicRegion& call_region, ProgressMeter& progress_me
                 auto removable_haplotypes = get_removable_haplotypes(haplotypes,
                                                                      *caller_latents->haplotype_posteriors());
                 
+                if (debug_log_) {
+                    stream(*debug_log_) << "Discarding " << removable_haplotypes.size() << " haplotypes with low posterior";
+                }
+                
                 haplotype_generator.remove(removable_haplotypes);
             }
             pause_timer(haplotype_generation_timer);
@@ -754,13 +758,15 @@ VariantCaller::get_removable_haplotypes(const std::vector<Haplotype>& haplotypes
     
     for (const auto& p : haplotype_posteriors) {
         if (p.second < parameters_.min_haplotype_posterior) {
+            ::debug::print_variant_alleles(p.first);
+            std::cout << " " << p.second << '\n';
             result.emplace_back(p.first);
         }
     }
     
     return result;
 }
-    
+
 bool VariantCaller::done_calling(const GenomicRegion& region) const noexcept
 {
     return is_empty(region);

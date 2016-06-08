@@ -46,6 +46,8 @@ public:
         unsigned ploidy;
         boost::optional<SampleIdType> normal_sample;
         double somatic_mutation_rate;
+        double min_somatic_frequency;
+        double credible_mass;
         unsigned max_genotypes;
     };
     

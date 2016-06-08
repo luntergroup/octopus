@@ -10,6 +10,9 @@
 
 #include <stdexcept>
 #include <utility>
+#include <sstream>
+
+#include <boost/filesystem/operations.hpp>
 
 #include "vcf_header.hpp"
 #include "vcf_record.hpp"
@@ -19,9 +22,26 @@
 VcfWriter::VcfWriter(Path file_path)
 :
 file_path_ {std::move(file_path)},
-writer_ {std::make_unique<HtslibBcfFacade>(file_path_, "w")},
+writer_ {nullptr},
 is_header_written_ {false}
-{}
+{
+    if (boost::filesystem::exists(file_path_)) {
+        boost::filesystem::remove(file_path_);
+    } else {
+        const auto dir = file_path_.parent_path();
+        
+        if (!(boost::filesystem::is_directory(dir) && boost::filesystem::exists(dir))) {
+            std::ostringstream ss {};
+            ss << "VcfWriter: the path ";
+            ss << file_path_;
+            ss << " is not writable";
+            
+            throw std::runtime_error {ss.str()};
+        }
+    }
+    
+    writer_ = std::make_unique<HtslibBcfFacade>(file_path_, "w");
+}
 
 VcfWriter::VcfWriter(Path file_path, const VcfHeader& header)
 :

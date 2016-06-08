@@ -42,7 +42,7 @@ int main(int argc, const char **argv)
             std::clog << "Could not parse input options. Did not run Octopus." << std::endl;
         }
     } catch (const std::exception& e) {
-        std::cerr << "Exception: '" << e.what() << "'" << std::endl;
+        std::cerr << "Encounted unhandled exception: '" << e.what() << "'" << std::endl;
         return EXIT_FAILURE;
     } catch (...) {
         std::cerr << "Encountered unknown exception. Quiting now" << std::endl;

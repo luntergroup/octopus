@@ -50,20 +50,22 @@ namespace Octopus {
         VariantCallerBuilder& set_candidate_generator_builder(const CandidateGeneratorBuilder& generator) noexcept;        
         VariantCallerBuilder& set_ploidy(unsigned ploidy) noexcept;
         VariantCallerBuilder& set_caller(std::string caller);
-        VariantCallerBuilder& set_refcall_type(VariantCaller::RefCallType refcall_type) noexcept;
+        VariantCallerBuilder& set_refcall_type(VariantCaller::RefCallType type) noexcept;
         VariantCallerBuilder& set_sites_only() noexcept;
-        VariantCallerBuilder& set_min_variant_posterior(double min_posterior) noexcept;
-        VariantCallerBuilder& set_min_refcall_posterior(double min_posterior) noexcept;
-        VariantCallerBuilder& set_max_haplotypes(unsigned max_haplotypes) noexcept;
+        VariantCallerBuilder& set_min_variant_posterior(double posterior) noexcept;
+        VariantCallerBuilder& set_min_refcall_posterior(double posterior) noexcept;
+        VariantCallerBuilder& set_max_haplotypes(unsigned n) noexcept;
         VariantCallerBuilder& set_min_haplotype_posterior(double p) noexcept;
-        VariantCallerBuilder& set_flank_scoring(bool allow_flank_scoring) noexcept;
+        VariantCallerBuilder& set_flank_scoring(bool b) noexcept;
         VariantCallerBuilder& set_model_filtering(bool b) noexcept;
-        VariantCallerBuilder& set_min_phase_score(double min_phase_score) noexcept;
+        VariantCallerBuilder& set_min_phase_score(double score) noexcept;
         
         // cancer
         VariantCallerBuilder& set_normal_sample(SampleIdType normal_sample);
-        VariantCallerBuilder& set_somatic_mutation_rate(double somatic_mutation_rate);
-        VariantCallerBuilder& set_min_somatic_posterior(double min_posterior) noexcept;
+        VariantCallerBuilder& set_somatic_mutation_rate(double rate) noexcept;
+        VariantCallerBuilder& set_credible_mass(double mass) noexcept;
+        VariantCallerBuilder& set_min_somatic_frequency(double frequency) noexcept;
+        VariantCallerBuilder& set_min_somatic_posterior(double posterior) noexcept;
         
         // trio
         
@@ -117,6 +119,8 @@ namespace Octopus {
             
             boost::optional<SampleIdType> normal_sample;
             double somatic_mutation_rate;
+            double min_somatic_frequency;
+            double credible_mass;
             double min_somatic_posterior;
             bool call_somatics_only;
             

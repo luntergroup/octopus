@@ -218,7 +218,7 @@ auto zip(const T&... containers)
     -> boost::iterator_range<boost::zip_iterator<decltype(boost::make_tuple(std::begin(containers)...))>>
 {
     auto zip_begin = boost::make_zip_iterator(boost::make_tuple(std::begin(containers)...));
-    auto zip_end = boost::make_zip_iterator(boost::make_tuple(std::end(containers)...));
+    auto zip_end   = boost::make_zip_iterator(boost::make_tuple(std::end(containers)...));
     return boost::make_iterator_range(zip_begin, zip_end);
 }
 
@@ -783,13 +783,11 @@ CancerVariantCaller::call_variants(const std::vector<Variant>& candidates, const
         
         const auto& somatic_alphas = latents.somatic_model_inferences_.posteriors.alphas;
         
-        const auto credible_regions = compute_marginal_credible_intervals(somatic_alphas, 0.99);
+        const auto credible_regions = compute_marginal_credible_intervals(somatic_alphas, parameters_.credible_mass);
         
         if (!somatic_variant_calls.empty()) {
-            // Hard filter somatics that have too low credible frequency
-            
             for (const auto& p : credible_regions) {
-                if (p.second.back().first >= 0.01) {
+                if (p.second.back().first >= parameters_.min_somatic_frequency) {
                     somatic_samples.push_back(p.first);
                 }
             }
@@ -865,9 +863,9 @@ CancerVariantCaller::calculate_model_posteriors(const Latents& inferences) const
     const auto& cnv_inferences      = inferences.cnv_model_inferences_;
     const auto& somatic_inferences  = inferences.somatic_model_inferences_;
     
-    const double germline_model_prior {0.89999};
-    const double cnv_model_prior      {0.1};
-    const double somatic_model_prior  {0.01 * 0.001};
+    const double cnv_model_prior      {0.01};
+    const double somatic_model_prior  {parameters_.somatic_mutation_rate};
+    const double germline_model_prior {std::max(0.0, 1.0 - (cnv_model_prior + somatic_model_prior))};
     
     const auto germline_model_jlp = std::log(germline_model_prior) + germline_inferences.log_evidence;
     const auto cnv_model_jlp      = std::log(cnv_model_prior) + cnv_inferences.approx_log_evidence;
@@ -916,10 +914,11 @@ CancerVariantCaller::calculate_probability_samples_not_somatic(const Latents& in
     const auto& posterior_alphas = inferences.somatic_model_inferences_.posteriors.alphas;
     
     std::transform(std::cbegin(posterior_alphas), std::cend(posterior_alphas),
-                   std::begin(result), [ploidy] (const auto& p) {
+                   std::begin(result), [this, ploidy] (const auto& p) {
                        const auto a0 = std::accumulate(std::cbegin(p.second),
-                                                       std::prev(std::cend(p.second)), 0.0);
-                       return Maths::beta_cdf(p.second.back(), a0, 0.05);
+                                                       std::prev(std::cend(p.second)),
+                                                       0.0);
+                       return Maths::beta_cdf(p.second.back(), a0, parameters_.min_somatic_frequency);
                    });
     
     return result;
@@ -928,9 +927,9 @@ CancerVariantCaller::calculate_probability_samples_not_somatic(const Latents& in
 double CancerVariantCaller::calculate_somatic_probability(const ProbabilityVector& sample_somatic_posteriors,
                                                           const ModelPosteriors& model_posteriors) const
 {
-    auto result = 1 - std::accumulate(std::cbegin(sample_somatic_posteriors),
-                                            std::cend(sample_somatic_posteriors),
-                                            1.0, std::multiplies<> {});
+    auto result = 1.0 - std::accumulate(std::cbegin(sample_somatic_posteriors),
+                                        std::cend(sample_somatic_posteriors),
+                                        1.0, std::multiplies<> {});
     
     result *= model_posteriors.somatic;
     

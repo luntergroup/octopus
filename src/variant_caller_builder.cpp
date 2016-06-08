@@ -95,9 +95,9 @@ VariantCallerBuilder& VariantCallerBuilder::set_caller(std::string caller)
     return *this;
 }
 
-VariantCallerBuilder& VariantCallerBuilder::set_refcall_type(const VariantCaller::RefCallType refcall_type) noexcept
+VariantCallerBuilder& VariantCallerBuilder::set_refcall_type(const VariantCaller::RefCallType type) noexcept
 {
-    parameters_.refcall_type = refcall_type;
+    parameters_.refcall_type = type;
     return *this;
 }
 
@@ -107,21 +107,21 @@ VariantCallerBuilder& VariantCallerBuilder::set_sites_only() noexcept
     return *this;
 }
 
-VariantCallerBuilder& VariantCallerBuilder::set_min_variant_posterior(const double min_posterior) noexcept
+VariantCallerBuilder& VariantCallerBuilder::set_min_variant_posterior(const double posterior) noexcept
 {
-    parameters_.min_variant_posterior = min_posterior;
+    parameters_.min_variant_posterior = posterior;
     return *this;
 }
 
-VariantCallerBuilder& VariantCallerBuilder::set_min_refcall_posterior(const double min_posterior) noexcept
+VariantCallerBuilder& VariantCallerBuilder::set_min_refcall_posterior(const double posterior) noexcept
 {
-    parameters_.min_refcall_posterior = min_posterior;
+    parameters_.min_refcall_posterior = posterior;
     return *this;
 }
 
-VariantCallerBuilder& VariantCallerBuilder::set_max_haplotypes(const unsigned max_haplotypes) noexcept
+VariantCallerBuilder& VariantCallerBuilder::set_max_haplotypes(const unsigned n) noexcept
 {
-    parameters_.max_haplotypes = max_haplotypes;
+    parameters_.max_haplotypes = n;
     return *this;
 }
 
@@ -131,9 +131,9 @@ VariantCallerBuilder& VariantCallerBuilder::set_min_haplotype_posterior(const do
     return *this;
 }
 
-VariantCallerBuilder& VariantCallerBuilder::set_flank_scoring(const bool allow_flank_scoring) noexcept
+VariantCallerBuilder& VariantCallerBuilder::set_flank_scoring(const bool b) noexcept
 {
-    parameters_.allow_flank_scoring = allow_flank_scoring;
+    parameters_.allow_flank_scoring = b;
     return *this;
 }
 
@@ -143,9 +143,9 @@ VariantCallerBuilder& VariantCallerBuilder::set_model_filtering(bool b) noexcept
     return *this;
 }
 
-VariantCallerBuilder& VariantCallerBuilder::set_min_phase_score(const double min_phase_score) noexcept
+VariantCallerBuilder& VariantCallerBuilder::set_min_phase_score(const double score) noexcept
 {
-    parameters_.min_phase_score = min_phase_score;
+    parameters_.min_phase_score = score;
     return *this;
 }
 
@@ -156,15 +156,27 @@ VariantCallerBuilder& VariantCallerBuilder::set_normal_sample(SampleIdType norma
     return *this;
 }
 
-VariantCallerBuilder& VariantCallerBuilder::set_somatic_mutation_rate(double somatic_mutation_rate)
+VariantCallerBuilder& VariantCallerBuilder::set_somatic_mutation_rate(const double rate) noexcept
 {
-    parameters_.somatic_mutation_rate = somatic_mutation_rate;
+    parameters_.somatic_mutation_rate = rate;
     return *this;
 }
 
-VariantCallerBuilder& VariantCallerBuilder::set_min_somatic_posterior(const double min_posterior) noexcept
+VariantCallerBuilder& VariantCallerBuilder::set_min_somatic_frequency(const double frequency) noexcept
 {
-    parameters_.min_somatic_posterior = min_posterior;
+    parameters_.min_somatic_frequency = frequency;
+    return *this;
+}
+
+VariantCallerBuilder& VariantCallerBuilder::set_credible_mass(const double mass) noexcept
+{
+    parameters_.credible_mass = mass;
+    return *this;
+}
+
+VariantCallerBuilder& VariantCallerBuilder::set_min_somatic_posterior(const double posterior) noexcept
+{
+    parameters_.min_somatic_posterior = posterior;
     return *this;
 }
 
@@ -258,6 +270,8 @@ VariantCallerBuilder::CallerFactoryMap VariantCallerBuilder::generate_factory() 
                                                              parameters_.ploidy,
                                                              parameters_.normal_sample,
                                                              parameters_.somatic_mutation_rate,
+                                                             parameters_.min_somatic_frequency,
+                                                             parameters_.credible_mass,
                                                              50'000
                                                          });
         }}

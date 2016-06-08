@@ -10,9 +10,12 @@
 
 #include <fstream>
 #include <iostream>
-#include <stdexcept>
 #include <utility>
 #include <algorithm>
+#include <stdexcept>
+#include <sstream>
+
+#include <boost/filesystem/operations.hpp>
 
 #include "vcf_header.hpp"
 #include "vcf_record.hpp"
@@ -21,6 +24,14 @@
 
 std::unique_ptr<IVcfReaderImpl> make_vcf_reader(const VcfReader::Path& file_path)
 {
+    if (!boost::filesystem::exists(file_path)) {
+        std::ostringstream ss {};
+        ss << "VcfReader: the path ";
+        ss << file_path;
+        ss << " does not exist";
+        throw std::runtime_error {ss.str()};
+    }
+    
     auto file_type = file_path.extension().string();
     
     if (file_type == ".vcf") {

@@ -112,8 +112,8 @@ auto align(const std::string& truth, const std::string& target,
     const auto max_alignment_size = 2 * (target.size() + 8);
     
     if (align1->size() < max_alignment_size) {
-        align1->resize(max_alignment_size, '\0');
-        align2->resize(max_alignment_size, '\0');
+        align1->assign(max_alignment_size, '\0');
+        align2->assign(max_alignment_size, '\0');
     } else {
         std::fill_n(std::begin(*align1), max_alignment_size, '\0');
         std::fill_n(std::begin(*align2), max_alignment_size, '\0');

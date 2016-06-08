@@ -1190,7 +1190,7 @@ namespace Octopus
         //const VcfReader calls {"/Users/dcooke/Genomics/cancer/TCGA/benchmark/octopus_calls.vcf"};
         const VcfReader calls {components.output().path()};
         
-        VcfWriter filtered_calls {"/Users/dcooke/Genomics/cancer/TCGA/benchmark/filtered.vcf"};
+        VcfWriter filtered_calls {"/Users/danielcooke/Genomics/cancer/TCGA/benchmark/filtered.vcf"};
         
         const auto read_pipe = make_filter_read_pipe(components);
         
@@ -1250,6 +1250,11 @@ namespace Octopus
             
             try {
                 if (is_multithreaded(*components)) {
+                    if (DEBUG_MODE) {
+                        Logging::WarningLogger warn_log {};
+                        warn_log << "Running in parallel mode can be debug log difficult to interpret";
+                    }
+                    
                     run_octopus_multi_threaded(*components);
                 } else {
                     run_octopus_single_threaded(*components);

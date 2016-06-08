@@ -397,6 +397,10 @@ namespace Octopus
              "Normal sample used in cancer model")
             ("somatic-mutation-rate", po::value<float>()->default_value(0.00001),
              "Expected somatic mutation rate, per megabase pair, for this sample")
+            ("min-somatic-frequency", po::value<float>()->default_value(0.01),
+             "The minimum allele frequency that can be considered as a viable somatic mutation")
+            ("credible-mass", po::value<float>()->default_value(0.99),
+             "The mass of the posterior density to use for evaluating allele frequencies")
             ("min-somatic-posterior", po::value<float>()->default_value(5.0),
              "The minimum somatic mutation call posterior probability (phred scale)")
             ("somatics-only", po::bool_switch()->default_value(false),
@@ -1619,6 +1623,8 @@ namespace Octopus
             }
             
             vc_builder.set_somatic_mutation_rate(options.at("somatic-mutation-rate").as<float>());
+            vc_builder.set_min_somatic_frequency(options.at("min-somatic-frequency").as<float>());
+            vc_builder.set_credible_mass(options.at("credible-mass").as<float>());
             
             const auto min_somatic_posterior_phred = options.at("min-somatic-posterior").as<float>();
             vc_builder.set_min_somatic_posterior(phred_to_probability(min_somatic_posterior_phred));
