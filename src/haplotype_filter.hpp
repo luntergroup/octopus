@@ -11,6 +11,8 @@
 
 #include <vector>
 #include <cstddef>
+#include <functional>
+#include <unordered_map>
 
 #include "common.hpp"
 
@@ -20,8 +22,18 @@ class HaplotypeLikelihoodCache;
 namespace Octopus
 {
     std::vector<Haplotype>
-    filter_to_n_haplotypes(std::vector<Haplotype>& haplotypes, const std::vector<SampleIdType>& samples,
-                           const HaplotypeLikelihoodCache& haplotype_likelihoods, const std::size_t n);
+    filter_to_n(std::vector<Haplotype>& haplotypes, const std::vector<SampleIdType>& samples,
+                const HaplotypeLikelihoodCache& haplotype_likelihoods, const std::size_t n);
+    
+    using HaplotypeReference    = std::reference_wrapper<const Haplotype>;
+    using HaplotypePosteriorMap = std::unordered_map<HaplotypeReference, double>;
+    
+    std::vector<HaplotypeReference>
+    extract_removable(const std::vector<Haplotype>& haplotypes,
+                      const HaplotypePosteriorMap& haplotype_posteriors,
+                      const std::vector<SampleIdType>& samples,
+                      const HaplotypeLikelihoodCache& haplotype_likelihoods,
+                      std::size_t max_to_remove, double min_posterior);
 } // namespace Octopus
 
 #endif /* haplotype_filter_hpp */

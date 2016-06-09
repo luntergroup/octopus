@@ -137,7 +137,7 @@ CancerVariantCaller::Latents::haplotype_posteriors() const
     
     for (const auto& p : cnv_model_inferences_.posteriors.genotype_probabilities) {
         for (const auto& haplotype : p.first.copy_unique_ref()) {
-            result.at(haplotype) += p.second;
+            cnv_result.at(haplotype) += p.second;
         }
     }
     
@@ -149,9 +149,9 @@ CancerVariantCaller::Latents::haplotype_posteriors() const
     
     for (const auto& p : somatic_model_inferences_.posteriors.genotype_probabilities) {
         for (const auto& haplotype : p.first.germline_genotype().copy_unique_ref()) {
-            result.at(haplotype) += p.second;
+            somatic_result.at(haplotype) += p.second;
         }
-        result.at(p.first.somatic_element()) += p.second;
+        somatic_result.at(p.first.somatic_element()) += p.second;
     }
     
     for (auto& p : result) {

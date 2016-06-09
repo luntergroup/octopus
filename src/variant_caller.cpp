@@ -440,10 +440,6 @@ VariantCaller::call(const GenomicRegion& call_region, ProgressMeter& progress_me
         const auto caller_latents = this->infer_latents(haplotypes, haplotype_likelihoods);
         pause_timer(latent_timer);
         
-        if (!parameters_.allow_model_filtering) {
-            haplotype_likelihoods.clear();
-        }
-        
         if (TRACE_MODE) {
             Logging::TraceLogger trace_log {};
             debug::print_haplotype_posteriors(stream(trace_log),
@@ -514,6 +510,7 @@ VariantCaller::call(const GenomicRegion& call_region, ProgressMeter& progress_me
                 const auto max_to_remove = haplotype_generator.max_removal_impact();
                 
                 auto removable_haplotypes = get_removable_haplotypes(haplotypes,
+                                                                     haplotype_likelihoods,
                                                                      *caller_latents->haplotype_posteriors(),
                                                                      max_to_remove);
                 
@@ -524,6 +521,10 @@ VariantCaller::call(const GenomicRegion& call_region, ProgressMeter& progress_me
                 haplotype_generator.remove(removable_haplotypes);
             }
             pause_timer(haplotype_generation_timer);
+        }
+        
+        if (!parameters_.allow_model_filtering) {
+            haplotype_likelihoods.clear();
         }
         
         resume_timer(haplotype_generation_timer);
@@ -732,8 +733,8 @@ VariantCaller::filter(std::vector<Haplotype>& haplotypes,
                       const HaplotypeLikelihoodCache& haplotype_likelihoods) const
 {
     resume_timer(haplotype_fitler_timer);
-    auto removed_haplotypes = filter_to_n_haplotypes(haplotypes, samples_, haplotype_likelihoods,
-                                                     parameters_.max_haplotypes);
+    auto removed_haplotypes = filter_to_n(haplotypes, samples_, haplotype_likelihoods,
+                                          parameters_.max_haplotypes);
     pause_timer(haplotype_fitler_timer);
     
     if (debug_log_) {
@@ -755,39 +756,12 @@ VariantCaller::filter(std::vector<Haplotype>& haplotypes,
 
 std::vector<std::reference_wrapper<const Haplotype>>
 VariantCaller::get_removable_haplotypes(const std::vector<Haplotype>& haplotypes,
+                                        const HaplotypeLikelihoodCache& haplotype_likelihoods,
                                         const CallerLatents::HaplotypeProbabilityMap& haplotype_posteriors,
                                         const unsigned max_to_remove) const
 {
-    using HaplotypeReference = std::reference_wrapper<const Haplotype>;
-    
-    std::vector<HaplotypeReference> result {};
-    result.reserve(max_to_remove);
-    
-    if (max_to_remove < haplotypes.size()) {
-        std::vector<std::pair<HaplotypeReference, double>> sorted {};
-        sorted.reserve(haplotypes.size());
-        
-        std::copy(std::cbegin(haplotype_posteriors), std::cend(haplotype_posteriors),
-                  std::back_inserter(sorted));
-        
-        const auto mth = std::next(std::begin(sorted), haplotypes.size() - max_to_remove);
-        
-        std::partial_sort(std::begin(sorted), mth, std::end(sorted),
-                          [] (const auto& lhs, const auto& rhs) {
-                              return lhs.second > rhs.second;
-                          });
-        
-        std::transform(mth, std::end(sorted), std::back_inserter(result),
-                       [] (const auto& p) { return p.first; });
-    } else {
-        for (const auto& p : haplotype_posteriors) {
-            if (p.second < parameters_.min_haplotype_posterior) {
-                result.emplace_back(p.first);
-            }
-        }
-    }
-    
-    return result;
+    return extract_removable(haplotypes, haplotype_posteriors, samples_, haplotype_likelihoods,
+                             max_to_remove, parameters_.min_haplotype_posterior);
 }
 
 bool VariantCaller::done_calling(const GenomicRegion& region) const noexcept

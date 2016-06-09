@@ -181,6 +181,7 @@ private:
     
     std::vector<std::reference_wrapper<const Haplotype>>
     get_removable_haplotypes(const std::vector<Haplotype>& haplotypes,
+                             const HaplotypeLikelihoodCache& haplotype_likelihoods,
                              const CallerLatents::HaplotypeProbabilityMap& haplotype_posteriors,
                              unsigned max_to_remove) const;
     

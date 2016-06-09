@@ -829,10 +829,10 @@
 			isa = PBXGroup;
 			children = (
 				D402C5411CC9349C00C8B8A7 /* call-factory */,
-				CACF81361C870E8300E9E6BD /* haplotype_filter.hpp */,
-				CACF81351C870E8300E9E6BD /* haplotype_filter.cpp */,
 				CA91C2D11B8DF76300609FFA /* variant_caller.hpp */,
 				D4807FB11BA843B900657D4F /* variant_caller.cpp */,
+				CACF81361C870E8300E9E6BD /* haplotype_filter.hpp */,
+				CACF81351C870E8300E9E6BD /* haplotype_filter.cpp */,
 				D40B11A21CAEBC270050145D /* individual_caller.hpp */,
 				D40B11A11CAEBC270050145D /* individual_caller.cpp */,
 				D4807FAF1BA826DB00657D4F /* population_caller.hpp */,
@@ -880,8 +880,8 @@
 			isa = PBXGroup;
 			children = (
 				CA1472771AACECAF005FDCD1 /* octopus */,
-				CA91C2CC1B8DE63A00609FFA /* callers */,
 				CAFA2CE41CF37FF200C109D5 /* filters */,
+				CA91C2CC1B8DE63A00609FFA /* callers */,
 				D413B0421B5D4E84007EFDE0 /* models */,
 				CAFA19771AC62BEB00F953D9 /* core */,
 				CABA377B1A8F66E400BBE598 /* utils */,

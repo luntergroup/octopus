@@ -154,9 +154,8 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--regions", "22:41,607,540-41,607,580", // tricky PASSing FP SNVs
         //"--regions", "22:42,905,833-42,905,873", // PASSing FP SNV
         //"--regions", "22:43,410,348-43,410,423", // PASSing FP SNV
-        "--regions", "22:43,622,482-43,622,832", // PASSing FP SNV
-        //"--regions", "22:45,934,960-45,935,000", // PASSing FP SNV
-        //"--regions", "22:47,094,614-47,094,654", // PASSing FP SNV
+        //"--regions", "22:43,622,482-43,622,832", // PASSing FP SNV. Fixed: haplotype filtering
+        "--regions", "22:47,094,596-47,094,671", // PASSing FP SNV
         //"--regions", "22:47,996,352-47,996,392", // PASSing FP SNV
         
         //"--regions", "22:40,000,000-50,000,000",
@@ -252,7 +251,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         "--phasing-level", "Conservative", // Minimal, Conservative, Aggressive
         //"--disable-inactive-flank-scoring",
         //"--max-haplotypes", "256",
-        "--min-haplotype-posterior", "1e-40",
+        //"--min-haplotype-posterior", "1e-40",
         
         //"--disable-model-filtering",
         
