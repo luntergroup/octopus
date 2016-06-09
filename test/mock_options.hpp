@@ -25,16 +25,16 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--help",
         //"--version",
         
-        "--debug",
+        //"--debug",
         //"--trace",
         
         //"--sites-only",
         
         //"--samples", "NOT-A-SAMPLE",
         
-        //"--working-directory", "~/Genomics/octopus_test",
+        "--working-directory", "~/Genomics/octopus_test",
         //"--working-directory", "~/Genomics/MCG",
-        "--working-directory", "~/Genomics/cancer/TCGA/benchmark",
+        //"--working-directory", "~/Genomics/cancer/TCGA/benchmark",
         
         //"--target-read-buffer-size", "1.0",
         //"--reference-cache-size", "100",
@@ -46,7 +46,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--reference", ecoli_reference_fasta.c_str(),
         
         //"--reads", NA12878_low_coverage.c_str(),
-        //"--reads", NA12878_high_coverage.c_str(),
+        "--reads", NA12878_high_coverage.c_str(),
         //"--reads", "~/Genomics/Illumina/NA12878.mapped.ILLUMINA.bwa.CEU.high_coverage_pcr_free.20130906.chr22.bam",
         
         //"--reads", NA12891_high_coverage.c_str(),
@@ -62,14 +62,14 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--reads", "~/Genomics/Illumina/NA12878HC_HLA_C.bam",
         
         // TCGA
-        "--reads", "~/Genomics/cancer/TCGA/benchmark/G15511.HCC1143_BL.1.chr22.bam",
-        "--reads", "~/Genomics/cancer/TCGA/benchmark/G15511.HCC1143.1.chr22.bam",
+        //"--reads", "~/Genomics/cancer/TCGA/benchmark/G15511.HCC1143_BL.1.chr22.bam",
+        //"--reads", "~/Genomics/cancer/TCGA/benchmark/G15511.HCC1143.1.chr22.bam",
         
         // MCG
         //"--reads", "~/Genomics/MCG/10120_chr2_47641558_GTA_G.RG.bam",
         //"--reads", "~/Genomics/MCG/D59597_Cov3.RG.bam",
         
-        "--caller", "cancer", // default "population"
+        //"--caller", "cancer", // default "population"
         "--normal-sample", "HCC1143 BL",
         
         //"--organism-ploidy", "3",
@@ -98,6 +98,8 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--regions", "2:47,641,997-47,644,890", // second block (one SNP)
         
         // for population
+        
+        "--regions", "22:18719772-18719986", // NA12878 bad VCF
         
         // NA12878_high_coverage interesting regions / possible errors
         //"--regions", "22:37,894,887-37,895,035", // is the insertion there (both GATK & Platypus call - I'm not so sure)?
@@ -155,7 +157,7 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         //"--regions", "22:42,905,833-42,905,873", // PASSing FP SNV
         //"--regions", "22:43,410,348-43,410,423", // PASSing FP SNV
         //"--regions", "22:43,622,482-43,622,832", // PASSing FP SNV. Fixed: haplotype filtering
-        "--regions", "22:47,094,596-47,094,671", // PASSing FP SNV
+        //"--regions", "22:47,094,596-47,094,671", // PASSing FP SNV
         //"--regions", "22:47,996,352-47,996,392", // PASSing FP SNV
         
         //"--regions", "22:40,000,000-50,000,000",

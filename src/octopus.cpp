@@ -1183,14 +1183,23 @@ namespace Octopus
         };
     }
     
+    auto get_filtered_path(const GenomeCallingComponents& components)
+    {
+        const std::string identifier {"filtered"};
+        const auto unfiltered = components.output().path();
+        const fs::path new_stem {unfiltered.stem().string() + "_" + identifier + unfiltered.extension().string()};
+        return unfiltered.parent_path() / new_stem;
+    }
+    
     void filter_calls(const GenomeCallingComponents& components)
     {
         assert(!components.output().is_open());
         
-        //const VcfReader calls {"/Users/dcooke/Genomics/cancer/TCGA/benchmark/octopus_calls.vcf"};
         const VcfReader calls {components.output().path()};
         
-        VcfWriter filtered_calls {"/Users/danielcooke/Genomics/cancer/TCGA/benchmark/filtered.vcf"};
+        const auto filtered_path = get_filtered_path(components);
+        
+        VcfWriter filtered_calls {filtered_path};
         
         const auto read_pipe = make_filter_read_pipe(components);
         
