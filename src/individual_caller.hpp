@@ -27,6 +27,8 @@ class HaplotypeLikelihoodCache;
 
 namespace Octopus
 {
+class CoalescentModel;
+
 class IndividualVariantCaller : public VariantCaller
 {
 public:
@@ -38,11 +40,14 @@ public:
         double min_variant_posterior;
         double min_refcall_posterior;
         unsigned ploidy;
+        double snp_heterozygosity;
+        double indel_heterozygosity;
     };
     
     IndividualVariantCaller() = delete;
     
-    IndividualVariantCaller(CallerComponents&& components, VariantCaller::CallerParameters general_parameters,
+    IndividualVariantCaller(CallerComponents&& components,
+                            VariantCaller::CallerParameters general_parameters,
                             CallerParameters specific_parameters);
     
     ~IndividualVariantCaller() = default;
@@ -55,9 +60,7 @@ public:
 private:
     class Latents;
     
-    double min_variant_posterior_;
-    double min_refcall_posterior_;
-    unsigned ploidy_;
+    CallerParameters parameters_;
     
     CallTypeSet do_get_call_types() const override;
     
@@ -90,6 +93,8 @@ private:
                    const ReadMap& reads) const;
     
     const SampleIdType& sample() const noexcept;
+    
+    CoalescentModel make_prior_model(const std::vector<Haplotype>& haplotypes) const;
 };
 
 class IndividualVariantCaller::Latents : public CallerLatents

@@ -99,8 +99,9 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         
         // for population
         
-        "--regions", "22:20,641,794-20,643,014",
-        //"--regions", "22:20496411-21198962", // 22:20642425-20642426
+        //"--regions", "22:48,501,236-48,501,662", // NA12878 FN: indel error model & prior model
+        //"--regions", "22:44,300,644-44,301,124",  // NA12878 FN: indel error model & prior model
+        //"--regions", "22:43,238,234-43,238,385", // NA12878 FN: indel error model
         
         // NA12878_high_coverage interesting regions / possible errors
         //"--regions", "22:37,894,887-37,895,035", // is the insertion there (both GATK & Platypus call - I'm not so sure)?
@@ -260,6 +261,9 @@ inline boost::optional<po::variables_map> get_basic_mock_options()
         
         //"--min-variant-posterior", "2",
         //"--min-refcall-posterior", "0",
+        
+        //"--snp-heterozygosity", "0.01",
+        //"--indel-heterozygosity", "0.01",
         
         // cancer
         //"--somatic-mutation-rate", "0.001",

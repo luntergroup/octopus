@@ -385,9 +385,9 @@ namespace Octopus
             
             po::options_description model("Common model options");
             model.add_options()
-            ("snp-heterozygosity", po::value<double>()->default_value(0.001),
+            ("snp-heterozygosity", po::value<float>()->default_value(0.001),
              "The germline SNP heterozygosity used to calculate genotype priors")
-            ("indel-heterozygosity", po::value<double>()->default_value(0.001),
+            ("indel-heterozygosity", po::value<float>()->default_value(0.001),
              "The germline indel heterozygosity used to calculate genotype priors")
             ;
             
@@ -1602,6 +1602,9 @@ namespace Octopus
         
         const auto min_phase_score_phred = options.at("min-phase-score").as<float>();
         vc_builder.set_min_phase_score(phred_to_probability(min_phase_score_phred));
+        
+        vc_builder.set_snp_heterozygosity(options.at("snp-heterozygosity").as<float>());
+        vc_builder.set_indel_heterozygosity(options.at("indel-heterozygosity").as<float>());
         
         if (caller == "cancer") {
             if (options.count("normal-sample") == 1) {

@@ -60,6 +60,9 @@ namespace Octopus {
         VariantCallerBuilder& set_model_filtering(bool b) noexcept;
         VariantCallerBuilder& set_min_phase_score(double score) noexcept;
         
+        VariantCallerBuilder& set_snp_heterozygosity(double heterozygosity) noexcept;
+        VariantCallerBuilder& set_indel_heterozygosity(double heterozygosity) noexcept;
+        
         // cancer
         VariantCallerBuilder& set_normal_sample(SampleIdType normal_sample);
         VariantCallerBuilder& set_somatic_mutation_rate(double rate) noexcept;
@@ -112,6 +115,9 @@ namespace Octopus {
             double min_haplotype_posterior;
             bool allow_flank_scoring;
             bool allow_model_filtering;
+            
+            double snp_heterozygosity;
+            double indel_heterozygosity;
             
             double min_phase_score;
             

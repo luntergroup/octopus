@@ -149,6 +149,18 @@ VariantCallerBuilder& VariantCallerBuilder::set_min_phase_score(const double sco
     return *this;
 }
 
+VariantCallerBuilder& VariantCallerBuilder::set_snp_heterozygosity(const double heterozygosity) noexcept
+{
+    parameters_.snp_heterozygosity = heterozygosity;
+    return *this;
+}
+
+VariantCallerBuilder& VariantCallerBuilder::set_indel_heterozygosity(const double heterozygosity) noexcept
+{
+    parameters_.indel_heterozygosity = heterozygosity;
+    return *this;
+}
+
 // cancer
 VariantCallerBuilder& VariantCallerBuilder::set_normal_sample(SampleIdType normal_sample)
 {
@@ -236,7 +248,9 @@ VariantCallerBuilder::CallerFactoryMap VariantCallerBuilder::generate_factory() 
                                                              IndividualVariantCaller::CallerParameters {
                                                                  parameters_.min_variant_posterior,
                                                                  parameters_.min_refcall_posterior,
-                                                                 parameters_.ploidy
+                                                                 parameters_.ploidy,
+                                                                 parameters_.snp_heterozygosity,
+                                                                 parameters_.indel_heterozygosity
                                                              });
         }},
         {"population", [this, general_parameters = std::move(general_parameters)] () {

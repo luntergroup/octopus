@@ -43,11 +43,9 @@ IndividualVariantCaller::IndividualVariantCaller(CallerComponents&& components,
                                                  CallerParameters specific_parameters)
 :
 VariantCaller {std::move(components), std::move(general_parameters)},
-ploidy_ {specific_parameters.ploidy},
-min_variant_posterior_ {specific_parameters.min_variant_posterior},
-min_refcall_posterior_ {specific_parameters.min_refcall_posterior}
+parameters_ {std::move(specific_parameters)}
 {
-    if (ploidy_ == 0) {
+    if (parameters_.ploidy == 0) {
         throw std::logic_error {"IndividualVariantCaller: ploidy must be > 0"};
     }
 }
@@ -119,11 +117,11 @@ std::unique_ptr<IndividualVariantCaller::CallerLatents>
 IndividualVariantCaller::infer_latents(const std::vector<Haplotype>& haplotypes,
                                        const HaplotypeLikelihoodCache& haplotype_likelihoods) const
 {
-    auto genotypes = generate_all_genotypes(haplotypes, ploidy_);
+    auto genotypes = generate_all_genotypes(haplotypes, parameters_.ploidy);
     
     if (debug_log_) stream(*debug_log_) << "There are " << genotypes.size() << " candidate genotypes";
     
-    const CoalescentModel prior_model {Haplotype {mapped_region(haplotypes.front()), reference_}};
+    const auto prior_model = make_prior_model(haplotypes);
     
     const GenotypeModel::Individual model {prior_model, debug_log_};
     
@@ -160,9 +158,9 @@ IndividualVariantCaller::calculate_dummy_model_posterior(const std::vector<Haplo
                                                          const HaplotypeLikelihoodCache& haplotype_likelihoods,
                                                          const Latents& latents) const
 {
-    const auto genotypes = generate_all_genotypes(haplotypes, ploidy_ + 1);
+    const auto genotypes = generate_all_genotypes(haplotypes, parameters_.ploidy + 1);
     
-    const CoalescentModel prior_model {Haplotype {mapped_region(haplotypes.front()), reference_}};
+    const auto prior_model = make_prior_model(haplotypes);
     
     const GenotypeModel::Individual model {prior_model, debug_log_};
     
@@ -385,7 +383,8 @@ IndividualVariantCaller::call_variants(const std::vector<Variant>& candidates,
     
     const auto genotype_call = call_genotype(genotype_posteriors);
     
-    auto variant_calls = call_candidates(candidate_posteriors, genotype_call, min_variant_posterior_);
+    auto variant_calls = call_candidates(candidate_posteriors, genotype_call,
+                                         parameters_.min_variant_posterior);
     
     const auto called_regions = extract_regions(variant_calls);
     
@@ -474,10 +473,19 @@ IndividualVariantCaller::call_reference(const std::vector<Allele>& alleles, cons
 {
     return {};
 }
-    
+
 const SampleIdType& IndividualVariantCaller::sample() const noexcept
 {
     return samples_.front();
+}
+
+CoalescentModel IndividualVariantCaller::make_prior_model(const std::vector<Haplotype>& haplotypes) const
+{
+    return CoalescentModel {
+        Haplotype {mapped_region(haplotypes.front()), reference_},
+        parameters_.snp_heterozygosity,
+        parameters_.indel_heterozygosity
+    };
 }
 
 namespace debug
