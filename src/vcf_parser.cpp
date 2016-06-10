@@ -391,7 +391,7 @@ void parse_genotype(const VcfRecord::SampleIdType& sample, const std::string& ge
                        try {
                            const auto i = boost::lexical_cast<unsigned>(a);
                            
-                           if (i < ploidy - 1) {
+                           if (i < ploidy) {
                                return i;
                            } else {
                                return boost::none;
