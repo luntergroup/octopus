@@ -289,6 +289,9 @@ namespace Octopus
         }
         
         if (read_sizes.empty()) {
+            Logging::WarningLogger log {};
+            log << "Could not estimate read size from data, resorting to default";
+            
             return sizeof(AlignedRead) + 300;
         }
         
@@ -619,7 +622,7 @@ namespace Octopus
         return result;
     }
     
-    void write_final_output_header(GenomeCallingComponents& components, const bool sites_only = false)
+    void write_caller_output_header(GenomeCallingComponents& components, const bool sites_only = false)
     {
         const auto call_types = get_call_types(components, components.contigs_in_output_order());
         
@@ -1253,7 +1256,7 @@ namespace Octopus
             
             log_startup_info(*components);
             
-            write_final_output_header(*components, Options::call_sites_only(options));
+            write_caller_output_header(*components, Options::call_sites_only(options));
             
             options.clear();
             
@@ -1261,7 +1264,7 @@ namespace Octopus
                 if (is_multithreaded(*components)) {
                     if (DEBUG_MODE) {
                         Logging::WarningLogger warn_log {};
-                        warn_log << "Running in parallel mode can be debug log difficult to interpret";
+                        warn_log << "Running in parallel mode can make debug log difficult to interpret";
                     }
                     
                     run_octopus_multi_threaded(*components);

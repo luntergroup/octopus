@@ -17,7 +17,7 @@ namespace Octopus
         return ::mapped_region(reference_);
     }
     
-    const Allele& ReferenceCall::get_reference() const noexcept
+    const Allele& ReferenceCall::reference() const noexcept
     {
         return reference_;
     }
@@ -46,7 +46,7 @@ namespace Octopus
         if (reference_ == old) reference_ = std::move(replacement);
     }
     
-    void ReferenceCall::replace_uncalled_genotype_alleles(const Allele& replacement, char ignore)
+    void ReferenceCall::replace_uncalled_genotype_alleles(const Allele& replacement, const char ignore)
     {
         
     }

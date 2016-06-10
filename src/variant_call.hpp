@@ -36,9 +36,10 @@ namespace Octopus
         VariantCall& operator=(VariantCall&&)      = default;
         
         const GenomicRegion& mapped_region() const noexcept override;
-        const Allele& get_reference() const noexcept override;
         
-        const Allele& get_alternative() const noexcept;
+        const Allele& reference() const noexcept override;
+        
+        const Allele& alternative() const noexcept;
         
         void replace(const Allele& old, Allele replacement) override;
         void replace_uncalled_genotype_alleles(const Allele& replacement, char ignore) override;

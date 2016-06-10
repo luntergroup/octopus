@@ -25,12 +25,12 @@ namespace Octopus
         return ::mapped_region(variant_);
     }
     
-    const Allele& VariantCall::get_reference() const noexcept
+    const Allele& VariantCall::reference() const noexcept
     {
         return variant_.ref_allele();
     }
     
-    const Allele& VariantCall::get_alternative() const noexcept
+    const Allele& VariantCall::alternative() const noexcept
     {
         return variant_.alt_allele();
     }
@@ -89,8 +89,7 @@ namespace Octopus
         }
     }
     
-    bool matches(const Allele::SequenceType& lhs, const Allele::SequenceType& rhs,
-                 const char ignoring)
+    bool matches(const Allele::SequenceType& lhs, const Allele::SequenceType& rhs, const char ignoring)
     {
         auto it = std::mismatch(std::cbegin(lhs), std::cend(lhs), std::cbegin(rhs),
                                 [ignoring] (const auto a, const auto b) {
@@ -108,7 +107,7 @@ namespace Octopus
             return matches(ref_sequence(variant), allele.sequence(), ignoring);
         }
         
-        if (allele.sequence().size() == alt_sequence_size(variant)) {
+        if (sequence_size(allele) == alt_sequence_size(variant)) {
             return matches(alt_sequence(variant), allele.sequence(), ignoring);
         }
         

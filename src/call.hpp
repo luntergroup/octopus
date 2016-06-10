@@ -29,14 +29,20 @@ namespace Octopus
     class Call : public Mappable<Call>
     {
     public:
-        struct PhaseCall
+        class PhaseCall
         {
+        public:
             PhaseCall() = delete;
             
             template <typename R> PhaseCall(R&& region, double score);
             
-            GenomicRegion region;
-            double score;
+            const GenomicRegion& region() const noexcept { return region_; }
+            
+            double score() const noexcept { return score_; };
+            
+        private:
+            GenomicRegion region_;
+            double score_;
         };
         
         struct GenotypeCall
@@ -75,7 +81,7 @@ namespace Octopus
         
         virtual const GenomicRegion& mapped_region() const noexcept = 0;
         
-        virtual const Allele& get_reference() const noexcept = 0;
+        virtual const Allele& reference() const noexcept = 0;
         
         void replace(char old_base, char replacement_base);
         
@@ -112,7 +118,7 @@ namespace Octopus
     
     template <typename R>
     Call::PhaseCall::PhaseCall(R&& region, double score)
-    : region {std::forward<R>(region)}, score {score}
+    : region_ {std::forward<R>(region)}, score_ {score}
     {}
     
     template <typename G>

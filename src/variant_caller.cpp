@@ -515,7 +515,8 @@ VariantCaller::call(const GenomicRegion& call_region, ProgressMeter& progress_me
                                                                      max_to_remove);
                 
                 if (debug_log_) {
-                    stream(*debug_log_) << "Discarding " << removable_haplotypes.size() << " haplotypes with low posterior";
+                    stream(*debug_log_) << "Discarding " << removable_haplotypes.size()
+                                    << " haplotypes with low posterior support";
                 }
                 
                 haplotype_generator.remove(removable_haplotypes);

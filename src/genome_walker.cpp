@@ -154,6 +154,8 @@ GenomicRegion GenomeWalker::walk(const GenomicRegion& previous_region, const Rea
                ++included_itr;
            }
     
+    // first_excluded_itr = find_first_not_overlapped(included_itr, last_candidate_itr, rightmost
+    
     first_excluded_itr = next(included_itr);
     
     const auto& rightmost = *rightmost_mappable(first_included_itr, first_excluded_itr);
