@@ -359,13 +359,13 @@ void HaplotypeGenerator::update_next_active_region() const
                     }
                 }
                 
-                const auto indicator_region = overlapped_region(current_active_region_,
-                                                                max_lagged_region);
-                const auto indicator_alleles = overlap_range(alleles_, indicator_region);
+                const auto initial_indicator_region = overlapped_region(current_active_region_,
+                                                                        max_lagged_region);
+                const auto initial_indicator_alleles = overlap_range(alleles_, initial_indicator_region);
                 
-                assert(!indicator_alleles.empty());
+                assert(!initial_indicator_alleles.empty());
                 
-                const auto mutually_exclusive_indicator_regions = extract_covered_regions(indicator_alleles);
+                const auto mutually_exclusive_indicator_regions = extract_covered_regions(initial_indicator_alleles);
                 
                 // prefer sacrificing indicators over novel alleles
                 for (const auto& region : mutually_exclusive_indicator_regions) {
@@ -412,11 +412,14 @@ void HaplotypeGenerator::update_next_active_region() const
                     next_active_region_ = expand_rhs(*next_active_region_, 1);
                 }
                 
+                const auto final_indicator_region  = overlapped_region(current_active_region_, *next_active_region_);
+                const auto final_indicator_alleles = overlap_range(alleles_, final_indicator_region);
+                
                 if (*next_active_region_ == current_active_region_) {
                     assert(num_regions_added == 0);
                     next_active_region_ = walker_.walk(current_active_region_, reads_, alleles_);
                 } else if (begins_before(current_active_region_, *next_active_region_)
-                           && is_empty_region(indicator_alleles.front())) {
+                           && is_empty_region(final_indicator_alleles.front())) {
                     // to be explicit about insertion containment
                     next_active_region_ = expand_lhs(*next_active_region_, 1);
                 }

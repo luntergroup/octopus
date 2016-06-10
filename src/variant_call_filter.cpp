@@ -503,11 +503,11 @@ void VariantCallFilter::filter(const VcfReader& source, VcfWriter& dest, const R
                 call = cb.build();
             }
             
-            const auto it = std::remove_if(std::begin(calls), std::end(calls),
-                                           [] (const auto& call) {
-                                               return !is_somatic(call);
-                                           });
-            calls.erase(it, std::end(calls));
+//            const auto it = std::remove_if(std::begin(calls), std::end(calls),
+//                                           [] (const auto& call) {
+//                                               return !is_somatic(call);
+//                                           });
+//            calls.erase(it, std::end(calls));
             
             write(calls, dest);
         }
