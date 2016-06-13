@@ -65,7 +65,9 @@ namespace Octopus
         struct PhaseRegion : public Mappable<PhaseRegion>
         {
             PhaseRegion() = default;
+            
             template <typename Region> PhaseRegion(Region&& region, double score);
+            
             ~PhaseRegion() = default;
             
             PhaseRegion(const PhaseRegion&)            = default;

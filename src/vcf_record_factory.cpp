@@ -209,7 +209,17 @@ namespace Octopus
                     const auto& phase = call->get_genotype_call(sample).phase;
                     
                     if (phase) {
-                        const auto overlapped = overlap_range(modified_calls, phase->region());
+                        auto overlapped = overlap_range(modified_calls, phase->region());
+                        
+                        if (overlapped.empty()) {
+                            overlapped = overlap_range(modified_calls, expand_lhs(phase->region(), 1));
+                            
+                            if (!overlapped.empty()) {
+                                if (begin_distance(overlapped.front(), phase->region()) != 1) {
+                                    overlapped.advance_begin(1);
+                                }
+                            }
+                        }
                         
                         if (!overlapped.empty() && overlapped.front().get() != call) {
                             const auto& old_phase = call->get_genotype_call(sample).phase;

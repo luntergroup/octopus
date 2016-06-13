@@ -127,6 +127,11 @@ namespace
                                          const ReferenceGenome& reference)
     {
         assert(!phased_calls.empty());
+        
+        if (!contains(region, encompassing_region(phased_calls))) {
+            std::cout << region << std::endl;
+        }
+        
         assert(contains(region, encompassing_region(phased_calls)));
         
         const auto ploidy = extract_ploidy(phased_calls, sample);

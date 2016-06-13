@@ -375,8 +375,7 @@ void HaplotypeGenerator::update_next_active_region() const
                     test_tree.remove_overlapped(region);
                 }
                 
-                const auto novel_region  = right_overhang_region(max_lagged_region,
-                                                               current_active_region_);
+                const auto novel_region  = right_overhang_region(max_lagged_region, current_active_region_);
                 const auto novel_alleles = overlap_range(alleles_, novel_region);
                 
                 assert(!novel_alleles.empty());
@@ -404,24 +403,30 @@ void HaplotypeGenerator::update_next_active_region() const
                     }
                 }
                 
+                // the trees encompassing region may be beyond the indicator boundry
+                // if all haplotypes containing indicator alleles have been pruned
                 next_active_region_ = test_tree.encompassing_region();
                 
-                if (num_regions_added > 0
-                    && is_empty(mutually_exclusive_novel_regions[num_regions_added - 1])) {
+                if (num_regions_added > 0 && is_empty(mutually_exclusive_novel_regions[num_regions_added - 1])) {
                     // to ensure we progress on a single novel insertion
                     next_active_region_ = expand_rhs(*next_active_region_, 1);
                 }
                 
-                const auto final_indicator_region  = overlapped_region(current_active_region_, *next_active_region_);
-                const auto final_indicator_alleles = overlap_range(alleles_, final_indicator_region);
-                
-                if (*next_active_region_ == current_active_region_) {
-                    assert(num_regions_added == 0);
-                    next_active_region_ = walker_.walk(current_active_region_, reads_, alleles_);
-                } else if (begins_before(current_active_region_, *next_active_region_)
-                           && is_empty_region(final_indicator_alleles.front())) {
-                    // to be explicit about insertion containment
-                    next_active_region_ = expand_lhs(*next_active_region_, 1);
+                if (overlaps(current_active_region_, *next_active_region_)) {
+                    if (*next_active_region_ == current_active_region_) {
+                        assert(num_regions_added == 0);
+                        next_active_region_ = walker_.walk(current_active_region_, reads_, alleles_);
+                    } else if (begins_before(current_active_region_, *next_active_region_)) {
+                        const auto final_indicator_region = overlapped_region(current_active_region_,
+                                                                              *next_active_region_);
+                        const auto& first_indicator_allele = contained_range(initial_indicator_alleles,
+                                                                             final_indicator_region).front();
+                        
+                        if (is_empty_region(first_indicator_allele)) {
+                            // to be explicit about insertion containment
+                            next_active_region_ = expand_lhs(*next_active_region_, 1);
+                        }
+                    }
                 }
             }
         } else {

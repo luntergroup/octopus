@@ -47,8 +47,11 @@ public:
     
     bool empty() const noexcept;
     unsigned num_haplotypes() const noexcept;
+    
     bool contains(const Haplotype& haplotype) const;
+    
     bool is_unique(const Haplotype& haplotype) const;
+    
     HaplotypeTree& extend(const ContigAllele& allele);
     HaplotypeTree& extend(const Allele& allele);
     
@@ -65,10 +68,8 @@ public:
     void clear() noexcept;
     
 private:
-    using Tree = boost::adjacency_list<
-                     boost::listS, boost::listS, boost::bidirectionalS,
-                     ContigAllele, boost::no_property
-                 >;
+    using Tree = boost::adjacency_list<boost::listS, boost::listS, boost::bidirectionalS,
+                                        ContigAllele, boost::no_property>;
     
     using Vertex = typename boost::graph_traits<Tree>::vertex_descriptor;
     using Edge   = typename boost::graph_traits<Tree>::edge_descriptor;

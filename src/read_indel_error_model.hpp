@@ -23,6 +23,7 @@ namespace Octopus
         using PenaltyType = std::int8_t;
         
         ReadIndelErrorModel() = default;
+        
         ~ReadIndelErrorModel() = default;
         
         ReadIndelErrorModel(const ReadIndelErrorModel&)            = default;

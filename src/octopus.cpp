@@ -507,6 +507,19 @@ namespace Octopus
         return true;
     }
     
+    void cleanup(GenomeCallingComponents& components) noexcept
+    {
+        Logging::InfoLogger log {};
+        if (components.temp_directory()) {
+            try {
+                const auto num_files_removed = fs::remove_all(*components.temp_directory());
+                stream(log) << "Removed " << num_files_removed << " temporary files";
+                } catch (const std::exception& e) {
+                    stream(log) << "Cleanup failed with exception: " << e.what();
+                }
+        }
+    }
+    
     boost::optional<GenomeCallingComponents>
     collate_genome_calling_components(const po::variables_map& options)
     {
@@ -542,6 +555,7 @@ namespace Octopus
             };
             
             if (!are_components_valid(result)) {
+                cleanup(result);
                 return boost::none;
             }
             
@@ -748,19 +762,6 @@ namespace Octopus
         #ifdef BENCHMARK
         print_all_timers();
         #endif
-    }
-    
-    void cleanup(GenomeCallingComponents& components) noexcept
-    {
-        Logging::InfoLogger log {};
-        if (components.temp_directory()) {
-            try {
-                const auto num_files_removed = fs::remove_all(*components.temp_directory());
-                stream(log) << "Removed " << num_files_removed << " temporary files";
-            } catch (const std::exception& e) {
-                stream(log) << "Cleanup failed with exception: " << e.what();
-            }
-        }
     }
     
     void run_octopus_single_threaded(GenomeCallingComponents& components)
@@ -1196,9 +1197,10 @@ namespace Octopus
     
     void filter_calls(const GenomeCallingComponents& components)
     {
-        assert(!components.output().is_open());
+        //assert(!components.output().is_open());
         
         const VcfReader calls {components.output().path()};
+        //const VcfReader calls {"/Users/danielcooke/Genomics/octopus_test/octopus_calls.vcf"};
         
         const auto filtered_path = get_filtered_path(components);
         

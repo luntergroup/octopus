@@ -443,6 +443,7 @@ void VariantCallFilter::filter(const VcfReader& source, VcfWriter& dest, const R
                 bool strand_biased {true};
                 bool sample_rmq_failed {false};
                 bool sample_kl_failed {false};
+                bool all_homozygous {true};
                 
                 for (const auto& sample : samples) {
                     //std::cout << sample << std::endl;
@@ -463,27 +464,26 @@ void VariantCallFilter::filter(const VcfReader& source, VcfWriter& dest, const R
                     
                     if (sample_variants.first == sample_variants.second) continue;
                     
-                    const auto variant_support = calculate_support(genotype, sample_call_reads,
-                                                                   sample_variants);
-                    
-                    const auto pval = calculate_strand_bias(variant_support, sample_variants.first->second,
-                                                            sample_call_reads);
-                    
-                    if (pval > 0.1) {
-                        strand_biased = false;
+                    if (call.is_heterozygous(sample)) {
+                        all_homozygous = false;
+                        
+                        const auto variant_support = calculate_support(genotype, sample_call_reads,
+                                                                       sample_variants);
+                        
+                        const auto pval = calculate_strand_bias(variant_support, sample_variants.first->second,
+                                                                sample_call_reads);
+                        
+                        if (pval > 0.01) {
+                            strand_biased = false;
+                        }
+                        
+                        const auto mq_bias = calculate_mq_bias(variant_support, sample_variants.first->second,
+                                                               sample_call_reads);
+                        
+                        if (mq_bias > 0.5) {
+                            sample_kl_failed = true;
+                        }
                     }
-                    
-                    const auto mq_bias = calculate_mq_bias(variant_support, sample_variants.first->second,
-                                                           sample_call_reads);
-                    
-                    if (mq_bias > 0.4) {
-                        sample_kl_failed = true;
-                    }
-                }
-                
-                if (sample_kl_failed) {
-                    cb.add_filter("KL");
-                    filtered = true;
                 }
                 
                 if (sample_rmq_failed) {
@@ -491,9 +491,16 @@ void VariantCallFilter::filter(const VcfReader& source, VcfWriter& dest, const R
                     filtered = true;
                 }
                 
-                if (strand_biased) {
-                    cb.add_filter("SB");
-                    filtered = true;
+                if (!all_homozygous) {
+                    if (sample_kl_failed) {
+                        cb.add_filter("KL");
+                        filtered = true;
+                    }
+                    
+                    if (strand_biased) {
+                        cb.add_filter("SB");
+                        filtered = true;
+                    }
                 }
                 
                 if (!filtered) {

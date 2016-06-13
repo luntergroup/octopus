@@ -243,18 +243,29 @@ void set_phase(const SampleIdType& sample, const Phaser::PhaseSet::PhaseRegion& 
     call->set_phase(sample, Call::PhaseCall {encompassing_region(overlapped.front(), call), phase.score});
 }
 
-void set_phasing(std::vector<CallWrapper>& calls, const Phaser::PhaseSet& phase_set)
+void set_phasing(std::vector<CallWrapper>& calls, const Phaser::PhaseSet& phase_set,
+                 const GenomicRegion& call_region)
 {
     if (!calls.empty()) {
         const auto call_regions = extract_regions(calls);
         
         for (auto& call : calls) {
-            const auto& call_region = call.mapped_region();
+            const auto& call_region = mapped_region(call);
             
             for (const auto& p : phase_set.phase_regions) {
-                const auto& phase = find_phase_region(p.second, call_region);
+                const auto phase = find_phase_region(p.second, call_region);
+                
                 if (phase) {
-                    set_phase(p.first, *phase, call_regions, call);
+                    if (begins_before(phase->get().region, call_region)) {
+                        const Phaser::PhaseSet::PhaseRegion clipped_phase {
+                            expand_lhs(phase->get().region, begin_distance(call_region, phase->get().region)),
+                            phase->get().score
+                        };
+                        
+                        set_phase(p.first, clipped_phase, call_regions, call);
+                    } else {
+                        set_phase(p.first, *phase, call_regions, call);
+                    }
                 }
             }
         }
@@ -488,7 +499,7 @@ VariantCaller::call(const GenomicRegion& call_region, ProgressMeter& progress_me
                     }
                     
                     resume_timer(output_timer);
-                    set_phasing(variant_calls, *phase_set);
+                    set_phasing(variant_calls, *phase_set, call_region);
                     
                     merge(std::move(variant_calls), result, record_factory, call_region);
                     pause_timer(output_timer);
@@ -575,7 +586,7 @@ VariantCaller::call(const GenomicRegion& call_region, ProgressMeter& progress_me
                     if (debug_log_) debug::print_phase_sets(stream(*debug_log_), phasings);
                     
                     resume_timer(output_timer);
-                    set_phasing(variant_calls, phasings);
+                    set_phasing(variant_calls, phasings, call_region);
                     
                     merge(std::move(variant_calls), result, record_factory, call_region);
                     pause_timer(output_timer);
