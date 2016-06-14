@@ -39,7 +39,7 @@ static auto get_penalty(const C& penalties, const T length)
 }
 
 ReadIndelErrorModel::PenaltyType
-ReadIndelErrorModel::evaluate(const Haplotype& haplotype, std::vector<PenaltyType>& gap_open_penalities) const
+ReadIndelErrorModel::evaluate(const Haplotype& haplotype, PenaltyVector& gap_open_penalities) const
 {
     using std::begin; using std::end; using std::cbegin; using std::cend; using std::next;
     

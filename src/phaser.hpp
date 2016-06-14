@@ -137,6 +137,8 @@ namespace Octopus
         return boost::none;
     }
     
+    bool is_split_phasing(const Phaser::PhaseSet& phase);
+    
     namespace debug
     {
         template <typename S>

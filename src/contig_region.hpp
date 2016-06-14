@@ -53,7 +53,7 @@ inline ContigRegion::ContigRegion(const SizeType begin, const SizeType end)
 begin_ {begin},
 end_ {end}
 {
-    if (end < begin) throw std::runtime_error {"ContigRegion constructed with end < begin"};
+    if (end < begin) throw std::runtime_error {"ContigRegion: constructed with end < begin"};
 }
 
 inline ContigRegion::SizeType ContigRegion::begin() const noexcept
@@ -180,7 +180,7 @@ inline ContigRegion shift(const ContigRegion& region, ContigRegion::DifferenceTy
     using SizeType = ContigRegion::SizeType;
     
     if (n < 0 && region.begin() + n > region.begin()) {
-        throw std::out_of_range {"shifted past contig start"};
+        throw std::out_of_range {"ContigRegion: shifted past contig start"};
     }
     
     return ContigRegion {
@@ -196,11 +196,11 @@ inline ContigRegion next_position(const ContigRegion& region)
 inline ContigRegion expand_lhs(const ContigRegion& region, const ContigRegion::DifferenceType n)
 {
     if (n < 0 && region.begin() + n > region.begin()) {
-        throw std::out_of_range {"compressed past contig start"};
+        throw std::out_of_range {"ContigRegion: compressed past contig start"};
     }
     
     if (region.begin() - n > region.end()) {
-        throw std::out_of_range {"compressed past region end"};
+        throw std::out_of_range {"ContigRegion: compressed past region end"};
     }
     
     return ContigRegion {
@@ -212,7 +212,7 @@ inline ContigRegion expand_lhs(const ContigRegion& region, const ContigRegion::D
 inline ContigRegion expand_rhs(const ContigRegion& region, const ContigRegion::DifferenceType n)
 {
     if (region.end() + n < region.begin()) {
-        throw std::out_of_range {"compressed past region begin"};
+        throw std::out_of_range {"ContigRegion: expanded past region begin"};
     }
     
     return ContigRegion {
@@ -240,7 +240,7 @@ inline ContigRegion expand(const ContigRegion& region, const ContigRegion::Diffe
 inline ContigRegion overlapped_region(const ContigRegion& lhs, const ContigRegion& rhs) noexcept
 {
     if (!overlaps(lhs, rhs)) {
-        throw std::runtime_error {"cannot calculate overlapped region between non overlapping regions"};
+        throw std::runtime_error {"ContigRegion: cannot calculate overlapped region between non overlapping regions"};
     }
     
     return ContigRegion {std::max(lhs.begin(), rhs.begin()), std::min(lhs.end(), rhs.end())};
@@ -254,7 +254,7 @@ inline ContigRegion encompassing_region(const ContigRegion& lhs, const ContigReg
 inline ContigRegion intervening_region(const ContigRegion& lhs, const ContigRegion& rhs)
 {
     if (begins_before(rhs, lhs) || overlaps(lhs, rhs)) {
-        throw std::runtime_error {"cannot calculate intervening region between overlapping regions"};
+        throw std::runtime_error {"ContigRegion: cannot calculate intervening region between overlapping regions"};
     }
     
     return ContigRegion {lhs.end(), rhs.begin()};

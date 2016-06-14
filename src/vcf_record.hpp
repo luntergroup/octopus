@@ -220,23 +220,25 @@ public:
     Builder& set_filter(std::initializer_list<KeyType> filter);
     Builder& add_filter(KeyType filter);
     Builder& add_info(const KeyType& key); // flags
-    Builder& add_info(const KeyType& key, const ValueType& value);
-    template <typename T> Builder& add_info(const KeyType& key, const T& value); // calls std::to_string
-    Builder& add_info(const KeyType& key, const std::vector<ValueType>& values);
-    Builder& add_info(const KeyType& key, std::initializer_list<ValueType> values);
-    Builder& add_info_flag(KeyType key);
+    Builder& set_info(const KeyType& key, const ValueType& value);
+    template <typename T> Builder& set_info(const KeyType& key, const T& value); // calls std::to_string
+    Builder& set_info(const KeyType& key, std::vector<ValueType> values);
+    Builder& set_info(const KeyType& key, std::initializer_list<ValueType> values);
+    Builder& set_info_flag(KeyType key);
+    Builder& clear_info() noexcept;
+    Builder& clear_info(const KeyType& key);
     Builder& set_format(std::vector<KeyType> format);
     Builder& set_format(std::initializer_list<KeyType> format);
     Builder& add_format(KeyType key);
-    Builder& add_homozygous_ref_genotype(const SampleIdType& sample, unsigned ploidy);
-    Builder& add_genotype(const SampleIdType& sample, const std::vector<SequenceType>& alleles, Phasing phasing);
-    Builder& add_genotype(const SampleIdType& sample, const std::vector<boost::optional<unsigned>>& alleles, Phasing is_phased);
-    Builder& add_genotype_field(const SampleIdType& sample, const KeyType& key, const ValueType& value);
+    Builder& set_homozygous_ref_genotype(const SampleIdType& sample, unsigned ploidy);
+    Builder& set_genotype(const SampleIdType& sample, const std::vector<SequenceType>& alleles, Phasing phasing);
+    Builder& set_genotype(const SampleIdType& sample, const std::vector<boost::optional<unsigned>>& alleles, Phasing is_phased);
+    Builder& set_format(const SampleIdType& sample, const KeyType& key, const ValueType& value);
     template <typename T>
-    Builder& add_genotype_field(const SampleIdType& sample, const KeyType& key, const T& value); // calls std::to_string
-    Builder& add_genotype_field(const SampleIdType& sample, const KeyType& key, const std::vector<ValueType>& values);
-    Builder& add_genotype_field(const SampleIdType& sample, const KeyType& key, std::initializer_list<ValueType> values);
-    Builder& add_missing_genotype_field(const SampleIdType& sample, const KeyType& key);
+    Builder& set_format(const SampleIdType& sample, const KeyType& key, const T& value); // calls std::to_string
+    Builder& set_format(const SampleIdType& sample, const KeyType& key, std::vector<ValueType> values);
+    Builder& set_format(const SampleIdType& sample, const KeyType& key, std::initializer_list<ValueType> values);
+    Builder& set_format_missing(const SampleIdType& sample, const KeyType& key);
     
     Builder& set_refcall();
     Builder& set_somatic();
@@ -261,16 +263,16 @@ private:
 };
 
 template <typename T>
-VcfRecord::Builder& VcfRecord::Builder::add_info(const KeyType& key, const T& value)
+VcfRecord::Builder& VcfRecord::Builder::set_info(const KeyType& key, const T& value)
 {
-    return add_info(key, std::to_string(value));
+    return set_info(key, std::to_string(value));
 }
 
 template <typename T>
-VcfRecord::Builder& VcfRecord::Builder::add_genotype_field(const SampleIdType& sample, const KeyType& key,
-                                                           const T& value)
+VcfRecord::Builder& VcfRecord::Builder::set_format(const SampleIdType& sample, const KeyType& key,
+                                                   const T& value)
 {
-    return add_genotype_field(sample, key, std::to_string(value));
+    return set_format(sample, key, std::to_string(value));
 }
 
 #endif /* defined(__Octopus__vcf_record__) */

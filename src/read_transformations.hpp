@@ -23,12 +23,13 @@ namespace Octopus { namespace ReadTransforms
         void operator()(AlignedRead& read) const noexcept;
     };
     
-    struct TrimTail
+    struct MaskTail
     {
         using SizeType = AlignedRead::SizeType;
         
-        TrimTail() = default;
-        explicit TrimTail(SizeType num_bases);
+        MaskTail() = default;
+        
+        explicit MaskTail(SizeType num_bases);
         
         void operator()(AlignedRead& read) const noexcept;
         
@@ -41,12 +42,13 @@ namespace Octopus { namespace ReadTransforms
         void operator()(AlignedRead& read) const noexcept;
     };
     
-    struct TrimSoftClippedTails
+    struct MaskSoftClippedBoundries
     {
         using SizeType = AlignedRead::SizeType;
         
-        TrimSoftClippedTails() = default;
-        explicit TrimSoftClippedTails(SizeType num_bases);
+        MaskSoftClippedBoundries() = default;
+        
+        explicit MaskSoftClippedBoundries(SizeType num_bases);
         
         void operator()(AlignedRead& read) const noexcept;
         

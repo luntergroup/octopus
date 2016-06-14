@@ -41,24 +41,7 @@ public:
         ContigRegion::SizeType lhs_flank, rhs_flank;
     };
     
-    class ShortHaplotypeError : public std::runtime_error
-    {
-    public:
-        using SizeType = Haplotype::SizeType;
-        
-        ShortHaplotypeError() = delete;
-        
-        ShortHaplotypeError(const Haplotype& haplotype, SizeType required_extension);
-        
-        const Haplotype& haplotype() const noexcept;
-        
-        SizeType required_extension() const noexcept;
-        
-    private:
-        const Haplotype& haplotype_;
-        
-        SizeType required_extension_;
-    };
+    class ShortHaplotypeError;
     
     using MapPositionItr = std::vector<std::size_t>::const_iterator;
     
@@ -77,6 +60,7 @@ public:
     HaplotypeLikelihoodModel& operator=(HaplotypeLikelihoodModel&&)      = default;
     
     void set(const Haplotype& haplotype, boost::optional<FlankState> flank_state);
+    
     void clear() noexcept;
     
     // ln p(read | haplotype, model)
@@ -90,8 +74,28 @@ private:
     
     const Haplotype* haplotype_;
     boost::optional<FlankState> haplotype_flank_state_;
+    
     std::vector<std::int8_t> haplotype_gap_open_penalities_;
     PenaltyType haplotype_gap_extension_penalty_;
+};
+
+class HaplotypeLikelihoodModel::ShortHaplotypeError : public std::runtime_error
+{
+public:
+    using SizeType = Haplotype::SizeType;
+    
+    ShortHaplotypeError() = delete;
+    
+    ShortHaplotypeError(const Haplotype& haplotype, SizeType required_extension);
+    
+    const Haplotype& haplotype() const noexcept;
+    
+    SizeType required_extension() const noexcept;
+    
+private:
+    const Haplotype& haplotype_;
+    
+    SizeType required_extension_;
 };
 } // namespace Octopus
 

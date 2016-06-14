@@ -62,35 +62,34 @@ std::size_t try_filter(std::vector<Haplotype>& haplotypes,
 {
     using T = std::result_of_t<F(const Haplotype&, decltype(samples), decltype(haplotype_likelihoods))>;
     
-    std::unordered_map<Haplotype, T> filter_likelihoods {haplotypes.size()};
+    std::unordered_map<Haplotype, T> filter_score {haplotypes.size()};
     
     for (const auto& haplotype : haplotypes) {
-        filter_likelihoods.emplace(haplotype, filter(haplotype, samples, haplotype_likelihoods));
+        filter_score.emplace(haplotype, filter(haplotype, samples, haplotype_likelihoods));
     }
+    
+    const FilterGreater<T> cmp {filter_score};
     
     const auto first = std::begin(haplotypes);
     const auto last  = std::end(haplotypes);
-    
-    const auto nth = std::next(first, n);
-    
-    const FilterGreater<T> cmp {filter_likelihoods};
+    const auto nth   = std::next(first, n);
     
     std::nth_element(first, nth, last, cmp);
     
-    const auto nth_max_liklihood = filter_likelihoods.at(*nth);
+    const auto nth_best = filter_score.at(*nth);
     
     const auto rlast = std::make_reverse_iterator(first);
     
     const auto it = std::find_if(std::make_reverse_iterator(std::prev(nth)), rlast,
-                                 [nth_max_liklihood, &filter_likelihoods] (const Haplotype& haplotype) {
-                                     return filter_likelihoods.at(haplotype) == nth_max_liklihood;
+                                 [nth_best, &filter_score] (const Haplotype& haplotype) {
+                                     return filter_score.at(haplotype) == nth_best;
                                  });
     
     if (it != rlast) {
         std::sort(first, nth, cmp);
         std::sort(nth, last, cmp);
         
-        const auto er = std::equal_range(first, last, nth_max_liklihood, cmp);
+        const auto er = std::equal_range(first, last, nth_best, cmp);
         
         result.insert(std::end(result), std::make_move_iterator(er.second), std::make_move_iterator(last));
         
@@ -298,11 +297,11 @@ filter_to_n(std::vector<Haplotype>& haplotypes, const std::vector<SampleIdType>&
     }
     
     num_to_filter -= try_filter(haplotypes, samples, haplotype_likelihoods, n, result,
-                                LikelihoodZeroCount {});
+                                AssignmentCount {haplotypes, samples, haplotype_likelihoods});
     
     if (DEBUG_MODE) {
         stream(debug_log) << "There are " << haplotypes.size()
-                            << " remaining haplotypes after likelihood zero count filtering";
+                            << " remaining haplotypes after assignment count filtering";
     }
     
     if (num_to_filter == 0) {
@@ -310,11 +309,11 @@ filter_to_n(std::vector<Haplotype>& haplotypes, const std::vector<SampleIdType>&
     }
     
     num_to_filter -= try_filter(haplotypes, samples, haplotype_likelihoods, n, result,
-                                AssignmentCount {haplotypes, samples, haplotype_likelihoods});
+                                LikelihoodZeroCount {});
     
     if (DEBUG_MODE) {
         stream(debug_log) << "There are " << haplotypes.size()
-                            << " remaining haplotypes after assignment count filtering";
+                            << " remaining haplotypes after likelihood zero count filtering";
     }
     
     if (num_to_filter == 0) {

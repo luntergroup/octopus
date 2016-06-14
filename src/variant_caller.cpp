@@ -238,13 +238,15 @@ void set_phase(const SampleIdType& sample, const Phaser::PhaseSet::PhaseRegion& 
     const auto overlapped = overlap_range(call_regions, phase.mapped_region(),
                                           BidirectionallySortedTag {});
     
-    assert(!overlapped.empty());
-    
-    call->set_phase(sample, Call::PhaseCall {encompassing_region(overlapped.front(), call), phase.score});
+    if (!overlapped.empty()) {
+        call->set_phase(sample, Call::PhaseCall {encompassing_region(overlapped.front(), call), phase.score});
+    } else {
+        call->set_phase(sample, Call::PhaseCall {mapped_region(call), phase.score});
+    }
 }
 
 void set_phasing(std::vector<CallWrapper>& calls, const Phaser::PhaseSet& phase_set,
-                 const GenomicRegion& call_region)
+                 const GenomicRegion& calling_region)
 {
     if (!calls.empty()) {
         const auto call_regions = extract_regions(calls);
@@ -256,9 +258,10 @@ void set_phasing(std::vector<CallWrapper>& calls, const Phaser::PhaseSet& phase_
                 const auto phase = find_phase_region(p.second, call_region);
                 
                 if (phase) {
-                    if (begins_before(phase->get().region, call_region)) {
+                    if (begins_before(phase->get().region, calling_region)
+                        && !is_before(phase->get().region, calling_region)) {
                         const Phaser::PhaseSet::PhaseRegion clipped_phase {
-                            expand_lhs(phase->get().region, begin_distance(call_region, phase->get().region)),
+                            expand_lhs(phase->get().region, begin_distance(calling_region, phase->get().region)),
                             phase->get().score
                         };
                         
@@ -578,15 +581,15 @@ VariantCaller::call(const GenomicRegion& call_region, ProgressMeter& progress_me
                     called_regions = extract_covered_regions(variant_calls);
                     
                     resume_timer(phasing_timer);
-                    const auto phasings = phaser_.force_phase(haplotypes,
-                                                              *caller_latents->genotype_posteriors(),
-                                                              active_candidates);
+                    const auto phase = phaser_.force_phase(haplotypes,
+                                                           *caller_latents->genotype_posteriors(),
+                                                           active_candidates);
                     pause_timer(phasing_timer);
                     
-                    if (debug_log_) debug::print_phase_sets(stream(*debug_log_), phasings);
+                    if (debug_log_) debug::print_phase_sets(stream(*debug_log_), phase);
                     
                     resume_timer(output_timer);
-                    set_phasing(variant_calls, phasings, call_region);
+                    set_phasing(variant_calls, phase, call_region);
                     
                     merge(std::move(variant_calls), result, record_factory, call_region);
                     pause_timer(output_timer);

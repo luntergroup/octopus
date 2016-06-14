@@ -342,9 +342,9 @@ void parse_info_field(const std::string& field, VcfRecord::Builder& rb)
     const auto pos = field.find_first_of('=');
     
     if (pos == std::string::npos) {
-        rb.add_info(field);
+        rb.set_info_flag(field);
     } else {
-        rb.add_info(field.substr(0, pos), split(field.substr(pos + 1), ','));
+        rb.set_info(field.substr(0, pos), split(field.substr(pos + 1), ','));
     }
 }
 
@@ -401,7 +401,7 @@ void parse_genotype(const VcfRecord::SampleIdType& sample, const std::string& ge
                        }
                    });
     
-    rb.add_genotype(sample, std::move(alleles), (phased) ? Phasing::Phased : Phasing::Unphased);
+    rb.set_genotype(sample, std::move(alleles), (phased) ? Phasing::Phased : Phasing::Unphased);
 }
 
 using SampleField = Token<':'>;
@@ -424,7 +424,7 @@ void parse_sample(const std::string& column, const VcfRecord::SampleIdType& samp
     
     std::for_each(first_value, std::istream_iterator<SampleField> {},
                   [&rb, &sample, &first_key] (const std::string& value) {
-                      rb.add_genotype_field(sample, *first_key, split(value, ','));
+                      rb.set_format(sample, *first_key, split(value, ','));
                       ++first_key;
                   });
 }
@@ -460,7 +460,7 @@ VcfRecord parse_record(const std::string& line, const std::vector<VcfRecord::Sam
     
     ++it;
     if (it->data != ".") {
-        rb.set_filter(split(it->data, ':'));
+        rb.set_filter(split(it->data, ';'));
     }
     ++it;
     parse_info(it->data, rb);

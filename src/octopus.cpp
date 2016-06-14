@@ -1200,7 +1200,7 @@ namespace Octopus
         //assert(!components.output().is_open());
         
         const VcfReader calls {components.output().path()};
-        //const VcfReader calls {"/Users/danielcooke/Genomics/octopus_test/octopus_calls.vcf"};
+        //const VcfReader calls {"/Users/dcooke/Genomics/octopus_test/octopus_calls.vcf"};
         
         const auto filtered_path = get_filtered_path(components);
         
@@ -1229,6 +1229,77 @@ namespace Octopus
         }
         
         filter.filter(calls, filtered_calls, regions);
+    }
+                
+    void convert_to_legacy(const VcfReader& src, VcfWriter& dst)
+    {
+        if (!dst.is_header_written()) {
+            dst << src.fetch_header();
+        }
+        
+        auto calls = src.fetch_records();
+        
+        const auto samples = src.fetch_header().samples();
+        
+        const static char Deleted {'*'};
+        const static std::string Missing {"."};
+        
+        const auto has_deleted = [] (const auto& allele) {
+            return std::find(std::cbegin(allele), std::cend(allele), Deleted) != std::cend(allele);
+        };
+        
+        for (const auto& call : calls) {
+            const auto& alt = call.alt();
+            
+            VcfRecord::Builder cb {call};
+            
+            const auto it = std::find_if(std::cbegin(alt), std::cend(alt), has_deleted);
+            
+            if (it != std::cend(alt)) {
+                const auto i = std::distance(std::cbegin(alt), it);
+                
+                auto new_alt = alt;
+                
+                new_alt.erase(std::next(std::begin(new_alt), i));
+                
+                cb.set_alt(std::move(new_alt));
+            }
+            
+            for (const auto& sample : samples) {
+                const auto& gt = call.get_sample_value(sample, "GT");
+                
+                const auto it2 = std::find_if(std::cbegin(gt), std::cend(gt), has_deleted);
+                const auto it3 = std::find(std::cbegin(gt), std::cend(gt), Missing);
+                
+                const auto& ref = call.ref();
+                
+                if (it2 != std::cend(gt) || it3 != std::cend(gt)) {
+                    auto new_gt = gt;
+                    
+                    std::replace_if(std::begin(new_gt), std::end(new_gt), has_deleted, ref);
+                    
+                    std::replace(std::begin(new_gt), std::end(new_gt), Missing, ref);
+                    
+                    auto phasing = VcfRecord::Builder::Phasing::Phased;
+                    
+                    if (!call.is_sample_phased(sample)) {
+                        phasing = VcfRecord::Builder::Phasing::Unphased;
+                    }
+                    
+                    cb.set_genotype(sample, std::move(new_gt), phasing);
+                }
+            }
+            
+            dst << cb.build_once();
+        }
+    }
+    
+    auto get_legacy_path(const GenomeCallingComponents& components)
+    {
+        const std::string identifier {"legacy"};
+        const auto base = components.output().path();
+        const fs::path new_stem {base.stem().string() + "." + identifier + base.extension().string()};
+        return base.parent_path() / new_stem;
     }
     
     void run_octopus(po::variables_map& options)
@@ -1292,6 +1363,10 @@ namespace Octopus
             }
             
             filter_calls(*components);
+            
+            const VcfReader vcf {components->output().path()};
+            VcfWriter out {get_legacy_path(*components)};
+            convert_to_legacy(vcf, out);
             
             cleanup(*components);
             

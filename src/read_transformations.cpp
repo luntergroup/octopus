@@ -43,9 +43,9 @@ namespace ReadTransforms
         }
     }
     
-    TrimTail::TrimTail(SizeType num_bases) : num_bases_ {num_bases} {};
+    MaskTail::MaskTail(SizeType num_bases) : num_bases_ {num_bases} {};
     
-    void TrimTail::operator()(AlignedRead& read) const noexcept
+    void MaskTail::operator()(AlignedRead& read) const noexcept
     {
         if (read.is_marked_reverse_mapped()) {
             read.zero_front_qualities(num_bases_);
@@ -63,16 +63,20 @@ namespace ReadTransforms
         }
     }
     
-    TrimSoftClippedTails::TrimSoftClippedTails(SizeType num_bases) : num_bases_ {num_bases} {};
+    MaskSoftClippedBoundries::MaskSoftClippedBoundries(SizeType num_bases) : num_bases_ {num_bases} {};
     
-    void TrimSoftClippedTails::operator()(AlignedRead& read) const noexcept
+    void MaskSoftClippedBoundries::operator()(AlignedRead& read) const noexcept
     {
         if (is_soft_clipped(read)) {
             const auto soft_clipped_sizes = get_soft_clipped_sizes(read);
-            read.zero_front_qualities(soft_clipped_sizes.first + num_bases_);
-            read.zero_back_qualities(soft_clipped_sizes.second + num_bases_);
-        } else {
-            TrimTail {num_bases_}(read);
+            
+            if (soft_clipped_sizes.first > 0) {
+                read.zero_front_qualities(soft_clipped_sizes.first + num_bases_);
+            }
+            
+            if (soft_clipped_sizes.second > 0) {
+                read.zero_back_qualities(soft_clipped_sizes.second + num_bases_);
+            }
         }
     }
 } // namespace ReadTransforms

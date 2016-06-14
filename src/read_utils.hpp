@@ -162,7 +162,7 @@ namespace detail
         static_assert(is_aligned_read_container<T>, "T must be a container of AlignedReads");
         return std::accumulate(std::cbegin(reads), std::cend(reads), size_t {},
                                [] (const auto curr, const auto& read) {
-                                   return curr + static_cast<size_t>(read.get_sequence_size());
+                                   return curr + static_cast<size_t>(sequence_size(read));
                                });
     }
     
@@ -183,7 +183,7 @@ namespace detail
         static_assert(is_aligned_read_container<T>, "T must be a container of AlignedReads");
         return std::accumulate(std::cbegin(reads), std::cend(reads), size_t {},
                                [] (const auto curr, const auto& read) {
-                                   return curr + ((IsForward()(read)) ? static_cast<size_t>(read.get_sequence_size()) : 0);
+                                   return curr + ((IsForward()(read)) ? static_cast<size_t>(sequence_size(read)) : 0);
                                });
     }
     
@@ -204,7 +204,7 @@ namespace detail
         static_assert(is_aligned_read_container<T>, "T must be a container of AlignedReads");
         return std::accumulate(std::cbegin(reads), std::cend(reads), size_t {},
                                [] (const auto curr, const auto& read) {
-                                   return curr + ((IsReverse()(read)) ? static_cast<size_t>(read.get_sequence_size()) : 0);
+                                   return curr + ((IsReverse()(read)) ? static_cast<size_t>(sequence_size(read)) : 0);
                                });
     }
     
@@ -1013,7 +1013,7 @@ std::vector<GenomicRegion> find_uniform_coverage_regions(const T& reads, const G
 template <typename T>
 std::vector<GenomicRegion> find_uniform_coverage_regions(const T& reads)
 {
-    return find_uniform_coverage_regions(reads, get_encompassing_region(reads));
+    return find_uniform_coverage_regions(reads, encompassing_region(reads));
 }
     
 namespace detail {

@@ -306,6 +306,14 @@ Phaser::force_phase(const std::vector<Haplotype>& haplotypes,
     return result;
 }
 
+// non-member methods
+
+bool is_split_phasing(const Phaser::PhaseSet& phase)
+{
+    return std::any_of(std::cbegin(phase.phase_regions), std::cend(phase.phase_regions),
+                       [] (const auto& p) { return p.second.size() > 1; });
+}
+    
 namespace debug
 {
     void print_phase_sets(const Phaser::PhaseSet& phasings)

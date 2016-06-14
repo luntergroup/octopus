@@ -292,8 +292,10 @@ namespace Octopus
              "Disables all read transformations")
             ("disable-soft-clip-masking", po::bool_switch()->default_value(false),
              "Disables soft clipped masking, thus allowing all soft clipped bases to be used for candidate generation")
-            ("tail-trim-size", po::value<AlignedRead::SizeType>()->default_value(0),
-             "Trims this number of bases off the tail of all reads")
+            ("mask-tails", po::value<AlignedRead::SizeType>()->default_value(0),
+             "Masks this number of bases of the tail of all reads")
+            ("mask-soft-clipped-boundries", po::value<AlignedRead::SizeType>()->default_value(2),
+             "Masks this number of non soft clipped bases when soft clipped bases are present")
             ("disable-adapter-masking", po::bool_switch()->default_value(false),
              "Disables adapter detection and masking")
             ("disable-overlap-masking", po::bool_switch()->default_value(false),
@@ -371,9 +373,9 @@ namespace Octopus
              "Space-seperated list of contig=ploidy pairs")
             ("contig-ploidies-file", po::value<std::string>(),
              "List of contig=ploidy pairs, one per line")
-            ("min-variant-posterior", po::value<float>()->default_value(5),
+            ("min-variant-posterior", po::value<float>()->default_value(2),
              "Minimum variant call posterior probability (phred scale)")
-            ("min-refcall-posterior", po::value<float>()->default_value(5),
+            ("min-refcall-posterior", po::value<float>()->default_value(2),
              "Minimum homozygous reference call posterior probability (phred scale)")
 //            ("refcalls", po::value<RefCallType>()->default_value(RefCallType::None),
 //             "Caller will output reference confidence calls")
@@ -387,7 +389,7 @@ namespace Octopus
             model.add_options()
             ("snp-heterozygosity", po::value<float>()->default_value(0.001),
              "The germline SNP heterozygosity used to calculate genotype priors")
-            ("indel-heterozygosity", po::value<float>()->default_value(0.001),
+            ("indel-heterozygosity", po::value<float>()->default_value(0.0001),
              "The germline indel heterozygosity used to calculate genotype priors")
             ;
             
@@ -1320,16 +1322,20 @@ namespace Octopus
             return result;
         }
         
-        bool trim_soft_clipped = !options.at("disable-soft-clip-masking").as<bool>();
+        const auto tail_mask_size = options.at("mask-tails").as<SizeType>();
         
-        auto tail_trim_size = options.at("tail-trim-size").as<SizeType>();
+        if (tail_mask_size > 0) {
+            result.register_transform(ReadTransforms::MaskTail(tail_mask_size));
+        }
         
-        if (trim_soft_clipped && tail_trim_size > 0) {
-            result.register_transform(ReadTransforms::TrimSoftClippedTails(tail_trim_size));
-        } else if (tail_trim_size > 0) {
-            result.register_transform(ReadTransforms::TrimTail(tail_trim_size));
-        } else if (trim_soft_clipped) {
-            result.register_transform(ReadTransforms::MaskSoftClipped());
+        if (!options.at("disable-soft-clip-masking").as<bool>()) {
+            const auto soft_clipped_mask_size = options.at("mask-soft-clipped-boundries").as<SizeType>();
+            
+            if (soft_clipped_mask_size > 0) {
+                result.register_transform(ReadTransforms::MaskSoftClippedBoundries(soft_clipped_mask_size));
+            } else {
+                result.register_transform(ReadTransforms::MaskSoftClipped());
+            }
         }
         
         if (!options.at("disable-adapter-masking").as<bool>()) {

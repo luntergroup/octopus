@@ -24,6 +24,7 @@
 #include "genomic_region.hpp"
 #include "vcf_header.hpp"
 #include "vcf_record.hpp"
+#include "string_utils.hpp"
 
 #include <iostream> // TEST
 
@@ -570,6 +571,21 @@ void set_filter(const bcf_hdr_t* header, bcf1_t* record, const std::vector<std::
     }
 }
 
+namespace
+{
+    template <typename T>
+    std::vector<std::string> split(const T& str, const char delim) {
+        std::vector<std::string> elems;
+        elems.reserve(std::count(std::cbegin(str), std::cend(str), delim) + 1);
+        std::stringstream ss(str);
+        std::string item;
+        while (std::getline(ss, item, delim)) {
+            elems.emplace_back(item);
+        }
+        return elems;
+    }
+} // namespace
+
 auto extract_info(const bcf_hdr_t* header, bcf1_t* record)
 {
     std::unordered_map<VcfRecord::KeyType, std::vector<std::string>> result {};
@@ -577,7 +593,7 @@ auto extract_info(const bcf_hdr_t* header, bcf1_t* record)
     
     int* intinfo {nullptr};
     float* floatinfo {nullptr};
-    char** stringinfo {nullptr};
+    char* stringinfo {nullptr};
     int* flaginfo {nullptr}; // not actually populated
     
     for (unsigned i {0}; i < record->n_info; ++i) {
@@ -609,14 +625,8 @@ auto extract_info(const bcf_hdr_t* header, bcf1_t* record)
             {
                 const auto nchars = bcf_get_info_string(header, record, key, &stringinfo, &nstringinfo);
                 if (nchars > 0) {
-                    if (nchars == 1 && nstringinfo > 1) {
-                        values.reserve(1);
-                        values.emplace_back(".");
-                    } else {
-                        values.reserve(nstringinfo);
-                        std::for_each(stringinfo, stringinfo + nstringinfo,
-                                      [&values] (const char* str) { values.emplace_back(str); });
-                    }
+                    std::string tmp(stringinfo, nchars);
+                    values = split(tmp, ',');
                 }
                 break;
             }

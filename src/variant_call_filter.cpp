@@ -31,6 +31,7 @@
 #include "genotype_reader.hpp"
 #include "haplotype_likelihood_cache.hpp"
 #include "maths.hpp"
+#include "string_utils.hpp"
 
 #include <boost/math/distributions/hypergeometric.hpp>
 
@@ -59,12 +60,19 @@ namespace
         std::transform(std::cbegin(calls), std::cend(calls), std::back_inserter(result),
                        [] (const auto& call) { return mapped_region(call); });
         
+        std::sort(std::begin(result), std::end(result));
+        
         return result;
+    }
+    
+    auto encompassing_region(const std::vector<VcfRecord>& calls)
+    {
+        return encompassing_region(mapped_regions(calls));
     }
     
     auto fetch_reads(const std::vector<VcfRecord>& calls, const ReadPipe& read_pipe)
     {
-        return read_pipe.fetch_reads(mapped_regions(calls));
+        return read_pipe.fetch_reads(encompassing_region(calls));
     }
     
     using HaplotypeSupportMap = std::multimap<Haplotype, AlignedRead>;
@@ -227,8 +235,8 @@ namespace
     using VariantSupportMap = std::multimap<Variant, AlignedRead>;
     
     template <typename Range>
-    auto calculate_support(const Genotype<Haplotype>& genotype, const ReadContainer& reads,
-                           Range variants)
+    auto calculate_variant_support(const Genotype<Haplotype>& genotype, const ReadContainer& reads,
+                                   Range variants)
     {
         const auto haplotype_support = calculate_support(genotype, reads);
         
@@ -239,7 +247,7 @@ namespace
                           for (const auto& hp : haplotype_support) {
                               if (overlaps(p.second, hp.second)
                                   && hp.first.contains(p.second.alt_allele())) {
-                                  result.emplace(p.second, hp.second);
+                                        result.emplace(p.second, hp.second);
                               }
                           }
                       });
@@ -256,10 +264,8 @@ namespace
     {
         const auto er = support.equal_range(v);
         
-        //std::cout << v << std::endl;
         const auto c = std::count_if(er.first, er.second,
                                      [] (const auto& p) {
-                                         //std::cout << p.second.mapped_region() << " " << p.second.cigar_string() << " " << p.second.is_marked_reverse_mapped() << std::endl;
                                          return p.second.is_marked_reverse_mapped();
                                      });
         
@@ -417,11 +423,20 @@ void VariantCallFilter::filter(const VcfReader& source, VcfWriter& dest, const R
                 
                 VcfRecord::Builder cb {call};
                 
+                cb.set_info("NS",  count_samples_with_coverage(call_reads));
+                cb.set_info("DP",  sum_max_coverages(call_reads));
+                cb.set_info("SB",  Octopus::to_string(strand_bias(call_reads), 2));
+                cb.set_info("BQ",  static_cast<unsigned>(rmq_base_quality(call_reads)));
+                cb.set_info("MQ",  static_cast<unsigned>(rmq_mapping_quality(call_reads)));
+                cb.set_info("MQ0", count_mapq_zero(call_reads));
+                
                 bool filtered {false};
                 
                 const auto dummy_model_posterior = get_dummy_model_posterior(call);
                 
-                if (dummy_model_posterior > 0.1) {
+                cb.clear_info("DMBF");
+                
+                if (dummy_model_posterior > 0.05) {
                     cb.add_filter("MODEL");
                     filtered = true;
                 }
@@ -431,7 +446,7 @@ void VariantCallFilter::filter(const VcfReader& source, VcfWriter& dest, const R
                     filtered = true;
                 }
                 
-                const auto rmq = rmq_mapping_quality(reads, call_region);
+                const auto rmq = rmq_mapping_quality(call_reads);
                 
                 if (rmq < 40) {
                     cb.add_filter("MQ");
@@ -464,11 +479,13 @@ void VariantCallFilter::filter(const VcfReader& source, VcfWriter& dest, const R
                     
                     if (sample_variants.first == sample_variants.second) continue;
                     
+                    std::vector<ReadDirectionCounts> count {};
+                    
                     if (call.is_heterozygous(sample)) {
                         all_homozygous = false;
                         
-                        const auto variant_support = calculate_support(genotype, sample_call_reads,
-                                                                       sample_variants);
+                        const auto variant_support = calculate_variant_support(genotype, sample_call_reads,
+                                                                               sample_variants);
                         
                         const auto pval = calculate_strand_bias(variant_support, sample_variants.first->second,
                                                                 sample_call_reads);
@@ -484,6 +501,10 @@ void VariantCallFilter::filter(const VcfReader& source, VcfWriter& dest, const R
                             sample_kl_failed = true;
                         }
                     }
+                    
+                    cb.set_format(sample, "DP", max_coverage(call_reads.at(sample)));
+                    cb.set_format(sample, "BQ", static_cast<unsigned>(rmq_base_quality(call_reads.at(sample))));
+                    cb.set_format(sample, "MQ", static_cast<unsigned>(rmq_mapping_quality(call_reads.at(sample))));
                 }
                 
                 if (sample_rmq_failed) {

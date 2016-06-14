@@ -131,6 +131,7 @@
 		D4807FB01BA826DB00657D4F /* population_caller.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D4807FAE1BA826DB00657D4F /* population_caller.cpp */; };
 		D4807FB21BA843B900657D4F /* variant_caller.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D4807FB11BA843B900657D4F /* variant_caller.cpp */; };
 		D4807FB51BA9716700657D4F /* cancer_caller.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D4807FB31BA9716700657D4F /* cancer_caller.cpp */; };
+		D482E00E1D0EB9440096A269 /* hiseq_read_indel_error_model.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D482E00C1D0EB9440096A269 /* hiseq_read_indel_error_model.cpp */; };
 		D48D2AE41BB5753F00C5596E /* haplotype_liklihood_model.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D48D2AE21BB5753F00C5596E /* haplotype_liklihood_model.cpp */; };
 		D4907F4B1A88E20E00639203 /* variant_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D4907F4A1A88E20E00639203 /* variant_tests.cpp */; };
 		D4907F571A8A2A9B00639203 /* reference_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D4907F561A8A2A9B00639203 /* reference_tests.cpp */; };
@@ -487,6 +488,8 @@
 		D4807FB11BA843B900657D4F /* variant_caller.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = variant_caller.cpp; sourceTree = "<group>"; };
 		D4807FB31BA9716700657D4F /* cancer_caller.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = cancer_caller.cpp; sourceTree = "<group>"; };
 		D4807FB41BA9716700657D4F /* cancer_caller.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = cancer_caller.hpp; sourceTree = "<group>"; };
+		D482E00C1D0EB9440096A269 /* hiseq_read_indel_error_model.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = hiseq_read_indel_error_model.cpp; sourceTree = "<group>"; };
+		D482E00D1D0EB9440096A269 /* hiseq_read_indel_error_model.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = hiseq_read_indel_error_model.hpp; sourceTree = "<group>"; };
 		D48D2AE21BB5753F00C5596E /* haplotype_liklihood_model.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = haplotype_liklihood_model.cpp; sourceTree = "<group>"; };
 		D48D2AE31BB5753F00C5596E /* haplotype_liklihood_model.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = haplotype_liklihood_model.hpp; sourceTree = "<group>"; };
 		D4907F471A88D71800639203 /* genomic_region.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = genomic_region.hpp; sourceTree = "<group>"; };
@@ -1199,6 +1202,7 @@
 		D42F72F71C5BAC3100995F54 /* read-error-models */ = {
 			isa = PBXGroup;
 			children = (
+				D482E0081D0EB8E80096A269 /* indel_error_models */,
 				D490E41F1C74CE1200883184 /* kmer_mapping.hpp */,
 				D490E4201C74CE1200883184 /* kmer_mapping.cpp */,
 				D490E41D1C74CE1200883184 /* banded_simd_viterbi.hpp */,
@@ -1207,8 +1211,6 @@
 				D490E41C1C74CE1200883184 /* align.cpp */,
 				D490E4251C74CE2300883184 /* pair_hmm.hpp */,
 				D490E41A1C74CE1200883184 /* pair_hmm.cpp */,
-				CAB89DF21C753551002D6F8E /* read_indel_error_model.hpp */,
-				CAB89DF11C753551002D6F8E /* read_indel_error_model.cpp */,
 				D48D2AE31BB5753F00C5596E /* haplotype_liklihood_model.hpp */,
 				D48D2AE21BB5753F00C5596E /* haplotype_liklihood_model.cpp */,
 				D46F9EDC1C05D4E700DCC18D /* haplotype_likelihood_cache.hpp */,
@@ -1234,6 +1236,17 @@
 				CADA44301C6CCE0800D432E8 /* interesting_1000G_regions.txt */,
 			);
 			name = 1000G;
+			sourceTree = "<group>";
+		};
+		D482E0081D0EB8E80096A269 /* indel_error_models */ = {
+			isa = PBXGroup;
+			children = (
+				CAB89DF21C753551002D6F8E /* read_indel_error_model.hpp */,
+				CAB89DF11C753551002D6F8E /* read_indel_error_model.cpp */,
+				D482E00D1D0EB9440096A269 /* hiseq_read_indel_error_model.hpp */,
+				D482E00C1D0EB9440096A269 /* hiseq_read_indel_error_model.cpp */,
+			);
+			name = indel_error_models;
 			sourceTree = "<group>";
 		};
 		D48C00B81AAA0F5300E76FC8 /* read */ = {
@@ -1408,6 +1421,7 @@
 				CA2D59FE1CB972FE005EA347 /* cancer_genotype.cpp in Sources */,
 				D47686631BD672940067E03D /* read_reader.cpp in Sources */,
 				CAD552E81BE3BC6E00362016 /* pedigree_caller.cpp in Sources */,
+				D482E00E1D0EB9440096A269 /* hiseq_read_indel_error_model.cpp in Sources */,
 				D463C1A41B0A174B00739A66 /* variant.cpp in Sources */,
 				D4BEA9FC1B861BE200E53CFD /* sssort.c in Sources */,
 				D44ADE781C452B9B00A854C6 /* compression.cpp in Sources */,

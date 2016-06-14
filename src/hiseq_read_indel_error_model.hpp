@@ -1,39 +1,32 @@
 //
-//  read_indel_error_model.hpp
+//  hiseq_read_indel_error_model.hpp
 //  Octopus
 //
-//  Created by Daniel Cooke on 17/02/2016.
+//  Created by Daniel Cooke on 13/06/2016.
 //  Copyright © 2016 Oxford University. All rights reserved.
 //
 
-#ifndef read_indel_error_model_hpp
-#define read_indel_error_model_hpp
+#ifndef hiseq_read_indel_error_model_hpp
+#define hiseq_read_indel_error_model_hpp
 
-#include <vector>
-#include <array>
-#include <cstdint>
-
-#include "haplotype.hpp"
+#include "read_indel_error_model.hpp"
 
 namespace Octopus
 {
-    class ReadIndelErrorModel
+    class HiSeqReadIndelErrorModel : public ReadIndelErrorModel
     {
     public:
-        using PenaltyType = std::int8_t;
+        using ReadIndelErrorModel::PenaltyType;
+        using ReadIndelErrorModel::PenaltyVector;
         
-        using PenaltyVector = std::vector<PenaltyType>;
+        HiSeqReadIndelErrorModel() = default;
         
-        ReadIndelErrorModel() = default;
+        HiSeqReadIndelErrorModel(const HiSeqReadIndelErrorModel&)            = default;
+        HiSeqReadIndelErrorModel& operator=(const HiSeqReadIndelErrorModel&) = default;
+        HiSeqReadIndelErrorModel(HiSeqReadIndelErrorModel&&)                 = default;
+        HiSeqReadIndelErrorModel& operator=(HiSeqReadIndelErrorModel&&)      = default;
         
-        virtual ~ReadIndelErrorModel() = default;
-        
-        ReadIndelErrorModel(const ReadIndelErrorModel&)            = default;
-        ReadIndelErrorModel& operator=(const ReadIndelErrorModel&) = default;
-        ReadIndelErrorModel(ReadIndelErrorModel&&)                 = default;
-        ReadIndelErrorModel& operator=(ReadIndelErrorModel&&)      = default;
-        
-        virtual PenaltyType evaluate(const Haplotype& haplotype, PenaltyVector& gap_open_penalties) const;
+        PenaltyType evaluate(const Haplotype& haplotype, PenaltyVector& gap_open_penalties) const override;
         
     private:
         static constexpr std::array<PenaltyType, 50> Homopolymer_errors_ =
@@ -64,4 +57,4 @@ namespace Octopus
     };
 } // namespace Octopus
 
-#endif /* read_indel_error_model_hpp */
+#endif /* hiseq_read_indel_error_model_hpp */

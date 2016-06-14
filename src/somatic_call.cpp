@@ -22,12 +22,12 @@ namespace Octopus
         
         for (const auto& p : credible_regions_) {
             if (p.second.somatic) {
-                record.add_genotype_field(p.first, "SCR", {
+                record.set_format(p.first, "SCR", {
                     Octopus::to_string(p.second.somatic->first, 2),
                     Octopus::to_string(p.second.somatic->second, 2)
                 });
             } else {
-                record.add_genotype_field(p.first, "SCR", {"0", "0"});
+                record.set_format(p.first, "SCR", {"0", "0"});
             }
         }
     }

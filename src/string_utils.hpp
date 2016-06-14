@@ -24,12 +24,12 @@ namespace Octopus
 template <typename T>
 std::vector<std::string> split(const T& str, const char delim) {
     std::vector<std::string> elems;
+    elems.reserve(std::count(std::cbegin(str), std::cend(str), delim) + 1);
     std::stringstream ss(str);
     std::string item;
     while (std::getline(ss, item, delim)) {
         elems.emplace_back(item);
     }
-    elems.shrink_to_fit();
     return elems;
 }
 

@@ -494,27 +494,42 @@ VcfRecord::Builder& VcfRecord::Builder::add_info(const KeyType& key)
     return *this;
 }
 
-VcfRecord::Builder& VcfRecord::Builder::add_info(const KeyType& key, const ValueType& value)
+VcfRecord::Builder& VcfRecord::Builder::set_info(const KeyType& key, const ValueType& value)
 {
-    info_.emplace(key, std::vector<ValueType> {value});
+    return this->set_info(key, {value});
+}
+
+VcfRecord::Builder& VcfRecord::Builder::set_info(const KeyType& key, std::vector<ValueType> values)
+{
+    const auto p = info_.emplace(key, values);
+    
+    if (!p.second) {
+        p.first->second = std::move(values);
+    }
+    
     return *this;
 }
 
-VcfRecord::Builder& VcfRecord::Builder::add_info(const KeyType& key, const std::vector<ValueType>& values)
+VcfRecord::Builder& VcfRecord::Builder::set_info(const KeyType& key, std::initializer_list<ValueType> values)
 {
-    info_.emplace(key, values);
+    return this->set_info(key, std::vector<ValueType> {values});
+}
+
+VcfRecord::Builder& VcfRecord::Builder::set_info_flag(KeyType key)
+{
+    return this->set_info(std::move(key), {});
+}
+
+VcfRecord::Builder& VcfRecord::Builder::clear_info() noexcept
+{
+    info_.clear();
     return *this;
 }
 
-VcfRecord::Builder& VcfRecord::Builder::add_info(const KeyType& key, std::initializer_list<ValueType> values)
+VcfRecord::Builder& VcfRecord::Builder::clear_info(const KeyType& key)
 {
-    info_.emplace(key, values);
+    info_.erase(key);
     return *this;
-}
-
-VcfRecord::Builder& VcfRecord::Builder::add_info_flag(KeyType key)
-{
-    return this->add_info(std::move(key), {});
 }
 
 VcfRecord::Builder& VcfRecord::Builder::set_format(std::vector<KeyType> format)
@@ -535,22 +550,30 @@ VcfRecord::Builder& VcfRecord::Builder::add_format(KeyType key)
     return *this;
 }
 
-VcfRecord::Builder&VcfRecord::Builder:: add_homozygous_ref_genotype(const SampleIdType& sample, unsigned ploidy)
+VcfRecord::Builder&VcfRecord::Builder:: set_homozygous_ref_genotype(const SampleIdType& sample, unsigned ploidy)
 {
     std::vector<SequenceType> tmp(ploidy, ref_);
-    return add_genotype(sample, tmp, Phasing::Phased);
+    return set_genotype(sample, tmp, Phasing::Phased);
 }
 
-VcfRecord::Builder& VcfRecord::Builder::add_genotype(const SampleIdType& sample,
-                                                     const std::vector<SequenceType>& alleles, Phasing phasing)
+VcfRecord::Builder& VcfRecord::Builder::set_genotype(const SampleIdType& sample,
+                                                     const std::vector<SequenceType>& alleles,
+                                                     Phasing phasing)
 {
-    genotypes_.emplace(std::piecewise_construct,
-                       std::forward_as_tuple(sample),
-                       std::forward_as_tuple(alleles, phasing == Phasing::Phased));
+    const auto p = genotypes_.emplace(std::piecewise_construct,
+                                      std::forward_as_tuple(sample),
+                                      std::forward_as_tuple(alleles, phasing == Phasing::Phased));
+    
+    
+    if (!p.second) {
+        p.first->second.first  = alleles;
+        p.first->second.second = phasing == Phasing::Phased;
+    }
+    
     return *this;
 }
 
-VcfRecord::Builder& VcfRecord::Builder::add_genotype(const SampleIdType& sample,
+VcfRecord::Builder& VcfRecord::Builder::set_genotype(const SampleIdType& sample,
                                                      const std::vector<boost::optional<unsigned>>& alleles,
                                                      Phasing phasing)
 {
@@ -566,34 +589,36 @@ VcfRecord::Builder& VcfRecord::Builder::add_genotype(const SampleIdType& sample,
                        }
                    });
     
-    return add_genotype(sample, tmp, phasing);
+    return set_genotype(sample, tmp, phasing);
 }
 
-VcfRecord::Builder& VcfRecord::Builder::add_genotype_field(const SampleIdType& sample, const KeyType& key,
-                                                           const ValueType& value)
+VcfRecord::Builder& VcfRecord::Builder::set_format(const SampleIdType& sample, const KeyType& key,
+                                                   const ValueType& value)
 {
-    samples_[sample].emplace(key, std::vector<ValueType> {value});
+    return this->set_format(sample, key, std::vector<ValueType> {value});
+}
+
+VcfRecord::Builder& VcfRecord::Builder::set_format(const SampleIdType& sample, const KeyType& key,
+                                                   std::vector<ValueType> values)
+{
+    const auto p = samples_[sample].emplace(key, values);
+    
+    if (!p.second) {
+        p.first->second = std::move(values);
+    }
+    
     return *this;
 }
 
-VcfRecord::Builder& VcfRecord::Builder::add_genotype_field(const SampleIdType& sample, const KeyType& key,
-                                                           const std::vector<ValueType>& values)
+VcfRecord::Builder& VcfRecord::Builder::set_format(const SampleIdType& sample, const KeyType& key,
+                                                   std::initializer_list<ValueType> values)
 {
-    samples_[sample].emplace(key, values);
-    return *this;
+    return this->set_format(sample, key, std::vector<ValueType> {values});
 }
 
-VcfRecord::Builder& VcfRecord::Builder::add_genotype_field(const SampleIdType& sample, const KeyType& key,
-                                                           std::initializer_list<ValueType> values)
+VcfRecord::Builder& VcfRecord::Builder::set_format_missing(const SampleIdType& sample, const KeyType& key)
 {
-    samples_[sample].emplace(key, values);
-    return *this;
-}
-
-VcfRecord::Builder& VcfRecord::Builder::add_missing_genotype_field(const SampleIdType& sample, const KeyType& key)
-{
-    samples_[sample].emplace(key, std::vector<ValueType> {"."});
-    return *this;
+    return this->set_format(sample, key, std::string {"."});
 }
 
 VcfRecord::Builder& VcfRecord::Builder::set_refcall()
@@ -603,7 +628,7 @@ VcfRecord::Builder& VcfRecord::Builder::set_refcall()
 
 VcfRecord::Builder& VcfRecord::Builder::set_somatic()
 {
-    return this->add_info_flag("SOMATIC");
+    return this->set_info_flag("SOMATIC");
 }
 
 VcfRecord::SizeType VcfRecord::Builder::pos() const noexcept
